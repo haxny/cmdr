@@ -803,7 +803,7 @@ impl Volume for ClaimsCreationDates {
         length: StreamLength,
         stream: Box<dyn VolumeReadStream>,
         on_progress: &'a (dyn Fn(StreamWriteProgress) -> std::ops::ControlFlow<()> + Sync),
-    ) -> Pin<Box<dyn Future<Output = Result<u64, VolumeError>> + Send + 'a>> {
+    ) -> Pin<Box<dyn Future<Output = Result<StreamWritten, VolumeError>> + Send + 'a>> {
         self.0.write_from_stream(dest, mode, length, stream, on_progress)
     }
     fn metadata_caps(&self) -> crate::metadata::MetadataCaps {

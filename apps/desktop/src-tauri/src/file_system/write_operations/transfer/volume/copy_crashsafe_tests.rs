@@ -28,10 +28,10 @@ use crate::file_system::write_operations::types::ConflictResolution;
 // halves: data survives a failure, and a success replaces the content cleanly
 // with no temp left behind.
 
-use crate::file_system::volume::WriteMode;
 use crate::file_system::volume::{
     CopyScanResult, ListingProgress, SpaceInfo, StreamLength, StreamWriteProgress, VolumeReadStream,
 };
+use crate::file_system::volume::{StreamWritten, WriteMode};
 use cmdr_fs::entry::FileEntry;
 use std::pin::Pin as StdPin;
 
@@ -390,7 +390,7 @@ impl Volume for RenameFailsDestVolume {
         length: StreamLength,
         stream: Box<dyn VolumeReadStream>,
         on_progress: &'a (dyn Fn(StreamWriteProgress) -> std::ops::ControlFlow<()> + Sync),
-    ) -> StdPin<Box<dyn Future<Output = Result<u64, VolumeError>> + Send + 'a>> {
+    ) -> StdPin<Box<dyn Future<Output = Result<StreamWritten, VolumeError>> + Send + 'a>> {
         self.inner.write_from_stream(dest, mode, length, stream, on_progress)
     }
     /// The whole point of this double: the finalize rename onto `fails_onto`

@@ -17,7 +17,9 @@ mod streams;
 use super::{
     CopyScanResult, ScanConflict, SourceItemInfo, SpaceInfo, Volume, VolumeError, VolumeReadStream, WatchCoverage,
 };
-use crate::file_system::volume::{EntryKind, ListingProgress, StreamLength, StreamWriteProgress, WriteMode};
+use crate::file_system::volume::{
+    EntryKind, ListingProgress, StreamLength, StreamWriteProgress, StreamWritten, WriteMode,
+};
 #[cfg(feature = "playwright-e2e")]
 use crate::ignore_poison::IgnorePoison;
 use cmdr_fs::entry::FileEntry;
@@ -758,7 +760,7 @@ impl Volume for LocalPosixVolume {
         length: StreamLength,
         stream: Box<dyn VolumeReadStream>,
         on_progress: &'a (dyn Fn(StreamWriteProgress) -> std::ops::ControlFlow<()> + Sync),
-    ) -> Pin<Box<dyn Future<Output = Result<u64, VolumeError>> + Send + 'a>> {
+    ) -> Pin<Box<dyn Future<Output = Result<StreamWritten, VolumeError>> + Send + 'a>> {
         self.write_from_stream_impl(dest, mode, length, stream, on_progress)
     }
 

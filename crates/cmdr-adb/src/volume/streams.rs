@@ -12,7 +12,9 @@ use std::path::Path;
 
 use cmdr_fs::metadata::{CarriedMetadata, MetadataClasses, default_file_mode, routed_mode};
 use cmdr_fs::staging::temp_sibling_name;
-use cmdr_fs::volume::{ChannelReadStream, StreamLength, StreamWriteProgress, VolumeError, VolumeReadStream, WriteMode};
+use cmdr_fs::volume::{
+    ChannelReadStream, StreamLength, StreamWriteProgress, StreamWritten, VolumeError, VolumeReadStream, WriteMode,
+};
 use log::debug;
 
 use super::AdbVolume;
@@ -172,7 +174,7 @@ impl AdbVolume {
         length: StreamLength,
         mut stream: Box<dyn VolumeReadStream>,
         on_progress: &(dyn Fn(StreamWriteProgress) -> ControlFlow<()> + Sync),
-    ) -> Result<u64, VolumeError> {
+    ) -> Result<StreamWritten, VolumeError> {
         let device = self.to_device_path(dest)?;
         let staging = staging_name_for(&device);
         debug!("AdbVolume::write_from_stream: {device} via {staging}, length={length:?}");
@@ -194,7 +196,8 @@ impl AdbVolume {
                     return Err(e);
                 }
                 self.notify_created(dest).await;
-                Ok(written)
+                // The mode rides `SEND` itself: a refusal fails the write.
+                Ok(StreamWritten::nothing_refused(written))
             }
             Err(e) => {
                 self.remove_partial(&staging).await;

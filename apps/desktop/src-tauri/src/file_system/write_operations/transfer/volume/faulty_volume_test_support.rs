@@ -24,7 +24,8 @@
 //! are.
 
 use crate::file_system::volume::{
-    DirectoryCreation, ListingProgress, StreamLength, StreamWriteProgress, Volume, VolumeError, VolumeReadStream,
+    DirectoryCreation, ListingProgress, StreamLength, StreamWriteProgress, StreamWritten, Volume, VolumeError,
+    VolumeReadStream,
 };
 use crate::ignore_poison::IgnorePoison;
 use cmdr_fs::entry::FileEntry;
@@ -259,7 +260,7 @@ macro_rules! forward_volume_methods {
             length: $crate::file_system::volume::StreamLength,
             stream: Box<dyn $crate::file_system::volume::VolumeReadStream>,
             on_progress: &'a (dyn Fn($crate::file_system::volume::StreamWriteProgress) -> std::ops::ControlFlow<()> + Sync),
-        ) -> ::std::pin::Pin<Box<dyn ::std::future::Future<Output = Result<u64, $crate::file_system::volume::VolumeError>> + Send + 'a>> {
+        ) -> ::std::pin::Pin<Box<dyn ::std::future::Future<Output = Result<$crate::file_system::volume::StreamWritten, $crate::file_system::volume::VolumeError>> + Send + 'a>> {
             self.$inner.write_from_stream(dest, mode, length, stream, on_progress)
         }
     };
@@ -547,7 +548,7 @@ impl<V: Volume + 'static> Volume for FaultyVolume<V> {
         length: StreamLength,
         stream: Box<dyn VolumeReadStream>,
         on_progress: &'a (dyn Fn(StreamWriteProgress) -> std::ops::ControlFlow<()> + Sync),
-    ) -> Pin<Box<dyn Future<Output = Result<u64, VolumeError>> + Send + 'a>> {
+    ) -> Pin<Box<dyn Future<Output = Result<StreamWritten, VolumeError>> + Send + 'a>> {
         match self.fault_for(FaultyOp::WriteFromStream) {
             Some(e) => Box::pin(async move { Err(e) }),
             None => self.inner.write_from_stream(dest, mode, length, stream, on_progress),

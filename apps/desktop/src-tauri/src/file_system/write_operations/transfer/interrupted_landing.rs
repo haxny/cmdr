@@ -51,7 +51,7 @@ use super::super::in_flight_temps;
 use super::super::state::WriteOperationState;
 use super::recovered_name::discard_unplaced_temp;
 use super::staged_write::{StagedWrite, dest_home};
-use crate::file_system::volume::{Volume, VolumeError, VolumeReadStream, WriteMode};
+use crate::file_system::volume::{StreamWritten, Volume, VolumeError, VolumeReadStream, WriteMode};
 
 /// What a landing whose reply the outage swallowed turned out to have done.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -119,7 +119,7 @@ async fn clear_unlanded_temp(state: &WriteOperationState, dest_volume: &Arc<dyn 
 /// Whether this attempt's write was a create at the FINAL name (a single-shot
 /// `CreateNew`) that failed on the transport, so the server may have completed
 /// it anyway: the next attempt must [`settle_unanswered_create`] first.
-pub(super) fn create_went_unanswered(staged: &StagedWrite, result: &Result<u64, VolumeError>) -> bool {
+pub(super) fn create_went_unanswered(staged: &StagedWrite, result: &Result<StreamWritten, VolumeError>) -> bool {
     matches!(
         staged.write_mode(),
         WriteMode::CreateNew | WriteMode::CreateNewInFreshFolder

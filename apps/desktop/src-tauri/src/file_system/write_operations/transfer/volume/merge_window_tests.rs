@@ -27,7 +27,7 @@ use super::tests::{make_state, make_volumes};
 use super::*;
 use crate::file_system::volume::InMemoryVolume;
 use crate::file_system::volume::WriteMode;
-use crate::file_system::volume::{StreamLength, StreamWriteProgress};
+use crate::file_system::volume::{StreamLength, StreamWriteProgress, StreamWritten};
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::state::cancel_write_operation;
 use crate::file_system::write_operations::test_support::TestOperationGuard;
@@ -120,7 +120,7 @@ impl Volume for WindowWatchingDest {
         length: StreamLength,
         stream: Box<dyn crate::file_system::volume::VolumeReadStream>,
         on_progress: &'a (dyn Fn(StreamWriteProgress) -> std::ops::ControlFlow<()> + Sync),
-    ) -> Pin<Box<dyn Future<Output = Result<u64, VolumeError>> + Send + 'a>> {
+    ) -> Pin<Box<dyn Future<Output = Result<StreamWritten, VolumeError>> + Send + 'a>> {
         Box::pin(async move {
             let live = self.live.fetch_add(1, Ordering::Relaxed) + 1;
             self.peak.fetch_max(live, Ordering::Relaxed);

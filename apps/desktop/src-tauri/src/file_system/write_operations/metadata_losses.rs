@@ -8,7 +8,8 @@
 //! file copied anywhere reports nothing.
 //!
 //! **Who counts.** The cross-volume engine, from the destination's
-//! `MetadataCaps` against the source's: a file at landing
+//! `MetadataCaps` against the source's plus what the destination's write
+//! refused at runtime (`StreamWritten::refused`): a file at landing
 //! (`transfer/volume/strategy.rs`, `sequential_extract.rs`), a folder when its
 //! dates and xattrs go on (`transfer/volume/folder_metadata.rs`). The native engine keeps
 //! everything local disk can hold and counts nothing. The contract:

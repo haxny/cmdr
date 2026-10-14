@@ -26,6 +26,7 @@ async fn write(volume: &S3Volume, key: &str, len: usize) -> Result<u64, VolumeEr
             &|_| ControlFlow::Continue(()),
         )
         .await
+        .map(|written| written.bytes)
 }
 
 #[tokio::test(flavor = "multi_thread")]

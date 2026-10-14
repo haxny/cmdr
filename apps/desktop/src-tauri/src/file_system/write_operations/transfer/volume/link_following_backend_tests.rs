@@ -21,7 +21,7 @@ use super::move_same::move_within_same_volume_with_progress;
 use super::rename_merge_test_support::{exists, make_state, mkdir, read, write_file};
 use crate::file_system::volume::{
     BatchScanResult, CopyScanResult, InMemoryVolume, ListingProgress, LocalPosixVolume, ScanBoundary, SpaceInfo,
-    StreamLength, StreamWriteProgress, Volume, VolumeError, VolumeReadStream, WriteMode,
+    StreamLength, StreamWriteProgress, StreamWritten, Volume, VolumeError, VolumeReadStream, WriteMode,
 };
 use crate::file_system::write_operations::event_sinks::{CollectorEventSink, OperationEventSink};
 use crate::file_system::write_operations::state::WriteOperationState;
@@ -144,7 +144,7 @@ impl Volume for LinkFollowingVolume {
         length: StreamLength,
         stream: Box<dyn VolumeReadStream>,
         on_progress: &'a (dyn Fn(StreamWriteProgress) -> std::ops::ControlFlow<()> + Sync),
-    ) -> Pin<Box<dyn Future<Output = Result<u64, VolumeError>> + Send + 'a>> {
+    ) -> Pin<Box<dyn Future<Output = Result<StreamWritten, VolumeError>> + Send + 'a>> {
         self.inner.write_from_stream(dest, mode, length, stream, on_progress)
     }
     fn get_space_info<'a>(&'a self) -> Pin<Box<dyn Future<Output = Result<SpaceInfo, VolumeError>> + Send + 'a>> {

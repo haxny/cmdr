@@ -33,8 +33,8 @@ use super::test_support::make_state;
 use super::*;
 use crate::file_system::volume::WriteMode;
 use crate::file_system::volume::{
-    InMemoryVolume, ListingProgress, ServerCopyProgress, StreamLength, StreamWriteProgress, Volume, VolumeError,
-    VolumeReadStream,
+    InMemoryVolume, ListingProgress, ServerCopyProgress, StreamLength, StreamWriteProgress, StreamWritten, Volume,
+    VolumeError, VolumeReadStream,
 };
 use crate::file_system::write_operations::state::OperationIntent;
 use cmdr_fs::entry::FileEntry;
@@ -117,7 +117,7 @@ impl Volume for ServerCopyVolume {
         length: StreamLength,
         stream: Box<dyn VolumeReadStream>,
         on_progress: &'a (dyn Fn(StreamWriteProgress) -> ControlFlow<()> + Sync),
-    ) -> Pin<Box<dyn Future<Output = Result<u64, VolumeError>> + Send + 'a>> {
+    ) -> Pin<Box<dyn Future<Output = Result<StreamWritten, VolumeError>> + Send + 'a>> {
         self.streamed.fetch_add(1, Ordering::SeqCst);
         self.inner.write_from_stream(dest, mode, length, stream, on_progress)
     }
@@ -153,6 +153,7 @@ impl Volume for ServerCopyVolume {
                     &|progress| on_progress(progress.bytes_written, size),
                 )
                 .await
+                .map(|written| written.bytes)
         })
     }
 }
@@ -402,7 +403,7 @@ impl Volume for StorePlace {
         length: StreamLength,
         stream: Box<dyn VolumeReadStream>,
         on_progress: &'a (dyn Fn(StreamWriteProgress) -> ControlFlow<()> + Sync),
-    ) -> Pin<Box<dyn Future<Output = Result<u64, VolumeError>> + Send + 'a>> {
+    ) -> Pin<Box<dyn Future<Output = Result<StreamWritten, VolumeError>> + Send + 'a>> {
         self.streamed.fetch_add(1, Ordering::SeqCst);
         self.inner.write_from_stream(dest, mode, length, stream, on_progress)
     }
@@ -435,6 +436,7 @@ impl Volume for StorePlace {
                     progress.advanced(written.bytes_written, size)
                 })
                 .await
+                .map(|written| written.bytes)
         })
     }
 }

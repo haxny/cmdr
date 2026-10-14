@@ -17,8 +17,8 @@ use cmdr_fs::metadata::{CarriedMetadata, MetadataCaps, MetadataClasses, Metadata
 
 use cmdr_fs::volume::{
     BatchScanResult, ConnectionLiveness, CopyScanResult, LaneKey, MutationEvent, ScanBoundary, ScanConflict,
-    SourceItemInfo, SpaceInfo, StreamLength, StreamWriteProgress, Volume, VolumeError, VolumeRandomReader,
-    VolumeReadStream, WatchCoverage, WriteMode,
+    SourceItemInfo, SpaceInfo, StreamLength, StreamWriteProgress, StreamWritten, Volume, VolumeError,
+    VolumeRandomReader, VolumeReadStream, WatchCoverage, WriteMode,
 };
 use cmdr_fs::volume::{ListingProgress, Retirement};
 use log::debug;
@@ -623,7 +623,7 @@ impl Volume for SmbVolume {
         length: StreamLength,
         stream: Box<dyn VolumeReadStream>,
         on_progress: &'a (dyn Fn(StreamWriteProgress) -> std::ops::ControlFlow<()> + Sync),
-    ) -> Pin<Box<dyn Future<Output = Result<u64, VolumeError>> + Send + 'a>> {
+    ) -> Pin<Box<dyn Future<Output = Result<StreamWritten, VolumeError>> + Send + 'a>> {
         self.write_from_stream_impl(dest, mode, length, stream, on_progress)
     }
 

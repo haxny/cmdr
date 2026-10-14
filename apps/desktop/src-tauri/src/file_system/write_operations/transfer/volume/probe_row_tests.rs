@@ -36,7 +36,7 @@ use super::super::faulty_volume::forward_volume_methods;
 use super::test_support::make_state;
 use super::*;
 use crate::file_system::volume::WriteMode;
-use crate::file_system::volume::{InMemoryVolume, StreamLength, StreamWriteProgress, VolumeError};
+use crate::file_system::volume::{InMemoryVolume, StreamLength, StreamWriteProgress, StreamWritten, VolumeError};
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 
 /// How long a leaf lingers inside `write_from_stream` waiting for siblings to
@@ -105,7 +105,7 @@ impl Volume for TablePhotographingDest {
         length: StreamLength,
         stream: Box<dyn crate::file_system::volume::VolumeReadStream>,
         on_progress: &'a (dyn Fn(StreamWriteProgress) -> std::ops::ControlFlow<()> + Sync),
-    ) -> Pin<Box<dyn Future<Output = Result<u64, VolumeError>> + Send + 'a>> {
+    ) -> Pin<Box<dyn Future<Output = Result<StreamWritten, VolumeError>> + Send + 'a>> {
         Box::pin(async move {
             self.live.fetch_add(1, Ordering::Relaxed);
             let deadline = Instant::now() + LINGER;

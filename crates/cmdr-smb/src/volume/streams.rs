@@ -5,11 +5,12 @@
 //! trait method in `volume_impl` delegates to.
 
 use super::SmbVolume;
-use super::mapping::{attributes_of, map_smb_error, user_flags_of};
+use super::mapping::{map_smb_error, user_flags_of};
 use super::session::update_state_on_smb_error;
+use super::stamping::{source_times, stamp_writer, stamped};
 use cmdr_fs::metadata::{CarriedMetadata, MetadataClasses, UserFlags};
 use cmdr_fs::volume::{
-    ChannelReadStream, MutationEvent, StreamLength, Volume, VolumeError, VolumeReadStream, WriteMode,
+    ChannelReadStream, MutationEvent, StreamLength, StreamWritten, Volume, VolumeError, VolumeReadStream, WriteMode,
 };
 use log::{debug, warn};
 use std::path::Path;
@@ -202,47 +203,6 @@ struct OpenedDownload {
 /// the name's own (`user_flags_of`).
 fn name_of(smb_path: &str) -> &str {
     smb_path.rsplit(['\\', '/']).next().unwrap_or(smb_path)
-}
-
-/// What a copy stamps on what it wrote, in one `FILE_BASIC_INFORMATION`: the
-/// source's `LastWriteTime` and `CreationTime`, and `HIDDEN` when the source is
-/// Hidden, so neither costs a frame of its own. The server keeps its own access
-/// time. `None` when the source has none of them, which leaves the server's.
-///
-/// Only Hidden rides here ([`SmbVolume::METADATA_CAPS`]'s `staged_flags`):
-/// this lands on the staged temp, and Read-only waits for the landing. Sending
-/// attributes REPLACES the settable set, so a Hidden copy doesn't wear the
-/// `ARCHIVE` a fresh file gets, which nothing on a Mac reads.
-fn source_times(
-    modified: Option<std::time::SystemTime>,
-    created: Option<std::time::SystemTime>,
-    flags: UserFlags,
-) -> Option<smb2::FileTimes> {
-    let staged = flags.intersection(SmbVolume::METADATA_CAPS.staged_flags);
-    if modified.is_none() && created.is_none() && staged.is_empty() {
-        return None;
-    }
-    let mut times = smb2::FileTimes::new();
-    if let Some(modified) = modified {
-        times = times.set_modified(modified);
-    }
-    if let Some(created) = created {
-        times = times.set_created(created);
-    }
-    if !staged.is_empty() {
-        times = times.set_attributes(attributes_of(staged));
-    }
-    Some(times)
-}
-
-/// Stamps the source's date on a streaming writer's OWN handle, before
-/// `finish()`: the server rewrites the date when a writing handle closes, so a
-/// path stamp while this one is open would lose to that close. Best effort: a
-/// date that won't set leaves the server's, and the copy goes on.
-async fn stamp_writer(writer: &mut smb2::client::stream::FileWriter, times: smb2::FileTimes, smb_path: &str) {
-    if let Err(e) = writer.set_times(times).await {
-        warn!("SmbVolume::write_from_stream: path={smb_path:?} keeps the server's date, not the source's: {e}");
-    }
 }
 
 impl VolumeReadStream for InlineReadStream {
@@ -475,7 +435,7 @@ impl SmbVolume {
         length: StreamLength,
         mut stream: Box<dyn VolumeReadStream>,
         on_progress: &'a (dyn Fn(cmdr_fs::volume::StreamWriteProgress) -> std::ops::ControlFlow<()> + Sync),
-    ) -> Pin<Box<dyn Future<Output = Result<u64, VolumeError>> + Send + 'a>> {
+    ) -> Pin<Box<dyn Future<Output = Result<StreamWritten, VolumeError>> + Send + 'a>> {
         // Lock-free streaming write path.
         //
         // Both branches below drive the upload on a cloned `Connection`
@@ -510,6 +470,8 @@ impl SmbVolume {
             // no mode, and xattrs wait for named streams (vdavid/smb2#9).
             let carried = stream.metadata(MetadataClasses::CREATED | MetadataClasses::FLAGS);
             let times = source_times(stream.modified_at(), carried.created, carried.flags);
+            // Set when the server refuses `times`, for the write's report.
+            let mut times_refused = false;
 
             // Best-effort delete of a partial file on a FRESH cloned session.
             // Once a `FileWriter` is open and bytes have streamed into it, an
@@ -630,6 +592,7 @@ impl SmbVolume {
                                 warn!(
                                     "SmbVolume::write_from_stream: path={smb_path:?} keeps the server's date, not the source's: {e}"
                                 );
+                                times_refused = true;
                             }
                             break 'write written;
                         }
@@ -662,7 +625,7 @@ impl SmbVolume {
                     // The source signalled end-of-stream by returning None
                     // above (we exited the drain loop). No further chunks.
                     if let Some(times) = times {
-                        stamp_writer(&mut writer, times, &smb_path).await;
+                        times_refused = !stamp_writer(&mut writer, times, &smb_path).await;
                     }
                     // `finish()` consumes the writer, so on failure the
                     // handle is already gone (best-effort delete only).
@@ -745,7 +708,7 @@ impl SmbVolume {
                 }
 
                 if let Some(times) = times {
-                    stamp_writer(&mut writer, times, &smb_path).await;
+                    times_refused = !stamp_writer(&mut writer, times, &smb_path).await;
                 }
                 // `finish()` consumes the writer; on failure the handle is
                 // already gone, so we can only best-effort delete the partial.
@@ -787,7 +750,7 @@ impl SmbVolume {
                 )
                 .await;
             }
-            Ok(bytes_written)
+            Ok(stamped(bytes_written, &carried, stream.modified_at(), times_refused))
         })
     }
 }

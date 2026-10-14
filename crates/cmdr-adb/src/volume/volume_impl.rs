@@ -14,8 +14,8 @@ use std::time::Duration;
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::{
     BatchScanResult, CopyScanResult, DirectoryCreation, LaneKey, ListingProgress, MutationEvent, Retirement,
-    ScanBoundary, ScanConflict, SignInShape, SourceItemInfo, SpaceInfo, StreamLength, StreamWriteProgress, Volume,
-    VolumeError, VolumeReadStream, WatchCoverage, WriteMode,
+    ScanBoundary, ScanConflict, SignInShape, SourceItemInfo, SpaceInfo, StreamLength, StreamWriteProgress,
+    StreamWritten, Volume, VolumeError, VolumeReadStream, WatchCoverage, WriteMode,
 };
 use cmdr_fs::volume::{patching, scan_walk};
 use tokio_util::sync::CancellationToken;
@@ -284,7 +284,7 @@ impl Volume for AdbVolume {
         length: StreamLength,
         stream: Box<dyn VolumeReadStream>,
         on_progress: &'a (dyn Fn(StreamWriteProgress) -> ControlFlow<()> + Sync),
-    ) -> Pin<Box<dyn Future<Output = Result<u64, VolumeError>> + Send + 'a>> {
+    ) -> Pin<Box<dyn Future<Output = Result<StreamWritten, VolumeError>> + Send + 'a>> {
         let write = self.write_from_stream_impl(dest, mode, length, stream, on_progress);
         Box::pin(async move { self.noting(write).await })
     }

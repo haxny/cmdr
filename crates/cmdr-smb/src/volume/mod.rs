@@ -36,6 +36,7 @@ mod scan_pool;
 mod session;
 mod slow_calls;
 mod spelling;
+mod stamping;
 mod state;
 mod streams;
 mod volume_impl;

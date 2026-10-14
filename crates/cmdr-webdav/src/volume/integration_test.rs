@@ -198,6 +198,7 @@ async fn write(volume: &WebdavVolume, path: &Path, bytes: Vec<u8>) -> Result<u64
             &|_| ControlFlow::Continue(()),
         )
         .await
+        .map(|written| written.bytes)
 }
 
 // ── The listing surface ──────────────────────────────────────────────

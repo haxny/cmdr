@@ -141,7 +141,7 @@ async fn an_unknown_length_multichunk_write_streams_and_reports_its_actual_count
         .expect(FIXTURE);
 
     assert_eq!(
-        written,
+        written.bytes,
         bytes.len() as u64,
         "the writer returns bytes the server accepted"
     );
@@ -622,6 +622,7 @@ async fn write(volume: &SftpVolume, path: &str, bytes: Vec<u8>) -> Result<u64, V
             &|_| ControlFlow::Continue(()),
         )
         .await
+        .map(|written| written.bytes)
 }
 
 /// Reads a whole file back, the way the copy path does.

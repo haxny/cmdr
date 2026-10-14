@@ -61,8 +61,8 @@ pub async fn assert_write_from_stream_keeps_metadata(volume: &dyn Volume, dest: 
         )
         .await;
     assert_eq!(
-        written.as_ref().ok(),
-        Some(&length),
+        written.as_ref().ok().map(|written| written.bytes),
+        Some(length),
         "the write onto {} must land every byte; got {written:?}",
         dest.display()
     );

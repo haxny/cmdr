@@ -37,7 +37,7 @@ use super::merge_ctx::{CreatedPaths, MergeCtx};
 use super::preflight::SourceFileFacts;
 use super::server_side_copy::try_server_side_copy;
 use super::transfer_error::{AtPath, PathedVolumeError, hard_abort_error};
-use crate::file_system::volume::{Volume, VolumeError, VolumeReadStream};
+use crate::file_system::volume::{StreamWritten, Volume, VolumeError, VolumeReadStream};
 
 /// Debounce window for the foreground auto-yield: after foreground work drains,
 /// the checkpoint stays parked until the device has been quiet for this long
@@ -565,8 +565,8 @@ pub(super) async fn stream_pipe_file(
             },
             ok => ok,
         };
-        let bytes = match write_result {
-            Ok(bytes) => {
+        let written = match write_result {
+            Ok(written) => {
                 if attempt > 1 {
                     log::info!(
                         target: "copy",
@@ -575,7 +575,7 @@ pub(super) async fn stream_pipe_file(
                         retry::MAX_ATTEMPTS,
                     );
                 }
-                bytes
+                written
             }
             Err(e) if retry::should_retry(&e, attempt, state) => {
                 // The staged bytes are a partial of an attempt we're abandoning;
@@ -631,7 +631,10 @@ pub(super) async fn stream_pipe_file(
         // Past the last byte: give the file its final name. What the source
         // carries beyond its bytes is already on it: the destination asked the
         // stream and put it on the staged write (`Volume::write_from_stream`),
-        // all but the flags that wait for the final name.
+        // all but the flags that wait for the final name. What it refused on
+        // the way joins what its caps couldn't hold, for the loss note.
+        let bytes = written.bytes;
+        let lost = lost.union(written.refused());
         let landing_from = staged.target().to_path_buf();
         match staged.commit(dest_volume).await {
             Ok(()) => {
@@ -740,7 +743,7 @@ async fn cancelled_or_never(token: Option<&tokio_util::sync::CancellationToken>)
 /// How one attempt at a file's write ended.
 enum WriteAttemptOutcome {
     /// The destination's `write_from_stream` returned, one way or the other.
-    Finished(Result<u64, VolumeError>),
+    Finished(Result<StreamWritten, VolumeError>),
     /// TIER 2 ended the wait: the write future was dropped mid-flight and the
     /// backend ran none of its own cleanup. ❌ Nothing may go back through that
     /// connection now; the staged partial is left to the sweep.

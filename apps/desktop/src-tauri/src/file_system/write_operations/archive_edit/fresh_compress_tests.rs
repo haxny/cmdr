@@ -1,7 +1,7 @@
 //! Fresh compression coordinator shutdown and stage-validation tests.
 
 use super::*;
-use crate::file_system::volume::{InMemoryVolume, ListingProgress, SpaceInfo};
+use crate::file_system::volume::{InMemoryVolume, ListingProgress, SpaceInfo, StreamWritten};
 use crate::file_system::write_operations::archive_edit::fresh_plan::FreshPlan;
 use crate::file_system::write_operations::archive_edit::fresh_zip::{FreshZipEntry, FreshZipSource};
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
@@ -68,7 +68,7 @@ impl Volume for RefuseAfterProducerProgress {
         _length: StreamLength,
         stream: Box<dyn VolumeReadStream>,
         _on_progress: &'a (dyn Fn(StreamWriteProgress) -> ControlFlow<()> + Sync),
-    ) -> Pin<Box<dyn Future<Output = Result<u64, VolumeError>> + Send + 'a>> {
+    ) -> Pin<Box<dyn Future<Output = Result<StreamWritten, VolumeError>> + Send + 'a>> {
         Box::pin(async move {
             self.producer_progressed.notified().await;
             drop(stream);
@@ -258,7 +258,7 @@ impl Volume for GatedDestination {
         length: StreamLength,
         mut stream: Box<dyn VolumeReadStream>,
         on_progress: &'a (dyn Fn(StreamWriteProgress) -> ControlFlow<()> + Sync),
-    ) -> Pin<Box<dyn Future<Output = Result<u64, VolumeError>> + Send + 'a>> {
+    ) -> Pin<Box<dyn Future<Output = Result<StreamWritten, VolumeError>> + Send + 'a>> {
         use std::sync::atomic::Ordering;
         Box::pin(async move {
             let mut written = 0u64;
@@ -266,7 +266,7 @@ impl Volume for GatedDestination {
             loop {
                 let Some(chunk) = stream.next_chunk().await else {
                     self.closed_on_eof.store(true, Ordering::SeqCst);
-                    return Ok(written);
+                    return Ok(StreamWritten::nothing_refused(written));
                 };
                 let chunk = chunk?;
                 if written == 0 {
@@ -274,7 +274,7 @@ impl Volume for GatedDestination {
                 }
                 written += chunk.len() as u64;
                 if matches!(self.script, AfterFirstChunk::ClaimSuccess) {
-                    return Ok(written);
+                    return Ok(StreamWritten::nothing_refused(written));
                 }
                 self.at_gate.store(true, Ordering::SeqCst);
                 let _ = gate.wait_for(|open| *open).await;

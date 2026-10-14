@@ -151,7 +151,7 @@ async fn the_write_path_lands_a_file_byte_exact_on_sabre_dav() {
         .await
         .expect(FIXTURE);
 
-    assert_eq!(written, bytes.len() as u64);
+    assert_eq!(written.bytes, bytes.len() as u64);
     assert_same_bytes(&read_whole(&volume, &path).await, &bytes, "a write to sabre/dav");
     // `CreateNew`: refused over the file just written (by sabre/dav's 412 on
     // `Overwrite: F`), landed whole on a free name.

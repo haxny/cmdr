@@ -62,7 +62,7 @@ async fn smb_integration_write_from_stream_local_source_large_file() {
         .await
         .unwrap();
 
-    assert_eq!(bytes, size as u64);
+    assert_eq!(bytes.bytes, size as u64);
     assert!(
         progress_calls.load(Ordering::Relaxed) >= 2,
         "streaming write should call progress multiple times for a multi-chunk source"

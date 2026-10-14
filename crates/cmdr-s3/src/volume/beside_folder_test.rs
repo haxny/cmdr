@@ -295,7 +295,7 @@ async fn overwriting_the_file_row_replaces_the_file(service: FixtureService) {
         .await
         .expect(FIXTURE);
 
-    assert_eq!(written, replacement.len() as u64, "{}", service.key);
+    assert_eq!(written.bytes, replacement.len() as u64, "{}", service.key);
     assert_eq!(
         read_back(&s.volume, &s.file_row()).await,
         replacement,

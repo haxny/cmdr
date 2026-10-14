@@ -303,6 +303,7 @@ async fn write_new(volume: &dyn Volume, dest: &Path, content: &[u8]) -> Result<u
             &|_| std::ops::ControlFlow::Continue(()),
         )
         .await
+        .map(|written| written.bytes)
 }
 
 struct PollCountingUnknownStream {

@@ -190,7 +190,7 @@ async fn unknown_write_streams_all_bytes_and_reports_the_accepted_count() {
         .await;
     sender.await.unwrap();
 
-    assert_eq!(written.unwrap(), 12);
+    assert_eq!(written.unwrap().bytes, 12);
     assert_eq!(std::fs::read(test_dir.join("notes.txt")).unwrap(), b"first-second");
     let progress = progress.lock().unwrap();
     assert_eq!(progress.last().unwrap().bytes_written, 12);

@@ -19,7 +19,8 @@ use super::tests::make_state;
 use super::*;
 use crate::file_system::volume::WriteMode;
 use crate::file_system::volume::{
-    CopyScanResult, InMemoryVolume, ListingProgress, SpaceInfo, StreamLength, StreamWriteProgress, VolumeReadStream,
+    CopyScanResult, InMemoryVolume, ListingProgress, SpaceInfo, StreamLength, StreamWriteProgress, StreamWritten,
+    VolumeReadStream,
 };
 use crate::file_system::write_operations::types::{ConflictResolution, VolumeCopyConfig, WriteOperationError};
 use cmdr_fs::entry::FileEntry;
@@ -198,7 +199,7 @@ impl Volume for CaseFoldingDest {
         length: StreamLength,
         stream: Box<dyn VolumeReadStream>,
         on_progress: &'a (dyn Fn(StreamWriteProgress) -> std::ops::ControlFlow<()> + Sync),
-    ) -> Pin<Box<dyn Future<Output = Result<u64, VolumeError>> + Send + 'a>> {
+    ) -> Pin<Box<dyn Future<Output = Result<StreamWritten, VolumeError>> + Send + 'a>> {
         Box::pin(async move {
             let folded = self.fold(dest).await;
             self.inner
@@ -533,7 +534,7 @@ impl Volume for LateArrivalDest {
         length: StreamLength,
         stream: Box<dyn VolumeReadStream>,
         on_progress: &'a (dyn Fn(StreamWriteProgress) -> std::ops::ControlFlow<()> + Sync),
-    ) -> Pin<Box<dyn Future<Output = Result<u64, VolumeError>> + Send + 'a>> {
+    ) -> Pin<Box<dyn Future<Output = Result<StreamWritten, VolumeError>> + Send + 'a>> {
         self.inner.write_from_stream(dest, mode, length, stream, on_progress)
     }
     fn open_read_stream<'a>(

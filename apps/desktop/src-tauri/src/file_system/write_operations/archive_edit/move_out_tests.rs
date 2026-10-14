@@ -8,7 +8,7 @@ use std::pin::Pin;
 
 use super::test_support::*;
 use crate::file_system::volume::WriteMode;
-use crate::file_system::volume::{DirectoryCreation, StreamLength, StreamWriteProgress, VolumeError};
+use crate::file_system::volume::{DirectoryCreation, StreamLength, StreamWriteProgress, StreamWritten, VolumeError};
 
 /// A destination volume whose streaming write ALWAYS fails: it delegates reads,
 /// metadata, and space to an inner `InMemoryVolume` but never implements
@@ -458,7 +458,7 @@ impl Volume for FailOnNameVolume {
         length: StreamLength,
         stream: Box<dyn crate::file_system::volume::VolumeReadStream>,
         on_progress: &'a (dyn Fn(StreamWriteProgress) -> std::ops::ControlFlow<()> + Sync),
-    ) -> Pin<Box<dyn Future<Output = Result<u64, VolumeError>> + Send + 'a>> {
+    ) -> Pin<Box<dyn Future<Output = Result<StreamWritten, VolumeError>> + Send + 'a>> {
         let fails = dest
             .file_name()
             .map(|n| n.to_string_lossy() == self.fail_name)

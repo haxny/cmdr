@@ -43,6 +43,7 @@ async fn write(volume: &S3Volume, path: &Path, mode: WriteMode, bytes: Vec<u8>) 
     volume
         .write_from_stream(path, mode, length, Box::new(source), &|_| ControlFlow::Continue(()))
         .await
+        .map(|written| written.bytes)
 }
 
 async fn copy(volume: &S3Volume, from: &str, to: &str) -> Result<u64, VolumeError> {

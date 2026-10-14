@@ -72,7 +72,8 @@ async fn put(promised: usize, actual: usize, fail: bool) -> (FakeS3, Result<u64,
             Box::new(source),
             &|_| ControlFlow::Continue(()),
         )
-        .await;
+        .await
+        .map(|written| written.bytes);
     (s3, written)
 }
 

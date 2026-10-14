@@ -18,8 +18,8 @@ use cmdr_fs::volume::patching;
 use cmdr_fs::volume::scan_walk;
 use cmdr_fs::volume::{
     BatchScanResult, CopyScanResult, DirectoryCreation, EntryKind, LaneKey, ListingProgress, MutationEvent, Retirement,
-    ScanBoundary, ScanConflict, SignInShape, SourceItemInfo, SpaceInfo, StreamLength, StreamWriteProgress, Volume,
-    VolumeError, VolumeReadStream, WatchCoverage, WriteMode,
+    ScanBoundary, ScanConflict, SignInShape, SourceItemInfo, SpaceInfo, StreamLength, StreamWriteProgress,
+    StreamWritten, Volume, VolumeError, VolumeReadStream, WatchCoverage, WriteMode,
 };
 
 use crate::auth::AuthRungUsed;
@@ -325,7 +325,7 @@ impl Volume for SftpVolume {
         length: StreamLength,
         stream: Box<dyn VolumeReadStream>,
         on_progress: &'a (dyn Fn(StreamWriteProgress) -> ControlFlow<()> + Sync),
-    ) -> Pin<Box<dyn Future<Output = Result<u64, VolumeError>> + Send + 'a>> {
+    ) -> Pin<Box<dyn Future<Output = Result<StreamWritten, VolumeError>> + Send + 'a>> {
         Box::pin(async move {
             self.noting(self.write_from_stream_impl(dest, mode, length, stream, on_progress))
                 .await

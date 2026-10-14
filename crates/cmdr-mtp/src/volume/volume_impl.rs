@@ -10,7 +10,7 @@ use crate::connection::{MtpConnectionError, MtpDeleteScope, UploadedFile};
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::{
     BatchScanResult, CopyScanResult, LaneKey, MutationEvent, ScanConflict, SourceItemInfo, SpaceInfo, StreamLength,
-    StreamWriteProgress, Volume, VolumeError, VolumeReadStream, WatchCoverage, WriteMode,
+    StreamWriteProgress, StreamWritten, Volume, VolumeError, VolumeReadStream, WatchCoverage, WriteMode,
 };
 use log::debug;
 use std::future::Future;
@@ -693,7 +693,7 @@ impl Volume for MtpVolume {
         length: StreamLength,
         stream: Box<dyn VolumeReadStream>,
         on_progress: &'a (dyn Fn(StreamWriteProgress) -> std::ops::ControlFlow<()> + Sync),
-    ) -> Pin<Box<dyn Future<Output = Result<u64, VolumeError>> + Send + 'a>> {
+    ) -> Pin<Box<dyn Future<Output = Result<StreamWritten, VolumeError>> + Send + 'a>> {
         let Some(size) = length.known() else {
             return Box::pin(async { Err(VolumeError::NotSupported) });
         };
@@ -746,7 +746,8 @@ impl Volume for MtpVolume {
                 self.notify_mutation(&self.volume_id, parent, MutationEvent::Created(filename))
                     .await;
             }
-            Ok(bytes_written)
+            // MTP keeps no metadata beyond the date `SendObjectInfo` carries.
+            Ok(StreamWritten::nothing_refused(bytes_written))
         })
     }
 }

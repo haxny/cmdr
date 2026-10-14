@@ -9,7 +9,8 @@ use crate::ignore_poison::RwLockIgnorePoison;
 use crate::metadata::{CarriedMetadata, ClassOutcome, MetadataCaps, MetadataClasses, MetadataReport};
 use crate::volume::{
     BackendKind, ConnectionState, CopyScanResult, IndexWalk, LaneKey, RenameWork, ScanConflict, SourceItemInfo,
-    SpaceInfo, StreamLength, StreamWriteProgress, Volume, VolumeError, VolumeReadStream, WriteAccess, WriteMode,
+    SpaceInfo, StreamLength, StreamWriteProgress, StreamWritten, Volume, VolumeError, VolumeReadStream, WriteAccess,
+    WriteMode,
 };
 use std::future::Future;
 use std::path::{Path, PathBuf};
@@ -666,7 +667,7 @@ impl Volume for InMemoryVolume {
         length: StreamLength,
         mut stream: Box<dyn VolumeReadStream>,
         on_progress: &'a (dyn Fn(StreamWriteProgress) -> std::ops::ControlFlow<()> + Sync),
-    ) -> Pin<Box<dyn Future<Output = Result<u64, VolumeError>> + Send + 'a>> {
+    ) -> Pin<Box<dyn Future<Output = Result<StreamWritten, VolumeError>> + Send + 'a>> {
         let Some(size) = length.known() else {
             return Box::pin(async { Err(VolumeError::NotSupported) });
         };
@@ -676,6 +677,9 @@ impl Volume for InMemoryVolume {
             // after the landing rename (`Volume::apply_metadata`).
             let mut carried = stream.metadata(self.metadata_caps.stores);
             carried.flags = carried.flags.intersection(self.metadata_caps.staged_flags);
+            let kept = carried
+                .clone()
+                .restricted_to(MetadataClasses::ALL.without(self.write_refuses));
             let mut data = Vec::new();
             let mut bytes_written = 0u64;
 
@@ -709,10 +713,10 @@ impl Volume for InMemoryVolume {
             {
                 self.set_modified_at(dest, Some(secs.as_secs()));
             }
-            if !carried.is_empty() {
-                self.set_carried_metadata(dest, carried);
+            if !kept.is_empty() {
+                self.set_carried_metadata(dest, kept);
             }
-            Ok(bytes_written)
+            Ok(self.written(bytes_written, &carried, stream.modified_at()))
         })
     }
 

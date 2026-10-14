@@ -32,6 +32,7 @@ async fn write(volume: &S3Volume, path: &Path, mode: WriteMode, source: BytesSou
     volume
         .write_from_stream(path, mode, length, Box::new(source), &|_| ControlFlow::Continue(()))
         .await
+        .map(|written| written.bytes)
 }
 
 async fn small_and_large_uploads_round_trip_with_their_mtime(service: FixtureService) {

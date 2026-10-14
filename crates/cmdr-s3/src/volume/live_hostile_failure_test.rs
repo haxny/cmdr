@@ -386,7 +386,10 @@ async fn live_hostile_crash_recovery() {
         let finished = task.await.expect("the upload task");
         let intact = pattern_mismatch(&second, &at(&second, &key), size, 12).await;
         m.check(
-            started && swept == 0 && finished.as_ref().ok() == Some(&size) && intact.is_none(),
+            started
+                && swept == 0
+                && finished.as_ref().ok().map(|written| written.bytes) == Some(size)
+                && intact.is_none(),
             "an upload in flight in this process survives a second connect's sweep",
             format!("recorded: {started}, swept {swept}, upload {finished:?}, read back {intact:?}"),
         );

@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
 use crate::entry::FileEntry;
+use crate::metadata::{CarriedMetadata, MetadataClasses, MetadataReport};
 
 /// Whether a background index walk descends into one directory it met in a
 /// listing ([`Volume::index_walk`](super::Volume::index_walk)).
@@ -111,6 +112,55 @@ pub struct StreamWriteProgress {
     pub bytes_written: u64,
     /// The declared final length, or unknown for generated output.
     pub expected_length: StreamLength,
+}
+
+/// What a [`Volume::write_from_stream`](super::Volume::write_from_stream) that
+/// succeeded did: the bytes it wrote, and what of the source's metadata the
+/// destination refused on the way.
+///
+/// The refusals are already narrowed to what the source had worth keeping
+/// ([`CarriedMetadata::worth_keeping`]), so a caller counts them as they are:
+/// the only constructor that takes a report narrows it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct StreamWritten {
+    /// Bytes written.
+    pub bytes: u64,
+    refused: MetadataClasses,
+}
+
+impl StreamWritten {
+    /// `bytes` written, and nothing the destination was handed refused: every
+    /// class kept, or one it can't hold at all (which `MetadataCaps` already
+    /// says).
+    pub const fn nothing_refused(bytes: u64) -> Self {
+        Self {
+            bytes,
+            refused: MetadataClasses::NONE,
+        }
+    }
+
+    /// `bytes` written, and `report` saying what became of `carried` (and the
+    /// source's `modified` date). A refused class counts only when `carried`
+    /// had something worth keeping in it, against a fresh file's default mode.
+    pub fn with_report(
+        bytes: u64,
+        report: &MetadataReport,
+        carried: &CarriedMetadata,
+        modified: Option<std::time::SystemTime>,
+    ) -> Self {
+        Self {
+            bytes,
+            refused: report
+                .refused_classes()
+                .intersection(carried.worth_keeping(modified, crate::metadata::default_file_mode())),
+        }
+    }
+
+    /// The classes the destination refused of what the source had worth
+    /// keeping.
+    pub const fn refused(&self) -> MetadataClasses {
+        self.refused
+    }
 }
 
 /// Whether [`Volume::create_directory_all`](super::Volume::create_directory_all)

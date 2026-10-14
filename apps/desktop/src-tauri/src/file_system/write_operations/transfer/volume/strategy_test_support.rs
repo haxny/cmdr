@@ -19,7 +19,7 @@ use std::sync::{Arc, Mutex as StdMutex};
 use std::time::Duration;
 
 use crate::file_system::volume::{
-    ListingProgress, StreamLength, StreamWriteProgress, Volume, VolumeError, VolumeReadStream,
+    ListingProgress, StreamLength, StreamWriteProgress, StreamWritten, Volume, VolumeError, VolumeReadStream,
 };
 use crate::ignore_poison::IgnorePoison;
 use cmdr_fs::entry::FileEntry;
@@ -213,7 +213,7 @@ impl Volume for FailOnceStaleDest {
         length: StreamLength,
         _stream: Box<dyn VolumeReadStream>,
         _on_progress: &'a (dyn Fn(StreamWriteProgress) -> ControlFlow<()> + Sync),
-    ) -> Pin<Box<dyn Future<Output = Result<u64, VolumeError>> + Send + 'a>> {
+    ) -> Pin<Box<dyn Future<Output = Result<StreamWritten, VolumeError>> + Send + 'a>> {
         let Some(size) = length.known() else {
             return Box::pin(async { Err(VolumeError::NotSupported) });
         };
@@ -222,7 +222,7 @@ impl Volume for FailOnceStaleDest {
             if attempt == 0 {
                 Err(VolumeError::StaleDestinationHandle("/Documents".to_string()))
             } else {
-                Ok(size)
+                Ok(StreamWritten::nothing_refused(size))
             }
         })
     }
@@ -335,7 +335,7 @@ impl Volume for FlakyDest {
         length: StreamLength,
         mut stream: Box<dyn VolumeReadStream>,
         on_progress: &'a (dyn Fn(StreamWriteProgress) -> ControlFlow<()> + Sync),
-    ) -> Pin<Box<dyn Future<Output = Result<u64, VolumeError>> + Send + 'a>> {
+    ) -> Pin<Box<dyn Future<Output = Result<StreamWritten, VolumeError>> + Send + 'a>> {
         let Some(size) = length.known() else {
             return Box::pin(async { Err(VolumeError::NotSupported) });
         };
@@ -594,7 +594,7 @@ impl Volume for WedgedThenWorkingDest {
         length: StreamLength,
         stream: Box<dyn VolumeReadStream>,
         on_progress: &'a (dyn Fn(StreamWriteProgress) -> ControlFlow<()> + Sync),
-    ) -> Pin<Box<dyn Future<Output = Result<u64, VolumeError>> + Send + 'a>> {
+    ) -> Pin<Box<dyn Future<Output = Result<StreamWritten, VolumeError>> + Send + 'a>> {
         let Some(size) = length.known() else {
             return Box::pin(async { Err(VolumeError::NotSupported) });
         };
@@ -757,7 +757,7 @@ impl Volume for TierOneWitnessDest {
         length: StreamLength,
         mut stream: Box<dyn VolumeReadStream>,
         on_progress: &'a (dyn Fn(StreamWriteProgress) -> ControlFlow<()> + Sync),
-    ) -> Pin<Box<dyn Future<Output = Result<u64, VolumeError>> + Send + 'a>> {
+    ) -> Pin<Box<dyn Future<Output = Result<StreamWritten, VolumeError>> + Send + 'a>> {
         let Some(size) = length.known() else {
             return Box::pin(async { Err(VolumeError::NotSupported) });
         };
@@ -781,7 +781,7 @@ impl Volume for TierOneWitnessDest {
                     return Err(VolumeError::Cancelled("Operation cancelled by user".to_string()));
                 }
             }
-            Ok(data.len() as u64)
+            Ok(StreamWritten::nothing_refused(data.len() as u64))
         })
     }
 }

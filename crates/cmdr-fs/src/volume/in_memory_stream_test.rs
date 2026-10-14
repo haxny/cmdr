@@ -54,7 +54,7 @@ async fn test_round_trip_stream_copy() {
         )
         .await
         .unwrap();
-    assert_eq!(bytes, data.len() as u64);
+    assert_eq!(bytes.bytes, data.len() as u64);
 
     // Verify content integrity via streaming
     let mut stream = dest.open_read_stream(Path::new("/payload.bin")).await.unwrap();
@@ -161,7 +161,7 @@ async fn test_write_from_stream_creates_file() {
         .await
         .unwrap();
 
-    assert_eq!(bytes, 14);
+    assert_eq!(bytes.bytes, 14);
     // Verify content arrived correctly
     let mut verify = dest.open_read_stream(Path::new("/data.bin")).await.unwrap();
     let chunk = verify.next_chunk().await.unwrap().unwrap();
@@ -196,7 +196,7 @@ async fn test_write_from_stream_progress_callback() {
         .await
         .unwrap();
 
-    assert_eq!(bytes, 100_000);
+    assert_eq!(bytes.bytes, 100_000);
     assert!(
         progress_calls.load(std::sync::atomic::Ordering::Relaxed) >= 2,
         "expected at least 2 progress calls for 100 KB at 64 KB chunks"

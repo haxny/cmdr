@@ -298,6 +298,7 @@ async fn write_prefix(volume: &SftpVolume, depth: usize, name: &str) -> u64 {
         )
         .await
         .expect("the bench server's export is writable")
+        .bytes
 }
 
 /// `width` uploads at once, as one aggregate rate.

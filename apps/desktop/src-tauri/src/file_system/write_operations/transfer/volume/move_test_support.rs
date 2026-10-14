@@ -15,7 +15,7 @@ use std::pin::Pin;
 use std::time::Duration;
 
 use crate::file_system::volume::WriteMode;
-use crate::file_system::volume::{InMemoryVolume, StreamLength, StreamWriteProgress, VolumeError};
+use crate::file_system::volume::{InMemoryVolume, StreamLength, StreamWriteProgress, StreamWritten, VolumeError};
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::types::{
     WriteConflictEvent, WriteConflictResolvedEvent, WriteErrorEvent, WriteProgressEvent, WriteSourceItemDoneEvent,
@@ -228,7 +228,7 @@ impl Volume for MoveRenameFailsDestVolume {
         length: StreamLength,
         stream: Box<dyn crate::file_system::volume::VolumeReadStream>,
         on_progress: &'a (dyn Fn(StreamWriteProgress) -> std::ops::ControlFlow<()> + Sync),
-    ) -> Pin<Box<dyn Future<Output = Result<u64, VolumeError>> + Send + 'a>> {
+    ) -> Pin<Box<dyn Future<Output = Result<StreamWritten, VolumeError>> + Send + 'a>> {
         self.inner.write_from_stream(dest, mode, length, stream, on_progress)
     }
     fn rename<'a>(

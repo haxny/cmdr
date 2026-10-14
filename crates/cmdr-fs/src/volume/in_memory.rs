@@ -10,11 +10,11 @@
 
 #[cfg(doc)]
 use super::Volume; // the knobs' docs link the trait methods each one bends
-use super::{BackendKind, ConnectionState, IndexWalk, SpaceInfo, VolumeError};
+use super::{BackendKind, ConnectionState, IndexWalk, SpaceInfo, StreamWritten, VolumeError};
 use crate::entry::FileEntry;
 use crate::ignore_poison::IgnorePoison;
 use crate::ignore_poison::RwLockIgnorePoison;
-use crate::metadata::{CarriedMetadata, MetadataCaps};
+use crate::metadata::{CarriedMetadata, ClassOutcome, MetadataCaps, MetadataClasses, MetadataReport};
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::RwLock;
@@ -153,6 +153,9 @@ pub struct InMemoryVolume {
     /// [`Self::REFERENCE_CAPS`]; set via [`Self::with_metadata_caps`] to stand in
     /// for a backend in the loss-note matrix.
     metadata_caps: MetadataCaps,
+    /// Classes `write_from_stream` refuses at runtime though its caps claim
+    /// them, set via [`Self::with_write_refusing`]. Empty by default.
+    write_refuses: MetadataClasses,
     /// [`Volume::index_walk`] answers set by
     /// [`with_index_walk`](Self::with_index_walk), by directory path. Any other
     /// directory keeps the trait's default.
@@ -191,6 +194,7 @@ impl InMemoryVolume {
             connection_state: None,
             backend_kind: BackendKind::Local,
             metadata_caps: Self::REFERENCE_CAPS,
+            write_refuses: MetadataClasses::NONE,
             index_walk_overrides: Vec::new(),
             #[cfg(feature = "playwright-e2e")]
             injected_error: std::sync::Mutex::new(None),
@@ -225,6 +229,23 @@ impl InMemoryVolume {
     pub fn with_metadata_caps(mut self, caps: MetadataCaps) -> Self {
         self.metadata_caps = caps;
         self
+    }
+
+    /// Makes `write_from_stream` refuse `classes` at runtime, whatever its caps
+    /// claim: they never land, and the write reports them refused. Stands in
+    /// for a destination that says it keeps a class and then doesn't (a NAS
+    /// rejecting a creation date, a `chmod` the server refuses).
+    pub fn with_write_refusing(mut self, classes: MetadataClasses) -> Self {
+        self.write_refuses = classes;
+        self
+    }
+
+    /// What a write of `bytes` reports: every class of `carried` in
+    /// [`Self::with_write_refusing`]'s set refused.
+    fn written(&self, bytes: u64, carried: &CarriedMetadata, modified: Option<std::time::SystemTime>) -> StreamWritten {
+        let refused = carried.clone().restricted_to(self.write_refuses);
+        let report = MetadataReport::uniform(&refused, None, ClassOutcome::Refused);
+        StreamWritten::with_report(bytes, &report, carried, modified)
     }
 
     /// Makes [`Volume::index_walk`] answer `walk` for the directory at `dir`,

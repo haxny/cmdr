@@ -33,8 +33,10 @@ use std::pin::Pin;
 use std::sync::Arc;
 use std::time::SystemTime;
 
-use cmdr_fs::metadata::{MetadataClasses, default_file_mode, routed_mode};
-use cmdr_fs::volume::{StreamLength, StreamWriteProgress, VolumeError, VolumeReadStream, WriteMode};
+use cmdr_fs::metadata::{
+    CarriedMetadata, ClassOutcome, MetadataClasses, MetadataReport, default_file_mode, routed_mode,
+};
+use cmdr_fs::volume::{StreamLength, StreamWriteProgress, StreamWritten, VolumeError, VolumeReadStream, WriteMode};
 use futures_util::StreamExt;
 use futures_util::stream::FuturesUnordered;
 use log::{debug, warn};
@@ -196,7 +198,7 @@ impl SftpVolume {
         length: StreamLength,
         stream: Box<dyn VolumeReadStream>,
         on_progress: &(dyn Fn(StreamWriteProgress) -> ControlFlow<()> + Sync),
-    ) -> Result<u64, VolumeError> {
+    ) -> Result<StreamWritten, VolumeError> {
         self.upload(dest, mode, length, stream, WRITE_WINDOW_DEPTH, on_progress)
             .await
     }
@@ -211,7 +213,7 @@ impl SftpVolume {
         mut stream: Box<dyn VolumeReadStream>,
         depth: usize,
         on_progress: &(dyn Fn(StreamWriteProgress) -> ControlFlow<()> + Sync),
-    ) -> Result<u64, VolumeError> {
+    ) -> Result<StreamWritten, VolumeError> {
         let remote = self.to_remote_path(dest)?;
         // ❗ Cloned out from under a short read guard, and the guard released
         // before a byte moves. An upload that held it would serialize every other
@@ -259,9 +261,18 @@ impl SftpVolume {
                     self.remove_partial(&session, &remote).await;
                     return Err(e);
                 }
-                keep_source_attrs(&session, &remote, stream.modified_at(), landed_mode).await;
+                let report = keep_source_attrs(&session, &remote, stream.modified_at(), landed_mode).await;
                 cmdr_fs::volume::patching::patch_created(self, dest).await;
-                Ok(written)
+                let carried = CarriedMetadata {
+                    mode: landed_mode,
+                    ..CarriedMetadata::default()
+                };
+                Ok(StreamWritten::with_report(
+                    written,
+                    &report,
+                    &carried,
+                    stream.modified_at(),
+                ))
             }
             Err(e) => {
                 // ❗ Every error path takes the partial away. Closing first so the
@@ -385,8 +396,9 @@ async fn narrow_while_streaming(file: &mut File, remote: &str, mode: u32) {
 /// `mode` is already folded (`cmdr_fs::metadata::routed_mode`): never wider than
 /// the source, never setuid.
 ///
-/// Best effort: a refusal is logged and the upload stays a success, since the
-/// bytes are what matter. `None` leaves the server's own value. The contract:
+/// Best effort: a refusal is logged and reported, and the upload stays a
+/// success, since the bytes are what matter. `None` leaves the server's own
+/// value. The contract:
 /// `apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/DETAILS.md`
 /// § "Copies keep the source's metadata".
 pub(super) async fn keep_source_attrs(
@@ -394,7 +406,7 @@ pub(super) async fn keep_source_attrs(
     remote: &str,
     modified_at: Option<SystemTime>,
     mode: Option<u32>,
-) {
+) -> MetadataReport {
     let mut attrs = MetaDataBuilder::new();
     let mut any = false;
     if let Some(modified_at) = modified_at {
@@ -414,8 +426,12 @@ pub(super) async fn keep_source_attrs(
         any = true;
     }
     if !any {
-        return;
+        return MetadataReport::ABSENT;
     }
+    let carried = CarriedMetadata {
+        mode,
+        ..CarriedMetadata::default()
+    };
     let attrs = attrs.create();
     if let Err(e) = session.sftp().fs().set_metadata(remote, attrs).await {
         let status = match &e {
@@ -426,7 +442,9 @@ pub(super) async fn keep_source_attrs(
             "SftpVolume::keep_source_attrs: couldn't keep the source date and mode on path={remote:?}: source=backend, backend=sftp, operation=setstat, sftp_status={status}, detail={:?}",
             cmdr_fs::log_detail::LogDetail(&e.to_string())
         );
+        return MetadataReport::uniform(&carried, modified_at, ClassOutcome::Refused);
     }
+    MetadataReport::uniform(&carried, modified_at, ClassOutcome::Kept)
 }
 
 #[cfg(test)]

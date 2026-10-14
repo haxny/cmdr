@@ -19,7 +19,7 @@ use cmdr_fs::entry::FileEntry;
 use std::pin::Pin as StdPin;
 
 use super::super::super::conflict_responder_test_support::{ConflictResponderSink, file_conflict_count};
-use crate::file_system::volume::WriteMode;
+use crate::file_system::volume::{StreamWritten, WriteMode};
 
 /// A destination that fails the first `fail_writes` writes of ONE named file and
 /// otherwise behaves exactly like the `InMemoryVolume` it wraps.
@@ -148,7 +148,7 @@ impl Volume for FlakyMergeDest {
         length: StreamLength,
         mut stream: Box<dyn VolumeReadStream>,
         on_progress: &'a (dyn Fn(StreamWriteProgress) -> std::ops::ControlFlow<()> + Sync),
-    ) -> StdPin<Box<dyn Future<Output = Result<u64, VolumeError>> + Send + 'a>> {
+    ) -> StdPin<Box<dyn Future<Output = Result<StreamWritten, VolumeError>> + Send + 'a>> {
         let Some(size) = length.known() else {
             return Box::pin(async { Err(VolumeError::NotSupported) });
         };

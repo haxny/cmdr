@@ -623,7 +623,7 @@ async fn test_write_from_stream_creates_file() {
         .await
         .unwrap();
 
-    assert_eq!(bytes, 16); // "Imported content" is 16 bytes
+    assert_eq!(bytes.bytes, 16); // "Imported content" is 16 bytes
     assert_eq!(
         fs::read_to_string(vol_dir.join("imported.txt")).unwrap(),
         "Imported content"
@@ -664,7 +664,7 @@ async fn test_write_from_stream_multichunk_is_durable_and_correct() {
         .await
         .unwrap();
 
-    assert_eq!(bytes, payload.len() as u64);
+    assert_eq!(bytes.bytes, payload.len() as u64);
     assert_eq!(fs::read(vol_dir.join("imported.bin")).unwrap(), payload);
 }
 

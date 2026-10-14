@@ -36,6 +36,7 @@ async fn write_cancelled_at_the_end(
             }
         })
         .await
+        .map(|written| written.bytes)
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -103,6 +104,7 @@ async fn write_through(volume: &S3Volume, key: &str, mode: WriteMode, source: By
             ControlFlow::Continue(())
         })
         .await
+        .map(|written| written.bytes)
 }
 
 /// ❗ The link dies right after the server published a PUT: what's at the key

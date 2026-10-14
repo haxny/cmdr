@@ -21,7 +21,7 @@ use cmdr_fs::volume::host::activity::BusyVolumes;
 
 use crate::file_system::volume::WriteMode;
 use crate::file_system::volume::{
-    ListingProgress, StreamLength, StreamWriteProgress, Volume, VolumeError, VolumeReadStream,
+    ListingProgress, StreamLength, StreamWriteProgress, StreamWritten, Volume, VolumeError, VolumeReadStream,
 };
 use crate::ignore_poison::IgnorePoison;
 use cmdr_fs::entry::FileEntry;
@@ -178,7 +178,7 @@ impl Volume for ForegroundBusyDest {
         length: StreamLength,
         mut stream: Box<dyn VolumeReadStream>,
         on_progress: &'a (dyn Fn(StreamWriteProgress) -> ControlFlow<()> + Sync),
-    ) -> Pin<Box<dyn Future<Output = Result<u64, VolumeError>> + Send + 'a>> {
+    ) -> Pin<Box<dyn Future<Output = Result<StreamWritten, VolumeError>> + Send + 'a>> {
         let Some(size) = length.known() else {
             return Box::pin(async { Err(VolumeError::NotSupported) });
         };
@@ -214,7 +214,7 @@ impl Volume for ForegroundBusyDest {
             if single_shot {
                 written.lock_ignore_poison().extend_from_slice(&buffered);
             }
-            Ok(bytes_written)
+            Ok(StreamWritten::nothing_refused(bytes_written))
         })
     }
 }
@@ -289,7 +289,7 @@ impl Volume for PanicIfProbedDest {
         length: StreamLength,
         mut stream: Box<dyn VolumeReadStream>,
         on_progress: &'a (dyn Fn(StreamWriteProgress) -> ControlFlow<()> + Sync),
-    ) -> Pin<Box<dyn Future<Output = Result<u64, VolumeError>> + Send + 'a>> {
+    ) -> Pin<Box<dyn Future<Output = Result<StreamWritten, VolumeError>> + Send + 'a>> {
         let Some(size) = length.known() else {
             return Box::pin(async { Err(VolumeError::NotSupported) });
         };
@@ -309,7 +309,7 @@ impl Volume for PanicIfProbedDest {
                     return Err(VolumeError::Cancelled("Operation cancelled by user".to_string()));
                 }
             }
-            Ok(bytes_written)
+            Ok(StreamWritten::nothing_refused(bytes_written))
         })
     }
 }

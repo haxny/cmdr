@@ -150,6 +150,20 @@ impl MetadataReport {
     pub fn any_refused(&self) -> bool {
         self.classes().contains(&ClassOutcome::Refused)
     }
+
+    /// The engine classes refused: the creation date, the mode, the flags, and
+    /// the xattrs. The modification date and the ACL have no engine class.
+    pub fn refused_classes(&self) -> MetadataClasses {
+        [
+            (self.created, MetadataClasses::CREATED),
+            (self.mode, MetadataClasses::MODE),
+            (self.flags, MetadataClasses::FLAGS),
+            (self.xattrs, MetadataClasses::XATTRS),
+        ]
+        .into_iter()
+        .filter(|(outcome, _)| *outcome == ClassOutcome::Refused)
+        .fold(MetadataClasses::NONE, |refused, (_, class)| refused.union(class))
+    }
 }
 
 /// An ACL as the helper carries it: opaque entries, read and written whole.

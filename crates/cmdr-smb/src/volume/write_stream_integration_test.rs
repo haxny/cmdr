@@ -49,7 +49,7 @@ async fn smb_integration_write_from_stream() {
         )
         .await
         .unwrap();
-    assert_eq!(bytes, 50_000);
+    assert_eq!(bytes.bytes, 50_000);
 
     // Read back and verify content integrity
     let mut verify = vol
@@ -99,7 +99,7 @@ async fn smb_integration_write_from_stream_with_progress() {
         .await
         .unwrap();
 
-    assert_eq!(bytes, 200_000);
+    assert_eq!(bytes.bytes, 200_000);
     assert!(
         progress_calls.load(Ordering::Relaxed) >= 1,
         "expected at least 1 progress call"
@@ -193,7 +193,7 @@ async fn smb_integration_cross_volume_streaming_copy() {
         .await
         .unwrap();
 
-    assert_eq!(bytes, 100_000);
+    assert_eq!(bytes.bytes, 100_000);
     assert!(progress_calls.load(Ordering::Relaxed) >= 1);
 
     // Verify content via read back
@@ -250,7 +250,7 @@ async fn smb_integration_write_from_stream_streams_large_file() {
         .await
         .unwrap();
 
-    assert_eq!(bytes, size as u64);
+    assert_eq!(bytes.bytes, size as u64);
     assert!(
         progress_calls.load(Ordering::Relaxed) >= 2,
         "streaming write should call progress multiple times for a multi-chunk source"
@@ -498,7 +498,7 @@ async fn smb_integration_write_progress_reports_confirmed_bytes_not_queued_ones(
         size,
         "the write is committed, so the last callback must account for every byte"
     );
-    assert_eq!(bytes, size);
+    assert_eq!(bytes.bytes, size);
 
     ensure_clean(&vol, &dir).await;
 }

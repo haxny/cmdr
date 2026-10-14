@@ -66,8 +66,8 @@ pub async fn assert_write_from_stream_keeps_the_source_date(volume: &dyn Volume,
         )
         .await;
     assert_eq!(
-        written.as_ref().ok(),
-        Some(&length),
+        written.as_ref().ok().map(|written| written.bytes),
+        Some(length),
         "the dated write onto {} must land every byte; got {written:?}",
         dest.display()
     );

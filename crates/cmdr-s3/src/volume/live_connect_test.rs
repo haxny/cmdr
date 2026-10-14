@@ -258,6 +258,7 @@ async fn put(volume: &S3Volume, path: &Path, bytes: &[u8]) -> Result<u64, Volume
             ControlFlow::Continue(())
         })
         .await
+        .map(|written| written.bytes)
 }
 
 /// ❗ An account root on the routing allowlist (AWS, Wasabi) reaches a bucket

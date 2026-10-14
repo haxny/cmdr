@@ -294,7 +294,7 @@ async fn smb_integration_a_single_shot_write_leaves_as_one_compound_frame() {
         .unwrap();
     let (requests_after, compounds_after) = request_counts(&vol).await;
 
-    assert_eq!(written, size);
+    assert_eq!(written.bytes, size);
     // TWO compound frames leave the wire, four ops each (verified against Samba
     // in the `smb-consumer` container, 2026-08-01): the write's
     // CREATE+WRITE+FLUSH+CLOSE, then the CREATE+QUERY_INFO+CLOSE stat every SMB
@@ -449,7 +449,7 @@ async fn smb_integration_a_staged_write_over_the_quick_write_limit_streams() {
         .await
         .unwrap();
 
-    assert_eq!(written, size);
+    assert_eq!(written.bytes, size);
     assert!(
         conn.upload_rate_hint().is_some(),
         "the write must have streamed as two WRITEs, which leave the uplink's rate on the connection"
@@ -512,7 +512,7 @@ async fn smb_integration_a_warm_uplink_lifts_the_promise_and_the_promised_write_
         .unwrap();
     let (requests_after, compounds_after) = request_counts(&vol).await;
 
-    assert_eq!(written, size);
+    assert_eq!(written.bytes, size);
     assert_eq!(
         (compounds_after - compounds_before, requests_after - requests_before),
         (2, 8),
@@ -687,7 +687,7 @@ async fn smb_integration_a_write_the_credit_window_cant_fund_is_staged_and_strea
         )
         .await
         .expect("a staged write streams through a small window");
-    assert_eq!(written, size);
+    assert_eq!(written.bytes, size);
     assert_eq!(
         drain(direct.open_read_stream(Path::new(&temp)).await.unwrap()).await,
         data

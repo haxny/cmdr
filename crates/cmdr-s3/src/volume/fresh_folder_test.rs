@@ -9,7 +9,7 @@ use std::ops::ControlFlow;
 use std::pin::Pin;
 use std::time::Duration;
 
-use cmdr_fs::volume::{ServerCopyProgress, Volume, VolumeReadStream, WriteMode};
+use cmdr_fs::volume::{ServerCopyProgress, StreamWritten, Volume, VolumeReadStream, WriteMode};
 
 use super::fake_s3::FakeS3;
 use super::testing::BytesSource;
@@ -42,7 +42,7 @@ async fn write(s3: &FakeS3, key: &str, mode: WriteMode) {
             ControlFlow::Continue(())
         })
         .await;
-    assert!(matches!(written, Ok(100)), "{written:?}");
+    assert!(matches!(written, Ok(StreamWritten { bytes: 100, .. })), "{written:?}");
 }
 
 #[tokio::test(flavor = "multi_thread")]

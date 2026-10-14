@@ -43,7 +43,7 @@ use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::metadata::MetadataClasses;
 use cmdr_fs::pluralize::pluralize_grouped;
 use cmdr_fs::volume::patching::patch_created;
-use cmdr_fs::volume::{StreamLength, StreamWriteProgress, VolumeError, VolumeReadStream, WriteMode};
+use cmdr_fs::volume::{StreamLength, StreamWriteProgress, StreamWritten, VolumeError, VolumeReadStream, WriteMode};
 use log::{debug, warn};
 use tokio_util::sync::CancellationToken;
 
@@ -248,7 +248,7 @@ impl S3Volume {
         length: StreamLength,
         stream: Box<dyn VolumeReadStream>,
         on_progress: &(dyn Fn(StreamWriteProgress) -> ControlFlow<()> + Sync),
-    ) -> Result<u64, VolumeError> {
+    ) -> Result<StreamWritten, VolumeError> {
         let remote = self.to_remote_path(dest)?;
         let Target::Key { bucket, key } = target_of(&remote) else {
             return Err(VolumeError::IsADirectory(remote));
@@ -293,7 +293,9 @@ impl S3Volume {
         } else {
             ShortStream::OnePut
         };
-        match (shape, short) {
+        // The source's metadata rides the request itself, so the store takes it
+        // with the bytes or refuses the whole write: nothing refused alone.
+        let written = match (shape, short) {
             (UploadShape::Single(size), ShortStream::OnePut) => {
                 let bytes = self.read_whole(&target, size, stream, &progress).await?;
                 self.put_whole(&client, &target, bytes, &progress).await
@@ -310,7 +312,8 @@ impl S3Volume {
                 self.upload_in_parts(&client, &target, None, short, stream, &progress)
                     .await
             }
-        }
+        };
+        written.map(StreamWritten::nothing_refused)
     }
 
     /// Whether a write that would go as one PUT has to go as a multipart

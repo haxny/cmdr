@@ -270,7 +270,7 @@ async fn a_write_lands_through_a_staging_sibling_and_leaves_no_partial() {
         )
         .await
         .expect("the upload must land");
-    assert_eq!(written, payload.len() as u64);
+    assert_eq!(written.bytes, payload.len() as u64);
 
     let tree = server.tree();
     let tree = tree.lock().unwrap();
@@ -361,7 +361,7 @@ async fn an_unknown_length_multichunk_write_streams_and_reports_its_actual_count
         .await
         .expect("the unknown-length upload must land");
 
-    assert_eq!(written, payload.len() as u64);
+    assert_eq!(written.bytes, payload.len() as u64);
     assert_eq!(
         server
             .tree()

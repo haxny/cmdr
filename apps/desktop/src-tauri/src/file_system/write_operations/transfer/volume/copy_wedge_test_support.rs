@@ -16,7 +16,7 @@ use super::*;
 use crate::file_system::volume::WriteMode;
 use crate::file_system::volume::{
     CopyScanResult, DirectoryCreation, InMemoryVolume, ListingProgress, ScanConflict, SourceItemInfo, SpaceInfo,
-    StreamLength, StreamWriteProgress, VolumeReadStream,
+    StreamLength, StreamWriteProgress, StreamWritten, VolumeReadStream,
 };
 use cmdr_fs::entry::FileEntry;
 use std::future::Future;
@@ -326,7 +326,7 @@ impl Volume for IncrementalDest {
         length: StreamLength,
         mut stream: Box<dyn VolumeReadStream>,
         on_progress: &'a (dyn Fn(StreamWriteProgress) -> std::ops::ControlFlow<()> + Sync),
-    ) -> StdPin<Box<dyn Future<Output = Result<u64, VolumeError>> + Send + 'a>> {
+    ) -> StdPin<Box<dyn Future<Output = Result<StreamWritten, VolumeError>> + Send + 'a>> {
         let Some(size) = length.known() else {
             return Box::pin(async { Err(VolumeError::NotSupported) });
         };
@@ -352,7 +352,7 @@ impl Volume for IncrementalDest {
                     return Err(VolumeError::Cancelled("Operation cancelled by user".to_string()));
                 }
             }
-            Ok(data.len() as u64)
+            Ok(StreamWritten::nothing_refused(data.len() as u64))
         })
     }
 }

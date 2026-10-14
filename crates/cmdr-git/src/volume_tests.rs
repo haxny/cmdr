@@ -319,7 +319,7 @@ async fn a_copy_out_of_a_snapshot_carries_the_bytes_and_the_executable_bit() {
         .write_from_stream(dest_rel, WriteMode::CreateOrReplace, total, stream, &on_progress)
         .await
         .expect("write_from_stream");
-    assert_eq!(written, total.known().expect("git blobs have a known length"));
+    assert_eq!(written.bytes, total.known().expect("git blobs have a known length"));
     assert_eq!(
         counter.load(Ordering::SeqCst),
         total.known().unwrap(),

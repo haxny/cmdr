@@ -905,8 +905,8 @@ invariants, what each pair keeps, and the decisions behind both close this secti
   - A refused flags write counts as a loss (`LockedAndHidden`). A crash between the landing and this step leaves a
     file without its Locked; accepted, like the native landing's same gap (`../DETAILS.md` § "Local copies stage").
   - Not on the one-pass sequential extract: no archive reports flags.
-- **Best effort**: every apply returns a `MetadataReport` and has no error path; a refused class is a `log::warn!`, and
-  the copy stands.
+- **Best effort**: every apply returns a `MetadataReport` and has no error path; a refused class is a `log::warn!` and a
+  line on the loss note, and the copy stands.
 - **`None` leaves the destination's own value**, ❌ never an invented one. atime is never carried across volumes (where
   a protocol forces it alongside, SFTP's `ATTR_ACMODTIME`, it gets the mtime).
 - **Each backend states what it keeps and reports in `Volume::metadata_caps`** (`cmdr_fs::metadata::MetadataCaps`:
@@ -941,9 +941,15 @@ The mechanics:
 - **Free to know, and asked only where it can be lost** (invariant 10): `metadata_losses::file_losses` asks the stream
   nothing for a pair whose caps lose nothing, and otherwise reads `VolumeReadStream::metadata_outline`, which for a
   local file lists xattr NAMES only. Asked before `write_from_stream` consumes the stream; wrappers forward it.
-- **Not counted**: a refusal inside a destination's `write_from_stream` (its `MetadataReport` doesn't leave the trait
-  call; it's a `log::warn!` there), the native engine (local to local keeps everything local disk can hold), and a
-  server-side copy (the store keeps its own metadata).
+- **A runtime refusal counts too**: a destination whose caps claim a class can still refuse it (a NAS rejecting a
+  creation date, a `setstat` the server refuses). `write_from_stream` returns a `cmdr_fs::volume::StreamWritten`, bytes
+  plus the classes it refused, built from the apply's `MetadataReport` through `StreamWritten::with_report`, which
+  narrows to what the source had worth keeping, so a backend can't count a refusal of nothing. The engine adds them to
+  the caps-based loss at landing. Local disk (`apply_staged`), SMB (the dates' frame), SFTP (the `setstat`), and WebDAV
+  (`X-OC-CTime`) report refusals; S3, ADB, and MTP carry metadata on the write itself or not at all
+  (`StreamWritten::nothing_refused`). Pinned by `metadata_loss_tests.rs`, through `InMemoryVolume::with_write_refusing`.
+- **Not counted**: the native engine (local to local keeps everything local disk can hold), and a server-side copy (the
+  store keeps its own metadata).
 - ❗ **The wording is David's placeholder** (`transfer.metadataLeftBehind`, `transfer.metadataClass.*`), marked so in
   the `@key` descriptions.
 

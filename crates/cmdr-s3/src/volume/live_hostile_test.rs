@@ -461,7 +461,9 @@ async fn live_hostile_sizes() {
                 let stat = volume.get_metadata(&path).await.map(|e| e.size);
                 let what = format!("{size} bytes, {} length", if known { "known" } else { "unknown" }); // allowed-pluralize-noun: a test label naming a size in bytes
                 m.check(
-                    wrote.as_ref().ok() == Some(&size) && mismatch.is_none() && stat.as_ref().ok() == Some(&Some(size)),
+                    wrote.as_ref().ok().map(|written| written.bytes) == Some(size)
+                        && mismatch.is_none()
+                        && stat.as_ref().ok() == Some(&Some(size)),
                     &what,
                     format!("{wrote:?}, read back: {mismatch:?}, stat: {stat:?}"),
                 );
@@ -531,7 +533,7 @@ async fn live_hostile_sizes() {
         let down = started.elapsed().as_secs_f64();
         let mib = big as f64 / MIB as f64;
         m.check(
-            wrote.as_ref().ok() == Some(&big) && mismatch.is_none(),
+            wrote.as_ref().ok().map(|written| written.bytes) == Some(big) && mismatch.is_none(),
             &format!("{} MiB in 64 MiB parts", big / MIB as u64),
             format!(
                 "{wrote:?} up at {:.1} MiB/s, read back {mismatch:?} at {:.1} MiB/s",

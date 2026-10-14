@@ -1841,6 +1841,14 @@ pub trait Volume: Send + Sync {
     ///
     /// Peak memory per transfer should be bounded by a small chunk buffer
     /// (~1 MiB) regardless of file size.
+    ///
+    /// # Returns
+    ///
+    /// The bytes written and what of the source's metadata the destination
+    /// refused ([`StreamWritten`]): build it with
+    /// [`StreamWritten::with_report`] from the apply's report, or
+    /// [`StreamWritten::nothing_refused`] when nothing applied here can be
+    /// refused alone. The copy's loss note counts the refusals.
     fn write_from_stream<'a>(
         &'a self,
         dest: &'a Path,
@@ -1848,7 +1856,7 @@ pub trait Volume: Send + Sync {
         length: StreamLength,
         stream: Box<dyn VolumeReadStream>,
         on_progress: &'a (dyn Fn(StreamWriteProgress) -> std::ops::ControlFlow<()> + Sync),
-    ) -> Pin<Box<dyn Future<Output = Result<u64, VolumeError>> + Send + 'a>> {
+    ) -> Pin<Box<dyn Future<Output = Result<StreamWritten, VolumeError>> + Send + 'a>> {
         let _ = (dest, mode, length, stream, on_progress);
         Box::pin(async { Err(VolumeError::NotSupported) })
     }

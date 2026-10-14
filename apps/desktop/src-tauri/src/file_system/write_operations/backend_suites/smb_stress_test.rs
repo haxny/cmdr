@@ -377,7 +377,7 @@ async fn run_concurrent_write_pass(
             )
             .await
             .unwrap_or_else(|e| panic!("pre-upload {name} failed: {e:?}"));
-        assert_eq!(bytes, size, "pre-upload size mismatch");
+        assert_eq!(bytes.bytes, size, "pre-upload size mismatch");
     }
     log::info!("regression: pre-upload done");
 

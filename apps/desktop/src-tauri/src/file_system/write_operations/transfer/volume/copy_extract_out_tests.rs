@@ -7,7 +7,7 @@
 
 use super::tests::make_state;
 use super::*;
-use crate::file_system::volume::{InMemoryVolume, LocalPosixVolume};
+use crate::file_system::volume::{InMemoryVolume, LocalPosixVolume, StreamWritten};
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 
 // ========================================================================
@@ -525,7 +525,7 @@ mod quarantine {
             on_progress: &'a (
                     dyn Fn(crate::file_system::volume::StreamWriteProgress) -> std::ops::ControlFlow<()> + Sync
                 ),
-        ) -> Pin<Box<dyn Future<Output = Result<u64, VolumeError>> + Send + 'a>> {
+        ) -> Pin<Box<dyn Future<Output = Result<StreamWritten, VolumeError>> + Send + 'a>> {
             use crate::file_system::write_operations::state::OperationIntent;
             use std::sync::atomic::Ordering;
             Box::pin(async move {

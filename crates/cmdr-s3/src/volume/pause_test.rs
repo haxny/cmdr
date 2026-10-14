@@ -131,6 +131,7 @@ fn start_write(
                 }
             })
             .await
+            .map(|written| written.bytes)
     })
 }
 

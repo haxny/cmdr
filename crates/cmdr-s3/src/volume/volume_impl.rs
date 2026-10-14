@@ -16,8 +16,8 @@ use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::{
     BackendKind, BatchScanResult, CopyScanResult, DirectoryCreation, LaneKey, ListingProgress, MutationEvent,
     RenameWork, Retirement, ScanBoundary, ScanConflict, ServerCopyProgress, ShareLink, ShareLinkExpiry, SignInShape,
-    SourceItemInfo, SpaceInfo, StreamLength, StreamWriteProgress, SubtreeTally, Volume, VolumeError, VolumeReadStream,
-    WatchCoverage, WriteMode,
+    SourceItemInfo, SpaceInfo, StreamLength, StreamWriteProgress, StreamWritten, SubtreeTally, Volume, VolumeError,
+    VolumeReadStream, WatchCoverage, WriteMode,
 };
 use cmdr_fs::volume::{patching, scan_walk};
 use tokio_util::sync::CancellationToken;
@@ -263,7 +263,7 @@ impl Volume for S3Volume {
         length: StreamLength,
         stream: Box<dyn VolumeReadStream>,
         on_progress: &'a (dyn Fn(StreamWriteProgress) -> ControlFlow<()> + Sync),
-    ) -> Pin<Box<dyn Future<Output = Result<u64, VolumeError>> + Send + 'a>> {
+    ) -> Pin<Box<dyn Future<Output = Result<StreamWritten, VolumeError>> + Send + 'a>> {
         Box::pin(self.noting(self.write_from_stream_impl(dest, mode, length, stream, on_progress)))
     }
 

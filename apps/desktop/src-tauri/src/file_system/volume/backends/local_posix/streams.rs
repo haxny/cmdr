@@ -10,7 +10,7 @@
 
 use super::super::{VolumeError, VolumeReadStream};
 use super::LocalPosixVolume;
-use crate::file_system::volume::{StreamLength, StreamWriteProgress, WriteMode};
+use crate::file_system::volume::{StreamLength, StreamWriteProgress, StreamWritten, WriteMode};
 use cmdr_fs::metadata::{
     CarriedMetadata, LandedMetadata, MetadataClasses, MetadataReport, StagedItem, StagedTimes, UserFlags, apply_landed,
     apply_staged, default_file_mode, default_folder_mode, routed_mode,
@@ -189,7 +189,7 @@ impl LocalPosixVolume {
         length: StreamLength,
         mut stream: Box<dyn VolumeReadStream>,
         on_progress: &'a (dyn Fn(StreamWriteProgress) -> std::ops::ControlFlow<()> + Sync),
-    ) -> Pin<Box<dyn Future<Output = Result<u64, VolumeError>> + Send + 'a>> {
+    ) -> Pin<Box<dyn Future<Output = Result<StreamWritten, VolumeError>> + Send + 'a>> {
         let dest_abs = self.resolve(dest);
         Box::pin(async move {
             // Ensure parent directory exists
@@ -298,7 +298,8 @@ impl LocalPosixVolume {
                 accessed: None,
             };
             let dest_for_sync = dest_abs.clone();
-            file = spawn_blocking(move || {
+            let carried_for_apply = carried.clone();
+            let (file, report) = spawn_blocking(move || {
                 use std::io::Write;
                 // Userspace flush first (harmless no-op on a raw File, but
                 // correct if the writer is ever wrapped in a BufWriter).
@@ -310,7 +311,7 @@ impl LocalPosixVolume {
                         dest_for_sync.display()
                     );
                 }
-                let report = apply_staged(StagedItem::File(&file), &carried, times);
+                let report = apply_staged(StagedItem::File(&file), &carried_for_apply, times);
                 if report.any_refused() {
                     log::warn!(
                         target: "local_posix",
@@ -318,7 +319,7 @@ impl LocalPosixVolume {
                         dest_for_sync.display()
                     );
                 }
-                file
+                (file, report)
             })
             .await
             .expect("spawn_blocking sync_data closure doesn't panic and the task is uncancelable");
@@ -345,7 +346,12 @@ impl LocalPosixVolume {
             // patch the cache, and FSEvents is reliable on local FS. The
             // SMB / MTP overrides need it because their out-of-band
             // notification channels can lose events; we don't.
-            Ok(bytes_written)
+            Ok(StreamWritten::with_report(
+                bytes_written,
+                &report,
+                &carried,
+                times.modified,
+            ))
         })
     }
 }

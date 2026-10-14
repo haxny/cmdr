@@ -181,8 +181,8 @@ pub(super) async fn extract_sequential_subtree(
         let written = dest_volume
             .write_from_stream(staged.target(), staged.write_mode(), length, stream, &on_chunk)
             .await;
-        let bytes = match written {
-            Ok(bytes) => bytes,
+        let written = match written {
+            Ok(written) => written,
             Err(e) => {
                 staged.abandon(dest_volume).await;
                 return Err(e).at(&file.source_path);
@@ -197,7 +197,10 @@ pub(super) async fn extract_sequential_subtree(
         // stays on the op's ledger for the post-loop to take back
         // (`naming.rs::take_back_unfilled_reservations`).
         state.claimed_names.release_placeholder(&planned.dest_path);
-        state.metadata_losses.note_file(lost);
+        // What the destination refused on the way joins what its caps couldn't
+        // hold.
+        state.metadata_losses.note_file(lost.union(written.refused()));
+        let bytes = written.bytes;
 
         // Safe-replace finalize for a file→file Overwrite (same as the per-entry
         // path): the temp holds the complete new bytes; swap it over the original.

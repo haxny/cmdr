@@ -19,7 +19,8 @@ use std::sync::Mutex as StdMutex;
 
 use crate::file_system::volume::WriteMode;
 use crate::file_system::volume::{
-    InMemoryVolume, ListingProgress, StreamLength, StreamWriteProgress, Volume, VolumeError, VolumeReadStream,
+    InMemoryVolume, ListingProgress, StreamLength, StreamWriteProgress, StreamWritten, Volume, VolumeError,
+    VolumeReadStream,
 };
 use crate::ignore_poison::IgnorePoison;
 use cmdr_fs::entry::FileEntry;
@@ -123,7 +124,7 @@ impl Volume for SingleShotDest {
         length: StreamLength,
         mut stream: Box<dyn VolumeReadStream>,
         on_progress: &'a (dyn Fn(StreamWriteProgress) -> ControlFlow<()> + Sync),
-    ) -> Pin<Box<dyn Future<Output = Result<u64, VolumeError>> + Send + 'a>> {
+    ) -> Pin<Box<dyn Future<Output = Result<StreamWritten, VolumeError>> + Send + 'a>> {
         let Some(size) = length.known() else {
             return Box::pin(async { Err(VolumeError::NotSupported) });
         };
@@ -143,7 +144,7 @@ impl Volume for SingleShotDest {
                     return Err(VolumeError::Cancelled("Operation cancelled by user".to_string()));
                 }
             }
-            Ok(written)
+            Ok(StreamWritten::nothing_refused(written))
         })
     }
 }

@@ -535,7 +535,7 @@ async fn produce_via_spool(
         )
         .await;
     let uploaded = match uploaded {
-        Ok(bytes) => bytes,
+        Ok(written) => written.bytes,
         Err(error) => {
             stage.abandon(&dest_volume).await;
             // Classify without parking: a paused op whose upload failed reports
@@ -629,7 +629,8 @@ async fn produce_into(
             Box::new(stream),
             &callback,
         )
-        .await;
+        .await
+        .map(|written| written.bytes);
     let produced = completion.finish().await;
     if produced.is_err() {
         // A producer that ended early leaves the feed nothing to feed; stop a

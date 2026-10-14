@@ -287,6 +287,7 @@ async fn write_to_local_dest(
             on_progress,
         )
         .await
+        .map(|written| written.bytes)
 }
 
 /// Recursively downloads a source directory into the Finder-created `dest_path`.

@@ -15,8 +15,8 @@ use cmdr_fs::volume::patching;
 use cmdr_fs::volume::scan_walk;
 use cmdr_fs::volume::{
     BatchScanResult, CopyScanResult, DirectoryCreation, LaneKey, ListingProgress, MutationEvent, Retirement,
-    ScanBoundary, ScanConflict, SignInShape, SourceItemInfo, SpaceInfo, StreamLength, StreamWriteProgress, Volume,
-    VolumeError, VolumeReadStream, WatchCoverage, WriteMode,
+    ScanBoundary, ScanConflict, SignInShape, SourceItemInfo, SpaceInfo, StreamLength, StreamWriteProgress,
+    StreamWritten, Volume, VolumeError, VolumeReadStream, WatchCoverage, WriteMode,
 };
 use tokio_util::sync::CancellationToken;
 
@@ -314,7 +314,7 @@ impl Volume for WebdavVolume {
         length: StreamLength,
         stream: Box<dyn VolumeReadStream>,
         on_progress: &'a (dyn Fn(StreamWriteProgress) -> ControlFlow<()> + Sync),
-    ) -> Pin<Box<dyn Future<Output = Result<u64, VolumeError>> + Send + 'a>> {
+    ) -> Pin<Box<dyn Future<Output = Result<StreamWritten, VolumeError>> + Send + 'a>> {
         let Some(size) = length.known() else {
             return Box::pin(async { Err(VolumeError::NotSupported) });
         };

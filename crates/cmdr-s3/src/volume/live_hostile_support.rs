@@ -112,6 +112,7 @@ pub(super) async fn write(volume: &S3Volume, path: &Path, mode: WriteMode, bytes
     volume
         .write_from_stream(path, mode, length, Box::new(source), &|_| ControlFlow::Continue(()))
         .await
+        .map(|written| written.bytes)
 }
 
 /// A write whose progress hook answers `Break` once `stop` says so.
@@ -132,6 +133,7 @@ pub(super) async fn write_cancelled_when(
             }
         })
         .await
+        .map(|written| written.bytes)
 }
 
 /// A server-side copy's hook: cancels at checkpoint number `cancel_at` (1 is

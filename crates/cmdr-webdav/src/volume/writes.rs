@@ -26,10 +26,10 @@ use std::time::Duration;
 
 use bytes::Bytes;
 use cmdr_fs::ignore_poison::IgnorePoison;
-use cmdr_fs::metadata::MetadataClasses;
+use cmdr_fs::metadata::{CarriedMetadata, ClassOutcome, MetadataClasses, MetadataReport};
 use cmdr_fs::pluralize::pluralize_grouped;
 use cmdr_fs::staging::temp_sibling_name;
-use cmdr_fs::volume::{VolumeError, VolumeReadStream, WriteMode};
+use cmdr_fs::volume::{StreamWritten, VolumeError, VolumeReadStream, WriteMode};
 use log::debug;
 use reqwest::Method;
 use reqwest::header::{CONTENT_LENGTH, CONTENT_TYPE};
@@ -202,7 +202,7 @@ impl WebdavVolume {
         size: u64,
         stream: Box<dyn VolumeReadStream>,
         on_progress: &(dyn Fn(u64, u64) -> ControlFlow<()> + Sync),
-    ) -> Result<u64, VolumeError> {
+    ) -> Result<StreamWritten, VolumeError> {
         let remote = self.to_remote_path(dest)?;
         let client = self.clone_client().await?;
         match mode {
@@ -213,7 +213,7 @@ impl WebdavVolume {
             WriteMode::CreateNew | WriteMode::CreateNewInFreshFolder => {
                 let temp = staging_sibling(&remote);
                 debug!("WebdavVolume::write_from_stream: {remote} via {temp}");
-                let total = self.put_streaming(&client, &temp, size, stream, on_progress).await?;
+                let written = self.put_streaming(&client, &temp, size, stream, on_progress).await?;
                 let request = client
                     .request(method("MOVE"), client.url_for(&temp, false))
                     .header("Destination", client.url_for(&remote, false).as_str())
@@ -223,13 +223,14 @@ impl WebdavVolume {
                     self.remove_best_effort(&temp).await;
                     return Err(e);
                 }
-                Ok(total)
+                Ok(written)
             }
         }
     }
 
     /// One streaming `PUT` of `stream` to `target`, `Content-Length: size`, with
-    /// progress and cancel. Returns the bytes written; ❗ every failure removes
+    /// progress and cancel. Returns the bytes written and the creation date the
+    /// server refused, if it did; ❗ every failure removes
     /// whatever the `PUT` may have left at `target`, so the caller has nothing
     /// to clean.
     async fn put_streaming(
@@ -239,7 +240,7 @@ impl WebdavVolume {
         size: u64,
         stream: Box<dyn VolumeReadStream>,
         on_progress: &(dyn Fn(u64, u64) -> ControlFlow<()> + Sync),
-    ) -> Result<u64, VolumeError> {
+    ) -> Result<StreamWritten, VolumeError> {
         // Read before the stream moves into the body. A source knows its dates
         // from its open, so nothing is lost by asking before the first byte. The
         // creation date only where the server keeps one (`keeps_dates`).
@@ -334,36 +335,45 @@ impl WebdavVolume {
         // differ by exactly the case this guard exists for.
         let total = counts.fetched.load(Ordering::Relaxed);
         let outcome = outcome.map(|response| {
+            let mut created = ClassOutcome::Absent;
             if modified_at.is_some() && !accepted(&response, X_OC_MTIME) {
                 // Not a failure: a server without the ownCloud extension (plain
                 // `mod_dav`) has no way to store a date, and keeps its own.
                 debug!("WebdavVolume::write_from_stream: {target}: the server didn't take X-OC-Mtime, so it keeps its own date");
             }
-            if created_at.is_some() && !accepted(&response, X_OC_CTIME) {
-                // A server that said at connect it keeps creation dates, then
-                // didn't take this one: the loss note can't hear it from here
-                // (`write_from_stream` returns no report), so the log does.
-                log::warn!("WebdavVolume::write_from_stream: {target}: the server didn't take X-OC-CTime, so it keeps its own creation date");
+            if created_at.is_some() {
+                created = ClassOutcome::Kept;
+                if !accepted(&response, X_OC_CTIME) {
+                    // A server that said at connect it keeps creation dates,
+                    // then didn't take this one: the write's report carries it
+                    // to the loss note.
+                    log::warn!("WebdavVolume::write_from_stream: {target}: the server didn't take X-OC-CTime, so it keeps its own creation date");
+                    created = ClassOutcome::Refused;
+                }
             }
+            created
         });
-        if let Err(e) = outcome {
-            self.remove_best_effort(target).await;
-            if stop.is_cancelled() {
-                return Err(VolumeError::Cancelled(self.volume_id().to_string()));
+        let created = match outcome {
+            Ok(created) => created,
+            Err(e) => {
+                self.remove_best_effort(target).await;
+                if stop.is_cancelled() {
+                    return Err(VolumeError::Cancelled(self.volume_id().to_string()));
+                }
+                if let Some(source) = source_error.lock_ignore_poison().take() {
+                    return Err(source);
+                }
+                if counts.ended.load(Ordering::Relaxed) && total != size {
+                    // ❗ A short source ends the request from OUR side (hyper's
+                    // `NotEof`), which `reqwest` reports as a request error, the
+                    // same predicate a dropped connection answers. ❌ Not the
+                    // volume's fault, so not `DeviceDisconnected`: that would flip
+                    // the volume offline over one wrong `size`.
+                    return Err(size_mismatch(target, total, size));
+                }
+                return Err(e);
             }
-            if let Some(source) = source_error.lock_ignore_poison().take() {
-                return Err(source);
-            }
-            if counts.ended.load(Ordering::Relaxed) && total != size {
-                // ❗ A short source ends the request from OUR side (hyper's
-                // `NotEof`), which `reqwest` reports as a request error, the
-                // same predicate a dropped connection answers. ❌ Not the
-                // volume's fault, so not `DeviceDisconnected`: that would flip
-                // the volume offline over one wrong `size`.
-                return Err(size_mismatch(target, total, size));
-            }
-            return Err(e);
-        }
+        };
         if total != size {
             // ❗ hyper TRUNCATES a body longer than `Content-Length` and the
             // server happily stores the prefix, then answers 201 with nothing
@@ -381,7 +391,15 @@ impl WebdavVolume {
             self.remove_best_effort(target).await;
             return Err(VolumeError::Cancelled(self.volume_id().to_string()));
         }
-        Ok(total)
+        let carried = CarriedMetadata {
+            created: created_at,
+            ..CarriedMetadata::default()
+        };
+        let report = MetadataReport {
+            created,
+            ..MetadataReport::ABSENT
+        };
+        Ok(StreamWritten::with_report(total, &report, &carried, modified_at))
     }
 
     /// Removes what a failed write left at `remote`, and says nothing if that

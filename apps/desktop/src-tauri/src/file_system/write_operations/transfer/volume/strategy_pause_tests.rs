@@ -33,8 +33,8 @@ use std::time::Duration;
 
 use super::super::faulty_volume::forward_volume_methods;
 use crate::file_system::volume::{
-    InMemoryVolume, LocalPosixVolume, StreamLength, StreamWriteProgress, Volume, VolumeError, VolumeReadStream,
-    WriteMode,
+    InMemoryVolume, LocalPosixVolume, StreamLength, StreamWriteProgress, StreamWritten, Volume, VolumeError,
+    VolumeReadStream, WriteMode,
 };
 use crate::test_support::TestDir;
 
@@ -467,7 +467,7 @@ impl Volume for BufferingDest {
         length: StreamLength,
         mut stream: Box<dyn VolumeReadStream>,
         on_progress: &'a (dyn Fn(StreamWriteProgress) -> ControlFlow<()> + Sync),
-    ) -> std::pin::Pin<Box<dyn Future<Output = Result<u64, VolumeError>> + Send + 'a>> {
+    ) -> std::pin::Pin<Box<dyn Future<Output = Result<StreamWritten, VolumeError>> + Send + 'a>> {
         Box::pin(async move {
             let stop = stream.stop_signal();
             let mut bytes = Vec::new();
@@ -485,7 +485,7 @@ impl Volume for BufferingDest {
                 bytes_written: written,
                 expected_length: length,
             });
-            Ok(written)
+            Ok(StreamWritten::nothing_refused(written))
         })
     }
 }

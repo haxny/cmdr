@@ -19,7 +19,7 @@
 
 use crate::file_system::volume::{
     ConnectionState, DirectoryCreation, InMemoryVolume, LaneKey, ListingProgress, ScanConflict, SourceItemInfo,
-    SpaceInfo, StreamLength, StreamWriteProgress, Volume, VolumeError, VolumeReadStream, WriteMode,
+    SpaceInfo, StreamLength, StreamWriteProgress, StreamWritten, Volume, VolumeError, VolumeReadStream, WriteMode,
 };
 use crate::ignore_poison::IgnorePoison;
 use cmdr_fs::entry::FileEntry;
@@ -323,7 +323,7 @@ impl Volume for OutageVolume {
         length: StreamLength,
         stream: Box<dyn VolumeReadStream>,
         on_progress: &'a (dyn Fn(StreamWriteProgress) -> std::ops::ControlFlow<()> + Sync),
-    ) -> Fut<'a, Result<u64, VolumeError>> {
+    ) -> Fut<'a, Result<StreamWritten, VolumeError>> {
         Box::pin(async move {
             let n = self.writes.fetch_add(1, Ordering::SeqCst);
             if *self.drop_at_write.lock_ignore_poison() == Some(n) {

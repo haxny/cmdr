@@ -21,7 +21,9 @@ use std::pin::Pin;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use crate::file_system::volume::{InMemoryVolume, StreamLength, StreamWriteProgress, Volume, VolumeError};
+use crate::file_system::volume::{
+    InMemoryVolume, StreamLength, StreamWriteProgress, StreamWritten, Volume, VolumeError,
+};
 use cmdr_archive::{ArchiveFormat, ArchiveVolume, TarCodec};
 use cmdr_fs::volume::host::VolumeHost;
 
@@ -398,7 +400,7 @@ impl Volume for StopAfterFirstWrite {
         length: StreamLength,
         stream: Box<dyn VolumeReadStream>,
         on_progress: &'a (dyn Fn(StreamWriteProgress) -> ControlFlow<()> + Sync),
-    ) -> Pin<Box<dyn Future<Output = Result<u64, VolumeError>> + Send + 'a>> {
+    ) -> Pin<Box<dyn Future<Output = Result<StreamWritten, VolumeError>> + Send + 'a>> {
         Box::pin(async move {
             let written = self
                 .inner

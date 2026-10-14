@@ -345,3 +345,84 @@ async fn a_tagged_local_folder_copied_to_sftp_reports_its_tags_and_an_untagged_o
     );
     assert_eq!(plain_copy.metadata_left_behind, None);
 }
+
+/// A destination that claims a class and refuses it at runtime (a NAS
+/// rejecting a creation date) puts that class on the note: its caps promised
+/// it, so only the write's own report can tell.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_class_the_destination_refuses_at_runtime_is_on_the_note() {
+    let source = Arc::new(InMemoryVolume::new("Source"));
+    seed(&source, InMemoryVolume::REFERENCE_CAPS).await;
+    let dest = Arc::new(
+        InMemoryVolume::new("NAS")
+            .with_metadata_caps(LocalPosixVolume::METADATA_CAPS)
+            .with_write_refusing(MetadataClasses::CREATED),
+    );
+    dest.create_directory(Path::new("/to")).await.unwrap();
+
+    let complete = copy(source, &[PathBuf::from("/file.bin")], dest, Path::new("/to")).await;
+
+    assert_eq!(
+        complete.metadata_left_behind,
+        Some(MetadataLeftBehind {
+            classes: vec![LostMetadata {
+                class: LostMetadataClass::CreationDates,
+                item_count: 1
+            }]
+        })
+    );
+}
+
+/// A refusal counts only what the source had worth keeping: a creation date
+/// equal to the last edit is refused without a note.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_runtime_refusal_of_nothing_worth_keeping_is_not_on_the_note() {
+    let source = Arc::new(InMemoryVolume::new("Source"));
+    let plain = Path::new("/plain.txt");
+    source.create_file(plain, b"plain").await.unwrap();
+    source.set_modified_at(plain, Some(MODIFIED));
+    source.set_carried_metadata(
+        plain,
+        CarriedMetadata {
+            created: Some(at(MODIFIED)),
+            ..CarriedMetadata::default()
+        },
+    );
+    let dest = Arc::new(InMemoryVolume::new("NAS").with_write_refusing(MetadataClasses::ALL));
+    dest.create_directory(Path::new("/to")).await.unwrap();
+
+    let complete = copy(source, &[plain.to_path_buf()], dest, Path::new("/to")).await;
+
+    assert_eq!(complete.metadata_left_behind, None);
+}
+
+/// Local disk onto local disk through the volume engine keeps every class, so
+/// its write's report refuses nothing and the note stays silent.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_local_to_local_volume_copy_reports_nothing() {
+    let dir = TestDir::new("metadata_loss_local_to_local");
+    let from = dir.join("from");
+    let to = dir.join("to");
+    std::fs::create_dir_all(&from).unwrap();
+    std::fs::create_dir_all(&to).unwrap();
+    let file = from.join("tagged.sh");
+    std::fs::write(&file, b"#!/bin/sh\n").unwrap();
+    std::fs::set_permissions(&file, std::os::unix::fs::PermissionsExt::from_mode(EXECUTABLE)).unwrap();
+    xattr::set(&file, "user.cmdr.tag", b"red").unwrap();
+    std::fs::File::options()
+        .write(true)
+        .open(&file)
+        .unwrap()
+        .set_modified(at(MODIFIED))
+        .unwrap();
+    let source: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder("From", &*from));
+    let dest: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder("To", &*to));
+
+    let complete = copy(source, &[PathBuf::from("tagged.sh")], dest, Path::new("")).await;
+
+    assert_eq!(complete.metadata_left_behind, None);
+    assert_eq!(
+        xattr::get(to.join("tagged.sh"), "user.cmdr.tag").unwrap(),
+        Some(b"red".to_vec())
+    );
+}

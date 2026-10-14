@@ -255,7 +255,7 @@ async fn smb_integration_write_from_stream_single_file() {
         })
         .await
         .unwrap();
-    assert_eq!(bytes, content.len() as u64);
+    assert_eq!(bytes.bytes, content.len() as u64);
 
     assert!(vol.exists(Path::new(&smb_file)).await);
     let meta = vol.get_metadata(Path::new(&smb_file)).await.unwrap();

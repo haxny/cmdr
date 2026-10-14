@@ -571,14 +571,15 @@ source's metadata".
   creeping back in shows there as `(2, 7)`.
 - **The scan pool's prefetch stays dateless**: enrichment never copies those bytes.
 - **Destination half: `write_from_stream_impl` stamps `LastWriteTime` and `CreationTime`**, both in the one
-  `FILE_BASIC_INFORMATION` (`source_times`; access and change times go as 0, "don't change"), so the creation date costs
-  no frame. It asks the stream for `CREATED` and the flags (§ "Hidden and Locked on copies"); a share has no mode, and
-  xattrs wait for named streams. Best effort: a refused stamp is a `warn!` and the copy succeeds. Gotcha/Why: the server
-  rewrites a file's date when the handle that WROTE it closes, so the moment matters. The streaming writer stamps its
-  own handle before `finish()` (`stamp_writer`, which `FileWriter::set_times` orders after the pending writes); the
-  one-frame compound write has already closed its handle, so it stamps by path right after, one more compound frame
-  (CREATE+SET_INFO+CLOSE). ❌ Never stamp by path while a writer is still open: its close wins. A one-shot write to the
-  user's real name (unstaged, `write_is_single_shot`) shows the server's dates for that one frame.
+  `FILE_BASIC_INFORMATION` (`stamping.rs::source_times`; access and change times go as 0, "don't change"), so the
+  creation date costs no frame. It asks the stream for `CREATED` and the flags (§ "Hidden and Locked on copies"); a
+  share has no mode, and xattrs wait for named streams. Best effort: a refused stamp is a `warn!` and the copy succeeds,
+  and the write reports the creation date and Hidden refused (`stamping.rs::stamped`) for the copy's loss note.
+  Gotcha/Why: the server rewrites a file's date when the handle that WROTE it closes, so the moment matters. The
+  streaming writer stamps its own handle before `finish()` (`stamp_writer`, which `FileWriter::set_times` orders after
+  the pending writes); the one-frame compound write has already closed its handle, so it stamps by path right after, one
+  more compound frame (CREATE+SET_INFO+CLOSE). ❌ Never stamp by path while a writer is still open: its close wins. A
+  one-shot write to the user's real name (unstaged, `write_is_single_shot`) shows the server's dates for that one frame.
 - **The landing rename keeps `CreationTime`** (verified on the Docker guest share, Samba 4.20.6 with
   `store dos attributes = yes`,
   `conformance_test.rs::smb_integration_a_copy_keeps_the_creation_date_per_the_shared_contract`, 2026-10-11):
