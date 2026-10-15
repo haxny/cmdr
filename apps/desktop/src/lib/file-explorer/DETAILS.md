@@ -79,8 +79,10 @@ fallback contract, and the snapshot-pane note.
     old opaque light/dark grays. Zebra stripes are auto-overridden by cascade order.
   - `--color-selection-border` draws a 1px `inset` `box-shadow` between consecutive selected rows so dense selections
     stay countable; suppressed on the cursor row's top.
-  - Independent: every cursor row (focused or unfocused) gets a faint accent-colored `inset` outline via
-    `--color-cursor-outline` so cursor stays distinguishable from the selection bg, regardless of selection state.
+  - Independent: every cursor row gets a faint `inset` hairline so the cursor stays distinguishable from the selection
+    bg, regardless of selection state: accent (`--color-cursor-outline`) in the focused pane, gray
+    (`--color-cursor-outline-unfocused`) in the other, dashed there under Increase contrast or Differentiate without
+    color (`app-file-list.css`).
   - All combinations clear WCAG AA 4.5:1; verified by the row-state matrix in `scripts/check-a11y-contrast/`.
 
 ### Operation lifecycle

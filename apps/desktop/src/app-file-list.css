@@ -108,17 +108,26 @@
   background-color: var(--color-cursor-active);
 }
 
-/* The unfocused pane's cursor keeps its fill and trades the solid hairline for a
-   dashed one, so solid vs dashed tells the panes apart without hue (WCAG 1.4.1). A
-   1px `outline` (box-shadow can't dash), pulled inside the row like the inset
-   hairline. `--color-cursor-outline-dashed` is a faint gray (the control-border tone
-   at half strength), so the accent stays the focused pane's. Skips a folder drop target, whose own
-   2px outline (`DualPaneExplorer`) must win, and drops into the other pane are the
-   common case. */
-.full-list-container:not(.is-focused) .file-entry.is-under-cursor:not(.folder-drop-target),
-.brief-list-container:not(.is-focused) .file-entry.is-under-cursor:not(.folder-drop-target) {
+/* The unfocused pane's cursor hairline is a faint gray (`--color-cursor-outline-unfocused`),
+   so the accent stays the focused pane's. */
+.full-list-container:not(.is-focused) .file-entry.is-under-cursor,
+.brief-list-container:not(.is-focused) .file-entry.is-under-cursor {
+  box-shadow: inset 0 0 0 1px var(--color-cursor-outline-unfocused);
+}
+
+/* When the user asked macOS for stronger cues (Differentiate without color, Increase
+   contrast), the unfocused hairline turns DASHED, so solid vs dashed tells the panes
+   apart without hue (WCAG 1.4.1). A 1px `outline` (box-shadow can't dash), pulled inside
+   the row like the inset hairline. Skips a folder drop target, whose own 2px outline
+   (`DualPaneExplorer`) must win, and drops into the other pane are the common case. */
+html:is(.differentiate-without-color, .increase-contrast)
+  .full-list-container:not(.is-focused)
+  .file-entry.is-under-cursor:not(.folder-drop-target),
+html:is(.differentiate-without-color, .increase-contrast)
+  .brief-list-container:not(.is-focused)
+  .file-entry.is-under-cursor:not(.folder-drop-target) {
   box-shadow: none;
-  outline: 1px dashed var(--color-cursor-outline-dashed);
+  outline: 1px dashed var(--color-cursor-outline-unfocused);
   outline-offset: -1px;
 }
 

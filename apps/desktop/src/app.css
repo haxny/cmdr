@@ -181,12 +181,12 @@
      regardless of pane tint or selection state. Subtle by design — 35%
      alpha. */
   --color-cursor-outline: color-mix(in oklch, var(--color-accent), transparent 65%);
-  /* The unfocused pane draws its cursor hairline DASHED (`app-file-list.css`), so
-     solid vs dashed tells the panes apart. A faint gray (the control-border tone at
-     half strength), about as quiet as the solid accent hairline: the accent belongs to
-     the focused pane. Increase contrast takes the full control-border tone and
-     Differentiate without color `--color-accent-pop`, both below. */
-  --color-cursor-outline-dashed: color-mix(in srgb, var(--color-control-border), transparent 50%);
+  /* The unfocused pane's cursor hairline: a faint gray (the control-border tone at 35%,
+     about as quiet as the accent hairline), so the accent belongs to the focused pane.
+     Solid by default; DASHED under Increase contrast (full control-border tone) and
+     Differentiate without color (`--color-accent-pop`), both below, where the shape
+     tells the panes apart (`app-file-list.css`). */
+  --color-cursor-outline-unfocused: color-mix(in srgb, var(--color-control-border), transparent 65%);
 
   /* === Tab accent band (`TabBar`'s active tab) ===
      The focused pane's active tab carries the full accent along its top edge; the
@@ -708,7 +708,7 @@
     --color-cursor-inactive: rgba(232, 232, 232, 0.4);
     --color-cursor-active: rgba(212, 160, 6, 0.2);
     --color-cursor-outline: rgba(212, 160, 6, 0.35);
-    --color-cursor-outline-dashed: rgba(133, 133, 133, 0.5);
+    --color-cursor-outline-unfocused: rgba(133, 133, 133, 0.35);
     --color-tab-band-unfocused: rgba(212, 160, 6, 0.5);
     --color-warning-bg-solid: #f3e5dc;
     --color-disk-ok: #74a376;
@@ -741,7 +741,7 @@
   --color-cursor-inactive: rgba(232, 232, 232, 0.4);
   --color-cursor-active: rgba(212, 160, 6, 0.2);
   --color-cursor-outline: rgba(212, 160, 6, 0.35);
-  --color-cursor-outline-dashed: rgba(133, 133, 133, 0.5);
+  --color-cursor-outline-unfocused: rgba(133, 133, 133, 0.35);
   --color-tab-band-unfocused: rgba(212, 160, 6, 0.5);
   --color-warning-bg-solid: #f3e5dc;
   --color-disk-ok: #74a376;
@@ -992,7 +992,7 @@
       --color-cursor-inactive: rgba(51, 51, 51, 0.4);
       --color-cursor-active: rgba(255, 194, 6, 0.2);
       --color-cursor-outline: rgba(255, 194, 6, 0.35);
-      --color-cursor-outline-dashed: rgba(128, 128, 128, 0.5);
+      --color-cursor-outline-unfocused: rgba(128, 128, 128, 0.35);
       --color-tab-band-unfocused: rgba(255, 194, 6, 0.5);
       --color-warning-bg-solid: #483d29;
       --color-disk-ok: #588b5b;
@@ -1019,7 +1019,7 @@
     --color-cursor-inactive: rgba(51, 51, 51, 0.4);
     --color-cursor-active: rgba(255, 194, 6, 0.2);
     --color-cursor-outline: rgba(255, 194, 6, 0.35);
-    --color-cursor-outline-dashed: rgba(128, 128, 128, 0.5);
+    --color-cursor-outline-unfocused: rgba(128, 128, 128, 0.35);
     --color-tab-band-unfocused: rgba(255, 194, 6, 0.5);
     --color-warning-bg-solid: #483d29;
     --color-disk-ok: #588b5b;
@@ -1065,7 +1065,7 @@ html.increase-contrast {
   --color-text-secondary: #4f4f4f;
   --color-text-tertiary: #4f4f4f;
   --color-cursor-outline: var(--color-accent-pop);
-  --color-cursor-outline-dashed: var(--color-control-border);
+  --color-cursor-outline-unfocused: var(--color-control-border);
   --shadow-focus-solid: 0 0 0 2px var(--color-focus-ink), 0 0 0 4px var(--color-accent);
   --color-selection-fg-primary: #a80000;
   --color-selection-fg-cursor: #8a0000;
@@ -1091,16 +1091,17 @@ html.increase-contrast {
 /* === Differentiate without color ===
    macOS Accessibility > Display > Differentiate without color, mirrored as the
    `differentiate-without-color` class on `<html>` by `#lib/display-accessibility`. The
-   default look already tells states apart by shape (solid vs dashed cursor hairline,
-   the marked-file bar and stroke); this lifts the shape cues that lean on a faint accent
-   to `--color-accent-pop`, so each clears 3:1 whatever the accent and tint. The contrast
-   checker reads this block as its own tier (`non_text_states.go`).
+   default look tells marked files apart by shape (the marked-file bar and stroke); this
+   dashes the unfocused pane's cursor hairline (`app-file-list.css`) and lifts the cues
+   that lean on a faint accent to `--color-accent-pop`, so each clears 3:1 whatever the
+   accent and tint. The contrast checker reads this block as its own tier
+   (`non_text_states.go`).
 
    - Both cursor hairlines, so solid vs dashed reads at full strength.
    - The focused pane's tab accent band (the unfocused one stays faint). */
 html.differentiate-without-color {
   --color-cursor-outline: var(--color-accent-pop);
-  --color-cursor-outline-dashed: var(--color-accent-pop);
+  --color-cursor-outline-unfocused: var(--color-accent-pop);
   --color-tab-band: var(--color-accent-pop);
 }
 

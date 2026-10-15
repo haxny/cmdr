@@ -42,7 +42,7 @@ func rowMarkFixture(dashed, dwcDashed string) *VarTable {
 		m["color-cursor-inactive"] = "rgba(232, 232, 232, 0.4)"
 		m["color-cursor-active"] = "color-mix(in oklch, var(--color-accent), transparent 80%)"
 		m["color-cursor-outline"] = "color-mix(in oklch, var(--color-accent), transparent 65%)"
-		m["color-cursor-outline-dashed"] = dashed
+		m["color-cursor-outline-unfocused"] = dashed
 		m["color-selection-bg"] = "rgba(0, 0, 0, 0.05)"
 		m["color-selection-fg-primary"] = "#cc0000"
 		m["color-selection-fg-cursor"] = "#a30000"
@@ -56,9 +56,9 @@ func rowMarkFixture(dashed, dwcDashed string) *VarTable {
 		vt.Light[tint.VarName] = "#888888"
 	}
 	vt.ContrastLight["color-cursor-outline"] = "#5a4300"
-	vt.ContrastLight["color-cursor-outline-dashed"] = "#5a4300"
+	vt.ContrastLight["color-cursor-outline-unfocused"] = "#5a4300"
 	vt.Differentiate["color-cursor-outline"] = "#5a4300"
-	vt.Differentiate["color-cursor-outline-dashed"] = dwcDashed
+	vt.Differentiate["color-cursor-outline-unfocused"] = dwcDashed
 	return vt
 }
 
@@ -73,22 +73,24 @@ func failingWhere(findings []Finding, substr string) []Finding {
 }
 
 // TestAnalyzeRowMarksGatesTheDashedOutlineUnderDifferentiateWithoutColor:
-// under Differentiate without color, solid vs dashed is the focused-pane cue,
-// so the dashed hairline has to clear 3:1 on the cursor fill. A faint one fails.
+// under Differentiate without color, the unfocused hairline turns dashed and
+// solid vs dashed is the focused-pane cue, so it has to clear 3:1 on the cursor
+// fill. A faint one fails.
 func TestAnalyzeRowMarksGatesTheDashedOutlineUnderDifferentiateWithoutColor(t *testing.T) {
 	faint := "color-mix(in oklch, var(--color-accent), transparent 50%)"
 	gated, _ := NewAnalyzer(rowMarkFixture(faint, faint)).AnalyzeRowMarks()
-	if len(failingWhere(gated, "dashed")) == 0 {
+	if len(failingWhere(gated, "unfocused")) == 0 {
 		t.Fatal("a faint dashed outline passed the Differentiate without color gate")
 	}
 	gated, _ = NewAnalyzer(rowMarkFixture(faint, "#5a4300")).AnalyzeRowMarks()
-	if failing := failingWhere(gated, "dashed"); len(failing) > 0 {
+	if failing := failingWhere(gated, "unfocused"); len(failing) > 0 {
 		t.Errorf("a dark dashed outline failed: %s = %.2f:1", failing[0].Selector, failing[0].Ratio)
 	}
 }
 
 // TestAnalyzeRowMarksOnlyMeasuresTheDefaultHairlines: the default look keeps
-// both cursor hairlines subtle by design, so they're reported, not gated.
+// both cursor hairlines solid and subtle by design, so they're reported, not
+// gated.
 func TestAnalyzeRowMarksOnlyMeasuresTheDefaultHairlines(t *testing.T) {
 	faint := "color-mix(in oklch, var(--color-accent), transparent 50%)"
 	gated, measured := NewAnalyzer(rowMarkFixture(faint, "#5a4300")).AnalyzeRowMarks()

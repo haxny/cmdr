@@ -90,8 +90,9 @@ One pass measures marks rather than text:
   (3:1, joins the WCAG gate) or MEASURED (a cue kept subtle there by design, printed under `--verbose` only). Surface
   marks: the text field edge (`--color-field-border`), the focus ring's ink layer (`--color-focus-ink`), and the tab
   accent bands (`--color-tab-band*`). Row marks, swept over pane tint × row state like the row matrix: the marked-file
-  bar (the `--color-selection-fg` cascade) and the solid and dashed cursor hairlines (`--color-cursor-outline*`). An
-  unresolvable token fails rather than skips. These findings stay out of the APCA floor, whose Lc scale is for text.
+  bar (the `--color-selection-fg` cascade) and the focused and unfocused cursor hairlines (`--color-cursor-outline*`;
+  the unfocused one dashes under Increase contrast and Differentiate without color). An unresolvable token fails rather
+  than skips. These findings stay out of the APCA floor, whose Lc scale is for text.
 
 ## Opacity (detect, don't compute)
 

@@ -10,12 +10,13 @@ import "fmt"
 //   - The marked-file bar (`app-file-list.css`), painted in the same
 //     `--color-selection-fg` cascade as the marked text, so it shifts with the
 //     cursor exactly as the text does.
-//   - The cursor hairlines: solid in the focused pane, dashed in the other.
-//     Solid vs dashed is the focused-pane cue. By default the solid one is the
-//     faint accent and the dashed one a faint gray (David's picks, 2026-10-15),
-//     both measured, not gated. Increase contrast lifts the solid one to
-//     `--color-accent-pop` and the dashed one to the full control-border gray;
-//     Differentiate without color lifts both to `--color-accent-pop`. There they
+//   - The cursor hairlines. By default both are solid and faint, the focused
+//     pane's in the accent and the other's in gray (David's picks, 2026-10-15),
+//     measured, not gated: the focused-pane cue is then hue, fill, and the tab
+//     band. Increase contrast and Differentiate without color dash the unfocused
+//     one, so solid vs dashed becomes the cue: Increase contrast lifts the solid
+//     one to `--color-accent-pop` and the dashed one to the full control-border
+//     gray, Differentiate without color both to `--color-accent-pop`. There they
 //     must clear 3:1.
 //
 // A gated finding joins the WCAG gate; a measured one prints under
@@ -50,15 +51,15 @@ var rowMarkScenarios = []rowMarkScenario{
 		Gated:    []rowContrastTier{tierDefault, tierIncrease, tierDifferentiate},
 	},
 	{
-		Name:     "focused cursor hairline (solid)",
+		Name:     "focused cursor hairline",
 		MarkVar:  constMark("color-cursor-outline"),
 		Variants: []string{"cursor-active"},
 		Gated:    []rowContrastTier{tierIncrease, tierDifferentiate},
 		Measured: []rowContrastTier{tierDefault},
 	},
 	{
-		Name:     "unfocused cursor hairline (dashed)",
-		MarkVar:  constMark("color-cursor-outline-dashed"),
+		Name:     "unfocused cursor hairline",
+		MarkVar:  constMark("color-cursor-outline-unfocused"),
 		Variants: []string{"cursor-inactive"},
 		Gated:    []rowContrastTier{tierIncrease, tierDifferentiate},
 		Measured: []rowContrastTier{tierDefault},
