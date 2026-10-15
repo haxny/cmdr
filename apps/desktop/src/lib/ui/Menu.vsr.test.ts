@@ -113,8 +113,12 @@ describe('the house menu, spoken', () => {
     await openMenu()
     await step('ArrowDown')
 
-    // Entering: focus moves to the submenu, whose own row lands a frame later.
-    expect(await step('ArrowRight')).toBe('menu, Team share, orientated vertically')
+    // Entering: focus moves to the submenu, whose own row lands a frame later. Asserted on the
+    // phrase spoken AT focus: the reader re-reads after the key too, and whether the frame has
+    // landed by then is a race a loaded CI runner loses.
+    const spokenBefore = (await virtual.spokenPhraseLog()).length
+    await step('ArrowRight')
+    expect((await virtual.spokenPhraseLog())[spokenBefore]).toBe('menu, Team share, orientated vertically')
     expect(await step('ArrowDown')).toBe(
       'menu, Team share, orientated vertically, active descendant Use the fast connection',
     )
