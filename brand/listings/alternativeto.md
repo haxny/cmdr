@@ -4,9 +4,11 @@ Live: https://alternativeto.net/software/cmdr/about/. Edit it while signed in; c
 queue, and the "Note about your changes" field at the bottom speeds that up.
 
 Status: the 2026-09-18 v0.46.0 edit is live (checked 2026-09-24: description, tags, and the single $59 price all match
-this file). The fields below are what's live, except the v0.53.0 edit (prepared 2026-10-15, not yet submitted; it
-supersedes the unsent v0.49.0 one). Edit them here first when refreshing, then paste. Refresh cadence and what to update
-per release: `docs/guides/releasing.md` § "Refreshing the app-directory listings".
+this file). The fields below are what went in with the v0.53.0 edit, **submitted 2026-10-15, awaiting admin approval**.
+The form first said "Cmdr has pending changes" (likely an earlier edit still in their queue), then reported success, so
+check the live page in a week or two; the last change before it went live 27 days earlier. Edit the fields here first
+when refreshing, then paste. Refresh cadence and what to update per release: `docs/guides/releasing.md` § "Refreshing
+the app-directory listings".
 
 v0.47.0 changed nothing here (checked 2026-09-24): AlternativeTo shows no version or changelog, and nothing in the
 description, tags, or features became false. Its new features (the viewer's long lines, favorite letter shortcuts, the
@@ -16,9 +18,9 @@ v0.48.0 and v0.49.0 changed one line (checked 2026-10-01): Latin American Spanis
 edit. Their other additions (hex and binary viewer modes, tab drag and drop, streaming compression, SFTP free space)
 don't make anything false and are too small to buy room under the cap.
 
-v0.53.0 changed three lines (checked 2026-10-15): Russian (shipped in v0.50.0) made it 15 languages, and the
-accessibility line now leads with VoiceOver and full keyboard use, paid for by dropping "native macOS behavior".
-Multi-rename, S3, and compare folders (v0.50.0–v0.52.0) would need cuts elsewhere, so they wait for a rewrite.
+v0.53.0 rewrote the description (2026-10-15) in the voice of David's MacUpdate rewrite: labeled bullets, plainer claims,
+and the newer features (multi-rename, VoiceOver, S3, on-server SMB copies). It also fixed the language count: Russian
+shipped in v0.50.0, so it's 15, not 14.
 
 ## Main info
 
@@ -27,7 +29,7 @@ Multi-rename, S3, and compare folders (v0.50.0–v0.52.0) would need cuts elsewh
 - **Short description** (their hint: one concise sentence on the main purpose):
 
 ```
-A very fast two-pane file manager for macOS with Total Commander-compatible keyboard shortcuts, SMB, SFTP, WebDAV, and MTP/Android support. Optional+privacy-first AI features like natural language search and bulk rename.
+A very fast two-pane file manager for macOS with Total Commander-compatible keyboard shortcuts, SMB, SFTP, WebDAV, and MTP+ADB/Android support. Optional+privacy-first AI features like natural language search and bulk rename.
 ```
 
 ### Full description
@@ -37,46 +39,41 @@ description (`macupdate.md`), minus the HTML, plus the licensing and pricing lin
 it after every edit; there's little room left under the cap.
 
 ```
-Cmdr is on macOS what Total Commander is on Windows: familiar shortcuts, two panes, fast and transparent. Built with Rust, it's extremely fast and respectful of your CPU, RAM, and disk.
+Cmdr brings the Total Commander experience to macOS, and (optionally, only if you enable it) adds AI features that genuinely help. Built with Rust, it's extremely fast and respectful toward your CPU, RAM, and disk.
 
-Plus it has two more cool things:
+Cmdr is in open beta. It's well-tested, stable software used every day by the author and hundreds of early adopters. Feedback goes straight to the developer!
 
-- It indexes your drive for near-instant search and shows you live folder sizes (optional, can be disabled at onboarding)
-- AI features like bulk renames and search (optional, off by default, can run 100% locally, and all destructive operations need human approval)
-
-Cmdr is in open beta: the core is well-tested and used daily by the author and a group of testers, while the newer features (archives, operation log, AI, SFTP, WebDAV, ADB) are marked as "alpha". Feedback goes straight to the developer!
-
-Cmdr is source-available under the Business Source License 1.1, and the source is on GitHub. Free for personal use, commercial license for work use.
+Source-available (BSL 1.1) on GitHub. Free for personal use, paid license for work.
 
 Core features:
 
 - Basics: Two panes, tabs, command palette, keyboard-first. F5 to copy, F6 to move, F8 to delete, all remappable.
-- Operations: Copy, move, rename, delete, with accurate progress bars, ETAs, and cancellation. Built for data safety, speed, and transparency.
-- Advanced ops: Queue operations, background them, pause/resume, browse op log, roll back ops, even days later.
-- Browse zip, tar, and 7z files like folders, and create or extract them.
-- Speed: Lists 50,000 files near-instantly; the built-in viewer opens a 10 GB file in 1 sec, with search. (!)
-- Accessibility: VoiceOver, full keyboard use, dark/light modes, WCAG 2.2 AA and APCA verified contrasts.
+- Operations: Copy, move, rename, delete, compress with accurate progress bars, ETAs, cancellation. Optimized for data safety, speed, and transparency.
+- Advanced operations: Queue ops, background them, pause/resume, browse op log, roll back ops, even days later.
+- Multi-rename: With patterns, counters, search and replace, live preview, Undo.
+- Archives: Browse zip, tar, and 7z files like folders, and create or extract them.
+- Speed: Lists 50,000 files near-instantly, the built-in viewer opens a 10 GB file in 1 sec, with search!
+- Accessibility: Follows macOS accessibility settings. VoiceOver, WCAG 2.2 AA and APCA-verified contrasts in dark+light modes, and everything works with the keyboard.
 - Localization: Translated into 15 languages.
 
 Extra features:
 
-- USB: Reads/writes Android phones, Kindles, and cameras over MTP and PTP, up to 4x faster than Android File Transfer, with any USB cable. Also ADB support for Android!
-- SMB: Accesses network drives 4-200x faster than the macOS client. For small files and listing dirs, it's waay faster than Finder!
-- SFTP: Use your server like a local drive
-- WebDAV: Same
+- Phones: Android phones, Kindles, and cameras over MTP and PTP, up to 4x faster than Android File Transfer. Also ADB over USB, and iPhones natively.
+- SMB: Network drives over a custom SMB implementation, 4–200x faster than the macOS client. Copies within a share happen on the server. For small files and listing dirs, it's waay faster than Finder!
+- More servers: SFTP, WebDAV (Nextcloud and others), and S3 (AWS, R2, B2, and more), with cost estimates for S3 transfers.
 - Git: Browse Git history, branches, worktrees, and stashes like normal folders.
-- Supports Dropbox's and Google Drive's own actions, like "Copy Dropbox link" and "Share with Google Drive".
-- Drive index: Keeps a fully local index of your disk, for live folder sizes and fast search.
+- Cloud: Supports "Copy Dropbox link", "Share with Google Drive", etc.
+- Indexing: (Optional) Keeps a fully local index of your disk for live folder sizes and near-instant search.
 
-AI features (optional, off by default, and can stay fully local with a built-in LLM):
+AI features (optional, off by default, can stay 100% local with a built-in LLM):
 
-- Natural-language search: "Find my tax report from last year"
+- Models: The default model runs on your Mac. Or bring your own OpenAI, Claude, Gemini, etc. key, or any OpenAI-compatible endpoint (like your ollama server).
+- Chat: "Why is my Downloads folder so big?", "Summarize these three docs"
+- Natural-language search: "Find my tax report from last year" just works.
 - Smart selection: "Select all screenshots in this folder"
-- Chat: "Why is my Downloads folder so big?"
-- Local image indexing: "Find photos where a dog looks into the camera"
-- Natural-language renaming: "Rename these screenshots based on their content." The agent only suggests; you review, apply, and can roll back.
-- File organization: "Clean up my Downloads folder". You approve each move.
-- The model runs on your Mac by default; bring your own OpenAI, Claude, or Gemini key (or ollama, etc.) for better models.
+- Image indexing: "Find photos where a dog looks into the camera"
+- Renaming and organizing: "Rename these screenshots based on their content", "Clean up my Downloads folder". The agent never actually changes stuff: it only suggests, you approve or reject, and you can roll back later.
+- Proactive suggestions: "How about moving that vet invoice to your donkey's medical papers?"
 - With AI off, Cmdr is a complete Total Commander-style file manager!
 ```
 
@@ -158,7 +155,7 @@ Leave unchecked, deliberately:
 Their optional box for the reviewing admin. For the v0.53.0 edit:
 
 ```
-Hi! Small one: Cmdr now speaks Russian and Latin American Spanish, so it's 15 languages (Russian added to the list), and it works with VoiceOver now, so the accessibility line says so. Thanks!
+Hi! I've refreshed the description for v0.53.0: Cmdr now works with VoiceOver, got multi-rename and S3 support, and speaks 15 languages (Russian added to the list). Thanks!
 ```
 
 The note that went with the v0.46.0 edit, kept for reference (it's where the licensing mislabel ask went in):
@@ -184,7 +181,7 @@ Also, my ask from last time (if it's not done already): Cmdr is source-available
 
 So they don't get re-litigated at the next edit pass:
 
-- **The full description sits at 2,997 of their 3,000-character cap.** Every addition has to be paid for by a cut, so
+- **The full description sits at 2,991 of their 3,000-character cap.** Every addition has to be paid for by a cut, so
   measure before and after; the form rejects an over-long one outright. Nothing in v0.46.0 made the description false
   (no feature graduated out of alpha, no claim broke, and the description names no prices), so that release changed
   nothing here, per `docs/guides/releasing.md` § "Refreshing the app-directory listings".
