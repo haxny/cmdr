@@ -60,7 +60,8 @@ describe('MediaImageView.handleKey', () => {
     }
     expect(view.handleKey(key('+', { metaKey: true }))).toBe(false)
     expect(view.handleKey(key('-', { ctrlKey: true }))).toBe(false)
-    expect(view.handleKey(key('0', { altKey: true }))).toBe(false)
+    // What ⌥0 really reports on a US Mac: the `º` it types.
+    expect(view.handleKey(key('º', { altKey: true, code: 'Digit0' }))).toBe(false)
     destroy()
   })
 

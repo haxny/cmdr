@@ -25,6 +25,14 @@ export function getRestrictedWindowSettings(): Promise<RestrictedWindowSettings>
 }
 
 /**
+ * The persisted custom shortcuts (command id → shortcuts), for a window with no store access
+ * (the viewer). Read-only; live rebinds arrive through `shortcuts:changed`.
+ */
+export function getRestrictedWindowShortcuts(): Promise<Partial<Record<string, string[]>>> {
+  return commands.getRestrictedWindowShortcuts()
+}
+
+/**
  * Pushes the FE settings-registry default map to the backend, so error-report
  * manifests don't duplicate defaults between TypeScript and Rust.
  */

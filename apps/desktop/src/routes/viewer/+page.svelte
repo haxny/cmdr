@@ -62,6 +62,7 @@
     import ViewerRow from './ViewerRow.svelte'
     import RawByteView from './RawByteView.svelte'
     import { modeForKey, type ViewerDisplayMode } from './viewer-view-mode'
+    import { initializeShortcuts } from '#lib/shortcuts/index.js'
     import { availableMediaKind } from './media-view'
     import ViewerCopyDialogs from './ViewerCopyDialogs.svelte'
     import MediaImageView from './MediaImageView.svelte'
@@ -953,6 +954,10 @@
         })
         scroll.wordWrap = getSetting('viewer.wordWrap')
         warningSuppressed = getSetting('fileViewer.suppressBinaryWarning')
+        // The viewer's single keys are remappable (`Viewer window` in the shortcuts registry),
+        // and with no store access the rebindings arrive the restricted way too: a backend
+        // snapshot plus `shortcuts:changed`. Non-throwing; the defaults hold until it lands.
+        await initializeShortcuts({ restrictedWindow: true })
 
         // Apply compounded text size after settings are loaded so the user's
         // persisted slider value is honored on first paint.

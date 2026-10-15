@@ -34,8 +34,8 @@ Each is break-if-ignored; the named `DETAILS.md` section has the why.
   Shift-click reads `gestureGranularity`, ❌ never `dragGranularity`, which `endDrag` already reset. (§ "Selection
   granularity")
 - **Keyboard extension has two placement-sensitive entry points**: unmodified Shift+Arrow / Home / End after the
-  `searchInputFocused` guard and before `handleBareKey`; the ⌥/⌃/⌘ branch in `handleModifiedKey`, which runs regardless
-  of focus and gates on `!searchInputFocused` itself. (§ "Keyboard motion model")
+  `searchInputFocused` guard and before `handleNavigationKey`; the ⌥/⌃/⌘ branch in `handleModifiedKey`, which runs
+  regardless of focus and gates on `!searchInputFocused` itself. (§ "Keyboard motion model")
 - **"Caret" is a text POSITION, "text cursor" the optional rendered bar.** Mount the cursor in `.scroll-spacer`, ❌
   never in `.lines-container`, whose child count derives the wrapped-line height. (§ "Text cursor")
 - **`closeWindow()` goes through `closeSelfWindow()` (backend hide + 100 ms), and `canClose` / `windowReady` flip via

@@ -225,6 +225,16 @@ pub fn get_restricted_window_settings(app: AppHandle) -> crate::settings::Restri
     crate::settings::load_restricted_window_settings(&app)
 }
 
+/// The custom keyboard shortcuts, as command id → shortcuts, for a restricted-capability
+/// window (the viewer), whose keys are remappable but which has no store access to read
+/// `shortcuts.json`. Read-only, and only the initial snapshot: live rebinds arrive through
+/// the cross-window `shortcuts:changed` event. See `crate::settings::load_custom_shortcuts`.
+#[tauri::command]
+#[specta::specta]
+pub fn get_restricted_window_shortcuts(app: AppHandle) -> std::collections::BTreeMap<String, Vec<String>> {
+    crate::settings::load_custom_shortcuts(&app)
+}
+
 /// The settings a restricted-capability window may persist. A typed enum (not a
 /// free-form id string) so the write allowlist is enforced at the IPC boundary:
 /// a compromised viewer webview can only flip the booleans listed here, never

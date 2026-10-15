@@ -2529,6 +2529,13 @@ export const commands = {
    */
   getRestrictedWindowSettings: () => __TAURI_INVOKE<RestrictedWindowSettings>('get_restricted_window_settings'),
   /**
+   *  The custom keyboard shortcuts, as command id → shortcuts, for a restricted-capability
+   *  window (the viewer), whose keys are remappable but which has no store access to read
+   *  `shortcuts.json`. Read-only, and only the initial snapshot: live rebinds arrive through
+   *  the cross-window `shortcuts:changed` event. See `crate::settings::load_custom_shortcuts`.
+   */
+  getRestrictedWindowShortcuts: () => __TAURI_INVOKE<{ [key in string]: string[] }>('get_restricted_window_shortcuts'),
+  /**
    *  Persists a setting on behalf of a restricted-capability window (the viewer).
    *
    *  The backend never writes `settings.json` itself (the settings loader is

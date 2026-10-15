@@ -27,6 +27,7 @@ import { browsersCommands } from './sources/browsers'
 import { mcpCommands } from './sources/mcp'
 import { aboutWindowCommands } from './sources/about-window'
 import { queueWindowCommands } from './sources/queue-window'
+import { viewerWindowCommands } from './sources/viewer-window'
 import { commandPaletteCommands } from './sources/command-palette'
 
 /**
@@ -128,6 +129,7 @@ const commandSources: CommandSource[] = [
   ...mcpCommands,
   ...aboutWindowCommands,
   ...queueWindowCommands,
+  ...viewerWindowCommands,
   ...commandPaletteCommands,
 ]
 

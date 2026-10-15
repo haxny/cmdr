@@ -269,10 +269,6 @@
   "@viewer.statusBar.hint.image": {
     "sourceHash": "bca0205"
   },
-  "viewer.statusBar.hint.text": "W 自動換行 · F 跟隨 · ⌘F 搜尋",
-  "@viewer.statusBar.hint.text": {
-    "sourceHash": "3ecf215"
-  },
   "viewer.media.dimensions": "{width} × {height}",
   "@viewer.media.dimensions": {
     "sourceHash": "ece2cad",

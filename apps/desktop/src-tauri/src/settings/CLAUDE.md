@@ -13,6 +13,8 @@ satisfies the live-apply rule below.
 - `loader.rs`: `Settings` struct + `load_settings` (reads `settings.json`, falls back to `Default`); the `RestrictedWindowSettings`
   snapshot; the early-load helpers.
 - `ai_gates.rs`: switches the AI gates read fresh (`askCmdr.enabled` via the policy `overlay`, held-"no" markers).
+- `restricted_shortcuts.rs`: the viewer's read-only snapshot of `shortcuts.json` (its keys are remappable, and it has no
+  store access); `lib/shortcuts/DETAILS.md` § "The viewer's keys".
 - `loader_tests.rs`: `loader`'s own tests, in a sibling file wired in with `#[path]` so they still reach its private
   parse helpers.
 

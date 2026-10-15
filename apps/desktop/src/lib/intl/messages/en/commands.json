@@ -610,6 +610,42 @@
   "@commands.queueClose.label": {
     "description": "Row in the Keyboard shortcuts list: what the key does in the operation queue window (the separate window listing running, waiting, and stopped copies, moves, and deletes, one operation per row). Read-only (the key can’t be rebound). It closes the operation queue window. Operations keep running."
   },
+  "commands.viewerToggleWordWrap.label": "Turn word wrap on or off",
+  "@commands.viewerToggleWordWrap.label": {
+    "description": "Row in the Keyboard shortcuts list: what the key does in the file viewer window (the separate window that shows a file's contents). It switches between wrapping long lines to the window width and letting them run off to the right. The user can rebind or remove this key."
+  },
+  "commands.viewerToggleTail.label": "Turn tail mode on or off",
+  "@commands.viewerToggleTail.label": {
+    "description": "Row in the Keyboard shortcuts list: what the key does in the file viewer window. Tail mode keeps the view at the end of the file and follows new lines as they're written, like a growing log. Use the same word for \"tail\" as the viewer toolbar's Tail button (viewer.toolbar.tail.label). The user can rebind or remove this key."
+  },
+  "commands.viewerViewAsMedia.label": "View as image or PDF",
+  "@commands.viewerViewAsMedia.label": {
+    "description": "Row in the Keyboard shortcuts list: what the key does in the file viewer window. For an image or PDF file, it shows the rendered picture or document instead of its raw bytes; on an image that's already showing, it fits the image back to the window. \"PDF\" is a format name; don't translate it."
+  },
+  "commands.viewerViewAsText.label": "View as text",
+  "@commands.viewerViewAsText.label": {
+    "description": "Row in the Keyboard shortcuts list: what the key does in the file viewer window. It shows the file decoded as text. Same wording as the viewer's view-mode menu (viewer.toolbar.viewMode.viewAsText)."
+  },
+  "commands.viewerViewAsBinary.label": "View as binary",
+  "@commands.viewerViewAsBinary.label": {
+    "description": "Row in the Keyboard shortcuts list: what the key does in the file viewer window. It shows the file's original bytes as fixed-width character rows, without treating line breaks as breaks. \"Binary\" matches the view-mode menu's Binary option (viewer.toolbar.viewMode.binary)."
+  },
+  "commands.viewerViewAsHex.label": "View as hex",
+  "@commands.viewerViewAsHex.label": {
+    "description": "Row in the Keyboard shortcuts list: what the key does in the file viewer window. It shows the file's bytes as hexadecimal pairs beside their characters. \"Hex\" matches the view-mode menu's Hex option (viewer.toolbar.viewMode.hex)."
+  },
+  "commands.viewerZoomIn.label": "Zoom in on the image",
+  "@commands.viewerZoomIn.label": {
+    "description": "Row in the Keyboard shortcuts list: what the key does in the file viewer window while it shows an image. It enlarges the image a step."
+  },
+  "commands.viewerZoomOut.label": "Zoom out of the image",
+  "@commands.viewerZoomOut.label": {
+    "description": "Row in the Keyboard shortcuts list: what the key does in the file viewer window while it shows an image. It shrinks the image a step."
+  },
+  "commands.viewerToggleImageZoom.label": "Switch the image between fit and actual size",
+  "@commands.viewerToggleImageZoom.label": {
+    "description": "Row in the Keyboard shortcuts list: what the key does in the file viewer window while it shows an image. It flips between fitting the whole image in the window and showing it at 100% (one image pixel per screen pixel), the same as clicking the image."
+  },
   "commands.multiRenameOpenPresets.label": "Open the presets menu",
   "@commands.multiRenameOpenPresets.label": {
     "description": "Row in the Keyboard shortcuts list: what F2 does while the Multi-rename tool is open. It opens the menu of saved rename settings (presets), as in Total Commander. Read-only (the key can't be rebound)."

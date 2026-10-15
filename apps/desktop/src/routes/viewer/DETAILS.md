@@ -26,7 +26,10 @@ Per-file inventory for the route. Locate symbols via `codegraph_search`; this is
 - **`viewer-open-failure.ts`**: `handleOpenFailure`, the copy, Retry flag, and log level for an open that didn't
   succeed, shared by the three open sites. See § "A read that didn't come back".
 - **`viewer-keyboard.ts`**: pure key helpers + `createViewerKeyboard`, the keydown router (modifiers, Escape ladder, ⌘A,
-  bare-key dispatch, and the twelve selection-extension chords).
+  bare-key dispatch, and the twelve selection-extension chords). Word wrap, tail, the 0–3 mode keys
+  (`viewer-view-mode.ts`), and the image's zoom keys (`MediaImageView.svelte`) are shortcuts-registry commands (scope
+  `Viewer window`), so the user can rebind or turn them off; `viewer-key-hints.ts` builds the status-bar hint from the
+  live keys. How the window reads rebinds without store access: `lib/shortcuts/DETAILS.md` § "The viewer's keys".
 - **`viewer-menu-actions.ts`**: `runViewerEditAction`, the dispatcher behind the viewer menu bar's Edit > Copy and
   Edit > Select all. Branches on search-input focus through the same `isSearchInputFocused` / `inputHasSelection` the
   keydown router uses, so the menu path and the ⌘-chord path end in the same two functions. Beside it,
@@ -489,8 +492,8 @@ the user can't see.
 Gotcha/Why: the two entry points sit in different halves of `handleKeyDown`, and each is placement-sensitive.
 
 - **Unmodified Shift+Arrow / Home / End** arrive on the bare-key path. The extend branch goes **after the
-  `if (searchInputFocused) return` guard and before `handleBareKey`**. Before that guard it steals the search input's
-  own Shift+Arrow; after `handleBareKey` Shift+Up keeps scrolling instead of extending.
+  `if (searchInputFocused) return` guard and before `handleNavigationKey`**. Before that guard it steals the search
+  input's own Shift+Arrow; after `handleNavigationKey` Shift+Up keeps scrolling instead of extending.
 - **⌥⇧ / ⌃⇧ / ⌘⇧ chords** arrive in `handleModifiedKey`, which runs **regardless of focus**. The branch sits after the
   search chords (so ⌘⌥R / ⌘⌥C still win) and before the `if (!e.altKey && !e.shiftKey)` bail, and **gates on
   `!searchInputFocused` itself** — without that gate it steals ⌥⇧← / ⌥⇧→ from a focused search input.

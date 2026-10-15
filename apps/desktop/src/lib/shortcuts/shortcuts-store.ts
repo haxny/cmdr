@@ -4,7 +4,10 @@
 
 import { load, type Store } from '@tauri-apps/plugin-store'
 import { emit, listen, type UnlistenFn } from '@tauri-apps/api/event'
-import { updateMenuAccelerator as updateMenuAcceleratorCommand } from '#lib/tauri-commands/index.js'
+import {
+  getRestrictedWindowShortcuts,
+  updateMenuAccelerator as updateMenuAcceleratorCommand,
+} from '#lib/tauri-commands/index.js'
 import { commands, FIXED_KEY_COMMAND_IDS, NATIVE_SHORTCUT_COMMAND_IDS } from '#lib/commands/command-registry.js'
 import { resolveStorePath } from '#lib/settings/store-path.js'
 import { getAppLogger } from '#lib/logging/logger.js'
@@ -134,8 +137,13 @@ async function getStore(): Promise<Store> {
 
 /**
  * Initialize the shortcuts store. Must be called before using other functions.
+ *
+ * `restrictedWindow` is for a window with no `tauri-plugin-store` access (the viewer): it
+ * seeds from the typed `get_restricted_window_shortcuts` snapshot instead and follows
+ * rebinds through `shortcuts:changed` like any window. It only READS: rebinding happens in
+ * Settings, so the mutators are never called there (a save would have no store to write).
  */
-export async function initializeShortcuts(): Promise<void> {
+export async function initializeShortcuts(options: { restrictedWindow?: boolean } = {}): Promise<void> {
   if (initialized) {
     log.debug('Shortcuts already initialized, skipping')
     return
@@ -143,58 +151,11 @@ export async function initializeShortcuts(): Promise<void> {
 
   log.debug('Initializing shortcuts store')
 
-  const store = await getStore()
+  const entries = options.restrictedWindow ? await readRestrictedSnapshot() : await readStoreEntries()
 
-  // Check schema version and migrate if needed
-  const version = await store.get<number>('_schemaVersion')
-  if (version !== undefined && version !== SCHEMA_VERSION) {
-    log.info('Migrating shortcuts from version {version}', { version })
-    await migrateShortcuts(store, version)
-  }
-
-  // Clear in-memory cache and load fresh from store
+  // Clear in-memory cache and load fresh
   customShortcuts.clear()
-
-  // Load custom shortcuts from top-level keys (format: shortcut:commandId)
-  // This is similar to how settings-store stores values
-  const keys = await store.keys()
-  const shortcutKeys = keys.filter((k) => k.startsWith('shortcut:'))
-
-  for (const key of shortcutKeys) {
-    const commandId = key.replace('shortcut:', '')
-
-    // Drop any persisted customization for a macOS-native command. AppKit owns
-    // these accelerators, so the entry is a no-op illusion (David's dev
-    // shortcuts.json carries `app.hide: []` from testing). Not loading it leaves
-    // the map without an entry, so the registry default applies and the next
-    // save reconciles the stale disk key away.
-    if (isNativeShortcutCommand(commandId) || isFixedKeyCommand(commandId)) continue
-
-    const shortcuts = await store.get<string[]>(key)
-    if (!Array.isArray(shortcuts)) continue // skip non-array garbage
-
-    // Heal leaked empty-string entries. A `''` is never a real shortcut; it's
-    // junk an older "+ add" flow could persist when the user clicked away from a
-    // half-started add. Drop every `''`, but keep the distinction that matters:
-    //   - a genuine `[]` (length 0) is "user removed all shortcuts" — load it.
-    //   - a non-empty array that's ALL `''` heals to empty, which we must NOT
-    //     store as `[]` (that would wrongly suppress a default-bound command's
-    //     defaults); skip the entry entirely so the registry default applies.
-    //   - `['⌘X', '']` heals to `['⌘X']`.
-    // See CLAUDE.md § "Empty array vs missing key".
-    if (shortcuts.length === 0) {
-      customShortcuts.set(commandId, []) // real removed-all state
-      continue
-    }
-    const healed = shortcuts.filter((s) => s !== '')
-    if (healed.length === 0) continue // was all-'' junk; fall back to default
-    // Bring display-form key names back to the canonical vocabulary (`⌘⌫` →
-    // `⌘Backspace`). A file written before the two spellings were unified would
-    // otherwise hold a binding no keypress can produce and no menu accelerator
-    // can parse. See `key-capture.ts` for the canonical-vs-display split. Healing
-    // can fold two entries into one (`['⇧8', '*']` → `*` twice), so dedupe.
-    customShortcuts.set(commandId, [...new Set(healed.map(toCanonicalShortcut))])
-  }
+  for (const [commandId, shortcuts] of entries) seedCustomShortcut(commandId, shortcuts)
 
   if (customShortcuts.size > 0) {
     log.debug('Loaded {count} {shortcutsNoun}: {ids}', {
@@ -220,6 +181,71 @@ export async function initializeShortcuts(): Promise<void> {
   for (const commandId of customShortcuts.keys()) {
     notifyListeners(commandId)
   }
+}
+
+/** Every `shortcut:<commandId>` entry in the store, as `[commandId, raw value]`, after any schema migration. */
+async function readStoreEntries(): Promise<[string, unknown][]> {
+  const store = await getStore()
+
+  // Check schema version and migrate if needed
+  const version = await store.get<number>('_schemaVersion')
+  if (version !== undefined && version !== SCHEMA_VERSION) {
+    log.info('Migrating shortcuts from version {version}', { version })
+    await migrateShortcuts(store, version)
+  }
+
+  // Custom shortcuts live in top-level keys (format: shortcut:commandId), like settings-store's values.
+  const shortcutKeys = (await store.keys()).filter((k) => k.startsWith('shortcut:'))
+  return Promise.all(
+    shortcutKeys.map(async (key): Promise<[string, unknown]> => [key.replace('shortcut:', ''), await store.get(key)]),
+  )
+}
+
+/**
+ * A restricted window's customizations, from the backend's read of `shortcuts.json`. A failed
+ * read leaves the registry defaults in force, at warn level: an error-level log here would
+ * file an error report on every viewer open (the reason restricted settings warn too).
+ */
+async function readRestrictedSnapshot(): Promise<[string, unknown][]> {
+  try {
+    return Object.entries(await getRestrictedWindowShortcuts())
+  } catch (error) {
+    log.warn('Could not read custom shortcuts, using defaults: {error}', { error: String(error) })
+    return []
+  }
+}
+
+/** Loads one persisted customization into the map, healed. Both init paths come through here. */
+function seedCustomShortcut(commandId: string, shortcuts: unknown): void {
+  // Drop any persisted customization for a macOS-native command. AppKit owns
+  // these accelerators, so the entry is a no-op illusion (David's dev
+  // shortcuts.json carries `app.hide: []` from testing). Not loading it leaves
+  // the map without an entry, so the registry default applies and the next
+  // save reconciles the stale disk key away.
+  if (isNativeShortcutCommand(commandId) || isFixedKeyCommand(commandId)) return
+  if (!Array.isArray(shortcuts)) return // skip non-array garbage
+
+  // Heal leaked empty-string entries. A `''` is never a real shortcut; it's
+  // junk an older "+ add" flow could persist when the user clicked away from a
+  // half-started add. Drop every `''`, but keep the distinction that matters:
+  //   - a genuine `[]` (length 0) is "user removed all shortcuts" — load it.
+  //   - a non-empty array that's ALL `''` heals to empty, which we must NOT
+  //     store as `[]` (that would wrongly suppress a default-bound command's
+  //     defaults); skip the entry entirely so the registry default applies.
+  //   - `['⌘X', '']` heals to `['⌘X']`.
+  // See CLAUDE.md § "Empty array vs missing key".
+  if (shortcuts.length === 0) {
+    customShortcuts.set(commandId, []) // real removed-all state
+    return
+  }
+  const healed = shortcuts.filter((s): s is string => typeof s === 'string' && s !== '')
+  if (healed.length === 0) return // was all-'' junk; fall back to default
+  // Bring display-form key names back to the canonical vocabulary (`⌘⌫` →
+  // `⌘Backspace`). A file written before the two spellings were unified would
+  // otherwise hold a binding no keypress can produce and no menu accelerator
+  // can parse. See `key-capture.ts` for the canonical-vs-display split. Healing
+  // can fold two entries into one (`['⇧8', '*']` → `*` twice), so dedupe.
+  customShortcuts.set(commandId, [...new Set(healed.map(toCanonicalShortcut))])
 }
 
 /**

@@ -11,6 +11,7 @@
  */
 import type { CommandId, CommandArgs } from '#lib/commands/index.js'
 import { FIXED_KEY_COMMAND_IDS, NATIVE_SHORTCUT_COMMAND_IDS } from '#lib/commands/command-registry.js'
+import { VIEWER_KEY_COMMAND_IDS } from '#lib/commands/sources/viewer-window.js'
 import type { CommandDispatchContext } from '../command-dispatch-context'
 import type { ExplorerAPI } from '../explorer-api'
 
@@ -95,6 +96,9 @@ export type DispatchExemptId =
   // ErrorPane owns ⌘D through its own CAPTURE-phase document listener, which runs
   // ahead of the dispatch spine on purpose (it must beat any user binding on ⌘D).
   | 'errorPane.toggleTechnicalDetails'
+  // Family 4 — Another window's remappable keys. The file viewer answers them in its own
+  // keydown through `eventMatchesCommand`; the main window's spine never sees them.
+  | (typeof VIEWER_KEY_COMMAND_IDS)[number]
 
 /**
  * Runtime mirror of `DispatchExemptId` (an `as const` tuple). Backs the
@@ -113,6 +117,8 @@ export const DISPATCH_EXEMPT_IDS = [
   // ❌ DO NOT add handlers for the per-keystroke nav ids — that is a P2
   // violation, not a completion.
   ...FIXED_KEY_COMMAND_IDS,
+  // Family 4 — the viewer window's keys, from the one list its registry entries use.
+  ...VIEWER_KEY_COMMAND_IDS,
 ] as const satisfies readonly DispatchExemptId[]
 
 /** The id set a handler record must cover: every `CommandId` minus the exempt families. */

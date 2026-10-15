@@ -271,10 +271,6 @@
   "@viewer.statusBar.hint.image": {
     "sourceHash": "bca0205"
   },
-  "viewer.statusBar.hint.text": "W: перенос · F: слежение · ⌘F: поиск",
-  "@viewer.statusBar.hint.text": {
-    "sourceHash": "3ecf215"
-  },
   "viewer.media.dimensions": "{width} × {height}",
   "@viewer.media.dimensions": {
     "sourceHash": "ece2cad",

@@ -4,6 +4,8 @@
   import { availableMediaKind, mediaKindLabel, viewAsMediaLabel } from './media-view'
   import type { ViewerDisplayMode } from './viewer-view-mode'
   import { tString } from '#lib/intl/messages.svelte.js'
+  import { getFirstShortcutReactive } from '#lib/shortcuts/reactive-shortcuts.svelte.js'
+  import type { CommandId } from '#lib/commands/index.js'
 
   type Props = {
     mode: ViewerDisplayMode
@@ -14,13 +16,25 @@
 
   const { mode, kind, lastMediaKind, onModeChange }: Props = $props()
   const mediaKind = $derived(availableMediaKind(kind, lastMediaKind))
+
+  /** An option's label with its key appended, `Text (1)`; the key is the user's (remappable), and none shows no suffix. */
+  function withKey(label: string, command: CommandId): string {
+    const key = getFirstShortcutReactive(command)
+    return key === undefined ? label : `${label} (${key})`
+  }
+
   const items = $derived<SelectItem[]>([
     ...(mediaKind
-      ? [{ value: 'media', label: `${mode === 'media' ? mediaKindLabel(mediaKind) : viewAsMediaLabel(mediaKind)} (0)` }]
+      ? [
+          {
+            value: 'media',
+            label: withKey(mode === 'media' ? mediaKindLabel(mediaKind) : viewAsMediaLabel(mediaKind), 'viewer.viewAsMedia'),
+          },
+        ]
       : []),
-    { value: 'text', label: `${tString('viewer.toolbar.viewMode.text')} (1)` },
-    { value: 'binary', label: `${tString('viewer.toolbar.viewMode.binary')} (2)` },
-    { value: 'hex', label: `${tString('viewer.toolbar.viewMode.hex')} (3)` },
+    { value: 'text', label: withKey(tString('viewer.toolbar.viewMode.text'), 'viewer.viewAsText') },
+    { value: 'binary', label: withKey(tString('viewer.toolbar.viewMode.binary'), 'viewer.viewAsBinary') },
+    { value: 'hex', label: withKey(tString('viewer.toolbar.viewMode.hex'), 'viewer.viewAsHex') },
   ])
 </script>
 

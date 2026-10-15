@@ -9,9 +9,9 @@
  *   eventMatchesCommand(e, 'selection.selectAll')   // exact, and follows a rebind
  *   comboMatchesCommand(combo, 'nav.down')          // same, for a pre-formatted combo
  *
- * Both live in `#lib/shortcuts`. In a window with no command registry (the viewer),
- * match locally but split on "carries ⌘/⌃/⌥" up front so a bare key can never be
- * reached by a modified one.
+ * Both live in `#lib/shortcuts`. For a window's own fixed chords that aren't registry
+ * commands (the viewer's ⌘F / ⌘C / ⌘⌥R), match locally but split on "carries ⌘/⌃/⌥" up
+ * front so a bare key can never be reached by a modified one.
  *
  * ## The heuristic, and why this one
  *
@@ -68,8 +68,8 @@
  *
  * - A combo that IS exact but hardcoded (all four modifiers pinned, no registry
  *   lookup). It can't fire on the wrong keypress, so it isn't this bug; it just isn't
- *   rebindable. That's a deliberate choice in the viewer (no command registry for that
- *   window) and in a few dialogs.
+ *   rebindable. That's a deliberate choice for the viewer's ⌘ chords and in a few
+ *   dialogs.
  *
  * So: a clean run is NOT proof that every handler matches exactly. It is proof that
  * nobody re-introduced the ⌥⌘A shape. See `src/lib/shortcuts/CLAUDE.md`.

@@ -1,3 +1,4 @@
+import { eventMatchesCommand } from '#lib/shortcuts/index.js'
 import { EOF_ROW, type RowOffset, type SelectAllArgs, type Selection } from './selection.svelte'
 import { moveFocus, type CaretMotion, type MotionDirection } from './viewer-caret-motion'
 
@@ -59,8 +60,8 @@ export function handleNavigationKey(key: string, actions: ScrollActions): boolea
  * ❌ Never fold the two together as `e.shiftKey && e.key === 'ArrowLeft'`. That pairs a
  * required modifier read with a literal key test while leaving ⌘/⌃/⌥ unconstrained, which
  * is the modifier-superset bug `cmdr/no-raw-key-match` (an ERROR here) exists for; its
- * header names this window's case, "in a window with no command registry (the viewer),
- * match locally but split on 'carries ⌘/⌃/⌥' up front".
+ * header names this window's case: its fixed chords match locally but split on "carries
+ * ⌘/⌃/⌥" up front.
  */
 function extendMotionFor(e: KeyboardEvent): CaretMotion | null {
   switch (e.key) {
@@ -112,26 +113,25 @@ function rowEdgeMotion(e: KeyboardEvent, direction: MotionDirection): CaretMotio
   return { kind: 'rowEdge', direction }
 }
 
-/** Handles single-letter toggles (word wrap on `W`). Returns true if handled. */
+/**
+ * Word wrap's key (`viewer.toggleWordWrap`, `W` by default). Returns true if handled. The
+ * key comes from the shortcuts registry, so the user can rebind it or turn it off (WCAG
+ * 2.1.4); the whole-combo match means a default `W` never fires on `⌘W`.
+ */
 export function handleToggleKey(e: KeyboardEvent, toggleWordWrap: () => void): boolean {
-  if (e.key.toLowerCase() === 'w' && !e.metaKey && !e.ctrlKey && !e.altKey) {
-    toggleWordWrap()
-    return true
-  }
-  return false
+  if (!eventMatchesCommand(e, 'viewer.toggleWordWrap')) return false
+  toggleWordWrap()
+  return true
 }
 
 /**
- * Handles the tail-mode toggle on the unmodified `F` key. Returns true if
- * handled. Gated on no modifier so it can't collide with `⌘F` (open search)
- * or other chords.
+ * Tail mode's key (`viewer.toggleTail`, `F` by default). Returns true if handled. Like word
+ * wrap's, it comes from the registry; the whole-combo match keeps `F` off `⌘F` (search).
  */
 export function handleTailToggleKey(e: KeyboardEvent, toggleTailMode: () => void): boolean {
-  if (e.key.toLowerCase() === 'f' && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey) {
-    toggleTailMode()
-    return true
-  }
-  return false
+  if (!eventMatchesCommand(e, 'viewer.toggleTail')) return false
+  toggleTailMode()
+  return true
 }
 
 interface SearchToggleActions {
@@ -430,18 +430,12 @@ export function createViewerKeyboard(deps: KeyboardDeps) {
   }
 
   /**
-   * Routes unmodified single-letter and navigation keys to their handler.
-   * Split out from `handleKeyDown` to keep the latter's cyclomatic
-   * complexity below the project lint threshold.
+   * The viewer's registry keys (tail mode, word wrap). Asked before the modifier split,
+   * because a rebinding may carry a modifier (`⌥W`), and a whole-combo match can't confuse
+   * a default `F` with `⌘F`.
    */
-  function handleBareKey(e: KeyboardEvent): boolean {
-    // Callers reach here only for unmodified keys (`handleKeyDown` bails on
-    // ⌘/⌃/⌥ first), which matters because `handleNavigationKey` sees only `e.key`.
-    return (
-      handleTailToggleKey(e, deps.toggleTailMode) ||
-      handleToggleKey(e, deps.toggleWordWrap) ||
-      handleNavigationKey(e.key, deps.scroll)
-    )
+  function handleRegistryKey(e: KeyboardEvent): boolean {
+    return handleTailToggleKey(e, deps.toggleTailMode) || handleToggleKey(e, deps.toggleWordWrap)
   }
 
   /**
@@ -480,6 +474,12 @@ export function createViewerKeyboard(deps: KeyboardDeps) {
     const { search } = deps
     const searchInputFocused = isSearchInputFocused(search)
 
+    // Not while the search input has focus: there a letter is a letter.
+    if (!searchInputFocused && handleRegistryKey(e)) {
+      e.preventDefault()
+      return
+    }
+
     if (e.metaKey || e.ctrlKey || e.altKey) {
       handleModifiedKey(e, searchInputFocused)
       return
@@ -504,14 +504,16 @@ export function createViewerKeyboard(deps: KeyboardDeps) {
     if (searchInputFocused) return
 
     // Plain Shift+Arrow and Shift+Home/End land here. AFTER the focus guard, or this
-    // would steal the search input's own Shift+Arrow; BEFORE `handleBareKey`, or
+    // would steal the search input's own Shift+Arrow; BEFORE the navigation keys, or
     // Shift+Up would keep scrolling instead of extending.
     if (tryExtendSelection(e)) {
       e.preventDefault()
       return
     }
 
-    if (handleBareKey(e)) e.preventDefault()
+    // Only unmodified keys reach here (⌘/⌃/⌥ returned above), which matters because
+    // `handleNavigationKey` sees only `e.key`.
+    if (handleNavigationKey(e.key, deps.scroll)) e.preventDefault()
   }
 
   return { handleKeyDown, handleSelectAllShortcut, resetDesiredColumn }

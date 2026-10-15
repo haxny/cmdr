@@ -64,6 +64,10 @@ and persists the id it names, so an emit grant would walk around the enum. The m
 it persists instead. `src/capabilities.rs` pins the grant. Viewer tail mode stays deliberately
 unpersisted (defaults off per session, see `routes/viewer/CLAUDE.md` § Tail mode).
 
+The viewer's remappable keys read `shortcuts.json` the same way, through the read-only
+`get_restricted_window_shortcuts`; there's no write half, since rebinding happens in Settings. The same no-emit grant
+keeps a forged `shortcuts:changed` out. Frontend half: `src/lib/shortcuts/DETAILS.md` § "The viewer's keys".
+
 ## The E2E capability
 
 `playwright:default` exists only when `tauri-plugin-playwright` is linked, so a capability naming it fails validation in

@@ -26,6 +26,7 @@ export type CommandScope =
   | 'Main window/Multi-rename' // The ⌃M Multi-rename sheet
   | 'About window' // About window commands
   | 'Operation queue window' // The operation queue window's own keys
+  | 'Viewer window' // The file viewer window's single keys
   | 'Onboarding' // FDA prompt
   | 'Command palette' // Command palette modal
 

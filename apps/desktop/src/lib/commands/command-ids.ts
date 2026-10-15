@@ -68,6 +68,17 @@ export const COMMAND_IDS = [
   'queue.previousControl',
   'queue.close',
 
+  // The file viewer window's single keys (`sources/viewer-window.ts`), remappable.
+  'viewer.toggleWordWrap',
+  'viewer.toggleTail',
+  'viewer.viewAsMedia',
+  'viewer.viewAsText',
+  'viewer.viewAsBinary',
+  'viewer.viewAsHex',
+  'viewer.zoomIn',
+  'viewer.zoomOut',
+  'viewer.toggleImageZoom',
+
   // Operation log (alpha)
   'log.operationLog',
 

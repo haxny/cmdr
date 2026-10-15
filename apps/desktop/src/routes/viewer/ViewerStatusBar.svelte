@@ -14,6 +14,9 @@
     import { isMediaKind, mediaKindLabel, formatMediaDimensions } from './media-view'
     import { tString } from '#lib/intl/messages.svelte.js'
     import type { ViewerDisplayMode } from './viewer-view-mode'
+    import { textModeHint } from './viewer-key-hints'
+    import { getFirstShortcutReactive } from '#lib/shortcuts/reactive-shortcuts.svelte.js'
+    import { toDisplayShortcut, toPlatformShortcut } from '#lib/shortcuts/key-capture.js'
 
     interface Props {
         /** File name shown at the start of the bar. */
@@ -52,6 +55,11 @@
 
     const isMedia = $derived(mode === 'media' && isMediaKind(kind))
     const dimensionsText = $derived(formatMediaDimensions(mediaDimensions))
+    // The user's keys, live: both are remappable (`Viewer window` in the shortcuts registry).
+    const wrapKey = $derived(getFirstShortcutReactive('viewer.toggleWordWrap'))
+    const tailKey = $derived(getFirstShortcutReactive('viewer.toggleTail'))
+    /** Search isn't a registry key: the viewer opens it on ⌘F (Ctrl+F off macOS). */
+    const SEARCH_KEY = toDisplayShortcut(toPlatformShortcut('⌘F'))
 </script>
 
 <div class="status-bar" aria-label={tString('viewer.statusBar.ariaLabel')}>
@@ -96,14 +104,14 @@
             >
         {/if}
         {#if wordWrap}
-            <span class="backend-badge" use:tooltip={{ text: tString('viewer.statusBar.badge.wrapTooltip'), shortcut: 'W' }}>{tString('viewer.statusBar.badge.wrap')}</span
+            <span class="backend-badge" use:tooltip={{ text: tString('viewer.statusBar.badge.wrapTooltip'), shortcut: wrapKey }}>{tString('viewer.statusBar.badge.wrap')}</span
             >
         {/if}
     {/if}
     {#if isMedia && kind === 'image'}
         <span class="shortcut-hint">{tString('viewer.statusBar.hint.image')}</span>
     {:else if mode === 'text'}
-        <span class="shortcut-hint">{tString('viewer.statusBar.hint.text')}</span>
+        <span class="shortcut-hint">{textModeHint({ wrap: wrapKey, tail: tailKey, search: SEARCH_KEY })}</span>
     {/if}
 </div>
 

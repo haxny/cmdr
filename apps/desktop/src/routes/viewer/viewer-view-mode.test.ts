@@ -16,7 +16,14 @@ describe('viewer mode keys', () => {
   it('leaves modified digits and other keys alone', () => {
     expect(modeForKey(new KeyboardEvent('keydown', { key: '0', metaKey: true }), true)).toBeNull()
     expect(modeForKey(new KeyboardEvent('keydown', { key: '2', metaKey: true }), false)).toBeNull()
-    expect(modeForKey(new KeyboardEvent('keydown', { key: '3', shiftKey: true }), false)).toBeNull()
+    // ⇧3 on a US keyboard types `#`, which is no mode's key.
+    expect(modeForKey(new KeyboardEvent('keydown', { key: '#', shiftKey: true, code: 'Digit3' }), false)).toBeNull()
     expect(modeForKey(new KeyboardEvent('keydown', { key: '4' }), false)).toBeNull()
+  })
+
+  // The keys match what they TYPE, as every registry key does: French AZERTY types the
+  // digits with Shift held, which the old hand-rolled `!shiftKey` check shut out.
+  it('answers a digit typed with Shift, as on a French keyboard', () => {
+    expect(modeForKey(new KeyboardEvent('keydown', { key: '3', shiftKey: true, code: 'Digit3' }), false)).toBe('hex')
   })
 })

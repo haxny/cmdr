@@ -778,6 +778,7 @@ export {
   deleteAiApiKey,
   getSystemMemoryInfo,
   getRestrictedWindowSettings,
+  getRestrictedWindowShortcuts,
   recordSettingsDefaults,
   onSettingsChanged,
   persistRestrictedWindowSetting,

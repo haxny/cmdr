@@ -2,6 +2,7 @@
 
 mod ai_gates;
 pub mod loader;
+mod restricted_shortcuts;
 
 pub use ai_gates::{
     AskCmdrSwitch, load_ask_cmdr_consent_revoke_pending, load_ask_cmdr_switch, load_cloud_consent_revoke_pending,
@@ -12,3 +13,4 @@ pub use loader::{
     load_ask_cmdr_interactive_model, load_ask_cmdr_proactive, load_ask_cmdr_wake_delay_secs,
     load_operation_log_retention_limits, load_restricted_window_settings, load_settings,
 };
+pub use restricted_shortcuts::load_custom_shortcuts;

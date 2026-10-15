@@ -30,7 +30,8 @@ export type { CommandScope }
  *   its F2 (the Presets menu) never meets the file list's F2 (Rename).
  *
  * `Operation queue window` is a window of its own, like `About window`: its arrows and
- * Enter never meet the main window's, so they share only `App`.
+ * Enter never meet the main window's, so they share only `App`. So is `Viewer window`, whose
+ * bare `W` / `F` / digits never meet the file list's type-to-jump.
  *
  * `Command palette` inherits `Main window` (it overlays the main window, so its
  * keys can collide with Main-window keys). `Onboarding` is a modal under `App`
@@ -51,6 +52,7 @@ const scopeHierarchy: Record<CommandScope, CommandScope[]> = {
   'Main window/Multi-rename': ['Main window/Multi-rename', 'Main window', 'App'],
   'About window': ['About window', 'App'],
   'Operation queue window': ['Operation queue window', 'App'],
+  'Viewer window': ['Viewer window', 'App'],
   Onboarding: ['Onboarding', 'App'],
   'Command palette': ['Command palette', 'Main window', 'App'],
 }

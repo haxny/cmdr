@@ -40,6 +40,8 @@ shortcuts:
   on the same step — it just clears the map and saves.
 - `initializeShortcuts` loads any array, including `[]`, and skips only non-array garbage (`Array.isArray` check). The
   empty array is the persisted "removed all shortcuts" state, so it must survive a reload, not be treated as absent.
+  Both of its sources (the store, or a restricted window's backend snapshot, § "The viewer's keys") go through ONE
+  `seedCustomShortcut`, so the healing can't drift between them.
 - `initializeShortcuts` notifies `onShortcutChange` listeners for every loaded customization, so components that mounted
   before the async init finished (reactive shortcut reads, the dispatch map) catch up instead of showing registry
   defaults. The notification path also syncs menu accelerators (`updateMenuAccelerator` no-ops for commands without a
@@ -358,11 +360,25 @@ Its first repo-wide run caught two live supersets, both since fixed: the favorit
 gesture pinned only ⇧ (so ⌥⇧Space dismissed the panel on its way elsewhere; it now resolves `file.quickLook` through the
 registry, so it follows a rebind).
 
-### The viewer matches locally
+### The viewer's keys
 
-The viewer is a separate window and the registry has no source file for it, so its shortcuts aren't customizable and
-`../../routes/viewer/viewer-keyboard.ts` matches locally — but exactly: `handleKeyDown` splits on "carries ⌘/⌃/⌥" up
-front, so a bare key can never be reached by a modified one, and `⌥⌘C` lands on the search chord instead of copy.
+The viewer is a separate window with its own keydown. Its single keys (word wrap, tail, the 0–3 view modes, image zoom)
+are registry commands in `../commands/sources/viewer-window.ts` (scope `Viewer window`), matched with
+`eventMatchesCommand`, and NOT fixed: bare letters and digits must be remappable or able to be turned off (WCAG 2.1.4).
+They ride no dispatch spine, so `DISPATCH_EXEMPT_IDS` takes `VIEWER_KEY_COMMAND_IDS` whole.
+
+- **Reading rebinds without store access.** The viewer may never load a store (`src-tauri/capabilities/CLAUDE.md`), so
+  it calls `initializeShortcuts({ restrictedWindow: true })`: the seed comes from the typed, read-only
+  `get_restricted_window_shortcuts` (Rust `../../../src-tauri/src/settings/restricted_shortcuts.rs`, a fresh read of
+  `shortcuts.json`), healed through the same `seedCustomShortcut` as a store load, and live rebinds arrive through
+  `shortcuts:changed` (the viewer may listen, never emit). A failed read warns and leaves the defaults. Rebinding
+  happens in Settings only; a restricted window never calls a mutator.
+- **The router asks the registry keys before its modifier split** (`handleRegistryKey`), because a rebinding may carry a
+  modifier. Everything else in `../../routes/viewer/viewer-keyboard.ts` still splits on "carries ⌘/⌃/⌥" up front, so
+  `⌥⌘C` lands on the search chord instead of copy.
+- **Its hints read the user's keys**: the mode picker's `(1)`, the Tail and wrap tooltips, and the status bar hint
+  (`viewer-key-hints.ts`) all go through `getFirstShortcutReactive`, and a key turned off drops its hint.
+- The ⌘ chords (⌘F, ⌘C, ⌘A, ⌘⌥R / ⌘⌥C) and Escape / Enter stay local and fixed; they aren't single-character keys.
 
 **Decision: central dispatch stays in the bubble phase.** Moving it to capture would invert precedence for every handler
 that deliberately stops propagation (`⌘↑`/`⌘↓`, Space, type-to-jump) with no behavior gained. With local handlers

@@ -9,7 +9,8 @@
    *   - The keys reach it from anywhere in the window: the page routes them through
    *     `handleKey` before its own shortcuts, so they work without clicking the image
    *     first. `1`–`3` stay the viewer's mode keys (Text / Binary / Hex); actual size
-   *     is Enter / Space.
+   *     is Enter / Space. Those are the defaults: every key here comes from the
+   *     shortcuts registry (`Viewer window`), so the user can rebind it.
    *   - Checkerboard behind transparency, fixed in screen space.
    *
    * Loading + error states ship from the start: a spinner until `load` / `error`
@@ -18,6 +19,8 @@
   import Spinner from '#lib/ui/Spinner.svelte'
   import { clampZoom, nextClickZoom, type ImageViewMode } from './media-view'
   import { tString } from '#lib/intl/messages.svelte.js'
+  import { eventMatchesCommand } from '#lib/shortcuts/index.js'
+  import type { CommandId } from '#lib/commands/index.js'
 
   const CONTROL_SELECTOR =
     'button, a[href], input, textarea, select, [contenteditable="true"], [role="combobox"], [role="listbox"], [role="option"]'
@@ -97,30 +100,23 @@
    * neither may also toggle the zoom.
    */
   export function handleKey(e: KeyboardEvent): boolean {
-    if (e.metaKey || e.ctrlKey || e.altKey || e.defaultPrevented) return false
+    if (e.defaultPrevented) return false
     if (e.target instanceof Element && e.target.closest(CONTROL_SELECTOR)) return false
-    switch (e.key) {
-      case 'Enter':
-      case ' ':
-        toggleClickZoom()
-        break
-      case '+':
-      case '=':
-        zoomBy(1.25)
-        break
-      case '-':
-        zoomBy(1 / 1.25)
-        break
-      case '0':
-        // Also the viewer's "Media" mode key, which this view already is.
-        resetToFit()
-        break
-      default:
-        return false
-    }
+    const action = IMAGE_KEYS.find(({ command }) => eventMatchesCommand(e, command))?.run
+    if (!action) return false
+    action()
     e.preventDefault()
     return true
   }
+
+  /** The image's commands, keyed from the shortcuts registry (`Viewer window`), so each can be rebound or turned off. */
+  const IMAGE_KEYS: readonly { command: CommandId; run: () => void }[] = [
+    { command: 'viewer.toggleImageZoom', run: () => { toggleClickZoom() } },
+    { command: 'viewer.zoomIn', run: () => { zoomBy(1.25) } },
+    { command: 'viewer.zoomOut', run: () => { zoomBy(1 / 1.25) } },
+    // The viewer's "media" mode key, which this view already is: it fits the image back.
+    { command: 'viewer.viewAsMedia', run: resetToFit },
+  ]
 
   function handlePointerDown(e: PointerEvent): void {
     // Pan only in actual mode; in fit mode a pointerdown is a no-op (click toggles).
