@@ -58,7 +58,7 @@
 
 <style>
     /* A 1px divider with an 8px grab target: the element itself is the hairline, and
-       `::before` widens the hit area past it on both sides. Doing it this way (rather
+       `::before` widens the hit area past it into the right pane. Doing it this way (rather
        than a 4px strip with a 1px line drawn inside) keeps the LAYOUT at 1px, so the
        panes stay flush against the line and no strip of a third color appears between
        them. */

@@ -784,10 +784,9 @@ const section508Ch6: CriterionRow[] = [
   {
     id: '602.2',
     name: 'Accessibility and compatibility features',
-    conformance: 'partially-supports',
+    conformance: 'supports',
     remark:
-      'The Keyboard shortcuts window (in the Help menu) lists every keyboard command. This report lists the known limits, but no guide describes the other accessibility features yet.',
-    issues: [443],
+      "The accessibility guide (Help > Accessibility guide, also on getcmdr.com) describes Cmdr's accessibility features, how to turn each one on, and the known gaps. The Keyboard shortcuts window, also in the Help menu, lists every keyboard command.",
   },
   {
     id: '602.3',
@@ -805,9 +804,9 @@ const section508Ch6: CriterionRow[] = [
   {
     id: '603.2',
     name: 'Information on accessibility and compatibility features',
-    conformance: 'partially-supports',
-    remark: 'Support answers by email and through in-app feedback, but has no accessibility guide to point to yet.',
-    issues: [443],
+    conformance: 'supports',
+    remark:
+      'Support answers by email and through in-app feedback, and points to the accessibility guide for what Cmdr offers and how to turn it on.',
   },
   {
     id: '603.3',
@@ -1090,17 +1089,15 @@ const enClause12: CriterionRow[] = [
   {
     id: '12.1.1',
     name: 'Accessibility and compatibility features',
-    conformance: 'partially-supports',
+    conformance: 'supports',
     remark: 'See Section 508 602.2.',
-    issues: [443],
   },
   { id: '12.1.2', name: 'Accessible documentation', conformance: 'supports', remark: 'See Section 508 602.3.' },
   {
     id: '12.2.2',
     name: 'Information on accessibility and compatibility features',
-    conformance: 'partially-supports',
+    conformance: 'supports',
     remark: 'See Section 508 603.2.',
-    issues: [443],
   },
   { id: '12.2.3', name: 'Effective communication', conformance: 'supports', remark: 'See Section 508 603.3.' },
   { id: '12.2.4', name: 'Accessible documentation', conformance: 'supports', remark: 'See Section 508 602.3.' },
@@ -1189,7 +1186,6 @@ export const gapIssues: { number: number; title: string }[] = [
     number: 441,
     title: 'A few click targets are still under 24 pixels: one-letter path segments and the pane divider',
   },
-  { number: 443, title: "No guide to Cmdr's accessibility features yet" },
 ]
 
 /** The screen-reader checks still to run. Each one's rows are the rows whose `pending` names it. */

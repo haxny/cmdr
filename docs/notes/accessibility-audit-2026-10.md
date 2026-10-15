@@ -391,14 +391,15 @@ video, flashing, or time limits beyond toasts; native menu bar and context menus
 
 ### Chapter 6: support documentation and services
 
-- **602.2 Accessibility and compatibility features**: Partially supports. The Keyboard shortcuts window (Help menu)
-  documents every keyboard command; nothing documents the other accessibility features or known limits. #443.
+- **602.2 Accessibility and compatibility features**: Supports. The accessibility guide (`/trust/accessibility-guide`,
+  opened by Help > Accessibility guide, `help.accessibility`) documents the features, how to turn each on, and the known
+  gaps (from `gapIssues`); the Keyboard shortcuts window (Help menu) documents every keyboard command. #443.
 - **602.3 Electronic support documentation**: Supports. getcmdr.com passes axe on all 13 pages in light and dark mode
   (the `website-e2e` check), and Lighthouse accessibility scored 100 (2026-09-08). Evidence:
   `apps/website/e2e/accessibility.spec.ts`, `apps/website/.lighthouseci/`.
 - **602.4 Alternate formats for non-electronic support documentation**: Not applicable. No non-electronic docs.
-- **603.2 Information on accessibility and compatibility features**: Partially supports. Support answers by email
-  (hello@getcmdr.com) and in-app feedback, but has no accessibility documentation to point to. #443.
+- **603.2 Information on accessibility and compatibility features**: Supports. Support answers by email
+  (hello@getcmdr.com) and in-app feedback, and points to the accessibility guide. #443.
 - **603.3 Accommodation of communication needs**: Supports. All support is written (email, in-app feedback); no phone
   needed.
 
@@ -468,9 +469,9 @@ video, flashing, or time limits beyond toasts; native menu bar and context menus
 
 ### Clause 12: documentation and support services
 
-- **12.1.1 Accessibility and compatibility features**: Partially supports. See 508 602.2. #443.
+- **12.1.1 Accessibility and compatibility features**: Supports. See 508 602.2.
 - **12.1.2 Accessible documentation**: Supports. See 508 602.3.
-- **12.2.2 Information on accessibility and compatibility features**: Partially supports. See 508 603.2. #443.
+- **12.2.2 Information on accessibility and compatibility features**: Supports. See 508 603.2.
 - **12.2.3 Effective communication**: Supports. See 508 603.3.
 - **12.2.4 Accessible documentation**: Supports. See 508 602.3.
 

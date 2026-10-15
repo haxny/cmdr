@@ -13,9 +13,6 @@ import { gapIssues } from '../../lib/accessibility-report'
 const repo = 'https://github.com/vdavid/cmdr'
 const issueUrl = (n: number) => `${repo}/issues/${n}`
 
-// #443 is this page itself.
-const gaps = gapIssues.filter((issue) => issue.number !== 443)
-
 const toc = [
     { id: 'keyboard', label: 'Use Cmdr from the keyboard' },
     { id: 'screen-readers', label: 'Screen readers' },
@@ -180,7 +177,7 @@ const toc = [
     </p>
     <ul>
         {
-            gaps.map((issue) => (
+            gapIssues.map((issue) => (
                 <li>
                     <a href={issueUrl(issue.number)}>#{issue.number}</a>: {issue.title}
                 </li>
