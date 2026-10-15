@@ -36,6 +36,21 @@ export function afterNextFrame(run: () => void): () => void {
   }
 }
 
+/**
+ * Focuses a composite widget's element without scrolling, laid out first.
+ *
+ * ❗ WebKit maps a focus change to the focused element's accessibility object, and an element
+ * mounted this frame has none until layout runs: it posts focus on the web area instead and
+ * then ignores every `aria-activedescendant` move on the element, so VoiceOver stays silent
+ * until focus leaves and comes back (macOS 27.0, VoiceOver 10, Cmdr 0.52.0 dev, `axprobe
+ * watch` on the Brief/Full toggle, the drive-index menu, and the first archive popup,
+ * 2026-10-15). Reading the layout first gives WebKit the object to focus.
+ */
+export function focusLaidOut(el: HTMLElement): void {
+  el.getBoundingClientRect()
+  el.focus({ preventScroll: true })
+}
+
 export interface DeferredActiveDescendant {
   /** What to render as `aria-activedescendant` while the cursor row's id is `id`. */
   of: (id: string | undefined) => string | undefined
@@ -96,7 +111,7 @@ export function createDeferredActiveDescendant(
     },
     focus(el, id) {
       hold(id)
-      el.focus({ preventScroll: true })
+      focusLaidOut(el)
     },
     tookFocus: hold,
     renew(id) {

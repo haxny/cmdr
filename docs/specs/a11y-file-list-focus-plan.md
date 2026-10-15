@@ -781,7 +781,10 @@ after the cursor row.
    class.
 5. `Tab` is `pane.switch` everywhere in the main window, chrome included.
 6. Every `.focus()` on a list passes `preventScroll: true`, and no focus restorer calls a bare `.focus()` on an explorer
-   element (they go through the shared restore helper).
+   element (they go through the shared restore helper). Lists and menu surfaces focus through `focusLaidOut`
+   (`#lib/ui/deferred-active-descendant.svelte.ts`): a node focused before layout has no AX object, so WebKit posts
+   focus on the web area and then ignores its active-descendant moves (the silent list after ⌘1/⌘2, the drive-index
+   menu, the first archive popup; verified with `axprobe watch` and VoiceOver 10 on macOS 27.0, 2026-10-15).
 7. Focus leaves an element before that element unmounts (submenu, list on a view toggle), or is re-homed the moment it
    lands on `<body>`.
 8. axe stays clean in every a11y test and in `accessibility.spec.ts`.

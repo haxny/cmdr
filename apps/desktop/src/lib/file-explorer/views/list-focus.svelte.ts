@@ -13,7 +13,7 @@
  */
 
 import { untrack } from 'svelte'
-import { createDeferredActiveDescendant } from '#lib/ui/deferred-active-descendant.svelte.js'
+import { createDeferredActiveDescendant, focusLaidOut } from '#lib/ui/deferred-active-descendant.svelte.js'
 import { focusHome, isFocusAdrift } from '#lib/ui/focus-restore.js'
 
 /** The rendered cursor row: its document-unique id, and the key of the node behind it (its path). */
@@ -57,7 +57,7 @@ export function createListFocus(deps: ListFocusDeps): ListFocus {
   // pane now shows none), both only while focus is adrift (`isFocusAdrift`).
   $effect(() => {
     const listbox = deps.getListbox()
-    if (listbox && untrack(deps.isFocusedPane) && isFocusAdrift()) listbox.focus({ preventScroll: true })
+    if (listbox && untrack(deps.isFocusedPane) && isFocusAdrift()) focusLaidOut(listbox)
   })
   $effect(() => () => {
     // After the flush, so the replacement list (if any) is mounted and bound.
@@ -80,7 +80,7 @@ export function createListFocus(deps: ListFocusDeps): ListFocus {
     untrack(() => {
       const listbox = deps.getListbox()
       if (row && listbox && last?.key !== row.key && deps.isFocusedPane() && isFocusAdrift()) {
-        listbox.focus({ preventScroll: true })
+        focusLaidOut(listbox)
       } else if (row && (!last || (last.id === row.id && last.key !== row.key))) {
         descendant.renew(row.id)
       }
@@ -93,7 +93,7 @@ export function createListFocus(deps: ListFocusDeps): ListFocus {
     focus() {
       const listbox = deps.getListbox()
       if (!listbox?.isConnected) return false
-      listbox.focus({ preventScroll: true })
+      focusLaidOut(listbox)
       return true
     },
     handleFocus() {

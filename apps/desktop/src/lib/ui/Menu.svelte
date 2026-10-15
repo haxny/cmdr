@@ -29,7 +29,7 @@
     import { placeBesideRow, placeOffAnchor, type PlacementRect } from './anchored-placement'
     import type { MenuController } from './menu-controller.svelte'
     import { disclosureRowValue } from './menu-navigation'
-    import { createDeferredActiveDescendant } from './deferred-active-descendant.svelte'
+    import { createDeferredActiveDescendant, focusLaidOut } from './deferred-active-descendant.svelte'
     import type { MenuItem, MenuRowContext, MenuSection } from './menu-types'
 
     /* eslint-disable @typescript-eslint/no-unnecessary-type-arguments -- `T` is this component's OWN
@@ -129,7 +129,7 @@
         // `<body>`, and WebKit posts a stray web-area focus on the way back.
         beforeSubmenuLeave: () => {
             submenuDescendant.reset()
-            if (submenuEl?.contains(document.activeElement)) surfaceEl?.focus({ preventScroll: true })
+            if (submenuEl?.contains(document.activeElement) && surfaceEl) focusLaidOut(surfaceEl)
         },
         holdsFocus: () => {
             const focused = document.activeElement

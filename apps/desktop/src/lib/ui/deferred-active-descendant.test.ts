@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { afterNextFrame, createDeferredActiveDescendant } from './deferred-active-descendant.svelte'
+import { afterNextFrame, createDeferredActiveDescendant, focusLaidOut } from './deferred-active-descendant.svelte'
 
 beforeEach(() => {
   vi.useFakeTimers()
@@ -51,6 +51,35 @@ describe('afterNextFrame', () => {
     cancel()
     vi.advanceTimersByTime(1000)
     expect(run).not.toHaveBeenCalled()
+  })
+})
+
+describe('focusLaidOut', () => {
+  // ❗ An element focused before layout has no AX object yet: WebKit posts focus on the web
+  // area and ignores its `aria-activedescendant` moves, so VoiceOver stays silent.
+  it('reads the layout before it focuses, without scrolling', () => {
+    const el = focusable()
+    const calls: string[] = []
+    vi.spyOn(el, 'getBoundingClientRect').mockImplementation(() => {
+      calls.push('layout')
+      return new DOMRect()
+    })
+    const focus = vi.spyOn(el, 'focus').mockImplementation(() => calls.push('focus'))
+    focusLaidOut(el)
+    expect(calls).toEqual(['layout', 'focus'])
+    expect(focus).toHaveBeenCalledWith({ preventScroll: true })
+  })
+
+  it('lays out before focusing for the deferred descendant too', () => {
+    const el = focusable()
+    const calls: string[] = []
+    vi.spyOn(el, 'getBoundingClientRect').mockImplementation(() => {
+      calls.push('layout')
+      return new DOMRect()
+    })
+    vi.spyOn(el, 'focus').mockImplementation(() => calls.push('focus'))
+    createDeferredActiveDescendant().focus(el, 'row-1')
+    expect(calls).toEqual(['layout', 'focus'])
   })
 })
 
