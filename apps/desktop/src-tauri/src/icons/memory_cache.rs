@@ -1,7 +1,7 @@
 //! The in-memory icon cache: the hot tier in front of `disk_cache.rs` and the OS
 //! fetch. Bounded keys stay uncapped; the per-path subset is LRU-capped.
 
-use super::{disk_cache, per_path, special_folders};
+use super::{IconVariant, disk_cache, per_path, special_folders};
 use crate::ignore_poison::RwLockIgnorePoison;
 use std::collections::{HashMap, VecDeque};
 use std::sync::{LazyLock, RwLock};
@@ -40,6 +40,19 @@ struct IconCache {
     /// Per-path keys (`path:*` + `pkg:*`) in least-recently-inserted-first order.
     /// Front = oldest.
     path_lru: VecDeque<String>,
+    /// Bumped by every flush, so a fetch that started before one can tell its pixels
+    /// are stale (see `insert_if_current`).
+    generation: u64,
+    /// The display options the cached pixels were drawn under.
+    variant: IconVariant,
+}
+
+/// What a fetch snapshots before asking macOS: the cache generation (to refuse a
+/// late write after a flush) and the variant (to key the on-disk tier).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) struct CacheEpoch {
+    generation: u64,
+    pub(super) variant: IconVariant,
 }
 
 impl IconCache {
@@ -47,7 +60,42 @@ impl IconCache {
         Self {
             entries: HashMap::new(),
             path_lru: VecDeque::new(),
+            generation: 0,
+            variant: IconVariant::default(),
         }
+    }
+
+    fn epoch(&self) -> CacheEpoch {
+        CacheEpoch {
+            generation: self.generation,
+            variant: self.variant,
+        }
+    }
+
+    /// Caches an icon fetched under `epoch`, unless a flush happened since. Returns
+    /// whether it was cached.
+    ///
+    /// Gotcha/Why: a fetch can outlive the flush that should have dropped it (a slow
+    /// real-folder lookup, or one the 2 s IPC deadline abandoned that keeps running).
+    /// Written back blindly, it restores the previous look a few seconds after the
+    /// switch, and every later request serves it.
+    fn insert_if_current(&mut self, epoch: CacheEpoch, icon_id: String, data_url: String) -> bool {
+        if epoch.generation != self.generation {
+            return false;
+        }
+        self.insert(icon_id, data_url);
+        true
+    }
+
+    /// Switches to the pixels for `variant`, dropping every key if it changed. Returns
+    /// whether it flushed.
+    fn set_variant(&mut self, variant: IconVariant) -> bool {
+        if variant == self.variant {
+            return false;
+        }
+        self.variant = variant;
+        self.retain(|_| false);
+        true
     }
 
     /// Inserts or refreshes an icon. For per-path keys (`path:*` + `pkg:*`),
@@ -72,10 +120,12 @@ impl IconCache {
         }
     }
 
-    /// Removes entries (and their LRU bookkeeping) matching `pred`.
+    /// Keeps only the entries (and their LRU bookkeeping) matching `pred`, and starts
+    /// a new generation so fetches already in flight can't write back.
     fn retain(&mut self, pred: impl Fn(&str) -> bool) {
         self.entries.retain(|key, _| pred(key));
         self.path_lru.retain(|key| pred(key));
+        self.generation += 1;
     }
 }
 
@@ -88,9 +138,25 @@ pub(super) fn get_cached_icon(icon_id: &str) -> Option<String> {
     ICON_CACHE.read_ignore_poison().entries.get(icon_id).cloned()
 }
 
-/// Caches an icon data URL.
-pub(super) fn cache_icon(icon_id: String, data_url: String) {
-    ICON_CACHE.write_ignore_poison().insert(icon_id, data_url);
+/// Snapshots the cache generation and variant; take it BEFORE asking macOS.
+pub(super) fn epoch() -> CacheEpoch {
+    ICON_CACHE.read_ignore_poison().epoch()
+}
+
+/// Caches an icon fetched under `epoch`, unless the cache was flushed since. Returns
+/// whether it was cached, so the caller persists it only then.
+pub(super) fn cache_icon(epoch: CacheEpoch, icon_id: String, data_url: String) -> bool {
+    ICON_CACHE
+        .write_ignore_poison()
+        .insert_if_current(epoch, icon_id, data_url)
+}
+
+/// Switches the cache to the pixels for `variant`, dropping every cached icon if it
+/// changed (file icons too: macOS draws documents differently under Increase contrast).
+/// The on-disk tier needs no clear, since its entries are keyed by variant. Returns
+/// whether it flushed.
+pub(super) fn set_variant(variant: IconVariant) -> bool {
+    ICON_CACHE.write_ignore_poison().set_variant(variant)
 }
 
 /// Clears all cached icons for extension-based entries.
@@ -234,6 +300,57 @@ mod tests {
         // No duplicate LRU entries after the refresh.
         let occurrences = cache.path_lru.iter().filter(|k| **k == path_key(0)).count();
         assert_eq!(occurrences, 1, "refreshed key must appear exactly once in the LRU");
+    }
+
+    /// Regression anchor: a fetch that started before a flush must not land after it. On a
+    /// macOS Increase contrast toggle, the accent-change flush's refetch was still in flight
+    /// when the display-options flush ran, finished late, and put the previous look's pixels
+    /// back over the fresh ones a few seconds after the switch.
+    #[test]
+    fn a_fetch_started_before_a_flush_is_not_cached_after_it() {
+        let mut cache = IconCache::new();
+        let before = cache.epoch();
+
+        cache.retain(|key| key != "dir");
+
+        assert!(!cache.insert_if_current(before, "dir".to_string(), "stale".to_string()));
+        assert!(!cache.entries.contains_key("dir"));
+
+        let after = cache.epoch();
+        assert!(cache.insert_if_current(after, "dir".to_string(), "fresh".to_string()));
+        assert_eq!(cache.entries.get("dir").map(String::as_str), Some("fresh"));
+    }
+
+    #[test]
+    fn a_new_icon_variant_drops_every_key_and_invalidates_in_flight_fetches() {
+        let mut cache = IconCache::new();
+        let before = cache.epoch();
+        for key in ["dir", "ext:txt", "file", "special:downloads", "pkg:/A.app"] {
+            cache.insert(key.to_string(), "standard".to_string());
+        }
+        let contrast = IconVariant {
+            increase_contrast: true,
+            invert_colors: false,
+        };
+
+        assert!(cache.set_variant(contrast), "a changed variant flushes");
+
+        assert!(cache.entries.is_empty(), "file icons change too, not just folders");
+        assert!(cache.path_lru.is_empty());
+        assert_eq!(cache.epoch().variant, contrast);
+        assert!(!cache.insert_if_current(before, "dir".to_string(), "stale".to_string()));
+    }
+
+    #[test]
+    fn the_same_icon_variant_again_keeps_the_cache() {
+        let mut cache = IconCache::new();
+        cache.insert("dir".to_string(), "url".to_string());
+        let before = cache.epoch();
+
+        assert!(!cache.set_variant(IconVariant::default()));
+
+        assert!(cache.entries.contains_key("dir"));
+        assert!(cache.insert_if_current(before, "file".to_string(), "url".to_string()));
     }
 
     #[test]

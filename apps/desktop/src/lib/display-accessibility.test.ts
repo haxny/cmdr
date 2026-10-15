@@ -5,6 +5,7 @@ interface Options {
   reduceTransparency: boolean
   increaseContrast: boolean
   differentiateWithoutColor: boolean
+  invertColors: boolean
 }
 
 // `vi.mock` is hoisted above the imports, so its factory can only reach these through `vi.hoisted`.
@@ -13,7 +14,12 @@ interface MockState {
   listener?: (p: { options: Options }) => void
 }
 const state = vi.hoisted((): MockState => ({
-  options: { reduceTransparency: false, increaseContrast: false, differentiateWithoutColor: false },
+  options: {
+    reduceTransparency: false,
+    increaseContrast: false,
+    differentiateWithoutColor: false,
+    invertColors: false,
+  },
 }))
 
 vi.mock('#lib/tauri-commands/index.js', () => ({
@@ -32,7 +38,12 @@ let mediaListener: ((e: { matches: boolean }) => void) | undefined
 
 describe('display accessibility', () => {
   beforeEach(() => {
-    state.options = { reduceTransparency: false, increaseContrast: false, differentiateWithoutColor: false }
+    state.options = {
+      reduceTransparency: false,
+      increaseContrast: false,
+      differentiateWithoutColor: false,
+      invertColors: false,
+    }
     mediaMatches = false
     mediaListener = undefined
     vi.stubGlobal(
@@ -58,7 +69,12 @@ describe('display accessibility', () => {
   })
 
   it('mirrors each macOS option as a class on <html>', async () => {
-    state.options = { reduceTransparency: true, increaseContrast: true, differentiateWithoutColor: true }
+    state.options = {
+      reduceTransparency: true,
+      increaseContrast: true,
+      differentiateWithoutColor: true,
+      invertColors: true,
+    }
     await initDisplayAccessibility()
     expect(has('reduce-transparency')).toBe(true)
     expect(has('increase-contrast')).toBe(true)
@@ -75,11 +91,21 @@ describe('display accessibility', () => {
   it('follows live System Settings changes', async () => {
     await initDisplayAccessibility()
     state.listener?.({
-      options: { reduceTransparency: false, increaseContrast: false, differentiateWithoutColor: true },
+      options: {
+        reduceTransparency: false,
+        increaseContrast: false,
+        differentiateWithoutColor: true,
+        invertColors: false,
+      },
     })
     expect(has('differentiate-without-color')).toBe(true)
     state.listener?.({
-      options: { reduceTransparency: false, increaseContrast: false, differentiateWithoutColor: false },
+      options: {
+        reduceTransparency: false,
+        increaseContrast: false,
+        differentiateWithoutColor: false,
+        invertColors: false,
+      },
     })
     expect(has('differentiate-without-color')).toBe(false)
   })

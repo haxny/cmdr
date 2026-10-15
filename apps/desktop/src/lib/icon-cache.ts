@@ -2,13 +2,19 @@
 // Caches icon data URLs by icon ID to avoid redundant Tauri calls
 
 import { writable } from 'svelte/store'
+import { type UnlistenFn } from '@tauri-apps/api/event'
 import {
   getIcons,
   getCustomFolderIconIds,
   refreshDirectoryIcons as refreshIconsCommand,
   clearExtensionIconCache as clearExtensionIconCacheCommand,
   clearDirectoryIconCache as clearDirectoryIconCacheCommand,
+  getDisplayAccessibility,
+  onDisplayAccessibilityChanged,
 } from './tauri-commands'
+import { getAppLogger } from '#lib/logging/logger.js'
+
+const log = getAppLogger('icon-cache')
 
 const STORAGE_KEY = 'cmdr-icon-cache'
 
@@ -22,14 +28,50 @@ const STORAGE_KEY = 'cmdr-icon-cache'
  *
  * 2: `dir` / `symlink-dir` stopped sampling the home directory, whose baked-in
  *    house badge every plain folder had been wearing.
+ * 3: the envelope records the display variant its icons were drawn under.
  */
-const CACHE_SCHEMA = 2
+const CACHE_SCHEMA = 3
 
 /** The persisted envelope. A bare map (no `version`) is a pre-schema build's. */
 interface StoredCache {
   version: number
+  /** The `IconDisplayVariant` the icons were drawn under. */
+  variant: IconDisplayVariant
   icons: Record<string, string>
 }
+
+/**
+ * The macOS display options that change the pixels macOS draws for an icon, as one value.
+ * Mirrors the Rust `icons::IconVariant`, which keys the backend caches the same way.
+ */
+type IconDisplayVariant = 'standard' | 'contrast' | 'invert' | 'contrast+invert'
+
+/** The two Accessibility > Display options that change icon pixels. */
+interface IconDisplayOptions {
+  increaseContrast: boolean
+  invertColors: boolean
+}
+
+function iconDisplayVariantOf({ increaseContrast, invertColors }: IconDisplayOptions): IconDisplayVariant {
+  if (increaseContrast && invertColors) return 'contrast+invert'
+  if (increaseContrast) return 'contrast'
+  if (invertColors) return 'invert'
+  return 'standard'
+}
+
+/**
+ * The variant the cached icons were drawn under: the persisted one at load, then whatever the OS
+ * reports. `null` until either is known; nothing persists meanwhile, so an envelope never claims
+ * a variant it can't vouch for.
+ */
+let activeVariant: IconDisplayVariant | null = null
+
+/**
+ * Bumped by every flush. A fetch remembers the value it started under, and its result is dropped
+ * if a flush happened meanwhile: otherwise a slow fetch issued before a theme, accent, or display
+ * change lands after the flush and puts the previous look back for good.
+ */
+let cacheEpoch = 0
 
 const retryDelayMs = 5000
 
@@ -136,10 +178,11 @@ function loadFromStorage(): void {
       // Written by a build whose bounded icons may differ from what this one
       // would fetch. Drop the lot rather than guess which entries still hold:
       // they refetch on first use, and a stale one would never be revisited.
-      if (parsed.version !== CACHE_SCHEMA || !parsed.icons) {
+      if (parsed.version !== CACHE_SCHEMA || !parsed.icons || !parsed.variant) {
         localStorage.removeItem(STORAGE_KEY)
         return
       }
+      activeVariant = parsed.variant
       for (const [id, url] of Object.entries(parsed.icons)) {
         // Defensive: skip any per-path (`path:`/`pkg:`) keys left by an older build.
         // They're no longer persisted, and feeding them in would seed the
@@ -155,6 +198,7 @@ function loadFromStorage(): void {
 
 /** Persist cache to localStorage */
 function saveToStorage(): void {
+  if (activeVariant === null) return
   try {
     const obj: Record<string, string> = {}
     for (const [id, url] of memoryCache) {
@@ -165,7 +209,10 @@ function saveToStorage(): void {
       if (isPerPathKey(id)) continue
       obj[id] = url
     }
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: CACHE_SCHEMA, icons: obj } satisfies StoredCache))
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ version: CACHE_SCHEMA, variant: activeVariant, icons: obj } satisfies StoredCache),
+    )
   } catch {
     // Ignore storage errors
   }
@@ -176,8 +223,12 @@ if (typeof localStorage !== 'undefined') {
   loadFromStorage()
 }
 
-/** Merges fetched icons into the cache, persists, and bumps the version counter. Returns true if any icons were added. */
-function applyIconsToCache(icons: Record<string, string>): boolean {
+/**
+ * Merges icons fetched under `epoch` into the cache, persists, and bumps the version counter.
+ * Drops them if the cache was flushed since the fetch started. Returns true if any icons were added.
+ */
+function applyIconsToCache(icons: Record<string, string>, epoch: number): boolean {
+  if (epoch !== cacheEpoch) return false
   let changed = false
   for (const [id, url] of Object.entries(icons)) {
     const existing = memoryCache.get(id)
@@ -212,15 +263,16 @@ export async function prefetchIcons(iconIds: string[], useAppIconsForDocuments: 
 
   // Deduplicate
   const unique = [...new Set(uncached)]
+  const epoch = cacheEpoch
   const { data: icons, timedOut } = await getIcons(unique, useAppIconsForDocuments)
 
-  applyIconsToCache(icons)
+  applyIconsToCache(icons, epoch)
 
-  if (timedOut) {
+  if (timedOut && epoch === cacheEpoch) {
     prefetchRetryTimer = setTimeout(() => {
       prefetchRetryTimer = undefined
       void getIcons(unique, useAppIconsForDocuments)
-        .then(({ data: retryIcons }) => applyIconsToCache(retryIcons))
+        .then(({ data: retryIcons }) => applyIconsToCache(retryIcons, epoch))
         .catch(() => {
           // Give up silently on retry failure
         })
@@ -340,15 +392,16 @@ export async function refreshDirectoryIcons(
   clearTimeout(refreshRetryTimer)
   refreshRetryTimer = undefined
 
+  const epoch = cacheEpoch
   const { data: icons, timedOut } = await refreshIconsCommand(directoryPaths, extensions, useAppIconsForDocuments)
 
-  applyIconsToCache(icons)
+  applyIconsToCache(icons, epoch)
 
-  if (timedOut) {
+  if (timedOut && epoch === cacheEpoch) {
     refreshRetryTimer = setTimeout(() => {
       refreshRetryTimer = undefined
       void refreshIconsCommand(directoryPaths, extensions, useAppIconsForDocuments)
-        .then(({ data: retryIcons }) => applyIconsToCache(retryIcons))
+        .then(({ data: retryIcons }) => applyIconsToCache(retryIcons, epoch))
         .catch(() => {
           // Give up silently on retry failure
         })
@@ -362,11 +415,7 @@ export async function refreshDirectoryIcons(
  * After calling this, extension icons will be re-fetched with the new setting.
  */
 export async function clearExtensionIconCache(): Promise<void> {
-  // Cancel pending retries: old icon IDs are now invalidated
-  clearTimeout(prefetchRetryTimer)
-  prefetchRetryTimer = undefined
-  clearTimeout(refreshRetryTimer)
-  refreshRetryTimer = undefined
+  startNewEpoch()
 
   // Clear backend cache
   await clearExtensionIconCacheCommand()
@@ -396,11 +445,7 @@ export async function clearExtensionIconCache(): Promise<void> {
  * folder icons with the current accent color baked in.
  */
 export async function clearDirectoryIconCache(): Promise<void> {
-  // Cancel pending retries: old icon IDs are now invalidated
-  clearTimeout(prefetchRetryTimer)
-  prefetchRetryTimer = undefined
-  clearTimeout(refreshRetryTimer)
-  refreshRetryTimer = undefined
+  startNewEpoch()
 
   await clearDirectoryIconCacheCommand()
 
@@ -415,14 +460,79 @@ export async function clearDirectoryIconCache(): Promise<void> {
   iconCacheVersion.update((v) => v + 1)
 }
 
-/** Test-only: clears the in-memory cache so each test starts from a known state. */
+/**
+ * Starts a new cache epoch: fetches already in flight, and their pending retries, can no longer
+ * write. Synchronous, so it takes effect before any `await` in the flush that calls it.
+ */
+function startNewEpoch(): void {
+  cacheEpoch++
+  clearTimeout(prefetchRetryTimer)
+  prefetchRetryTimer = undefined
+  clearTimeout(refreshRetryTimer)
+  refreshRetryTimer = undefined
+}
+
+/**
+ * Points the cache at the icons macOS draws under `options`, dropping EVERY icon (file icons
+ * too) when Increase contrast or Invert colors changed. The backend has already flushed its own
+ * tiers by the time the change event arrives, so the refetch gets the new look.
+ */
+function syncToDisplayOptions(options: IconDisplayOptions): void {
+  const variant = iconDisplayVariantOf(options)
+  if (variant === activeVariant) return
+  const previous = activeVariant
+  activeVariant = variant
+  // Unknown until now, so whatever is in memory came from this session's backend, which already
+  // drew it under the real options.
+  if (previous === null) {
+    saveToStorage()
+    return
+  }
+  log.debug('Display options changed the icon look from {previous} to {variant}, refetching', { previous, variant })
+  startNewEpoch()
+  memoryCache.clear()
+  saveToStorage()
+  iconCacheCleared.update((v) => v + 1)
+  iconCacheVersion.update((v) => v + 1)
+}
+
+let unlistenDisplayAccessibility: UnlistenFn | undefined
+
+/**
+ * Keeps the cache in step with the macOS Increase contrast and Invert colors options, under which
+ * macOS draws different file and folder icons: on startup (a persisted cache may predate a change
+ * made while Cmdr was closed) and live. Call once, from the window that shows file icons.
+ */
+export async function initIconDisplayVariant(): Promise<void> {
+  try {
+    syncToDisplayOptions(await getDisplayAccessibility())
+  } catch (error) {
+    log.warn('Could not read the display options, so icons keep their cached look: {error}', { error })
+  }
+  try {
+    unlistenDisplayAccessibility = await onDisplayAccessibilityChanged((payload) => {
+      syncToDisplayOptions(payload.options)
+    })
+  } catch (error) {
+    log.warn('Could not subscribe to display option changes: {error}', { error })
+  }
+}
+
+/** Stops following the display options. */
+export function cleanupIconDisplayVariant(): void {
+  unlistenDisplayAccessibility?.()
+  unlistenDisplayAccessibility = undefined
+}
+
+/** Test-only: clears the in-memory cache so each test starts from a known state, drawn under the standard look. */
 export function _resetIconCacheForTests(): void {
   memoryCache.clear()
+  activeVariant = 'standard'
 }
 
 /** Test-only: applies fetched icons through the normal cache path (LRU + persist). */
 export function _applyIconsToCacheForTests(icons: Record<string, string>): void {
-  applyIconsToCache(icons)
+  applyIconsToCache(icons, cacheEpoch)
 }
 
 /** Test-only: the `path:`-key LRU cap, exposed so tests don't hard-code the value. */

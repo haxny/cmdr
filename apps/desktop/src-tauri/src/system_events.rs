@@ -29,6 +29,9 @@ pub struct DisplayAccessibility {
     pub increase_contrast: bool,
     /// Differentiate without color: state cues gain a shape or weight, not just a hue.
     pub differentiate_without_color: bool,
+    /// Invert colors: the whole display is inverted. macOS draws file and folder icons
+    /// differently under it, so the icon caches key off it.
+    pub invert_colors: bool,
 }
 
 /// `display-accessibility-changed`: one of the macOS Accessibility > Display

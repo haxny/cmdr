@@ -9,8 +9,10 @@
 //! durability and correct invalidation without watching anything.
 //!
 //! Layout: a flat directory of small JSON sidecar files under
-//! `<data_dir>/icon-cache/`, one per icon id, named by a hex digest of the id (so
-//! arbitrary path characters never leak into a filename). The in-memory
+//! `<data_dir>/icon-cache/`, one per icon id and display variant, named by a hex
+//! digest of both (so arbitrary path characters never leak into a filename). The
+//! variant is in the name because macOS draws a different icon under Increase
+//! contrast or Invert colors, and the folder's mtime can't see that. The in-memory
 //! `ICON_CACHE` LRU stays the hot tier; this is the warm tier consulted on a hot
 //! miss, before the cold NSWorkspace fetch.
 //!
@@ -25,6 +27,8 @@ use std::sync::LazyLock;
 use std::time::UNIX_EPOCH;
 
 use serde::{Deserialize, Serialize};
+
+use super::IconVariant;
 
 /// One persisted icon entry. `token` is the folder's staleness token at fetch
 /// time (its mtime as whole seconds since the epoch); a mismatch on read means
@@ -59,11 +63,17 @@ fn staleness_token(real_path: &str) -> Option<u64> {
     Some(secs)
 }
 
-/// Maps an icon id to its sidecar file path: `<cache-dir>/<hex-digest>.json`. We
-/// digest the id rather than using it verbatim so arbitrary path characters (`/`,
-/// spaces, unicode) never produce an invalid or traversal-prone filename.
-fn entry_path(dir: &Path, icon_id: &str) -> PathBuf {
-    dir.join(format!("{}.json", digest_hex(icon_id)))
+/// Maps an icon id and display variant to its sidecar file path:
+/// `<cache-dir>/<hex-digest>.json`. We digest rather than use the id verbatim so
+/// arbitrary path characters (`/`, spaces, unicode) never produce an invalid or
+/// traversal-prone filename. The standard variant digests the bare id, so entries
+/// written before variants existed stay valid.
+fn entry_path(dir: &Path, icon_id: &str, variant: IconVariant) -> PathBuf {
+    let digest = match variant.cache_key_suffix() {
+        None => digest_hex(icon_id),
+        Some(suffix) => digest_hex(&format!("{icon_id}#{suffix}")),
+    };
+    dir.join(format!("{digest}.json"))
 }
 
 /// A small, dependency-free FNV-1a 64-bit hash, rendered as zero-padded hex. Not
@@ -82,31 +92,31 @@ fn digest_hex(s: &str) -> String {
     format!("{hash:016x}")
 }
 
-/// Loads a cached icon for `icon_id` whose folder is at `real_path`, if present
-/// AND still fresh (stored token == the folder's current mtime). Returns `None`
-/// on any miss: no file, unreadable file, malformed JSON, or a stale token. Never
-/// panics.
-pub fn load(icon_id: &str, real_path: &str) -> Option<String> {
-    load_in(CACHE_DIR.as_ref()?, icon_id, real_path)
+/// Loads a cached icon for `icon_id` whose folder is at `real_path`, drawn under
+/// `variant`, if present AND still fresh (stored token == the folder's current
+/// mtime). Returns `None` on any miss: no file, unreadable file, malformed JSON, or
+/// a stale token. Never panics.
+pub fn load(icon_id: &str, real_path: &str, variant: IconVariant) -> Option<String> {
+    load_in(CACHE_DIR.as_ref()?, icon_id, real_path, variant)
 }
 
 /// Persists `data_url` for `icon_id` under the folder's current mtime token. A
 /// best-effort write — any failure (no cache dir, unresolvable mtime, write
 /// error) is silently dropped; the in-memory cache still has the icon for this
 /// session, and the next session just re-fetches.
-pub fn store(icon_id: &str, real_path: &str, data_url: &str) {
+pub fn store(icon_id: &str, real_path: &str, variant: IconVariant, data_url: &str) {
     let Some(dir) = CACHE_DIR.as_ref() else {
         return;
     };
-    store_in(dir, icon_id, real_path, data_url);
+    store_in(dir, icon_id, real_path, variant, data_url);
 }
 
 /// Pure `load` against an explicit cache dir. Public-in-module so tests can run
 /// hermetically against a temp dir instead of the process-wide `CACHE_DIR` (a
 /// `LazyLock` whose first-touch ordering across tests isn't controllable).
-fn load_in(dir: &Path, icon_id: &str, real_path: &str) -> Option<String> {
+fn load_in(dir: &Path, icon_id: &str, real_path: &str, variant: IconVariant) -> Option<String> {
     let token = staleness_token(real_path)?;
-    let raw = fs::read(entry_path(dir, icon_id)).ok()?;
+    let raw = fs::read(entry_path(dir, icon_id, variant)).ok()?;
     let entry: DiskEntry = serde_json::from_slice(&raw).ok()?;
     if entry.token == token {
         Some(entry.data_url)
@@ -117,7 +127,7 @@ fn load_in(dir: &Path, icon_id: &str, real_path: &str) -> Option<String> {
 }
 
 /// Pure `store` against an explicit cache dir. See `load_in` for the test seam.
-fn store_in(dir: &Path, icon_id: &str, real_path: &str, data_url: &str) {
+fn store_in(dir: &Path, icon_id: &str, real_path: &str, variant: IconVariant, data_url: &str) {
     let Some(token) = staleness_token(real_path) else {
         return;
     };
@@ -129,7 +139,7 @@ fn store_in(dir: &Path, icon_id: &str, real_path: &str, data_url: &str) {
         // Recreate the dir if a `clear_all` (theme change) removed it since the
         // `CACHE_DIR` LazyLock first built it. Cheap and idempotent.
         let _ = fs::create_dir_all(dir);
-        let path = entry_path(dir, icon_id);
+        let path = entry_path(dir, icon_id, variant);
         if let Err(e) = write_atomic(&path, &bytes) {
             log::debug!(target: "icons", "icon-cache write failed for {icon_id}: {e}");
         }
@@ -229,10 +239,20 @@ mod tests {
         let fx = Fixture::new("rw");
         let id = format!("path:{}", fx.folder);
 
-        assert_eq!(load_in(&fx.cache_dir, &id, &fx.folder), None, "cold miss before store");
-        store_in(&fx.cache_dir, &id, &fx.folder, "data:image/webp;base64,AAAA");
         assert_eq!(
-            load_in(&fx.cache_dir, &id, &fx.folder).as_deref(),
+            load_in(&fx.cache_dir, &id, &fx.folder, IconVariant::default()),
+            None,
+            "cold miss before store"
+        );
+        store_in(
+            &fx.cache_dir,
+            &id,
+            &fx.folder,
+            IconVariant::default(),
+            "data:image/webp;base64,AAAA",
+        );
+        assert_eq!(
+            load_in(&fx.cache_dir, &id, &fx.folder, IconVariant::default()).as_deref(),
             Some("data:image/webp;base64,AAAA")
         );
     }
@@ -244,13 +264,16 @@ mod tests {
         fx.set_folder_mtime(base);
         let id = format!("path:{}", fx.folder);
 
-        store_in(&fx.cache_dir, &id, &fx.folder, "old-icon");
-        assert_eq!(load_in(&fx.cache_dir, &id, &fx.folder).as_deref(), Some("old-icon"));
+        store_in(&fx.cache_dir, &id, &fx.folder, IconVariant::default(), "old-icon");
+        assert_eq!(
+            load_in(&fx.cache_dir, &id, &fx.folder, IconVariant::default()).as_deref(),
+            Some("old-icon")
+        );
 
         // Re-icon simulation: the folder's mtime moves forward.
         fx.set_folder_mtime(base + 100);
         assert_eq!(
-            load_in(&fx.cache_dir, &id, &fx.folder),
+            load_in(&fx.cache_dir, &id, &fx.folder, IconVariant::default()),
             None,
             "a changed folder mtime invalidates the entry"
         );
@@ -262,10 +285,14 @@ mod tests {
         let id = format!("path:{}", fx.folder);
 
         // Hand-write garbage where the sidecar would live.
-        fs::write(entry_path(&fx.cache_dir, &id), b"not json at all").expect("write garbage");
+        fs::write(
+            entry_path(&fx.cache_dir, &id, IconVariant::default()),
+            b"not json at all",
+        )
+        .expect("write garbage");
 
         assert_eq!(
-            load_in(&fx.cache_dir, &id, &fx.folder),
+            load_in(&fx.cache_dir, &id, &fx.folder, IconVariant::default()),
             None,
             "malformed JSON must be a miss, not a panic"
         );
@@ -279,18 +306,61 @@ mod tests {
         let _ = fs::remove_dir_all(&fx.folder);
 
         // Store is a no-op (no token), load is a miss.
-        store_in(&fx.cache_dir, &id, &fx.folder, "should-not-persist");
-        assert_eq!(load_in(&fx.cache_dir, &id, &fx.folder), None);
+        store_in(
+            &fx.cache_dir,
+            &id,
+            &fx.folder,
+            IconVariant::default(),
+            "should-not-persist",
+        );
+        assert_eq!(load_in(&fx.cache_dir, &id, &fx.folder, IconVariant::default()), None);
+    }
+
+    #[test]
+    fn an_icon_stored_under_one_display_variant_does_not_load_under_another() {
+        let fx = Fixture::new("variant");
+        let id = format!("special:{}", fx.folder);
+        let contrast = IconVariant {
+            increase_contrast: true,
+            invert_colors: false,
+        };
+
+        store_in(&fx.cache_dir, &id, &fx.folder, IconVariant::default(), "standard");
+        assert_eq!(load_in(&fx.cache_dir, &id, &fx.folder, contrast), None);
+
+        store_in(&fx.cache_dir, &id, &fx.folder, contrast, "high-contrast");
+        assert_eq!(
+            load_in(&fx.cache_dir, &id, &fx.folder, contrast).as_deref(),
+            Some("high-contrast")
+        );
+        assert_eq!(
+            load_in(&fx.cache_dir, &id, &fx.folder, IconVariant::default()).as_deref(),
+            Some("standard"),
+            "both looks stay warm, so toggling back is instant"
+        );
+    }
+
+    #[test]
+    fn the_standard_variant_keeps_the_existing_sidecar_names() {
+        let dir = Path::new("/cache");
+        assert_eq!(
+            entry_path(dir, "path:/a", IconVariant::default()),
+            dir.join(format!("{}.json", digest_hex("path:/a"))),
+            "entries written before variants existed stay valid"
+        );
     }
 
     #[test]
     fn write_is_atomic_no_tmp_left_behind() {
         let fx = Fixture::new("atomic");
         let id = format!("pkg:{}", fx.folder);
-        store_in(&fx.cache_dir, &id, &fx.folder, "icon");
+        store_in(&fx.cache_dir, &id, &fx.folder, IconVariant::default(), "icon");
 
-        let tmp = entry_path(&fx.cache_dir, &id).with_extension("json.tmp");
+        let tmp = entry_path(&fx.cache_dir, &id, IconVariant::default()).with_extension("json.tmp");
         assert!(!tmp.exists(), "temp file must be renamed away after an atomic write");
-        assert_eq!(load_in(&fx.cache_dir, &id, &fx.folder).as_deref(), Some("icon"));
+        assert_eq!(
+            load_in(&fx.cache_dir, &id, &fx.folder, IconVariant::default()).as_deref(),
+            Some("icon")
+        );
     }
 }

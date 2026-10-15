@@ -7511,6 +7511,11 @@ export type DisplayAccessibility = {
   increaseContrast: boolean
   // Differentiate without color: state cues gain a shape or weight, not just a hue.
   differentiateWithoutColor: boolean
+  /**
+   *  Invert colors: the whole display is inverted. macOS draws file and folder icons
+   *  differently under it, so the icon caches key off it.
+   */
+  invertColors: boolean
 }
 
 /**
@@ -15745,10 +15750,18 @@ export type SkipReason =
    */
   | 'dirNotEmpty'
   /**
-   *  The thing to reverse is already gone (trash emptied, item already restored):
-   *  the desired end state already holds, so this is an idempotent no-op success.
+   *  The thing to reverse is already gone and the desired end state already holds
+   *  (a copy already removed, an item already restored), so this is an idempotent
+   *  no-op success.
    */
   | 'alreadyGone'
+  /**
+   *  The item is gone from where the operation left it AND absent from where it came
+   *  from (the trash was emptied, or it was deleted or moved away since): there's
+   *  nothing to put back. A real skip, unlike `AlreadyGone`, because the end state the
+   *  undo wanted (the item home again) does NOT hold.
+   */
+  | 'vanished'
   // A backend error prevented reversing this item.
   | 'failed'
   /**

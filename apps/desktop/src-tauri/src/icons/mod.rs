@@ -15,6 +15,7 @@ pub use cmdr_fs::icons::special_folders;
 pub use memory_cache::{clear_directory_icon_cache, clear_extension_icon_cache};
 
 use crate::config::ICON_SIZE;
+use crate::system_events::DisplayAccessibility;
 use base64::Engine;
 use image::{DynamicImage, ImageFormat, imageops::FilterType};
 use memory_cache::{PATH_KEY_PREFIX, cache_icon, get_cached_icon};
@@ -30,6 +31,46 @@ use std::path::{Path, PathBuf};
 // from a rayon or tokio worker.
 #[cfg(target_os = "macos")]
 use macos_workspace::render_file_icon;
+
+/// The macOS display options that change the pixels `NSWorkspace` draws for an icon.
+/// Every cached icon belongs to one variant: the in-memory tier flushes when it
+/// changes, and the on-disk tier keys its entries by it.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub(crate) struct IconVariant {
+    pub(crate) increase_contrast: bool,
+    pub(crate) invert_colors: bool,
+}
+
+impl IconVariant {
+    pub(crate) fn of(options: &DisplayAccessibility) -> Self {
+        Self {
+            increase_contrast: options.increase_contrast,
+            invert_colors: options.invert_colors,
+        }
+    }
+
+    /// What tells this variant's on-disk entries apart, or `None` for the standard
+    /// look (whose entries predate variants and keep their names).
+    fn cache_key_suffix(self) -> Option<&'static str> {
+        match (self.increase_contrast, self.invert_colors) {
+            (false, false) => None,
+            (true, false) => Some("contrast"),
+            (false, true) => Some("invert"),
+            (true, true) => Some("contrast+invert"),
+        }
+    }
+}
+
+/// Points the icon caches at the look macOS draws under `options`. Called once at
+/// startup and on every Accessibility > Display change; when Increase contrast or
+/// Invert colors flipped, every cached icon is dropped (before the frontend hears of
+/// the change and refetches) and any fetch still in flight is refused on return.
+pub fn apply_display_accessibility(options: &DisplayAccessibility) {
+    let variant = IconVariant::of(options);
+    if memory_cache::set_variant(variant) {
+        log::info!(target: "icons", "Display options changed the icon look to {variant:?}; dropped the cached icons");
+    }
+}
 
 /// Converts an image to a base64 WebP data URL.
 fn image_to_data_url(img: &DynamicImage) -> Option<String> {
@@ -203,6 +244,8 @@ pub fn custom_folder_icon_ids(directory_paths: Vec<String>) -> Vec<String> {
 /// Returns a map of icon_id -> data URL.
 pub fn get_icons(icon_ids: Vec<String>, use_app_icons_for_documents: bool) -> HashMap<String, String> {
     let mut result = HashMap::new();
+    // Taken before asking macOS, so a flush during the fetch refuses its writes.
+    let epoch = memory_cache::epoch();
 
     // Real-folder icon ids (`special:downloads`, `pkg:/Applications/Safari.app`,
     // `path:/Users/x/CustomFolder`) all fetch their icon from a REAL filesystem
@@ -226,9 +269,9 @@ pub fn get_icons(icon_ids: Vec<String>, use_app_icons_for_documents: bool) -> Ha
             continue;
         }
         if let Some(real_path) = real_path_for_real_folder_id(&icon_id) {
-            if let Some(url) = disk_cache::load(&icon_id, &real_path) {
+            if let Some(url) = disk_cache::load(&icon_id, &real_path, epoch.variant) {
                 // Warm-tier hit: promote into the hot in-memory cache and return.
-                cache_icon(icon_id.clone(), url.clone());
+                cache_icon(epoch, icon_id.clone(), url.clone());
                 result.insert(icon_id, url);
             } else {
                 per_path_to_fetch.push((icon_id, real_path));
@@ -251,8 +294,9 @@ pub fn get_icons(icon_ids: Vec<String>, use_app_icons_for_documents: bool) -> Ha
         // and return it.
         for ((original_id, real_path), (_, data_url)) in per_path_to_fetch.into_iter().zip(fetched) {
             if let Some(url) = data_url {
-                cache_icon(original_id.clone(), url.clone());
-                disk_cache::store(&original_id, &real_path, &url);
+                if cache_icon(epoch, original_id.clone(), url.clone()) {
+                    disk_cache::store(&original_id, &real_path, epoch.variant, &url);
+                }
                 result.insert(original_id, url);
             }
         }
@@ -310,7 +354,7 @@ pub fn get_icons(icon_ids: Vec<String>, use_app_icons_for_documents: bool) -> Ha
         };
 
         if let Some(data_url) = fetched {
-            cache_icon(icon_id.clone(), data_url.clone());
+            cache_icon(epoch, icon_id.clone(), data_url.clone());
             result.insert(icon_id, data_url);
         }
     }
@@ -360,6 +404,7 @@ pub fn refresh_icons_for_directory(
     use_app_icons_for_documents: bool,
 ) -> HashMap<String, String> {
     let mut result = HashMap::new();
+    let epoch = memory_cache::epoch();
 
     // Fetch extension icons in parallel (uses rayon's global pool)
     if !extensions.is_empty() {
@@ -387,7 +432,7 @@ pub fn refresh_icons_for_directory(
 
         for (icon_id, data_url) in ext_results {
             if let Some(url) = data_url {
-                cache_icon(icon_id.clone(), url.clone());
+                cache_icon(epoch, icon_id.clone(), url.clone());
                 result.insert(icon_id, url);
             }
         }
@@ -404,8 +449,7 @@ pub fn refresh_icons_for_directory(
         let dir_results = fetch_path_icons(directory_paths);
         for (icon_id, data_url) in dir_results {
             if let Some(url) = data_url {
-                // Update cache
-                cache_icon(icon_id.clone(), url.clone());
+                cache_icon(epoch, icon_id.clone(), url.clone());
                 result.insert(icon_id, url);
             }
         }

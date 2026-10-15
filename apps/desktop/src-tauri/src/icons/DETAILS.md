@@ -142,10 +142,35 @@ the stored token no longer matches and we re-fetch: durability plus correct inva
 missing/corrupt sidecar, an unresolvable mtime (dead mount), or any I/O error is a graceful miss; writes are temp+rename
 atomic and best-effort.
 
+**The display variant is part of each entry's name.** macOS draws a different icon under Increase contrast or Invert
+colors, which the mtime can't see either, so `entry_path` digests `{id}#{variant}` (the standard look keeps the bare-id
+name, so entries from before variants stay valid). Both looks stay warm, and toggling back is instant.
+
 **Theme/accent change wipes the disk cache too** (`disk_cache::clear_all`, called from `clear_directory_icon_cache`):
 macOS tints folder glyphs by appearance, which the mtime token can't catch (the folder didn't change, the system did),
 so we drop the warm tier wholesale and let icons re-fetch with the new tint. The tier (in-memory hot LRU → on-disk warm
 → NSWorkspace cold) keeps the common case instant while staying honest about appearance and re-icon changes.
+
+## Flushes and in-flight fetches
+
+Three things flush icons: a theme/accent change (`clear_directory_icon_cache`, from the FE on `accent-color-changed`),
+the "use app icons for documents" setting (`clear_extension_icon_cache`), and a change of `IconVariant`
+(`apply_display_accessibility`, called by `display_accessibility.rs` at startup and on every display-options
+notification, BEFORE it emits `display-accessibility-changed`, so the FE's refetch already gets the new look).
+
+**Gotcha/Why the epoch guard**: a fetch can outlive the flush meant to drop it: a real-folder lookup through
+`fileproviderd`, a task the 2 s IPC deadline abandoned that keeps running, or the FE's 5 s timed-out retry. A macOS
+display-options toggle posts `NSSystemColorsDidChangeNotification` (our accent flush) about 300 ms BEFORE the
+display-options notification, so the accent flush's refetch was routinely still in flight when the variant flush ran.
+Written back blindly, it put the previous look over the fresh icons a few seconds after the switch, and every later
+request served it. So `IconCache` carries a `generation` that every flush bumps; `get_icons` snapshots a `CacheEpoch`
+(generation + variant) before asking macOS, and `cache_icon` refuses the write (and the disk store is skipped) when the
+generation moved. The FE mirrors it: `icon-cache.ts` bumps `cacheEpoch` synchronously at the start of every flush, and
+`applyIconsToCache` drops results fetched under an older one. Pinned by
+`a_fetch_started_before_a_flush_is_not_cached_after_it` and the FE `icon-cache display variant` tests.
+
+The FE side follows the variant itself (`initIconDisplayVariant`, main window only): its persisted envelope records the
+variant, so a cache written before a change made while Cmdr was closed is dropped at startup.
 
 The pure `load_in` / `store_in` (explicit cache dir) underpin the public `load` / `store` (process-wide `CACHE_DIR`),
 so tests run hermetically against a temp dir.

@@ -283,8 +283,9 @@ All under `apps/desktop/src-tauri/src/`.
 - `glass_tint.rs`: macOS 27 Liquid Glass slider reader (undocumented `NSGlassTintAmount`, re-read on app activation;
   risk notes in source). Emits `glass-tint-changed`; the frontend side is `#lib/glass-material`
 - `display_accessibility.rs`: macOS Accessibility > Display options (Reduce transparency, Increase contrast,
-  Differentiate without color) as one typed value, live. Emits `display-accessibility-changed`; the frontend side is
-  `#lib/display-accessibility`, which turns them into classes on `<html>`
+  Differentiate without color, Invert colors) as one typed value, live. Emits `display-accessibility-changed`; the
+  frontend side is `#lib/display-accessibility`, which turns them into classes on `<html>`. Also re-keys the icon caches
+  (`icons::apply_display_accessibility`)
 - `system_strings.rs`: Localized macOS pane labels from `.loctable` system bundles (loctable catalog + risks in source).
   Also the ordered `AppleLanguages` read that `intl/` walks
 - `intl/`: What the OS says about language and region. Walks the user's ordered macOS language preferences against the

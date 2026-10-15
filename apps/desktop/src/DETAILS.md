@@ -61,7 +61,9 @@ Menu-like surfaces (`Menu`, `Select`, the breadcrumb popup) also take the macOS 
 classes: `reduce-transparency`, `increase-contrast`, and `differentiate-without-color`. The backend reads all three from
 `NSWorkspace` in one typed `DisplayAccessibility` value and re-reads them on every
 `NSWorkspaceAccessibilityDisplayOptionsDidChangeNotification` (`apps/desktop/src-tauri/src/display_accessibility.rs`),
-so they follow System Settings live.
+so they follow System Settings live. The same value carries Invert colors, which gets no class: it only changes the
+icons macOS draws, which `#lib/icon-cache` follows itself (`apps/desktop/src-tauri/src/icons/DETAILS.md` § Flushes and
+in-flight fetches).
 
 - **Why classes**: WKWebView ignores `prefers-reduced-transparency` (verified, see the module doc), and CSS has no query
   for Differentiate without color at all. `increase-contrast` is ALSO on when `prefers-contrast: more` matches, so a

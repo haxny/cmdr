@@ -16,6 +16,7 @@
     import { initAccentColor, cleanupAccentColor } from '#lib/accent-color.js'
     import { initGlassMaterial, cleanupGlassMaterial } from '#lib/glass-material.js'
     import { initDisplayAccessibility, cleanupDisplayAccessibility } from '#lib/display-accessibility.js'
+    import { initIconDisplayVariant, cleanupIconDisplayVariant } from '#lib/icon-cache.js'
     import { logWebkitCompat } from '#lib/utils/webkit-compat.js'
     import { initFocusWatchdog } from '#lib/focus-watchdog.js'
     import { initTextSize, cleanupTextSize } from '#lib/text-size.svelte.js'
@@ -245,6 +246,8 @@
             { name: 'accentColor', run: initAccentColor },
             { name: 'glassMaterial', run: initGlassMaterial },
             { name: 'displayAccessibility', run: initDisplayAccessibility },
+            // macOS draws different file and folder icons under Increase contrast and Invert colors
+            { name: 'iconDisplayVariant', run: initIconDisplayVariant },
             {
                 // Apply compounded text size (system Accessibility × user setting).
                 // This is the window that renders Brief mode, so it's the one that
@@ -331,6 +334,7 @@
         cleanupAccentColor()
         cleanupGlassMaterial()
         cleanupDisplayAccessibility()
+        cleanupIconDisplayVariant()
         cleanupTextSize()
         cleanupReactiveSettings()
         cleanupSettingsApplier()

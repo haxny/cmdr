@@ -8,6 +8,9 @@
  * - **Differentiate without color** → `differentiate-without-color`: the shape cues for the focused
  *   pane (cursor hairlines, tab accent band) step up to 3:1 (`app.css` § Differentiate without color).
  *
+ * Invert colors is read too, but gets no class: it only changes the icons macOS draws, which
+ * `#lib/icon-cache` follows on its own.
+ *
  * Classes, not media queries: WKWebView never reflects `prefers-reduced-transparency` (verified:
  * with the setting on, AppKit reports `true` while the webview's `matchMedia` reports `false`),
  * and no media query exists for Differentiate without color at all. So the Rust backend reads all
@@ -28,9 +31,13 @@ export interface DisplayAccessibilityState {
   reduceTransparency: boolean
   increaseContrast: boolean
   differentiateWithoutColor: boolean
+  invertColors: boolean
 }
 
-const CLASS_BY_OPTION: Record<keyof DisplayAccessibilityState, string> = {
+/** The options mirrored as an `<html>` class. */
+type ClassOption = Exclude<keyof DisplayAccessibilityState, 'invertColors'>
+
+const CLASS_BY_OPTION: Record<ClassOption, string> = {
   reduceTransparency: 'reduce-transparency',
   increaseContrast: 'increase-contrast',
   differentiateWithoutColor: 'differentiate-without-color',
@@ -42,6 +49,7 @@ const allOff = (): DisplayAccessibilityState => ({
   reduceTransparency: false,
   increaseContrast: false,
   differentiateWithoutColor: false,
+  invertColors: false,
 })
 
 let fromOs = allOff()
@@ -56,7 +64,7 @@ function onContrastMediaChange(event: { matches: boolean }): void {
 
 function apply(): void {
   const classes = document.documentElement.classList
-  for (const option of Object.keys(CLASS_BY_OPTION) as (keyof DisplayAccessibilityState)[]) {
+  for (const option of Object.keys(CLASS_BY_OPTION) as ClassOption[]) {
     let on = fromOs[option]
     if (option === 'increaseContrast') on ||= contrastMediaMatches
     classes.toggle(CLASS_BY_OPTION[option], on)

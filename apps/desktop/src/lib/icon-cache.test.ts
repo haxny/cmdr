@@ -1,25 +1,53 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 
 // icon-cache imports these from ./tauri-commands at module load. We never call them
 // in these tests (we drive the cache via the test-only helpers), but they must exist
 // as mocks so the import resolves without a real Tauri runtime.
+interface DisplayOptions {
+  reduceTransparency: boolean
+  increaseContrast: boolean
+  differentiateWithoutColor: boolean
+  invertColors: boolean
+}
+
+// `vi.mock` is hoisted above the imports, so its factory can only reach this through `vi.hoisted`.
+const display = vi.hoisted((): { options: DisplayOptions; listener?: (p: { options: DisplayOptions }) => void } => ({
+  options: {
+    reduceTransparency: false,
+    increaseContrast: false,
+    differentiateWithoutColor: false,
+    invertColors: false,
+  },
+}))
+
 vi.mock('./tauri-commands', () => ({
   getIcons: vi.fn(),
   getCustomFolderIconIds: vi.fn(),
   refreshDirectoryIcons: vi.fn(),
   clearExtensionIconCache: vi.fn(),
   clearDirectoryIconCache: vi.fn(),
+  getDisplayAccessibility: () => Promise.resolve(display.options),
+  onDisplayAccessibilityChanged: (handler: (p: { options: DisplayOptions }) => void) => {
+    display.listener = handler
+    return Promise.resolve(() => {})
+  },
 }))
 
 import {
   getCachedIcon,
   evictPerPathIconsForDir,
+  prefetchIcons,
   prefetchCustomFolderIcons,
+  clearDirectoryIconCache,
+  initIconDisplayVariant,
+  cleanupIconDisplayVariant,
+  iconCacheCleared,
   _resetIconCacheForTests,
   _applyIconsToCacheForTests,
   _pathKeyCapForTests,
 } from './icon-cache'
 import { getIcons, getCustomFolderIconIds } from './tauri-commands'
+import { get } from 'svelte/store'
 
 const STORAGE_KEY = 'cmdr-icon-cache'
 
@@ -274,5 +302,88 @@ describe('icon-cache persisted-schema invalidation', () => {
 
     expect(fresh.getCachedIcon('dir')).toBe('dir-url')
     expect(fresh.getCachedIcon('ext:txt')).toBe('txt-url')
+  })
+})
+
+/**
+ * Regression anchor: macOS draws different file and folder icons under Increase contrast and
+ * Invert colors. Cmdr showed the new look for a moment, then the old one came back a few seconds
+ * later: a fetch that started before the flush landed after it, and nothing ever flushed the
+ * file icons or the persisted cache.
+ */
+describe('icon-cache display variant', () => {
+  const allOff = (): DisplayOptions => ({
+    reduceTransparency: false,
+    increaseContrast: false,
+    differentiateWithoutColor: false,
+    invertColors: false,
+  })
+
+  beforeEach(() => {
+    _resetIconCacheForTests()
+    localStorage.clear()
+    vi.mocked(getIcons).mockReset()
+    display.options = allOff()
+    display.listener = undefined
+  })
+
+  afterEach(() => {
+    cleanupIconDisplayVariant()
+  })
+
+  it('drops a fetch that resolves after the cache was cleared', async () => {
+    let resolveFetch: (value: { data: Record<string, string>; timedOut: boolean }) => void = () => {}
+    vi.mocked(getIcons).mockReturnValue(
+      new Promise((resolve) => {
+        resolveFetch = resolve
+      }),
+    )
+
+    const inFlight = prefetchIcons(['dir'], true)
+    await clearDirectoryIconCache()
+    resolveFetch({ data: { dir: 'previous-look' }, timedOut: false })
+    await inFlight
+
+    expect(getCachedIcon('dir')).toBeUndefined()
+  })
+
+  it('drops every icon, file icons too, when Increase contrast or Invert colors flips', async () => {
+    await initIconDisplayVariant()
+    _applyIconsToCacheForTests({ dir: 'dir-url', 'ext:txt': 'txt-url', file: 'file-url' })
+    const clearedBefore = get(iconCacheCleared)
+
+    display.listener?.({ options: { ...allOff(), increaseContrast: true } })
+
+    expect(getCachedIcon('dir')).toBeUndefined()
+    expect(getCachedIcon('ext:txt')).toBeUndefined()
+    expect(getCachedIcon('file')).toBeUndefined()
+    expect(get(iconCacheCleared)).toBe(clearedBefore + 1)
+
+    _applyIconsToCacheForTests({ dir: 'contrast-url' })
+    display.listener?.({ options: { ...allOff(), increaseContrast: true, invertColors: true } })
+    expect(getCachedIcon('dir')).toBeUndefined()
+  })
+
+  it('keeps the cache when an option that leaves icons alone changes', async () => {
+    await initIconDisplayVariant()
+    _applyIconsToCacheForTests({ dir: 'dir-url' })
+
+    display.listener?.({ options: { ...allOff(), reduceTransparency: true, differentiateWithoutColor: true } })
+
+    expect(getCachedIcon('dir')).toBe('dir-url')
+  })
+
+  it('discards persisted icons drawn under another variant at startup', async () => {
+    _applyIconsToCacheForTests({ dir: 'standard-url', 'ext:txt': 'txt-url' })
+    vi.resetModules()
+    const fresh = await import('./icon-cache')
+    expect(fresh.getCachedIcon('dir')).toBe('standard-url')
+
+    display.options = { ...allOff(), invertColors: true }
+    await fresh.initIconDisplayVariant()
+
+    expect(fresh.getCachedIcon('dir')).toBeUndefined()
+    expect(fresh.getCachedIcon('ext:txt')).toBeUndefined()
+    fresh.cleanupIconDisplayVariant()
   })
 })

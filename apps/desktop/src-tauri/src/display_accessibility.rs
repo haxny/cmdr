@@ -1,9 +1,12 @@
 //! macOS Accessibility > Display options reader.
 //!
-//! Reads the three display options the UI mirrors (Reduce transparency,
-//! Increase contrast, Differentiate without color) via `NSWorkspace`, and
+//! Reads the display options the UI mirrors (Reduce transparency, Increase
+//! contrast, Differentiate without color, Invert colors) via `NSWorkspace`, and
 //! observes `NSWorkspaceAccessibilityDisplayOptionsDidChangeNotification` to
-//! emit live updates.
+//! emit live updates. Increase contrast and Invert colors also change the icons
+//! macOS draws, so every read is handed to `icons::apply_display_accessibility`
+//! BEFORE the event goes out: the icon caches flush first, and the frontend's
+//! refetch gets the new look.
 //!
 //! ## Notes
 //!
@@ -40,6 +43,7 @@ fn read_display_accessibility(_mtm: MainThreadMarker) -> DisplayAccessibility {
         reduce_transparency: workspace.accessibilityDisplayShouldReduceTransparency(),
         increase_contrast: workspace.accessibilityDisplayShouldIncreaseContrast(),
         differentiate_without_color: workspace.accessibilityDisplayShouldDifferentiateWithoutColor(),
+        invert_colors: workspace.accessibilityDisplayShouldInvertColors(),
     }
 }
 
@@ -78,6 +82,7 @@ pub fn observe_display_accessibility_changes<R: Runtime>(app_handle: AppHandle<R
     let mtm = MainThreadMarker::new().expect("observe_display_accessibility_changes runs on the main thread");
     let initial = read_display_accessibility(mtm);
     debug!("Display accessibility: {initial:?}");
+    crate::icons::apply_display_accessibility(&initial);
 
     // Accessibility-display options post on the NSWorkspace notification center,
     // not the default center.
@@ -92,6 +97,7 @@ pub fn observe_display_accessibility_changes<R: Runtime>(app_handle: AppHandle<R
             .expect("NSWorkspaceAccessibilityDisplayOptionsDidChange is delivered on the main thread");
         let options = read_display_accessibility(mtm);
         info!("Display accessibility changed: {options:?}");
+        crate::icons::apply_display_accessibility(&options);
         if let Err(e) = (DisplayAccessibilityChanged { options }).emit(&app_handle) {
             warn!("Failed to emit display-accessibility-changed event: {e}");
         }
