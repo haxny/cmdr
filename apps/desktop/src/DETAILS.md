@@ -85,7 +85,7 @@ its first two options landed under the strip and couldn't be picked. Anything a 
 
 Seven sheets, all global (no Svelte scoping). Who owns what:
 
-- `app.css`: the design tokens (`:root`, plus the dark-mode, `prefers-contrast`, reduced-transparency, and old-WebKit
+- `app.css`: the design tokens (`:root`, plus the dark-mode, Increase contrast, reduced-transparency, and old-WebKit
   override blocks), then the base element styles (focus ring, typography layer, `html` / `body`, `#app-root`).
 - `app-palette.css`: the static Tailwind color scale. Scheme-independent reference data with no `var()` dependencies, so
   it's order-independent.
@@ -122,7 +122,7 @@ the tie and paint the drag-over highlight over the selection and cursor fills.
 Load order between the two chunks is real but should never be load-bearing: keep a lifted rule's specificity at or above
 what it had inside the component.
 
-The dark-mode / `prefers-contrast` / reduced-transparency blocks in `app.css` are order-load-bearing for the same reason
+The dark-mode / Increase contrast / reduced-transparency blocks in `app.css` are order-load-bearing for the same reason
 (they override the light defaults above them). Leave them where they are.
 
 **Verifying a move.** Vite's content hashes make this cheap: build the frontend before and after (`vite build` in

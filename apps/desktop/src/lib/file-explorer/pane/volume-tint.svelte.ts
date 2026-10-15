@@ -11,17 +11,18 @@
  * Two implementations, picked once at module load:
  * - Modern path: returns the `color-mix(in oklch, ...)` string. CSS evaluates
  *   it at paint time, so `--color-bg-primary`'s dark/light swap and the
- *   `prefers-contrast: more` percentage bump apply automatically.
+ *   Increase contrast percentage bump (`html.increase-contrast`) apply automatically.
  * - Old-WebKit path (Safari < 16.2, common on macOS 12 Monterey): `color-mix()`
  *   doesn't parse, so we read the live CSS vars via `getComputedStyle` and mix
  *   in sRGB ourselves, returning a hex string. A reactive `mediaTick` $state
- *   re-fires `$derived` callers when `prefers-color-scheme` or
- *   `prefers-contrast` flips, since CSS no longer re-evaluates for us.
+ *   re-fires `$derived` callers when `prefers-color-scheme` flips or the
+ *   `<html>` class list changes (Increase contrast), since CSS no longer
+ *   re-evaluates for us.
  *
  * The light/dark switch on the modern path is handled automatically by
  * `--color-bg-primary` in `app.css`. Mix percentages flow through
  * `--pane-tint-fg-pct` / `--pane-tint-bg-pct` so dark mode and
- * `prefers-contrast: more` can each dial it up (10% light → 15% dark; 15%
+ * Increase contrast can each dial it up (10% light → 15% dark; 15%
  * light-contrast → 25% dark-contrast) without touching the call sites.
  */
 
@@ -36,13 +37,14 @@ let tintLocal = $state<VolumeTintColor>('none')
 let tintSmb = $state<VolumeTintColor>('none')
 let tintMtp = $state<VolumeTintColor>('none')
 // Reactive trigger so `getPaneTintBg`'s `$derived` callers recompute when the
-// color scheme or contrast preference flips. Only meaningful on the old-WebKit
+// color scheme or Increase contrast flips. Only meaningful on the old-WebKit
 // branch (the modern `color-mix()` string is re-evaluated by CSS at paint).
 let mediaTick = $state(0)
 
 let initialized = false
 let unsubs: Array<() => void> = []
 let mediaListeners: Array<{ mq: MediaQueryList; fn: (e: MediaQueryListEvent) => void }> = []
+let rootClassObserver: MutationObserver | undefined
 
 /** Initialise reactive subscriptions. Call once from app startup. */
 export function initVolumeTints(): void {
@@ -64,13 +66,17 @@ export function initVolumeTints(): void {
   // Only the JS-mix branch needs to listen to media changes — the CSS-mix
   // branch re-evaluates the `color-mix(...)` string on every paint already.
   if (!hasColorMix && typeof window !== 'undefined') {
-    for (const q of ['(prefers-color-scheme: dark)', '(prefers-contrast: more)']) {
-      const mq = window.matchMedia(q)
-      const fn = () => {
-        mediaTick++
-      }
-      mq.addEventListener('change', fn)
-      mediaListeners.push({ mq, fn })
+    const bump = () => {
+      mediaTick++
+    }
+    const mq = window.matchMedia('(prefers-color-scheme: dark)')
+    mq.addEventListener('change', bump)
+    mediaListeners.push({ mq, fn: bump })
+    // Increase contrast arrives as the `increase-contrast` class (`#lib/display-accessibility`),
+    // which raises `--pane-tint-fg-pct`.
+    if (typeof MutationObserver !== 'undefined') {
+      rootClassObserver = new MutationObserver(bump)
+      rootClassObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
     }
   }
   initialized = true
@@ -82,6 +88,8 @@ export function cleanupVolumeTints(): void {
   unsubs = []
   for (const { mq, fn } of mediaListeners) mq.removeEventListener('change', fn)
   mediaListeners = []
+  rootClassObserver?.disconnect()
+  rootClassObserver = undefined
   initialized = false
 }
 
@@ -169,7 +177,7 @@ function computeTintHex(tint: VolumeTintColor): string | null {
  *
  * On modern WebKit (the default) the returned string is a `color-mix(...)`
  * expression that CSS re-evaluates on every paint, so the dark/light swap
- * and `prefers-contrast: more` apply automatically. On old WebKit
+ * and the Increase contrast bump apply automatically. On old WebKit
  * (`color-mix()` unsupported), we precompute a hex string via
  * `getComputedStyle` and re-fire reactivity through `mediaTick` whenever a
  * relevant media query flips.

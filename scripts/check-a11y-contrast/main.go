@@ -121,9 +121,14 @@ func main() {
 	// set on different selectors. See `toast_states.go`.
 	allFindings = append(allFindings, analyzer.AnalyzeToastStates()...)
 
-	violations := FilterViolations(allFindings)
+	// Non-text marks (field edges, the Increase contrast focus ring) at 3:1.
+	// Kept out of `allFindings` so the APCA text floor below never sees them.
+	// See `non_text_states.go`.
+	nonText := analyzer.AnalyzeNonTextStates()
+
+	violations := FilterViolations(append(append([]Finding{}, allFindings...), nonText...))
 	warnings := append([]string{}, analyzer.Warnings...)
-	for _, f := range allFindings {
+	for _, f := range append(append([]Finding{}, allFindings...), nonText...) {
 		warnings = append(warnings, f.Warnings...)
 	}
 	warnings = joinWarnings(warnings)

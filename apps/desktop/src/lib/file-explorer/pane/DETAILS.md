@@ -1664,8 +1664,9 @@ survive the rebuild on the Rust side, so they aren't in that list.
   this.
 - **Volume tint old-WebKit branch.** On Safari < 16.2 (macOS 12), `color-mix()` doesn't parse, so `volume-tint` reads
   live CSS vars via `getComputedStyle` and mixes in sRGB. A reactive `mediaTick` re-fires `$derived` callers when
-  `prefers-color-scheme` / `prefers-contrast` flips; without it, dark-mode swaps wouldn't repaint the tint. The branch
-  is picked once at module load via `hasColorMix` from `#lib/utils/webkit-compat.ts`.
+  `prefers-color-scheme` flips or the `<html>` class list changes (Increase contrast); without it, dark-mode swaps
+  wouldn't repaint the tint. The branch is picked once at module load via `hasColorMix` from
+  `#lib/utils/webkit-compat.ts`.
 - **`DualPaneExplorer.svelte` (~1450 lines) and `FilePane.svelte` (~2815) are flagged by `file-length`.** Don't add to
   them without extracting first. New cross-cutting state goes into a `*.svelte.ts` factory; new pure logic goes into a
   `*.ts` helper with a colocated test. `DualPaneExplorer` has been drained to mostly its `ExplorerAPI` delegate facade +

@@ -160,7 +160,7 @@
         align-items: center;
         gap: var(--spacing-xs);
         width: 100%;
-        border: 1px solid var(--color-border);
+        border: 1px solid var(--color-field-border);
         border-radius: var(--radius-input);
         background: var(--color-bg-primary);
         transition:

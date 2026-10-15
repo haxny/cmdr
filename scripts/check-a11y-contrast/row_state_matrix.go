@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"maps"
+	"strconv"
+	"strings"
 )
 
 // Row-state matrix.
@@ -142,18 +144,26 @@ var rowRoleGroups = []rowRoleGroup{
 }
 
 // AnalyzeRowStates evaluates every (mode × pane tint × bg variant × role
-// group × accent × text role) combination and returns the worst-case Finding
-// per (textRole, mode, tint, variant) — accent is collapsed into the worst
-// variant internally. The result is roughly 700 findings (well under the rule
-// walker's total) and surfaces every failing combo without exploding the
-// report.
+// group × accent × text role) combination, once at the default look and once
+// under macOS Increase contrast (`html.increase-contrast`, which raises the pane
+// tints and darkens tokens), and returns the worst-case Finding per (textRole,
+// mode, tint, variant, contrast tier) — accent is collapsed into the worst
+// variant internally. The result is roughly 1,400 findings and surfaces every
+// failing combo without exploding the report.
 func (a *Analyzer) AnalyzeRowStates() []Finding {
 	worst, evaluated := make(map[rowWorstKey]Finding), 0
-	for _, mode := range []Mode{ModeLight, ModeDark} {
-		for _, tint := range rowPaneTints {
-			for _, group := range rowRoleGroups {
-				for _, variant := range group.bgVariants() {
-					evaluated += a.evalRowCell(mode, tint, variant, group, worst)
+	for _, tier := range []rowContrastTier{{}, {increase: true}} {
+		base := a.Vars
+		if tier.increase {
+			base = a.Vars.WithIncreaseContrast()
+		}
+		for _, mode := range []Mode{ModeLight, ModeDark} {
+			for _, tint := range rowPaneTints {
+				for _, group := range rowRoleGroups {
+					for _, variant := range group.bgVariants() {
+						cell := rowCell{mode: mode, tint: tint, variant: variant, tier: tier}
+						evaluated += a.evalRowCell(base, cell, group, worst)
+					}
 				}
 			}
 		}
@@ -250,11 +260,12 @@ func resolvePaneBg(vars *VarTable, mode Mode, tint paneTintHue) (RGBA, bool) {
 	if tint.VarName == "" {
 		return resolveVar(vars, mode, "color-bg-primary")
 	}
-	// Light = 10% tint, dark = 15% (both default; prefers-contrast: more
-	// would bump these to 15/25 but isn't modelled here — see Scope below).
-	tintPct := 10
-	if mode == ModeDark {
-		tintPct = 15
+	// The share comes from `--pane-tint-fg-pct` (10% light / 15% dark, raised
+	// to 15% / 25% under `html.increase-contrast`), the same token
+	// `volume-tint.svelte.ts` mixes with.
+	tintPct, ok := resolvePercent(vars, mode, "pane-tint-fg-pct")
+	if !ok {
+		return RGBA{}, false
 	}
 	expr := fmt.Sprintf(
 		"color-mix(in oklch, var(--color-bg-primary) %d%%, var(--%s) %d%%)",
@@ -294,57 +305,71 @@ func resolveTextRole(vars *VarTable, mode Mode, role string) (RGBA, bool) {
 // collapses all accent variants for cursor-active into a single worst-case
 // finding per (role, mode, tint, variant) tuple, so the report stays short.
 type rowWorstKey struct {
-	role    string
-	mode    Mode
-	tint    string
-	variant string
+	role     string
+	mode     Mode
+	tint     string
+	variant  string
+	increase bool
 }
 
-// evalRowCell evaluates one (mode, tint, variant, group) cell across the
-// group's roles and all relevant accent variants. Returns how many
-// (role × accent) pairs were evaluated, and updates `worst` in place with the
-// lowest-ratio finding per (role × mode × tint × variant) tuple.
-func (a *Analyzer) evalRowCell(mode Mode, tint paneTintHue, variant string, group rowRoleGroup, worst map[rowWorstKey]Finding) int {
+// rowContrastTier is one of the two looks the matrix sweeps: the default
+// (`increase: false`) and macOS Increase contrast (`html.increase-contrast`).
+type rowContrastTier struct {
+	increase bool
+}
+
+// rowCell is one (mode, tint, bg variant, contrast tier) coordinate.
+type rowCell struct {
+	mode    Mode
+	tint    paneTintHue
+	variant string
+	tier    rowContrastTier
+}
+
+// evalRowCell evaluates one cell across the group's roles and all relevant
+// accent variants, starting from `base` (the tier's var table). Returns how
+// many (role × accent) pairs were evaluated, and updates `worst` in place with
+// the lowest-ratio finding per (role × mode × tint × variant × tier) tuple.
+func (a *Analyzer) evalRowCell(base *VarTable, cell rowCell, group rowRoleGroup, worst map[rowWorstKey]Finding) int {
 	accents := []AccentVariant{{Name: "default", IsDefault: true}}
-	if variant == "cursor-active" {
+	if cell.variant == "cursor-active" {
 		accents = AccentVariants
 	}
 	evaluated := 0
 	for _, accent := range accents {
-		evaluated += a.evalRowCellForAccent(mode, tint, variant, accent, group, worst)
+		evaluated += evalRowCellForAccent(base, cell, accent, group, worst)
 	}
 	return evaluated
 }
 
-// evalRowCellForAccent runs one (mode, tint, variant, accent) sample across
-// every role in `group`. Splits out of `evalRowCell` so gocyclo doesn't fire.
-func (a *Analyzer) evalRowCellForAccent(
-	mode Mode, tint paneTintHue, variant string, accent AccentVariant, group rowRoleGroup,
-	worst map[rowWorstKey]Finding,
+// evalRowCellForAccent runs one (cell, accent) sample across every role in
+// `group`. Splits out of `evalRowCell` so gocyclo doesn't fire.
+func evalRowCellForAccent(
+	base *VarTable, cell rowCell, accent AccentVariant, group rowRoleGroup, worst map[rowWorstKey]Finding,
 ) int {
-	vars := a.Vars
+	vars := base
 	if !accent.IsDefault {
-		vars = withAccentOverride(a.Vars, accent)
+		vars = withAccentOverride(base, accent)
 	}
 	if group.selected {
-		// Mirror the three-tier `--color-selection-fg` cascade from
-		// `app.css` + `app-file-list.css`. The resolver doesn't model
-		// rule-level CSS overrides, so apply the right tier by hand per
-		// scenario. Irrelevant to an unselected-row role: none of them
-		// derive from `--color-selection-fg`.
-		vars = withSelectionFgVariant(vars, selectionFgTokenFor(mode, tint, variant))
+		// Mirror the `--color-selection-fg` cascade from `app.css` +
+		// `app-file-list.css`. The resolver doesn't model rule-level CSS
+		// overrides, so apply the right tier by hand per scenario.
+		// Irrelevant to an unselected-row role: none of them derive from
+		// `--color-selection-fg`.
+		vars = withSelectionFgVariant(vars, selectionFgTokenFor(cell.mode, cell.tint, cell.variant, cell.tier.increase))
 	}
-	bg, ok := resolveRowBg(vars, mode, tint, variant, group.selected)
+	bg, ok := resolveRowBg(vars, cell.mode, cell.tint, cell.variant, group.selected)
 	if !ok {
 		return 0
 	}
 	evaluated := 0
 	for _, role := range group.roles {
-		f, ok := evalRowText(vars, mode, role, bg, accent, tint, variant, group.selected)
+		f, ok := evalRowText(vars, cell, role, bg, accent, group.selected)
 		if !ok {
 			continue
 		}
-		k := rowWorstKey{role: role, mode: mode, tint: tint.Name, variant: variant}
+		k := rowWorstKey{role: role, mode: cell.mode, tint: cell.tint.Name, variant: cell.variant, increase: cell.tier.increase}
 		if cur, exists := worst[k]; !exists || f.Ratio < cur.Ratio {
 			worst[k] = f
 		}
@@ -355,10 +380,8 @@ func (a *Analyzer) evalRowCellForAccent(
 
 // evalRowText turns a (vars, role) pair into a Finding tagged with the
 // scenario coordinates.
-func evalRowText(
-	vars *VarTable, mode Mode, role string, bg RGBA,
-	accent AccentVariant, tint paneTintHue, variant string, selected bool,
-) (Finding, bool) {
+func evalRowText(vars *VarTable, cell rowCell, role string, bg RGBA, accent AccentVariant, selected bool) (Finding, bool) {
+	mode := cell.mode
 	fg, ok := resolveTextRole(vars, mode, role)
 	if !ok {
 		return Finding{}, false
@@ -374,7 +397,7 @@ func evalRowText(
 	return Finding{
 		File:          syntheticRowMatrixPath(),
 		Line:          0,
-		Selector:      describeRowScenario(role, tint, variant, selected),
+		Selector:      describeRowScenario(role, cell.tint, cell.variant, selected) + tierTag(cell.tier),
 		Mode:          mode,
 		FG:            fg,
 		BG:            bg,
@@ -395,17 +418,42 @@ func evalRowText(
 //     `--color-selection-bg`).
 //   - row is under cursor: `--color-selection-fg-cursor` (a hair darker
 //     red in light, lighter in dark, AA-safe vs the translucent cursor bg).
+//   - Increase contrast + dark + a pane tint + the focused cursor:
+//     `--color-selection-fg-fallback` (= `--color-text-primary`). The 25%
+//     tint lightens the translucent-accent cursor bg so far that no red clears
+//     AA there (`app.css`, "selection-fg fallback").
 //
-// There's a fourth tier in the CSS — dark + tinted + cursor-active drops to
-// `--color-selection-fg-fallback` (= `--color-text-primary`) — but it fires
-// ONLY under `prefers-contrast: more` (25% tint), which this matrix doesn't
-// model (it evaluates the 15% baseline; see `resolvePaneBg`). At 15% the red
-// cursor variant clears AA on every tint, so the matrix uses it here too.
-func selectionFgTokenFor(_ Mode, _ paneTintHue, variant string) string {
+// Under Increase contrast the tokens themselves also change (the class block
+// in `app.css` redefines the light reds); `increase` only picks the RULE tier.
+func selectionFgTokenFor(mode Mode, tint paneTintHue, variant string, increase bool) string {
+	if increase && mode == ModeDark && tint.VarName != "" && variant == "cursor-active" {
+		return "color-selection-fg-fallback"
+	}
 	if variant == "cursor-active" || variant == "cursor-inactive" {
 		return "color-selection-fg-cursor"
 	}
 	return "color-selection-fg-primary"
+}
+
+// tierTag marks an Increase contrast finding in the report.
+func tierTag(tier rowContrastTier) string {
+	if tier.increase {
+		return " [increase-contrast]"
+	}
+	return ""
+}
+
+// resolvePercent reads a `N%` token (like `--pane-tint-fg-pct`) as an int.
+func resolvePercent(vars *VarTable, mode Mode, name string) (int, bool) {
+	raw, ok := vars.Raw(name, mode)
+	if !ok {
+		return 0, false
+	}
+	n, err := strconv.Atoi(strings.TrimSuffix(strings.TrimSpace(raw), "%"))
+	if err != nil {
+		return 0, false
+	}
+	return n, true
 }
 
 // withSelectionFgVariant returns a VarTable derived from v with

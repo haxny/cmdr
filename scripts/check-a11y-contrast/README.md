@@ -54,17 +54,20 @@ The rule walker pairs `color` and `background`, full stop: it has no notion of C
 color composited via `opacity` is invisible to steps 1-6 above. A separate pass, `AnalyzeOpacity`, flags any such rule
 it can't otherwise account for — see "Opacity (detect, don't compute)" below.
 
-In addition to the rule walker, four scenario synthesizers cover cases where the text color and the background are set
-on different selectors — cases the walker can't pair on its own:
+In addition to the rule walker, four text scenario synthesizers (plus one non-text pass, below) cover cases where the
+text color and the background are set on different selectors — cases the walker can't pair on its own:
 
 - **Row state matrix** (`row_state_matrix.go`): the file-list's selected-row text colors (`--color-selection-fg` and the
   `--color-size-*-selected` mixes, on `.is-selected` descendants) and its unselected-row text colors (today:
   `--color-text-quiet`, shared by the hidden-entry dim and the TCC-restricted row treatment) are both set on a
   descendant selector while the row bg is set elsewhere (the pane, the stripe rule, or the cursor rules). The
   synthesizer composites the bg the row will actually render with — pane tint × stripe × cursor state × accent variant —
-  and pairs each text role in `rowRoleGroups` against it. About 1000 pairs evaluated; worst-case-per-(role, mode, tint,
-  variant) reported. Mirrors the three-tier selection-fg cascade in `app.css` (primary → cursor → fallback) for selected
-  roles, so the synthesizer's verdict matches what the runtime actually paints.
+  and pairs each text role in `rowRoleGroups` against it. It sweeps twice: the default look, and the macOS Increase
+  contrast look (the `html.increase-contrast` token blocks, which raise the pane tints to 15% / 25% and deepen the light
+  reds); the tint share comes from `--pane-tint-fg-pct`, never a constant. About 2000 pairs evaluated;
+  worst-case-per-(role, mode, tint, variant, tier) reported, the Increase contrast ones tagged `[increase-contrast]`.
+  Mirrors the selection-fg cascade in `app.css` (primary → cursor → fallback) for selected roles, so the synthesizer's
+  verdict matches what the runtime actually paints.
 - **Dropdown ancestor-bg matrix** (`dropdown_states.go`): hand-listed `(descendant-text-var, ancestor-bg-var)` tuples
   for cases where bg comes from an ancestor selector and `[data-highlighted]` (the dropdown options today; designed for
   easy extension). Runs every entry against the accent matrix + both modes. Each tuple supports a `FgExpr` / `BgExpr`
@@ -77,6 +80,13 @@ on different selectors — cases the walker can't pair on its own:
 - **Toast states** (`toast_states.go`): the toast frame's text roles (the message on `--color-text-primary`, the age
   label on `--color-text-tertiary`) on each level's tinted surface, which `ToastItem.svelte` sets on `.toast.<level>`
   while the text colors live on their own selectors. Same scenario type and sweep.
+
+One pass measures marks rather than text:
+
+- **Non-text states** (`non_text_states.go`, WCAG 1.4.11): the edges and rings that carry a control's shape or state, at
+  3:1 against each surface they sit on, in both modes, across the accent matrix, and under Increase contrast: the text
+  field edge (`--color-field-border`) and the focus ring's ink layer (`--color-focus-ink`). An unresolvable token fails
+  rather than skips. These findings join the WCAG gate but stay out of the APCA floor, whose Lc scale is for text.
 
 ## Opacity (detect, don't compute)
 
@@ -209,6 +219,9 @@ matrix), resolved fg hex, resolved bg hex, actual ratio, required threshold, and
   are evaluated separately.
 - **Modes**: rules inside `@media (prefers-color-scheme: dark)` are tagged so they only contribute in dark-mode
   evaluation.
+- **Increase contrast**: only the bare `html.increase-contrast { ... }` token blocks are modeled, as an overlay
+  (`VarTable.WithIncreaseContrast`), and only the row matrix and the non-text pass sweep it. The rule walker, size
+  tiers, and the other synthesizers evaluate the default look.
 
 ## Architecture
 
@@ -216,8 +229,9 @@ matrix), resolved fg hex, resolved bg hex, actual ratio, required threshold, and
 main.go              Entry, walks `apps/desktop/src/**/*.svelte`, orchestrates
                      the rule walker + scenario synthesizers.
 parser.go            Parses app.css (light + dark var tables) and Svelte <style>
-                     blocks into Rule structs. Strips `@supports not (...)` and
-                     descends into every `@media (prefers-color-scheme: dark)`.
+                     blocks into Rule structs. Strips `@supports not (...)`,
+                     descends into every `@media (prefers-color-scheme: dark)`,
+                     and keeps `html.increase-contrast` blocks as an overlay.
 resolver.go          Resolves a CSS value string (literal / var() / color-mix())
                      to RGBA per mode. Tracks visited var names in `Deps` so
                      callers can decide whether to sweep the accent matrix.
@@ -236,7 +250,10 @@ size_tiers.go        `.size-*` utility classes × known container bgs, since
                      they're only `color:` rules with no paired bg.
 row_state_matrix.go  Selected-row text × (pane tint × stripe × cursor state ×
                      accent variant) bg composition. Models the three-tier
-                     `--color-selection-fg` cascade.
+                     `--color-selection-fg` cascade. Sweeps the default and the
+                     Increase contrast tiers.
+non_text_states.go   Field edges and focus-ring layers at 3:1 (WCAG 1.4.11)
+                     on every surface they meet; kept out of the APCA floor.
 dropdown_states.go   Hand-listed (descendant-text-var, ancestor-bg-var) tuples
                      for "secondary text on accent-bg" cases. Supports FgExpr /
                      BgExpr for opacity composites and tint-over-surface bgs.

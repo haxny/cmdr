@@ -29,6 +29,8 @@ var allowedUnusedClasses = map[string]bool{
 	// app.css - toggled on <html> by JS to opt surfaces out of translucency (WKWebView doesn't
 	// honor the prefers-reduced-transparency media query, so the app drives the class itself)
 	"reduce-transparency": true,
+	// app.css - macOS Increase contrast, toggled on <html> by `#lib/display-accessibility` the same way
+	"increase-contrast": true,
 	// Button.svelte - classes constructed dynamically via template strings (btn-{variant}, btn-{size})
 	"btn-primary":   true,
 	"btn-secondary": true,

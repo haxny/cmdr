@@ -70,7 +70,7 @@
     :global(.ni-control) {
         display: flex;
         align-items: stretch;
-        border: 1px solid var(--color-border);
+        border: 1px solid var(--color-field-border);
         border-radius: var(--radius-input);
         overflow: hidden;
         transition:

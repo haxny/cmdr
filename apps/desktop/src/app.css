@@ -102,6 +102,11 @@
      (`--color-bg-primary` through `--color-bg-tertiary`). The decorative border
      tokens above sit at ~1.3–1.8:1 and are too faint for that job. */
   --color-control-border: #858585;
+  /* Resting edge of a text field (`.text-field`, `Combobox`, `NumberInput`). The
+     outline is all that marks an empty field's hit area, so it takes the 3:1
+     control border too, not the decorative `--color-border`. Gated by the
+     contrast checker's non-text scenarios (`non_text_states.go`). */
+  --color-field-border: var(--color-control-border);
 
   /* === Text === */
   --color-text-primary: #1a1a1a;
@@ -261,7 +266,7 @@
      The 100% saturated swatches shown in the Settings color picker for
      `appearance.tint{Local,Smb,Mtp}`. At pane render time, the chosen tint
      is mixed against `--color-bg-primary` at `--pane-tint-fg-pct` (10%
-     light / 15% dark, raised to 15% / 25% under `prefers-contrast: more`)
+     light / 15% dark, raised to 15% / 25% under `html.increase-contrast`)
      and applied to `.file-pane` from `FilePane.svelte`. Tuned at full
      saturation for clear identity in the picker; the
      `color-mix(in oklch, …)` does the heavy lifting on perceptual
@@ -282,7 +287,7 @@
   /* Tint mix intensity. The pane bg is `--color-bg-primary` mixed with the
      chosen tint at these percentages. Light baseline is 10%; the dark-mode
      block lifts it to 15% (dark surfaces have less luminance headroom);
-     `prefers-contrast: more` adds another step on top (15% / 25%). */
+     Increase contrast (`html.increase-contrast`) adds another step (15% / 25%). */
   --pane-tint-bg-pct: 90%;
   --pane-tint-fg-pct: 10%;
 
@@ -499,6 +504,11 @@
      focused field reads unmistakably even against an accent-tinted surface.
      Sits outside the field's own 1px border, for a 3px accent edge in total. */
   --shadow-focus-solid: 0 0 0 2px var(--color-accent);
+  /* The ink layer of a two-layer focus ring: near-black in light mode, near-white in
+     dark, so the ring clears 3:1 against any surface whatever the user's accent (the
+     plain accent ring is 1.58:1 on white with Apple Yellow). Used under Increase
+     contrast and by the #440 ring proposals (`app-visual-cues.css`). */
+  --color-focus-ink: var(--color-text-primary);
 
   /* === Transitions === */
   --transition-fast: 100ms ease;
@@ -628,7 +638,7 @@
 }
 
 /* selection-fg fallback: dark mode + high contrast + pane tint + focused
-   cursor on a selected row. Only under `prefers-contrast: more` does the tint
+   cursor on a selected row. Only under Increase contrast (`html.increase-contrast`) does the tint
    jump to 25%, lightening the translucent-accent cursor bg enough that no red
    variant clears AA (4.5:1) for the warm-neutral tints — there we drop to
    `--color-text-primary` so the row stays legible, sacrificing the red
@@ -638,9 +648,15 @@
    (`--color-size-*-selected`) derive from `--color-selection-fg`, so they
    switch in lockstep. Both list views need the override. Mirrored in
    `row_state_matrix.go`'s synthesizer. */
-@media (prefers-color-scheme: dark) and (prefers-contrast: more) {
-  .file-pane[data-pane-tint] .full-list-container.is-focused .file-entry.is-selected.is-under-cursor,
-  .file-pane[data-pane-tint] .brief-list-container.is-focused .file-entry.is-selected.is-under-cursor {
+@media (prefers-color-scheme: dark) {
+  html.increase-contrast
+    .file-pane[data-pane-tint]
+    .full-list-container.is-focused
+    .file-entry.is-selected.is-under-cursor,
+  html.increase-contrast
+    .file-pane[data-pane-tint]
+    .brief-list-container.is-focused
+    .file-entry.is-selected.is-under-cursor {
     --color-selection-fg: var(--color-selection-fg-fallback);
   }
 }
@@ -868,7 +884,7 @@
 
     /* Volume tints need more presence on dark backgrounds: a 10% mix against
        `#1e1e1e` mostly vanishes. 15% gets the hue across without coloring
-       text. `prefers-contrast: more` below stacks on top for 25%. */
+       text. Increase contrast stacks on top for 25% (`html.increase-contrast`). */
     --pane-tint-bg-pct: 85%;
     --pane-tint-fg-pct: 15%;
 
@@ -999,23 +1015,52 @@
   }
 }
 
-/* Raise volume-tint intensity for users who request more contrast.
-   Light scheme: 10% → 15%. Dark scheme: 15% baseline (see dark block above)
-   → 25% (combined query below). */
-@media (prefers-contrast: more) {
-  :root {
-    --pane-tint-bg-pct: 85%;
-    --pane-tint-fg-pct: 15%;
-  }
+/* === Increase contrast ===
+   macOS Accessibility > Display > Increase contrast, mirrored as the `increase-contrast`
+   class on `<html>` by `#lib/display-accessibility` (which also turns it on for
+   `prefers-contrast: more`). Style off the CLASS, ❌ never the media query: one source.
+   `html.increase-contrast` (0,1,1) outranks the `:root` blocks (0,1,0) above in both
+   modes, and the dark block below stacks on top in dark mode. The contrast checker reads
+   both blocks as its Increase contrast tier (`row_state_matrix.go`,
+   `non_text_states.go`), so a token here is gated like a default one.
+
+   - Pane tints step up (10% → 15% light, 15% → 25% dark), so the volume reads at a glance.
+   - Borders, control and field edges, secondary text, and the cursor hairline darken
+     (light) or brighten (dark).
+   - The marked-file reds go a step deeper in light mode: on a 15% tint the default reds
+     fall under AA (brown, teal, indigo, pink corners).
+   - Focus rings gain an ink layer (`--color-focus-ink`) inside the accent, which clears
+     3:1 whatever the accent: text fields through `--shadow-focus-solid` here, buttons and
+     links through the rule under § Global Focus Styles. */
+html.increase-contrast {
+  --pane-tint-bg-pct: 85%;
+  --pane-tint-fg-pct: 15%;
+  --color-border-strong: #6e6e6e;
+  --color-border: #8a8a8a;
+  --color-border-subtle: #b0b0b0;
+  --color-control-border: #6b6b6b;
+  --color-text-secondary: #4f4f4f;
+  --color-text-tertiary: #4f4f4f;
+  --color-cursor-outline: var(--color-accent-pop);
+  --shadow-focus-solid: 0 0 0 2px var(--color-focus-ink), 0 0 0 4px var(--color-accent);
+  --color-selection-fg-primary: #a80000;
+  --color-selection-fg-cursor: #8a0000;
 }
 
-/* Dark + more-contrast stacks on top of both prior blocks. Order matters:
-   this MUST come after both `prefers-color-scheme: dark` and
-   `prefers-contrast: more` for the cascade to land here. */
-@media (prefers-color-scheme: dark) and (prefers-contrast: more) {
-  :root {
+@media (prefers-color-scheme: dark) {
+  html.increase-contrast {
     --pane-tint-bg-pct: 75%;
     --pane-tint-fg-pct: 25%;
+    --color-border-strong: #a0a0a0;
+    --color-border: #808080;
+    --color-border-subtle: #5c5c5c;
+    --color-control-border: #a0a0a0;
+    --color-text-secondary: #d9d9d9;
+    --color-text-tertiary: #c8c8c8;
+    /* The default `#aaaaaa` falls under AA on a striped 25% warm or green tint. */
+    --color-text-quiet: #c2c2c2;
+    --color-selection-fg-primary: #ffa0a0;
+    --color-selection-fg-cursor: #ffb3b3;
   }
 }
 
@@ -1065,6 +1110,12 @@ a:focus-visible,
 [role='button']:focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
+}
+
+/* Increase contrast: an ink ring fills the 2px gap inside the accent outline, so the
+   ring clears 3:1 against any surface with any accent (see § Increase contrast). */
+html.increase-contrast :is(button, a, [role='button']):focus-visible {
+  box-shadow: 0 0 0 2px var(--color-focus-ink);
 }
 
 /* =============================================================================

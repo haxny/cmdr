@@ -144,7 +144,7 @@ func selectionDiffRatio(vars *VarTable, mode Mode, tint paneTintHue, variant str
 		work = withAccentOverride(work, accent)
 	}
 	if applyFallback {
-		work = withSelectionFgVariant(work, selectionFgTokenFor(mode, tint, variant))
+		work = withSelectionFgVariant(work, selectionFgTokenFor(mode, tint, variant, false))
 	}
 	fg, _ := resolveTextRole(work, mode, "color-selection-fg")
 	textPrimary, _ := resolveTextRole(work, mode, "color-text-primary")

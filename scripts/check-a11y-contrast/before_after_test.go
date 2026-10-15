@@ -253,7 +253,7 @@ func evalScenario(base *VarTable, sc beforeAfterScenario, applyFallback bool) (F
 		}
 	}
 	if applyFallback {
-		vars = withSelectionFgVariant(vars, selectionFgTokenFor(sc.mode, sc.tint, sc.variant))
+		vars = withSelectionFgVariant(vars, selectionFgTokenFor(sc.mode, sc.tint, sc.variant, false))
 	}
 	// This diagnostic only ever exercises selected-row roles (the
 	// before/after selection-color comparison).

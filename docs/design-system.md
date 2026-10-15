@@ -19,8 +19,8 @@ Design language for the Cmdr desktop app and getcmdr.com website.
 ### Accent strategy
 
 **App:** Reads `NSColor.controlAccentColor()` at startup and on `NSSystemColorsDidChangeNotification`. Injected as
-`--color-accent` via `document.documentElement.style.setProperty()`. Fallback: macOS default blue (`#007aff` light,
-`#0a84ff` dark).
+`--color-accent` via `document.documentElement.style.setProperty()`. Fallback: Cmdr gold (`#d4a006` light, `#ffc206`
+dark).
 
 Hover and focus variants are derived, not hardcoded, because the base color is dynamic:
 
@@ -68,8 +68,10 @@ The app and website use different color temperatures by design:
 | `--color-bg-dialog`      | `#ebebeb` | Every `ModalDialog` panel                  |
 | `--color-text-primary`   | `#1a1a1a` | Body text (not pure black, easier on eyes) |
 | `--color-text-secondary` | `#666666` | Labels, descriptions                       |
-| `--color-text-tertiary`  | `#888888` | Timestamps, metadata                       |
+| `--color-text-tertiary`  | `#666666` | Timestamps, metadata                       |
 | `--color-border`         | `#ddd`    | Default borders                            |
+| `--color-control-border` | `#858585` | Empty checkbox and switch outlines (3:1)   |
+| `--color-field-border`   | control   | Text field edges (3:1)                     |
 | `--color-border-strong`  | `#bbb`    | Panel dividers, emphasized boundaries      |
 | `--color-border-subtle`  | `#e8e8e8` | Internal separators                        |
 
@@ -82,11 +84,22 @@ The app and website use different color temperatures by design:
 | `--color-bg-tertiary`    | `#333333` | Hover fills, grouped sections             |
 | `--color-bg-dialog`      | `#232323` | Every `ModalDialog` panel                 |
 | `--color-text-primary`   | `#e8e8e8` | Body text (not pure white, reduces glare) |
-| `--color-text-secondary` | `#aaaaaa` | Labels, descriptions                      |
-| `--color-text-tertiary`  | `#888888` | Timestamps, metadata                      |
+| `--color-text-secondary` | `#c4c4c4` | Labels, descriptions                      |
+| `--color-text-tertiary`  | `#aaaaaa` | Timestamps, metadata                      |
 | `--color-border`         | `#444444` | Default borders                           |
+| `--color-control-border` | `#808080` | Empty checkbox and switch outlines (3:1)  |
+| `--color-field-border`   | control   | Text field edges (3:1)                    |
 | `--color-border-strong`  | `#555555` | Panel dividers                            |
 | `--color-border-subtle`  | `#333333` | Internal separators                       |
+
+**App under Increase contrast:** macOS Accessibility > Display > Increase contrast (or `prefers-contrast: more`) puts
+`increase-contrast` on `<html>`, and `app.css` § Increase contrast redefines tokens under that class: pane tints step up
+to 15% (light) / 25% (dark); `--color-border` goes to `#8a8a8a` / `#808080`, control and field edges to `#6b6b6b` /
+`#a0a0a0`; secondary text to `#4f4f4f` / `#d9d9d9`; the cursor hairline to the full `--color-accent-pop`; the light
+marked-file reds deepen to `#a80000` / `#8a0000` (the default reds fall under AA on a 15% brown, teal, indigo, or pink
+tint); dark quiet text lifts to `#c2c2c2`; and focus rings gain an ink layer (§ Focus ring accessibility). The contrast
+checker sweeps this tier too, so every value here is gated. Style off the class, never the media query: WKWebView's
+media queries don't track every macOS display option (`apps/desktop/src/DETAILS.md` § Display accessibility classes).
 
 **Website (dark):**
 
@@ -341,17 +354,23 @@ Dark mode shadows use higher opacity because dark-on-dark has less perceived con
 shadows in `app.css` § Frosted-glass material: `--shadow-glass` (menus, selects), `--shadow-tooltip` (a strong, tight
 lift like a native tooltip), `--shadow-toast`, and the `--shadow-glass-rim` inset top highlight added to each.
 
-**Focus ring accessibility.** When the accent color is close to the background (for example, a light-blue accent on a
-light background), the focus ring can become hard to see. Use a two-layer strategy:
+**Focus ring accessibility.** The default ring is the plain accent, which falls under the 3:1 non-text minimum on white
+with pale accents (Apple Yellow 1.58:1, Cmdr gold 2.38:1, Green 2.41:1, Orange 2.58:1). Under Increase contrast it gains
+an ink layer, `--color-focus-ink` (`--color-text-primary`: 17.4:1 on white, 13.6:1 on `#1e1e1e`), inside the accent:
 
 ```css
-/* Inner dark ring for guaranteed contrast, outer accent ring for color */
+/* buttons and links: the ink fills the 2px gap inside the accent outline */
 outline: 2px solid var(--color-accent);
-outline-offset: 1px;
-box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.1); /* contrast backup in light mode */
+outline-offset: 2px;
+box-shadow: 0 0 0 2px var(--color-focus-ink);
+/* text fields: --shadow-focus-solid */
+box-shadow:
+  0 0 0 2px var(--color-focus-ink),
+  0 0 0 4px var(--color-accent);
 ```
 
-In dark mode, the backup shadow uses `rgba(255, 255, 255, 0.08)` instead.
+Whether the default ring changes too is open (GitHub issue #440): the candidates live behind Debug > Visual cues,
+`apps/desktop/src/app-visual-cues.css`.
 
 ### Z-index scale (app)
 
@@ -631,9 +650,10 @@ primitives already do, not a recipe to copy into a component. The chrome itself 
 | `--font-size-input`    | `var(--font-size-md)`     | 14px, with `line-height: 1.2` (the frame's padding sets height) |
 | `--shadow-focus-solid` | `0 0 0 2px accent`        | The focus ring: thicker and solid, not the translucent glow     |
 
-Resting: a 1px `--color-border` hairline on `--color-bg-primary`. Focus (`:focus-within` on the frame, so a leading icon
-or trailing button is inside the ring): `border-color: var(--color-accent)` plus `--shadow-focus-solid`, a 3px solid
-accent edge in total. Invalid swaps both for `--color-error`; the caution state swaps both for `--color-warning`.
+Resting: a 1px `--color-field-border` edge (the 3:1 control border, 3.7:1 on white) on `--color-bg-primary`. Focus
+(`:focus-within` on the frame, so a leading icon or trailing button is inside the ring):
+`border-color: var(--color-accent)` plus `--shadow-focus-solid`, a 3px solid accent edge in total. Invalid swaps both
+for `--color-error`; the caution state swaps both for `--color-warning`.
 
 Two conventions the fields establish app-wide, both global rules in `app.css`:
 

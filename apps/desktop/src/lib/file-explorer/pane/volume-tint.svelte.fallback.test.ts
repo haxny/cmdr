@@ -49,7 +49,7 @@ beforeEach(() => {
   settings.clear()
   subscribers.clear()
   // jsdom doesn't ship `matchMedia`; init wires it for the
-  // `prefers-color-scheme` / `prefers-contrast` reactivity tick on the
+  // `prefers-color-scheme` reactivity tick on the
   // old-WebKit branch, so stub a no-op.
   Object.defineProperty(window, 'matchMedia', {
     configurable: true,

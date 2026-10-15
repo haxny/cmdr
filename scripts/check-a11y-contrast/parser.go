@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"maps"
 	"regexp"
 	"strings"
 )
@@ -15,17 +16,42 @@ const (
 )
 
 // VarTable holds raw variable definitions (name -> raw CSS value string) per mode.
+//
+// ContrastLight / ContrastDark hold the `html.increase-contrast` overrides
+// (the class `#lib/display-accessibility` sets under macOS Increase contrast):
+// top-level rules land in ContrastLight and apply to BOTH modes, rules nested in
+// `@media (prefers-color-scheme: dark)` land in ContrastDark. They stay out of
+// Light/Dark, so every check reads the default look unless it asks for
+// `WithIncreaseContrast()`.
 type VarTable struct {
-	Light map[string]string
-	Dark  map[string]string
+	Light         map[string]string
+	Dark          map[string]string
+	ContrastLight map[string]string
+	ContrastDark  map[string]string
 }
 
 // NewVarTable returns an empty VarTable.
 func NewVarTable() *VarTable {
 	return &VarTable{
-		Light: make(map[string]string),
-		Dark:  make(map[string]string),
+		Light:         make(map[string]string),
+		Dark:          make(map[string]string),
+		ContrastLight: make(map[string]string),
+		ContrastDark:  make(map[string]string),
 	}
+}
+
+// WithIncreaseContrast returns a table with the `html.increase-contrast`
+// overrides layered on, mirroring the cascade: the top-level class rule
+// (specificity 0,1,1) beats the dark `:root` (0,1,0), so it applies in both
+// modes, and the dark-nested class rule then wins in dark mode.
+func (v *VarTable) WithIncreaseContrast() *VarTable {
+	out := NewVarTable()
+	maps.Copy(out.Light, v.Light)
+	maps.Copy(out.Light, v.ContrastLight)
+	maps.Copy(out.Dark, v.Dark)
+	maps.Copy(out.Dark, v.ContrastLight)
+	maps.Copy(out.Dark, v.ContrastDark)
+	return out
 }
 
 // Raw returns the raw value string for a variable in a given mode.
@@ -103,6 +129,7 @@ func ParseAppCSS(content string) *VarTable {
 		cleanDark := stripSupportsNotBlocks(darkBody)
 		darkRoot := extractRootBlock(cleanDark)
 		extractVarDefs(darkRoot, table.Dark)
+		extractIncreaseContrastBlocks(cleanDark, table.ContrastDark)
 
 		// Replace the dark block with an equivalent number of spaces so that
 		// line numbers don't shift (not strictly needed, but tidy) and so
@@ -116,6 +143,10 @@ func ParseAppCSS(content string) *VarTable {
 	// wins in `extractVarDefs`). The check models modern WebKit; the
 	// fallbacks are a separate concern verified by `check-css-fallbacks`.
 	content = stripSupportsNotBlocks(content)
+
+	// Top-level `html.increase-contrast { ... }` overrides: both modes, under
+	// the class only (see `VarTable`).
+	content = extractIncreaseContrastBlocks(content, table.ContrastLight)
 
 	// Now parse all `:root { ... }` blocks remaining (light mode).
 	for {
@@ -194,6 +225,30 @@ func extractDarkModeBlock(content string) (string, int, int) {
 		return "", -1, -1
 	}
 	return content[bodyStart:bodyEnd], loc[0], bodyEnd + 1
+}
+
+// increaseContrastBlockPattern matches the opening of a token block keyed on
+// the Increase contrast class. Only the bare `html.increase-contrast {` form
+// carries tokens; a longer selector (`html.increase-contrast .file-pane ...`)
+// is a rule the rule walker reads, not a token block.
+var increaseContrastBlockPattern = regexp.MustCompile(`html\.increase-contrast\s*\{`)
+
+// extractIncreaseContrastBlocks copies the custom properties of every bare
+// `html.increase-contrast { ... }` block in s into out, and returns s with
+// those blocks blanked (same length, so offsets don't shift).
+func extractIncreaseContrastBlocks(s string, out map[string]string) string {
+	for {
+		loc := increaseContrastBlockPattern.FindStringIndex(s)
+		if loc == nil {
+			return s
+		}
+		end := matchingBrace(s, loc[1]-1)
+		if end < 0 {
+			return s
+		}
+		extractVarDefs(s[loc[1]:end], out)
+		s = s[:loc[0]] + strings.Repeat(" ", end+1-loc[0]) + s[end+1:]
+	}
 }
 
 // extractRootBlock returns the inside of the first `:root { ... }` in s.
