@@ -242,6 +242,7 @@
     <!-- svelte-ignore a11y_interactive_supports_focus -->
     <div
         class="function-key-bar"
+        data-toast-bottom-inset
         data-row={shiftHeld ? 'shift' : 'plain'}
         role="toolbar"
         aria-label={tString('fileExplorer.functionKeyBar.toolbarAriaLabel')}

@@ -1568,6 +1568,9 @@ the bottom right, if that's clear (WCAG 2.4.11). Decisions:
 - **Event-driven, only while toasts are up**: focus moves, the focused element's `aria-activedescendant` changing,
   scroll, resize, and the stack's own size, coalesced to one measurement a frame. At the bottom, newest still sits
   nearest the window edge.
+- **At the bottom it sits above the function key bar**, measured (`bottomChromeInset` reads every
+  `[data-toast-bottom-inset]` element), so a hidden bar costs nothing and a bigger text size lifts the stack with the
+  bar. Mark any new bottom chrome the same way.
 
 ## CopyBox
 

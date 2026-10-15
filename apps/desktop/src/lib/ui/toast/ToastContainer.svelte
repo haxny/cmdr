@@ -67,17 +67,21 @@
     // Off the focused cursor row (`toast-placement.ts`): watched only while toasts are up, and
     // back at the top once the last one goes.
     let edge = $state<ToastEdge>('top')
+    /** Height of the window chrome along the bottom (the function key bar), which the bottom edge sits above. */
+    let bottomInset = $state(0)
     const hasToasts = $derived(toasts.length > 0)
 
     $effect(() => {
         const element = stackElement
         if (!hasToasts || !element) {
             edge = 'top'
+            bottomInset = 0
             return
         }
         return untrack(() =>
-            watchToastPlacement(element, (next) => {
-                edge = next
+            watchToastPlacement(element, (placement) => {
+                edge = placement.edge
+                bottomInset = placement.bottomInset
             }),
         )
     })
@@ -89,7 +93,8 @@
     }
 </script>
 
-<div class="toast-container" class:at-bottom={edge === 'bottom'} data-toast-stack data-edge={edge} bind:this={stackElement}>
+<div class="toast-container" class:at-bottom={edge === 'bottom'} data-toast-stack data-edge={edge}
+    style:bottom={edge === 'bottom' ? `calc(var(--spacing-lg) + ${String(bottomInset)}px)` : undefined} bind:this={stackElement}>
     {#each toasts as toast (toast.id)}
             <ToastItem
                 id={toast.id}
@@ -131,10 +136,9 @@
     }
 
     /* Moved off the focused cursor row (`toast-placement.ts`). Newest still sits nearest the
-       window edge. */
+       window edge. `bottom` is inline: the gap plus the measured function key bar. */
     .toast-container.at-bottom {
         top: auto;
-        bottom: var(--spacing-lg);
         flex-direction: column;
     }
 

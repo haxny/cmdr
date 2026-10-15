@@ -5,7 +5,13 @@
  */
 
 import { describe, it, expect, afterEach, vi } from 'vitest'
-import { pickToastEdge, placementRects, watchToastPlacement, type ToastEdge } from './toast-placement'
+import {
+  bottomChromeInset,
+  pickToastEdge,
+  placementRects,
+  watchToastPlacement,
+  type ToastEdge,
+} from './toast-placement'
 
 const VIEWPORT = { width: 1200, height: 800 }
 
@@ -26,6 +32,33 @@ describe('placementRects', () => {
   it('mirrors a stack at the bottom back to the top', () => {
     const rects = placementRects({ top: 664, bottom: 784, left: 824, right: 1184 }, 'bottom', VIEWPORT.height)
     expect(rects.top).toEqual(STACK_AT_TOP)
+  })
+})
+
+describe('keeping the bottom position above the function key bar', () => {
+  afterEach(() => {
+    document.body.innerHTML = ''
+  })
+
+  it('sits the bottom placement above window chrome at the bottom', () => {
+    const rects = placementRects(STACK_AT_TOP, 'top', VIEWPORT.height, 30)
+    expect(rects.bottom).toEqual({ top: 634, bottom: 754, left: 824, right: 1184 })
+  })
+
+  it('mirrors a stack already above the chrome back to the same top gap', () => {
+    const rects = placementRects({ top: 634, bottom: 754, left: 824, right: 1184 }, 'bottom', VIEWPORT.height, 30)
+    expect(rects.top).toEqual(STACK_AT_TOP)
+  })
+
+  it('measures the function key bar’s real height, and nothing while it’s hidden', () => {
+    expect(bottomChromeInset(VIEWPORT.height)).toBe(0)
+
+    const bar = document.createElement('div')
+    bar.setAttribute('data-toast-bottom-inset', '')
+    bar.getBoundingClientRect = () => ({ top: 771, bottom: 800, height: 29 }) as DOMRect
+    document.body.appendChild(bar)
+
+    expect(bottomChromeInset(VIEWPORT.height)).toBe(29)
   })
 })
 
@@ -107,7 +140,7 @@ describe('watchToastPlacement', () => {
     document.body.appendChild(stack)
     const { list } = mountList(100)
     const edges: ToastEdge[] = []
-    stop = watchToastPlacement(stack, (edge) => {
+    stop = watchToastPlacement(stack, ({ edge }) => {
       edges.push(edge)
     })
 
@@ -134,6 +167,6 @@ describe('watchToastPlacement', () => {
     stop = watchToastPlacement(stack, onEdge)
 
     await nextFrame()
-    expect(onEdge).not.toHaveBeenCalledWith('bottom')
+    expect(onEdge).not.toHaveBeenCalled()
   })
 })
