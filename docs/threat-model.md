@@ -259,7 +259,7 @@ risk.
     (`docs/guides/releasing.md` § Who signs the update archives). CI builds, notarizes, and attests into a draft
     release; the laptop verifies each update archive's build provenance (the release workflow, at the signed tag's
     commit, on a GitHub-hosted runner), refuses anything that doesn't verify, signs with the key from its encrypted
-    store, checks each signature against the app's public key, and only then lets CI publish. The key's GitHub copies
+    store, checks each signature against the app's trusted keys, and only then lets CI publish. The key's GitHub copies
     are deleted once that first release ships, which is when a GitHub or CI compromise stops being able to read it.
   - **Account and key custody**: hardware-key 2FA on the GitHub account, and encrypted copies of every signing key
     outside GitHub and Cloudflare.

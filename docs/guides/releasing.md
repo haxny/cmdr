@@ -103,9 +103,9 @@ the variable alone.
    minisign verifier (the check the app runs), uploads the `.sig` files, reads them back, and dispatches `release.yml`
    on the tag.
 4. **The dispatched run** finishes it: `guard` (it also refuses a dispatch on a branch), then `publish`, which verifies
-   every archive's `.sig` against the app's public key, publishes the draft, and then runs exactly the `ci` mode steps
-   (`latest.json` from the `.sig` assets, checksums, release notes, the commit to `main`, the website deploy), then
-   `attest` and `bump-tap`. `ci-gate`, `compile`, `sign`, and `sbom` skip.
+   every archive's `.sig` against the app's trusted keys (main or backup), publishes the draft, and then runs exactly
+   the `ci` mode steps (`latest.json` from the `.sig` assets, checksums, release notes, the commit to `main`, the
+   website deploy), then `attest` and `bump-tap`. `ci-gate`, `compile`, `sign`, and `sbom` skip.
 
 `release-finish.sh` is resumable: re-run it after anything (a closed laptop, a red job). It holds no state of its own
 and reads where the release stands on GitHub. A build still running gets waited for, a draft gets signed (re-signing a

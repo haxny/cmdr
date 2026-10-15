@@ -946,7 +946,8 @@ jobs:
           printf '%s\n' "$NOTES" > /tmp/notes.txt
 
       # A dispatch publishes signatures made off CI, so it proves them before anything goes public:
-      # each archive needs a `.sig` that verifies against the app's public key (an empty or foreign
+      # each archive needs a `.sig` that verifies against a key the app trusts, the main or the offline
+      # backup one (`docs/guides/releasing.md` § Rotating to the backup updater key; an empty or foreign
       # one would otherwise land in `latest.json` and strand every install). The same verifier
       # `release-finish.sh` ran before uploading. `ci` mode's signatures come from its own build.
       - name: Install Go to verify the signatures
@@ -955,7 +956,7 @@ jobs:
         with:
           install_args: go
 
-      - name: Verify the signatures against the app's public key
+      - name: Verify the signatures against the app's trusted keys
         if: github.event_name == 'workflow_dispatch'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
