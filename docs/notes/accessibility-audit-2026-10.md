@@ -21,8 +21,12 @@ downloaded INT `.docx` (itic.org, `VPAT2.5RevINT`).
   E2E axe tests in light and dark mode (12 since #442 added the queue window, which also gained a tier-3 file,
   `routes/queue/queue.a11y.test.ts`) (`apps/desktop/test/e2e-playwright/accessibility.spec.ts`, `color-contrast` off
   there because the static checker owns it). `docs/testing.md` still says 696 tests; the count above is from the files.
-- **Not done**: no screen reader run. Rows that depend on what VoiceOver actually says are marked "Pending VoiceOver
-  check" with the check ID (V1–V12) from David's guide (vault, `projects/Cmdr/2026-10-14 Cmdr VoiceOver test guide.md`).
+- **Screen reader**: one VoiceOver run, on a throwaway spike of the #437/#267 focus model (macOS 27.0, VoiceOver 10,
+  Cmdr 0.52.0 dev at `bf49861b2`, real keys through VoiceOver's AppleScript bridge, 2026-10-15); its phrases are quoted
+  under V1, V2, V3, and V10 below. Nobody has listened to the shipped code (the Mac's screen was locked for the rest of
+  the effort), so every row that depends on what VoiceOver says stays "Pending VoiceOver check" with the check ID
+  (V1–V12) from David's guide (vault, `projects/Cmdr/2026-10-14 Cmdr VoiceOver test guide.md`). The shipped code is
+  covered by unit, axe, and `@guidepup/virtual-screen-reader` tests, which model the ARIA spec, not WebKit or VoiceOver.
   Live UI wasn't judged from screenshots.
 - **Levels**: Supports, Partially supports, Does not support, Not applicable (the VPAT's own terms). "Partially
   supports" means some functionality doesn't meet the criterion.
@@ -32,31 +36,33 @@ downloaded INT `.docx` (itic.org, `VPAT2.5RevINT`).
 Counts per table (rows marked "see WCAG section" aren't counted):
 
 - **WCAG 2.2 Level A (32)**: 20 Supports, 6 Partially supports, 0 Does not support, 6 Not applicable (3.3.1 moved to
-  Supports with #438, 2.2.1 with #439, 2026-10-15).
+  Supports with #438, 2.2.1 with #439, 1.1.1 with #437, and 2.5.3 moved to Partially supports with #450, 2026-10-15).
 - **WCAG 2.2 Level AA (24)**: 11 Supports, 8 Partially supports, 0 Does not support, 5 Not applicable (1.3.5 and 3.1.2
   moved to Supports with #442, 2.4.11 and 4.1.3 with #439, 2026-10-15).
 - **Section 508 chapter 3 (9)**: 5 Supports, 4 Partially supports (302.9 moved to Supports with #439, 2026-10-15).
-- **Section 508 chapter 5 (26)**: 11 Supports, 5 Partially supports, 10 Not applicable (502.3.6 moved to Supports with
-  #438, 502.3.14 with #439, 503.2 with #440, 2026-10-15).
+- **Section 508 chapter 5 (26)**: 12 Supports, 4 Partially supports, 10 Not applicable (502.3.6 moved to Supports with
+  #438, 502.3.14 with #439, 503.2 with #440, 502.3.12 with #437, 2026-10-15).
 - **Section 508 chapter 6 (5)**: 2 Supports, 2 Partially supports, 1 Not applicable.
 - **EN 301 549 clause 4 (11)**: 7 Supports, 4 Partially supports (4.2.10 moved to Supports with #439, 2026-10-15).
 - **EN 301 549 clause 5 (11)**: 2 Supports, 9 Not applicable.
-- **EN 301 549 clause 11 (23)**: 10 Supports, 5 Partially supports, 8 Not applicable (11.5.2.8 moved to Supports with
-  #438, 11.5.2.15 with #439, 11.7 with #440, 2026-10-15).
+- **EN 301 549 clause 11 (23)**: 11 Supports, 4 Partially supports, 8 Not applicable (11.5.2.8 moved to Supports with
+  #438, 11.5.2.15 with #439, 11.7 with #440, 11.5.2.13 with #437, 2026-10-15).
 - **EN 301 549 clause 12 (5)**: 3 Supports, 2 Partially supports.
 - **Whole chapters/clauses not applicable**: 508 chapter 4 (hardware); EN 301 549 clauses 6 (two-way voice), 7 (video),
   8 (hardware), 9 (web: the app isn't web content; the website is assessed as documentation under 12.1.2), 10 (non-web
   documents: none ship), and 13 (relay and emergency services). WCAG AAA (Table 3) wasn't evaluated: none of the three
   standards requires it.
 
-**Risk of downgrade**: if V1 confirms the file list is silent under VoiceOver, 4.1.2, 1.3.1, 508 302.1 and 502.3.12, and
-EN 4.2.1 and 11.5.2.13 should drop to "Does not support", since browsing files is the product's core.
+**Risk of downgrade**: the file list's VoiceOver support is code-reviewed and heard only on the spike. If V1 finds the
+shipped list silent, 4.1.2, 1.3.1, 508 302.1 and 502.3.12, and EN 4.2.1 and 11.5.2.13 should drop to "Does not support",
+since browsing files is the product's core.
 
 Top gaps, each with its issue:
 
-1. **The file list likely doesn't speak** (#437): the focused element is the `role="application"` container, while
-   `aria-activedescendant` sits on the never-focused listbox; marked files, list position, file kind, and Full view
-   columns aren't exposed.
+1. **The file list spoke only on the spike** (#437, closed in code 2026-10-15, VoiceOver listening owed): focus now sits
+   on the focused pane's listbox, whose `aria-activedescendant` names the cursor row by a document-unique id; rows carry
+   kind, position, marked state, and in Full view size and date; a per-pane live region says the pane and folder; ⌃F5
+   reaches the pane chrome. Left: the inline rename field nests inside its option (#449), and Full view isn't a table.
 2. **Cursors and status changes aren't announced** (#438, closed in code 2026-10-15, VoiceOver checks pending): the
    Search result cursor, the Settings sidebar, empty folders, selection counts, the license key error, progress text.
 3. **Toasts are mouse-first** (#439, closed in code 2026-10-15, VoiceOver checks pending): focus didn't pause them, no
@@ -70,8 +76,12 @@ Top gaps, each with its issue:
    one-letter breadcrumb segment and the pane divider are still narrower than 24 px.
 6. **Quick fixes** (#442, closed in code 2026-10-15): Reduce motion misses, hard-coded English labels and window titles,
    a missing `lang`, a missing `autocomplete`, badges without text, no queue window a11y test.
-7. **No accessibility documentation** (#443): nothing lists the features, limits, or how to get help.
-8. Already tracked: in-app menus under VoiceOver (#267).
+7. **No accessibility documentation** (#443, drafted 2026-10-15 at `/trust/accessibility-guide`, awaiting David's
+   review): nothing lists the features, limits, or how to get help.
+8. **In-app menus under VoiceOver** (#267, closed in code 2026-10-15, VoiceOver listening owed): submenu rows have ids,
+   the entered submenu takes focus with its own `aria-activedescendant`, and the volume chooser is a menu button.
+9. **Label in name** (#450): seven controls' accessible names don't contain their visible text (found once the rule ran
+   for real, 2026-10-15).
 
 Strengths a buyer can rely on: everything core runs from the keyboard (every action is a command with a rebindable
 shortcut and a command palette entry); all dialogs share one primitive with correct roles, focus trap, Escape, and focus
@@ -81,23 +91,26 @@ video, flashing, or time limits beyond toasts; native menu bar and context menus
 
 ## WCAG 2.2 Level A
 
-- **1.1.1 Non-text content**: Partially supports. Icon buttons are named, the viewer image uses the file name as alt
-  text, and the sync and symlink badges name themselves into the row's accessible name (#442, 2026-10-15), but file-kind
-  icons are `alt=""`, so folders and files sound the same. `Icon` is `aria-hidden` unless given a label. Evidence:
-  `lib/file-explorer/selection/FileIcon.svelte` (`alt=""` at the kind icon; badge `aria-label` / `alt`);
-  `lib/ui/Icon.svelte`; `routes/viewer/MediaImageView.svelte` (`alt={fileName}`); spot checks of `ModalDialog.svelte`,
-  `TabBar.svelte`, `SettingRow.svelte` aria-labels. #437.
+- **1.1.1 Non-text content**: Supports. Icon buttons are named, the viewer image uses the file name as alt text, and the
+  sync and symlink badges name themselves into the row's accessible name (#442). File-kind icons stay `alt=""`, and the
+  row's name says the kind instead ("src (folder)", #437, 2026-10-15). `Icon` is `aria-hidden` unless given a label.
+  Evidence: `lib/file-explorer/selection/FileIcon.svelte`, `views/file-row-a11y.ts` (`fileRowName`),
+  `lib/ui/Icon.svelte`, `routes/viewer/MediaImageView.svelte` (`alt={fileName}`); spot checks of `ModalDialog.svelte`,
+  `TabBar.svelte`, `SettingRow.svelte` aria-labels. Pending VoiceOver check V1.
 - **1.2.1 Audio-only and video-only (prerecorded)**: Not applicable. Cmdr has no audio or video content; the viewer
   shows text, images, and PDFs only. Evidence: no `<audio>`/`<video>` in `apps/desktop/src`;
   `routes/viewer/media-view.ts`.
 - **1.2.2 Captions (prerecorded)**: Not applicable. Same as 1.2.1.
 - **1.2.3 Audio description or media alternative (prerecorded)**: Not applicable. Same as 1.2.1.
 - **1.3.1 Info and relationships**: Partially supports. Dialogs, settings, and server forms use real headings, labels,
-  and roles. The file list doesn't expose marked state, list position, or Full view column structure, and sort order is
-  visual only. The Settings sidebar nests each section's subsections in a `role="group"` named for it (#438,
-  2026-10-15). Evidence: `views/BriefList.svelte`, `views/FullList.svelte` (`aria-selected` = cursor only, no
-  `aria-setsize`/`aria-posinset`), `views/FullListHeader.svelte`, `selection/SortableHeader.svelte` (caret
-  `aria-hidden`, no `aria-sort`), `settings/components/SettingsSidebar.svelte`. Pending VoiceOver check V1, V7. #437.
+  and roles. The Settings sidebar nests each section's subsections in a `role="group"` named for it (#438). Since #437
+  (2026-10-15) the file list is `aria-multiselectable` with `aria-selected` = marked, every option (`..` included)
+  carries `aria-posinset`/`aria-setsize`, and the sort buttons' names say the sort state ("Size, sorted descending").
+  Left: Full view is a listbox, not a grid, by decision; each row's name carries its size and date, so the column
+  headers aren't tied to cells. Evidence: `views/file-row-a11y.ts`, `views/BriefList.svelte`, `views/FullList.svelte`,
+  `views/FullListHeader.svelte`, `selection/SortableHeader.svelte` (`fileExplorer.columns.sortState`),
+  `settings/components/SettingsSidebar.svelte`, `file-list.vsr.svelte.test.ts`. Pending VoiceOver check V1, V2, V7.
+  #437.
 - **1.3.2 Meaningful sequence**: Supports. DOM order matches the visual order in every surface; virtualized rows render
   in list order. Evidence: code reading of panes, dialogs, settings. Confirm with V12.
 - **1.3.3 Sensory characteristics**: Supports. Instructions don't rely on shape, position, or sound alone; pane regions
@@ -155,9 +168,13 @@ video, flashing, or time limits beyond toasts; native menu bar and context menus
 - **2.5.2 Pointer cancellation**: Supports. Row `mousedown` only moves the cursor, selects, or arms a drag; opening is
   on double-click and buttons act on click. Evidence: `FullList.svelte`, `BriefList.svelte` row handlers,
   `FunctionKeyBar.svelte`.
-- **2.5.3 Label in name**: Supports. Five spot checks of visibly labeled buttons all start their accessible name with
-  the visible text (Tail, Search, Dismiss, Pause, Remove). Evidence: `ViewerToolbar.svelte`, `QueryBar.svelte`,
-  `QueueRow.svelte`, `TransferProgressDialog.svelte`, `MediaIndexChosenFolders.svelte`.
+- **2.5.3 Label in name**: Partially supports. axe's `label-content-name-mismatch` never ran in the unit audits (its
+  icon-ligature check needs canvas pixels, so it fell into `incomplete`); the E2E audit ran it for real on 2026-10-15
+  and caught every Full view row (fixed: the visible words run through the name in order, the rest parenthesized), and
+  `test-a11y.ts` now runs the rule. Seven controls still fail and opt out with `skipLabelInName`: the Servers hub
+  refresh, `QueueRow` buttons, two `MultiRenameDialog` chips (`1×`, `.ext`), `SuggestedOpsIndicator`, and two `lib/ui`
+  controls. Evidence: `lib/test-a11y.ts`, `views/file-row-a11y.ts`, `views/DETAILS.md` (row names),
+  `test/e2e-playwright/accessibility.spec.ts`. #450.
 - **2.5.4 Motion actuation**: Not applicable. No device-motion input.
 - **3.1.1 Language of page**: Supports. Every window sets `<html lang>` from the chosen UI language (11 languages).
   Evidence: `intl/messages.svelte.ts` `setLocale()`, `intl/document-language.ts`, `initWindowLanguageSync()` in each
@@ -179,13 +196,19 @@ video, flashing, or time limits beyond toasts; native menu bar and context menus
   onboarding; server credentials stay in the Keychain. Evidence: `attach-email/attach-email.svelte.ts`.
 - **4.1.1 Parsing**: Supports. Obsolete in WCAG 2.2 and always satisfied; the DOM is generated by Svelte.
 - **4.1.2 Name, role, value**: Partially supports. Dialogs, settings controls (Ark UI-based checkbox, switch, select,
-  slider), tabs, the command palette, the queue grid, and menus expose name, role, and state. The file list's cursor
-  isn't conveyed (activedescendant on an unfocused element), marked state isn't exposed, and the volume chooser trigger
-  isn't a control. The Search result cursor and the Settings sidebar selection are conveyed as `aria-activedescendant`
-  on the focused field or list, landing a frame after focus (#438, 2026-10-15). Evidence: `pane/key-dispatch.ts`
-  `handleFocusGuard`, `pane/DualPaneExplorer.svelte` (`role="application"`), `query-ui/QueryBar.svelte`,
-  `SettingsSidebar.svelte` (both with virtual-screen-reader tests), `navigation/VolumeBreadcrumb.svelte`. Pending
-  VoiceOver check V1, V3, V6, V7, V10. #437, #267.
+  slider), tabs, the command palette, the queue grid, and menus expose name, role, and state. The Search result cursor
+  and the Settings sidebar selection are conveyed as `aria-activedescendant` on the focused field or list, landing a
+  frame after focus (#438). Since #437 and #267 (2026-10-15): DOM focus sits on the focused pane's listbox, whose
+  `aria-activedescendant` names the cursor row by a per-list id (`$props.id()`) a frame after focus and after every
+  navigation commit; `aria-selected` = marked; the container is `role="group"`; submenu rows have ids, an entered
+  submenu takes focus with its own `aria-activedescendant` and its parent row's name, and the parent row gets
+  `aria-controls`; the volume chooser is a `<button aria-haspopup="menu" aria-expanded>`. Left: the inline rename
+  `<input>` sits inside its option, whose children ARIA makes presentational (axe `nested-interactive` while a rename is
+  up, #449). Evidence: `pane/active-pane-focus.ts` (`focusActivePane`), `pane/key-dispatch.ts` `handleFocusGuard`,
+  `views/list-focus.svelte.ts`, `views/file-row-a11y.ts`, `ui/Menu.svelte`, `ui/deferred-active-descendant.svelte.ts`,
+  `navigation/VolumeBreadcrumb.svelte`, `query-ui/QueryBar.svelte`, `SettingsSidebar.svelte`; virtual-screen-reader
+  tests `file-list.vsr.svelte.test.ts`, `Menu.vsr.test.ts`, `QueryBar.vsr.svelte.test.ts`,
+  `SettingsSidebar.vsr.svelte.test.ts`. Pending VoiceOver check V1, V3, V6, V7, V10. #437, #267, #449.
 
 ## WCAG 2.2 Level AA
 
@@ -232,8 +255,10 @@ video, flashing, or time limits beyond toasts; native menu bar and context menus
   hoverable), `app-tooltip.css`.
 - **2.4.5 Multiple ways**: Not applicable. Applies to sets of web pages or software.
 - **2.4.6 Headings and labels**: Supports. Settings uses `h1`/`h2`/`h3`, dialogs an `h2` title, panes named regions.
-  Both panes' listboxes share the name "File list" (#437). Evidence: `routes/settings/+page.svelte`,
-  `SettingsSection.svelte`, `ModalDialog.svelte`, `FilePane.svelte`.
+  Each pane's listbox is named "{side} pane, {folder}" (#437, 2026-10-15), and since VoiceOver never speaks a listbox's
+  name on focus (spike, see V2), a per-pane polite live region says it on pane switch and folder change. Evidence:
+  `routes/settings/+page.svelte`, `SettingsSection.svelte`, `ModalDialog.svelte`, `FilePane.svelte` (`listLabel`),
+  `pane/pane-location-announcer.svelte.ts`, `ui/LiveAnnouncer.svelte`. Pending VoiceOver check V2.
 - **2.4.7 Focus visible**: Partially supports. Buttons, links, fields, and menus show a focus ring (`:focus` for fields
   so mouse users see it too), and the file cursor has an accent fill plus outline. Which pane holds focus is close to
   invisible in light mode (focused vs unfocused cursor about 1.09:1 with gold, 1.02:1 with Apple Yellow). Evidence:
@@ -281,8 +306,10 @@ video, flashing, or time limits beyond toasts; native menu bar and context menus
 
 ### Chapter 3: functional performance criteria
 
-- **302.1 Without vision**: Partially supports. Dialogs, settings, menus, and forms are built for screen readers; the
-  file list probably doesn't announce its cursor or marked files. Pending VoiceOver check V1–V12. #437.
+- **302.1 Without vision**: Partially supports. Dialogs, settings, menus, and forms are built for screen readers; since
+  #437 (2026-10-15) the file list exposes its cursor row with kind and position, marked files, and the pane and folder
+  (see 4.1.2). Left: the nested rename field (#449) and Full view's columns not being a table. Pending VoiceOver check
+  V1–V12. #437.
 - **302.2 With limited vision**: Partially supports. App zoom alone to 200%, past it with macOS text size, dark mode, AA
   text contrast in CI. Weak focused-pane and focus-ring contrast with some accents. #440.
 - **302.3 Without perception of color**: Partially supports. Marked files and hidden files rely on color; the rest uses
@@ -310,13 +337,17 @@ video, flashing, or time limits beyond toasts; native menu bar and context menus
 - **502.2.1 User control of accessibility features**: Not applicable. Cmdr isn't platform software.
 - **502.2.2 No disruption of accessibility features**: Supports. VoiceOver's ⌃⌥ chords pass through (type-to-jump bails
   on ⌃/⌥), system zoom isn't blocked, menus are native. Main-window `Tab` is a rebindable pane switch, which keeps Full
-  Keyboard Access off the pane chrome (#437). Evidence: `pane/type-to-jump-keys.ts`, `commands/sources/main-window.ts`.
+  Keyboard Access off the pane chrome; `pane.focusControls` (⌃F5, remappable; `⌘⇧F5` off macOS) moves focus into it, and
+  the arrows walk it (#437, 2026-10-15). Evidence: `pane/type-to-jump-keys.ts`, `commands/sources/main-window.ts`,
+  `pane/pane-chrome.ts`.
 - **502.3.1 Object information**: Partially supports. Standard controls expose name, role, and state through WebKit;
-  file rows lack kind and marked state. Pending VoiceOver check V1, V3. #437.
+  file rows expose name, kind, position, and marked state (#437, 2026-10-15). Left: the inline rename field nests in its
+  option (#449). Pending VoiceOver check V1, V3. #437, #449.
 - **502.3.2 Modification of object information**: Supports. States set by the user (checkboxes, switches, selects) are
   standard ARIA controls that assistive tech can change. Pending VoiceOver check V7.
 - **502.3.3 Row, column, and headers**: Partially supports. The queue window is a `role="grid"`; the Full view file list
-  has no column headers tied to cells. Evidence: `routes/queue/+page.svelte`, `FullListHeader.svelte`. #437.
+  has no column headers tied to cells (a listbox by decision; each row's name carries its size and date). Evidence:
+  `routes/queue/+page.svelte`, `FullListHeader.svelte`, `views/file-row-a11y.ts`. #437.
 - **502.3.4 Values**: Supports. Progress bars expose `aria-valuenow/min/max`, and the transfer readout's bars also say
   the amount on screen as `aria-valuetext` ("1.2 GB of 3 GB", #438, 2026-10-15); sliders and number fields expose
   values. Evidence: `ui/ProgressBar.svelte`, `file-operations/TransferProgressReadout.svelte`. Pending VoiceOver check
@@ -333,9 +364,9 @@ video, flashing, or time limits beyond toasts; native menu bar and context menus
 - **502.3.10 List of actions**: Supports. Controls are native buttons and ARIA widgets with standard actions. Pending
   VoiceOver check V8.
 - **502.3.11 Actions on objects**: Supports. Same as 502.3.10. Pending VoiceOver check V8.
-- **502.3.12 Focus cursor**: Partially supports. Dialog and settings focus is real DOM focus, and the Search cursor and
-  Settings sidebar selection are exposed as `aria-activedescendant` (#438, 2026-10-15); the file list cursor isn't.
-  Pending VoiceOver check V1, V6. #437.
+- **502.3.12 Focus cursor**: Supports. Dialog and settings focus is real DOM focus, and the Search cursor, the Settings
+  sidebar selection (#438), and the file list cursor (#437, 2026-10-15; see 4.1.2) are exposed as
+  `aria-activedescendant` on the focused element. Pending VoiceOver check V1, V6. #437.
 - **502.3.13 Modification of focus cursor**: Partially supports. Assistive tech can move focus among standard controls;
   moving the VoiceOver cursor onto a file row likely doesn't move Cmdr's cursor. Pending VoiceOver check V1. #437.
 - **502.3.14 Event notification**: Supports. See WCAG 4.1.3. Pending VoiceOver check V4.
@@ -416,7 +447,7 @@ video, flashing, or time limits beyond toasts; native menu bar and context menus
 - **11.5.2.1–11.5.2.3 Platform accessibility service support and use**: See 11.5.2.5–11.5.2.17. Cmdr uses the platform
   service through WebKit's NSAccessibility bridge.
 - **11.5.2.4 Assistive technology**: Not applicable. Cmdr isn't assistive technology.
-- **11.5.2.5 Object information**: Partially supports. See 508 502.3.1. #437.
+- **11.5.2.5 Object information**: Partially supports. See 508 502.3.1. #437, #449.
 - **11.5.2.6 Row, column, and headers**: Partially supports. See 508 502.3.3. #437.
 - **11.5.2.7 Values**: Supports. See 508 502.3.4.
 - **11.5.2.8 Label relationships**: Supports. See 508 502.3.6.
@@ -424,8 +455,8 @@ video, flashing, or time limits beyond toasts; native menu bar and context menus
 - **11.5.2.10 Text**: Supports. See 508 502.3.8.
 - **11.5.2.11 List of available actions**: Supports. See 508 502.3.10.
 - **11.5.2.12 Execution of available actions**: Supports. See 508 502.3.11.
-- **11.5.2.13 Tracking of focus and selection attributes**: Partially supports. See 508 502.3.12; marked files aren't
-  exposed as selected. #437.
+- **11.5.2.13 Tracking of focus and selection attributes**: Supports. See 508 502.3.12; marked files are exposed as
+  `aria-selected` in an `aria-multiselectable` listbox (#437, 2026-10-15). Pending VoiceOver check V1, V3.
 - **11.5.2.14 Modification of focus and selection attributes**: Partially supports. See 508 502.3.13. #437.
 - **11.5.2.15 Change notification**: Supports. See WCAG 4.1.3. Pending VoiceOver check V4, V9.
 - **11.5.2.16 Modifications of states and properties**: Supports. See 508 502.3.2.
@@ -448,9 +479,20 @@ video, flashing, or time limits beyond toasts; native menu bar and context menus
 Each ID matches a step in David's guide; the result fills the rows named.
 
 - **V1 Browse a folder**: does VoiceOver read each file name as the cursor moves, with "folder" vs file and "n of
-  total"? Rows: 1.1.1, 1.3.1, 4.1.2, 302.1, 502.3.1, 502.3.12, 502.3.13, 4.2.1, 11.5.2.5, 11.5.2.13, 11.5.2.14.
-- **V2 Switch panes**: does it say which pane (and path) you're in? Rows: 1.3.1, 2.4.6.
-- **V3 Mark files**: does it say "selected" for marked files, and the count? Rows: 4.1.2, 502.3.1, 11.5.2.13.
+  total"? Rows: 1.1.1, 1.3.1, 4.1.2, 302.1, 502.3.1, 502.3.12, 502.3.13, 4.2.1, 11.5.2.5, 11.5.2.13, 11.5.2.14. Heard on
+  the spike (environment in § Scope and method): before, launch said "main File explorer web application" and ↓ was
+  SILENT; on the spike ↓ said "subfolder, folder (1 of 7)", "a.txt (2 of 7)", "c.zip, archive (4 of 7)", and entering a
+  folder was silent until the deferred active descendant (which then read "parent folder (1 of 2)"). The shipped code
+  differs from the spike (`..` counts in positions, Full view names add size and date, the container is `role="group"`,
+  the deferred id after every navigation) and hasn't been heard. Full phrase log:
+  `docs/specs/a11y-file-list-focus-plan.md` § Spike results.
+- **V2 Switch panes**: does it say which pane (and path) you're in? Rows: 1.3.1, 2.4.6. Heard on the spike: before,
+  `Tab` was SILENT (no AX notification); on the spike it read the other pane's cursor row ("parent folder (1 of 1)") but
+  never the listbox's name, even with distinct names and the id held back 1.2 s. A polite live region did speak ("Right
+  pane, vo-target"). The shipped per-pane announcer, and whether it cuts off the row, hasn't been heard.
+- **V3 Mark files**: does it say "selected" for marked files, and the count? Rows: 4.1.2, 502.3.1, 11.5.2.13. Heard on
+  the spike: Space on b.txt "b.txt selected (3 of 7)", ↑ onto marked a.txt "a.txt selected (2 of 7)", unmarked rows say
+  nothing about selection. The shipped code and the selection-count announcement (#438) haven't been heard.
 - **V4 Copy with the progress dialog**: dialog title on open, progress value, completion message. Rows: 4.1.3, 502.3.4,
   502.3.14, 11.5.2.7, 11.5.2.15.
 - **V5 Rename**: field name, and an announced error for an invalid name. Rows: 3.3.1, 502.3.6, 11.5.2.8.
@@ -460,6 +502,10 @@ Each ID matches a step in David's guide; the result fills the rows named.
 - **V8 Confirmation dialog (delete)**: title, message, and buttons; pressing a button works. Rows: 502.3.10, 502.3.11,
   11.5.2.11, 11.5.2.12.
 - **V9 Toast or error message**: is it read out without moving focus? Rows: 4.1.3, 11.5.2.15.
-- **V10 In-app menus** (volume chooser, favorites): rows read as you arrow. Rows: 4.1.2. Tracked in #267.
+- **V10 In-app menus** (volume chooser, favorites): rows read as you arrow. Rows: 4.1.2. Tracked in #267. Heard on the
+  spike: before, a submenu was SILENT on every ↓; on the spike → said "menu naspi on 100.127.48.122", ↓ "Connect
+  directly now selected menu item (2 of 4) menu naspi on 100.127.48.122", ← "naspi on 100.127.48.122 collapsed submenu";
+  Favorites (⌃D) "menu Favorites menu". On open only "menu Volume switcher" until the active descendant was re-set a
+  frame later. The shipped code (that deferral built in) hasn't been heard, nor the drive-index badge and viewer menus.
 - **V11 Read text**: an error pane and a text file in the viewer read in full. Rows: 502.3.8, 11.5.2.10.
 - **V12 Reading order**: VoiceOver's VO-arrow order in a dialog and in Settings matches the screen. Rows: 1.3.2.

@@ -5,6 +5,26 @@ Make the file list and the house menus speak to VoiceOver without changing a sin
 silent). Background: `docs/notes/accessibility-audit-2026-10.md`, David's guide (vault,
 `projects/Cmdr/2026-10-14 Cmdr VoiceOver test guide.md`, checks V1–V12).
 
+## Remaining (2026-10-15)
+
+M1–M4 and M6 shipped in code, and M7's paperwork is done except what depends on listening. The plan stays until this
+list is empty; then delete it and its line in `docs/specs/DETAILS.md` § "The specs". Everything below needs VoiceOver on
+and the Mac unlocked (the screen was locked through M2–M7, `CGSSessionScreenIsLocked`).
+
+1. **M5 listening on the shipped code** through the harness: U1–U4 (U4 adds the drive-index badge menu and the viewer's
+   right-click menu), L1–L5, P1–P2; the pane announcer against the cursor row on launch, `Tab`, and entering a folder
+   (both heard, row first); "File explorer web application" gone (`role="group"`, finding 7); `aria-setsize` churn on a
+   streaming huge folder; a real click on the unfocused pane's EMPTY list space (row clicks were clean in M0).
+2. **Harness step 6**: the real-key scroll check, Brief and Full, in `vo-long`.
+3. **M6's owed checks**: C1–C3, harness step 5 (⌃F5 reaching the webview, with `AppleKeyboardUIMode` recorded), and a
+   real click on each chrome control (focus mustn't stay there for mouse users).
+4. **Fill the results in**: the V1, V2, V3, and V10 rows in `apps/website/src/lib/accessibility-report.ts` (per its
+   header rule) and `docs/notes/accessibility-audit-2026-10.md` (V entries and rows), replacing the spike phrases cited
+   there with the shipped code's.
+5. **Draft comments on #437 and #267** with the results (David approves before posting); close both when 1–3 pass.
+6. David's review of the two post-M0 decisions in "Open questions for David" (`..` counts in positions; the per-pane
+   announcer).
+
 ## Loud rules
 
 1. ❗ **Keyboard behavior is frozen.** `Tab` switches panes, every shortcut does what it does today, in the same pane,

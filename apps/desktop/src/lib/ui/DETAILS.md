@@ -1194,8 +1194,10 @@ switcher's port is what moved them here):
   through the AppleScript bridge, 2026-10-15, on a spike of this model): ⌥F1 "menu Volume switcher", ↓ "naspi on
   100.127.48.122 collapsed submenu Volumes group (2 of 4)", → "menu naspi on 100.127.48.122", ↓ "Connect directly now
   selected menu item (2 of 4) menu naspi on 100.127.48.122", ← "naspi on 100.127.48.122 collapsed submenu". Before this
-  model a submenu was silent on every ↓. The shipped code's own listening run (with the deferred active descendant,
-  which the spike heard read the highlighted row on open) is still owed.
+  model a submenu was silent on every ↓. That was prototype code. The shipped code (adding the deferred active
+  descendant, which the spike heard read the highlighted row on open, and the refocus-before-unmount close path) is
+  verified by unit tests and `Menu.vsr.test.ts` (the ARIA model, not VoiceOver) and awaits a VoiceOver listen (U1–U4 in
+  the plan linked from #267).
 
 ## FilterPopover
 
