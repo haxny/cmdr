@@ -1257,6 +1257,10 @@
         /* Let the name shrink (and ellipsize) so the trailing tag-dot cluster
            stays visible when the column is width-capped. */
         min-width: 0;
+        /* Descender room inside the clip, at the same margin box (row height and
+           position unchanged): see `FullList.svelte`'s `.col-name` twin rule. */
+        padding-block: 0.2em;
+        margin-block: -0.2em;
         /* Soften the selection color flip. */
         transition: color 50ms ease;
     }

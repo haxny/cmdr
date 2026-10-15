@@ -1201,6 +1201,20 @@
         --color-size-tb-selected: var(--color-selection-fg);
     }
 
+    /* Descender room for the clipping text cells. The list's flat line height (1) makes
+       each line box exactly the font size, and the system font's glyphs reach about 0.1em
+       past it top and bottom, so `overflow: hidden` cut the tail of a "g". The padding
+       moves the clip edge out by 0.2em; the equal negative margin hands it back, so the
+       margin box, and with it every row's height and every cell's position, stays
+       exactly what it was. `BriefList`'s `.name` does the same. */
+    .col-name,
+    .col-name-text,
+    .col-ext,
+    .col-date {
+        padding-block: 0.2em;
+        margin-block: -0.2em;
+    }
+
     .col-name {
         display: inline-flex;
         align-items: center;
