@@ -283,9 +283,10 @@ check.
      `search` or `select-files` out of `alpha` also means updating the pinned assertion in
      `apps/desktop/src/lib/feature-status.test.ts`. Present the diff for review.
    - **If either file changed, start the website for David** so he can check `/roadmap` and `/features` live: stop any
-     running one (`pnpm --filter @cmdr/website exec astro dev stop`, harmless if none), then run `pnpm dev:website` as a
-     background command and give him the URL it prints. The script passes `--ignore-lock`, which keeps Astro in the
-     foreground with hot reload; without it, Astro 7.3.8+ detaches the server whenever it detects an agent's env vars.
+     running one first (`lsof -ti tcp:4829 -sTCP:LISTEN | xargs kill`; `astro dev stop` can't see it, since
+     `--ignore-lock` skips the lock file), then run `pnpm dev:website` as a background command, confirm the URL answers,
+     and give it to him. The script passes `--ignore-lock`, which keeps Astro in the foreground; without it, Astro
+     7.3.8+ detaches the server whenever it detects an agent's env vars.
 6. **Advise the version** (patch: bug fixes, minor: new features, major: major launches), and give the user the
    `./scripts/release.sh x.x.x` command.
 7. **Offer to run the release script**, and wait for confirmation before running it.
