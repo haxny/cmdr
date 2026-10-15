@@ -34,9 +34,10 @@ Pull-tier docs for `lib/ui/`: architecture, component APIs, and decision rationa
 - **`anchored-placement.ts`**: the pure placement math `Menu` and `Popover` share: below / above / roomier side with a
   height cap, viewport clamp, and the submenu's right-or-left flip. See § Menu
 - **`deferred-active-descendant.svelte.ts`**: `aria-activedescendant` that lands one frame after its element takes focus
-  (VoiceOver reads only the container otherwise), plus `afterNextFrame`, a frame with a timeout fallback. The menu uses
-  it per surface, the file lists through `list-focus.svelte.ts`; its `onLand` option tells a file pane when the cursor
-  row landed, so the pane's "Left pane, Documents" announcement queues behind the row. See § Menu
+  (VoiceOver reads only the container otherwise), plus `afterNextFrame`, a frame with a timeout fallback, and
+  `focusLaidOut`, the one way a list or menu surface takes focus (§ Menu, "Focus"). The menu uses it per surface, the
+  file lists through `list-focus.svelte.ts`; its `onLand` option tells a file pane when the cursor row landed, so the
+  pane's "Left pane, Documents" announcement queues behind the row. See § Menu
 - **`menu-navigation.ts`** / **`menu-reorder.ts`**: the pure halves: which row is next and what a key means; the drag
   and ⌥↑/⌥↓ index math
 - **`FilterPopover.svelte`**: `Popover` + a labelled section header; the query dialogs' Size / Modified / Search-in
@@ -1077,9 +1078,17 @@ surface (the menu, or the open submenu) has an `icon`, the rows without one get 
   hover-opened, cursorless submenu is only shown and never does. Every way the cursor leaves an entered submenu (`←`,
   Escape, a `keepsMenuOpen` pick, a hover back on the parent, the pointer leaving it, the menu closing) runs through the
   controller's one `setSubmenu`, which calls `beforeSubmenuLeave` FIRST, so `Menu.svelte` refocuses the parent surface
-  while the submenu node still exists. Keys never depend on any of this: they route through a document-level CAPTURE
-  listener that lives only while open, the model `enter-menu.svelte.ts` proved deterministic against focus timing. A
-  submenu row's `mousedown` is `preventDefault`ed so a click doesn't focus the row, which unmounts after a pick.
+  while the submenu node still exists. Decision/Why: focus moves between two `role="menu"` surfaces, as native submenus
+  do, ❌ not `aria-owns` from the parent menu to the submenu (WebKit's reparenting for `aria-owns` under VoiceOver is
+  the less-trodden path). Every one of these focus moves goes through `focusLaidOut` (read layout, then
+  `focus({ preventScroll: true })`). Gotcha/Why: a node focused before layout has no WebKit accessibility object yet, so
+  WebKit posts focus on the web area and then ignores every `aria-activedescendant` move on it; VoiceOver went silent on
+  the drive-index badge menu, the first archive popup, and the file list after a Brief/Full toggle until focus left and
+  came back (`axprobe watch` and VoiceOver 10, macOS 27.0, 2026-10-15, fixed in `f58df3754`). A second `focus()` on the
+  already-focused node posts nothing, so the fix has to be at the first one. Keys never depend on any of this: they
+  route through a document-level CAPTURE listener that lives only while open, the model `enter-menu.svelte.ts` proved
+  deterministic against focus timing. A submenu row's `mousedown` is `preventDefault`ed so a click doesn't focus the
+  row, which unmounts after a pick.
 - **What the screen reader is told**: every row has a document-unique id from `$props.id()` (top-level
   `menu-<uid>-row-<value>`, submenu `menu-<uid>-subrow-<value>`, a value URI-encoded since an id ref can't hold a
   space). The submenu surface is named after its parent row (`aria-label`), and the parent row carries `aria-controls`
@@ -1194,14 +1203,18 @@ switcher's port is what moved them here):
   service.
 - **One level of submenu**, and no type-ahead, virtualization, or radio items: nothing needs them, and each is addable
   without moving the seams (a radio would be a third `MenuItemCheck` kind, for rows hosting no controls).
-- **VoiceOver reads a portaled surface's `aria-activedescendant`** (macOS 27.0, VoiceOver 10, Cmdr 0.52.0 dev, real keys
-  through the AppleScript bridge, 2026-10-15, on a spike of this model): ⌥F1 "menu Volume switcher", ↓ "naspi on
-  100.127.48.122 collapsed submenu Volumes group (2 of 4)", → "menu naspi on 100.127.48.122", ↓ "Connect directly now
-  selected menu item (2 of 4) menu naspi on 100.127.48.122", ← "naspi on 100.127.48.122 collapsed submenu". A submenu
-  that never takes focus itself stays silent on every ↓. Those phrases came from prototype code; the shipped code
-  (adding the deferred active descendant, which the spike heard read the highlighted row on open, and the
-  refocus-before-unmount close path) is verified by unit tests and `Menu.vsr.test.ts` (the ARIA model, not VoiceOver)
-  and awaits a VoiceOver listen (U1–U4 in the plan linked from #267).
+- **VoiceOver reads every house menu, submenus included** (macOS 27.0, VoiceOver 10, dev builds at `1e669900c` and
+  `f58df3754`, real keys with the spoken text polled through VoiceOver's AppleScript bridge, 2026-10-15). Volume
+  switcher: ⌥F1 "Macintosh HD APFS current location menu item, group Volumes group (2 of 4)" (the deferred active
+  descendant at work: without it, only "menu Volume switcher"); → "naspi on 100.127.48.122 expanded submenu", ↓ "Connect
+  directly now selected menu item (2 of 4)", ↓ "Use Cmdr's fast direct connection selected checked menu item (4 of 4)",
+  ← "… collapsed submenu", Escape twice back to the list's cursor row; ⌥F1 then `Tab` keeps focus on the moved chooser.
+  Favorites (⌃D): "Applications collapsed submenu Favorites group (1 of 2)", ↓ "Desktop collapsed submenu". Archive
+  Enter popup: "Browse like a folder menu item menu Open archive or bundle", ↓ "Open with default app menu item".
+  Drive-index badge menu: "Rescan now menu item menu Drive index status", ↓ "Turn off indexing for this drive menu
+  item", Escape back to the badge. A submenu that never takes focus itself stays silent on every ↓. Not heard: the
+  viewer's right-click menu (native muda, not this primitive; it opened as "menu (2 items)", item names not caught).
+  Full log: `docs/notes/accessibility-audit-2026-10.md` § VoiceOver listening runs.
 
 ## FilterPopover
 

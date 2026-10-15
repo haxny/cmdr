@@ -6,7 +6,7 @@
  * focused listbox naming its pane and folder, the cursor row named "{name} ({kind})" as the
  * cursor moves, every row's place in the whole list (`..` included), marking saying
  * "selected", and the pane announcer's message arriving. What VoiceOver really says is the
- * listening harness's job (`docs/specs/a11y-file-list-focus-plan.md`).
+ * listening runs' job (`docs/notes/accessibility-audit-2026-10.md` § VoiceOver listening runs).
  *
  * The keys here stand in for the pane's: a listener moves the cursor and marks rows the way
  * `FilePane` would, because the list itself handles no keys.

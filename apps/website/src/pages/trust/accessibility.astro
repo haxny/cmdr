@@ -99,11 +99,10 @@ const toc = [
             the open issues below track the gaps.
         </li>
         <li>
-            <strong>The biggest open question is screen-reader use of the file list</strong>, the core of the product.
-            Dialogs, Settings, menus, and forms are built for screen readers. The file list now gives VoiceOver the file
-            under the cursor with its kind and position, which files are marked, and which pane and folder you're in,
-            and in-app menus read their submenus too. Simulated screen-reader tests confirm this, but a hands-on
-            VoiceOver test of the current version is still to come.
+            <strong>The file list works with VoiceOver</strong>, the core of the product. A hands-on VoiceOver test
+            heard it read the file under the cursor with its kind and position, which files are marked, and which pane
+            and folder you're in, and heard in-app menus read every row, submenus included. Dialogs, Settings, and
+            forms are built for screen readers too, and some of their VoiceOver checks are still to run.
         </li>
         <li>
             <strong>What works well today</strong>: everything core runs from the keyboard (every action has a
@@ -163,9 +162,10 @@ const toc = [
             and focus return in dialogs.
         </li>
         <li>
-            <strong>Not done yet</strong>: a full test with a screen reader (VoiceOver) on the current version. An early
-            VoiceOver run on a prototype heard file names, kinds, positions, marked files, and submenus read out.
-            <a href="#pending">What the full test will cover</a>.
+            <strong>Screen-reader test</strong>: a hands-on VoiceOver test with real keys (macOS 27, VoiceOver 10)
+            covered browsing folders, switching panes, marking files, in-app menus, notifications, the command palette,
+            and parts of Search and Settings. Not done yet: the rest of that test,
+            <a href="#pending">listed below</a>.
         </li>
     </ul>
 

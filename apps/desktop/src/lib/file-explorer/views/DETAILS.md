@@ -328,6 +328,11 @@ the empty-folder cases in `BriefList.a11y.test.ts` / `full-list.a11y.test.ts`.
 **What a row says is ONE helper, `file-row-a11y.ts`**, and both views spread its `fileRowAttributes` on every option; ❌
 no per-view copy of any of it.
 
+- Both views are listboxes. Decision/Why: Full view isn't a `role="grid"`, because Cmdr's cursor is a row, never a cell;
+  a grid with an active descendant needs a focused cell (or a treegrid row model), and VoiceOver table navigation over a
+  virtualized grid (`aria-rowcount` / `aria-rowindex`) is a second untested surface. Full rows say their column values
+  in the row name instead, and the sort state is in the header buttons' names. Revisit only if users ask for VoiceOver
+  table navigation.
 - The listbox is `aria-multiselectable`; `aria-selected` on an option means MARKED (always present, `false` included).
   The cursor is only `aria-activedescendant` plus `.is-under-cursor`, so code that finds the cursor row uses the class
   (`enter-menu.ts`, `context-menu-anchor.ts`), ❌ never `[aria-selected="true"]`.

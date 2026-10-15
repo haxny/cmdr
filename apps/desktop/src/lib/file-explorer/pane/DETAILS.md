@@ -264,6 +264,16 @@ switched (VoiceOver run, 2026-10-15). The id lands a frame after focus and again
 pane's list mounts, unmounts, or lands a new folder's cursor row (same file; a Brief/Full toggle, a tab close, Backspace
 on a focused path segment). ❌ Never focus a row: rows unmount under virtualization and focus drops to `<body>`.
 
+Decision/Why, the focus model: the active descendant sits on the element that really has focus, and that element is the
+composite itself, the same shape as the house menu, the command palette, and the onboarding pickers, which VoiceOver
+already read in this WKWebView. Rejected: `aria-activedescendant` on the container (whether WebKit honors it on a
+wrapper and announces an option inside an unfocused listbox was unverified, and the row would lose its list's context);
+roving `tabindex` or real focus on rows (rows unmount under virtualization, every cursor step becomes a focus/blur storm
+through the guard, the watchdog, and the rename editor, and `focus()` scroll-into-view fights the virtual scroller). The
+container is `role="group"`, ❌ not `role="application"`: an application wrapper around standard listboxes is the
+classic anti-pattern, and with it VoiceOver said "File explorer web application… You are currently on a web application"
+at launch (0.52.0); neither 2026-10-15 listening run heard it after the change.
+
 **Pane chrome.** Each pane's tab bar (`TabBar`), location bar (`FilePane`'s `.header`, a `role="toolbar"`: volume
 button, drive badges, path segments, repo chip, eject), and sort header (both views' `.header-row`, a toolbar too) carry
 `data-pane-chrome`, inside the pane's `data-pane-chrome-scope` wrapper. `pane-chrome.ts` owns it. The guard leaves focus
@@ -291,9 +301,9 @@ listing batch in the same folder, never for the unfocused pane. The same string 
 VO-cursor browsing. Row first: the message waits for the list's `onCursorRowLanded` (the deferred active descendant
 landing), with a 400 ms fallback when no row lands. An arrival in an empty folder says "Left pane, Downloads, empty
 folder" (the announcer's `message`, read when it goes out). Every other pane message goes through the same region, ❌
-never a second one: a region inserted together with its message announces nothing. Whether VoiceOver cuts the row off is
-a listening question for the harness (the VoiceOver verification step in `docs/specs/a11y-file-list-focus-plan.md`), not
-a timing knob.
+never a second one: a region inserted together with its message announces nothing. In the AX trace the row posts 5–15 ms
+before the announcer every time (VoiceOver 10, macOS 27.0, 2026-10-15); whether VoiceOver cuts the row off is a question
+for the ear (`docs/notes/accessibility-audit-2026-10.md` § VoiceOver checks, V2), not a timing knob.
 
 **Pane status announcer.** `pane-status-announcer.svelte.ts` speaks about changes IN PLACE, for the focused pane only:
 "3 selected" / "Nothing selected", the quick filter's "3 names contain “re”" / "No names contain “zz”" and, when it

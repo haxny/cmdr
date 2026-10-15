@@ -8,9 +8,10 @@
  * a gap closes, update the row and its remark, and bump `report.date`.
  *
  * Screen-reader checks. David's VoiceOver guide (vault, `projects/Cmdr/2026-10-14 Cmdr VoiceOver
- * test guide.md`) has 12 checks, V1–V12, described in `voiceOverChecks` below. A row that waits on
- * one lists it in `pending`; that array is the single source for "which rows does V3 fill" (search
- * for `'V3'`; 302.1 and 4.2.1 wait on all twelve). The rule for a pending row:
+ * test guide.md`) has 12 checks, V1–V12; `voiceOverChecks` below describes the ones still to run.
+ * A row that waits on one lists it in `pending`; that array is the single source for "which rows
+ * does V4 fill" (search for `'V4'`; 302.1 and 4.2.1 wait on every check still to run). V1, V2, V3,
+ * and V10 were heard passing (the audit doc has the phrases). The rule for a pending row:
  *   - Code review found it fully supported → `conformance: 'not-evaluated'`, because only the
  *     screen-reader test can confirm it. `codeReview` keeps the code-review result.
  *   - Code review already found gaps → it stays `'partially-supports'`. The test can only confirm it
@@ -34,7 +35,8 @@ export type Conformance =
 
 export type VoiceOverCheck = 'V1' | 'V2' | 'V3' | 'V4' | 'V5' | 'V6' | 'V7' | 'V8' | 'V9' | 'V10' | 'V11' | 'V12'
 
-const allChecks: VoiceOverCheck[] = ['V1', 'V2', 'V3', 'V4', 'V5', 'V6', 'V7', 'V8', 'V9', 'V10', 'V11', 'V12']
+/** The checks not yet heard passing, which 302.1 and 4.2.1 wait on. */
+const unheardChecks: VoiceOverCheck[] = ['V4', 'V5', 'V6', 'V7', 'V8', 'V9', 'V11', 'V12']
 
 /** Labels for the page's tables, in the VPAT's own terms plus one for pending rows. */
 export const conformanceLabel: Record<Conformance, string> = {
@@ -109,12 +111,9 @@ const wcagA: CriterionRow[] = [
     id: '1.1.1',
     name: 'Non-text content',
     level: 'A',
-    conformance: 'not-evaluated',
-    codeReview: 'supports',
+    conformance: 'supports',
     remark:
-      "Icon buttons have names, the image viewer uses the file name as the image's text alternative, and the sync-status and symlink badges on file icons are named. Each file's name for assistive technology also says its kind (folder, symlink, package, or archive), so the file-type icon needs no text of its own.",
-    issues: [437],
-    pending: ['V1'],
+      'Icon buttons have names, the image viewer uses the file name as the image\'s text alternative, and the sync-status and symlink badges on file icons are named. Each file\'s name for assistive technology also says its kind (folder, symlink, package, or archive), so the file-type icon needs no text of its own: VoiceOver reads "Photos (folder)" and "backup.zip (archive)".',
   },
   {
     id: '1.2.1',
@@ -145,7 +144,7 @@ const wcagA: CriterionRow[] = [
     remark:
       "Dialogs, Settings, and server forms use real headings, labels, and roles, and the Settings sidebar groups each section's subsections under it. The file list exposes which files are marked and each file's position in the list, and the sort buttons say which column the list is sorted by and which way. The Full view isn't a table: each file's name for assistive technology carries its size and date, but the column headers aren't tied to the cells.",
     issues: [437],
-    pending: ['V1', 'V2', 'V7'],
+    pending: ['V7'],
   },
   {
     id: '1.3.2',
@@ -170,7 +169,7 @@ const wcagA: CriterionRow[] = [
     level: 'A',
     conformance: 'partially-supports',
     remark:
-      'Git status uses letters, errors use labeled symbols, and size and date colors are optional decoration. Marked files carry a bar along their left edge and slightly heavier text besides their red color. The cursor in the focused pane has a solid outline and the one in the other pane a dashed outline. Hidden files still differ only by a dimmer color.',
+      "Git status uses letters, errors use labeled symbols, and size and date colors are optional decoration. Marked files carry a bar along their left edge and slightly heavier text besides their red color. The cursor in the focused pane has a solid outline and the one in the other pane a dashed outline, and the focused pane's active tab has the stronger accent line. Hidden files still differ only by a dimmer color.",
     issues: [440],
   },
   { id: '1.4.2', name: 'Audio control', level: 'A', conformance: 'not-applicable', remark: 'Cmdr plays no audio.' },
@@ -351,9 +350,9 @@ const wcagA: CriterionRow[] = [
     level: 'A',
     conformance: 'partially-supports',
     remark:
-      "Dialogs, Settings controls, tabs, the command palette, the queue, and menus (submenus included) expose their name, role, and state, and the file list, Search results, and the Settings sidebar convey the highlighted item as you arrow. The file list also conveys which files are marked, and the volume switcher is a menu button. While a file is being renamed in place, the name field sits inside the file's row, which hides its role from some assistive technology.",
-    issues: [437, 267, 449],
-    pending: ['V1', 'V3', 'V6', 'V7', 'V10'],
+      "Dialogs, Settings controls, tabs, the command palette, the queue, and in-app menus (submenus included) expose their name, role, and state, and the file list, Search results, and the Settings sidebar convey the highlighted item as you arrow. The file list also conveys which files are marked, and the volume switcher is a menu button. While a file is being renamed in place, the name field sits inside the file's row, which hides its role from some assistive technology.",
+    issues: [267, 449],
+    pending: ['V6', 'V7'],
   },
 ]
 
@@ -454,12 +453,9 @@ const wcagAA: CriterionRow[] = [
     id: '2.4.6',
     name: 'Headings and labels',
     level: 'AA',
-    conformance: 'not-evaluated',
-    codeReview: 'supports',
+    conformance: 'supports',
     remark:
-      'Settings uses headings for its sections, dialogs have a heading for their title, and both panes are named. Each file list is named after its pane and folder, like "Left pane, Documents", and switching panes or folders says the new pane and folder.',
-    issues: [437],
-    pending: ['V2'],
+      'Settings uses headings for its sections, dialogs have a heading for their title, and both panes are named. Each file list is named after its pane and folder, and VoiceOver says the new pane and folder, like "Right pane, Documents", after you switch panes or open a folder.',
   },
   {
     id: '2.4.7',
@@ -558,9 +554,9 @@ const section508Ch3: CriterionRow[] = [
     name: 'Without vision',
     conformance: 'partially-supports',
     remark:
-      "Dialogs, Settings, menus, and forms are built for screen readers. The file list gives assistive technology the file under the cursor with its kind and position, which files are marked, and which pane and folder you're in. A name field being renamed in place sits inside its file's row, and the Full view's columns aren't a table.",
+      "Dialogs, Settings, menus, and forms are built for screen readers. With VoiceOver, the file list reads the file under the cursor with its kind and position, says which files are marked and which pane and folder you're in, and in-app menus read every row, submenus included. A name field being renamed in place sits inside its file's row, and the Full view's columns aren't a table.",
     issues: [437],
-    pending: allChecks,
+    pending: unheardChecks,
   },
   {
     id: '302.2',
@@ -575,7 +571,7 @@ const section508Ch3: CriterionRow[] = [
     name: 'Without perception of color',
     conformance: 'partially-supports',
     remark:
-      'Marked files carry a bar and heavier text besides their color, and the focused pane shows a solid cursor outline where the other pane shows a dashed one. Hidden files still differ only by color. Everything else uses symbols and text.',
+      'Marked files carry a bar and heavier text besides their color, and the focused pane shows a solid cursor outline and a stronger tab accent line where the other pane shows a dashed outline. Hidden files still differ only by color. Everything else uses symbols and text.',
     issues: [440],
   },
   { id: '302.4', name: 'Without hearing', conformance: 'supports', remark: 'Cmdr uses no sound.' },
@@ -630,9 +626,8 @@ const section508Ch5: CriterionRow[] = [
     name: 'Object information',
     conformance: 'partially-supports',
     remark:
-      "Standard controls expose their name, role, and state to VoiceOver, and file rows expose their name, kind, position, and whether they're marked. While a file is being renamed in place, the name field sits inside its row, which hides the field's role from some assistive technology.",
-    issues: [437, 449],
-    pending: ['V1', 'V3'],
+      'Standard controls expose their name, role, and state to VoiceOver. VoiceOver reads each file row\'s name, kind, and position, like "notes.txt, 3 of 8", and says "selected" on marked files. While a file is being renamed in place, the name field sits inside its row, which hides the field\'s role from some assistive technology.',
+    issues: [449],
   },
   {
     id: '502.3.2',
@@ -723,16 +718,15 @@ const section508Ch5: CriterionRow[] = [
     remark:
       "Focus in dialogs and Settings is real keyboard focus, and the cursor in the file list, Search results, and the Settings sidebar is exposed to assistive technology as the focused list's current item.",
     issues: [437],
-    pending: ['V1', 'V6'],
+    pending: ['V6'],
   },
   {
     id: '502.3.13',
     name: 'Modification of focus cursor',
     conformance: 'partially-supports',
     remark:
-      "Assistive technology can move focus between standard controls. Moving the VoiceOver cursor onto a file likely doesn't move Cmdr's cursor.",
+      "Assistive technology can move focus between standard controls, and VoiceOver follows Cmdr's cursor as the arrow keys move it through the file list. Moving the VoiceOver cursor onto a file with VoiceOver's own keys likely doesn't move Cmdr's cursor.",
     issues: [437],
-    pending: ['V1'],
   },
   {
     id: '502.3.14',
@@ -823,7 +817,7 @@ const enClause4: CriterionRow[] = [
     conformance: 'partially-supports',
     remark: 'See Section 508 302.1.',
     issues: [437],
-    pending: allChecks,
+    pending: unheardChecks,
   },
   {
     id: '4.2.2',
@@ -960,8 +954,7 @@ const enClause11: CriterionRow[] = [
     name: 'Object information',
     conformance: 'partially-supports',
     remark: 'See Section 508 502.3.1.',
-    issues: [437, 449],
-    pending: ['V1'],
+    issues: [449],
   },
   {
     id: '11.5.2.6',
@@ -1021,11 +1014,8 @@ const enClause11: CriterionRow[] = [
   {
     id: '11.5.2.13',
     name: 'Tracking of focus and selection attributes',
-    conformance: 'not-evaluated',
-    codeReview: 'supports',
-    remark: 'See Section 508 502.3.12. Marked files are exposed as selected.',
-    issues: [437],
-    pending: ['V1', 'V3'],
+    conformance: 'supports',
+    remark: 'See Section 508 502.3.12. Marked files are exposed as selected, and VoiceOver says "selected" on them.',
   },
   {
     id: '11.5.2.14',
@@ -1033,7 +1023,6 @@ const enClause11: CriterionRow[] = [
     conformance: 'partially-supports',
     remark: 'See Section 508 502.3.13.',
     issues: [437],
-    pending: ['V1'],
   },
   {
     id: '11.5.2.15',
@@ -1170,11 +1159,11 @@ export const gapIssues: { number: number; title: string }[] = [
   {
     number: 437,
     title:
-      "The file list's new VoiceOver support (cursor, marked files, position, and file kind) awaits a hands-on test",
+      "The Full view's columns aren't a table, and moving the VoiceOver cursor onto a file doesn't move Cmdr's cursor",
   },
   {
     number: 267,
-    title: 'In-app menus (volume switcher, favorites), submenus included, await a hands-on VoiceOver test',
+    title: "The file viewer's right-click menu awaits a hands-on VoiceOver test (the in-app menus passed theirs)",
   },
   {
     number: 440,
@@ -1193,19 +1182,18 @@ export const gapIssues: { number: number; title: string }[] = [
 
 /** The screen-reader checks still to run. Each one's rows are the rows whose `pending` names it. */
 export const voiceOverChecks: { id: VoiceOverCheck; what: string }[] = [
-  {
-    id: 'V1',
-    what: 'Browse a folder: VoiceOver reads each file name as the cursor moves, says folder or file, and the position in the list.',
-  },
-  { id: 'V2', what: "Switch panes: it says which pane and folder you're in." },
-  { id: 'V3', what: 'Mark files: it says a marked file is selected, and how many are.' },
   { id: 'V4', what: "Copy files: the progress dialog's title, progress value, and completion message." },
   { id: 'V5', what: "Rename: the field's name, and an announced error for an invalid name." },
-  { id: 'V6', what: 'Search: the result count, and the highlighted result while arrowing.' },
-  { id: 'V7', what: "Settings: section names, a control's label and value, and the new value after a change." },
+  {
+    id: 'V6',
+    what: 'Search: the result count (a search that finds nothing included), and the highlighted result while arrowing.',
+  },
+  {
+    id: 'V7',
+    what: "Settings: section names with their position, a control's label and value, and the new value after a change.",
+  },
   { id: 'V8', what: 'Delete confirmation: title, message, and buttons, and pressing a button works.' },
-  { id: 'V9', what: 'Notifications: one is read out without moving focus.' },
-  { id: 'V10', what: 'In-app menus (volume switcher, favorites): rows are read while arrowing.' },
+  { id: 'V9', what: 'Notifications: one is read out in full, links included, without moving focus.' },
   { id: 'V11', what: 'Read text: an error message and a text file in the viewer are read in full.' },
   { id: 'V12', what: "Reading order: VoiceOver's order in a dialog and in Settings matches the screen." },
 ]
