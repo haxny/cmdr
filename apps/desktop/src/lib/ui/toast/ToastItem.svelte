@@ -290,6 +290,9 @@
     })
 </script>
 
+<!-- `onmousedown` only keeps a press on the text from moving focus (`keepFocusOnTextPress`); the
+     frame does nothing on it, so it's no interaction the keyboard is missing. -->
+<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <div
     bind:this={toastElement}
     class="toast"
