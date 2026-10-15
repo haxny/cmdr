@@ -1510,6 +1510,7 @@ export type MessageKey =
   | 'fileExplorer.list.empty'
   | 'fileExplorer.list.fileListAriaLabel'
   | 'fileExplorer.list.parentRowName'
+  | 'fileExplorer.list.parentRowSize'
   | 'fileExplorer.list.rowGitStatus'
   | 'fileExplorer.list.rowKind.archive'
   | 'fileExplorer.list.rowKind.folder'

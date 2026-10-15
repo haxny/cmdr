@@ -75,7 +75,9 @@ export interface FileRowNameInput {
  * "(modified) {date}", and "{status} in git": "src (folder), 4,096, (modified) 2026-10-14 10:30,
  * Modified in git". The git phrase needs no parentheses: the Git cell draws its glyph from CSS,
  * so none of it is visible text, and "in git" keeps it from echoing the date's "modified".
- * `..` says "Parent folder" in place of its name, then its cells like any row.
+ * `..` says "Parent folder" in place of its name, then its cells like any row, its size as
+ * "(this folder) 36,860": that cell shows the CURRENT folder's total, and bare after "Parent
+ * folder" it sounded like the parent's.
  *
  * It's set as the option's `aria-label`, which replaces the name the row's content would give,
  * so every badge that speaks through content (`FileIcon`'s sync badge, the restricted and
@@ -88,12 +90,14 @@ export interface FileRowNameInput {
  * included. Joined by {@link formatUnitList}, which never adds an "and".
  */
 export function fileRowName({ entry, syncStatus, isRestricted = false, details }: FileRowNameInput): string {
+  const parent = isParentRow(entry)
+  const size = details?.size ?? ''
   const parts = [
-    isParentRow(entry)
+    parent
       ? tString('fileExplorer.list.parentRowName')
       : withAside(entry.name, rowAsides(entry, syncStatus, isRestricted)),
-    details?.size ?? '',
-    details?.modified ? modifiedPhrase(details.modified) : '',
+    parent && size !== '' ? asideAround('fileExplorer.list.parentRowSize', size) : size,
+    details?.modified ? asideAround('fileExplorer.list.rowModified', details.modified) : '',
     details?.gitStatus ? tString('fileExplorer.list.rowGitStatus', { status: details.gitStatus }) : '',
   ]
   return formatUnitList(parts.filter((part) => part !== ''))
@@ -115,20 +119,22 @@ function withAside(text: string, asides: string[]): string {
   return asides.length === 0 ? text : `${text} (${formatUnitList(asides)})`
 }
 
-/** Stands in for the date while its phrase is split, so a translation may put it anywhere. */
-const DATE_SLOT = '\u0000'
+/** Stands in for the visible value while its phrase is split, so a translation may put it anywhere. */
+const VALUE_SLOT = '\u0000'
 
 /**
- * "modified {date}" with the words around the date in parentheses: "(modified) 2026-10-14
- * 10:30". The date is on the row; the words aren't. The catalog phrase stays whole for
- * translators, whatever side of the date their language puts the words on.
+ * A catalog phrase around a visible cell value, with the phrase's own words in parentheses:
+ * "modified {date}" gives "(modified) 2026-10-14 10:30", "this folder {size}" gives "(this
+ * folder) 36,860". The value is on the row; the words aren't. The phrase stays whole for
+ * translators, whatever side of the value their language puts the words on.
  */
-function modifiedPhrase(date: string): string {
-  return tString('fileExplorer.list.rowModified', { date: DATE_SLOT })
-    .split(DATE_SLOT)
+function asideAround(key: 'fileExplorer.list.rowModified' | 'fileExplorer.list.parentRowSize', value: string): string {
+  const slot = key === 'fileExplorer.list.rowModified' ? { date: VALUE_SLOT } : { size: VALUE_SLOT }
+  return tString(key, slot)
+    .split(VALUE_SLOT)
     .map((words) => words.trim())
     .map((words) => (words === '' ? '' : `(${words})`))
-    .join(` ${date} `)
+    .join(` ${value} `)
     .trim()
 }
 

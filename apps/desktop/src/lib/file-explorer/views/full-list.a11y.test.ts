@@ -111,6 +111,30 @@ describe('FullList a11y', () => {
     await expectNoA11yViolations(list.target)
   })
 
+  // The `..` row shows the current folder's total; its name says whose it is in words axe
+  // drops, so the visible size still runs through the name (WCAG 2.5.3).
+  it('parent row showing the current folder’s size has no a11y violations', async () => {
+    const { getDirStatsBatch } = await import('#lib/tauri-commands/index.js')
+    vi.mocked(getDirStatsBatch).mockResolvedValueOnce([
+      {
+        path: '/root',
+        recursiveSize: 36_860,
+        recursivePhysicalSize: 40_960,
+        recursiveFileCount: 7,
+        recursiveDirCount: 1,
+        recursiveHasSymlinks: false,
+        recursiveSizeComplete: true,
+      },
+    ])
+    const list = await mountFullList({
+      entries: [fileEntry({ name: 'report.md', iconId: 'ext:md', size: 2048 })],
+      props: { hasParent: true, parentPath: '/', totalCount: 2 },
+    })
+    const parent = list.rows()[0]
+    expect(parent.getAttribute('aria-label')).toBe('Parent folder, (this folder) 36,860')
+    await expectNoA11yViolations(list.target)
+  })
+
   it('unfocused pane has no a11y violations', async () => {
     const list = await mountFullList({
       entries: [fileEntry({ name: 'report.md' })],

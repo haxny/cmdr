@@ -1419,6 +1419,13 @@
   "@fileExplorer.list.parentRowName": {
     "description": "What a screen reader says for the “..” row at the top of the file list, which goes up one folder. Never shown on screen. A noun phrase naming the row, not a command. The reader adds the row’s position after it (for example “1 of 8”)."
   },
+  "fileExplorer.list.parentRowSize": "this folder {size}",
+  "@fileExplorer.list.parentRowSize": {
+    "description": "Spoken after “Parent folder” when a screen reader reads the “..” row in the file list’s Full view, as in “Parent folder, this folder 36,860”. Never shown on screen. The size on that row is the total of the folder the user is IN, not of the parent folder the row leads to, so these words say whose size it is. Lowercase where your language allows, because it follows the row name after a comma.",
+    "placeholders": {
+      "size": "the current folder’s total size, already formatted the way the Size column shows it (or the “<dir>” placeholder while it isn’t known yet)"
+    }
+  },
   "fileExplorer.list.rowKind.folder": "folder",
   "@fileExplorer.list.rowKind.folder": {
     "description": "Spoken after a folder’s name when a screen reader reads a row of the file list, as in “Photos, folder”. Never shown on screen. One word, lowercase where your language allows, because it follows the name after a comma."

@@ -48,10 +48,14 @@ describe('fileRowName', () => {
     expect(fileRowName({ entry: entry({ name: 'a.txt' }) })).toBe('a.txt')
   })
 
-  it('names the `..` row "Parent folder", then says its cells like any row', () => {
+  // Regression: "Parent folder, 36,86 kB" sounded like the parent's size, but the `..` row's
+  // size cell shows the CURRENT folder's total (VoiceOver listening run, 2026-10-15). The
+  // words in parentheses say whose it is; axe drops them, so the visible size still matches.
+  it('names the `..` row "Parent folder", then says its size is this folder’s', () => {
     const parent = createParentEntry('/')
     expect(fileRowName({ entry: parent })).toBe('Parent folder')
-    expect(fileRowName({ entry: parent, details: { size: '<dir>' } })).toBe('Parent folder, <dir>')
+    expect(fileRowName({ entry: parent, details: { size: '<dir>' } })).toBe('Parent folder, (this folder) <dir>')
+    expect(fileRowName({ entry: parent, details: { size: '36,860' } })).toBe('Parent folder, (this folder) 36,860')
   })
 
   it('says what the row’s badges mean beside the kind', () => {
