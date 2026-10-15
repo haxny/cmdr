@@ -26,5 +26,9 @@
   "menu.go.showFavorites": "Show favourites",
   "@menu.go.showFavorites": {
     "sourceHash": "f4dfe9b"
+  },
+  "menu.edit.undoTrash": "Undo move to Bin",
+  "@menu.edit.undoTrash": {
+    "sourceHash": "c6fea33"
   }
 }

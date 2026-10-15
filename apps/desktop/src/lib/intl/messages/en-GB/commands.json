@@ -74,5 +74,13 @@
   "commands.multiRenameNormalizeUnicode.label": "Turn Normalise Unicode on or off",
   "@commands.multiRenameNormalizeUnicode.label": {
     "sourceHash": "fc2b801"
+  },
+  "commands.editUndoTrash.label": "Undo move to Bin",
+  "@commands.editUndoTrash.label": {
+    "sourceHash": "c6fea33"
+  },
+  "commands.editUndoTrash.description": "Put back the files you last moved to the Bin",
+  "@commands.editUndoTrash.description": {
+    "sourceHash": "3aa756f"
   }
 }
