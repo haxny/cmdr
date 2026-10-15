@@ -246,6 +246,9 @@
     ],
     "chosen": "存档",
     "confidence": "high",
+    "exceptions": {
+      "fileExplorer.list.rowKind.archive": "A zip-style archive file (the archive concept), not a chat: 压缩文件, matching fileExplorer.archiveEnterMenu.ariaLabel."
+    },
     "forms": "unarchive 取消存档; the badge 已存档",
     "sources": "MS terminology (archive → 存档)"
   },
@@ -2177,7 +2180,8 @@
     "confidence": "high",
     "exceptions": {
       "licensing.acknowledgements.jumpToNpm": "npm packages are 包 (npm 包), the JavaScript community's own word.",
-      "licensing.acknowledgements.npmHeading": "npm packages are 包 (npm 包), the JavaScript community's own word."
+      "licensing.acknowledgements.npmHeading": "npm packages are 包 (npm 包), the JavaScript community's own word.",
+      "fileExplorer.list.rowKind.package": "A macOS package (the app-bundle concept, Finder 显示包内容): 应用程序包, matching settings.archives.bundle.label and fileExplorer.archiveEnterMenu.ariaLabel."
     },
     "forms": "a generic package 软件包; npm packages npm 包",
     "note": "Deliberately wider than the app-bundle word 应用程序包.",

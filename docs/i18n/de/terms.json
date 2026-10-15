@@ -232,6 +232,9 @@
     "chosen": "archivieren",
     "confidence": "high",
     "decision": "Ask Cmdr (`askCmdr.*`, `settings.askCmdr.*`, `settings.advanced.logLlmCalls.*`, `commands.askCmdrToggle.*`)",
+    "exceptions": {
+      "fileExplorer.list.rowKind.archive": "English sense: the zip-file row kind (concept archive), not hiding a chat, so it's the noun Archiv"
+    },
     "forms": "badge Archiviert; unarchive → Archivierung aufheben (mirrors Auswahl aufheben); Archivierte ausblenden",
     "note": "Archivierung aufheben is tentative: no direct unarchive source.",
     "sources": "MS terminology (archive → archivieren, archived → Archiviert)"
@@ -1888,6 +1891,13 @@
     "confidence": "high",
     "sources": "MS terminology"
   },
+  "modified": {
+    "accept": ["Geändert", "Zuletzt geändert", "geänderten", "Änderungsdatum", "Änderungsdaten"],
+    "chosen": "geändert",
+    "confidence": "high",
+    "forms": "column header → Geändert; sort-by menu item and date filter → Änderungsdatum (Finder's own label); a spoken date → geändert am {date} (like Für eine Datei, die zuletzt am {date} geändert wurde)",
+    "sources": "macOS Finder Info window (Geändert:, Änderungsdatumswert); catalog (fileExplorer.columns.modified, menu.sort.dateModified)"
+  },
   "modifier-key": {
     "accept": ["Sondertasten"],
     "chosen": "Sondertaste",
@@ -3034,7 +3044,7 @@
     "accept": ["Symlink", "symbolischen Verknüpfung", "Verknüpfung"],
     "chosen": "symbolische Verknüpfung",
     "confidence": "high",
-    "forms": "the loop term and short titles keep Symlink (Symlink-Schleife)",
+    "forms": "the loop term, short titles, and the spoken row kind keep Symlink (Symlink-Schleife; fileExplorer.list.rowKind.symlink matches the visible Symlink badge)",
     "sources": "MS terminology (symbolische Verknüpfung)"
   },
   "sync": {

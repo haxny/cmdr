@@ -225,6 +225,9 @@
     "accept": ["avarkivera"],
     "chosen": "arkivera",
     "confidence": "high",
+    "exceptions": {
+      "fileExplorer.list.rowKind.archive": "English sense: a zip-like archive file (the archive concept, arkiv), not archiving a chat; source-queue asks to move it to archive-chat's notMatch."
+    },
     "forms": "Arkivera; badge Arkiverad; Visa/Göm arkiverade; unarchive → avarkivera (tentative, av- reversal like avmontera)",
     "sources": "MS terminology (archive verb → arkivera)"
   },

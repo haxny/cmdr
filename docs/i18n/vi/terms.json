@@ -196,6 +196,9 @@
     ],
     "chosen": "Lưu trữ",
     "confidence": "high",
+    "exceptions": {
+      "fileExplorer.list.rowKind.archive": "English-sense: the zip-file row kind (concept `archive`), not a chat; `tệp nén` carries it."
+    },
     "forms": "archive → Lưu trữ, archived → đã lưu trữ, unarchive → Bỏ lưu trữ",
     "sources": "macOS Finder AR40 (Archive → Lưu trữ); Bỏ lưu trữ mirrors Gmail/Zalo (tentative)"
   },

@@ -43,6 +43,14 @@
   "@fileExplorer.pane.filePaneAriaLabel": {
     "sourceHash": "77f3961"
   },
+  "fileExplorer.pane.location": "{side, select, left {Vänster panel, {folder}} other {Höger panel, {folder}}}",
+  "@fileExplorer.pane.location": {
+    "sourceHash": "8b5ce0b"
+  },
+  "fileExplorer.pane.searchResultsLocation": "Sökresultat",
+  "@fileExplorer.pane.searchResultsLocation": {
+    "sourceHash": "e978b00"
+  },
   "fileExplorer.pane.diskUsageAriaLabel": "Diskanvändning",
   "@fileExplorer.pane.diskUsageAriaLabel": {
     "sourceHash": "4fe60c1"
@@ -917,6 +925,10 @@
   "@fileExplorer.columns.sortByRelevance": {
     "sourceHash": "20632dd"
   },
+  "fileExplorer.columns.sortState": "{column}, {order, select, ascending {sorterad stigande} descending {sorterad fallande} other {inte sorterad}}",
+  "@fileExplorer.columns.sortState": {
+    "sourceHash": "b4787e7"
+  },
   "fileExplorer.columns.git": "Git",
   "@fileExplorer.columns.git": {
     "sourceHash": "b949c92",
@@ -937,6 +949,30 @@
   "fileExplorer.list.sortColumnsAriaLabel": "Sortera kolumner",
   "@fileExplorer.list.sortColumnsAriaLabel": {
     "sourceHash": "21f76f8"
+  },
+  "fileExplorer.list.parentRowName": "Överordnad mapp",
+  "@fileExplorer.list.parentRowName": {
+    "sourceHash": "158f5a0"
+  },
+  "fileExplorer.list.rowKind.folder": "mapp",
+  "@fileExplorer.list.rowKind.folder": {
+    "sourceHash": "034a006"
+  },
+  "fileExplorer.list.rowKind.symlink": "symlänk",
+  "@fileExplorer.list.rowKind.symlink": {
+    "sourceHash": "cc52c0d"
+  },
+  "fileExplorer.list.rowKind.package": "paket",
+  "@fileExplorer.list.rowKind.package": {
+    "sourceHash": "bc4a711"
+  },
+  "fileExplorer.list.rowKind.archive": "arkiv",
+  "@fileExplorer.list.rowKind.archive": {
+    "sourceHash": "0eb3e36"
+  },
+  "fileExplorer.list.rowModified": "ändrad {date}",
+  "@fileExplorer.list.rowModified": {
+    "sourceHash": "974427b"
   },
   "fileExplorer.dirSize.updatingIndexTooltip": "Uppdaterar index: storleken kan ändras.",
   "@fileExplorer.dirSize.updatingIndexTooltip": {
@@ -1590,6 +1626,10 @@
   "fileExplorer.navigation.readOnlyTooltip": "Skrivskyddad",
   "@fileExplorer.navigation.readOnlyTooltip": {
     "sourceHash": "72bb908"
+  },
+  "fileExplorer.navigation.volumeChooserButtonLabel": "{name}, välj en volym",
+  "@fileExplorer.navigation.volumeChooserButtonLabel": {
+    "sourceHash": "fd14c96"
   },
   "fileExplorer.navigation.volumeOptionsTooltip": "Volymalternativ",
   "@fileExplorer.navigation.volumeOptionsTooltip": {

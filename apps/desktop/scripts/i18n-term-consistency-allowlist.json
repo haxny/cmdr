@@ -432,6 +432,10 @@
         "reason": "Дата изменения names file timestamps; Измененные filters customized keyboard shortcuts, not dates."
       },
       {
+        "source": "Parent folder",
+        "reason": "Two surfaces. `menu.go.parentFolder` is a COMMAND in the Go menu and follows Russian Finder's own item (`На уровень выше`). `fileExplorer.list.parentRowName` is the spoken NAME of the `..` row, a noun phrase by its description (`Родительская папка`); the command wording would make VoiceOver read the row as a button."
+      },
+      {
         "source": "Rolling back",
         "reason": "Откат is the operation-progress window title; Откат выполняется is a running status in the operation log."
       },

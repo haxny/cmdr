@@ -43,6 +43,14 @@
   "@fileExplorer.pane.filePaneAriaLabel": {
     "sourceHash": "77f3961"
   },
+  "fileExplorer.pane.location": "{side, select, left {Khung trái, {folder}} other {Khung phải, {folder}}}",
+  "@fileExplorer.pane.location": {
+    "sourceHash": "8b5ce0b"
+  },
+  "fileExplorer.pane.searchResultsLocation": "Kết quả tìm kiếm",
+  "@fileExplorer.pane.searchResultsLocation": {
+    "sourceHash": "e978b00"
+  },
   "fileExplorer.pane.diskUsageAriaLabel": "Dung lượng đĩa",
   "@fileExplorer.pane.diskUsageAriaLabel": {
     "sourceHash": "4fe60c1"
@@ -917,6 +925,10 @@
   "@fileExplorer.columns.sortByRelevance": {
     "sourceHash": "20632dd"
   },
+  "fileExplorer.columns.sortState": "{column}, {order, select, ascending {sắp xếp tăng dần} descending {sắp xếp giảm dần} other {chưa sắp xếp}}",
+  "@fileExplorer.columns.sortState": {
+    "sourceHash": "b4787e7"
+  },
   "fileExplorer.columns.git": "Git",
   "@fileExplorer.columns.git": {
     "sourceHash": "b949c92",
@@ -937,6 +949,30 @@
   "fileExplorer.list.sortColumnsAriaLabel": "Sắp xếp cột",
   "@fileExplorer.list.sortColumnsAriaLabel": {
     "sourceHash": "21f76f8"
+  },
+  "fileExplorer.list.parentRowName": "Thư mục chứa",
+  "@fileExplorer.list.parentRowName": {
+    "sourceHash": "158f5a0"
+  },
+  "fileExplorer.list.rowKind.folder": "thư mục",
+  "@fileExplorer.list.rowKind.folder": {
+    "sourceHash": "034a006"
+  },
+  "fileExplorer.list.rowKind.symlink": "liên kết mềm",
+  "@fileExplorer.list.rowKind.symlink": {
+    "sourceHash": "cc52c0d"
+  },
+  "fileExplorer.list.rowKind.package": "gói",
+  "@fileExplorer.list.rowKind.package": {
+    "sourceHash": "bc4a711"
+  },
+  "fileExplorer.list.rowKind.archive": "tệp nén",
+  "@fileExplorer.list.rowKind.archive": {
+    "sourceHash": "0eb3e36"
+  },
+  "fileExplorer.list.rowModified": "đã sửa đổi {date}",
+  "@fileExplorer.list.rowModified": {
+    "sourceHash": "974427b"
   },
   "fileExplorer.dirSize.updatingIndexTooltip": "Đang cập nhật chỉ mục: kích cỡ có thể thay đổi.",
   "@fileExplorer.dirSize.updatingIndexTooltip": {
@@ -1592,6 +1628,10 @@
   "fileExplorer.navigation.readOnlyTooltip": "Chỉ đọc",
   "@fileExplorer.navigation.readOnlyTooltip": {
     "sourceHash": "72bb908"
+  },
+  "fileExplorer.navigation.volumeChooserButtonLabel": "{name}, chọn ổ đĩa",
+  "@fileExplorer.navigation.volumeChooserButtonLabel": {
+    "sourceHash": "fd14c96"
   },
   "fileExplorer.navigation.volumeOptionsTooltip": "Tùy chọn ổ đĩa",
   "@fileExplorer.navigation.volumeOptionsTooltip": {

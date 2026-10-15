@@ -43,6 +43,14 @@
   "@fileExplorer.pane.filePaneAriaLabel": {
     "sourceHash": "77f3961"
   },
+  "fileExplorer.pane.location": "{side, select, left {Левая панель, {folder}} other {Правая панель, {folder}}}",
+  "@fileExplorer.pane.location": {
+    "sourceHash": "8b5ce0b"
+  },
+  "fileExplorer.pane.searchResultsLocation": "Результаты поиска",
+  "@fileExplorer.pane.searchResultsLocation": {
+    "sourceHash": "e978b00"
+  },
   "fileExplorer.pane.diskUsageAriaLabel": "Использование диска",
   "@fileExplorer.pane.diskUsageAriaLabel": {
     "sourceHash": "4fe60c1"
@@ -916,6 +924,10 @@
   "@fileExplorer.columns.sortByRelevance": {
     "sourceHash": "20632dd"
   },
+  "fileExplorer.columns.sortState": "{column}, {order, select, ascending {сортировка по возрастанию} descending {сортировка по убыванию} other {без сортировки}}",
+  "@fileExplorer.columns.sortState": {
+    "sourceHash": "b4787e7"
+  },
   "fileExplorer.columns.git": "Git",
   "@fileExplorer.columns.git": {
     "sourceHash": "b949c92",
@@ -936,6 +948,30 @@
   "fileExplorer.list.sortColumnsAriaLabel": "Сортировка по колонкам",
   "@fileExplorer.list.sortColumnsAriaLabel": {
     "sourceHash": "21f76f8"
+  },
+  "fileExplorer.list.parentRowName": "Родительская папка",
+  "@fileExplorer.list.parentRowName": {
+    "sourceHash": "158f5a0"
+  },
+  "fileExplorer.list.rowKind.folder": "папка",
+  "@fileExplorer.list.rowKind.folder": {
+    "sourceHash": "034a006"
+  },
+  "fileExplorer.list.rowKind.symlink": "символическая ссылка",
+  "@fileExplorer.list.rowKind.symlink": {
+    "sourceHash": "cc52c0d"
+  },
+  "fileExplorer.list.rowKind.package": "пакет",
+  "@fileExplorer.list.rowKind.package": {
+    "sourceHash": "bc4a711"
+  },
+  "fileExplorer.list.rowKind.archive": "архив",
+  "@fileExplorer.list.rowKind.archive": {
+    "sourceHash": "0eb3e36"
+  },
+  "fileExplorer.list.rowModified": "дата изменения: {date}",
+  "@fileExplorer.list.rowModified": {
+    "sourceHash": "974427b"
   },
   "fileExplorer.dirSize.updatingIndexTooltip": "Обновление индекса: размер может измениться.",
   "@fileExplorer.dirSize.updatingIndexTooltip": {
@@ -1589,6 +1625,10 @@
   "fileExplorer.navigation.readOnlyTooltip": "Только для чтения",
   "@fileExplorer.navigation.readOnlyTooltip": {
     "sourceHash": "72bb908"
+  },
+  "fileExplorer.navigation.volumeChooserButtonLabel": "{name}, выбрать том",
+  "@fileExplorer.navigation.volumeChooserButtonLabel": {
+    "sourceHash": "fd14c96"
   },
   "fileExplorer.navigation.volumeOptionsTooltip": "Параметры тома",
   "@fileExplorer.navigation.volumeOptionsTooltip": {

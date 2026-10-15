@@ -319,3 +319,13 @@ rule into `translation-principles.md` or `translator-instructions.md`), then del
   git's own `po/<lang>.po` (github.com/git/git, `po/`) is the authoritative translation for ~20 languages; propose
   adding it to the pile as a git-domain source. sv mined it live for `git-detached`, `git-unborn`, `git-dirty`. (sv, ru,
   es, de)
+- `concepts.json` `archive-chat` matches `fileExplorer.list.rowKind.archive` ("archive", a zip file), so the brief lists
+  the chat-archiving verb for it. Add that key to `archive-chat`'s `notMatch` and let the `archive` concept match it; hu
+  carries a per-locale `exceptions` entry meanwhile. (hu, nl, vi, pt, sv, es, ru, zh-Hant, de)
+- `concepts.json` `package` (.jar, .apk, Linux packages) matches `fileExplorer.list.rowKind.package`, which is a macOS
+  package (Finder's "Show Package Contents"), so the brief offers the wrong sense. Route the key to `app-bundle` (or
+  widen that concept to macOS packages) and add it to `package`'s `notMatch`. (zh-Hant, de)
+- Term consistency ties `fileExplorer.list.parentRowName` ("Parent folder", a spoken noun naming the `..` row) to
+  `menu.go.parentFolder` ("Parent folder", the Go command, which follows Finder's Enclosing Folder: ru
+  `На уровень выше`). The description asks for a noun, so the row reads `Родительская папка`. Reword one English source,
+  or add a term-consistency allowlist entry per locale (ru needs one now). (ru)

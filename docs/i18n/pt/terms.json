@@ -167,7 +167,10 @@
     "accept": ["arquivad"],
     "forms": "Arquivar / Arquivado / Desarquivar",
     "confidence": "confirmed",
-    "sources": "MS terminology pt-BR (archive → arquivar, Archived → Arquivado)"
+    "sources": "MS terminology pt-BR (archive → arquivar, Archived → Arquivado)",
+    "exceptions": {
+      "fileExplorer.list.rowKind.archive": "The zip/tar file kind (concept archive), not a chat: arquivo compactado."
+    }
   },
   "ask": {
     "chosen": "Perguntar",

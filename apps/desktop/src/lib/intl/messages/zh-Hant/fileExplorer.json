@@ -43,6 +43,14 @@
   "@fileExplorer.pane.filePaneAriaLabel": {
     "sourceHash": "77f3961"
   },
+  "fileExplorer.pane.location": "{side, select, left {左窗格，{folder}} other {右窗格，{folder}}}",
+  "@fileExplorer.pane.location": {
+    "sourceHash": "8b5ce0b"
+  },
+  "fileExplorer.pane.searchResultsLocation": "搜尋結果",
+  "@fileExplorer.pane.searchResultsLocation": {
+    "sourceHash": "e978b00"
+  },
   "fileExplorer.pane.diskUsageAriaLabel": "磁碟使用量",
   "@fileExplorer.pane.diskUsageAriaLabel": {
     "sourceHash": "4fe60c1"
@@ -915,6 +923,10 @@
   "@fileExplorer.columns.sortByRelevance": {
     "sourceHash": "20632dd"
   },
+  "fileExplorer.columns.sortState": "{column}，{order, select, ascending {遞增排序} descending {遞減排序} other {未排序}}",
+  "@fileExplorer.columns.sortState": {
+    "sourceHash": "b4787e7"
+  },
   "fileExplorer.columns.git": "Git",
   "@fileExplorer.columns.git": {
     "sourceHash": "b949c92",
@@ -935,6 +947,30 @@
   "fileExplorer.list.sortColumnsAriaLabel": "排序直欄",
   "@fileExplorer.list.sortColumnsAriaLabel": {
     "sourceHash": "21f76f8"
+  },
+  "fileExplorer.list.parentRowName": "上層資料夾",
+  "@fileExplorer.list.parentRowName": {
+    "sourceHash": "158f5a0"
+  },
+  "fileExplorer.list.rowKind.folder": "資料夾",
+  "@fileExplorer.list.rowKind.folder": {
+    "sourceHash": "034a006"
+  },
+  "fileExplorer.list.rowKind.symlink": "符號連結",
+  "@fileExplorer.list.rowKind.symlink": {
+    "sourceHash": "cc52c0d"
+  },
+  "fileExplorer.list.rowKind.package": "套件",
+  "@fileExplorer.list.rowKind.package": {
+    "sourceHash": "bc4a711"
+  },
+  "fileExplorer.list.rowKind.archive": "封存檔",
+  "@fileExplorer.list.rowKind.archive": {
+    "sourceHash": "0eb3e36"
+  },
+  "fileExplorer.list.rowModified": "修改日期 {date}",
+  "@fileExplorer.list.rowModified": {
+    "sourceHash": "974427b"
   },
   "fileExplorer.dirSize.updatingIndexTooltip": "正在更新索引：大小可能會變。",
   "@fileExplorer.dirSize.updatingIndexTooltip": {
@@ -1588,6 +1624,10 @@
   "fileExplorer.navigation.readOnlyTooltip": "唯讀",
   "@fileExplorer.navigation.readOnlyTooltip": {
     "sourceHash": "72bb908"
+  },
+  "fileExplorer.navigation.volumeChooserButtonLabel": "{name}，選擇卷宗",
+  "@fileExplorer.navigation.volumeChooserButtonLabel": {
+    "sourceHash": "fd14c96"
   },
   "fileExplorer.navigation.volumeOptionsTooltip": "卷宗選項",
   "@fileExplorer.navigation.volumeOptionsTooltip": {

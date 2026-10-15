@@ -43,6 +43,14 @@
   "@fileExplorer.pane.filePaneAriaLabel": {
     "sourceHash": "77f3961"
   },
+  "fileExplorer.pane.location": "{side, select, left {Bal panel, {folder}} other {Jobb panel, {folder}}}",
+  "@fileExplorer.pane.location": {
+    "sourceHash": "8b5ce0b"
+  },
+  "fileExplorer.pane.searchResultsLocation": "Keresési találatok",
+  "@fileExplorer.pane.searchResultsLocation": {
+    "sourceHash": "e978b00"
+  },
   "fileExplorer.pane.diskUsageAriaLabel": "Lemezhasználat",
   "@fileExplorer.pane.diskUsageAriaLabel": {
     "sourceHash": "4fe60c1"
@@ -916,6 +924,10 @@
   "@fileExplorer.columns.sortByRelevance": {
     "sourceHash": "20632dd"
   },
+  "fileExplorer.columns.sortState": "{column}, {order, select, ascending {növekvő sorrendben rendezve} descending {csökkenő sorrendben rendezve} other {nincs rendezve}}",
+  "@fileExplorer.columns.sortState": {
+    "sourceHash": "b4787e7"
+  },
   "fileExplorer.columns.git": "Git",
   "@fileExplorer.columns.git": {
     "sourceHash": "b949c92",
@@ -936,6 +948,30 @@
   "fileExplorer.list.sortColumnsAriaLabel": "Rendezési oszlopok",
   "@fileExplorer.list.sortColumnsAriaLabel": {
     "sourceHash": "21f76f8"
+  },
+  "fileExplorer.list.parentRowName": "Szülőmappa",
+  "@fileExplorer.list.parentRowName": {
+    "sourceHash": "158f5a0"
+  },
+  "fileExplorer.list.rowKind.folder": "mappa",
+  "@fileExplorer.list.rowKind.folder": {
+    "sourceHash": "034a006"
+  },
+  "fileExplorer.list.rowKind.symlink": "szimbolikus link",
+  "@fileExplorer.list.rowKind.symlink": {
+    "sourceHash": "cc52c0d"
+  },
+  "fileExplorer.list.rowKind.package": "csomag",
+  "@fileExplorer.list.rowKind.package": {
+    "sourceHash": "bc4a711"
+  },
+  "fileExplorer.list.rowKind.archive": "archívum",
+  "@fileExplorer.list.rowKind.archive": {
+    "sourceHash": "0eb3e36"
+  },
+  "fileExplorer.list.rowModified": "módosítva: {date}",
+  "@fileExplorer.list.rowModified": {
+    "sourceHash": "974427b"
   },
   "fileExplorer.dirSize.updatingIndexTooltip": "Index frissítése: a méret változhat.",
   "@fileExplorer.dirSize.updatingIndexTooltip": {
@@ -1590,6 +1626,10 @@
   "fileExplorer.navigation.readOnlyTooltip": "Csak olvasható",
   "@fileExplorer.navigation.readOnlyTooltip": {
     "sourceHash": "72bb908"
+  },
+  "fileExplorer.navigation.volumeChooserButtonLabel": "{name}, kötet kiválasztása",
+  "@fileExplorer.navigation.volumeChooserButtonLabel": {
+    "sourceHash": "fd14c96"
   },
   "fileExplorer.navigation.volumeOptionsTooltip": "Kötetbeállítások",
   "@fileExplorer.navigation.volumeOptionsTooltip": {

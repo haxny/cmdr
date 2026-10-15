@@ -225,6 +225,9 @@
     "accept": ["gearchiveerd", "Uit archief halen", "archiveren"],
     "chosen": "Archiveer",
     "confidence": "tentative",
+    "exceptions": {
+      "fileExplorer.list.rowKind.archive": "English sense: a zip-style archive file (the archive concept, archief), not hiding a chat."
+    },
     "forms": "button Archiveer; restore Uit archief halen (no single-word reverse verb); badge gearchiveerd",
     "sources": "coined from the settled noun archief; no pile source for this sense"
   },

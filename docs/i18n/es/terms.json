@@ -191,6 +191,9 @@
     "accept": ["archivad", "Archivado"],
     "forms": "Archivar / Archivado / Desarchivar (tentative); distinct from archivo comprimido",
     "confidence": "high",
+    "exceptions": {
+      "fileExplorer.list.rowKind.archive": "a zip file's spoken kind, the archive concept (archivo comprimido), not hiding a chat"
+    },
     "sources": "MS terminology (archive → archivar, Archived → Archivado)"
   },
   "ask": {
@@ -1739,7 +1742,7 @@
   "modified": {
     "chosen": "Modificación",
     "accept": ["modific"],
-    "forms": "the date column Modificación (Fecha de modificación); shortcuts the user changed → Modificados",
+    "forms": "the date column Modificación (Fecha de modificación); shortcuts the user changed → Modificados; a row's spoken date → modificación: {date} (a participle would agree with archivo or carpeta)",
     "confidence": "high",
     "sources": "macOS es (Modificación, Fecha de modificación)"
   },
@@ -2716,7 +2719,7 @@
   "sort": {
     "chosen": "Ordenar",
     "accept": ["orden", "ascendente", "descendente"],
-    "forms": "Ordenar por; Ascendente / Descendente",
+    "forms": "Ordenar por; Ascendente / Descendente; a column's spoken state → orden ascendente / orden descendente / sin ordenar (ordenado would agree with the column name)",
     "confidence": "high",
     "sources": "macOS Finder (Ordenar por); Dolphin (Ascendente/Descendente)"
   },

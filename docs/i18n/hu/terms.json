@@ -266,7 +266,10 @@
     "forms": "unarchive → Archiválás visszavonása (tentative); the badge → Archivált",
     "confidence": "high",
     "sources": "ms (archive verb → archivál, a separate entry from the zip-archive noun); Gmail hu",
-    "note": "Distinct from the zip-archive noun archívum."
+    "note": "Distinct from the zip-archive noun archívum.",
+    "exceptions": {
+      "fileExplorer.list.rowKind.archive": "English sense: a zip-style archive file (the archive concept), not hiding a chat, so it takes the noun archívum."
+    }
   },
   "ask": {
     "chosen": "Rákérdezés",

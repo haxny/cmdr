@@ -208,6 +208,9 @@
     "chosen": "Archiver",
     "confidence": "high",
     "decision": "Ask Cmdr : la conversation, les jetons et les lignes d'outil",
+    "exceptions": {
+      "fileExplorer.list.rowKind.archive": "a zip-file row kind, the archive concept (archive), not a chat being archived"
+    },
     "forms": "badge Archivée (agrees with the implicit conversation); unarchive → Désarchiver (tentative, no pile hit)",
     "sources": "MS terminology FRA (archive verb → archiver)"
   },
