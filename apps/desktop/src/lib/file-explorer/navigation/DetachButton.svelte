@@ -68,6 +68,16 @@
         outline-offset: 1px;
     }
 
+    /* Show borders: the box hugs its glyph, so the shared inset hairline (`app-utilities.css`
+       § Show borders) would sit tight on it. Draw the bezel a pixel outside instead, as an
+       outline, so the glyph gets air and nothing shifts. The focus ring replaces it. */
+    :global(html.show-borders) .eject-button:not(:focus-visible) {
+        box-shadow: none;
+        outline: 1px solid var(--color-control-border);
+        outline-offset: 1px;
+        border-radius: var(--radius-md);
+    }
+
     /* Busy: a write op is reading from / writing to this volume, so ejecting is
        blocked. Greyed out, no hover affordance; the tooltip explains why. */
     .eject-button:disabled {

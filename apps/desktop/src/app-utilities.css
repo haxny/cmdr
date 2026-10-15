@@ -52,12 +52,15 @@
 /* =============================================================================
    Show borders
    macOS Accessibility > Display > Show borders, mirrored as the `show-borders` class on
-   `<html>` by `#lib/display-accessibility`. A control that draws no edge of its own (an icon
-   button, a tab's close button, a path segment, the volume chip) carries
-   `.borderless-control`, and gains a control-edge hairline under the class. An inset
+   `<html>` by `#lib/display-accessibility`. Like macOS, it borders standalone buttons
+   only: the new-tab button, the volume chip, its options trigger, and the eject button
+   carry `.borderless-control` and gain a control-edge bezel under the class. Inline items
+   stay bare, as in Finder's path bar and Safari's tabs: path segments and a tab's close
+   button don't carry it (boxing each read as a broken row of fragments). An inset
    `box-shadow`, so nothing shifts by a pixel when the option flips, and it follows the
-   control's own radius. Controls that already have a border (`Button`, fields) don't carry
-   the class.
+   control's own radius; a control whose box hugs its glyph draws its bezel further out
+   itself (`DetachButton`). Controls that already have a border (`Button`, fields) don't
+   carry the class.
    ============================================================================= */
 
 html.show-borders .borderless-control {

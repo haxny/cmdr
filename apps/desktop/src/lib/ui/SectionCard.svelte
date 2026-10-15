@@ -77,6 +77,13 @@
         border: 1px solid var(--color-border-subtle);
     }
 
+    /* macOS Show borders (`app-utilities.css` § Show borders): the neutral card's edge
+       steps up from the near-invisible subtle tone to the regular border tone, so each
+       group reads as a box without turning loud. Toned cards keep their own edge. */
+    :global(html.show-borders) .section-card[data-tone='neutral'] {
+        border-color: var(--color-border);
+    }
+
     /* Toned cards. Each uses the OPAQUE tint token, not the translucent one: a card
        often sits on a modal panel, and a translucent fill lets the window behind it
        bleed through. Border and fill only; text inside keeps its own color. */

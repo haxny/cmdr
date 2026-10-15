@@ -199,7 +199,7 @@
                 </span>
                 {#if !isSingleTab}
                     <span
-                        class="close-btn borderless-control"
+                        class="close-btn"
                         aria-hidden="true"
                         use:tooltip={tString('fileExplorer.tabBar.closeTabTooltip')}
                         onclick={(e: MouseEvent) => {

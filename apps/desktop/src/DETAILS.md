@@ -70,9 +70,10 @@ in-flight fetches).
   matches, so a webview that reflects it (Linux) gets the same styling. Style off the class, ❌ never the media query:
   one source keeps the two from drifting.
 - **Show borders has no public API**: the backend calls an undeclared `NSWorkspace` getter behind a
-  `respondsToSelector:` guard (evidence in `display_accessibility.rs`). A control that draws no edge of its own carries
-  `.borderless-control` and gains a hairline under `html.show-borders` (`app-utilities.css` § Show borders). Give a new
-  borderless button the class.
+  `respondsToSelector:` guard (evidence in `display_accessibility.rs`). A standalone button that draws no edge of its
+  own carries `.borderless-control` and gains a bezel under `html.show-borders` (`app-utilities.css` § Show borders).
+  Give a new borderless standalone button the class, but ❌ not inline items (path segments, a tab's close button):
+  macOS leaves those bare, and boxing each made the path bar read as broken.
 
 ## Window drag strips sit at `--z-sticky`, under every menu
 
