@@ -156,7 +156,9 @@ function fakeGitHub(options: {
         query: string
         variables: Record<string, unknown>
       }
-      if (request.query.startsWith('query(')) {
+      // A query is the board read, anything else a mutation. The template literal keeps its
+      // indentation and the formatter writes `query (`, so match the keyword, not a spelling.
+      if (/^\s*query\b/.test(request.query)) {
         return json({
           data: { node: { number: 2, owner: { __typename: 'User', login: 'vdavid' }, fields: { nodes: fields } } },
         })
