@@ -323,6 +323,8 @@ check.
       three `.cdx.json` SBOMs are among the assets, then download one DMG and run both `gh attestation verify` commands
       in § Provenance and SBOM attestations. A red `attest` or `sbom` job doesn't block release success: see § "The
       attest or sbom job failed".
+    - **Stop the website dev server** started in step 5, once these checks pass: the deployed site has replaced it.
+      `lsof -ti tcp:4829 -sTCP:LISTEN | xargs kill` (its `--ignore-lock` hides it from `astro dev stop`).
 13. **Minor or major release: offer to refresh the app-directory listings** (skip for patches), per § Refreshing the
     app-directory listings.
 
