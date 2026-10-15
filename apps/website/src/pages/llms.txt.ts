@@ -26,6 +26,7 @@ Current version: ${version}
 - [Pricing](${site}/pricing/): Free for personal use, $59 once for commercial use
 - [Trust and security](${site}/trust/): What the app sends over the network, where data is stored, signing and updates, and known gaps, for security and IT reviewers
 - [How Cmdr is built and kept up to date](${site}/trust/development/): The development process by stage (design, code, review, test, dependencies, release, updates) with measured numbers, for security questionnaires
+- [Accessibility guide](${site}/trust/accessibility-guide/): Cmdr's accessibility features (keyboard-only use, VoiceOver, text size and zoom, light and dark mode, Reduce motion, Reduce transparency), how to turn them on, known gaps, and how to get help
 - [Accessibility conformance report](${site}/trust/accessibility/): How Cmdr meets WCAG 2.2 A and AA, Revised Section 508, and EN 301 549, criterion by criterion, with known gaps (based on VPAT® 2.5Rev INT)
 - [Blog](${site}/blog/): Updates and news
 - [Changelog](${site}/changelog/): Release notes

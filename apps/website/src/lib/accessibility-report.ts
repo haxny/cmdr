@@ -350,7 +350,7 @@ const wcagA: CriterionRow[] = [
     level: 'A',
     conformance: 'partially-supports',
     remark:
-      'Dialogs, Settings controls, tabs, the command palette, the queue, and menus expose their name, role, and state, and Search results and the Settings sidebar convey the highlighted item as you arrow. The file list doesn\'t convey which file the cursor is on or which files are marked, and the volume chooser button isn\'t exposed as a control. If VoiceOver confirms the file list is silent, this row becomes "Does not support".',
+      'Dialogs, Settings controls, tabs, the command palette, the queue, and menus expose their name, role, and state, and Search results and the Settings sidebar convey the highlighted item as you arrow. The file list doesn\'t convey which file the cursor is on or which files are marked, and the volume switcher button isn\'t exposed as a control. If VoiceOver confirms the file list is silent, this row becomes "Does not support".',
     issues: [437, 267],
     pending: ['V1', 'V3', 'V6', 'V7', 'V10'],
   },
@@ -1180,7 +1180,7 @@ export const gapIssues: { number: number; title: string }[] = [
       "Tab reordering needs a drag, some click targets are small, tooltips can't be hovered, viewer keys can't be remapped, and app zoom stops at 150%",
   },
   { number: 443, title: "No guide to Cmdr's accessibility features yet" },
-  { number: 267, title: 'In-app menus (volume chooser, favorites) under VoiceOver' },
+  { number: 267, title: 'In-app menus (volume switcher, favorites) under VoiceOver' },
 ]
 
 /** The screen-reader checks still to run. Each one's rows are the rows whose `pending` names it. */
@@ -1197,7 +1197,7 @@ export const voiceOverChecks: { id: VoiceOverCheck; what: string }[] = [
   { id: 'V7', what: "Settings: section names, a control's label and value, and the new value after a change." },
   { id: 'V8', what: 'Delete confirmation: title, message, and buttons, and pressing a button works.' },
   { id: 'V9', what: 'Notifications: one is read out without moving focus.' },
-  { id: 'V10', what: 'In-app menus (volume chooser, favorites): rows are read while arrowing.' },
+  { id: 'V10', what: 'In-app menus (volume switcher, favorites): rows are read while arrowing.' },
   { id: 'V11', what: 'Read text: an error message and a text file in the viewer are read in full.' },
   { id: 'V12', what: "Reading order: VoiceOver's order in a dialog and in Settings matches the screen." },
 ]

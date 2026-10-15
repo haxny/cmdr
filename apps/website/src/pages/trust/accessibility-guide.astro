@@ -1,0 +1,173 @@
+---
+// The user-facing accessibility guide: which accessibility features Cmdr has, how to turn each one on,
+// the known gaps, and how to get help. Opened from Help > Accessibility guide in the app
+// (`help.accessibility`), and linked from `/trust/accessibility`, the criterion-by-criterion
+// conformance report. Every feature claim here must be true in the app's code; the gap list is the
+// report's `gapIssues` (`src/lib/accessibility-report.ts`), so a closed gap leaves both pages at once.
+// "New in 0.53.0" marks features that aren't in 0.52.0; drop the marks once 0.53.0 has shipped for a
+// while. `<DevTodo>` callouts are David's open tasks and render only in `pnpm dev`.
+import LegalLayout from '../../layouts/LegalLayout.astro'
+import DevTodo from '../../components/DevTodo.astro'
+import { gapIssues } from '../../lib/accessibility-report'
+
+const repo = 'https://github.com/vdavid/cmdr'
+const issueUrl = (n: number) => `${repo}/issues/${n}`
+
+// #443 is this page itself.
+const gaps = gapIssues.filter((issue) => issue.number !== 443)
+
+const toc = [
+    { id: 'keyboard', label: 'Use Cmdr from the keyboard' },
+    { id: 'screen-readers', label: 'Screen readers' },
+    { id: 'seeing', label: 'Text size, zoom, and colors' },
+    { id: 'motion', label: 'Motion and transparency' },
+    { id: 'notifications', label: 'Time to read notifications' },
+    { id: 'gaps', label: 'Known gaps' },
+    { id: 'help', label: 'Get help' },
+]
+---
+
+<LegalLayout
+    title="Accessibility guide"
+    description="Cmdr's accessibility features and how to turn them on: keyboard-only use, VoiceOver, text size and zoom, light and dark mode, Reduce motion, and Reduce transparency. Plus the known gaps, and how to get help."
+    lastUpdated="2026-10-15"
+>
+    <DevTodo>
+        Draft copy, written by an agent: review all of it. Also decide (1) whether to promise a reply time in "Get
+        help", and (2) whether to keep the "New in 0.53.0" marks if this page goes live before 0.53.0 ships.
+    </DevTodo>
+
+    <p>
+        Cmdr is keyboard-first, and it follows your macOS accessibility settings. This page lists what works today, how
+        to turn it on, what's still missing, and how to get help. For a criterion-by-criterion view (WCAG 2.2, Section
+        508, EN 301 549), see the <a href="/trust/accessibility">accessibility conformance report</a>.
+    </p>
+
+    <nav aria-label="On this page">
+        <ul>
+            {
+                toc.map((item) => (
+                    <li>
+                        <a href={`#${item.id}`}>{item.label}</a>
+                    </li>
+                ))
+            }
+        </ul>
+    </nav>
+
+    <h2 id="keyboard">Use Cmdr from the keyboard</h2>
+    <p>Everything core in Cmdr works without a mouse.</p>
+    <ul>
+        <li>
+            <strong>Every action has a shortcut</strong>, and you can change any of them in Settings &gt; Keyboard
+            shortcuts. Help &gt; Keyboard shortcuts lists them all in one window.
+        </li>
+        <li>
+            <strong>Command palette</strong>: press ⌘⇧P (Command-Shift-P) and type to find any command by name.
+        </li>
+        <li><strong>Switch panes</strong>: press Tab to move between the left and right file lists.</li>
+        <li>
+            <strong>Reach the pane controls</strong>: press ⌃F5 (Control-F5) to move focus to the focused pane's tabs,
+            location bar, and sort buttons. Arrow keys move between them, and Escape takes you back to the files. New in
+            0.53.0.
+        </li>
+        <li>
+            <strong>Reach the notifications</strong>: press ⌃F6 (Control-F6) to move focus to the notifications and
+            their buttons, like Undo. Arrow keys move between them, and Escape takes you back. New in 0.53.0.
+        </li>
+        <li>
+            <strong>Undo a move to trash</strong> any time from Edit &gt; Undo move to trash, after its notification is
+            gone. New in 0.53.0.
+        </li>
+        <li>
+            <strong>Full Keyboard Access</strong>: in the main window, Tab switches panes, so macOS Full Keyboard Access
+            doesn't move through the pane controls. Use ⌃F5 for those. Menus are native macOS menus, so they work as
+            usual.
+        </li>
+    </ul>
+
+    <h2 id="screen-readers">Screen readers</h2>
+    <p>
+        Cmdr works with VoiceOver through the macOS accessibility interface, and VoiceOver's own keyboard commands pass
+        through.
+    </p>
+    <ul>
+        <li>
+            <strong>Works today</strong>: dialogs, Settings, and forms are built for screen readers, and dialogs keep
+            and return focus correctly. Menus are native, so VoiceOver reads them like any other
+            app's. Notifications are read out without moving your focus (new in 0.53.0).
+        </li>
+        <li>
+            <strong>Not yet</strong>: the file list doesn't tell VoiceOver which file the cursor is on or which files
+            are marked (<a href={issueUrl(437)}>#437</a>). That's the biggest gap.
+        </li>
+        <li>
+            <strong>Still to test</strong>: a full hands-on VoiceOver test is pending. The
+            <a href="/trust/accessibility#pending">conformance report</a> lists what it covers and gets updated with
+            the results.
+        </li>
+    </ul>
+
+    <h2 id="seeing">Text size, zoom, and colors</h2>
+    <ul>
+        <li>
+            <strong>Text size</strong>: set it from 75% to 150% in Settings &gt; Appearance &gt; Zoom and density &gt;
+            Text size, or with ⌘+ and ⌘− (Command-plus and Command-minus; ⌘0 resets it). It scales the whole app, rows
+            included, and adds to the macOS text size in System Settings &gt; Accessibility, so text can go past 200%.
+        </li>
+        <li><strong>macOS Zoom</strong> works with Cmdr like with any other app.</li>
+        <li>
+            <strong>Light and dark mode</strong>: Settings &gt; Appearance &gt; Theme mode. Pick Light, Dark, or
+            System to follow macOS.
+        </li>
+        <li>
+            <strong>System font and accent color</strong>: Cmdr uses the macOS system font and your accent color.
+        </li>
+        <li>
+            <strong>Contrast</strong>: text contrast is checked automatically in light and dark mode, with every macOS
+            accent color. Increase contrast in macOS only changes the pane tints for now.
+        </li>
+    </ul>
+
+    <h2 id="motion">Motion and transparency</h2>
+    <ul>
+        <li>
+            <strong>Reduce motion</strong>: turn it on in System Settings &gt; Accessibility &gt; Display, and Cmdr's
+            activity indicators, like spinners, stop moving. Cmdr has no flashing content, and no audio or video.
+        </li>
+        <li>
+            <strong>Reduce transparency</strong>: turn it on in the same place, and Cmdr's frosted-glass surfaces turn
+            solid.
+        </li>
+    </ul>
+
+    <h2 id="notifications">Time to read notifications</h2>
+    <p>
+        Notifications go away after a few seconds by default. To keep them up until you close them, turn on Settings
+        &gt; Behavior &gt; Notifications &gt; "Keep notifications until I close them" (new in 0.53.0). A notification
+        also stays while your pointer or keyboard focus is on it.
+    </p>
+
+    <h2 id="gaps">Known gaps</h2>
+    <p>
+        Cmdr doesn't fully meet WCAG 2.2 Level AA yet. These open issues track what's missing, and each one is public,
+        so you can follow the fix:
+    </p>
+    <ul>
+        {
+            gaps.map((issue) => (
+                <li>
+                    <a href={issueUrl(issue.number)}>#{issue.number}</a>: {issue.title}
+                </li>
+            ))
+        }
+    </ul>
+
+    <h2 id="help">Get help</h2>
+    <p>
+        Need something to work differently, or hit a wall? Write to
+        <a href="mailto:hello@getcmdr.com">hello@getcmdr.com</a>, or use Help &gt; Send feedback in the app.
+        Accessibility questions and reports are welcome, and every one gets an answer. If something blocks you, say
+        what you use (for example VoiceOver, Zoom, or a switch device) and what you tried, so the fix can target it.
+    </p>
+</LegalLayout>
