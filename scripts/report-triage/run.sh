@@ -54,8 +54,9 @@ trap 'rm -rf -- "$work/bundles"' EXIT
 # finds no startup files to read (verified on the M1, Claude Code 2.1.299, 2026-10-14).
 #
 # A run gets 90 minutes, then SIGALRM stops it (perl's `alarm` survives the `exec`; macOS ships no `timeout`). Without
-# it, a run whose API connection dropped waits forever: the 2026-10-15 run sat 4.5 hours on two closed sockets, and
-# launchd never starts the next day's run while one is still going.
+# it, a stalled run waits forever, and launchd never starts the next day's run while one is still going: the 2026-10-15
+# run sat 4.5 hours at startup with no CPU (the cause was the launchd job's `ProcessType`, see the plist in the infra
+# repo's `m1mbp/ansible/roles/report_triage`).
 limit_seconds=5400
 status=0
 env -i \
