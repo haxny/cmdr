@@ -16,6 +16,9 @@ rule into `translation-principles.md` or `translator-instructions.md`), then del
   size); add it to `size`'s `notMatch`. ru carries an `exceptions` entry meanwhile. (ru)
 - `git` is a product name the descriptions say to keep, but it isn't in `BRAND_WORDS`
   (`apps/desktop/scripts/i18n-catalog-lib.ts`), so nothing enforces it.
+- `fileExplorer.list.rowGitStatus`: the description says `{status}` arrives "already translated", but `labelFor` in
+  `status-column.ts` returns hardcoded English (`Modified`, `Untracked`), also used as the Git cell's tooltip and aria.
+  Move those nine words into the catalog.
 
 - `fileExplorer.network.browser.removeHostConfirm`, `.hostRemoved`, `.hostRemoveFailed`: descriptions (and key names)
   still say "remove" while the English says "Forget". Say forget, and that the host is a saved server.

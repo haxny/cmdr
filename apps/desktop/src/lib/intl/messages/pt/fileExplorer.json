@@ -63,6 +63,10 @@
   "@fileExplorer.pane.filterMatches": {
     "sourceHash": "22e1cd2"
   },
+  "fileExplorer.pane.filterCleared": "{count, plural, =0 {Filtro limpo} one {Filtro limpo, {countText} nome} many {Filtro limpo, {countText} nomes} other {Filtro limpo, {countText} nomes}}",
+  "@fileExplorer.pane.filterCleared": {
+    "sourceHash": "f63111f"
+  },
   "fileExplorer.pane.searchResultsLocation": "Resultados da busca",
   "@fileExplorer.pane.searchResultsLocation": {
     "sourceHash": "e978b00"
@@ -971,6 +975,10 @@
   "@fileExplorer.list.parentRowName": {
     "sourceHash": "158f5a0"
   },
+  "fileExplorer.list.parentRowSize": "esta pasta {size}",
+  "@fileExplorer.list.parentRowSize": {
+    "sourceHash": "a7a54c8"
+  },
   "fileExplorer.list.rowKind.folder": "pasta",
   "@fileExplorer.list.rowKind.folder": {
     "sourceHash": "034a006"
@@ -990,6 +998,10 @@
   "fileExplorer.list.rowModified": "última modificação: {date}",
   "@fileExplorer.list.rowModified": {
     "sourceHash": "974427b"
+  },
+  "fileExplorer.list.rowGitStatus": "{status} no git",
+  "@fileExplorer.list.rowGitStatus": {
+    "sourceHash": "8c3bdc9"
   },
   "fileExplorer.dirSize.updatingIndexTooltip": "Atualizando o índice: o tamanho pode mudar.",
   "@fileExplorer.dirSize.updatingIndexTooltip": {

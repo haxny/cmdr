@@ -63,6 +63,10 @@
   "@fileExplorer.pane.filterMatches": {
     "sourceHash": "22e1cd2"
   },
+  "fileExplorer.pane.filterCleared": "{count, plural, =0 {Filter gewist} one {Filter gewist, {countText} naam} other {Filter gewist, {countText} namen}}",
+  "@fileExplorer.pane.filterCleared": {
+    "sourceHash": "f63111f"
+  },
   "fileExplorer.pane.searchResultsLocation": "Zoekresultaten",
   "@fileExplorer.pane.searchResultsLocation": {
     "sourceHash": "e978b00"
@@ -973,6 +977,10 @@
   "@fileExplorer.list.parentRowName": {
     "sourceHash": "158f5a0"
   },
+  "fileExplorer.list.parentRowSize": "deze map {size}",
+  "@fileExplorer.list.parentRowSize": {
+    "sourceHash": "a7a54c8"
+  },
   "fileExplorer.list.rowKind.folder": "map",
   "@fileExplorer.list.rowKind.folder": {
     "sourceHash": "034a006"
@@ -992,6 +1000,11 @@
   "fileExplorer.list.rowModified": "gewijzigd {date}",
   "@fileExplorer.list.rowModified": {
     "sourceHash": "974427b"
+  },
+  "fileExplorer.list.rowGitStatus": "{status} in git",
+  "@fileExplorer.list.rowGitStatus": {
+    "sourceHash": "8c3bdc9",
+    "sameAsSourceJustification": "Dutch says it the same way: “in” is the Dutch preposition, and git stays lowercase as in nl’s other git copy (fileExplorer.git.portalIntro.title)."
   },
   "fileExplorer.dirSize.updatingIndexTooltip": "Index wordt bijgewerkt: grootte kan veranderen.",
   "@fileExplorer.dirSize.updatingIndexTooltip": {

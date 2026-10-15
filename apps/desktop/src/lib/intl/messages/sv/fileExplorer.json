@@ -63,6 +63,10 @@
   "@fileExplorer.pane.filterMatches": {
     "sourceHash": "22e1cd2"
   },
+  "fileExplorer.pane.filterCleared": "{count, plural, =0 {Filtret rensat} one {Filtret rensat, {countText} namn} other {Filtret rensat, {countText} namn}}",
+  "@fileExplorer.pane.filterCleared": {
+    "sourceHash": "f63111f"
+  },
   "fileExplorer.pane.searchResultsLocation": "Sökresultat",
   "@fileExplorer.pane.searchResultsLocation": {
     "sourceHash": "e978b00"
@@ -970,6 +974,10 @@
   "@fileExplorer.list.parentRowName": {
     "sourceHash": "158f5a0"
   },
+  "fileExplorer.list.parentRowSize": "den här mappen {size}",
+  "@fileExplorer.list.parentRowSize": {
+    "sourceHash": "a7a54c8"
+  },
   "fileExplorer.list.rowKind.folder": "mapp",
   "@fileExplorer.list.rowKind.folder": {
     "sourceHash": "034a006"
@@ -989,6 +997,10 @@
   "fileExplorer.list.rowModified": "ändrad {date}",
   "@fileExplorer.list.rowModified": {
     "sourceHash": "974427b"
+  },
+  "fileExplorer.list.rowGitStatus": "{status} i git",
+  "@fileExplorer.list.rowGitStatus": {
+    "sourceHash": "8c3bdc9"
   },
   "fileExplorer.dirSize.updatingIndexTooltip": "Uppdaterar index: storleken kan ändras.",
   "@fileExplorer.dirSize.updatingIndexTooltip": {
