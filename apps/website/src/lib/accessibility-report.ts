@@ -179,8 +179,8 @@ const wcagA: CriterionRow[] = [
     level: 'A',
     conformance: 'partially-supports',
     remark:
-      "Every core action has a keyboard shortcut and a command palette entry: switching panes, navigating, marking, opening, every file operation, tabs, sorting, view modes, and Settings. Two gaps: reordering tabs or moving a tab to the other pane needs a mouse drag, and the buttons in notifications (including Undo after moving files to the trash) can't be reached from the keyboard.",
-    issues: [439, 441],
+      'Every core action has a keyboard shortcut and a command palette entry: switching panes, navigating, marking, opening, every file operation, tabs, sorting, view modes, and Settings. "Move focus to the notifications" reaches the buttons in notifications, and Undo after moving files to the trash is also in the Edit menu. One gap: reordering tabs or moving a tab to the other pane needs a mouse drag.',
+    issues: [441],
   },
   {
     id: '2.1.2',
@@ -202,10 +202,9 @@ const wcagA: CriterionRow[] = [
     id: '2.2.1',
     name: 'Timing adjustable',
     level: 'A',
-    conformance: 'partially-supports',
+    conformance: 'supports',
     remark:
-      "The only time limits are notifications, which close after 4–10 seconds. Hovering over one pauses it, but keyboard focus doesn't, and no setting makes them stay longer. The 15-second countdown when quitting during a file operation is essential: it follows the macOS logout deadline.",
-    issues: [439],
+      "The only time limits are notifications, which close after 4–10 seconds. Hovering over one or moving keyboard focus into it holds it, and a setting keeps every notification until it's closed. The 15-second countdown when quitting during a file operation is essential: it follows the macOS logout deadline.",
   },
   {
     id: '2.2.2',
@@ -476,10 +475,9 @@ const wcagAA: CriterionRow[] = [
     id: '2.4.11',
     name: 'Focus not obscured (minimum)',
     level: 'AA',
-    conformance: 'partially-supports',
+    conformance: 'supports',
     remark:
-      'Dialogs open in the middle of the window. Notifications appear at the top right and can cover the first rows of the right pane, including the cursor, until they close.',
-    issues: [439],
+      'Dialogs open in the middle of the window. Notifications appear at the top right and move to the bottom right while they would cover the row the keyboard is on.',
   },
   {
     id: '2.5.7',
@@ -534,8 +532,7 @@ const wcagAA: CriterionRow[] = [
     level: 'AA',
     conformance: 'supports',
     remark:
-      'Deleting always asks first, and deleting permanently asks even when confirmations are turned off. Overwrites and name clashes open a dialog, moving to the trash can be undone, and copies and moves can be rolled back. (The Undo after moving to the trash is mouse-only today.)',
-    issues: [439],
+      'Deleting always asks first, and deleting permanently asks even when confirmations are turned off. Overwrites and name clashes open a dialog, moving to the trash can be undone (from its notification or the Edit menu), and copies and moves can be rolled back.',
   },
   {
     id: '3.3.8',
@@ -549,10 +546,10 @@ const wcagAA: CriterionRow[] = [
     id: '4.1.3',
     name: 'Status messages',
     level: 'AA',
-    conformance: 'partially-supports',
+    conformance: 'not-evaluated',
+    codeReview: 'supports',
     remark:
-      'Notifications, progress during file operations, folder errors, an empty folder, a slow load, the number of marked files, and the result counts of Search, the file filter, the command palette, and the Settings search are announced. Notifications can be announced late, and some urgent ones politely.',
-    issues: [439],
+      'Notifications, progress during file operations, folder errors, an empty folder, a slow load, the number of marked files, and the result counts of Search, the file filter, the command palette, and the Settings search are announced. Warnings and failures in notifications are announced right away, everything else politely.',
     pending: ['V4', 'V6', 'V9'],
   },
 ]
@@ -590,8 +587,8 @@ const section508Ch3: CriterionRow[] = [
     name: 'With limited manipulation',
     conformance: 'partially-supports',
     remark:
-      'Everything core works from the keyboard with remappable shortcuts, and no shortcut needs more than modifiers plus one key, so Sticky Keys works. Reordering tabs needs a drag, notification buttons need a pointer, and some click targets are smaller than 24 pixels.',
-    issues: [439, 441],
+      'Everything core works from the keyboard with remappable shortcuts, and no shortcut needs more than modifiers plus one key, so Sticky Keys works. Reordering tabs needs a drag, and some click targets are smaller than 24 pixels.',
+    issues: [441],
   },
   {
     id: '302.8',
@@ -602,10 +599,9 @@ const section508Ch3: CriterionRow[] = [
   {
     id: '302.9',
     name: 'With limited language, cognitive, and learning abilities',
-    conformance: 'partially-supports',
+    conformance: 'supports',
     remark:
-      'Plain, conversational wording, confirmations before risky actions, undo and rollback, and the same menus everywhere. Notifications close before some users can act on them.',
-    issues: [439],
+      "Plain, conversational wording, confirmations before risky actions, undo and rollback, the same menus everywhere, and a setting that keeps notifications until they're closed.",
   },
 ]
 
@@ -742,9 +738,9 @@ const section508Ch5: CriterionRow[] = [
   {
     id: '502.3.14',
     name: 'Event notification',
-    conformance: 'partially-supports',
-    remark: 'See WCAG 4.1.3: status changes are announced, notifications sometimes late.',
-    issues: [439],
+    conformance: 'not-evaluated',
+    codeReview: 'supports',
+    remark: 'See WCAG 4.1.3.',
     pending: ['V4'],
   },
   {
@@ -859,7 +855,7 @@ const enClause4: CriterionRow[] = [
     name: 'Usage with limited manipulation or strength',
     conformance: 'partially-supports',
     remark: 'See Section 508 302.7.',
-    issues: [439, 441],
+    issues: [441],
   },
   {
     id: '4.2.8',
@@ -871,9 +867,8 @@ const enClause4: CriterionRow[] = [
   {
     id: '4.2.10',
     name: 'Usage with limited cognition, language or learning',
-    conformance: 'partially-supports',
+    conformance: 'supports',
     remark: 'See Section 508 302.9.',
-    issues: [439],
   },
   {
     id: '4.2.11',
@@ -1045,9 +1040,9 @@ const enClause11: CriterionRow[] = [
   {
     id: '11.5.2.15',
     name: 'Change notification',
-    conformance: 'partially-supports',
+    conformance: 'not-evaluated',
+    codeReview: 'supports',
     remark: 'See WCAG 4.1.3.',
-    issues: [439],
     pending: ['V4', 'V9'],
   },
   {
@@ -1178,7 +1173,6 @@ export const standards: StandardSection[] = [
 /** The open issues behind the report's gaps, most important first. */
 export const gapIssues: { number: number; title: string }[] = [
   { number: 437, title: "The file list doesn't yet speak to VoiceOver: cursor, marked files, position, and file kind" },
-  { number: 439, title: "Notifications can't be reached or kept from the keyboard, and Undo trash lives only in one" },
   { number: 440, title: 'The focused pane, marked files, and some focus rings rely on faint color' },
   {
     number: 441,

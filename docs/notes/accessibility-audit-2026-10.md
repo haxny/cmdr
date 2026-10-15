@@ -31,18 +31,18 @@ downloaded INT `.docx` (itic.org, `VPAT2.5RevINT`).
 
 Counts per table (rows marked "see WCAG section" aren't counted):
 
-- **WCAG 2.2 Level A (32)**: 19 Supports, 7 Partially supports, 0 Does not support, 6 Not applicable (3.3.1 moved to
-  Supports with #438, 2026-10-15).
-- **WCAG 2.2 Level AA (24)**: 9 Supports, 10 Partially supports, 0 Does not support, 5 Not applicable (1.3.5 and 3.1.2
-  moved to Supports with #442, 2026-10-15).
-- **Section 508 chapter 3 (9)**: 4 Supports, 5 Partially supports.
-- **Section 508 chapter 5 (26)**: 9 Supports, 7 Partially supports, 10 Not applicable (502.3.6 moved to Supports with
-  #438, 2026-10-15).
+- **WCAG 2.2 Level A (32)**: 20 Supports, 6 Partially supports, 0 Does not support, 6 Not applicable (3.3.1 moved to
+  Supports with #438, 2.2.1 with #439, 2026-10-15).
+- **WCAG 2.2 Level AA (24)**: 11 Supports, 8 Partially supports, 0 Does not support, 5 Not applicable (1.3.5 and 3.1.2
+  moved to Supports with #442, 2.4.11 and 4.1.3 with #439, 2026-10-15).
+- **Section 508 chapter 3 (9)**: 5 Supports, 4 Partially supports (302.9 moved to Supports with #439, 2026-10-15).
+- **Section 508 chapter 5 (26)**: 10 Supports, 6 Partially supports, 10 Not applicable (502.3.6 moved to Supports with
+  #438, 502.3.14 with #439, 2026-10-15).
 - **Section 508 chapter 6 (5)**: 2 Supports, 2 Partially supports, 1 Not applicable.
-- **EN 301 549 clause 4 (11)**: 6 Supports, 5 Partially supports.
+- **EN 301 549 clause 4 (11)**: 7 Supports, 4 Partially supports (4.2.10 moved to Supports with #439, 2026-10-15).
 - **EN 301 549 clause 5 (11)**: 2 Supports, 9 Not applicable.
-- **EN 301 549 clause 11 (23)**: 8 Supports, 7 Partially supports, 8 Not applicable (11.5.2.8 moved to Supports with
-  #438, 2026-10-15).
+- **EN 301 549 clause 11 (23)**: 9 Supports, 6 Partially supports, 8 Not applicable (11.5.2.8 moved to Supports with
+  #438, 11.5.2.15 with #439, 2026-10-15).
 - **EN 301 549 clause 12 (5)**: 3 Supports, 2 Partially supports.
 - **Whole chapters/clauses not applicable**: 508 chapter 4 (hardware); EN 301 549 clauses 6 (two-way voice), 7 (video),
   8 (hardware), 9 (web: the app isn't web content; the website is assessed as documentation under 12.1.2), 10 (non-web
@@ -59,8 +59,8 @@ Top gaps, each with its issue:
    columns aren't exposed.
 2. **Cursors and status changes aren't announced** (#438, closed in code 2026-10-15, VoiceOver checks pending): the
    Search result cursor, the Settings sidebar, empty folders, selection counts, the license key error, progress text.
-3. **Toasts are mouse-first** (#439): focus doesn't pause them, no key reaches them, no setting keeps them, and Undo
-   trash exists only in a 10-second toast.
+3. **Toasts are mouse-first** (#439, closed in code 2026-10-15, VoiceOver checks pending): focus didn't pause them, no
+   key reached them, no setting kept them, and Undo trash existed only in a 10-second toast.
 4. **State cues rely on faint color** (#440): which pane is focused (about 1.09:1), marked rows (hue only), focus rings
    under 3:1 with yellow, orange, green, or Cmdr gold accents in light mode, field borders 1.36:1.
 5. **Pointer and keyboard leftovers** (#441): tab reorder is drag-only, sub-24px targets, tooltips not hoverable, viewer
@@ -107,20 +107,21 @@ native menu bar and context menus.
 - **1.4.2 Audio control**: Not applicable. Cmdr plays no audio.
 - **2.1.1 Keyboard**: Partially supports. Every core action is a command with a shortcut and a command palette entry:
   pane switch, navigation, marking, open, go up, go to path, volume chooser, tabs, sort, divider, view mode, all file
-  operations, settings. Gaps: reordering tabs or moving a tab to the other pane needs a drag, and toast actions
-  (including Undo trash) can't be reached from the keyboard. Evidence: `lib/commands/sources/*.ts`,
-  `tabs/tab-drag-controller.svelte.ts`, `ui/toast/ToastItem.svelte`, `delete/TrashCompleteToastContent.svelte`. #439,
-  #441.
+  operations, settings. "Move focus to the notifications" (⌃F6) reaches every toast's buttons, and Undo trash is also
+  Edit > Undo move to trash (#439, 2026-10-15). Gap: reordering tabs or moving a tab to the other pane needs a drag.
+  Evidence: `lib/commands/sources/*.ts`, `tabs/tab-drag-controller.svelte.ts`, `ui/toast/toast-focus.ts`,
+  `delete/trash-undo.ts` (`undoLastTrash`). #441.
 - **2.1.2 No keyboard trap**: Supports. Dialog focus traps always release on Escape or their buttons; nested traps
   stack. Evidence: `lib/ui/focus-trap.ts`, `ModalDialog.svelte`, lint `cmdr/dialog-needs-focus-trap`.
 - **2.1.4 Character key shortcuts**: Partially supports. File-list single keys (`*`, `+`, `-`) are rebindable and active
   only with list focus; type-to-jump only acts with pane focus. The viewer's single-key shortcuts (`W`, `F`, `0`–`3`,
   `+`/`=`/`-`) work window-wide and can't be remapped or turned off. Evidence: `shortcuts/shortcuts-store.ts`,
   `pane/type-to-jump-keys.ts`, `routes/viewer/viewer-keyboard.ts`, `viewer-view-mode.ts`, `MediaImageView.svelte`. #441.
-- **2.2.1 Timing adjustable**: Partially supports. The only time limits are toasts (4 s default, 7–10 s for some). Hover
-  pauses them; keyboard focus doesn't, and no setting extends them. The quit-while-busy 15 s countdown falls under the
-  essential exception (macOS logout deadline). Evidence: `ui/toast/toast-store.svelte.ts`, `ToastItem.svelte`,
-  `lib/quit/QuitConfirmationDialog.svelte`. #439.
+- **2.2.1 Timing adjustable**: Supports. The only time limits are toasts (4 s default, 7–10 s for some). Hover and
+  keyboard focus hold them, and "Keep notifications until I close them" turns the timers off (#439, 2026-10-15). The
+  quit-while-busy 15 s countdown falls under the essential exception (macOS logout deadline). Evidence:
+  `ui/toast/ToastItem.svelte` (`updateHold`, `ToastItem.focus.test.ts`), `ToastContainer.svelte`
+  (`behavior.notifications.keepUntilClosed`), `lib/quit/QuitConfirmationDialog.svelte`.
 - **2.2.2 Pause, stop, hide**: Supports. Moving content is limited to activity indicators (spinners, shimmer, pulses),
   which stop under Reduce motion; the transfer tree's auto-follow pauses on user intent. No marquee or auto-updating
   feed. Evidence: `app-utilities.css`, `ui/ProgressBar.svelte`, `file-operations/transfer-tree/`.
@@ -222,9 +223,9 @@ native menu bar and context menus.
   so mouse users see it too), and the file cursor has an accent fill plus outline. Which pane holds focus is close to
   invisible in light mode (focused vs unfocused cursor about 1.09:1 with gold, 1.02:1 with Apple Yellow). Evidence:
   `app.css`, `app-field.css`, `app-file-list.css`. #440.
-- **2.4.11 Focus not obscured (minimum)**: Partially supports. Dialogs are modal and centered. Toasts are fixed at the
-  top right and can cover the right pane's first rows, cursor included, until they time out. Evidence:
-  `ui/toast/ToastContainer.svelte`. #439.
+- **2.4.11 Focus not obscured (minimum)**: Supports. Dialogs are modal and centered. Toasts sit at the top right and
+  move to the bottom right while they would cover the focused element's cursor row (`aria-activedescendant`) or the
+  focused element (#439, 2026-10-15). Evidence: `ui/toast/toast-placement.ts` (+ test), `ToastContainer.svelte`.
 - **2.5.7 Dragging movements**: Partially supports. The pane divider (double-click reset, ⌃⌥←/→), drag-and-drop copy and
   move (F5/F6, context menu, copy and paste) have alternatives; tab reordering and moving a tab to the other pane don't.
   Evidence: `PaneResizer.svelte`, `commands/sources/main-window.ts`, `tabs/tab-drag-controller.svelte.ts`. #441.
@@ -243,19 +244,21 @@ native menu bar and context menus.
   `docs/style-guide.md`.
 - **3.3.4 Error prevention (legal, financial, data)**: Supports. Delete always confirms, permanent delete confirms even
   with "skip confirmation" on, overwrites and rename collisions get conflict dialogs, trash is undoable, and copy and
-  move can be rolled back. (Undo trash's toast is mouse-only today, #439.) Evidence: `settings/definitions/behavior.ts`,
-  `DeleteDialog.svelte`, `TransferConflictDialog`, `RenameConflictDialog.svelte`,
-  `operation-log/RollbackControls.svelte`.
+  move can be rolled back. Undo trash is on its toast and in the Edit menu (#439, 2026-10-15), and the operation log
+  rolls back any journaled trash. Evidence: `settings/definitions/behavior.ts`, `DeleteDialog.svelte`,
+  `TransferConflictDialog`, `RenameConflictDialog.svelte`, `operation-log/RollbackControls.svelte`,
+  `delete/trash-undo.ts`.
 - **3.3.8 Accessible authentication (minimum)**: Supports. License key, API keys, and passwords accept paste; no
   cognitive tests. Evidence: no `onpaste` handlers in `apps/desktop/src`; `SettingPasswordInput.svelte`.
-- **4.1.3 Status messages**: Partially supports. Toasts use `status`/`alert`, the transfer phase banner and Search
-  result counts are polite live regions, listing errors are alerts. Since #438 (2026-10-15), each file pane's one live
-  region also says an empty folder, a slow load, the selection count, and the quick filter's match count (debounced, so
-  a burst says its end state), and the command palette and the Settings search say their result counts. Gap: the toast
-  live region mounts late with alerts nested in a polite region. EN and 508 don't apply this to software. Evidence:
-  `ToastContainer.svelte`, `TransferProgressDialog.svelte`, `QueryResults.svelte`, `pane/ErrorPane.svelte`,
+- **4.1.3 Status messages**: Supports. Toasts speak through two always-mounted sibling live regions, polite for status
+  and assertive for warnings and failures, with no region nested in another (#439, 2026-10-15). The transfer phase
+  banner and Search result counts are polite live regions, listing errors are alerts. Since #438 (2026-10-15), each file
+  pane's one live region also says an empty folder, a slow load, the selection count, and the quick filter's match count
+  (debounced, so a burst says its end state), and the command palette and the Settings search say their result counts.
+  EN and 508 don't apply this to software. Evidence: `ToastContainer.svelte` (`ToastContainer.vsr.svelte.test.ts`),
+  `ui/toast/toast-speech.ts`, `TransferProgressDialog.svelte`, `QueryResults.svelte`, `pane/ErrorPane.svelte`,
   `pane/pane-status-announcer.svelte.ts`, `ui/LiveAnnouncer.svelte`, `CommandPalette.svelte`, `SettingsSidebar.svelte`.
-  Pending VoiceOver check V4, V9. #439.
+  Pending VoiceOver check V4, V6, V9.
 
 ## Revised Section 508
 
@@ -271,12 +274,12 @@ native menu bar and context menus.
 - **302.5 With limited hearing**: Supports. Same as 302.4.
 - **302.6 Without speech**: Supports. No speech input needed.
 - **302.7 With limited manipulation**: Partially supports. Full keyboard operation with rebindable shortcuts and no
-  simultaneous-key requirement beyond modifiers (Sticky Keys works). Tab reorder is drag-only, toast actions are
-  pointer-only, and some targets are under 24 px. #439, #441.
+  simultaneous-key requirement beyond modifiers (Sticky Keys works). Toast actions are reachable with "Move focus to the
+  notifications" (#439, 2026-10-15). Tab reorder is drag-only, and some targets are under 24 px. #441.
 - **302.8 With limited reach and strength**: Supports. Software only; no physical reach.
-- **302.9 With limited language, cognitive, and learning abilities**: Partially supports. Plain, conversational copy
-  (`docs/style-guide.md`), confirmations, undo and rollback, consistent menus. Toasts time out before some users can act
-  on them. #439.
+- **302.9 With limited language, cognitive, and learning abilities**: Supports. Plain, conversational copy
+  (`docs/style-guide.md`), confirmations, undo and rollback, consistent menus, and a setting that keeps toasts until
+  they're closed (#439, 2026-10-15).
 
 ### Chapter 4: hardware
 
@@ -316,7 +319,7 @@ native menu bar and context menus.
   Pending VoiceOver check V1, V6. #437.
 - **502.3.13 Modification of focus cursor**: Partially supports. Assistive tech can move focus among standard controls;
   moving the VoiceOver cursor onto a file row likely doesn't move Cmdr's cursor. Pending VoiceOver check V1. #437.
-- **502.3.14 Event notification**: Partially supports. See WCAG 4.1.3. #439.
+- **502.3.14 Event notification**: Supports. See WCAG 4.1.3. Pending VoiceOver check V4.
 - **502.4 Platform accessibility features**: Not applicable. Applies to platforms.
 - **503.2 User preferences**: Partially supports. Honors system font, dark/light, accent color, Reduce transparency,
   Reduce motion, and macOS text size. The Reduce motion misses (settings sidebar jump, rename shake and zoom, boot
@@ -356,10 +359,10 @@ native menu bar and context menus.
 - **4.2.4 Usage without hearing**: Supports. No audio.
 - **4.2.5 Usage with limited hearing**: Supports. No audio.
 - **4.2.6 Usage with no or limited vocal capability**: Supports. No speech input.
-- **4.2.7 Usage with limited manipulation or strength**: Partially supports. See 508 302.7. #439, #441.
+- **4.2.7 Usage with limited manipulation or strength**: Partially supports. See 508 302.7. #441.
 - **4.2.8 Usage with limited reach**: Supports. Software only.
 - **4.2.9 Minimize photosensitive seizure triggers**: Supports. See WCAG 2.3.1.
-- **4.2.10 Usage with limited cognition, language or learning**: Partially supports. See 508 302.9. #439.
+- **4.2.10 Usage with limited cognition, language or learning**: Supports. See 508 302.9.
 - **4.2.11 Privacy**: Supports. Accessibility features don't expose private data; passwords and keys use masked fields
   and the Keychain.
 
@@ -402,7 +405,7 @@ native menu bar and context menus.
 - **11.5.2.13 Tracking of focus and selection attributes**: Partially supports. See 508 502.3.12; marked files aren't
   exposed as selected. #437.
 - **11.5.2.14 Modification of focus and selection attributes**: Partially supports. See 508 502.3.13. #437.
-- **11.5.2.15 Change notification**: Partially supports. See WCAG 4.1.3. #439.
+- **11.5.2.15 Change notification**: Supports. See WCAG 4.1.3. Pending VoiceOver check V4, V9.
 - **11.5.2.16 Modifications of states and properties**: Supports. See 508 502.3.2.
 - **11.5.2.17 Modifications of values and text**: Supports. See 508 502.3.5 and 502.3.9.
 - **11.6.1 User control of accessibility features**: Not applicable. Cmdr isn't platform software.
