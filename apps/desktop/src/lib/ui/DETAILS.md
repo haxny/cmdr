@@ -553,6 +553,13 @@ outside `[data-menu]` / `[data-menu-submenu]` while one is in the document, read
 menu opened is dropped too. This matches macOS, where an open menu owns the screen. Covered by `tooltip.test.ts` §
 "while a menu is open".
 
+**Pressing a trigger hides its tooltip, and a trigger with its popup open shows none.** Clicking the volume chip once
+opened its menu with the chip's "APFS" tooltip still drawn over it: the pointer never left the chip, so no `mouseleave`
+came. A `pointerdown` on the trigger hides its tooltip (and drops a pending show); keyboard activation is already
+covered by the global keydown dismiss. `showTooltip` also drops a show whose trigger says `aria-expanded="true"`, read
+at show time, so a menu button needs no `isOpen ? '' : text` param of its own. Covered by `tooltip.test.ts` § "when its
+trigger is pressed".
+
 ### InfoTip
 
 `InfoTip.svelte` packages the commonest `contentEl` shape: an info glyph whose whole job is to hold the long version of

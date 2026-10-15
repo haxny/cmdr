@@ -247,7 +247,7 @@
             bind:this={breadcrumbPopupRef}
             aria-expanded={breadcrumbPopup.isOpen}
             aria-label={tString('fileExplorer.navigation.volumeOptionsTooltip')}
-            use:tooltip={breadcrumbPopup.isOpen ? '' : tString('fileExplorer.navigation.volumeOptionsTooltip')}
+            use:tooltip={tString('fileExplorer.navigation.volumeOptionsTooltip')}
             onclick={(e: MouseEvent) => {
                 e.stopPropagation()
                 closeHeaderMenu()

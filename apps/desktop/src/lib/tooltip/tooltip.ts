@@ -279,12 +279,21 @@ function isBehindOpenMenu(triggerEl: HTMLElement): boolean {
   return document.querySelector(MENU_SURFACE_SELECTOR) !== null && triggerEl.closest(MENU_SURFACE_SELECTOR) === null
 }
 
+/**
+ * Whether the trigger has its own popup open (a menu button, `aria-expanded="true"`). Its tooltip
+ * describes the closed control and would draw over the popup it opened. Read at show time, so a
+ * show already pending when the popup opened is dropped too.
+ */
+function hasOpenPopup(triggerEl: HTMLElement): boolean {
+  return triggerEl.getAttribute('aria-expanded') === 'true'
+}
+
 function showTooltip(triggerEl: HTMLElement, param: TooltipParam): void {
   // The trigger may have been removed from the DOM during the show delay (e.g. a virtual-scroll row
   // recycled while hovered). Never show against a detached element: its rect is all-zero, which would
   // place the tooltip in the top-left corner.
   if (isTriggerDetached(triggerEl)) return
-  if (isBehindOpenMenu(triggerEl)) {
+  if (isBehindOpenMenu(triggerEl) || hasOpenPopup(triggerEl)) {
     if (openListener?.node === triggerEl) notifyClosed()
     return
   }
@@ -501,10 +510,18 @@ export function tooltip(node: HTMLElement, param: TooltipParam): ActionReturn<To
     hideTooltip()
   }
 
+  // Pressing the trigger acts on it, so the tooltip that explained it goes, pending show and all.
+  // The pointer stays put, so no `mouseleave` would ever hide it, and a menu the press opens would
+  // sit under it. Keyboard activation needs nothing here: the global keydown already hides.
+  const handlePointerDown = (): void => {
+    if (activeElement === node || timerNode === node) hideTooltip()
+  }
+
   node.addEventListener('mouseenter', handleMouseEnter)
   node.addEventListener('mouseleave', handleMouseLeave)
   node.addEventListener('focus', handleFocus)
   node.addEventListener('blur', handleBlur)
+  node.addEventListener('pointerdown', handlePointerDown)
 
   return {
     update(newParam: TooltipParam) {
@@ -526,6 +543,7 @@ export function tooltip(node: HTMLElement, param: TooltipParam): ActionReturn<To
       node.removeEventListener('mouseleave', handleMouseLeave)
       node.removeEventListener('focus', handleFocus)
       node.removeEventListener('blur', handleBlur)
+      node.removeEventListener('pointerdown', handlePointerDown)
 
       // Cancel a pending show-timer owned by this node. Svelte removes a virtual-scroll row's DOM node
       // without firing `mouseleave`, so without this the timer would fire later against a detached node

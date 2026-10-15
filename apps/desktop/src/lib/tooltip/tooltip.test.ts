@@ -149,6 +149,65 @@ describe('tooltip', () => {
     })
   })
 
+  // Regression: clicking the volume chip opened its menu while the chip's "APFS" tooltip stayed
+  // drawn over it. The pointer never left the chip, so nothing hid it.
+  describe('when its trigger is pressed', () => {
+    it('a press on the trigger hides its tooltip', () => {
+      const el = makeTrigger()
+      tooltip(el, 'APFS')
+      el.dispatchEvent(new MouseEvent('mouseenter'))
+      vi.advanceTimersByTime(500)
+      expect(document.querySelector('.cmdr-tooltip.visible')).not.toBeNull()
+
+      el.dispatchEvent(new PointerEvent('pointerdown'))
+
+      expect(document.querySelector('.cmdr-tooltip.visible')).toBeNull()
+    })
+
+    it('a press during the show delay drops the pending show', () => {
+      const el = makeTrigger()
+      tooltip(el, 'APFS')
+      el.dispatchEvent(new MouseEvent('mouseenter'))
+      el.dispatchEvent(new PointerEvent('pointerdown'))
+      vi.advanceTimersByTime(500)
+
+      expect(document.querySelector('.cmdr-tooltip.visible')).toBeNull()
+    })
+
+    it('a trigger whose popup is open shows nothing, on hover or focus', () => {
+      const el = makeTrigger()
+      tooltip(el, 'APFS')
+      el.setAttribute('aria-expanded', 'true')
+      el.dispatchEvent(new MouseEvent('mouseenter'))
+      vi.advanceTimersByTime(500)
+      el.dispatchEvent(new MouseEvent('mouseleave'))
+      el.dispatchEvent(new FocusEvent('focus'))
+      vi.advanceTimersByTime(500)
+
+      expect(document.querySelector('.cmdr-tooltip.visible')).toBeNull()
+    })
+
+    it('a popup opening during the show delay drops the pending show', () => {
+      const el = makeTrigger()
+      tooltip(el, 'APFS')
+      el.dispatchEvent(new FocusEvent('focus'))
+      el.setAttribute('aria-expanded', 'true')
+      vi.advanceTimersByTime(500)
+
+      expect(document.querySelector('.cmdr-tooltip.visible')).toBeNull()
+    })
+
+    it('shows again once the popup closed', () => {
+      const el = makeTrigger()
+      tooltip(el, 'APFS')
+      el.setAttribute('aria-expanded', 'false')
+      el.dispatchEvent(new MouseEvent('mouseenter'))
+      vi.advanceTimersByTime(500)
+
+      expect(document.querySelector('.cmdr-tooltip.visible')?.textContent).toBe('APFS')
+    })
+  })
+
   describe('hides on keypress', () => {
     it('hides a visible tooltip when a key is pressed', () => {
       const el = makeTrigger()
