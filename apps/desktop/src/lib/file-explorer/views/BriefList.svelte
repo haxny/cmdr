@@ -1212,7 +1212,9 @@
         /* Rows are transparent; pane bg lives on `.file-pane > .content`.
            See FullList.svelte / FilePane.svelte for the rationale. */
         white-space: nowrap;
-        overflow: hidden;
+        /* ❌ No `overflow: hidden` here: with the cursor's `border-radius`, it clipped the
+           marked-file bar (`app-file-list.css`) to the rounded corners. The name clips
+           itself, and the icon and tag dots fit `MIN_COLUMN_WIDTH`, as in `FullList`. */
     }
 
     /* TCC-restricted rows: italic + the quiet text token to match the
