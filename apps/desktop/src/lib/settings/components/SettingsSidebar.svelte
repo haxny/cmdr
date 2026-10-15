@@ -113,6 +113,16 @@
     function optionId(path: string[]): string {
         return `${uid}-section-${String(stableIndex.indexOf(path.join('/')))}`
     }
+    /**
+     * A section's place in the list ↓ walks (subsections included), 1-based. Every option says it
+     * (`aria-posinset` + `aria-setsize`): VoiceOver counted the first row it landed on itself and
+     * read every later one by name alone.
+     */
+    function positionOf(path: string[]): number {
+        const key = path.join('/')
+        return allSections.findIndex((s) => s.path.join('/') === key) + 1
+    }
+
     const selectedOptionId = $derived.by(() => {
         const index = findSelectedIndex()
         return index < 0 ? undefined : optionId(allSections[index].path)
@@ -281,6 +291,8 @@
                             class="section-item"
                             class:selected={isSelected(entry.node.path)}
                             id={optionId(entry.node.path)}
+                            aria-posinset={positionOf(entry.node.path)}
+                            aria-setsize={allSections.length}
                             onclick={() => {
                                 onSectionSelect(entry.node.path)
                             }}
@@ -300,6 +312,8 @@
                                             class="section-item subsection"
                                             class:selected={isSelected(subsection.path)}
                                             id={optionId(subsection.path)}
+                                            aria-posinset={positionOf(subsection.path)}
+                                            aria-setsize={allSections.length}
                                             onclick={() => {
                                                 onSectionSelect(subsection.path)
                                             }}
@@ -321,6 +335,8 @@
                         class="section-item"
                         class:selected={isSelected(entry.path)}
                         id={optionId(entry.path)}
+                        aria-posinset={positionOf(entry.path)}
+                        aria-setsize={allSections.length}
                         onclick={() => {
                             onSectionSelect(entry.path)
                         }}

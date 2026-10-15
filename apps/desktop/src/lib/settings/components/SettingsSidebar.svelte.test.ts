@@ -120,6 +120,25 @@ describe('SettingsSidebar: the section cursor', () => {
     const top = [...listbox.querySelectorAll('[role="option"]')].find((el) => el.textContent.trim() === 'Appearance')
     expect(top?.closest('[role="group"]')).toBeNull()
   })
+
+  // Regression: VoiceOver read "(2 of 15)" on the first row it landed on (its own count) and
+  // then the name alone for every row after it (listening run, 2026-10-15). Every option
+  // carries its place in the list ↓ walks, subsections included.
+  it('gives every section its position in the walk, renumbered when a search narrows it', () => {
+    const { listbox, props } = setup()
+    const positions = () =>
+      [...listbox.querySelectorAll('[role="option"]')].map(
+        (el) => `${el.getAttribute('aria-posinset') ?? '?'}/${el.getAttribute('aria-setsize') ?? '?'}`,
+      )
+    const all = positions()
+    expect(all.length).toBeGreaterThan(2)
+    expect(all).toEqual(all.map((_, i) => `${String(i + 1)}/${String(all.length)}`))
+
+    props.searchQuery = 'theme'
+    props.matchingSections = new Set(['Appearance', 'Appearance/Colors and formats'])
+    flushSync()
+    expect(positions()).toEqual(['1/2', '2/2'])
+  })
 })
 
 describe('SettingsSidebar: search results', () => {

@@ -137,5 +137,8 @@ back. They share the `SettingsSection` wrapper styling and the same registry hoo
   the active descendant doesn't jump to a different id for the same row.
 - **Subsections sit in a `role="group"` named for their section.** A listbox may hold only options and groups, and
   `aria-level` isn't allowed on an option, so the group is how "Colors and formats" says it belongs to Appearance.
+- **Every option carries `aria-posinset` / `aria-setsize`** over the visible list ↓ walks (subsections included,
+  renumbered by a search). Left to itself, VoiceOver counted only the first row it landed on ("2 of 15") and read every
+  later row by name alone (verified on macOS 27.0 + VoiceOver, listening run, 2026-10-15).
 - **A search says how many sections it left** ("3 sections match", "No settings match") through a `LiveAnnouncer`, after
   the input's 200 ms debounce, so a word typed is one message. Clearing the search says nothing.
