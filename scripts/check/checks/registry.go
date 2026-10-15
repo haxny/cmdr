@@ -1585,16 +1585,18 @@ var AllChecks = []CheckDefinition{
 		Run:             RunFileLength,
 	},
 	{
-		ID:              "claude-md-reminder",
-		DisplayName:     "CLAUDE.md reminder",
-		App:             AppOther,
-		Tech:            "📏 Metrics",
-		NotInCI:         "warn-only metric; it can never fail, so a CI step would be noise",
-		DependsOn:       nil,
-		IsFast:          true,
-		JoinsScopedRuns: true,
-		Inputs:          wholeRepoInputs,
-		Run:             RunClaudeMdReminder,
+		ID:          "claude-md-reminder",
+		DisplayName: "CLAUDE.md reminder",
+		App:         AppOther,
+		Tech:        "📏 Metrics",
+		NotInCI:     "warn-only metric; it can never fail, so a CI step would be noise",
+		DependsOn:   nil,
+		// Neither in --fast nor in scoped runs: mid-iteration it fires on every
+		// run before the docs pass has had a chance to happen. A plain milestone
+		// run still carries it.
+		IsFast: false,
+		Inputs: wholeRepoInputs,
+		Run:    RunClaudeMdReminder,
 	},
 	{
 		ID:              "claude-md-length",

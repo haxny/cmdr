@@ -86,7 +86,10 @@ func RunClaudeMdReminder(ctx *CheckContext) (CheckResult, error) {
 
 	var misses []reminderMiss
 	for dir, count := range bucket {
-		if docTouchedOnChain(dir, changedDocDirs) {
+		// The root bucket catches every file with no nearer doc (root scripts,
+		// generated output, plumbing), and the root `CLAUDE.md` is only
+		// the `@`-import manifest, so a miss there is noise.
+		if dir == "." || docTouchedOnChain(dir, changedDocDirs) {
 			continue
 		}
 		misses = append(misses, reminderMiss{dir, count})
@@ -97,27 +100,39 @@ func RunClaudeMdReminder(ctx *CheckContext) (CheckResult, error) {
 			len(claudeFiles), Pluralize(len(claudeFiles), "doc", "docs"))), nil
 	}
 
-	sort.Slice(misses, func(i, j int) bool { return misses[i].dir < misses[j].dir })
-
-	var sb strings.Builder
-	for _, m := range misses {
-		sb.WriteString(fmt.Sprintf("  - %s/ (%d %s)\n", m.dir, m.count, Pluralize(m.count, "file", "files")))
-	}
-
-	msg := fmt.Sprintf("%d %s with source changes but no CLAUDE.md or DETAILS.md update:\n%s"+
-		"Friendly reminder: if your changes affect the documented architecture, decisions, or gotchas, updating D.md (default) or C.md (must knows)",
-		len(misses),
-		Pluralize(len(misses), "directory", "directories"),
-		sb.String(),
-	)
-
 	return CheckResult{
 		Code:    ResultWarning,
-		Message: msg,
+		Message: reminderMessage(misses),
 		Total:   len(claudeFiles),
 		Issues:  len(misses),
 		Changes: -1,
 	}, nil
+}
+
+// reminderListed caps how many dirs the one-line nudge names; the rest is a count.
+const reminderListed = 3
+
+// reminderMessage renders the misses as one line: the dirs with the most changed
+// files first, the first reminderListed of them by name. One line because it
+// fires on most branches, and a list the reader scrolls past every run is a list
+// nobody reads.
+func reminderMessage(misses []reminderMiss) string {
+	sort.Slice(misses, func(i, j int) bool {
+		if misses[i].count != misses[j].count {
+			return misses[i].count > misses[j].count
+		}
+		return misses[i].dir < misses[j].dir
+	})
+	names := make([]string, 0, reminderListed)
+	for _, m := range misses[:min(len(misses), reminderListed)] {
+		names = append(names, m.dir+"/")
+	}
+	list := strings.Join(names, ", ")
+	if rest := len(misses) - len(names); rest > 0 {
+		list += fmt.Sprintf(" (+%d)", rest)
+	}
+	return fmt.Sprintf("%d %s changed without a CLAUDE.md/DETAILS.md touch: %s; update if behavior or gotchas changed",
+		len(misses), Pluralize(len(misses), "dir", "dirs"), list)
 }
 
 // findClaudeMdFiles returns repo-relative paths to all first-party CLAUDE.md

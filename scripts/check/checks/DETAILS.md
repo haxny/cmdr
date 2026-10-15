@@ -713,11 +713,18 @@ down), so there's nothing to exempt. Reuses `findClaudeMdFiles` (the same walk a
 
 ## CLAUDE.md reminder
 
-`claude-md-reminder` (`IsFast`, **warn-only**, `NotInCI`) nudges when source files changed under a directory with a
-colocated `CLAUDE.md` but no agent doc covering them was touched. It's a nudge aimed at the agent mid-change, not a
-gate, and a nudge only works while it's mostly right: a reminder that fires on work the author already thought about
-gets cleared reflexively, which costs the same tokens as a real one and catches nothing. Two rules keep the
-signal-to-noise up, and both are load-bearing.
+`claude-md-reminder` (**warn-only**, `NotInCI`, in neither `--fast` nor scoped runs) nudges when source files changed
+under a directory with a colocated `CLAUDE.md` but no agent doc covering them was touched. It's a nudge aimed at the
+agent finishing a change, not a gate, and a nudge only works while it's mostly right: a reminder that fires on work the
+author already thought about gets cleared reflexively, which costs the same tokens as a real one and catches nothing.
+Three rules keep the signal-to-noise up, and all are load-bearing.
+
+**It's one line and stays out of iteration runs.**
+`N dirs changed without a CLAUDE.md/DETAILS.md touch: a/, b/, c/ (+K); update if behavior or gotchas changed`, naming
+the three dirs with the most changed files (`reminderMessage`). It fires on most branches, so a per-dir list on every
+iteration run was text everyone scrolled past; milestone runs (plain `pnpm check`) are when the docs pass happens
+anyway. The repo-root bucket never counts: it collects every file with no nearer `CLAUDE.md`, and the root one is only
+the `@`-import manifest.
 
 **The window is the change being made now.** `pickBaseRef` bases on LOCAL `main`, and on `main` itself returns "" so
 only the working tree counts. Branches are cut from local `main` and fast-forwarded back, so local `main` is the real
@@ -2018,22 +2025,25 @@ doubles as production code.
   dynamic-prefix allowlist for runtime-built keys), message-screenshots-fresh (ERROR on a structural break: a
   representative rule reaching no catalog key, or a rule or `@key.screenshot` naming an image the committed capture
   report lacks; warns on stale couplings and on a rule every key of which has its own capture; runs the coupler's
-  `--check` and maps its exit code, reads no PNGs), i18n-stale (warn-only; a non-`en` translation whose
-  `@key.sourceHash` no longer matches the value it was translated from), i18n-parity (ERROR; each locale key's
-  `{placeholder}`+`<tag>` set, or raw `{token}` set for `errors.*`, must equal that of the value it renders instead of,
-  since a mismatch crashes at runtime), i18n-icu (ERROR; every message is written in its own family's grammar: an ICU
-  message must compile via `intl-messageformat`, and a RAW value (`errors.*` plus the native `menu.*`) must carry no ICU
-  escaping, since a doubled `''` renders verbatim there; the one locale check that inspects `en` too, the rule being
-  about a catalog's own syntax), i18n-tag-param-collision (ERROR; a message naming a `<tag>` and a `{param}` alike
-  renders the param as a stringified handler, because `Trans` lets the tag win the merged lookup), i18n-trans-snippets
-  (ERROR; a message `<tag>` with no matching `snippets={{ … }}` key at the call site renders as nothing, so its inner
-  text silently vanishes; catches a rename finished on only one side), i18n-plural (ERROR; each plural covers its
-  locale's required CLDR categories, gated on the English source's plural shape), i18n-coverage (ERROR; for a full
-  translation, keys missing from the locale or still showing English without a `@key.sameAsSourceJustification`, either
-  of which ships a half-translated locale. "Still English" is byte-identical OR English text under a plural/select
-  branch set the locale legitimately changed, which byte comparison alone reads as translated; for an OVERLAY the rules
-  invert, and a key identical to what it overrides, or unknown to it, is the finding), i18n-dont-translate (warn-only; a
-  curated brand/system token English carries but the locale dropped), i18n-terms (warn-only, nickname of
+  `--check` and maps its exit code, reads no PNGs; a warn prints the coupler's one-line summary, which also counts
+  report keys the catalogs dropped, and saves the lists as `Details`. Not an auto-fixer on purpose: `pnpm i18n:couple`
+  is deterministic, but after a key rename it would clear the renamed key's still-truthful screenshot, which the warn
+  exists to spare until the next capture), i18n-stale (warn-only; a non-`en` translation whose `@key.sourceHash` no
+  longer matches the value it was translated from), i18n-parity (ERROR; each locale key's `{placeholder}`+`<tag>` set,
+  or raw `{token}` set for `errors.*`, must equal that of the value it renders instead of, since a mismatch crashes at
+  runtime), i18n-icu (ERROR; every message is written in its own family's grammar: an ICU message must compile via
+  `intl-messageformat`, and a RAW value (`errors.*` plus the native `menu.*`) must carry no ICU escaping, since a
+  doubled `''` renders verbatim there; the one locale check that inspects `en` too, the rule being about a catalog's own
+  syntax), i18n-tag-param-collision (ERROR; a message naming a `<tag>` and a `{param}` alike renders the param as a
+  stringified handler, because `Trans` lets the tag win the merged lookup), i18n-trans-snippets (ERROR; a message
+  `<tag>` with no matching `snippets={{ … }}` key at the call site renders as nothing, so its inner text silently
+  vanishes; catches a rename finished on only one side), i18n-plural (ERROR; each plural covers its locale's required
+  CLDR categories, gated on the English source's plural shape), i18n-coverage (ERROR; for a full translation, keys
+  missing from the locale or still showing English without a `@key.sameAsSourceJustification`, either of which ships a
+  half-translated locale. "Still English" is byte-identical OR English text under a plural/select branch set the locale
+  legitimately changed, which byte comparison alone reads as translated; for an OVERLAY the rules invert, and a key
+  identical to what it overrides, or unknown to it, is the finding), i18n-dont-translate (warn-only; a curated
+  brand/system token English carries but the locale dropped), i18n-terms (warn-only, nickname of
   desktop-i18n-term-consistency; the only CROSS-key check: two keys sharing one English value must render one way in a
   locale, judged on the EFFECTIVE value so a half-forked overlay term is caught, with a reasoned allowlist and a
   ratchet-down `notYetReviewed` baseline for locales that predate it), i18n-aria-label (ERROR, desktop-i18n-aria-label;

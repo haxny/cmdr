@@ -80,8 +80,48 @@ func TestReminder_SourceChangeWithoutDocUpdate_Warns(t *testing.T) {
 	if !strings.Contains(res.Message, "apps/desktop/") {
 		t.Errorf("expected message to mention apps/desktop/, got: %s", res.Message)
 	}
-	if !strings.Contains(res.Message, "Friendly reminder") {
-		t.Errorf("expected friendly tone, got: %s", res.Message)
+	want := "1 dir changed without a CLAUDE.md/DETAILS.md touch: apps/desktop/; update if behavior or gotchas changed"
+	if res.Message != want {
+		t.Errorf("got %q, want the one-line nudge %q", res.Message, want)
+	}
+}
+
+func TestReminder_ManyMisses_ListsThreeOnOneLine(t *testing.T) {
+	dir := initReminderRepo(t)
+	for _, name := range []string{"a", "b", "c", "d", "e"} {
+		reminderWrite(t, dir, "mods/"+name+"/CLAUDE.md", "# "+name+"\n")
+		reminderWrite(t, dir, "mods/"+name+"/x.go", "package x\n")
+	}
+	reminderGit(t, dir, "add", ".")
+	reminderGit(t, dir, "commit", "-q", "-m", "seed modules")
+	for _, name := range []string{"a", "b", "c", "d", "e"} {
+		reminderWrite(t, dir, "mods/"+name+"/x.go", "package x\n\nvar Y = 1\n")
+	}
+
+	res := runReminder(t, dir)
+	if res.Code != ResultWarning || res.Issues != 5 {
+		t.Fatalf("expected a warning with 5 issues, got %v / %d: %s", res.Code, res.Issues, res.Message)
+	}
+	want := "5 dirs changed without a CLAUDE.md/DETAILS.md touch: mods/a/, mods/b/, mods/c/ (+2); " +
+		"update if behavior or gotchas changed"
+	if res.Message != want {
+		t.Errorf("got %q, want %q", res.Message, want)
+	}
+}
+
+func TestReminder_RepoRootBucket_Ignored(t *testing.T) {
+	// A file with no nearer CLAUDE.md falls to the repo root's, which is only the
+	// `@`-import manifest: plumbing changes there aren't a documentation miss.
+	dir := initReminderRepo(t)
+	reminderWrite(t, dir, "CLAUDE.md", "@AGENTS.md\n")
+	reminderGit(t, dir, "add", ".")
+	reminderGit(t, dir, "commit", "-q", "-m", "seed root manifest")
+
+	reminderWrite(t, dir, "apps/api/server.go", "package api\n\nvar X = 1\n")
+
+	res := runReminder(t, dir)
+	if res.Code != ResultSuccess {
+		t.Fatalf("expected success for a change only the root doc covers, got %v: %s", res.Code, res.Message)
 	}
 }
 
@@ -174,9 +214,8 @@ func TestReminder_NearestClaudeWins(t *testing.T) {
 	}
 	// The ancestor `apps/desktop/` CLAUDE.md should not be reported as a miss
 	// since no source file directly under it (excluding the deeper-CLAUDE-covered
-	// subtree) was changed. Match on the bullet form to avoid catching the
-	// substring inside the deeper path.
-	if strings.Contains(res.Message, "- apps/desktop/ ") {
+	// subtree) was changed.
+	if res.Issues != 1 {
 		t.Errorf("ancestor CLAUDE.md should not be reported, got: %s", res.Message)
 	}
 }
@@ -277,10 +316,10 @@ func TestReminder_BranchScopesToLocalMain_NotRemote(t *testing.T) {
 	if res.Code != ResultWarning {
 		t.Fatalf("expected warning for the branch's own change, got %v: %s", res.Code, res.Message)
 	}
-	if !strings.Contains(res.Message, "- apps/other/ ") {
+	if !strings.Contains(res.Message, "apps/other/") {
 		t.Errorf("expected the branch's change to be reported, got: %s", res.Message)
 	}
-	if strings.Contains(res.Message, "- apps/desktop/ ") {
+	if strings.Contains(res.Message, "apps/desktop/") {
 		t.Errorf("work sitting unpushed on main should be out of the branch window, got: %s", res.Message)
 	}
 }
