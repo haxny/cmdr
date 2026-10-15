@@ -100,9 +100,6 @@
     "settings/components/SettingsContent.svelte": {
       "reason": "UI layout component"
     },
-    "settings/components/SettingsSidebar.svelte": {
-      "reason": "UI component, search logic tested via registry"
-    },
     "settings/reactive-settings.svelte.ts": {
       "reason": "Svelte reactive state, depends on settings store"
     },
