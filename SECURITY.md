@@ -60,6 +60,10 @@ earlier date.
 
 There's no bug bounty. We can't pay for reports, but we're grateful for them.
 
+When a flaw is being actively exploited, or something bad happens to Cmdr itself (like a stolen signing key), we follow
+our [security incident procedure](docs/security-incident-procedure.md), which includes reporting to CERT-SE and ENISA
+under the EU Cyber Resilience Act.
+
 ## Scope
 
 In scope:
