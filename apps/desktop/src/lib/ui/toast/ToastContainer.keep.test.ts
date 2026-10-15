@@ -11,6 +11,7 @@ import { mount, tick, unmount } from 'svelte'
 const settings = vi.hoisted(() => ({ keepUntilClosed: false }))
 vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({
   getKeepNotificationsUntilClosed: () => settings.keepUntilClosed,
+  getShowFunctionKeyBar: () => true,
 }))
 
 import ToastContainer from './ToastContainer.svelte'

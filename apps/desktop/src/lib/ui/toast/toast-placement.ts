@@ -84,12 +84,13 @@ function keyboardTarget(stack: HTMLElement): Element | null {
 
 /**
  * Watches what the stack must keep clear and reports each change of edge or bottom inset. The
- * first call reports only when something differs from the top with no inset. Returns the stop.
+ * first call reports only when something differs from the top with no inset. Returns the stop,
+ * and `remeasure` for a change no event announces (the function key bar shown or hidden).
  */
 export function watchToastPlacement(
   stack: HTMLElement,
   onPlacement: (placement: { edge: ToastEdge; bottomInset: number }) => void,
-): () => void {
+): { stop: () => void; remeasure: () => void } {
   let edge: ToastEdge = 'top'
   let bottomInset = 0
   let frame: number | null = null
@@ -131,12 +132,15 @@ export function watchToastPlacement(
   window.addEventListener('resize', schedule)
   followFocus()
 
-  return () => {
-    if (frame !== null) cancelAnimationFrame(frame)
-    cursorWatch.disconnect()
-    sizeWatch?.disconnect()
-    document.removeEventListener('focusin', followFocus)
-    document.removeEventListener('scroll', schedule, { capture: true })
-    window.removeEventListener('resize', schedule)
+  return {
+    stop: () => {
+      if (frame !== null) cancelAnimationFrame(frame)
+      cursorWatch.disconnect()
+      sizeWatch?.disconnect()
+      document.removeEventListener('focusin', followFocus)
+      document.removeEventListener('scroll', schedule, { capture: true })
+      window.removeEventListener('resize', schedule)
+    },
+    remeasure: schedule,
   }
 }

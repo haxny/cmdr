@@ -1570,7 +1570,8 @@ the bottom right, if that's clear (WCAG 2.4.11). Decisions:
   nearest the window edge.
 - **At the bottom it sits above the function key bar**, measured (`bottomChromeInset` reads every
   `[data-toast-bottom-inset]` element), so a hidden bar costs nothing and a bigger text size lifts the stack with the
-  bar. Mark any new bottom chrome the same way.
+  bar. Mark any new bottom chrome the same way. Toggling the bar fires no event, so `ToastContainer` follows
+  `appearance.showFunctionKeyBar` and calls the watcher's `remeasure`.
 
 ## CopyBox
 

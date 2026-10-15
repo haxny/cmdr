@@ -142,7 +142,7 @@ describe('watchToastPlacement', () => {
     const edges: ToastEdge[] = []
     stop = watchToastPlacement(stack, ({ edge }) => {
       edges.push(edge)
-    })
+    }).stop
 
     await nextFrame()
     expect(edges.at(-1)).toBe('bottom')
@@ -164,9 +164,32 @@ describe('watchToastPlacement', () => {
     document.body.appendChild(stack)
     mountList(400)
     const onEdge = vi.fn()
-    stop = watchToastPlacement(stack, onEdge)
+    stop = watchToastPlacement(stack, onEdge).stop
 
     await nextFrame()
     expect(onEdge).not.toHaveBeenCalled()
+  })
+
+  it('re-measures the bottom chrome when asked, so a function key bar toggled on lifts the stack at once', async () => {
+    window.innerHeight = VIEWPORT.height
+    const stack = document.createElement('div')
+    rectOf(stack, STACK_AT_TOP)
+    document.body.appendChild(stack)
+    mountList(400)
+    const insets: number[] = []
+    const watch = watchToastPlacement(stack, ({ bottomInset }) => {
+      insets.push(bottomInset)
+    })
+    stop = watch.stop
+    await nextFrame()
+
+    const bar = document.createElement('div')
+    bar.setAttribute('data-toast-bottom-inset', '')
+    rectOf(bar, { top: 771, bottom: 800, left: 0, right: 1200 })
+    document.body.appendChild(bar)
+    watch.remeasure()
+    await nextFrame()
+
+    expect(insets.at(-1)).toBe(29)
   })
 })

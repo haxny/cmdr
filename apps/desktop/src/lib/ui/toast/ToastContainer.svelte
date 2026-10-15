@@ -14,7 +14,8 @@
     import type { ToastSpeech } from './toast-speech'
     import LiveAnnouncer from '../LiveAnnouncer.svelte'
     import { handleToastStackFocusOut, handleToastStackKeydown, registerToastStack } from './toast-focus'
-    import { getKeepNotificationsUntilClosed } from '#lib/settings/reactive-settings.svelte.js'
+    import { getKeepNotificationsUntilClosed, getShowFunctionKeyBar } from '#lib/settings/reactive-settings.svelte.js'
+    import { dependOn } from '#lib/utils/reactivity.js'
     import { watchToastPlacement, type ToastEdge } from './toast-placement'
 
     const toasts = getToasts()
@@ -71,6 +72,8 @@
     let bottomInset = $state(0)
     const hasToasts = $derived(toasts.length > 0)
 
+    let remeasurePlacement: (() => void) | null = null
+
     $effect(() => {
         const element = stackElement
         if (!hasToasts || !element) {
@@ -78,12 +81,24 @@
             bottomInset = 0
             return
         }
-        return untrack(() =>
+        const watch = untrack(() =>
             watchToastPlacement(element, (placement) => {
                 edge = placement.edge
                 bottomInset = placement.bottomInset
             }),
         )
+        remeasurePlacement = watch.remeasure
+        return () => {
+            remeasurePlacement = null
+            watch.stop()
+        }
+    })
+
+    // The function key bar coming or going moves the floor the bottom edge sits on, and no
+    // DOM event says so: follow its setting and measure again.
+    $effect(() => {
+        dependOn(getShowFunctionKeyBar())
+        untrack(() => remeasurePlacement?.())
     })
 
     function handleUserDismiss(id: string): void {
