@@ -12,9 +12,11 @@ import "fmt"
 //     cursor exactly as the text does.
 //   - The cursor hairlines: solid in the focused pane, dashed in the other.
 //     Solid vs dashed is the focused-pane cue. By default the solid one is the
-//     faint accent and the dashed one gray (David's picks, 2026-10-15), both
-//     measured, not gated; Increase contrast and Differentiate without color lift both to
-//     `--color-accent-pop`, and there they must clear 3:1.
+//     faint accent and the dashed one a faint gray (David's picks, 2026-10-15),
+//     both measured, not gated. Increase contrast lifts the solid one to
+//     `--color-accent-pop` and the dashed one to the full control-border gray;
+//     Differentiate without color lifts both to `--color-accent-pop`. There they
+//     must clear 3:1.
 //
 // A gated finding joins the WCAG gate; a measured one prints under
 // `--verbose` only.

@@ -476,17 +476,17 @@ vertical rhythm.
 - Focused pane: `background: var(--color-cursor-active)` (the accent at 20% opacity)
 - Unfocused pane: `background: var(--color-cursor-inactive)` (neutral, no accent)
 - Focused pane: a solid 1px `--color-cursor-outline` hairline (the accent at 35%). Unfocused pane: the same hairline
-  DASHED, in gray `--color-cursor-outline-dashed` (`--color-control-border`), so the accent marks the focused pane. Both
-  with `--radius-sm` corners (`app-file-list.css`). The two fills differ by only about 1.09:1, so solid vs dashed is
-  what tells the panes apart without color.
+  DASHED, in a faint gray `--color-cursor-outline-dashed` (`--color-control-border` at half strength), so the accent
+  marks the focused pane. Both with `--radius-sm` corners (`app-file-list.css`). The two fills differ by only about
+  1.09:1, so solid vs dashed is what tells the panes apart without color.
 - The pane's tab bar backs this up: the focused pane's active tab carries the full accent band along its top
   (`--color-tab-band`), the unfocused pane's active tab the band at half strength (`--color-tab-band-unfocused`). The
   bar always shows, one tab or ten.
 - Contrast: both hairlines are measured but not gated by default (the solid one subtle by design, worst 1.09:1 in light
-  mode with Apple Yellow, 1.30:1 dark; the gray dashed one 3.10:1 light, 3.23:1 dark). Under Increase contrast and
-  Differentiate without color both go to `--color-accent-pop` (gated at 3:1, worst 3.83:1), and Differentiate without
-  color also lifts the focused tab band to it (5.26:1 light, 5.98:1 dark). The faint band is 1.22:1 / 1.67:1 and never
-  promises 3:1.
+  mode with Apple Yellow, 1.30:1 dark; the faint gray dashed one 1.66:1 light, 1.82:1 dark). Under Increase contrast the
+  solid one goes to `--color-accent-pop` and the dashed one to the full `--color-control-border`; under Differentiate
+  without color both go to `--color-accent-pop` (all gated at 3:1), and Differentiate without color also lifts the
+  focused tab band to it (5.26:1 light, 5.98:1 dark). The faint band is 1.22:1 / 1.67:1 and never promises 3:1.
 
 **Selection:** The row's text turns `var(--color-selection-fg)` (red, see § Semantic colors) and gets a 0.4px text
 stroke; the row gets the translucent `--color-selection-bg`, a hairline between consecutive selected rows, and the
