@@ -28,9 +28,6 @@
     "file-explorer/modifier-key-tracker.svelte.ts": {
       "reason": "Document event listeners, reactive Svelte state"
     },
-    "file-explorer/navigation/VolumeBreadcrumb.svelte": {
-      "reason": "UI component, depends on Tauri APIs and MTP store"
-    },
     "file-explorer/pane/DialogManager.svelte": {
       "reason": "Pure rendering component, dialog state tested via parent"
     },

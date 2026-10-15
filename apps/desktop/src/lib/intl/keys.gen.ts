@@ -1605,6 +1605,7 @@ export type MessageKey =
   | 'fileExplorer.navigation.useSavedPasswordConfirm'
   | 'fileExplorer.navigation.useSavedPasswordMessage'
   | 'fileExplorer.navigation.useSavedPasswordTitle'
+  | 'fileExplorer.navigation.volumeChooserButtonLabel'
   | 'fileExplorer.navigation.volumeFallback'
   | 'fileExplorer.navigation.volumeOptionsTooltip'
   | 'fileExplorer.navigation.volumesMayBeMissing'

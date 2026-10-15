@@ -62,7 +62,7 @@
 
     const volumes = $derived(getVolumes())
 
-    let chipEl: HTMLSpanElement | undefined = $state()
+    let chipEl: HTMLButtonElement | undefined = $state()
     // The whole chip: the name plus every control beside it. A pointer-down in here belongs to
     // the switcher, so pressing the eject button doesn't close the list it opened.
     let clusterEl: HTMLDivElement | undefined = $state()
@@ -93,7 +93,7 @@
 
     // Breadcrumb inline popup state (for the yellow os_mount indicator).
     const breadcrumbPopup = createBreadcrumbPopupController()
-    let breadcrumbPopupRef: HTMLSpanElement | undefined = $state()
+    let breadcrumbPopupRef: HTMLButtonElement | undefined = $state()
 
     // The volume the pane is on: `pane-volume.ts` says which of its two answers wins.
     // Special case: 'network' is a virtual volume, not from the backend.
@@ -199,12 +199,16 @@
 </script>
 
 <div class="volume-breadcrumb" bind:this={clusterEl}>
-    <!-- svelte-ignore a11y_click_events_have_key_events -->
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <span
+    <!-- A real button, so VoiceOver finds it and says it opens a menu. A click doesn't focus a
+         button in WKWebView, so pointer use leaves focus where it was. -->
+    <button
+        type="button"
         class="volume-name"
         class:is-open={openMenu !== null}
         bind:this={chipEl}
+        aria-haspopup="menu"
+        aria-expanded={openMenu !== null}
+        aria-label={tString('fileExplorer.navigation.volumeChooserButtonLabel', { name: currentVolumeName })}
         use:tooltip={currentVolumeFsLabel ?? ''}
         onclick={toggleVolumeChooser}
     >
@@ -224,7 +228,7 @@
             <span class="read-only-indicator" use:tooltip={tString('fileExplorer.navigation.readOnlyTooltip')}><Icon name="lock" size={14} aria-hidden="true" /></span>
         {/if}
         <span class="chevron"></span>
-    </span>
+    </button>
     {#if currentVolume?.usbSpeed}
         <UsbSpeedDot speed={currentVolume.usbSpeed} breadcrumb />
     {/if}
@@ -236,12 +240,13 @@
             <ConnectionDot state="direct" hasOsMountFallback breadcrumb />
         {/if}
     {:else if currentVolume?.connectionState === 'os_mount'}
-        <!-- svelte-ignore a11y_click_events_have_key_events -->
-        <!-- svelte-ignore a11y_no_static_element_interactions -->
-        <span
+        <button
+            type="button"
             class="breadcrumb-options-trigger"
             class:is-open={breadcrumbPopup.isOpen}
             bind:this={breadcrumbPopupRef}
+            aria-expanded={breadcrumbPopup.isOpen}
+            aria-label={tString('fileExplorer.navigation.volumeOptionsTooltip')}
             use:tooltip={breadcrumbPopup.isOpen ? '' : tString('fileExplorer.navigation.volumeOptionsTooltip')}
             onclick={(e: MouseEvent) => {
                 e.stopPropagation()
@@ -252,12 +257,11 @@
             <!-- The trigger carries the sentence, so the dot inside it stays quiet. -->
             <ConnectionDot state="os_mount" explain={false} />
             <span class="chevron"></span>
-        </span>
+        </button>
         {#if breadcrumbPopup.isOpen}
             <div class="breadcrumb-popup">
-                <!-- svelte-ignore a11y_click_events_have_key_events -->
-                <!-- svelte-ignore a11y_no_static_element_interactions -->
-                <div
+                <button
+                    type="button"
                     class="breadcrumb-popup-item"
                     onclick={(e: MouseEvent) => {
                         e.stopPropagation()
@@ -266,7 +270,7 @@
                     }}
                 >
                     {tString('fileExplorer.navigation.connectDirectly')}
-                </div>
+                </button>
             </div>
         {/if}
     {/if}
@@ -351,7 +355,11 @@
        column. The extra gap lives on the icon's margin, not on this `gap`, so the
        trailing chevron and read-only badge keep their tighter spacing. Change any of
        those four values and this drifts. */
+    /* A `<button>` that must look like the `<span>` it was: no UA font, margin, or border. */
     .volume-name {
+        font: inherit;
+        margin: 0;
+        border: none;
         cursor: default;
         font-weight: 500;
         color: var(--color-text-primary);
@@ -427,6 +435,8 @@
     /* ── Breadcrumb inline popup ───────────────────────────────── */
 
     .breadcrumb-options-trigger {
+        font: inherit;
+        border: none;
         color: var(--color-text-tertiary);
         cursor: default;
         padding: var(--spacing-xxs) var(--spacing-xs);
@@ -466,6 +476,13 @@
     }
 
     .breadcrumb-popup-item {
+        display: block;
+        width: 100%;
+        margin: 0;
+        border: none;
+        font: inherit;
+        color: inherit;
+        text-align: start;
         padding: var(--spacing-sm) var(--spacing-md);
         cursor: default;
         white-space: nowrap;

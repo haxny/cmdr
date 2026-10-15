@@ -335,6 +335,11 @@ those belong to the primitive.
 
 Props: `volumeId`, `currentPath`, `onVolumeChange?`, `onSwitchPane?`.
 
+**The trigger is a `<button>`** (`aria-haspopup="menu"`, `aria-expanded` while either menu hangs off it, named
+"{volume}, choose a volume"), so VoiceOver finds it and says what it opens; so is the OS-mount options trigger beside it
+(a disclosure button, `aria-expanded`) and its popup's one item. Each resets the UA button styles to look as the
+`<span>` it replaced did. A click doesn't focus a button in WKWebView, so pointer use leaves focus where it was.
+
 **The trigger's geometry is a copy of a file row's, and stays that way by hand.** The volume icon must sit on the same x
 as the file icons below it, and the volume label on the same x as the Name column. Left to right that's `.header`'s
 `--spacing-sm` inset + `.volume-name`'s `--spacing-xs` padding = 12px for the icon, matching `.listbox-region`'s

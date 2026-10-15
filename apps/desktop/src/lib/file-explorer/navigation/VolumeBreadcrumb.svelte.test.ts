@@ -10,6 +10,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, tick, flushSync } from 'svelte'
+import { computeAccessibleName } from 'dom-accessibility-api'
 import VolumeBreadcrumb from './VolumeBreadcrumb.svelte'
 import type { VolumeChangePayload } from '../pane/types'
 
@@ -367,6 +368,74 @@ describe('VolumeBreadcrumb server rows', () => {
     await vi.waitFor(() => {
       expect(onVolumeChange).toHaveBeenCalledWith(expect.objectContaining({ volumeId: 'sftp-nas-local-22-ada' }))
     })
+  })
+})
+
+/**
+ * The chip and its options trigger are real buttons, so a screen reader (and, once pane chrome
+ * is reachable, the keyboard) finds them and hears what they open. They used to be `<span>`s
+ * with a click handler, which VoiceOver skipped entirely.
+ */
+describe('VolumeBreadcrumb buttons for assistive tech', () => {
+  const share = {
+    id: 'smb-share',
+    name: 'Share',
+    path: '/Volumes/share',
+    category: 'network',
+    fsType: 'smbfs',
+    isEjectable: true,
+  }
+
+  async function mountOn(volume: Record<string, unknown>): Promise<BreadcrumbInstance> {
+    stubs.volumes = [volume]
+    stubs.containingVolumeId = volume.id as string
+    const { instance } = mountBreadcrumb({ volumeId: volume.id as string, currentPath: '/Volumes/share' })
+    await tick()
+    await tick()
+    flushSync()
+    return instance
+  }
+
+  function chip(): HTMLElement | null {
+    return document.querySelector('.volume-name')
+  }
+
+  beforeEach(() => {
+    document.body.innerHTML = ''
+  })
+
+  afterEach(() => {
+    stubs.volumes = null
+    stubs.containingVolumeId = 'root'
+  })
+
+  it('makes the chip a menu button named after its volume, expanded while a menu hangs off it', async () => {
+    const instance = await mountOn(share)
+    expect(chip()?.tagName).toBe('BUTTON')
+    expect(chip()?.getAttribute('type')).toBe('button')
+    expect(chip()?.getAttribute('aria-haspopup')).toBe('menu')
+    expect(chip()?.getAttribute('aria-expanded')).toBe('false')
+    expect(computeAccessibleName(chip() as Element)).toBe('Share, choose a volume')
+
+    instance.openVolumeChooser()
+    await tick()
+    flushSync()
+    expect(chip()?.getAttribute('aria-expanded')).toBe('true')
+  })
+
+  it('makes the OS-mount options trigger a disclosure button, and its popup item a button', async () => {
+    await mountOn({ ...share, connectionState: 'os_mount' })
+    const trigger = document.querySelector<HTMLElement>('.breadcrumb-options-trigger')
+    expect(trigger?.tagName).toBe('BUTTON')
+    expect(trigger?.getAttribute('aria-expanded')).toBe('false')
+    expect(computeAccessibleName(trigger as Element)).toBe('Volume options')
+
+    trigger?.click()
+    flushSync()
+    expect(trigger?.getAttribute('aria-expanded')).toBe('true')
+    const item = document.querySelector<HTMLElement>('.breadcrumb-popup-item')
+    expect(item?.tagName).toBe('BUTTON')
+    expect(computeAccessibleName(item as Element)).toBe('Connect directly for faster access')
   })
 })
 

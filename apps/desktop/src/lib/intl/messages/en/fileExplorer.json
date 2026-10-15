@@ -2316,6 +2316,13 @@
     "description": "Hover tooltip on the lock icon marking a read-only volume in the breadcrumb and volume switcher.",
     "screenshot": "pane-volume-chooser.png"
   },
+  "fileExplorer.navigation.volumeChooserButtonLabel": "{name}, choose a volume",
+  "@fileExplorer.navigation.volumeChooserButtonLabel": {
+    "description": "What a screen reader says for the volume chip at the head of a pane's path bar, a button that opens the volume switcher menu. The visible text is the volume name alone; keep the name first so the spoken label starts with what the button shows.",
+    "placeholders": {
+      "name": "the name of the volume the pane is on, e.g. Macintosh HD"
+    }
+  },
   "fileExplorer.navigation.volumeOptionsTooltip": "Volume options",
   "@fileExplorer.navigation.volumeOptionsTooltip": {
     "description": "Hover tooltip on the breadcrumb options button (the chevron next to an OS-mounted network volume) that opens the connect-directly popup."
