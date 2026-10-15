@@ -42,6 +42,8 @@
     import LoadingIcon from '#lib/ui/LoadingIcon.svelte'
     import VolumeBreadcrumb from '../navigation/VolumeBreadcrumb.svelte'
     import { splitPathSegments } from '../navigation/path-segments'
+    import { hasSeparatorBefore } from '../navigation/breadcrumb-fit'
+    import { createBreadcrumbFit } from '../navigation/breadcrumb-fit-observer.svelte'
     import { enrichBreadcrumbSegments } from '../navigation/breadcrumb-navigation'
     import RepoChip from '../git/RepoChip.svelte'
     import { createGitBrowserSync } from './git-browser-sync.svelte'
@@ -618,6 +620,10 @@
             isSearchResults: isSearchResultsView,
         }),
     )
+
+    // The path fitted into the bar's width: a segment that doesn't fit shows its start and end
+    // around a middle `…` (`breadcrumb-fit.ts`, unit-tested), so no segment drops off the end.
+    const breadcrumbFit = createBreadcrumbFit(() => clickableBreadcrumbSegments.map((seg) => seg.text))
 
     // Check if we're viewing an MTP device
     const isMtpView = $derived(volumeScheme(volumeId) === 'mtp')
@@ -2068,13 +2074,14 @@
             onVolumeChange={breadcrumb.handleVolumeChange}
             onSwitchPane={() => onSwitchVolumeChooserPane?.()}
         />
-        <span class="path">{#each clickableBreadcrumbSegments as seg, i (i)}{#if i > 0 && seg.text !== ''}<span class="path-sep">/</span>{/if}{#if seg.target !== null}<button
+        <!-- A middle-truncated segment shows its short form and speaks its full name. -->
+        <span class="path" use:breadcrumbFit.observe>{#each clickableBreadcrumbSegments as seg, i (i)}{@const shown = breadcrumbFit.shown[i] ?? seg.text}{#if hasSeparatorBefore(i, seg.text)}<span class="path-sep">/</span>{/if}{#if seg.target !== null}<button
                     type="button"
                     class="path-segment"
                     class:git-portal={seg.gitPortal}
                     use:tooltip={tString('fileExplorer.breadcrumb.navigateTooltip', { path: seg.displayPath })}
                     onclick={() => { breadcrumb.handleSegmentClick(seg.target as string); }}
-                >{seg.text}</button>{:else}<span class:git-portal={seg.gitPortal}>{seg.text}</span>{/if}{/each}</span>
+                >{#if shown === seg.text}{seg.text}{:else}<span aria-hidden="true">{shown}</span><span class="sr-only">{seg.text}</span>{/if}</button>{:else}<span class:git-portal={seg.gitPortal} use:tooltip={shown === seg.text ? '' : seg.text}>{#if shown === seg.text}{seg.text}{:else}<span aria-hidden="true">{shown}</span><span class="sr-only">{seg.text}</span>{/if}</span>{/if}{/each}</span>
         {#if gitBrowser.showRepoChip && gitBrowser.gitRepoInfo}
             <RepoChip info={gitBrowser.gitRepoInfo} />
         {/if}

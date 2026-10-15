@@ -32,6 +32,14 @@ used, in `../pane/DETAILS.md`. Only the layout facts that none of those carry li
   comes back".
 - **`path-segments.ts` flags segments inside a `.git/…` portal** as it splits the breadcrumb display path, purely so
   `FilePane.svelte` can paint them with `--color-git-portal-text`. It's the only consumer of that flag.
+- **`breadcrumb-fit.ts` fits the path into the location bar** (pure, unit-tested; `breadcrumb-fit-observer.svelte.ts`
+  feeds it the bar's width and font and measures text on a canvas). Every segment stays on screen: when the path is too
+  wide, the widest segments shrink to one shared cap (water-filling), each keeping its start and end around a middle
+  `…`, so short ancestors stay whole and a UUID or mangled project dir gives way. Decision/Why: the bar used to rely on
+  `text-overflow: ellipsis`, which can't cut into an inline-block `<button>`, so a long segment vanished whole behind a
+  trailing `…` until the window fit all of it. A truncated segment renders its short form `aria-hidden` plus its full
+  name `sr-only`, and the current folder's span gets a tooltip with the full name. Past a lone `…` per segment the
+  container clips, so the observer scrolls a keyboard-focused segment into view and resets the scroll on focus out.
 - **`eject-predicate.ts::isVolumeEjectable` is true when the OS says ejectable OR the row has a session to end**
   (`isLiveSession` or `showsDisconnect`), which is what puts SMB shares and dialed places behind the same `⏏` affordance
   as physical media. ❌ Never widen it back to "carries a connection state": `saved` and the two sign-in states would
