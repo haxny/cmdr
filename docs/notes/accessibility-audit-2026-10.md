@@ -249,7 +249,8 @@ video, flashing, or time limits beyond toasts; native menu bar and context menus
   look by `row_mark_states.go`. The solid and dashed cursor hairlines that tell the panes apart reach 3.83:1 worst under
   Increase contrast and 4.53:1 under Differentiate without color (both gated); by default they're measured not gated:
   the solid accent one stays subtle by design at 1.09:1 worst (light, Apple Yellow, brown tint), the faint gray dashed
-  one is 1.66:1 worst (light, brown tint); the tab accent bands are 1.45:1 (focused) and 1.22:1 (unfocused) worst by
+  one (the control border at 50%) is 1.66:1 worst light and 1.82:1 dark (brown and lime tints), 4.26:1 under Increase
+  contrast as the full-strength border; the tab accent bands are 1.45:1 (focused) and 1.22:1 (unfocused) worst by
   default, 5.26:1 for the focused one under Differentiate without color. By default the 2px accent focus ring is under
   3:1 on white with Apple Yellow (1.58), Cmdr gold (2.38), Green (2.41), and Orange (2.58). Evidence: `app-field.css`
   (`--color-field-border`), `app.css` `button:focus-visible`, `--shadow-focus-solid`, § Differentiate without color,
