@@ -185,6 +185,7 @@ fn listing_entry(path: &str) -> FileEntry {
         is_symlink: false,
         is_hidden: false,
         is_archive: false,
+        is_package: false,
         size: None,
         physical_size: None,
         inode: None,

@@ -28,6 +28,13 @@ export interface FileEntry {
    * here so synthetic entries (the `..` row, search-results adapters) can omit it.
    */
   isArchive?: boolean
+  /**
+   * True for a macOS package (`Safari.app`, `Foo.bundle`): a directory Finder presents as
+   * one item. Set backend-side from the name (`is_package_dir`); the row's accessible name
+   * says "package" from it. ❌ Never sniff the `pkg:` prefix of `iconId` instead. Optional
+   * for the same synthetic entries as `isArchive`.
+   */
+  isPackage?: boolean
   size?: number
   physicalSize?: number
   modifiedAt?: number

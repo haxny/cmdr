@@ -186,6 +186,14 @@ export const commands = {
          *  wins), so this is always `false` for directories.
          */
         isArchive: boolean
+        /**
+         *  `true` for a macOS package (`Safari.app`, `Foo.bundle`, …): a directory
+         *  Finder presents as one item. A pure suffix test on the name
+         *  ([`crate::icons::packages::is_package_dir`]), so it costs no I/O. The
+         *  frontend names the row a "package" for screen readers from this, ❌ never
+         *  from the `pkg:` prefix of `icon_id`. Always `false` for a file or a symlink.
+         */
+        isPackage: boolean
         // Logical size in bytes. `None` when the backend didn't stat it.
         size: number | null
         // Physical size on disk in bytes (st_blocks * 512 on Unix, same as size on other platforms)
@@ -340,6 +348,14 @@ export const commands = {
          *  wins), so this is always `false` for directories.
          */
         isArchive: boolean
+        /**
+         *  `true` for a macOS package (`Safari.app`, `Foo.bundle`, …): a directory
+         *  Finder presents as one item. A pure suffix test on the name
+         *  ([`crate::icons::packages::is_package_dir`]), so it costs no I/O. The
+         *  frontend names the row a "package" for screen readers from this, ❌ never
+         *  from the `pkg:` prefix of `icon_id`. Always `false` for a file or a symlink.
+         */
+        isPackage: boolean
         // Logical size in bytes. `None` when the backend didn't stat it.
         size: number | null
         // Physical size on disk in bytes (st_blocks * 512 on Unix, same as size on other platforms)
@@ -8244,6 +8260,14 @@ export type FileEntry = {
    *  wins), so this is always `false` for directories.
    */
   isArchive: boolean
+  /**
+   *  `true` for a macOS package (`Safari.app`, `Foo.bundle`, …): a directory
+   *  Finder presents as one item. A pure suffix test on the name
+   *  ([`crate::icons::packages::is_package_dir`]), so it costs no I/O. The
+   *  frontend names the row a "package" for screen readers from this, ❌ never
+   *  from the `pkg:` prefix of `icon_id`. Always `false` for a file or a symlink.
+   */
+  isPackage: boolean
   // Logical size in bytes. `None` when the backend didn't stat it.
   size: number | null
   // Physical size on disk in bytes (st_blocks * 512 on Unix, same as size on other platforms)

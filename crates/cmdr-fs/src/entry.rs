@@ -148,6 +148,12 @@ pub struct FileEntry {
     /// layer. A directory named `foo.zip` is NOT an archive (its `is_directory`
     /// wins), so this is always `false` for directories.
     pub is_archive: bool,
+    /// `true` for a macOS package (`Safari.app`, `Foo.bundle`, …): a directory
+    /// Finder presents as one item. A pure suffix test on the name
+    /// ([`crate::icons::packages::is_package_dir`]), so it costs no I/O. The
+    /// frontend names the row a "package" for screen readers from this, ❌ never
+    /// from the `pkg:` prefix of `icon_id`. Always `false` for a file or a symlink.
+    pub is_package: bool,
     /// Logical size in bytes. `None` when the backend didn't stat it.
     pub size: Option<u64>,
     /// Physical size on disk in bytes (st_blocks * 512 on Unix, same as size on other platforms)
@@ -245,6 +251,7 @@ impl FileEntry {
             // Extension-only, and never for a directory (a folder named
             // `foo.zip` is browsed as itself, not as an archive).
             is_archive: !is_dir && crate::archive_format::has_supported_archive_extension(&name),
+            is_package: is_dir && !is_symlink && crate::icons::packages::is_package_dir(&name),
             is_hidden: is_hidden_by_name(&name),
             name,
             path,
@@ -355,6 +362,30 @@ mod icon_id_tests {
             get_icon_id(false, false, "notes.txt", "/some/where/Downloads/notes.txt"),
             "ext:txt"
         );
+    }
+}
+
+#[cfg(test)]
+mod is_package_tests {
+    use super::*;
+
+    fn entry(name: &str, is_dir: bool, is_symlink: bool) -> FileEntry {
+        FileEntry::new(name.to_string(), format!("/Applications/{name}"), is_dir, is_symlink)
+    }
+
+    #[test]
+    fn an_app_bundle_directory_is_a_package() {
+        assert!(entry("Safari.app", true, false).is_package);
+        assert!(entry("Cocoa.framework", true, false).is_package);
+    }
+
+    #[test]
+    fn plain_folders_files_and_symlinks_are_not_packages() {
+        assert!(!entry("Documents", true, false).is_package);
+        // A file named like a bundle is a file.
+        assert!(!entry("thing.app", false, false).is_package);
+        // A symlink to a bundle reads as a symlink, the way its icon does.
+        assert!(!entry("Safari.app", true, true).is_package);
     }
 }
 
