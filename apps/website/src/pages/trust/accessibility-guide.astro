@@ -26,7 +26,7 @@ const toc = [
 
 <LegalLayout
     title="Accessibility guide"
-    description="Cmdr's accessibility features and how to turn them on: keyboard-only use, VoiceOver, text size and zoom, light and dark mode, Increase contrast, Differentiate without color, Reduce motion, and Reduce transparency. Plus the known gaps, and how to get help."
+    description="Cmdr's accessibility features and how to turn them on: keyboard-only use, VoiceOver, text size and zoom, light and dark mode, Increase contrast, Differentiate without color, Show borders, Reduce motion, and Reduce transparency. Plus the known gaps, and how to get help."
     lastUpdated="2026-10-15"
 >
     <DevTodo>
@@ -74,7 +74,7 @@ const toc = [
         </li>
         <li>
             <strong>Undo a move to trash</strong> any time from Edit &gt; Undo move to trash, after its notification is
-            gone. New in 0.53.0.
+            gone. The menu item names what it puts back, like "Undo move to trash of 3 items". New in 0.53.0.
         </li>
         <li>
             <strong>Move tabs</strong>: ⌘⌃⇧← and ⌘⌃⇧→ (Command-Control-Shift-arrow) move the current tab along its bar,
@@ -144,9 +144,14 @@ const toc = [
         <li>
             <strong>Marked files and the focused pane</strong>: marked files carry a bar down their left edge and
             slightly heavier text besides their red color. The cursor has a solid outline in the focused pane and a
-            dashed one in the other pane, and the focused pane's active tab has the stronger accent line along its top.
-            Turn on Differentiate without color in the same place, and those outlines and the tab line get stronger.
-            New in 0.53.0.
+            gray dashed one in the other pane, and the focused pane's active tab has the stronger accent line along its
+            top. These cues are subtle by default; turn on Differentiate without color in the same place, and those
+            outlines and the tab line get stronger. New in 0.53.0.
+        </li>
+        <li>
+            <strong>Show borders</strong>: turn it on in System Settings &gt; Accessibility &gt; Display, and Cmdr's
+            buttons that have no edge of their own, like a tab's close button, the volume chip, and the path segments,
+            get a visible border.
         </li>
         <li>
             <strong>Tooltips</strong> stay up while you move the pointer onto them, so you can read them with the

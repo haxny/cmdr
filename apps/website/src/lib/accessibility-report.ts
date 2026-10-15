@@ -169,7 +169,7 @@ const wcagA: CriterionRow[] = [
     level: 'A',
     conformance: 'partially-supports',
     remark:
-      "Git status uses letters, errors use labeled symbols, and size and date colors are optional decoration. Marked files carry a bar along their left edge and slightly heavier text besides their red color. The cursor in the focused pane has a solid outline and the one in the other pane a dashed outline, and the focused pane's active tab has the stronger accent line. Hidden files still differ only by a dimmer color.",
+      "Git status uses letters, errors use labeled symbols, and size and date colors are optional decoration. Marked files carry a bar along their left edge and slightly heavier text besides their red color. The cursor in the focused pane has a solid outline in the accent color and the one in the other pane a gray dashed outline, and the focused pane's active tab has the stronger accent line. Hidden files still differ only by a dimmer color.",
     issues: [440],
   },
   { id: '1.4.2', name: 'Audio control', level: 'A', conformance: 'not-applicable', remark: 'Cmdr plays no audio.' },
@@ -423,7 +423,7 @@ const wcagAA: CriterionRow[] = [
     level: 'AA',
     conformance: 'partially-supports',
     remark:
-      'Checkbox, switch, and text field borders reach at least 3:1 (about 3.7:1 on white), and the bar on marked files at least 4.5:1. With the macOS Increase contrast or Differentiate without color setting on, the cursor outlines that tell the two panes apart reach at least 3.8:1, and with Increase contrast every focus ring gains an inner ring that clears 3:1 with any accent color. Without those settings, the cursor outlines are deliberately subtle (about 1.2:1 in light mode with the yellow accent), and in light mode the focus ring is under 3:1 with the yellow, gold, green, and orange accent colors.',
+      'Checkbox, switch, and text field borders reach at least 3:1 (about 3.7:1 on white), and the bar on marked files at least 4.5:1. With the macOS Increase contrast or Differentiate without color setting on, the cursor outlines that tell the two panes apart reach at least 3.8:1, and with Increase contrast every focus ring gains an inner ring that clears 3:1 with any accent color. Without those settings, the cursor outlines are deliberately subtle (about 1.1:1 for the solid one with the yellow accent and 1.7:1 for the gray dashed one, in light mode), so the dash pattern is what tells the panes apart, and in light mode the focus ring is under 3:1 with the yellow, gold, green, and orange accent colors.',
     issues: [440],
   },
   {
@@ -463,7 +463,7 @@ const wcagAA: CriterionRow[] = [
     level: 'AA',
     conformance: 'partially-supports',
     remark:
-      "Buttons, links, fields, and menus show a focus ring, and the file cursor has a colored background and outline. The focused pane's cursor outline is solid and the other pane's dashed, and the focused pane's active tab carries a stronger accent line, but both cues are faint in light mode unless the macOS Increase contrast or Differentiate without color setting is on.",
+      "Buttons, links, fields, and menus show a focus ring, and the file cursor has a colored background and outline. The focused pane's cursor outline is solid and the other pane's gray and dashed, and the focused pane's active tab carries a stronger accent line than the other pane's. By default these cues rely on the outline's shape and the line's strength and stay under 3:1 contrast on purpose; the macOS Increase contrast and Differentiate without color settings take the outlines past 3:1.",
     issues: [440],
   },
   {
@@ -526,7 +526,7 @@ const wcagAA: CriterionRow[] = [
     level: 'AA',
     conformance: 'supports',
     remark:
-      'Deleting always asks first, and deleting permanently asks even when confirmations are turned off. Overwrites and name clashes open a dialog, moving to the trash can be undone (from its notification or the Edit menu), and copies and moves can be rolled back.',
+      'Deleting always asks first, and deleting permanently asks even when confirmations are turned off. Overwrites and name clashes open a dialog, moving to the trash can be undone (from its notification or the Edit menu, which names what it puts back), and copies and moves can be rolled back.',
   },
   {
     id: '3.3.8',
@@ -563,7 +563,7 @@ const section508Ch3: CriterionRow[] = [
     name: 'With limited vision',
     conformance: 'partially-supports',
     remark:
-      'App zoom alone takes text to 200%, and the macOS text size setting takes it further. Dark mode is supported, and text contrast is checked automatically. The focused-pane cues and some focus rings have weak contrast with some accent colors unless the macOS Increase contrast or Differentiate without color setting is on.',
+      'App zoom alone takes text to 200%, and the macOS text size setting takes it further. Dark mode is supported, and text contrast is checked automatically. The focused-pane cues are told apart by shape and stay low in contrast, and some focus rings have weak contrast with some accent colors, unless the macOS Increase contrast or Differentiate without color setting is on.',
     issues: [440],
   },
   {
@@ -571,7 +571,7 @@ const section508Ch3: CriterionRow[] = [
     name: 'Without perception of color',
     conformance: 'partially-supports',
     remark:
-      'Marked files carry a bar and heavier text besides their color, and the focused pane shows a solid cursor outline and a stronger tab accent line where the other pane shows a dashed outline. Hidden files still differ only by color. Everything else uses symbols and text.',
+      'Marked files carry a bar and heavier text besides their color, and the focused pane shows a solid cursor outline and a stronger tab accent line where the other pane shows a gray dashed outline and a fainter one. Hidden files still differ only by color. Everything else uses symbols and text.',
     issues: [440],
   },
   { id: '302.4', name: 'Without hearing', conformance: 'supports', remark: 'Cmdr uses no sound.' },
@@ -747,7 +747,7 @@ const section508Ch5: CriterionRow[] = [
     name: 'User preferences',
     conformance: 'supports',
     remark:
-      'Cmdr follows the macOS system font, light and dark mode, accent color, text size, Reduce transparency, Reduce motion, Increase contrast (stronger borders, secondary text, focus rings, and pane tints), and Differentiate without color (stronger outlines and tab line for the focused pane), and picks up changes without a restart.',
+      'Cmdr follows the macOS system font, light and dark mode, accent color, text size, Reduce transparency, Reduce motion, Increase contrast (stronger borders, secondary text, focus rings, and pane tints), Differentiate without color (stronger outlines and tab line for the focused pane), and Show borders (a visible edge on buttons that otherwise have none), and picks up changes without a restart.',
   },
   {
     id: '503.3',
@@ -1167,7 +1167,8 @@ export const gapIssues: { number: number; title: string }[] = [
   },
   {
     number: 440,
-    title: 'Hidden files differ only by color, and the focused-pane cues and some focus rings are faint by default',
+    title:
+      'Hidden files differ only by color, and the focused-pane cues and some focus rings are under 3:1 contrast by default',
   },
   {
     number: 449,

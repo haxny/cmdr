@@ -69,9 +69,10 @@ Top gaps, each with its issue:
 4. **State cues rely on faint color** (#440, mostly closed in code 2026-10-15): marked rows now carry a leading-edge bar
    (4.51:1 worst) and a text stroke, and the panes differ by a solid vs dashed cursor hairline plus a full vs faint tab
    accent band, all by default (David's design picks). Field borders clear 3:1; Increase contrast and Differentiate
-   without color lift the hairlines to 3:1. Left: by default the hairlines stay subtle (1.17:1 worst), hidden files
-   differ by color alone, and the default focus ring is under 3:1 with yellow, orange, green, or Cmdr gold in light mode
-   (kept on purpose: VoiceOver draws its own ring; the ink ring is the Increase contrast tier).
+   without color lift the hairlines to 3:1. Left: by default the hairlines stay subtle (1.09:1 solid, 1.66:1 dashed
+   worst), so the default cue is the dashed-vs-solid shape, deliberately below 3:1 (David's pick), hidden files differ
+   by color alone, and the default focus ring is under 3:1 with yellow, orange, green, or Cmdr gold in light mode (kept
+   on purpose: VoiceOver draws its own ring; the ink ring is the Increase contrast tier).
 5. **Pointer and keyboard leftovers** (#441, mostly closed in code 2026-10-15): tab reorder was drag-only, sub-24px
    targets, tooltips not hoverable, viewer bare-key shortcuts not remappable, zoom topped out at 150%. Left: a
    one-letter breadcrumb segment and the pane divider are still narrower than 24 px.
@@ -121,10 +122,11 @@ video, flashing, or time limits beyond toasts; native menu bar and context menus
 - **1.4.1 Use of color**: Partially supports. Git status uses letters, errors use labeled glyphs, and size/age colors
   are decorative. Since #440 (2026-10-15), by default: marked rows carry a 3px leading-edge bar in the selection red
   (4.51:1 worst against the row), rounded at each run's ends, plus a 0.4px text stroke; the unfocused pane's cursor
-  hairline is dashed where the focused one is solid, and the focused pane's active tab has the full accent band where
-  the other has it at half strength. Hidden files still differ only by a dimmer color. Evidence: `app.css`
-  `--color-selection-fg-primary`, `--color-cursor-outline-dashed`, `--color-tab-band*`; `app-file-list.css` marked-row
-  and cursor rules; `views/mark-run.ts`; `tabs/TabBar.svelte`; `--color-text-quiet`; `git/status-column.ts`. #440.
+  hairline is dashed and gray (the control-border tone at 50%) where the focused one is solid accent, and the focused
+  pane's active tab has the full accent band where the other has it at half strength. Hidden files still differ only by
+  a dimmer color. Evidence: `app.css` `--color-selection-fg-primary`, `--color-cursor-outline-dashed`,
+  `--color-tab-band*`; `app-file-list.css` marked-row and cursor rules; `views/mark-run.ts`; `tabs/TabBar.svelte`;
+  `--color-text-quiet`; `git/status-column.ts`. #440.
 - **1.4.2 Audio control**: Not applicable. Cmdr plays no audio.
 - **2.1.1 Keyboard**: Supports. Every core action is a command with a shortcut and a command palette entry: pane switch,
   navigation, marking, open, go up, go to path, volume chooser, tabs, sort, divider, view mode, all file operations,
@@ -246,10 +248,10 @@ video, flashing, or time limits beyond toasts; native menu bar and context menus
   (14.6:1 worst). The marked-file bar is 4.51:1 worst (light) and 4.71:1 (dark) against its row, gated at 3:1 in every
   look by `row_mark_states.go`. The solid and dashed cursor hairlines that tell the panes apart reach 3.83:1 worst under
   Increase contrast and 4.53:1 under Differentiate without color (both gated); by default they're measured not gated:
-  the solid accent one stays subtle by design at 1.09:1 worst (light, Apple Yellow, brown tint), the gray dashed one is
-  3.10:1 worst (light, brown tint); the tab accent bands are 1.45:1 (focused) and 1.22:1 (unfocused) worst by default,
-  5.26:1 for the focused one under Differentiate without color. By default the 2px accent focus ring is under 3:1 on
-  white with Apple Yellow (1.58), Cmdr gold (2.38), Green (2.41), and Orange (2.58). Evidence: `app-field.css`
+  the solid accent one stays subtle by design at 1.09:1 worst (light, Apple Yellow, brown tint), the faint gray dashed
+  one is 1.66:1 worst (light, brown tint); the tab accent bands are 1.45:1 (focused) and 1.22:1 (unfocused) worst by
+  default, 5.26:1 for the focused one under Differentiate without color. By default the 2px accent focus ring is under
+  3:1 on white with Apple Yellow (1.58), Cmdr gold (2.38), Green (2.41), and Orange (2.58). Evidence: `app-field.css`
   (`--color-field-border`), `app.css` `button:focus-visible`, `--shadow-focus-solid`, § Differentiate without color,
   `app-file-list.css` cursor rules; ratios from `pnpm check a11y-contrast` (`-- --verbose` lists the measured ones) and
   `accent_matrix.go` hexes. #440.
@@ -272,9 +274,9 @@ video, flashing, or time limits beyond toasts; native menu bar and context menus
 - **2.4.7 Focus visible**: Partially supports. Buttons, links, fields, and menus show a focus ring (`:focus` for fields
   so mouse users see it too), and the file cursor has an accent fill plus outline. Since #440 (2026-10-15) the focused
   pane's cursor hairline is solid and the other's dashed, and the focused pane's active tab carries the full accent band
-  (the other half), but by default both cues are faint in light mode (see 1.4.11); Increase contrast and Differentiate
-  without color lift the hairlines past 3:1. Evidence: `app.css`, `app-field.css`, `app-file-list.css`,
-  `tabs/TabBar.svelte`. #440.
+  (the other half). By default both cues stay under 3:1 on purpose (see 1.4.11): the panes differ by the dash pattern
+  and the tab band's strength rather than by contrast. Increase contrast and Differentiate without color lift the
+  hairlines past 3:1. Evidence: `app.css`, `app-field.css`, `app-file-list.css`, `tabs/TabBar.svelte`. #440.
 - **2.4.11 Focus not obscured (minimum)**: Supports. Dialogs are modal and centered. Toasts sit at the top right and
   move to the bottom right while they would cover the focused element's cursor row (`aria-activedescendant`) or the
   focused element (#439, 2026-10-15). Evidence: `ui/toast/toast-placement.ts` (+ test), `ToastContainer.svelte`.
@@ -298,8 +300,9 @@ video, flashing, or time limits beyond toasts; native menu bar and context menus
   `docs/style-guide.md`.
 - **3.3.4 Error prevention (legal, financial, data)**: Supports. Delete always confirms, permanent delete confirms even
   with "skip confirmation" on, overwrites and rename collisions get conflict dialogs, trash is undoable, and copy and
-  move can be rolled back. Undo trash is on its toast and in the Edit menu (#439, 2026-10-15), and the operation log
-  rolls back any journaled trash. Evidence: `settings/definitions/behavior.ts`, `DeleteDialog.svelte`,
+  move can be rolled back. Undo trash is on its toast and in the Edit menu (#439, 2026-10-15); the menu item greys out
+  with nothing to undo and names what it puts back, and an undo over an emptied trash says so (`d5706b6d8`). The
+  operation log rolls back any journaled trash. Evidence: `settings/definitions/behavior.ts`, `DeleteDialog.svelte`,
   `TransferConflictDialog`, `RenameConflictDialog.svelte`, `operation-log/RollbackControls.svelte`,
   `delete/trash-undo.ts`.
 - **3.3.8 Accessible authentication (minimum)**: Supports. License key, API keys, and passwords accept paste; no
@@ -390,10 +393,12 @@ video, flashing, or time limits beyond toasts; native menu bar and context menus
   (settings sidebar jump, rename shake and zoom, boot loader, switch thumb, disclosure chevrons, swatch and
   onboarding-dot grows) closed with #442 on 2026-10-15. Increase contrast (stronger borders, secondary text, focus-ring
   ink layer, deeper light reds, raised tints) and Differentiate without color (the cursor hairlines and the focused tab
-  band lifted to `--color-accent-pop`) closed with #440 on 2026-10-15; the contrast checker sweeps both tiers. Not yet
-  seen on a Mac with the settings flipped. Evidence: `app.css` (`--font-system`, § Increase contrast, § Differentiate
-  without color), `src-tauri/src/display_accessibility.rs`, `lib/display-accessibility.ts`,
-  `src-tauri/src/text_size.rs`, `lib/accent-color.ts`.
+  band lifted to `--color-accent-pop`) closed with #440 on 2026-10-15; the contrast checker sweeps both tiers. Show
+  borders (2026-10-15, `8736c60c8`) gives the borderless controls (tab close and new tab, the volume chip, path
+  segments, the breadcrumb options and eject buttons) a `--color-control-border` hairline. Not yet seen on a Mac with
+  the settings flipped. Evidence: `app.css` (`--font-system`, § Increase contrast, § Differentiate without color),
+  `app-utilities.css` § Show borders (`.borderless-control`), `src-tauri/src/display_accessibility.rs`,
+  `lib/display-accessibility.ts`, `src-tauri/src/text_size.rs`, `lib/accent-color.ts`.
 - **503.3 Alternative user interfaces**: Not applicable. Cmdr provides no alternative UI acting as assistive tech.
 - **503.4.1 Caption controls**: Not applicable. No video.
 - **503.4.2 Audio description controls**: Not applicable. No video.
