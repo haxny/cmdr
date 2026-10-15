@@ -66,6 +66,11 @@ export default defineConfig({
     },
     server: {
       strictPort: true,
+      // Poll in dev: editors that save by writing a temp file and renaming it over the original
+      // (IntelliJ's "safe write", among others) leave the native watcher on the old file, so the
+      // page never updates again until a restart. Polling the small `src/` tree costs ~1% idle CPU
+      // (verified on Astro 7.3.5 and 7.3.8, Vite 8.3.4, chokidar 4.0.3, macOS 27.0, 2026-10-15).
+      watch: { usePolling: true, interval: 250 },
     },
     plugins: [tailwindcss(), Icons({ compiler: 'astro' }), blogEditorDevServer()],
   },
