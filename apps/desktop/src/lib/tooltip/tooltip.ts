@@ -22,6 +22,11 @@ export type TooltipParam =
   | undefined
 
 const SHOW_DELAY_MS = 400
+/**
+ * How long a tooltip outlives the pointer leaving its trigger (or the tooltip itself). Long enough
+ * to cross the `OFFSET_BELOW` gap onto the tooltip, short enough that it doesn't read as stuck.
+ */
+const HIDE_GRACE_MS = 250
 const OFFSET_BELOW = 6
 const VIEWPORT_MARGIN = 8
 
@@ -31,6 +36,19 @@ let activeElement: HTMLElement | null = null
 let showTimer: ReturnType<typeof setTimeout> | null = null
 /** The element a pending show-timer belongs to, so we can cancel it if that element is torn down. */
 let timerNode: HTMLElement | null = null
+
+/**
+ * The hoverable-tooltip grace (WCAG 1.4.13): running while the pointer is off both the shown
+ * tooltip's trigger and the tooltip. Reaching either one cancels it; running out hides the tooltip.
+ */
+let graceTimer: ReturnType<typeof setTimeout> | null = null
+
+/**
+ * A trigger the pointer entered while another tooltip was in its grace. Its show waits for the grace
+ * to run out instead of taking over at once: a row's tooltip sits over the NEXT row, so the pointer
+ * crosses that row on its way onto the tooltip, and an instant hand-over would make it unreachable.
+ */
+let waitingTrigger: { node: HTMLElement; getParam: () => TooltipParam; enteredAt: number } | null = null
 
 /** Shared container for tooltips (keeps them inside a landmark to satisfy axe's `region` rule). */
 let tooltipContainer: HTMLDivElement | null = null
@@ -104,6 +122,14 @@ function ensureTooltipElement(): HTMLDivElement {
   tooltipEl.className = 'cmdr-tooltip'
   tooltipEl.setAttribute('role', 'tooltip')
   tooltipEl.id = 'cmdr-tooltip-' + String(tooltipIdCounter++)
+
+  // Hoverable: the pointer resting on the tooltip keeps it up, and leaving it starts the grace.
+  // A press dismisses it, so the click after lands on whatever it was covering (a row below).
+  tooltipEl.addEventListener('mouseenter', cancelGrace)
+  tooltipEl.addEventListener('mouseleave', () => {
+    if (activeElement) startGrace()
+  })
+  tooltipEl.addEventListener('mousedown', hideTooltip)
 
   ensureTooltipContainer().appendChild(tooltipEl)
   return tooltipEl
@@ -268,6 +294,7 @@ function showTooltip(triggerEl: HTMLElement, param: TooltipParam): void {
     return
   }
   notifyOpen(triggerEl, param)
+  cancelGrace()
 
   const tip = ensureTooltipElement()
   setTooltipContent(tip, param)
@@ -284,6 +311,7 @@ function showTooltip(triggerEl: HTMLElement, param: TooltipParam): void {
 
 function hideTooltip(): void {
   cancelTimer()
+  cancelGrace()
   // Return any adopted rich content to its host so Svelte keeps updating it in place for the next show.
   returnAdoptedContentEl()
   if (tooltipEl) {
@@ -303,6 +331,32 @@ function cancelTimer(): void {
     showTimer = null
   }
   timerNode = null
+}
+
+/** Stops the grace: the pointer reached the tooltip or its trigger, or the tooltip is going anyway. */
+function cancelGrace(): void {
+  if (graceTimer !== null) {
+    clearTimeout(graceTimer)
+    graceTimer = null
+  }
+  waitingTrigger = null
+}
+
+/**
+ * Hides the shown tooltip after `HIDE_GRACE_MS`, unless the pointer reaches it or its trigger first.
+ * Running out also starts the show of a trigger the pointer is waiting on, for what's left of its
+ * own delay, so the hand-over between rows keeps its usual timing.
+ */
+function startGrace(): void {
+  if (graceTimer !== null) clearTimeout(graceTimer)
+  graceTimer = setTimeout(() => {
+    graceTimer = null
+    const next = waitingTrigger
+    hideTooltip()
+    if (next && !isTriggerDetached(next.node)) {
+      startShowTimer(next.node, next.getParam, Math.max(0, SHOW_DELAY_MS - (Date.now() - next.enteredAt)))
+    }
+  }, HIDE_GRACE_MS)
 }
 
 /**
@@ -375,7 +429,10 @@ function installGlobalDismissListeners(): void {
  * Starts the show delay. The show reads `getParam()` when the delay ends rather than the param the
  * hover started with, because an `onOpenChange` caller mounts its content in between.
  */
-function startShowTimer(triggerEl: HTMLElement, getParam: () => TooltipParam): void {
+function startShowTimer(triggerEl: HTMLElement, getParam: () => TooltipParam, delayMs = SHOW_DELAY_MS): void {
+  // A tooltip still in its grace goes now, before this trigger's `onOpenChange` hears `true`, so
+  // the one-open-listener contract holds (keyboard focus moving on lands here).
+  if (graceTimer !== null) hideTooltip()
   cancelTimer()
   timerNode = triggerEl
   notifyOpen(triggerEl, getParam())
@@ -383,7 +440,7 @@ function startShowTimer(triggerEl: HTMLElement, getParam: () => TooltipParam): v
     showTimer = null
     timerNode = null
     showTooltip(triggerEl, getParam())
-  }, SHOW_DELAY_MS)
+  }, delayMs)
 }
 
 function isOverflowing(el: HTMLElement): boolean {
@@ -406,13 +463,31 @@ export function tooltip(node: HTMLElement, param: TooltipParam): ActionReturn<To
   node.removeAttribute('title')
 
   const handleMouseEnter = (): void => {
+    // Back on its own trigger (from the tooltip, or within the grace): it simply stays.
+    if (activeElement === node) {
+      cancelGrace()
+      return
+    }
     if (hoverSuppressed) return
     if (!isEmptyParam(currentParam) && shouldShow(node, currentParam)) {
+      if (graceTimer !== null) {
+        waitingTrigger = { node, getParam: () => currentParam, enteredAt: Date.now() }
+        return
+      }
       startShowTimer(node, () => currentParam)
     }
   }
 
   const handleMouseLeave = (): void => {
+    // A shown tooltip waits out the grace, so the pointer can move onto it (WCAG 1.4.13).
+    if (activeElement === node) {
+      startGrace()
+      return
+    }
+    if (waitingTrigger?.node === node) {
+      waitingTrigger = null
+      return
+    }
     hideTooltip()
   }
 
@@ -459,6 +534,7 @@ export function tooltip(node: HTMLElement, param: TooltipParam): ActionReturn<To
       if (timerNode === node) {
         cancelTimer()
       }
+      if (waitingTrigger?.node === node) waitingTrigger = null
       if (openListener?.node === node && activeElement !== node) notifyClosed()
 
       // If this element's tooltip is showing, hide it

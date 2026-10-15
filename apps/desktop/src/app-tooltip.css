@@ -42,9 +42,12 @@
     transform var(--transition-fast);
 }
 
+/* Hoverable once shown (WCAG 1.4.13): the pointer can rest on it, and `tooltip.ts` keeps it up while
+   it does. Hidden, it stays `pointer-events: none` so the faded-out box never blocks a click. */
 .cmdr-tooltip.visible {
   opacity: 1;
   transform: translateY(0);
+  pointer-events: auto;
 }
 
 /* A tooltip holding adopted rich content (`contentEl`): several paragraphs of prose, often a

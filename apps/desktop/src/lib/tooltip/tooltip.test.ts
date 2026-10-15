@@ -11,8 +11,14 @@ describe('tooltip', () => {
   })
 
   afterEach(() => {
+    // Hide whatever a test left up, so its grace timer can't outlive the fake clock and strand
+    // the next test's hover behind a grace that never runs out.
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
     vi.useRealTimers()
   })
+
+  /** Past the hoverable grace a tooltip outlives its trigger's `mouseleave` by. */
+  const PAST_HIDE_GRACE_MS = 300
 
   function makeTrigger(): HTMLElement {
     const el = document.createElement('div')
@@ -229,6 +235,113 @@ describe('tooltip', () => {
     })
   })
 
+  // WCAG 1.4.13 (#441): the pointer can travel from the trigger onto the tooltip to read it, or
+  // select a rich `InfoTip`'s text, without the tooltip vanishing on the way.
+  describe('hoverable', () => {
+    function showFor(text: string): { el: HTMLElement; tip: HTMLElement } {
+      const el = makeTrigger()
+      tooltip(el, text)
+      el.dispatchEvent(new MouseEvent('mouseenter'))
+      vi.advanceTimersByTime(500)
+      const tip = document.querySelector<HTMLElement>('.cmdr-tooltip.visible')
+      if (!tip) throw new Error('tooltip did not show')
+      return { el, tip }
+    }
+
+    function visibleText(): string | null {
+      return document.querySelector('.cmdr-tooltip.visible')?.textContent ?? null
+    }
+
+    it('stays up while the pointer crosses from the trigger onto the tooltip', () => {
+      const { el, tip } = showFor('Folder info')
+      el.dispatchEvent(new MouseEvent('mouseleave'))
+      vi.advanceTimersByTime(50)
+      tip.dispatchEvent(new MouseEvent('mouseenter'))
+      vi.advanceTimersByTime(1000)
+
+      expect(visibleText()).toBe('Folder info')
+      expect(el.getAttribute('aria-describedby')).toBe(tip.id)
+    })
+
+    it('hides shortly after the pointer leaves the trigger for somewhere else', () => {
+      const { el } = showFor('Folder info')
+      el.dispatchEvent(new MouseEvent('mouseleave'))
+      expect(visibleText()).toBe('Folder info')
+
+      vi.advanceTimersByTime(500)
+
+      expect(visibleText()).toBeNull()
+      expect(el.hasAttribute('aria-describedby')).toBe(false)
+    })
+
+    it('hides shortly after the pointer leaves the tooltip itself', () => {
+      const { el, tip } = showFor('Folder info')
+      el.dispatchEvent(new MouseEvent('mouseleave'))
+      tip.dispatchEvent(new MouseEvent('mouseenter'))
+      tip.dispatchEvent(new MouseEvent('mouseleave'))
+      vi.advanceTimersByTime(500)
+
+      expect(visibleText()).toBeNull()
+    })
+
+    it('stays up when the pointer goes back from the tooltip to the trigger', () => {
+      const { el, tip } = showFor('Folder info')
+      el.dispatchEvent(new MouseEvent('mouseleave'))
+      tip.dispatchEvent(new MouseEvent('mouseenter'))
+      tip.dispatchEvent(new MouseEvent('mouseleave'))
+      el.dispatchEvent(new MouseEvent('mouseenter'))
+      vi.advanceTimersByTime(1000)
+
+      expect(visibleText()).toBe('Folder info')
+    })
+
+    // A row's tooltip sits below it, over the next row: reaching it means crossing that row first.
+    it('stays up while the pointer crosses a neighbor trigger on its way onto the tooltip', () => {
+      const { el, tip } = showFor('First')
+      const neighbor = makeTrigger()
+      tooltip(neighbor, 'Second')
+      el.dispatchEvent(new MouseEvent('mouseleave'))
+      neighbor.dispatchEvent(new MouseEvent('mouseenter'))
+      vi.advanceTimersByTime(30)
+      neighbor.dispatchEvent(new MouseEvent('mouseleave'))
+      tip.dispatchEvent(new MouseEvent('mouseenter'))
+      vi.advanceTimersByTime(1000)
+
+      expect(visibleText()).toBe('First')
+    })
+
+    it("hands over to a neighbor once the grace runs out, on the neighbor's own delay", () => {
+      const { el } = showFor('First')
+      const neighbor = makeTrigger()
+      tooltip(neighbor, 'Second')
+      el.dispatchEvent(new MouseEvent('mouseleave'))
+      neighbor.dispatchEvent(new MouseEvent('mouseenter'))
+
+      vi.advanceTimersByTime(300)
+      expect(visibleText()).toBeNull()
+      vi.advanceTimersByTime(100)
+      expect(visibleText()).toBe('Second')
+    })
+
+    it('a press on the tooltip dismisses it, so the next click reaches what it covered', () => {
+      const { el, tip } = showFor('Folder info')
+      el.dispatchEvent(new MouseEvent('mouseleave'))
+      tip.dispatchEvent(new MouseEvent('mouseenter'))
+      tip.dispatchEvent(new MouseEvent('mousedown'))
+
+      expect(visibleText()).toBeNull()
+    })
+
+    it('a keypress still dismisses a tooltip the pointer is resting on', () => {
+      const { el, tip } = showFor('Folder info')
+      el.dispatchEvent(new MouseEvent('mouseleave'))
+      tip.dispatchEvent(new MouseEvent('mouseenter'))
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+
+      expect(visibleText()).toBeNull()
+    })
+  })
+
   describe('contentEl (rich live content)', () => {
     it('adopts the host element into the tooltip on show', () => {
       const el = makeTrigger()
@@ -251,6 +364,7 @@ describe('tooltip', () => {
       vi.advanceTimersByTime(500)
 
       el.dispatchEvent(new MouseEvent('mouseleave'))
+      vi.advanceTimersByTime(PAST_HIDE_GRACE_MS)
 
       expect(content.parentElement).toBe(host)
     })
@@ -333,6 +447,7 @@ describe('tooltip', () => {
       // The owning component unmounts while the tooltip is showing (host leaves the DOM).
       host.remove()
       el.dispatchEvent(new MouseEvent('mouseleave'))
+      vi.advanceTimersByTime(PAST_HIDE_GRACE_MS)
 
       // Nothing to return to, so the element is simply detached, never left dangling in the tooltip.
       expect(content.parentElement).toBeNull()
@@ -421,6 +536,7 @@ describe('tooltip', () => {
       vi.advanceTimersByTime(500)
 
       el.dispatchEvent(new MouseEvent('mouseleave'))
+      vi.advanceTimersByTime(PAST_HIDE_GRACE_MS)
 
       expect(onOpenChange).toHaveBeenLastCalledWith(false)
       expect(hostHeldContentOnClose).toBe(true)
