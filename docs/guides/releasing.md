@@ -20,16 +20,16 @@ How a release build is split). The environment's deployment policy admits `v*` t
 (releases run unattended), and no signing secret exists at repo level, so a workflow on a branch can't reach them. Where
 each value comes from: the vault note `projects/Cmdr/workflow/Cmdr signing keys.md`.
 
-- **The ten secrets**: `TAURI_SIGNING_PRIVATE_KEY`, `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`, `APPLE_API_KEY`,
-  `APPLE_API_KEY_BASE64`, `APPLE_API_ISSUER`, `APPLE_SIGNING_IDENTITY`, `APPLE_CERTIFICATE`,
-  `APPLE_CERTIFICATE_PASSWORD`, `APPLE_INSTALLER_CERTIFICATE`, and `APPLE_INSTALLER_CERTIFICATE_PASSWORD`. The `.p12`
-  files and their passwords come from Bitwarden, which agents can't reach; set or replace one with
-  `gh secret set <NAME> --env release -R vdavid/cmdr` (it prompts for the value).
+- **The eight secrets**: `APPLE_API_KEY`, `APPLE_API_KEY_BASE64`, `APPLE_API_ISSUER`, `APPLE_SIGNING_IDENTITY`,
+  `APPLE_CERTIFICATE`, `APPLE_CERTIFICATE_PASSWORD`, `APPLE_INSTALLER_CERTIFICATE`, and
+  `APPLE_INSTALLER_CERTIFICATE_PASSWORD`. The `.p12` files and their passwords come from Bitwarden, which agents can't
+  reach; set or replace one with `gh secret set <NAME> --env release -R vdavid/cmdr` (it prompts for the value).
 - ❌ **Never add a signing secret at repo level.** `release.yml` calls the pipeline with `secrets: inherit`, so a
   repo-level copy reaches every job, and any branch workflow could read it. (The repo-level copies were deleted on
   2026-10-08, after v0.51.0 signed and notarized from the environment alone.)
-- The updater pair (`TAURI_SIGNING_*`) leaves GitHub entirely once a `local` release has shipped: § Who signs the update
-  archives.
+- **The updater key isn't on GitHub at all**: it signs on the laptop (§ Who signs the update archives). Its
+  `TAURI_SIGNING_*` copies were deleted from the `release` environment on 2026-10-15, after v0.53.0, the first `local`
+  release, shipped and an installed copy updated to it. Going back to `ci` mode puts them back (§ Switching modes).
 
 ## How a release build is split
 
@@ -165,7 +165,7 @@ signatures and rejected one swapped across arches.)
 ### What `local` mode protects, and what it doesn't
 
 - **Protects against the key leaking from GitHub**: an exfiltrated secret, a workflow on a branch, or a compromised
-  action step reading its environment. Once the GitHub copies are deleted, there's no key on GitHub to take.
+  action step reading its environment. There's no copy of the key on GitHub to take.
 - **Protects against an archive swapped on the release**: one that wasn't built by the pipeline at the signed tag has no
   matching provenance, so the laptop refuses it, and one swapped after signing fails the app's signature check.
 - **Doesn't protect against a malicious build from inside the pipeline**: a compromised third-party action or dependency
@@ -186,22 +186,11 @@ is its own proof of origin.
 - **To `local`**: `gh variable set RELEASE_UPDATE_SIGNING -R vdavid/cmdr --body local`, before pushing the tag.
 - **Back to `ci`** (the revert):
   1. `gh variable set RELEASE_UPDATE_SIGNING -R vdavid/cmdr --body ci` (or `gh variable delete`).
-  2. If the GitHub copies of the key were already deleted, put them back in the `release` environment from sops, piped
-     so the values never reach the shell history or the screen:
+  2. Put the key back in the `release` environment from sops, piped so the values never reach the shell history or the
+     screen:
      `secret CMDR_TAURI_SIGNING_PRIVATE_KEY | gh secret set TAURI_SIGNING_PRIVATE_KEY --env release -R vdavid/cmdr`,
      then the same for `CMDR_TAURI_SIGNING_PRIVATE_KEY_PASSWORD` into `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`.
   3. Release as usual. § The release procedure reads the variable and skips `release-finish.sh` in `ci` mode.
-
-### After the first `local` release ships
-
-The `TAURI_SIGNING_*` secrets stay in the `release` environment until then, so `ci` mode keeps working while the new
-flow proves itself. Until they're gone, `local` mode protects nothing against a leak from GitHub. Once the first `local`
-release has passed the checks in step 12 of § The release procedure (the manifest, the three archive URLs, the
-attestations) and an installed copy has updated to it:
-
-1. Delete the updater pair from GitHub: `gh secret delete TAURI_SIGNING_PRIVATE_KEY --env release -R vdavid/cmdr`, the
-   same for `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`. From then on, going back to `ci` takes step 2 of the revert.
-2. Update § Signing secrets and the release-chain bullets in `docs/threat-model.md`, which are phrased for this point.
 
 ### Rotating to the backup updater key
 
@@ -334,9 +323,6 @@ check.
       three `.cdx.json` SBOMs are among the assets, then download one DMG and run both `gh attestation verify` commands
       in § Provenance and SBOM attestations. A red `attest` or `sbom` job doesn't block release success: see § "The
       attest or sbom job failed".
-    - **First `local` release only**: once the checks above pass and an installed copy has updated to it, hand David the
-      step in § After the first `local` release ships (deleting the updater key from GitHub). Don't delete secrets
-      without David's go-ahead.
 13. **Minor or major release: offer to refresh the app-directory listings** (skip for patches), per § Refreshing the
     app-directory listings.
 
@@ -681,6 +667,11 @@ For a minor or major release, the agent updates `brand/listings/macupdate.md` in
 Then hand David the submission link: https://member.macupdate.com/content/submit, where "Modify an existing listing?" at
 the top takes the app name and loads the current listing. MacUpdate prefers updating an existing listing over a new one
 (downloads keep accumulating, version history stays catalogued, and Watch List users get notified).
+
+`brand/listings/alternativeto.md` gets the same pass, minus the version (AlternativeTo shows none): fix any line the
+release made false (language count, alpha list, a claim that broke), measure the description against its 3,000-character
+cap after every edit, and record what changed and why in the file's status notes. Hand David
+https://alternativeto.net/software/cmdr/about/ with the "Note about your changes" text.
 
 ## What a release publishes
 

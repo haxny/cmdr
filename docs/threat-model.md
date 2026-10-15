@@ -255,12 +255,12 @@ risk.
     that compiles nothing (§ How a release build is split, same guide); a release waits for a full, green CI run of its
     commit; every third-party action is pinned to a commit SHA; each release publishes SHA-256 checksums, SLSA build
     provenance, and signed SBOMs (`docs/guides/releasing.md`).
-  - **The updater key signs on the maintainer's laptop, not in CI**, from the first release in `local` signing mode
-    (`docs/guides/releasing.md` § Who signs the update archives). CI builds, notarizes, and attests into a draft
-    release; the laptop verifies each update archive's build provenance (the release workflow, at the signed tag's
-    commit, on a GitHub-hosted runner), refuses anything that doesn't verify, signs with the key from its encrypted
-    store, checks each signature against the app's trusted keys, and only then lets CI publish. The key's GitHub copies
-    are deleted once that first release ships, which is when a GitHub or CI compromise stops being able to read it.
+  - **The updater key signs on the maintainer's laptop, not in CI**, since v0.53.0 (`docs/guides/releasing.md` § Who
+    signs the update archives). CI builds, notarizes, and attests into a draft release; the laptop verifies each update
+    archive's build provenance (the release workflow, at the signed tag's commit, on a GitHub-hosted runner), refuses
+    anything that doesn't verify, signs with the key from its encrypted store, checks each signature against the app's
+    trusted keys, and only then lets CI publish. The key has no copy on GitHub, so a GitHub or CI compromise can't read
+    it.
   - **Account and key custody**: hardware-key 2FA on the GitHub account, and encrypted copies of every signing key
     outside GitHub and Cloudflare.
 - **Residual risk**:
@@ -384,8 +384,8 @@ risk.
 Impact × likelihood, highest first. Gaps tracked privately aren't ranked here.
 
 1. **Maintainer account or release chain compromise ships code to every install** (boundary 6). Impact: critical.
-   Likelihood: low, after hardware keys, the release environment, signed and protected tags, the CI gate, and (once the
-   first `local`-mode release ships) an updater key that no longer lives on GitHub.
+   Likelihood: low, after hardware keys, the release environment, signed and protected tags, the CI gate, and an updater
+   key that doesn't live on GitHub.
 2. **A parser bug in a dependency or Apple framework, reached by a downloaded file or a hostile server, runs with Full
    Disk Access** (boundaries 3 and 4). Impact: high. Likelihood: low. Cmdr isn't sandboxed and parses in process.
 3. **Prompt injection through file names or contents steers Ask Cmdr** into reading and sending more than intended,
