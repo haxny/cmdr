@@ -46,6 +46,9 @@ Pull-tier docs for `lib/ui/`: architecture, component APIs, and decision rationa
 - **`LinkButton.svelte`**: Link-styled `<button>` (default) or `<a>` (with `href`); the only sanctioned
   `cursor: pointer`
 - **`CopyBox.svelte`**: Copyable monospace text, a command or a path (+ Copy button)
+- **`LiveAnnouncer.svelte`**: a polite live region with `announce(message)`, mounted empty with its owner (a region
+  inserted with its message says nothing); the same text twice is heard twice. File panes, the command palette, and the
+  Settings sidebar speak through one each. Callers debounce bursts
 - **`LoadingIcon.svelte`**: Animated spinner with progressive status text
 - **`AlertDialog.svelte`**: Single-action confirmation dialog built on `ModalDialog`
 - **`ProgressBar.svelte`**: Reusable progress bar (just the bar, no labels or layout)
@@ -1289,12 +1292,13 @@ Reusable progress bar component: just the bar, no labels or layout. Consumers ar
 
 Props:
 
-| Prop        | Type           | Notes                                                                                       |
-| ----------- | -------------- | ------------------------------------------------------------------------------------------- |
-| `value`     | `number`       | 0–1 fractional progress                                                                     |
-| `size`      | `'sm' \| 'md'` | Bar height + radius. `sm` = 4px / `--radius-xs`, `md` = 8px / `--radius-sm`. Default `'md'` |
-| `ariaLabel` | `string?`      | Accessible label for screen readers                                                         |
-| `animated`  | `boolean?`     | Whether the bar is MOVING. Default `true`; `false` drops the shimmer                        |
+| Prop            | Type           | Notes                                                                                         |
+| --------------- | -------------- | --------------------------------------------------------------------------------------------- |
+| `value`         | `number`       | 0–1 fractional progress                                                                       |
+| `size`          | `'sm' \| 'md'` | Bar height + radius. `sm` = 4px / `--radius-xs`, `md` = 8px / `--radius-sm`. Default `'md'`   |
+| `ariaLabel`     | `string?`      | Accessible label for screen readers                                                           |
+| `ariaValuetext` | `string?`      | The amount shown beside the bar ("1.2 GB of 3 GB"); without it a reader says only the percent |
+| `animated`      | `boolean?`     | Whether the bar is MOVING. Default `true`; `false` drops the shimmer                          |
 
 Uses `role="progressbar"` with `aria-valuenow` / `aria-valuemin` / `aria-valuemax`. Fill transitions via
 `transition: width 0.15s ease-out`.

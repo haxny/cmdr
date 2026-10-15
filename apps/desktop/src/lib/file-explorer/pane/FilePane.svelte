@@ -130,7 +130,7 @@
     import { createHistoryCursorSync } from './history-cursor-sync.svelte'
     import type { CursorReading } from '../navigation/history-cursor'
     import { getFirstShortcutReactive } from '#lib/shortcuts/reactive-shortcuts.svelte.js'
-    import PaneAnnouncer from './PaneAnnouncer.svelte'
+    import LiveAnnouncer from '#lib/ui/LiveAnnouncer.svelte'
     import { focusPaneChrome } from './pane-chrome'
     import { createPaneLocationAnnouncer, paneLocationLabel } from './pane-location-announcer.svelte'
 
@@ -1723,7 +1723,7 @@
         )
     }
 
-    /** Says `message` through the pane's polite live region (`PaneAnnouncer.svelte`). */
+    /** Says `message` through the pane's polite live region (`#lib/ui/LiveAnnouncer.svelte`). */
     export function announce(message: string): void {
         announcer?.announce(message)
     }
@@ -2036,7 +2036,7 @@
     data-pane-tint={paneTintName ?? undefined}
     data-listing-id={listingId || undefined}
 >
-    <PaneAnnouncer bind:this={announcer} />
+    <LiveAnnouncer bind:this={announcer} data-pane-announcer />
     <!-- Pane chrome: ←/→ walk its controls, Escape goes back to the list (`pane-chrome.ts`). The
          toolbar itself takes no focus; its controls do. -->
     <!-- svelte-ignore a11y_interactive_supports_focus -->

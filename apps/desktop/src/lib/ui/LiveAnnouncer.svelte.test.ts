@@ -1,12 +1,12 @@
 /**
- * The pane's one polite live region. A region inserted on demand announces nothing, so it's
- * mounted with the pane and empty; each message clears it first and lands a frame later, so
+ * The house polite live region. A region inserted on demand announces nothing, so it's
+ * mounted with its owner and empty; each message clears it first and lands a frame later, so
  * the same text twice in a row is a change both times.
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { flushSync, mount, unmount } from 'svelte'
-import PaneAnnouncer from './PaneAnnouncer.svelte'
+import LiveAnnouncer from './LiveAnnouncer.svelte'
 
 let component: ReturnType<typeof mount> | null = null
 
@@ -24,13 +24,13 @@ afterEach(() => {
 function setup(): { region: HTMLElement; announce: (message: string) => void } {
   const target = document.createElement('div')
   document.body.appendChild(target)
-  component = mount(PaneAnnouncer, { target })
-  const region = target.querySelector<HTMLElement>('[data-pane-announcer]')
-  if (!region) throw new Error('PaneAnnouncer rendered no region')
+  component = mount(LiveAnnouncer, { target })
+  const region = target.querySelector<HTMLElement>('[data-live-announcer]')
+  if (!region) throw new Error('LiveAnnouncer rendered no region')
   return { region, announce: (component as unknown as { announce: (m: string) => void }).announce }
 }
 
-describe('PaneAnnouncer', () => {
+describe('LiveAnnouncer', () => {
   it('is a live region from mount, before its first message', () => {
     const { region } = setup()
     expect(region.getAttribute('aria-live')).toBe('polite')

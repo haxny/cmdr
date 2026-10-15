@@ -932,6 +932,17 @@ design guidelines in AGENTS.md:
 All long operations must be cancelable. The cancel action should be a secondary button or `Escape` key, and must stop
 both the UI indicator and the background process.
 
+A `ProgressBar` with an amount printed beside it passes that amount as `ariaValuetext` ("1.2 GB of 3 GB"), or a screen
+reader hears only the percentage.
+
+### Live announcer (app)
+
+`LiveAnnouncer.svelte` is how a surface tells a screen reader what no focused element says: a file pane's "Left pane,
+Documents" or "3 selected", a search's "12 matches". It renders nothing visible. Mount it with its owner, empty, and
+call `announce(message)`: a region inserted together with its first message says nothing. One per surface, ❌ never a
+second region beside it, and the owner debounces bursts (a held key, a streaming load) so the reader never hears a
+flood.
+
 ### Empty states (app)
 
 Centered, single-line message in `--color-text-tertiary` at `--font-size-sm`: "Empty folder". No icon, no illustration;

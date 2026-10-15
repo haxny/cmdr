@@ -1,6 +1,7 @@
 /**
  * Tier 3 a11y tests for the presentational primitives: chips, badges, glyphs,
- * spinners, progress, the two formatted-value labels, and the column list.
+ * spinners, progress, the two formatted-value labels, the column list, and the live
+ * announcer.
  *
  * One file per primitive would cost about ten times as much: `svelte-tests`
  * charges per test FILE, not per test (`docs/testing.md` § "What a test actually
@@ -56,6 +57,7 @@ import type { ColumnListColumn } from './column-list-types'
 import DateLabel from './DateLabel.svelte'
 import Icon from './Icon.svelte'
 import InfoTip from './InfoTip.svelte'
+import LiveAnnouncer from './LiveAnnouncer.svelte'
 import LoadingIcon from './LoadingIcon.svelte'
 import ProgressBar from './ProgressBar.svelte'
 import SectionCard from './SectionCard.svelte'
@@ -351,6 +353,24 @@ describe('StatusGlyph a11y', () => {
 })
 
 /**
+ * Tier 3 a11y tests for `LiveAnnouncer.svelte`: a polite live region, mounted empty with its
+ * owner (a region inserted with its first message announces nothing). Extra attributes land
+ * on the region, which is how a file pane tags its own.
+ */
+describe('LiveAnnouncer a11y', () => {
+  it('mounts an empty polite region with no a11y violations', async () => {
+    const target = container()
+    mount(LiveAnnouncer, { target, props: { 'data-pane-announcer': true } })
+    await tick()
+    const region = target.querySelector('[data-live-announcer]')
+    expect(region?.getAttribute('aria-live')).toBe('polite')
+    expect(region?.hasAttribute('data-pane-announcer')).toBe(true)
+    expect(region?.textContent).toBe('')
+    await expectNoA11yViolations(target)
+  })
+})
+
+/**
  * Tier 3 a11y tests for `LoadingIcon.svelte`.
  *
  * Covers each of the four progressive-status states (default, opening,
@@ -427,6 +447,26 @@ describe('ProgressBar a11y', () => {
     mount(ProgressBar, { target, props: { value: 0.25, size: 'sm', ariaLabel: 'Indexing progress' } })
     await tick()
     await expectNoA11yViolations(target)
+  })
+
+  // A reader says "42 percent" from `aria-valuenow` alone; the words on screen ("1.2 GB of
+  // 3 GB") ride `aria-valuetext`, and the bar names no value text it wasn't given.
+  it('says the on-screen amount through aria-valuetext when given one', async () => {
+    const target = container()
+    mount(ProgressBar, {
+      target,
+      props: { value: 0.42, ariaLabel: 'Size progress', ariaValuetext: '1.2 GB of 3 GB' },
+    })
+    await tick()
+    const bar = target.querySelector('[role="progressbar"]')
+    expect(bar?.getAttribute('aria-valuetext')).toBe('1.2 GB of 3 GB')
+    expect(bar?.getAttribute('aria-valuenow')).toBe('42')
+    await expectNoA11yViolations(target)
+
+    const plain = container()
+    mount(ProgressBar, { target: plain, props: { value: 0.42, ariaLabel: 'Size progress' } })
+    await tick()
+    expect(plain.querySelector('[role="progressbar"]')?.hasAttribute('aria-valuetext')).toBe(false)
   })
 })
 

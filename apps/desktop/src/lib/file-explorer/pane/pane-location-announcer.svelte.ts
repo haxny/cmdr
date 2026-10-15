@@ -1,5 +1,5 @@
 /**
- * "Left pane, Documents", spoken through the pane's live region (`PaneAnnouncer.svelte`) when
+ * "Left pane, Documents", spoken through the pane's live region (`#lib/ui/LiveAnnouncer.svelte`) when
  * the pane takes focus and when the focused pane settles on another folder.
  *
  * ❗ VoiceOver never speaks a listbox's own name, neither at launch nor on `Tab`, even with

@@ -13,3 +13,10 @@ import { getFileSizeFormat } from '#lib/settings/reactive-settings.svelte.js'
 export function sizeDisplayParts(bytes: number, rounded = false): { value: string; tierClass: string }[] {
   return formatSizeForDisplay(bytes, { unit: 'dynamic', format: getFileSizeFormat(), rounded })
 }
+
+/** The words `<Size>` shows, as plain text (a progress bar's `aria-valuetext`). */
+export function sizeDisplayText(bytes: number, rounded = false): string {
+  return sizeDisplayParts(bytes, rounded)
+    .map((part) => part.value)
+    .join('')
+}

@@ -22,6 +22,7 @@
 <script lang="ts">
     import ProgressBar from '#lib/ui/ProgressBar.svelte'
     import Size from '#lib/ui/Size.svelte'
+    import { sizeDisplayText } from '#lib/ui/size-display.js'
     import Trans from '#lib/intl/Trans.svelte'
     import { tString } from '#lib/intl/messages.svelte.js'
     import { calculatePercentage, formatNumber } from '#lib/file-explorer/selection/selection-info-utils.js'
@@ -103,6 +104,23 @@
             : tString('fileOperations.shared.fileRate', { count: fileRate.value, rateText: fileRate.text }),
     )
 
+    /** What each bar's `aria-valuetext` says: the amount printed beside it, so a screen
+     *  reader hears "1.2 GB of 3 GB", not only "40 percent". */
+    const sizeValueText = $derived(
+        tString('fileOperations.transferProgress.sizeProgressValueText', {
+            doneText: sizeDisplayText(bytesDone, true),
+            totalText: sizeDisplayText(bytesTotal, true),
+        }),
+    )
+    const countValueText = $derived(
+        tString(
+            countKind === 'items'
+                ? 'fileOperations.transferProgress.itemProgressValueText'
+                : 'fileOperations.transferProgress.fileProgressValueText',
+            { count: filesTotal, doneText: formatNumber(filesDone), totalText: formatNumber(filesTotal) },
+        ),
+    )
+
     const countLabel = $derived(
         countKind === 'items'
             ? tString('fileOperations.transferProgress.progressItems')
@@ -153,6 +171,7 @@
             value={bytesDone / bytesTotal}
             size={isCompact ? 'sm' : 'md'}
             ariaLabel={tString('fileOperations.transferProgress.sizeProgressAria')}
+            ariaValuetext={sizeValueText}
         />
         <span class="amount"><Size bytes={bytesDone} rounded /> / <Size bytes={bytesTotal} rounded /></span>
         <span class="percent">({formatNumber(bytePercent)}%)</span>
@@ -169,6 +188,7 @@
             value={filesDone / filesTotal}
             size={isCompact ? 'sm' : 'md'}
             ariaLabel={tString('fileOperations.transferProgress.fileProgressAria')}
+            ariaValuetext={countValueText}
         />
         <span class="amount">{formatNumber(filesDone)} / {formatNumber(filesTotal)}</span>
         <span class="percent">({formatNumber(filePercent)}%)</span>

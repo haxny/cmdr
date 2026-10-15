@@ -28,7 +28,6 @@ vi.mock('#lib/ui/toast/index.js', () => ({ dismissToast: vi.fn(() => undefined) 
 
 import DoubleClickPaneHintToastContent from './DoubleClickPaneHintToastContent.svelte'
 import FunctionKeyBar from './FunctionKeyBar.svelte'
-import PaneAnnouncer from './PaneAnnouncer.svelte'
 import PaneResizer from './PaneResizer.svelte'
 import TypeToJumpIndicator from './TypeToJumpIndicator.svelte'
 import VolumeUnreachableBanner from './VolumeUnreachableBanner.svelte'
@@ -223,22 +222,6 @@ describe('DoubleClickPaneHintToastContent a11y', () => {
     const target = container()
     mount(DoubleClickPaneHintToastContent, { target, props: { toastId: 'hint-1' } })
     await tick()
-    await expectNoA11yViolations(target)
-  })
-})
-
-/**
- * Tier 3 a11y tests for `PaneAnnouncer.svelte`: the pane's one polite live region, mounted
- * empty with the pane (a region inserted with its first message announces nothing).
- */
-describe('PaneAnnouncer a11y', () => {
-  it('mounts an empty polite region with no a11y violations', async () => {
-    const target = container()
-    mount(PaneAnnouncer, { target })
-    await tick()
-    const region = target.querySelector('[data-pane-announcer]')
-    expect(region?.getAttribute('aria-live')).toBe('polite')
-    expect(region?.textContent).toBe('')
     await expectNoA11yViolations(target)
   })
 })

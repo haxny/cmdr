@@ -1316,6 +1316,35 @@
     "screenshot": "conflict-dialog.png"
   },
 
+  "fileOperations.transferProgress.sizeProgressValueText": "{doneText} of {totalText}",
+  "@fileOperations.transferProgress.sizeProgressValueText": {
+    "description": "What a screen reader says for the byte-progress bar of a running copy/move, for example “1.2 GB of 3 GB”, so it hears the amount shown beside the bar and not only a percentage. Screen-reader only, never shown.",
+    "placeholders": {
+      "doneText": "how much has been written so far, already formatted with its unit (e.g. 1.2 GB)",
+      "totalText": "the total size of the operation, already formatted with its unit (e.g. 3 GB)"
+    }
+  },
+
+  "fileOperations.transferProgress.fileProgressValueText": "{count, plural, one {{doneText} of {totalText} file} other {{doneText} of {totalText} files}}",
+  "@fileOperations.transferProgress.fileProgressValueText": {
+    "description": "What a screen reader says for the count-progress bar of a running copy/move, for example “1,312 of 4,000 files”, so it hears the count shown beside the bar and not only a percentage. Screen-reader only, never shown. Sibling: fileOperations.transferProgress.itemProgressValueText for a trash.",
+    "placeholders": {
+      "doneText": "how many files are done, already formatted for display (e.g. 1,312)",
+      "totalText": "how many files the operation has in total, already formatted for display (e.g. 4,000)",
+      "count": "the same total as a raw number (drives the singular/plural form)"
+    }
+  },
+
+  "fileOperations.transferProgress.itemProgressValueText": "{count, plural, one {{doneText} of {totalText} item} other {{doneText} of {totalText} items}}",
+  "@fileOperations.transferProgress.itemProgressValueText": {
+    "description": "What a screen reader says for the count-progress bar of a running trash, for example “12 of 40 items”, so it hears the count shown beside the bar and not only a percentage. Screen-reader only, never shown. An item is a file or a folder. Sibling: fileOperations.transferProgress.fileProgressValueText.",
+    "placeholders": {
+      "doneText": "how many items are done, already formatted for display (e.g. 12)",
+      "totalText": "how many items the operation has in total, already formatted for display (e.g. 40)",
+      "count": "the same total as a raw number (drives the singular/plural form)"
+    }
+  },
+
   "fileOperations.transferProgress.etaRemaining": "{duration} left",
   "@fileOperations.transferProgress.etaRemaining": {
     "description": "Estimated time left, shown next to the progress bars, for example \"2m 30s left\". Appears on both surfaces that show a running transfer: the copy/move/delete progress dialog and the rows of the operation queue window. It sits in a narrow fixed-width cell, so keep it short. The duration comes in ready-made.",

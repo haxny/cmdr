@@ -22,7 +22,7 @@ import { SvelteSet } from 'svelte/reactivity'
 import { virtual } from '@guidepup/virtual-screen-reader'
 import { dirEntry, fileEntry } from './test-full-list'
 import { mountBriefList } from './test-brief-list'
-import PaneAnnouncer from '../pane/PaneAnnouncer.svelte'
+import LiveAnnouncer from '#lib/ui/LiveAnnouncer.svelte'
 
 vi.mock('#lib/tauri-commands/index.js', async () =>
   (await import('./test-file-list-mocks')).tauriCommandsMock({
@@ -162,7 +162,7 @@ describe('the file list, spoken', () => {
   it('speaks the pane announcer’s message as a polite announcement', async () => {
     const target = document.createElement('div')
     document.body.appendChild(target)
-    const announcer = mount(PaneAnnouncer, { target })
+    const announcer = mount(LiveAnnouncer, { target, props: { 'data-pane-announcer': true } })
     cleanups.push(() => {
       void unmount(announcer)
     })

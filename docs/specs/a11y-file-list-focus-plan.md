@@ -468,7 +468,7 @@ stays as it is.
 - **DONE**: `pnpm check` green.
 - **Status (2026-10-15)**: code, unit, axe, and `file-list.vsr.svelte.test.ts` landed. Shapes that differ from the
   sketch: the row helper is its own module, `views/file-row-a11y.ts` (`fileRowId` moved there), with `rowSizeText` for
-  Full view's size words; the announcer is `pane/PaneAnnouncer.svelte` (the region, `announce`) plus
+  Full view's size words; the announcer is `ui/LiveAnnouncer.svelte` (the region, `announce`) plus
   `pane/pane-location-announcer.svelte.ts` (when to say "{side} pane, {folder}"), and "after the active descendant
   lands" is literal: `createDeferredActiveDescendant` gained an `onLand` callback that the lists forward as
   `onCursorRowLanded`, with a 400 ms fallback when no row lands; it announces only for the focused pane, and a folder

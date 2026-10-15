@@ -39,6 +39,17 @@ describe('TransferProgressReadout', () => {
     expect(texts('.percent')).toEqual(['(25%)', '(25%)'])
   })
 
+  // A screen reader reads a progress bar's percentage, never the amount printed beside it,
+  // so each bar carries that amount as its value text, in the same coarse live form.
+  it('gives each bar the amount beside it as its value text', () => {
+    render({ bytesDone: 7_610_000_000, bytesTotal: 22_660_000_000, filesDone: 1_312, filesTotal: 4_000 })
+    const bars = [...target.querySelectorAll('[role="progressbar"]')]
+    expect(bars.map((b) => b.getAttribute('aria-valuetext'))).toEqual(['7.6 GB of 23 GB', '1,312 of 4,000 files'])
+    render({ ...halfway, filesDone: 1, filesTotal: 1, countKind: 'items' })
+    const itemBar = target.querySelectorAll('[role="progressbar"]')[1]
+    expect(itemBar.getAttribute('aria-valuetext')).toBe('1 of 1 item')
+  })
+
   it('drops the bytes row when the total size is unknown, keeping the count row', () => {
     render({ ...halfway, bytesDone: 0, bytesTotal: 0 })
     const bars = [...target.querySelectorAll('[role="progressbar"]')]

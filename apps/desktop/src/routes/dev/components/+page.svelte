@@ -20,6 +20,7 @@
     import Toasts from './sections/Toasts.svelte'
     import Progress from './sections/Progress.svelte'
     import Loading from './sections/Loading.svelte'
+    import LiveAnnouncerSection from './sections/LiveAnnouncerSection.svelte'
     import Tooltips from './sections/Tooltips.svelte'
     import SizeBadges from './sections/SizeBadges.svelte'
     import StatusBadgeSection from './sections/StatusBadgeSection.svelte'
@@ -64,6 +65,7 @@
         'toasts',
         'progress',
         'loading',
+        'live-announcer',
         'tooltips',
         'size-badges',
         'status-badge',
@@ -110,6 +112,7 @@
         <Toasts />
         <Progress />
         <Loading />
+        <LiveAnnouncerSection />
         <Tooltips />
         <SizeBadges />
         <StatusBadgeSection />

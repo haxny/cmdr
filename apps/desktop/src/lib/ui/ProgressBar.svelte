@@ -3,11 +3,15 @@
         value,
         size = 'md',
         ariaLabel,
+        ariaValuetext,
         animated = true,
     }: {
         value: number
         size?: 'sm' | 'md'
         ariaLabel?: string
+        /** The amount shown beside the bar ("1.2 GB of 3 GB"), so a screen reader says it
+         *  too, and not only the percentage. */
+        ariaValuetext?: string
         /** Whether the bar is MOVING. The shimmer says "something is happening",
          *  so a bar that's halted (a paused operation) passes `false` and sits
          *  still. Reduced motion drops the sweep regardless. */
@@ -25,6 +29,7 @@
     aria-valuemin={0}
     aria-valuemax={100}
     aria-label={ariaLabel}
+    aria-valuetext={ariaValuetext}
 >
     <div class="fill" class:animated style="width: {widthPercent}%"></div>
 </div>
