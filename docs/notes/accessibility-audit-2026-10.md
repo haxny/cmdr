@@ -31,15 +31,18 @@ downloaded INT `.docx` (itic.org, `VPAT2.5RevINT`).
 
 Counts per table (rows marked "see WCAG section" aren't counted):
 
-- **WCAG 2.2 Level A (32)**: 18 Supports, 8 Partially supports, 0 Does not support, 6 Not applicable.
+- **WCAG 2.2 Level A (32)**: 19 Supports, 7 Partially supports, 0 Does not support, 6 Not applicable (3.3.1 moved to
+  Supports with #438, 2026-10-15).
 - **WCAG 2.2 Level AA (24)**: 9 Supports, 10 Partially supports, 0 Does not support, 5 Not applicable (1.3.5 and 3.1.2
   moved to Supports with #442, 2026-10-15).
 - **Section 508 chapter 3 (9)**: 4 Supports, 5 Partially supports.
-- **Section 508 chapter 5 (26)**: 8 Supports, 8 Partially supports, 10 Not applicable.
+- **Section 508 chapter 5 (26)**: 9 Supports, 7 Partially supports, 10 Not applicable (502.3.6 moved to Supports with
+  #438, 2026-10-15).
 - **Section 508 chapter 6 (5)**: 2 Supports, 2 Partially supports, 1 Not applicable.
 - **EN 301 549 clause 4 (11)**: 6 Supports, 5 Partially supports.
 - **EN 301 549 clause 5 (11)**: 2 Supports, 9 Not applicable.
-- **EN 301 549 clause 11 (23)**: 7 Supports, 8 Partially supports, 8 Not applicable.
+- **EN 301 549 clause 11 (23)**: 8 Supports, 7 Partially supports, 8 Not applicable (11.5.2.8 moved to Supports with
+  #438, 2026-10-15).
 - **EN 301 549 clause 12 (5)**: 3 Supports, 2 Partially supports.
 - **Whole chapters/clauses not applicable**: 508 chapter 4 (hardware); EN 301 549 clauses 6 (two-way voice), 7 (video),
   8 (hardware), 9 (web: the app isn't web content; the website is assessed as documentation under 12.1.2), 10 (non-web
@@ -54,8 +57,8 @@ Top gaps, each with its issue:
 1. **The file list likely doesn't speak** (#437): the focused element is the `role="application"` container, while
    `aria-activedescendant` sits on the never-focused listbox; marked files, list position, file kind, and Full view
    columns aren't exposed.
-2. **Cursors and status changes aren't announced** (#438): the Search result cursor, the Settings sidebar, empty
-   folders, selection counts, the license key error, progress text.
+2. **Cursors and status changes aren't announced** (#438, closed in code 2026-10-15, VoiceOver checks pending): the
+   Search result cursor, the Settings sidebar, empty folders, selection counts, the license key error, progress text.
 3. **Toasts are mouse-first** (#439): focus doesn't pause them, no key reaches them, no setting keeps them, and Undo
    trash exists only in a 10-second toast.
 4. **State cues rely on faint color** (#440): which pane is focused (about 1.09:1), marked rows (hue only), focus rings
@@ -87,11 +90,11 @@ native menu bar and context menus.
 - **1.2.2 Captions (prerecorded)**: Not applicable. Same as 1.2.1.
 - **1.2.3 Audio description or media alternative (prerecorded)**: Not applicable. Same as 1.2.1.
 - **1.3.1 Info and relationships**: Partially supports. Dialogs, settings, and server forms use real headings, labels,
-  and roles. The file list doesn't expose marked state, list position, or Full view column structure, sort order is
-  visual only, and the Settings sidebar flattens its section hierarchy. Evidence: `views/BriefList.svelte`,
-  `views/FullList.svelte` (`aria-selected` = cursor only, no `aria-setsize`/`aria-posinset`),
-  `views/FullListHeader.svelte`, `selection/SortableHeader.svelte` (caret `aria-hidden`, no `aria-sort`),
-  `settings/components/SettingsSidebar.svelte`. Pending VoiceOver check V1, V7. #437, #438.
+  and roles. The file list doesn't expose marked state, list position, or Full view column structure, and sort order is
+  visual only. The Settings sidebar nests each section's subsections in a `role="group"` named for it (#438,
+  2026-10-15). Evidence: `views/BriefList.svelte`, `views/FullList.svelte` (`aria-selected` = cursor only, no
+  `aria-setsize`/`aria-posinset`), `views/FullListHeader.svelte`, `selection/SortableHeader.svelte` (caret
+  `aria-hidden`, no `aria-sort`), `settings/components/SettingsSidebar.svelte`. Pending VoiceOver check V1, V7. #437.
 - **1.3.2 Meaningful sequence**: Supports. DOM order matches the visual order in every surface; virtualized rows render
   in list order. Evidence: code reading of panes, dialogs, settings. Confirm with V12.
 - **1.3.3 Sensory characteristics**: Supports. Instructions don't rely on shape, position, or sound alone; pane regions
@@ -154,10 +157,11 @@ native menu bar and context menus.
   its content pane on arrow keys, like tabs. Evidence: `SettingsSidebar.svelte`.
 - **3.2.6 Consistent help**: Supports. The native Help menu sits in the same place in every window (Keyboard shortcuts,
   What's new, Send feedback, debug log, error report). Evidence: `src-tauri/src/menu/menu_bar.rs`.
-- **3.3.1 Error identification**: Partially supports. Rename, new folder, and server forms mark errors with
-  `aria-invalid` and tie the message to the field. The license key activation error isn't tied to the field or
-  announced. Evidence: `InlineRenameEditor.svelte`, `NewEntryNameField.svelte`, `ServerFormFields.svelte`,
-  `licensing/LicenseKeyDialog.svelte`. Pending VoiceOver check V5. #438.
+- **3.3.1 Error identification**: Supports. Rename, new folder, server, and license key forms mark errors with
+  `aria-invalid` and tie the message to the field; the license key's activation error also lands in an always-mounted
+  `role="alert"` region (#438, 2026-10-15). Evidence: `InlineRenameEditor.svelte`, `NewEntryNameField.svelte`,
+  `ServerFormFields.svelte`, `licensing/LicenseKeyDialog.svelte` (`showError`, `licensing.a11y.test.ts`). Pending
+  VoiceOver check V5.
 - **3.3.2 Labels or instructions**: Supports. Settings and server forms use visible `<label for>`; the license key,
   rename, and new folder fields have a visible prompt plus an accessible name. Evidence: `SettingRow.svelte`,
   `ServerFormFields.svelte`, `SignInCredentialFields.svelte`, `LicenseKeyDialog.svelte`.
@@ -166,11 +170,12 @@ native menu bar and context menus.
 - **4.1.1 Parsing**: Supports. Obsolete in WCAG 2.2 and always satisfied; the DOM is generated by Svelte.
 - **4.1.2 Name, role, value**: Partially supports. Dialogs, settings controls (Ark UI-based checkbox, switch, select,
   slider), tabs, the command palette, the queue grid, and menus expose name, role, and state. The file list's cursor
-  isn't conveyed (activedescendant on an unfocused element), marked state isn't exposed, the Search result cursor and
-  Settings sidebar selection aren't conveyed, and the volume chooser trigger isn't a control. Evidence:
-  `pane/key-dispatch.ts` `handleFocusGuard`, `pane/DualPaneExplorer.svelte` (`role="application"`),
-  `query-ui/QueryBar.svelte`, `SettingsSidebar.svelte`, `navigation/VolumeBreadcrumb.svelte`. Pending VoiceOver check
-  V1, V3, V6, V7, V10. #437, #438, #267.
+  isn't conveyed (activedescendant on an unfocused element), marked state isn't exposed, and the volume chooser trigger
+  isn't a control. The Search result cursor and the Settings sidebar selection are conveyed as `aria-activedescendant`
+  on the focused field or list, landing a frame after focus (#438, 2026-10-15). Evidence: `pane/key-dispatch.ts`
+  `handleFocusGuard`, `pane/DualPaneExplorer.svelte` (`role="application"`), `query-ui/QueryBar.svelte`,
+  `SettingsSidebar.svelte` (both with virtual-screen-reader tests), `navigation/VolumeBreadcrumb.svelte`. Pending
+  VoiceOver check V1, V3, V6, V7, V10. #437, #267.
 
 ## WCAG 2.2 Level AA
 
@@ -244,18 +249,20 @@ native menu bar and context menus.
 - **3.3.8 Accessible authentication (minimum)**: Supports. License key, API keys, and passwords accept paste; no
   cognitive tests. Evidence: no `onpaste` handlers in `apps/desktop/src`; `SettingPasswordInput.svelte`.
 - **4.1.3 Status messages**: Partially supports. Toasts use `status`/`alert`, the transfer phase banner and Search
-  result counts are polite live regions, listing errors are alerts. Gaps: empty folder, loading, selection count, filter
-  count, command palette results, and Settings search count aren't announced, and the toast live region mounts late with
-  alerts nested in a polite region. EN and 508 don't apply this to software. Evidence: `ToastContainer.svelte`,
-  `TransferProgressDialog.svelte`, `QueryResults.svelte`, `pane/ErrorPane.svelte`, `SelectionInfo.svelte`. Pending
-  VoiceOver check V4, V9. #438, #439.
+  result counts are polite live regions, listing errors are alerts. Since #438 (2026-10-15), each file pane's one live
+  region also says an empty folder, a slow load, the selection count, and the quick filter's match count (debounced, so
+  a burst says its end state), and the command palette and the Settings search say their result counts. Gap: the toast
+  live region mounts late with alerts nested in a polite region. EN and 508 don't apply this to software. Evidence:
+  `ToastContainer.svelte`, `TransferProgressDialog.svelte`, `QueryResults.svelte`, `pane/ErrorPane.svelte`,
+  `pane/pane-status-announcer.svelte.ts`, `ui/LiveAnnouncer.svelte`, `CommandPalette.svelte`, `SettingsSidebar.svelte`.
+  Pending VoiceOver check V4, V9. #439.
 
 ## Revised Section 508
 
 ### Chapter 3: functional performance criteria
 
 - **302.1 Without vision**: Partially supports. Dialogs, settings, menus, and forms are built for screen readers; the
-  file list probably doesn't announce its cursor or marked files. Pending VoiceOver check V1–V12. #437, #438.
+  file list probably doesn't announce its cursor or marked files. Pending VoiceOver check V1–V12. #437.
 - **302.2 With limited vision**: Partially supports. macOS text size plus app zoom past 200%, dark mode, AA text
   contrast in CI. Weak focused-pane and focus-ring contrast with some accents. #440, #441.
 - **302.3 Without perception of color**: Partially supports. Marked files and hidden files rely on color; the rest uses
@@ -288,24 +295,28 @@ native menu bar and context menus.
   standard ARIA controls that assistive tech can change. Pending VoiceOver check V7.
 - **502.3.3 Row, column, and headers**: Partially supports. The queue window is a `role="grid"`; the Full view file list
   has no column headers tied to cells. Evidence: `routes/queue/+page.svelte`, `FullListHeader.svelte`. #437.
-- **502.3.4 Values**: Supports. Progress bars expose `aria-valuenow/min/max`; sliders and number fields expose values.
-  No `aria-valuetext` yet (#438). Evidence: `ui/ProgressBar.svelte`. Pending VoiceOver check V4.
+- **502.3.4 Values**: Supports. Progress bars expose `aria-valuenow/min/max`, and the transfer readout's bars also say
+  the amount on screen as `aria-valuetext` ("1.2 GB of 3 GB", #438, 2026-10-15); sliders and number fields expose
+  values. Evidence: `ui/ProgressBar.svelte`, `file-operations/TransferProgressReadout.svelte`. Pending VoiceOver check
+  V4.
 - **502.3.5 Modification of values**: Supports. Sliders, number inputs, and selects are Ark UI controls operable by
   assistive tech. Pending VoiceOver check V7.
-- **502.3.6 Label relationships**: Partially supports. `<label for>` and `aria-describedby` throughout, except the
-  license key error and two alertdialogs without a description. #438.
-- **502.3.7 Hierarchical relationships**: Partially supports. Dialogs, menus, and the tablist are structured; the
-  Settings sidebar flattens subsections and tabs have no `tabpanel`. #437, #438.
+- **502.3.6 Label relationships**: Supports. `<label for>` and `aria-describedby` throughout, the license key error and
+  the two alertdialogs (`DeleteAiModelDialog`, `ForgetMemoryDialog`) included since #438 (2026-10-15). Pending VoiceOver
+  check V5.
+- **502.3.7 Hierarchical relationships**: Partially supports. Dialogs, menus, the tablist, and the Settings sidebar
+  (subsections grouped under their section, #438) are structured; tabs have no `tabpanel`. #437.
 - **502.3.8 Text**: Supports. All UI text is live DOM text exposed through WebKit. Pending VoiceOver check V11.
 - **502.3.9 Modification of text**: Supports. Text entry uses native `<input>`/`<textarea>`.
 - **502.3.10 List of actions**: Supports. Controls are native buttons and ARIA widgets with standard actions. Pending
   VoiceOver check V8.
 - **502.3.11 Actions on objects**: Supports. Same as 502.3.10. Pending VoiceOver check V8.
-- **502.3.12 Focus cursor**: Partially supports. Dialog and settings focus is real DOM focus; the file list and Search
-  cursors aren't exposed. Pending VoiceOver check V1, V6. #437, #438.
+- **502.3.12 Focus cursor**: Partially supports. Dialog and settings focus is real DOM focus, and the Search cursor and
+  Settings sidebar selection are exposed as `aria-activedescendant` (#438, 2026-10-15); the file list cursor isn't.
+  Pending VoiceOver check V1, V6. #437.
 - **502.3.13 Modification of focus cursor**: Partially supports. Assistive tech can move focus among standard controls;
   moving the VoiceOver cursor onto a file row likely doesn't move Cmdr's cursor. Pending VoiceOver check V1. #437.
-- **502.3.14 Event notification**: Partially supports. See WCAG 4.1.3. #438, #439.
+- **502.3.14 Event notification**: Partially supports. See WCAG 4.1.3. #439.
 - **502.4 Platform accessibility features**: Not applicable. Applies to platforms.
 - **503.2 User preferences**: Partially supports. Honors system font, dark/light, accent color, Reduce transparency,
   Reduce motion, and macOS text size. The Reduce motion misses (settings sidebar jump, rename shake and zoom, boot
@@ -383,15 +394,15 @@ native menu bar and context menus.
 - **11.5.2.5 Object information**: Partially supports. See 508 502.3.1. #437.
 - **11.5.2.6 Row, column, and headers**: Partially supports. See 508 502.3.3. #437.
 - **11.5.2.7 Values**: Supports. See 508 502.3.4.
-- **11.5.2.8 Label relationships**: Partially supports. See 508 502.3.6. #438.
-- **11.5.2.9 Parent-child relationships**: Partially supports. See 508 502.3.7. #437, #438.
+- **11.5.2.8 Label relationships**: Supports. See 508 502.3.6.
+- **11.5.2.9 Parent-child relationships**: Partially supports. See 508 502.3.7. #437.
 - **11.5.2.10 Text**: Supports. See 508 502.3.8.
 - **11.5.2.11 List of available actions**: Supports. See 508 502.3.10.
 - **11.5.2.12 Execution of available actions**: Supports. See 508 502.3.11.
 - **11.5.2.13 Tracking of focus and selection attributes**: Partially supports. See 508 502.3.12; marked files aren't
   exposed as selected. #437.
 - **11.5.2.14 Modification of focus and selection attributes**: Partially supports. See 508 502.3.13. #437.
-- **11.5.2.15 Change notification**: Partially supports. See WCAG 4.1.3. #438, #439.
+- **11.5.2.15 Change notification**: Partially supports. See WCAG 4.1.3. #439.
 - **11.5.2.16 Modifications of states and properties**: Supports. See 508 502.3.2.
 - **11.5.2.17 Modifications of values and text**: Supports. See 508 502.3.5 and 502.3.9.
 - **11.6.1 User control of accessibility features**: Not applicable. Cmdr isn't platform software.

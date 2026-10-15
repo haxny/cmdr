@@ -142,8 +142,8 @@ const wcagA: CriterionRow[] = [
     level: 'A',
     conformance: 'partially-supports',
     remark:
-      "Dialogs, Settings, and server forms use real headings, labels, and roles. The file list doesn't expose which files are marked, each file's position in the list, or the column structure of the Full view. Sort order is shown visually only, and the Settings sidebar doesn't expose its section hierarchy.",
-    issues: [437, 438],
+      "Dialogs, Settings, and server forms use real headings, labels, and roles, and the Settings sidebar groups each section's subsections under it. The file list doesn't expose which files are marked, each file's position in the list, or the column structure of the Full view. Sort order is shown visually only.",
+    issues: [437],
     pending: ['V1', 'V2', 'V7'],
   },
   {
@@ -316,10 +316,10 @@ const wcagA: CriterionRow[] = [
     id: '3.3.1',
     name: 'Error identification',
     level: 'A',
-    conformance: 'partially-supports',
+    conformance: 'not-evaluated',
+    codeReview: 'supports',
     remark:
-      "Rename, new folder, and server forms mark the field in error and tie the message to it. The license key error isn't tied to its field or announced.",
-    issues: [438],
+      'Rename, new folder, server, and license key forms mark the field in error and tie the message to it. A failed license activation is also announced as an alert.',
     pending: ['V5'],
   },
   {
@@ -351,8 +351,8 @@ const wcagA: CriterionRow[] = [
     level: 'A',
     conformance: 'partially-supports',
     remark:
-      "Dialogs, Settings controls, tabs, the command palette, the queue, and menus expose their name, role, and state. The file list doesn't convey which file the cursor is on or which files are marked, Search results and the Settings sidebar don't convey the highlighted item, and the volume chooser button isn't exposed as a control. If VoiceOver confirms the file list is silent, this row becomes \"Does not support\".",
-    issues: [437, 438, 267],
+      'Dialogs, Settings controls, tabs, the command palette, the queue, and menus expose their name, role, and state, and Search results and the Settings sidebar convey the highlighted item as you arrow. The file list doesn\'t convey which file the cursor is on or which files are marked, and the volume chooser button isn\'t exposed as a control. If VoiceOver confirms the file list is silent, this row becomes "Does not support".',
+    issues: [437, 267],
     pending: ['V1', 'V3', 'V6', 'V7', 'V10'],
   },
 ]
@@ -551,8 +551,8 @@ const wcagAA: CriterionRow[] = [
     level: 'AA',
     conformance: 'partially-supports',
     remark:
-      "Notifications, progress during file operations, Search result counts, and folder errors are announced. An empty folder, loading, the number of marked files, filter and command palette result counts, and the Settings search count aren't.",
-    issues: [438, 439],
+      'Notifications, progress during file operations, folder errors, an empty folder, a slow load, the number of marked files, and the result counts of Search, the file filter, the command palette, and the Settings search are announced. Notifications can be announced late, and some urgent ones politely.',
+    issues: [439],
     pending: ['V4', 'V6', 'V9'],
   },
 ]
@@ -564,7 +564,7 @@ const section508Ch3: CriterionRow[] = [
     conformance: 'partially-supports',
     remark:
       'Dialogs, Settings, menus, and forms are built for screen readers. The file list likely doesn\'t announce its cursor or marked files. If VoiceOver confirms that, this row becomes "Does not support".',
-    issues: [437, 438],
+    issues: [437],
     pending: allChecks,
   },
   {
@@ -661,8 +661,8 @@ const section508Ch5: CriterionRow[] = [
     name: 'Values',
     conformance: 'not-evaluated',
     codeReview: 'supports',
-    remark: 'Progress bars, sliders, and number fields expose their values. Progress has no spoken text form yet.',
-    issues: [438],
+    remark:
+      'Progress bars, sliders, and number fields expose their values. File operation progress also says the amount, like "1.2 GB of 3 GB".',
     pending: ['V4'],
   },
   {
@@ -676,10 +676,10 @@ const section508Ch5: CriterionRow[] = [
   {
     id: '502.3.6',
     name: 'Label relationships',
-    conformance: 'partially-supports',
+    conformance: 'not-evaluated',
+    codeReview: 'supports',
     remark:
-      'Fields are tied to their labels and descriptions throughout, except the license key error and two alert dialogs without a description.',
-    issues: [438],
+      'Fields are tied to their labels and error messages, and confirmation dialogs to their message, throughout.',
     pending: ['V5'],
   },
   {
@@ -687,8 +687,8 @@ const section508Ch5: CriterionRow[] = [
     name: 'Hierarchical relationships',
     conformance: 'partially-supports',
     remark:
-      "Dialogs, menus, and the tab bar are structured. The Settings sidebar doesn't expose its subsections, and tabs aren't tied to their content.",
-    issues: [437, 438],
+      "Dialogs, menus, the tab bar, and the Settings sidebar's sections and subsections are structured. Tabs aren't tied to their content.",
+    issues: [437],
     pending: ['V7'],
   },
   {
@@ -726,8 +726,8 @@ const section508Ch5: CriterionRow[] = [
     name: 'Focus cursor',
     conformance: 'partially-supports',
     remark:
-      "Focus in dialogs and Settings is real keyboard focus. The cursor in the file list and in Search results isn't exposed to assistive technology.",
-    issues: [437, 438],
+      "Focus in dialogs and Settings is real keyboard focus, and the cursor in Search results and the Settings sidebar is exposed to assistive technology. The cursor in the file list isn't.",
+    issues: [437],
     pending: ['V1', 'V6'],
   },
   {
@@ -743,8 +743,8 @@ const section508Ch5: CriterionRow[] = [
     id: '502.3.14',
     name: 'Event notification',
     conformance: 'partially-supports',
-    remark: "See WCAG 4.1.3: some status changes are announced, others aren't.",
-    issues: [438, 439],
+    remark: 'See WCAG 4.1.3: status changes are announced, notifications sometimes late.',
+    issues: [439],
     pending: ['V4'],
   },
   {
@@ -989,9 +989,9 @@ const enClause11: CriterionRow[] = [
   {
     id: '11.5.2.8',
     name: 'Label relationships',
-    conformance: 'partially-supports',
+    conformance: 'not-evaluated',
+    codeReview: 'supports',
     remark: 'See Section 508 502.3.6.',
-    issues: [438],
     pending: ['V5'],
   },
   {
@@ -999,7 +999,7 @@ const enClause11: CriterionRow[] = [
     name: 'Parent-child relationships',
     conformance: 'partially-supports',
     remark: 'See Section 508 502.3.7.',
-    issues: [437, 438],
+    issues: [437],
     pending: ['V7'],
   },
   {
@@ -1047,7 +1047,7 @@ const enClause11: CriterionRow[] = [
     name: 'Change notification',
     conformance: 'partially-supports',
     remark: 'See WCAG 4.1.3.',
-    issues: [438, 439],
+    issues: [439],
     pending: ['V4', 'V9'],
   },
   {
@@ -1178,10 +1178,6 @@ export const standards: StandardSection[] = [
 /** The open issues behind the report's gaps, most important first. */
 export const gapIssues: { number: number; title: string }[] = [
   { number: 437, title: "The file list doesn't yet speak to VoiceOver: cursor, marked files, position, and file kind" },
-  {
-    number: 438,
-    title: "Search and Settings cursors, empty folders, selection counts, and form errors aren't announced",
-  },
   { number: 439, title: "Notifications can't be reached or kept from the keyboard, and Undo trash lives only in one" },
   { number: 440, title: 'The focused pane, marked files, and some focus rings rely on faint color' },
   {
