@@ -502,6 +502,7 @@
     }
 
     .close-btn {
+        position: relative;
         flex-shrink: 0;
         display: flex;
         align-items: center;
@@ -517,6 +518,16 @@
             opacity var(--transition-fast),
             background-color var(--transition-fast),
             color var(--transition-fast);
+    }
+
+    /* The click target, never painted: 5px past the 14px circle on every side makes it the 24px
+       of WCAG 2.5.8 while the glyph keeps its size. It fits the tab's height and its
+       `--spacing-sm` right padding; clicks on it land on `.close-btn`, so the click handler and
+       the drag controller's `.close-btn` guard need nothing. */
+    .close-btn::before {
+        content: '';
+        position: absolute;
+        inset: -5px;
     }
 
     /* Show close button on tab hover or when tab is active */

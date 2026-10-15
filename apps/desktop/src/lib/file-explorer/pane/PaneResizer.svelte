@@ -57,7 +57,7 @@
 </div>
 
 <style>
-    /* A 1px divider with a 4px grab target: the element itself is the hairline, and
+    /* A 1px divider with an 8px grab target: the element itself is the hairline, and
        `::before` widens the hit area past it on both sides. Doing it this way (rather
        than a 4px strip with a 1px line drawn inside) keeps the LAYOUT at 1px, so the
        panes stay flush against the line and no strip of a third color appears between
@@ -83,16 +83,18 @@
         transition: background-color var(--transition-fast);
     }
 
-    /* Grab target only, never painted. 1.5px of overhang each side puts the total at
-       the 4px the divider used to occupy. Events on it bubble to the resizer, so the
-       drag handlers need no change. */
+    /* Grab target only, never painted. 3.5px of overhang each side makes it 8px wide, easier
+       to hit for anyone whose pointer isn't steady (WCAG 2.5.8; the keyboard commands above
+       are the equivalent). It lies over the panes' edge pixels, so it takes the outer 3.5px of
+       the left pane's scrollbar. Events on it bubble to the resizer, so the drag handlers need
+       no change. */
     .pane-resizer::before {
         content: '';
         position: absolute;
         top: 0;
         bottom: 0;
-        left: -1.5px;
-        right: -1.5px;
+        left: -3.5px;
+        right: -3.5px;
         cursor: col-resize;
     }
 

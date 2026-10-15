@@ -2402,6 +2402,9 @@
         border-radius: 0 var(--radius-xs) var(--radius-xs) 0;
     }
 
+    /* The header's vertical padding, moved inside `.path` (padding in, equal negative margin
+       out, so nothing moves): `overflow: hidden` clips at the padding box, and the segments'
+       hit areas below need that room to reach the header's full height. */
     .path {
         font-family: var(--font-system) sans-serif;
         color: var(--color-text-secondary);
@@ -2409,19 +2412,24 @@
         text-overflow: ellipsis;
         flex: 1;
         min-width: 0;
+        padding: var(--spacing-sm) 0 var(--spacing-xs);
+        margin: calc(-1 * var(--spacing-sm)) 0 calc(-1 * var(--spacing-xs));
     }
 
     /* Clickable ancestor segments: bare inline buttons (no chrome), inheriting
        the breadcrumb's color, brightening to the primary text color on hover so
        the click affordance is visible. Cursor stays the app-wide default (only
-       `LinkButton` opts into a pointer). */
+       `LinkButton` opts into a pointer).
+       The click target is bigger than the text (WCAG 2.5.8): padding grows it to the header's
+       full height and 3px into the `/` on each side, and the equal negative margin keeps the
+       layout byte-identical. A one-letter segment is still narrow, but no longer 17px tall. */
     .path :global(.path-segment) {
         font: inherit;
         color: inherit;
         background: none;
         border: none;
-        padding: 0;
-        margin: 0;
+        padding: var(--spacing-sm) 3px var(--spacing-xs);
+        margin: calc(-1 * var(--spacing-sm)) -3px calc(-1 * var(--spacing-xs));
         cursor: default;
     }
 
