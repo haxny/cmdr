@@ -627,6 +627,14 @@
   "@askCmdr.renameUndo.skipReason.drift.counted": {
     "sourceHash": "217d1e8"
   },
+  "askCmdr.renameUndo.skipReason.vanished.named": "O Cmdr não encontrou {name}: o arquivo foi movido ou apagado depois da renomeação.",
+  "@askCmdr.renameUndo.skipReason.vanished.named": {
+    "sourceHash": "4daa75c"
+  },
+  "askCmdr.renameUndo.skipReason.vanished.counted": "{count, plural, one {O Cmdr não encontrou {countText} arquivo: ele foi movido ou apagado depois da renomeação.} many {O Cmdr não encontrou {countText} arquivos: eles foram movidos ou apagados depois da renomeação.} other {O Cmdr não encontrou {countText} arquivos: eles foram movidos ou apagados depois da renomeação.}}",
+  "@askCmdr.renameUndo.skipReason.vanished.counted": {
+    "sourceHash": "a761296"
+  },
   "askCmdr.renameUndo.skipReason.nameTaken.named": "{name} ficou como está: o nome anterior está ocupado de novo.",
   "@askCmdr.renameUndo.skipReason.nameTaken.named": {
     "sourceHash": "ed5bd8e"

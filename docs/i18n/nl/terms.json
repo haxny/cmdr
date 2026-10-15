@@ -3233,7 +3233,7 @@
     "chosen": "Ongedaan maken",
     "confidence": "high",
     "decision": "Eén ding, één naam: de interne driftronde",
-    "forms": "text undo in the Edit menu → Herstel (Apple's ⌘Z); Edit > Undo move to trash (menu.edit.undoTrash and its palette twin commands.editUndoTrash.label) → Herstel verplaatsen naar prullenmand (Finder's Herstel + gerund, MV2/MT9); the trash toast's undo → Zet terug (it IS Finder's Put Back); nothing to put back → Er is niets om uit de prullenmand terug te zetten; undoing an Ask Cmdr rename run → Ongedaan maken; This can't be undone → Dit kun je niet ongedaan maken",
+    "forms": "text undo in the Edit menu → Herstel (Apple's ⌘Z); Edit > Undo move to trash (menu.edit.undoTrash and its palette twin commands.editUndoTrash.label) → Herstel verplaatsen naar prullenmand (Finder's Herstel + gerund, MV2/MT9), with one item → Herstel verplaatsen van ‘{name}’ naar prullenmand, with several → Herstel verplaatsen van {countText} onderdelen naar prullenmand (MV2_V1/MV2_V2); the trash toast's undo → Zet terug (it IS Finder's Put Back); nothing to put back → Er is niets terug te zetten (undoUnavailable, undoGone); undoing an Ask Cmdr rename run → Ongedaan maken; This can't be undone → Dit kun je niet ongedaan maken",
     "sources": "macOS Finder (ME13 Herstel, MV2_V1 Herstel verplaatsen van, MT9 Herstel verplaatsen naar prullenmand, N153.1 Zet terug)"
   },
   "unexpected": {

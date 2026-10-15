@@ -625,6 +625,14 @@
   "@askCmdr.renameUndo.skipReason.drift.counted": {
     "sourceHash": "217d1e8"
   },
+  "askCmdr.renameUndo.skipReason.vanished.named": "„{name}” nem található: az átnevezés óta áthelyezték vagy törölték.",
+  "@askCmdr.renameUndo.skipReason.vanished.named": {
+    "sourceHash": "4daa75c"
+  },
+  "askCmdr.renameUndo.skipReason.vanished.counted": "{countText} {count, plural, one {fájl} other {fájl}} nem található: az átnevezés óta áthelyezték vagy törölték őket.",
+  "@askCmdr.renameUndo.skipReason.vanished.counted": {
+    "sourceHash": "a761296"
+  },
   "askCmdr.renameUndo.skipReason.nameTaken.named": "„{name}” változatlan maradt: a régi nevét már más használja.",
   "@askCmdr.renameUndo.skipReason.nameTaken.named": {
     "sourceHash": "ed5bd8e"

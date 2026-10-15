@@ -168,6 +168,14 @@
   "@menu.edit.undoTrash": {
     "sourceHash": "c6fea33"
   },
+  "menu.edit.undoTrashOne": "Hoàn tác thao tác chuyển “{name}” vào thùng rác",
+  "@menu.edit.undoTrashOne": {
+    "sourceHash": "45494c8"
+  },
+  "menu.edit.undoTrashMany": "Hoàn tác thao tác chuyển {countText} mục vào thùng rác",
+  "@menu.edit.undoTrashMany": {
+    "sourceHash": "bb9192a"
+  },
   "menu.edit.cut": "Cắt",
   "@menu.edit.cut": {
     "sourceHash": "1f45f02"

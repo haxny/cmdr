@@ -68,6 +68,14 @@
   "@fileOperations.trash.undoUnavailable": {
     "sourceHash": "ee17b5f"
   },
+  "fileOperations.trash.undoGone": "Rien à remettre en place : {count, plural, one {cet élément n’est plus} many {ces éléments ne sont plus} other {ces éléments ne sont plus}} dans la corbeille.",
+  "@fileOperations.trash.undoGone": {
+    "sourceHash": "8ab6d72"
+  },
+  "fileOperations.trash.undoPartlyGone": "{countText} {count, plural, one {élément n’était plus} many {éléments n’étaient plus} other {éléments n’étaient plus}} dans la corbeille.",
+  "@fileOperations.trash.undoPartlyGone": {
+    "sourceHash": "2e23577"
+  },
   "fileOperations.trash.noTrashHere": "Ce disque n’a pas de corbeille.",
   "@fileOperations.trash.noTrashHere": {
     "sourceHash": "f58bdab"

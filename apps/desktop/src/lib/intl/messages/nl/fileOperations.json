@@ -68,6 +68,14 @@
   "@fileOperations.trash.undoUnavailable": {
     "sourceHash": "ee17b5f"
   },
+  "fileOperations.trash.undoGone": "Er is niets terug te zetten: {count, plural, one {het onderdeel staat} other {de onderdelen staan}} niet meer in de prullenmand.",
+  "@fileOperations.trash.undoGone": {
+    "sourceHash": "8ab6d72"
+  },
+  "fileOperations.trash.undoPartlyGone": "{countText} {count, plural, one {onderdeel stond} other {onderdelen stonden}} niet meer in de prullenmand.",
+  "@fileOperations.trash.undoPartlyGone": {
+    "sourceHash": "2e23577"
+  },
   "fileOperations.trash.noTrashHere": "Deze schijf heeft geen prullenmand.",
   "@fileOperations.trash.noTrashHere": {
     "sourceHash": "f58bdab"

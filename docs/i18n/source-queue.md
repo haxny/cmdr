@@ -36,6 +36,17 @@ rule into `translation-principles.md` or `translator-instructions.md`), then del
   key.
 - `servers.hub.editPickHint`: "Select a server" pulls locales toward their file-marking verb; the English means moving
   the cursor to a row.
+- `askCmdr.renameUndo.skipReason.vanished.named`, `.counted`: English and descriptions say "file", but a rename run can
+  include folders (see `folderNotEmpty`); gendered locales added "the file" as the noun. Say "item", or confirm files
+  only.
+- `askCmdr.renameUndo.skipReason.vanished.counted`: `{countText}` is "always two or more", yet the ICU carries a `one`
+  branch, and "they were moved" sits outside the plural. Drop the branch or the claim. (de, nl, sv, es)
+- `fileOperations.trash.undoGone`: the plural only picks a pronoun ("it's / they're") with no antecedent, and is present
+  tense where `undoPartlyGone` is past. Name the items, align tense, and say languages without number may drop it.
+- `i18n:brief` lists function words ("since", "longer") under "No concept yet", which demands a pile mining nobody
+  needs. Filter stopwords out of concept detection. (de, nl, zh)
+- Pronoun rule vs. the shipped `askCmdr.renameUndo.skipReason.*` family: zh-Hant and fr siblings point `它` / « il » at
+  `{name}`. Rule family-wide, or exempt languages whose pronouns carry no gender. (zh-Hant, fr)
 - Cross-language rule proposal: when English prose names a button without quotes (`servers.sheet.addAnywayHelp`,
   `servers.pinHint.body`), a locale may quote it; or quote it in English too.
 - `list` concept: matches the verb "lists" (Cmdr lists …); add a verb-sense `notMatch` so locales stop needing

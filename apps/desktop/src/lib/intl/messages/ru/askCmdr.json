@@ -624,6 +624,14 @@
   "@askCmdr.renameUndo.skipReason.drift.counted": {
     "sourceHash": "217d1e8"
   },
+  "askCmdr.renameUndo.skipReason.vanished.named": "Не удалось найти файл {name}: после переименования его переместили или удалили.",
+  "@askCmdr.renameUndo.skipReason.vanished.named": {
+    "sourceHash": "4daa75c"
+  },
+  "askCmdr.renameUndo.skipReason.vanished.counted": "Не удалось найти {countText} {count, plural, one {файл} few {файла} many {файлов} other {файла}}: после переименования их переместили или удалили.",
+  "@askCmdr.renameUndo.skipReason.vanished.counted": {
+    "sourceHash": "a761296"
+  },
   "askCmdr.renameUndo.skipReason.nameTaken.named": "Оставлено как есть: {name}. Прежнее имя снова занято.",
   "@askCmdr.renameUndo.skipReason.nameTaken.named": {
     "sourceHash": "ed5bd8e"

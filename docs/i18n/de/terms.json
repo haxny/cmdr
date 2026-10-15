@@ -1962,7 +1962,7 @@
     "chosen": "in den Papierkorb bewegen",
     "confidence": "high",
     "decision": "Delete-dialog trash switch + transfer From/To groups",
-    "note": "Undo of it (menu.edit.undoTrash, commands.editUndoTrash.label) takes Finder's '<Aktion> widerrufen' frame (In den Papierkorb legen widerrufen) with this verb: In den Papierkorb bewegen widerrufen.",
+    "note": "Undo of it (menu.edit.undoTrash, commands.editUndoTrash.label) takes Finder's '<Aktion> widerrufen' frame (In den Papierkorb legen widerrufen) with this verb: In den Papierkorb bewegen widerrufen. The named and counted forms (undoTrashOne/Many) take Finder's MV2/MT8 frame: Bewegen von „{name}“ in den Papierkorb widerrufen, Bewegen von {countText} Objekten in den Papierkorb widerrufen (dative after von holds for every count of 2+).",
     "sources": "macOS Finder (Trash ${entities} → ${entities} in den Papierkorb bewegen)"
   },
   "name": {

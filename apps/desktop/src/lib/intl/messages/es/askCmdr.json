@@ -627,6 +627,14 @@
   "@askCmdr.renameUndo.skipReason.drift.counted": {
     "sourceHash": "217d1e8"
   },
+  "askCmdr.renameUndo.skipReason.vanished.named": "No se ha podido encontrar {name}: se ha movido o eliminado después del cambio de nombre.",
+  "@askCmdr.renameUndo.skipReason.vanished.named": {
+    "sourceHash": "4daa75c"
+  },
+  "askCmdr.renameUndo.skipReason.vanished.counted": "No se ha podido encontrar {countText} {count, plural, one {archivo} many {archivos} other {archivos}}: {count, plural, one {se ha movido o eliminado} many {se han movido o eliminado} other {se han movido o eliminado}} después del cambio de nombre.",
+  "@askCmdr.renameUndo.skipReason.vanished.counted": {
+    "sourceHash": "a761296"
+  },
   "askCmdr.renameUndo.skipReason.nameTaken.named": "{name} se ha quedado como está: su nombre anterior vuelve a estar ocupado.",
   "@askCmdr.renameUndo.skipReason.nameTaken.named": {
     "sourceHash": "ed5bd8e"

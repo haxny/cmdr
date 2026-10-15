@@ -167,6 +167,14 @@
   "@menu.edit.undoTrash": {
     "sourceHash": "c6fea33"
   },
+  "menu.edit.undoTrashOne": "還原把「{name}」移至垃圾桶",
+  "@menu.edit.undoTrashOne": {
+    "sourceHash": "45494c8"
+  },
+  "menu.edit.undoTrashMany": "還原把 {countText} 個項目移至垃圾桶",
+  "@menu.edit.undoTrashMany": {
+    "sourceHash": "bb9192a"
+  },
   "menu.edit.cut": "剪下",
   "@menu.edit.cut": {
     "sourceHash": "1f45f02"

@@ -625,6 +625,14 @@
   "@askCmdr.renameUndo.skipReason.drift.counted": {
     "sourceHash": "217d1e8"
   },
+  "askCmdr.renameUndo.skipReason.vanished.named": "Det gick inte att hitta {name}: filen har flyttats eller raderats sedan namnbytet.",
+  "@askCmdr.renameUndo.skipReason.vanished.named": {
+    "sourceHash": "4daa75c"
+  },
+  "askCmdr.renameUndo.skipReason.vanished.counted": "Det gick inte att hitta {countText} {count, plural, one {fil: den} other {filer: de}} har flyttats eller raderats sedan namnbytet.",
+  "@askCmdr.renameUndo.skipReason.vanished.counted": {
+    "sourceHash": "a761296"
+  },
   "askCmdr.renameUndo.skipReason.nameTaken.named": "{name} lämnades som den är: det gamla namnet är taget igen.",
   "@askCmdr.renameUndo.skipReason.nameTaken.named": {
     "sourceHash": "ed5bd8e"

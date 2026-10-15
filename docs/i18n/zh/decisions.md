@@ -311,12 +311,11 @@ clash. Description `在当前文件夹中为选中的文件创建副本`.
 - `请稍等一会儿` / `请稍等片刻` mirror the two lengths. Cmdr's own bug: `发送一份报告`, never `发送错误报告`.
 - Processes go last (`分别是 {processes}`): `名为…的` can't hold `其他`.
 
-## 废纸篓提示条：撤销与前往废纸篓（`fileOperations.trash.*` + `commands.fileGoToTrash.*`）
+## 废纸篓提示条：撤销与前往废纸篓（`fileOperations.trash.*`、`commands.fileGoToTrash.*`、`menu.edit.undoTrash*`）
 
-- Put back `放回原处` (Finder's menu item) over `恢复`, which belongs to restoring an AI rename's old name, and over
-  Nautilus's `从回收站恢复`.
-- Undo `撤销` (a real undo), distinct from `回滚`.
-- `这个驱动器没有废纸篓。` (a fact about the drive), same shape as `压缩文件里没有废纸篓。`
+- Put back `放回原处` (Finder) over `恢复` (an AI rename's old name).
+- Undo `撤销`, not `回滚`; with an object `撤销将“{name}”移到废纸篓`, like Finder's `撤销将标签颜色设定为…`.
+- `这个驱动器没有废纸篓。`, like `压缩文件里没有废纸篓。`
 
 ## 给已发送的错误报告补充备注（`errorReporter.amend.*`、`errorReporter.amendedToast.message`、`errorReporter.autoSentToast.viewOrAddNotes`）
 

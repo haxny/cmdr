@@ -280,6 +280,14 @@
   "@commands.editUndoTrash.label": {
     "sourceHash": "c6fea33"
   },
+  "commands.editUndoTrash.one": "Отменить перемещение «{name}» в Корзину",
+  "@commands.editUndoTrash.one": {
+    "sourceHash": "45494c8"
+  },
+  "commands.editUndoTrash.many": "Отменить перемещение {countText} {count, plural, one {объекта} few {объектов} many {объектов} other {объекта}} в Корзину",
+  "@commands.editUndoTrash.many": {
+    "sourceHash": "69c4966"
+  },
   "commands.editUndoTrash.description": "Восстановить файлы, которые вы в последний раз переместили в Корзину",
   "@commands.editUndoTrash.description": {
     "sourceHash": "3aa756f"

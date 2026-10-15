@@ -280,6 +280,14 @@
   "@commands.editUndoTrash.label": {
     "sourceHash": "c6fea33"
   },
+  "commands.editUndoTrash.one": "Deshacer movimiento de “{name}” a la papelera",
+  "@commands.editUndoTrash.one": {
+    "sourceHash": "45494c8"
+  },
+  "commands.editUndoTrash.many": "Deshacer movimiento de {countText} {count, plural, one {elemento} many {elementos} other {elementos}} a la papelera",
+  "@commands.editUndoTrash.many": {
+    "sourceHash": "69c4966"
+  },
   "commands.editUndoTrash.description": "Devuelve a su sitio los archivos que moviste a la papelera la última vez",
   "@commands.editUndoTrash.description": {
     "sourceHash": "3aa756f"

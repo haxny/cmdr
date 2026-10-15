@@ -280,6 +280,14 @@
   "@commands.editUndoTrash.label": {
     "sourceHash": "c6fea33"
   },
+  "commands.editUndoTrash.one": "Annuler le placement dans la corbeille de « {name} »",
+  "@commands.editUndoTrash.one": {
+    "sourceHash": "45494c8"
+  },
+  "commands.editUndoTrash.many": "Annuler le placement dans la corbeille de {countText} {count, plural, one {élément} many {éléments} other {éléments}}",
+  "@commands.editUndoTrash.many": {
+    "sourceHash": "69c4966"
+  },
   "commands.editUndoTrash.description": "Remettre en place les derniers fichiers que vous avez placés dans la corbeille",
   "@commands.editUndoTrash.description": {
     "sourceHash": "3aa756f"

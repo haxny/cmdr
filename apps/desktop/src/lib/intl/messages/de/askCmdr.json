@@ -626,6 +626,14 @@
   "@askCmdr.renameUndo.skipReason.drift.counted": {
     "sourceHash": "217d1e8"
   },
+  "askCmdr.renameUndo.skipReason.vanished.named": "Cmdr konnte {name} nicht finden: die Datei wurde seit dem Umbenennen bewegt oder gelöscht.",
+  "@askCmdr.renameUndo.skipReason.vanished.named": {
+    "sourceHash": "4daa75c"
+  },
+  "askCmdr.renameUndo.skipReason.vanished.counted": "Cmdr konnte {countText} {count, plural, one {Datei nicht finden: sie wurde} other {Dateien nicht finden: sie wurden}} seit dem Umbenennen bewegt oder gelöscht.",
+  "@askCmdr.renameUndo.skipReason.vanished.counted": {
+    "sourceHash": "a761296"
+  },
   "askCmdr.renameUndo.skipReason.nameTaken.named": "Habe {name} unverändert gelassen: der alte Name ist wieder belegt.",
   "@askCmdr.renameUndo.skipReason.nameTaken.named": {
     "sourceHash": "ed5bd8e"

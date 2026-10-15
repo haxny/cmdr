@@ -35,6 +35,14 @@
   "@commands.editUndoTrash.label": {
     "sourceHash": "ae39e1f"
   },
+  "commands.editUndoTrash.one": "Deshacer movimiento de “{name}” al basurero",
+  "@commands.editUndoTrash.one": {
+    "sourceHash": "77a330a"
+  },
+  "commands.editUndoTrash.many": "Deshacer movimiento de {countText} {count, plural, one {elemento} many {elementos} other {elementos}} al basurero",
+  "@commands.editUndoTrash.many": {
+    "sourceHash": "d100947"
+  },
   "commands.editUndoTrash.description": "Devuelve a su lugar los archivos que moviste al basurero la última vez",
   "@commands.editUndoTrash.description": {
     "sourceHash": "ff1e685"

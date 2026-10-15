@@ -280,6 +280,14 @@
   "@commands.editUndoTrash.label": {
     "sourceHash": "c6fea33"
   },
+  "commands.editUndoTrash.one": "„{name}” Kukába helyezésének visszavonása",
+  "@commands.editUndoTrash.one": {
+    "sourceHash": "45494c8"
+  },
+  "commands.editUndoTrash.many": "{countText} {count, plural, one {elem} other {elem}} Kukába helyezésének visszavonása",
+  "@commands.editUndoTrash.many": {
+    "sourceHash": "69c4966"
+  },
   "commands.editUndoTrash.description": "A legutóbb a Kukába helyezett fájlok visszahelyezése",
   "@commands.editUndoTrash.description": {
     "sourceHash": "3aa756f"

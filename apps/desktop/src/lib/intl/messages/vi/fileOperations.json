@@ -68,6 +68,14 @@
   "@fileOperations.trash.undoUnavailable": {
     "sourceHash": "ee17b5f"
   },
+  "fileOperations.trash.undoGone": "Không có gì để đưa trở lại: {count, plural, other {đã không còn ở trong thùng rác nữa}}.",
+  "@fileOperations.trash.undoGone": {
+    "sourceHash": "8ab6d72"
+  },
+  "fileOperations.trash.undoPartlyGone": "{countText} {count, plural, other {mục}} không còn ở trong thùng rác nữa.",
+  "@fileOperations.trash.undoPartlyGone": {
+    "sourceHash": "2e23577"
+  },
   "fileOperations.trash.noTrashHere": "Ổ đĩa này không có thùng rác.",
   "@fileOperations.trash.noTrashHere": {
     "sourceHash": "f58bdab"

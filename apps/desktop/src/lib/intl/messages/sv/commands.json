@@ -280,6 +280,14 @@
   "@commands.editUndoTrash.label": {
     "sourceHash": "c6fea33"
   },
+  "commands.editUndoTrash.one": "Ångra flytt av ”{name}” till papperskorgen",
+  "@commands.editUndoTrash.one": {
+    "sourceHash": "45494c8"
+  },
+  "commands.editUndoTrash.many": "Ångra flytt av {countText} {count, plural, one {objekt} other {objekt}} till papperskorgen",
+  "@commands.editUndoTrash.many": {
+    "sourceHash": "69c4966"
+  },
   "commands.editUndoTrash.description": "Lägg tillbaka filerna du senast flyttade till papperskorgen",
   "@commands.editUndoTrash.description": {
     "sourceHash": "3aa756f"

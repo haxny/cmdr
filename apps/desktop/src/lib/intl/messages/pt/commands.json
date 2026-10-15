@@ -280,6 +280,14 @@
   "@commands.editUndoTrash.label": {
     "sourceHash": "c6fea33"
   },
+  "commands.editUndoTrash.one": "Desfazer mover “{name}” para o Lixo",
+  "@commands.editUndoTrash.one": {
+    "sourceHash": "45494c8"
+  },
+  "commands.editUndoTrash.many": "Desfazer mover {countText} {count, plural, one {item} many {itens} other {itens}} para o Lixo",
+  "@commands.editUndoTrash.many": {
+    "sourceHash": "69c4966"
+  },
   "commands.editUndoTrash.description": "Coloque de volta os arquivos que você moveu por último para o Lixo",
   "@commands.editUndoTrash.description": {
     "sourceHash": "3aa756f"

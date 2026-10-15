@@ -280,6 +280,14 @@
   "@commands.editUndoTrash.label": {
     "sourceHash": "c6fea33"
   },
+  "commands.editUndoTrash.one": "Hoàn tác thao tác chuyển “{name}” vào thùng rác",
+  "@commands.editUndoTrash.one": {
+    "sourceHash": "45494c8"
+  },
+  "commands.editUndoTrash.many": "Hoàn tác thao tác chuyển {countText} {count, plural, other {mục}} vào thùng rác",
+  "@commands.editUndoTrash.many": {
+    "sourceHash": "69c4966"
+  },
   "commands.editUndoTrash.description": "Đưa trở lại các tệp bạn đã chuyển vào thùng rác lần gần nhất",
   "@commands.editUndoTrash.description": {
     "sourceHash": "3aa756f"

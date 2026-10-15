@@ -626,6 +626,14 @@
   "@askCmdr.renameUndo.skipReason.drift.counted": {
     "sourceHash": "217d1e8"
   },
+  "askCmdr.renameUndo.skipReason.vanished.named": "{name} introuvable : le fichier a été déplacé ou supprimé depuis le renommage.",
+  "@askCmdr.renameUndo.skipReason.vanished.named": {
+    "sourceHash": "4daa75c"
+  },
+  "askCmdr.renameUndo.skipReason.vanished.counted": "{countText} {count, plural, one {fichier introuvable} many {fichiers introuvables} other {fichiers introuvables}} : ils ont été déplacés ou supprimés depuis le renommage.",
+  "@askCmdr.renameUndo.skipReason.vanished.counted": {
+    "sourceHash": "a761296"
+  },
   "askCmdr.renameUndo.skipReason.nameTaken.named": "{name} laissé tel quel : son ancien nom est de nouveau pris.",
   "@askCmdr.renameUndo.skipReason.nameTaken.named": {
     "sourceHash": "ed5bd8e"

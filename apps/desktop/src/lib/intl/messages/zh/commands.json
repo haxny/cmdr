@@ -280,6 +280,14 @@
   "@commands.editUndoTrash.label": {
     "sourceHash": "c6fea33"
   },
+  "commands.editUndoTrash.one": "撤销将“{name}”移到废纸篓",
+  "@commands.editUndoTrash.one": {
+    "sourceHash": "45494c8"
+  },
+  "commands.editUndoTrash.many": "撤销将 {countText} {count, plural, other {个项目}}移到废纸篓",
+  "@commands.editUndoTrash.many": {
+    "sourceHash": "69c4966"
+  },
   "commands.editUndoTrash.description": "把你上次移到废纸篓的文件放回原处",
   "@commands.editUndoTrash.description": {
     "sourceHash": "3aa756f"

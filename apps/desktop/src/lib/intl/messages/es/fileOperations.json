@@ -67,6 +67,14 @@
   "@fileOperations.trash.undoUnavailable": {
     "sourceHash": "ee17b5f"
   },
+  "fileOperations.trash.undoGone": "No hay nada que devolver: {count, plural, one {ya no está} many {ya no están} other {ya no están}} en la papelera.",
+  "@fileOperations.trash.undoGone": {
+    "sourceHash": "8ab6d72"
+  },
+  "fileOperations.trash.undoPartlyGone": "{countText} {count, plural, one {elemento ya no estaba} many {elementos ya no estaban} other {elementos ya no estaban}} en la papelera.",
+  "@fileOperations.trash.undoPartlyGone": {
+    "sourceHash": "2e23577"
+  },
   "fileOperations.trash.noTrashHere": "Esta unidad no tiene papelera.",
   "@fileOperations.trash.noTrashHere": {
     "sourceHash": "f58bdab"

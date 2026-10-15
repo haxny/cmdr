@@ -15,6 +15,14 @@
   "@menu.edit.undoTrash": {
     "sourceHash": "ae39e1f"
   },
+  "menu.edit.undoTrashOne": "Deshacer movimiento de “{name}” al basurero",
+  "@menu.edit.undoTrashOne": {
+    "sourceHash": "77a330a"
+  },
+  "menu.edit.undoTrashMany": "Deshacer movimiento de {countText} elementos al basurero",
+  "@menu.edit.undoTrashMany": {
+    "sourceHash": "23068b5"
+  },
   "menu.go.addToFavorites": "Agregar a favoritos",
   "@menu.go.addToFavorites": {
     "sourceHash": "cd2319d"

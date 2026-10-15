@@ -280,6 +280,14 @@
   "@commands.editUndoTrash.label": {
     "sourceHash": "c6fea33"
   },
+  "commands.editUndoTrash.one": "Bewegen von „{name}“ in den Papierkorb widerrufen",
+  "@commands.editUndoTrash.one": {
+    "sourceHash": "45494c8"
+  },
+  "commands.editUndoTrash.many": "Bewegen von {countText} {count, plural, one {Objekt} other {Objekten}} in den Papierkorb widerrufen",
+  "@commands.editUndoTrash.many": {
+    "sourceHash": "69c4966"
+  },
   "commands.editUndoTrash.description": "Die Dateien zurücklegen, die du zuletzt in den Papierkorb bewegt hast",
   "@commands.editUndoTrash.description": {
     "sourceHash": "3aa756f"

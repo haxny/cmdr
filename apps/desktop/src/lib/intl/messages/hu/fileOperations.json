@@ -68,6 +68,14 @@
   "@fileOperations.trash.undoUnavailable": {
     "sourceHash": "ee17b5f"
   },
+  "fileOperations.trash.undoGone": "Nincs mit visszahelyezni: {count, plural, one {már nincs a Kukában} other {már nincsenek a Kukában}}.",
+  "@fileOperations.trash.undoGone": {
+    "sourceHash": "8ab6d72"
+  },
+  "fileOperations.trash.undoPartlyGone": "{countText} {count, plural, one {elem} other {elem}} már nem volt a Kukában.",
+  "@fileOperations.trash.undoPartlyGone": {
+    "sourceHash": "2e23577"
+  },
   "fileOperations.trash.noTrashHere": "Ezen a meghajtón nincs Kuka.",
   "@fileOperations.trash.noTrashHere": {
     "sourceHash": "f58bdab"

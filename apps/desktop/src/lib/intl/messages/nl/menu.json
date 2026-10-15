@@ -170,6 +170,14 @@
   "@menu.edit.undoTrash": {
     "sourceHash": "c6fea33"
   },
+  "menu.edit.undoTrashOne": "Herstel verplaatsen van ‘{name}’ naar prullenmand",
+  "@menu.edit.undoTrashOne": {
+    "sourceHash": "45494c8"
+  },
+  "menu.edit.undoTrashMany": "Herstel verplaatsen van {countText} onderdelen naar prullenmand",
+  "@menu.edit.undoTrashMany": {
+    "sourceHash": "bb9192a"
+  },
   "menu.edit.cut": "Knip",
   "@menu.edit.cut": {
     "sourceHash": "1f45f02"

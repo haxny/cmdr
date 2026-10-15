@@ -628,6 +628,14 @@
   "@askCmdr.renameUndo.skipReason.drift.counted": {
     "sourceHash": "217d1e8"
   },
+  "askCmdr.renameUndo.skipReason.vanished.named": "Kon {name} niet vinden: het bestand is na de naamwijziging verplaatst of verwijderd.",
+  "@askCmdr.renameUndo.skipReason.vanished.named": {
+    "sourceHash": "4daa75c"
+  },
+  "askCmdr.renameUndo.skipReason.vanished.counted": "Kon {countText} {count, plural, one {bestand} other {bestanden}} niet vinden: ze zijn na de naamwijziging verplaatst of verwijderd.",
+  "@askCmdr.renameUndo.skipReason.vanished.counted": {
+    "sourceHash": "a761296"
+  },
   "askCmdr.renameUndo.skipReason.nameTaken.named": "{name} ongemoeid gelaten: de oude naam is weer in gebruik.",
   "@askCmdr.renameUndo.skipReason.nameTaken.named": {
     "sourceHash": "ed5bd8e"

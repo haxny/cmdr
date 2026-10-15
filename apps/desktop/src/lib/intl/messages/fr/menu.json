@@ -168,6 +168,14 @@
   "@menu.edit.undoTrash": {
     "sourceHash": "c6fea33"
   },
+  "menu.edit.undoTrashOne": "Annuler le placement dans la corbeille de « {name} »",
+  "@menu.edit.undoTrashOne": {
+    "sourceHash": "45494c8"
+  },
+  "menu.edit.undoTrashMany": "Annuler le placement dans la corbeille de {countText} éléments",
+  "@menu.edit.undoTrashMany": {
+    "sourceHash": "bb9192a"
+  },
   "menu.edit.cut": "Couper",
   "@menu.edit.cut": {
     "sourceHash": "1f45f02"

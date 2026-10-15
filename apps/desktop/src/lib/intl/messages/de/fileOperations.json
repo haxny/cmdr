@@ -68,6 +68,14 @@
   "@fileOperations.trash.undoUnavailable": {
     "sourceHash": "ee17b5f"
   },
+  "fileOperations.trash.undoGone": "Es gibt nichts zurückzulegen: {count, plural, one {das Objekt ist} other {die Objekte sind}} nicht mehr im Papierkorb.",
+  "@fileOperations.trash.undoGone": {
+    "sourceHash": "8ab6d72"
+  },
+  "fileOperations.trash.undoPartlyGone": "{countText} {count, plural, one {Objekt war} other {Objekte waren}} nicht mehr im Papierkorb.",
+  "@fileOperations.trash.undoPartlyGone": {
+    "sourceHash": "2e23577"
+  },
   "fileOperations.trash.noTrashHere": "Dieses Laufwerk hat keinen Papierkorb.",
   "@fileOperations.trash.noTrashHere": {
     "sourceHash": "f58bdab"

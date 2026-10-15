@@ -282,6 +282,14 @@
   "@commands.editUndoTrash.label": {
     "sourceHash": "c6fea33"
   },
+  "commands.editUndoTrash.one": "Herstel verplaatsen van ‘{name}’ naar prullenmand",
+  "@commands.editUndoTrash.one": {
+    "sourceHash": "45494c8"
+  },
+  "commands.editUndoTrash.many": "Herstel verplaatsen van {countText} {count, plural, one {onderdeel} other {onderdelen}} naar prullenmand",
+  "@commands.editUndoTrash.many": {
+    "sourceHash": "69c4966"
+  },
   "commands.editUndoTrash.description": "Zet de bestanden terug die je het laatst naar de prullenmand hebt verplaatst",
   "@commands.editUndoTrash.description": {
     "sourceHash": "3aa756f"

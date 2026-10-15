@@ -39,6 +39,14 @@
   "@fileOperations.trash.undonePartial": {
     "sourceHash": "aad792e"
   },
+  "fileOperations.trash.undoGone": "No hay nada que devolver: {count, plural, one {ya no está} many {ya no están} other {ya no están}} en el basurero.",
+  "@fileOperations.trash.undoGone": {
+    "sourceHash": "c398d92"
+  },
+  "fileOperations.trash.undoPartlyGone": "{countText} {count, plural, one {elemento ya no estaba} many {elementos ya no estaban} other {elementos ya no estaban}} en el basurero.",
+  "@fileOperations.trash.undoPartlyGone": {
+    "sourceHash": "59e86e6"
+  },
   "fileOperations.trash.noTrashHere": "Esta unidad no tiene basurero.",
   "@fileOperations.trash.noTrashHere": {
     "sourceHash": "837c16a"

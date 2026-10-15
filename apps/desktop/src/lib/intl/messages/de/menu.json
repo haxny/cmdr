@@ -168,6 +168,14 @@
   "@menu.edit.undoTrash": {
     "sourceHash": "c6fea33"
   },
+  "menu.edit.undoTrashOne": "Bewegen von „{name}“ in den Papierkorb widerrufen",
+  "@menu.edit.undoTrashOne": {
+    "sourceHash": "45494c8"
+  },
+  "menu.edit.undoTrashMany": "Bewegen von {countText} Objekten in den Papierkorb widerrufen",
+  "@menu.edit.undoTrashMany": {
+    "sourceHash": "bb9192a"
+  },
   "menu.edit.cut": "Ausschneiden",
   "@menu.edit.cut": {
     "sourceHash": "1f45f02"
