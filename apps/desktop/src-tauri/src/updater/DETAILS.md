@@ -17,8 +17,8 @@ Read this before any non-trivial work here: editing, planning, reorganizing, or 
   binary is still intact.
 - **Unconditional deletion of stale files after sync.** Old files left behind could cause version mismatches or bloat.
   The deletion pass removes anything in the destination not in the source, then cleans empty directories bottom-up.
-- **Minisign verification before writing the tarball to disk.** Ensures integrity and authenticity; the public key is
-  compiled into the binary. Both key and signatures use base64(minisign-text-format), matching Tauri's convention.
+- **Minisign verification before writing the tarball to disk.** Ensures integrity and authenticity; the public keys
+  (main and backup, § Two updater keys) are compiled into the binary. Both keys and signatures use base64(minisign-text-format), matching Tauri's convention.
 - **Privilege escalation via `osascript` with `rsync -a --delete`.** When installed in `/Applications` (root-owned),
   direct writes fail; `osascript`'s `do shell script … with administrator privileges` shows the native auth dialog.
   `rsync` expresses the full sync (copy + delete stale) in one shell command. Only triggers when direct writes are
@@ -115,8 +115,8 @@ signing identity (Apple-issued, revocable by Apple) to ship anything.
   branch that a broken self-check (say, a running bundle already rewritten by an earlier sync) could silently take.
   Dev builds never get this far anyway: `skip_reason` stops them at the check. Unit tests inject the check through
   `vet_staged_bundle`'s `code_signature` parameter.
-- **A second minisign key** (a possible follow-up for key rotation) doesn't touch this: the Apple check is independent
-  of which key verified the archive, and `signature::verify` is the only place a key list would live.
+- **Independent of the minisign key**: the Apple check runs the same whichever trusted key (§ Two updater keys) verified
+  the archive, so a backup-signed rotation release must be a Developer ID build too.
 - **Cost.** Under a second for a full release bundle (verified on macOS 27.0, `codesign --verify --strict --deep` on
   v0.52.0 aarch64, 2026-10-15). The install is untimed and runs on a blocking thread.
 
@@ -136,6 +136,30 @@ cd apps/desktop/src-tauri && CMDR_UPDATER_RELEASE_TARBALL=<scratch>/Cmdr_0.52.0_
 (`cargo test` rather than nextest: the universal archive runs past nextest's slow-test timeout.) The always-on unit
 tests in `code_signature.rs` build an ad-hoc signed fixture with `codesign` at test time and cover unsigned, ad-hoc,
 Apple-signed-but-not-Cmdr, a changed resource, an added resource, and a changed executable.
+
+## Two updater keys
+
+`signature::verify` accepts a signature from either key in `TRUSTED_PUBKEYS`, and refuses everything else:
+
+- **The main key** (`A2601F36BB168C0A`) signs every release. `MAIN_PUBKEY_BASE64` is a copy of
+  `plugins.updater.pubkey` in `tauri.conf.json`, which has to stay there because the Tauri bundler reads it; the test
+  `the_main_key_is_the_one_in_tauri_conf` pins the two equal.
+- **The offline backup key** (`B72B6B32B7D71B58`) exists so a leaked or lost main key can be rotated out with one
+  release signed by the backup. Its private half lives only in David's Bitwarden. Its public half's one home is
+  `apps/desktop/src-tauri/updater-backup.pub`, which the app compiles in (`include_str!`) and
+  `scripts/release-finish` reads, so the two verifiers can't disagree. A separate file because `plugins.updater` in
+  `tauri.conf.json` takes one key, and that section belongs to the Tauri plugin's config, not ours.
+- A signature names its key ID, so minisign-verify refuses a mismatched key before hashing anything: trying each key
+  costs one real check.
+- **Every verifier must trust the same set**, or a backup-signed release is refused before it ships:
+  `release-finish.sh` (the laptop's check after signing, and `-verify-dir`, the `publish` job's gate) reads both through
+  `readTrustedPubkeys`. The Tauri updater plugin (non-macOS builds) trusts only the `tauri.conf.json` key, and
+  `latest.json` publishes no Linux build today.
+- The rotation runbook (what the rotation release changes, how it signs without the backup key entering sops):
+  `docs/guides/releasing.md` § Rotating to the backup updater key.
+
+Fixture: `testdata/fixture.pub` and `payload.txt.sig` come from a throwaway key (`tauri signer generate`, then
+`tauri signer sign`), so the tests pin the verifier to the real signer's output.
 
 ## A bundle that can't be written
 

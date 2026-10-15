@@ -235,11 +235,11 @@ risk.
 - **Threats**: a forged or replayed update (tampering, elevation to every install); a stolen signing key; a compromised
   CI run or third-party action; a compromised maintainer account.
 - **Mitigations**:
-  - **Every update archive is verified against a minisign public key compiled into the app**, on the downloaded bytes,
-    before anything is written into the bundle. The manifest must name a newer version, the verified archive's own
-    `Info.plist` must too (so an older signed release can't be replayed as an update), and the release workflow refuses
-    to move the published manifest backwards (`apps/desktop/src-tauri/src/updater/CLAUDE.md`,
-    `apps/desktop/src/lib/updates/DETAILS.md`).
+  - **Every update archive is verified against the minisign public keys compiled into the app** (the main key and an
+    offline backup), on the downloaded bytes, before anything is written into the bundle. The manifest must name a newer
+    version, the verified archive's own `Info.plist` must too (so an older signed release can't be replayed as an
+    update), and the release workflow refuses to move the published manifest backwards
+    (`apps/desktop/src-tauri/src/updater/CLAUDE.md`, `apps/desktop/src/lib/updates/DETAILS.md`).
   - **An update must also carry Cmdr's Apple code signature.** On macOS, before anything is written into the bundle, the
     updater checks the extracted bundle's code signature: valid (strict, all architectures, nested code), and satisfying
     a requirement pinned to Cmdr's Developer ID team (`83H6YAQMNP`). Nothing the manifest, the archive, or the
@@ -277,9 +277,12 @@ risk.
     was built, not what went into it, so a compromised third-party action or dependency in the compile job still ships
     to every install. What local signing removes is the key itself leaking from GitHub, and an archive swapped on the
     release; what the compile/sign split removes is that dependency reading the signing keys.
-  - **The minisign updater key can't be rotated** without a release signed by the old key; losing it strands installs on
-    manual reinstall. With local signing it lives on one laptop (encrypted, with Bitwarden copies). On macOS, that key
-    alone can only re-sign genuine Cmdr releases, and an older one is refused by the version check; it can't ship a
+  - **Rotating the updater key takes a release that installs accept.** Every build after 0.52.0 also trusts an offline
+    backup key (private half only in Bitwarden), so a leaked or lost main key is rotated out by one release signed with
+    the backup (`docs/guides/releasing.md` § Rotating to the backup updater key). Installs that never take that release
+    keep trusting the old key, and 0.52.0 and earlier trust only the main key, so losing it strands those on manual
+    reinstall. With local signing the main key lives on one laptop (encrypted, with Bitwarden copies). On macOS, that
+    key alone can only re-sign genuine Cmdr releases, and an older one is refused by the version check; it can't ship a
     build of its own.
   - **The updater key plus the Developer ID signing identity together can ship to every macOS install.** If both leak
     (for example both reachable from one compromised laptop or CI run), the code-signature check passes. Apple can

@@ -68,9 +68,11 @@ all of that sharing one `tauri-action` step with every signing secret.
 
 ## Who signs the update archives
 
-The updater key (minisign, key ID `A2601F36BB168C0A`) is the one release secret that can't be rotated: its public half
-is compiled into every installed copy, so whoever holds the private half can ship an update to every Mac, for good. The
-repository variable `RELEASE_UPDATE_SIGNING` picks where it signs, read by the `guard` job of each tag push:
+The updater key (minisign, key ID `A2601F36BB168C0A`) is the hardest release secret to rotate: its public half is
+compiled into every installed copy, beside an offline backup key's (`B72B6B32B7D71B58`) that exists to replace it (§
+Rotating to the backup updater key). With the Developer ID identity, whoever holds the private half can ship an update
+to every Mac; alone, it can only re-sign genuine releases, since the updater also requires Cmdr's Apple code signature.
+The repository variable `RELEASE_UPDATE_SIGNING` picks where it signs, read by the `guard` job of each tag push:
 
 - **`ci`, or unset**: the tag push does everything, and the `sign` job signs each archive with `TAURI_SIGNING_*` from
   the `release` environment.
@@ -159,6 +161,50 @@ attestations) and an installed copy has updated to it:
 1. Delete the updater pair from GitHub: `gh secret delete TAURI_SIGNING_PRIVATE_KEY --env release -R vdavid/cmdr`, the
    same for `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`. From then on, going back to `ci` takes step 2 of the revert.
 2. Update § Signing secrets and the release-chain bullets in `docs/threat-model.md`, which are phrased for this point.
+
+### Rotating to the backup updater key
+
+Every build after 0.52.0 trusts two updater keys: the main key (`plugins.updater.pubkey` in `tauri.conf.json`, private
+half in sops) and an offline backup (`apps/desktop/src-tauri/updater-backup.pub`, key ID `B72B6B32B7D71B58`, private
+half only in David's Bitwarden as "Cmdr Tauri BACKUP updater key (offline)", never in sops, CI, or GitHub). An update
+signed by either verifies, in the app and in `release-finish.sh`. How the app checks: the updater `DETAILS.md` § Two
+updater keys.
+
+**When**: the main key's private half leaked, or it's lost. One release signed with the backup key moves every install
+that takes it onto a new pair. If you still hold the main key, signing the rotation release with it works too, and it
+also reaches installs from 0.52.0 or earlier, which trust only the main key and refuse a backup-signed update.
+
+**What the rotation release changes** (in one commit, before tagging):
+
+1. **The backup becomes the main key**: copy `updater-backup.pub` into `plugins.updater.pubkey` in `tauri.conf.json`,
+   and into `MAIN_PUBKEY_BASE64` in the updater's `signature.rs` (a test pins the two equal).
+2. **A new backup**: David generates it offline, `pnpm exec tauri signer generate -w <file>`, stores the private key and
+   its password in Bitwarden as the new backup item, deletes the file, and puts the new public key in
+   `updater-backup.pub`.
+3. **The leaked key is gone from the trust list**, since it's in neither place anymore.
+4. Update the pinned key IDs: the Rust test `the_trusted_keys_are_the_main_key_then_the_backup`, the Go tests in
+   `scripts/release-finish/minisign_test.go` (`cmdrPubkey`, the two key-ID tests), this guide, the updater `DETAILS.md`,
+   `docs/threat-model.md`, and the vault note `projects/Cmdr/workflow/Cmdr signing keys.md`.
+
+**How to sign it** (`RELEASE_UPDATE_SIGNING` must be `local`; in `ci` mode the sign job uses the GitHub copy of the main
+key):
+
+1. Release as usual up to the push (§ The release procedure).
+2. Instead of the plain `release-finish.sh`, David copies the backup key and its password from Bitwarden into the shell,
+   prompted so neither lands in the history:
+   `read -rs CMDR_BACKUP_UPDATER_KEY; read -rs CMDR_BACKUP_UPDATER_KEY_PASSWORD; export CMDR_BACKUP_UPDATER_KEY CMDR_BACKUP_UPDATER_KEY_PASSWORD`
+3. `caffeinate -i ./scripts/release-finish.sh -backup-key X.Y.Z`. It signs with the key from those two variables and
+   never touches sops for it; the verification line names the key that signed (`key B72B6B32B7D71B58`).
+4. Once it's published, `unset CMDR_BACKUP_UPDATER_KEY CMDR_BACKUP_UPDATER_KEY_PASSWORD`. The old backup is now the main
+   key, so it takes the main key's place in sops (`secret edit`: `CMDR_TAURI_SIGNING_PRIVATE_KEY` and
+   `CMDR_TAURI_SIGNING_PRIVATE_KEY_PASSWORD`), replacing the leaked one. From then on releases sign the usual way.
+5. Update an installed copy and confirm it reaches the new version (§ Emergency release during an incident has the rest
+   of the after-checks).
+
+**Installs that never update keep trusting the leaked key**, and an older version's trust list can't be changed from
+outside. On macOS the leaked key alone still can't ship a build to them, because the updater also requires Cmdr's
+Developer ID code signature; with the Developer ID identity as well, it could. Linux builds have no code-signature
+check.
 
 ## The release procedure
 
@@ -274,8 +320,8 @@ with these differences. The procedure pre-approves building and publishing it, s
 - Containment may have disabled the release workflow. Re-enable it: `gh workflow enable release.yml -R vdavid/cmdr`.
 - CI red for reasons outside the fix? Use the emergency bypass in § Release gates that abort before tagging, and clear
   `RELEASE_SKIP_CI_GATE_TAG` afterwards.
-- If the updater key itself leaked, the fix release is still signed by it: installed copies trust only that key, so it's
-  the only way to reach them, including a release that moves them to a new key.
+- If the updater key itself leaked, make the fix release the rotation release too: § Rotating to the backup updater key,
+  which also says when to sign it with the backup key and when with the leaked one.
 
 **Timeline**, from the tabletop's estimate (2026-10-15), not yet measured on a real incident: two to three hours of
 agent work on the fix and changelog, with the ~25-minute CI gate overlapping it, then about 90 minutes from the tag push
@@ -865,10 +911,11 @@ Fix the cause, then run it again; it picks up where the release stands.
   that check is the whole point of signing locally.
 - **"the build run ended failure"**: re-run its failed jobs, `gh run rerun <id> --failed`, then run this again.
 - **"has N releases on GitHub"**: duplicate drafts on one tag. Keep the one with the assets, delete the rest.
-- **"the signature for … doesn't verify against the app's public key"**: the key in sops isn't the app's (key ID
-  `A2601F36BB168C0A`). Compare with the Bitwarden copy (vault note `projects/Cmdr/workflow/Cmdr signing keys.md`). The
-  finishing run's `publish` job runs the same check (`release-finish.sh -verify-dir`) before it publishes the draft, so
-  a dispatch with missing, empty, or foreign signatures fails there and nothing goes public.
+- **"the signature for … doesn't verify against the app's trusted keys"**: the key in sops isn't the app's main key (key
+  ID `A2601F36BB168C0A`; the error names the key that signed). Compare with the Bitwarden copy (vault note
+  `projects/Cmdr/workflow/Cmdr signing keys.md`). The finishing run's `publish` job runs the same check
+  (`release-finish.sh -verify-dir`) before it publishes the draft, so a dispatch with missing, empty, or foreign
+  signatures fails there and nothing goes public.
 - **"the finishing run failed again"**: it already re-ran the failed jobs once. Read the run; § Publish job failed but
   builds succeeded applies, as does § The attest or sbom job failed. ❌ Don't dispatch a fresh run by hand once
   `publish` has committed the manifest: the guard refuses it. Re-run the failed jobs instead.

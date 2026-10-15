@@ -11,7 +11,8 @@
 //     sign anything that doesn't verify;
 //  4. signs each with the Tauri signer, the key and password read from the sops store
 //     (`secret`), never printed and passed only to the signer's environment;
-//  5. verifies each signature natively against the app's public key (`minisign.go`);
+//  5. verifies each signature natively against the app's trusted keys, the main updater key
+//     and the offline backup (`minisign.go`, `readTrustedPubkeys`);
 //  6. uploads the `.sig` files to the draft and checks the uploaded bytes;
 //  7. dispatches `release.yml` on the tag, whose `publish` job publishes the draft, ships
 //     `latest.json`, deploys the website, and bumps the Homebrew tap, then waits for it.
@@ -25,12 +26,15 @@
 //	./scripts/release-finish.sh 0.51.0
 //	./scripts/release-finish.sh -dry-run -out /tmp/sigs 0.51.0
 //
-// `-verify-dir DIR` only verifies the archives and `.sig` files in DIR against the app's public key,
+// `-verify-dir DIR` only verifies the archives and `.sig` files in DIR against the app's trusted keys,
 // with no gh or sops; the `publish` job gates a dispatch on it.
 //
 // `-dry-run` stops after step 5: it uploads, dispatches, and publishes nothing, and works on an
 // already published release. `-signer-workflow` (dry runs only) checks a release from before the
 // reusable workflow, whose provenance `release.yml` signed.
+//
+// `-backup-key` signs with the offline backup key from the environment instead of the main key
+// from sops: the one release that rotates a leaked main key out.
 //
 // The flow, the switch between modes, and recovery: `docs/guides/releasing.md` § Who signs the
 // update archives.
@@ -57,7 +61,10 @@ const (
 	pipelineSigner  = "vdavid/cmdr/.github/workflows/release-pipeline.yml"
 	keySecret       = "CMDR_TAURI_SIGNING_PRIVATE_KEY"
 	passwordSecret  = "CMDR_TAURI_SIGNING_PRIVATE_KEY_PASSWORD"
-	pollEvery       = 30 * time.Second
+	// Where `-backup-key` reads the offline backup key. Never a sops name: that key stays offline.
+	backupKeyEnv      = "CMDR_BACKUP_UPDATER_KEY"
+	backupPasswordEnv = "CMDR_BACKUP_UPDATER_KEY_PASSWORD"
+	pollEvery         = 30 * time.Second
 	// How long a run gets to show up in `gh run list` after the push or dispatch that starts it.
 	appearWithin = 3 * time.Minute
 )
@@ -69,6 +76,7 @@ type config struct {
 	outDir         string
 	signerWorkflow string
 	dryRun         bool
+	backupKey      bool
 }
 
 func main() {
@@ -76,9 +84,10 @@ func main() {
 	dryRun := flag.Bool("dry-run", false, "verify and sign into -out, then stop: upload, dispatch, and publish nothing")
 	out := flag.String("out", "", "where to put the downloaded archives and signatures (default: a fresh temp dir)")
 	signer := flag.String("signer-workflow", pipelineSigner, "dry runs only: the workflow whose provenance must cover the archives")
-	verifyDir := flag.String("verify-dir", "", "only verify the three archives in DIR against their .sig files and the app's public key (the publish job's gate)")
+	verifyDir := flag.String("verify-dir", "", "only verify the three archives in DIR against their .sig files and the app's trusted keys (the publish job's gate)")
+	backupKey := flag.Bool("backup-key", false, "sign with the offline backup key from $"+backupKeyEnv+" and $"+backupPasswordEnv+" instead of sops: the key-rotation release only")
 	flag.Usage = func() {
-		fmt.Fprintln(os.Stderr, "Usage: ./scripts/release-finish.sh [-dry-run] [-out DIR] [-signer-workflow WORKFLOW] <version>")
+		fmt.Fprintln(os.Stderr, "Usage: ./scripts/release-finish.sh [-dry-run] [-backup-key] [-out DIR] [-signer-workflow WORKFLOW] <version>")
 		flag.PrintDefaults()
 	}
 	flag.Parse()
@@ -93,6 +102,7 @@ func main() {
 		outDir:         *out,
 		signerWorkflow: *signer,
 		dryRun:         *dryRun,
+		backupKey:      *backupKey,
 	}
 	if err := checkVersion(cfg.version); err != nil {
 		fail(err)
@@ -129,7 +139,7 @@ func run(cfg config) error {
 	if err != nil {
 		return fmt.Errorf("there's no local tag %s. Run this in the clone that tagged the release, or `git fetch origin tag %s` first", cfg.tag, cfg.tag)
 	}
-	pubkey, err := readPubkey(cfg.root)
+	pubkeys, err := readTrustedPubkeys(cfg.root)
 	if err != nil {
 		return err
 	}
@@ -167,10 +177,10 @@ func run(cfg config) error {
 	if err := downloadAndVerifyProvenance(cfg, dir, names, commit); err != nil {
 		return err
 	}
-	if err := sign(cfg.root, dir, names); err != nil {
+	if err := sign(cfg, dir, names); err != nil {
 		return err
 	}
-	if err := verifySignatures(pubkey, dir, names); err != nil {
+	if err := verifySignatures(pubkeys, dir, names); err != nil {
 		return err
 	}
 
@@ -187,11 +197,11 @@ func run(cfg config) error {
 // verifyOnly is `-verify-dir`: the `publish` job runs it before publishing a draft, so a
 // dispatch can't ship a manifest built from missing, empty, or foreign signatures.
 func verifyOnly(cfg config, dir string) error {
-	pubkey, err := readPubkey(cfg.root)
+	pubkeys, err := readTrustedPubkeys(cfg.root)
 	if err != nil {
 		return err
 	}
-	return verifySignatures(pubkey, dir, updateArchiveNames(cfg.version))
+	return verifySignatures(pubkeys, dir, updateArchiveNames(cfg.version))
 }
 
 // waitUntilSignable reports a release that's already published (signing is behind it), and
@@ -265,24 +275,20 @@ func downloadAndVerifyProvenance(cfg config, dir string, names []string, commit 
 }
 
 // sign runs the Tauri signer over each archive, writing `<archive>.sig` beside it. The key and
-// its password go to the signer's environment only, read fresh from sops.
-func sign(root, dir string, names []string) error {
-	step("Signing with the updater key from sops")
-	key, err := output(root, nil, "secret", keySecret)
+// its password go to the signer's environment only, read fresh from where `signingEnv` says.
+func sign(cfg config, dir string, names []string) error {
+	env, err := signingEnv(cfg.backupKey, os.Getenv, func(name string) (string, error) {
+		return output(cfg.root, nil, "secret", name)
+	})
 	if err != nil {
-		return fmt.Errorf("reading %s from sops: %w", keySecret, err)
+		return err
 	}
-	password, err := output(root, nil, "secret", passwordSecret)
-	if err != nil {
-		return fmt.Errorf("reading %s from sops: %w", passwordSecret, err)
-	}
-	env := []string{"TAURI_SIGNING_PRIVATE_KEY=" + key, "TAURI_SIGNING_PRIVATE_KEY_PASSWORD=" + password}
 	for _, name := range names {
 		path := filepath.Join(dir, name)
 		if err := os.Remove(path + ".sig"); err != nil && !errors.Is(err, os.ErrNotExist) {
 			return err
 		}
-		if _, err := output(filepath.Join(root, "apps", "desktop"), env, "pnpm", "exec", "tauri", "signer", "sign", path); err != nil {
+		if _, err := output(filepath.Join(cfg.root, "apps", "desktop"), env, "pnpm", "exec", "tauri", "signer", "sign", path); err != nil {
 			return fmt.Errorf("signing %s: %w", name, err)
 		}
 		fmt.Printf("    signed %s\n", name)
@@ -290,13 +296,38 @@ func sign(root, dir string, names []string) error {
 	return nil
 }
 
-func verifySignatures(pubkey, dir string, names []string) error {
-	step("Verifying the signatures against the app's public key")
-	for _, name := range names {
-		if err := verifyFile(pubkey, filepath.Join(dir, name), filepath.Join(dir, name+".sig")); err != nil {
-			return fmt.Errorf("the signature for %s doesn't verify against the app's public key (made with the wrong key?): %w", name, err)
+// signingEnv answers the signer's environment: the main key from sops, or with `-backup-key` the
+// offline backup key from this process's environment, where David put it from Bitwarden for the
+// one rotation release. The backup key never goes into sops.
+func signingEnv(backupKey bool, getenv func(string) string, readSecret func(string) (string, error)) ([]string, error) {
+	var key, password string
+	if backupKey {
+		step("Signing with the BACKUP updater key from %s", backupKeyEnv)
+		key, password = getenv(backupKeyEnv), getenv(backupPasswordEnv)
+		if key == "" || password == "" {
+			return nil, fmt.Errorf("-backup-key needs %s and %s set (from Bitwarden, see docs/guides/releasing.md § Rotating to the backup updater key)", backupKeyEnv, backupPasswordEnv)
 		}
-		fmt.Printf("    %s.sig verifies\n", name)
+	} else {
+		step("Signing with the updater key from sops")
+		var err error
+		if key, err = readSecret(keySecret); err != nil {
+			return nil, fmt.Errorf("reading %s from sops: %w", keySecret, err)
+		}
+		if password, err = readSecret(passwordSecret); err != nil {
+			return nil, fmt.Errorf("reading %s from sops: %w", passwordSecret, err)
+		}
+	}
+	return []string{"TAURI_SIGNING_PRIVATE_KEY=" + key, "TAURI_SIGNING_PRIVATE_KEY_PASSWORD=" + password}, nil
+}
+
+func verifySignatures(pubkeys []string, dir string, names []string) error {
+	step("Verifying the signatures against the app's trusted keys")
+	for _, name := range names {
+		keyID, err := verifyFile(pubkeys, filepath.Join(dir, name), filepath.Join(dir, name+".sig"))
+		if err != nil {
+			return fmt.Errorf("the signature for %s doesn't verify against the app's trusted keys (made with the wrong key?): %w", name, err)
+		}
+		fmt.Printf("    %s.sig verifies (key %s)\n", name, keyID)
 	}
 	return nil
 }
@@ -313,17 +344,17 @@ func uploadSignatures(cfg config, dir string, names []string) error {
 	return checkUploadedSignatures(cfg, dir, names)
 }
 
-func verifyFile(pubkey, archivePath, sigPath string) error {
+func verifyFile(pubkeys []string, archivePath, sigPath string) (string, error) {
 	sig, err := os.ReadFile(sigPath)
 	if err != nil {
-		return err
+		return "", err
 	}
 	f, err := os.Open(archivePath)
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer f.Close()
-	return verifyTauriSignature(pubkey, string(sig), f)
+	return verifyTauriSignature(pubkeys, string(sig), f)
 }
 
 // checkUploadedSignatures downloads the `.sig` assets back and compares them with what was
@@ -554,7 +585,25 @@ func findRelease(tag string) (releaseInfo, bool, error) {
 	}
 }
 
-// readPubkey reads the updater public key the app is built with.
+// backupPubkeyFile is the offline backup updater key's one home, which the app compiles in too
+// (`apps/desktop/src-tauri/src/updater/signature.rs`).
+const backupPubkeyFile = "apps/desktop/src-tauri/updater-backup.pub"
+
+// readTrustedPubkeys answers every key the app accepts an update from: the main key, then the
+// offline backup. A signature from either passes; the backup signs only a key-rotation release.
+func readTrustedPubkeys(root string) ([]string, error) {
+	main, err := readPubkey(root)
+	if err != nil {
+		return nil, err
+	}
+	backup, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(backupPubkeyFile)))
+	if err != nil {
+		return nil, fmt.Errorf("reading the backup updater key: %w", err)
+	}
+	return []string{main, strings.TrimSpace(string(backup))}, nil
+}
+
+// readPubkey reads the main updater public key, the one the bundler embeds.
 func readPubkey(root string) (string, error) {
 	raw, err := os.ReadFile(filepath.Join(root, "apps", "desktop", "src-tauri", "tauri.conf.json"))
 	if err != nil {

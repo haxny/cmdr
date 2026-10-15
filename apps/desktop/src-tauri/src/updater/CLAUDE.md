@@ -11,7 +11,7 @@ platforms use the Tauri updater plugin and the frontend calls the plugin API dir
   Tests in `tests.rs`.
 - `bundle_location.rs`: whether the running bundle can be written into at all (`BundleWriteBlocker`).
 - `manifest.rs`: parses `latest.json`, compares versions, resolves the platform key.
-- `signature.rs`: minisign signature verification (base64-wrapped, matching Tauri's format).
+- `signature.rs`: minisign verification against the main and backup updater keys.
 - `code_signature.rs`: the Apple code-signature check on the staged bundle, pinned to our Developer ID team.
 - `installer.rs`: tarball extraction, sync into the running bundle, privilege escalation. Its
   `running_bundle()` is crate-visible: `crate::install_location` asks the same "where is this copy installed" question
@@ -31,10 +31,10 @@ platforms use the Tauri updater plugin and the frontend calls the plugin API dir
 - **A read-only bundle is EROFS, not EPERM, and no amount of admin fixes it.** App Translocation and a mounted `.dmg`
   refuse root too. `installer::install` and the frontend both gate on `bundle_location::classify` BEFORE the download,
   ❌ never by escalating (an auth dialog the user can only cancel). `DETAILS.md` § A bundle that can't be written.
-- **Two keys, both required: minisign on the archive, then Cmdr's Developer ID on the bundle.**
-  `installer::vet_staged_bundle` refuses a staged bundle whose Apple code signature isn't valid or isn't team
-  `83H6YAQMNP` (`UntrustedCodeSignature`), before reading anything inside it. ❌ No switch, env var, build flag, or
-  manifest field may skip it; tests inject the check instead. `DETAILS.md` § Code signature.
+- **Minisign (main or offline backup key) on the archive, AND Cmdr's Developer ID on the bundle.**
+  `vet_staged_bundle` refuses a bundle not code-signed by team `83H6YAQMNP` (`UntrustedCodeSignature`) before reading
+  it; ❌ nothing may skip that, tests inject it. The backup pubkey lives only in `updater-backup.pub`, also read by
+  `scripts/release-finish`; ❌ never copy it. `DETAILS.md` § Code signature, § Two updater keys.
 - **The signature doesn't name a version, so the archive's own `Info.plist` does.** Its trusted comment is only
   `file:Cmdr.app.tar.gz`, and `latest.json` isn't signed, so `installer::refuse_unless_newer` refuses a staged bundle
   whose `CFBundleShortVersionString` isn't newer than the running build. ❌ Never install around it: it's what stops an
@@ -48,6 +48,5 @@ platforms use the Tauri updater plugin and the frontend calls the plugin API dir
   with user attention). The check and the download ride `server_request::send` (`Egress::UpdateCheck`,
   `UpdateDownload`).
 
-Sync order, deletion pass, minisign rationale, the code-signature check, privilege escalation, who may check, the manifest URL, and the managed
-policy step by step: `DETAILS.md`. Read it before any non-trivial work here: editing, planning, reorganizing, or
-advising.
+Sync order, deletion pass, signatures, privilege escalation, who may check, and the managed policy: `DETAILS.md`. Read
+it before any non-trivial work here.

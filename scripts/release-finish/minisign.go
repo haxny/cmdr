@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"slices"
 	"strings"
 
 	"golang.org/x/crypto/blake2b"
@@ -137,15 +138,32 @@ func (pk publicKey) verify(sig signature, data io.Reader) error {
 	return nil
 }
 
-// verifyTauriSignature parses both halves and verifies `data`.
-func verifyTauriSignature(pubkeyB64, sigB64 string, data io.Reader) error {
-	pk, err := parsePublicKey(pubkeyB64)
-	if err != nil {
-		return err
-	}
+// verifyTauriSignature verifies `data` against whichever of the trusted keys made `sigB64`, and
+// answers that key's ID. A signature from any other key is errKeyMismatch.
+func verifyTauriSignature(pubkeysB64 []string, sigB64 string, data io.Reader) (string, error) {
 	sig, err := parseSignature(sigB64)
 	if err != nil {
-		return err
+		return "", err
 	}
-	return pk.verify(sig, data)
+	trusted := make([]string, 0, len(pubkeysB64))
+	for _, b64 := range pubkeysB64 {
+		pk, err := parsePublicKey(b64)
+		if err != nil {
+			return "", err
+		}
+		// The signature names its key, so only that key is tried: `data` is read once.
+		if pk.keyID == sig.keyID {
+			return pk.id(), pk.verify(sig, data)
+		}
+		trusted = append(trusted, pk.id())
+	}
+	return "", fmt.Errorf("%w: key ID %s, want one of %s", errKeyMismatch,
+		publicKey{keyID: sig.keyID}.id(), strings.Join(trusted, ", "))
+}
+
+// id is the key ID the way minisign prints it: little-endian hex, `A2601F36BB168C0A` for Cmdr's main key.
+func (pk publicKey) id() string {
+	id := pk.keyID
+	slices.Reverse(id[:])
+	return fmt.Sprintf("%X", id)
 }
