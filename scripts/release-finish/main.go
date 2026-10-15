@@ -9,17 +9,20 @@
 //  3. verifies each one's build provenance with `gh attestation verify`, pinned to
 //     `release-pipeline.yml` at the tag's commit on a GitHub-hosted runner, and refuses to
 //     sign anything that doesn't verify;
-//  4. signs each with the Tauri signer, the key and password read from the sops store
+//  4. refuses to sign any archive the macOS updater would refuse to install: it runs the app's
+//     own check (`cmdr-vet-update`) for Cmdr's Developer ID code signature and the version
+//     (`vet.go`);
+//  5. signs each with the Tauri signer, the key and password read from the sops store
 //     (`secret`), never printed and passed only to the signer's environment;
-//  5. verifies each signature natively against the app's trusted keys, the main updater key
+//  6. verifies each signature natively against the app's trusted keys, the main updater key
 //     and the offline backup (`minisign.go`, `readTrustedPubkeys`);
-//  6. uploads the `.sig` files to the draft and checks the uploaded bytes;
-//  7. dispatches `release.yml` on the tag, whose `publish` job publishes the draft, ships
+//  7. uploads the `.sig` files to the draft and checks the uploaded bytes;
+//  8. dispatches `release.yml` on the tag, whose `publish` job publishes the draft, ships
 //     `latest.json`, deploys the website, and bumps the Homebrew tap, then waits for it.
 //
 // Every run reads where the release stands on GitHub and picks up from there, so it's safe to
 // re-run after a crash, a closed laptop, or a red job: a published release skips straight to
-// step 7, and a red finishing run gets its failed jobs re-run once.
+// step 8, and a red finishing run gets its failed jobs re-run once.
 //
 // # Usage
 //
@@ -29,8 +32,9 @@
 // `-verify-dir DIR` only verifies the archives and `.sig` files in DIR against the app's trusted keys,
 // with no gh or sops; the `publish` job gates a dispatch on it.
 //
-// `-dry-run` stops after step 5: it uploads, dispatches, and publishes nothing, and works on an
-// already published release. `-signer-workflow` (dry runs only) checks a release from before the
+// `-dry-run` stops after step 6: it uploads, dispatches, and publishes nothing, and works on an
+// already published release or a pipeline test tag's draft (it takes a pre-release version like
+// `0.52.1-pipelinetest.1`). `-signer-workflow` (dry runs only) checks a release from before the
 // reusable workflow, whose provenance `release.yml` signed.
 //
 // `-backup-key` signs with the offline backup key from the environment instead of the main key
@@ -104,7 +108,7 @@ func main() {
 		dryRun:         *dryRun,
 		backupKey:      *backupKey,
 	}
-	if err := checkVersion(cfg.version); err != nil {
+	if err := checkVersion(cfg.version, cfg.dryRun && *verifyDir == ""); err != nil {
 		fail(err)
 	}
 	if *verifyDir != "" {
@@ -174,13 +178,7 @@ func run(cfg config) error {
 	}
 	defer cleanup()
 
-	if err := downloadAndVerifyProvenance(cfg, dir, names, commit); err != nil {
-		return err
-	}
-	if err := sign(cfg, dir, names); err != nil {
-		return err
-	}
-	if err := verifySignatures(pubkeys, dir, names); err != nil {
+	if err := checkAndSign(cfg, pubkeys, dir, names, commit); err != nil {
 		return err
 	}
 
@@ -192,6 +190,21 @@ func run(cfg config) error {
 		return err
 	}
 	return finish(cfg)
+}
+
+// checkAndSign downloads the archives into `dir` and signs them, but only the ones CI provably
+// built from the tag and the updater would install, and only with a signature the app trusts.
+func checkAndSign(cfg config, pubkeys []string, dir string, names []string, commit string) error {
+	if err := downloadAndVerifyProvenance(cfg, dir, names, commit); err != nil {
+		return err
+	}
+	if err := vetArchives(runCombined, cfg.root, cfg.version, dir, names); err != nil {
+		return err
+	}
+	if err := sign(cfg, dir, names); err != nil {
+		return err
+	}
+	return verifySignatures(pubkeys, dir, names)
 }
 
 // verifyOnly is `-verify-dir`: the `publish` job runs it before publishing a draft, so a

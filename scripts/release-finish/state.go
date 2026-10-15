@@ -90,11 +90,15 @@ func (r releaseInfo) missing(names []string) []string {
 	return out
 }
 
-var versionPattern = regexp.MustCompile(`^[0-9]+\.[0-9]+\.[0-9]+$`)
+var (
+	versionPattern = regexp.MustCompile(`^[0-9]+\.[0-9]+\.[0-9]+$`)
+	// A pipeline test tag's version, like `0.52.1-pipelinetest.1`, which only a dry run takes.
+	preReleasePattern = regexp.MustCompile(`^[0-9]+\.[0-9]+\.[0-9]+-[0-9A-Za-z.]*[0-9A-Za-z]$`)
+)
 
-func checkVersion(v string) error {
-	if !versionPattern.MatchString(v) {
-		return fmt.Errorf("version must look like 0.51.0 (no leading v), got %q", v)
+func checkVersion(v string, dryRun bool) error {
+	if versionPattern.MatchString(v) || (dryRun && preReleasePattern.MatchString(v)) {
+		return nil
 	}
-	return nil
+	return fmt.Errorf("version must look like 0.51.0 (no leading v), got %q", v)
 }

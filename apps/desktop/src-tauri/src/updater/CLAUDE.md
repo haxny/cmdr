@@ -12,7 +12,8 @@ platforms use the Tauri updater plugin and the frontend calls the plugin API dir
 - `bundle_location.rs`: whether the running bundle can be written into at all (`BundleWriteBlocker`).
 - `manifest.rs`: parses `latest.json`, compares versions, resolves the platform key.
 - `signature.rs`: minisign verification against the main and backup updater keys.
-- `code_signature.rs`: the Apple code-signature check on the staged bundle, pinned to our Developer ID team.
+- The Apple code-signature check and the tarball extraction live in `crates/cmdr-update-trust/CLAUDE.md`, shared with
+  the release gate.
 - `installer.rs`: tarball extraction, sync into the running bundle, privilege escalation. Its
   `running_bundle()` is crate-visible: `crate::install_location` asks the same "where is this copy installed" question
   on behalf of the Dock pin and the reveal handler.

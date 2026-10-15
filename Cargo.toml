@@ -12,6 +12,7 @@ members = [
   "crates/cmdr-s3",
   "crates/cmdr-sftp",
   "crates/cmdr-smb",
+  "crates/cmdr-update-trust",
   "crates/cmdr-webdav",
   "crates/fsevent-stream",
   "crates/index-query",

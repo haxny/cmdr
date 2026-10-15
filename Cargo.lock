@@ -1389,6 +1389,7 @@ dependencies = [
  "cmdr-s3",
  "cmdr-sftp",
  "cmdr-smb",
+ "cmdr-update-trust",
  "cmdr-webdav",
  "cocoon",
  "core-foundation 0.10.1",
@@ -1734,6 +1735,18 @@ dependencies = [
  "tokio",
  "tokio-util",
  "unicode-normalization",
+]
+
+[[package]]
+name = "cmdr-update-trust"
+version = "0.0.0"
+dependencies = [
+ "core-foundation 0.10.1",
+ "flate2",
+ "plist",
+ "security-framework",
+ "tar",
+ "tempfile",
 ]
 
 [[package]]

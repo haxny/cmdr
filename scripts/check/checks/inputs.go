@@ -118,6 +118,7 @@ var rustMemberTrees = []rustMemberTree{
 	{Pkg: "cmdr-s3", Kind: KindApp, Glob: "crates/cmdr-s3/**"},
 	{Pkg: "cmdr-sftp", Kind: KindApp, Glob: "crates/cmdr-sftp/**"},
 	{Pkg: "cmdr-smb", Kind: KindApp, Glob: "crates/cmdr-smb/**"},
+	{Pkg: "cmdr-update-trust", Kind: KindApp, Glob: "crates/cmdr-update-trust/**"},
 	{Pkg: "cmdr-webdav", Kind: KindApp, Glob: "crates/cmdr-webdav/**"},
 	{Pkg: "index-query", Kind: KindTool, Glob: "crates/index-query/**"},
 	{Pkg: "operation-log-dump", Kind: KindTool, Glob: "crates/operation-log-dump/**"},
@@ -161,7 +162,8 @@ var rustWorkspaceConfigInputs = []string{
 // vocabulary and drift test read the frontend command-id tuple, so a registry edit
 // must invalidate every Rust lane that compiles or scans the app crate. The managed-policy
 // drift guard reads the public MDM files and the `/trust` key list
-// (`managed_policy/public_docs_test.rs`).
+// (`managed_policy/public_docs_test.rs`). The updater compiles in the offline backup
+// updater key (`updater/signature.rs` reads `updater-backup.pub`).
 //
 // A lane carries this whenever its own set covers the tree that does the
 // embedding, which is what `TestRustInputsCoverEveryEmbeddedFile` walks the whole
@@ -174,6 +176,7 @@ var rustEmbeddedInputs = []string{
 	"apps/desktop/src/lib/commands/command-ids.ts",
 	"apps/desktop/src/lib/units/drive-figure-cases.json",
 	"apps/desktop/src-tauri/tauri.conf.json",
+	"apps/desktop/src-tauri/updater-backup.pub",
 	"apps/website/public/mdm/**",
 	"apps/website/src/lib/trust.ts",
 }

@@ -66,6 +66,22 @@ all of that sharing one `tauri-action` step with every signing secret.
   own `bundle_dmg.sh`). The DMGs came out `_aarch64`, `_x64`, and `_universal`. **Not verified on GitHub yet**: real
   signing, notarization, and the upload step; the next release is the first run.
 
+## The release gate
+
+No update archive gets signed or published unless the macOS updater would install it. Since the updater requires Cmdr's
+Developer ID code signature on the bundle (`apps/desktop/src-tauri/src/updater/DETAILS.md` § Code signature), a release
+whose bundle fails that check would strand every install on the version before it, and no later update could reach them
+(only a manual download). The gate runs the app's own code, `cmdr-vet-update` (`crates/cmdr-update-trust/DETAILS.md`):
+it unpacks each archive with the installer's extraction, checks the code signature, and requires the bundle's version to
+be the release's.
+
+- **On the laptop**, `release-finish.sh` runs it after the provenance check and before signing, dry runs included, and
+  refuses to sign if any archive fails.
+- **On GitHub**, the `vet-update-archives` job (macOS) runs it on the release's three archives, and `publish` needs it,
+  in `ci` and `local` mode alike. In a `local` tag push it runs right after `sign`, so a bad build shows up before the
+  laptop is asked to sign it.
+- **By hand**: `cargo run --release -p cmdr-update-trust --bin cmdr-vet-update -- --version X.Y.Z <archives>`.
+
 ## Who signs the update archives
 
 The updater key (minisign, key ID `A2601F36BB168C0A`) is the hardest release secret to rotate: its public half is
@@ -97,15 +113,16 @@ the variable alone.
 3. **On the laptop, `./scripts/release-finish.sh X.Y.Z`** (step 8 of § The release procedure starts it right after the
    push). It waits for that run to go green, downloads the three archives, and runs `gh attestation verify` on each,
    pinned to `release-pipeline.yml` at the tag's commit (`--signer-digest`, `--source-digest`, `--source-ref`) on a
-   GitHub-hosted runner. It refuses to sign anything that doesn't verify. Then it signs with `tauri signer sign`, the
-   key and password read from sops (`CMDR_TAURI_SIGNING_PRIVATE_KEY`, `CMDR_TAURI_SIGNING_PRIVATE_KEY_PASSWORD`) into
-   the signer's environment only, verifies each new signature against the pubkey in `tauri.conf.json` with its own
-   minisign verifier (the check the app runs), uploads the `.sig` files, reads them back, and dispatches `release.yml`
-   on the tag.
-4. **The dispatched run** finishes it: `guard` (it also refuses a dispatch on a branch), then `publish`, which verifies
-   every archive's `.sig` against the app's trusted keys (main or backup), publishes the draft, and then runs exactly
-   the `ci` mode steps (`latest.json` from the `.sig` assets, checksums, release notes, the commit to `main`, the
-   website deploy), then `attest` and `bump-tap`. `ci-gate`, `compile`, `sign`, and `sbom` skip.
+   GitHub-hosted runner. It refuses to sign anything that doesn't verify, or that the updater would refuse to install (§
+   The release gate). Then it signs with `tauri signer sign`, the key and password read from sops
+   (`CMDR_TAURI_SIGNING_PRIVATE_KEY`, `CMDR_TAURI_SIGNING_PRIVATE_KEY_PASSWORD`) into the signer's environment only,
+   verifies each new signature against the pubkey in `tauri.conf.json` with its own minisign verifier (the check the app
+   runs), uploads the `.sig` files, reads them back, and dispatches `release.yml` on the tag.
+4. **The dispatched run** finishes it: `guard` (it also refuses a dispatch on a branch), `vet-update-archives` (§ The
+   release gate), then `publish`, which verifies every archive's `.sig` against the app's trusted keys (main or backup),
+   publishes the draft, and then runs exactly the `ci` mode steps (`latest.json` from the `.sig` assets, checksums,
+   release notes, the commit to `main`, the website deploy), then `attest` and `bump-tap`. `ci-gate`, `compile`, `sign`,
+   and `sbom` skip.
 
 `release-finish.sh` is resumable: re-run it after anything (a closed laptop, a red job). It holds no state of its own
 and reads where the release stands on GitHub. A build still running gets waited for, a draft gets signed (re-signing a

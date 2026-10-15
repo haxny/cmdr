@@ -368,11 +368,11 @@ All under `apps/desktop/src-tauri/src/`.
 ## Workspace crates
 
 All under `crates/`, alongside the four apps. `cmdr-fs`, `cmdr-index`, `cmdr-archive`, `cmdr-smb`, `cmdr-sftp`,
-`cmdr-webdav`, `cmdr-s3`, `cmdr-adb`, `cmdr-mtp`, `cmdr-git`, `cmdr-http`, and `cmdr-listing` carry no `tauri`
-dependency and no reach into the app; `index-crate-isolation` enforces that against the `cargo metadata` graph, and caps
-the public surface of `cmdr-index`, `cmdr-archive`, `cmdr-smb`, `cmdr-sftp`, `cmdr-webdav`, `cmdr-s3`, `cmdr-mtp`,
-`cmdr-git`, and `cmdr-listing` at the numbers their audits landed on. The two dev CLIs and the vendored fork are
-ordinary members.
+`cmdr-webdav`, `cmdr-s3`, `cmdr-adb`, `cmdr-mtp`, `cmdr-git`, `cmdr-http`, `cmdr-listing`, and `cmdr-update-trust` carry
+no `tauri` dependency and no reach into the app; `index-crate-isolation` enforces that against the `cargo metadata`
+graph, and caps the public surface of `cmdr-index`, `cmdr-archive`, `cmdr-smb`, `cmdr-sftp`, `cmdr-webdav`, `cmdr-s3`,
+`cmdr-mtp`, `cmdr-git`, and `cmdr-listing` at the numbers their audits landed on. The two dev CLIs and the vendored fork
+are ordinary members.
 
 - `crates/cmdr-fs/`: the filesystem vocabulary and host primitives every layer speaks in — the `Volume` trait and its
   data types, `FileEntry`, typed error classification (`ListingError` / `ListingErrorReason` / `ErrorCategory`, errno →
@@ -398,6 +398,9 @@ ordinary members.
   behind it: loopback and link-local always direct, then the `*_PROXY` variables, then macOS's own verdict per URL
   (manual proxy, bypass list, PAC, WPAD). The app, `cmdr-webdav`, and `cmdr-s3` all build on it, and `clippy.toml`
   refuses a bare reqwest client. See `crates/cmdr-http/CLAUDE.md`
+- `crates/cmdr-update-trust/`: what makes a macOS update archive a Cmdr release (the installer's extraction plus Cmdr's
+  Developer ID code signature), shared by the updater and the release gate binary `cmdr-vet-update`. See
+  `crates/cmdr-update-trust/CLAUDE.md`
 - `crates/cmdr-archive/`: the archive backend — a `Volume` over a zip / tar / 7z file that physically lives on another
   volume. Browse + extract for every format, plus temp+rename WRITES for zip, over a decoupled `Volume`-free reading
   core (central-directory parse, synthetic tree, streaming decompress, Zip Slip defense) and the shared boundary

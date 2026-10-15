@@ -10,8 +10,9 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
+use cmdr_update_trust::{CodeSignatureRefusal, extract_tarball};
+
 use super::UpdateInstallError;
-use super::code_signature::{self, CodeSignatureRefusal};
 
 /// Error type for the sync pipeline (`sync_bundle` + its inner helpers).
 ///
@@ -125,7 +126,7 @@ pub fn install(tarball_path: &Path, may_install: &dyn Fn(&semver::Version) -> bo
         &staged_app,
         env!("CARGO_PKG_VERSION"),
         may_install,
-        &code_signature::verify_release_bundle,
+        &cmdr_update_trust::verify_release_bundle,
     )?;
 
     log::info!("Installing update into bundle: {}", bundle_path.display());
@@ -167,7 +168,7 @@ pub fn install(tarball_path: &Path, may_install: &dyn Fn(&semver::Version) -> bo
     Ok(())
 }
 
-/// Refuses a staged bundle that isn't code-signed by Cmdr's Developer ID (`code_signature`), whose
+/// Refuses a staged bundle that isn't code-signed by Cmdr's Developer ID (`cmdr_update_trust`), whose
 /// own version isn't newer than `current`, or that the managed policy doesn't allow (`may_install`).
 ///
 /// The code signature goes first: until it holds, nothing inside the bundle (its `Info.plist`
@@ -203,16 +204,10 @@ fn vet_staged_bundle(
 /// manifest claiming a newer version would verify and roll the install back. The
 /// version inside the signed bytes (`Contents/Info.plist`) is what binds it.
 fn refuse_unless_newer(staged_app: &Path, current: &str) -> Result<semver::Version, String> {
-    let info_path = staged_app.join("Contents/Info.plist");
-    let info =
-        plist::Value::from_file(&info_path).map_err(|e| format!("Couldn't read the update's Info.plist: {e}"))?;
-    let staged = info
-        .as_dictionary()
-        .and_then(|d| d.get("CFBundleShortVersionString"))
-        .and_then(plist::Value::as_string)
-        .ok_or_else(|| "The update's Info.plist names no version".to_string())?;
+    let staged = cmdr_update_trust::bundle_version(staged_app)
+        .map_err(|e| format!("Couldn't read the update's version: {e}"))?;
     let staged_version =
-        semver::Version::parse(staged).map_err(|e| format!("The update's version {staged} isn't semver: {e}"))?;
+        semver::Version::parse(&staged).map_err(|e| format!("The update's version {staged} isn't semver: {e}"))?;
     let current_version =
         semver::Version::parse(current).map_err(|e| format!("This build's version {current} isn't semver: {e}"))?;
     if staged_version <= current_version {
@@ -221,16 +216,6 @@ fn refuse_unless_newer(staged_app: &Path, current: &str) -> Result<semver::Versi
         ));
     }
     Ok(staged_version)
-}
-
-/// Extracts a `.tar.gz` tarball into `dest_dir`.
-fn extract_tarball(tarball_path: &Path, dest_dir: &Path) -> Result<(), String> {
-    let file = fs::File::open(tarball_path).map_err(|e| format!("Couldn't open tarball: {e}"))?;
-    let gz = flate2::read::GzDecoder::new(file);
-    let mut archive = tar::Archive::new(gz);
-    archive
-        .unpack(dest_dir)
-        .map_err(|e| format!("Couldn't extract tarball: {e}"))
 }
 
 /// Finds the running app's `.app` bundle path by walking up from `current_exe()`.
@@ -690,51 +675,6 @@ mod tests {
             !policy_asked.get(),
             "an untrusted bundle's version must not reach the policy"
         );
-    }
-
-    /// The check against a real published release, extracted by the installer's own `tar` code
-    /// (which drops xattrs and sets its own modes, so the system `tar` proves nothing): the genuine
-    /// bundle passes, an ad-hoc re-signed copy and a copy with one changed resource don't. Needs
-    /// the release archive, so it's opt-in; recipe in `DETAILS.md` § Code signature.
-    #[test]
-    #[ignore = "needs a downloaded release archive in CMDR_UPDATER_RELEASE_TARBALL"]
-    fn a_published_release_passes_and_its_doctored_copies_dont() {
-        let tarball =
-            PathBuf::from(std::env::var_os("CMDR_UPDATER_RELEASE_TARBALL").expect("set CMDR_UPDATER_RELEASE_TARBALL"));
-        let extract = |label: &str| {
-            let dir = crate::test_support::TestDir::new(label);
-            extract_tarball(&tarball, &dir).unwrap();
-            let app = dir.join("Cmdr.app");
-            (dir, app)
-        };
-
-        let (_genuine_dir, genuine) = extract("release_genuine");
-        assert_eq!(code_signature::verify_release_bundle(&genuine), Ok(()));
-
-        let (_ad_hoc_dir, ad_hoc) = extract("release_ad_hoc");
-        let output = Command::new("codesign")
-            .args(["--force", "--deep", "--sign", "-"])
-            .arg(&ad_hoc)
-            .output()
-            .unwrap();
-        assert!(
-            output.status.success(),
-            "codesign: {}",
-            String::from_utf8_lossy(&output.stderr)
-        );
-        assert_eq!(
-            code_signature::verify_release_bundle(&ad_hoc),
-            Err(CodeSignatureRefusal::NotOurs)
-        );
-
-        let (_tampered_dir, tampered) = extract("release_tampered");
-        let mut info = fs::read(tampered.join("Contents/Info.plist")).unwrap();
-        info.extend_from_slice(b"\n");
-        fs::write(tampered.join("Contents/Info.plist"), info).unwrap();
-        assert!(matches!(
-            code_signature::verify_release_bundle(&tampered),
-            Err(CodeSignatureRefusal::Invalid { .. })
-        ));
     }
 
     /// A rollback stays a failure even where the policy would allow it: the version check comes first.

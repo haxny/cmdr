@@ -70,13 +70,31 @@ func TestMissingAssets(t *testing.T) {
 
 func TestParseVersion(t *testing.T) {
 	for _, ok := range []string{"0.51.0", "1.0.12"} {
-		if err := checkVersion(ok); err != nil {
+		if err := checkVersion(ok, false); err != nil {
 			t.Errorf("%s: %v", ok, err)
 		}
 	}
 	for _, bad := range []string{"v0.51.0", "0.51", "0.51.0-beta", "", "0.51.0 "} {
-		if err := checkVersion(bad); err == nil {
+		if err := checkVersion(bad, false); err == nil {
 			t.Errorf("%q: want an error", bad)
 		}
+	}
+}
+
+// A dry run also takes a pre-release version, the shape of a pipeline test tag
+// (`docs/guides/releasing.md` § Testing the release pipeline); a real release never does.
+func TestDryRunsTakeAPreReleaseVersion(t *testing.T) {
+	for _, ok := range []string{"0.51.0", "0.52.1-pipelinetest.1"} {
+		if err := checkVersion(ok, true); err != nil {
+			t.Errorf("%s: %v", ok, err)
+		}
+	}
+	for _, bad := range []string{"v0.52.1-pipelinetest.1", "0.52.1-", "0.52.1-x y", ""} {
+		if err := checkVersion(bad, true); err == nil {
+			t.Errorf("%q: want an error", bad)
+		}
+	}
+	if err := checkVersion("0.52.1-pipelinetest.1", false); err == nil {
+		t.Error("a real release must refuse a pre-release version")
 	}
 }

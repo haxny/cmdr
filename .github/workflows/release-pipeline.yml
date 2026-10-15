@@ -897,6 +897,59 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+  # The release gate's GitHub half: every update archive on the release must be one the macOS
+  # updater would install, checked by the app's own code (`cmdr-vet-update`: the installer's
+  # extraction, Cmdr's Developer ID code signature, and the release's version). A bundle the
+  # updater refuses, once in `latest.json`, would strand every install on its current version with
+  # no update able to reach it. `publish` needs this job in both modes; in a `local` tag push it
+  # also runs, so a bad build shows up before the laptop is asked to sign it (`release-finish.sh`
+  # runs the same check again before signing). `docs/guides/releasing.md` § The release gate.
+  vet-update-archives:
+    name: Vet the update archives
+    needs: [guard, sign]
+    if: >-
+      !cancelled() && needs.guard.result == 'success' && (
+        github.event_name == 'workflow_dispatch' || needs.sign.result == 'success')
+    # Apple's code-signature check needs macOS. Same image as `sign`.
+    runs-on: macos-26
+    timeout-minutes: 30
+    permissions:
+      contents: write # read the draft release in `local` mode: a read-only token can't see drafts
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      # First, and the only step that sees the token: the cargo build below runs third-party build
+      # scripts, which then find no token in their environment or in `.git/config`.
+      - name: Download the update archives
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          VERSION="${TAG#v}"
+          for arch in aarch64 x64 universal; do
+              gh release download "$TAG" -R "$GITHUB_REPOSITORY" \
+                  -p "Cmdr_${VERSION}_${arch}.app.tar.gz" -D "$RUNNER_TEMP/archives"
+          done
+          ls -l "$RUNNER_TEMP/archives"
+
+      # The runner image's rustup syncs the toolchain `rust-toolchain.toml` pins on the first call.
+      - name: Run the updater's own check on each archive
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          VERSION="${TAG#v}"
+          cargo run --quiet --release --locked -p cmdr-update-trust --bin cmdr-vet-update -- \
+              --version "$VERSION" \
+              "$RUNNER_TEMP/archives/Cmdr_${VERSION}_aarch64.app.tar.gz" \
+              "$RUNNER_TEMP/archives/Cmdr_${VERSION}_x64.app.tar.gz" \
+              "$RUNNER_TEMP/archives/Cmdr_${VERSION}_universal.app.tar.gz"
+
   # Builds `latest.json` from the `.sig` assets and ships it. In `ci` mode it follows the builds;
   # in `local` mode it's the dispatch that `scripts/release-finish.sh` starts once its signatures
   # are on the draft, and its first act is publishing that draft. Same steps either way, so the
@@ -904,10 +957,10 @@ jobs:
   publish:
     name: Publish release
     # `pkg` only for ordering: its pkg (if any) is on the release before the checksums are taken.
-    # The `if` below ignores how it ended.
-    needs: [guard, sign, pkg]
+    # The `if` below ignores how it ended. `vet-update-archives` is a hard requirement.
+    needs: [guard, sign, pkg, vet-update-archives]
     if: >-
-      !cancelled() && needs.guard.result == 'success' && (
+      !cancelled() && needs.guard.result == 'success' && needs.vet-update-archives.result == 'success' && (
         github.event_name == 'workflow_dispatch' ||
         (needs.guard.outputs.update-signing == 'ci' && needs.sign.result == 'success'))
     runs-on: ubuntu-latest

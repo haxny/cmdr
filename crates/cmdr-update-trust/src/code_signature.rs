@@ -8,14 +8,17 @@ use std::path::Path;
 
 /// Why a staged bundle's Apple code signature doesn't make it a Cmdr release.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(super) enum CodeSignatureRefusal {
+pub enum CodeSignatureRefusal {
     /// The bundle carries no code signature at all.
     Unsigned,
     /// The signature is intact but isn't Cmdr's (ad-hoc, another team, another app).
     NotOurs,
     /// The signature doesn't hold: a sealed file was changed, added, or removed, or the signature
     /// itself is malformed. `status` is the Security framework's `OSStatus`.
-    Invalid { status: i32 },
+    Invalid {
+        /// The Security framework's `OSStatus`.
+        status: i32,
+    },
 }
 
 impl std::fmt::Display for CodeSignatureRefusal {
@@ -59,8 +62,9 @@ const ERR_SEC_CS_STATIC_CODE_NOT_FOUND: i32 = -67068;
 
 /// Refuses `bundle` unless it carries a valid Apple code signature from Cmdr's Developer ID.
 ///
-/// Runs on every install, with nothing to switch it off: see `DETAILS.md` § Code signature.
-pub(super) fn verify_release_bundle(bundle: &Path) -> Result<(), CodeSignatureRefusal> {
+/// The app runs it on every install, with nothing to switch it off, and the release gate runs it on
+/// every update archive before it's signed: see `DETAILS.md`.
+pub fn verify_release_bundle(bundle: &Path) -> Result<(), CodeSignatureRefusal> {
     verify_bundle_against(bundle, RELEASE_REQUIREMENT)
 }
 
@@ -92,62 +96,8 @@ fn verify_bundle_against(bundle: &Path, requirement: &str) -> Result<(), CodeSig
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_support::TestDir;
-    use std::ffi::OsStr;
+    use crate::fixtures::{ad_hoc_signed_fixture, fixture_requirement, unsigned_fixture};
     use std::fs;
-    use std::path::PathBuf;
-    use std::process::Command;
-
-    /// A minimal `.app` with an executable, a resource, and an `Info.plist`, unsigned.
-    fn unsigned_fixture(dir: &TestDir) -> PathBuf {
-        let app = dir.join("Fixture.app");
-        let contents = app.join("Contents");
-        fs::create_dir_all(contents.join("MacOS")).unwrap();
-        fs::create_dir_all(contents.join("Resources")).unwrap();
-        // Any Mach-O will do, stripped of the Apple signature it ships with.
-        let exe = contents.join("MacOS/Fixture");
-        fs::copy("/usr/bin/true", &exe).unwrap();
-        run_codesign(&[OsStr::new("--remove-signature"), exe.as_os_str()]);
-        fs::write(contents.join("Resources/data.txt"), "sealed\n").unwrap();
-        let mut info = plist::Dictionary::new();
-        info.insert("CFBundleIdentifier".into(), FIXTURE_ID.into());
-        info.insert("CFBundleExecutable".into(), "Fixture".into());
-        plist::Value::Dictionary(info)
-            .to_file_xml(contents.join("Info.plist"))
-            .unwrap();
-        app
-    }
-
-    const FIXTURE_ID: &str = "com.example.cmdr-updater-fixture";
-
-    /// The same fixture, ad-hoc signed: what someone holding only the updater key can produce.
-    fn ad_hoc_signed_fixture(dir: &TestDir) -> PathBuf {
-        let app = unsigned_fixture(dir);
-        run_codesign(&[
-            OsStr::new("--force"),
-            OsStr::new("--sign"),
-            OsStr::new("-"),
-            OsStr::new("--identifier"),
-            OsStr::new(FIXTURE_ID),
-            app.as_os_str(),
-        ]);
-        app
-    }
-
-    fn run_codesign(args: &[&OsStr]) {
-        let output = Command::new("codesign").args(args).output().unwrap();
-        assert!(
-            output.status.success(),
-            "codesign: {}",
-            String::from_utf8_lossy(&output.stderr)
-        );
-    }
-
-    /// A requirement the ad-hoc fixture satisfies, so the tamper tests isolate signature validity
-    /// from the team pin.
-    fn fixture_requirement() -> String {
-        format!("identifier \"{FIXTURE_ID}\"")
-    }
 
     #[test]
     fn the_release_requirement_compiles() {
@@ -159,15 +109,15 @@ mod tests {
     /// put an ad-hoc (or their own team's) code signature inside it.
     #[test]
     fn an_ad_hoc_signed_bundle_is_refused() {
-        let dir = TestDir::new("codesig_adhoc");
-        let app = ad_hoc_signed_fixture(&dir);
+        let dir = tempfile::tempdir().unwrap();
+        let app = ad_hoc_signed_fixture(dir.path());
         assert_eq!(verify_release_bundle(&app), Err(CodeSignatureRefusal::NotOurs));
     }
 
     #[test]
     fn an_unsigned_bundle_is_refused() {
-        let dir = TestDir::new("codesig_unsigned");
-        let app = unsigned_fixture(&dir);
+        let dir = tempfile::tempdir().unwrap();
+        let app = unsigned_fixture(dir.path());
         assert_eq!(verify_release_bundle(&app), Err(CodeSignatureRefusal::Unsigned));
     }
 
@@ -182,15 +132,15 @@ mod tests {
     /// The mechanics with a requirement the fixture meets: an intact bundle passes.
     #[test]
     fn an_intact_bundle_meeting_the_requirement_passes() {
-        let dir = TestDir::new("codesig_intact");
-        let app = ad_hoc_signed_fixture(&dir);
+        let dir = tempfile::tempdir().unwrap();
+        let app = ad_hoc_signed_fixture(dir.path());
         assert_eq!(verify_bundle_against(&app, &fixture_requirement()), Ok(()));
     }
 
     #[test]
     fn a_changed_resource_is_refused() {
-        let dir = TestDir::new("codesig_resource");
-        let app = ad_hoc_signed_fixture(&dir);
+        let dir = tempfile::tempdir().unwrap();
+        let app = ad_hoc_signed_fixture(dir.path());
         fs::write(app.join("Contents/Resources/data.txt"), "tampered\n").unwrap();
         assert!(matches!(
             verify_bundle_against(&app, &fixture_requirement()),
@@ -200,8 +150,8 @@ mod tests {
 
     #[test]
     fn an_added_resource_is_refused() {
-        let dir = TestDir::new("codesig_added");
-        let app = ad_hoc_signed_fixture(&dir);
+        let dir = tempfile::tempdir().unwrap();
+        let app = ad_hoc_signed_fixture(dir.path());
         fs::write(app.join("Contents/Resources/extra.txt"), "smuggled\n").unwrap();
         assert!(matches!(
             verify_bundle_against(&app, &fixture_requirement()),
@@ -211,8 +161,8 @@ mod tests {
 
     #[test]
     fn a_changed_executable_is_refused() {
-        let dir = TestDir::new("codesig_exe");
-        let app = ad_hoc_signed_fixture(&dir);
+        let dir = tempfile::tempdir().unwrap();
+        let app = ad_hoc_signed_fixture(dir.path());
         let exe = app.join("Contents/MacOS/Fixture");
         let mut bytes = fs::read(&exe).unwrap();
         // Flip a byte inside the first page, which the code directory hashes.
@@ -226,7 +176,7 @@ mod tests {
 
     #[test]
     fn a_missing_bundle_is_refused() {
-        let dir = TestDir::new("codesig_missing");
-        assert!(verify_release_bundle(&dir.join("Nothing.app")).is_err());
+        let dir = tempfile::tempdir().unwrap();
+        assert!(verify_release_bundle(&dir.path().join("Nothing.app")).is_err());
     }
 }

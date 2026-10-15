@@ -296,20 +296,20 @@ plist = "1.8.0"
 pulldown-cmark = { version = "0.13.4", default-features = false, features = ["html"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
-# The custom updater unpacks its release tarball with this. `mod updater` is
-# macOS-only, so on Linux the lib never touches `tar` and a plain `[dependencies]`
-# entry tripped `unused_crate_dependencies` there (CI red on the `Desktop (Rust)`
-# lane). The cross-platform test that BUILDS a tarball gets it from
-# `[dev-dependencies]` instead.
-tar = "0.4"
+# The custom updater's trust check: unpacking the release tarball and requiring Cmdr's Developer
+# ID code signature on the bundle inside, shared with the release gate (`cmdr-vet-update`) so the
+# two can't disagree. `mod updater` is macOS-only, so on Linux the lib never touches it, and a
+# plain `[dependencies]` entry trips `unused_crate_dependencies` there (as `tar` once did: CI red
+# on the `Desktop (Rust)` lane).
+cmdr-update-trust = { path = "../../../crates/cmdr-update-trust" }
 # Percent-encoding the folder inside Warp's `warp://action/new_window?path=…` URI
 # ("open terminal here"). Sits here rather than in the macOS+Linux table above for the
-# reason `tar` gives: `file_system/terminal.rs` is macOS-only, so on Linux the lib never
+# reason `cmdr-update-trust` gives: `file_system/terminal.rs` is macOS-only, so on Linux the lib never
 # touches it. `urlencoding` (macOS+Linux table) can't do the job: it escapes `/` too, and
 # the scheme wants a literal path. Already in the lockfile via `cmdr-webdav`.
 percent-encoding = "2"
 # The updater touches the installed bundle's mtime with it (`updater/installer.rs`), and
-# `mod updater` is macOS-only, so it sits here for the reason `tar` gives. Tests on
+# `mod updater` is macOS-only, so it sits here for the reason `cmdr-update-trust` gives. Tests on
 # every platform age fixture files with it through `[dev-dependencies]`.
 filetime = "0.2"
 core-foundation = "0.10.1"
@@ -400,8 +400,8 @@ security-framework = "3.2"
 # Finder/macOS saved (internet-password items the high-level crate can't filter by
 # server/protocol). Already in the lockfile as a transitive dep of `security-framework`.
 security-framework-sys = "2.17"
-# Custom updater: signature verification (tarball extraction uses `tar` + `flate2`
-# from the untargeted archive codec block above).
+# Custom updater: minisign signature verification (extraction and the code-signature check
+# live in `cmdr-update-trust`).
 minisign-verify = "0.2"
 # `CFUserNotification` (+ its `CFDate` / `CFURL` prerequisites) powers the instance-lock refusal
 # alert: it's the one alert API that doesn't pump our run loop (see `instance_lock.rs`).
@@ -451,7 +451,7 @@ muda = { version = "0.20", default-features = false }
 bytes = "1"
 # `volume_strategy_sequential_tests.rs` builds a tarball fixture and is NOT
 # platform-gated, so `tar` has to be reachable from tests on every target. The
-# production side is macOS-only (see the per-target section above).
+# production side lives in `cmdr-update-trust`.
 tar = "0.4"
 # Scratch directories for the lib's unit tests.
 tempfile = "3"
