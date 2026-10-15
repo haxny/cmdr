@@ -333,7 +333,22 @@
      * run that ended short stopped counting where it stopped. Either way the exact
      * sentence would be a confident lie, so the "so far" one takes over.
      */
-    const countIsProvisional = $derived(live !== null && (live.running || live.incomplete))
+    /**
+     * The "No files match these criteria" list owns the content area. Spelled out in full
+     * (the template's earlier branches included) because the announcement reads it too.
+     */
+    const showingNoResults = $derived(
+        isIndexAvailable &&
+            isIndexReady &&
+            !liveWaiting &&
+            !showingCount &&
+            results.length === 0 &&
+            hasSearched &&
+            !isSearching &&
+            (query.trim() !== '' || sizeFilter !== 'any' || dateFilter !== 'any'),
+    )
+
+    const countIsProvisional =$derived(live !== null && (live.running || live.incomplete))
 
     const statusText = $derived(getStatusText())
     /** The walk's own progress, beside the count. Empty unless a walk is what's running. */
@@ -360,8 +375,18 @@
      */
     const announcer = createAnnouncementThrottle()
     let announcement = $state('')
+    /**
+     * The status bar stays empty over the no-results list (the content says it), but the
+     * list is no live region, so a search that found nothing would say nothing at all.
+     */
+    const spokenStatus = $derived(
+        statusText ||
+            (showingNoResults
+                ? `${tString('queryUi.results.noMatchHeading')} ${buildCriteria().join(', ')}`.trim()
+                : ''),
+    )
     $effect(() => {
-        if (announcer.offer(statusText, !streaming)) announcement = announcer.text
+        if (announcer.offer(spokenStatus, !streaming)) announcement = announcer.text
     })
 
     const uid = $props.id()
@@ -504,7 +529,7 @@
                     </Button>
                 {/if}
             </div>
-        {:else if results.length === 0 && hasSearched && !isSearching && (query.trim() || sizeFilter !== 'any' || dateFilter !== 'any')}
+        {:else if showingNoResults}
             <!-- D4: structured no-results state. Heading + bulleted criteria list. -->
             <div class="no-results">
                 <p class="no-results-heading">{tString('queryUi.results.noMatchHeading')}</p>

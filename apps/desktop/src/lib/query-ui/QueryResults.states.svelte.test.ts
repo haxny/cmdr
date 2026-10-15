@@ -187,6 +187,22 @@ describe('SearchResults round 2 states', () => {
     expect(status?.textContent ?? '').toBe('')
   })
 
+  // Regression: a search that found nothing said nothing to a screen reader, while one that
+  // found 11 said "11 of 11 results" (VoiceOver listening run, 2026-10-15). The visible bar
+  // stays empty (the content area shows the criteria); the live region speaks them.
+  it('D4: a screen reader hears the no-results heading and the criteria', async () => {
+    const target = mountWith({
+      hasSearched: true,
+      query: 'right-r',
+      results: [],
+      totalCount: 0,
+      scopeSummary: 'vo-huge',
+    })
+    await tick()
+    const region = target.querySelector('.status-bar [aria-live="polite"]')
+    expect(region?.textContent).toBe('No files match these criteria: Query: right-r, Searched in: vo-huge')
+  })
+
   it('D4: criteria list includes the query when a query is set', async () => {
     const target = mountWith({
       isSearching: false,

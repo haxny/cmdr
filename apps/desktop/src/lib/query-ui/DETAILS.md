@@ -748,6 +748,10 @@ Loading drive index). The rule: content is the source of truth; duplicating the 
 broken. When you add a new content-area state in `QueryResults.svelte`, make sure `getStatusText()` returns `''` for
 that state.
 
+The live region says more than the bar shows: over the no-results list it speaks the heading and the criteria
+(`spokenStatus`), since that list is no live region and a search that found nothing would otherwise say nothing. A new
+content-area state the reader can't reach by itself owes the same.
+
 An empty bar then COLLAPSES: `.status-bar.is-empty` zeroes its padding and height and makes its top border transparent,
 so a running search doesn't end the results well in a bordered strip with nothing in it. Two reasons it collapses
 instead of unmounting: the `aria-live="polite"` region has to exist before its content changes to be announced, and a
