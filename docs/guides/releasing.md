@@ -210,6 +210,48 @@ attestations) and an installed copy has updated to it:
 13. **Minor or major release: offer to refresh the app-directory listings** (skip for patches), per § Refreshing the
     app-directory listings.
 
+## Emergency release during an incident
+
+A fix release during a declared security incident (`docs/security-incident-procedure.md`) runs § The release procedure
+with these differences. The procedure pre-approves building and publishing it, so step 7 doesn't wait for a go-ahead.
+`RELEASE_UPDATE_SIGNING` is `local` (set 2026-10-15), so `release-finish.sh` signs on this laptop.
+
+**What needs David, or at least this laptop:**
+
+- **The signed tag doesn't prompt while the SSH agent holds the key.** `release.sh` runs `git tag -s` with the Git SSH
+  signing key (`gpg.format ssh`, `user.signingkey` names a passphrase-protected ed25519 key whose passphrase is in the
+  login Keychain, loaded into the launchd `ssh-agent` through `UseKeychain` and `AddKeysToAgent`). Every agent commit is
+  signed by the same key unattended, and so is the tag. After a reboot the agent starts empty until something loads the
+  key: `ssh-add --apple-load-keychain` does it without a prompt once David has logged in. Without the key in the agent,
+  the tag can't be signed unattended and `release.sh` aborts before pushing. (Verified on David's laptop with
+  `git config`, `ssh-add -l`, and the `v0.52.0` tag's SSH signature, 2026-10-15; the reboot path is untested.)
+- **Docker running**: `release.sh` aborts before tagging without it (§ Release gates that abort before tagging).
+- **The laptop awake and online for about 75 minutes after the push**, while `release-finish.sh` waits for the build,
+  signs, and waits for the finishing run. Run it as `caffeinate -i ./scripts/release-finish.sh X.Y.Z`, on power with the
+  lid open. If it stops, re-run it: it's resumable.
+- MFA, Bitwarden, and the phone aren't needed: everything else runs on GitHub with credentials already in place.
+
+**Before tagging:**
+
+- Containment may have disabled the release workflow. Re-enable it: `gh workflow enable release.yml -R vdavid/cmdr`.
+- CI red for reasons outside the fix? Use the emergency bypass in § Release gates that abort before tagging, and clear
+  `RELEASE_SKIP_CI_GATE_TAG` afterwards.
+- If the updater key itself leaked, the fix release is still signed by it: installed copies trust only that key, so it's
+  the only way to reach them, including a release that moves them to a new key.
+
+**Timeline**, from the tabletop's estimate (2026-10-15), not yet measured on a real incident: two to three hours of
+agent work on the fix and changelog, with the ~25-minute CI gate overlapping it, then about 90 minutes from the tag push
+to `latest.json` (the build is about an hour of it). A running copy checks every three hours by default, so it picks the
+fix up within hours.
+
+**After it ships:** run step 12 of § The release procedure, then:
+
+- Update an installed copy (**Cmdr > Check for updates**) and confirm it reaches the new version. For a key rotation,
+  confirm the new build's `tauri.conf.json` pubkey is the new one.
+- Confirm no release or tag exists that we didn't make (`gh release list -R vdavid/cmdr`), and that `latest.json` names
+  ours.
+- Clear any bypass variable you set, and log the release with its UTC time in the `INCIDENT:` issue.
+
 ## Writing the CHANGELOG
 
 Mechanics, which the release script and the `changelog-links` check depend on:
