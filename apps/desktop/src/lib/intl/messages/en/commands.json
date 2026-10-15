@@ -305,6 +305,14 @@
   "@commands.paneFocusControls.description": {
     "description": "Longer help text for the \"Move focus to the pane controls\" command, shown as a secondary line in the command palette. \"Location bar\" is the row above the file list showing the volume and the folder path; \"sort buttons\" are the column headers that sort the list. \"The files\" means the file list."
   },
+  "commands.appFocusNotifications.label": "Move focus to the notifications",
+  "@commands.appFocusNotifications.label": {
+    "description": "Command name that moves keyboard focus to the newest notification (the small message boxes that pop up at the top right of the window, like \"Moved 3 files to the trash\" with its Undo button). Mostly for keyboard-only and screen-reader users. Appears in the command palette and the keyboard shortcuts settings. Mirrors macOS's \"Move focus to the floating window\" wording."
+  },
+  "commands.appFocusNotifications.description": "Reach the notifications and their buttons, like Undo, from the keyboard. Arrow keys move between them, and Escape takes you back.",
+  "@commands.appFocusNotifications.description": {
+    "description": "Longer help text for the \"Move focus to the notifications\" command, shown as a secondary line in the command palette. \"Undo\" is the button on the notification after files go to the trash."
+  },
   "commands.paneLeftVolumeChooser.label": "Open left volume switcher",
   "@commands.paneLeftVolumeChooser.label": {
     "description": "Command name that opens the volume/location switcher for the LEFT pane. \"Volume\" is a disk or mounted location. Appears in the command palette. The key says “chooser” only because it mirrors a stored command id; the UI calls this the volume switcher.",

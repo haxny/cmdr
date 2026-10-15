@@ -12,6 +12,7 @@
     import { captureFocusOrigin, restoreFocus, type FocusOrigin } from '#lib/ui/focus-restore.js'
     import { toastSpeech, type ToastSpeech } from './toast-speech'
     import { dependOn } from '#lib/utils/reactivity.js'
+    import { continueWalkAfterClose, isInToastStack } from './toast-focus'
 
     interface Props {
         id: string
@@ -98,6 +99,8 @@
     function rememberFocusOrigin(event: FocusEvent): void {
         ownedFocus = true
         const origin = event.relatedTarget
+        // From another toast, the walk is on and it knows where focus came from.
+        if (isInToastStack(origin)) return
         if (origin instanceof HTMLElement && origin !== document.body && !toastElement?.contains(origin)) {
             focusReturnTarget = captureFocusOrigin(origin)
         }
@@ -120,13 +123,16 @@
         if (!ownedFocus) return
         const target = focusReturnTarget
         queueMicrotask(() => {
-            if (document.activeElement === document.body) restoreFocus(target)
+            if (document.activeElement !== document.body || continueWalkAfterClose()) return
+            restoreFocus(target)
         })
     })
 
     // What the toast says, read off the rendered body once each post has rendered, so a
     // component toast speaks the same way a string one does.
     let contentElement: HTMLDivElement | undefined = $state()
+    /** The frame's accessible name, so a keyboard walk landing on it hears what the toast says. */
+    let spokenText = $state('')
 
     $effect(() => {
         // Each post is news, even with the same words: `postedAt` moves on every re-raise.
@@ -134,7 +140,9 @@
         const element = contentElement
         if (!element) return
         const urgent = level === 'warn' || level === 'error'
-        untrack(() => onSpeak?.({ text: toastSpeech(element), urgent }))
+        const text = toastSpeech(element)
+        spokenText = text
+        untrack(() => onSpeak?.({ text, urgent }))
     })
 
     // Age label ("2m ago"). `now` moves only when the label would change: one timer, armed for
@@ -279,6 +287,9 @@
     class:warn={level === 'warn'}
     class:error={level === 'error'}
     style={widthPx ? `max-width: ${String(widthPx)}px` : undefined}
+    data-toast-frame
+    role="group"
+    aria-label={spokenText || undefined}
     onpointerenter={handlePointerEnter}
     onpointerleave={handlePointerLeave}
     onpointerdown={rememberPointerFocusOrigin}

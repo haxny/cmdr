@@ -34,8 +34,11 @@ let installed = false
  * a Servers row menu), plus its `[data-menu-submenu]`, which takes focus while it
  * holds the cursor and is the surface's sibling, not its child. The rail and a menu
  * only mount while open, so a closed one matches nothing here without any extra guard.
+ * The toast stack is always mounted but holds focus only when "Move focus to the
+ * notifications" (or a click on a toast button) put it there.
  */
-const KEYBOARD_HOME_SELECTOR = '.dual-pane-explorer, .ask-cmdr-rail, [data-menu], [data-menu-submenu]'
+const KEYBOARD_HOME_SELECTOR =
+  '.dual-pane-explorer, .ask-cmdr-rail, [data-menu], [data-menu-submenu], [data-toast-stack]'
 
 /**
  * Returns true when `document.activeElement` lives inside a keyboard home. This

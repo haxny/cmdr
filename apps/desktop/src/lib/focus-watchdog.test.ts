@@ -122,6 +122,21 @@ describe('focus watchdog', () => {
     expect(warnSpy).not.toHaveBeenCalled()
   })
 
+  /** "Move focus to the notifications" puts focus on a toast, on purpose. */
+  it('does not warn when focus is on a toast', () => {
+    const stack = document.createElement('div')
+    stack.setAttribute('data-toast-stack', '')
+    const button = document.createElement('button')
+    stack.appendChild(button)
+    document.body.appendChild(stack)
+    button.focus()
+
+    initFocusWatchdog()
+    vi.advanceTimersByTime(2000)
+
+    expect(warnSpy).not.toHaveBeenCalled()
+  })
+
   it('warns when the rail is open but focus falls to body (the bug it must still catch)', () => {
     // Rail being open is NOT a suppressor: if focus lands on <body> while the
     // rail is open, that is still the restore-focus bug the watchdog exists to

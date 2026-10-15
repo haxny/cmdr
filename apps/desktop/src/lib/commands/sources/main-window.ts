@@ -315,6 +315,19 @@ export const mainWindowCommands: CommandSource[] = [
     descriptionKey: 'commands.paneFocusControls.description',
   },
   {
+    // The keyboard way to the toasts (`#lib/ui/toast/toast-focus.ts`), whose buttons (Undo trash)
+    // Tab can't reach, since Tab is the pane switch. ⌃F6 mirrors macOS's "Move focus to the
+    // floating window"; off macOS, ⌃F6 would land on ⌘F6, so it takes ⌘⇧F6 like `pane.focusControls`.
+    id: 'app.focusNotifications',
+    nameKey: 'commands.appFocusNotifications.label',
+    scope: 'Main window',
+    showInPalette: true,
+    shortcuts: isMacOS() ? ['⌃F6'] : ['⌘⇧F6'],
+    whileDialogOpen: BLOCKED_BY_DIALOGS,
+    descriptionKey: 'commands.appFocusNotifications.description',
+    keywords: ['toast', 'notification', 'notifications', 'undo', 'keyboard', 'focus'],
+  },
+  {
     id: 'pane.leftVolumeChooser',
     nameKey: 'commands.paneLeftVolumeChooser.label',
     scope: 'Main window',

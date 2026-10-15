@@ -8,10 +8,12 @@
     twice. `ui/DETAILS.md` § Toast system.
 -->
 <script lang="ts">
+    import { onMount } from 'svelte'
     import { getToasts, dismissToast } from './toast-store.svelte'
     import ToastItem from './ToastItem.svelte'
     import type { ToastSpeech } from './toast-speech'
     import LiveAnnouncer from '../LiveAnnouncer.svelte'
+    import { handleToastStackFocusOut, handleToastStackKeydown, registerToastStack } from './toast-focus'
 
     const toasts = getToasts()
 
@@ -36,6 +38,25 @@
         })
     }
 
+    let stackElement: HTMLDivElement | undefined = $state()
+
+    // The keyboard walk (`toast-focus.ts`). Listeners rather than `onkeydown` attributes: the
+    // stack is no widget of its own, only the place a walk across its toasts happens.
+    onMount(() => {
+        const unregister = registerToastStack({
+            element: () => stackElement,
+            announce: (message) => politeRegion?.announce(message),
+        })
+        const element = stackElement
+        element?.addEventListener('keydown', handleToastStackKeydown)
+        element?.addEventListener('focusout', handleToastStackFocusOut)
+        return () => {
+            unregister()
+            element?.removeEventListener('keydown', handleToastStackKeydown)
+            element?.removeEventListener('focusout', handleToastStackFocusOut)
+        }
+    })
+
     function handleUserDismiss(id: string): void {
         const toast = toasts.find((t) => t.id === id)
         toast?.onDismiss?.()
@@ -43,7 +64,7 @@
     }
 </script>
 
-<div class="toast-container" data-toast-stack>
+<div class="toast-container" data-toast-stack bind:this={stackElement}>
     {#each toasts as toast (toast.id)}
             <ToastItem
                 id={toast.id}

@@ -123,6 +123,8 @@ export const COMMAND_IDS = [
   'pane.swap',
   'pane.clone',
   'pane.focusControls',
+  // Focus into the toast stack (`#lib/ui/toast/toast-focus.ts`).
+  'app.focusNotifications',
   'pane.leftVolumeChooser',
   'pane.rightVolumeChooser',
   'pane.copyPathLeftToRight',

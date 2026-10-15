@@ -63,6 +63,7 @@ const EXPECTED_PALETTE_IDS: readonly CommandId[] = [
   'pane.swap',
   'pane.clone',
   'pane.focusControls',
+  'app.focusNotifications',
   'pane.leftVolumeChooser',
   'pane.rightVolumeChooser',
   'pane.copyPathLeftToRight',

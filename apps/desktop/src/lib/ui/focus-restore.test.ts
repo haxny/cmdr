@@ -136,6 +136,24 @@ describe('restoreFocus', () => {
     expect(document.activeElement).toBe(list)
   })
 
+  // The palette running "Move focus to the notifications": the command focuses the newest
+  // toast, then the palette unmounts and restores. Sending focus home would undo the command.
+  it('leaves focus in the toast stack, but not when the stack is what is closing', () => {
+    const home = mountHome()
+    cleanup = home.unregister
+    home.list.focus()
+    const origin = captureFocusOrigin()
+    const stack = focusable()
+    stack.setAttribute('data-toast-stack', '')
+    focusable(stack).focus()
+
+    restoreFocus(origin)
+    expect(home.refocus).not.toHaveBeenCalled()
+
+    restoreFocus(origin, { leaving: stack })
+    expect(home.refocus).toHaveBeenCalledTimes(1)
+  })
+
   it('does nothing without an origin', () => {
     const home = mountHome()
     cleanup = home.unregister

@@ -18,6 +18,7 @@ import { claimKey } from '#lib/shortcuts/claim-key.js'
 import { commands } from '#lib/commands/command-registry.js'
 import type { DialogsOnScreen } from './command-dispatch-context'
 import { initShortcutDispatch, destroyShortcutDispatch } from '#lib/shortcuts/shortcut-dispatch.js'
+import { registerToastStack } from '#lib/ui/toast/toast-focus.js'
 
 // The resolver speaks the macOS combo vocabulary (⌘V, not Ctrl+V), and this is a
 // macOS-only bug; `isMacOS()` reads the user agent.
@@ -172,6 +173,24 @@ describe('resolveGlobalKeyAction', () => {
     it.each(CHROME_KEYS)('%s resolves for the control with a pane chrome button focused', (_name, init, expected) => {
       const { button } = mountExplorer()
       button.parentElement?.setAttribute('data-pane-chrome', '')
+      button.focus()
+      expect(resolveGlobalKeyAction(new KeyboardEvent('keydown', init), NOTHING_OPEN)).toEqual(expected)
+    })
+
+    /**
+     * A button in a toast (reached with "Move focus to the notifications", `toast-focus.ts`)
+     * keeps the same keys: Enter on Undo presses Undo, it doesn't open the cursor row.
+     */
+    it.each(CHROME_KEYS)('%s resolves for the button with a toast button focused', (_name, init, expected) => {
+      const stack = document.createElement('div')
+      const button = document.createElement('button')
+      stack.appendChild(button)
+      document.body.appendChild(stack)
+      const unregister = registerToastStack({ element: () => stack, announce: () => {} })
+      cleanupFocus = () => {
+        unregister()
+        stack.remove()
+      }
       button.focus()
       expect(resolveGlobalKeyAction(new KeyboardEvent('keydown', init), NOTHING_OPEN)).toEqual(expected)
     })

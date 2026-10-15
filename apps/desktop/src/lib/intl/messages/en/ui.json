@@ -73,6 +73,10 @@
     "description": "aria-label for the × button that closes (dismisses) a toast notification.",
     "screenshot": "toast-favorite.png"
   },
+  "ui.toast.noneToFocus": "No notifications",
+  "@ui.toast.noneToFocus": {
+    "description": "Spoken by the screen reader (never shown) when the user runs the \"Move focus to the notifications\" command while no notification toast is on screen, so there's nothing for focus to move to."
+  },
   "ui.toast.age": "{durationText} ago",
   "@ui.toast.age": {
     "description": "Small gray label at the top right of a notification toast, beside its close button, saying how long ago the notification appeared. Only shown once the toast is at least a minute old, and it counts up as time passes. Keep it very short: it shares a line with the toast's first line of text.",

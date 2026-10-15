@@ -72,14 +72,15 @@ export function captureFocusOrigin(active: Element | null = document.activeEleme
 
 /**
  * Whether focus already sits in an open menu or dialog other than `leaving` (the overlay
- * closing now), or on a home element that keeps it (`FocusHome.keepsFocus`).
+ * closing now), in the toast stack ("Move focus to the notifications" put it there), or on a
+ * home element that keeps it (`FocusHome.keepsFocus`).
  */
 function focusMovedOn(leaving: Element | null | undefined): boolean {
   const active = document.activeElement
   if (!active || active === document.body || leaving?.contains(active)) return false
   return (
     isFocusInOpenMenu() ||
-    active.closest('[role="dialog"], [role="alertdialog"]') !== null ||
+    active.closest('[role="dialog"], [role="alertdialog"], [data-toast-stack]') !== null ||
     (home?.keepsFocus?.(active) ?? false)
   )
 }

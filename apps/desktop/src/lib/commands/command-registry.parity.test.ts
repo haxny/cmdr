@@ -91,6 +91,7 @@ const EXPECTED_NAMES: Record<string, string> = {
   'pane.swap': 'Swap panes',
   'pane.clone': 'Clone pane',
   'pane.focusControls': 'Move focus to the pane controls',
+  'app.focusNotifications': 'Move focus to the notifications',
   'pane.leftVolumeChooser': 'Open left volume switcher',
   'pane.rightVolumeChooser': 'Open right volume switcher',
   'pane.copyPathLeftToRight': 'Copy path from left to right pane',
@@ -247,6 +248,8 @@ const EXPECTED_DESCRIPTIONS: Record<string, string | undefined> = {
   'pane.clone': 'Open this pane’s folder in the other pane too.',
   'pane.focusControls':
     'Reach the focused pane’s tabs, location bar, and sort buttons from the keyboard. Arrow keys move between them, and Escape takes you back to the files.',
+  'app.focusNotifications':
+    'Reach the notifications and their buttons, like Undo, from the keyboard. Arrow keys move between them, and Escape takes you back.',
   'pane.copyPathLeftToRight':
     'Open the left pane’s location on the right. When the left pane is focused and the cursor is on a folder, that folder opens on the right instead.',
   'pane.copyPathRightToLeft':

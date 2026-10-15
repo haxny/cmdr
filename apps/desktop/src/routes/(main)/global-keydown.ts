@@ -19,6 +19,7 @@ import { formatKeyCombo, isTypingKeyCombo } from '#lib/shortcuts/key-capture.js'
 import { lookupCommand, resolveKeyCombo } from '#lib/shortcuts/shortcut-dispatch.js'
 import { isTextInputFocused, isTextInputTarget } from '#lib/utils/text-input-focus.js'
 import { paneChromeOwnsKey } from '#lib/file-explorer/pane/pane-chrome.js'
+import { toastStackOwnsKey } from '#lib/ui/toast/toast-focus.js'
 import type { CommandId } from '#lib/commands/index.js'
 import type { DialogsOnScreen } from './command-dispatch-context'
 import { isRefusedOverDialog } from './dialog-command-gate'
@@ -97,6 +98,8 @@ function commandForCombo(combo: string): CommandId | undefined {
   // A focused pane-chrome control (a path segment, a tab, a sort header) answers Enter,
   // Space, the arrows, and Home/End itself, so they mustn't open the cursor row or move it.
   if (paneChromeOwnsKey(combo)) return undefined
+  // Same for a button in a toast: Enter on Undo presses Undo, not the cursor row.
+  if (toastStackOwnsKey(combo)) return undefined
   return lookupCommand(combo)
 }
 
