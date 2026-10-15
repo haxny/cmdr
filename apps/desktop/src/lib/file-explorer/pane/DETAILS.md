@@ -154,8 +154,9 @@ come for free):
   breadcrumb shows a DISPLAY path (volume prefix stripped, home collapsed to `~`); reconstructing the real target is the
   pure `navigation/breadcrumb-navigation.ts` (`enrichBreadcrumbSegments`), unit-tested. The current folder (last
   segment), the empty root marker, and search-results panes (whose "path" is a query label) are non-clickable. The path
-  fits the bar by middle-truncating its widest segments (`navigation/DETAILS.md`, the `breadcrumb-fit.ts` bullet).-
-  **Double-click the empty pane background → parent folder** (Directory Opus-style), gated by
+  fits the bar by middle-truncating its widest segments (`navigation/DETAILS.md`, the `breadcrumb-fit.ts` bullet).
+  Segments draw their focus ring INSIDE (`outline-offset: -2px`): `.path` clips at their hit area's edges.
+- **Double-click the empty pane background → parent folder** (Directory Opus-style), gated by
   `behavior.doubleClickPaneNavigatesToParent` (default on). The `ondblclick` lives on the `.file-pane` root (which
   already carries `role="region"`, so no new a11y exposure); `isFileListBackgroundClick` filters to genuine list
   background. The first time it fires it raises a one-time INFO toast (`DoubleClickPaneHintToastContent`) and flips the

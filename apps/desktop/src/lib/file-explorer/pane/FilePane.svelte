@@ -2441,6 +2441,22 @@
         cursor: default;
     }
 
+    /* The focus ring sits inside the segment: `.path` clips at the edges the segment's hit area
+       reaches, so the global ring (outside, offset 2px) lost its top and bottom. A flush-left
+       segment (`~`) drops the 3px overhang that would put its left edge past the clip too. */
+    .path :global(.path-segment:focus-visible) {
+        outline-offset: -2px;
+    }
+
+    :global(html.increase-contrast) .path :global(.path-segment:focus-visible) {
+        box-shadow: inset 0 0 0 4px var(--color-focus-ink);
+    }
+
+    .path :global(.path-segment:first-child) {
+        padding-inline-start: 0;
+        margin-inline-start: 0;
+    }
+
     .path :global(.path-segment:hover) {
         color: var(--color-text-primary);
     }
