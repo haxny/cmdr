@@ -196,7 +196,7 @@ menu menu.bar.edit
   12 item settings menu.app.settings [Ctrl+,] tracked
   13 item enter_license_key menu.app.licenseEnter|menu.app.licenseDetails untracked
   14 item check_for_updates menu.app.checkForUpdates tracked
-  13 item changelog menu.app.changelog tracked
+  15 item changelog menu.app.changelog tracked
 menu menu.bar.select
   0 item select_all_files menu.select.all [Ctrl+A] tracked
   1 item deselect_all menu.select.deselectAll [Ctrl+Shift+A] tracked
