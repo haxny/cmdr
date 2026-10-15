@@ -31,6 +31,7 @@
     import Icon from '#lib/ui/Icon.svelte'
     import Button from '#lib/ui/Button.svelte'
     import TextInput from '#lib/ui/TextInput.svelte'
+    import { createDeferredActiveDescendant } from '#lib/ui/deferred-active-descendant.svelte.js'
     import type { SearchMode } from './query-filter-state.svelte'
 
     interface Props {
@@ -69,6 +70,12 @@
         showEnterHint?: boolean
         /** True while the recent-items dropdown is open. Drives the trigger's `aria-expanded`. */
         recentOpen?: boolean
+        /** The result listbox this field controls as a combobox. */
+        listboxId: string
+        /** Whether that listbox is on screen (`aria-expanded`). */
+        listExpanded: boolean
+        /** The cursor row's option id while drawn; lands as `aria-activedescendant` a frame after focus. */
+        activeOptionId?: string
         onInput: (value: string) => void
         /** Click handler for the run button. Equivalent to pressing Enter in the input. */
         onRun: () => void
@@ -96,6 +103,9 @@
         runTitleOverride,
         showEnterHint = true,
         recentOpen = false,
+        listboxId,
+        listExpanded,
+        activeOptionId,
         onInput,
         onRun,
         onToggleRecent,
@@ -105,6 +115,10 @@
         onCompositionEnd,
     }: Props = $props()
     /* eslint-enable prefer-const */
+
+    // ❗ The cursor row's id lands a frame after the field takes focus: VoiceOver reads only the
+    // field when the two arrive together (`deferred-active-descendant.svelte.ts`).
+    const descendant = createDeferredActiveDescendant()
 
     /** Placeholder text per mode. Filenames are the workhorse, so we name the wildcards there. */
     const placeholder = $derived.by(() => {
@@ -148,6 +162,17 @@
                 spellcheck={false}
                 autocomplete="off"
                 autocapitalize="off"
+                role="combobox"
+                aria-controls={listExpanded ? listboxId : undefined}
+                aria-expanded={listExpanded}
+                aria-autocomplete="list"
+                aria-activedescendant={descendant.of(activeOptionId)}
+                onfocus={() => {
+                    descendant.tookFocus(activeOptionId)
+                }}
+                onblur={() => {
+                    descendant.reset()
+                }}
                 oninput={(e: Event) => {
                     onInput((e.target as HTMLInputElement).value)
                 }}

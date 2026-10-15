@@ -218,6 +218,37 @@ describe('ColumnList cursor and pointer', () => {
   })
 })
 
+// A combobox (Search's query field) names the cursor row by id, so a list given an `id`
+// gives every option one, and says which id is safe to name: only a row that's drawn, since
+// `aria-activedescendant` pointing at nothing reads as nothing.
+describe('ColumnList option ids', () => {
+  it('ids the listbox and every option, and names only a drawn row as active', async () => {
+    const target = document.createElement('div')
+    document.body.appendChild(target)
+    const component = mount(ColumnList<Item>, {
+      target,
+      props: { columns: plainColumns, ariaLabel: 'Things', rows: items(1_000), id: 'results' },
+    })
+    cleanup = () => {
+      void unmount(component)
+    }
+    for (let i = 0; i < 4; i++) await tick()
+    expect(target.querySelector('[role="listbox"]')?.id).toBe('results')
+    const options = target.querySelectorAll<HTMLElement>('[role="option"]')
+    expect(options[3].id).toBe('results-option-3')
+
+    const api = component as ColumnListApi
+    expect(api.activeDescendantId(3)).toBe('results-option-3')
+    expect(api.activeDescendantId(900)).toBeUndefined()
+    expect(api.activeDescendantId(-1)).toBeUndefined()
+  })
+
+  it('leaves options without ids when the list has none', async () => {
+    const target = await render({ rows: items(3) })
+    expect([...target.querySelectorAll('[role="option"]')].some((o) => o.hasAttribute('id'))).toBe(false)
+  })
+})
+
 describe('ColumnList table semantics', () => {
   it('renders rows and cells with a row count, and group headings as spanning row headers', async () => {
     const heading = createRawSnippet<[{ row: Item }]>((ctx) => ({ render: () => `<span>${ctx().row.name}</span>` }))

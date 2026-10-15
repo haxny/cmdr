@@ -172,6 +172,15 @@ status bar inside it, and those three pay `--spacing-md` of their own so the row
 starting on its edge. The centered state blocks inside `QueryResults` (loading / no-results / empty) are content
 padding, not strip inset, and stay on the generic scale.
 
+### The query field to a screen reader
+
+To assistive tech the query field is a `role="combobox"` over the RESULT list (`aria-controls` → the `ColumnList`
+listbox, `aria-expanded` while rows show), because that's what ↑/↓ move while focus stays in the field. The cursor row
+reaches VoiceOver only as the field's `aria-activedescendant`: `QueryDialog` reads it from
+`QueryResults.cursorOptionId()`, which asks `ColumnList.activeDescendantId(cursorIndex)`, so it names a row only while
+that row is drawn. The id lands a frame after the field takes focus (`QueryBar` owns a
+`#lib/ui/deferred-active-descendant` instance). The result count is the status bar's throttled live region.
+
 ### Recent-items dropdown
 
 The query field is a combobox over the recent-items history. The field itself is the house `TextInput`

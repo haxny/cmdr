@@ -123,6 +123,13 @@ export interface ColumnListProps<T> {
    * draws the whole `count`.
    */
   virtualized?: boolean
+  /**
+   * Listbox semantics only: the listbox's id, and the prefix of every option's
+   * (`{id}-option-{index}`), so a combobox outside the list can name its cursor row
+   * (`aria-controls`, and `aria-activedescendant` through `activeDescendantId`). Must be
+   * document-unique.
+   */
+  id?: string
 }
 
 /**
@@ -137,4 +144,6 @@ export function columnListProps<T>(props: ColumnListProps<T>): ColumnListProps<T
 /** What a `bind:this` ref to a `ColumnList` exposes (a typed ref, since the linter can't see the generic). */
 export interface ColumnListApi {
   scrollIndexIntoView: (index: number) => void
+  /** Row `index`'s option id while it's drawn, else `undefined` (needs the `id` prop). Reactive. */
+  activeDescendantId: (index: number) => string | undefined
 }

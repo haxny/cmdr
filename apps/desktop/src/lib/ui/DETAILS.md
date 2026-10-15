@@ -1568,6 +1568,10 @@ itself, which is exactly what this leaves to the parent.
   `aria-posinset`, so a virtualized list still announces its true length. `table` for previews and rows that hold
   controls (an `option` can't contain a checkbox or a text field): `table` / `row` / `columnheader` / `cell`, with
   `aria-rowcount` and per-row `aria-rowindex` (the header is row 1).
+- **Named by a combobox**: a listbox given `id` takes it, and every option gets `{id}-option-{index}`, so a field
+  outside the list (Search's query field) can `aria-controls` it. The exported `activeDescendantId(index)` returns that
+  id only while the row is drawn (a data row, not a heading), since an `aria-activedescendant` naming an unmounted row
+  reads as nothing.
 - **Group headings**: `isGroupHeading(row)` marks a row as a heading and `groupHeading` renders it across every column.
   In a table it's a `row` with one `rowheader` (`aria-colspan` = column count). A listbox can't hold one (options and
   groups only), so there it's `aria-hidden` and each option's own label must carry the context. The cursor index counts

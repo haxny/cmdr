@@ -49,6 +49,8 @@ function mountBar(
       // The bar renders whatever hint it's handed; each dialog names its own verb.
       runHintCopy: overrides.runHintCopy ?? 'Press Enter to search',
       recentOpen: overrides.recentOpen ?? false,
+      listboxId: 'results',
+      listExpanded: false,
       onInput,
       onRun,
       onToggleRecent,

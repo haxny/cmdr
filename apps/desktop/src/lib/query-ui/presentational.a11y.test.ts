@@ -244,6 +244,8 @@ describe('SearchBar a11y', () => {
       showRunHint: false,
       runHintCopy: 'Press Enter to search',
       recentOpen: false,
+      listboxId: 'results',
+      listExpanded: false,
       onInput: () => {},
       onRun: () => {},
       onToggleRecent: () => {},

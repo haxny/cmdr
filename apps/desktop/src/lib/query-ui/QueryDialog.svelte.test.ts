@@ -10,6 +10,7 @@
 
 import { describe, it, expect, vi } from 'vitest'
 import { mount, unmount, tick } from 'svelte'
+import { computeAccessibleName } from 'dom-accessibility-api'
 import { writable } from 'svelte/store'
 import QueryDialog from './QueryDialog.svelte'
 import { createQueryFilterState, type QueryFilterState } from './query-filter-state.svelte'
@@ -782,5 +783,64 @@ describe('QueryDialog focus restore', () => {
     // Pre-fix this landed on <body>, leaving pane keyboard nav dead after Escape.
     expect(document.activeElement).toBe(outside)
     outside.remove()
+  })
+})
+
+// The query field is where focus lives while ↑/↓ walk the results, so it's a combobox over
+// the result list: without `aria-activedescendant`, VoiceOver never said which result the
+// cursor was on. The id lands a frame after the field takes focus (deferred helper), so
+// each check waits past that frame.
+describe('QueryDialog query field as a combobox', () => {
+  /** Past the deferred active descendant's frame (or its 100 ms fallback). */
+  async function frame(): Promise<void> {
+    await new Promise((resolve) => setTimeout(resolve, 150))
+    await tick()
+  }
+
+  function activeOption(input: HTMLInputElement): Element | null {
+    const id = input.getAttribute('aria-activedescendant')
+    if (!id) return null
+    const matches = document.querySelectorAll(`[id="${id}"]`)
+    expect(matches.length).toBe(1)
+    return matches[0]
+  }
+
+  it('names the cursor result through aria-activedescendant as ↓ moves it', async () => {
+    const { overlay, cleanup } = mountQueryDialog({
+      initialQuery: '*.jpg',
+      runQueryResult: { entries: [SAMPLE_RESULT, { ...SAMPLE_RESULT, path: '/b', name: 'b.jpg' }], totalCount: 2 },
+    })
+    await settle()
+    dispatchKey(overlay, 'Enter')
+    await settle()
+
+    const input = overlay.querySelector('.query-bar input') as HTMLInputElement
+    input.blur()
+    input.focus()
+    await frame()
+    const listbox = overlay.querySelector('[role="listbox"]')
+    expect(input.getAttribute('role')).toBe('combobox')
+    expect(input.getAttribute('aria-expanded')).toBe('true')
+    expect(listbox?.id).toBeTruthy()
+    expect(input.getAttribute('aria-controls')).toBe(listbox?.id)
+    expect(computeAccessibleName(activeOption(input) as Element)).toContain('photo.jpg')
+
+    dispatchKey(overlay, 'ArrowDown')
+    await tick()
+    const option = activeOption(input)
+    expect(option?.getAttribute('role')).toBe('option')
+    expect(computeAccessibleName(option as Element)).toContain('b.jpg')
+    cleanup()
+  })
+
+  it('is collapsed and names nothing while there are no results', async () => {
+    const { overlay, cleanup } = mountQueryDialog()
+    await settle()
+    await frame()
+    const input = overlay.querySelector('.query-bar input') as HTMLInputElement
+    expect(input.getAttribute('role')).toBe('combobox')
+    expect(input.getAttribute('aria-expanded')).toBe('false')
+    expect(input.hasAttribute('aria-activedescendant')).toBe(false)
+    cleanup()
   })
 })

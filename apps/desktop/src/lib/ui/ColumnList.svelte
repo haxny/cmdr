@@ -35,7 +35,12 @@
         rowClass = '',
         rowHeight,
         virtualized = true,
+        id,
     }: ColumnListProps<T> = $props()
+
+    function optionId(index: number): string | undefined {
+        return id === undefined || isTable ? undefined : `${id}-option-${String(index)}`
+    }
 
     function isWindowed(source: ColumnListSource<T>): source is ColumnListWindowedSource<T> {
         return !Array.isArray(source)
@@ -110,6 +115,18 @@
         }
     })
 
+    /**
+     * The id a combobox may name as its `aria-activedescendant` for row `index`: only a drawn
+     * data row's, since a virtual list unmounts the rest and an id naming nothing reads as
+     * nothing. Reactive: it changes as the window moves.
+     */
+    export function activeDescendantId(index: number): string | undefined {
+        if (index < range.start || index >= range.end) return undefined
+        const row = rowAt(index)
+        if (row === undefined || isGroupHeading?.(row)) return undefined
+        return optionId(index)
+    }
+
     /** Brings row `index` fully into view. The parent calls it after moving the cursor by key. */
     export function scrollIndexIntoView(index: number): void {
         const viewport = viewportEl
@@ -173,6 +190,7 @@
     <div
         class="column-list-viewport"
         bind:this={viewportEl}
+        id={isTable ? undefined : id}
         role={isTable ? 'rowgroup' : 'listbox'}
         aria-label={isTable ? undefined : ariaLabel}
         onscroll={() => {
@@ -219,6 +237,7 @@
                         style:height={rowStyleHeight}
                         style:min-height={rowMinHeight}
                         role={isTable ? 'row' : 'option'}
+                        id={optionId(index)}
                         tabindex={isTable ? undefined : -1}
                         aria-selected={isTable ? undefined : isUnderCursor}
                         aria-setsize={isTable ? undefined : count}

@@ -51,6 +51,8 @@
     interface Props {
         results: SearchResultEntry[]
         cursorIndex: number
+        /** The result listbox's id: the query field is a combobox naming its rows by it. */
+        listboxId: string
         isIndexAvailable: boolean
         isIndexReady: boolean
         isSearching: boolean
@@ -133,6 +135,7 @@
     const {
         results,
         cursorIndex,
+        listboxId,
         isIndexAvailable,
         isIndexReady,
         isSearching,
@@ -364,6 +367,16 @@
         if (announcer.offer(statusText, !streaming)) announcement = announcer.text
     })
 
+    /** Whether the result listbox is on screen: the query combobox's `aria-expanded`. Reactive. */
+    export function isListShown(): boolean {
+        return showingRows
+    }
+
+    /** The cursor row's option id while it's drawn, for the query combobox's `aria-activedescendant`. Reactive. */
+    export function cursorOptionId(): string | undefined {
+        return showingRows ? columnList?.activeDescendantId(cursorIndex) : undefined
+    }
+
     /** Scrolls the cursor row into view. Called by the parent after cursor changes. */
     export function scrollCursorIntoView(): void {
         void tick().then(() => {
@@ -518,6 +531,7 @@
                     rows: results,
                     rowKey: (entry) => entry.path,
                     ariaLabel: tString('queryUi.results.listboxAria'),
+                    id: listboxId,
                     cursorIndex,
                     onHover,
                     onRowClick: onResultClick,
