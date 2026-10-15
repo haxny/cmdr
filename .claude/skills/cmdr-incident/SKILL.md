@@ -39,7 +39,9 @@ minutes, not an hour.
    - Cloudflare: the account audit log through the API (D1, R2, Workers, Pages, and token changes).
    - Paddle, PostHog, and Resend: whatever their APIs expose about key use and account activity.
    - For what no API reaches (the GitHub account security log, dashboard-only logs), give David the exact pages to open.
-   - Personal data accessed? Say so at once and add the IMY deadline (72 hours from that discovery) to the issue.
+   - Personal data accessed? Say so at once and add the IMY deadline (72 hours from that discovery) to the issue, plus a
+     48-hour deadline per affected customer with a signed DPA (§ Deadlines). Their notice is a draft for David, like
+     every customer email.
 6. **Prefill the early warning** from the vault template
    `projects/Cmdr/business/2026-10-08 Cmdr CRA early-warning template.md`: copy it, fill the blanks from what's known,
    and put the draft in the incident issue as a comment marked "DRAFT, not submitted". If the SRP is reported down, also

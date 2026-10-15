@@ -38,8 +38,10 @@ Count from the aware time. One SRP submission reaches CERT-SE and ENISA together
   report within 14 days of a fix or mitigation being available.
 - **Personal data involved** (a GDPR breach too): notify IMY within 72 hours of discovering that personal data was
   affected. That's its own clock, often later than the CRA one.
+- **Personal data of a customer with a signed DPA**: notify that customer within 48 hours of becoming aware (DPA § B.6),
+  at the notice email in their DPA's Annex I, with what's known so far. This clock is shorter than IMY's.
 
-(From CRA Art. 14 and ENISA's SRP FAQ, checked 2026-10-07.)
+(From CRA Art. 14 and ENISA's SRP FAQ, checked 2026-10-07; the DPA clock from Cmdr's DPA, decided 2026-10-15.)
 
 ## What counts
 
@@ -61,7 +63,8 @@ Count from the aware time. One SRP submission reaches CERT-SE and ENISA together
   - Paddle, PostHog, and Resend: each dashboard's API-key and activity logs.
   - The api-server's D1 database: unexpected queries or exports, through the Cloudflare audit log.
 - **Ship a fix release** if users need one: `docs/guides/releasing.md` § Emergency release during an incident.
-- Personal data touched? Start the IMY clock now (§ Deadlines).
+- Personal data touched? Start the IMY clock now, and the 48-hour clock for every affected customer with a signed DPA (§
+  Deadlines).
 
 ## Reporting
 
@@ -73,7 +76,8 @@ Count from the aware time. One SRP submission reaches CERT-SE and ENISA together
    works again.
 3. **Within 72 hours: notification** on the SRP: the nature of the incident or exploit, an initial assessment, the
    measures taken, and what users can do. Personal data involved: notify IMY (imy.se, personuppgiftsincident) on its own
-   clock, and record the GDPR assessment even when no notice is needed.
+   clock, and record the GDPR assessment even when no notice is needed. Customers with a signed DPA hear from us sooner,
+   within their 48 hours.
 4. **Tell users** (Art. 14(8)) as soon as there's something they can do, without waiting for the final report: a fix
    release, a note on getcmdr.com, a GitHub security advisory, and an email to license holders. Organizations that
    pinned a version or turned updates off need the email most.
@@ -98,9 +102,9 @@ Everything else still needs David's explicit OK: public statements, the user not
 
 ## When David is away
 
-The backup is a board member of Rymdskottkärra AB who is the Secondary AR ("AR Backup User") on the SRP, with their own
-EU Login and MFA. They file the early warning from the prefilled template; they make no public statements and no
-technical fixes, and the 72-hour notification and everything after stay with David.
+The backup contact is a board member of Rymdskottkärra AB who is the Secondary AR ("AR Backup User") on the SRP, with
+their own EU Login and MFA. They file the early warning from the prefilled template; they make no public statements and
+no technical fixes, and the 72-hour notification and everything after stay with David.
 
 How the backup gets alerted:
 
