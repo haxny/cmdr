@@ -1,7 +1,7 @@
 /**
  * What a focused pane says through its live region (`FilePaneAPI.announce`) besides where it
  * is: a load that's taking a while, a folder that just went empty, the selection count, and
- * the quick filter's match count. Each is otherwise visible only (the loading icon, the
+ * the quick filter's match count (and its clearing, which brings every name back). Each is otherwise visible only (the loading icon, the
  * "Empty folder" text, the status bar, the filter badge).
  *
  * Where it is ("Left pane, Documents", plus "empty folder" when it arrives in one) is
@@ -52,7 +52,12 @@ function messageFor(from: PaneStatusInput, to: PaneStatusInput): string | null {
       pattern: to.filterPattern,
     })
   }
-  if (to.filterPattern === null && from.filterPattern !== null) return null
+  if (to.filterPattern === null && from.filterPattern !== null) {
+    return tString('fileExplorer.pane.filterCleared', {
+      count: to.entryCount,
+      countText: formatInteger(to.entryCount),
+    })
+  }
   if (!to.hasError && to.entryCount === 0 && from.entryCount > 0) return tString('fileExplorer.list.empty')
   if (to.selectedCount !== from.selectedCount) {
     return tString('fileExplorer.pane.selectedCount', {

@@ -163,11 +163,37 @@ describe('createPaneStatusAnnouncer', () => {
       expect(announce).toHaveBeenCalledExactlyOnceWith('No names contain “zz”')
     })
 
-    it('says nothing when the filter clears', () => {
+    it('says the filter is gone, with the count it shows again, when it clears', () => {
       const { state, announce } = setup({ entryCount: 3, filterPattern: 're' })
       change(() => {
         state.filterPattern = null
-        state.entryCount = 40
+        state.entryCount = 1_204
+      })
+      vi.advanceTimersByTime(STATUS_SETTLE_MS)
+      expect(announce).toHaveBeenCalledExactlyOnceWith('Filter cleared, 1,204 names')
+    })
+
+    it('says the clearing, not the selection it brought back', () => {
+      const { state, announce } = setup({ entryCount: 1, selectedCount: 0, filterPattern: 'b' })
+      change(() => {
+        state.filterPattern = null
+        state.entryCount = 8
+        state.selectedCount = 2
+      })
+      vi.advanceTimersByTime(STATUS_SETTLE_MS)
+      expect(announce).toHaveBeenCalledExactlyOnceWith('Filter cleared, 8 names')
+    })
+
+    it('says nothing when a filter typed and cleared in one burst lands back where it started', () => {
+      const { state, announce } = setup({ entryCount: 8 })
+      change(() => {
+        state.filterPattern = 'b'
+        state.entryCount = 3
+      })
+      vi.advanceTimersByTime(STATUS_SETTLE_MS / 2)
+      change(() => {
+        state.filterPattern = null
+        state.entryCount = 8
       })
       vi.advanceTimersByTime(STATUS_SETTLE_MS)
       expect(announce).not.toHaveBeenCalled()

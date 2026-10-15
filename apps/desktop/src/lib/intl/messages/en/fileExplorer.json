@@ -87,6 +87,14 @@
       "pattern": "the characters the user typed to filter the list"
     }
   },
+  "fileExplorer.pane.filterCleared": "{count, plural, =0 {Filter cleared} one {Filter cleared, {countText} name} other {Filter cleared, {countText} names}}",
+  "@fileExplorer.pane.filterCleared": {
+    "description": "For screen readers only (never shown): said when the user clears the quick filter (Esc, or the × on its badge), so the pane shows every file and folder again, for example: Filter cleared, 40 names. Pairs with fileExplorer.pane.filterMatches, which is said while the filter narrows the list.",
+    "placeholders": {
+      "countText": "how many files and folders the pane shows again, already formatted for display (e.g. 1,204)",
+      "count": "the same number (drives the singular/plural form and the empty-folder wording)"
+    }
+  },
   "fileExplorer.pane.searchResultsLocation": "Search results",
   "@fileExplorer.pane.searchResultsLocation": {
     "description": "Stands in for the folder name in fileExplorer.pane.location when search results fill the pane instead of a folder, so a screen reader says “Left pane, Search results”. Never shown on screen."
