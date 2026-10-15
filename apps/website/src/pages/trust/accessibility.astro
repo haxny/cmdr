@@ -99,16 +99,19 @@ const toc = [
             the open issues below track the gaps.
         </li>
         <li>
-            <strong>The biggest gap is screen-reader use of the file list</strong>, the core of the product. Dialogs,
-            Settings, menus, and forms are built for screen readers, but the file list likely doesn't announce which
-            file the cursor is on or which files are marked.
+            <strong>The biggest open question is screen-reader use of the file list</strong>, the core of the product.
+            Dialogs, Settings, menus, and forms are built for screen readers. The file list now gives VoiceOver the file
+            under the cursor with its kind and position, which files are marked, and which pane and folder you're in,
+            and in-app menus read their submenus too. Simulated screen-reader tests confirm this, but a hands-on
+            VoiceOver test of the current version is still to come.
         </li>
         <li>
             <strong>What works well today</strong>: everything core runs from the keyboard (every action has a
             remappable shortcut and a command palette entry); dialogs keep and return focus correctly; text contrast is
             checked automatically in light and dark mode with every macOS accent color; Cmdr follows the macOS text
-            size, light and dark mode, accent color, Reduce motion, and Reduce transparency settings; menus are native
-            macOS menus; and there's no audio, video, or flashing content.
+            size, light and dark mode, accent color, Reduce motion, Reduce transparency, Increase contrast, and
+            Differentiate without color settings; the menu bar and context menus are native macOS menus; and there's no
+            audio, video, or flashing content.
         </li>
         <li>
             <strong>{notEvaluatedCount} rows say "Not evaluated yet"</strong>: the code review found them supported, but
@@ -151,12 +154,18 @@ const toc = [
             file-list row state.
         </li>
         <li>
+            <strong>Simulated screen-reader tests</strong>: the file list, in-app menus, notifications, Search, and the
+            Settings sidebar have automated tests of what a screen reader says as you move through them. They follow
+            the ARIA specification, not VoiceOver itself.
+        </li>
+        <li>
             <strong>Keyboard review</strong>: every action checked for a keyboard path, plus focus order, focus traps,
             and focus return in dialogs.
         </li>
         <li>
-            <strong>Not done yet</strong>: a test with a screen reader (VoiceOver). <a href="#pending">What it will
-            cover</a>.
+            <strong>Not done yet</strong>: a full test with a screen reader (VoiceOver) on the current version. An early
+            VoiceOver run on a prototype heard file names, kinds, positions, marked files, and submenus read out.
+            <a href="#pending">What the full test will cover</a>.
         </li>
     </ul>
 

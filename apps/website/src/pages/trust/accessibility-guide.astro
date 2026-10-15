@@ -29,7 +29,7 @@ const toc = [
 
 <LegalLayout
     title="Accessibility guide"
-    description="Cmdr's accessibility features and how to turn them on: keyboard-only use, VoiceOver, text size and zoom, light and dark mode, Reduce motion, and Reduce transparency. Plus the known gaps, and how to get help."
+    description="Cmdr's accessibility features and how to turn them on: keyboard-only use, VoiceOver, text size and zoom, light and dark mode, Increase contrast, Differentiate without color, Reduce motion, and Reduce transparency. Plus the known gaps, and how to get help."
     lastUpdated="2026-10-15"
 >
     <DevTodo>
@@ -102,17 +102,24 @@ const toc = [
     <ul>
         <li>
             <strong>Works today</strong>: dialogs, Settings, and forms are built for screen readers, and dialogs keep
-            and return focus correctly. Menus are native, so VoiceOver reads them like any other
-            app's. Notifications are read out without moving your focus (new in 0.53.0).
+            and return focus correctly. The menu bar and context menus are native, so VoiceOver reads them like any
+            other app's. Notifications are read out without moving your focus (new in 0.53.0).
         </li>
         <li>
-            <strong>Not yet</strong>: the file list doesn't tell VoiceOver which file the cursor is on or which files
-            are marked (<a href={issueUrl(437)}>#437</a>). That's the biggest gap.
+            <strong>The file list</strong> (new in 0.53.0): as the cursor moves, VoiceOver reads the file's name, its
+            kind (folder, symlink, package, or archive), and its position, like "3 of 8", and says "selected" for marked
+            files. Switching panes or folders says which pane and folder you're in, and in Full view each file also
+            says its size and date.
         </li>
         <li>
-            <strong>Still to test</strong>: a full hands-on VoiceOver test is pending. The
-            <a href="/trust/accessibility#pending">conformance report</a> lists what it covers and gets updated with
-            the results.
+            <strong>In-app menus</strong> (new in 0.53.0), like the volume switcher (⌥F1) and Favorites, read each row
+            as you arrow through them, submenus included.
+        </li>
+        <li>
+            <strong>Still to test</strong>: the file list and in-app menu support is new, and a hands-on VoiceOver test
+            of it is still to come (<a href={issueUrl(437)}>#437</a>, <a href={issueUrl(267)}>#267</a>). The
+            <a href="/trust/accessibility#pending">conformance report</a> lists what that test covers and gets updated
+            with the results. If something reads wrong for you, please say so (see <a href="#help">Get help</a>).
         </li>
     </ul>
 
@@ -134,11 +141,16 @@ const toc = [
         <li>
             <strong>Contrast</strong>: text contrast is checked automatically in light and dark mode, with every macOS
             accent color. Turn on Increase contrast in System Settings &gt; Accessibility &gt; Display, and Cmdr
-            draws stronger borders, secondary text, focus rings, and pane tints.
+            draws stronger borders, secondary text, focus rings, and pane tints (new in 0.53.0).
         </li>
         <li>
-            <strong>Differentiate without color</strong>: turn it on in the same place, and a bar marks the focused
-            pane and each marked file, so you don't have to tell them apart by color.
+            <strong>Differentiate without color</strong>: turn it on in the same place, and a bar runs along the top of
+            the focused pane's location bar and down the left edge of each marked file, so you don't have to tell them
+            apart by color. New in 0.53.0.
+        </li>
+        <li>
+            <strong>Tooltips</strong> stay up while you move the pointer onto them, so you can read them with the
+            screen magnified. Any key closes them. New in 0.53.0.
         </li>
     </ul>
 

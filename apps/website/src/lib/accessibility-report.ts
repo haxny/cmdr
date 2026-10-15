@@ -109,9 +109,10 @@ const wcagA: CriterionRow[] = [
     id: '1.1.1',
     name: 'Non-text content',
     level: 'A',
-    conformance: 'partially-supports',
+    conformance: 'not-evaluated',
+    codeReview: 'supports',
     remark:
-      "Icon buttons have names, the image viewer uses the file name as the image's text alternative, and the sync-status and symlink badges on file icons are named. File-type icons have no text, so a folder and a file sound the same.",
+      "Icon buttons have names, the image viewer uses the file name as the image's text alternative, and the sync-status and symlink badges on file icons are named. Each file's name for assistive technology also says its kind (folder, symlink, package, or archive), so the file-type icon needs no text of its own.",
     issues: [437],
     pending: ['V1'],
   },
@@ -142,7 +143,7 @@ const wcagA: CriterionRow[] = [
     level: 'A',
     conformance: 'partially-supports',
     remark:
-      "Dialogs, Settings, and server forms use real headings, labels, and roles, and the Settings sidebar groups each section's subsections under it. The file list doesn't expose which files are marked, each file's position in the list, or the column structure of the Full view. Sort order is shown visually only.",
+      "Dialogs, Settings, and server forms use real headings, labels, and roles, and the Settings sidebar groups each section's subsections under it. The file list exposes which files are marked and each file's position in the list, and the sort buttons say which column the list is sorted by and which way. The Full view isn't a table: each file's name for assistive technology carries its size and date, but the column headers aren't tied to the cells.",
     issues: [437],
     pending: ['V1', 'V2', 'V7'],
   },
@@ -269,8 +270,10 @@ const wcagA: CriterionRow[] = [
     id: '2.5.3',
     name: 'Label in name',
     level: 'A',
-    conformance: 'supports',
-    remark: 'Buttons with visible text have an accessible name that starts with that text.',
+    conformance: 'partially-supports',
+    remark:
+      "File list rows and most buttons have an accessible name that contains their visible text, in order, and an automated check now tests this on every change. Seven controls don't yet, among them the queue window's row buttons and two option chips in the multi-rename dialog.",
+    issues: [450],
   },
   {
     id: '2.5.4',
@@ -348,8 +351,8 @@ const wcagA: CriterionRow[] = [
     level: 'A',
     conformance: 'partially-supports',
     remark:
-      'Dialogs, Settings controls, tabs, the command palette, the queue, and menus expose their name, role, and state, and Search results and the Settings sidebar convey the highlighted item as you arrow. The file list doesn\'t convey which file the cursor is on or which files are marked, and the volume switcher button isn\'t exposed as a control. If VoiceOver confirms the file list is silent, this row becomes "Does not support".',
-    issues: [437, 267],
+      "Dialogs, Settings controls, tabs, the command palette, the queue, and menus (submenus included) expose their name, role, and state, and the file list, Search results, and the Settings sidebar convey the highlighted item as you arrow. The file list also conveys which files are marked, and the volume switcher is a menu button. While a file is being renamed in place, the name field sits inside the file's row, which hides its role from some assistive technology.",
+    issues: [437, 267, 449],
     pending: ['V1', 'V3', 'V6', 'V7', 'V10'],
   },
 ]
@@ -454,7 +457,7 @@ const wcagAA: CriterionRow[] = [
     conformance: 'not-evaluated',
     codeReview: 'supports',
     remark:
-      'Settings uses headings for its sections, dialogs have a heading for their title, and both panes are named. Both panes\' file lists share the name "File list".',
+      'Settings uses headings for its sections, dialogs have a heading for their title, and both panes are named. Each file list is named after its pane and folder, like "Left pane, Documents", and switching panes or folders says the new pane and folder.',
     issues: [437],
     pending: ['V2'],
   },
@@ -555,7 +558,7 @@ const section508Ch3: CriterionRow[] = [
     name: 'Without vision',
     conformance: 'partially-supports',
     remark:
-      'Dialogs, Settings, menus, and forms are built for screen readers. The file list likely doesn\'t announce its cursor or marked files. If VoiceOver confirms that, this row becomes "Does not support".',
+      "Dialogs, Settings, menus, and forms are built for screen readers. The file list gives assistive technology the file under the cursor with its kind and position, which files are marked, and which pane and folder you're in. A name field being renamed in place sits inside its file's row, and the Full view's columns aren't a table.",
     issues: [437],
     pending: allChecks,
   },
@@ -620,16 +623,15 @@ const section508Ch5: CriterionRow[] = [
     name: 'No disruption of accessibility features',
     conformance: 'supports',
     remark:
-      "VoiceOver's keyboard commands pass through, macOS zoom works, and the menus are native. In the main window, the Tab key switches panes (a remappable shortcut), so macOS Full Keyboard Access doesn't move through the pane controls.",
-    issues: [437],
+      "VoiceOver's keyboard commands pass through, macOS zoom works, and the menus are native. In the main window, the Tab key switches panes (a remappable shortcut), so macOS Full Keyboard Access doesn't move through the pane controls; Control-F5 (also remappable) moves focus to them, and the arrow keys walk them.",
   },
   {
     id: '502.3.1',
     name: 'Object information',
     conformance: 'partially-supports',
     remark:
-      "Standard controls expose their name, role, and state to VoiceOver. File rows don't expose their kind (file or folder) or whether they're marked.",
-    issues: [437],
+      "Standard controls expose their name, role, and state to VoiceOver, and file rows expose their name, kind, position, and whether they're marked. While a file is being renamed in place, the name field sits inside its row, which hides the field's role from some assistive technology.",
+    issues: [437, 449],
     pending: ['V1', 'V3'],
   },
   {
@@ -645,7 +647,7 @@ const section508Ch5: CriterionRow[] = [
     name: 'Row, column, and headers',
     conformance: 'partially-supports',
     remark:
-      "The queue window is a grid with headers. The Full view of the file list has column headers, but they aren't tied to the cells.",
+      "The queue window is a grid with headers. The Full view of the file list has column headers, but they aren't tied to the cells; each file's name for assistive technology says its size and date instead.",
     issues: [437],
   },
   {
@@ -716,9 +718,10 @@ const section508Ch5: CriterionRow[] = [
   {
     id: '502.3.12',
     name: 'Focus cursor',
-    conformance: 'partially-supports',
+    conformance: 'not-evaluated',
+    codeReview: 'supports',
     remark:
-      "Focus in dialogs and Settings is real keyboard focus, and the cursor in Search results and the Settings sidebar is exposed to assistive technology. The cursor in the file list isn't.",
+      "Focus in dialogs and Settings is real keyboard focus, and the cursor in the file list, Search results, and the Settings sidebar is exposed to assistive technology as the focused list's current item.",
     issues: [437],
     pending: ['V1', 'V6'],
   },
@@ -958,7 +961,7 @@ const enClause11: CriterionRow[] = [
     name: 'Object information',
     conformance: 'partially-supports',
     remark: 'See Section 508 502.3.1.',
-    issues: [437],
+    issues: [437, 449],
     pending: ['V1'],
   },
   {
@@ -1019,8 +1022,9 @@ const enClause11: CriterionRow[] = [
   {
     id: '11.5.2.13',
     name: 'Tracking of focus and selection attributes',
-    conformance: 'partially-supports',
-    remark: "See Section 508 502.3.12. Marked files also aren't exposed as selected.",
+    conformance: 'not-evaluated',
+    codeReview: 'supports',
+    remark: 'See Section 508 502.3.12. Marked files are exposed as selected.',
     issues: [437],
     pending: ['V1', 'V3'],
   },
@@ -1166,14 +1170,26 @@ export const standards: StandardSection[] = [
 
 /** The open issues behind the report's gaps, most important first. */
 export const gapIssues: { number: number; title: string }[] = [
-  { number: 437, title: "The file list doesn't yet speak to VoiceOver: cursor, marked files, position, and file kind" },
-  { number: 440, title: 'The focused pane, marked files, and some focus rings rely on faint color' },
+  {
+    number: 437,
+    title:
+      "The file list's new VoiceOver support (cursor, marked files, position, and file kind) awaits a hands-on test",
+  },
+  {
+    number: 267,
+    title: 'In-app menus (volume switcher, favorites), submenus included, await a hands-on VoiceOver test',
+  },
+  { number: 440, title: 'The focused pane, marked files, and some focus rings rely on faint color by default' },
+  {
+    number: 449,
+    title: "The rename field sits inside the file's row, which hides its role from some assistive technology",
+  },
+  { number: 450, title: "Seven controls' accessible names don't contain their visible text" },
   {
     number: 441,
     title: 'A few click targets are still under 24 pixels: one-letter path segments and the pane divider',
   },
   { number: 443, title: "No guide to Cmdr's accessibility features yet" },
-  { number: 267, title: 'In-app menus (volume switcher, favorites) under VoiceOver' },
 ]
 
 /** The screen-reader checks still to run. Each one's rows are the rows whose `pending` names it. */
