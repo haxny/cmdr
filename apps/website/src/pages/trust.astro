@@ -636,7 +636,7 @@ const toc = [
             <strong>If the company stops</strong>: the full source is public today, and each version becomes open source
             on its change date. Paid licenses don't need our server: a perpetual license is checked offline and keeps
             working forever, and the license email includes the full key, so you can set up a new Mac without us.
-            There's no faster continuity promise in the terms yet.
+            Section 12 of the <a href="/terms-and-conditions">terms</a> makes this a promise, with 90 days' notice and a final release that needs no server.
         </li>
         <li>
             <strong>Requests from authorities</strong>: if the police or another authority asks for user data,
@@ -680,9 +680,9 @@ const toc = [
         {notInPlaceYet.map((gap) => <li set:html={gap} />)}
     </ul>
     <DevTodo>
-        Bars a security team may still expect that this page can't claim: a signed DPA, a protected release
+        Bars a security team may still expect that this page can't claim: a signed DPA and a protected release
         environment for the signing secrets (they're
-        plain repo secrets today, with no branch protection), and a continuity clause. Each one you add moves a line
+        plain repo secrets today, with no branch protection). Each one you add moves a line
         out of this list.
     </DevTodo>
 </LegalLayout>

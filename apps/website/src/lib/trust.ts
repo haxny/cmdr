@@ -324,7 +324,7 @@ export const notInPlaceYet: string[] = [
   "<strong>Checks on GitHub run after a change lands</strong>, on Linux and macOS. A release waits for a full, green run of the commit it's cut from, checked by both the maintainer's release script and the release workflow on GitHub. The macOS end-to-end tests run only on the maintainer's Mac.",
   '<strong>No automated tests on older macOS versions.</strong> A release-time check catches system frameworks and functions that are too new for them.',
   '<strong>No third-party audit or penetration test, and no SOC 2 or ISO 27001.</strong>',
-  "<strong>One person maintains Cmdr</strong> and holds all signing keys. There's no continuity clause in the terms and no written support commitment.",
+  "<strong>One person maintains Cmdr</strong> and holds all signing keys. There's no written support commitment.",
   "<strong>Local data isn't encrypted by Cmdr</strong>, so it relies on FileVault. There's no option to exclude Cmdr's index from backups.",
   "<strong>No sign-in for proxies</strong> beyond a user name and password in the proxy's address (<code>HTTPS_PROXY</code> or <code>ALL_PROXY</code>).",
   "<strong>No published security advisories yet</strong>, so there's no track record of how Cmdr handles a reported issue.",
