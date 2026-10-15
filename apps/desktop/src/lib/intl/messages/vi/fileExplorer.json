@@ -281,10 +281,6 @@
   "@fileExplorer.functionKeyBar.hiddenToast": {
     "sourceHash": "f961d3b"
   },
-  "fileExplorer.typeToJump.ariaLabel": "Nhảy tới {buffer}",
-  "@fileExplorer.typeToJump.ariaLabel": {
-    "sourceHash": "da879a5"
-  },
   "fileExplorer.typeToJump.prefix": "Nhảy tới: ",
   "@fileExplorer.typeToJump.prefix": {
     "sourceHash": "e9e3412"
@@ -292,10 +288,6 @@
   "fileExplorer.quickFilter.prefix": "Lọc: ",
   "@fileExplorer.quickFilter.prefix": {
     "sourceHash": "b549365"
-  },
-  "fileExplorer.quickFilter.ariaLabel": "Đang hiển thị các tên có chứa “{pattern}”",
-  "@fileExplorer.quickFilter.ariaLabel": {
-    "sourceHash": "9b223b0"
   },
   "fileExplorer.searchResults.unavailableTitle": "Kết quả tìm kiếm không còn khả dụng",
   "@fileExplorer.searchResults.unavailableTitle": {

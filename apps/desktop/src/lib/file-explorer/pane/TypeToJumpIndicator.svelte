@@ -15,6 +15,10 @@
      * which stays up for as long as the filter narrows the list, with a × that
      * clears it by mouse (`onClear`). The × takes no focus: the keyboard's way out
      * is Esc, and a click must leave focus on the pane it filters.
+     *
+     * ❌ Not a live region: it mounts together with its text, and a region inserted with its
+     * message may say nothing. A jump speaks through the cursor row it lands on; the filter's
+     * match count goes through the pane's one live region (`pane-status-announcer.svelte.ts`).
      */
 
     interface Props {
@@ -31,13 +35,7 @@
 
 {#if visible}
     <div class="type-to-jump-indicator" class:is-stale={stale}>
-        <span
-            role="status"
-            aria-live="polite"
-            aria-label={kind === 'filter'
-                ? tString('fileExplorer.quickFilter.ariaLabel', { pattern: buffer })
-                : tString('fileExplorer.typeToJump.ariaLabel', { buffer })}
-        >
+        <span>
             {kind === 'filter'
                 ? tString('fileExplorer.quickFilter.prefix')
                 : tString('fileExplorer.typeToJump.prefix')}<span class="buffer">{buffer}</span>

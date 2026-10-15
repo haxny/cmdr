@@ -282,10 +282,6 @@
   "@fileExplorer.functionKeyBar.hiddenToast": {
     "sourceHash": "f961d3b"
   },
-  "fileExplorer.typeToJump.ariaLabel": "Ga naar {buffer}",
-  "@fileExplorer.typeToJump.ariaLabel": {
-    "sourceHash": "da879a5"
-  },
   "fileExplorer.typeToJump.prefix": "Ga naar: ",
   "@fileExplorer.typeToJump.prefix": {
     "sourceHash": "e9e3412"
@@ -294,10 +290,6 @@
   "@fileExplorer.quickFilter.prefix": {
     "sourceHash": "b549365",
     "sameAsSourceJustification": "'Filter' is the Dutch word too (catalog: Filter recente selecties, Groottefilter actief; nl terms.json filter); the badge names the Filter typing mode, beside the shipped 'Ga naar: '."
-  },
-  "fileExplorer.quickFilter.ariaLabel": "Toont namen die ‘{pattern}’ bevatten",
-  "@fileExplorer.quickFilter.ariaLabel": {
-    "sourceHash": "9b223b0"
   },
   "fileExplorer.searchResults.unavailableTitle": "Zoekresultaten zijn niet meer beschikbaar",
   "@fileExplorer.searchResults.unavailableTitle": {

@@ -104,8 +104,12 @@ describe('PaneResizer a11y', () => {
  *
  * - Hidden: the component renders nothing (no DOM node).
  * - Active: visible with a fresh buffer, indicator says "Jump: …".
- * - Stale: buffer reset fired, indicator still visible, italic + dim. Still
- *   needs to announce (the live region must stay polite, not off).
+ * - Stale: buffer reset fired, indicator still visible, italic + dim.
+ *
+ * It's visual only, never a live region: it mounts with its text, and a region
+ * inserted together with its message may say nothing. A jump speaks through the
+ * cursor row it lands on, and the filter's match count through the pane's one
+ * live region (`pane-status-announcer.svelte.ts`).
  *
  * Plus a `prefers-reduced-motion: reduce` check that the CSS turns off the
  * opacity/font-style transitions.
@@ -123,28 +127,25 @@ describe('TypeToJumpIndicator a11y', () => {
     await expectNoA11yViolations(target)
   })
 
-  it('active state carries role="status", aria-live="polite", and the buffer in its accessible name', async () => {
-    const target = container()
-    mount(TypeToJumpIndicator, {
-      target,
-      props: { buffer: 'fil', visible: true, stale: false },
-    })
-    await tick()
+  it('active state shows the buffer and is no live region of its own', async () => {
+    for (const kind of ['jump', 'filter'] as const) {
+      const target = container()
+      mount(TypeToJumpIndicator, {
+        target,
+        props: { buffer: 'fil', visible: true, stale: false, kind, onClear: () => {} },
+      })
+      await tick()
 
-    const el = target.querySelector('.type-to-jump-indicator')
-    expect(el).not.toBeNull()
-    // The live region is the text inside the chip (the filter's × sits beside it).
-    const status = el?.querySelector('[role="status"]')
-    expect(status?.getAttribute('aria-live')).toBe('polite')
-    // Accessible name surfaces the buffer so screen-reader users hear "Jump to fil".
-    expect(status?.getAttribute('aria-label')).toBe('Jump to fil')
-    // Visible text still includes the buffer for sighted users.
-    expect(el?.textContent).toContain('fil')
-
-    await expectNoA11yViolations(target)
+      const el = target.querySelector('.type-to-jump-indicator')
+      expect(el).not.toBeNull()
+      expect(el?.textContent).toContain('fil')
+      expect(el?.querySelector('[role="status"], [aria-live]')).toBeNull()
+      await expectNoA11yViolations(target)
+      target.remove()
+    }
   })
 
-  it('stale state still announces (live region stays polite, not off)', async () => {
+  it('stale state dims the chip', async () => {
     const target = container()
     mount(TypeToJumpIndicator, {
       target,
@@ -153,15 +154,7 @@ describe('TypeToJumpIndicator a11y', () => {
     await tick()
 
     const el = target.querySelector('.type-to-jump-indicator')
-    expect(el).not.toBeNull()
-    const status = el?.querySelector('[role="status"]')
-    expect(status).not.toBeNull()
-    // Critical: the live region must NOT be flipped to `aria-live="off"` when
-    // the indicator shifts to stale, which would suppress the announcement
-    // for the next keystroke. The component leaves it polite.
-    expect(status?.getAttribute('aria-live')).toBe('polite')
     expect(el?.classList.contains('is-stale')).toBe(true)
-
     await expectNoA11yViolations(target)
   })
 

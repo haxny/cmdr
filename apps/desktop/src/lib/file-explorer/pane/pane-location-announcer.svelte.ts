@@ -45,7 +45,14 @@ export function paneLocationLabel(input: PaneLocationInput): string {
 }
 
 export interface PaneLocationAnnouncerDeps {
+  /** "Left pane, Documents": which folder the pane shows. A change of it is an arrival. */
   label: () => string
+  /**
+   * What an arrival says, when it's more than `label` ("Left pane, Downloads, empty folder").
+   * Read when the message goes out, so it describes the settled listing; its own changes
+   * announce nothing (`pane-status-announcer.svelte.ts` speaks about changes in place).
+   */
+  message?: () => string
   isFocused: () => boolean
   /** The pane shows what `label` names: no listing still loading into it. */
   isSettled: () => boolean
@@ -69,9 +76,9 @@ export function createPaneLocationAnnouncer(deps: PaneLocationAnnouncerDeps): Pa
   function flush(): void {
     clearTimeout(fallback)
     if (pending === null) return
-    const message = pending
+    const label = pending
     pending = null
-    deps.announce(message)
+    deps.announce(deps.message ? untrack(deps.message) : label)
   }
 
   function drop(): void {

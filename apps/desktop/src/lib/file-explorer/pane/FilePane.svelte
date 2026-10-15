@@ -133,6 +133,7 @@
     import LiveAnnouncer from '#lib/ui/LiveAnnouncer.svelte'
     import { focusPaneChrome } from './pane-chrome'
     import { createPaneLocationAnnouncer, paneLocationLabel } from './pane-location-announcer.svelte'
+    import { createPaneStatusAnnouncer } from './pane-status-announcer.svelte'
 
     interface Props {
         initialPath: string
@@ -1495,8 +1496,17 @@
     // takes focus or settles on another folder (VoiceOver never speaks a list's own name).
     const locationLabel = $derived(paneLocationLabel({ side: paneId, currentPath, isVolumeRoot: !hasParent,
         volumeName, isSearchResults: isSearchResultsView }))
+    const listingEntryCount = $derived(isSearchResultsView ? searchResultsCount : totalCount)
+    const showsEmptyFolder = $derived(paneViewKind === 'normal' && !loading && !friendlyError && !error
+        && listingEntryCount === 0 && !quickFilter.isActive())
     const locationAnnouncer = createPaneLocationAnnouncer({ label: () => locationLabel, isFocused: () => isFocused,
+        message: () => (showsEmptyFolder ? tString('fileExplorer.pane.locationEmpty', { location: locationLabel }) : locationLabel),
         isSettled: () => !loading || paneViewKind !== 'normal', announce: (message) => { announcer?.announce(message) } })
+    // Changes in place (selection and filter counts, a folder going empty, a slow load).
+    createPaneStatusAnnouncer({ announce: (message) => { announcer?.announce(message) }, read: () => ({ isFocused,
+        location: currentPath, loading: loading && paneViewKind === 'normal', hasError: !!(friendlyError || error),
+        entryCount: listingEntryCount, selectedCount: selection.selectedIndices.size,
+        filterPattern: quickFilter.isActive() ? quickFilter.pattern : null }) })
 
     // Effective total count includes ".." entry if not at root.
     // For search-results panes, the snapshot owns the count (the backend

@@ -45,17 +45,19 @@ describe('createPaneLocationAnnouncer', () => {
     vi.useRealTimers()
   })
 
-  function setup(initial: { focused: boolean; label?: string; settled?: boolean }) {
+  function setup(initial: { focused: boolean; label?: string; settled?: boolean; message?: string }) {
     const state = $state({
       focused: initial.focused,
       label: initial.label ?? 'Left pane, a',
       settled: initial.settled ?? true,
+      message: initial.message,
     })
     const announce = vi.fn<(message: string) => void>()
     let announcer!: ReturnType<typeof createPaneLocationAnnouncer>
     dispose = $effect.root(() => {
       announcer = createPaneLocationAnnouncer({
         label: () => state.label,
+        message: initial.message === undefined ? undefined : () => state.message ?? state.label,
         isFocused: () => state.focused,
         isSettled: () => state.settled,
         announce,
@@ -64,6 +66,23 @@ describe('createPaneLocationAnnouncer', () => {
     flushSync()
     return { state, announce, announcer }
   }
+
+  // The label names the folder (a change of it is an arrival); what's said on arrival can
+  // carry more, like "empty folder", read when it goes out so it describes the settled list.
+  it('says the arrival message, read when it goes out, while the label stays the folder’s identity', () => {
+    const { state, announce, announcer } = setup({ focused: true, message: 'Left pane, a' })
+    state.message = 'Left pane, a, empty folder'
+    flushSync()
+    announcer.cursorRowLanded()
+    expect(announce).toHaveBeenCalledExactlyOnceWith('Left pane, a, empty folder')
+
+    // The message changing on its own is no arrival.
+    announce.mockClear()
+    state.message = 'Left pane, a'
+    flushSync()
+    vi.advanceTimersByTime(1000)
+    expect(announce).not.toHaveBeenCalled()
+  })
 
   // Row first: the announcement waits for the list's cursor row to land as the active
   // descendant, so a polite message queues behind the row instead of racing it.

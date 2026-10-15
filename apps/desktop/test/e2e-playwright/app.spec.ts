@@ -295,6 +295,14 @@ test.describe('Keyboard navigation', () => {
     cursorClass = await tauriPage.getAttribute('.file-entry.is-under-cursor', 'class')
     expect(cursorClass).toContain('is-selected')
 
+    // The focused pane's live region says the count once marking pauses (a screen reader
+    // hears it; the status bar alone is visual).
+    const announced = () =>
+      tauriPage.evaluate<string>(
+        `document.querySelector('.file-pane.is-focused [data-pane-announcer]')?.textContent ?? ''`,
+      )
+    await expect.poll(announced, { timeout: waitBudget(3000) }).toBe('1 selected')
+
     // Press Space again to deselect
     await pressKey(tauriPage, 'Space')
 
@@ -310,6 +318,7 @@ test.describe('Keyboard navigation', () => {
 
     cursorClass = await tauriPage.getAttribute('.file-entry.is-under-cursor', 'class')
     expect(cursorClass).not.toContain('is-selected')
+    await expect.poll(announced, { timeout: waitBudget(3000) }).toBe('Nothing selected')
 
     // First Space press fires the persistent Quick Look hint toast explaining
     // "In Cmdr, Space selects the file under the cursor by default" (vs.

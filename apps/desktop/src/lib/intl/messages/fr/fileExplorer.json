@@ -281,10 +281,6 @@
   "@fileExplorer.functionKeyBar.hiddenToast": {
     "sourceHash": "f961d3b"
   },
-  "fileExplorer.typeToJump.ariaLabel": "Aller à {buffer}",
-  "@fileExplorer.typeToJump.ariaLabel": {
-    "sourceHash": "da879a5"
-  },
   "fileExplorer.typeToJump.prefix": "Aller à : ",
   "@fileExplorer.typeToJump.prefix": {
     "sourceHash": "e9e3412"
@@ -292,10 +288,6 @@
   "fileExplorer.quickFilter.prefix": "Filtrer : ",
   "@fileExplorer.quickFilter.prefix": {
     "sourceHash": "b549365"
-  },
-  "fileExplorer.quickFilter.ariaLabel": "Affichage des noms contenant « {pattern} »",
-  "@fileExplorer.quickFilter.ariaLabel": {
-    "sourceHash": "9b223b0"
   },
   "fileExplorer.searchResults.unavailableTitle": "Résultats de recherche indisponibles",
   "@fileExplorer.searchResults.unavailableTitle": {

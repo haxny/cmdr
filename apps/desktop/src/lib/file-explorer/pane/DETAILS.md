@@ -282,10 +282,19 @@ mounts ONE polite live region (`#lib/ui/LiveAnnouncer.svelte`, tagged `data-pane
 focused pane settles on another folder (the volume's name at its root, "Search results" for a snapshot pane); never on a
 listing batch in the same folder, never for the unfocused pane. The same string is the lists' `aria-label`, for
 VO-cursor browsing. Row first: the message waits for the list's `onCursorRowLanded` (the deferred active descendant
-landing), with a 400 ms fallback when no row lands. Every later pane message (an empty folder, a selection count) goes
-through `FilePaneAPI.announce`, ❌ never a second region: a region inserted together with its message announces nothing.
-Whether VoiceOver cuts the row off is a listening question for the harness (`docs/specs/a11y-file-list-focus-plan.md`
-M5), not a timing knob.
+landing), with a 400 ms fallback when no row lands. An arrival in an empty folder says "Left pane, Downloads, empty
+folder" (the announcer's `message`, read when it goes out). Every other pane message goes through the same region, ❌
+never a second one: a region inserted together with its message announces nothing. Whether VoiceOver cuts the row off is
+a listening question for the harness (`docs/specs/a11y-file-list-focus-plan.md` M5), not a timing knob.
+
+**Pane status announcer.** `pane-status-announcer.svelte.ts` speaks about changes IN PLACE, for the focused pane only:
+"3 selected" / "Nothing selected", the quick filter's "3 names contain “re”" / "No names contain “zz”", "Empty folder"
+when the last entry goes, and "Loading…" when a load outlasts 1 s. It re-baselines silently on focus, folder change, and
+load end, so arriving never repeats what the location message said. Chatty-safe: one message, 750 ms after the changes
+pause, so a held ↓ while marking or a filter typed letter by letter says only its end state; when several things moved
+at once the cause wins (the filter's count over the selection it dropped). `TypeToJumpIndicator` is visual only: it
+mounts with its text, so as a live region its first message would drop. A jump speaks through the cursor row it lands
+on.
 
 **Type-to-jump factory.** One `createTypeToJumpState` instance per pane, inside `FilePane`. Reset triggers (ESC, arrows,
 Page/Home/End, Enter, Tab, Backspace, rename entry, context menu, drag start, pane switch, tab switch, dir change,
