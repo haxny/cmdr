@@ -10,7 +10,7 @@
  *   setting (mapped from `UIPreferredContentSizeCategoryName`). Read once at
  *   startup and re-read whenever the backend emits `system-text-size-changed`.
  *   Returns 1.0 on non-macOS.
- * - `userPercent` is `appearance.textSize` (75–150, default 100).
+ * - `userPercent` is `appearance.textSize` (75–200, default 100).
  *
  * **Single source of truth:** `computeAndApply()` is the only place that
  * combines the two values. It writes both:
@@ -66,7 +66,7 @@ const scaleChangeListeners = new SvelteSet<(scale: number) => void>()
  * boundary values without mocking Tauri or DOM.
  *
  * @param systemMultiplier  Multiplier from the macOS Accessibility text size (≥ 0).
- * @param userPercent       The user's `appearance.textSize` slider value (75–150).
+ * @param userPercent       The user's `appearance.textSize` slider value (75–200).
  * @returns                 The compounded multiplier, clamped to a sane minimum.
  */
 export function compoundScale(systemMultiplier: number, userPercent: number): number {

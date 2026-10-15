@@ -64,11 +64,11 @@ export const isOverflowPass = overflowLocale !== ''
 export const isWorstCasePass = isOverflowPass && process.env.CMDR_I18N_WORST_CASE === '1'
 
 /**
- * The largest UI zoom the app offers (the `appearance.textSize` percentage; the
- * `view.zoom.set150` preset is the ceiling). The worst-case pass drives the app
+ * The largest UI zoom the app offers (the `appearance.textSize` ceiling,
+ * `TEXT_SIZE_RANGE.max` in `definitions/appearance.ts`). The worst-case pass drives the app
  * to this before capturing so layout is stressed at max zoom AND inflated text.
  */
-export const MAX_UI_ZOOM = 150
+export const MAX_UI_ZOOM = 200
 
 /** The default UI zoom (`appearance.textSize`), and what a fitted window restores to. */
 export const DEFAULT_UI_ZOOM = 100

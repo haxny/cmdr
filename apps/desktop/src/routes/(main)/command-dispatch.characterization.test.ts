@@ -513,10 +513,16 @@ describe('characterization — zoom arms (toast copy verbatim)', () => {
     )
   })
 
-  it('view.zoom.in clamps at the 150 ceiling', async () => {
+  it('view.zoom.in steps past 150% toward the 200% ceiling (WCAG 1.4.4, #441)', async () => {
     getSetting.mockReturnValue(150)
     await handleCommandExecute('view.zoom.in', makeCtx({}))
-    expect(setSetting).toHaveBeenCalledExactlyOnceWith('appearance.textSize', 150)
+    expect(setSetting).toHaveBeenCalledExactlyOnceWith('appearance.textSize', 160)
+  })
+
+  it('view.zoom.in clamps at the 200 ceiling', async () => {
+    getSetting.mockReturnValue(200)
+    await handleCommandExecute('view.zoom.in', makeCtx({}))
+    expect(setSetting).toHaveBeenCalledExactlyOnceWith('appearance.textSize', 200)
     // oldSize === newSize → showZoomToast returns early, no toast.
     expect(addToast).not.toHaveBeenCalled()
   })

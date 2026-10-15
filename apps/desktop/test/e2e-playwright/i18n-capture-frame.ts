@@ -204,7 +204,7 @@ const FIT_SLACK_PX = 12
 
 /**
  * The UI zoom ladder the fit falls back to, in order, once the DISPLAY is the
- * limit and the content still doesn't fit. `appearance.textSize` allows 75–150 in
+ * limit and the content still doesn't fit. `appearance.textSize` allows 75–200 in
  * steps of 5 (`definitions/appearance.ts`), so 75 is the real floor; there's no
  * point stepping finer than this when the alternative is a clipped screenshot.
  * ❗ Every surface captured below 100 is recorded in the report, so a translator

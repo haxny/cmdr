@@ -6,6 +6,7 @@
 import { addToast } from '#lib/ui/toast/index.js'
 import { getEffectiveShortcuts, toDisplayShortcut } from '#lib/shortcuts/index.js'
 import { getSetting, setSetting } from '#lib/settings/index.js'
+import { TEXT_SIZE_RANGE } from '#lib/settings/definitions/appearance.js'
 import { tString } from '#lib/intl/messages.svelte.js'
 import type { CommandArgs } from '#lib/commands/index.js'
 import type { CommandHandlerRecord } from './types'
@@ -98,14 +99,14 @@ export const viewHandlers = {
 
   'view.zoom.in': () => {
     const current = getSetting('appearance.textSize')
-    const next = Math.min(150, current + 10)
+    const next = Math.min(TEXT_SIZE_RANGE.max, current + 10)
     setSetting('appearance.textSize', next)
     showZoomToast(current, next)
   },
 
   'view.zoom.out': () => {
     const current = getSetting('appearance.textSize')
-    const next = Math.max(75, current - 10)
+    const next = Math.max(TEXT_SIZE_RANGE.min, current - 10)
     setSetting('appearance.textSize', next)
     showZoomToast(current, next)
   },

@@ -11,6 +11,13 @@ import { pickUiLocale } from '#lib/intl/os-locales.js'
 import type { MessageKey } from '#lib/intl/keys.gen.js'
 import { unitLabel } from '#lib/units/byte-size.js'
 
+/**
+ * The app zoom range, in percent. The ceiling is 200 so app zoom ALONE reaches WCAG 1.4.4's
+ * 200%, without also raising the macOS text size. ⌘+ / ⌘− clamp to it too
+ * (`command-handlers/view-handlers.ts`).
+ */
+export const TEXT_SIZE_RANGE = { min: 75, max: 200 } as const
+
 /** A fixed size-unit option, labelled with the unit symbol `#lib/units` renders. */
 function sizeUnitOption(unit: 'kB' | 'MB' | 'GB'): EnumOption {
   return {
@@ -319,10 +326,10 @@ export const appearanceSettings: SettingDefinitionSource[] = [
     default: 100,
     component: 'slider',
     constraints: {
-      min: 75,
-      max: 150,
+      min: TEXT_SIZE_RANGE.min,
+      max: TEXT_SIZE_RANGE.max,
       step: 5,
-      sliderStops: [75, 100, 125, 150],
+      sliderStops: [75, 100, 125, 150, 200],
     },
   },
   {
