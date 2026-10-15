@@ -39,6 +39,11 @@ Some notes here are load-bearing rather than historical. Those are grouped below
   formatting (63, fixed by the git hooks). It records the calls made on it (Linux lanes stay opt-in; the pre-push hook
   took on notices and size limits; the macOS CI job turns required after two clean weeks). Read it before changing what
   CI or the hooks run.
+- `2026-10-15-update-path-proof.md` — the update path after the incident tabletop's three changes, proven with a real
+  pipeline test tag and a real installed app updating itself on a second Mac. **The new pipeline's bundles pass the new
+  code-signature check, 0.52.0 and the new updater both install them, and every doctored archive is refused with the old
+  build intact.** It records the test-proxy seam that kept the installed build a real release build, and what stays
+  untested. Read it before changing the updater's trust checks or the release build, and as the recipe for re-proving.
 - `proxy-and-tls-inspection-2026-10.md` — how every outbound connection behaves behind a corporate proxy, measured on
   the 0.50.0 release, then re-measured after the fixes it led to (`crates/cmdr-http`). **0.50.0 honored the manual proxy
   and a keychain-trusted inspection CA, but ignored PAC and the bypass list and proxied loopback; the fixes verify all

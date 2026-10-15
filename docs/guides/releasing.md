@@ -63,8 +63,10 @@ all of that sharing one `tauri-action` step with every signing secret.
 - **Verified locally** (Tauri CLI 2.12.1, macOS 27.0, 2026-10-15): a `--no-bundle` compile, then `tauri bundle` on a
   copy of the binary in an empty target dir, gave the same `Cmdr.app` tree (file modes included), `Info.plist`, updater
   archive listing, and bundle folder as a one-step `tauri build`, with no `create-dmg` on `PATH` (the bundler ships its
-  own `bundle_dmg.sh`). The DMGs came out `_aarch64`, `_x64`, and `_universal`. **Not verified on GitHub yet**: real
-  signing, notarization, and the upload step; the next release is the first run.
+  own `bundle_dmg.sh`). The DMGs came out `_aarch64`, `_x64`, and `_universal`. **Verified on GitHub** with the
+  `v0.52.1-pipelinetest.1` test tag (run 38755716207, 2026-10-15): every job green, the three bundles Developer ID
+  signed, notarized, and stapled, and an installed app updated itself to one
+  (`docs/notes/2026-10-15-update-path-proof.md`).
 
 ## The release gate
 
@@ -81,6 +83,28 @@ be the release's.
   in `ci` and `local` mode alike. In a `local` tag push it runs right after `sign`, so a bad build shows up before the
   laptop is asked to sign it.
 - **By hand**: `cargo run --release -p cmdr-update-trust --bin cmdr-vet-update -- --version X.Y.Z <archives>`.
+
+## Testing the pipeline without releasing
+
+In `local` mode a tag push builds only into a private draft (`publish` and `bump-tap` skip, `latest.json` stays), so a
+pre-release tag tests the whole build for real: signing, notarization, the gate, provenance. Done for
+`v0.52.1-pipelinetest.1` on 2026-10-15; the record and the installed-app half are in
+`docs/notes/2026-10-15-update-path-proof.md`.
+
+1. Confirm `RELEASE_UPDATE_SIGNING` is `local`. In `ci` mode the same push would PUBLISH.
+2. Get a full CI run and a CodeQL run green on the commit you'll build: push a helper tag that isn't `v*` (say
+   `pipelinetest-base-N`) and dispatch both on it (`gh workflow run ci.yml --ref <tag> -f run_all=true`, then
+   `codeql.yml`). `main`'s own green run works too when testing `main` as is.
+3. On top of it, a throwaway branch with one commit titled `chore(release): vX.Y.Z-pipelinetest.N` bumping the version
+   in `apps/desktop/package.json`, `tauri.conf.json`, and `Cargo.toml` (then `cargo update --workspace`), so `ci-gate`
+   takes the parent's run, as for a real release. Sign the tag (`git tag -s`) and push only the tag. The guard's
+   `sort -V` ranks the pre-release above the live version.
+4. When the run is green: `./scripts/release-finish.sh -dry-run -out <dir> X.Y.Z-pipelinetest.N` (dry runs take a
+   pre-release version; never a real run on a test tag), then `codesign --verify --deep --strict` and `spctl -a -vv` on
+   each extracted app.
+5. Clean up: delete the draft (`gh api -X DELETE repos/vdavid/cmdr/releases/<id>`, the id from the releases list since
+   drafts can't be fetched by tag), the run's artifacts, the tags on GitHub and locally, and the branch. The run's
+   attestations stay (on the repo and in Sigstore's public log) and describe assets nobody can fetch.
 
 ## Who signs the update archives
 
