@@ -20,6 +20,7 @@
     import type { VolumeIndexStatus } from '#lib/ipc/bindings.js'
     import Menu from '#lib/ui/Menu.svelte'
     import { createMenu } from '#lib/ui/menu-controller.svelte.js'
+    import { captureFocusOrigin, restoreFocus, type FocusOrigin } from '#lib/ui/focus-restore.js'
     import type { MenuSection } from '#lib/ui/menu-types.js'
     import { tooltip } from '#lib/tooltip/tooltip.js'
     import { tString } from '#lib/intl/messages.svelte.js'
@@ -217,7 +218,7 @@
 
     let badgeRef: HTMLButtonElement | undefined = $state()
     /** Whatever held focus when the menu opened, so closing it doesn't move focus anywhere new. */
-    let focusBeforeOpen: HTMLElement | null = null
+    let focusBeforeOpen: FocusOrigin | null = null
 
     const menu = createMenu<DriveIndexMenuAction>({
         getSections: () => sections,
@@ -227,7 +228,7 @@
         restoreFocus: () => {
             // ❗ Back to whatever held focus, ❌ not to the badge: in a switcher row that's the
             // switcher's own surface, which owns the keyboard the moment this menu lets go of it.
-            focusBeforeOpen?.focus()
+            restoreFocus(focusBeforeOpen)
             focusBeforeOpen = null
         },
     })
@@ -235,7 +236,7 @@
     function toggleMenu(): void {
         if (!badgeRef) return
         if (!menu.isOpen)
-            focusBeforeOpen = document.activeElement instanceof HTMLElement ? document.activeElement : null
+            focusBeforeOpen = captureFocusOrigin()
         menu.toggleUnder(badgeRef)
     }
 

@@ -9,6 +9,7 @@
     import { tooltip } from '#lib/tooltip/tooltip.js'
     import Icon from '#lib/ui/Icon.svelte'
     import { tString } from '#lib/intl/messages.svelte.js'
+    import { captureFocusOrigin, restoreFocus, type FocusOrigin } from '#lib/ui/focus-restore.js'
 
     interface Props {
         id: string
@@ -77,12 +78,11 @@
     let naturalDeadline = 0
     let hovered = false
     let toastElement: HTMLDivElement | undefined = $state()
-    let focusReturnTarget: HTMLElement | null = null
+    let focusReturnTarget: FocusOrigin | null = null
     let ownedFocus = false
 
     onMount(() => {
-        const active = document.activeElement
-        focusReturnTarget = active instanceof HTMLElement && active !== document.body ? active : null
+        focusReturnTarget = captureFocusOrigin()
         document.addEventListener('focusin', observeDocumentFocus)
         return () => { document.removeEventListener('focusin', observeDocumentFocus); }
     })
@@ -91,14 +91,14 @@
         ownedFocus = true
         const origin = event.relatedTarget
         if (origin instanceof HTMLElement && origin !== document.body && !toastElement?.contains(origin)) {
-            focusReturnTarget = origin
+            focusReturnTarget = captureFocusOrigin(origin)
         }
     }
 
     function rememberPointerFocusOrigin(): void {
         const active = document.activeElement
         if (active instanceof HTMLElement && active !== document.body && !toastElement?.contains(active)) {
-            focusReturnTarget = active
+            focusReturnTarget = captureFocusOrigin(active)
             ownedFocus = true
         }
     }
@@ -112,7 +112,7 @@
         if (!ownedFocus) return
         const target = focusReturnTarget
         queueMicrotask(() => {
-            if (target?.isConnected && document.activeElement === document.body) target.focus()
+            if (document.activeElement === document.body) restoreFocus(target)
         })
     })
 

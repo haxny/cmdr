@@ -485,11 +485,15 @@
         }
         return undefined
     })
-    const listFocus = createListFocus(() => cursorRow)
+    const listFocus = createListFocus({
+        getCursorRow: () => cursorRow,
+        getListbox: () => scrollContainer,
+        isFocusedPane: () => isFocused,
+    })
 
     /** Focuses this list (the focused pane's keyboard home); false when it isn't mounted. */
     export function focusList(): boolean {
-        return listFocus.focus(scrollContainer)
+        return listFocus.focus()
     }
 
     // ==== Per-column widths (backend-driven) ====

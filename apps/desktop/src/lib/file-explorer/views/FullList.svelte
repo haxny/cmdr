@@ -526,13 +526,17 @@
         const row = visibleFiles.find((entry) => entry.globalIndex === cursorIndex)
         return row ? { id: fileRowId(listId, cursorIndex), key: row.file.path } : undefined
     })
-    const listFocus = createListFocus(() => cursorRow)
     // The listbox, not the scroller around it: focus and `aria-activedescendant` share one element.
     let listboxElement: HTMLDivElement | undefined = $state()
+    const listFocus = createListFocus({
+        getCursorRow: () => cursorRow,
+        getListbox: () => listboxElement,
+        isFocusedPane: () => isFocused,
+    })
 
     /** Focuses this list (the focused pane's keyboard home); false when it isn't mounted. */
     export function focusList(): boolean {
-        return listFocus.focus(listboxElement)
+        return listFocus.focus()
     }
 
     function handleScroll(e: Event) {

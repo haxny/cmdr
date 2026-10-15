@@ -16,6 +16,7 @@
 import { saveAppStatus } from '#lib/app-status-store.js'
 import { explorerState } from '#lib/file-explorer/pane/explorer-state.svelte.js'
 import { getAppLogger } from '#lib/logging/logger.js'
+import { focusHome } from '#lib/ui/focus-restore.js'
 import { refreshRailGate } from './ask-cmdr-gate.svelte'
 import { buildRailMessages } from './ask-cmdr-history'
 import { discardRenameReview } from './ask-cmdr-rename-review.svelte'
@@ -111,10 +112,10 @@ export function markRailFocused(): void {
   explorerState.setRailFocused(true)
 }
 
-/** Return focus from the rail to the dual-pane explorer (the Esc affordance). */
+/** Return focus from the rail to the dual-pane explorer, on the focused pane's list (the Esc affordance). */
 export function returnFocusToPane(): void {
   explorerState.setRailFocused(false)
-  document.querySelector<HTMLElement>('.dual-pane-explorer')?.focus()
+  focusHome()
 }
 
 /** Set the rail width, clamped to its bounds, and persist it. */

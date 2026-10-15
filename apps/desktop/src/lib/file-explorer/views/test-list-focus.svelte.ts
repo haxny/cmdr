@@ -10,9 +10,10 @@
  */
 
 import { expect, it, vi } from 'vitest'
-import { tick } from 'svelte'
+import { tick, unmount } from 'svelte'
 import { getFileRange } from '#lib/tauri-commands/index.js'
 import { assertFocusModel } from '#lib/test-focus-model.js'
+import { registerFocusHome } from '#lib/ui/focus-restore.js'
 import { fileEntry } from './test-full-list'
 import type { FileEntry } from '../types'
 
@@ -104,7 +105,7 @@ export function listFocusCases(mountList: MountFocusableList): void {
   })
 
   // ❗ Entering a folder renders a new row 0 under the same id; without landing the id again
-  // WebKit keeps focus on the dead node and VoiceOver says nothing (heard in the M0 spike).
+  // WebKit keeps focus on the dead node and VoiceOver says nothing (heard in the 2026-10-15 VoiceOver spike).
   it('lands the id again when a navigation replaces the cursor row under it', async () => {
     const live = $state<Partial<LiveListProps>>({})
     const list = await mountList({ entries: ENTRIES, liveProps: live })
@@ -129,5 +130,33 @@ export function listFocusCases(mountList: MountFocusableList): void {
     expect(activeDescendant(listbox)).toBe(rowZeroId)
     expect(seen).toContain(null)
     assertFocusModel(list.target)
+  })
+
+  // ❗ A Brief/Full toggle remounts the list: focus fell to `<body>` and ↓ did nothing until
+  // `Tab` (2026-10-15 VoiceOver spike). The new list picks focus up when its pane is focused.
+  it('takes focus when it mounts in the focused pane while focus is adrift', async () => {
+    const unregister = registerFocusHome({ root: () => undefined, refocus: () => {} })
+    try {
+      document.body.focus()
+      const list = await mountList({ entries: ENTRIES })
+      await list.settle(() => document.activeElement === listboxOf(list), 'the new list to take focus')
+    } finally {
+      unregister()
+    }
+  })
+
+  it('puts focus home when it unmounts holding it', async () => {
+    const refocus = vi.fn()
+    const unregister = registerFocusHome({ root: () => undefined, refocus })
+    try {
+      const list = await mountList({ entries: ENTRIES })
+      list.component.focusList()
+      refocus.mockClear()
+      await unmount(list.component)
+      await tick()
+      expect(refocus).toHaveBeenCalledTimes(1)
+    } finally {
+      unregister()
+    }
   })
 }

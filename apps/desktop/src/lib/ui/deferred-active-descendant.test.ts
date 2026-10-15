@@ -113,7 +113,7 @@ describe('createDeferredActiveDescendant', () => {
 
   // ❗ Entering a folder replaces the cursor row's node under an unchanged id, so WebKit's
   // focus stays on the dead node and VoiceOver says nothing; re-landing the id a frame later
-  // made it read the new row (M0 spike, macOS 27.0, VoiceOver 10, 2026-10-15).
+  // made it read the new row (VoiceOver spike, macOS 27.0, VoiceOver 10, 2026-10-15).
   it('holds a renewed id for a frame while focused', () => {
     const descendant = createDeferredActiveDescendant()
     descendant.tookFocus('row-0')

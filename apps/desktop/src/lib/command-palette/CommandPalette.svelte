@@ -15,6 +15,7 @@
     import ShortcutChip from '#lib/ui/ShortcutChip.svelte'
     import StatusBadge from '#lib/ui/StatusBadge.svelte'
     import { trapFocus } from '#lib/ui/focus-trap.js'
+    import { captureFocusOrigin, restoreFocus, type FocusOrigin } from '#lib/ui/focus-restore.js'
     import { tooltip } from '#lib/tooltip/tooltip.js'
     import TextInput from '#lib/ui/TextInput.svelte'
     import { tString } from '#lib/intl/messages.svelte.js'
@@ -53,12 +54,13 @@
     let inputElement: HTMLInputElement | undefined = $state()
     let resultsContainer: HTMLDivElement | undefined = $state()
     /**
-     * Element that had focus when the palette opened. We restore focus to it on
-     * destroy so the focused pane (or whichever element triggered the palette)
-     * gets keyboard input again. Without this, focus falls to <body> and arrow
-     * keys silently no-op until the user clicks back into a pane.
+     * Where focus was when the palette opened. We restore it on destroy so the
+     * focused pane (or whichever element triggered the palette) gets keyboard
+     * input again. Without this, focus falls to <body> and arrow keys silently
+     * no-op until the user clicks back into a pane.
      */
-    let previousActiveElement: HTMLElement | null = null
+    let focusOrigin: FocusOrigin | null = null
+    let overlayElement: HTMLDivElement | undefined = $state()
 
     // Derived: filtered and ranked results. When the query is empty, recents
     // lead the list (most-recent first) so the cursor at index 0 lands on the
@@ -96,7 +98,7 @@
     })
 
     onMount(() => {
-        previousActiveElement = document.activeElement instanceof HTMLElement ? document.activeElement : null
+        focusOrigin = captureFocusOrigin()
         // Load recents and prune any IDs that no longer correspond to a valid palette
         // command (renamed or removed since last use). Self-heals the persisted list.
         const validIds = new Set(getPaletteCommands().map((c) => c.id))
@@ -107,12 +109,10 @@
     })
 
     onDestroy(() => {
-        // Restore focus to whatever had it before we opened, if it's still in the DOM.
-        // Without this, focus falls to <body> after close and keyboard nav stops working
-        // for the previously focused pane until the user clicks back into it.
-        if (previousActiveElement?.isConnected) {
-            previousActiveElement.focus()
-        }
+        // Restore focus to wherever it was before we opened (the focused pane's list, by
+        // way of the explorer, after a "Switch pane" too). Without this, focus falls to
+        // <body> after close and keyboard nav stops working until the user clicks back in.
+        restoreFocus(focusOrigin, { leaving: overlayElement })
     })
 
     function handleKeyDown(e: KeyboardEvent) {
@@ -207,6 +207,7 @@
 
 <div
     class="palette-overlay"
+    bind:this={overlayElement}
     role="dialog"
     aria-modal="true"
     aria-labelledby="palette-title"

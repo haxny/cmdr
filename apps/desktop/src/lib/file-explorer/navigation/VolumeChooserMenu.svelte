@@ -31,6 +31,7 @@
     import ShortcutChip from '#lib/ui/ShortcutChip.svelte'
     import StatusGlyph from '#lib/ui/StatusGlyph.svelte'
     import { createMenu } from '#lib/ui/menu-controller.svelte.js'
+    import { captureFocusOrigin, restoreFocus, type FocusOrigin } from '#lib/ui/focus-restore.js'
     import type { MenuActivationSource, MenuIcon, MenuItem, MenuRowContext, MenuSection } from '#lib/ui/menu-types.js'
     import type { PaneId } from '#lib/commands/types.js'
     import { chooserCommandFor, otherChooserCommandFor } from './header-menu-keys'
@@ -282,7 +283,7 @@
     ])
 
     /** Where focus was when the menu opened, so closing it doesn't move the focused pane. */
-    let focusBeforeOpen: HTMLElement | null = null
+    let focusBeforeOpen: FocusOrigin | null = null
 
     /**
      * The keys that hand the header to another menu. Central dispatch is suppressed while a
@@ -340,7 +341,7 @@
         restoreFocus: () => {
             // ❗ Back to whatever held focus, ❌ not to this pane: ⌥F2 opens the OTHER pane's
             // switcher, and closing it must not move the focus across.
-            focusBeforeOpen?.focus()
+            restoreFocus(focusBeforeOpen)
             focusBeforeOpen = null
         },
         // ❗ The chip's own controls sit BESIDE the anchor, and ejecting from one deliberately
@@ -352,7 +353,7 @@
         if (menu.isOpen) return
         const anchor = getAnchor()
         if (!anchor) return
-        focusBeforeOpen = document.activeElement instanceof HTMLElement ? document.activeElement : null
+        focusBeforeOpen = captureFocusOrigin()
         favoritesExpanded = getSwitcherFavoritesExpanded()
         menu.openUnder(anchor)
         // Land the cursor on the row wearing the checkmark, so Enter re-opens where you

@@ -330,8 +330,8 @@ Tab-Tab bug: Esc, ⌘⇧P, and Tab all dead, mouse-only recovery). The action do
    jsdom/happy-dom return `null` for every `offsetParent`, which would empty the list in tests.
 2. **Leak guard**: a document-level capture `focusin` listener pulls focus back if it lands outside the container anyway
    (a programmatic `.focus()` from background code). The pull-back is deferred by one microtask so a closing dialog's
-   own focus-restore (`onDestroy` → `previousActiveElement.focus()`) wins — the action's destroy unregisters the trap
-   before the microtask runs.
+   own focus-restore (`onDestroy` → `restoreFocus(...)`) wins — the action's destroy unregisters the trap before the
+   microtask runs.
 3. **Escape fallback**: if Escape fires while focus is outside the container (the broken state the guard exists for),
    `onEscape` runs. When focus is inside — the healthy state — the action stays out of the way and the dialog's own
    Escape handler works as usual.
@@ -353,6 +353,25 @@ today, and the case that used to (an in-pane, non-modal SMB credential form, whe
 the other pane) is gone: every credential ask is the modal sign-in sheet now. Components passing `role` to `ModalDialog`
 as a prop don't repeat the directive — the primitive owns it. Tier-2 Playwright coverage lives in
 `test/e2e-playwright/focus-trap.spec.ts`; the action's unit tests sit next to it in `focus-trap.test.ts`.
+
+## Focus restore (`focus-restore.ts`)
+
+Every overlay that remembers where focus was at open and puts it back at close (`ModalDialog`, the command palette, the
+onboarding wizard, a toast, and the `Menu` consumers' `restoreFocus`) goes through `captureFocusOrigin()` /
+`restoreFocus(origin, { leaving })`, ❌ never a bare `.focus()` on the remembered element.
+
+- **The home.** `DualPaneExplorer` registers itself (`registerFocusHome`). An origin inside it is remembered as "the
+  home", and restoring it calls the explorer's refocus (`focusActivePane`: the focused pane's list, with
+  `preventScroll`). A bare `.focus()` on the remembered list would scroll the view off the cursor (the listbox is taller
+  than its scroller), and after the palette's "Switch pane" or ⌥F1 → `Tab` it would land on the pane that's no longer
+  focused. A remembered list that unmounted meanwhile (a view toggle) still restores, because the origin is the home,
+  not the node. `focusHome()` is the same move for code with no origin (the Ask Cmdr rail's Escape, the servers hub).
+- **Focus that already moved on stays.** When focus sits in another OPEN menu (`isFocusInOpenMenu`, which asks the menu
+  stack; a closing menu leaves the stack before it restores) or another dialog, restoring does nothing: closing the old
+  volume chooser after `Tab` re-opened it on the other pane once stole focus from the new one (2026-10-15 VoiceOver
+  spike). A dialog passes its own element as `leaving`, since focus is still inside it while it closes.
+- **`isFocusAdrift()`** (focus on `<body>` or on the home's root) is what the file lists check to re-home focus when
+  they mount or unmount (`file-explorer/views/list-focus.svelte.ts`). False in a window with no home.
 
 ## Dialog registry
 

@@ -131,6 +131,10 @@
             submenuDescendant.reset()
             if (submenuEl?.contains(document.activeElement)) surfaceEl?.focus({ preventScroll: true })
         },
+        holdsFocus: () => {
+            const focused = document.activeElement
+            return (surfaceEl?.contains(focused) ?? false) || (submenuEl?.contains(focused) ?? false)
+        },
     })
 
     /** The rect the menu hangs off, whichever way it was opened, and the gap it keeps from it. */

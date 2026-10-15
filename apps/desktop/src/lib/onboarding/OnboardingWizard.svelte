@@ -7,6 +7,7 @@
     import { markDialogOpen, markDialogClosed } from '#lib/ui/open-dialogs.svelte.js'
     import Button from '#lib/ui/Button.svelte'
     import { trapFocus } from '#lib/ui/focus-trap.js'
+    import { captureFocusOrigin, restoreFocus, type FocusOrigin } from '#lib/ui/focus-restore.js'
     import { providePortalTarget } from '#lib/ui/portal-target.js'
     import { tooltip, showTooltipNow, hideTooltipFor } from '#lib/tooltip/tooltip.js'
     import { getAppLogger } from '#lib/logging/logger.js'
@@ -54,10 +55,10 @@
     let overlayEl: HTMLDivElement | undefined = $state()
     providePortalTarget(() => overlayEl)
     /**
-     * Element that had focus when the wizard opened. Restored on destroy so
+     * Where focus was when the wizard opened. Restored on destroy so
      * keyboard input flows back to wherever it came from after close.
      */
-    let previousActiveElement: HTMLElement | null = null
+    let focusOrigin: FocusOrigin | null = null
     /** The footer's forward-button group, so a note can be shown ON the button it answers. */
     let primarySlotEl: HTMLDivElement | undefined = $state()
 
@@ -72,7 +73,7 @@
     })
 
     onMount(async () => {
-        previousActiveElement = document.activeElement instanceof HTMLElement ? document.activeElement : null
+        focusOrigin = captureFocusOrigin()
 
         // Open the wizard machine if it isn't already open. `+page.svelte` may have called
         // `openWizard()` itself; this guard makes the component safe to mount standalone too
@@ -105,9 +106,7 @@
     onDestroy(() => {
         markDialogClosed('onboarding')
         void notifyDialogClosed('onboarding')
-        if (previousActiveElement?.isConnected) {
-            previousActiveElement.focus()
-        }
+        restoreFocus(focusOrigin, { leaving: overlayEl })
     })
 
     /**

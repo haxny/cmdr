@@ -3,6 +3,7 @@
     import type { Snippet } from 'svelte'
     import { notifyDialogOpened, notifyDialogClosed } from '#lib/tauri-commands/index.js'
     import { focusFirstField, trapFocus } from './focus-trap'
+    import { captureFocusOrigin, restoreFocus, type FocusOrigin } from './focus-restore'
     import { anchoredTopFor } from './modal-anchor'
     import {
         declaredStyle,
@@ -169,7 +170,7 @@
      * pane): without this, focus falls to <body> and arrow keys silently
      * no-op until the user clicks back into a pane.
      */
-    let previousActiveElement: HTMLElement | null = null
+    let focusOrigin: FocusOrigin | null = null
     let heightObserver: ResizeObserver | null = null
     /** Size the user dragged the panel to. */
     let resizedSize = $state<DraggedSize>({ width: null, height: null })
@@ -475,7 +476,7 @@
     })
 
     onMount(async () => {
-        previousActiveElement = document.activeElement instanceof HTMLElement ? document.activeElement : null
+        focusOrigin = captureFocusOrigin()
         if (dialogId) {
             markDialogOpen(dialogId)
             void notifyDialogOpened(dialogId)
@@ -512,11 +513,9 @@
             markDialogClosed(dialogId)
             void notifyDialogClosed(dialogId)
         }
-        // Restore focus to whatever had it before the dialog opened. The connected-check
-        // skips elements that were unmounted while the dialog was up (e.g., a rename input).
-        if (previousActiveElement?.isConnected) {
-            previousActiveElement.focus()
-        }
+        // Restore focus to wherever it was before the dialog opened (`focus-restore.ts`). An
+        // element unmounted while the dialog was up (a rename input) is skipped.
+        restoreFocus(focusOrigin, { leaving: overlayElement })
     })
 </script>
 

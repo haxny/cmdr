@@ -105,6 +105,7 @@
     import type { SmbHandOff } from '#lib/servers/open-sign-in.js'
     import { createKeyDispatch } from './key-dispatch'
     import { focusActivePane as focusActivePaneOf } from './active-pane-focus'
+    import { registerFocusHome } from '#lib/ui/focus-restore.js'
     import { createMcpTabAction } from './mcp-tab-action'
     import {
         navigate as runNavigate,
@@ -176,6 +177,8 @@
             getContainerElement: () => containerElement,
         })
     }
+    // The window's focus home: overlays closing, and lists remounting, put focus back through it.
+    $effect(() => registerFocusHome({ root: () => containerElement, refocus: focusActivePane }))
     let unlistenVolumeUnmount: UnlistenFn | undefined
     let unlistenVolumeContextAction: UnlistenFn | undefined
     let unlistenIndexEvents: UnlistenFn | undefined

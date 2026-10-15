@@ -1,6 +1,7 @@
 <script lang="ts">
     import { tick } from 'svelte'
     import { openAddServerSheet } from '#lib/servers/open-sign-in.js'
+    import { focusHome } from '#lib/ui/focus-restore.js'
     import type { MountError, NetworkHost, PlacesAccount, ShareInfo } from '../types'
     import {
         mountNetworkShare,
@@ -258,8 +259,8 @@
             },
         })
         await tick()
-        // Focus goes back to the explorer container so keyboard navigation resumes.
-        document.querySelector<HTMLElement>('.dual-pane-explorer')?.focus()
+        // Focus goes back to the explorer so keyboard navigation resumes.
+        focusHome()
     }
 
     /**

@@ -188,6 +188,12 @@ test.describe('Keyboard focus: which pane the next ↓ moves', () => {
     await tauriPage.keyboard.press('Tab')
     await expect.poll(async () => focusedPane(tauriPage), { timeout: waitBudget(3000) }).toBe('right')
     await tauriPage.waitForSelector(MENU, waitBudget(3000))
+    // The moved chooser keeps focus: the closing one's restorer must not pull it back to a list.
+    await expect
+      .poll(async () => tauriPage.evaluate<boolean>(`!!document.activeElement?.closest('${MENU}')`), {
+        timeout: waitBudget(3000),
+      })
+      .toBe(true)
     // Escape on the open menu IS the keyboard path under test, so it's a real press.
     await tauriPage.keyboard.press('Escape')
     await expect.poll(async () => tauriPage.count(MENU), { timeout: waitBudget(3000) }).toBe(0)

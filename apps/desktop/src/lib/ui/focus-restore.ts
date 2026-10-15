@@ -1,0 +1,85 @@
+/**
+ * Putting focus back where it was when an overlay (a dialog, a menu, the command palette,
+ * a toast) closes.
+ *
+ * Every overlay used to remember `document.activeElement` and call a bare `.focus()` on it.
+ * In the main window that element is the focused pane's file list, and a bare `.focus()`
+ * there goes wrong two ways: it lacks `preventScroll` (the listbox is taller than its
+ * scroller, so WebKit scrolls the view off the cursor), and the remembered list may belong to
+ * the pane that's no longer focused (the palette's "Switch pane", ⌥F1 → `Tab`), leaving DOM
+ * focus and the store on different panes. So focus that started inside the registered HOME
+ * (the explorer) goes back through the home's own refocus, which picks the focused pane's
+ * list; anything else is focused directly.
+ *
+ * ❗ Focus that already moved into another open menu or dialog stays there: closing the old
+ * volume chooser after `Tab` re-opened it on the other pane would otherwise steal focus from
+ * the new one (2026-10-15 VoiceOver spike: the moved chooser stayed open but unfocused).
+ */
+
+import { isFocusInOpenMenu } from './menu-controller.svelte'
+
+/** The window's keyboard home: the explorer in the main window. */
+export interface FocusHome {
+  root: () => HTMLElement | undefined
+  /** Puts focus home (the focused pane's list, else the explorer container). */
+  refocus: () => void
+}
+
+/** Where focus was when an overlay opened: the home as a whole, or one element outside it. */
+export type FocusOrigin = { kind: 'home' } | { kind: 'element'; element: HTMLElement }
+
+let home: FocusHome | null = null
+
+/** Registers the window's home; returns the unregister. One home per window. */
+export function registerFocusHome(next: FocusHome): () => void {
+  home = next
+  return () => {
+    if (home === next) home = null
+  }
+}
+
+/** Puts focus home; false when this window registered none. */
+export function focusHome(): boolean {
+  if (!home) return false
+  home.refocus()
+  return true
+}
+
+/**
+ * Whether focus has nowhere useful to be: on `<body>` (its element unmounted under it) or on
+ * the home's root itself. Keys reach no pane from `<body>`, so a list that mounts or unmounts
+ * puts focus home when this holds (`file-explorer/views/list-focus.svelte.ts`). Never true in
+ * a window without a home.
+ */
+export function isFocusAdrift(): boolean {
+  if (!home) return false
+  const active = document.activeElement
+  return active === null || active === document.body || active === home.root()
+}
+
+/** Remembers where `active` (default: the focused element) sits, for `restoreFocus`. */
+export function captureFocusOrigin(active: Element | null = document.activeElement): FocusOrigin | null {
+  if (!(active instanceof HTMLElement) || active === document.body) return null
+  if (home?.root()?.contains(active)) return { kind: 'home' }
+  return { kind: 'element', element: active }
+}
+
+/** Whether focus already sits in an open menu or dialog other than `leaving` (the overlay closing now). */
+function focusMovedOn(leaving: Element | null | undefined): boolean {
+  const active = document.activeElement
+  if (!active || active === document.body || leaving?.contains(active)) return false
+  return isFocusInOpenMenu() || active.closest('[role="dialog"], [role="alertdialog"]') !== null
+}
+
+/**
+ * Puts focus back at `origin`. Pass `leaving` (the closing overlay's own element) when focus
+ * may still be inside it as it closes, so it doesn't count as "another" dialog.
+ */
+export function restoreFocus(origin: FocusOrigin | null, options: { leaving?: Element | null } = {}): void {
+  if (!origin || focusMovedOn(options.leaving)) return
+  if (origin.kind === 'home') {
+    focusHome()
+    return
+  }
+  if (origin.element.isConnected) origin.element.focus()
+}

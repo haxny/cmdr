@@ -1,17 +1,17 @@
 # UI primitives
 
-Reusable components; only silent-breakage rules live here. Ark UI backs the complex ones.
+Reusable components (Ark UI backs the complex ones); silent-breakage rules only.
 
 ## Module map
 
 - Dialogs: `ModalDialog.svelte` (overlay + drag + Escape + focus + MCP tracking), `focus-trap.ts` (`use:trapFocus`),
-  `dialog-registry.ts` (`SOFT_DIALOG_REGISTRY`), `AlertDialog.svelte`.
+  `dialog-registry.ts` (`SOFT_DIALOG_REGISTRY`), `AlertDialog.svelte`, `focus-restore.ts` (❌ never restore focus bare).
 - The house menu: `Menu.svelte` + `createMenu` (`menu-controller.svelte.ts`), over `menu-navigation.ts` /
   `menu-reorder.ts`. ❗ A `.svelte.ts` may never case-collide with a component. DETAILS § Menu.
 - The primitives (`Icon`, `Spinner`, `Button`, `ColumnList`, form controls, `Select`, `Combobox`, text fields,
-  `ShortcutChip`, `InfoTip` (a `<button>`), `StatusGlyph` (❌ never focusable: a tab stop per virtual row wrecks
-  keyboard navigation), `toast/`) are catalogued in DETAILS § Key files. `ToggleGroup` is segmented, ≠ `RadioGroup`;
-  Tooltip is the sibling `../tooltip/tooltip.ts`.
+  `ShortcutChip`, `InfoTip` (a `<button>`), `StatusGlyph` (❌ never focusable: a tab stop per virtual row), `toast/`)
+  are catalogued in DETAILS § Key files. `ToggleGroup` is segmented, ≠ `RadioGroup`; Tooltip is the sibling
+  `../tooltip/tooltip.ts`.
 
 ## Must-knows
 

@@ -19,6 +19,7 @@
     import { tString } from '#lib/intl/messages.svelte.js'
     import Menu from '#lib/ui/Menu.svelte'
     import { createMenu } from '#lib/ui/menu-controller.svelte.js'
+    import { captureFocusOrigin, restoreFocus, type FocusOrigin } from '#lib/ui/focus-restore.js'
     import type { MenuRowContext } from '#lib/ui/menu-types.js'
     import type { PaneId } from '#lib/commands/types.js'
     import { chooserCommandFor, otherChooserCommandFor } from './header-menu-keys'
@@ -82,7 +83,7 @@
     })
 
     /** Where focus was when the menu opened, so closing it doesn't move the focused pane. */
-    let focusBeforeOpen: HTMLElement | null = null
+    let focusBeforeOpen: FocusOrigin | null = null
 
     /**
      * The keys that swap menus. Central dispatch is suppressed while a header menu is open,
@@ -124,7 +125,7 @@
             // ❗ Back to whatever held focus, ❌ not to this pane: the command opens the
             // FOCUSED pane's menu, and a swap from the other pane's switcher must not
             // move the focus across.
-            focusBeforeOpen?.focus()
+            restoreFocus(focusBeforeOpen)
             focusBeforeOpen = null
         },
         // ❗ The chip's own controls sit BESIDE the anchor, and pressing one deliberately
@@ -136,7 +137,7 @@
         if (menu.isOpen) return
         const anchor = getAnchor()
         if (!anchor) return
-        focusBeforeOpen = document.activeElement instanceof HTMLElement ? document.activeElement : null
+        focusBeforeOpen = captureFocusOrigin()
         menu.openUnder(anchor)
         reportFavoritesMenuOpened({ trigger })
     }

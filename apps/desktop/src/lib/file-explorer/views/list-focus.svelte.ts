@@ -8,11 +8,13 @@
  * `#lib/ui/deferred-active-descendant.svelte.ts`, where the VoiceOver evidence lives.
  *
  * The listbox reports focus from its own `focus` / `blur` events, so every path in counts:
- * `focusList`, a click (the browser's mousedown default), the explorer's focus guard.
+ * `focusList`, a click (the browser's mousedown default), the explorer's focus guard. It
+ * also re-homes focus when it mounts or unmounts (below), through `#lib/ui/focus-restore.ts`.
  */
 
 import { untrack } from 'svelte'
 import { createDeferredActiveDescendant } from '#lib/ui/deferred-active-descendant.svelte.js'
+import { focusHome, isFocusAdrift } from '#lib/ui/focus-restore.js'
 
 /** The rendered cursor row: its document-unique id, and the key of the node behind it (its path). */
 export interface CursorRowRef {
@@ -24,20 +26,43 @@ export interface ListFocus {
   /** The listbox's `aria-activedescendant`: the rendered cursor row, while the listbox has focus. */
   activeDescendant: () => string | undefined
   /** Focuses the listbox without scrolling (it's taller than its scroller); false when it isn't mounted. */
-  focus: (listbox: HTMLElement | undefined) => boolean
+  focus: () => boolean
   /** Bind to the listbox's `onfocus`. */
   handleFocus: () => void
   /** Bind to the listbox's `onblur`. */
   handleBlur: () => void
 }
 
-/**
- * Call during component init (it installs an effect). `getCursorRow` reads the rendered
- * cursor row, `undefined` when the cursor names nothing in the virtual window.
- */
-export function createListFocus(getCursorRow: () => CursorRowRef | undefined): ListFocus {
+export interface ListFocusDeps {
+  /** The rendered cursor row, `undefined` when the cursor names nothing in the virtual window. */
+  getCursorRow: () => CursorRowRef | undefined
+  /** The listbox element, once mounted. */
+  getListbox: () => HTMLElement | undefined
+  /** Whether this list's pane is the focused one. */
+  isFocusedPane: () => boolean
+}
+
+/** Call during component init (it installs effects). */
+export function createListFocus(deps: ListFocusDeps): ListFocus {
+  const { getCursorRow } = deps
   const descendant = createDeferredActiveDescendant()
   let last: CursorRowRef | undefined
+
+  // ❗ Re-homing. A list that remounts (Brief/Full toggle, search results opening or closing)
+  // takes its focused node with it, focus drops to `<body>`, and no pane key arrives (2026-10-15
+  // spike: ↓ did nothing until `Tab`). So a list mounting in the focused pane picks focus
+  // up, and one unmounting puts it home (the next list, or the explorer container when the
+  // pane now shows none), both only while focus is adrift (`isFocusAdrift`).
+  $effect(() => {
+    const listbox = deps.getListbox()
+    if (listbox && untrack(deps.isFocusedPane) && isFocusAdrift()) listbox.focus({ preventScroll: true })
+  })
+  $effect(() => () => {
+    // After the flush, so the replacement list (if any) is mounted and bound.
+    queueMicrotask(() => {
+      if (isFocusAdrift()) focusHome()
+    })
+  })
 
   // ❗ A navigation re-renders the cursor row as a NEW node under the same id (row 0 in
   // both folders), and WebKit keeps its focus on the dead one: VoiceOver stays silent on
@@ -53,7 +78,8 @@ export function createListFocus(getCursorRow: () => CursorRowRef | undefined): L
 
   return {
     activeDescendant: () => descendant.of(getCursorRow()?.id),
-    focus(listbox) {
+    focus() {
+      const listbox = deps.getListbox()
       if (!listbox?.isConnected) return false
       listbox.focus({ preventScroll: true })
       return true

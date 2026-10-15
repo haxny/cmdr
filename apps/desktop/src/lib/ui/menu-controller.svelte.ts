@@ -51,20 +51,35 @@ const DRAG_THRESHOLD_PX = 4
  * row in each menu and one Escape would close the pair. The topmost is also the only one that
  * should be swallowing keys; the one underneath is inert until it's on top again.
  */
-const openMenus: object[] = []
+const openMenus: OpenMenu[] = []
 
-function pushOpen(menu: object): void {
+/** One open menu on the stack. */
+interface OpenMenu {
+  /** Whether DOM focus is on its surface or its submenu. */
+  holdsFocus: () => boolean
+}
+
+function pushOpen(menu: OpenMenu): void {
   dropOpen(menu)
   openMenus.push(menu)
 }
 
-function dropOpen(menu: object): void {
+function dropOpen(menu: OpenMenu): void {
   const at = openMenus.indexOf(menu)
   if (at !== -1) openMenus.splice(at, 1)
 }
 
-function isTopmost(menu: object): boolean {
+function isTopmost(menu: OpenMenu): boolean {
   return openMenus[openMenus.length - 1] === menu
+}
+
+/**
+ * Whether DOM focus is in a menu that's still open. A closing menu has left the stack by
+ * the time it calls `restoreFocus`, so this answers "did focus already move on to ANOTHER
+ * menu" (`focus-restore.ts`).
+ */
+export function isFocusInOpenMenu(): boolean {
+  return openMenus.some((menu) => menu.holdsFocus())
 }
 
 /** Pointer travel that ends keyboard mode, so a resting mouse can't steal the cursor. */
@@ -107,6 +122,8 @@ export interface MenuSurfaceHooks {
    * leaves the document drops to `<body>`.
    */
   beforeSubmenuLeave?: () => void
+  /** Whether DOM focus is on the surface or its submenu. */
+  holdsFocus?: () => boolean
 }
 
 /** The wiring `Menu.svelte` drives. Consumers never touch this; they use the surface above it. */
@@ -188,6 +205,8 @@ export function createMenu<T = unknown>(deps: MenuDeps<T>): MenuController<T> {
   // Not reactive: read by handlers, never rendered.
   let lastPointerPos: { x: number; y: number } | null = null
   let hooks: MenuSurfaceHooks | null = null
+  /** This menu's entry on the open-menus stack. */
+  const stackEntry: OpenMenu = { holdsFocus: () => hooks?.holdsFocus?.() ?? false }
   let pendingDrag: { value: string; sectionId: string; startY: number } | null = null
   let dragActive = false
   /** A finished drag must not also activate the row when the browser's click lands after mouseup. */
@@ -239,7 +258,7 @@ export function createMenu<T = unknown>(deps: MenuDeps<T>): MenuController<T> {
     justDragged = false
     highlightedValue = navigableValues(sections())[0] ?? null
     attachKeyListener()
-    pushOpen(controller)
+    pushOpen(stackEntry)
     deps.onOpenChange?.(true)
   }
 
@@ -252,7 +271,7 @@ export function createMenu<T = unknown>(deps: MenuDeps<T>): MenuController<T> {
     closeSubmenu()
     endDrag()
     detachKeyListener()
-    dropOpen(controller)
+    dropOpen(stackEntry)
     deps.onOpenChange?.(false)
     deps.restoreFocus?.()
   }
@@ -655,7 +674,7 @@ export function createMenu<T = unknown>(deps: MenuDeps<T>): MenuController<T> {
       if (!open) return false
       // A menu opened from inside this one owns the keyboard until it closes. Both listen on
       // the document, so without this the key would be handled twice over.
-      if (!isTopmost(controller)) return false
+      if (!isTopmost(stackEntry)) return false
       // An inline editor owns every keystroke, untouched: not even swallowed, or the field
       // would lose the keys it exists to receive.
       if (deps.isEditing?.()) return false
@@ -689,7 +708,7 @@ export function createMenu<T = unknown>(deps: MenuDeps<T>): MenuController<T> {
       endDrag()
       // A menu torn down while open would otherwise sit on top of the stack forever, leaving
       // the menu underneath it inert.
-      dropOpen(controller)
+      dropOpen(stackEntry)
     },
   }
 
