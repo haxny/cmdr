@@ -8,13 +8,14 @@
     twice. `ui/DETAILS.md` § Toast system.
 -->
 <script lang="ts">
-    import { onMount } from 'svelte'
+    import { onMount, untrack } from 'svelte'
     import { getToasts, dismissToast } from './toast-store.svelte'
     import ToastItem from './ToastItem.svelte'
     import type { ToastSpeech } from './toast-speech'
     import LiveAnnouncer from '../LiveAnnouncer.svelte'
     import { handleToastStackFocusOut, handleToastStackKeydown, registerToastStack } from './toast-focus'
     import { getKeepNotificationsUntilClosed } from '#lib/settings/reactive-settings.svelte.js'
+    import { watchToastPlacement, type ToastEdge } from './toast-placement'
 
     const toasts = getToasts()
 
@@ -63,6 +64,24 @@
         }
     })
 
+    // Off the focused cursor row (`toast-placement.ts`): watched only while toasts are up, and
+    // back at the top once the last one goes.
+    let edge = $state<ToastEdge>('top')
+    const hasToasts = $derived(toasts.length > 0)
+
+    $effect(() => {
+        const element = stackElement
+        if (!hasToasts || !element) {
+            edge = 'top'
+            return
+        }
+        return untrack(() =>
+            watchToastPlacement(element, (next) => {
+                edge = next
+            }),
+        )
+    })
+
     function handleUserDismiss(id: string): void {
         const toast = toasts.find((t) => t.id === id)
         toast?.onDismiss?.()
@@ -70,7 +89,7 @@
     }
 </script>
 
-<div class="toast-container" data-toast-stack bind:this={stackElement}>
+<div class="toast-container" class:at-bottom={edge === 'bottom'} data-toast-stack data-edge={edge} bind:this={stackElement}>
     {#each toasts as toast (toast.id)}
             <ToastItem
                 id={toast.id}
@@ -109,6 +128,14 @@
         gap: var(--spacing-md);
         max-width: 440px;
         pointer-events: none;
+    }
+
+    /* Moved off the focused cursor row (`toast-placement.ts`). Newest still sits nearest the
+       window edge. */
+    .toast-container.at-bottom {
+        top: auto;
+        bottom: var(--spacing-lg);
+        flex-direction: column;
     }
 
     .toast-container > :global(*) {
