@@ -170,10 +170,10 @@ run.
 In `apps/desktop/src/lib/test-focus-model.ts`. For a composite widget that owns a cursor (a file list, a menu): focus is
 inside the root, the focused element's `aria-activedescendant` resolves to exactly ONE element in the document, inside
 it or `aria-owns`ed by it, with an `option` / `menuitem*` role and a non-empty accessible name (from
-`dom-accessibility-api`), and every live region the caller names already exists. Options relax it for today's explorer,
-where the container holds focus (`focusMayBeContainer`). The E2E twin, `expectFocusModel(page, selector, options)` in
-`apps/desktop/test/e2e-playwright/helpers/focus-model.ts`, bundles the same module with Vite and runs it in the real
-webview, so happy-dom and WKWebView are held to one contract.
+`dom-accessibility-api`), and every live region the caller names already exists. `focusMayBeContainer` accepts the
+explorer's fallback, the container holding focus when the focused pane shows no list. The E2E twin,
+`expectFocusModel(page, selector, options)` in `apps/desktop/test/e2e-playwright/helpers/focus-model.ts`, bundles the
+same module with Vite and runs it in the real webview, so happy-dom and WKWebView are held to one contract.
 
 ### `stryker-mutator` (mutation testing for TS)
 

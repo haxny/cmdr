@@ -33,9 +33,9 @@ import { computeAccessibleName, getRole } from 'dom-accessibility-api'
 
 export interface FocusModelOptions {
   /**
-   * Focus may sit on `root` itself with no active descendant: the explorer container that
-   * holds focus today, before focus moves onto the focused pane's list. An
-   * `aria-activedescendant` the focused element does carry is still checked.
+   * Focus may sit on `root` itself with no active descendant: the explorer container, which
+   * holds focus when the focused pane shows no list (the servers hub, an error, a connect
+   * view). An `aria-activedescendant` the focused element does carry is still checked.
    */
   focusMayBeContainer?: boolean
   /** The cursor row must have a non-empty accessible name. Default true. */
@@ -124,7 +124,7 @@ export function focusModelViolations(root: Element | null, options: FocusModelOp
   if (!focused || !root.contains(focused)) {
     out.push(`focus is on ${describe(focused)}, outside ${describe(root)}`)
   } else if (options.focusMayBeContainer && focused === root && !root.hasAttribute('aria-activedescendant')) {
-    // Today's explorer: the container holds focus and names no row. Nothing to resolve.
+    // The explorer's fallback: the container holds focus and names no row. Nothing to resolve.
   } else {
     checkActiveDescendant(focused, options, out)
   }

@@ -148,7 +148,7 @@ describe('focusModelViolations', () => {
     ])
   })
 
-  describe('focusMayBeContainer (the explorer container holds focus today)', () => {
+  describe('focusMayBeContainer (the explorer container, when the focused pane shows no list)', () => {
     const CONTAINER = `<div class="explorer" tabindex="0" aria-label="File explorer">${GOOD_LIST}</div>`
 
     it('accepts focus on the root itself with no active descendant', () => {

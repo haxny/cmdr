@@ -379,7 +379,8 @@ onboarding wizard, a toast, and the `Menu` consumers' `restoreFocus`) goes throu
   element the home says keeps focus (`FocusHome.keepsFocus`, pane chrome in the explorer): the palette runs its command
   BEFORE it unmounts, so "Move focus to the pane controls" would otherwise be undone by the palette's restore.
 - **`isFocusAdrift()`** (focus on `<body>` or on the home's root) is what the file lists check to re-home focus when
-  they mount or unmount (`file-explorer/views/list-focus.svelte.ts`). False in a window with no home.
+  they mount, unmount, or land a new folder's cursor row (`file-explorer/views/list-focus.svelte.ts`). False in a window
+  with no home.
 
 ## Dialog registry
 
@@ -1193,11 +1194,11 @@ switcher's port is what moved them here):
 - **VoiceOver reads a portaled surface's `aria-activedescendant`** (macOS 27.0, VoiceOver 10, Cmdr 0.52.0 dev, real keys
   through the AppleScript bridge, 2026-10-15, on a spike of this model): ⌥F1 "menu Volume switcher", ↓ "naspi on
   100.127.48.122 collapsed submenu Volumes group (2 of 4)", → "menu naspi on 100.127.48.122", ↓ "Connect directly now
-  selected menu item (2 of 4) menu naspi on 100.127.48.122", ← "naspi on 100.127.48.122 collapsed submenu". Before this
-  model a submenu was silent on every ↓. That was prototype code. The shipped code (adding the deferred active
-  descendant, which the spike heard read the highlighted row on open, and the refocus-before-unmount close path) is
-  verified by unit tests and `Menu.vsr.test.ts` (the ARIA model, not VoiceOver) and awaits a VoiceOver listen (U1–U4 in
-  the plan linked from #267).
+  selected menu item (2 of 4) menu naspi on 100.127.48.122", ← "naspi on 100.127.48.122 collapsed submenu". A submenu
+  that never takes focus itself stays silent on every ↓. Those phrases came from prototype code; the shipped code
+  (adding the deferred active descendant, which the spike heard read the highlighted row on open, and the
+  refocus-before-unmount close path) is verified by unit tests and `Menu.vsr.test.ts` (the ARIA model, not VoiceOver)
+  and awaits a VoiceOver listen (U1–U4 in the plan linked from #267).
 
 ## FilterPopover
 
@@ -1531,8 +1532,8 @@ The toasts are no live regions. The stack speaks through two `LiveAnnouncer`s th
 the start, side by side and outside the stack: a polite one for `default` / `info` / `success`, an assertive one for
 `warn` / `error`. Decisions:
 
-- **Always mounted.** A region inserted together with its first message announces unreliably in WebKit, and the stack
-  used to mount with its first toast.
+- **Always mounted.** A region inserted together with its first message announces unreliably in WebKit, and a toast's
+  frame mounts together with its words.
 - **Siblings, never nested.** Per-toast `role="alert"` inside an `aria-live="polite"` container gave one toast two
   politeness levels; a frame that is itself a region would also speak twice.
 - **The words come off the rendered body** (`toastSpeech`): text only, buttons and links left out (focus names them
@@ -1541,7 +1542,7 @@ the start, side by side and outside the stack: a polite one for `default` / `inf
 - **One message per region per turn.** `LiveAnnouncer` keeps only the newest message asked within a frame, so toasts
   raised together are joined before they reach it.
 - A component body may still carry its own `role="alert"` for news that lands in place without a re-raise
-  (`CrashReportToastContent`'s "couldn't attach"); it no longer sits inside a polite region.
+  (`CrashReportToastContent`'s "couldn't attach"); no polite region wraps it.
 - Guarded by `ToastContainer.vsr.svelte.test.ts` (virtual screen reader). What VoiceOver says is V9 in David's guide.
 
 ### Keyboard reach (`toast-focus.ts`)

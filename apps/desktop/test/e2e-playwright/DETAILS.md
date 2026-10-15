@@ -1382,10 +1382,11 @@ focus here:
    it's the same focus-follows-navigation behavior production uses — so the fix lives in the test reset, not the app.
 
 On each poll iteration the helper dismisses any visible `.modal-overlay` via synthetic Escape, re-clicks the left
-`.file-pane` (its `onclick` → `handleFocus('left')`) when it isn't already focused, re-issues `explorer.focus()`, then
-re-checks both invariants. Re-clicking each pass outlasts the late right-pane focus-shift. The 99 % path costs one extra
-`evaluate()` over the old one-shot wait. On timeout the helper throws with a snapshot of `activeElement`, the focused
-pane index, and visible overlays so a future regression names the culprit directly.
+`.file-pane` (its `onclick` → `handleFocus('left')`) when it isn't already focused, re-issues `explorer.focus()` (the
+explorer's focus guard moves it on to the focused pane's list, `src/lib/file-explorer/pane/DETAILS.md` § Focus model),
+then re-checks both invariants. Re-clicking each pass outlasts the late right-pane focus-shift. The 99 % path costs one
+extra `evaluate()` over the old one-shot wait. On timeout the helper throws with a snapshot of `activeElement`, the
+focused pane index, and visible overlays so a future regression names the culprit directly.
 
 **If you add a new auto-mounted modal** in `(main)/+layout.svelte` or anywhere that can flip a render to a `ModalDialog`
 after onboarding finishes, the recovery loop covers you. Consider whether the dialog should be gated on a user gesture
