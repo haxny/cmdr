@@ -155,6 +155,17 @@ export const appCommands: CommandSource[] = [
     descriptionKey: 'commands.helpOpenShortcuts.description',
   },
   {
+    // Opens getcmdr.com/trust/accessibility-guide in the browser, so it never blocks on a dialog.
+    id: 'help.accessibility',
+    nameKey: 'commands.helpAccessibility.label',
+    scope: 'App',
+    showInPalette: true,
+    shortcuts: [],
+    whileDialogOpen: OPENS_OWN_WINDOW,
+    descriptionKey: 'commands.helpAccessibility.description',
+    keywords: ['accessibility', 'a11y', 'voiceover', 'screen reader', 'help'],
+  },
+  {
     // Default ⌘⌥Q ("Q for queue"), pairing with `log.operationLog`'s ⌘⌥L next to it in
     // the View menu. Command-then-Option order (⌘⌥) because that's what `formatKeyCombo`
     // emits; Apple's ⌥⌘ display order would be dead on the keyboard. Pinned by

@@ -76,6 +76,14 @@
   "@commands.helpOpenShortcuts.description": {
     "description": "Longer help text for the \"Keyboard shortcuts\" command, shown as a secondary line in the command palette."
   },
+  "commands.helpAccessibility.label": "Accessibility guide",
+  "@commands.helpAccessibility.label": {
+    "description": "Command name that opens the web page describing Cmdr's accessibility features (VoiceOver, keyboard use, text size, motion) and how to get help. Appears in the command palette and the Help menu. Use the standard term for accessibility in this language, the one macOS uses in System Settings."
+  },
+  "commands.helpAccessibility.description": "Open the guide to Cmdr’s accessibility features on getcmdr.com",
+  "@commands.helpAccessibility.description": {
+    "description": "Longer help text for the \"Accessibility guide\" command, shown as a secondary line in the command palette. \"Cmdr\" is the brand name and \"getcmdr.com\" is the website address; keep both as they are."
+  },
   "commands.helpSendErrorReport.label": "Send error report…",
   "@commands.helpSendErrorReport.label": {
     "description": "Command name that sends app logs to the team to help fix a problem. The trailing ellipsis (…) signals it opens a flow; keep it. \"Error report\" names the bundle of logs sent.",

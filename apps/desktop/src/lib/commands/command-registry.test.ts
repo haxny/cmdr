@@ -28,6 +28,7 @@ const EXPECTED_PALETTE_IDS: readonly CommandId[] = [
   'app.checkForUpdates',
   'cmdr.openOnboarding',
   'help.openShortcuts',
+  'help.accessibility',
   'queue.show',
   'help.viewDebugLog',
   'help.sendErrorReport',
@@ -228,6 +229,7 @@ const RUNS_OVER_DIALOGS: readonly CommandId[] = [
   // Their own windows: the dialog in the main window stays up and untouched.
   'app.settings',
   'help.openShortcuts',
+  'help.accessibility',
   'help.viewDebugLog',
   'queue.show',
   // App-wide text size: it scales the dialog too, and touches no pane.

@@ -152,11 +152,12 @@ menu menu.bar.window id=menu_window
   1 predefined maximize menu.window.zoom
 menu menu.bar.help id=menu_help
   0 item help_shortcuts menu.help.keyboardShortcuts tracked
-  1 separator
-  2 item help_whats_new menu.help.whatsNew tracked
-  3 item help_send_feedback menu.help.sendFeedback tracked
-  4 item help_debug_log menu.help.viewDebugLog tracked
-  5 item help_send_error_report menu.help.sendErrorReport tracked
+  1 item help_accessibility menu.help.accessibility tracked
+  2 separator
+  3 item help_whats_new menu.help.whatsNew tracked
+  4 item help_send_feedback menu.help.sendFeedback tracked
+  5 item help_debug_log menu.help.viewDebugLog tracked
+  6 item help_send_error_report menu.help.sendErrorReport tracked
 ";
 
 const LINUX_MENU_BAR: &str = "\
@@ -275,10 +276,11 @@ menu menu.bar.help
   1 item acknowledgements menu.app.acknowledgements untracked
   2 separator
   3 item help_shortcuts menu.help.keyboardShortcuts tracked
-  4 item help_whats_new menu.help.whatsNew tracked
-  5 item help_send_feedback menu.help.sendFeedback tracked
-  6 item help_debug_log menu.help.viewDebugLog tracked
-  7 item help_send_error_report menu.help.sendErrorReport tracked
+  4 item help_accessibility menu.help.accessibility tracked
+  5 item help_whats_new menu.help.whatsNew tracked
+  6 item help_send_feedback menu.help.sendFeedback tracked
+  7 item help_debug_log menu.help.viewDebugLog tracked
+  8 item help_send_error_report menu.help.sendErrorReport tracked
 ";
 
 #[test]

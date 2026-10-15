@@ -33,6 +33,7 @@ const EXPECTED_NAMES: Record<string, string> = {
   'app.checkForUpdates': 'Check for updates…',
   'cmdr.openOnboarding': 'Onboarding…',
   'help.openShortcuts': 'Keyboard shortcuts',
+  'help.accessibility': 'Accessibility guide',
   'help.viewDebugLog': 'View debug log',
   'queue.show': 'Operation queue',
   'queue.cursorUp': 'Previous operation',
@@ -233,6 +234,7 @@ const EXPECTED_DESCRIPTIONS: Record<string, string | undefined> = {
   'app.checkForUpdates': 'Check whether a newer version of Cmdr is available, and download it if so',
   'cmdr.openOnboarding': 'Reopen the onboarding wizard to review or change first-launch setup options',
   'help.openShortcuts': 'Open a read-only window listing every keyboard shortcut, live-synced with your customizations',
+  'help.accessibility': 'Open the guide to Cmdr’s accessibility features on getcmdr.com',
   'queue.show':
     'Open a window listing every running and waiting operation, where you can pause, resume, or cancel them',
   'help.viewDebugLog': 'Watch Cmdr’s debug log live in the file viewer',

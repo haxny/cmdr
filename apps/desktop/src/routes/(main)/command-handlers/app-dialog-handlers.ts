@@ -53,6 +53,10 @@ export const appDialogHandlers = {
     detached(openShortcutsWindow())
   },
 
+  'help.accessibility': async () => {
+    await openExternalUrl('https://getcmdr.com/trust/accessibility-guide')
+  },
+
   'queue.show': () => {
     detached(openQueueWindow())
   },

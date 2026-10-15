@@ -223,8 +223,8 @@ describe('characterization — id partition self-check', () => {
     for (const id of EXEMPT_IDS) expect(COMMAND_IDS).toContain(id)
   })
 
-  it('dispatchable set is exactly 144 ids', () => {
-    expect(DISPATCHABLE_IDS).toHaveLength(144)
+  it('dispatchable set is exactly 145 ids', () => {
+    expect(DISPATCHABLE_IDS).toHaveLength(145)
   })
 
   it('dispatchable ∪ exempt = COMMAND_IDS, disjoint', () => {
@@ -290,6 +290,11 @@ describe('characterization — module-delegate arms', () => {
   it('about.openUpgrade → openExternalUrl with the exact upgrade URL', async () => {
     await handleCommandExecute('about.openUpgrade', makeCtx({}))
     expect(openExternalUrl).toHaveBeenCalledExactlyOnceWith('https://getcmdr.com/upgrade')
+  })
+
+  it('help.accessibility → openExternalUrl with the accessibility guide URL', async () => {
+    await handleCommandExecute('help.accessibility', makeCtx({}))
+    expect(openExternalUrl).toHaveBeenCalledExactlyOnceWith('https://getcmdr.com/trust/accessibility-guide')
   })
 })
 

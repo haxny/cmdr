@@ -442,6 +442,10 @@
   "@menu.help.keyboardShortcuts": {
     "description": "NOUN phrase (plural). Help-menu item that opens the window listing every key binding, grouped by area. Use the standard term for keyboard shortcuts in this language, the one macOS itself uses in System Settings."
   },
+  "menu.help.accessibility": "Accessibility guide",
+  "@menu.help.accessibility": {
+    "description": "NOUN phrase. Help-menu item that opens a web page in the browser describing Cmdr's accessibility features (VoiceOver, keyboard use, text size, motion) and how to get help. Use the same wording as commands.helpAccessibility.label, and the standard term for accessibility the one macOS uses in System Settings. No ellipsis; it collects no input."
+  },
   "menu.help.whatsNew": "What’s new",
   "@menu.help.whatsNew": {
     "description": "NOUN phrase. Help-menu item that opens the popup listing the latest releases and what changed in each. Same destination as menu.app.changelog, so the two should read as clearly different doors to the same room: this one names the news, that one names the document. The apostrophe here is a plain ASCII one and is literal text, not a formatting character."

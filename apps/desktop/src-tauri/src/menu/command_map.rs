@@ -306,6 +306,9 @@ pub const HELP_SEND_FEEDBACK_ID: &str = "help_send_feedback";
 /// Menu item ID for "Keyboard shortcuts" (opens the read-only shortcuts help window, under the Help menu).
 pub const HELP_SHORTCUTS_ID: &str = "help_shortcuts";
 
+/// Menu item ID for "Accessibility guide" (opens the accessibility page on getcmdr.com, under the Help menu).
+pub const HELP_ACCESSIBILITY_ID: &str = "help_accessibility";
+
 /// Opens the current debug log in the internal viewer, under the Help menu.
 pub const HELP_DEBUG_LOG_ID: &str = "help_debug_log";
 
@@ -356,6 +359,7 @@ pub fn menu_id_to_command(menu_id: &str) -> Option<(&'static str, CommandScope)>
         COMMAND_PALETTE_ID => Some(("app.commandPalette", CommandScope::FileScoped)),
         SEARCH_FILES_ID => Some(("search.open", CommandScope::FileScoped)),
         HELP_SHORTCUTS_ID => Some(("help.openShortcuts", CommandScope::App)),
+        HELP_ACCESSIBILITY_ID => Some(("help.accessibility", CommandScope::App)),
         HELP_DEBUG_LOG_ID => Some(("help.viewDebugLog", CommandScope::App)),
         QUEUE_SHOW_ID => Some(("queue.show", CommandScope::App)),
         HELP_WHATS_NEW_ID => Some(("help.whatsNew", CommandScope::App)),
@@ -489,6 +493,7 @@ pub fn command_id_to_menu_id(command_id: &str) -> Option<&'static str> {
         "app.commandPalette" => Some(COMMAND_PALETTE_ID),
         "search.open" => Some(SEARCH_FILES_ID),
         "help.openShortcuts" => Some(HELP_SHORTCUTS_ID),
+        "help.accessibility" => Some(HELP_ACCESSIBILITY_ID),
         "help.viewDebugLog" => Some(HELP_DEBUG_LOG_ID),
         "queue.show" => Some(QUEUE_SHOW_ID),
         "help.whatsNew" => Some(HELP_WHATS_NEW_ID),
