@@ -2023,6 +2023,13 @@ tier 1's job; focus traps and Escape-return-focus are tier 2's.
 Helper: `#lib/test-a11y` exports `expectNoA11yViolations(container)`. Same axe ruleset as E2E, minus `color-contrast`
 and `region` (both misfire in jsdom; see the helper's comments).
 
+- **`label-content-name-mismatch` (WCAG 2.5.3, label in name) runs for real**: the helper hands axe a canvas whose
+  glyphs read as text for the audit, since the unit DOM's canvas returns no pixels and the rule's icon-ligature probe
+  threw into `incomplete`, passing for free while E2E failed the same markup. A `aria-label` must contain the element's
+  visible words in order (axe drops punctuation and parentheticals before comparing).
+- **A known gap opts out per audit**, naming its issue: `expectNoA11yViolations(el, { skipLabelInName: '#450' })`.
+  Remove the opt-out with the fix.
+
 Two file layouts satisfy `a11y-coverage`, and both are equally enforced:
 
 - **Colocated**: `ComponentName.a11y.test.ts` next to the component. Right for a primitive with a rich state matrix.

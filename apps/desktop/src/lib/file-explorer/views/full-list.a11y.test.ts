@@ -22,7 +22,14 @@ import { installLayoutMock } from '#lib/test-layout.js'
 import { listFocusCases } from './test-list-focus.svelte'
 import type { SortColumn, SortOrder } from '../types'
 
-vi.mock('#lib/tauri-commands/index.js', async () => (await import('./test-file-list-mocks')).tauriCommandsMock())
+vi.mock('#lib/tauri-commands/index.js', async () =>
+  (await import('./test-file-list-mocks')).tauriCommandsMock({
+    // One modified file, for the Git column's case.
+    getGitStatusForPaths: () =>
+      Promise.resolve({ timedOut: false, data: [{ relativePath: 'report.md', code: 'modified' }] }),
+    onGitStateChanged: () => Promise.resolve(() => {}),
+  }),
+)
 vi.mock('#lib/icon-cache.js', async () => (await import('./test-file-list-mocks')).iconCacheMock())
 vi.mock('#lib/indexing/index-state.svelte.js', async () =>
   (await import('./test-file-list-mocks')).indexStateMock({ getWalkedGround: () => ['/root/src'] }),
@@ -129,14 +136,30 @@ describe('FullList row names', () => {
       entries: [dirEntry({ name: 'src' }), fileEntry({ name: 'report.md', size: 2048 })],
     })
     expect(rowLabels(list.rows())).toEqual([
-      'src, folder, 4,096, modified 2025-03-14 10:30',
-      'report.md, 2,048, modified 2025-03-14 10:30',
+      'src (folder), 4,096, (modified) 2025-03-14 10:30',
+      'report.md, 2,048, (modified) 2025-03-14 10:30',
     ])
   })
 
-  it('says no size for a folder whose size isn’t known yet', async () => {
+  // The cell shows `<dir>`, so the name says it too (WCAG 2.5.3, label in name).
+  it('says the `<dir>` placeholder for a folder whose size isn’t known yet', async () => {
     const list = await mountFullList({ entries: [dirEntry({ name: 'src', recursiveSize: undefined })] })
-    expect(rowLabels(list.rows())).toEqual(['src, folder, modified 2025-03-14 10:30'])
+    expect(rowLabels(list.rows())).toEqual(['src (folder), <dir>, (modified) 2025-03-14 10:30'])
+    await expectNoA11yViolations(list.target)
+  })
+
+  // The Git cell draws its letter from CSS, so "M" between the name and Ext cells doesn't
+  // break the visible words' run through the name; the name says "Modified" at the end.
+  it('says the git status last, and the git column keeps the row clean', async () => {
+    const list = await mountFullList({
+      entries: [fileEntry({ name: 'report.md', size: 2048 })],
+      props: { showGitColumn: true, gitRepoRoot: '/root' },
+    })
+    await vi.waitFor(() => {
+      expect(rowLabels(list.rows())).toEqual(['report.md, 2,048, (modified) 2025-03-14 10:30, Modified'])
+    })
+    expect(list.target.querySelector('.col-git')?.getAttribute('data-glyph')).toBe('M')
+    await expectNoA11yViolations(list.target)
   })
 
   // Known gap, pinned so nothing else joins it: ARIA makes an option's children

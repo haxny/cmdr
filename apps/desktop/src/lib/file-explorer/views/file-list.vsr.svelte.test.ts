@@ -3,7 +3,7 @@
  * Speech-level expectations for the file list, through `@guidepup/virtual-screen-reader`.
  *
  * It models the ARIA spec over jsdom, not WebKit or VoiceOver, so it guards OUR markup: the
- * focused listbox naming its pane and folder, the cursor row named "{name}, {kind}" as the
+ * focused listbox naming its pane and folder, the cursor row named "{name} ({kind})" as the
  * cursor moves, every row's place in the whole list (`..` included), marking saying
  * "selected", and the pane announcer's message arriving. What VoiceOver really says is the
  * listening harness's job (`docs/specs/a11y-file-list-focus-plan.md`).
@@ -137,7 +137,7 @@ describe('the file list, spoken', () => {
     )
 
     expect(await press('ArrowDown')).toBe(
-      'listbox, Left pane, vo-test, orientated vertically, active descendant subfolder, folder, multi-selectable',
+      'listbox, Left pane, vo-test, orientated vertically, active descendant subfolder (folder), multi-selectable',
     )
     expect(await press('ArrowDown')).toBe(
       'listbox, Left pane, vo-test, orientated vertically, active descendant a.txt, multi-selectable',
@@ -152,10 +152,10 @@ describe('the file list, spoken', () => {
 
     expect(await walkOptions(5)).toEqual([
       'option, Parent folder, not selected, position 1, set size 8',
-      'option, subfolder, folder, not selected, position 2, set size 8',
+      'option, subfolder (folder), not selected, position 2, set size 8',
       'option, a.txt, selected, position 3, set size 8',
       'option, b.txt, not selected, position 4, set size 8',
-      'option, c.zip, archive, not selected, position 5, set size 8',
+      'option, c.zip (archive), not selected, position 5, set size 8',
     ])
   })
 

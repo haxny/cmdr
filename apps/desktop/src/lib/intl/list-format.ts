@@ -25,7 +25,7 @@ interface ListJoiner {
   spacesHan: boolean
 }
 
-type ListType = 'conjunction' | 'disjunction' | 'unit'
+type ListType = 'conjunction' | 'disjunction'
 
 /** Cache of one joiner per UI locale and list type. */
 const listFormatterCache = new Map<string, ListJoiner>()
@@ -64,12 +64,34 @@ export function formatDisjunctionList(items: readonly string[]): string {
 }
 
 /**
- * List standalone facts the way the UI language lists units, with no "and":
- * `Photos, copying, 3 of 10 files`. For an accessible name built from phrases
- * that each read on their own (a transfer tree row's). Empty for an empty list.
+ * List standalone facts with the UI language's enumeration comma and no "and":
+ * `Photos, copying, 3 of 10 files`, `写真、コピー中`. For an accessible name built
+ * from phrases that each read on their own (a transfer tree row's, a file row's).
+ * Empty for an empty list.
+ *
+ * Not CLDR's `unit` list: that one ends "B und C" in German (and "y", "et", "és"
+ * elsewhere) and runs items together with no separator at all in Chinese. Both
+ * break an accessible name that has to carry the row's visible words in order
+ * (WCAG 2.5.3). Every language's MIDDLE conjunction separator is punctuation, so
+ * every join uses that one.
  */
 export function formatUnitList(items: readonly string[]): string {
-  return formatList(items, 'unit')
+  return items.join(enumerationSeparator())
+}
+
+/** Cache of the enumeration comma per UI locale. */
+const separatorCache = new Map<string, string>()
+
+/** The literal CLDR puts between the first two of three conjunction items: `, ` or `、`. */
+function enumerationSeparator(): string {
+  const locale = getUiLocale()
+  let separator = separatorCache.get(locale)
+  if (separator === undefined) {
+    const parts = new Intl.ListFormat(locale, { style: 'long', type: 'conjunction' }).formatToParts(['a', 'b', 'c'])
+    separator = parts.find((part) => part.type === 'literal')?.value ?? ', '
+    separatorCache.set(locale, separator)
+  }
+  return separator
 }
 
 function formatList(items: readonly string[], type: ListType): string {
@@ -109,4 +131,5 @@ function spaceLiteral(literal: string, before: string | undefined, after: string
 /** Test seam: drop the memoization cache so a memoization assertion starts clean. */
 export function _clearListFormatCacheForTests(): void {
   listFormatterCache.clear()
+  separatorCache.clear()
 }

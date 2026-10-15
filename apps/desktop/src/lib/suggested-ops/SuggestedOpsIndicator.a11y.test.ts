@@ -72,6 +72,6 @@ describe('the indicator', () => {
     badge.state.pendingGroupCount = 4
     const host = mountIndicator()
 
-    await expectNoA11yViolations(host)
+    await expectNoA11yViolations(host, { skipLabelInName: '#450' })
   })
 })

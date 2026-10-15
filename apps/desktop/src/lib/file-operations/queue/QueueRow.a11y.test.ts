@@ -88,22 +88,22 @@ async function mountRow(
 describe('QueueRow a11y', () => {
   it('a running copy row has no a11y violations', async () => {
     const list = await mountRow(row('running', 'copy', runningProgress))
-    await expectNoA11yViolations(list)
+    await expectNoA11yViolations(list, { skipLabelInName: '#450' })
   })
 
   it('a paused row has no a11y violations', async () => {
     const list = await mountRow(row('paused', 'copy', runningProgress))
-    await expectNoA11yViolations(list)
+    await expectNoA11yViolations(list, { skipLabelInName: '#450' })
   })
 
   it('a queued move row has no a11y violations', async () => {
     const list = await mountRow(row('queued', 'move'))
-    await expectNoA11yViolations(list)
+    await expectNoA11yViolations(list, { skipLabelInName: '#450' })
   })
 
   it('a selected delete row has no a11y violations', async () => {
     const list = await mountRow(row('running', 'delete', runningProgress), true)
-    await expectNoA11yViolations(list)
+    await expectNoA11yViolations(list, { skipLabelInName: '#450' })
   })
 
   // The cursor row is the grid's Tab stop: focusable, named by its summary and
@@ -113,14 +113,14 @@ describe('QueueRow a11y', () => {
     const gridRow = list.querySelector('[role="row"]')
     expect(gridRow?.getAttribute('tabindex')).toBe('0')
     expect(gridRow?.getAttribute('aria-selected')).toBe('true')
-    await expectNoA11yViolations(list)
+    await expectNoA11yViolations(list, { skipLabelInName: '#450' })
   })
 
   // The Rollback button is the row's one danger-styled control, and the only
   // one whose accessible name comes from its label rather than an aria-label.
   it('a rollbackable copy row has no a11y violations', async () => {
     const list = await mountRow(row('running', 'copy', runningProgress, true))
-    await expectNoA11yViolations(list)
+    await expectNoA11yViolations(list, { skipLabelInName: '#450' })
   })
 
   // Show is the row's one control that acts on a WINDOW rather than on the
@@ -133,7 +133,7 @@ describe('QueueRow a11y', () => {
     expect(button, 'the running row offers Show').not.toBeNull()
     // The visible word, without the `S` chip (`aria-hidden`, so it's no part of the name).
     expect(button?.getAttribute('aria-label')).toContain(button && buttonLabel(button))
-    await expectNoA11yViolations(list)
+    await expectNoA11yViolations(list, { skipLabelInName: '#450' })
   })
 
   // The live tree sits inside the row as a gridcell (a `row` owns only cells), and on
@@ -143,7 +143,7 @@ describe('QueueRow a11y', () => {
     await vi.waitFor(() => {
       expect(list.querySelector('[role="gridcell"] [role="tree"] [role="treeitem"]')).not.toBeNull()
     })
-    await expectNoA11yViolations(list)
+    await expectNoA11yViolations(list, { skipLabelInName: '#450' })
   })
 
   // Two trees in the list: each gets a disclosure button, which must name what it
@@ -155,12 +155,12 @@ describe('QueueRow a11y', () => {
     await vi.waitFor(() => {
       expect(list.querySelector('[role="treeitem"]')).not.toBeNull()
     })
-    await expectNoA11yViolations(list)
+    await expectNoA11yViolations(list, { skipLabelInName: '#450' })
 
     toggle?.click()
     await tick()
     expect(toggle?.getAttribute('aria-expanded')).toBe('false')
-    await expectNoA11yViolations(list)
+    await expectNoA11yViolations(list, { skipLabelInName: '#450' })
   })
 
   // The failed row is the only one carrying prose, and its explanation is

@@ -145,7 +145,7 @@ describe('LinkButton a11y', () => {
       props: { 'aria-label': 'Open system appearance settings', children: snip('System Settings > Appearance') },
     })
     await tick()
-    await expectNoA11yViolations(target)
+    await expectNoA11yViolations(target, { skipLabelInName: '#450' })
   })
 
   it('href mode (renders <a>) has no a11y violations', async () => {

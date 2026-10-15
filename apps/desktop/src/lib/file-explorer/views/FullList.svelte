@@ -869,14 +869,16 @@
                                     tooltip={ARCHIVED_FILE_TOOLTIP}
                                 />{/if}{#if showTags}<TagDots tags={file.tags} />{/if}</span>
                             {#if gitColumnVisible}
+                                <!-- The glyph draws from `data-glyph` (CSS `content`), not a text node: it's
+                                     an icon whose word is in the row's name, and a letter sitting between the
+                                     name and Ext cells would break the name's label-in-name match (WCAG 2.5.3). -->
                                 <span
                                     class="col-git"
                                     class:has-status={gitStatus !== null}
+                                    data-glyph={gitStatus ? glyphFor(gitStatus) : ''}
                                     aria-label={gitStatus ? labelFor(gitStatus) : ''}
                                     use:tooltip={gitStatus ? labelFor(gitStatus) : ''}
-                                >
-                                    {gitStatus ? glyphFor(gitStatus) : ''}
-                                </span>
+                                ></span>
                             {/if}
                             {#if !showExtensionInName}
                                 <span
@@ -1240,6 +1242,10 @@
         color: var(--color-git-portal);
         white-space: nowrap;
         overflow: hidden;
+    }
+
+    .col-git::before {
+        content: attr(data-glyph);
     }
 
     .col-git.has-status {

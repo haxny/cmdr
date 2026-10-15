@@ -200,12 +200,13 @@ export function listFocusCases(mountList: MountFocusableList): void {
     })
     const listbox = await focusAndLand(list)
     assertFocusModel(list.target)
-    expect(computeAccessibleName(cursorOption(listbox))).toBe('Parent folder')
+    // Full view goes on with the `..` row's cells: "Parent folder, <dir>".
+    expect(computeAccessibleName(cursorOption(listbox))).toMatch(/^Parent folder\b/)
 
     live.cursorIndex = 1
     await tick()
     assertFocusModel(list.target)
-    expect(computeAccessibleName(cursorOption(listbox))).toMatch(/^subfolder, folder\b/)
+    expect(computeAccessibleName(cursorOption(listbox))).toMatch(/^subfolder \(folder\)/)
   })
 
   it('takes its pane’s name, and says when its cursor row lands', async () => {

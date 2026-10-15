@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { fileRowAttributes, fileRowId, fileRowKind, fileRowName, renderedCursorRow, rowSizeText } from './file-row-a11y'
 import { createParentEntry } from './file-list-utils'
 import type { FileEntry } from '../types'
+import { _setLocaleForTests } from '#lib/intl/locale.js'
 
 function entry(overrides: Partial<FileEntry> & { name: string }): FileEntry {
   return {
@@ -31,34 +32,34 @@ describe('fileRowKind', () => {
   })
 })
 
+// WCAG 2.5.3 (axe `label-content-name-mismatch`): the words the row shows run through the
+// name in order, and the words only the name says sit in parentheses, which axe drops.
 describe('fileRowName', () => {
-  it('says the name, then the kind', () => {
-    expect(fileRowName({ entry: entry({ name: 'subfolder', isDirectory: true }) })).toBe('subfolder, folder')
+  it('says the name, then the kind in parentheses', () => {
+    expect(fileRowName({ entry: entry({ name: 'subfolder', isDirectory: true }) })).toBe('subfolder (folder)')
     expect(fileRowName({ entry: entry({ name: 'Safari.app', isDirectory: true, isPackage: true }) })).toBe(
-      'Safari.app, package',
+      'Safari.app (package)',
     )
-    expect(fileRowName({ entry: entry({ name: 'c.zip', isArchive: true }) })).toBe('c.zip, archive')
-    expect(fileRowName({ entry: entry({ name: 'd-link', isSymlink: true }) })).toBe('d-link, symlink')
+    expect(fileRowName({ entry: entry({ name: 'c.zip', isArchive: true }) })).toBe('c.zip (archive)')
+    expect(fileRowName({ entry: entry({ name: 'd-link', isSymlink: true }) })).toBe('d-link (symlink)')
   })
 
   it('gives a plain file its name alone, since the extension is in it', () => {
     expect(fileRowName({ entry: entry({ name: 'a.txt' }) })).toBe('a.txt')
   })
 
-  it('names the `..` row "Parent folder" and nothing else, details included', () => {
+  it('names the `..` row "Parent folder", then says its cells like any row', () => {
     const parent = createParentEntry('/')
     expect(fileRowName({ entry: parent })).toBe('Parent folder')
-    expect(fileRowName({ entry: parent, details: { size: '4 KB', modified: '2026-10-14 10:30' } })).toBe(
-      'Parent folder',
-    )
+    expect(fileRowName({ entry: parent, details: { size: '<dir>' } })).toBe('Parent folder, <dir>')
   })
 
-  it('says what the row’s badges mean after the kind', () => {
-    expect(fileRowName({ entry: entry({ name: 'a.txt' }), syncStatus: 'online_only' })).toBe('a.txt, Online-only')
+  it('says what the row’s badges mean beside the kind', () => {
+    expect(fileRowName({ entry: entry({ name: 'a.txt' }), syncStatus: 'online_only' })).toBe('a.txt (Online-only)')
     expect(fileRowName({ entry: entry({ name: 'Desktop', isDirectory: true }), isRestricted: true })).toBe(
-      'Desktop, folder, Restricted folder',
+      'Desktop (folder, Restricted folder)',
     )
-    expect(fileRowName({ entry: entry({ name: 'cold.bin', inColdStorage: true }) })).toBe('cold.bin, Archived')
+    expect(fileRowName({ entry: entry({ name: 'cold.bin', inColdStorage: true }) })).toBe('cold.bin (Archived)')
     // `unknown` draws no badge, so it says nothing either.
     expect(fileRowName({ entry: entry({ name: 'a.txt' }), syncStatus: 'unknown' })).toBe('a.txt')
   })
@@ -66,18 +67,32 @@ describe('fileRowName', () => {
   it('adds the Full view’s size, modified date, and git status in that order', () => {
     const details = { size: '1 KB', modified: '2026-10-14 10:30', gitStatus: 'Modified' }
     expect(fileRowName({ entry: entry({ name: 'a.txt' }), details })).toBe(
-      'a.txt, 1 KB, modified 2026-10-14 10:30, Modified',
+      'a.txt, 1 KB, (modified) 2026-10-14 10:30, Modified',
     )
     expect(fileRowName({ entry: entry({ name: 'sub', isDirectory: true }), details })).toBe(
-      'sub, folder, 1 KB, modified 2026-10-14 10:30, Modified',
+      'sub (folder), 1 KB, (modified) 2026-10-14 10:30, Modified',
     )
   })
 
   it('leaves out a size, date, or git status it doesn’t have', () => {
     expect(fileRowName({ entry: entry({ name: 'a.txt' }), details: { modified: '2026-10-14 10:30' } })).toBe(
-      'a.txt, modified 2026-10-14 10:30',
+      'a.txt, (modified) 2026-10-14 10:30',
     )
     expect(fileRowName({ entry: entry({ name: 'a.txt' }), details: { size: '', modified: '' } })).toBe('a.txt')
+  })
+
+  it('joins with no "and", in a language whose lists end in one', () => {
+    _setLocaleForTests('de')
+    try {
+      const name = fileRowName({
+        entry: entry({ name: 'sub', isDirectory: true }),
+        details: { size: '1 KB', modified: '2026-10-14 10:30' },
+      })
+      expect(name).toMatch(/^sub \(.+\), 1 KB, \(.+\) 2026-10-14 10:30$/)
+      expect(name).not.toMatch(/\bund\b/)
+    } finally {
+      _setLocaleForTests(null)
+    }
   })
 })
 
@@ -97,9 +112,9 @@ describe('rowSizeText', () => {
     expect(rowSizeText({ override: 'No access', triads })).toBe('No access')
   })
 
-  it('says no size while the cell shows the `<dir>` placeholder or nothing', () => {
-    expect(rowSizeText({ triads, dirState: 'dir' })).toBeUndefined()
-    expect(rowSizeText({ triads, dirState: 'scanning' })).toBeUndefined()
+  it('says the `<dir>` placeholder while the cell shows it, and nothing for an empty cell', () => {
+    expect(rowSizeText({ triads, dirState: 'dir' })).toBe('<dir>')
+    expect(rowSizeText({ triads, dirState: 'scanning' })).toBe('<dir>')
     expect(rowSizeText({})).toBeUndefined()
   })
 })

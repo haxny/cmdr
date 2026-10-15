@@ -22,7 +22,7 @@
  */
 
 import axe, { type AxeResults, type RunOptions } from 'axe-core'
-import { expect } from 'vitest'
+import { expect, vi } from 'vitest'
 
 /**
  * Axe options matching the E2E suite (WCAG 2.0/2.1/2.2 AA) minus `color-contrast`
@@ -47,14 +47,62 @@ const AXE_OPTIONS: RunOptions = {
 }
 
 /**
+ * A 2D canvas context that draws every glyph as solid ink, for the length of one audit.
+ *
+ * axe's `label-content-name-mismatch` asks a canvas whether each text node is an icon-font
+ * ligature before it compares the visible text with the accessible name, and the unit DOM's
+ * canvas returns no pixels, so the rule threw, landed in `incomplete`, and passed for free
+ * while the E2E audit failed on the same rows. Solid, width-proportional ink reads as plain
+ * text, which is what our text nodes are.
+ */
+async function withTextCanvas<T>(run: () => Promise<T>): Promise<T> {
+  const canvas = document.createElement('canvas')
+  const context = {
+    canvas,
+    measureText: (text: string) => ({ width: 10 * text.length }),
+    fillText: () => {},
+    clearRect: () => {},
+    getImageData: (_x: number, _y: number, width: number, height: number) => ({
+      data: new Uint8ClampedArray(Math.max(1, Math.ceil(width) * Math.ceil(height)) * 4).fill(255),
+    }),
+  } as unknown as CanvasRenderingContext2D
+  const spy = vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(context)
+  try {
+    return await run()
+  } finally {
+    spy.mockRestore()
+  }
+}
+
+/** Per-audit opt-outs. Each one names the issue that removes it. */
+export interface A11yAuditOptions {
+  /**
+   * Skip `label-content-name-mismatch` (WCAG 2.5.3) for a KNOWN gap, given as the issue that
+   * fixes it (`'#450'`). Every other audit runs the rule.
+   */
+  skipLabelInName?: string
+}
+
+function runAxe(element: Element | Document, { skipLabelInName }: A11yAuditOptions): Promise<AxeResults> {
+  if (skipLabelInName === undefined) return withTextCanvas(() => axe.run(element, AXE_OPTIONS))
+  return axe.run(element, {
+    ...AXE_OPTIONS,
+    rules: { ...AXE_OPTIONS.rules, 'label-content-name-mismatch': { enabled: false } },
+  })
+}
+
+/**
  * Runs axe-core on the given DOM element (or root document) and throws a
  * descriptive assertion failure listing each violation.
  *
  * @param element - A mounted container element. Pass the `target` you gave to
  *                  Svelte's `mount()`. Defaults to `document.body`.
  */
-export async function expectNoA11yViolations(element: Element | Document = document.body): Promise<void> {
-  const results: AxeResults = await axe.run(element, AXE_OPTIONS)
+export async function expectNoA11yViolations(
+  element: Element | Document = document.body,
+  options: A11yAuditOptions = {},
+): Promise<void> {
+  const results: AxeResults = await runAxe(element, options)
 
   if (process.env.CMDR_A11Y_DEBUG) {
     console.log(
@@ -82,8 +130,11 @@ export async function expectNoA11yViolations(element: Element | Document = docum
  * The ids of the rules `element` violates, under the same options. For a test that pins a
  * KNOWN gap (say why in a comment), so no other violation slips in beside it unnoticed.
  */
-export async function a11yViolationIds(element: Element | Document = document.body): Promise<string[]> {
-  const results: AxeResults = await axe.run(element, AXE_OPTIONS)
+export async function a11yViolationIds(
+  element: Element | Document = document.body,
+  options: A11yAuditOptions = {},
+): Promise<string[]> {
+  const results: AxeResults = await runAxe(element, options)
   return results.violations.map((violation) => violation.id)
 }
 

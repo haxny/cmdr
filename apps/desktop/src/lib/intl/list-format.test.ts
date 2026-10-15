@@ -73,9 +73,16 @@ describe('formatUnitList', () => {
     expect(formatUnitList([])).toBe('')
     expect(formatUnitList(['Photos', 'copying', '3 of 10 files'])).toBe('Photos, copying, 3 of 10 files')
     _setLocaleForTests('ja')
-    expect(formatUnitList(['写真', 'コピー中'])).toBe(
-      new Intl.ListFormat('ja', { type: 'unit' }).format(['写真', 'コピー中']),
-    )
+    expect(formatUnitList(['写真', 'コピー中'])).toBe('写真、コピー中')
+  })
+
+  // CLDR's `unit` list ends "B und C" in German and runs Chinese items together with no
+  // separator; either breaks an accessible name that has to carry visible words in order.
+  it('never adds a conjunction word, and always separates', () => {
+    _setLocaleForTests('de')
+    expect(formatUnitList(['A', 'B', 'C'])).toBe('A, B, C')
+    _setLocaleForTests('zh')
+    expect(formatUnitList(['A', 'B', 'C'])).toBe('A、B、C')
   })
 })
 

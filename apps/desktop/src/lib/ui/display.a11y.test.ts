@@ -17,7 +17,7 @@
 
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { mount, tick, createRawSnippet, type ComponentProps } from 'svelte'
-import { expectNoA11yViolations } from '#lib/test-a11y.js'
+import { expectNoA11yViolations, type A11yAuditOptions } from '#lib/test-a11y.js'
 
 vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({
   getFileSizeFormat: () => 'binary',
@@ -158,11 +158,11 @@ describe('Chip a11y', () => {
     }
   }
 
-  async function mountAndAudit(props: Props): Promise<void> {
+  async function mountAndAudit(props: Props, audit: A11yAuditOptions = {}): Promise<void> {
     const target = container()
     mount(Chip, { target, props })
     await tick()
-    await expectNoA11yViolations(target)
+    await expectNoA11yViolations(target, audit)
     target.remove()
   }
 
@@ -208,6 +208,7 @@ describe('Chip a11y', () => {
         ariaLabel: 'Run recent filename search: *.log',
         leading: createRawSnippet(() => ({ render: () => '<span>Aa</span>' })),
       }),
+      { skipLabelInName: '#450' },
     )
   })
 })
@@ -473,7 +474,7 @@ describe('ShortcutChip a11y', () => {
 
   it('clickable commandId chip has no a11y violations', async () => {
     const target = await mountChip({ commandId: 'downloads.goToLatest' })
-    await expectNoA11yViolations(target)
+    await expectNoA11yViolations(target, { skipLabelInName: '#450' })
   })
 
   it('non-clickable commandId chip has no a11y violations', async () => {

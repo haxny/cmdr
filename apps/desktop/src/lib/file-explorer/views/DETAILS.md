@@ -335,10 +335,19 @@ no per-view copy of any of it.
   option without them gets a position VoiceOver invents from the RENDERED siblings: a left-out `..` read "Parent folder
   (1 of 8)" beside "subfolder, folder (1 of 7)" (macOS 27.0, VoiceOver 10, 2026-10-15 spike), and under virtualization
   that count is wrong anyway.
-- The name (`fileRowName`) is "{name}, {kind}" (folder, symlink, package, archive; a plain file has no kind word, its
-  extension is in its name), then what the row's badges mean (sync state, restricted, archived), then in Full view the
-  size and "modified {date}" and the git status. `..` is "Parent folder" alone. The kind comes from typed fields only;
+- The name (`fileRowName`) is "{name} ({kind}, {badges})" (kind: folder, symlink, package, archive; a plain file has no
+  kind word, its extension is in its name; badges: sync state, restricted, archived), then in Full view the size,
+  "(modified) {date}", and the git status: "src (folder), 4,096, (modified) 2026-10-14 10:30". `..` says "Parent folder"
+  in place of its name, then its cells like any row ("Parent folder, <dir>"). The kind comes from typed fields only;
   "package" from `FileEntry.isPackage`, set in Rust from `is_package_dir`, ❌ never the `pkg:` icon-id prefix.
+- ❗ **Label in name (WCAG 2.5.3, axe `label-content-name-mismatch`)**: the row's VISIBLE words must run through the
+  name unbroken and in visible order (axe compares word tokens after dropping punctuation and parentheticals). So words
+  only the name says sit in parentheses (VoiceOver doesn't speak them), the size says `<dir>` while the cell shows it,
+  `formatUnitList` joins with a comma and never an "and" (CLDR's unit list ends "B und C" in German), and the Git cell
+  draws its letter from CSS `content: attr(data-glyph)`, since a text "M" between the Name and Ext cells would split the
+  run. `modifiedPhrase` splits the catalog's "modified {date}" around the date, so translations keep working. Known gap:
+  a middle-truncated name ("verylo…ename.txt") isn't word-for-word in the full name; axe would flag it, the E2E
+  fixture's names are short.
 - It's the option's `aria-label`, which REPLACES the name the row's content would give, so a badge that speaks through
   content (`FileIcon`'s sync badge, the restricted and archived `StatusGlyph`s) must also be in `fileRowName`. Add a
   badge, add its words there.

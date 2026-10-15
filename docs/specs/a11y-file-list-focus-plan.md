@@ -475,10 +475,12 @@ stays as it is.
   change waits for `!loading`. `enter-menu.ts` anchored on `[aria-selected="true"]` (the cursor until now); it uses
   `.is-under-cursor`. Found: axe `nested-interactive` fires while the inline rename field is up (an input inside an
   option, predating M4); pinned as the only violation in `full-list.a11y.test.ts`, fix is moving the editor out of the
-  option. **Owed (screen locked)**: listening to L1–L5 and P1–P2 on this code (row names with kind and position, `..` as
-  "Parent folder, 1 of 8", "selected" on marked rows, Full view's size and date, the announcer after the row on launch,
-  `Tab`, and entering a folder), the `aria-setsize` churn check on a streaming huge folder, and the sort buttons' names
-  (C-scenarios, reachable in M6). Run them in M5.
+  option. The E2E audit then failed axe `label-content-name-mismatch` (WCAG 2.5.3) on every Full row, so the name keeps
+  the visible words in order and parenthesizes the rest: "src (folder), 4,096, (modified) {date}", `..` as "Parent
+  folder, <dir>" (rule and mechanics: `views/DETAILS.md`). **Owed (screen locked)**: listening to L1–L5 and P1–P2 on
+  this code (row names with kind and position, `..` as "Parent folder, 1 of 8", "selected" on marked rows, Full view's
+  size and date, the announcer after the row on launch, `Tab`, and entering a folder), the `aria-setsize` churn check on
+  a streaming huge folder, and the sort buttons' names (C-scenarios, reachable in M6). Run them in M5.
 
 ### M5: VoiceOver verification of M2–M4
 

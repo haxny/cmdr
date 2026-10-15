@@ -185,7 +185,7 @@ describe('a11y', () => {
     const target = render(line({ status: 'undoable' }, { jobOperationIds: ['op-1', 'op-2'], jobFileCount: 1500 }))
     await tick()
 
-    await expectNoA11yViolations(target)
+    await expectNoA11yViolations(target, { skipLabelInName: '#450' })
   })
 
   it('has no violations reporting a partial result', async () => {

@@ -71,34 +71,70 @@ export interface FileRowNameInput {
 }
 
 /**
- * The row's accessible name: "{name}, {kind}", then what its badges mean, then (Full view)
- * size, "modified {date}", and git status. `..` is "Parent folder" and nothing more.
+ * The row's accessible name: "{name} ({kind}, {badges})", then (Full view) size,
+ * "(modified) {date}", and git status: "src (folder), 4,096, (modified) 2026-10-14 10:30".
+ * `..` says "Parent folder" in place of its name, then its cells like any row.
  *
  * It's set as the option's `aria-label`, which replaces the name the row's content would give,
  * so every badge that speaks through content (`FileIcon`'s sync badge, the restricted and
  * archived glyphs) has to be said here. The symlink badge is the kind word.
+ *
+ * ❗ WCAG 2.5.3 (label in name, axe `label-content-name-mismatch`): the row's visible words
+ * must run through the name unbroken and in order, so voice control can say what it sees.
+ * Words the name adds BETWEEN visible ones go in parentheses, which axe drops before it
+ * compares and VoiceOver doesn't speak; the visible ones stay bare, the `<dir>` placeholder
+ * included. Joined by {@link formatUnitList}, which never adds an "and".
  */
 export function fileRowName({ entry, syncStatus, isRestricted = false, details }: FileRowNameInput): string {
-  if (isParentRow(entry)) return tString('fileExplorer.list.parentRowName')
-  const kind = fileRowKind(entry)
-  const syncKey = getSyncStatusLabelKey(syncStatus)
   const parts = [
-    entry.name,
-    kind ? tString(KIND_KEYS[kind]) : '',
-    syncKey ? tString(syncKey) : '',
-    isRestricted ? tString('fileExplorer.restrictedFolder.label') : '',
-    entry.inColdStorage === true ? tString('fileExplorer.archivedFile.label') : '',
+    isParentRow(entry)
+      ? tString('fileExplorer.list.parentRowName')
+      : withAside(entry.name, rowAsides(entry, syncStatus, isRestricted)),
     details?.size ?? '',
-    details?.modified ? tString('fileExplorer.list.rowModified', { date: details.modified }) : '',
+    details?.modified ? modifiedPhrase(details.modified) : '',
     details?.gitStatus ?? '',
   ]
   return formatUnitList(parts.filter((part) => part !== ''))
 }
 
+/** What the row's kind and badges mean: the words its name adds that nothing on the row writes out. */
+function rowAsides(entry: FileEntry, syncStatus: SyncStatus | undefined, isRestricted: boolean): string[] {
+  const kind = fileRowKind(entry)
+  const syncKey = getSyncStatusLabelKey(syncStatus)
+  return [
+    kind ? tString(KIND_KEYS[kind]) : '',
+    syncKey ? tString(syncKey) : '',
+    isRestricted ? tString('fileExplorer.restrictedFolder.label') : '',
+    entry.inColdStorage === true ? tString('fileExplorer.archivedFile.label') : '',
+  ].filter((aside) => aside !== '')
+}
+
+function withAside(text: string, asides: string[]): string {
+  return asides.length === 0 ? text : `${text} (${formatUnitList(asides)})`
+}
+
+/** Stands in for the date while its phrase is split, so a translation may put it anywhere. */
+const DATE_SLOT = '\u0000'
+
+/**
+ * "modified {date}" with the words around the date in parentheses: "(modified) 2026-10-14
+ * 10:30". The date is on the row; the words aren't. The catalog phrase stays whole for
+ * translators, whatever side of the date their language puts the words on.
+ */
+function modifiedPhrase(date: string): string {
+  return tString('fileExplorer.list.rowModified', { date: DATE_SLOT })
+    .split(DATE_SLOT)
+    .map((words) => words.trim())
+    .map((words) => (words === '' ? '' : `(${words})`))
+    .join(` ${date} `)
+    .trim()
+}
+
 /**
  * The Full view's size cell as words, from what the cell itself renders: its override word
- * (no access, a git portal fact), else its size spans joined, with the `≥` of a lower bound.
- * Nothing while the cell shows the `<dir>` placeholder: an unknown size says no size.
+ * (no access, a git portal fact), else its size spans joined, with the `≥` of a lower bound,
+ * else the `<dir>` placeholder of a folder whose size isn't known yet (WCAG 2.5.3: the name
+ * says what the row shows).
  */
 export function rowSizeText(cell: {
   override?: string
@@ -106,7 +142,8 @@ export function rowSizeText(cell: {
   dirState?: DirSizeDisplayState
 }): string | undefined {
   if (cell.override !== undefined) return cell.override
-  if (cell.dirState === 'dir' || cell.dirState === 'scanning' || !cell.triads) return undefined
+  if (cell.dirState === 'dir' || cell.dirState === 'scanning') return tString('fileExplorer.dirSize.dirPlaceholder')
+  if (!cell.triads) return undefined
   const size = cell.triads.map((triad) => triad.value).join('')
   return cell.dirState === 'lower-bound' ? LOWER_BOUND_GLYPH + size : size
 }
