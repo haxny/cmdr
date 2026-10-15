@@ -101,10 +101,8 @@ describe('resolveGlobalKeyAction', () => {
 
   /**
    * Characterization pins for the screen-reader focus work (#437): the navigation keys
-   * resolve the same wherever focus sits in the explorer, because nothing here reads
-   * focus except `isTextInputFocused()`. The "button focused" column changes on purpose
-   * once a focused pane-chrome control keeps Enter, Space, the arrows, and Home/End for
-   * itself (#437 items 7–8); `Tab` and `⇧Tab` stay as they are.
+   * resolve the same wherever focus sits in the explorer, except on pane chrome (below),
+   * which keeps Enter, Space, the arrows, and Home/End for the focused control.
    */
   describe('navigation keys, wherever focus sits in the explorer', () => {
     const IGNORE = { kind: 'ignore' }
@@ -145,11 +143,36 @@ describe('resolveGlobalKeyAction', () => {
       expect(resolveGlobalKeyAction(new KeyboardEvent('keydown', init), NOTHING_OPEN)).toEqual(expected)
     })
 
-    // Changes on purpose for every key but Tab / ⇧Tab once pane chrome is reachable.
     it.each(NAV_KEYS)('%s resolves the same with a button inside the explorer focused', (_name, init, expected) => {
       const { button } = mountExplorer()
       button.focus()
       expect(document.activeElement).toBe(button)
+      expect(resolveGlobalKeyAction(new KeyboardEvent('keydown', init), NOTHING_OPEN)).toEqual(expected)
+    })
+
+    /**
+     * A focused pane-chrome control (`pane-chrome.ts`) keeps the keys a button or a toolbar
+     * answers to; `Tab` stays `pane.switch` and modifier shortcuts still run.
+     */
+    const CHROME_KEYS: [string, KeyboardEventInit, unknown][] = [
+      ['Enter', { key: 'Enter' }, IGNORE],
+      ['Space', { key: ' ' }, IGNORE],
+      ['↑', { key: 'ArrowUp' }, IGNORE],
+      ['↓', { key: 'ArrowDown' }, IGNORE],
+      ['←', { key: 'ArrowLeft' }, IGNORE],
+      ['→', { key: 'ArrowRight' }, IGNORE],
+      ['Home', { key: 'Home' }, IGNORE],
+      ['End', { key: 'End' }, IGNORE],
+      ['Tab', { key: 'Tab' }, { kind: 'dispatch', commandId: 'pane.switch' }],
+      ['⇧Tab', { key: 'Tab', shiftKey: true }, IGNORE],
+      ['⌘R', { key: 'r', metaKey: true }, { kind: 'dispatch', commandId: 'pane.refresh' }],
+      ['⌘↓', { key: 'ArrowDown', metaKey: true }, { kind: 'dispatch', commandId: 'nav.open' }],
+    ]
+
+    it.each(CHROME_KEYS)('%s resolves for the control with a pane chrome button focused', (_name, init, expected) => {
+      const { button } = mountExplorer()
+      button.parentElement?.setAttribute('data-pane-chrome', '')
+      button.focus()
       expect(resolveGlobalKeyAction(new KeyboardEvent('keydown', init), NOTHING_OPEN)).toEqual(expected)
     })
   })

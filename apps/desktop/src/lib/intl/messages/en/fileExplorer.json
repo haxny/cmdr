@@ -51,6 +51,10 @@
     },
     "screenshot": "main-window.png"
   },
+  "fileExplorer.pane.locationBarAriaLabel": "Location",
+  "@fileExplorer.pane.locationBarAriaLabel": {
+    "description": "Spoken name of the row at the top of each file pane that holds the volume button, the folder path, and the eject button. Screen readers only (never shown); VoiceOver says it with the word “toolbar”, as in “Location toolbar”. A noun: where the pane is."
+  },
   "fileExplorer.pane.location": "{side, select, left {Left pane, {folder}} other {Right pane, {folder}}}",
   "@fileExplorer.pane.location": {
     "description": "Which pane the keyboard is in and which folder it shows, for screen readers only (never shown on screen). Spoken when you switch between the left and right pane and when you open another folder, as in “Left pane, Documents”, and used as the spoken name of that pane’s file list. Don’t add a word like “active”: the same name stays on the pane you just left.",
@@ -1389,7 +1393,7 @@
   },
   "fileExplorer.list.sortColumnsAriaLabel": "Sort columns",
   "@fileExplorer.list.sortColumnsAriaLabel": {
-    "description": "Accessibility label for the row of sortable column headers in the Brief list view.",
+    "description": "Accessibility label for the row of sortable column headers above the file list, in both the Brief and the Full list view.",
     "screenshot": "main-window.png",
     "screenshotNote": "The main window, pictured here. Your string is never shown: a screen reader speaks it for the row of sortable column headers in the file list."
   },

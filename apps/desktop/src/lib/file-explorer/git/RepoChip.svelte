@@ -63,7 +63,9 @@
   })
 </script>
 
-<span class="repo-chip" class:dirty={state === 'dirty'} class:ahead={state === 'ahead'} class:behind={state === 'behind'} class:detached={state === 'detached'} class:unborn={state === 'unborn'} use:tooltip={tooltipText} aria-label={tooltipText} data-state={state}>
+<!-- A labeled status pill, not a control. `tabindex="-1"` makes it a stop on the location bar's
+     arrow-key walk (`pane/pane-chrome.ts`), so keyboard users can read it too. -->
+<span class="repo-chip" class:dirty={state === 'dirty'} class:ahead={state === 'ahead'} class:behind={state === 'behind'} class:detached={state === 'detached'} class:unborn={state === 'unborn'} use:tooltip={tooltipText} role="img" tabindex="-1" aria-label={tooltipText} data-state={state}>
   <span class="icon"><Icon name="git-branch" size={12} /></span>
   <span class="label">{label}</span>
   {#if subtitle}
@@ -104,6 +106,12 @@
     white-space: nowrap;
     user-select: none;
     cursor: default;
+  }
+
+  /* The house focus ring (`app.css` gives it to buttons only), for the keyboard walk. */
+  .repo-chip:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
   }
 
   .repo-chip.dirty {

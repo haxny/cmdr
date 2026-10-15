@@ -131,6 +131,7 @@
     import type { CursorReading } from '../navigation/history-cursor'
     import { getFirstShortcutReactive } from '#lib/shortcuts/reactive-shortcuts.svelte.js'
     import PaneAnnouncer from './PaneAnnouncer.svelte'
+    import { focusPaneChrome } from './pane-chrome'
     import { createPaneLocationAnnouncer, paneLocationLabel } from './pane-location-announcer.svelte'
 
     interface Props {
@@ -457,6 +458,7 @@
     let searchResultsViewRef: SearchResultsViewAPI | undefined = $state()
     // The pane's root element, so the Enter-behavior popup can anchor at the cursor row.
     let paneEl: HTMLElement | undefined = $state()
+    let headerEl: HTMLElement | undefined = $state()
     let announcer: { announce: (message: string) => void } | undefined = $state()
 
     // The Browse | Open | Configure popup shown when an archive/bundle set to Ask is
@@ -1707,6 +1709,11 @@
         keyRouter.handleKeyUp(e)
     }
 
+    /** Focuses the location bar's first control (the volume button); false before it mounts. */
+    export function focusControls(): boolean {
+        return headerEl ? focusPaneChrome(headerEl) : false
+    }
+
     /** Focuses whichever file list this pane shows; false when it shows none. */
     export function focusList(): boolean {
         return (
@@ -2030,8 +2037,17 @@
     data-listing-id={listingId || undefined}
 >
     <PaneAnnouncer bind:this={announcer} />
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div class="header" oncontextmenu={breadcrumb.handleContextMenu}>
+    <!-- Pane chrome: ←/→ walk its controls, Escape goes back to the list (`pane-chrome.ts`). The
+         toolbar itself takes no focus; its controls do. -->
+    <!-- svelte-ignore a11y_interactive_supports_focus -->
+    <div
+        class="header"
+        bind:this={headerEl}
+        oncontextmenu={breadcrumb.handleContextMenu}
+        role="toolbar"
+        aria-label={tString('fileExplorer.pane.locationBarAriaLabel')}
+        data-pane-chrome
+    >
         <VolumeBreadcrumb
             bind:this={volumeBreadcrumbRef}
             {paneId}

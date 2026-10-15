@@ -904,7 +904,8 @@
 
 <div class="brief-list-container" class:is-focused={isFocused}>
     <!-- Header row with sort options -->
-    <div class="header-row" role="toolbar" aria-label={tString('fileExplorer.list.sortColumnsAriaLabel')}>
+    <!-- Pane chrome: ←/→ walk the sort buttons, ↑ goes to the location bar (`pane/pane-chrome.ts`). -->
+    <div class="header-row" role="toolbar" aria-label={tString('fileExplorer.list.sortColumnsAriaLabel')} data-pane-chrome>
         <!-- Dead space standing in for the rows' icon cell, the same trick `FullList`'s
              header uses, so "Name" starts exactly above the file names rather than
              above their icons. -->

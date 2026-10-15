@@ -106,6 +106,7 @@
     import { createKeyDispatch } from './key-dispatch'
     import { focusActivePane as focusActivePaneOf } from './active-pane-focus'
     import { registerFocusHome } from '#lib/ui/focus-restore.js'
+    import { isPaneChromeTarget } from './pane-chrome'
     import { createMcpTabAction } from './mcp-tab-action'
     import {
         navigate as runNavigate,
@@ -178,7 +179,9 @@
         })
     }
     // The window's focus home: overlays closing, and lists remounting, put focus back through it.
-    $effect(() => registerFocusHome({ root: () => containerElement, refocus: focusActivePane }))
+    $effect(() =>
+        registerFocusHome({ root: () => containerElement, refocus: focusActivePane, keepsFocus: isPaneChromeTarget }),
+    )
     let unlistenVolumeUnmount: UnlistenFn | undefined
     let unlistenVolumeContextAction: UnlistenFn | undefined
     let unlistenIndexEvents: UnlistenFn | undefined
@@ -878,6 +881,11 @@
         focusActivePane()
     }
 
+    /** Focus the focused pane's location bar, the keyboard way into its chrome (`pane.focusControls`). */
+    export function focusPaneControls() {
+        getPaneRef(focusedPane)?.focusControls()
+    }
+
     /** Move an open volume switcher to the other pane without letting Tab walk DOM focus. */
     function switchVolumeChooserPane(fromPane: 'left' | 'right'): void {
         getPaneRef(fromPane)?.closeHeaderMenu()
@@ -1375,6 +1383,7 @@
     {@const tabMgr = getTabMgr(paneId)}
     <div
         class="pane-wrapper"
+        data-pane-chrome-scope
         class:drop-target-active={dragDrop.getDropTargetPane() === paneId}
         style="width: {getPaneWidth(paneId)}%"
         bind:this={paneWrapperEls[paneId]}

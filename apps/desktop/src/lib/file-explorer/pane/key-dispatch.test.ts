@@ -237,12 +237,10 @@ describe('createKeyDispatch', () => {
   })
 
   /**
-   * Characterization pins for the screen-reader focus work (#437): focus and key routing
-   * as they are today, with real focus moves and real dispatches against a DOM shaped like
-   * the explorer's. Two groups change on purpose once pane chrome becomes reachable from
-   * the keyboard (#437 items 7–8): the guard stops bouncing chrome controls, and keys from a
-   * focused chrome control stop reaching the pane. Those cases say so; nothing else here
-   * may change.
+   * Focus and key routing with real focus moves and real dispatches against a DOM shaped
+   * like the explorer's. Started as characterization pins for the screen-reader focus work
+   * (#437); the pane chrome cases changed on purpose when chrome became reachable from the
+   * keyboard: the guard leaves focus on a chrome control, and keys from one stay there.
    */
   describe('focus and key routing in an explorer-shaped DOM', () => {
     /**
@@ -256,10 +254,13 @@ describe('createKeyDispatch', () => {
       container.innerHTML = ['left', 'right']
         .map(
           (side) => `
-          <div class="file-pane" data-side="${side}">
-            <div role="tablist"><button class="tab" role="tab" aria-selected="true">Tab</button></div>
-            <div class="header"><button type="button" class="path-segment">Users</button></div>
-            <div class="header-row"><button type="button" class="sortable-header">Name</button></div>
+          <div class="file-pane" data-side="${side}" data-pane-chrome-scope>
+            <div data-pane-chrome><div role="tablist"><button class="tab" role="tab" aria-selected="true">Tab</button></div></div>
+            <div class="header" role="toolbar" data-pane-chrome>
+              <button type="button" class="volume-name">Macintosh HD</button>
+              <button type="button" class="path-segment">Users</button>
+            </div>
+            <div class="header-row" data-pane-chrome><button type="button" class="sortable-header">Name</button></div>
             <div class="brief-list" role="listbox" tabindex="-1" aria-label="File list">
               <div class="file-entry" role="option" aria-selected="true">a.txt</div>
               <div class="file-entry" role="option" aria-selected="false">b.txt</div>
@@ -289,29 +290,24 @@ describe('createKeyDispatch', () => {
       document.body.innerHTML = ''
     })
 
-    // Where the bounce LANDS is deliberately not pinned (the container today; the focused
-    // pane's list once focus moves onto the lists), only that focus leaves the control and
-    // stays in the explorer. Pane chrome: changes on purpose once the guard leaves focus on
-    // `[data-pane-chrome]`.
+    // So "keyboard focus follows the VoiceOver cursor" can rest on a control, and the
+    // "Move focus to the pane controls" command can put it there.
     it.each([
       ['a path segment button', '.path-segment'],
       ['a pane tab', '[role="tab"]'],
       ['a sort header button', '.sortable-header'],
-    ])('bounces focus that lands on %s, keeping it in the explorer', (_name, selector) => {
-      const { container, q } = mountExplorer()
+    ])('leaves focus that lands on %s there', (_name, selector) => {
+      const { left, q } = mountExplorer()
       const control = q('left', selector)
       control.focus()
-      expect(document.activeElement).not.toBe(control)
-      expect(container.contains(document.activeElement)).toBe(true)
+      expect(document.activeElement).toBe(control)
+      expect(left.focusList).not.toHaveBeenCalled()
     })
 
     it.each([
       ['the container', null],
       ["the focused pane's listbox", '[role="listbox"]'],
       ["the focused pane's cursor row", '.file-entry'],
-      // Pane chrome: changes on purpose once keys from a focused chrome control stay there.
-      ['a path segment button', '.path-segment'],
-      ['a sort header button', '.sortable-header'],
     ])('forwards ↓ dispatched on %s to the focused pane only', (_name, selector) => {
       const { container, left, right, q } = mountExplorer()
       const target = selector === null ? container : q('left', selector)
@@ -329,14 +325,71 @@ describe('createKeyDispatch', () => {
       expect(left.handleKeyDown).not.toHaveBeenCalled()
     })
 
-    // Pane chrome: changes on purpose; a letter typed on a focused chrome control must not jump.
-    it("sends a letter typed on a chrome button into the focused pane's type-to-jump", () => {
+    /** Dispatches a keydown on `target` the way a real keypress lands; returns the event. */
+    function press(target: HTMLElement, key: string): KeyboardEvent {
+      const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true })
+      target.dispatchEvent(event)
+      return event
+    }
+
+    it.each([
+      ['↓', 'ArrowDown'],
+      ['Enter', 'Enter'],
+      ['Space', ' '],
+      ['a letter', 'b'],
+    ])('keeps %s pressed on a chrome control away from both panes', (_name, key) => {
       const { left, right, q } = mountExplorer()
-      q('left', '.path-segment').dispatchEvent(
-        new KeyboardEvent('keydown', { key: 'b', bubbles: true, cancelable: true }),
-      )
-      expect(left.handleJumpKeystroke).toHaveBeenCalledWith('b')
+      const segment = q('left', '.path-segment')
+      segment.focus()
+      press(segment, key)
+      expect(left.handleKeyDown).not.toHaveBeenCalled()
+      expect(left.handleJumpKeystroke).not.toHaveBeenCalled()
+      expect(right.handleKeyDown).not.toHaveBeenCalled()
       expect(right.handleJumpKeystroke).not.toHaveBeenCalled()
+    })
+
+    // Enter and Space activate the focused button through the browser's default action.
+    it.each([
+      ['Enter', 'Enter'],
+      ['Space', ' '],
+    ])("leaves %s's default action to the chrome control", (_name, key) => {
+      const { q } = mountExplorer()
+      const segment = q('left', '.path-segment')
+      segment.focus()
+      expect(press(segment, key).defaultPrevented).toBe(false)
+    })
+
+    it('walks the location bar with ← and →, and hops to the sort header with ↓, claiming each key', () => {
+      const { q } = mountExplorer()
+      q('left', '.volume-name').focus()
+      expect(press(q('left', '.volume-name'), 'ArrowRight').defaultPrevented).toBe(true)
+      expect(document.activeElement).toBe(q('left', '.path-segment'))
+      press(q('left', '.path-segment'), 'ArrowLeft')
+      expect(document.activeElement).toBe(q('left', '.volume-name'))
+      press(q('left', '.volume-name'), 'ArrowDown')
+      expect(document.activeElement).toBe(q('left', '.sortable-header'))
+    })
+
+    it("sends focus back to the focused pane's list on Escape", () => {
+      const { left, q } = mountExplorer()
+      left.focusList.mockImplementation(() => {
+        q('left', '[role="listbox"]').focus()
+        return true
+      })
+      const segment = q('left', '.path-segment')
+      segment.focus()
+      const event = press(segment, 'Escape')
+      expect(document.activeElement).toBe(q('left', '[role="listbox"]'))
+      expect(event.defaultPrevented).toBe(true)
+      expect(left.handleCancelLoading).not.toHaveBeenCalled()
+    })
+
+    it('still sends a letter typed on a plain button outside chrome to type-to-jump', () => {
+      const { container, left } = mountExplorer()
+      const stray = document.createElement('button')
+      container.appendChild(stray)
+      press(stray, 'b')
+      expect(left.handleJumpKeystroke).toHaveBeenCalledWith('b')
     })
   })
 

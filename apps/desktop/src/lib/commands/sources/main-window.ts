@@ -303,6 +303,18 @@ export const mainWindowCommands: CommandSource[] = [
     descriptionKey: 'commands.paneClone.description',
   },
   {
+    // The keyboard way into pane chrome (`pane/pane-chrome.ts`) without giving up `Tab`,
+    // which stays the pane switch. ⌃F5 mirrors macOS's "Move focus to the window toolbar".
+    // Off macOS, ⌃ and ⌘ both map to Ctrl, so ⌃F5 would land on ⌘F5 (sort by modified).
+    id: 'pane.focusControls',
+    nameKey: 'commands.paneFocusControls.label',
+    scope: 'Main window',
+    showInPalette: true,
+    shortcuts: isMacOS() ? ['⌃F5'] : ['⌘⇧F5'],
+    whileDialogOpen: BLOCKED_BY_DIALOGS,
+    descriptionKey: 'commands.paneFocusControls.description',
+  },
+  {
     id: 'pane.leftVolumeChooser',
     nameKey: 'commands.paneLeftVolumeChooser.label',
     scope: 'Main window',

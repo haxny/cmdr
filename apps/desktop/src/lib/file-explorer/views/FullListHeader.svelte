@@ -47,10 +47,13 @@
     const sort = $derived(onSortChange ?? (() => {}))
 </script>
 
-<!-- Role/aria intentionally omitted: `role="toolbar"` here would be a lie about a
-     row of column labels. The sort buttons inside remain individually focusable. -->
+<!-- The same sort toolbar as Brief view's: a row of sort buttons that ←/→ walk, with ↑ to
+     the location bar (`pane/pane-chrome.ts`). The Git label between them is plain text. -->
 <div
     class="header-row"
+    role="toolbar"
+    aria-label={tString('fileExplorer.list.sortColumnsAriaLabel')}
+    data-pane-chrome
     class:no-transition={skipTransition}
     style:grid-template-columns={gridTemplate}
     style:--spacing-scrollbar-width="{scrollbarWidth}px"

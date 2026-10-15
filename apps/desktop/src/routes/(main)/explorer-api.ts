@@ -56,6 +56,8 @@ export interface SelectionActionArgs {
 export interface ExplorerAPI {
   refocus: () => void
   switchPane: () => void
+  /** Focus the focused pane's location bar, the keyboard way into its chrome (`pane.focusControls`). */
+  focusPaneControls: () => void
   swapPanes: () => void
   /** Nudge the pane divider one keyboard step (`pane-split.ts`). */
   moveDivider: (direction: SplitDirection) => void

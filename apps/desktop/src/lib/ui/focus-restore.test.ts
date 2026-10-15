@@ -111,6 +111,31 @@ describe('restoreFocus', () => {
     expect(home.refocus).toHaveBeenCalledTimes(1)
   })
 
+  // The palette running "Move focus to the pane controls": the command focuses a pane
+  // control, then the palette unmounts and restores. Sending focus home would undo the command.
+  it('leaves focus on a home element the home says keeps it, and only there', () => {
+    const root = focusable()
+    const list = focusable(root)
+    const control = focusable(root, 'button')
+    const refocus = vi.fn(() => {
+      list.focus()
+    })
+    cleanup = registerFocusHome({ root: () => root, refocus, keepsFocus: (el) => el === control })
+    list.focus()
+    const origin = captureFocusOrigin()
+    const palette = focusable()
+
+    control.focus()
+    restoreFocus(origin, { leaving: palette })
+    expect(refocus).not.toHaveBeenCalled()
+    expect(document.activeElement).toBe(control)
+
+    palette.focus()
+    restoreFocus(origin, { leaving: palette })
+    expect(refocus).toHaveBeenCalledTimes(1)
+    expect(document.activeElement).toBe(list)
+  })
+
   it('does nothing without an origin', () => {
     const home = mountHome()
     cleanup = home.unregister

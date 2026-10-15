@@ -23,6 +23,12 @@ export interface FocusHome {
   root: () => HTMLElement | undefined
   /** Puts focus home (the focused pane's list, else the explorer container). */
   refocus: () => void
+  /**
+   * Places inside the home where focus that a command put there stays when an overlay closes:
+   * pane chrome, so "Move focus to the pane controls" run from the palette isn't undone by
+   * the palette's own restore a moment later.
+   */
+  keepsFocus?: (element: Element) => boolean
 }
 
 /** Where focus was when an overlay opened: the home as a whole, or one element outside it. */
@@ -64,11 +70,18 @@ export function captureFocusOrigin(active: Element | null = document.activeEleme
   return { kind: 'element', element: active }
 }
 
-/** Whether focus already sits in an open menu or dialog other than `leaving` (the overlay closing now). */
+/**
+ * Whether focus already sits in an open menu or dialog other than `leaving` (the overlay
+ * closing now), or on a home element that keeps it (`FocusHome.keepsFocus`).
+ */
 function focusMovedOn(leaving: Element | null | undefined): boolean {
   const active = document.activeElement
   if (!active || active === document.body || leaving?.contains(active)) return false
-  return isFocusInOpenMenu() || active.closest('[role="dialog"], [role="alertdialog"]') !== null
+  return (
+    isFocusInOpenMenu() ||
+    active.closest('[role="dialog"], [role="alertdialog"]') !== null ||
+    (home?.keepsFocus?.(active) ?? false)
+  )
 }
 
 /**

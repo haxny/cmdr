@@ -370,7 +370,9 @@ onboarding wizard, a toast, and the `Menu` consumers' `restoreFocus`) goes throu
 - **Focus that already moved on stays.** When focus sits in another OPEN menu (`isFocusInOpenMenu`, which asks the menu
   stack; a closing menu leaves the stack before it restores) or another dialog, restoring does nothing: closing the old
   volume chooser after `Tab` re-opened it on the other pane once stole focus from the new one (2026-10-15 VoiceOver
-  spike). A dialog passes its own element as `leaving`, since focus is still inside it while it closes.
+  spike). A dialog passes its own element as `leaving`, since focus is still inside it while it closes. Same for a home
+  element the home says keeps focus (`FocusHome.keepsFocus`, pane chrome in the explorer): the palette runs its command
+  BEFORE it unmounts, so "Move focus to the pane controls" would otherwise be undone by the palette's restore.
 - **`isFocusAdrift()`** (focus on `<body>` or on the home's root) is what the file lists check to re-home focus when
   they mount or unmount (`file-explorer/views/list-focus.svelte.ts`). False in a window with no home.
 

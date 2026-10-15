@@ -117,6 +117,7 @@ export function makeExplorerSpy(): Record<string, ReturnType<typeof vi.fn>> {
     'setViewMode',
     'setViewModeFromMenu',
     'switchPane',
+    'focusPaneControls',
     'swapPanes',
     'moveDivider',
     'resetDivider',
@@ -303,6 +304,12 @@ export const DELEGATE_ROWS: DelegateRow[] = [
     id: 'pane.swap',
     expect: (e) => {
       expect(e.swapPanes).toHaveBeenCalledOnce()
+    },
+  },
+  {
+    id: 'pane.focusControls',
+    expect: (e) => {
+      expect(e.focusPaneControls).toHaveBeenCalledOnce()
     },
   },
   {

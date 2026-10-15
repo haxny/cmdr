@@ -4,21 +4,26 @@
  * (`onkeydown` / `onkeyup` / `onfocusin`); they own no state, they route events
  * to the focused pane and enforce the focus guard.
  *
- * `handleKeyDown` dispatch order is load-bearing and unchanged:
- *   1. Escape while loading → cancel the load (and swallow the key).
- *   2. A header menu (volume switcher or favorites) open on either pane → swallow
+ * `handleKeyDown` dispatch order is load-bearing:
+ *   1. A key pressed on pane chrome (`pane-chrome.ts`) stays there: Escape goes back
+ *      to the list, arrows/Home/End move between the controls, and nothing reaches
+ *      the pane or type-to-jump. Enter and Space keep their default (activate the button).
+ *   2. Escape while loading → cancel the load (and swallow the key).
+ *   3. A header menu (volume switcher or favorites) open on either pane → swallow
  *      (the panes behind it stay inert, Fix E). The menu itself already caught what
  *      it wanted.
- *   3. Type-to-jump intercept → route printable keys into the active pane's buffer
+ *   4. Type-to-jump intercept → route printable keys into the active pane's buffer
  *      BEFORE any shortcut sees them. Once a jump is active the captured set
  *      widens to any printable key (L9 — mirror of `pane-commands.routePanelKey`).
  *      Reset keys clear the buffer and fall through.
- *   4. Otherwise forward to the focused pane's `handleKeyDown`.
+ *   5. Otherwise forward to the focused pane's `handleKeyDown`.
  */
 
 import { focusActivePane } from './active-pane-focus'
 import { cancelCountInPane } from './folder-size-count'
 import { isTextInputTarget } from '#lib/utils/text-input-focus.js'
+import { claimKey } from '#lib/shortcuts/claim-key.js'
+import { isPaneChromeTarget, movePaneChromeFocus } from './pane-chrome'
 import { routeTypingKey } from './type-to-jump-keys'
 import type { FilePaneAPI } from './types'
 
@@ -75,12 +80,16 @@ export function createKeyDispatch(deps: KeyDispatchDeps): KeyDispatch {
    * dialog is the trap's job, not this guard's; the exemption also makes the dialogs'
    * buttons keyboard-reachable.
    *
+   * Pane chrome (`pane-chrome.ts`) is exempt too, so "keyboard focus follows the VoiceOver
+   * cursor" can rest on a path segment and `pane.focusControls` can put focus there. A click
+   * doesn't focus a button in WKWebView, so mouse use never leaves focus on chrome.
+   *
    * Everything else lands on the focused pane's list:
    * - Focus already on it stays (`focus()` on the focused element is a no-op, no event).
    * - Focus on the container moves to the list when the pane shows one, so every container
    *   focuser converges there; with no list the container stays the home.
-   * - Anything else (a chrome button, the OTHER pane's list, Full view's `.full-list`
-   *   scroller that a click on empty space focuses) is bounced to it.
+   * - Anything else (the OTHER pane's list, Full view's `.full-list` scroller that a click on
+   *   empty space focuses) is bounced to it.
    */
   function handleFocusGuard(e: FocusEvent): void {
     const target = e.target as HTMLElement
@@ -89,7 +98,8 @@ export function createKeyDispatch(deps: KeyDispatchDeps): KeyDispatch {
       target instanceof HTMLTextAreaElement ||
       target instanceof HTMLSelectElement ||
       target.isContentEditable ||
-      target.closest('[role="dialog"], [role="alertdialog"]') !== null
+      target.closest('[role="dialog"], [role="alertdialog"]') !== null ||
+      isPaneChromeTarget(target)
     )
       return
     if (target === deps.getContainerElement()) {
@@ -109,7 +119,26 @@ export function createKeyDispatch(deps: KeyDispatchDeps): KeyDispatch {
     return cancelCountInPane(pane.getListingId())
   }
 
+  /**
+   * A key pressed on pane chrome. The document dispatcher already leaves Enter, Space, the
+   * arrows, and Home/End to the control (`paneChromeOwnsKey`); `Tab` and modifier shortcuts
+   * go on to it untouched. Escape is the way back to the list.
+   */
+  function handleChromeKeyDown(e: KeyboardEvent): void {
+    if (e.key === 'Escape' && !e.metaKey && !e.ctrlKey && !e.altKey && !e.shiftKey) {
+      claimKey(e)
+      focusActivePane(deps)
+      return
+    }
+    if (movePaneChromeFocus(e)) claimKey(e)
+  }
+
   function handleKeyDown(e: KeyboardEvent): void {
+    if (isPaneChromeTarget(e.target)) {
+      handleChromeKeyDown(e)
+      return
+    }
+
     // ESC during loading = cancel and go back
     if (e.key === 'Escape' && handleEscapeDuringLoading()) {
       e.preventDefault()
@@ -144,6 +173,7 @@ export function createKeyDispatch(deps: KeyDispatchDeps): KeyDispatch {
   }
 
   function handleKeyUp(e: KeyboardEvent): void {
+    if (isPaneChromeTarget(e.target)) return
     // Forward to the focused pane for range selection finalization
     const activePaneRef = deps.getPaneRef(deps.getFocusedPane())
     activePaneRef?.handleKeyUp(e)

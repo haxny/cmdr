@@ -24,6 +24,9 @@ here:
   shell; the component supplies `dialogsOnScreen()` (the only reactive input, § What `dialogsOnScreen()` is made of) and
   then runs `preventDefault` and `dispatchers.keyboard`. Keeping the decision out of the component is also what stops
   the `file-length`-flagged `+page.svelte` from growing per keyboard rule.
+- **A focused pane-chrome control keeps bare Enter, Space, the arrows, and Home/End** (`paneChromeOwnsKey`, beside the
+  text-input bails in `commandForCombo`): a path segment's Enter clicks it rather than opening the cursor row. `Tab` and
+  every modifier combo still dispatch. `#lib/file-explorer/pane/pane-chrome.ts`.
 - **An unclaimed scroll key from a file list is `suppress`** (`isUnclaimedListScrollKey`): DOM focus sits on the focused
   pane's list, and WebKit would scroll it natively on an arrow, Page, Home/End, or Space nobody cancelled, yanking the
   virtual view off the cursor. Decided here, after dispatch, ❌ not by an early `preventDefault` in the pane's key

@@ -254,9 +254,26 @@ lists. `active-pane-focus.ts::focusActivePane` is the one seam (`PaneAccess.focu
 `switchPane`, `handleFocus`, `refocus()`): the pane's list via `FilePaneAPI.focusList()` (Brief, Full, or search
 results; `preventScroll` always), else the `role="group"` container when the pane shows no list. Keys don't care which
 of the two holds focus: they bubble to the container's handlers and route by the store's focused pane. The guard
-(`key-dispatch.ts`) sends container focus and stray focus (chrome buttons, the other pane's list, Full view's scroller)
-to the same seam. The id lands a frame after focus and again after the cursor row's node is replaced
+(`key-dispatch.ts`) sends container focus and stray focus (the other pane's list, Full view's scroller) to the same
+seam. The id lands a frame after focus and again after the cursor row's node is replaced
 (`../views/list-focus.svelte.ts`). ❌ Never focus a row: rows unmount under virtualization and focus drops to `<body>`.
+
+**Pane chrome.** Each pane's tab bar (`TabBar`), location bar (`FilePane`'s `.header`, a `role="toolbar"`: volume
+button, drive badges, path segments, repo chip, eject), and sort header (both views' `.header-row`, a toolbar too) carry
+`data-pane-chrome`, inside the pane's `data-pane-chrome-scope` wrapper. `pane-chrome.ts` owns it. The guard leaves focus
+there, so VoiceOver's "keyboard focus follows the VoiceOver cursor" can rest on a control. While focus is in chrome,
+`key-dispatch` forwards nothing to the pane and runs no type-to-jump: ←/→ walk the group's controls, Home/End jump to
+its ends, ↑/↓ hop to the same pane's next group, Escape returns to the list (`focusActivePane`), and the global resolver
+leaves Enter, Space, the arrows, and Home/End to the control (`paneChromeOwnsKey`). `Tab` stays `pane.switch`, and
+modifier shortcuts still run. The keyboard way in is `pane.focusControls` (default ⌃F5), landing on the volume button.
+Activating a segment, a tab, or the volume button clicks it, and the click bubbles to the pane's (or the tab bar's)
+`onclick` (`handlePaneClick` / `onPaneFocus` → `focusActivePane`), so focus lands back in the list; a menu it opens
+takes focus and restores it home. A sort button handles Enter/Space itself without a click, so focus stays on it for the
+next press (ascending, then descending). Decision: arrow-key focus, ❌ no roving `tabindex`. `Tab` never walks the page
+here, so `tabindex` would only matter to WebKit, which makes a button with an explicit `tabindex` mouse-focusable on
+macOS (`HTMLFormControlElement::isMouseFocusable`, WebKit main, source-read 2026-10-15): a click would leave focus on
+chrome, and the next arrow would walk the toolbar instead of moving the cursor. The repo chip opts in with
+`tabindex="-1"` (a status pill, `role="img"`), so a click focuses it for a moment, until the click reaches the pane.
 
 **Pane announcer.** VoiceOver never speaks a listbox's own name, neither at launch nor on `Tab` (macOS 27.0, VoiceOver
 10, 2026-10-15 spike, even with distinct names and the active descendant held back up to 1.2 s). So each `FilePane`
@@ -1618,7 +1635,7 @@ survive the rebuild on the Rust side, so they aren't in that list.
   `[role="dialog"], [role="alertdialog"]` exemption, the guard yanks focus off the dialog overlay while `use:trapFocus`
   (see `lib/ui/DETAILS.md` § "Focus trapping") pulls it back — an endless focus ping-pong of microtasks that starves the
   event loop and freezes the webview. Pinned by the "rename to existing name is rejected on MTP" E2E. Focus containment
-  inside a dialog is the trap's job; the guard only corrals pane chrome.
+  inside a dialog is the trap's job; the guard only corrals stray focus inside the explorer.
 - **A superseded `navigateToPath` rejects with `NavigationSuperseded`, a cancelled one with `NavigationCancelled`, a
   failed listing with a plain `Error`.** The loader marks every rejection handled (a listing error is already on screen
   as the pane's error state), so the callers that fire and forget (the cancel flow's return trip, a `navigate()` whose

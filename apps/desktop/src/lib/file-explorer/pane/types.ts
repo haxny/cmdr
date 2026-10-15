@@ -294,6 +294,8 @@ export interface FilePaneAPI {
    * explorer container is the keyboard home then.
    */
   focusList(): boolean
+  /** Focuses the location bar's first control, the keyboard way into the pane's chrome (`pane-chrome.ts`). */
+  focusControls(): boolean
   /**
    * Says `message` to a screen reader through the pane's one polite live region, after
    * whatever it's saying now. Every pane announcement goes through here, never a second region.
