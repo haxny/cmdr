@@ -151,6 +151,26 @@ func Summary(fileCount, ruleCount, findingCount, violationCount int) string {
 	)
 }
 
+// ReportMeasuredMarks prints the non-text cues that are measured but not
+// gated (a cue kept subtle by design in that look), worst first, under
+// `--verbose` only. Never part of the exit code.
+func ReportMeasuredMarks(measured []Finding, verbose bool) {
+	if !verbose || len(measured) == 0 {
+		return
+	}
+	sorted := append([]Finding{}, measured...)
+	sort.SliceStable(sorted, func(i, j int) bool { return sorted[i].Ratio < sorted[j].Ratio })
+	fmt.Printf("%s=== Non-text cues, measured not gated ===%s\n", colorYellow, colorReset)
+	for _, f := range sorted {
+		accent := ""
+		if f.AccentVariant != "" {
+			accent = "  accent=" + f.AccentVariant
+		}
+		fmt.Printf("  %s  mode=%s%s  ratio=%.2f\n", f.Selector, f.Mode, accent, f.Ratio)
+	}
+	fmt.Println()
+}
+
 func plural(n int, s, p string) string {
 	if n == 1 {
 		return s

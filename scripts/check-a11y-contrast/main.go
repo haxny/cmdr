@@ -121,10 +121,16 @@ func main() {
 	// set on different selectors. See `toast_states.go`.
 	allFindings = append(allFindings, analyzer.AnalyzeToastStates()...)
 
-	// Non-text marks (field edges, the Increase contrast focus ring) at 3:1.
-	// Kept out of `allFindings` so the APCA text floor below never sees them.
-	// See `non_text_states.go`.
-	nonText := analyzer.AnalyzeNonTextStates()
+	// Non-text marks (field edges, the Increase contrast focus ring, the tab
+	// accent band, and the file-list row marks: the marked-file bar and the
+	// cursor hairlines) at 3:1 in the looks that promise it; the rest is
+	// measured and printed under -verbose. Kept out of `allFindings` so the
+	// APCA text floor below never sees them. See `non_text_states.go` and
+	// `row_mark_states.go`.
+	nonText, measuredMarks := analyzer.AnalyzeNonTextStates()
+	rowMarks, measuredRowMarks := analyzer.AnalyzeRowMarks()
+	nonText = append(nonText, rowMarks...)
+	measuredMarks = append(measuredMarks, measuredRowMarks...)
 
 	violations := FilterViolations(append(append([]Finding{}, allFindings...), nonText...))
 	warnings := append([]string{}, analyzer.Warnings...)
@@ -134,6 +140,7 @@ func main() {
 	warnings = joinWarnings(warnings)
 
 	hasViolations := Report(violations, warnings, rootDir, *verbose)
+	ReportMeasuredMarks(measuredMarks, *verbose)
 
 	// APCA: print the perceptual second opinion (detail under -verbose) and
 	// enforce the Lc-45 floor alongside the WCAG gate. See apca.go.

@@ -312,10 +312,30 @@ type rowWorstKey struct {
 	increase bool
 }
 
-// rowContrastTier is one of the two looks the matrix sweeps: the default
-// (`increase: false`) and macOS Increase contrast (`html.increase-contrast`).
+// rowContrastTier is one look a sweep evaluates: the default (zero value),
+// macOS Increase contrast (`html.increase-contrast`), or macOS Differentiate
+// without color (`html.differentiate-without-color`, the non-text marks only:
+// it changes no text token).
 type rowContrastTier struct {
-	increase bool
+	increase      bool
+	differentiate bool
+}
+
+var (
+	tierDefault       = rowContrastTier{}
+	tierIncrease      = rowContrastTier{increase: true}
+	tierDifferentiate = rowContrastTier{differentiate: true}
+)
+
+// tableFor returns the var table the tier's look resolves against.
+func tableFor(vars *VarTable, tier rowContrastTier) *VarTable {
+	switch {
+	case tier.increase:
+		return vars.WithIncreaseContrast()
+	case tier.differentiate:
+		return vars.WithDifferentiateWithoutColor()
+	}
+	return vars
 }
 
 // rowCell is one (mode, tint, bg variant, contrast tier) coordinate.
@@ -435,10 +455,14 @@ func selectionFgTokenFor(mode Mode, tint paneTintHue, variant string, increase b
 	return "color-selection-fg-primary"
 }
 
-// tierTag marks an Increase contrast finding in the report.
+// tierTag marks an Increase contrast or Differentiate without color finding
+// in the report.
 func tierTag(tier rowContrastTier) string {
-	if tier.increase {
+	switch {
+	case tier.increase:
 		return " [increase-contrast]"
+	case tier.differentiate:
+		return " [differentiate-without-color]"
 	}
 	return ""
 }

@@ -9,8 +9,9 @@ import "fmt"
 // focus ring, so a field edge drawn in the decorative `--color-border` (1.36:1
 // on white) shipped unseen. Each scenario names the mark's token and the
 // surfaces it meets, and runs in both modes, under every accent variant, and
-// (for `tiers`) under macOS Increase contrast too. These findings stay out of
-// the APCA text floor: APCA's Lc scale is for text, not a 1px edge.
+// in each look it names. These findings stay out of the APCA text floor:
+// APCA's Lc scale is for text, not a 1px edge. Marks on file-list rows, whose
+// bg depends on the pane tint and the row state, live in `row_mark_states.go`.
 
 type nonTextScenario struct {
 	// Selector is the human-readable owner of the mark, for the report.
@@ -19,46 +20,72 @@ type nonTextScenario struct {
 	MarkVar string
 	// Surfaces are the bg tokens the mark sits on.
 	Surfaces []string
-	// IncreaseContrastOnly evaluates the scenario under `html.increase-contrast`
-	// alone: a mark the default look doesn't paint (the two-layer focus ring).
-	IncreaseContrastOnly bool
+	// Gated looks are held to 3:1; Measured looks are only reported (a cue
+	// kept subtle there by design). A look in neither isn't painted.
+	Gated, Measured []rowContrastTier
 }
 
 // fieldSurfaces are the backgrounds a text field sits on: the main window, a
 // card or the settings pane, and a dialog panel.
 var fieldSurfaces = []string{"color-bg-primary", "color-bg-secondary", "color-bg-dialog"}
 
+// activeTabSurface is the active tab's own surface, which its accent band sits
+// on (`TabBar.svelte`).
+var activeTabSurface = []string{"color-bg-secondary"}
+
 var nonTextScenarios = []nonTextScenario{
-	{Selector: ".text-field / Combobox / NumberInput edge", MarkVar: "color-field-border", Surfaces: fieldSurfaces},
-	// The Differentiate without color pane bar (on the `--color-bg-secondary` header) and
-	// the Increase contrast cursor hairline (`app-visual-cues.css`, `app.css`).
-	{Selector: "accent-pop state mark", MarkVar: "color-accent-pop", Surfaces: fieldSurfaces},
 	{
-		Selector:             "focus ring ink layer (html.increase-contrast)",
-		MarkVar:              "color-focus-ink",
-		Surfaces:             fieldSurfaces,
-		IncreaseContrastOnly: true,
+		Selector: ".text-field / Combobox / NumberInput edge",
+		MarkVar:  "color-field-border",
+		Surfaces: fieldSurfaces,
+		Gated:    []rowContrastTier{tierDefault, tierIncrease},
+	},
+	{
+		Selector: "focus ring ink layer",
+		MarkVar:  "color-focus-ink",
+		Surfaces: fieldSurfaces,
+		Gated:    []rowContrastTier{tierIncrease},
+	},
+	// The focused pane's active-tab band: the raw accent by default (a pane-level
+	// extra, measured: Apple Yellow is 1.45:1 on the tab), `--color-accent-pop`
+	// under Differentiate without color, where it must clear 3:1.
+	{
+		Selector: "focused pane's tab accent band",
+		MarkVar:  "color-tab-band",
+		Surfaces: activeTabSurface,
+		Gated:    []rowContrastTier{tierDifferentiate},
+		Measured: []rowContrastTier{tierDefault},
+	},
+	// The unfocused pane's band, at half the accent: faint on purpose.
+	{
+		Selector: "unfocused pane's tab accent band",
+		MarkVar:  "color-tab-band-unfocused",
+		Surfaces: activeTabSurface,
+		Measured: []rowContrastTier{tierDefault},
 	},
 }
 
 // AnalyzeNonTextStates evaluates every non-text scenario and returns the
-// worst-case finding per (scenario, surface, mode, contrast tier).
-func (a *Analyzer) AnalyzeNonTextStates() []Finding {
-	var out []Finding
+// worst-case finding per (scenario, surface, mode, look), split into the gated
+// ones and the measured-only ones.
+func (a *Analyzer) AnalyzeNonTextStates() (gated, measured []Finding) {
 	for _, sc := range nonTextScenarios {
-		for _, increase := range []bool{false, true} {
-			if sc.IncreaseContrastOnly && !increase {
-				continue
-			}
-			base := a.Vars
-			if increase {
-				base = a.Vars.WithIncreaseContrast()
-			}
-			for _, surface := range sc.Surfaces {
-				for _, mode := range []Mode{ModeLight, ModeDark} {
-					out = append(out, a.worstNonText(base, sc, surface, mode, rowContrastTier{increase: increase}))
-				}
-			}
+		for _, tier := range sc.Gated {
+			gated = append(gated, a.nonTextFindings(sc, tier)...)
+		}
+		for _, tier := range sc.Measured {
+			measured = append(measured, a.nonTextFindings(sc, tier)...)
+		}
+	}
+	return gated, measured
+}
+
+func (a *Analyzer) nonTextFindings(sc nonTextScenario, tier rowContrastTier) []Finding {
+	base := tableFor(a.Vars, tier)
+	var out []Finding
+	for _, surface := range sc.Surfaces {
+		for _, mode := range []Mode{ModeLight, ModeDark} {
+			out = append(out, a.worstNonText(base, sc, surface, mode, tier))
 		}
 	}
 	return out

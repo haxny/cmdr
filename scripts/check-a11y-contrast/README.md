@@ -83,11 +83,15 @@ text color and the background are set on different selectors — cases the walke
 
 One pass measures marks rather than text:
 
-- **Non-text states** (`non_text_states.go`, WCAG 1.4.11): the edges and rings that carry a control's shape or state, at
-  3:1 against each surface they sit on, in both modes, across the accent matrix, and under Increase contrast: the text
-  field edge (`--color-field-border`), the `--color-accent-pop` state marks (the Differentiate without color pane bar,
-  the Increase contrast cursor hairline), and the focus ring's ink layer (`--color-focus-ink`). An unresolvable token
-  fails rather than skips. These findings join the WCAG gate but stay out of the APCA floor, whose Lc scale is for text.
+- **Non-text states** (`non_text_states.go`, `row_mark_states.go`, WCAG 1.4.11): the edges and marks that carry a
+  control's shape or state, at 3:1 against what they sit on, in both modes and across the accent matrix. Each scenario
+  names its looks: the default, Increase contrast, and Differentiate without color (the
+  `html.differentiate-without-color` block in `app.css`, parsed into `VarTable.Differentiate`). A look is either GATED
+  (3:1, joins the WCAG gate) or MEASURED (a cue kept subtle there by design, printed under `--verbose` only). Surface
+  marks: the text field edge (`--color-field-border`), the focus ring's ink layer (`--color-focus-ink`), and the tab
+  accent bands (`--color-tab-band*`). Row marks, swept over pane tint × row state like the row matrix: the marked-file
+  bar (the `--color-selection-fg` cascade) and the solid and dashed cursor hairlines (`--color-cursor-outline*`). An
+  unresolvable token fails rather than skips. These findings stay out of the APCA floor, whose Lc scale is for text.
 
 ## Opacity (detect, don't compute)
 
