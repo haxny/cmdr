@@ -486,10 +486,11 @@ vertical rhythm.
   (`--color-tab-band`), the unfocused pane's active tab the band at half strength (`--color-tab-band-unfocused`). The
   bar always shows, one tab or ten.
 - Contrast: both hairlines are measured but not gated by default (the solid one subtle by design, worst 1.09:1 in light
-  mode with Apple Yellow, 1.30:1 dark; the faint gray one 1.41:1 light, 1.52:1 dark). Under Increase contrast the solid
-  one goes to `--color-accent-pop` and the dashed one to the full `--color-control-border`; under Differentiate without
-  color both go to `--color-accent-pop` (all gated at 3:1), and Differentiate without color also lifts the focused tab
-  band to it (5.26:1 light, 5.98:1 dark). The faint band is 1.22:1 / 1.67:1 and never promises 3:1.
+  mode with Apple Yellow, 1.30:1 dark; the faint gray one 1.41:1 light, 1.52:1 dark). Under Increase contrast or
+  Differentiate without color the solid one goes to `--color-accent-pop` and the dashed one to the full
+  `--color-control-border` (3.10:1 light, 3.23:1 dark; 4.26:1 under Increase contrast's darker border), all gated at
+  3:1, and Differentiate without color also lifts the focused tab band to `--color-accent-pop` (5.26:1 light, 5.98:1
+  dark). The faint band is 1.22:1 / 1.67:1 and never promises 3:1.
 
 **Selection:** The row's text turns `var(--color-selection-fg)` (red, see § Semantic colors) and gets a 0.4px text
 stroke; the row gets the translucent `--color-selection-bg`, a hairline between consecutive selected rows, and the

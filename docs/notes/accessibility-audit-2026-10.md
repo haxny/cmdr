@@ -248,16 +248,16 @@ video, flashing, or time limits beyond toasts; native menu bar and context menus
   3.7:1), and text field borders `--color-field-border` (the same token, 3.1:1 worst on the dialog surface) since #440,
   2026-10-15, gated by `non_text_states.go`. Under Increase contrast every focus ring gains a `--color-focus-ink` layer
   (14.6:1 worst). The marked-file bar is 4.51:1 worst (light) and 4.71:1 (dark) against its row, gated at 3:1 in every
-  look by `row_mark_states.go`. The cursor hairlines (the unfocused one dashed there) reach 3.83:1 worst under Increase
-  contrast and 4.53:1 under Differentiate without color (both gated); by default both are solid and measured not gated:
-  the accent one stays subtle by design at 1.09:1 worst (light, Apple Yellow, brown tint), the faint gray one (the
-  control border at 35%) is 1.41:1 worst light and 1.52:1 dark (brown and lime tints), 4.26:1 under Increase contrast as
-  the full-strength border; the tab accent bands are 1.45:1 (focused) and 1.22:1 (unfocused) worst by default, 5.26:1
-  for the focused one under Differentiate without color. By default the 2px accent focus ring is under 3:1 on white with
-  Apple Yellow (1.58), Cmdr gold (2.38), Green (2.41), and Orange (2.58). Evidence: `app-field.css`
-  (`--color-field-border`), `app.css` `button:focus-visible`, `--shadow-focus-solid`, § Differentiate without color,
-  `app-file-list.css` cursor rules; ratios from `pnpm check a11y-contrast` (`-- --verbose` lists the measured ones) and
-  `accent_matrix.go` hexes. #440.
+  look by `row_mark_states.go`. The cursor hairlines (the unfocused one dashed there, in the full control-border gray)
+  reach 3.83:1 worst under Increase contrast and 3.10:1 under Differentiate without color (both gated); by default both
+  are solid and measured not gated: the accent one stays subtle by design at 1.09:1 worst (light, Apple Yellow, brown
+  tint), the faint gray one (the control border at 35%) is 1.41:1 worst light and 1.52:1 dark (brown and lime tints),
+  4.26:1 under Increase contrast as the full-strength border; the tab accent bands are 1.45:1 (focused) and 1.22:1
+  (unfocused) worst by default, 5.26:1 for the focused one under Differentiate without color. By default the 2px accent
+  focus ring is under 3:1 on white with Apple Yellow (1.58), Cmdr gold (2.38), Green (2.41), and Orange (2.58).
+  Evidence: `app-field.css` (`--color-field-border`), `app.css` `button:focus-visible`, `--shadow-focus-solid`, §
+  Differentiate without color, `app-file-list.css` cursor rules; ratios from `pnpm check a11y-contrast` (`-- --verbose`
+  lists the measured ones) and `accent_matrix.go` hexes. #440.
 - **1.4.12 Text spacing**: Partially supports. Rows have fixed pixel heights with `overflow: hidden`; a 1.5 line height
   fits the Comfortable density but clips in Compact (16 px rows), and middle truncation measures with canvas metrics
   that ignore letter and word spacing overrides. Pending a manual text-spacing test. Evidence: `BriefList.svelte`,
@@ -396,13 +396,14 @@ video, flashing, or time limits beyond toasts; native menu bar and context menus
   motion, Increase contrast, Differentiate without color, and macOS text size, all live. The Reduce motion misses
   (settings sidebar jump, rename shake and zoom, boot loader, switch thumb, disclosure chevrons, swatch and
   onboarding-dot grows) closed with #442 on 2026-10-15. Increase contrast (stronger borders, secondary text, focus-ring
-  ink layer, deeper light reds, raised tints) and Differentiate without color (the cursor hairlines and the focused tab
-  band lifted to `--color-accent-pop`) closed with #440 on 2026-10-15; the contrast checker sweeps both tiers. Show
-  borders (2026-10-15, `8736c60c8`) gives the borderless controls (tab close and new tab, the volume chip, path
-  segments, the breadcrumb options and eject buttons) a `--color-control-border` hairline. Not yet seen on a Mac with
-  the settings flipped. Evidence: `app.css` (`--font-system`, § Increase contrast, § Differentiate without color),
-  `app-utilities.css` § Show borders (`.borderless-control`), `src-tauri/src/display_accessibility.rs`,
-  `lib/display-accessibility.ts`, `src-tauri/src/text_size.rs`, `lib/accent-color.ts`.
+  ink layer, deeper light reds, raised tints) and Differentiate without color (the focused cursor hairline and the
+  focused tab band lifted to `--color-accent-pop`, the unfocused hairline dashed in the full control-border gray) closed
+  with #440 on 2026-10-15; the contrast checker sweeps both tiers. Show borders (2026-10-15, `8736c60c8`) gives the
+  borderless controls (tab close and new tab, the volume chip, path segments, the breadcrumb options and eject buttons)
+  a `--color-control-border` hairline. Not yet seen on a Mac with the settings flipped. Evidence: `app.css`
+  (`--font-system`, § Increase contrast, § Differentiate without color), `app-utilities.css` § Show borders
+  (`.borderless-control`), `src-tauri/src/display_accessibility.rs`, `lib/display-accessibility.ts`,
+  `src-tauri/src/text_size.rs`, `lib/accent-color.ts`.
 - **503.3 Alternative user interfaces**: Not applicable. Cmdr provides no alternative UI acting as assistive tech.
 - **503.4.1 Caption controls**: Not applicable. No video.
 - **503.4.2 Audio description controls**: Not applicable. No video.

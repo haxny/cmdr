@@ -423,7 +423,7 @@ const wcagAA: CriterionRow[] = [
     level: 'AA',
     conformance: 'partially-supports',
     remark:
-      'Checkbox, switch, and text field borders reach at least 3:1 (about 3.7:1 on white), and the bar on marked files at least 4.5:1. With the macOS Increase contrast or Differentiate without color setting on, the cursor outlines that tell the two panes apart reach at least 3.8:1, and with Increase contrast every focus ring gains an inner ring that clears 3:1 with any accent color. Without those settings, the cursor outlines are deliberately subtle (about 1.1:1 for the accent one with the yellow accent and 1.4:1 for the gray one, in light mode), and in light mode the focus ring is under 3:1 with the yellow, gold, green, and orange accent colors.',
+      'Checkbox, switch, and text field borders reach at least 3:1 (about 3.7:1 on white), and the bar on marked files at least 4.5:1. With the macOS Increase contrast or Differentiate without color setting on, the cursor outlines that tell the two panes apart reach at least 3:1, and with Increase contrast every focus ring gains an inner ring that clears 3:1 with any accent color. Without those settings, the cursor outlines are deliberately subtle (about 1.1:1 for the accent one with the yellow accent and 1.4:1 for the gray one, in light mode), and in light mode the focus ring is under 3:1 with the yellow, gold, green, and orange accent colors.',
     issues: [440],
   },
   {

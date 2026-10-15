@@ -16,7 +16,7 @@ import "fmt"
 //     band. Increase contrast and Differentiate without color dash the unfocused
 //     one, so solid vs dashed becomes the cue: Increase contrast lifts the solid
 //     one to `--color-accent-pop` and the dashed one to the full control-border
-//     gray, Differentiate without color both to `--color-accent-pop`. There they
+//     gray, and Differentiate without color does the same. There they
 //     must clear 3:1.
 //
 // A gated finding joins the WCAG gate; a measured one prints under

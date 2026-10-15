@@ -183,9 +183,9 @@
   --color-cursor-outline: color-mix(in oklch, var(--color-accent), transparent 65%);
   /* The unfocused pane's cursor hairline: a faint gray (the control-border tone at 35%,
      about as quiet as the accent hairline), so the accent belongs to the focused pane.
-     Solid by default; DASHED under Increase contrast (full control-border tone) and
-     Differentiate without color (`--color-accent-pop`), both below, where the shape
-     tells the panes apart (`app-file-list.css`). */
+     Solid by default; DASHED in the full control-border tone under Increase contrast
+     (which darkens that tone) and Differentiate without color, both below, where the
+     shape tells the panes apart (`app-file-list.css`). */
   --color-cursor-outline-unfocused: color-mix(in srgb, var(--color-control-border), transparent 65%);
 
   /* === Tab accent band (`TabBar`'s active tab) ===
@@ -1092,16 +1092,16 @@ html.increase-contrast {
    macOS Accessibility > Display > Differentiate without color, mirrored as the
    `differentiate-without-color` class on `<html>` by `#lib/display-accessibility`. The
    default look tells marked files apart by shape (the marked-file bar and stroke); this
-   dashes the unfocused pane's cursor hairline (`app-file-list.css`) and lifts the cues
-   that lean on a faint accent to `--color-accent-pop`, so each clears 3:1 whatever the
-   accent and tint. The contrast checker reads this block as its own tier
-   (`non_text_states.go`).
+   dashes the unfocused pane's cursor hairline (`app-file-list.css`) in the full
+   control-border gray and lifts the cues that lean on a faint accent to
+   `--color-accent-pop`, so each clears 3:1 whatever the accent and tint. The contrast
+   checker reads this block as its own tier (`non_text_states.go`).
 
    - Both cursor hairlines, so solid vs dashed reads at full strength.
    - The focused pane's tab accent band (the unfocused one stays faint). */
 html.differentiate-without-color {
   --color-cursor-outline: var(--color-accent-pop);
-  --color-cursor-outline-unfocused: var(--color-accent-pop);
+  --color-cursor-outline-unfocused: var(--color-control-border);
   --color-tab-band: var(--color-accent-pop);
 }
 
