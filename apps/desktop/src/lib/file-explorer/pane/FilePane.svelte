@@ -2038,6 +2038,7 @@
     class="file-pane"
     class:is-focused={isFocused}
     onclick={pointer.handlePaneClick}
+    onmousedown={pointer.handlePaneMouseDown}
     ondblclick={pointer.handlePaneBackgroundDblClick}
     onkeydown={() => {}}
     role="region"

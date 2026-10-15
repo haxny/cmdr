@@ -80,6 +80,7 @@ export interface PanePointer {
   handleContextMenu: (entry: FileEntry, anchor?: MenuAnchor | null) => Promise<void>
   handleSelect: (args: SelectPayload) => void
   handlePaneClick: (event: MouseEvent) => void
+  handlePaneMouseDown: (event: MouseEvent) => void
   handlePaneBackgroundDblClick: (event: MouseEvent) => void
 }
 
@@ -181,6 +182,22 @@ export function createPanePointer(deps: PanePointerDeps): PanePointer {
   }
 
   /**
+   * A primary-button press on the list background (the empty space below or beside the rows)
+   * switches to this pane on the PRESS, as a row's own `mousedown` does. Waiting for the click
+   * isn't enough: the browser's mousedown default focuses the pressed list (Full view: its
+   * scroller) while the store still names the other pane, the focus guard bounces that focus
+   * back, and on a real click in WKWebView the pane never switched (2026-10-15 VoiceOver run).
+   * Switching first makes the guard land focus on this pane's list, with no bounce through
+   * the old one. Rows, other buttons (right-click, the back/forward side buttons), and chrome
+   * keep their own handling.
+   */
+  function handlePaneMouseDown(event: MouseEvent): void {
+    if (event.button !== 0) return
+    if (!isFileListBackgroundClick(event.target)) return
+    deps.onRequestFocus()
+  }
+
+  /**
    * Double-clicking the empty file-list background navigates up one folder
    * (Directory Opus-style), gated by `behavior.doubleClickPaneNavigatesToParent`.
    * On the very first trigger we raise a one-time INFO toast explaining it, and
@@ -201,5 +218,5 @@ export function createPanePointer(deps: PanePointerDeps): PanePointer {
     }
   }
 
-  return { handleSelect, handleContextMenu, handlePaneClick, handlePaneBackgroundDblClick }
+  return { handleSelect, handleContextMenu, handlePaneClick, handlePaneMouseDown, handlePaneBackgroundDblClick }
 }

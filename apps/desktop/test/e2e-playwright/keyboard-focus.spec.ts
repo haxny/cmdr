@@ -252,4 +252,19 @@ test.describe('Keyboard focus: which pane the next ↓ moves', () => {
     await expect.poll(async () => focusedPane(tauriPage), { timeout: waitBudget(3000) }).toBe('right')
     await expectKeysReach(tauriPage, 'right')
   })
+
+  // The PRESS alone, no click: a real click on empty list space never switched panes while
+  // the switch waited for the click (the browser's focus default bounced through the old
+  // pane first), so it happens on `mousedown`, as a row's does.
+  test('after a press on empty list space in the unfocused pane, that pane', async ({ tauriPage }) => {
+    const pressed = await tauriPage.evaluate<boolean>(`(function() {
+      var surface = document.querySelectorAll('.file-pane')[1]?.querySelector('[data-file-list-surface]');
+      if (!surface) return false;
+      surface.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0 }));
+      return true;
+    })()`)
+    expect(pressed).toBe(true)
+    await expect.poll(async () => focusedPane(tauriPage), { timeout: waitBudget(3000) }).toBe('right')
+    await expectKeysReach(tauriPage, 'right')
+  })
 })

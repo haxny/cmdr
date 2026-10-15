@@ -255,7 +255,11 @@ lists. `active-pane-focus.ts::focusActivePane` is the one seam (`PaneAccess.focu
 results; `preventScroll` always), else the `role="group"` container when the pane shows no list. Keys don't care which
 of the two holds focus: they bubble to the container's handlers and route by the store's focused pane. The guard
 (`key-dispatch.ts`) sends container focus and stray focus (the other pane's list, Full view's scroller) to the same
-seam. The id lands a frame after focus and again after the cursor row's node is replaced
+seam. A mouse pane switch happens on the PRESS for rows and empty list space (the row's `mousedown`, the pane's
+`handlePaneMouseDown` in `pane-pointer.ts`), before the browser's focus default runs, so the guard lands that focus on
+the new pane's list; elsewhere in the pane (chrome) it's the click (`handlePaneClick`). Gotcha/Why: with the switch on
+the click alone, a real click on the unfocused pane's empty list space bounced focus through the old pane and never
+switched (VoiceOver run, 2026-10-15). The id lands a frame after focus and again after the cursor row's node is replaced
 (`../views/list-focus.svelte.ts`). Focus that falls to `<body>` (its element unmounted) comes home when the focused
 pane's list mounts, unmounts, or lands a new folder's cursor row (same file; a Brief/Full toggle, a tab close, Backspace
 on a focused path segment). ❌ Never focus a row: rows unmount under virtualization and focus drops to `<body>`.

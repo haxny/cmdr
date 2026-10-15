@@ -427,6 +427,29 @@ describe('createPanePointer', () => {
     })
   })
 
+  describe('pressing on the list background', () => {
+    function press(button = 0) {
+      return { target: null, button } as unknown as MouseEvent
+    }
+
+    it('focuses the pane on the press, before the browser moves focus', () => {
+      createPanePointer(deps).handlePaneMouseDown(press())
+      expect(calls.onRequestFocus).toHaveBeenCalledTimes(1)
+    })
+
+    it('leaves a press on a row to the row', () => {
+      background.isFileListBackgroundClick.mockReturnValue(false)
+      createPanePointer(deps).handlePaneMouseDown(press())
+      expect(calls.onRequestFocus).not.toHaveBeenCalled()
+    })
+
+    it('ignores a right or side button, which never switched panes', () => {
+      createPanePointer(deps).handlePaneMouseDown(press(2))
+      createPanePointer(deps).handlePaneMouseDown(press(3))
+      expect(calls.onRequestFocus).not.toHaveBeenCalled()
+    })
+  })
+
   describe('double-clicking the pane background', () => {
     function dblClick() {
       return { target: null } as unknown as MouseEvent
