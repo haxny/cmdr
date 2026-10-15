@@ -118,3 +118,33 @@ describe('ToastItem held by keyboard focus', () => {
     expect(toast.querySelector('.toast-timer')?.getAttribute('data-state')).toBe('paused')
   })
 })
+
+describe('ToastItem under a click', () => {
+  beforeEach(() => {
+    document.body.innerHTML = ''
+  })
+
+  function mouseDown(target: Element): MouseEvent {
+    const event = new MouseEvent('mousedown', { bubbles: true, cancelable: true })
+    target.dispatchEvent(event)
+    return event
+  }
+
+  // Regression: WebKit moved focus to `<body>` on a click on the toast's text, and every pane
+  // key died until Tab or a click (VoiceOver listening run, 2026-10-15).
+  it('keeps focus where it is when the click lands on its text', async () => {
+    const { toast } = mountTransient(vi.fn())
+    await tick()
+
+    const message = toast.querySelector('.toast-message')
+    if (!message) throw new Error('Toast message missing')
+    expect(mouseDown(message).defaultPrevented).toBe(true)
+  })
+
+  it('still lets a click focus its buttons', async () => {
+    const { close } = mountTransient(vi.fn())
+    await tick()
+
+    expect(mouseDown(close).defaultPrevented).toBe(false)
+  })
+})

@@ -89,6 +89,8 @@
     let toastElement: HTMLDivElement | undefined = $state()
     let focusReturnTarget: FocusOrigin | null = null
     let ownedFocus = false
+    /** What a press inside the toast may focus; a press anywhere else in it keeps focus put. */
+    const FOCUSABLE_IN_TOAST = 'button, a[href], input, select, textarea, [tabindex], [contenteditable="true"]'
 
     onMount(() => {
         focusReturnTarget = captureFocusOrigin()
@@ -112,6 +114,15 @@
             focusReturnTarget = captureFocusOrigin(active)
             ownedFocus = true
         }
+    }
+
+    /**
+     * A click on the toast's text keeps focus where it is. WebKit otherwise drops it to `<body>`
+     * (the frame isn't focusable), and every pane key dies until Tab or a click. Text selection
+     * is off app-wide, so cancelling the press costs nothing; a control still takes its click.
+     */
+    function keepFocusOnTextPress(event: MouseEvent): void {
+        if (event.target instanceof Element && !event.target.closest(FOCUSABLE_IN_TOAST)) event.preventDefault()
     }
 
     function observeDocumentFocus(event: FocusEvent): void {
@@ -293,6 +304,7 @@
     onpointerenter={handlePointerEnter}
     onpointerleave={handlePointerLeave}
     onpointerdown={rememberPointerFocusOrigin}
+    onmousedown={keepFocusOnTextPress}
     onfocusin={handleFocusIn}
     onfocusout={handleFocusOut}
 >

@@ -1452,6 +1452,10 @@ It restores only when focus fell to `<body>`, so a dialog or field opened by the
 claimed. This applies to the X and inline actions; timeout or programmatic removal of a toast that the user did not
 interact with moves nothing.
 
+A press on a toast's text (anything but a control) is cancelled on `mousedown`, so focus stays put: the frame isn't
+focusable, and WebKit otherwise drops focus to `<body>`, where every pane key dies until Tab. Text selection is off
+app-wide, so the cancel costs nothing.
+
 ### Origin pane and scoped dismissal
 
 A toast carries an optional `originPane?: 'left' | 'right'`. It marks a toast as describing THAT pane's directory or a
