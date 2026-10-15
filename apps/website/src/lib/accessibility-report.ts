@@ -169,7 +169,7 @@ const wcagA: CriterionRow[] = [
     level: 'A',
     conformance: 'partially-supports',
     remark:
-      'Git status uses letters, errors use labeled symbols, and size and date colors are optional decoration. Marked files differ from other files mostly by their red color, hidden files only by a dimmer color, and the focused pane only by a faint background.',
+      'Git status uses letters, errors use labeled symbols, and size and date colors are optional decoration. Marked files differ from other files mostly by their red color, hidden files only by a dimmer color, and the focused pane only by a faint background. With the macOS Differentiate without color setting on, a bar also marks the focused pane and each marked file.',
     issues: [440],
   },
   { id: '1.4.2', name: 'Audio control', level: 'A', conformance: 'not-applicable', remark: 'Cmdr plays no audio.' },
@@ -391,7 +391,7 @@ const wcagAA: CriterionRow[] = [
     level: 'AA',
     conformance: 'partially-supports',
     remark:
-      'An automated check on every change measures every text color against its background in light and dark mode, with all macOS accent colors and pane tints, at 4.5:1 (3:1 for large text). Marked file names measure at least 4.52:1. Two exceptions: with the macOS Increase contrast setting on, light mode can drop to about 4.18:1 on a brown pane tint, and the optional "App" date and size colors can put a pale accent color on text (about 2.4:1 with the gold accent).',
+      'An automated check on every change measures every text color against its background in light and dark mode, with all macOS accent colors and pane tints, at 4.5:1 (3:1 for large text). Marked file names measure at least 4.52:1. The check also covers the stronger colors the macOS Increase contrast setting turns on. One exception: the optional "App" date and size colors can put a pale accent color on text (about 2.4:1 with the gold accent).',
     issues: [440],
   },
   {
@@ -424,7 +424,7 @@ const wcagAA: CriterionRow[] = [
     level: 'AA',
     conformance: 'partially-supports',
     remark:
-      'Checkbox and switch borders reach about 3.7:1. Text field borders are 1.36:1 in light mode and 1.71:1 in dark mode. In light mode, the focus ring is under 3:1 with the yellow, gold, green, and orange accent colors, and the difference between the focused and the unfocused pane is about 1.09:1.',
+      'Checkbox, switch, and text field borders reach at least 3:1 (about 3.7:1 on white). With the macOS Increase contrast setting on, every focus ring gains an inner ring that clears 3:1 with any accent color. Without it, in light mode the focus ring is under 3:1 with the yellow, gold, green, and orange accent colors, and the difference between the focused and the unfocused pane is about 1.09:1.',
     issues: [440],
   },
   {
@@ -576,7 +576,8 @@ const section508Ch3: CriterionRow[] = [
     id: '302.3',
     name: 'Without perception of color',
     conformance: 'partially-supports',
-    remark: 'Marked files and hidden files are told apart by color. Everything else uses symbols and text.',
+    remark:
+      'Marked files and hidden files are told apart by color. With the macOS Differentiate without color setting on, marked files and the focused pane also get a bar; hidden files still differ only by color. Everything else uses symbols and text.',
     issues: [440],
   },
   { id: '302.4', name: 'Without hearing', conformance: 'supports', remark: 'Cmdr uses no sound.' },
@@ -752,10 +753,9 @@ const section508Ch5: CriterionRow[] = [
   {
     id: '503.2',
     name: 'User preferences',
-    conformance: 'partially-supports',
+    conformance: 'supports',
     remark:
-      "Cmdr follows the macOS system font, light and dark mode, accent color, text size, Reduce transparency, and Reduce motion. Increase contrast only changes pane tints, and Differentiate without color isn't used.",
-    issues: [440],
+      'Cmdr follows the macOS system font, light and dark mode, accent color, text size, Reduce transparency, Reduce motion, Increase contrast (stronger borders, secondary text, focus rings, and pane tints), and Differentiate without color (a bar marks the focused pane and marked files), and picks up changes without a restart.',
   },
   {
     id: '503.3',
@@ -1076,9 +1076,8 @@ const enClause11: CriterionRow[] = [
   {
     id: '11.7',
     name: 'User preferences',
-    conformance: 'partially-supports',
+    conformance: 'supports',
     remark: 'See Section 508 503.2.',
-    issues: [440],
   },
   {
     id: '11.8.1–11.8.5',

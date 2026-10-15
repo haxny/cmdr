@@ -36,13 +36,13 @@ Counts per table (rows marked "see WCAG section" aren't counted):
 - **WCAG 2.2 Level AA (24)**: 11 Supports, 8 Partially supports, 0 Does not support, 5 Not applicable (1.3.5 and 3.1.2
   moved to Supports with #442, 2.4.11 and 4.1.3 with #439, 2026-10-15).
 - **Section 508 chapter 3 (9)**: 5 Supports, 4 Partially supports (302.9 moved to Supports with #439, 2026-10-15).
-- **Section 508 chapter 5 (26)**: 10 Supports, 6 Partially supports, 10 Not applicable (502.3.6 moved to Supports with
-  #438, 502.3.14 with #439, 2026-10-15).
+- **Section 508 chapter 5 (26)**: 11 Supports, 5 Partially supports, 10 Not applicable (502.3.6 moved to Supports with
+  #438, 502.3.14 with #439, 503.2 with #440, 2026-10-15).
 - **Section 508 chapter 6 (5)**: 2 Supports, 2 Partially supports, 1 Not applicable.
 - **EN 301 549 clause 4 (11)**: 7 Supports, 4 Partially supports (4.2.10 moved to Supports with #439, 2026-10-15).
 - **EN 301 549 clause 5 (11)**: 2 Supports, 9 Not applicable.
-- **EN 301 549 clause 11 (23)**: 9 Supports, 6 Partially supports, 8 Not applicable (11.5.2.8 moved to Supports with
-  #438, 11.5.2.15 with #439, 2026-10-15).
+- **EN 301 549 clause 11 (23)**: 10 Supports, 5 Partially supports, 8 Not applicable (11.5.2.8 moved to Supports with
+  #438, 11.5.2.15 with #439, 11.7 with #440, 2026-10-15).
 - **EN 301 549 clause 12 (5)**: 3 Supports, 2 Partially supports.
 - **Whole chapters/clauses not applicable**: 508 chapter 4 (hardware); EN 301 549 clauses 6 (two-way voice), 7 (video),
   8 (hardware), 9 (web: the app isn't web content; the website is assessed as documentation under 12.1.2), 10 (non-web
@@ -61,8 +61,10 @@ Top gaps, each with its issue:
    Search result cursor, the Settings sidebar, empty folders, selection counts, the license key error, progress text.
 3. **Toasts are mouse-first** (#439, closed in code 2026-10-15, VoiceOver checks pending): focus didn't pause them, no
    key reached them, no setting kept them, and Undo trash existed only in a 10-second toast.
-4. **State cues rely on faint color** (#440): which pane is focused (about 1.09:1), marked rows (hue only), focus rings
-   under 3:1 with yellow, orange, green, or Cmdr gold accents in light mode, field borders 1.36:1.
+4. **State cues rely on faint color** (#440, partly closed in code 2026-10-15): which pane is focused (about 1.09:1),
+   marked rows (hue only), and focus rings under 3:1 with yellow, orange, green, or Cmdr gold accents in light mode, by
+   default. Field borders now clear 3:1; Increase contrast and Differentiate without color are read and styled; the
+   default-look options for the three cues await David's design pick (Debug > Visual cues).
 5. **Pointer and keyboard leftovers** (#441): tab reorder is drag-only, sub-24px targets, tooltips not hoverable, viewer
    bare-key shortcuts not remappable, zoom tops out at 150%.
 6. **Quick fixes** (#442, closed in code 2026-10-15): Reduce motion misses, hard-coded English labels and window titles,
@@ -73,8 +75,8 @@ Top gaps, each with its issue:
 Strengths a buyer can rely on: everything core runs from the keyboard (every action is a command with a rebindable
 shortcut and a command palette entry); all dialogs share one primitive with correct roles, focus trap, Escape, and focus
 restore; text contrast is gated in CI across both themes and every macOS accent; macOS text size, dark mode, accent
-color, Reduce motion, and Reduce transparency are honored; no audio, video, flashing, or time limits beyond toasts;
-native menu bar and context menus.
+color, Reduce motion, Reduce transparency, Increase contrast, and Differentiate without color are honored; no audio,
+video, flashing, or time limits beyond toasts; native menu bar and context menus.
 
 ## WCAG 2.2 Level A
 
@@ -102,8 +104,10 @@ native menu bar and context menus.
   review.
 - **1.4.1 Use of color**: Partially supports. Git status uses letters, errors use labeled glyphs, and size/age colors
   are decorative. Marked files differ from normal rows mostly by red hue, hidden files only by a dimmer color, and the
-  focused pane only by a faint fill. Evidence: `app.css` `--color-selection-fg-primary`, `app-file-list.css` marked-row
-  rules, `--color-text-quiet`; `git/status-column.ts`. #440.
+  focused pane only by a faint fill. Under macOS Differentiate without color (read since #440, 2026-10-15), a
+  `--color-accent-pop` bar marks the focused pane's header (5.26:1 worst) and a red edge bar marks each marked row
+  (4.51:1 worst). Evidence: `app.css` `--color-selection-fg-primary`, `app-file-list.css` marked-row rules,
+  `app-visual-cues.css`, `--color-text-quiet`; `git/status-column.ts`. #440.
 - **1.4.2 Audio control**: Not applicable. Cmdr plays no audio.
 - **2.1.1 Keyboard**: Partially supports. Every core action is a command with a shortcut and a command palette entry:
   pane switch, navigation, marking, open, go up, go to path, volume chooser, tabs, sort, divider, view mode, all file
@@ -189,11 +193,12 @@ native menu bar and context menus.
   `AttachEmailCheckbox.svelte`, `onboarding/StepBeta.svelte`, `settings/sections/UpdatesSection.svelte`.
 - **1.4.3 Contrast (minimum)**: Partially supports. Every text token pair is gated at 4.5:1 (3:1 large) in CI in light
   and dark mode under all nine accent variants and all pane tints; marked file names measure 4.52:1 worst case (light)
-  and 4.71:1 (dark). Exceptions: with macOS Increase contrast on, light mode can fall to about 4.18:1 on a brown pane
-  tint (computed; the checker doesn't model those tints yet), and the opt-in "App" date and size palettes put the raw
-  accent on text (gold about 2.4:1). Core tokens on `#ffffff` / `#1e1e1e`: primary 17.40 / 13.61, secondary 5.74 / 9.56,
-  tertiary 5.74 / 7.18, error text 6.47 / 8.78, warning text 7.31 / 9.89. Evidence: `pnpm check a11y-contrast` (green),
-  `scripts/check-a11y-contrast/row_state_matrix.go`, `app.css` `prefers-contrast: more` block. #440.
+  and 4.71:1 (dark). The checker also sweeps the Increase contrast tier (`html.increase-contrast` tokens, 15% / 25%
+  tints); the 4.16:1 brown-tint corner it found there closed with #440 on 2026-10-15 (deeper light reds). Exception: the
+  opt-in "App" date and size palettes put the raw accent on text (gold about 2.4:1). Core tokens on `#ffffff` /
+  `#1e1e1e`: primary 17.40 / 13.61, secondary 5.74 / 9.56, tertiary 5.74 / 7.18, error text 6.47 / 8.78, warning text
+  7.31 / 9.89. Evidence: `pnpm check a11y-contrast` (green), `scripts/check-a11y-contrast/row_state_matrix.go`,
+  `app.css` § Increase contrast. #440.
 - **1.4.4 Resize text**: Supports. App zoom (⌘+ / ⌘−, 75–150%) compounds with the macOS Accessibility text size
   (0.82–3.12×), so text reaches 200% and beyond; tokens are rem-based and rows grow with text. App zoom alone stops at
   150% (#441). Evidence: `src-tauri/src/text_size.rs`, `lib/text-size.svelte.ts`, `command-handlers/view-handlers.ts`,
@@ -204,10 +209,12 @@ native menu bar and context menus.
   for content that requires 2-D layout covers the file grid, not the chrome). Pending a manual check at 150% zoom plus
   large system text. Evidence: `src-tauri/tauri.conf.json`, `settings/settings-window.ts`, `file-viewer/open-viewer.ts`.
 - **1.4.11 Non-text contrast**: Partially supports. Checkbox and switch borders use `--color-control-border` (about
-  3.7:1). Text field borders are 1.36:1 (light) and 1.71:1 (dark); the 2px accent focus ring is under 3:1 on white with
-  Apple Yellow (1.58), Cmdr gold (2.38), Green (2.41), and Orange (2.58); the focused-pane cue is about 1.09:1.
-  Evidence: `app-field.css` (`--color-border`), `app.css` `button:focus-visible`, `--shadow-focus-solid`,
-  `app-file-list.css` cursor rules; ratios computed from `scripts/check-a11y-contrast/accent_matrix.go` hexes. #440.
+  3.7:1), and text field borders `--color-field-border` (the same token, 3.1:1 worst on the dialog surface) since #440,
+  2026-10-15, gated by `non_text_states.go`. Under Increase contrast every focus ring gains a `--color-focus-ink` layer
+  (14.6:1 worst). By default the 2px accent focus ring is under 3:1 on white with Apple Yellow (1.58), Cmdr gold (2.38),
+  Green (2.41), and Orange (2.58); the focused-pane cue is about 1.09:1. Evidence: `app-field.css`
+  (`--color-field-border`), `app.css` `button:focus-visible`, `--shadow-focus-solid`, `app-file-list.css` cursor rules;
+  ratios computed from `scripts/check-a11y-contrast/accent_matrix.go` hexes. #440.
 - **1.4.12 Text spacing**: Partially supports. Rows have fixed pixel heights with `overflow: hidden`; a 1.5 line height
   fits the Comfortable density but clips in Compact (16 px rows), and middle truncation measures with canvas metrics
   that ignore letter and word spacing overrides. Pending a manual text-spacing test. Evidence: `BriefList.svelte`,
@@ -269,7 +276,8 @@ native menu bar and context menus.
 - **302.2 With limited vision**: Partially supports. macOS text size plus app zoom past 200%, dark mode, AA text
   contrast in CI. Weak focused-pane and focus-ring contrast with some accents. #440, #441.
 - **302.3 Without perception of color**: Partially supports. Marked files and hidden files rely on color; the rest uses
-  glyphs and text. #440.
+  glyphs and text. Under Differentiate without color, marked rows and the focused pane gain a bar; hidden files don't.
+  #440.
 - **302.4 Without hearing**: Supports. Cmdr uses no audio cues.
 - **302.5 With limited hearing**: Supports. Same as 302.4.
 - **302.6 Without speech**: Supports. No speech input needed.
@@ -321,12 +329,15 @@ native menu bar and context menus.
   moving the VoiceOver cursor onto a file row likely doesn't move Cmdr's cursor. Pending VoiceOver check V1. #437.
 - **502.3.14 Event notification**: Supports. See WCAG 4.1.3. Pending VoiceOver check V4.
 - **502.4 Platform accessibility features**: Not applicable. Applies to platforms.
-- **503.2 User preferences**: Partially supports. Honors system font, dark/light, accent color, Reduce transparency,
-  Reduce motion, and macOS text size. The Reduce motion misses (settings sidebar jump, rename shake and zoom, boot
-  loader, switch thumb, disclosure chevrons, swatch and onboarding-dot grows) closed with #442 on 2026-10-15. Increase
-  contrast only changes pane tints; Differentiate without color isn't read. Evidence: `app.css` (`--font-system`,
-  `prefers-contrast` block), `src-tauri/src/reduce_transparency.rs`, `src-tauri/src/text_size.rs`,
-  `lib/accent-color.ts`. #440.
+- **503.2 User preferences**: Supports. Honors system font, dark/light, accent color, Reduce transparency, Reduce
+  motion, Increase contrast, Differentiate without color, and macOS text size, all live. The Reduce motion misses
+  (settings sidebar jump, rename shake and zoom, boot loader, switch thumb, disclosure chevrons, swatch and
+  onboarding-dot grows) closed with #442 on 2026-10-15. Increase contrast (stronger borders, secondary text, focus-ring
+  ink layer, deeper light reds, raised tints) and Differentiate without color (pane and marked-row bars) closed with
+  #440 on 2026-10-15; the contrast checker sweeps the Increase contrast tier. Not yet seen on a Mac with the settings
+  flipped (Debug > Visual cues simulates both). Evidence: `app.css` (`--font-system`, § Increase contrast),
+  `app-visual-cues.css`, `src-tauri/src/display_accessibility.rs`, `lib/display-accessibility.ts`,
+  `src-tauri/src/text_size.rs`, `lib/accent-color.ts`.
 - **503.3 Alternative user interfaces**: Not applicable. Cmdr provides no alternative UI acting as assistive tech.
 - **503.4.1 Caption controls**: Not applicable. No video.
 - **503.4.2 Audio description controls**: Not applicable. No video.
@@ -410,7 +421,7 @@ native menu bar and context menus.
 - **11.5.2.17 Modifications of values and text**: Supports. See 508 502.3.5 and 502.3.9.
 - **11.6.1 User control of accessibility features**: Not applicable. Cmdr isn't platform software.
 - **11.6.2 No disruption of accessibility features**: Supports. See 508 502.2.2.
-- **11.7 User preferences**: Partially supports. See 508 503.2. #440.
+- **11.7 User preferences**: Supports. See 508 503.2.
 - **11.8.1–11.8.5 Authoring tools**: Not applicable.
 
 ### Clause 12: documentation and support services
