@@ -182,7 +182,7 @@
     },
     "apps/desktop/src/lib/ui/Menu.svelte": {
       "lines": 841,
-      "reason": "The house menu's DOM half: the surface and its submenu surface, both portaled and focus-holding, plus ~200 lines of `<style>` both surfaces share as one scoped sheet. The behavior already lives in `menu-controller.svelte.ts`, `menu-navigation.ts`, `menu-reorder.ts`, and `deferred-active-descendant.svelte.ts`. Pulling the submenu into its own component would split one scoped stylesheet across two files and route its focus hand-off (focus back to the parent surface BEFORE the submenu node unmounts) through a component boundary, which is the ordering this file exists to keep in one place."
+      "reason": "The house menu's DOM half: the surface and its submenu surface, both portaled and focus-holding, plus ~200 lines of `\u003cstyle\u003e` both surfaces share as one scoped sheet. The behavior already lives in `menu-controller.svelte.ts`, `menu-navigation.ts`, `menu-reorder.ts`, and `deferred-active-descendant.svelte.ts`. Pulling the submenu into its own component would split one scoped stylesheet across two files and route its focus hand-off (focus back to the parent surface BEFORE the submenu node unmounts) through a component boundary, which is the ordering this file exists to keep in one place."
     },
     "apps/desktop/src/lib/ui/ModalDialog.svelte": {
       "lines": 934,
@@ -200,13 +200,13 @@
       "lines": 1590,
       "reason": "TODO: The search bar is the one large presentational block this directory has not extracted yet: roughly 112 lines of markup (the `TextInput`, the `Aa` and `.*` toggles, the five-branch match counter, the stop/prev/next/close buttons, the progress bar), bound entirely to the `search` composable, plus roughly 70 lines of `.search-bar` / `.search-toggle` / `.match-count` / `.search-error` / `.search-spinner` / `.search-progress*` CSS. Move it to `ViewerSearchBar.svelte` beside `ViewerToolbar.svelte` and `ViewerStatusBar.svelte`, and move the binary-warning banner (roughly 30 markup lines plus its `.binary-warning*` rules) to `ViewerBinaryWarning.svelte`. That lands near 1,290 lines and no lower: the remaining 885-line `\u003cscript\u003e` is pinned here by the contract in `CLAUDE.md` (the `$state` lives on the page, the roughly 20 `createViewer*` composables take getters, and the `$effect`s delegate to `run*Effect()`), and `openViewerSession` writes a dozen of those `$state` vars directly, so lifting it out would mean threading a dozen setters through."
     },
-    "apps/website/src/lib/accessibility-report.ts": {
-      "lines": 1226,
-      "reason": "Pure data, no logic: one row per criterion of the VPAT 2.5Rev INT accessibility conformance report (WCAG 2.2 A and AA, Revised 508, EN 301 549), each with its conformance level, buyer-facing remark, and pending VoiceOver checks. It grows with the standards, not with code, and one file keeps a VoiceOver result a single search-and-edit (`'V3'` finds every row it fills)."
-    },
     "apps/website/src/dev/blog-editor/entry.ts": {
       "lines": 1096,
       "reason": "TODO: Two independent things share this file. The live preview renderer is roughly 320 lines (`renderPreview`, `expandInlineIcons`, `iconSvgHtml`, `rewritePreviewImageSources`, `expandBlogMedia`, `figureCell`, `buildSlider`, `lightboxFigure`, `activateCompareSliders`, `SLANT_MAX`, `isMeaningfulNode`, `isImageCell`, `captionFor`) and it mirrors `src/plugins/blog-media.ts` and `BlogCompareSlider.astro` rather than the editor; everything below `renderPreview` takes a container and transforms it, with no reach into the module-level `entry` state. Move it to a `preview.ts` sibling exporting `renderPostBody(container, html)` and `activateCompareSliders`, so the keep-in-sync-with-the-plugin obligation lives in one named file. Then move the textarea editing helpers (`attachMarkdownShortcuts`, `wrapSelection`, `insertLink`, `insertAtCursor`, roughly 70 lines) to `markdown-shortcuts.ts`, and the tail of pure helpers (`stableHash`, `slugify`, `todayString`, `formatTime`, `formatLongDate`, `arrayBufferToBase64`, `altTextFromFilename`, `assetUrlFor`, `fetchJson`, `element`, `errorMessage`, roughly 120 lines) to `utils.ts`. `entry.ts` keeps the DOM handles, `attachListeners`, and the load/save/publish/backup flow, at roughly 600 lines."
+    },
+    "apps/website/src/lib/accessibility-report.ts": {
+      "lines": 1100,
+      "reason": "Pure data, no logic: one row per criterion of the VPAT 2.5Rev INT accessibility conformance report (WCAG 2.2 A and AA, Revised 508, EN 301 549), each with its conformance level, buyer-facing remark, and pending VoiceOver checks. It grows with the standards, not with code, and one file keeps a VoiceOver result a single search-and-edit (`'V3'` finds every row it fills)."
     },
     "crates/cmdr-archive/src/volume.rs": {
       "lines": 842,
@@ -260,13 +260,13 @@
       "lines": 1204,
       "reason": "TODO: split; the file even carries a comment listing which impl blocks live in submodules, and two more belong there. Move `connect` with `resolve_device_location_id`, `open_device`, `probe_write_capability`, and `get_storages` (roughly 400 lines, one device-open conversation end to end) to `connect.rs`, and the storage-level handlers `handle_storage_added`, `handle_storage_removed`, `invalidate_storage_cache`, and `get_live_storage_space` (roughly 230) to `storage_ops.rs`. That leaves the vocabulary (`MtpDisconnectReason`, `DeviceWatch`, `MtpObjectInfo`, `ConnectedDeviceInfo`, `DeviceEntry`), the `MtpConnectionManager` struct, the priority-gate accessors, `disconnect`, and the small path and icon helpers at roughly 500 lines."
     },
-    "crates/cmdr-smb/src/volume/volume_impl.rs": {
-      "lines": 816,
-      "reason": "The SMB backend's one `impl Volume` block, which Rust can't split across files. Every method that does real work is already a thin delegator into its concern module (`paths`, `query`, `mutation`, `attributes`, `scan`, `scan_pool`, `streams`, `copy`, `reconnect`), as the module doc says; what stays is the dispatch surface and the capability answers, whose content is the reasoning in their doc comments. The length tracks the `Volume` surface, not logic that could leave."
-    },
     "crates/cmdr-sftp/src/transport.rs": {
       "lines": 945,
       "reason": "The crate's headline invariant is that `russh` is named in exactly one module so a breaking minor stays one file's problem (eight breaking minors in eight months), stated in the module doc and again in `crates/cmdr-sftp/CLAUDE.md`; everything russh-free has already been pushed out to `auth.rs`, `trust.rs`, `known_hosts.rs`, `extensions.rs`, and `errors.rs`, so what remains is one dial conversation (`open_session` to `authenticate` to `hello`) plus the `PendingEngine` teardown guard and the two `Handler` impls, under a 57-line module doc for the three abort hazards the shape defends against."
+    },
+    "crates/cmdr-smb/src/volume/volume_impl.rs": {
+      "lines": 816,
+      "reason": "The SMB backend's one `impl Volume` block, which Rust can't split across files. Every method that does real work is already a thin delegator into its concern module (`paths`, `query`, `mutation`, `attributes`, `scan`, `scan_pool`, `streams`, `copy`, `reconnect`), as the module doc says; what stays is the dispatch surface and the capability answers, whose content is the reasoning in their doc comments. The length tracks the `Volume` surface, not logic that could leave."
     },
     "scripts/check/checks/desktop-rust-cfg-gate_test.go": {
       "lines": 1228,

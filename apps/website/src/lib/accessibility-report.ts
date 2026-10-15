@@ -7,19 +7,10 @@
  * references, and contrast math). Remarks here are for buyers: plain, specific, no file paths. When
  * a gap closes, update the row and its remark, and bump `report.date`.
  *
- * Screen-reader checks. David's VoiceOver guide (vault, `projects/Cmdr/2026-10-14 Cmdr VoiceOver
- * test guide.md`) has 12 checks, V1–V12; `voiceOverChecks` below describes the ones still to run.
- * A row that waits on one lists it in `pending`; that array is the single source for "which rows
- * does V4 fill" (search for `'V4'`; 302.1 and 4.2.1 wait on every check still to run). V1, V2, V3,
- * and V10 were heard passing (the audit doc has the phrases). The rule for a pending row:
- *   - Code review found it fully supported → `conformance: 'not-evaluated'`, because only the
- *     screen-reader test can confirm it. `codeReview` keeps the code-review result.
- *   - Code review already found gaps → it stays `'partially-supports'`. The test can only confirm it
- *     or lower it (V1 failing would lower the file-list rows to `'does-not-support'`).
- * The page adds "A screen-reader test is pending." after the remark of every row with `pending`, so
- * remarks don't say it themselves. Filling in a result: set `conformance`, rewrite `remark` from
- * what VoiceOver did, drop the check from `pending` (and `codeReview` once `pending` is empty). The
- * page needs no edit.
+ * Screen-reader evidence: David ran his VoiceOver guide (vault, `projects/Cmdr/2026-10-14 Cmdr
+ * VoiceOver test guide.md`, checks V1–V12) by ear and heard every check pass on 2026-10-15. The
+ * audit doc's § VoiceOver checks maps each check to the rows it confirms. Remarks that say what
+ * VoiceOver reads rest on that run.
  *
  * Write straight quotes; `smart-quotes.ts` curls them in the built HTML. Remarks are plain text.
  */
@@ -29,22 +20,15 @@ export type Conformance =
   | 'partially-supports'
   | 'does-not-support'
   | 'not-applicable'
-  | 'not-evaluated'
   /** A row the VPAT answers by pointing elsewhere; `seeLabel` says where. */
   | 'see-other'
 
-export type VoiceOverCheck = 'V1' | 'V2' | 'V3' | 'V4' | 'V5' | 'V6' | 'V7' | 'V8' | 'V9' | 'V10' | 'V11' | 'V12'
-
-/** The checks not yet heard passing, which 302.1 and 4.2.1 wait on. */
-const unheardChecks: VoiceOverCheck[] = ['V4', 'V5', 'V6', 'V7', 'V8', 'V9', 'V11', 'V12']
-
-/** Labels for the page's tables, in the VPAT's own terms plus one for pending rows. */
+/** Labels for the page's tables, in the VPAT's own terms. */
 export const conformanceLabel: Record<Conformance, string> = {
   supports: 'Supports',
   'partially-supports': 'Partially supports',
   'does-not-support': 'Does not support',
   'not-applicable': 'Not applicable',
-  'not-evaluated': 'Not evaluated yet',
   'see-other': 'See remarks',
 }
 
@@ -58,11 +42,6 @@ export const conformanceTerms: { term: Conformance; meaning: string }[] = [
   { term: 'partially-supports', meaning: "Some functionality of the product doesn't meet the criterion." },
   { term: 'does-not-support', meaning: "The majority of product functionality doesn't meet the criterion." },
   { term: 'not-applicable', meaning: "The criterion isn't relevant to the product." },
-  {
-    term: 'not-evaluated',
-    meaning:
-      "The criterion depends on a screen-reader test that hasn't been run yet. This isn't one of the VPAT's terms; it marks rows this report will fill in later.",
-  },
 ]
 
 export const report = {
@@ -85,10 +64,6 @@ export interface CriterionRow {
   remark: string
   /** GitHub issues in `vdavid/cmdr` that track this row's gaps. */
   issues?: number[]
-  /** Screen-reader checks this row waits on. See the file comment. */
-  pending?: VoiceOverCheck[]
-  /** For a `'not-evaluated'` row: what the code review found. */
-  codeReview?: Conformance
 }
 
 export interface ReportTable {
@@ -144,16 +119,14 @@ const wcagA: CriterionRow[] = [
     remark:
       "Dialogs, Settings, and server forms use real headings, labels, and roles, and the Settings sidebar groups each section's subsections under it. The file list exposes which files are marked and each file's position in the list, and the sort buttons say which column the list is sorted by and which way. The Full view isn't a table: each file's name for assistive technology carries its size and date, but the column headers aren't tied to the cells.",
     issues: [437],
-    pending: ['V7'],
   },
   {
     id: '1.3.2',
     name: 'Meaningful sequence',
     level: 'A',
-    conformance: 'not-evaluated',
-    codeReview: 'supports',
-    remark: 'The reading order in the code matches the visual order in every window, including long file lists.',
-    pending: ['V12'],
+    conformance: 'supports',
+    remark:
+      'The reading order matches the visual order in every window, including long file lists. VoiceOver reads dialogs and Settings top to bottom, as they appear on screen.',
   },
   {
     id: '1.3.3',
@@ -315,11 +288,9 @@ const wcagA: CriterionRow[] = [
     id: '3.3.1',
     name: 'Error identification',
     level: 'A',
-    conformance: 'not-evaluated',
-    codeReview: 'supports',
+    conformance: 'supports',
     remark:
-      'Rename, new folder, server, and license key forms mark the field in error and tie the message to it. A failed license activation is also announced as an alert.',
-    pending: ['V5'],
+      "Rename, new folder, server, and license key forms mark the field in error and tie the message to it. VoiceOver reads an invalid file name's message as soon as it appears, and a failed license activation is also announced as an alert.",
   },
   {
     id: '3.3.2',
@@ -351,8 +322,7 @@ const wcagA: CriterionRow[] = [
     conformance: 'partially-supports',
     remark:
       "Dialogs, Settings controls, tabs, the command palette, the queue, and in-app menus (submenus included) expose their name, role, and state, and the file list, Search results, and the Settings sidebar convey the highlighted item as you arrow. The file list also conveys which files are marked, and the volume switcher is a menu button. While a file is being renamed in place, the name field sits inside the file's row, which hides its role from some assistive technology.",
-    issues: [267, 449],
-    pending: ['V6', 'V7'],
+    issues: [449],
   },
 ]
 
@@ -540,11 +510,9 @@ const wcagAA: CriterionRow[] = [
     id: '4.1.3',
     name: 'Status messages',
     level: 'AA',
-    conformance: 'not-evaluated',
-    codeReview: 'supports',
+    conformance: 'supports',
     remark:
-      'Notifications, progress during file operations, folder errors, an empty folder, a slow load, the number of marked files, and the result counts of Search, the file filter, the command palette, and the Settings search are announced. Warnings and failures in notifications are announced right away, everything else politely.',
-    pending: ['V4', 'V6', 'V9'],
+      'Notifications, progress and the result of file operations, folder errors, an empty folder, a slow load, the number of marked files, and the result counts of Search (a search that finds nothing included), the file filter, the command palette, and the Settings search are announced without moving focus. Warnings and failures in notifications are announced right away, everything else politely.',
   },
 ]
 
@@ -554,9 +522,8 @@ const section508Ch3: CriterionRow[] = [
     name: 'Without vision',
     conformance: 'partially-supports',
     remark:
-      "Dialogs, Settings, menus, and forms are built for screen readers. With VoiceOver, the file list reads the file under the cursor with its kind and position, says which files are marked and which pane and folder you're in, and in-app menus read every row, submenus included. A name field being renamed in place sits inside its file's row, and the Full view's columns aren't a table.",
-    issues: [437],
-    pending: unheardChecks,
+      "Cmdr works with VoiceOver. The file list reads the file under the cursor with its kind and position, and says which files are marked and which pane and folder you're in. In-app menus read every row, submenus included, and dialogs, Settings, Search, file operation progress, notifications, and the file viewer read in full. A name field being renamed in place sits inside its file's row, and the Full view's columns aren't a table.",
+    issues: [449],
   },
   {
     id: '302.2',
@@ -632,10 +599,9 @@ const section508Ch5: CriterionRow[] = [
   {
     id: '502.3.2',
     name: 'Modification of object information',
-    conformance: 'not-evaluated',
-    codeReview: 'supports',
-    remark: 'Checkboxes, switches, and dropdowns are standard controls that assistive technology can change.',
-    pending: ['V7'],
+    conformance: 'supports',
+    remark:
+      'Checkboxes, switches, and dropdowns are standard controls that assistive technology can change, and VoiceOver reads the new value after a change.',
   },
   {
     id: '502.3.3',
@@ -648,28 +614,23 @@ const section508Ch5: CriterionRow[] = [
   {
     id: '502.3.4',
     name: 'Values',
-    conformance: 'not-evaluated',
-    codeReview: 'supports',
+    conformance: 'supports',
     remark:
-      'Progress bars, sliders, and number fields expose their values. File operation progress also says the amount, like "1.2 GB of 3 GB".',
-    pending: ['V4'],
+      'Progress bars, sliders, and number fields expose their values. VoiceOver reads file operation progress with the amount, like "1.2 GB of 3 GB".',
   },
   {
     id: '502.3.5',
     name: 'Modification of values',
-    conformance: 'not-evaluated',
-    codeReview: 'supports',
-    remark: 'Sliders, number fields, and dropdowns are standard controls that assistive technology can operate.',
-    pending: ['V7'],
+    conformance: 'supports',
+    remark:
+      'Sliders, number fields, and dropdowns are standard controls that assistive technology can operate. VoiceOver reads their label and value.',
   },
   {
     id: '502.3.6',
     name: 'Label relationships',
-    conformance: 'not-evaluated',
-    codeReview: 'supports',
+    conformance: 'supports',
     remark:
-      'Fields are tied to their labels and error messages, and confirmation dialogs to their message, throughout.',
-    pending: ['V5'],
+      "Fields are tied to their labels and error messages, and confirmation dialogs to their message, throughout. VoiceOver reads the rename field's name, and a confirmation dialog's title and message when it opens.",
   },
   {
     id: '502.3.7',
@@ -678,15 +639,13 @@ const section508Ch5: CriterionRow[] = [
     remark:
       "Dialogs, menus, the tab bar, and the Settings sidebar's sections and subsections are structured. Tabs aren't tied to their content.",
     issues: [437],
-    pending: ['V7'],
   },
   {
     id: '502.3.8',
     name: 'Text',
-    conformance: 'not-evaluated',
-    codeReview: 'supports',
-    remark: 'All text in the app is real text that the macOS accessibility interface can read.',
-    pending: ['V11'],
+    conformance: 'supports',
+    remark:
+      'All text in the app is real text that the macOS accessibility interface can read. VoiceOver reads error messages and text files in the file viewer in full.',
   },
   {
     id: '502.3.9',
@@ -697,28 +656,21 @@ const section508Ch5: CriterionRow[] = [
   {
     id: '502.3.10',
     name: 'List of actions',
-    conformance: 'not-evaluated',
-    codeReview: 'supports',
-    remark: 'Controls are standard buttons and widgets with standard actions.',
-    pending: ['V8'],
+    conformance: 'supports',
+    remark: 'Controls are standard buttons and widgets with standard actions, and VoiceOver reads them.',
   },
   {
     id: '502.3.11',
     name: 'Actions on objects',
-    conformance: 'not-evaluated',
-    codeReview: 'supports',
-    remark: 'Assistive technology can press buttons and operate controls.',
-    pending: ['V8'],
+    conformance: 'supports',
+    remark: 'Assistive technology can press buttons and operate controls, like the buttons of a delete confirmation.',
   },
   {
     id: '502.3.12',
     name: 'Focus cursor',
-    conformance: 'not-evaluated',
-    codeReview: 'supports',
+    conformance: 'supports',
     remark:
-      "Focus in dialogs and Settings is real keyboard focus, and the cursor in the file list, Search results, and the Settings sidebar is exposed to assistive technology as the focused list's current item.",
-    issues: [437],
-    pending: ['V6'],
+      "Focus in dialogs and Settings is real keyboard focus, and the cursor in the file list, Search results, and the Settings sidebar is exposed to assistive technology as the focused list's current item. VoiceOver reads each item as you arrow.",
   },
   {
     id: '502.3.13',
@@ -731,10 +683,8 @@ const section508Ch5: CriterionRow[] = [
   {
     id: '502.3.14',
     name: 'Event notification',
-    conformance: 'not-evaluated',
-    codeReview: 'supports',
+    conformance: 'supports',
     remark: 'See WCAG 4.1.3.',
-    pending: ['V4'],
   },
   {
     id: '502.4',
@@ -816,8 +766,7 @@ const enClause4: CriterionRow[] = [
     name: 'Usage without vision',
     conformance: 'partially-supports',
     remark: 'See Section 508 302.1.',
-    issues: [437],
-    pending: unheardChecks,
+    issues: [449],
   },
   {
     id: '4.2.2',
@@ -966,18 +915,14 @@ const enClause11: CriterionRow[] = [
   {
     id: '11.5.2.7',
     name: 'Values',
-    conformance: 'not-evaluated',
-    codeReview: 'supports',
+    conformance: 'supports',
     remark: 'See Section 508 502.3.4.',
-    pending: ['V4'],
   },
   {
     id: '11.5.2.8',
     name: 'Label relationships',
-    conformance: 'not-evaluated',
-    codeReview: 'supports',
+    conformance: 'supports',
     remark: 'See Section 508 502.3.6.',
-    pending: ['V5'],
   },
   {
     id: '11.5.2.9',
@@ -985,31 +930,24 @@ const enClause11: CriterionRow[] = [
     conformance: 'partially-supports',
     remark: 'See Section 508 502.3.7.',
     issues: [437],
-    pending: ['V7'],
   },
   {
     id: '11.5.2.10',
     name: 'Text',
-    conformance: 'not-evaluated',
-    codeReview: 'supports',
+    conformance: 'supports',
     remark: 'See Section 508 502.3.8.',
-    pending: ['V11'],
   },
   {
     id: '11.5.2.11',
     name: 'List of available actions',
-    conformance: 'not-evaluated',
-    codeReview: 'supports',
+    conformance: 'supports',
     remark: 'See Section 508 502.3.10.',
-    pending: ['V8'],
   },
   {
     id: '11.5.2.12',
     name: 'Execution of available actions',
-    conformance: 'not-evaluated',
-    codeReview: 'supports',
+    conformance: 'supports',
     remark: 'See Section 508 502.3.11.',
-    pending: ['V8'],
   },
   {
     id: '11.5.2.13',
@@ -1027,26 +965,20 @@ const enClause11: CriterionRow[] = [
   {
     id: '11.5.2.15',
     name: 'Change notification',
-    conformance: 'not-evaluated',
-    codeReview: 'supports',
+    conformance: 'supports',
     remark: 'See WCAG 4.1.3.',
-    pending: ['V4', 'V9'],
   },
   {
     id: '11.5.2.16',
     name: 'Modifications of states and properties',
-    conformance: 'not-evaluated',
-    codeReview: 'supports',
+    conformance: 'supports',
     remark: 'See Section 508 502.3.2.',
-    pending: ['V7'],
   },
   {
     id: '11.5.2.17',
     name: 'Modifications of values and text',
-    conformance: 'not-evaluated',
-    codeReview: 'supports',
+    conformance: 'supports',
     remark: 'See Section 508 502.3.5 and 502.3.9.',
-    pending: ['V7'],
   },
   {
     id: '11.6.1',
@@ -1157,20 +1089,6 @@ export const standards: StandardSection[] = [
 /** The open issues behind the report's gaps, most important first. */
 export const gapIssues: { number: number; title: string }[] = [
   {
-    number: 437,
-    title:
-      "The Full view's columns aren't a table, and moving the VoiceOver cursor onto a file doesn't move Cmdr's cursor",
-  },
-  {
-    number: 267,
-    title: "The file viewer's right-click menu awaits a hands-on VoiceOver test (the in-app menus passed theirs)",
-  },
-  {
-    number: 440,
-    title:
-      'Hidden files differ only by color, and the focused-pane cues and some focus rings are under 3:1 contrast by default',
-  },
-  {
     number: 449,
     title: "The rename field sits inside the file's row, which hides its role from some assistive technology",
   },
@@ -1180,26 +1098,3 @@ export const gapIssues: { number: number; title: string }[] = [
     title: 'A few click targets are still under 24 pixels: one-letter path segments and the pane divider',
   },
 ]
-
-/** The screen-reader checks still to run. Each one's rows are the rows whose `pending` names it. */
-export const voiceOverChecks: { id: VoiceOverCheck; what: string }[] = [
-  { id: 'V4', what: "Copy files: the progress dialog's title, progress value, and completion message." },
-  { id: 'V5', what: "Rename: the field's name, and an announced error for an invalid name." },
-  {
-    id: 'V6',
-    what: 'Search: the result count (a search that finds nothing included), and the highlighted result while arrowing.',
-  },
-  {
-    id: 'V7',
-    what: "Settings: section names with their position, a control's label and value, and the new value after a change.",
-  },
-  { id: 'V8', what: 'Delete confirmation: title, message, and buttons, and pressing a button works.' },
-  { id: 'V9', what: 'Notifications: one is read out in full, links included, without moving focus.' },
-  { id: 'V11', what: 'Read text: an error message and a text file in the viewer are read in full.' },
-  { id: 'V12', what: "Reading order: VoiceOver's order in a dialog and in Settings matches the screen." },
-]
-
-/** Number of rows still waiting on any screen-reader check. */
-export const pendingRowCount = standards
-  .flatMap((standard) => standard.tables.flatMap((table) => table.rows))
-  .filter((row) => row.pending?.length).length

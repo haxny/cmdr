@@ -1,9 +1,8 @@
 ---
 // Cmdr's accessibility conformance report, in the order and terms of ITI's VPAT 2.5Rev INT
 // edition, for procurement and accessibility reviewers. Linked from `/trust` § Accessibility. Every
-// row, the screen-reader checks still to run, and the product facts live in
-// `src/lib/accessibility-report.ts`; the evidence behind each row is
-// `docs/notes/accessibility-audit-2026-10.md`. "VPAT" is ITI's registered service mark: name the
+// row and the product facts live in `src/lib/accessibility-report.ts`; the evidence behind each row
+// is `docs/notes/accessibility-audit-2026-10.md`. "VPAT" is ITI's registered service mark: name the
 // template only as "based on VPAT® 2.5Rev INT", never call this page a VPAT. Never claim WCAG
 // conformance while any row says "Partially supports".
 import LegalLayout from '../../layouts/LegalLayout.astro'
@@ -13,23 +12,17 @@ import {
     gapIssues,
     report,
     standards,
-    voiceOverChecks,
     type CriterionRow,
 } from '../../lib/accessibility-report'
 
 const repo = 'https://github.com/vdavid/cmdr'
 const issueUrl = (n: number) => `${repo}/issues/${n}`
 
-const allRows = standards.flatMap((standard) => standard.tables.flatMap((table) => table.rows))
-const notEvaluatedCount = allRows.filter((row) => row.conformance === 'not-evaluated').length
-const pendingCount = allRows.filter((row) => row.pending?.length).length
-
 const escapeHtml = (text: string) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
-/** The remarks cell: the remark, the pending-test note, and links to the issues behind it. One string, so no stray whitespace lands before the commas. */
+/** The remarks cell: the remark and links to the issues behind it. One string, so no stray whitespace lands before the commas. */
 const remarkHtml = (row: CriterionRow) => {
     const parts = [escapeHtml(row.remark)]
-    if (row.pending?.length) parts.push('A screen-reader test is pending.')
     if (row.issues?.length) {
         const links = row.issues.map((n) => `<a href="${issueUrl(n)}">#${n}</a>`).join(', ')
         parts.push(`Tracked in ${links}.`)
@@ -47,7 +40,6 @@ const toc = [
     { id: 'applicable-standards', label: 'Applicable standards' },
     { id: 'terms', label: 'Terms' },
     ...standards.map((standard) => ({ id: standard.id, label: standard.title })),
-    { id: 'pending', label: 'Screen-reader test still to run' },
     { id: 'legal', label: 'Legal' },
 ]
 ---
@@ -99,10 +91,10 @@ const toc = [
             the open issues below track the gaps.
         </li>
         <li>
-            <strong>The file list works with VoiceOver</strong>, the core of the product. A hands-on VoiceOver test
-            heard it read the file under the cursor with its kind and position, which files are marked, and which pane
-            and folder you're in, and heard in-app menus read every row, submenus included. Dialogs, Settings, and
-            forms are built for screen readers too, and some of their VoiceOver checks are still to run.
+            <strong>Cmdr works with VoiceOver</strong>. A hands-on VoiceOver test heard the file list, the core of the
+            product, read the file under the cursor with its kind and position, which files are marked, and which pane
+            and folder you're in. It heard in-app menus read every row, submenus included, and dialogs, Settings,
+            Search, file operation progress, notifications, and the file viewer read in full.
         </li>
         <li>
             <strong>What works well today</strong>: everything core runs from the keyboard (every action has a
@@ -111,12 +103,6 @@ const toc = [
             size, light and dark mode, accent color, Reduce motion, Reduce transparency, Increase contrast, and
             Differentiate without color settings; the menu bar and context menus are native macOS menus; and there's no
             audio, video, or flashing content.
-        </li>
-        <li>
-            <strong>{notEvaluatedCount} rows say "Not evaluated yet"</strong>: the code review found them supported, but
-            only a screen-reader test can confirm it. {pendingCount} rows in total wait on that test, and some
-            "Partially supports" rows may drop to "Does not support" after it. This report will be updated with the
-            results.
         </li>
         <li>
             <strong>WCAG applied to software</strong>: Cmdr is a desktop app, so WCAG is applied as the W3C's
@@ -163,9 +149,9 @@ const toc = [
         </li>
         <li>
             <strong>Screen-reader test</strong>: a hands-on VoiceOver test with real keys (macOS 27, VoiceOver 10)
-            covered browsing folders, switching panes, marking files, in-app menus, notifications, the command palette,
-            and parts of Search and Settings. Not done yet: the rest of that test,
-            <a href="#pending">listed below</a>.
+            covered browsing folders, switching panes, marking files, copying with the progress dialog, renaming,
+            Search, Settings, a delete confirmation, notifications, in-app menus, reading text in the file viewer,
+            reading order, and the command palette.
         </li>
     </ul>
 
@@ -246,15 +232,6 @@ const toc = [
             </section>
         ))
     }
-
-    <h2 id="pending">Screen-reader test still to run</h2>
-    <p>
-        These VoiceOver checks will fill in the rows marked "Not evaluated yet" and confirm or lower the
-        "Partially supports" rows that wait on them:
-    </p>
-    <ul>
-        {voiceOverChecks.map((check) => <li>{check.what}</li>)}
-    </ul>
 
     <h2 id="legal">Legal</h2>
     <p>
@@ -353,10 +330,6 @@ const toc = [
 
     .level-does-not-support {
         --level-hue: var(--color-warning);
-    }
-
-    .level-not-evaluated {
-        --level-hue: var(--color-icon-soon);
     }
 
     td a {

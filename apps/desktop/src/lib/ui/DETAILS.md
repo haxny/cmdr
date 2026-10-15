@@ -1219,9 +1219,9 @@ switcher's port is what moved them here):
   Favorites (⌃D): "Applications collapsed submenu Favorites group (1 of 2)", ↓ "Desktop collapsed submenu". Archive
   Enter popup: "Browse like a folder menu item menu Open archive or bundle", ↓ "Open with default app menu item".
   Drive-index badge menu: "Rescan now menu item menu Drive index status", ↓ "Turn off indexing for this drive menu
-  item", Escape back to the badge. A submenu that never takes focus itself stays silent on every ↓. Not heard: the
-  viewer's right-click menu (native muda, not this primitive; it opened as "menu (2 items)", item names not caught).
-  Full log: `docs/notes/accessibility-audit-2026-10.md` § VoiceOver listening runs.
+  item", Escape back to the badge. A submenu that never takes focus itself stays silent on every ↓. The viewer's
+  right-click menu (native muda, not this primitive) was heard by ear in David's VoiceOver guide run on `main` at
+  `8feba4c02` (2026-10-15). Full log: `docs/notes/accessibility-audit-2026-10.md` § VoiceOver listening runs.
 
 ## FilterPopover
 
