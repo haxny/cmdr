@@ -31,10 +31,11 @@ let installed = false
  * explorer (the keyboard event sink for both file panes), the Ask Cmdr rail
  * (composer, sessions list, and its other focusable chrome), and an open in-app
  * menu (`ui/Menu.svelte`'s `[data-menu]` surface, which takes focus while it's up:
- * a Servers row menu). The rail and a menu only mount while open, so a closed
- * one matches nothing here without any extra guard.
+ * a Servers row menu), plus its `[data-menu-submenu]`, which takes focus while it
+ * holds the cursor and is the surface's sibling, not its child. The rail and a menu
+ * only mount while open, so a closed one matches nothing here without any extra guard.
  */
-const KEYBOARD_HOME_SELECTOR = '.dual-pane-explorer, .ask-cmdr-rail, [data-menu]'
+const KEYBOARD_HOME_SELECTOR = '.dual-pane-explorer, .ask-cmdr-rail, [data-menu], [data-menu-submenu]'
 
 /**
  * Returns true when `document.activeElement` lives inside a keyboard home. This

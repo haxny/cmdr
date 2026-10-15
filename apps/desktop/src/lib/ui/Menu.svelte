@@ -2,9 +2,6 @@
     // The vocabulary lives in `./menu-types` (not here) so non-Svelte consumers resolve it as
     // real types; re-exported for callers that import it alongside the component.
     export type { MenuItem, MenuSection, MenuIcon, MenuRowContext } from './menu-types'
-
-    /** Unique per mounted menu, so `aria-activedescendant` points at this menu's own row. */
-    let menuInstanceCount = 0
 </script>
 
 <script lang="ts" generics="T">
@@ -32,6 +29,7 @@
     import { placeBesideRow, placeOffAnchor, type PlacementRect } from './anchored-placement'
     import type { MenuController } from './menu-controller.svelte'
     import { disclosureRowValue } from './menu-navigation'
+    import { createDeferredActiveDescendant } from './deferred-active-descendant.svelte'
     import type { MenuItem, MenuRowContext, MenuSection } from './menu-types'
 
     /* eslint-disable @typescript-eslint/no-unnecessary-type-arguments -- `T` is this component's OWN
@@ -72,17 +70,27 @@
         getBottomLimit,
     }: Props = $props()
 
-    menuInstanceCount += 1
-    const instanceId = `menu-${String(menuInstanceCount)}`
+    // Unique per mounted menu, so every `aria-activedescendant` names this menu's own row.
+    const uid = $props.id()
+    const instanceId = `menu-${uid}`
     // Inside a modal the menu lands in its overlay: under `document.body` it would sit below
     // the scrim, and the modal's focus trap would pull focus straight back out of it.
     const portalTarget = usePortalTarget()
-    const rowId = (value: string) => `${instanceId}-row-${value}`
+    // Encoded: a value can hold a space (a favorite's path), and an id ref can't.
+    const rowId = (value: string) => `${instanceId}-row-${encodeURIComponent(value)}`
+    // Its own segment: a submenu child's value can equal a top-level row's.
+    const submenuRowId = (value: string) => `${instanceId}-subrow-${encodeURIComponent(value)}`
+    const submenuId = `${instanceId}-submenu`
 
     let surfaceEl: HTMLDivElement | undefined = $state()
     let submenuEl: HTMLDivElement | undefined = $state()
     let position = $state<{ left: number; top: number; maxHeight: number } | null>(null)
     let submenuPosition = $state<{ top: number; left: number; maxHeight: number } | null>(null)
+
+    // Each surface names its cursor a frame after it takes focus (VoiceOver reads the row only
+    // then), so each holds its own.
+    const surfaceDescendant = createDeferredActiveDescendant()
+    const submenuDescendant = createDeferredActiveDescendant()
 
     /**
      * The surface this menu hangs off, when its anchor lives inside ANOTHER menu — the
@@ -117,6 +125,12 @@
                 const rect = row.getBoundingClientRect()
                 return rect.top + rect.height / 2
             }),
+        // ❗ Before the submenu unmounts, never after: focus on a removed node drops to
+        // `<body>`, and WebKit posts a stray web-area focus on the way back.
+        beforeSubmenuLeave: () => {
+            submenuDescendant.reset()
+            if (submenuEl?.contains(document.activeElement)) surfaceEl?.focus({ preventScroll: true })
+        },
     })
 
     /** The rect the menu hangs off, whichever way it was opened, and the gap it keeps from it. */
@@ -149,8 +163,8 @@
     }
 
     /**
-     * Measure and focus on open; the container holds focus so `aria-activedescendant` is
-     * announced.
+     * Measure and focus on open; the surface holds focus so `aria-activedescendant` is
+     * announced, a frame after focus lands (`deferred-active-descendant.svelte.ts`).
      *
      * ❗ It depends on `surfaceEl`, ❌ not on `menu.isOpen` alone. Ark's `Portal` mounts its
      * children in a `tick().then(…)` of its own, so this can run its first pass before the
@@ -163,10 +177,16 @@
         const el = surfaceEl
         if (!menu.isOpen || !el) {
             position = null
+            surfaceDescendant.reset()
             return
         }
         void fitToViewport().then(() => {
-            el.focus()
+            // ❗ Focus already in this menu stays put. A re-run while the submenu holds focus
+            // stole it straight back to the parent (heard in WKWebView with VoiceOver), and a
+            // re-run while the surface has it would hold its row back for a frame again.
+            const focused = document.activeElement
+            if (el.contains(focused) || submenuEl?.contains(focused)) return
+            surfaceDescendant.focus(el, menu.highlightedValue === null ? undefined : rowId(menu.highlightedValue))
         })
     })
 
@@ -318,15 +338,40 @@
         ),
     )
 
-    const submenuItems = $derived(
+    /** The row the open submenu hangs off, which names it. */
+    const submenuParent = $derived(
         menu.openSubmenuValue === null
-            ? []
-            : (menu.sections
-                  .flatMap((section) => section.items)
-                  .find((item) => item.value === menu.openSubmenuValue)?.submenu ?? []),
+            ? undefined
+            : menu.sections.flatMap((section) => section.items).find((item) => item.value === menu.openSubmenuValue),
     )
 
+    const submenuItems = $derived(submenuParent?.submenu ?? [])
+
     const submenuHasIcons = $derived(submenuItems.some((item) => item.icon != null))
+
+    /**
+     * The row the submenu's surface names: its cursor, or, in a keyboard-opened submenu whose
+     * every row is disabled (entered, cursorless), its first row, which VoiceOver reads "dimmed".
+     */
+    const submenuActiveValue = $derived(
+        menu.submenuHighlightedValue ?? (menu.submenuEntered ? (submenuItems[0]?.value ?? null) : null),
+    )
+
+    /**
+     * Focus follows the cursor into the submenu once it's entered (`→`, or the pointer reached
+     * one of its rows); `beforeSubmenuLeave` hands it back. A hover-opened submenu is only
+     * shown, so it never takes focus.
+     *
+     * ❗ Keyed on the NODE and its POSITION, never the flag alone: the node mounts a beat after
+     * the value opens (the Ark `Portal` tick, as with the surface above), and it stays
+     * `visibility: hidden` until placed, where `focus()` silently does nothing.
+     */
+    $effect(() => {
+        const el = submenuEl
+        if (!el || submenuPosition === null || !menu.submenuEntered) return
+        if (el.contains(document.activeElement)) return
+        submenuDescendant.focus(el, untrack(() => (submenuActiveValue === null ? undefined : submenuRowId(submenuActiveValue))))
+    })
 </script>
 
 <svelte:window onresize={handleResize} onpointerdown={handleDocumentPointerDown} />
@@ -373,7 +418,9 @@
             data-keyboard-mode={menu.keyboardMode ? '' : undefined}
             role="menu"
             aria-label={ariaLabel}
-            aria-activedescendant={menu.highlightedValue ? rowId(menu.highlightedValue) : undefined}
+            aria-activedescendant={surfaceDescendant.of(
+                menu.highlightedValue === null ? undefined : rowId(menu.highlightedValue),
+            )}
             tabindex="-1"
             style:left="{position?.left ?? 0}px"
             style:top="{position?.top ?? 0}px"
@@ -472,6 +519,7 @@
                             aria-disabled={item.disabled ? 'true' : undefined}
                             aria-haspopup={item.submenu?.length ? 'menu' : undefined}
                             aria-expanded={item.submenu?.length ? menu.openSubmenuValue === item.value : undefined}
+                            aria-controls={menu.openSubmenuValue === item.value ? submenuId : undefined}
                             aria-keyshortcuts={[item.accelerator, item.shortcut].filter(Boolean).join(' ') || undefined}
                             data-menu-row={item.value}
                             data-accelerator={item.accelerator}
@@ -524,14 +572,19 @@
         </div>
 
         {#if menu.openSubmenuValue !== null}
-            <!-- The parent surface keeps focus and routes keys here (→ opens, ← closes). -->
-            <!-- svelte-ignore a11y_interactive_supports_focus -->
+            <!-- Takes focus while it holds the cursor, named after its row; keys still route
+                 through the controller's document listener wherever focus is. -->
             <div
                 bind:this={submenuEl}
+                id={submenuId}
                 class="menu-surface menu-submenu"
                 data-menu-submenu=""
                 role="menu"
-                aria-label={ariaLabel}
+                tabindex="-1"
+                aria-label={submenuParent?.label}
+                aria-activedescendant={submenuDescendant.of(
+                    submenuActiveValue === null ? undefined : submenuRowId(submenuActiveValue),
+                )}
                 style:top="{submenuPosition?.top ?? 0}px"
                 style:left="{submenuPosition?.left ?? 0}px"
                 style:max-height={submenuPosition ? `${String(submenuPosition.maxHeight)}px` : undefined}
@@ -547,6 +600,7 @@
                     {/if}
                     <!-- svelte-ignore a11y_mouse_events_have_key_events -->
                     <div
+                        id={submenuRowId(child.value)}
                         class="menu-row"
                         class:is-highlighted={menu.submenuHighlightedValue === child.value}
                         class:is-disabled={child.disabled}
@@ -561,7 +615,7 @@
                         data-disabled={child.disabled ? '' : undefined}
                         use:tooltip={child.tooltip ?? ''}
                         onmousedown={(event: MouseEvent) => {
-                            // Focus stays on the surface: this row unmounts after a pick, and
+                            // Focus stays on a surface: this row unmounts after a pick, and
                             // focus on a node that left the document drops to <body>.
                             event.preventDefault()
                         }}

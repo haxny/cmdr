@@ -107,6 +107,21 @@ describe('focus watchdog', () => {
     expect(warnSpy).not.toHaveBeenCalled()
   })
 
+  /** A menu's submenu takes focus while it has a cursor, and it's a sibling of `[data-menu]`, not inside it. */
+  it('does not warn when focus is inside an open submenu', () => {
+    const submenu = document.createElement('div')
+    submenu.setAttribute('data-menu-submenu', '')
+    submenu.setAttribute('role', 'menu')
+    submenu.tabIndex = -1
+    document.body.appendChild(submenu)
+    submenu.focus()
+
+    initFocusWatchdog()
+    vi.advanceTimersByTime(2000)
+
+    expect(warnSpy).not.toHaveBeenCalled()
+  })
+
   it('warns when the rail is open but focus falls to body (the bug it must still catch)', () => {
     // Rail being open is NOT a suppressor: if focus lands on <body> while the
     // rail is open, that is still the restore-focus bug the watchdog exists to

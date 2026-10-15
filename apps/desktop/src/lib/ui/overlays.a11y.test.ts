@@ -478,6 +478,25 @@ describe('Menu a11y', () => {
     await expectNoA11yViolations(document.body)
     menu.destroy()
   })
+
+  // Entered, the submenu holds focus and names its cursor row by an id that must resolve, and
+  // its parent row points at it with `aria-controls`.
+  it('an entered submenu, holding focus and naming its cursor, has no a11y violations', async () => {
+    const target = container()
+    const menu = createMenu({ getSections: () => richSections, onSelect: () => {} })
+    menu.openAt({ x: 100, y: 100 })
+    mount(Menu, { target, props: { menu, ariaLabel: 'Volumes' } })
+    await tick()
+    await tick()
+    menu.highlight('share')
+    menu.surface.openSubmenu('share', true)
+    await vi.waitFor(() => {
+      expect(document.querySelector('[data-menu-submenu]')?.getAttribute('aria-activedescendant')).toBeTruthy()
+    })
+    expect(document.activeElement?.hasAttribute('data-menu-submenu')).toBe(true)
+    await expectNoA11yViolations(document.body)
+    menu.destroy()
+  })
 })
 
 /**

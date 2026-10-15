@@ -74,6 +74,7 @@
   "devDependencies": {
     "@cyclonedx/cyclonedx-library": "10.3.0",
     "@eslint/js": "^10.0.1",
+    "@guidepup/virtual-screen-reader": "0.33.0",
     "@iconify-json/lucide": "1.2.142",
     "@playwright/test": "^1.64.0",
     "@srsholmes/tauri-playwright": "^0.4.1",

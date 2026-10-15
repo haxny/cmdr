@@ -33,6 +33,9 @@ Pull-tier docs for `lib/ui/`: architecture, component APIs, and decision rationa
   resolve them as real types
 - **`anchored-placement.ts`**: the pure placement math `Menu` and `Popover` share: below / above / roomier side with a
   height cap, viewport clamp, and the submenu's right-or-left flip. See § Menu
+- **`deferred-active-descendant.svelte.ts`**: `aria-activedescendant` that lands one frame after its element takes focus
+  (VoiceOver reads only the container otherwise), plus `afterNextFrame`, a frame with a timeout fallback. The menu uses
+  it per surface; the file lists are meant to as well. See § Menu
 - **`menu-navigation.ts`** / **`menu-reorder.ts`**: the pure halves: which row is next and what a key means; the drag
   and ⌥↑/⌥↓ index math
 - **`FilterPopover.svelte`**: `Popover` + a labelled section header; the query dialogs' Size / Modified / Search-in
@@ -1029,11 +1032,23 @@ surface (the menu, or the open submenu) has an `icon`, the rows without one get 
   `preventDefault`ed, so ⌘Q and the menu-bar accelerators still mean what they mean. The two are different mechanisms:
   `stopPropagation` ends DOM bubbling, which is the double-fire path, and leaves the key's meaning to the OS.
 - **`isEditing()` suspends all of it**, untouched and unswallowed, so an inline editor keeps every keystroke.
-- **Focus**: the container takes focus on open (`tabindex="-1"` plus `aria-activedescendant` on the highlighted row) and
-  calls `restoreFocus` on close. A submenu row's `mousedown` is `preventDefault`ed so a click leaves focus on the
-  surface: the row unmounts after a pick, and focus on a node that left the document drops to `<body>`, which a
-  `keepsMenuOpen` pick would otherwise leave the still-open menu with. Keys route through a document-level CAPTURE
-  listener that lives only while open, the model `enter-menu.svelte.ts` proved deterministic against focus timing.
+- **Focus**: focus sits on the surface that owns the cursor, and that surface's `aria-activedescendant` names the cursor
+  row. The top-level surface (`tabindex="-1"`) takes focus on open and calls `restoreFocus` on close. Once the submenu
+  is ENTERED (`menu.submenuEntered`: `→`, or the pointer reached one of its rows), its own surface takes focus; a
+  hover-opened, cursorless submenu is only shown and never does. Every way the cursor leaves an entered submenu (`←`,
+  Escape, a `keepsMenuOpen` pick, a hover back on the parent, the pointer leaving it, the menu closing) runs through the
+  controller's one `setSubmenu`, which calls `beforeSubmenuLeave` FIRST, so `Menu.svelte` refocuses the parent surface
+  while the submenu node still exists. Keys never depend on any of this: they route through a document-level CAPTURE
+  listener that lives only while open, the model `enter-menu.svelte.ts` proved deterministic against focus timing. A
+  submenu row's `mousedown` is `preventDefault`ed so a click doesn't focus the row, which unmounts after a pick.
+- **What the screen reader is told**: every row has a document-unique id from `$props.id()` (top-level
+  `menu-<uid>-row-<value>`, submenu `menu-<uid>-subrow-<value>`, a value URI-encoded since an id ref can't hold a
+  space). The submenu surface is named after its parent row (`aria-label`), and the parent row carries `aria-controls`
+  naming it while open. Each surface's `aria-activedescendant` lands one frame after it takes focus
+  (`deferred-active-descendant.svelte.ts`): VoiceOver reads only "menu Volume switcher" when the two arrive together,
+  and the row when the attribute follows (heard in a spike of this model, macOS 27.0, VoiceOver 10, 2026-10-15). A
+  keyboard-opened submenu whose every row is disabled is entered cursorless, and its surface names its first row, so
+  VoiceOver reads the greyed reason. `Menu.vsr.test.ts` pins the speech against the ARIA model.
 - **Pointer**: hover moves the cursor unless keyboard mode is on; a pointer move over 5 px leaves keyboard mode AND
   hands the cursor to the row it happened over (❗ otherwise there would be two: `:hover` paints again the moment
   keyboard mode drops, and no `mouseover` is coming for a row the pointer never left); a click activates; a right-click
@@ -1075,7 +1090,7 @@ rename one without updating them. They're `data-*` attributes rather than CSS cl
 gets renamed on a whim. `Menu.svelte.test.ts` asserts each one, so none of them rots into decoration.
 
 - `data-menu` on the surface, `data-keyboard-mode` on it while the keyboard is driving, `data-menu-submenu` on the
-  submenu surface.
+  submenu surface (which the focus watchdog counts as a keyboard home, since it's the surface's sibling).
 - `data-menu-instance="<id>"` on every surface, and `data-menu-nested-in="<id>"` on one whose ANCHOR sits inside another
   menu's surface, naming that menu. It's the link a nested menu is recognized by (below); a top-level menu carries no
   `data-menu-nested-in` at all.
@@ -1125,6 +1140,10 @@ switcher's port is what moved them here):
   submenu opened by hovering its parent row shows no cursor until the pointer or the keyboard reaches into it.
 - **A submenu's cursor is a VALUE too** (`submenuHighlightedValue`), so render against it per row. ❌ Never a boolean:
   that lights every row of a multi-item submenu, which a one-row submenu hides until a second row arrives.
+- ❗ **The submenu's focus `$effect` keys on the node AND `submenuPosition`**, for the same Portal reason plus one more:
+  the submenu stays `visibility: hidden` until placed, and `focus()` on a hidden element silently does nothing. And the
+  surface's open effect never refocuses while focus is already in this menu: in the spike a re-run stole focus straight
+  back out of the submenu.
 - ❗ **The measure-and-focus `$effect` depends on `surfaceEl`, ❌ never on `menu.isOpen` alone.** Ark's `Portal` mounts
   its children inside a `tick().then(…)` of its own, so an effect keyed on open state alone runs its only pass before
   the node exists, bails, and never re-runs: the surface keeps the `visibility: hidden` it starts with while the menu
@@ -1136,8 +1155,12 @@ switcher's port is what moved them here):
   service.
 - **One level of submenu**, and no type-ahead, virtualization, or radio items: nothing needs them, and each is addable
   without moving the seams (a radio would be a third `MenuItemCheck` kind, for rows hosting no controls).
-- ⚠️ **`aria-activedescendant` on a portaled container is not yet verified with VoiceOver.** The ARIA wiring is there
-  and axe is clean (`overlays.a11y.test.ts`), but nobody has listened to it; confirm before leaning on it.
+- **VoiceOver reads a portaled surface's `aria-activedescendant`** (macOS 27.0, VoiceOver 10, Cmdr 0.52.0 dev, real keys
+  through the AppleScript bridge, 2026-10-15, on a spike of this model): ⌥F1 "menu Volume switcher", ↓ "naspi on
+  100.127.48.122 collapsed submenu Volumes group (2 of 4)", → "menu naspi on 100.127.48.122", ↓ "Connect directly now
+  selected menu item (2 of 4) menu naspi on 100.127.48.122", ← "naspi on 100.127.48.122 collapsed submenu". Before this
+  model a submenu was silent on every ↓. The shipped code's own listening run (with the deferred active descendant,
+  which the spike heard read the highlighted row on open) is still owed.
 
 ## FilterPopover
 

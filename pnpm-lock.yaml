@@ -373,6 +373,9 @@ importers:
       '@eslint/js':
         specifier: ^10.0.1
         version: 10.0.1(eslint@10.10.0(jiti@2.7.0)(supports-color@10.2.2))
+      '@guidepup/virtual-screen-reader':
+        specifier: 0.33.0
+        version: 0.33.0
       '@iconify-json/lucide':
         specifier: 1.2.142
         version: 1.2.142
@@ -1319,6 +1322,10 @@ packages:
 
   '@formatjs/intl-localematcher@0.6.2':
     resolution: {integrity: sha512-XOMO2Hupl0wdd172Y06h6kLpBz6Dv+J4okPLl4LPtzbr8f66WbIoy4ev98EBuZ6ZK4h5ydTN6XneT4QVpD7cdA==}
+
+  '@guidepup/virtual-screen-reader@0.33.0':
+    resolution: {integrity: sha512-CXMkIx19oFZ7BS7TcvDibXn6A2RsEs8nVX9IijHW7HQ0qTGHgc2WErkaMi12YPQi1Zypxr36NfRYWgBxUNvMtQ==}
+    engines: {node: '>=20'}
 
   '@html-validate/stylish@6.0.0':
     resolution: {integrity: sha512-d1/lI3qIXhGVJF3+MmKEBn1dRX6U4Z+BDaOdDI3E6SXcO+OQ7hC/3mSo6BIjwQlcuV6NdDOKm6QCrzIQL1EezQ==}
@@ -2655,6 +2662,12 @@ packages:
         optional: true
       vitest:
         optional: true
+
+  '@testing-library/user-event@14.6.7':
+    resolution: {integrity: sha512-MPCpX8bxe8zS+JmmTwLp8jd0dy1rAm60Te/SL8JrQM3qvQJcBOs1d7IefJMyZzqM3EWBrDn/LWDt1BCGu4ASfg==}
+    engines: {node: '>=12', npm: '>=6'}
+    peerDependencies:
+      '@testing-library/dom': '>=7.21.4'
 
   '@tootallnate/quickjs-emscripten@0.23.0':
     resolution: {integrity: sha512-C5Mc6rdnsaJDjO3UpGW/CQTHtCKaYlScZTly4JIu97Jxo/odCiH0ITnDXSJPTOrEKk/ycSZ0AOgTmkDtkOsvIA==}
@@ -4382,6 +4395,9 @@ packages:
   hosted-git-info@10.1.1:
     resolution: {integrity: sha512-DeOnSPAvOndYKfw075gt8yZzQ7S2hNztw34zBTfhIzLhmBTswIBg5/y+pqu/VD5cYWm5goAFTusDmUEmKZ0PEQ==}
     engines: {node: ^22.22.2 || ^24.15.0 || >=26.0.0}
+
+  html-aria@0.5.3:
+    resolution: {integrity: sha512-2SkCacsjXJu0e6D5vLSHlLs7KEdPZ7pIJqLh9EFedPqrAaywthe7jJWQ+PjEyB7bpmWMMOsBJuV4WlYd9WRiug==}
 
   html-encoding-sniffer@7.0.0:
     resolution: {integrity: sha512-UikN5yr7xsCDAq87Or5or0PAlD3HJJOKVzM05az588WnpDJ4Ux7a2A53Qi6gofGg2/EtvF/H4hCi/TXfCW4Y6w==}
@@ -7784,6 +7800,13 @@ snapshots:
     dependencies:
       tslib: 2.8.1
 
+  '@guidepup/virtual-screen-reader@0.33.0':
+    dependencies:
+      '@testing-library/dom': 10.4.1
+      '@testing-library/user-event': 14.6.7(@testing-library/dom@10.4.1)
+      dom-accessibility-api: 0.7.1
+      html-aria: 0.5.3
+
   '@html-validate/stylish@6.0.0': {}
 
   '@humanfs/core@0.19.2':
@@ -8795,6 +8818,10 @@ snapshots:
     optionalDependencies:
       vite: 8.3.4(@types/node@26.6.4)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)
       vitest: 5.0.3(@types/node@26.6.4)(@vitest/coverage-v8@5.0.3)(happy-dom@20.14.6)(jsdom@30.1.2)(vite@8.3.4(@types/node@26.6.4)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
+
+  '@testing-library/user-event@14.6.7(@testing-library/dom@10.4.1)':
+    dependencies:
+      '@testing-library/dom': 10.4.1
 
   '@tootallnate/quickjs-emscripten@0.23.0': {}
 
@@ -11148,6 +11175,8 @@ snapshots:
   hosted-git-info@10.1.1:
     dependencies:
       lru-cache: 11.5.3
+
+  html-aria@0.5.3: {}
 
   html-encoding-sniffer@7.0.0:
     dependencies:

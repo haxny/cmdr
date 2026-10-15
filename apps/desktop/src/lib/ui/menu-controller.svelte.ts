@@ -97,10 +97,16 @@ export interface MenuDeps<T = unknown> {
   keepOpenWithin?: () => HTMLElement | null | undefined
 }
 
-/** What `Menu.svelte` registers so the controller can do drag math against real rows. */
+/** What `Menu.svelte` registers: the DOM facts and moves the controller can't make itself. */
 export interface MenuSurfaceHooks {
   /** The vertical midpoint of each row in a section, in display order. */
   getRowMidpoints: (sectionId: string) => number[]
+  /**
+   * The cursor is about to leave an entered submenu (closed, or back to cursorless), and its
+   * node still exists: focus goes back to the parent surface NOW, since focus on a node that
+   * leaves the document drops to `<body>`.
+   */
+  beforeSubmenuLeave?: () => void
 }
 
 /** The wiring `Menu.svelte` drives. Consumers never touch this; they use the surface above it. */
@@ -140,6 +146,12 @@ export interface MenuController<T = unknown> {
   readonly submenuHighlightedValue: string | null
   /** Whether the open submenu shows a cursor at all. */
   readonly submenuHighlighted: boolean
+  /**
+   * Whether the keyboard or the pointer went INTO the open submenu, which is what moves focus
+   * there. A hover-opened submenu is only shown. A keyboard-opened one whose every row is
+   * disabled is entered with no cursor.
+   */
+  readonly submenuEntered: boolean
   /** The single-cursor rule: an open submenu takes the parent row's highlight. */
   readonly parentHighlightSuppressed: boolean
   readonly draggingValue: string | null
@@ -167,6 +179,8 @@ export function createMenu<T = unknown>(deps: MenuDeps<T>): MenuController<T> {
   // The submenu's cursor is a VALUE, like the parent list's: a boolean would light every row
   // of a multi-item submenu, which the one-item "Connect directly" happened to hide.
   let submenuHighlightedValue = $state<string | null>(null)
+  // The keyboard opened the submenu, so it's entered even with no row to put the cursor on.
+  let submenuOpenedByKeyboard = $state(false)
   let draggingValue = $state<string | null>(null)
   let draggingSectionId = $state<string | null>(null)
   let dropSlot = $state<number | null>(null)
@@ -243,9 +257,25 @@ export function createMenu<T = unknown>(deps: MenuDeps<T>): MenuController<T> {
     deps.restoreFocus?.()
   }
 
+  function isSubmenuEntered(): boolean {
+    return openSubmenuValue !== null && (submenuHighlightedValue !== null || submenuOpenedByKeyboard)
+  }
+
+  /**
+   * The ONE way the submenu changes: which row it hangs off, its cursor, and whether the
+   * keyboard opened it. Leaving an entered submenu tells the surface first, while the node is
+   * still there to move focus off.
+   */
+  function setSubmenu(value: string | null, cursor: string | null, byKeyboard: boolean): void {
+    const staysEntered = value !== null && (cursor !== null || byKeyboard)
+    if (isSubmenuEntered() && !staysEntered) hooks?.beforeSubmenuLeave?.()
+    openSubmenuValue = value
+    submenuHighlightedValue = cursor
+    submenuOpenedByKeyboard = value !== null && byKeyboard
+  }
+
   function closeSubmenu(): void {
-    openSubmenuValue = null
-    submenuHighlightedValue = null
+    setSubmenu(null, null, false)
   }
 
   /** The rows an open submenu offers, disabled ones skipped. */
@@ -258,13 +288,12 @@ export function createMenu<T = unknown>(deps: MenuDeps<T>): MenuController<T> {
   function openSubmenu(value: string, fromKeyboard: boolean): void {
     const item = itemOf(sections(), value)
     if (!item?.submenu?.length) return
-    openSubmenuValue = value
     // A submenu opened by hovering its parent row shows no cursor until the pointer or the
     // keyboard reaches INTO it; opened by keyboard, the cursor is already there. One whose
     // every row is disabled still opens, cursorless: its greyed rows are the answer to "why
     // can't I eject this?", and hiding them would leave an arrow that leads nowhere.
     const first = item.submenu.find((child) => !child.disabled)
-    submenuHighlightedValue = fromKeyboard ? (first?.value ?? null) : null
+    setSubmenu(value, fromKeyboard ? (first?.value ?? null) : null, fromKeyboard)
   }
 
   /** Walk an open submenu's own rows, wrapping; from no cursor, enter at the near end. */
@@ -593,6 +622,9 @@ export function createMenu<T = unknown>(deps: MenuDeps<T>): MenuController<T> {
     },
     get submenuHighlighted() {
       return submenuHighlightedValue !== null
+    },
+    get submenuEntered() {
+      return isSubmenuEntered()
     },
     get parentHighlightSuppressed() {
       return openSubmenuValue !== null

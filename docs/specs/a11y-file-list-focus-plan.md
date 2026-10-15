@@ -311,6 +311,10 @@ stays as it is.
   model).
 - **DONE**: M1 pins green untouched; `pnpm check` green; `ui/DETAILS.md` § Menu "Focus" bullet rewritten and the ⚠️ "not
   yet verified" gotcha replaced with the result.
+- **Status (2026-10-15)**: code, unit, axe, and `Menu.vsr.test.ts` landed. The U1–U4 listening run did NOT happen: the
+  Mac's screen was locked (`CGSSessionScreenIsLocked` true; VoiceOver said "Authentication application", the dev window
+  couldn't come frontmost), so `ui/DETAILS.md` cites the spike's phrases and says the shipped code's run is owed. Run
+  U1–U4 first thing in M5 (or before M3 if the screen is unlocked sooner).
 
 ### M3: Focus lives on the focused pane's list (#437 items 1, 6 partly)
 

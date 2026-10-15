@@ -467,6 +467,23 @@ describe('VolumeChooserMenu a11y', () => {
     })
     expect(document.querySelector('[data-menu-row="fav-1"]') !== null).toBe(expanded)
     await expectNoA11yViolations(document.body)
+
+    if (expanded) {
+      // A favorite's submenu, entered by the pointer: it takes focus and names its cursor row.
+      document
+        .querySelector('[data-menu-row="fav-1"]')
+        ?.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }))
+      await vi.waitFor(() => {
+        expect(document.querySelector('[data-menu-submenu] [data-menu-row]')).not.toBeNull()
+      })
+      document
+        .querySelector('[data-menu-submenu] [data-menu-row]:not([data-disabled])')
+        ?.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }))
+      await vi.waitFor(() => {
+        expect(document.activeElement?.hasAttribute('data-menu-submenu')).toBe(true)
+      })
+      await expectNoA11yViolations(document.body)
+    }
     switcherFavoritesExpanded = false
   })
 })

@@ -525,6 +525,229 @@ describe('the keyboard walk through a rendered submenu', () => {
 })
 
 /**
+ * What VoiceOver is told. Focus sits on the surface that owns the cursor and that surface's
+ * `aria-activedescendant` names the cursor row: the top-level surface while the parent list
+ * has the cursor, the submenu surface once the cursor is inside it. Every id is unique in the
+ * document, and the attribute lands a frame after focus, because VoiceOver reads only the
+ * container when the two arrive together.
+ */
+describe('what a screen reader is told', () => {
+  /** A submenu child that shares its value with a top-level row, and one that's all disabled. */
+  function srSections(): MenuSection[] {
+    return [
+      {
+        id: 'volumes',
+        items: [
+          { value: 'hd', label: 'Macintosh HD' },
+          {
+            value: 'share',
+            label: 'Team share',
+            submenu: [
+              { value: 'hd', label: 'Open on Macintosh HD' },
+              { value: 'forget', label: 'Forget server' },
+              { value: 'stay', label: 'Eject', keepsMenuOpen: true },
+            ],
+          },
+          {
+            value: 'busy',
+            label: 'Busy drive',
+            submenu: [{ value: 'eject', label: 'Eject (busy)', disabled: true }],
+          },
+        ],
+      },
+    ]
+  }
+
+  async function press(key: string): Promise<void> {
+    const target = document.activeElement ?? document.body
+    target.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }))
+    await tick()
+    await tick()
+  }
+
+  function submenu(): HTMLElement | null {
+    return document.querySelector('[data-menu-submenu]')
+  }
+
+  function subrow(value: string): HTMLElement | null {
+    return document.querySelector(`[data-menu-submenu] [data-menu-row="${value}"]`)
+  }
+
+  /** Opens on `row`, waits for the surface's focus and its active descendant. */
+  async function openOn(value: string, deps: Record<string, unknown> = {}): Promise<{ menu: MenuController }> {
+    const opened = await open({}, { getSections: srSections, ...deps })
+    await vi.waitFor(() => {
+      expect(document.activeElement).toBe(surface())
+    })
+    opened.menu.highlight(value)
+    await tick()
+    return opened
+  }
+
+  /** Walks into `share`'s submenu with →, and waits for its surface to take focus. */
+  async function enterShare(deps: Record<string, unknown> = {}): Promise<{ menu: MenuController }> {
+    const opened = await openOn('share', deps)
+    await press('ArrowRight')
+    await vi.waitFor(() => {
+      expect(document.activeElement).toBe(submenu())
+    })
+    return opened
+  }
+
+  it('gives submenu rows document-unique ids, even where a value repeats a top-level one', async () => {
+    const { menu } = await openOn('share')
+    menu.surface.openSubmenu('share', true)
+    await tick()
+    await tick()
+    const ids = [...document.querySelectorAll('[data-menu-row]')].map((el) => el.id)
+    expect(ids.every((id) => id !== '')).toBe(true)
+    expect(new Set(ids).size).toBe(ids.length)
+    expect(subrow('hd')?.id).not.toBe(row('hd')?.id)
+  })
+
+  it('names the submenu after its row, and the row says which surface it opened', async () => {
+    const { menu } = await openOn('share')
+    expect(row('share')?.hasAttribute('aria-controls')).toBe(false)
+    menu.surface.openSubmenu('share', true)
+    await tick()
+    await tick()
+    expect(submenu()?.getAttribute('aria-label')).toBe('Team share')
+    expect(submenu()?.getAttribute('tabindex')).toBe('-1')
+    expect(submenu()?.id).toBeTruthy()
+    expect(row('share')?.getAttribute('aria-controls')).toBe(submenu()?.id)
+  })
+
+  it('lands the surface’s active descendant a frame after it takes focus on open', async () => {
+    const atFocus: (string | null)[] = []
+    document.addEventListener('focusin', (event) => {
+      const el = event.target as HTMLElement
+      if (el.matches('[data-menu]')) atFocus.push(el.getAttribute('aria-activedescendant'))
+    })
+    await open({}, { getSections: srSections })
+    await vi.waitFor(() => {
+      expect(document.activeElement).toBe(surface())
+    })
+    expect(atFocus).toEqual([null])
+    await vi.waitFor(() => {
+      expect(surface()?.getAttribute('aria-activedescendant')).toBe(row('hd')?.id)
+    })
+    assertFocusModel(surface())
+  })
+
+  it('→ moves focus into the submenu once it’s placed, and its active descendant follows ↓', async () => {
+    const visibilityAtFocus: string[] = []
+    document.addEventListener('focusin', (event) => {
+      const el = event.target as HTMLElement
+      if (el.matches('[data-menu-submenu]')) visibilityAtFocus.push(el.style.visibility)
+    })
+    await enterShare()
+    // `focus()` on a `visibility: hidden` node does nothing in WebKit, so it waits for placement.
+    expect(visibilityAtFocus).toEqual(['visible'])
+    await vi.waitFor(() => {
+      expect(submenu()?.getAttribute('aria-activedescendant')).toBe(subrow('hd')?.id)
+    })
+    assertFocusModel(submenu())
+
+    await press('ArrowDown')
+    expect(submenu()?.getAttribute('aria-activedescendant')).toBe(subrow('forget')?.id)
+    assertFocusModel(submenu())
+  })
+
+  it('leaves focus in the submenu: the parent surface never takes it back', async () => {
+    await enterShare()
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    await tick()
+    expect(document.activeElement).toBe(submenu())
+  })
+
+  /** Focus on a node that leaves the document drops to `<body>`, and the next key goes nowhere useful. */
+  describe('focus returns to the parent surface before the submenu goes away', () => {
+    /** Records where focus was at the moment the submenu node left the document. */
+    function watchSubmenuRemoval(): { focusAtRemoval: () => Element | null | undefined } {
+      let seen: Element | null | undefined
+      const node = submenu()
+      const observer = new MutationObserver(() => {
+        if (node && !node.isConnected && seen === undefined) {
+          seen = document.activeElement
+          observer.disconnect()
+        }
+      })
+      observer.observe(document.body, { childList: true, subtree: true })
+      // The blur fires synchronously on removal of a focused node, before any observer.
+      node?.addEventListener('blur', () => {
+        if (seen === undefined && !node.isConnected) seen = document.body
+      })
+      return { focusAtRemoval: () => seen }
+    }
+
+    it('on ←', async () => {
+      await enterShare()
+      const watch = watchSubmenuRemoval()
+      await press('ArrowLeft')
+      expect(submenu()).toBeNull()
+      expect(document.activeElement).toBe(surface())
+      expect(watch.focusAtRemoval()).toBe(surface())
+      assertFocusModel(surface())
+      expect(surface()?.getAttribute('aria-activedescendant')).toBe(row('share')?.id)
+    })
+
+    it('on Escape', async () => {
+      await enterShare()
+      await press('Escape')
+      expect(submenu()).toBeNull()
+      expect(document.activeElement).toBe(surface())
+    })
+
+    it('on a keepsMenuOpen pick', async () => {
+      await enterShare()
+      await press('ArrowDown')
+      await press('ArrowDown')
+      await press('Enter')
+      expect(submenu()).toBeNull()
+      expect(document.activeElement).toBe(surface())
+    })
+
+    it('when the pointer drifts off a keyboard-entered submenu', async () => {
+      await enterShare()
+      submenu()?.dispatchEvent(new MouseEvent('mouseleave'))
+      await tick()
+      await tick()
+      expect(submenu()).toBeNull()
+      expect(document.activeElement).toBe(surface())
+    })
+  })
+
+  it('a hover-opened submenu shows but doesn’t take focus, until the pointer enters it', async () => {
+    await openOn('hd')
+    row('share')?.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }))
+    await tick()
+    await tick()
+    expect(submenu()).not.toBeNull()
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    expect(document.activeElement).toBe(surface())
+
+    subrow('forget')?.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }))
+    await vi.waitFor(() => {
+      expect(document.activeElement).toBe(submenu())
+    })
+  })
+
+  // "Why can't I eject this?": its greyed rows are the answer, so VoiceOver must reach them.
+  it('a keyboard-opened all-disabled submenu takes focus and names its first row, cursor still null', async () => {
+    const { menu } = await openOn('busy')
+    await press('ArrowRight')
+    await vi.waitFor(() => {
+      expect(document.activeElement).toBe(submenu())
+    })
+    expect(menu.submenuHighlightedValue).toBeNull()
+    await vi.waitFor(() => {
+      expect(submenu()?.getAttribute('aria-activedescendant')).toBe(subrow('eject')?.id)
+    })
+    expect(subrow('eject')?.getAttribute('aria-disabled')).toBe('true')
+  })
+})
+
+/**
  * The `data-*` hooks are a contract other suites select on (`lib/ui/DETAILS.md` § Menu),
  * so they're asserted here rather than left to rot as decoration.
  */

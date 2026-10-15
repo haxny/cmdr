@@ -951,6 +951,67 @@ describe('submenu row states', () => {
     expect(menu.highlightedValue).toBe('share')
   })
 
+  /**
+   * "Entered" decides where focus sits (the surface follows it, `Menu.svelte`): a submenu the
+   * keyboard or the pointer went INTO, never one a hover only showed. A keyboard-opened one
+   * with every row disabled is entered with no cursor, so VoiceOver can read why.
+   */
+  it('says whether the open submenu was entered, cursor or not', () => {
+    const menu = build({
+      getSections: () => [
+        {
+          id: 'volumes',
+          items: [
+            { value: 'share', label: 'Share', submenu: [{ value: 'forget', label: 'Forget' }] },
+            { value: 'busy', label: 'Busy', submenu: [{ value: 'eject', label: 'Eject', disabled: true }] },
+          ],
+        },
+      ],
+    })
+    menu.openUnder(anchorEl())
+    expect(menu.submenuEntered).toBe(false)
+    menu.surface.openSubmenu('share', false)
+    expect(menu.submenuEntered).toBe(false)
+    menu.surface.hoverSubmenu('forget')
+    expect(menu.submenuEntered).toBe(true)
+    menu.surface.closeSubmenu()
+    expect(menu.submenuEntered).toBe(false)
+
+    menu.highlight('busy')
+    menu.handleKey(keydown('ArrowRight'))
+    expect(menu.submenuHighlightedValue).toBeNull()
+    expect(menu.submenuEntered).toBe(true)
+    menu.handleKey(keydown('ArrowLeft'))
+    expect(menu.submenuEntered).toBe(false)
+  })
+
+  // The surface moves focus back to the parent while the submenu's node still exists: focus on
+  // a removed node drops to `<body>`. Every way out goes through this one call.
+  it('tells the surface before the cursor leaves the submenu, on every way out', () => {
+    const leaving = vi.fn()
+    const menu = build({ getSections: sectionsWith([{ value: 'forget', label: 'Forget', keepsMenuOpen: true }]) })
+    menu.surface.bindSurface({ getRowMidpoints: () => [], beforeSubmenuLeave: leaving })
+    menu.openUnder(anchorEl())
+    menu.highlight('share')
+
+    menu.handleKey(keydown('ArrowRight'))
+    leaving.mockImplementation(() => {
+      expect(menu.openSubmenuValue).toBe('share')
+    })
+    menu.handleKey(keydown('ArrowLeft'))
+    menu.handleKey(keydown('ArrowRight'))
+    menu.handleKey(keydown('Escape'))
+    menu.handleKey(keydown('ArrowRight'))
+    menu.handleKey(keydown('Enter'))
+    menu.handleKey(keydown('ArrowRight'))
+    menu.surface.closeSubmenu()
+    expect(leaving).toHaveBeenCalledTimes(4)
+    // A hover-opened submenu was never entered, so there's nothing to hand back.
+    menu.surface.openSubmenu('share', false)
+    menu.surface.closeSubmenu()
+    expect(leaving).toHaveBeenCalledTimes(4)
+  })
+
   it('closes the whole menu after an ordinary submenu pick', () => {
     const menu = build({
       getSections: sectionsWith([
