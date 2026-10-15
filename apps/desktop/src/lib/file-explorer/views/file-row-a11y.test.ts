@@ -67,10 +67,10 @@ describe('fileRowName', () => {
   it('adds the Full view’s size, modified date, and git status in that order', () => {
     const details = { size: '1 KB', modified: '2026-10-14 10:30', gitStatus: 'Modified' }
     expect(fileRowName({ entry: entry({ name: 'a.txt' }), details })).toBe(
-      'a.txt, 1 KB, (modified) 2026-10-14 10:30, Modified',
+      'a.txt, 1 KB, (modified) 2026-10-14 10:30, Modified in git',
     )
     expect(fileRowName({ entry: entry({ name: 'sub', isDirectory: true }), details })).toBe(
-      'sub (folder), 1 KB, (modified) 2026-10-14 10:30, Modified',
+      'sub (folder), 1 KB, (modified) 2026-10-14 10:30, Modified in git',
     )
   })
 

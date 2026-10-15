@@ -337,9 +337,11 @@ no per-view copy of any of it.
   that count is wrong anyway.
 - The name (`fileRowName`) is "{name} ({kind}, {badges})" (kind: folder, symlink, package, archive; a plain file has no
   kind word, its extension is in its name; badges: sync state, restricted, archived), then in Full view the size,
-  "(modified) {date}", and the git status: "src (folder), 4,096, (modified) 2026-10-14 10:30". `..` says "Parent folder"
-  in place of its name, then its cells like any row ("Parent folder, <dir>"). The kind comes from typed fields only;
-  "package" from `FileEntry.isPackage`, set in Rust from `is_package_dir`, ❌ never the `pkg:` icon-id prefix.
+  "(modified) {date}", and "{status} in git": "src (folder), 4,096, (modified) 2026-10-14 10:30, Modified in git" (the
+  "in git" keeps the status from echoing the date's "modified"; no parentheses, since the Git cell has no visible text).
+  `..` says "Parent folder" in place of its name, then its cells like any row ("Parent folder, <dir>"). The kind comes
+  from typed fields only; "package" from `FileEntry.isPackage`, set in Rust from `is_package_dir`, ❌ never the `pkg:`
+  icon-id prefix.
 - ❗ **Label in name (WCAG 2.5.3, axe `label-content-name-mismatch`)**: the row's VISIBLE words must run through the
   name unbroken and in visible order (axe compares word tokens after dropping punctuation and parentheticals). So words
   only the name says sit in parentheses (VoiceOver doesn't speak them), the size says `<dir>` while the cell shows it,

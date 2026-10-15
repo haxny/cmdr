@@ -1442,6 +1442,13 @@
       "date": "the file’s last-modified date and time, already formatted the way the Modified column shows it"
     }
   },
+  "fileExplorer.list.rowGitStatus": "{status} in git",
+  "@fileExplorer.list.rowGitStatus": {
+    "description": "Spoken last in a row of the file list’s Full view when a screen reader reads it, as in “a.txt, 1 KB, modified 2026-10-14 10:30, Modified in git”. Never shown on screen. Says the file’s git status so it doesn’t sound like a second “modified” after the date. “git” is the version control tool’s name: keep it as is.",
+    "placeholders": {
+      "status": "the file’s git status word, already translated, as the Git column’s tooltip shows it (for example Modified, Untracked, or Ignored)"
+    }
+  },
   "fileExplorer.dirSize.updatingIndexTooltip": "Updating index: size may change.",
   "@fileExplorer.dirSize.updatingIndexTooltip": {
     "description": "Hover tooltip on a folder’s size while indexing is in progress, warning that the figure may still change. Note the colon."

@@ -149,14 +149,14 @@ describe('FullList row names', () => {
   })
 
   // The Git cell draws its letter from CSS, so "M" between the name and Ext cells doesn't
-  // break the visible words' run through the name; the name says "Modified" at the end.
+  // break the visible words' run through the name; the name says "Modified in git" at the end.
   it('says the git status last, and the git column keeps the row clean', async () => {
     const list = await mountFullList({
       entries: [fileEntry({ name: 'report.md', size: 2048 })],
       props: { showGitColumn: true, gitRepoRoot: '/root' },
     })
     await vi.waitFor(() => {
-      expect(rowLabels(list.rows())).toEqual(['report.md, 2,048, (modified) 2025-03-14 10:30, Modified'])
+      expect(rowLabels(list.rows())).toEqual(['report.md, 2,048, (modified) 2025-03-14 10:30, Modified in git'])
     })
     expect(list.target.querySelector('.col-git')?.getAttribute('data-glyph')).toBe('M')
     await expectNoA11yViolations(list.target)

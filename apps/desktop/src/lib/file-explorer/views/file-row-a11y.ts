@@ -72,7 +72,9 @@ export interface FileRowNameInput {
 
 /**
  * The row's accessible name: "{name} ({kind}, {badges})", then (Full view) size,
- * "(modified) {date}", and git status: "src (folder), 4,096, (modified) 2026-10-14 10:30".
+ * "(modified) {date}", and "{status} in git": "src (folder), 4,096, (modified) 2026-10-14 10:30,
+ * Modified in git". The git phrase needs no parentheses: the Git cell draws its glyph from CSS,
+ * so none of it is visible text, and "in git" keeps it from echoing the date's "modified".
  * `..` says "Parent folder" in place of its name, then its cells like any row.
  *
  * It's set as the option's `aria-label`, which replaces the name the row's content would give,
@@ -92,7 +94,7 @@ export function fileRowName({ entry, syncStatus, isRestricted = false, details }
       : withAside(entry.name, rowAsides(entry, syncStatus, isRestricted)),
     details?.size ?? '',
     details?.modified ? modifiedPhrase(details.modified) : '',
-    details?.gitStatus ?? '',
+    details?.gitStatus ? tString('fileExplorer.list.rowGitStatus', { status: details.gitStatus }) : '',
   ]
   return formatUnitList(parts.filter((part) => part !== ''))
 }
