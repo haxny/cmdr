@@ -2,6 +2,7 @@ package checks
 
 import (
 	"errors"
+	"strings"
 	"testing"
 )
 
@@ -16,9 +17,13 @@ func TestScreenshotsCheckResult_CleanRunIsSuccess(t *testing.T) {
 }
 
 func TestScreenshotsCheckResult_DriftIsAWarnWithEachFindingCounted(t *testing.T) {
-	output := "Stale screenshot couplings (2):\n" +
+	summary := "2 stale couplings (`pnpm i18n:couple` rewrites them), and 1 key the capture report still names but the catalogs dropped"
+	output := summary + "\n" +
+		"Stale screenshot couplings (2):\n" +
 		"  - common.ok → dialog.png (currently undefined)\n" +
-		"  - common.cancel → no screenshot (stale coupling to clear) (currently \"old.png\")\n"
+		"  - common.cancel → no screenshot (stale coupling to clear) (currently \"old.png\")\n" +
+		"Keys the capture report names but the catalogs dropped (1):\n" +
+		"  - common.gone (not in common.json)\n"
 	result, err := screenshotsCheckResult(screenshotsExitWarn, output)
 	if err != nil {
 		t.Fatalf("got error %v, want a warn", err)
@@ -26,8 +31,15 @@ func TestScreenshotsCheckResult_DriftIsAWarnWithEachFindingCounted(t *testing.T)
 	if result.Code != ResultWarning {
 		t.Fatalf("got code %d, want warning", result.Code)
 	}
-	if result.Issues != 2 {
-		t.Fatalf("got %d issues, want 2", result.Issues)
+	if result.Issues != 3 {
+		t.Fatalf("got %d issues, want 3", result.Issues)
+	}
+	// Quiet stdout gets the summary alone; the list goes to the saved output.
+	if result.Message != summary {
+		t.Fatalf("got message %q, want the coupler's one-line summary", result.Message)
+	}
+	if !strings.Contains(result.Details, "common.gone") || strings.Contains(result.Details, summary) {
+		t.Fatalf("got details %q, want the bulleted sections without the summary", result.Details)
 	}
 }
 

@@ -59,8 +59,11 @@ const (
 
 // CheckResult is returned by checks on success.
 type CheckResult struct {
-	Code        ResultCode
-	Message     string
+	Code    ResultCode
+	Message string
+	// Details is the full finding list behind a one-line Message. It goes to the
+	// saved full output (and `-v`), never to quiet stdout, which names the file.
+	Details     string
 	MadeChanges bool // true if the check modified files (for example, formatted code)
 	Total       int  // items checked (-1 = N/A)
 	Issues      int  // items needing attention (-1 = N/A)

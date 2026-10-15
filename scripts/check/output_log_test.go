@@ -100,6 +100,28 @@ func TestCapOutputWithoutAFileStillSaysHowToSeeEverything(t *testing.T) {
 	}
 }
 
+func TestDetailsReachTheSavedOutputButNotQuietStdout(t *testing.T) {
+	state := &CheckState{
+		Status:         StatusCompleted,
+		FullOutputPath: "/logs/x.log",
+		Result: checks.CheckResult{
+			Code:    checks.ResultWarning,
+			Message: "3 stale couplings",
+			Details: "  - a\n  - b\n  - c",
+		},
+	}
+	if got := outputBody(state); !strings.Contains(got, "3 stale couplings") || !strings.Contains(got, "  - c") {
+		t.Errorf("saved output should carry the message and the details, got %q", got)
+	}
+	if got := quietBody(state); got != "3 stale couplings (list: /logs/x.log)" {
+		t.Errorf("quiet stdout should be the message plus a pointer, got %q", got)
+	}
+	state.FullOutputPath = ""
+	if got := quietBody(state); strings.Contains(got, "  - a") {
+		t.Errorf("with nothing saved, quiet stdout still leaves the details out, got %q", got)
+	}
+}
+
 func TestAFailedCheckSavesItsFullOutputAndPrintsAnExcerpt(t *testing.T) {
 	home := redirectHome(t)
 	body := numberedLines(200)

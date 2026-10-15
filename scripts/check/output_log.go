@@ -106,12 +106,27 @@ func clipLines(lines []string) []string {
 }
 
 // outputBody is the text a check produced: its error for a failure, its message
-// otherwise.
+// (plus any details) otherwise.
 func outputBody(state *CheckState) string {
 	if state.Status == StatusFailed && state.Error != nil {
 		return state.Error.Error()
 	}
+	if state.Result.Details != "" {
+		return state.Result.Message + "\n\n" + state.Result.Details
+	}
 	return state.Result.Message
+}
+
+// quietBody is what quiet mode prints before the budget applies: the output
+// minus a check's Details, which stay in the saved full output the line names.
+func quietBody(state *CheckState) string {
+	if state.Status == StatusFailed || state.Result.Details == "" {
+		return outputBody(state)
+	}
+	if state.FullOutputPath == "" {
+		return state.Result.Message + " (rerun with -v for the list)"
+	}
+	return fmt.Sprintf("%s (list: %s)", state.Result.Message, state.FullOutputPath)
 }
 
 // keepsFullOutput reports whether a check's full output is worth saving: a

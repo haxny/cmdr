@@ -8,6 +8,7 @@ import {
   findStructuralProblems,
   isBreakingFinding,
   checkExitCode,
+  checkSummary,
   CHECK_EXIT_WARN,
   CHECK_EXIT_ERROR,
   REPRESENTATIVE_SCREENSHOTS,
@@ -440,6 +441,26 @@ describe('checkExitCode', () => {
     // finding must never share Node's exit 1.
     expect([CHECK_EXIT_WARN, CHECK_EXIT_ERROR]).not.toContain(1)
     expect(CHECK_EXIT_WARN).not.toBe(CHECK_EXIT_ERROR)
+  })
+})
+
+describe('checkSummary', () => {
+  it('names every nonzero count on one line, each with its fix', () => {
+    const summary = checkSummary({ broken: 0, redundantRules: 1, stale: 8, removedKeys: 25 })
+    expect(summary).toBe(
+      '8 stale couplings (`pnpm i18n:couple` rewrites them), 1 redundant representative rule, ' +
+        'and 25 keys the capture report still names but the catalogs dropped (the next `pnpm i18n:shots` forgets them)',
+    )
+    expect(summary).not.toContain('\n')
+  })
+
+  it('leaves out the zero counts and pluralizes one', () => {
+    expect(checkSummary({ broken: 0, redundantRules: 0, stale: 1, removedKeys: 0 })).toBe(
+      '1 stale coupling (`pnpm i18n:couple` rewrites it)',
+    )
+    expect(checkSummary({ broken: 2, redundantRules: 0, stale: 0, removedKeys: 0 })).toBe(
+      '2 broken screenshot rules or couplings',
+    )
   })
 })
 

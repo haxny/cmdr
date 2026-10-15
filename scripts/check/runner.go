@@ -378,7 +378,7 @@ func (r *Runner) printResult(state *CheckState) int {
 
 	shown := outputBody(state)
 	if r.quiet {
-		shown = capOutput(shown, state.FullOutputPath)
+		shown = capOutput(quietBody(state), state.FullOutputPath)
 	}
 
 	switch state.Status {

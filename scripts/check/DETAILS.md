@@ -144,6 +144,9 @@ lines (14 KB) to say one thing.
   check that RAN (cache hits and blocked checks print nothing of their own). `result` is `pass` / `warn` / `fail` /
   `skip`, a warning being its own label here, unlike in `check-log.csv`. `printed_bytes` is what reached stdout: 0 for a
   pass quiet mode hid, less than `output_bytes` for a capped one. `full_output` is the saved file, or empty.
+- **`CheckResult.Details`**: a warn-only check whose finding list rarely needs reading in-run returns a one-line
+  `Message` (counts plus the fix) and the list as `Details`. The saved text and `-v` carry both; quiet stdout prints the
+  message with `(list: <saved path>)` (`quietBody`). `message-screenshots-fresh` is the user.
 
 **Decision**: fix a noisy check at the source before reaching for the budget. **Why**: the budget is a backstop that
 keeps one lane from flooding a run; an excerpt still costs a round trip to the file when the cut part mattered. So

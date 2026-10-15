@@ -71,12 +71,17 @@ func screenshotsCheckResult(exitCode int, output string) (CheckResult, error) {
 	case 0:
 		return Success("screenshot couplings match the capture report, and every representative rule is live"), nil
 	case screenshotsExitWarn:
-		findings := countDriftLines(output)
-		msg := fmt.Sprintf(
-			"%d screenshot %s to look at (warn-only: screenshots are an optional translator aid):\n%s",
-			findings, Pluralize(findings, "finding", "findings"), indentOutput(output),
-		)
-		return CheckResult{Code: ResultWarning, Message: msg, Total: -1, Issues: findings, Changes: -1}, nil
+		// The coupler leads with a one-line summary that names each fix; the
+		// bulleted sections after it go to the saved output only.
+		summary, details, _ := strings.Cut(strings.TrimLeft(output, "\n"), "\n")
+		return CheckResult{
+			Code:    ResultWarning,
+			Message: summary,
+			Details: details,
+			Total:   -1,
+			Issues:  countDriftLines(details),
+			Changes: -1,
+		}, nil
 	case screenshotsExitError:
 		return CheckResult{}, fmt.Errorf(
 			"a screenshot rule or coupling no longer matches the catalog or the capture report, "+

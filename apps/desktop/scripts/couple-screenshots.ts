@@ -49,7 +49,7 @@
  * inventory, so the report says so rather than implying gaps are bugs.
  *
  * The pure cores are exported (`couplingsFromReport`, `buildCouplings`,
- * `coupleCatalog`, `findStructuralProblems`, `fileForKey`) so they're
+ * `coupleCatalog`, `findStructuralProblems`, `checkSummary`, `fileForKey`) so they're
  * unit-testable without touching the real catalogs (see
  * `couple-screenshots.test.ts`). The CLI shell below is only file I/O around
  * those cores, and runs only when invoked as a script.
@@ -237,6 +237,43 @@ export function checkExitCode(findings: StructuralFinding[], staleCount: number)
   if (findings.some((finding) => isBreakingFinding(finding))) return CHECK_EXIT_ERROR
   if (findings.length > 0 || staleCount > 0) return CHECK_EXIT_WARN
   return 0
+}
+
+/** What `--check` found, counted, for its one-line summary. */
+export interface CheckCounts {
+  broken: number
+  redundantRules: number
+  stale: number
+  /** Keys the capture report names that no catalog has anymore (renamed or deleted since the capture). */
+  removedKeys: number
+}
+
+/**
+ * Pure: the one-line summary `--check` prints first, so the check runner can
+ * show it alone and keep the bulleted detail for the saved output. Names each
+ * nonzero count with its fix, joined as a prose list.
+ */
+export function checkSummary(counts: CheckCounts): string {
+  const plural = (n: number, one: string, many: string): string => `${String(n)} ${n === 1 ? one : many}`
+  const parts: string[] = []
+  if (counts.broken > 0) {
+    parts.push(plural(counts.broken, 'broken screenshot rule or coupling', 'broken screenshot rules or couplings'))
+  }
+  if (counts.stale > 0) {
+    const it = counts.stale === 1 ? 'it' : 'them'
+    parts.push(`${plural(counts.stale, 'stale coupling', 'stale couplings')} (\`pnpm i18n:couple\` rewrites ${it})`)
+  }
+  if (counts.redundantRules > 0) {
+    parts.push(plural(counts.redundantRules, 'redundant representative rule', 'redundant representative rules'))
+  }
+  if (counts.removedKeys > 0) {
+    parts.push(
+      `${plural(counts.removedKeys, 'key', 'keys')} the capture report still names but the catalogs dropped ` +
+        '(the next `pnpm i18n:shots` forgets them)',
+    )
+  }
+  if (parts.length <= 1) return parts.join('')
+  return `${parts.slice(0, -1).join(', ')}, and ${parts[parts.length - 1]}`
 }
 
 export interface Coupling {
@@ -531,13 +568,15 @@ interface CoupleAllResult {
   staleForCheck: string[]
   coupledWithoutDescription: string[]
   missingTwins: string[]
+  /** Report keys no catalog has anymore (or whose whole area catalog is gone). */
+  removedKeys: string[]
 }
 
 /**
  * Couples every catalog file on disk, including one this run couples nothing in
  * (its stale couplings still need clearing). With `checkOnly`, collects stale
- * couplings instead of writing; otherwise writes the changed files. Surfaces
- * drift (a coupled area with no catalog, missing keys) as warnings.
+ * couplings instead of writing; otherwise writes the changed files. Collects
+ * drift (a coupled area with no catalog, missing keys) for the caller to print.
  */
 function coupleAllFiles(
   byFile: Map<string, Map<string, Coupling>>,
@@ -550,11 +589,12 @@ function coupleAllFiles(
   const staleForCheck: string[] = []
   const coupledWithoutDescription: string[] = []
   const missingTwins: string[] = []
+  const removedKeys: string[] = []
 
   const catalogFiles = readdirSync(messagesDir).filter((name) => name.endsWith('.json'))
-  for (const file of byFile.keys()) {
+  for (const [file, keys] of byFile) {
     if (!catalogFiles.includes(file)) {
-      console.warn(`Skipping ${file}: no such catalog (key area without a catalog file?)`)
+      for (const key of keys.keys()) removedKeys.push(`${key} (no ${file} catalog)`)
     }
   }
 
@@ -562,9 +602,7 @@ function coupleAllFiles(
     const filePath = join(messagesDir, file)
     const result = coupleCatalog(readFileSync(filePath, 'utf8'), byFile.get(file) ?? new Map<string, Coupling>())
 
-    for (const key of result.missingKeys) {
-      console.warn(`Skipping ${key}: not present in ${file} (catalog may have drifted from the report)`)
-    }
+    for (const key of result.missingKeys) removedKeys.push(`${key} (not in ${file})`)
     for (const key of result.missingTwins) {
       missingTwins.push(`${key} (in ${file})`)
     }
@@ -584,7 +622,15 @@ function coupleAllFiles(
     }
   }
 
-  return { changedFiles, couplingCount, clearedCount, staleForCheck, coupledWithoutDescription, missingTwins }
+  return {
+    changedFiles,
+    couplingCount,
+    clearedCount,
+    staleForCheck,
+    coupledWithoutDescription,
+    missingTwins,
+    removedKeys,
+  }
 }
 
 /** One finding as a line a person can act on. */
@@ -608,8 +654,8 @@ function printSection(header: string, lines: string[]): void {
   for (const line of lines) console.error(`  - ${line}`)
 }
 
-/** Prints the structural findings (breaking first) and the stale couplings. */
-function printFindings(findings: StructuralFinding[], stale: string[]): void {
+/** Prints the structural findings (breaking first), the stale couplings, and the removed keys. */
+function printFindings(findings: StructuralFinding[], stale: string[], removedKeys: string[]): void {
   const describe = (list: StructuralFinding[]): string[] => list.map((finding) => describeFinding(finding))
   printSection(
     'Broken screenshot rules and couplings',
@@ -617,6 +663,7 @@ function printFindings(findings: StructuralFinding[], stale: string[]): void {
   )
   printSection('Redundant representative rules', describe(findings.filter((finding) => !isBreakingFinding(finding))))
   printSection('Stale screenshot couplings, which `pnpm i18n:couple` rewrites', stale)
+  printSection('Keys the capture report names but the catalogs dropped, which the next capture forgets', removedKeys)
 }
 
 function main() {
@@ -651,24 +698,45 @@ function main() {
 
   // Group target keys by their catalog file so each file is read/written once.
   const byFile = groupByFile(byKey)
-  const { changedFiles, couplingCount, clearedCount, staleForCheck, coupledWithoutDescription, missingTwins } =
-    coupleAllFiles(byFile, messagesDir, checkOnly)
+  const {
+    changedFiles,
+    couplingCount,
+    clearedCount,
+    staleForCheck,
+    coupledWithoutDescription,
+    missingTwins,
+    removedKeys,
+  } = coupleAllFiles(byFile, messagesDir, checkOnly)
 
   if (checkOnly) {
     // Read against the catalogs as committed: a screenshot the report lacks is a
     // break for as long as a twin still names it.
     const findings = findStructuralProblems(report, allKeys, screenshotByKey)
-    printFindings(findings, staleForCheck)
+    // Removed keys ride along in the summary but never raise the exit code on
+    // their own: only a fresh capture clears them, and that's an E2E run.
     const exitCode = checkExitCode(findings, staleForCheck.length)
     if (exitCode === 0) {
       console.log('Every screenshot coupling matches the capture report, and every representative rule is live.')
+      process.exit(0)
     }
+    // The summary goes first and alone on its line: the check runner prints it
+    // and saves the sections below to its full-output log.
+    const broken = findings.filter((finding) => isBreakingFinding(finding)).length
+    console.error(
+      checkSummary({
+        broken,
+        redundantRules: findings.length - broken,
+        stale: staleForCheck.length,
+        removedKeys: removedKeys.length,
+      }),
+    )
+    printFindings(findings, staleForCheck, removedKeys)
     process.exit(exitCode)
   }
 
   // This run just rewrote every twin from the report, so only the rules can still
   // be broken; a finding here doesn't stop the write, it tells the person running it.
-  printFindings(findStructuralProblems(report, allKeys, new Map()), [])
+  printFindings(findStructuralProblems(report, allKeys, new Map()), [], removedKeys)
 
   console.log(
     `Coupled ${String(couplingCount)} key(s) to screenshots and cleared ${String(clearedCount)} stale coupling(s) ` +
