@@ -4,9 +4,9 @@ Live: https://alternativeto.net/software/cmdr/about/. Edit it while signed in; c
 queue, and the "Note about your changes" field at the bottom speeds that up.
 
 Status: the 2026-09-18 v0.46.0 edit is live (checked 2026-09-24: description, tags, and the single $59 price all match
-this file). The fields below are what's live, except the v0.49.0 edit (14 languages, prepared 2026-10-01, not yet
-submitted). Edit them here first when refreshing, then paste. Refresh cadence and what to update per release:
-`docs/guides/releasing.md` § "Refreshing the app-directory listings".
+this file). The fields below are what's live, except the v0.53.0 edit (prepared 2026-10-15, not yet submitted; it
+supersedes the unsent v0.49.0 one). Edit them here first when refreshing, then paste. Refresh cadence and what to update
+per release: `docs/guides/releasing.md` § "Refreshing the app-directory listings".
 
 v0.47.0 changed nothing here (checked 2026-09-24): AlternativeTo shows no version or changelog, and nothing in the
 description, tags, or features became false. Its new features (the viewer's long lines, favorite letter shortcuts, the
@@ -15,6 +15,10 @@ description, tags, or features became false. Its new features (the viewer's long
 v0.48.0 and v0.49.0 changed one line (checked 2026-10-01): Latin American Spanish made it 14 languages, a same-length
 edit. Their other additions (hex and binary viewer modes, tab drag and drop, streaming compression, SFTP free space)
 don't make anything false and are too small to buy room under the cap.
+
+v0.53.0 changed three lines (checked 2026-10-15): Russian (shipped in v0.50.0) made it 15 languages, and the
+accessibility line now leads with VoiceOver and full keyboard use, paid for by dropping "native macOS behavior".
+Multi-rename, S3, and compare folders (v0.50.0–v0.52.0) would need cuts elsewhere, so they wait for a rewrite.
 
 ## Main info
 
@@ -51,8 +55,8 @@ Core features:
 - Advanced ops: Queue operations, background them, pause/resume, browse op log, roll back ops, even days later.
 - Browse zip, tar, and 7z files like folders, and create or extract them.
 - Speed: Lists 50,000 files near-instantly; the built-in viewer opens a 10 GB file in 1 sec, with search. (!)
-- Accessibility: Real dark and light modes, native macOS behavior, WCAG 2.2 AA and APCA verified contrasts.
-- Localization: Translated into 14 languages.
+- Accessibility: VoiceOver, full keyboard use, dark/light modes, WCAG 2.2 AA and APCA verified contrasts.
+- Localization: Translated into 15 languages.
 
 Extra features:
 
@@ -78,9 +82,10 @@ AI features (optional, off by default, and can stay fully local with a built-in 
 
 ## More info
 
-- **Supported languages**: English, German, Spanish, French, Hungarian, Dutch, Portuguese, Swedish, Vietnamese, Chinese.
-  (The 14 locales the app ships, with British and Australian English folded into English and Latin American Spanish into
-  Spanish: `apps/desktop/src/lib/intl/messages`. Traditional/Simplified Chinese split is not supported in their list.)
+- **Supported languages**: English, German, Spanish, French, Hungarian, Dutch, Portuguese, Russian, Swedish, Vietnamese,
+  Chinese. (The 15 locales the app ships, with British and Australian English folded into English and Latin American
+  Spanish into Spanish: `apps/desktop/src/lib/intl/messages`. Traditional/Simplified Chinese split is not supported in
+  their list.)
 - **Pricing**: `Free for personal use`. Model `Purchase`, min `$59`, max `$59`. One figure in both fields, so the page
   renders a single price rather than a range: v0.46.0 retired the $59/year subscription and the $199 perpetual, leaving
   Commercial at $59 paid once (a year of updates included, $39/year after that to keep getting them). Enterprise
@@ -150,10 +155,10 @@ Leave unchecked, deliberately:
 
 ## Note about your changes
 
-Their optional box for the reviewing admin. For the v0.49.0 edit:
+Their optional box for the reviewing admin. For the v0.53.0 edit:
 
 ```
-Hi! Small one: Cmdr now ships Latin American Spanish, so the description says 14 languages instead of 13. Thanks!
+Hi! Small one: Cmdr now speaks Russian and Latin American Spanish, so it's 15 languages (Russian added to the list), and it works with VoiceOver now, so the accessibility line says so. Thanks!
 ```
 
 The note that went with the v0.46.0 edit, kept for reference (it's where the licensing mislabel ask went in):
@@ -179,7 +184,7 @@ Also, my ask from last time (if it's not done already): Cmdr is source-available
 
 So they don't get re-litigated at the next edit pass:
 
-- **The full description sits at 2,999 of their 3,000-character cap.** Every addition has to be paid for by a cut, so
+- **The full description sits at 2,997 of their 3,000-character cap.** Every addition has to be paid for by a cut, so
   measure before and after; the form rejects an over-long one outright. Nothing in v0.46.0 made the description false
   (no feature graduated out of alpha, no claim broke, and the description names no prices), so that release changed
   nothing here, per `docs/guides/releasing.md` § "Refreshing the app-directory listings".
