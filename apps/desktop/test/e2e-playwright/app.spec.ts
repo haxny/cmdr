@@ -142,8 +142,11 @@ test.describe('Keyboard navigation', () => {
       await tauriPage.click('.toast-close')
       await expect.poll(async () => (await tauriPage.count('.toast')) === 0, { timeout: waitBudget(2000) }).toBeTruthy()
 
+      // Focus is back on the focused pane's list, inside the explorer.
       expect(
-        await tauriPage.evaluate<boolean>(`document.activeElement === document.querySelector('.dual-pane-explorer')`),
+        await tauriPage.evaluate<boolean>(
+          `document.activeElement === document.querySelector('.dual-pane-explorer .file-pane.is-focused [role="listbox"]')`,
+        ),
       ).toBe(true)
       const initialCursor = await tauriPage.evaluate<string>(
         `document.querySelector('.file-pane.is-focused .file-entry.is-under-cursor')?.getAttribute('data-filename') || ''`,

@@ -180,7 +180,7 @@ export { returnPointFor } from './navigate-return'
  * refinement) keep focus put. The edge-flow recoveries (`'cancel'` walk-up /
  * network-restore, `'fallback'` MTP-fatal / retry / open-home / unmount) also keep
  * the focused pane put — they re-anchor DOM focus on the container instead, via
- * the handler's own `focusContainer()` where today's code does.
+ * the handler's own `focusActivePane()` where today's code does.
  *
  * `'mcp'` deliberately does NOT shift here: the MCP nav listener
  * (`mcp-listeners.ts`) calls `setFocusedPane(pane)` synchronously when the nav is

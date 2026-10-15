@@ -98,9 +98,16 @@ export interface MountFullListOptions {
   /** The scroll surface's measured box. Height ÷ row height sets what renders. */
   viewport?: LayoutBox
   props?: Partial<FullListProps>
+  /**
+   * A `$state` object to mount with, so the spec can change props after mount
+   * (a navigation, a cursor move). The defaults and `props` are written into it.
+   */
+  liveProps?: Partial<FullListProps>
 }
 
 export interface MountedFullList {
+  /** The exports the pane drives focus through. */
+  component: { focusList: () => boolean }
   target: HTMLElement
   /** Resize or scroll the surface and let the component react. */
   layout: LayoutMock
@@ -154,25 +161,23 @@ export async function mountFullList(options: MountFullListOptions = {}): Promise
 
   const target = document.createElement('div')
   document.body.appendChild(target)
-  mount(FullList, {
-    target,
-    props: {
-      listingId: 'listing-1',
-      volumeId: 'root',
-      totalCount: entries.length,
-      includeHidden: false,
-      cursorIndex: 0,
-      isFocused: true,
-      hasParent: false,
-      parentPath: '',
-      currentPath: '/root',
-      sortBy: 'name',
-      sortOrder: 'ascending',
-      onSelect: () => {},
-      onNavigate: () => {},
-      ...options.props,
-    },
-  })
+  const props = Object.assign(options.liveProps ?? {}, {
+    listingId: 'listing-1',
+    volumeId: 'root',
+    totalCount: entries.length,
+    includeHidden: false,
+    cursorIndex: 0,
+    isFocused: true,
+    hasParent: false,
+    parentPath: '',
+    currentPath: '/root',
+    sortBy: 'name',
+    sortOrder: 'ascending',
+    onSelect: () => {},
+    onNavigate: () => {},
+    ...options.props,
+  }) as FullListProps
+  const component = mount(FullList, { target, props }) as MountedFullList['component']
 
   const rows = () => [...target.querySelectorAll<HTMLElement>('.file-entry')]
   const rowNames = () => rows().map((row) => row.dataset.filename ?? '')
@@ -195,6 +200,7 @@ export async function mountFullList(options: MountFullListOptions = {}): Promise
   }
 
   return {
+    component,
     target,
     layout,
     rows,

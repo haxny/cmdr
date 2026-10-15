@@ -19,8 +19,9 @@
     import InlineRenameEditor from '../rename/InlineRenameEditor.svelte'
     import { shouldMountRenameEditor } from '../rename/rename-mount'
     import { glyphFor, labelFor } from '../git/status-column'
-    import { getImageIndexBadge, getFolderCoverageBadge } from './file-list-utils'
+    import { getImageIndexBadge, getFolderCoverageBadge, fileRowId } from './file-list-utils'
     import { createFullListCache } from './full-list-cache.svelte'
+    import { createListFocus } from './list-focus.svelte'
     import { createGitStatusColumn } from './full-list-git-column.svelte'
     import { planRowMouseDown } from './full-list-mouse'
     import { formatSizeForDisplay, formatNumber } from '../selection/selection-info-utils'
@@ -210,6 +211,9 @@
         clearsSortLabel,
         loadingOverlay,
     }: Props = $props()
+
+    // Unique per mounted list, so the two panes (and a search-results list) never render the same row id.
+    const listId = $props.id()
 
     /**
      * True when the host pane has supplied a static entries array (search-results
@@ -518,9 +522,18 @@
      * there, it's a critical a11y violation (axe `aria-valid-attr-value`) and
      * leaves screen readers announcing a stale row.
      */
-    const activeDescendantId = $derived(
-        visibleFiles.some((entry) => entry.globalIndex === cursorIndex) ? `file-${String(cursorIndex)}` : undefined,
-    )
+    const cursorRow = $derived.by(() => {
+        const row = visibleFiles.find((entry) => entry.globalIndex === cursorIndex)
+        return row ? { id: fileRowId(listId, cursorIndex), key: row.file.path } : undefined
+    })
+    const listFocus = createListFocus(() => cursorRow)
+    // The listbox, not the scroller around it: focus and `aria-activedescendant` share one element.
+    let listboxElement: HTMLDivElement | undefined = $state()
+
+    /** Focuses this list (the focused pane's keyboard home); false when it isn't mounted. */
+    export function focusList(): boolean {
+        return listFocus.focus(listboxElement)
+    }
 
     function handleScroll(e: Event) {
         cancelClickToRename()
@@ -714,10 +727,13 @@
     >
         <div
             class="listbox-region"
+            bind:this={listboxElement}
             role="listbox"
             aria-label={tString('fileExplorer.list.fileListAriaLabel')}
-            aria-activedescendant={activeDescendantId}
+            aria-activedescendant={listFocus.activeDescendant()}
             tabindex="-1"
+            onfocus={listFocus.handleFocus}
+            onblur={listFocus.handleBlur}
         >
         <!-- Spacer div provides accurate scrollbar for full list size -->
         <div class="virtual-spacer" style="height: {virtualWindow.totalSize}px;">
@@ -743,7 +759,7 @@
                     {@const date = formattedDate(file.modifiedAt)}
                     <!-- svelte-ignore a11y_interactive_supports_focus -->
                     <div
-                        id={`file-${String(globalIndex)}`}
+                        id={fileRowId(listId, globalIndex)}
                         class="file-entry"
                         class:is-under-cursor={globalIndex === cursorIndex}
                         class:is-selected={selectedIndices.has(globalIndex)}

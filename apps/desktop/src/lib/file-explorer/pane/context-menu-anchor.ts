@@ -50,24 +50,20 @@ export function contextMenuAnchor(row: AnchorRect | null, surface: AnchorRect | 
 /**
  * {@link contextMenuAnchor} over a pane's live DOM.
  *
- * ❗ Both list views give their rows `id="file-<index>"`, so a two-pane window holds
- * TWO `file-3` elements. The lookup is scoped to `paneEl` for that reason;
- * `document.getElementById` would hand back the left pane's row whichever pane asked.
+ * ❗ Both panes show a cursor row, so the lookup is scoped to `paneEl`: a document-wide
+ * query would hand back the left pane's row whichever pane asked.
  *
  * @param paneEl - The pane's root element (`FilePane`'s `paneEl`).
- * @param cursorIndex - The pane's cursor row, in the same index space the row ids use
- *                      (frontend indices, so the synthetic `..` sits at 0).
  * @param measure - How to measure an element; injected so the pure part stays testable
  *                  where `getBoundingClientRect` answers all zeroes.
  */
 export function cursorRowAnchor(
   paneEl: HTMLElement | null,
-  cursorIndex: number,
   measure: (el: Element) => AnchorRect = (el) => el.getBoundingClientRect(),
 ): AnchorPoint | null {
   if (!paneEl) return null
   const surface = paneEl.querySelector('[data-file-list-surface]')
-  return rowAnchorIn(paneEl, `#file-${String(cursorIndex)}`, surface, measure)
+  return rowAnchorIn(paneEl, '.file-entry.is-under-cursor', surface, measure)
 }
 
 /**

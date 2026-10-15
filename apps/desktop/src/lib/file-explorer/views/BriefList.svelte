@@ -22,6 +22,7 @@
         getImageIndexBadge,
         getFolderCoverageBadge,
         createParentEntry,
+        fileRowId,
         getEntryAt as getEntryAtUtil,
         indexOfEntry as indexOfEntryUtil,
         fetchVisibleRange as fetchVisibleRangeUtil,
@@ -33,6 +34,7 @@
         applyFolderSizes,
         type DirStats,
     } from './file-list-utils'
+    import { createListFocus } from './list-focus.svelte'
     import type { ListingIndexSizesChanged } from '#lib/tauri-commands/index.js'
     import {
         createBriefColumnWidths,
@@ -175,6 +177,9 @@
         onDragInitiate,
         loadingOverlay,
     }: Props = $props()
+
+    // Unique per mounted list, so the two panes never render the same row id.
+    const listId = $props.id()
 
     // ==== Cached entries (prefetch buffer) ====
     let cachedEntries = $state<FileEntry[]>([])
@@ -473,11 +478,19 @@
      * there, it's a critical a11y violation (axe `aria-valid-attr-value`) and
      * leaves screen readers announcing a stale row.
      */
-    const activeDescendantId = $derived(
-        visibleColumns.some((column) => column.files.some((entry) => entry.globalIndex === cursorIndex))
-            ? `file-${String(cursorIndex)}`
-            : undefined,
-    )
+    const cursorRow = $derived.by(() => {
+        for (const column of visibleColumns) {
+            const row = column.files.find((entry) => entry.globalIndex === cursorIndex)
+            if (row) return { id: fileRowId(listId, cursorIndex), key: row.file.path }
+        }
+        return undefined
+    })
+    const listFocus = createListFocus(() => cursorRow)
+
+    /** Focuses this list (the focused pane's keyboard home); false when it isn't mounted. */
+    export function focusList(): boolean {
+        return listFocus.focus(scrollContainer)
+    }
 
     // ==== Per-column widths (backend-driven) ====
     //
@@ -948,7 +961,9 @@
         tabindex="-1"
         role="listbox"
         aria-label={tString('fileExplorer.list.fileListAriaLabel')}
-        aria-activedescendant={activeDescendantId}
+        aria-activedescendant={listFocus.activeDescendant()}
+        onfocus={listFocus.handleFocus}
+        onblur={listFocus.handleBlur}
     >
         <!-- Spacer div provides accurate scrollbar for full list width -->
         <div class="virtual-spacer" style="width: {virtualWindow.totalSize}px; height: 100%;">
@@ -972,7 +987,7 @@
                             })}
                             <!-- svelte-ignore a11y_click_events_have_key_events,a11y_interactive_supports_focus -->
                             <div
-                                id={`file-${String(globalIndex)}`}
+                                id={fileRowId(listId, globalIndex)}
                                 class="file-entry"
                                 class:is-under-cursor={globalIndex === cursorIndex}
                                 class:is-selected={selectedIndices.has(globalIndex)}

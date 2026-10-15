@@ -107,7 +107,7 @@ export function buildAccess(config: AccessConfig = {}): PaneAccess {
     otherPane,
     getShowHiddenFiles: () => true,
     getVolumes: () => config.volumes ?? [ROOT_VOLUME],
-    focusContainer: vi.fn(),
+    focusActivePane: vi.fn(),
   }
 }
 

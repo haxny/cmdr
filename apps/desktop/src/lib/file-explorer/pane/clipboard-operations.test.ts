@@ -149,7 +149,7 @@ function buildAccess(config: AccessConfig = {}): PaneAccess {
     otherPane: (pane) => (pane === 'left' ? 'right' : 'left'),
     getShowHiddenFiles: () => config.showHiddenFiles ?? true,
     getVolumes: () => (config.volumes ?? []) as unknown as ReturnType<PaneAccess['getVolumes']>,
-    focusContainer: () => {},
+    focusActivePane: () => {},
   }
 }
 

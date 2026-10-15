@@ -26,7 +26,7 @@ function setup(opts: {
   leftMgr?: TabManager
   rightMgr?: TabManager
 }) {
-  const focusContainer = vi.fn()
+  const focusActivePane = vi.fn()
   const leftMgr = opts.leftMgr ?? makeTabMgr('L', { path: '/l', volumeId: 'vl' })
   const rightMgr = opts.rightMgr ?? makeTabMgr('R', { path: '/r', volumeId: 'vr' })
   const deps: SwapPanesDeps = {
@@ -34,9 +34,9 @@ function setup(opts: {
     getLeftTabMgr: () => leftMgr,
     getRightTabMgr: () => rightMgr,
     isAnyTransferDialogOpen: () => opts.isAnyTransferDialogOpen ?? false,
-    focusContainer,
+    focusActivePane,
   }
-  return { deps, focusContainer, leftMgr, rightMgr }
+  return { deps, focusActivePane, leftMgr, rightMgr }
 }
 
 describe('createSwapPanes', () => {
@@ -59,7 +59,7 @@ describe('createSwapPanes', () => {
       sortBy: 'size',
       sortOrder: 'descending',
     })
-    const { deps, focusContainer } = setup({ leftRef, rightRef, leftMgr, rightMgr })
+    const { deps, focusActivePane } = setup({ leftRef, rightRef, leftMgr, rightMgr })
 
     createSwapPanes(deps).swapPanes()
 
@@ -74,17 +74,17 @@ describe('createSwapPanes', () => {
     // Each pane adopts the OTHER pane's snapshot.
     expect(leftRef.adoptListing).toHaveBeenCalledWith({ id: 'right-listing' })
     expect(rightRef.adoptListing).toHaveBeenCalledWith({ id: 'left-listing' })
-    expect(focusContainer).toHaveBeenCalled()
+    expect(focusActivePane).toHaveBeenCalled()
   })
 
   it('is a no-op when a pane ref is missing', () => {
     const rightRef = makePaneRef()
-    const { deps, focusContainer } = setup({ leftRef: undefined, rightRef })
+    const { deps, focusActivePane } = setup({ leftRef: undefined, rightRef })
 
     createSwapPanes(deps).swapPanes()
 
     expect(rightRef.adoptListing).not.toHaveBeenCalled()
-    expect(focusContainer).not.toHaveBeenCalled()
+    expect(focusActivePane).not.toHaveBeenCalled()
   })
 
   it('is a no-op while a pane is loading', () => {

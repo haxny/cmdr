@@ -16,6 +16,7 @@
  *   4. Otherwise forward to the focused pane's `handleKeyDown`.
  */
 
+import { focusActivePane } from './active-pane-focus'
 import { cancelCountInPane } from './folder-size-count'
 import { isTextInputTarget } from '#lib/utils/text-input-focus.js'
 import { routeTypingKey } from './type-to-jump-keys'
@@ -65,7 +66,7 @@ export function createKeyDispatch(deps: KeyDispatchDeps): KeyDispatch {
   }
 
   /**
-   * Prevents focus from escaping to buttons/links inside the explorer. Inputs (rename,
+   * Keeps DOM focus on the focused pane's list (`focusActivePane`). Inputs (rename,
    * network login) and dialog content are exempt. The dialog exemption is load-bearing:
    * the rename dialogs mount INSIDE FilePane, and without it this guard yanks focus off
    * the dialog overlay while `use:trapFocus` pulls it back — an endless focus ping-pong
@@ -73,12 +74,17 @@ export function createKeyDispatch(deps: KeyDispatchDeps): KeyDispatch {
    * the "rename to existing name is rejected on MTP" E2E). Focus containment inside a
    * dialog is the trap's job, not this guard's; the exemption also makes the dialogs'
    * buttons keyboard-reachable.
+   *
+   * Everything else lands on the focused pane's list:
+   * - Focus already on it stays (`focus()` on the focused element is a no-op, no event).
+   * - Focus on the container moves to the list when the pane shows one, so every container
+   *   focuser converges there; with no list the container stays the home.
+   * - Anything else (a chrome button, the OTHER pane's list, Full view's `.full-list`
+   *   scroller that a click on empty space focuses) is bounced to it.
    */
   function handleFocusGuard(e: FocusEvent): void {
-    const containerElement = deps.getContainerElement()
     const target = e.target as HTMLElement
     if (
-      target === containerElement ||
       target instanceof HTMLInputElement ||
       target instanceof HTMLTextAreaElement ||
       target instanceof HTMLSelectElement ||
@@ -86,7 +92,11 @@ export function createKeyDispatch(deps: KeyDispatchDeps): KeyDispatch {
       target.closest('[role="dialog"], [role="alertdialog"]') !== null
     )
       return
-    containerElement?.focus()
+    if (target === deps.getContainerElement()) {
+      deps.getPaneRef(deps.getFocusedPane())?.focusList()
+      return
+    }
+    focusActivePane(deps)
   }
 
   /**

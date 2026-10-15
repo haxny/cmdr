@@ -11,7 +11,7 @@ export interface MoveCursorDeps {
   getPaneRef: (pane: 'left' | 'right') => FilePaneAPI | undefined
   setFocusedPane: (pane: 'left' | 'right') => void
   moveCursorByName: (paneRef: FilePaneAPI, name: string) => Promise<boolean>
-  focusContainer: () => void
+  focusActivePane: () => void
 }
 
 /**
@@ -59,7 +59,7 @@ export async function moveCursorToTarget(pane: 'left' | 'right', to: number | st
   // lands in the right dispatcher chain. Also makes the awaited completion
   // genuine; `void` swallowed the cursor-set promise and let MCP report `OK`
   // before the cursor was observably positioned.
-  deps.focusContainer()
+  deps.focusActivePane()
 
   // Flush the new cursor position to the backend's PaneStateStore BEFORE the
   // round-trip replies ok, so a follow-up tool call (move_cursor → copy/move/

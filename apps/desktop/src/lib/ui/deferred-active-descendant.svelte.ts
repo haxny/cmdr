@@ -41,6 +41,17 @@ export interface DeferredActiveDescendant {
   of: (id: string | undefined) => string | undefined
   /** Focuses `el` without scrolling and holds `id` (the cursor's id right now) back until the next frame. */
   focus: (el: HTMLElement, id: string | undefined) => void
+  /**
+   * The element took focus by some other path (a click, a `.focus()` elsewhere), reported
+   * from its own `focus` event: hold `id` back until the next frame, as `focus` does.
+   */
+  tookFocus: (id: string | undefined) => void
+  /**
+   * The cursor row's node was replaced under an unchanged id (entering a folder re-renders
+   * row 0): WebKit's focus stays on the dead node and VoiceOver says nothing, so hold `id`
+   * back for a frame again and let it land as a change. No-op while the element lacks focus.
+   */
+  renew: (id: string) => void
   /** The element lost its role (unmounted, or focus left it for good): hold again until its next `focus`. */
   reset: () => void
 }
@@ -56,21 +67,29 @@ export function createDeferredActiveDescendant(): DeferredActiveDescendant {
     cancel = null
   }
 
+  function hold(id: string | undefined): void {
+    stop()
+    released = false
+    focused = true
+    heldId = id
+    cancel = afterNextFrame(() => {
+      cancel = null
+      released = true
+    })
+  }
+
   return {
     of(id) {
       if (released) return id
       return focused && id !== heldId ? id : undefined
     },
     focus(el, id) {
-      stop()
-      released = false
-      focused = true
-      heldId = id
+      hold(id)
       el.focus({ preventScroll: true })
-      cancel = afterNextFrame(() => {
-        cancel = null
-        released = true
-      })
+    },
+    tookFocus: hold,
+    renew(id) {
+      if (focused) hold(id)
     },
     reset() {
       stop()

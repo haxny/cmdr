@@ -173,6 +173,11 @@
 
     // ── Exported API mirrors NetworkMountView so FilePane's branches call uniformly. ──
 
+    /** Focuses the results list (the pane's keyboard home); false when no snapshot renders one. */
+    export function focusList(): boolean {
+        return fullListRef?.focusList() ?? false
+    }
+
     /** Move cursor to a specific index in the pane's result list. */
     export function setCursorIndex(index: number) {
         fullListRef?.scrollToIndex(index)

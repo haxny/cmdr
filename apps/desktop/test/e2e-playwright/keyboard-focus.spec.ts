@@ -7,7 +7,8 @@
  * focused pane's list without a single keystroke changing what it does. So they assert on
  * cursor movement (`.is-under-cursor` + `data-filename`), ❌ never on which element holds
  * focus or on `aria-selected`: both are free to change, the keys aren't. `expectFocusModel`
- * runs with `focusMayBeContainer`, today's model, where the explorer container holds focus.
+ * then checks the screen-reader side on its own: focus on the focused pane's list, naming
+ * its cursor row.
  *
  * Every press here is synthetic and lands on `document.activeElement`
  * (`DETAILS.md` § "Keyboard: no press in this suite is a real one"). That's what makes a
@@ -75,10 +76,10 @@ async function focusedPane(tauriPage: PageLike): Promise<'left' | 'right' | null
   return index === 0 ? 'left' : index === 1 ? 'right' : null
 }
 
-/** Focus is in the explorer (today: on its container), and ↓ moves `pane`'s cursor alone. */
+/** Focus is on `pane`'s list, naming its cursor row, and ↓ moves `pane`'s cursor alone. */
 async function expectKeysReach(tauriPage: PageLike, pane: 'left' | 'right'): Promise<void> {
   expect(await focusedPane(tauriPage)).toBe(pane)
-  await expectFocusModel(tauriPage, '.dual-pane-explorer', { focusMayBeContainer: true })
+  await expectFocusModel(tauriPage, '.file-pane.is-focused [role="listbox"]')
   await expectArrowDownMovesCursorIn(tauriPage, pane)
 }
 

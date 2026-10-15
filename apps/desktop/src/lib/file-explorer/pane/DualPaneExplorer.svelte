@@ -104,6 +104,7 @@
     import { createPaneMirror } from './pane-mirror'
     import type { SmbHandOff } from '#lib/servers/open-sign-in.js'
     import { createKeyDispatch } from './key-dispatch'
+    import { focusActivePane as focusActivePaneOf } from './active-pane-focus'
     import { createMcpTabAction } from './mcp-tab-action'
     import {
         navigate as runNavigate,
@@ -166,6 +167,15 @@
 
     let containerElement: HTMLDivElement | undefined = $state()
     const paneRefs = $state<Record<'left' | 'right', FilePaneAPI | undefined>>({ left: undefined, right: undefined })
+
+    /** DOM focus goes home: the focused pane's list, else this container (`active-pane-focus.ts`). */
+    function focusActivePane(): void {
+        focusActivePaneOf({
+            getPaneRef: (pane) => paneRefs[pane],
+            getFocusedPane: () => focusedPane,
+            getContainerElement: () => containerElement,
+        })
+    }
     let unlistenVolumeUnmount: UnlistenFn | undefined
     let unlistenVolumeContextAction: UnlistenFn | undefined
     let unlistenIndexEvents: UnlistenFn | undefined
@@ -199,7 +209,7 @@
         // own exports, so there's nothing to plumb from the route.
         getExplorer: () => ({ getFocusedPane, setFocusedPane, getPaneLocation, navigate, moveCursor }),
         skipsConfirmations: () => getSetting('fileOperations.skipConfirmation'),
-        onRefocus: () => containerElement?.focus(),
+        onRefocus: focusActivePane,
         onOpenInEditor: (path: string) => void openInEditorOrExplain(getPaneVolumeId(focusedPane), path),
     })
 
@@ -250,7 +260,7 @@
         otherPane,
         getShowHiddenFiles: () => showHiddenFiles,
         getVolumes: () => volumes,
-        focusContainer: () => containerElement?.focus(),
+        focusActivePane,
     }
 
     const clipboardOps = createClipboardOperations(paneAccess, dialogs)
@@ -268,7 +278,7 @@
         getLeftTabMgr: () => leftTabMgr,
         getRightTabMgr: () => rightTabMgr,
         isAnyTransferDialogOpen: () => dialogs.isAnyTransferDialogOpen(),
-        focusContainer: () => containerElement?.focus(),
+        focusActivePane,
     })
     const volumeSelection = createVolumeSelection({
         getVolumes: () => volumes,
@@ -282,7 +292,7 @@
         getPaneVolumeId,
         getTabMgr,
         getVolumes: () => volumes,
-        focusContainer: () => containerElement?.focus(),
+        focusActivePane,
     })
     // MCP `tab` tool per-pane action dispatch (new/close/close_others/reopen/
     // activate/set_pinned). Menu-sync + persistence driven the same way as before.
@@ -539,7 +549,7 @@
             pushViewMenuState()
         }
         // Always restore DOM focus (needed after inline rename or dialog close within a pane)
-        containerElement?.focus()
+        focusActivePane()
     }
 
     /**
@@ -835,7 +845,7 @@
     // Focus the container after initialization so keyboard events work
     $effect(() => {
         if (initialized) {
-            containerElement?.focus()
+            focusActivePane()
         }
     })
 
@@ -849,7 +859,7 @@
      * Call this after closing modals to restore keyboard navigation.
      */
     export function refocus() {
-        containerElement?.focus()
+        focusActivePane()
     }
 
     /**
@@ -862,7 +872,7 @@
         explorerState.setFocusedPane(newFocus)
         void updateFocusedPane(newFocus)
         pushViewMenuState()
-        containerElement?.focus()
+        focusActivePane()
     }
 
     /** Move an open volume switcher to the other pane without letting Tab walk DOM focus. */
@@ -872,7 +882,7 @@
         explorerState.setFocusedPane(newFocus)
         void updateFocusedPane(newFocus)
         pushViewMenuState()
-        containerElement?.focus()
+        focusActivePane()
         getPaneRef(newFocus)?.openVolumeChooser()
     }
 
@@ -1103,7 +1113,7 @@
                 explorerState.setFocusedPane(p)
             },
             moveCursorByName: (paneRef, name) => paneCommands.moveCursorByName(paneRef, name),
-            focusContainer: () => containerElement?.focus(),
+            focusActivePane,
         })
     }
 
@@ -1471,6 +1481,9 @@
     </div>
 {/snippet}
 
+<!-- Focus lives on the focused pane's list (`active-pane-focus.ts`); this container is the
+     fallback home when that pane shows no list, and catches every key bubbling up from it.
+     `group`, ❌ not `application`: VoiceOver appended "File explorer web application" on entry. -->
 <!-- svelte-ignore a11y_no_noninteractive_tabindex,a11y_no_noninteractive_element_interactions -->
 <div
     class="dual-pane-explorer"
@@ -1479,7 +1492,7 @@
     onkeydown={keyDispatch.handleKeyDown}
     onkeyup={keyDispatch.handleKeyUp}
     tabindex="0"
-    role="application"
+    role="group"
     aria-label={tString('fileExplorer.pane.fileExplorerAriaLabel')}
     data-app-ready="false"
 >

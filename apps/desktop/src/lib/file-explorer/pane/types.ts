@@ -288,6 +288,12 @@ export interface FilePaneAPI {
 
   handleKeyDown(e: KeyboardEvent): void
   handleKeyUp(e: KeyboardEvent): void
+  /**
+   * Focuses whichever file list the pane shows (Brief, Full, or search results), without
+   * scrolling. False when it shows none (loading error, servers hub, a connect view): the
+   * explorer container is the keyboard home then.
+   */
+  focusList(): boolean
 
   /** Opens the entry under the cursor; awaits directory load or OS handoff. */
   openCursorItem(): Promise<void>
@@ -320,6 +326,8 @@ export interface FilePaneAPI {
 
 /** Typed interface for BriefList/FullList exported methods used by FilePane. */
 export interface ListViewAPI {
+  /** Focuses the listbox without scrolling; false when it isn't mounted. */
+  focusList(): boolean
   scrollToIndex(index: number): void
   refreshIndexSizes(): void
   /** Applies a pushed `listing-index-sizes-changed` to the cached rows (no IPC). */
@@ -427,6 +435,8 @@ export interface PlacesBrowserAPI extends BrowserAPI {
 export type PaneViewKind = 'network' | 'search-results' | 'normal'
 
 export interface SearchResultsViewAPI {
+  /** Focuses the results list without scrolling; false when it isn't mounted. */
+  focusList(): boolean
   setCursorIndex(index: number): void
   findItemIndex(name: string): number
   openCursorItem(): void

@@ -12,6 +12,7 @@
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { expect } from '@playwright/test'
+import { waitBudget } from '../wait-budget.js'
 import type { FocusModelOptions } from '../../../src/lib/test-focus-model.js'
 import type { PageLike } from './core.js'
 
@@ -61,11 +62,21 @@ export async function focusModelViolationsInPage(
   )
 }
 
-/** Fails the test, listing each violation, unless the focus model holds for `rootSelector`. */
+/**
+ * Fails the test, listing each violation, unless the focus model holds for `rootSelector`
+ * within a short wait. A wait, not one read: a list names its cursor row a frame AFTER it
+ * takes focus (`src/lib/ui/deferred-active-descendant.svelte.ts`), so the model holds a
+ * beat after the flow that moved focus.
+ */
 export async function expectFocusModel(
   page: PageLike,
   rootSelector: string,
   options: FocusModelOptions = {},
 ): Promise<void> {
-  expect(await focusModelViolationsInPage(page, rootSelector, options), `focus model on ${rootSelector}`).toEqual([])
+  await expect
+    .poll(async () => focusModelViolationsInPage(page, rootSelector, options), {
+      timeout: waitBudget(2000),
+      message: `focus model on ${rootSelector}`,
+    })
+    .toEqual([])
 }

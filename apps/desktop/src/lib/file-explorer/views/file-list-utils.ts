@@ -130,6 +130,15 @@ export function getFolderCoverageBadge(
 }
 
 /**
+ * A file row's DOM id. `listId` is the list instance's `$props.id()`, so the two panes (and a
+ * search-results list) never render the same id: `aria-activedescendant` resolves through
+ * `getElementById`, which would hand a focused RIGHT list the LEFT pane's row.
+ */
+export function fileRowId(listId: string, index: number): string {
+  return `${listId}-row-${String(index)}`
+}
+
+/**
  * Creates a parent directory entry (".."). When `stats` is provided, the entry
  * carries the CURRENT directory's recursive size fields, so the ".." row shows
  * the total for the folder we're looking at, not the folder we'd navigate into.

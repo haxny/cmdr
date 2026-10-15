@@ -325,6 +325,14 @@ critical axe violation (`aria-valid-attr-value`) and leaves a screen reader anno
 it back to a `cursorIndex` bound like `cursorIndex < totalCount`, which still lies in the scrolled-away case. Pinned by
 the empty-folder cases in `BriefList.a11y.test.ts` / `FullList.a11y.test.ts`.
 
+**Row ids are per list instance** (`fileRowId(listId, index)`, `listId` from `$props.id()`): both panes and a
+search-results list render rows 0, 1, …, and `getElementById` would hand a focused right list the left pane's row. The
+listbox is the focus target (`focusList()`; in Full view the inner `.listbox-region`, never the `.full-list` scroller)
+and names the cursor row only while it holds focus, through `list-focus.svelte.ts`: the id lands one frame after focus,
+and lands again a frame after the cursor row's node changes under an unchanged id (a navigation's new row 0), which
+WebKit otherwise never announces. A plain cursor move shows at once. Pinned by `test-list-focus.svelte.ts`, run from
+`full-list.a11y.test.ts` and `BriefList.focus.test.ts`.
+
 **Don't reintroduce a header-height shift with a `Math.max(0, …)` clamp** between `scrollTop` and the spacer offset: a
 band of `scrollTop` values then collapses to the same spacer state, and PageDown × 2 → PageUp × 2 lands inside it,
 hiding row 0 (including the `..` cursor). The only legitimate translation between the two is `.listbox-region`'s gutter.

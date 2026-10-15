@@ -34,9 +34,9 @@ function makePaneRefStub(overrides: Partial<Record<string, ReturnType<typeof vi.
 function makeDeps(paneRef: FilePaneAPI | undefined) {
   const setFocusedPane = vi.fn()
   const moveCursorByName = vi.fn().mockResolvedValue(true)
-  const focusContainer = vi.fn()
-  const deps: MoveCursorDeps = { getPaneRef: () => paneRef, setFocusedPane, moveCursorByName, focusContainer }
-  return { deps, setFocusedPane, moveCursorByName, focusContainer }
+  const focusActivePane = vi.fn()
+  const deps: MoveCursorDeps = { getPaneRef: () => paneRef, setFocusedPane, moveCursorByName, focusActivePane }
+  return { deps, setFocusedPane, moveCursorByName, focusActivePane }
 }
 
 beforeEach(() => {
@@ -117,9 +117,9 @@ describe('moveCursorToTarget', () => {
 
   it('re-anchors DOM focus and flushes state to MCP after a successful move', async () => {
     const pane = makePaneRefStub()
-    const { deps, focusContainer } = makeDeps(pane.ref)
+    const { deps, focusActivePane } = makeDeps(pane.ref)
     await moveCursorToTarget('left', 0, deps)
-    expect(focusContainer).toHaveBeenCalled()
+    expect(focusActivePane).toHaveBeenCalled()
     expect(pane.syncStateToMcpNow).toHaveBeenCalled()
   })
 })

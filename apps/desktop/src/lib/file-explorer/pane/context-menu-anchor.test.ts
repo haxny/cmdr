@@ -35,13 +35,14 @@ describe('cursorRowAnchor', () => {
     document.body.innerHTML = ''
   })
 
+  /** A pane whose list renders `rowIndices`, the cursor on row 3 when it's among them. */
   function buildPane(rowIndices: number[]): HTMLElement {
     const pane = document.createElement('div')
     const surface = document.createElement('div')
     surface.setAttribute('data-file-list-surface', '')
     for (const i of rowIndices) {
       const row = document.createElement('div')
-      row.id = `file-${String(i)}`
+      row.className = i === 3 ? 'file-entry is-under-cursor' : 'file-entry'
       surface.appendChild(row)
     }
     pane.appendChild(surface)
@@ -49,22 +50,18 @@ describe('cursorRowAnchor', () => {
     return pane
   }
 
-  it('measures the row in THIS pane, never the other pane carrying the same row id', () => {
-    // Both panes render `file-<index>` ids, so the document holds two `file-3`s.
-    // A `document.getElementById` lookup would take the left pane's every time.
+  it('measures the cursor row in THIS pane, never the other pane', () => {
+    // Both panes show a cursor row; a document-wide lookup would take the left pane's every time.
     const left = buildPane([0, 1, 2, 3])
     const right = buildPane([0, 1, 2, 3])
-    const leftRow = left.querySelector('#file-3')
-    const rightRow = right.querySelector('#file-3')
-    expect(leftRow).not.toBe(rightRow)
 
-    expect(cursorRowAnchor(right, 3, () => ({ left: 900, top: 40, bottom: 60 }))).toEqual({ x: 916, y: 60 })
-    expect(cursorRowAnchor(left, 3, () => ({ left: 100, top: 40, bottom: 60 }))).toEqual({ x: 116, y: 60 })
+    expect(cursorRowAnchor(right, () => ({ left: 900, top: 40, bottom: 60 }))).toEqual({ x: 916, y: 60 })
+    expect(cursorRowAnchor(left, () => ({ left: 100, top: 40, bottom: 60 }))).toEqual({ x: 116, y: 60 })
   })
 
   it('falls back to the pane scroll surface when the cursor row is off-screen', () => {
     const pane = buildPane([10, 11, 12])
-    const measured = cursorRowAnchor(pane, 3, (el) => {
+    const measured = cursorRowAnchor(pane, (el) => {
       expect(el.hasAttribute('data-file-list-surface')).toBe(true)
       return { left: 8, top: 100, bottom: 700 }
     })
@@ -72,12 +69,12 @@ describe('cursorRowAnchor', () => {
   })
 
   it('has no answer without a pane element', () => {
-    expect(cursorRowAnchor(null, 3, () => ({ left: 0, top: 0, bottom: 0 }))).toBeNull()
+    expect(cursorRowAnchor(null, () => ({ left: 0, top: 0, bottom: 0 }))).toBeNull()
   })
 
   it('has no answer when the pane has neither the row nor a scroll surface', () => {
     const pane = document.createElement('div')
     document.body.appendChild(pane)
-    expect(cursorRowAnchor(pane, 3, () => ({ left: 0, top: 0, bottom: 0 }))).toBeNull()
+    expect(cursorRowAnchor(pane, () => ({ left: 0, top: 0, bottom: 0 }))).toBeNull()
   })
 })

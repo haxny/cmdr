@@ -100,4 +100,34 @@ describe('createDeferredActiveDescendant', () => {
     vi.advanceTimersByTime(1000)
     expect(descendant.of('row-1')).toBeUndefined()
   })
+
+  // A file list takes focus by more paths than one `.focus()` call (a click lands on it, the
+  // browser's mousedown default), so it reports focus from its own `focus` event.
+  it('holds an id for a frame when the element reports it took focus some other way', () => {
+    const descendant = createDeferredActiveDescendant()
+    descendant.tookFocus('row-1')
+    expect(descendant.of('row-1')).toBeUndefined()
+    vi.advanceTimersToNextFrame()
+    expect(descendant.of('row-1')).toBe('row-1')
+  })
+
+  // ❗ Entering a folder replaces the cursor row's node under an unchanged id, so WebKit's
+  // focus stays on the dead node and VoiceOver says nothing; re-landing the id a frame later
+  // made it read the new row (M0 spike, macOS 27.0, VoiceOver 10, 2026-10-15).
+  it('holds a renewed id for a frame while focused', () => {
+    const descendant = createDeferredActiveDescendant()
+    descendant.tookFocus('row-0')
+    vi.advanceTimersToNextFrame()
+    descendant.renew('row-0')
+    expect(descendant.of('row-0')).toBeUndefined()
+    vi.advanceTimersToNextFrame()
+    expect(descendant.of('row-0')).toBe('row-0')
+  })
+
+  it('ignores a renew without focus', () => {
+    const descendant = createDeferredActiveDescendant()
+    descendant.renew('row-0')
+    vi.advanceTimersByTime(1000)
+    expect(descendant.of('row-0')).toBeUndefined()
+  })
 })

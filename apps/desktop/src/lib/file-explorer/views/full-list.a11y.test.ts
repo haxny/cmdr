@@ -19,6 +19,7 @@ import FullListHeader from './FullListHeader.svelte'
 import { expectNoA11yViolations } from '#lib/test-a11y.js'
 import { dirEntry, fileEntry, mountFullList } from './test-full-list'
 import { installLayoutMock } from '#lib/test-layout.js'
+import { listFocusCases } from './test-list-focus.svelte'
 import type { SortColumn, SortOrder } from '../types'
 
 vi.mock('#lib/tauri-commands/index.js', async () => (await import('./test-file-list-mocks')).tauriCommandsMock())
@@ -111,6 +112,10 @@ describe('FullList a11y', () => {
     expect(list.rowNames()).toEqual(['report.md'])
     await expectNoA11yViolations(list.target)
   })
+})
+
+describe('FullList focus model', () => {
+  listFocusCases((options) => mountFullList(options))
 })
 
 /**

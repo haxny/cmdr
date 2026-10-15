@@ -69,6 +69,7 @@ export interface MountedBriefList {
   component: {
     getEntryAt: (globalIndex: number) => FileEntry | undefined
     indexOfEntry: (path: string) => number | undefined
+    focusList: () => boolean
   }
   target: HTMLElement
   layout: LayoutMock

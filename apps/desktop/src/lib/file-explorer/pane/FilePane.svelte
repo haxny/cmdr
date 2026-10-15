@@ -1067,7 +1067,7 @@
         }
         const cursorEntry = isSearchResultsView ? selectionInfo.entry : await refreshCursorEntry()
         if (!cursorEntry) return
-        await handleContextMenu(cursorEntry, cursorRowAnchor(paneEl ?? null, cursorIndex))
+        await handleContextMenu(cursorEntry, cursorRowAnchor(paneEl ?? null))
     }
 
     export function toggleSelectionAtCursor(): void {
@@ -1695,6 +1695,15 @@
     // noinspection JSUnusedGlobalSymbols -- Used dynamically
     export function handleKeyUp(e: KeyboardEvent) {
         keyRouter.handleKeyUp(e)
+    }
+
+    /** Focuses whichever file list this pane shows; false when it shows none. */
+    export function focusList(): boolean {
+        return (
+            (briefListRef?.focusList() ?? false) ||
+            (fullListRef?.focusList() ?? false) ||
+            (searchResultsViewRef?.focusList() ?? false)
+        )
     }
 
     /** Debug only: inject a FriendlyError into this pane to preview the error state. */

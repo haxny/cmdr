@@ -24,5 +24,6 @@ export interface PaneAccess {
   otherPane: (pane: 'left' | 'right') => 'left' | 'right'
   getShowHiddenFiles: () => boolean
   getVolumes: () => VolumeInfo[]
-  focusContainer: () => void
+  /** DOM focus back home: the focused pane's list, else the explorer container (`active-pane-focus.ts`). */
+  focusActivePane: () => void
 }

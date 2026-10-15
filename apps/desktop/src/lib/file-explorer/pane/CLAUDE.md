@@ -14,6 +14,8 @@ their helper siblings are listed in `DETAILS.md` § File map.
 - **Row indices belong to `pane-row-state.ts`'s applied revision.** Sort/visibility/filter changes use its serialized
   gate; compare and F5 require ready rows. Transition batches stay separate. Protocol: `DETAILS.md` § Compare
   directories.
+- **DOM focus lives on the focused pane's list, ❌ never on a row**: refocus through `focusActivePane`, ❌ never a bare
+  container or list `.focus()`. `DETAILS.md` § Focus model.
 - **Only `setFocusedPane` mutates the focused pane**, and startup must call `updateFocusedPane`, or Rust's left default
   misdirects Ask Cmdr and MCP.
 - **Guard on `capabilitiesForPane(volumeId, path)`, ❌ never a volume-id string or a backend-sourced KIND**: an

@@ -57,6 +57,8 @@ function makePaneRefStub(): Record<string, () => unknown> {
     // The sort effect asks every pane whether it's a snapshot pane before it
     // re-sorts, so a stub without this crashes the effect rather than a test.
     'getCurrentPath',
+    // Every refocus asks the focused pane for its list first.
+    'focusList',
   ]
   const stub: Record<string, () => unknown> = {}
   for (const n of names) stub[n] = () => undefined

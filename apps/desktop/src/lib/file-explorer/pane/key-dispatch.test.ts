@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import type { FilePaneAPI } from './types'
 import { createKeyDispatch, isTypingInInput, type KeyDispatchDeps } from './key-dispatch'
+import { focusActivePane } from './active-pane-focus'
 
 function makePaneRef(overrides: Record<string, unknown> = {}) {
   return {
@@ -18,6 +19,7 @@ function makePaneRef(overrides: Record<string, unknown> = {}) {
     clearQuickFilter: vi.fn(),
     handleKeyDown: vi.fn(),
     handleKeyUp: vi.fn(),
+    focusList: vi.fn(() => false),
     ...overrides,
   }
 }
@@ -173,14 +175,64 @@ describe('createKeyDispatch', () => {
       expect(focusSpy).not.toHaveBeenCalled()
     })
 
-    it('leaves focus alone when the container itself receives focus', () => {
+    it('leaves focus on the container itself when the focused pane shows no list', () => {
       const container = document.createElement('div')
       const focusSpy = vi.spyOn(container, 'focus')
-      const kd = setup({}, container)
+      const left = makePaneRef()
+      const kd = setup({ left }, container)
 
       kd.handleFocusGuard({ target: container } as unknown as FocusEvent)
 
+      expect(left.focusList).toHaveBeenCalled()
       expect(focusSpy).not.toHaveBeenCalled()
+    })
+
+    // Every container focuser (E2E helpers, a selector somewhere) converges on the list.
+    it("moves focus that lands on the container to the focused pane's list", () => {
+      const container = document.createElement('div')
+      const focusSpy = vi.spyOn(container, 'focus')
+      const left = makePaneRef({ focusList: vi.fn(() => true) })
+      const right = makePaneRef({ focusList: vi.fn(() => true) })
+      const kd = setup({ left, right }, container)
+
+      kd.handleFocusGuard({ target: container } as unknown as FocusEvent)
+
+      expect(left.focusList).toHaveBeenCalledTimes(1)
+      expect(right.focusList).not.toHaveBeenCalled()
+      expect(focusSpy).not.toHaveBeenCalled()
+    })
+
+    it("bounces focus that escapes to a button onto the focused pane's list, not the container", () => {
+      const container = document.createElement('div')
+      const focusSpy = vi.spyOn(container, 'focus')
+      const left = makePaneRef({ focusList: vi.fn(() => true) })
+      const kd = setup({ left }, container)
+
+      kd.handleFocusGuard({ target: document.createElement('button') } as unknown as FocusEvent)
+
+      expect(left.focusList).toHaveBeenCalledTimes(1)
+      expect(focusSpy).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('focusActivePane', () => {
+    it("focuses the focused pane's list, and the container when it shows none", () => {
+      const container = document.createElement('div')
+      const focusSpy = vi.spyOn(container, 'focus')
+      const left = makePaneRef({ focusList: vi.fn(() => true) })
+      const deps = {
+        getPaneRef: (p: 'left' | 'right') => ({ left })[p as 'left'] as unknown as FilePaneAPI,
+        getFocusedPane: () => 'left' as const,
+        getContainerElement: () => container,
+      }
+
+      focusActivePane(deps)
+      expect(left.focusList).toHaveBeenCalledTimes(1)
+      expect(focusSpy).not.toHaveBeenCalled()
+
+      left.focusList.mockReturnValue(false)
+      focusActivePane(deps)
+      expect(focusSpy).toHaveBeenCalledTimes(1)
     })
   })
 

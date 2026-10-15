@@ -139,7 +139,7 @@ function buildAccess(config: AccessConfig = {}): PaneAccess {
     otherPane,
     getShowHiddenFiles: () => config.showHiddenFiles ?? true,
     getVolumes: () => [],
-    focusContainer: () => {},
+    focusActivePane: () => {},
   }
 }
 

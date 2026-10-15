@@ -86,7 +86,7 @@ interface AccessConfig {
   paths?: Partial<Record<'left' | 'right', string>>
   volumes?: VolumeInfo[]
   showHiddenFiles?: boolean
-  focusContainer?: () => void
+  focusActivePane?: () => void
 }
 
 export function buildAccess(config: AccessConfig = {}): PaneAccess {
@@ -101,7 +101,7 @@ export function buildAccess(config: AccessConfig = {}): PaneAccess {
     otherPane,
     getShowHiddenFiles: () => config.showHiddenFiles ?? true,
     getVolumes: () => config.volumes ?? [],
-    focusContainer: config.focusContainer ?? (() => {}),
+    focusActivePane: config.focusActivePane ?? (() => {}),
   }
 }
 

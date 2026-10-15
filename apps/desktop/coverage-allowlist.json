@@ -67,9 +67,6 @@
     "file-explorer/views/BriefList.svelte": {
       "reason": "Logic tested in brief-list-utils.ts, component mounting heavy"
     },
-    "file-explorer/views/FullList.svelte": {
-      "reason": "Logic tested in full-list-utils.ts, component mounting heavy"
-    },
     "file-operations/mkdir/new-folder-operations.ts": {
       "reason": "Depends on FilePane refs and Tauri listen API"
     },

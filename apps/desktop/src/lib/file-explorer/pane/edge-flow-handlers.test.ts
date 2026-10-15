@@ -40,16 +40,16 @@ function setup(opts: {
     status: 'started',
     settled: Promise.resolve(),
   }))
-  const focusContainer = vi.fn()
+  const focusActivePane = vi.fn()
   const deps: EdgeFlowHandlersDeps = {
     navigate,
     getReturnPoint: () => opts.returnPoint ?? null,
     getPaneVolumeId: (p) => opts.volumeIdByPane?.[p] ?? 'root',
     getTabMgr: () => opts.tabMgr ?? makeTabMgr(null),
     getVolumes: () => opts.volumes ?? [],
-    focusContainer,
+    focusActivePane,
   }
-  return { handlers: createEdgeFlowHandlers(deps), navigate, focusContainer }
+  return { handlers: createEdgeFlowHandlers(deps), navigate, focusActivePane }
 }
 
 describe('createEdgeFlowHandlers', () => {
@@ -70,7 +70,7 @@ describe('createEdgeFlowHandlers', () => {
         entry: shownA,
         ahead: { volumeId: 'root', path: '/a/b' },
       }
-      const { handlers, navigate, focusContainer } = setup({ returnPoint: point })
+      const { handlers, navigate, focusActivePane } = setup({ returnPoint: point })
 
       handlers.handleCancelLoading('left', {
         cancelled: { volumeId: 'root', path: '/a/b' },
@@ -83,7 +83,7 @@ describe('createEdgeFlowHandlers', () => {
         source: 'cancel',
         selectName: 'b',
       })
-      expect(focusContainer).toHaveBeenCalled()
+      expect(focusActivePane).toHaveBeenCalled()
     })
 
     it('without one, re-lists the location the pane last showed, with the child under the cursor', () => {
@@ -119,12 +119,12 @@ describe('createEdgeFlowHandlers', () => {
     })
 
     it('stops a load the pane already switched away from, and does nothing more', () => {
-      const { handlers, navigate, focusContainer } = setup({ volumeIdByPane: { left: 'network', right: 'root' } })
+      const { handlers, navigate, focusActivePane } = setup({ volumeIdByPane: { left: 'network', right: 'root' } })
 
       handlers.handleCancelLoading('left', { cancelled: { volumeId: 'root', path: '/a/b' }, lastShown: shownA })
 
       expect(navigate).not.toHaveBeenCalled()
-      expect(focusContainer).toHaveBeenCalled()
+      expect(focusActivePane).toHaveBeenCalled()
     })
 
     it('before anything was shown, walks up to the nearest valid parent with no history push', async () => {

@@ -248,6 +248,16 @@ calls the mutator on pane switch. Key dispatch in `DualPaneExplorer` resolves wh
 state, then delegates to `FilePane.handleKeyDown`. Pane-switch (Tab) clears type-to-jump and rename mode on both panes
 (see "Reset triggers" in parent § "Type-to-jump").
 
+**Focus model.** DOM focus sits on the focused pane's file list (the `role="listbox"` element), whose
+`aria-activedescendant` names the cursor row, so VoiceOver follows the cursor and `Tab` moves it between the panes'
+lists. `active-pane-focus.ts::focusActivePane` is the one seam (`PaneAccess.focusActivePane`, the dialog `onRefocus`,
+`switchPane`, `handleFocus`, `refocus()`): the pane's list via `FilePaneAPI.focusList()` (Brief, Full, or search
+results; `preventScroll` always), else the `role="group"` container when the pane shows no list. Keys don't care which
+of the two holds focus: they bubble to the container's handlers and route by the store's focused pane. The guard
+(`key-dispatch.ts`) sends container focus and stray focus (chrome buttons, the other pane's list, Full view's scroller)
+to the same seam. The id lands a frame after focus and again after the cursor row's node is replaced
+(`../views/list-focus.svelte.ts`). ❌ Never focus a row: rows unmount under virtualization and focus drops to `<body>`.
+
 **Type-to-jump factory.** One `createTypeToJumpState` instance per pane, inside `FilePane`. Reset triggers (ESC, arrows,
 Page/Home/End, Enter, Tab, Backspace, rename entry, context menu, drag start, pane switch, tab switch, dir change,
 re-sort, listing replace) all call the factory's `clearJumpState()`. The generation counter discards stale async match
@@ -1437,8 +1447,8 @@ subscriber. Two behaviors the fold preserves byte-for-byte:
   `pushHistory`); the volume-unmount redirect does NOT (`pushHistory: false` ⇒ `commit` history `'none'`), so ejecting a
   volume can't inject a spurious Back target. The unmount handler redirects EACH affected pane independently (left and
   right), not just the focused one.
-- **Per-source focus.** The `'fallback'` / `'cancel'` flows re-anchor DOM focus on the container (the cancel flow calls
-  `focusContainer()`) but do NOT shift the focused pane — unlike a `'user'` / `'mcp'` volume select, which makes the
+- **Per-source focus.** The `'fallback'` / `'cancel'` flows re-anchor DOM focus (the cancel flow calls
+  `focusActivePane()`) but do NOT shift the focused pane — unlike a `'user'` / `'mcp'` volume select, which makes the
   navigated pane focused. `shiftsFocus(source)` in `navigate.ts` is the single source of that rule. The `'fallback'` and
   `'cancel'` sources are also `terminal`: a fixed recovery target, so no old-path pre-save and no background
   `determineNavigationPath` correction.
@@ -1591,12 +1601,13 @@ survive the rebuild on the Rust side, so they aren't in that list.
   6 h orphan reaper (`crates/cmdr-listing/DETAILS.md` § Backstop reaper). Measured before the fix: one Linux E2E run
   carried 11 concurrent orphans, each re-reading a deleted archive every debounce cycle for the whole run (verified on
   the Linux Docker lane, 2026-08-28).
-- **The focus guard must exempt dialog content.** `DualPaneExplorer.handleFocusGuard` refocuses the container on any
-  non-input focusin inside the explorer, and the rename dialogs (`RenameConflictDialog`, `ExtensionChangeDialog`) mount
-  INSIDE FilePane. Without the `[role="dialog"], [role="alertdialog"]` exemption, the guard yanks focus off the dialog
-  overlay while `use:trapFocus` (see `lib/ui/DETAILS.md` § "Focus trapping") pulls it back — an endless focus ping-pong
-  of microtasks that starves the event loop and freezes the webview. Pinned by the "rename to existing name is rejected
-  on MTP" E2E. Focus containment inside a dialog is the trap's job; the guard only corrals pane chrome.
+- **The focus guard must exempt dialog content.** The guard (`key-dispatch.ts::handleFocusGuard`) sends any non-input
+  focusin inside the explorer to the focused pane's list (§ "Focus model"), and the rename dialogs
+  (`RenameConflictDialog`, `ExtensionChangeDialog`) mount INSIDE FilePane. Without the
+  `[role="dialog"], [role="alertdialog"]` exemption, the guard yanks focus off the dialog overlay while `use:trapFocus`
+  (see `lib/ui/DETAILS.md` § "Focus trapping") pulls it back — an endless focus ping-pong of microtasks that starves the
+  event loop and freezes the webview. Pinned by the "rename to existing name is rejected on MTP" E2E. Focus containment
+  inside a dialog is the trap's job; the guard only corrals pane chrome.
 - **A superseded `navigateToPath` rejects with `NavigationSuperseded`, a cancelled one with `NavigationCancelled`, a
   failed listing with a plain `Error`.** The loader marks every rejection handled (a listing error is already on screen
   as the pane's error state), so the callers that fire and forget (the cancel flow's return trip, a `navigate()` whose
