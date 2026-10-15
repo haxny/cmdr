@@ -515,6 +515,17 @@ stays as it is.
   segment → Enter navigates → focus back in the list; `Tab` from chrome switches panes.
 - **DONE**: `pnpm check --include-slow` green (both E2E lanes), VoiceOver scenarios C1–C3 pass through the harness, and
   the real-key check that ⌃F5 reaches the webview (harness step 5) recorded with the Full Keyboard Access state.
+- **Status (2026-10-15)**: code, unit, and `pane-controls.spec.ts` landed (green on both E2E lanes). Shapes that differ
+  from the sketch: the walk is arrow-key focus, ❌ not a roving `tabindex` (WebKit makes a button with an explicit
+  `tabindex` mouse-focusable on macOS, so a click would strand focus on chrome; `pane/DETAILS.md` § Pane chrome); ↑/↓
+  hop within `data-pane-chrome-scope` (the pane wrapper) and resume each group where it was left; off macOS the default
+  is `⌘⇧F5` (`⌃F5` collapses onto `⌘F5`, sort by modified); the palette's focus restore undid the command, so
+  `FocusHome.keepsFocus` lets pane chrome keep focus; the repo chip joined the walk as a `role="img"` pill with
+  `tabindex="-1"`; Full view's sort header is a `role="toolbar"` too. The M1 `global-keydown` plain-button pins stayed
+  untouched (a new table covers a chrome button); the `key-dispatch` chrome pins changed as marked. **Owed (screen
+  locked)**: C1–C3 through the harness, harness step 5 (⌃F5 reaching the webview, with `AppleKeyboardUIMode` recorded),
+  and a real click on each chrome control to confirm focus doesn't stay there for mouse users (the repo chip focuses for
+  a moment by design, until the click reaches the pane).
 
 ### M7: Paperwork and close-out
 
