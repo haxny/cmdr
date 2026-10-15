@@ -46,9 +46,10 @@ Pull-tier docs for `lib/ui/`: architecture, component APIs, and decision rationa
 - **`LinkButton.svelte`**: Link-styled `<button>` (default) or `<a>` (with `href`); the only sanctioned
   `cursor: pointer`
 - **`CopyBox.svelte`**: Copyable monospace text, a command or a path (+ Copy button)
-- **`LiveAnnouncer.svelte`**: a polite live region with `announce(message)`, mounted empty with its owner (a region
-  inserted with its message says nothing); the same text twice is heard twice. File panes, the command palette, and the
-  Settings sidebar speak through one each. Callers debounce bursts
+- **`LiveAnnouncer.svelte`**: a live region with `announce(message)`, polite unless `politeness="assertive"`, mounted
+  empty with its owner (a region inserted with its message says nothing); the same text twice is heard twice. File
+  panes, the command palette, the Settings sidebar, and the toast stack (one of each politeness) speak through them.
+  Callers debounce bursts
 - **`LoadingIcon.svelte`**: Animated spinner with progressive status text
 - **`AlertDialog.svelte`**: Single-action confirmation dialog built on `ModalDialog`
 - **`ProgressBar.svelte`**: Reusable progress bar (just the bar, no labels or layout)
@@ -371,8 +372,9 @@ onboarding wizard, a toast, and the `Menu` consumers' `restoreFocus`) goes throu
   focused. A remembered list that unmounted meanwhile (a view toggle) still restores, because the origin is the home,
   not the node. `focusHome()` is the same move for code with no origin (the Ask Cmdr rail's Escape, the servers hub).
 - **Focus that already moved on stays.** When focus sits in another OPEN menu (`isFocusInOpenMenu`, which asks the menu
-  stack; a closing menu leaves the stack before it restores) or another dialog, restoring does nothing: closing the old
-  volume chooser after `Tab` re-opened it on the other pane once stole focus from the new one (2026-10-15 VoiceOver
+  stack; a closing menu leaves the stack before it restores), another dialog, or the toast stack (`[data-toast-stack]`,
+  where "Move focus to the notifications" put it while the palette was still up), restoring does nothing: closing the
+  old volume chooser after `Tab` re-opened it on the other pane once stole focus from the new one (2026-10-15 VoiceOver
   spike). A dialog passes its own element as `leaving`, since focus is still inside it while it closes. Same for a home
   element the home says keeps focus (`FocusHome.keepsFocus`, pane chrome in the explorer): the palette runs its command
   BEFORE it unmounts, so "Move focus to the pane controls" would otherwise be undone by the palette's restore.
@@ -1317,8 +1319,13 @@ Centralized toast notifications with stacking, levels, and two dismissal modes.
 
 - **Store** (`toast-store.svelte.ts`): Module-level `$state` array. `addToast(content, options?)` accepts a `Snippet` or
   plain `string`. Optional `id` for dedup (replace in place, which also re-stamps `postedAt`). Max 5 visible.
-- **Container** (`ToastContainer.svelte`): Mounted once in `(main)/+layout.svelte`. Fixed top-right, stacks vertically.
-- **Item** (`ToastItem.svelte`): Frame, level icon, age label, close button, auto-dismiss timer for transient toasts.
+- **Container** (`ToastContainer.svelte`): Mounted once in `(main)/+layout.svelte`, always (empty while no toast is up).
+  Fixed top-right, stacks vertically, with the two live regions beside it. Reads "Keep notifications until I close
+  them".
+- **Item** (`ToastItem.svelte`): Frame (a `role="group"` named by what it says), level icon, age label, close button,
+  auto-dismiss timer for transient toasts.
+- **Speech** (`toast-speech.ts`), **keyboard reach** (`toast-focus.ts`), and **placement** (`toast-placement.ts`): the
+  sections below.
 - **Level icon** (`ToastLevelIcon.svelte`): the 28px flat SVG badge per level. **Age** (`toast-age.ts`): the age label's
   wording and wake-up schedule.
 
@@ -1356,8 +1363,8 @@ Age label: once a toast has been up a minute, "2m ago" / "1h ago" sits on the co
 
 - **Nothing under a minute.** A seconds count ticks on a surface the eye keeps catching, and a transient toast is gone
   in four seconds anyway. It counts whole minutes, then whole hours, rounded down.
-- **`aria-hidden`.** Each toast is a live region (`status` / `alert`), so a label changing every minute would have a
-  screen reader announce the whole toast again.
+- **`aria-hidden`.** A label changing every minute is noise to a screen reader, and the toast's spoken text leaves it
+  out too.
 - **No polling.** One timer per toast, armed for the next whole minute (or hour) and re-armed when it fires.
 - **It counts from `postedAt`, which a same-id re-add re-stamps.** Replaced content is fresh news; "5m ago" on it would
   be wrong.
@@ -1425,10 +1432,11 @@ Pick the variant by what you want the user to do, not by button position:
 Dismissal: `transient` (4s timeout + nav-dismiss, default) or `persistent`.
 
 When an interaction inside a toast removes it, `ToastItem` returns focus to the connected element that held it before
-focus or the pointer entered the toast. Tracking pointer-down matters on macOS, where WebKit can blur the explorer when
-a button is clicked without focusing that button. It restores only when focus fell to `<body>`, so a dialog or field
-opened by the toast action keeps the focus it claimed. This applies to the X and inline actions; timeout or programmatic
-removal of a toast that the user did not interact with moves nothing.
+focus or the pointer entered the toast (during a keyboard walk, the walk decides instead: § Keyboard reach). Tracking
+pointer-down matters on macOS, where WebKit can blur the explorer when a button is clicked without focusing that button.
+It restores only when focus fell to `<body>`, so a dialog or field opened by the toast action keeps the focus it
+claimed. This applies to the X and inline actions; timeout or programmatic removal of a toast that the user did not
+interact with moves nothing.
 
 ### Origin pane and scoped dismissal
 
@@ -1482,23 +1490,84 @@ FIRST toast's `originPane` (consistent with its partial replace of other fields)
   send error report" toast) passes `false`, so it doesn't offer to re-run the flow that just didn't work. A component
   toast that never errors types its level `NonErrorToastLevel`.
 
-### Hover behavior
+### Hold behavior (pointer and keyboard focus)
 
-A transient toast hides at `max(mountedAt + timeoutMs, pointerLeftAt + HOVER_LEAVE_GRACE_MS)`, with the grace tail at 1
-second. Hovering doesn't pause or extend the natural clock; it only guarantees that tail once the cursor is off, so a
-toast can't vanish out from under a pointer that's still on it and can't snap away the instant the mouse drifts off.
+A transient toast is HELD while the pointer is on it or keyboard focus is inside it, and let go once neither is true. It
+hides at `max(mountedAt + timeoutMs, letGoAt + HOVER_LEAVE_GRACE_MS)`, with the grace tail at 1 second. Holding doesn't
+pause or extend the natural clock; it only guarantees that tail once let go, so a toast can't vanish out from under a
+pointer or a focused button, and can't snap away the instant either drifts off.
 
-In practice: `pointerenter` clears the timer, `pointerleave` re-arms it for whatever is left of the natural window, or
-the tail, whichever is longer. A 4-second toast hovered from t=1s to t=20s therefore goes at t=21s (the tail decides);
-the same toast hovered t=0.5s–1s still goes at t=4s (the natural deadline decides), not a second after the pointer
-leaves.
+In practice: the hold starting (`pointerenter`, or `focusin` from outside the toast) clears the timer; the hold ending
+(`pointerleave`, or `focusout` to somewhere outside the toast, with the other still off) re-arms it for whatever is left
+of the natural window, or the tail, whichever is longer. A 4-second toast held from t=1s to t=20s therefore goes at
+t=21s (the tail decides); the same toast held t=0.5s–1s still goes at t=4s (the natural deadline decides). Focus counts
+because keyboard and screen-reader users reach the buttons by focus, never by hover (WCAG 2.2.1).
 
-Decision: don't turn this into a paused countdown. Handing a long-hovered toast its leftover seconds back makes it
-linger once the user is clearly done with it, and pausing costs a pile of bookkeeping (elapsed time, captured remainder,
-whether the toast ever had unhovered visibility) that the `max()` rule replaces with a deadline and a timer.
+Decision: don't turn this into a paused countdown. Handing a long-held toast its leftover seconds back makes it linger
+once the user is clearly done with it, and pausing costs a pile of bookkeeping (elapsed time, captured remainder,
+whether the toast ever had unheld visibility) that the `max()` rule replaces with a deadline and a timer.
 
 `HOVER_LEAVE_GRACE_MS` lives in `toast/toast-store.svelte.ts` so a future tuning lands in one place. Persistent toasts
-have no timer and the hover handlers no-op for them.
+have no timer and the hold handlers no-op for them.
+
+"Keep notifications until I close them" (`behavior.notifications.keepUntilClosed`, Settings > Behavior > Notifications)
+turns every timer off: `ToastContainer` hands each toast `persistent` dismissal while it's on. Only how a toast LEAVES
+changes; the store's `dismissal` still says what kind it is, so pane navigation keeps clearing a pane's own stale
+transients.
+
+### Speech (`toast-speech.ts`)
+
+The toasts are no live regions. The stack speaks through two `LiveAnnouncer`s that `ToastContainer` keeps mounted from
+the start, side by side and outside the stack: a polite one for `default` / `info` / `success`, an assertive one for
+`warn` / `error`. Decisions:
+
+- **Always mounted.** A region inserted together with its first message announces unreliably in WebKit, and the stack
+  used to mount with its first toast.
+- **Siblings, never nested.** Per-toast `role="alert"` inside an `aria-live="polite"` container gave one toast two
+  politeness levels; a frame that is itself a region would also speak twice.
+- **The words come off the rendered body** (`toastSpeech`): text only, buttons and links left out (focus names them
+  where they are), `aria-hidden` left out (the age label). So a component toast speaks like a string one. Each post and
+  each same-id re-raise speaks again; it's news even with the same words.
+- **One message per region per turn.** `LiveAnnouncer` keeps only the newest message asked within a frame, so toasts
+  raised together are joined before they reach it.
+- A component body may still carry its own `role="alert"` for news that lands in place without a re-raise
+  (`CrashReportToastContent`'s "couldn't attach"); it no longer sits inside a polite region.
+- Guarded by `ToastContainer.vsr.svelte.test.ts` (virtual screen reader). What VoiceOver says is V9 in David's guide.
+
+### Keyboard reach (`toast-focus.ts`)
+
+`Tab` is the pane switch in the main window, so nothing could reach a toast's buttons (Undo trash) from the keyboard.
+"Move focus to the notifications" (`app.focusNotifications`, ⌃F6 on macOS like "Move focus to the floating window", ⌘⇧F6
+elsewhere, in the palette) puts focus on the newest toast's frame, which speaks its text as the group's name. Then:
+
+- ↑ / ↓ (and ← / →) walk every toast, newest first, and each one's buttons; Home and End jump to the ends. The walk
+  claims those keys. Enter and Space stay with the focused button: `toastStackOwnsKey` keeps them from the command
+  dispatcher (`routes/(main)/global-keydown.ts`), the way pane chrome keeps its keys. `Tab` stays the pane switch and
+  modifier shortcuts still run.
+- Escape returns focus where the command found it (`captureFocusOrigin`), or home when that element is gone (the
+  palette's input, when the command ran from the palette).
+- Closing the focused toast carries the walk on at the newest toast left, or leaves the stack once none is. A pointer
+  user's close still returns focus the way it always did (below).
+- With no toast up, the command says "No notifications" through the polite region and moves nothing.
+- ❗ A frame is focusable only while the walk is on it: its `tabindex="-1"` is set right before focus and dropped on
+  blur. WebKit makes ANY element with a `tabindex` mouse-focusable, so a permanent one would let a click on a toast's
+  text pull focus off the file list.
+- The focus watchdog counts `[data-toast-stack]` as a keyboard home, and `restoreFocus` leaves focus there (the palette
+  runs the command before it unmounts and restores).
+
+### Placement (`toast-placement.ts`)
+
+The stack sits at the top right, over the right pane's first rows. While it would cover the row the keyboard is on (the
+focused element's `aria-activedescendant` target, the file list's cursor row, or else the focused element), it moves to
+the bottom right, if that's clear (WCAG 2.4.11). Decisions:
+
+- **Nothing moves in the common case.** Only a stack that would actually cover the cursor row moves.
+- **It stays wherever it's clear** instead of snapping back as the cursor moves on, so arrowing down from the top rows
+  doesn't bounce it; it goes back to the top once the last toast goes, and stays put when both edges would cover the
+  row.
+- **Event-driven, only while toasts are up**: focus moves, the focused element's `aria-activedescendant` changing,
+  scroll, resize, and the stack's own size, coalesced to one measurement a frame. At the bottom, newest still sits
+  nearest the window edge.
 
 ## CopyBox
 

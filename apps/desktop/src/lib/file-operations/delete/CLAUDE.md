@@ -9,8 +9,8 @@ Backend counterpart: `apps/desktop/src-tauri/src/file_system/write_operations/de
   wherever permanent is forced), confirm, and Shift-hold. Role: `dialog` (trash) or `alertdialog` (permanent).
 - **delete-scan-state.svelte.ts** (+ test): scan preview and online-only answer.
 - **delete-dialog-utils.ts** (+ test): pure title, path-abbreviation, and symlink-notice helpers.
-- **TrashCompleteToastContent.svelte** + **trash-undo.ts** (journal rollback, worded) + **go-to-trash.ts** (toast
-  button + `file.goToTrash`).
+- **TrashCompleteToastContent.svelte** + **trash-undo.ts** (journal rollback, worded; `edit.undoTrash`) +
+  **go-to-trash.ts** (toast button + `file.goToTrash`).
 
 ## Must-knows
 

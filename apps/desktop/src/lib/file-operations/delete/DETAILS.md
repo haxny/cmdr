@@ -105,9 +105,17 @@ is available. It carries two actions and, deliberately, no third.
 
 **Why Undo lives here.** The rollback engine could always reverse a trash: a trash row records the OS's own in-trash
 location (`resultingItemURL`), and its inverse is a pinned restore-move back to the source
-(`src-tauri/src/operation_log/rollback.rs`). What was missing was a surface. The operation log is read-only and the
-queue's Rollback button is a different thing entirely (cancel-an-in-flight-op-and-undo-its-partials, gated on
-running/paused), so a completed trash had no reachable undo at the one moment it matters.
+(`src-tauri/src/operation_log/rollback.rs`). What was missing was a surface at the moment it matters. The operation log
+can roll a trash back, but nobody has it open three seconds after a mis-keyed F8, and the queue's Rollback button is a
+different thing entirely (cancel-an-in-flight-op-and-undo-its-partials, gated on running/paused).
+
+**Edit > Undo move to trash** (`edit.undoTrash`, also in the palette). The toast's Undo is mouse-first and gone after
+ten seconds, so the same action has a second home. `raiseCompletionToasts` (`file-explorer/pane/dialog-state.svelte.ts`)
+records each finished trash with `rememberTrashForUndo` and gives its toast the id `trashCompleteToastId(operationId)`;
+`undoLastTrash` reverses the newest one through `runTrashUndo` and takes that toast down so its Undo can't run twice.
+`runTrashUndo` forgets the trash whichever surface ran it. Decision: session-only. An "Undo" that reached back to
+yesterday's trash would surprise more than it helps, and the operation log already rolls back any journaled trash. No
+default key: ⌘Z is the text Undo, owned by the Edit menu's predefined item.
 
 **Decision: no "delete permanently" button.** The toast renders after every trash, including the ones the user is glad
 they can take back, and a one-click irreversible action on a transient surface that appears that often is a misclick

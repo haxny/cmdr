@@ -78,12 +78,13 @@ sections compose).
   hidden, which stops being strictly true the moment a search writes coverage for a branch it walked; he read it against
   that and chose to leave it, since it describes what the switch does rather than what a search may have left behind. It
   is accepted difference 11 in `apps/desktop/src-tauri/src/search/DETAILS.md`.
-- **`NotificationsSection.svelte`**: `Behavior > Notifications`: two `SectionCard` card groups — Downloads (BOTH
-  Downloads-folder features in one card: the 4-option `downloadsNotifications` ToggleGroup, plus the on/off go-to-latest
-  `Switch` whose description references the live global binding — the combo is edited under Keyboard shortcuts; anchor
-  `settings-downloads-notifications`), Low disk space (3-option ToggleGroup + percent number input, anchor
-  `settings-low-disk-space`, NOT FDA-gated — statfs needs no TCC permission). FDA-closed greys the Downloads card (via
-  `SectionCard`'s `gated` prop) with one shared hint linking to System Settings (the shared `<Trans>`
+- **`NotificationsSection.svelte`**: `Behavior > Notifications`: three `SectionCard` card groups — On-screen
+  notifications (the "Keep notifications until I close them" `SettingSwitch`, which `ToastContainer` reads), Downloads
+  (BOTH Downloads-folder features in one card: the 4-option `downloadsNotifications` ToggleGroup, plus the on/off
+  go-to-latest `Switch` whose description references the live global binding — the combo is edited under Keyboard
+  shortcuts; anchor `settings-downloads-notifications`), Low disk space (3-option ToggleGroup + percent number input,
+  anchor `settings-low-disk-space`, NOT FDA-gated — statfs needs no TCC permission). FDA-closed greys the Downloads card
+  (via `SectionCard`'s `gated` prop) with one shared hint linking to System Settings (the shared `<Trans>`
   `common.downloadsFdaHint`). **Card-group pattern (the empty-card / blank-page fix):** each `SectionCard` frame is
   wrapped in `{#if anyVisible(shouldShow, ...memberIds)}` over the card's member setting ids, reading the SAME
   `shouldShow` (`createShouldShow(searchQuery)`) the rows use, so a card whose rows all filter out under search hides

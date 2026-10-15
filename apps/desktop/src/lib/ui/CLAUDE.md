@@ -49,7 +49,7 @@ Reusable components (Ark UI backs the complex ones); silent-breakage rules only.
   - Text fields: chrome lives in `app.css` § "Text fields", so ONE edit restyles all five (keep `Combobox` /
     `NumberInput` in sync). `.text-field` / `.text-field-control` are a selector contract, and `TextInput` is one-way
     `value` + `oninput`, never an internal `bind:value`.
-  - Toasts: pick a level by feedback kind; a full all-persistent stack drops new ones; a pane-local transient toast
-    needs `addToastForPane(pane, …)`, else navigation won't clear it.
+  - Toasts: level by feedback kind; a full persistent stack drops new ones; pane-local transients need
+    `addToastForPane(pane, …)`. ❌ Frames: no live region, no permanent `tabindex`.
 
 Catalogs, prop tables, and remaining component traps: `DETAILS.md`. Read it before any non-trivial work here.
