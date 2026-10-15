@@ -1,7 +1,8 @@
 /**
- * Tier 3 a11y tests for the pane's chrome: the function-key bar, the resizer,
- * the type-to-jump indicator, the unreachable-volume banner, and the
- * double-click hint toast.
+ * Tier 3 a11y tests for the pane's small parts: the function-key bar, the resizer,
+ * the type-to-jump indicator, the unreachable-volume banner, the double-click
+ * hint toast, and the pane announcer. (Not `pane-chrome.ts`'s "pane chrome", the
+ * keyboard-reachable tab bar, location bar, and sort header.)
  *
  * One file per component would cost about five times as much: `svelte-tests`
  * charges per test FILE, not per test (`docs/testing.md` § "What a test actually
@@ -27,6 +28,7 @@ vi.mock('#lib/ui/toast/index.js', () => ({ dismissToast: vi.fn(() => undefined) 
 
 import DoubleClickPaneHintToastContent from './DoubleClickPaneHintToastContent.svelte'
 import FunctionKeyBar from './FunctionKeyBar.svelte'
+import PaneAnnouncer from './PaneAnnouncer.svelte'
 import PaneResizer from './PaneResizer.svelte'
 import TypeToJumpIndicator from './TypeToJumpIndicator.svelte'
 import VolumeUnreachableBanner from './VolumeUnreachableBanner.svelte'
@@ -221,6 +223,22 @@ describe('DoubleClickPaneHintToastContent a11y', () => {
     const target = container()
     mount(DoubleClickPaneHintToastContent, { target, props: { toastId: 'hint-1' } })
     await tick()
+    await expectNoA11yViolations(target)
+  })
+})
+
+/**
+ * Tier 3 a11y tests for `PaneAnnouncer.svelte`: the pane's one polite live region, mounted
+ * empty with the pane (a region inserted with its first message announces nothing).
+ */
+describe('PaneAnnouncer a11y', () => {
+  it('mounts an empty polite region with no a11y violations', async () => {
+    const target = container()
+    mount(PaneAnnouncer, { target })
+    await tick()
+    const region = target.querySelector('[data-pane-announcer]')
+    expect(region?.getAttribute('aria-live')).toBe('polite')
+    expect(region?.textContent).toBe('')
     await expectNoA11yViolations(target)
   })
 })
