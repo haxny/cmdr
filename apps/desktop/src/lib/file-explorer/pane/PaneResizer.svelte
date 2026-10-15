@@ -83,18 +83,19 @@
         transition: background-color var(--transition-fast);
     }
 
-    /* Grab target only, never painted. 3.5px of overhang each side makes it 8px wide, easier
+    /* Grab target only, never painted. 7px of overhang to the RIGHT makes it 8px wide, easier
        to hit for anyone whose pointer isn't steady (WCAG 2.5.8; the keyboard commands above
-       are the equivalent). It lies over the panes' edge pixels, so it takes the outer 3.5px of
-       the left pane's scrollbar. Events on it bubble to the resizer, so the drag handlers need
-       no change. */
+       are the equivalent). Only rightward: the left pane's vertical scrollbar runs along the
+       divider and must stay fully grabbable, while the right pane's leading edge holds no
+       control. `pane-resizer-hit-area.test.ts` pins both. Events on it bubble to the resizer,
+       so the drag handlers need no change. */
     .pane-resizer::before {
         content: '';
         position: absolute;
         top: 0;
         bottom: 0;
-        left: -3.5px;
-        right: -3.5px;
+        left: 0;
+        right: -7px;
         cursor: col-resize;
     }
 
