@@ -38,8 +38,8 @@ wording into `terms.json` (and `decisions.md` when the reason is worth keeping).
   switching is one sweep, never a partial split.
 - **`Lần trước`** (crash dialog) against Apple's `Lần cuối cùng bạn mở %@` (AppKitErrors).
 - **`beta công khai`** for "open beta": confirm over keeping the English phrase.
-- **`nhảy đến` / `nhảy tới`** for "jump to": both ship (`downloads.*` vs `commands.navFirstInFull.label`,
-  `fileExplorer.typeToJump.ariaLabel`); `licensing.acknowledgements.jumpTo*` say `Chuyển đến`. Pick one.
+- **`nhảy đến` / `nhảy tới`** for "jump to": both ship (`downloads.*` vs `commands.navFirstInFull.label`);
+  `licensing.acknowledgements.jumpTo*` say `Chuyển đến`. Pick one.
 - **Coined or descriptive terms**: `bảng lệnh` (command palette), `bộ chuyển ứng dụng` (app switcher), `phím bổ trợ`
   (modifier key), `huy hiệu` (badge and the corner chip), `thông báo nhỏ` (toast), `lần truyền` (a transfer),
   `Bỏ lưu trữ` (unarchive a chat), `chu trình đổi tên` (rename cycle), `kho ảnh` (photo archive), `thư mục bắt đầu`

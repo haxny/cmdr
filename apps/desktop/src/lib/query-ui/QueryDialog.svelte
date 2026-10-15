@@ -89,15 +89,13 @@
     /** Shape of the `bind:this` ref for `QueryResults.svelte` — only the exported method we call. */
     interface QueryResultsAPI {
         scrollCursorIntoView(): void
+        // The query field is a combobox over the result list: focus stays in the field while
+        // ↑/↓ move the cursor, so the cursor row reaches a screen reader only as its
+        // `aria-activedescendant`. All three read through `QueryResults`, which owns the list.
+        readonly listboxId: string
         isListShown(): boolean
         cursorOptionId(): string | undefined
     }
-
-    // The query field is a combobox over the result list: focus stays in the field while ↑/↓
-    // move the cursor, so the cursor row reaches a screen reader only as its
-    // `aria-activedescendant`. Both read through `QueryResults`, so they follow the window.
-    const uid = $props.id()
-    const resultsListboxId = `${uid}-results`
 
     let queryInputElement: HTMLInputElement | undefined = $state()
     let dialogElement: HTMLDivElement | undefined = $state()
@@ -642,7 +640,7 @@
                 runTitleOverride={config.runTitleOverride}
                 showEnterHint={enterAction === 'run-search'}
                 recentOpen={recent.isOpen}
-                listboxId={resultsListboxId}
+                listboxId={queryResultsComponent?.listboxId}
                 listExpanded={queryResultsComponent?.isListShown() ?? false}
                 activeOptionId={queryResultsComponent?.cursorOptionId()}
                 onInput={handleQueryInput}
@@ -732,7 +730,6 @@
             bind:this={queryResultsComponent}
             {results}
             {cursorIndex}
-            listboxId={resultsListboxId}
             isIndexAvailable={config.isIndexAvailable}
             isIndexReady={config.isIndexReady}
             {isSearching}

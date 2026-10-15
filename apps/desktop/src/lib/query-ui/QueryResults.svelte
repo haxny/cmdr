@@ -51,8 +51,6 @@
     interface Props {
         results: SearchResultEntry[]
         cursorIndex: number
-        /** The result listbox's id: the query field is a combobox naming its rows by it. */
-        listboxId: string
         isIndexAvailable: boolean
         isIndexReady: boolean
         isSearching: boolean
@@ -135,7 +133,6 @@
     const {
         results,
         cursorIndex,
-        listboxId,
         isIndexAvailable,
         isIndexReady,
         isSearching,
@@ -366,6 +363,10 @@
     $effect(() => {
         if (announcer.offer(statusText, !streaming)) announcement = announcer.text
     })
+
+    const uid = $props.id()
+    /** The result listbox's id, for the query combobox's `aria-controls`. */
+    export const listboxId = `${uid}-results`
 
     /** Whether the result listbox is on screen: the query combobox's `aria-expanded`. Reactive. */
     export function isListShown(): boolean {

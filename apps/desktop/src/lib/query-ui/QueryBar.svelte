@@ -70,8 +70,8 @@
         showEnterHint?: boolean
         /** True while the recent-items dropdown is open. Drives the trigger's `aria-expanded`. */
         recentOpen?: boolean
-        /** The result listbox this field controls as a combobox. */
-        listboxId: string
+        /** The result listbox this field controls as a combobox (`aria-controls` while expanded). */
+        listboxId?: string
         /** Whether that listbox is on screen (`aria-expanded`). */
         listExpanded: boolean
         /** The cursor row's option id while drawn; lands as `aria-activedescendant` a frame after focus. */

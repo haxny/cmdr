@@ -103,17 +103,15 @@
     // UNFILTERED order, so a search narrowing the list never renames a section.
     const uid = $props.id()
     const listboxId = `${uid}-sections`
-    const stableIndex = $derived.by(() => {
-        const map = new Map<string, number>()
-        for (const entry of orderedEntries) {
-            const paths =
-                entry.kind === 'tree' ? [entry.node.path, ...entry.node.subsections.map((s) => s.path)] : [entry.path]
-            for (const path of paths) map.set(path.join('/'), map.size)
-        }
-        return map
-    })
+    const stableIndex = $derived(
+        orderedEntries
+            .flatMap((entry) =>
+                entry.kind === 'tree' ? [entry.node.path, ...entry.node.subsections.map((s) => s.path)] : [entry.path],
+            )
+            .map((path) => path.join('/')),
+    )
     function optionId(path: string[]): string {
-        return `${uid}-section-${String(stableIndex.get(path.join('/')) ?? -1)}`
+        return `${uid}-section-${String(stableIndex.indexOf(path.join('/')))}`
     }
     const selectedOptionId = $derived.by(() => {
         const index = findSelectedIndex()

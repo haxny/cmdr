@@ -15,7 +15,7 @@ import { createRawSnippet, flushSync, mount, tick, unmount } from 'svelte'
 import { virtual } from '@guidepup/virtual-screen-reader'
 import QueryBar from './QueryBar.svelte'
 import ColumnList from '#lib/ui/ColumnList.svelte'
-import type { ColumnListApi, ColumnListColumn } from '#lib/ui/column-list-types'
+import type { ColumnListApi, ColumnListColumn } from '#lib/ui/column-list-types.js'
 
 interface Row {
   name: string
@@ -87,7 +87,7 @@ async function setup(): Promise<HTMLInputElement> {
     },
   })
   mounted.push(list)
-  state.list = list as unknown as ColumnListApi
+  state.list = list
   const input = target.querySelector('input') as HTMLInputElement
   // The dialog's ↓: move the cursor, focus stays in the field.
   input.addEventListener('keydown', (event) => {
