@@ -125,7 +125,9 @@ toasts "Tab limit reached" and leaves the stack untouched.
 ## Moving a tab
 
 Drag a tab to reorder it, or drop it on the other pane's bar to move it there. The MCP `tab` tool's `move` action does
-the same thing for an agent. There's no keyboard shortcut, menu item, or palette entry for it.
+the same thing for an agent. From the keyboard, `tab.moveLeft` / `tab.moveRight` (⌘⌃⇧← / ⌘⌃⇧→) step the focused pane's
+active tab along its bar and `tab.moveToOtherPane` (palette only by default) sends it to the end of the other pane's;
+there's no menu item yet.
 
 **One rule-owner.** `moveTab(source, target, tabId, toIndex?)` in `tab-state-manager.svelte.ts` decides everything, so
 the two entry points can't drift:
@@ -149,6 +151,8 @@ both panes on a cross-pane move and one on a reorder, report `tab_moved`, and re
 pane's active tab left. An active tab that leaves takes its cursor filename along, read from its `FilePane` before the
 move, so it shows the same row when it's next opened. Pane focus is never touched. `handleTabDrop` is the mouse's
 wrapper: it toasts a drop on a full pane, the one refusal a drag can reach; the MCP path returns every refusal instead.
+`moveActiveTab` is the keyboard's: past either end of the bar it's a quiet no-op, as in a browser, and every other
+refusal (pinned, only tab, full pane) toasts why, since a key press gets none of the cursor feedback a drag shows.
 
 **The drag** (`tab-drag-controller.svelte.ts`):
 

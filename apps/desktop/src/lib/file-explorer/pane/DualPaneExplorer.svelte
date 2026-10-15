@@ -64,6 +64,8 @@
         switchToTab as tabOpsSwitchToTab,
         handleTabDrop as tabOpsHandleTabDrop,
         moveTabToPane as tabOpsMoveTabToPane,
+        moveActiveTab as tabOpsMoveActiveTab,
+        type ActiveTabMove,
         type TabMoveDeps,
         type TabMoveRequest,
     } from './tab-operations'
@@ -1354,6 +1356,11 @@
      */
     export function handleMcpTabAction(pane: 'left' | 'right', action: McpTabAction, tabId?: string, pinned?: boolean) {
         mcpTab.handleMcpTabAction(pane, action, tabId, pinned)
+    }
+
+    /** The keyboard's tab move (`tab.moveLeft` / `tab.moveRight` / `tab.moveToOtherPane`). */
+    export function moveActiveTab(move: ActiveTabMove): void {
+        tabOpsMoveActiveTab(move, tabMoveDeps)
     }
 
     /** A tab move from the MCP `tab` tool: the same operation a tab drag ends in, minus the toast. */

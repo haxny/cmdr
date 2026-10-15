@@ -133,6 +133,7 @@ export function makeExplorerSpy(): Record<string, ReturnType<typeof vi.fn>> {
     'cycleTab',
     'togglePinActiveTab',
     'closeOtherTabs',
+    'moveActiveTab',
     'handleMcpTabAction',
     'sendKeyToFocusedPane',
     'navigate',
@@ -390,6 +391,24 @@ export const DELEGATE_ROWS: DelegateRow[] = [
     id: 'tab.closeOthers',
     expect: (e) => {
       expect(e.closeOtherTabs).toHaveBeenCalledOnce()
+    },
+  },
+  {
+    id: 'tab.moveLeft',
+    expect: (e) => {
+      expect(e.moveActiveTab).toHaveBeenCalledExactlyOnceWith('left')
+    },
+  },
+  {
+    id: 'tab.moveRight',
+    expect: (e) => {
+      expect(e.moveActiveTab).toHaveBeenCalledExactlyOnceWith('right')
+    },
+  },
+  {
+    id: 'tab.moveToOtherPane',
+    expect: (e) => {
+      expect(e.moveActiveTab).toHaveBeenCalledExactlyOnceWith('otherPane')
     },
   },
   {

@@ -464,4 +464,32 @@ export const mainWindowCommands: CommandSource[] = [
     shortcuts: [],
     whileDialogOpen: BLOCKED_BY_DIALOGS,
   },
+  {
+    // The keyboard's way to do what a tab drag does. ⌘⌃⇧← / → keeps the arrows `tab.prev` /
+    // `tab.next` use for walking the bar (⌘⌥← / →), and nothing else in the registry or macOS holds it.
+    id: 'tab.moveLeft',
+    nameKey: 'commands.tabMoveLeft.label',
+    scope: 'Main window',
+    showInPalette: true,
+    shortcuts: ['⌘⌃⇧←'],
+    whileDialogOpen: BLOCKED_BY_DIALOGS,
+  },
+  {
+    id: 'tab.moveRight',
+    nameKey: 'commands.tabMoveRight.label',
+    scope: 'Main window',
+    showInPalette: true,
+    shortcuts: ['⌘⌃⇧→'],
+    whileDialogOpen: BLOCKED_BY_DIALOGS,
+  },
+  {
+    // No default key: no free combo says "the other pane" the way the arrows say "along the
+    // bar". The palette reaches it, and Settings can bind one.
+    id: 'tab.moveToOtherPane',
+    nameKey: 'commands.tabMoveToOtherPane.label',
+    scope: 'Main window',
+    showInPalette: true,
+    shortcuts: [],
+    whileDialogOpen: BLOCKED_BY_DIALOGS,
+  },
 ]

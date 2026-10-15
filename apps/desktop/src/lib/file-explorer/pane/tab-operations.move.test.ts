@@ -25,7 +25,7 @@ vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() }),
 }))
 
-import { createInitialTabState, handleTabDrop, moveTabToPane, type TabMoveDeps } from './tab-operations'
+import { createInitialTabState, handleTabDrop, moveActiveTab, moveTabToPane, type TabMoveDeps } from './tab-operations'
 import { createTabManager, MAX_TABS_PER_PANE, type TabManager } from '../tabs/tab-state-manager.svelte'
 import type { FilePaneAPI } from './types'
 
@@ -199,6 +199,88 @@ describe('moveTabToPane', () => {
     })
     expect(savePaneTabsSpy).not.toHaveBeenCalled()
     expect(trackEventSpy).not.toHaveBeenCalled()
+  })
+})
+
+// The keyboard's road (`tab.moveLeft` / `tab.moveRight` / `tab.moveToOtherPane`, #441): the
+// focused pane's active tab, under the same rules as a drag.
+describe('moveActiveTab', () => {
+  it('steps the active tab one slot left or right in its own bar, keeping it active', () => {
+    const { deps, left } = setup({ left: managerOf(['a', 'b', 'c'], 'b'), right: managerOf(['x']) })
+
+    moveActiveTab('left', deps)
+    expect(idsOf(left)).toEqual(['b', 'a', 'c'])
+    moveActiveTab('right', deps)
+    moveActiveTab('right', deps)
+    expect(idsOf(left)).toEqual(['a', 'c', 'b'])
+    expect(left.activeTabId).toBe('b')
+  })
+
+  it('moves the tab of the FOCUSED pane', () => {
+    const { deps, left, right } = setup({
+      left: managerOf(['a', 'b']),
+      right: managerOf(['x', 'y'], 'y'),
+      focused: 'right',
+    })
+
+    moveActiveTab('left', deps)
+
+    expect(idsOf(right)).toEqual(['y', 'x'])
+    expect(idsOf(left)).toEqual(['a', 'b'])
+  })
+
+  it('sends the active tab to the end of the other pane, as a drop there would', () => {
+    const { deps, left, right } = setup({ left: managerOf(['a', 'b'], 'a'), right: managerOf(['x']) })
+
+    moveActiveTab('otherPane', deps)
+
+    expect(idsOf(left)).toEqual(['b'])
+    expect(idsOf(right)).toEqual(['x', 'a'])
+    expect(savedPanes()).toEqual(['left', 'right'])
+  })
+
+  it('is a quiet no-op past either end of the bar', () => {
+    const { deps, left } = setup({ left: managerOf(['a', 'b'], 'a'), right: managerOf(['x']) })
+
+    moveActiveTab('left', deps)
+    left.activeTabId = 'b'
+    moveActiveTab('right', deps)
+
+    expect(idsOf(left)).toEqual(['a', 'b'])
+    expect(addToastSpy).not.toHaveBeenCalled()
+    expect(savePaneTabsSpy).not.toHaveBeenCalled()
+  })
+
+  // A drag can't start on these (and shows a "not allowed" cursor on a full pane), so it never
+  // needs words. A key press gives no such hint, so each refusal says why.
+  it.each([
+    {
+      name: 'a pinned tab',
+      left: managerOf(['a', 'b'], 'a', ['a']),
+      right: managerOf(['x']),
+      direction: 'right' as const,
+      toast: 'Pinned tabs stay in place. Unpin this one to move it.',
+    },
+    {
+      name: "a pane's only tab",
+      left: managerOf(['a']),
+      right: managerOf(['x']),
+      direction: 'otherPane' as const,
+      toast: 'This is the only tab in this pane, so it stays.',
+    },
+    {
+      name: 'a move into a full pane',
+      left: managerOf(['a', 'b']),
+      right: fullPane(),
+      direction: 'otherPane' as const,
+      toast: 'Tab limit reached',
+    },
+  ])('explains why it refuses $name', ({ left, right, direction, toast }) => {
+    const { deps } = setup({ left, right })
+
+    moveActiveTab(direction, deps)
+
+    expect(addToastSpy).toHaveBeenCalledExactlyOnceWith(toast, { level: 'warn' })
   })
 })
 

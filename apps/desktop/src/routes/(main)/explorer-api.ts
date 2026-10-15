@@ -6,7 +6,7 @@
 import type { CompareDirectoriesMode } from '#lib/tauri-commands/index.js'
 import type { ViewMode } from '#lib/app-status-store.js'
 import type { McpSelectMode, McpTabAction, ConfirmDialogType } from '#lib/commands/index.js'
-import type { TabMoveRequest } from '#lib/file-explorer/pane/tab-operations.js'
+import type { ActiveTabMove, TabMoveRequest } from '#lib/file-explorer/pane/tab-operations.js'
 import type { MoveTabResult } from '#lib/file-explorer/tabs/tab-state-manager.svelte.js'
 import type { QuickLookKeyEventPayload } from '#lib/file-explorer/quick-look/quick-look-state.svelte.js'
 import type { FileEntry, FriendlyError, NetworkHost, TransferOperationType } from '#lib/file-explorer/types.js'
@@ -334,6 +334,8 @@ export interface ExplorerAPI {
   cycleTab: (direction: 'next' | 'prev') => void
   togglePinActiveTab: () => void
   closeOtherTabs: () => void
+  /** Moves the focused pane's active tab one slot along its bar or to the other pane, under the drag's rules. */
+  moveActiveTab: (move: ActiveTabMove) => void
   /**
    * Bulk-applies matched indices to the focused pane's selection set. Used by the
    * Selection dialog on commit.

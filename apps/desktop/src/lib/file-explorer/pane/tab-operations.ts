@@ -37,6 +37,7 @@ import type { Location } from '#lib/tauri-commands/index.js'
 import { getAppLogger } from '#lib/logging/logger.js'
 import { addToast } from '#lib/ui/toast/index.js'
 import { tString } from '#lib/intl/messages.svelte.js'
+import type { MessageKey } from '#lib/intl/keys.gen.js'
 import type { FilePaneAPI } from './types'
 
 const log = getAppLogger('fileExplorer')
@@ -494,6 +495,41 @@ export function moveTabToPane(request: TabMoveRequest, deps: TabMoveDeps): MoveT
     syncPinTabMenuForPane(fromPane, deps.getTabMgr)
   }
   return result
+}
+
+/** Where the keyboard sends the focused pane's active tab: one slot along its bar, or to the other pane. */
+export type ActiveTabMove = 'left' | 'right' | 'otherPane'
+
+/** What a refused keyboard move says. A drag never needs these: it can't start on a pinned or only tab. */
+const keyboardMoveRefusals: Record<Exclude<MoveTabRefusal, 'notFound'>, MessageKey> = {
+  pinned: 'fileExplorer.tabs.movePinnedRefused',
+  onlyTab: 'fileExplorer.tabs.moveOnlyTabRefused',
+  targetFull: 'fileExplorer.tabs.limitReached',
+}
+
+/**
+ * The keyboard's tab move (`tab.moveLeft` / `tab.moveRight` / `tab.moveToOtherPane`): the focused
+ * pane's active tab, through `moveTabToPane` like a drag, so the same rules hold. To the other pane
+ * it lands at the end. Stepping past either end of the bar is a quiet no-op, as in a browser; a
+ * refusal says why, since a key press gets none of the cursor feedback a drag shows.
+ */
+export function moveActiveTab(move: ActiveTabMove, deps: TabMoveDeps): void {
+  const fromPane = deps.getFocusedPane()
+  const mgr = deps.getTabMgr(fromPane)
+  const tabId = getActiveTab(mgr).id
+  const request: TabMoveRequest =
+    move === 'otherPane'
+      ? { fromPane, tabId, toPane: fromPane === 'left' ? 'right' : 'left' }
+      : {
+          fromPane,
+          tabId,
+          toPane: fromPane,
+          toIndex: mgr.tabs.findIndex((t) => t.id === tabId) + (move === 'left' ? -1 : 1),
+        }
+  const result = moveTabToPane(request, deps)
+  if (!result.moved && result.reason !== 'unchanged' && result.reason !== 'notFound') {
+    addToast(tString(keyboardMoveRefusals[result.reason]), { level: 'warn' })
+  }
 }
 
 /**

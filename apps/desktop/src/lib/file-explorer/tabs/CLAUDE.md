@@ -25,8 +25,8 @@ Architecture, decision rationale, persistence, and closed-tab-history detail: `D
 - **`addTab` inserts to the LEFT without changing `activeTabId`** (the clone trick), so no remount happens; switching to
   the new tab is a separate explicit action.
 - **`moveTab` owns every rule of a move** (pinned and only tabs stay, a full pane refuses, the tab is never activated
-  where it lands). The drag and MCP `tab move` both reach it via `pane/tab-operations.ts::moveTabToPane`. ❌ Don't
-  re-decide a rule in the controller or in Rust.
+  where it lands). The drag, the `tab.move*` commands, and MCP `tab move` all reach it via
+  `pane/tab-operations.ts::moveTabToPane`. ❌ Don't re-decide a rule in the controller or in Rust.
 - **A tab drag is pointer events on `window`, ❌ never HTML5 drag and drop**: Tauri's file-drop handler owns that. The
   click after a drop is swallowed, or a drag would switch tabs.
 - **Ctrl+Tab cycling uses a leading-edge debounce (50ms)**, so rapid cycling doesn't mount/destroy many FilePanes.

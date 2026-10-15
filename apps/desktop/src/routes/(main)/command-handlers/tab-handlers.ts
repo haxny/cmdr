@@ -1,5 +1,5 @@
 /**
- * Tab handlers: open / close / reopen, cycle, pin, close others, and the per-pane
+ * Tab handlers: open / close / reopen, cycle, pin, close others, move, and the per-pane
  * MCP tab action. `tab.close` awaits the close (and, on the last-tab branch,
  * awaits the window close after a lazy `@tauri-apps/api/window` import).
  */
@@ -48,6 +48,18 @@ export const tabHandlers = {
 
   'tab.closeOthers': ({ explorerRef }) => {
     explorerRef?.closeOtherTabs()
+  },
+
+  'tab.moveLeft': ({ explorerRef }) => {
+    explorerRef?.moveActiveTab('left')
+  },
+
+  'tab.moveRight': ({ explorerRef }) => {
+    explorerRef?.moveActiveTab('right')
+  },
+
+  'tab.moveToOtherPane': ({ explorerRef }) => {
+    explorerRef?.moveActiveTab('otherPane')
   },
 
   'tab.mcpAction': ({ explorerRef, dispatchArgs }) => {

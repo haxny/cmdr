@@ -1159,6 +1159,14 @@
   "@fileExplorer.tabs.limitReached": {
     "description": "Warning toast when the user tries to open another tab but the per-pane tab limit is already reached."
   },
+  "fileExplorer.tabs.movePinnedRefused": "Pinned tabs stay in place. Unpin this one to move it.",
+  "@fileExplorer.tabs.movePinnedRefused": {
+    "description": "Warning toast when the user tries to move a pinned tab with the keyboard (Move tab left, Move tab right, or Move tab to other pane). Pinned tabs never move; the second sentence tells them how to move it anyway. \"Unpin\" matches the tab menu's Unpin tab command."
+  },
+  "fileExplorer.tabs.moveOnlyTabRefused": "This is the only tab in this pane, so it stays.",
+  "@fileExplorer.tabs.moveOnlyTabRefused": {
+    "description": "Warning toast when the user tries to move a pane's last remaining tab to the other pane with the keyboard. Every pane keeps at least one tab, so the move doesn't happen."
+  },
   "fileExplorer.tabs.closePinnedConfirm": "This tab is pinned. Close it anyway?",
   "@fileExplorer.tabs.closePinnedConfirm": {
     "description": "Confirmation dialog message before closing a pinned tab (pinned tabs are meant to stay open)."

@@ -401,6 +401,18 @@
     "description": "Command name that closes every tab except the current one. Appears in the command palette.",
     "screenshot": "settings-keyboard-shortcuts.png"
   },
+  "commands.tabMoveLeft.label": "Move tab left",
+  "@commands.tabMoveLeft.label": {
+    "description": "Command name that moves the current tab one place to the left in its pane's tab bar. The keyboard alternative to dragging a tab. Appears in the command palette and the keyboard shortcuts list."
+  },
+  "commands.tabMoveRight.label": "Move tab right",
+  "@commands.tabMoveRight.label": {
+    "description": "Command name that moves the current tab one place to the right in its pane's tab bar. The keyboard alternative to dragging a tab. Appears in the command palette and the keyboard shortcuts list."
+  },
+  "commands.tabMoveToOtherPane.label": "Move tab to other pane",
+  "@commands.tabMoveToOtherPane.label": {
+    "description": "Command name that moves the current tab out of its pane and onto the end of the other pane's tab bar (Cmdr shows two side-by-side panes, each with its own tabs). The keyboard alternative to dragging a tab across. Appears in the command palette and the keyboard shortcuts list."
+  },
   "commands.tabMcpAction.label": "Pane tab action",
   "@commands.tabMcpAction.label": {
     "description": "Internal command name for a tab action driven by the automation interface, shown only in the keyboard-shortcuts list (not the palette). \"Pane\" is one of the two side-by-side file lists.",

@@ -143,6 +143,10 @@ export const COMMAND_IDS = [
   'tab.prev',
   'tab.togglePin',
   'tab.closeOthers',
+  // The keyboard's tab reorder and move, the drag's equivalent (WCAG 2.1.1, 2.5.7).
+  'tab.moveLeft',
+  'tab.moveRight',
+  'tab.moveToOtherPane',
   // Per-pane tab action carried by the MCP `tab` tool (the focused-pane
   // `tab.new`/`tab.close`/etc. can't target the inactive pane or a specific tab).
   'tab.mcpAction',
