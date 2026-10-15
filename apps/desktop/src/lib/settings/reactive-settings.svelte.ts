@@ -57,6 +57,7 @@ let mediaIndexEnabled = $state<boolean>(false)
 let mediaIndexShowFileStatusIcons = $state<boolean>(true)
 let showVirtualGitPortal = $state<boolean>(true)
 let viewerShowTextCursor = $state<boolean>(false)
+let keepNotificationsUntilClosed = $state<boolean>(false)
 
 let initialized = false
 let unsubscribe: (() => void) | undefined
@@ -119,6 +120,7 @@ async function runInit(options?: { restrictedWindow?: boolean }): Promise<void> 
     mediaIndexShowFileStatusIcons = getSetting('mediaIndex.showFileStatusIcons')
     showVirtualGitPortal = getSetting('fileExplorer.git.showVirtualGitPortal')
     viewerShowTextCursor = getSetting('viewer.showTextCursor')
+    keepNotificationsUntilClosed = getSetting('behavior.notifications.keepUntilClosed')
 
     // Subscribe to changes (including cross-window changes). The arrow function delegates to
     // `applySettingChange` so the switch's case count stays under the per-fn complexity limit.
@@ -232,6 +234,9 @@ function applySettingChange(id: string, value: unknown): void {
       break
     case 'viewer.showTextCursor':
       viewerShowTextCursor = value as boolean
+      break
+    case 'behavior.notifications.keepUntilClosed':
+      keepNotificationsUntilClosed = value as boolean
       break
   }
 }
@@ -503,4 +508,9 @@ export function formattedDate(timestamp: number | null | undefined): FormattedDa
  */
 export function formatDateTime(timestamp: number | null | undefined): string {
   return formattedDate(timestamp).text
+}
+
+/** Whether on-screen notifications stay until closed rather than going on a timer (`ToastContainer`). */
+export function getKeepNotificationsUntilClosed(): boolean {
+  return keepNotificationsUntilClosed
 }

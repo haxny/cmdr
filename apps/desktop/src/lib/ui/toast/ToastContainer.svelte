@@ -14,8 +14,14 @@
     import type { ToastSpeech } from './toast-speech'
     import LiveAnnouncer from '../LiveAnnouncer.svelte'
     import { handleToastStackFocusOut, handleToastStackKeydown, registerToastStack } from './toast-focus'
+    import { getKeepNotificationsUntilClosed } from '#lib/settings/reactive-settings.svelte.js'
 
     const toasts = getToasts()
+
+    // "Keep notifications until I close them": every toast leaves the way a persistent one
+    // does (no timer, no ring). Only how it LEAVES changes; the store's `dismissal` still says
+    // what kind of toast it is, so pane navigation keeps clearing a pane's own stale ones.
+    const keepUntilClosed = $derived(getKeepNotificationsUntilClosed())
 
     type Announcer = { announce: (message: string) => void }
     let politeRegion: Announcer | undefined = $state()
@@ -70,7 +76,7 @@
                 id={toast.id}
                 content={toast.content}
                 level={toast.level}
-                dismissal={toast.dismissal}
+                dismissal={keepUntilClosed ? 'persistent' : toast.dismissal}
                 timeoutMs={toast.timeoutMs}
                 postedAt={toast.postedAt}
                 closeTooltip={toast.closeTooltip}

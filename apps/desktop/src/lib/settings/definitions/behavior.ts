@@ -453,11 +453,24 @@ export const behaviorSettings: SettingDefinitionSource[] = [
 
   // ========================================================================
   // Behavior › Notifications
-  // The downloads watcher and the low-disk-space warning: both surface
-  // notifications, and the downloads watcher shares the FDA gate. Rendered by
+  // How long on-screen notifications (toasts) stay, then the downloads watcher
+  // and the low-disk-space warning: both surface notifications, and the
+  // downloads watcher shares the FDA gate. Rendered by
   // `NotificationsSection.svelte`. (The `*.fileSystemWatching.*` id prefix is a
   // stable persistence key; renaming the section doesn't touch it.)
   // ========================================================================
+  {
+    // Read by `ToastContainer` (`#lib/ui/toast/`): on, no toast goes on a timer.
+    id: 'behavior.notifications.keepUntilClosed',
+    section: ['Behavior', 'Notifications'],
+    labelKey: 'settings.behavior.notifications.keepUntilClosed.label',
+    descriptionKey: 'settings.behavior.notifications.keepUntilClosed.description',
+    cardKey: 'settings.notifications.cardOnScreen',
+    keywords: ['toast', 'notification', 'timeout', 'time', 'disappear', 'dismiss', 'close', 'keep', 'accessibility'],
+    type: 'boolean',
+    default: false,
+    component: 'switch',
+  },
   {
     id: 'behavior.fileSystemWatching.downloadsNotifications',
     section: ['Behavior', 'Notifications'],

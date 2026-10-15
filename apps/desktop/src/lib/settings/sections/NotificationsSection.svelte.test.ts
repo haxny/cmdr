@@ -66,6 +66,8 @@ function setDefaultSettings(): void {
         return 'in-app'
       case 'behavior.fileSystemWatching.lowDiskSpaceThresholdPercent':
         return 5
+      case 'behavior.notifications.keepUntilClosed':
+        return false
       default:
         return undefined
     }
@@ -116,6 +118,22 @@ describe('NotificationsSection', () => {
     // Section title.
     const title = target.querySelector('.section-title')?.textContent.trim()
     expect(title).toBe('Notifications')
+    target.remove()
+  })
+
+  it('offers to keep notifications until closed, on its own card, and writes the choice through', async () => {
+    const target = await mountSection()
+    const labels = Array.from(target.querySelectorAll('.section-card-label')).map((el) => el.textContent.trim())
+    expect(labels[0]).toBe('On-screen notifications')
+
+    const keep = target.querySelector<HTMLInputElement>(
+      'input[type="checkbox"][aria-label="Keep notifications until I close them"]',
+    )
+    if (!keep) throw new Error('Keep-until-closed switch not found')
+    keep.click()
+    await tick()
+
+    expect(setSettingMock).toHaveBeenCalledWith('behavior.notifications.keepUntilClosed', true)
     target.remove()
   })
 

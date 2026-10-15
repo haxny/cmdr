@@ -1,12 +1,14 @@
 <script lang="ts">
     /**
-     * `Behavior > Notifications` covers the two notification-shaped watchers: the
-     * downloads watcher and the low-disk-space warning. The downloads watcher
-     * shares the Full Disk Access gate, so a single hint surfaces when the gate is
-     * closed.
+     * `Behavior > Notifications` covers how long Cmdr's on-screen notifications
+     * stay, then the two notification-shaped watchers: the downloads watcher and
+     * the low-disk-space warning. The downloads watcher shares the Full Disk
+     * Access gate, so a single hint surfaces when the gate is closed.
      *
-     * The section renders two card groups inside `SectionCard`s:
+     * The section renders three card groups inside `SectionCard`s:
      *
+     *   0. **On-screen notifications**: "Keep notifications until I close them",
+     *      which `ToastContainer` reads to put no toast on a timer.
      *   1. **Downloads** — both Downloads-folder features in one card: the
      *      4-option `downloadsNotifications` ToggleGroup, and the on/off
      *      `Switch` for the global go-to-latest hotkey (whose description
@@ -38,6 +40,7 @@
     import SettingRow from '../components/SettingRow.svelte'
     import SettingToggleGroup from '../components/SettingToggleGroup.svelte'
     import SettingNumberInput from '../components/SettingNumberInput.svelte'
+    import SettingSwitch from '../components/SettingSwitch.svelte'
     import SectionCard from '#lib/ui/SectionCard.svelte'
     import LinkButton from '#lib/ui/LinkButton.svelte'
     import Trans from '#lib/intl/Trans.svelte'
@@ -80,6 +83,8 @@
 
     const shouldShow = $derived(createShouldShow(searchQuery))
 
+    const KEEP_UNTIL_CLOSED_KEY = 'behavior.notifications.keepUntilClosed'
+    const keepUntilClosedDef = getSettingDefinition(KEEP_UNTIL_CLOSED_KEY) ?? { label: '', description: '' }
     const notificationsDef = getSettingDefinition(DOWNLOADS_NOTIFICATIONS_SETTING_KEY) ?? {
         label: '',
         description: '',
@@ -192,6 +197,19 @@
 {/snippet}
 
 <SettingsSection title={tString('settings.section.notifications')}>
+    {#if shouldShow(KEEP_UNTIL_CLOSED_KEY)}
+        <SectionCard label={tString('settings.notifications.cardOnScreen')}>
+            <SettingRow
+                id={KEEP_UNTIL_CLOSED_KEY}
+                label={keepUntilClosedDef.label}
+                description={keepUntilClosedDef.description}
+                {searchQuery}
+            >
+                <SettingSwitch id={KEEP_UNTIL_CLOSED_KEY} />
+            </SettingRow>
+        </SectionCard>
+    {/if}
+
     {#if downloadsGated && anyVisible(shouldShow, DOWNLOADS_NOTIFICATIONS_SETTING_KEY, GLOBAL_GO_TO_LATEST_ENABLED_KEY)}
         <p class="fda-hint">
             <Trans key="common.downloadsFdaHint" snippets={{ settingsLink }} />

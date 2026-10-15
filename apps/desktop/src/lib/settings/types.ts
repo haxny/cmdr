@@ -596,6 +596,8 @@ export interface SettingsValues {
    */
   'mediaIndex.semanticSearch.enabled': boolean
 
+  // Behavior › Notifications - on-screen notifications (toasts).
+  'behavior.notifications.keepUntilClosed': boolean
   // Behavior › Notifications - downloads notifications + global go-to-latest shortcut.
   // (The `fileSystemWatching` id prefix is a stable persistence key, kept across the
   // section rename from "File system watching" to "Notifications".)
