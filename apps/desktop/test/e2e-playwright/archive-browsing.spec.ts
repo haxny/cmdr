@@ -39,6 +39,7 @@ import {
   openViewerWindow,
   closeScopedWindow,
   expectAndDismissToast,
+  dismissAllToasts,
   dismissOverlay,
   getOpenedPaths,
   clearOpenedPaths,
@@ -307,6 +308,8 @@ test.describe('Archive Enter-behavior menu', () => {
     // does NOT browse into it — the pane stays put.
     await expect.poll(async () => getOpenedPaths(tauriPage), { timeout: waitBudget(5000) }).toContain(zipPath)
     expect(await getFocusedPaneActiveTabPath()).toBe(`${getFixtureRoot()}/left`)
+    // Opening a file shows an "Opening sample.zip…" toast, which the leak guard counts.
+    await dismissAllToasts(tauriPage)
   })
 
   test('a zip set to Browse skips the menu and enters directly', async ({ tauriPage }) => {
@@ -331,6 +334,7 @@ test.describe('Archive Enter-behavior menu', () => {
     // Document packages default to Open, so there's no popup — it opens directly.
     await expect.poll(async () => getOpenedPaths(tauriPage), { timeout: waitBudget(5000) }).toContain(docxPath)
     expect(await tauriPage.isVisible(ENTER_MENU)).toBe(false)
+    await dismissAllToasts(tauriPage)
   })
 
   test('Configure deep-links to the Archives settings section', async ({ tauriPage }) => {

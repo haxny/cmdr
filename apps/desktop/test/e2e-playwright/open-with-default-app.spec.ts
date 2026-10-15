@@ -28,6 +28,7 @@ import { restoreFixtureTree } from '../e2e-shared/fixture-manifest.js'
 import { ensureMcpClient, mcpNavToPath } from '../e2e-shared/mcp-client.js'
 import {
   clearOpenedPaths,
+  dismissAllToasts,
   ensureAppReady,
   ensureExplorerFocused,
   getFixtureRoot,
@@ -81,6 +82,8 @@ test.describe('Open with the default app', () => {
       `${getFixtureRoot()}/left/file-a.txt`,
       `${getFixtureRoot()}/left/file-b.txt`,
     ])
+    // Each open shows an "Opening <file>…" toast, which the leak guard counts.
+    await dismissAllToasts(tauriPage)
   })
 
   test('⌘↓ hands each file to its default app exactly once', async ({ tauriPage }) => {
@@ -96,5 +99,6 @@ test.describe('Open with the default app', () => {
       `${getFixtureRoot()}/left/file-a.txt`,
       `${getFixtureRoot()}/left/file-b.txt`,
     ])
+    await dismissAllToasts(tauriPage)
   })
 })
