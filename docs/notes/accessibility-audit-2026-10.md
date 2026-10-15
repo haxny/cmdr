@@ -65,8 +65,9 @@ Top gaps, each with its issue:
    marked rows (hue only), and focus rings under 3:1 with yellow, orange, green, or Cmdr gold accents in light mode, by
    default. Field borders now clear 3:1; Increase contrast and Differentiate without color are read and styled; the
    default-look options for the three cues await David's design pick (Debug > Visual cues).
-5. **Pointer and keyboard leftovers** (#441): tab reorder is drag-only, sub-24px targets, tooltips not hoverable, viewer
-   bare-key shortcuts not remappable, zoom tops out at 150%.
+5. **Pointer and keyboard leftovers** (#441, mostly closed in code 2026-10-15): tab reorder was drag-only, sub-24px
+   targets, tooltips not hoverable, viewer bare-key shortcuts not remappable, zoom topped out at 150%. Left: a
+   one-letter breadcrumb segment and the pane divider are still narrower than 24 px.
 6. **Quick fixes** (#442, closed in code 2026-10-15): Reduce motion misses, hard-coded English labels and window titles,
    a missing `lang`, a missing `autocomplete`, badges without text, no queue window a11y test.
 7. **No accessibility documentation** (#443): nothing lists the features, limits, or how to get help.
@@ -109,18 +110,22 @@ video, flashing, or time limits beyond toasts; native menu bar and context menus
   (4.51:1 worst). Evidence: `app.css` `--color-selection-fg-primary`, `app-file-list.css` marked-row rules,
   `app-visual-cues.css`, `--color-text-quiet`; `git/status-column.ts`. #440.
 - **1.4.2 Audio control**: Not applicable. Cmdr plays no audio.
-- **2.1.1 Keyboard**: Partially supports. Every core action is a command with a shortcut and a command palette entry:
-  pane switch, navigation, marking, open, go up, go to path, volume chooser, tabs, sort, divider, view mode, all file
-  operations, settings. "Move focus to the notifications" (⌃F6) reaches every toast's buttons, and Undo trash is also
-  Edit > Undo move to trash (#439, 2026-10-15). Gap: reordering tabs or moving a tab to the other pane needs a drag.
-  Evidence: `lib/commands/sources/*.ts`, `tabs/tab-drag-controller.svelte.ts`, `ui/toast/toast-focus.ts`,
-  `delete/trash-undo.ts` (`undoLastTrash`). #441.
+- **2.1.1 Keyboard**: Supports. Every core action is a command with a shortcut and a command palette entry: pane switch,
+  navigation, marking, open, go up, go to path, volume chooser, tabs, sort, divider, view mode, all file operations,
+  settings. "Move focus to the notifications" (⌃F6) reaches every toast's buttons, and Undo trash is also Edit > Undo
+  move to trash (#439, 2026-10-15). Tabs reorder with `tab.moveLeft` / `tab.moveRight` (⌘⌃⇧← / →) and cross with
+  `tab.moveToOtherPane` (palette), the drag's rules through `moveTabToPane` (#441, 2026-10-15). Evidence:
+  `lib/commands/sources/*.ts`, `pane/tab-operations.ts` (`moveActiveTab`), `ui/toast/toast-focus.ts`,
+  `delete/trash-undo.ts` (`undoLastTrash`).
 - **2.1.2 No keyboard trap**: Supports. Dialog focus traps always release on Escape or their buttons; nested traps
   stack. Evidence: `lib/ui/focus-trap.ts`, `ModalDialog.svelte`, lint `cmdr/dialog-needs-focus-trap`.
-- **2.1.4 Character key shortcuts**: Partially supports. File-list single keys (`*`, `+`, `-`) are rebindable and active
-  only with list focus; type-to-jump only acts with pane focus. The viewer's single-key shortcuts (`W`, `F`, `0`–`3`,
-  `+`/`=`/`-`) work window-wide and can't be remapped or turned off. Evidence: `shortcuts/shortcuts-store.ts`,
-  `pane/type-to-jump-keys.ts`, `routes/viewer/viewer-keyboard.ts`, `viewer-view-mode.ts`, `MediaImageView.svelte`. #441.
+- **2.1.4 Character key shortcuts**: Supports. File-list single keys (`*`, `+`, `-`) are rebindable and active only with
+  list focus; type-to-jump only acts with pane focus. The viewer's single-key shortcuts (`W`, `F`, `0`–`3`, `+`/`=`/`-`,
+  Enter / Space on an image) work window-wide and, since #441 (2026-10-15), are registry commands (scope
+  `Viewer window`) the user can remap or turn off in Settings; the viewer reads rebinds through the read-only
+  `get_restricted_window_shortcuts`. Evidence: `shortcuts/shortcuts-store.ts`, `pane/type-to-jump-keys.ts`,
+  `commands/sources/viewer-window.ts`, `routes/viewer/viewer-keyboard.ts`, `viewer-view-mode.ts`,
+  `MediaImageView.svelte`, `viewer-keys.remap.test.ts`.
 - **2.2.1 Timing adjustable**: Supports. The only time limits are toasts (4 s default, 7–10 s for some). Hover and
   keyboard focus hold them, and "Keep notifications until I close them" turns the timers off (#439, 2026-10-15). The
   quit-while-busy 15 s countdown falls under the essential exception (macOS logout deadline). Evidence:
@@ -199,14 +204,15 @@ video, flashing, or time limits beyond toasts; native menu bar and context menus
   `#1e1e1e`: primary 17.40 / 13.61, secondary 5.74 / 9.56, tertiary 5.74 / 7.18, error text 6.47 / 8.78, warning text
   7.31 / 9.89. Evidence: `pnpm check a11y-contrast` (green), `scripts/check-a11y-contrast/row_state_matrix.go`,
   `app.css` § Increase contrast. #440.
-- **1.4.4 Resize text**: Supports. App zoom (⌘+ / ⌘−, 75–150%) compounds with the macOS Accessibility text size
-  (0.82–3.12×), so text reaches 200% and beyond; tokens are rem-based and rows grow with text. App zoom alone stops at
-  150% (#441). Evidence: `src-tauri/src/text_size.rs`, `lib/text-size.svelte.ts`, `command-handlers/view-handlers.ts`,
-  `settings/reactive-settings.svelte.ts`.
+- **1.4.4 Resize text**: Supports. App zoom (⌘+ / ⌘−, 75–200%; the ceiling rose from 150% with #441, 2026-10-15) reaches
+  200% alone and compounds with the macOS Accessibility text size (0.82–3.12×) beyond it; tokens are rem-based and rows
+  grow with text. 2.0 adds no new effective scale: 150% × the system's 1.35+ sizes was already past it. Evidence:
+  `settings/definitions/appearance.ts` (`TEXT_SIZE_RANGE`), `src-tauri/src/text_size.rs`, `lib/text-size.svelte.ts`,
+  `command-handlers/view-handlers.ts`, `settings/reactive-settings.svelte.ts`.
 - **1.4.5 Images of text**: Supports. All text is live text; no images of text in the UI.
 - **1.4.10 Reflow**: Partially supports. Dialogs and Settings are single-column and their minimum widths scale with
   text. The main window has a 950×550 minimum and a dual-pane, columnar layout that needs two dimensions (the exception
-  for content that requires 2-D layout covers the file grid, not the chrome). Pending a manual check at 150% zoom plus
+  for content that requires 2-D layout covers the file grid, not the chrome). Pending a manual check at 200% zoom plus
   large system text. Evidence: `src-tauri/tauri.conf.json`, `settings/settings-window.ts`, `file-viewer/open-viewer.ts`.
 - **1.4.11 Non-text contrast**: Partially supports. Checkbox and switch borders use `--color-control-border` (about
   3.7:1), and text field borders `--color-field-border` (the same token, 3.1:1 worst on the dialog surface) since #440,
@@ -219,9 +225,11 @@ video, flashing, or time limits beyond toasts; native menu bar and context menus
   fits the Comfortable density but clips in Compact (16 px rows), and middle truncation measures with canvas metrics
   that ignore letter and word spacing overrides. Pending a manual text-spacing test. Evidence: `BriefList.svelte`,
   `FullList.svelte` row styles, `settings/types.ts` density mappings.
-- **1.4.13 Content on hover or focus**: Partially supports. Tooltips show on hover and keyboard focus, stay until
-  pointer leave, blur, or a key, and any key dismisses them. They can't be hovered: `pointer-events: none` and the
-  trigger's `mouseleave` hides them. Evidence: `lib/tooltip/tooltip.ts`, `app-tooltip.css`. #441.
+- **1.4.13 Content on hover or focus**: Supports. Tooltips show on hover and keyboard focus and any key dismisses them.
+  Since #441 (2026-10-15) they're hoverable: a shown tooltip takes the pointer, leaving its trigger starts a 250 ms
+  grace that reaching the tooltip (or the trigger) cancels, and a trigger crossed on the way waits for the grace instead
+  of taking over. A press on the tooltip dismisses it. Evidence: `lib/tooltip/tooltip.ts` (+ `tooltip.test.ts` §
+  hoverable), `app-tooltip.css`.
 - **2.4.5 Multiple ways**: Not applicable. Applies to sets of web pages or software.
 - **2.4.6 Headings and labels**: Supports. Settings uses `h1`/`h2`/`h3`, dialogs an `h2` title, panes named regions.
   Both panes' listboxes share the name "File list" (#437). Evidence: `routes/settings/+page.svelte`,
@@ -233,12 +241,14 @@ video, flashing, or time limits beyond toasts; native menu bar and context menus
 - **2.4.11 Focus not obscured (minimum)**: Supports. Dialogs are modal and centered. Toasts sit at the top right and
   move to the bottom right while they would cover the focused element's cursor row (`aria-activedescendant`) or the
   focused element (#439, 2026-10-15). Evidence: `ui/toast/toast-placement.ts` (+ test), `ToastContainer.svelte`.
-- **2.5.7 Dragging movements**: Partially supports. The pane divider (double-click reset, ⌃⌥←/→), drag-and-drop copy and
-  move (F5/F6, context menu, copy and paste) have alternatives; tab reordering and moving a tab to the other pane don't.
-  Evidence: `PaneResizer.svelte`, `commands/sources/main-window.ts`, `tabs/tab-drag-controller.svelte.ts`. #441.
-- **2.5.8 Target size (minimum)**: Partially supports. Sort headers, function-key bar, and the new-tab button meet 24×24
-  px. The tab close button is 14×14 px, breadcrumb segments are about 17 px tall with no padding, and the pane divider's
-  hit area is 4 px wide. Evidence: `TabBar.svelte`, `FilePane.svelte` breadcrumb styles, `PaneResizer.svelte`. #441.
+- **2.5.7 Dragging movements**: Supports. The pane divider (double-click reset, ⌃⌥←/→), drag-and-drop copy and move
+  (F5/F6, context menu, copy and paste), and tab reordering and moving (`tab.move*`, #441, 2026-10-15) have
+  alternatives. Evidence: `PaneResizer.svelte`, `commands/sources/main-window.ts`, `pane/tab-operations.ts`.
+- **2.5.8 Target size (minimum)**: Partially supports. Sort headers, function-key bar, the new-tab button, and since
+  #441 (2026-10-15) the tab close button (an unpainted 24×24 `::before`) meet 24×24 px. Breadcrumb segments now span the
+  header's full height (about 29 px at 100%) and 3 px into each `/`, but a one-letter segment is about 13 px wide next
+  to its neighbors; the pane divider's grab strip is 8 px. Evidence: `TabBar.svelte`, `FilePane.svelte` `.path-segment`,
+  `PaneResizer.svelte`. #441.
 - **3.1.2 Language of parts**: Supports. The language picker lists each language in its own name, with a per-option
   `lang` on the row and on the trigger while selected (#442, 2026-10-15). Evidence: `intl/locale-display-names.ts`,
   `settings/definitions/appearance.ts` `languageOptions()`, `ui/Select.svelte`.
@@ -273,8 +283,8 @@ video, flashing, or time limits beyond toasts; native menu bar and context menus
 
 - **302.1 Without vision**: Partially supports. Dialogs, settings, menus, and forms are built for screen readers; the
   file list probably doesn't announce its cursor or marked files. Pending VoiceOver check V1–V12. #437.
-- **302.2 With limited vision**: Partially supports. macOS text size plus app zoom past 200%, dark mode, AA text
-  contrast in CI. Weak focused-pane and focus-ring contrast with some accents. #440, #441.
+- **302.2 With limited vision**: Partially supports. App zoom alone to 200%, past it with macOS text size, dark mode, AA
+  text contrast in CI. Weak focused-pane and focus-ring contrast with some accents. #440.
 - **302.3 Without perception of color**: Partially supports. Marked files and hidden files rely on color; the rest uses
   glyphs and text. Under Differentiate without color, marked rows and the focused pane gain a bar; hidden files don't.
   #440.
@@ -283,7 +293,8 @@ video, flashing, or time limits beyond toasts; native menu bar and context menus
 - **302.6 Without speech**: Supports. No speech input needed.
 - **302.7 With limited manipulation**: Partially supports. Full keyboard operation with rebindable shortcuts and no
   simultaneous-key requirement beyond modifiers (Sticky Keys works). Toast actions are reachable with "Move focus to the
-  notifications" (#439, 2026-10-15). Tab reorder is drag-only, and some targets are under 24 px. #441.
+  notifications" (#439, 2026-10-15), and tabs reorder and move from the keyboard (#441, 2026-10-15). A one-letter
+  breadcrumb segment and the pane divider are still under 24 px. #441.
 - **302.8 With limited reach and strength**: Supports. Software only; no physical reach.
 - **302.9 With limited language, cognitive, and learning abilities**: Supports. Plain, conversational copy
   (`docs/style-guide.md`), confirmations, undo and rollback, consistent menus, and a setting that keeps toasts until

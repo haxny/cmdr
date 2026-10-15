@@ -177,10 +177,9 @@ const wcagA: CriterionRow[] = [
     id: '2.1.1',
     name: 'Keyboard',
     level: 'A',
-    conformance: 'partially-supports',
+    conformance: 'supports',
     remark:
-      'Every core action has a keyboard shortcut and a command palette entry: switching panes, navigating, marking, opening, every file operation, tabs, sorting, view modes, and Settings. "Move focus to the notifications" reaches the buttons in notifications, and Undo after moving files to the trash is also in the Edit menu. One gap: reordering tabs or moving a tab to the other pane needs a mouse drag.',
-    issues: [441],
+      'Every core action has a keyboard shortcut and a command palette entry: switching panes, navigating, marking, opening, every file operation, tabs (including reordering them and moving one to the other pane), sorting, view modes, and Settings. "Move focus to the notifications" reaches the buttons in notifications, and Undo after moving files to the trash is also in the Edit menu.',
   },
   {
     id: '2.1.2',
@@ -193,10 +192,9 @@ const wcagA: CriterionRow[] = [
     id: '2.1.4',
     name: 'Character key shortcuts',
     level: 'A',
-    conformance: 'partially-supports',
+    conformance: 'supports',
     remark:
-      "Single-key shortcuts in the file list (like * and +) can be remapped and work only while the file list has focus. In the file viewer, single-key shortcuts (W, F, 0–3, + and -) work anywhere in the window and can't be remapped or turned off.",
-    issues: [441],
+      'Single-key shortcuts in the file list (like * and +) can be remapped and work only while the file list has focus. In the file viewer, single-key shortcuts (W, F, 0–3, + and -) work anywhere in the window, and each one can be remapped or turned off in Settings.',
   },
   {
     id: '2.2.1',
@@ -400,8 +398,7 @@ const wcagAA: CriterionRow[] = [
     level: 'AA',
     conformance: 'supports',
     remark:
-      'App zoom (Command-plus and Command-minus, 75–150%) combines with the macOS text size setting, so text reaches 200% and beyond, and rows grow with it. App zoom alone stops at 150%.',
-    issues: [441],
+      'App zoom (Command-plus and Command-minus, 75–200%) reaches 200% on its own and combines with the macOS text size setting to go further. Rows grow with the text.',
   },
   {
     id: '1.4.5',
@@ -439,10 +436,9 @@ const wcagAA: CriterionRow[] = [
     id: '1.4.13',
     name: 'Content on hover or focus',
     level: 'AA',
-    conformance: 'partially-supports',
+    conformance: 'supports',
     remark:
-      "Tooltips appear on hover and on keyboard focus, stay until the pointer or focus leaves, and any key closes them. Moving the pointer onto a tooltip closes it, so it can't be hovered.",
-    issues: [441],
+      'Tooltips appear on hover and on keyboard focus, stay while the pointer rests on them or their control or while focus stays, and any key closes them.',
   },
   {
     id: '2.4.5',
@@ -483,10 +479,9 @@ const wcagAA: CriterionRow[] = [
     id: '2.5.7',
     name: 'Dragging movements',
     level: 'AA',
-    conformance: 'partially-supports',
+    conformance: 'supports',
     remark:
-      "Resizing the panes, and copying or moving files by drag and drop, all have keyboard and menu alternatives. Reordering tabs and moving a tab to the other pane don't.",
-    issues: [441],
+      'Resizing the panes, reordering tabs, moving a tab to the other pane, and copying or moving files by drag and drop all have keyboard and command palette alternatives.',
   },
   {
     id: '2.5.8',
@@ -494,7 +489,7 @@ const wcagAA: CriterionRow[] = [
     level: 'AA',
     conformance: 'partially-supports',
     remark:
-      'Column headers, the function key bar, and the new-tab button are at least 24 by 24 pixels. The tab close button is 14 by 14 pixels, path segments above the file list are about 17 pixels tall, and the divider between the panes is 4 pixels wide.',
+      'Column headers, the function key bar, the new-tab button, and the tab close button are at least 24 by 24 pixels. Path segments above the file list take the full height of their bar, but a folder with a one-letter name is still a narrow target, and the divider between the panes is 8 pixels wide.',
     issues: [441],
   },
   {
@@ -569,8 +564,8 @@ const section508Ch3: CriterionRow[] = [
     name: 'With limited vision',
     conformance: 'partially-supports',
     remark:
-      'Text grows past 200% with the macOS text size setting and app zoom, dark mode is supported, and text contrast is checked automatically. The focused pane and some focus rings have weak contrast with some accent colors.',
-    issues: [440, 441],
+      'App zoom alone takes text to 200%, and the macOS text size setting takes it further. Dark mode is supported, and text contrast is checked automatically. The focused pane and some focus rings have weak contrast with some accent colors.',
+    issues: [440],
   },
   {
     id: '302.3',
@@ -588,7 +583,7 @@ const section508Ch3: CriterionRow[] = [
     name: 'With limited manipulation',
     conformance: 'partially-supports',
     remark:
-      'Everything core works from the keyboard with remappable shortcuts, and no shortcut needs more than modifiers plus one key, so Sticky Keys works. Reordering tabs needs a drag, and some click targets are smaller than 24 pixels.',
+      'Everything core works from the keyboard with remappable shortcuts, reordering and moving tabs included, and no shortcut needs more than modifiers plus one key, so Sticky Keys works. A few click targets are still smaller than 24 pixels: a path segment with a one-letter folder name, and the divider between the panes.',
     issues: [441],
   },
   {
@@ -1175,8 +1170,7 @@ export const gapIssues: { number: number; title: string }[] = [
   { number: 440, title: 'The focused pane, marked files, and some focus rings rely on faint color' },
   {
     number: 441,
-    title:
-      "Tab reordering needs a drag, some click targets are small, tooltips can't be hovered, viewer keys can't be remapped, and app zoom stops at 150%",
+    title: 'A few click targets are still under 24 pixels: one-letter path segments and the pane divider',
   },
   { number: 443, title: "No guide to Cmdr's accessibility features yet" },
   { number: 267, title: 'In-app menus (volume switcher, favorites) under VoiceOver' },
