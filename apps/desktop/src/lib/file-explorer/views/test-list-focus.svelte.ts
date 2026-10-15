@@ -165,6 +165,33 @@ export function listFocusCases(mountList: MountFocusableList): void {
     }
   })
 
+  // ❗ Backspace on a focused path segment navigates up and unmounts that very segment (it
+  // becomes the current folder, a plain span), dropping focus to `<body>` with no list remount
+  // to pick it up. The navigation's new rows do.
+  it('takes focus when a navigation lands while focus is adrift', async () => {
+    const unregister = registerFocusHome({ root: () => undefined, refocus: () => {} })
+    const segment = document.createElement('button')
+    try {
+      const live = $state<Partial<LiveListProps>>({})
+      const list = await mountList({ entries: ENTRIES, liveProps: live })
+      document.body.append(segment)
+      segment.focus()
+      segment.remove()
+      expect(document.activeElement).toBe(document.body)
+
+      const next = ['x.txt', 'y.txt', 'z.txt'].map((name) => fileEntry({ name, path: `/root/up/${name}` }))
+      vi.mocked(getFileRange).mockImplementation((_listingId, start: number, count: number) =>
+        Promise.resolve(next.slice(start, start + count)),
+      )
+      live.listingId = 'listing-up'
+      await list.settle(() => list.rowNames()[0] === 'x.txt', 'the parent folder rows')
+      await list.settle(() => document.activeElement === listboxOf(list), 'the list to take focus back')
+    } finally {
+      segment.remove()
+      unregister()
+    }
+  })
+
   it('is multiselectable, and says each option’s marked state, the cursor row included', async () => {
     const list = await mountList({ entries: ENTRIES, props: { selectedIndices: new SvelteSet([1]) } })
     expect(listboxOf(list).getAttribute('aria-multiselectable')).toBe('true')

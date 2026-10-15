@@ -256,7 +256,9 @@ results; `preventScroll` always), else the `role="group"` container when the pan
 of the two holds focus: they bubble to the container's handlers and route by the store's focused pane. The guard
 (`key-dispatch.ts`) sends container focus and stray focus (the other pane's list, Full view's scroller) to the same
 seam. The id lands a frame after focus and again after the cursor row's node is replaced
-(`../views/list-focus.svelte.ts`). ❌ Never focus a row: rows unmount under virtualization and focus drops to `<body>`.
+(`../views/list-focus.svelte.ts`). Focus that falls to `<body>` (its element unmounted) comes home when the focused
+pane's list mounts, unmounts, or lands a new folder's cursor row (same file; a Brief/Full toggle, a tab close, Backspace
+on a focused path segment). ❌ Never focus a row: rows unmount under virtualization and focus drops to `<body>`.
 
 **Pane chrome.** Each pane's tab bar (`TabBar`), location bar (`FilePane`'s `.header`, a `role="toolbar"`: volume
 button, drive badges, path segments, repo chip, eject), and sort header (both views' `.header-row`, a toolbar too) carry

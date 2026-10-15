@@ -70,10 +70,20 @@ export function createListFocus(deps: ListFocusDeps): ListFocus {
   // both folders), and WebKit keeps its focus on the dead one: VoiceOver stays silent on
   // entering a folder. So when the row appears, or its node changes under an unchanged id,
   // the id lands again a frame later. A plain cursor move changes the id and shows at once.
+  //
+  // ❗ A navigation can also strand focus without remounting the list: Backspace on a focused
+  // path segment goes up and unmounts that segment (it turns into the current folder's plain
+  // text), so focus falls to `<body>`. The new folder's cursor row picks it up (its own
+  // `focus` event lands the id).
   $effect(() => {
     const row = getCursorRow()
     untrack(() => {
-      if (row && (!last || (last.id === row.id && last.key !== row.key))) descendant.renew(row.id)
+      const listbox = deps.getListbox()
+      if (row && listbox && last?.key !== row.key && deps.isFocusedPane() && isFocusAdrift()) {
+        listbox.focus({ preventScroll: true })
+      } else if (row && (!last || (last.id === row.id && last.key !== row.key))) {
+        descendant.renew(row.id)
+      }
       last = row
     })
   })
