@@ -864,6 +864,42 @@
   "@fileExplorer.git.portalIntro.goToGitDir": {
     "sourceHash": "e05a0af"
   },
+  "fileExplorer.git.status.modified": "Módosítva",
+  "@fileExplorer.git.status.modified": {
+    "sourceHash": "e8ce5dc"
+  },
+  "fileExplorer.git.status.added": "Hozzáadva",
+  "@fileExplorer.git.status.added": {
+    "sourceHash": "6b02e0d"
+  },
+  "fileExplorer.git.status.deleted": "Törölve",
+  "@fileExplorer.git.status.deleted": {
+    "sourceHash": "b48ff39"
+  },
+  "fileExplorer.git.status.renamed": "Átnevezve",
+  "@fileExplorer.git.status.renamed": {
+    "sourceHash": "05487af"
+  },
+  "fileExplorer.git.status.copied": "Másolva",
+  "@fileExplorer.git.status.copied": {
+    "sourceHash": "8d525e5"
+  },
+  "fileExplorer.git.status.typechange": "Típus módosítva",
+  "@fileExplorer.git.status.typechange": {
+    "sourceHash": "a949ceb"
+  },
+  "fileExplorer.git.status.untracked": "Nem követett",
+  "@fileExplorer.git.status.untracked": {
+    "sourceHash": "c7ba547"
+  },
+  "fileExplorer.git.status.ignored": "Figyelmen kívül hagyva",
+  "@fileExplorer.git.status.ignored": {
+    "sourceHash": "7d648f5"
+  },
+  "fileExplorer.git.status.conflicted": "Konfliktusos",
+  "@fileExplorer.git.status.conflicted": {
+    "sourceHash": "916a464"
+  },
   "fileExplorer.git.useTransferToCopyOut": "Ha fájlokat szeretnél kimásolni egy git-pillanatképből, használd az F5-öt másoláshoz vagy az F6-ot áthelyezéshez.",
   "@fileExplorer.git.useTransferToCopyOut": {
     "sourceHash": "a0d65fe"

@@ -865,6 +865,42 @@
   "@fileExplorer.git.portalIntro.goToGitDir": {
     "sourceHash": "e05a0af"
   },
+  "fileExplorer.git.status.modified": "Đã sửa",
+  "@fileExplorer.git.status.modified": {
+    "sourceHash": "e8ce5dc"
+  },
+  "fileExplorer.git.status.added": "Đã thêm",
+  "@fileExplorer.git.status.added": {
+    "sourceHash": "6b02e0d"
+  },
+  "fileExplorer.git.status.deleted": "Đã xóa",
+  "@fileExplorer.git.status.deleted": {
+    "sourceHash": "b48ff39"
+  },
+  "fileExplorer.git.status.renamed": "Đã đổi tên",
+  "@fileExplorer.git.status.renamed": {
+    "sourceHash": "05487af"
+  },
+  "fileExplorer.git.status.copied": "Đã sao chép",
+  "@fileExplorer.git.status.copied": {
+    "sourceHash": "8d525e5"
+  },
+  "fileExplorer.git.status.typechange": "Đã đổi loại",
+  "@fileExplorer.git.status.typechange": {
+    "sourceHash": "a949ceb"
+  },
+  "fileExplorer.git.status.untracked": "Chưa theo dõi",
+  "@fileExplorer.git.status.untracked": {
+    "sourceHash": "c7ba547"
+  },
+  "fileExplorer.git.status.ignored": "Bị bỏ qua",
+  "@fileExplorer.git.status.ignored": {
+    "sourceHash": "7d648f5"
+  },
+  "fileExplorer.git.status.conflicted": "Có xung đột",
+  "@fileExplorer.git.status.conflicted": {
+    "sourceHash": "916a464"
+  },
   "fileExplorer.git.useTransferToCopyOut": "Để sao chép tệp ra khỏi một ảnh chụp git, hãy dùng F5 để sao chép hoặc F6 để di chuyển.",
   "@fileExplorer.git.useTransferToCopyOut": {
     "sourceHash": "a0d65fe"

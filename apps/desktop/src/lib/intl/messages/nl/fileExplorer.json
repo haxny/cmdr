@@ -867,6 +867,42 @@
   "@fileExplorer.git.portalIntro.goToGitDir": {
     "sourceHash": "e05a0af"
   },
+  "fileExplorer.git.status.modified": "Gewijzigd",
+  "@fileExplorer.git.status.modified": {
+    "sourceHash": "e8ce5dc"
+  },
+  "fileExplorer.git.status.added": "Toegevoegd",
+  "@fileExplorer.git.status.added": {
+    "sourceHash": "6b02e0d"
+  },
+  "fileExplorer.git.status.deleted": "Verwijderd",
+  "@fileExplorer.git.status.deleted": {
+    "sourceHash": "b48ff39"
+  },
+  "fileExplorer.git.status.renamed": "Naam gewijzigd",
+  "@fileExplorer.git.status.renamed": {
+    "sourceHash": "05487af"
+  },
+  "fileExplorer.git.status.copied": "Gekopieerd",
+  "@fileExplorer.git.status.copied": {
+    "sourceHash": "8d525e5"
+  },
+  "fileExplorer.git.status.typechange": "Type gewijzigd",
+  "@fileExplorer.git.status.typechange": {
+    "sourceHash": "a949ceb"
+  },
+  "fileExplorer.git.status.untracked": "Niet gevolgd",
+  "@fileExplorer.git.status.untracked": {
+    "sourceHash": "c7ba547"
+  },
+  "fileExplorer.git.status.ignored": "Genegeerd",
+  "@fileExplorer.git.status.ignored": {
+    "sourceHash": "7d648f5"
+  },
+  "fileExplorer.git.status.conflicted": "Conflict",
+  "@fileExplorer.git.status.conflicted": {
+    "sourceHash": "916a464"
+  },
   "fileExplorer.git.useTransferToCopyOut": "Om bestanden uit een git-momentopname te halen, gebruik je F5 om te kopiëren of F6 om te verplaatsen.",
   "@fileExplorer.git.useTransferToCopyOut": {
     "sourceHash": "a0d65fe"

@@ -195,3 +195,9 @@ wording into `terms.json` (and `decisions.md` when the reason is worth keeping).
   `Mac-gebruikershandleiding` for a manual); confirm `gids` reads right for a web page, or prefer `handleiding`.
 - `Wissel de afbeelding tussen passend en ware grootte`: `ware grootte` is Preview's Actual Size from memory, not mined
   (the pile has no Preview strings); `Zoom de afbeelding in/uit` keeps the separable particle at the end.
+
+## Git-kolomstatussen (`fileExplorer.git.status.*`)
+
+- Git has no Dutch translation, so `Niet gevolgd` (untracked), `Conflict` (conflicted), and `Type gewijzigd` have no
+  Tier-1 source; TortoiseGit nl says `Zonder versiebeheer` and `In conflict`, which read oddly inside `{status} in git`.
+  Confirm what Dutch git users say.

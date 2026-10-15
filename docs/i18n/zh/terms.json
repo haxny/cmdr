@@ -1407,6 +1407,27 @@
     "sources": "Pro Git 2 zh (打标签, 列出标签); MS terminology git sense (标签); Gitea zh-CN (Git 标签); VS Code zh-Hans mixes 标记 and 标签",
     "note": "Same word as the Finder color tag (tag), as English shares one word; the .git portal context tells them apart."
   },
+  "git-conflicted": {
+    "chosen": "有冲突",
+    "confidence": "high",
+    "sources": "git po/zh_CN.po (冲突, 未合并)"
+  },
+  "git-ignored": {
+    "chosen": "已忽略",
+    "confidence": "high",
+    "sources": "VS Code language pack (Git extension) (已忽略); git po/zh_CN.po (忽略的文件)"
+  },
+  "git-typechange": {
+    "chosen": "类型已更改",
+    "confidence": "high",
+    "accept": ["类型变更"],
+    "sources": "VS Code language pack (Git extension) (类型已更改); git po/zh_CN.po (类型变更：)"
+  },
+  "git-untracked": {
+    "chosen": "未跟踪",
+    "confidence": "high",
+    "sources": "git po/zh_CN.po (未跟踪的文件)"
+  },
   "github-star": {
     "avoid": [
       {

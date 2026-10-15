@@ -1368,6 +1368,12 @@
     "match": ["commit", "commits"],
     "sense": "A git commit (a snapshot in the repo's history), as the .git portal lists it."
   },
+  "git-conflicted": {
+    "distinct": ["conflict"],
+    "en": "conflicted",
+    "match": ["conflicted"],
+    "sense": "A file with an unresolved git merge conflict (the Git column's U). Not a name clash during a copy or move."
+  },
   "git-detached": {
     "distinct": ["git-branch", "git-commit"],
     "en": "detached",
@@ -1379,17 +1385,35 @@
     "match": ["dirty"],
     "sense": "A git working tree with uncommitted changes."
   },
+  "git-ignored": {
+    "distinct": ["git-untracked"],
+    "en": "ignored (git)",
+    "match": ["ignored"],
+    "notMatch": ["are ignored", "is ignored"],
+    "sense": "A file git skips because of a .gitignore rule (the Git column's !)."
+  },
   "git-tag": {
     "distinct": ["tag", "git-branch", "git-commit"],
     "en": "tag (git)",
     "match": ["git tag", "git tags", "branches, tags", "tag tags", "tagged commit"],
     "sense": "A git tag (a named pointer to a commit), browsable in the .git portal. Not a Finder color tag."
   },
+  "git-typechange": {
+    "en": "type changed",
+    "match": ["type changed"],
+    "sense": "A file whose kind changed since the last commit, like a regular file that became a symbolic link (the Git column's T)."
+  },
   "git-unborn": {
     "distinct": ["git-branch", "git-commit"],
     "en": "unborn branch",
     "match": ["unborn", "no commits yet"],
     "sense": "A git branch in a freshly created repository that has no commits yet (git's \"unborn branch\")."
+  },
+  "git-untracked": {
+    "distinct": ["git-ignored"],
+    "en": "untracked",
+    "match": ["untracked"],
+    "sense": "A new file git doesn't track yet, never added (the Git column's ?)."
   },
   "github-issue": {
     "en": "issue (GitHub)",

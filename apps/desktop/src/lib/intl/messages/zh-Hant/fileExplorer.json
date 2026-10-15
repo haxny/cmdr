@@ -863,6 +863,42 @@
   "@fileExplorer.git.portalIntro.goToGitDir": {
     "sourceHash": "e05a0af"
   },
+  "fileExplorer.git.status.modified": "已修改",
+  "@fileExplorer.git.status.modified": {
+    "sourceHash": "e8ce5dc"
+  },
+  "fileExplorer.git.status.added": "已加入",
+  "@fileExplorer.git.status.added": {
+    "sourceHash": "6b02e0d"
+  },
+  "fileExplorer.git.status.deleted": "已刪除",
+  "@fileExplorer.git.status.deleted": {
+    "sourceHash": "b48ff39"
+  },
+  "fileExplorer.git.status.renamed": "已重新命名",
+  "@fileExplorer.git.status.renamed": {
+    "sourceHash": "05487af"
+  },
+  "fileExplorer.git.status.copied": "已複製",
+  "@fileExplorer.git.status.copied": {
+    "sourceHash": "8d525e5"
+  },
+  "fileExplorer.git.status.typechange": "類型已變更",
+  "@fileExplorer.git.status.typechange": {
+    "sourceHash": "a949ceb"
+  },
+  "fileExplorer.git.status.untracked": "未追蹤",
+  "@fileExplorer.git.status.untracked": {
+    "sourceHash": "c7ba547"
+  },
+  "fileExplorer.git.status.ignored": "已忽略",
+  "@fileExplorer.git.status.ignored": {
+    "sourceHash": "7d648f5"
+  },
+  "fileExplorer.git.status.conflicted": "有衝突",
+  "@fileExplorer.git.status.conflicted": {
+    "sourceHash": "916a464"
+  },
   "fileExplorer.git.useTransferToCopyOut": "要把檔案從 git 快照裡複製出來，請用 F5 複製或 F6 移動。",
   "@fileExplorer.git.useTransferToCopyOut": {
     "sourceHash": "a0d65fe"

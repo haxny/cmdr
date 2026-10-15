@@ -1,9 +1,10 @@
 /**
  * Tests for the status-column helpers.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { invoke } from '@tauri-apps/api/core'
 import { fetchStatusMap, glyphFor, labelFor, type EntryStatusCode } from './status-column'
+import { setLocale } from '#lib/intl/messages.svelte.js'
 
 vi.mock('@tauri-apps/api/core', () => ({
   invoke: vi.fn(),
@@ -59,6 +60,20 @@ describe('status-column', () => {
       expect(label).not.toContain('error')
       expect(label).not.toContain('failed')
     }
+  })
+
+  // Regression: the labels were hardcoded English, so the row's spoken "{status} in git" and the
+  // Git cell's tooltip said "Modified" in every language.
+  describe('in another UI language', () => {
+    afterEach(() => {
+      setLocale(null)
+    })
+
+    it('says the status in that language', () => {
+      setLocale('de')
+      expect(labelFor('modified')).not.toBe('Modified')
+      expect(labelFor('untracked')).not.toBe('Untracked')
+    })
   })
 })
 

@@ -1268,6 +1268,32 @@
     "forms": "an unborn branch is named by its state, with no coined adjective: On unborn branch X (no commits yet) → Đang ở nhánh X (chưa có commit nào); the chip → X (chưa có commit)",
     "sources": "git’s own vi catalog (No commits yet → Vẫn chưa chuyển giao; You are on a branch yet to be born → Bạn tại nhánh mà nó chưa hề được sinh ra, Homebrew git.mo, 2026-10-15), recast with the catalog’s commit"
   },
+  "git-conflicted": {
+    "chosen": "có xung đột",
+    "confidence": "tentative",
+    "sources": "git po/vi.po (xung đột)"
+  },
+  "git-ignored": {
+    "chosen": "bị bỏ qua",
+    "confidence": "high",
+    "sources": "git po/vi.po (Những tập tin bị bỏ qua)"
+  },
+  "git-typechange": {
+    "chosen": "đã đổi loại",
+    "confidence": "tentative",
+    "avoid": [
+      {
+        "form": "đổi kiểu",
+        "why": "git po/vi.po's word, but the catalog names Type Loại everywhere"
+      }
+    ],
+    "sources": "git po/vi.po (đổi kiểu:)"
+  },
+  "git-untracked": {
+    "chosen": "chưa theo dõi",
+    "confidence": "high",
+    "sources": "git po/vi.po (Những tập tin chưa được theo dõi)"
+  },
   "github-star": {
     "accept": ["gắn sao"],
     "avoid": [

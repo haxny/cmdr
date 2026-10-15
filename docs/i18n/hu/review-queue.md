@@ -32,6 +32,9 @@ wording into `terms.json` (and `decisions.md` when the reason is worth keeping).
   pane"; no reference names the setting.
 - **camera → `kamera`** (`settings.appearance.tintMtp.description`, the MTP family): macOS says `fényképezőgép`; the
   catalog uses `kamera` about 10 times. Confirm it, or migrate the whole family at once.
+- **Git column states** (`fileExplorer.git.status.*`, spoken as „{status} a gitben”): git core has no hu.po, so
+  `Nem követett` (git-gui), `Figyelmen kívül hagyva`, `Konfliktusos` (TortoiseGit), and `Típus módosítva` are tentative.
+  Confirm what Hungarian git users say, especially `Konfliktusos` over `Ütközés`.
 
 ## Wording
 

@@ -1577,6 +1577,44 @@
     "confidence": "tentative",
     "sources": "descriptive (the English pill’s own gloss, no commits yet); no pile source has unborn branch"
   },
+  "git-conflicted": {
+    "chosen": "konfliktusos",
+    "confidence": "tentative",
+    "avoid": [
+      {
+        "form": "ütközés",
+        "why": "git-gui hu's word, but Hungarian git users say merge konfliktus; ütközés is Cmdr's name-clash word in transfers"
+      }
+    ],
+    "sources": "TortoiseGit hu (Konfliktusos)"
+  },
+  "git-ignored": {
+    "chosen": "figyelmen kívül hagyva",
+    "confidence": "tentative",
+    "avoid": [
+      {
+        "form": "kizárva",
+        "why": "Cmdr's excluded (TortoiseGit hu uses it for ignored, but that collides)"
+      }
+    ],
+    "sources": "TortoiseGit hu (Figyelmen kívül hagyott); -va status form per style.md"
+  },
+  "git-typechange": {
+    "chosen": "típus módosítva",
+    "confidence": "tentative",
+    "sources": "git-gui hu (Fájl típus megváltozott); -va status form like Módosítva"
+  },
+  "git-untracked": {
+    "chosen": "nem követett",
+    "confidence": "tentative",
+    "avoid": [
+      {
+        "form": "nem verziókezelt",
+        "why": "TortoiseGit's SVN-era unversioned, not git's untracked"
+      }
+    ],
+    "sources": "git-gui hu (Nem követett)"
+  },
   "sync": {
     "chosen": "szinkronizálás",
     "accept": ["szinkron"],

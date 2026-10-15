@@ -1436,6 +1436,26 @@
     "forms": "On unborn branch {branch} → Sur la branche non née {branch}; no commits yet → encore aucun commit (the short pill uses only this half)",
     "sources": "git po/fr.po (new unborn branch → nouvelle branche non née; create unborn branch → créer une branche non née; No commits yet on → Encore aucun commit sur), 2026-10-15; no file-manager source covers git"
   },
+  "git-conflicted": {
+    "chosen": "en conflit",
+    "confidence": "high",
+    "sources": "git po/fr.po (conflit, modifié des deux côtés)"
+  },
+  "git-ignored": {
+    "chosen": "ignoré",
+    "confidence": "high",
+    "sources": "git po/fr.po (Fichiers ignorés); VS Code language pack (Git extension) (Ignoré)"
+  },
+  "git-typechange": {
+    "chosen": "type modifié",
+    "confidence": "high",
+    "sources": "VS Code language pack (Git extension) (Type modifié); git po/fr.po (modif. type :)"
+  },
+  "git-untracked": {
+    "chosen": "non suivi",
+    "confidence": "high",
+    "sources": "git po/fr.po (Fichiers non suivis); VS Code language pack (Git extension) (Non suivi)"
+  },
   "github-issue": {
     "chosen": "ticket",
     "confidence": "tentative",

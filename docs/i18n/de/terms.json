@@ -3578,6 +3578,34 @@
     "forms": "Auf ungeborenem Branch {branch} (noch keine Commits).; the pill → {branch} (noch keine Commits)",
     "sources": "git po/de.po („ungeborener Branch“, „Noch keine Commits“, „Auf Branch “); reference pile has no git sense"
   },
+  "git-conflicted": {
+    "chosen": "Konflikt",
+    "confidence": "tentative",
+    "forms": "`fileExplorer.git.status.conflicted` → Konflikt (reads as „Konflikt in Git“)",
+    "sources": "git po/de.po (CONFLICT → KONFLIKT); catalog's conflict noun Konflikt"
+  },
+  "git-ignored": {
+    "chosen": "ignoriert",
+    "confidence": "high",
+    "sources": "git po/de.po (Ignorierte Dateien); VS Code language pack (Git extension) (Ignoriert)"
+  },
+  "git-typechange": {
+    "chosen": "Typ geändert",
+    "confidence": "high",
+    "accept": ["Typänderung"],
+    "sources": "VS Code language pack (Git extension) (Typ geändert); git po/de.po (typechange: → Typänderung:)"
+  },
+  "git-untracked": {
+    "chosen": "nicht verfolgt",
+    "confidence": "tentative",
+    "avoid": [
+      {
+        "form": "unversioniert",
+        "why": "git po/de.po's word, but „Unversioniert in Git“ reads stiff; VS Code's Nicht verfolgt is what most German git users see"
+      }
+    ],
+    "sources": "VS Code language pack (Git extension) (Nicht verfolgt); git po/de.po (Unversionierte Dateien)"
+  },
   "online-only": {
     "chosen": "nur online verfügbar",
     "confidence": "tentative",

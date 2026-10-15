@@ -7,6 +7,8 @@
  * the cell in O(1).
  */
 import { getGitStatusForPaths } from '#lib/tauri-commands/index.js'
+import type { MessageKey } from '#lib/intl/keys.gen.js'
+import { tString } from '#lib/intl/messages.svelte.js'
 
 export type EntryStatusCode =
   | 'modified'
@@ -31,24 +33,25 @@ const codeToGlyph: Record<EntryStatusCode, string> = {
   conflicted: 'U',
 }
 
-const codeToLabel: Record<EntryStatusCode, string> = {
-  modified: 'Modified',
-  added: 'Added',
-  deleted: 'Deleted',
-  renamed: 'Renamed',
-  copied: 'Copied',
-  typechange: 'Type changed',
-  untracked: 'Untracked',
-  ignored: 'Ignored',
-  conflicted: 'Conflicted',
+const codeToLabelKey: Record<EntryStatusCode, MessageKey> = {
+  modified: 'fileExplorer.git.status.modified',
+  added: 'fileExplorer.git.status.added',
+  deleted: 'fileExplorer.git.status.deleted',
+  renamed: 'fileExplorer.git.status.renamed',
+  copied: 'fileExplorer.git.status.copied',
+  typechange: 'fileExplorer.git.status.typechange',
+  untracked: 'fileExplorer.git.status.untracked',
+  ignored: 'fileExplorer.git.status.ignored',
+  conflicted: 'fileExplorer.git.status.conflicted',
 }
 
 export function glyphFor(code: EntryStatusCode): string {
   return codeToGlyph[code]
 }
 
+/** The status in the UI language: the Git cell's tooltip and `aria-label`, and the row name's "{status} in git". */
 export function labelFor(code: EntryStatusCode): string {
-  return codeToLabel[code]
+  return tString(codeToLabelKey[code])
 }
 
 /**

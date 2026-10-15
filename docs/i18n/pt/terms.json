@@ -1312,6 +1312,33 @@
     "confidence": "high",
     "sources": "Pro Git 2 pt-BR (Criando Tags, Listando suas tags); MS terminology git sense (tag); Gitea pt-BR (Nome da tag); VS Code pt-BR mixes Marca and Tag"
   },
+  "git-conflicted": {
+    "chosen": "em conflito",
+    "confidence": "high",
+    "sources": "git po/pt_BR.po (conflito, não mesclado)"
+  },
+  "git-ignored": {
+    "chosen": "ignorado",
+    "confidence": "high",
+    "sources": "git po/pt_BR.po (Arquivos ignorados); VS Code language pack (Git extension) (Ignorado)"
+  },
+  "git-typechange": {
+    "chosen": "tipo alterado",
+    "confidence": "high",
+    "accept": ["mudança de tipo"],
+    "sources": "VS Code language pack (Git extension) (Tipo alterado); git po/pt_BR.po (mudança de tipo:)"
+  },
+  "git-untracked": {
+    "chosen": "não rastreado",
+    "confidence": "high",
+    "avoid": [
+      {
+        "form": "não controlado",
+        "why": "VS Code pt-BR's word; git's own pt_BR output says não rastreados"
+      }
+    ],
+    "sources": "git po/pt_BR.po (Arquivos não rastreados)"
+  },
   "github-star": {
     "chosen": "Adicionar aos favoritos",
     "accept": ["estrelas", "aos favoritos"],

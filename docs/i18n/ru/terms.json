@@ -2095,6 +2095,32 @@
     "sources": "git's own po/ru.po (No commits yet → Еще нет коммитов; unborn branch → еще не начавшаяся ветка; On branch → Текущая ветка:). No pile source has git",
     "decision": "Git words"
   },
+  "git-conflicted": {
+    "chosen": "конфликт",
+    "confidence": "tentative",
+    "sources": "git po/ru.po (КОНФЛИКТ)"
+  },
+  "git-ignored": {
+    "chosen": "игнорируется",
+    "confidence": "high",
+    "avoid": [
+      {
+        "form": "проигнорировано",
+        "why": "VS Code's perfective reads as a one-off event; the state is ongoing (git's Игнорируемые файлы)"
+      }
+    ],
+    "sources": "git po/ru.po (Игнорируемые файлы)"
+  },
+  "git-typechange": {
+    "chosen": "тип изменен",
+    "confidence": "high",
+    "sources": "git po/ru.po (изменен тип:); VS Code language pack (Git extension) (Тип изменен)"
+  },
+  "git-untracked": {
+    "chosen": "не отслеживается",
+    "confidence": "high",
+    "sources": "git po/ru.po (Неотслеживаемые файлы); VS Code language pack (Git extension) (Не отслеживается)"
+  },
   "github-issue": {
     "chosen": "issue",
     "accept": ["issue", "задач"],

@@ -350,3 +350,7 @@ rule into `translation-principles.md` or `translator-instructions.md`), then del
 - `fileOperations.trash.nothingToUndo` ("There’s no trash to undo.") treats "trash" as a countable action. Consider
   "There’s no move to trash to undo." so the toast echoes `menu.edit.undoTrash`; en-GB already says "There’s no move to
   the Bin to undo." (zh-Hant)
+- `fileExplorer.git.status.*` descriptions say "a file", so es and pt agree the participles masculine (archivo, arquivo:
+  `Modificado`, `Eliminado`). If the Git column ever shows a status on a folder row (git reports untracked or ignored
+  directories), those read wrong for carpeta / pasta. State in the descriptions whether a folder row can carry a status.
+  (es, pt)

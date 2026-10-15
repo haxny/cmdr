@@ -1258,6 +1258,42 @@
   "@fileExplorer.git.portalIntro.goToGitDir": {
     "description": "Primary button on the one-time git notification that opens the .git folder in the pane. Never translate \".git\". Space is tight; keep it short."
   },
+  "fileExplorer.git.status.modified": "Modified",
+  "@fileExplorer.git.status.modified": {
+    "description": "A file’s git status, shown as the tooltip on the one-letter Git column cell (“M”) in the file list’s Full view, and spoken by screen readers at the end of the row as “Modified in git” (fileExplorer.list.rowGitStatus). Means the file changed since the last commit. An adjective describing the file’s state, sentence case, one or two words. Use your language’s usual git terminology (the word git’s own translated output or popular git tools use)."
+  },
+  "fileExplorer.git.status.added": "Added",
+  "@fileExplorer.git.status.added": {
+    "description": "Same Git column tooltip as fileExplorer.git.status.modified, for a new file staged to be committed (git add). An adjective describing the file’s state, one or two words; use your language’s usual git terminology."
+  },
+  "fileExplorer.git.status.deleted": "Deleted",
+  "@fileExplorer.git.status.deleted": {
+    "description": "Same Git column tooltip as fileExplorer.git.status.modified, for a file removed since the last commit. An adjective describing the file’s state, one or two words; use your language’s usual git terminology."
+  },
+  "fileExplorer.git.status.renamed": "Renamed",
+  "@fileExplorer.git.status.renamed": {
+    "description": "Same Git column tooltip as fileExplorer.git.status.modified, for a file git sees as moved or renamed since the last commit. An adjective describing the file’s state, one or two words; use your language’s usual git terminology."
+  },
+  "fileExplorer.git.status.copied": "Copied",
+  "@fileExplorer.git.status.copied": {
+    "description": "Same Git column tooltip as fileExplorer.git.status.modified, for a new file git sees as a copy of another tracked file. An adjective describing the file’s state, one or two words; use your language’s usual git terminology."
+  },
+  "fileExplorer.git.status.typechange": "Type changed",
+  "@fileExplorer.git.status.typechange": {
+    "description": "Same Git column tooltip as fileExplorer.git.status.modified, for a file whose kind changed since the last commit (for example a regular file became a symbolic link). A short state phrase, sentence case, two or three words; use your language’s usual git terminology."
+  },
+  "fileExplorer.git.status.untracked": "Untracked",
+  "@fileExplorer.git.status.untracked": {
+    "description": "Same Git column tooltip as fileExplorer.git.status.modified, for a new file git doesn’t track yet (never added). An adjective describing the file’s state, one or two words; use your language’s usual git terminology."
+  },
+  "fileExplorer.git.status.ignored": "Ignored",
+  "@fileExplorer.git.status.ignored": {
+    "description": "Same Git column tooltip as fileExplorer.git.status.modified, for a file that git ignores because of a .gitignore rule. An adjective describing the file’s state, one or two words; use your language’s usual git terminology."
+  },
+  "fileExplorer.git.status.conflicted": "Conflicted",
+  "@fileExplorer.git.status.conflicted": {
+    "description": "Same Git column tooltip as fileExplorer.git.status.modified, for a file with an unresolved merge conflict. An adjective describing the file’s state, one or two words; use your language’s usual git terminology."
+  },
   "fileExplorer.git.useTransferToCopyOut": "To copy files out of a git snapshot, use F5 to copy or F6 to move.",
   "@fileExplorer.git.useTransferToCopyOut": {
     "description": "Info toast when the user presses the system-clipboard copy or cut shortcut (Cmd+C / Cmd+X) inside the virtual `.git` portal, where Cmdr shows a repository’s branches, tags, and commits as browsable folders. Those entries are reconstructed from git history and have no path the system clipboard can carry, so it points the user at the F5 (copy) and F6 (move) transfer keys instead. F5 and F6 are keyboard key names; keep them as-is. \"git\" is the version-control tool name; keep it."

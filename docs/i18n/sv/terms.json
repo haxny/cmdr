@@ -1336,6 +1336,27 @@
     "forms": "På den ofödda grenen {branch}; no commits yet → inga incheckningar än",
     "sources": "git po/sv.po (unborn branch → ofödd gren; No commits yet → Inga incheckningar ännu, with än as the everyday form)"
   },
+  "git-conflicted": {
+    "chosen": "konflikt",
+    "confidence": "high",
+    "sources": "git po/sv.po (KONFLIKT); the catalog's conflict ruling"
+  },
+  "git-ignored": {
+    "chosen": "ignorerad",
+    "confidence": "high",
+    "sources": "git po/sv.po (Ignorerade filer)"
+  },
+  "git-typechange": {
+    "chosen": "typ ändrad",
+    "confidence": "tentative",
+    "accept": ["typbyte"],
+    "sources": "git po/sv.po (typechange: → typbyte:); built on the ruled ändrad"
+  },
+  "git-untracked": {
+    "chosen": "ospårad",
+    "confidence": "high",
+    "sources": "git po/sv.po (Ospårade filer)"
+  },
   "overall": {
     "chosen": "Totalt",
     "confidence": "high",
@@ -2411,7 +2432,8 @@
       "byter tillbaka",
       "massbyte av namn",
       "massbytet av namn",
-      "namnmönster"
+      "namnmönster",
+      "namnbytt"
     ],
     "avoid": [
       {

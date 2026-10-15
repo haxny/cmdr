@@ -1115,7 +1115,7 @@
   "@settings.fileExplorer.git.showStatusColumn.label": {
     "sourceHash": "0f6a836"
   },
-  "settings.fileExplorer.git.showStatusColumn.description": "Fügt eine Spalte hinzu, die den Git-Status pro Datei (geändert, nicht versioniert usw.) im Modus Voll zeigt.",
+  "settings.fileExplorer.git.showStatusColumn.description": "Fügt eine Spalte hinzu, die den Git-Status pro Datei (geändert, nicht verfolgt usw.) im Modus Voll zeigt.",
   "@settings.fileExplorer.git.showStatusColumn.description": {
     "sourceHash": "7ff07e4"
   },

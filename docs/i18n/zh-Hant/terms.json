@@ -1578,6 +1578,33 @@
     "sources": "git CLI zh_TW.po (unborn branch → 未誕生的分支 / 未誕生分支, No commits yet → 尚無提交); no Apple, MS, VS Code, or file-manager entry",
     "note": "Tentative: git's own coinage, literal and unfamiliar outside git; the 尚無提交 gloss carries the meaning."
   },
+  "git-conflicted": {
+    "chosen": "有衝突",
+    "confidence": "high",
+    "sources": "git po/zh_TW.po (衝突, 未合併)"
+  },
+  "git-ignored": {
+    "chosen": "已忽略",
+    "confidence": "high",
+    "sources": "VS Code language pack (Git extension) (已忽略); git po/zh_TW.po (忽略的檔案)"
+  },
+  "git-typechange": {
+    "chosen": "類型已變更",
+    "confidence": "high",
+    "accept": ["類型變更"],
+    "sources": "VS Code language pack (Git extension) (類型已變更); git po/zh_TW.po (類型變更：)"
+  },
+  "git-untracked": {
+    "chosen": "未追蹤",
+    "confidence": "high",
+    "avoid": [
+      {
+        "form": "已取消追蹤",
+        "why": "VS Code zh-Hant, but it means tracking was removed, not never added"
+      }
+    ],
+    "sources": "git po/zh_TW.po (未追蹤的檔案)"
+  },
   "github-star": {
     "accept": ["星"],
     "chosen": "star",

@@ -1116,7 +1116,7 @@
   "@settings.fileExplorer.git.showStatusColumn.label": {
     "sourceHash": "0f6a836"
   },
-  "settings.fileExplorer.git.showStatusColumn.description": "Voeg een kolom toe met de git-status per bestand (gewijzigd, niet-gevolgd, enz.) in de Volledige weergave.",
+  "settings.fileExplorer.git.showStatusColumn.description": "Voeg een kolom toe met de git-status per bestand (gewijzigd, niet gevolgd, enz.) in de Volledige weergave.",
   "@settings.fileExplorer.git.showStatusColumn.description": {
     "sourceHash": "7ff07e4"
   },

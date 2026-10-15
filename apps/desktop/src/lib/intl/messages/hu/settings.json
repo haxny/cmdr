@@ -1112,7 +1112,7 @@
   "@settings.fileExplorer.git.showStatusColumn.label": {
     "sourceHash": "0f6a836"
   },
-  "settings.fileExplorer.git.showStatusColumn.description": "Egy oszlopot ad hozzá, amely a fájlonkénti git státuszt (módosított, nem követett stb.) mutatja Teljes nézetben.",
+  "settings.fileExplorer.git.showStatusColumn.description": "Egy oszlopot ad hozzá, amely a fájlonkénti git státuszt (módosítva, nem követett stb.) mutatja Teljes nézetben.",
   "@settings.fileExplorer.git.showStatusColumn.description": {
     "sourceHash": "7ff07e4"
   },

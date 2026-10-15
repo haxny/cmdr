@@ -1350,6 +1350,38 @@
     "note": "Dutch has no settled word for git's unborn; carry the concept with nieuwe branch plus the parenthetical, never a literal ongeboren.",
     "sources": "no pile source (MS terminology and the file managers have no hit); built from the settled git-branch and git-commit rulings"
   },
+  "git-conflicted": {
+    "chosen": "conflict",
+    "confidence": "tentative",
+    "avoid": [
+      {
+        "form": "in conflict",
+        "why": "TortoiseGit nl, but doubles in inside ‘{status} in git’"
+      }
+    ],
+    "sources": "TortoiseGit nl (In conflict)"
+  },
+  "git-ignored": {
+    "chosen": "genegeerd",
+    "confidence": "high",
+    "sources": "TortoiseGit nl (Genegeerd)"
+  },
+  "git-typechange": {
+    "chosen": "type gewijzigd",
+    "confidence": "tentative",
+    "sources": "no Dutch git source; built on the ruled gewijzigd"
+  },
+  "git-untracked": {
+    "chosen": "niet gevolgd",
+    "confidence": "tentative",
+    "avoid": [
+      {
+        "form": "zonder versiebeheer",
+        "why": "TortoiseGit's SVN-era unversioned; reads odd before ‘in git’"
+      }
+    ],
+    "sources": "no Dutch git po exists; TortoiseGit nl has only Zonder versiebeheer"
+  },
   "github-star": {
     "accept": ["stars"],
     "avoid": [

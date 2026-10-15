@@ -1372,6 +1372,45 @@
     "sources": "Pro Git 2 es (Etiquetado, Listar tus etiquetas); MS terminology git sense (etiqueta); VS Code es git extension (Crear etiqueta, Etiquetas); Gitea es-ES (Etiquetas)",
     "note": "Same word as the Finder color tag (tag), as English shares one word; the .git portal context tells them apart."
   },
+  "git-conflicted": {
+    "chosen": "con conflictos",
+    "confidence": "tentative",
+    "avoid": [
+      {
+        "form": "en conflicto",
+        "why": "doubles en inside „{status} en git“"
+      }
+    ],
+    "sources": "git po/es.po (Rutas no fusionadas); built on the catalog's conflicto"
+  },
+  "git-ignored": {
+    "chosen": "ignorado",
+    "confidence": "high",
+    "avoid": [
+      {
+        "form": "omitido",
+        "why": "VS Code's word; git's own es output says ignorados"
+      }
+    ],
+    "sources": "git po/es.po (Archivos ignorados)"
+  },
+  "git-typechange": {
+    "chosen": "tipo cambiado",
+    "confidence": "high",
+    "sources": "VS Code language pack (Git extension) (Tipo cambiado); git po/es.po (cambios de tipo:)"
+  },
+  "git-untracked": {
+    "chosen": "sin seguimiento",
+    "confidence": "high",
+    "avoid": [
+      {
+        "form": "no rastreado",
+        "why": "a LatAm-leaning calque; git's es.po and VS Code agree on sin seguimiento"
+      }
+    ],
+    "note": "Genderless, so it fits a file or a folder.",
+    "sources": "git po/es.po (Archivos sin seguimiento); VS Code language pack (Git extension) (Sin seguimiento)"
+  },
   "github-star": {
     "chosen": "estrella",
     "forms": "Dale una estrella al repo en GitHub; the GitHub button is Estrella",

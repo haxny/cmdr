@@ -272,6 +272,10 @@
         "reason": "The menu bar's File menu is Apple's own Swedish title `Arkiv` (Finder, AppKit); the suggested-ops column names an ordinary file, `Fil`."
       },
       {
+        "source": "Copied",
+        "reason": "Agreement, not drift: the copy-to-clipboard confirmations (`Kopierat`) are neuter, about text (det är kopierat); the Git column's `fileExplorer.git.status.copied` describes a file (en fil), so it takes the common-gender `Kopierad`, like its siblings `Ändrad`, `Tillagd`, `Raderad` and git's own sv `kopierad:`."
+      },
+      {
         "source": "Modified",
         "reason": "`Ändrad` describes one file's date (the column and the date filters); the keyboard-shortcuts filter chip `Ändrade` filters a set of commands, so the participle agrees in the plural."
       },

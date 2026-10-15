@@ -3,6 +3,10 @@
   "@fileExplorer.archiveEnterMenu.open": {
     "sourceHash": "f429111"
   },
+  "fileExplorer.git.status.added": "Agregado",
+  "@fileExplorer.git.status.added": {
+    "sourceHash": "f52c88f"
+  },
   "fileExplorer.pane.disconnectFailedToast": "No se pudo desconectar: {message}",
   "@fileExplorer.pane.disconnectFailedToast": {
     "sourceHash": "dedbdef"

@@ -1110,7 +1110,7 @@
   "@settings.fileExplorer.git.showStatusColumn.label": {
     "sourceHash": "0f6a836"
   },
-  "settings.fileExplorer.git.showStatusColumn.description": "Добавлять колонку состояния git каждого файла (изменен, не отслеживается и другие) в подробном режиме.",
+  "settings.fileExplorer.git.showStatusColumn.description": "Добавлять колонку состояния git каждого файла (изменено, не отслеживается и другие) в подробном режиме.",
   "@settings.fileExplorer.git.showStatusColumn.description": {
     "sourceHash": "7ff07e4"
   },
