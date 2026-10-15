@@ -323,7 +323,34 @@ virtual window (`visibleColumns` / `visibleFiles`), not from `cursorIndex >= 0`:
 nothing rendered in an empty folder, or when the user scrolls the cursor out of the window. Naming a missing id is a
 critical axe violation (`aria-valid-attr-value`) and leaves a screen reader announcing a stale row. ❌ Don't "simplify"
 it back to a `cursorIndex` bound like `cursorIndex < totalCount`, which still lies in the scrolled-away case. Pinned by
-the empty-folder cases in `BriefList.a11y.test.ts` / `FullList.a11y.test.ts`.
+the empty-folder cases in `BriefList.a11y.test.ts` / `full-list.a11y.test.ts`.
+
+**What a row says is ONE helper, `file-row-a11y.ts`**, and both views spread its `fileRowAttributes` on every option; ❌
+no per-view copy of any of it.
+
+- The listbox is `aria-multiselectable`; `aria-selected` on an option means MARKED (always present, `false` included).
+  The cursor is only `aria-activedescendant` plus `.is-under-cursor`, so code that finds the cursor row uses the class
+  (`enter-menu.ts`, `context-menu-anchor.ts`), ❌ never `[aria-selected="true"]`.
+- Every option, `..` included, carries `aria-posinset` (`globalIndex + 1`) and `aria-setsize` (`totalCount`). ❗ An
+  option without them gets a position VoiceOver invents from the RENDERED siblings: a left-out `..` read "Parent folder
+  (1 of 8)" beside "subfolder, folder (1 of 7)" (macOS 27.0, VoiceOver 10, 2026-10-15 spike), and under virtualization
+  that count is wrong anyway.
+- The name (`fileRowName`) is "{name}, {kind}" (folder, symlink, package, archive; a plain file has no kind word, its
+  extension is in its name), then what the row's badges mean (sync state, restricted, archived), then in Full view the
+  size and "modified {date}" and the git status. `..` is "Parent folder" alone. The kind comes from typed fields only;
+  "package" from `FileEntry.isPackage`, set in Rust from `is_package_dir`, ❌ never the `pkg:` icon-id prefix.
+- It's the option's `aria-label`, which REPLACES the name the row's content would give, so a badge that speaks through
+  content (`FileIcon`'s sync badge, the restricted and archived `StatusGlyph`s) must also be in `fileRowName`. Add a
+  badge, add its words there.
+- Full view hands in the strings its cells already render (`rowSizeText` over the same `sizeTriads` the size cell draws,
+  `date.text`, the git column's `labelFor`), so nothing formats twice. It's a plain function per rendered row: no
+  `$derived` per row, no DOM reads; cost is bounded by the virtual window.
+- Known gap: the inline rename field sits inside its option, whose children ARIA makes presentational, so axe flags
+  `nested-interactive` while a rename is up (pinned in `full-list.a11y.test.ts`). DOM focus is on the field then, so
+  VoiceOver reads the field. Moving the editor out of the option is the fix.
+
+Speech-level expectations (`file-list.vsr.svelte.test.ts`, `@guidepup/virtual-screen-reader`) guard this markup; what
+VoiceOver really says is the listening harness's job.
 
 **Row ids are per list instance** (`fileRowId(listId, index)`, `listId` from `$props.id()`): both panes and a
 search-results list render rows 0, 1, …, and `getElementById` would hand a focused right list the left pane's row. The

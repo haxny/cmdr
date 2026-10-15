@@ -466,6 +466,19 @@ stays as it is.
   "2 of 8", marking adds "selected", and the pane announcer's text arrives; axe clean; `accessibility.spec.ts`
   main-window audit clean.
 - **DONE**: `pnpm check` green.
+- **Status (2026-10-15)**: code, unit, axe, and `file-list.vsr.svelte.test.ts` landed. Shapes that differ from the
+  sketch: the row helper is its own module, `views/file-row-a11y.ts` (`fileRowId` moved there), with `rowSizeText` for
+  Full view's size words; the announcer is `pane/PaneAnnouncer.svelte` (the region, `announce`) plus
+  `pane/pane-location-announcer.svelte.ts` (when to say "{side} pane, {folder}"), and "after the active descendant
+  lands" is literal: `createDeferredActiveDescendant` gained an `onLand` callback that the lists forward as
+  `onCursorRowLanded`, with a 400 ms fallback when no row lands; it announces only for the focused pane, and a folder
+  change waits for `!loading`. `enter-menu.ts` anchored on `[aria-selected="true"]` (the cursor until now); it uses
+  `.is-under-cursor`. Found: axe `nested-interactive` fires while the inline rename field is up (an input inside an
+  option, predating M4); pinned as the only violation in `full-list.a11y.test.ts`, fix is moving the editor out of the
+  option. **Owed (screen locked)**: listening to L1–L5 and P1–P2 on this code (row names with kind and position, `..` as
+  "Parent folder, 1 of 8", "selected" on marked rows, Full view's size and date, the announcer after the row on launch,
+  `Tab`, and entering a folder), the `aria-setsize` churn check on a streaming huge folder, and the sort buttons' names
+  (C-scenarios, reachable in M6). Run them in M5.
 
 ### M5: VoiceOver verification of M2–M4
 

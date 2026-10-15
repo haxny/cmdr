@@ -143,3 +143,32 @@ describe('SortableHeader sort-shortcut tooltip', () => {
     expect(tooltipKbd()).toBeNull()
   })
 })
+
+// `aria-sort` needs a `columnheader`, and these are plain buttons, so the sort state rides
+// in the button's name. It starts with the visible label (WCAG 2.5.3, label in name).
+describe('SortableHeader sort state, spoken', () => {
+  it('names the active column with its direction, and every other column as not sorted', () => {
+    const active = setup({ column: 'size', currentSortColumn: 'size', currentSortOrder: 'descending' })
+    expect(active.button.getAttribute('aria-label')).toBe('Size, sorted descending')
+
+    const ascending = setup({ column: 'size', currentSortColumn: 'size', currentSortOrder: 'ascending' })
+    expect(ascending.button.getAttribute('aria-label')).toBe('Size, sorted ascending')
+
+    const other = setup({ column: 'name', label: 'Name', currentSortColumn: 'size' })
+    expect(other.button.getAttribute('aria-label')).toBe('Name, not sorted')
+
+    for (const header of [active, ascending, other]) {
+      void unmount(header.component)
+      header.target.remove()
+    }
+  })
+
+  it('follows a sort change live', () => {
+    const header = setup({ column: 'size', currentSortColumn: 'name' })
+    header.props.currentSortColumn = 'size'
+    flushSync()
+    expect(header.button.getAttribute('aria-label')).toBe('Size, sorted ascending')
+    void unmount(header.component)
+    header.target.remove()
+  })
+})

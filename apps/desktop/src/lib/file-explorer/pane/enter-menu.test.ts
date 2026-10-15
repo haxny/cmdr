@@ -34,6 +34,19 @@ describe('enterMenuAnchor', () => {
     expect(enterMenuAnchor(paneEl)).toEqual({ x: 116, y: 40 })
   })
 
+  // `aria-selected` on a file row means MARKED, so a marked row above the cursor must not
+  // pull the popup up to itself.
+  it('finds the cursor row by its cursor class, never by a marked row', () => {
+    const paneEl = document.createElement('div')
+    paneEl.innerHTML = `
+      <div class="file-entry" role="option" aria-selected="true">marked.txt</div>
+      <div class="file-entry is-under-cursor" role="option" aria-selected="false">cursor.zip</div>`
+    const [marked, cursor] = paneEl.querySelectorAll('.file-entry')
+    marked.getBoundingClientRect = () => ({ left: 0, bottom: 20 }) as DOMRect
+    cursor.getBoundingClientRect = () => ({ left: 0, bottom: 40 }) as DOMRect
+    expect(enterMenuAnchor(paneEl)).toEqual({ x: 16, y: 40 })
+  })
+
   it('falls back to the pane center when no cursor row is found', () => {
     const paneEl = {
       querySelector: () => null,

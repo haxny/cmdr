@@ -258,6 +258,17 @@ of the two holds focus: they bubble to the container's handlers and route by the
 to the same seam. The id lands a frame after focus and again after the cursor row's node is replaced
 (`../views/list-focus.svelte.ts`). ❌ Never focus a row: rows unmount under virtualization and focus drops to `<body>`.
 
+**Pane announcer.** VoiceOver never speaks a listbox's own name, neither at launch nor on `Tab` (macOS 27.0, VoiceOver
+10, 2026-10-15 spike, even with distinct names and the active descendant held back up to 1.2 s). So each `FilePane`
+mounts ONE polite live region, `PaneAnnouncer.svelte`, and `pane-location-announcer.svelte.ts` says "{Left|Right} pane,
+{folder}" through it when the pane takes focus and when the focused pane settles on another folder (the volume's name at
+its root, "Search results" for a snapshot pane); never on a listing batch in the same folder, never for the unfocused
+pane. The same string is the lists' `aria-label`, for VO-cursor browsing. Row first: the message waits for the list's
+`onCursorRowLanded` (the deferred active descendant landing), with a 400 ms fallback when no row lands. Every later pane
+message (an empty folder, a selection count) goes through `FilePaneAPI.announce`, ❌ never a second region: a region
+inserted together with its message announces nothing. Whether VoiceOver cuts the row off is a listening question for the
+harness (`docs/specs/a11y-file-list-focus-plan.md` M5), not a timing knob.
+
 **Type-to-jump factory.** One `createTypeToJumpState` instance per pane, inside `FilePane`. Reset triggers (ESC, arrows,
 Page/Home/End, Enter, Tab, Backspace, rename entry, context menu, drag start, pane switch, tab switch, dir change,
 re-sort, listing replace) all call the factory's `clearJumpState()`. The generation counter discards stale async match

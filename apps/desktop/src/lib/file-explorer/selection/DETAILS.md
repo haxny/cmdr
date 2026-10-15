@@ -207,6 +207,10 @@ current keyboard shortcut as a `<kbd>` chip: the command id derives from `column
 rebind updates live. The shortcut shows only when `isFocused` is true (truthfulness rule), and the tooltip action
 live-updates so a focus flip or rebind mid-hover is reflected immediately.
 
+Its accessible name carries the sort state, "Size, sorted descending" / "Name, not sorted"
+(`fileExplorer.columns.sortState`): `aria-sort` needs a `columnheader`, and this is a plain button. The name starts with
+the visible label, so voice control still finds it by what's on screen (WCAG 2.5.3).
+
 `align: 'right'` (numeric columns: the Size header, and the Ext trigger inside `FullList`'s combined Name+Ext header)
 does more than push the button's content right: it flips the row to `flex-direction: row-reverse`, so the caret lands on
 the label's LEFT and never sits between the label and the column's right edge, where the digits below line up. Under

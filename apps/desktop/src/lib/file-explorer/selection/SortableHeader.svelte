@@ -3,6 +3,7 @@
     import { commands, type CommandId } from '#lib/commands/index.js'
     import { getFirstShortcutReactive } from '#lib/shortcuts/reactive-shortcuts.svelte.js'
     import { tooltip } from '#lib/tooltip/tooltip.js'
+    import { tString } from '#lib/intl/messages.svelte.js'
 
     interface Props {
         column: SortColumn
@@ -60,6 +61,14 @@
 
     const isActive = $derived(column === currentSortColumn)
     /**
+     * The button's spoken name carries the sort state ("Size, sorted descending"), since
+     * `aria-sort` needs a `columnheader` and this is a plain button. It starts with the
+     * visible label, so voice control finds it by what's on screen.
+     */
+    const ariaLabel = $derived(
+        tString('fileExplorer.columns.sortState', { column: label, order: isActive ? currentSortOrder : 'none' }),
+    )
+    /**
      * The tooltip names what the NEXT click does. That is normally this column's
      * sort command; on the active column of a pane that cycles back to an unsorted
      * state, it's `clearsSortLabel`. The shortcut stays either way, because the key
@@ -86,6 +95,7 @@
     onclick={handleClick}
     onkeydown={handleKeyDown}
     type="button"
+    aria-label={ariaLabel}
     use:tooltip={{ text: tooltipText, shortcut }}
 >
     <span class="label">{label}</span>

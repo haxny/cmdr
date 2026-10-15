@@ -51,6 +51,18 @@
     },
     "screenshot": "main-window.png"
   },
+  "fileExplorer.pane.location": "{side, select, left {Left pane, {folder}} other {Right pane, {folder}}}",
+  "@fileExplorer.pane.location": {
+    "description": "Which pane the keyboard is in and which folder it shows, for screen readers only (never shown on screen). Spoken when you switch between the left and right pane and when you open another folder, as in “Left pane, Documents”, and used as the spoken name of that pane’s file list. Don’t add a word like “active”: the same name stays on the pane you just left.",
+    "placeholders": {
+      "side": "which pane this is: the value is either left or right",
+      "folder": "the name of the folder the pane shows, the drive’s name at a drive’s top level, or the words “Search results”"
+    }
+  },
+  "fileExplorer.pane.searchResultsLocation": "Search results",
+  "@fileExplorer.pane.searchResultsLocation": {
+    "description": "Stands in for the folder name in fileExplorer.pane.location when search results fill the pane instead of a folder, so a screen reader says “Left pane, Search results”. Never shown on screen."
+  },
   "fileExplorer.pane.diskUsageAriaLabel": "Disk usage",
   "@fileExplorer.pane.diskUsageAriaLabel": {
     "description": "Accessibility label for the small disk-usage bar shown under a pane, indicating how full the current volume is.",
@@ -1349,6 +1361,14 @@
   "@fileExplorer.columns.sortByRelevance": {
     "description": "Hover tooltip on the active column header of a search-results pane, where the next click puts the rows back in the search engine’s own best-match-first order. \"Relevance\" is how well a result matches the search."
   },
+  "fileExplorer.columns.sortState": "{column}, {order, select, ascending {sorted ascending} descending {sorted descending} other {not sorted}}",
+  "@fileExplorer.columns.sortState": {
+    "description": "What a screen reader says for a column header button in the file list: the column’s name, then whether the list is sorted by it and which way, as in “Size, sorted descending” or “Name, not sorted”. Never shown on screen; the button shows only the column name and a small arrow.",
+    "placeholders": {
+      "column": "the column header’s own text, for example Name, Size, or Modified",
+      "order": "ascending or descending when the list is sorted by this column, anything else when it isn’t"
+    }
+  },
   "fileExplorer.columns.git": "Git",
   "@fileExplorer.columns.git": {
     "description": "File-list column header for the per-file git status indicator. \"Git\" is the version-control tool name; keep it as-is."
@@ -1372,6 +1392,33 @@
     "description": "Accessibility label for the row of sortable column headers in the Brief list view.",
     "screenshot": "main-window.png",
     "screenshotNote": "The main window, pictured here. Your string is never shown: a screen reader speaks it for the row of sortable column headers in the file list."
+  },
+  "fileExplorer.list.parentRowName": "Parent folder",
+  "@fileExplorer.list.parentRowName": {
+    "description": "What a screen reader says for the “..” row at the top of the file list, which goes up one folder. Never shown on screen. A noun phrase naming the row, not a command. The reader adds the row’s position after it (for example “1 of 8”)."
+  },
+  "fileExplorer.list.rowKind.folder": "folder",
+  "@fileExplorer.list.rowKind.folder": {
+    "description": "Spoken after a folder’s name when a screen reader reads a row of the file list, as in “Photos, folder”. Never shown on screen. One word, lowercase where your language allows, because it follows the name after a comma."
+  },
+  "fileExplorer.list.rowKind.symlink": "symlink",
+  "@fileExplorer.list.rowKind.symlink": {
+    "description": "Spoken after the name of a symbolic link (a pointer to another file or folder) when a screen reader reads a row of the file list, as in “notes-link, symlink”. Never shown on screen. Use your platform’s usual word for a symbolic link, lowercase where your language allows."
+  },
+  "fileExplorer.list.rowKind.package": "package",
+  "@fileExplorer.list.rowKind.package": {
+    "description": "Spoken after the name of a macOS package when a screen reader reads a row of the file list, as in “Safari.app, package”. A package is a folder macOS shows as a single item, such as an app. Never shown on screen. Use the word Apple’s Finder uses for “Show Package Contents”, lowercase where your language allows."
+  },
+  "fileExplorer.list.rowKind.archive": "archive",
+  "@fileExplorer.list.rowKind.archive": {
+    "description": "Spoken after the name of a zip or similar archive file when a screen reader reads a row of the file list, as in “photos.zip, archive”. Cmdr can open these like folders. Never shown on screen. NOT about files in cloud cold storage. Lowercase where your language allows."
+  },
+  "fileExplorer.list.rowModified": "modified {date}",
+  "@fileExplorer.list.rowModified": {
+    "description": "Spoken near the end of a row in the file list’s Full view when a screen reader reads it, as in “a.txt, 1 KB, modified 2026-10-14 10:30”. Never shown on screen. Lowercase where your language allows, because it follows other details after a comma.",
+    "placeholders": {
+      "date": "the file’s last-modified date and time, already formatted the way the Modified column shows it"
+    }
   },
   "fileExplorer.dirSize.updatingIndexTooltip": "Updating index: size may change.",
   "@fileExplorer.dirSize.updatingIndexTooltip": {

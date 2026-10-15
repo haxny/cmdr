@@ -294,6 +294,11 @@ export interface FilePaneAPI {
    * explorer container is the keyboard home then.
    */
   focusList(): boolean
+  /**
+   * Says `message` to a screen reader through the pane's one polite live region, after
+   * whatever it's saying now. Every pane announcement goes through here, never a second region.
+   */
+  announce(message: string): void
 
   /** Opens the entry under the cursor; awaits directory load or OS handoff. */
   openCursorItem(): Promise<void>

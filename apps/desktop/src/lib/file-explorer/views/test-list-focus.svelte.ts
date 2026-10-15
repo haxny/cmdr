@@ -11,10 +11,13 @@
 
 import { expect, it, vi } from 'vitest'
 import { tick, unmount } from 'svelte'
+import { SvelteSet } from 'svelte/reactivity'
 import { getFileRange } from '#lib/tauri-commands/index.js'
+import { computeAccessibleName } from 'dom-accessibility-api'
 import { assertFocusModel } from '#lib/test-focus-model.js'
+import { expectNoA11yViolations } from '#lib/test-a11y.js'
 import { registerFocusHome } from '#lib/ui/focus-restore.js'
-import { fileEntry } from './test-full-list'
+import { dirEntry, fileEntry } from './test-full-list'
 import type { FileEntry } from '../types'
 
 /** The props every case may change after mount; both views take them. */
@@ -31,9 +34,20 @@ export interface MountedFocusableList {
   settle: (until: () => boolean, reason: string) => Promise<void>
 }
 
+/** Fixed props a case may set at mount; both views take them. */
+interface ListProps {
+  hasParent: boolean
+  parentPath: string
+  totalCount: number
+  selectedIndices: Set<number>
+  listLabel: string
+  onCursorRowLanded: () => void
+}
+
 export type MountFocusableList = (options: {
   entries: FileEntry[]
   liveProps?: Partial<LiveListProps>
+  props?: Partial<ListProps>
 }) => Promise<MountedFocusableList>
 
 const ENTRIES = [fileEntry({ name: 'a.txt' }), fileEntry({ name: 'b.txt' }), fileEntry({ name: 'c.txt' })]
@@ -46,6 +60,12 @@ function listboxOf(list: MountedFocusableList): HTMLElement {
 
 function activeDescendant(listbox: HTMLElement): string | null {
   return listbox.getAttribute('aria-activedescendant')
+}
+
+function cursorOption(listbox: HTMLElement): HTMLElement {
+  const option = document.getElementById(activeDescendant(listbox) ?? '')
+  if (!option) throw new Error('the listbox names no rendered cursor row')
+  return option
 }
 
 async function focusAndLand(list: MountedFocusableList): Promise<HTMLElement> {
@@ -143,6 +163,60 @@ export function listFocusCases(mountList: MountFocusableList): void {
     } finally {
       unregister()
     }
+  })
+
+  it('is multiselectable, and says each option’s marked state, the cursor row included', async () => {
+    const list = await mountList({ entries: ENTRIES, props: { selectedIndices: new SvelteSet([1]) } })
+    expect(listboxOf(list).getAttribute('aria-multiselectable')).toBe('true')
+    // The cursor sits on row 0, unmarked: `aria-selected` is marking, never the cursor.
+    expect(list.rows().map((row) => row.getAttribute('aria-selected'))).toEqual(['false', 'true', 'false'])
+    await expectNoA11yViolations(list.target)
+  })
+
+  // ❗ VoiceOver invents a position from the RENDERED siblings for an option without one, so
+  // a `..` left out read "Parent folder (1 of 8)" beside "(1 of 7)" (2026-10-15 VoiceOver spike).
+  it('places every option in the whole list, the `..` row included', async () => {
+    const list = await mountList({
+      entries: ENTRIES,
+      props: { hasParent: true, parentPath: '/', totalCount: ENTRIES.length + 1 },
+    })
+    await list.settle(() => list.rows().length === ENTRIES.length + 1, 'the `..` row and every entry')
+    expect(list.rows().map((row) => [row.getAttribute('aria-posinset'), row.getAttribute('aria-setsize')])).toEqual([
+      ['1', '4'],
+      ['2', '4'],
+      ['3', '4'],
+      ['4', '4'],
+    ])
+    await expectNoA11yViolations(list.target)
+  })
+
+  it('names the cursor option by name and kind, and `..` as "Parent folder"', async () => {
+    const entries = [dirEntry({ name: 'subfolder' }), ...ENTRIES]
+    const live = $state<Partial<LiveListProps>>({})
+    const list = await mountList({
+      entries,
+      liveProps: live,
+      props: { hasParent: true, parentPath: '/', totalCount: entries.length + 1 },
+    })
+    const listbox = await focusAndLand(list)
+    assertFocusModel(list.target)
+    expect(computeAccessibleName(cursorOption(listbox))).toBe('Parent folder')
+
+    live.cursorIndex = 1
+    await tick()
+    assertFocusModel(list.target)
+    expect(computeAccessibleName(cursorOption(listbox))).toMatch(/^subfolder, folder\b/)
+  })
+
+  it('takes its pane’s name, and says when its cursor row lands', async () => {
+    const onCursorRowLanded = vi.fn()
+    const list = await mountList({
+      entries: ENTRIES,
+      props: { listLabel: 'Left pane, root', onCursorRowLanded },
+    })
+    expect(listboxOf(list).getAttribute('aria-label')).toBe('Left pane, root')
+    await focusAndLand(list)
+    expect(onCursorRowLanded).toHaveBeenCalledTimes(1)
   })
 
   it('puts focus home when it unmounts holding it', async () => {

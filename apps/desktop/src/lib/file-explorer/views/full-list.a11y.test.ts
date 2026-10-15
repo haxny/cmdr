@@ -16,7 +16,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 import { mount, tick } from 'svelte'
 import FullList from './FullList.svelte'
 import FullListHeader from './FullListHeader.svelte'
-import { expectNoA11yViolations } from '#lib/test-a11y.js'
+import { a11yViolationIds, expectNoA11yViolations } from '#lib/test-a11y.js'
 import { dirEntry, fileEntry, mountFullList } from './test-full-list'
 import { installLayoutMock } from '#lib/test-layout.js'
 import { listFocusCases } from './test-list-focus.svelte'
@@ -116,6 +116,52 @@ describe('FullList a11y', () => {
 
 describe('FullList focus model', () => {
   listFocusCases((options) => mountFullList(options))
+})
+
+/** Each row's accessible name, in DOM order. */
+function rowLabels(rows: HTMLElement[]): (string | null)[] {
+  return rows.map((row) => row.getAttribute('aria-label'))
+}
+
+describe('FullList row names', () => {
+  it('says size and modified date after the kind, from what the cells show', async () => {
+    const list = await mountFullList({
+      entries: [dirEntry({ name: 'src' }), fileEntry({ name: 'report.md', size: 2048 })],
+    })
+    expect(rowLabels(list.rows())).toEqual([
+      'src, folder, 4,096, modified 2025-03-14 10:30',
+      'report.md, 2,048, modified 2025-03-14 10:30',
+    ])
+  })
+
+  it('says no size for a folder whose size isn’t known yet', async () => {
+    const list = await mountFullList({ entries: [dirEntry({ name: 'src', recursiveSize: undefined })] })
+    expect(rowLabels(list.rows())).toEqual(['src, folder, modified 2025-03-14 10:30'])
+  })
+
+  // Known gap, pinned so nothing else joins it: ARIA makes an option's children
+  // presentational, so the inline rename field inside the renamed row trips axe's
+  // `nested-interactive`. It predates the row names (the field always sat inside the option),
+  // and DOM focus is on the field while it's up, so VoiceOver reads the field itself. The fix
+  // is moving the editor out of the option.
+  it('a row being renamed violates only nested-interactive', async () => {
+    const list = await mountFullList({
+      entries: [fileEntry({ name: 'report.md' })],
+      props: {
+        renameState: {
+          active: true,
+          target: { path: '/root/report.md', originalName: 'report.md', parentPath: '/root', isDirectory: false },
+          currentName: 'report.md',
+          validation: { severity: 'ok', message: '' },
+          shaking: false,
+          focusTrigger: 0,
+          sessionId: 1,
+        },
+      },
+    })
+    expect(list.target.querySelector('input')).toBeTruthy()
+    expect(await a11yViolationIds(list.target)).toEqual(['nested-interactive'])
+  })
 })
 
 /**

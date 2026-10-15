@@ -130,6 +130,8 @@
     import { createHistoryCursorSync } from './history-cursor-sync.svelte'
     import type { CursorReading } from '../navigation/history-cursor'
     import { getFirstShortcutReactive } from '#lib/shortcuts/reactive-shortcuts.svelte.js'
+    import PaneAnnouncer from './PaneAnnouncer.svelte'
+    import { createPaneLocationAnnouncer, paneLocationLabel } from './pane-location-announcer.svelte'
 
     interface Props {
         initialPath: string
@@ -455,6 +457,7 @@
     let searchResultsViewRef: SearchResultsViewAPI | undefined = $state()
     // The pane's root element, so the Enter-behavior popup can anchor at the cursor row.
     let paneEl: HTMLElement | undefined = $state()
+    let announcer: { announce: (message: string) => void } | undefined = $state()
 
     // The Browse | Open | Configure popup shown when an archive/bundle set to Ask is
     // opened. Rendered near the pane root; opened from `handleNavigate`.
@@ -1486,6 +1489,13 @@
         }),
     )
 
+    // "Left pane, Documents": the lists' name, and what the pane's live region says when it
+    // takes focus or settles on another folder (VoiceOver never speaks a list's own name).
+    const locationLabel = $derived(paneLocationLabel({ side: paneId, currentPath, isVolumeRoot: !hasParent,
+        volumeName, isSearchResults: isSearchResultsView }))
+    const locationAnnouncer = createPaneLocationAnnouncer({ label: () => locationLabel, isFocused: () => isFocused,
+        isSettled: () => !loading || paneViewKind !== 'normal', announce: (message) => { announcer?.announce(message) } })
+
     // Effective total count includes ".." entry if not at root.
     // For search-results panes, the snapshot owns the count (the backend
     // `totalCount` state stays at 0 because no listing IPC ran), which is what
@@ -1704,6 +1714,11 @@
             (fullListRef?.focusList() ?? false) ||
             (searchResultsViewRef?.focusList() ?? false)
         )
+    }
+
+    /** Says `message` through the pane's polite live region (`PaneAnnouncer.svelte`). */
+    export function announce(message: string): void {
+        announcer?.announce(message)
     }
 
     /** Debug only: inject a FriendlyError into this pane to preview the error state. */
@@ -2014,6 +2029,7 @@
     data-pane-tint={paneTintName ?? undefined}
     data-listing-id={listingId || undefined}
 >
+    <PaneAnnouncer bind:this={announcer} />
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div class="header" oncontextmenu={breadcrumb.handleContextMenu}>
         <VolumeBreadcrumb
@@ -2098,6 +2114,8 @@
                 path={currentPath}
                 {cursorIndex}
                 {isFocused}
+                listLabel={locationLabel}
+                onCursorRowLanded={locationAnnouncer.cursorRowLanded}
                 selectedIndices={selection.selectedIndices}
                 onNavigate={(entry: FileEntry) => { void handleNavigate(entry) }}
                 onSelect={({ index, shiftKey, metaKey }: SelectPayload) => {
@@ -2142,6 +2160,8 @@
                 {softRefreshTick}
                 {cursorIndex}
                 {isFocused}
+                listLabel={locationLabel}
+                onCursorRowLanded={locationAnnouncer.cursorRowLanded}
                 syncStatusMap={overlays.syncStatusMap}
                 indexStatusMap={overlays.indexStatusMap}
                 folderCoverageMap={overlays.folderCoverageMap}
@@ -2189,6 +2209,8 @@
                 {softRefreshTick}
                 {cursorIndex}
                 {isFocused}
+                listLabel={locationLabel}
+                onCursorRowLanded={locationAnnouncer.cursorRowLanded}
                 syncStatusMap={overlays.syncStatusMap}
                 indexStatusMap={overlays.indexStatusMap}
                 folderCoverageMap={overlays.folderCoverageMap}

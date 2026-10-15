@@ -40,12 +40,14 @@ export interface ListFocusDeps {
   getListbox: () => HTMLElement | undefined
   /** Whether this list's pane is the focused one. */
   isFocusedPane: () => boolean
+  /** The cursor row just landed as the active descendant (after focus, or a navigation). */
+  onLanded?: () => void
 }
 
 /** Call during component init (it installs effects). */
 export function createListFocus(deps: ListFocusDeps): ListFocus {
   const { getCursorRow } = deps
-  const descendant = createDeferredActiveDescendant()
+  const descendant = createDeferredActiveDescendant({ onLand: () => deps.onLanded?.() })
   let last: CursorRowRef | undefined
 
   // ❗ Re-homing. A list that remounts (Brief/Full toggle, search results opening or closing)

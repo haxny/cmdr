@@ -22,7 +22,6 @@
         getImageIndexBadge,
         getFolderCoverageBadge,
         createParentEntry,
-        fileRowId,
         getEntryAt as getEntryAtUtil,
         indexOfEntry as indexOfEntryUtil,
         fetchVisibleRange as fetchVisibleRangeUtil,
@@ -34,6 +33,7 @@
         applyFolderSizes,
         type DirStats,
     } from './file-list-utils'
+    import { fileRowAttributes, fileRowName, renderedCursorRow } from './file-row-a11y'
     import { createListFocus } from './list-focus.svelte'
     import type { ListingIndexSizesChanged } from '#lib/tauri-commands/index.js'
     import {
@@ -138,6 +138,10 @@
          * column header stays on screen, so a slow load never blinks the header out.
          */
         loadingOverlay?: Snippet
+        /** The listbox's accessible name: which pane and folder ("Left pane, Documents"). */
+        listLabel?: string
+        /** The cursor row just landed as the active descendant after focus or a navigation. */
+        onCursorRowLanded?: () => void
     }
 
     const {
@@ -176,6 +180,8 @@
         onStartRename,
         onDragInitiate,
         loadingOverlay,
+        listLabel,
+        onCursorRowLanded,
     }: Props = $props()
 
     // Unique per mounted list, so the two panes never render the same row id.
@@ -471,24 +477,19 @@
         return columns
     })
 
-    /**
-     * `aria-activedescendant` may only name a row that's actually in the DOM.
-     * The cursor can point at nothing rendered: an empty folder, or a row
-     * scrolled outside the virtual window. A dangling reference isn't harmless
-     * there, it's a critical a11y violation (axe `aria-valid-attr-value`) and
-     * leaves screen readers announcing a stale row.
-     */
-    const cursorRow = $derived.by(() => {
-        for (const column of visibleColumns) {
-            const row = column.files.find((entry) => entry.globalIndex === cursorIndex)
-            if (row) return { id: fileRowId(listId, cursorIndex), key: row.file.path }
-        }
-        return undefined
-    })
+    // What `aria-activedescendant` may name: the cursor row, only while it's rendered.
+    const cursorRow = $derived(
+        renderedCursorRow(
+            listId,
+            cursorIndex,
+            visibleColumns.flatMap((column) => column.files),
+        ),
+    )
     const listFocus = createListFocus({
         getCursorRow: () => cursorRow,
         getListbox: () => scrollContainer,
         isFocusedPane: () => isFocused,
+        onLanded: () => onCursorRowLanded?.(),
     })
 
     /** Focuses this list (the focused pane's keyboard home); false when it isn't mounted. */
@@ -964,7 +965,8 @@
         onscroll={handleScroll}
         tabindex="-1"
         role="listbox"
-        aria-label={tString('fileExplorer.list.fileListAriaLabel')}
+        aria-multiselectable="true"
+        aria-label={listLabel ?? tString('fileExplorer.list.fileListAriaLabel')}
         aria-activedescendant={listFocus.activeDescendant()}
         onfocus={listFocus.handleFocus}
         onblur={listFocus.handleBlur}
@@ -989,9 +991,18 @@
                                 isSelected: selectedIndices.has(globalIndex),
                                 isUnderCursor: globalIndex === cursorIndex,
                             })}
-                            <!-- svelte-ignore a11y_click_events_have_key_events,a11y_interactive_supports_focus -->
                             <div
-                                id={fileRowId(listId, globalIndex)}
+                                {...fileRowAttributes({
+                                    listId,
+                                    globalIndex,
+                                    totalCount,
+                                    isMarked: selectedIndices.has(globalIndex),
+                                    name: fileRowName({
+                                        entry: file,
+                                        syncStatus: syncStatusMap[file.path],
+                                        isRestricted: fileIsRestricted,
+                                    }),
+                                })}
                                 class="file-entry"
                                 class:is-under-cursor={globalIndex === cursorIndex}
                                 class:is-selected={selectedIndices.has(globalIndex)}
@@ -1016,7 +1027,6 @@
                                     onContextMenu?.(file)
                                 }}
                                 role="option"
-                                aria-selected={globalIndex === cursorIndex}
                             >
                                 <FileIcon
                                     {file}

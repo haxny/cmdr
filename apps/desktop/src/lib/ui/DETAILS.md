@@ -35,7 +35,8 @@ Pull-tier docs for `lib/ui/`: architecture, component APIs, and decision rationa
   height cap, viewport clamp, and the submenu's right-or-left flip. See § Menu
 - **`deferred-active-descendant.svelte.ts`**: `aria-activedescendant` that lands one frame after its element takes focus
   (VoiceOver reads only the container otherwise), plus `afterNextFrame`, a frame with a timeout fallback. The menu uses
-  it per surface; the file lists are meant to as well. See § Menu
+  it per surface, the file lists through `list-focus.svelte.ts`; its `onLand` option tells a file pane when the cursor
+  row landed, so the pane's "Left pane, Documents" announcement queues behind the row. See § Menu
 - **`menu-navigation.ts`** / **`menu-reorder.ts`**: the pure halves: which row is next and what a key means; the drag
   and ⌥↑/⌥↓ index math
 - **`FilterPopover.svelte`**: `Popover` + a labelled section header; the query dialogs' Size / Modified / Search-in

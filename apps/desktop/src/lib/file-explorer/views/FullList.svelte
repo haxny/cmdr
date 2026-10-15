@@ -19,7 +19,8 @@
     import InlineRenameEditor from '../rename/InlineRenameEditor.svelte'
     import { shouldMountRenameEditor } from '../rename/rename-mount'
     import { glyphFor, labelFor } from '../git/status-column'
-    import { getImageIndexBadge, getFolderCoverageBadge, fileRowId } from './file-list-utils'
+    import { getImageIndexBadge, getFolderCoverageBadge } from './file-list-utils'
+    import { fileRowAttributes, fileRowName, renderedCursorRow, rowSizeText } from './file-row-a11y'
     import { createFullListCache } from './full-list-cache.svelte'
     import { createListFocus } from './list-focus.svelte'
     import { createGitStatusColumn } from './full-list-git-column.svelte'
@@ -168,6 +169,10 @@
          * column header stays on screen, so a slow load never blinks the header out.
          */
         loadingOverlay?: Snippet
+        /** The listbox's accessible name: which pane and folder ("Left pane, Documents"). */
+        listLabel?: string
+        /** The cursor row just landed as the active descendant after focus or a navigation. */
+        onCursorRowLanded?: () => void
     }
 
     const {
@@ -210,6 +215,8 @@
         staticEntries,
         clearsSortLabel,
         loadingOverlay,
+        listLabel,
+        onCursorRowLanded,
     }: Props = $props()
 
     // Unique per mounted list, so the two panes (and a search-results list) never render the same row id.
@@ -515,23 +522,15 @@
         cache.windowRows({ startIndex: virtualWindow.startIndex, endIndex: virtualWindow.endIndex }),
     )
 
-    /**
-     * `aria-activedescendant` may only name a row that's actually in the DOM.
-     * The cursor can point at nothing rendered: an empty folder, or a row
-     * scrolled outside the virtual window. A dangling reference isn't harmless
-     * there, it's a critical a11y violation (axe `aria-valid-attr-value`) and
-     * leaves screen readers announcing a stale row.
-     */
-    const cursorRow = $derived.by(() => {
-        const row = visibleFiles.find((entry) => entry.globalIndex === cursorIndex)
-        return row ? { id: fileRowId(listId, cursorIndex), key: row.file.path } : undefined
-    })
+    // What `aria-activedescendant` may name: the cursor row, only while it's rendered.
+    const cursorRow = $derived(renderedCursorRow(listId, cursorIndex, visibleFiles))
     // The listbox, not the scroller around it: focus and `aria-activedescendant` share one element.
     let listboxElement: HTMLDivElement | undefined = $state()
     const listFocus = createListFocus({
         getCursorRow: () => cursorRow,
         getListbox: () => listboxElement,
         isFocusedPane: () => isFocused,
+        onLanded: () => onCursorRowLanded?.(),
     })
 
     /** Focuses this list (the focused pane's keyboard home); false when it isn't mounted. */
@@ -733,7 +732,8 @@
             class="listbox-region"
             bind:this={listboxElement}
             role="listbox"
-            aria-label={tString('fileExplorer.list.fileListAriaLabel')}
+            aria-multiselectable="true"
+            aria-label={listLabel ?? tString('fileExplorer.list.fileListAriaLabel')}
             aria-activedescendant={listFocus.activeDescendant()}
             tabindex="-1"
             onfocus={listFocus.handleFocus}
@@ -761,9 +761,39 @@
                         isUnderCursor: globalIndex === cursorIndex,
                     })}
                     {@const date = formattedDate(file.modifiedAt)}
-                    <!-- svelte-ignore a11y_interactive_supports_focus -->
+                    {@const dirUpdating = file.isDirectory && isSizeUpdating(file)}
+                    {@const dirSizeState = file.isDirectory
+                        ? getDirSizeDisplayState(
+                              dirDisplaySize,
+                              file.recursiveSizeComplete,
+                              file.recursiveSizeStale,
+                              dirUpdating,
+                          )
+                        : undefined}
+                    {@const displaySize = file.isDirectory ? dirDisplaySize : fileDisplaySize}
+                    {@const sizeTriads = displaySize != null ? formatSizeForDisplay(displaySize, sizeFormatOpts) : undefined}
+                    {@const gitStatus = gitColumnVisible ? gitColumn.statusFor(file) : null}
                     <div
-                        id={fileRowId(listId, globalIndex)}
+                        {...fileRowAttributes({
+                            listId,
+                            globalIndex,
+                            totalCount,
+                            isMarked: selectedIndices.has(globalIndex),
+                            name: fileRowName({
+                                entry: file,
+                                syncStatus: syncStatusMap[file.path],
+                                isRestricted: fileIsRestricted,
+                                details: {
+                                    size: rowSizeText({
+                                        override: sizeOverride.override,
+                                        triads: sizeTriads,
+                                        dirState: dirSizeState,
+                                    }),
+                                    modified: date.text,
+                                    gitStatus: gitStatus ? labelFor(gitStatus) : undefined,
+                                },
+                            }),
+                        })}
                         class="file-entry"
                         class:is-under-cursor={globalIndex === cursorIndex}
                         class:is-selected={selectedIndices.has(globalIndex)}
@@ -785,7 +815,6 @@
                             onContextMenu?.(file)
                         }}
                         role="option"
-                        aria-selected={globalIndex === cursorIndex}
                     >
                         <FileIcon
                             {file}
@@ -840,14 +869,13 @@
                                     tooltip={ARCHIVED_FILE_TOOLTIP}
                                 />{/if}{#if showTags}<TagDots tags={file.tags} />{/if}</span>
                             {#if gitColumnVisible}
-                                {@const status = gitColumn.statusFor(file)}
                                 <span
                                     class="col-git"
-                                    class:has-status={status !== null}
-                                    aria-label={status ? labelFor(status) : ''}
-                                    use:tooltip={status ? labelFor(status) : ''}
+                                    class:has-status={gitStatus !== null}
+                                    aria-label={gitStatus ? labelFor(gitStatus) : ''}
+                                    use:tooltip={gitStatus ? labelFor(gitStatus) : ''}
                                 >
-                                    {status ? glyphFor(status) : ''}
+                                    {gitStatus ? glyphFor(gitStatus) : ''}
                                 </span>
                             {/if}
                             {#if !showExtensionInName}
@@ -872,7 +900,7 @@
                                         file.recursivePhysicalSize,
                                         file.recursiveFileCount ?? 0,
                                         file.recursiveDirCount ?? 0,
-                                        isSizeUpdating(file),
+                                        dirUpdating,
                                         formatByteSizeTiered,
                                         formatNumber,
                                         file.recursiveSizeComplete,
@@ -883,13 +911,6 @@
                             {#if sizeOverride.override !== undefined}
                                 <span class="size-text">{sizeOverride.override}</span>
                             {:else if file.isDirectory}
-                                {@const dirUpdating = isSizeUpdating(file)}
-                                {@const dirSizeState = getDirSizeDisplayState(
-                                    dirDisplaySize,
-                                    file.recursiveSizeComplete,
-                                    file.recursiveSizeStale,
-                                    dirUpdating,
-                                )}
                                 {#if dirSizeState === 'dir' || dirSizeState === 'scanning'}
                                     <!-- Size unknown (not enriched yet, OR an incomplete subtree with
                                          nothing known below): the familiar `<dir>` placeholder, never a
@@ -905,10 +926,10 @@
                                             ><Icon name="hourglass" size={12} /></span
                                         >
                                     {/if}
-                                {:else if dirDisplaySize != null}
+                                {:else if sizeTriads}
                                     <span class="size-text"
                                         >{#if dirSizeState === 'lower-bound'}<span class="size-lower-bound-prefix">{LOWER_BOUND_GLYPH}</span
-                                            >{/if}{#each formatSizeForDisplay(dirDisplaySize, sizeFormatOpts) as triad, i (i)}<span
+                                            >{/if}{#each sizeTriads as triad, i (i)}<span
                                                 class={triad.tierClass}>{triad.value}</span
                                             >{/each}</span
                                     >
@@ -942,9 +963,9 @@
                                         </span>
                                     {/if}
                                 {/if}
-                            {:else if fileDisplaySize != null}
+                            {:else if sizeTriads}
                                 <span class="size-text"
-                                    >{#each formatSizeForDisplay(fileDisplaySize, sizeFormatOpts) as triad, i (i)}<span
+                                    >{#each sizeTriads as triad, i (i)}<span
                                             class={triad.tierClass}>{triad.value}</span
                                         >{/each}</span
                                 >

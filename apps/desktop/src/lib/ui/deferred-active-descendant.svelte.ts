@@ -56,7 +56,17 @@ export interface DeferredActiveDescendant {
   reset: () => void
 }
 
-export function createDeferredActiveDescendant(): DeferredActiveDescendant {
+export interface DeferredActiveDescendantOptions {
+  /**
+   * A held id just landed (after focus, or after `renew`). A file pane hangs its "Left pane,
+   * Documents" announcement off this, so VoiceOver reads the row first.
+   */
+  onLand?: () => void
+}
+
+export function createDeferredActiveDescendant(
+  options: DeferredActiveDescendantOptions = {},
+): DeferredActiveDescendant {
   let released = $state(false)
   let focused = $state(false)
   let heldId = $state<string | undefined>(undefined)
@@ -75,6 +85,7 @@ export function createDeferredActiveDescendant(): DeferredActiveDescendant {
     cancel = afterNextFrame(() => {
       cancel = null
       released = true
+      options.onLand?.()
     })
   }
 

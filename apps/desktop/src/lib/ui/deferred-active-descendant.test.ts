@@ -130,4 +130,24 @@ describe('createDeferredActiveDescendant', () => {
     vi.advanceTimersByTime(1000)
     expect(descendant.of('row-0')).toBeUndefined()
   })
+
+  // A file pane says "Left pane, Documents" through a live region AFTER the row is read, so
+  // it waits for the moment the held id lands.
+  it('reports each landing of a held id, once, and nothing for a reset hold', () => {
+    const onLand = vi.fn()
+    const descendant = createDeferredActiveDescendant({ onLand })
+    descendant.tookFocus('row-0')
+    expect(onLand).not.toHaveBeenCalled()
+    vi.advanceTimersToNextFrame()
+    expect(onLand).toHaveBeenCalledTimes(1)
+
+    descendant.renew('row-0')
+    vi.advanceTimersByTime(1000)
+    expect(onLand).toHaveBeenCalledTimes(2)
+
+    descendant.tookFocus('row-0')
+    descendant.reset()
+    vi.advanceTimersByTime(1000)
+    expect(onLand).toHaveBeenCalledTimes(2)
+  })
 })

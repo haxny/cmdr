@@ -37,11 +37,12 @@ export function enterMenuHighlight(action: EnterAction): EnterMenuChoice {
 
 /**
  * A viewport point to anchor the menu at: just below the left edge of the cursor row (found
- * via its `aria-selected` marker within the pane). Falls back to the pane's center, then to
- * the origin — both only when the row can't be located, which shouldn't happen for a real Enter.
+ * by its `is-under-cursor` class within the pane; ❌ never `aria-selected`, which marks MARKED
+ * rows). Falls back to the pane's center, then to the origin — both only when the row can't be
+ * located, which shouldn't happen for a real Enter.
  */
 export function enterMenuAnchor(paneEl: HTMLElement | null): { x: number; y: number } {
-  const row = paneEl?.querySelector('[aria-selected="true"]')
+  const row = paneEl?.querySelector('.file-entry.is-under-cursor')
   if (row) {
     const rect = row.getBoundingClientRect()
     return { x: rect.left + 16, y: rect.bottom }

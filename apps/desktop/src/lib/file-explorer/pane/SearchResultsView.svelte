@@ -61,6 +61,10 @@
         onSelect: (args: SelectPayload) => void
         /** Called by FullList when the visible window changes (passed through). */
         onVisibleRangeChange?: (args: VisibleRangePayload) => void
+        /** The results list's accessible name ("Left pane, Search results"), passed through. */
+        listLabel?: string
+        /** The cursor row just landed as the active descendant (passed through). */
+        onCursorRowLanded?: () => void
     }
 
     const {
@@ -71,6 +75,8 @@
         onNavigate,
         onSelect,
         onVisibleRangeChange,
+        listLabel,
+        onCursorRowLanded,
     }: Props = $props()
 
     /** The snapshot id in `search-results://<id>`. `null` for any other path shape. */
@@ -243,6 +249,8 @@
         {onSelect}
         {onNavigate}
         {onVisibleRangeChange}
+        {listLabel}
+        {onCursorRowLanded}
         staticEntries={entries}
         onContextMenu={(entry: FileEntry) => {
             // Route through the standard native context menu but ask Rust to
