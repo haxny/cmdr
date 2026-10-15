@@ -145,6 +145,7 @@ only the environment. The code-signature check is independent of which key signe
 - Laptop: the throwaway keys, doctored archives, and main-key signatures deleted; the two local test branches deleted.
 - M1: `~/Applications/Cmdr.app`, the proxy, the CA's private key, and every test file removed; `/Applications/Cmdr.app`
   (0.52.0) untouched; no hosts entry was ever made. **Left for David**: the trusted test CA in the System keychain
-  (inert without its deleted key, expires 2026-10-18):
-  `ssh -t m1mbp sudo security delete-certificate -Z 05B7B517FD39FB37A721BDBBC0162EFCACE3DDC4 -t /Library/Keychains/System.keychain`.
-  The prod data dir there gained this test's log lines and an `update-check.json`.
+  (inert without its deleted key, expires 2026-10-18): in a GUI session on the M1 (Remote Desktop terminal; sudo over
+  ssh can't change trust settings),
+  `sudo security delete-certificate -c "Cmdr update-path test CA 2026-10-15" /Library/Keychains/System.keychain`. The
+  prod data dir there gained this test's log lines and an `update-check.json`.
