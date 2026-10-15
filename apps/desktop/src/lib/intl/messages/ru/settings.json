@@ -869,6 +869,14 @@
   "@settings.behavior.fileSystemWatching.downloadsToastCollapsed.description": {
     "sourceHash": "aab60b8"
   },
+  "settings.behavior.notifications.keepUntilClosed.label": "Показывать уведомления, пока я их не закрою",
+  "@settings.behavior.notifications.keepUntilClosed.label": {
+    "sourceHash": "bc58ecc"
+  },
+  "settings.behavior.notifications.keepUntilClosed.description": "Уведомления остаются на экране, пока вы их не закроете, и не исчезают через несколько секунд.",
+  "@settings.behavior.notifications.keepUntilClosed.description": {
+    "sourceHash": "53890bf"
+  },
   "settings.behavior.fileSystemWatching.lowDiskSpaceNotifications.label": "Предупреждать о нехватке места",
   "@settings.behavior.fileSystemWatching.lowDiskSpaceNotifications.label": {
     "sourceHash": "911b74b"
@@ -2286,6 +2294,10 @@
   "settings.fileSystemWatching.cardDownloads": "Загрузки",
   "@settings.fileSystemWatching.cardDownloads": {
     "sourceHash": "d5fdc1a"
+  },
+  "settings.notifications.cardOnScreen": "Уведомления на экране",
+  "@settings.notifications.cardOnScreen": {
+    "sourceHash": "e6a780e"
   },
   "settings.fileSystemWatching.cardLowDiskSpace": "Мало места на диске",
   "@settings.fileSystemWatching.cardLowDiskSpace": {

@@ -872,6 +872,14 @@
   "@settings.behavior.fileSystemWatching.downloadsToastCollapsed.description": {
     "sourceHash": "aab60b8"
   },
+  "settings.behavior.notifications.keepUntilClosed.label": "Manter as notificações até eu fechá-las",
+  "@settings.behavior.notifications.keepUntilClosed.label": {
+    "sourceHash": "bc58ecc"
+  },
+  "settings.behavior.notifications.keepUntilClosed.description": "As notificações ficam na tela até você fechá-las, em vez de sumirem depois de alguns segundos.",
+  "@settings.behavior.notifications.keepUntilClosed.description": {
+    "sourceHash": "53890bf"
+  },
   "settings.behavior.fileSystemWatching.lowDiskSpaceNotifications.label": "Aviso de pouco espaço em disco",
   "@settings.behavior.fileSystemWatching.lowDiskSpaceNotifications.label": {
     "sourceHash": "911b74b"
@@ -2292,6 +2300,10 @@
   "@settings.fileSystemWatching.cardDownloads": {
     "sourceHash": "d5fdc1a",
     "sameAsSourceJustification": "'Downloads' is the macOS folder name; macOS pt-BR keeps the Downloads folder name verbatim (confirmed macOS/Finder: 'Downloads' to 'Downloads'). Glossary: 'the Downloads folder name stays Downloads'."
+  },
+  "settings.notifications.cardOnScreen": "Notificações na tela",
+  "@settings.notifications.cardOnScreen": {
+    "sourceHash": "e6a780e"
   },
   "settings.fileSystemWatching.cardLowDiskSpace": "Pouco espaço em disco",
   "@settings.fileSystemWatching.cardLowDiskSpace": {

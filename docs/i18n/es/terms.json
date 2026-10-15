@@ -1884,7 +1884,7 @@
   "notification": {
     "chosen": "notificación",
     "accept": ["notificaciones", "aviso"],
-    "forms": "a Cmdr toast → aviso; a system notification → notificación",
+    "forms": "a system notification → notificación; a Cmdr toast NAMED in a label, command, or setting → notificación, as English names it (Descartar notificación, Mover el foco a las notificaciones, Notificaciones en pantalla); aviso only in prose about one specific toast",
     "confidence": "high",
     "sources": "macOS (Centro de notificaciones)"
   },

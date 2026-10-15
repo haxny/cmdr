@@ -163,6 +163,10 @@
   "@menu.edit.redo": {
     "sourceHash": "7427398"
   },
+  "menu.edit.undoTrash": "Ångra flytt till papperskorgen",
+  "@menu.edit.undoTrash": {
+    "sourceHash": "c6fea33"
+  },
   "menu.edit.cut": "Klipp ut",
   "@menu.edit.cut": {
     "sourceHash": "1f45f02"

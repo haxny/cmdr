@@ -260,6 +260,22 @@
   "@commands.paneFocusControls.description": {
     "sourceHash": "e5828ae"
   },
+  "commands.appFocusNotifications.label": "Fokus auf die Hinweise bewegen",
+  "@commands.appFocusNotifications.label": {
+    "sourceHash": "628f0e5"
+  },
+  "commands.appFocusNotifications.description": "Die Hinweise und ihre Tasten, etwa „Widerrufen“, mit der Tastatur erreichen. Mit den Pfeiltasten bewegst du dich zwischen ihnen, und die esc-Taste bringt dich zurück.",
+  "@commands.appFocusNotifications.description": {
+    "sourceHash": "87886a4"
+  },
+  "commands.editUndoTrash.label": "In den Papierkorb bewegen widerrufen",
+  "@commands.editUndoTrash.label": {
+    "sourceHash": "c6fea33"
+  },
+  "commands.editUndoTrash.description": "Die Dateien zurücklegen, die du zuletzt in den Papierkorb bewegt hast",
+  "@commands.editUndoTrash.description": {
+    "sourceHash": "3aa756f"
+  },
   "commands.paneLeftVolumeChooser.label": "Linke Volume-Auswahl öffnen",
   "@commands.paneLeftVolumeChooser.label": {
     "sourceHash": "6210f8e"

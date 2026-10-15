@@ -51,6 +51,10 @@
   "@fileOperations.trash.goToTrashAction": {
     "sourceHash": "5332858"
   },
+  "fileOperations.trash.nothingToUndo": "沒有可還原的「移至垃圾桶」操作。",
+  "@fileOperations.trash.nothingToUndo": {
+    "sourceHash": "67b73bf"
+  },
   "fileOperations.trash.undoing": "正在放回原處⋯",
   "@fileOperations.trash.undoing": {
     "sourceHash": "3272a7a"

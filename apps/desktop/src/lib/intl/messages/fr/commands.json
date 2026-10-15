@@ -260,6 +260,22 @@
   "@commands.paneFocusControls.description": {
     "sourceHash": "e5828ae"
   },
+  "commands.appFocusNotifications.label": "Déplacer la cible sur les notifications",
+  "@commands.appFocusNotifications.label": {
+    "sourceHash": "628f0e5"
+  },
+  "commands.appFocusNotifications.description": "Atteindre au clavier les notifications et leurs boutons, comme « Annuler ». Les touches fléchées déplacent la cible d’un élément à l’autre et la touche Échap vous ramène là où vous étiez.",
+  "@commands.appFocusNotifications.description": {
+    "sourceHash": "87886a4"
+  },
+  "commands.editUndoTrash.label": "Annuler le placement dans la corbeille",
+  "@commands.editUndoTrash.label": {
+    "sourceHash": "c6fea33"
+  },
+  "commands.editUndoTrash.description": "Remettre en place les derniers fichiers que vous avez placés dans la corbeille",
+  "@commands.editUndoTrash.description": {
+    "sourceHash": "3aa756f"
+  },
   "commands.paneLeftVolumeChooser.label": "Ouvrir le sélecteur de volume gauche",
   "@commands.paneLeftVolumeChooser.label": {
     "sourceHash": "6210f8e"

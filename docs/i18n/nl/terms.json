@@ -3185,18 +3185,18 @@
     "sources": "Linux term udev kept, regels translated"
   },
   "undo": {
-    "accept": ["ongedaan", "Herstel", "Zet terug", "terugdraaien"],
+    "accept": ["ongedaan", "Herstel", "Zet terug", "terug te zetten", "terugdraaien"],
     "avoid": [
       {
-        "form": "Herstel (outside the Edit menu)",
+        "form": "Herstel (outside the Edit menu and its command twin)",
         "why": "macOS also uses it for Revert and Repair"
       }
     ],
     "chosen": "Ongedaan maken",
     "confidence": "high",
     "decision": "Eén ding, één naam: de interne driftronde",
-    "forms": "text undo in the Edit menu → Herstel (Apple's ⌘Z); the trash toast's undo → Zet terug (it IS Finder's Put Back); undoing an Ask Cmdr rename run → Ongedaan maken; This can't be undone → Dit kun je niet ongedaan maken",
-    "sources": "macOS Finder (ME13 Herstel, N153.1 Zet terug)"
+    "forms": "text undo in the Edit menu → Herstel (Apple's ⌘Z); Edit > Undo move to trash (menu.edit.undoTrash and its palette twin commands.editUndoTrash.label) → Herstel verplaatsen naar prullenmand (Finder's Herstel + gerund, MV2/MT9); the trash toast's undo → Zet terug (it IS Finder's Put Back); nothing to put back → Er is niets om uit de prullenmand terug te zetten; undoing an Ask Cmdr rename run → Ongedaan maken; This can't be undone → Dit kun je niet ongedaan maken",
+    "sources": "macOS Finder (ME13 Herstel, MV2_V1 Herstel verplaatsen van, MT9 Herstel verplaatsen naar prullenmand, N153.1 Zet terug)"
   },
   "unexpected": {
     "accept": ["onverwachts", "mis"],

@@ -260,6 +260,22 @@
   "@commands.paneFocusControls.description": {
     "sourceHash": "e5828ae"
   },
+  "commands.appFocusNotifications.label": "移動焦點至通知",
+  "@commands.appFocusNotifications.label": {
+    "sourceHash": "628f0e5"
+  },
+  "commands.appFocusNotifications.description": "用鍵盤前往通知和通知上的按鈕，例如「還原」。用方向鍵在它們之間移動，按 Esc 鍵返回。",
+  "@commands.appFocusNotifications.description": {
+    "sourceHash": "87886a4"
+  },
+  "commands.editUndoTrash.label": "還原移至垃圾桶",
+  "@commands.editUndoTrash.label": {
+    "sourceHash": "c6fea33"
+  },
+  "commands.editUndoTrash.description": "把你上次移到垃圾桶的檔案放回原處",
+  "@commands.editUndoTrash.description": {
+    "sourceHash": "3aa756f"
+  },
   "commands.paneLeftVolumeChooser.label": "開啟左側卷宗切換器",
   "@commands.paneLeftVolumeChooser.label": {
     "sourceHash": "6210f8e"

@@ -1314,7 +1314,7 @@
   "go-to-trash": {
     "chosen": "đi tới thùng rác",
     "confidence": "high",
-    "decision": "Toast thùng rác: hoàn tác và đi tới thùng rác",
+    "decision": "Toast thùng rác",
     "sources": "catalog Đi tới family; macOS Đi tới thư mục chính"
   },
   "got-it": {
@@ -2177,7 +2177,7 @@
     ],
     "chosen": "đưa trở lại",
     "confidence": "high",
-    "decision": "Toast thùng rác: hoàn tác và đi tới thùng rác",
+    "decision": "Toast thùng rác",
     "exceptions": {
       "askCmdr.renameUndo.unavailable": "The rename-undo family puts back old NAMES (`đặt lại tên cũ`), nothing moves; `đưa trở lại` is for files leaving the trash."
     },

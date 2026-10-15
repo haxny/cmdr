@@ -260,6 +260,22 @@
   "@commands.paneFocusControls.description": {
     "sourceHash": "e5828ae"
   },
+  "commands.appFocusNotifications.label": "Flytta fokus till aviseringarna",
+  "@commands.appFocusNotifications.label": {
+    "sourceHash": "628f0e5"
+  },
+  "commands.appFocusNotifications.description": "Nå aviseringarna och deras knappar, som Ångra, från tangentbordet. Piltangenterna flyttar fokus mellan dem och Escape tar dig tillbaka.",
+  "@commands.appFocusNotifications.description": {
+    "sourceHash": "87886a4"
+  },
+  "commands.editUndoTrash.label": "Ångra flytt till papperskorgen",
+  "@commands.editUndoTrash.label": {
+    "sourceHash": "c6fea33"
+  },
+  "commands.editUndoTrash.description": "Lägg tillbaka filerna du senast flyttade till papperskorgen",
+  "@commands.editUndoTrash.description": {
+    "sourceHash": "3aa756f"
+  },
   "commands.paneLeftVolumeChooser.label": "Öppna vänster volymväljare",
   "@commands.paneLeftVolumeChooser.label": {
     "sourceHash": "6210f8e"

@@ -260,6 +260,22 @@
   "@commands.paneFocusControls.description": {
     "sourceHash": "e5828ae"
   },
+  "commands.appFocusNotifications.label": "Mover o foco para as notificações",
+  "@commands.appFocusNotifications.label": {
+    "sourceHash": "628f0e5"
+  },
+  "commands.appFocusNotifications.description": "Acesse pelo teclado as notificações e os botões delas, como “Desfazer”. As teclas de seta movem o foco entre eles, e Esc leva você de volta.",
+  "@commands.appFocusNotifications.description": {
+    "sourceHash": "87886a4"
+  },
+  "commands.editUndoTrash.label": "Desfazer mover para o Lixo",
+  "@commands.editUndoTrash.label": {
+    "sourceHash": "c6fea33"
+  },
+  "commands.editUndoTrash.description": "Coloque de volta os arquivos que você moveu por último para o Lixo",
+  "@commands.editUndoTrash.description": {
+    "sourceHash": "3aa756f"
+  },
   "commands.paneLeftVolumeChooser.label": "Abrir seletor de volume da esquerda",
   "@commands.paneLeftVolumeChooser.label": {
     "sourceHash": "6210f8e"

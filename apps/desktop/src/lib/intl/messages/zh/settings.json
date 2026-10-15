@@ -871,6 +871,14 @@
   "@settings.behavior.fileSystemWatching.downloadsToastCollapsed.description": {
     "sourceHash": "aab60b8"
   },
+  "settings.behavior.notifications.keepUntilClosed.label": "一直显示通知，直到我关闭",
+  "@settings.behavior.notifications.keepUntilClosed.label": {
+    "sourceHash": "bc58ecc"
+  },
+  "settings.behavior.notifications.keepUntilClosed.description": "通知会一直留在屏幕上，直到你关闭它们，而不是几秒后自动消失。",
+  "@settings.behavior.notifications.keepUntilClosed.description": {
+    "sourceHash": "53890bf"
+  },
   "settings.behavior.fileSystemWatching.lowDiskSpaceNotifications.label": "磁盘空间不足警告",
   "@settings.behavior.fileSystemWatching.lowDiskSpaceNotifications.label": {
     "sourceHash": "911b74b"
@@ -2289,6 +2297,10 @@
   "settings.fileSystemWatching.cardDownloads": "下载",
   "@settings.fileSystemWatching.cardDownloads": {
     "sourceHash": "d5fdc1a"
+  },
+  "settings.notifications.cardOnScreen": "屏幕上的通知",
+  "@settings.notifications.cardOnScreen": {
+    "sourceHash": "e6a780e"
   },
   "settings.fileSystemWatching.cardLowDiskSpace": "磁盘空间不足",
   "@settings.fileSystemWatching.cardLowDiskSpace": {

@@ -164,6 +164,10 @@
   "@menu.edit.redo": {
     "sourceHash": "7427398"
   },
+  "menu.edit.undoTrash": "Annuler le placement dans la corbeille",
+  "@menu.edit.undoTrash": {
+    "sourceHash": "c6fea33"
+  },
   "menu.edit.cut": "Couper",
   "@menu.edit.cut": {
     "sourceHash": "1f45f02"

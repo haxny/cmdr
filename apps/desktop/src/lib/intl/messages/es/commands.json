@@ -260,6 +260,22 @@
   "@commands.paneFocusControls.description": {
     "sourceHash": "e5828ae"
   },
+  "commands.appFocusNotifications.label": "Mover el foco a las notificaciones",
+  "@commands.appFocusNotifications.label": {
+    "sourceHash": "628f0e5"
+  },
+  "commands.appFocusNotifications.description": "Accede con el teclado a las notificaciones y a sus botones, como Deshacer. Las teclas de flecha mueven el foco entre ellos y Esc te devuelve adonde estabas.",
+  "@commands.appFocusNotifications.description": {
+    "sourceHash": "87886a4"
+  },
+  "commands.editUndoTrash.label": "Deshacer movimiento a la papelera",
+  "@commands.editUndoTrash.label": {
+    "sourceHash": "c6fea33"
+  },
+  "commands.editUndoTrash.description": "Devuelve a su sitio los archivos que moviste a la papelera la última vez",
+  "@commands.editUndoTrash.description": {
+    "sourceHash": "3aa756f"
+  },
   "commands.paneLeftVolumeChooser.label": "Abrir el selector de volúmenes izquierdo",
   "@commands.paneLeftVolumeChooser.label": {
     "sourceHash": "6210f8e"

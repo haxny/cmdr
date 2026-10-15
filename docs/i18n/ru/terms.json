@@ -5501,7 +5501,7 @@
   "undo": {
     "chosen": "Отменить",
     "accept": ["отмен", "откат", "вернуть", "восстанов"],
-    "forms": "button and menu «Отменить»; «Это нельзя отменить»; reverting an AI rename run may say «откатить»; putting trashed files back is `put-back` («Вернуть»)",
+    "forms": "button and menu «Отменить»; «Это нельзя отменить»; reverting an AI rename run may say «откатить»; putting trashed files back is `put-back` («Восстановить»); the Edit-menu command Undo move to trash → «Отменить перемещение в Корзину», Finder's own pattern (MV2_V1 Undo Move of “^1” → Отменить перемещение „^1“)",
     "avoid": [
       {
         "form": "Не применять",

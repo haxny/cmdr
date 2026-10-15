@@ -279,12 +279,12 @@ over a pile-ideal form that would fork a term mid-catalog.
   `“Đã khóa”` (Finder `AXNODE1`, `NE18`), Sharing & Permissions → `phần Chia sẻ & quyền` (verified on macOS 26.5.2,
   `InfoWindowPermissionsView.strings`, 2026-08-24). `phần` over `mục`, as Apple writes it in that sentence.
 
-## Toast thùng rác: hoàn tác và đi tới thùng rác (`fileOperations.trash.*`, `commands.fileGoToTrash.*`)
+## Toast thùng rác (`fileOperations.trash.*`, `commands.fileGoToTrash.*`, `commands.editUndoTrash.*`, `menu.edit.undoTrash`)
 
-- put back → `đưa trở lại` (Finder `N153.1` "Put Back"), over `đặt lại` (reserved for old names) and Nautilus
-  `khôi phục` (Restore, broader, Tier 3).
-- go to trash → `Đi tới thùng rác` (the catalog's `Đi tới` family); it's 16 characters against 11, so overflow-check the
-  toast pair. "This drive doesn't keep a trash" states a fact about the drive, never a reproach.
+- put back → `đưa trở lại` (Finder `N153.1`), over `đặt lại` (old names) and Nautilus `khôi phục` (broader).
+- go to trash → `Đi tới thùng rác` (`Đi tới` family); overflow-check the toast pair.
+- Undo move to trash → `Hoàn tác thao tác chuyển vào thùng rác` (Finder frame `MV2_V1`, `ME14`), so it never reads as
+  text undo.
 
 ## Thêm ghi chú vào báo cáo đã gửi (`errorReporter.amend.*`, `errorReporter.amendedToast.message`, `errorReporter.autoSentToast.viewOrAddNotes`)
 

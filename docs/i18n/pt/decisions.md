@@ -147,11 +147,11 @@ the installed macOS `pt_BR.lproj` bundles.
 
 ## Trash buttons and refusals (`fileOperations.trash.*`, `commands.fileGoToTrash.*`, `errors.mutation.trash*`, `errors.write.trashRefused.title`)
 
-- Undo → `Desfazer`; put back → `colocar de volta` (Finder `N153.1`). `Este disco não tem Lixo.` states a fact, so it
-  skips the error-screen `não oferece suporte`.
-- `errors.write.trashRefused.*`: `{count} dos itens que você escolheu` reads right at any count without a plural. Never
-  suggest trying again (a permission refusal repeats). The title is identical to four `errors.write.*.title.trash`
-  twins.
+- Undo → `Desfazer`; put back → `colocar de volta` (Finder `N153.1`). `Este disco não tem Lixo.` states a fact.
+- `errors.write.trashRefused.*`: `{count} dos itens que você escolheu` needs no plural. Never suggest retrying (a
+  permission refusal repeats).
+- `commands.editUndoTrash.label` = `menu.edit.undoTrash` = `Desfazer mover para o Lixo`: Finder's `Desfazer` + action
+  (`ME14`, `RN2`, `MT9`).
 
 ## Online-only delete warning (`fileOperations.delete.cloudOnlineOnlyMixedWarning`, `fileOperations.delete.cloudOnlineOnlyAllWarning`, `fileOperations.delete.cloudOnlineOnlyHandedBack`)
 

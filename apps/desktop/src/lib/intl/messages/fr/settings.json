@@ -873,6 +873,14 @@
   "@settings.behavior.fileSystemWatching.downloadsToastCollapsed.description": {
     "sourceHash": "aab60b8"
   },
+  "settings.behavior.notifications.keepUntilClosed.label": "Conserver les notifications jusqu’à leur fermeture",
+  "@settings.behavior.notifications.keepUntilClosed.label": {
+    "sourceHash": "bc58ecc"
+  },
+  "settings.behavior.notifications.keepUntilClosed.description": "Les notifications restent à l’écran jusqu’à ce que vous les fermiez, au lieu de disparaître après quelques secondes.",
+  "@settings.behavior.notifications.keepUntilClosed.description": {
+    "sourceHash": "53890bf"
+  },
   "settings.behavior.fileSystemWatching.lowDiskSpaceNotifications.label": "Avertissement d’espace disque faible",
   "@settings.behavior.fileSystemWatching.lowDiskSpaceNotifications.label": {
     "sourceHash": "911b74b"
@@ -2301,6 +2309,10 @@
   "settings.fileSystemWatching.cardDownloads": "Téléchargements",
   "@settings.fileSystemWatching.cardDownloads": {
     "sourceHash": "d5fdc1a"
+  },
+  "settings.notifications.cardOnScreen": "Notifications à l’écran",
+  "@settings.notifications.cardOnScreen": {
+    "sourceHash": "e6a780e"
   },
   "settings.fileSystemWatching.cardLowDiskSpace": "Espace disque faible",
   "@settings.fileSystemWatching.cardLowDiskSpace": {

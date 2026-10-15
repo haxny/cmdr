@@ -163,6 +163,10 @@
   "@menu.edit.redo": {
     "sourceHash": "7427398"
   },
+  "menu.edit.undoTrash": "Kukába helyezés visszavonása",
+  "@menu.edit.undoTrash": {
+    "sourceHash": "c6fea33"
+  },
   "menu.edit.cut": "Kivágás",
   "@menu.edit.cut": {
     "sourceHash": "1f45f02"

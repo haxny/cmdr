@@ -260,6 +260,22 @@
   "@commands.paneFocusControls.description": {
     "sourceHash": "e5828ae"
   },
+  "commands.appFocusNotifications.label": "Переместить фокус на уведомления",
+  "@commands.appFocusNotifications.label": {
+    "sourceHash": "628f0e5"
+  },
+  "commands.appFocusNotifications.description": "Перейти с клавиатуры к уведомлениям и их кнопкам, например «Отменить». Клавиши со стрелками перемещают фокус между ними, а клавиша Escape вернет вас обратно.",
+  "@commands.appFocusNotifications.description": {
+    "sourceHash": "87886a4"
+  },
+  "commands.editUndoTrash.label": "Отменить перемещение в Корзину",
+  "@commands.editUndoTrash.label": {
+    "sourceHash": "c6fea33"
+  },
+  "commands.editUndoTrash.description": "Восстановить файлы, которые вы в последний раз переместили в Корзину",
+  "@commands.editUndoTrash.description": {
+    "sourceHash": "3aa756f"
+  },
   "commands.paneLeftVolumeChooser.label": "Открыть переключатель томов левой панели",
   "@commands.paneLeftVolumeChooser.label": {
     "sourceHash": "6210f8e"

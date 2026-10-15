@@ -52,6 +52,10 @@
   "@fileOperations.trash.goToTrashAction": {
     "sourceHash": "5332858"
   },
+  "fileOperations.trash.nothingToUndo": "Không có thao tác chuyển vào thùng rác nào để hoàn tác.",
+  "@fileOperations.trash.nothingToUndo": {
+    "sourceHash": "67b73bf"
+  },
   "fileOperations.trash.undoing": "Đang đưa chúng trở lại…",
   "@fileOperations.trash.undoing": {
     "sourceHash": "3272a7a"

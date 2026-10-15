@@ -260,6 +260,22 @@
   "@commands.paneFocusControls.description": {
     "sourceHash": "e5828ae"
   },
+  "commands.appFocusNotifications.label": "Di chuyển tiêu điểm tới các thông báo",
+  "@commands.appFocusNotifications.label": {
+    "sourceHash": "628f0e5"
+  },
+  "commands.appFocusNotifications.description": "Dùng bàn phím để tới các thông báo và nút trên đó, như nút Hoàn tác. Phím mũi tên di chuyển tiêu điểm giữa các thông báo, còn phím Escape đưa bạn quay lại.",
+  "@commands.appFocusNotifications.description": {
+    "sourceHash": "87886a4"
+  },
+  "commands.editUndoTrash.label": "Hoàn tác thao tác chuyển vào thùng rác",
+  "@commands.editUndoTrash.label": {
+    "sourceHash": "c6fea33"
+  },
+  "commands.editUndoTrash.description": "Đưa trở lại các tệp bạn đã chuyển vào thùng rác lần gần nhất",
+  "@commands.editUndoTrash.description": {
+    "sourceHash": "3aa756f"
+  },
   "commands.paneLeftVolumeChooser.label": "Mở bộ chọn ổ đĩa bên trái",
   "@commands.paneLeftVolumeChooser.label": {
     "sourceHash": "6210f8e"

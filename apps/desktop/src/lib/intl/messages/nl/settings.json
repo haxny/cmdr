@@ -874,6 +874,14 @@
   "@settings.behavior.fileSystemWatching.downloadsToastCollapsed.description": {
     "sourceHash": "aab60b8"
   },
+  "settings.behavior.notifications.keepUntilClosed.label": "Meldingen laten staan tot ik ze sluit",
+  "@settings.behavior.notifications.keepUntilClosed.label": {
+    "sourceHash": "bc58ecc"
+  },
+  "settings.behavior.notifications.keepUntilClosed.description": "Meldingen blijven op het scherm staan tot je ze sluit, in plaats van na een paar seconden te verdwijnen.",
+  "@settings.behavior.notifications.keepUntilClosed.description": {
+    "sourceHash": "53890bf"
+  },
   "settings.behavior.fileSystemWatching.lowDiskSpaceNotifications.label": "Waarschuwing bij weinig schijfruimte",
   "@settings.behavior.fileSystemWatching.lowDiskSpaceNotifications.label": {
     "sourceHash": "911b74b"
@@ -2301,6 +2309,10 @@
   "@settings.fileSystemWatching.cardDownloads": {
     "sourceHash": "d5fdc1a",
     "sameAsSourceJustification": "'Downloads' is the macOS folder name kept verbatim in Dutch (macOS NL: Downloads -> Downloads); the card heading uses the OS-localized folder name, which is identical to English in Dutch."
+  },
+  "settings.notifications.cardOnScreen": "Meldingen op het scherm",
+  "@settings.notifications.cardOnScreen": {
+    "sourceHash": "e6a780e"
   },
   "settings.fileSystemWatching.cardLowDiskSpace": "Weinig schijfruimte",
   "@settings.fileSystemWatching.cardLowDiskSpace": {

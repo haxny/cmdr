@@ -52,6 +52,10 @@
   "@fileOperations.trash.goToTrashAction": {
     "sourceHash": "5332858"
   },
+  "fileOperations.trash.nothingToUndo": "Нет перемещения в Корзину, которое можно отменить.",
+  "@fileOperations.trash.nothingToUndo": {
+    "sourceHash": "67b73bf"
+  },
   "fileOperations.trash.undoing": "Восстановление…",
   "@fileOperations.trash.undoing": {
     "sourceHash": "3272a7a"

@@ -640,8 +640,8 @@
   },
   "close": {
     "chosen": "Bezárás",
-    "accept": ["bezár", "zárd be", "zárj be", "lezár", "zárul", "zárja", "zárva"],
-    "forms": "button Bezárás; Close X → X bezárása (Kötetválasztó bezárása, Az Ask Cmdr bezárása)",
+    "accept": ["bezár", "zárd be", "zárj be", "lezár", "zárul", "zárja", "zárva", "zárod"],
+    "forms": "button Bezárás; Close X → X bezárása (Kötetválasztó bezárása, Az Ask Cmdr bezárása); until you close it → amíg be nem zárod",
     "confidence": "high",
     "sources": "macOS (FR26 Bezárás)",
     "note": "Bezárás closes a window; Mégsem stops the operation; Elvetés dismisses a notice."
@@ -2246,7 +2246,7 @@
   "move-to-trash": {
     "chosen": "Áthelyezés a Kukába",
     "accept": ["kukába"],
-    "forms": "the switch and the queue row → Áthelyezés a Kukába; possessive … áthelyezése a Kukába; in prose → a Kukába helyez",
+    "forms": "the switch and the queue row → Áthelyezés a Kukába; possessive … áthelyezése a Kukába; in prose → a Kukába helyez; as a noun inside a longer label → Kukába helyezés (Undo move to trash → Kukába helyezés visszavonása, Finder's X visszavonása frame, ME14/RN2, over MT9's quoted form)",
     "confidence": "high",
     "sources": "macOS Finder (AL13/N153); Xfce Thunar"
   },

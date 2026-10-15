@@ -51,6 +51,10 @@
   "@fileOperations.trash.goToTrashAction": {
     "sourceHash": "5332858"
   },
+  "fileOperations.trash.nothingToUndo": "No hay ningún movimiento a la papelera que deshacer.",
+  "@fileOperations.trash.nothingToUndo": {
+    "sourceHash": "67b73bf"
+  },
   "fileOperations.trash.undoing": "Devolviéndolos a su sitio…",
   "@fileOperations.trash.undoing": {
     "sourceHash": "3272a7a"

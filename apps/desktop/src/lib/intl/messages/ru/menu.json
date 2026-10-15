@@ -163,6 +163,10 @@
   "@menu.edit.redo": {
     "sourceHash": "7427398"
   },
+  "menu.edit.undoTrash": "Отменить перемещение в Корзину",
+  "@menu.edit.undoTrash": {
+    "sourceHash": "c6fea33"
+  },
   "menu.edit.cut": "Вырезать",
   "@menu.edit.cut": {
     "sourceHash": "1f45f02"

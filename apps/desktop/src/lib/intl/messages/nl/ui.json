@@ -56,6 +56,10 @@
   "@ui.toast.dismissAria": {
     "sourceHash": "b7bb3f3"
   },
+  "ui.toast.noneToFocus": "Geen meldingen",
+  "@ui.toast.noneToFocus": {
+    "sourceHash": "cbce204"
+  },
   "ui.toast.age": "{durationText} geleden",
   "@ui.toast.age": {
     "sourceHash": "6dcfed0"

@@ -84,7 +84,7 @@
 
   "fileOperations.trash.nothingToUndo": "There’s no trash to undo.",
   "@fileOperations.trash.nothingToUndo": {
-    "description": "Toast shown when the user picks Edit > Undo trash (or its command) but nothing they moved to the trash since opening Cmdr is waiting to be undone: either nothing was trashed, or the last trash was already put back."
+    "description": "Toast shown when the user picks Edit > Undo move to trash (or its command) but nothing they moved to the trash since opening Cmdr is waiting to be undone: either nothing was trashed, or the last trash was already put back."
   },
   "fileOperations.trash.undoing": "Putting them back…",
   "@fileOperations.trash.undoing": {

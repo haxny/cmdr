@@ -871,6 +871,14 @@
   "@settings.behavior.fileSystemWatching.downloadsToastCollapsed.description": {
     "sourceHash": "aab60b8"
   },
+  "settings.behavior.notifications.keepUntilClosed.label": "Értesítések megtartása bezárásig",
+  "@settings.behavior.notifications.keepUntilClosed.label": {
+    "sourceHash": "bc58ecc"
+  },
+  "settings.behavior.notifications.keepUntilClosed.description": "Az értesítések a képernyőn maradnak, amíg be nem zárod őket, és nem tűnnek el néhány másodperc után.",
+  "@settings.behavior.notifications.keepUntilClosed.description": {
+    "sourceHash": "53890bf"
+  },
   "settings.behavior.fileSystemWatching.lowDiskSpaceNotifications.label": "Kevés lemezterület figyelmeztetés",
   "@settings.behavior.fileSystemWatching.lowDiskSpaceNotifications.label": {
     "sourceHash": "911b74b"
@@ -2291,6 +2299,10 @@
   "settings.fileSystemWatching.cardDownloads": "Letöltések",
   "@settings.fileSystemWatching.cardDownloads": {
     "sourceHash": "d5fdc1a"
+  },
+  "settings.notifications.cardOnScreen": "Képernyőn megjelenő értesítések",
+  "@settings.notifications.cardOnScreen": {
+    "sourceHash": "e6a780e"
   },
   "settings.fileSystemWatching.cardLowDiskSpace": "Kevés lemezterület",
   "@settings.fileSystemWatching.cardLowDiskSpace": {

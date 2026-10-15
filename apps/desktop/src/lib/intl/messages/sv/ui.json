@@ -56,6 +56,10 @@
   "@ui.toast.dismissAria": {
     "sourceHash": "b7bb3f3"
   },
+  "ui.toast.noneToFocus": "Inga aviseringar",
+  "@ui.toast.noneToFocus": {
+    "sourceHash": "cbce204"
+  },
   "ui.toast.age": "för {durationText} sedan",
   "@ui.toast.age": {
     "sourceHash": "6dcfed0"

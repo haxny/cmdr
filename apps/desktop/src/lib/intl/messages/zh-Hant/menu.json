@@ -163,6 +163,10 @@
   "@menu.edit.redo": {
     "sourceHash": "7427398"
   },
+  "menu.edit.undoTrash": "還原移至垃圾桶",
+  "@menu.edit.undoTrash": {
+    "sourceHash": "c6fea33"
+  },
   "menu.edit.cut": "剪下",
   "@menu.edit.cut": {
     "sourceHash": "1f45f02"

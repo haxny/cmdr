@@ -313,12 +313,12 @@ catalog.
 - disk image → `skivavbild`, short `avbilden`; ❌ not MS's `avbildning` (Windows side).
 - Disabled buttons' tooltips skip the menus' `(upptagen)` marker.
 
-## Trash toast (`fileOperations.trash.*`, `commands.fileGoToTrash.*`)
+## Trash toast (`fileOperations.trash.*`, `commands.fileGoToTrash.*`, `menu.edit.undoTrash`)
 
-- put back → `lägga tillbaka` (Finder's `Lägg tillbaka`), ❌ not `återställa` (restore, and used for names) nor
-  `flytta tillbaka`: the menu item's word is the action's name.
-- `Gå till papperskorgen` is 21 characters against 11; overflow-check it beside `Ångra` (review queue).
-- `{skipped}` is a real selector, but `objekt` and the verb don't inflect, so both branches are identical.
+- put back → `lägga tillbaka` (Finder's menu word), ❌ not `återställa` (restore; names) nor `flytta tillbaka`.
+- Undo move to trash → Finder's noun form `Ångra flytt till papperskorgen` (MT9).
+- `Gå till papperskorgen` (21 chars vs 11): overflow-check beside `Ångra`.
+- `{skipped}` selects, but `objekt` and the verb don't inflect: identical branches.
 
 ## Amending a sent error report (`errorReporter.amend.*`, `errorReporter.amendedToast.message`, `errorReporter.autoSentToast.viewOrAddNotes`)
 

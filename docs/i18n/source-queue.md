@@ -340,3 +340,6 @@ rule into `translation-principles.md` or `translator-instructions.md`), then del
   `viewer.pull.progress` (a visible line), both "{doneText} of {totalText}". A compact slash suits the visible line but
   reads badly aloud. hu realigned both to its shipped `{free} szabad, összesen {total}` frame; vi, zh, and zh-Hant now
   diverge. Reword one English source, or allow the split per locale. (hu)
+- `fileOperations.trash.nothingToUndo` ("There’s no trash to undo.") treats "trash" as a countable action. Consider
+  "There’s no move to trash to undo." so the toast echoes `menu.edit.undoTrash`; en-GB already says "There’s no move to
+  the Bin to undo." (zh-Hant)

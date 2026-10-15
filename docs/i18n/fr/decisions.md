@@ -361,14 +361,13 @@ values write the catalog's `’`.
 - stored there → `qui s’y trouve` (`Une image disque qui s’y trouve est encore ouverte.`).
 - send a report → `envoyez un rapport` (plain: nothing crashed), never `un retour` (the feedback surface).
 
-## La notification de corbeille : annuler et remettre en place (`fileOperations.trash.*`, `commands.fileGoToTrash.*`)
+## La notification de corbeille : annuler et remettre en place (`fileOperations.trash.*`, `commands.*Trash.*`, `menu.edit.undoTrash`)
 
-- Undo → `Annuler`, living with the Undo/Cancel ambiguity as macOS does; `Remettre` is the sourced fallback.
-- Put back → `remettre en place` (Finder `Remettre`) over `restaurer`, which the catalog keeps for rename undo (names,
-  not locations).
-- `Ces éléments sont peut-être déjà de retour`: `de retour` is invariable. The partial result’s second half agrees
-  through its own `{skipped}` plural.
-- The button and the command share `Aller à la corbeille`.
+- Undo → `Annuler` (Undo = Cancel, as on macOS). Edit-menu undo → `Annuler le placement dans la corbeille`: Finder’s
+  noun frame (`Annuler le déplacement de…`) with the ruled noun.
+- Put back → `remettre en place` (Finder `Remettre`); `restaurer` stays for rename undo (names, not places).
+- `de retour` is invariable; the partial result agrees through its `{skipped}` plural.
+- Button and command share `Aller à la corbeille`.
 
 ## Compléter un rapport déjà envoyé : les 11 clés `errorReporter.amend*`
 

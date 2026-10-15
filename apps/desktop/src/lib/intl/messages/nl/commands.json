@@ -262,6 +262,22 @@
   "@commands.paneFocusControls.description": {
     "sourceHash": "e5828ae"
   },
+  "commands.appFocusNotifications.label": "Verplaats focus naar meldingen",
+  "@commands.appFocusNotifications.label": {
+    "sourceHash": "628f0e5"
+  },
+  "commands.appFocusNotifications.description": "Bereik de meldingen en hun knoppen, zoals ‘Zet terug’, met het toetsenbord. Met de pijltoetsen verplaats je de focus ertussen en de Escape-toets brengt je terug.",
+  "@commands.appFocusNotifications.description": {
+    "sourceHash": "87886a4"
+  },
+  "commands.editUndoTrash.label": "Herstel verplaatsen naar prullenmand",
+  "@commands.editUndoTrash.label": {
+    "sourceHash": "c6fea33"
+  },
+  "commands.editUndoTrash.description": "Zet de bestanden terug die je het laatst naar de prullenmand hebt verplaatst",
+  "@commands.editUndoTrash.description": {
+    "sourceHash": "3aa756f"
+  },
   "commands.paneLeftVolumeChooser.label": "Open linker volumekiezer",
   "@commands.paneLeftVolumeChooser.label": {
     "sourceHash": "6210f8e"

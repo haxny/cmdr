@@ -572,7 +572,7 @@
     "sources": "MS terminology (clone → cloner) + the pane ruling (panneau). TC 532 and DC name the same command Cible = Source; Finder has none"
   },
   "close": {
-    "accept": ["ferme", "fermé"],
+    "accept": ["ferme", "fermé", "fermiez", "fermeture"],
     "chosen": "Fermer",
     "confidence": "high",
     "forms": "closes a window or tab (Fermer l’onglet); a notice or toast is dismissed with Ignorer instead",
@@ -1875,6 +1875,7 @@
     "chosen": "Déplacer",
     "confidence": "high",
     "exceptions": {
+      "commands.editUndoTrash.description": "English-sense: moving to the trash is placer dans la corbeille.",
       "errors.mutation.trashRefused": "English-sense: moving to the trash is placer dans la corbeille.",
       "errors.write.fallback.message.trash": "English-sense: moving to the trash is placer dans la corbeille.",
       "errors.write.ioError.message.trash": "English-sense: moving to the trash is placer dans la corbeille.",

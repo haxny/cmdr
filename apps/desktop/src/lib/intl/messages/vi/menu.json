@@ -164,6 +164,10 @@
   "@menu.edit.redo": {
     "sourceHash": "7427398"
   },
+  "menu.edit.undoTrash": "Hoàn tác thao tác chuyển vào thùng rác",
+  "@menu.edit.undoTrash": {
+    "sourceHash": "c6fea33"
+  },
   "menu.edit.cut": "Cắt",
   "@menu.edit.cut": {
     "sourceHash": "1f45f02"

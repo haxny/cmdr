@@ -260,6 +260,22 @@
   "@commands.paneFocusControls.description": {
     "sourceHash": "e5828ae"
   },
+  "commands.appFocusNotifications.label": "Fókusz mozgatása az értesítésekre",
+  "@commands.appFocusNotifications.label": {
+    "sourceHash": "628f0e5"
+  },
+  "commands.appFocusNotifications.description": "Billentyűzetről is elérhetővé teszi az értesítéseket és a gombjaikat, például a „Visszavonás” gombot. A nyílbillentyűk ezek között mozgatják a fókuszt, az Escape billentyűvel pedig visszatérhetsz oda, ahol voltál.",
+  "@commands.appFocusNotifications.description": {
+    "sourceHash": "87886a4"
+  },
+  "commands.editUndoTrash.label": "Kukába helyezés visszavonása",
+  "@commands.editUndoTrash.label": {
+    "sourceHash": "c6fea33"
+  },
+  "commands.editUndoTrash.description": "A legutóbb a Kukába helyezett fájlok visszahelyezése",
+  "@commands.editUndoTrash.description": {
+    "sourceHash": "3aa756f"
+  },
   "commands.paneLeftVolumeChooser.label": "Bal oldali kötetválasztó megnyitása",
   "@commands.paneLeftVolumeChooser.label": {
     "sourceHash": "6210f8e"

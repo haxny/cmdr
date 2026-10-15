@@ -31,6 +31,14 @@
   "@commands.favoritesOpen.description": {
     "sourceHash": "e554df5"
   },
+  "commands.editUndoTrash.label": "Deshacer movimiento al basurero",
+  "@commands.editUndoTrash.label": {
+    "sourceHash": "ae39e1f"
+  },
+  "commands.editUndoTrash.description": "Devuelve a su lugar los archivos que moviste al basurero la última vez",
+  "@commands.editUndoTrash.description": {
+    "sourceHash": "ff1e685"
+  },
   "commands.fileEdit.label": "Editar en el editor predeterminado",
   "@commands.fileEdit.label": {
     "sourceHash": "012941c"

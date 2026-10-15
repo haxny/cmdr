@@ -260,6 +260,22 @@
   "@commands.paneFocusControls.description": {
     "sourceHash": "e5828ae"
   },
+  "commands.appFocusNotifications.label": "将焦点移到通知",
+  "@commands.appFocusNotifications.label": {
+    "sourceHash": "628f0e5"
+  },
+  "commands.appFocusNotifications.description": "用键盘访问通知和通知上的按钮（比如“撤销”）。用方向键在它们之间移动，按 Esc 键返回。",
+  "@commands.appFocusNotifications.description": {
+    "sourceHash": "87886a4"
+  },
+  "commands.editUndoTrash.label": "撤销移到废纸篓",
+  "@commands.editUndoTrash.label": {
+    "sourceHash": "c6fea33"
+  },
+  "commands.editUndoTrash.description": "把你上次移到废纸篓的文件放回原处",
+  "@commands.editUndoTrash.description": {
+    "sourceHash": "3aa756f"
+  },
   "commands.paneLeftVolumeChooser.label": "打开左侧宗卷选择器",
   "@commands.paneLeftVolumeChooser.label": {
     "sourceHash": "6210f8e"

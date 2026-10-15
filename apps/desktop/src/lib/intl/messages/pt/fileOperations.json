@@ -52,6 +52,10 @@
   "@fileOperations.trash.goToTrashAction": {
     "sourceHash": "5332858"
   },
+  "fileOperations.trash.nothingToUndo": "Não há movimentação para o Lixo a desfazer.",
+  "@fileOperations.trash.nothingToUndo": {
+    "sourceHash": "67b73bf"
+  },
   "fileOperations.trash.undoing": "Colocando de volta…",
   "@fileOperations.trash.undoing": {
     "sourceHash": "3272a7a"

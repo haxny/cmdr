@@ -166,6 +166,10 @@
   "@menu.edit.redo": {
     "sourceHash": "7427398"
   },
+  "menu.edit.undoTrash": "Herstel verplaatsen naar prullenmand",
+  "@menu.edit.undoTrash": {
+    "sourceHash": "c6fea33"
+  },
   "menu.edit.cut": "Knip",
   "@menu.edit.cut": {
     "sourceHash": "1f45f02"

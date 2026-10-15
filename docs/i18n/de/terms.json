@@ -1950,6 +1950,7 @@
     "chosen": "in den Papierkorb bewegen",
     "confidence": "high",
     "decision": "Delete-dialog trash switch + transfer From/To groups",
+    "note": "Undo of it (menu.edit.undoTrash, commands.editUndoTrash.label) takes Finder's '<Aktion> widerrufen' frame (In den Papierkorb legen widerrufen) with this verb: In den Papierkorb bewegen widerrufen.",
     "sources": "macOS Finder (Trash ${entities} → ${entities} in den Papierkorb bewegen)"
   },
   "name": {
@@ -3268,7 +3269,7 @@
     "sources": "macOS de; catalog (Klicke unten auf die Taste „+“ …)"
   },
   "undo": {
-    "accept": ["widerrufen", "rückgängig", "zurückgesetzt", "zurückgelegt", "zurückn"],
+    "accept": ["widerrufen", "rückgängig", "zurückgesetzt", "zurückgelegt", "zurückzulegen", "zurückn"],
     "avoid": [
       {
         "form": "Rückgängig",
