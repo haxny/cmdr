@@ -245,13 +245,14 @@ video, flashing, or time limits beyond toasts; native menu bar and context menus
   2026-10-15, gated by `non_text_states.go`. Under Increase contrast every focus ring gains a `--color-focus-ink` layer
   (14.6:1 worst). The marked-file bar is 4.51:1 worst (light) and 4.71:1 (dark) against its row, gated at 3:1 in every
   look by `row_mark_states.go`. The solid and dashed cursor hairlines that tell the panes apart reach 3.83:1 worst under
-  Increase contrast and 4.53:1 under Differentiate without color (both gated), but by default stay subtle by design:
-  1.09:1 solid and 1.17:1 dashed worst (light, Apple Yellow, brown tint), measured not gated; the tab accent bands are
-  1.45:1 (focused) and 1.22:1 (unfocused) worst by default, 5.26:1 for the focused one under Differentiate without
-  color. By default the 2px accent focus ring is under 3:1 on white with Apple Yellow (1.58), Cmdr gold (2.38), Green
-  (2.41), and Orange (2.58). Evidence: `app-field.css` (`--color-field-border`), `app.css` `button:focus-visible`,
-  `--shadow-focus-solid`, § Differentiate without color, `app-file-list.css` cursor rules; ratios from
-  `pnpm check a11y-contrast` (`-- --verbose` lists the measured ones) and `accent_matrix.go` hexes. #440.
+  Increase contrast and 4.53:1 under Differentiate without color (both gated); by default they're measured not gated:
+  the solid accent one stays subtle by design at 1.09:1 worst (light, Apple Yellow, brown tint), the gray dashed one is
+  3.10:1 worst (light, brown tint); the tab accent bands are 1.45:1 (focused) and 1.22:1 (unfocused) worst by default,
+  5.26:1 for the focused one under Differentiate without color. By default the 2px accent focus ring is under 3:1 on
+  white with Apple Yellow (1.58), Cmdr gold (2.38), Green (2.41), and Orange (2.58). Evidence: `app-field.css`
+  (`--color-field-border`), `app.css` `button:focus-visible`, `--shadow-focus-solid`, § Differentiate without color,
+  `app-file-list.css` cursor rules; ratios from `pnpm check a11y-contrast` (`-- --verbose` lists the measured ones) and
+  `accent_matrix.go` hexes. #440.
 - **1.4.12 Text spacing**: Partially supports. Rows have fixed pixel heights with `overflow: hidden`; a 1.5 line height
   fits the Comfortable density but clips in Compact (16 px rows), and middle truncation measures with canvas metrics
   that ignore letter and word spacing overrides. Pending a manual text-spacing test. Evidence: `BriefList.svelte`,

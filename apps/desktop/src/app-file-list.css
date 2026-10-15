@@ -111,8 +111,8 @@
 /* The unfocused pane's cursor keeps its fill and trades the solid hairline for a
    dashed one, so solid vs dashed tells the panes apart without hue (WCAG 1.4.1). A
    1px `outline` (box-shadow can't dash), pulled inside the row like the inset
-   hairline. `--color-cursor-outline-dashed` is a touch stronger than the solid
-   hairline, since dashes ink half the pixels. Skips a folder drop target, whose own
+   hairline. `--color-cursor-outline-dashed` is gray (the control-border tone), so
+   the accent stays the focused pane's. Skips a folder drop target, whose own
    2px outline (`DualPaneExplorer`) must win, and drops into the other pane are the
    common case. */
 .full-list-container:not(.is-focused) .file-entry.is-under-cursor:not(.folder-drop-target),

@@ -182,9 +182,10 @@
      alpha. */
   --color-cursor-outline: color-mix(in oklch, var(--color-accent), transparent 65%);
   /* The unfocused pane draws its cursor hairline DASHED (`app-file-list.css`), so
-     solid vs dashed tells the panes apart. A step stronger than the solid one, since
-     dashes ink half the pixels. */
-  --color-cursor-outline-dashed: color-mix(in oklch, var(--color-accent), transparent 50%);
+     solid vs dashed tells the panes apart. Gray, the control-border tone: the accent
+     belongs to the focused pane. Increase contrast and Differentiate without color
+     lift it to `--color-accent-pop` below. */
+  --color-cursor-outline-dashed: var(--color-control-border);
 
   /* === Tab accent band (`TabBar`'s active tab) ===
      The focused pane's active tab carries the full accent along its top edge; the
@@ -706,7 +707,6 @@
     --color-cursor-inactive: rgba(232, 232, 232, 0.4);
     --color-cursor-active: rgba(212, 160, 6, 0.2);
     --color-cursor-outline: rgba(212, 160, 6, 0.35);
-    --color-cursor-outline-dashed: rgba(212, 160, 6, 0.5);
     --color-tab-band-unfocused: rgba(212, 160, 6, 0.5);
     --color-warning-bg-solid: #f3e5dc;
     --color-disk-ok: #74a376;
@@ -739,7 +739,6 @@
   --color-cursor-inactive: rgba(232, 232, 232, 0.4);
   --color-cursor-active: rgba(212, 160, 6, 0.2);
   --color-cursor-outline: rgba(212, 160, 6, 0.35);
-  --color-cursor-outline-dashed: rgba(212, 160, 6, 0.5);
   --color-tab-band-unfocused: rgba(212, 160, 6, 0.5);
   --color-warning-bg-solid: #f3e5dc;
   --color-disk-ok: #74a376;
@@ -990,7 +989,6 @@
       --color-cursor-inactive: rgba(51, 51, 51, 0.4);
       --color-cursor-active: rgba(255, 194, 6, 0.2);
       --color-cursor-outline: rgba(255, 194, 6, 0.35);
-      --color-cursor-outline-dashed: rgba(255, 194, 6, 0.5);
       --color-tab-band-unfocused: rgba(255, 194, 6, 0.5);
       --color-warning-bg-solid: #483d29;
       --color-disk-ok: #588b5b;
@@ -1017,7 +1015,6 @@
     --color-cursor-inactive: rgba(51, 51, 51, 0.4);
     --color-cursor-active: rgba(255, 194, 6, 0.2);
     --color-cursor-outline: rgba(255, 194, 6, 0.35);
-    --color-cursor-outline-dashed: rgba(255, 194, 6, 0.5);
     --color-tab-band-unfocused: rgba(255, 194, 6, 0.5);
     --color-warning-bg-solid: #483d29;
     --color-disk-ok: #588b5b;
