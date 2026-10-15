@@ -11,6 +11,10 @@
   "@commandPalette.noResults": {
     "sourceHash": "eac0d09"
   },
+  "commandPalette.resultCount": "{count, plural, other {{countText} lệnh}}",
+  "@commandPalette.resultCount": {
+    "sourceHash": "d65fc7d"
+  },
   "commandPalette.resultsAriaLabel": "Lệnh",
   "@commandPalette.resultsAriaLabel": {
     "sourceHash": "b269dc4"

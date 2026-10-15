@@ -11,6 +11,10 @@
   "@commandPalette.noResults": {
     "sourceHash": "eac0d09"
   },
+  "commandPalette.resultCount": "{count, plural, one {{countText} kommando} other {{countText} kommandon}}",
+  "@commandPalette.resultCount": {
+    "sourceHash": "d65fc7d"
+  },
   "commandPalette.resultsAriaLabel": "Kommandon",
   "@commandPalette.resultsAriaLabel": {
     "sourceHash": "b269dc4"

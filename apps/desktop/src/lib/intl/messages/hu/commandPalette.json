@@ -11,6 +11,10 @@
   "@commandPalette.noResults": {
     "sourceHash": "eac0d09"
   },
+  "commandPalette.resultCount": "{count, plural, one {{countText} parancs} other {{countText} parancs}}",
+  "@commandPalette.resultCount": {
+    "sourceHash": "d65fc7d"
+  },
   "commandPalette.resultsAriaLabel": "Parancsok",
   "@commandPalette.resultsAriaLabel": {
     "sourceHash": "b269dc4"

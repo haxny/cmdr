@@ -51,6 +51,18 @@
   "@fileExplorer.pane.location": {
     "sourceHash": "8b5ce0b"
   },
+  "fileExplorer.pane.locationEmpty": "{location}, lege map",
+  "@fileExplorer.pane.locationEmpty": {
+    "sourceHash": "4c4231e"
+  },
+  "fileExplorer.pane.selectedCount": "{count, plural, =0 {Niets geselecteerd} one {{countText} geselecteerd} other {{countText} geselecteerd}}",
+  "@fileExplorer.pane.selectedCount": {
+    "sourceHash": "5f3960b"
+  },
+  "fileExplorer.pane.filterMatches": "{count, plural, =0 {Geen naam bevat ‘{pattern}’} one {{countText} naam bevat ‘{pattern}’} other {{countText} namen bevatten ‘{pattern}’}}",
+  "@fileExplorer.pane.filterMatches": {
+    "sourceHash": "22e1cd2"
+  },
   "fileExplorer.pane.searchResultsLocation": "Zoekresultaten",
   "@fileExplorer.pane.searchResultsLocation": {
     "sourceHash": "e978b00"

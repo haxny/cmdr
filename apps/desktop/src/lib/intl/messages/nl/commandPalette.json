@@ -11,6 +11,10 @@
   "@commandPalette.noResults": {
     "sourceHash": "eac0d09"
   },
+  "commandPalette.resultCount": "{count, plural, one {{countText} opdracht} other {{countText} opdrachten}}",
+  "@commandPalette.resultCount": {
+    "sourceHash": "d65fc7d"
+  },
   "commandPalette.resultsAriaLabel": "Opdrachten",
   "@commandPalette.resultsAriaLabel": {
     "sourceHash": "b269dc4"

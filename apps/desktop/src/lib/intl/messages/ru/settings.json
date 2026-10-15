@@ -2158,6 +2158,10 @@
   "@settings.sidebar.sections": {
     "sourceHash": "e26d51d"
   },
+  "settings.sidebar.matchCount": "{count, plural, =0 {Настройки не найдены} one {Найден {countText} раздел} few {Найдено {countText} раздела} many {Найдено {countText} разделов} other {Найдено {countText} раздела}}",
+  "@settings.sidebar.matchCount": {
+    "sourceHash": "fb95dc1"
+  },
   "settings.appearance.themeColorSwatchAria": "Открыть Системные настройки, чтобы изменить цвет системной темы",
   "@settings.appearance.themeColorSwatchAria": {
     "sourceHash": "4cad022"

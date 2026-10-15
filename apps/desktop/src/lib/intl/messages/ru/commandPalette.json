@@ -11,6 +11,10 @@
   "@commandPalette.noResults": {
     "sourceHash": "eac0d09"
   },
+  "commandPalette.resultCount": "{count, plural, one {{countText} команда} few {{countText} команды} many {{countText} команд} other {{countText} команды}}",
+  "@commandPalette.resultCount": {
+    "sourceHash": "d65fc7d"
+  },
   "commandPalette.resultsAriaLabel": "Команды",
   "@commandPalette.resultsAriaLabel": {
     "sourceHash": "b269dc4"

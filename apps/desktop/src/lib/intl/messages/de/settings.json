@@ -2170,6 +2170,10 @@
   "@settings.sidebar.sections": {
     "sourceHash": "e26d51d"
   },
+  "settings.sidebar.matchCount": "{count, plural, =0 {Keine passenden Einstellungen} one {{countText} Abschnitt passt} other {{countText} Abschnitte passen}}",
+  "@settings.sidebar.matchCount": {
+    "sourceHash": "fb95dc1"
+  },
   "settings.appearance.themeColorSwatchAria": "Systemeinstellungen öffnen, um die System-Akzentfarbe zu ändern",
   "@settings.appearance.themeColorSwatchAria": {
     "sourceHash": "4cad022"

@@ -214,9 +214,8 @@ Placeholder `預留位置`, deployment `部署`, endpoint `端點` (all MS). The
 
 ## Show in Finder takeover (`main.revealNudge.*`, `main.revealActivation.*`, `settings.behavior.reveal*`, `settings.revealHandler.notProductionBuild`)
 
-`「在 Finder 中顯示」` quoted, as the settings card. "For a while now" `有一陣子了`, ❌ never a day count. The
-first-takeover notice explains, it doesn't apologize. Dev and test builds `開發版和測試版`, a released copy
-`正式發行的 Cmdr 版本` (MS), ❌ not `建置` / `組建`.
+`「在 Finder 中顯示」` quoted, as the settings card. "For a while now" `有一陣子了`, ❌ never a day count. Dev and test
+builds `開發版和測試版`, a released copy `正式發行的 Cmdr 版本` (MS), ❌ not `建置` / `組建`.
 
 ## Onboarding checklist, step count, and toggle summaries (`onboarding.stepBeta.*`, `onboarding.stepOptional.*`, `onboarding.moreAbout`, `onboarding.wizard.*`)
 
@@ -227,7 +226,6 @@ first-takeover notice explains, it doesn't apologize. Dev and test builds `開�
 - The `<alpha>` badge is `標記`, ❌ not `徽章` (achievements) nor `標籤` (tag). `「區域網路」` keeps `取用` outside the
   brackets. `{mandatory}+1` is literal.
 - Fetch (the viewer pulls a file to a temp copy) `取得`, ❌ not Finder's `下載` (a phone or archive isn't a download).
-  Byte progress `{doneText} / {totalText}`, spaced because the units hold spaces.
 
 ## The phone's stale-index hint (`fileExplorer.navigation.driveIndex.tooltipStalePhone`, `indexing.staleDialog.titlePhone`, `.bodyPhone`)
 
@@ -242,14 +240,14 @@ wrong `出了點狀況`.
 
 ## A share the server says doesn't exist (`fileExplorer.network.osMountFallback.shareNotOnServer`, `fileExplorer.pane.directConnectionShareNotOnServerToast`)
 
-The one case where waiting can't help, so no temporary tone (no `現在`, no `再試一次`): `這種情況等下去也不會好`.
+Waiting can't help here, so no temporary tone (no `現在`, no `再試一次`): `這種情況等下去也不會好`.
 
 ## A drive gone mid-work (`fileExplorer.navigation.driveIndex.driveLeaving`, `indexing.needsFreshScan.afterDisconnect`, `errors.write.deviceDisconnected.*`, `errors.write.moveNotConfirmed.*`)
 
 - The dialog title says `中斷連線`, its body `斷線了`: the family's existing split, not drift. In progress
   `正在中斷連線`; already gone `中斷了連線`.
-- The sided bodies never label source or target: which name sits where tells it. `把 {total} 個檔案中的 {done} 個…`; the
-  rest is placed explicitly (`還在磁碟機上`); `你原本的檔案`, `什麼都沒被丟掉`.
+- Sided bodies never label source or target. `把 {total} 個檔案中的 {done} 個…`; the rest is placed explicitly
+  (`還在磁碟機上`); `你原本的檔案`, `什麼都沒被丟掉`.
 - A move that couldn't be confirmed is ❌ never a failure (`無法確認這次移動`): Cmdr kept the originals on purpose, so
   `把你原本的檔案留在原處沒有動` keeps Cmdr as the subject. `原處` is right here: those files never left.
 
@@ -271,8 +269,7 @@ The one case where waiting can't help, so no temporary tone (no `現在`, no `�
 
 ## The title-bar full-disk-access badge (`onboarding.fdaBadge.*`, `onboarding.stepAi.bannerTitle.denied`)
 
-`沒有「完全取用磁碟」權限`: TW `完全取用磁碟` over HK `完整磁碟取用`, bracketed as the System Settings item. The aria
-opens with the label verbatim.
+`沒有「完全取用磁碟」權限`: TW `完全取用磁碟` over HK `完整磁碟取用`, bracketed as the System Settings item.
 
 ## The trash refusal dialog (`errors.write.trashRefused.*`, `errors.write.fallback.title.trash`, `errors.write.ioError.title.trash`, `errors.write.readError.title.trash`, `errors.write.writeError.title.trash`)
 
@@ -316,3 +313,7 @@ Allow `允許` (TCC's permission button), ❌ not `同意`, which is approve. Ev
 
 - The text caret is Apple's `插入點` (AP-TW `文字插入點`), ❌ not `游標`: that's this catalog's pane cursor. Point at it
   → `把指標停在…上` (Apple `指標`).
+
+## Spoken counts (`fileOperations.transferProgress.*ValueText`, `viewer.pull.progress`, `settings.sidebar.matchCount`)
+
+X of Y `{doneText}，共 {totalText}`, ❌ `/` (spoken). Section `區段`, ❌ `部分` (= partly).

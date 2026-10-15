@@ -736,6 +736,18 @@
   "@fileOperations.transferProgress.fileProgressAria": {
     "sourceHash": "07db117"
   },
+  "fileOperations.transferProgress.sizeProgressValueText": "{doneText} из {totalText}",
+  "@fileOperations.transferProgress.sizeProgressValueText": {
+    "sourceHash": "edce3be"
+  },
+  "fileOperations.transferProgress.fileProgressValueText": "{count, plural, one {{doneText} из {totalText} файла} few {{doneText} из {totalText} файлов} many {{doneText} из {totalText} файлов} other {{doneText} из {totalText} файла}}",
+  "@fileOperations.transferProgress.fileProgressValueText": {
+    "sourceHash": "56bd593"
+  },
+  "fileOperations.transferProgress.itemProgressValueText": "{count, plural, one {{doneText} из {totalText} объекта} few {{doneText} из {totalText} объектов} many {{doneText} из {totalText} объектов} other {{doneText} из {totalText} объекта}}",
+  "@fileOperations.transferProgress.itemProgressValueText": {
+    "sourceHash": "e5c35e6"
+  },
   "fileOperations.transferProgress.etaRemaining": "Осталось: {duration}",
   "@fileOperations.transferProgress.etaRemaining": {
     "sourceHash": "a6b154c"

@@ -2161,6 +2161,10 @@
   "@settings.sidebar.sections": {
     "sourceHash": "e26d51d"
   },
+  "settings.sidebar.matchCount": "{count, plural, =0 {没有匹配的设置} other {{countText} 个部分匹配}}",
+  "@settings.sidebar.matchCount": {
+    "sourceHash": "fb95dc1"
+  },
   "settings.appearance.themeColorSwatchAria": "打开“系统设置”以更改系统主题色",
   "@settings.appearance.themeColorSwatchAria": {
     "sourceHash": "4cad022"

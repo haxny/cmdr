@@ -737,6 +737,18 @@
   "@fileOperations.transferProgress.fileProgressAria": {
     "sourceHash": "07db117"
   },
+  "fileOperations.transferProgress.sizeProgressValueText": "{doneText}, összesen {totalText}",
+  "@fileOperations.transferProgress.sizeProgressValueText": {
+    "sourceHash": "edce3be"
+  },
+  "fileOperations.transferProgress.fileProgressValueText": "{count, plural, one {{doneText}, összesen {totalText} fájl} other {{doneText}, összesen {totalText} fájl}}",
+  "@fileOperations.transferProgress.fileProgressValueText": {
+    "sourceHash": "56bd593"
+  },
+  "fileOperations.transferProgress.itemProgressValueText": "{count, plural, one {{doneText}, összesen {totalText} elem} other {{doneText}, összesen {totalText} elem}}",
+  "@fileOperations.transferProgress.itemProgressValueText": {
+    "sourceHash": "e5c35e6"
+  },
   "fileOperations.transferProgress.etaRemaining": "{duration} van hátra",
   "@fileOperations.transferProgress.etaRemaining": {
     "sourceHash": "a6b154c"

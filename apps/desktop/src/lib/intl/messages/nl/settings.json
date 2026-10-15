@@ -2172,6 +2172,10 @@
   "@settings.sidebar.sections": {
     "sourceHash": "e26d51d"
   },
+  "settings.sidebar.matchCount": "{count, plural, =0 {Geen overeenkomende instellingen} one {{countText} onderdeel komt overeen} other {{countText} onderdelen komen overeen}}",
+  "@settings.sidebar.matchCount": {
+    "sourceHash": "fb95dc1"
+  },
   "settings.appearance.themeColorSwatchAria": "Open Systeeminstellingen om de systeemthemakleur te wijzigen",
   "@settings.appearance.themeColorSwatchAria": {
     "sourceHash": "4cad022"

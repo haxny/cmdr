@@ -51,6 +51,18 @@
   "@fileExplorer.pane.location": {
     "sourceHash": "8b5ce0b"
   },
+  "fileExplorer.pane.locationEmpty": "{location}, dossier vide",
+  "@fileExplorer.pane.locationEmpty": {
+    "sourceHash": "4c4231e"
+  },
+  "fileExplorer.pane.selectedCount": "{count, plural, =0 {Aucune sélection} one {{countText} sélectionné} many {{countText} sélectionnés} other {{countText} sélectionnés}}",
+  "@fileExplorer.pane.selectedCount": {
+    "sourceHash": "5f3960b"
+  },
+  "fileExplorer.pane.filterMatches": "{count, plural, =0 {Aucun nom ne contient « {pattern} »} one {{countText} nom contient « {pattern} »} many {{countText} noms contiennent « {pattern} »} other {{countText} noms contiennent « {pattern} »}}",
+  "@fileExplorer.pane.filterMatches": {
+    "sourceHash": "22e1cd2"
+  },
   "fileExplorer.pane.searchResultsLocation": "Résultats de recherche",
   "@fileExplorer.pane.searchResultsLocation": {
     "sourceHash": "e978b00"

@@ -738,6 +738,18 @@
   "@fileOperations.transferProgress.fileProgressAria": {
     "sourceHash": "07db117"
   },
+  "fileOperations.transferProgress.sizeProgressValueText": "{doneText} sur {totalText}",
+  "@fileOperations.transferProgress.sizeProgressValueText": {
+    "sourceHash": "edce3be"
+  },
+  "fileOperations.transferProgress.fileProgressValueText": "{count, plural, one {{doneText} sur {totalText} fichier} many {{doneText} sur {totalText} fichiers} other {{doneText} sur {totalText} fichiers}}",
+  "@fileOperations.transferProgress.fileProgressValueText": {
+    "sourceHash": "56bd593"
+  },
+  "fileOperations.transferProgress.itemProgressValueText": "{count, plural, one {{doneText} sur {totalText} élément} many {{doneText} sur {totalText} éléments} other {{doneText} sur {totalText} éléments}}",
+  "@fileOperations.transferProgress.itemProgressValueText": {
+    "sourceHash": "e5c35e6"
+  },
   "fileOperations.transferProgress.etaRemaining": "{duration} restant",
   "@fileOperations.transferProgress.etaRemaining": {
     "sourceHash": "a6b154c"

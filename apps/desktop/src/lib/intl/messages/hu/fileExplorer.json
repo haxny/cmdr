@@ -51,6 +51,18 @@
   "@fileExplorer.pane.location": {
     "sourceHash": "8b5ce0b"
   },
+  "fileExplorer.pane.locationEmpty": "{location}, üres mappa",
+  "@fileExplorer.pane.locationEmpty": {
+    "sourceHash": "4c4231e"
+  },
+  "fileExplorer.pane.selectedCount": "{count, plural, =0 {Nincs kijelölés} one {{countText} kijelölve} other {{countText} kijelölve}}",
+  "@fileExplorer.pane.selectedCount": {
+    "sourceHash": "5f3960b"
+  },
+  "fileExplorer.pane.filterMatches": "{count, plural, =0 {Egyetlen név sem tartalmazza ezt: „{pattern}”} one {{countText} név tartalmazza ezt: „{pattern}”} other {{countText} név tartalmazza ezt: „{pattern}”}}",
+  "@fileExplorer.pane.filterMatches": {
+    "sourceHash": "22e1cd2"
+  },
   "fileExplorer.pane.searchResultsLocation": "Keresési találatok",
   "@fileExplorer.pane.searchResultsLocation": {
     "sourceHash": "e978b00"

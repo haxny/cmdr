@@ -51,6 +51,18 @@
   "@fileExplorer.pane.location": {
     "sourceHash": "8b5ce0b"
   },
+  "fileExplorer.pane.locationEmpty": "{location}，空的資料夾",
+  "@fileExplorer.pane.locationEmpty": {
+    "sourceHash": "4c4231e"
+  },
+  "fileExplorer.pane.selectedCount": "{count, plural, =0 {未選取項目} other {已選取 {countText} 個項目}}",
+  "@fileExplorer.pane.selectedCount": {
+    "sourceHash": "5f3960b"
+  },
+  "fileExplorer.pane.filterMatches": "{count, plural, =0 {沒有名稱包含「{pattern}」} other {有 {countText} 個名稱包含「{pattern}」}}",
+  "@fileExplorer.pane.filterMatches": {
+    "sourceHash": "22e1cd2"
+  },
   "fileExplorer.pane.searchResultsLocation": "搜尋結果",
   "@fileExplorer.pane.searchResultsLocation": {
     "sourceHash": "e978b00"

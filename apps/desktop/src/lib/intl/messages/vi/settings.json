@@ -2161,6 +2161,10 @@
   "@settings.sidebar.sections": {
     "sourceHash": "e26d51d"
   },
+  "settings.sidebar.matchCount": "{count, plural, =0 {Không có cài đặt nào khớp} other {{countText} mục khớp}}",
+  "@settings.sidebar.matchCount": {
+    "sourceHash": "fb95dc1"
+  },
   "settings.appearance.themeColorSwatchAria": "Mở Cài đặt hệ thống để đổi màu giao diện hệ thống",
   "@settings.appearance.themeColorSwatchAria": {
     "sourceHash": "4cad022"

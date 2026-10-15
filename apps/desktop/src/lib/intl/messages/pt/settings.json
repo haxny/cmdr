@@ -2163,6 +2163,10 @@
   "@settings.sidebar.sections": {
     "sourceHash": "e26d51d"
   },
+  "settings.sidebar.matchCount": "{count, plural, =0 {Nenhum ajuste corresponde} one {{countText} seção corresponde} many {{countText} seções correspondem} other {{countText} seções correspondem}}",
+  "@settings.sidebar.matchCount": {
+    "sourceHash": "fb95dc1"
+  },
   "settings.appearance.themeColorSwatchAria": "Abrir os Ajustes do Sistema para mudar a cor do tema do sistema",
   "@settings.appearance.themeColorSwatchAria": {
     "sourceHash": "4cad022"

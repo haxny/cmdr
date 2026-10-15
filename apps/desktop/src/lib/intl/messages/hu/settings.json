@@ -2163,6 +2163,10 @@
   "@settings.sidebar.sections": {
     "sourceHash": "e26d51d"
   },
+  "settings.sidebar.matchCount": "{count, plural, =0 {Nincs egyező beállítás} one {{countText} szakaszban van találat} other {{countText} szakaszban van találat}}",
+  "@settings.sidebar.matchCount": {
+    "sourceHash": "fb95dc1"
+  },
   "settings.appearance.themeColorSwatchAria": "A Rendszerbeállítások megnyitása a rendszer témaszínének módosításához",
   "@settings.appearance.themeColorSwatchAria": {
     "sourceHash": "4cad022"

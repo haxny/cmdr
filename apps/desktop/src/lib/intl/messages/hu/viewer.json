@@ -63,7 +63,7 @@
   "@viewer.pull.title": {
     "sourceHash": "3a02768"
   },
-  "viewer.pull.progress": "{doneText} / {totalText}",
+  "viewer.pull.progress": "{doneText}, összesen {totalText}",
   "@viewer.pull.progress": {
     "sourceHash": "edce3be"
   },

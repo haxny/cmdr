@@ -7,6 +7,9 @@ rule into `translation-principles.md` or `translator-instructions.md`), then del
 
 ## Open
 
+- `fileExplorer.pane.selectedCount`: English has only `=0` and `other`, so every `one`-category locale fails `plural`
+  until it adds a `one` branch (nl copied `other`). Add `one {{countText} selected}` to the English so translators see
+  it.
 - `git` is a product name the descriptions say to keep, but it isn't in `BRAND_WORDS`
   (`apps/desktop/scripts/i18n-catalog-lib.ts`), so nothing enforces it.
 
@@ -333,3 +336,7 @@ rule into `translation-principles.md` or `translator-instructions.md`), then del
   `menu.go.parentFolder` ("Parent folder", the Go command, which follows Finder's Enclosing Folder: ru
   `На уровень выше`). The description asks for a noun, so the row reads `Родительская папка`. Reword one English source,
   or add a term-consistency allowlist entry per locale (ru needs one now). (ru)
+- Term consistency ties `fileOperations.transferProgress.sizeProgressValueText` (spoken by a screen reader) to
+  `viewer.pull.progress` (a visible line), both "{doneText} of {totalText}". A compact slash suits the visible line but
+  reads badly aloud. hu realigned both to its shipped `{free} szabad, összesen {total}` frame; vi, zh, and zh-Hant now
+  diverge. Reword one English source, or allow the split per locale. (hu)

@@ -2170,6 +2170,10 @@
   "@settings.sidebar.sections": {
     "sourceHash": "e26d51d"
   },
+  "settings.sidebar.matchCount": "{count, plural, =0 {Inga inställningar matchar} one {{countText} sektion matchar} other {{countText} sektioner matchar}}",
+  "@settings.sidebar.matchCount": {
+    "sourceHash": "fb95dc1"
+  },
   "settings.appearance.themeColorSwatchAria": "Öppna Systeminställningar för att ändra systemets temafärg",
   "@settings.appearance.themeColorSwatchAria": {
     "sourceHash": "4cad022"
