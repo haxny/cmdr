@@ -33,6 +33,8 @@ var allowedUnusedClasses = map[string]bool{
 	"increase-contrast": true,
 	// app.css - macOS Differentiate without color, toggled on <html> the same way
 	"differentiate-without-color": true,
+	// app-utilities.css - macOS Show borders, toggled on <html> the same way
+	"show-borders": true,
 	// Button.svelte - classes constructed dynamically via template strings (btn-{variant}, btn-{size})
 	"btn-primary":   true,
 	"btn-secondary": true,
