@@ -1540,8 +1540,10 @@ the start, side by side and outside the stack: a polite one for `default` / `inf
 - **Siblings, never nested.** Per-toast `role="alert"` inside an `aria-live="polite"` container gave one toast two
   politeness levels; a frame that is itself a region would also speak twice.
 - **The words come off the rendered body** (`toastSpeech`): text only, buttons and links left out (focus names them
-  where they are), `aria-hidden` left out (the age label). So a component toast speaks like a string one. Each post and
-  each same-id re-raise speaks again; it's news even with the same words.
+  where they are), `aria-hidden` left out (the age label). A link inside a sentence stays in, or "configurable in
+  <Settings > Keyboard shortcuts>." would say "configurable in ."; "inside a sentence" means its row has words of its
+  own outside any control, so an action row never qualifies. So a component toast speaks like a string one. Each post
+  and each same-id re-raise speaks again; it's news even with the same words.
 - **One message per region per turn.** `LiveAnnouncer` keeps only the newest message asked within a frame, so toasts
   raised together are joined before they reach it.
 - A component body may still carry its own `role="alert"` for news that lands in place without a re-raise

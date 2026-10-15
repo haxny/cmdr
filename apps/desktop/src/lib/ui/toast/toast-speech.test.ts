@@ -24,6 +24,14 @@ describe('toastSpeech', () => {
     expect(toastSpeech(element)).toBe('Moved 3 files to the trash.')
   })
 
+  it('keeps a link that sits inside a sentence, which is part of what the sentence says', () => {
+    const element = body(
+      '<div><p>All of this is configurable in <button>Settings &gt; Keyboard shortcuts</button>.</p>' +
+        '<div><button>Don’t show again</button></div></div>',
+    )
+    expect(toastSpeech(element)).toBe('All of this is configurable in Settings > Keyboard shortcuts.')
+  })
+
   it('leaves out what is hidden from assistive tech, like the age label', () => {
     expect(toastSpeech(body('<span aria-hidden="true">2m ago</span><span>Saved.</span>'))).toBe('Saved.')
   })
