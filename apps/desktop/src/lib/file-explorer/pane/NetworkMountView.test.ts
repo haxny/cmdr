@@ -23,6 +23,7 @@ const h = vi.hoisted(() => ({
   fetchShares: vi.fn(),
   mountNetworkShare: vi.fn(),
   saveSmbCredentials: vi.fn(),
+  setSmbAccountPreference: vi.fn(() => Promise.resolve(true)),
   getSmbCredentials: vi.fn(),
   resolvePathVolume: vi.fn(),
   updateLeftPaneState: vi.fn(() => Promise.resolve()),
@@ -35,6 +36,7 @@ vi.mock('#lib/tauri-commands/index.js', () => ({
   mountNetworkShare: h.mountNetworkShare,
   resolvePathVolume: h.resolvePathVolume,
   saveSmbCredentials: h.saveSmbCredentials,
+  setSmbAccountPreference: h.setSmbAccountPreference,
   getSmbCredentials: h.getSmbCredentials,
   listSharesWithCredentials: vi.fn(() => Promise.resolve({ shares: [], authMode: 'unknown', fromCache: false })),
   isUsingCredentialFileFallback: vi.fn(() => Promise.resolve(false)),
@@ -241,6 +243,33 @@ describe('NetworkMountView mount-failure auth loop', () => {
 
     expect(outcome).toEqual({ kind: 'refused', refusal: 'authentication_rejected' })
     expect(h.saveSmbCredentials).not.toHaveBeenCalled()
+    expect(h.setSmbAccountPreference, 'a refused account is not the host account').not.toHaveBeenCalled()
+
+    await unmount(component)
+  })
+
+  // cmdr-reports#27: a share guests can list but not open asked for the password on every
+  // mount, because the account that got in was never made the host's account, so the next
+  // visit listed and mounted as guest again.
+  it("makes the account that got in the host's account, so the next visit signs in as it", async () => {
+    h.mountNetworkShare
+      .mockRejectedValueOnce(refused(authRequired))
+      .mockResolvedValueOnce({ mountPath: '/Volumes/naspi', alreadyMounted: false })
+    const { component } = await mountViewAndActivateShare()
+
+    await vi.waitFor(() => {
+      expect(h.openSignInSheet).toHaveBeenCalled()
+    })
+
+    await sheetRequest().attempt({
+      mode: 'sign-in',
+      secret: { secret: 'hunter2', remember: true },
+      username: 'david',
+    })
+
+    await vi.waitFor(() => {
+      expect(h.setSmbAccountPreference).toHaveBeenCalledWith('Naspolya', 'david')
+    })
 
     await unmount(component)
   })

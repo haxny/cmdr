@@ -7,6 +7,7 @@
         mountNetworkShare,
         resolvePathVolume,
         saveSmbCredentials,
+        setSmbAccountPreference,
         updateLeftPaneState,
         updateRightPaneState,
     } from '#lib/tauri-commands/index.js'
@@ -428,6 +429,10 @@
         const credentials = answer.username === null ? null : { username: answer.username, password: answer.password ?? '' }
         const error = await mountShare(share, credentials)
         if (!error) {
+            // ❗ The account that got in becomes the host's account, as "Sign in as…" does, so
+            // the next visit lists and mounts as it. Without this, a share guests can list but
+            // not open asked for the password on every mount (cmdr-reports#27).
+            if (credentials) void setSmbAccountPreference(hostName, credentials.username).catch(() => {})
             if (credentials && answer.remember && answer.password !== null) {
                 try {
                     await saveSmbCredentials(hostName, null, credentials.username, answer.password)

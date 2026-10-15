@@ -40,9 +40,6 @@
     "file-explorer/pane/FilePane.svelte": {
       "reason": "Tested in integration.test.ts, complex component"
     },
-    "file-explorer/pane/NetworkMountView.svelte": {
-      "reason": "Network mount UI, depends on Tauri APIs"
-    },
     "file-explorer/pane/PaneResizer.svelte": {
       "reason": "Mouse drag UI component, difficult to unit test"
     },
