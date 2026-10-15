@@ -1399,6 +1399,7 @@
             tabs={getAllTabs(tabMgr)}
             activeTabId={tabMgr.activeTabId}
             {paneId}
+            isPaneFocused={focusedPane === paneId}
             maxTabs={MAX_TABS_PER_PANE}
             drag={tabDrag.forPane(paneId)}
             onTabSwitch={(tabId: TabId) => {

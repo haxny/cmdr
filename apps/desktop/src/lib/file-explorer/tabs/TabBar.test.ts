@@ -40,6 +40,7 @@ interface MountOptions {
   onTabSwitch?: (tabId: string) => void
   onPaneFocus?: () => void
   paneId?: 'left' | 'right'
+  isPaneFocused?: boolean
 }
 
 function mountTabBar(target: HTMLElement, opts: MountOptions = {}) {
@@ -51,6 +52,7 @@ function mountTabBar(target: HTMLElement, opts: MountOptions = {}) {
       tabs,
       activeTabId: 't1',
       paneId,
+      isPaneFocused: opts.isPaneFocused ?? true,
       maxTabs: 10,
       drag: (opts.controller ?? dragControllerFor(tabs)).forPane(paneId),
       onTabSwitch: opts.onTabSwitch ?? noop,
@@ -79,6 +81,25 @@ describe('TabBar tablist name', () => {
     await tick()
 
     expect(target.querySelector('[role="tablist"]')?.getAttribute('aria-label')).toBe(expected)
+  })
+})
+
+/** The focused pane's bar carries the full accent band; the other pane's bar a faint one. */
+describe('TabBar pane focus', () => {
+  beforeEach(() => {
+    document.body.innerHTML = ''
+  })
+
+  it.each([
+    [true, true],
+    [false, false],
+  ])('marks the bar pane-focused=%s', async (isPaneFocused, expected) => {
+    const target = document.createElement('div')
+    document.body.appendChild(target)
+    mountTabBar(target, { isPaneFocused })
+    await tick()
+
+    expect(target.querySelector('.tab-bar')?.classList.contains('pane-focused')).toBe(expected)
   })
 })
 

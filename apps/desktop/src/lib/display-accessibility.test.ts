@@ -1,9 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import {
-  initDisplayAccessibility,
-  cleanupDisplayAccessibility,
-  simulateDisplayAccessibility,
-} from './display-accessibility'
+import { initDisplayAccessibility, cleanupDisplayAccessibility } from './display-accessibility'
 
 interface Options {
   reduceTransparency: boolean
@@ -95,13 +91,5 @@ describe('display accessibility', () => {
     mediaMatches = false
     mediaListener?.({ matches: false })
     expect(has('increase-contrast')).toBe(false)
-  })
-
-  it('lets a dev simulation force an option on and back off', async () => {
-    await initDisplayAccessibility()
-    simulateDisplayAccessibility({ differentiateWithoutColor: true })
-    expect(has('differentiate-without-color')).toBe(true)
-    simulateDisplayAccessibility({ differentiateWithoutColor: false })
-    expect(has('differentiate-without-color')).toBe(false)
   })
 })

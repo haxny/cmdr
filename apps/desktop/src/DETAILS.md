@@ -67,8 +67,6 @@ so they follow System Settings live.
   for Differentiate without color at all. `increase-contrast` is ALSO on when `prefers-contrast: more` matches, so a
   webview that reflects it (Linux) gets the same styling. Style off the class, ❌ never the media query: one source
   keeps the two from drifting.
-- **Dev simulation**: `simulateDisplayAccessibility()` forces an option on without touching System Settings (Debug >
-  Appearance drives it). An option is on when macOS OR the simulation says so.
 
 ## Window drag strips sit at `--z-sticky`, under every menu
 
@@ -83,7 +81,7 @@ its first two options landed under the strip and couldn't be picked. Anything a 
 
 ## Global stylesheets
 
-Eight sheets, all global (no Svelte scoping). Who owns what:
+Seven sheets, all global (no Svelte scoping). Who owns what:
 
 - `app.css`: the design tokens (`:root`, plus the dark-mode, Increase contrast, reduced-transparency, and old-WebKit
   override blocks), then the base element styles (focus ring, typography layer, `html` / `body`, `#app-root`).
@@ -96,21 +94,19 @@ Eight sheets, all global (no Svelte scoping). Who owns what:
   `.spinner*`).
 - `app-tooltip.css`: `.cmdr-tooltip`, the singleton element the tooltip action creates.
 - `app-file-list.css`: the `.file-entry` row chrome that `FullList.svelte` and `BriefList.svelte` share (stripe,
-  selection fill, selected-row hairline, cursor fill and outline). Only rules that were identical in both views live
-  here; see `lib/file-explorer/views/DETAILS.md` for what stayed per-view and why.
-- `app-visual-cues.css`: the non-color state cues (GitHub issue #440). The Differentiate without color behavior (keyed
-  on `html.differentiate-without-color`) plus the dev-only design proposals keyed on `data-cue-*` attributes that only
-  Debug > Visual cues sets. Every selector starts at `html`, so it out-ranks the row and focus rules it overrides.
+  selection fill, selected-row hairline, the marked-file bar and text stroke, cursor fill and outline, the unfocused
+  pane's dashed cursor outline). Only rules that were identical in both views live here; see
+  `lib/file-explorer/views/DETAILS.md` for what stayed per-view and why.
 
 ### Cascade order is load order, and it's manual
 
-`app.css` `@import`s the two order-independent sheets (palette, reset) at its top. The other five are imported from
+`app.css` `@import`s the two order-independent sheets (palette, reset) at its top. The other four are imported from
 `routes/+layout.svelte`, in a fixed order, AFTER `app.css`.
 
 **Why:** a CSS `@import` must sit at the top of its sheet, so `@import`-ing a sheet whose rules belong at the END would
 put them BEFORE everything that precedes them today. Wherever specificity ties, the winner flips, and the regression is
 invisible until someone notices a wrong border weeks later. Importing from the layout is what reproduces the original
-single-file order exactly. So: don't convert those five to `@import`s, and don't reorder the imports in the layout.
+single-file order exactly. So: don't convert those four to `@import`s, and don't reorder the imports in the layout.
 
 ### Moving a rule out of a component costs a class of specificity
 

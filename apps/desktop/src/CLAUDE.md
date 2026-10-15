@@ -9,9 +9,8 @@ it; feature must-knows live in each directory's colocated `CLAUDE.md`, and the m
   `--spacing-*` / `--font-size-*` / `--radius-*` token, a `z-index` ≥ 10, or a non-token `font-family`:
   `declaration-property-value-disallowed-list` flags exactly those. Token-less values (1px borders, negative nudges,
   display font sizes) may stay raw, with a `stylelint-disable` + `-- reason`.
-- Global CSS is `app.css` (tokens, base) plus `app-field` / `app-utilities` / `app-tooltip` / `app-file-list` /
-  `app-visual-cues`, loaded AFTER it by `routes/+layout.svelte`. Never `@import` those five: that hoists and inverts the
-  cascade.
+- Global CSS is `app.css` (tokens, base) plus `app-field` / `app-utilities` / `app-tooltip` / `app-file-list`, loaded
+  AFTER it by `routes/+layout.svelte`. Never `@import` those four: that hoists and inverts the cascade.
 - ❌ Never write a raw `line-height` number (stylelint rejects all but `0`). Leading comes from the
   `--font-line-height-*` tokens, which text surfaces inherit, so a component usually writes nothing. Which token where:
   `docs/design-system.md` § Leading; who inherits what: `DETAILS.md` § Leading.

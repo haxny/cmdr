@@ -9,7 +9,9 @@ Virtual-scrolling file list components rendering 100k+ directories without DOM p
 `brief-column-widths.svelte.ts` beside Brief. `virtual-scroll.ts` is pure window math, `measure-column-widths.ts` is
 pixel-accurate width measurement via `@chenglou/pretext`, and the `*-utils.ts` trio holds the rendering helpers.
 `list-focus.svelte.ts` gives both listboxes their focus and `aria-activedescendant` (❌ focus never on a row), and
-`file-row-a11y.ts` is what every row says (id, name, marked, position); ❌ no per-view copy.
+`file-row-a11y.ts` is what every row says (id, name, marked, position); ❌ no per-view copy. `mark-run.ts` gives the
+marked-file bar its run ends from the marked set by global index, ❌ never from rendered neighbors (the virtual window's
+edge would fake an end).
 
 ## Must-knows
 

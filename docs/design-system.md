@@ -35,8 +35,8 @@ Hover and focus variants are derived, not hardcoded, because the base color is d
 `--color-accent-pop` is a higher-contrast accent for small marks sitting ON accent-tinted surfaces (the symlink badge
 over a gold folder icon), where plain `--color-accent` would blend in. It flips direction by scheme: darker than the
 accent in light mode, lighter in dark mode. That also makes it the accent for a state MARK that needs 3:1 against any
-surface with any accent (worst 4.81:1 light, 5.98:1 dark): the Differentiate without color pane bar and the Increase
-contrast cursor hairline.
+surface with any accent (worst 4.81:1 light, 5.98:1 dark): the cursor hairlines under Increase contrast and
+Differentiate without color, and the focused tab's accent band under the latter.
 
 **Accent-colored TEXT always uses `--color-accent-text`, never `--color-accent`.** That's the one accent variant
 darkened far enough to clear 4.5:1 on a light background (a pale user accent, say Apple Yellow, fails AA as plain text),
@@ -160,10 +160,11 @@ selected rows, so dense selections stay countable.
 **Contrast:** `#cc0000` is 5.89:1 on `#ffffff` and 5.26:1 on the selected-row background; `#ffa0a0` is 8.56:1 on
 `#1e1e1e` and 9.46:1 on the selected-row background. The worst case across every row state, pane tint, and accent is
 4.52:1 (light) and 4.71:1 (dark), all AA. `pnpm check a11y-contrast` gates the whole matrix (`row_state_matrix.go`
-mirrors the three-tier cascade), so a new selection color must pass it. Known limit: selection differs from normal text
-mostly by hue (red vs black is 2.96:1, `#ffa0a0` vs white text 1.59:1). Under macOS Differentiate without color, marked
-rows add a 3px red edge bar (`app-visual-cues.css`); a second cue for everyone is a pending design pick (GitHub issue
-#440, Debug > Visual cues).
+mirrors the three-tier cascade), so a new selection color must pass it. The red alone differs from normal text mostly by
+hue (red vs black is 2.96:1, `#ffa0a0` vs white text 1.59:1), so marked rows carry two non-color cues as well: a 3px bar
+in the selection red down the leading edge, rounded at the ends of each run of consecutive marked rows like Finder's
+selection blobs (worst 4.51:1 light, 4.71:1 dark against the row, gated at 3:1 by `row_mark_states.go`), and a 0.4px
+text stroke in the text's own color (faux bold, so middle truncation keeps measuring right). See § File list rows.
 
 **Automated contrast checks:** `scripts/check-a11y-contrast/` runs at build time via `pnpm check a11y-contrast`. It
 parses `app.css` design tokens and every scoped `<style>` block, resolves `var()` chains + `color-mix(in srgb, ...)` +
@@ -372,8 +373,8 @@ box-shadow:
   0 0 0 4px var(--color-accent);
 ```
 
-Whether the default ring changes too is open (GitHub issue #440): the candidates live behind Debug > Visual cues,
-`apps/desktop/src/app-visual-cues.css`.
+The default ring stays the single accent outline: VoiceOver draws its own high-contrast ring, and the ink layer is for
+Increase contrast only.
 
 ### Z-index scale (app)
 
@@ -474,14 +475,23 @@ vertical rhythm.
 
 - Focused pane: `background: var(--color-cursor-active)` (the accent at 20% opacity)
 - Unfocused pane: `background: var(--color-cursor-inactive)` (neutral, no accent)
-- Both: a 1px inset `--color-cursor-outline` hairline (the accent at 35%) and `--radius-sm` corners
-  (`app-file-list.css`). The focused and unfocused fills differ by only about 1.09:1 in light mode (1.02:1 with Apple
-  Yellow), so which pane holds focus is hard to see. Under macOS Differentiate without color, the focused pane's path
-  header gets a 2px `--color-accent-pop` top bar (`app-visual-cues.css`); a cue for everyone is a pending design pick
-  (GitHub issue #440, Debug > Visual cues).
+- Focused pane: a solid 1px `--color-cursor-outline` hairline (the accent at 35%). Unfocused pane: the same hairline
+  DASHED, in `--color-cursor-outline-dashed` (the accent at 50%, since dashes ink half the pixels). Both with
+  `--radius-sm` corners (`app-file-list.css`). The two fills differ by only about 1.09:1, so solid vs dashed is what
+  tells the panes apart without color.
+- The pane's tab bar backs this up: the focused pane's active tab carries the full accent band along its top
+  (`--color-tab-band`), the unfocused pane's active tab the band at half strength (`--color-tab-band-unfocused`). The
+  bar always shows, one tab or ten.
+- Contrast: both hairlines stay subtle by design, measured but not gated (worst 1.09:1 solid / 1.17:1 dashed in light
+  mode with Apple Yellow, 1.30:1 / 1.57:1 dark). Under Increase contrast and Differentiate without color both go to
+  `--color-accent-pop` (gated at 3:1, worst 3.83:1), and Differentiate without color also lifts the focused tab band to
+  it (5.26:1 light, 5.98:1 dark). The faint band is 1.22:1 / 1.67:1 and never promises 3:1.
 
-**Selection:** The row's text turns `var(--color-selection-fg)` (red, see § Semantic colors) and the row gets the
-translucent `--color-selection-bg`, with a hairline between consecutive selected rows.
+**Selection:** The row's text turns `var(--color-selection-fg)` (red, see § Semantic colors) and gets a 0.4px text
+stroke; the row gets the translucent `--color-selection-bg`, a hairline between consecutive selected rows, and the
+leading-edge marked-file bar, rounded at each run's ends. Run ends come from
+`apps/desktop/src/lib/file-explorer/views/mark-run.ts` by global index (Brief breaks runs per column), so a run crossing
+the virtual window's edge stays open there.
 
 **Scrollbars:** Native macOS. No custom styling. This is deliberate: custom scrollbars immediately feel web-native.
 

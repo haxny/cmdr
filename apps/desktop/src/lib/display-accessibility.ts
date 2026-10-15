@@ -5,8 +5,8 @@
  *   (`app.css` § Reduced transparency).
  * - **Increase contrast** → `increase-contrast`: stronger borders, secondary text, focus rings,
  *   and pane tints (`app.css` § Increase contrast).
- * - **Differentiate without color** → `differentiate-without-color`: state cues that lean on hue
- *   (the focused pane, marked files) gain a non-color cue (`app-visual-cues.css`).
+ * - **Differentiate without color** → `differentiate-without-color`: the shape cues for the focused
+ *   pane (cursor hairlines, tab accent band) step up to 3:1 (`app.css` § Differentiate without color).
  *
  * Classes, not media queries: WKWebView never reflects `prefers-reduced-transparency` (verified:
  * with the setting on, AppKit reports `true` while the webview's `matchMedia` reports `false`),
@@ -45,7 +45,6 @@ const allOff = (): DisplayAccessibilityState => ({
 })
 
 let fromOs = allOff()
-let simulated = allOff()
 let contrastMediaMatches = false
 let contrastMedia: MediaQueryList | undefined
 let unlisten: UnlistenFn | undefined
@@ -58,7 +57,7 @@ function onContrastMediaChange(event: { matches: boolean }): void {
 function apply(): void {
   const classes = document.documentElement.classList
   for (const option of Object.keys(CLASS_BY_OPTION) as (keyof DisplayAccessibilityState)[]) {
-    let on = fromOs[option] || simulated[option]
+    let on = fromOs[option]
     if (option === 'increaseContrast') on ||= contrastMediaMatches
     classes.toggle(CLASS_BY_OPTION[option], on)
   }
@@ -93,15 +92,6 @@ export async function initDisplayAccessibility(): Promise<void> {
   }
 }
 
-/**
- * Dev-only (Debug > Appearance): forces options on so the reviewer can see their styling without
- * flipping System Settings. An option is on when macOS OR the simulation says so.
- */
-export function simulateDisplayAccessibility(options: Partial<DisplayAccessibilityState>): void {
-  simulated = { ...simulated, ...options }
-  apply()
-}
-
 /** Cleans up the listeners. */
 export function cleanupDisplayAccessibility(): void {
   unlisten?.()
@@ -110,5 +100,4 @@ export function cleanupDisplayAccessibility(): void {
   contrastMedia = undefined
   contrastMediaMatches = false
   fromOs = allOff()
-  simulated = allOff()
 }

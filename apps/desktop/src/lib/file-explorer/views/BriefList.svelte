@@ -35,6 +35,7 @@
     } from './file-list-utils'
     import { fileRowAttributes, fileRowName, renderedCursorRow } from './file-row-a11y'
     import { createListFocus } from './list-focus.svelte'
+    import { markRunEdges } from './mark-run'
     import type { ListingIndexSizesChanged } from '#lib/tauri-commands/index.js'
     import {
         createBriefColumnWidths,
@@ -992,6 +993,7 @@
                                 isSelected: selectedIndices.has(globalIndex),
                                 isUnderCursor: globalIndex === cursorIndex,
                             })}
+                            {@const markRun = markRunEdges(globalIndex, selectedIndices, itemsPerColumn)}
                             <div
                                 {...fileRowAttributes({
                                     listId,
@@ -1007,6 +1009,8 @@
                                 class="file-entry"
                                 class:is-under-cursor={globalIndex === cursorIndex}
                                 class:is-selected={selectedIndices.has(globalIndex)}
+                                class:is-mark-run-start={markRun.isRunStart}
+                                class:is-mark-run-end={markRun.isRunEnd}
                                 class:is-striped={stripedRows && globalIndex % 2 === 1}
                                 class:is-restricted={fileIsRestricted}
                                 data-filename={file.name}

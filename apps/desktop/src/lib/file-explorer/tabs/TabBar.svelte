@@ -14,6 +14,8 @@
         tabs: TabState[]
         activeTabId: TabId
         paneId: 'left' | 'right'
+        /** Whether this bar's pane has focus: its active tab then carries the full accent band. */
+        isPaneFocused: boolean
         maxTabs: number
         /** This bar's face of the shared tab drag (reorder, or move to the other pane's bar). */
         drag: TabBarDrag
@@ -29,6 +31,7 @@
         tabs,
         activeTabId,
         paneId,
+        isPaneFocused,
         maxTabs,
         drag,
         onTabSwitch,
@@ -122,7 +125,14 @@
 <!-- Mouse shortcuts with key twins: a click focuses the pane (Tab), a double-click opens a tab (⌘T).
      Pane chrome: ←/→ walk the tabs, ↓ goes to the location bar (`pane/pane-chrome.ts`). -->
 <!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
-<div class="tab-bar" use:drag.attach onclick={onPaneFocus} ondblclick={handleTabBarDblClick} data-pane-chrome>
+<div
+    class="tab-bar"
+    class:pane-focused={isPaneFocused}
+    use:drag.attach
+    onclick={onPaneFocus}
+    ondblclick={handleTabBarDblClick}
+    data-pane-chrome
+>
     <div class="tab-list" role="tablist" aria-label={tString('fileExplorer.tabBar.paneTabsAriaLabel', { paneId })}>
         {#each tabs as tab, index (tab.id)}
             {@const isActive = tab.id === activeTabId}
@@ -363,14 +373,21 @@
        Don't shrink the box to the band's height and round it instead: browsers scale
        corner radii down to fit a short box, which flattens the curve. And don't reach
        for an inset `box-shadow` ring — that paints all four sides, running accent down
-       the tab's edges. */
+       the tab's edges.
+
+       Full strength on the focused pane's bar, half on the other's: a pane-level focus
+       cue that holds even with the cursor scrolled away (`--color-tab-band*`, `app.css`). */
     .tab.active::after {
         content: '';
         position: absolute;
         inset: 0;
         border-radius: inherit;
-        background: linear-gradient(to bottom, var(--color-accent) 0 2px, transparent 2px);
+        background: linear-gradient(to bottom, var(--color-tab-band-unfocused) 0 2px, transparent 2px);
         pointer-events: none;
+    }
+
+    .tab-bar.pane-focused .tab.active::after {
+        background: linear-gradient(to bottom, var(--color-tab-band) 0 2px, transparent 2px);
     }
 
     /* Chrome-style "shoulders": pseudo-elements that stick out past the

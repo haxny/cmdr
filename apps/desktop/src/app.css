@@ -165,7 +165,8 @@
      --color-accent blends in. Mode-aware: darker than the accent in light mode, lighter in dark mode
      (dark override in the prefers-color-scheme block below). Used by the symlink badge, and by
      state marks that need 3:1 on any surface with any accent (worst 4.81:1 light, 5.98:1 dark):
-     the Increase contrast cursor hairline and the `app-visual-cues.css` bars and rings. */
+     the cursor hairlines under Increase contrast and Differentiate without color, and the
+     focused tab's accent band under the latter. */
   --color-accent-pop: color-mix(in oklch, var(--color-accent), black 40%);
   --color-cmdr-gold: #d4a006;
   --color-system-accent: #d4a006; /* Updated at runtime by accent-color.ts */
@@ -180,6 +181,16 @@
      regardless of pane tint or selection state. Subtle by design — 35%
      alpha. */
   --color-cursor-outline: color-mix(in oklch, var(--color-accent), transparent 65%);
+  /* The unfocused pane draws its cursor hairline DASHED (`app-file-list.css`), so
+     solid vs dashed tells the panes apart. A step stronger than the solid one, since
+     dashes ink half the pixels. */
+  --color-cursor-outline-dashed: color-mix(in oklch, var(--color-accent), transparent 50%);
+
+  /* === Tab accent band (`TabBar`'s active tab) ===
+     The focused pane's active tab carries the full accent along its top edge; the
+     unfocused pane's active tab carries it at half strength. */
+  --color-tab-band: var(--color-accent);
+  --color-tab-band-unfocused: color-mix(in oklch, var(--color-accent), transparent 50%);
 
   /* === Semantic Colors === */
   --color-allow: #2e7d32;
@@ -509,7 +520,7 @@
   /* The ink layer of a two-layer focus ring: near-black in light mode, near-white in
      dark, so the ring clears 3:1 against any surface whatever the user's accent (the
      plain accent ring is 1.58:1 on white with Apple Yellow). Used under Increase
-     contrast and by the #440 ring proposals (`app-visual-cues.css`). */
+     contrast. */
   --color-focus-ink: var(--color-text-primary);
 
   /* === Transitions === */
@@ -695,6 +706,8 @@
     --color-cursor-inactive: rgba(232, 232, 232, 0.4);
     --color-cursor-active: rgba(212, 160, 6, 0.2);
     --color-cursor-outline: rgba(212, 160, 6, 0.35);
+    --color-cursor-outline-dashed: rgba(212, 160, 6, 0.5);
+    --color-tab-band-unfocused: rgba(212, 160, 6, 0.5);
     --color-warning-bg-solid: #f3e5dc;
     --color-disk-ok: #74a376;
     --color-disk-warning: #e47b42;
@@ -726,6 +739,8 @@
   --color-cursor-inactive: rgba(232, 232, 232, 0.4);
   --color-cursor-active: rgba(212, 160, 6, 0.2);
   --color-cursor-outline: rgba(212, 160, 6, 0.35);
+  --color-cursor-outline-dashed: rgba(212, 160, 6, 0.5);
+  --color-tab-band-unfocused: rgba(212, 160, 6, 0.5);
   --color-warning-bg-solid: #f3e5dc;
   --color-disk-ok: #74a376;
   --color-disk-warning: #e47b42;
@@ -975,6 +990,8 @@
       --color-cursor-inactive: rgba(51, 51, 51, 0.4);
       --color-cursor-active: rgba(255, 194, 6, 0.2);
       --color-cursor-outline: rgba(255, 194, 6, 0.35);
+      --color-cursor-outline-dashed: rgba(255, 194, 6, 0.5);
+      --color-tab-band-unfocused: rgba(255, 194, 6, 0.5);
       --color-warning-bg-solid: #483d29;
       --color-disk-ok: #588b5b;
       --color-disk-warning: #bf892d;
@@ -1000,6 +1017,8 @@
     --color-cursor-inactive: rgba(51, 51, 51, 0.4);
     --color-cursor-active: rgba(255, 194, 6, 0.2);
     --color-cursor-outline: rgba(255, 194, 6, 0.35);
+    --color-cursor-outline-dashed: rgba(255, 194, 6, 0.5);
+    --color-tab-band-unfocused: rgba(255, 194, 6, 0.5);
     --color-warning-bg-solid: #483d29;
     --color-disk-ok: #588b5b;
     --color-disk-warning: #bf892d;
@@ -1027,8 +1046,8 @@
    `non_text_states.go`), so a token here is gated like a default one.
 
    - Pane tints step up (10% → 15% light, 15% → 25% dark), so the volume reads at a glance.
-   - Borders, control and field edges, secondary text, and the cursor hairline darken
-     (light) or brighten (dark).
+   - Borders, control and field edges, secondary text, and the cursor hairlines (solid
+     and dashed) darken (light) or brighten (dark).
    - The marked-file reds go a step deeper in light mode: on a 15% tint the default reds
      fall under AA (brown, teal, indigo, pink corners).
    - Focus rings gain an ink layer (`--color-focus-ink`) inside the accent, which clears
@@ -1044,6 +1063,7 @@ html.increase-contrast {
   --color-text-secondary: #4f4f4f;
   --color-text-tertiary: #4f4f4f;
   --color-cursor-outline: var(--color-accent-pop);
+  --color-cursor-outline-dashed: var(--color-accent-pop);
   --shadow-focus-solid: 0 0 0 2px var(--color-focus-ink), 0 0 0 4px var(--color-accent);
   --color-selection-fg-primary: #a80000;
   --color-selection-fg-cursor: #8a0000;
@@ -1064,6 +1084,22 @@ html.increase-contrast {
     --color-selection-fg-primary: #ffa0a0;
     --color-selection-fg-cursor: #ffb3b3;
   }
+}
+
+/* === Differentiate without color ===
+   macOS Accessibility > Display > Differentiate without color, mirrored as the
+   `differentiate-without-color` class on `<html>` by `#lib/display-accessibility`. The
+   default look already tells states apart by shape (solid vs dashed cursor hairline,
+   the marked-file bar and stroke); this lifts the shape cues that lean on a faint accent
+   to `--color-accent-pop`, so each clears 3:1 whatever the accent and tint. The contrast
+   checker reads this block as its own tier (`non_text_states.go`).
+
+   - Both cursor hairlines, so solid vs dashed reads at full strength.
+   - The focused pane's tab accent band (the unfocused one stays faint). */
+html.differentiate-without-color {
+  --color-cursor-outline: var(--color-accent-pop);
+  --color-cursor-outline-dashed: var(--color-accent-pop);
+  --color-tab-band: var(--color-accent-pop);
 }
 
 /* === Reduced transparency ===

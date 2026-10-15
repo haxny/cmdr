@@ -30,7 +30,44 @@
    below win, so cursor-on-selected still shows the cursor highlight. */
 .full-list-container .file-entry.is-selected,
 .brief-list-container .file-entry.is-selected {
+  position: relative;
   background-color: var(--color-selection-bg);
+
+  /* A second, non-color cue next to the red (WCAG 1.4.1): a hairline stroke in the
+     text's own color. Faux bold on purpose: a real `font-weight` widens the glyphs,
+     and middle truncation measures with the regular face's metrics. */
+  -webkit-text-stroke: 0.4px currentColor;
+}
+
+/* Marked-file bar: a 3px stripe in the selection red down the row's leading edge,
+   shaped like Finder's selection blobs. Across a run of consecutive marked rows it
+   reads as one bar, rounded at the run's top and bottom ends only. The run edges come
+   from `views/mark-run.ts` (by global index, so a run crossing the virtual window's
+   edge stays open there; Brief breaks runs per column). It follows
+   `--color-selection-fg`, so it shifts with the text under the cursor and clears 3:1
+   wherever the text clears 4.5:1 (`a11y-contrast`'s row-mark pass). A pseudo-element,
+   so it stacks with whatever box-shadow or outline the cursor rules paint. */
+.full-list-container .file-entry.is-selected::before,
+.brief-list-container .file-entry.is-selected::before {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  /* stylelint-disable-next-line declaration-property-value-disallowed-list -- a 3px mark, no spacing token */
+  width: 3px;
+  background-color: var(--color-selection-fg);
+}
+
+.full-list-container .file-entry.is-selected.is-mark-run-start::before,
+.brief-list-container .file-entry.is-selected.is-mark-run-start::before {
+  border-top-left-radius: var(--radius-full);
+  border-top-right-radius: var(--radius-full);
+}
+
+.full-list-container .file-entry.is-selected.is-mark-run-end::before,
+.brief-list-container .file-entry.is-selected.is-mark-run-end::before {
+  border-bottom-left-radius: var(--radius-full);
+  border-bottom-right-radius: var(--radius-full);
 }
 
 /* When the cursor is on a selected row, the text color shifts from the primary
@@ -69,4 +106,18 @@
 .full-list-container.is-focused .file-entry.is-under-cursor,
 .brief-list-container.is-focused .file-entry.is-under-cursor {
   background-color: var(--color-cursor-active);
+}
+
+/* The unfocused pane's cursor keeps its fill and trades the solid hairline for a
+   dashed one, so solid vs dashed tells the panes apart without hue (WCAG 1.4.1). A
+   1px `outline` (box-shadow can't dash), pulled inside the row like the inset
+   hairline. `--color-cursor-outline-dashed` is a touch stronger than the solid
+   hairline, since dashes ink half the pixels. Skips a folder drop target, whose own
+   2px outline (`DualPaneExplorer`) must win, and drops into the other pane are the
+   common case. */
+.full-list-container:not(.is-focused) .file-entry.is-under-cursor:not(.folder-drop-target),
+.brief-list-container:not(.is-focused) .file-entry.is-under-cursor:not(.folder-drop-target) {
+  box-shadow: none;
+  outline: 1px dashed var(--color-cursor-outline-dashed);
+  outline-offset: -1px;
 }

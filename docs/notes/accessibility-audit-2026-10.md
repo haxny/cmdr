@@ -67,10 +67,12 @@ Top gaps, each with its issue:
    Search result cursor, the Settings sidebar, empty folders, selection counts, the license key error, progress text.
 3. **Toasts are mouse-first** (#439, closed in code 2026-10-15, VoiceOver checks pending): focus didn't pause them, no
    key reached them, no setting kept them, and Undo trash existed only in a 10-second toast.
-4. **State cues rely on faint color** (#440, partly closed in code 2026-10-15): which pane is focused (about 1.09:1),
-   marked rows (hue only), and focus rings under 3:1 with yellow, orange, green, or Cmdr gold accents in light mode, by
-   default. Field borders now clear 3:1; Increase contrast and Differentiate without color are read and styled; the
-   default-look options for the three cues await David's design pick (Debug > Visual cues).
+4. **State cues rely on faint color** (#440, mostly closed in code 2026-10-15): marked rows now carry a leading-edge bar
+   (4.51:1 worst) and a text stroke, and the panes differ by a solid vs dashed cursor hairline plus a full vs faint tab
+   accent band, all by default (David's design picks). Field borders clear 3:1; Increase contrast and Differentiate
+   without color lift the hairlines to 3:1. Left: by default the hairlines stay subtle (1.17:1 worst), hidden files
+   differ by color alone, and the default focus ring is under 3:1 with yellow, orange, green, or Cmdr gold in light mode
+   (kept on purpose: VoiceOver draws its own ring; the ink ring is the Increase contrast tier).
 5. **Pointer and keyboard leftovers** (#441, mostly closed in code 2026-10-15): tab reorder was drag-only, sub-24px
    targets, tooltips not hoverable, viewer bare-key shortcuts not remappable, zoom topped out at 150%. Left: a
    one-letter breadcrumb segment and the pane divider are still narrower than 24 px.
@@ -117,11 +119,12 @@ video, flashing, or time limits beyond toasts; native menu bar and context menus
   are named "Left file pane" and "Right file pane". Evidence: `pane/FilePane.svelte` region label; English catalog
   review.
 - **1.4.1 Use of color**: Partially supports. Git status uses letters, errors use labeled glyphs, and size/age colors
-  are decorative. Marked files differ from normal rows mostly by red hue, hidden files only by a dimmer color, and the
-  focused pane only by a faint fill. Under macOS Differentiate without color (read since #440, 2026-10-15), a
-  `--color-accent-pop` bar marks the focused pane's header (5.26:1 worst) and a red edge bar marks each marked row
-  (4.51:1 worst). Evidence: `app.css` `--color-selection-fg-primary`, `app-file-list.css` marked-row rules,
-  `app-visual-cues.css`, `--color-text-quiet`; `git/status-column.ts`. #440.
+  are decorative. Since #440 (2026-10-15), by default: marked rows carry a 3px leading-edge bar in the selection red
+  (4.51:1 worst against the row), rounded at each run's ends, plus a 0.4px text stroke; the unfocused pane's cursor
+  hairline is dashed where the focused one is solid, and the focused pane's active tab has the full accent band where
+  the other has it at half strength. Hidden files still differ only by a dimmer color. Evidence: `app.css`
+  `--color-selection-fg-primary`, `--color-cursor-outline-dashed`, `--color-tab-band*`; `app-file-list.css` marked-row
+  and cursor rules; `views/mark-run.ts`; `tabs/TabBar.svelte`; `--color-text-quiet`; `git/status-column.ts`. #440.
 - **1.4.2 Audio control**: Not applicable. Cmdr plays no audio.
 - **2.1.1 Keyboard**: Supports. Every core action is a command with a shortcut and a command palette entry: pane switch,
   navigation, marking, open, go up, go to path, volume chooser, tabs, sort, divider, view mode, all file operations,
@@ -240,10 +243,15 @@ video, flashing, or time limits beyond toasts; native menu bar and context menus
 - **1.4.11 Non-text contrast**: Partially supports. Checkbox and switch borders use `--color-control-border` (about
   3.7:1), and text field borders `--color-field-border` (the same token, 3.1:1 worst on the dialog surface) since #440,
   2026-10-15, gated by `non_text_states.go`. Under Increase contrast every focus ring gains a `--color-focus-ink` layer
-  (14.6:1 worst). By default the 2px accent focus ring is under 3:1 on white with Apple Yellow (1.58), Cmdr gold (2.38),
-  Green (2.41), and Orange (2.58); the focused-pane cue is about 1.09:1. Evidence: `app-field.css`
-  (`--color-field-border`), `app.css` `button:focus-visible`, `--shadow-focus-solid`, `app-file-list.css` cursor rules;
-  ratios computed from `scripts/check-a11y-contrast/accent_matrix.go` hexes. #440.
+  (14.6:1 worst). The marked-file bar is 4.51:1 worst (light) and 4.71:1 (dark) against its row, gated at 3:1 in every
+  look by `row_mark_states.go`. The solid and dashed cursor hairlines that tell the panes apart reach 3.83:1 worst under
+  Increase contrast and 4.53:1 under Differentiate without color (both gated), but by default stay subtle by design:
+  1.09:1 solid and 1.17:1 dashed worst (light, Apple Yellow, brown tint), measured not gated; the tab accent bands are
+  1.45:1 (focused) and 1.22:1 (unfocused) worst by default, 5.26:1 for the focused one under Differentiate without
+  color. By default the 2px accent focus ring is under 3:1 on white with Apple Yellow (1.58), Cmdr gold (2.38), Green
+  (2.41), and Orange (2.58). Evidence: `app-field.css` (`--color-field-border`), `app.css` `button:focus-visible`,
+  `--shadow-focus-solid`, § Differentiate without color, `app-file-list.css` cursor rules; ratios from
+  `pnpm check a11y-contrast` (`-- --verbose` lists the measured ones) and `accent_matrix.go` hexes. #440.
 - **1.4.12 Text spacing**: Partially supports. Rows have fixed pixel heights with `overflow: hidden`; a 1.5 line height
   fits the Comfortable density but clips in Compact (16 px rows), and middle truncation measures with canvas metrics
   that ignore letter and word spacing overrides. Pending a manual text-spacing test. Evidence: `BriefList.svelte`,
@@ -260,9 +268,11 @@ video, flashing, or time limits beyond toasts; native menu bar and context menus
   `routes/settings/+page.svelte`, `SettingsSection.svelte`, `ModalDialog.svelte`, `FilePane.svelte` (`listLabel`),
   `pane/pane-location-announcer.svelte.ts`, `ui/LiveAnnouncer.svelte`. Pending VoiceOver check V2.
 - **2.4.7 Focus visible**: Partially supports. Buttons, links, fields, and menus show a focus ring (`:focus` for fields
-  so mouse users see it too), and the file cursor has an accent fill plus outline. Which pane holds focus is close to
-  invisible in light mode (focused vs unfocused cursor about 1.09:1 with gold, 1.02:1 with Apple Yellow). Evidence:
-  `app.css`, `app-field.css`, `app-file-list.css`. #440.
+  so mouse users see it too), and the file cursor has an accent fill plus outline. Since #440 (2026-10-15) the focused
+  pane's cursor hairline is solid and the other's dashed, and the focused pane's active tab carries the full accent band
+  (the other half), but by default both cues are faint in light mode (see 1.4.11); Increase contrast and Differentiate
+  without color lift the hairlines past 3:1. Evidence: `app.css`, `app-field.css`, `app-file-list.css`,
+  `tabs/TabBar.svelte`. #440.
 - **2.4.11 Focus not obscured (minimum)**: Supports. Dialogs are modal and centered. Toasts sit at the top right and
   move to the bottom right while they would cover the focused element's cursor row (`aria-activedescendant`) or the
   focused element (#439, 2026-10-15). Evidence: `ui/toast/toast-placement.ts` (+ test), `ToastContainer.svelte`.
@@ -311,10 +321,11 @@ video, flashing, or time limits beyond toasts; native menu bar and context menus
   (see 4.1.2). Left: the nested rename field (#449) and Full view's columns not being a table. Pending VoiceOver check
   V1–V12. #437.
 - **302.2 With limited vision**: Partially supports. App zoom alone to 200%, past it with macOS text size, dark mode, AA
-  text contrast in CI. Weak focused-pane and focus-ring contrast with some accents. #440.
-- **302.3 Without perception of color**: Partially supports. Marked files and hidden files rely on color; the rest uses
-  glyphs and text. Under Differentiate without color, marked rows and the focused pane gain a bar; hidden files don't.
-  #440.
+  text contrast in CI. Weak focused-pane and focus-ring contrast with some accents unless Increase contrast or
+  Differentiate without color is on. #440.
+- **302.3 Without perception of color**: Partially supports. Marked rows carry a bar and a text stroke, and the panes
+  differ by solid vs dashed cursor hairlines (#440, 2026-10-15); hidden files still rely on color alone. The rest uses
+  glyphs and text. #440.
 - **302.4 Without hearing**: Supports. Cmdr uses no audio cues.
 - **302.5 With limited hearing**: Supports. Same as 302.4.
 - **302.6 Without speech**: Supports. No speech input needed.
@@ -375,10 +386,10 @@ video, flashing, or time limits beyond toasts; native menu bar and context menus
   motion, Increase contrast, Differentiate without color, and macOS text size, all live. The Reduce motion misses
   (settings sidebar jump, rename shake and zoom, boot loader, switch thumb, disclosure chevrons, swatch and
   onboarding-dot grows) closed with #442 on 2026-10-15. Increase contrast (stronger borders, secondary text, focus-ring
-  ink layer, deeper light reds, raised tints) and Differentiate without color (pane and marked-row bars) closed with
-  #440 on 2026-10-15; the contrast checker sweeps the Increase contrast tier. Not yet seen on a Mac with the settings
-  flipped (Debug > Visual cues simulates both). Evidence: `app.css` (`--font-system`, § Increase contrast),
-  `app-visual-cues.css`, `src-tauri/src/display_accessibility.rs`, `lib/display-accessibility.ts`,
+  ink layer, deeper light reds, raised tints) and Differentiate without color (the cursor hairlines and the focused tab
+  band lifted to `--color-accent-pop`) closed with #440 on 2026-10-15; the contrast checker sweeps both tiers. Not yet
+  seen on a Mac with the settings flipped. Evidence: `app.css` (`--font-system`, § Increase contrast, § Differentiate
+  without color), `src-tauri/src/display_accessibility.rs`, `lib/display-accessibility.ts`,
   `src-tauri/src/text_size.rs`, `lib/accent-color.ts`.
 - **503.3 Alternative user interfaces**: Not applicable. Cmdr provides no alternative UI acting as assistive tech.
 - **503.4.1 Caption controls**: Not applicable. No video.

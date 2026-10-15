@@ -14,7 +14,6 @@
     import '../app-utilities.css'
     import '../app-tooltip.css'
     import '../app-file-list.css'
-    import '../app-visual-cues.css'
     import { initLogger } from '#lib/logging/logger.js'
     import { installClipboardShimIfE2e } from '#lib/clipboard-shim.js'
     import { initWindowSettings } from '#lib/settings/window-settings.js'

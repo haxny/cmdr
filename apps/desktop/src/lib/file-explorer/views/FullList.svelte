@@ -23,6 +23,7 @@
     import { fileRowAttributes, fileRowName, renderedCursorRow, rowSizeText } from './file-row-a11y'
     import { createFullListCache } from './full-list-cache.svelte'
     import { createListFocus } from './list-focus.svelte'
+    import { markRunEdges } from './mark-run'
     import { createGitStatusColumn } from './full-list-git-column.svelte'
     import { planRowMouseDown } from './full-list-mouse'
     import { formatSizeForDisplay, formatNumber } from '../selection/selection-info-utils'
@@ -773,6 +774,7 @@
                     {@const displaySize = file.isDirectory ? dirDisplaySize : fileDisplaySize}
                     {@const sizeTriads = displaySize != null ? formatSizeForDisplay(displaySize, sizeFormatOpts) : undefined}
                     {@const gitStatus = gitColumnVisible ? gitColumn.statusFor(file) : null}
+                    {@const markRun = markRunEdges(globalIndex, selectedIndices)}
                     <div
                         {...fileRowAttributes({
                             listId,
@@ -797,6 +799,8 @@
                         class="file-entry"
                         class:is-under-cursor={globalIndex === cursorIndex}
                         class:is-selected={selectedIndices.has(globalIndex)}
+                        class:is-mark-run-start={markRun.isRunStart}
+                        class:is-mark-run-end={markRun.isRunEnd}
                         class:is-striped={stripedRows && globalIndex % 2 === 1}
                         class:no-transition={skipTransition}
                         class:is-restricted={fileIsRestricted}

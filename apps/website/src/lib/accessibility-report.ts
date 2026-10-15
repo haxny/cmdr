@@ -170,7 +170,7 @@ const wcagA: CriterionRow[] = [
     level: 'A',
     conformance: 'partially-supports',
     remark:
-      'Git status uses letters, errors use labeled symbols, and size and date colors are optional decoration. Marked files differ from other files mostly by their red color, hidden files only by a dimmer color, and the focused pane only by a faint background. With the macOS Differentiate without color setting on, a bar also marks the focused pane and each marked file.',
+      'Git status uses letters, errors use labeled symbols, and size and date colors are optional decoration. Marked files carry a bar along their left edge and slightly heavier text besides their red color. The cursor in the focused pane has a solid outline and the one in the other pane a dashed outline. Hidden files still differ only by a dimmer color.',
     issues: [440],
   },
   { id: '1.4.2', name: 'Audio control', level: 'A', conformance: 'not-applicable', remark: 'Cmdr plays no audio.' },
@@ -424,7 +424,7 @@ const wcagAA: CriterionRow[] = [
     level: 'AA',
     conformance: 'partially-supports',
     remark:
-      'Checkbox, switch, and text field borders reach at least 3:1 (about 3.7:1 on white). With the macOS Increase contrast setting on, every focus ring gains an inner ring that clears 3:1 with any accent color. Without it, in light mode the focus ring is under 3:1 with the yellow, gold, green, and orange accent colors, and the difference between the focused and the unfocused pane is about 1.09:1.',
+      'Checkbox, switch, and text field borders reach at least 3:1 (about 3.7:1 on white), and the bar on marked files at least 4.5:1. With the macOS Increase contrast or Differentiate without color setting on, the cursor outlines that tell the two panes apart reach at least 3.8:1, and with Increase contrast every focus ring gains an inner ring that clears 3:1 with any accent color. Without those settings, the cursor outlines are deliberately subtle (about 1.2:1 in light mode with the yellow accent), and in light mode the focus ring is under 3:1 with the yellow, gold, green, and orange accent colors.',
     issues: [440],
   },
   {
@@ -467,7 +467,7 @@ const wcagAA: CriterionRow[] = [
     level: 'AA',
     conformance: 'partially-supports',
     remark:
-      'Buttons, links, fields, and menus show a focus ring, and the file cursor has a colored background and outline. Which of the two panes has focus is very hard to see in light mode.',
+      "Buttons, links, fields, and menus show a focus ring, and the file cursor has a colored background and outline. The focused pane's cursor outline is solid and the other pane's dashed, and the focused pane's active tab carries a stronger accent line, but both cues are faint in light mode unless the macOS Increase contrast or Differentiate without color setting is on.",
     issues: [440],
   },
   {
@@ -567,7 +567,7 @@ const section508Ch3: CriterionRow[] = [
     name: 'With limited vision',
     conformance: 'partially-supports',
     remark:
-      'App zoom alone takes text to 200%, and the macOS text size setting takes it further. Dark mode is supported, and text contrast is checked automatically. The focused pane and some focus rings have weak contrast with some accent colors.',
+      'App zoom alone takes text to 200%, and the macOS text size setting takes it further. Dark mode is supported, and text contrast is checked automatically. The focused-pane cues and some focus rings have weak contrast with some accent colors unless the macOS Increase contrast or Differentiate without color setting is on.',
     issues: [440],
   },
   {
@@ -575,7 +575,7 @@ const section508Ch3: CriterionRow[] = [
     name: 'Without perception of color',
     conformance: 'partially-supports',
     remark:
-      'Marked files and hidden files are told apart by color. With the macOS Differentiate without color setting on, marked files and the focused pane also get a bar; hidden files still differ only by color. Everything else uses symbols and text.',
+      'Marked files carry a bar and heavier text besides their color, and the focused pane shows a solid cursor outline where the other pane shows a dashed one. Hidden files still differ only by color. Everything else uses symbols and text.',
     issues: [440],
   },
   { id: '302.4', name: 'Without hearing', conformance: 'supports', remark: 'Cmdr uses no sound.' },
@@ -753,7 +753,7 @@ const section508Ch5: CriterionRow[] = [
     name: 'User preferences',
     conformance: 'supports',
     remark:
-      'Cmdr follows the macOS system font, light and dark mode, accent color, text size, Reduce transparency, Reduce motion, Increase contrast (stronger borders, secondary text, focus rings, and pane tints), and Differentiate without color (a bar marks the focused pane and marked files), and picks up changes without a restart.',
+      'Cmdr follows the macOS system font, light and dark mode, accent color, text size, Reduce transparency, Reduce motion, Increase contrast (stronger borders, secondary text, focus rings, and pane tints), and Differentiate without color (stronger outlines and tab line for the focused pane), and picks up changes without a restart.',
   },
   {
     id: '503.3',
@@ -1176,7 +1176,10 @@ export const gapIssues: { number: number; title: string }[] = [
     number: 267,
     title: 'In-app menus (volume switcher, favorites), submenus included, await a hands-on VoiceOver test',
   },
-  { number: 440, title: 'The focused pane, marked files, and some focus rings rely on faint color by default' },
+  {
+    number: 440,
+    title: 'Hidden files differ only by color, and the focused-pane cues and some focus rings are faint by default',
+  },
   {
     number: 449,
     title: "The rename field sits inside the file's row, which hides its role from some assistive technology",
