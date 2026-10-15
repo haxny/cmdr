@@ -4,8 +4,8 @@ This is the open source program of Rymdskottkärra AB, the Swedish company that 
 roles. It covers license compliance (OpenChain, ISO/IEC 5230:2020) and security assurance (ISO/IEC 18974:2023), and it's
 part of the company's wider security policy, which is kept as an internal record.
 
-- **Owner**: David Veszelovszki, the company's only developer and director. He holds every role named below.
-- **Status**: version 0.1, 2026-10-14, pending adoption.
+- **Owner**: David Veszelovszki, the company's only developer. He holds every role named below.
+- **Status**: version 1.0, adopted 2026-10-15.
 - **Review**: yearly, together with the rest of the security policy, and whenever the way we build or ship Cmdr changes
   significantly.
 - **Contact**: license and open-source questions to [legal@getcmdr.com](mailto:legal@getcmdr.com), security questions to
@@ -80,51 +80,51 @@ part of the company's wider security policy, which is kept as an internal record
   question that can't be settled that way is settled by removing or replacing the component (procedure 6).
 - **Evidence of competence**: 25+ years of software engineering; designed and runs the license and vulnerability tooling
   in this repo (`deny.toml`, the notices generator, the SBOM and attestation jobs, `SECURITY.md`). Self-assessed on
-  adoption.
+  2026-10-15.
 - **Resources**: time in the yearly review and as reports need; the tooling is free (GitHub, cargo-deny, Renovate,
   Dependabot); no budget for outside legal advice, so an unsettled license question ends in removing or replacing the
   component.
-- **Affirmation**, signed on adoption and renewed every 18 months: "I've read this policy and its procedures. I
-  understand the program's goals, my part in them, and that a missed obligation can mean a license violation or an
-  unfixed vulnerability in users' hands. I affirm the program meets every requirement of ISO/IEC 5230:2020 and ISO/IEC
-  18974:2023." David Veszelovszki, for Rymdskottkärra AB.
+- **Affirmation**, signed 2026-10-15 and renewed every 18 months (next by 2028-04-15): "I've read this policy and its
+  procedures. I understand the program's goals, my part in them, and that a missed obligation can mean a license
+  violation or an unfixed vulnerability in users' hands. I affirm the program meets every requirement of ISO/IEC
+  5230:2020 and ISO/IEC 18974:2023." David Veszelovszki, for Rymdskottkärra AB.
 
 ## Requirement map
 
 ISO/IEC 5230:2020 (license compliance):
 
-| Requirement                           | Where it's met                                                                                 | Status          |
-| ------------------------------------- | ---------------------------------------------------------------------------------------------- | --------------- |
-| 3.1.1 Policy                          | Policy                                                                                         | Met on adoption |
-| 3.1.2 Competence                      | Roles                                                                                          | Met on adoption |
-| 3.1.3 Awareness                       | Roles, affirmation                                                                             | Met on adoption |
-| 3.1.4 Program scope                   | Policy, scope                                                                                  | Met on adoption |
-| 3.1.5 License obligations             | Procedure 2                                                                                    | Met             |
-| 3.2.1 Access                          | `legal@getcmdr.com`, published here, in `THIRD-PARTY-NOTICES.md`, and on `/trust`; procedure 5 | Met             |
-| 3.2.2 Effectively resourced           | Roles (legal questions, resources), procedure 6                                                | Met on adoption |
-| 3.3.1 Bill of materials               | Release SBOMs, procedure 3                                                                     | Met             |
-| 3.3.2 License compliance use cases    | Policy, procedures 1–2                                                                         | Met             |
-| 3.4.1 Compliance artifacts            | Procedures 3–4                                                                                 | Met on adoption |
-| 3.5.1 Contributions                   | Policy, contributing                                                                           | Met on adoption |
-| 3.6.1, 3.6.2 Conformance and duration | Affirmation, renewed every 18 months                                                           | Met on adoption |
+| Requirement                           | Where it's met                                                                                 | Status |
+| ------------------------------------- | ---------------------------------------------------------------------------------------------- | ------ |
+| 3.1.1 Policy                          | Policy                                                                                         | Met    |
+| 3.1.2 Competence                      | Roles                                                                                          | Met    |
+| 3.1.3 Awareness                       | Roles, affirmation                                                                             | Met    |
+| 3.1.4 Program scope                   | Policy, scope                                                                                  | Met    |
+| 3.1.5 License obligations             | Procedure 2                                                                                    | Met    |
+| 3.2.1 Access                          | `legal@getcmdr.com`, published here, in `THIRD-PARTY-NOTICES.md`, and on `/trust`; procedure 5 | Met    |
+| 3.2.2 Effectively resourced           | Roles (legal questions, resources), procedure 6                                                | Met    |
+| 3.3.1 Bill of materials               | Release SBOMs, procedure 3                                                                     | Met    |
+| 3.3.2 License compliance use cases    | Policy, procedures 1–2                                                                         | Met    |
+| 3.4.1 Compliance artifacts            | Procedures 3–4                                                                                 | Met    |
+| 3.5.1 Contributions                   | Policy, contributing                                                                           | Met    |
+| 3.6.1, 3.6.2 Conformance and duration | Affirmation, renewed every 18 months                                                           | Met    |
 
 On 3.2.2: the standard asks for access to legal expertise. Best-effort research with a remove-or-replace fallback is a
 documented route, though a reviewer may read it as thin.
 
 ISO/IEC 18974:2023 (security assurance):
 
-| Requirement                            | Where it's met                                                                  | Status          |
-| -------------------------------------- | ------------------------------------------------------------------------------- | --------------- |
-| 4.1.1 Policy                           | Policy                                                                          | Met on adoption |
-| 4.1.2 Competence                       | Roles                                                                           | Met on adoption |
-| 4.1.3 Awareness                        | Roles, affirmation                                                              | Met on adoption |
-| 4.1.4 Scope, metrics, improvement      | Policy (scope, measuring), plus the improvements below                          | Met on adoption |
-| 4.1.5 Standard practices               | See the breakdown below                                                         | Met             |
-| 4.2.1 Access                           | `security@getcmdr.com`, GitHub private reporting, `SECURITY.md`, `security.txt` | Met             |
-| 4.2.2 Effectively resourced            | Roles                                                                           | Met on adoption |
-| 4.3.1 SBOM                             | Release SBOMs, procedures 3–4                                                   | Met             |
-| 4.3.2 Security assurance per component | Procedure 7, ranked by CVSS                                                     | Met             |
-| 4.4.1, 4.4.2 Completeness and duration | Affirmation, renewed every 18 months                                            | Met on adoption |
+| Requirement                            | Where it's met                                                                  | Status |
+| -------------------------------------- | ------------------------------------------------------------------------------- | ------ |
+| 4.1.1 Policy                           | Policy                                                                          | Met    |
+| 4.1.2 Competence                       | Roles                                                                           | Met    |
+| 4.1.3 Awareness                        | Roles, affirmation                                                              | Met    |
+| 4.1.4 Scope, metrics, improvement      | Policy (scope, measuring), plus the improvements below                          | Met    |
+| 4.1.5 Standard practices               | See the breakdown below                                                         | Met    |
+| 4.2.1 Access                           | `security@getcmdr.com`, GitHub private reporting, `SECURITY.md`, `security.txt` | Met    |
+| 4.2.2 Effectively resourced            | Roles                                                                           | Met    |
+| 4.3.1 SBOM                             | Release SBOMs, procedures 3–4                                                   | Met    |
+| 4.3.2 Security assurance per component | Procedure 7, ranked by CVSS                                                     | Met    |
+| 4.4.1, 4.4.2 Completeness and duration | Affirmation, renewed every 18 months                                            | Met    |
 
 On 4.1.4: the 2026-10 Dependabot cleanup took 113 open alerts down to one, and the 2026-10 internal security review's
 findings were fixed or accepted in writing.
