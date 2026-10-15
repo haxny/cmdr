@@ -706,6 +706,12 @@ export const roadmapSections: RoadmapSection[] = [
             description: 'See what a copy/move is doing on the folder+file level.',
             done: true,
           },
+          {
+            date: '(Oct 15)',
+            title: 'Accessibility',
+            description: 'Support for VoiceOver, "Increase contrast", "Show borders", and full keyboard navi.',
+            done: true,
+          },
         ],
       },
     ],

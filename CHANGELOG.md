@@ -5,6 +5,110 @@ This file holds all notable changes to Cmdr over time.
 The format is based on [keep a changelog](https://keepachangelog.com/en/1.1.0/), and we use
 [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html).
 
+## [0.53.0] - 2026-10-15
+
+The main things:
+
+- Accessibility: VoiceOver works, we follow macOS's "Increase contrast", "Differentiate without color", and "Show
+  borders". Toast and everything else I found not to work with the keyboard not works. Also added a Help > Accessibility
+  guide.
+- A lot of work towards Cmdr working for big companies and getting some certifications, etc. that came with a lot of
+  security improvements.
+- Performance improvements: same-share SMB copies now happen on-server (4 GB duplicate takes seconds), and the git
+  commit browsing feature can now list 100k commits in a second!
+
+### Added
+
+- Make Cmdr work with VoiceOver: file rows say their name, kind, position, and marked state, and menus, Settings,
+  search, the command palette, toasts, and progress bars speak as you go (630beb349, a63b0eec7, 24cc4b61b, 194300367,
+  f6251a522, 63b7caf8b, fdf494651, 865ba111b, a3143f2be, 7501520f7, b6c5e3f26, 0ad6d216c, c57cc6f04, 131a59fbb,
+  807799e9f, 2edc6733d, f58df3754, 2d18f0be9, 966f0af0b, 1c9e0acbb, 615a87390, 2ce9db14a, ed7435a72, 6aa66fbc9,
+  b69f663f9, fa4f15189, a36329289, 3f8d463dc)
+- Follow macOS Increase contrast, Differentiate without color, and Show borders live, with stronger edges, text, and
+  focus rings (3c05c4755, 514fe4e44, f2ac5f991, 1dc10cee1, 48e3f7db6)
+- Reach each pane's tabs, location bar, and sort buttons with ⌃F5, and the newest notification with ⌃F6 (58612c351,
+  d60484e9a, 8c8cc79a0, d13b68c82)
+- Add Edit > Undo move to trash, naming what it puts back (6926d6fcf, 265d00449)
+- Add a "Keep notifications until I close them" setting (6d96e83f0)
+- Move tabs from the keyboard with ⌘⌃⇧← / ⌘⌃⇧→, or to the other pane from the command palette (14ddf8a7c)
+- Move the pane divider with ⌃⌥← / ⌃⌥→ (188625f3d, c56940f73)
+- Rebind or turn off the viewer's single-letter keys in Settings (d7b3bd22e)
+- Add Help > Accessibility guide (1ca3ed3e9)
+- Copy files within one SMB share on the server: a 4 GB duplicate on a NAS takes seconds (656edf780)
+- Open a terminal with F9, also a new button on the function key bar (0ea737532)
+- Say "report.pdf is opening in Preview…" while a file opens (da9546669)
+- Right-click a queue row for its actions and keys, with Dismiss on failed ones (a6e2faabf, 2d4a99a06)
+- Point out the browsable `.git` folder the first time you open a repo (fe548dd9b)
+- Let agents see which folders and files a transfer is on, and each drive's mount path (c0505fe19, a1628256b, 70572a18c)
+- Let agents turn off usage stats and crash and error reports, but never turn them on (5949de6f8)
+
+### Changed
+
+- Mark selected files with an edge bar and heavier text, and keep the accent color for the focused pane only (5e4de1956,
+  973c9fd3a, 561af8309, 9455be016, 7645b1484, 2f48febdc, e8afebc1e)
+- Let text size go up to 200% (59470173f)
+- Make tab close buttons, path segments, and the pane divider easier to hit, and keep tooltips up while you move onto
+  them (9bbc44108, 171f5f5c9, 13eb4c2e7)
+- Move notifications to the bottom right while they'd cover the row you're on (93727e604, 30d756dad, afcf56809)
+- List up to 100,000 commits in `.git/commits/` in about a second, with files-changed counts filling in after
+  (de91e4449, 96eaec095, 6d139f4e1)
+- Show a big SMB folder's loading count climb, and stop listing it when you navigate away (be16dc023)
+- Say what each queue row copies and where, and open a paused copy expanded (769cbcbac)
+- Remember the progress dialog's height (bcee28c26)
+- Show "Running…" in Ask Cmdr's thread as soon as an approved suggestion starts (b1c84f9d7)
+- Keep usage stats on our own server: they no longer pass through PostHog (d88257d19)
+- Round windows and dialogs like macOS does (b35e403ca, 11d43acdf)
+
+### Fixed
+
+- Fix reconnects hanging on a NAS that accepts the connection but never answers, and copies waiting out the whole outage
+  after it's back (863583be2, 8335011ac)
+- Fix a share that guests can list but not open asking for the password on every visit (8968039e3)
+- Fix renaming a file on an SMB share to another letter case: it was refused, or deleted when overwriting (aba9a20df,
+  f678c50a5, 874011b87)
+- Fix large copies to Nextcloud behind a proxy failing partway (e605e3f31)
+- Fix a pane inside a zip not showing copies, deletes, and renames until you left it (8b259c4bf)
+- Fix edited zips keeping their old modified date (47fa590dc)
+- Fix type-to-jump and the quick filter not starting on Cyrillic, Greek, and other non-Latin layouts (868bcce3b)
+- Fix trashing a Locked file suggesting a permanent delete that fails too: Cmdr now says how to unlock it (29c2beb16)
+- Fix the metadata note missing what a server refused mid-copy (43ca8e476)
+- Fix renames approved in Ask Cmdr's review coming back "interrupted" after a relaunch (432cb6b78)
+- Fix long path segments vanishing whole: they now shorten with a middle "…" (6b0fd9d94)
+- Fix the bottoms of letters like "g" and "p" getting cut off in the file list (931c74a8f)
+- Fix the last row hiding under a scrollbar (19ae26020)
+- Fix the volume chip's tooltip covering the menu it opened (5c84f0ef2)
+- Fix file icons switching back after toggling Increase contrast or Invert colors (4af4eb91a)
+- Fix "Reload" and "Inspect Element" appearing on right-click in Settings, the viewer, and the queue window (862654a26)
+- Fix window titles staying in English or the previous language (c92d156fc, 0eb45f59a)
+- Fix the git status tooltip and branch pill speaking English in other languages, and a stray space after "。" in
+  Chinese tooltips (2e8e38025, 4086eda2d, 536ce4991)
+- Fix some animations still moving with Reduce motion on (220f2ae8a)
+- Fix Linux menus showing Super shortcuts where Ctrl ones work (cf4228cd8)
+- Fix folder ranking lagging behind the index after quitting mid-scan (a41c53ffc)
+
+### Security
+
+- Require Cmdr's Apple Developer ID signature on every update, beside the update signature (de66c5171)
+- Add a backup update-signing key, so a leaked or lost key can be replaced with one release (00291264b)
+- Stop a hostile file open in the viewer from changing settings (3cd24fa20)
+- Delete a plaintext OpenAI key that older versions left in the settings file (3aaf046d6)
+- Keep SMB share passwords out of logs (36ba541b9)
+- Update the TLS library for four security fixes (19dee72ab)
+
+### Non-app
+
+- Split the release build so signing keys never share a machine with third-party build code, and refuse to sign an
+  update the updater would reject (c9fd205d8, d9b8a7b75, 6bd271b60)
+- Publish an accessibility conformance report and guide on getcmdr.com (bb179ff3f, 6be271d21, 0d70df492, cc8ff1956,
+  86f5aebdf)
+- Publish a security incident procedure, an open source policy, and what happens to licenses if the company stops
+  (8b5324bef, 354da6427, 17e95d25a)
+- File every crash, error report, and feedback on a board, with one three-hour digest email, a morning brief, and a
+  triage agent (e7aa4c737, b8c35ce53, f4214b37e, 6b8226fd8, 2312912f5, 369f699d2)
+- Scan every lockfile with osv-scanner and run OpenSSF Scorecard's checks locally (f17797964, 0118f54d2, e5d22ab6c,
+  c2a55d6e2)
+- Move to smb2 0.30.0 (7389c370a, f2ef6c30b)
+
 ## [0.52.0] - 2026-10-13
 
 The big highlight is **multi-rename**, which I've been missing for a long time! It lets you rename many files at once,

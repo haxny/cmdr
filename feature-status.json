@@ -54,7 +54,7 @@
       "id": "network-drives",
       "name": "Network drives (SMB)",
       "status": "beta",
-      "note": "Browsing and fast direct transfers work on common NAS setups, with saved servers and shares, account switching, accented names, DFS namespace roots, and unreliable servers. Constantly testing with more real-world servers."
+      "note": "Browsing and fast direct transfers work on common NAS setups, with server-side copies within a share, saved servers and shares, account switching, accented names, DFS namespace roots, and unreliable servers. Constantly testing with more real-world servers."
     },
     {
       "id": "android-devices",
@@ -90,7 +90,7 @@
       "id": "git-browser",
       "name": "Git browser",
       "status": "beta",
-      "note": "Browse history, branches, tags, stashes, and worktrees like folders, open any file from them in the viewer, and copy one out. Very large repos can take a bit to load."
+      "note": "Browse history, branches, tags, stashes, and worktrees like folders, open any file from them in the viewer, and copy one out. Lists up to 100,000 commits in about a second."
     },
     {
       "id": "local-ai",
@@ -132,7 +132,7 @@
       "id": "tabs",
       "name": "Tabs",
       "status": "stable",
-      "note": "Per-pane tabs with pinning, history, reopen closed tab, and dragging to reorder or move a tab to the other pane."
+      "note": "Per-pane tabs with pinning, history, reopen closed tab, and moving a tab left, right, or to the other pane by drag or keyboard."
     },
     {
       "id": "command-palette",
