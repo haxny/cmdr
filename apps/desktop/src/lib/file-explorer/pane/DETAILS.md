@@ -269,8 +269,9 @@ its ends, ↑/↓ hop to the same pane's next group, Escape returns to the list 
 leaves Enter, Space, the arrows, and Home/End to the control (`paneChromeOwnsKey`). `Tab` stays `pane.switch`, and
 modifier shortcuts still run. The keyboard way in is `pane.focusControls` (default ⌃F5), landing on the volume button.
 Activating a segment, a tab, or the volume button clicks it, and the click bubbles to the pane's (or the tab bar's)
-`onclick` (`handlePaneClick` / `onPaneFocus` → `focusActivePane`), so focus lands back in the list; a menu it opens
-takes focus and restores it home. A sort button handles Enter/Space itself without a click, so focus stays on it for the
+`onclick` (`handlePaneClick` / `onPaneFocus` → `focusActivePane`), so focus lands back in the list; a menu opened from a
+focused control takes focus and gives it back to that control on close (`#lib/ui/focus-restore.ts`, `home-control`), or
+home when the control is gone. A sort button handles Enter/Space itself without a click, so focus stays on it for the
 next press (ascending, then descending). Decision: arrow-key focus, ❌ no roving `tabindex`. `Tab` never walks the page
 here, so `tabindex` would only matter to WebKit, which makes a button with an explicit `tabindex` mouse-focusable on
 macOS (`HTMLFormControlElement::isMouseFocusable`, WebKit main, source-read 2026-10-15): a click would leave focus on

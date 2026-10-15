@@ -31,8 +31,15 @@ export interface FocusHome {
   keepsFocus?: (element: Element) => boolean
 }
 
-/** Where focus was when an overlay opened: the home as a whole, or one element outside it. */
-export type FocusOrigin = { kind: 'home' } | { kind: 'element'; element: HTMLElement }
+/**
+ * Where focus was when an overlay opened: the home as a whole, a home control that keeps focus
+ * (pane chrome: Escape on the menu its volume button opened goes back to that button, the
+ * menu-button pattern), or one element outside the home.
+ */
+export type FocusOrigin =
+  | { kind: 'home' }
+  | { kind: 'home-control'; element: HTMLElement }
+  | { kind: 'element'; element: HTMLElement }
 
 let home: FocusHome | null = null
 
@@ -66,7 +73,9 @@ export function isFocusAdrift(): boolean {
 /** Remembers where `active` (default: the focused element) sits, for `restoreFocus`. */
 export function captureFocusOrigin(active: Element | null = document.activeElement): FocusOrigin | null {
   if (!(active instanceof HTMLElement) || active === document.body) return null
-  if (home?.root()?.contains(active)) return { kind: 'home' }
+  if (home?.root()?.contains(active)) {
+    return home.keepsFocus?.(active) ? { kind: 'home-control', element: active } : { kind: 'home' }
+  }
   return { kind: 'element', element: active }
 }
 
@@ -91,7 +100,7 @@ function focusMovedOn(leaving: Element | null | undefined): boolean {
  */
 export function restoreFocus(origin: FocusOrigin | null, options: { leaving?: Element | null } = {}): void {
   if (!origin || focusMovedOn(options.leaving)) return
-  if (origin.kind === 'home') {
+  if (origin.kind === 'home' || (origin.kind === 'home-control' && !origin.element.isConnected)) {
     focusHome()
     return
   }

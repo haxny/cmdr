@@ -371,6 +371,9 @@ onboarding wizard, a toast, and the `Menu` consumers' `restoreFocus`) goes throu
   than its scroller), and after the palette's "Switch pane" or ⌥F1 → `Tab` it would land on the pane that's no longer
   focused. A remembered list that unmounted meanwhile (a view toggle) still restores, because the origin is the home,
   not the node. `focusHome()` is the same move for code with no origin (the Ask Cmdr rail's Escape, the servers hub).
+- **A home control that keeps focus** (`FocusHome.keepsFocus`: pane chrome) is remembered as itself (`home-control`), so
+  a menu opened from the volume button goes back to that button on close, the menu-button pattern. When it's gone by
+  then (a navigation re-rendered the path), focus goes home.
 - **Focus that already moved on stays.** When focus sits in another OPEN menu (`isFocusInOpenMenu`, which asks the menu
   stack; a closing menu leaves the stack before it restores), another dialog, or the toast stack (`[data-toast-stack]`,
   where "Move focus to the notifications" put it while the palette was still up), restoring does nothing: closing the

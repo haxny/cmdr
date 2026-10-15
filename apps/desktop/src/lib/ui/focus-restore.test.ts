@@ -81,6 +81,32 @@ describe('restoreFocus', () => {
 
   // ⌥F1 then Tab: the chooser re-opens in the other pane, and the closing one's restorer
   // must not pull focus off it (focus stays on the moved chooser today).
+  // The standard menu-button pattern: Escape on the volume menu opened from pane chrome goes
+  // back to the volume button, ❌ not to the list.
+  it('returns focus to the home control that keeps it (pane chrome), and home once that control is gone', () => {
+    const home = mountHome()
+    const control = focusable(home.root, 'button')
+    const unregister = registerFocusHome({
+      root: () => home.root,
+      refocus: home.refocus,
+      keepsFocus: (element) => element === control,
+    })
+    cleanup = unregister
+    control.focus()
+    const origin = captureFocusOrigin()
+    focusable().focus()
+
+    restoreFocus(origin)
+    expect(document.activeElement).toBe(control)
+    expect(home.refocus).not.toHaveBeenCalled()
+
+    focusable().focus()
+    control.remove()
+    restoreFocus(origin)
+    expect(home.refocus).toHaveBeenCalledTimes(1)
+    expect(document.activeElement).toBe(home.list)
+  })
+
   it('leaves focus alone when it already sits in another open menu', () => {
     const home = mountHome()
     cleanup = home.unregister
