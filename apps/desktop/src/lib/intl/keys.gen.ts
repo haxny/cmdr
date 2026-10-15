@@ -344,6 +344,7 @@ export type MessageKey =
   | 'commandPalette.groupAll'
   | 'commandPalette.groupRecent'
   | 'commandPalette.noResults'
+  | 'commandPalette.resultCount'
   | 'commandPalette.resultsAriaLabel'
   | 'commandPalette.searchAriaLabel'
   | 'commandPalette.searchPlaceholder'

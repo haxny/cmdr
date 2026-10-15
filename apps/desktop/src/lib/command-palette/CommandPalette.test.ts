@@ -163,6 +163,41 @@ describe('CommandPalette', () => {
     expect(results.length).toBe(1)
   })
 
+  // The count used to be visible only: a screen reader typing a query heard nothing about
+  // how many commands matched, or that none did. It's said once the typing pauses.
+  it('says how many commands match, or that none do, once the typing pauses', async () => {
+    vi.useFakeTimers()
+    try {
+      const target = document.createElement('div')
+      document.body.appendChild(target)
+      mount(CommandPalette, { target, props: { onExecute: mockOnExecute, onClose: mockOnClose } })
+      await tick()
+      const region = target.querySelector('[data-live-announcer]')
+      expect(region?.textContent).toBe('')
+
+      const input = target.querySelector('input') as HTMLInputElement
+      async function type(value: string): Promise<string> {
+        input.value = value
+        input.dispatchEvent(new InputEvent('input', { bubbles: true }))
+        await tick()
+        await vi.advanceTimersByTimeAsync(1000)
+        flushSync()
+        return region?.textContent ?? ''
+      }
+
+      // A burst says only its end state.
+      input.value = 'q'
+      input.dispatchEvent(new InputEvent('input', { bubbles: true }))
+      await tick()
+      expect(await type('quit')).toBe('1 command')
+      expect(await type('zzz')).toBe('No commands found')
+      expect(await type('i')).toBe('4 commands')
+      target.remove()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('calls onClose when Escape is pressed', async () => {
     const target = document.createElement('div')
     mount(CommandPalette, {

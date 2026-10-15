@@ -20,6 +20,9 @@
     import TextInput from '#lib/ui/TextInput.svelte'
     import { tString } from '#lib/intl/messages.svelte.js'
     import { dependOn } from '#lib/utils/reactivity.js'
+    import { createDebounce } from '#lib/utils/timing.js'
+    import { formatInteger } from '#lib/intl/number-format.js'
+    import LiveAnnouncer from '#lib/ui/LiveAnnouncer.svelte'
     import type { PaletteCondition } from '#lib/commands/index.js'
     import { getFocusedPanePath, getFocusedPaneVolumeId } from '#lib/file-explorer/pane/focused-pane-reads.js'
     import { capabilitiesForPane } from '#lib/file-explorer/pane/volume-capabilities.js'
@@ -37,6 +40,8 @@
 
     /** How many shortcut chips a palette row shows (power users discover alternates). */
     const MAX_SHORTCUTS_SHOWN = 3
+    /** How long typing must pause before the match count is said, so a word typed is one message. */
+    const COUNT_ANNOUNCE_DELAY_MS = 500
 
     interface Props {
         /** Called when user selects a command */
@@ -97,6 +102,25 @@
         hoveredIndex = null
     })
 
+    // How many commands match, said once the typing pauses: the count (and "none") is
+    // otherwise visible only. An empty query says nothing; the field's name covers opening.
+    let announcer: { announce: (message: string) => void } | undefined = $state()
+    const announceCount = createDebounce(() => {
+        if (!query.trim()) return
+        announcer?.announce(
+            results.length === 0
+                ? tString('commandPalette.noResults')
+                : tString('commandPalette.resultCount', {
+                      count: results.length,
+                      countText: formatInteger(results.length),
+                  }),
+        )
+    }, COUNT_ANNOUNCE_DELAY_MS)
+    $effect(() => {
+        dependOn(query)
+        announceCount.call()
+    })
+
     onMount(() => {
         focusOrigin = captureFocusOrigin()
         // Load recents and prune any IDs that no longer correspond to a valid palette
@@ -113,6 +137,7 @@
         // way of the explorer, after a "Switch pane" too). Without this, focus falls to
         // <body> after close and keyboard nav stops working until the user clicks back in.
         restoreFocus(focusOrigin, { leaving: overlayElement })
+        announceCount.cancel()
     })
 
     function handleKeyDown(e: KeyboardEvent) {
@@ -217,6 +242,7 @@
     use:trapFocus={{ onEscape: onClose }}
 >
     <div class="palette-modal">
+        <LiveAnnouncer bind:this={announcer} />
         <div class="search-row">
             <TextInput
                 bind:inputElement

@@ -16,6 +16,15 @@
     "description": "Empty-state message shown in the command palette when a search matches no commands."
   },
 
+  "commandPalette.resultCount": "{count, plural, one {{countText} command} other {{countText} commands}}",
+  "@commandPalette.resultCount": {
+    "description": "Said by a screen reader (never shown) after the user pauses typing in the command palette’s search box: how many commands match, for example “12 commands”. When nothing matches, commandPalette.noResults is said instead.",
+    "placeholders": {
+      "countText": "how many commands match, already formatted for display",
+      "count": "the same number (drives the singular/plural form)"
+    }
+  },
+
   "commandPalette.resultsAriaLabel": "Commands",
   "@commandPalette.resultsAriaLabel": {
     "description": "Accessibility label (read by screen readers) for the command palette's results list.",

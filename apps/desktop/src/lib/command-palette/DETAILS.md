@@ -28,6 +28,8 @@ User presses ⌘⇧P
   (`palette-option-{command.id}`). The listbox isn't rendered when a search yields zero results (a "No commands found"
   message replaces it), so the `scrollable-region-focusable` rule has nothing to flag in the empty state and
   `aria-expanded` flips to `false`.
+- **The match count speaks**: a `#lib/ui/LiveAnnouncer` says "12 commands" or "No commands found" 500 ms after typing
+  pauses (one message per word typed, not per key), and nothing for an empty query (opening reads the field's name).
 - **Fuzzy highlight rendering**: `highlightMatches()` converts the flat `matchedIndices` set into
   `{ text, highlighted }` segments and renders `<mark class="match-highlight">` for matched chars.
 - **Shortcut chips**: each combo renders as a non-clickable, dense (`size="sm"`) `ShortcutChip`, capped at three. Chips
