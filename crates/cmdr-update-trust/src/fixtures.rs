@@ -13,20 +13,20 @@ pub const FIXTURE_ID: &str = "com.example.cmdr-updater-fixture";
 /// `version`, unsigned.
 pub fn unsigned_bundle_at(app: &Path, version: &str) -> PathBuf {
     let contents = app.join("Contents");
-    fs::create_dir_all(contents.join("MacOS")).unwrap();
-    fs::create_dir_all(contents.join("Resources")).unwrap();
+    fs::create_dir_all(contents.join("MacOS")).expect("test fixture: create MacOS/");
+    fs::create_dir_all(contents.join("Resources")).expect("test fixture: create Resources/");
     // Any Mach-O will do, stripped of the Apple signature it ships with.
     let exe = contents.join("MacOS/Fixture");
-    fs::copy("/usr/bin/true", &exe).unwrap();
+    fs::copy("/usr/bin/true", &exe).expect("test fixture: copy a Mach-O");
     run_codesign(&[OsStr::new("--remove-signature"), exe.as_os_str()]);
-    fs::write(contents.join("Resources/data.txt"), "sealed\n").unwrap();
+    fs::write(contents.join("Resources/data.txt"), "sealed\n").expect("test fixture: write a resource");
     let mut info = plist::Dictionary::new();
     info.insert("CFBundleIdentifier".into(), FIXTURE_ID.into());
     info.insert("CFBundleExecutable".into(), "Fixture".into());
     info.insert("CFBundleShortVersionString".into(), version.into());
     plist::Value::Dictionary(info)
         .to_file_xml(contents.join("Info.plist"))
-        .unwrap();
+        .expect("test fixture: write Info.plist");
     app.to_path_buf()
 }
 
@@ -61,18 +61,27 @@ pub fn fixture_requirement() -> String {
 /// Packs `root`'s children into a `.tar.gz` at `archive`, the way the bundler does (`Cmdr.app/` at
 /// the top).
 pub fn tar_gz(root: &Path, archive: &Path) {
-    let file = fs::File::create(archive).unwrap();
+    let file = fs::File::create(archive).expect("test fixture: create the archive");
     let gz = flate2::write::GzEncoder::new(file, flate2::Compression::default());
     let mut builder = tar::Builder::new(gz);
-    for entry in fs::read_dir(root).unwrap() {
-        let entry = entry.unwrap();
-        builder.append_dir_all(entry.file_name(), entry.path()).unwrap();
+    for entry in fs::read_dir(root).expect("test fixture: list the archive root") {
+        let entry = entry.expect("test fixture: read an archive root entry");
+        builder
+            .append_dir_all(entry.file_name(), entry.path())
+            .expect("test fixture: pack a dir");
     }
-    builder.into_inner().unwrap().finish().unwrap();
+    builder
+        .into_inner()
+        .expect("test fixture: finish the tar")
+        .finish()
+        .expect("test fixture: finish the gzip");
 }
 
 fn run_codesign(args: &[&OsStr]) {
-    let output = Command::new("codesign").args(args).output().unwrap();
+    let output = Command::new("codesign")
+        .args(args)
+        .output()
+        .expect("test fixture: run codesign");
     assert!(
         output.status.success(),
         "codesign: {}",
