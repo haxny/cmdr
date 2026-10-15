@@ -444,6 +444,10 @@
   "@menu.help.keyboardShortcuts": {
     "sourceHash": "e9bef0b"
   },
+  "menu.help.accessibility": "Руководство по универсальному доступу",
+  "@menu.help.accessibility": {
+    "sourceHash": "eee67fa"
+  },
   "menu.help.whatsNew": "Что нового",
   "@menu.help.whatsNew": {
     "sourceHash": "37e6112"

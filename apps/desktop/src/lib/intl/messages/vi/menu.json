@@ -445,6 +445,10 @@
   "@menu.help.keyboardShortcuts": {
     "sourceHash": "e9bef0b"
   },
+  "menu.help.accessibility": "Hướng dẫn trợ năng",
+  "@menu.help.accessibility": {
+    "sourceHash": "eee67fa"
+  },
   "menu.help.whatsNew": "Có gì mới",
   "@menu.help.whatsNew": {
     "sourceHash": "37e6112"

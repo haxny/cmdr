@@ -17,6 +17,13 @@
     "confidence": "high",
     "sources": "macOS Finder pt-BR; shipped pt catalog"
   },
+  "accessibility": {
+    "chosen": "Acessibilidade",
+    "accept": ["acessibilidade"],
+    "confidence": "confirmed",
+    "sources": "macOS pt-BR AccessibilitySettingsExtension InfoPlist.loctable (\"pt\": Acessibilidade, Ajustes de Acessibilidade); MS terminology pt-BR acessibilidade, recurso de acessibilidade",
+    "note": "Sentence case in a Cmdr label (Guia de acessibilidade); Apple's capital only when naming the System Settings pane."
+  },
   "access-key-id": {
     "chosen": "ID da chave de acesso",
     "confidence": "high",

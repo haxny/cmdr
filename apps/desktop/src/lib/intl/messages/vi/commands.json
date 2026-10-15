@@ -63,6 +63,14 @@
   "@commands.helpOpenShortcuts.description": {
     "sourceHash": "a9a1e0d"
   },
+  "commands.helpAccessibility.label": "Hướng dẫn trợ năng",
+  "@commands.helpAccessibility.label": {
+    "sourceHash": "eee67fa"
+  },
+  "commands.helpAccessibility.description": "Mở hướng dẫn về các tính năng trợ năng của Cmdr trên getcmdr.com",
+  "@commands.helpAccessibility.description": {
+    "sourceHash": "2ece797"
+  },
   "commands.helpSendErrorReport.label": "Gửi báo cáo trục trặc…",
   "@commands.helpSendErrorReport.label": {
     "sourceHash": "063c94e"
@@ -344,6 +352,18 @@
   "@commands.tabCloseOthers.label": {
     "sourceHash": "0ddc2c5"
   },
+  "commands.tabMoveLeft.label": "Di chuyển tab sang trái",
+  "@commands.tabMoveLeft.label": {
+    "sourceHash": "6a55f1c"
+  },
+  "commands.tabMoveRight.label": "Di chuyển tab sang phải",
+  "@commands.tabMoveRight.label": {
+    "sourceHash": "a0f125f"
+  },
+  "commands.tabMoveToOtherPane.label": "Di chuyển tab sang khung kia",
+  "@commands.tabMoveToOtherPane.label": {
+    "sourceHash": "c604acb"
+  },
   "commands.tabMcpAction.label": "Tác vụ tab của khung",
   "@commands.tabMcpAction.label": {
     "sourceHash": "405ed9c"
@@ -511,6 +531,42 @@
   "commands.queueClose.label": "Đóng hàng đợi thao tác",
   "@commands.queueClose.label": {
     "sourceHash": "d7b8c22"
+  },
+  "commands.viewerToggleWordWrap.label": "Bật/tắt tự ngắt dòng",
+  "@commands.viewerToggleWordWrap.label": {
+    "sourceHash": "80a6fa2"
+  },
+  "commands.viewerToggleTail.label": "Bật/tắt chế độ theo dõi",
+  "@commands.viewerToggleTail.label": {
+    "sourceHash": "b711266"
+  },
+  "commands.viewerViewAsMedia.label": "Xem dưới dạng hình ảnh hoặc PDF",
+  "@commands.viewerViewAsMedia.label": {
+    "sourceHash": "5e713d3"
+  },
+  "commands.viewerViewAsText.label": "Xem dưới dạng văn bản",
+  "@commands.viewerViewAsText.label": {
+    "sourceHash": "a0059b8"
+  },
+  "commands.viewerViewAsBinary.label": "Xem dưới dạng nhị phân",
+  "@commands.viewerViewAsBinary.label": {
+    "sourceHash": "6720507"
+  },
+  "commands.viewerViewAsHex.label": "Xem dưới dạng thập lục phân",
+  "@commands.viewerViewAsHex.label": {
+    "sourceHash": "974e5dc"
+  },
+  "commands.viewerZoomIn.label": "Phóng to hình ảnh",
+  "@commands.viewerZoomIn.label": {
+    "sourceHash": "bd95659"
+  },
+  "commands.viewerZoomOut.label": "Thu nhỏ hình ảnh",
+  "@commands.viewerZoomOut.label": {
+    "sourceHash": "f4b62c5"
+  },
+  "commands.viewerToggleImageZoom.label": "Chuyển hình ảnh giữa vừa khít và kích cỡ thực",
+  "@commands.viewerToggleImageZoom.label": {
+    "sourceHash": "1bd79eb"
   },
   "commands.multiRenameOpenPresets.label": "Mở menu giá trị đặt trước",
   "@commands.multiRenameOpenPresets.label": {

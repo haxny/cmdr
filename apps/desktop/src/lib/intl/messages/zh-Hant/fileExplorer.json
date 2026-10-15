@@ -771,6 +771,14 @@
   "@fileExplorer.tabs.limitReached": {
     "sourceHash": "2d4205a"
   },
+  "fileExplorer.tabs.movePinnedRefused": "已釘選的分頁會留在原位。取消釘選後就能移動。",
+  "@fileExplorer.tabs.movePinnedRefused": {
+    "sourceHash": "6743a2e"
+  },
+  "fileExplorer.tabs.moveOnlyTabRefused": "這是這個窗格裡唯一的分頁，所以會留在原位。",
+  "@fileExplorer.tabs.moveOnlyTabRefused": {
+    "sourceHash": "c7f36a0"
+  },
   "fileExplorer.tabs.closePinnedConfirm": "這個分頁已釘選。還是要關閉嗎？",
   "@fileExplorer.tabs.closePinnedConfirm": {
     "sourceHash": "d5757f9"

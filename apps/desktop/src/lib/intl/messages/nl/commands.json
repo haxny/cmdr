@@ -64,6 +64,14 @@
   "@commands.helpOpenShortcuts.description": {
     "sourceHash": "a9a1e0d"
   },
+  "commands.helpAccessibility.label": "Toegankelijkheidsgids",
+  "@commands.helpAccessibility.label": {
+    "sourceHash": "eee67fa"
+  },
+  "commands.helpAccessibility.description": "Open de gids over de toegankelijkheidsfuncties van Cmdr op getcmdr.com",
+  "@commands.helpAccessibility.description": {
+    "sourceHash": "2ece797"
+  },
   "commands.helpSendErrorReport.label": "Verstuur foutrapport…",
   "@commands.helpSendErrorReport.label": {
     "sourceHash": "063c94e"
@@ -346,6 +354,18 @@
   "@commands.tabCloseOthers.label": {
     "sourceHash": "0ddc2c5"
   },
+  "commands.tabMoveLeft.label": "Verplaats tabblad naar links",
+  "@commands.tabMoveLeft.label": {
+    "sourceHash": "6a55f1c"
+  },
+  "commands.tabMoveRight.label": "Verplaats tabblad naar rechts",
+  "@commands.tabMoveRight.label": {
+    "sourceHash": "a0f125f"
+  },
+  "commands.tabMoveToOtherPane.label": "Verplaats tabblad naar het andere paneel",
+  "@commands.tabMoveToOtherPane.label": {
+    "sourceHash": "c604acb"
+  },
   "commands.tabMcpAction.label": "Tabbladactie paneel",
   "@commands.tabMcpAction.label": {
     "sourceHash": "405ed9c"
@@ -513,6 +533,42 @@
   "commands.queueClose.label": "Sluit de bewerkingenwachtrij",
   "@commands.queueClose.label": {
     "sourceHash": "d7b8c22"
+  },
+  "commands.viewerToggleWordWrap.label": "Zet tekstterugloop aan of uit",
+  "@commands.viewerToggleWordWrap.label": {
+    "sourceHash": "80a6fa2"
+  },
+  "commands.viewerToggleTail.label": "Zet tail-modus aan of uit",
+  "@commands.viewerToggleTail.label": {
+    "sourceHash": "b711266"
+  },
+  "commands.viewerViewAsMedia.label": "Toon als afbeelding of PDF",
+  "@commands.viewerViewAsMedia.label": {
+    "sourceHash": "5e713d3"
+  },
+  "commands.viewerViewAsText.label": "Toon als tekst",
+  "@commands.viewerViewAsText.label": {
+    "sourceHash": "a0059b8"
+  },
+  "commands.viewerViewAsBinary.label": "Toon als binair",
+  "@commands.viewerViewAsBinary.label": {
+    "sourceHash": "6720507"
+  },
+  "commands.viewerViewAsHex.label": "Toon als hex",
+  "@commands.viewerViewAsHex.label": {
+    "sourceHash": "974e5dc"
+  },
+  "commands.viewerZoomIn.label": "Zoom de afbeelding in",
+  "@commands.viewerZoomIn.label": {
+    "sourceHash": "bd95659"
+  },
+  "commands.viewerZoomOut.label": "Zoom de afbeelding uit",
+  "@commands.viewerZoomOut.label": {
+    "sourceHash": "f4b62c5"
+  },
+  "commands.viewerToggleImageZoom.label": "Wissel de afbeelding tussen passend en ware grootte",
+  "@commands.viewerToggleImageZoom.label": {
+    "sourceHash": "1bd79eb"
   },
   "commands.multiRenameOpenPresets.label": "Open voorinstellingenmenu",
   "@commands.multiRenameOpenPresets.label": {

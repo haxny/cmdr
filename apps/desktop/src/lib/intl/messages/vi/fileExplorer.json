@@ -773,6 +773,14 @@
   "@fileExplorer.tabs.limitReached": {
     "sourceHash": "2d4205a"
   },
+  "fileExplorer.tabs.movePinnedRefused": "Tab đã ghim luôn giữ nguyên chỗ. Hãy bỏ ghim tab này để di chuyển.",
+  "@fileExplorer.tabs.movePinnedRefused": {
+    "sourceHash": "6743a2e"
+  },
+  "fileExplorer.tabs.moveOnlyTabRefused": "Đây là tab duy nhất trong khung này, nên tab vẫn ở lại.",
+  "@fileExplorer.tabs.moveOnlyTabRefused": {
+    "sourceHash": "c7f36a0"
+  },
   "fileExplorer.tabs.closePinnedConfirm": "Tab này đã được ghim. Vẫn đóng?",
   "@fileExplorer.tabs.closePinnedConfirm": {
     "sourceHash": "d5757f9"

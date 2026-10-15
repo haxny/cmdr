@@ -63,6 +63,14 @@
   "@commands.helpOpenShortcuts.description": {
     "sourceHash": "a9a1e0d"
   },
+  "commands.helpAccessibility.label": "Anleitung zu Bedienungshilfen",
+  "@commands.helpAccessibility.label": {
+    "sourceHash": "eee67fa"
+  },
+  "commands.helpAccessibility.description": "Anleitung zu den Bedienungshilfen von Cmdr auf getcmdr.com öffnen",
+  "@commands.helpAccessibility.description": {
+    "sourceHash": "2ece797"
+  },
   "commands.helpSendErrorReport.label": "Fehlerbericht senden …",
   "@commands.helpSendErrorReport.label": {
     "sourceHash": "063c94e"
@@ -344,6 +352,18 @@
   "@commands.tabCloseOthers.label": {
     "sourceHash": "0ddc2c5"
   },
+  "commands.tabMoveLeft.label": "Tab nach links bewegen",
+  "@commands.tabMoveLeft.label": {
+    "sourceHash": "6a55f1c"
+  },
+  "commands.tabMoveRight.label": "Tab nach rechts bewegen",
+  "@commands.tabMoveRight.label": {
+    "sourceHash": "a0f125f"
+  },
+  "commands.tabMoveToOtherPane.label": "Tab in den anderen Bereich bewegen",
+  "@commands.tabMoveToOtherPane.label": {
+    "sourceHash": "c604acb"
+  },
   "commands.tabMcpAction.label": "Tab-Aktion im Bereich",
   "@commands.tabMcpAction.label": {
     "sourceHash": "405ed9c"
@@ -511,6 +531,42 @@
   "commands.queueClose.label": "Vorgangswarteschlange schließen",
   "@commands.queueClose.label": {
     "sourceHash": "d7b8c22"
+  },
+  "commands.viewerToggleWordWrap.label": "Zeilenumbruch ein-/ausschalten",
+  "@commands.viewerToggleWordWrap.label": {
+    "sourceHash": "80a6fa2"
+  },
+  "commands.viewerToggleTail.label": "Folgemodus ein-/ausschalten",
+  "@commands.viewerToggleTail.label": {
+    "sourceHash": "b711266"
+  },
+  "commands.viewerViewAsMedia.label": "Als Bild oder PDF anzeigen",
+  "@commands.viewerViewAsMedia.label": {
+    "sourceHash": "5e713d3"
+  },
+  "commands.viewerViewAsText.label": "Als Text anzeigen",
+  "@commands.viewerViewAsText.label": {
+    "sourceHash": "a0059b8"
+  },
+  "commands.viewerViewAsBinary.label": "Binär anzeigen",
+  "@commands.viewerViewAsBinary.label": {
+    "sourceHash": "6720507"
+  },
+  "commands.viewerViewAsHex.label": "Hexadezimal anzeigen",
+  "@commands.viewerViewAsHex.label": {
+    "sourceHash": "974e5dc"
+  },
+  "commands.viewerZoomIn.label": "Bild vergrößern",
+  "@commands.viewerZoomIn.label": {
+    "sourceHash": "bd95659"
+  },
+  "commands.viewerZoomOut.label": "Bild verkleinern",
+  "@commands.viewerZoomOut.label": {
+    "sourceHash": "f4b62c5"
+  },
+  "commands.viewerToggleImageZoom.label": "Bild zwischen Fenstergröße und Originalgröße umschalten",
+  "@commands.viewerToggleImageZoom.label": {
+    "sourceHash": "1bd79eb"
   },
   "commands.multiRenameOpenPresets.label": "Menü „Voreinstellungen“ öffnen",
   "@commands.multiRenameOpenPresets.label": {

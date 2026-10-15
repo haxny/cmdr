@@ -63,6 +63,14 @@
   "@commands.helpOpenShortcuts.description": {
     "sourceHash": "a9a1e0d"
   },
+  "commands.helpAccessibility.label": "Guia de acessibilidade",
+  "@commands.helpAccessibility.label": {
+    "sourceHash": "eee67fa"
+  },
+  "commands.helpAccessibility.description": "Abra o guia dos recursos de acessibilidade do Cmdr em getcmdr.com",
+  "@commands.helpAccessibility.description": {
+    "sourceHash": "2ece797"
+  },
   "commands.helpSendErrorReport.label": "Enviar relatório de problema…",
   "@commands.helpSendErrorReport.label": {
     "sourceHash": "063c94e"
@@ -344,6 +352,18 @@
   "@commands.tabCloseOthers.label": {
     "sourceHash": "0ddc2c5"
   },
+  "commands.tabMoveLeft.label": "Mover aba para a esquerda",
+  "@commands.tabMoveLeft.label": {
+    "sourceHash": "6a55f1c"
+  },
+  "commands.tabMoveRight.label": "Mover aba para a direita",
+  "@commands.tabMoveRight.label": {
+    "sourceHash": "a0f125f"
+  },
+  "commands.tabMoveToOtherPane.label": "Mover aba para o outro painel",
+  "@commands.tabMoveToOtherPane.label": {
+    "sourceHash": "c604acb"
+  },
   "commands.tabMcpAction.label": "Ação de aba do painel",
   "@commands.tabMcpAction.label": {
     "sourceHash": "405ed9c"
@@ -511,6 +531,42 @@
   "commands.queueClose.label": "Fechar a fila de operações",
   "@commands.queueClose.label": {
     "sourceHash": "d7b8c22"
+  },
+  "commands.viewerToggleWordWrap.label": "Ativar ou desativar a quebra automática de linha",
+  "@commands.viewerToggleWordWrap.label": {
+    "sourceHash": "80a6fa2"
+  },
+  "commands.viewerToggleTail.label": "Ativar ou desativar o modo de acompanhamento",
+  "@commands.viewerToggleTail.label": {
+    "sourceHash": "b711266"
+  },
+  "commands.viewerViewAsMedia.label": "Ver como imagem ou PDF",
+  "@commands.viewerViewAsMedia.label": {
+    "sourceHash": "5e713d3"
+  },
+  "commands.viewerViewAsText.label": "Ver como texto",
+  "@commands.viewerViewAsText.label": {
+    "sourceHash": "a0059b8"
+  },
+  "commands.viewerViewAsBinary.label": "Ver como binário",
+  "@commands.viewerViewAsBinary.label": {
+    "sourceHash": "6720507"
+  },
+  "commands.viewerViewAsHex.label": "Ver como hexadecimal",
+  "@commands.viewerViewAsHex.label": {
+    "sourceHash": "974e5dc"
+  },
+  "commands.viewerZoomIn.label": "Ampliar a imagem",
+  "@commands.viewerZoomIn.label": {
+    "sourceHash": "bd95659"
+  },
+  "commands.viewerZoomOut.label": "Reduzir a imagem",
+  "@commands.viewerZoomOut.label": {
+    "sourceHash": "f4b62c5"
+  },
+  "commands.viewerToggleImageZoom.label": "Alternar a imagem entre ajustada à janela e tamanho real",
+  "@commands.viewerToggleImageZoom.label": {
+    "sourceHash": "1bd79eb"
   },
   "commands.multiRenameOpenPresets.label": "Abrir menu de pré-ajustes",
   "@commands.multiRenameOpenPresets.label": {

@@ -24,6 +24,18 @@
     "confidence": "tentative",
     "sources": "catalog servers.sheet.accessKeyId and servers.sheet.identityLockedS3; MS access key → khóa truy cập; no AWS console ships Vietnamese"
   },
+  "accessibility": {
+    "chosen": "trợ năng",
+    "confidence": "confirmed",
+    "forms": "the macOS pane by name → Trợ năng (cỡ chữ Trợ năng của macOS); Cmdr's own features in a label → trợ năng (Hướng dẫn trợ năng); guide → hướng dẫn (macOS Hướng dẫn sử dụng máy Mac)",
+    "avoid": [
+      {
+        "form": "tính tiện dụng",
+        "why": "MS's older generic term; macOS and newer MS products say Trợ năng"
+      }
+    ],
+    "sources": "macOS 26 AccessibilitySettingsExtension InfoPlist (Accessibility → Trợ năng, plutil, 2026-10-15); MS terminology (Trợ năng, Bộ kiểm tra Trợ năng)"
+  },
   "account": {
     "chosen": "tài khoản",
     "confidence": "high",

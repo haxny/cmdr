@@ -63,6 +63,14 @@
   "@commands.helpOpenShortcuts.description": {
     "sourceHash": "a9a1e0d"
   },
+  "commands.helpAccessibility.label": "Hjälpmedelsguide",
+  "@commands.helpAccessibility.label": {
+    "sourceHash": "eee67fa"
+  },
+  "commands.helpAccessibility.description": "Öppna guiden till Cmdrs hjälpmedelsfunktioner på getcmdr.com",
+  "@commands.helpAccessibility.description": {
+    "sourceHash": "2ece797"
+  },
   "commands.helpSendErrorReport.label": "Skicka felrapport…",
   "@commands.helpSendErrorReport.label": {
     "sourceHash": "063c94e"
@@ -344,6 +352,18 @@
   "@commands.tabCloseOthers.label": {
     "sourceHash": "0ddc2c5"
   },
+  "commands.tabMoveLeft.label": "Flytta flik åt vänster",
+  "@commands.tabMoveLeft.label": {
+    "sourceHash": "6a55f1c"
+  },
+  "commands.tabMoveRight.label": "Flytta flik åt höger",
+  "@commands.tabMoveRight.label": {
+    "sourceHash": "a0f125f"
+  },
+  "commands.tabMoveToOtherPane.label": "Flytta flik till andra panelen",
+  "@commands.tabMoveToOtherPane.label": {
+    "sourceHash": "c604acb"
+  },
   "commands.tabMcpAction.label": "Panelflikåtgärd",
   "@commands.tabMcpAction.label": {
     "sourceHash": "405ed9c"
@@ -511,6 +531,42 @@
   "commands.queueClose.label": "Stäng åtgärdskön",
   "@commands.queueClose.label": {
     "sourceHash": "d7b8c22"
+  },
+  "commands.viewerToggleWordWrap.label": "Slå på eller av automatiskt radbyte",
+  "@commands.viewerToggleWordWrap.label": {
+    "sourceHash": "80a6fa2"
+  },
+  "commands.viewerToggleTail.label": "Slå på eller av Tail-läge",
+  "@commands.viewerToggleTail.label": {
+    "sourceHash": "b711266"
+  },
+  "commands.viewerViewAsMedia.label": "Visa som bild eller PDF",
+  "@commands.viewerViewAsMedia.label": {
+    "sourceHash": "5e713d3"
+  },
+  "commands.viewerViewAsText.label": "Visa som text",
+  "@commands.viewerViewAsText.label": {
+    "sourceHash": "a0059b8"
+  },
+  "commands.viewerViewAsBinary.label": "Visa binärt",
+  "@commands.viewerViewAsBinary.label": {
+    "sourceHash": "6720507"
+  },
+  "commands.viewerViewAsHex.label": "Visa hexadecimalt",
+  "@commands.viewerViewAsHex.label": {
+    "sourceHash": "974e5dc"
+  },
+  "commands.viewerZoomIn.label": "Zooma in på bilden",
+  "@commands.viewerZoomIn.label": {
+    "sourceHash": "bd95659"
+  },
+  "commands.viewerZoomOut.label": "Zooma ut från bilden",
+  "@commands.viewerZoomOut.label": {
+    "sourceHash": "f4b62c5"
+  },
+  "commands.viewerToggleImageZoom.label": "Växla bilden mellan anpassad och verklig storlek",
+  "@commands.viewerToggleImageZoom.label": {
+    "sourceHash": "1bd79eb"
   },
   "commands.multiRenameOpenPresets.label": "Öppna förinställningsmenyn",
   "@commands.multiRenameOpenPresets.label": {

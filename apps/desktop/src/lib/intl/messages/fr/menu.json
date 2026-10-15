@@ -443,6 +443,10 @@
   "@menu.help.keyboardShortcuts": {
     "sourceHash": "e9bef0b"
   },
+  "menu.help.accessibility": "Guide d’accessibilité",
+  "@menu.help.accessibility": {
+    "sourceHash": "eee67fa"
+  },
   "menu.help.whatsNew": "Nouveautés",
   "@menu.help.whatsNew": {
     "sourceHash": "37e6112"

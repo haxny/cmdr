@@ -4641,7 +4641,8 @@
     "confidence": "high",
     "sources": "Finder LocalizableMerged.json N169.33: Size → Размер (and «по размеру» as the sort item); DC, Nautilus, Dolphin, Thunar: Size → Размер",
     "exceptions": {
-      "settings.ai.tooltipLocal": "Context size is expressed by «контекст»; the surrounding memory quantities supply the size meaning."
+      "settings.ai.tooltipLocal": "Context size is expressed by «контекст»; the surrounding memory quantities supply the size meaning.",
+      "commands.viewerToggleImageZoom.label": "\"Actual size\" is image zoom, not file size: «в масштабе 100 %», matching `viewer.statusBar.hint.image` («100 % / вписать»)."
     }
   },
   "size-unit-gibibyte": {
@@ -5135,7 +5136,7 @@
   "tail": {
     "chosen": "Следить",
     "accept": ["следи", "слежени", "отслежива"],
-    "forms": "toolbar button «Следить»; hint «F: слежение»; aria «Следить: отслеживать изменения файла»",
+    "forms": "toolbar button «Следить»; hint «F: слежение» (`{key}: слежение`); toggle command: Включить или выключить режим «Следить»; aria «Следить: отслеживать изменения файла»",
     "avoid": [
       {
         "form": "Хвост",

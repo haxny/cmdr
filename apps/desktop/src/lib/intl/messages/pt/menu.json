@@ -446,6 +446,10 @@
   "@menu.help.keyboardShortcuts": {
     "sourceHash": "e9bef0b"
   },
+  "menu.help.accessibility": "Guia de acessibilidade",
+  "@menu.help.accessibility": {
+    "sourceHash": "eee67fa"
+  },
   "menu.help.whatsNew": "Novidades",
   "@menu.help.whatsNew": {
     "sourceHash": "37e6112"

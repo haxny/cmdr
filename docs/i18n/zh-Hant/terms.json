@@ -3534,6 +3534,12 @@
     "confidence": "high",
     "sources": "AP-HK, MS, NAU, DOL, THU, DC"
   },
+  "tail": {
+    "chosen": "跟隨",
+    "confidence": "high",
+    "forms": "the mode → 跟隨模式; status-bar hint → {key} 跟隨",
+    "sources": "catalog viewer.toolbar.tail.label / .ariaLabel (跟隨模式); no pile source renders tail -f (TC/DC/AP silent)"
+  },
   "tag": {
     "avoid": [
       {

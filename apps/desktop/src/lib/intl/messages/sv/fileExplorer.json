@@ -773,6 +773,14 @@
   "@fileExplorer.tabs.limitReached": {
     "sourceHash": "2d4205a"
   },
+  "fileExplorer.tabs.movePinnedRefused": "Fästa flikar stannar på sin plats. Lossa den här fliken för att flytta den.",
+  "@fileExplorer.tabs.movePinnedRefused": {
+    "sourceHash": "6743a2e"
+  },
+  "fileExplorer.tabs.moveOnlyTabRefused": "Det här är den enda fliken i den här panelen, så den stannar kvar.",
+  "@fileExplorer.tabs.moveOnlyTabRefused": {
+    "sourceHash": "c7f36a0"
+  },
   "fileExplorer.tabs.closePinnedConfirm": "Den här fliken är fäst. Stäng den ändå?",
   "@fileExplorer.tabs.closePinnedConfirm": {
     "sourceHash": "d5757f9"

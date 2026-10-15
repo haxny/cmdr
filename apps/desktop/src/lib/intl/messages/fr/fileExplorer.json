@@ -773,6 +773,14 @@
   "@fileExplorer.tabs.limitReached": {
     "sourceHash": "2d4205a"
   },
+  "fileExplorer.tabs.movePinnedRefused": "Les onglets épinglés restent en place. Désépinglez celui-ci pour le déplacer.",
+  "@fileExplorer.tabs.movePinnedRefused": {
+    "sourceHash": "6743a2e"
+  },
+  "fileExplorer.tabs.moveOnlyTabRefused": "C’est le seul onglet de ce panneau, il reste donc en place.",
+  "@fileExplorer.tabs.moveOnlyTabRefused": {
+    "sourceHash": "c7f36a0"
+  },
   "fileExplorer.tabs.closePinnedConfirm": "Cet onglet est épinglé. Le fermer quand même ?",
   "@fileExplorer.tabs.closePinnedConfirm": {
     "sourceHash": "d5757f9"

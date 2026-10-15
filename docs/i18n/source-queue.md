@@ -10,6 +10,10 @@ rule into `translation-principles.md` or `translator-instructions.md`), then del
 - `fileExplorer.pane.selectedCount`: English has only `=0` and `other`, so every `one`-category locale fails `plural`
   until it adds a `one` branch (nl copied `other`). Add `one {{countText} selected}` to the English so translators see
   it.
+- No `guide` concept for `commands.helpAccessibility.label` / `menu.help.accessibility` ("Accessibility guide"); add one
+  so locales align it with macOS Help's "User Guide" (ru `Руководство пользователя` → `Руководство по …`). (ru)
+- `concepts.json` `size` matches `commands.viewerToggleImageZoom.label` ("actual size" = image zoom 100%, not file
+  size); add it to `size`'s `notMatch`. ru carries an `exceptions` entry meanwhile. (ru)
 - `git` is a product name the descriptions say to keep, but it isn't in `BRAND_WORDS`
   (`apps/desktop/scripts/i18n-catalog-lib.ts`), so nothing enforces it.
 

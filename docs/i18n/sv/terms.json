@@ -25,6 +25,19 @@
     "confidence": "tentative",
     "sources": "catalog servers.sheet.accessKeyId and servers.sheet.identityLockedS3; MS access key → åtkomstnyckel; no AWS console ships Swedish"
   },
+  "accessibility": {
+    "chosen": "hjälpmedel",
+    "accept": ["Hjälpmedel"],
+    "forms": "the pane name Hjälpmedel; compounds close up: Hjälpmedelsguide, hjälpmedelsfunktioner, textstorlek för hjälpmedel",
+    "avoid": [
+      {
+        "form": "tillgänglighet",
+        "why": "the Windows and general-language word (MS accessibility → tillgänglighet); macOS names the pane and its features Hjälpmedel"
+      }
+    ],
+    "confidence": "high",
+    "sources": "macOS 27.0 live Setup Assistant Localizable.loctable (Hjälpmedel, hjälpmedelsalternativ); MS (accessibility → tillgänglighet, Ease of Access → hjälpmedel); catalog settings.appearance.textSize.description"
+  },
   "account": {
     "chosen": "konto",
     "confidence": "high",

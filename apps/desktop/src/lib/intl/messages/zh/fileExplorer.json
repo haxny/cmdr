@@ -771,6 +771,14 @@
   "@fileExplorer.tabs.limitReached": {
     "sourceHash": "2d4205a"
   },
+  "fileExplorer.tabs.movePinnedRefused": "已固定的标签页会留在原处。取消固定这个标签页后就能移动它了。",
+  "@fileExplorer.tabs.movePinnedRefused": {
+    "sourceHash": "6743a2e"
+  },
+  "fileExplorer.tabs.moveOnlyTabRefused": "这是这个窗格中唯一的标签页，所以它会留在原处。",
+  "@fileExplorer.tabs.moveOnlyTabRefused": {
+    "sourceHash": "c7f36a0"
+  },
   "fileExplorer.tabs.closePinnedConfirm": "这个标签页已固定。仍要关闭吗？",
   "@fileExplorer.tabs.closePinnedConfirm": {
     "sourceHash": "d5757f9"

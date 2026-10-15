@@ -11,6 +11,19 @@
     "confidence": "high",
     "sources": "catalog (fileOperations.validation.pathNotAbsolute); ms (absolute path → abszolút elérési út)"
   },
+  "accessibility": {
+    "chosen": "kisegítő lehetőségek",
+    "accept": ["kisegítő"],
+    "forms": "the System Settings pane → Kisegítő lehetőségek; Accessibility guide → Útmutató a kisegítő lehetőségekhez; Cmdr's accessibility features → a Cmdr kisegítő lehetőségei",
+    "avoid": [
+      {
+        "form": "akadálymentesség",
+        "why": "not Apple's word for the feature set; macOS names the pane and its features Kisegítő lehetőségek"
+      }
+    ],
+    "confidence": "confirmed",
+    "sources": "macOS 27 AccessibilitySettingsExtension.appex InfoPlist.loctable (CFBundleDisplayName = Kisegítő lehetőségek); catalog (settings zoom description: macOS kisegítő lehetőségek); ms (guide → útmutató)"
+  },
   "access": {
     "chosen": "hozzáférés",
     "accept": ["hozzáfér", "elér", "fér"],

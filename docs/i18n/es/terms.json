@@ -23,6 +23,13 @@
     "confidence": "high",
     "sources": "catalog servers.sheet.accessKeyId; decisions.md \"S3\" (AWS console and docs in this language (outside the pile, not verified live))"
   },
+  "accessibility": {
+    "chosen": "Accesibilidad",
+    "accept": ["accesibilidad"],
+    "forms": "the macOS pane → Accesibilidad (capitalized, a name); Cmdr's features → las funciones de accesibilidad; Accessibility guide → Guía de accesibilidad",
+    "confidence": "high",
+    "sources": "macOS System Settings pane Accesibilidad (the pile's SystemSettings bundle lacks that pane; catalog settings.appearance.textSize.description already says Accesibilidad de macOS); MS terminology (accessibility feature → característica de accesibilidad)"
+  },
   "account": {
     "chosen": "cuenta",
     "forms": "la cuenta; ❌ never por su cuenta for the account (that locution means on its own)",
@@ -2897,6 +2904,8 @@
   },
   "tail": {
     "chosen": "Seguir",
+    "accept": ["seguimiento"],
+    "forms": "the toolbar button and the status-bar hint → Seguir / seguir; the mode as a noun → el modo seguimiento (viewer.toolbar.tail.ariaLabel, commands.viewerToggleTail.label)",
     "confidence": "tentative",
     "sources": "composed (no macOS equivalent)"
   },

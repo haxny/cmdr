@@ -64,6 +64,10 @@
   "@shortcuts.scope.queueWindow": {
     "sourceHash": "fa91417"
   },
+  "shortcuts.scope.viewerWindow": "Visor de archivos",
+  "@shortcuts.scope.viewerWindow": {
+    "sourceHash": "b32f632"
+  },
   "shortcuts.scope.aboutWindow": "Ventana Acerca de",
   "@shortcuts.scope.aboutWindow": {
     "sourceHash": "615b547"

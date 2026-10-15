@@ -773,6 +773,14 @@
   "@fileExplorer.tabs.limitReached": {
     "sourceHash": "2d4205a"
   },
+  "fileExplorer.tabs.movePinnedRefused": "Las pestañas fijadas no se mueven. Desfija esta para moverla.",
+  "@fileExplorer.tabs.movePinnedRefused": {
+    "sourceHash": "6743a2e"
+  },
+  "fileExplorer.tabs.moveOnlyTabRefused": "Es la única pestaña de este panel, así que se queda.",
+  "@fileExplorer.tabs.moveOnlyTabRefused": {
+    "sourceHash": "c7f36a0"
+  },
   "fileExplorer.tabs.closePinnedConfirm": "Esta pestaña está fijada. ¿Cerrarla de todos modos?",
   "@fileExplorer.tabs.closePinnedConfirm": {
     "sourceHash": "d5757f9"

@@ -115,3 +115,10 @@ German runs 20–35% longer than English. Look at these against the pseudolocale
 - `fileExplorer.pane.locationBarAriaLabel` (`Standort`, spoken „Standort, Symbolleiste“): the ruling's `Ort` collides
   with `servers.sheet.s3Location` (`Standort`) under term consistency. A reviewer may prefer `Ort` plus an allowlist
   entry.
+- `menu.help.accessibility` / `commands.helpAccessibility.label` (`Anleitung zu Bedienungshilfen`): `Anleitung` for
+  „guide“ is coined (the pile has only `Benutzerhandbuch`, which reads as a full manual). A reviewer may prefer
+  `Bedienungshilfen-Leitfaden` or plain `Bedienungshilfen`.
+- `commands.viewerViewAsBinary.label` / `commands.viewerViewAsHex.label` (`Binär anzeigen`, `Hexadezimal anzeigen`):
+  adverbial so the view-mode words stay byte-identical, beside `Als Text anzeigen`.
+  `commands.viewerToggleImageZoom.label` uses `Fenstergröße` (Total Commander) for „fit“ where the status hint says
+  `einpassen`.

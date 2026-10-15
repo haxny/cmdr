@@ -188,3 +188,10 @@ wording into `terms.json` (and `decisions.md` when the reason is worth keeping).
   for "unborn": no pile source names either; confirm against what Dutch git users actually say.
 - `fileIcon.sync.onlineOnly` `Alleen online beschikbaar` runs three words in a badge asking for one or two; Finder nl
   has no badge label to copy.
+
+## Toegankelijkheidsgids en weergavevenstertoetsen (`commands.helpAccessibility.*`, `menu.help.accessibility`, `commands.viewer*`)
+
+- `Toegankelijkheidsgids` for "Accessibility guide": `gids` has no pile source (Apple's Help menu says
+  `Mac-gebruikershandleiding` for a manual); confirm `gids` reads right for a web page, or prefer `handleiding`.
+- `Wissel de afbeelding tussen passend en ware grootte`: `ware grootte` is Preview's Actual Size from memory, not mined
+  (the pile has no Preview strings); `Zoom de afbeelding in/uit` keeps the separable particle at the end.

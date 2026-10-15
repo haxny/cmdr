@@ -24,6 +24,12 @@
     "confidence": "high",
     "sources": "decisions.md \"Le stockage S3\" (AWS FR console, MS FRA); catalog servers.sheet.accessKeyId"
   },
+  "accessibility": {
+    "chosen": "accessibilité",
+    "confidence": "high",
+    "forms": "the macOS pane → Accessibilité; Help item and command → Guide d’accessibilité (modeled on Finder’s Help > Guide d’utilisation du Mac); features → fonctionnalités d’accessibilité",
+    "sources": "macOS System Settings (Accessibilité, already quoted by settings.appearance.textSize.description); macOS Finder MainMenu (Guide d’utilisation du Mac); MS terminology FRA (accessibilité)"
+  },
   "account": {
     "chosen": "compte",
     "confidence": "high",

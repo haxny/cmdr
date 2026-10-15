@@ -25,6 +25,18 @@
     "confidence": "high",
     "sources": "catalog servers.sheet.accessKeyId and servers.sheet.identityLockedS3; AWS console and docs in this language (outside the pile, not verified live) (Zugriffsschlüssel-ID); MS access key → Zugriffsschlüssel"
   },
+  "accessibility": {
+    "avoid": [
+      {
+        "form": "Barrierefreiheit",
+        "why": "MS's second option; macOS names the pane and its features Bedienungshilfen"
+      }
+    ],
+    "chosen": "Bedienungshilfen",
+    "confidence": "high",
+    "forms": "Accessibility guide → Anleitung zu Bedienungshilfen (commands.helpAccessibility.label, menu.help.accessibility); Cmdr's accessibility features → die Bedienungshilfen von Cmdr",
+    "sources": "macOS System Settings pane name (catalog settings.appearance.textSize.description already says Bedienungshilfen); MS terminology accessibility → Bedienungshilfen / Barrierefreiheit"
+  },
   "account": {
     "accept": ["Konten"],
     "avoid": [

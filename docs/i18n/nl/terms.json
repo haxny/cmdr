@@ -22,6 +22,12 @@
     "forms": "exclusive access → exclusieve toegang; in prose, \"trying to access a folder\" → een map proberen te openen (benaderen reads bookish)",
     "sources": "macOS (\"geen toegang\")"
   },
+  "accessibility": {
+    "chosen": "Toegankelijkheid",
+    "confidence": "high",
+    "forms": "compounds close up: Toegankelijkheidsgids (Help-menu item and palette command), toegankelijkheidsfuncties, macOS-toegankelijkheidstekstgrootte",
+    "sources": "macOS System Settings pane Toegankelijkheid; MS terminology (accessibility → toegankelijkheid); catalog settings.appearance.textSize.description"
+  },
   "access-key-id": {
     "chosen": "toegangssleutel-ID",
     "confidence": "high",

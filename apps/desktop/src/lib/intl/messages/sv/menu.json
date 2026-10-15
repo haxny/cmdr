@@ -441,6 +441,10 @@
   "@menu.help.keyboardShortcuts": {
     "sourceHash": "e9bef0b"
   },
+  "menu.help.accessibility": "Hjälpmedelsguide",
+  "@menu.help.accessibility": {
+    "sourceHash": "eee67fa"
+  },
   "menu.help.whatsNew": "Nyheter",
   "@menu.help.whatsNew": {
     "sourceHash": "37e6112"

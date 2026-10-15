@@ -38,10 +38,11 @@ const SPAIN_ONLY: readonly { term: string; pattern: RegExp; except?: readonly st
     pattern: /(?<!\p{L})ajustes?(?!\p{L})/iu,
     // `Ajuste de línea` is word wrap, not a setting.
     except: [
+      'commands.viewerToggleWordWrap.label',
       'menu.viewer.wordWrap',
       'settings.viewer.wordWrap.label',
       'viewer.statusBar.badge.wrap',
-      'viewer.statusBar.hint.text',
+      'viewer.statusBar.hint.wrap',
     ],
   },
   { term: 'pulsar → presionar', pattern: /(?<!\p{L})p[uú]ls(?!\p{L}*ión)/iu },

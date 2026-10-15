@@ -27,6 +27,18 @@
     "confidence": "high",
     "sources": "AWS zh-CN docs (访问密钥 ID 和秘密访问密钥, IAM id_credentials_access-keys, checked 2026-10-02); MS access key → 访问密钥"
   },
+  "accessibility": {
+    "avoid": [
+      {
+        "form": "无障碍",
+        "why": "Android's and the web's word; macOS zh-CN names the System Settings pane 辅助功能"
+      }
+    ],
+    "chosen": "辅助功能",
+    "confidence": "high",
+    "forms": "Accessibility guide → 辅助功能指南 (command and Help menu item); macOS text size → macOS 辅助功能的文本大小",
+    "sources": "macOS System Settings pane 辅助功能 (cited by Double Commander zh-CN: 系统偏好设置 > 安全性与隐私 > 辅助功能); MS terminology accessibility → 辅助功能 (id 7459); catalog settings.appearance.textSize.description"
+  },
   "account": {
     "chosen": "账户",
     "confidence": "high",

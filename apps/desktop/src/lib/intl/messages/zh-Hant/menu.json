@@ -444,6 +444,10 @@
   "@menu.help.keyboardShortcuts": {
     "sourceHash": "e9bef0b"
   },
+  "menu.help.accessibility": "輔助使用指南",
+  "@menu.help.accessibility": {
+    "sourceHash": "eee67fa"
+  },
   "menu.help.whatsNew": "新功能",
   "@menu.help.whatsNew": {
     "sourceHash": "37e6112"
