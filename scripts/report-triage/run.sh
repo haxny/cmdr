@@ -52,6 +52,12 @@ trap 'rm -rf -- "$work/bundles"' EXIT
 # command, so without these the box's `~/.zshenv` re-exports its broad GH_TOKEN (over ours), CLOUDFLARE_API_TOKEN, and
 # the rest straight back into the agent's shell, undoing `env -i`. `/var/empty` is a root-owned empty dir, so zsh
 # finds no startup files to read (verified on the M1, Claude Code 2.1.299, 2026-10-14).
+#
+# A run gets 90 minutes, then SIGALRM stops it (perl's `alarm` survives the `exec`; macOS ships no `timeout`). Without
+# it, a run whose API connection dropped waits forever: the 2026-10-15 run sat 4.5 hours on two closed sockets, and
+# launchd never starts the next day's run while one is still going.
+limit_seconds=5400
+status=0
 env -i \
   HOME="$HOME" \
   SHELL=/bin/zsh \
@@ -62,6 +68,7 @@ env -i \
   TRIAGE_R2_ACCOUNT_ID="6a4433bf11c3cf86feda057f76f47991" \
   TRIAGE_R2_ACCESS_KEY_ID="$r2_key_id" \
   TRIAGE_R2_SECRET_ACCESS_KEY="$r2_secret" \
+  /usr/bin/perl -e 'alarm shift; exec @ARGV or die "exec: $!"' "$limit_seconds" \
   claude -p "$prompt" \
   --model claude-opus-5-5 \
   --settings "$here/settings.json" \
@@ -69,4 +76,9 @@ env -i \
   --strict-mcp-config --mcp-config '{"mcpServers":{}}' \
   --tools Bash,Read,Grep,Glob \
   --permission-mode dontAsk \
-  --permission-prompts none
+  --permission-prompts none ||
+  status=$?
+if ((status == 142)); then
+  echo "Stopped after $((limit_seconds / 60)) minutes without finishing (SIGALRM). Cards it didn't reach stay unprocessed for tomorrow." >&2
+fi
+exit "$status"
