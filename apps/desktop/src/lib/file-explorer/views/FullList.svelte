@@ -3,6 +3,7 @@
     import Icon from '#lib/ui/Icon.svelte'
     import StatusGlyph from '#lib/ui/StatusGlyph.svelte'
     import { dependOn } from '#lib/utils/reactivity.js'
+    import { useScrollBoxSize, type ScrollBoxSize } from '#lib/utils/scroll-box-size-action.js'
     import type { FileEntry, SelectPayload, SortColumn, SortOrder, SyncStatus, VisibleRangePayload } from '../types'
     import type { FileIndexState, FolderCoverage, ListingIndexSizesChanged } from '#lib/tauri-commands/index.js'
     import { calculateVirtualWindow, getScrollToPosition } from './virtual-scroll'
@@ -377,13 +378,12 @@
     let scrollTop = $state(0)
     /**
      * How much width the vertical scrollbar takes from the scroller's content box:
-     * 0 for macOS overlay scrollbars, ~15px under "Always show scroll bars", and 0
-     * again whenever the listing is short enough not to overflow. The header sits
-     * outside the scroll container, so it has to re-add exactly this to its right
-     * padding to keep its columns over the rows'. Both bindings are
-     * ResizeObserver-backed, so a window resize, a font-scale change, a listing that
-     * stops overflowing, or the user flipping that System Setting all re-measure on
-     * their own — nothing here needs a manual trigger.
+     * the styled classic bar's width (`app-file-list.css`) while the listing
+     * overflows, 0 when it doesn't. The header sits outside the scroll container,
+     * so it has to re-add exactly this to its right padding to keep its columns
+     * over the rows'. `useScrollBoxSize` watches the content box, so a window
+     * resize, a font-scale change, and a listing that starts or stops overflowing
+     * all re-measure on their own — nothing here needs a manual trigger.
      */
     let listClientWidth = $state(0)
     let listOffsetWidth = $state(0)
@@ -723,9 +723,13 @@
         class:is-covered={loadingOverlay !== undefined}
         data-file-list-surface
         bind:this={scrollContainer}
-        bind:clientHeight={rowAreaHeight}
-        bind:clientWidth={listClientWidth}
-        bind:offsetWidth={listOffsetWidth}
+        use:useScrollBoxSize={{
+            onResize: (box: ScrollBoxSize) => {
+                rowAreaHeight = box.clientHeight
+                listClientWidth = box.clientWidth
+                listOffsetWidth = box.offsetWidth
+            },
+        }}
         onscroll={handleScroll}
         tabindex="-1"
     >

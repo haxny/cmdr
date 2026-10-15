@@ -125,6 +125,14 @@ previous text. A resize at the same width and text is a no-op, and a truncation 
 the DOM. The Full list's 300 ms column transition resizes every name cell each frame, so without both skips every
 transition cost a `textContent` write per row per frame.
 
+## scroll-box-size-action.ts
+
+`useScrollBoxSize(node, { onResize })` reports a scroll container's `clientWidth`, `clientHeight`, and `offsetWidth` at
+mount and whenever its content box changes. It replaces Svelte's `bind:clientHeight` family on the file lists because
+those bindings observe the BORDER box, and a classic scrollbar appearing or going (the lists style theirs, see
+`lib/file-explorer/views/DETAILS.md` § Key decisions) moves only the content box. Observing `{ box: 'content-box' }`
+catches both that and every border-box resize.
+
 ## inline-size-action.ts
 
 `useInlineSize(node, { onResize })` is the house stand-in for a CSS container query: it reports an element's content-box

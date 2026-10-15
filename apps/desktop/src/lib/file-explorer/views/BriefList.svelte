@@ -1,6 +1,7 @@
 <script lang="ts">
     import { untrack, type Snippet } from 'svelte'
     import { dependOn } from '#lib/utils/reactivity.js'
+    import { useScrollBoxSize, type ScrollBoxSize } from '#lib/utils/scroll-box-size-action.js'
     import type { FileEntry, SelectPayload, SortColumn, SortOrder, SyncStatus, VisibleRangePayload } from '../types'
     import type { FileIndexState, FolderCoverage } from '#lib/tauri-commands/index.js'
     import { calculateVirtualWindowVariable, getScrollToPositionVariable } from './virtual-scroll'
@@ -246,7 +247,7 @@
     let scrollLeft = $state(0)
 
     /**
-     * Size actually available to columns. `bind:clientWidth` / `clientHeight` report the
+     * Size actually available to columns. `useScrollBoxSize`'s `clientWidth` / `clientHeight` report the
      * scroll surface's content box PLUS its own padding, and `.brief-list` carries the
      * pane's gutter on all four sides — so the raw numbers overstate the usable area by
      * two gutters per axis, and the rightmost column and the bottom row of each column
@@ -962,8 +963,12 @@
         class:is-covered={loadingOverlay !== undefined}
         data-file-list-surface
         bind:this={scrollContainer}
-        bind:clientHeight={containerHeight}
-        bind:clientWidth={containerWidth}
+        use:useScrollBoxSize={{
+            onResize: (box: ScrollBoxSize) => {
+                containerHeight = box.clientHeight
+                containerWidth = box.clientWidth
+            },
+        }}
         onscroll={handleScroll}
         tabindex="-1"
         role="listbox"

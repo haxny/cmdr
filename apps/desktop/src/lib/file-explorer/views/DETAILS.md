@@ -291,18 +291,27 @@ non-configurable, so wrapping them from a spec silently does nothing.
 **Decision**: `FullList`'s column header is a **sibling above** the scroll container, and pays the scrollbar's width
 itself. **Why**: a native scrollbar spans its scroll container's full height, so a header inside the scroller puts the
 pane's scrollbar right next to the column labels, which no native macOS list does. The cost of moving it out is that it
-no longer shares the scroller's content box: with "Always show scrollbars" set (System Settings → Appearance),
-non-overlay scrollbars take ~15 px from the rows but not from a full-width header, and every column drifts.
+no longer shares the scroller's content box: the list's classic scrollbar (below) takes its width from the rows but not
+from a full-width header, and every column would drift.
 
-`FullList` closes that gap by measuring: `scrollbarWidth = max(0, listOffsetWidth - listClientWidth)`, from
-`bind:offsetWidth` / `bind:clientWidth` on `.full-list`. Those bindings are ResizeObserver-backed, so a window resize, a
-font-scale change, a listing that stops overflowing, and the user flipping that System Setting all re-measure without a
-manual trigger. The number reaches CSS as `--spacing-scrollbar-width` (declared `0px` in `app.css`, overridden inline on
-`.header-row`), and `FullListHeader` spends it as
-`padding-right: calc(var(--spacing-md) + var(--spacing-scrollbar-width))`. The header's background still runs edge to
-edge, over the scrollbar's column, as a native list header does. It travels as a custom property rather than a
-ready-made `padding-right` so the `calc` stays in the stylesheet, and because jsdom drops an inline `calc()` containing
-a `var()` (which is why `FullListHeader.test.ts` asserts on the property).
+`FullList` closes that gap by measuring: `scrollbarWidth = max(0, listOffsetWidth - listClientWidth)`, reported by
+`useScrollBoxSize` (`#lib/utils/scroll-box-size-action.ts`) on `.full-list`. ❌ Not `bind:clientWidth`: Svelte's size
+bindings observe the BORDER box, which a scrollbar appearing doesn't move, so they kept the pre-overflow numbers. The
+action observes the content box, so a window resize, a font-scale change, and a listing that starts or stops overflowing
+all re-measure without a manual trigger. `BriefList` reads its client box through the same action. The number reaches
+CSS as `--spacing-scrollbar-width` (declared `0px` in `app.css`, overridden inline on `.header-row`), and
+`FullListHeader` spends it as `padding-right: calc(var(--spacing-md) + var(--spacing-scrollbar-width))`. The header's
+background still runs edge to edge, over the scrollbar's column, as a native list header does. It travels as a custom
+property rather than a ready-made `padding-right` so the `calc` stays in the stylesheet, and because jsdom drops an
+inline `calc()` containing a `var()` (which is why `FullListHeader.test.ts` asserts on the property).
+
+**Decision**: both lists style `::-webkit-scrollbar` (`src/app-file-list.css`), so the bar is always visible while the
+list overflows and takes its own strip instead of floating over rows. **Why**: macOS overlay scrollbars fade out and
+paint over the content, hiding Full's cursor edge and Brief's bottom row; styling any part switches WebKit to a classic
+bar regardless of the system "Show scroll bars" setting. With `overflow: auto` the strip exists only while the list
+overflows, so a short listing's layout is unchanged. Brief's rows-per-column come from the shrunk `clientHeight`, which
+is why the content-box observation above matters there too: with a border-box binding, the bottom row sat under the
+horizontal bar.
 
 ❌ Don't move the header back inside the scroller, and ❌ don't reintroduce a header-HEIGHT offset between `scrollTop`
 and the spacer: the two differ by the gutter alone (above), and adding the header's height on top makes the clamp eat

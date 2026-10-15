@@ -95,8 +95,8 @@ Seven sheets, all global (no Svelte scoping). Who owns what:
 - `app-tooltip.css`: `.cmdr-tooltip`, the singleton element the tooltip action creates.
 - `app-file-list.css`: the `.file-entry` row chrome that `FullList.svelte` and `BriefList.svelte` share (stripe,
   selection fill, selected-row hairline, the marked-file bar and text stroke, cursor fill and outline, the unfocused
-  pane's dashed cursor outline). Only rules that were identical in both views live here; see
-  `lib/file-explorer/views/DETAILS.md` for what stayed per-view and why.
+  pane's dashed cursor outline) and the lists' always-visible classic scrollbars. Only rules that were identical in both
+  views live here; see `lib/file-explorer/views/DETAILS.md` for what stayed per-view and why.
 
 ### Cascade order is load order, and it's manual
 
