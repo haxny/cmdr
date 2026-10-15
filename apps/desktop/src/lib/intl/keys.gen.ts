@@ -1730,6 +1730,7 @@ export type MessageKey =
   | 'fileExplorer.pane.ejectFailedToast'
   | 'fileExplorer.pane.fileExplorerAriaLabel'
   | 'fileExplorer.pane.filePaneAriaLabel'
+  | 'fileExplorer.pane.filterCleared'
   | 'fileExplorer.pane.filterMatches'
   | 'fileExplorer.pane.location'
   | 'fileExplorer.pane.locationBarAriaLabel'
