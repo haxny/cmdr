@@ -11,6 +11,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use super::UpdateInstallError;
+use super::code_signature::{self, CodeSignatureRefusal};
 
 /// Error type for the sync pipeline (`sync_bundle` + its inner helpers).
 ///
@@ -120,7 +121,12 @@ pub fn install(tarball_path: &Path, may_install: &dyn Fn(&semver::Version) -> bo
         )));
     }
 
-    vet_staged_bundle(&staged_app, env!("CARGO_PKG_VERSION"), may_install)?;
+    vet_staged_bundle(
+        &staged_app,
+        env!("CARGO_PKG_VERSION"),
+        may_install,
+        &code_signature::verify_release_bundle,
+    )?;
 
     log::info!("Installing update into bundle: {}", bundle_path.display());
 
@@ -161,8 +167,11 @@ pub fn install(tarball_path: &Path, may_install: &dyn Fn(&semver::Version) -> bo
     Ok(())
 }
 
-/// Refuses a staged bundle whose own version isn't newer than `current`, or that the managed
-/// policy doesn't allow (`may_install`).
+/// Refuses a staged bundle that isn't code-signed by Cmdr's Developer ID (`code_signature`), whose
+/// own version isn't newer than `current`, or that the managed policy doesn't allow (`may_install`).
+///
+/// The code signature goes first: until it holds, nothing inside the bundle (its `Info.plist`
+/// version included) is anything more than what the updater key's holder chose to write.
 ///
 /// The policy is asked about the version the bundle NAMES, not the one the check offered: an
 /// unsigned manifest could offer a version under the ceiling and serve a signed release above it.
@@ -170,7 +179,14 @@ fn vet_staged_bundle(
     staged_app: &Path,
     current: &str,
     may_install: &dyn Fn(&semver::Version) -> bool,
+    code_signature: &dyn Fn(&Path) -> Result<(), CodeSignatureRefusal>,
 ) -> Result<(), UpdateInstallError> {
+    if let Err(refusal) = code_signature(staged_app) {
+        crate::log_error!("Refusing the update: its minisign signature verified, but {refusal}");
+        return Err(UpdateInstallError::UntrustedCodeSignature {
+            detail: refusal.to_string(),
+        });
+    }
     let version = refuse_unless_newer(staged_app, current)?;
     if !may_install(&version) {
         log::info!(target: "managed_policy", "Not installing update {version}: the organization's policy refuses it");
@@ -609,6 +625,11 @@ mod tests {
         dir
     }
 
+    /// The code-signature check for tests whose fixture bundles are unsigned on purpose.
+    fn trusted(_: &Path) -> Result<(), CodeSignatureRefusal> {
+        Ok(())
+    }
+
     #[test]
     fn a_newer_staged_bundle_installs() {
         let dir = staged_app_with_version(Some("0.51.0"));
@@ -640,13 +661,80 @@ mod tests {
         let ceiling = crate::managed_policy::UpdateCeiling::Minor(0, 52);
         let held = |version: &semver::Version| ceiling.allows(version);
         assert_eq!(
-            vet_staged_bundle(&dir.path().join("Cmdr.app"), "0.51.0", &held),
+            vet_staged_bundle(&dir.path().join("Cmdr.app"), "0.51.0", &held, &trusted),
             Err(UpdateInstallError::BlockedByPolicy)
         );
         assert_eq!(
-            vet_staged_bundle(&dir.path().join("Cmdr.app"), "0.51.0", &|_| true),
+            vet_staged_bundle(&dir.path().join("Cmdr.app"), "0.51.0", &|_| true, &trusted),
             Ok(())
         );
+    }
+
+    /// ❗ A bundle whose Apple code signature isn't Cmdr's is refused before anything inside it is
+    /// believed, even its `Info.plist`: a leaked updater key can sign an archive, not a Developer ID
+    /// build. The refusal is typed, and the policy is never asked about such a bundle.
+    #[test]
+    fn a_bundle_not_signed_by_cmdr_is_refused_first() {
+        let dir = staged_app_with_version(Some("0.53.0"));
+        let policy_asked = std::cell::Cell::new(false);
+        let may_install = |_: &semver::Version| {
+            policy_asked.set(true);
+            true
+        };
+        let not_ours = |_: &Path| Err(CodeSignatureRefusal::NotOurs);
+        assert!(matches!(
+            vet_staged_bundle(&dir.path().join("Cmdr.app"), "0.51.0", &may_install, &not_ours),
+            Err(UpdateInstallError::UntrustedCodeSignature { .. })
+        ));
+        assert!(
+            !policy_asked.get(),
+            "an untrusted bundle's version must not reach the policy"
+        );
+    }
+
+    /// The check against a real published release, extracted by the installer's own `tar` code
+    /// (which drops xattrs and sets its own modes, so the system `tar` proves nothing): the genuine
+    /// bundle passes, an ad-hoc re-signed copy and a copy with one changed resource don't. Needs
+    /// the release archive, so it's opt-in; recipe in `DETAILS.md` § Code signature.
+    #[test]
+    #[ignore = "needs a downloaded release archive in CMDR_UPDATER_RELEASE_TARBALL"]
+    fn a_published_release_passes_and_its_doctored_copies_dont() {
+        let tarball =
+            PathBuf::from(std::env::var_os("CMDR_UPDATER_RELEASE_TARBALL").expect("set CMDR_UPDATER_RELEASE_TARBALL"));
+        let extract = |label: &str| {
+            let dir = crate::test_support::TestDir::new(label);
+            extract_tarball(&tarball, &dir).unwrap();
+            let app = dir.join("Cmdr.app");
+            (dir, app)
+        };
+
+        let (_genuine_dir, genuine) = extract("release_genuine");
+        assert_eq!(code_signature::verify_release_bundle(&genuine), Ok(()));
+
+        let (_ad_hoc_dir, ad_hoc) = extract("release_ad_hoc");
+        let output = Command::new("codesign")
+            .args(["--force", "--deep", "--sign", "-"])
+            .arg(&ad_hoc)
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "codesign: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        assert_eq!(
+            code_signature::verify_release_bundle(&ad_hoc),
+            Err(CodeSignatureRefusal::NotOurs)
+        );
+
+        let (_tampered_dir, tampered) = extract("release_tampered");
+        let mut info = fs::read(tampered.join("Contents/Info.plist")).unwrap();
+        info.extend_from_slice(b"\n");
+        fs::write(tampered.join("Contents/Info.plist"), info).unwrap();
+        assert!(matches!(
+            code_signature::verify_release_bundle(&tampered),
+            Err(CodeSignatureRefusal::Invalid { .. })
+        ));
     }
 
     /// A rollback stays a failure even where the policy would allow it: the version check comes first.
@@ -654,7 +742,7 @@ mod tests {
     fn an_older_archive_is_a_failure_not_a_policy_refusal() {
         let dir = staged_app_with_version(Some("0.50.0"));
         assert!(matches!(
-            vet_staged_bundle(&dir.path().join("Cmdr.app"), "0.51.0", &|_| true),
+            vet_staged_bundle(&dir.path().join("Cmdr.app"), "0.51.0", &|_| true, &trusted),
             Err(UpdateInstallError::Failed { .. })
         ));
     }

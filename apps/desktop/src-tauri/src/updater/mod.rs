@@ -10,6 +10,7 @@
 //! - `install_update`: extracts and syncs into the running `.app` bundle
 
 mod bundle_location;
+mod code_signature;
 // Crate-visible for `installer::running_bundle`, which `dock/` needs to decide whether a Dock tile
 // could point at this copy. Nothing else outside `updater` reaches in.
 pub(crate) mod installer;
@@ -416,6 +417,10 @@ pub enum UpdateInstallError {
     BlockedByPolicy,
     /// No verified download is waiting: the frontend asked out of turn.
     NothingStaged,
+    /// The staged bundle's Apple code signature isn't a valid Cmdr Developer ID signature, though
+    /// its archive passed minisign. Nothing was written. Means the updater key signed something
+    /// that isn't a Cmdr release (or the release itself is broken): log it at error.
+    UntrustedCodeSignature { detail: String },
     /// The install ran and didn't finish.
     Failed { detail: String },
 }

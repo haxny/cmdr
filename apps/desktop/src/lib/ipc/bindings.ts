@@ -17042,6 +17042,12 @@ export type UpdateInstallError =
   | { type: 'blockedByPolicy' }
   // No verified download is waiting: the frontend asked out of turn.
   | { type: 'nothingStaged' }
+  /**
+   *  The staged bundle's Apple code signature isn't a valid Cmdr Developer ID signature, though
+   *  its archive passed minisign. Nothing was written. Means the updater key signed something
+   *  that isn't a Cmdr release (or the release itself is broken): log it at error.
+   */
+  | { type: 'untrustedCodeSignature'; detail: string }
   // The install ran and didn't finish.
   | { type: 'failed'; detail: string }
 

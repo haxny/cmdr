@@ -9,7 +9,19 @@ import { TypedFailure } from '#lib/ipc/typed-failure.js'
 /** An `Error` that still carries the backend's typed install failure. */
 export class UpdateInstallFailure extends TypedFailure<UpdateInstallError> {
   constructor(failure: UpdateInstallError) {
-    super(failure, failure.type === 'failed' ? `update install: ${failure.detail}` : `update install ${failure.type}`)
+    super(failure, describe(failure))
     this.name = 'UpdateInstallFailure'
+  }
+}
+
+/** The log line for a failure: the backend's detail where it carries one. */
+function describe(failure: UpdateInstallError): string {
+  switch (failure.type) {
+    case 'failed':
+      return `update install: ${failure.detail}`
+    case 'untrustedCodeSignature':
+      return `update install refused, untrusted code signature: ${failure.detail}`
+    default:
+      return `update install ${failure.type}`
   }
 }

@@ -240,6 +240,12 @@ risk.
     `Info.plist` must too (so an older signed release can't be replayed as an update), and the release workflow refuses
     to move the published manifest backwards (`apps/desktop/src-tauri/src/updater/CLAUDE.md`,
     `apps/desktop/src/lib/updates/DETAILS.md`).
+  - **An update must also carry Cmdr's Apple code signature.** On macOS, before anything is written into the bundle, the
+    updater checks the extracted bundle's code signature: valid (strict, all architectures, nested code), and satisfying
+    a requirement pinned to Cmdr's Developer ID team (`83H6YAQMNP`). Nothing the manifest, the archive, or the
+    environment controls can turn the check off. So a leaked updater key alone can't ship anything: an archive it signs
+    must still hold a bundle signed with the Developer ID identity, which is a separate key that Apple can revoke
+    (`apps/desktop/src-tauri/src/updater/DETAILS.md` § Code signature).
   - **Release builds are Developer ID signed and notarized** (`docs/guides/apple-signing-and-notarization.md`).
   - **The release pipeline**: release tags are SSH-signed and verified against `.github/release-signers` before a build
     starts; only admins can create `v*` tags (a repository ruleset); the only jobs that sign run in a `release`
@@ -272,8 +278,15 @@ risk.
     to every install. What local signing removes is the key itself leaking from GitHub, and an archive swapped on the
     release; what the compile/sign split removes is that dependency reading the signing keys.
   - **The minisign updater key can't be rotated** without a release signed by the old key; losing it strands installs on
-    manual reinstall. With local signing it lives on one laptop (encrypted, with Bitwarden copies), so a compromise of
-    that laptop could sign anything.
+    manual reinstall. With local signing it lives on one laptop (encrypted, with Bitwarden copies). On macOS, that key
+    alone can only re-sign genuine Cmdr releases, and an older one is refused by the version check; it can't ship a
+    build of its own.
+  - **The updater key plus the Developer ID signing identity together can ship to every macOS install.** If both leak
+    (for example both reachable from one compromised laptop or CI run), the code-signature check passes. Apple can
+    revoke the Developer ID certificate, but the updater doesn't force a revocation check (enforcing one would fail
+    every install whose network blocks Apple's OCSP responder), so it relies on macOS's default revocation handling.
+  - **Outside macOS the updater trusts minisign alone**: those builds use the Tauri updater plugin, which has no
+    code-signature step.
   - Some release-chain hardening is tracked privately.
 
 ### 7. Licensing
