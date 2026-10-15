@@ -1,17 +1,21 @@
-//! macOS "reduce transparency" reader.
+//! macOS Accessibility > Display options reader.
 //!
-//! Reads the user's Accessibility > Display > Reduce transparency setting via
-//! `NSWorkspace.accessibilityDisplayShouldReduceTransparency()` and observes
-//! `NSWorkspaceAccessibilityDisplayOptionsDidChangeNotification` to emit live
-//! updates.
+//! Reads the three display options the UI mirrors (Reduce transparency,
+//! Increase contrast, Differentiate without color) via `NSWorkspace`, and
+//! observes `NSWorkspaceAccessibilityDisplayOptionsDidChangeNotification` to
+//! emit live updates.
 //!
 //! ## Notes
 //!
+//! - WKWebView doesn't reflect `prefers-reduced-transparency` (verified: AppKit
+//!   reports `true` while the webview's `matchMedia` reports `false`), and CSS
+//!   has no media query for Differentiate without color at all, so the
+//!   frontend reads these here and toggles classes on `<html>`.
 //! - The accessibility-options notification posts on the `NSWorkspace`
 //!   notification center (NOT the default center), so we subscribe there.
-//! - It fires for the whole accessibility-display options group (reduce
-//!   transparency, increase contrast, reduce motion, etc.), so we always
-//!   re-read the current value rather than trusting the notification payload.
+//! - It fires for the whole accessibility-display options group (also reduce
+//!   motion, invert colors, etc.), so we always re-read every value rather
+//!   than trusting the notification payload.
 
 use std::ptr::NonNull;
 
@@ -22,54 +26,58 @@ use objc2_foundation::NSNotification;
 use tauri::{AppHandle, Runtime};
 use tauri_specta::Event as _;
 
-use crate::system_events::ReduceTransparencyChanged;
+use crate::system_events::{DisplayAccessibility, DisplayAccessibilityChanged};
 
-/// Reads whether the user has enabled "reduce transparency". Returns `false`
-/// (the safe "don't reduce" default) if it can't be read.
+/// Reads the current display options.
 ///
 /// `NSWorkspace` accessibility-display queries are AppKit-main-thread-only. The
 /// `mtm: MainThreadMarker` is the compile-time proof we're on the main thread;
-/// the objc2 0.3 method doesn't take it as an argument, so its presence alone
+/// the objc2 0.3 methods don't take it as an argument, so its presence alone
 /// is what makes an off-main call fail to compile.
-fn read_should_reduce_transparency(_mtm: MainThreadMarker) -> bool {
-    NSWorkspace::sharedWorkspace().accessibilityDisplayShouldReduceTransparency()
+fn read_display_accessibility(_mtm: MainThreadMarker) -> DisplayAccessibility {
+    let workspace = NSWorkspace::sharedWorkspace();
+    DisplayAccessibility {
+        reduce_transparency: workspace.accessibilityDisplayShouldReduceTransparency(),
+        increase_contrast: workspace.accessibilityDisplayShouldIncreaseContrast(),
+        differentiate_without_color: workspace.accessibilityDisplayShouldDifferentiateWithoutColor(),
+    }
 }
 
-/// Tauri command: returns whether macOS "reduce transparency" is enabled.
+/// Tauri command: returns the macOS Accessibility > Display options the UI mirrors.
 ///
 /// `NSWorkspace` accessibility queries are main-thread-only, so we hop to the
 /// AppKit main thread via `run_on_main_thread` and read there, mirroring
-/// `get_accent_color`. Returns `false` (don't reduce) if the main-thread hop or
-/// channel fails.
+/// `get_accent_color`. Returns all-off (the safe default) if the main-thread hop
+/// or channel fails.
 #[tauri::command]
 #[specta::specta]
-pub fn get_should_reduce_transparency(app: AppHandle) -> bool {
+pub fn get_display_accessibility(app: AppHandle) -> DisplayAccessibility {
     let (tx, rx) = std::sync::mpsc::channel();
     if app
         .run_on_main_thread(move || {
             let mtm = MainThreadMarker::new().expect("run_on_main_thread runs on the main thread");
-            let _ = tx.send(read_should_reduce_transparency(mtm));
+            let _ = tx.send(read_display_accessibility(mtm));
         })
         .is_err()
     {
-        warn!("Couldn't hop to the main thread to read reduce-transparency, defaulting to false");
-        return false;
+        warn!("Couldn't hop to the main thread to read display accessibility options, defaulting to all off");
+        return DisplayAccessibility::default();
     }
 
     rx.recv().unwrap_or_else(|e| {
-        warn!("Couldn't receive reduce-transparency from the main thread ({e}), defaulting to false");
-        false
+        warn!("Couldn't receive display accessibility options from the main thread ({e}), defaulting to all off");
+        DisplayAccessibility::default()
     })
 }
 
 /// Starts observing `NSWorkspaceAccessibilityDisplayOptionsDidChangeNotification`.
-/// Emits `reduce-transparency-changed` with the new value whenever the user
+/// Emits `display-accessibility-changed` with the fresh options whenever the user
 /// changes their Accessibility > Display options in System Settings.
-pub fn observe_reduce_transparency_changes<R: Runtime>(app_handle: AppHandle<R>) {
+pub fn observe_display_accessibility_changes<R: Runtime>(app_handle: AppHandle<R>) {
     // This runs at startup on the main thread (called from the Tauri setup hook).
-    let mtm = MainThreadMarker::new().expect("observe_reduce_transparency_changes runs on the main thread");
-    let initial = read_should_reduce_transparency(mtm);
-    debug!("Reduce transparency: {initial}");
+    let mtm = MainThreadMarker::new().expect("observe_display_accessibility_changes runs on the main thread");
+    let initial = read_display_accessibility(mtm);
+    debug!("Display accessibility: {initial:?}");
 
     // Accessibility-display options post on the NSWorkspace notification center,
     // not the default center.
@@ -82,10 +90,10 @@ pub fn observe_reduce_transparency_changes<R: Runtime>(app_handle: AppHandle<R>)
         // notification; accessibility-options changes post on the main thread.
         let mtm = MainThreadMarker::new()
             .expect("NSWorkspaceAccessibilityDisplayOptionsDidChange is delivered on the main thread");
-        let reduce = read_should_reduce_transparency(mtm);
-        info!("Reduce transparency changed: {reduce}");
-        if let Err(e) = (ReduceTransparencyChanged { reduce }).emit(&app_handle) {
-            warn!("Failed to emit reduce-transparency-changed event: {e}");
+        let options = read_display_accessibility(mtm);
+        info!("Display accessibility changed: {options:?}");
+        if let Err(e) = (DisplayAccessibilityChanged { options }).emit(&app_handle) {
+            warn!("Failed to emit display-accessibility-changed event: {e}");
         }
     });
 

@@ -6,6 +6,7 @@
     import { initWindowSettings, initWindowLanguageSync } from '#lib/settings/window-settings.js'
     import { initAccentColor, cleanupAccentColor } from '#lib/accent-color.js'
     import { initGlassMaterial, cleanupGlassMaterial } from '#lib/glass-material.js'
+    import { initDisplayAccessibility, cleanupDisplayAccessibility } from '#lib/display-accessibility.js'
     import { initTextSize, cleanupTextSize } from '#lib/text-size.svelte.js'
     import { trackOwnRect } from '#lib/window-positioning.js'
     import { getAppLogger } from '#lib/logging/logger.js'
@@ -396,6 +397,7 @@
             unsubscribeLanguage = initWindowLanguageSync({ title: () => tString('queue.windowTitle') })
             await initAccentColor()
             await initGlassMaterial()
+            await initDisplayAccessibility()
             await initTextSize()
             await store.init()
             // This window's session registry. Subscribed here, before any row
@@ -437,6 +439,7 @@
         destroyOperationSessions()
         cleanupAccentColor()
         cleanupGlassMaterial()
+        cleanupDisplayAccessibility()
         cleanupTextSize()
     })
 </script>

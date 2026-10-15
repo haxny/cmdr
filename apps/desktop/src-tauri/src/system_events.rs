@@ -18,13 +18,25 @@ pub struct AccentColorChanged {
     pub hex: String,
 }
 
-/// `reduce-transparency-changed`: the macOS Accessibility > Display > Reduce
-/// transparency setting changed. `reduce` is the new value (`true` = reduce
-/// transparency / use opaque backgrounds).
+/// The macOS Accessibility > Display options the UI mirrors as classes on
+/// `<html>`. All `false` off macOS. Read by `get_display_accessibility`.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct DisplayAccessibility {
+    /// Reduce transparency: translucent materials go opaque.
+    pub reduce_transparency: bool,
+    /// Increase contrast: borders, secondary text, and focus rings get stronger.
+    pub increase_contrast: bool,
+    /// Differentiate without color: state cues gain a shape or weight, not just a hue.
+    pub differentiate_without_color: bool,
+}
+
+/// `display-accessibility-changed`: one of the macOS Accessibility > Display
+/// options changed. `options` is the fresh full set, re-read on every change.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, specta::Type, Event)]
 #[serde(rename_all = "camelCase")]
-pub struct ReduceTransparencyChanged {
-    pub reduce: bool,
+pub struct DisplayAccessibilityChanged {
+    pub options: DisplayAccessibility,
 }
 
 /// `glass-tint-changed`: the macOS 27 Appearance > Liquid Glass slider moved. `amount` is

@@ -51,6 +51,10 @@ vi.mock('#lib/settings/window-settings.js', () => ({
 }))
 vi.mock('#lib/accent-color.js', () => ({ initAccentColor: vi.fn(resolved), cleanupAccentColor: vi.fn() }))
 vi.mock('#lib/glass-material.js', () => ({ initGlassMaterial: vi.fn(resolved), cleanupGlassMaterial: vi.fn() }))
+vi.mock('#lib/display-accessibility.js', () => ({
+  initDisplayAccessibility: vi.fn(resolved),
+  cleanupDisplayAccessibility: vi.fn(),
+}))
 vi.mock('#lib/text-size.svelte.js', () => ({ initTextSize: vi.fn(resolved), cleanupTextSize: vi.fn() }))
 vi.mock('#lib/window-positioning.js', () => ({ trackOwnRect: vi.fn(noUnlisten) }))
 // `<Size>` inside the rows reads the reactive settings layer.

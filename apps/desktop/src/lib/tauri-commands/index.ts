@@ -572,9 +572,10 @@ export {
 } from './ai'
 export type { CloudAiConsentStatus } from './ai'
 
-// Appearance / system-environment (accent color, reduce-transparency, Liquid Glass tint, text-size, localized strings)
+// Appearance / system-environment (accent color, display accessibility, Liquid Glass tint, text-size, localized strings)
 export {
   getAccentColor,
+  getDisplayAccessibility,
   getShouldReduceTransparency,
   getGlassTintAmount,
   onGlassTintChanged,
@@ -582,7 +583,7 @@ export {
   getLocalizedSystemStrings,
   getOsLocales,
   onAccentColorChanged,
-  onReduceTransparencyChanged,
+  onDisplayAccessibilityChanged,
   onSystemTextSizeChanged,
   onOsLocalesChanged,
 } from './appearance'

@@ -15,6 +15,7 @@
     import { initVolumeTints, cleanupVolumeTints } from '#lib/file-explorer/pane/volume-tint.svelte.js'
     import { initAccentColor, cleanupAccentColor } from '#lib/accent-color.js'
     import { initGlassMaterial, cleanupGlassMaterial } from '#lib/glass-material.js'
+    import { initDisplayAccessibility, cleanupDisplayAccessibility } from '#lib/display-accessibility.js'
     import { logWebkitCompat } from '#lib/utils/webkit-compat.js'
     import { initFocusWatchdog } from '#lib/focus-watchdog.js'
     import { initTextSize, cleanupTextSize } from '#lib/text-size.svelte.js'
@@ -243,6 +244,7 @@
             // Read system accent color from macOS and listen for changes
             { name: 'accentColor', run: initAccentColor },
             { name: 'glassMaterial', run: initGlassMaterial },
+            { name: 'displayAccessibility', run: initDisplayAccessibility },
             {
                 // Apply compounded text size (system Accessibility × user setting).
                 // This is the window that renders Brief mode, so it's the one that
@@ -328,6 +330,7 @@
         // Cleanup other modules
         cleanupAccentColor()
         cleanupGlassMaterial()
+        cleanupDisplayAccessibility()
         cleanupTextSize()
         cleanupReactiveSettings()
         cleanupSettingsApplier()

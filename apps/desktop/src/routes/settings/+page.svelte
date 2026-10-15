@@ -11,6 +11,7 @@
     import { initializeShortcuts, flushPendingSave as flushShortcutsSave } from '#lib/shortcuts/index.js'
     import { initAccentColor, cleanupAccentColor } from '#lib/accent-color.js'
     import { initGlassMaterial, cleanupGlassMaterial } from '#lib/glass-material.js'
+    import { initDisplayAccessibility, cleanupDisplayAccessibility } from '#lib/display-accessibility.js'
     import { initTextSize, cleanupTextSize, getEffectiveScale } from '#lib/text-size.svelte.js'
     import { initSystemStrings } from '#lib/system-strings.svelte.js'
     import {
@@ -285,6 +286,7 @@
             await initAccentColor()
 
             await initGlassMaterial()
+            await initDisplayAccessibility()
 
             // Apply compounded text size (system Accessibility × user setting)
             await initTextSize()
@@ -415,6 +417,7 @@
         unsubscribeLanguage?.()
         cleanupAccentColor()
         cleanupGlassMaterial()
+        cleanupDisplayAccessibility()
         cleanupTextSize()
     })
 

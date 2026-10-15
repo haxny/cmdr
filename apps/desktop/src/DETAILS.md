@@ -27,19 +27,20 @@ minification, so gating markup on `isDevBuild()` would ship the dialog gallery a
 ## Glass material
 
 Every frosted-glass surface (menus, selects, popovers, toasts, tooltips) draws from the tokens in `app.css` §
-Frosted-glass material, and `#lib/glass-material` (inited per window) feeds them the two macOS settings that shape it:
+Frosted-glass material, and two per-window modules feed them the two macOS settings that shape it:
 
 - **Reduced transparency.** WKWebView never reflects `@media (prefers-reduced-transparency)`, so the app can't key a
-  fallback off it. The backend reads the `NSWorkspace` value and the module toggles an `html.reduce-transparency` CLASS
-  instead. Under it, `app.css` § Reduced transparency flips `--color-bg-glass` / `--color-bg-glass-steady` /
-  `--color-border-glass` to opaque and `--glass-backdrop` to `none`, so a surface using the tokens needs no rule of its
-  own. `prefers-reduced-motion` WKWebView does honor, so that one stays a media query.
+  fallback off it. The backend reads the `NSWorkspace` value and `#lib/display-accessibility` toggles an
+  `html.reduce-transparency` CLASS instead (see § Display accessibility classes). Under it, `app.css` § Reduced
+  transparency flips `--color-bg-glass` / `--color-bg-glass-steady` / `--color-border-glass` to opaque and
+  `--glass-backdrop` to `none`, so a surface using the tokens needs no rule of its own. `prefers-reduced-motion`
+  WKWebView does honor, so that one stays a media query.
 - **The Liquid Glass slider** (macOS 27 Appearance). The backend reads the undocumented `NSGlassTintAmount` global
   default, re-reading it each time the app becomes active (`apps/desktop/src-tauri/src/glass_tint.rs` has why no
-  notification works), and the module sets `--glass-tint` (0 clearest to 1 most tinted, 0.5 when macOS reports none).
-  The glass fill's opacity and the blur grow with it, as native menus do. Toasts ride it with a higher opacity floor
-  (`--glass-toast-opacity`), since they hold paragraphs over busy lists; tooltips and the unblurred Ask Cmdr drop hint
-  use the fixed `--color-bg-glass-steady` instead.
+  notification works), and `#lib/glass-material` sets `--glass-tint` (0 clearest to 1 most tinted, 0.5 when macOS
+  reports none). The glass fill's opacity and the blur grow with it, as native menus do. Toasts ride it with a higher
+  opacity floor (`--glass-toast-opacity`), since they hold paragraphs over busy lists; tooltips and the unblurred Ask
+  Cmdr drop hint use the fixed `--color-bg-glass-steady` instead.
 
 **Gotcha: the MCP bridge's `webview_screenshot` never paints `backdrop-filter`.** Every glass surface reads as bare
 translucency in it, with the text underneath sharp through the fill, so a menu or popover over a busy list (a dialog's
@@ -53,6 +54,21 @@ test div with `backdrop-filter: blur(20px)` above everything left the text under
 
 Menu-like surfaces (`Menu`, `Select`, the breadcrumb popup) also take the macOS 26+ menu shape: `--radius-menu`,
 `--shadow-glass` plus the `--shadow-glass-rim` top highlight, and rows highlighted as inset pills.
+
+## Display accessibility classes
+
+`#lib/display-accessibility` (inited per window) mirrors three macOS Accessibility > Display options onto `<html>` as
+classes: `reduce-transparency`, `increase-contrast`, and `differentiate-without-color`. The backend reads all three from
+`NSWorkspace` in one typed `DisplayAccessibility` value and re-reads them on every
+`NSWorkspaceAccessibilityDisplayOptionsDidChangeNotification` (`apps/desktop/src-tauri/src/display_accessibility.rs`),
+so they follow System Settings live.
+
+- **Why classes**: WKWebView ignores `prefers-reduced-transparency` (verified, see the module doc), and CSS has no query
+  for Differentiate without color at all. `increase-contrast` is ALSO on when `prefers-contrast: more` matches, so a
+  webview that reflects it (Linux) gets the same styling. Style off the class, ❌ never the media query: one source
+  keeps the two from drifting.
+- **Dev simulation**: `simulateDisplayAccessibility()` forces an option on without touching System Settings (Debug >
+  Appearance drives it). An option is on when macOS OR the simulation says so.
 
 ## Window drag strips sit at `--z-sticky`, under every menu
 

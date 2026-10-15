@@ -91,6 +91,10 @@ vi.mock('#lib/glass-material.js', () => ({
   initGlassMaterial: vi.fn(() => Promise.resolve()),
   cleanupGlassMaterial: vi.fn(),
 }))
+vi.mock('#lib/display-accessibility.js', () => ({
+  initDisplayAccessibility: vi.fn(() => Promise.resolve()),
+  cleanupDisplayAccessibility: vi.fn(),
+}))
 vi.mock('#lib/text-size.svelte.js', () => ({
   initTextSize: vi.fn(() => Promise.resolve()),
   cleanupTextSize: vi.fn(),

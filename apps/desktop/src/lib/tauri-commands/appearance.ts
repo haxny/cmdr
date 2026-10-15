@@ -1,6 +1,6 @@
 // Appearance / system-environment wrappers: typed `on*` event listeners over the
 // `tauri-specta` `events.*` helpers, plus the one-shot reads of the current OS
-// appearance/accessibility state (accent color, reduce-transparency, text-size
+// appearance/accessibility state (accent color, display accessibility options, text-size
 // multiplier, localized system strings).
 
 import { type UnlistenFn } from '@tauri-apps/api/event'
@@ -8,9 +8,10 @@ import {
   commands,
   events,
   type AccentColorChanged,
+  type DisplayAccessibility,
+  type DisplayAccessibilityChanged,
   type GlassTintChanged,
   type LocalizedSystemStrings,
-  type ReduceTransparencyChanged,
   type SystemTextSizeChanged,
   type OsLocales,
   type OsLocalesChanged,
@@ -21,9 +22,20 @@ export function getAccentColor(): Promise<string> {
   return commands.getAccentColor()
 }
 
-/** Reads the current macOS "reduce transparency" (Accessibility > Display) state. */
-export function getShouldReduceTransparency(): Promise<boolean> {
-  return commands.getShouldReduceTransparency()
+/**
+ * Reads the macOS Accessibility > Display options the UI mirrors (Reduce transparency,
+ * Increase contrast, Differentiate without color). All off outside macOS.
+ */
+export function getDisplayAccessibility(): Promise<DisplayAccessibility> {
+  return commands.getDisplayAccessibility()
+}
+
+/**
+ * Reads just the macOS "reduce transparency" state, for the window openers that pick a
+ * native material before the window exists.
+ */
+export async function getShouldReduceTransparency(): Promise<boolean> {
+  return (await commands.getDisplayAccessibility()).reduceTransparency
 }
 
 /**
@@ -89,14 +101,14 @@ export function onOsLocalesChanged(handler: (payload: OsLocalesChanged) => void)
 }
 
 /**
- * Subscribes to macOS "reduce transparency" (Accessibility > Display) changes.
- * The payload's `reduce` is the new value. Drives the `reduce-transparency`
- * class on `<html>` (see `#lib/glass-material`).
+ * Subscribes to macOS Accessibility > Display option changes. The payload's `options`
+ * is the fresh full set. Drives the `reduce-transparency`, `increase-contrast`, and
+ * `differentiate-without-color` classes on `<html>` (see `#lib/display-accessibility`).
  */
-export function onReduceTransparencyChanged(
-  handler: (payload: ReduceTransparencyChanged) => void,
+export function onDisplayAccessibilityChanged(
+  handler: (payload: DisplayAccessibilityChanged) => void,
 ): Promise<UnlistenFn> {
-  return events.reduceTransparencyChanged.listen((event) => {
+  return events.displayAccessibilityChanged.listen((event) => {
     handler(event.payload)
   })
 }

@@ -4923,14 +4923,14 @@ export const commands = {
    */
   addCmdrToDock: () => typedError<null, DockPinFailure>(__TAURI_INVOKE('add_cmdr_to_dock')),
   /**
-   *  Tauri command: returns whether macOS "reduce transparency" is enabled.
+   *  Tauri command: returns the macOS Accessibility > Display options the UI mirrors.
    *
    *  `NSWorkspace` accessibility queries are main-thread-only, so we hop to the
    *  AppKit main thread via `run_on_main_thread` and read there, mirroring
-   *  `get_accent_color`. Returns `false` (don't reduce) if the main-thread hop or
-   *  channel fails.
+   *  `get_accent_color`. Returns all-off (the safe default) if the main-thread hop
+   *  or channel fails.
    */
-  getShouldReduceTransparency: () => __TAURI_INVOKE<boolean>('get_should_reduce_transparency'),
+  getDisplayAccessibility: () => __TAURI_INVOKE<DisplayAccessibility>('get_display_accessibility'),
   /**
    *  Tauri command: the Liquid Glass slider value in `0.0..=1.0`, or `None` when macOS doesn't
    *  report one.
@@ -5126,6 +5126,7 @@ export const events = {
   cloudAiConsentChanged: makeEvent<CloudAiConsentChanged>('cloud-ai-consent-changed'),
   directoryDeleted: makeEvent<DirectoryDeletedEvent>('directory-deleted'),
   directoryDiff: makeEvent<DirectoryDiff>('directory-diff'),
+  displayAccessibilityChanged: makeEvent<DisplayAccessibilityChanged>('display-accessibility-changed'),
   downloadDetected: makeEvent<DownloadDetectedEvent>('download-detected'),
   dragImageSize: makeEvent<DragImageSize>('drag-image-size'),
   dragModifiers: makeEvent<DragModifiers>('drag-modifiers'),
@@ -5205,7 +5206,6 @@ export const events = {
   quickLookKey: makeEvent<QuickLookKeyEvent>('quick-look-key'),
   quitCalledOff: makeEvent<QuitCalledOff>('quit-called-off'),
   quitRequested: makeEvent<QuitRequested>('quit-requested'),
-  reduceTransparencyChanged: makeEvent<ReduceTransparencyChanged>('reduce-transparency-changed'),
   restrictedPathsChanged: makeEvent<RestrictedPathsChangedPayload>('restricted-paths-changed'),
   revealDelivered: makeEvent<RevealDelivered>('reveal-delivered'),
   revealPath: makeEvent<RevealPath>('reveal-path'),
@@ -7492,6 +7492,27 @@ export type DiscoveryState =
   | 'searching'
   // Initial burst is complete, still listening.
   | 'active'
+
+/**
+ *  The macOS Accessibility > Display options the UI mirrors as classes on
+ *  `<html>`. All `false` off macOS. Read by `get_display_accessibility`.
+ */
+export type DisplayAccessibility = {
+  // Reduce transparency: translucent materials go opaque.
+  reduceTransparency: boolean
+  // Increase contrast: borders, secondary text, and focus rings get stronger.
+  increaseContrast: boolean
+  // Differentiate without color: state cues gain a shape or weight, not just a hue.
+  differentiateWithoutColor: boolean
+}
+
+/**
+ *  `display-accessibility-changed`: one of the macOS Accessibility > Display
+ *  options changed. `options` is the fresh full set, re-read on every change.
+ */
+export type DisplayAccessibilityChanged = {
+  options: DisplayAccessibility
+}
 
 // Why we won't offer, or why a pin can't go ahead.
 export type DockPinBlocker =
@@ -13340,15 +13361,6 @@ export type RecoveredOriginal = {
    *  back out of prose.
    */
   keptAt: string
-}
-
-/**
- *  `reduce-transparency-changed`: the macOS Accessibility > Display > Reduce
- *  transparency setting changed. `reduce` is the new value (`true` = reduce
- *  transparency / use opaque backgrounds).
- */
-export type ReduceTransparencyChanged = {
-  reduce: boolean
 }
 
 /**

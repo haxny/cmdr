@@ -54,6 +54,8 @@ mod deadline;
 pub mod dev_fixtures;
 mod device_volumes;
 mod diagnostics_snapshot;
+#[cfg(target_os = "macos")]
+mod display_accessibility;
 // The macOS Dock: reading `persistent-apps` and putting Cmdr in it. No other platform has one.
 #[cfg(target_os = "macos")]
 mod dock;
@@ -126,8 +128,6 @@ mod quick_look;
 mod quit;
 pub mod recents;
 mod redact;
-#[cfg(target_os = "macos")]
-mod reduce_transparency;
 mod restricted_paths;
 // Not `#[cfg(target_os = "macos")]`, though every part of the mechanism is: `RevealDelivered`
 // has to resolve on every platform for `ipc.rs`'s `collect_events!`, which can't cfg-gate
@@ -564,11 +564,12 @@ pub fn run() {
             #[cfg(target_os = "linux")]
             accent_color_linux::observe_accent_color_changes(app.handle().clone());
 
-            // Observe macOS Accessibility > Display > Reduce transparency changes
+            // Observe macOS Accessibility > Display option changes (Reduce transparency,
+            // Increase contrast, Differentiate without color)
             #[cfg(target_os = "macos")]
-            reduce_transparency::observe_reduce_transparency_changes(app.handle().clone());
+            display_accessibility::observe_display_accessibility_changes(app.handle().clone());
             #[cfg(not(target_os = "macos"))]
-            stubs::reduce_transparency::observe_reduce_transparency_changes(app.handle().clone());
+            stubs::display_accessibility::observe_display_accessibility_changes(app.handle().clone());
 
             // Follow the macOS 27 Appearance > Liquid Glass slider
             #[cfg(target_os = "macos")]

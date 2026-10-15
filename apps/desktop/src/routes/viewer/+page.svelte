@@ -28,6 +28,7 @@
     import { initWindowSettings, initWindowLanguageSync } from '#lib/settings/window-settings.js'
     import { initAccentColor, cleanupAccentColor } from '#lib/accent-color.js'
     import { initGlassMaterial, cleanupGlassMaterial } from '#lib/glass-material.js'
+    import { initDisplayAccessibility, cleanupDisplayAccessibility } from '#lib/display-accessibility.js'
     import { initTextSize, cleanupTextSize } from '#lib/text-size.svelte.js'
     import { tooltip } from '#lib/tooltip/tooltip.js'
     import { getAppLogger } from '#lib/logging/logger.js'
@@ -935,6 +936,7 @@
         await initAccentColor()
 
         await initGlassMaterial()
+        await initDisplayAccessibility()
 
         // Seeds the store AND the reactive layer that `<Size>` and friends read.
         // `window-settings.ts` knows the viewer has no store capability (see
@@ -1008,6 +1010,7 @@
         unsubscribeLanguage?.()
         cleanupAccentColor()
         cleanupGlassMaterial()
+        cleanupDisplayAccessibility()
         cleanupTextSize()
         cleanupListeners()
         search.destroy()

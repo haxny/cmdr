@@ -3,18 +3,12 @@ import { initGlassMaterial, cleanupGlassMaterial, DEFAULT_GLASS_TINT } from './g
 
 // `vi.mock` is hoisted above the imports, so its factory can only reach these through `vi.hoisted`.
 interface MockState {
-  listeners: { tint?: (p: { amount: number | null }) => void; reduce?: (p: { reduce: boolean }) => void }
+  listeners: { tint?: (p: { amount: number | null }) => void }
   tintAmount: number | null
-  reduce: boolean
 }
-const state = vi.hoisted((): MockState => ({ listeners: {}, tintAmount: 0.27, reduce: false }))
+const state = vi.hoisted((): MockState => ({ listeners: {}, tintAmount: 0.27 }))
 
 vi.mock('#lib/tauri-commands/index.js', () => ({
-  getShouldReduceTransparency: () => Promise.resolve(state.reduce),
-  onReduceTransparencyChanged: (handler: (p: { reduce: boolean }) => void) => {
-    state.listeners.reduce = handler
-    return Promise.resolve(() => {})
-  },
   getGlassTintAmount: () => Promise.resolve(state.tintAmount),
   onGlassTintChanged: (handler: (p: { amount: number | null }) => void) => {
     state.listeners.tint = handler
@@ -28,9 +22,7 @@ const tintVar = () => root.style.getPropertyValue('--glass-tint')
 describe('glass material', () => {
   beforeEach(() => {
     state.tintAmount = 0.27
-    state.reduce = false
     root.removeAttribute('style')
-    root.classList.remove('reduce-transparency')
   })
 
   afterEach(() => {
@@ -54,13 +46,5 @@ describe('glass material', () => {
     expect(tintVar()).toBe('0.9')
     state.listeners.tint?.({ amount: null })
     expect(tintVar()).toBe(String(DEFAULT_GLASS_TINT))
-  })
-
-  it('still toggles the reduce-transparency class', async () => {
-    state.reduce = true
-    await initGlassMaterial()
-    expect(root.classList.contains('reduce-transparency')).toBe(true)
-    state.listeners.reduce?.({ reduce: false })
-    expect(root.classList.contains('reduce-transparency')).toBe(false)
   })
 })

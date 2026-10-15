@@ -109,8 +109,8 @@ use crate::quick_look::{QuickLookClosed, QuickLookKeyEvent};
 use crate::quit::{QuitCalledOff, QuitRequested};
 use crate::restricted_paths::RestrictedPathsChangedPayload;
 use crate::system_events::{
-    AccentColorChanged, DragImageSize, DragModifiers, GlassTintChanged, MenuBarRebuilt, OsLocalesChanged,
-    ReduceTransparencyChanged, SessionCompleteEvent, SessionStartedEvent, SystemTextSizeChanged,
+    AccentColorChanged, DisplayAccessibilityChanged, DragImageSize, DragModifiers, GlassTintChanged, MenuBarRebuilt,
+    OsLocalesChanged, SessionCompleteEvent, SessionStartedEvent, SystemTextSizeChanged,
 };
 
 /// Every IPC command the app exposes, written once, grouped by the `#[cfg]` predicate that
@@ -806,16 +806,17 @@ macro_rules! ipc_command_manifest {
                 ]
                 dispatch_only: []
             }
-            // Reduce transparency.
+            // Accessibility > Display options (Reduce transparency, Increase contrast,
+            // Differentiate without color).
             cfg(target_os = "macos") {
                 typed: [
-                    crate::reduce_transparency::get_should_reduce_transparency,
+                    crate::display_accessibility::get_display_accessibility,
                 ]
                 dispatch_only: []
             }
             cfg(not(target_os = "macos")) {
                 typed: [
-                    crate::stubs::reduce_transparency::get_should_reduce_transparency,
+                    crate::stubs::display_accessibility::get_display_accessibility,
                 ]
                 dispatch_only: []
             }
@@ -1185,7 +1186,7 @@ pub fn builder() -> Builder<tauri::Wry> {
             // wrapped in named structs; the drag structs live in the always-compiled
             // `system_events` because their emit sites are macOS-gated.
             AccentColorChanged,
-            ReduceTransparencyChanged,
+            DisplayAccessibilityChanged,
             GlassTintChanged,
             SystemTextSizeChanged,
             MenuBarRebuilt,

@@ -6,6 +6,7 @@
     import { initWindowSettings, initWindowLanguageSync } from '#lib/settings/window-settings.js'
     import { initAccentColor, cleanupAccentColor } from '#lib/accent-color.js'
     import { initGlassMaterial, cleanupGlassMaterial } from '#lib/glass-material.js'
+    import { initDisplayAccessibility, cleanupDisplayAccessibility } from '#lib/display-accessibility.js'
     import { getAppLogger } from '#lib/logging/logger.js'
     import DebugAppearancePanel from './DebugAppearancePanel.svelte'
     import DebugClosedTabsPanel from './DebugClosedTabsPanel.svelte'
@@ -192,6 +193,7 @@
             unsubscribeLanguage = initWindowLanguageSync()
             await initAccentColor()
             await initGlassMaterial()
+            await initDisplayAccessibility()
         } catch (error) {
             log.error('Failed to initialize debug window appearance: {error}', { error })
         }
@@ -206,6 +208,7 @@
         unlistenRectTracking?.()
         cleanupAccentColor()
         cleanupGlassMaterial()
+        cleanupDisplayAccessibility()
     })
 
     function handleKeydown(event: KeyboardEvent) {
