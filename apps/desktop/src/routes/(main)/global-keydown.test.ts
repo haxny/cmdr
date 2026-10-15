@@ -154,6 +154,87 @@ describe('resolveGlobalKeyAction', () => {
     })
   })
 
+  /**
+   * With focus on a pane's file list, WebKit scrolls the list on any arrow, Page, Home/End,
+   * or Space nobody `preventDefault`s, yanking the virtual view off the cursor (↓ on the last
+   * row of Full view moved `scrollTop` 7,481 → 7,485 in the 2026-10-15 spike). The pane
+   * claims the keys it acts on; what reaches here unclaimed from a list is suppressed.
+   */
+  describe('native scrolling of a focused file list', () => {
+    /** Resolves `init` as a keydown dispatched on `target`, the way a real keypress lands. */
+    function resolveOn(target: HTMLElement, init: KeyboardEventInit): unknown {
+      let action: unknown
+      const listener = (event: Event): void => {
+        action = resolveGlobalKeyAction(event as KeyboardEvent, NOTHING_OPEN)
+      }
+      document.addEventListener('keydown', listener)
+      target.dispatchEvent(new KeyboardEvent('keydown', { ...init, bubbles: true, cancelable: true }))
+      document.removeEventListener('keydown', listener)
+      return action
+    }
+
+    /** A Full-view-shaped list: the scroller (`data-file-list-surface`) around the listbox. */
+    function mountList(): { scroller: HTMLElement; listbox: HTMLElement } {
+      const scroller = document.createElement('div')
+      scroller.setAttribute('data-file-list-surface', '')
+      scroller.tabIndex = -1
+      const listbox = document.createElement('div')
+      listbox.setAttribute('role', 'listbox')
+      listbox.tabIndex = -1
+      scroller.appendChild(listbox)
+      document.body.appendChild(scroller)
+      cleanupFocus = () => {
+        scroller.remove()
+      }
+      return { scroller, listbox }
+    }
+
+    it.each([
+      ['↓', { key: 'ArrowDown' }],
+      ['↑', { key: 'ArrowUp' }],
+      ['←', { key: 'ArrowLeft' }],
+      ['→', { key: 'ArrowRight' }],
+    ])('suppresses an unclaimed %s on the focused list', (_name, init) => {
+      const { listbox } = mountList()
+      listbox.focus()
+      expect(resolveOn(listbox, init)).toEqual({ kind: 'suppress' })
+    })
+
+    it('suppresses it on the scroller around the listbox too', () => {
+      const { scroller } = mountList()
+      scroller.focus()
+      expect(resolveOn(scroller, { key: 'ArrowDown' })).toEqual({ kind: 'suppress' })
+    })
+
+    it('still dispatches a key a command claims', () => {
+      const { listbox } = mountList()
+      listbox.focus()
+      expect(resolveOn(listbox, { key: 'Home' })).toEqual({ kind: 'dispatch', commandId: 'nav.home' })
+      expect(resolveOn(listbox, { key: 'PageDown' })).toEqual({ kind: 'dispatch', commandId: 'nav.pageDown' })
+      expect(resolveOn(listbox, { key: 'Tab' })).toEqual({ kind: 'dispatch', commandId: 'pane.switch' })
+    })
+
+    it('leaves the key alone outside a list', () => {
+      const container = document.createElement('div')
+      container.tabIndex = 0
+      document.body.appendChild(container)
+      cleanupFocus = () => {
+        container.remove()
+      }
+      container.focus()
+      expect(resolveOn(container, { key: 'ArrowDown' })).toEqual({ kind: 'ignore' })
+    })
+
+    // The rename editor lives inside the listbox: its caret keys are its own.
+    it('leaves the key alone in a text input inside the list', () => {
+      const { listbox } = mountList()
+      const input = document.createElement('input')
+      listbox.appendChild(input)
+      input.focus()
+      expect(resolveOn(input, { key: 'ArrowLeft' })).toEqual({ kind: 'ignore' })
+    })
+  })
+
   // Keypresses as macOS reports them (Safari key log, 2026-10-05: US layout plus a
   // PC-layout keyboard), and the layouts the character rule exists for.
   describe('keys from any keyboard and layout', () => {

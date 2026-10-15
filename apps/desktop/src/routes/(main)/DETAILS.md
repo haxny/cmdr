@@ -24,6 +24,11 @@ here:
   shell; the component supplies `dialogsOnScreen()` (the only reactive input, § What `dialogsOnScreen()` is made of) and
   then runs `preventDefault` and `dispatchers.keyboard`. Keeping the decision out of the component is also what stops
   the `file-length`-flagged `+page.svelte` from growing per keyboard rule.
+- **An unclaimed scroll key from a file list is `suppress`** (`isUnclaimedListScrollKey`): DOM focus sits on the focused
+  pane's list, and WebKit would scroll it natively on an arrow, Page, Home/End, or Space nobody cancelled, yanking the
+  virtual view off the cursor. Decided here, after dispatch, ❌ not by an early `preventDefault` in the pane's key
+  dispatch (that trips `unclaimedDispatchWarning` on every arrow). Whether WebKit then really stays put is checked with
+  real keys only (no E2E press is a real one).
 - **Quick Look's close keys run in capture before the general keydown resolver.** Its small decision lives in
   `file-explorer/quick-look/quick-look-state.svelte.ts` (`shouldCloseFromMainWindowKey`): plain Escape, or plain Space
   outside a text field, with no foreground dialog closes an open panel while the main webview still owns the key event,

@@ -396,6 +396,16 @@ stays as it is.
   scroll-key suppression. (a) alone already puts focus in a scroller and on lists that remount, so don't merge (a)
   without (b) and (c).
 - **DONE**: `pnpm check --include-slow` green (it runs both E2E lanes).
+- **Status (2026-10-15)**: code, unit, and E2E landed in the three commits. Shapes that differ from the plan's sketch:
+  re-homing lives in the lists (`views/list-focus.svelte.ts`: a list mounting in the focused pane takes focus when it's
+  adrift, one unmounting puts it home through `#lib/ui/focus-restore.ts`), not in a `DualPaneExplorer` effect; the
+  restore helper remembers an ORIGIN (`captureFocusOrigin`: "the explorer" or an element), so a list that unmounted
+  while a dialog was up still restores; "focus already in another open menu" asks the menu stack (`isFocusInOpenMenu`);
+  `cursorRowAnchor` finds the cursor row by `.is-under-cursor`. The guard folds cases (a) and (c): everything not exempt
+  goes to `focusActivePane()`, a no-op when focus is already on the focused pane's list. **Owed (the Mac's screen was
+  locked, `CGSSessionScreenIsLocked`)**: harness step 6 (real-key scroll check, Brief and Full, `vo-long`), and
+  listening to L1–L5 / P1–P2 / U3 on this code (launch, `Tab`, entering a folder, the view toggle). Run them first thing
+  in M5, together with M2's owed U1–U4.
 
 ### M4: The list says what it holds (#437 items 2–6)
 

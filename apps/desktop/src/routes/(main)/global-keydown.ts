@@ -17,7 +17,7 @@
  */
 import { formatKeyCombo, isTypingKeyCombo } from '#lib/shortcuts/key-capture.js'
 import { lookupCommand, resolveKeyCombo } from '#lib/shortcuts/shortcut-dispatch.js'
-import { isTextInputFocused } from '#lib/utils/text-input-focus.js'
+import { isTextInputFocused, isTextInputTarget } from '#lib/utils/text-input-focus.js'
 import type { CommandId } from '#lib/commands/index.js'
 import type { DialogsOnScreen } from './command-dispatch-context'
 import { isRefusedOverDialog } from './dialog-command-gate'
@@ -131,8 +131,36 @@ export function resolveGlobalKeyAction(event: KeyboardEvent, onScreen: DialogsOn
   // - Debug window: dev-only, not worth registering as a command
   // - Key suppression: browser behavior overrides, not commands
   if (isDebugWindowShortcut(event)) return { kind: 'openDebugWindow' }
-  if (shouldSuppressKey(event)) return { kind: 'suppress' }
+  if (shouldSuppressKey(event) || isUnclaimedListScrollKey(event)) return { kind: 'suppress' }
   return IGNORE
+}
+
+/** The keys WebKit scrolls a focused scroller with, when nobody cancels them. */
+const NATIVE_SCROLL_KEYS = new Set([
+  'ArrowUp',
+  'ArrowDown',
+  'ArrowLeft',
+  'ArrowRight',
+  'PageUp',
+  'PageDown',
+  'Home',
+  'End',
+  ' ',
+])
+
+/**
+ * A scroll key that reached the document unclaimed from a pane's file list (any modifiers:
+ * ⌥↓ and ⌘↑ scroll too). Focus sits on the list (`active-pane-focus.ts`), so WebKit would
+ * scroll it natively and yank the virtual view off the cursor: ↓ on Full view's last row
+ * moved `scrollTop` 7,481 → 7,485 (real keys, macOS 27.0, 2026-10-15). The virtual scroller
+ * alone moves the view. ❌ Not an early `preventDefault` in the pane's key dispatch: that
+ * trips `unclaimedDispatchWarning` on every arrow. A text input inside the list (the rename
+ * editor) keeps its caret keys.
+ */
+function isUnclaimedListScrollKey(event: KeyboardEvent): boolean {
+  if (event.defaultPrevented || !NATIVE_SCROLL_KEYS.has(event.key)) return false
+  const target = event.target
+  return target instanceof Element && !isTextInputTarget(target) && target.closest('[data-file-list-surface]') !== null
 }
 
 /**
