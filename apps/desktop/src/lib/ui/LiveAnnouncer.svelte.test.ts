@@ -21,10 +21,13 @@ afterEach(() => {
   vi.useRealTimers()
 })
 
-function setup(): { region: HTMLElement; announce: (message: string) => void } {
+function setup(props: { politeness?: 'polite' | 'assertive' } = {}): {
+  region: HTMLElement
+  announce: (message: string) => void
+} {
   const target = document.createElement('div')
   document.body.appendChild(target)
-  component = mount(LiveAnnouncer, { target })
+  component = mount(LiveAnnouncer, { target, props })
   const region = target.querySelector<HTMLElement>('[data-live-announcer]')
   if (!region) throw new Error('LiveAnnouncer rendered no region')
   return { region, announce: (component as unknown as { announce: (m: string) => void }).announce }
@@ -35,6 +38,11 @@ describe('LiveAnnouncer', () => {
     const { region } = setup()
     expect(region.getAttribute('aria-live')).toBe('polite')
     expect(region.textContent).toBe('')
+  })
+
+  it('is an assertive region when asked to be one', () => {
+    const { region } = setup({ politeness: 'assertive' })
+    expect(region.getAttribute('aria-live')).toBe('assertive')
   })
 
   it('says a message one frame after clearing', () => {

@@ -1,9 +1,9 @@
 /**
  * Tier 3 a11y tests for `ToastItem.svelte`.
  *
- * Individual toast frame with a close button. Each level uses the right
- * `role` (`status` for info/success, `alert` for warn/error). Tests
- * cover all levels, both dismissal modes, and string and component content.
+ * Individual toast frame with a close button. The frame is no live region (the
+ * stack speaks it); tests cover all levels, both dismissal modes, and string and
+ * component content.
  */
 
 import { describe, it, vi } from 'vitest'

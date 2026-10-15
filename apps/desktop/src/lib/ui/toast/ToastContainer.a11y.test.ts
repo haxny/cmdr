@@ -1,8 +1,8 @@
 /**
  * Tier 3 a11y tests for `ToastContainer.svelte`.
  *
- * Empty and populated states, with multiple toast levels. The container
- * uses `aria-live="polite"` so screen readers announce new toasts.
+ * Empty and populated states, with multiple toast levels. The stack speaks
+ * through two always-mounted live regions beside it (`ToastContainer.vsr.svelte.test.ts`).
  */
 
 import { describe, it, beforeEach } from 'vitest'

@@ -1,8 +1,40 @@
+<!--
+    The toast stack, plus the two live regions it speaks through.
+
+    ❗ The regions are always mounted, empty until a toast arrives (a region inserted with its
+    first message announces unreliably in WebKit), and they're siblings: a polite one for
+    status toasts and an assertive one for warnings and failures. The toasts themselves are
+    no live regions, so nothing nests an `alert` inside a polite region and nothing speaks
+    twice. `ui/DETAILS.md` § Toast system.
+-->
 <script lang="ts">
     import { getToasts, dismissToast } from './toast-store.svelte'
     import ToastItem from './ToastItem.svelte'
+    import type { ToastSpeech } from './toast-speech'
+    import LiveAnnouncer from '../LiveAnnouncer.svelte'
 
     const toasts = getToasts()
+
+    type Announcer = { announce: (message: string) => void }
+    let politeRegion: Announcer | undefined = $state()
+    let assertiveRegion: Announcer | undefined = $state()
+
+    // Toasts raised in the same turn speak as one message per region: the announcer keeps
+    // only the newest of two messages asked within a frame, which would drop the first.
+    const pending = { polite: [] as string[], assertive: [] as string[] }
+    let flushQueued = false
+
+    function speak({ text, urgent }: ToastSpeech): void {
+        if (!text) return
+        pending[urgent ? 'assertive' : 'polite'].push(text)
+        if (flushQueued) return
+        flushQueued = true
+        queueMicrotask(() => {
+            flushQueued = false
+            if (pending.polite.length > 0) politeRegion?.announce(pending.polite.splice(0).join(' '))
+            if (pending.assertive.length > 0) assertiveRegion?.announce(pending.assertive.splice(0).join(' '))
+        })
+    }
 
     function handleUserDismiss(id: string): void {
         const toast = toasts.find((t) => t.id === id)
@@ -11,9 +43,8 @@
     }
 </script>
 
-{#if toasts.length > 0}
-    <div class="toast-container" aria-live="polite">
-        {#each toasts as toast (toast.id)}
+<div class="toast-container" data-toast-stack>
+    {#each toasts as toast (toast.id)}
             <ToastItem
                 id={toast.id}
                 content={toast.content}
@@ -27,10 +58,12 @@
                 report={toast.report}
                 onTimeout={dismissToast}
                 onUserDismiss={handleUserDismiss}
+                onSpeak={speak}
             />
-        {/each}
-    </div>
-{/if}
+    {/each}
+</div>
+<LiveAnnouncer bind:this={politeRegion} data-toast-announcer="polite" />
+<LiveAnnouncer bind:this={assertiveRegion} politeness="assertive" data-toast-announcer="assertive" />
 
 <style>
     .toast-container {

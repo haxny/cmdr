@@ -10,6 +10,8 @@
     import Icon from '#lib/ui/Icon.svelte'
     import { tString } from '#lib/intl/messages.svelte.js'
     import { captureFocusOrigin, restoreFocus, type FocusOrigin } from '#lib/ui/focus-restore.js'
+    import { toastSpeech, type ToastSpeech } from './toast-speech'
+    import { dependOn } from '#lib/utils/reactivity.js'
 
     interface Props {
         id: string
@@ -39,6 +41,11 @@
         onTimeout: (id: string) => void
         /** Called when the user clicks the X button or the inline action. */
         onUserDismiss: (id: string) => void
+        /**
+         * Called after each post (mount and every same-id re-raise) with what the toast says.
+         * The toast is no live region itself: the stack speaks it (`ToastContainer.svelte`).
+         */
+        onSpeak?: (speech: ToastSpeech) => void
     }
 
     const {
@@ -54,6 +61,7 @@
         report = null,
         onTimeout,
         onUserDismiss,
+        onSpeak,
     }: Props = $props()
 
     // Auto-dismiss timer for transient toasts.
@@ -114,6 +122,19 @@
         queueMicrotask(() => {
             if (document.activeElement === document.body) restoreFocus(target)
         })
+    })
+
+    // What the toast says, read off the rendered body once each post has rendered, so a
+    // component toast speaks the same way a string one does.
+    let contentElement: HTMLDivElement | undefined = $state()
+
+    $effect(() => {
+        // Each post is news, even with the same words: `postedAt` moves on every re-raise.
+        dependOn(postedAt, content)
+        const element = contentElement
+        if (!element) return
+        const urgent = level === 'warn' || level === 'error'
+        untrack(() => onSpeak?.({ text: toastSpeech(element), urgent }))
     })
 
     // Age label ("2m ago"). `now` moves only when the label would change: one timer, armed for
@@ -258,7 +279,6 @@
     class:warn={level === 'warn'}
     class:error={level === 'error'}
     style={widthPx ? `max-width: ${String(widthPx)}px` : undefined}
-    role={level === 'default' || level === 'info' || level === 'success' ? 'status' : 'alert'}
     onpointerenter={handlePointerEnter}
     onpointerleave={handlePointerLeave}
     onpointerdown={rememberPointerFocusOrigin}
@@ -267,7 +287,7 @@
 >
     <ToastLevelIcon {level} />
     <div class="toast-main">
-        <div class="toast-content">
+        <div class="toast-content" bind:this={contentElement}>
             <!-- The corner, floated so the body's first line wraps around the age label and the
                  close button pinned over it, while everything below runs to the right edge. -->
             <span class="toast-corner">
