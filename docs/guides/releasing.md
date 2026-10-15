@@ -657,7 +657,9 @@ This is optional and deliberately not part of the release script:
 
 For a minor or major release, the agent updates `brand/listings/macupdate.md` in place:
 
-- The version number.
+- The version number, and the version-pinned Download URL.
+- The screenshots: run the five `magick` commands in its § 3. Media (keep them matching the screenshot list there), and
+  give David the folder, `brand/listings/macupdate-media/`. The PNGs are gitignored; never commit them.
 - The "Version changes" HTML, rewritten from the new CHANGELOG section into their `<h5>` + `<ul>` format (New / Improved
   / Fixed). Cover the whole minor line, patches included, since the listing skipped those.
 - The description, but only where the release actually changed it: a feature that graduated out of alpha, a claim that
@@ -666,7 +668,9 @@ For a minor or major release, the agent updates `brand/listings/macupdate.md` in
 
 Then hand David the submission link: https://member.macupdate.com/content/submit, where "Modify an existing listing?" at
 the top takes the app name and loads the current listing. MacUpdate prefers updating an existing listing over a new one
-(downloads keep accumulating, version history stays catalogued, and Watch List users get notified).
+(downloads keep accumulating, version history stays catalogued, and Watch List users get notified). Remind him to ping
+the reviewer right after submitting: without a ping, a submission never gets reviewed (contact in the vault's directory
+blitz plan).
 
 `brand/listings/alternativeto.md` gets the same pass, minus the version (AlternativeTo shows none): fix any line the
 release made false (language count, alpha list, a claim that broke), measure the description against its 3,000-character

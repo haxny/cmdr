@@ -1,0 +1,7 @@
+# The five MacUpdate screenshot PNGs are throwaway conversions of the lossless WebP masters in
+# `brand/screenshots/`, made only because MacUpdate's uploader wants PNG. Regenerate them with
+# the commands in `brand/listings/macupdate.md` § 3. Media; never commit them.
+#
+# This file is tracked so the directory exists in a fresh clone and the commands' output path resolves.
+*.png
+!.gitignore

@@ -20,7 +20,8 @@ website, AlternativeTo, newsletter, and any new surface all pull from.
 - `copy/`: marketing text blobs (taglines, descriptions, feature lists).
 - `listings/`: one file per app directory we submit Cmdr to, holding every field of that site's form, filled and ready
   to paste: [`listings/macupdate.md`](listings/macupdate.md), [`listings/alternativeto.md`](listings/alternativeto.md).
-  Update the file in the same pass as the submission, never after.
+  Update the file in the same pass as the submission, never after. `listings/macupdate-media/` holds MacUpdate's PNG
+  screenshot conversions, gitignored like `hero-masters/`.
 
 This dir holds **exported deliverables**, not working files. The multi-MB source raws (logo `.af`, icon masters,
 animation sources) stay in `_ignored/designs/`, which is gitignored.

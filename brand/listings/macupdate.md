@@ -4,10 +4,13 @@ Live: https://cmdr.macupdate.com/ (accepted from the 2026-09-18 v0.46.0 submissi
 through). Submission form: https://member.macupdate.com/content/submit (needs a MacUpdate member account). The same form
 creates and modifies a listing: type `Cmdr` into "Modify an existing listing?" at the top to load this one.
 
-Status: **v0.53.0 prepared 2026-10-15, not yet submitted** (the fields below are the update to paste). The live page
-still shows v0.46.0; the v0.47.0 and v0.49.0 updates never went in, and this one supersedes both. Since it skips
-v0.47–v0.52, the Description picks up what shipped in between (multi-rename, compare folders, folder sizes on demand,
-S3) and the Version changes cover v0.53.0 alone.
+Status: **v0.53.0 submitted 2026-10-15, reviewer pinged the same day, awaiting review** (the fields below are what went
+in). Before it, the live page showed v0.46.0; the v0.47.0 and v0.49.0 updates were prepared but never submitted.
+
+❗ **A submission sits unreviewed until David pings a MacUpdate reviewer directly.** The v0.46.0 one only went through
+after a ping, and the earlier ones never did. The contact is in the vault's directory blitz plan (MacUpdate entry), so
+every handoff ends with "submit, then ping". Since it skips v0.47–v0.52, the Description picks up what shipped in
+between (multi-rename, compare folders, folder sizes on demand, S3) and the Version changes cover v0.53.0 alone.
 
 ❗ **The Download URL must be a DIRECT link to the installer**, not a redirect. Their guidelines say "the direct URL to
 the installer package (e.g., .pkg .dmg, .zip)", and `getcmdr.com/download/latest/universal` takes 3 redirects to a
@@ -57,86 +60,93 @@ A blazing-fast, keyboard-driven two-pane file manager for macOS, with fully opti
   features that genuinely help. Built with Rust, it's extremely fast and respectful toward your CPU, RAM, and disk.
 </p>
 <p>
-  Cmdr is in open beta. There might be sharp edges in the newer features (archives, multi-rename, the operation log,
-  servers, and AI), but the core is well-tested, stable software used every day by the author and a group of testers.
+  Cmdr is in open beta. It is well-tested, stable software used every day by the author and hundreds of early adopters.
   Feedback goes straight to the developer!
 </p>
 <h5>Core features</h5>
 <ul>
   <li>
-    Two panes, tabs, command palette, keyboard-first. Common shortcuts like F5 to copy, F6 to move, F8 to delete all
-    work, and are remappable.
+    <strong>Basics:</strong> Two panes, tabs, command palette, keyboard-first. Common shortcuts like F5 to copy, F6 to
+    move, F8 to delete all work, and are remappable.
   </li>
   <li>
-    Browse, copy, move, rename, delete, compress/decompress with accurate progress bars, honest ETAs, cancellation.
-    Optimized for data safety, speed, and transparency.
+    <strong>Operations:</strong> Browse, copy, move, rename, delete, compress/decompress with accurate progress bars,
+    honest ETAs, cancellation. Optimized for data safety, speed, and transparency.
   </li>
   <li>
-    Queue multiple file operations, send any of them to the background, pause/resume file transfers, view a full,
-    searchable log of past operations, with rollback for anything that didn't permanently delete data.
+    <strong>Advanced operations:</strong> Queue multiple file ops, send any of them to the background, pause/resume file
+    transfers, view a full, searchable log of past operations, with rollback for anything that didn't permanently delete
+    data.
+  </li>
+  <li><strong>Multi-rename:</strong> With patterns, counters, and search and replace, live preview, Undo.</li>
+  <li>
+    <strong>Speed:</strong> Lists 50,000 files near-instantly, the built-in viewer opens a 10 GB file in a second,
+    near-instant search.
   </li>
   <li>
-    Total Commander favorites: multi-rename with patterns, counters, and search and replace (with a live preview and one
-    Undo), compare folders, and folder sizes on demand.
+    <strong>Accessibility:</strong> Follows macOS accessibility settings, works with VoiceOver, has WCAG 2.2 AA and
+    APCA-verified contrasts, and everything works with the keyboard.
   </li>
-  <li>
-    Very fast: Lists 50,000 files near-instantly, and the built-in viewer opens a 10 GB file near-instantly with fast
-    search.
-  </li>
-  <li>
-    Accessible: works with VoiceOver, follows the macOS Increase contrast, Differentiate without color, and Show borders
-    settings, and everything works from the keyboard.
-  </li>
-  <li>
-    Real dark and light modes, native macOS behavior, and all text color / background contrasts verified against WCAG
-    2.2 AA and APCA.
-  </li>
+  <li><strong>Design:</strong> Looks good, has real dark and light modes, follows native macOS look and behavior.</li>
 </ul>
 <h5>Extra features</h5>
 <ul>
   <li>
-    Full access to Android phones, Kindles, and cameras over MTP and PTP, up to 4x faster than Android File Transfer, no
-    hacks needed, works out of the box with any USB cable.
+    <strong>Phones:</strong> Full access to Android phones, Kindles, and cameras over MTP and PTP, up to 4x faster than
+    Android File Transfer, no hacks needed, works out of the box with any USB cable. Also supports ADB over USB, and
+    handles iPhones natively.
   </li>
   <li>
-    Full access to network drives over a custom SMB implementation, roughly 4x faster than the macOS client. Copies
-    within one share happen on the NAS itself.
+    <strong>SMB:</strong> Full access to network drives over a custom SMB implementation, which is up to 100x faster
+    than the macOS client. Copies within a share happen in-place on the server.
   </li>
-  <li>SFTP, WebDAV (Nextcloud and others), and S3 servers (AWS, R2, B2, and more) open like folders.</li>
   <li>
-    Keeps a full index of your disk (fully local and private) and uses it to display live folder sizes for
-    <em>all</em> your folders, and for near-instant full-drive search. A folder that isn't indexed yet gets walked live,
-    with matches arriving as they're found.
+    <strong>More servers:</strong> Full support for SFTP, WebDAV (Nextcloud and others), and S3 servers (AWS, R2, B2,
+    and more), including cost estimates for S3 transfers.
   </li>
-  <li>For Git repositories, it shows a Git history, branches, worktrees, and stashes browsable like normal folders.</li>
+  <li>
+    <strong>Indexing:</strong> (Optional) Keeps a (local&amp;private) full index of your disk to display live folder
+    sizes and for near-instant search.
+  </li>
+  <li>
+    <strong>Git:</strong> In Git repos, the commits, branches, worktrees, and stashes are browsable like normal folders.
+  </li>
 </ul>
 <h5>AI features (entirely optional, can be fully local and private with a built-in LLM)</h5>
 <ul>
   <li>
-    With AI features switched off, Cmdr is a complete Total Commander-style file manager. Many people don't like AI
-    features, so they are off by default.
-  </li>
-  <li>Switched on, it adds natural-language search: "Find my tax report from last year"</li>
-  <li>Smart selection: "Select all screenshots in this folder"</li>
-  <li>Chat: "Why is my Downloads folder so big?"</li>
-  <li>
-    Image indexing (fully local and private!): "Find me all photos in this folder where a dog looks into the camera."
+    <strong>Fully optional!</strong> With AI features switched off, Cmdr is a complete Total Commander-style file
+    manager. Many people don't like AI features, and they are off by default.
   </li>
   <li>
-    Natural-language renaming: "Rename all these screenshots based on their content." → The agent can only
-    <em>suggest</em> write operations like renames, you are in charge of reviewing and applying them. If you change your
-    mind, you can always roll back any past operations.
+    <strong>Model support:</strong> The default model runs on your Mac, so your data stays 100% private. You can choose
+    to bring your own OpenAI, Claude, Gemini, etc. key, or point Cmdr at any OpenAI-compatible endpoint (like your
+    ollama server) to use better models.
   </li>
   <li>
-    File organization: "Clean up my Downloads folder" and the agent proposes each move for you to approve or reject.
+    <strong>Built-in chat:</strong> You can ask "Why is my Downloads folder so big?", "Summarize these three docs", etc.
+    (alpha version)
+  </li>
+  <li><strong>Natural-language search:</strong> "Find my tax report from last year" just works.</li>
+  <li><strong>Smart selection:</strong> "Select all screenshots in this folder" selects your screenshots.</li>
+  <li>
+    <strong>Image indexing:</strong> (fully local and private!) "Find me all photos in this folder where a dog looks
+    into the camera."
   </li>
   <li>
-    It can also watch your folders and raise things on its own: "How about moving that vet invoice to your medical
-    papers?" It only ever suggests, you decide, and it stops on one click.
+    <strong>Natural-language renaming:</strong> "Rename all these screenshots based on their content." The agent
+    <strong>never</strong> actually renames stuff. It can only <em>suggest</em> write operations like renames! You are
+    in charge of reviewing and applying them. And if you change your mind later, you can always roll back any past
+    operations.
   </li>
   <li>
-    The model runs on your Mac by default, so your files and data stay 100% private. You can choose to bring your own
-    OpenAI, Claude, Gemini, etc. key, or point Cmdr at any OpenAI-compatible endpoint to use more powerful models.
+    <strong>File organization:</strong> "Clean up my Downloads folder" and the agent proposes each move for you to
+    approve or reject.
+  </li>
+  <li>
+    <strong>Proactive suggestions:</strong> The agent can also watch your folders and raise things on its own: "How
+    about moving that vet invoice to your donkey's medical papers?" The agent can only <em>suggest</em> actions, you
+    need to approve/reject.
   </li>
 </ul>
 <p>Cmdr is source-available under the Business Source License 1.1: https://github.com/vdavid/cmdr</p>
@@ -200,14 +210,21 @@ macOS 12 Monterey or later, both Apple Silicon and Intel. macOS 10.15 Catalina a
 ## 3. Media
 
 - **Icon**: `brand/logos/cmdr-512.png` (512x512, transparent)
-- **Screenshots** (up to five, in this order):
-  1. `brand/screenshots/app-main-light.webp`
-  2. `brand/screenshots/app-main-dark.webp`
-  3. `brand/screenshots/search-light.webp`, `chat-light.webp`, `settings-light.webp` if the listing takes more.
+- **Screenshots** (five, in this order): PNG conversions of the lossless WebP masters, since MacUpdate's uploader wants
+  PNG. Run from the repo root; the output folder is gitignored, so the PNGs never get committed:
+
+  ```bash
+  magick brand/screenshots/app-main-light.webp brand/listings/macupdate-media/1-app-main-light.png
+  magick brand/screenshots/app-main-dark.webp brand/listings/macupdate-media/2-app-main-dark.png
+  magick brand/screenshots/search-light.webp brand/listings/macupdate-media/3-search-light.png
+  magick brand/screenshots/chat-light.webp brand/listings/macupdate-media/4-chat-light.png
+  magick brand/screenshots/settings-light.webp brand/listings/macupdate-media/5-settings-light.png
+  ```
+
   - Five slots for eight masters, so the dark twins of search, chat, and Settings sit out: the main-view pair already
     shows both themes. The submitted listing still carries only that pair, from before the rest existed.
-  - The masters are lossless WebP. MacUpdate's uploader want PNG, so use:
-    `magick app-main-light.webp app-main-light.png`. Reshoot per `docs/guides/screenshots.md`.
+  - Re-run the commands for every listing update, since the masters change with each reshoot
+    (`docs/guides/screenshots.md`).
 
 ## Comments for the review team
 
