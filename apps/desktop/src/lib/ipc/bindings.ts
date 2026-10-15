@@ -7516,6 +7516,8 @@ export type DisplayAccessibility = {
    *  differently under it, so the icon caches key off it.
    */
   invertColors: boolean
+  // Show borders: buttons and controls that draw no edge of their own gain one.
+  showBorders: boolean
 }
 
 /**

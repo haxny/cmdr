@@ -203,7 +203,7 @@
          button in WKWebView, so pointer use leaves focus where it was. -->
     <button
         type="button"
-        class="volume-name"
+        class="volume-name borderless-control"
         class:is-open={openMenu !== null}
         bind:this={chipEl}
         aria-haspopup="menu"
@@ -242,7 +242,7 @@
     {:else if currentVolume?.connectionState === 'os_mount'}
         <button
             type="button"
-            class="breadcrumb-options-trigger"
+            class="breadcrumb-options-trigger borderless-control"
             class:is-open={breadcrumbPopup.isOpen}
             bind:this={breadcrumbPopupRef}
             aria-expanded={breadcrumbPopup.isOpen}

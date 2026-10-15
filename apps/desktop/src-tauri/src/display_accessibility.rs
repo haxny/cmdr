@@ -1,7 +1,8 @@
 //! macOS Accessibility > Display options reader.
 //!
 //! Reads the display options the UI mirrors (Reduce transparency, Increase
-//! contrast, Differentiate without color, Invert colors) via `NSWorkspace`, and
+//! contrast, Differentiate without color, Invert colors, Show borders) via
+//! `NSWorkspace`, and
 //! observes `NSWorkspaceAccessibilityDisplayOptionsDidChangeNotification` to
 //! emit live updates. Increase contrast and Invert colors also change the icons
 //! macOS draws, so every read is handed to `icons::apply_display_accessibility`
@@ -16,6 +17,11 @@
 //!   frontend reads these here and toggles classes on `<html>`.
 //! - The accessibility-options notification posts on the `NSWorkspace`
 //!   notification center (NOT the default center), so we subscribe there.
+//! - Show borders has no public API. `NSWorkspace` answers the undeclared
+//!   `accessibilityDisplayShouldShowBorders` (verified on macOS 27.0 by
+//!   enumerating its methods and calling it, 2026-10-15), which `should_show_borders`
+//!   calls behind a `respondsToSelector:` guard, so a macOS that drops it reads
+//!   as off. Toggling it posts the same notification as the others.
 //! - It fires for the whole accessibility-display options group (also reduce
 //!   motion, invert colors, etc.), so we always re-read every value rather
 //!   than trusting the notification payload.
@@ -23,7 +29,8 @@
 use std::ptr::NonNull;
 
 use log::{debug, info, warn};
-use objc2::MainThreadMarker;
+use objc2::runtime::Bool;
+use objc2::{MainThreadMarker, msg_send, sel};
 use objc2_app_kit::{NSWorkspace, NSWorkspaceAccessibilityDisplayOptionsDidChangeNotification};
 use objc2_foundation::NSNotification;
 use tauri::{AppHandle, Runtime};
@@ -44,7 +51,24 @@ fn read_display_accessibility(_mtm: MainThreadMarker) -> DisplayAccessibility {
         increase_contrast: workspace.accessibilityDisplayShouldIncreaseContrast(),
         differentiate_without_color: workspace.accessibilityDisplayShouldDifferentiateWithoutColor(),
         invert_colors: workspace.accessibilityDisplayShouldInvertColors(),
+        show_borders: should_show_borders(&workspace),
     }
+}
+
+/// Reads Show borders through the undeclared `NSWorkspace` getter (see the module
+/// notes), or `false` when this macOS doesn't have it.
+fn should_show_borders(workspace: &NSWorkspace) -> bool {
+    // SAFETY: `workspace` is the live shared `NSWorkspace`, and `-respondsToSelector:` is
+    // an `NSObject` method every object implements, returning `BOOL`.
+    let responds: Bool =
+        unsafe { msg_send![workspace, respondsToSelector: sel!(accessibilityDisplayShouldShowBorders)] };
+    if !responds.as_bool() {
+        return false;
+    }
+    // SAFETY: the guard above proved the selector exists; it takes no arguments and
+    // returns `BOOL`, like its documented siblings (`accessibilityDisplayShouldInvertColors`).
+    let shows: Bool = unsafe { msg_send![workspace, accessibilityDisplayShouldShowBorders] };
+    shows.as_bool()
 }
 
 /// Tauri command: returns the macOS Accessibility > Display options the UI mirrors.

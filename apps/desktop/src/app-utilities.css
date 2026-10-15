@@ -50,6 +50,21 @@
 }
 
 /* =============================================================================
+   Show borders
+   macOS Accessibility > Display > Show borders, mirrored as the `show-borders` class on
+   `<html>` by `#lib/display-accessibility`. A control that draws no edge of its own (an icon
+   button, a tab's close button, a path segment, the volume chip) carries
+   `.borderless-control`, and gains a control-edge hairline under the class. An inset
+   `box-shadow`, so nothing shifts by a pixel when the option flips, and it follows the
+   control's own radius. Controls that already have a border (`Button`, fields) don't carry
+   the class.
+   ============================================================================= */
+
+html.show-borders .borderless-control {
+  box-shadow: inset 0 0 0 1px var(--color-control-border);
+}
+
+/* =============================================================================
    Spinner utility classes
    ============================================================================= */
 

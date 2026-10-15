@@ -7,13 +7,15 @@
  *   and pane tints (`app.css` § Increase contrast).
  * - **Differentiate without color** → `differentiate-without-color`: the shape cues for the focused
  *   pane (cursor hairlines, tab accent band) step up to 3:1 (`app.css` § Differentiate without color).
+ * - **Show borders** → `show-borders`: controls that draw no edge of their own gain one
+ *   (`app-utilities.css` § Show borders).
  *
  * Invert colors is read too, but gets no class: it only changes the icons macOS draws, which
  * `#lib/icon-cache` follows on its own.
  *
  * Classes, not media queries: WKWebView never reflects `prefers-reduced-transparency` (verified:
  * with the setting on, AppKit reports `true` while the webview's `matchMedia` reports `false`),
- * and no media query exists for Differentiate without color at all. So the Rust backend reads all
+ * and no media query exists for Differentiate without color or Show borders at all. So the Rust backend reads all
  * three from `NSWorkspace` (`src-tauri/src/display_accessibility.rs`). Increase contrast ALSO
  * honors `prefers-contrast: more`, so a webview that does reflect it (Linux) gets the same class.
  *
@@ -32,6 +34,7 @@ export interface DisplayAccessibilityState {
   increaseContrast: boolean
   differentiateWithoutColor: boolean
   invertColors: boolean
+  showBorders: boolean
 }
 
 /** The options mirrored as an `<html>` class. */
@@ -41,6 +44,7 @@ const CLASS_BY_OPTION: Record<ClassOption, string> = {
   reduceTransparency: 'reduce-transparency',
   increaseContrast: 'increase-contrast',
   differentiateWithoutColor: 'differentiate-without-color',
+  showBorders: 'show-borders',
 }
 
 const CONTRAST_QUERY = '(prefers-contrast: more)'
@@ -50,6 +54,7 @@ const allOff = (): DisplayAccessibilityState => ({
   increaseContrast: false,
   differentiateWithoutColor: false,
   invertColors: false,
+  showBorders: false,
 })
 
 let fromOs = allOff()

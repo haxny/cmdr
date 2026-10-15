@@ -199,7 +199,7 @@
                 </span>
                 {#if !isSingleTab}
                     <span
-                        class="close-btn"
+                        class="close-btn borderless-control"
                         aria-hidden="true"
                         use:tooltip={tString('fileExplorer.tabBar.closeTabTooltip')}
                         onclick={(e: MouseEvent) => {
@@ -211,7 +211,7 @@
         {/each}
     </div>
     <button
-        class="new-tab-btn"
+        class="new-tab-btn borderless-control"
         aria-label={tString('fileExplorer.tabBar.newTabAriaLabel')}
         use:tooltip={{ text: tString('fileExplorer.tabBar.newTabAriaLabel'), shortcut: newTabShortcut }}
         disabled={isAtMax}

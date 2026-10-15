@@ -23,7 +23,7 @@
 
 <button
     type="button"
-    class="eject-button"
+    class="eject-button borderless-control"
     class:breadcrumb-eject-button={breadcrumb}
     class:is-ejecting={ejecting}
     aria-label={label}

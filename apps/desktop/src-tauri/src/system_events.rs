@@ -32,6 +32,8 @@ pub struct DisplayAccessibility {
     /// Invert colors: the whole display is inverted. macOS draws file and folder icons
     /// differently under it, so the icon caches key off it.
     pub invert_colors: bool,
+    /// Show borders: buttons and controls that draw no edge of their own gain one.
+    pub show_borders: bool,
 }
 
 /// `display-accessibility-changed`: one of the macOS Accessibility > Display

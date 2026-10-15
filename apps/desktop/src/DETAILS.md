@@ -57,18 +57,22 @@ Menu-like surfaces (`Menu`, `Select`, the breadcrumb popup) also take the macOS 
 
 ## Display accessibility classes
 
-`#lib/display-accessibility` (inited per window) mirrors three macOS Accessibility > Display options onto `<html>` as
-classes: `reduce-transparency`, `increase-contrast`, and `differentiate-without-color`. The backend reads all three from
-`NSWorkspace` in one typed `DisplayAccessibility` value and re-reads them on every
+`#lib/display-accessibility` (inited per window) mirrors four macOS Accessibility > Display options onto `<html>` as
+classes: `reduce-transparency`, `increase-contrast`, `differentiate-without-color`, and `show-borders`. The backend
+reads all four from `NSWorkspace` in one typed `DisplayAccessibility` value and re-reads them on every
 `NSWorkspaceAccessibilityDisplayOptionsDidChangeNotification` (`apps/desktop/src-tauri/src/display_accessibility.rs`),
 so they follow System Settings live. The same value carries Invert colors, which gets no class: it only changes the
 icons macOS draws, which `#lib/icon-cache` follows itself (`apps/desktop/src-tauri/src/icons/DETAILS.md` § Flushes and
 in-flight fetches).
 
 - **Why classes**: WKWebView ignores `prefers-reduced-transparency` (verified, see the module doc), and CSS has no query
-  for Differentiate without color at all. `increase-contrast` is ALSO on when `prefers-contrast: more` matches, so a
-  webview that reflects it (Linux) gets the same styling. Style off the class, ❌ never the media query: one source
-  keeps the two from drifting.
+  for Differentiate without color or Show borders at all. `increase-contrast` is ALSO on when `prefers-contrast: more`
+  matches, so a webview that reflects it (Linux) gets the same styling. Style off the class, ❌ never the media query:
+  one source keeps the two from drifting.
+- **Show borders has no public API**: the backend calls an undeclared `NSWorkspace` getter behind a
+  `respondsToSelector:` guard (evidence in `display_accessibility.rs`). A control that draws no edge of its own carries
+  `.borderless-control` and gains a hairline under `html.show-borders` (`app-utilities.css` § Show borders). Give a new
+  borderless button the class.
 
 ## Window drag strips sit at `--z-sticky`, under every menu
 

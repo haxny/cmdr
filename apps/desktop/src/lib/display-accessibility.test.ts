@@ -6,6 +6,7 @@ interface Options {
   increaseContrast: boolean
   differentiateWithoutColor: boolean
   invertColors: boolean
+  showBorders: boolean
 }
 
 // `vi.mock` is hoisted above the imports, so its factory can only reach these through `vi.hoisted`.
@@ -19,6 +20,7 @@ const state = vi.hoisted((): MockState => ({
     increaseContrast: false,
     differentiateWithoutColor: false,
     invertColors: false,
+    showBorders: false,
   },
 }))
 
@@ -43,6 +45,7 @@ describe('display accessibility', () => {
       increaseContrast: false,
       differentiateWithoutColor: false,
       invertColors: false,
+      showBorders: false,
     }
     mediaMatches = false
     mediaListener = undefined
@@ -74,11 +77,13 @@ describe('display accessibility', () => {
       increaseContrast: true,
       differentiateWithoutColor: true,
       invertColors: true,
+      showBorders: true,
     }
     await initDisplayAccessibility()
     expect(has('reduce-transparency')).toBe(true)
     expect(has('increase-contrast')).toBe(true)
     expect(has('differentiate-without-color')).toBe(true)
+    expect(has('show-borders')).toBe(true)
   })
 
   it('leaves every class off when macOS reports all off', async () => {
@@ -86,6 +91,7 @@ describe('display accessibility', () => {
     expect(has('reduce-transparency')).toBe(false)
     expect(has('increase-contrast')).toBe(false)
     expect(has('differentiate-without-color')).toBe(false)
+    expect(has('show-borders')).toBe(false)
   })
 
   it('follows live System Settings changes', async () => {
@@ -96,18 +102,22 @@ describe('display accessibility', () => {
         increaseContrast: false,
         differentiateWithoutColor: true,
         invertColors: false,
+        showBorders: true,
       },
     })
     expect(has('differentiate-without-color')).toBe(true)
+    expect(has('show-borders')).toBe(true)
     state.listener?.({
       options: {
         reduceTransparency: false,
         increaseContrast: false,
         differentiateWithoutColor: false,
         invertColors: false,
+        showBorders: false,
       },
     })
     expect(has('differentiate-without-color')).toBe(false)
+    expect(has('show-borders')).toBe(false)
   })
 
   it('also turns on increase-contrast from the prefers-contrast media query, live', async () => {

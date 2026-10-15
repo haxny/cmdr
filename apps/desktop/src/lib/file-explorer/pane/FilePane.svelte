@@ -2077,7 +2077,7 @@
         <!-- A middle-truncated segment shows its short form and speaks its full name. -->
         <span class="path" use:breadcrumbFit.observe>{#each clickableBreadcrumbSegments as seg, i (i)}{@const shown = breadcrumbFit.shown[i] ?? seg.text}{#if hasSeparatorBefore(i, seg.text)}<span class="path-sep">/</span>{/if}{#if seg.target !== null}<button
                     type="button"
-                    class="path-segment"
+                    class="path-segment borderless-control"
                     class:git-portal={seg.gitPortal}
                     use:tooltip={tString('fileExplorer.breadcrumb.navigateTooltip', { path: seg.displayPath })}
                     onclick={() => { breadcrumb.handleSegmentClick(seg.target as string); }}
