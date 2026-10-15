@@ -883,7 +883,8 @@ Full Disk Access profile.
 
 ## How updates work
 
-- App checks `https://getcmdr.com/latest.json` on start and every 60 min
+- App asks `https://api.getcmdr.com/update-check/<version>?arch=<arch>` on start and every 3 hours by default
+  (`advanced.updateCheckInterval`)
 - If newer version found → downloads silently → shows "Restart to update" toast
 - Signatures verified with public key embedded in app
 
