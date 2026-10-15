@@ -252,6 +252,14 @@
   "@commands.paneClone.description": {
     "sourceHash": "8a13dc9"
   },
+  "commands.paneFocusControls.label": "Di chuyển tiêu điểm tới các điều khiển của khung",
+  "@commands.paneFocusControls.label": {
+    "sourceHash": "b71f4ad"
+  },
+  "commands.paneFocusControls.description": "Dùng bàn phím để tới các tab, thanh vị trí và nút sắp xếp của khung đang chọn. Phím mũi tên di chuyển tiêu điểm giữa các mục này, còn phím Escape đưa bạn quay lại danh sách tệp.",
+  "@commands.paneFocusControls.description": {
+    "sourceHash": "e5828ae"
+  },
   "commands.paneLeftVolumeChooser.label": "Mở bộ chọn ổ đĩa bên trái",
   "@commands.paneLeftVolumeChooser.label": {
     "sourceHash": "6210f8e"

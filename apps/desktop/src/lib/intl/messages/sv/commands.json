@@ -252,6 +252,14 @@
   "@commands.paneClone.description": {
     "sourceHash": "8a13dc9"
   },
+  "commands.paneFocusControls.label": "Flytta fokus till panelens reglage",
+  "@commands.paneFocusControls.label": {
+    "sourceHash": "b71f4ad"
+  },
+  "commands.paneFocusControls.description": "Nå den fokuserade panelens flikar, platsfält och sorteringsknappar från tangentbordet. Piltangenterna flyttar fokus mellan dem och Escape tar dig tillbaka till filerna.",
+  "@commands.paneFocusControls.description": {
+    "sourceHash": "e5828ae"
+  },
   "commands.paneLeftVolumeChooser.label": "Öppna vänster volymväljare",
   "@commands.paneLeftVolumeChooser.label": {
     "sourceHash": "6210f8e"

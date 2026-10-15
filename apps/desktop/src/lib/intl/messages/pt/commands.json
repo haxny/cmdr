@@ -252,6 +252,14 @@
   "@commands.paneClone.description": {
     "sourceHash": "8a13dc9"
   },
+  "commands.paneFocusControls.label": "Mover o foco para os controles do painel",
+  "@commands.paneFocusControls.label": {
+    "sourceHash": "b71f4ad"
+  },
+  "commands.paneFocusControls.description": "Acesse pelo teclado as abas, a barra de localização e os botões de ordenação do painel em foco. As teclas de seta movem o foco entre eles, e Esc leva você de volta aos arquivos.",
+  "@commands.paneFocusControls.description": {
+    "sourceHash": "e5828ae"
+  },
   "commands.paneLeftVolumeChooser.label": "Abrir seletor de volume da esquerda",
   "@commands.paneLeftVolumeChooser.label": {
     "sourceHash": "6210f8e"

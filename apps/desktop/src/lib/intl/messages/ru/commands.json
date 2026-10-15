@@ -252,6 +252,14 @@
   "@commands.paneClone.description": {
     "sourceHash": "8a13dc9"
   },
+  "commands.paneFocusControls.label": "Переместить фокус на элементы управления панели",
+  "@commands.paneFocusControls.label": {
+    "sourceHash": "b71f4ad"
+  },
+  "commands.paneFocusControls.description": "Перейти с клавиатуры к вкладкам, строке расположения и кнопкам сортировки активной панели. Клавиши со стрелками перемещают фокус между ними, а клавиша Escape вернет вас к файлам.",
+  "@commands.paneFocusControls.description": {
+    "sourceHash": "e5828ae"
+  },
   "commands.paneLeftVolumeChooser.label": "Открыть переключатель томов левой панели",
   "@commands.paneLeftVolumeChooser.label": {
     "sourceHash": "6210f8e"

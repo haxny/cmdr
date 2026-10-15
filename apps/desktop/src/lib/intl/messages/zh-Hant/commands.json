@@ -252,6 +252,14 @@
   "@commands.paneClone.description": {
     "sourceHash": "8a13dc9"
   },
+  "commands.paneFocusControls.label": "移動焦點至窗格控制項目",
+  "@commands.paneFocusControls.label": {
+    "sourceHash": "b71f4ad"
+  },
+  "commands.paneFocusControls.description": "用鍵盤前往焦點窗格的分頁、位置列和排序按鈕。用方向鍵在它們之間移動，按 Esc 鍵返回檔案列表。",
+  "@commands.paneFocusControls.description": {
+    "sourceHash": "e5828ae"
+  },
   "commands.paneLeftVolumeChooser.label": "開啟左側卷宗切換器",
   "@commands.paneLeftVolumeChooser.label": {
     "sourceHash": "6210f8e"

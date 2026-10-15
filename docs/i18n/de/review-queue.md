@@ -112,3 +112,6 @@ German runs 20–35% longer than English. Look at these against the pseudolocale
   own badge for that state is `Nicht geladen`. `fileExplorer.fileIcon.sync.uploading` / `.downloading`
   (`Wird hochgeladen` / `Wird heruntergeladen`): tied to the progress line by term consistency, where Finder speaks
   `Upload …` / `Laden …`. A reviewer may prefer Finder's set.
+- `fileExplorer.pane.locationBarAriaLabel` (`Standort`, spoken „Standort, Symbolleiste“): the ruling's `Ort` collides
+  with `servers.sheet.s3Location` (`Standort`) under term consistency. A reviewer may prefer `Ort` plus an allowlist
+  entry.

@@ -254,6 +254,14 @@
   "@commands.paneClone.description": {
     "sourceHash": "8a13dc9"
   },
+  "commands.paneFocusControls.label": "Verplaats focus naar paneelregelaars",
+  "@commands.paneFocusControls.label": {
+    "sourceHash": "b71f4ad"
+  },
+  "commands.paneFocusControls.description": "Bereik de tabbladen, locatiebalk en sorteerknoppen van het actieve paneel met het toetsenbord. Met de pijltoetsen verplaats je de focus ertussen en de Escape-toets brengt je terug naar de bestanden.",
+  "@commands.paneFocusControls.description": {
+    "sourceHash": "e5828ae"
+  },
   "commands.paneLeftVolumeChooser.label": "Open linker volumekiezer",
   "@commands.paneLeftVolumeChooser.label": {
     "sourceHash": "6210f8e"

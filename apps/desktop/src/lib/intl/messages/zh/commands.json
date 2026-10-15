@@ -252,6 +252,14 @@
   "@commands.paneClone.description": {
     "sourceHash": "8a13dc9"
   },
+  "commands.paneFocusControls.label": "将焦点移到窗格控制项",
+  "@commands.paneFocusControls.label": {
+    "sourceHash": "b71f4ad"
+  },
+  "commands.paneFocusControls.description": "用键盘访问焦点窗格的标签页、位置栏和排序按钮。用方向键在它们之间移动，按 Esc 键返回文件列表。",
+  "@commands.paneFocusControls.description": {
+    "sourceHash": "e5828ae"
+  },
   "commands.paneLeftVolumeChooser.label": "打开左侧宗卷选择器",
   "@commands.paneLeftVolumeChooser.label": {
     "sourceHash": "6210f8e"

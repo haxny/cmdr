@@ -252,6 +252,14 @@
   "@commands.paneClone.description": {
     "sourceHash": "8a13dc9"
   },
+  "commands.paneFocusControls.label": "Fokus auf Steuerelemente des Bereichs bewegen",
+  "@commands.paneFocusControls.label": {
+    "sourceHash": "b71f4ad"
+  },
+  "commands.paneFocusControls.description": "Die Tabs, die Pfadleiste und die Tasten zum Sortieren des fokussierten Bereichs mit der Tastatur erreichen. Mit den Pfeiltasten bewegst du dich zwischen ihnen, und die esc-Taste bringt dich zurück zu den Dateien.",
+  "@commands.paneFocusControls.description": {
+    "sourceHash": "e5828ae"
+  },
   "commands.paneLeftVolumeChooser.label": "Linke Volume-Auswahl öffnen",
   "@commands.paneLeftVolumeChooser.label": {
     "sourceHash": "6210f8e"

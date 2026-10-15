@@ -1817,7 +1817,7 @@
     ],
     "chosen": "Ort",
     "confidence": "high",
-    "forms": "a general place in the file system → Ort (Places → Orte); a location a user picks or enters → Speicherort (Speicherort von adb); where a photo was taken → Aufnahmeort",
+    "forms": "a general place in the file system → Ort (Places → Orte); a location a user picks or enters → Speicherort (Speicherort von adb); where a photo was taken → Aufnahmeort; the bare noun \"Location\" naming a row or field → Standort (`servers.sheet.s3Location`, `fileExplorer.pane.locationBarAriaLabel`: same English, same translation); the pane's location bar in prose → Pfadleiste (Finder's FV12 Pfadleiste einblenden)",
     "sources": "macOS Finder (FI12 Dieser Ort ist schreibgeschützt., SD5/FI9 Orte, BU39 Speicherort wählen …)"
   },
   "locked": {

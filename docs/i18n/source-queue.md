@@ -51,6 +51,10 @@ rule into `translation-principles.md` or `translator-instructions.md`), then del
 - `errors.write.destinationNotAFolder.message` leaves `{path}` bare while its one-line twin
   `errors.volume.notADirectory` quotes it (“{path}”). If the dialog styles the path itself, say so in the description;
   otherwise quote it in both.
+- `commands.paneFocusControls.*`: no concept for keyboard focus or "controls". Register them from macOS Keyboard
+  Settings (`DefaultShortcutsTable.loctable`, "Move focus to the window toolbar"; Accessibility prose "move focus
+  between controls"), which all 11 locales followed. Add "move focus" and "keys move between" to `move`'s `notMatch`.
+  `location` also matches "location bar"; de uses Finder's `Pfadleiste` there. (all 11)
 - `pnpm i18n:brief --keys a b c` (space-separated) silently briefs only `a` (header says "1 key"). Reject stray
   positional args, or accept both separators.
 - Tooling: `sync-locale-keys.ts --restamp` skips overlays (`es-419`), so a new overlay fork's `sourceHash` (the hash of

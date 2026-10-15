@@ -252,6 +252,14 @@
   "@commands.paneClone.description": {
     "sourceHash": "8a13dc9"
   },
+  "commands.paneFocusControls.label": "Déplacer la cible sur les commandes du panneau",
+  "@commands.paneFocusControls.label": {
+    "sourceHash": "b71f4ad"
+  },
+  "commands.paneFocusControls.description": "Atteindre au clavier les onglets, la barre d’emplacement et les boutons de tri du panneau actif. Les touches fléchées déplacent la cible d’un élément à l’autre et la touche Échap permet de revenir aux fichiers.",
+  "@commands.paneFocusControls.description": {
+    "sourceHash": "e5828ae"
+  },
   "commands.paneLeftVolumeChooser.label": "Ouvrir le sélecteur de volume gauche",
   "@commands.paneLeftVolumeChooser.label": {
     "sourceHash": "6210f8e"

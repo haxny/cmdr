@@ -252,6 +252,14 @@
   "@commands.paneClone.description": {
     "sourceHash": "8a13dc9"
   },
+  "commands.paneFocusControls.label": "Mover el foco a los controles del panel",
+  "@commands.paneFocusControls.label": {
+    "sourceHash": "b71f4ad"
+  },
+  "commands.paneFocusControls.description": "Accede con el teclado a las pestañas, la barra de ubicación y los botones de ordenación del panel activo. Las teclas de flecha mueven el foco entre ellos y Esc te devuelve a los archivos.",
+  "@commands.paneFocusControls.description": {
+    "sourceHash": "e5828ae"
+  },
   "commands.paneLeftVolumeChooser.label": "Abrir el selector de volúmenes izquierdo",
   "@commands.paneLeftVolumeChooser.label": {
     "sourceHash": "6210f8e"

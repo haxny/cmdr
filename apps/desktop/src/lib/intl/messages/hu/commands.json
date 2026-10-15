@@ -252,6 +252,14 @@
   "@commands.paneClone.description": {
     "sourceHash": "8a13dc9"
   },
+  "commands.paneFocusControls.label": "Fókusz mozgatása a panel vezérlőelemeire",
+  "@commands.paneFocusControls.label": {
+    "sourceHash": "b71f4ad"
+  },
+  "commands.paneFocusControls.description": "Billentyűzetről is elérhetővé teszi a fókuszált panel lapjait, helysorát és rendezőgombjait. A nyílbillentyűk ezek között mozgatják a fókuszt, az Escape billentyűvel pedig visszatérhetsz a fájlokhoz.",
+  "@commands.paneFocusControls.description": {
+    "sourceHash": "e5828ae"
+  },
   "commands.paneLeftVolumeChooser.label": "Bal oldali kötetválasztó megnyitása",
   "@commands.paneLeftVolumeChooser.label": {
     "sourceHash": "6210f8e"

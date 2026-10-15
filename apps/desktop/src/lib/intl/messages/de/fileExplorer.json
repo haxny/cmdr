@@ -43,6 +43,10 @@
   "@fileExplorer.pane.filePaneAriaLabel": {
     "sourceHash": "77f3961"
   },
+  "fileExplorer.pane.locationBarAriaLabel": "Standort",
+  "@fileExplorer.pane.locationBarAriaLabel": {
+    "sourceHash": "15b6197"
+  },
   "fileExplorer.pane.location": "{side, select, left {Linker Bereich, {folder}} other {Rechter Bereich, {folder}}}",
   "@fileExplorer.pane.location": {
     "sourceHash": "8b5ce0b"
