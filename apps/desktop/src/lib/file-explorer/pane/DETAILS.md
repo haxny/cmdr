@@ -285,7 +285,8 @@ VO-cursor browsing. Row first: the message waits for the list's `onCursorRowLand
 landing), with a 400 ms fallback when no row lands. An arrival in an empty folder says "Left pane, Downloads, empty
 folder" (the announcer's `message`, read when it goes out). Every other pane message goes through the same region, ❌
 never a second one: a region inserted together with its message announces nothing. Whether VoiceOver cuts the row off is
-a listening question for the harness (`docs/specs/a11y-file-list-focus-plan.md` M5), not a timing knob.
+a listening question for the harness (the VoiceOver verification step in `docs/specs/a11y-file-list-focus-plan.md`), not
+a timing knob.
 
 **Pane status announcer.** `pane-status-announcer.svelte.ts` speaks about changes IN PLACE, for the focused pane only:
 "3 selected" / "Nothing selected", the quick filter's "3 names contain “re”" / "No names contain “zz”", "Empty folder"

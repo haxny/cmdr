@@ -463,7 +463,7 @@
 </script>
 
 <!-- The name the switcher already carries in Settings > Keyboard shortcuts, so screen readers
-     and the shortcut scope say the same thing (and M2 adds no new copy to translate). -->
+     and the shortcut scope say the same thing (and the switcher adds no new copy to translate). -->
 <!-- ❗ Stops above the pane's footer and scrolls: over it, the last row sat on the status
      bar with the status text showing through the glass. -->
 <Menu {menu} ariaLabel={tString('shortcuts.scope.volumeChooser')} getBottomLimit={paneFooterTop}>

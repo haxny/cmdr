@@ -1,7 +1,7 @@
 /**
  * Behavioral tests for the chip (`VolumeBreadcrumb.svelte`) and the volume switcher it
  * hosts (`VolumeChooserMenu.svelte`, the house `Menu`). They're the behavior contract the
- * M2 port had to keep, so they mount the chip and drive it the way a person does — real
+ * port onto the house `Menu` had to keep, so they mount the chip and drive it the way a person does — real
  * keydowns, real clicks.
  *
  * The chip's OTHER menu is `FavoritesMenu.svelte.test.ts`: the favorites cases moved

@@ -639,6 +639,15 @@ where there's no `document`) carry the whole behavior:
 Covered by `tooltip.test.ts` § "hides on keypress". Its `beforeEach` dispatches a `mousemove` because `hoverSuppressed`
 is module state that outlives a single test.
 
+### Hoverable (WCAG 1.4.13)
+
+The pointer can move onto a shown tooltip and it stays (`.cmdr-tooltip.visible` takes `pointer-events`; hidden, it stays
+click-through). Leaving its trigger, or the tooltip, starts a 250 ms grace (`HIDE_GRACE_MS`); reaching either cancels
+it. **Decision**: a trigger entered DURING the grace waits for it (`waitingTrigger`) and then shows on what's left of
+its own 400 ms. **Why**: a row's tooltip sits over the next row, so the pointer crosses that row on the way, and an
+instant hand-over made the tooltip unreachable. A press on the tooltip dismisses it, so the next click lands on what it
+covered. Covered by `tooltip.test.ts` § hoverable; its `afterEach` presses a key so no grace outlives the fake clock.
+
 ## Button
 
 Variants: `primary` | `secondary` (default) | `danger`. Sizes: `regular` (default) | `mini`.
@@ -1050,8 +1059,7 @@ surface (the menu, or the open submenu) has an `icon`, the rows without one get 
 - **Escape closes the open submenu if there is one, otherwise the menu**, down ONE path. The switcher used to disagree
   with itself here: its routed handler closed only the submenu while a second document listener closed the whole
   dropdown, so which happened depended on how the key arrived. The primitive has no second listener, and this matches
-  macOS. ❗ M2's characterization pin for the old DOM-Escape-closes-everything case is expected to fail, and gets
-  updated deliberately then.
+  macOS.
 - **Every key while open.** `onKey` gets the first look, then the menu's own handling, and anything left over is
   swallowed (`stopPropagation`), which is what keeps the panes behind it inert. A key `onKey` CLAIMS is swallowed the
   same way: otherwise it's the one class that reaches the app's central dispatch and fires twice, invisible only while
