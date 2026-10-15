@@ -31,6 +31,8 @@ var allowedUnusedClasses = map[string]bool{
 	"reduce-transparency": true,
 	// app.css - macOS Increase contrast, toggled on <html> by `#lib/display-accessibility` the same way
 	"increase-contrast": true,
+	// app-visual-cues.css - macOS Differentiate without color, toggled on <html> the same way
+	"differentiate-without-color": true,
 	// Button.svelte - classes constructed dynamically via template strings (btn-{variant}, btn-{size})
 	"btn-primary":   true,
 	"btn-secondary": true,

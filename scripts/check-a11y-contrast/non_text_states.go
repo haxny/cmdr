@@ -30,6 +30,9 @@ var fieldSurfaces = []string{"color-bg-primary", "color-bg-secondary", "color-bg
 
 var nonTextScenarios = []nonTextScenario{
 	{Selector: ".text-field / Combobox / NumberInput edge", MarkVar: "color-field-border", Surfaces: fieldSurfaces},
+	// The Differentiate without color pane bar (on the `--color-bg-secondary` header) and
+	// the Increase contrast cursor hairline (`app-visual-cues.css`, `app.css`).
+	{Selector: "accent-pop state mark", MarkVar: "color-accent-pop", Surfaces: fieldSurfaces},
 	{
 		Selector:             "focus ring ink layer (html.increase-contrast)",
 		MarkVar:              "color-focus-ink",

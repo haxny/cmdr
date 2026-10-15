@@ -34,7 +34,9 @@ Hover and focus variants are derived, not hardcoded, because the base color is d
 
 `--color-accent-pop` is a higher-contrast accent for small marks sitting ON accent-tinted surfaces (the symlink badge
 over a gold folder icon), where plain `--color-accent` would blend in. It flips direction by scheme: darker than the
-accent in light mode, lighter in dark mode.
+accent in light mode, lighter in dark mode. That also makes it the accent for a state MARK that needs 3:1 against any
+surface with any accent (worst 4.81:1 light, 5.98:1 dark): the Differentiate without color pane bar and the Increase
+contrast cursor hairline.
 
 **Accent-colored TEXT always uses `--color-accent-text`, never `--color-accent`.** That's the one accent variant
 darkened far enough to clear 4.5:1 on a light background (a pale user accent, say Apple Yellow, fails AA as plain text),
@@ -159,8 +161,9 @@ selected rows, so dense selections stay countable.
 `#1e1e1e` and 9.46:1 on the selected-row background. The worst case across every row state, pane tint, and accent is
 4.52:1 (light) and 4.71:1 (dark), all AA. `pnpm check a11y-contrast` gates the whole matrix (`row_state_matrix.go`
 mirrors the three-tier cascade), so a new selection color must pass it. Known limit: selection differs from normal text
-mostly by hue (red vs black is 2.96:1, `#ffa0a0` vs white text 1.59:1), so it leans on color (tracked in GitHub issue
-#440).
+mostly by hue (red vs black is 2.96:1, `#ffa0a0` vs white text 1.59:1). Under macOS Differentiate without color, marked
+rows add a 3px red edge bar (`app-visual-cues.css`); a second cue for everyone is a pending design pick (GitHub issue
+#440, Debug > Visual cues).
 
 **Automated contrast checks:** `scripts/check-a11y-contrast/` runs at build time via `pnpm check a11y-contrast`. It
 parses `app.css` design tokens and every scoped `<style>` block, resolves `var()` chains + `color-mix(in srgb, ...)` +
@@ -472,8 +475,10 @@ vertical rhythm.
 - Focused pane: `background: var(--color-cursor-active)` (the accent at 20% opacity)
 - Unfocused pane: `background: var(--color-cursor-inactive)` (neutral, no accent)
 - Both: a 1px inset `--color-cursor-outline` hairline (the accent at 35%) and `--radius-sm` corners
-  (`app-file-list.css`). The focused and unfocused fills differ by only about 1.09:1 in light mode, so which pane holds
-  focus is hard to see (GitHub issue #440).
+  (`app-file-list.css`). The focused and unfocused fills differ by only about 1.09:1 in light mode (1.02:1 with Apple
+  Yellow), so which pane holds focus is hard to see. Under macOS Differentiate without color, the focused pane's path
+  header gets a 2px `--color-accent-pop` top bar (`app-visual-cues.css`); a cue for everyone is a pending design pick
+  (GitHub issue #440, Debug > Visual cues).
 
 **Selection:** The row's text turns `var(--color-selection-fg)` (red, see § Semantic colors) and the row gets the
 translucent `--color-selection-bg`, with a hairline between consecutive selected rows.

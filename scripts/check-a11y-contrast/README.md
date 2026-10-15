@@ -85,8 +85,9 @@ One pass measures marks rather than text:
 
 - **Non-text states** (`non_text_states.go`, WCAG 1.4.11): the edges and rings that carry a control's shape or state, at
   3:1 against each surface they sit on, in both modes, across the accent matrix, and under Increase contrast: the text
-  field edge (`--color-field-border`) and the focus ring's ink layer (`--color-focus-ink`). An unresolvable token fails
-  rather than skips. These findings join the WCAG gate but stay out of the APCA floor, whose Lc scale is for text.
+  field edge (`--color-field-border`), the `--color-accent-pop` state marks (the Differentiate without color pane bar,
+  the Increase contrast cursor hairline), and the focus ring's ink layer (`--color-focus-ink`). An unresolvable token
+  fails rather than skips. These findings join the WCAG gate but stay out of the APCA floor, whose Lc scale is for text.
 
 ## Opacity (detect, don't compute)
 

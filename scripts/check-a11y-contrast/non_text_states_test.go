@@ -12,6 +12,10 @@ func nonTextFixture(fieldBorder string) *VarTable {
 	vt.Dark["color-bg-secondary"] = "#2a2a2a"
 	vt.Dark["color-bg-dialog"] = "#232323"
 	vt.Dark["color-field-border"] = "#808080"
+	vt.Light["color-accent"] = "#d4a006"
+	vt.Light["color-accent-pop"] = "color-mix(in oklch, var(--color-accent), black 40%)"
+	vt.Dark["color-accent"] = "#ffc206"
+	vt.Dark["color-accent-pop"] = "color-mix(in oklch, var(--color-accent), white 40%)"
 	vt.ContrastLight["color-focus-ink"] = "#1a1a1a"
 	vt.ContrastDark["color-focus-ink"] = "#e8e8e8"
 	return vt

@@ -67,6 +67,7 @@ import { openStaleDrivePreview } from '#lib/dialog-gallery/stale-drive-preview.j
 import { openOperationConflictPreview } from '#lib/dialog-gallery/operation-conflict-preview.js'
 import { openTransferProgressPreview } from '#lib/dialog-gallery/transfer-progress-preview.js'
 import { isE2eRun } from '#lib/app-mode.js'
+import { applyVisualCueProposals, VISUAL_CUES_EVENT, type VisualCueProposals } from '#lib/debug/visual-cue-proposals.js'
 import type { ExplorerAPI } from './explorer-api'
 import type { FriendlyError, TransferOperationType } from '#lib/file-explorer/types.js'
 
@@ -543,6 +544,10 @@ export async function setupDialogListeners(ctx: ListenerSetupContext): Promise<v
     await listenTauri('debug-reset-error', (event) => {
       const { pane } = event.payload as { pane: 'left' | 'right' | 'both' }
       getExplorer()?.resetError(pane)
+    })
+    // Debug > Visual cues: the #440 design proposals, previewed on the file panes.
+    await listenTauri(VISUAL_CUES_EVENT, (event) => {
+      applyVisualCueProposals(event.payload as VisualCueProposals)
     })
     // Debug > Soft dialogs: open a gallery dialog over the main window. The main
     // window focuses ITSELF here rather than the Debug window pushing it, because

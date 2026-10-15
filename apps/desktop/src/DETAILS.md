@@ -83,7 +83,7 @@ its first two options landed under the strip and couldn't be picked. Anything a 
 
 ## Global stylesheets
 
-Seven sheets, all global (no Svelte scoping). Who owns what:
+Eight sheets, all global (no Svelte scoping). Who owns what:
 
 - `app.css`: the design tokens (`:root`, plus the dark-mode, Increase contrast, reduced-transparency, and old-WebKit
   override blocks), then the base element styles (focus ring, typography layer, `html` / `body`, `#app-root`).
@@ -98,16 +98,19 @@ Seven sheets, all global (no Svelte scoping). Who owns what:
 - `app-file-list.css`: the `.file-entry` row chrome that `FullList.svelte` and `BriefList.svelte` share (stripe,
   selection fill, selected-row hairline, cursor fill and outline). Only rules that were identical in both views live
   here; see `lib/file-explorer/views/DETAILS.md` for what stayed per-view and why.
+- `app-visual-cues.css`: the non-color state cues (GitHub issue #440). The Differentiate without color behavior (keyed
+  on `html.differentiate-without-color`) plus the dev-only design proposals keyed on `data-cue-*` attributes that only
+  Debug > Visual cues sets. Every selector starts at `html`, so it out-ranks the row and focus rules it overrides.
 
 ### Cascade order is load order, and it's manual
 
-`app.css` `@import`s the two order-independent sheets (palette, reset) at its top. The other four are imported from
+`app.css` `@import`s the two order-independent sheets (palette, reset) at its top. The other five are imported from
 `routes/+layout.svelte`, in a fixed order, AFTER `app.css`.
 
 **Why:** a CSS `@import` must sit at the top of its sheet, so `@import`-ing a sheet whose rules belong at the END would
 put them BEFORE everything that precedes them today. Wherever specificity ties, the winner flips, and the regression is
 invisible until someone notices a wrong border weeks later. Importing from the layout is what reproduces the original
-single-file order exactly. So: don't convert those four to `@import`s, and don't reorder the imports in the layout.
+single-file order exactly. So: don't convert those five to `@import`s, and don't reorder the imports in the layout.
 
 ### Moving a rule out of a component costs a class of specificity
 

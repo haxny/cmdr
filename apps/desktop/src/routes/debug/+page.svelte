@@ -17,12 +17,14 @@
     import DebugOperationLogPanel from './DebugOperationLogPanel.svelte'
     import DebugSmbDiagnosticsPanel from './DebugSmbDiagnosticsPanel.svelte'
     import DebugToastPanel from './DebugToastPanel.svelte'
+    import DebugVisualCuesPanel from './DebugVisualCuesPanel.svelte'
     import ComponentsCatalog from '../dev/components/+page.svelte'
     import GraphicsCatalog from '../dev/graphics/+page.svelte'
 
     /** Section ids. The `components-*` ids are children of the `'components'` parent. */
     type SectionId =
         | 'appearance'
+        | 'visual-cues'
         | 'drive-index'
         | 'smb-diagnostics'
         | 'toast-notifications'
@@ -81,6 +83,7 @@
     /** Sidebar order. First entry is the default selection. */
     const SECTIONS: Section[] = [
         { id: 'appearance', label: 'Appearance' },
+        { id: 'visual-cues', label: 'Visual cues (#440)' },
         { id: 'drive-index', label: 'Drive index' },
         { id: 'smb-diagnostics', label: 'SMB diagnostics' },
         { id: 'toast-notifications', label: 'Toast notifications' },
@@ -270,6 +273,8 @@
         <div class="debug-content-wrapper">
             {#if selected === 'appearance'}
                 <DebugAppearancePanel />
+            {:else if selected === 'visual-cues'}
+                <DebugVisualCuesPanel />
             {:else if selected === 'drive-index'}
                 <DebugDriveIndexPanel />
             {:else if selected === 'smb-diagnostics'}

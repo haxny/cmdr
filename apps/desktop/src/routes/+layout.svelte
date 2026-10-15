@@ -5,7 +5,7 @@
      * Other windows (viewer, debug) get only this minimal layout.
      */
     import { onMount } from 'svelte'
-    // Global stylesheets, in cascade order. The four after `app.css` must stay last;
+    // Global stylesheets, in cascade order. The five after `app.css` must stay last;
     // importing them here is what keeps them there. Don't move them into an `@import`
     // inside `app.css`: that hoists to the top of the sheet and inverts the cascade.
     // See `apps/desktop/src/DETAILS.md` § Global stylesheets.
@@ -14,6 +14,7 @@
     import '../app-utilities.css'
     import '../app-tooltip.css'
     import '../app-file-list.css'
+    import '../app-visual-cues.css'
     import { initLogger } from '#lib/logging/logger.js'
     import { installClipboardShimIfE2e } from '#lib/clipboard-shim.js'
     import { initWindowSettings } from '#lib/settings/window-settings.js'

@@ -1,0 +1,138 @@
+/* State cues that don't lean on hue alone (GitHub issue #440).
+
+   Two jobs live here:
+
+   1. **Differentiate without color.** macOS Accessibility > Display > Differentiate
+      without color arrives as `html.differentiate-without-color`
+      (`#lib/display-accessibility`). Under it, the focused pane gets the header bar
+      (1a below) and marked files get the edge bar (2b below), the strongest non-color
+      option of each. Shipped behavior.
+   2. **Proposals awaiting David's design pick.** Each option is keyed on a dev-only
+      attribute on `<html>` (`data-cue-pane`, `data-cue-marked`, `data-cue-ring`) that
+      only Debug > Visual cues sets, so none of it touches the default look. Once an
+      option is picked, it moves to its real home (`app-file-list.css`, `app.css`
+      § Global Focus Styles) and this half goes away.
+
+   Each option notes its WORST ratio (light / dark) across all nine accents and the 13
+   pane tints, computed with `scripts/check-a11y-contrast`'s resolver on 2026-10-15.
+   Today's cue it replaces: focused vs unfocused cursor fill 1.02 / 1.10, marked red vs
+   normal text 2.96 / 1.59, accent ring vs surface 1.32 / 2.92.
+
+   Loaded AFTER `app-file-list.css` by `routes/+layout.svelte`, never @imported. Each
+   selector starts at `html[...]` / `html.<class>`, which out-ranks the base row and
+   focus rules it overrides regardless of source order. */
+
+/* ── 1. Focused pane ─────────────────────────────────────────────────────────────── */
+
+/* 1a. Header bar: a 2px accent-pop band along the top of the focused pane's path
+   header. Pane-level, so it reads even with the cursor scrolled out of view.
+   Bar vs header: 5.26 / 5.98. */
+:is(html[data-cue-pane='header-bar'], html.differentiate-without-color) .file-pane.is-focused > .header {
+  box-shadow: inset 0 2px 0 var(--color-accent-pop);
+}
+
+/* 1b. Cursor ring: the focused pane's cursor trades its faint 1px hairline for a
+   solid 2px accent-pop ring. The unfocused cursor keeps the hairline, so the two
+   differ by weight as well as hue.
+   Ring vs the cursor fill: 4.57 / 4.53; vs the pane: 4.90 / 5.33. */
+html[data-cue-pane='cursor-ring']
+  :is(.full-list-container, .brief-list-container).is-focused
+  .file-entry.is-under-cursor {
+  box-shadow: inset 0 0 0 2px var(--color-accent-pop);
+}
+
+/* 1c. Hollow unfocused cursor: the unfocused pane's cursor drops its fill for a
+   dashed control-border outline, so filled vs hollow tells the panes apart.
+   Dashed outline vs the pane: 3.15 / 3.24. */
+html[data-cue-pane='hollow-unfocused']
+  :is(.full-list-container, .brief-list-container):not(.is-focused)
+  .file-entry.is-under-cursor {
+  background-color: transparent;
+  box-shadow: none;
+  outline: 1px dashed var(--color-control-border);
+  outline-offset: -1px;
+}
+
+html[data-cue-pane='hollow-unfocused']
+  :is(.full-list-container, .brief-list-container):not(.is-focused)
+  .file-entry.is-under-cursor.is-selected {
+  background-color: var(--color-selection-bg);
+}
+
+/* ── 2. Marked files ─────────────────────────────────────────────────────────────── */
+
+/* 2a. Heavier text: a hairline stroke in the text's own color. Faux bold on purpose:
+   a real `font-weight` widens the glyphs, and middle truncation measures with the
+   regular face's metrics. No ratio change: the cue is weight. */
+html[data-cue-marked='bold'] .file-entry.is-selected {
+  -webkit-text-stroke: 0.4px currentColor;
+}
+
+/* 2b. Edge bar: a 3px bar in the selection red down the row's leading edge. A
+   pseudo-element, so it stacks with whatever box-shadow the cursor or hairline
+   rules paint. Bar vs the marked row: 4.51 / 8.22. */
+:is(html[data-cue-marked='edge-bar'], html.differentiate-without-color) .file-entry.is-selected {
+  position: relative;
+}
+
+:is(html[data-cue-marked='edge-bar'], html.differentiate-without-color) .file-entry.is-selected::before {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  /* stylelint-disable-next-line declaration-property-value-disallowed-list -- a 3px mark, no spacing token */
+  width: 3px;
+  background-color: var(--color-selection-fg);
+}
+
+/* 2c. Mark badge: a dot in the selection red on the file icon's free bottom-left
+   corner, ringed in the pane background so it reads over any icon.
+   Dot vs the marked row: 4.51 / 8.22. */
+html[data-cue-marked='badge'] .file-entry.is-selected .icon-wrapper::after {
+  content: '';
+  position: absolute;
+  /* stylelint-disable declaration-property-value-disallowed-list -- badge geometry, matching FileIcon's own badges */
+  inset-inline-start: -2px;
+  bottom: -2px;
+  width: 7px;
+  height: 7px;
+  /* stylelint-enable declaration-property-value-disallowed-list */
+  border-radius: var(--radius-full);
+  background-color: var(--color-selection-fg);
+  box-shadow: 0 0 0 1px var(--color-bg-primary);
+}
+
+/* ── 3. Focus ring ───────────────────────────────────────────────────────────────── */
+
+/* 3a. Accent inside, ink outside: the accent hugs the control, and an ink outline
+   (`--color-focus-ink`) rings it at the outer edge. Ink vs surface: 14.60 / 11.71;
+   accent vs ink: 3.54 / 1.29 (the ink carries the 3:1, not the seam). */
+html[data-cue-ring='ink-outside'] :is(button, a, [role='button']):focus-visible {
+  outline-color: var(--color-focus-ink);
+  box-shadow: 0 0 0 2px var(--color-accent);
+}
+
+html[data-cue-ring='ink-outside'] {
+  --shadow-focus-solid: 0 0 0 2px var(--color-accent), 0 0 0 4px var(--color-focus-ink);
+}
+
+/* 3b. Ink inside, accent outside: the Increase contrast ring (`app.css` § Global Focus
+   Styles), offered as the default. Ink vs surface: 14.60 / 11.71. */
+html[data-cue-ring='ink-inside'] :is(button, a, [role='button']):focus-visible {
+  box-shadow: 0 0 0 2px var(--color-focus-ink);
+}
+
+html[data-cue-ring='ink-inside'] {
+  --shadow-focus-solid: 0 0 0 2px var(--color-focus-ink), 0 0 0 4px var(--color-accent);
+}
+
+/* 3c. Strong accent: one ring, in `--color-accent-pop` (the accent mixed 40% toward
+   black in light mode, toward white in dark) instead of the raw accent.
+   Ring vs surface: 4.81 / 5.98. */
+html[data-cue-ring='strong-accent'] :is(button, a, [role='button']):focus-visible {
+  outline-color: var(--color-accent-pop);
+}
+
+html[data-cue-ring='strong-accent'] {
+  --shadow-focus-solid: 0 0 0 2px var(--color-accent-pop);
+}
