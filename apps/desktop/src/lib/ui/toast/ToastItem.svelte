@@ -58,25 +58,25 @@
 
     // Auto-dismiss timer for transient toasts.
     //
-    // The rule: a toast hides at `max(its natural deadline, the moment the
-    // pointer left it + HOVER_LEAVE_GRACE_MS)`. The natural deadline is
-    // `mountedAt + timeoutMs` in wall-clock time, and hovering neither pauses
-    // nor extends that clock. What hovering guarantees is the grace tail after
-    // the pointer leaves, so a toast can never vanish out from under a cursor
-    // that's still on it, and never snaps away the instant the mouse drifts
-    // off. Don't reintroduce a paused countdown: a toast hovered for a
-    // minute is meant to go one second after the pointer leaves, not to get
-    // its leftover seconds back.
+    // The rule: a toast hides at `max(its natural deadline, the moment it was
+    // let go + HOVER_LEAVE_GRACE_MS)`. It's HELD while the pointer is on it or
+    // keyboard focus is inside it, and let go when neither is true any more. The
+    // natural deadline is `mountedAt + timeoutMs` in wall-clock time, and holding
+    // neither pauses nor extends that clock. What holding guarantees is the grace
+    // tail after letting go, so a toast can never vanish out from under a cursor
+    // or a focused button, and never snaps away the instant either drifts off.
+    // Don't reintroduce a paused countdown: a toast held for a minute is meant to
+    // go one second after it's let go, not to get its leftover seconds back.
     //
     // The clock counts from the later of mount and the latest post, so a same-id
     // re-raise (a new `postedAt`, which can also change `dismissal` and
     // `timeoutMs`) restarts it. Persistent toasts never get a timer, and a toast
-    // re-raised under the pointer waits for the pointer to leave, same as one
-    // hovered the whole time.
+    // re-raised while held waits to be let go, same as one held the whole time.
     const mountedAt = Date.now()
     let timer: ReturnType<typeof setTimeout> | undefined
     let naturalDeadline = 0
     let hovered = false
+    let focusWithin = false
     let toastElement: HTMLDivElement | undefined = $state()
     let focusReturnTarget: FocusOrigin | null = null
     let ownedFocus = false
@@ -183,19 +183,51 @@
         ringRunning = false
     }
 
-    function handlePointerEnter() {
-        hovered = true
-        if (dismissal !== 'transient') return
-        clearTimer()
-        pauseRing()
+    function isHeld(): boolean {
+        return hovered || focusWithin
     }
 
-    function handlePointerLeave() {
-        hovered = false
-        if (dismissal !== 'transient') return
+    /** Runs `change` (flipping `hovered` or `focusWithin`), then starts or stops the clock if being held flipped. */
+    function updateHold(change: () => void) {
+        const wasHeld = isHeld()
+        change()
+        const held = isHeld()
+        if (held === wasHeld || dismissal !== 'transient') return
+        if (held) {
+            clearTimer()
+            pauseRing()
+            return
+        }
         const ms = Math.max(naturalDeadline - Date.now(), HOVER_LEAVE_GRACE_MS)
         armTimer(ms)
         startRing(ringFraction(), ms)
+    }
+
+    function handlePointerEnter() {
+        updateHold(() => {
+            hovered = true
+        })
+    }
+
+    function handlePointerLeave() {
+        updateHold(() => {
+            hovered = false
+        })
+    }
+
+    function handleFocusIn(event: FocusEvent) {
+        rememberFocusOrigin(event)
+        updateHold(() => {
+            focusWithin = true
+        })
+    }
+
+    function handleFocusOut(event: FocusEvent) {
+        const next = event.relatedTarget
+        if (next instanceof Node && toastElement?.contains(next)) return
+        updateHold(() => {
+            focusWithin = false
+        })
     }
 
     $effect(() => {
@@ -206,7 +238,7 @@
         const ms = Math.max(naturalDeadline - Date.now(), 0)
         const from = timeoutMs > 0 ? Math.min(1, ms / timeoutMs) : 0
         untrack(() => {
-            if (hovered) {
+            if (isHeld()) {
                 ringFrom = from
                 ringRunning = false
             } else {
@@ -230,7 +262,8 @@
     onpointerenter={handlePointerEnter}
     onpointerleave={handlePointerLeave}
     onpointerdown={rememberPointerFocusOrigin}
-    onfocusin={rememberFocusOrigin}
+    onfocusin={handleFocusIn}
+    onfocusout={handleFocusOut}
 >
     <ToastLevelIcon {level} />
     <div class="toast-main">
