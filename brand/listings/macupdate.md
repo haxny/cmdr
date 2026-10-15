@@ -12,11 +12,13 @@ after a ping, and the earlier ones never did. The contact is in the vault's dire
 every handoff ends with "submit, then ping". Since it skips v0.47–v0.52, the Description picks up what shipped in
 between (multi-rename, compare folders, folder sizes on demand, S3) and the Version changes cover v0.53.0 alone.
 
-❗ **The Download URL must be a DIRECT link to the installer**, not a redirect. Their guidelines say "the direct URL to
-the installer package (e.g., .pkg .dmg, .zip)", and `getcmdr.com/download/latest/universal` takes 3 redirects to a
-signed `release-assets.githubusercontent.com` blob URL that doesn't end in `.dmg` (verified 2026-09-18). The two
-submissions that used the redirect were never accepted and the one with the version-pinned GitHub Releases URL was, so
-keep the pinned URL, at the cost of the `?ref=macupdate.com` attribution and a bump per release.
+**The Download URL is the dynamic `getcmdr.com/download/latest/universal` link** (since the v0.53.0 submission), so it
+never goes stale and downloads count toward MacUpdate. Their guidelines ask for "the direct URL to the installer package
+(e.g., .pkg .dmg, .zip)", and this one takes 3 redirects to a signed `release-assets.githubusercontent.com` blob URL
+that doesn't end in `.dmg` (verified 2026-09-18). The two submissions that used it went unreviewed, but so did
+everything until a reviewer got pinged, so the missing ping, not the redirect, is the likely cause. If MacUpdate ever
+refuses it, fall back to the version-pinned GitHub Releases URL
+(`https://github.com/vdavid/cmdr/releases/download/vX.Y.Z/Cmdr_X.Y.Z_universal.dmg`), bumped per release.
 
 "Version changes" covers the release being submitted (the whole minor line, patches included, once patches start getting
 skipped here); the Description carries everything older.
@@ -31,10 +33,8 @@ the Price field and the note to the review team instead.
 
 - **App name**: `Cmdr`
 - **Developer name**: `David Veszelovszki`
-- **Download URL**: `https://github.com/vdavid/cmdr/releases/download/v0.53.0/Cmdr_0.53.0_universal.dmg`
-  - Version-pinned, so bump it with every listing update (see the Download URL note at the top). The redirecting
-    `https://getcmdr.com/download/latest/universal?ref=macupdate.com` would never go stale and would attribute downloads
-    to MacUpdate, but it's what the rejected submissions used.
+- **Download URL**: `https://getcmdr.com/download/latest/universal?ref=macupdate.com` (dynamic, no bump per release; see
+  the Download URL note at the top)
 - **Product page URL**: `https://getcmdr.com`
 - **Purchase URL**: `https://getcmdr.com/pricing`
 - **Developer support URL**: `https://github.com/vdavid/cmdr/issues`

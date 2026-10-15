@@ -657,7 +657,7 @@ This is optional and deliberately not part of the release script:
 
 For a minor or major release, the agent updates `brand/listings/macupdate.md` in place:
 
-- The version number, and the version-pinned Download URL.
+- The version number. The Download URL is the dynamic `latest` link, so it needs no bump.
 - The screenshots: run the five `magick` commands in its § 3. Media (keep them matching the screenshot list there), and
   give David the folder, `brand/listings/macupdate-media/`. The PNGs are gitignored; never commit them.
 - The "Version changes" HTML, rewritten from the new CHANGELOG section into their `<h5>` + `<ul>` format (New / Improved
