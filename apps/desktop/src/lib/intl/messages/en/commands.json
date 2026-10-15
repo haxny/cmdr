@@ -78,7 +78,8 @@
   },
   "commands.helpAccessibility.label": "Accessibility guide",
   "@commands.helpAccessibility.label": {
-    "description": "Command name that opens the web page describing Cmdr's accessibility features (VoiceOver, keyboard use, text size, motion) and how to get help. Appears in the command palette and the Help menu. Use the standard term for accessibility in this language, the one macOS uses in System Settings."
+    "description": "Command name that opens the web page describing Cmdr's accessibility features (VoiceOver, keyboard use, text size, motion) and how to get help. Appears in the command palette and the Help menu. Use the standard term for accessibility in this language, the one macOS uses in System Settings.",
+    "screenshot": "settings-keyboard-shortcuts.png"
   },
   "commands.helpAccessibility.description": "Open the guide to Cmdr’s accessibility features on getcmdr.com",
   "@commands.helpAccessibility.description": {
@@ -191,7 +192,8 @@
   },
   "commands.viewCalculateFolderSizes.label": "Calculate folder sizes",
   "@commands.viewCalculateFolderSizes.label": {
-    "description": "Command name (Alt+Shift+Enter, like Total Commander) in the command palette and View menu: shows the total size of every folder in the focused file list."
+    "description": "Command name (Alt+Shift+Enter, like Total Commander) in the command palette and View menu: shows the total size of every folder in the focused file list.",
+    "screenshot": "settings-keyboard-shortcuts.png"
   },
   "commands.viewCalculateFolderSizes.description": "Shows the size of every folder in this pane that doesn’t have one yet. Esc stops the calculation.",
   "@commands.viewCalculateFolderSizes.description": {
@@ -299,7 +301,8 @@
   },
   "commands.paneClone.label": "Clone pane",
   "@commands.paneClone.label": {
-    "description": "Command name that opens the focused pane's folder in the other pane too, so both panes show the same folder. \"Pane\" is one of the two side-by-side file lists. Appears in the command palette and the View menu. Total Commander calls this \"Target = Source\"; Finder has no equivalent. Not the Copy command (F5): nothing is copied, only the folder shown changes."
+    "description": "Command name that opens the focused pane's folder in the other pane too, so both panes show the same folder. \"Pane\" is one of the two side-by-side file lists. Appears in the command palette and the View menu. Total Commander calls this \"Target = Source\"; Finder has no equivalent. Not the Copy command (F5): nothing is copied, only the folder shown changes.",
+    "screenshot": "settings-keyboard-shortcuts.png"
   },
   "commands.paneClone.description": "Open this pane’s folder in the other pane too.",
   "@commands.paneClone.description": {
@@ -307,7 +310,8 @@
   },
   "commands.paneFocusControls.label": "Move focus to the pane controls",
   "@commands.paneFocusControls.label": {
-    "description": "Command name that moves keyboard focus from the file list to the focused pane's controls: its tabs, its location bar (the volume button and the folder path), and its column sort buttons. Mostly for keyboard-only and screen-reader users. \"Pane\" is one of the two side-by-side file lists. Appears in the command palette and the keyboard shortcuts settings. Mirrors macOS's \"Move focus to the window toolbar\" wording."
+    "description": "Command name that moves keyboard focus from the file list to the focused pane's controls: its tabs, its location bar (the volume button and the folder path), and its column sort buttons. Mostly for keyboard-only and screen-reader users. \"Pane\" is one of the two side-by-side file lists. Appears in the command palette and the keyboard shortcuts settings. Mirrors macOS's \"Move focus to the window toolbar\" wording.",
+    "screenshot": "settings-keyboard-shortcuts.png"
   },
   "commands.paneFocusControls.description": "Reach the focused pane’s tabs, location bar, and sort buttons from the keyboard. Arrow keys move between them, and Escape takes you back to the files.",
   "@commands.paneFocusControls.description": {
@@ -315,7 +319,8 @@
   },
   "commands.appFocusNotifications.label": "Move focus to the notifications",
   "@commands.appFocusNotifications.label": {
-    "description": "Command name that moves keyboard focus to the newest notification (the small message boxes that pop up at the top right of the window, like \"Moved 3 files to the trash\" with its Undo button). Mostly for keyboard-only and screen-reader users. Appears in the command palette and the keyboard shortcuts settings. Mirrors macOS's \"Move focus to the floating window\" wording."
+    "description": "Command name that moves keyboard focus to the newest notification (the small message boxes that pop up at the top right of the window, like \"Moved 3 files to the trash\" with its Undo button). Mostly for keyboard-only and screen-reader users. Appears in the command palette and the keyboard shortcuts settings. Mirrors macOS's \"Move focus to the floating window\" wording.",
+    "screenshot": "settings-keyboard-shortcuts.png"
   },
   "commands.appFocusNotifications.description": "Reach the notifications and their buttons, like Undo, from the keyboard. Arrow keys move between them, and Escape takes you back.",
   "@commands.appFocusNotifications.description": {
@@ -323,7 +328,8 @@
   },
   "commands.editUndoTrash.label": "Undo move to trash",
   "@commands.editUndoTrash.label": {
-    "description": "Command name that puts back the files the user most recently moved to the trash in Cmdr, the same thing the Undo button on the \"Moved 3 files to trash\" notification does. Appears in the command palette, the keyboard shortcuts settings, and the Edit menu. \"Move to trash\" is the action's name, as in macOS's own \"Move to Trash\"."
+    "description": "Command name that puts back the files the user most recently moved to the trash in Cmdr, the same thing the Undo button on the \"Moved 3 files to trash\" notification does. Appears in the command palette, the keyboard shortcuts settings, and the Edit menu. \"Move to trash\" is the action's name, as in macOS's own \"Move to Trash\".",
+    "screenshot": "settings-keyboard-shortcuts.png"
   },
   "commands.editUndoTrash.one": "Undo move to trash of “{name}”",
   "@commands.editUndoTrash.one": {
@@ -379,15 +385,18 @@
   },
   "commands.paneMoveDividerLeft.label": "Move pane divider left",
   "@commands.paneMoveDividerLeft.label": {
-    "description": "Command name that moves the vertical line between the two side-by-side file lists (\"panes\") to the left, so the left pane gets narrower and the right one wider. Appears in the command palette and the keyboard-shortcuts list. \"Divider\" is that line, the same one the user can drag with the mouse."
+    "description": "Command name that moves the vertical line between the two side-by-side file lists (\"panes\") to the left, so the left pane gets narrower and the right one wider. Appears in the command palette and the keyboard-shortcuts list. \"Divider\" is that line, the same one the user can drag with the mouse.",
+    "screenshot": "settings-keyboard-shortcuts.png"
   },
   "commands.paneMoveDividerRight.label": "Move pane divider right",
   "@commands.paneMoveDividerRight.label": {
-    "description": "Command name that moves the vertical line between the two side-by-side file lists (\"panes\") to the right, so the left pane gets wider and the right one narrower. Appears in the command palette and the keyboard-shortcuts list. \"Divider\" is that line, the same one the user can drag with the mouse."
+    "description": "Command name that moves the vertical line between the two side-by-side file lists (\"panes\") to the right, so the left pane gets wider and the right one narrower. Appears in the command palette and the keyboard-shortcuts list. \"Divider\" is that line, the same one the user can drag with the mouse.",
+    "screenshot": "settings-keyboard-shortcuts.png"
   },
   "commands.paneResetDivider.label": "Reset pane divider",
   "@commands.paneResetDivider.label": {
-    "description": "Command name that puts the vertical line between the two side-by-side file lists (\"panes\") back in the middle, so both panes are equally wide. Same as double-clicking the line. Appears in the command palette and the keyboard-shortcuts list. \"Reset\" is a verb here: put back to the even split."
+    "description": "Command name that puts the vertical line between the two side-by-side file lists (\"panes\") back in the middle, so both panes are equally wide. Same as double-clicking the line. Appears in the command palette and the keyboard-shortcuts list. \"Reset\" is a verb here: put back to the even split.",
+    "screenshot": "settings-keyboard-shortcuts.png"
   },
   "commands.tabNew.label": "New tab",
   "@commands.tabNew.label": {
@@ -426,15 +435,18 @@
   },
   "commands.tabMoveLeft.label": "Move tab left",
   "@commands.tabMoveLeft.label": {
-    "description": "Command name that moves the current tab one place to the left in its pane's tab bar. The keyboard alternative to dragging a tab. Appears in the command palette and the keyboard shortcuts list."
+    "description": "Command name that moves the current tab one place to the left in its pane's tab bar. The keyboard alternative to dragging a tab. Appears in the command palette and the keyboard shortcuts list.",
+    "screenshot": "settings-keyboard-shortcuts.png"
   },
   "commands.tabMoveRight.label": "Move tab right",
   "@commands.tabMoveRight.label": {
-    "description": "Command name that moves the current tab one place to the right in its pane's tab bar. The keyboard alternative to dragging a tab. Appears in the command palette and the keyboard shortcuts list."
+    "description": "Command name that moves the current tab one place to the right in its pane's tab bar. The keyboard alternative to dragging a tab. Appears in the command palette and the keyboard shortcuts list.",
+    "screenshot": "settings-keyboard-shortcuts.png"
   },
   "commands.tabMoveToOtherPane.label": "Move tab to other pane",
   "@commands.tabMoveToOtherPane.label": {
-    "description": "Command name that moves the current tab out of its pane and onto the end of the other pane's tab bar (Cmdr shows two side-by-side panes, each with its own tabs). The keyboard alternative to dragging a tab across. Appears in the command palette and the keyboard shortcuts list."
+    "description": "Command name that moves the current tab out of its pane and onto the end of the other pane's tab bar (Cmdr shows two side-by-side panes, each with its own tabs). The keyboard alternative to dragging a tab across. Appears in the command palette and the keyboard shortcuts list.",
+    "screenshot": "settings-keyboard-shortcuts.png"
   },
   "commands.tabMcpAction.label": "Pane tab action",
   "@commands.tabMcpAction.label": {
@@ -493,7 +505,8 @@
   },
   "commands.navGoToRoot.label": "Go to root folder",
   "@commands.navGoToRoot.label": {
-    "description": "Command name that opens the topmost folder of what the active pane shows: \"/\" on the Mac's main disk, the top of a USB drive, server, or phone, or the top of an archive when the pane is inside one (⌘/). \"Root\" is the top of a folder tree, nothing to do with plants or admin rights. Use this language's ruling for the \"root folder\" term, as in the Go menu's \"Root folder\" item."
+    "description": "Command name that opens the topmost folder of what the active pane shows: \"/\" on the Mac's main disk, the top of a USB drive, server, or phone, or the top of an archive when the pane is inside one (⌘/). \"Root\" is the top of a folder tree, nothing to do with plants or admin rights. Use this language's ruling for the \"root folder\" term, as in the Go menu's \"Root folder\" item.",
+    "screenshot": "settings-keyboard-shortcuts.png"
   },
   "commands.navGoHome.label": "Go to home folder",
   "@commands.navGoHome.label": {
@@ -547,7 +560,8 @@
   },
   "commands.fileMultiRename.label": "Multi-rename",
   "@commands.fileMultiRename.label": {
-    "description": "Command name (Ctrl+M, like Total Commander) in the command palette and File menu: opens the tool that renames many files at once with a name mask."
+    "description": "Command name (Ctrl+M, like Total Commander) in the command palette and File menu: opens the tool that renames many files at once with a name mask.",
+    "screenshot": "settings-keyboard-shortcuts.png"
   },
   "commands.fileMultiRename.description": "Renames the selected files (or the whole folder) with a name mask, counter, and search & replace",
   "@commands.fileMultiRename.description": {
@@ -555,171 +569,213 @@
   },
   "commands.queueCursorUp.label": "Previous operation",
   "@commands.queueCursorUp.label": {
-    "description": "Row in the Keyboard shortcuts list: what the key does in the operation queue window (the separate window listing running, waiting, and stopped copies, moves, and deletes, one operation per row). Read-only (the key can’t be rebound). It moves the row cursor to the operation above."
+    "description": "Row in the Keyboard shortcuts list: what the key does in the operation queue window (the separate window listing running, waiting, and stopped copies, moves, and deletes, one operation per row). Read-only (the key can’t be rebound). It moves the row cursor to the operation above.",
+    "screenshot": "settings-keyboard-shortcuts.png"
   },
   "commands.queueCursorDown.label": "Next operation",
   "@commands.queueCursorDown.label": {
-    "description": "Row in the Keyboard shortcuts list: what the key does in the operation queue window (the separate window listing running, waiting, and stopped copies, moves, and deletes, one operation per row). Read-only (the key can’t be rebound). It moves the row cursor to the operation below."
+    "description": "Row in the Keyboard shortcuts list: what the key does in the operation queue window (the separate window listing running, waiting, and stopped copies, moves, and deletes, one operation per row). Read-only (the key can’t be rebound). It moves the row cursor to the operation below.",
+    "screenshot": "settings-keyboard-shortcuts.png"
   },
   "commands.queueCursorFirst.label": "First operation",
   "@commands.queueCursorFirst.label": {
-    "description": "Row in the Keyboard shortcuts list: what the key does in the operation queue window (the separate window listing running, waiting, and stopped copies, moves, and deletes, one operation per row). Read-only (the key can’t be rebound). It moves the row cursor to the top row."
+    "description": "Row in the Keyboard shortcuts list: what the key does in the operation queue window (the separate window listing running, waiting, and stopped copies, moves, and deletes, one operation per row). Read-only (the key can’t be rebound). It moves the row cursor to the top row.",
+    "screenshot": "settings-keyboard-shortcuts.png"
   },
   "commands.queueCursorLast.label": "Last operation",
   "@commands.queueCursorLast.label": {
-    "description": "Row in the Keyboard shortcuts list: what the key does in the operation queue window (the separate window listing running, waiting, and stopped copies, moves, and deletes, one operation per row). Read-only (the key can’t be rebound). It moves the row cursor to the bottom row."
+    "description": "Row in the Keyboard shortcuts list: what the key does in the operation queue window (the separate window listing running, waiting, and stopped copies, moves, and deletes, one operation per row). Read-only (the key can’t be rebound). It moves the row cursor to the bottom row.",
+    "screenshot": "settings-keyboard-shortcuts.png"
   },
   "commands.queueExtendUp.label": "Extend the selection up",
   "@commands.queueExtendUp.label": {
-    "description": "Row in the Keyboard shortcuts list: what the key does in the operation queue window (the separate window listing running, waiting, and stopped copies, moves, and deletes, one operation per row). Read-only (the key can’t be rebound). It moves the row cursor up and adds the rows it passes to the selection that “Cancel selected” acts on, or takes them back out when moving back toward where the selection started."
+    "description": "Row in the Keyboard shortcuts list: what the key does in the operation queue window (the separate window listing running, waiting, and stopped copies, moves, and deletes, one operation per row). Read-only (the key can’t be rebound). It moves the row cursor up and adds the rows it passes to the selection that “Cancel selected” acts on, or takes them back out when moving back toward where the selection started.",
+    "screenshot": "settings-keyboard-shortcuts.png"
   },
   "commands.queueExtendDown.label": "Extend the selection down",
   "@commands.queueExtendDown.label": {
-    "description": "Row in the Keyboard shortcuts list: what the key does in the operation queue window (the separate window listing running, waiting, and stopped copies, moves, and deletes, one operation per row). Read-only (the key can’t be rebound). It moves the row cursor down and adds the rows it passes to the selection that “Cancel selected” acts on, or takes them back out when moving back toward where the selection started."
+    "description": "Row in the Keyboard shortcuts list: what the key does in the operation queue window (the separate window listing running, waiting, and stopped copies, moves, and deletes, one operation per row). Read-only (the key can’t be rebound). It moves the row cursor down and adds the rows it passes to the selection that “Cancel selected” acts on, or takes them back out when moving back toward where the selection started.",
+    "screenshot": "settings-keyboard-shortcuts.png"
   },
   "commands.queueToggleSelected.label": "Add the operation to the selection, or remove it",
   "@commands.queueToggleSelected.label": {
-    "description": "Row in the Keyboard shortcuts list: what the key does in the operation queue window (the separate window listing running, waiting, and stopped copies, moves, and deletes, one operation per row). Read-only (the key can’t be rebound). It checks or unchecks the row under the cursor for “Cancel selected”. An operation that couldn’t finish can’t be selected."
+    "description": "Row in the Keyboard shortcuts list: what the key does in the operation queue window (the separate window listing running, waiting, and stopped copies, moves, and deletes, one operation per row). Read-only (the key can’t be rebound). It checks or unchecks the row under the cursor for “Cancel selected”. An operation that couldn’t finish can’t be selected.",
+    "screenshot": "settings-keyboard-shortcuts.png"
   },
   "commands.queueSelectAll.label": "Select every operation",
   "@commands.queueSelectAll.label": {
-    "description": "Row in the Keyboard shortcuts list: what the key does in the operation queue window (the separate window listing running, waiting, and stopped copies, moves, and deletes, one operation per row). Read-only (the key can’t be rebound). It checks every row that can still be canceled, for “Cancel selected”."
+    "description": "Row in the Keyboard shortcuts list: what the key does in the operation queue window (the separate window listing running, waiting, and stopped copies, moves, and deletes, one operation per row). Read-only (the key can’t be rebound). It checks every row that can still be canceled, for “Cancel selected”.",
+    "screenshot": "settings-keyboard-shortcuts.png"
   },
   "commands.queueShowInMainWindow.label": "Show the operation in the main window",
   "@commands.queueShowInMainWindow.label": {
-    "description": "Row in the Keyboard shortcuts list: what the key does in the operation queue window (the separate window listing running, waiting, and stopped copies, moves, and deletes, one operation per row). Read-only (the key can’t be rebound). It brings the operation under the cursor back into the main window’s progress dialog, like the row’s Show button. Only running and paused operations can be shown."
+    "description": "Row in the Keyboard shortcuts list: what the key does in the operation queue window (the separate window listing running, waiting, and stopped copies, moves, and deletes, one operation per row). Read-only (the key can’t be rebound). It brings the operation under the cursor back into the main window’s progress dialog, like the row’s Show button. Only running and paused operations can be shown.",
+    "screenshot": "settings-keyboard-shortcuts.png"
   },
   "commands.queuePauseOrResume.label": "Pause or resume the operation",
   "@commands.queuePauseOrResume.label": {
-    "description": "Row in the Keyboard shortcuts list: what the key does in the operation queue window (the separate window listing running, waiting, and stopped copies, moves, and deletes, one operation per row). Read-only (the key can’t be rebound). It does what the row’s own Pause or Resume button does to the operation under the cursor: pauses a running one in place, or resumes a paused one."
+    "description": "Row in the Keyboard shortcuts list: what the key does in the operation queue window (the separate window listing running, waiting, and stopped copies, moves, and deletes, one operation per row). Read-only (the key can’t be rebound). It does what the row’s own Pause or Resume button does to the operation under the cursor: pauses a running one in place, or resumes a paused one.",
+    "screenshot": "settings-keyboard-shortcuts.png"
   },
   "commands.queueCancel.label": "Cancel the operation",
   "@commands.queueCancel.label": {
-    "description": "Row in the Keyboard shortcuts list: what the key does in the operation queue window (the separate window listing running, waiting, and stopped copies, moves, and deletes, one operation per row). Read-only (the key can’t be rebound). It does what the row’s own Cancel button does to the operation under the cursor: stops it, keeping the files already copied, with no confirmation."
+    "description": "Row in the Keyboard shortcuts list: what the key does in the operation queue window (the separate window listing running, waiting, and stopped copies, moves, and deletes, one operation per row). Read-only (the key can’t be rebound). It does what the row’s own Cancel button does to the operation under the cursor: stops it, keeping the files already copied, with no confirmation.",
+    "screenshot": "settings-keyboard-shortcuts.png"
   },
   "commands.queueRollback.label": "Roll back the operation",
   "@commands.queueRollback.label": {
-    "description": "Row in the Keyboard shortcuts list: what the key does in the operation queue window (the separate window listing running, waiting, and stopped copies, moves, and deletes, one operation per row). Read-only (the key can’t be rebound). It does what the row’s own Rollback button does to the operation under the cursor: asks for confirmation first, then stops the operation and undoes what it already did (deletes the copies, or moves the files back). Word it the way the Rollback button or its confirmation names the action."
+    "description": "Row in the Keyboard shortcuts list: what the key does in the operation queue window (the separate window listing running, waiting, and stopped copies, moves, and deletes, one operation per row). Read-only (the key can’t be rebound). It does what the row’s own Rollback button does to the operation under the cursor: asks for confirmation first, then stops the operation and undoes what it already did (deletes the copies, or moves the files back). Word it the way the Rollback button or its confirmation names the action.",
+    "screenshot": "settings-keyboard-shortcuts.png"
   },
   "commands.queueCancelOrDismiss.label": "Cancel the operation, or dismiss one that couldn’t finish",
   "@commands.queueCancelOrDismiss.label": {
-    "description": "Row in the Keyboard shortcuts list: what the key does in the operation queue window (the separate window listing running, waiting, and stopped copies, moves, and deletes, one operation per row). Read-only (the key can’t be rebound). It does what the row’s own button does: it cancels a running, paused, or waiting operation (files already copied are kept, and there’s no confirmation, same as the Cancel button), or removes a row for an operation that couldn’t finish, like Dismiss."
+    "description": "Row in the Keyboard shortcuts list: what the key does in the operation queue window (the separate window listing running, waiting, and stopped copies, moves, and deletes, one operation per row). Read-only (the key can’t be rebound). It does what the row’s own button does: it cancels a running, paused, or waiting operation (files already copied are kept, and there’s no confirmation, same as the Cancel button), or removes a row for an operation that couldn’t finish, like Dismiss.",
+    "screenshot": "settings-keyboard-shortcuts.png"
   },
   "commands.queueMoveEarlier.label": "Move the waiting operation up in line",
   "@commands.queueMoveEarlier.label": {
-    "description": "Row in the Keyboard shortcuts list: what the key does in the operation queue window (the separate window listing running, waiting, and stopped copies, moves, and deletes, one operation per row). Read-only (the key can’t be rebound). It moves a waiting operation one place nearer the front of the line, so it starts sooner. Running and paused operations keep their place."
+    "description": "Row in the Keyboard shortcuts list: what the key does in the operation queue window (the separate window listing running, waiting, and stopped copies, moves, and deletes, one operation per row). Read-only (the key can’t be rebound). It moves a waiting operation one place nearer the front of the line, so it starts sooner. Running and paused operations keep their place.",
+    "screenshot": "settings-keyboard-shortcuts.png"
   },
   "commands.queueMoveLater.label": "Move the waiting operation down in line",
   "@commands.queueMoveLater.label": {
-    "description": "Row in the Keyboard shortcuts list: what the key does in the operation queue window (the separate window listing running, waiting, and stopped copies, moves, and deletes, one operation per row). Read-only (the key can’t be rebound). It moves a waiting operation one place further back in the line, so it starts later. Running and paused operations keep their place."
+    "description": "Row in the Keyboard shortcuts list: what the key does in the operation queue window (the separate window listing running, waiting, and stopped copies, moves, and deletes, one operation per row). Read-only (the key can’t be rebound). It moves a waiting operation one place further back in the line, so it starts later. Running and paused operations keep their place.",
+    "screenshot": "settings-keyboard-shortcuts.png"
   },
   "commands.queueNextControl.label": "Next button in the row",
   "@commands.queueNextControl.label": {
-    "description": "Row in the Keyboard shortcuts list: what the key does in the operation queue window (the separate window listing running, waiting, and stopped copies, moves, and deletes, one operation per row). Read-only (the key can’t be rebound). It moves keyboard focus from the row to its buttons (Pause, Cancel, and so on), one at a time, left to right."
+    "description": "Row in the Keyboard shortcuts list: what the key does in the operation queue window (the separate window listing running, waiting, and stopped copies, moves, and deletes, one operation per row). Read-only (the key can’t be rebound). It moves keyboard focus from the row to its buttons (Pause, Cancel, and so on), one at a time, left to right.",
+    "screenshot": "settings-keyboard-shortcuts.png"
   },
   "commands.queuePreviousControl.label": "Previous button in the row",
   "@commands.queuePreviousControl.label": {
-    "description": "Row in the Keyboard shortcuts list: what the key does in the operation queue window (the separate window listing running, waiting, and stopped copies, moves, and deletes, one operation per row). Read-only (the key can’t be rebound). It moves keyboard focus to the previous button in the row, and back to the row itself from the first one."
+    "description": "Row in the Keyboard shortcuts list: what the key does in the operation queue window (the separate window listing running, waiting, and stopped copies, moves, and deletes, one operation per row). Read-only (the key can’t be rebound). It moves keyboard focus to the previous button in the row, and back to the row itself from the first one.",
+    "screenshot": "settings-keyboard-shortcuts.png"
   },
   "commands.queueClose.label": "Close the operation queue",
   "@commands.queueClose.label": {
-    "description": "Row in the Keyboard shortcuts list: what the key does in the operation queue window (the separate window listing running, waiting, and stopped copies, moves, and deletes, one operation per row). Read-only (the key can’t be rebound). It closes the operation queue window. Operations keep running."
+    "description": "Row in the Keyboard shortcuts list: what the key does in the operation queue window (the separate window listing running, waiting, and stopped copies, moves, and deletes, one operation per row). Read-only (the key can’t be rebound). It closes the operation queue window. Operations keep running.",
+    "screenshot": "settings-keyboard-shortcuts.png"
   },
   "commands.viewerToggleWordWrap.label": "Turn word wrap on or off",
   "@commands.viewerToggleWordWrap.label": {
-    "description": "Row in the Keyboard shortcuts list: what the key does in the file viewer window (the separate window that shows a file's contents). It switches between wrapping long lines to the window width and letting them run off to the right. The user can rebind or remove this key."
+    "description": "Row in the Keyboard shortcuts list: what the key does in the file viewer window (the separate window that shows a file's contents). It switches between wrapping long lines to the window width and letting them run off to the right. The user can rebind or remove this key.",
+    "screenshot": "settings-keyboard-shortcuts.png"
   },
   "commands.viewerToggleTail.label": "Turn tail mode on or off",
   "@commands.viewerToggleTail.label": {
-    "description": "Row in the Keyboard shortcuts list: what the key does in the file viewer window. Tail mode keeps the view at the end of the file and follows new lines as they're written, like a growing log. Use the same word for \"tail\" as the viewer toolbar's Tail button (viewer.toolbar.tail.label). The user can rebind or remove this key."
+    "description": "Row in the Keyboard shortcuts list: what the key does in the file viewer window. Tail mode keeps the view at the end of the file and follows new lines as they're written, like a growing log. Use the same word for \"tail\" as the viewer toolbar's Tail button (viewer.toolbar.tail.label). The user can rebind or remove this key.",
+    "screenshot": "settings-keyboard-shortcuts.png"
   },
   "commands.viewerViewAsMedia.label": "View as image or PDF",
   "@commands.viewerViewAsMedia.label": {
-    "description": "Row in the Keyboard shortcuts list: what the key does in the file viewer window. For an image or PDF file, it shows the rendered picture or document instead of its raw bytes; on an image that's already showing, it fits the image back to the window. \"PDF\" is a format name; don't translate it."
+    "description": "Row in the Keyboard shortcuts list: what the key does in the file viewer window. For an image or PDF file, it shows the rendered picture or document instead of its raw bytes; on an image that's already showing, it fits the image back to the window. \"PDF\" is a format name; don't translate it.",
+    "screenshot": "settings-keyboard-shortcuts.png"
   },
   "commands.viewerViewAsText.label": "View as text",
   "@commands.viewerViewAsText.label": {
-    "description": "Row in the Keyboard shortcuts list: what the key does in the file viewer window. It shows the file decoded as text. Same wording as the viewer's view-mode menu (viewer.toolbar.viewMode.viewAsText)."
+    "description": "Row in the Keyboard shortcuts list: what the key does in the file viewer window. It shows the file decoded as text. Same wording as the viewer's view-mode menu (viewer.toolbar.viewMode.viewAsText).",
+    "screenshot": "settings-keyboard-shortcuts.png"
   },
   "commands.viewerViewAsBinary.label": "View as binary",
   "@commands.viewerViewAsBinary.label": {
-    "description": "Row in the Keyboard shortcuts list: what the key does in the file viewer window. It shows the file's original bytes as fixed-width character rows, without treating line breaks as breaks. \"Binary\" matches the view-mode menu's Binary option (viewer.toolbar.viewMode.binary)."
+    "description": "Row in the Keyboard shortcuts list: what the key does in the file viewer window. It shows the file's original bytes as fixed-width character rows, without treating line breaks as breaks. \"Binary\" matches the view-mode menu's Binary option (viewer.toolbar.viewMode.binary).",
+    "screenshot": "settings-keyboard-shortcuts.png"
   },
   "commands.viewerViewAsHex.label": "View as hex",
   "@commands.viewerViewAsHex.label": {
-    "description": "Row in the Keyboard shortcuts list: what the key does in the file viewer window. It shows the file's bytes as hexadecimal pairs beside their characters. \"Hex\" matches the view-mode menu's Hex option (viewer.toolbar.viewMode.hex)."
+    "description": "Row in the Keyboard shortcuts list: what the key does in the file viewer window. It shows the file's bytes as hexadecimal pairs beside their characters. \"Hex\" matches the view-mode menu's Hex option (viewer.toolbar.viewMode.hex).",
+    "screenshot": "settings-keyboard-shortcuts.png"
   },
   "commands.viewerZoomIn.label": "Zoom in on the image",
   "@commands.viewerZoomIn.label": {
-    "description": "Row in the Keyboard shortcuts list: what the key does in the file viewer window while it shows an image. It enlarges the image a step."
+    "description": "Row in the Keyboard shortcuts list: what the key does in the file viewer window while it shows an image. It enlarges the image a step.",
+    "screenshot": "settings-keyboard-shortcuts.png"
   },
   "commands.viewerZoomOut.label": "Zoom out of the image",
   "@commands.viewerZoomOut.label": {
-    "description": "Row in the Keyboard shortcuts list: what the key does in the file viewer window while it shows an image. It shrinks the image a step."
+    "description": "Row in the Keyboard shortcuts list: what the key does in the file viewer window while it shows an image. It shrinks the image a step.",
+    "screenshot": "settings-keyboard-shortcuts.png"
   },
   "commands.viewerToggleImageZoom.label": "Switch the image between fit and actual size",
   "@commands.viewerToggleImageZoom.label": {
-    "description": "Row in the Keyboard shortcuts list: what the key does in the file viewer window while it shows an image. It flips between fitting the whole image in the window and showing it at 100% (one image pixel per screen pixel), the same as clicking the image."
+    "description": "Row in the Keyboard shortcuts list: what the key does in the file viewer window while it shows an image. It flips between fitting the whole image in the window and showing it at 100% (one image pixel per screen pixel), the same as clicking the image.",
+    "screenshot": "settings-keyboard-shortcuts.png"
   },
   "commands.multiRenameOpenPresets.label": "Open the presets menu",
   "@commands.multiRenameOpenPresets.label": {
-    "description": "Row in the Keyboard shortcuts list: what F2 does while the Multi-rename tool is open. It opens the menu of saved rename settings (presets), as in Total Commander. Read-only (the key can't be rebound)."
+    "description": "Row in the Keyboard shortcuts list: what F2 does while the Multi-rename tool is open. It opens the menu of saved rename settings (presets), as in Total Commander. Read-only (the key can't be rebound).",
+    "screenshot": "settings-keyboard-shortcuts.png"
   },
   "commands.multiRenameSavePreset.label": "Save the current settings as a preset",
   "@commands.multiRenameSavePreset.label": {
-    "description": "Row in the Keyboard shortcuts list: what Cmd+S does while the Multi-rename tool is open. It asks for a name and saves the tool's current fields as a preset to load later. Read-only (the key can't be rebound)."
+    "description": "Row in the Keyboard shortcuts list: what Cmd+S does while the Multi-rename tool is open. It asks for a name and saves the tool's current fields as a preset to load later. Read-only (the key can't be rebound).",
+    "screenshot": "settings-keyboard-shortcuts.png"
   },
   "commands.multiRenameLetterCase.label": "Open the letter case menu",
   "@commands.multiRenameLetterCase.label": {
-    "description": "Row in the Keyboard shortcuts list: what the key does while the Multi-rename tool (renames many files at once) is open. Read-only (the key can’t be rebound). It opens the menu that changes the new names to lowercase, UPPERCASE, and so on."
+    "description": "Row in the Keyboard shortcuts list: what the key does while the Multi-rename tool (renames many files at once) is open. Read-only (the key can’t be rebound). It opens the menu that changes the new names to lowercase, UPPERCASE, and so on.",
+    "screenshot": "settings-keyboard-shortcuts.png"
   },
   "commands.multiRenameRemoveDiacritics.label": "Turn Remove diacritics on or off",
   "@commands.multiRenameRemoveDiacritics.label": {
-    "description": "Row in the Keyboard shortcuts list: what the key does while the Multi-rename tool (renames many files at once) is open. Read-only (the key can’t be rebound). It switches on or off the option that turns accented letters into plain ones (á becomes a). Use the same words as that option’s checkbox, \"Remove diacritics\"."
+    "description": "Row in the Keyboard shortcuts list: what the key does while the Multi-rename tool (renames many files at once) is open. Read-only (the key can’t be rebound). It switches on or off the option that turns accented letters into plain ones (á becomes a). Use the same words as that option’s checkbox, \"Remove diacritics\".",
+    "screenshot": "settings-keyboard-shortcuts.png"
   },
   "commands.multiRenameGreekToLatin.label": "Turn Greek to Latin on or off",
   "@commands.multiRenameGreekToLatin.label": {
-    "description": "Row in the Keyboard shortcuts list: what the key does while the Multi-rename tool (renames many files at once) is open. Read-only (the key can’t be rebound). It switches on or off the option that writes Greek letters in Latin ones (Αθήνα becomes Athina). Use the same words as that option’s checkbox, \"Greek to Latin\"."
+    "description": "Row in the Keyboard shortcuts list: what the key does while the Multi-rename tool (renames many files at once) is open. Read-only (the key can’t be rebound). It switches on or off the option that writes Greek letters in Latin ones (Αθήνα becomes Athina). Use the same words as that option’s checkbox, \"Greek to Latin\".",
+    "screenshot": "settings-keyboard-shortcuts.png"
   },
   "commands.multiRenameNormalizeUnicode.label": "Turn Normalize Unicode on or off",
   "@commands.multiRenameNormalizeUnicode.label": {
-    "description": "Row in the Keyboard shortcuts list: what the key does while the Multi-rename tool (renames many files at once) is open. Read-only (the key can’t be rebound). It switches on or off the option that stores accented letters in the single-character form Windows, Linux, and websites expect. Use the same words as that option’s checkbox, \"Normalize Unicode\"."
+    "description": "Row in the Keyboard shortcuts list: what the key does while the Multi-rename tool (renames many files at once) is open. Read-only (the key can’t be rebound). It switches on or off the option that stores accented letters in the single-character form Windows, Linux, and websites expect. Use the same words as that option’s checkbox, \"Normalize Unicode\".",
+    "screenshot": "settings-keyboard-shortcuts.png"
   },
   "commands.multiRenameMatchCase.label": "Turn Match case on or off",
   "@commands.multiRenameMatchCase.label": {
-    "description": "Row in the Keyboard shortcuts list: what the key does while the Multi-rename tool (renames many files at once) is open. Read-only (the key can’t be rebound). It switches on or off the search & replace option that only matches the same uppercase and lowercase letters. Use the same words as that option’s checkbox, \"Match case\"."
+    "description": "Row in the Keyboard shortcuts list: what the key does while the Multi-rename tool (renames many files at once) is open. Read-only (the key can’t be rebound). It switches on or off the search & replace option that only matches the same uppercase and lowercase letters. Use the same words as that option’s checkbox, \"Match case\".",
+    "screenshot": "settings-keyboard-shortcuts.png"
   },
   "commands.multiRenameFirstMatchOnly.label": "Turn First match only on or off",
   "@commands.multiRenameFirstMatchOnly.label": {
-    "description": "Row in the Keyboard shortcuts list: what the key does while the Multi-rename tool (renames many files at once) is open. Read-only (the key can’t be rebound). It switches on or off the search & replace option that replaces only the first match in each name. Use the same words as that option’s checkbox, \"First match only\"."
+    "description": "Row in the Keyboard shortcuts list: what the key does while the Multi-rename tool (renames many files at once) is open. Read-only (the key can’t be rebound). It switches on or off the search & replace option that replaces only the first match in each name. Use the same words as that option’s checkbox, \"First match only\".",
+    "screenshot": "settings-keyboard-shortcuts.png"
   },
   "commands.multiRenameIncludeExtension.label": "Turn Include extension on or off",
   "@commands.multiRenameIncludeExtension.label": {
-    "description": "Row in the Keyboard shortcuts list: what the key does while the Multi-rename tool (renames many files at once) is open. Read-only (the key can’t be rebound). It switches on or off the search & replace option that also searches the file extension. Use the same words as that option’s checkbox, \"Include extension\"."
+    "description": "Row in the Keyboard shortcuts list: what the key does while the Multi-rename tool (renames many files at once) is open. Read-only (the key can’t be rebound). It switches on or off the search & replace option that also searches the file extension. Use the same words as that option’s checkbox, \"Include extension\".",
+    "screenshot": "settings-keyboard-shortcuts.png"
   },
   "commands.multiRenameRegex.label": "Turn Regular expression on or off",
   "@commands.multiRenameRegex.label": {
-    "description": "Row in the Keyboard shortcuts list: what the key does while the Multi-rename tool (renames many files at once) is open. Read-only (the key can’t be rebound). It switches on or off the search & replace option that reads the search as a regular expression. Use the same words as that option’s checkbox, \"Regular expression\"."
+    "description": "Row in the Keyboard shortcuts list: what the key does while the Multi-rename tool (renames many files at once) is open. Read-only (the key can’t be rebound). It switches on or off the search & replace option that reads the search as a regular expression. Use the same words as that option’s checkbox, \"Regular expression\".",
+    "screenshot": "settings-keyboard-shortcuts.png"
   },
   "commands.multiRenameReplaceWholeName.label": "Turn Replace whole name on or off",
   "@commands.multiRenameReplaceWholeName.label": {
-    "description": "Row in the Keyboard shortcuts list: what the key does while the Multi-rename tool (renames many files at once) is open. Read-only (the key can’t be rebound). It switches on or off the search & replace option where a match replaces the whole name. Use the same words as that option’s checkbox, \"Replace whole name\"."
+    "description": "Row in the Keyboard shortcuts list: what the key does while the Multi-rename tool (renames many files at once) is open. Read-only (the key can’t be rebound). It switches on or off the search & replace option where a match replaces the whole name. Use the same words as that option’s checkbox, \"Replace whole name\".",
+    "screenshot": "settings-keyboard-shortcuts.png"
   },
   "commands.multiRenameUndoRename.label": "Undo the last multi-rename",
   "@commands.multiRenameUndoRename.label": {
-    "description": "Row in the Keyboard shortcuts list: what the key does while the Multi-rename tool (renames many files at once) is open. Read-only (the key can’t be rebound). It renames every file of the last multi-rename back to its old name, in one go."
+    "description": "Row in the Keyboard shortcuts list: what the key does while the Multi-rename tool (renames many files at once) is open. Read-only (the key can’t be rebound). It renames every file of the last multi-rename back to its old name, in one go.",
+    "screenshot": "settings-keyboard-shortcuts.png"
   },
   "commands.multiRenameResults.label": "Edit the new names in your text editor",
   "@commands.multiRenameResults.label": {
-    "description": "Row in the Keyboard shortcuts list: what the key does while the Multi-rename tool (renames many files at once) is open. Read-only (the key can’t be rebound). It opens the list of new names in the user's text editor, where they can change any of them by hand."
+    "description": "Row in the Keyboard shortcuts list: what the key does while the Multi-rename tool (renames many files at once) is open. Read-only (the key can’t be rebound). It opens the list of new names in the user's text editor, where they can change any of them by hand.",
+    "screenshot": "settings-keyboard-shortcuts.png"
   },
   "commands.multiRenameFieldHistory.label": "Show the field’s earlier values",
   "@commands.multiRenameFieldHistory.label": {
-    "description": "Row in the Keyboard shortcuts list: what the key does while the Multi-rename tool (renames many files at once) is open. Read-only (the key can’t be rebound). In one of the tool's text fields, it lists what that field held in earlier renames, to pick one."
+    "description": "Row in the Keyboard shortcuts list: what the key does while the Multi-rename tool (renames many files at once) is open. Read-only (the key can’t be rebound). In one of the tool's text fields, it lists what that field held in earlier renames, to pick one.",
+    "screenshot": "settings-keyboard-shortcuts.png"
   },
   "commands.multiRenameRename.label": "Rename the files",
   "@commands.multiRenameRename.label": {
-    "description": "Row in the Keyboard shortcuts list: what the key does while the Multi-rename tool (renames many files at once) is open. Read-only (the key can’t be rebound). It renames every file the preview shows as ready, as the tool’s main Rename button does."
+    "description": "Row in the Keyboard shortcuts list: what the key does while the Multi-rename tool (renames many files at once) is open. Read-only (the key can’t be rebound). It renames every file the preview shows as ready, as the tool’s main Rename button does.",
+    "screenshot": "settings-keyboard-shortcuts.png"
   },
   "commands.fileView.label": "View",
   "@commands.fileView.label": {
@@ -934,7 +990,8 @@
   },
   "commands.fileCopyShareLink.label": "Copy share link (seven days)",
   "@commands.fileCopyShareLink.label": {
-    "description": "Command name that copies a share link to the selected file in an S3 bucket (cloud storage), valid for seven days. A share link is a web address anyone can open to download that one file, without signing in, until it expires. It copies a link, not the file. Appears in the command palette, only while the focused pane is on a bucket."
+    "description": "Command name that copies a share link to the selected file in an S3 bucket (cloud storage), valid for seven days. A share link is a web address anyone can open to download that one file, without signing in, until it expires. It copies a link, not the file. Appears in the command palette, only while the focused pane is on a bucket.",
+    "screenshot": "settings-keyboard-shortcuts.png"
   },
   "commands.fileCopyShareLink.description": "Copies a link anyone can open to download the file for seven days",
   "@commands.fileCopyShareLink.description": {
@@ -942,7 +999,8 @@
   },
   "commands.fileCopyShareLinkOneDay.label": "Copy share link (one day)",
   "@commands.fileCopyShareLinkOneDay.label": {
-    "description": "Command name that copies a share link to the selected file in an S3 bucket (cloud storage), valid for one day. A share link is a web address anyone can open to download that one file, without signing in, until it expires. It copies a link, not the file. Appears in the command palette, only while the focused pane is on a bucket."
+    "description": "Command name that copies a share link to the selected file in an S3 bucket (cloud storage), valid for one day. A share link is a web address anyone can open to download that one file, without signing in, until it expires. It copies a link, not the file. Appears in the command palette, only while the focused pane is on a bucket.",
+    "screenshot": "settings-keyboard-shortcuts.png"
   },
   "commands.fileCopyShareLinkOneDay.description": "Copies a link anyone can open to download the file for one day",
   "@commands.fileCopyShareLinkOneDay.description": {
@@ -950,7 +1008,8 @@
   },
   "commands.fileCopyShareLinkOneHour.label": "Copy share link (one hour)",
   "@commands.fileCopyShareLinkOneHour.label": {
-    "description": "Command name that copies a share link to the selected file in an S3 bucket (cloud storage), valid for one hour. A share link is a web address anyone can open to download that one file, without signing in, until it expires. It copies a link, not the file. Appears in the command palette, only while the focused pane is on a bucket."
+    "description": "Command name that copies a share link to the selected file in an S3 bucket (cloud storage), valid for one hour. A share link is a web address anyone can open to download that one file, without signing in, until it expires. It copies a link, not the file. Appears in the command palette, only while the focused pane is on a bucket.",
+    "screenshot": "settings-keyboard-shortcuts.png"
   },
   "commands.fileCopyShareLinkOneHour.description": "Copies a link anyone can open to download the file for one hour",
   "@commands.fileCopyShareLinkOneHour.description": {
@@ -1063,7 +1122,8 @@
   },
   "commands.selectionCompareDirectories.label": "Compare folders",
   "@commands.selectionCompareDirectories.label": {
-    "description": "Command name in the command palette and Select menu. Compares the folders shown in the two side-by-side panes and selects the files that differ, like Total Commander's Compare directories (Shift+F2)."
+    "description": "Command name in the command palette and Select menu. Compares the folders shown in the two side-by-side panes and selects the files that differ, like Total Commander's Compare directories (Shift+F2).",
+    "screenshot": "settings-keyboard-shortcuts.png"
   },
   "commands.selectionCompareDirectories.description": "Selects, in each pane, the files the other pane lacks and the newer copies of the rest",
   "@commands.selectionCompareDirectories.description": {
@@ -1071,7 +1131,8 @@
   },
   "commands.selectionCompareDirectoriesMissing.label": "Compare folders: missing files only",
   "@commands.selectionCompareDirectoriesMissing.label": {
-    "description": "Command name in the command palette and Select menu. Compares the folders shown in the two side-by-side panes and selects the files that differ, like Total Commander's Compare directories (Shift+F2)."
+    "description": "Command name in the command palette and Select menu. Compares the folders shown in the two side-by-side panes and selects the files that differ, like Total Commander's Compare directories (Shift+F2).",
+    "screenshot": "settings-keyboard-shortcuts.png"
   },
   "commands.selectionCompareDirectoriesMissing.description": "Selects, in each pane, only the files the other pane lacks",
   "@commands.selectionCompareDirectoriesMissing.description": {
@@ -1079,7 +1140,8 @@
   },
   "commands.selectionCompareDirectoriesSize.label": "Compare folders: different size",
   "@commands.selectionCompareDirectoriesSize.label": {
-    "description": "Command name in the command palette and Select menu. Compares the folders shown in the two side-by-side panes and selects the files that differ, like Total Commander's Compare directories (Shift+F2)."
+    "description": "Command name in the command palette and Select menu. Compares the folders shown in the two side-by-side panes and selects the files that differ, like Total Commander's Compare directories (Shift+F2).",
+    "screenshot": "settings-keyboard-shortcuts.png"
   },
   "commands.selectionCompareDirectoriesSize.description": "Selects, in each pane, the files the other pane lacks and both copies of files whose size differs",
   "@commands.selectionCompareDirectoriesSize.description": {
@@ -1405,7 +1467,8 @@
   },
   "commands.helpViewDebugLog.label": "View debug log",
   "@commands.helpViewDebugLog.label": {
-    "description": "Verb phrase (imperative). Command palette action that opens the running app’s own current debug log file in the internal read-only file viewer. Use the same wording as menu.help.viewDebugLog. No ellipsis; there is no input to collect."
+    "description": "Verb phrase (imperative). Command palette action that opens the running app’s own current debug log file in the internal read-only file viewer. Use the same wording as menu.help.viewDebugLog. No ellipsis; there is no input to collect.",
+    "screenshot": "settings-keyboard-shortcuts.png"
   },
   "commands.helpViewDebugLog.description": "Watch Cmdr’s debug log live in the file viewer",
   "@commands.helpViewDebugLog.description": {

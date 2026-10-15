@@ -16,88 +16,95 @@ Per catalog area, each renderable key is one of three:
 
 Coverage is PARTIAL by design. Uncoupled keys are expected, not bugs.
 
-**Total: 2622 / 4238 keys have a screenshot (62%):** 1375 direct (32%) and 1247 representative (29%). 1434 remain
-uncoupled, and 182 are native surfaces a webview capture cannot reach.
+**Total: 2811 / 4324 keys have a screenshot (65%):** 1595 direct (37%) and 1216 representative (28%). 1329 remain
+uncoupled, and 184 are native surfaces a webview capture cannot reach.
 
 | Area           | Direct | Representative | Uncoupled | Native | Total | Any % |
 | -------------- | -----: | -------------: | --------: | -----: | ----: | ----: |
 | adb            |      3 |              0 |        17 |      0 |    20 |   15% |
 | ai             |      0 |            123 |         0 |      0 |   123 |  100% |
 | askCmdr        |     65 |              0 |       130 |      0 |   195 |   33% |
-| commandPalette |      3 |              2 |         1 |      0 |     6 |   83% |
-| commands       |    152 |              1 |       131 |      0 |   284 |   54% |
-| common         |      1 |              1 |        15 |      0 |    17 |   12% |
+| commandPalette |      3 |              2 |         2 |      0 |     7 |   71% |
+| commands       |    215 |              1 |        88 |      0 |   304 |   71% |
+| common         |      9 |              1 |         8 |      0 |    18 |   56% |
 | crashReporter  |     12 |             11 |         0 |      0 |    23 |  100% |
 | downloads      |     10 |              5 |        21 |      0 |    36 |   42% |
-| errorReporter  |     17 |              0 |        35 |      0 |    52 |   33% |
-| errors         |     98 |            439 |         0 |      0 |   537 |  100% |
+| errorReporter  |     16 |              0 |        36 |      0 |    52 |   31% |
+| errors         |    116 |            425 |         0 |      0 |   541 |  100% |
 | feedback       |      7 |              5 |         1 |      0 |    13 |   92% |
-| fileExplorer   |    100 |             66 |       291 |      0 |   457 |   36% |
-| fileOperations |    106 |             69 |       110 |      0 |   285 |   61% |
+| fileExplorer   |    122 |             66 |       312 |      0 |   500 |   38% |
+| fileOperations |    124 |             68 |        97 |      0 |   289 |   66% |
 | goToPath       |      5 |              6 |         2 |      0 |    13 |   85% |
-| indexing       |     33 |             17 |        21 |      0 |    71 |   70% |
+| indexing       |     34 |             17 |        20 |      0 |    71 |   72% |
 | licensing      |     49 |             35 |        25 |      0 |   109 |   77% |
 | lowDiskSpace   |      0 |              0 |         5 |      0 |     5 |    0% |
 | main           |      7 |              0 |        32 |      2 |    41 |   17% |
-| menu           |      4 |              0 |         0 |    180 |   184 |    2% |
+| menu           |      4 |              0 |         0 |    182 |   186 |    2% |
 | mtp            |     18 |              2 |         0 |      0 |    20 |  100% |
 | multiRename    |      0 |              0 |       123 |      0 |   123 |    0% |
 | notifications  |      0 |              0 |         1 |      0 |     1 |    0% |
 | onboarding     |     96 |             39 |        25 |      0 |   160 |   84% |
 | operationLog   |     26 |             29 |         0 |      0 |    55 |  100% |
-| queryUi        |     41 |            126 |         0 |      0 |   167 |  100% |
-| queue          |     25 |             22 |         5 |      0 |    52 |   90% |
+| queryUi        |     41 |            127 |         0 |      0 |   168 |  100% |
+| queue          |     27 |             20 |         5 |      0 |    52 |   90% |
 | search         |      9 |             48 |         0 |      0 |    57 |  100% |
 | selection      |     14 |              0 |         1 |      0 |    15 |   93% |
-| servers        |     54 |             23 |       111 |      0 |   188 |   41% |
-| settings       |    335 |             37 |       282 |      0 |   654 |   57% |
-| shortcuts      |     32 |             30 |         0 |      0 |    62 |  100% |
+| servers        |     73 |             23 |        92 |      0 |   188 |   51% |
+| settings       |    404 |             25 |       231 |      0 |   660 |   65% |
+| shortcuts      |     35 |             28 |         0 |      0 |    63 |  100% |
 | suggestedOps   |      0 |              0 |        38 |      0 |    38 |    0% |
 | transfer       |      2 |             18 |         0 |      0 |    20 |  100% |
-| ui             |     13 |              0 |        10 |      0 |    23 |   57% |
+| ui             |      8 |              0 |        16 |      0 |    24 |   33% |
 | updates        |      5 |             17 |         0 |      0 |    22 |  100% |
-| viewer         |     27 |             75 |         0 |      0 |   102 |  100% |
+| viewer         |     30 |             74 |         0 |      0 |   104 |  100% |
 | whatsNew       |      6 |              1 |         1 |      0 |     8 |   88% |
 
 ## Surfaces to review
 
-The run captured 164 surfaces. This section is regenerated every run, so it stays true as the UI changes.
+The run captured 181 surfaces. This section is regenerated every run, so it stays true as the UI changes.
 
-### No unique keys (23)
+### No unique keys (27)
 
 Every key on these surfaces also renders on another captured surface, so dropping one costs no coverage: its keys would
 simply couple to whichever surface keeps them. Worth considering, NOT an automatic delete. A surface can be the clearest
 picture of a key several surfaces share, and being the clearest is reason enough to keep it. To drop one, remove its
 staging (or add it to `DROPPED_GALLERY_STATES` for a gallery state) in `test/e2e-playwright/`.
 
-- `search-dialog` (96 keys, none unique)
-- `select-dialog` (89 keys, none unique)
-- `transfer-confirmation-copy` (82 keys, none unique)
-- `onboarding-optional` (81 keys, none unique)
-- `bulk-rename-review-all-allowed` (72 keys, none unique)
-- `onboarding-fda-notgranted` (71 keys, none unique)
-- `onboarding-fda-denied` (71 keys, none unique)
-- `server-sign-in-add` (68 keys, none unique)
-- `mkdir-confirmation-empty` (65 keys, none unique)
-- `delete-confirm` (62 keys, none unique)
-- `trash-confirm` (62 keys, none unique)
-- `onboarding-fda` (61 keys, none unique)
-- `expiration` (61 keys, none unique)
-- `new-folder-dialog` (60 keys, none unique)
-- `new-file-dialog` (60 keys, none unique)
-- `server-sign-in-sign-in` (59 keys, none unique)
-- `expiration-organization` (59 keys, none unique)
-- `transfer-error-source_not_found` (58 keys, none unique)
-- `favorites-menu-empty` (57 keys, none unique)
-- `alert-long` (55 keys, none unique)
-- `main-window` (53 keys, none unique)
-- `indexing-status` (53 keys, none unique)
-- `viewer-encoding` (17 keys, none unique)
+- `search-dialog` (123 keys, none unique)
+- `select-dialog` (116 keys, none unique)
+- `onboarding-optional` (110 keys, none unique)
+- `transfer-confirmation-copy` (105 keys, none unique)
+- `bulk-rename-review-all-allowed` (96 keys, none unique)
+- `delete-confirm` (93 keys, none unique)
+- `server-sign-in-add` (93 keys, none unique)
+- `onboarding-fda-notgranted` (93 keys, none unique)
+- `onboarding-fda-denied` (93 keys, none unique)
+- `trash-confirm` (91 keys, none unique)
+- `onboarding-fda` (90 keys, none unique)
+- `new-file-dialog` (89 keys, none unique)
+- `new-folder-dialog` (86 keys, none unique)
+- `expiration` (86 keys, none unique)
+- `mkdir-confirmation-empty` (85 keys, none unique)
+- `favorites-menu` (83 keys, none unique)
+- `transfer-error-source_not_found` (83 keys, none unique)
+- `server-sign-in-sign-in` (83 keys, none unique)
+- `expiration-organization` (83 keys, none unique)
+- `alert-long` (81 keys, none unique)
+- `sources-gone-move-some` (81 keys, none unique)
+- `indexing-status` (80 keys, none unique)
+- `main-window` (79 keys, none unique)
+- `favorites-menu-empty` (79 keys, none unique)
+- `settings-appearance` (74 keys, none unique)
+- `empty-pane` (73 keys, none unique)
+- `viewer-encoding` (20 keys, none unique)
 
-### Captured at a reduced UI zoom (1)
+### Captured at a reduced UI zoom (4)
 
 ❗ These surfaces are taller than the display allows even with the window grown to full height, so the driver reduced
 the UI zoom to fit the whole surface in frame. **The text in these images is smaller than what a user sees.** Judge
 length against the other screenshots, not these.
 
-- `bulk-rename-review-some-blocked`: captured at 90% zoom
+- `bulk-rename-review-some-blocked`: captured at 80% zoom
+- `bulk-rename-review-why-this-name`: captured at 75% zoom
+- `selection-add-snapshot-pane`: captured at 90% zoom
+- `server-sign-in-add-s3`: captured at 90% zoom

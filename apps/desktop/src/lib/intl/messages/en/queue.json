@@ -72,8 +72,7 @@
       "countText": "how many top-level items, already formatted for display with grouping, e.g. 1,980",
       "count": "the same number (drives the singular/plural noun)"
     },
-    "screenshot": "queue.png",
-    "screenshotNote": "The operations queue window, pictured here. Your string belongs to a row state this screenshot doesn’t show: an undo in progress, an operation waiting for your answer, or a paused one with its Resume button."
+    "screenshot": "queue.png"
   },
 
   "queue.row.folderCount": "{countText} {count, plural, one {folder} other {folders}}",
@@ -178,8 +177,7 @@
   "queue.row.foregroundTooltip": "Show this operation’s progress dialog in the main window, and bring that window forward. The operation keeps running either way.",
   "@queue.row.foregroundTooltip": {
     "description": "Tooltip on the per-row Show button, explaining what the bare word \"Show\" does: the main window comes to the front and shows this operation's full progress dialog (bars, ETA, the same Pause / Cancel / Rollback). Pressing it doesn't pause, cancel, or restart anything; the operation runs on whichever window shows it.",
-    "screenshot": "queue.png",
-    "screenshotNote": "The operations queue window, pictured here. Your string belongs to a row state this screenshot doesn’t show: an undo in progress, an operation waiting for your answer, or a paused one with its Resume button."
+    "screenshot": "queue.png"
   },
 
   "queue.row.foregroundAria": "Show this operation in the main window",

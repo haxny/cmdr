@@ -1667,8 +1667,7 @@
   "errors.write.destinationNotAFolder.suggestion": "Pick another destination, or rename or move that file and try again.",
   "@errors.write.destinationNotAFolder.title": {
     "description": "Title of the copy/move error dialog when the destination folder couldn't be created because a file sits where that folder, or one of the folders above it, has to be. Plain text. Nothing was copied or moved.",
-    "screenshot": "error-message-example.png",
-    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
+    "screenshot": "transfer-error-destination_not_a_folder.png"
   },
   "@errors.write.destinationNotAFolder.message": {
     "description": "Body of the copy/move error dialog when a file sits where the destination folder, or a folder above it, has to be, so Cmdr stopped before writing anything. Plain text, a raw errors.* string (no ICU). The same sentence serves copy and move, so keep it neutral about which one it was. The last sentence is load-bearing reassurance: nothing was changed, so keep that promise explicit.",
@@ -1677,13 +1676,11 @@
         "description": "The full path of the file that is in the way, inserted verbatim. It can be a level or more above the folder the person picked. Do not translate or reformat it."
       }
     },
-    "screenshot": "error-message-example.png",
-    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
+    "screenshot": "transfer-error-destination_not_a_folder.png"
   },
   "@errors.write.destinationNotAFolder.suggestion": {
     "description": "Recovery suggestion when a file is in the way of the destination folder, shown in the copy/move error dialog. Plain text. \"That file\" is the one the explanation above names. The two ways out: a different destination, or getting the file out of the way first.",
-    "screenshot": "error-message-example.png",
-    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
+    "screenshot": "transfer-error-destination_not_a_folder.png"
   },
   "errors.write.notConnected.title": "Not connected yet",
   "errors.write.notConnected.message.source": "Cmdr hasn’t connected to the phone or server holding these files yet, so nothing has changed.",
@@ -1710,18 +1707,15 @@
   "errors.write.noLongerConnected.suggestion": "Plug the phone back in, or open the server from the volume switcher, then try again.",
   "@errors.write.noLongerConnected.title": {
     "description": "Title of the copy, move, or delete error dialog when the phone or server holding the selected files was connected earlier but isn't any more (a phone unplugged while its search results were still on screen), so the operation didn't start. Distinct from errors.write.notConnected.title (\"Not connected yet\", for one Cmdr never connected) and from \"Device disconnected\" (a connection that dropped mid-operation). Plain text.",
-    "screenshot": "error-message-example.png",
-    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
+    "screenshot": "transfer-error-source_no_longer_connected.png"
   },
   "@errors.write.noLongerConnected.message": {
     "description": "Body of the copy, move, or delete error dialog when the phone or server that holds the selected files is no longer connected. Cmdr refused before reading or changing anything, and the end of the sentence promises that. Plain text, a raw errors.* string (no ICU). It has to read right for copy, move, and delete alike, so don't name one action.",
-    "screenshot": "error-message-example.png",
-    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
+    "screenshot": "transfer-error-source_no_longer_connected.png"
   },
   "@errors.write.noLongerConnected.suggestion": {
     "description": "Recovery suggestion in the same dialog. A phone comes back by plugging its cable in again; a server by choosing it in the \"volume switcher\", the dropdown at the top of each pane where a person picks a drive, phone, or server (use the same term as the commands.paneLeftVolumeChooser.label key). Plain text.",
-    "screenshot": "error-message-example.png",
-    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
+    "screenshot": "transfer-error-source_no_longer_connected.png"
   },
   "errors.write.destinationExists.title": "File already exists",
   "errors.write.destinationExists.message": "There’s already a file with this name at the destination.",
@@ -2032,8 +2026,7 @@
   "errors.write.archiveEntryNameRefused.title": "This name can’t go in a zip",
   "@errors.write.archiveEntryNameRefused.title": {
     "description": "Title of the compress error dialog when one of the selected files has a name that a zip can't hold safely. Cmdr refuses before compressing anything. Plain text. This is a raw errors.* string (no ICU).",
-    "screenshot": "error-message-example.png",
-    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
+    "screenshot": "transfer-error-archive_entry_name_refused.png"
   },
   "errors.write.archiveEntryNameRefused.message.parentTraversal": "{entry} has a name that points outside the zip once a backslash counts as a folder separator, which is how zip tools read it. Opening the zip would hide it, and some tools would put it outside the folder they extract to.",
   "@errors.write.archiveEntryNameRefused.message.parentTraversal": {
@@ -2043,8 +2036,7 @@
         "description": "The file's path inside the zip as Cmdr would have written it, for example folder/..\\notes.txt. Inserted verbatim. Do not translate or reformat it."
       }
     },
-    "screenshot": "error-message-example.png",
-    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
+    "screenshot": "transfer-error-archive_entry_name_refused.png"
   },
   "errors.write.archiveEntryNameRefused.message.tooDeep": "{entry} sits inside more folders than a zip can safely hold, so opening the zip would hide it.",
   "@errors.write.archiveEntryNameRefused.message.tooDeep": {
@@ -2071,14 +2063,12 @@
   "errors.write.archiveEntryNameRefused.suggestion": "Rename it, or leave it out of the selection, then compress again.",
   "@errors.write.archiveEntryNameRefused.suggestion": {
     "description": "Recovery suggestion for any of those three bodies. Plain text. This is a raw errors.* string (no ICU).",
-    "screenshot": "error-message-example.png",
-    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
+    "screenshot": "transfer-error-archive_entry_name_refused.png"
   },
   "errors.write.archiveEntryNamesCollide.title": "Two items would share one name in the zip",
   "@errors.write.archiveEntryNamesCollide.title": {
     "description": "Title of the compress error dialog when two of the files being compressed would end up at the same place inside the zip, so one would hide the other. Cmdr refuses before compressing anything. Plain text. This is a raw errors.* string (no ICU).",
-    "screenshot": "error-message-example.png",
-    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
+    "screenshot": "transfer-error-archive_entry_names_collide.png"
   },
   "errors.write.archiveEntryNamesCollide.message": "{entry} and {other} would both claim {archivePath} inside the zip, because zip tools read a backslash as a folder separator. Opening the zip would show only one of them.",
   "@errors.write.archiveEntryNamesCollide.message": {
@@ -2094,14 +2084,12 @@
         "description": "The one path inside the zip both would take. Inserted verbatim. Do not translate or reformat it."
       }
     },
-    "screenshot": "error-message-example.png",
-    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
+    "screenshot": "transfer-error-archive_entry_names_collide.png"
   },
   "errors.write.archiveEntryNamesCollide.suggestion": "Rename one of them, or leave one out of the selection, then compress again.",
   "@errors.write.archiveEntryNamesCollide.suggestion": {
     "description": "Recovery suggestion for that dialog. Plain text. This is a raw errors.* string (no ICU).",
-    "screenshot": "error-message-example.png",
-    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
+    "screenshot": "transfer-error-archive_entry_names_collide.png"
   },
   "errors.write.invalidName.title": "Invalid file name",
   "errors.write.invalidName.message": "{path} has a name the destination can’t store.",
@@ -2544,8 +2532,7 @@
   "errors.write.sourceInColdStorage.suggestion": "Restore it in your storage provider’s console, then try again. A restore can take anywhere from minutes to two days.",
   "@errors.write.sourceInColdStorage.title": {
     "description": "Title of the copy/move error dialog when a source file sits in cloud cold storage and can't be read until it's restored. Plain text. \"Archived\" here means the file's bytes sit in a cloud provider's cold storage tier (for example S3 Glacier) and must be restored before they can be read. It does NOT mean a zip or other archive file.",
-    "screenshot": "error-message-example.png",
-    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
+    "screenshot": "transfer-error-source_in_cold_storage.png"
   },
   "@errors.write.sourceInColdStorage.message": {
     "description": "Body of the copy/move error dialog for an archived source file. Plain text. Names the file, because one archived file deep in a copied folder is the whole problem. \"Archived\" here means the file's bytes sit in a cloud provider's cold storage tier (for example S3 Glacier) and must be restored before they can be read. It does NOT mean a zip or other archive file.",
@@ -2554,21 +2541,18 @@
         "description": "The full path of the archived file, inserted verbatim. Do not translate or reformat it."
       }
     },
-    "screenshot": "error-message-example.png",
-    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
+    "screenshot": "transfer-error-source_in_cold_storage.png"
   },
   "@errors.write.sourceInColdStorage.suggestion": {
     "description": "Recovery suggestion for an archived source file. Plain text. \"Storage provider’s console\" means the provider's website or admin tool (for example the AWS console), where a restore is started. A restore takes minutes to about two days depending on the tier.",
-    "screenshot": "error-message-example.png",
-    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
+    "screenshot": "transfer-error-source_in_cold_storage.png"
   },
   "errors.write.sourceChanged.title": "This file changed during the copy",
   "errors.write.sourceChanged.message": "The file at {path} changed while Cmdr was copying it, so Cmdr saved nothing. The file stays where it was.",
   "errors.write.sourceChanged.suggestion": "Try again to copy the version that’s there now.",
   "@errors.write.sourceChanged.title": {
     "description": "Title of the copy/move error dialog when another app or person replaced the source file in cloud storage while Cmdr was copying it there on the server. Plain text.",
-    "screenshot": "error-message-example.png",
-    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
+    "screenshot": "transfer-error-source_changed.png"
   },
   "@errors.write.sourceChanged.message": {
     "description": "Body of the copy/move error dialog when the source file was replaced mid-copy. Cmdr stopped before saving a copy that could mix the old and the new version, so nothing appeared at the destination. \"The file stays where it was\" matters for a move: the source was NOT deleted. \"Cmdr\" is the product name. Plain text.",
@@ -2577,13 +2561,11 @@
         "description": "The full path of the source file, inserted verbatim. Do not translate or reformat it."
       }
     },
-    "screenshot": "error-message-example.png",
-    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
+    "screenshot": "transfer-error-source_changed.png"
   },
   "@errors.write.sourceChanged.suggestion": {
     "description": "Recovery suggestion when the source file was replaced mid-copy: running the copy again copies the new version that is there now. Plain text.",
-    "screenshot": "error-message-example.png",
-    "screenshotNote": "Cmdr renders every friendly error with one shared layout: a bold title, an explanation paragraph, and a suggestion below it (plus an optional action button and a collapsed \"Technical details\"). This screenshot shows a DIFFERENT error, but your string appears as the title, explanation, or suggestion text in this same panel, in the same position. errors.provider.* names (Dropbox, Google Drive, OneDrive, and so on) are brand names, so keep them as-is."
+    "screenshot": "transfer-error-source_changed.png"
   },
   "errors.write.newDataKeptAt.title": "Your new file is under a different name",
   "errors.write.newDataKeptAt.message": "The new {path} is written and complete, but the destination wouldn’t let it take that name, and the file it was replacing is already gone. The new one is at {keptAt}.",

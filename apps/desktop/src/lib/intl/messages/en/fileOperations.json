@@ -438,7 +438,7 @@
       "free": "available space, already formatted (e.g. 12 GB)",
       "total": "total volume size, already formatted (e.g. 500 GB)"
     },
-    "screenshot": "transfer-dialog.png"
+    "screenshot": "conflict-dialog.png"
   },
   "fileOperations.transferDialog.spaceInfoUnbounded": "{used} used, no size limit",
   "@fileOperations.transferDialog.spaceInfoUnbounded": {
@@ -588,8 +588,7 @@
 
   "fileOperations.transferDialog.checkingConflicts": "Checking for conflicts…",
   "@fileOperations.transferDialog.checkingConflicts": {
-    "description": "Status shown while the transfer dialog scans the destination for name clashes before the copy/move. Keep the trailing ellipsis.",
-    "screenshot": "conflict-dialog.png"
+    "description": "Status shown while the transfer dialog scans the destination for name clashes before the copy/move. Keep the trailing ellipsis."
   },
 
   "fileOperations.transferDialog.mergeInfoSingle": "1 folder already exists there, so its contents will merge.",
@@ -622,7 +621,8 @@
     "description": "Lead-in above the file-conflict options in the transfer dialog, shown when some folders being copied or moved already exist at the destination but no individual file is known to clash yet. 'it' or 'them' is the existing folder or folders from the line above. The options below it (Skip, Overwrite, and so on) answer this question, so it makes clear they're about FILES inside those folders, never the folders themselves. Ends with a colon because the options complete the sentence.",
     "placeholders": {
       "count": "how many folders already exist at the destination (drives 'it' vs 'them')"
-    }
+    },
+    "screenshot": "transfer-confirmation-copy.png"
   },
 
   "fileOperations.transferDialog.conflictsSummary": "{countText} {count, plural, one {file already exists. What do you want to do with it?} other {files already exist. What do you want to do with them?}}",
@@ -682,7 +682,8 @@
 
   "fileOperations.transferDialog.policyAskEach": "Ask for each",
   "@fileOperations.transferDialog.policyAskEach": {
-    "description": "Radio option: decide per clashing file during the transfer instead of choosing now. Shown when folders will merge but nobody knows yet how many files inside them clash, maybe none, maybe many. Short control label."
+    "description": "Radio option: decide per clashing file during the transfer instead of choosing now. Shown when folders will merge but nobody knows yet how many files inside them clash, maybe none, maybe many. Short control label.",
+    "screenshot": "transfer-confirmation-copy.png"
   },
 
   "fileOperations.transferDialog.typeMismatchWarning": "Some clashes mix a file and a folder by the same name. Overwriting will replace items of a different type, including the entire contents of a folder.",
@@ -1226,8 +1227,7 @@
   "fileOperations.transferProgress.conflictCancel": "Cancel",
   "@fileOperations.transferProgress.conflictCancel": {
     "description": "Button in the conflict step that stops the whole operation. Short control label.",
-    "screenshot": "transfer-dialog.png",
-    "screenshotNote": "The copy/move progress dialog, pictured here. Your string belongs to one of its phases (scanning, paused, queued, or finishing up) or to one of its two progress bars."
+    "screenshot": "conflict-dialog.png"
   },
 
   "fileOperations.transferProgress.conflictRollback": "Rollback",
@@ -1243,7 +1243,8 @@
       "type": "the kind of operation: copy, move, archive_edit (changing a zip), or something else",
       "hasDestination": "\"yes\" when the destination folder is known, anything else when it isn't",
       "destination": "the name of the destination folder, for example Backup"
-    }
+    },
+    "screenshot": "sources-gone-move-some.png"
   },
 
   "fileOperations.operationConflict.pausedNote": "Everything else is paused until you answer.",
@@ -1253,7 +1254,8 @@
 
   "fileOperations.sourcesGone.title": "Some items are gone",
   "@fileOperations.sourcesGone.title": {
-    "description": "Title of a prompt that appears when an operation the user had queued behind another one finally gets its turn, and some of the files or folders it was going to copy, move, or delete are no longer where they were: the user (or another app) moved or deleted them while the operation waited. Nothing went wrong; the prompt asks whether to go ahead with the items that are still there."
+    "description": "Title of a prompt that appears when an operation the user had queued behind another one finally gets its turn, and some of the files or folders it was going to copy, move, or delete are no longer where they were: the user (or another app) moved or deleted them while the operation waited. Nothing went wrong; the prompt asks whether to go ahead with the items that are still there.",
+    "screenshot": "sources-gone-move-some.png"
   },
 
   "fileOperations.sourcesGone.message": "{type, select, copy {{goneText} of the {totalText} items this copy was waiting on {gone, plural, one {was} other {were}} moved or deleted since you queued it.} move {{goneText} of the {totalText} items this move was waiting on {gone, plural, one {was} other {were}} moved or deleted since you queued it.} delete {{goneText} of the {totalText} items this delete was waiting on {gone, plural, one {was} other {were}} moved or deleted since you queued it.} trash {{goneText} of the {totalText} items this move to trash was waiting on {gone, plural, one {was} other {were}} moved or deleted since you queued it.} other {{goneText} of the {totalText} items this operation was waiting on {gone, plural, one {was} other {were}} moved or deleted since you queued it.}}",
@@ -1264,7 +1266,8 @@
       "goneText": "how many items are gone, ready to drop into the sentence (for example 4)",
       "totalText": "how many items the operation was started with, ready to drop into the sentence (for example 22); always at least 2 here",
       "gone": "the same number as goneText, used only to pick singular or plural"
-    }
+    },
+    "screenshot": "sources-gone-move-some.png"
   },
 
   "fileOperations.sourcesGone.moreItems": "{count, plural, one {and {countText} more} other {and {countText} more}}",
@@ -1273,7 +1276,8 @@
     "placeholders": {
       "countText": "how many more items are gone beyond the listed names, ready to drop into the sentence (for example 17)",
       "count": "the same number, used only to pick singular or plural"
-    }
+    },
+    "screenshot": "sources-gone-move-many.png"
   },
 
   "fileOperations.sourcesGone.continue": "{type, select, copy {Copy the rest} move {Move the rest} delete {Delete the rest} trash {Move the rest to trash} other {Do the rest}}",
@@ -1281,7 +1285,8 @@
     "description": "Main button of the fileOperations.sourcesGone.title prompt. Goes ahead with the operation using only the files and folders that are still there; the missing ones are skipped. Its neighbour is a plain Cancel, which ends the operation without doing anything. Short button label; a verb phrase.",
     "placeholders": {
       "type": "the kind of operation that was waiting: copy, move, delete (permanent), trash (move to trash), or something else"
-    }
+    },
+    "screenshot": "sources-gone-move-some.png"
   },
 
   "fileOperations.sourcesGone.heldToast": "{type, select, copy {A queued copy has a question for you. You’ll see it as soon as the open dialog closes.} move {A queued move has a question for you. You’ll see it as soon as the open dialog closes.} delete {A queued delete has a question for you. You’ll see it as soon as the open dialog closes.} trash {A queued move to trash has a question for you. You’ll see it as soon as the open dialog closes.} other {A queued operation has a question for you. You’ll see it as soon as the open dialog closes.}}",
@@ -1339,7 +1344,8 @@
     "placeholders": {
       "doneText": "how much has been written so far, already formatted with its unit (e.g. 1.2 GB)",
       "totalText": "the total size of the operation, already formatted with its unit (e.g. 3 GB)"
-    }
+    },
+    "screenshot": "conflict-dialog.png"
   },
 
   "fileOperations.transferProgress.fileProgressValueText": "{count, plural, one {{doneText} of {totalText} file} other {{doneText} of {totalText} files}}",
@@ -1349,7 +1355,8 @@
       "doneText": "how many files are done, already formatted for display (e.g. 1,312)",
       "totalText": "how many files the operation has in total, already formatted for display (e.g. 4,000)",
       "count": "the same total as a raw number (drives the singular/plural form)"
-    }
+    },
+    "screenshot": "conflict-dialog.png"
   },
 
   "fileOperations.transferProgress.itemProgressValueText": "{count, plural, one {{doneText} of {totalText} item} other {{doneText} of {totalText} items}}",
@@ -1359,7 +1366,9 @@
       "doneText": "how many items are done, already formatted for display (e.g. 12)",
       "totalText": "how many items the operation has in total, already formatted for display (e.g. 40)",
       "count": "the same total as a raw number (drives the singular/plural form)"
-    }
+    },
+    "screenshot": "transfer-dialog.png",
+    "screenshotNote": "The copy/move progress dialog, pictured here. Your string belongs to one of its phases (scanning, paused, queued, or finishing up) or to one of its two progress bars."
   },
 
   "fileOperations.transferProgress.etaRemaining": "{duration} left",
@@ -1378,8 +1387,7 @@
     "placeholders": {
       "countText": "the number of files left, already formatted for display (e.g. 1,312)"
     },
-    "screenshot": "transfer-dialog.png",
-    "screenshotNote": "The copy/move progress dialog, pictured here. Your string belongs to one of its phases (scanning, paused, queued, or finishing up) or to one of its two progress bars."
+    "screenshot": "conflict-dialog.png"
   },
 
   "fileOperations.transferProgress.itemsLeft": "{count, plural, one {{countText} item left} other {{countText} items left}}",
@@ -1500,7 +1508,8 @@
 
   "fileOperations.backgroundStart.background": "Background",
   "@fileOperations.backgroundStart.background": {
-    "description": "Button in the copy, move, compress, and move-to-trash confirmation dialogs, beside the main confirm button. It confirms AND starts the operation out of sight, with no progress window, so the user can keep working. Shown when nothing else is running; with other operations running it reads as fileOperations.backgroundStart.queue instead. The word is a verb here, the thing you do to the operation, not the noun for a background. Short control label; must fit the same button as \"Queue\"."
+    "description": "Button in the copy, move, compress, and move-to-trash confirmation dialogs, beside the main confirm button. It confirms AND starts the operation out of sight, with no progress window, so the user can keep working. Shown when nothing else is running; with other operations running it reads as fileOperations.backgroundStart.queue instead. The word is a verb here, the thing you do to the operation, not the noun for a background. Short control label; must fit the same button as \"Queue\".",
+    "screenshot": "delete-confirm.png"
   },
 
   "fileOperations.backgroundStart.queue": "Queue",
@@ -1510,7 +1519,8 @@
 
   "fileOperations.backgroundStart.tooltip": "Start this without a progress window and follow it in the operation queue (F2)",
   "@fileOperations.backgroundStart.tooltip": {
-    "description": "Tooltip on the Background / Queue button of the copy, move, compress, and move-to-trash confirmation dialogs. The operation starts right away but out of sight, and the user follows it in the operation queue window. \"Operation queue\" is that window’s name; keep it identical to queue.windowTitle. F2 is the keyboard shortcut for the same button while the dialog is open; keep it as is."
+    "description": "Tooltip on the Background / Queue button of the copy, move, compress, and move-to-trash confirmation dialogs. The operation starts right away but out of sight, and the user follows it in the operation queue window. \"Operation queue\" is that window’s name; keep it identical to queue.windowTitle. F2 is the keyboard shortcut for the same button while the dialog is open; keep it as is.",
+    "screenshot": "delete-confirm.png"
   },
 
   "fileOperations.backgroundStart.startedToast": "Sent to the background.",
@@ -1984,12 +1994,14 @@
 
   "fileOperations.transferTree.treeLabel": "Files in this transfer",
   "@fileOperations.transferTree.treeLabel": {
-    "description": "Screen-reader name of the live file tree in the copy/move/compress progress dialog and under a running row in the operation queue window. The tree lists every selected file and folder with its own progress. Not shown on screen. The tree also serves a compress (into a new zip), so a word wider than your “transfer” term, like “operation”, is fine."
+    "description": "Screen-reader name of the live file tree in the copy/move/compress progress dialog and under a running row in the operation queue window. The tree lists every selected file and folder with its own progress. Not shown on screen. The tree also serves a compress (into a new zip), so a word wider than your “transfer” term, like “operation”, is fine.",
+    "screenshot": "toast-transfer-complete.png"
   },
 
   "fileOperations.transferTree.preparing": "Listing the files…",
   "@fileOperations.transferTree.preparing": {
-    "description": "Quiet placeholder where the live file tree of a copy/move/compress will appear, shown while Cmdr is still scanning the selection and has no list to show yet. Ends in an ellipsis (U+2026) because it’s still in progress."
+    "description": "Quiet placeholder where the live file tree of a copy/move/compress will appear, shown while Cmdr is still scanning the selection and has no list to show yet. Ends in an ellipsis (U+2026) because it’s still in progress.",
+    "screenshot": "conflict-dialog.png"
   },
 
   "fileOperations.transferTree.empty": "No files to show",
@@ -2023,7 +2035,8 @@
       "doneText": "how many of the folder’s files are finished, already formatted (e.g. 312)",
       "totalText": "how many files the folder holds, already formatted (e.g. 1,000)",
       "total": "the same total number (drives the singular/plural form of the noun)"
-    }
+    },
+    "screenshot": "queue.png"
   },
 
   "fileOperations.transferTree.skippedCount": "{count, plural, one {{countText} skipped} other {{countText} skipped}}",
@@ -2046,12 +2059,14 @@
 
   "fileOperations.transferTree.state.waiting": "Waiting",
   "@fileOperations.transferTree.state.waiting": {
-    "description": "State of a file or folder in the live file tree of a copy/move/compress that hasn’t started yet. Screen-reader only: read as the last item of the row’s comma-separated description, after the name and the counts the row shows."
+    "description": "State of a file or folder in the live file tree of a copy/move/compress that hasn’t started yet. Screen-reader only: read as the last item of the row’s comma-separated description, after the name and the counts the row shows.",
+    "screenshot": "queue.png"
   },
 
   "fileOperations.transferTree.state.copying": "Copying",
   "@fileOperations.transferTree.state.copying": {
-    "description": "State of a file or folder being copied right now, in the live file tree of a copy. Screen-reader only: read as the last item of the row’s comma-separated description, after the name and the counts the row shows. Siblings: fileOperations.transferTree.state.moving and fileOperations.transferTree.state.compressing for the other two operations."
+    "description": "State of a file or folder being copied right now, in the live file tree of a copy. Screen-reader only: read as the last item of the row’s comma-separated description, after the name and the counts the row shows. Siblings: fileOperations.transferTree.state.moving and fileOperations.transferTree.state.compressing for the other two operations.",
+    "screenshot": "queue.png"
   },
 
   "fileOperations.transferTree.state.moving": "Moving",
@@ -2066,7 +2081,8 @@
 
   "fileOperations.transferTree.state.done": "Done",
   "@fileOperations.transferTree.state.done": {
-    "description": "State of a file or folder that has finished transferring, in the live file tree of a copy/move/compress. The accessible name of the small checkmark at the end of its row, and one item of the row’s comma-separated screen-reader description. A row can be a file or a folder, so use a form that needs no agreement, or your language’s usual status form (masculine where that’s the convention)."
+    "description": "State of a file or folder that has finished transferring, in the live file tree of a copy/move/compress. The accessible name of the small checkmark at the end of its row, and one item of the row’s comma-separated screen-reader description. A row can be a file or a folder, so use a form that needs no agreement, or your language’s usual status form (masculine where that’s the convention).",
+    "screenshot": "toast-transfer-complete.png"
   },
 
   "fileOperations.transferTree.state.skipped": "Skipped",

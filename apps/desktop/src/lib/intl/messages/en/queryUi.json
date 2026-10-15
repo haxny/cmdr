@@ -99,7 +99,8 @@
   "queryUi.empty.aiBadge": "AI",
   "@queryUi.empty.aiBadge": {
     "description": "Tiny badge on an example-query chip in the search dialog's empty state, marking the example as an AI search (the other chips show a typographic “Aa” glyph instead). Use the language's usual abbreviation for artificial intelligence; keep it to two or three characters.",
-    "screenshot": "search-dialog.png"
+    "screenshot": "search-dialog.png",
+    "screenshotNote": "Cmdr’s search, select, and filter surfaces are one shared dialog: a mode row at the top, the query bar, the scope and filter controls under it, and results below. This shows that dialog; your string is one of those controls, one of the filter or date options, or a line in the results area."
   },
   "queryUi.empty.tip": "Tip: <newKey>⌘N</newKey> starts fresh, <historyKey>⌘H</historyKey> shows recent searches.",
   "@queryUi.empty.tip": {

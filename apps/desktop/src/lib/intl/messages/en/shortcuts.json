@@ -58,8 +58,7 @@
   "shortcuts.scope.multiRename": "Multi-rename",
   "@shortcuts.scope.multiRename": {
     "description": "Group heading in the Keyboard shortcuts list for keys that work inside the Multi-rename tool (Ctrl+M, the sheet that renames many files at once). A short section title; match multiRename.title.",
-    "screenshot": "settings-keyboard-shortcuts.png",
-    "screenshotNote": "Keyboard-shortcut UI. This shows the Settings > Keyboard shortcuts list, which uses the same row/scope/conflict layout as the standalone Shortcuts window. macOS modifier glyphs (⌘ ⌥ ⌃ ⇧) and key names are not translated."
+    "screenshot": "settings-keyboard-shortcuts.png"
   },
 
   "shortcuts.scope.favoritesMenu": "Favorites menu",
@@ -95,13 +94,13 @@
   "shortcuts.scope.queueWindow": "Operation queue",
   "@shortcuts.scope.queueWindow": {
     "description": "Group heading in the Keyboard shortcuts list for the keys that work in the operation queue window (the separate window listing running, waiting, and stopped copies, moves, and deletes). Use the same name as the window title, queue.windowTitle. A short section title.",
-    "screenshot": "settings-keyboard-shortcuts.png",
-    "screenshotNote": "Keyboard-shortcut UI. This shows the Settings > Keyboard shortcuts list, which uses the same row/scope/conflict layout as the standalone Shortcuts window. macOS modifier glyphs (⌘ ⌥ ⌃ ⇧) and key names are not translated."
+    "screenshot": "settings-keyboard-shortcuts.png"
   },
 
   "shortcuts.scope.viewerWindow": "File viewer",
   "@shortcuts.scope.viewerWindow": {
-    "description": "Group heading in the Keyboard shortcuts list for the single keys that work in the file viewer window (the separate window that shows a file's text, bytes, or image when you press F3): word wrap, tail mode, view modes, and image zoom. A short section title."
+    "description": "Group heading in the Keyboard shortcuts list for the single keys that work in the file viewer window (the separate window that shows a file's text, bytes, or image when you press F3): word wrap, tail mode, view modes, and image zoom. A short section title.",
+    "screenshot": "settings-keyboard-shortcuts.png"
   },
 
   "shortcuts.scope.aboutWindow": "About window",

@@ -373,19 +373,23 @@
   },
   "settings.listing.foldersFirst.label": "Show folders first",
   "@settings.listing.foldersFirst.label": {
-    "description": "Label for the on/off switch that lists folders above files in every file list. On by default. In Settings > Appearance > Listing, right above \"Sort folders\"."
+    "description": "Label for the on/off switch that lists folders above files in every file list. On by default. In Settings > Appearance > Listing, right above \"Sort folders\".",
+    "screenshot": "settings-appearance-listing.png"
   },
   "settings.listing.foldersFirst.description": "List folders above files. Turn it off to mix folders and files.",
   "@settings.listing.foldersFirst.description": {
-    "description": "Help text under the \"Show folders first\" switch. \"Mix folders and files\" means that with the switch off, folders and files sort together by the active column (name, size, date, and so on) instead of folders coming first."
+    "description": "Help text under the \"Show folders first\" switch. \"Mix folders and files\" means that with the switch off, folders and files sort together by the active column (name, size, date, and so on) instead of folders coming first.",
+    "screenshot": "settings-appearance-listing.png"
   },
   "settings.listing.spaceCalculatesFolderSize.label": "Calculate folder size with Space",
   "@settings.listing.spaceCalculatesFolderSize.label": {
-    "description": "Settings > Appearance > Listing switch: pressing the Space key to select a folder also calculates the folder's total size, like Total Commander. \"Space\" is the key name."
+    "description": "Settings > Appearance > Listing switch: pressing the Space key to select a folder also calculates the folder's total size, like Total Commander. \"Space\" is the key name.",
+    "screenshot": "settings-appearance-listing.png"
   },
   "settings.listing.spaceCalculatesFolderSize.description": "When Space selects a folder whose size isn’t known yet, Cmdr adds up its contents and shows the total. Esc stops the calculation.",
   "@settings.listing.spaceCalculatesFolderSize.description": {
-    "description": "Help text for the Space-calculates-folder-size switch. Esc is the key name."
+    "description": "Help text for the Space-calculates-folder-size switch. Esc is the key name.",
+    "screenshot": "settings-appearance-listing.png"
   },
   "settings.listing.directorySortMode.label": "Sort folders",
   "@settings.listing.directorySortMode.label": {
@@ -489,71 +493,88 @@
   },
   "settings.fileOperations.skipConfirmation.label": "Skip confirmation for copy, move, and trash",
   "@settings.fileOperations.skipConfirmation.label": {
-    "description": "Settings switch label. When on, Copy, Move, and Move to Trash start right away without their confirmation dialog. \"trash\" is the macOS Trash (use the OS's localized name for it)."
+    "description": "Settings switch label. When on, Copy, Move, and Move to Trash start right away without their confirmation dialog. \"trash\" is the macOS Trash (use the OS's localized name for it).",
+    "screenshot": "settings-behavior-navigation-and-file-ops.png"
   },
   "settings.fileOperations.skipConfirmation.description": "F5 and F6 copy and move into the other pane right away, and F8 moves to the trash without asking. A bit risky, since one keypress acts at once. Deleting permanently always asks first.",
   "@settings.fileOperations.skipConfirmation.description": {
-    "description": "Help text under the skip-confirmation switch. \"F5\", \"F6\", and \"F8\" are keyboard keys (Copy, Move, Delete); keep them. \"A bit risky\" is a gentle, friendly caution, not an alarm: keep the tone light. \"the other pane\" = the second file list of the two-pane window. \"trash\" is the macOS Trash (use the OS's localized name)."
+    "description": "Help text under the skip-confirmation switch. \"F5\", \"F6\", and \"F8\" are keyboard keys (Copy, Move, Delete); keep them. \"A bit risky\" is a gentle, friendly caution, not an alarm: keep the tone light. \"the other pane\" = the second file list of the two-pane window. \"trash\" is the macOS Trash (use the OS's localized name).",
+    "screenshot": "settings-behavior-navigation-and-file-ops.png"
   },
   "settings.archives.card.archives": "Archives",
   "@settings.archives.card.archives": {
-    "description": "Card title in Settings > Behavior > Archives, grouping the archive formats Cmdr can browse into (zip today). \"Cmdr\" is the product name; do not translate it."
+    "description": "Card title in Settings > Behavior > Archives, grouping the archive formats Cmdr can browse into (zip today). \"Cmdr\" is the product name; do not translate it.",
+    "screenshot": "settings-behavior-archives.png"
   },
   "settings.archives.card.bundles": "App bundles",
   "@settings.archives.card.bundles": {
-    "description": "Card title in Settings > Behavior > Archives, grouping macOS app bundles (.app, .bundle, .framework) — folders macOS presents as a single item."
+    "description": "Card title in Settings > Behavior > Archives, grouping macOS app bundles (.app, .bundle, .framework) — folders macOS presents as a single item.",
+    "screenshot": "settings-behavior-archives.png"
   },
   "settings.archives.zip.label": "Zip archives",
   "@settings.archives.zip.label": {
-    "description": "Row label in Settings > Behavior > Archives for the .zip format. \".zip\" is a file extension; do not translate it."
+    "description": "Row label in Settings > Behavior > Archives for the .zip format. \".zip\" is a file extension; do not translate it.",
+    "screenshot": "settings-behavior-archives.png"
   },
   "settings.archives.zip.description": "What pressing Enter does on a zip file.",
   "@settings.archives.zip.description": {
-    "description": "Help text under the zip row in Settings > Behavior > Archives. \"Enter\" is the Return/Enter key."
+    "description": "Help text under the zip row in Settings > Behavior > Archives. \"Enter\" is the Return/Enter key.",
+    "screenshot": "settings-behavior-archives.png"
   },
   "settings.archives.ooxml.label": "Documents and packages",
   "@settings.archives.ooxml.label": {
-    "description": "Row label in Settings > Behavior > Archives for zip-based documents and app packages (.docx, .xlsx, .pptx, .jar, .apk): files that are archives underneath, but that people think of as one document or one app."
+    "description": "Row label in Settings > Behavior > Archives for zip-based documents and app packages (.docx, .xlsx, .pptx, .jar, .apk): files that are archives underneath, but that people think of as one document or one app.",
+    "screenshot": "settings-behavior-archives.png"
   },
   "settings.archives.ooxml.description": "What pressing Enter does on a .docx, .xlsx, .pptx, .jar, or .apk.",
   "@settings.archives.ooxml.description": {
-    "description": "Help text under the documents-and-packages row in Settings > Behavior > Archives. The five names are file extensions; do not translate them. \"Enter\" is the Return/Enter key."
+    "description": "Help text under the documents-and-packages row in Settings > Behavior > Archives. The five names are file extensions; do not translate them. \"Enter\" is the Return/Enter key.",
+    "screenshot": "settings-behavior-archives.png"
   },
   "settings.archives.bundle.label": "App bundles",
   "@settings.archives.bundle.label": {
-    "description": "Row label in Settings > Behavior > Archives for macOS app bundles (.app, .bundle, .framework)."
+    "description": "Row label in Settings > Behavior > Archives for macOS app bundles (.app, .bundle, .framework).",
+    "screenshot": "settings-behavior-archives.png"
   },
   "settings.archives.bundle.description": "What pressing Enter does on a .app, .bundle, or .framework.",
   "@settings.archives.bundle.description": {
-    "description": "Help text under the app-bundles row in Settings > Behavior > Archives. \".app\", \".bundle\", and \".framework\" are file extensions; do not translate them. \"Enter\" is the Return/Enter key."
+    "description": "Help text under the app-bundles row in Settings > Behavior > Archives. \".app\", \".bundle\", and \".framework\" are file extensions; do not translate them. \"Enter\" is the Return/Enter key.",
+    "screenshot": "settings-behavior-archives.png"
   },
   "settings.archives.opt.browse": "Browse",
   "@settings.archives.opt.browse": {
-    "description": "Toggle option in Settings > Behavior > Archives: pressing Enter steps inside the archive or bundle like a folder. Keep it short (one segmented-control cell)."
+    "description": "Toggle option in Settings > Behavior > Archives: pressing Enter steps inside the archive or bundle like a folder. Keep it short (one segmented-control cell).",
+    "screenshot": "settings-behavior-archives.png"
   },
   "settings.archives.opt.open": "Open",
   "@settings.archives.opt.open": {
-    "description": "Toggle option in Settings > Behavior > Archives: pressing Enter opens the archive or bundle in its default app instead of browsing it. Keep it short (one segmented-control cell)."
+    "description": "Toggle option in Settings > Behavior > Archives: pressing Enter opens the archive or bundle in its default app instead of browsing it. Keep it short (one segmented-control cell).",
+    "screenshot": "settings-behavior-archives.png"
   },
   "settings.archives.opt.ask": "Ask",
   "@settings.archives.opt.ask": {
-    "description": "Toggle option in Settings > Behavior > Archives: pressing Enter shows a small popup asking whether to browse or open. Keep it short (one segmented-control cell)."
+    "description": "Toggle option in Settings > Behavior > Archives: pressing Enter shows a small popup asking whether to browse or open. Keep it short (one segmented-control cell).",
+    "screenshot": "settings-behavior-archives.png"
   },
   "settings.archives.compressionLevel.label": "Compression level",
   "@settings.archives.compressionLevel.label": {
-    "description": "Row label in Settings > Behavior > Archives for a 1-to-9 slider that sets how hard Cmdr compresses when it makes a zip (the Compress command, and copying or moving files into an existing zip). Higher means a smaller file but slower packing. \"Cmdr\" is the product name; do not translate it."
+    "description": "Row label in Settings > Behavior > Archives for a 1-to-9 slider that sets how hard Cmdr compresses when it makes a zip (the Compress command, and copying or moving files into an existing zip). Higher means a smaller file but slower packing. \"Cmdr\" is the product name; do not translate it.",
+    "screenshot": "settings-behavior-archives.png"
   },
   "settings.archives.compressionLevel.description": "How hard to compress when Cmdr makes a zip. Higher levels make a smaller file but take longer to pack. This applies to the Compress command and to copying or moving files into a zip.",
   "@settings.archives.compressionLevel.description": {
-    "description": "Help text under the compression-level slider in Settings > Behavior > Archives. \"Cmdr\" is the product name; do not translate it. \"zip\" is a file format; do not translate it."
+    "description": "Help text under the compression-level slider in Settings > Behavior > Archives. \"Cmdr\" is the product name; do not translate it. \"zip\" is a file format; do not translate it.",
+    "screenshot": "settings-behavior-archives.png"
   },
   "settings.archives.compressionLevel.faster": "Faster",
   "@settings.archives.compressionLevel.faster": {
-    "description": "End label on the LEFT (low) end of the compression-level slider, at level 1. It marks the tradeoff end where packing is quicker but the zip is larger. It describes packing speed, not the speed of the app. Keep it very short (one or two words)."
+    "description": "End label on the LEFT (low) end of the compression-level slider, at level 1. It marks the tradeoff end where packing is quicker but the zip is larger. It describes packing speed, not the speed of the app. Keep it very short (one or two words).",
+    "screenshot": "settings-behavior-archives.png"
   },
   "settings.archives.compressionLevel.smaller": "Smaller",
   "@settings.archives.compressionLevel.smaller": {
-    "description": "End label on the RIGHT (high) end of the compression-level slider, at level 9. It marks the tradeoff end where the resulting zip file is smaller but packing takes longer. It describes the output file size, not the size of the app. Keep it very short (one or two words)."
+    "description": "End label on the RIGHT (high) end of the compression-level slider, at level 9. It marks the tradeoff end where the resulting zip file is smaller but packing takes longer. It describes the output file size, not the size of the app. Keep it very short (one or two words).",
+    "screenshot": "settings-behavior-archives.png"
   },
   "settings.indexing.enabled.label": "Drive indexing",
   "@settings.indexing.enabled.label": {
@@ -1055,11 +1076,13 @@
   },
   "settings.behavior.notifications.keepUntilClosed.label": "Keep notifications until I close them",
   "@settings.behavior.notifications.keepUntilClosed.label": {
-    "description": "Label for an on/off switch in Settings > Behavior > Notifications. When on, Cmdr's in-window notifications (the small message boxes at the top right) stay on screen until the user closes them, instead of disappearing after a few seconds. Helps people who read slowly or use a screen reader."
+    "description": "Label for an on/off switch in Settings > Behavior > Notifications. When on, Cmdr's in-window notifications (the small message boxes at the top right) stay on screen until the user closes them, instead of disappearing after a few seconds. Helps people who read slowly or use a screen reader.",
+    "screenshot": "settings-behavior-notifications.png"
   },
   "settings.behavior.notifications.keepUntilClosed.description": "Notifications stay on screen until you close them, instead of going away after a few seconds.",
   "@settings.behavior.notifications.keepUntilClosed.description": {
-    "description": "Help text under the \"Keep notifications until I close them\" switch."
+    "description": "Help text under the \"Keep notifications until I close them\" switch.",
+    "screenshot": "settings-behavior-notifications.png"
   },
   "settings.behavior.fileSystemWatching.lowDiskSpaceNotifications.label": "Low disk space warning",
   "@settings.behavior.fileSystemWatching.lowDiskSpaceNotifications.label": {
@@ -1605,19 +1628,23 @@
   },
   "settings.fileExplorer.typeToJump.mode.label": "When you type in a pane",
   "@settings.fileExplorer.typeToJump.mode.label": {
-    "description": "Settings > Appearance > Listing label for the choice of what typing letters in a file pane does: jump the cursor to a matching file, or filter the list down to matching files."
+    "description": "Settings > Appearance > Listing label for the choice of what typing letters in a file pane does: jump the cursor to a matching file, or filter the list down to matching files.",
+    "screenshot": "settings-appearance-listing.png"
   },
   "settings.fileExplorer.typeToJump.mode.description": "Jump moves the cursor to the best match. Filter shows only the files and folders whose names contain what you type, like Total Commander’s quick filter; Delete (⌫) edits it and Esc clears it.",
   "@settings.fileExplorer.typeToJump.mode.description": {
-    "description": "Help text for the type-in-pane mode setting. \"Total Commander\" is a product name (keep as-is). \"quick filter\" is Total Commander's name for the feature. Delete (⌫) and Esc are Mac key names: use the name macOS gives each key in your language (VoiceOver's key names), and keep the ⌫ glyph. The option names Jump and Filter must match the badge prefixes fileExplorer.typeToJump.prefix and fileExplorer.quickFilter.prefix."
+    "description": "Help text for the type-in-pane mode setting. \"Total Commander\" is a product name (keep as-is). \"quick filter\" is Total Commander's name for the feature. Delete (⌫) and Esc are Mac key names: use the name macOS gives each key in your language (VoiceOver's key names), and keep the ⌫ glyph. The option names Jump and Filter must match the badge prefixes fileExplorer.typeToJump.prefix and fileExplorer.quickFilter.prefix.",
+    "screenshot": "settings-appearance-listing.png"
   },
   "settings.fileExplorer.typeToJump.mode.opt.jump": "Jump",
   "@settings.fileExplorer.typeToJump.mode.opt.jump": {
-    "description": "Option in the type-in-pane mode toggle: typing moves the cursor to the best-matching file. Short verb."
+    "description": "Option in the type-in-pane mode toggle: typing moves the cursor to the best-matching file. Short verb.",
+    "screenshot": "settings-appearance-listing.png"
   },
   "settings.fileExplorer.typeToJump.mode.opt.filter": "Filter",
   "@settings.fileExplorer.typeToJump.mode.opt.filter": {
-    "description": "Option in the type-in-pane mode toggle: typing narrows the list to matching files. Short verb."
+    "description": "Option in the type-in-pane mode toggle: typing narrows the list to matching files. Short verb.",
+    "screenshot": "settings-appearance-listing.png"
   },
   "settings.fileOperations.maxConflictsToShow.label": "Maximum conflicts to show",
   "@settings.fileOperations.maxConflictsToShow.label": {
@@ -1779,74 +1806,62 @@
   "settings.tint.red": "Red",
   "@settings.tint.red": {
     "description": "Volume-tint color name: red. Shown as a swatch label / aria-label in the tint color picker.",
-    "screenshot": "settings-appearance.png",
-    "screenshotNote": "Settings > Appearance, pictured here. Your string is the name of one color in its tint picker, used as the swatch’s label and the name a screen reader speaks."
+    "screenshot": "settings-appearance-tint.png"
   },
   "settings.tint.orange": "Orange",
   "@settings.tint.orange": {
     "description": "Volume-tint color name: orange. Shown as a swatch label / aria-label in the tint color picker.",
-    "screenshot": "settings-appearance.png",
-    "screenshotNote": "Settings > Appearance, pictured here. Your string is the name of one color in its tint picker, used as the swatch’s label and the name a screen reader speaks."
+    "screenshot": "settings-appearance-tint.png"
   },
   "settings.tint.amber": "Amber",
   "@settings.tint.amber": {
     "description": "Volume-tint color name: amber (a warm yellow-orange). Shown as a swatch label / aria-label in the tint color picker.",
-    "screenshot": "settings-appearance.png",
-    "screenshotNote": "Settings > Appearance, pictured here. Your string is the name of one color in its tint picker, used as the swatch’s label and the name a screen reader speaks."
+    "screenshot": "settings-appearance-tint.png"
   },
   "settings.tint.lime": "Lime",
   "@settings.tint.lime": {
     "description": "Volume-tint color name: lime (a yellow-green). Shown as a swatch label / aria-label in the tint color picker.",
-    "screenshot": "settings-appearance.png",
-    "screenshotNote": "Settings > Appearance, pictured here. Your string is the name of one color in its tint picker, used as the swatch’s label and the name a screen reader speaks."
+    "screenshot": "settings-appearance-tint.png"
   },
   "settings.tint.green": "Green",
   "@settings.tint.green": {
     "description": "Volume-tint color name: green. Shown as a swatch label / aria-label in the tint color picker.",
-    "screenshot": "settings-appearance.png",
-    "screenshotNote": "Settings > Appearance, pictured here. Your string is the name of one color in its tint picker, used as the swatch’s label and the name a screen reader speaks."
+    "screenshot": "settings-appearance-tint.png"
   },
   "settings.tint.teal": "Teal",
   "@settings.tint.teal": {
     "description": "Volume-tint color name: teal (a blue-green). Shown as a swatch label / aria-label in the tint color picker.",
-    "screenshot": "settings-appearance.png",
-    "screenshotNote": "Settings > Appearance, pictured here. Your string is the name of one color in its tint picker, used as the swatch’s label and the name a screen reader speaks."
+    "screenshot": "settings-appearance-tint.png"
   },
   "settings.tint.cyan": "Cyan",
   "@settings.tint.cyan": {
     "description": "Volume-tint color name: cyan (a bright light blue). Shown as a swatch label / aria-label in the tint color picker.",
-    "screenshot": "settings-appearance.png",
-    "screenshotNote": "Settings > Appearance, pictured here. Your string is the name of one color in its tint picker, used as the swatch’s label and the name a screen reader speaks."
+    "screenshot": "settings-appearance-tint.png"
   },
   "settings.tint.blue": "Blue",
   "@settings.tint.blue": {
     "description": "Volume-tint color name: blue. Shown as a swatch label / aria-label in the tint color picker.",
-    "screenshot": "settings-appearance.png",
-    "screenshotNote": "Settings > Appearance, pictured here. Your string is the name of one color in its tint picker, used as the swatch’s label and the name a screen reader speaks."
+    "screenshot": "settings-appearance-tint.png"
   },
   "settings.tint.indigo": "Indigo",
   "@settings.tint.indigo": {
     "description": "Volume-tint color name: indigo (a deep blue-violet). Shown as a swatch label / aria-label in the tint color picker.",
-    "screenshot": "settings-appearance.png",
-    "screenshotNote": "Settings > Appearance, pictured here. Your string is the name of one color in its tint picker, used as the swatch’s label and the name a screen reader speaks."
+    "screenshot": "settings-appearance-tint.png"
   },
   "settings.tint.purple": "Purple",
   "@settings.tint.purple": {
     "description": "Volume-tint color name: purple. Shown as a swatch label / aria-label in the tint color picker.",
-    "screenshot": "settings-appearance.png",
-    "screenshotNote": "Settings > Appearance, pictured here. Your string is the name of one color in its tint picker, used as the swatch’s label and the name a screen reader speaks."
+    "screenshot": "settings-appearance-tint.png"
   },
   "settings.tint.pink": "Pink",
   "@settings.tint.pink": {
     "description": "Volume-tint color name: pink. Shown as a swatch label / aria-label in the tint color picker.",
-    "screenshot": "settings-appearance.png",
-    "screenshotNote": "Settings > Appearance, pictured here. Your string is the name of one color in its tint picker, used as the swatch’s label and the name a screen reader speaks."
+    "screenshot": "settings-appearance-tint.png"
   },
   "settings.tint.brown": "Brown",
   "@settings.tint.brown": {
     "description": "Volume-tint color name: brown. Shown as a swatch label / aria-label in the tint color picker.",
-    "screenshot": "settings-appearance.png",
-    "screenshotNote": "Settings > Appearance, pictured here. Your string is the name of one color in its tint picker, used as the swatch’s label and the name a screen reader speaks."
+    "screenshot": "settings-appearance-tint.png"
   },
   "settings.section.appearance": "Appearance",
   "@settings.section.appearance": {
@@ -2006,8 +2021,7 @@
   },
   "settings.behavior.openTerminalHereApp.checking": "Checking your apps…",
   "@settings.behavior.openTerminalHereApp.checking": {
-    "description": "Placeholder shown in the \"Open terminal here uses\" dropdown for the moment before Cmdr has finished asking macOS which terminal apps are installed. The dropdown is disabled while it reads this. \"your apps\" = the apps on this Mac. Usually gone within a few milliseconds.",
-    "screenshot": "settings-behavior-navigation-and-file-ops.png"
+    "description": "Placeholder shown in the \"Open terminal here uses\" dropdown for the moment before Cmdr has finished asking macOS which terminal apps are installed. The dropdown is disabled while it reads this. \"your apps\" = the apps on this Mac. Usually gone within a few milliseconds."
   },
   "settings.fileExplorer.git.portalIntroSeen.label": "Git folder intro shown",
   "@settings.fileExplorer.git.portalIntroSeen.label": {
@@ -2418,75 +2432,93 @@
   },
   "settings.summary.colorsAndFormats": "Theme, app color, date and size coloring, and date/time format.",
   "@settings.summary.colorsAndFormats": {
-    "description": "One-line summary shown under the \"Colors and formats\" subsection heading, listing what it covers."
+    "description": "One-line summary shown under the \"Colors and formats\" subsection heading, listing what it covers.",
+    "screenshot": "settings-summary-appearance.png"
   },
   "settings.summary.zoomAndDensity": "Text size and UI density for the whole app.",
   "@settings.summary.zoomAndDensity": {
-    "description": "One-line summary shown under the \"Zoom and density\" subsection heading. \"UI\" = user interface."
+    "description": "One-line summary shown under the \"Zoom and density\" subsection heading. \"UI\" = user interface.",
+    "screenshot": "settings-summary-appearance.png"
   },
   "settings.summary.fileAndFolderSizes": "How sizes are shown in the file list and warnings about size mismatches.",
   "@settings.summary.fileAndFolderSizes": {
-    "description": "One-line summary shown under the \"File and folder sizes\" subsection heading."
+    "description": "One-line summary shown under the \"File and folder sizes\" subsection heading.",
+    "screenshot": "settings-summary-appearance.png"
   },
   "settings.summary.listing": "Document icons, folder sorting, and Brief mode column width.",
   "@settings.summary.listing": {
-    "description": "One-line summary shown under the \"Listing\" subsection heading. \"Brief\" is a Cmdr view-mode name (translate consistently)."
+    "description": "One-line summary shown under the \"Listing\" subsection heading. \"Brief\" is a Cmdr view-mode name (translate consistently).",
+    "screenshot": "settings-summary-appearance.png"
   },
   "settings.summary.navigationAndFileOps": "Double-click-to-parent navigation, and behavior when renaming files.",
   "@settings.summary.navigationAndFileOps": {
-    "description": "One-line summary shown under the \"Navigation & file ops\" subsection heading. \"extension\" = a filename's dotted suffix; \"parent\" = the folder one level up."
+    "description": "One-line summary shown under the \"Navigation & file ops\" subsection heading. \"extension\" = a filename's dotted suffix; \"parent\" = the folder one level up.",
+    "screenshot": "settings-summary-behavior.png"
   },
   "settings.summary.archives": "What pressing Enter does on archives and app bundles: browse inside, open, or ask.",
   "@settings.summary.archives": {
-    "description": "One-line summary shown under the \"Archives\" subsection heading. \"Enter\" is the Return/Enter key; \"app bundles\" are macOS .app/.bundle/.framework folders."
+    "description": "One-line summary shown under the \"Archives\" subsection heading. \"Enter\" is the Return/Enter key; \"app bundles\" are macOS .app/.bundle/.framework folders.",
+    "screenshot": "settings-summary-behavior.png"
   },
   "settings.summary.notifications": "Downloads notifications, the global go-to-latest-download shortcut, and low-disk-space warnings.",
   "@settings.summary.notifications": {
-    "description": "One-line summary shown under the \"Notifications\" subsection heading. \"Downloads\" is the macOS folder name (use the OS’s localized name)."
+    "description": "One-line summary shown under the \"Notifications\" subsection heading. \"Downloads\" is the macOS folder name (use the OS’s localized name).",
+    "screenshot": "settings-summary-behavior.png"
   },
   "settings.summary.search": "Live-applied filename and regex searches, and the recent-searches cap.",
   "@settings.summary.search": {
-    "description": "One-line summary shown under the \"Search\" subsection heading. \"regex\" = regular-expression search; \"cap\" = maximum count."
+    "description": "One-line summary shown under the \"Search\" subsection heading. \"regex\" = regular-expression search; \"cap\" = maximum count.",
+    "screenshot": "settings-summary-behavior.png"
   },
   "settings.summary.smbNetworkShares": "Enable networking, direct SMB connections, share cache, and timeouts.",
   "@settings.summary.smbNetworkShares": {
-    "description": "One-line summary shown under the \"SMB/Network shares\" subsection heading. \"SMB\" is a protocol name; keep it."
+    "description": "One-line summary shown under the \"SMB/Network shares\" subsection heading. \"SMB\" is a protocol name; keep it.",
+    "screenshot": "settings-summary-file-systems.png"
   },
   "settings.summary.servers": "The SSH host keys you’ve trusted.",
   "@settings.summary.servers": {
-    "description": "One-line summary shown on the \"Servers (SFTP, WebDAV)\" card in the File systems overview. A host key is the fingerprint a server proves its identity with; \"SSH\" is a protocol name (keep it)."
+    "description": "One-line summary shown on the \"Servers (SFTP, WebDAV)\" card in the File systems overview. A host key is the fingerprint a server proves its identity with; \"SSH\" is a protocol name (keep it).",
+    "screenshot": "settings-summary-file-systems.png"
   },
   "settings.summary.adb": "Browse an Android phone that has USB debugging turned on.",
   "@settings.summary.adb": {
-    "description": "One-line summary shown on the \"Android (ADB)\" card in the File systems overview. \"Android\" is a product name (keep it); \"USB debugging\" is a switch the reader finds on their own phone, so use the wording Android itself shows in your language."
+    "description": "One-line summary shown on the \"Android (ADB)\" card in the File systems overview. \"Android\" is a product name (keep it); \"USB debugging\" is a switch the reader finds on their own phone, so use the wording Android itself shows in your language.",
+    "screenshot": "settings-summary-file-systems.png"
   },
   "settings.summary.mtp": "Detect Android, Kindle, and camera devices over USB.",
   "@settings.summary.mtp": {
-    "description": "One-line summary shown under the \"MTP\" subsection heading. \"Android\" and \"Kindle\" are product names (keep them); \"USB\" is a connector name (keep it)."
+    "description": "One-line summary shown under the \"MTP\" subsection heading. \"Android\" and \"Kindle\" are product names (keep them); \"USB\" is a connector name (keep it).",
+    "screenshot": "settings-summary-file-systems.png"
   },
   "settings.summary.git": "Repository chip, per-file status column, and the virtual `.git` portal.",
   "@settings.summary.git": {
-    "description": "One-line summary shown under the \"Git\" subsection heading. \"chip\" = a small badge; \"`.git`\" is a literal folder name (keep it; it stays in backticks in the source). \"portal\" is Cmdr's virtual-folder view name."
+    "description": "One-line summary shown under the \"Git\" subsection heading. \"chip\" = a small badge; \"`.git`\" is a literal folder name (keep it; it stays in backticks in the source). \"portal\" is Cmdr's virtual-folder view name.",
+    "screenshot": "settings-summary-file-systems.png"
   },
   "settings.summary.mcpServer": "Configure the Model Context Protocol server for AI integrations.",
   "@settings.summary.mcpServer": {
-    "description": "One-line summary shown under the \"MCP server\" subsection heading. \"Model Context Protocol\" is a standard name; keep it. \"AI\" = artificial intelligence."
+    "description": "One-line summary shown under the \"MCP server\" subsection heading. \"Model Context Protocol\" is a standard name; keep it. \"AI\" = artificial intelligence.",
+    "screenshot": "settings-summary-ai.png"
   },
   "settings.summary.aiProvider": "Turn AI off, connect a cloud provider, or run a model locally.",
   "@settings.summary.aiProvider": {
-    "description": "One-line summary shown on the AI section's Provider card. \"AI\" = artificial intelligence."
+    "description": "One-line summary shown on the AI section's Provider card. \"AI\" = artificial intelligence.",
+    "screenshot": "settings-summary-ai.png"
   },
   "settings.summary.askCmdr": "Chat with an AI about your files, drives, and history, and pick the model it uses.",
   "@settings.summary.askCmdr": {
-    "description": "One-line summary shown on the AI section's Ask Cmdr card. \"Ask Cmdr\" is the product name; keep it as-is."
+    "description": "One-line summary shown on the AI section's Ask Cmdr card. \"Ask Cmdr\" is the product name; keep it as-is.",
+    "screenshot": "settings-summary-ai.png"
   },
   "settings.summary.driveIndexing": "Background drive indexing so search finds your files fast.",
   "@settings.summary.driveIndexing": {
-    "description": "One-line summary shown on the Indexing section's Drive indexing card. Describes the background file-system indexer that scans drives so search is fast."
+    "description": "One-line summary shown on the Indexing section's Drive indexing card. Describes the background file-system indexer that scans drives so search is fast.",
+    "screenshot": "settings-summary-indexing.png"
   },
   "settings.summary.imageIndexing": "Search the text inside your images. Runs on your Mac, and nothing leaves it.",
   "@settings.summary.imageIndexing": {
-    "description": "One-line summary shown on the Indexing section's Image indexing card. The feature reads the text inside images (OCR) so it can be searched; it runs on-device. \"Mac\" is the Apple computer."
+    "description": "One-line summary shown on the Indexing section's Image indexing card. The feature reads the text inside images (OCR) so it can be searched; it runs on-device. \"Mac\" is the Apple computer.",
+    "screenshot": "settings-summary-indexing.png"
   },
   "settings.summary.noSubsections": "This section has no subsections.",
   "@settings.summary.noSubsections": {
@@ -2531,7 +2563,8 @@
   },
   "settings.control.unitItems": "items",
   "@settings.control.unitItems": {
-    "description": "Unit word shown right after a number input in Settings > Advanced, for the list buffer sizes (how many file-list items or rows to prepare ahead, like '200 items'). The number is whatever the person typed and changes as they edit, so use a form that reads right after any number (the general plural). Keep it short, lowercase unless your language capitalizes nouns."
+    "description": "Unit word shown right after a number input in Settings > Advanced, for the list buffer sizes (how many file-list items or rows to prepare ahead, like '200 items'). The number is whatever the person typed and changes as they edit, so use a form that reads right after any number (the general plural). Keep it short, lowercase unless your language capitalizes nouns.",
+    "screenshot": "settings-advanced.png"
   },
   "settings.managed.rowNote": "Your organization manages this setting.",
   "@settings.managed.rowNote": {
@@ -2657,7 +2690,8 @@
   },
   "settings.appearance.datePreviewLabel": "Preview:",
   "@settings.appearance.datePreviewLabel": {
-    "description": "Label preceding a live preview of the chosen date/time format. Followed by the formatted example date. Keep the trailing colon."
+    "description": "Label preceding a live preview of the chosen date/time format. Followed by the formatted example date. Keep the trailing colon.",
+    "screenshot": "settings-appearance-date-format.png"
   },
   "settings.appearance.dateInvalidFormat": "Invalid format",
   "@settings.appearance.dateInvalidFormat": {
@@ -2665,7 +2699,8 @@
   },
   "settings.appearance.hideFormatHelp": "Hide format help",
   "@settings.appearance.hideFormatHelp": {
-    "description": "Toggle-button text that collapses the date-format placeholder help. Pairs with \"Show format help\"."
+    "description": "Toggle-button text that collapses the date-format placeholder help. Pairs with \"Show format help\".",
+    "screenshot": "settings-appearance-date-format.png"
   },
   "settings.appearance.showFormatHelp": "Show format help",
   "@settings.appearance.showFormatHelp": {
@@ -2673,31 +2708,38 @@
   },
   "settings.appearance.formatPlaceholdersTitle": "Format placeholders",
   "@settings.appearance.formatPlaceholdersTitle": {
-    "description": "Heading above the list of date-format tokens (YYYY, MM, etc.) and their meanings."
+    "description": "Heading above the list of date-format tokens (YYYY, MM, etc.) and their meanings.",
+    "screenshot": "settings-appearance-date-format.png"
   },
   "settings.appearance.formatHelpYear": "4-digit year (2025)",
   "@settings.appearance.formatHelpYear": {
-    "description": "Meaning of the YYYY date token, shown next to it in the format help. \"2025\" is a literal example; \"4-digit\" is the digit count."
+    "description": "Meaning of the YYYY date token, shown next to it in the format help. \"2025\" is a literal example; \"4-digit\" is the digit count.",
+    "screenshot": "settings-appearance-date-format.png"
   },
   "settings.appearance.formatHelpMonth": "2-digit month (01-12)",
   "@settings.appearance.formatHelpMonth": {
-    "description": "Meaning of the MM date token. \"01-12\" is a literal example range; keep the numerals. \"2-digit\" is the digit count."
+    "description": "Meaning of the MM date token. \"01-12\" is a literal example range; keep the numerals. \"2-digit\" is the digit count.",
+    "screenshot": "settings-appearance-date-format.png"
   },
   "settings.appearance.formatHelpDay": "2-digit day (01-31)",
   "@settings.appearance.formatHelpDay": {
-    "description": "Meaning of the DD date token. \"01-31\" is a literal example range; keep the numerals. \"2-digit\" is the digit count."
+    "description": "Meaning of the DD date token. \"01-31\" is a literal example range; keep the numerals. \"2-digit\" is the digit count.",
+    "screenshot": "settings-appearance-date-format.png"
   },
   "settings.appearance.formatHelpHour": "2-digit hour (00-23)",
   "@settings.appearance.formatHelpHour": {
-    "description": "Meaning of the HH date token (24-hour clock). \"00-23\" is a literal example range; keep the numerals. \"2-digit\" is the digit count."
+    "description": "Meaning of the HH date token (24-hour clock). \"00-23\" is a literal example range; keep the numerals. \"2-digit\" is the digit count.",
+    "screenshot": "settings-appearance-date-format.png"
   },
   "settings.appearance.formatHelpMinute": "2-digit minute (00-59)",
   "@settings.appearance.formatHelpMinute": {
-    "description": "Meaning of the mm date token. \"00-59\" is a literal example range; keep the numerals. \"2-digit\" is the digit count."
+    "description": "Meaning of the mm date token. \"00-59\" is a literal example range; keep the numerals. \"2-digit\" is the digit count.",
+    "screenshot": "settings-appearance-date-format.png"
   },
   "settings.appearance.formatHelpSecond": "2-digit second (00-59)",
   "@settings.appearance.formatHelpSecond": {
-    "description": "Meaning of the ss date token. \"00-59\" is a literal example range; keep the numerals. \"2-digit\" is the digit count."
+    "description": "Meaning of the ss date token. \"00-59\" is a literal example range; keep the numerals. \"2-digit\" is the digit count.",
+    "screenshot": "settings-appearance-date-format.png"
   },
   "settings.appearance.tintGroupDescription": "Adds a faint background tint to panes so you can tell volume types apart at a glance.",
   "@settings.appearance.tintGroupDescription": {
@@ -2709,11 +2751,13 @@
     "description": "aria-label for the tint-color picker dialog (screen-reader only).",
     "placeholders": {
       "label": "the pane-tint setting being colored, e.g. \"Tint local-volume panes\""
-    }
+    },
+    "screenshot": "settings-appearance-tint.png"
   },
   "settings.appearance.tintColorsAria": "Tint colors",
   "@settings.appearance.tintColorsAria": {
-    "description": "aria-label for the grid of selectable tint-color swatches (screen-reader only)."
+    "description": "aria-label for the grid of selectable tint-color swatches (screen-reader only).",
+    "screenshot": "settings-appearance-tint.png"
   },
   "settings.appearance.tintTriggerAria": "{label} (currently: {colorName})",
   "@settings.appearance.tintTriggerAria": {
@@ -2779,7 +2823,8 @@
   },
   "settings.notifications.cardOnScreen": "On-screen notifications",
   "@settings.notifications.cardOnScreen": {
-    "description": "Heading of the card in Settings > Behavior > Notifications about the notifications Cmdr shows inside its own window (the small message boxes at the top right, like \"Moved 3 files to the trash\"), as opposed to macOS's own notifications."
+    "description": "Heading of the card in Settings > Behavior > Notifications about the notifications Cmdr shows inside its own window (the small message boxes at the top right, like \"Moved 3 files to the trash\"), as opposed to macOS's own notifications.",
+    "screenshot": "settings-behavior-notifications.png"
   },
   "settings.fileSystemWatching.cardLowDiskSpace": "Low disk space",
   "@settings.fileSystemWatching.cardLowDiskSpace": {
