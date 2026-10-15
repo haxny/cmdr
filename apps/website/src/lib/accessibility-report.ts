@@ -118,7 +118,7 @@ const wcagA: CriterionRow[] = [
     conformance: 'partially-supports',
     remark:
       "Dialogs, Settings, and server forms use real headings, labels, and roles, and the Settings sidebar groups each section's subsections under it. The file list exposes which files are marked and each file's position in the list, and the sort buttons say which column the list is sorted by and which way. The Full view isn't a table: each file's name for assistive technology carries its size and date, but the column headers aren't tied to the cells.",
-    issues: [437],
+    issues: [451],
   },
   {
     id: '1.3.2',
@@ -143,7 +143,7 @@ const wcagA: CriterionRow[] = [
     conformance: 'partially-supports',
     remark:
       "Git status uses letters, errors use labeled symbols, and size and date colors are optional decoration. Marked files carry a bar along their left edge and slightly heavier text besides their red color. By default the focused pane differs from the other by color: its cursor outline and fill are in the accent color where the other pane's are gray, and its active tab has the stronger accent line. With the macOS Differentiate without color or Increase contrast setting on, the other pane's cursor outline also turns dashed, so the panes differ by shape too. Hidden files still differ only by a dimmer color.",
-    issues: [440],
+    issues: [452, 454],
   },
   { id: '1.4.2', name: 'Audio control', level: 'A', conformance: 'not-applicable', remark: 'Cmdr plays no audio.' },
   {
@@ -362,7 +362,7 @@ const wcagAA: CriterionRow[] = [
     conformance: 'partially-supports',
     remark:
       'An automated check on every change measures every text color against its background in light and dark mode, with all macOS accent colors and pane tints, at 4.5:1 (3:1 for large text). Marked file names measure at least 4.52:1. The check also covers the stronger colors the macOS Increase contrast setting turns on. One exception: the optional "App" date and size colors can put a pale accent color on text (about 2.4:1 with the gold accent).',
-    issues: [440],
+    issues: [454],
   },
   {
     id: '1.4.4',
@@ -394,7 +394,7 @@ const wcagAA: CriterionRow[] = [
     conformance: 'partially-supports',
     remark:
       'Checkbox, switch, and text field borders reach at least 3:1 (about 3.7:1 on white), and the bar on marked files at least 4.5:1. With the macOS Increase contrast or Differentiate without color setting on, the cursor outlines that tell the two panes apart reach at least 3:1, and with Increase contrast every focus ring gains an inner ring that clears 3:1 with any accent color. Without those settings, the cursor outlines are deliberately subtle (about 1.1:1 for the accent one with the yellow accent and 1.4:1 for the gray one, in light mode), and in light mode the focus ring is under 3:1 with the yellow, gold, green, and orange accent colors.',
-    issues: [440],
+    issues: [454],
   },
   {
     id: '1.4.12',
@@ -434,7 +434,7 @@ const wcagAA: CriterionRow[] = [
     conformance: 'partially-supports',
     remark:
       "Buttons, links, fields, and menus show a focus ring, and the file cursor has a colored background and outline. The focused pane's cursor outline is in the accent color and the other pane's gray, and the focused pane's active tab carries a stronger accent line than the other pane's. By default these cues rely on color and the line's strength and stay under 3:1 contrast on purpose; the macOS Increase contrast and Differentiate without color settings dash the other pane's outline and take the outlines past 3:1.",
-    issues: [440],
+    issues: [454],
   },
   {
     id: '2.4.11',
@@ -531,7 +531,7 @@ const section508Ch3: CriterionRow[] = [
     conformance: 'partially-supports',
     remark:
       'App zoom alone takes text to 200%, and the macOS text size setting takes it further. Dark mode is supported, and text contrast is checked automatically. The focused-pane cues lean on color and stay low in contrast, and some focus rings have weak contrast with some accent colors, unless the macOS Increase contrast or Differentiate without color setting is on.',
-    issues: [440],
+    issues: [454],
   },
   {
     id: '302.3',
@@ -539,7 +539,7 @@ const section508Ch3: CriterionRow[] = [
     conformance: 'partially-supports',
     remark:
       "Marked files carry a bar and heavier text besides their color, and the focused pane's active tab shows a stronger accent line than the other pane's. The two panes' cursor outlines differ only by color unless the macOS Differentiate without color or Increase contrast setting is on, which dashes the other pane's outline. Hidden files still differ only by color. Everything else uses symbols and text.",
-    issues: [440],
+    issues: [452, 454],
   },
   { id: '302.4', name: 'Without hearing', conformance: 'supports', remark: 'Cmdr uses no sound.' },
   { id: '302.5', name: 'With limited hearing', conformance: 'supports', remark: 'Cmdr uses no sound.' },
@@ -609,7 +609,7 @@ const section508Ch5: CriterionRow[] = [
     conformance: 'partially-supports',
     remark:
       "The queue window is a grid with headers. The Full view of the file list has column headers, but they aren't tied to the cells; each file's name for assistive technology says its size and date instead.",
-    issues: [437],
+    issues: [451],
   },
   {
     id: '502.3.4',
@@ -638,7 +638,7 @@ const section508Ch5: CriterionRow[] = [
     conformance: 'partially-supports',
     remark:
       "Dialogs, menus, the tab bar, and the Settings sidebar's sections and subsections are structured. Tabs aren't tied to their content.",
-    issues: [437],
+    issues: [451],
   },
   {
     id: '502.3.8',
@@ -678,7 +678,7 @@ const section508Ch5: CriterionRow[] = [
     conformance: 'partially-supports',
     remark:
       "Assistive technology can move focus between standard controls, and VoiceOver follows Cmdr's cursor as the arrow keys move it through the file list. Moving the VoiceOver cursor onto a file with VoiceOver's own keys likely doesn't move Cmdr's cursor.",
-    issues: [437],
+    issues: [453],
   },
   {
     id: '502.3.14',
@@ -773,14 +773,14 @@ const enClause4: CriterionRow[] = [
     name: 'Usage with limited vision',
     conformance: 'partially-supports',
     remark: 'See Section 508 302.2.',
-    issues: [440],
+    issues: [454],
   },
   {
     id: '4.2.3',
     name: 'Usage without perception of colour',
     conformance: 'partially-supports',
     remark: 'See Section 508 302.3.',
-    issues: [440],
+    issues: [452, 454],
   },
   { id: '4.2.4', name: 'Usage without hearing', conformance: 'supports', remark: 'Cmdr uses no sound.' },
   { id: '4.2.5', name: 'Usage with limited hearing', conformance: 'supports', remark: 'Cmdr uses no sound.' },
@@ -910,7 +910,7 @@ const enClause11: CriterionRow[] = [
     name: 'Row, column, and headers',
     conformance: 'partially-supports',
     remark: 'See Section 508 502.3.3.',
-    issues: [437],
+    issues: [451],
   },
   {
     id: '11.5.2.7',
@@ -929,7 +929,7 @@ const enClause11: CriterionRow[] = [
     name: 'Parent-child relationships',
     conformance: 'partially-supports',
     remark: 'See Section 508 502.3.7.',
-    issues: [437],
+    issues: [451],
   },
   {
     id: '11.5.2.10',
@@ -960,7 +960,7 @@ const enClause11: CriterionRow[] = [
     name: 'Modification of focus and selection attributes',
     conformance: 'partially-supports',
     remark: 'See Section 508 502.3.13.',
-    issues: [437],
+    issues: [453],
   },
   {
     id: '11.5.2.15',
@@ -1088,6 +1088,20 @@ export const standards: StandardSection[] = [
 
 /** The open issues behind the report's gaps, most important first. */
 export const gapIssues: { number: number; title: string }[] = [
+  {
+    number: 451,
+    title: "The Full view's columns aren't a table, and tabs aren't tied to the file list they show",
+  },
+  {
+    number: 453,
+    title: "Moving the VoiceOver cursor onto a file may not move Cmdr's cursor",
+  },
+  {
+    number: 454,
+    title:
+      'By default, the focused-pane cues, some focus rings, and the optional App date and size colors are under 3:1 contrast',
+  },
+  { number: 452, title: 'Hidden files differ from other files only by a dimmer color' },
   {
     number: 449,
     title: "The rename field sits inside the file's row, which hides its role from some assistive technology",

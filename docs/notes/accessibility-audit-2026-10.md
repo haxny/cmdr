@@ -60,8 +60,8 @@ Top gaps, each with its issue:
 1. **The file list was silent to VoiceOver** (#437, fixed and heard 2026-10-15): focus sits on the focused pane's
    listbox, whose `aria-activedescendant` names the cursor row by a document-unique id; rows carry kind, position,
    marked state, and in Full view size and date; a per-pane live region says the pane and folder; ⌃F5 reaches the pane
-   chrome. Left: the inline rename field nests inside its option (#449), Full view isn't a table, and the VoiceOver
-   cursor moving onto a row (C3) is unheard.
+   chrome. Left: the inline rename field nests inside its option (#449), Full view isn't a table (#451), and the
+   VoiceOver cursor moving onto a row (C3) is unheard (#453).
 2. **Cursors and status changes aren't announced** (#438, fixed 2026-10-15, heard in V4–V7): the Search result cursor,
    the Settings sidebar, empty folders, selection counts, the license key error, progress text.
 3. **Toasts are mouse-first** (#439, fixed 2026-10-15, heard in V9): focus didn't pause them, no key reached them, no
@@ -72,8 +72,9 @@ Top gaps, each with its issue:
    without color dash the unfocused hairline and lift both hairlines to 3:1. Left: by default both hairlines are solid
    and subtle (1.09:1 accent, 1.41:1 gray worst), so the default focused-pane cue is hue, fill, and the tab band,
    deliberately below 3:1 and with no shape cue until the user asks macOS for one (David's pick), hidden files differ by
-   color alone, and the default focus ring is under 3:1 with yellow, orange, green, or Cmdr gold in light mode (kept on
-   purpose: VoiceOver draws its own ring; the ink ring is the Increase contrast tier).
+   color alone (#452), and the default focus ring is under 3:1 with yellow, orange, green, or Cmdr gold in light mode
+   (kept on purpose: VoiceOver draws its own ring; the ink ring is the Increase contrast tier). The default-contrast
+   items are #454.
 5. **Pointer and keyboard leftovers** (#441, mostly closed in code 2026-10-15): tab reorder was drag-only, sub-24px
    targets, tooltips not hoverable, viewer bare-key shortcuts not remappable, zoom topped out at 150%. Left: a
    one-letter breadcrumb segment and the pane divider are still narrower than 24 px.
@@ -113,7 +114,7 @@ video, flashing, or time limits beyond toasts; native menu bar and context menus
   Left: Full view is a listbox, not a grid, by decision; each row's name carries its size and date, so the column
   headers aren't tied to cells. Evidence: `views/file-row-a11y.ts`, `views/BriefList.svelte`, `views/FullList.svelte`,
   `views/FullListHeader.svelte`, `selection/SortableHeader.svelte` (`fileExplorer.columns.sortState`),
-  `settings/components/SettingsSidebar.svelte`, `file-list.vsr.svelte.test.ts`. V1, V2, and V7 heard. #437.
+  `settings/components/SettingsSidebar.svelte`, `file-list.vsr.svelte.test.ts`. V1, V2, and V7 heard. #451.
 - **1.3.2 Meaningful sequence**: Supports. DOM order matches the visual order in every surface; virtualized rows render
   in list order. Evidence: code reading of panes, dialogs, settings. V12 heard.
 - **1.3.3 Sensory characteristics**: Supports. Instructions don't rely on shape, position, or sound alone; pane regions
@@ -127,7 +128,7 @@ video, flashing, or time limits beyond toasts; native menu bar and context menus
   Differentiate without color or Increase contrast the unfocused hairline turns dashed, adding a shape cue. Hidden files
   still differ only by a dimmer color. Evidence: `app.css` `--color-selection-fg-primary`,
   `--color-cursor-outline-unfocused`, `--color-tab-band*`; `app-file-list.css` marked-row and cursor rules;
-  `views/mark-run.ts`; `tabs/TabBar.svelte`; `--color-text-quiet`; `git/status-column.ts`. #440.
+  `views/mark-run.ts`; `tabs/TabBar.svelte`; `--color-text-quiet`; `git/status-column.ts`. #452, #454.
 - **1.4.2 Audio control**: Not applicable. Cmdr plays no audio.
 - **2.1.1 Keyboard**: Supports. Every core action is a command with a shortcut and a command palette entry: pane switch,
   navigation, marking, open, go up, go to path, volume chooser, tabs, sort, divider, view mode, all file operations,
@@ -231,7 +232,7 @@ video, flashing, or time limits beyond toasts; native menu bar and context menus
   opt-in "App" date and size palettes put the raw accent on text (gold about 2.4:1). Core tokens on `#ffffff` /
   `#1e1e1e`: primary 17.40 / 13.61, secondary 5.74 / 9.56, tertiary 5.74 / 7.18, error text 6.47 / 8.78, warning text
   7.31 / 9.89. Evidence: `pnpm check a11y-contrast` (green), `scripts/check-a11y-contrast/row_state_matrix.go`,
-  `app.css` § Increase contrast. #440.
+  `app.css` § Increase contrast. #454.
 - **1.4.4 Resize text**: Supports. App zoom (⌘+ / ⌘−, 75–200%; the ceiling rose from 150% with #441, 2026-10-15) reaches
   200% alone and compounds with the macOS Accessibility text size (0.82–3.12×) beyond it; tokens are rem-based and rows
   grow with text. 2.0 adds no new effective scale: 150% × the system's 1.35+ sizes was already past it. Evidence:
@@ -255,7 +256,7 @@ video, flashing, or time limits beyond toasts; native menu bar and context menus
   focus ring is under 3:1 on white with Apple Yellow (1.58), Cmdr gold (2.38), Green (2.41), and Orange (2.58).
   Evidence: `app-field.css` (`--color-field-border`), `app.css` `button:focus-visible`, `--shadow-focus-solid`, §
   Differentiate without color, `app-file-list.css` cursor rules; ratios from `pnpm check a11y-contrast` (`-- --verbose`
-  lists the measured ones) and `accent_matrix.go` hexes. #440.
+  lists the measured ones) and `accent_matrix.go` hexes. #454.
 - **1.4.12 Text spacing**: Partially supports. Rows have fixed pixel heights with `overflow: hidden`; a 1.5 line height
   fits the Comfortable density but clips in Compact (16 px rows), and middle truncation measures with canvas metrics
   that ignore letter and word spacing overrides. Pending a manual text-spacing test. Evidence: `BriefList.svelte`,
@@ -277,7 +278,7 @@ video, flashing, or time limits beyond toasts; native menu bar and context menus
   pane's cursor hairline is accent and the other's gray, and the focused pane's active tab carries the full accent band
   (the other half). By default both cues stay under 3:1 on purpose (see 1.4.11): the panes differ by hue and the tab
   band's strength rather than by contrast. Increase contrast and Differentiate without color dash the unfocused hairline
-  and lift both past 3:1. Evidence: `app.css`, `app-field.css`, `app-file-list.css`, `tabs/TabBar.svelte`. #440.
+  and lift both past 3:1. Evidence: `app.css`, `app-field.css`, `app-file-list.css`, `tabs/TabBar.svelte`. #454.
 - **2.4.11 Focus not obscured (minimum)**: Supports. Dialogs are modal and centered. Toasts sit at the top right and
   move to the bottom right while they would cover the focused element's cursor row (`aria-activedescendant`) or the
   focused element (#439, 2026-10-15). Evidence: `ui/toast/toast-placement.ts` (+ test), `ToastContainer.svelte`.
@@ -327,11 +328,11 @@ video, flashing, or time limits beyond toasts; native menu bar and context menus
   (see 4.1.2). Left: the nested rename field (#449) and Full view's columns not being a table. V1–V12 heard. #449.
 - **302.2 With limited vision**: Partially supports. App zoom alone to 200%, past it with macOS text size, dark mode, AA
   text contrast in CI. Weak focused-pane and focus-ring contrast with some accents unless Increase contrast or
-  Differentiate without color is on. #440.
+  Differentiate without color is on. #454.
 - **302.3 Without perception of color**: Partially supports. Marked rows carry a bar and a text stroke (#440,
   2026-10-15), and the focused pane's tab band is stronger; the panes' cursor hairlines differ by color alone unless
   Differentiate without color or Increase contrast is on, which dashes the unfocused one. Hidden files still rely on
-  color alone. The rest uses glyphs and text. #440.
+  color alone. The rest uses glyphs and text. #452, #454.
 - **302.4 Without hearing**: Supports. Cmdr uses no audio cues.
 - **302.5 With limited hearing**: Supports. Same as 302.4.
 - **302.6 Without speech**: Supports. No speech input needed.
@@ -364,7 +365,7 @@ video, flashing, or time limits beyond toasts; native menu bar and context menus
   standard ARIA controls that assistive tech can change. V7 heard.
 - **502.3.3 Row, column, and headers**: Partially supports. The queue window is a `role="grid"`; the Full view file list
   has no column headers tied to cells (a listbox by decision; each row's name carries its size and date). Evidence:
-  `routes/queue/+page.svelte`, `FullListHeader.svelte`, `views/file-row-a11y.ts`. #437.
+  `routes/queue/+page.svelte`, `FullListHeader.svelte`, `views/file-row-a11y.ts`. #451.
 - **502.3.4 Values**: Supports. Progress bars expose `aria-valuenow/min/max`, and the transfer readout's bars also say
   the amount on screen as `aria-valuetext` ("1.2 GB of 3 GB", #438, 2026-10-15); sliders and number fields expose
   values. Evidence: `ui/ProgressBar.svelte`, `file-operations/TransferProgressReadout.svelte`. V4 heard.
@@ -373,7 +374,7 @@ video, flashing, or time limits beyond toasts; native menu bar and context menus
 - **502.3.6 Label relationships**: Supports. `<label for>` and `aria-describedby` throughout, the license key error and
   the two alertdialogs (`DeleteAiModelDialog`, `ForgetMemoryDialog`) included since #438 (2026-10-15). V5 heard.
 - **502.3.7 Hierarchical relationships**: Partially supports. Dialogs, menus, the tablist, and the Settings sidebar
-  (subsections grouped under their section, #438) are structured; tabs have no `tabpanel`. #437.
+  (subsections grouped under their section, #438) are structured; tabs have no `tabpanel`. #451.
 - **502.3.8 Text**: Supports. All UI text is live DOM text exposed through WebKit. V11 heard.
 - **502.3.9 Modification of text**: Supports. Text entry uses native `<input>`/`<textarea>`.
 - **502.3.10 List of actions**: Supports. Controls are native buttons and ARIA widgets with standard actions. V8 heard.
@@ -383,7 +384,7 @@ video, flashing, or time limits beyond toasts; native menu bar and context menus
   `aria-activedescendant` on the focused element. V1 and V6 heard.
 - **502.3.13 Modification of focus cursor**: Partially supports. Assistive tech can move focus among standard controls,
   and VoiceOver follows Cmdr's cursor (V1 heard); moving the VoiceOver cursor onto a file row likely doesn't move Cmdr's
-  cursor (unheard, C3 in § VoiceOver listening runs). #437.
+  cursor (unheard, C3 in § VoiceOver listening runs). #453.
 - **502.3.14 Event notification**: Supports. See WCAG 4.1.3. V4 heard.
 - **502.4 Platform accessibility features**: Not applicable. Applies to platforms.
 - **503.2 User preferences**: Supports. Honors system font, dark/light, accent color, Reduce transparency, Reduce
@@ -426,8 +427,8 @@ video, flashing, or time limits beyond toasts; native menu bar and context menus
 ### Clause 4: functional performance statements
 
 - **4.2.1 Usage without vision**: Partially supports. See 508 302.1. #449.
-- **4.2.2 Usage with limited vision**: Partially supports. See 508 302.2. #440.
-- **4.2.3 Usage without perception of colour**: Partially supports. See 508 302.3. #440.
+- **4.2.2 Usage with limited vision**: Partially supports. See 508 302.2. #454.
+- **4.2.3 Usage without perception of colour**: Partially supports. See 508 302.3. #452, #454.
 - **4.2.4 Usage without hearing**: Supports. No audio.
 - **4.2.5 Usage with limited hearing**: Supports. No audio.
 - **4.2.6 Usage with no or limited vocal capability**: Supports. No speech input.
@@ -467,16 +468,16 @@ video, flashing, or time limits beyond toasts; native menu bar and context menus
   service through WebKit's NSAccessibility bridge.
 - **11.5.2.4 Assistive technology**: Not applicable. Cmdr isn't assistive technology.
 - **11.5.2.5 Object information**: Partially supports. See 508 502.3.1. #449.
-- **11.5.2.6 Row, column, and headers**: Partially supports. See 508 502.3.3. #437.
+- **11.5.2.6 Row, column, and headers**: Partially supports. See 508 502.3.3. #451.
 - **11.5.2.7 Values**: Supports. See 508 502.3.4.
 - **11.5.2.8 Label relationships**: Supports. See 508 502.3.6.
-- **11.5.2.9 Parent-child relationships**: Partially supports. See 508 502.3.7. #437.
+- **11.5.2.9 Parent-child relationships**: Partially supports. See 508 502.3.7. #451.
 - **11.5.2.10 Text**: Supports. See 508 502.3.8.
 - **11.5.2.11 List of available actions**: Supports. See 508 502.3.10.
 - **11.5.2.12 Execution of available actions**: Supports. See 508 502.3.11.
 - **11.5.2.13 Tracking of focus and selection attributes**: Supports. See 508 502.3.12; marked files are exposed as
   `aria-selected` in an `aria-multiselectable` listbox (#437, 2026-10-15). V1 and V3 heard.
-- **11.5.2.14 Modification of focus and selection attributes**: Partially supports. See 508 502.3.13. #437.
+- **11.5.2.14 Modification of focus and selection attributes**: Partially supports. See 508 502.3.13. #453.
 - **11.5.2.15 Change notification**: Supports. See WCAG 4.1.3. V4 and V9 heard.
 - **11.5.2.16 Modifications of states and properties**: Supports. See 508 502.3.2.
 - **11.5.2.17 Modifications of values and text**: Supports. See 508 502.3.5 and 502.3.9.
