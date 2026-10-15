@@ -16,6 +16,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mount, tick } from 'svelte'
+import { computeAccessibleDescription } from 'dom-accessibility-api'
 import AboutWindow from './AboutWindow.svelte'
 import AcknowledgementsDialog from './AcknowledgementsDialog.svelte'
 import CommercialReminderModal from './CommercialReminderModal.svelte'
@@ -272,6 +273,38 @@ describe('LicenseKeyDialog a11y', () => {
     // Flush the getLicenseInfo() microtask so `isLoading` flips to false.
     await new Promise((r) => setTimeout(r, 0))
     await tick()
+    await expectNoA11yViolations(target)
+  })
+
+  // A failed activation used to be silent to a screen reader: the error was a bare `<p>`
+  // inserted under the field. It now lands in an alert region that's there before it, and
+  // the key field names it as its description.
+  it('announces a failed activation and ties the error to the key field', async () => {
+    const { verifyLicense } = await import('#lib/tauri-commands/index.js')
+    vi.mocked(verifyLicense).mockRejectedValueOnce(new Error('bad key'))
+    const target = document.createElement('div')
+    document.body.appendChild(target)
+    mount(LicenseKeyDialog, { target, props: { onClose: () => {}, onSuccess: () => {} } })
+    await new Promise((r) => setTimeout(r, 0))
+    await tick()
+
+    const alert = target.querySelector('[role="alert"]')
+    expect(alert).not.toBeNull()
+    expect(alert?.textContent.trim()).toBe('')
+
+    const input = target.querySelector('input') as HTMLInputElement
+    input.value = 'CMDR-AAAA-BBBB-CCCC'
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+    await tick()
+    const activate = [...target.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Activate')
+    activate?.click()
+    await new Promise((r) => setTimeout(r, 0))
+    await tick()
+
+    const error = alert?.querySelector('.error-message')
+    expect(error?.textContent.trim()).not.toBe('')
+    expect(input.getAttribute('aria-invalid')).toBe('true')
+    expect(computeAccessibleDescription(input)).toContain(error?.textContent.trim())
     await expectNoA11yViolations(target)
   })
 

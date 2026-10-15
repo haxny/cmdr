@@ -16,6 +16,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { createRawSnippet, mount, tick, type ComponentProps } from 'svelte'
+import { computeAccessibleDescription } from 'dom-accessibility-api'
 import { expectNoA11yViolations } from '#lib/test-a11y.js'
 import { clearSearchIndex } from '#lib/settings/settings-search.js'
 
@@ -357,6 +358,21 @@ describe('DeleteAiModelDialog', () => {
       const { notifyDialogOpened } = await import('#lib/tauri-commands/index.js')
       expect(vi.mocked(notifyDialogOpened).mock.calls.map(([id]) => id)).toContain('delete-ai-model')
       target.remove()
+    })
+
+    // An alertdialog's reader opens on its title and description: without the description,
+    // VoiceOver says "Delete the local AI model?" and never what deleting costs.
+    it('describes itself with the size warning, then with the progress line while deleting', async () => {
+      for (const [isDeleting, words] of [
+        [false, '4.1 GB'],
+        [true, 'removing files'],
+      ] as const) {
+        const { target } = await mountDialog(isDeleting)
+        const dialog = target.querySelector('[role="alertdialog"]')
+        expect(dialog).not.toBeNull()
+        expect(computeAccessibleDescription(dialog as Element)).toContain(words)
+        target.remove()
+      }
     })
 
     it('confirms on Enter while idle', async () => {

@@ -6,6 +6,7 @@
 
 import { describe, expect, it, vi } from 'vitest'
 import { mount, tick } from 'svelte'
+import { computeAccessibleDescription } from 'dom-accessibility-api'
 import ForgetMemoryDialog from './ForgetMemoryDialog.svelte'
 import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
@@ -49,6 +50,18 @@ describe('ForgetMemoryDialog behaviour', () => {
     expect(target.querySelector('[role="alertdialog"]')).not.toBeNull()
     const { notifyDialogOpened } = await import('#lib/tauri-commands/index.js')
     expect(vi.mocked(notifyDialogOpened).mock.calls.map(([id]) => id)).toContain('forget-memory')
+    target.remove()
+  })
+
+  // An alertdialog's reader opens on its title and description: without the description,
+  // VoiceOver asks the question and never says what forgetting deletes.
+  it('describes itself with what forgetting deletes', async () => {
+    const { target } = await mountDialog(false)
+    const dialog = target.querySelector('[role="alertdialog"]')
+    expect(dialog).not.toBeNull()
+    const message = target.querySelector('.confirm-message')?.textContent.trim() ?? ''
+    expect(message).not.toBe('')
+    expect(computeAccessibleDescription(dialog as Element)).toBe(message)
     target.remove()
   })
 

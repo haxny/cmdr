@@ -21,12 +21,16 @@
     }
 
     const { modelSizeFormatted, isDeleting, onConfirm, onCancel }: Props = $props()
+    /** Whichever body shows (the size warning, or the progress line) is the alertdialog's description. */
+    const uid = $props.id()
+    const messageId = `${uid}-message`
 </script>
 
 <ModalDialog
     titleId="delete-ai-model-title"
     dialogId="delete-ai-model"
     role="alertdialog"
+    ariaDescribedby={messageId}
     onclose={() => {
         if (!isDeleting) onCancel()
     }}
@@ -41,12 +45,12 @@
             ? tString('ai.local.deleteDialogTitleDeleting')
             : tString('ai.local.deleteDialogTitle')}{/snippet}
     {#if isDeleting}
-        <div class="deleting-status">
+        <div class="deleting-status" id={messageId}>
             <Spinner size="sm" />
             <span>{tString('ai.local.deletingStatus')}</span>
         </div>
     {:else}
-        <p class="confirm-message">
+        <p class="confirm-message" id={messageId}>
             {t('ai.local.deleteConfirmMessage', { modelSize: modelSizeFormatted })}
         </p>
     {/if}

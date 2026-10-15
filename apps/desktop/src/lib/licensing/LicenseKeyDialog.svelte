@@ -47,6 +47,25 @@
     let serverInvalidRetryCount = $state(0)
 
     let errorHelpHint = $state('')
+    /** Bumped by every `showError`, so a retry failing with the same words re-renders them and the alert speaks again. */
+    let errorSeq = $state(0)
+    const uid = $props.id()
+    /** The error line: the key field's description, inside the always-mounted alert region. */
+    const errorId = `${uid}-error`
+
+    function showError(message: string, hint = ''): void {
+        error = message
+        errorHelpHint = hint
+        hasError = true
+        errorSeq++
+    }
+
+    function clearError(): void {
+        error = ''
+        errorHelpHint = ''
+        hasError = false
+        isServerInvalidError = false
+    }
 
     const SUPPORT_EMAIL = 'hello@getcmdr.com'
 
@@ -180,15 +199,11 @@
         if (fallbackStatus) {
             setCachedStatus(fallbackStatus)
             setPendingVerification(true)
-            error = ''
-            errorHelpHint = ''
-            hasError = false
-            isServerInvalidError = false
+            clearError()
             showActivationToast(licenseInfo)
             onSuccess()
         } else {
-            error = tString('licensing.dialog.networkFallbackError')
-            hasError = true
+            showError(tString('licensing.dialog.networkFallbackError'))
         }
     }
 
@@ -207,8 +222,7 @@
 
     async function handleActivate() {
         if (!cleanedKey) {
-            error = tString('licensing.dialog.emptyKeyError')
-            hasError = true
+            showError(tString('licensing.dialog.emptyKeyError'))
             return
         }
 
@@ -236,10 +250,7 @@
                 setPendingVerification(false)
                 setCachedStatus(newStatus)
                 serverInvalidRetryCount = 0
-                error = ''
-                errorHelpHint = ''
-                hasError = false
-                isServerInvalidError = false
+                clearError()
                 showActivationToast(verifyResult.info)
                 onSuccess()
             } else if (newStatus?.type === 'expired') {
@@ -247,16 +258,16 @@
                 await commitLicense(verifyResult.fullKey, verifyResult.shortCode)
                 setCachedStatus(newStatus)
                 isServerInvalidError = false
-                error = tString('licensing.dialog.expiredOnError', { date: formatDate(newStatus.expiredAt) })
-                errorHelpHint = tString('licensing.dialog.expiredOnHelp')
-                hasError = true
+                showError(
+                    tString('licensing.dialog.expiredOnError', { date: formatDate(newStatus.expiredAt) }),
+                    tString('licensing.dialog.expiredOnHelp'),
+                )
             } else if (newStatus?.type === 'personal') {
                 // Server checked with Paddle and this transaction is unknown.
                 // DON'T commit. Nothing is stored, no cleanup needed.
                 serverInvalidRetryCount++
                 isServerInvalidError = true
-                error = tString('licensing.dialog.serverInvalidError')
-                hasError = true
+                showError(tString('licensing.dialog.serverInvalidError'))
             } else {
                 // Network error (newStatus is null): key is crypto-valid, commit optimistically
                 await commitLicense(verifyResult.fullKey, verifyResult.shortCode)
@@ -265,9 +276,7 @@
         } catch (e) {
             const friendly = getFriendlyError(e)
             isServerInvalidError = false
-            error = friendly.error
-            errorHelpHint = friendly.hint
-            hasError = true
+            showError(friendly.error, friendly.hint)
         } finally {
             isActivating = false
         }
@@ -437,6 +446,7 @@
                     bind:inputElement
                     bind:value={licenseKey}
                     invalid={!!error}
+                    aria-describedby={error ? errorId : undefined}
                     ariaLabel={tString('licensing.dialog.inputPlaceholder')}
                     placeholder={tString('licensing.dialog.inputPlaceholder')}
                     spellcheck={false}
@@ -447,11 +457,19 @@
                 />
             </div>
 
+            <!-- ❗ Mounted with the field and empty: an alert inserted together with its text may
+                 go unspoken. Each failure re-keys its lines, so the same error twice speaks twice. -->
+            <div role="alert">
+                {#key errorSeq}
+                    {#if error}
+                        <p class="error-message" id={errorId}>{error}</p>
+                        {#if errorHelpHint}
+                            <p class="help-text">{errorHelpHint}</p>
+                        {/if}
+                    {/if}
+                {/key}
+            </div>
             {#if error}
-                <p class="error-message">{error}</p>
-                {#if errorHelpHint}
-                    <p class="help-text">{errorHelpHint}</p>
-                {/if}
                 <p class="help-text">
                     {#if isServerInvalidError && serverInvalidRetryCount >= 3}
                         <Trans

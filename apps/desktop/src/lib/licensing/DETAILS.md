@@ -76,6 +76,10 @@ be both alarming and untrue.
   license data (key, short code, cached status, validation timestamp) and reverting to Personal.
 - **`errorHelpHint` state**: holds context-specific help text from `getFriendlyError()` for non-server-invalid errors
   (signature failures, network issues), rendered in the separate secondary `<p>`.
+- **A failed activation speaks.** Every error goes through `showError` (and every success through `clearError`): the
+  error and its hint render inside a `role="alert"` region that's mounted, empty, with the key field (an alert inserted
+  with its text may go unspoken), re-keyed by `errorSeq` so the same error on a retry speaks again. The field carries
+  `aria-invalid` and `aria-describedby` → the error line, so moving back to it re-reads why.
 
 ## Acknowledgements dialog
 
