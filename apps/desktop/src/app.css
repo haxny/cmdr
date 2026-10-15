@@ -1060,7 +1060,6 @@ html.increase-contrast {
   --color-text-secondary: #4f4f4f;
   --color-text-tertiary: #4f4f4f;
   --color-cursor-outline: var(--color-accent-pop);
-  --color-cursor-outline-dashed: var(--color-accent-pop);
   --shadow-focus-solid: 0 0 0 2px var(--color-focus-ink), 0 0 0 4px var(--color-accent);
   --color-selection-fg-primary: #a80000;
   --color-selection-fg-cursor: #8a0000;
