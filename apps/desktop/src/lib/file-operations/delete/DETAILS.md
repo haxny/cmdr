@@ -111,11 +111,27 @@ different thing entirely (cancel-an-in-flight-op-and-undo-its-partials, gated on
 
 **Edit > Undo move to trash** (`edit.undoTrash`, also in the palette). The toast's Undo is mouse-first and gone after
 ten seconds, so the same action has a second home. `raiseCompletionToasts` (`file-explorer/pane/dialog-state.svelte.ts`)
-records each finished trash with `rememberTrashForUndo` and gives its toast the id `trashCompleteToastId(operationId)`;
-`undoLastTrash` reverses the newest one through `runTrashUndo` and takes that toast down so its Undo can't run twice.
-`runTrashUndo` forgets the trash whichever surface ran it. Decision: session-only. An "Undo" that reached back to
-yesterday's trash would surprise more than it helps, and the operation log already rolls back any journaled trash. No
-default key: ⌘Z is the text Undo, owned by the Edit menu's predefined item.
+records each finished trash with `rememberTrashForUndo(operationId, { sourcePaths, itemCount })` and gives its toast the
+id `trashCompleteToastId(operationId)`; `undoLastTrash` reverses the newest one through `runTrashUndo` and takes that
+toast down so its Undo can't run twice. `runTrashUndo` forgets the trash whichever surface ran it, as it STARTS: a
+second undo could only be refused, and what one couldn't put back won't come back on a retry. Decision: session-only,
+newest only. An "Undo" that reached back to yesterday's trash would surprise more than it helps, and the operation log
+already rolls back any journaled trash. No default key: ⌘Z is the text Undo, owned by the Edit menu's predefined item.
+
+**It behaves like macOS's own Edit > Undo**: always in the menu, greyed out with nothing to undo, and otherwise named
+for what it puts back. Every change to the remembered trash pushes `trashUndoTarget()` through `updateUndoTrashMenu`
+(`null` greys it out; `one` names it, `many` counts it, `unknown` keeps the plain words) and Rust renders the label
+(`menu/DETAILS.md`). `unknown` is the batch the OS refused part of down to ONE item: the completion counts refusals but
+doesn't say which item went, so the label won't guess a name. The palette follows the same state: the row is hidden by
+the `trashUndoAvailable` condition and named by `trashUndoCommandLabel`. A language rebuild re-pushes through
+`resyncTrashUndoMenu`. With nothing remembered, `undoLastTrash` does nothing at all (only a stale click or a rebound key
+reaches it then), which is why no "nothing to undo" toast exists.
+
+**A trash the trash no longer holds is said plainly.** The rollback engine reports an item gone from the trash AND from
+its old place as a `vanished` skip (`src-tauri/src/operation_log/DETAILS.md` § What counts as already gone), and
+`trashUndoOutcome` keeps those apart from items that stayed in the trash: all gone reads "Nothing to put back: they’re
+no longer in the trash.", some gone appends "N items were no longer in the trash." Cmdr itself never empties the trash,
+so this is the only way the app learns the items are gone.
 
 **Decision: no "delete permanently" button.** The toast renders after every trash, including the ones the user is glad
 they can take back, and a one-click irreversible action on a transient surface that appears that often is a misclick

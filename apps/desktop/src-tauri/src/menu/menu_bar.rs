@@ -198,8 +198,9 @@ pub(crate) const MENU_BAR: &[BarMenu] = &[
             macos_only(predefined(Predefined::Undo, "menu.edit.undo")),
             macos_only(predefined(Predefined::Redo, "menu.edit.redo")),
             // Files, unlike the text Undo above: the trash toast's Undo, for keyboard users and
-            // for after the toast has gone.
-            item(UNDO_TRASH_ID, "menu.edit.undoTrash", NONE),
+            // for after the toast has gone. Starts disabled; `update_undo_trash_menu` turns it on
+            // and names what it would put back once there's a trash to undo.
+            item(UNDO_TRASH_ID, "menu.edit.undoTrash", NONE).disabled(),
             SEPARATOR,
             // Custom items rather than predefined ones, so ⌘X / ⌘C / ⌘V route through
             // `execute-command` and the frontend picks the text clipboard (an input has focus) or

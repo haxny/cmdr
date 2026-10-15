@@ -95,12 +95,13 @@ palette-visible; the rest are `showInPalette: false`: low-level navigation and M
 `getPaletteCommands(holds?)` is the only filter exported; `commands` (the full array) is exported too, for shortcut
 documentation and Settings panes.
 
-**Conditional palette rows.** A source may carry a `paletteCondition` (a `PaletteCondition` member, today only
-`focusedPaneSharesLinks`), and the palette shows it only while that holds. `CommandPalette.svelte` answers each one
-through its `PALETTE_CONDITIONS` record when it searches, so a new member doesn't compile until it's answered there.
-Without `holds`, `getPaletteCommands` counts every conditional row as shown, which is what pruning stale recents wants.
-Every other surface (Settings, help, MCP) lists the command regardless, and its handler still checks: the palette knows
-the pane, not the cursor row.
+**Conditional palette rows.** A source may carry a `paletteCondition` (a `PaletteCondition` member:
+`focusedPaneSharesLinks`, or `trashUndoAvailable`, which hides `edit.undoTrash` exactly while its Edit menu item is
+greyed out), and the palette shows it only while that holds. `CommandPalette.svelte` answers each one through its
+`PALETTE_CONDITIONS` record when it searches, so a new member doesn't compile until it's answered there. Without
+`holds`, `getPaletteCommands` counts every conditional row as shown, which is what pruning stale recents wants. Every
+other surface (Settings, help, MCP) lists the command regardless, and its handler still checks: the palette knows the
+pane, not the cursor row.
 
 `command-ids.ts::COMMAND_IDS` is also the backend's command-breadcrumb vocabulary. `src-tauri/build.rs` parses the tuple
 into an `OUT_DIR` Rust slice, and `error_reporter/breadcrumbs.rs` retains a command event only when its id is in that
@@ -152,11 +153,12 @@ Three sources of a non-constant label, all generic — ❌ `resolveCommand` carr
   `commands.appLicenseKey.seeDetails.label` or `…enterKey.label`. `updateLicenseCommandName(hasLicense)` flips the flag
   — it doesn't rewrite English in place — keeping the palette label in step with the native menu.
 - **A `displayName` resolver** composes the palette label outright, when no fixed set of catalog keys covers it.
-  `selection.selectSameKind` is the one user: it renders whatever the focused pane published into
-  `file-explorer/pane/same-kind-target.svelte.ts` ("Select all with extension *.pdf"), falling back to its static name
-  when the cursor row has no kind. ❗ The command itself never reads that store — it re-reads the cursor row when it
-  runs — so a stale label can't change what gets selected (`file-explorer/pane/DETAILS.md` § Select all of the same
-  kind).
+  `edit.undoTrash` names the trash it would put back (`trashUndoCommandLabel`, `file-operations/delete/trash-undo.ts`,
+  the same state that relabels the Edit menu item). `selection.selectSameKind` renders whatever the focused pane
+  published into `file-explorer/pane/same-kind-target.svelte.ts` ("Select all with extension *.pdf"), falling back to
+  its static name when the cursor row has no kind. ❗ The command itself never reads that store — it re-reads the cursor
+  row when it runs — so a stale label can't change what gets selected (`file-explorer/pane/DETAILS.md` § Select all of
+  the same kind).
 
 **Rust's menu labels are a SEPARATE mechanism, and stay that way.** Native menus never read `Command.name`: they resolve
 through Rust's own `menu_t` catalog, and `Label::License` (`src-tauri/src/menu/menu_spec.rs`) is a second, independently

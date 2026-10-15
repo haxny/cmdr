@@ -17,8 +17,8 @@ use crate::ignore_poison::IgnorePoison;
 use super::{
     CLOSE_TAB_ID, CommandScope, EDIT_PASTE_MOVE_ID, FILE_COMPRESS_ID, FILE_COPY_ID, FILE_DELETE_ID,
     FILE_DELETE_PERMANENTLY_ID, FILE_MOVE_ID, FILE_NEW_FILE_ID, FILE_NEW_FOLDER_ID, MenuState, OPEN_TERMINAL_HERE_ID,
-    PIN_TAB_MENU_ID, RENAME_ID, REOPEN_CLOSED_TAB_ID, VIEW_SET_MODE_COMMAND_ID, VIEW_SHOW_HIDDEN_COMMAND_ID,
-    menu_id_to_command,
+    PIN_TAB_MENU_ID, RENAME_ID, REOPEN_CLOSED_TAB_ID, UNDO_TRASH_ID, VIEW_SET_MODE_COMMAND_ID,
+    VIEW_SHOW_HIDDEN_COMMAND_ID, menu_id_to_command,
 };
 
 /// Swaps the app-level menu bar to the main menu, if a different menu is installed.
@@ -113,6 +113,8 @@ struct MenuItemInputs<'a> {
     open_terminal_here_enabled: bool,
     /// The focused pane's closed-tab stack has entries (`set_reopen_closed_tab_enabled`).
     reopen_closed_tab_enabled: bool,
+    /// A trash this session waits to be undone (`update_undo_trash_menu`).
+    undo_trash_available: bool,
     /// The commands the main window's dialog gate refuses right now (`set_commands_refused_over_dialog`).
     refused: &'a HashSet<String>,
 }
@@ -130,6 +132,7 @@ fn menu_item_enabled(id: &str, inputs: &MenuItemInputs) -> bool {
     let in_scope = matches!(command, Some((_, CommandScope::App))) || inputs.explorer_menu_active;
     let own_verdict = match id {
         REOPEN_CLOSED_TAB_ID => inputs.reopen_closed_tab_enabled,
+        UNDO_TRASH_ID => inputs.undo_trash_available,
         OPEN_TERMINAL_HERE_ID => inputs.open_terminal_here_enabled,
         _ if OPERATION_START_ITEM_IDS.contains(&id) => !inputs.file_operations_blocked,
         _ => true,
@@ -193,6 +196,7 @@ pub(crate) fn apply_menu_item_states<R: Runtime>(menu_state: &MenuState<R>) {
         file_operations_blocked: menu_state.file_operations_blocked.load(Ordering::Relaxed),
         open_terminal_here_enabled: menu_state.open_terminal_here_enabled.load(Ordering::Relaxed),
         reopen_closed_tab_enabled: menu_state.reopen_closed_tab_enabled.load(Ordering::Relaxed),
+        undo_trash_available: menu_state.undo_trash_available.load(Ordering::Relaxed),
         refused: &refused,
     };
 

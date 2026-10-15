@@ -755,6 +755,21 @@
       "count": "The same number of files (decides whether the noun is singular or plural)."
     }
   },
+  "askCmdr.renameUndo.skipReason.vanished.named": "Couldn’t find {name}: it was moved or deleted since the rename.",
+  "@askCmdr.renameUndo.skipReason.vanished.named": {
+    "description": "One line of a partial undo result in the Ask Cmdr chat thread, saying which of the renamed files didn't get their old names back and why. This version is used when the reason applies to exactly ONE file, so the line names it. This reason: the file is no longer where Cmdr renamed it, and isn't back under its old name either, so there's nothing to rename. A plain statement, not a warning. Sentence case; the apostrophe is U+2019.",
+    "placeholders": {
+      "name": "The file's name as Cmdr last renamed it (e.g. \"invoice-2026.pdf\")."
+    }
+  },
+  "askCmdr.renameUndo.skipReason.vanished.counted": "Couldn’t find {countText} {count, plural, one {file} other {files}}: they were moved or deleted since the rename.",
+  "@askCmdr.renameUndo.skipReason.vanished.counted": {
+    "description": "One line of a partial undo result in the Ask Cmdr chat thread, saying which of the renamed files didn't get their old names back and why. This version is used when the reason applies to two or more files, so the line counts them instead of naming them. This reason: the files are no longer where Cmdr renamed them, and aren't back under their old names either, so there's nothing to rename. A plain statement, not a warning. Sentence case; the apostrophe is U+2019.",
+    "placeholders": {
+      "countText": "How many files this reason applies to, ready to drop into the sentence (e.g. 1,234). Always two or more.",
+      "count": "The same number of files (decides whether the noun is singular or plural)."
+    }
+  },
   "askCmdr.renameUndo.skipReason.nameTaken.named": "Left {name} alone: its old name is taken again.",
   "@askCmdr.renameUndo.skipReason.nameTaken.named": {
     "description": "One line of a partial undo result in the Ask Cmdr chat thread, saying which of the renamed files kept their new names and why. This version is used when the reason applies to exactly ONE file, so the line names it. This reason: something else now sits at the name the file used to have, so the file keeps its new name. Cmdr never overwrites while undoing, so say this as a considered choice, not as something going wrong. Sentence case.",

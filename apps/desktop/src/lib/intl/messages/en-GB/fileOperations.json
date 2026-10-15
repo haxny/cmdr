@@ -79,8 +79,12 @@
   "@fileOperations.sourcesGone.nothingLeftToast": {
     "sourceHash": "4d62b7d"
   },
-  "fileOperations.trash.nothingToUndo": "There’s no move to the Bin to undo.",
-  "@fileOperations.trash.nothingToUndo": {
-    "sourceHash": "67b73bf"
+  "fileOperations.trash.undoGone": "Nothing to put back: {count, plural, one {it’s} other {they’re}} no longer in the Bin.",
+  "@fileOperations.trash.undoGone": {
+    "sourceHash": "8ab6d72"
+  },
+  "fileOperations.trash.undoPartlyGone": "{countText} {count, plural, one {item was} other {items were}} no longer in the Bin.",
+  "@fileOperations.trash.undoPartlyGone": {
+    "sourceHash": "2e23577"
   }
 }

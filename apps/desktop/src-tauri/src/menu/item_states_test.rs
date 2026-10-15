@@ -32,8 +32,26 @@ fn inputs(refused: &HashSet<String>) -> MenuItemInputs<'_> {
         file_operations_blocked: false,
         open_terminal_here_enabled: true,
         reopen_closed_tab_enabled: true,
+        undo_trash_available: true,
         refused,
     }
+}
+
+/// Like macOS's own Edit > Undo: present always, greyed out while there's nothing to undo.
+#[test]
+fn undo_move_to_trash_is_live_only_while_a_trash_waits_to_be_undone() {
+    use crate::menu::UNDO_TRASH_ID;
+    let nothing = refusing(&[]);
+    assert!(menu_item_enabled(UNDO_TRASH_ID, &inputs(&nothing)));
+    let nothing_to_undo = MenuItemInputs {
+        undo_trash_available: false,
+        ..inputs(&nothing)
+    };
+    assert!(!menu_item_enabled(UNDO_TRASH_ID, &nothing_to_undo));
+    assert!(!menu_item_enabled(
+        UNDO_TRASH_ID,
+        &inputs(&refusing(&["edit.undoTrash"]))
+    ));
 }
 
 #[test]

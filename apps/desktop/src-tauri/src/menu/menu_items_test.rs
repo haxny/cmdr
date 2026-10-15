@@ -55,6 +55,42 @@ fn the_same_kind_payload_deserializes_the_frontend_target() {
 }
 
 #[test]
+fn the_undo_trash_label_names_what_it_would_put_back() {
+    assert_eq!(undo_trash_menu_label(None), "Undo move to trash");
+    assert_eq!(
+        undo_trash_menu_label(Some(&TrashUndoTarget::One {
+            name: "report.pdf".to_string()
+        })),
+        "Undo move to trash of “report.pdf”"
+    );
+    assert_eq!(
+        undo_trash_menu_label(Some(&TrashUndoTarget::Many {
+            count_text: "1,234".to_string()
+        })),
+        "Undo move to trash of 1,234 items"
+    );
+}
+
+/// The payload is the frontend's `TrashUndoTarget` (`trash-undo.ts`) on the wire.
+#[test]
+fn the_undo_trash_payload_deserializes_the_frontend_target() {
+    let one: TrashUndoTarget = serde_json::from_str(r#"{"kind":"one","name":"a.txt"}"#).expect("one");
+    assert_eq!(
+        one,
+        TrashUndoTarget::One {
+            name: "a.txt".to_string()
+        }
+    );
+    let many: TrashUndoTarget = serde_json::from_str(r#"{"kind":"many","countText":"3"}"#).expect("many");
+    assert_eq!(
+        many,
+        TrashUndoTarget::Many {
+            count_text: "3".to_string()
+        }
+    );
+}
+
+#[test]
 fn the_detach_word_comes_off_the_volume_id() {
     use cmdr_fs::volume::{adb_volume_id, mtp_device_id, path_volume_id};
 

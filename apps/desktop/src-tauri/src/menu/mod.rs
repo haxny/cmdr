@@ -9,8 +9,8 @@
 //! - `menu_bar.rs`: the menu bar for both platforms, one row per item (`MENU_BAR`), written in the
 //!   words `menu_spec.rs` defines. `menu_bar_builder.rs` builds it for the running platform
 //!   (`build_menu`), and `mnemonics.rs` allocates the Linux underline letters.
-//! - `menu_items.rs`: small shared pieces: `APP_MENU_TITLE`, `pin_tab_label`, `detach_label`, and
-//!   `truncate_for_menu_label`.
+//! - `menu_items.rs`: small shared pieces: `APP_MENU_TITLE`, the live labels (`pin_tab_label`,
+//!   `same_kind_menu_label`, `undo_trash_menu_label`, `detach_label`), and `truncate_for_menu_label`.
 //! - `file_context_menu.rs`: the file context menu (the one a right-click on a row opens), plus
 //!   `FileContextInfo` / `ContextMenuPaneFacts` / `ContextMenuResult`.
 //! - `menu_structure.rs`: the smaller context menus (breadcrumb, parent row, function key bar, tab,
@@ -134,7 +134,7 @@ pub use menu_handlers::{
     set_display_accelerators_from_command, set_macos_menu_icons, set_macos_menu_icons_from_command,
 };
 pub(crate) use menu_items::DetachWord;
-pub use menu_items::{SameKindTarget, pin_tab_label, same_kind_menu_label};
+pub use menu_items::{SameKindTarget, TrashUndoTarget, pin_tab_label, same_kind_menu_label, undo_trash_menu_label};
 pub use menu_structure::{
     ContextMenuShortcuts, build_breadcrumb_context_menu, build_function_key_bar_context_menu,
     build_network_host_context_menu, build_parent_row_context_menu, build_tab_context_menu, build_viewer_context_menu,
@@ -380,6 +380,10 @@ pub struct MenuState<R: Runtime> {
     /// item's enabled state is recomputed from all its inputs at once. Starts `false`, matching the item as
     /// it's built.
     pub reopen_closed_tab_enabled: AtomicBool,
+    /// Whether a trash this session waits to be undone, deciding Edit > "Undo move to trash". Pushed by
+    /// `update_undo_trash_menu` (which also relabels the item), and stored for the same reason as
+    /// `reopen_closed_tab_enabled`. Starts `false`, matching the item as it's built.
+    pub undo_trash_available: AtomicBool,
     /// The frontend commands the main window's dialog gate refuses right now: every `BLOCKED_BY_DIALOGS`
     /// command while a dialog, an explorer overlay, or the command palette is up, and nothing once it's gone.
     /// Pushed by `set_commands_refused_over_dialog`, whose only writer is
@@ -464,6 +468,7 @@ impl<R: Runtime> Default for MenuState<R> {
             view_mode_brief_accel: Mutex::new(menu_bar::spec_accelerator(VIEW_MODE_BRIEF_LEFT_ID).map(String::from)),
             pin_tab: Mutex::new(None),
             reopen_closed_tab_enabled: AtomicBool::new(false),
+            undo_trash_available: AtomicBool::new(false),
             commands_refused_over_dialog: Mutex::new(HashSet::new()),
             items: Mutex::new(HashMap::new()),
             display_accelerators: Mutex::new(HashMap::new()),
@@ -498,8 +503,9 @@ impl<R: Runtime> MenuState<R> {
 
     /// Give a tracked menu-bar item a new label, keeping whatever display-only shortcut it draws.
     ///
-    /// For an item whose words depend on live state (today only "Select all of the same kind",
-    /// which names what the cursor row would select). Two things have to move together, which is
+    /// For an item whose words depend on live state ("Select all of the same kind", which names
+    /// what the cursor row would select, and "Undo move to trash", which names what it would put
+    /// back). Two things have to move together, which is
     /// why this isn't a bare `set_text`:
     ///
     /// - on Linux the display-only shortcut lives INSIDE the label, so it's recomposed here;

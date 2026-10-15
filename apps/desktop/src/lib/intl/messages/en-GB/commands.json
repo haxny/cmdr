@@ -82,5 +82,13 @@
   "commands.editUndoTrash.description": "Put back the files you last moved to the Bin",
   "@commands.editUndoTrash.description": {
     "sourceHash": "3aa756f"
+  },
+  "commands.editUndoTrash.one": "Undo move to Bin of “{name}”",
+  "@commands.editUndoTrash.one": {
+    "sourceHash": "45494c8"
+  },
+  "commands.editUndoTrash.many": "Undo move to Bin of {countText} {count, plural, one {item} other {items}}",
+  "@commands.editUndoTrash.many": {
+    "sourceHash": "69c4966"
   }
 }

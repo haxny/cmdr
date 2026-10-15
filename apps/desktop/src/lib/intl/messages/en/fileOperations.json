@@ -82,10 +82,6 @@
     "description": "Button on the toast that appears right after files are moved to the trash. Pressing it opens the trash folder in the file pane, with the cursor on the item that was just moved there. \"Trash\" is the macOS Trash, so use whatever your platform calls the recoverable wastebasket. Short control label; the toast is narrow, so keep it to one or two words."
   },
 
-  "fileOperations.trash.nothingToUndo": "There’s no trash to undo.",
-  "@fileOperations.trash.nothingToUndo": {
-    "description": "Toast shown when the user picks Edit > Undo move to trash (or its command) but nothing they moved to the trash since opening Cmdr is waiting to be undone: either nothing was trashed, or the last trash was already put back."
-  },
   "fileOperations.trash.undoing": "Putting them back…",
   "@fileOperations.trash.undoing": {
     "description": "Replaces the toast while an undo is running, after the user pressed Undo on the trash toast. Putting files back can take a while on a slow or busy drive, so this is a progress state, not a result. Sentence case; the character at the end is an ellipsis. The files come back OUT of the Trash, so use the same verb as fileOperations.trash.undone."
@@ -113,7 +109,24 @@
 
   "fileOperations.trash.undoUnavailable": "Nothing to put back. These items may already be back, or their drive isn’t connected.",
   "@fileOperations.trash.undoUnavailable": {
-    "description": "Result toast when an undo had nothing to reverse: the items are already back, someone emptied the trash, or the drive they belong on is no longer connected. Two sentences, both plain statements rather than a warning. Sentence case. “put back” here is restoring from the Trash, like fileOperations.trash.undone."
+    "description": "Result toast when an undo had nothing to reverse: the items are already back, or the drive they belong on is no longer connected. Two sentences, both plain statements rather than a warning. Sentence case. “put back” here is restoring from the Trash, like fileOperations.trash.undone."
+  },
+
+  "fileOperations.trash.undoGone": "Nothing to put back: {count, plural, one {it’s} other {they’re}} no longer in the trash.",
+  "@fileOperations.trash.undoGone": {
+    "description": "Result toast when the user asked to undo a move to the trash, but the trash no longer holds any of those items (it was emptied, or they were deleted from it since), so nothing could come back. A plain statement, not a warning. Sentence case. “Put back” is restoring from the Trash, like fileOperations.trash.undone; use the same trash term as the rest of these toasts.",
+    "placeholders": {
+      "count": "how many items were no longer in the trash (drives the pronoun: one item or several)"
+    }
+  },
+
+  "fileOperations.trash.undoPartlyGone": "{countText} {count, plural, one {item was} other {items were}} no longer in the trash.",
+  "@fileOperations.trash.undoPartlyGone": {
+    "description": "A second sentence added to an undo's result toast (after fileOperations.trash.undone or fileOperations.trash.undonePartial) when some of the trashed items couldn't come back because the trash no longer holds them (it was emptied, or they were deleted from it since). A plain statement, not a warning. Sentence case. Use the same trash term as the sentence before it.",
+    "placeholders": {
+      "countText": "how many items were no longer in the trash, formatted for display (e.g. 12)",
+      "count": "the same number (drives the singular/plural form of the noun and verb)"
+    }
   },
 
   "fileOperations.trash.noTrashHere": "This drive doesn’t keep a trash.",

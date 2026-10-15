@@ -1930,8 +1930,8 @@ and `sameKindIndices(target, entries)` asks a listing snapshot which rows match.
   - **The Select MENU is pushed to**, because a native item can't read Svelte state. `publishSameKindTarget` debounces
     that push by 200 ms and skips it when the words wouldn't change, so arrowing through a folder of `.pdf`s costs
     nothing. Rust renders the words from its own `menu_t` catalog off a typed payload (`src-tauri/src/menu/DETAILS.md` §
-    "The one item whose LABEL changes"); the frontend never composes the string. `resyncSameKindMenu()` re-pushes after
-    a language rebuild, from `DualPaneExplorer`'s `menu-bar-rebuilt` handler.
+    "Items whose LABEL changes"); the frontend never composes the string. `resyncSameKindMenu()` re-pushes after a
+    language rebuild, from `DualPaneExplorer`'s `menu-bar-rebuilt` handler.
   - **The right-click `Selection >` submenu reads NEITHER.** `pane-pointer.ts` computes `sameKindTargetFor(entry)` as it
     opens the menu and sends it in the payload. ❗ ❌ Never the debounced value: a right-click, and `⌃⏎` even more so,
     is exactly when a label a frame behind would be read as truth.

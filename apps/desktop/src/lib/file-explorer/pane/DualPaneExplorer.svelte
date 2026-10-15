@@ -136,6 +136,7 @@
     import { getSetting, onSettingChange } from '#lib/settings/index.js'
     import { onMenuBarRebuilt, activateWindowMenu, onListingIndexSizesChanged } from '#lib/tauri-commands/index.js'
     import { resyncSameKindMenu } from './same-kind-target.svelte'
+    import { resyncTrashUndoMenu } from '#lib/file-operations/delete/trash-undo.js'
     import { resyncMenuAccelerators } from '#lib/shortcuts/index.js'
     import DragOverlay from '../drag/DragOverlay.svelte'
     import { addToastForPane } from '#lib/ui/toast/index.js'
@@ -660,13 +661,15 @@
         // The menu bar is thrown away and rebuilt when the UI language changes, so
         // every item is a new object and everything this window had pushed onto the
         // old ones is gone. Rust restores what it knows (checked states, the
-        // view-mode pair); these five are the ones only the frontend knows.
+        // view-mode pair); these six are the ones only the frontend knows.
         unlistenMenuBarRebuilt = await onMenuBarRebuilt(() => {
             resyncMenuAccelerators()
             syncPinTabMenu()
             syncReopenMenuState()
             // The Select item comes up neutral; only this side knows what the cursor is on.
             resyncSameKindMenu()
+            // Edit > Undo move to trash comes up greyed out; only this side knows what was trashed.
+            resyncTrashUndoMenu()
             // Re-applies the file-scoped enable/disable state, including the
             // operation-start gate, which a fresh bar comes up without.
             void activateWindowMenu('main')

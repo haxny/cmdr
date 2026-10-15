@@ -200,6 +200,7 @@ export {
   orderWindowToBack,
   updatePinTabMenu,
   updateSelectSameKindMenu,
+  updateUndoTrashMenu,
   setReopenClosedTabEnabled,
   setOpenTerminalHereEnabled,
   getChildWindowRect,

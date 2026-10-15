@@ -325,6 +325,21 @@
   "@commands.editUndoTrash.label": {
     "description": "Command name that puts back the files the user most recently moved to the trash in Cmdr, the same thing the Undo button on the \"Moved 3 files to trash\" notification does. Appears in the command palette, the keyboard shortcuts settings, and the Edit menu. \"Move to trash\" is the action's name, as in macOS's own \"Move to Trash\"."
   },
+  "commands.editUndoTrash.one": "Undo move to trash of “{name}”",
+  "@commands.editUndoTrash.one": {
+    "description": "The command palette's name for commands.editUndoTrash.label once the user has moved exactly ONE file or folder to the trash, so the row names what it would put back. Same wording as menu.edit.undoTrashOne; keep the two identical.",
+    "placeholders": {
+      "name": "the trashed file or folder's name, e.g. \"report.pdf\""
+    }
+  },
+  "commands.editUndoTrash.many": "Undo move to trash of {countText} {count, plural, one {item} other {items}}",
+  "@commands.editUndoTrash.many": {
+    "description": "The command palette's name for commands.editUndoTrash.label once the user has moved TWO OR MORE files or folders to the trash in one go, so the row says how many it would put back. Same meaning as menu.edit.undoTrashMany, which can't inflect; this one can, so use your language's natural plural here.",
+    "placeholders": {
+      "countText": "how many items, 2 or more, formatted for display (e.g. 1,234)",
+      "count": "the same number (drives the singular/plural form of the noun)"
+    }
+  },
   "commands.editUndoTrash.description": "Put back the files you last moved to the trash",
   "@commands.editUndoTrash.description": {
     "description": "Longer help text for the \"Undo move to trash\" command, shown as a secondary line in the command palette."

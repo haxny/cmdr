@@ -7,6 +7,7 @@ import type { CommandSource } from '../types'
 import { getBadgeStatus } from '#lib/feature-status.js'
 import { isMacOS } from '#lib/shortcuts/key-capture.js'
 import { sameKindCommandLabel } from '#lib/file-explorer/pane/same-kind-target.svelte.js'
+import { trashUndoCommandLabel } from '#lib/file-operations/delete/trash-undo.js'
 import { BLOCKED_BY_DIALOGS, IN_TEXT_INPUTS_ONLY } from '../while-dialog-open'
 
 export const fileListCommands: CommandSource[] = [
@@ -342,6 +343,10 @@ export const fileListCommands: CommandSource[] = [
     whileDialogOpen: BLOCKED_BY_DIALOGS,
     descriptionKey: 'commands.editUndoTrash.description',
     keywords: ['undo', 'trash', 'bin', 'restore', 'put back', 'recover', 'deleted'],
+    // Offered only while there's a trash to undo, and named after it, the way the Edit menu
+    // item greys out and relabels itself.
+    paletteCondition: 'trashUndoAvailable',
+    displayName: trashUndoCommandLabel,
   },
   {
     // No shortcut: it's the "where did that go?" follow-up, reached from the

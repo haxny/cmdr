@@ -392,17 +392,24 @@ second `(⇧8)` on the end. The glyph is the frontend's own spelling (`⇧8`), �
 never parsed. A word key shows as `Backspace` where AppKit would draw `⌫`; nobody has hit that yet, and the fix would be
 a display-spelling table Rust doesn't have today.
 
-### The one item whose LABEL changes: "Select all of the same kind"
+### Items whose LABEL changes: "Select all of the same kind" and "Undo move to trash"
 
-Two items in the bar say something different depending on state. `Pin tab` flips between two whole catalog keys
-(`Label::License` does the same for the licence row, and both are resolved at BUILD time). "Select all of the same
-kind" is the third and the only one rewritten AFTER the build, from data only the frontend has: what the focused pane's
-cursor row is. It reads "Select all folders", "Select all with extension *.pdf", "Select all files with no extension",
-or the neutral wording when the row implies no kind.
+Several items in the bar say something different depending on state. `Pin tab` flips between two whole catalog keys
+(`Label::License` does the same for the licence row, and both are resolved at BUILD time). Two are rewritten AFTER the
+build, from data only the frontend has:
 
-**The words are rendered in Rust**, by `menu_items::same_kind_menu_label` from a typed `SameKindTarget` (wire-identical
-to the frontend's `pane/select-same-kind.ts` type, pinned by a deserialization test). ❌ Never a string the frontend
-composes: the bar speaks the language `crate::intl` resolves, which is not necessarily the webview's.
+- "Select all of the same kind" says what the focused pane's cursor row would select: "Select all folders", "Select all
+  with extension *.pdf", "Select all files with no extension", or the neutral wording when the row implies no kind.
+- "Undo move to trash" names what it would put back: "Undo move to trash of “report.pdf”", "… of 3 items", or the plain
+  wording (greyed out when there's nothing to undo, enabled for a trash it can't name). `menu_t` has no plurals, so the
+  counted key only ever carries 2 or more, and its catalog description tells translators to pick a shape that reads
+  right for every such number.
+
+**The words are rendered in Rust**, by `menu_items::same_kind_menu_label` / `undo_trash_menu_label` from a typed
+`SameKindTarget` / `TrashUndoTarget` (wire-identical to the frontend's `pane/select-same-kind.ts` and
+`delete/trash-undo.ts` types, each pinned by a deserialization test). ❌ Never a string the frontend composes: the bar
+speaks the language `crate::intl` resolves, which is not necessarily the webview's. A count arrives preformatted
+(`countText`): number formatting is the frontend's.
 
 **`MenuState::set_item_label` is how a tracked item's label moves**, and it is not a bare `set_text`, because two other
 things hang off the label:
@@ -414,7 +421,8 @@ things hang off the label:
   later rebind silently restored the neutral wording.
 
 ❗ **On macOS the caller must follow with `set_display_accelerators`.** `set_text` replaces the attributed title with a
-plain one, and the dimmed `⌥⇧=` goes with it. `update_select_same_kind_menu` does exactly that, and the pass is cheap
+plain one, and the dimmed `⌥⇧=` goes with it. `update_select_same_kind_menu` and `update_undo_trash_menu` do exactly
+that, and the pass is cheap
 enough to re-run per push (it walks the spec, finds only the Select menu wants glyphs, and re-measures one tab stop).
 
 **The push is debounced 200 ms and skipped when the words wouldn't change**, since holding an arrow key is a burst whose
@@ -422,8 +430,10 @@ only interesting value is the last one. The store behind it (`pane/same-kind-tar
 every surface's label comes from: who publishes into it, who pulls versus who is pushed to, and why there may be only
 one publisher are all in `src/lib/file-explorer/pane/DETAILS.md` § Select all of the same kind.
 
-A language rebuild throws the item away, so `DualPaneExplorer`'s `menu-bar-rebuilt` handler calls `resyncSameKindMenu()`
-alongside the other frontend-only re-pushes.
+The undo-trash push isn't debounced: it moves once per finished trash or undo.
+
+A language rebuild throws both items away, so `DualPaneExplorer`'s `menu-bar-rebuilt` handler calls
+`resyncSameKindMenu()` and `resyncTrashUndoMenu()` alongside the other frontend-only re-pushes.
 
 ### Where a CONTEXT menu's accelerator comes from
 
@@ -1263,6 +1273,10 @@ class of bug.
   `set_reopen_closed_tab_enabled(enabled: bool)` after every close, reopen, and focus change, which stores it in
   `MenuState.reopen_closed_tab_enabled` and recomputes the items (§ Dialog refusals), so the menu always reflects the
   focused pane's closed-tab stack.
+- **Undo move to trash item** (`UNDO_TRASH_ID`): like macOS's own Edit > Undo, always present and **disabled** while
+  there's nothing to undo. One push, `update_undo_trash_menu(target)`, carries both halves: `target.is_some()` lands in
+  `MenuState.undo_trash_available` (§ Dialog refusals), and the target relabels it (§ "Items whose LABEL changes").
+  The frontend's only pusher is `file-operations/delete/trash-undo.ts`.
 - **Open terminal here item** (`OPEN_TERMINAL_HERE_ID` → `file.openTerminalHere`, macOS only): sits in the File menu
   right after Show in Finder (F9, with ⌥⌘T as a second binding), and in the file context menu next to it. It's the one item whose enabled state
   follows the FOCUSED PANE rather than the window: a pane on MTP or ADB has no path a shell can `cd` into. The verdict

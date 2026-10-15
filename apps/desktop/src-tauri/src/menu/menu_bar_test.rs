@@ -63,7 +63,7 @@ menu menu.bar.file id=menu_file
 menu menu.bar.edit id=menu_edit
   0 predefined undo menu.edit.undo
   1 predefined redo menu.edit.redo
-  2 item undo_trash menu.edit.undoTrash tracked
+  2 item undo_trash menu.edit.undoTrash disabled tracked
   3 separator
   4 item edit_cut menu.edit.cut [Cmd+X] tracked
   5 item edit_copy menu.edit.copy [Cmd+C] tracked
@@ -182,7 +182,7 @@ menu menu.bar.file
   17 item get_info menu.file.getInfo [Ctrl+I] tracked
   18 item quick_look menu.file.quickLook tracked
 menu menu.bar.edit
-  0 item undo_trash menu.edit.undoTrash tracked
+  0 item undo_trash menu.edit.undoTrash disabled tracked
   1 separator
   2 item edit_cut menu.edit.cut [Ctrl+X] tracked
   3 item edit_copy menu.edit.copy [Ctrl+C] tracked

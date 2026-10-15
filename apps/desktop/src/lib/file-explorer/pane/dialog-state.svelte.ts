@@ -37,7 +37,11 @@ import {
 } from '#lib/file-operations/transfer/transfer-complete-toast.js'
 import { getTechnicalDetails } from '#lib/file-operations/transfer/transfer-error-messages.js'
 import TrashCompleteToastContent from '#lib/file-operations/delete/TrashCompleteToastContent.svelte'
-import { rememberTrashForUndo, trashCompleteToastId } from '#lib/file-operations/delete/trash-undo.js'
+import {
+  rememberTrashForUndo,
+  trashCompleteToastId,
+  type TrashedItems,
+} from '#lib/file-operations/delete/trash-undo.js'
 import { getAppLogger } from '#lib/logging/logger.js'
 import { moveCursorToNewFolder } from '#lib/file-operations/mkdir/new-folder-operations.js'
 import { archiveNameFromPath, pathCrossesArchiveBoundary } from './archive-paths'
@@ -201,12 +205,13 @@ export function createDialogState(deps: DialogStateDeps) {
     level: NonErrorToastLevel,
     refusedMessage: string | null,
     sourceFolderPath: string | undefined,
+    trashed: TrashedItems,
   ): void {
     // A job that ran in the background still has "Sent to the background" up,
     // stale now: this toast takes its place (a no-op for a foreground one).
     if (settledOperationId) dismissQueueHandoffToast(settledOperationId)
     if (op === 'trash' && settledOperationId) {
-      rememberTrashForUndo(settledOperationId)
+      rememberTrashForUndo(settledOperationId, trashed)
       addToast(TrashCompleteToastContent, {
         id: trashCompleteToastId(settledOperationId),
         level,
@@ -279,7 +284,18 @@ export function createDialogState(deps: DialogStateDeps) {
     const refusedMessage = composeTrashRefusedToast(refused)
     const allSkipped = filesSkipped > 0 && filesSkipped === filesProcessed
     const completeLevel: NonErrorToastLevel = refusedMessage !== null ? 'warn' : allSkipped ? 'info' : 'success'
-    raiseCompletionToasts(op, settledOperationId, toastMessage, completeLevel, refusedMessage, props?.sourceFolderPath)
+    raiseCompletionToasts(
+      op,
+      settledOperationId,
+      toastMessage,
+      completeLevel,
+      refusedMessage,
+      props?.sourceFolderPath,
+      {
+        sourcePaths: props?.sourcePaths ?? [],
+        itemCount: filesProcessed,
+      },
+    )
   }
 
   /** Opens the error dialog, claiming the failure so the corner chip and the

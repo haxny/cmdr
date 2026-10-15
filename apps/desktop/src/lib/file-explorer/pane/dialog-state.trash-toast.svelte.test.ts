@@ -147,7 +147,11 @@ describe('a completed trash', () => {
     dialogs.handleTransferComplete(ONE_FILE)
 
     expect(raisedToast().options.id).toBe(trashCompleteToastId('op-1'))
-    expect(rememberTrashForUndo).toHaveBeenCalledWith('op-1')
+    // What it trashed rides along, so the menu item can name it ("Undo move to trash of “photo.jpg”").
+    expect(rememberTrashForUndo).toHaveBeenCalledWith('op-1', {
+      sourcePaths: [`${FOLDER}/photo.jpg`],
+      itemCount: 1,
+    })
   })
 
   it('gives the user longer to reach the buttons than a plain toast gets', () => {

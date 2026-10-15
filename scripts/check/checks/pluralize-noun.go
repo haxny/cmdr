@@ -209,6 +209,11 @@ func pluralizeNounWalkAction(d os.DirEntry, exts []string) (skip bool, action er
 		}
 		return true, nil
 	}
+	// A generated file (`native_strings.gen.rs`, `keys.gen.ts`) mirrors catalog DATA, whose plurals
+	// the i18n checks own, and it can't carry a per-line opt-out: the generator would drop it.
+	if strings.Contains(d.Name(), ".gen.") {
+		return true, nil
+	}
 	for _, ext := range exts {
 		if strings.HasSuffix(d.Name(), ext) {
 			return false, nil

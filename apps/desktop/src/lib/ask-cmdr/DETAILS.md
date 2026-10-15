@@ -443,7 +443,8 @@ choice, and a locale whose plural has only `other` (`zh`, `vi`) couldn't express
 **Whatever no reason accounts for is still said by class**, with the leftover count ("Left 4 files alone: they changed…,
 or the old name is taken again."). That covers a batch undone before the reason column existed (its rows read "reason
 not recorded") and `alreadyGone`, which maps to no line because it counts as restored. A missing reason must never
-shrink the skipped count the line admits to.
+shrink the skipped count the line admits to. `vanished` (the renamed file is gone and its old name absent too) has its
+own line, since the class line ("Left … alone") would misstate a file that isn't there.
 
 ## Editing a proposed name
 

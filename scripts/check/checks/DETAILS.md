@@ -1760,7 +1760,9 @@ nothing" and passes). Anything narrower than every first-party member carries a 
 - **`desktop-rust-write-ops-agent-isolation`** is `AppTreeOnly`. It fences `file_system/write_operations/`, which only
   exists in the app tree; no other member has a write engine to keep out of the agent module.
 - **`desktop-pluralize-noun`** is `app` only. `pluralize` is a private module of the app crate, so a tool crate can't
-  reach the helper the check directs it to.
+  reach the helper the check directs it to. It skips `*.gen.*` files: `native_strings.gen.rs` mirrors catalog data (a
+  menu label like "… of {countText} items", whose count is never 1), the i18n checks own catalog plurals, and a
+  generated row can't carry the opt-out comment.
 - **`desktop-rust-cfg-gate`** governs every kind, because it pairs each member's OWN manifest with that member's tree
   and skips members that are already macOS-only at the crate level.
 

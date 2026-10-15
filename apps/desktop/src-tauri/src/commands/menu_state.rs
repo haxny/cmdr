@@ -1,5 +1,5 @@
 //! Menu-state sync commands: the pushes that keep the native menu bar saying what
-//! the frontend is showing (view mode, hidden files, pin tab, reopen tab, the
+//! the frontend is showing (view mode, hidden files, pin tab, reopen tab, undo trash, the
 //! Select menu's live "same kind" label, the UI language) and the greying that
 //! follows the focused pane, a dialog, or a window swap.
 //!
@@ -8,8 +8,9 @@
 
 use crate::ignore_poison::IgnorePoison;
 use crate::menu::{
-    MenuState, SELECT_SAME_KIND_ID, SameKindTarget, SettingsChanged, ViewMode, apply_menu_item_states,
-    rebuild_view_mode_items, same_kind_menu_label, set_menu_context, sync_view_mode_check_states,
+    MenuState, SELECT_SAME_KIND_ID, SameKindTarget, SettingsChanged, TrashUndoTarget, UNDO_TRASH_ID, ViewMode,
+    apply_menu_item_states, rebuild_view_mode_items, same_kind_menu_label, set_menu_context,
+    sync_view_mode_check_states, undo_trash_menu_label,
 };
 #[cfg(target_os = "macos")]
 use crate::menu::{swap_to_main_menu, swap_to_viewer_menu};
@@ -151,6 +152,29 @@ pub fn update_select_same_kind_menu<R: Runtime>(
     menu_state.set_item_label(SELECT_SAME_KIND_ID, same_kind_menu_label(target.as_ref()))?;
     // `set_text` leaves a plain NSMenuItem title behind, so the dimmed `⌥⇧=` has to be redrawn or
     // it vanishes on the first cursor move.
+    #[cfg(target_os = "macos")]
+    crate::menu::set_display_accelerators_from_command(&app);
+    Ok(())
+}
+
+/// Greys out (or restores) Edit > "Undo move to trash" and makes it name what it would put back:
+/// "Undo move to trash of “report.pdf”", "… of 3 items", or the plain wording, greyed out, for
+/// `None` (nothing to undo).
+///
+/// `target` is the newest trash this session nobody has undone yet, as `trash-undo.ts` remembers
+/// it; that module is the only caller, and pushes on every change. ⚠️ CHROME only: the command
+/// re-reads that memory when it runs, so a label a beat behind can't undo a different trash.
+#[tauri::command]
+#[specta::specta]
+pub fn update_undo_trash_menu<R: Runtime>(app: AppHandle<R>, target: Option<TrashUndoTarget>) -> Result<(), String> {
+    let menu_state = app.state::<MenuState<R>>();
+    menu_state
+        .undo_trash_available
+        .store(target.is_some(), Ordering::Relaxed);
+    menu_state.set_item_label(UNDO_TRASH_ID, undo_trash_menu_label(target.as_ref()))?;
+    apply_menu_item_states(&menu_state);
+    // `set_text` leaves a plain NSMenuItem title behind, so a rebound display-only shortcut has
+    // to be redrawn (see `update_select_same_kind_menu`).
     #[cfg(target_os = "macos")]
     crate::menu::set_display_accelerators_from_command(&app);
     Ok(())

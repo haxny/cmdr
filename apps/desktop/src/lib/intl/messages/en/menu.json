@@ -165,7 +165,21 @@
   },
   "menu.edit.undoTrash": "Undo move to trash",
   "@menu.edit.undoTrash": {
-    "description": "VERB phrase (imperative). Edit menu item that puts back the files the user most recently moved to the trash in Cmdr, the same as the Undo button on the \"Moved 3 files to trash\" notification. It sits right under the text-editing Undo and Redo, so the wording must make clear it's about trashed FILES, not text. \"Move to trash\" matches macOS's own \"Move to Trash\" action; use the term macOS uses in this language."
+    "description": "VERB phrase (imperative). Edit menu item that puts back the files the user most recently moved to the trash in Cmdr, the same as the Undo button on the \"Moved 3 files to trash\" notification. It sits right under the text-editing Undo and Redo, so the wording must make clear it's about trashed FILES, not text. This plain wording shows, greyed out, while there's nothing to undo; once there is, menu.edit.undoTrashOne or menu.edit.undoTrashMany takes its place. \"Move to trash\" matches macOS's own \"Move to Trash\" action; use the term macOS uses in this language."
+  },
+  "menu.edit.undoTrashOne": "Undo move to trash of “{name}”",
+  "@menu.edit.undoTrashOne": {
+    "description": "VERB phrase (imperative). The menu.edit.undoTrash item once the user has moved exactly ONE file or folder to the trash, so the item names what it would put back. The command palette shows the same words. Match your Finder's quotation marks, as in menu.context.copyNamed, and use the same trash term as menu.edit.undoTrash. Keep the {name} token exactly as written, braces included; it is replaced literally, with no formatting, and can be any length.",
+    "placeholders": {
+      "name": "the trashed file or folder's name, e.g. \"report.pdf\""
+    }
+  },
+  "menu.edit.undoTrashMany": "Undo move to trash of {countText} items",
+  "@menu.edit.undoTrashMany": {
+    "description": "VERB phrase (imperative). The menu.edit.undoTrash item once the user has moved TWO OR MORE files or folders to the trash in one go, so the item says how many it would put back. The command palette shows the same words. The native menu can't pick a plural form, so {countText} is always 2 or more: if your language inflects the noun differently across numbers of 2 and up, use a shape that reads right for every one of them (like \"items: {countText}\"). Use the same trash term as menu.edit.undoTrash. Keep the {countText} token exactly as written, braces included; it is replaced literally.",
+    "placeholders": {
+      "countText": "how many items, 2 or more, formatted for display (e.g. 1,234)"
+    }
   },
   "menu.edit.cut": "Cut",
   "@menu.edit.cut": {

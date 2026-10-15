@@ -10,6 +10,7 @@ import {
   type ServicesSelection,
 } from '#lib/ipc/bindings.js'
 import type { SameKindTarget } from '#lib/file-explorer/pane/select-same-kind.js'
+import type { TrashUndoTarget } from '#lib/file-operations/delete/trash-undo.js'
 import type { OperationGate, SoftDialogId } from '#lib/ui/dialog-registry.js'
 import { isMacOS } from '#lib/shortcuts/key-capture.js'
 import { throwIpcError } from './ipc-types'
@@ -95,6 +96,16 @@ export async function setFileOperationsBlocked(blocked: boolean): Promise<void> 
 export async function setCommandsRefusedOverDialog(commandIds: string[]): Promise<void> {
   // eslint-disable-next-line cmdr/no-raw-tauri-invoke -- generic over Runtime; not in typed bindings
   await invoke('set_commands_refused_over_dialog', { commandIds })
+}
+
+/**
+ * Greys out Edit > "Undo move to trash" for `null` (nothing to undo), or enables it and makes it name
+ * what it would put back. `#lib/file-operations/delete/trash-undo.ts` is the only caller. Rust renders
+ * the words from `menu_t`, so ❌ never pass a composed string here.
+ */
+export async function updateUndoTrashMenu(target: TrashUndoTarget | null): Promise<void> {
+  // eslint-disable-next-line cmdr/no-raw-tauri-invoke -- generic <R: Runtime> command, excluded from specta bindings (see the `ipc.rs` manifest)
+  await invoke('update_undo_trash_menu', { target })
 }
 
 /** Enables or disables the Tab menu "Reopen closed tab" item based on whether the focused pane's closed-tab stack has entries. */

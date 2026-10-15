@@ -70,6 +70,36 @@ pub fn same_kind_menu_label(target: Option<&SameKindTarget>) -> String {
     }
 }
 
+/// What Edit > Undo move to trash would put back right now: the newest trash this session, as
+/// the frontend remembers it (`file-operations/delete/trash-undo.ts`'s `TrashUndoTarget`,
+/// wire-identical). `None` is "nothing to undo", which also greys the item out.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Deserialize)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+pub enum TrashUndoTarget {
+    /// One file or folder, named.
+    One { name: String },
+    /// Two or more, counted. Formatted by the frontend, which owns number formatting.
+    Many {
+        #[serde(rename = "countText")]
+        count_text: String,
+    },
+}
+
+/// The Edit > Undo move to trash label, which names what it would put back.
+///
+/// ❗ Rendered HERE, from a typed payload, ❌ never as a literal the frontend composes, for the
+/// same reason as [`same_kind_menu_label`]. `menu_t` has no plurals, so the counted form only
+/// ever carries 2 or more, and its catalog description tells translators so.
+pub fn undo_trash_menu_label(target: Option<&TrashUndoTarget>) -> String {
+    match target {
+        None => menu_t("menu.edit.undoTrash"),
+        Some(TrashUndoTarget::One { name }) => menu_t_with("menu.edit.undoTrashOne", &[("name", name)]),
+        Some(TrashUndoTarget::Many { count_text }) => {
+            menu_t_with("menu.edit.undoTrashMany", &[("countText", count_text)])
+        }
+    }
+}
+
 /// Which word a volume row's detach control uses.
 ///
 /// ❗ A phone says Disconnect, ❌ never Eject: `adb` has no per-client detach, so

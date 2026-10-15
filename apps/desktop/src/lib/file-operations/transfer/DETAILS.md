@@ -998,8 +998,9 @@ the user finishes reading it feeling Cmdr did the careful thing.
 **The reason lines are two keys per reason, named and counted**, for the reason `#lib/ask-cmdr/`'s rename-undo rail
 already found: "name the one file" vs "count them" is a display decision, not a plural category, and a locale with only
 `other` (Chinese, Vietnamese) can't express both from one message. `alreadyGone` maps to `null` — the backend counts it
-as reversed, so it never arrives as a skip — and it stays in the map so a NEW `SkipReason` is a compile error here
-rather than a count silently dropped off the list.
+as reversed, so it never arrives as a skip — and so does `vanished`, which only the journal's restore-move of a FINISHED
+operation reports. Both stay in the map so a NEW `SkipReason` is a compile error here rather than a count silently
+dropped off the list.
 
 **Cmdr's OWN leftover gets its own line, outside the reason list.** `rollback.stagedLeftovers` is the `.cmdr-tmp-*`
 scratch a cancelled transfer's sweep asked the destination to remove and didn't get, because an abandoned write task

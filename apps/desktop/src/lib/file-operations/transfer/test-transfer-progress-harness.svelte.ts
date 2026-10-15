@@ -85,6 +85,8 @@ export function tauriCommandsMock() {
     moveFiles: vi.fn(() => Promise.resolve({ operationId: 'op-1', operationType: 'move' })),
     deleteFiles: vi.fn(() => Promise.resolve({ operationId: 'op-1', operationType: 'delete' })),
     trashFiles: vi.fn(() => Promise.resolve({ operationId: 'op-1', operationType: 'trash' })),
+    // A finished trash tells Edit > Undo move to trash about itself (`delete/trash-undo.ts`).
+    updateUndoTrashMenu: vi.fn(() => Promise.resolve()),
     onWriteProgress: vi.fn((cb: (e: WriteProgressEvent) => void) => {
       listeners.progress = cb
       return Promise.resolve(noopUnlisten)

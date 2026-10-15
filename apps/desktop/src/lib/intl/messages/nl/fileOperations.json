@@ -52,10 +52,6 @@
   "@fileOperations.trash.goToTrashAction": {
     "sourceHash": "5332858"
   },
-  "fileOperations.trash.nothingToUndo": "Er is niets om uit de prullenmand terug te zetten.",
-  "@fileOperations.trash.nothingToUndo": {
-    "sourceHash": "67b73bf"
-  },
   "fileOperations.trash.undoing": "Bezig met terugzetten…",
   "@fileOperations.trash.undoing": {
     "sourceHash": "3272a7a"

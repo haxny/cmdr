@@ -580,6 +580,15 @@ fn missing_item(sides: &[(&dyn Volume, &Path)]) -> ItemResult {
     }
 }
 
+/// The verdict for a restore whose item is gone from BOTH sides: `Vanished`, under the same
+/// containment rule as [`missing_item`] (a path a narrowed root no longer reaches isn't gone).
+fn vanished_item(sides: &[(&dyn Volume, &Path)]) -> ItemResult {
+    match missing_item(sides) {
+        ItemResult::Skipped(SkipReason::AlreadyGone) => ItemResult::Skipped(SkipReason::Vanished),
+        out_of_reach => out_of_reach,
+    }
+}
+
 async fn remove_file_if_unchanged(vm: &VolumeManager, runner: &dyn RollbackRunner, unit: &RollbackUnit) -> ItemResult {
     let (vol_id, path) = removal_target(unit);
     let Some(volume) = vm.get(&vol_id) else {
@@ -672,8 +681,17 @@ async fn restore_move(vm: &VolumeManager, runner: &dyn RollbackRunner, unit: &Ro
     // The thing to move back must still be where the op left it.
     let from_entry = match from_volume.get_metadata(from_path).await {
         Ok(e) => e,
-        // Gone (trash emptied, item moved within trash, already restored) ⇒ skip.
-        Err(VolumeError::NotFound(_)) => return missing_item(&sides),
+        // Gone from there. Whether that's an undo already done depends on the other side:
+        // back home (an earlier undo, Finder's Put Back) is the end state we wanted; absent
+        // from home too (trash emptied, deleted since) means nothing came back, and the
+        // undo must say so rather than credit a restore that never happened.
+        Err(VolumeError::NotFound(_)) => {
+            return match to_volume.get_metadata(to_path).await {
+                Ok(_) => missing_item(&sides),
+                Err(VolumeError::NotFound(_)) => vanished_item(&sides),
+                Err(_) => ItemResult::Skipped(SkipReason::Failed),
+            };
+        }
         Err(_) => return ItemResult::Skipped(SkipReason::Failed),
     };
     // For a file, verify it hasn't changed since the op (dirs: existence only —

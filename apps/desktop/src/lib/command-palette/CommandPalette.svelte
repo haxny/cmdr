@@ -26,6 +26,7 @@
     import type { PaletteCondition } from '#lib/commands/index.js'
     import { getFocusedPanePath, getFocusedPaneVolumeId } from '#lib/file-explorer/pane/focused-pane-reads.js'
     import { capabilitiesForPane } from '#lib/file-explorer/pane/volume-capabilities.js'
+    import { isTrashUndoAvailable } from '#lib/file-operations/delete/trash-undo.js'
 
     /**
      * Whether each conditional row belongs in the palette right now. A record, so a
@@ -35,6 +36,8 @@
     const PALETTE_CONDITIONS: Record<PaletteCondition, () => boolean> = {
         focusedPaneSharesLinks: () =>
             capabilitiesForPane(getFocusedPaneVolumeId(), getFocusedPanePath()).canShareLinks,
+        // Like the greyed-out Edit menu item: a row that could only do nothing isn't offered.
+        trashUndoAvailable: isTrashUndoAvailable,
     }
     const paletteConditionHolds = (condition: PaletteCondition): boolean => PALETTE_CONDITIONS[condition]()
 

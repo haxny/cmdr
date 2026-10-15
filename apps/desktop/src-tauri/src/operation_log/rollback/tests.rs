@@ -297,10 +297,36 @@ async fn trash_rollback_skips_when_trash_was_emptied() {
         vec![file_unit(0, "v", "/doc.txt", "v", "/.Trash/doc.txt", 5)],
     );
     let report = rig.rollback("op").await;
-    // Gone ⇒ the desired end state (absent from trash) already holds, an idempotent
-    // no-op, so nothing to restore and the item isn't a blocking skip.
+    // Gone from the trash AND absent from its old place: nothing came back, so the
+    // undo must say so rather than report a restore that never happened.
     assert!(!exists(&v, "/doc.txt").await);
-    assert_eq!(report.reversed, 1, "an already-gone item is an idempotent no-op");
+    assert_eq!(report.reversed, 0, "a file the trash no longer holds was not put back");
+    assert_eq!(report.skipped, 1);
+    assert_eq!(report.skips.len(), 1);
+    assert_eq!(report.skips[0].reason, SkipReason::Vanished);
+    assert_eq!(report.final_state, RollbackState::PartiallyRolledBack);
+}
+
+/// The other way an in-trash copy goes missing: it's already back where it came from
+/// (an earlier undo, or Finder's Put Back). That end state holds, so it's credited.
+#[tokio::test]
+async fn trash_rollback_credits_an_item_already_put_back() {
+    let rig = Rig::new();
+    let v = Arc::new(InMemoryVolume::new("V"));
+    put(&v, "/doc.txt", b"hello").await;
+    rig.register("v", v.clone());
+    rig.seed(
+        "op",
+        OpKind::Trash,
+        "v",
+        Some("v"),
+        RollbackState::Rollbackable,
+        vec![file_unit(0, "v", "/doc.txt", "v", "/.Trash/doc.txt", 5)],
+    );
+    let report = rig.rollback("op").await;
+    assert_eq!(report.reversed, 1, "already back where it belongs");
+    assert_eq!(report.skipped, 0);
+    assert_eq!(report.final_state, RollbackState::RolledBack);
 }
 
 #[tokio::test]

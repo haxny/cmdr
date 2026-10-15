@@ -486,6 +486,13 @@ moved to a second mount: a path under the old mount reads as outside, and the it
 counted. Pinned by `rollback/root_reach_tests.rs`, where `RootFenced` (`rollback/test_support.rs`) stands in for the
 refusing volume, since `InMemoryVolume` serves any path it holds.
 
+**A restore-move whose item is gone asks the OTHER side before calling it done** (`restore_move`). Back at its original
+path (an earlier undo, Finder's Put Back) is the end state the undo wanted: `AlreadyGone`, credited. Absent from BOTH
+sides (the trash was emptied, or the file was deleted since) is `SkipReason::Vanished`, a real skip, under the same
+root-reach rule (`vanished_item` wraps `missing_item`). Crediting it, as this once did, made Edit > Undo move to trash
+toast "Put back 3 files." over an emptied trash. Pinned by `trash_rollback_skips_when_trash_was_emptied` and
+`trash_rollback_credits_an_item_already_put_back`.
+
 ### Per-kind inverse table
 
 The op kind + item entry-type map to one of three inverse actions (`inverse_action`):

@@ -52,10 +52,6 @@
   "@fileOperations.trash.goToTrashAction": {
     "sourceHash": "5332858"
   },
-  "fileOperations.trash.nothingToUndo": "Aucun placement dans la corbeille à annuler.",
-  "@fileOperations.trash.nothingToUndo": {
-    "sourceHash": "67b73bf"
-  },
   "fileOperations.trash.undoing": "Remise en place…",
   "@fileOperations.trash.undoing": {
     "sourceHash": "3272a7a"

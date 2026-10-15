@@ -52,10 +52,6 @@
   "@fileOperations.trash.goToTrashAction": {
     "sourceHash": "5332858"
   },
-  "fileOperations.trash.nothingToUndo": "Det finns ingen flytt till papperskorgen att ångra.",
-  "@fileOperations.trash.nothingToUndo": {
-    "sourceHash": "67b73bf"
-  },
   "fileOperations.trash.undoing": "Lägger tillbaka dem…",
   "@fileOperations.trash.undoing": {
     "sourceHash": "3272a7a"

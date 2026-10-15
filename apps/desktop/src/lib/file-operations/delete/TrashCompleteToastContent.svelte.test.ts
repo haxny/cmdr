@@ -12,7 +12,8 @@ import { mount, flushSync } from 'svelte'
 import type { PaneRevealAPI } from '#lib/file-explorer/navigation/navigate-and-select.js'
 
 const runTrashUndo = vi.fn<(operationId: string) => Promise<void>>()
-vi.mock('./trash-undo', () => ({
+vi.mock('./trash-undo', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   runTrashUndo: (operationId: string): Promise<void> => runTrashUndo(operationId),
 }))
 

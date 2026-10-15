@@ -234,9 +234,15 @@ token_enum! {
         /// A directory the undo would remove isn't empty (a file was added since) — the
         /// create-folder / copied-dir recheck.
         DirNotEmpty => "dir_not_empty",
-        /// The thing to reverse is already gone (trash emptied, item already restored):
-        /// the desired end state already holds, so this is an idempotent no-op success.
+        /// The thing to reverse is already gone and the desired end state already holds
+        /// (a copy already removed, an item already restored), so this is an idempotent
+        /// no-op success.
         AlreadyGone => "already_gone",
+        /// The item is gone from where the operation left it AND absent from where it came
+        /// from (the trash was emptied, or it was deleted or moved away since): there's
+        /// nothing to put back. A real skip, unlike `AlreadyGone`, because the end state the
+        /// undo wanted (the item home again) does NOT hold.
+        Vanished => "vanished",
         /// A backend error prevented reversing this item.
         Failed => "failed",
         /// The item was verified as this operation's own, but it wears a lock this
@@ -313,6 +319,7 @@ mod tests {
                 RestoreTargetOccupied,
                 DirNotEmpty,
                 AlreadyGone,
+                Vanished,
                 Failed,
                 Locked
             ]

@@ -27,10 +27,6 @@
   "@fileOperations.trash.goToTrashAction": {
     "sourceHash": "9c15ead"
   },
-  "fileOperations.trash.nothingToUndo": "No hay ningún movimiento al basurero que deshacer.",
-  "@fileOperations.trash.nothingToUndo": {
-    "sourceHash": "60f64ad"
-  },
   "fileOperations.trash.undoing": "Devolviéndolos a su lugar…",
   "@fileOperations.trash.undoing": {
     "sourceHash": "21197c3"
