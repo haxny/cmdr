@@ -5,6 +5,10 @@
     import { sectionHasMatches } from '#lib/settings/settings-search.js'
     import { tString } from '#lib/intl/messages.svelte.js'
     import { sectionTitle } from '#lib/settings/section-i18n.js'
+    import { untrack } from 'svelte'
+    import { createDeferredActiveDescendant } from '#lib/ui/deferred-active-descendant.svelte.js'
+    import LiveAnnouncer from '#lib/ui/LiveAnnouncer.svelte'
+    import { formatInteger } from '#lib/intl/number-format.js'
 
     interface Props {
         searchQuery: string
@@ -90,6 +94,41 @@
             }
         }
         return sections
+    })
+
+    // ❗ Screen readers: the section cursor is `aria-activedescendant` on whichever element holds
+    // focus (the list, or the search field, which moves the cursor with ↑/↓ and so is a
+    // combobox over the list). Each lands a frame after its element takes focus
+    // (`deferred-active-descendant.svelte.ts` has the VoiceOver evidence). Option ids index the
+    // UNFILTERED order, so a search narrowing the list never renames a section.
+    const uid = $props.id()
+    const listboxId = `${uid}-sections`
+    const stableIndex = $derived.by(() => {
+        const map = new Map<string, number>()
+        for (const entry of orderedEntries) {
+            const paths =
+                entry.kind === 'tree' ? [entry.node.path, ...entry.node.subsections.map((s) => s.path)] : [entry.path]
+            for (const path of paths) map.set(path.join('/'), map.size)
+        }
+        return map
+    })
+    function optionId(path: string[]): string {
+        return `${uid}-section-${String(stableIndex.get(path.join('/')) ?? -1)}`
+    }
+    const selectedOptionId = $derived.by(() => {
+        const index = findSelectedIndex()
+        return index < 0 ? undefined : optionId(allSections[index].path)
+    })
+    const listDescendant = createDeferredActiveDescendant()
+    const searchDescendant = createDeferredActiveDescendant()
+
+    // How many sections a search leaves, said once the (already debounced) query lands: the
+    // narrowed list is otherwise silent, and so is a search that matched nothing.
+    let announcer: { announce: (message: string) => void } | undefined = $state()
+    $effect(() => {
+        if (!searchQuery.trim()) return
+        const count = untrack(() => allSections.length)
+        announcer?.announce(tString('settings.sidebar.matchCount', { count, countText: formatInteger(count) }))
     })
 
     function findSelectedIndex(): number {
@@ -190,9 +229,20 @@
             value={searchQuery}
             oninput={handleSearchInput}
             onkeydown={handleSearchKeydown}
+            onfocus={() => {
+                searchDescendant.tookFocus(selectedOptionId)
+            }}
+            onblur={() => {
+                searchDescendant.reset()
+            }}
             autocomplete="off"
             autocapitalize="off"
             spellcheck={false}
+            role="combobox"
+            aria-controls={listboxId}
+            aria-expanded={allSections.length > 0}
+            aria-autocomplete="list"
+            aria-activedescendant={searchDescendant.of(selectedOptionId)}
         >
             {#snippet trailing()}
                 {#if searchQuery}
@@ -209,12 +259,21 @@
         </TextInput>
     </div>
 
+    <LiveAnnouncer bind:this={announcer} />
     <div
         class="section-tree"
+        id={listboxId}
         tabindex="0"
         onkeydown={handleNavKeydown}
+        onfocus={() => {
+            listDescendant.tookFocus(selectedOptionId)
+        }}
+        onblur={() => {
+            listDescendant.reset()
+        }}
         role="listbox"
         aria-label={tString('settings.sidebar.sections')}
+        aria-activedescendant={listDescendant.of(selectedOptionId)}
     >
         {#each orderedEntries as entry (entry.kind === 'tree' ? entry.node.name : entry.name)}
             {#if entry.kind === 'tree'}
@@ -223,6 +282,7 @@
                         <button
                             class="section-item"
                             class:selected={isSelected(entry.node.path)}
+                            id={optionId(entry.node.path)}
                             onclick={() => {
                                 onSectionSelect(entry.node.path)
                             }}
@@ -232,13 +292,16 @@
                         >
                             {sectionTitle(entry.node.name)}
                         </button>
-                        {#if entry.node.subsections.length > 0}
-                            <div class="subsections">
+                        {#if entry.node.subsections.some(shouldShowSection)}
+                            <!-- A listbox holds options and groups only, so the subsections nest
+                                 in a group named for their section ("Colors and formats, Appearance"). -->
+                            <div class="subsections" role="group" aria-label={sectionTitle(entry.node.name)}>
                                 {#each entry.node.subsections as subsection (subsection.name)}
                                     {#if shouldShowSection(subsection)}
                                         <button
                                             class="section-item subsection"
                                             class:selected={isSelected(subsection.path)}
+                                            id={optionId(subsection.path)}
                                             onclick={() => {
                                                 onSectionSelect(subsection.path)
                                             }}
@@ -259,6 +322,7 @@
                     <button
                         class="section-item"
                         class:selected={isSelected(entry.path)}
+                        id={optionId(entry.path)}
                         onclick={() => {
                             onSectionSelect(entry.path)
                         }}

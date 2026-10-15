@@ -126,3 +126,16 @@ stale store reads.
 They're paired with the primitives because the settings window has exactly one consumer of each (the `routes/settings`
 page). Splitting them into `lib/settings/window/` would add a directory boundary that crosses the same import edges
 back. They share the `SettingsSection` wrapper styling and the same registry hooks, so they sit alongside the rest.
+
+## The sidebar to a screen reader
+
+- **One cursor, two focus homes.** ↑/↓ move the selected section from the section list AND from the search field, so
+  both name the selected option through `aria-activedescendant`: the list as a `role="listbox"`, the field as a
+  `role="combobox"` controlling it. Each id lands a frame after its element takes focus
+  (`#lib/ui/deferred-active-descendant.svelte.ts`: VoiceOver reads only the container when the two arrive together).
+- **Option ids index the unfiltered order** (`stableIndex`), so a search narrowing the list never renames a section and
+  the active descendant doesn't jump to a different id for the same row.
+- **Subsections sit in a `role="group"` named for their section.** A listbox may hold only options and groups, and
+  `aria-level` isn't allowed on an option, so the group is how "Colors and formats" says it belongs to Appearance.
+- **A search says how many sections it left** ("3 sections match", "No settings match") through a `LiveAnnouncer`, after
+  the input's 200 ms debounce, so a word typed is one message. Clearing the search says nothing.

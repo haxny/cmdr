@@ -3944,6 +3944,7 @@ export type MessageKey =
   | 'settings.servers.trustedHostKeys.empty'
   | 'settings.servers.trustedHostKeys.forget'
   | 'settings.sidebar.clearSearch'
+  | 'settings.sidebar.matchCount'
   | 'settings.sidebar.searchPlaceholder'
   | 'settings.sidebar.sections'
   | 'settings.summary.adb'

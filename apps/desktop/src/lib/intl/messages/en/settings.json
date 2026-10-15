@@ -2616,6 +2616,14 @@
     "description": "aria-label for the settings-sidebar navigation region listing all sections (screen-reader only).",
     "screenshot": "settings-appearance.png"
   },
+  "settings.sidebar.matchCount": "{count, plural, =0 {No settings match} one {{countText} section matches} other {{countText} sections match}}",
+  "@settings.sidebar.matchCount": {
+    "description": "Said by a screen reader (never shown) after the user types in the settings sidebar’s search box: how many sidebar sections still show because they hold a matching setting, for example “3 sections match”, or that nothing matched.",
+    "placeholders": {
+      "countText": "how many sections match, already formatted for display",
+      "count": "the same number (drives the singular/plural form and the no-match wording)"
+    }
+  },
   "settings.appearance.themeColorSwatchAria": "Open System Settings to change the system theme color",
   "@settings.appearance.themeColorSwatchAria": {
     "description": "aria-label for the disabled color swatch that points users to macOS for the system theme color. \"System Settings\" is the macOS app name; use the OS's localized name.",
