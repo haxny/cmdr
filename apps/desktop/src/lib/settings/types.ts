@@ -596,11 +596,9 @@ export interface SettingsValues {
    */
   'mediaIndex.semanticSearch.enabled': boolean
 
-  // Behavior › Notifications - on-screen notifications (toasts).
+  // Behavior › Notifications - on-screen notifications, downloads notifications + global go-to-latest shortcut.
   'behavior.notifications.keepUntilClosed': boolean
-  // Behavior › Notifications - downloads notifications + global go-to-latest shortcut.
-  // (The `fileSystemWatching` id prefix is a stable persistence key, kept across the
-  // section rename from "File system watching" to "Notifications".)
+  // (The `fileSystemWatching` id prefix is a stable persistence key, kept across the section's rename.)
   'behavior.fileSystemWatching.downloadsNotifications': DownloadsNotificationsMode
   /** Internal: remembers whether the user last collapsed the new-download toast, so a new toast opens the same way. */
   'behavior.fileSystemWatching.downloadsToastCollapsed': boolean

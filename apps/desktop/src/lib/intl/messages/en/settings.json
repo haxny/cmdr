@@ -1055,8 +1055,7 @@
   },
   "settings.behavior.notifications.keepUntilClosed.label": "Keep notifications until I close them",
   "@settings.behavior.notifications.keepUntilClosed.label": {
-    "description": "Label for an on/off switch in Settings > Behavior > Notifications. When on, Cmdr's in-window notifications (the small message boxes at the top right) stay on screen until the user closes them, instead of disappearing after a few seconds. Helps people who read slowly or use a screen reader.",
-    "screenshot": "settings-behavior-notifications.png"
+    "description": "Label for an on/off switch in Settings > Behavior > Notifications. When on, Cmdr's in-window notifications (the small message boxes at the top right) stay on screen until the user closes them, instead of disappearing after a few seconds. Helps people who read slowly or use a screen reader."
   },
   "settings.behavior.notifications.keepUntilClosed.description": "Notifications stay on screen until you close them, instead of going away after a few seconds.",
   "@settings.behavior.notifications.keepUntilClosed.description": {
@@ -2780,8 +2779,7 @@
   },
   "settings.notifications.cardOnScreen": "On-screen notifications",
   "@settings.notifications.cardOnScreen": {
-    "description": "Heading of the card in Settings > Behavior > Notifications about the notifications Cmdr shows inside its own window (the small message boxes at the top right, like \"Moved 3 files to the trash\"), as opposed to macOS's own notifications.",
-    "screenshot": "settings-behavior-notifications.png"
+    "description": "Heading of the card in Settings > Behavior > Notifications about the notifications Cmdr shows inside its own window (the small message boxes at the top right, like \"Moved 3 files to the trash\"), as opposed to macOS's own notifications."
   },
   "settings.fileSystemWatching.cardLowDiskSpace": "Low disk space",
   "@settings.fileSystemWatching.cardLowDiskSpace": {

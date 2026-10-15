@@ -2202,6 +2202,7 @@
     "behavior.fileSystemWatching.globalGoToLatestShortcut.enabled": true,
     "behavior.fileSystemWatching.lowDiskSpaceNotifications": "in-app",
     "behavior.fileSystemWatching.lowDiskSpaceThresholdPercent": 5,
+    "behavior.notifications.keepUntilClosed": false,
     "behavior.openTerminalHereToastSeen": false,
     "behavior.revealActivationNoticeSeen": false,
     "behavior.serversPinHintSeen": false,
