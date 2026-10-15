@@ -49,8 +49,8 @@ Wrapper architecture, decisions, instance-isolation reference: `DETAILS.md`, `do
   space and `/tmp` self-prunes. Wrapper exit cleanup is best-effort and skips `SIGKILL`/OOM/terminal-close, so that
   location is the load-bearing fallback. Don't move it into the repo.
 - **`download-llama-server.go` takes the binaries from the main clone in a worktree when `.version` matches**, as a
-  COPY, ❌ never a symlink: the Linux-E2E container bind-mounts only the worktree, where such a symlink dangles. CI
-  codesigns each one. DETAILS § "The llama-server fetch".
+  COPY, ❌ never a symlink: the Linux-E2E container bind-mounts only the worktree, where such a symlink dangles. Signing
+  is the `sign` subcommand, ❌ never the fetch. DETAILS § "The llama-server fetch".
 - **`--worktree` slug isn't validated against the directory name.** The wrapper sanitizes whatever slug you pass, so
   isolation can be pinned from a non-worktree shell.
 - **`instance-id.ts` is stdlib-only** (`node:net`/`fs`/`os`/`path`/`child_process`), imported by `tauri-wrapper.ts` and

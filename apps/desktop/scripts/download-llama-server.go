@@ -2,10 +2,16 @@
 //
 // Downloads the llama.cpp release tarball, extracts only the files needed at
 // runtime (llama-server binary + dylibs), and places them in src-tauri/resources/ai/.
-// When APPLE_SIGNING_IDENTITY is set (CI release builds), each binary is codesigned
-// with hardened runtime + secure timestamp so Apple notarization passes.
 //
 // Usage: go run scripts/download-llama-server.go
+//
+// Signing is its own subcommand, which the release workflow's signing job runs
+// after the compile, so no build-time code shares a step with the identity:
+//
+//	APPLE_SIGNING_IDENTITY=... go run scripts/download-llama-server.go sign
+//
+// It codesigns each prepared binary with hardened runtime + secure timestamp so
+// Apple notarization passes.
 //
 // The script is idempotent: it skips work if the marker file matches the
 // expected version.
@@ -56,6 +62,16 @@ const PlaceholderFile = "src-tauri/resources/ai/llama-server"
 const MarkerFile = "src-tauri/resources/ai/.version"
 
 func main() {
+	if len(os.Args) > 1 {
+		if os.Args[1] != "sign" || len(os.Args) > 2 {
+			fail("parse arguments", fmt.Errorf("unknown arguments %q; the only subcommand is `sign`", os.Args[1:]))
+		}
+		if err := signPrepared(); err != nil {
+			fail("sign llama-server", err)
+		}
+		return
+	}
+
 	// On non-macOS platforms, create a placeholder file for CI builds.
 	// The AI feature is macOS-only, but Tauri requires the resource to exist.
 	if runtime.GOOS != "darwin" {
@@ -95,7 +111,7 @@ func fail(stage string, err error) {
 }
 
 // prepareForDarwin runs the full macOS pipeline: download → verify → extract →
-// (optional) codesign → write the version marker. Each step returns a wrapped
+// write the version marker. Each step returns a wrapped
 // error so main() handles exit codes in one place.
 func prepareForDarwin() error {
 	tmpPath, cleanup, err := makeTempArchive()
@@ -124,12 +140,6 @@ func prepareForDarwin() error {
 		return fmt.Errorf("extract: %w", err)
 	}
 	fmt.Printf("Extracted %d files\n", len(extracted))
-
-	if identity := os.Getenv("APPLE_SIGNING_IDENTITY"); identity != "" {
-		if err := signAll(extracted, identity); err != nil {
-			return err
-		}
-	}
 
 	if err := os.WriteFile(MarkerFile, []byte(Version), 0o644); err != nil {
 		return fmt.Errorf("write version marker: %w", err)
@@ -174,7 +184,43 @@ func resetDir(dir string) error {
 	return nil
 }
 
-// signAll codesigns each extracted binary with the given identity (used in CI release builds).
+// signPrepared codesigns the binaries an earlier run prepared in DestDir with
+// APPLE_SIGNING_IDENTITY. It refuses anything but a complete copy of the
+// expected version, so it can't sign a stale set that notarization then rejects.
+func signPrepared() error {
+	if runtime.GOOS != "darwin" {
+		return fmt.Errorf("signing is macOS-only")
+	}
+	identity := os.Getenv("APPLE_SIGNING_IDENTITY")
+	if identity == "" {
+		return fmt.Errorf("APPLE_SIGNING_IDENTITY is not set")
+	}
+	if !isCurrentVersion(MarkerFile, Version) || isSymlink(DestDir) {
+		return fmt.Errorf("%s doesn't hold llama-server %s; run this script without arguments first", DestDir, Version)
+	}
+	entries, err := os.ReadDir(DestDir)
+	if err != nil {
+		return fmt.Errorf("list %s: %w", DestDir, err)
+	}
+	// Regular files only: each dylib symlink points at a file signed here.
+	var paths []string
+	for _, entry := range entries {
+		if entry.Type().IsRegular() && isRuntimeFile(entry.Name()) {
+			paths = append(paths, filepath.Join(DestDir, entry.Name()))
+		}
+	}
+	if len(paths) == 0 {
+		return fmt.Errorf("found nothing to sign in %s", DestDir)
+	}
+	return signAll(paths, identity)
+}
+
+// isRuntimeFile reports whether an archive entry is one the app needs at runtime.
+func isRuntimeFile(name string) bool {
+	return name == "llama-server" || strings.HasSuffix(name, ".dylib")
+}
+
+// signAll codesigns each binary with the given identity.
 func signAll(paths []string, identity string) error {
 	fmt.Printf("Signing %d files with identity %q...\n", len(paths), identity)
 	for _, path := range paths {
@@ -219,8 +265,7 @@ func extractNeededFiles(archivePath, destDir string) ([]string, error) {
 			continue
 		}
 
-		isNeeded := name == "llama-server" || strings.HasSuffix(name, ".dylib")
-		if !isNeeded {
+		if !isRuntimeFile(name) {
 			continue
 		}
 

@@ -244,7 +244,9 @@ risk.
   - **The release pipeline**: release tags are SSH-signed and verified against `.github/release-signers` before a build
     starts; only admins can create `v*` tags (a repository ruleset); the only jobs that sign run in a `release`
     environment that only `v*` tags can deploy to, and no signing secret exists at repo level, so a branch workflow
-    can't read them (`docs/guides/releasing.md` § Signing secrets); a release waits for a full, green CI run of its
+    can't read them (`docs/guides/releasing.md` § Signing secrets); the third-party build code (npm install scripts,
+    Vite plugins, crate build scripts) runs in a job with none of those secrets, and signing happens on a fresh runner
+    that compiles nothing (§ How a release build is split, same guide); a release waits for a full, green CI run of its
     commit; every third-party action is pinned to a commit SHA; each release publishes SHA-256 checksums, SLSA build
     provenance, and signed SBOMs (`docs/guides/releasing.md`).
   - **The updater key signs on the maintainer's laptop, not in CI**, from the first release in `local` signing mode
@@ -266,9 +268,9 @@ risk.
     tagged commit) are tracked privately.
   - **No reproducible builds**, so a reviewer can't rebuild and compare a release.
   - **A malicious build from inside the release pipeline still gets signed.** Signing locally checks where an archive
-    was built, not what went into it, so a compromised third-party action or dependency in the build job still ships to
-    every install. What local signing removes is the key itself leaking from GitHub, and an archive swapped on the
-    release.
+    was built, not what went into it, so a compromised third-party action or dependency in the compile job still ships
+    to every install. What local signing removes is the key itself leaking from GitHub, and an archive swapped on the
+    release; what the compile/sign split removes is that dependency reading the signing keys.
   - **The minisign updater key can't be rotated** without a release signed by the old key; losing it strands installs on
     manual reinstall. With local signing it lives on one laptop (encrypted, with Bitwarden copies), so a compromise of
     that laptop could sign anything.

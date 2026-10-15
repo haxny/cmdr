@@ -32,7 +32,7 @@ fi
 # Detach stale Cmdr* DMG mounts. The self-hosted runner builds on this same Mac;
 # a leftover /Volumes/Cmdr (typically from inspecting an old DMG in Finder) makes
 # `bundle_dmg.sh` fail fast on the runner because the volume name is already
-# taken. The release workflow has the same guard before the tauri-action step,
+# taken. The release workflow has the same guard before its bundle step,
 # but failing here means we don't tag a release that can't ship.
 while IFS= read -r vol; do
   if [[ -n "$vol" ]]; then

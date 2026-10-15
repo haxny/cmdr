@@ -1860,7 +1860,7 @@ How it decides:
 - **Where it runs.** It needs a built Mach-O, so it skips where there is none, which is every CI run (`ci.yml`'s macOS
   job never links the app). Locally it reads `target/release/Cmdr` if there is one, else `target/debug/Cmdr`, so any Mac
   that has run the app is covered. The gate that can't be skipped is `release-pipeline.yml`, which points
-  `CMDR_MACOS_BINARY` at the signed bundled binary right after `tauri-action` builds it; that's the only run that sees
+  `CMDR_MACOS_BINARY` at the signed bundled binary right after its `sign` job bundles it; that's the only run that sees
   what users actually get, which is also why `ci-coverage` counts it as wired without a `ci.yml` step.
 
 ## macOS symbol floor

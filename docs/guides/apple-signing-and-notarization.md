@@ -136,6 +136,10 @@ Go to https://github.com/vdavid/cmdr/settings/secrets/actions and add these:
 
 Three changes: import the certificate, set up notarization credentials, and clean up.
 
+This phase records the original setup. Today's workflow is `release-pipeline.yml`, which signs and notarizes in a `sign`
+job apart from the compile, with the Tauri CLI's `tauri bundle` in place of `tauri-action`: `docs/guides/releasing.md` §
+How a release build is split.
+
 ### 5.1. Add certificate import step
 
 Add this **before** the existing "Build and release" step:
@@ -265,23 +269,20 @@ Add this right after the certificate import step:
 Proving a signing or entitlements change without cutting a release. The whole point is that a dev build is unsigned, so
 it exercises none of this, and `pnpm check` can't tell you either.
 
-❗ **A local `pnpm build` leaves the AI binaries ad-hoc signed, and notarization refuses the bundle over them.**
-`download-llama-server.go` only codesigns when `APPLE_SIGNING_IDENTITY` is set, which is a CI-release thing, and the
-script is idempotent, so re-running the build won't go back and sign them. Apple rejects with "The binary is not signed
-with a valid Developer ID certificate" plus "The signature does not include a secure timestamp", once per dylib
-(`libggml-*`, `libllama`, `libmtmd`, `llama-server`). ❌ That failure says nothing about your change; sign them and
-resubmit before reading anything into it.
+❗ **A local `pnpm build` leaves the AI binaries ad-hoc signed, and notarization refuses the bundle over them.** A build
+only fetches them; signing is the script's separate `sign` subcommand, which only the release workflow's `sign` job
+runs. Apple rejects with "The binary is not signed with a valid Developer ID certificate" plus "The signature does not
+include a secure timestamp", once per dylib (`libggml-*`, `libllama`, `libmtmd`, `llama-server`). ❌ That failure says
+nothing about your change; sign them and resubmit before reading anything into it.
 
 ```sh
-# 1. Sign the AI binaries the way CI's beforeBuildCommand does. Real files only, not the symlinks.
-cd apps/desktop/src-tauri/resources/ai
-for f in $(find . -type f ! -name ".version"); do
-  codesign --force --options runtime --timestamp \
-    --sign "Developer ID Application: Rymdskottkarra AB (83H6YAQMNP)" "$f"
-done
+# 1. Sign the AI binaries the way the release workflow does (the real files, not their symlinks).
+cd apps/desktop
+APPLE_SIGNING_IDENTITY="Developer ID Application: Rymdskottkarra AB (83H6YAQMNP)" \
+  go run scripts/download-llama-server.go sign
 
 # 2. Rebuild, so the bundler copies the signed binaries in and re-signs the app around them.
-cd - && pnpm build
+cd ../.. && pnpm build
 
 # 3. Submit. The key lives in the infra sops store, so decrypt it to a temp file for the submission
 #    and shred it afterwards. `secret` is ~/projects-git/vdavid/scripts/shell/secret.

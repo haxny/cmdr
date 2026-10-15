@@ -4,7 +4,7 @@
 # signer (SLSA Build Level 3 on GitHub); see the `attest` job and `docs/guides/releasing.md`.
 #
 # Who signs the update archives is one repository variable, `RELEASE_UPDATE_SIGNING`:
-# - `ci` (or unset): the tag push does everything, the `build` job signing with the updater key
+# - `ci` (or unset): the tag push does everything, the `sign` job signing with the updater key
 #   from the `release` environment.
 # - `local`: the tag push builds, notarizes, and attests into a DRAFT release, with no updater
 #   signatures and no manifest move. `scripts/release-finish.sh` on David's laptop verifies each
@@ -34,7 +34,7 @@ jobs:
   #
   # It also verifies that the tag itself was signed by a release key trusted in
   # `.github/release-signers`, so every shipped tag carries independently verifiable provenance
-  # and a release cannot accidentally go out unsigned. This runs in seconds and gates `build`,
+  # and a release cannot accidentally go out unsigned. This runs in seconds and gates `compile`,
   # so a bad push costs nothing: no three parallel 90-minute macOS builds, and no assets
   # overwritten on an old release.
   guard:
@@ -122,7 +122,7 @@ jobs:
   ci-gate:
     name: Require green CI on the released commit
     # The tag push only. A dispatch finishes a release whose build this job already gated, and
-    # skipping it here also skips `build` and `sbom`, which need it.
+    # skipping it here also skips `compile` (so `sign`) and `sbom`, which need it.
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -199,9 +199,9 @@ jobs:
           # shellcheck disable=SC2086 # one argument per commit
           ./scripts/release-codeql-gate.sh $CANDIDATES
 
-  # `local` mode only: the draft release the three build jobs upload into. Created once, up front,
-  # because three parallel `tauri-action` runs each looking for a draft by tag (drafts can't be
-  # fetched by tag) can each find none and create one. Re-runs reuse the draft.
+  # `local` mode only: the draft release the three `sign` jobs upload into. Created once, up front,
+  # because three parallel jobs each looking for a draft by tag (drafts can't be fetched by tag)
+  # can each find none and create one. Re-runs reuse the draft.
   draft:
     name: Create the draft release
     needs: [guard, ci-gate]
@@ -242,11 +242,18 @@ jobs:
           esac
           echo "id=$ID" >> "$GITHUB_OUTPUT"
 
-  build:
-    name: Build (${{ matrix.arch }})
+  # A release build is two jobs per arch: `compile` makes the binary with no signing material
+  # anywhere near it, and `sign` bundles, signs, notarizes, and uploads that binary on a fresh
+  # runner. Compiling runs every third-party build hook there is (npm install scripts, Vite
+  # plugins, each crate's `build.rs`), and code from one step can stay behind on its machine and
+  # read a later step's environment or keychain, so the split is by job, not by step.
+  # ❌ Don't give `compile` a secret, the `release` environment, or a signing step, and don't
+  # make `sign` build anything. `docs/guides/releasing.md` § How a release build is split.
+  compile:
+    name: Compile (${{ matrix.arch }})
     needs: [guard, ci-gate, draft]
-    # `ci` mode skips `draft`; `local` mode needs it, so a build never uploads into anything but
-    # the draft (an empty `releaseId` would make `tauri-action` create a release of its own).
+    # `ci` mode skips `draft`; `local` mode needs it, so `sign` never uploads into anything but
+    # the draft.
     if: >-
       !cancelled() && needs.guard.result == 'success' && needs.ci-gate.result == 'success' && (
         (needs.guard.outputs.update-signing == 'ci' && needs.draft.result == 'skipped') ||
@@ -255,7 +262,8 @@ jobs:
     # (`[self-hosted, macOS, ARM64]`). GitHub-hosted is the ACTIVE one; see
     # `docs/guides/releasing.md` § "Which runner builds the release" for the trade-offs and the
     # Finder-Automation permission problem that took the self-hosted one out of service.
-    # Switching back is this one line, plus re-enabling the runner service on the Mac.
+    # Switching back is this line and the one in `sign`, plus re-enabling the runner service on
+    # the Mac.
     #
     # ❗ Pinned to the IMAGE, ❌ never `macos-latest`: an image carries exactly one Xcode major, so
     # this line picks the macOS SDK the bundle links against, and Apple gates behavior changes on
@@ -268,15 +276,10 @@ jobs:
     # Generous because a hosted runner is ephemeral: every job pays a cold ~1000-crate Tauri
     # compile (the self-hosted runner's warm cargo cache made 30 minutes plenty). The three arch
     # jobs run in PARALLEL here rather than queueing on one machine, so wall-clock is one cold
-    # build, not three. Apple's notarization sits inside this budget too.
+    # build, not three.
     timeout-minutes: 90
-    # The only job that signs, notarizes, or (in `ci` mode) updater-signs, so the only one in the
-    # `release` environment, which holds those secrets and deploys from `v*` tags alone. An
-    # environment secret wins over a same-named repo secret. See `docs/guides/releasing.md` §
-    # Signing secrets.
-    environment: release
     permissions:
-      contents: write # `tauri-action` uploads the build to the release
+      contents: read
     strategy:
       fail-fast: false
       matrix:
@@ -291,6 +294,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          # Nothing here pushes, so the build hooks get no token to find in `.git/config`.
+          persist-credentials: false
 
       - name: Check the macOS SDK is the one we pinned
         # Fails before the ~1000-crate compile rather than after it, and loudly: a silently
@@ -320,11 +326,6 @@ jobs:
       - name: Install tools with mise
         run: mise install
 
-      - name: Install create-dmg
-        # tauri's DMG bundler shells out to create-dmg's `bundle_dmg.sh`. The self-hosted Mac had
-        # it installed once, by hand; a hosted runner starts clean every time.
-        run: brew install create-dmg
-
       - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
         working-directory: ./apps/desktop
@@ -333,19 +334,163 @@ jobs:
         run: pnpm exec svelte-kit sync
         working-directory: ./apps/desktop
 
+      # `beforeBuildCommand` (the llama-server fetch and the Vite build), then cargo. `--no-bundle`
+      # stops before the bundler, which is the only part of `tauri build` that signs.
+      - name: Compile the frontend and the app
+        run: pnpm tauri build --no-bundle --target ${{ matrix.target }}
+        working-directory: ./apps/desktop
+
+      - name: Hand the binary to the sign job
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: compiled-${{ matrix.arch }}
+          path: target/${{ matrix.target }}/release/Cmdr
+          if-no-files-found: error
+          # Long enough to "Re-run failed jobs" on a `sign` job days later.
+          retention-days: 7
+
+  # Turns the `compile` job's binary into `Cmdr.app`, the DMG, and the updater archive, signs and
+  # notarizes them (and in `ci` mode updater-signs the archive), and uploads them to the release.
+  # The only job holding the app's signing secrets, which is why it compiles nothing: the code it
+  # runs is the Tauri CLI (the bundler that signs), our stdlib-only llama-server script, Apple's
+  # tools, and the pinned actions. `pnpm install` runs no install scripts, and `tauri bundle` runs
+  # no `beforeBuildCommand` and no cargo build, only `cargo metadata --no-deps` (verified on Tauri
+  # CLI 2.12.1 by reading `crates/tauri-cli/src/bundle.rs` and bundling a copied binary,
+  # 2026-10-15). It never executes the binary it signs.
+  sign:
+    name: Sign and notarize (${{ matrix.arch }})
+    needs: [guard, compile]
+    if: >-
+      !cancelled() && needs.guard.result == 'success' && needs.compile.result == 'success'
+    # The same image as `compile`; see the comment there before changing either.
+    runs-on: macos-26
+    # Apple's notarization sits inside this budget.
+    timeout-minutes: 60
+    # The only job that signs the app, notarizes it, or (in `ci` mode) updater-signs it, so the
+    # only one in the `release` environment besides `pkg`. That environment holds those secrets
+    # and deploys from `v*` tags alone; an environment secret wins over a same-named repo secret.
+    # See `docs/guides/releasing.md` § Signing secrets.
+    environment: release
+    permissions:
+      contents: write # upload the build to the release
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # `asset-arch` is the arch as Tauri's bundler spells it in file names (`x64`, never
+          # `x86_64`), which every asset name downstream relies on.
+          - target: aarch64-apple-darwin
+            arch: aarch64
+            asset-arch: aarch64
+          - target: x86_64-apple-darwin
+            arch: x86_64
+            asset-arch: x64
+          - target: universal-apple-darwin
+            arch: universal
+            asset-arch: universal
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Install mise
+        uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca # v5.1.1
+
+      - name: Install tools with mise
+        run: mise install
+
+      - name: Install the Tauri CLI
+        # The desktop app's packages with no install scripts (the way `sbom` fetches them), so the
+        # npm tree lands on disk without running. Only the Tauri CLI from it ever runs here.
+        run: pnpm install --frozen-lockfile --ignore-scripts --filter @cmdr/desktop
+
+      - name: Fetch the compiled binary
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: compiled-${{ matrix.arch }}
+          path: ${{ runner.temp }}/compiled
+
+      - name: Put the binary where the bundler looks
+        env:
+          TARGET: ${{ matrix.target }}
+          ARCH: ${{ matrix.arch }}
+        run: |
+          set -euo pipefail
+          # The artifact comes from a job that ran third-party code, so take exactly one regular
+          # file from it and nothing else. An artifact doesn't keep the executable bit.
+          DIR="$RUNNER_TEMP/compiled"
+          if [ "$(ls -A "$DIR")" != Cmdr ] || [ -L "$DIR/Cmdr" ] || [ ! -f "$DIR/Cmdr" ]; then
+            echo "::error::The compiled-$ARCH artifact should hold one file, Cmdr. It holds: $(ls -lA "$DIR")"
+            exit 1
+          fi
+          case "$ARCH" in
+            aarch64) WANT=arm64 ;;
+            x86_64) WANT=x86_64 ;;
+            universal) WANT="x86_64 arm64" ;;
+          esac
+          GOT="$(lipo -archs "$DIR/Cmdr")"
+          if [ "$GOT" != "$WANT" ]; then
+            echo "::error::The compiled-$ARCH binary is built for '$GOT', expected '$WANT'."
+            exit 1
+          fi
+          mkdir -p "target/$TARGET/release"
+          install -m 755 "$DIR/Cmdr" "target/$TARGET/release/Cmdr"
+
+      - name: Fetch llama-server
+        # Downloads and checks the pinned archive against its SHA-256; `compile` did the same for
+        # its build, but this job builds nothing and starts from a fresh checkout.
+        run: go run scripts/download-llama-server.go
+        working-directory: ./apps/desktop
+
+      - name: Detach stale Cmdr* DMG mounts
+        # The DMG bundler's `bundle_dmg.sh` fails fast (~3 s) when the "Cmdr" volume name is already
+        # taken in /Volumes (typically from a previous Finder double-click on an old DMG). A
+        # hosted runner has a clean /Volumes so this is a no-op there; it earns its keep on the
+        # self-hosted Mac, which shares /Volumes with the dev's interactive session. Kept either
+        # way because it costs nothing and the runner choice is one line away from flipping.
+        # scripts/release.sh has the same guard pre-tag-push; this catches mounts appearing AFTER.
+        run: |
+          while IFS= read -r vol; do
+            if [[ -n "$vol" ]]; then
+              echo "Detaching stale mount: $vol"
+              hdiutil detach "$vol" -force >/dev/null 2>&1 || true
+            fi
+          done < <(mount | awk -F' on ' '/\/Volumes\/Cmdr/ { sub(/ \(.*$/, "", $2); print $2 }')
+
+      # `local` mode: the Tauri CLI refuses to bundle without an updater key once the config has a
+      # pubkey, and the updater archive must still come out of the bundler (byte-for-byte the shape
+      # `ci` mode ships). So it gets a key made here and thrown away with the runner: it only
+      # mismatches the pubkey (a warning), and its `.sig` files are never uploaded (the upload
+      # step below). The password must be non-empty, or the `||` fallback in the bundle step would
+      # hand the real secret to it.
+      - name: Make a throwaway updater key (local signing)
+        id: throwaway-key
+        if: needs.guard.outputs.update-signing == 'local'
+        working-directory: ./apps/desktop
+        run: |
+          PASSWORD=$(openssl rand -hex 24)
+          echo "::add-mask::$PASSWORD"
+          pnpm exec tauri signer generate --ci -p "$PASSWORD" -w "$RUNNER_TEMP/throwaway-updater.key" > /dev/null
+          {
+            echo "path=$RUNNER_TEMP/throwaway-updater.key"
+            echo "password=$PASSWORD"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Set up llama-server signing keychain
         env:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
         run: |
-          # tauri-action's bundler does the APP-BUNDLE signing-keychain setup itself from the
-          # APPLE_CERTIFICATE env vars, but only at BUNDLING time. The llama-server dylib signing
-          # in beforeBuildCommand (download-llama-server.go) runs BEFORE that, so it needs a
-          # signing identity of its own. On a hosted runner there is no login keychain holding the
-          # cert at all; on the self-hosted Mac there is one, but the runner's launchd service
-          # (SessionCreate=true) lives in its own security session where its private key isn't
-          # usable and codesign fails with errSecInternalComponent (the same command works from a
-          # GUI shell). A hermetic keychain is the answer on both.
+          # The bundler does the APP-BUNDLE signing-keychain setup itself from the
+          # APPLE_CERTIFICATE env vars, but it never signs the llama-server binaries it copies in
+          # as resources, so the "Sign the llama-server binaries" step needs an identity of its
+          # own. On a hosted runner there is no login keychain holding the cert at all; on the
+          # self-hosted Mac there is one, but the runner's launchd service (SessionCreate=true)
+          # lives in its own security session where its private key isn't usable and codesign
+          # fails with errSecInternalComponent (the same command works from a GUI shell). A
+          # hermetic keychain is the answer on both.
           #
           # The keychain MUST be both targeted explicitly (codesign --keychain via
           # $LLAMA_SIGN_KEYCHAIN in download-llama-server.go) AND in the user keychain search
@@ -353,8 +498,8 @@ jobs:
           # search list (verified empirically on the self-hosted runner). The explicit --keychain
           # pins identity resolution to this keychain, so a login keychain's copy of the same
           # identity can't make resolution ambiguous (the failure mode an earlier manual-import
-          # step had). The "Restore keychain search list" cleanup step below resets the search
-          # list to login-only on every run, pass or fail.
+          # step had). The "Remove the signing material" step below deletes it and resets the
+          # search list to login-only on every run, pass or fail.
           KEYCHAIN_PATH="$RUNNER_TEMP/llama-sign.keychain-db"
           KEYCHAIN_PASSWORD=$(openssl rand -base64 24)
           security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
@@ -379,46 +524,19 @@ jobs:
           echo -n "$APPLE_API_KEY_BASE64" | base64 --decode \
             > ~/private_keys/"AuthKey_${APPLE_API_KEY}.p8"
 
-      - name: Detach stale Cmdr* DMG mounts
-        # tauri-action's bundle_dmg.sh fails fast (~3 s) when the "Cmdr" volume name is already
-        # taken in /Volumes (typically from a previous Finder double-click on an old DMG). A
-        # hosted runner has a clean /Volumes so this is a no-op there; it earns its keep on the
-        # self-hosted Mac, which shares /Volumes with the dev's interactive session. Kept either
-        # way because it costs nothing and the runner choice is one line away from flipping.
-        # scripts/release.sh has the same guard pre-tag-push; this catches mounts appearing AFTER.
-        run: |
-          while IFS= read -r vol; do
-            if [[ -n "$vol" ]]; then
-              echo "Detaching stale mount: $vol"
-              hdiutil detach "$vol" -force >/dev/null 2>&1 || true
-            fi
-          done < <(mount | awk -F' on ' '/\/Volumes\/Cmdr/ { sub(/ \(.*$/, "", $2); print $2 }')
-
-      # `local` mode: the Tauri CLI refuses to bundle without an updater key once the config has a
-      # pubkey, and the updater archive must still come out of the bundler (byte-for-byte the shape
-      # `ci` mode ships). So it gets a key made here and thrown away with the runner: it only
-      # mismatches the pubkey (a warning), and its `.sig` files are never uploaded
-      # (`uploadUpdaterSignatures` below). The password must be non-empty, or the `||` fallback in
-      # the next step would hand the real secret to it.
-      - name: Make a throwaway updater key (local signing)
-        id: throwaway-key
-        if: needs.guard.outputs.update-signing == 'local'
-        working-directory: ./apps/desktop
-        run: |
-          PASSWORD=$(openssl rand -hex 24)
-          echo "::add-mask::$PASSWORD"
-          pnpm exec tauri signer generate --ci -p "$PASSWORD" -w "$RUNNER_TEMP/throwaway-updater.key" > /dev/null
-          {
-            echo "path=$RUNNER_TEMP/throwaway-updater.key"
-            echo "password=$PASSWORD"
-          } >> "$GITHUB_OUTPUT"
-
-      - name: Build, sign, and notarize
-        uses: tauri-apps/tauri-action@1deb371b0cd8bd54025b384f1cd735e725c4060f # v1
+      - name: Sign the llama-server binaries
+        # Before bundling, so the bundler copies signed binaries into the app and signs the app
+        # around them; notarization refuses unsigned or untimestamped ones.
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # The throwaway key in `local` mode; the step above is skipped in `ci` mode, so these
-          # fall through to the real key.
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+        run: go run scripts/download-llama-server.go sign
+        working-directory: ./apps/desktop
+
+      - name: Bundle, sign, and notarize
+        working-directory: ./apps/desktop
+        env:
+          # The throwaway key in `local` mode; the step that makes it is skipped in `ci` mode, so
+          # these fall through to the real key.
           TAURI_SIGNING_PRIVATE_KEY: ${{ steps.throwaway-key.outputs.path || secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD:
             ${{ steps.throwaway-key.outputs.password || secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
@@ -428,38 +546,26 @@ jobs:
           APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
           APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
           APPLE_API_KEY_PATH: ~/private_keys/AuthKey_${{ secrets.APPLE_API_KEY }}.p8
-        with:
-          projectPath: ./apps/desktop
-          args: --target ${{ matrix.target }}
-          # GitHub's asset-upload API fails often enough to cost a release: v0.46.0 lost two runs
-          # to it, first `Cmdr_0.46.0_aarch64.dmg` (an HTML 5xx page in place of a response), then
-          # `Cmdr_0.46.0_aarch64.app.tar.gz` (`Error saving asset` after an 8m30s hang), while the
-          # x86_64 and universal jobs uploaded the same shapes fine. The action's own `retry()`
-          # wraps each `uploadReleaseAsset` call with a 1-10 s random backoff, and `inputs.ts`
-          # defaults this to `0` (`attempts = additionalAttempts + 1`, so a single try), which is
-          # why neither failure was ever retried.
-          # ❗ This retries the BUILD too, not just uploads, so a genuinely broken build burns up
-          # to 4 attempts before it fails. Worth it: the build is the reliable half here.
-          retryAttempts: 3
-          tagName: ${{ github.ref_name }}
-          releaseName: 'Cmdr ${{ github.ref_name }}'
-          releaseBody: 'See CHANGELOG.md for details.'
-          # `local` mode uploads into the `draft` job's release (a set `releaseId` wins over
-          # `tagName`; empty in `ci` mode, which the action reads as unset). `releaseDraft` only
-          # backs it up: should the id ever be empty there, the action makes a draft, not a release.
-          releaseId: ${{ needs.draft.outputs.release-id }}
-          releaseDraft: ${{ needs.guard.outputs.update-signing == 'local' }}
-          # The `.sig` assets are what the publish job reads to build `latest.json`, so this
-          # default is load-bearing rather than incidental. Stated explicitly to keep it that way.
-          # In `local` mode they're the throwaway key's, so they stay on the runner.
-          uploadUpdaterSignatures: ${{ needs.guard.outputs.update-signing != 'local' }}
-          # ❌ Don't turn this back on. From v1 the action writes `latest.json` with GitHub API
-          # asset URLs (`api.github.com/repos/.../releases/assets/<id>`), which only serve the
-          # binary to a caller sending `Accept: application/octet-stream`. Cmdr's updater
-          # (`apps/desktop/src-tauri/src/updater/mod.rs`) does a plain `reqwest` GET, so it would
-          # get JSON metadata and fail signature verification. The publish job below is the single
-          # source of the manifest we ship, with browser-download URLs.
-          uploadUpdaterJson: false
+          # With `CI` set, the DMG bundler skips the Finder AppleScript that lays out the DMG
+          # window (icon positions, background). This keeps it, as every release so far had it.
+          TAURI_BUNDLER_DMG_IGNORE_CI: 'true'
+        run: pnpm exec tauri bundle --target ${{ matrix.target }}
+
+      - name: Remove the signing material
+        if: always()
+        run: |
+          rm -rf ~/private_keys
+          if [ -n "${LLAMA_SIGN_KEYCHAIN:-}" ] && [ -f "$LLAMA_SIGN_KEYCHAIN" ]; then
+            security delete-keychain "$LLAMA_SIGN_KEYCHAIN"
+          fi
+          # The bundler creates a temporary signing keychain, appends it to the user keychain
+          # search list, and on teardown deletes the keychain file but never restores the search
+          # list. A hosted runner is thrown away, so this is only insurance there; on the
+          # self-hosted Mac it is load-bearing, since a stale (deleted) entry persists across
+          # releases and can re-introduce identity ambiguity. Reset the user search list to the
+          # canonical login keychain so `gh` (its OAuth token lives there via secure storage) and
+          # other keychain-backed tools keep working after a release.
+          security list-keychains -d user -s "$HOME/Library/Keychains/login.keychain-db"
 
       # The last thing between a signed build and a Mac that can't open it. A framework
       # link is a hard `LC_LOAD_DYLIB`, so one that arrived after the floor we promise
@@ -467,7 +573,7 @@ jobs:
       # v0.42.0 shipped exactly that and could not launch on Catalina at all. This is
       # the only run that sees the real bundled binary: `ci.yml` never links the app (its
       # macOS job lints and tests), so there's no Mach-O to read and `desktop-macos-framework-floor`
-      # skips there.
+      # skips there. After the step above, since the check runner is Go code with third-party modules.
       - name: Check the bundled binary's frameworks against the macOS floor
         run: |
           (cd scripts/check && go build -o check .)
@@ -488,24 +594,79 @@ jobs:
           # can't see. Runs here too because it needs both the SDK headers and a Mach-O.
           CMDR_MACOS_BINARY="$BINARY" ./scripts/check/check --check desktop-macos-symbol-floor --ci
 
-      - name: Delete llama-server signing keychain
-        if: always()
+      # Uploads under the names everything downstream builds from the version (`publish`'s
+      # `latest.json` and signature checks, `pkg`, `attest`, `release-finish.sh`, the website and
+      # the cask): `Cmdr_<version>_<arch>.dmg` and `Cmdr_<version>_<arch>.app.tar.gz[.sig]`. The
+      # bundler names the DMG that way already; the archive gets its name here.
+      - name: Upload the build to the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+          TARGET: ${{ matrix.target }}
+          ASSET_ARCH: ${{ matrix.asset-arch }}
+          MODE: ${{ needs.guard.outputs.update-signing }}
         run: |
-          if [ -n "${LLAMA_SIGN_KEYCHAIN:-}" ] && [ -f "$LLAMA_SIGN_KEYCHAIN" ]; then
-            security delete-keychain "$LLAMA_SIGN_KEYCHAIN"
+          set -euo pipefail
+          VERSION="${TAG#v}"
+          BUNDLE="target/$TARGET/release/bundle"
+          STAGE="$RUNNER_TEMP/assets"
+          mkdir -p "$STAGE"
+          cp "$BUNDLE/dmg/Cmdr_${VERSION}_${ASSET_ARCH}.dmg" "$STAGE/"
+          cp "$BUNDLE/macos/Cmdr.app.tar.gz" "$STAGE/Cmdr_${VERSION}_${ASSET_ARCH}.app.tar.gz"
+          # The `.sig` assets are what `publish` reads to build `latest.json`. In `local` mode
+          # they're the throwaway key's, so they stay on the runner and the laptop signs instead.
+          if [ "$MODE" = ci ]; then
+            cp "$BUNDLE/macos/Cmdr.app.tar.gz.sig" "$STAGE/Cmdr_${VERSION}_${ASSET_ARCH}.app.tar.gz.sig"
           fi
 
-      - name: Restore keychain search list
-        if: always()
-        run: |
-          # tauri-action's bundler creates a temporary signing keychain, appends it to the user
-          # keychain search list, and on teardown deletes the keychain file but never restores the
-          # search list. A hosted runner is thrown away, so this is only insurance there; on the
-          # self-hosted Mac it is load-bearing, since a stale (deleted) entry persists across
-          # releases and can re-introduce identity ambiguity. Reset the user search list to the
-          # canonical login keychain so `gh` (its OAuth token lives there via secure storage) and
-          # other keychain-backed tools keep working after a release.
-          security list-keychains -d user -s "$HOME/Library/Keychains/login.keychain-db"
+          # Drafts can't be fetched by tag, so the release is found in the list, like `draft` does.
+          find_release() {
+            gh api --paginate "repos/$GITHUB_REPOSITORY/releases?per_page=100" \
+              --jq '.[] | select(.tag_name == env.TAG) | "\(.id) \(.draft)"'
+          }
+          FOUND=$(find_release)
+          if [ "$MODE" = ci ] && [ -z "$FOUND" ]; then
+            # The three arch jobs race to create it; a loser's POST fails, and the list then
+            # shows the winner's release.
+            gh api -X POST "repos/$GITHUB_REPOSITORY/releases" -f tag_name="$TAG" \
+              -f name="Cmdr $TAG" -f body='See CHANGELOG.md for details.' -F draft=false --silent \
+              || echo "Couldn't create the release; another arch job may have. Looking again."
+            FOUND=$(find_release)
+          fi
+          COUNT=$(printf '%s' "$FOUND" | grep -c . || true)
+          if [ "$COUNT" != 1 ]; then
+            echo "::error::Expected one release for $TAG, found $COUNT: $FOUND"
+            exit 1
+          fi
+          read -r _ IS_DRAFT <<< "$FOUND"
+          # `local` mode builds into the `draft` job's draft and nothing else; `ci` mode publishes
+          # as it goes, so a draft on the tag there is a leftover (§ Troubleshooting in
+          # `docs/guides/releasing.md`).
+          if [ "$MODE" = local ] && [ "$IS_DRAFT" != true ]; then
+            echo "::error::$TAG's release is published, but local signing builds into a draft."
+            exit 1
+          fi
+          if [ "$MODE" = ci ] && [ "$IS_DRAFT" != false ]; then
+            echo "::error::$TAG has a leftover draft release. Delete it, then re-run the failed jobs."
+            exit 1
+          fi
+
+          # GitHub's asset-upload API fails often enough to cost a release: v0.46.0 lost two runs
+          # to it (an HTML 5xx page in place of a response, then `Error saving asset` after an
+          # 8m30s hang). So each file gets four tries; `--clobber` replaces a half-saved asset.
+          for file in "$STAGE"/*; do
+            for attempt in 1 2 3 4; do
+              if gh release upload "$TAG" -R "$GITHUB_REPOSITORY" "$file" --clobber; then
+                break
+              fi
+              if [ "$attempt" = 4 ]; then
+                echo "::error::Couldn't upload $(basename "$file") after four tries."
+                exit 1
+              fi
+              sleep $((attempt * 15))
+            done
+            echo "Uploaded $(basename "$file")"
+          done
 
   # The installer package for MDM deployment (`Cmdr_<version>_universal.pkg`), built from the app
   # inside the universal DMG AS UPLOADED, so it carries exactly the signed, notarized, stapled app
@@ -520,12 +681,12 @@ jobs:
   # `docs/guides/releasing.md` § The installer package.
   pkg:
     name: Build the installer package
-    needs: [guard, build]
+    needs: [guard, sign]
     if: >-
-      !cancelled() && github.event_name == 'push' && needs.build.result == 'success'
+      !cancelled() && github.event_name == 'push' && needs.sign.result == 'success'
     runs-on: macos-26
     timeout-minutes: 45
-    # It signs and notarizes, so it reads the `release` environment's Apple secrets, like `build`.
+    # It signs and notarizes, so it reads the `release` environment's Apple secrets, like `sign`.
     environment: release
     permissions:
       contents: write # upload the pkg to the release
@@ -552,7 +713,7 @@ jobs:
           APPLE_INSTALLER_CERTIFICATE: ${{ secrets.APPLE_INSTALLER_CERTIFICATE }}
           APPLE_INSTALLER_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_INSTALLER_CERTIFICATE_PASSWORD }}
         run: |
-          # Same hermetic-keychain shape as `build`'s llama-server keychain, for the same reasons:
+          # Same hermetic-keychain shape as `sign`'s llama-server keychain, for the same reasons:
           # targeted explicitly (`productbuild --keychain`) AND in the search list.
           KEYCHAIN_PATH="$RUNNER_TEMP/installer-sign.keychain-db"
           KEYCHAIN_PASSWORD=$(openssl rand -base64 24)
@@ -696,14 +857,14 @@ jobs:
           # The npm packages whose code is in the built frontend, read from the bundle itself by
           # a frontend build with `CMDR_FRONTEND_SBOM=1` (`apps/desktop/scripts/vite-frontend-sbom.ts`).
           # `package.json` can't answer this: Svelte ships from devDependencies, and most
-          # devDependencies don't ship at all. Same commit and lockfile as the build job, so the
+          # devDependencies don't ship at all. Same commit and lockfile as the compile job, so the
           # same modules; this build's own output is thrown away.
           pnpm --filter @cmdr/desktop exec svelte-kit sync
           CMDR_FRONTEND_SBOM=1 pnpm --filter @cmdr/desktop build
           mv apps/desktop/build/sbom/frontend.cdx.json "sbom/Cmdr_${VERSION}_frontend.cdx.json"
 
           # Resolving must not have changed a lockfile, or the SBOM describes something
-          # other than what the build job compiled.
+          # other than what the compile job compiled.
           git diff --exit-code -- Cargo.lock pnpm-lock.yaml
 
           # `actions/attest` takes a CycloneDX SBOM only if it has a `serialNumber` (optional in the
@@ -744,11 +905,11 @@ jobs:
     name: Publish release
     # `pkg` only for ordering: its pkg (if any) is on the release before the checksums are taken.
     # The `if` below ignores how it ended.
-    needs: [guard, build, pkg]
+    needs: [guard, sign, pkg]
     if: >-
       !cancelled() && needs.guard.result == 'success' && (
         github.event_name == 'workflow_dispatch' ||
-        (needs.guard.outputs.update-signing == 'ci' && needs.build.result == 'success'))
+        (needs.guard.outputs.update-signing == 'ci' && needs.sign.result == 'success'))
     runs-on: ubuntu-latest
     permissions:
       contents: write # publish the draft, upload `latest.json` and checksums, push `latest.json` to main
@@ -766,8 +927,8 @@ jobs:
           mkdir -p /tmp/signatures
           gh release download "$TAG" -p "Cmdr_*.app.tar.gz.sig" -D /tmp/signatures
 
-          # Verify all 3 arch sigs were downloaded. Since tauri-action v1 the `.app.tar.gz` and
-          # `.app.tar.gz.sig` names carry the app version, the way the DMG names always have:
+          # Verify all 3 arch sigs were downloaded. The `sign` job names the `.app.tar.gz` and
+          # `.app.tar.gz.sig` assets with the app version, the way the DMG names always have:
           # `Cmdr_<version>_<arch>.app.tar.gz.sig`. `gh` writes each file under the release
           # asset's own name, so these are the names on disk too.
           for arch in aarch64 x64 universal; do
@@ -832,7 +993,7 @@ jobs:
           SIG_X86_64=$(cat "/tmp/signatures/Cmdr_${VERSION}_x64.app.tar.gz.sig")
           SIG_UNIVERSAL=$(cat "/tmp/signatures/Cmdr_${VERSION}_universal.app.tar.gz.sig")
 
-          # Query DMG sizes from the release assets (tauri-action uses "x64" in DMG names)
+          # Query DMG sizes from the release assets (Tauri's bundler says "x64" in DMG names)
           RELEASE_JSON=$(gh api "repos/${{ github.repository }}/releases/tags/$TAG")
           SIZE_AARCH64=$(echo "$RELEASE_JSON" | jq '[.assets[] | select(.name | endswith("_aarch64.dmg"))][0].size // 0')
           SIZE_X86_64=$(echo "$RELEASE_JSON" | jq '[.assets[] | select(.name | endswith("_x64.dmg"))][0].size // 0')
@@ -867,7 +1028,7 @@ jobs:
             }' > /tmp/latest.json
 
           # Every installed copy of Cmdr fetches these URLs verbatim and has no fallback, so a name
-          # that drifts from what tauri-action uploaded would strand the whole install base. Fail
+          # that drifts from what the `sign` job uploaded would strand the whole install base. Fail
           # the release here instead, while nothing has shipped.
           for asset in $(jq -r '.platforms[].url | split("/") | last' /tmp/latest.json | sort -u); do
               echo "$RELEASE_JSON" | jq -e --arg name "$asset" 'any(.assets[]; .name == $name)' > /dev/null \
@@ -973,11 +1134,11 @@ jobs:
     name: Attest provenance and publish SBOMs
     # `pkg` for ordering only, like `publish`: in `local` mode the tag push's run attests the
     # pkg along with the rest of the draft.
-    needs: [guard, build, pkg, publish, sbom]
+    needs: [guard, sign, pkg, publish, sbom]
     if: >-
       !cancelled() && (needs.publish.result == 'success' || (
         github.event_name == 'push' && needs.guard.outputs.update-signing == 'local' &&
-        needs.build.result == 'success'))
+        needs.sign.result == 'success'))
     runs-on: ubuntu-latest
     timeout-minutes: 30
     # Job-scoped on purpose (`desktop-workflows-hardening` enforces it for `id-token`). A job
