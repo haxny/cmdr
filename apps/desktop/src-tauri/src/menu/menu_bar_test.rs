@@ -63,16 +63,17 @@ menu menu.bar.file id=menu_file
 menu menu.bar.edit id=menu_edit
   0 predefined undo menu.edit.undo
   1 predefined redo menu.edit.redo
-  2 separator
-  3 item edit_cut menu.edit.cut [Cmd+X] tracked
-  4 item edit_copy menu.edit.copy [Cmd+C] tracked
-  5 item edit_paste menu.edit.paste [Cmd+V] tracked
-  6 item edit_paste_move menu.edit.moveHere [Alt+Cmd+V] tracked
-  7 separator
-  8 item copy_path menu.edit.copyPath [Cmd+Alt+C] tracked
-  9 item copy_filename menu.edit.copyFilename tracked
-  10 separator
-  11 item search_files menu.edit.searchFiles [Cmd+F] tracked
+  2 item undo_trash menu.edit.undoTrash tracked
+  3 separator
+  4 item edit_cut menu.edit.cut [Cmd+X] tracked
+  5 item edit_copy menu.edit.copy [Cmd+C] tracked
+  6 item edit_paste menu.edit.paste [Cmd+V] tracked
+  7 item edit_paste_move menu.edit.moveHere [Alt+Cmd+V] tracked
+  8 separator
+  9 item copy_path menu.edit.copyPath [Cmd+Alt+C] tracked
+  10 item copy_filename menu.edit.copyFilename tracked
+  11 separator
+  12 item search_files menu.edit.searchFiles [Cmd+F] tracked
 menu menu.bar.select id=menu_select
   0 item select_all_files menu.select.all [Cmd+A] tracked
   1 item deselect_all menu.select.deselectAll [Cmd+Shift+A] tracked
@@ -180,19 +181,21 @@ menu menu.bar.file
   17 item get_info menu.file.getInfo [Ctrl+I] tracked
   18 item quick_look menu.file.quickLook tracked
 menu menu.bar.edit
-  0 item edit_cut menu.edit.cut [Ctrl+X] tracked
-  1 item edit_copy menu.edit.copy [Ctrl+C] tracked
-  2 item edit_paste menu.edit.paste [Ctrl+V] tracked
-  3 item edit_paste_move menu.edit.moveHere [Ctrl+Alt+V] tracked
-  4 separator
-  5 item copy_path menu.edit.copyPath [Ctrl+Alt+C] tracked
-  6 item copy_filename menu.edit.copyFilename tracked
-  7 separator
-  8 item search_files menu.edit.searchFiles [Ctrl+F] tracked
+  0 item undo_trash menu.edit.undoTrash tracked
+  1 separator
+  2 item edit_cut menu.edit.cut [Ctrl+X] tracked
+  3 item edit_copy menu.edit.copy [Ctrl+C] tracked
+  4 item edit_paste menu.edit.paste [Ctrl+V] tracked
+  5 item edit_paste_move menu.edit.moveHere [Ctrl+Alt+V] tracked
+  6 separator
+  7 item copy_path menu.edit.copyPath [Ctrl+Alt+C] tracked
+  8 item copy_filename menu.edit.copyFilename tracked
   9 separator
-  10 item settings menu.app.settings [Ctrl+,] tracked
-  11 item enter_license_key menu.app.licenseEnter|menu.app.licenseDetails untracked
-  12 item check_for_updates menu.app.checkForUpdates tracked
+  10 item search_files menu.edit.searchFiles [Ctrl+F] tracked
+  11 separator
+  12 item settings menu.app.settings [Ctrl+,] tracked
+  13 item enter_license_key menu.app.licenseEnter|menu.app.licenseDetails untracked
+  14 item check_for_updates menu.app.checkForUpdates tracked
   13 item changelog menu.app.changelog tracked
 menu menu.bar.select
   0 item select_all_files menu.select.all [Ctrl+A] tracked

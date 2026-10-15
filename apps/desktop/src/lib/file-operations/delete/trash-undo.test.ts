@@ -9,7 +9,15 @@
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest'
 import { _setLocaleForTests } from '#lib/intl/locale.js'
-import { trashUndoOutcome, trashUndoMessage, trashUndoLevel, runTrashUndo } from './trash-undo'
+import {
+  trashUndoOutcome,
+  trashUndoMessage,
+  trashUndoLevel,
+  runTrashUndo,
+  rememberTrashForUndo,
+  trashCompleteToastId,
+  undoLastTrash,
+} from './trash-undo'
 import type { UndoReport, OperationUndoOutcome } from '#lib/tauri-commands/index.js'
 import type { RollbackRefusal } from '#lib/ipc/bindings.js'
 import type { ToastOptions } from '#lib/ui/toast/toast-store.svelte.js'
@@ -183,5 +191,45 @@ describe('runTrashUndo', () => {
   it('does not let a refused undo reject into the click handler', async () => {
     undoOperations.mockRejectedValue(new Error('nope'))
     await expect(runTrashUndo('op-1')).resolves.toBeUndefined()
+  })
+})
+
+/**
+ * Edit > Undo trash and its command: the trash toast's Undo, reachable after the toast has
+ * gone and without a pointer (#439).
+ */
+describe('undoLastTrash', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    undoOperations.mockResolvedValue(report({ restored: 1 }))
+  })
+
+  it('undoes the newest trash and takes its toast down', async () => {
+    rememberTrashForUndo('op-old')
+    rememberTrashForUndo('op-new')
+
+    await undoLastTrash()
+
+    expect(undoOperations).toHaveBeenCalledWith(['op-new'])
+    expect(dismissToast).toHaveBeenCalledWith(trashCompleteToastId('op-new'))
+  })
+
+  it('says so, and undoes nothing, once that trash is already back', async () => {
+    rememberTrashForUndo('op-1')
+    await runTrashUndo('op-1')
+    vi.clearAllMocks()
+
+    await undoLastTrash()
+
+    expect(undoOperations).not.toHaveBeenCalled()
+    expect(addToast.mock.calls[0]?.[0]).toBe('There’s no trash to undo.')
+  })
+
+  it('undoes each trash only once', async () => {
+    rememberTrashForUndo('op-1')
+    await undoLastTrash()
+    await undoLastTrash()
+
+    expect(undoOperations).toHaveBeenCalledTimes(1)
   })
 })

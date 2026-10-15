@@ -28,6 +28,26 @@ const log = getAppLogger('fileOperations')
  */
 const TRASH_UNDO_TOAST_ID = 'trash-undo'
 
+/** The dedup id of a trash's own completion toast (Undo / "Go to trash"), so Edit > Undo trash can take it down. */
+export function trashCompleteToastId(operationId: string): string {
+  return `trash-complete-${operationId}`
+}
+
+/**
+ * The newest trash this session that nobody has undone yet: what Edit > Undo trash
+ * (`edit.undoTrash`) reverses. The toast's Undo button is mouse-first and gone after ten
+ * seconds; this keeps the same action a menu item and a palette command away for as long
+ * as it's the last thing trashed. Session-only on purpose: an "Undo" that reached back to
+ * a trash from yesterday would surprise more than it helps, and the operation log already
+ * rolls back any trash in the journal.
+ */
+let lastTrashOperationId: string | null = null
+
+/** Records a finished trash as the one Edit > Undo trash reverses. */
+export function rememberTrashForUndo(operationId: string): void {
+  lastTrashOperationId = operationId
+}
+
 /** What a finished trash undo amounts to, before it becomes a sentence. */
 export type TrashUndoOutcome =
   /** Every item is back where it was. */
@@ -90,6 +110,8 @@ export function trashUndoLevel(outcome: TrashUndoOutcome): 'success' | 'info' {
  * as a fresh transient toast rather than a replacement.
  */
 export async function runTrashUndo(operationId: string): Promise<void> {
+  // Whatever the outcome, this trash has had its undo: a second one could only be refused.
+  if (lastTrashOperationId === operationId) lastTrashOperationId = null
   addToast(tString('fileOperations.trash.undoing'), {
     id: TRASH_UNDO_TOAST_ID,
     level: 'info',
@@ -107,4 +129,18 @@ export async function runTrashUndo(operationId: string): Promise<void> {
     dismissToast(TRASH_UNDO_TOAST_ID)
     addToast(tString('fileOperations.trash.undoUnavailable'), { level: 'info', timeoutMs: 7000 })
   }
+}
+
+/**
+ * Edit > Undo trash: undo the newest trash not undone yet, taking its completion toast
+ * down so its Undo can't run a second time. Says so when there's nothing to undo.
+ */
+export async function undoLastTrash(): Promise<void> {
+  const operationId = lastTrashOperationId
+  if (operationId === null) {
+    addToast(tString('fileOperations.trash.nothingToUndo'), { level: 'info', id: TRASH_UNDO_TOAST_ID })
+    return
+  }
+  dismissToast(trashCompleteToastId(operationId))
+  await runTrashUndo(operationId)
 }

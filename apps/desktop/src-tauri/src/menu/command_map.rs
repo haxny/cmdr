@@ -78,6 +78,8 @@ pub const OPEN_TERMINAL_HERE_ID: &str = "open_terminal_here";
 pub const COPY_PATH_ID: &str = "copy_path";
 pub const COPY_CURRENT_DIR_PATH_ID: &str = "copy_current_dir_path";
 pub const COPY_FILENAME_ID: &str = "copy_filename";
+/// Edit > Undo move to trash: the trash toast's Undo, reachable from the menu bar.
+pub const UNDO_TRASH_ID: &str = "undo_trash";
 pub const GET_INFO_ID: &str = "get_info";
 pub const QUICK_LOOK_ID: &str = "quick_look";
 pub const RENAME_ID: &str = "rename";
@@ -426,6 +428,7 @@ pub fn menu_id_to_command(menu_id: &str) -> Option<(&'static str, CommandScope)>
         COPY_PATH_ID => Some(("file.copyPath", CommandScope::FileScoped)),
         COPY_CURRENT_DIR_PATH_ID => Some(("file.copyCurrentDirectoryPath", CommandScope::FileScoped)),
         COPY_FILENAME_ID => Some(("file.copyFilename", CommandScope::FileScoped)),
+        UNDO_TRASH_ID => Some(("edit.undoTrash", CommandScope::FileScoped)),
         GET_INFO_ID => Some(("file.getInfo", CommandScope::FileScoped)),
         QUICK_LOOK_ID => Some(("file.quickLook", CommandScope::FileScoped)),
         // Intercepted by on_menu_event before this lookup (like cut/copy/paste): main window →
@@ -534,6 +537,7 @@ pub fn command_id_to_menu_id(command_id: &str) -> Option<&'static str> {
         "file.openTerminalHere" => Some(OPEN_TERMINAL_HERE_ID),
         "file.copyPath" => Some(COPY_PATH_ID),
         "file.copyFilename" => Some(COPY_FILENAME_ID),
+        "edit.undoTrash" => Some(UNDO_TRASH_ID),
         "file.getInfo" => Some(GET_INFO_ID),
         "file.quickLook" => Some(QUICK_LOOK_ID),
         "selection.selectAll" => Some(SELECT_ALL_ID),
@@ -732,6 +736,7 @@ mod tests {
             "file.openTerminalHere",
             "file.copyPath",
             "file.copyFilename",
+            "edit.undoTrash",
             "file.copyShareLink",
             "file.copyShareLinkOneDay",
             "file.copyShareLinkOneHour",

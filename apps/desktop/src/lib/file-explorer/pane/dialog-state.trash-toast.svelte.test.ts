@@ -16,6 +16,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { createDialogState } from './dialog-state.svelte'
 import { setForegroundOperationId } from '#lib/file-operations/foreground-operation.svelte.js'
 import TrashCompleteToastContent from '#lib/file-operations/delete/TrashCompleteToastContent.svelte'
+import { trashCompleteToastId } from '#lib/file-operations/delete/trash-undo.js'
 import type { TransferCompletePayload, TransferProgressPropsData } from './dialog-props'
 import type { FilePaneAPI } from './types'
 import type { PaneRevealAPI } from '../navigation/navigate-and-select'
@@ -46,6 +47,11 @@ vi.mock('#lib/tauri-commands/index.js', () => ({
 }))
 
 vi.mock('#lib/ui/toast/index.js', () => ({ addToast, dismissToast: vi.fn() }))
+const { rememberTrashForUndo } = vi.hoisted(() => ({ rememberTrashForUndo: vi.fn() }))
+vi.mock('#lib/file-operations/delete/trash-undo.js', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  rememberTrashForUndo,
+}))
 vi.mock('#lib/search/snapshot-store.svelte.js', () => ({ removeEntryFromAllSnapshots: vi.fn() }))
 
 const FOLDER = '/Users/me/photos'
@@ -129,6 +135,19 @@ describe('a completed trash', () => {
       sourceFolderPath: FOLDER,
       explorer,
     })
+  })
+
+  // Edit > Undo trash reverses this same trash later, and takes this toast down by its id
+  // so its Undo can't run a second time.
+  it('names the toast after its operation, and leaves the trash for Edit > Undo trash', () => {
+    const dialogs = makeState()
+    dialogs.startTransferProgress(props('trash'))
+    setForegroundOperationId('op-1')
+
+    dialogs.handleTransferComplete(ONE_FILE)
+
+    expect(raisedToast().options.id).toBe(trashCompleteToastId('op-1'))
+    expect(rememberTrashForUndo).toHaveBeenCalledWith('op-1')
   })
 
   it('gives the user longer to reach the buttons than a plain toast gets', () => {

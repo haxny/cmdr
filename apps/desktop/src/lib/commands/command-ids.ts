@@ -213,6 +213,7 @@ export const COMMAND_IDS = [
   'edit.cut',
   'edit.paste',
   'edit.pasteAsMove',
+  'edit.undoTrash',
   'file.newFolder',
   'file.newFile',
   'file.delete',

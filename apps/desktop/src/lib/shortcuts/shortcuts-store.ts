@@ -282,6 +282,7 @@ export const menuCommands = [
   'file.quickLook',
   'file.copyPath',
   'file.copyFilename',
+  'edit.undoTrash',
   'file.copyShareLink',
   'file.copyShareLinkOneDay',
   'file.copyShareLinkOneHour',

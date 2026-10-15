@@ -163,6 +163,10 @@
   "@menu.edit.redo": {
     "description": "VERB (imperative). Standard macOS text-editing Redo (⇧⌘Z), the counterpart of menu.edit.undo. Use the exact word macOS uses for Redo in this language."
   },
+  "menu.edit.undoTrash": "Undo move to trash",
+  "@menu.edit.undoTrash": {
+    "description": "VERB phrase (imperative). Edit menu item that puts back the files the user most recently moved to the trash in Cmdr, the same as the Undo button on the \"Moved 3 files to trash\" notification. It sits right under the text-editing Undo and Redo, so the wording must make clear it's about trashed FILES, not text. \"Move to trash\" matches macOS's own \"Move to Trash\" action; use the term macOS uses in this language."
+  },
   "menu.edit.cut": "Cut",
   "@menu.edit.cut": {
     "description": "VERB (imperative). Cuts to the clipboard (⌘X). Does double duty: with a text field focused it cuts text, otherwise it marks the selected FILES to be moved on the next paste. Use the exact word macOS uses for Cut in this language, since the text meaning is the one people recognize."

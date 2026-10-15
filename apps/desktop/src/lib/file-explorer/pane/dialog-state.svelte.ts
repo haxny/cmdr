@@ -37,6 +37,7 @@ import {
 } from '#lib/file-operations/transfer/transfer-complete-toast.js'
 import { getTechnicalDetails } from '#lib/file-operations/transfer/transfer-error-messages.js'
 import TrashCompleteToastContent from '#lib/file-operations/delete/TrashCompleteToastContent.svelte'
+import { rememberTrashForUndo, trashCompleteToastId } from '#lib/file-operations/delete/trash-undo.js'
 import { getAppLogger } from '#lib/logging/logger.js'
 import { moveCursorToNewFolder } from '#lib/file-operations/mkdir/new-folder-operations.js'
 import { archiveNameFromPath, pathCrossesArchiveBoundary } from './archive-paths'
@@ -189,7 +190,8 @@ export function createDialogState(deps: DialogStateDeps) {
    * (hovering pauses the timer, so the number is only the window in which the
    * pointer has to arrive). Both actions need the journaled operation, so a trash
    * that somehow has no id falls back to the plain toast rather than offering
-   * buttons that would do nothing. 7s elsewhere: the default 4s reads as a
+   * buttons that would do nothing. The trash also becomes what Edit > Undo trash
+   * reverses, for keyboard users and for after the toast has gone. 7s elsewhere: the default 4s reads as a
    * flicker for anyone still parsing a mixed sentence's second clause.
    */
   function raiseCompletionToasts(
@@ -204,7 +206,9 @@ export function createDialogState(deps: DialogStateDeps) {
     // stale now: this toast takes its place (a no-op for a foreground one).
     if (settledOperationId) dismissQueueHandoffToast(settledOperationId)
     if (op === 'trash' && settledOperationId) {
+      rememberTrashForUndo(settledOperationId)
       addToast(TrashCompleteToastContent, {
+        id: trashCompleteToastId(settledOperationId),
         level,
         timeoutMs: 10000,
         props: {

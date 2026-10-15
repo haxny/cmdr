@@ -11,6 +11,7 @@
  */
 import { goToLatestDownload } from '#lib/downloads/go-to-latest.js'
 import { goToTrash } from '#lib/file-operations/delete/go-to-trash.js'
+import { undoLastTrash } from '#lib/file-operations/delete/trash-undo.js'
 import { addFavoriteFolder } from '#lib/file-explorer/navigation/add-favorite-folder.js'
 import { getFocusedPanePath } from '#lib/file-explorer/pane/focused-pane-reads.js'
 import type { CommandArgs } from '#lib/commands/index.js'
@@ -30,6 +31,10 @@ export const miscHandlers = {
 
   'file.goToTrash': async ({ explorerRef }) => {
     await goToTrash(explorerRef)
+  },
+
+  'edit.undoTrash': async () => {
+    await undoLastTrash()
   },
 
   'favorites.add': async () => {

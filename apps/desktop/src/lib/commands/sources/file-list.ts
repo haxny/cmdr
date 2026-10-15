@@ -331,6 +331,19 @@ export const fileListCommands: CommandSource[] = [
     whileDialogOpen: BLOCKED_BY_DIALOGS,
   },
   {
+    // The trash toast's Undo, kept reachable after the toast has gone and without a
+    // pointer: Edit > Undo move to trash and the palette (`trash-undo.ts`). No default
+    // shortcut: ⌘Z is macOS's text Undo, which the Edit menu's predefined item owns.
+    id: 'edit.undoTrash',
+    nameKey: 'commands.editUndoTrash.label',
+    scope: 'Main window/File list',
+    showInPalette: true,
+    shortcuts: [],
+    whileDialogOpen: BLOCKED_BY_DIALOGS,
+    descriptionKey: 'commands.editUndoTrash.description',
+    keywords: ['undo', 'trash', 'bin', 'restore', 'put back', 'recover', 'deleted'],
+  },
+  {
     // No shortcut: it's the "where did that go?" follow-up, reached from the
     // palette or from the button on the trash toast, not from muscle memory.
     id: 'file.goToTrash',

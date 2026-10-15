@@ -82,6 +82,10 @@
     "description": "Button on the toast that appears right after files are moved to the trash. Pressing it opens the trash folder in the file pane, with the cursor on the item that was just moved there. \"Trash\" is the macOS Trash, so use whatever your platform calls the recoverable wastebasket. Short control label; the toast is narrow, so keep it to one or two words."
   },
 
+  "fileOperations.trash.nothingToUndo": "There’s no trash to undo.",
+  "@fileOperations.trash.nothingToUndo": {
+    "description": "Toast shown when the user picks Edit > Undo trash (or its command) but nothing they moved to the trash since opening Cmdr is waiting to be undone: either nothing was trashed, or the last trash was already put back."
+  },
   "fileOperations.trash.undoing": "Putting them back…",
   "@fileOperations.trash.undoing": {
     "description": "Replaces the toast while an undo is running, after the user pressed Undo on the trash toast. Putting files back can take a while on a slow or busy drive, so this is a progress state, not a result. Sentence case; the character at the end is an ellipsis. The files come back OUT of the Trash, so use the same verb as fileOperations.trash.undone."

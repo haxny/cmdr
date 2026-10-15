@@ -49,7 +49,7 @@ use super::{
     SEARCH_FILES_ID, SELECT_ALL_ID, SELECT_FILES_ID, SELECT_MENU_ID, SELECT_SAME_KIND_ID, SERVERS_CONNECT_ID,
     SERVERS_SHOW_ID, SETTINGS_ID, SHOW_HIDDEN_FILES_ID, SHOW_IN_FINDER_ID, SORT_ASCENDING_ID, SORT_BY_CREATED_ID,
     SORT_BY_EXTENSION_ID, SORT_BY_MENU_ID, SORT_BY_MODIFIED_ID, SORT_BY_NAME_ID, SORT_BY_SIZE_ID, SORT_DESCENDING_ID,
-    SUGGESTED_OPS_ID, SWAP_PANES_ID, SWITCH_PANE_ID, TAB_MENU_ID, VIEW_MENU_ID, VIEW_MODE_BRIEF_LEFT_ID,
+    SUGGESTED_OPS_ID, SWAP_PANES_ID, SWITCH_PANE_ID, TAB_MENU_ID, UNDO_TRASH_ID, VIEW_MENU_ID, VIEW_MODE_BRIEF_LEFT_ID,
     VIEW_MODE_BRIEF_RIGHT_ID, VIEW_MODE_FULL_LEFT_ID, VIEW_MODE_FULL_RIGHT_ID, VIEW_ZOOM_75_ID, VIEW_ZOOM_100_ID,
     VIEW_ZOOM_125_ID, VIEW_ZOOM_150_ID, VIEW_ZOOM_IN_ID, VIEW_ZOOM_OUT_ID, ViewMode, WINDOW_MENU_ID,
 };
@@ -196,7 +196,10 @@ pub(crate) const MENU_BAR: &[BarMenu] = &[
         &[
             macos_only(predefined(Predefined::Undo, "menu.edit.undo")),
             macos_only(predefined(Predefined::Redo, "menu.edit.redo")),
-            macos_only(SEPARATOR),
+            // Files, unlike the text Undo above: the trash toast's Undo, for keyboard users and
+            // for after the toast has gone.
+            item(UNDO_TRASH_ID, "menu.edit.undoTrash", NONE),
+            SEPARATOR,
             // Custom items rather than predefined ones, so ⌘X / ⌘C / ⌘V route through
             // `execute-command` and the frontend picks the text clipboard (an input has focus) or
             // the file clipboard. In other windows, `handle_menu_event` forwards the native selector.

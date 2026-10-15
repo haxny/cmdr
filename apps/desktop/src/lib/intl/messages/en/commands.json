@@ -313,6 +313,14 @@
   "@commands.appFocusNotifications.description": {
     "description": "Longer help text for the \"Move focus to the notifications\" command, shown as a secondary line in the command palette. \"Undo\" is the button on the notification after files go to the trash."
   },
+  "commands.editUndoTrash.label": "Undo move to trash",
+  "@commands.editUndoTrash.label": {
+    "description": "Command name that puts back the files the user most recently moved to the trash in Cmdr, the same thing the Undo button on the \"Moved 3 files to trash\" notification does. Appears in the command palette, the keyboard shortcuts settings, and the Edit menu. \"Move to trash\" is the action's name, as in macOS's own \"Move to Trash\"."
+  },
+  "commands.editUndoTrash.description": "Put back the files you last moved to the trash",
+  "@commands.editUndoTrash.description": {
+    "description": "Longer help text for the \"Undo move to trash\" command, shown as a secondary line in the command palette."
+  },
   "commands.paneLeftVolumeChooser.label": "Open left volume switcher",
   "@commands.paneLeftVolumeChooser.label": {
     "description": "Command name that opens the volume/location switcher for the LEFT pane. \"Volume\" is a disk or mounted location. Appears in the command palette. The key says “chooser” only because it mirrors a stored command id; the UI calls this the volume switcher.",
