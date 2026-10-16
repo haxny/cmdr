@@ -34,8 +34,8 @@ use super::port_file::{remove_port_file, write_port_file, write_secret_file};
 use super::protocol::{INVALID_PARAMS, INVALID_REQUEST, METHOD_NOT_FOUND, McpRequest, McpResponse, ServerCapabilities};
 use super::resources::{get_all_resources, read_resource};
 use super::safe_headers::SafeHeaders;
+use super::tool_registry::get_all_tools;
 use super::tool_registry::{Consumer, execute_tool};
-use super::tools::get_all_tools;
 
 /// File name written under `<data_dir>` so external readers (CLI, E2E fixtures, agent
 /// helpers) can discover the actual bound port. See `port_file.rs` for the protocol.

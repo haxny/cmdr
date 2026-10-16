@@ -1,5 +1,5 @@
 use crate::mcp::pane_state::{PaneFileEntry, PaneState, PaneStateStore};
-use crate::mcp::tools::get_all_tools;
+use crate::mcp::tool_registry::get_all_tools;
 
 // =============================================================================
 // PaneStateStore tests

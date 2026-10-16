@@ -1,5 +1,5 @@
 use crate::mcp::resources::get_all_resources;
-use crate::mcp::tools::get_all_tools;
+use crate::mcp::tool_registry::get_all_tools;
 
 #[test]
 fn test_app_tools_exist() {

@@ -16,9 +16,8 @@ mcp/
 ├── auth.rs           # Bearer-token lifecycle + per-request validation
 ├── protocol.rs       # JSON-RPC message handling
 ├── tool_registry/    # THE single source: one authored table → per-consumer lists and dispatch
-│   ├── mod.rs        #   the `mcp_tools!` macro, the table, the `Consumer`/`Access` dimensions, accessors
+│   ├── mod.rs        #   the `mcp_tools!` macro, the table, the `Tool` struct, the `Consumer`/`Access` dimensions, accessors
 │   └── schemas/      #   per-tool `fn <tool>_schema()` blocks, grouped by category
-├── tools.rs          # Thin shim: the `Tool` struct + re-export of `get_all_tools`
 ├── executor/         # Tool handlers, grouped by category (app.rs, nav.rs, file_ops.rs, …)
 ├── resources/        # Read-only resources (cmdr://state, logs, indexing, settings)
 ├── pane_state.rs     # Frontend → backend state sync store

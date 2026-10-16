@@ -1,6 +1,6 @@
 use crate::mcp::pane_state::PaneFileEntry;
 use crate::mcp::protocol::McpRequest;
-use crate::mcp::tools::get_all_tools;
+use crate::mcp::tool_registry::get_all_tools;
 
 // =============================================================================
 // Security-focused tests

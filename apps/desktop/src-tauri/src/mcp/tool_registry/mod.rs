@@ -38,9 +38,21 @@
 pub mod params;
 mod schemas;
 
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use super::executor::ToolError;
+
+/// A tool definition for MCP: the registry's output type, one `tools/list` element (serde
+/// `camelCase`, so `input_schema` serializes as `inputSchema`). Every generated view returns
+/// `Vec<Tool>`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Tool {
+    pub name: String,
+    pub description: String,
+    pub input_schema: Value,
+}
 
 /// Which AI consumer a tool is exposed to. One authored registry, per-consumer views (D49):
 /// the MCP HTTP server dispatches the [`AiClient`](Consumer::AiClient) view, the in-process agent

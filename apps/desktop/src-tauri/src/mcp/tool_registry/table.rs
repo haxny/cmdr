@@ -8,13 +8,12 @@
 
 use serde_json::Value;
 
-use super::{Access, Consumer, schemas, tool_available_to, validate_params};
+use super::{Access, Consumer, Tool, schemas, tool_available_to, validate_params};
 use crate::mcp::executor::{ToolError, ToolResult};
 use crate::mcp::executor::{
     app, archive_password, async_tools, conflicts, dialogs, downloads, eject, favorites, file_ops, image_facts,
     indexing, memory, nav, operation_log, photos, queue, quit, search, tags, view,
 };
-use crate::mcp::tools::Tool;
 
 mcp_tools! {
     // ── Navigation ──────────────────────────────────────────────────────────

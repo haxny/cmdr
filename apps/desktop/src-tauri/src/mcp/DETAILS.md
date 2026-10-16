@@ -44,7 +44,7 @@ Every AI-callable tool is authored once in the `mcp_tools!` table in `tool_regis
 schema, `consumers`, `access`, and handler per entry. That one table generates `get_all_tools()`
 (the ai_client `tools/list`), `agent_tool_view()` (the in-process agent's set), `execute_tool()` (consumer-gated
 dispatch), and `tool_consumers()` / `tool_access()`, so the facets can't drift and adding a tool is a single entry.
-`tools.rs` is a thin shim: the `Tool` struct plus a re-export of `get_all_tools`. Read the entries
+`tool_registry/mod.rs` also defines `Tool`, the `tools/list` element every view returns. Read the entries
 for the exact schemas (don't transcribe them here); the sections below summarize behavior. Wire output is byte-identical
 and pinned by `tests/tool_snapshot_tests.rs`.
 
