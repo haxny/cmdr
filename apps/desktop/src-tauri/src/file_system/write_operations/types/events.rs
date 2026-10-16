@@ -18,8 +18,8 @@ use tauri_specta::Event;
 use cmdr_operation_log::rollback::SkipBreakdown;
 
 use super::{
-    ConflictId, ProgressAxis, RecoveredOriginal, TransferActivity, TrashRefusalKind, WriteOperationError,
-    WriteOperationPhase, WriteOperationType,
+    ConflictId, OperationSnapshot, ProgressAxis, RecoveredOriginal, TransferActivity, TrashRefusalKind,
+    WriteOperationError, WriteOperationPhase, WriteOperationType,
 };
 
 // ============================================================================
@@ -596,6 +596,16 @@ pub struct MoveLeftoversKeptEvent {
     /// The staging folder's own name (`.cmdr-staging-<op>`), which is what the
     /// person would look for with hidden files shown.
     pub folder_name: String,
+}
+
+/// Typed `operations-changed` Tauri event carrying the thin registry snapshot
+/// (membership + lifecycle status, NOT 200 ms progress). The struct name
+/// kebab-cases to `operations-changed`. The queue window subscribes to it for
+/// the row set and to the per-file `write-progress` stream for live bars.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type, tauri_specta::Event)]
+#[serde(rename_all = "camelCase")]
+pub struct OperationsChanged {
+    pub operations: Vec<OperationSnapshot>,
 }
 
 /// Cancelled event payload.

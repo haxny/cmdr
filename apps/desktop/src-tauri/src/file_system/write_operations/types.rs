@@ -5,17 +5,20 @@
 //! `write_operations`, and a single upward import welds eleven modules into
 //! one cycle. `DETAILS.md` § "Why `types` imports nothing".
 //!
-//! The event payloads and the error family live one level down in
-//! `types/events.rs` and `types/errors.rs` and are re-exported here, so every
-//! caller keeps its `types::WriteProgressEvent` / `types::WriteOperationError`
-//! path.
+//! The event payloads, the error family, and the queue row's summary live one
+//! level down in `types/events.rs`, `types/errors.rs`, and `types/queue_row.rs`
+//! and are re-exported here, so every caller keeps its
+//! `types::WriteProgressEvent` / `types::WriteOperationError` path.
 
+use cmdr_operation_log::types::OpKind;
 use serde::{Deserialize, Serialize};
 
 mod errors;
 mod events;
+mod queue_row;
 pub use errors::*;
 pub use events::*;
+pub use queue_row::*;
 
 /// One original the operation kept under a new name because its old name was
 /// occupied by the replacement. Shared by failure and cancellation payloads so
@@ -136,6 +139,37 @@ pub enum LifecycleStatus {
     Cancelled,
     /// Could not complete.
     Failed,
+}
+
+/// One thin registry snapshot row (membership + lifecycle status, NOT 200 ms
+/// progress). The queue window subscribes to `operations-changed` for the row
+/// set and to the per-file `write-progress` stream for live bars.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct OperationSnapshot {
+    pub operation_id: String,
+    pub operation_type: WriteOperationType,
+    pub status: LifecycleStatus,
+    pub source: Option<String>,
+    pub destination: Option<String>,
+    /// See [`OperationDescriptor::supports_rollback`](super::OperationDescriptor::supports_rollback).
+    pub supports_rollback: bool,
+    /// See [`OperationDescriptor::reverses`](super::OperationDescriptor::reverses). Static for the op's whole life,
+    /// which is why it rides the thin snapshot rather than the 200 ms progress
+    /// tick.
+    pub reverses: Option<OpKind>,
+    /// Why the operation stopped, on a retained `Failed` row only; `None` on
+    /// every live row. The typed variant, never rendered prose: the frontend's
+    /// `transfer-error-messages.ts` owns the wording. DETAILS § "Retained
+    /// failures".
+    pub error: Option<WriteOperationError>,
+    /// The queue row may offer Retry: a retained failure that kept a way to
+    /// start again (`routing/retry.rs`), with no Retry for it already starting.
+    /// `false` on every live row. Whether the ERROR is worth retrying is the
+    /// frontend's call (`offersRetry`), the same one the error dialog makes.
+    pub can_retry: bool,
+    /// See [`OperationSummaryText::items`].
+    pub items: Option<OperationItems>,
 }
 
 // ============================================================================

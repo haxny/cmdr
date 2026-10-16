@@ -1,12 +1,9 @@
-//! The manager's wire vocabulary: what it tells the windows (`OperationSnapshot`,
-//! `OperationsChanged`) and what each request answers (`PauseOutcome`,
+//! The manager's request vocabulary: what each request answers (`PauseOutcome`,
 //! `PauseAllOutcome`, `QueueMoveOutcome`). Serde and specta structs only; none of
 //! it touches the manager's lock, which is why it lives apart from the admission
-//! machinery in `../manager.rs`.
-
-use cmdr_operation_log::types::OpKind;
-
-use super::super::types::{ItemKinds, LifecycleStatus, WriteOperationError, WriteOperationType};
+//! machinery in `../manager.rs`. What the manager TELLS the windows
+//! (`OperationSnapshot`, `OperationsChanged`) is vocabulary the engine-wide
+//! events seam carries too, so it lives in `types`.
 
 /// What a pause or resume request actually did, so every caller can say so
 /// instead of assuming it worked. Pause and resume share it: the three outcomes
@@ -115,83 +112,4 @@ pub enum QueueMoveOutcome {
     /// Not waiting: running, paused, settled, or never registered. Only a
     /// waiting operation has a place in line to change.
     NotQueued,
-}
-
-/// Best-effort human-readable source/destination summary for the queue window.
-// DEFAULT-OK: both sides `None` means "couldn't summarize", and the queue window renders
-// that absence rather than an empty string.
-#[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize, specta::Type)]
-#[serde(rename_all = "camelCase")]
-pub struct OperationSummaryText {
-    pub source: Option<String>,
-    pub destination: Option<String>,
-    /// What the operation acts on, spelled out for the queue row. `None` where
-    /// the starter has no top-level items to name (a rename, a new folder, an
-    /// edit inside an archive): the row falls back to the two names above.
-    pub items: Option<OperationItems>,
-}
-
-/// The items an operation acts on and where they go, for the queue row's
-/// "Copying 2 folders and 1 file Dropbox → cmdr-s3-test/target/folder".
-///
-/// Static for the op's whole life and bounded (at most
-/// [`ITEM_NAMES_SHOWN`](super::super::summary::ITEM_NAMES_SHOWN) names), which
-/// is why it rides the thin snapshot: it changes only when membership does.
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize, specta::Type)]
-#[serde(rename_all = "camelCase")]
-pub struct OperationItems {
-    /// How many top-level items, files and folders together.
-    pub count: u32,
-    /// The same items split by kind, when the starter said; `None` reads as
-    /// "3 items". Dropped when it doesn't add up to `count`.
-    pub kinds: Option<ItemKinds>,
-    /// The first top-level names, in order, for the row's tooltip. The rest is
-    /// `count` minus these.
-    pub names: Vec<String>,
-    /// The folder they come from, as a person reads it (`~/Dropbox`,
-    /// `cmdr-s3-test/photos`). `None` when the sources share no parent.
-    pub from: Option<String>,
-    /// The folder they go to, in the same form. `None` for a delete or trash.
-    pub to: Option<String>,
-}
-
-/// One thin registry snapshot row (membership + lifecycle status, NOT 200 ms
-/// progress). The queue window subscribes to `operations-changed` for the row
-/// set and to the per-file `write-progress` stream for live bars.
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type)]
-#[serde(rename_all = "camelCase")]
-pub struct OperationSnapshot {
-    pub operation_id: String,
-    pub operation_type: WriteOperationType,
-    pub status: LifecycleStatus,
-    pub source: Option<String>,
-    pub destination: Option<String>,
-    /// See [`OperationDescriptor::supports_rollback`](super::OperationDescriptor::supports_rollback).
-    pub supports_rollback: bool,
-    /// See [`OperationDescriptor::reverses`](super::OperationDescriptor::reverses). Static for the op's whole life,
-    /// which is why it rides the thin snapshot rather than the 200 ms progress
-    /// tick.
-    pub reverses: Option<OpKind>,
-    /// Why the operation stopped, on a retained `Failed` row only; `None` on
-    /// every live row. The typed variant, never rendered prose: the frontend's
-    /// `transfer-error-messages.ts` owns the wording. DETAILS § "Retained
-    /// failures".
-    pub error: Option<WriteOperationError>,
-    /// The queue row may offer Retry: a retained failure that kept a way to
-    /// start again (`routing/retry.rs`), with no Retry for it already starting.
-    /// `false` on every live row. Whether the ERROR is worth retrying is the
-    /// frontend's call (`offersRetry`), the same one the error dialog makes.
-    pub can_retry: bool,
-    /// See [`OperationSummaryText::items`].
-    pub items: Option<OperationItems>,
-}
-
-/// Typed `operations-changed` Tauri event carrying the thin registry snapshot
-/// (membership + lifecycle status, NOT 200 ms progress). The struct name
-/// kebab-cases to `operations-changed`. The queue window subscribes to it for
-/// the row set and to the per-file `write-progress` stream for live bars.
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type, tauri_specta::Event)]
-#[serde(rename_all = "camelCase")]
-pub struct OperationsChanged {
-    pub operations: Vec<OperationSnapshot>,
 }

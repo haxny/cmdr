@@ -79,10 +79,8 @@ use super::types::{LifecycleStatus, WriteOperationError, WriteOperationType};
 
 mod reorder;
 mod wire;
-pub use wire::{
-    OperationItems, OperationSnapshot, OperationSummaryText, OperationsChanged, PauseAllOutcome, PauseOutcome,
-    QueueMoveDirection, QueueMoveOutcome,
-};
+pub use super::types::{OperationItems, OperationSnapshot, OperationSummaryText, OperationsChanged};
+pub use wire::{PauseAllOutcome, PauseOutcome, QueueMoveDirection, QueueMoveOutcome};
 
 // How a retained failure starts again (the queue window's Retry): the
 // `StartAgain` a routing entry attaches, and the failure row that carries it.
