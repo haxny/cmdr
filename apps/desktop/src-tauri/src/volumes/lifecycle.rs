@@ -30,7 +30,7 @@ pub(super) fn set_app_handle(app: &AppHandle) -> bool {
 pub(crate) fn handle_volume_mounted(volume_path: &str) {
     // Another account's own mount is nothing this account can open, so it's not
     // news here: no registration, no event, no refresh. The startup sweep and
-    // discovery skip the same rows (`mounts::MountEntry::is_private_to_another_user`).
+    // discovery skip the same rows (`mounts::mount_is_private_to_another_user`).
     if super::is_private_to_another_user(volume_path) {
         debug!("Another account's mount appeared; leaving it alone: {}", volume_path);
         return;

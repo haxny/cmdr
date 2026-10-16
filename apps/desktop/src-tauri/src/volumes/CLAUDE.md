@@ -6,9 +6,9 @@ macOS volume and location discovery, plus live mount/unmount watching via `NSWor
 ## Module map
 
 `mod.rs`: model types, orchestrators, and re-exports (`crate::volumes::X` stays stable). Also:
-`ids.rs`, `fs_type.rs` (non-blocking `statfs`), `nsurl.rs` (blocking enrichment), `mounts.rs` (`getfsstat`),
+`ids.rs`, `fs_type.rs` (non-blocking `statfs`), `nsurl.rs` (blocking enrichment), `mounts.rs` (`getfsstat` rows),
 `smb.rs`, `cloud.rs`, `disk_image.rs`, `watcher.rs` (the `NSWorkspace` observer), `lifecycle.rs` (its handlers), `disk_units.rs` (volume→whole disk),
-`unmount_approver/` (the DiskArbitration session). Space and NSURL readers: `file_system/volume/backends/`.
+`unmount_approver/` (the DiskArbitration session). Space, NSURL: `file_system/volume/backends/`.
 
 ## Must-knows
 

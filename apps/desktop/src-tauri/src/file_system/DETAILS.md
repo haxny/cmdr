@@ -30,10 +30,10 @@ Three submodules carry their own docs: `write_operations/`, `volume/`, and `sync
 - `tags.rs`: Finder tags. `terminal.rs`: "open terminal here". `text_editor.rs`: which app F4 opens a file in (wire
   types; the macOS half in `text_editor_macos.rs`, its tests in `text_editor_test.rs`).
 
-## Local disk or not (`index_provider.rs`)
+## Local disk or not (`filesystem_kind.rs`)
 
-`MountFacts::is_network` (the index's walker choice) and `path_is_on_network_mount` (a watch's `WatchCoverage`) share
-one predicate, `cmdr_fs::filesystem_kind::mount_is_local_disk`, over a single probe (`filesystem_kind::probe_mount_for_path`: `statfs` on macOS,
+`MountFacts::is_network` (the index's walker choice, in `index_provider.rs`) and `path_is_on_network_mount` (a watch's
+`WatchCoverage`), both beside the probe in `volume/backends/local_posix/filesystem_kind.rs`, share one predicate, `cmdr_fs::filesystem_kind::mount_is_local_disk`, over a single probe (`filesystem_kind::probe_mount_for_path`: `statfs` on macOS,
 `/proc/mounts` on Linux) that returns the fs type AND the mount source. A mount is local only if its source is a block
 device (`/dev/…`: disks, partitions, attached disk images) or its type is a known local disk type that needn't have a
 device source (`zfs`, `overlay`, `tmpfs`, …). Everything else is "network": shares, FUSE, cloud mounts (`pcloudfs`,

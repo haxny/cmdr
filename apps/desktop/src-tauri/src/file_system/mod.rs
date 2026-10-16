@@ -6,7 +6,7 @@ pub mod cloud_actions;
 pub mod cloud_provider;
 #[cfg(target_os = "macos")]
 pub mod file_provider_actions;
-pub mod filesystem_kind;
+pub use volume::backends::filesystem_kind;
 /// A bounded pool of 8 MB-stack OS threads for synchronous macOS framework calls.
 #[cfg(target_os = "macos")]
 pub(crate) mod framework_pool;
@@ -17,7 +17,7 @@ pub mod google_drive;
 /// The app's `VolumeProvider`: what the index asks about mounted volumes.
 pub(crate) mod index_provider;
 #[cfg(target_os = "linux")]
-pub(crate) mod linux_mounts;
+pub(crate) use volume::backends::linux_mounts;
 #[cfg(test)]
 mod mock_provider;
 #[cfg(target_os = "macos")]

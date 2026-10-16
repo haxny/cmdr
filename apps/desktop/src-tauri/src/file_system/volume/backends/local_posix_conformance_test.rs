@@ -13,6 +13,7 @@
 use super::*;
 use crate::file_system::volume::{StreamLength, WriteMode};
 use crate::test_support::TestDir;
+use cmdr_fs::volume::Volume;
 use cmdr_fs::volume::host::VolumeHost;
 use std::path::Path;
 

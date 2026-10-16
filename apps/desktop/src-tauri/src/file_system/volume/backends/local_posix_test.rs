@@ -7,6 +7,7 @@ use crate::ignore_poison::IgnorePoison;
 use crate::test_support::TestDir;
 use cmdr_fs::volume::MountClass;
 use cmdr_fs::volume::host::VolumeHost;
+use cmdr_fs::volume::{MutationEvent, SourceItemInfo, SpaceInfo, Volume, VolumeError, WatchCoverage};
 use std::path::Path;
 
 #[test]

@@ -7,10 +7,15 @@
 //! files, so those methods stay here as one-line delegations to inherent bodies
 //! over there.
 
+pub mod filesystem_kind;
+#[cfg(target_os = "linux")]
+pub(crate) mod linux_mounts;
 #[cfg(target_os = "macos")]
 pub(crate) mod live_space;
 #[cfg(target_os = "macos")]
 mod macos_metadata;
+#[cfg(target_os = "macos")]
+pub(crate) mod mount_table;
 pub(crate) mod mutation;
 #[cfg(target_os = "macos")]
 pub(crate) mod nsurl;
@@ -23,19 +28,17 @@ pub(crate) mod space;
 pub(crate) mod statfs;
 mod streams;
 
-use super::{
-    CopyScanResult, ScanConflict, SourceItemInfo, SpaceInfo, Volume, VolumeError, VolumeReadStream, WatchCoverage,
-};
-use crate::file_system::volume::{
-    EntryKind, ListingProgress, StreamLength, StreamWriteProgress, StreamWritten, WriteMode,
-};
-#[cfg(feature = "playwright-e2e")]
-use crate::ignore_poison::IgnorePoison;
 use cmdr_fs::entry::FileEntry;
+#[cfg(feature = "playwright-e2e")]
+use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::metadata::{CarriedMetadata, MetadataCaps, MetadataClasses, MetadataReport, Unblock, UserFlags};
 use cmdr_fs::volume::MountClass;
 use cmdr_fs::volume::host::VolumeHost;
 use cmdr_fs::volume::listing_progress::report_while;
+use cmdr_fs::volume::{
+    CopyScanResult, ScanConflict, SourceItemInfo, SpaceInfo, Volume, VolumeError, VolumeReadStream, WatchCoverage,
+};
+use cmdr_fs::volume::{EntryKind, ListingProgress, StreamLength, StreamWriteProgress, StreamWritten, WriteMode};
 use reading::{ListingTally, get_single_entry, list_directory_core_with_tally};
 use space::{get_space_info_for_path, live_space_info_for_path};
 use std::future::Future;
@@ -454,7 +457,7 @@ impl Volume for LocalPosixVolume {
         &'a self,
         volume_id: &'a str,
         parent_path: &'a Path,
-        mutation: super::MutationEvent,
+        mutation: cmdr_fs::volume::MutationEvent,
     ) -> Pin<Box<dyn Future<Output = ()> + Send + 'a>> {
         Box::pin(async move {
             mutation::patch_listing_after_local_mutation(self.host.listings(), volume_id, parent_path, mutation);
@@ -778,7 +781,7 @@ impl Volume for LocalPosixVolume {
     fn write_access_at<'a>(
         &'a self,
         path: &'a Path,
-    ) -> Pin<Box<dyn Future<Output = crate::file_system::volume::WriteAccess> + Send + 'a>> {
+    ) -> Pin<Box<dyn Future<Output = cmdr_fs::volume::WriteAccess> + Send + 'a>> {
         let target = self.resolve(path);
         Box::pin(async move {
             spawn_blocking(move || write_access_for_path(&target))
@@ -794,8 +797,8 @@ impl Volume for LocalPosixVolume {
 /// A read-only filesystem is the `statvfs` `ST_RDONLY` flag, or `access(W_OK)`
 /// refused with `EROFS`; a missing permission is `access` refused with `EACCES` or
 /// `EPERM`. Anything the two calls can't answer is `Unknown`, ❌ never a guess.
-pub(crate) fn write_access_for_path(path: &Path) -> crate::file_system::volume::WriteAccess {
-    use crate::file_system::volume::{UnwritableReason, WriteAccess};
+pub(crate) fn write_access_for_path(path: &Path) -> cmdr_fs::volume::WriteAccess {
+    use cmdr_fs::volume::{UnwritableReason, WriteAccess};
     use std::ffi::CString;
     use std::os::unix::ffi::OsStrExt;
 

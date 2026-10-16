@@ -8,13 +8,13 @@
 //! one subject rather than three more `Volume` methods. A trait impl can't span
 //! files, so the trait side stays in `local_posix.rs` and the work lives here.
 
-use super::super::{VolumeError, VolumeReadStream};
 use super::LocalPosixVolume;
-use crate::file_system::volume::{StreamLength, StreamWriteProgress, StreamWritten, WriteMode};
 use cmdr_fs::metadata::{
     CarriedMetadata, LandedMetadata, MetadataClasses, MetadataReport, StagedItem, StagedTimes, UserFlags, apply_landed,
     apply_staged, default_file_mode, default_folder_mode, routed_mode,
 };
+use cmdr_fs::volume::{StreamLength, StreamWriteProgress, StreamWritten, WriteMode};
+use cmdr_fs::volume::{VolumeError, VolumeReadStream};
 use std::future::Future;
 use std::os::unix::fs::OpenOptionsExt as _;
 use std::path::Path;
@@ -356,7 +356,7 @@ impl LocalPosixVolume {
     }
 }
 
-/// [`Volume::apply_metadata`](crate::file_system::volume::Volume::apply_metadata)
+/// [`Volume::apply_metadata`](cmdr_fs::volume::Volume::apply_metadata)
 /// for a local item that has landed: the xattrs, the routed mode folded against
 /// the item's kind, birth and mtime in one call, then the flags last (Locked
 /// refuses every later write).

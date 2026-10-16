@@ -251,15 +251,6 @@ fn pcloud_drive(home: &str, who: MountedBy) -> MountEntry {
     )
 }
 
-#[test]
-fn the_owner_is_this_user_root_or_someone_else() {
-    assert_eq!(MountedBy::from_owner(501, 501), MountedBy::ThisUser);
-    assert_eq!(MountedBy::from_owner(0, 501), MountedBy::Root);
-    assert_eq!(MountedBy::from_owner(502, 501), MountedBy::AnotherUser);
-    // Cmdr run as root mounts as root, and that's still its own.
-    assert_eq!(MountedBy::from_owner(0, 0), MountedBy::ThisUser);
-}
-
 /// Regression anchor: both accounts' pCloud drives got a row, and the other
 /// one's showed as unavailable and dropped the pane in the home folder.
 /// `forbidden_resolver` is the rest of the fix: no NSURL or icon lookup ever
@@ -382,22 +373,6 @@ fn two_mount_roots_for_one_share_collapse_to_the_shortest_path() {
         collapsed[1].path, "/Volumes/export",
         "a different volume stays separate"
     );
-}
-
-#[test]
-fn enumerate_mounts_finds_the_boot_volume() {
-    // getfsstat should always return at least the root mount on a live system,
-    // and it must never block (this test would hang if it did).
-    let mounts = enumerate_mounts().expect("getfsstat answers on a live system");
-    assert!(!mounts.is_empty(), "getfsstat returned no mounts");
-    assert!(mounts.iter().any(|m| m.mount_point == "/"), "root mount missing");
-}
-
-#[test]
-fn is_mount_point_answers_from_the_mount_table() {
-    assert_eq!(is_mount_point("/"), Some(true), "the boot volume is a mount point");
-    // A folder ON a mount is not one: an eject can't mistake it for a live mount.
-    assert_eq!(is_mount_point("/usr/bin"), Some(false));
 }
 
 #[test]

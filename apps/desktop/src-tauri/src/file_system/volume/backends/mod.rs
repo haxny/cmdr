@@ -29,7 +29,15 @@ pub(crate) use local_posix::space::get_space_info_for_path;
 #[cfg(target_os = "macos")]
 pub use local_posix::space::get_volume_space;
 #[cfg(target_os = "macos")]
-pub(crate) use local_posix::statfs::statfs_string;
+pub(crate) use local_posix::statfs::{get_mount_info, statfs_string};
+// The mount probes the engine and `volumes*/` ask, beside the backend that
+// serves those mounts: the filesystem behind a path (and whether it's a network
+// one), the macOS mount table, and Linux's `/proc/mounts`.
+pub use local_posix::filesystem_kind;
+#[cfg(target_os = "linux")]
+pub(crate) use local_posix::linux_mounts;
+#[cfg(target_os = "macos")]
+pub(crate) use local_posix::mount_table;
 // The local reader: the `std::fs` listing and stat that `LocalPosixVolume`, the
 // watcher's unregistered-volume fallback, `tags.rs`, and `create.rs` read through.
 // `mutation.rs` beside it is what a local mutation means for the listing cache.
@@ -37,14 +45,6 @@ pub(crate) use local_posix::mutation::patch_listing_after_local_mutation;
 #[cfg(test)]
 pub(crate) use local_posix::reading::list_directory;
 pub(crate) use local_posix::reading::{get_single_entry, list_directory_core};
-
-// Re-export shared `volume/` types so each backend submodule can keep using
-// `super::Volume`, `super::VolumeError`, `super::MutationEvent`, etc. without
-// having to spell `crate::file_system::volume::...` everywhere.
-pub(crate) use super::{
-    CopyScanResult, MutationEvent, ScanConflict, SourceItemInfo, SpaceInfo, Volume, VolumeError, VolumeReadStream,
-    WatchCoverage,
-};
 
 #[cfg(test)]
 mod local_posix_test;

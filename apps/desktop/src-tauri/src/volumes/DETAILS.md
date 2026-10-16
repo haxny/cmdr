@@ -62,7 +62,7 @@ is still navigable, it just has no row of its own. The one mount the registry sk
 
 **Decision**: a mount is another account's own, and hidden, when its mount-table row says someone else mounted it
 (`f_owner` is neither this process's uid nor 0), it isn't a disk (`f_mntfromname` doesn't start with `/dev/`), and it
-isn't a network filesystem (`is_network_fs_type`). `MountEntry::is_private_to_another_user` in `mounts.rs` is the one
+isn't a network filesystem (`is_network_fs_type`). `mount_is_private_to_another_user` in `mounts.rs` is the one
 rule; `MountedBy` is the owner as a type.
 
 **Why**: on a Mac with two accounts that both run pCloud, the kernel table lists both `pCloud Drive` mounts, one per

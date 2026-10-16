@@ -2,9 +2,7 @@
 //! classification, mount-point resolution, and read-only detection. All
 //! non-blocking (pure `statfs` / `getfsstat` reads, no NSURL enrichment).
 
-use std::path::Path;
-
-pub(crate) use crate::file_system::volume::backends::statfs_string;
+pub(crate) use crate::file_system::volume::backends::{get_mount_info, statfs_string};
 
 /// Determine whether a filesystem type supports trash.
 ///
@@ -46,65 +44,6 @@ pub fn is_network_fs_type(fs_type: Option<&str>) -> bool {
 /// directories until one succeeds. Returns `None` only if even `/` fails.
 pub(crate) fn get_mount_point(path: &str) -> Option<(String, String)> {
     get_mount_info(path).map(|info| (info.mount_point, info.fs_type))
-}
-
-/// The mount a path lives on, as one `statfs` reports it.
-pub(crate) struct MountPointInfo {
-    /// Where it's mounted, firmlink-normalized (see [`get_mount_point`]).
-    pub mount_point: String,
-    /// `f_fstypename`, for example `apfs` or `smbfs`.
-    pub fs_type: String,
-    /// `f_mntfromname`: a device node (`/dev/disk3s1`) for a disk or disk image,
-    /// a URL-ish string for a share, whatever a FUSE or cloud mount chose.
-    pub source: String,
-}
-
-/// [`get_mount_point`] plus the mount's source, from the same single `statfs`.
-pub(crate) fn get_mount_info(path: &str) -> Option<MountPointInfo> {
-    use std::ffi::CString;
-
-    let mut current = path.to_string();
-    loop {
-        if let Ok(c_path) = CString::new(current.as_str()) {
-            let mut stat: std::mem::MaybeUninit<libc::statfs> = std::mem::MaybeUninit::uninit();
-            // SAFETY: `c_path` is a valid NUL-terminated C string from `current`, and `stat` is an
-            // uninitialized but correctly-typed `libc::statfs` out-buffer the kernel fills on success.
-            let result = unsafe { libc::statfs(c_path.as_ptr(), stat.as_mut_ptr()) };
-            if result == 0 {
-                // SAFETY: `statfs` returned 0, so the kernel fully initialized `stat`.
-                let stat = unsafe { stat.assume_init() };
-
-                let mount_point = statfs_string(&stat.f_mntonname);
-                let fs_type = statfs_string(&stat.f_fstypename);
-                let source = statfs_string(&stat.f_mntfromname);
-
-                // APFS firmlink normalization: /System/Volumes/Data → /
-                let mount_point = if mount_point == "/System/Volumes/Data" {
-                    "/".to_string()
-                } else {
-                    mount_point
-                };
-
-                return Some(MountPointInfo {
-                    mount_point,
-                    fs_type,
-                    source,
-                });
-            }
-        }
-
-        // Walk up to parent on failure (handles deleted directories)
-        if current == "/" || current.is_empty() {
-            return None;
-        }
-        current = Path::new(&current)
-            .parent()
-            .map(|p| p.to_string_lossy().to_string())
-            .unwrap_or_default();
-        if current.is_empty() {
-            current = "/".to_string();
-        }
-    }
 }
 
 /// Read the filesystem type for a path using `libc::statfs`.

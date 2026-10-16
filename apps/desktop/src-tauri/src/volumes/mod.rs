@@ -36,7 +36,7 @@ pub use crate::file_system::volume::ConnectionState;
 pub use crate::file_system::volume::backends::{expect_space_change, get_volume_space, live_volume_space};
 pub use cloud::get_cloud_drives;
 pub(crate) use cloud::resolve_cloud_drive_for_path;
-pub(crate) use fs_type::{get_fs_type, get_mount_info, get_mount_point, read_only_from_statfs};
+pub(crate) use fs_type::{get_fs_type, get_mount_point, read_only_from_statfs};
 pub use fs_type::{is_network_fs_type, is_smb_fs_type, supports_trash_for_fs_type};
 pub(crate) use ids::{volume_id_for, volume_id_for_mount};
 pub use mounts::get_attached_volumes;

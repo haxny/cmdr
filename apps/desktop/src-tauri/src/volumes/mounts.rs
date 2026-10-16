@@ -13,159 +13,29 @@ use cmdr_fs::volume::canonical_root::collapse_by_volume_id;
 use cmdr_fs::volume::friendly_error::Provider;
 use std::path::Path;
 
-/// One entry from the kernel mount table, as returned by `getfsstat(MNT_NOWAIT)`.
+pub(crate) use crate::file_system::volume::backends::mount_table::{
+    MountEntry, MountedBy, enumerate_mounts, is_mount_point,
+};
+
+/// Whether this is another account's own mount, which this account can't open:
+/// a cloud client's or FUSE layer's drive that someone else on this Mac mounted.
 ///
-/// Every field comes straight out of `statfs` with no follow-up syscall, so
-/// building one never talks to the backing filesystem. That is the whole reason
-/// discovery uses `getfsstat` instead of NSFileManager's volume enumeration: the
-/// enumeration `getattrlist`s every mount, which blocks 30s–forever on a hung
-/// network mount and froze the app at launch. See `DETAILS.md` § "Hung mounts".
-pub(super) struct MountEntry {
-    /// Mount point, e.g. `/Volumes/naspi` (`f_mntonname`).
-    mount_point: String,
-    /// Filesystem type, e.g. `apfs`, `exfat`, `smbfs` (`f_fstypename`).
-    fs_type: String,
-    /// Mount source, e.g. `//david@192.168.1.111/naspi` for SMB (`f_mntfromname`).
-    mount_from: String,
-    /// Whether the mount carries the `MNT_RDONLY` flag.
-    is_read_only: bool,
-    /// Whether the OS says this mount belongs in a file manager's sidebar, i.e.
-    /// it does NOT carry `MNT_DONTBROWSE`. Finder's own rule, and the one that
-    /// separates real drives from the plumbing (`devfs`, `/System/Volumes/*`,
-    /// `/Volumes/Recovery`, autofs triggers) without naming any of them.
-    is_browsable: bool,
-    /// The mounted filesystem's identity (`f_fsid`, its two words packed high then
-    /// low). Renaming a mounted volume moves the mount point and keeps this.
-    fsid: u64,
-    /// Who mounted it (`f_owner`).
-    mounted_by: MountedBy,
-}
-
-/// Who mounted a filesystem: the mount-table row's `f_owner`, which `mount` prints
-/// as "mounted by `<name>`" for every row whose owner isn't root.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum MountedBy {
-    /// `f_owner` 0: the system's own mounts, and anything mounted as root.
-    Root,
-    /// The account Cmdr runs as.
-    ThisUser,
-    /// Another account on this Mac, for example one still logged in behind fast
-    /// user switching.
-    AnotherUser,
-}
-
-impl MountedBy {
-    /// Pure, so the three answers are testable without a second account.
-    fn from_owner(owner: libc::uid_t, this_user: libc::uid_t) -> Self {
-        if owner == this_user {
-            Self::ThisUser
-        } else if owner == 0 {
-            Self::Root
-        } else {
-            Self::AnotherUser
-        }
-    }
-}
-
-impl MountEntry {
-    /// Whether this is another account's own mount, which this account can't open:
-    /// a cloud client's or FUSE layer's drive that someone else on this Mac mounted.
-    ///
-    /// Two exceptions keep everything a second account CAN use:
-    ///
-    /// - **A disk** (mounted from `/dev/…`): a drive plugged in while someone else
-    ///   was logged in is "mounted by" them, and it's still everyone's.
-    /// - **A network mount** (`is_network_fs_type`): whether another account's SMB,
-    ///   NFS, WebDAV, or AFP mount is usable from this one is unverified, so those
-    ///   stay as they were. `DETAILS.md` § "Another account's mounts" says what
-    ///   would widen the rule.
-    ///
-    /// ❗ Read off the snapshot row, ❌ never an access probe: that's a syscall per
-    /// mount that can hang on a dead share, and the drive this rule exists for
-    /// answered an ambiguous "No such file or directory".
-    fn is_private_to_another_user(&self) -> bool {
-        self.mounted_by == MountedBy::AnotherUser
-            && !self.mount_from.starts_with("/dev/")
-            && !is_network_fs_type(Some(&self.fs_type))
-    }
-}
-
-/// Snapshot the kernel mount table without blocking on any mount.
+/// Two exceptions keep everything a second account CAN use:
 ///
-/// `getfsstat(MNT_NOWAIT)` returns cached mount metadata and never round-trips to
-/// a filesystem, so a wedged network mount can't stall it — unlike `MNT_WAIT`,
-/// which is what makes plain `df` hang.
+/// - **A disk** (mounted from `/dev/…`): a drive plugged in while someone else
+///   was logged in is "mounted by" them, and it's still everyone's.
+/// - **A network mount** (`is_network_fs_type`): whether another account's SMB,
+///   NFS, WebDAV, or AFP mount is usable from this one is unverified, so those
+///   stay as they were. `DETAILS.md` § "Another account's mounts" says what
+///   would widen the rule.
 ///
-/// ❗ **`None` when the syscall wouldn't answer, ❌ never an empty list.** A live
-/// system always lists `/`, so an empty table is a failed read wearing a positive
-/// answer's clothes: every caller above reads "nothing is mounted", and the one that
-/// groups a disk's volumes then lets an unmount take a sibling down under its live
-/// FSEvents watcher. Callers name the third answer (`is_mount_point`,
-/// `has_mount_identity`, `mount_sources`) or fold it deliberately.
-pub(super) fn enumerate_mounts() -> Option<Vec<MountEntry>> {
-    // First pass: ask how many mounts exist (null buffer writes nothing).
-    // SAFETY: `getfsstat(NULL, 0, flags)` is the documented count query; with a
-    // null buffer and zero size the kernel only returns the mount count.
-    let count = unsafe { libc::getfsstat(std::ptr::null_mut(), 0, libc::MNT_NOWAIT) };
-    if count <= 0 {
-        return None;
-    }
-
-    // A few slots of slack in case a mount appears between the two calls.
-    let capacity = count as usize + 4;
-    let mut buf: Vec<libc::statfs> = Vec::with_capacity(capacity);
-    let bufsize = (capacity * size_of::<libc::statfs>()) as libc::c_int;
-    // SAFETY: `buf` has room for `capacity` `statfs` records and `bufsize` matches
-    // that byte length, so the kernel fills at most `capacity` records and returns
-    // how many it wrote.
-    let filled = unsafe { libc::getfsstat(buf.as_mut_ptr(), bufsize, libc::MNT_NOWAIT) };
-    if filled <= 0 {
-        return None;
-    }
-    // SAFETY: the kernel initialized `filled` records; clamp to our capacity in
-    // case the mount table grew past the slack between the two calls.
-    unsafe { buf.set_len((filled as usize).min(capacity)) };
-
-    // SAFETY: `getuid` takes no arguments, touches no memory, and can't fail.
-    let this_user = unsafe { libc::getuid() };
-
-    Some(
-        buf.iter()
-            .map(|s| MountEntry {
-                mount_point: cstr_field_to_string(&s.f_mntonname),
-                fs_type: cstr_field_to_string(&s.f_fstypename),
-                mount_from: cstr_field_to_string(&s.f_mntfromname),
-                is_read_only: (s.f_flags & libc::MNT_RDONLY as u32) != 0,
-                is_browsable: (s.f_flags & libc::MNT_DONTBROWSE as u32) == 0,
-                fsid: packed_fsid(s),
-                mounted_by: MountedBy::from_owner(s.f_owner, this_user),
-            })
-            .collect(),
-    )
-}
-
-/// Convert a NUL-terminated `c_char` array from `statfs` into a `String`
-/// (UTF-8 lossy, since mount points and volume names can be non-ASCII).
-fn cstr_field_to_string(field: &[libc::c_char]) -> String {
-    let bytes: Vec<u8> = field.iter().take_while(|&&c| c != 0).map(|&c| c as u8).collect();
-    String::from_utf8_lossy(&bytes).into_owned()
-}
-
-/// A `statfs` record's `f_fsid`, its two words packed high then low into one `u64`.
-fn packed_fsid(stat: &libc::statfs) -> u64 {
-    // SAFETY: libc declares `fsid_t` `#[repr(C)]` around exactly one `[i32; 2]` and
-    // only keeps that field private, so reading the value as the array reads the field.
-    let [high, low]: [i32; 2] = unsafe { std::mem::transmute(stat.f_fsid) };
-    (u64::from(high.cast_unsigned()) << 32) | u64::from(low.cast_unsigned())
-}
-
-/// Whether `path` is a mount point in the kernel mount table. Reads the same
-/// non-blocking `getfsstat` snapshot discovery does, so a hung mount can't stall
-/// it. `None` when the table couldn't be read (a live system always lists `/`).
-pub(crate) fn is_mount_point(path: &str) -> Option<bool> {
-    let mounts = enumerate_mounts()?;
-    let path = Path::new(path);
-    Some(mounts.iter().any(|m| Path::new(&m.mount_point) == path))
+/// ❗ Read off the snapshot row, ❌ never an access probe: that's a syscall per
+/// mount that can hang on a dead share, and the drive this rule exists for
+/// answered an ambiguous "No such file or directory".
+fn mount_is_private_to_another_user(mount: &MountEntry) -> bool {
+    mount.mounted_by == MountedBy::AnotherUser
+        && !mount.mount_from.starts_with("/dev/")
+        && !is_network_fs_type(Some(&mount.fs_type))
 }
 
 /// The identity of the filesystem mounted exactly at `path`, from the same
@@ -272,13 +142,13 @@ pub(crate) fn registrable_mount_roots() -> Option<Vec<String>> {
 fn registrable_roots(mounts: Vec<MountEntry>) -> Vec<String> {
     mounts
         .into_iter()
-        .filter(|mount| !mount.is_private_to_another_user())
+        .filter(|mount| !mount_is_private_to_another_user(mount))
         .map(|mount| mount.mount_point)
         .collect()
 }
 
 /// Whether the mount at `path` is another account's own
-/// ([`MountEntry::is_private_to_another_user`]), from the same non-blocking table. `false` when
+/// ([`mount_is_private_to_another_user`]), from the same non-blocking table. `false` when
 /// nothing is mounted there or the table couldn't be read: the mount watcher asks this to decide
 /// whether to stay quiet about a mount, and an unknown one is announced as it always was.
 pub(crate) fn is_private_to_another_user(path: &str) -> bool {
@@ -293,7 +163,7 @@ fn private_to_another_user_at(mounts: &[MountEntry], path: &str) -> bool {
         .iter()
         .rev()
         .find(|mount| Path::new(&mount.mount_point) == path)
-        .is_some_and(MountEntry::is_private_to_another_user)
+        .is_some_and(mount_is_private_to_another_user)
 }
 
 /// A mount's point and the source it was mounted from (`f_mntfromname`), for code that maps
@@ -377,7 +247,7 @@ pub(crate) fn has_mount_identity(fsid: u64) -> Option<bool> {
 /// Never the boot volume (it has its own row), never a dot-prefixed mount, never
 /// a `~/Library/CloudStorage` path, which the cloud-drive arm publishes and would
 /// otherwise appear twice, and never another account's own mount
-/// ([`MountEntry::is_private_to_another_user`]), recognized provider or not: a row
+/// ([`mount_is_private_to_another_user`]), recognized provider or not: a row
 /// for it is a drive this account can't open. Pure, so it's unit-testable.
 fn is_user_facing_mount(mount: &MountEntry, provider: Option<Provider>) -> bool {
     let path = Path::new(&mount.mount_point);
@@ -393,7 +263,7 @@ fn is_user_facing_mount(mount: &MountEntry, provider: Option<Provider>) -> bool 
     {
         return false;
     }
-    if mount.is_private_to_another_user() {
+    if mount_is_private_to_another_user(mount) {
         return false;
     }
     mount.is_browsable || provider.is_some()

@@ -11,24 +11,11 @@ use std::sync::Arc;
 
 use cmdr_fs::volume::Volume;
 
+use super::filesystem_kind::is_network;
+pub use super::filesystem_kind::path_is_on_network_mount;
 use cmdr_index::host::volumes::{
     EnsureDirectSmbFut, MountFacts, MountIdentity, ResolveMtpFut, ResolvedMtpObject, SmbUpgradeRefusal, VolumeProvider,
 };
-
-/// Whether `path` sits on anything but a known local disk: a network share (SMB,
-/// NFS, AFP, WebDAV, ...), a FUSE or cloud mount (`pcloudfs`, rclone, sshfs), or a
-/// mount the probe couldn't resolve.
-///
-/// One `statfs` (a `/proc/mounts` read on Linux), so ❌ never call it in a loop
-/// over entries or on a hot read path: it can block for as long as the mount
-/// takes to answer. `mount_facts` below is the index's caller (the walker
-/// choice); `watcher::start_watching` is the other, deciding a watch's
-/// [`WatchCoverage`](cmdr_fs::volume::WatchCoverage) once at arm time rather than
-/// per query. Both want the same answer: a remote tree can't be walked at local
-/// speed, and its other writers never reach FSEvents.
-pub fn path_is_on_network_mount(path: &Path) -> bool {
-    is_network(&super::filesystem_kind::probe_mount_for_path(path))
-}
 
 /// The [`MountClass`](cmdr_fs::volume::MountClass) of the mount at `root`, for a
 /// `LocalPosixVolume` being registered on it.
@@ -56,13 +43,6 @@ fn classify_mount(is_local_disk: bool, is_smb_share: impl FnOnce() -> bool) -> c
     } else {
         MountClass::OtherNetwork
     }
-}
-
-/// "Network" here means "not a known local disk" (`cmdr_fs::filesystem_kind::mount_is_local_disk`), so
-/// FUSE and cloud mounts count too. Split out so one probe can answer both of
-/// [`mount_facts`](AppVolumeProvider::mount_facts)' questions.
-fn is_network(probe: &super::filesystem_kind::MountProbe) -> bool {
-    !cmdr_fs::filesystem_kind::mount_is_local_disk(probe.source.as_deref(), probe.info.raw_type.as_deref())
 }
 
 /// Answers the index from the app's real volume registry and platform probes.

@@ -4,6 +4,7 @@
 
 use super::*;
 use crate::test_support::TestDir;
+use cmdr_fs::volume::{MutationEvent, Volume, WatchCoverage};
 use std::path::Path;
 
 /// `listing_watch_coverage` follows the watcher lifecycle: `None` before a listing

@@ -8,12 +8,12 @@
 //! impl can't span files, so the trait side stays in the parent and the work
 //! lives here.
 
-use super::super::{CopyScanResult, ScanConflict, SourceItemInfo, VolumeError};
 use super::LocalPosixVolume;
-use crate::file_system::volume::Volume;
 use cmdr_fs::apple_double::SidecarRule;
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::ScanRecorder;
+use cmdr_fs::volume::Volume;
+use cmdr_fs::volume::{CopyScanResult, ScanConflict, SourceItemInfo, VolumeError};
 use std::ffi::OsStr;
 use std::future::Future;
 use std::path::{Path, PathBuf};
