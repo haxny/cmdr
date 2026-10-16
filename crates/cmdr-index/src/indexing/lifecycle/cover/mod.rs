@@ -22,10 +22,12 @@ use tokio_util::sync::CancellationToken;
 use self::ground::{Ground, RootOutcome};
 use crate::indexing::IndexPathSpace;
 use crate::indexing::hold::VolumeWork;
+use crate::indexing::lifecycle::state::{begin_branch_coverage, finish_branch_coverage};
 use crate::indexing::metadata::MetadataSnapshot;
 use crate::indexing::read::coverage::CoverageDimension;
 use crate::indexing::scanner::{CoveredEntry, WalkHeartbeat};
 use crate::indexing::volume::IndexVolumeKind;
+use crate::indexing::watch::branches;
 use crate::indexing::writer::IndexWriter;
 use cmdr_fs::pluralize::{pluralize, pluralize_with};
 
@@ -322,7 +324,7 @@ pub(crate) fn start(context: CoverContext, frontier: Vec<String>, dimension: Cov
     // when the walk ends this ground is watched — which is what lets walk-written
     // coverage carry no expiry (Decision 9). Ground another walk claimed is
     // already registered by that walk, so only `mine` goes in.
-    super::state::begin_branch_coverage(&context.volume_id, claim.mine());
+    begin_branch_coverage(&context.volume_id, claim.mine());
 
     let (sender, batches) = sync_channel(BATCH_QUEUE_DEPTH);
     let walk_heartbeat = heartbeat.clone();
@@ -376,7 +378,7 @@ pub(crate) fn start(context: CoverContext, frontier: Vec<String>, dimension: Cov
 /// scan spawning out of a destructor is a side effect nobody reading `Claim` would
 /// expect.
 fn release_ground(volume_id: &str, claim: Claim) {
-    super::state::finish_branch_coverage(volume_id, claim.mine());
+    finish_branch_coverage(volume_id, claim.mine());
     drop(claim);
     super::rescan_request::run_if_owed(volume_id);
 }
@@ -441,7 +443,7 @@ fn walk_frontier(
     // WALKING it; it changes hands when nothing is WRITING it.
     let owed = context.flush == FlushOnFinish::BeforeReporting
         || cancel.is_cancelled()
-        || super::state::branch_coverage_buffered_events(&context.volume_id, frontier);
+        || branches::live_for(&context.volume_id).any_buffered(frontier);
     if owed && let Err(e) = context.writer.flush_blocking() {
         log::warn!("Cover: the walk's last rows may not have landed: {e}");
     }

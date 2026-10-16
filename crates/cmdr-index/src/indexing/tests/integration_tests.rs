@@ -15,9 +15,9 @@ use crate::indexing::stress_test_helpers::TestInstanceGuard;
 use crate::indexing::*;
 use crate::{NoopEventSink, ReadPool};
 use cmdr_fs::entry::FileEntry;
+use lifecycle::signals::VolumeSignals;
 use lifecycle::state::{
-    INDEX_REGISTRY, IndexInstance, IndexPhase, StartRequest, VolumeSignals, is_initializing_phase,
-    try_reserve_initializing_phase,
+    INDEX_REGISTRY, IndexInstance, IndexPhase, StartRequest, is_initializing_phase, try_reserve_initializing_phase,
 };
 use read::enrichment::{READ_POOL_TEST_MUTEX, THREAD_CONNS, enrich_via_individual_paths_on, enrich_via_parent_id_on};
 use rusqlite::Connection;

@@ -8,6 +8,9 @@
 //!   dispatch, with its SMB/MTP `Volume`-trait scan path in
 //!   `manager/network_scan.rs`. [`scan_completion`]: the post-scan handler.
 //! - [`freshness`]: the Fresh/Stale/Scanning transition table.
+//! - [`signals`]: `VolumeSignals`, the handles a volume's registry instance and its
+//!   manager share, and `apply_freshness_event_on`, the transition fired on them.
+//!   Registry-free, so a caller holding one needs no `state` import.
 //! - [`failure`]: the fatal-storage-error Failed state.
 //! - [`lifecycle_bus`]: the neutral registration / dirs-changed event bus.
 //! - [`master`]: the master drive-indexing switch and how it overrides per-drive
@@ -42,5 +45,6 @@ pub(crate) mod phases;
 pub(crate) mod progress_reporter;
 pub(crate) mod rescan_request;
 pub(crate) mod scan_completion;
+pub(crate) mod signals;
 pub(crate) mod state;
 pub(crate) mod steps_ahead;

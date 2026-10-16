@@ -28,7 +28,7 @@ fn a_rescan_refused_under_a_walk_runs_when_the_walk_ends() {
     // The ground a walk holds for as long as it runs, taken directly so the window
     // is deterministic rather than a race against a walk of two files.
     let claim = Claim::take(drive.volume_id, vec![scope.clone()], Holder::a_background_walk());
-    crate::indexing::lifecycle::state::begin_branch_coverage(drive.volume_id, claim.mine());
+    begin_branch_coverage(drive.volume_id, claim.mine());
 
     assert_eq!(
         crate::indexing::lifecycle::state::force_scan(drive.volume_id),
@@ -68,7 +68,7 @@ fn a_remembered_rescan_waits_for_the_last_walk_out() {
         vec![drive.path("elsewhere")],
         Holder::a_background_walk(),
     );
-    crate::indexing::lifecycle::state::begin_branch_coverage(drive.volume_id, first.mine());
+    begin_branch_coverage(drive.volume_id, first.mine());
 
     assert_eq!(
         crate::indexing::lifecycle::state::force_scan(drive.volume_id),
@@ -77,7 +77,7 @@ fn a_remembered_rescan_waits_for_the_last_walk_out() {
 
     // The first walk ends. Run the fire on this thread rather than through the
     // spawn, so the assertion below is about the decision and not about timing.
-    crate::indexing::lifecycle::state::finish_branch_coverage(drive.volume_id, first.mine());
+    finish_branch_coverage(drive.volume_id, first.mine());
     drop(first);
     crate::indexing::lifecycle::rescan_request::run_owed_now(drive.volume_id);
     assert_eq!(

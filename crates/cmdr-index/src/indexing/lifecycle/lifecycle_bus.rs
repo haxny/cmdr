@@ -15,7 +15,7 @@
 //! ## The one-way boundary
 //!
 //! `indexing/` publishes through `publish_*` from the neutral scan-completion
-//! chokepoint (`state::apply_freshness_event_on`) without knowing who listens.
+//! chokepoint (`signals::apply_freshness_event_on`) without knowing who listens.
 //! Consumers call [`subscribe`] with a volume id. The clean direction — consumers
 //! depend on `indexing/`, never the reverse — mirrors `search/`→`indexing/`.
 //!

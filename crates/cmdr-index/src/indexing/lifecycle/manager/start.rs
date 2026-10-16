@@ -20,7 +20,7 @@ use crate::indexing::hold::HoldKind;
 use crate::indexing::lifecycle::cover;
 use crate::indexing::lifecycle::progress_reporter::ScanProgressReporter;
 use crate::indexing::lifecycle::rescan_request::ScanStartError;
-use crate::indexing::lifecycle::state;
+use crate::indexing::lifecycle::signals::apply_freshness_event_on;
 use crate::indexing::lifecycle::steps_ahead::{RunShape, StepsAhead};
 use crate::indexing::reconcile::local_reconcile;
 use crate::indexing::scanner::{self, ScanConfig};
@@ -508,7 +508,7 @@ impl IndexManager {
         // (`off_the_registry`, `perform_registry_rescan`), so a re-lock would not
         // deadlock right now — but a handle that can't re-enter the registry keeps
         // that safe by construction rather than by what every caller happens to do.
-        state::apply_freshness_event_on(
+        apply_freshness_event_on(
             &self.freshness,
             self.events.as_ref(),
             &self.volume_id,

@@ -5,15 +5,16 @@
 //! the change, and bumps the coverage epoch a continuity break calls for.
 //!
 //! The two entry points are LOCK DISCIPLINE, not style: `apply_freshness_event`
-//! looks the handle up in the registry, `apply_freshness_event_on` takes the
-//! handle directly and never touches the registry at all.
+//! looks the handle up in the registry, then delegates to
+//! `signals::apply_freshness_event_on`, which takes the handle directly and never
+//! touches the registry at all (so it lives in that leaf, outside `state`).
 
 use cmdr_fs::ignore_poison::IgnorePoison;
 use std::sync::Arc;
 
 use super::{INDEX_REGISTRY, get_writer_and_flux_for};
 use crate::indexing::lifecycle::freshness::{Freshness, FreshnessEvent};
-use crate::indexing::lifecycle::lifecycle_bus;
+use crate::indexing::lifecycle::signals::apply_freshness_event_on;
 use crate::indexing::writer::WriteMessage;
 
 /// Apply a freshness transition for a volume via the pure state machine
@@ -48,60 +49,6 @@ pub(crate) fn apply_freshness_event(volume_id: &str, event: FreshnessEvent) {
         return;
     };
     apply_freshness_event_on(&freshness, events.as_ref(), volume_id, event);
-}
-
-/// The actual freshness transition + FE emit, operating on a volume's freshness
-/// `Arc` DIRECTLY — it NEVER locks `INDEX_REGISTRY`. This is the lock-discipline
-/// seam: `IndexManager` holds a clone of its volume's freshness `Arc` and fires
-/// scan transitions through here, so a scan-start firing can't re-enter the
-/// registry (the self-deadlock a held-registry caller like `force_scan` hit).
-///
-/// `apply_freshness_event` is the registry-lookup wrapper for external callers
-/// that only have a volume id.
-pub(crate) fn apply_freshness_event_on(
-    freshness: &std::sync::Mutex<Option<Freshness>>,
-    events: &dyn crate::EventSink,
-    volume_id: &str,
-    event: FreshnessEvent,
-) {
-    // `ScanStarted` is total even from "not yet determined": a scan can begin on
-    // a volume that has no freshness yet (first ever scan). Seed it so the
-    // transition is meaningful, then apply the event.
-    //
-    // We compute the next value under the freshness lock, then emit the FE event
-    // AFTER dropping it (the report never needs it, and holding a std Mutex
-    // across a host call risks contention). The event fires only on an actual value
-    // change, so the FE's one-time stale dialog sees the exact Fresh→Stale
-    // transition (subscribe-don't-poll).
-    let changed_to = {
-        let mut f = freshness.lock_ignore_poison();
-        let previous = *f;
-        let next = f.unwrap_or(Freshness::Scanning).on(event);
-        *f = Some(next);
-        (previous != Some(next)).then_some(next)
-    };
-
-    if let Some(next) = changed_to {
-        events.emit(crate::IndexEvent::FreshnessChanged {
-            volume_id: volume_id.to_string(),
-            freshness: next,
-        });
-    }
-
-    // Publish scan completion on the neutral in-process lifecycle bus, alongside
-    // the frontend `.emit` above. A backend subsystem (the importance scheduler)
-    // drives its full-volume recompute off this, without `indexing/` depending on
-    // it (plan Decision 4). We fire on the EVENT, not on a freshness change: a
-    // Fresh→Fresh rescan completion still means new data to rescore, and it must
-    // notify the bus even though the badge didn't move.
-    // An unwatched volume's completion is new data just the same, however its
-    // badge reads.
-    if matches!(
-        event,
-        FreshnessEvent::ScanCompleted | FreshnessEvent::ScanCompletedUnwatched
-    ) {
-        lifecycle_bus::publish_scan_completed(volume_id);
-    }
 }
 
 /// Bump a volume's `current_epoch` on a continuity break that does NOT rescan

@@ -23,6 +23,7 @@ use crate::indexing::events::{
 };
 use crate::indexing::lifecycle::cover;
 use crate::indexing::lifecycle::manager::after_live_loop;
+use crate::indexing::lifecycle::signals::apply_freshness_event_on;
 use crate::indexing::reconcile::reconciler::EventReconciler;
 use crate::indexing::scanner::{ScanError, ScanSummary};
 use crate::indexing::store::{IndexStore, ScanCalibrationKind, StepDurations};
@@ -191,7 +192,7 @@ async fn finish_the_scan(params: ScanCompletion) {
         log::warn!("Scan completion: '{volume_id}' stopped being listed, so its scan claims nothing");
         // Whatever it deleted on the way out is what the rebuild marker is for.
         crate::indexing::deletes::note_the_drive_left(&volume_id, &writer);
-        super::state::apply_freshness_event_on(
+        apply_freshness_event_on(
             &freshness,
             events.as_ref(),
             &volume_id,
@@ -379,7 +380,7 @@ async fn finish_the_scan(params: ScanCompletion) {
     // it isn't reset to gray the way an interrupted SMB scan is,
     // because local data isn't tied to a connection that vanished.
     if was_completed {
-        super::state::apply_freshness_event_on(
+        apply_freshness_event_on(
             &freshness,
             events.as_ref(),
             &volume_id,

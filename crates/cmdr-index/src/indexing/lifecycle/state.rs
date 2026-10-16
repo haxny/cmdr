@@ -36,12 +36,11 @@
 use cmdr_fs::ignore_poison::IgnorePoison;
 use std::collections::HashMap;
 use std::path::PathBuf;
-use std::sync::Arc;
 use std::sync::LazyLock;
 use std::sync::atomic::Ordering;
 
-use super::freshness::Freshness;
 use super::manager::{BranchWatchStart, IndexManager};
+use super::signals::VolumeSignals;
 use crate::indexing::hold::VolumeWork;
 use crate::indexing::store::{IndexFailure, IndexStore};
 use crate::indexing::volume::{IndexVolumeKind, VolumeId};
@@ -59,9 +58,7 @@ mod teardown;
 mod walk_database;
 
 pub use auto_start::{should_auto_start, should_auto_start_indexing};
-pub(crate) use freshness_bridge::{
-    apply_freshness_event, apply_freshness_event_on, bump_current_epoch_for, get_freshness,
-};
+pub(crate) use freshness_bridge::{apply_freshness_event, bump_current_epoch_for, get_freshness};
 #[cfg(test)]
 pub(crate) use queries::is_watching_for_test;
 #[cfg(any(target_os = "macos", target_os = "linux"))]
@@ -294,36 +291,6 @@ impl IndexPhase {
             }
             IndexPhase::Initializing { .. } | IndexPhase::Running(_) | IndexPhase::Failed { .. } => false,
         }
-    }
-}
-
-/// The two handles a volume's registry instance and its `IndexManager` both
-/// hold: its freshness signal and where its reports go. Passed as ONE value so the
-/// two can never be built with different halves — a manager firing freshness
-/// through a different `Arc` is exactly the class of bug this shape rules out.
-///
-/// The third thing they share, the volume's stop signal with its hold, is a
-/// [`VolumeWork`] only the reservation mints (`reservation.rs`).
-#[derive(Clone)]
-pub(crate) struct VolumeSignals {
-    /// This volume's freshness signal (gray = absent instance; blue/green/yellow
-    /// = the `Freshness` variants). `Arc<Mutex<…>>` so scan-transition tasks and
-    /// the live-watch layer can flip it without holding the registry lock.
-    /// `None` means "not yet determined" (e.g. mid-initialization before the
-    /// first scan transition); a `Running` volume always carries `Some`. The
-    /// state machine itself lives in `lifecycle/freshness.rs`. See DETAILS §
-    /// "The freshness model".
-    pub(crate) freshness: Arc<std::sync::Mutex<Option<Freshness>>>,
-    /// Where this volume's reports go. Held per volume rather than in a
-    /// process-wide slot so the handle-free seams (the freshness transition, the
-    /// failure supervisor) stay per-volume, like every other invariant here.
-    pub(crate) events: Arc<dyn crate::EventSink>,
-}
-
-impl VolumeSignals {
-    /// Bundle a volume's shared handles: the caller's freshness and sink.
-    pub(crate) fn new(freshness: Arc<std::sync::Mutex<Option<Freshness>>>, events: Arc<dyn crate::EventSink>) -> Self {
-        Self { freshness, events }
     }
 }
 
@@ -582,14 +549,6 @@ pub(crate) fn finish_branch_coverage(volume_id: &str, paths: &[String]) {
     if let Some((space, writer)) = record {
         branches.persist(&space, &writer);
     }
-}
-
-/// Whether any of the ground a walk is about to release is holding live events
-/// for it. A walk that left its drain to the caller asks this before releasing:
-/// the release replays them, and they resolve against committed rows or not at
-/// all.
-pub(crate) fn branch_coverage_buffered_events(volume_id: &str, paths: &[String]) -> bool {
-    branches::live_for(volume_id).any_buffered(paths)
 }
 
 /// Run something against a volume's `Running` manager, or nothing if it has

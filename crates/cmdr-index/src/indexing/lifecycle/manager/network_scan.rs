@@ -20,6 +20,8 @@ use crate::indexing::events::{
 };
 use crate::indexing::lifecycle::progress_reporter::ScanProgressReporter;
 use crate::indexing::lifecycle::rescan_request::ScanStartError;
+use crate::indexing::lifecycle::signals::apply_freshness_event_on;
+use crate::indexing::lifecycle::state::reset_to_not_indexed;
 use crate::indexing::lifecycle::steps_ahead::{RunShape, StepsAhead};
 use crate::indexing::network_scanner::VolumeScanError;
 use crate::indexing::store::{IndexStore, StepDurations};
@@ -337,7 +339,7 @@ impl IndexManager {
         // manager's OWN freshness handle (`apply_freshness_event_on`), NOT the
         // volume-id lookup, so a held-registry caller can't self-deadlock on a
         // registry re-lock here.
-        crate::indexing::lifecycle::state::apply_freshness_event_on(
+        apply_freshness_event_on(
             &self.freshness,
             self.events.as_ref(),
             &self.volume_id,
@@ -538,12 +540,7 @@ impl IndexManager {
                         } else {
                             crate::indexing::lifecycle::freshness::FreshnessEvent::ScanCompletedUnwatched
                         };
-                        crate::indexing::lifecycle::state::apply_freshness_event_on(
-                            &freshness,
-                            events.as_ref(),
-                            &volume_id,
-                            completed,
-                        );
+                        apply_freshness_event_on(&freshness, events.as_ref(), &volume_id, completed);
                     }
                     set_phase_for(
                         events.as_ref(),
@@ -583,7 +580,7 @@ impl IndexManager {
                     // bumping past it makes those rows read exact-but-stale, the
                     // honest state for a connection that vanished.
                     let _ = writer.send(WriteMessage::BumpCurrentEpoch);
-                    crate::indexing::lifecycle::state::apply_freshness_event_on(
+                    apply_freshness_event_on(
                         &freshness,
                         events.as_ref(),
                         &volume_id,
@@ -616,7 +613,7 @@ impl IndexManager {
                         e => log::warn!("network scan: failed for '{volume_id}' ({e}), discarding partial"),
                     }
                     discard_buffered_changes_for_kind(kind, &volume_id);
-                    crate::indexing::lifecycle::state::reset_to_not_indexed(&volume_id);
+                    reset_to_not_indexed(&volume_id);
                     // Clear the FE's live activity (no completion event fired for
                     // an aborted scan), so the corner indicator and badge tooltip
                     // don't keep a stuck "scanning" row. The dot reverts to gray

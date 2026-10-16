@@ -6,7 +6,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
 use super::phases;
-use super::state;
+use super::signals::VolumeSignals;
 use super::steps_ahead::StepsAhead;
 use crate::indexing::IndexPathSpace;
 use crate::indexing::deletes;
@@ -96,7 +96,7 @@ pub(crate) struct IndexManager {
     /// This volume's freshness signal — the SAME `Arc` the registry `IndexInstance`
     /// holds. The manager fires its scan transitions (`ScanStarted`,
     /// `ScanCompleted`, `WatcherDied`) through this handle via
-    /// `state::apply_freshness_event_on`, which never locks `INDEX_REGISTRY`. That
+    /// `signals::apply_freshness_event_on`, which never locks `INDEX_REGISTRY`. That
     /// is what lets a held-registry caller (`force_scan`, the journal-gap fallback)
     /// drive a scan without self-deadlocking on a registry re-lock. External
     /// (volume-id-only) callers still use `state::apply_freshness_event`.
@@ -273,7 +273,7 @@ impl IndexManager {
         db_path: PathBuf,
         kind: IndexVolumeKind,
         inodes_trustworthy: bool,
-        signals: state::VolumeSignals,
+        signals: VolumeSignals,
         work: VolumeWork,
     ) -> Result<Self, String> {
         let store = IndexStore::open(&db_path).map_err(|e| format!("Failed to open index store: {e}"))?;
@@ -284,7 +284,7 @@ impl IndexManager {
         // SMB/MTP writer must not invalidate the root search index it doesn't
         // feed, or every NAS/phone change-notify event would thrash a full root
         // search reload. See `writer::WRITER_GENERATION` and `indexing/DETAILS.md`.
-        let state::VolumeSignals { freshness, events } = signals;
+        let VolumeSignals { freshness, events } = signals;
 
         let feeds_search = kind.feeds_search();
         let writer = IndexWriter::spawn_for(&db_path, Arc::clone(&events), feeds_search, volume_id.clone())

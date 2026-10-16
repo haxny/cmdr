@@ -13,7 +13,7 @@ use std::time::Duration;
 use crate::indexing::events::{IndexEventKind, RecordingSink};
 use crate::indexing::lifecycle::manager::IndexManager;
 use crate::indexing::lifecycle::progress_reporter::ScanProgressReporter;
-use crate::indexing::lifecycle::state::VolumeSignals;
+use crate::indexing::lifecycle::signals::VolumeSignals;
 use crate::indexing::scanner::ScanProgress;
 use crate::indexing::volume::IndexVolumeKind;
 use crate::indexing::writer::{AggSource, IndexWriter};

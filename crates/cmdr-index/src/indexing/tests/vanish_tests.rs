@@ -27,7 +27,7 @@ use crate::indexing::events::{ActivityPhase, IndexEvent, IndexEventKind, Recordi
 use crate::indexing::hold::{self, HoldKind, VolumeWork};
 use crate::indexing::host::volumes::{FakeVolumeProvider, MountIdentity, VolumeProvider, install_for_test};
 use crate::indexing::lifecycle::manager::IndexManager;
-use crate::indexing::lifecycle::state::VolumeSignals;
+use crate::indexing::lifecycle::signals::VolumeSignals;
 use crate::indexing::scanner::park::ParkHandle;
 use crate::indexing::store::{IndexStore, UnreadableCause};
 use crate::indexing::volume::IndexVolumeKind;

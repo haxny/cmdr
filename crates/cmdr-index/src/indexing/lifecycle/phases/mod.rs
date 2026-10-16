@@ -58,6 +58,7 @@ use crate::indexing::events::{ActivityPhase, CoveragePhase, EventSink, IndexEven
 use crate::indexing::hold::VolumeWork;
 use crate::indexing::lifecycle::freshness::Freshness;
 use crate::indexing::lifecycle::progress_reporter::ScanProgressReporter;
+use crate::indexing::lifecycle::signals::apply_freshness_event_on;
 use crate::indexing::lifecycle::{cover, master};
 use crate::indexing::read::coverage::{CoverageDimension, coverage_for_scope};
 use crate::indexing::scanner::ScanProgress;
@@ -761,7 +762,7 @@ impl Machine {
             "Phases: '{}' can't be listed any more, so its index stops where it is",
             self.volume_id
         );
-        crate::indexing::lifecycle::state::apply_freshness_event_on(
+        apply_freshness_event_on(
             &self.freshness,
             self.events.as_ref(),
             &self.volume_id,
@@ -808,7 +809,7 @@ impl Machine {
             left_after_compute_ms: None,
             left_after_catch_up_ms: None,
         });
-        crate::indexing::lifecycle::state::apply_freshness_event_on(
+        apply_freshness_event_on(
             &self.freshness,
             self.events.as_ref(),
             &self.volume_id,

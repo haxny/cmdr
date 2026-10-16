@@ -112,7 +112,7 @@ fn a_walk_that_finishes_while_the_manager_is_detached_still_releases_its_branch(
     )
     .expect("stand the index up");
 
-    crate::indexing::lifecycle::state::begin_branch_coverage(drive.volume_id, &branch);
+    begin_branch_coverage(drive.volume_id, &branch);
     let watch = branches::live_for(drive.volume_id);
     assert!(
         watch.is_being_walked(Path::new(&scope)),
@@ -130,7 +130,7 @@ fn a_walk_that_finishes_while_the_manager_is_detached_still_releases_its_branch(
     let _ = WatchScope::Branches(Arc::clone(&watch)).admit(held);
 
     crate::indexing::lifecycle::state::while_detached_for_test(drive.volume_id, || {
-        crate::indexing::lifecycle::state::finish_branch_coverage(drive.volume_id, &branch);
+        finish_branch_coverage(drive.volume_id, &branch);
     });
 
     assert!(

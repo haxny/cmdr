@@ -93,6 +93,7 @@ mod tests {
 
     use super::*;
     use crate::indexing::lifecycle::freshness::Freshness;
+    use crate::indexing::lifecycle::signals::VolumeSignals;
     use crate::indexing::lifecycle::state::{INDEX_REGISTRY, get_freshness, try_reserve_initializing_phase};
     use crate::indexing::read::enrichment::{ReadPool, uninstall_read_pool};
     use crate::indexing::read::pending_sizes::{PendingSizes, uninstall_pending_sizes};
@@ -115,7 +116,7 @@ mod tests {
                 store,
                 pool,
                 pending,
-                state::VolumeSignals::new(
+                VolumeSignals::new(
                     Arc::new(std::sync::Mutex::new(Some(initial))),
                     crate::NoopEventSink::shared()
                 ),

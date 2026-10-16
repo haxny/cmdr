@@ -31,8 +31,9 @@ concurrently without corrupting each other. Every invariant below holds independ
   - `queries.rs` — the read-only surface: `is_active`, `is_failed`, `index_failure`, `awaits_its_first_scan`,
     `ready_volumes_with_kind`, `ready_volumes_to_wire`, `all_registered_volume_ids`, `volume_kind`,
     `registered_mtp_volume_ids_for_device`.
-  - `freshness_bridge.rs` — the registry ↔ `freshness.rs` wiring (`apply_freshness_event` vs `..._on`, which is LOCK
-    DISCIPLINE, not style) plus `bump_current_epoch_for` / `get_freshness`.
+  - `freshness_bridge.rs` — the registry ↔ `freshness.rs` wiring: `apply_freshness_event`, the volume-id door that looks
+    the handle up under the registry lock and delegates to `signals.rs` (which door a caller uses is LOCK DISCIPLINE,
+    not style), plus `bump_current_epoch_for` / `get_freshness`.
   - `supervisor.rs` — `spawn_failure_supervisor` + `fail_index`, the `Failed`-phase transition (the signal itself is
     `failure.rs`).
   - `tests.rs` — the registry-level lifecycle tests.
@@ -45,6 +46,11 @@ concurrently without corrupting each other. Every invariant below holds independ
   `force_scan`, `stop_scan`, `is_active`, `trigger_verification`, plus `init()`, `should_auto_start_indexing()`, and
   `stop_all_indexing` (the memory watchdog's target). The path→volume routing and the read-only query surface moved OUT
   to `../paths` and `../read`.
+
+- **signals.rs** — `VolumeSignals` (the freshness `Arc` + event sink a registry instance and its manager share) and
+  `apply_freshness_event_on`, the transition fired on those handles directly. Neither touches the registry, so they sit
+  in this leaf beside `freshness.rs` and `lifecycle_bus.rs`: the manager, the phase machine, scan completion, and the
+  transports' tests hold or fire them without importing `state` for a value bag.
 
 - **manager.rs** — `IndexManager`, the central per-volume coordinator, plus the LOCAL scan path and the shared dispatch.
   Owns the SQLite store (reads), the writer thread (writes), the scanner handle, and the FSEvents watcher.
@@ -63,9 +69,9 @@ concurrently without corrupting each other. Every invariant below holds independ
   resolves such a glob to every item the parent re-exports, so each child gains a phantom edge to every sibling: while
   `start.rs` and `phased.rs` carried one, `manager.rs`'s seven child-only imports all printed as `manager` edges and
   `watch::event_loop` read as part of the `lifecycle` tangle it has nothing to do with. De-globbing took this crate's
-  largest raw component from 19 modules to 15 with no behavior change. `module-cycles` measures the result but is
-  warn-only and doesn't run in CI, so nothing stops the glob coming back. The trap and its five siblings:
-  `scripts/check/checks/DETAILS.md` § "Rust module cycles".
+  largest raw component from 19 modules to 15 with no behavior change. `module-cycles` fails (locally and in CI) if a
+  returning glob grows the tangle past its allowance. The trap and its five siblings: `scripts/check/checks/DETAILS.md`
+  § "Rust module cycles". Why the tangle itself stays: § "The accepted `[4]` module tangle".
 - **manager/network_scan.rs** — the SMB/MTP `Volume`-trait scan path, a split `impl IndexManager` block beside
   `manager/start.rs`'s local one, so the manager's two scan funnels sit under it rather than one beside it. Holds
   `resume_or_scan_network` (a completed prior scan loads Stale and does NOT auto-rescan; a never-completed one scans)
@@ -750,6 +756,36 @@ teardown that arrived while the manager was out used to be silently swallowed, `
 was never the argument against custody, and 23 call sites across eight files is mostly mechanical work. The lock
 semantics are the ground to reject it on, and they are the ground somebody proposing it again has to answer.
 
+## The accepted `[4]` module tangle
+
+`module-cycles` reports `cmdr-index::indexing::lifecycle` at `[4]`: `cover`, `manager`, `phases`, and `state` depend on
+each other in a circle. That's accepted, and the allowlist entry is meant to stay (#421). The reason: **the registry
+owns the manager, which owns the phase machine; detached work (walks, scans, live loops) re-enters through the registry
+by volume id, because the registry is the liveness authority.**
+
+- **Down is ownership.** `IndexPhase::Running(Box<IndexManager>)`, and the manager holds its `PendingPhases`. The phase
+  machine walks through `cover`.
+- **Up is liveness.** Everything the manager starts runs detached from it: the replay fallback, a live loop's end, a
+  network scan's interruption, each phase-machine walk. It comes back by volume id (`manager/registry_rescan.rs`,
+  `cover::context_for_walk` → `state::cover_context_for`) because only the registry knows whether that volume is still
+  alive and not in flux. `cover_context_for` checks `Running(mgr) if !mgr.ground_in_flux` and mints the walk's work
+  under one registry lock, so both name the same life of the volume (#375's race).
+
+Every cut that makes the number drop is worse than the edge it removes:
+
+- **A callback or single-subscriber bus event** ("rescan me", "give me a context") is a single-implementer indirection
+  added for the metric.
+- **The manager minting the phase machine's `CoverContext` up front** skips the per-walk liveness and flux check. That's
+  a behavior change on a race-prone path.
+- **❌ Moving `context_for_walk` from `cover/bootstrap.rs` into `state`** scores 4 → 2 on the graph and hides the
+  coupling without removing it: `phases` would call `state` directly, and `cover`'s branch-coverage calls into `state`
+  stay. The report shrinks; the code doesn't change.
+
+Dissolving it for real is an actor or handle redesign of the registry (M+), not worth it today. The hygiene that holds
+on its own merits: `signals.rs` keeps `VolumeSignals` and `apply_freshness_event_on` outside `state`, so nothing imports
+the registry module for a value bag, and `cover` asks `watch::branches` directly whether released ground holds buffered
+events. Neither moves the number, and that's expected: `manager/registry_rescan.rs → state` still closes the circle.
+
 ## Freshness (`freshness.rs`) — the state machine and the seam
 
 Local disk gets freshness free from FSEvents' journal (replay from `last_event_id` → Fresh on launch). SMB/MTP/external
@@ -763,7 +799,7 @@ on the `IndexInstance` as `Arc<Mutex<Option<Freshness>>>` so scan-transition tas
 without the registry lock. Two entry points thread an event through it, and which one a caller uses is a LOCK-DISCIPLINE
 decision:
 
-- `state::apply_freshness_event_on(freshness_arc, vid, event)` — the real transition + FE emit. Operates on the `Arc`
+- `signals::apply_freshness_event_on(freshness_arc, vid, event)` — the real transition + FE emit. Operates on the `Arc`
   DIRECTLY, NEVER locks `INDEX_REGISTRY`. `IndexManager` holds a clone of its volume's freshness `Arc` and fires ALL its
   scan transitions through this (including from spawned completion tasks via a cloned handle). That's what lets a caller
   holding the registry lock across `start_scan` fire scan-start WITHOUT re-entering the non-recursive registry mutex.

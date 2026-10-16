@@ -35,6 +35,8 @@ the first index, each with its own `CLAUDE.md`. Other leaves are one job each (`
 - **Fire a pipeline-phase transition through `events::set_phase_for`**; the `IndexPhase` swaps here are a different
   machine. Freshness has ONE total table (`Freshness::on`), and `..._on` vs `apply_freshness_event` is LOCK DISCIPLINE.
 - **A fatal storage error STOPS and FAILS the index.** Recovery is a rebuild, never a retry.
+- **The `[4]` `module-cycles` tangle is ACCEPTED** (ownership down, liveness back up via the registry). ❌ Don't hide it
+  by moving `context_for_walk` into `state`. `DETAILS.md` § The accepted `[4]` module tangle.
 - **Two switches gate BACKGROUND work only, master first.** `indexing.enabled` hard-gates `Activation::IndexTheVolume`;
   per-drive intent is the `user_enabled` / `user_disabled` pair, written when the user ASKS, ❌ never inferred from
   `scan_completed_at`. A search walk is carved out of both.

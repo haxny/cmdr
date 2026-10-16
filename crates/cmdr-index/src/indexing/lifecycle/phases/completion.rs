@@ -27,7 +27,8 @@ use rusqlite::Connection;
 use super::Machine;
 use crate::indexing::events::IndexEvent;
 use crate::indexing::lifecycle::freshness::FreshnessEvent;
-use crate::indexing::lifecycle::{lifecycle_bus, state};
+use crate::indexing::lifecycle::lifecycle_bus;
+use crate::indexing::lifecycle::signals::apply_freshness_event_on;
 use crate::indexing::paths::path_prefix::is_at_or_under;
 use crate::indexing::reconcile::reconciler;
 use crate::indexing::store::{IndexStore, ScanCalibrationKind};
@@ -201,7 +202,7 @@ fn run_the_completion_sequence(machine: &Machine) {
         total_dirs: machine.progress.dirs_found.load(Ordering::Relaxed),
         duration_ms: machine.started_at.elapsed().as_millis() as u64,
     });
-    state::apply_freshness_event_on(
+    apply_freshness_event_on(
         &machine.freshness,
         machine.events.as_ref(),
         &machine.volume_id,
