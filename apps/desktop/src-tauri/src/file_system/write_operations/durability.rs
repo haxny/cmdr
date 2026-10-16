@@ -299,11 +299,7 @@ fn fsync_dir(dir: &Path) -> io::Result<()> {
 /// the tree to compute this — `(unknown)` on the FE is the legitimate
 /// fallback when the cached value isn't available.
 pub(super) fn lookup_indexed_size(path: &Path) -> Option<u64> {
-    crate::index_host::index()
-        .dir_stats(&path.to_string_lossy())
-        .ok()
-        .flatten()
-        .map(|s| s.recursive_size)
+    super::host::installed().index().recursive_size(path)
 }
 
 /// Test seam: records every directory `fsync_dir` is asked to sync on this

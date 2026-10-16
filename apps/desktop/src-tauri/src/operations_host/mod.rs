@@ -11,6 +11,8 @@
 //! - engine-wide events — [`events::TauriEngineEvents`]
 //! - own writes — [`own_writes::AppOwnWrites`], the downloads watcher's ignore
 //!   set
+//! - the drive index — [`index::AppOperationIndex`], `index_host::index()` asked
+//!   per call
 //! - one operation's or preview's events — [`TauriEventSink`] and
 //!   [`TauriScanPreviewSink`] (`sinks.rs`), built at the IPC edge; a terminal
 //!   event's app side effects ride along (`terminal_effects.rs`)
@@ -19,6 +21,7 @@
 
 mod analytics;
 mod events;
+mod index;
 mod own_writes;
 mod sinks;
 pub(crate) mod terminal_effects;
@@ -64,4 +67,5 @@ fn app_answers(app: Option<AppHandle>) -> EngineHost {
         Arc::new(events::TauriEngineEvents::new(app)),
     )
     .with_own_writes(Arc::new(own_writes::AppOwnWrites))
+    .with_index(Arc::new(index::AppOperationIndex))
 }

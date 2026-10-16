@@ -33,6 +33,8 @@ mod human_wait;
 mod in_flight_temps;
 mod journal;
 mod journal_search;
+#[cfg(test)]
+pub(crate) use journal_search::SEARCH_LEAF_CAP;
 mod ledger;
 mod look_alike;
 #[cfg(test)]

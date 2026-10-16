@@ -97,6 +97,16 @@ called beside a syscall on every file landing, so it stays one prefix-checked in
 `downloads/own_write_recorder.rs`, which is how `own_write_announce_tests.rs` sees every write path's announces through
 this adapter. Pinned by `own_writes::tests::an_announce_reaches_the_downloads_hook`.
 
+## The drive index (`index.rs`)
+
+`AppOperationIndex` answers `OperationIndex` from `index_host::index()`, reached per call (the index is built in
+`setup()`, and an adapter that captured it could win its slot with an unconfigured one). `expected_totals` maps the
+index's count onto the engine's own `ExpectedTotals`; `recursive_size` is `dir_stats`' `recursive_size`;
+`search_leaves` is the honest-coverage read behind the operation log's search leaves (`cmdr-operation-log/DETAILS.md` §
+"Search-leaf enumeration"): the Live gate, path resolution, the epoch gate (`enumerate_from_id`), and the cap, each
+miss a typed downgrade. Its cells (the coverage honesty, the cap's edges, an ignored latency bench) run against a
+hand-built index DB; `an_unindexed_volume_answers_uncovered` pins the adapter itself.
+
 ## A test binary
 
 Nothing installs in a test binary, and some engine pins read the app's real answers: the transfer-gauge cells in

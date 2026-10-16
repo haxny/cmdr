@@ -17,6 +17,8 @@
 //!   [`OperationSinkFactory`].
 //! - **"Cmdr is about to write here"** goes through [`OwnWrites`]
 //!   (`own_writes.rs`), before every syscall that lands a path.
+//! - **What the drive index knows** goes through [`OperationIndex`]
+//!   (`index.rs`).
 //!
 //! The volumes and the events are required; every other seam defaults to an
 //! answer that does nothing, which the host replaces with `with_*`.
@@ -27,6 +29,7 @@
 
 mod error_report;
 mod events;
+mod index;
 mod operation_sink;
 mod own_writes;
 mod scan_preview_sink;
@@ -41,6 +44,8 @@ use tokio::runtime::Handle;
 pub(crate) use error_report::{AsideAttempt, OperationErrorReport, TreeFailure};
 use events::NoEngineEvents;
 pub(crate) use events::{EngineEvents, InstantMutationFact, InstantOp, InstantOutcome, InstantTarget};
+use index::NoOperationIndex;
+pub(crate) use index::{BufferedLeaves, ExpectedTotals, Leaf, OperationIndex};
 pub use operation_sink::OperationEventSink;
 use own_writes::NoOwnWrites;
 pub(crate) use own_writes::OwnWrites;
@@ -58,6 +63,7 @@ pub(crate) struct EngineHost {
     events: Arc<dyn EngineEvents>,
     operation_sinks: Option<OperationSinkFactory>,
     own_writes: Arc<dyn OwnWrites>,
+    index: Arc<dyn OperationIndex>,
 }
 
 impl EngineHost {
@@ -75,6 +81,7 @@ impl EngineHost {
             events,
             operation_sinks: None,
             own_writes: Arc::new(NoOwnWrites),
+            index: Arc::new(NoOperationIndex),
         }
     }
 
@@ -88,6 +95,12 @@ impl EngineHost {
     /// Tells `own_writes` about every path the engine is about to write.
     pub(crate) fn with_own_writes(mut self, own_writes: Arc<dyn OwnWrites>) -> Self {
         self.own_writes = own_writes;
+        self
+    }
+
+    /// Answers the engine's drive-index questions from `index`.
+    pub(crate) fn with_index(mut self, index: Arc<dyn OperationIndex>) -> Self {
+        self.index = index;
         self
     }
 
@@ -135,6 +148,11 @@ impl EngineHost {
     /// Where the engine announces a path before it writes there.
     pub(crate) fn own_writes(&self) -> &dyn OwnWrites {
         &*self.own_writes
+    }
+
+    /// What the drive index knows.
+    pub(crate) fn index(&self) -> &dyn OperationIndex {
+        &*self.index
     }
 
     /// A fresh sink for an operation the engine starts on its own behalf.

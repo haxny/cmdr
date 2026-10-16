@@ -231,8 +231,8 @@ decisions"; the estimator in § "ETA + throughput"; `WriteSettledGuard` in § "S
   both `pub(super)`) that lands a brand-new entry in the pane on local-FS-backed volumes, through the local backend's
   mutation patch (`MutationEvent::Created`, so the composer's index apply and badge invalidation run too).
   `create_numbered.rs` reuses both so a pasted file cursor-lands exactly like mkfile.
-- **Scan-phase `expected_files_total` / `expected_bytes_total` come from
-  `crate::indexing::read::expected_totals::expected_totals_for_sources`** and are `None` when the index doesn't cover
+- **Scan-phase `expected_files_total` / `expected_bytes_total` come from the host's
+  `OperationIndex::expected_totals`** (the app answers with the drive index's count) and are `None` when the index doesn't cover
   every source; the FE then falls back to a tally-only display instead of a progress bar. `scan.rs`'s walker derives
   `current_dir` from `path.parent()`, which is what lets the UI show "in directory: …" beside the filename.
 - **`rename/bulk.rs` is Ask Cmdr's reviewed batch-rename driver**, and it does NOT use `run_instant`: `start_bulk_rename`
@@ -745,6 +745,11 @@ runtime. The app's answer is `apps/desktop/src-tauri/src/operations_host/`, whic
 - **"Cmdr is about to write here" goes through `OwnWrites`** (`host/own_writes.rs`), once per path BEFORE the syscall
   that lands it (§ "Cmdr-own-write hook (downloads watcher)"). The one per-file seam the dispatch rule sanctions: a
   landing already costs syscalls, so one `dyn` call beside it is noise.
+- **What the drive index knows goes through `OperationIndex`** (`host/index.rs`): a selection's expected totals (the
+  scan's progress bar), a folder's recursive size (a conflict prompt's folder sizes), and a subtree's search leaves
+  (`journal_search.rs`, which keeps `SEARCH_LEAF_CAP`, the before-the-mutation and after-success rules, and the test
+  hook; the index gates and their downgrade reasons are the app's read, `operations_host/index.rs`). Value types
+  (`ExpectedTotals`, `BufferedLeaves`, `Leaf`) are the engine's own: it names no `cmdr_index` type.
 - **Optional seams default to doing nothing.** `EngineHost::new` takes only the runtime's `VolumeHost`, the volumes,
   and the events (nothing works without those); every other seam starts as a no-op answer that `with_*` replaces. The
   app wires them all in `operations_host::app_answers`.

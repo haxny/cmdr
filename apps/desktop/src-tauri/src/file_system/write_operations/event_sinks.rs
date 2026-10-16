@@ -10,6 +10,7 @@
 #[cfg(test)]
 use cmdr_fs::ignore_poison::IgnorePoison;
 
+use super::host::ExpectedTotals;
 pub use super::host::{OperationEventSink, ScanPreviewEventSink};
 #[cfg(test)]
 use super::types::{
@@ -18,7 +19,6 @@ use super::types::{
     WriteConflictResolvedEvent, WriteSettledEvent, WriteSourceItemDoneEvent, WriteSourcesGoneEvent,
 };
 use super::types::{WriteErrorEvent, WriteOperationError, WriteOperationType, WriteProgressEvent};
-use cmdr_index::ExpectedTotals;
 
 impl WriteProgressEvent {
     /// Construct an event with the 8 core counter fields. Rate/ETA fields are
@@ -76,7 +76,7 @@ impl WriteProgressEvent {
     /// scanning phase call this; everywhere else leaves the fields at their
     /// defaults (`None` / `0`).
     #[must_use]
-    pub fn with_scan_meta(
+    pub(crate) fn with_scan_meta(
         mut self,
         current_dir: Option<String>,
         dirs_done: usize,

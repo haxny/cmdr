@@ -356,8 +356,8 @@ fn write_progress_new_defaults_scan_meta_to_none() {
 
 #[test]
 fn with_scan_meta_populates_all_fields() {
+    use super::super::host::ExpectedTotals;
     use super::super::types::{WriteOperationPhase, WriteOperationType, WriteProgressEvent};
-    use cmdr_index::ExpectedTotals;
     let event = WriteProgressEvent::new(
         "op-1".to_string(),
         WriteOperationType::Copy,

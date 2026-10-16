@@ -276,7 +276,7 @@ fn scan_sources_internal(
     // Index-derived expected totals: the denominator the FE renders the
     // scan-phase progress bar against while the foolproof scan runs. `None`
     // when any source isn't in the index; the FE falls back to tallies only.
-    let expected = crate::index_host::index().expected_totals(sources);
+    let expected = host::installed().index().expected_totals(sources);
     log::debug!(
         "scan: op={} index expected={}",
         operation_id,

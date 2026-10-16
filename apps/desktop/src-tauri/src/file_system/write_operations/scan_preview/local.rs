@@ -9,6 +9,7 @@ use std::time::{Duration, Instant};
 
 use super::super::error_classification::classify_io_error;
 use super::super::event_sinks::ScanPreviewEventSink;
+use super::super::host;
 use super::super::scan_bridge::{ScanCounts, ScanPause, forward_scan_progress};
 use super::super::scan_cache::{ScanOutcome, settle_preview};
 use super::super::scan_walker::{OnlineOnlyWatch, WalkContext, walk_sources_with_per_path};
@@ -69,7 +70,7 @@ pub(in crate::file_system::write_operations) fn run_scan_preview(
     // Index-derived expected totals: lets the UI render a real progress bar
     // from the first scan event instead of an indeterminate spinner. `None`
     // when any source isn't covered by the index.
-    let expected = crate::index_host::index().expected_totals(&sources);
+    let expected = host::installed().index().expected_totals(&sources);
 
     // Online-only tally, armed only when the sources reach into a cloud drive we
     // know by name. A selected FOLDER can't carry `SF_DATALESS` itself, so this

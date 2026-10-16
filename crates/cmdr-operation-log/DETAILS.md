@@ -273,8 +273,10 @@ Each point is where the op already stats the item, so journaling is near-zero ma
 
 ### Search-leaf enumeration (`file_system/write_operations/journal_search.rs`)
 
-For same-FS move + trash, the subtree's descendant leaves are read from the DRIVE INDEX (zero extra filesystem I/O) and
-recorded as `search_only` rows so "when did I trash `dog.jpg`" hits inside a trashed folder. Two hard ordering rules:
+For same-FS move + trash, the subtree's descendant leaves are read from the DRIVE INDEX (zero extra filesystem I/O,
+through the engine's `OperationIndex::search_leaves`, whose app answer and its gates live in `operations_host/index.rs`)
+and recorded as `search_only` rows so "when did I trash `dog.jpg`" hits inside a trashed folder. Two hard ordering
+rules:
 
 - **Enumerate BEFORE the OS mutation**, buffered in memory: the index reconciler prunes the subtree the instant it sees
   the trash/rename FSEvent, so a later read would find the rows gone and wrongly stamp `full`.
