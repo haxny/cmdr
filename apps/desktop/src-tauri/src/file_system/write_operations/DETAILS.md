@@ -283,8 +283,8 @@ either is a `use` of a sibling, so the floor rule already forbids it). `Lifecycl
 `WriteOperationPhase`, because it IS vocabulary: `types::OperationStatus` carries it and it crosses the wire to the
 frontend as a serde/specta enum. `manager` imports it like everyone else.
 
-**How it stays cut.** `module-cycles` re-measures this home on every slow run, and its allowlist for
-`cmdr::file_system::write_operations` holds no tangle at all, so any new circle here warns. A new upward import from
+**How it stays cut.** `module-cycles` re-measures this home on every slow run and in CI, and its allowlist for
+`cmdr::file_system::write_operations` holds no tangle at all, so any new circle here fails it. A new upward import from
 `types` brings the whole eleven back. `scripts/check/checks/DETAILS.md` § "Rust module cycles" documents how to read its
 output, including the ways `cargo-modules` misattributes an edge.
 

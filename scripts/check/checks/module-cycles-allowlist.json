@@ -1,14 +1,17 @@
 {
-  "$comment": "Accepted module tangles per home, seeded from the state at the check's introduction. A home is the longest module path every member of a tangle shares; the list is the sizes of the tangles living there, largest first, counted AFTER parent-child hubs collapse (so splitting a file into submodules adds nothing here). A strict ratchet: local runs lower a list to what's measured and drop a home that comes clean, and raising one needs David's OK (scripts/check/checks/DETAILS.md § Allowlist consent). The fix for a home over its numbers is to cut an edge, not to bump the number. `toolVersion` is the cargo-modules release these numbers came from; the check refuses to compare against a different one.",
+  "$comment": "Accepted module tangles per home, re-seeded on 2026-10-16 from the measured state (David approved the re-seed on 2026-10-13; GitHub issue #421 tracks cutting every entry, and the target is an empty list). A home is the longest module path every member of a tangle shares; the list is the sizes of the tangles living there, largest first, counted AFTER parent-child hubs collapse (so splitting a file into submodules adds nothing here). A strict ratchet: local runs lower a list to what's measured and drop a home that comes clean, and raising one needs David's OK (scripts/check/checks/DETAILS.md § Allowlist consent). The fix for a home over its numbers is to cut an edge, not to bump the number. `toolVersion` is the cargo-modules release these numbers came from; the check refuses to compare against a different one.",
   "toolVersion": "0.27.0",
   "tangles": {
-    "cmdr": [2],
-    "cmdr-archive::read": [4],
+    "cmdr": [2, 2],
+    "cmdr-archive::read": [5],
     "cmdr-fs::volume": [2],
     "cmdr-index::importance::scheduler": [2],
+    "cmdr-index::indexing::lifecycle": [4],
     "cmdr-index::indexing::writer": [2],
-    "cmdr::file_viewer": [2],
-    "cmdr::licensing": [3],
-    "cmdr::mcp": [2]
+    "cmdr-s3::volume": [2],
+    "cmdr-webdav": [2],
+    "cmdr::file_viewer": [2, 2],
+    "cmdr::mcp": [2],
+    "cmdr::volumes": [2]
   }
 }
