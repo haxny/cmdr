@@ -22,7 +22,7 @@ fn temp_db() -> (tempfile::TempDir, PathBuf) {
 
 fn opened(path: &Path) -> OperationLog {
     let log = OperationLog::detached();
-    log.open(path).expect("open");
+    log.open(path, &|_| None).expect("open");
     log
 }
 
@@ -105,7 +105,7 @@ fn a_second_open_is_refused_and_starts_no_second_writer() {
     let (_other_dir, second) = temp_db();
     let log = opened(&first);
 
-    assert!(matches!(log.open(&second), Err(OpenError::AlreadyOpen)));
+    assert!(matches!(log.open(&second, &|_| None), Err(OpenError::AlreadyOpen)));
     assert!(!second.exists(), "nothing opened, created, or migrated the second DB");
     assert_eq!(
         log.writer().expect("writer").db_path(),

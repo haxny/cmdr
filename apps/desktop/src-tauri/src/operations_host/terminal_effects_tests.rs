@@ -81,6 +81,7 @@ fn complete_event(operation_id: &str, operation_type: WriteOperationType) -> Wri
         top_level_skipped: None,
         refused: None,
         metadata_left_behind: None,
+        durability_unconfirmed: None,
     }
 }
 

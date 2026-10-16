@@ -101,27 +101,36 @@ fn downgrade_is_refused_not_destroyed() {
     assert_eq!(a, "precious", "a refused downgrade must not destroy the DB");
 }
 
-/// A genuinely unparseable file (garbage bytes, not a SQLite DB) is set aside and
-/// recreated fresh through `OperationLogStore::open` — the ONLY case where
-/// recreating is correct. The recreated DB is at the current schema
-/// version with the real tables present.
+/// A genuinely unparseable file (garbage bytes, not a SQLite DB) is handed to the
+/// host's set-aside and recreated fresh — the ONLY case where recreating is
+/// correct. The recreated DB is at the current schema version with the real
+/// tables present. (What the app does with the file it's handed:
+/// `operation_log_host`'s `an_unreadable_operation_log_is_kept_and_reported`.)
 #[test]
 fn unparseable_file_recreates_fresh() {
     let dir = tempfile::tempdir().expect("temp dir");
     let path = operation_log_db_path(dir.path());
     std::fs::write(&path, b"this is not a sqlite database at all").expect("write garbage");
 
-    let notices = crate::state_recovery::testing::capture_recoveries();
-    let store = OperationLogStore::open(&path).expect("open recreates an unparseable file");
-    let kept = crate::state_recovery::testing::kept_copies(&path);
-    assert_eq!(kept.len(), 1, "the unreadable DB is kept beside the new one: {kept:?}");
+    let kept = path.with_extension("db.kept");
+    let handed = std::sync::Mutex::new(Vec::new());
+    let set_aside = |unreadable: &Path| {
+        handed
+            .lock()
+            .expect("no other holder panics")
+            .push(unreadable.to_path_buf());
+        std::fs::rename(unreadable, &kept).ok().map(|()| kept.clone())
+    };
+    let store = OperationLogStore::open_setting_aside(&path, &set_aside).expect("open recreates an unparseable file");
     assert_eq!(
-        std::fs::read(&kept[0]).expect("read the copy"),
+        *handed.lock().expect("unpoisoned"),
+        vec![path.clone()],
+        "handed over once"
+    );
+    assert_eq!(
+        std::fs::read(&kept).expect("read the copy"),
         b"this is not a sqlite database at all"
     );
-    let recoveries = notices.recoveries();
-    assert_eq!(recoveries.len(), 1, "one notice");
-    assert_eq!(recoveries[0].file, crate::state_recovery::StateFile::OperationLog);
     assert_eq!(
         store.schema_version().expect("version"),
         MIGRATIONS.last().expect("ladder non-empty").version,

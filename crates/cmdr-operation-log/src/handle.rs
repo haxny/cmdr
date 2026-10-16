@@ -17,7 +17,7 @@ use super::capture::{FinalizeInputs, OperationJournal, WriterJournal};
 use super::recording::Recording;
 use super::retention::{self, RetentionLimitsSource};
 use super::rollback::reconcile_rolling_back_on_open;
-use super::store::{OperationLogStore, OperationLogStoreError};
+use super::store::{OperationLogStore, OperationLogStoreError, SetAside};
 use super::types::{NotRollbackableReason, SearchCoverage, SearchCoverageReason};
 use super::writer::{FinalizeOutcome, JournalItem, OpenOperation, OperationLogWriter};
 
@@ -79,7 +79,8 @@ impl OperationLog {
     }
 
     /// Open `db_path` and start journaling into it: the store migrates the schema
-    /// forward (or recreates an unparseable file, or refuses a downgrade), the
+    /// forward (or hands an unparseable file to `set_aside` and recreates it, or
+    /// refuses a downgrade), the
     /// writer thread starts, the operations a crash left mid-rollback resolve,
     /// and only THEN do the writer and the journal become reachable, together.
     /// So a rollback can never be dispatched into a reconcile.
@@ -88,13 +89,13 @@ impl OperationLog {
     /// nothing, and a failed open leaves the handle without a journal for good,
     /// which the app survives (it runs without history rather than refusing to
     /// start).
-    pub fn open(&self, db_path: &Path) -> Result<(), OpenError> {
+    pub fn open(&self, db_path: &Path, set_aside: SetAside<'_>) -> Result<(), OpenError> {
         if self.inner.open_claimed.swap(true, Ordering::SeqCst) {
             return Err(OpenError::AlreadyOpen);
         }
         // The store owns the schema lifecycle; the writer then opens its own
         // write connection over the now-current schema.
-        OperationLogStore::open(db_path).map_err(OpenError::Store)?;
+        OperationLogStore::open_setting_aside(db_path, set_aside).map_err(OpenError::Store)?;
         let writer = OperationLogWriter::spawn(db_path).map_err(OpenError::Writer)?;
         // Resolve any operation a crash left mid-rollback: from its unfinalized
         // inverse op's recorded outcomes, or straight back to rollbackable when no

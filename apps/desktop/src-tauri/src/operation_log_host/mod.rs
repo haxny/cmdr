@@ -15,6 +15,7 @@ mod test_journal;
 #[cfg(test)]
 mod volumes;
 
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, OnceLock};
 
 use tauri::AppHandle;
@@ -87,7 +88,7 @@ pub fn start(app: &AppHandle, log: &OperationLog) {
         }
     };
     log.set_recording(crate::settings::load_operation_log_enabled(app));
-    match log.open(&operation_log_db_path(&data_dir)) {
+    match log.open(&operation_log_db_path(&data_dir), &set_aside_unreadable) {
         // Prune on startup and on a slow timer, on the app's runtime. Runs before
         // the app is under load; the size loop is a no-op while under budget.
         Ok(()) => log.spawn_retention(tauri::async_runtime::handle().inner(), retention_limits(app)),
@@ -97,6 +98,12 @@ pub fn start(app: &AppHandle, log: &OperationLog) {
             crate::log_error!(target: "operation_log", "the operation log was started twice; keeping the first");
         }
     }
+}
+
+/// Keeps an `operation-log.db` the store can't read beside the fresh one, and
+/// tells the person once (`state_recovery`).
+fn set_aside_unreadable(db_path: &Path) -> Option<PathBuf> {
+    crate::state_recovery::set_aside(db_path, crate::state_recovery::StateFile::OperationLog)
 }
 
 /// The retention limits from `settings.json`, read fresh on every tick so a
@@ -110,6 +117,36 @@ fn retention_limits(app: &AppHandle) -> RetentionLimitsSource {
             max_size_bytes: limits.max_size_bytes,
         }
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use cmdr_operation_log::OperationLog;
+    use cmdr_operation_log::store::operation_log_db_path;
+
+    /// An unparseable `operation-log.db` opened the way `start` opens it is kept
+    /// beside the fresh one and reported once, and the log still opens.
+    #[test]
+    fn an_unreadable_operation_log_is_kept_and_reported() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let path = operation_log_db_path(dir.path());
+        std::fs::write(&path, b"this is not a sqlite database at all").expect("write garbage");
+
+        let notices = crate::state_recovery::testing::capture_recoveries();
+        let log = OperationLog::detached();
+        log.open(&path, &super::set_aside_unreadable)
+            .expect("open recreates an unparseable file");
+        let kept = crate::state_recovery::testing::kept_copies(&path);
+        assert_eq!(kept.len(), 1, "the unreadable DB is kept beside the new one: {kept:?}");
+        assert_eq!(
+            std::fs::read(&kept[0]).expect("read the copy"),
+            b"this is not a sqlite database at all"
+        );
+        let recoveries = notices.recoveries();
+        assert_eq!(recoveries.len(), 1, "one notice");
+        assert_eq!(recoveries[0].file, crate::state_recovery::StateFile::OperationLog);
+        assert!(log.writer().is_some(), "the fresh DB opened");
+    }
 }
 
 #[cfg(not(any(test, feature = "transfer-bench")))]

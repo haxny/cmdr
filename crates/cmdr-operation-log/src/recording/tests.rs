@@ -23,7 +23,7 @@ impl Rig {
         let dir = tempfile::tempdir().expect("tempdir");
         let path = operation_log_db_path(dir.path());
         let log = OperationLog::detached();
-        log.open(&path).expect("open");
+        log.open(&path, &|_| None).expect("open");
         let writer = log.writer().expect("an opened log has a writer");
         Self {
             _dir: dir,

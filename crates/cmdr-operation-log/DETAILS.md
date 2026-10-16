@@ -41,9 +41,10 @@ lives in `store/migrations.rs`.
   from.
 - **Never destroy on a version gap.** A stored version _older_ than the ladder migrates up. A stored version _newer_ (a
   downgrade — the user ran a newer build, then an older one) is refused with a typed `SchemaDowngrade` error and the
-  file is left untouched, because it may hold data this build can't represent. Delete-and-recreate is reserved for a
-  genuinely **unparseable** file, classified by the typed sqlite error code (`NotADatabase` / `DatabaseCorrupt`), never
-  a message string.
+  file is left untouched, because it may hold data this build can't represent. Recreating is reserved for a genuinely
+  **unparseable** file, classified by the typed sqlite error code (`NotADatabase` / `DatabaseCorrupt`), never a message
+  string. The file goes to the host's `SetAside` first (the app keeps a copy and tells the person, `state_recovery`); a
+  host that keeps nothing (tests, tools: `OperationLogStore::open`) lets it be deleted.
 
 Rules for adding a migration: append a step with the next version; **never edit or renumber a shipped step** (users' DBs
 already ran it — editing it silently diverges their schema); write `up` against the schema the prior steps produce, not

@@ -35,6 +35,11 @@ use super::types::{
 /// a cross-volume operation is one operation with one identity.
 pub(crate) const OPERATION_LOG_DB_FILE: &str = "operation-log.db";
 
+/// What the host does with an unparseable `operation-log.db` before a fresh one
+/// replaces it: keeps it, answering where, or `None` when it couldn't, and the
+/// store then deletes it. The app's answer keeps a copy and tells the person.
+pub type SetAside<'a> = &'a dyn Fn(&Path) -> Option<PathBuf>;
+
 /// Resolve the `operation-log.db` path inside `data_dir`.
 pub fn operation_log_db_path(data_dir: &Path) -> PathBuf {
     data_dir.join(OPERATION_LOG_DB_FILE)
@@ -206,9 +211,16 @@ pub struct OperationLogStore {
 impl OperationLogStore {
     /// Open (or create) the DB, migrating the schema forward to the current
     /// version. A downgrade is refused (returned as an error, DB untouched); a
-    /// genuinely unparseable file is set aside and recreated fresh; a transient
-    /// error (IO) propagates without destroying anything.
+    /// genuinely unparseable file is deleted and recreated fresh; a transient
+    /// error (IO) propagates without destroying anything. For tests and tools:
+    /// the host opens through [`Self::open_setting_aside`].
     pub fn open(db_path: &Path) -> Result<Self, OperationLogStoreError> {
+        Self::open_setting_aside(db_path, &|_| None)
+    }
+
+    /// [`Self::open`], handing a genuinely unparseable file to `set_aside` before
+    /// a fresh one replaces it, so the host can keep it and tell the person.
+    pub fn open_setting_aside(db_path: &Path, set_aside: SetAside<'_>) -> Result<Self, OperationLogStoreError> {
         match Self::try_open(db_path) {
             Ok(store) => Ok(store),
             Err(OperationLogStoreError::SchemaDowngrade { found, expected }) => {
@@ -220,7 +232,7 @@ impl OperationLogStore {
             }
             Err(e) if is_unparseable(&e) => {
                 log::warn!(target: "operation_log", "operation-log DB is unparseable ({e}); setting it aside and recreating");
-                Self::set_aside_and_recreate(db_path)
+                Self::set_aside_and_recreate(db_path, set_aside)
             }
             Err(e) => Err(e),
         }
@@ -234,12 +246,11 @@ impl OperationLogStore {
         })
     }
 
-    fn set_aside_and_recreate(db_path: &Path) -> Result<Self, OperationLogStoreError> {
-        // Kept beside the new DB, and the person hears it reset. A rename that doesn't happen
-        // falls back to deleting, the one way forward.
-        if db_path.exists()
-            && crate::state_recovery::set_aside(db_path, crate::state_recovery::StateFile::OperationLog).is_none()
-        {
+    fn set_aside_and_recreate(db_path: &Path, set_aside: SetAside<'_>) -> Result<Self, OperationLogStoreError> {
+        // Kept beside the new DB when the host keeps it (and the person hears it
+        // reset). A rename that doesn't happen falls back to deleting, the one way
+        // forward.
+        if db_path.exists() && set_aside(db_path).is_none() {
             std::fs::remove_file(db_path)?;
         }
         for sidecar in [db_path.with_extension("db-wal"), db_path.with_extension("db-shm")] {
