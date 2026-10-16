@@ -122,6 +122,7 @@ pub(super) fn move_with_rename(
             // this item's move succeeds (below the top-level row).
             let buffered_leaves = if source_is_dir {
                 Some(journal_search::enumerate_subtree_for_search(
+                    state.scope().host().index(),
                     "root",
                     source,
                     journal_search::SEARCH_LEAF_CAP,
@@ -158,7 +159,7 @@ pub(super) fn move_with_rename(
                 // `crates/cmdr-operation-log/DETAILS.md` § "Why a directory merge isn't
                 // reversible" holds that decision.
                 journal::note_not_rollbackable(
-                    operation_id,
+                    state.scope(),
                     cmdr_operation_log::types::NotRollbackableReason::DirectoryMerge,
                 );
             } else if path_exists_or_is_symlink(&dest_path) {
@@ -229,7 +230,7 @@ pub(super) fn move_with_rename(
                 cmdr_operation_log::types::EntryType::File
             };
             journal::record_local_leaf(
-                operation_id,
+                state.scope(),
                 entry_type,
                 source,
                 Some(&landed_path),
@@ -243,7 +244,7 @@ pub(super) fn move_with_rename(
             // succeeded; their dest is rebased onto the moved-to path.
             if let Some(buffered) = &buffered_leaves {
                 journal_search::persist_and_note(
-                    operation_id,
+                    state.scope(),
                     cmdr_fs::volume::DEFAULT_VOLUME_ID,
                     source,
                     cmdr_fs::volume::DEFAULT_VOLUME_ID,

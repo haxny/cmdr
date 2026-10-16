@@ -146,24 +146,9 @@ fn heard_about(journal: &CapturingJournal) -> (usize, usize, usize) {
     )
 }
 
-/// The engine's by-id calls are what production journals through: an operation
-/// that opened before the journal did stays unjournaled once it arrives, rather
-/// than sending its tail and finalize to a journal with no row for it.
-#[test]
-fn an_operation_opened_before_the_journal_journals_nothing_by_id() {
-    let log = OperationLog::detached();
-    drop(log.journal_open(header("early")));
-
-    let journal = Arc::new(CapturingJournal::new());
-    log.set_journal(Some(journal.clone()));
-    log.record_items("early", item("a.txt"));
-    log.note_not_rollbackable("early", NotRollbackableReason::DirectoryMerge);
-
-    assert_eq!(log.finalize("early", done()).rollback_unit_rows, 0);
-    assert_eq!(heard_about(&journal), (0, 0, 0), "no tail and no finalize");
-    assert!(journal.not_rollbackable_notes.lock_ignore_poison().is_empty());
-}
-
+/// An operation that opened before the journal did stays unjournaled once it
+/// arrives, rather than sending its tail and finalize to a journal with no row
+/// for it.
 #[test]
 fn an_operation_opened_before_the_journal_journals_nothing_through_its_journal() {
     let log = OperationLog::detached();
@@ -172,50 +157,26 @@ fn an_operation_opened_before_the_journal_journals_nothing_through_its_journal()
     let journal = Arc::new(CapturingJournal::new());
     log.set_journal(Some(journal.clone()));
     op.record_items(item("a.txt"));
+    op.note_not_rollbackable(NotRollbackableReason::DirectoryMerge);
 
     assert_eq!(op.finalize(done()).rollback_unit_rows, 0);
     assert_eq!(heard_about(&journal), (0, 0, 0), "no tail and no finalize");
+    assert!(journal.not_rollbackable_notes.lock_ignore_poison().is_empty());
 }
 
-/// The next operation after the journal arrives journals normally: the early one
-/// was forgotten at its finalize, not left to shadow its id.
+/// The next operation after the journal arrives journals normally, whatever
+/// the early one did.
 #[test]
 fn the_journal_hears_every_operation_opened_after_it_arrived() {
     let log = OperationLog::detached();
-    drop(log.journal_open(header("early")));
+    let early = log.journal_open(header("early"));
     let journal = Arc::new(CapturingJournal::new());
     log.set_journal(Some(journal.clone()));
-    log.finalize("early", done());
+    early.finalize(done());
 
-    drop(log.journal_open(header("next")));
-    log.record_items("next", item("a.txt"));
-    log.finalize("next", done());
+    let next = log.journal_open(header("next"));
+    next.record_items(item("a.txt"));
+    next.finalize(done());
 
     assert_eq!(heard_about(&journal), (1, 1, 1));
-}
-
-#[test]
-fn by_id_an_operation_started_while_off_stays_unjournaled_when_switched_on() {
-    let (_dir, path) = temp_db();
-    let log = opened(&path);
-    log.set_recording(false);
-    drop(log.journal_open(header("late")));
-    log.set_recording(true);
-    log.record_items("late", item("a.txt"));
-
-    assert_eq!(log.finalize("late", done()).rollback_unit_rows, 0);
-    log.writer().expect("writer").flush_blocking().expect("flush");
-    assert_eq!(rows(&path, "late"), None);
-}
-
-#[test]
-fn by_id_an_operation_recording_when_switched_off_is_journaled_whole() {
-    let (_dir, path) = temp_db();
-    let log = opened(&path);
-    drop(log.journal_open(header("mid")));
-    log.set_recording(false);
-    log.record_items("mid", item("a.txt"));
-
-    assert_eq!(log.finalize("mid", done()).rollback_unit_rows, 1);
-    assert_eq!(rows(&path, "mid"), Some(1));
 }

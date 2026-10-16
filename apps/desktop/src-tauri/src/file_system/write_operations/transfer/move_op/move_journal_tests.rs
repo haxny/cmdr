@@ -116,7 +116,9 @@ impl MoveLoop {
     /// Run a same-FS move, bracketed by the journal open/finalize the managed
     /// driver arranges.
     fn move_same_fs(&self, sources: &[PathBuf], destination: &Path, config: &WriteOperationConfig) {
+        let state = Arc::new(WriteOperationState::new(Duration::from_millis(0)));
         journal::open_local_op(
+            state.scope(),
             &self.op_id,
             OpKind::Move,
             Initiator::User,
@@ -124,10 +126,9 @@ impl MoveLoop {
             Some("root"),
         );
         let events = CollectorEventSink::new();
-        let state = Arc::new(WriteOperationState::new(Duration::from_millis(0)));
         let result = move_files_with_progress_inner(&events, &self.op_id, &state, sources, destination, config);
         journal::finalize_op(
-            &self.op_id,
+            state.scope(),
             OpKind::Move,
             journal::execution_status_from_error(result.as_ref().err()),
         );
@@ -138,7 +139,9 @@ impl MoveLoop {
     /// available in a unit test, so this calls the path the dispatcher would pick
     /// for them — the same trick `move_op_tests.rs` uses.
     fn move_cross_fs(&self, sources: &[PathBuf], destination: &Path, config: &WriteOperationConfig) {
+        let state = Arc::new(WriteOperationState::new(Duration::from_millis(0)));
         journal::open_local_op(
+            state.scope(),
             &self.op_id,
             OpKind::Move,
             Initiator::User,
@@ -146,10 +149,9 @@ impl MoveLoop {
             Some("root"),
         );
         let events = CollectorEventSink::new();
-        let state = Arc::new(WriteOperationState::new(Duration::from_millis(0)));
         let result = move_with_staging(&events, &self.op_id, &state, sources, destination, config, 0);
         journal::finalize_op(
-            &self.op_id,
+            state.scope(),
             OpKind::Move,
             journal::execution_status_from_error(result.as_ref().err()),
         );

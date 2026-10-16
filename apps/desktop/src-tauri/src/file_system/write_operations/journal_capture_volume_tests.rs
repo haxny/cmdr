@@ -87,7 +87,15 @@ async fn volume_copy_journals_under_the_real_volume_ids_not_root() {
     let state = Arc::new(
         WriteOperationState::new(Duration::from_millis(0)).with_journal_volumes("smb-src".into(), "smb-dst".into()),
     );
-    journal::open_volume_op(op_id, OpKind::Copy, Initiator::AiClient, "smb-src", Some("smb-dst"), 0);
+    journal::open_volume_op(
+        state.scope(),
+        op_id,
+        OpKind::Copy,
+        Initiator::AiClient,
+        "smb-src",
+        Some("smb-dst"),
+        0,
+    );
     copy_volumes_with_progress(
         Arc::new(CollectorEventSink::new()),
         op_id,
@@ -100,7 +108,7 @@ async fn volume_copy_journals_under_the_real_volume_ids_not_root() {
     )
     .await
     .expect("volume copy");
-    journal::finalize_op(op_id, OpKind::Copy, ExecutionStatus::Done);
+    journal::finalize_op(state.scope(), OpKind::Copy, ExecutionStatus::Done);
 
     let conn = open_read_connection(&jdb).expect("read conn");
     let row = read_operation(&conn, op_id).expect("read").expect("op row");
@@ -151,7 +159,15 @@ async fn overwriting_volume_copy_finalizes_not_rollbackable() {
     let state = Arc::new(
         WriteOperationState::new(Duration::from_millis(0)).with_journal_volumes("smb-src".into(), "smb-dst".into()),
     );
-    journal::open_volume_op(op_id, OpKind::Copy, Initiator::User, "smb-src", Some("smb-dst"), 0);
+    journal::open_volume_op(
+        state.scope(),
+        op_id,
+        OpKind::Copy,
+        Initiator::User,
+        "smb-src",
+        Some("smb-dst"),
+        0,
+    );
     copy_volumes_with_progress(
         Arc::new(CollectorEventSink::new()),
         op_id,
@@ -164,7 +180,7 @@ async fn overwriting_volume_copy_finalizes_not_rollbackable() {
     )
     .await
     .expect("volume copy");
-    journal::finalize_op(op_id, OpKind::Copy, ExecutionStatus::Done);
+    journal::finalize_op(state.scope(), OpKind::Copy, ExecutionStatus::Done);
 
     let conn = open_read_connection(&jdb).expect("read conn");
     let row = read_operation(&conn, op_id).expect("read").expect("op row");
@@ -195,7 +211,15 @@ async fn cross_volume_move_journals_per_leaf_move_rows() {
     let state = Arc::new(
         WriteOperationState::new(Duration::from_millis(0)).with_journal_volumes("smb-src".into(), "smb-dst".into()),
     );
-    journal::open_volume_op(op_id, OpKind::Move, Initiator::User, "smb-src", Some("smb-dst"), 0);
+    journal::open_volume_op(
+        state.scope(),
+        op_id,
+        OpKind::Move,
+        Initiator::User,
+        "smb-src",
+        Some("smb-dst"),
+        0,
+    );
     move_volumes_with_progress(
         Arc::new(CollectorEventSink::new()),
         op_id,
@@ -211,7 +235,7 @@ async fn cross_volume_move_journals_per_leaf_move_rows() {
     )
     .await
     .expect("volume move");
-    journal::finalize_op(op_id, OpKind::Move, ExecutionStatus::Done);
+    journal::finalize_op(state.scope(), OpKind::Move, ExecutionStatus::Done);
 
     let conn = open_read_connection(&jdb).expect("read conn");
     let row = read_operation(&conn, op_id).expect("read").expect("op row");
@@ -248,7 +272,15 @@ async fn volume_delete_journals_per_leaf_under_the_real_volume_id() {
 
     let op_id = "op-vol-delete";
     let state = state();
-    journal::open_volume_op(op_id, OpKind::Delete, Initiator::User, "smb-src", None, 0);
+    journal::open_volume_op(
+        state.scope(),
+        op_id,
+        OpKind::Delete,
+        Initiator::User,
+        "smb-src",
+        None,
+        0,
+    );
     super::delete::delete_volume_files_with_progress_inner(
         volume as Arc<dyn Volume>,
         "smb-src",
@@ -263,7 +295,7 @@ async fn volume_delete_journals_per_leaf_under_the_real_volume_id() {
     )
     .await
     .expect("volume delete");
-    journal::finalize_op(op_id, OpKind::Delete, ExecutionStatus::Done);
+    journal::finalize_op(state.scope(), OpKind::Delete, ExecutionStatus::Done);
 
     let conn = open_read_connection(&jdb).expect("read conn");
     let row = read_operation(&conn, op_id).expect("read").expect("op row");
@@ -386,6 +418,7 @@ impl VolumeLoop {
         );
         let events = make_events(Arc::clone(&state.intent));
         journal::open_volume_op(
+            state.scope(),
             &self.op_id,
             OpKind::Copy,
             Initiator::User,
@@ -409,7 +442,7 @@ impl VolumeLoop {
         )
         .await;
         journal::finalize_op(
-            &self.op_id,
+            state.scope(),
             OpKind::Copy,
             journal::execution_status_from_error(result.as_ref().err().map(|f| &f.error)),
         );

@@ -214,7 +214,10 @@ async fn rename_managed_inner(
             None => false,
         }
     };
-    super::journal::open_volume_op(&op_id, OpKind::Rename, initiator, &journal_volume_id, None, 1);
+    // The op's own scope on the engine, which journals it: an instant op has no
+    // state to carry one.
+    let scope = super::installed().op_scope();
+    super::journal::open_volume_op(&scope, &op_id, OpKind::Rename, initiator, &journal_volume_id, None, 1);
     let journal_snapshot = Some((from.clone(), to.clone(), local_meta, volume_is_dir));
 
     let result = manager::manager()
@@ -300,7 +303,7 @@ async fn rename_managed_inner(
                 let is_dir = meta.as_ref().map(|m| m.is_dir()).unwrap_or(volume_is_dir);
                 let entry_type = if is_dir { EntryType::Dir } else { EntryType::File };
                 super::journal::record_volume_leaf(
-                    &op_id,
+                    &scope,
                     entry_type,
                     &journal_volume_id,
                     &from_path,
@@ -310,9 +313,9 @@ async fn rename_managed_inner(
                     false,
                     ItemOutcome::Done,
                 );
-                super::journal::finalize_op(&op_id, OpKind::Rename, ExecutionStatus::Done);
+                super::journal::finalize_op(&scope, OpKind::Rename, ExecutionStatus::Done);
             }
-            Err(_) => super::journal::finalize_op(&op_id, OpKind::Rename, ExecutionStatus::Failed),
+            Err(_) => super::journal::finalize_op(&scope, OpKind::Rename, ExecutionStatus::Failed),
         }
     }
     (result, InstantTarget::Volume)

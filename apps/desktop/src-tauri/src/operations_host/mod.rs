@@ -95,7 +95,7 @@ pub(crate) fn operations() -> Result<&'static Operations, NotInstalled> {
 }
 
 /// [`operations`] over a given slot, so a test can hand an empty one in.
-fn operations_in(slot: &'static OnceLock<Operations>) -> Result<&'static Operations, NotInstalled> {
+pub(crate) fn operations_in(slot: &'static OnceLock<Operations>) -> Result<&'static Operations, NotInstalled> {
     if let Some(engine) = slot.get() {
         return Ok(engine);
     }

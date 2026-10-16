@@ -393,7 +393,7 @@ pub(super) fn move_with_staging(
                 // Same rule as the same-FS merge: the destination folder also
                 // holds files this operation never touched.
                 journal::note_not_rollbackable(
-                    operation_id,
+                    state.scope(),
                     cmdr_operation_log::types::NotRollbackableReason::DirectoryMerge,
                 );
             } else if path_exists_or_is_symlink(&final_path) {
@@ -428,7 +428,7 @@ pub(super) fn move_with_staging(
                         // be amended after the fact — so the operation says
                         // honestly that it can't be reversed.
                         journal::note_not_rollbackable(
-                            operation_id,
+                            state.scope(),
                             if resolved.path == final_path {
                                 cmdr_operation_log::types::NotRollbackableReason::Overwrote
                             } else {
@@ -454,7 +454,7 @@ pub(super) fn move_with_staging(
                         // keep. Reversing them would carry THAT file to the
                         // source.
                         journal::note_not_rollbackable(
-                            operation_id,
+                            state.scope(),
                             cmdr_operation_log::types::NotRollbackableReason::StagedConflictResolved,
                         );
                         continue;
@@ -568,7 +568,7 @@ pub(super) fn move_with_staging(
     // empty skeleton at the destination. They land after every leaf row (phase 2
     // wrote those), so a `seq DESC` reversal still removes files before dirs.
     let final_dirs: Vec<PathBuf> = transaction.created_dirs.iter().map(|p| remap(p)).collect();
-    journal::record_created_dirs(operation_id, &final_dirs);
+    journal::record_created_dirs(state.scope(), &final_dirs);
     // The staging tree is renamed into place, so nothing this transaction recorded
     // is still a partial to clean up: commit, or the `Drop` net runs a pointless
     // rollback over paths that moved.

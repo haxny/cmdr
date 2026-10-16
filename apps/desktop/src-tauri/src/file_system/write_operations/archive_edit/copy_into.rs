@@ -601,7 +601,10 @@ async fn archive_copy_into_start(
     } else {
         WriteOperationType::ArchiveEdit
     };
-    let state = Arc::new(WriteOperationState::new(Duration::from_millis(progress_interval_ms)));
+    let state = Arc::new(
+        crate::file_system::write_operations::installed()
+            .new_operation_state(Duration::from_millis(progress_interval_ms)),
+    );
 
     let lane = host::installed()
         .volumes()
@@ -666,7 +669,7 @@ async fn archive_copy_into_start(
                 // Open the journal row when the op actually starts. Archive edits
                 // spawn directly (not through `start_write_operation`), so this is
                 // their own open/finalize bracket, mirroring the generic one.
-                super::super::journal::open_archive_op(&op_id, prov.initiator, &parent_volume_id);
+                super::super::journal::open_archive_op(state.scope(), &op_id, prov.initiator, &parent_volume_id);
 
                 let hooks = Arc::new(MutatorHooks::new(
                     Arc::clone(&state),
@@ -782,7 +785,7 @@ async fn archive_copy_into_start(
                         .map(|m| (Some(m.len() as i64), super::super::journal::mtime_secs(&m)))
                         .unwrap_or((None, None));
                     super::super::journal::record_compress_archive(
-                        &op_id,
+                        state.scope(),
                         &parent_volume_id,
                         &archive_path,
                         size,
@@ -790,7 +793,13 @@ async fn archive_copy_into_start(
                         prov.net_new,
                     );
                 }
-                super::super::journal::finalize_archive_op(&op_id, prov.subkind, prov.net_new, execution_status, None);
+                super::super::journal::finalize_archive_op(
+                    state.scope(),
+                    prov.subkind,
+                    prov.net_new,
+                    execution_status,
+                    None,
+                );
 
                 task_guard.disarm();
                 ops.manager().on_settled(&op_id);

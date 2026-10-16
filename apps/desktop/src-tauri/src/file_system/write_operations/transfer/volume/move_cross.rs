@@ -689,7 +689,7 @@ pub(crate) async fn move_volumes_with_progress(
                         let files = std::mem::take(&mut *created.files.lock_ignore_poison());
                         let dirs = std::mem::take(&mut *created.dirs.lock_ignore_poison());
                         journal::record_volume_transfer_source(
-                            &operation_id,
+                            state.scope(),
                             src_vol,
                             &source_path,
                             dst_vol,
@@ -699,7 +699,7 @@ pub(crate) async fn move_volumes_with_progress(
                             (!source_is_dir).then_some(bytes as i64),
                             source_overwrote,
                         );
-                        journal::record_created_dirs_on(&operation_id, dst_vol, &dirs);
+                        journal::record_created_dirs_on(state.scope(), dst_vol, &dirs);
                     }
 
                     // Per-file milestone emit (bumped `files_done = N`,

@@ -42,9 +42,10 @@ pub(in crate::file_system::write_operations) fn start_volume_delete(
     expected_sources: Option<ExpectedSources>,
 ) -> WriteOperationStartResult {
     let operation_id = cmdr_operation_log::new_operation_id();
-    let state = Arc::new(WriteOperationState::new(Duration::from_millis(
-        config.progress_interval_ms,
-    )));
+    let state = Arc::new(
+        crate::file_system::write_operations::installed()
+            .new_operation_state(Duration::from_millis(config.progress_interval_ms)),
+    );
 
     // Plain `get`: the drive's lane and how it names the items; `delete_files_start`
     // sent an in-zip batch to the archive-edit driver before this.
@@ -153,6 +154,7 @@ async fn drive_volume_delete(op: DeferredDelete) {
     // Journal under the REAL volume id (not the hardcoded `"root"` the local
     // helpers bake in). Per-leaf rows are recorded inside the walker.
     journal::open_volume_op(
+        state.scope(),
         &operation_id,
         OpKind::Delete,
         initiator,
@@ -171,7 +173,7 @@ async fn drive_volume_delete(op: DeferredDelete) {
         expected_sources.as_ref(),
     )
     .await;
-    journal::finalize_op(&operation_id, OpKind::Delete, execution_status);
+    journal::finalize_op(state.scope(), OpKind::Delete, execution_status);
 
     task_guard.disarm();
     ops.manager().on_settled(&operation_id);

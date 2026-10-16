@@ -5,13 +5,14 @@
 //! and destination-path resolution and the archive forks. That split is what lets
 //! a backend caller start the same transfer with its own injected sink.
 
+use crate::file_system::write_operations::Operations;
 use crate::file_system::{
     CONFLICT_CHECK_BUDGET, OperationEventSink, ScanConflict, SourceItemInput, VolumeCopyConfig, VolumeScanError,
     WriteOperationError, WriteOperationStartResult, resolve_dest_path, scan_volume_for_conflicts_within,
     start_rename_by_move, start_volume_compress, start_volume_copy, start_volume_move,
 };
 use crate::operations_host::TauriEventSink;
-use crate::operations_host::{operations, refuse_not_installed};
+use crate::operations_host::{NotInstalled, operations, refuse_not_installed};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tokio::time::Duration;
@@ -33,9 +34,37 @@ pub async fn copy_between_volumes(
     config: Option<VolumeCopyConfig>,
     initiator: Option<Initiator>,
 ) -> Result<WriteOperationStartResult, WriteOperationError> {
-    // Before `install` there is no engine to start on: refuse, never write.
-    operations().map_err(refuse_not_installed)?;
     let events: Arc<dyn OperationEventSink> = Arc::new(TauriEventSink::new(app));
+    copy_between_volumes_on(
+        operations(),
+        events,
+        source_volume_id,
+        source_paths,
+        dest_volume_id,
+        dest_path,
+        config,
+        initiator,
+    )
+    .await
+}
+
+/// [`copy_between_volumes`] on the engine `engine` answers, with the sink passed in.
+#[allow(
+    clippy::too_many_arguments,
+    reason = "the command's own arguments plus its engine and sink"
+)]
+async fn copy_between_volumes_on(
+    engine: Result<&'static Operations, NotInstalled>,
+    events: Arc<dyn OperationEventSink>,
+    source_volume_id: String,
+    source_paths: Vec<String>,
+    dest_volume_id: String,
+    dest_path: String,
+    config: Option<VolumeCopyConfig>,
+    initiator: Option<Initiator>,
+) -> Result<WriteOperationStartResult, WriteOperationError> {
+    // Before `install` there is no engine to start on: refuse, never write.
+    let _engine = engine.map_err(refuse_not_installed)?;
     start_volume_copy(
         events,
         source_volume_id,
@@ -241,3 +270,49 @@ pub async fn scan_volume_for_conflicts(
 #[cfg(test)]
 #[path = "destination_root_echo_test.rs"]
 mod destination_root_echo_test;
+
+#[cfg(test)]
+mod tests {
+    use std::sync::{Arc, OnceLock};
+
+    use crate::file_system::write_operations::{
+        CollectorEventSink, OperationEventSink, Operations, WriteOperationError,
+    };
+    use crate::test_support::TestDir;
+
+    /// A copy started before the engine is installed is refused with the
+    /// generic I/O failure the frontend already renders, and writes nothing.
+    #[tokio::test]
+    async fn a_copy_before_install_is_refused_and_writes_nothing() {
+        static NEVER_INSTALLED: OnceLock<Operations> = OnceLock::new();
+        let dir = TestDir::new("copy-before-install");
+        let source = dir.join("a.txt");
+        std::fs::write(&source, b"a").expect("write the source");
+        let destination = dir.join("dest");
+        std::fs::create_dir(&destination).expect("make the destination");
+        let events = Arc::new(CollectorEventSink::new());
+
+        let refused = super::copy_between_volumes_on(
+            crate::operations_host::operations_in(&NEVER_INSTALLED),
+            Arc::clone(&events) as Arc<dyn OperationEventSink>,
+            "root".to_string(),
+            vec![source.display().to_string()],
+            "root".to_string(),
+            destination.display().to_string(),
+            None,
+            None,
+        )
+        .await;
+
+        assert!(
+            matches!(refused, Err(WriteOperationError::IoError { .. })),
+            "refused with the generic I/O failure, got {refused:?}"
+        );
+        assert!(!destination.join("a.txt").exists(), "nothing was written");
+        use cmdr_fs::ignore_poison::IgnorePoison;
+        assert!(
+            events.settled.lock_ignore_poison().is_empty() && events.errors.lock_ignore_poison().is_empty(),
+            "no operation started, so nothing was emitted"
+        );
+    }
+}

@@ -109,7 +109,8 @@ pub(super) async fn move_within_same_volume(
     // A same-volume move journals under the one volume id as both source and dest;
     // the per-item record point in `_with_progress` reads it off the state.
     let state = Arc::new(
-        WriteOperationState::new(Duration::from_millis(progress_interval_ms))
+        crate::file_system::write_operations::installed()
+            .new_operation_state(Duration::from_millis(progress_interval_ms))
             .with_journal_volumes(volume_id.clone(), volume_id.clone())
             .with_target_names(target_names),
     );
@@ -178,6 +179,7 @@ pub(super) async fn move_within_same_volume(
                 // Journal the same-volume move under the REAL volume id. The top-level
                 // rename rows + search leaves land inside `_with_progress`.
                 journal::open_volume_op(
+                    state.scope(),
                     &op_id,
                     OpKind::Move,
                     initiator,
@@ -219,7 +221,7 @@ pub(super) async fn move_within_same_volume(
                 };
 
                 journal::finalize_op(
-                    &op_id,
+                    state.scope(),
                     OpKind::Move,
                     journal::execution_status_from_error(result.as_ref().err()),
                 );
@@ -272,7 +274,7 @@ async fn moves_by_copy(volume: &Arc<dyn Volume>, sources: &[PathBuf]) -> Result<
 /// journal target.
 #[allow(clippy::too_many_arguments, reason = "the fields of one journaled moved item")]
 fn journal_same_volume_moved_item(
-    op_id: &str,
+    scope: &crate::file_system::write_operations::scope::OpScope,
     journal_volumes: Option<&(String, String)>,
     overwritten_sources: &std::sync::Mutex<std::collections::HashSet<PathBuf>>,
     merge_overwrote: &std::sync::atomic::AtomicBool,
@@ -288,7 +290,7 @@ fn journal_same_volume_moved_item(
     let overwrote = merge_overwrote.load(std::sync::atomic::Ordering::Relaxed)
         || overwritten_sources.lock_ignore_poison().contains(source);
     journal::record_volume_leaf(
-        op_id,
+        scope,
         entry_type,
         src_vol,
         source,
@@ -299,7 +301,7 @@ fn journal_same_volume_moved_item(
         cmdr_operation_log::types::ItemOutcome::Done,
     );
     if let Some(buf) = buffered {
-        super::super::super::journal_search::persist_and_note(op_id, src_vol, source, dst_vol, Some(dest), buf);
+        super::super::super::journal_search::persist_and_note(scope, src_vol, source, dst_vol, Some(dest), buf);
     }
 }
 
@@ -726,6 +728,7 @@ pub(crate) async fn move_within_same_volume_with_progress(
                     let row_size = hint.and_then(|h| (!h.is_directory).then_some(h.size as i64));
                     let buffered_leaves = journal_volumes.as_ref().filter(|_| source_is_dir).map(|(src_vol, _)| {
                         super::super::super::journal_search::enumerate_subtree_for_search(
+                            state.scope().host().index(),
                             src_vol,
                             &source_path,
                             super::super::super::journal_search::SEARCH_LEAF_CAP,
@@ -786,11 +789,11 @@ pub(crate) async fn move_within_same_volume_with_progress(
                         // rationale in `crates/cmdr-operation-log/DETAILS.md` § "Why a
                         // directory merge isn't reversible".
                         journal::note_not_rollbackable(
-                            &operation_id,
+                            state.scope(),
                             cmdr_operation_log::types::NotRollbackableReason::DirectoryMerge,
                         );
                         journal_same_volume_moved_item(
-                            &operation_id,
+                            state.scope(),
                             journal_volumes.as_ref(),
                             &overwritten_sources,
                             &merge_overwrote,
@@ -842,7 +845,7 @@ pub(crate) async fn move_within_same_volume_with_progress(
                     }
 
                     journal_same_volume_moved_item(
-                        &operation_id,
+                        state.scope(),
                         journal_volumes.as_ref(),
                         &overwritten_sources,
                         &merge_overwrote,

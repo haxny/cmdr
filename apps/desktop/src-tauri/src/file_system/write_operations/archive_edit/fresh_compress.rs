@@ -123,7 +123,8 @@ pub(super) async fn start(
         .as_ref()
         .map_or_else(|| source_volume.lane_key().to_string(), |(id, _)| id.clone());
     let state = Arc::new(
-        WriteOperationState::new(Duration::from_millis(progress_interval_ms))
+        crate::file_system::write_operations::installed()
+            .new_operation_state(Duration::from_millis(progress_interval_ms))
             .with_journal_volumes(source_volume_id.clone(), parent_volume_id.clone()),
     );
     let mut lanes = vec![source_volume.lane_key(), dest_lane];
@@ -186,6 +187,7 @@ pub(super) async fn start(
             }
 
             super::super::journal::open_compress_op(
+                state.scope(),
                 &op_id,
                 initiator,
                 &source_volume_id,
@@ -236,7 +238,7 @@ pub(super) async fn start(
                 }
                 let meta = dest_volume.get_metadata(&archive_path).await.ok();
                 super::super::journal::record_compress_archive(
-                    &op_id,
+                    state.scope(),
                     &parent_volume_id,
                     &archive_path,
                     meta.as_ref()
@@ -249,7 +251,7 @@ pub(super) async fn start(
                 );
             }
             super::super::journal::finalize_archive_op(
-                &op_id,
+                state.scope(),
                 ArchiveSubkind::Compress,
                 net_new,
                 execution_status,

@@ -121,7 +121,7 @@ fn unparseable_file_recreates_fresh() {
             .push(unreadable.to_path_buf());
         std::fs::rename(unreadable, &kept).ok().map(|()| kept.clone())
     };
-    let store = OperationLogStore::open_setting_aside(&path, &set_aside).expect("open recreates an unparseable file");
+    let store = OperationLogStore::open(&path, &set_aside).expect("open recreates an unparseable file");
     assert_eq!(
         *handed.lock().expect("unpoisoned"),
         vec![path.clone()],
@@ -184,7 +184,7 @@ fn a_pre_migration_item_row_reads_as_no_recorded_skip_reason() {
 fn fresh_open_builds_current_schema() {
     let dir = tempfile::tempdir().expect("temp dir");
     let path = operation_log_db_path(dir.path());
-    let store = OperationLogStore::open(&path).expect("open fresh");
+    let store = OperationLogStore::open(&path, &|_| None).expect("open fresh");
     assert_eq!(
         store.schema_version().expect("version"),
         MIGRATIONS.last().expect("ladder non-empty").version

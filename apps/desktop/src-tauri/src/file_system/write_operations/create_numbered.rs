@@ -49,7 +49,10 @@ pub(crate) async fn create_numbered_file(
     // onto SMB / MTP is captured too.
     let descriptor = super::create::instant_descriptor(WriteOperationType::CreateFile, volume_id.as_deref(), stem);
     let op_id = descriptor.operation_id.clone();
-    super::journal::open_volume_op(&op_id, OpKind::CreateFile, initiator, &volume_id_str, None, 1);
+    // The op's own scope on the engine, which journals it: an instant op has no
+    // state to carry one.
+    let scope = super::installed().op_scope();
+    super::journal::open_volume_op(&scope, &op_id, OpKind::CreateFile, initiator, &volume_id_str, None, 1);
 
     // Atomic O_EXCL create+write, retrying the shared `<stem> (N).<ext>` names on
     // the typed AlreadyExists (no pre-scan TOCTOU; works on any writable volume).
@@ -79,7 +82,7 @@ pub(crate) async fn create_numbered_file(
     let result = manager::manager().run_instant(descriptor, write).await;
 
     super::journal::journal_instant_create(
-        &op_id,
+        &scope,
         OpKind::CreateFile,
         EntryType::File,
         &volume_id_str,

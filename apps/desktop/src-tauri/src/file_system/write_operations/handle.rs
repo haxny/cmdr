@@ -6,6 +6,7 @@
 //! a builder method; the rest default to answers that do nothing.
 
 use std::sync::Arc;
+use std::time::Duration;
 
 use cmdr_fs::volume::host::VolumeHost;
 use cmdr_operation_log::OperationLog;
@@ -14,7 +15,9 @@ use super::host::{
     EngineEvents, EngineHost, NameOrder, OperationIndex, OperationSinkFactory, OperationVolumes, OwnWrites, Pacing,
 };
 use super::manager::OperationManager;
+use super::scope::OpScope;
 use super::state::WriteOperationRegistry;
+use super::state::WriteOperationState;
 use super::status_cache::StatusCache;
 use super::types::OperationStatus;
 use super::{Inner, Operations};
@@ -169,6 +172,21 @@ impl Operations {
     /// Every registered operation's status, and the busy-volume set.
     pub(super) fn status(&self) -> &StatusCache {
         &self.inner.status
+    }
+
+    /// A scope for one new operation on this engine: its seams, its status cache,
+    /// and a journal it opens later.
+    pub(super) fn op_scope(&self) -> OpScope {
+        OpScope::new(
+            Arc::clone(&self.inner.host),
+            Arc::clone(&self.inner.status),
+            self.inner.operation_log.clone(),
+        )
+    }
+
+    /// A fresh state for one new managed operation on this engine.
+    pub(super) fn new_operation_state(&self, progress_interval: Duration) -> WriteOperationState {
+        WriteOperationState::scoped(progress_interval, Arc::new(self.op_scope()))
     }
 
     /// Keeps a failed operation's row readable after its record settles: what

@@ -395,9 +395,10 @@ fn spawn_managed_inverse(
     };
     // The cadence every other transfer's bar runs at. A zero interval would mean
     // no throttle at all, and a million-item reversal emitting an event per item.
-    let state = Arc::new(WriteOperationState::new(Duration::from_millis(
-        DEFAULT_PROGRESS_INTERVAL_MS,
-    )));
+    let state = Arc::new(
+        crate::file_system::write_operations::installed()
+            .new_operation_state(Duration::from_millis(DEFAULT_PROGRESS_INTERVAL_MS)),
+    );
 
     let writer = writer.clone();
     let state_for_op = Arc::clone(&state);

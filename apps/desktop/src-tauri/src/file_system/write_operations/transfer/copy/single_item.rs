@@ -511,7 +511,7 @@ pub(in crate::file_system::write_operations::transfer) fn copy_single_item(
         }
 
         crate::file_system::write_operations::journal::record_local_leaf(
-            operation_id,
+            state.scope(),
             cmdr_operation_log::types::EntryType::File,
             source,
             Some(&journal_dest(journal_dest_under, &actual_dest)),
@@ -693,7 +693,7 @@ pub(in crate::file_system::write_operations::transfer) fn copy_single_item(
         // so the per-file milestone matches the scan's `total_bytes` exactly
         // even when a clonefile reports 0 copied bytes.
         crate::file_system::write_operations::journal::record_local_leaf(
-            operation_id,
+            state.scope(),
             cmdr_operation_log::types::EntryType::File,
             source,
             Some(&journal_dest(journal_dest_under, &actual_dest)),

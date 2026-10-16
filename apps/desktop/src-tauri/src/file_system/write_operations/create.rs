@@ -100,7 +100,11 @@ async fn create_directory_managed_inner(
         .to_string();
     let descriptor = instant_descriptor(WriteOperationType::CreateFolder, volume_id.as_deref(), &name);
     let op_id = descriptor.operation_id.clone();
+    // The op's own scope on the engine, which journals it: an instant op has no
+    // state to carry one.
+    let scope = super::installed().op_scope();
     super::journal::open_volume_op(
+        &scope,
         &op_id,
         cmdr_operation_log::types::OpKind::CreateFolder,
         initiator,
@@ -113,7 +117,7 @@ async fn create_directory_managed_inner(
         .run_instant(descriptor, create_directory_core(volume_id, &parent_path, &name))
         .await;
     super::journal::journal_instant_create(
-        &op_id,
+        &scope,
         cmdr_operation_log::types::OpKind::CreateFolder,
         cmdr_operation_log::types::EntryType::Dir,
         &journal_volume_id,
@@ -176,7 +180,11 @@ async fn create_file_managed_inner(
         .to_string();
     let descriptor = instant_descriptor(WriteOperationType::CreateFile, volume_id.as_deref(), &name);
     let op_id = descriptor.operation_id.clone();
+    // The op's own scope on the engine, which journals it: an instant op has no
+    // state to carry one.
+    let scope = super::installed().op_scope();
     super::journal::open_volume_op(
+        &scope,
         &op_id,
         cmdr_operation_log::types::OpKind::CreateFile,
         initiator,
@@ -189,7 +197,7 @@ async fn create_file_managed_inner(
         .run_instant(descriptor, create_file_core(volume_id, &parent_path, &name))
         .await;
     super::journal::journal_instant_create(
-        &op_id,
+        &scope,
         cmdr_operation_log::types::OpKind::CreateFile,
         cmdr_operation_log::types::EntryType::File,
         &journal_volume_id,

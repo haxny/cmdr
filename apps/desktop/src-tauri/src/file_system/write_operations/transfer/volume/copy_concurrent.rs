@@ -410,7 +410,7 @@ impl<'a> ConcurrentDriver<'a> {
         // `copy_files_start`) and in tests that don't set a journal target.
         if let Some((src_vol, dst_vol)) = ctx.journal_volumes.as_ref() {
             journal::record_volume_transfer_source(
-                ctx.operation_id,
+                ctx.state.scope(),
                 src_vol,
                 &done_source,
                 dst_vol,
@@ -512,7 +512,7 @@ impl<'a> ConcurrentDriver<'a> {
             // sources rebase off.
             if let Some((src_vol, dst_vol)) = ctx.journal_volumes.as_ref() {
                 journal::record_volume_transfer_source(
-                    ctx.operation_id,
+                    ctx.state.scope(),
                     src_vol,
                     &done_source,
                     dst_vol,
@@ -587,7 +587,7 @@ impl<'a> ConcurrentDriver<'a> {
             let dirs = std::mem::take(&mut *abandoned.created.dirs.lock_ignore_poison());
             if let Some((src_vol, dst_vol)) = self.ctx.journal_volumes.as_ref() {
                 journal::record_volume_transfer_source(
-                    self.ctx.operation_id,
+                    self.ctx.state.scope(),
                     src_vol,
                     &abandoned.source_path,
                     dst_vol,

@@ -5,6 +5,7 @@
 //! post-loop completion / cancel / rollback. The per-file work, empty-dir
 //! landing, and tracked rollback live in the submodules.
 
+use crate::file_system::write_operations::scope::OpScope;
 use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -94,8 +95,8 @@ pub(super) fn apply_dir_remap(dest: &Path, dir_remap: &HashMap<PathBuf, PathBuf>
 /// skeleton standing. An in-flight rollback removes them again, and the reversal
 /// reads those rows as already gone — the same way it already reads the file rows
 /// this copy journaled as they landed.
-fn commit_journaling_created_dirs(transaction: CopyTransaction, operation_id: &str) {
-    crate::file_system::write_operations::journal::record_created_dirs(operation_id, &transaction.created_dirs);
+fn commit_journaling_created_dirs(transaction: CopyTransaction, scope: &OpScope) {
+    crate::file_system::write_operations::journal::record_created_dirs(scope, &transaction.created_dirs);
     transaction.commit();
 }
 
@@ -107,9 +108,10 @@ fn commit_journaling_created_dirs(transaction: CopyTransaction, operation_id: &s
 /// each fallback name for the cancellation event the user reads.
 fn stop_keeping_displaced_aside(
     transaction: CopyTransaction,
+    scope: &OpScope,
     operation_id: &str,
 ) -> Vec<super::super::types::RecoveredOriginal> {
-    crate::file_system::write_operations::journal::record_created_dirs(operation_id, &transaction.created_dirs);
+    crate::file_system::write_operations::journal::record_created_dirs(scope, &transaction.created_dirs);
     let recovered = transaction.commit_keeping_displaced_aside();
     for kept in &recovered {
         log::warn!(
@@ -132,10 +134,11 @@ fn stop_keeping_displaced_aside(
 /// failures displace nothing, and those get their own error back untouched.
 fn fail_keeping_displaced_aside(
     transaction: CopyTransaction,
+    scope: &OpScope,
     operation_id: &str,
     error: WriteOperationError,
 ) -> WriteOperationError {
-    crate::file_system::write_operations::journal::record_created_dirs(operation_id, &transaction.created_dirs);
+    crate::file_system::write_operations::journal::record_created_dirs(scope, &transaction.created_dirs);
     let recovered = transaction.commit_keeping_displaced_aside();
     if recovered.is_empty() {
         return error;
@@ -588,7 +591,7 @@ pub(in crate::file_system::write_operations) fn copy_files_with_progress_inner(
                     file_count,
                     total_bytes,
                 );
-                commit_journaling_created_dirs(transaction, operation_id);
+                commit_journaling_created_dirs(transaction, state.scope());
 
                 events.emit_cancelled(WriteCancelledEvent {
                     operation_id: operation_id.to_string(),
@@ -615,7 +618,7 @@ pub(in crate::file_system::write_operations) fn copy_files_with_progress_inner(
                 &dir_remap,
             ) {
                 if matches!(e, WriteOperationError::Cancelled { .. }) {
-                    let recovered = stop_keeping_displaced_aside(transaction, operation_id);
+                    let recovered = stop_keeping_displaced_aside(transaction, state.scope(), operation_id);
                     events.emit_cancelled(WriteCancelledEvent {
                         operation_id: operation_id.to_string(),
                         operation_type: WriteOperationType::Copy,
@@ -627,7 +630,7 @@ pub(in crate::file_system::write_operations) fn copy_files_with_progress_inner(
                 // A failure keeps what landed, exactly like the arm below. Every
                 // file in the ledger is complete, and one of them may have
                 // replaced the user's original.
-                let e = fail_keeping_displaced_aside(transaction, operation_id, e);
+                let e = fail_keeping_displaced_aside(transaction, state.scope(), operation_id, e);
                 let event = transfer_stop_event(operation_id, WriteOperationType::Copy, state, e, None);
                 let e = event.error.clone();
                 events.emit_error(event);
@@ -669,7 +672,7 @@ pub(in crate::file_system::write_operations) fn copy_files_with_progress_inner(
                 &already_synced,
             );
             let durability_unconfirmed = unconfirmed_copy(flushed, operation_id, state);
-            commit_journaling_created_dirs(transaction, operation_id);
+            commit_journaling_created_dirs(transaction, state.scope());
 
             log::info!(
                 "copy_files_with_progress: completed op={} files={} bytes={}",
@@ -717,7 +720,7 @@ pub(in crate::file_system::write_operations) fn copy_files_with_progress_inner(
                         file_count,
                         total_bytes,
                     );
-                    commit_journaling_created_dirs(transaction, operation_id);
+                    commit_journaling_created_dirs(transaction, state.scope());
                     events.emit_cancelled(WriteCancelledEvent {
                         operation_id: operation_id.to_string(),
                         operation_type: WriteOperationType::Copy,
@@ -734,7 +737,7 @@ pub(in crate::file_system::write_operations) fn copy_files_with_progress_inner(
                         operation_id,
                         transaction.created_files().len()
                     );
-                    let recovered = stop_keeping_displaced_aside(transaction, operation_id);
+                    let recovered = stop_keeping_displaced_aside(transaction, state.scope(), operation_id);
                     events.emit_cancelled(WriteCancelledEvent {
                         operation_id: operation_id.to_string(),
                         operation_type: WriteOperationType::Copy,
@@ -765,7 +768,7 @@ pub(in crate::file_system::write_operations) fn copy_files_with_progress_inner(
                     error: e.clone(),
                     kept_files: transaction.created_files().len(),
                 });
-            let e = fail_keeping_displaced_aside(transaction, operation_id, e);
+            let e = fail_keeping_displaced_aside(transaction, state.scope(), operation_id, e);
             let event = transfer_stop_event(operation_id, WriteOperationType::Copy, state, e, None);
             let e = event.error.clone();
             events.emit_error(event);

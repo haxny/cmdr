@@ -14,7 +14,7 @@ use std::time::Duration;
 use super::super::OperationEventSink;
 use super::super::host;
 use super::super::manager::{self, ManagedTaskGuard, OperationDescriptor, OperationSummaryText};
-use super::super::state::{WriteOperationState, WriteSettledGuard};
+use super::super::state::WriteSettledGuard;
 use super::super::types::ReadOnlySide;
 use super::super::types::{WriteOperationError, WriteOperationStartResult, WriteOperationType};
 use super::edit_error::EditError;
@@ -107,7 +107,10 @@ pub(crate) async fn archive_edit_start(
     progress_interval_ms: u64,
 ) -> Result<WriteOperationStartResult, WriteOperationError> {
     let operation_id = cmdr_operation_log::new_operation_id();
-    let state = Arc::new(WriteOperationState::new(Duration::from_millis(progress_interval_ms)));
+    let state = Arc::new(
+        crate::file_system::write_operations::installed()
+            .new_operation_state(Duration::from_millis(progress_interval_ms)),
+    );
 
     // Share the parent drive's lane so the op serializes against other work on
     // that device (falls back to the id itself if the volume isn't registered —

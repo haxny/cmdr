@@ -64,6 +64,7 @@ mod scan_preview;
 mod scan_source_tracker;
 mod scan_walker;
 mod scan_watchdog;
+mod scope;
 mod scratch_dir;
 mod source_binding;
 mod sources_gone_slot;
@@ -408,7 +409,11 @@ where
         + 'static,
 {
     let operation_id = cmdr_operation_log::new_operation_id();
-    let state = Arc::new(WriteOperationState::new(Duration::from_millis(progress_interval_ms)).with_sides(sides));
+    let state = Arc::new(
+        installed()
+            .new_operation_state(Duration::from_millis(progress_interval_ms))
+            .with_sides(sides),
+    );
 
     let descriptor = OperationDescriptor {
         operation_id: operation_id.clone(),
@@ -467,7 +472,7 @@ where
                 WriteOperationType::Copy | WriteOperationType::Move => Some(cmdr_fs::volume::DEFAULT_VOLUME_ID),
                 _ => None,
             };
-            journal::open_local_op(&op_id, op_kind, initiator, item_count, dest_volume_id);
+            journal::open_local_op(state.scope(), &op_id, op_kind, initiator, item_count, dest_volume_id);
 
             let op_id_for_blocking = op_id.clone();
             let events_for_handler = Arc::clone(&events);
@@ -488,7 +493,7 @@ where
                 Ok(Err(WriteOperationError::Cancelled { .. })) => cmdr_operation_log::types::ExecutionStatus::Canceled,
                 _ => cmdr_operation_log::types::ExecutionStatus::Failed,
             };
-            journal::finalize_op(&op_id, op_kind, execution_status);
+            journal::finalize_op(state_for_net.scope(), op_kind, execution_status);
 
             match result {
                 Ok(Ok(())) => {} // Handler already emitted write-complete or write-cancelled

@@ -52,12 +52,17 @@ pub(crate) const SEARCH_LEAF_CAP: usize = 50_000;
 /// mutation; the caller persists the result only after the item succeeds.
 /// `volume_id` is the index volume (the local record points pass `"root"`);
 /// `abs_source` is the subtree root's absolute path.
-pub(super) fn enumerate_subtree_for_search(volume_id: &str, abs_source: &Path, cap: usize) -> BufferedLeaves {
+pub(super) fn enumerate_subtree_for_search(
+    index: &dyn host::OperationIndex,
+    volume_id: &str,
+    abs_source: &Path,
+    cap: usize,
+) -> BufferedLeaves {
     #[cfg(test)]
     if let Some(canned) = test_hook::take(abs_source) {
         return canned;
     }
-    host::installed().index().search_leaves(volume_id, abs_source, cap)
+    index.search_leaves(volume_id, abs_source, cap)
 }
 
 /// Persist the buffered `search_only` leaves (ONLY call this after the top-level
@@ -69,7 +74,7 @@ pub(super) fn enumerate_subtree_for_search(volume_id: &str, abs_source: &Path, c
 /// under that volume, not `"root"` (the local callers pass `"root"`). A `Full`
 /// verdict notes nothing (the op opens `Full`); a downgrade notes worst-wins.
 pub(super) fn persist_and_note(
-    op_id: &str,
+    scope: &super::scope::OpScope,
     source_volume_id: &str,
     abs_source: &Path,
     dest_volume_id: &str,
@@ -80,7 +85,7 @@ pub(super) fn persist_and_note(
         let source = abs_source.join(&leaf.rel);
         let dest = top_level_dest.map(|d| d.join(&leaf.rel));
         super::journal::record_search_leaf(
-            op_id,
+            scope,
             leaf.entry_type,
             source_volume_id,
             &source,
@@ -90,7 +95,7 @@ pub(super) fn persist_and_note(
         );
     }
     if buffered.coverage != SearchCoverage::Full {
-        super::journal::journal_note_coverage(op_id, buffered.coverage, buffered.reason);
+        super::journal::note_coverage(scope, buffered.coverage, buffered.reason);
     }
 }
 

@@ -142,7 +142,7 @@ pub(in crate::file_system::write_operations) fn delete_files_with_progress_inner
         // Delete is never rollbackable (the op finalizes `permanent_delete`), so
         // these rows exist purely for search — one per leaf, deliberately.
         super::super::journal::record_local_leaf(
-            operation_id,
+            state.scope(),
             cmdr_operation_log::types::EntryType::File,
             &file_info.path,
             None,
@@ -904,7 +904,7 @@ pub(in crate::file_system::write_operations) async fn delete_volume_files_with_p
             // rollbackable (the op finalizes `permanent_delete`), so these rows
             // exist purely for search — one per leaf, deliberately.
             super::super::journal::record_volume_leaf(
-                operation_id,
+                state.scope(),
                 cmdr_operation_log::types::EntryType::File,
                 volume_id,
                 &entry.path,

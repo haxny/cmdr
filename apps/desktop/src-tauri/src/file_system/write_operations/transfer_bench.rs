@@ -194,7 +194,9 @@ impl BenchJournal {
     /// [`Self::journaled_files`].
     pub fn copy_local(&self, sources: &[PathBuf], destination: &Path) -> Result<String, WriteOperationError> {
         let op_id = cmdr_operation_log::new_operation_id();
+        let state = fresh_state();
         journal::open_local_op(
+            state.scope(),
             &op_id,
             OpKind::Copy,
             Initiator::User,
@@ -204,7 +206,7 @@ impl BenchJournal {
         let result = copy_files_with_progress_inner(
             &DiscardEvents,
             &op_id,
-            &fresh_state(),
+            &state,
             sources,
             destination,
             &WriteOperationConfig::default(),
@@ -214,7 +216,7 @@ impl BenchJournal {
             Err(WriteOperationError::Cancelled { .. }) => ExecutionStatus::Canceled,
             Err(_) => ExecutionStatus::Failed,
         };
-        journal::finalize_op(&op_id, OpKind::Copy, execution_status);
+        journal::finalize_op(state.scope(), OpKind::Copy, execution_status);
         result.map(|()| op_id)
     }
 

@@ -1,4 +1,5 @@
 use super::*;
+use crate::file_system::write_operations::scope::OpScope;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicU8;
@@ -35,7 +36,12 @@ fn local_row(row_id: &str, source: PathBuf, destination: PathBuf) -> BulkRenameR
 /// A recorder for tests that don't assert on the journal. Journaling no-ops when no
 /// journal is installed, so this is inert unless a `TestJournalGuard` is in scope.
 fn test_recorder() -> BulkRenameRecorder {
-    BulkRenameRecorder::new("op-test".to_string(), "root".to_string())
+    BulkRenameRecorder::new(test_scope(), "root".to_string())
+}
+
+/// A scope on the shared test engine, for a recorder whose journal a test opens.
+fn test_scope() -> Arc<OpScope> {
+    Arc::new(crate::file_system::write_operations::installed().op_scope())
 }
 
 fn assert_no_staging_paths(dir: &Path) {
@@ -86,9 +92,10 @@ fn an_applied_bulk_rename_journals_the_mtime_undo_verifies_on() {
     let live = cmdr_local::reading::get_single_entry(&source).expect("read the live entry");
 
     let op_id = "op-bulk-rename-mtime";
-    super::super::super::journal::open_local_op(op_id, OpKind::Rename, Initiator::User, 1, Some("root"));
-    BulkRenameRecorder::new(op_id.to_string(), "root".to_string()).record_hop(&row, &source, &destination);
-    super::super::super::journal::finalize_op(op_id, OpKind::Rename, ExecutionStatus::Done);
+    let scope = test_scope();
+    super::super::super::journal::open_local_op(&scope, op_id, OpKind::Rename, Initiator::User, 1, Some("root"));
+    BulkRenameRecorder::new(Arc::clone(&scope), "root".to_string()).record_hop(&row, &source, &destination);
+    super::super::super::journal::finalize_op(&scope, OpKind::Rename, ExecutionStatus::Done);
 
     let conn = open_read_connection(&db).expect("read conn");
     let items = read_operation_items(&conn, op_id, 10).expect("items");
@@ -162,18 +169,26 @@ impl UndoLoop {
         let row = local_row("undo", source.to_path_buf(), destination.to_path_buf());
         // Open BEFORE the run: the run journals each landing as it happens, so the
         // op has to exist first, exactly as the managed driver arranges it.
-        super::super::super::journal::open_local_op(&self.op_id, OpKind::Rename, Initiator::User, 1, Some("root"));
+        let scope = test_scope();
+        super::super::super::journal::open_local_op(
+            &scope,
+            &self.op_id,
+            OpKind::Rename,
+            Initiator::User,
+            1,
+            Some("root"),
+        );
         let run = bulk_rename_local(
             std::slice::from_ref(&row),
             &AtomicU8::new(OperationIntent::Running as u8),
-            &BulkRenameRecorder::new(self.op_id.clone(), "root".to_string()),
+            &BulkRenameRecorder::new(Arc::clone(&scope), "root".to_string()),
         );
         assert_eq!(
             run.outcomes,
             vec![BulkRenameOutcome::Done],
             "the fixture rename applied"
         );
-        super::super::super::journal::finalize_op(&self.op_id, OpKind::Rename, ExecutionStatus::Done);
+        super::super::super::journal::finalize_op(&scope, OpKind::Rename, ExecutionStatus::Done);
     }
 
     async fn undo(&self) -> cmdr_operation_log::rollback::RollbackReport {
@@ -519,6 +534,7 @@ struct LandingJournal {
     _journal_dir: TestDir,
     db: PathBuf,
     op_id: String,
+    scope: Arc<OpScope>,
 }
 
 impl LandingJournal {
@@ -532,23 +548,25 @@ impl LandingJournal {
         let writer = OperationLogWriter::spawn(&db).expect("spawn writer");
         let journal = crate::operation_log_host::TestJournalGuard::install(Arc::new(WriterJournal::new(writer)));
         let op_id = format!("op-{name}");
-        super::super::super::journal::open_local_op(&op_id, OpKind::Rename, Initiator::Agent, 1, Some("root"));
+        let scope = test_scope();
+        super::super::super::journal::open_local_op(&scope, &op_id, OpKind::Rename, Initiator::Agent, 1, Some("root"));
         Self {
             _journal: journal,
             _journal_dir: journal_dir,
             db,
             op_id,
+            scope,
         }
     }
 
     fn recorder(&self) -> BulkRenameRecorder {
-        BulkRenameRecorder::new(self.op_id.clone(), "root".to_string())
+        BulkRenameRecorder::new(Arc::clone(&self.scope), "root".to_string())
     }
 
     /// The rows as the journal holds them, after finalizing so the writer flushes.
     fn rows(&self) -> Vec<cmdr_operation_log::store::OperationItemRow> {
         use cmdr_operation_log::store::{open_read_connection, read_operation_items};
-        super::super::super::journal::finalize_op(&self.op_id, OpKind::Rename, ExecutionStatus::Done);
+        super::super::super::journal::finalize_op(&self.scope, OpKind::Rename, ExecutionStatus::Done);
         let conn = open_read_connection(&self.db).expect("read conn");
         read_operation_items(&conn, &self.op_id, 100).expect("items")
     }

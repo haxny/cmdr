@@ -43,8 +43,8 @@ lives in `store/migrations.rs`.
   downgrade — the user ran a newer build, then an older one) is refused with a typed `SchemaDowngrade` error and the
   file is left untouched, because it may hold data this build can't represent. Recreating is reserved for a genuinely
   **unparseable** file, classified by the typed sqlite error code (`NotADatabase` / `DatabaseCorrupt`), never a message
-  string. The file goes to the host's `SetAside` first (the app keeps a copy and tells the person, `state_recovery`); a
-  host that keeps nothing (tests, tools: `OperationLogStore::open`) lets it be deleted.
+  string. The file goes to the host's `set_aside` first (the app keeps a copy and tells the person, `state_recovery`); a
+  caller that keeps nothing (tests and tools pass `&|_| None`) lets it be deleted.
 
 Rules for adding a migration: append a step with the next version; **never edit or renumber a shipped step** (users' DBs
 already ran it — editing it silently diverges their schema); write `up` against the schema the prior steps produce, not
@@ -147,15 +147,14 @@ counts), `Prune` (retention), `Flush` (barrier), `Shutdown`.
 `file_system/write_operations/journal.rs`. Together they make every managed mutation journal itself with per-item rows,
 two-axis status, and computed rollback eligibility — without measurably slowing the op.
 
-### The seam: a journal reached by `op_id`
+### The seam: an operation's journal, fixed at open
 
 **The journal lives in an `OperationLog` handle** (`handle.rs`): its slot, the recording gate, and the writer. The app
-builds ONE (`operation_log_host::install`, first thing in `setup`), opens it late (`OperationLog::open`, from
-`operation_log_host::start`), and the write pipeline reaches it BY `op_id` through `operation_log_host`'s
-`journal_open`, `journal_record_items`, `journal_note_coverage`, `journal_note_not_rollbackable`, and
-`journal_finalize`, mirroring the op-keyed `update_operation_status(op_id, …)` status cache that the same record points
-already write. Those by-id calls are the interim shape: `journal_open` returns an `OpJournal`, the operation's journal
-fixed at open, which an operation carries once its pipeline has a scope to carry it in.
+builds ONE (`operation_log_host::install`, first thing in `setup`), hands it to the write engine
+(`operations_host::install`), and opens it late (`OperationLog::open`, from `operation_log_host::start`).
+`OperationLog::journal_open` returns an `OpJournal`, the operation's journal fixed at open, and the write engine keeps
+it in the operation's scope (`OpScope`, `apps/desktop/src-tauri/src/file_system/write_operations/scope.rs`) for every
+record, note, and the finalize.
 
 - **`open` publishes last.** It migrates the store, spawns the writer, reconciles the operations a crash left
   `rolling_back`, and only THEN puts the journal and the writer in the slot, in one write. So nothing can journal, and
@@ -163,23 +162,20 @@ fixed at open, which an operation carries once its pipeline has a scope to carry
   second writer, and a failed one leaves the handle without a journal (the app runs without history rather than refusing
   to start).
 - **An operation is journaled wholly or not at all, decided at open.** One opened before the journal was (or while
-  recording is off) joins the handle's unrecorded set, and every later by-id call for it no-ops even if the journal
-  arrives mid-op: a tail and a finalize sent to a journal that never opened it would be rows with no header. Pinned by
-  `handle/tests.rs`.
-
-- **Why a global rather than a context threaded down the pipeline.** Threading one replaces
-  `Arc<dyn OperationEventSink>` through the entire transfer/delete signature chain (`copy_single_item`, the transfer
-  driver, the volume paths, …) — a large, high-risk refactor of the app's most data-safety-critical code. The
-  op-id-keyed global is (a) how `update_operation_status` already works at the identical call sites, (b) how `manager()`
-  already works, and (c) zero-churn to those signatures. The hard constraint holds either way: the sink stays a sink,
-  and nothing here extends `OperationEventSink`.
+  recording is off) holds an empty `OpJournal`, so every later record, note, and finalize no-ops even if the journal
+  arrives mid-op: a tail and a finalize sent to a journal that never opened it would be rows with no header. The type
+  carries it, so nothing has to remember. Pinned by `handle/tests.rs`.
+- **Why it rides the operation's scope, not the sink.** The write engine already carries one `OpScope` per operation
+  (its seams and status cache), so the journal joins it there and reaches every record point the state reaches. The hard
+  constraint holds: the sink stays a sink, and nothing here extends `OperationEventSink`.
 - **Testability holds.** A test of the operation log builds its own handle, so it needs no lock. A write-pipeline test
-  reaches the app's shared handle by `op_id`, so it holds `operation_log_host::TestJournalGuard`, which puts a
-  `CapturingJournal` or a temp-DB `WriterJournal` in the shared slot under a lock
-  (`file_system/write_operations/DETAILS.md` § the test-isolation guards).
+  runs on the app's shared test engine, whose log is the shared handle, so it holds
+  `operation_log_host::TestJournalGuard`, which puts a `CapturingJournal` or a temp-DB `WriterJournal` in the shared
+  slot under a lock (`file_system/write_operations/DETAILS.md` § the test-isolation guards). A test that drives an
+  engine function directly opens the journal on the same state's scope it passes in.
 - **Lifecycle.** `journal_open` is called when the op actually STARTS (inside the manager's deferred), not at
-  registration, so a queued op that's canceled before admission never journals and leaks no accumulator.
-  `journal_finalize` removes the per-op accumulator.
+  registration, so a queued op that's canceled before admission never journals and leaks no accumulator. The finalize
+  removes the per-op accumulator.
 - **Header aggregates (`item_count` / `items_done` / `bytes_total`).** `open` writes a provisional `item_count` (the
   top-level source count, known before the scan) plus the destination volume; `finalize_op` then refines the three
   aggregates from the live `OperationStatus` cache (the same one the queue UI drives — `header_totals_from_status`), so
@@ -302,9 +298,8 @@ gate from `settings.json` in `operation_log_host::start` (`settings::load_operat
 frontend pushes every change through `set_operation_log_enabled` (`OperationLog::set_recording`).
 
 - **The gate sits in the handle, not in a journal.** `OperationLog::journal_open` reads the switch; an op opened while
-  off gets an empty `OpJournal` and joins the handle's unrecorded set, so every later by-id record / note / finalize for
-  it returns early, and finalize forgets it. The journal stays installed, so production and the test journals see one
-  gate, and nothing about the writer or `WriterJournal` changes.
+  off gets an empty `OpJournal`, so every later record / note / finalize through it returns early. The journal stays
+  installed, so production and the test journals see one gate, and nothing about the writer or `WriterJournal` changes.
 - **Decision/Why: decided once, at open, held to finalize.** An op that opened while on journals every item even if the
   switch flips mid-way; one that opened while off journals nothing even if it flips back on. Gating each record call
   instead would leave a header with only some of its rows, and the completeness check can't catch that: it compares rows
@@ -318,8 +313,8 @@ frontend pushes every change through `set_operation_log_enabled` (`OperationLog:
   surfaces that offer Undo right after an op (the trash toast and Edit > Undo move to trash, Undo rename, Ask Cmdr's
   rename undo) don't offer it while recording is off (`apps/desktop/src/lib/operation-log/recording.ts`), and the
   history dialog says recording is off.
-- **The record path stays cheap while on**: the unrecorded set's length is an atomic, so with nothing unrecorded a
-  record call never takes the set's lock.
+- **The record path stays cheap while on**: an operation's `OpJournal` already holds its journal, so a record call reads
+  no switch and takes no lock of the handle's.
 
 ### The bypass boundary
 
@@ -846,9 +841,8 @@ volumes up in (`VolumeLookup`).
 `index-crate-isolation` holds the surface to what it was at the extraction, with no headroom. By module:
 
 - **Root**: `OperationLog` (the handle), `OpJournal`, `OpenError`, `new_operation_id`, and the seven modules below. The
-  handle's ten methods are `detached`, `open`, `set_recording`, `writer`, `spawn_retention`, `journal_open`, and the
-  four by-id journal methods (`record_items`, `note_coverage`, `note_not_rollbackable`, `finalize`) that leave once each
-  operation carries its `OpJournal`.
+  handle's methods are `detached`, `open`, `set_recording`, `writer`, `spawn_retention`, and `journal_open`; an
+  `OpJournal` records, notes, and finalizes its one operation.
 - **`store`**: the DB path, `fold_name`, the error type, the row types, the migration ladder, and the low-level reads
   the IPC commands, the MCP tools, the dump tool, and the planner's app-side cells use.
 - **`query`**: the paged history read and indexed name search behind the IPC commands and MCP tools.

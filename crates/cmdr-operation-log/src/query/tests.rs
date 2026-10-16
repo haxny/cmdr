@@ -18,7 +18,7 @@ use crate::writer::{FinalizeOperation, JournalItem, OpenOperation, OperationLogW
 fn fresh() -> (OperationLogStore, OperationLogWriter, tempfile::TempDir) {
     let dir = tempfile::tempdir().expect("temp dir");
     let path = operation_log_db_path(dir.path());
-    let store = OperationLogStore::open(&path).expect("open store");
+    let store = OperationLogStore::open(&path, &|_| None).expect("open store");
     let writer = OperationLogWriter::spawn(&path).expect("spawn writer");
     (store, writer, dir)
 }

@@ -152,7 +152,7 @@ pub(crate) fn start_bulk_rename(
         preview_id: None,
         reverses: None,
     };
-    let state = Arc::new(WriteOperationState::new(Duration::from_millis(200)));
+    let state = Arc::new(super::super::installed().new_operation_state(Duration::from_millis(200)));
     let events_for_task = Arc::clone(&events);
     let operation_id_for_task = operation_id.clone();
     let rows_for_task = rows.clone();
@@ -169,6 +169,7 @@ pub(crate) fn start_bulk_rename(
                     settled_volume,
                 );
                 super::super::journal::open_volume_op(
+                    state_for_task.scope(),
                     &operation_id_for_task,
                     OpKind::Rename,
                     initiator,
@@ -177,7 +178,7 @@ pub(crate) fn start_bulk_rename(
                     rows_for_task.len() as u64,
                 );
 
-                let recorder = BulkRenameRecorder::new(operation_id_for_task.clone(), volume_id_for_task.clone());
+                let recorder = BulkRenameRecorder::new(state_for_task.shared_scope(), volume_id_for_task.clone());
                 let run = if uses_local_paths {
                     let rows = rows_for_task.clone();
                     let intent = Arc::clone(&state_for_task.intent);
@@ -212,7 +213,7 @@ pub(crate) fn start_bulk_rename(
                         rollback: CancelRollback::none(),
                     });
                     super::super::journal::finalize_op(
-                        &operation_id_for_task,
+                        state_for_task.scope(),
                         OpKind::Rename,
                         ExecutionStatus::Canceled,
                     );
@@ -229,7 +230,7 @@ pub(crate) fn start_bulk_rename(
                         metadata_left_behind: None,
                         durability_unconfirmed: None,
                     });
-                    super::super::journal::finalize_op(&operation_id_for_task, OpKind::Rename, ExecutionStatus::Done);
+                    super::super::journal::finalize_op(state_for_task.scope(), OpKind::Rename, ExecutionStatus::Done);
                 }
 
                 task_guard.disarm();
@@ -660,16 +661,14 @@ async fn remote_fingerprint_matches(volume: &dyn Volume, path: &Path, expected: 
 /// debt: nothing on disk depends on it, so its `Skipped`/`Failed` row can wait for the
 /// end of the run.
 struct BulkRenameRecorder {
-    operation_id: String,
+    /// The batch's scope, whose journal every row lands in.
+    scope: Arc<crate::file_system::write_operations::scope::OpScope>,
     volume_id: String,
 }
 
 impl BulkRenameRecorder {
-    fn new(operation_id: String, volume_id: String) -> Self {
-        Self {
-            operation_id,
-            volume_id,
-        }
+    fn new(scope: Arc<crate::file_system::write_operations::scope::OpScope>, volume_id: String) -> Self {
+        Self { scope, volume_id }
     }
 
     /// One completed filesystem hop, recorded the moment it lands.
@@ -685,7 +684,7 @@ impl BulkRenameRecorder {
     fn record_hop(&self, row: &BulkRenameRow, from: &Path, to: &Path) {
         let (size, mtime) = row.expected_fingerprint.journal_snapshot();
         super::super::journal::record_volume_leaf(
-            &self.operation_id,
+            &self.scope,
             EntryType::File,
             &self.volume_id,
             from,
@@ -711,7 +710,7 @@ impl BulkRenameRecorder {
             };
             let (size, mtime) = row.expected_fingerprint.journal_snapshot();
             super::super::journal::record_volume_leaf(
-                &self.operation_id,
+                &self.scope,
                 EntryType::File,
                 &self.volume_id,
                 &row.source,

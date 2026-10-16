@@ -577,7 +577,7 @@ pub(super) async fn drive_transfer_serial(ctx: SerialCopy<'_>) -> SerialOutcome 
                                 // dest dir root). Created dirs journal post-loop.
                                 if let Some((src_vol, dst_vol)) = journal_volumes.as_ref() {
                                     journal::record_volume_transfer_source(
-                                        &operation_id,
+                                        state.scope(),
                                         src_vol,
                                         &source_path,
                                         dst_vol,
@@ -593,7 +593,7 @@ pub(super) async fn drive_transfer_serial(ctx: SerialCopy<'_>) -> SerialOutcome 
                             } else {
                                 if let Some((src_vol, dst_vol)) = journal_volumes.as_ref() {
                                     journal::record_volume_transfer_source(
-                                        &operation_id,
+                                        state.scope(),
                                         src_vol,
                                         &source_path,
                                         dst_vol,
@@ -656,7 +656,7 @@ pub(super) async fn drive_transfer_serial(ctx: SerialCopy<'_>) -> SerialOutcome 
                                 // rebase off.
                                 if let Some((src_vol, dst_vol)) = journal_volumes.as_ref() {
                                     journal::record_volume_transfer_source(
-                                        &operation_id,
+                                        state.scope(),
                                         src_vol,
                                         &source_path,
                                         dst_vol,

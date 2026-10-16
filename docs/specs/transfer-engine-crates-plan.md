@@ -634,7 +634,8 @@ Each lands as its own commit with a red test first, and the commit body names it
    It joins the unrecorded set at `journal_open`, so its later by-id record, note, and finalize calls never reach a
    journal that arrived mid-op and holds no header row for it. Before, those calls re-read the slot and could. Not
    observable in production (nothing journals before startup opens the log). Red test first:
-   `crates/cmdr-operation-log/src/handle/tests.rs::an_operation_opened_before_the_journal_journals_nothing_by_id`.
+   `crates/cmdr-operation-log/src/handle/tests.rs::an_operation_opened_before_the_journal_journals_nothing_through_its_journal`
+   (its by-id twin went with the by-id API in M6a).
 3. **The `no_global_sync` source scan becomes a clippy rule (M8a)**: `disallowed-methods = ["libc::sync"]` in the
    crate's `clippy.toml`. `spawn_async_sync` is a deleted helper, so clippy can't name it; that half stays as a tiny
    fail-closed test (root exists, ≥300 files scanned). Not a behavior change in the app; listed because a test changes

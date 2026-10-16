@@ -22,8 +22,8 @@ Issue #461. Must-knows in `CLAUDE.md`.
   with `{"analytics.enabled": false, "updates.crashReports": false}`, written temp+rename. A file present but unreadable
   for an I/O reason is left alone: we can't tell it's damaged. Paths match their readers: the frontend's stores sit in
   `CMDR_DATA_DIR` when that's set (`resolveStorePath`), `license.json` always in the plugin's app data dir.
-- **`operation-log.db`, `main.db`** (`OperationLogStore::open_setting_aside`, which `operation_log_host::start` hands
-  `set_aside` through `OperationLog::open`; `AgentStore::open`): only on the typed
+- **`operation-log.db`, `main.db`** (`OperationLogStore::open`, which `operation_log_host::start` hands `set_aside`
+  through `OperationLog::open`; `AgentStore::open`): only on the typed
   `NotADatabase` / `DatabaseCorrupt` code. The DB is set aside, its `-wal` and `-shm` removed, and a fresh one built. A
   rename that doesn't happen falls back to deleting, the only way to a working DB.
 - **Favorites, the recents lists**: set aside; a rename that doesn't happen deletes the file (a deleted history beats a

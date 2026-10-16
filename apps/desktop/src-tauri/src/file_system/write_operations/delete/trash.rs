@@ -170,61 +170,75 @@ pub fn trash_single_journaled(
     source: &Path,
     initiator: cmdr_operation_log::types::Initiator,
 ) -> Result<Option<PathBuf>, MutationError> {
-    use cmdr_operation_log::types::{EntryType, ExecutionStatus, ItemOutcome, OpKind};
+    // shim: removed in M7a
+    super::super::installed().trash_single_journaled(source, initiator)
+}
 
-    let source_meta = fs::symlink_metadata(source).map_err(|_| MutationError::NotFound {
-        path: source.display().to_string(),
-    })?;
+impl super::super::Operations {
+    /// See the free [`trash_single_journaled`]: the same, on this engine.
+    pub(crate) fn trash_single_journaled(
+        &self,
+        source: &Path,
+        initiator: cmdr_operation_log::types::Initiator,
+    ) -> Result<Option<PathBuf>, MutationError> {
+        use cmdr_operation_log::types::{EntryType, ExecutionStatus, ItemOutcome, OpKind};
+        let scope = self.op_scope();
 
-    // Enumerate BEFORE the move (buffered, persisted only on success).
-    let buffered = if source_meta.is_dir() {
-        Some(super::super::journal_search::enumerate_subtree_for_search(
-            "root",
-            source,
-            super::super::journal_search::SEARCH_LEAF_CAP,
-        ))
-    } else {
-        None
-    };
+        let source_meta = fs::symlink_metadata(source).map_err(|_| MutationError::NotFound {
+            path: source.display().to_string(),
+        })?;
 
-    let op_id = cmdr_operation_log::new_operation_id();
-    // A single trash has no destination volume (the in-trash location rides on the
-    // item row, not the header); one top-level item.
-    super::super::journal::open_local_op(&op_id, OpKind::Trash, initiator, 1, None);
-
-    match move_to_trash_sync(source) {
-        Ok(in_trash) => {
-            let entry_type = if source_meta.is_dir() {
-                EntryType::Dir
-            } else {
-                EntryType::File
-            };
-            super::super::journal::record_local_leaf(
-                &op_id,
-                entry_type,
+        // Enumerate BEFORE the move (buffered, persisted only on success).
+        let buffered = if source_meta.is_dir() {
+            Some(super::super::journal_search::enumerate_subtree_for_search(
+                scope.host().index(),
+                "root",
                 source,
-                in_trash.as_deref(),
-                Some(source_meta.len() as i64),
-                super::super::journal::mtime_secs(&source_meta),
-                false,
-                ItemOutcome::Done,
-            );
-            if let Some(buffered) = &buffered {
-                super::super::journal_search::persist_and_note(
-                    &op_id,
-                    cmdr_fs::volume::DEFAULT_VOLUME_ID,
+                super::super::journal_search::SEARCH_LEAF_CAP,
+            ))
+        } else {
+            None
+        };
+
+        let op_id = cmdr_operation_log::new_operation_id();
+        // A single trash has no destination volume (the in-trash location rides on the
+        // item row, not the header); one top-level item.
+        super::super::journal::open_local_op(&scope, &op_id, OpKind::Trash, initiator, 1, None);
+
+        match move_to_trash_sync(source) {
+            Ok(in_trash) => {
+                let entry_type = if source_meta.is_dir() {
+                    EntryType::Dir
+                } else {
+                    EntryType::File
+                };
+                super::super::journal::record_local_leaf(
+                    &scope,
+                    entry_type,
                     source,
-                    cmdr_fs::volume::DEFAULT_VOLUME_ID,
                     in_trash.as_deref(),
-                    buffered,
+                    Some(source_meta.len() as i64),
+                    super::super::journal::mtime_secs(&source_meta),
+                    false,
+                    ItemOutcome::Done,
                 );
+                if let Some(buffered) = &buffered {
+                    super::super::journal_search::persist_and_note(
+                        &scope,
+                        cmdr_fs::volume::DEFAULT_VOLUME_ID,
+                        source,
+                        cmdr_fs::volume::DEFAULT_VOLUME_ID,
+                        in_trash.as_deref(),
+                        buffered,
+                    );
+                }
+                super::super::journal::finalize_op(&scope, OpKind::Trash, ExecutionStatus::Done);
+                Ok(in_trash)
             }
-            super::super::journal::finalize_op(&op_id, OpKind::Trash, ExecutionStatus::Done);
-            Ok(in_trash)
-        }
-        Err(e) => {
-            super::super::journal::finalize_op(&op_id, OpKind::Trash, ExecutionStatus::Failed);
-            Err(e)
+            Err(e) => {
+                super::super::journal::finalize_op(&scope, OpKind::Trash, ExecutionStatus::Failed);
+                Err(e)
+            }
         }
     }
 }
@@ -395,6 +409,7 @@ pub(in crate::file_system::write_operations) fn trash_files_with_progress(
         // now, persisted only after this item succeeds (below).
         let buffered_leaves = if source_meta.is_dir() {
             Some(super::super::journal_search::enumerate_subtree_for_search(
+                state.scope().host().index(),
                 "root",
                 source,
                 super::super::journal_search::SEARCH_LEAF_CAP,
@@ -423,7 +438,7 @@ pub(in crate::file_system::write_operations) fn trash_files_with_progress(
                     cmdr_operation_log::types::EntryType::File
                 };
                 super::super::journal::record_local_leaf(
-                    operation_id,
+                    state.scope(),
                     entry_type,
                     source,
                     in_trash.as_deref(),
@@ -440,7 +455,7 @@ pub(in crate::file_system::write_operations) fn trash_files_with_progress(
                 // noted worst-wins.
                 if let Some(buffered) = &buffered_leaves {
                     super::super::journal_search::persist_and_note(
-                        operation_id,
+                        state.scope(),
                         cmdr_fs::volume::DEFAULT_VOLUME_ID,
                         source,
                         cmdr_fs::volume::DEFAULT_VOLUME_ID,

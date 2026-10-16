@@ -34,7 +34,7 @@ Copy, move, delete, trash, and zip edits as managed background ops.
 - **EVERY local write lands via `overwrite::stage_and_land_file`** (temp+rename, rename-aside when replacing); announce
   a destination via `host::OwnWrites::announce` BEFORE the syscall (renames: both ends). What it leaves
   carries a KIND: ❌ only a `temp` is removable on sight. DETAILS § "What the sweep does with each kind".
-- **Every managed mutation journals by `op_id`**; a VOLUME op passes its REAL volume id. Bulk rename journals each hop
+- **Every mutation journals through its `OpScope`**; a VOLUME op passes its REAL volume id. Bulk rename journals each hop
   as it lands: ❌ never batch to the end, nor put a rotation temp in `in_flight_temps` (its sweep DELETES it).
 - **A transfer carries both volumes as typed sides** (`transfer_sides.rs`), captured at start: a vanished drive can't be
   named later. A drive that LEFT is the mount table's answer, ❌ never an errno.

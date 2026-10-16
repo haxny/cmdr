@@ -232,7 +232,8 @@ pub async fn copy_between_volumes(
     // these REAL volume ids (carried on the op state so the ~80 test call sites
     // stay unchanged); the open/finalize bracket below uses them directly.
     let state = Arc::new(
-        WriteOperationState::new(Duration::from_millis(config.progress_interval_ms))
+        crate::file_system::write_operations::installed()
+            .new_operation_state(Duration::from_millis(config.progress_interval_ms))
             .with_journal_volumes(source_volume_id.clone(), dest_volume_id.clone()),
     );
     let journal_source_volume_id = source_volume_id.clone();
@@ -307,6 +308,7 @@ pub async fn copy_between_volumes(
                 // helpers bake in `"root"`). Per-leaf rows land inside
                 // `copy_volumes_with_progress`; this brackets the op.
                 journal::open_volume_op(
+                    state.scope(),
                     &op_id,
                     OpKind::Copy,
                     initiator,
@@ -350,7 +352,7 @@ pub async fn copy_between_volumes(
                 };
 
                 journal::finalize_op(
-                    &op_id,
+                    state.scope(),
                     OpKind::Copy,
                     journal::execution_status_from_error(result.as_ref().err().map(|f| &f.error)),
                 );
@@ -1092,7 +1094,7 @@ pub(crate) async fn copy_volumes_with_progress(
     // rows as already gone — the same way it already reads the file rows this
     // operation journaled as they landed.
     if let Some((_, dst_vol)) = journal_volumes.as_ref() {
-        journal::record_created_dirs_on(operation_id, dst_vol, &created_dirs);
+        journal::record_created_dirs_on(state.scope(), dst_vol, &created_dirs);
     }
 
     // Every ` (N)` placeholder a `Rename` reserved that no write landed on: a

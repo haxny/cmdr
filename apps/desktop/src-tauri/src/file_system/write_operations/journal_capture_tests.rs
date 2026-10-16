@@ -55,11 +55,12 @@ fn grouped_copy_journals_leaf_files_and_created_dir_rows() {
     std::fs::create_dir_all(&dst).expect("mk dst");
 
     let op_id = "op-copy-smoke";
-    journal::open_local_op(op_id, OpKind::Copy, Initiator::User, 0, Some("root"));
+    let st = state();
+    journal::open_local_op(st.scope(), op_id, OpKind::Copy, Initiator::User, 0, Some("root"));
     let events = CollectorEventSink::new();
     let cfg = WriteOperationConfig::default();
-    copy_files_with_progress_inner(&events, op_id, &state(), std::slice::from_ref(&src), &dst, &cfg).expect("copy");
-    journal::finalize_op(op_id, OpKind::Copy, ExecutionStatus::Done);
+    copy_files_with_progress_inner(&events, op_id, &st, std::slice::from_ref(&src), &dst, &cfg).expect("copy");
+    journal::finalize_op(st.scope(), OpKind::Copy, ExecutionStatus::Done);
 
     let conn = open_read_connection(&jdb).expect("read conn");
     let row = read_operation(&conn, op_id).expect("read op").expect("op row");
@@ -105,11 +106,12 @@ fn a_finished_same_fs_move_reports_the_items_it_moved() {
 
     let op_id = "op-move-header";
     register_operation_status(op_id, WriteOperationType::Move, vec![]);
-    journal::open_local_op(op_id, OpKind::Move, Initiator::User, 1, Some("root"));
+    let st = state();
+    journal::open_local_op(st.scope(), op_id, OpKind::Move, Initiator::User, 1, Some("root"));
     let events = CollectorEventSink::new();
     let cfg = WriteOperationConfig::default();
-    move_files_with_progress_inner(&events, op_id, &state(), std::slice::from_ref(&src), &dst, &cfg).expect("move");
-    journal::finalize_op(op_id, OpKind::Move, ExecutionStatus::Done);
+    move_files_with_progress_inner(&events, op_id, &st, std::slice::from_ref(&src), &dst, &cfg).expect("move");
+    journal::finalize_op(st.scope(), OpKind::Move, ExecutionStatus::Done);
     unregister_operation_status(op_id);
 
     let conn = open_read_connection(&jdb).expect("read conn");
@@ -148,12 +150,13 @@ fn local_copy_header_carries_planned_count_items_done_and_dest_volume() {
     // direct-call tests above don't, so their headers stay at the open value).
     register_operation_status(op_id, WriteOperationType::Copy, vec![]);
     // Open with the provisional top-level count (1 source dir), dest on "root".
-    journal::open_local_op(op_id, OpKind::Copy, Initiator::User, 1, Some("root"));
+    let st = state();
+    journal::open_local_op(st.scope(), op_id, OpKind::Copy, Initiator::User, 1, Some("root"));
     let events = CollectorEventSink::new();
     let cfg = WriteOperationConfig::default();
-    copy_files_with_progress_inner(&events, op_id, &state(), std::slice::from_ref(&src), &dst, &cfg).expect("copy");
+    copy_files_with_progress_inner(&events, op_id, &st, std::slice::from_ref(&src), &dst, &cfg).expect("copy");
     let status = get_operation_status(op_id).expect("status present after copy");
-    journal::finalize_op(op_id, OpKind::Copy, ExecutionStatus::Done);
+    journal::finalize_op(st.scope(), OpKind::Copy, ExecutionStatus::Done);
     unregister_operation_status(op_id);
 
     let conn = open_read_connection(&jdb).expect("read conn");
@@ -195,14 +198,15 @@ fn overwriting_copy_finalizes_not_rollbackable() {
     std::fs::write(dst.join("src").join("a.txt"), b"old").expect("old");
 
     let op_id = "op-copy-overwrite";
-    journal::open_local_op(op_id, OpKind::Copy, Initiator::User, 0, Some("root"));
+    let st = state();
+    journal::open_local_op(st.scope(), op_id, OpKind::Copy, Initiator::User, 0, Some("root"));
     let events = CollectorEventSink::new();
     let cfg = WriteOperationConfig {
         conflict_resolution: super::ConflictResolution::Overwrite,
         ..Default::default()
     };
-    copy_files_with_progress_inner(&events, op_id, &state(), std::slice::from_ref(&src), &dst, &cfg).expect("copy");
-    journal::finalize_op(op_id, OpKind::Copy, ExecutionStatus::Done);
+    copy_files_with_progress_inner(&events, op_id, &st, std::slice::from_ref(&src), &dst, &cfg).expect("copy");
+    journal::finalize_op(st.scope(), OpKind::Copy, ExecutionStatus::Done);
 
     let conn = open_read_connection(&jdb).expect("read conn");
     let row = read_operation(&conn, op_id).expect("read op").expect("op row");
@@ -225,11 +229,12 @@ fn same_fs_move_journals_the_top_level_item_as_rollback_unit() {
     std::fs::create_dir_all(&dst).expect("mk dst");
 
     let op_id = "op-move-smoke";
-    journal::open_local_op(op_id, OpKind::Move, Initiator::User, 0, Some("root"));
+    let st = state();
+    journal::open_local_op(st.scope(), op_id, OpKind::Move, Initiator::User, 0, Some("root"));
     let events = CollectorEventSink::new();
     let cfg = WriteOperationConfig::default();
-    move_files_with_progress_inner(&events, op_id, &state(), std::slice::from_ref(&src), &dst, &cfg).expect("move");
-    journal::finalize_op(op_id, OpKind::Move, ExecutionStatus::Done);
+    move_files_with_progress_inner(&events, op_id, &st, std::slice::from_ref(&src), &dst, &cfg).expect("move");
+    journal::finalize_op(st.scope(), OpKind::Move, ExecutionStatus::Done);
 
     let conn = open_read_connection(&jdb).expect("read conn");
     let row = read_operation(&conn, op_id).expect("read op").expect("op row");
@@ -259,11 +264,12 @@ fn initiator_threads_from_the_op_into_the_journal_row() {
         std::fs::create_dir_all(&dst).expect("mk dst");
 
         let op_id = "op-initiator";
-        journal::open_local_op(op_id, OpKind::Copy, initiator, 0, Some("root"));
+        let st = state();
+        journal::open_local_op(st.scope(), op_id, OpKind::Copy, initiator, 0, Some("root"));
         let events = CollectorEventSink::new();
-        copy_files_with_progress_inner(&events, op_id, &state(), &[src], &dst, &WriteOperationConfig::default())
+        copy_files_with_progress_inner(&events, op_id, &st, &[src], &dst, &WriteOperationConfig::default())
             .expect("copy");
-        journal::finalize_op(op_id, OpKind::Copy, ExecutionStatus::Done);
+        journal::finalize_op(st.scope(), OpKind::Copy, ExecutionStatus::Done);
 
         let conn = open_read_connection(&jdb).expect("read conn");
         let row = read_operation(&conn, op_id).expect("read").expect("row");
@@ -286,11 +292,12 @@ fn delete_journals_search_leaves_and_stays_not_rollbackable() {
     std::fs::write(&b, b"cat").expect("b");
 
     let op_id = "op-delete-smoke";
-    journal::open_local_op(op_id, OpKind::Delete, Initiator::User, 0, None);
+    let st = state();
+    journal::open_local_op(st.scope(), op_id, OpKind::Delete, Initiator::User, 0, None);
     let events = CollectorEventSink::new();
     let cfg = WriteOperationConfig::default();
-    delete_files_with_progress_inner(&events, op_id, &state(), &[a.clone(), b.clone()], &cfg).expect("delete");
-    journal::finalize_op(op_id, OpKind::Delete, ExecutionStatus::Done);
+    delete_files_with_progress_inner(&events, op_id, &st, &[a.clone(), b.clone()], &cfg).expect("delete");
+    journal::finalize_op(st.scope(), OpKind::Delete, ExecutionStatus::Done);
 
     let conn = open_read_connection(&jdb).expect("read conn");
     let row = read_operation(&conn, op_id).expect("read op").expect("op row");
@@ -337,12 +344,12 @@ fn install_canned_leaves(coverage: SearchCoverage, reason: Option<SearchCoverage
 #[cfg(target_os = "macos")]
 fn trash(op_id: &str, sources: &[std::path::PathBuf]) {
     use super::delete::trash::trash_files_with_progress;
-    journal::open_local_op(op_id, OpKind::Trash, Initiator::User, 0, None);
-    let events = CollectorEventSink::new();
     let st = state();
+    journal::open_local_op(st.scope(), op_id, OpKind::Trash, Initiator::User, 0, None);
+    let events = CollectorEventSink::new();
     // A missing source in the batch is a per-item failure, not a whole-op failure.
     let _ = trash_files_with_progress(&events, op_id, &st, sources, None);
-    journal::finalize_op(op_id, OpKind::Trash, ExecutionStatus::Done);
+    journal::finalize_op(st.scope(), OpKind::Trash, ExecutionStatus::Done);
     super::journal_search::test_hook::clear();
 }
 
@@ -434,13 +441,13 @@ fn make_files(n: usize) -> (tempfile::TempDir, Vec<std::path::PathBuf>) {
 
 /// Time a delete of `paths` with the op id already opened/finalized around it.
 fn time_delete(op_id: &str, paths: &[std::path::PathBuf]) -> Duration {
-    journal::open_local_op(op_id, OpKind::Delete, Initiator::User, 0, None);
+    let st = state();
+    journal::open_local_op(st.scope(), op_id, OpKind::Delete, Initiator::User, 0, None);
     let events = CollectorEventSink::new();
     let t = std::time::Instant::now();
-    delete_files_with_progress_inner(&events, op_id, &state(), paths, &WriteOperationConfig::default())
-        .expect("delete");
+    delete_files_with_progress_inner(&events, op_id, &st, paths, &WriteOperationConfig::default()).expect("delete");
     let elapsed = t.elapsed();
-    journal::finalize_op(op_id, OpKind::Delete, ExecutionStatus::Done);
+    journal::finalize_op(st.scope(), OpKind::Delete, ExecutionStatus::Done);
     elapsed
 }
 
@@ -671,17 +678,18 @@ fn bench_same_fs_move_latency_delta() {
         let t = std::time::Instant::now();
         for (i, s) in srcs.iter().enumerate() {
             let id = format!("on-{i}");
-            journal::open_local_op(&id, OpKind::Move, Initiator::User, 0, Some("root"));
+            let st = state();
+            journal::open_local_op(st.scope(), &id, OpKind::Move, Initiator::User, 0, Some("root"));
             move_files_with_progress_inner(
                 &events,
                 &id,
-                &state(),
+                &st,
                 std::slice::from_ref(s),
                 &dst,
                 &WriteOperationConfig::default(),
             )
             .expect("move");
-            journal::finalize_op(&id, OpKind::Move, ExecutionStatus::Done);
+            journal::finalize_op(st.scope(), OpKind::Move, ExecutionStatus::Done);
         }
         t.elapsed()
     };
@@ -708,18 +716,19 @@ fn same_fs_move_dir_records_search_leaves() {
 
     install_canned_leaves(SearchCoverage::Full, None, &["p.jpg"]);
     let op_id = "op-move-leaves";
-    journal::open_local_op(op_id, OpKind::Move, Initiator::User, 0, Some("root"));
+    let st = state();
+    journal::open_local_op(st.scope(), op_id, OpKind::Move, Initiator::User, 0, Some("root"));
     let events = CollectorEventSink::new();
     move_files_with_progress_inner(
         &events,
         op_id,
-        &state(),
+        &st,
         std::slice::from_ref(&src),
         &dst,
         &WriteOperationConfig::default(),
     )
     .expect("move");
-    journal::finalize_op(op_id, OpKind::Move, ExecutionStatus::Done);
+    journal::finalize_op(st.scope(), OpKind::Move, ExecutionStatus::Done);
     super::journal_search::test_hook::clear();
 
     let conn = open_read_connection(&jdb).expect("read conn");

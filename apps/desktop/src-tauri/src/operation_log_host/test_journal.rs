@@ -9,7 +9,7 @@ use super::operation_log;
 
 /// Holds the shared [`operation_log()`]'s journal slot for one test.
 ///
-/// The write engine reaches the shared handle by `op_id`, so a test that wants
+/// The shared test engine journals into the shared handle, so a test that wants
 /// its operations journaled installs a journal there. nextest forks a process per
 /// test, so the handle is hermetic there, but plain `cargo test` runs the whole
 /// crate's tests as threads in ONE process, where concurrent installs and

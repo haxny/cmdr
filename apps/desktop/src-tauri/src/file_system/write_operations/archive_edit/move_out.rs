@@ -14,7 +14,7 @@ use std::time::Duration;
 use super::super::OperationEventSink;
 use super::super::manager::{self, ManagedTaskGuard, OperationDescriptor, OperationSummaryText};
 use super::super::operation_intent::is_cancelled;
-use super::super::state::{WriteOperationState, WriteSettledGuard};
+use super::super::state::WriteSettledGuard;
 use super::super::summary::volume_items;
 use super::super::types::ReadOnlySide;
 use super::super::types::{
@@ -101,7 +101,10 @@ pub(crate) async fn route_archive_move_out(
 
     let operation_id = cmdr_operation_log::new_operation_id();
     let progress_interval_ms = config.progress_interval_ms;
-    let state = Arc::new(WriteOperationState::new(Duration::from_millis(progress_interval_ms)));
+    let state = Arc::new(
+        crate::file_system::write_operations::installed()
+            .new_operation_state(Duration::from_millis(progress_interval_ms)),
+    );
 
     // The op holds BOTH lanes (the archive's parent drive AND the destination),
     // so it serializes against other work on either device. The archive delete

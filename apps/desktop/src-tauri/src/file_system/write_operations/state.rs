@@ -14,6 +14,7 @@ use super::eta::{EtaEstimator, EtaSample, ReversalBar};
 use super::host::OperationEventSink;
 use super::human_wait::HumanWaitClock;
 use super::outage_slot::{OutagePolicy, OutageSlot};
+use super::scope::OpScope;
 use super::sources_gone_slot::SourcesGoneSlot;
 use super::types::{
     ConflictId, ConflictResolution, ConflictResolutionOutcome, TransferActivity, TransferWaitReason,
@@ -45,6 +46,9 @@ pub(super) use super::scan_cache::{CachedScanResult, FileInfo, ScanPreviewState,
 
 /// State for an in-progress write operation.
 pub struct WriteOperationState {
+    /// What this operation reaches its engine through: the host's seams, the
+    /// status cache, and its journal. Fixed when the engine built the state.
+    scope: Arc<OpScope>,
     /// Shared with native copy operations for cancellation checks.
     /// Encodes `OperationIntent` as a `u8`. Use `is_cancelled()` / `load_intent()` to read.
     pub intent: Arc<AtomicU8>,
@@ -271,14 +275,23 @@ pub struct WriteOperationState {
 }
 
 impl WriteOperationState {
-    /// Construct a fresh state for a new operation. Use this from every
-    /// `*_files_start` entry point; keeps the field list out of every call
-    /// site so adding new state members (like the estimator) is one-line.
+    /// A fresh state on the shared test engine (the bench's detached one), for a
+    /// test that drives an engine function directly. Production states come from
+    /// the engine that runs them (`Operations::new_operation_state`).
+    #[cfg(any(test, feature = "transfer-bench"))]
     pub fn new(progress_interval: Duration) -> Self {
+        super::installed().new_operation_state(progress_interval)
+    }
+
+    /// A fresh state for a new operation that reaches its engine through
+    /// `scope`. Keeps the field list out of every call site so adding new state
+    /// members (like the estimator) is one-line.
+    pub(super) fn scoped(progress_interval: Duration, scope: Arc<OpScope>) -> Self {
         // One clock, two owners: whichever of them parks the operation, the
         // estimator reads the union.
         let human_wait = HumanWaitClock::shared();
         Self {
+            scope,
             intent: Arc::new(AtomicU8::new(OperationIntent::Running as u8)),
             progress_interval,
             conflict_slot: ConflictSlot::new(Arc::clone(&human_wait)),
@@ -312,6 +325,17 @@ impl WriteOperationState {
             #[cfg(test)]
             intent_write_gap: std::sync::Mutex::new(None),
         }
+    }
+
+    /// What this operation reaches its engine through.
+    pub(crate) fn scope(&self) -> &OpScope {
+        &self.scope
+    }
+
+    /// The same scope, for a part of the operation that runs apart from its
+    /// state (a blocking task holding only what it needs).
+    pub(crate) fn shared_scope(&self) -> Arc<OpScope> {
+        Arc::clone(&self.scope)
     }
 
     /// Records that this operation had to wait in the queue. The manager's call.

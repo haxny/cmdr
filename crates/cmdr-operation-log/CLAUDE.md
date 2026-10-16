@@ -32,8 +32,8 @@ a disposable cache. A Tauri-free crate hosted by the app's `operation_log_host/`
 - **The writer stores terminal state; it does NOT compute eligibility.** That reasoning lives in `capture.rs`. A driver
   may also NOTE a reason the rows can't express (`note_not_rollbackable`, say a directory merge), and a note beats the
   per-kind rule.
-- **Capture is the host's one `OperationLog`, reached by `op_id`, NOT threaded through the pipeline** (❌ never extend
-  `OperationEventSink`).
+- **Capture is the operation's `OpJournal`, fixed at `journal_open` and carried in the write engine's op scope** (❌
+  never extend `OperationEventSink`).
 - **Recording on/off is decided ONCE per op, at open** (`recording.rs`); ❌ never mid-op (half-journaled lies).
 - **A multi-operation undo reverses NEWEST FIRST** (`undo_order`): a later rename batch can take a name an earlier one
   freed. Callers pass ids in APPLY order.

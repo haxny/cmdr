@@ -26,7 +26,6 @@ use super::super::super::event_sinks::OperationEventSink;
 use super::super::super::journal;
 use super::super::super::manager;
 use super::super::super::source_binding::{ExpectedSources, retain_bound_sources_on};
-use super::super::super::state::WriteOperationState;
 use super::super::super::target_names::TargetNames;
 use super::super::super::types::{
     VolumeCopyConfig, WriteOperationConfig, WriteOperationError, WriteOperationStartResult, WriteOperationType,
@@ -168,7 +167,8 @@ pub async fn move_between_volumes(
     // these REAL volume ids (carried on the op state so the test call sites stay
     // unchanged); the deferred's open/finalize bracket uses them directly.
     let state = Arc::new(
-        WriteOperationState::new(Duration::from_millis(config.progress_interval_ms))
+        crate::file_system::write_operations::installed()
+            .new_operation_state(Duration::from_millis(config.progress_interval_ms))
             .with_journal_volumes(source_volume_id.clone(), dest_volume_id.clone()),
     );
     let journal_source_volume_id = source_volume_id.clone();
@@ -242,6 +242,7 @@ pub async fn move_between_volumes(
                 // Journal the cross-volume move under the REAL volume ids (per-leaf
                 // rows land inside `move_volumes_with_progress`; this brackets the op).
                 journal::open_volume_op(
+                    state.scope(),
                     &op_id,
                     OpKind::Move,
                     initiator,
@@ -284,7 +285,7 @@ pub async fn move_between_volumes(
                 };
 
                 journal::finalize_op(
-                    &op_id,
+                    state.scope(),
                     OpKind::Move,
                     journal::execution_status_from_error(result.as_ref().err().map(|f| &f.error)),
                 );

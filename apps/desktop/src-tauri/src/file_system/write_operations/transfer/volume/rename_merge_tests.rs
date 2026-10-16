@@ -461,6 +461,7 @@ async fn journaled_same_volume_move(
     let state =
         Arc::new(WriteOperationState::new(Duration::from_millis(0)).with_journal_volumes("v".into(), "v".into()));
     journal::open_volume_op(
+        state.scope(),
         op_id,
         OpKind::Move,
         Initiator::User,
@@ -472,7 +473,7 @@ async fn journaled_same_volume_move(
     let result =
         move_within_same_volume_with_progress(events, op_id, &state, Arc::clone(volume), sources, destination, config)
             .await;
-    journal::finalize_op(op_id, OpKind::Move, ExecutionStatus::Done);
+    journal::finalize_op(state.scope(), OpKind::Move, ExecutionStatus::Done);
     assert!(result.is_ok(), "expected Ok, got {:?}", result);
 
     let conn = open_read_connection(&db).expect("read conn");

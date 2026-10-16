@@ -5,9 +5,9 @@
 //! recording gate, and the writer once opened. A handle starts detached, so an
 //! operation opened before the journal journals nothing, and the host opens it
 //! once its data dir is known. Two handles share nothing: a test builds its own.
-//! `DETAILS.md` § "The seam: a journal reached by `op_id`".
+//! `DETAILS.md` § "The seam: an operation's journal, fixed at open".
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, RwLock};
 
@@ -17,7 +17,7 @@ use super::capture::{FinalizeInputs, OperationJournal, WriterJournal};
 use super::recording::Recording;
 use super::retention::{self, RetentionLimitsSource};
 use super::rollback::reconcile_rolling_back_on_open;
-use super::store::{OperationLogStore, OperationLogStoreError, SetAside};
+use super::store::{OperationLogStore, OperationLogStoreError};
 use super::types::{NotRollbackableReason, SearchCoverage, SearchCoverageReason};
 use super::writer::{FinalizeOutcome, JournalItem, OpenOperation, OperationLogWriter};
 
@@ -89,13 +89,13 @@ impl OperationLog {
     /// nothing, and a failed open leaves the handle without a journal for good,
     /// which the app survives (it runs without history rather than refusing to
     /// start).
-    pub fn open(&self, db_path: &Path, set_aside: SetAside<'_>) -> Result<(), OpenError> {
+    pub fn open(&self, db_path: &Path, set_aside: &dyn Fn(&Path) -> Option<PathBuf>) -> Result<(), OpenError> {
         if self.inner.open_claimed.swap(true, Ordering::SeqCst) {
             return Err(OpenError::AlreadyOpen);
         }
         // The store owns the schema lifecycle; the writer then opens its own
         // write connection over the now-current schema.
-        OperationLogStore::open_setting_aside(db_path, set_aside).map_err(OpenError::Store)?;
+        OperationLogStore::open(db_path, set_aside).map_err(OpenError::Store)?;
         let writer = OperationLogWriter::spawn(db_path).map_err(OpenError::Writer)?;
         // Resolve any operation a crash left mid-rollback: from its unfinalized
         // inverse op's recorded outcomes, or straight back to rollbackable when no
@@ -141,60 +141,10 @@ impl OperationLog {
             None
         };
         let op_id = open.op_id.clone();
-        match &journal {
-            Some(journal) => journal.open(open),
-            None => self.inner.recording.hold_unrecorded(&op_id),
+        if let Some(journal) = &journal {
+            journal.open(open);
         }
-        OpJournal {
-            log: self.clone(),
-            op_id,
-            journal,
-        }
-    }
-
-    // shim: removed in M6a
-    /// [`OpJournal::record_items`] by `op_id`, for a caller that doesn't carry
-    /// its operation's [`OpJournal`].
-    pub fn record_items(&self, op_id: &str, items: Vec<JournalItem>) {
-        if let Some(journal) = self.journal_of(op_id) {
-            journal.record_items(op_id, items);
-        }
-    }
-
-    // shim: removed in M6a
-    /// [`OpJournal::note_coverage`] by `op_id`.
-    pub fn note_coverage(&self, op_id: &str, coverage: SearchCoverage, reason: Option<SearchCoverageReason>) {
-        if let Some(journal) = self.journal_of(op_id) {
-            journal.note_search_coverage(op_id, coverage, reason);
-        }
-    }
-
-    // shim: removed in M6a
-    /// [`OpJournal::note_not_rollbackable`] by `op_id`.
-    pub fn note_not_rollbackable(&self, op_id: &str, reason: NotRollbackableReason) {
-        if let Some(journal) = self.journal_of(op_id) {
-            journal.note_not_rollbackable(op_id, reason);
-        }
-    }
-
-    // shim: removed in M6a
-    /// [`OpJournal::finalize`] by `op_id`.
-    pub fn finalize(&self, op_id: &str, inputs: FinalizeInputs) -> FinalizeOutcome {
-        // Released first, so an unrecorded op is forgotten even with no journal.
-        let unrecorded = self.inner.recording.release(op_id);
-        match self.current_journal() {
-            Some(journal) if !unrecorded => journal.finalize(op_id, inputs),
-            _ => NOTHING_WRITTEN,
-        }
-    }
-
-    // shim: removed in M6a
-    /// The journal an operation journals to: none if it opened without one.
-    fn journal_of(&self, op_id: &str) -> Option<Arc<dyn OperationJournal>> {
-        if self.inner.recording.is_unrecorded(op_id) {
-            return None;
-        }
-        self.current_journal()
+        OpJournal { op_id, journal }
     }
 
     fn current_journal(&self) -> Option<Arc<dyn OperationJournal>> {
@@ -209,7 +159,7 @@ impl OperationLog {
         *self.inner.slot.write_ignore_poison() = journal.map(|journal| Published { journal, writer: None });
     }
 
-    /// Recording back on, nothing unrecorded: a shared handle's test teardown.
+    /// Recording back on: a shared handle's test teardown.
     #[cfg(any(test, feature = "testing"))]
     pub fn reset_recording(&self) {
         self.inner.recording.reset();
@@ -224,13 +174,21 @@ const NOTHING_WRITTEN: FinalizeOutcome = FinalizeOutcome {
 
 /// One operation's journal, fixed when it opened: the operation is wholly
 /// journaled or wholly not. Every method no-ops for an unjournaled operation.
+///
+/// The operation carries it from open to finalize (the write engine keeps it in
+/// the operation's scope); a clone is the same operation's journal.
+#[derive(Clone)]
 pub struct OpJournal {
-    log: OperationLog,
     op_id: String,
     journal: Option<Arc<dyn OperationJournal>>,
 }
 
 impl OpJournal {
+    /// The operation this journal records.
+    pub fn op_id(&self) -> &str {
+        &self.op_id
+    }
+
     /// Record item rows (buffered and batched by the journal).
     pub fn record_items(&self, items: Vec<JournalItem>) {
         if let Some(journal) = &self.journal {
@@ -259,10 +217,7 @@ impl OpJournal {
     pub fn finalize(self, inputs: FinalizeInputs) -> FinalizeOutcome {
         match &self.journal {
             Some(journal) => journal.finalize(&self.op_id, inputs),
-            None => {
-                self.log.inner.recording.release(&self.op_id);
-                NOTHING_WRITTEN
-            }
+            None => NOTHING_WRITTEN,
         }
     }
 }
