@@ -713,7 +713,7 @@ crate::downloads::note_pending_write_for_cmdr(&actual_dest);
 let bytes = copy_file_with_strategy(source, &actual_dest, ..)?;
 ```
 
-See also: `apps/desktop/src-tauri/src/downloads/CLAUDE.md` for the watcher architecture, ignore-set internals, and the FDA-gated lifecycle. End-to-end safety net for the contract lives in `downloads::runtime::tests::note_pending_write_for_cmdr_suppresses_watcher_event_end_to_end`.
+See also: `apps/desktop/src-tauri/src/downloads/CLAUDE.md` for the watcher architecture, ignore-set internals, and the FDA-gated lifecycle. End-to-end safety net for the contract lives in `downloads::runtime::tests::note_pending_write_for_cmdr_suppresses_watcher_event_end_to_end`. Each write path's exact announce sequence (which paths, in what order, and whether each existed yet) is pinned in `own_write_announce_tests.rs`, over the test-only recorder in `apps/desktop/src-tauri/src/downloads/own_write_recorder.rs`; a new write path gets a cell there.
 
 ## Events emitted
 

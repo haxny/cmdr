@@ -39,6 +39,10 @@ reproduced). `downloads::watcher_test::note_pending_write_never_resolves_the_pat
 `file_system/write_operations/` (copy, move, delete walker, trash, volume strategy); renames register BOTH halves. See
 `file_system/write_operations/DETAILS.md` for the write-side contract.
 
+Under `cfg(test)` the hook also feeds `own_write_recorder.rs`, BEFORE the watcher check (tests run with no watcher): a
+process-wide registry keyed by each test's root, recording every call with whether its path existed yet. Never per
+thread, since managed ops write from the blocking pool.
+
 ## Global go-to-latest hotkey
 
 The default global combo is `⌃⌥⌘J` (settings key `behavior.fileSystemWatching.globalGoToLatestShortcut.binding`).

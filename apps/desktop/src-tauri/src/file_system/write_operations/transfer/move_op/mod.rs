@@ -613,7 +613,7 @@ fn merge_move_directory(
 /// The rig both local-move suites share (engine call-throughs, operation state).
 #[cfg(test)]
 #[path = "test_support.rs"]
-pub(super) mod test_support;
+pub(in crate::file_system::write_operations) mod test_support;
 
 #[cfg(test)]
 #[path = "move_op_tests.rs"]

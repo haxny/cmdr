@@ -67,6 +67,8 @@ mod filter;
 pub mod global_shortcut;
 mod ignore_set;
 mod latest_ring;
+#[cfg(test)]
+pub(crate) mod own_write_recorder;
 pub mod runtime;
 pub mod watcher;
 #[cfg(test)]

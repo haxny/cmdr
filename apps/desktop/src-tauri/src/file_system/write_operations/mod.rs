@@ -797,6 +797,9 @@ pub(crate) mod backend_suites;
 mod journal_capture_tests;
 #[cfg(test)]
 mod journal_capture_volume_tests;
+// Every write path announces each own write before the syscall that makes it.
+#[cfg(test)]
+mod own_write_announce_tests;
 #[cfg(test)]
 mod scan_bridge_tests;
 // A walk that stops on a missing or unreadable item fails its operation naming that item.

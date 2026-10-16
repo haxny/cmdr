@@ -35,7 +35,7 @@ pub(in crate::file_system::write_operations::transfer) fn run_same_fs_move(
 
 /// Drives a cross-FS local move (`move_with_staging`) of `sources` into
 /// `dst_dir` under the given resolution.
-pub(in crate::file_system::write_operations::transfer) fn run_cross_fs_move(
+pub(in crate::file_system::write_operations) fn run_cross_fs_move(
     sources: &[PathBuf],
     dst_dir: &Path,
     resolution: ConflictResolution,

@@ -255,6 +255,9 @@ pub fn note_pending_write_for_cmdr(path: &Path) {
 /// use this to shrink/grow the window; production code should use the
 /// default.
 pub fn note_pending_write_for_cmdr_with_ttl(path: &Path, ttl: Duration) {
+    // Before the watcher check: tests run with no watcher installed.
+    #[cfg(test)]
+    super::own_write_recorder::note(path);
     with_watcher(|w| w.note_pending_write(path.to_path_buf(), ttl));
 }
 
