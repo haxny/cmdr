@@ -393,11 +393,11 @@ All under `apps/desktop/src-tauri/src/`.
 ## Workspace crates
 
 All under `crates/`, alongside the four apps. `cmdr-fs`, `cmdr-index`, `cmdr-archive`, `cmdr-smb`, `cmdr-sftp`,
-`cmdr-webdav`, `cmdr-s3`, `cmdr-adb`, `cmdr-mtp`, `cmdr-git`, `cmdr-http`, `cmdr-listing`, and `cmdr-update-trust` carry
-no `tauri` dependency and no reach into the app; `index-crate-isolation` enforces that against the `cargo metadata`
-graph, and caps the public surface of `cmdr-index`, `cmdr-archive`, `cmdr-smb`, `cmdr-sftp`, `cmdr-webdav`, `cmdr-s3`,
-`cmdr-mtp`, `cmdr-git`, and `cmdr-listing` at the numbers their audits landed on. The two dev CLIs and the vendored fork
-are ordinary members.
+`cmdr-webdav`, `cmdr-s3`, `cmdr-adb`, `cmdr-mtp`, `cmdr-git`, `cmdr-http`, `cmdr-listing`, `cmdr-collation`, and
+`cmdr-update-trust` carry no `tauri` dependency and no reach into the app; `index-crate-isolation` enforces that against
+the `cargo metadata` graph, and caps the public surface of `cmdr-index`, `cmdr-archive`, `cmdr-smb`, `cmdr-sftp`,
+`cmdr-webdav`, `cmdr-s3`, `cmdr-mtp`, `cmdr-git`, `cmdr-listing`, and `cmdr-collation` at the numbers their audits
+landed on. The two dev CLIs and the vendored fork are ordinary members.
 
 - `crates/cmdr-fs/`: the filesystem vocabulary and host primitives every layer speaks in — the `Volume` trait and its
   data types, `FileEntry`, typed error classification (`ListingError` / `ListingErrorReason` / `ErrorCategory`, errno →
@@ -416,9 +416,12 @@ are ordinary members.
   - `src/apple_double.rs`: whether a listed `._name` is the AppleDouble sidecar the kernel serves as its sibling's
     xattrs (FAT, exFAT, a stream-less SMB share), so a copy skips it as a file: its contents already travel as xattrs
 - `crates/cmdr-listing/`: the directory listing engine behind every pane: streaming reads with progress and stall
-  reporting, the listing cache, sorting and Unicode collation, pane row numbers, the quick filter, and the diffs that
-  keep a pane current. One handle (`Listings`) that a host builds with explicit seams; Cmdr's host is `listing_host/`.
-  See `crates/cmdr-listing/CLAUDE.md`
+  reporting, the listing cache, sorting, pane row numbers, the quick filter, and the diffs that keep a pane current. One
+  handle (`Listings`) that a host builds with explicit seams; Cmdr's host is `listing_host/`. See
+  `crates/cmdr-listing/CLAUDE.md`
+- `crates/cmdr-collation/`: how two file names rank (`NameCollator`, ICU4X Unicode collation with numeric ordering, and
+  the prebuilt `NameKey` a bulk sort compares). Below the listing engine, which re-exports it, so anything that orders
+  names sorts the way a pane does without depending on the listing. See `crates/cmdr-collation/CLAUDE.md`
 - `crates/cmdr-http/`: the one door every HTTP client is built through (`client_builder()`), and the proxy routing
   behind it: loopback and link-local always direct, then the `*_PROXY` variables, then macOS's own verdict per URL
   (manual proxy, bypass list, PAC, WPAD). The app, `cmdr-webdav`, and `cmdr-s3` all build on it, and `clippy.toml`

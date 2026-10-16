@@ -1,25 +1,29 @@
+// The lint set this crate is held to lives in the workspace root's
+// `[workspace.lints]`, opted into by `Cargo.toml`'s `lints.workspace = true`.
+// `unused_crate_dependencies` can't go with them: it's judged per compilation
+// unit, so it belongs on the lib alone. `missing_docs` and `unreachable_pub` are
+// this crate's own contract, as in every crate whose surface is capped.
+#![warn(unused_crate_dependencies)]
+#![warn(unreachable_pub)]
+#![deny(missing_docs)]
+
 //! How file names rank against each other.
 //!
 //! One Unicode collator, shared by every list the app orders. It answers the
 //! same question two ways: [`NameCollator::compare`] for a one-off comparison,
 //! and [`NameCollator::key`] for a byte key that a bulk sort builds once per row
 //! and then compares directly. The two agree by construction (a sort key IS the
-//! collation weights, serialized), and `sorting_test` pins that they do.
+//! collation weights, serialized), and the tests below and `cmdr-listing`'s
+//! `collation_test` pin that they do.
 //!
-//! Rationale, the alternatives weighed, and the measurements: `DETAILS.md`
-//! § "Collating names".
+//! Rationale, the alternatives weighed, and the measurements: `DETAILS.md`.
 
 use std::cmp::Ordering;
-use std::sync::Arc;
 
 use icu_collator::options::{CollatorOptions, Strength};
 use icu_collator::preferences::CollationNumericOrdering;
 use icu_collator::{Collator, CollatorBorrowed, CollatorPreferences};
 use icu_locale_core::Locale;
-
-use cmdr_fs::ignore_poison::RwLockIgnorePoison;
-
-use crate::Inner;
 
 /// A file name's collation weights, serialized to bytes that order the same way
 /// the collator does.
@@ -46,7 +50,12 @@ pub struct NameCollator {
 }
 
 impl NameCollator {
-    fn new(locale: &str) -> Self {
+    /// Builds the collator for `locale`, a BCP 47 tag like `sv` or `en-US`.
+    ///
+    /// A tag that doesn't parse falls back to the root locale rather than
+    /// failing, so a broken setting still sorts. Building one loads ICU data, so
+    /// a caller that sorts often keeps one per locale.
+    pub fn new(locale: &str) -> Self {
         Self {
             inner: build(locale)
                 .unwrap_or_else(|| build("und").expect("ICU4X ships compiled collation data for the root locale")),
@@ -92,34 +101,6 @@ fn build(locale: &str) -> Option<CollatorBorrowed<'static>> {
     options.strength = Some(Strength::Tertiary);
 
     Collator::try_new(prefs, options).ok()
-}
-
-impl Inner {
-    /// The collator for the locale the user reads now, built once per locale.
-    ///
-    /// A language switch is picked up here rather than pushed: the host's
-    /// [`ReadingLocale`](super::host::ReadingLocale) answers the language the user
-    /// reads now, so the next sort asks for a collator for the new language.
-    /// Listings already sorted keep their order until something re-reads them, the
-    /// same way they do when the sort column changes.
-    ///
-    /// Locales are a bounded set (14 catalogs ship), so the cache never grows past
-    /// a handful of entries.
-    ///
-    /// ❗ Ask before taking the listing cache: it asks the host.
-    pub(crate) fn collator(&self) -> Arc<NameCollator> {
-        let locale = self.locale();
-
-        if let Some(cached) = self.collators.read_ignore_poison().get(&locale) {
-            return Arc::clone(cached);
-        }
-
-        let collator = Arc::new(NameCollator::new(&locale));
-        self.collators
-            .write_ignore_poison()
-            .insert(locale, Arc::clone(&collator));
-        collator
-    }
 }
 
 #[cfg(test)]

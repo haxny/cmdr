@@ -17,9 +17,9 @@ use cmdr_fs::volume::Volume;
 use tokio::runtime::Handle;
 
 use crate::Inner;
-use crate::collation::NameCollator;
 use crate::host::ListingOverlay;
 use crate::sorting::{DirectorySortMode, SortColumn, SortOrder, sort_entries};
+use cmdr_collation::NameCollator;
 
 /// What a cache update knows about the [`ListingOverlay`] rows inside the
 /// entries it is about to write.

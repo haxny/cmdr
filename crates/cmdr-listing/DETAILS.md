@@ -483,15 +483,11 @@ row order".
 
 ### Collating names
 
-`collation.rs` owns the one answer to "how do two names rank". It wraps an ICU4X `Collator` built for the locale the
-host's `ReadingLocale` seam reports (Cmdr's answer: `intl::active_locale()`), with numeric ordering on.
-
-**Why a collator and not code-point order.** macOS stores whatever bytes a writer hands it, so a single folder holds
-both spellings of an accented name: Cocoa writers emit NFD (`a` + U+0301), browsers and most others NFC (U+00E1).
-Comparing code points decides at that character and orders by the SPELLING, which put `…Dávid…-signed.pdf` above
-`…Dáviad…-araw.pdf` in a real `~/Downloads` (5 of its names were NFD, 7 NFC). Code points also rank by number rather
-than by category, which stranded every accented letter after `z` and every `_name` below every `2026-…` name, where
-Finder, Total Commander, and Explorer all put `_` first.
+Names rank by `cmdr-collation`'s `NameCollator`, built for the locale the host's `ReadingLocale` seam reports (Cmdr's
+answer: `intl::active_locale()`). Why a collator and not code points, the options it's built with, the raw-bytes
+tiebreak both readings end with, the `unstable` ICU feature, and ❌ never persisting a `NameKey`:
+`crates/cmdr-collation/DETAILS.md`. This crate re-exports `NameCollator`, so a host names it as
+`cmdr_listing::NameCollator`.
 
 **One order, two readings.** `NameCollator::compare` collates a pair live; `NameCollator::key` serializes one name's
 weights to bytes that sort the same way. The bulk `sort_entries` builds a key per row and sorts on those, so a 100k
@@ -504,7 +500,7 @@ code-point comparator it replaced, and keying once per row lands ahead of it ins
 by Name, release build, M-series laptop, 2026-09-08: **105 ms, against 228 ms** for the previous `to_lowercase` +
 `alphanumeric-sort` comparator on the same rows. The new figure covers the whole of `sort_entries` (key building, the
 index sort, and the permutation). `collation_test::the_bulk_sort_and_the_live_comparator_agree_on_unicode_names` and
-`collation::tests::a_key_ranks_names_the_way_compare_does` pin that they never diverge.
+`cmdr-collation`'s `tests::a_key_ranks_names_the_way_compare_does` pin that they never diverge.
 
 Sorting is covered by three suites, split along the questions they answer rather than by size: `sorting_test` (which
 column, which direction, and the edge cases), `sorting_dir_mode_test` (`DirectorySortMode`, so how a directory ranks
@@ -514,23 +510,13 @@ stays in that suite.
 
 The fixture each suite needs is what marks the seam. `collation_test` fixes the reading language per engine
 (`testing::FixedLocale`), which is why case-insensitive ordering is tested THERE and not beside the other column tests:
-case folding is a collation question, so `to_lowercase` would answer it wrongly (see the raw-bytes-tiebreak note above).
-`sorting_dir_mode_test` owns the honest-size directory builder. Each file's header names its two neighbours, so the
-boundary is legible from whichever one you open first.
+case folding is a collation question, so `to_lowercase` would answer it wrongly (`crates/cmdr-collation/DETAILS.md` §
+"The options"). `sorting_dir_mode_test` owns the honest-size directory builder. Each file's header names its two
+neighbours, so the boundary is legible from whichever one you open first.
 
-**Both readings end with a raw-bytes tiebreak**, because the NFC and NFD spellings of one name carry identical collation
-weights and would otherwise compare `Equal`. Without a total order the watcher's re-read could order such a pair either
-way between two passes, and `compute_diff` would report a `DiffChangeType::Move` for a row that never moved.
-
-**❌ Never persist a `NameKey`.** The bytes are ICU4X's internal encoding, and a library or CLDR update may re-tune
-them. That is harmless while every key in a comparison came from the running binary, and silently wrong the moment a
-stored key meets a fresh one.
-
-**On the `unstable` feature.** `write_sort_key_to` sits behind `icu_collator`'s `unstable` flag, which ICU4X exempts
-from semver (it may change in a minor release). Every shape that change can take is a compile error, since the only
-surface used is that one call and `Vec<u8>`'s upstream `CollationKeySink` impl; `Cargo.lock` is committed, so a break
-arrives as a red Renovate PR rather than on `main`. What type checking cannot see is a change to the key BYTES, which is
-what the never-persist rule and the ordering tests above cover.
+**The tiebreak keeps diffs honest.** Without the raw-bytes tiebreak's total order, the watcher's re-read could order the
+NFC and NFD spellings of one name either way between two passes, and `compute_diff` would report a
+`DiffChangeType::Move` for a row that never moved.
 
 **Locale changes are pulled, not pushed.** `Inner::collator` caches one collator per locale tag and re-asks the host's
 `ReadingLocale` on each call, so the next sort after an OS language switch uses the new language. Listings already

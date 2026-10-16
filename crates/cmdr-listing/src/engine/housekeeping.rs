@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use crate::collation::NameCollator;
+use cmdr_collation::NameCollator;
 
 use super::Listings;
 

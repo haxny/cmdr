@@ -41,7 +41,6 @@ use {libc as _, tempfile as _, uuid as _};
 mod authoritative;
 mod cached_listing;
 mod caching;
-mod collation;
 mod compare;
 mod diff;
 mod diff_emitter;
@@ -70,7 +69,7 @@ pub mod testing;
 mod visible_rows;
 
 pub use caching::ListingSummary;
-pub use collation::NameCollator;
+pub use cmdr_collation::NameCollator;
 pub use compare::{CompareDirectoriesError, CompareDirectoriesMode, CompareDirectoriesResult};
 pub use diff::{DiffChange, DiffChangeType, DirectoryDiffBatch};
 pub use engine::{Listings, ListingsBuilder};
@@ -94,6 +93,8 @@ use std::sync::{Arc, RwLock, Weak};
 use std::time::Instant;
 
 use tokio::runtime::Handle;
+
+use cmdr_fs::ignore_poison::RwLockIgnorePoison;
 
 use cached_listing::{CachedListing, ListingPath};
 use diff_emitter::DiffQueue;
@@ -149,7 +150,7 @@ pub(crate) struct Inner {
     read_generations: AtomicU64,
     /// Every volume's listing reads, and which of them are hung (`stall.rs`).
     hung_reads: Arc<HungReads>,
-    /// One collator per locale tag (`collation.rs`).
+    /// One collator per locale tag (`Inner::collator`).
     collators: RwLock<HashMap<String, Arc<NameCollator>>>,
 }
 
@@ -175,6 +176,32 @@ impl Inner {
     /// Which language names collate in, as the host answers it now.
     fn locale(&self) -> String {
         self.locale.locale()
+    }
+
+    /// The collator for the locale the user reads now, built once per locale.
+    ///
+    /// A language switch is picked up here rather than pushed: the host's
+    /// [`ReadingLocale`] answers the language the user reads now, so the next sort
+    /// asks for a collator for the new language. Listings already sorted keep their
+    /// order until something re-reads them, the same way they do when the sort
+    /// column changes.
+    ///
+    /// Locales are a bounded set (14 catalogs ship), so the cache never grows past
+    /// a handful of entries.
+    ///
+    /// ❗ Ask before taking the listing cache: it asks the host.
+    pub(crate) fn collator(&self) -> Arc<NameCollator> {
+        let locale = self.locale();
+
+        if let Some(cached) = self.collators.read_ignore_poison().get(&locale) {
+            return Arc::clone(cached);
+        }
+
+        let collator = Arc::new(NameCollator::new(&locale));
+        self.collators
+            .write_ignore_poison()
+            .insert(locale, Arc::clone(&collator));
+        collator
     }
 
     /// The stall policy production reads use, and this engine's registry of

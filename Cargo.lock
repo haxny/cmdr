@@ -1523,6 +1523,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "cmdr-collation"
+version = "0.0.0"
+dependencies = [
+ "icu_collator",
+ "icu_locale_core",
+]
+
+[[package]]
 name = "cmdr-fs"
 version = "0.0.0"
 dependencies = [
@@ -1636,11 +1644,10 @@ dependencies = [
 name = "cmdr-listing"
 version = "0.0.0"
 dependencies = [
+ "cmdr-collation",
  "cmdr-fs",
  "cmdr-listing",
  "futures-util",
- "icu_collator",
- "icu_locale_core",
  "libc",
  "log",
  "nucleo-matcher",

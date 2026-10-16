@@ -47,13 +47,10 @@ tokio = { version = "1", features = ["macros", "rt", "sync", "time"] }
 # `CancellationToken`: cancel detaches a read without aborting it. Same version
 # and feature shape as `cmdr-fs`'s, so no second copy enters the graph.
 tokio-util = { version = "0.7.18", default-features = false }
-# Unicode collation for file-name ordering: normalization-insensitive, numeric
-# ordering (so `img_9` precedes `img_10`), and locale-correct accent placement.
-# `unstable` is for `write_sort_key_to`; ICU4X exempts it from semver, and an API
-# change there is a compile error, never a silent one. ❌ Never persist a key:
-# `src/collation.rs`.
-icu_collator = { version = "2.3.1", features = ["unstable"] }
-icu_locale_core = "2.2"
+# How file names rank (`NameCollator`, re-exported at the root so a host sorts
+# the way a listing does). Its own crate, so code that only orders names (the
+# write engine's tree order) needn't depend on the listing engine.
+cmdr-collation = { path = "../cmdr-collation" }
 # The stall watch polls every read of a volume at once (`FuturesUnordered`).
 futures-util = "0.3"
 # Fuzzy matcher for the in-directory "type to jump" feature (`fuzzy_jump.rs`).

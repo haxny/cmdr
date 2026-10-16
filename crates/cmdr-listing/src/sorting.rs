@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use serde::{Deserialize, Serialize};
 
-use crate::collation::{NameCollator, NameKey};
+use cmdr_collation::{NameCollator, NameKey};
 use cmdr_fs::entry::FileEntry;
 
 // ============================================================================
@@ -211,7 +211,7 @@ fn known_dir_size<E: SortableEntry + ?Sized>(e: &E) -> Option<u64> {
 ///
 /// Names rank by Unicode collation, resolved through [`SortableEntry::compare_name`]
 /// so a caller that prebuilt its keys and one comparing live get the same order.
-/// `collation.rs`, and `DETAILS.md` § "Collating names".
+/// `cmdr_collation`, and `DETAILS.md` § "Collating names".
 ///
 /// `collator` is resolved once per sort by the caller, ❗ never per comparison and
 /// never under a cache lock: the engine's collator asks the host for the live

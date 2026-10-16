@@ -329,4 +329,20 @@ var surfaceGuardedCrates = []struct {
 			SubsystemItems: 20,
 		},
 	},
+	{
+		// Measured 2026-10-16, at the extraction, and set to exactly what the crate
+		// exposes, with no headroom (David approved the rule in the #415 plan).
+		//
+		// Two root promises, `NameCollator` (one locale's order) and `NameKey` (the
+		// prebuilt key a bulk sort compares), and their four methods as the items:
+		// `NameCollator::new`, `compare`, and `key`, and `NameKey::compare`. There is
+		// no handle and no public module: the whole crate is `lib.rs`. Item-by-item:
+		// `crates/cmdr-collation/DETAILS.md` § "The public surface is capped".
+		Name: "cmdr-collation",
+		Ceilings: surfaceCeilings{
+			RootPromises:   2,
+			PublicModules:  0,
+			SubsystemItems: 4,
+		},
+	},
 }

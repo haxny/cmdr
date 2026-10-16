@@ -10,7 +10,7 @@ Tauri-free; Cmdr hosts it from `apps/desktop/src-tauri/src/listing_host/`.
 - Read: **streaming.rs**, **stall.rs**, **pipeline.rs**, **reread.rs**, **refresh.rs**, **foreign_path.rs**. Cache:
   **cached_listing.rs**, **caching.rs** (lookups, change intake), **mutate.rs**, **authoritative.rs**,
   **operations.rs**. Rows: **visible_rows.rs**, **path_index.rs**, **quick_filter.rs**, **diff.rs**,
-  **diff_emitter.rs**. Sort: **sorting.rs**, **collation.rs**.
+  **diff_emitter.rs**. Sort: **sorting.rs** (names collate through `cmdr-collation`).
 
 ## Must-knows
 
@@ -27,8 +27,8 @@ Tauri-free; Cmdr hosts it from `apps/desktop/src-tauri/src/listing_host/`.
 - **No full re-read lands after a newer one** (§ "Read generations"). Overlays fold in only through `Prepared`, and
   observers hear a close AFTER the cache removal.
 - ❌ **Never abort a read**: cancel detaches (an abort wedges an MTP phone), and a stall reports and keeps waiting.
-- **ONE comparator**, `entry_comparator`; a sort change bumps the frontend's `cacheGeneration`. Names collate
-  (`collation.rs`) with a raw-bytes tiebreak, ❌ never code points; ❌ never persist a `NameKey`.
+- **ONE comparator**, `entry_comparator`; a sort change bumps the frontend's `cacheGeneration`. Names collate through
+  `cmdr-collation`, whose must-knows apply here (`crates/cmdr-collation/CLAUDE.md`).
 - **A listing's path is a `ListingPath`** from `ListingPath::on_volume`; ❌ never compare a raw path to it (MTP).
 - **Only a pane open or a Finder drop/paste resolves a foreign spelling**, ❌ never a walker, scan, or refresh.
 - **The orphan reaper keys on `last_accessed_ms`**, which index-size writes never bump.

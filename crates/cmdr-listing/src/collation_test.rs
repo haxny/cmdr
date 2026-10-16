@@ -1,4 +1,4 @@
-//! The order names themselves come out in (`collation.rs`).
+//! The order names themselves come out in (`cmdr_collation`).
 //!
 //! Separate from the column-ordering suite because it answers a different
 //! question and needs a different fixture: each test reads in a language of its

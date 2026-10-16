@@ -61,7 +61,7 @@ path map, so it stays small for a million-file scan. A source the scan never rep
 
 ### Order
 
-`TreeOrder` (`order.rs`): folders first, then files, each by the panes' collator (`crates/cmdr-listing/src/collation.rs`), with the
+`TreeOrder` (`order.rs`): folders first, then files, each by the panes' collator (`crates/cmdr-collation/src/lib.rs`), with the
 collator's raw-bytes tiebreak so the order is total. `sort` builds one key per item; `compare` is the one-off form.
 `TreeOrder::bytewise` (test builds only) keeps the shape without the collator, for the budget cells, where building a
 million keys in an unoptimized build is the whole test budget.
