@@ -411,7 +411,9 @@ async fn a_rename_that_copies_starts_a_move_instead_of_calling_rename() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn the_validity_check_reports_the_move_a_copying_rename_runs_as() {
     let (small_id, _small) = copying_store("copy-validity-small", 3).await;
-    let small = check_rename_validity_impl("/a".into(), "foo".into(), "bar".into(), small_id, None).await;
+    let small = check_rename_validity_impl("/a".into(), "foo".into(), "bar".into(), small_id)
+        .await
+        .priced(|_| false);
     assert_eq!(
         small.by_move,
         Some(RenameByMove {
@@ -423,7 +425,9 @@ async fn the_validity_check_reports_the_move_a_copying_rename_runs_as() {
     );
 
     let (big_id, _big) = copying_store("copy-validity-big", 101).await;
-    let big = check_rename_validity_impl("/a".into(), "foo".into(), "bar".into(), big_id, None).await;
+    let big = check_rename_validity_impl("/a".into(), "foo".into(), "bar".into(), big_id)
+        .await
+        .priced(|_| false);
     let by_move = big.by_move.expect("a copying rename reports its move");
     assert!(by_move.confirm_first, "past 100 files it asks first: {by_move:?}");
     assert!(!by_move.counted_all, "and the count stopped at its cap: {by_move:?}");
@@ -432,8 +436,33 @@ async fn the_validity_check_reports_the_move_a_copying_rename_runs_as() {
     let plain = Arc::new(cmdr_fs::volume::InMemoryVolume::new(&plain_id));
     plain.create_directory(Path::new("/a/foo")).await.unwrap();
     get_volume_manager().register(&plain_id, plain as Arc<dyn Volume>);
-    let one_call = check_rename_validity_impl("/a".into(), "foo".into(), "bar".into(), plain_id, None).await;
+    let one_call = check_rename_validity_impl("/a".into(), "foo".into(), "bar".into(), plain_id)
+        .await
+        .priced(|_| false);
     assert_eq!(one_call.by_move, None, "a one-call rename carries nothing");
+}
+
+/// The check hands the host what a fully counted copying rename carries, and
+/// a move the host prices as costing money asks first. An unfinished count is
+/// never priced: it asks first anyway.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn the_host_prices_what_a_counted_copying_rename_carries() {
+    let (small_id, _small) = copying_store("copy-validity-priced", 3).await;
+    let mut priced = None;
+    let small = check_rename_validity_impl("/a".into(), "foo".into(), "bar".into(), small_id)
+        .await
+        .priced(|facts| {
+            priced = Some((facts.files, facts.bytes, facts.selected_folders));
+            true
+        });
+    assert_eq!(priced, Some((3, 6, 1)), "the price sees the counted folder");
+    assert!(small.by_move.expect("a copying rename reports its move").confirm_first);
+
+    let (big_id, _big) = copying_store("copy-validity-unpriced", 101).await;
+    let big = check_rename_validity_impl("/a".into(), "foo".into(), "bar".into(), big_id)
+        .await
+        .priced(|_| panic!("an unfinished count isn't priced"));
+    assert!(big.by_move.expect("a copying rename reports its move").confirm_first);
 }
 
 /// A few files that cost something to move (young objects on Wasabi) ask
@@ -632,7 +661,9 @@ async fn a_case_only_rename_on_a_case_insensitive_volume_is_not_a_conflict() {
     inner.create_file(Path::new("/share/c.txt"), b"abcd").await.unwrap();
     get_volume_manager().register(&volume_id, Arc::new(CaseFoldingVolume { inner }) as Arc<dyn Volume>);
 
-    let check = check_rename_validity_impl("/share".into(), "c.txt".into(), "C.txt".into(), volume_id, None).await;
+    let check = check_rename_validity_impl("/share".into(), "c.txt".into(), "C.txt".into(), volume_id)
+        .await
+        .priced(|_| false);
 
     assert!(check.valid, "{check:?}");
     assert!(
@@ -652,7 +683,9 @@ async fn a_case_only_rename_onto_a_real_sibling_is_still_a_conflict() {
     volume.create_file(Path::new("/share/C.txt"), b"other!").await.unwrap();
     get_volume_manager().register(&volume_id, volume as Arc<dyn Volume>);
 
-    let check = check_rename_validity_impl("/share".into(), "c.txt".into(), "C.txt".into(), volume_id, None).await;
+    let check = check_rename_validity_impl("/share".into(), "c.txt".into(), "C.txt".into(), volume_id)
+        .await
+        .priced(|_| false);
 
     assert!(check.has_conflict, "{check:?}");
     assert!(!check.is_case_only_rename, "`C.txt` is a different file: {check:?}");

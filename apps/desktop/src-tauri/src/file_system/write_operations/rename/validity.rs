@@ -3,6 +3,10 @@
 //! volume elsewhere), and, where the rename copies (`Volume::rename_work`), what
 //! the move it runs as would carry (`RenameByMove`). Read-only and unmanaged:
 //! it runs on commit, never through the operation manager.
+//!
+//! What that move costs is the host's to say: the check hands back what it
+//! counted ([`RenameValidityCheck`]), and the host prices it before the editor
+//! hears the answer.
 
 use std::path::{Path, PathBuf};
 
@@ -11,7 +15,6 @@ use super::super::host;
 use cmdr_fs::name_fold::fold_name;
 
 use super::super::look_alike::{ListedFolders, NewEntry, place_new_entry};
-use crate::s3_costs;
 use cmdr_fs::volume::{RenameWork, SubtreeTally, Volume};
 
 /// Result of a rename validity check.
@@ -55,6 +58,43 @@ pub(crate) struct RenameByMove {
     pub confirm_first: bool,
 }
 
+/// The editor's answer before the host has priced the move a copying rename
+/// runs as. Only [`priced`](Self::priced) turns it into the
+/// [`RenameValidityResult`] the editor hears, so no answer skips the cost.
+#[derive(Debug)]
+pub(crate) struct RenameValidityCheck {
+    result: RenameValidityResult,
+    /// What a fully counted copying rename carries, in the shape a cost
+    /// estimate prices. `None` when there's no move, or its count didn't finish
+    /// (which asks first anyway).
+    move_to_price: Option<ScanCostFacts>,
+}
+
+impl RenameValidityCheck {
+    fn unpriced(result: RenameValidityResult) -> Self {
+        Self {
+            result,
+            move_to_price: None,
+        }
+    }
+
+    /// The editor's answer, with `costs_something` saying whether moving what
+    /// the rename carries costs money that doesn't round to zero. A move that
+    /// does asks first. Called only when there's a counted move to price.
+    pub(crate) fn priced(self, costs_something: impl FnOnce(&ScanCostFacts) -> bool) -> RenameValidityResult {
+        let Self {
+            mut result,
+            move_to_price,
+        } = self;
+        if let (Some(by_move), Some(facts)) = (result.by_move.as_mut(), move_to_price.as_ref())
+            && costs_something(facts)
+        {
+            by_move.confirm_first = true;
+        }
+        result
+    }
+}
+
 impl RenameByMove {
     /// The verdict for what a bounded count found: anything past
     /// [`SMALL_RENAME_FILES`], a count that couldn't finish, or a cost that
@@ -93,42 +133,42 @@ pub(crate) struct ConflictFileInfo {
 /// Uses inode comparison to detect case-only renames (valid on case-insensitive
 /// APFS). When `volume_id` is not `"root"`, uses the Volume trait for conflict
 /// detection, and the folder's listing for a case-only rename on a volume that
-/// folds case ([`found_the_source_itself`]). `data_dir` is where
-/// the S3 price table is cached, for a rename that runs as a move.
+/// folds case ([`found_the_source_itself`]). A rename that runs as a move comes
+/// back with what it carries, for the caller to price
+/// ([`RenameValidityCheck::priced`]).
 pub(crate) async fn check_rename_validity_impl(
     dir: String,
     old_name: String,
     new_name: String,
     volume_id: String,
-    data_dir: Option<PathBuf>,
-) -> RenameValidityResult {
+) -> RenameValidityCheck {
     use cmdr_fs::validation::{validate_filename, validate_path_length};
 
     let trimmed = new_name.trim();
 
     // Validate filename
     if let Err(error) = validate_filename(trimmed) {
-        return RenameValidityResult {
+        return RenameValidityCheck::unpriced(RenameValidityResult {
             valid: false,
             error: Some(error),
             has_conflict: false,
             is_case_only_rename: false,
             conflict: None,
             by_move: None,
-        };
+        });
     }
 
     // Validate resulting path length
     let new_path = PathBuf::from(&dir).join(trimmed);
     if let Err(error) = validate_path_length(&new_path) {
-        return RenameValidityResult {
+        return RenameValidityCheck::unpriced(RenameValidityResult {
             valid: false,
             error: Some(error),
             has_conflict: false,
             is_case_only_rename: false,
             conflict: None,
             by_move: None,
-        };
+        });
     }
 
     // Check for conflict: does a sibling with this name already exist?
@@ -137,18 +177,25 @@ pub(crate) async fn check_rename_validity_impl(
     if volume_id != "root" {
         // Non-local volume: use Volume trait for conflict detection
         let conflict_info = check_sibling_conflict_via_volume(&volume_id, &old_path, &new_path).await;
-        RenameValidityResult {
-            valid: true,
-            error: None,
-            has_conflict: conflict_info.0,
-            is_case_only_rename: conflict_info.1,
-            conflict: conflict_info.2,
-            by_move: rename_by_move_cost(&volume_id, &old_path, data_dir.as_deref()).await,
+        let (by_move, move_to_price) = match rename_by_move(&volume_id, &old_path).await {
+            Some((by_move, facts)) => (Some(by_move), facts),
+            None => (None, None),
+        };
+        RenameValidityCheck {
+            result: RenameValidityResult {
+                valid: true,
+                error: None,
+                has_conflict: conflict_info.0,
+                is_case_only_rename: conflict_info.1,
+                conflict: conflict_info.2,
+                by_move,
+            },
+            move_to_price,
         }
     } else {
         // Local filesystem: use symlink_metadata with inode comparison
         let conflict_info = check_sibling_conflict(&old_path, &new_path);
-        RenameValidityResult {
+        RenameValidityCheck::unpriced(RenameValidityResult {
             valid: true,
             error: None,
             has_conflict: conflict_info.0,
@@ -156,16 +203,18 @@ pub(crate) async fn check_rename_validity_impl(
             conflict: conflict_info.2,
             // The local disk renames everything in one call.
             by_move: None,
-        }
+        })
     }
 }
 
 /// What renaming `old_path` would carry when it runs as a move, `None` when
 /// it's one call (or the volume is gone, which the rename itself reports).
 /// The count is bounded ([`SMALL_RENAME_FILES`] plus one), so F2 on a huge
-/// folder answers without listing all of it, and its files are what the cost
-/// estimate prices: no request is sent for the estimate itself.
-async fn rename_by_move_cost(volume_id: &str, old_path: &Path, data_dir: Option<&Path>) -> Option<RenameByMove> {
+/// folder answers without listing all of it. A complete count also comes back
+/// as the facts a cost estimate prices (no request is sent for the estimate
+/// itself); until the caller prices them ([`RenameValidityCheck::priced`]), the
+/// verdict asks first only for size or an unfinished count.
+async fn rename_by_move(volume_id: &str, old_path: &Path) -> Option<(RenameByMove, Option<ScanCostFacts>)> {
     // Plain `get`: the drive's own rename cost (an in-zip rename is an archive edit).
     let volume = host::installed().volumes().get(volume_id)?;
     match volume.rename_work(old_path).await {
@@ -180,26 +229,24 @@ async fn rename_by_move_cost(volume_id: &str, old_path: &Path, data_dir: Option<
         }
     };
     // An unfinished count asks first anyway, so only a complete one is priced.
-    let costs_something = tally.as_ref().is_some_and(|tally| {
-        tally.complete && {
-            let facts = ScanCostFacts {
-                files: usize::try_from(tally.files).unwrap_or(usize::MAX),
-                dirs: usize::try_from(tally.folders).unwrap_or(usize::MAX),
-                bytes: tally.bytes,
-                per_file: Some(tally.per_file.clone()),
-                // The renamed entry is the one selected item: a folder, or a
-                // file past the part floor.
-                selected_folders: usize::from(tally.folders > 0),
-                selected_file_sizes: if tally.folders > 0 {
-                    Vec::new()
-                } else {
-                    vec![tally.bytes]
-                },
-            };
-            !s3_costs::rounds_to_zero(&s3_costs::estimate_rename(volume_id, &facts, data_dir))
-        }
-    });
-    Some(RenameByMove::from_tally(tally, costs_something))
+    let move_to_price = tally
+        .as_ref()
+        .filter(|tally| tally.complete)
+        .map(|tally| ScanCostFacts {
+            files: usize::try_from(tally.files).unwrap_or(usize::MAX),
+            dirs: usize::try_from(tally.folders).unwrap_or(usize::MAX),
+            bytes: tally.bytes,
+            per_file: Some(tally.per_file.clone()),
+            // The renamed entry is the one selected item: a folder, or a
+            // file past the part floor.
+            selected_folders: usize::from(tally.folders > 0),
+            selected_file_sizes: if tally.folders > 0 {
+                Vec::new()
+            } else {
+                vec![tally.bytes]
+            },
+        });
+    Some((RenameByMove::from_tally(tally, false), move_to_price))
 }
 
 /// Checks if a file with `new_path` exists and whether it's the same inode as `old_path`

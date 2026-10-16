@@ -5,7 +5,9 @@
 //! resolve the `volume_id`, apply the IPC timeout tiers (2 s validity/permission,
 //! the validity check stretched on a live session by `deadline::io_budget`; the
 //! rename answers within `MUTATION_REPLY_DEADLINE` or says it's still running),
-//! and ship the typed `MutationError` the frontend words itself.
+//! and ship the typed `MutationError` the frontend words itself. A rename that
+//! runs as a move is priced here, from what the engine counted
+//! (`s3_costs::estimate_rename`).
 //! Every command in the family speaks that one vocabulary, `check_rename_validity`
 //! included: its answer is a typed `RenameValidityResult`, so the only `Err` it
 //! can produce is the deadline or a panicked task.
@@ -22,6 +24,7 @@ use crate::file_system::write_operations::{
     check_rename_permission_for_volume, check_rename_validity_impl, rename_managed, reply_within,
 };
 use crate::operations_host::wire;
+use crate::s3_costs;
 use cmdr_fs::deadline::timeout_detached_typed;
 
 // ============================================================================
@@ -148,7 +151,13 @@ async fn check_rename_validity_with(
         io_budget_for_volume(&volume_id_str, Duration::from_secs(2)),
         || MutationError::TimedOut,
         |detail| MutationError::Unexpected { detail },
-        async move { Ok(check_rename_validity_impl(expanded_dir, old_name, new_name, volume_id_str, data_dir).await) },
+        async move {
+            // Priced inside the budget, as before: the estimate reads the cached price table.
+            let check = check_rename_validity_impl(expanded_dir, old_name, new_name, volume_id_str.clone()).await;
+            Ok(check.priced(|facts| {
+                !s3_costs::rounds_to_zero(&s3_costs::estimate_rename(&volume_id_str, facts, data_dir.as_deref()))
+            }))
+        },
     )
     .await
 }

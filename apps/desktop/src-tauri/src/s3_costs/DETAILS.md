@@ -36,7 +36,9 @@ the_engine_sends_what_the_estimate_counts` on both fixtures.
   per folder (one `DeleteObjects` per level) with a `swept_object` per file inside, and a `delete_object` per selected
   file. This is also F2's rename by move: the prefilled Move dialog runs the same scan. Before that, `estimate_rename`
   prices the rename editor's own tally (`Volume::tally_subtree`, at most 101 files, the renamed entry as the one
-  selected item) as a same-account move, and any amount that doesn't round to zero (`rounds_to_zero`, the cost line's
+  selected item) as a same-account move: the engine's validity check hands the counted facts back unpriced
+  (`RenameValidityCheck`), and `commands/rename.rs` prices them inside the check's IPC budget, so the engine needs no
+  data dir and never names this module; and any amount that doesn't round to zero (`rounds_to_zero`, the cost line's
   half-a-cent rule) sends the rename to the Move dialog.
 - **Delete**: `stat_selection` per selected item, a `list_folder` per listing page, a `delete_object` per file
   (batched a thousand to a `DeleteObjects`, the way the volume delete sends them), and a `delete_folder` per folder.

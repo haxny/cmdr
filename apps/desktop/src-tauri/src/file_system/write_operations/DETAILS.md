@@ -552,7 +552,10 @@ one delete per object, which needs a scan, byte progress, pause, cancel, conflic
   dialog prefilled with the new name instead of renaming when `confirm_first` is set (past 100 files, a count that
   couldn't finish, or an estimate that doesn't round to zero); it confirms through the `rename_by_move` command. The
   estimate prices the count's own files (`s3_costs::estimate_rename`, no extra request), which is what catches Wasabi
-  billing a young object's remaining days on even a one-file rename. The dialog's scan preview then feeds the cost line
+  billing a young object's remaining days on even a one-file rename. The engine doesn't price: the check returns a
+  `RenameValidityCheck` carrying the complete count as `ScanCostFacts`, and only `priced(costs_something)` turns it
+  into the editor's `RenameValidityResult`, so the IPC layer (`commands/rename.rs`) can't forget the cost and the
+  engine needs no data dir. The dialog's scan preview then feeds the cost line
   it shows (`apps/desktop/src-tauri/src/s3_costs/DETAILS.md`); a rename that starts without the dialog costs nothing
   worth a line.
 - **The MCP rename tool** (autoConfirm) calls `rename_file_replying`, so it takes F2's route; a `StillRunning` reply

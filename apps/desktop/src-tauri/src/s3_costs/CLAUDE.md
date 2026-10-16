@@ -6,7 +6,8 @@ estimator and the price table live in `crates/cmdr-s3/src/cost/`; this module wi
 ## Module map
 
 - `mod.rs`: `estimate`, behind the `estimate_operation_cost` command (`commands/s3.rs`), and its IPC types;
-  `estimate_rename` + `rounds_to_zero`, F2's "ask first?" verdict (`write_operations/rename/validity.rs`).
+  `estimate_rename` + `rounds_to_zero`, F2's "ask first?" verdict, applied in `commands/rename.rs` to what the engine
+  counted (`RenameValidityCheck::priced`).
 - `plan.rs`: the operation plus the scan's files into one `Workload` per S3 provider. Pure.
 - `price_source.rs`: the table in use (server copy, disk cache, bundled fallback) and its background refresh.
 

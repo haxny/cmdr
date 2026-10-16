@@ -114,9 +114,9 @@ async fn smb_integration_a_case_only_rename_asks_nothing_and_lands() {
         "c.txt".into(),
         "C.txt".into(),
         registered.id.clone(),
-        None,
     )
-    .await;
+    .await
+    .priced(|_| false);
     assert!(
         !check.has_conflict || check.is_case_only_rename,
         "the share's only `C.txt` is `c.txt` itself, so F2 asks nothing: {check:?}"
