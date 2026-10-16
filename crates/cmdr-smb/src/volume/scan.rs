@@ -378,6 +378,7 @@ impl SmbVolume {
                                 cmdr_fs::log_detail::LogDetail(&e.to_string())
                             );
                         }
+                        super::session::report_security_refusal(self.inner.host(), &self.inner.volume_id, &e);
                         return Err(map_smb_error(e, &self.to_display_path(&smb_path)));
                     }
                 }

@@ -481,7 +481,10 @@ impl SmbVolume {
                     // same on any connection, so surface it exactly like the main
                     // path. Don't transition the main session's state — this wasn't
                     // its connection.
-                    Err(ListingStop::Smb(e)) => return Err(map_smb_error(e, &display_path)),
+                    Err(ListingStop::Smb(e)) => {
+                        super::session::report_security_refusal(self.inner.host(), &self.inner.volume_id, &e);
+                        return Err(map_smb_error(e, &display_path));
+                    }
                 }
             }
             // Every member is momentarily dead: fall through to the main session,
@@ -572,7 +575,10 @@ impl SmbVolume {
                         // A real per-file error (permission, not-found, …): the same
                         // on any connection; surface it typed, don't touch the main
                         // session's state (this wasn't its connection).
-                        Err(e) => return Err(map_smb_error(e, &display_path)),
+                        Err(e) => {
+                            super::session::report_security_refusal(self.inner.host(), &self.inner.volume_id, &e);
+                            return Err(map_smb_error(e, &display_path));
+                        }
                     }
                 }
             }

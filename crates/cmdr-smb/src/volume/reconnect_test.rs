@@ -202,3 +202,23 @@ fn on_superseded_retires_the_id_but_keeps_the_session() {
         "the watcher belongs to the volume id, which the successor now owns"
     );
 }
+
+/// A reply refused for its signature reaches the host's security seam, under the volume's id,
+/// once per refusal; any other error tells it nothing.
+#[test]
+fn a_refused_signature_reaches_the_security_seam() {
+    use cmdr_fs::volume::host::events::SecurityRefusal;
+    let (vol, events) = volume_with_recorded_events();
+    let refused = || smb2::Error::SignatureInvalid {
+        command: smb2::types::Command::Read,
+        message_id: smb2::types::MessageId(7),
+        reason: smb2::error::SignatureFailure::Mismatch,
+    };
+    let mapped = vol.handle_smb_result::<()>("read", "a.txt", Err(refused()));
+    assert!(matches!(mapped, Err(VolumeError::SignatureInvalid(_))));
+    let _ = vol.handle_smb_result::<()>("read", "a.txt", Err(smb2::Error::Timeout));
+    assert_eq!(
+        events.refusals(),
+        vec![(RECORDED_ID.to_string(), SecurityRefusal::ReplySignatureInvalid)]
+    );
+}

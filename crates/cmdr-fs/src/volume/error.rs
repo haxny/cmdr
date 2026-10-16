@@ -147,6 +147,14 @@ pub enum VolumeError {
     /// what happened; a retry copies the new version. S3-only today (a
     /// server-side copy in parts, `cmdr-s3` `server_copy.rs`).
     SourceChanged(String),
+    /// A reply on a signed session carried a bad or missing signature, so the backend refused
+    /// it rather than trust what it said. Carries what the backend reported, for the
+    /// technical-details panel.
+    ///
+    /// Typed rather than an [`IoError`](Self::IoError): it's a possible sign of tampering
+    /// between the Mac and the server (or a broken network device), not a transport blip, so
+    /// it's never retried and the host records it (`SecurityRefusal`). SMB-only today.
+    SignatureInvalid(String),
     /// Anything the backend couldn't classify further. The classifier
     /// re-dispatches on `raw_os_error` when one is present.
     IoError {
@@ -204,6 +212,7 @@ impl std::fmt::Display for VolumeError {
             Self::StaleDestinationHandle(path) => write!(f, "Destination folder handle was stale: {}", path),
             Self::ColdStorage(path) => write!(f, "In cold storage, needs a restore before reading: {}", path),
             Self::SourceChanged(path) => write!(f, "The source changed during the copy: {}", path),
+            Self::SignatureInvalid(msg) => write!(f, "Reply refused, its signature didn't hold: {}", msg),
             Self::IoError { message, .. } => write!(f, "I/O error: {}", message),
             Self::NeedsPassword { wrong_attempt } => {
                 if *wrong_attempt {

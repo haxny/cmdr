@@ -71,6 +71,7 @@ const VOLUME_MESSAGE: { [K in VolumeError['type']]: (error: Extract<VolumeError,
   sourceChanged: (e) => raw('errors.volume.sourceChanged', { path: e.data }),
   ambiguousName: (e) => raw('errors.volume.ambiguousName', { path: e.data }),
   staleDestinationHandle: () => raw('errors.volume.staleDestinationHandle'),
+  signatureInvalid: () => raw('errors.volume.signatureInvalid'),
   ioError: () => raw('errors.volume.ioError'),
   needsPassword: (e) => raw(e.data.wrongAttempt ? 'errors.volume.passwordRejected' : 'errors.volume.needsPassword'),
   // Git already has its own typed kinds and its own translated factory, so a

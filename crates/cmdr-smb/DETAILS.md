@@ -28,7 +28,12 @@ Here, because the answer is yes:
   takes the UNC server name as what comes before the FIRST colon, and Samba ignores it.
 - `is_auth_error` / `classify_error` / `classify_authenticated_error` — reading an `smb2::Error`. Every retry, fallback,
   and sign-in path branches on the first one, and it's the reason the `UpgradeFailure` log can name a rejected password
-  even though its own enum has no auth variant.
+  even though its own enum has no auth variant. A named login answered with a guest session (`GuestSessionRefused`, smb2
+  0.31) counts as auth: it's how a Samba server set to `map to guest = bad user` answers a wrong password. A reply
+  refused for its signature (`SignatureInvalid`) is ❌ not auth, and becomes `ShareListError::SignatureInvalid` /
+  `VolumeError::SignatureInvalid`, never the `ProtocolError` that sends a listing down the CLI fallback.
+- Every error funnel (`handle_smb_result`, `update_state_on_smb_error`, and the scan paths that map directly) calls
+  `session::report_security_refusal`, which tells the host's `security_refusal` seam about a refused signature.
 - `try_list_shares_as_guest` / `try_list_shares_authenticated` — one connect and one `list_shares`, nothing else.
 - `ShareInfo` / `AuthMode` / `ShareListResult` / `ShareListError` — what a listing attempt produced.
 

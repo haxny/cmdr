@@ -303,3 +303,28 @@ fn attributes_of_maps_the_flags_an_smb_item_can_wear() {
         "no SMB attribute stands for these"
     );
 }
+
+#[test]
+fn a_refused_signature_maps_to_its_typed_volume_error() {
+    let err = smb2::Error::SignatureInvalid {
+        command: smb2::types::Command::Read,
+        message_id: smb2::types::MessageId(42),
+        reason: smb2::error::SignatureFailure::Mismatch,
+    };
+    assert!(matches!(
+        map_smb_error(err, "/share/a.txt"),
+        VolumeError::SignatureInvalid(_)
+    ));
+}
+
+#[test]
+fn a_refused_guest_session_maps_like_a_wrong_password() {
+    let err = smb2::Error::GuestSessionRefused {
+        username: "david".to_string(),
+        anonymous: true,
+    };
+    assert!(matches!(
+        map_smb_error(err, "/share"),
+        VolumeError::PermissionDenied { raw_os_error: None, .. }
+    ));
+}

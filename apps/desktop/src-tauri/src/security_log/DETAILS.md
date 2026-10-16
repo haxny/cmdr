@@ -32,8 +32,11 @@ Issue #456. Must-knows in `CLAUDE.md`; this is the why and the catalog.
   `update_signature_invalid` (`check`: `minisign` | `code_signature`): `../updater/security_events.rs`, one-line hooks in
   `updater/mod.rs`. The installed version is the one the bundle's own `Info.plist` names (`installer::install` answers
   it), not the one the unsigned manifest offered.
-- `smb_signature_rejections_started` / `_ended` (`volume_id`): `note_smb_signature_rejection`, fed from the typed
-  `smb2` kind once it exists.
+- `smb_signature_rejections_started` / `_ended` (`volume_id`): `cmdr-smb` reports each refused reply
+  (`smb2::ErrorKind::SignatureInvalid`) through the volume host's `security_refusal` seam;
+  `events/volume_mapping.rs` hands it to `note_smb_signature_rejection`, one episode per volume. A guest session offered
+  for a named login (`GuestSessionRefused`) isn't recorded: it reads as a wrong password today, and #457 gives it its
+  own pane state.
 - `recording_turned_on` / `recording_turned_off` (`by`: `user` | `organization`): the opt-out itself.
 
 Not recorded: reads of file data. The operation log covers modifications; journaling every read would cost privacy and

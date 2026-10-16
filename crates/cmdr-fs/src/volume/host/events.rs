@@ -36,6 +36,16 @@ pub enum VolumeConnection {
     NeedsHostKeyApproval,
 }
 
+/// Something a backend turned away for the user's safety, for the host's security record (and,
+/// later, a notice). Typed and payload-free like [`VolumeConnection`]: the host decides what it
+/// means to the user.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum SecurityRefusal {
+    /// A reply on a signed session carried a bad or missing signature, so the backend refused it.
+    ReplySignatureInvalid,
+}
+
 /// Where a backend's typed events go.
 ///
 /// Cmdr answers this from the app's event layer, where the Tauri payload types
@@ -51,6 +61,15 @@ pub trait VolumeEventSink: Send + Sync {
     /// must stay silent: its news would describe a volume that no longer exists
     /// under that id, and the frontend would show a healthy share as dropped.
     fn connection_changed(&self, volume_id: &str, connection: VolumeConnection);
+
+    /// The backend refused something on `volume_id` for the user's safety.
+    ///
+    /// Report every one: unlike [`connection_changed`](Self::connection_changed), the host
+    /// coalesces repeats itself. A superseded instance reports too, since a refused reply is a
+    /// fact about the server, not about who owns the id now.
+    fn security_refusal(&self, volume_id: &str, refusal: SecurityRefusal) {
+        let _ = (volume_id, refusal);
+    }
 }
 
 /// Events go nowhere. There's no frontend in a bench, a tool, or most tests.
@@ -67,7 +86,7 @@ pub use recording::RecordingVolumeEvents;
 mod recording {
     use std::sync::Mutex;
 
-    use super::{VolumeConnection, VolumeEventSink};
+    use super::{SecurityRefusal, VolumeConnection, VolumeEventSink};
     use crate::ignore_poison::IgnorePoison;
 
     /// A [`VolumeEventSink`] that remembers every
@@ -76,6 +95,7 @@ mod recording {
     #[derive(Default)]
     pub struct RecordingVolumeEvents {
         transitions: Mutex<Vec<(String, VolumeConnection)>>,
+        refusals: Mutex<Vec<(String, SecurityRefusal)>>,
     }
 
     impl RecordingVolumeEvents {
@@ -88,6 +108,11 @@ mod recording {
         pub fn transitions(&self) -> Vec<(String, VolumeConnection)> {
             self.transitions.lock_ignore_poison().clone()
         }
+
+        /// Every security refusal reported so far, in order.
+        pub fn refusals(&self) -> Vec<(String, SecurityRefusal)> {
+            self.refusals.lock_ignore_poison().clone()
+        }
     }
 
     impl VolumeEventSink for RecordingVolumeEvents {
@@ -95,6 +120,12 @@ mod recording {
             self.transitions
                 .lock_ignore_poison()
                 .push((volume_id.to_string(), connection));
+        }
+
+        fn security_refusal(&self, volume_id: &str, refusal: SecurityRefusal) {
+            self.refusals
+                .lock_ignore_poison()
+                .push((volume_id.to_string(), refusal));
         }
     }
 }

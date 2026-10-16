@@ -145,6 +145,11 @@ the wire enum it serializes stay app-side. The two enums meet in exactly one mat
 (`Direct ⇄ Disconnected`): it's the one transition the backend must NOT retry its way out of, and a string would let a
 UI copy edit change what a backend means.
 
+`security_refusal` is the seam's second, defaulted method: the backend reports each thing it refused for the user's
+safety (`SecurityRefusal`, today only a reply with a bad or missing signature), and the app feeds its security event
+log, which coalesces repeats (`apps/desktop/src-tauri/src/security_log/CLAUDE.md`). Unlike `connection_changed` it
+reports every occurrence, and a superseded instance reports too: a refused reply is a fact about the server.
+
 ### `CredentialStore`
 
 ⇐ `network::keychain::{get_credentials, save_credentials}`. Three sites: the session builder's narrow-then-wide lookup

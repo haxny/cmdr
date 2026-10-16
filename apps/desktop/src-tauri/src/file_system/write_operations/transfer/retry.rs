@@ -108,6 +108,7 @@ pub(super) fn is_retryable(err: &VolumeError) -> bool {
         | VolumeError::ColdStorage(_) // archived until someone restores it; asking again changes nothing
         | VolumeError::SourceChanged(_) // a new version is there; whether to copy it is the user's call
         | VolumeError::AmbiguousName(_) // two stored names fit; asking again asks the same question
+        | VolumeError::SignatureInvalid(_) // a refused reply: asking again invites the same answer
         | VolumeError::IoError { raw_os_error: None, .. }
         | VolumeError::NeedsPassword { .. }
         | VolumeError::FriendlyGit(_) => false,
@@ -205,6 +206,7 @@ mod tests {
         assert!(!is_retryable(&VolumeError::IsADirectory("/x".into())));
         assert!(!is_retryable(&VolumeError::NotADirectory("/x".into())));
         assert!(!is_retryable(&VolumeError::DeletePending("/x".into())));
+        assert!(!is_retryable(&VolumeError::SignatureInvalid("refused".into())));
         assert!(!is_retryable(&VolumeError::ColdStorage("/x".into())));
         assert!(!is_retryable(&VolumeError::SourceChanged("/x".into())));
         assert!(!is_retryable(&VolumeError::NeedsPassword { wrong_attempt: true }));

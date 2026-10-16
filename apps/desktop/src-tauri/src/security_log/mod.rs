@@ -19,7 +19,6 @@ use tauri::{AppHandle, Runtime};
 use crate::ignore_poison::RwLockIgnorePoison;
 use crate::managed_policy::ManagedPolicy;
 
-#[allow(unused_imports, reason = "TEMP: wired once smb2 types a refused signature")]
 pub use episodes::{note_mcp_rejection, note_smb_signature_rejection};
 pub use types::{
     Initiator, LogLine, McpRejection, PolicyRefusal, PolicyTrigger, RecordingSwitch, SecurityEvent, SignatureCheck,

@@ -402,6 +402,12 @@ pub(in crate::file_system::write_operations) fn map_volume_error(
             path: context_path.to_string(),
             message,
         },
+        // A reply refused for its signature stops the transfer. Its own stopped state and words
+        // are the notice work's (#457); until then it reads as the generic one.
+        VolumeError::SignatureInvalid(message) => WriteOperationError::IoError {
+            path: context_path.to_string(),
+            message,
+        },
         // Extracting from a password-protected archive: a typed signal the FE
         // prompts on (then retries via `set_archive_password`), never a generic
         // read error.

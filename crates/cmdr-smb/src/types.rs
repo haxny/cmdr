@@ -75,6 +75,12 @@ pub enum ShareListError {
         /// Diagnostic detail, for logs.
         message: String,
     },
+    /// The server's reply on a signed session didn't carry a valid signature, so Cmdr refused
+    /// it. A possible sign of tampering, so ❌ never a fallback to another client.
+    SignatureInvalid {
+        /// Diagnostic detail, for logs.
+        message: String,
+    },
     /// The exchange broke down in a way none of the other variants describes.
     ProtocolError {
         /// Diagnostic detail, for logs.
@@ -103,6 +109,7 @@ impl std::fmt::Display for ShareListError {
             Self::AuthRequired { message } => write!(f, "Authentication required: {}", message),
             Self::SigningRequired { message } => write!(f, "SMB signing required: {}", message),
             Self::AuthFailed { message } => write!(f, "Authentication failed: {}", message),
+            Self::SignatureInvalid { message } => write!(f, "Reply refused for its signature: {}", message),
             Self::ProtocolError { message } => write!(f, "Protocol error: {}", message),
             Self::ResolutionFailed { message } => write!(f, "Resolution failed: {}", message),
             Self::MissingDependency { message, .. } => write!(f, "Missing dependency: {}", message),

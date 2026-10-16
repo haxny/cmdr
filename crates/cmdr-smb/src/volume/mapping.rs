@@ -112,12 +112,13 @@ pub(super) fn map_smb_error(err: smb2::Error, path: &str) -> VolumeError {
         ErrorKind::NotFound => VolumeError::NotFound(path.to_string()),
         ErrorKind::AlreadyExists => VolumeError::AlreadyExists(path.to_string()),
         ErrorKind::IsADirectory => VolumeError::IsADirectory(path.to_string()),
-        ErrorKind::AccessDenied | ErrorKind::AuthRequired | ErrorKind::SigningRequired => {
-            VolumeError::PermissionDenied {
-                path: path.to_string(),
-                raw_os_error: None,
-            }
-        }
+        ErrorKind::AccessDenied
+        | ErrorKind::AuthRequired
+        | ErrorKind::SigningRequired
+        | ErrorKind::GuestSessionRefused => VolumeError::PermissionDenied {
+            path: path.to_string(),
+            raw_os_error: None,
+        },
         ErrorKind::ConnectionLost | ErrorKind::SessionExpired => VolumeError::DeviceDisconnected(err.to_string()),
         ErrorKind::TimedOut => VolumeError::ConnectionTimeout(err.to_string()),
         ErrorKind::DiskFull => VolumeError::StorageFull {
@@ -131,6 +132,8 @@ pub(super) fn map_smb_error(err: smb2::Error, path: &str) -> VolumeError {
         // length limit, or a character its filesystem can't store — all of which
         // the user fixes by renaming, and none of which a retry helps.
         ErrorKind::InvalidName => VolumeError::InvalidName(err.to_string()),
+        // Typed, never an `IoError`: a refused reply isn't a transport blip to retry.
+        ErrorKind::SignatureInvalid => VolumeError::SignatureInvalid(err.to_string()),
         _ => VolumeError::IoError {
             message: err.to_string(),
             raw_os_error: None,

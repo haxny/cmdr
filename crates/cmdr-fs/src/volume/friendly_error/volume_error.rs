@@ -125,6 +125,9 @@ pub fn listing_error_from_volume_error(err: &VolumeError, path: &Path) -> Listin
         // Copy-only too (a server-side copy's source changed under it); mapped
         // defensively to the generic serious I/O reason.
         VolumeError::SourceChanged(_) => kinds::io_serious(&path_display, &raw, raw.clone()),
+        // A refused reply: the generic serious reason until the notice work (#457) gives it its
+        // own words. Never a retry hint: asking again over the same path invites the same answer.
+        VolumeError::SignatureInvalid(_) => kinds::io_serious(&path_display, &raw, raw.clone()),
         VolumeError::IsADirectory(_) => ListingError {
             category: ErrorCategory::NeedsAction,
             reason: ListingErrorReason::IsADirectory { path: path_display },

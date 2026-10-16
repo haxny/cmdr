@@ -2942,6 +2942,12 @@
     "screenshot": "mkdir-confirmation-too-long.png",
     "screenshotNote": "This one is NOT the error panel. Your string is the single red line under the name field in the Rename / New folder / New file box, exactly where the validation message sits in this screenshot (which shows a DIFFERENT message). One sentence, plain text, no markdown, and it has to fit a narrow dialog."
   },
+  "errors.volume.signatureInvalid": "The server’s reply wasn’t signed, so Cmdr stopped.",
+  "@errors.volume.signatureInvalid": {
+    "description": "Shown when a network share's reply on a secured (signed) connection didn't carry a valid signature, so Cmdr refused it instead of trusting it. A flaky network device can cause this; so can someone tampering with the connection. Inline one-line message under the name field in Cmdr's Rename / New folder / New file flow, or in a brief toast. Plain text, one sentence, no markdown. Cmdr never uses the words \"error\" or \"failed\" in messages people read.",
+    "screenshot": "mkdir-confirmation-too-long.png",
+    "screenshotNote": "This one is NOT the error panel. Your string is the single red line under the name field in the Rename / New folder / New file box, exactly where the validation message sits in this screenshot (which shows a DIFFERENT message). One sentence, plain text, no markdown, and it has to fit a narrow dialog."
+  },
   "errors.volume.ioError": "The volume couldn’t finish that.",
   "@errors.volume.ioError": {
     "description": "The catch-all for a drive, share, or device failure Cmdr can't classify further. Deliberately short: the technical reason appears separately under \"Technical details\". \"Volume\" means a drive, disk, network share, or connected device. Inline one-line message under the name field in Cmdr's Rename / New folder / New file flow, or in a brief toast. Plain text, one sentence, no markdown. Cmdr never uses the words \"error\" or \"failed\" in messages people read.",
@@ -3301,6 +3307,13 @@
     },
     "screenshot": "servers-hub.png",
     "screenshotNote": "This one is NOT the error panel. Your string is the one sentence under the \"Couldn't connect to …\" title that replaces a server's list of shares when that list doesn't load. That list opens from the servers list pictured here, and the same sentence is the tooltip on that server's row in it."
+  },
+  "errors.shareList.signatureInvalid": "“{server}” answered without a valid signature, so Cmdr didn’t trust the reply. A flaky network device can cause this, and so can someone tampering with the connection. Try again, and if it keeps happening, check your network.",
+  "@errors.shareList.signatureInvalid": {
+    "description": "Shown when the server's reply on a secured (signed) connection didn't carry a valid signature, so Cmdr refused it. The innocent cause is a misbehaving router or network device; the serious one is someone tampering with traffic. Surface: the network pane, after someone opens a server (SMB) to see its shared folders and the list doesn't load. The pane shows a \"Couldn't connect to …\" title naming the server, this sentence under it, and Retry, Sign in, and Back buttons. The same sentence is the tooltip on that server's row in the servers list. Plain text, two or three short sentences, no markdown. Cmdr never uses the words \"error\" or \"failed\" in messages people read.",
+    "placeholders": {
+      "server": "the server's name as the servers list shows it (like Naspolya)"
+    }
   },
   "errors.shareList.protocolError": "Something went wrong while asking “{server}” for its shares. Try again in a moment.",
   "@errors.shareList.protocolError": {

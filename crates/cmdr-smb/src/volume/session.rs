@@ -121,6 +121,7 @@ impl SmbVolume {
             Ok(val) => Ok(val),
             Err(e) => {
                 let kind = e.kind();
+                report_security_refusal(self.inner.host(), &self.inner.volume_id, &e);
 
                 // On connection loss, transition to Disconnected
                 if matches!(kind, smb2::ErrorKind::ConnectionLost | smb2::ErrorKind::SessionExpired) {
@@ -237,6 +238,18 @@ pub(super) async fn refresh_credentials_from_store(
 /// `retirement` is the share's flag: a retired share still tracks its own state
 /// for the holders reading through it, but must not announce a disconnect under a
 /// volume id somebody else now owns.
+/// Tells the host about a reply smb2 refused for its signature, for the app's security record.
+/// Every error funnel calls it (`handle_smb_result`, `update_state_on_smb_error`); the host
+/// coalesces repeats.
+pub(super) fn report_security_refusal(host: &VolumeHost, volume_id: &str, err: &smb2::Error) {
+    if err.kind() == smb2::ErrorKind::SignatureInvalid {
+        host.events().security_refusal(
+            volume_id,
+            cmdr_fs::volume::host::events::SecurityRefusal::ReplySignatureInvalid,
+        );
+    }
+}
+
 pub(super) fn update_state_on_smb_error(
     host: &VolumeHost,
     state: &AtomicU8,
@@ -244,6 +257,7 @@ pub(super) fn update_state_on_smb_error(
     volume_id: &str,
     err: &smb2::Error,
 ) {
+    report_security_refusal(host, volume_id, err);
     if matches!(
         err.kind(),
         smb2::ErrorKind::ConnectionLost | smb2::ErrorKind::SessionExpired

@@ -40,6 +40,7 @@ const VOLUME_CASES: VolumeError[] = [
   { type: 'sourceChanged', data: '/docs/report.pdf' },
   { type: 'ambiguousName', data: '/Volumes/share/café.txt' },
   { type: 'staleDestinationHandle', data: '/DCIM/Camera' },
+  { type: 'signatureInvalid', data: 'the server READ response (message 7) has a signature that doesn’t match' },
   { type: 'ioError', data: { message: 'input/output error', rawOsError: 5 } },
   { type: 'needsPassword', data: { wrongAttempt: false } },
   { type: 'needsPassword', data: { wrongAttempt: true } },

@@ -15752,6 +15752,15 @@ export type ShareListError =
       // Diagnostic detail, for logs.
       message: string
     }
+  /**
+   *  The server's reply on a signed session didn't carry a valid signature, so Cmdr refused
+   *  it. A possible sign of tampering, so ❌ never a fallback to another client.
+   */
+  | {
+      type: 'signature_invalid'
+      // Diagnostic detail, for logs.
+      message: string
+    }
   // The exchange broke down in a way none of the other variants describes.
   | {
       type: 'protocol_error'
@@ -17981,6 +17990,16 @@ export type VolumeError =
    *  server-side copy in parts, `cmdr-s3` `server_copy.rs`).
    */
   | { type: 'sourceChanged'; data: string }
+  /**
+   *  A reply on a signed session carried a bad or missing signature, so the backend refused
+   *  it rather than trust what it said. Carries what the backend reported, for the
+   *  technical-details panel.
+   *
+   *  Typed rather than an [`IoError`](Self::IoError): it's a possible sign of tampering
+   *  between the Mac and the server (or a broken network device), not a transport blip, so
+   *  it's never retried and the host records it (`SecurityRefusal`). SMB-only today.
+   */
+  | { type: 'signatureInvalid'; data: string }
   /**
    *  Anything the backend couldn't classify further. The classifier
    *  re-dispatches on `raw_os_error` when one is present.

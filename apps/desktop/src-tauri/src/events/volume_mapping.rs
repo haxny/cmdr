@@ -15,7 +15,7 @@
 use tauri::AppHandle;
 use tauri_specta::Event;
 
-use cmdr_fs::volume::host::events::{VolumeConnection, VolumeEventSink};
+use cmdr_fs::volume::host::events::{SecurityRefusal, VolumeConnection, VolumeEventSink};
 
 use crate::network::{VolumeConnection as WireConnection, VolumeConnectionChanged};
 
@@ -56,6 +56,18 @@ impl VolumeEventSink for TauriVolumeEvents {
             log::warn!(target: "volume", "connection change for `{volume_id}` never reached the frontend: {e}");
         }
     }
+
+    fn security_refusal(&self, volume_id: &str, refusal: SecurityRefusal) {
+        record_security_refusal(volume_id, refusal);
+    }
+}
+
+/// Where a backend's security refusal goes: the security event log, coalesced per episode.
+fn record_security_refusal(volume_id: &str, refusal: SecurityRefusal) {
+    // `SecurityRefusal` is `#[non_exhaustive]`: a refusal this build doesn't know yet records nothing.
+    if refusal == SecurityRefusal::ReplySignatureInvalid {
+        crate::security_log::note_smb_signature_rejection(volume_id);
+    }
 }
 
 #[cfg(test)]
@@ -64,6 +76,21 @@ mod tests {
 
     /// The mapping is the whole adapter: every backend-facing transition has to
     /// reach the frontend as the matching wire variant, never a neighboring one.
+    #[test]
+    fn a_refused_signature_reaches_the_security_log_once_per_episode() {
+        use crate::security_log::{SecurityEvent, testing};
+        let capture = testing::capture_events();
+        for _ in 0..3 {
+            record_security_refusal("smb-nas-share", SecurityRefusal::ReplySignatureInvalid);
+        }
+        assert_eq!(
+            capture.events(),
+            vec![SecurityEvent::SmbSignatureRejectionsStarted {
+                volume_id: "smb-nas-share".into()
+            }]
+        );
+    }
+
     #[test]
     fn every_transition_maps_to_the_wire_variant_the_frontend_branches_on() {
         assert_eq!(wire_state(VolumeConnection::Connected), WireConnection::Connected);

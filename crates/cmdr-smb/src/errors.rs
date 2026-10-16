@@ -7,7 +7,9 @@
 use crate::types::ShareListError;
 use smb2::ErrorKind;
 
-/// Checks if an error is an authentication error (including signing requirement).
+/// Checks if an error is an authentication error (including signing requirement, and a named
+/// login answered with a guest session, which is how a Samba server set to
+/// `map to guest = bad user` answers a wrong password).
 ///
 /// It doesn't say WHICH step refused. Access denied at SessionSetup and at
 /// TreeConnect both count, and they mean different things: the second is a share
@@ -16,7 +18,7 @@ use smb2::ErrorKind;
 pub fn is_auth_error(err: &smb2::Error) -> bool {
     matches!(
         err.kind(),
-        ErrorKind::AuthRequired | ErrorKind::AccessDenied | ErrorKind::SigningRequired
+        ErrorKind::AuthRequired | ErrorKind::AccessDenied | ErrorKind::SigningRequired | ErrorKind::GuestSessionRefused
     )
 }
 
@@ -41,6 +43,9 @@ pub fn classify_error(err: &smb2::Error) -> ShareListError {
         ErrorKind::AuthRequired => ShareListError::AuthRequired { message },
         ErrorKind::AccessDenied => ShareListError::AuthFailed { message },
         ErrorKind::SigningRequired => ShareListError::SigningRequired { message },
+        // Only a named login gets here, so the credentials are what's wrong.
+        ErrorKind::GuestSessionRefused => ShareListError::AuthFailed { message },
+        ErrorKind::SignatureInvalid => ShareListError::SignatureInvalid { message },
         ErrorKind::NotFound => ShareListError::ProtocolError { message },
         ErrorKind::ConnectionLost => ShareListError::HostUnreachable { message },
         ErrorKind::TimedOut => ShareListError::Timeout { message },
@@ -60,9 +65,11 @@ pub fn classify_error(err: &smb2::Error) -> ShareListError {
 /// `smbclient`); the classifier itself is platform-agnostic.
 pub fn classify_authenticated_error(err: &smb2::Error) -> ShareListError {
     match err.kind() {
-        ErrorKind::AuthRequired | ErrorKind::AccessDenied => ShareListError::AuthFailed {
-            message: "Invalid username or password".to_string(),
-        },
+        ErrorKind::AuthRequired | ErrorKind::AccessDenied | ErrorKind::GuestSessionRefused => {
+            ShareListError::AuthFailed {
+                message: "Invalid username or password".to_string(),
+            }
+        }
         _ => classify_error(err),
     }
 }
@@ -70,6 +77,51 @@ pub fn classify_authenticated_error(err: &smb2::Error) -> ShareListError {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn guest_offered() -> smb2::Error {
+        smb2::Error::GuestSessionRefused {
+            username: "david".to_string(),
+            anonymous: false,
+        }
+    }
+
+    fn signature_refused() -> smb2::Error {
+        smb2::Error::SignatureInvalid {
+            command: smb2::types::Command::SessionSetup,
+            message_id: smb2::types::MessageId(3),
+            reason: smb2::error::SignatureFailure::Missing,
+        }
+    }
+
+    /// A guest session offered for a named login is Samba's `map to guest = bad user` answer
+    /// to a wrong password, so it takes the credentials path like any other wrong password.
+    #[test]
+    fn a_refused_guest_session_reads_as_wrong_credentials() {
+        assert!(is_auth_error(&guest_offered()));
+        assert!(matches!(
+            classify_error(&guest_offered()),
+            ShareListError::AuthFailed { .. }
+        ));
+        assert!(matches!(
+            classify_authenticated_error(&guest_offered()),
+            ShareListError::AuthFailed { .. }
+        ));
+    }
+
+    /// A refused signature is its own typed answer: not a credentials problem, and not the
+    /// protocol error that sends a listing down the CLI fallback.
+    #[test]
+    fn a_refused_signature_is_typed_and_not_an_auth_error() {
+        assert!(!is_auth_error(&signature_refused()));
+        assert!(matches!(
+            classify_error(&signature_refused()),
+            ShareListError::SignatureInvalid { .. }
+        ));
+        assert!(matches!(
+            classify_authenticated_error(&signature_refused()),
+            ShareListError::SignatureInvalid { .. }
+        ));
+    }
 
     #[test]
     fn test_is_auth_error() {

@@ -119,7 +119,6 @@ pub fn note_mcp_rejection(reason: McpRejection) {
 }
 
 /// An SMB reply on `volume_id` was refused for a bad or missing signature.
-#[allow(dead_code, reason = "TEMP: wired once smb2 types a refused signature")]
 pub fn note_smb_signature_rejection(volume_id: &str) {
     #[cfg(test)]
     if let Some(events) = captured(|c| {
