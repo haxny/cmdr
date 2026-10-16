@@ -91,12 +91,15 @@ chases equivalent mutants and isn't worth it.
 
 ### `criterion` (benchmarks)
 
-Two bench targets: `apps/desktop/src-tauri/benches/icon_benchmarks.rs` (icon fetching) and
+Three bench targets: `apps/desktop/src-tauri/benches/icon_benchmarks.rs` (icon fetching),
 `crates/cmdr-index/benches/index_benchmarks.rs` (index enrichment, the IPC dir-stats read, and the dir-stats roll-up,
-over a synthetic index DB built through the public `store` API). Run one with `cargo bench -p <package> --bench <name>`;
-add `-- --save-baseline <name>` to record a run and `-- --baseline <name>` to diff the next one against it. Reports land
-in `target/criterion/`. No check runs them: they're for answering "did this get slower", not for gating. Recorded index
-numbers, before and after the crate extraction, plus the method: `docs/notes/index-extraction-baseline.md`.
+over a synthetic index DB built through the public `store` API), and
+`apps/desktop/src-tauri/benches/transfer_benchmarks.rs` (the write engine's local copy, journaled copy, cross-volume
+stream, delete walk, and scan preview; the case list is its module doc). Run one with
+`cargo bench -p <package> --bench <name>`; add `-- --save-baseline <name>` to record a run and `-- --baseline <name>` to
+diff the next one against it. Reports land in `target/criterion/`. No check runs them: they're for answering "did this
+get slower", not for gating. Recorded index numbers, before and after the crate extraction, plus the method:
+`docs/notes/index-extraction-baseline.md`.
 
 A bench compiles against its crate as an EXTERNAL one, so it sees neither `#[cfg(test)]` items nor `pub(crate)` ones.
 The `testing` Cargo feature widens the few scaffolding items a bench needs (today: the root-read-pool installers in
@@ -108,6 +111,13 @@ crates all do this. ❌ The app doesn't: a self dev-dependency links a second co
 two copies' Objective-C classes collide (global, unmangled names; `ld` warns `duplicate symbol` and keeps one). The app
 has no `testing` feature of its own and turns on each crate's `testing` through a direct dev-dependency instead
 (`apps/desktop/src-tauri/Cargo.toml`).
+
+The transfer bench is the one target that takes the `required-features` cost, because it has no other way in: the app
+can't self-dev-depend, so its feature `transfer-bench` (which exposes `cmdr_lib::transfer_bench`, thin wrappers over the
+engine's internal entry points) is off in every lane, and no lane compiles or lints the bench. Run
+`cargo clippy -p cmdr --bench transfer_benchmarks --features cmdr/transfer-bench,cmdr/virtual-mtp -- -D warnings` (and
+`-- --test` on `cargo bench` to run each case once) whenever the engine's entry points change. The feature and the
+module go away once the engine is its own crate, where the bench can self-dev-depend like the rest.
 
 ## Frontend + Svelte
 

@@ -115,7 +115,9 @@ The full top-level inventory is here:
   `network_*_test_support.rs` scenarios the WebDAV, SFTP, SMB, and ADB suites drive, the chunk-gated sources in
   `network_gated_source_test_support.rs` (§ "The network transfer suites"), the per-backend fixture dials
   (`smb_test_support.rs`, `sftp_test_support.rs`, `webdav_test_support.rs`), and the `<backend>_*_test.rs` cells (§
-  "The SMB app-side suites").
+  "The SMB app-side suites"). `transfer_bench.rs` (feature `transfer-bench` only) is the Criterion bench's door in:
+  thin wrappers over five entry points, each with a no-op sink and an unregistered state
+  (`apps/desktop/src-tauri/benches/transfer_benchmarks.rs`; `docs/tooling/testing.md` § `criterion`).
 
 What the mechanisms DO is in the sections below: the registry, lanes, and `run_instant` in § "Operation manager";
 the zip-edit driver in § "Archive edits"; cancellation, pause, Stop-mode conflicts, safe overwrite, scan-preview caching,

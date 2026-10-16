@@ -38,6 +38,17 @@ smb-e2e = ["cmdr-smb/testing"]
 # No `testing` feature of our own: the app's test scaffolding is plain
 # `#[cfg(test)]`, and the workspace crates' `testing` features are turned on by
 # direct `[dev-dependencies]` entries (see there).
+#
+# The one exception, and it isn't test scaffolding: `transfer-bench` exposes
+# `cmdr_lib::transfer_bench`, thin wrappers over the write engine's internal
+# entry points, for `benches/transfer_benchmarks.rs` alone. A bench compiles
+# against the app as an external crate and sees no `pub(crate)` item, and the
+# usual fix (a self dev-dependency turning the feature on) would link a second
+# copy of the app, whose Objective-C classes collide (see `[dev-dependencies]`).
+# So the bench declares `required-features` instead, which means no lane builds
+# it: lint it by hand with `cargo clippy -p cmdr --bench transfer_benchmarks
+# --features cmdr/transfer-bench,cmdr/virtual-mtp -- -D warnings`.
+transfer-bench = []
 
 [[bin]]
 name = "Cmdr"
@@ -536,3 +547,8 @@ required-features = ["smb-e2e"]
 [[bench]]
 name = "icon_benchmarks"
 harness = false
+
+[[bench]]
+name = "transfer_benchmarks"
+harness = false
+required-features = ["transfer-bench"]

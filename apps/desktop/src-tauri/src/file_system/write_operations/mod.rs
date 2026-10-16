@@ -68,6 +68,9 @@ mod summary;
 pub(crate) use summary::path_summary;
 mod target_names;
 mod transfer;
+// The Criterion bench's one door into the engine, re-exported at the crate root.
+#[cfg(feature = "transfer-bench")]
+pub mod transfer_bench;
 mod transfer_sides;
 mod transfer_tree;
 mod tree_view;
