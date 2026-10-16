@@ -176,8 +176,14 @@ export function createQueueDrag(deps: QueueDragDeps): QueueDrag {
       // A second press while a drop settles takes over from it.
       cancel()
       const target = event.currentTarget instanceof Element ? event.currentTarget : document.body
-      // Capture keeps the moves coming when the pointer leaves the window mid-drag.
-      if (typeof target.setPointerCapture === 'function') target.setPointerCapture(event.pointerId)
+      // Capture keeps the moves coming when the pointer leaves the window mid-drag. It's a
+      // nicety: WebKit refuses it (`NotFoundError`) for a pointer that's no longer down, and
+      // the window listeners still carry the drag without it.
+      try {
+        target.setPointerCapture(event.pointerId)
+      } catch {
+        // No capture: moves outside the window are lost, nothing else changes.
+      }
       pending = { id, pointerId: event.pointerId, startY: event.clientY, startScroll: scrollTop(), target }
       window.addEventListener('pointermove', handleMove)
       window.addEventListener('pointerup', handleUp)
