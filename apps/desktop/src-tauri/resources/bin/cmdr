@@ -1,0 +1,194 @@
+#!/bin/sh
+# cmdr: show a file or folder in Cmdr, from a terminal.
+#
+# Shipped inside the app at Cmdr.app/Contents/Resources/bin/cmdr and put on PATH either by
+# Homebrew's cask (`binary` stanza) or by the app menu's "Install 'cmdr' command" (a symlink
+# in /usr/local/bin). It resolves every path itself, then hands Cmdr one
+# `cmdr-cli://open?...` URL through `open -a <this very bundle>`, so the copy of Cmdr that
+# shipped this script is the one that answers.
+#
+# The scheme is deliberately NOT registered with macOS: `open -a` delivers it anyway, while a
+# web page or another app firing a bare cmdr-cli:// link gets nowhere. The app side parses
+# and validates it in `src/cli/open_url.rs`; that file's tests run this script, so the two
+# can't drift apart. Docs: `src/cli/DETAILS.md`.
+#
+# POSIX sh on purpose: macOS's /bin/sh is bash 3.2, and nothing here needs more.
+
+set -u
+unset CDPATH
+
+# Must match `SCHEME` in `src/cli/open_url.rs`.
+SCHEME=cmdr-cli
+PRODUCTION_BUNDLE_ID=com.veszelovszki.cmdr
+
+usage() {
+    cat <<'EOF'
+Usage: cmdr [options] [path ...]
+
+Show a file or folder in Cmdr. A folder opens in the pane; a file opens the
+folder it's in, with the cursor on it. With no path, Cmdr shows the folder
+you're in. Several files from one folder all get selected.
+
+Options:
+  --left         Show it in the left pane
+  --right        Show it in the right pane
+  --new-tab      Show it in a new tab
+  --print-url    Print what would be sent to Cmdr, and don't open it
+  -v, --version  Print Cmdr's version
+  -h, --help     Show this help
+
+Starts Cmdr if it isn't running.
+EOF
+}
+
+say() {
+    printf 'cmdr: %s\n' "$*" >&2
+}
+
+# The Cmdr.app this script lives in, following symlinks (the installed command is one).
+# Empty when the script runs from outside a bundle, like straight from the source tree.
+find_bundle() {
+    self=$0
+    while [ -L "$self" ]; do
+        link=$(readlink "$self")
+        case $link in
+            /*) self=$link ;;
+            *) self=$(dirname -- "$self")/$link ;;
+        esac
+    done
+    bin_dir=$(cd -- "$(dirname -- "$self")" 2>/dev/null && pwd) || return 0
+    case $bin_dir in
+        */Contents/Resources/bin)
+            candidate=${bin_dir%/Contents/Resources/bin}
+            [ -f "$candidate/Contents/Info.plist" ] && printf '%s\n' "$candidate"
+            ;;
+    esac
+    return 0
+}
+
+# Percent-encode every byte. Wasteful but unambiguous: no character, `+` and `&` included,
+# can change meaning on the way through a URL query.
+urlencode() {
+    printf '%s' "$1" | od -An -v -tx1 | tr -d ' \n' | sed 's/\(..\)/%\1/g'
+}
+
+# Print the absolute path of $1, keeping symlinks as typed. Returns 1 if it doesn't exist.
+absolute() {
+    if [ -d "$1" ]; then
+        (cd -- "$1" 2>/dev/null && pwd)
+        return
+    fi
+    if [ ! -e "$1" ] && [ ! -L "$1" ]; then
+        return 1
+    fi
+    parent=$(cd -- "$(dirname -- "$1")" 2>/dev/null && pwd) || return 1
+    name=$(basename -- "$1")
+    case $parent in
+        /) printf '/%s\n' "$name" ;;
+        *) printf '%s/%s\n' "$parent" "$name" ;;
+    esac
+}
+
+pane=
+new_tab=
+print_url=
+paths_given=
+first=
+first_is_dir=
+shows_folder=
+skipped=0
+query=
+
+add_path() {
+    if ! resolved=$(absolute "$1"); then
+        say "there's no file or folder at $1"
+        exit 1
+    fi
+    query="$query&path=$(urlencode "$resolved")"
+    paths_given=1
+    # Mirror the app's rule (`plan_reveal`): one pane shows one folder. A folder first opens
+    # that folder and nothing else; a file first opens its folder and selects every other
+    # path that sits in it.
+    if [ -z "$first" ]; then
+        first=$resolved
+        if [ -d "$resolved" ]; then
+            first_is_dir=1
+            shows_folder=$resolved
+        else
+            shows_folder=$(dirname -- "$resolved")
+        fi
+    elif [ -n "$first_is_dir" ] || [ "$(dirname -- "$resolved")" != "$shows_folder" ]; then
+        skipped=$((skipped + 1))
+    fi
+}
+
+options_done=
+for arg in "$@"; do
+    if [ -z "$options_done" ]; then
+        case $arg in
+            --) options_done=1; continue ;;
+            --left | --right)
+                if [ -n "$pane" ] && [ "$pane" != "${arg#--}" ]; then
+                    say "pick one of --left and --right"
+                    exit 2
+                fi
+                pane=${arg#--}
+                continue
+                ;;
+            --new-tab) new_tab=1; continue ;;
+            --print-url) print_url=1; continue ;;
+            -h | --help) usage; exit 0 ;;
+            -v | --version)
+                bundle=$(find_bundle)
+                if [ -z "$bundle" ]; then
+                    say "this copy of the command isn't inside Cmdr.app, so there's no version to report"
+                    exit 1
+                fi
+                version=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$bundle/Contents/Info.plist" 2>/dev/null)
+                printf 'Cmdr %s\n' "${version:-(unknown version)}"
+                exit 0
+                ;;
+            -*)
+                say "there's no $arg option. Run 'cmdr --help' to see the ones there are."
+                exit 2
+                ;;
+        esac
+    fi
+    add_path "$arg"
+done
+
+[ -n "$paths_given" ] || add_path .
+
+if [ "$skipped" -gt 0 ]; then
+    if [ "$skipped" -eq 1 ]; then
+        say "one path isn't in $shows_folder, and Cmdr shows one folder at a time, so it's left out"
+    else
+        say "$skipped paths aren't in $shows_folder, and Cmdr shows one folder at a time, so they're left out"
+    fi
+fi
+
+[ -n "$pane" ] && query="$query&pane=$pane"
+[ -n "$new_tab" ] && query="$query&tab=new"
+url="$SCHEME://open?${query#&}"
+
+if [ -n "$print_url" ]; then
+    printf '%s\n' "$url"
+    exit 0
+fi
+
+# Who to send it to: an explicit bundle id wins (handy for a dev build, whose id is
+# suffixed), then the bundle this script ships in, then the installed production app.
+if [ -n "${CMDR_BUNDLE_ID:-}" ]; then
+    open -b "$CMDR_BUNDLE_ID" "$url" 2>/dev/null && exit 0
+    say "couldn't find an app with the bundle id $CMDR_BUNDLE_ID (from CMDR_BUNDLE_ID)"
+    exit 1
+fi
+bundle=$(find_bundle)
+if [ -n "$bundle" ]; then
+    open -a "$bundle" "$url" 2>/dev/null && exit 0
+    say "couldn't open Cmdr at $bundle. If you moved or deleted it, reinstall the command from Cmdr's app menu."
+    exit 1
+fi
+open -b "$PRODUCTION_BUNDLE_ID" "$url" 2>/dev/null && exit 0
+say "couldn't find Cmdr. Install it from https://getcmdr.com, then try again."
+exit 1

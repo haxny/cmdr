@@ -1,5 +1,10 @@
-//! What arrives once the `NSFileViewer` key is ours: the cold-launch buffer, the
-//! plan a set of revealed paths becomes, and the pane move that carries it out.
+//! What arrives through `RunEvent::Opened`: the cold-launch buffer, the plan a set of
+//! revealed paths becomes, and the pane move that carries it out.
+//!
+//! Two senders share this door. Another app's "Show in Finder" (once the `NSFileViewer` key
+//! is ours) arrives as `file://` URLs; the `cmdr` terminal command arrives as a
+//! `cmdr-cli://open?…` URL (`crate::cli`). Both become a [`RevealRequest`] here, and only
+//! their origin tells them apart from then on.
 //!
 //! macOS-only, like the mechanism itself. Its parent `mod.rs` is NOT gated, because
 //! [`super::RevealDelivered`] has to resolve on every platform for `ipc.rs`'s
@@ -13,7 +18,9 @@ use std::time::Duration;
 use tauri::{AppHandle, Manager, Runtime, Wry};
 use tauri_specta::Event;
 
+use crate::cli::open_url::{SCHEME as CLI_SCHEME, parse_cli_url};
 use crate::ignore_poison::IgnorePoison;
+use crate::mcp::GoToTarget;
 
 use super::RevealDelivered;
 
@@ -30,7 +37,26 @@ pub(super) static PENDING: LazyLock<PendingReveals> = LazyLock::new(PendingRevea
 /// request rather than guess at the answer.
 const CLASSIFY_TIMEOUT: Duration = Duration::from_secs(2);
 
-/// Where one reveal request puts the focused pane.
+/// Who asked for a reveal.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum RevealOrigin {
+    /// Another app's "Show in Finder", routed here by the `NSFileViewer` key.
+    Finder,
+    /// The `cmdr` terminal command. ❗ Never announced as [`RevealDelivered`]: the
+    /// frontend spends a once-ever "Show in Finder now lands here" notice on the first
+    /// one, and a terminal open says nothing about Finder.
+    Terminal,
+}
+
+/// One request to show paths in a pane.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct RevealRequest {
+    pub paths: Vec<PathBuf>,
+    pub target: GoToTarget,
+    pub origin: RevealOrigin,
+}
+
+/// Where one reveal request puts the pane.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct RevealPlan {
     /// The directory the pane navigates to.
@@ -40,25 +66,34 @@ pub(crate) struct RevealPlan {
     pub entries: Vec<String>,
 }
 
-/// Reveal targets that arrived before the frontend could act on them.
+/// Reveal requests that arrived before the frontend could act on them.
 ///
 /// A cold launch delivers the event long before the webview mounts, so the arriving
-/// paths are parked here and the frontend drains them once its listeners are up
+/// requests are parked here and the frontend drains them once its listeners are up
 /// (`commands::drain_pending_reveals`). A `Vec`, not an `Option`: two reveals can land
 /// back to back during a cold launch, and the second must not erase the first.
 #[derive(Default)]
 pub struct PendingReveals {
-    queue: Mutex<Vec<PathBuf>>,
+    queue: Mutex<Vec<RevealRequest>>,
     /// Set by the first drain. Until then nothing is delivered, because there is nobody
     /// listening for `mcp-nav-to-path` yet and the emit would go nowhere.
     frontend_ready: AtomicBool,
 }
 
 impl PendingReveals {
-    /// Park `paths` and report whether they can be delivered right now.
-    fn accept(&self, paths: Vec<PathBuf>) -> Vec<PathBuf> {
+    /// Park `request` and return whatever can be delivered right now.
+    ///
+    /// Back-to-back Finder reveals merge into one request: `open -R a b` sends one event
+    /// per path, and on a cold launch they must still become one pane move with both
+    /// selected. Terminal requests never merge, since each carries its own pane and tab.
+    fn accept(&self, request: RevealRequest) -> Vec<RevealRequest> {
         let mut queue = self.queue.lock_ignore_poison();
-        queue.extend(paths);
+        match queue.last_mut() {
+            Some(last) if last.origin == RevealOrigin::Finder && request.origin == RevealOrigin::Finder => {
+                last.paths.extend(request.paths);
+            }
+            _ => queue.push(request),
+        }
         if self.frontend_ready.load(Ordering::Acquire) {
             std::mem::take(&mut queue)
         } else {
@@ -66,11 +101,41 @@ impl PendingReveals {
         }
     }
 
-    /// Mark the frontend live and take everything parked so far.
-    pub(super) fn drain(&self) -> Vec<PathBuf> {
+    /// Mark the frontend live and take everything parked so far, in arrival order.
+    pub(super) fn drain(&self) -> Vec<RevealRequest> {
         self.frontend_ready.store(true, Ordering::Release);
         std::mem::take(&mut *self.queue.lock_ignore_poison())
     }
+}
+
+/// Sort what one `RunEvent::Opened` carried into requests: every `file://` URL into one
+/// Finder reveal, every `cmdr-cli://` URL into a terminal request of its own. Anything else,
+/// and any terminal URL that fails validation, is logged and dropped.
+pub(crate) fn requests_from_urls(urls: &[tauri::Url]) -> Vec<RevealRequest> {
+    let finder_paths: Vec<PathBuf> = urls
+        .iter()
+        .filter(|url| url.scheme() == "file")
+        .filter_map(|url| url.to_file_path().ok())
+        .collect();
+    let mut requests = Vec::new();
+    if !finder_paths.is_empty() {
+        requests.push(RevealRequest {
+            paths: finder_paths,
+            target: GoToTarget::FOCUSED,
+            origin: RevealOrigin::Finder,
+        });
+    }
+    for url in urls.iter().filter(|url| url.scheme() == CLI_SCHEME) {
+        match parse_cli_url(url) {
+            Ok(open) => requests.push(RevealRequest {
+                paths: open.paths,
+                target: open.target,
+                origin: RevealOrigin::Terminal,
+            }),
+            Err(refusal) => log::warn!(target: "reveal", "Refused a cmdr-cli URL: {refusal:?}"),
+        }
+    }
+    requests
 }
 
 /// Turn the paths one reveal delivered into a single pane move.
@@ -107,32 +172,30 @@ pub(crate) fn plan_reveal(paths: &[PathBuf], is_dir: &dyn Fn(&Path) -> bool) -> 
 /// ⚠️ On a cold launch this runs before `setup`, before the main window exists, and before
 /// the logger is initialised, so anything it says there goes nowhere and the delivery has
 /// to wait for the frontend's drain. Both calls below tolerate that: `raise_main_window`
-/// returns when there is no window, and the buffer holds the paths. `DETAILS.md` § "How a
+/// returns when there is no window, and the buffer holds the requests. `DETAILS.md` § "How a
 /// cold-launch reveal arrives".
 ///
 /// Called on the main thread, so it must not block: the classify probe and the pane
 /// round-trip both happen on the async runtime.
 pub fn on_urls_opened(app: &AppHandle<Wry>, urls: Vec<tauri::Url>) {
-    let paths: Vec<PathBuf> = urls
-        .iter()
-        .filter(|url| url.scheme() == "file")
-        .filter_map(|url| url.to_file_path().ok())
-        .collect();
-    if paths.is_empty() {
-        log::debug!(target: "reveal", "A reveal carried no file paths; ignoring");
+    let requests = requests_from_urls(&urls);
+    if requests.is_empty() {
+        log::debug!(target: "reveal", "An open event carried nothing to show; ignoring");
         return;
     }
-    log::info!(target: "reveal", "Reveal: {} path(s) to show", paths.len());
     raise_main_window(app);
-    let ready = PENDING.accept(paths);
+    let ready: Vec<RevealRequest> = requests
+        .into_iter()
+        .flat_map(|request| PENDING.accept(request))
+        .collect();
     if !ready.is_empty() {
         spawn_delivery(app, ready);
     }
 }
 
-/// Bring the main window forward. The reveal was fired from another app, so without this
-/// the pane lands behind whatever the user was looking at. Same three calls as the
-/// go-to-latest-download hotkey (`downloads/global_shortcut.rs`).
+/// Bring the main window forward. The reveal was fired from another app (or a terminal),
+/// so without this the pane lands behind whatever the user was looking at. Same three
+/// calls as the go-to-latest-download hotkey (`downloads/global_shortcut.rs`).
 fn raise_main_window<R: Runtime>(app: &AppHandle<R>) {
     let Some(window) = app.get_webview_window("main") else {
         return;
@@ -144,15 +207,22 @@ fn raise_main_window<R: Runtime>(app: &AppHandle<R>) {
     }
 }
 
-/// Run a delivery on the async runtime, off whatever thread asked for it.
-pub(super) fn spawn_delivery<R: Runtime>(app: &AppHandle<R>, paths: Vec<PathBuf>) {
+/// Run deliveries on the async runtime, off whatever thread asked for them, one after the
+/// other: two moves racing for the same pane would land in whichever order they finish.
+pub(super) fn spawn_delivery<R: Runtime>(app: &AppHandle<R>, requests: Vec<RevealRequest>) {
     let app = app.clone();
-    tauri::async_runtime::spawn(async move { deliver(&app, paths).await });
+    tauri::async_runtime::spawn(async move {
+        for request in requests {
+            deliver(&app, request).await;
+        }
+    });
 }
 
-/// Move the focused pane onto `paths`.
-async fn deliver<R: Runtime>(app: &AppHandle<R>, paths: Vec<PathBuf>) {
+/// Move a pane onto one request's paths.
+async fn deliver<R: Runtime>(app: &AppHandle<R>, request: RevealRequest) {
+    let RevealRequest { paths, target, origin } = request;
     let requested = paths.len();
+    log::info!(target: "reveal", "{origin:?} reveal: {requested} path(s) to show");
     let probe = paths.clone();
     let plan = crate::deadline::blocking_with_timeout(CLASSIFY_TIMEOUT, None, move || {
         plan_reveal(&probe, &|path| path.is_dir())
@@ -165,21 +235,25 @@ async fn deliver<R: Runtime>(app: &AppHandle<R>, paths: Vec<PathBuf>) {
         );
         return;
     };
-    if !plan.entries.is_empty() && plan.entries.len() < requested {
+    // A folder plan shows one path (the folder) with no entries to select.
+    let shown = plan.entries.len().max(1);
+    if shown < requested {
         log::info!(
             target: "reveal",
-            "Showing {} of {requested} revealed path(s); the rest sit in other directories",
-            plan.entries.len(),
+            "Showing {shown} of {requested} revealed path(s); the rest sit in other directories",
         );
     }
     let dir = plan.dir.to_string_lossy().to_string();
-    if let Err(err) = crate::mcp::go_to_in_focused_pane(app, &dir, &plan.entries).await {
+    if let Err(err) = crate::mcp::go_to_in_pane(app, target, &dir, &plan.entries).await {
         log::warn!(target: "reveal", "Couldn't show {dir}: {}", err.message);
         return;
     }
-    // Announced only once the pane has actually moved: the frontend turns the first of
-    // these into a once-ever notice, and a reveal that went nowhere would spend it.
-    if let Err(err) = (RevealDelivered {}).emit(app) {
+    // Announced only once the pane has actually moved, and only for Finder reveals: the
+    // frontend turns the first of these into a once-ever notice about "Show in Finder",
+    // which neither a reveal that went nowhere nor a terminal open may spend.
+    if origin == RevealOrigin::Finder
+        && let Err(err) = (RevealDelivered {}).emit(app)
+    {
         log::warn!(target: "reveal", "Couldn't announce the delivered reveal: {err}");
     }
 }
@@ -187,6 +261,7 @@ async fn deliver<R: Runtime>(app: &AppHandle<R>, paths: Vec<PathBuf>) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::mcp::PaneChoice;
 
     fn dirs(paths: &[&str]) -> impl Fn(&Path) -> bool + use<> {
         let dirs: Vec<PathBuf> = paths.iter().map(PathBuf::from).collect();
@@ -195,6 +270,26 @@ mod tests {
 
     fn p(path: &str) -> PathBuf {
         PathBuf::from(path)
+    }
+
+    fn finder(paths: &[&str]) -> RevealRequest {
+        RevealRequest {
+            paths: paths.iter().map(PathBuf::from).collect(),
+            target: GoToTarget::FOCUSED,
+            origin: RevealOrigin::Finder,
+        }
+    }
+
+    fn terminal(paths: &[&str], pane: PaneChoice) -> RevealRequest {
+        RevealRequest {
+            paths: paths.iter().map(PathBuf::from).collect(),
+            target: GoToTarget { pane, new_tab: false },
+            origin: RevealOrigin::Terminal,
+        }
+    }
+
+    fn urls(raw: &[&str]) -> Vec<tauri::Url> {
+        raw.iter().map(|url| tauri::Url::parse(url).expect("a URL")).collect()
     }
 
     #[test]
@@ -244,29 +339,85 @@ mod tests {
     }
 
     #[test]
-    fn a_cold_launch_parks_paths_until_the_frontend_drains_them() {
+    fn a_cold_launch_parks_reveals_until_the_frontend_drains_them() {
         let pending = PendingReveals::default();
         assert!(
-            pending.accept(vec![p("/tmp/one.txt")]).is_empty(),
+            pending.accept(finder(&["/tmp/one.txt"])).is_empty(),
             "nothing may be delivered before the frontend is listening"
         );
-        assert!(pending.accept(vec![p("/tmp/two.txt")]).is_empty());
-        assert_eq!(pending.drain(), vec![p("/tmp/one.txt"), p("/tmp/two.txt")]);
+        assert!(pending.accept(finder(&["/tmp/two.txt"])).is_empty());
+        // Back-to-back Finder reveals become one move, so both end up selected.
+        assert_eq!(pending.drain(), vec![finder(&["/tmp/one.txt", "/tmp/two.txt"])]);
     }
 
     #[test]
     fn a_second_reveal_never_erases_the_first() {
         let pending = PendingReveals::default();
-        pending.accept(vec![p("/tmp/one.txt")]);
-        pending.accept(vec![p("/tmp/two.txt")]);
+        pending.accept(finder(&["/tmp/one.txt"]));
+        pending.accept(terminal(&["/tmp/two.txt"], PaneChoice::Right));
         assert_eq!(pending.drain().len(), 2);
+    }
+
+    #[test]
+    fn terminal_requests_keep_their_own_pane_and_never_merge() {
+        let pending = PendingReveals::default();
+        pending.accept(terminal(&["/tmp/a"], PaneChoice::Left));
+        pending.accept(terminal(&["/tmp/b"], PaneChoice::Right));
+        pending.accept(finder(&["/tmp/c"]));
+        assert_eq!(
+            pending.drain(),
+            vec![
+                terminal(&["/tmp/a"], PaneChoice::Left),
+                terminal(&["/tmp/b"], PaneChoice::Right),
+                finder(&["/tmp/c"]),
+            ],
+            "arrival order, each with its own target"
+        );
     }
 
     #[test]
     fn once_drained_a_reveal_is_delivered_straight_away() {
         let pending = PendingReveals::default();
         pending.drain();
-        assert_eq!(pending.accept(vec![p("/tmp/one.txt")]), vec![p("/tmp/one.txt")]);
-        assert!(pending.drain().is_empty(), "an accepted path must not be queued twice");
+        assert_eq!(
+            pending.accept(finder(&["/tmp/one.txt"])),
+            vec![finder(&["/tmp/one.txt"])]
+        );
+        assert!(
+            pending.drain().is_empty(),
+            "an accepted request must not be queued twice"
+        );
+    }
+
+    #[test]
+    fn file_urls_become_one_finder_reveal() {
+        let requests = requests_from_urls(&urls(&["file:///tmp/a.txt", "file:///tmp/b%20c.txt"]));
+        assert_eq!(requests, vec![finder(&["/tmp/a.txt", "/tmp/b c.txt"])]);
+    }
+
+    #[test]
+    fn a_cli_url_becomes_a_terminal_request_with_its_target() {
+        let requests = requests_from_urls(&urls(&["cmdr-cli://open?path=%2Ftmp%2Fa&pane=right&tab=new"]));
+        assert_eq!(
+            requests,
+            vec![RevealRequest {
+                paths: vec![p("/tmp/a")],
+                target: GoToTarget {
+                    pane: PaneChoice::Right,
+                    new_tab: true
+                },
+                origin: RevealOrigin::Terminal,
+            }]
+        );
+    }
+
+    #[test]
+    fn invalid_cli_urls_and_other_schemes_are_dropped() {
+        let requests = requests_from_urls(&urls(&[
+            "cmdr-cli://open?path=relative",
+            "cmdr-cli://delete?path=%2Ftmp",
+            "https://example.com/",
+        ]));
+        assert!(requests.is_empty());
     }
 }

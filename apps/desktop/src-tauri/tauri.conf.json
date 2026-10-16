@@ -66,7 +66,8 @@
       "signingIdentity": "Developer ID Application: Rymdskottkarra AB (83H6YAQMNP)",
       "entitlements": "./Entitlements.plist",
       "files": {
-        "Resources/Assets.car": "resources/Assets.car"
+        "Resources/Assets.car": "resources/Assets.car",
+        "Resources/bin/cmdr": "resources/bin/cmdr"
       }
     }
   }

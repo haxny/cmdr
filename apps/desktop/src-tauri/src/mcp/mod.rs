@@ -35,17 +35,19 @@ pub use pane_state::PaneStateStore;
 // the ai-client dispatch or the auth gate.
 pub(crate) use executor::{ToolError, ToolResult, fit_to_result_budget, is_virtual_path};
 
-// "Go there and point at that" is this module's frontend protocol (`mcp-nav-to-path` +
-// `mcp-move-cursor` + `mcp-select-names`), but it isn't only an agent's move: an OS
-// reveal (`crate::reveal`) makes exactly the same one. Exported as a named seam rather
-// than by opening `executor` up, so the rest of the crate reaches this and nothing else.
+// "Go there and point at that" is this module's frontend protocol (`mcp-tab` +
+// `mcp-nav-to-path` + `mcp-move-cursor` + `mcp-select-names`), but it isn't only an
+// agent's move: an OS reveal and the `cmdr` terminal command (`crate::reveal`,
+// `crate::cli`) make exactly the same one. Exported as a named seam rather than by
+// opening `executor` up, so the rest of the crate reaches this and nothing else.
 //
-// Gated because `crate::reveal` is the seam's only user and is itself macOS-only: the
-// in-module caller (`executor::downloads`) reaches `nav` directly, so off macOS this
-// re-export has nobody, and `-D unused` is an error. CI lints on Linux and we lint on
-// macOS, so a missing gate here compiles clean locally and breaks the whole build there.
+// Gated because `crate::reveal` and `crate::cli` are the seam's only users and are
+// themselves macOS-only: the in-module caller (`executor::downloads`) reaches `nav`
+// directly, so off macOS this re-export has nobody, and `-D unused` is an error. CI lints
+// on Linux and we lint on macOS, so a missing gate here compiles clean locally and breaks
+// the whole build there.
 #[cfg(target_os = "macos")]
-pub(crate) use executor::nav::go_to_in_focused_pane;
+pub(crate) use executor::nav::{GoToTarget, PaneChoice, go_to_in_pane};
 pub use server::{
     McpServerOutcome, get_mcp_actual_port, is_mcp_running, rebind_interactive, start_mcp_server_background,
     stop_mcp_server, stop_mcp_server_and_wait,

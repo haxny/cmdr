@@ -3,7 +3,7 @@
 use std::path::Path;
 
 use super::app::{TabMoveAck, TabMoveRefusal, parse_tab_move_response, tab_move_result};
-use super::nav::{SelectableVolume, nav_result, resolve_volume_selector, select_volume_result};
+use super::nav::{PaneChoice, SelectableVolume, nav_result, resolve_volume_selector, select_volume_result};
 use super::search::parse_human_size;
 use super::*;
 
@@ -434,6 +434,18 @@ fn parse_nav_response_never_turns_a_malformed_reply_into_an_arrival() {
         parse_nav_response(r#"{"requestId":"r-2","ok":true,"outcome":"navigated"}"#, "r-1"),
         None
     );
+}
+
+#[test]
+fn a_go_to_lands_in_the_pane_it_names_or_the_focused_one() {
+    assert_eq!(PaneChoice::Focused.resolve("right"), "right");
+    assert_eq!(PaneChoice::Focused.resolve("left"), "left");
+    // An explicit pane wins over focus: `cmdr --left` is about the pane, not about where the
+    // user last clicked.
+    assert_eq!(PaneChoice::Left.resolve("right"), "left");
+    assert_eq!(PaneChoice::Right.resolve("left"), "right");
+    // Anything unexpected from the store falls back to a real pane rather than leaking out.
+    assert_eq!(PaneChoice::Focused.resolve("middle"), "left");
 }
 
 #[test]

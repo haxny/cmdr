@@ -1,16 +1,18 @@
 # Reveal in Cmdr
 
 Another app's "Show in Finder" lands in a Cmdr pane instead. One OS switch turns it on: the undocumented
-`NSFileViewer` key in the global preferences domain, holding a bundle id.
+`NSFileViewer` key in the global preferences domain, holding a bundle id. The `cmdr` terminal command (`../cli/`)
+arrives through the same door as a `cmdr-cli://` URL and shares the buffer and the pane move.
 
 ## Module map
 
 - **`registration.rs`**: the `NSFileViewer` state machine (`RevealHandlerState`, `RevealHandlerStatus`,
   `RevealRegistration`), the `ViewerPreference` seam over CFPreferences, and `own_bundle_id`, which decides whether this
   build may write at all.
-- **`delivery.rs`**: what arrives once it's on. `on_urls_opened` is the one door; `plan_reveal` turns the delivered
-  paths into one pane move; `PendingReveals` parks anything the frontend isn't up for yet; `deliver` drives the pane
-  and then announces `RevealDelivered`.
+- **`delivery.rs`**: what arrives. `on_urls_opened` is the one door; `requests_from_urls` sorts `file://` (Finder)
+  from `cmdr-cli://` (terminal) into `RevealRequest`s; `plan_reveal` turns paths into one pane move; `PendingReveals`
+  parks anything the frontend isn't up for yet; `deliver` drives the pane and, for Finder only, announces
+  `RevealDelivered`.
 - **`mod.rs`**: the `RevealDelivered` event type and nothing else.
 - **`commands.rs`**: three IPC commands (read state, set state, drain the parked reveals).
 
@@ -22,9 +24,10 @@ Another app's "Show in Finder" lands in a Cmdr pane instead. One OS switch turns
   turns that into a broken build rather than a warning. ❌ `mod.rs`'s docs name the three submodules in plain backticks,
   never as `[`delivery`]` intra-doc links: those resolve on macOS and break the Linux `rustdoc` job, which is a red CI
   your local `pnpm check rustdoc` can't see.
-- **`RevealDelivered` is emitted only after the pane actually moved**, so it means "the feature just did its thing".
-  The frontend turns the FIRST one into a once-ever notice (`apps/desktop/src/lib/reveal/CLAUDE.md`), so announcing a
-  reveal that went nowhere would spend it.
+- **`RevealDelivered` is emitted only after the pane actually moved, and only for `RevealOrigin::Finder`**, so it
+  means "Show in Finder just did its thing". The frontend turns the FIRST one into a once-ever notice
+  (`apps/desktop/src/lib/reveal/CLAUDE.md`), so announcing a reveal that went nowhere, or a `cmdr` terminal open,
+  would spend it.
 - **A cold-launch reveal arrives ~500 ms BEFORE Tauri's `setup` runs**, as the same `RunEvent::Opened` (measured on
   macOS 26.6, 2026-09-09). So at that moment there is no `app.manage`d state, no logger, and no main window. That's why
   `PENDING` is a process-global `LazyLock` and ❌ never Tauri-managed state, and why a log line added to this path won't
@@ -41,8 +44,9 @@ Another app's "Show in Finder" lands in a Cmdr pane instead. One OS switch turns
   up, or a moved copy is stranded holding it. `DETAILS.md` § "The uninstall problem".
 - **This is not a stored setting.** No `settings.json` key, no registry entry: the state reads through to the OS every
   time, because the user can change the handler outside Cmdr and a cached flag would lie.
-- **The pane move is `crate::mcp::go_to_in_focused_pane`**, shared with `go_to_latest_download`. ❌ Don't grow a second
-  navigate-then-cursor path; `DETAILS.md` says why it lives over there.
+- **The pane move is `crate::mcp::go_to_in_pane`**, shared with `go_to_latest_download`; a terminal request carries
+  its own `GoToTarget` (pane, new tab). ❌ Don't grow a second navigate-then-cursor path; `DETAILS.md` says why it
+  lives over there.
 - **The drain call has to run AFTER the frontend's `mcp-*` listeners are up** (`routes/(main)/window-services.ts`,
   phase 2). Draining earlier emits `mcp-nav-to-path` into a window with nothing listening, and the reveal is lost.
 

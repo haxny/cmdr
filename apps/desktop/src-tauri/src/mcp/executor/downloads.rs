@@ -9,7 +9,7 @@
 use serde_json::json;
 use tauri::{AppHandle, Runtime};
 
-use super::nav::go_to_in_focused_pane;
+use super::nav::{GoToTarget, go_to_in_pane};
 use super::{ToolError, ToolResult};
 
 /// `go_to_latest_download` MCP tool. No parameters in v1 (the `index`
@@ -20,7 +20,7 @@ use super::{ToolError, ToolResult};
 /// 1. Resolve the latest eligible download via the same code path as the
 ///    Tauri command — typed `GoToLatestError` branches map directly onto
 ///    MCP error responses with descriptive messages.
-/// 2. Hand the parent dir + file name to `go_to_in_focused_pane`, the shared
+/// 2. Hand the parent dir + file name to `go_to_in_pane` (focused pane), the shared
 ///    navigate-then-cursor primitive (`../nav.rs`) the OS reveal handler uses too.
 /// 3. Return the absolute path as the tool result so agents can chain on it.
 pub async fn execute_go_to_latest_download<R: Runtime>(app: &AppHandle<R>) -> ToolResult {
@@ -38,6 +38,12 @@ pub async fn execute_go_to_latest_download<R: Runtime>(app: &AppHandle<R>) -> To
             }
         })?;
 
-    go_to_in_focused_pane(app, &latest.parent_dir, std::slice::from_ref(&latest.file_name)).await?;
+    go_to_in_pane(
+        app,
+        GoToTarget::FOCUSED,
+        &latest.parent_dir,
+        std::slice::from_ref(&latest.file_name),
+    )
+    .await?;
     Ok(json!(format!("OK: Went to {}", latest.path)))
 }

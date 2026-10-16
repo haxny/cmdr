@@ -184,26 +184,85 @@ async fn wait_for_pane_volume_name(store: &PaneStateStore, pane: &str, volume_na
     }
 }
 
-/// Take the focused pane to `dir` and point it at `entries`: cursor on the first, all of
-/// them selected when there's more than one. An empty `entries` just opens `dir`.
+/// Which pane a [`go_to_in_pane`] lands in.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(
+    not(target_os = "macos"),
+    allow(
+        dead_code,
+        reason = "`Left` / `Right` come only from the macOS-only `cmdr` terminal command"
+    )
+)]
+pub(crate) enum PaneChoice {
+    /// Whichever pane has focus when the move starts.
+    Focused,
+    Left,
+    Right,
+}
+
+impl PaneChoice {
+    /// The pane id the `mcp-*` events speak, given the store's focused pane.
+    pub(crate) fn resolve(self, focused: &str) -> &'static str {
+        match self {
+            Self::Left => "left",
+            Self::Right => "right",
+            Self::Focused if focused == "right" => "right",
+            Self::Focused => "left",
+        }
+    }
+}
+
+/// Where a [`go_to_in_pane`] lands: which pane, and whether in a fresh tab there.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct GoToTarget {
+    pub pane: PaneChoice,
+    /// Open a new tab in that pane first, so the tab the user was on keeps its place.
+    pub new_tab: bool,
+}
+
+impl GoToTarget {
+    /// The focused pane's current tab: what a reveal and the latest-download hotkey use.
+    pub(crate) const FOCUSED: Self = Self {
+        pane: PaneChoice::Focused,
+        new_tab: false,
+    };
+}
+
+/// Take a pane to `dir` and point it at `entries`: cursor on the first, all of them
+/// selected when there's more than one. An empty `entries` just opens `dir`.
 ///
 /// The one implementation of "go there and show me that", shared by the
-/// `go_to_latest_download` tool and the OS reveal handler (`crate::reveal`). Both drive
-/// the same three frontend events, and a second copy would drift on the parts that are
-/// easy to get wrong: the typed landing check that stops a cursor move in the wrong
-/// directory, and the pane the move applies to.
+/// `go_to_latest_download` tool, the OS reveal handler, and the `cmdr` terminal command
+/// (both `crate::reveal`). They all drive the same frontend events, and a second copy
+/// would drift on the parts that are easy to get wrong: the typed landing check that stops
+/// a cursor move in the wrong directory, and the pane the move applies to.
 ///
-/// Ordering is load-bearing: the cursor moves before the multi-select, because the
-/// frontend's cursor move resets the selection.
-pub(crate) async fn go_to_in_focused_pane<R: Runtime>(
+/// Ordering is load-bearing: the new tab opens before the navigation (so the navigation
+/// lands in it), and the cursor moves before the multi-select, because the frontend's
+/// cursor move resets the selection.
+pub(crate) async fn go_to_in_pane<R: Runtime>(
     app: &AppHandle<R>,
+    target: GoToTarget,
     dir: &str,
     entries: &[String],
 ) -> Result<(), ToolError> {
-    let pane = app
-        .try_state::<PaneStateStore>()
-        .map(|store| store.get_focused_pane())
-        .unwrap_or_else(|| "left".to_string());
+    let store = app.try_state::<PaneStateStore>();
+    let focused = store.as_ref().map(|store| store.get_focused_pane()).unwrap_or_default();
+    let pane = target.pane.resolve(&focused).to_string();
+    if let Some(store) = &store {
+        // Same as `nav_to_path`: the FE moves focus to the navigated pane, so the store
+        // follows now and a focused-pane op right after acts on the right one.
+        store.set_focused_pane(pane.clone());
+    }
+
+    if target.new_tab {
+        // Reuses the `tab` tool's `new`, ack and all. A pane at its tab limit refuses, and
+        // then the move still happens in the current tab: landing where the user asked
+        // matters more than the tab it lands in.
+        if let Err(err) = super::app::execute_tab(app, &json!({"action": "new", "pane": pane})).await {
+            log::warn!(target: "mcp::nav", "Couldn't open a new tab in the {pane} pane, so going there in the current one: {}", err.message);
+        }
+    }
 
     // Reuses the FE's `mcp-nav-to-path` handler, so every volume / listing edge case it
     // already handles applies here too — including the typed landing outcome, so a pane

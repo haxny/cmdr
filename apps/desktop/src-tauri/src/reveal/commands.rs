@@ -54,10 +54,10 @@ pub async fn set_reveal_handler_enabled(enabled: bool) -> RevealHandlerStatus {
 #[tauri::command]
 #[specta::specta]
 pub async fn drain_pending_reveals(app: AppHandle) {
-    let paths = PENDING.drain();
-    if paths.is_empty() {
+    let requests = PENDING.drain();
+    if requests.is_empty() {
         return;
     }
-    log::info!(target: "reveal", "Frontend is up; delivering {} parked path(s)", paths.len());
-    spawn_delivery(&app, paths);
+    log::info!(target: "reveal", "Frontend is up; delivering {} parked request(s)", requests.len());
+    spawn_delivery(&app, requests);
 }
