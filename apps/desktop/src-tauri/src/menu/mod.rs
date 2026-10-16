@@ -12,7 +12,7 @@
 //! - `menu_items.rs`: small shared pieces: `APP_MENU_TITLE`, the live labels (`pin_tab_label`,
 //!   `same_kind_menu_label`, `undo_trash_menu_label`, `detach_label`), and `truncate_for_menu_label`.
 //! - `file_context_menu.rs`: the file context menu (the one a right-click on a row opens), plus
-//!   `FileContextInfo` / `ContextMenuPaneFacts` / `ContextMenuResult`.
+//!   `ContextMenuPaneFacts` / `ContextMenuResult`. Its macOS `FileContextInfo` is `context_menu_facts.rs`'s.
 //! - `menu_structure.rs`: the smaller context menus (breadcrumb, parent row, function key bar, tab,
 //!   network host, server row, volume row, favorite), the viewer menu, and the
 //!   `ContextMenuShortcuts` / `context_item` vocabulary they all share with the file one.

@@ -30,8 +30,8 @@ window focus context.
   `SameKindTarget` payload and `same_kind_menu_label` behind "Select all of the same kind"'s live wording, plus
   `DetachWord` / `detach_label`, which decide whether a row's leave-this-volume item reads `Eject ({name})` or
   `Disconnect` (a phone gets the second: `adb` has no per-client detach, so nothing is made safe to unplug).
-- `file_context_menu.rs`: the file context menu (`build_context_menu`) and the facts it is built from
-  (`FileContextInfo`, `ContextMenuPaneFacts`, `ContextMenuResult`), plus `append_tag_color_group`. Its own file because
+- `file_context_menu.rs`: the file context menu (`build_context_menu`), its pane facts and result
+  (`ContextMenuPaneFacts`, `ContextMenuResult`, and the empty non-macOS `FileContextInfo`), plus `append_tag_color_group`. Its own file because
   it is by far the biggest menu here, and the only one whose shape depends on the row, the pane, the cloud provider,
   and the OS at once. ❗ `context_menu_icons_test.rs`'s guard test `include_str!`s THIS file to check every icon names an
   item the menu actually builds; a builder moving out of it has to take that `include_str!` along.
@@ -68,7 +68,7 @@ window focus context.
   as the menu is up, and points it at the right-clicked rows. See "Services in the right-click menu".
 - `context_menu_facts.rs` (macOS): the file context menu's slow facts, asked off the main thread on the menu's own
   `framework_pool` and collected under the 100 ms `GRACE`; `file_context_info` turns what answered into the
-  `FileContextInfo` the builder reads, `Slow::Pending` for the rest. See "Slow facts and the live menu".
+  `FileContextInfo` the builder reads (defined here with its `Slow<T>`), `Slow::Pending` for the rest. See "Slow facts and the live menu".
 - `context_menu_live.rs` (macOS): `lend_live_menu`, which lands every fact that missed the grace period on the menu
   while it's open (`LateTargets`, `Placeheld` submenus, `SlotGroup` rows). Same section.
 - `open_with.rs` (macOS): `build_open_with_submenu` for the file context menu's "Open with"

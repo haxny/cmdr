@@ -1,5 +1,6 @@
-//! The file context menu: the one a right-click on a row opens, and the facts it
-//! is built from (`FileContextInfo`, `ContextMenuPaneFacts`, `ContextMenuResult`).
+//! The file context menu: the one a right-click on a row opens, and the pane facts and
+//! result around it (`ContextMenuPaneFacts`, `ContextMenuResult`). The slow per-file facts
+//! it reads (`FileContextInfo`) are `context_menu_facts.rs`'s.
 //!
 //! Its own file because it is by far the biggest menu here, and the only one whose
 //! shape depends on the row, the pane, the cloud provider, and the OS all at once.
@@ -21,20 +22,14 @@ use tauri::{
 };
 
 #[cfg(target_os = "macos")]
-use crate::file_system::file_provider_actions::ProviderOffer;
-#[cfg(target_os = "macos")]
-use crate::file_system::google_drive::DriveItemLinks;
-#[cfg(target_os = "macos")]
-use crate::file_system::open_with::OpenWithChoices;
-#[cfg(target_os = "macos")]
-use crate::file_system::share::ShareService;
-#[cfg(target_os = "macos")]
 use crate::file_system::sync_status::SyncStatus;
 
 use crate::intl::{menu_t, menu_t_with};
 
 #[cfg(target_os = "macos")]
 use super::OPEN_TERMINAL_HERE_ID;
+#[cfg(target_os = "macos")]
+use super::context_menu_facts::{FileContextInfo, Slow};
 use super::context_menu_header::{ContextMenuTargetFacts, append_context_menu_header};
 #[cfg(target_os = "macos")]
 use super::context_menu_live::{LateTargets, SlotGroup};
@@ -54,77 +49,8 @@ use super::{
     SHARE_LINK_SUBMENU_ID, SHOW_IN_FINDER_ID, SHOW_SEARCH_RESULT_IN_FOLDER_ID, image_index_menu_items,
 };
 
-/// A fact the menu asked off the main thread (`context_menu_facts.rs`): answered in time,
-/// or still out when the menu went up, in which case its part of the menu is built to be
-/// filled in while open (`context_menu_live.rs`).
-#[cfg(target_os = "macos")]
-#[derive(Debug, Clone)]
-pub enum Slow<T> {
-    Ready(T),
-    Pending,
-}
-
-#[cfg(target_os = "macos")]
-impl<T> Slow<T> {
-    /// The answer, when there is one yet.
-    pub fn ready(&self) -> Option<&T> {
-        match self {
-            Slow::Ready(value) => Some(value),
-            Slow::Pending => None,
-        }
-    }
-
-    pub fn is_pending(&self) -> bool {
-        matches!(self, Slow::Pending)
-    }
-}
-
-/// Answered, with the empty answer, which is what a fact the menu never asked about is.
-#[cfg(target_os = "macos")]
-impl<T: Default> Default for Slow<T> {
-    fn default() -> Self {
-        Slow::Ready(T::default())
-    }
-}
-
-/// Per-file information needed to build a fully-populated context menu.
-///
-/// On non-macOS this is empty. On macOS every field but `is_icloud_drive` is a slow fact
-/// ([`Slow`]), asked off the main thread and possibly still out when the menu goes up.
-#[cfg(target_os = "macos")]
-#[derive(Default)]
-pub struct FileContextInfo {
-    /// The primary row's iCloud sync status, which picks between "Make available offline"
-    /// and "Remove download". Asked only in iCloud Drive.
-    pub sync_status: Slow<SyncStatus>,
-    /// Whether this path is in iCloud Drive specifically. Gates the cloud action menu
-    /// items. Eviction / download work via `FileManager` ubiquity APIs, which only
-    /// support iCloud (not third-party File Providers). See `cloud_actions.rs` for why.
-    /// A path check, so never pending.
-    pub is_icloud_drive: bool,
-    /// The Google Drive web URLs for this item, when it resolves to one. `Some`
-    /// gates the Drive menu group, which is self-validating: no ID, no item; its
-    /// `gemini_url` gates `Ask Gemini` alone, since folders have none. See
-    /// `file_system/google_drive/` for why this isn't a path-prefix check (Drive's
-    /// mirror mode puts real files outside `~/Library/CloudStorage`).
-    pub google_drive_links: Slow<Option<DriveItemLinks>>,
-    /// The right-clicked rows' File Provider actions, when their provider offers any. Drawn
-    /// as one flat group below the cloud items, and kept in `MenuContext` so a click can run
-    /// one. `file_system/file_provider_actions/`.
-    pub file_provider_offer: Slow<Option<ProviderOffer>>,
-    pub open_with: Slow<OpenWithChoices>,
-    /// The services macOS offers for this selection, in its own order, one `Share`
-    /// submenu item each. EMPTY means macOS offers none and the whole item is left
-    /// out: an empty share sheet holding only `Edit Extensions…` is the symptom the
-    /// submenu replaced. From `file_system::share::enumerate_offer`.
-    pub share_services: Slow<Vec<ShareService>>,
-    /// Which of the seven Finder color tags (index 1..=7) the selection already carries.
-    /// "Applied" = EVERY selected path has a tag of that color, so the menu shows a
-    /// checked (checkmark-composited) circle and the click toggles it off. Index 0 is
-    /// unused (colorless). Pending shows no checks until the reads answer.
-    pub applied_tag_colors: Slow<[bool; 8]>,
-}
-
+/// Per-file information needed to build a fully-populated context menu: empty off macOS. The
+/// macOS one, all slow facts, is `context_menu_facts::FileContextInfo`.
 #[cfg(not(target_os = "macos"))]
 #[derive(Default)]
 pub struct FileContextInfo;

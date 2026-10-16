@@ -1,6 +1,6 @@
 //! Tests for the file context menu's image runs and title matching (`context_menu_icons.rs`).
 
-use super::super::file_context_menu::Slow;
+use super::super::context_menu_facts::Slow;
 use super::*;
 use crate::file_system::file_provider_actions::OfferedAction;
 use crate::file_system::open_with::AppCandidate;

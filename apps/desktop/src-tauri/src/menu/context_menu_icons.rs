@@ -51,7 +51,7 @@ use objc2_foundation::{
 use tauri::Runtime;
 use tauri::menu::{Menu, MenuItem, MenuItemKind, Submenu};
 
-use super::file_context_menu::FileContextInfo;
+use super::context_menu_facts::FileContextInfo;
 use super::file_provider_items::file_provider_action_id;
 use super::macos_appkit::{
     find_ns_submenu, menu_item_text, observe_menu_tracking, plain_title, set_menu_item_image, sf_symbol_image,
