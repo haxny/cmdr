@@ -8,12 +8,15 @@
 import { test, expect } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
 
-/** Pages to audit. Each gets tested in both light and dark mode. */
-const pages = [
+/**
+ * Pages to audit. Each gets tested in both light and dark mode. `slow` triples the test timeout, for a
+ * page whose axe run outgrows the default (the changelog gains a section every release).
+ */
+const pages: { name: string; path: string; slow?: boolean }[] = [
   { name: 'Homepage', path: '/' },
   { name: 'Features', path: '/features' },
   { name: 'Pricing', path: '/pricing' },
-  { name: 'Changelog', path: '/changelog' },
+  { name: 'Changelog', path: '/changelog', slow: true },
   { name: 'Roadmap', path: '/roadmap' },
   { name: 'Blog', path: '/blog' },
   { name: 'Privacy policy', path: '/privacy-policy' },
@@ -28,8 +31,9 @@ const pages = [
 
 for (const theme of ['light', 'dark'] as const) {
   test.describe(`Accessibility (${theme} mode)`, () => {
-    for (const { name, path } of pages) {
+    for (const { name, path, slow } of pages) {
       test(`${name} (${path})`, async ({ page }) => {
+        test.slow(slow === true)
         await page.goto(path)
 
         // Set theme via localStorage + data-theme attribute (matches the site's ThemeToggle behavior)
