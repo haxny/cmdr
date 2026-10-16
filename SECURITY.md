@@ -80,8 +80,8 @@ They run third-party open-source software, so we may point you to the upstream p
 
 Out of scope:
 
-- Services Cmdr uses but doesn't run: Paddle (payments), PostHog, Cloudflare's platform, GitHub, Discord, and the AI
-  providers a user connects. Please report those to the vendor.
+- Services Cmdr uses but doesn't run: Paddle (payments), PostHog, Cloudflare's platform, GitHub, and the AI providers a
+  user connects. Please report those to the vendor.
 - Attacks that need an already compromised Mac or account, physical access to an unlocked machine, or root. Cmdr runs as
   the logged-in user and isn't App Sandboxed, so a process already running as that user can do what the user can.
 - Denial of service by traffic volume, spam, and social engineering of the maintainer or users.
@@ -97,8 +97,9 @@ please check that it still happens in the latest one.
 
 ## Safe harbor
 
-If you research and report in good faith under this policy, we won't take legal action against you or ask anyone else
-to, and we'll consider your research authorized. Good faith means you:
+If you research and report in good faith under this policy, we consider your research authorized. We won't take legal
+action against you, report you to the police, or ask anyone else to act against you, and if someone else does, we'll
+confirm you had our permission. Good faith means you:
 
 - Only test against your own installation and your own accounts or licenses.
 - Don't access, change, or delete other people's data. If you reach some by accident, stop, don't keep a copy, and tell
@@ -106,6 +107,10 @@ to, and we'll consider your research authorized. Good faith means you:
 - Don't degrade the service for others (no load testing against api.getcmdr.com or getcmdr.com).
 - Give us a reasonable time to fix the problem before you publish, as described above.
 
+We can only give permission for what we run. Services Cmdr uses but doesn't run (listed under "Out of scope") have their
+own rules, and we can't speak for them. If your research exposes someone's personal data, the law may still require us
+to report the exposure to the data protection authority, even though you did nothing wrong.
+
 If you're unsure whether something is OK, ask first at [security@getcmdr.com](mailto:security@getcmdr.com).
 
-<!-- ⚠️ David: the safe-harbor paragraph is a plain-language template, not reviewed by a lawyer. Get it checked when you do the DPA and site agreement. -->
+<!-- Self-reviewed 2026-10-14, no lawyer by choice. -->
