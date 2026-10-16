@@ -17,7 +17,7 @@
 use percent_encoding::utf8_percent_encode;
 use url::Url;
 
-use crate::transport::{SEGMENT, join_remote};
+use crate::urls::{SEGMENT, join_remote};
 
 /// The chunk a big file is cut into, and the size past which a file goes in
 /// chunks at all (a file that fits in one chunk goes as one `PUT`).

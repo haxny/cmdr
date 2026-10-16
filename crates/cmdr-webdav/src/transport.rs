@@ -10,7 +10,6 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use log::debug;
-use percent_encoding::{AsciiSet, NON_ALPHANUMERIC, utf8_percent_encode};
 use reqwest::header::{HeaderValue, WWW_AUTHENTICATE};
 use reqwest::{Method, RequestBuilder, Response, StatusCode};
 use url::Url;
@@ -18,6 +17,7 @@ use url::Url;
 use crate::chunking::ChunkedUploads;
 use crate::errors::{WebdavConnectError, classify_connect_error};
 use crate::propfind::{PropfindEntry, every_propstat_succeeded, parse_multistatus};
+use crate::urls::join_remote;
 use cmdr_fs::volume::liveness::Liveness;
 
 /// The connect budget, per request: the PROBE's total budget and the idle
@@ -56,27 +56,6 @@ const MAX_PROBE_BODY: usize = 1024 * 1024;
 /// they take, and their stall detection lives elsewhere (`streams.rs`'s idle
 /// budget for downloads; the upload has none, see `REQUEST_BUDGET`).
 pub(crate) const MUTATION_BUDGET: Duration = Duration::from_secs(10 * 60);
-
-/// Everything but the unreserved characters gets encoded in a path segment:
-/// spaces, `#`, `?`, `%`, and every other reserved byte included.
-pub(crate) const SEGMENT: &AsciiSet = &NON_ALPHANUMERIC.remove(b'-').remove(b'.').remove(b'_').remove(b'~');
-
-/// `base` with a root-relative remote path like `/Photos/a b.jpg` appended,
-/// each segment percent-encoded. `collection` appends the trailing slash a
-/// collection is addressed with.
-pub(crate) fn join_remote(base: &Url, remote_path: &str, collection: bool) -> Url {
-    let mut url = base.clone();
-    let mut path = base.path().trim_end_matches('/').to_string();
-    for segment in remote_path.split('/').filter(|s| !s.is_empty()) {
-        path.push('/');
-        path.push_str(&utf8_percent_encode(segment, SEGMENT).to_string());
-    }
-    if collection || path.is_empty() {
-        path.push('/');
-    }
-    url.set_path(&path);
-    url
-}
 
 /// The methods HTTP itself doesn't name.
 pub(crate) fn method(name: &str) -> Method {

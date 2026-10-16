@@ -120,9 +120,9 @@ anchored). ❗ A bare server-absolute path is refused too; `crates/cmdr-sftp/DET
 reasoning, which is the same here. The three root aliases stay, and `query.rs` uses one: `is_root` and
 `get_space_info_impl` ask for `/`.
 
-The remote half is what `WebdavClient::url_for` percent-encodes (everything but unreserved characters) and appends a
-trailing slash to for collections. ❗ `FileEntry.path` is the APP spelling, prefix and all, because a pane hands what a
-listing gave it straight back — as does `display_path_for`, the listing-cache patcher's.
+The remote half is what `WebdavClient::url_for` percent-encodes (`urls.rs`: everything but unreserved characters) and
+appends a trailing slash to for collections. ❗ `FileEntry.path` is the APP spelling, prefix and all, because a pane
+hands what a listing gave it straight back — as does `display_path_for`, the listing-cache patcher's.
 
 Listings are one `PROPFIND Depth: 1` with a body naming
 `resourcetype, getcontentlength, getlastmodified, creationdate, getetag, quota-available-bytes, quota-used-bytes`.

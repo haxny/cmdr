@@ -11,6 +11,7 @@ pub(crate) mod errors;
 pub(crate) mod params;
 pub(crate) mod propfind;
 pub(crate) mod transport;
+pub(crate) mod urls;
 pub mod volume;
 
 #[cfg(feature = "fuzzing")]
