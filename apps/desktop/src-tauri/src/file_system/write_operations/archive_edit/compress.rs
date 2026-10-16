@@ -53,6 +53,7 @@ pub(crate) async fn compress_start(
     initiator: cmdr_operation_log::types::Initiator,
 ) -> Result<WriteOperationStartResult, WriteOperationError> {
     super::routing::ensure_zip_writable(&dest_zip_full_path, crate::file_system::ReadOnlySide::Destination)?;
+    // Plain `get`: the `.zip` file itself is a plain file on its parent drive.
     let (dest_zip_full_path, existed) = match host::installed().volumes().get(&parent_volume_id) {
         Some(parent) if !parent.supports_local_fs_access() => {
             archive_landing(parent.as_ref(), dest_zip_full_path).await?

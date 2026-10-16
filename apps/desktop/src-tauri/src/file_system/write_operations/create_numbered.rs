@@ -36,6 +36,7 @@ pub(crate) async fn create_numbered_file(
     initiator: Initiator,
 ) -> Result<String, MutationError> {
     let volume_id_str = volume_id.clone().unwrap_or_else(|| "root".to_string());
+    // Plain `get`: a numbered create acts on the drive itself; it has no archive or `.git` routing.
     let Some(volume) = host::installed().volumes().get(&volume_id_str) else {
         return Err(super::mutation_error::unregistered_volume_refusal(volume_id_str, dir).await);
     };

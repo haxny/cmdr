@@ -85,6 +85,7 @@ pub(crate) fn ensure_zip_writable(archive_path: &Path, side: ReadOnlySide) -> Re
 /// duplicate, so routing proceeds and the managed op surfaces the real fault
 /// through its normal error path rather than being masked here.
 pub(crate) async fn archive_inner_exists(parent_volume_id: &str, archive_path: &Path, inner_path: &str) -> bool {
+    // Plain `get`: only whether the parent drive is remote; the inner read below resolves.
     let parent = host::installed().volumes().get(parent_volume_id);
     let is_remote = parent.as_ref().is_some_and(|p| !p.supports_local_fs_access());
 

@@ -138,7 +138,9 @@ async fn rename_managed_inner(
     // managed archive-edit driver. The `.zip` file itself is a regular file —
     // renaming it must work like any other file — so only a genuinely-inner path
     // routes here. Parent-aware detection (not the `std::fs`-only sync predicate)
-    // so a rename inside a REMOTE zip (direct SMB / MTP) routes too.
+    // so a rename inside a REMOTE zip (direct SMB / MTP) routes too. Every
+    // `manager.get` below passes `from`: plain `get`, as this gate sent an in-zip
+    // rename away.
     let manager = host::installed().volumes();
     if manager.path_is_inside_archive(&volume_id, &from).await || manager.path_is_inside_archive(&volume_id, &to).await
     {

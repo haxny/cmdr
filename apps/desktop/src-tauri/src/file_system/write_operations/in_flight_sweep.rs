@@ -298,6 +298,7 @@ async fn locate(item: &TrackedItem) -> Located {
             drive_name: None,
         },
         ItemHome::Mount { volume_id } => {
+            // Plain `get`: only the mount's root is read; the item is reached at `root.join(path)`.
             let Some(volume) = host::installed().volumes().get(volume_id) else {
                 return Located::Unreachable;
             };

@@ -54,6 +54,7 @@ pub(crate) async fn start_renames(
     initiator: Initiator,
 ) -> Result<RenamesStarted, RenameStartError> {
     if volume_id != "root" {
+        // Plain `get`: a bulk rename acts on the drive itself; it has no archive or `.git` routing.
         let Some(volume) = host::installed().volumes().get(&volume_id) else {
             // Asked before anything runs, so a phone or server nobody connected is worded the way
             // a clicked copy off it would be, ❌ never as a volume that vanished.

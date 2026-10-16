@@ -88,6 +88,7 @@ pub(super) async fn start(
     net_new: bool,
     initiator: Initiator,
 ) -> Result<WriteOperationStartResult, WriteOperationError> {
+    // Plain `get`: a new `.zip` lands as a plain file on its parent drive.
     let (dest_volume, dest_lane) = match host::installed().volumes().get(&parent_volume_id) {
         Some(volume) => {
             let lane = volume.lane_key();

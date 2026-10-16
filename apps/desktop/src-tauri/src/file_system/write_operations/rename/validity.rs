@@ -166,6 +166,7 @@ pub(crate) async fn check_rename_validity_impl(
 /// folder answers without listing all of it, and its files are what the cost
 /// estimate prices: no request is sent for the estimate itself.
 async fn rename_by_move_cost(volume_id: &str, old_path: &Path, data_dir: Option<&Path>) -> Option<RenameByMove> {
+    // Plain `get`: the drive's own rename cost (an in-zip rename is an archive edit).
     let volume = host::installed().volumes().get(volume_id)?;
     match volume.rename_work(old_path).await {
         Ok(RenameWork::CopyThenDelete) => {}

@@ -114,7 +114,8 @@ pub(crate) fn start_bulk_rename(
         (vec![LaneKey::new("root")], Vec::new(), None, rows)
     } else {
         // `start_renames` classified an unregistered id before this; one missing NOW left the
-        // registry in between (an unmount race).
+        // registry in between (an unmount race). Plain `get`: a bulk rename acts on the drive
+        // itself; it has no archive or `.git` routing.
         let volume = host::installed()
             .volumes()
             .get(&volume_id)
@@ -310,6 +311,7 @@ async fn bulk_rename_remote(
     intent: &AtomicU8,
     recorder: &BulkRenameRecorder,
 ) -> BulkRenameRun {
+    // Plain `get`: a bulk rename acts on the drive itself; it has no archive or `.git` routing.
     let Some(volume) = host::installed().volumes().get(volume_id) else {
         return BulkRenameRun::failed(rows.len(), "volume unavailable".to_string());
     };

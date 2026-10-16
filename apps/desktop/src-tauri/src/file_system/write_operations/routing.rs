@@ -487,6 +487,8 @@ pub(crate) async fn start_rename_by_move(
             message: "a new name is one name, not a path".to_string(),
         })?;
     let sources: Vec<PathBuf> = renames.into_iter().map(|(source, _)| source).collect();
+    // Plain `get`: a rename that runs as a move acts on the drive itself; it has no
+    // archive or `.git` routing of its own.
     let Some(volume) = host::installed().volumes().get(&volume_id) else {
         return Err(source_volume_missing(&volume_id, &sources).await);
     };

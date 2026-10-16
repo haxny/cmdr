@@ -46,6 +46,8 @@ pub(in crate::file_system::write_operations) fn start_volume_delete(
         config.progress_interval_ms,
     )));
 
+    // Plain `get`: the drive's lane and how it names the items; `delete_files_start`
+    // sent an in-zip batch to the archive-edit driver before this.
     let volume = host::installed().volumes().get(&volume_id);
     let lane = volume
         .as_ref()
@@ -184,6 +186,7 @@ async fn run_volume_delete(
     config: &WriteOperationConfig,
     expected_sources: Option<&ExpectedSources>,
 ) -> ExecutionStatus {
+    // Plain `get`: `delete_files_start` sent an in-zip batch to the archive-edit driver.
     let Some(volume) = host::installed().volumes().get(volume_id) else {
         let first_source = sources
             .first()

@@ -341,7 +341,8 @@ pub(crate) async fn create_directory_core(
     let volume_id = volume_id.unwrap_or_else(|| "root".to_string());
     let expanded_path = parent_path.to_string();
 
-    // Try to use Volume abstraction
+    // Try to use Volume abstraction. Plain `get`: the archive gates above sent an
+    // in-zip parent to the archive-edit driver.
     if let Some(volume) = host::installed().volumes().get(&volume_id) {
         let new_path = new_entry_path(volume.as_ref(), &volume_id, &expanded_path, name).await?;
 
@@ -423,7 +424,8 @@ pub(crate) async fn create_file_core(
     let volume_id = volume_id.unwrap_or_else(|| "root".to_string());
     let expanded_path = parent_path.to_string();
 
-    // Try to use Volume abstraction
+    // Try to use Volume abstraction. Plain `get`: the archive gates above sent an
+    // in-zip parent to the archive-edit driver.
     if let Some(volume) = host::installed().volumes().get(&volume_id) {
         let new_path = new_entry_path(volume.as_ref(), &volume_id, &expanded_path, name).await?;
 
