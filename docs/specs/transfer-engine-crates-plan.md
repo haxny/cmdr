@@ -1226,6 +1226,24 @@ behavior change only if the path crosses an archive or `.git` route: if any does
 **DONE.** No `get_volume_manager` or `why_unregistered` in production engine code outside inline `#[cfg(test)]` blocks;
 lanes: `desktop-rust-tests`, `desktop-rust-clippy`.
 
+**What landed differently** (recorded at execution):
+
+- `OperationVolumes` (`host/volumes.rs`) has `VolumeLookup` as its supertrait, so `get` is the planner's method and an
+  `&dyn OperationVolumes` upcasts where the planner wants a lookup. Three methods beyond the plan's list:
+  `routes_over_its_parent` (the cheap gate in front of `resolve`; it reads the git portal's switch, so it's app state),
+  `path_crosses_archive_boundary` (create's gate), and `find_by_root` (fresh compress names its registered source).
+  `EngineHost::new(volume_host, volumes, events)`; the builder's `Operations::builder(volumes, events)` follows.
+- No `OperationVolumes` fake yet, for M5a's reason: nothing can inject one while the slot is process-global. It lands
+  with M6a. The test binary's fallback carries the real `AppOperationVolumes`, so cells keep registering in the
+  registry.
+- No `get` became a `resolve`; each path-passing `get` says why. Three sites have no route of their own (bulk rename,
+  the numbered create, rename-as-move), so an in-zip or `.git/<category>/` path there acts on the drive itself. The
+  engine trusts its caller there (the frontend refuses writes in a routed pane, `volume-capabilities.ts`); a write gate
+  for routed paths is a follow-up decision, not a mechanical re-point.
+- `operation_log_host/volumes.rs` (`VolumeLookup` for a bare `VolumeManager`) is test-only now: the planner cells use
+  it.
+- `transfer_bench::local_volume` builds on the engine's host too, so the bench's volumes and the engine agree.
+
 ### M5e: Seams IV — own writes, index, pacing, order, the rename-cost fact
 
 **Scope.** `OwnWrites`, `OperationIndex` (with `journal_search`'s `IndexStore` reads moving app-side behind
