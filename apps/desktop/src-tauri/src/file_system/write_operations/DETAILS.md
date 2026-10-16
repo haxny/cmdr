@@ -1036,6 +1036,8 @@ post-confirm hang — with the watchdog's message, which is why that message is 
 module had two `debug!` calls, neither at scan start. Every preview now logs one INFO at start (sources + volume), a 5 s
 DEBUG heartbeat with counts and time since the last one, and an INFO (or WARN, on a timeout) at the end, all under the
 `scan_preview` target, so the next hang answers "did it start, did it progress, how did it end" without guessing.
+Those lines name the first source as a quoted `path=` field (`ScanTarget::log_label`), while the timeout message keeps
+the plain `label`: bare, a report's redactor read the ` trip` of `Summer trip on volume root` as prose and shipped it.
 
 **A completed preview logs the WALK's totals, not the watchdog's counters** (`note_completed`, which takes a
 `ScanTally`). The counters only move on the progress tick, and that tick is on the

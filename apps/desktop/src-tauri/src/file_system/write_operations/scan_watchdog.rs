@@ -60,8 +60,13 @@ pub(super) struct ScanTally {
 /// What a preview walks: the phrase its log lines carry, and the path a timeout
 /// names to the operation waiting on it.
 pub(super) struct ScanTarget {
-    /// Human-readable "what is being scanned". See [`ScanTarget::of`].
+    /// Human-readable "what is being scanned", for the timeout message the user
+    /// reads. See [`ScanTarget::of`].
     pub(super) label: String,
+    /// The same, with the first source as a quoted `path=` field, for the log
+    /// lines. Bare, a report's redactor can't tell a lowercase last word of the
+    /// folder (`Summer trip`) from the ` on volume …` after it, and ships it.
+    pub(super) log_label: String,
     /// The first source, which is what a timed-out operation names: a failure
     /// with an empty path reads as "Path: ;" and tells the user nothing.
     pub(super) first_source: String,
@@ -73,16 +78,20 @@ impl ScanTarget {
     /// went quiet, without printing a whole selection.
     pub(super) fn of(sources: &[PathBuf], volume_id: &str) -> Self {
         let first_source = sources.first().map(|p| p.display().to_string()).unwrap_or_default();
-        let first = if first_source.is_empty() {
-            String::from("nothing")
+        let (first, first_logged) = if first_source.is_empty() {
+            (String::from("nothing"), String::from("nothing"))
         } else {
-            first_source.clone()
+            (first_source.clone(), format!("path={first_source:?}"))
         };
-        let label = match sources.len() {
-            0 | 1 => format!("{first} on volume {volume_id}"),
-            n => format!("{first} and {} more on volume {volume_id}", n - 1),
+        let rest = match sources.len() {
+            0 | 1 => format!("on volume {volume_id}"),
+            n => format!("and {} more on volume {volume_id}", n - 1),
         };
-        Self { label, first_source }
+        Self {
+            label: format!("{first} {rest}"),
+            log_label: format!("{first_logged} {rest}"),
+            first_source,
+        }
     }
 }
 
@@ -90,8 +99,10 @@ impl ScanTarget {
 /// last counted anything.
 pub(super) struct ScanWatchdog {
     preview_id: String,
-    /// Human-readable "what is being scanned", for the log lines.
+    /// Human-readable "what is being scanned", for the timeout message.
     target: String,
+    /// The same with a keyed path, for the log lines. See [`ScanTarget::log_label`].
+    log_target: String,
     /// What a timeout names to the waiting operation. See [`ScanTarget`].
     first_source: String,
     started: Instant,
@@ -138,6 +149,7 @@ impl ScanWatchdog {
         let watchdog = Arc::new(Self {
             preview_id,
             target: target.label,
+            log_target: target.log_label,
             first_source: target.first_source,
             started: Instant::now(),
             last_progress_ms: AtomicU64::new(0),
@@ -152,7 +164,7 @@ impl ScanWatchdog {
             target: LOG_TARGET,
             "scan preview {} started: {}",
             watchdog.preview_id,
-            watchdog.target
+            watchdog.log_target
         );
         let ticking = Arc::clone(&watchdog);
         tokio::spawn(async move { ticking.run(state, events).await });
@@ -236,7 +248,7 @@ impl ScanWatchdog {
             tally.dirs,
             tally.bytes,
             self.started.elapsed().as_secs_f64(),
-            self.target
+            self.log_target
         );
     }
 
@@ -261,7 +273,7 @@ impl ScanWatchdog {
                 self.files.load(Ordering::Relaxed),
                 self.dirs.load(Ordering::Relaxed),
                 self.bytes.load(Ordering::Relaxed),
-                self.target
+                self.log_target
             );
             return Beat::Parked;
         }
@@ -274,7 +286,7 @@ impl ScanWatchdog {
             self.dirs.load(Ordering::Relaxed),
             self.bytes.load(Ordering::Relaxed),
             idle.as_secs_f64(),
-            self.target
+            self.log_target
         );
         if idle >= self.inactivity_limit {
             Beat::Unresponsive
@@ -325,7 +337,7 @@ impl ScanWatchdog {
             self.files.load(Ordering::Relaxed),
             self.dirs.load(Ordering::Relaxed),
             self.bytes.load(Ordering::Relaxed),
-            self.target
+            self.log_target
         );
         state.cancelled.store(true, Ordering::Relaxed);
         let failure = WriteOperationError::IoError {
