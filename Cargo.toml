@@ -18,8 +18,16 @@ members = [
   "crates/index-query",
   "crates/operation-log-dump",
 ]
-exclude = ["benchmarks/smb"]
+exclude = ["benchmarks/smb", "vendor/tauri-plugin-store"]
 resolver = "2"
+
+# Third-party crates we patch, each identical to its crates.io release apart from the fix, which
+# its `vendor/<crate>/CMDR-PATCH.md` lists. `desktop-rust-vendor-patch-applied` fails when a bump
+# past the vendored version makes cargo resolve crates.io again.
+[patch.crates-io]
+# `Store::save` writes a synced temp file and renames it over the store, so a crash mid-save
+# can't leave `settings.json`, `shortcuts.json`, or `license.json` truncated (#461).
+tauri-plugin-store = { path = "vendor/tauri-plugin-store" }
 
 # Optimized builds cross crate boundaries. Cargo's default (`lto = false`,
 # `codegen-units = 16`) inlines only `#[inline]` and generic functions between

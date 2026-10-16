@@ -4,6 +4,9 @@ mod ai_gates;
 pub mod loader;
 mod restricted_shortcuts;
 
+#[cfg(test)]
+mod plugin_store_tests;
+
 pub use ai_gates::{
     AskCmdrSwitch, load_ask_cmdr_consent_revoke_pending, load_ask_cmdr_switch, load_cloud_consent_revoke_pending,
 };

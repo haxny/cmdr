@@ -95,7 +95,10 @@ config UIs), `KeyboardShortcutsSection` (command names from the command registry
 ### Store (`settings-store.ts`)
 
 - Uses `tauri-plugin-store` for persistence to `~/Library/Application Support/com.veszelovszki.cmdr/settings.json`
-- Debounced saves: 500ms after last change, atomic write (temp file + rename)
+- Debounced saves: 500ms after last change (`autoSave: false`, so `saveToStore` calls `store.save()` itself). The save
+  is atomic: Cmdr's patched plugin (`vendor/tauri-plugin-store/CMDR-PATCH.md`) writes a synced sibling temp file and
+  renames it over `settings.json`, so a crash mid-save leaves the old file or the new one, never a torn one. A failed
+  save rejects, and `saveToStore` logs it and retries once.
 - In-memory cache for synchronous reads via `getSetting()`
 - Cross-window sync: emits `settings:changed` events when values change (payload carries an `explicit` flag; see §
   Sparse persistence)
