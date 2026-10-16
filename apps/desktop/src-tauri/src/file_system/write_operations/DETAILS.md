@@ -103,7 +103,8 @@ The full top-level inventory is here:
   `rollback.rs` wears two hats: the history dialog's reversal, and the executor the operation-log engine injects.
 - Vocabulary and edges: `types.rs` (+ `types/events.rs`, every `#[tauri_specta(event_name)]` payload, and
   `types/errors.rs`, `WriteOperationError` with the typed payloads its variants carry — both re-exported through
-  `types`), `event_sinks.rs`, `error_classification.rs`, `transfer_sides.rs` (the two volumes a transfer runs
+  `types`), `event_sinks.rs`, `terminal_effects.rs` (the app side effects `TauriEventSink`'s four terminal emits run,
+  in a pinned order around the emit; tests in `terminal_effects_tests.rs`), `error_classification.rs`, `transfer_sides.rs` (the two volumes a transfer runs
   between, the mount-table question, and the one boundary that words a stop; tests in `transfer_sides_tests.rs`),
   `target_names.rs` (the new NAME a renamed source takes in a move, § "Renames that run as moves"),
   `mutation_error.rs` (the typed refusal an instant mutation returns), `mutation_reply.rs` (its reply within the deadline, and the late settle, § "A slow instant mutation says it is still running"), `validation.rs`, `free_space.rs` (the copy's free-space pre-flight, § "The free-space pre-flight"), `analytics.rs`, `eta.rs`. Journaling: `journal.rs`, `journal_search.rs`. The
@@ -142,7 +143,8 @@ decisions"; the estimator in § "ETA + throughput"; `WriteSettledGuard` in § "S
   payloads (`ReadOnlySide`, `TransferRole`, `DisconnectedSide`, `TrashRefusalKind`, `RecoveredOriginal`,
   `OversizedFile`). ❗ `RecoveredOriginal::new` is `pub(in …write_operations)` rather than `pub(super)`: `super` is
   `types` from down here, and its callers are the transfer engines a level up.
-- **`analytics.rs` is `pub(super)` and reached ONLY from `TauriEventSink::emit_complete`.** Every property is
+- **`analytics.rs` is `pub(super)` and reached ONLY from `TauriEventSink::emit_complete`** (via
+  `terminal_effects::complete`). Every property is
   categorical (op kind, a count bucket, a bool): no names, no paths ever. Copy/Move → `file_transfer_completed`,
   Delete/Trash → `delete_used`.
 - **`error_classification.rs` classifies from `errno` / `ErrorKind` only, never the message**. The native copy calls
@@ -824,7 +826,7 @@ registration by `summary.rs` (`path_summary` for local ops, `volume_items` for v
 **The exception to removal-on-terminal.** Nothing else can hold the failure of an operation that was backgrounded: the record is deleted on settle, and `write-error` only reaches a window that is listening at that moment — and the queue window being closed is the exact scenario this is for. So the manager keeps a bounded list of failures OUT OF BAND — `ManagerInner::failures`, a `VecDeque<RetainedFailure>` (the row plus its way to start again, `manager/retry.rs`) capped at `FAILURE_CAPACITY = 20`, oldest evicted first — and `snapshot()` appends them after the live rows.
 
 - **`free_and_remove` is untouched.** Admission, laning, the busy-volumes set, and settling behave exactly as before: a failed op frees its lane slots, cleans its caches, deletes its record, and admits the next op on the same `on_settled` it always did. Retention is a separate structure the settle path never consults. Pinned by `manager::tests::a_failed_op_frees_its_lane_and_admits_the_next_exactly_as_before`.
-- **Recorded at the emit site.** `TauriEventSink::emit_error` calls `record_failure`, next to the `mcp::terminal_ops::record` line. ❌ Not in the `OperationEventSink` trait and not in `CollectorEventSink`: test sinks stay side-effect-free.
+- **Recorded at the emit site.** `TauriEventSink::emit_error` calls `record_failure` through `terminal_effects::error`, after the `mcp::terminal_ops::record` line and before the emit (order pinned by `terminal_effects_tests.rs`). ❌ Not in the `OperationEventSink` trait and not in `CollectorEventSink`: test sinks stay side-effect-free.
 - **⚠️ A failure whose record is still LIVE is filtered out of the snapshot.** `emit_error` runs inside the op's own task, before `on_settled` removes the record, so for a moment the op is both running and failed. Emitting both rows would put one `operationId` in the list twice, and the queue window's keyed `{#each}` throws on a duplicate key. `record_failure` therefore stays silent whenever the record is live; the row surfaces on `on_settled`'s existing `emit_changed`, which is the honest moment anyway. It DOES emit on the other branch, where the record is already gone: no duplicate is possible without a record, and no `on_settled` is coming, so the row would otherwise sit unbroadcast until some unrelated emit — no toast, no chip, nothing until the queue window next opens. Pinned by `a_failure_with_no_live_record_broadcasts_itself`.
 - **Not every `write-error` is a failure.** `WriteOperationError::Cancelled` (some volume paths emit it) and `ArchiveNeedsPassword` (a recoverable prompt the frontend answers and retries) are excluded by TYPED variant match, never by message text.
 - **First error per id wins.** `write-error` can fire twice for one op — an inner handler emits and returns `Err`, then `mod.rs`'s safety net emits again — and the first one is what actually stopped it.

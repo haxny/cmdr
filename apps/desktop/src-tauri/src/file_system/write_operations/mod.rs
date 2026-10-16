@@ -67,6 +67,7 @@ mod status_cache;
 mod summary;
 pub(crate) use summary::path_summary;
 mod target_names;
+mod terminal_effects;
 mod transfer;
 // The Criterion bench's one door into the engine, re-exported at the crate root.
 #[cfg(feature = "transfer-bench")]
@@ -816,6 +817,9 @@ mod scan_preview_tree_tests;
 mod scan_watchdog_tests;
 #[cfg(test)]
 mod settle_event_tests;
+// Which app side effects each terminal event fires, and in what order around its emit.
+#[cfg(test)]
+mod terminal_effects_tests;
 // The one cooperative-stop boundary every serial loop here asks at.
 #[cfg(test)]
 mod free_space_tests;

@@ -11,7 +11,8 @@ use tauri_specta::Event;
 #[cfg(test)]
 use crate::ignore_poison::IgnorePoison;
 
-use super::analytics::emit_completion_analytics;
+use super::manager::manager;
+use super::terminal_effects::{self, AppTerminalEffects};
 use super::types::{
     ConflictInfo, DryRunResult, ScanPreviewCancelledEvent, ScanPreviewCompleteEvent, ScanPreviewErrorEvent,
     ScanPreviewProgressEvent, ScanProgressEvent, WriteCancelledEvent, WriteCompleteEvent, WriteConflictEvent,
@@ -165,6 +166,11 @@ impl TauriEventSink {
     pub fn new(app: tauri::AppHandle) -> Self {
         Self { app }
     }
+
+    /// The app side effects each terminal emit carries (`terminal_effects.rs`).
+    fn effects(&self) -> AppTerminalEffects {
+        AppTerminalEffects { manager: manager() }
+    }
 }
 
 impl OperationEventSink for TauriEventSink {
@@ -172,64 +178,19 @@ impl OperationEventSink for TauriEventSink {
         let _ = event.emit(&self.app);
     }
     fn emit_complete(&self, event: WriteCompleteEvent) {
-        // PII-free analytics: a transfer or delete completed. Categorical only (op, a count
-        // bucket, a bool); never names or paths. Copy/Move map to `file_transfer_completed`,
-        // Delete/Trash to `delete_used`. Fires before the emit so it can read the moved event.
-        emit_completion_analytics(&event);
-        // Record the terminal outcome for MCP's `await operation_complete` before the FE
-        // event fires (the emit-site pattern `listing_errors` uses), since the manager
-        // removes the op before `operations-changed` could carry a terminal status.
-        crate::mcp::terminal_ops::record(
-            &event.operation_id,
-            event.operation_type,
-            crate::mcp::terminal_ops::TerminalStatus::Completed,
-        );
-        let _ = event.emit(&self.app);
+        terminal_effects::complete(&self.effects(), event, |event| {
+            let _ = event.emit(&self.app);
+        });
     }
     fn emit_cancelled(&self, event: WriteCancelledEvent) {
-        crate::mcp::terminal_ops::record(
-            &event.operation_id,
-            event.operation_type,
-            crate::mcp::terminal_ops::TerminalStatus::Cancelled,
-        );
-        let _ = event.emit(&self.app);
+        terminal_effects::cancelled(&self.effects(), event, |event| {
+            let _ = event.emit(&self.app);
+        });
     }
     fn emit_error(&self, event: WriteErrorEvent) {
-        crate::mcp::terminal_ops::record(
-            &event.operation_id,
-            event.operation_type,
-            crate::mcp::terminal_ops::TerminalStatus::Failed,
-        );
-        // The one place a failing write operation writes its technical reason
-        // down. Everything else about the failure travels as the typed variant:
-        // the frontend logs `error.type` alone, and the detail string reaches
-        // only the error dialog's collapsed "Technical details". Without this
-        // line an error-report bundle records `Trash error: io_error` and the
-        // OS's actual words are gone (ERR-BPAPM, 2026-09-08).
-        //
-        // WARN, not `log_error!`, deliberately: the frontend already raises this
-        // same failure at error level, and a second error-level line would push
-        // one user-visible failure over the auto-dispatcher's "2 errors within
-        // 60s" threshold on its own. The file target is always Debug, so a warn
-        // still lands in every bundle.
-        //
-        // `{:?}` over a hand-written sentence: the variant carries the path and
-        // the message in named fields, and Debug can't drift from them.
-        log::warn!(
-            target: "write_operations",
-            "op {} ({:?}) failed: {:?}",
-            event.operation_id,
-            event.operation_type,
-            event.error
-        );
-        // Retain the failure so it outlives the record the manager is about to
-        // remove: a backgrounded operation that fails while the queue window is
-        // closed must still be able to say why. Same emit-site pattern as the
-        // ring above, and deliberately NOT in the trait or `CollectorEventSink`
-        // (test sinks stay side-effect-free). `record_failure` itself decides
-        // what counts as a failure and emits nothing.
-        super::manager::manager().record_failure(&event.operation_id, event.operation_type, &event.error);
-        let _ = event.emit(&self.app);
+        terminal_effects::error(&self.effects(), event, |event| {
+            let _ = event.emit(&self.app);
+        });
     }
     fn emit_conflict(&self, event: WriteConflictEvent) {
         let _ = event.emit(&self.app);
@@ -253,11 +214,9 @@ impl OperationEventSink for TauriEventSink {
         let _ = result.emit(&self.app);
     }
     fn emit_settled(&self, event: WriteSettledEvent) {
-        // The pane's free-space readout re-reads purgeable space on its next poll: a delete
-        // under a local snapshot frees space `statfs` never sees (`volumes/live_space.rs`).
-        #[cfg(target_os = "macos")]
-        cmdr_local::live_space::expect_space_change();
-        let _ = event.emit(&self.app);
+        terminal_effects::settled(&self.effects(), event, |event| {
+            let _ = event.emit(&self.app);
+        });
     }
 }
 
