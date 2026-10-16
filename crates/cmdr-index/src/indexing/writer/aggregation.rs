@@ -14,9 +14,9 @@ use crate::indexing::events::{EventSink, IndexEvent};
 use crate::indexing::store::IndexStore;
 use cmdr_fs::pluralize::{pluralize, pluralize_with};
 
-use super::deferred_repair::DeferredRepairs;
 use super::pending_rollups::PendingRollups;
-use super::repair::repair_dir_stats_upward;
+use super::repair::{DeferredRepairs, repair_dir_stats_upward};
+
 use super::{AccumulatorMaps, AggSource};
 use crate::indexing::events::emit_dir_updated;
 

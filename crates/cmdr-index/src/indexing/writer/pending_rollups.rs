@@ -21,7 +21,7 @@
 //! and the drain. See `DETAILS.md` § "The dir_stats ledger" for the full
 //! argument, including what reads the stale row in between.
 //!
-//! **❌ Not [`super::deferred_repair::DeferredRepairs`].** That queue is drift
+//! **❌ Not [`super::repair::DeferredRepairs`].** That queue is drift
 //! TELEMETRY: it warns on its first entry, caps at 1,024 ids, and gives up on an
 //! id after five attempts. All three are wrong here — this is the routine path,
 //! so the warning would fire on every first index, and a dropped roll-up is a
@@ -47,8 +47,7 @@ use cmdr_fs::pluralize::pluralize;
 
 use crate::indexing::events::{EventSink, emit_dir_updated};
 
-use super::deferred_repair::DeferredRepairs;
-use super::repair::repair_dir_stats_upward;
+use super::repair::{DeferredRepairs, repair_dir_stats_upward};
 
 /// Ancestors a finished subtree aggregate owes a roll-up, waiting for the
 /// writer's caught-up point.

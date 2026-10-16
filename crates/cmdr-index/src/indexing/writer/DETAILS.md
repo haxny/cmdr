@@ -389,12 +389,12 @@ mismatch was then silently clamped to zero — the incident's confident "0 bytes
 The rule of thumb: **delta when you know exactly what changed; repair when you know something changed but not exactly
 what.**
 
-**The repair primitive (`repair.rs::repair_dir_stats_upward`).** The universal escalation: from a start id, recompute
-each level from its committed children (one indexed SUM over direct file children + a SUM over direct child dirs' stored
-`dir_stats` — O(children) per level, never a recursive CTE), write it, walk to the parent, and STOP as soon as a level's
-recompute already equals its stored row (the short-circuit compares ALL fields, so an epoch-only or symlink-only
-difference keeps walking — coverage restoration depends on it). Idempotent and order-independent, so it's safe to fire
-from every escalation site with no coordination. **Missing-child-row semantics** (they diverge from
+**The repair primitive (`repair/mod.rs::repair_dir_stats_upward`).** The universal escalation: from a start id,
+recompute each level from its committed children (one indexed SUM over direct file children + a SUM over direct child
+dirs' stored `dir_stats` — O(children) per level, never a recursive CTE), write it, walk to the parent, and STOP as soon
+as a level's recompute already equals its stored row (the short-circuit compares ALL fields, so an epoch-only or
+symlink-only difference keeps walking — coverage restoration depends on it). Idempotent and order-independent, so it's
+safe to fire from every escalation site with no coordination. **Missing-child-row semantics** (they diverge from
 `ComputeAllAggregates`, which computes the child first): a child dir with NO `dir_stats` row contributes 0 to
 sizes/counts (LEFT JOIN + COALESCE 0), absorbs `min_subtree_epoch` to 0, reads false for symlinks — an honest
 under-count the backfill pass then heals and repairs upward (monotone convergence toward truth). A parentless /
@@ -473,7 +473,7 @@ them at all — `Shutdown` and channel-close both run `settle_the_ledger` on the
 telemetry that does both. `pending_rollups.rs` carries that boundary as a guardrail. A roll-up that fails on a transient
 DB error hands its id to `DeferredRepairs`, which drains immediately after it in the same hook.
 
-**Deferred repair: a failed DB operation is drift, not a no-op (`deferred_repair.rs`).** Every ancestor walk
+**Deferred repair: a failed DB operation is drift, not a no-op (`repair/deferred.rs`).** Every ancestor walk
 (`propagate_delta_by_id`, `propagate_recursive_has_symlinks`, `propagate_min_subtree_epoch`, `repair_dir_stats_upward`)
 can fail mid-chain on a transient SQLite error — the busy handler gives up at attempt 51, and the wild fingerprint is
 `propagate_delta_by_id: upsert failed for id=946: database is locked`. Warning and walking away makes that ancestor, and
@@ -501,6 +501,11 @@ is proof of drift we still owe a repair) and counts the newcomer. A drain that f
 after 5 passes rather than re-walking a doomed chain; dropped and given-up ids ride one `warn` line. The backstop for
 anything given up is the next full aggregate or backfill. Empty→non-empty logs at `warn` (normally silent), each drain
 at `debug`.
+
+**Decision: the queue lives under the repair walk as its child module (`repair/deferred.rs`).** The two recurse into
+each other by design: the walk re-queues a failed id, and draining the queue runs the walk. The queue exists only to
+retry that one walk, so the parent-child module says so, and `module-cycles` folds the mutual `use` into a hub instead
+of reporting two welded siblings. Importers name it `repair::DeferredRepairs` (a re-export).
 
 **The negative-delta warn is drift telemetry.** After the fixes it should be rare; a steadily-firing warn means a NEW
 leak to find, not a repair to tune.

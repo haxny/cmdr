@@ -122,7 +122,7 @@ how much WAL it generates. Needs measurement.
 ## 3. What else references the tables by name?
 
 Files with literal `entries` / `dir_stats` SQL (non-test): `indexing/store/{mod,entries,dir_stats,meta}.rs`,
-`indexing/writer/{entries,delta,repair,deferred_repair}.rs`, `indexing/aggregator/readers.rs`, `search/index.rs`,
+`indexing/writer/{entries,delta,repair/mod,repair/deferred}.rs`, `indexing/aggregator/readers.rs`, `search/index.rs`,
 `media_index/scheduler/enrich.rs`, plus `importance/scheduler/recompute.rs` through `IndexStore` helpers. All table
 names are **hardcoded SQL literals across ~82 `prepare_cached` sites**. Writing into shadow tables therefore means
 threading a table name through the entire store + writer API, or duplicating the write path. That's the single largest
@@ -155,7 +155,7 @@ scan, and `scan_completed_at` is deleted at scan start — see § 6.
 anywhere else becomes a pointer into a different row:
 
 - The deferred-repair queue holds ids and is explicitly cleared on `TruncateData` for exactly this reason
-  (`indexing/writer/deferred_repair.rs:97-100`). A swap must clear it too.
+  (`indexing/writer/repair/deferred.rs:97-100`). A swap must clear it too.
 - Any in-flight verifier correction started just before `scanning` flipped can land after the swap with pre-swap ids
   (`UpsertEntryV2` / `DeleteEntryById`), now naming unrelated rows.
 - The shared id counter would be used by both the shadow walker and any live write into the old table. The shadow build

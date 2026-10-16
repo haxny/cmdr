@@ -77,8 +77,8 @@ connection then sees `database is locked` indefinitely, and the writer's own lat
 
 `idx_child_dirs` is `ON entries (parent_id) WHERE is_directory = 1`. Every "the child dirs of X" query reads it: the
 `min_subtree_epoch` recompute (`dir_stats.rs`, run up the ancestor chain on every dir create or delete and every
-`PropagateMinSubtreeEpoch`), the subdir half of `recompute_recursive_has_symlinks` (`../writer/repair.rs`), the coverage
-frontier's `read_child_dir_coverage` (`../read/coverage.rs`), `list_child_dir_ids_and_names`, and
+`PropagateMinSubtreeEpoch`), the subdir half of `recompute_recursive_has_symlinks` (`../writer/repair/mod.rs`), the
+coverage frontier's `read_child_dir_coverage` (`../read/coverage.rs`), `list_child_dir_ids_and_names`, and
 `for_each_child_directory_of`. The whole-table `WHERE is_directory = 1` reads (the aggregator's bulk loads, `COUNT`)
 pick it up too, as a covering scan.
 
@@ -97,7 +97,7 @@ connection waits it out under `busy_timeout`. This is the one schema change that
 derivable from rows already there. A new column or a changed meaning still bumps.
 
 **Symlink children have a second one, `idx_child_symlinks`**: `ON entries (parent_id) WHERE is_symlink = 1`, added on
-open the same way. It serves the direct half of `recompute_recursive_has_symlinks` (`../writer/repair.rs`,
+open the same way. It serves the direct half of `recompute_recursive_has_symlinks` (`../writer/repair/mod.rs`,
 `DIRECT_SYMLINK_CHILD_SQL`), which otherwise read every child of the folder: 150–300 ms on a 200,000-file folder, ~8 µs
 off the index. It holds only symlink rows (154,156 of 5.6 M, 1.9 MB), so ordinary file and directory writes don't
 maintain it; only writing a symlink row, or flipping `is_symlink`, does. The first open after an upgrade builds it once,
@@ -106,8 +106,8 @@ maintain it; only writing a symlink row, or flipping `is_symlink`, does. The fir
 hot-path fix.
 
 Guards: `tests/child_dirs_index.rs` pins each child-dir query's plan to its index and covers the open-time build of
-both; `../writer/repair.rs` pins both symlink queries. Still O(children) and deliberately left: the repair's children
-`SUM`, which must read every child.
+both; `../writer/repair/mod.rs` pins both symlink queries. Still O(children) and deliberately left: the repair's
+children `SUM`, which must read every child.
 
 ## What coverage needs
 

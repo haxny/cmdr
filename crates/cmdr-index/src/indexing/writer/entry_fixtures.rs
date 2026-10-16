@@ -1,7 +1,7 @@
 //! `EntryRow` fixtures for the writer tests: the three row shapes a test tree is
 //! built from, so each `tests` module spells a tree as `dir_entry(10, ROOT_ID, "A")`
 //! rather than a ten-line struct literal per node. Shared by `delta.rs`,
-//! `repair.rs`, and `deferred_repair.rs`.
+//! `repair/mod.rs`, and `repair/deferred.rs`.
 use crate::indexing::store::EntryRow;
 
 /// A directory row with no sizes, no mtime, and no inode.

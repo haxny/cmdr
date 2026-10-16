@@ -5,7 +5,7 @@ Every write to a volume's index DB goes through one dedicated `std::thread`. Thi
 search-generation bump. Other areas point here.
 
 `mod.rs` the `WriteMessage` protocol + `IndexWriter` handle + `writer_loop`; `batch.rs` the implicit transaction;
-`entries.rs`, `delta.rs`, `aggregation.rs`, `repair.rs`, `deferred_repair.rs`, `pending_rollups.rs`,
+`entries.rs`, `delta.rs`, `aggregation.rs`, `repair/` (+ `deferred.rs` queue), `pending_rollups.rs`,
 `abandoned_retry.rs`, `maintenance.rs`, `probe_stats.rs`, `wait_probe.rs`, one job each.
 
 ## Must-knows (all hold PER volume id)
@@ -20,7 +20,7 @@ search-generation bump. Other areas point here.
   via `IndexFailureSignal`, ❌ never a message substring; `BUSY`/`LOCKED` stay retried.
 - **`dir_stats` ledger, four hard rules:** (1) ❌ never clamp a negative delta — it's drift, escalate to
   `repair_dir_stats_upward`; (2) a failed `dir_stats` read OR write is drift too, so queue the id to
-  `deferred_repair.rs`, ❌ never warn-and-continue, ❌ never read `Err` as "no row"; (3) structural rewrites repair
+  `repair/deferred.rs`, ❌ never warn-and-continue, ❌ never read `Err` as "no row"; (3) structural rewrites repair
   ancestors ON the writer; (4) suppress propagation ONLY inside `BulkReconcileGuard` (durable
   `MarkLedgerUnpaid`/`PayLedgerIfUnpaid`), ❌ never a bare `SetDeltaPropagation(false)`.
 - **Coverage epochs:** `propagate_delta_by_id` carries `min_subtree_epoch` through UNCHANGED on a pure size/count delta

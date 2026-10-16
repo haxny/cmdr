@@ -34,7 +34,6 @@ pub(in crate::indexing) fn retry_window_is_open(conn: &rusqlite::Connection) -> 
 }
 mod aggregation;
 mod batch;
-mod deferred_repair;
 mod delta;
 mod entries;
 mod maintenance;
@@ -54,7 +53,6 @@ use aggregation::{
     handle_compute_subtree_aggregates,
 };
 use batch::{BatchRole, ImplicitBatch};
-use deferred_repair::DeferredRepairs;
 use delta::{propagate_delta_by_id, propagate_min_subtree_epoch};
 use entries::{
     handle_delete_entry_by_id, handle_delete_subtree_by_id, handle_insert_entries_v2, handle_move_entry_v2,
@@ -62,6 +60,7 @@ use entries::{
 };
 use maintenance::{handle_incremental_vacuum, request_wal_checkpoint, run_deferred_wal_checkpoint};
 use pending_rollups::{PendingRollups, emit_full_refresh, settle_the_ledger};
+use repair::DeferredRepairs;
 
 // ── Writer generation (for search index staleness detection) ─────────
 
@@ -1137,7 +1136,7 @@ fn writer_loop(
     // the commit to run its checkpoint. See `maintenance::request_wal_checkpoint`.
     let mut deferred_checkpoint = false;
     // Chains a failed `dir_stats` read/write left drifted, drained below once the
-    // writer is idle again. See `deferred_repair.rs`.
+    // writer is idle again. See `repair/deferred.rs`.
     let repairs = DeferredRepairs::new();
     // Ancestors a finished subtree aggregate owes a roll-up, coalesced per burst and
     // drained at the same caught-up point. See `pending_rollups.rs`.

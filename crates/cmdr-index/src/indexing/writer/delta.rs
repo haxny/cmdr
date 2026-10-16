@@ -10,13 +10,12 @@
 //! a missing row — the walk escalates to [`super::repair::repair_dir_stats_upward`]
 //! rather than clamping the lie into place. When the DB itself refuses — a read
 //! or write that fails mid-chain — the walk writes nothing and hands the id to
-//! [`super::deferred_repair`], which repairs it on a later writer tick. See the
+//! [`super::repair::DeferredRepairs`], which repairs it on a later writer tick. See the
 //! ledger design in `indexing/DETAILS.md` § "The dir_stats ledger".
 
 use crate::indexing::store::IndexStore;
 
-use super::deferred_repair::DeferredRepairs;
-use super::repair::{recompute_recursive_has_symlinks, repair_dir_stats_upward};
+use super::repair::{DeferredRepairs, recompute_recursive_has_symlinks, repair_dir_stats_upward};
 
 #[allow(clippy::too_many_arguments, reason = "one signed delta per aggregate field")]
 pub(super) fn propagate_delta_by_id(

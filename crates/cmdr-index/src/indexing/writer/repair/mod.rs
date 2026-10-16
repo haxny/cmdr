@@ -13,7 +13,9 @@
 
 use crate::indexing::store::{DirStatsById, IndexStore, IndexStoreError};
 
-use super::deferred_repair::DeferredRepairs;
+mod deferred;
+
+pub(super) use deferred::DeferredRepairs;
 
 /// "Is any direct child a symlink?", for [`recompute_recursive_has_symlinks`].
 /// Served by `idx_child_symlinks`.

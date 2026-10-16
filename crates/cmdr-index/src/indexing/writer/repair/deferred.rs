@@ -1,7 +1,7 @@
 //! The deferred `dir_stats` repair queue: drift the writer knows about but
 //! can't fix right now.
 //!
-//! A `dir_stats` ancestor walk ([`super::delta`], [`super::repair`]) can fail
+//! A `dir_stats` ancestor walk ([`super::super::delta`], [`super`]) can fail
 //! mid-chain on a transient DB error — `SQLITE_BUSY` after the busy handler
 //! gives up at attempt 51, a read that couldn't be served. The walk stops there,
 //! so that ancestor and everything above it keep a stale balance. Logging a
@@ -24,7 +24,7 @@ use std::collections::BTreeMap;
 
 use cmdr_fs::pluralize::pluralize;
 
-use super::repair::repair_dir_stats_upward;
+use super::repair_dir_stats_upward;
 
 /// How many distinct ids the queue holds. Ancestor chains overlap heavily, so
 /// one stuck episode usually queues a handful of ids, not thousands; this is a
@@ -42,7 +42,7 @@ const MAX_ATTEMPTS: u32 = 5;
 ///
 /// Deduped (ancestor chains overlap heavily) and bounded. The value is the
 /// number of drain passes the id has already survived; see [`MAX_ATTEMPTS`].
-pub(super) struct DeferredRepairs {
+pub(in crate::indexing::writer) struct DeferredRepairs {
     pending: RefCell<BTreeMap<i64, u32>>,
     /// `true` while [`drain`](Self::drain) is running, so a re-queue from a
     /// still-failing repair carries the id's attempt count forward instead of
@@ -56,7 +56,7 @@ pub(super) struct DeferredRepairs {
 }
 
 impl DeferredRepairs {
-    pub(super) fn new() -> Self {
+    pub(in crate::indexing::writer) fn new() -> Self {
         Self {
             pending: RefCell::new(BTreeMap::new()),
             draining: Cell::new(false),
@@ -71,7 +71,7 @@ impl DeferredRepairs {
     /// The empty → non-empty crossing logs at `warn`: this is drift telemetry
     /// and should normally stay silent, so a steadily-firing line means the DB
     /// is genuinely unwritable. Every later id in the same episode is silent.
-    pub(super) fn queue(&self, id: i64, reason: &str) {
+    pub(in crate::indexing::writer) fn queue(&self, id: i64, reason: &str) {
         let mut pending = self.pending.borrow_mut();
         let was_empty = pending.is_empty();
         if pending.len() >= MAX_PENDING && !pending.contains_key(&id) {
@@ -90,13 +90,13 @@ impl DeferredRepairs {
         }
     }
 
-    pub(super) fn is_empty(&self) -> bool {
+    pub(in crate::indexing::writer) fn is_empty(&self) -> bool {
         self.pending.borrow().is_empty()
     }
 
     /// Forget everything queued. Sent by `TruncateData`: the tables are gone, so
     /// the queued ids name rows that no longer exist.
-    pub(super) fn clear(&self) {
+    pub(in crate::indexing::writer) fn clear(&self) {
         self.pending.borrow_mut().clear();
         self.dropped.set(0);
     }
@@ -108,7 +108,7 @@ impl DeferredRepairs {
     /// [`repair_dir_stats_upward`] with its attempt count bumped, so nothing is
     /// dropped on the floor; an id that exhausts [`MAX_ATTEMPTS`] is given up on
     /// with one warning. One line per drain, never per id.
-    pub(super) fn drain(&self, conn: &rusqlite::Connection) {
+    pub(in crate::indexing::writer) fn drain(&self, conn: &rusqlite::Connection) {
         let batch = std::mem::take(&mut *self.pending.borrow_mut());
         if batch.is_empty() {
             return;
@@ -154,13 +154,13 @@ impl DeferredRepairs {
 
     /// The queued ids (test-only observable).
     #[cfg(test)]
-    pub(super) fn pending_ids(&self) -> Vec<i64> {
+    pub(in crate::indexing::writer) fn pending_ids(&self) -> Vec<i64> {
         self.pending.borrow().keys().copied().collect()
     }
 
     /// Ids dropped because the queue was full, since the last drain (test-only).
     #[cfg(test)]
-    pub(super) fn dropped_count(&self) -> u64 {
+    pub(in crate::indexing::writer) fn dropped_count(&self) -> u64 {
         self.dropped.get()
     }
 }
