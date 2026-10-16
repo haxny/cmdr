@@ -120,9 +120,7 @@ pub(super) fn store_license(
     };
 
     // Update the in-memory cache with the newly committed license
-    if let Ok(mut cache) = LICENSE_CACHE.lock() {
-        *cache = Some(info.clone());
-    }
+    *LICENSE_CACHE.lock_ignore_poison() = Some(info.clone());
 
     Ok(info)
 }
@@ -131,10 +129,8 @@ pub(super) fn store_license(
 /// verification.
 pub fn get_license_info(app: &tauri::AppHandle) -> Option<LicenseInfo> {
     // Fast path: return cached info if available
-    if let Ok(cache) = LICENSE_CACHE.lock()
-        && let Some(ref info) = *cache
-    {
-        return Some(info.clone());
+    if let Some(info) = LICENSE_CACHE.lock_ignore_poison().clone() {
+        return Some(info);
     }
 
     if KEY_UNREADABLE.load(Ordering::Relaxed) {
@@ -173,9 +169,7 @@ pub fn get_license_info(app: &tauri::AppHandle) -> Option<LicenseInfo> {
     })?;
 
     // Populate cache for subsequent calls
-    if let Ok(mut cache) = LICENSE_CACHE.lock() {
-        *cache = Some(info.clone());
-    }
+    *LICENSE_CACHE.lock_ignore_poison() = Some(info.clone());
 
     Some(info)
 }

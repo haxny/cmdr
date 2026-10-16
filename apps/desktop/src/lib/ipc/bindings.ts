@@ -13280,7 +13280,8 @@ export type QueueRowContextAction = {
 /**
  *  One thing a queue row's menu can do. Pause and Resume share a key but are separate
  *  actions, so the label can say which one this click is, and so a pick that went stale
- *  while the menu was up can be told apart.
+ *  while the menu was up can be told apart. Its menu ids, labels, and commands live with the
+ *  menu builder (`menu/queue_row_menu.rs`).
  */
 export type QueueRowMenuAction =
   | 'moveEarlier'
