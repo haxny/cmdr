@@ -75,8 +75,9 @@ mod walk;
 mod wiring;
 use recompute::{
     IncrementalInputs, IncrementalReport, RecomputeInputs, incremental_rescore, load_previous_markers, load_visits,
-    recompute_folders, sanitize_incremental_batch, walk_for_incremental,
+    recompute_folders, sanitize_incremental_batch,
 };
+use scoped_walk::walk_for_incremental;
 // Re-exported for the eval corpus tool, which walks a real index the SAME way a
 // recompute does (so dumped signals match production exactly).
 pub(crate) use walk::walk_index_folders;

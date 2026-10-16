@@ -2,8 +2,8 @@
 
 Fills each volume's store: `mod.rs` (the `ImportanceScheduler` handle, `ScoringPolicy`, `PassCoordinator`, the pass),
 `wiring.rs` (construction, `wire_volume` + its two callers, throttle, spawns), `walk.rs` (the O(dirs) full pass),
-`scoped_walk.rs` (the O(touched) incremental walk + batch plan), `recompute.rs` (signals + score + write),
-`differential.rs` (the two-walk harness). Volume-kind policy and floors: `../CLAUDE.md`.
+`scoped_walk.rs` (the O(touched) incremental walk, its batch plan, and the scoped-or-full choice), `recompute.rs`
+(signals + score + write), `differential.rs` (the two-walk harness). Volume-kind policy and floors: `../CLAUDE.md`.
 
 ## Must-knows
 

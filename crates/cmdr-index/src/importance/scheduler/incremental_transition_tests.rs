@@ -15,8 +15,8 @@
 
 use std::collections::{HashMap, HashSet};
 
-use super::recompute::{RescoreScope, dedupe_nested_origins, load_previous_markers, walk_for_incremental};
-use super::scoped_walk::plan_incremental_batch;
+use super::recompute::{RescoreScope, dedupe_nested_origins, load_previous_markers};
+use super::scoped_walk::{plan_incremental_batch, walk_for_incremental};
 use super::test_support::*;
 use super::*;
 use crate::indexing::store::{DirStatsById, IndexStore, ROOT_ID};

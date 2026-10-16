@@ -39,7 +39,7 @@ use tokio_util::sync::CancellationToken;
 use super::recompute::{RescoreScope, dedupe_nested_origins};
 use super::walk::{
     ExtensionGroup, IndexFolder, WalkedFolders, folded_is_project_marker, lowercased_extension_into,
-    propagate_marker_to_ancestors,
+    propagate_marker_to_ancestors, walk_index_folders,
 };
 use crate::importance::classify::under_floored_ancestor;
 use crate::importance::signals::ChildAggregate;
@@ -212,6 +212,39 @@ pub(super) fn plan_incremental_batch(conn: &rusqlite::Connection, origins: &[Str
 fn subtree_is_over_budget(conn: &rusqlite::Connection, id: i64) -> Result<bool, String> {
     let stats = IndexStore::get_dir_stats_by_id(conn, id).map_err(|e| e.to_string())?;
     Ok(stats.is_some_and(|s| s.recursive_dir_count > SCOPED_WALK_MAX_DIRS as u64))
+}
+
+/// Read the folders one incremental pass needs out of `conn`, and say which of them
+/// the pass may write.
+///
+/// The single seam between "how the index is read" and "what gets scored and
+/// written": everything downstream ([`super::recompute::incremental_rescore`]) is a
+/// pure function of the [`WalkedFolders`] this returns. It prefers the SCOPED walk
+/// ([`try_scoped_walk`]), which reads only the changed subtrees, and falls back to
+/// the full O(dirs) [`walk_index_folders`] whenever the scoped one can't stand in for
+/// it — which is also what keeps the full walk exercised as the fallback path.
+///
+/// Returns the [`BatchPlan`] alongside the walk because the two are one decision: the
+/// plan says which origins were too big to descend, and the caller needs that to keep
+/// the clear list off them.
+///
+/// `stop` reaches both walks: the fallback is the same seconds-long walk a full pass
+/// takes, and the scoped one looks between origins.
+pub(super) fn walk_for_incremental(
+    conn: &rusqlite::Connection,
+    home: &str,
+    origins: &[String],
+    previous_markers: &HashMap<String, bool>,
+    stop: &CancellationToken,
+) -> Result<(WalkedFolders, RescoreScope, BatchPlan), PassError> {
+    let plan = plan_incremental_batch(conn, origins)?;
+    match try_scoped_walk(conn, home, &plan, previous_markers, stop)? {
+        ScopedWalkOutcome::Scoped(folders) => Ok((folders, RescoreScope::ChangedSubtreesOnly, plan)),
+        ScopedWalkOutcome::FullWalkNeeded(reason) => {
+            log::debug!(target: "importance", "incremental rescore takes the full walk: {reason}");
+            Ok((walk_index_folders(conn, home, stop)?, RescoreScope::WithAncestors, plan))
+        }
+    }
 }
 
 /// Read the folders of `plan`'s subtrees out of `conn`, or say why the pass has to

@@ -14,8 +14,9 @@ use std::collections::HashMap;
 
 use tokio_util::sync::CancellationToken;
 
-use super::scoped_walk::{BatchPlan, plan_incremental_batch};
-use super::walk::{IndexFolder, WalkedFolders, walk_index_folders};
+#[cfg(any(test, feature = "tooling"))]
+use super::walk::walk_index_folders;
+use super::walk::{IndexFolder, WalkedFolders};
 use crate::importance::scorer::{SignalSet, Weights, explain};
 use crate::importance::signals::{OptionalSignals, signals_for_dir};
 use crate::importance::stop::{PassError, StopPoll, check};
@@ -301,41 +302,6 @@ pub(super) enum RescoreScope {
     /// walk can score correctly (an ancestor's `has_marker_below` depends on
     /// everything below it, not only on the changed subtree).
     WithAncestors,
-}
-
-/// Read the folders one incremental pass needs out of `conn`, and say which of them
-/// the pass may write.
-///
-/// The single seam between "how the index is read" and "what gets scored and
-/// written": everything downstream ([`incremental_rescore`]) is a pure function of
-/// the [`WalkedFolders`] this returns. It prefers the SCOPED walk
-/// ([`super::scoped_walk`]), which reads only the changed subtrees, and falls back to
-/// the full O(dirs) [`walk_index_folders`] whenever the scoped one can't stand in for
-/// it — which is also what keeps the full walk exercised as the fallback path.
-///
-/// Returns the [`BatchPlan`] alongside the walk because the two are one decision: the
-/// plan says which origins were too big to descend, and the caller needs that to keep
-/// the clear list off them.
-///
-/// `stop` reaches both walks: the fallback is the same seconds-long walk a full pass
-/// takes, and the scoped one looks between origins.
-pub(super) fn walk_for_incremental(
-    conn: &rusqlite::Connection,
-    home: &str,
-    origins: &[String],
-    previous_markers: &HashMap<String, bool>,
-    stop: &CancellationToken,
-) -> Result<(WalkedFolders, RescoreScope, BatchPlan), PassError> {
-    let plan = plan_incremental_batch(conn, origins)?;
-    match super::scoped_walk::try_scoped_walk(conn, home, &plan, previous_markers, stop)? {
-        super::scoped_walk::ScopedWalkOutcome::Scoped(folders) => {
-            Ok((folders, RescoreScope::ChangedSubtreesOnly, plan))
-        }
-        super::scoped_walk::ScopedWalkOutcome::FullWalkNeeded(reason) => {
-            log::debug!(target: "importance", "incremental rescore takes the full walk: {reason}");
-            Ok((walk_index_folders(conn, home, stop)?, RescoreScope::WithAncestors, plan))
-        }
-    }
 }
 
 /// Drop every origin that sits under another DESCENDED origin in the same batch.
