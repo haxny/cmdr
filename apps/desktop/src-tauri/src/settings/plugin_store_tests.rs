@@ -63,6 +63,28 @@ fn a_save_renames_a_finished_file_over_the_old_one() {
     assert_eq!(saved["listing.showHiddenFiles"], serde_json::json!(false));
 }
 
+/// The rename swaps in a new file, so it has to carry the old one's mode: a store someone locked
+/// down to 0600 stays 0600.
+#[test]
+fn a_save_keeps_the_store_files_permissions() {
+    let dir = TestDir::new("plugin_store_mode");
+    let path = dir.join("license.json");
+    let app = app();
+    let store = store_at(&app, &path);
+
+    store.set("license_key_in_secret_store", true);
+    store.save().expect("the first save");
+    fs::set_permissions(&path, fs::Permissions::from_mode(0o600)).expect("lock the file down");
+
+    store.set("license_key_in_secret_store", false);
+    store.save().expect("the second save");
+
+    assert_eq!(
+        fs::metadata(&path).expect("the file exists").permissions().mode() & 0o777,
+        0o600
+    );
+}
+
 /// A save that can't finish (here a read-only folder, the same shape as a full disk) reports
 /// itself to the caller and leaves the old file byte for byte.
 #[test]

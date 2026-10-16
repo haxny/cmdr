@@ -465,11 +465,24 @@ fn write_atomically(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
         COUNTER.fetch_add(1, Ordering::Relaxed)
     ));
 
+    // The rename swaps in a new file, so it takes the old one's permissions. A new store keeps the
+    // default ones.
+    let existing_permissions = fs::metadata(&target).ok().map(|metadata| metadata.permissions());
+
     let written = (|| {
-        let mut file = fs::OpenOptions::new()
-            .write(true)
-            .create_new(true)
-            .open(&tmp)?;
+        let mut options = fs::OpenOptions::new();
+        options.write(true).create_new(true);
+        // Created with the old mode already, so it's never more open than the file it replaces.
+        #[cfg(unix)]
+        if let Some(permissions) = &existing_permissions {
+            use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
+            options.mode(permissions.mode() & 0o7777);
+        }
+        let mut file = options.open(&tmp)?;
+        // The umask may have narrowed the mode at create; this makes it exact.
+        if let Some(permissions) = existing_permissions {
+            file.set_permissions(permissions)?;
+        }
         file.write_all(bytes)?;
         file.sync_all()?;
         fs::rename(&tmp, &target)

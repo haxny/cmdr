@@ -13,7 +13,9 @@ package byte for byte, apart from the change below and two files left out:
 
 - `src/store.rs`: `StoreInner::save` calls a new `write_atomically` instead of `fs::write`. It writes a uniquely named
   sibling temp file (`.<name>.<pid>.<n>.tmp`), syncs it, renames it over the store file, and syncs the parent directory.
-  A symlinked store file is resolved first. On failure it removes the temp file and returns the error.
+  A symlinked store file is resolved first. When the store file exists, the temp file takes its permissions (created
+  with its mode on Unix, then set exactly), so a save never changes the store's mode; a new store gets the default ones.
+  On failure it removes the temp file and returns the error.
 
 ## Why
 
