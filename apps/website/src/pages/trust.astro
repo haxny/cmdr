@@ -92,6 +92,12 @@ const toc = [
             <strong>Made by one person</strong> at Rymdskottkärra AB, a Swedish company. The code is public under the
             Business Source License, and each version becomes open source (AGPL-3.0) three years after its release.
         </li>
+        <li>
+            <strong>Listed in the CSA STAR Registry.</strong> Cmdr's answers to the Cloud Security Alliance's security
+            questionnaire (CAIQ v4.1) are <a href="https://cloudsecurityalliance.org/star/registry/rymdskottkarra-ab"
+                >public there</a
+            >. It's a self-assessment (STAR Level 1), not an audit.
+        </li>
     </ul>
 
     <h2 id="network">What the app sends over the network</h2>
@@ -468,9 +474,11 @@ const toc = [
             off for everyone or hold Cmdr at a version (<a href="#mdm">central management</a>).
         </li>
         <li>
-            <strong>Signing keys</strong>: the release build signs with keys stored as GitHub secrets. The GitHub
-            account that controls them signs in with two-factor authentication, using hardware security keys. Every
-            signing key also has an encrypted backup outside GitHub.
+            <strong>Signing keys</strong>: the Apple signing keys are GitHub secrets in a protected environment that
+            only signed release tags reach. The GitHub account that controls them signs in with two-factor
+            authentication, using hardware security keys. The update signing key isn't on GitHub at all: the
+            maintainer signs each update on his own Mac, and the release workflow checks those signatures before it
+            publishes. Every signing key also has an encrypted backup outside GitHub.
         </li>
     </ul>
     <DevTodo>
