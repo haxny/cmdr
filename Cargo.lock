@@ -1380,6 +1380,7 @@ dependencies = [
  "chrono",
  "cmdr-adb",
  "cmdr-archive",
+ "cmdr-collation",
  "cmdr-fs",
  "cmdr-git",
  "cmdr-http",

@@ -756,6 +756,9 @@ runtime. The app's answer is `apps/desktop/src-tauri/src/operations_host/`, whic
   `pace_between_items`. `None` or non-zero, read per call (a spec changes it mid-run); every real build answers `None`.
   Asked per file in the copy loop: the dispatch rule allows it beside a file's I/O, and the Criterion copy cases showed
   no change against the pre-seam baseline (`docs/notes/transfer-extraction-baseline.md`'s method, 2026-10-17).
+- **The collator the panes sort with comes from `NameOrder`** (`host/name_order.rs`), asked once per walk by
+  `TreeOrder::active`. The engine names `cmdr_collation::NameCollator` directly, never through `cmdr-listing`. Default:
+  English, built on first use and kept on the answer itself.
 - **Optional seams default to doing nothing.** `EngineHost::new` takes only the runtime's `VolumeHost`, the volumes,
   and the events (nothing works without those); every other seam starts as a no-op answer that `with_*` replaces. The
   app wires them all in `operations_host::app_answers`.

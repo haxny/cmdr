@@ -14,6 +14,7 @@
 //! - the drive index — [`index::AppOperationIndex`], `index_host::index()` asked
 //!   per call
 //! - E2E pacing — [`pacing::AppPacing`], `test_mode`'s throttles
+//! - name order — [`name_order::AppNameOrder`], the panes' collator
 //! - one operation's or preview's events — [`TauriEventSink`] and
 //!   [`TauriScanPreviewSink`] (`sinks.rs`), built at the IPC edge; a terminal
 //!   event's app side effects ride along (`terminal_effects.rs`)
@@ -23,6 +24,7 @@
 mod analytics;
 mod events;
 mod index;
+mod name_order;
 mod own_writes;
 mod pacing;
 mod sinks;
@@ -71,4 +73,5 @@ fn app_answers(app: Option<AppHandle>) -> EngineHost {
     .with_own_writes(Arc::new(own_writes::AppOwnWrites))
     .with_index(Arc::new(index::AppOperationIndex))
     .with_pacing(Arc::new(pacing::AppPacing))
+    .with_name_order(Arc::new(name_order::AppNameOrder))
 }

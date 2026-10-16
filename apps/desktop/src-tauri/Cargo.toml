@@ -124,7 +124,11 @@ cmdr-operation-log = { path = "../../../crates/cmdr-operation-log" }
 # The directory listing engine: every pane's listing, its cache, sort, and diffs,
 # behind one handle (`listing_host::listings()`) the app answers seams for.
 cmdr-listing = { path = "../../../crates/cmdr-listing" }
-tauri = { version = "2", features = ["macos-private-api"] }
+# The file-name collator the panes sort with. The write engine names it from
+# here rather than through `cmdr-listing`'s re-export, so it never needs the
+# listing engine for one type.
+cmdr-collation = { path = "../../../crates/cmdr-collation" }
+tauri ={ version = "2", features = ["macos-private-api"] }
 tauri-plugin-opener = "2"
 tauri-plugin-mcp-bridge = "0.13"
 tauri-plugin-store = "2"

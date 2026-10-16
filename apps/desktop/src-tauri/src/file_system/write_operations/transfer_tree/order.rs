@@ -1,14 +1,15 @@
 //! Tree order: the one order a transfer's tree shows its selection in.
 //!
 //! Folders first, then files, each group by the panes' name collation
-//! (`cmdr_listing::NameCollator`), depth-first. The tree displays exactly this order,
+//! (`cmdr_collation::NameCollator`, from the host's `NameOrder`), depth-first. The tree displays exactly this order,
 //! so the rows below the active one really are the upcoming ones, because every
 //! driver starts files in it too (`../transfer/DETAILS.md` § "Processing order").
 
 use std::cmp::Ordering;
 use std::sync::Arc;
 
-use cmdr_listing::NameCollator;
+use super::super::host;
+use cmdr_collation::NameCollator;
 
 /// Ranks sibling entries in tree order.
 pub(crate) struct TreeOrder {
@@ -23,7 +24,7 @@ impl TreeOrder {
     /// panes sort with.
     pub(crate) fn active() -> Self {
         Self {
-            collator: Some(crate::listing_host::listings().collator()),
+            collator: Some(host::installed().name_order().collator()),
         }
     }
 

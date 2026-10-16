@@ -114,6 +114,12 @@ nothing. Each read is live, since a spec changes a throttle mid-run, and a zero 
 never hands back a zero-length sleep). The scan-preview delay is gated on E2E mode inside `test_mode`, so a stray
 variable can't slow a real build. Pinned by `pacing::tests::the_rollback_pace_follows_test_mode`.
 
+## Name order (`name_order.rs`)
+
+`AppNameOrder` answers `NameOrder` with `listing_host::listings().collator()`, asked per call: the reading language can
+change between two transfers, and the listing engine already keeps one collator per language, so a transfer's tree and
+the panes rank names identically. Pinned by `name_order::tests::the_engine_sorts_with_the_panes_collator`.
+
 ## A test binary
 
 Nothing installs in a test binary, and some engine pins read the app's real answers: the transfer-gauge cells in
