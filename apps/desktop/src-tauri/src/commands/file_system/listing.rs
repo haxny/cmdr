@@ -11,12 +11,12 @@ use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use tokio::time::Duration;
 
-use crate::deadline::{TimedOut, blocking_typed_result_with_timeout, blocking_with_timeout_flag};
 use crate::file_system::volume::manager::get_volume_manager;
 use crate::font_metrics::brief_columns::{
     BriefColumnWidths, BriefColumnsError, BriefColumnsIpcError, compute_brief_column_text_widths,
 };
 use crate::listing_index_sizes::count::{CountFolderSizesError, FolderSizeCountOutcome};
+use cmdr_fs::deadline::{TimedOut, blocking_typed_result_with_timeout, blocking_with_timeout_flag};
 use cmdr_fs::volume::WatchCoverage;
 
 use super::expand_tilde;

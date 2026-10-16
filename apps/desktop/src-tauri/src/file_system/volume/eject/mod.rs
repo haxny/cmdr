@@ -289,7 +289,7 @@ async fn run_teardown(volume_id: &str, teardown: Teardown<'_>) -> Result<(), Eje
             // is TRUE here: the disconnect already started and runs on to its end.
             let task_provider = Arc::clone(&provider);
             let task_volume_id = volume_id.to_string();
-            let result = crate::deadline::timeout_detached_typed(
+            let result = cmdr_fs::deadline::timeout_detached_typed(
                 deadlines::DEVICE_EJECT_DEADLINE,
                 || EjectError::TimedOut,
                 |detail| EjectError::Unexpected { detail },

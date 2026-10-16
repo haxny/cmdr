@@ -438,7 +438,7 @@ enum SecretCopy {
 /// didn't answer: the move must not go on without it.
 async fn copy_secret(from: &SecretKey, to: &SecretKey) -> Result<SecretCopy, ()> {
     let (from, to) = (from.clone(), to.clone());
-    let copied = crate::deadline::blocking_with_timeout(
+    let copied = cmdr_fs::deadline::blocking_with_timeout(
         SECRET_STORE_BUDGET,
         Err(KeychainError::Other("the secret store didn't answer".to_string())),
         move || {
@@ -472,7 +472,7 @@ fn copy_secret_with(
 /// it. Best effort: one that stays is an orphan nothing reads, ❌ never a reason
 /// to undo a move that landed.
 async fn delete_secret(key: SecretKey) {
-    let deleted = crate::deadline::blocking_with_timeout(
+    let deleted = cmdr_fs::deadline::blocking_with_timeout(
         SECRET_STORE_BUDGET,
         Err(KeychainError::Other("the secret store didn't answer".to_string())),
         move || keychain::delete_credentials(&key.service, Some(&key.scope)),

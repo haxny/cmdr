@@ -29,7 +29,7 @@ async fn share_holding(names: &[&str]) -> String {
     id
 }
 
-async fn destination_answer(id: &str, name: &str) -> crate::deadline::TimedOut<bool> {
+async fn destination_answer(id: &str, name: &str) -> cmdr_fs::deadline::TimedOut<bool> {
     destination_exists(Some(id.to_string()), format!("/share/{name}")).await
 }
 

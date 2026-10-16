@@ -308,7 +308,7 @@ pub async fn connect_saved_share(
 /// holds none, holds another account's, or didn't answer in time.
 async fn stored_password(host_name: &str, username: &str) -> Option<String> {
     let host = host_name.to_string();
-    let stored = crate::deadline::blocking_with_timeout(SECRET_STORE_LIMIT, None, move || {
+    let stored = cmdr_fs::deadline::blocking_with_timeout(SECRET_STORE_LIMIT, None, move || {
         keychain::get_credentials(&host, None).ok()
     })
     .await?;
@@ -320,7 +320,7 @@ async fn stored_password(host_name: &str, username: &str) -> Option<String> {
 /// all that's lost is "silent next time".
 async fn store_password(host_name: &str, username: &str, password: &str) {
     let (host, user, secret) = (host_name.to_string(), username.to_string(), password.to_string());
-    let stored = crate::deadline::blocking_with_timeout(SECRET_STORE_LIMIT, false, move || {
+    let stored = cmdr_fs::deadline::blocking_with_timeout(SECRET_STORE_LIMIT, false, move || {
         keychain::save_credentials(&host, None, &user, &secret).is_ok()
     })
     .await;

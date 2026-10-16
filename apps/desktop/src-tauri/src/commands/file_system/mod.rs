@@ -37,7 +37,7 @@ pub(crate) fn expand_tilde(path: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::deadline::blocking_with_timeout;
+    use cmdr_fs::deadline::blocking_with_timeout;
     use tokio::time::Duration;
 
     // Create-op tests (mkdir/mkfile core + managed wrappers) live with the logic

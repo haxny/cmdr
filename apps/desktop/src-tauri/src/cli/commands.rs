@@ -55,14 +55,14 @@ pub async fn uninstall_cli_command(app: AppHandle, admin_prompt: String) -> CliC
 }
 
 async fn read_status() -> Option<CliCommandStatus> {
-    crate::deadline::blocking_with_timeout(STATUS_TIMEOUT, None, || Some(installer().status())).await
+    cmdr_fs::deadline::blocking_with_timeout(STATUS_TIMEOUT, None, || Some(installer().status())).await
 }
 
 async fn run_action<R: Runtime>(
     app: AppHandle<R>,
     action: impl FnOnce() -> CliCommandResult + Send + 'static,
 ) -> CliCommandResult {
-    let result = match crate::deadline::blocking_with_timeout(ACTION_TIMEOUT, None, move || Some(action())).await {
+    let result = match cmdr_fs::deadline::blocking_with_timeout(ACTION_TIMEOUT, None, move || Some(action())).await {
         Some(result) => result,
         None => CliCommandResult {
             outcome: CliCommandOutcome::Failed { code: None },

@@ -413,7 +413,7 @@ async fn copy_secrets(from: &str, to: &str, shares: &[String]) -> Result<Vec<Opt
     let mut copied = Vec::new();
     for share in std::iter::once(None).chain(shares.iter().cloned().map(Some)) {
         let (from, to, key) = (from.to_string(), to.to_string(), share.clone());
-        let outcome = crate::deadline::blocking_with_timeout(
+        let outcome = cmdr_fs::deadline::blocking_with_timeout(
             SECRET_STORE_BUDGET,
             Err(KeychainError::Other("the secret store didn't answer".to_string())),
             move || {
@@ -440,7 +440,7 @@ async fn copy_secrets(from: &str, to: &str, shares: &[String]) -> Result<Vec<Opt
 /// `server_move::delete_secret`: one that stays is an orphan nothing reads.
 async fn delete_secret(server: &str, share: Option<String>) {
     let server = server.to_string();
-    let deleted = crate::deadline::blocking_with_timeout(
+    let deleted = cmdr_fs::deadline::blocking_with_timeout(
         SECRET_STORE_BUDGET,
         Err(KeychainError::Other("the secret store didn't answer".to_string())),
         move || keychain::delete_credentials(&server, share.as_deref()),

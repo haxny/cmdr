@@ -101,7 +101,7 @@ pub async fn save_webdav_credentials(url: String, username: String, secret: Stri
     let Some(service) = credential_key(&url) else {
         return Err(not_a_server_url());
     };
-    crate::deadline::blocking_with_timeout(
+    cmdr_fs::deadline::blocking_with_timeout(
         std::time::Duration::from_secs(15),
         Err(keychain_timed_out()),
         move || keychain::save_credentials(&service, Some(&username), &username, &secret),
@@ -122,7 +122,7 @@ pub(crate) async fn has_webdav_credentials(url: String, username: String) -> boo
     let Some(service) = credential_key(&url) else {
         return false;
     };
-    crate::deadline::blocking_with_timeout(std::time::Duration::from_secs(15), false, move || {
+    cmdr_fs::deadline::blocking_with_timeout(std::time::Duration::from_secs(15), false, move || {
         keychain::has_credentials(&service, Some(&username))
     })
     .await
@@ -133,7 +133,7 @@ pub(crate) async fn delete_webdav_credentials(url: String, username: String) -> 
     let Some(service) = credential_key(&url) else {
         return Err(not_a_server_url());
     };
-    crate::deadline::blocking_with_timeout(
+    cmdr_fs::deadline::blocking_with_timeout(
         std::time::Duration::from_secs(15),
         Err(keychain_timed_out()),
         move || keychain::delete_credentials(&service, Some(&username)),

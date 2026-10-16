@@ -34,9 +34,9 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::time::Duration;
 
-use crate::deadline::{DeadlineError, blocking_with_timeout, timeout_detached_typed};
 use crate::file_system::Volume;
 use crate::file_system::volume::manager::get_volume_manager;
+use cmdr_fs::deadline::{DeadlineError, blocking_with_timeout, timeout_detached_typed};
 use cmdr_operation_log::types::Initiator;
 
 use super::expand_tilde;

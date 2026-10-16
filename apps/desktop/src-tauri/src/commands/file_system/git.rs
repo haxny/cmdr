@@ -9,10 +9,10 @@ use std::time::Duration;
 
 use cmdr_listing::ListingId;
 
-use crate::deadline::{TimedOut, blocking_typed_result_with_timeout, blocking_with_timeout_flag};
 use crate::file_system::git::commit_counts::{self, CommitCountPass};
 use crate::file_system::git::wiring::portal;
 use crate::file_system::git::{EntryStatus, FriendlyGitError, RepoInfo, list_status, repo_info};
+use cmdr_fs::deadline::{TimedOut, blocking_typed_result_with_timeout, blocking_with_timeout_flag};
 
 /// The chip's budget is discover + repo info ≤ 100 ms p95 on a 50k-file repo
 /// (`crates/cmdr-git/DETAILS.md` § Performance). We give the IPC layer 2 s on

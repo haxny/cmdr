@@ -150,7 +150,7 @@ there's no `list_favorites` command.
 - `reorder_favorites(ordered_ids: Vec<String>) -> Result<(), DeadlineError>`
 - `set_favorite_shortcut(id: String, shortcut: Option<String>) -> Result<(), SetFavoriteShortcutError>`
 
-Remove, rename, and reorder answer in `DeadlineError` (`deadline/mod.rs`) rather than a vocabulary of their own,
+Remove, rename, and reorder answer in `DeadlineError` (`cmdr_fs::deadline`) rather than a vocabulary of their own,
 because the store swallows its own write errors: a favorite that doesn't reach disk still applies in
 memory, so a missed deadline (or a panicked blocking task) is the only thing they can report.
 `add_favorite` can also REFUSE (§ The add gate), so it owns `AddFavoriteError`: the same two

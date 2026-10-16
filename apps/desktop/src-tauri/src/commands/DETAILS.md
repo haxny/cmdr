@@ -226,7 +226,7 @@ Per-file function inventory and decision rationale. `CLAUDE.md` holds the must-k
   to update the listing cache (both local and volume-aware paths). ❗ `check_rename_validity` and
   `check_rename_permission` stay UNMANAGED: they answer while someone is typing, so they take the snappy read-only path
   instead of `manager::run_instant`, which busy-marks the volume for a mutation that isn't happening yet.
-  `check_rename_validity` sizes its wait with `deadline::io_budget_for_volume`: on a live session a stalled `stat` once
+  `check_rename_validity` sizes its wait with `file_system::volume::io_budget_for_volume`: on a live session a stalled `stat` once
   failed the user's rename with `TimedOut`. `rename_file` has no timeout answer at all: see the next bullet.
 - **`volume_id` on the write commands.** `create_directory` / `create_file` / `rename_file` only expand tilde (root),
   resolve the `volume_id`, and answer within `MUTATION_REPLY_DEADLINE` (2 s) through `write_operations::reply_within`:
@@ -448,7 +448,7 @@ returns a fallback (or error) instead of freezing the IPC thread or exhausting t
 use `spawn_blocking` wrap it with `tokio::time::timeout` instead.
 
 **Timeout-aware return types** (`TimedOut<T>`, or a variant of the family's own error enum):
-`../deadline/DETAILS.md` § "Decision: timeout-aware return types".
+`crates/cmdr-fs/src/deadline/DETAILS.md` § "Decision: timeout-aware return types".
 
 **Every command's `Err` is a typed enum, and there is deliberately no shared one.** A generic
 `IpcError { message, timed_out }` with a `from_err` constructor once carried every command's failure. Being ergonomic, it spread to

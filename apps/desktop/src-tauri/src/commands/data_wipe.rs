@@ -13,7 +13,7 @@ const SUMMARY_DEADLINE: Duration = Duration::from_secs(30);
 #[tauri::command]
 #[specta::specta]
 pub async fn data_wipe_summary(app: AppHandle) -> Result<DataWipeSummary, DataWipeError> {
-    crate::deadline::blocking_typed_result_with_timeout(
+    cmdr_fs::deadline::blocking_typed_result_with_timeout(
         SUMMARY_DEADLINE,
         || DataWipeError::TimedOut,
         |_| DataWipeError::Interrupted,

@@ -5,8 +5,8 @@
 
 use tokio::time::Duration;
 
-use crate::deadline::{blocking_typed_result_with_timeout, blocking_with_timeout};
 use crate::dock::{DockPinBlocker, DockPinFailure, DockPinState};
+use cmdr_fs::deadline::{blocking_typed_result_with_timeout, blocking_with_timeout};
 
 /// Reading the Dock's preferences goes through `cfprefsd` over XPC, which can wait on a busy
 /// daemon, so it carries the standard 2 s read deadline.

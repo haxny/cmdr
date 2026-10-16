@@ -4,7 +4,6 @@ use std::sync::Arc;
 
 use tokio::time::Duration;
 
-use crate::deadline::{BlockingBudget, blocking_typed_result_with_timeout, timeout_detached_typed};
 use crate::multi_rename::error::MultiRenameError;
 use crate::multi_rename::history::{FIELD_HISTORY, FieldHistoryEntry, MAX_FIELD_HISTORY, history_entries};
 use crate::multi_rename::plan::{MultiRenameSpec, PreviewRow, RenameExample, render_examples};
@@ -14,6 +13,7 @@ use crate::multi_rename::presets::{
 };
 use crate::multi_rename::run::{MultiRenameStarted, apply};
 use crate::multi_rename::session::{self, MultiRenameOpened, MultiRenamePreview, PreviewFilter};
+use cmdr_fs::deadline::{BlockingBudget, blocking_typed_result_with_timeout, timeout_detached_typed};
 
 /// Opens a session over the pane's selection: `selected_indices` are backend row
 /// numbers in rename order (`None` for every row the pane shows), read at

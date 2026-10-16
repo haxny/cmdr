@@ -10,8 +10,6 @@ use tauri::{AppHandle, Runtime};
 use tauri_plugin_clipboard_manager::ClipboardExt;
 use tokio::time::Duration;
 
-#[cfg(target_os = "macos")]
-use crate::deadline::{TimedOut, blocking_typed_result_with_timeout, blocking_with_timeout_flag};
 use crate::file_system::get_info::GetInfoError;
 use crate::file_system::google_drive::DriveItemLinks;
 #[cfg(target_os = "macos")]
@@ -19,6 +17,8 @@ use crate::file_system::terminal::{OpenTerminalError, OpenTerminalOutcome, Termi
 #[cfg(target_os = "macos")]
 use crate::file_system::text_editor::TextEditorList;
 use crate::file_system::text_editor::{EditorOpenReport, OpenInEditorError};
+#[cfg(target_os = "macos")]
+use cmdr_fs::deadline::{TimedOut, blocking_typed_result_with_timeout, blocking_with_timeout_flag};
 
 /// Listing terminals is a handful of LaunchServices lookups and bundle-icon
 /// reads. Generous enough for a custom pick sitting on a slow mount, short enough

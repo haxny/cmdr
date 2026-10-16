@@ -44,8 +44,8 @@ pub fn fail_next_brief_column_widths(count: usize) {
 #[specta::specta]
 pub async fn create_dialog_gallery_fixtures(
     app: tauri::AppHandle,
-) -> Result<crate::dev_fixtures::DialogGalleryFixtures, crate::deadline::DeadlineError> {
-    use crate::deadline::{DeadlineError, blocking_typed_result_with_timeout};
+) -> Result<crate::dev_fixtures::DialogGalleryFixtures, cmdr_fs::deadline::DeadlineError> {
+    use cmdr_fs::deadline::{DeadlineError, blocking_typed_result_with_timeout};
     use tokio::time::Duration;
 
     // Generous for a local write, because the FIRST call creates a few dozen

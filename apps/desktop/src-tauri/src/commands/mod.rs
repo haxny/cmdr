@@ -74,3 +74,6 @@ pub mod volumes;
 pub mod webdav;
 pub mod whats_new;
 pub mod window_ordering;
+
+#[cfg(test)]
+mod wire_shape_tests;

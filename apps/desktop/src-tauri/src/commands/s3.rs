@@ -18,8 +18,8 @@ use crate::network::s3_volume_wiring;
 use cmdr_s3::UnattendedReconnect;
 use std::time::Duration;
 
-use crate::deadline::blocking_with_timeout;
 use crate::s3_costs::{CostEstimate, CostEstimateRequest};
+use cmdr_fs::deadline::blocking_with_timeout;
 
 /// Whether an S3 volume can actually come back on its own as it stands. The
 /// WebDAV twin (`WebdavUnattendedReconnect`), for the same reasons: ❌ never

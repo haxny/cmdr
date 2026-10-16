@@ -15,8 +15,8 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tokio::time::Duration;
 
-use crate::deadline::{Deadline, timeout_detached_typed};
 use crate::file_system::volume::manager::get_volume_manager;
+use cmdr_fs::deadline::{Deadline, timeout_detached_typed};
 use cmdr_operation_log::types::Initiator;
 
 /// Unified copy across volume types (local, MTP, extract out of a `.zip`).

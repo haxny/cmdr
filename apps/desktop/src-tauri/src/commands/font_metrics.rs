@@ -11,8 +11,8 @@
 use std::collections::HashMap;
 use std::time::Duration;
 
-use crate::deadline::blocking_typed_result_with_timeout;
 use crate::font_metrics;
+use cmdr_fs::deadline::blocking_typed_result_with_timeout;
 
 /// Writing the metrics file is a small serialize plus one `fs::write` to the
 /// app data dir; 5 s matches the write tier used elsewhere in `commands/`.

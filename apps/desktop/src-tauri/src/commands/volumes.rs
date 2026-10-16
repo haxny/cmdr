@@ -8,9 +8,9 @@
 use serde::Serialize;
 use tokio::time::Duration;
 
-use crate::deadline::{TimedOut, blocking_with_timeout_flag};
 use crate::location::{Location, ResolveLocationResult};
 use crate::volume_listing;
+use cmdr_fs::deadline::{TimedOut, blocking_with_timeout_flag};
 
 #[cfg(target_os = "macos")]
 use crate::volumes as platform;

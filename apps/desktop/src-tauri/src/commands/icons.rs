@@ -3,8 +3,8 @@
 use std::collections::HashMap;
 use tokio::time::Duration;
 
-use crate::deadline::{TimedOut, blocking_with_timeout_flag};
 use crate::icons;
+use cmdr_fs::deadline::{TimedOut, blocking_with_timeout_flag};
 
 const ICONS_TIMEOUT: Duration = Duration::from_secs(2);
 

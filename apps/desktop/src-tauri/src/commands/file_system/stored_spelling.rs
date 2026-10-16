@@ -12,7 +12,7 @@ use std::path::PathBuf;
 
 use tokio::time::Duration;
 
-use crate::deadline::TimedOut;
+use cmdr_fs::deadline::TimedOut;
 
 /// A resolve is a stat plus, on a miss, a parent listing per wrong component. A
 /// drop never waits longer than this for it: past the deadline the paths go as

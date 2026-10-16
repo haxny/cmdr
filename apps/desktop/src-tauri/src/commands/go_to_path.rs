@@ -6,9 +6,9 @@
 
 use tokio::time::Duration;
 
-use crate::deadline::{DeadlineError, blocking_typed_result_with_timeout};
 use crate::go_to_path::history::{MAX_RECENTS, RECENT_PATHS, RecentPathEntry};
 use crate::go_to_path::{self, GoToPathResolution};
+use cmdr_fs::deadline::{DeadlineError, blocking_typed_result_with_timeout};
 
 /// 2s matches the read timeout other filesystem-touching commands use.
 const RESOLVE_TIMEOUT: Duration = Duration::from_secs(2);

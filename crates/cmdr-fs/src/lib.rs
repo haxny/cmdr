@@ -21,6 +21,7 @@
 pub mod apple_double;
 pub mod archive_format;
 pub mod benchmark;
+pub mod deadline;
 pub mod durable;
 pub mod entry;
 pub mod file_provider;

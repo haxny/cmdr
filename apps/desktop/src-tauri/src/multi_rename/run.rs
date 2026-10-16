@@ -11,9 +11,10 @@ use futures_util::stream::{self, StreamExt};
 use serde::{Deserialize, Serialize};
 use tokio::time::Duration;
 
-use crate::deadline::{Deadline, blocking_typed_result_with_timeout, io_budget_for_volume, timeout_detached_within};
 use crate::file_system::volume::Volume;
+use crate::file_system::volume::io_budget_for_volume;
 use crate::file_system::write_operations::{BulkRenameRow, SourceFingerprint, start_renames};
+use cmdr_fs::deadline::{Deadline, blocking_typed_result_with_timeout, timeout_detached_within};
 use cmdr_operation_log::types::Initiator;
 
 use super::error::MultiRenameError;

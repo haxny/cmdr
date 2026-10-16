@@ -1,12 +1,16 @@
-//! Deadlines, timeouts, and budgets for blocking work. IPC commands wrap their I/O in these, and so do
-//! the subsystems under the IPC layer (network, reveal, write operations), so one timeout policy covers both.
+//! Deadlines, timeouts, and budgets for blocking work. The app's IPC commands wrap their I/O in these, and so
+//! do the subsystems under the IPC layer (network, reveal, write operations), so one timeout policy covers both.
+//!
+//! Every helper spawns on the AMBIENT runtime (`tokio::spawn`, `spawn_blocking`) by design: its callers are
+//! already inside one (an IPC command, an operation's task), and the detached work must run on that same runtime
+//! to its own end. A caller outside a runtime gets tokio's panic, the same as a bare `tokio::spawn`.
 
 #[cfg(test)]
 mod budget_tests;
 #[cfg(test)]
 mod stall_tests;
 
-use cmdr_fs::volume::ConnectionState;
+use crate::volume::ConnectionState;
 use serde::{Deserialize, Serialize};
 use std::future::Future;
 use tokio::time::Duration;
@@ -16,6 +20,12 @@ use tokio::time::Duration;
 /// distinguish "genuinely empty/none" from "timed out before completing."
 #[derive(Debug, Clone, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
+// The fields stay undocumented on purpose: a field doc lands in `bindings.ts`, and the struct doc above
+// already says what both mean.
+#[allow(
+    missing_docs,
+    reason = "a field doc would change `bindings.ts`; the struct doc covers both fields"
+)]
 pub struct TimedOut<T: Serialize + specta::Type> {
     pub data: T,
     pub timed_out: bool,
@@ -250,6 +260,7 @@ pub struct Deadline {
 }
 
 impl Deadline {
+    /// A deadline worth `total`, starting now.
     pub fn new(total: Duration) -> Self {
         Self {
             started: tokio::time::Instant::now(),
@@ -398,13 +409,4 @@ pub fn io_budget(state: Option<ConnectionState>, local: Duration) -> Duration {
         Some(ConnectionState::Direct) => local.max(SESSION_IO_TIMEOUT),
         _ => local,
     }
-}
-
-/// [`io_budget`] for the volume registered as `volume_id`, read at call time.
-/// An id nothing serves keeps `local`.
-pub fn io_budget_for_volume(volume_id: &str, local: Duration) -> Duration {
-    let state = crate::file_system::volume::manager::get_volume_manager()
-        .get(volume_id)
-        .and_then(|volume| volume.connection_state());
-    io_budget(state, local)
 }

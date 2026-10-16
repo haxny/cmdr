@@ -77,6 +77,15 @@ pub fn note_root_failure(volume_id: &str, error: &VolumeError) {
     }
 }
 
+/// [`cmdr_fs::deadline::io_budget`] for the volume registered as `volume_id`,
+/// read at call time. An id nothing serves keeps `local`.
+pub fn io_budget_for_volume(volume_id: &str, local: std::time::Duration) -> std::time::Duration {
+    let state = manager::get_volume_manager()
+        .get(volume_id)
+        .and_then(|volume| volume.connection_state());
+    cmdr_fs::deadline::io_budget(state, local)
+}
+
 #[cfg(test)]
 mod inmemory_test;
 #[cfg(all(test, any(target_os = "macos", target_os = "linux")))]

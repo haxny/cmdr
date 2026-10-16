@@ -538,7 +538,7 @@ pub async fn upgrade_to_smb_volume_using_saved_password(volume_id: String) -> Up
 #[tauri::command]
 #[specta::specta]
 pub async fn disconnect_network_host(host: NetworkHost) -> Result<Vec<String>, String> {
-    use crate::deadline::blocking_with_timeout;
+    use cmdr_fs::deadline::blocking_with_timeout;
     use std::time::Duration;
 
     // Drop the cached share list so a later browse re-fetches fresh shares and

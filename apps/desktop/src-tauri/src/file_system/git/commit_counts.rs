@@ -24,7 +24,7 @@ use cmdr_git::GitPortal;
 use cmdr_listing::ListingId;
 
 use super::wiring::portal;
-use crate::deadline::{BlockingBudget, timeout_detached_typed};
+use cmdr_fs::deadline::{BlockingBudget, timeout_detached_typed};
 
 /// One batch is at most a few hundred tree diffs at ~230 µs each, so this only
 /// bounds a repo on a stalled mount; past it the cells keep their `…`.

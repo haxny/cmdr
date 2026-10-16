@@ -6,11 +6,11 @@ use std::sync::atomic::AtomicBool;
 use tauri_specta::Event as _;
 use tokio::time::Duration;
 
-use crate::deadline::{StallWatch, blocking_typed_result_until_stalled, blocking_typed_result_with_timeout};
 use crate::file_viewer::{
     self, AbandonReason, EncodingOptions, FileEncoding, LineChunk, PendingOpen, RangeEnd, SearchMode, SearchPollResult,
     SeekTarget, SeekTargetKind, ViewerError, ViewerOpenResult, ViewerPullProgress, ViewerSessionStatus,
 };
+use cmdr_fs::deadline::{StallWatch, blocking_typed_result_until_stalled, blocking_typed_result_with_timeout};
 use log::debug;
 use tauri::Manager;
 #[cfg(not(target_os = "macos"))]

@@ -49,6 +49,9 @@ the next section.
   rename or an unlink. § "`metadata`: what a copy keeps, and when it goes on".
 - `durable.rs`: `sync_file_data`, the flush every copy makes before reporting a file done (with the `fsync` fallback a
   Samba mount needs).
+- `deadline/`: the timeouts and budgets every blocking wait goes through (`Deadline`, `BlockingBudget`, the detaching
+  `timeout_detached_*` / `race_detached` helpers, `TimedOut`, `DeadlineError`), shared by the app's IPC commands and the
+  subsystems under them. Must-knows in `src/deadline/CLAUDE.md`.
 - `staging.rs`: `StagingTemp`, the ONLY way to name a scratch file. `src/staging/names.rs` is the one name builder
   behind it (and behind `temp_sibling_name` / `_path` / `_prefix` for the backends that name their own upload temps).
 - Leaves: `apple_double.rs` (whether a listed `._name` is the AppleDouble sidecar the kernel serves as `name`'s xattrs

@@ -5,10 +5,10 @@ use std::path::{Path, PathBuf};
 
 use tokio::time::Duration;
 
-use crate::deadline::{TimedOut, timeout_detached_typed};
 use crate::file_system::validation::{MAX_NAME_BYTES, MAX_PATH_BYTES};
 use crate::file_system::volume::manager::get_volume_manager;
 use crate::file_system::write_operations::held_in_another_spelling;
+use cmdr_fs::deadline::{TimedOut, timeout_detached_typed};
 
 use super::expand_tilde;
 
@@ -112,7 +112,7 @@ async fn exists_on_volume(volume_id: Option<String>, path: String, spelling: Spe
         // A live session waits out a busy server's stall (`deadline::io_budget`):
         // a "couldn't tell" here lands a volume switch on the share root and walks
         // a pane past a parent that's still there.
-        let budget = crate::deadline::io_budget(volume.connection_state(), PATH_EXISTS_TIMEOUT);
+        let budget = cmdr_fs::deadline::io_budget(volume.connection_state(), PATH_EXISTS_TIMEOUT);
 
         // The transfer dialog asks about its VOLUME-RELATIVE destination box
         // (`/photos`), the panes about absolute paths. Anchoring folds both into
@@ -121,7 +121,7 @@ async fn exists_on_volume(volume_id: Option<String>, path: String, spelling: Spe
         // already there.
         let path_for_check = cmdr_fs::volume::root_anchored(volume.root(), Path::new(&expanded_path));
         // Detached, so a deadline never abandons an MTP transaction mid-flight
-        // (`deadline/CLAUDE.md`). `Err(())` is "couldn't tell": the deadline, or
+        // (`crates/cmdr-fs/src/deadline/CLAUDE.md`). `Err(())` is "couldn't tell": the deadline, or
         // a look-alike listing that failed.
         let probe = {
             let volume = std::sync::Arc::clone(&volume);

@@ -59,7 +59,7 @@
 //! **Privacy**: every field is a byte count, a region count, or a fixed tag name. No
 //! paths, no filenames, no user data — nothing here can carry any.
 
-use crate::deadline::blocking_with_timeout;
+use cmdr_fs::deadline::blocking_with_timeout;
 use cmdr_fs::process_memory::{GlobalAllocator, RustHeapSnapshot};
 use std::time::Duration;
 

@@ -22,9 +22,9 @@ use serde::{Deserialize, Serialize};
 use tokio::time::Duration;
 
 use crate::commands::volumes::PathVolumeResolution;
-use crate::deadline::{DeadlineError, blocking_typed_result_with_timeout};
 use crate::favorites::store::{self, FavoriteVolume};
 use crate::volume_listing::{LocationCategory, LocationInfo, NetworkMount};
+use cmdr_fs::deadline::{DeadlineError, blocking_typed_result_with_timeout};
 
 /// 5s matches the write timeout other persisting commands use. The store write is local-only, but a
 /// hung data-dir mount must never freeze the IPC thread.

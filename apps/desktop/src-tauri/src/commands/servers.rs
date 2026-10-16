@@ -519,7 +519,7 @@ pub async fn has_server_secret(id: String) -> bool {
         SavedEntry::Webdav(entry) => super::webdav::has_webdav_credentials(entry.url, entry.username).await,
         SavedEntry::S3(entry) => super::s3::has_s3_credentials(entry.provider, entry.access_key_id).await,
         SavedEntry::Smb(row) => {
-            crate::deadline::blocking_with_timeout(std::time::Duration::from_secs(15), false, move || {
+            cmdr_fs::deadline::blocking_with_timeout(std::time::Duration::from_secs(15), false, move || {
                 crate::network::keychain::has_credentials(&row.server_name, None)
             })
             .await
@@ -552,7 +552,7 @@ pub async fn forget_server_secret(id: String) -> bool {
             .is_ok(),
         // SMB keeps one password per HOST, which is what a share's sign-in wrote.
         SavedEntry::Smb(row) => {
-            crate::deadline::blocking_with_timeout(std::time::Duration::from_secs(15), false, move || {
+            cmdr_fs::deadline::blocking_with_timeout(std::time::Duration::from_secs(15), false, move || {
                 crate::network::keychain::delete_credentials(&row.server_name, None).is_ok()
             })
             .await

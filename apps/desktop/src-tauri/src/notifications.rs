@@ -53,7 +53,7 @@ const PERMISSION_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(2
 pub async fn get_notification_permission() -> NotificationPermission {
     #[cfg(target_os = "macos")]
     {
-        crate::deadline::blocking_with_timeout(
+        cmdr_fs::deadline::blocking_with_timeout(
             PERMISSION_TIMEOUT,
             NotificationPermission::Unknown,
             macos::query_permission,

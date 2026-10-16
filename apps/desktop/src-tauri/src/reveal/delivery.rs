@@ -224,7 +224,7 @@ async fn deliver<R: Runtime>(app: &AppHandle<R>, request: RevealRequest) {
     let requested = paths.len();
     log::info!(target: "reveal", "{origin:?} reveal: {requested} path(s) to show");
     let probe = paths.clone();
-    let plan = crate::deadline::blocking_with_timeout(CLASSIFY_TIMEOUT, None, move || {
+    let plan = cmdr_fs::deadline::blocking_with_timeout(CLASSIFY_TIMEOUT, None, move || {
         plan_reveal(&probe, &|path| path.is_dir())
     })
     .await;

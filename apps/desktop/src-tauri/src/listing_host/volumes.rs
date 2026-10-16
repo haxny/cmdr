@@ -70,7 +70,7 @@ async fn adopt_mount(volume_id: &str, path: &Path) -> Option<Arc<dyn Volume>> {
     {
         let volume_id = volume_id.to_string();
         let path = path.to_path_buf();
-        crate::deadline::blocking_with_timeout(ADOPT_MOUNT_TIMEOUT, None, move || {
+        cmdr_fs::deadline::blocking_with_timeout(ADOPT_MOUNT_TIMEOUT, None, move || {
             crate::file_system::volume::mount_registration::adopt_mount_serving(&volume_id, &path)
         })
         .await

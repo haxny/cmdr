@@ -22,7 +22,7 @@ use serde::{Deserialize, Serialize};
 use tauri_specta::Event;
 
 use super::mutation_error::MutationError;
-use crate::deadline::{Raced, race_detached};
+use cmdr_fs::deadline::{Raced, race_detached};
 
 /// How long an instant mutation's IPC reply waits before it says "still
 /// running". Not a limit on the work: past it the frontend switches from its

@@ -54,7 +54,7 @@ pub(super) async fn within_deadline<T: Send + 'static>(
     deadline: Duration,
     work: impl Future<Output = T> + Send + 'static,
 ) -> Result<T, EjectError> {
-    crate::deadline::timeout_detached_typed(
+    cmdr_fs::deadline::timeout_detached_typed(
         deadline,
         || {
             log::warn!(
