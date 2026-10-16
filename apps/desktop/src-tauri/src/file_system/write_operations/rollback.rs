@@ -228,7 +228,7 @@ impl RollbackRunner for ReversalRunner {
     }
 
     fn pace_between_items(&self) -> Option<Duration> {
-        crate::test_mode::effective_rollback_throttle_ms().map(Duration::from_millis)
+        host::installed().pacing().rollback_pace()
     }
 
     fn wait_while_paused(&self) -> Pin<Box<dyn Future<Output = ()> + Send + '_>> {

@@ -107,6 +107,13 @@ index's count onto the engine's own `ExpectedTotals`; `recursive_size` is `dir_s
 miss a typed downgrade. Its cells (the coverage honesty, the cap's edges, an ignored latency bench) run against a
 hand-built index DB; `an_unindexed_volume_answers_uncovered` pins the adapter itself.
 
+## E2E pacing (`pacing.rs`)
+
+`AppPacing` answers `Pacing` from `test_mode`: the IPC overrides a spec sets, then the `CMDR_E2E_*` variables, then
+nothing. Each read is live, since a spec changes a throttle mid-run, and a zero throttle reads as no pause (the seam
+never hands back a zero-length sleep). The scan-preview delay is gated on E2E mode inside `test_mode`, so a stray
+variable can't slow a real build. Pinned by `pacing::tests::the_rollback_pace_follows_test_mode`.
+
 ## A test binary
 
 Nothing installs in a test binary, and some engine pins read the app's real answers: the transfer-gauge cells in

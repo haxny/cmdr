@@ -41,7 +41,7 @@ through its unrecorded set, so an operation stays wholly journaled or wholly not
 - **Recording**: seeded here at `start`; live changes arrive through `commands/settings.rs::set_operation_log_enabled`,
   which calls `operation_log().set_recording`.
 - **Pacing**: not here. The rollback planner asks its runner (`RollbackRunner::pace_between_items`), and the engine's
-  runner answers from `test_mode`.
+  runner answers from its host's `Pacing`, which `operations_host/pacing.rs` answers from `test_mode`.
 
 ## Tests
 

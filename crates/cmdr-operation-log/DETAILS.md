@@ -594,11 +594,12 @@ skipped or unsuccessful planned rename must never make an untouched destination 
 
 The file loop pauses for `RollbackRunner::pace_between_items()` before each item (above the pause gate, so a click
 landing inside the window is honored for THAT item rather than the next one). The planner owns no knob: the default
-answers `None`, and `ReversalRunner` answers from `test_mode::effective_rollback_throttle_ms()`. In production both of
-that one's sources are unset, so it costs one atomic load and one `LazyLock` deref per item and changes nothing; under
-E2E it is what gives a spec a window to press Cancel on a reversal that would otherwise be over in single-digit
-milliseconds (`apps/desktop/test/e2e-playwright/operation-log-rollback.spec.ts`). Its own knob rather than a reuse of
-the copy throttle, because a spec has to stage a fast copy and then reverse it slowly. Pinned by
+answers `None`, and `ReversalRunner` answers from the engine host's `Pacing::rollback_pace()` (the app's answer:
+`test_mode::effective_rollback_throttle_ms()`). In production both of that one's sources are unset, so it costs one
+atomic load and one `LazyLock` deref per item and changes nothing; under E2E it is what gives a spec a window to press
+Cancel on a reversal that would otherwise be over in single-digit milliseconds
+(`apps/desktop/test/e2e-playwright/operation-log-rollback.spec.ts`). Its own knob rather than a reuse of the copy
+throttle, because a spec has to stage a fast copy and then reverse it slowly. Pinned by
 `planner_tests/tests.rs::the_e2e_throttle_hook_paces_the_item_loop`, which measures elapsed time rather than trusting
 the helper to exist: whoever moves this loop must carry the three lines across, or every rollback E2E goes back to
 racing the engine. The deferred-directory phase is deliberately NOT paced (it removes empty leftovers, so a window there

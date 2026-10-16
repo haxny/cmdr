@@ -65,8 +65,8 @@ pub(in crate::file_system::write_operations) async fn run_volume_scan_preview(
     watchdog: Arc<ScanWatchdog>,
 ) {
     // E2E only; see the local walk's matching delay.
-    if let Some(ms) = crate::test_mode::e2e_scan_preview_delay_ms() {
-        tokio::time::sleep(Duration::from_millis(ms)).await;
+    if let Some(delay) = host::installed().pacing().scan_preview_delay() {
+        tokio::time::sleep(delay).await;
     }
 
     // Throttled progress emitter: the underlying MTP listing fires the callback

@@ -5,7 +5,7 @@ use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 use super::super::error_classification::classify_io_error;
 use super::super::event_sinks::ScanPreviewEventSink;
@@ -50,8 +50,8 @@ pub(in crate::file_system::write_operations) fn run_scan_preview(
 
     // E2E only: a deterministic scanning window for the specs that have to act
     // while a transfer is still counting. Unset in production.
-    if let Some(ms) = crate::test_mode::e2e_scan_preview_delay_ms() {
-        std::thread::sleep(Duration::from_millis(ms));
+    if let Some(delay) = host::installed().pacing().scan_preview_delay() {
+        std::thread::sleep(delay);
     }
 
     let mut files: Vec<FileInfo> = Vec::new();

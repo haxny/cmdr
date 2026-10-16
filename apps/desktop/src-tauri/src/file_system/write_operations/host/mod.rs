@@ -19,6 +19,8 @@
 //!   (`own_writes.rs`), before every syscall that lands a path.
 //! - **What the drive index knows** goes through [`OperationIndex`]
 //!   (`index.rs`).
+//! - **Deliberate slowness for automated runs** goes through [`Pacing`]
+//!   (`pacing.rs`).
 //!
 //! The volumes and the events are required; every other seam defaults to an
 //! answer that does nothing, which the host replaces with `with_*`.
@@ -32,6 +34,7 @@ mod events;
 mod index;
 mod operation_sink;
 mod own_writes;
+mod pacing;
 mod scan_preview_sink;
 mod volumes;
 
@@ -49,6 +52,8 @@ pub(crate) use index::{BufferedLeaves, ExpectedTotals, Leaf, OperationIndex};
 pub use operation_sink::OperationEventSink;
 use own_writes::NoOwnWrites;
 pub(crate) use own_writes::OwnWrites;
+use pacing::NoPacing;
+pub(crate) use pacing::Pacing;
 pub use scan_preview_sink::ScanPreviewEventSink;
 use volumes::NoOperationVolumes;
 pub(crate) use volumes::{OperationVolumes, UnregisteredVolume, VolumeAnswer};
@@ -64,6 +69,7 @@ pub(crate) struct EngineHost {
     operation_sinks: Option<OperationSinkFactory>,
     own_writes: Arc<dyn OwnWrites>,
     index: Arc<dyn OperationIndex>,
+    pacing: Arc<dyn Pacing>,
 }
 
 impl EngineHost {
@@ -82,6 +88,7 @@ impl EngineHost {
             operation_sinks: None,
             own_writes: Arc::new(NoOwnWrites),
             index: Arc::new(NoOperationIndex),
+            pacing: Arc::new(NoPacing),
         }
     }
 
@@ -101,6 +108,12 @@ impl EngineHost {
     /// Answers the engine's drive-index questions from `index`.
     pub(crate) fn with_index(mut self, index: Arc<dyn OperationIndex>) -> Self {
         self.index = index;
+        self
+    }
+
+    /// Paces the engine where it deliberately waits, as `pacing` says.
+    pub(crate) fn with_pacing(mut self, pacing: Arc<dyn Pacing>) -> Self {
+        self.pacing = pacing;
         self
     }
 
@@ -153,6 +166,11 @@ impl EngineHost {
     /// What the drive index knows.
     pub(crate) fn index(&self) -> &dyn OperationIndex {
         &*self.index
+    }
+
+    /// How long to wait where the engine deliberately waits.
+    pub(crate) fn pacing(&self) -> &dyn Pacing {
+        &*self.pacing
     }
 
     /// A fresh sink for an operation the engine starts on its own behalf.

@@ -750,6 +750,12 @@ runtime. The app's answer is `apps/desktop/src-tauri/src/operations_host/`, whic
   (`journal_search.rs`, which keeps `SEARCH_LEAF_CAP`, the before-the-mutation and after-success rules, and the test
   hook; the index gates and their downgrade reasons are the app's read, `operations_host/index.rs`). Value types
   (`ExpectedTotals`, `BufferedLeaves`, `Leaf`) are the engine's own: it names no `cmdr_index` type.
+- **Deliberate slowness for automated runs goes through `Pacing`** (`host/pacing.rs`): the per-step throttle of the
+  copy loop (`copy_throttle_for`, which also carries the dialog gallery's per-folder pace), the volume delete batches
+  and the archive rewrite's entries (`copy_throttle`), the scan preview's held start, and the rollback runner's
+  `pace_between_items`. `None` or non-zero, read per call (a spec changes it mid-run); every real build answers `None`.
+  Asked per file in the copy loop: the dispatch rule allows it beside a file's I/O, and the Criterion copy cases showed
+  no change against the pre-seam baseline (`docs/notes/transfer-extraction-baseline.md`'s method, 2026-10-17).
 - **Optional seams default to doing nothing.** `EngineHost::new` takes only the runtime's `VolumeHost`, the volumes,
   and the events (nothing works without those); every other seam starts as a no-op answer that `with_*` replaces. The
   app wires them all in `operations_host::app_answers`.

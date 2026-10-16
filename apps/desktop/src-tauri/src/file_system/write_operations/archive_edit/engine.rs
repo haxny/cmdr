@@ -430,12 +430,12 @@ impl MutatorHooks {
 
     /// E2E-only per-entry pacing, the archive twin of the copy loop's per-file
     /// throttle (`transfer/copy/mod.rs`), so a spec can press Cancel mid-rewrite.
-    /// `effective_copy_throttle_ms()` is `None` in production, so this is one atomic
-    /// load. It sleeps only while an entry remains: the mutator checks cancel before
+    /// The host's `Pacing::copy_throttle` is `None` in production, so this is one
+    /// atomic load. It sleeps only while an entry remains: the mutator checks cancel before
     /// every entry, so a click during the sleep always stops the rewrite, whereas
     /// after the last entry the commit follows with no check left to honor it.
     fn pace_entry_for_e2e(&self, progress: MutationProgress) {
-        let Some(ms) = crate::test_mode::effective_copy_throttle_ms().filter(|ms| *ms > 0) else {
+        let Some(pause) = host::installed().pacing().copy_throttle() else {
             return;
         };
         if progress.entries_done >= progress.entries_total
@@ -443,7 +443,7 @@ impl MutatorHooks {
         {
             return;
         }
-        sleep_unless_cancelled(Duration::from_millis(ms), || is_cancelled(&self.state.intent));
+        sleep_unless_cancelled(pause, || is_cancelled(&self.state.intent));
     }
 }
 

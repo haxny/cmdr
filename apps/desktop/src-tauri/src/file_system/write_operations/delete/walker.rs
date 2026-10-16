@@ -844,10 +844,8 @@ pub(in crate::file_system::write_operations) async fn delete_volume_files_with_p
         // deterministic window in which to click Cancel before all files are
         // gone. Reuses the copy throttle knob (`set_test_throttle` exposes a
         // generic per-step throttle). Zero-cost outside E2E.
-        if let Some(ms) = crate::test_mode::effective_copy_throttle_ms()
-            && ms > 0
-        {
-            tokio::time::sleep(Duration::from_millis(ms)).await;
+        if let Some(pause) = host::installed().pacing().copy_throttle() {
+            tokio::time::sleep(pause).await;
         }
 
         let results: Vec<Result<(), VolumeError>> = match batch_size {

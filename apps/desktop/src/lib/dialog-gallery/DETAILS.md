@@ -267,12 +267,12 @@ background, as the real dialog's does.
 
 **The pace is the backend's, and it reaches nothing else.** A local copy of small files is over in a blink, so the
 fixture command registers `From/` with `test_mode::pace_copies_from` (400 ms per file), and the local copy loop's
-throttle asks `effective_copy_throttle_ms_for(source)`. Only copies out of that folder slow down: nothing to arm or
-clear from the frontend, and nothing left throttled when a preview goes to the background.
-`dev_fixtures/ transfer_preview.rs` builds the three local shapes (five folders of photos, compacting single-child
-chains, one folder of 300 files) and empties `To/` on every trigger, so a copy never clashes with the last one. The
-parallel SMB and failed-rows shapes need a remote volume or a failing write, so they stay in Debug → Components →
-Transfer tree, and the row's note says so.
+throttle asks the engine host's `Pacing::copy_throttle_for(source)` (the app answers with
+`test_mode::effective_copy_throttle_ms_for`). Only copies out of that folder slow down: nothing to arm or clear from the
+frontend, and nothing left throttled when a preview goes to the background. `dev_fixtures/ transfer_preview.rs` builds
+the three local shapes (five folders of photos, compacting single-child chains, one folder of 300 files) and empties
+`To/` on every trigger, so a copy never clashes with the last one. The parallel SMB and failed-rows shapes need a remote
+volume or a failing write, so they stay in Debug → Components → Transfer tree, and the row's note says so.
 
 **The E2E sweeps skip it too**: their Escape would leave the paced copy running in the background, holding the local
 lane and putting the corner chip in every later shot. The i18n capture photographs the tree on the queue window's
