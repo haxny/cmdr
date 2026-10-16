@@ -1,0 +1,9 @@
+{
+  "group_id": "local_copy_small_files",
+  "function_id": null,
+  "value_str": "1000",
+  "throughput": { "Elements": 1000 },
+  "full_id": "local_copy_small_files/1000",
+  "directory_name": "local_copy_small_files/1000",
+  "title": "local_copy_small_files/1000"
+}

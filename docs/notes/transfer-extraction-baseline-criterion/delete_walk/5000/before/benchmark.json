@@ -1,0 +1,9 @@
+{
+  "group_id": "delete_walk",
+  "function_id": null,
+  "value_str": "5000",
+  "throughput": { "Elements": 5000 },
+  "full_id": "delete_walk/5000",
+  "directory_name": "delete_walk/5000",
+  "title": "delete_walk/5000"
+}

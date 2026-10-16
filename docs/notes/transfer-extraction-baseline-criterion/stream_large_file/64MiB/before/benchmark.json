@@ -1,0 +1,9 @@
+{
+  "group_id": "stream_large_file",
+  "function_id": null,
+  "value_str": "64MiB",
+  "throughput": { "Bytes": 67108864 },
+  "full_id": "stream_large_file/64MiB",
+  "directory_name": "stream_large_file/64MiB",
+  "title": "stream_large_file/64MiB"
+}
