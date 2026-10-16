@@ -9,6 +9,7 @@
 
 use std::sync::atomic::AtomicUsize;
 
+use super::super::BackendCapabilities;
 use super::*;
 
 /// Counts a rebuild thread's exit on every path (early return, error, or a

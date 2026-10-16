@@ -11,8 +11,6 @@ use std::sync::{Arc, LazyLock, Mutex, RwLock};
 use std::thread;
 use std::time::Duration;
 
-use arc_swap::ArcSwap;
-
 use super::materialize::PreviewTemp;
 use super::pending_open::PendingOpen;
 use crate::commands::file_system::expand_tilde;
@@ -27,17 +25,21 @@ use super::encoding::{DETECT_HEAD_BYTES, FileEncoding, detect_from_head, same_by
 use super::full_load::FullLoadBackend;
 use super::line_index::LineIndexBackend;
 use super::media;
-use super::media_session::{self, MediaDimensions};
+use super::media_session;
 use super::origin::{SourceOrigin, open_for_viewer};
 use super::range_read::{
     RangeEnd, STREAM_CHUNK_BYTES, read_range as do_read_range, read_range_streamed as stream_range,
 };
 use super::search_matcher::{Matcher, SearchMode};
+use super::session_store::{
+    BackendType, SESSIONS, SearchState, SearchStatus, ViewerOpenResult, ViewerSession, ViewerSessionInit,
+    generate_session_id,
+};
 use super::source::{OpenedFile, read_head};
 use super::watcher::{VIEWER_WATCHER_MANAGER, WatcherEvent};
 use super::{
-    BackendCapabilities, FULL_LOAD_THRESHOLD, FileViewerBackend, LineChunk, MAX_SEARCH_MATCHES, SearchMatch,
-    SeekTarget, TotalRows, ViewerError,
+    FULL_LOAD_THRESHOLD, FileViewerBackend, LineChunk, MAX_SEARCH_MATCHES, SearchMatch, SeekTarget, TotalRows,
+    ViewerError,
 };
 
 /// Process-wide AppHandle for emitting `viewer:file-changed:<sid>` events from
@@ -54,15 +56,6 @@ pub fn init_app_handle(handle: AppHandle) {
 
 fn app_handle() -> Option<AppHandle> {
     VIEWER_APP_HANDLE.read().ok().and_then(|g| g.clone())
-}
-
-/// Which backend strategy is active for a session.
-#[derive(Debug, Clone, Serialize, specta::Type)]
-#[serde(rename_all = "camelCase")]
-pub enum BackendType {
-    FullLoad,
-    ByteSeek,
-    LineIndex,
 }
 
 /// One row in the encoding dropdown.
@@ -106,37 +99,6 @@ fn all_encoding_choices() -> Vec<EncodingChoice> {
     .collect()
 }
 
-/// Result returned when opening a viewer session.
-#[derive(Debug, Clone, Serialize, specta::Type)]
-#[serde(rename_all = "camelCase")]
-pub struct ViewerOpenResult {
-    pub session_id: String,
-    pub file_name: String,
-    pub total_bytes: u64,
-    pub total_lines: Option<usize>,
-    /// The file's ROW count, exact or (on ByteSeek) from its bytes-per-row sample. The
-    /// first chunk's `total_rows` carries the same number plus which of the two it is.
-    pub estimated_total_rows: usize,
-    pub backend_type: BackendType,
-    pub capabilities: BackendCapabilities,
-    pub initial_lines: LineChunk,
-    /// ByteSeek -> LineIndex upgrade in progress.
-    pub is_indexing: bool,
-    /// Auto-detected encoding (also the initial selection of the picker).
-    pub encoding: FileEncoding,
-    /// Detected content kind. `Text` flows through the line pipeline (the fields
-    /// above are populated); `Image` / `Pdf` render inline from `media_token` and
-    /// leave the text fields empty.
-    pub kind: ViewerContentKind,
-    /// Present only for media kinds (`Image` / `Pdf`): the unguessable token the FE
-    /// puts in the `cmdr-media://localhost/<token>` URL. `None` for text.
-    pub media_token: Option<String>,
-    /// Image pixel dimensions, header-only and best-effort. `Some` only for some
-    /// `Image` files (raster formats the `image` crate can parse; `None` for HEIC,
-    /// SVG, PDFs, text, or on any read error).
-    pub media_dimensions: Option<MediaDimensions>,
-}
-
 /// Current status of a viewer session.
 #[derive(Debug, Clone, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
@@ -150,22 +112,6 @@ pub struct ViewerSessionStatus {
     /// Physical lines, if the backend knows them. The gutter's numbering and the
     /// status bar's count, ❌ never a row coordinate.
     pub total_lines: Option<usize>,
-}
-
-/// Status of an ongoing search.
-///
-/// `InvalidQuery` carries the user-facing reason (invalid regex syntax, multiline
-/// pattern, regex exceeds size limits). Surfaced via `search_poll`; the FE renders
-/// the message as plain text without inspecting its contents (per the
-/// no-error-string-match rule).
-#[derive(Debug, Clone, Serialize, specta::Type)]
-#[serde(tag = "status", rename_all = "camelCase", rename_all_fields = "camelCase")]
-pub enum SearchStatus {
-    Running,
-    Done,
-    Cancelled,
-    Idle,
-    InvalidQuery { message: String },
 }
 
 /// Result from polling search progress.
@@ -184,150 +130,6 @@ pub struct SearchPollResult {
     /// (for progress) but stopped storing new matches.
     pub match_limit_reached: bool,
 }
-
-/// Internal state for an active search.
-struct SearchState {
-    cancel: Arc<AtomicBool>,
-    matches: Arc<Mutex<Vec<SearchMatch>>>,
-    bytes_scanned: Arc<Mutex<u64>>,
-    status: Arc<Mutex<SearchStatus>>,
-}
-
-/// A viewer session wraps a backend and tracks search state.
-///
-/// Constructed via [`ViewerSession::new`] from a [`ViewerSessionInit`]; the per-session
-/// runtime fields (`search`, `rebuilding`, `pending_grew`, `tail_mode`, `active_reads`)
-/// always start at their idle defaults, so callers only supply what actually varies
-/// between a text open and a media open. The media-open path lives in `media_session.rs`
-/// and builds its `ViewerSession` through the same constructor.
-pub(super) struct ViewerSession {
-    /// `ArcSwap` so background threads (ByteSeek → LineIndex upgrade, encoding rebuild,
-    /// tail-mode `extend_to`) can replace the backend without a write lock on the
-    /// `get_lines` read path. Each backend is immutable; readers pick up either the
-    /// old or new backend atomically. Document rationale: `file_viewer/CLAUDE.md`
-    /// § "ArcSwap rather than RwLock."
-    backend: Arc<ArcSwap<Box<dyn FileViewerBackend>>>,
-    backend_type: Mutex<BackendType>,
-    search: Option<SearchState>,
-    /// Set when upgrading from ByteSeek to LineIndex in the background.
-    upgrading: Mutex<Option<Arc<AtomicBool>>>,
-    /// Set when an encoding-switch rebuild is in flight. Same `AtomicBool` pattern as
-    /// `upgrading`: the rebuild thread reads it to see if it's been superseded by a
-    /// rapid follow-up `set_encoding`.
-    rebuilding: Mutex<Option<Arc<AtomicBool>>>,
-    /// Latest pending `Grew(eof)` from the (future) watcher manager. Both the upgrade
-    /// thread and the encoding-rebuild thread drain this inside their swap critical
-    /// section so a tail append arriving mid-rebuild isn't silently dropped. Documented
-    /// protocol: drain-read → optional `extend_to` → `ArcSwap::store` → clear flag,
-    /// all under one mutex lock.
-    pending_grew: Mutex<Option<u64>>,
-    /// Current encoding. Updated atomically with the backend swap on `set_encoding`.
-    encoding: Mutex<FileEncoding>,
-    /// Detected encoding at open time (sticky; never changes after `open_session`).
-    detected_encoding: FileEncoding,
-    /// Tail mode flag: when true, `Grew` watcher events trigger a backend
-    /// `extend_to` so the open viewport auto-follows newly appended bytes.
-    /// When false, the FE still hears `viewer:file-changed:<sid>` events and
-    /// renders the persistent reload toast.
-    tail_mode: AtomicBool,
-    /// Cancel flag the manager thread reads on session close. Dropping the
-    /// session sets this flag; the manager thread observes it on its next
-    /// receive cycle, drops its owned `ViewerSubscription`, and exits. The
-    /// subscription's `Drop` then unwatches the path via the shared singleton.
-    watcher_stop: Arc<AtomicBool>,
-    /// Per-read cancel flags. Each `read_range` call inserts an entry keyed by the FE's
-    /// `read_id`, removes it on completion (cancelled or not). The FE generates fresh
-    /// ids per call (a monotonic counter is fine; uniqueness within a session is all
-    /// that's needed). Per-read (not session-wide) so a cancel for one read doesn't
-    /// affect a follow-up read that started in the same gesture.
-    active_reads: Mutex<HashMap<u64, Arc<AtomicBool>>>,
-    path: PathBuf,
-    /// Where the file lives, for a fresh handle on reload. See `file_viewer::source`.
-    origin: SourceOrigin,
-    /// The handle every backend of this session reads through, opened once. `None`
-    /// until first needed on a media session, which serves its bytes elsewhere.
-    file: Mutex<Option<OpenedFile>>,
-    /// The `cmdr-media://` token for a media (Image/PDF) session, dropped from the
-    /// global token map at `close_session`. `None` for text sessions. Tying the drop
-    /// to the single close choke point keeps the token's lifetime exactly the
-    /// session's, so a closed-window viewer can't leave a live token mapping a path.
-    media_token: Option<String>,
-    /// For a session over a file the OS can't open (inside a zip, in a repo's virtual
-    /// `.git` trees, on a phone or server), the temp copy it reads. Shared with a view
-    /// switch's session for the same window, and removed when the last session holding
-    /// it closes. `None` for a normal on-disk open. See `file_viewer::materialize`.
-    temp: Option<Arc<PreviewTemp>>,
-}
-
-/// The fields that vary between a text open and a media open. Everything else on a
-/// [`ViewerSession`] starts at an idle default (no search, no rebuild, no pending
-/// grew, tail off, no active reads), filled in by [`ViewerSession::new`].
-pub(super) struct ViewerSessionInit {
-    pub(super) backend: Box<dyn FileViewerBackend>,
-    pub(super) backend_type: BackendType,
-    pub(super) upgrading: Option<Arc<AtomicBool>>,
-    pub(super) encoding: FileEncoding,
-    pub(super) detected_encoding: FileEncoding,
-    pub(super) watcher_stop: Arc<AtomicBool>,
-    pub(super) path: PathBuf,
-    pub(super) origin: SourceOrigin,
-    pub(super) file: Option<OpenedFile>,
-    pub(super) media_token: Option<String>,
-    pub(super) temp: Option<Arc<PreviewTemp>>,
-}
-
-impl ViewerSession {
-    /// Builds a session from its varying fields, defaulting the idle runtime state.
-    pub(super) fn new(init: ViewerSessionInit) -> Self {
-        Self {
-            backend: Arc::new(ArcSwap::from_pointee(init.backend)),
-            backend_type: Mutex::new(init.backend_type),
-            search: None,
-            upgrading: Mutex::new(init.upgrading),
-            rebuilding: Mutex::new(None),
-            pending_grew: Mutex::new(None),
-            encoding: Mutex::new(init.encoding),
-            detected_encoding: init.detected_encoding,
-            tail_mode: AtomicBool::new(false),
-            watcher_stop: init.watcher_stop,
-            active_reads: Mutex::new(HashMap::new()),
-            path: init.path,
-            origin: init.origin,
-            file: Mutex::new(init.file),
-            media_token: init.media_token,
-            temp: init.temp,
-        }
-    }
-
-    /// Loads a freshly cloned `Arc` to the current backend. Holds no lock so calls to
-    /// `get_lines` can run in parallel.
-    fn load_backend(&self) -> Arc<Box<dyn FileViewerBackend>> {
-        self.backend.load_full()
-    }
-
-    /// The session's open file, opening it on first use.
-    fn open_file(&self) -> Result<OpenedFile, ViewerError> {
-        let mut file = self.file.lock_ignore_poison();
-        if let Some(opened) = file.as_ref() {
-            return Ok(opened.clone());
-        }
-        let opened = self.origin.open()?;
-        *file = Some(opened.clone());
-        Ok(opened)
-    }
-
-    /// The open file at the size the live backend knows (tail mode moves it past the
-    /// size seen at open), for building a sibling backend over the same bytes.
-    fn file_at_backend_size(&self) -> Result<OpenedFile, ViewerError> {
-        let mut opened = self.open_file()?;
-        opened.total_bytes = self.load_backend().total_bytes();
-        Ok(opened)
-    }
-}
-
-/// Global session cache.
-pub(super) static SESSIONS: LazyLock<Mutex<HashMap<String, ViewerSession>>> =
-    LazyLock::new(|| Mutex::new(HashMap::new()));
 
 /// Maps a viewer window label (`viewer-<timestamp>`) to its session id.
 ///
@@ -379,11 +181,6 @@ const INDEXING_TIMEOUT_SECS: u64 = 5;
 /// 2.7 s at 100 Mbit/s), so it would only compete with the viewport's own reads for
 /// the link and the block cache before being cancelled.
 const VOLUME_INDEX_MAX_BYTES: u64 = 32 * 1024 * 1024;
-
-/// Generates a unique session ID.
-pub(super) fn generate_session_id() -> String {
-    uuid::Uuid::new_v4().to_string()
-}
 
 /// Opens a viewer session for the given file path.
 ///

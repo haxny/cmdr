@@ -14,7 +14,7 @@
 
 use super::ViewerError;
 use super::content_kind::ViewerContentKind;
-use super::session::ViewerOpenResult;
+use super::session_store::ViewerOpenResult;
 
 /// The content class as a stable token. Mirrors the enum rather than reusing its
 /// serde form, so renaming a variant can't silently rewrite months of history.

@@ -9,7 +9,8 @@ use std::time::Duration;
 
 use crate::ignore_poison::IgnorePoison;
 
-use super::session::{self, SearchStatus};
+use super::session;
+use super::session_store::{BackendType, SearchStatus};
 use super::{FULL_LOAD_THRESHOLD, FileEncoding, MAX_SEARCH_MATCHES, RangeEnd, SearchMode, ViewerError};
 use crate::test_support::TestDir;
 use crate::test_support::wait_until;
@@ -75,7 +76,7 @@ fn wait_for_watcher_subscribed() {
 /// Whether the background ByteSeek → LineIndex upgrade (or an encoding rebuild) has settled.
 fn upgraded_to_line_index(sid: &str) -> bool {
     let status = session::get_session_status(sid).expect("session status");
-    matches!(status.backend_type, session::BackendType::LineIndex) && !status.is_indexing
+    matches!(status.backend_type, BackendType::LineIndex) && !status.is_indexing
 }
 
 #[test]
@@ -87,7 +88,7 @@ fn open_small_file_uses_full_load() {
     assert_eq!(result.file_name, "test.txt");
     assert_eq!(result.total_bytes, 12);
     assert_eq!(result.total_lines, Some(3));
-    assert!(matches!(result.backend_type, session::BackendType::FullLoad));
+    assert!(matches!(result.backend_type, BackendType::FullLoad));
     assert!(result.capabilities.supports_line_seek);
     assert!(result.capabilities.knows_total_lines);
 
@@ -125,7 +126,7 @@ fn open_large_file_uses_byte_seek() {
 
     let result = session::open_session(file.to_str().unwrap(), "root").unwrap();
     assert!(result.total_bytes > FULL_LOAD_THRESHOLD);
-    assert!(matches!(result.backend_type, session::BackendType::ByteSeek));
+    assert!(matches!(result.backend_type, BackendType::ByteSeek));
     assert!(!result.capabilities.supports_line_seek);
     assert!(!result.capabilities.knows_total_lines);
 
@@ -331,7 +332,7 @@ fn large_file_upgrades_to_line_index() {
     let sid = &open_result.session_id;
 
     // Initially ByteSeek
-    assert!(matches!(open_result.backend_type, session::BackendType::ByteSeek));
+    assert!(matches!(open_result.backend_type, BackendType::ByteSeek));
 
     wait_until(
         Duration::from_secs(3),
@@ -1239,7 +1240,7 @@ fn set_encoding_full_load_swaps_decoder() {
     let file = dir.join("bytes.txt");
     fs::write(&file, b"caf\xE9\n").unwrap();
     let result = session::open_session(file.to_str().unwrap(), "root").unwrap();
-    assert!(matches!(result.backend_type, session::BackendType::FullLoad));
+    assert!(matches!(result.backend_type, BackendType::FullLoad));
 
     // Currently Windows-1252 (detected): line should decode as "café".
     let chunk = session::get_lines(
@@ -1513,7 +1514,7 @@ fn tail_mode_on_a_full_load_file_reopens_it_to_take_in_the_append() {
 
     let result = session::open_session(path.to_str().unwrap(), "root").unwrap();
     let sid = result.session_id.clone();
-    assert!(matches!(result.backend_type, session::BackendType::FullLoad));
+    assert!(matches!(result.backend_type, BackendType::FullLoad));
     wait_for_watcher_subscribed();
     session::set_tail_mode(&sid, true).unwrap();
 

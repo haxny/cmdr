@@ -25,6 +25,7 @@ mod row_walk;
 mod rows;
 mod search_matcher;
 pub mod session;
+mod session_store;
 mod source;
 mod volume_source;
 pub mod watcher;
@@ -69,7 +70,6 @@ mod watcher_test;
 pub use content_kind::{ViewerContentKind, classify_viewer_content};
 pub use encoding::FileEncoding;
 pub use materialize::init_materialize_dir;
-pub use media_session::MediaDimensions;
 pub use open_with_extract::init_open_with_extract_dir;
 pub use pending_open::{AbandonReason, PendingOpen, ViewerPullProgress, begin_pending_open, end_pending_open};
 pub use range_read::RangeEnd;
@@ -77,11 +77,12 @@ pub use row_walk::{CHUNK_BUDGET_BYTES, ChunkEnd, TotalRows, ViewerRow};
 pub use rows::SEGMENT_BYTES;
 pub use search_matcher::{Matcher, SearchMode};
 pub use session::{
-    EncodingOptions, SaveProgress, SearchPollResult, ViewerOpenResult, ViewerSessionStatus, cancel_read, close_session,
+    EncodingOptions, SaveProgress, SearchPollResult, ViewerSessionStatus, cancel_read, close_session,
     close_session_for_window, get_bytes, get_encoding_options, get_lines, get_session_status, init_app_handle,
     open_for_window, open_session, open_session_as_text, read_range, register_window_session, reload, search_cancel,
     search_poll, search_start, set_encoding, set_tail_mode, write_range_to_file,
 };
+pub use session_store::{MediaDimensions, ViewerOpenResult};
 
 use serde::{Deserialize, Serialize};
 

@@ -5,7 +5,8 @@
 //! dimensions. The bytes are served by the `cmdr-media://` scheme handler
 //! ([`super::media_protocol`]); this module only sets up the session and the token. Text
 //! opens (FullLoad / ByteSeek / LineIndex, search, encoding, tail) stay in
-//! [`super::session`]; the two share the `ViewerSession` type and its `SESSIONS` cache.
+//! [`super::session`]; both build on [`super::session_store`] (the `ViewerSession` type and
+//! its `SESSIONS` cache).
 //!
 //! [`try_open_media`] is the single entry point [`super::session::open_session`] calls
 //! before it builds a text backend: it classifies the file and, for a media kind, opens
@@ -16,8 +17,6 @@ use std::path::Path;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 
-use serde::Serialize;
-
 use crate::ignore_poison::IgnorePoison;
 
 use super::content_kind::{CLASSIFY_HEAD_LEN, ViewerContentKind, classify_viewer_content, media_mime};
@@ -26,16 +25,10 @@ use super::materialize::PreviewTemp;
 use super::media::{self, MediaEntry};
 use super::media_backend::MediaBackend;
 use super::origin::SourceOrigin;
-use super::session::{BackendType, SESSIONS, ViewerOpenResult, ViewerSession, ViewerSessionInit, generate_session_id};
+use super::session_store::{
+    BackendType, MediaDimensions, SESSIONS, ViewerOpenResult, ViewerSession, ViewerSessionInit, generate_session_id,
+};
 use super::{FileViewerBackend, LineChunk, ViewerError};
-
-/// Image pixel dimensions, read header-only at open time.
-#[derive(Debug, Clone, Copy, Serialize, specta::Type)]
-#[serde(rename_all = "camelCase")]
-pub struct MediaDimensions {
-    pub width: u32,
-    pub height: u32,
-}
 
 /// Classifies `file_path` by magic bytes and, if it's a media kind (`Image` / `Pdf` on a
 /// local volume), opens a media session and returns its result. Returns `None` when the

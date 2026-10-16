@@ -19,12 +19,15 @@ Frontend counterpart: `apps/desktop/src/routes/viewer/CLAUDE.md` for the viewer 
   `rows.rs` for every clause. See § "Rows, not lines"
 - `session.rs`: text-session orchestration, backend switching, search state, per-read cancel registry (`active_reads`),
   encoding-switch (`set_encoding`), drain-and-swap-under-lock protocol via `pending_grew`, the `read_range`,
-  `write_range_to_file` (with its `SaveProgress` reporter), `get_bytes` (bounded original bytes), and `cancel_read` entry points. Owns the `ViewerSession` type + its `ViewerSession::new(ViewerSessionInit)` constructor and
-  the `SESSIONS` / `WINDOW_TO_SESSION` maps, shared with the media-open path. `close_session` is the single teardown
-  choke point (drops the media token too)
+  `write_range_to_file` (with its `SaveProgress` reporter), `get_bytes` (bounded original bytes), and `cancel_read` entry points, plus the
+  `WINDOW_TO_SESSION` map. `close_session` is the single teardown choke point (drops the media token too)
+- `session_store.rs`: the vocabulary both open paths build on. `ViewerSession` + its
+  `ViewerSession::new(ViewerSessionInit)` constructor, the search state it holds (`SearchState`, `SearchStatus`),
+  `BackendType`, `ViewerOpenResult` + `MediaDimensions`, the `SESSIONS` cache, and `generate_session_id`. A sibling of
+  `session.rs` rather than its child, so the open dispatcher can call `media_session` without a module cycle
 - `media_session.rs`: the media-open path. `try_open_media` (classify + dispatch, called by `open_session` before it
   builds a text backend), `open_media_session` (mint token, header-only dimensions, install a `MediaBackend` via
-  `ViewerSession::new`), `is_local_posix_path` (the local-volume gate), and the `MediaDimensions` type
+  `ViewerSession::new`), and `is_local_posix_path` (the local-volume gate)
 - `range_read.rs`: backend-agnostic stitching of a `(line, offset) -> (line, offset)` range into UTF-8 text.
   `read_range_streamed` is the engine (hands the range to a sink in `STREAM_CHUNK_BYTES` pieces, breaking only on line
   boundaries); `read_range` is that read with a collecting sink, for callers that want one string. Plus the UTF-16 ->
@@ -147,8 +150,8 @@ The viewer renders images and PDFs inline instead of showing the binary warning.
   `try_open_media(file_path, file_size, temp_cleanup)` reads the head, classifies (`is_local_posix_path` decides
   locality), and for a media kind calls `open_media_session`; otherwise returns `None` so `open_session` falls through to
   text. `open_media_session` mints the token, reads dimensions best-effort, installs a `MediaBackend`, and builds the
-  `ViewerSession` via `session::ViewerSession::new`, passing the shared `temp` through so an image/PDF previewed from
-  over a routed file keeps its temp exactly as long as a text session would (see § "Preview of a routed file"). Owns the `MediaDimensions` type. Covered by `media_session_test.rs`
+  `ViewerSession` via `session_store::ViewerSession::new`, passing the shared `temp` through so an image/PDF previewed from
+  over a routed file keeps its temp exactly as long as a text session would (see § "Preview of a routed file"). Covered by `media_session_test.rs`
   (image / PDF / text-fallthrough / open-as-text through the public `open_session`).
 
 Open flow: `open_session` calls `media_session::try_open_media` before building a text backend; a media kind opens

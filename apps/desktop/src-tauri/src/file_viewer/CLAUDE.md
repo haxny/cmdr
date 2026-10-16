@@ -7,15 +7,15 @@ Frontend counterparts: [route shell](../../../src/routes/viewer/CLAUDE.md) and
 
 ## Module map
 
-- `mod.rs`: public API, constants, `ViewerError`. `session.rs`: orchestration, backend switching, cancellation,
-  encoding, drain-and-swap, raw byte reads.
-- `rows.rs` (the row rule, answered in either direction), `row_walk.rs` (that rule read forward: `RowReader`,
+- `mod.rs`: public API, constants, `ViewerError`. `session.rs`: text sessions (backend switching, cancellation,
+  encoding, drain-and-swap); `session_store.rs`: `ViewerSession` + `SESSIONS` (both open paths).
+- `rows.rs` (the row rule), `row_walk.rs` (that rule read forward: `RowReader`,
   `collect_rows`, `search_rows`, and the row types), `range_read.rs` (range → UTF-8),
   `encoding.rs` (`FileEncoding` + detection), `full_load.rs` / `byte_seek.rs` / `line_index.rs` (the three backends),
   `search_matcher.rs`, `watcher.rs` (tail mode), `source.rs` + `volume_source.rs` (SMB) under
   `origin.rs`: one held handle per session, ❌ never `File::open` per fetch (#303, `DETAILS.md` § "Byte sources").
 - Backend selection: `< 1MB` → `FullLoad`; else instant `ByteSeek` + background `LineIndex`.
-- Media (Image/PDF): `content_kind.rs` plus `media*.rs` (`media.rs` holds the `cmdr-media://` token map).
+- Media (Image/PDF): `content_kind.rs` plus `media*.rs` (`media.rs`: the `cmdr-media://` token map).
   `DETAILS.md` § "Media rendering".
 - `materialize.rs` + `pending_open.rs`: pulling a file the OS can't open (routed, or on a phone) into a bounded temp,
   with progress and cancel, reused by "Open with" (`open_with_extract.rs`). `DETAILS.md` § "Preview of a routed file".
