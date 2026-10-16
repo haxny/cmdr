@@ -11,9 +11,9 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use super::create::{create_directory_core, create_file_core};
 use super::mutation_error::MutationError;
 use super::rename::{check_rename_validity_impl, rename_managed};
-use crate::file_system::Volume;
-use crate::file_system::volume::InMemoryVolume;
 use crate::file_system::volume::manager::get_volume_manager;
+use cmdr_fs::volume::InMemoryVolume;
+use cmdr_fs::volume::Volume;
 use cmdr_operation_log::types::Initiator;
 
 const CAFE_NFC: &str = "caf\u{e9}.txt";

@@ -14,14 +14,14 @@ use super::super::faulty_volume::{FaultyOp, FaultyVolume, forward_volume_methods
 use super::tests::{make_state, make_volumes};
 use super::wedge_test_support::*;
 use super::*;
-use crate::file_system::volume::InMemoryVolume;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::state::cancel_write_operation;
 use crate::file_system::write_operations::test_support::TestOperationGuard;
 use crate::file_system::write_operations::transfer_tree::test_support::row_states;
 use crate::file_system::write_operations::types::{ConflictResolution, SourceItemOutcome};
-use crate::ignore_poison::IgnorePoison;
+use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::testing::wait_until_async;
+use cmdr_fs::volume::InMemoryVolume;
 
 /// The tree's rows with their states (`row_states`).
 fn rows(state: &WriteOperationState) -> Vec<String> {

@@ -10,7 +10,7 @@ use std::collections::VecDeque;
 use std::sync::Arc;
 use std::time::Duration;
 
-use crate::file_system::volume::{ConnectionLiveness, Volume};
+use cmdr_fs::volume::{ConnectionLiveness, Volume};
 
 /// How many once-a-second readings the receive rate spans: the newest and the
 /// one four ticks before it.

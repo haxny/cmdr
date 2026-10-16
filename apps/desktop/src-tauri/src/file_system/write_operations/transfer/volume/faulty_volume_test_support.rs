@@ -23,12 +23,12 @@
 //! control WHEN bytes arrive, which is a different axis; they stay where they
 //! are.
 
-use crate::file_system::volume::{
+use cmdr_fs::entry::FileEntry;
+use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::volume::{
     DirectoryCreation, ListingProgress, StreamLength, StreamWriteProgress, StreamWritten, Volume, VolumeError,
     VolumeReadStream,
 };
-use crate::ignore_poison::IgnorePoison;
-use cmdr_fs::entry::FileEntry;
 use std::collections::HashMap;
 use std::future::Future;
 use std::path::Path;
@@ -68,7 +68,7 @@ macro_rules! forward_volume_methods {
         }
     };
     (@one $inner:ident, lane_key) => {
-        fn lane_key(&self) -> $crate::file_system::volume::LaneKey {
+        fn lane_key(&self) -> ::cmdr_fs::volume::LaneKey {
             self.$inner.lane_key()
         }
     };
@@ -76,8 +76,8 @@ macro_rules! forward_volume_methods {
         fn list_directory<'a>(
             &'a self,
             path: &'a ::std::path::Path,
-            on_progress: Option<&'a (dyn Fn($crate::file_system::volume::ListingProgress) + Sync)>,
-        ) -> ::std::pin::Pin<Box<dyn ::std::future::Future<Output = Result<Vec<::cmdr_fs::entry::FileEntry>, $crate::file_system::volume::VolumeError>> + Send + 'a>> {
+            on_progress: Option<&'a (dyn Fn(::cmdr_fs::volume::ListingProgress) + Sync)>,
+        ) -> ::std::pin::Pin<Box<dyn ::std::future::Future<Output = Result<Vec<::cmdr_fs::entry::FileEntry>, ::cmdr_fs::volume::VolumeError>> + Send + 'a>> {
             self.$inner.list_directory(path, on_progress)
         }
     };
@@ -85,7 +85,7 @@ macro_rules! forward_volume_methods {
         fn get_metadata<'a>(
             &'a self,
             path: &'a ::std::path::Path,
-        ) -> ::std::pin::Pin<Box<dyn ::std::future::Future<Output = Result<::cmdr_fs::entry::FileEntry, $crate::file_system::volume::VolumeError>> + Send + 'a>> {
+        ) -> ::std::pin::Pin<Box<dyn ::std::future::Future<Output = Result<::cmdr_fs::entry::FileEntry, ::cmdr_fs::volume::VolumeError>> + Send + 'a>> {
             self.$inner.get_metadata(path)
         }
     };
@@ -98,7 +98,7 @@ macro_rules! forward_volume_methods {
         fn is_directory<'a>(
             &'a self,
             path: &'a ::std::path::Path,
-        ) -> ::std::pin::Pin<Box<dyn ::std::future::Future<Output = Result<bool, $crate::file_system::volume::VolumeError>> + Send + 'a>> {
+        ) -> ::std::pin::Pin<Box<dyn ::std::future::Future<Output = Result<bool, ::cmdr_fs::volume::VolumeError>> + Send + 'a>> {
             self.$inner.is_directory(path)
         }
     };
@@ -107,7 +107,7 @@ macro_rules! forward_volume_methods {
             &'a self,
             path: &'a ::std::path::Path,
             content: &'a [u8],
-        ) -> ::std::pin::Pin<Box<dyn ::std::future::Future<Output = Result<(), $crate::file_system::volume::VolumeError>> + Send + 'a>> {
+        ) -> ::std::pin::Pin<Box<dyn ::std::future::Future<Output = Result<(), ::cmdr_fs::volume::VolumeError>> + Send + 'a>> {
             self.$inner.create_file(path, content)
         }
     };
@@ -115,7 +115,7 @@ macro_rules! forward_volume_methods {
         fn create_directory<'a>(
             &'a self,
             path: &'a ::std::path::Path,
-        ) -> ::std::pin::Pin<Box<dyn ::std::future::Future<Output = Result<(), $crate::file_system::volume::VolumeError>> + Send + 'a>> {
+        ) -> ::std::pin::Pin<Box<dyn ::std::future::Future<Output = Result<(), ::cmdr_fs::volume::VolumeError>> + Send + 'a>> {
             self.$inner.create_directory(path)
         }
     };
@@ -123,7 +123,7 @@ macro_rules! forward_volume_methods {
         fn create_directory_all<'a>(
             &'a self,
             path: &'a ::std::path::Path,
-        ) -> ::std::pin::Pin<Box<dyn ::std::future::Future<Output = Result<$crate::file_system::volume::DirectoryCreation, $crate::file_system::volume::VolumeError>> + Send + 'a>> {
+        ) -> ::std::pin::Pin<Box<dyn ::std::future::Future<Output = Result<::cmdr_fs::volume::DirectoryCreation, ::cmdr_fs::volume::VolumeError>> + Send + 'a>> {
             self.$inner.create_directory_all(path)
         }
     };
@@ -160,7 +160,7 @@ macro_rules! forward_volume_methods {
         }
     };
     (@one $inner:ident, delete) => {
-        fn delete<'a>(&'a self, path: &'a ::std::path::Path) -> ::std::pin::Pin<Box<dyn ::std::future::Future<Output = Result<(), $crate::file_system::volume::VolumeError>> + Send + 'a>> {
+        fn delete<'a>(&'a self, path: &'a ::std::path::Path) -> ::std::pin::Pin<Box<dyn ::std::future::Future<Output = Result<(), ::cmdr_fs::volume::VolumeError>> + Send + 'a>> {
             self.$inner.delete(path)
         }
     };
@@ -170,12 +170,12 @@ macro_rules! forward_volume_methods {
             from: &'a ::std::path::Path,
             to: &'a ::std::path::Path,
             force: bool,
-        ) -> ::std::pin::Pin<Box<dyn ::std::future::Future<Output = Result<(), $crate::file_system::volume::VolumeError>> + Send + 'a>> {
+        ) -> ::std::pin::Pin<Box<dyn ::std::future::Future<Output = Result<(), ::cmdr_fs::volume::VolumeError>> + Send + 'a>> {
             self.$inner.rename(from, to, force)
         }
     };
     (@one $inner:ident, get_space_info) => {
-        fn get_space_info<'a>(&'a self) -> ::std::pin::Pin<Box<dyn ::std::future::Future<Output = Result<$crate::file_system::volume::SpaceInfo, $crate::file_system::volume::VolumeError>> + Send + 'a>> {
+        fn get_space_info<'a>(&'a self) -> ::std::pin::Pin<Box<dyn ::std::future::Future<Output = Result<::cmdr_fs::volume::SpaceInfo, ::cmdr_fs::volume::VolumeError>> + Send + 'a>> {
             self.$inner.get_space_info()
         }
     };
@@ -223,7 +223,7 @@ macro_rules! forward_volume_methods {
         fn scan_for_copy<'a>(
             &'a self,
             path: &'a ::std::path::Path,
-        ) -> ::std::pin::Pin<Box<dyn ::std::future::Future<Output = Result<$crate::file_system::volume::CopyScanResult, $crate::file_system::volume::VolumeError>> + Send + 'a>> {
+        ) -> ::std::pin::Pin<Box<dyn ::std::future::Future<Output = Result<::cmdr_fs::volume::CopyScanResult, ::cmdr_fs::volume::VolumeError>> + Send + 'a>> {
             self.$inner.scan_for_copy(path)
         }
     };
@@ -231,16 +231,16 @@ macro_rules! forward_volume_methods {
         fn scan_for_copy_batch<'a>(
             &'a self,
             paths: &'a [::std::path::PathBuf],
-        ) -> ::std::pin::Pin<Box<dyn ::std::future::Future<Output = Result<$crate::file_system::volume::BatchScanResult, $crate::file_system::volume::VolumeError>> + Send + 'a>> {
+        ) -> ::std::pin::Pin<Box<dyn ::std::future::Future<Output = Result<::cmdr_fs::volume::BatchScanResult, ::cmdr_fs::volume::VolumeError>> + Send + 'a>> {
             self.$inner.scan_for_copy_batch(paths)
         }
     };
     (@one $inner:ident, scan_for_conflicts) => {
         fn scan_for_conflicts<'a>(
             &'a self,
-            source_items: &'a [$crate::file_system::volume::SourceItemInfo],
+            source_items: &'a [::cmdr_fs::volume::SourceItemInfo],
             dest_path: &'a ::std::path::Path,
-        ) -> ::std::pin::Pin<Box<dyn ::std::future::Future<Output = Result<Vec<$crate::file_system::volume::ScanConflict>, $crate::file_system::volume::VolumeError>> + Send + 'a>> {
+        ) -> ::std::pin::Pin<Box<dyn ::std::future::Future<Output = Result<Vec<::cmdr_fs::volume::ScanConflict>, ::cmdr_fs::volume::VolumeError>> + Send + 'a>> {
             self.$inner.scan_for_conflicts(source_items, dest_path)
         }
     };
@@ -248,7 +248,7 @@ macro_rules! forward_volume_methods {
         fn open_read_stream<'a>(
             &'a self,
             path: &'a ::std::path::Path,
-        ) -> ::std::pin::Pin<Box<dyn ::std::future::Future<Output = Result<Box<dyn $crate::file_system::volume::VolumeReadStream>, $crate::file_system::volume::VolumeError>> + Send + 'a>> {
+        ) -> ::std::pin::Pin<Box<dyn ::std::future::Future<Output = Result<Box<dyn ::cmdr_fs::volume::VolumeReadStream>, ::cmdr_fs::volume::VolumeError>> + Send + 'a>> {
             self.$inner.open_read_stream(path)
         }
     };
@@ -256,16 +256,16 @@ macro_rules! forward_volume_methods {
         fn write_from_stream<'a>(
             &'a self,
             dest: &'a ::std::path::Path,
-            mode: $crate::file_system::volume::WriteMode,
-            length: $crate::file_system::volume::StreamLength,
-            stream: Box<dyn $crate::file_system::volume::VolumeReadStream>,
-            on_progress: &'a (dyn Fn($crate::file_system::volume::StreamWriteProgress) -> std::ops::ControlFlow<()> + Sync),
-        ) -> ::std::pin::Pin<Box<dyn ::std::future::Future<Output = Result<$crate::file_system::volume::StreamWritten, $crate::file_system::volume::VolumeError>> + Send + 'a>> {
+            mode: ::cmdr_fs::volume::WriteMode,
+            length: ::cmdr_fs::volume::StreamLength,
+            stream: Box<dyn ::cmdr_fs::volume::VolumeReadStream>,
+            on_progress: &'a (dyn Fn(::cmdr_fs::volume::StreamWriteProgress) -> std::ops::ControlFlow<()> + Sync),
+        ) -> ::std::pin::Pin<Box<dyn ::std::future::Future<Output = Result<::cmdr_fs::volume::StreamWritten, ::cmdr_fs::volume::VolumeError>> + Send + 'a>> {
             self.$inner.write_from_stream(dest, mode, length, stream, on_progress)
         }
     };
     (@one $inner:ident, write_is_single_shot) => {
-        fn write_is_single_shot<'a>(&'a self, length: $crate::file_system::volume::StreamLength) -> ::std::pin::Pin<Box<dyn ::std::future::Future<Output = bool> + Send + 'a>> {
+        fn write_is_single_shot<'a>(&'a self, length: ::cmdr_fs::volume::StreamLength) -> ::std::pin::Pin<Box<dyn ::std::future::Future<Output = bool> + Send + 'a>> {
             self.$inner.write_is_single_shot(length)
         }
     };
@@ -276,7 +276,7 @@ macro_rules! forward_volume_methods {
     };
 }
 
-use crate::file_system::volume::WriteMode;
+use cmdr_fs::volume::WriteMode;
 pub(crate) use forward_volume_methods;
 
 /// The operations [`FaultyVolume`] can be armed to fail on. One variant per

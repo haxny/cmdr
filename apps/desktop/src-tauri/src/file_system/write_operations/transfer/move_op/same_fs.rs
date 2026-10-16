@@ -243,9 +243,9 @@ pub(super) fn move_with_rename(
             if let Some(buffered) = &buffered_leaves {
                 journal_search::persist_and_note(
                     operation_id,
-                    crate::file_system::volume::DEFAULT_VOLUME_ID,
+                    cmdr_fs::volume::DEFAULT_VOLUME_ID,
                     source,
-                    crate::file_system::volume::DEFAULT_VOLUME_ID,
+                    cmdr_fs::volume::DEFAULT_VOLUME_ID,
                     Some(&landed_path),
                     buffered,
                 );

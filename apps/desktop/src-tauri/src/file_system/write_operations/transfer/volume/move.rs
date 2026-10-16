@@ -35,7 +35,7 @@ use super::super::super::types::{
 // routes to its entry point.
 use super::move_same::move_within_same_volume;
 use super::transfer_error::{WriteFailure, write_error_event_from};
-use crate::file_system::volume::Volume;
+use cmdr_fs::volume::Volume;
 use cmdr_operation_log::types::OpKind;
 
 /// Unified move across volume types.

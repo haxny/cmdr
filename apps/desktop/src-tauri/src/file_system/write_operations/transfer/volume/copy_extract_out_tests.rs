@@ -7,8 +7,8 @@
 
 use super::tests::make_state;
 use super::*;
-use crate::file_system::volume::InMemoryVolume;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
+use cmdr_fs::volume::InMemoryVolume;
 use cmdr_local::LocalPosixVolume;
 
 // ========================================================================
@@ -272,8 +272,8 @@ async fn extracting_a_symlink_entry_writes_a_regular_file_never_a_symlink() {
 #[cfg(target_os = "macos")]
 mod quarantine {
     use super::*;
-    use crate::file_system::volume::StreamWritten;
     use crate::file_system::write_operations::transfer::volume::forward_volume_methods;
+    use cmdr_fs::volume::StreamWritten;
     use std::future::Future;
     use std::pin::Pin;
     use std::sync::atomic::AtomicUsize;
@@ -530,12 +530,10 @@ mod quarantine {
         fn write_from_stream<'a>(
             &'a self,
             dest: &'a Path,
-            mode: crate::file_system::volume::WriteMode,
-            length: crate::file_system::volume::StreamLength,
-            stream: Box<dyn crate::file_system::volume::VolumeReadStream>,
-            on_progress: &'a (
-                    dyn Fn(crate::file_system::volume::StreamWriteProgress) -> std::ops::ControlFlow<()> + Sync
-                ),
+            mode: cmdr_fs::volume::WriteMode,
+            length: cmdr_fs::volume::StreamLength,
+            stream: Box<dyn cmdr_fs::volume::VolumeReadStream>,
+            on_progress: &'a (dyn Fn(cmdr_fs::volume::StreamWriteProgress) -> std::ops::ControlFlow<()> + Sync),
         ) -> Pin<Box<dyn Future<Output = Result<StreamWritten, VolumeError>> + Send + 'a>> {
             use crate::file_system::write_operations::state::OperationIntent;
             use std::sync::atomic::Ordering;
@@ -616,7 +614,7 @@ mod quarantine {
     async fn moving_out_of_a_quarantined_zip_quarantines_what_lands() {
         use crate::file_system::write_operations::event_sinks::OperationEventSink;
         use crate::file_system::write_operations::route_archive_move_out;
-        use crate::ignore_poison::IgnorePoison;
+        use cmdr_fs::ignore_poison::IgnorePoison;
         use cmdr_fs::testing::metadata_fixture::{QUARANTINE_VALUE, QUARANTINE_XATTR, set_xattr};
 
         let tmp = tempfile::tempdir().expect("tempdir");

@@ -16,7 +16,7 @@ use super::super::super::state::WriteOperationState;
 use super::preflight::SourceFileFacts;
 use super::strategy::WriteStaging;
 use super::stream_pipe::stream_pipe_file;
-use crate::file_system::volume::{Volume, VolumeError};
+use cmdr_fs::volume::{Volume, VolumeError};
 
 /// Move one file from `source_volume` to `dest_volume`, streaming its bytes and
 /// then removing the source side. Returns the bytes transferred.

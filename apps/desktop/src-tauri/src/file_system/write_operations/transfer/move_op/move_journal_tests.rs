@@ -19,13 +19,13 @@ use super::cross_fs::move_with_staging;
 use super::move_files_with_progress_inner;
 
 use crate::file_system::VolumeManager;
-use crate::file_system::volume::Volume;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::rollback::Reversal;
 use crate::file_system::write_operations::state::WriteOperationState;
 use crate::file_system::write_operations::types::{ConflictResolution, WriteOperationConfig};
 use crate::file_system::write_operations::{journal, journal_search};
 use crate::operation_log_host::TestJournalGuard;
+use cmdr_fs::volume::Volume;
 use cmdr_local::LocalPosixVolume;
 use cmdr_operation_log::capture::WriterJournal;
 use cmdr_operation_log::query::{OperationItemView, get_operation};

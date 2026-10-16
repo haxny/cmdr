@@ -14,7 +14,7 @@ use super::super::super::types::{
 };
 use super::super::recovered_name::FinalizeFailure;
 use super::super::volume_outage::{self, OutageFailure};
-use crate::file_system::volume::VolumeError;
+use cmdr_fs::volume::VolumeError;
 
 /// Which side of a transfer a failing path belongs to.
 ///

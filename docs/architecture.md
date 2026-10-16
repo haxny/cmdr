@@ -162,8 +162,6 @@ above is separate: it ships per-character widths to Rust for backend column sizi
 
 All under `apps/desktop/src-tauri/src/`.
 
-- `apps/desktop/src-tauri/src/file_system/staging.rs`: Where every Cmdr scratch file (`.cmdr-tmp-*`, `.cmdr-temp-*`) is
-  named, and whether a listing shows it. Rules and rationale: the module's own docs
 - `file_system/write_operations/`: Copy/move/delete with safety patterns (temp+rename, staging, rollback). Umbrella +
   shared state machine, the operation manager (queue + lane admission), `OperationEventSink` and the per-source outcome
   it carries, Settle contract, the source-identity binding a reviewed batch may supply (`source_binding.rs`), the
@@ -414,6 +412,8 @@ vendored fork are ordinary members.
     reports. See `crates/cmdr-fs/DETAILS.md` § "`metadata`: what a copy keeps, and when it goes on"
   - `src/apple_double.rs`: whether a listed `._name` is the AppleDouble sidecar the kernel serves as its sibling's
     xattrs (FAT, exFAT, a stream-less SMB share), so a copy skips it as a file: its contents already travel as xattrs
+  - `src/staging.rs`: where every Cmdr scratch file (`.cmdr-tmp-*`, `.cmdr-temp-*`) is minted and named, which ones a
+    live operation owns, and whether a listing shows each. Rules and rationale: the module's own docs
 - `crates/cmdr-listing/`: the directory listing engine behind every pane: streaming reads with progress and stall
   reporting, the listing cache, sorting, pane row numbers, the quick filter, and the diffs that keep a pane current. One
   handle (`Listings`) that a host builds with explicit seams; Cmdr's host is `listing_host/`. See

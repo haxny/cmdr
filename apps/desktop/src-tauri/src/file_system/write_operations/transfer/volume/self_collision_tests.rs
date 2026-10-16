@@ -20,12 +20,12 @@ use super::super::conflict_responder_test_support::ConflictResponderSink;
 use super::conflict::resolve_volume_conflict;
 use super::copy::copy_volumes_with_progress;
 use super::move_same::move_within_same_volume_with_progress;
-use crate::file_system::volume::{InMemoryVolume, Volume};
 use crate::file_system::write_operations::conflict::ApplyToAll;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::state::WriteOperationState;
 use crate::file_system::write_operations::types::{ConflictResolution, SourceItemOutcome, VolumeCopyConfig};
-use crate::ignore_poison::IgnorePoison;
+use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::volume::{InMemoryVolume, Volume};
 
 fn make_state() -> Arc<WriteOperationState> {
     Arc::new(WriteOperationState::new(Duration::from_millis(0)))

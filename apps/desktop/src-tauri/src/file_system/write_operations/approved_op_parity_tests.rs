@@ -25,8 +25,8 @@ use super::event_sinks::{CollectorEventSink, OperationEventSink};
 use super::source_binding::{ExpectedSources, SourceFingerprint};
 use super::types::{ConflictResolution, WriteOperationConfig, WriteOperationType};
 use super::{copy_files_start, move_files_start};
-use crate::ignore_poison::IgnorePoison;
 use crate::test_support::TestDir;
+use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_operation_log::types::Initiator;
 
 /// What one run of a transfer did, in the terms the two runs have to agree on.

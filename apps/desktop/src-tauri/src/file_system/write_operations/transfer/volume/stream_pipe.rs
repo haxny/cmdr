@@ -25,7 +25,7 @@ use super::super::volume_outage::{self, OutageEnd, wait_after_failure};
 use super::preflight::SourceFileFacts;
 use super::server_side_copy::try_server_side_copy;
 use super::transfer_error::{AtPath, PathedVolumeError, hard_abort_error};
-use crate::file_system::volume::{StreamWritten, Volume, VolumeError, VolumeReadStream};
+use cmdr_fs::volume::{StreamWritten, Volume, VolumeError, VolumeReadStream};
 
 /// Debounce window for the foreground auto-yield: after foreground work drains,
 /// the checkpoint stays parked until the device has been quiet for this long
@@ -230,7 +230,7 @@ pub(super) async fn stream_pipe_file(
             return Err(VolumeError::NotSupported).at_source(source_path);
         };
         let (stream, source_reads) = super::source_reads::watch(stream);
-        let length = crate::file_system::volume::StreamLength::Known(size);
+        let length = cmdr_fs::volume::StreamLength::Known(size);
         // An extract carries the archive's quarantine with the rest of what
         // the source reports, so the destination puts it on before the landing
         // like any other xattr (`extract_quarantine.rs`).
@@ -304,7 +304,7 @@ pub(super) async fn stream_pipe_file(
         // the write future. No allocation, no timer, no syscall, and no change to
         // any backend.
         let write_progress =
-            |progress: crate::file_system::volume::StreamWriteProgress| on_file_progress(progress.bytes_written, size);
+            |progress: cmdr_fs::volume::StreamWriteProgress| on_file_progress(progress.bytes_written, size);
         let write_fut =
             dest_volume.write_from_stream(staged.target(), staged.write_mode(), length, stream, &write_progress);
         let outcome = tokio::select! {

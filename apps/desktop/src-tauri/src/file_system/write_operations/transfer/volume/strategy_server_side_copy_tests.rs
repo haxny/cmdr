@@ -32,13 +32,13 @@ use super::super::faulty_volume::forward_volume_methods;
 use super::super::transfer_error::PathedVolumeError;
 use super::test_support::make_state;
 use super::*;
-use crate::file_system::volume::WriteMode;
-use crate::file_system::volume::{
+use crate::file_system::write_operations::state::OperationIntent;
+use cmdr_fs::entry::FileEntry;
+use cmdr_fs::volume::WriteMode;
+use cmdr_fs::volume::{
     InMemoryVolume, ListingProgress, ServerCopyProgress, StreamLength, StreamWriteProgress, StreamWritten, Volume,
     VolumeError, VolumeReadStream,
 };
-use crate::file_system::write_operations::state::OperationIntent;
-use cmdr_fs::entry::FileEntry;
 
 /// A volume that can copy inside itself, and counts who asked.
 ///

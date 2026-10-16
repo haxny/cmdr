@@ -17,7 +17,7 @@ use std::sync::{Arc, Mutex};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::task::JoinHandle;
 
-use crate::ignore_poison::IgnorePoison;
+use cmdr_fs::ignore_poison::IgnorePoison;
 
 pub(crate) struct OutageProxy {
     port: u16,

@@ -20,11 +20,11 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use super::move_same::move_within_same_volume_with_progress;
-use crate::file_system::volume::Volume;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::state::WriteOperationState;
 use crate::file_system::write_operations::types::{ConflictResolution, VolumeCopyConfig};
 use crate::mtp::test_support::{self, ConnectedDevice, device_lock};
+use cmdr_fs::volume::Volume;
 use cmdr_mtp::virtual_device::setup_virtual_mtp_device;
 
 /// Seeds a virtual MTP device's backing dir, connects the app to it, and builds

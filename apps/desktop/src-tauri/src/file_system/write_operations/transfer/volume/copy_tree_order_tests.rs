@@ -11,10 +11,10 @@
 use super::super::faulty_volume::forward_volume_methods;
 use super::tests::make_state;
 use super::*;
-use crate::file_system::volume::{InMemoryVolume, ListingProgress};
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
-use crate::ignore_poison::IgnorePoison;
 use cmdr_fs::entry::FileEntry;
+use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::volume::{InMemoryVolume, ListingProgress};
 
 /// A remote-shaped source whose listings come back reversed and which records
 /// every file it opens.
@@ -66,11 +66,8 @@ impl Volume for ReversedListingSource {
     fn open_read_stream<'a>(
         &'a self,
         path: &'a Path,
-    ) -> Pin<
-        Box<
-            dyn Future<Output = Result<Box<dyn crate::file_system::volume::VolumeReadStream>, VolumeError>> + Send + 'a,
-        >,
-    > {
+    ) -> Pin<Box<dyn Future<Output = Result<Box<dyn cmdr_fs::volume::VolumeReadStream>, VolumeError>> + Send + 'a>>
+    {
         Box::pin(async move {
             self.opened.lock_ignore_poison().push(path.display().to_string());
             self.inner.open_read_stream(path).await

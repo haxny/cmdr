@@ -32,7 +32,7 @@ use super::types::{
     WriteCompleteEvent, WriteConflictEvent, WriteConflictResolvedEvent, WriteErrorEvent, WriteOperationConfig,
     WriteProgressEvent, WriteSettledEvent, WriteSourceItemDoneEvent,
 };
-use crate::file_system::volume::{DEFAULT_VOLUME_ID, Volume};
+use cmdr_fs::volume::{DEFAULT_VOLUME_ID, Volume};
 use cmdr_local::LocalPosixVolume;
 use cmdr_operation_log::capture::WriterJournal;
 use cmdr_operation_log::store::{OperationLogStoreError, open_read_connection, read_operation_items};

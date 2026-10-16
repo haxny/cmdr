@@ -14,9 +14,9 @@
 
 use super::tests::{make_state, make_volumes};
 use super::*;
-use crate::file_system::volume::InMemoryVolume;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::types::ConflictResolution;
+use cmdr_fs::volume::InMemoryVolume;
 
 // ========================================================================
 // Cross-volume file→file Overwrite safe-replace (data-loss regression)
@@ -28,11 +28,11 @@ use crate::file_system::write_operations::types::ConflictResolution;
 // halves: data survives a failure, and a success replaces the content cleanly
 // with no temp left behind.
 
-use crate::file_system::volume::{
+use cmdr_fs::entry::FileEntry;
+use cmdr_fs::volume::{
     CopyScanResult, ListingProgress, SpaceInfo, StreamLength, StreamWriteProgress, VolumeReadStream,
 };
-use crate::file_system::volume::{StreamWritten, WriteMode};
-use cmdr_fs::entry::FileEntry;
+use cmdr_fs::volume::{StreamWritten, WriteMode};
 use std::pin::Pin as StdPin;
 
 /// A `VolumeReadStream` that yields exactly one chunk, then fails. Models a
@@ -555,8 +555,8 @@ mod local_staging {
     use crate::file_system::write_operations::state::{OperationIntent, WriteOperationState};
     use crate::file_system::write_operations::transfer::copy_strategy::{LocalCopyStrategy, copy_file_using};
     use crate::file_system::write_operations::types::WriteOperationError;
-    use crate::ignore_poison::IgnorePoison;
     use crate::test_support::TestDir;
+    use cmdr_fs::ignore_poison::IgnorePoison;
     use cmdr_fs::staging::STAGING_TEMP_MARKER;
     use std::cell::Cell;
     use std::fs;

@@ -41,8 +41,8 @@ use super::super::super::types::{
 use super::super::dest_name_index::DestNameIndex;
 use super::super::transfer_driver::{LeafProgressLedger, build_pre_skip_set};
 use super::preflight::{scan_volume_sources, sources_in_tree_order};
-use crate::file_system::volume::{DirectoryCreation, SpaceInfo, Volume, VolumeError};
-use crate::ignore_poison::IgnorePoison;
+use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::volume::{DirectoryCreation, SpaceInfo, Volume, VolumeError};
 use cmdr_operation_log::types::OpKind;
 
 use super::super::super::ledger::WrittenFile;
@@ -466,12 +466,10 @@ fn room_to_check(dest_space: Option<SpaceInfo>) -> Option<u64> {
 /// later is still refused, with the backend's own error.
 pub(super) async fn destination_refusal(dest_volume: &dyn Volume, dest_path: &Path) -> Option<WriteOperationError> {
     match dest_volume.write_access_at(dest_path).await {
-        crate::file_system::volume::WriteAccess::Unwritable { reason } => {
-            Some(WriteOperationError::DestinationNotWritable {
-                path: dest_path.display().to_string(),
-                reason,
-            })
-        }
+        cmdr_fs::volume::WriteAccess::Unwritable { reason } => Some(WriteOperationError::DestinationNotWritable {
+            path: dest_path.display().to_string(),
+            reason,
+        }),
         _ => None,
     }
 }

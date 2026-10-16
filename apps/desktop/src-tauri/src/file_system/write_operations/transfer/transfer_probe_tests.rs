@@ -11,10 +11,10 @@ use std::sync::atomic::AtomicUsize;
 use super::super::liveness_test_support::ScriptedConnectionVolume;
 use super::super::transfer_driver::LeafProgressLedger;
 use super::*;
-use crate::file_system::volume::{ConnectionLiveness, Volume};
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::test_support::{TestOperationGuard, placeholder_conflict};
 use crate::file_system::write_operations::types::{WriteOperationType, WriteProgressEvent};
+use cmdr_fs::volume::{ConnectionLiveness, Volume};
 
 /// A probe whose stall-abort window is `window` AND whose connection is proven
 /// dead, so a test can drive the watchdog past the window in a handful of

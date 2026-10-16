@@ -17,12 +17,12 @@
 //! Wraps an `InMemoryVolume` (rather than owning one) so a test can read the
 //! destination back through the same handle after the copy.
 
-use crate::file_system::volume::{
+use cmdr_fs::entry::FileEntry;
+use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::volume::{
     ConnectionState, DirectoryCreation, InMemoryVolume, LaneKey, ListingProgress, ScanConflict, SourceItemInfo,
     SpaceInfo, StreamLength, StreamWriteProgress, StreamWritten, Volume, VolumeError, VolumeReadStream, WriteMode,
 };
-use crate::ignore_poison::IgnorePoison;
-use cmdr_fs::entry::FileEntry;
 use std::future::Future;
 use std::path::Path;
 use std::pin::Pin;

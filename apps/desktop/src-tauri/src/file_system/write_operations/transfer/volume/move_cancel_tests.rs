@@ -16,9 +16,9 @@ use super::test_support::{
     CancelAfterFirstSink, config_default, make_state, make_state_with_interval_ms, make_volumes,
 };
 use super::*;
-use crate::file_system::volume::InMemoryVolume;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::types::CancelRollbackOutcome;
+use cmdr_fs::volume::InMemoryVolume;
 
 /// Cancellation between sources stops further transfers and emits `write-cancelled`.
 /// This was a latent bug pre-M1-step-4: the cancel path returned `Err(Cancelled)`

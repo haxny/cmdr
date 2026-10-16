@@ -13,10 +13,10 @@
 
 use super::tests::make_state;
 use super::*;
-use crate::file_system::volume::{InMemoryVolume, VolumeError, VolumeReadStream};
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::types::ConflictResolution;
 use cmdr_fs::entry::FileEntry;
+use cmdr_fs::volume::{InMemoryVolume, VolumeError, VolumeReadStream};
 use cmdr_local::LocalPosixVolume;
 
 use super::super::faulty_volume::forward_volume_methods;

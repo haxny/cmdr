@@ -19,12 +19,12 @@ use std::sync::Arc;
 
 use super::plan::{RenamePlanStep, build_execution_plan, spelled_destinations};
 use super::{BulkRenameRow, RenameStartError, start_bulk_rename};
-use crate::file_system::volume::{RenameWork, Volume};
 use crate::file_system::write_operations::event_sinks::OperationEventSink;
 use crate::file_system::write_operations::routing::start_rename_by_move;
 use crate::file_system::write_operations::source_binding::ExpectedSources;
 use crate::file_system::write_operations::transfer::volume::unregistered_source_error;
 use crate::file_system::write_operations::types::{ConflictResolution, VolumeCopyConfig, WriteOperationStartResult};
+use cmdr_fs::volume::{RenameWork, Volume};
 use cmdr_operation_log::types::Initiator;
 
 /// How many entries a batch asks `Volume::rename_work` about at once.

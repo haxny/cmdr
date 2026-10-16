@@ -13,11 +13,11 @@
 use super::cross_fs::move_with_staging;
 use super::test_support::{make_state, outcomes_for, removal_flags_for};
 use super::*;
-use crate::file_system::volume::CopyScanResult;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::state::{CachedScanResult, FileInfo, insert_scan_result};
 use crate::file_system::write_operations::types::ConflictResolution;
-use crate::ignore_poison::IgnorePoison;
+use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::volume::CopyScanResult;
 
 /// Seeds the scan preview a transfer dialog would have cached for `source`,
 /// listing exactly `files` and `dirs`. Anything else on disk under `source` is

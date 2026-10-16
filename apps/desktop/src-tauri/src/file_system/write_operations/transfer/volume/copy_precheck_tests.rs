@@ -21,16 +21,16 @@
 //! `an_empty_but_preexisting_destination_is_never_assumed_free`.
 
 use super::*;
-use crate::file_system::volume::WriteMode;
-use crate::file_system::volume::{
-    CopyScanResult, DirectoryCreation, InMemoryVolume, ListingProgress, SpaceInfo, StreamLength, StreamWriteProgress,
-    StreamWritten, VolumeReadStream,
-};
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::test_support::TestOperationGuard;
 use crate::file_system::write_operations::types::ConflictResolution;
-use crate::ignore_poison::IgnorePoison;
 use cmdr_fs::entry::FileEntry;
+use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::volume::WriteMode;
+use cmdr_fs::volume::{
+    CopyScanResult, DirectoryCreation, InMemoryVolume, ListingProgress, SpaceInfo, StreamLength, StreamWriteProgress,
+    StreamWritten, VolumeReadStream,
+};
 use std::ops::ControlFlow;
 use unicode_normalization::UnicodeNormalization;
 
@@ -214,7 +214,7 @@ impl Volume for RecordingDest {
     fn entry_kind<'a>(
         &'a self,
         path: &'a Path,
-    ) -> Pin<Box<dyn Future<Output = Result<crate::file_system::volume::EntryKind, VolumeError>> + Send + 'a>> {
+    ) -> Pin<Box<dyn Future<Output = Result<cmdr_fs::volume::EntryKind, VolumeError>> + Send + 'a>> {
         Box::pin(async move {
             let real = self.resolve(path).await;
             self.inner.entry_kind(&real).await

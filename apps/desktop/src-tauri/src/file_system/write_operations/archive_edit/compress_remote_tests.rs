@@ -5,8 +5,8 @@
 
 use super::compress::compress_start;
 use super::test_support::*;
-use crate::file_system::volume::InMemoryVolume;
 use crate::file_system::write_operations::WriteOperationPhase;
+use cmdr_fs::volume::InMemoryVolume;
 use uuid::Uuid;
 
 /// Registers a NON-local `InMemoryVolume` (the remote-parent stand-in) with `dir`
@@ -428,7 +428,7 @@ async fn a_remote_source_streams_into_a_direct_local_archive() {
 
 #[tokio::test]
 async fn same_device_mtp_source_finishes_spooling_before_the_upload_path() {
-    use crate::file_system::volume::BackendKind;
+    use cmdr_fs::volume::BackendKind;
 
     let id = format!("mtp-same-device-{}", Uuid::new_v4());
     let volume = Arc::new(

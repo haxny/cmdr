@@ -59,8 +59,8 @@ use super::super::state::{WriteOperationState, is_cancelled};
 use super::super::types::{WriteOperationPhase, WriteOperationType, WriteProgressEvent};
 use super::retry;
 use super::transfer_probe::{TaskPhase, current_task_phase, set_task_phase};
-use crate::file_system::volume::{ConnectionState, LaneKey, Volume, VolumeError};
-use crate::ignore_poison::IgnorePoison;
+use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::volume::{ConnectionState, LaneKey, Volume, VolumeError};
 
 /// How a wait for a volume ended.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

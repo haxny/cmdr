@@ -19,12 +19,12 @@ use std::time::Duration;
 
 use cmdr_fs::volume::host::activity::BusyVolumes;
 
-use crate::file_system::volume::WriteMode;
-use crate::file_system::volume::{
+use cmdr_fs::entry::FileEntry;
+use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::volume::WriteMode;
+use cmdr_fs::volume::{
     ListingProgress, StreamLength, StreamWriteProgress, StreamWritten, Volume, VolumeError, VolumeReadStream,
 };
-use crate::ignore_poison::IgnorePoison;
-use cmdr_fs::entry::FileEntry;
 
 /// The share this double is uploading to. One id, because one double serves one
 /// upload; the per-volume scoping of the signal is covered where it lives

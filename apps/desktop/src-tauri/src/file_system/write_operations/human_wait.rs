@@ -28,7 +28,7 @@
 //! intervals routinely overlap, and summing them would subtract that time
 //! twice and leave real working seconds excluded afterwards.
 
-use crate::ignore_poison::IgnorePoison;
+use cmdr_fs::ignore_poison::IgnorePoison;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 

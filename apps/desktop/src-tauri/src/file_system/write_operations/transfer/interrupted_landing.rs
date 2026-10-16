@@ -51,7 +51,7 @@ use super::super::in_flight_temps;
 use super::super::state::WriteOperationState;
 use super::recovered_name::discard_unplaced_temp;
 use super::staged_write::{StagedWrite, dest_home};
-use crate::file_system::volume::{StreamWritten, Volume, VolumeError, VolumeReadStream, WriteMode};
+use cmdr_fs::volume::{StreamWritten, Volume, VolumeError, VolumeReadStream, WriteMode};
 
 /// What a landing whose reply the outage swallowed turned out to have done.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

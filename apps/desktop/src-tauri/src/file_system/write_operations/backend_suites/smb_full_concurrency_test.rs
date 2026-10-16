@@ -24,7 +24,7 @@
 //! from `super::smb_test_support`.
 
 use super::smb_test_support::*;
-use crate::file_system::volume::StreamLength;
+use cmdr_fs::volume::StreamLength;
 use cmdr_smb::volume::*;
 use std::sync::atomic::AtomicBool;
 
@@ -35,7 +35,7 @@ use crate::file_system::write_operations::{
     WriteOperationState, WriteProgressEvent, WriteSettledEvent, WriteSourceItemDoneEvent, copy_volumes_with_progress,
     render_live_transfer_dump,
 };
-use crate::ignore_poison::IgnorePoison;
+use cmdr_fs::ignore_poison::IgnorePoison;
 
 /// Sources in the batch. Two things pick this number: it has to be well past the
 /// concurrency window so the window stays FULL for essentially the whole run

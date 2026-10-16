@@ -23,10 +23,10 @@ use super::super::conflict_responder_test_support::{
 };
 use super::move_same::move_within_same_volume_with_progress;
 use super::rename_merge_test_support::{exists, local_volume, make_state, mkdir, read, write_file};
-use crate::file_system::volume::Volume;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::state::WriteOperationState;
 use crate::file_system::write_operations::types::{ConflictResolution, VolumeCopyConfig, WriteOperationError};
+use cmdr_fs::volume::Volume;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;

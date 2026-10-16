@@ -10,7 +10,7 @@ use super::test_support::make_state;
 use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::types::{WriteOperationPhase, WriteProgressEvent};
-use crate::ignore_poison::IgnorePoison;
+use cmdr_fs::ignore_poison::IgnorePoison;
 
 /// A Rollback the user clicks as the last item lands actually reverses the move.
 ///

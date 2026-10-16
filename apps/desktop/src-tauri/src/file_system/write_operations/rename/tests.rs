@@ -11,11 +11,11 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::file_system::volume::manager::get_volume_manager;
-use crate::file_system::volume::{LaneKey, ListingProgress};
 use crate::file_system::write_operations::busy_volume_ids;
-use crate::file_system::{Volume, VolumeError};
 use crate::test_support::TestDir;
 use cmdr_fs::entry::FileEntry;
+use cmdr_fs::volume::{LaneKey, ListingProgress};
+use cmdr_fs::volume::{Volume, VolumeError};
 
 fn unique(label: &str) -> String {
     static N: AtomicU64 = AtomicU64::new(0);
@@ -364,10 +364,10 @@ async fn route_archive_rename_onto_an_existing_name_errors_without_building_a_te
 
 /// An object store's double, registered under a fresh id, holding `/a/foo`
 /// with `files` files in it.
-async fn copying_store(label: &str, files: usize) -> (String, Arc<crate::file_system::volume::InMemoryVolume>) {
+async fn copying_store(label: &str, files: usize) -> (String, Arc<cmdr_fs::volume::InMemoryVolume>) {
     let volume_id = unique(label);
     let volume = Arc::new(
-        crate::file_system::volume::InMemoryVolume::new(&volume_id)
+        cmdr_fs::volume::InMemoryVolume::new(&volume_id)
             .with_whole_publish()
             .with_renames_by_copy()
             .with_space_info(10_000_000, 10_000_000),
@@ -429,7 +429,7 @@ async fn the_validity_check_reports_the_move_a_copying_rename_runs_as() {
     assert!(!by_move.counted_all, "and the count stopped at its cap: {by_move:?}");
 
     let plain_id = unique("plain-validity");
-    let plain = Arc::new(crate::file_system::volume::InMemoryVolume::new(&plain_id));
+    let plain = Arc::new(cmdr_fs::volume::InMemoryVolume::new(&plain_id));
     plain.create_directory(Path::new("/a/foo")).await.unwrap();
     get_volume_manager().register(&plain_id, plain as Arc<dyn Volume>);
     let one_call = check_rename_validity_impl("/a".into(), "foo".into(), "bar".into(), plain_id, None).await;
@@ -440,7 +440,7 @@ async fn the_validity_check_reports_the_move_a_copying_rename_runs_as() {
 /// first too: only a free, small, fully counted rename starts unasked.
 #[test]
 fn a_small_rename_that_costs_money_asks_first() {
-    let small = crate::file_system::volume::SubtreeTally {
+    let small = cmdr_fs::volume::SubtreeTally {
         files: 3,
         bytes: 6,
         folders: 1,
@@ -456,7 +456,7 @@ fn a_small_rename_that_costs_money_asks_first() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_batch_where_a_rename_copies_runs_as_one_move() {
     use crate::file_system::write_operations::event_sinks::CollectorEventSink;
-    use crate::ignore_poison::IgnorePoison;
+    use cmdr_fs::ignore_poison::IgnorePoison;
 
     let (volume_id, volume) = copying_store("copy-batch", 2).await;
     volume.create_file(Path::new("/a/note.txt"), b"n").await.unwrap();
@@ -575,7 +575,7 @@ async fn a_batch_the_executor_runs_leaves_no_swap_out() {
 /// any case, and the entry comes back named the way it was asked for, as
 /// `SmbVolume::get_metadata` names it. The listing keeps the stored spelling.
 struct CaseFoldingVolume {
-    inner: crate::file_system::volume::InMemoryVolume,
+    inner: cmdr_fs::volume::InMemoryVolume,
 }
 
 impl Volume for CaseFoldingVolume {
@@ -627,7 +627,7 @@ impl Volume for CaseFoldingVolume {
 #[tokio::test]
 async fn a_case_only_rename_on_a_case_insensitive_volume_is_not_a_conflict() {
     let volume_id = unique("case-folding");
-    let inner = crate::file_system::volume::InMemoryVolume::new(&volume_id);
+    let inner = cmdr_fs::volume::InMemoryVolume::new(&volume_id);
     inner.create_directory(Path::new("/share")).await.unwrap();
     inner.create_file(Path::new("/share/c.txt"), b"abcd").await.unwrap();
     get_volume_manager().register(&volume_id, Arc::new(CaseFoldingVolume { inner }) as Arc<dyn Volume>);
@@ -646,7 +646,7 @@ async fn a_case_only_rename_on_a_case_insensitive_volume_is_not_a_conflict() {
 #[tokio::test]
 async fn a_case_only_rename_onto_a_real_sibling_is_still_a_conflict() {
     let volume_id = unique("case-sensitive");
-    let volume = Arc::new(crate::file_system::volume::InMemoryVolume::new(&volume_id));
+    let volume = Arc::new(cmdr_fs::volume::InMemoryVolume::new(&volume_id));
     volume.create_directory(Path::new("/share")).await.unwrap();
     volume.create_file(Path::new("/share/c.txt"), b"abcd").await.unwrap();
     volume.create_file(Path::new("/share/C.txt"), b"other!").await.unwrap();

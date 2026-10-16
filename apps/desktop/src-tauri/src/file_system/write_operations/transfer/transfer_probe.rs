@@ -28,7 +28,7 @@ use std::time::{Duration, Instant};
 
 use tokio_util::sync::CancellationToken;
 
-use crate::ignore_poison::IgnorePoison;
+use cmdr_fs::ignore_poison::IgnorePoison;
 
 use super::super::event_sinks::OperationEventSink;
 use super::super::state::{OperationIntent, WriteOperationState, load_intent};

@@ -3,7 +3,7 @@
 //! asserting against a scenario that never happened.
 
 use super::*;
-use crate::file_system::volume::InMemoryVolume;
+use cmdr_fs::volume::InMemoryVolume;
 
 fn io(message: &str) -> VolumeError {
     VolumeError::IoError {

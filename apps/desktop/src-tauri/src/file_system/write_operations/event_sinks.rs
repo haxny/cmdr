@@ -9,7 +9,7 @@
 use tauri_specta::Event;
 
 #[cfg(test)]
-use crate::ignore_poison::IgnorePoison;
+use cmdr_fs::ignore_poison::IgnorePoison;
 
 use super::manager::manager;
 use super::terminal_effects::{self, AppTerminalEffects};

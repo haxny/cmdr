@@ -28,9 +28,9 @@ use super::source_binding::ExpectedSources;
 use super::target_names::{NotAName, TargetNames};
 use super::transfer::volume::{PathRole, copy_between_volumes, move_between_volumes, unregistered_volume_error};
 use super::types::{ReadOnlySide, VolumeCopyConfig, WriteOperationError, WriteOperationStartResult};
-use crate::file_system::volume::RoutedKind;
-use crate::file_system::volume::Volume;
 use crate::file_system::volume::manager::{get_volume_manager, path_routes_over_its_parent};
+use cmdr_fs::volume::RoutedKind;
+use cmdr_fs::volume::Volume;
 use cmdr_operation_log::types::Initiator;
 
 /// Turns the destination a caller sent into the path the destination volume

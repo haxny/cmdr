@@ -206,8 +206,8 @@ async fn read_only_directory_fails_closed_without_writing() {
 /// under `volume_id`.
 async fn register_slowly_creating_volume(volume_id: &str, delay: std::time::Duration) {
     use crate::file_system::volume::manager::get_volume_manager;
-    use crate::file_system::volume::{InMemoryVolume, Volume};
     use crate::test_support::SlowVolume;
+    use cmdr_fs::volume::{InMemoryVolume, Volume};
     use std::sync::Arc;
 
     let inner = InMemoryVolume::new("Slow NAS");

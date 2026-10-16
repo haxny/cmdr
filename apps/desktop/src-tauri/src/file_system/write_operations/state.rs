@@ -2,7 +2,7 @@
 //!
 //! Contains state tracking for in-progress operations and status caches for query APIs.
 
-use crate::ignore_poison::IgnorePoison;
+use cmdr_fs::ignore_poison::IgnorePoison;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -258,7 +258,7 @@ pub struct WriteOperationState {
     /// when it settles.
     ///
     /// Everything this operation staged holds a [`Weak`](std::sync::Weak) to it
-    /// (`file_system::staging`), so its scratch files stop being hidden the
+    /// (`cmdr_fs::staging`), so its scratch files stop being hidden the
     /// moment it ends. ❌ Not `Arc<WriteOperationState>` reachability: a task the
     /// driver ABANDONED after the cancel deadline still holds one of those, and
     /// the whole point is that a wedge's leftovers become visible anyway.

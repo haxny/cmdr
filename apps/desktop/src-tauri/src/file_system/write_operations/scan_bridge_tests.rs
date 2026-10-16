@@ -20,8 +20,8 @@ use super::scan_cache::{
 };
 use super::types::{LifecycleStatus, WriteOperationConfig, WriteOperationError, WriteOperationType};
 use super::{OperationEventSink, copy_files_start};
-use crate::file_system::volume::CopyScanResult;
 use crate::test_support::{TestDir, wait_until_async};
+use cmdr_fs::volume::CopyScanResult;
 use cmdr_operation_log::types::Initiator;
 
 /// Deadline for every wait here. Generous on purpose: each wait has a real
@@ -642,7 +642,7 @@ async fn a_trash_frees_its_preview_instead_of_waiting_on_it() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_compress_confirmed_mid_scan_awaits_its_preview() {
     use super::archive_edit::compress_start;
-    use crate::file_system::volume::Volume;
+    use cmdr_fs::volume::Volume;
     use cmdr_local::LocalPosixVolume;
 
     let dir = TestDir::new("scanwait-compress");
@@ -807,7 +807,7 @@ fn descriptor_on_lane(op_id: &str, lane: &str, preview_id: Option<String>) -> su
     super::manager::OperationDescriptor {
         operation_id: op_id.to_string(),
         operation_type: WriteOperationType::Copy,
-        lanes: vec![crate::file_system::volume::LaneKey::new(lane)],
+        lanes: vec![cmdr_fs::volume::LaneKey::new(lane)],
         volume_ids: vec![],
         summary: super::manager::OperationSummaryText::default(),
         supports_rollback: true,

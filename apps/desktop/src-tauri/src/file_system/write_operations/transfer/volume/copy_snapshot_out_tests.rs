@@ -12,10 +12,10 @@
 use super::tests::make_state;
 use super::*;
 use crate::file_system::git;
-use crate::file_system::volume::InMemoryVolume;
 use crate::file_system::volume::manager::get_volume_manager;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::resolve_source_volume;
+use cmdr_fs::volume::InMemoryVolume;
 use cmdr_git::test_fixtures::{EntryKind, Fixture, cleanup, temp_dir};
 use cmdr_local::LocalPosixVolume;
 
@@ -89,7 +89,7 @@ async fn a_copy_out_of_a_snapshot_carries_a_file_and_a_folder_byte_for_byte() {
         .expect("the source volume");
     assert_eq!(
         route,
-        Some(crate::file_system::volume::RoutedKind::GitPortal),
+        Some(cmdr_fs::volume::RoutedKind::GitPortal),
         "the snapshot is the portal's"
     );
 

@@ -32,7 +32,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use super::super::state::{WriteOperationState, is_cancelled};
-use crate::file_system::volume::VolumeError;
+use cmdr_fs::volume::VolumeError;
 
 /// How many times one file's write may run in total, the first try included.
 ///

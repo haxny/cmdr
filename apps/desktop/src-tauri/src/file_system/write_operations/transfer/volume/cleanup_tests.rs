@@ -9,12 +9,12 @@
 //! in this directory follows).
 
 use super::*;
-use crate::file_system::volume::InMemoryVolume;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::ledger::WrittenIdentity;
 use crate::file_system::write_operations::state::cancel_write_operation;
 use crate::file_system::write_operations::test_support::TestOperationGuard;
 use crate::file_system::write_operations::types::{CancelRollback, CancelRollbackOutcome};
+use cmdr_fs::volume::InMemoryVolume;
 
 fn make_state() -> Arc<WriteOperationState> {
     Arc::new(WriteOperationState::new(Duration::from_millis(50)))

@@ -22,8 +22,8 @@ use super::state::WriteOperationState;
 use super::types::{VolumeCopyConfig, WriteOperationConfig};
 use super::{copy_volumes_with_progress, move_volumes_with_progress};
 
-use crate::file_system::volume::{InMemoryVolume, Volume};
 use crate::operation_log_host::TestJournalGuard;
+use cmdr_fs::volume::{InMemoryVolume, Volume};
 use cmdr_operation_log::capture::WriterJournal;
 use cmdr_operation_log::store::{open_read_connection, operation_log_db_path, read_operation, read_operation_items};
 use cmdr_operation_log::types::{EntryType, ExecutionStatus, Initiator, OpKind, RollbackState, RowRole};

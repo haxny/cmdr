@@ -690,7 +690,7 @@ fn busy_volume_ids_excludes_root() {
     let op = unique_id("busy-root-op");
     let usb = unique_id("usb");
 
-    let root = crate::file_system::volume::DEFAULT_VOLUME_ID.to_string();
+    let root = cmdr_fs::volume::DEFAULT_VOLUME_ID.to_string();
     register_operation_status(&op, WriteOperationType::Move, vec![root.clone(), usb.clone()]);
     let busy = busy_volume_ids();
     assert!(busy.contains(&usb), "the ejectable volume should be busy");

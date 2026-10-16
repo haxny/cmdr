@@ -13,7 +13,7 @@
 //! but a load that grows over the soak's lifetime can.
 
 use super::smb_test_support::*;
-use crate::file_system::volume::smb_volume_id;
+use cmdr_fs::volume::smb_volume_id;
 use cmdr_smb::volume::*;
 
 // ── Soak test: repeated SMB→Local copy pipeline ────────────────

@@ -14,11 +14,11 @@
 use super::super::super::conflict_responder_test_support::{ConflictResponderSink, file_conflict_count};
 use super::tests::{make_state, make_volumes};
 use super::*;
-use crate::file_system::volume::Volume;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::state::cancel_write_operation;
 use crate::file_system::write_operations::test_support::TestOperationGuard;
 use crate::file_system::write_operations::types::ConflictResolution;
+use cmdr_fs::volume::Volume;
 
 // ============================================================================
 // Helpers

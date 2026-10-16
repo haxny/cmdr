@@ -215,7 +215,7 @@ threaded through its callers needs none of it.
 
 A pane numbers its rows over what it is SHOWING, so row 7 is the seventh visible entry and not `entries[7]`. Two things
 leave an entry out: `FileEntry::is_hidden` (when `include_hidden` is off) and scratch a running operation owns
-(`file_system::staging`).
+(`cmdr_fs::staging`).
 
 **Answering "which entry is row N" by walking and counting is what wedged the app.** The MCP pane mirror fetches ~100
 rows per sync, each fetch was one full walk, and at the bottom of a 74,144-entry directory that came to ~7.4 M predicate

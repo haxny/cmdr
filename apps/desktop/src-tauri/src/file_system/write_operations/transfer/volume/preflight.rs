@@ -41,10 +41,10 @@ use super::super::super::types::{
 use super::super::volume_outage::{OutageAnnounce, OutageEnd, wait_while_out};
 use super::folder_metadata::SourceFolderDates;
 use super::transfer_error::{PathRole, WriteFailure, map_volume_error};
-use crate::file_system::volume::{
+use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::volume::{
     EntryKind, ListingProgress, ScanBoundary, ScanRecorder, ScanStop, ScanStopSignal, Volume, VolumeError,
 };
-use crate::ignore_poison::IgnorePoison;
 
 /// Per-source hint collected during the scan: whether the top-level path is a
 /// directory and, for top-level files, the file size.

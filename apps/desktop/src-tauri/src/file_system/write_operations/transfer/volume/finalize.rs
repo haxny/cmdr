@@ -21,7 +21,7 @@ use super::super::super::state::WriteOperationState;
 use super::super::recovered_name::{
     AfterARefusedDelete, FinalizeFailure, discard_unplaced_temp, rescue_out_of_temp_space, what_a_refused_delete_left,
 };
-use crate::file_system::volume::{Volume, VolumeError};
+use cmdr_fs::volume::{Volume, VolumeError};
 
 /// Lands a fully-written temp at its final name: deletes whatever is at `orig`
 /// (which survived the entire streaming write) and renames the temp into its

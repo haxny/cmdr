@@ -13,11 +13,11 @@
 
 use super::move_same::move_within_same_volume_with_progress;
 use super::rename_merge_test_support::{exists, make_state, mkdir, write_file};
-use crate::file_system::volume::{Volume, VolumeError};
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::test_support::TestOperationGuard;
 use crate::file_system::write_operations::types::{ConflictResolution, VolumeCopyConfig};
 use cmdr_fs::entry::FileEntry;
+use cmdr_fs::volume::{Volume, VolumeError};
 use cmdr_local::LocalPosixVolume;
 use std::future::Future;
 use std::path::{Path, PathBuf};
@@ -54,7 +54,7 @@ impl Volume for PauseOnFirstRenameVolume {
     fn list_directory<'a>(
         &'a self,
         path: &'a Path,
-        on_progress: Option<&'a (dyn Fn(crate::file_system::volume::ListingProgress) + Sync)>,
+        on_progress: Option<&'a (dyn Fn(cmdr_fs::volume::ListingProgress) + Sync)>,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<FileEntry>, VolumeError>> + Send + 'a>> {
         self.inner.list_directory(path, on_progress)
     }
@@ -93,8 +93,7 @@ impl Volume for PauseOnFirstRenameVolume {
     fn scan_for_copy<'a>(
         &'a self,
         path: &'a Path,
-    ) -> Pin<Box<dyn Future<Output = Result<crate::file_system::volume::CopyScanResult, VolumeError>> + Send + 'a>>
-    {
+    ) -> Pin<Box<dyn Future<Output = Result<cmdr_fs::volume::CopyScanResult, VolumeError>> + Send + 'a>> {
         self.inner.scan_for_copy(path)
     }
 }

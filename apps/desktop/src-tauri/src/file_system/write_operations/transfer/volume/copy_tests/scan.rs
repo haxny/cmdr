@@ -87,9 +87,9 @@ async fn a_volume_copy_hands_its_operation_the_tree_its_scan_recorded() {
 /// source is: files, and folders whose contents the drivers list as they go.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_cached_preview_without_a_tree_gives_the_operation_its_sources_as_opaque_rows() {
-    use crate::file_system::volume::CopyScanResult;
     use crate::file_system::write_operations::state::{CachedScanResult, insert_scan_result};
     use crate::file_system::write_operations::transfer_tree::test_support::outline;
+    use cmdr_fs::volume::CopyScanResult;
 
     let (source, dest) = make_volumes();
     source.create_directory(Path::new("/src/photos")).await.unwrap();
@@ -180,7 +180,7 @@ async fn test_scan_for_copy_batch_with_progress_fires_callback() {
         PathBuf::from("/b.txt"),
         PathBuf::from("/c.txt"),
     ];
-    let boundary = crate::file_system::volume::ScanBoundary::new(Some(&on_progress));
+    let boundary = cmdr_fs::volume::ScanBoundary::new(Some(&on_progress));
     let result = vol.scan_for_copy_batch_with_boundary(&paths, &boundary).await.unwrap();
 
     assert_eq!(result.aggregate.file_count, 3);

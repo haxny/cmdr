@@ -14,8 +14,8 @@ use std::sync::Arc;
 use std::sync::atomic::Ordering;
 use std::time::Duration;
 
-use crate::file_system::volume::{InMemoryVolume, Volume, VolumeError};
 use crate::test_support::TestDir;
+use cmdr_fs::volume::{InMemoryVolume, Volume, VolumeError};
 use cmdr_local::LocalPosixVolume;
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]

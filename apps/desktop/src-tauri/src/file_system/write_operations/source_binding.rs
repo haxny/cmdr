@@ -21,7 +21,7 @@ use std::path::{Path, PathBuf};
 use super::event_sinks::OperationEventSink;
 use super::queued_sources::{kept_after_queue_local, kept_after_queue_on, local_source_is_gone};
 use super::types::{SourceItemOutcome, WriteCompleteEvent, WriteOperationType, WriteSourceItemDoneEvent};
-use crate::file_system::volume::Volume;
+use cmdr_fs::volume::Volume;
 
 /// Server-owned identity of one source, captured when a caller last looked at it.
 ///

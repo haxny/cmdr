@@ -40,8 +40,8 @@ use crate::adb::device_provider::apply_device_list;
 use crate::adb::test_support::{a_listed_phone, dial, dials_seen, phone, retire_phone};
 use crate::commands::file_system::scan_volume_for_conflicts;
 use crate::file_system::volume::manager::get_volume_manager;
-use crate::ignore_poison::IgnorePoison;
 use crate::test_support::TestDir;
+use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_local::LocalPosixVolume;
 use cmdr_operation_log::types::Initiator;
 

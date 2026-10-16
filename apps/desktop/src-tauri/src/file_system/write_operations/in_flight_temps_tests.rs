@@ -11,10 +11,10 @@
 use super::*;
 use crate::file_system::volume::manager::get_volume_manager;
 use crate::file_system::volume::manager::test_support::TestVolumeRegistration;
-use crate::file_system::volume::{InMemoryVolume, Volume};
 use crate::test_support::TestDir;
 use cmdr_fs::staging::StagingTemp;
 use cmdr_fs::testing::wait_until_async;
+use cmdr_fs::volume::{InMemoryVolume, Volume};
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;

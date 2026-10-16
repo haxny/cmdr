@@ -23,10 +23,10 @@ use super::{
     move_within_same_volume_with_progress, rename_managed, start_bulk_rename,
 };
 use crate::downloads::own_write_recorder::{OwnWriteRecording, record_under};
-use crate::file_system::volume::{InMemoryVolume, Volume};
-use crate::ignore_poison::IgnorePoison;
 use crate::test_support::{TestDir, wait_until_async};
 use cmdr_archive::mutator::{AddEntry, AddSource, Changeset};
+use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::volume::{InMemoryVolume, Volume};
 use cmdr_operation_log::types::Initiator;
 
 const WAIT: Duration = Duration::from_secs(5);

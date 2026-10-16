@@ -40,8 +40,8 @@ use super::preflight::SourceFileFacts;
 use super::preflight::{SourceHint, scan_volume_sources, sources_in_tree_order};
 use super::strategy::{Replaces, copy_single_path, resolve_source_is_directory};
 use super::transfer_error::{PathRole, WriteFailure, map_volume_error, source_not_removed};
-use crate::file_system::volume::Volume;
-use crate::ignore_poison::IgnorePoison;
+use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::volume::Volume;
 
 /// Internal cross-volume move body. Takes a sink for event emission so unit
 /// tests can drive the full pipeline with a `CollectorEventSink` instead of

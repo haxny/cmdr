@@ -38,7 +38,7 @@ use super::displaced_destination::{DisplacedDestination, displace_destination};
 use super::item_identity::is_the_same_item;
 use super::naming::find_unique_volume_name;
 use super::transfer_error::{PathRole, map_volume_error};
-use crate::file_system::volume::{EntryKind, Volume, VolumeError};
+use cmdr_fs::volume::{EntryKind, Volume, VolumeError};
 
 /// Outcome of resolving a volume conflict.
 ///

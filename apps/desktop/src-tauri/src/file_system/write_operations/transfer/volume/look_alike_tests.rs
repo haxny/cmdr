@@ -11,8 +11,8 @@
 use super::super::super::conflict_responder_test_support::{ConflictResponderSink, file_conflict_count};
 use super::tests::make_state;
 use super::*;
-use crate::file_system::volume::InMemoryVolume;
 use crate::file_system::write_operations::types::{ConflictResolution, VolumeCopyConfig, WriteOperationError};
+use cmdr_fs::volume::InMemoryVolume;
 
 const CAFE_NFC: &str = "caf\u{e9}.txt";
 const CAFE_NFD: &str = "cafe\u{301}.txt";

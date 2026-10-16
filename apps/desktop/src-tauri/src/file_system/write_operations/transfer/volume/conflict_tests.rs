@@ -12,8 +12,8 @@
 use super::super::super::staged_write::Replaces;
 use super::super::finalize::finalize_safe_replace;
 use super::*;
-use crate::file_system::volume::InMemoryVolume;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
+use cmdr_fs::volume::InMemoryVolume;
 use std::sync::Arc;
 
 /// The recursive-delete double lives in `strategy_test_support.rs`: the cleanup

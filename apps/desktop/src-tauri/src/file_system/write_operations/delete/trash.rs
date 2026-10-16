@@ -211,9 +211,9 @@ pub fn trash_single_journaled(
             if let Some(buffered) = &buffered {
                 super::super::journal_search::persist_and_note(
                     &op_id,
-                    crate::file_system::volume::DEFAULT_VOLUME_ID,
+                    cmdr_fs::volume::DEFAULT_VOLUME_ID,
                     source,
-                    crate::file_system::volume::DEFAULT_VOLUME_ID,
+                    cmdr_fs::volume::DEFAULT_VOLUME_ID,
                     in_trash.as_deref(),
                     buffered,
                 );
@@ -440,9 +440,9 @@ pub(in crate::file_system::write_operations) fn trash_files_with_progress(
                 if let Some(buffered) = &buffered_leaves {
                     super::super::journal_search::persist_and_note(
                         operation_id,
-                        crate::file_system::volume::DEFAULT_VOLUME_ID,
+                        cmdr_fs::volume::DEFAULT_VOLUME_ID,
                         source,
-                        crate::file_system::volume::DEFAULT_VOLUME_ID,
+                        cmdr_fs::volume::DEFAULT_VOLUME_ID,
                         in_trash.as_deref(),
                         buffered,
                     );

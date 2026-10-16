@@ -6,7 +6,7 @@ use super::cross_fs::move_with_staging;
 use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::types::ConflictResolution;
-use crate::ignore_poison::IgnorePoison;
+use cmdr_fs::ignore_poison::IgnorePoison;
 
 pub(super) fn make_state(progress_interval_ms: u64) -> Arc<WriteOperationState> {
     Arc::new(WriteOperationState::new(std::time::Duration::from_millis(

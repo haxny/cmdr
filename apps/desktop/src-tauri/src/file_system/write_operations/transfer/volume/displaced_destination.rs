@@ -19,9 +19,9 @@ use super::super::super::types::{RecoveredOriginal, WriteOperationError};
 use super::super::recovered_name::rescue_out_of_temp_space;
 use super::cleanup::{TreeRemoval, remove_tree};
 use super::transfer_error::{PathRole, map_volume_error};
-use crate::file_system::staging::StagingTemp;
-use crate::file_system::volume::{Volume, VolumeError};
-use crate::ignore_poison::IgnorePoison;
+use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::staging::StagingTemp;
+use cmdr_fs::volume::{Volume, VolumeError};
 
 /// The destination an Overwrite is about to replace, renamed out of the way
 /// rather than deleted.

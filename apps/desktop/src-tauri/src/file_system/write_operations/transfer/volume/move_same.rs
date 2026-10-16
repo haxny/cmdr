@@ -42,8 +42,8 @@ use super::preflight::{SourceHint, source_merges_as_a_directory, sources_in_tree
 use super::rename_merge::{RenameMergeCtx, rename_merge_directory};
 use super::strategy::Replaces;
 use super::transfer_error::{PathRole, map_volume_error};
-use crate::file_system::volume::{EntryKind, RenameWork, Volume, VolumeError};
-use crate::ignore_poison::IgnorePoison;
+use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::volume::{EntryKind, RenameWork, Volume, VolumeError};
 use cmdr_operation_log::types::OpKind;
 
 /// One item's rename landed: its row is done, and its verdict says whether the

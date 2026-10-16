@@ -100,7 +100,7 @@ use std::pin::Pin;
 use std::sync::Arc;
 use std::time::Duration;
 
-use crate::file_system::volume::LaneKey;
+use cmdr_fs::volume::LaneKey;
 use cmdr_operation_log::types::Initiator;
 use delete::delete_files_with_progress_inner;
 use manager::OperationDescriptor;
@@ -399,9 +399,7 @@ where
             // local FS ("root"); a delete/trash has no destination volume.
             let op_kind = journal::op_kind_of(operation_type);
             let dest_volume_id = match operation_type {
-                WriteOperationType::Copy | WriteOperationType::Move => {
-                    Some(crate::file_system::volume::DEFAULT_VOLUME_ID)
-                }
+                WriteOperationType::Copy | WriteOperationType::Move => Some(cmdr_fs::volume::DEFAULT_VOLUME_ID),
                 _ => None,
             };
             journal::open_local_op(&op_id, op_kind, initiator, item_count, dest_volume_id);
@@ -481,7 +479,7 @@ where
 /// substring parsing).
 fn local_lanes(volume_ids: &[String]) -> Vec<LaneKey> {
     if volume_ids.is_empty() {
-        vec![LaneKey::new(crate::file_system::volume::DEFAULT_VOLUME_ID)]
+        vec![LaneKey::new(cmdr_fs::volume::DEFAULT_VOLUME_ID)]
     } else {
         volume_ids.iter().cloned().map(LaneKey::new).collect()
     }
@@ -700,7 +698,7 @@ pub async fn delete_files_start(
             initiator,
             config.progress_interval_ms,
             vec![],
-            vec![LaneKey::new(crate::file_system::volume::DEFAULT_VOLUME_ID)],
+            vec![LaneKey::new(cmdr_fs::volume::DEFAULT_VOLUME_ID)],
             summary,
             config.preview_id.clone(),
             sources.len() as u64,
@@ -764,7 +762,7 @@ pub async fn trash_files_start(
         initiator,
         config.progress_interval_ms,
         vec![],
-        vec![LaneKey::new(crate::file_system::volume::DEFAULT_VOLUME_ID)],
+        vec![LaneKey::new(cmdr_fs::volume::DEFAULT_VOLUME_ID)],
         summary,
         None,
         sources.len() as u64,

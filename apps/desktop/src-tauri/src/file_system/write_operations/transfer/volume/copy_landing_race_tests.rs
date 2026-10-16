@@ -20,10 +20,10 @@ use std::sync::Arc;
 
 use super::tests::make_state;
 use super::*;
-use crate::file_system::volume::{InMemoryVolume, Volume, VolumeError};
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::transfer::volume::forward_volume_methods;
 use crate::file_system::write_operations::types::{ConflictResolution, WriteOperationError};
+use cmdr_fs::volume::{InMemoryVolume, Volume, VolumeError};
 
 /// What the other writer puts at the name.
 const THEIRS: &[u8] = b"someone else's file, written while ours was in flight";

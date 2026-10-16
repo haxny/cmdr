@@ -22,7 +22,7 @@ use cmdr_fs::volume::{CopyScanResult, ScanRecorder};
 use super::built;
 use super::model::{NodeId, NodeKind, NodeSeed, TreeModel, clip_name};
 use super::order::TreeOrder;
-use crate::ignore_poison::IgnorePoison;
+use cmdr_fs::ignore_poison::IgnorePoison;
 
 /// A node's id while the tree is being built, before breadth-first renumbering.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

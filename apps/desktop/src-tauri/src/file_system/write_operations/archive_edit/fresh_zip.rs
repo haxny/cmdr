@@ -19,7 +19,7 @@ use tokio_util::sync::CancellationToken;
 use zip::write::SimpleFileOptions;
 use zip::{CompressionMethod, ZipWriter};
 
-use crate::file_system::volume::{StreamLength, VolumeError, VolumeReadStream};
+use cmdr_fs::volume::{StreamLength, VolumeError, VolumeReadStream};
 
 const CHANNEL_CHUNKS: usize = 4;
 const CHUNK_BYTES: usize = 128 * 1024;

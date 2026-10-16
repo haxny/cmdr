@@ -29,7 +29,7 @@
 //! reason minting the id is: one transition under one lock, and no way to park
 //! an operation on a question nobody can read back.
 
-use crate::ignore_poison::IgnorePoison;
+use cmdr_fs::ignore_poison::IgnorePoison;
 use std::sync::{Arc, Mutex};
 use tokio::sync::oneshot;
 

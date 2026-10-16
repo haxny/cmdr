@@ -9,9 +9,9 @@ use std::path::Path;
 use std::sync::Arc;
 
 use crate::file_system::VolumeManager;
-use crate::file_system::volume::{InMemoryVolume, Volume, VolumeError};
 use crate::file_system::write_operations::rollback::Reversal;
 use cmdr_fs::entry::FileEntry;
+use cmdr_fs::volume::{InMemoryVolume, Volume, VolumeError};
 use cmdr_operation_log::rollback::*;
 use cmdr_operation_log::store::{
     OperationItemRow, OperationRow, open_read_connection, operation_log_db_path, read_operation, read_operation_items,
@@ -264,7 +264,7 @@ use std::future::Future;
 use std::path::PathBuf;
 use std::pin::Pin;
 
-use crate::file_system::volume::ListingProgress;
+use cmdr_fs::volume::ListingProgress;
 
 /// A remote place's volume after an edit narrowed its root: every file stays on
 /// the server (`inner`), but a path above the new root is refused as `NotFound`,

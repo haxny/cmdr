@@ -31,7 +31,7 @@ use cmdr_fs::metadata::{CarriedMetadata, ClassOutcome, MetadataClasses};
 
 use super::super::super::metadata_losses::FolderLosses;
 use super::super::super::state::{WriteOperationState, is_cancelled};
-use crate::file_system::volume::Volume;
+use cmdr_fs::volume::Volume;
 
 /// A source folder's own dates (Unix seconds), as the listing entry or the
 /// scan's stat reported them. `None` is a date the source didn't carry.

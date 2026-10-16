@@ -11,7 +11,7 @@ use std::sync::Arc;
 
 use super::test_support::*;
 use crate::file_system::VolumeManager;
-use crate::file_system::volume::{InMemoryVolume, Volume};
+use cmdr_fs::volume::{InMemoryVolume, Volume};
 use cmdr_operation_log::rollback::*;
 use cmdr_operation_log::store::{OperationRow, open_read_connection, read_operation, read_operation_items};
 use cmdr_operation_log::types::{

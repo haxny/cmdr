@@ -121,7 +121,7 @@ struct UndoLoop {
 
 impl UndoLoop {
     fn new(name: &str) -> Self {
-        use crate::file_system::volume::Volume;
+        use cmdr_fs::volume::Volume;
         use cmdr_local::LocalPosixVolume;
         use cmdr_operation_log::capture::WriterJournal;
         use cmdr_operation_log::store::operation_log_db_path;

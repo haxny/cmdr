@@ -20,8 +20,8 @@ use crate::clipboard::{
     ClipboardPasteOutcome, ClipboardPasteSettled, ClipboardPayload, PasteClipboardReply, PastedClipboardFile,
     payload_to_content,
 };
-use crate::file_system::VolumeError;
 use crate::file_system::volume::manager::get_volume_manager;
+use cmdr_fs::volume::VolumeError;
 use cmdr_operation_log::types::{EntryType, Initiator, OpKind};
 
 use super::manager;

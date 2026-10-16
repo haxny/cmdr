@@ -9,7 +9,7 @@
 use std::sync::Arc;
 
 use super::test_support::*;
-use crate::file_system::volume::InMemoryVolume;
+use cmdr_fs::volume::InMemoryVolume;
 use cmdr_operation_log::rollback::*;
 use cmdr_operation_log::types::{OpKind, RollbackState, SkipReason};
 

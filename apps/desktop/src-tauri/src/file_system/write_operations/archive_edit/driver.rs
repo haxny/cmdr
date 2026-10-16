@@ -19,9 +19,9 @@ use super::super::types::{WriteOperationError, WriteOperationStartResult, WriteO
 use super::edit_error::EditError;
 use super::engine::{MutatorHooks, emit_archive_terminal, run_managed_edit, to_write_error};
 use super::routing::{ensure_zip_writable, normalize_inner_path, read_only_error};
-use crate::file_system::volume::LaneKey;
 use crate::file_system::volume::manager::get_volume_manager;
 use cmdr_archive::mutator::{self, Changeset, MutationError};
+use cmdr_fs::volume::LaneKey;
 
 /// Everything the driver needs to run one archive edit.
 pub(crate) struct ArchiveEditRequest {

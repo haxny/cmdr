@@ -15,8 +15,8 @@ use super::types::{
     CancelRollback, WriteCancelledEvent, WriteCompleteEvent, WriteErrorEvent, WriteOperationError, WriteOperationType,
     WriteSettledEvent,
 };
-use crate::ignore_poison::IgnorePoison;
 use crate::mcp::terminal_ops::{self, TerminalStatus};
+use cmdr_fs::ignore_poison::IgnorePoison;
 
 /// One thing a terminal event did, as the recorder saw it.
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -24,9 +24,9 @@ use super::super::types::{
 use super::edit_error::EditError;
 use super::engine::{MutatorHooks, run_managed_edit, to_write_error};
 use super::routing::{ensure_zip_writable, normalize_inner_path, read_only_error};
-use crate::file_system::volume::Volume;
-use crate::ignore_poison::IgnorePoison;
 use cmdr_archive::mutator::{self, Changeset, MutationError};
+use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::volume::Volume;
 
 /// Routes a MOVE whose SOURCE is inside a zip (extract-out + delete-inside) to a
 /// single managed compound op. The op extracts the selected entries to the

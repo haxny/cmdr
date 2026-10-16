@@ -14,7 +14,6 @@
 
 use super::preflight::scan_volume_sources;
 use super::rename_merge_test_support::make_state;
-use crate::file_system::volume::{BatchScanResult, ScanBoundary, Volume, VolumeError};
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::state::{WriteOperationState, cancel_write_operation};
 use crate::file_system::write_operations::test_support::TestOperationGuard;
@@ -22,6 +21,7 @@ use crate::file_system::write_operations::types::{
     ConflictResolution, VolumeCopyConfig, WriteOperationError, WriteOperationType,
 };
 use cmdr_fs::entry::FileEntry;
+use cmdr_fs::volume::{BatchScanResult, ScanBoundary, Volume, VolumeError};
 use std::future::Future;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
@@ -91,7 +91,7 @@ impl Volume for BoundaryWalkingVolume {
     fn list_directory<'a>(
         &'a self,
         _path: &'a Path,
-        _on_progress: Option<&'a (dyn Fn(crate::file_system::volume::ListingProgress) + Sync)>,
+        _on_progress: Option<&'a (dyn Fn(cmdr_fs::volume::ListingProgress) + Sync)>,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<FileEntry>, VolumeError>> + Send + 'a>> {
         Box::pin(async { Ok(Vec::new()) })
     }
@@ -136,7 +136,7 @@ impl Volume for BoundaryWalkingVolume {
                 .map(|path| {
                     (
                         path.clone(),
-                        crate::file_system::volume::CopyScanResult {
+                        cmdr_fs::volume::CopyScanResult {
                             file_count: ENTRIES,
                             dir_count: 0,
                             total_bytes: ENTRIES as u64,

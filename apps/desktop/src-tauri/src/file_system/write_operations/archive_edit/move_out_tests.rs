@@ -7,8 +7,8 @@ use std::future::Future;
 use std::pin::Pin;
 
 use super::test_support::*;
-use crate::file_system::volume::WriteMode;
-use crate::file_system::volume::{DirectoryCreation, StreamLength, StreamWriteProgress, StreamWritten, VolumeError};
+use cmdr_fs::volume::WriteMode;
+use cmdr_fs::volume::{DirectoryCreation, StreamLength, StreamWriteProgress, StreamWritten, VolumeError};
 
 /// A destination volume whose streaming write ALWAYS fails: it delegates reads,
 /// metadata, and space to an inner `InMemoryVolume` but never implements
@@ -16,7 +16,7 @@ use crate::file_system::volume::{DirectoryCreation, StreamLength, StreamWritePro
 /// extracted-file write into a destination-side failure. Used to prove that a
 /// dest-side failure during move-out deletes NOTHING from the archive.
 struct FailingWriteVolume {
-    inner: Arc<crate::file_system::volume::InMemoryVolume>,
+    inner: Arc<cmdr_fs::volume::InMemoryVolume>,
 }
 
 impl Volume for FailingWriteVolume {
@@ -32,7 +32,7 @@ impl Volume for FailingWriteVolume {
     fn list_directory<'a>(
         &'a self,
         path: &'a Path,
-        on_progress: Option<&'a (dyn Fn(crate::file_system::volume::ListingProgress) + Sync)>,
+        on_progress: Option<&'a (dyn Fn(cmdr_fs::volume::ListingProgress) + Sync)>,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<cmdr_fs::entry::FileEntry>, VolumeError>> + Send + 'a>> {
         self.inner.list_directory(path, on_progress)
     }
@@ -53,7 +53,7 @@ impl Volume for FailingWriteVolume {
     }
     fn get_space_info<'a>(
         &'a self,
-    ) -> Pin<Box<dyn Future<Output = Result<crate::file_system::volume::SpaceInfo, VolumeError>> + Send + 'a>> {
+    ) -> Pin<Box<dyn Future<Output = Result<cmdr_fs::volume::SpaceInfo, VolumeError>> + Send + 'a>> {
         self.inner.get_space_info()
     }
     fn supports_streaming(&self) -> bool {
@@ -62,7 +62,7 @@ impl Volume for FailingWriteVolume {
     fn supports_export(&self) -> bool {
         true
     }
-    fn lane_key(&self) -> crate::file_system::volume::LaneKey {
+    fn lane_key(&self) -> cmdr_fs::volume::LaneKey {
         // Delegate to the inner volume so the injected unique lane key (below)
         // wins over the trait default (root `/`, shared across instances).
         self.inner.lane_key()
@@ -80,8 +80,8 @@ impl Volume for FailingWriteVolume {
 /// serializing the whole move-out suite onto one lane (see
 /// `test_support::unique_lane_id` for the isolation rationale).
 fn archive_source_volume(archive_path: &Path) -> Arc<dyn Volume> {
-    use crate::file_system::volume::InMemoryVolume;
     use cmdr_archive::{ArchiveFormat, ArchiveVolume};
+    use cmdr_fs::volume::InMemoryVolume;
     use cmdr_fs::volume::host::VolumeHost;
     let parent: Arc<dyn Volume> = Arc::new(
         InMemoryVolume::new("parent")
@@ -174,8 +174,8 @@ async fn move_out_lands_files_at_dest_deletes_entries_and_keeps_the_remainder() 
 
 #[tokio::test]
 async fn move_out_dest_failure_deletes_nothing_and_leaves_the_archive_readable() {
-    use crate::file_system::volume::InMemoryVolume;
     use crate::file_system::write_operations::route_archive_move_out;
+    use cmdr_fs::volume::InMemoryVolume;
 
     let tmp = tempfile::tempdir().expect("tempdir");
     let archive = tmp.path().join("a.zip");
@@ -405,7 +405,7 @@ async fn move_out_dir_with_a_deep_skipped_child_keeps_that_child_in_the_archive(
 /// one source of a move-out error while its predecessors land durably, proving
 /// the archive delete drops ONLY the durable prefix.
 struct FailOnNameVolume {
-    inner: Arc<crate::file_system::volume::InMemoryVolume>,
+    inner: Arc<cmdr_fs::volume::InMemoryVolume>,
     fail_name: String,
 }
 
@@ -419,13 +419,13 @@ impl Volume for FailOnNameVolume {
     fn as_any(&self) -> &dyn std::any::Any {
         self
     }
-    fn lane_key(&self) -> crate::file_system::volume::LaneKey {
+    fn lane_key(&self) -> cmdr_fs::volume::LaneKey {
         self.inner.lane_key()
     }
     fn list_directory<'a>(
         &'a self,
         path: &'a Path,
-        on_progress: Option<&'a (dyn Fn(crate::file_system::volume::ListingProgress) + Sync)>,
+        on_progress: Option<&'a (dyn Fn(cmdr_fs::volume::ListingProgress) + Sync)>,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<cmdr_fs::entry::FileEntry>, VolumeError>> + Send + 'a>> {
         self.inner.list_directory(path, on_progress)
     }
@@ -446,7 +446,7 @@ impl Volume for FailOnNameVolume {
     }
     fn get_space_info<'a>(
         &'a self,
-    ) -> Pin<Box<dyn Future<Output = Result<crate::file_system::volume::SpaceInfo, VolumeError>> + Send + 'a>> {
+    ) -> Pin<Box<dyn Future<Output = Result<cmdr_fs::volume::SpaceInfo, VolumeError>> + Send + 'a>> {
         self.inner.get_space_info()
     }
     fn supports_streaming(&self) -> bool {
@@ -472,7 +472,7 @@ impl Volume for FailOnNameVolume {
         dest: &'a Path,
         mode: WriteMode,
         length: StreamLength,
-        stream: Box<dyn crate::file_system::volume::VolumeReadStream>,
+        stream: Box<dyn cmdr_fs::volume::VolumeReadStream>,
         on_progress: &'a (dyn Fn(StreamWriteProgress) -> std::ops::ControlFlow<()> + Sync),
     ) -> Pin<Box<dyn Future<Output = Result<StreamWritten, VolumeError>> + Send + 'a>> {
         let fails = dest
@@ -559,8 +559,8 @@ async fn move_out_partial_skip_converges_deletes_landed_keeps_skipped() {
 
 #[tokio::test]
 async fn move_out_error_mid_tree_deletes_only_the_durable_prefix() {
-    use crate::file_system::volume::InMemoryVolume;
     use crate::file_system::write_operations::route_archive_move_out;
+    use cmdr_fs::volume::InMemoryVolume;
 
     let tmp = tempfile::tempdir().expect("tempdir");
     let archive = tmp.path().join("a.zip");

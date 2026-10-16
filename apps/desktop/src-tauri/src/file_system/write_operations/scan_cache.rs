@@ -38,8 +38,8 @@ use tokio::sync::Notify;
 
 use super::transfer_tree::{NodeId, TreeModel, TreeOrder, built, from_local_scan};
 use super::types::WriteOperationError;
-use crate::file_system::volume::{CopyScanResult, ScannedFile};
-use crate::ignore_poison::RwLockIgnorePoison;
+use cmdr_fs::ignore_poison::RwLockIgnorePoison;
+use cmdr_fs::volume::{CopyScanResult, ScannedFile};
 
 // ============================================================================
 // Scan preview state

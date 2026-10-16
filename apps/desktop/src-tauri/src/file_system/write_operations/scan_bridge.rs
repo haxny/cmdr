@@ -436,7 +436,7 @@ static OBSERVED_TICKS: std::sync::LazyLock<std::sync::Mutex<Vec<ObservedScanTick
 
 #[cfg(test)]
 fn record_tick_for_test(event: &WriteProgressEvent) {
-    use crate::ignore_poison::IgnorePoison;
+    use cmdr_fs::ignore_poison::IgnorePoison;
     OBSERVED_TICKS.lock_ignore_poison().push(ObservedScanTick {
         operation_id: event.operation_id.clone(),
         files_done: event.files_done,
@@ -448,7 +448,7 @@ fn record_tick_for_test(event: &WriteProgressEvent) {
 /// Every scanning-phase tick forwarded for `operation_id` so far, oldest first.
 #[cfg(test)]
 pub(crate) fn observed_scan_ticks(operation_id: &str) -> Vec<ObservedScanTick> {
-    use crate::ignore_poison::IgnorePoison;
+    use cmdr_fs::ignore_poison::IgnorePoison;
     OBSERVED_TICKS
         .lock_ignore_poison()
         .iter()

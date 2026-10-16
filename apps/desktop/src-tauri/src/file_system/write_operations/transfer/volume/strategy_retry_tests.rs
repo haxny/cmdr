@@ -27,10 +27,10 @@ use std::path::Path;
 use std::sync::Arc;
 use std::time::Duration;
 
-use crate::file_system::volume::{InMemoryVolume, Volume, VolumeError};
 use crate::file_system::write_operations::test_support::TestOperationGuard;
 use crate::file_system::write_operations::transfer::{retry, transfer_probe};
-use crate::ignore_poison::IgnorePoison;
+use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::volume::{InMemoryVolume, Volume, VolumeError};
 
 const PAYLOAD: &[u8] = b"the-bytes-that-must-arrive-whole";
 

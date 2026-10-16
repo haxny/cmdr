@@ -34,7 +34,7 @@ use super::in_flight_temps::{self, ItemKind, TrackedRecord};
 use super::state::WriteOperationState;
 use super::types::{RecoveredOriginal, WriteOperationError};
 use super::unique_name::{NameCandidates, RESCUE_NAME_ATTEMPTS, recovered_sibling};
-use crate::file_system::staging::StagingTemp;
+use cmdr_fs::staging::StagingTemp;
 
 /// Result of applying a conflict resolution.
 #[derive(Debug)]

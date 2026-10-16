@@ -17,13 +17,13 @@ use std::time::{Duration, UNIX_EPOCH};
 use cmdr_fs::metadata::{CarriedMetadata, MetadataCaps, MetadataClasses, UserFlags, Xattr};
 
 use super::copy_volumes_with_progress;
-use crate::file_system::volume::{InMemoryVolume, Volume};
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::state::WriteOperationState;
 use crate::file_system::write_operations::types::{
     LostMetadata, LostMetadataClass, MetadataLeftBehind, VolumeCopyConfig, WriteCompleteEvent,
 };
 use crate::test_support::TestDir;
+use cmdr_fs::volume::{InMemoryVolume, Volume};
 use cmdr_local::LocalPosixVolume;
 
 /// 2015-03-01: every seeded item's creation date, years before its last edit.

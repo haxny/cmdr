@@ -10,13 +10,13 @@
 use super::super::{FaultyOp, FaultyVolume};
 use super::tests::{make_state, make_volumes};
 use super::*;
-use crate::file_system::volume::InMemoryVolume;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::state::ConflictResolutionResponse;
 use crate::file_system::write_operations::types::{
     ConflictResolution, WriteConflictEvent, WriteConflictResolvedEvent, WriteErrorEvent, WriteOperationError,
     WriteSourceItemDoneEvent,
 };
+use cmdr_fs::volume::InMemoryVolume;
 
 /// Answers every prompt with a plain `Overwrite`, and, when `rollback_after_first`
 /// is set, flips the operation to `RollingBack` the moment one source has fully

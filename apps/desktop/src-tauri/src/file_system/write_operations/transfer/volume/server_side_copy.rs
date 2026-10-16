@@ -14,7 +14,7 @@ use super::super::recovered_name::FinalizeFailure;
 use super::super::staged_write::{StagedWrite, WriteStaging, note_pending_for_local_dest, resolve_staging};
 use super::super::transfer_probe::{TaskPhase, set_task_bytes, set_task_phase};
 use super::transfer_error::hard_abort_error;
-use crate::file_system::volume::{ServerCopyProgress, Volume, VolumeError};
+use cmdr_fs::volume::{ServerCopyProgress, Volume, VolumeError};
 
 /// Asks the destination to copy the file on the server, from itself or from a
 /// sibling place it can copy across (`Volume::copy_on_server`).

@@ -15,8 +15,8 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use super::transfer_error::{PathRole, PathedVolumeError};
-use crate::file_system::volume::{ScanStop, StreamLength, VolumeError, VolumeReadStream};
 use cmdr_fs::metadata::{CarriedMetadata, MetadataClasses};
+use cmdr_fs::volume::{ScanStop, StreamLength, VolumeError, VolumeReadStream};
 
 /// Whether a watched source stream failed a read. Shared with the stream, which
 /// the destination owns once the write starts.

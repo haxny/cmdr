@@ -333,7 +333,7 @@ pub enum WriteOperationError {
     /// can't tell read-only from no permission says `Unexplained`.
     DestinationNotWritable {
         path: String,
-        reason: crate::file_system::volume::UnwritableReason,
+        reason: cmdr_fs::volume::UnwritableReason,
     },
     /// File is locked (macOS immutable flag, "Operation not permitted" on delete).
     FileLocked {

@@ -7,7 +7,7 @@ use uuid::Uuid;
 use super::scan_cache::{insert_scan_result, release_preview};
 use super::scan_preview::get_scan_preview_totals;
 use super::state::{CachedScanResult, FileInfo};
-use crate::file_system::volume::CopyScanResult;
+use cmdr_fs::volume::CopyScanResult;
 
 /// `get_scan_preview_totals` must return the cached counters when a scan
 /// has completed. Pins the contract the FE relies on to recover its

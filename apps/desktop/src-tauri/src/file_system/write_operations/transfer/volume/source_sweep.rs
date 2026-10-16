@@ -27,8 +27,8 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use super::transfer_error::{AtPath, PathedVolumeError};
-use crate::file_system::volume::{EntryKind, Volume, VolumeError};
 use cmdr_fs::entry::FileEntry;
+use cmdr_fs::volume::{EntryKind, Volume, VolumeError};
 
 /// What a source entry looked like to the move: its size, its mtime, and its
 /// inode where the backend has one. Compared field by field, so a field a backend

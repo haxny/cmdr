@@ -33,8 +33,8 @@ use super::network_transfer_test_support::{
     assert_no_staging_litter, budget, clean_deep, self_describing_bytes, sha256, start_copy,
 };
 use crate::file_system::volume::manager::get_volume_manager;
-use crate::ignore_poison::IgnorePoison;
 use crate::test_support::TestDir;
+use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_local::LocalPosixVolume;
 
 /// The read failure the mid-operation cells inject into the LOCAL source.

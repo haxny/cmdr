@@ -17,7 +17,6 @@ use super::super::super::conflict_responder_test_support::{
 use super::super::safety_oracle::{SafetySpec, assert_operation_was_safe};
 use super::tests::{make_state, make_volumes};
 use super::*;
-use crate::file_system::volume::Volume;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::state::cancel_write_operation;
 use crate::file_system::write_operations::test_support::TestOperationGuard;
@@ -25,6 +24,7 @@ use crate::file_system::write_operations::types::{
     ConflictResolution, WriteCancelledEvent, WriteCompleteEvent, WriteConflictEvent, WriteConflictResolvedEvent,
     WriteErrorEvent, WriteSourceItemDoneEvent,
 };
+use cmdr_fs::volume::Volume;
 use std::sync::atomic::AtomicU8;
 
 // ============================================================================

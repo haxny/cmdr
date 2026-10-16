@@ -29,7 +29,7 @@ use super::super::types::{
     WriteCompleteEvent, WriteConflictEvent, WriteConflictResolvedEvent, WriteErrorEvent, WriteProgressEvent,
     WriteSettledEvent, WriteSourceItemDoneEvent,
 };
-use crate::ignore_poison::IgnorePoison;
+use cmdr_fs::ignore_poison::IgnorePoison;
 
 /// An event sink that auto-answers Stop-mode `write-conflict` prompts with a
 /// scripted resolution, the moment it observes them. Forwards every event to an

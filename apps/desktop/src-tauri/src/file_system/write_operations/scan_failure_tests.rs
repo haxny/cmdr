@@ -21,10 +21,10 @@ use super::scan_cache::ScanPreviewState;
 use super::scan_preview::{run_scan_preview, run_volume_scan_preview};
 use super::scan_watchdog::{ScanTarget, ScanWatchdog};
 use super::types::WriteOperationError;
-use crate::file_system::volume::{
+use crate::test_support::{WedgedVolume, wait_until_async};
+use cmdr_fs::volume::{
     BatchScanResult, CopyScanResult, InMemoryVolume, ListingProgress, ScanBoundary, Volume, VolumeError,
 };
-use crate::test_support::{WedgedVolume, wait_until_async};
 
 const WAIT: Duration = Duration::from_secs(5);
 

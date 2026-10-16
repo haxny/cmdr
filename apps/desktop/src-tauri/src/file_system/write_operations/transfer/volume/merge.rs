@@ -49,9 +49,9 @@ use super::strategy::Replaces;
 use super::strategy::{LandingName, WriteStaging, note_pending_for_local_dest, staging_for};
 use super::stream_pipe::stream_pipe_file;
 use super::transfer_error::{AtPath, PathRole, PathedVolumeError};
-use crate::file_system::volume::{ChildName, DirectoryCreation, Volume, VolumeError};
-use crate::ignore_poison::IgnorePoison;
 use cmdr_fs::entry::FileEntry;
+use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::volume::{ChildName, DirectoryCreation, Volume, VolumeError};
 
 /// What one leaf file's copy reports back to the walker.
 type LeafResult = Result<u64, PathedVolumeError>;

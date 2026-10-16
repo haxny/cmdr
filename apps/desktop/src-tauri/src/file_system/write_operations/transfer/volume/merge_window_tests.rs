@@ -25,9 +25,6 @@ use super::super::super::conflict_responder_test_support::ConflictResponderSink;
 use super::super::faulty_volume::forward_volume_methods;
 use super::tests::{make_state, make_volumes};
 use super::*;
-use crate::file_system::volume::InMemoryVolume;
-use crate::file_system::volume::WriteMode;
-use crate::file_system::volume::{StreamLength, StreamWriteProgress, StreamWritten};
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::state::cancel_write_operation;
 use crate::file_system::write_operations::test_support::TestOperationGuard;
@@ -35,6 +32,9 @@ use crate::file_system::write_operations::types::{
     ConflictResolution, ScanProgressEvent, WriteCancelledEvent, WriteCompleteEvent, WriteConflictEvent,
     WriteConflictResolvedEvent, WriteErrorEvent, WriteSettledEvent, WriteSourceItemDoneEvent,
 };
+use cmdr_fs::volume::InMemoryVolume;
+use cmdr_fs::volume::WriteMode;
+use cmdr_fs::volume::{StreamLength, StreamWriteProgress, StreamWritten};
 use std::sync::atomic::AtomicU8;
 
 /// How long a leaf lingers inside `write_from_stream` waiting for siblings to
@@ -118,7 +118,7 @@ impl Volume for WindowWatchingDest {
         dest: &'a Path,
         mode: WriteMode,
         length: StreamLength,
-        stream: Box<dyn crate::file_system::volume::VolumeReadStream>,
+        stream: Box<dyn cmdr_fs::volume::VolumeReadStream>,
         on_progress: &'a (dyn Fn(StreamWriteProgress) -> std::ops::ControlFlow<()> + Sync),
     ) -> Pin<Box<dyn Future<Output = Result<StreamWritten, VolumeError>> + Send + 'a>> {
         Box::pin(async move {
@@ -162,11 +162,8 @@ impl Volume for PoisonedLeafSource {
     fn open_read_stream<'a>(
         &'a self,
         path: &'a Path,
-    ) -> Pin<
-        Box<
-            dyn Future<Output = Result<Box<dyn crate::file_system::volume::VolumeReadStream>, VolumeError>> + Send + 'a,
-        >,
-    > {
+    ) -> Pin<Box<dyn Future<Output = Result<Box<dyn cmdr_fs::volume::VolumeReadStream>, VolumeError>> + Send + 'a>>
+    {
         Box::pin(async move {
             if path.to_string_lossy() == self.poisoned {
                 return Err(VolumeError::IoError {

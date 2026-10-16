@@ -111,7 +111,7 @@ use std::sync::{Arc, LazyLock, Mutex, MutexGuard, Once};
 
 use super::state::WriteOperationState;
 use crate::file_system::volume::manager::get_volume_manager;
-use crate::ignore_poison::IgnorePoison;
+use cmdr_fs::ignore_poison::IgnorePoison;
 use log_writer::LogWriter;
 
 /// The persisted log's file name inside the app data dir.

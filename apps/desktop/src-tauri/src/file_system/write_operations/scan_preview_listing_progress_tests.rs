@@ -26,10 +26,10 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use super::scan_preview::run_oracle_aware_batch_scan;
 use crate::file_system::volume::manager::get_volume_manager;
-use crate::file_system::volume::{
+use cmdr_fs::entry::FileEntry;
+use cmdr_fs::volume::{
     BatchScanResult, CopyScanResult, InMemoryVolume, ListingProgress, Volume, VolumeError, WatchCoverage,
 };
-use cmdr_fs::entry::FileEntry;
 
 /// Stub Volume that emits a non-zero `ListingProgress` from its
 /// `scan_for_copy_batch_with_progress` callback. Simulates the MTP/SMB shape
@@ -103,7 +103,7 @@ impl Volume for ProgressEmittingVolume {
     fn scan_for_copy_batch_with_boundary<'a>(
         &'a self,
         paths: &'a [PathBuf],
-        boundary: &'a crate::file_system::volume::ScanBoundary<'a>,
+        boundary: &'a cmdr_fs::volume::ScanBoundary<'a>,
     ) -> Pin<Box<dyn Future<Output = Result<BatchScanResult, VolumeError>> + Send + 'a>> {
         let emit = self.emit;
         Box::pin(async move {

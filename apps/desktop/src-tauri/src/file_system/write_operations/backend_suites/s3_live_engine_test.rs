@@ -68,8 +68,8 @@ use super::s3_transfer_integration_test::{
     copying_between_buckets_lands_every_byte, copying_off_a_bucket_lands_every_byte,
     copying_onto_a_bucket_lands_every_byte_and_the_mtime, scenario,
 };
-use crate::ignore_poison::IgnorePoison;
 use crate::test_support::TestDir;
+use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_local::LocalPosixVolume;
 
 const MIB: usize = 1024 * 1024;

@@ -28,8 +28,8 @@ use super::manager::{self, OperationDescriptor, OperationSummaryText};
 use super::mutation_error::MutationError;
 use super::types::WriteOperationType;
 use crate::file_system::volume::manager::get_volume_manager;
-use crate::file_system::volume::{MutationEvent, Volume};
 use cmdr_archive::mutator::{AddEntry, AddSource, Changeset};
+use cmdr_fs::volume::{MutationEvent, Volume};
 
 /// Whether a routed archive add creates a directory entry or an empty file.
 enum ArchiveEntryKind {
@@ -94,7 +94,7 @@ async fn create_directory_managed_inner(
     // volume-aware open/finalize collapse to the local shape when the id is root.
     let journal_volume_id = volume_id
         .as_deref()
-        .unwrap_or(crate::file_system::volume::DEFAULT_VOLUME_ID)
+        .unwrap_or(cmdr_fs::volume::DEFAULT_VOLUME_ID)
         .to_string();
     let descriptor = instant_descriptor(WriteOperationType::CreateFolder, volume_id.as_deref(), &name);
     let op_id = descriptor.operation_id.clone();
@@ -172,7 +172,7 @@ async fn create_file_managed_inner(
     let volume_id_for_diff = volume_id.clone();
     let journal_volume_id = volume_id
         .as_deref()
-        .unwrap_or(crate::file_system::volume::DEFAULT_VOLUME_ID)
+        .unwrap_or(cmdr_fs::volume::DEFAULT_VOLUME_ID)
         .to_string();
     let descriptor = instant_descriptor(WriteOperationType::CreateFile, volume_id.as_deref(), &name);
     let op_id = descriptor.operation_id.clone();
@@ -394,9 +394,9 @@ async fn new_entry_path(
 /// inline, right under the field the user is still standing in; the volume's
 /// `AlreadyExists` carries the full path, which reads as a different thing
 /// entirely in a one-line inline message.
-fn named_conflict_or_volume(e: crate::file_system::VolumeError, name: &str) -> MutationError {
+fn named_conflict_or_volume(e: cmdr_fs::volume::VolumeError, name: &str) -> MutationError {
     match e {
-        crate::file_system::VolumeError::AlreadyExists(_) => MutationError::AlreadyExists { name: name.to_string() },
+        cmdr_fs::volume::VolumeError::AlreadyExists(_) => MutationError::AlreadyExists { name: name.to_string() },
         other => MutationError::Volume { error: other },
     }
 }

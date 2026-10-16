@@ -15,8 +15,8 @@ use std::path::Path;
 use std::sync::Arc;
 
 use super::test_support::*;
-use crate::file_system::volume::{InMemoryVolume, Volume};
 use crate::file_system::write_operations::rollback::Reversal;
+use cmdr_fs::volume::{InMemoryVolume, Volume};
 use cmdr_operation_log::rollback::*;
 use cmdr_operation_log::store::{open_read_connection, read_inverse_op, read_operation_items};
 use cmdr_operation_log::types::{

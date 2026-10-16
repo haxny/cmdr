@@ -4,8 +4,8 @@
 use std::future::Future;
 
 use super::*;
-use crate::file_system::volume::InMemoryVolume;
 use crate::file_system::write_operations::transfer::volume::forward_volume_methods;
+use cmdr_fs::volume::InMemoryVolume;
 use cmdr_local::LocalPosixVolume;
 
 #[tokio::test]
@@ -119,7 +119,7 @@ impl Volume for LinkFollowingStat {
     fn list_directory<'a>(
         &'a self,
         path: &'a Path,
-        on_progress: Option<&'a (dyn Fn(crate::file_system::volume::ListingProgress) + Sync)>,
+        on_progress: Option<&'a (dyn Fn(cmdr_fs::volume::ListingProgress) + Sync)>,
     ) -> std::pin::Pin<Box<dyn Future<Output = Result<Vec<FileEntry>, VolumeError>> + Send + 'a>> {
         Box::pin(async move { self.inner.list_directory(&Self::target(path), on_progress).await })
     }
@@ -294,7 +294,7 @@ impl Volume for ReversedListing {
     fn list_directory<'a>(
         &'a self,
         path: &'a Path,
-        on_progress: Option<&'a (dyn Fn(crate::file_system::volume::ListingProgress) + Sync)>,
+        on_progress: Option<&'a (dyn Fn(cmdr_fs::volume::ListingProgress) + Sync)>,
     ) -> std::pin::Pin<Box<dyn Future<Output = Result<Vec<FileEntry>, VolumeError>> + Send + 'a>> {
         use futures_util::TryFutureExt;
         Box::pin(

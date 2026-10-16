@@ -20,7 +20,7 @@ use super::super::types::{
     WriteOperationError,
 };
 use super::settle_failed_preview;
-use crate::file_system::volume::CopyScanResult;
+use cmdr_fs::volume::CopyScanResult;
 
 /// Internal function that runs the scan preview in a background thread.
 ///
@@ -192,7 +192,7 @@ pub(in crate::file_system::write_operations) fn run_scan_preview(
         };
         // Local FS scan preview uses the "root" volume ID. The oracle short-circuits
         // any subtree currently open in a pane with a live FSEvents watcher.
-        let volume_id = Some(crate::file_system::volume::DEFAULT_VOLUME_ID);
+        let volume_id = Some(cmdr_fs::volume::DEFAULT_VOLUME_ID);
         per_path = walk_sources_with_per_path(
             &sources,
             &mut files,

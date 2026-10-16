@@ -12,7 +12,7 @@ use std::sync::Arc;
 
 use super::super::types::{RetryOutcome, WriteOperationError, WriteOperationStartResult};
 use super::{OperationManager, OperationSnapshot, manager};
-use crate::ignore_poison::IgnorePoison;
+use cmdr_fs::ignore_poison::IgnorePoison;
 
 /// Starts a failed operation again, as a NEW operation. Implemented by the
 /// routing that started the original (`routing/retry.rs`), which says what

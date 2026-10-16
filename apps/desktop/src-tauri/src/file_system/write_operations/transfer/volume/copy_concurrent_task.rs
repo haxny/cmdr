@@ -31,8 +31,8 @@ use super::merge_ctx::{CreatedPaths, FileWindow, MergeCtx, MergeProbe};
 use super::preflight::{SourceFileFacts, SourceHint};
 use super::strategy::{LandingName, Replaces, copy_single_path, failed_write_leaves_ours_at, staging_for};
 use super::transfer_error::PathedVolumeError;
-use crate::file_system::volume::Volume;
-use crate::ignore_poison::IgnorePoison;
+use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::volume::Volume;
 
 /// Success payload for one concurrent copy task.
 ///

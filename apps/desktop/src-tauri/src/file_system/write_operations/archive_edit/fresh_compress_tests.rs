@@ -1,13 +1,13 @@
 //! Fresh compression coordinator shutdown and stage-validation tests.
 
 use super::*;
-use crate::file_system::volume::{InMemoryVolume, ListingProgress, SpaceInfo, StreamWritten};
 use crate::file_system::write_operations::archive_edit::fresh_plan::FreshPlan;
 use crate::file_system::write_operations::archive_edit::fresh_zip::{FreshZipEntry, FreshZipSource};
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::types::{ArchiveNameRefusal, WriteOperationPhase};
-use crate::ignore_poison::IgnorePoison;
 use crate::test_support::wait_until_async;
+use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::volume::{InMemoryVolume, ListingProgress, SpaceInfo, StreamWritten};
 
 struct RefuseAfterProducerProgress {
     inner: InMemoryVolume,

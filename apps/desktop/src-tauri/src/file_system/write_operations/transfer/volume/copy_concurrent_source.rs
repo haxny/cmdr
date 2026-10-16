@@ -29,8 +29,8 @@ use super::merge_ctx::MergeProbe;
 use super::preflight::SourceFileFacts;
 use super::strategy::{LandingName, Replaces, failed_write_leaves_ours_at, resolve_source_is_directory, staging_for};
 use super::transfer_error::{PathRole, WriteFailure, map_volume_error};
-use crate::file_system::volume::{ChildName, VolumeError};
-use crate::ignore_poison::IgnorePoison;
+use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::volume::{ChildName, VolumeError};
 
 impl ConcurrentCopy<'_> {
     /// Works out what (if anything) the driver should spawn for one top-level

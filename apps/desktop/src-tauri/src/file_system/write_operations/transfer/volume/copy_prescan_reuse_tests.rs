@@ -25,11 +25,11 @@
 use super::super::super::conflict_responder_test_support::await_prompted_clash;
 use super::tests::{make_state, make_volumes};
 use super::*;
-use crate::file_system::volume::{CopyScanResult, InMemoryVolume, ListingProgress};
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::types::ConflictResolution;
 use crate::test_support::TestDir;
 use cmdr_fs::entry::FileEntry;
+use cmdr_fs::volume::{CopyScanResult, InMemoryVolume, ListingProgress};
 use cmdr_local::LocalPosixVolume;
 
 /// `resolve_volume_conflict` in `Stop` mode must NOT call `scan_for_copy` on the
@@ -120,8 +120,8 @@ async fn test_stop_conflict_does_not_rescan_source_when_hint_provided() {
     // Priming the cache through the real `start_scan_preview` path would need a
     // Tauri AppHandle. Seed it through the same choke point instead: the cached
     // branch takes the entry back out keyed by `preview_id`.
-    use crate::file_system::volume::CopyScanResult as CSR;
     use crate::file_system::write_operations::state::{CachedScanResult, insert_scan_result};
+    use cmdr_fs::volume::CopyScanResult as CSR;
     let one_photo = || {
         vec![(
             PathBuf::from("/photo.jpg"),

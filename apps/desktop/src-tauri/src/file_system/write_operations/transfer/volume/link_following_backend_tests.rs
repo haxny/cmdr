@@ -19,17 +19,17 @@ use super::copy::copy_volumes_with_progress;
 use super::move_cross::move_volumes_with_progress;
 use super::move_same::move_within_same_volume_with_progress;
 use super::rename_merge_test_support::{exists, make_state, mkdir, read, write_file};
-use crate::file_system::volume::{
-    BatchScanResult, CopyScanResult, InMemoryVolume, ListingProgress, ScanBoundary, SpaceInfo, StreamLength,
-    StreamWriteProgress, StreamWritten, Volume, VolumeError, VolumeReadStream, WriteMode,
-};
 use crate::file_system::write_operations::event_sinks::{CollectorEventSink, OperationEventSink};
 use crate::file_system::write_operations::state::WriteOperationState;
 use crate::file_system::write_operations::transfer_tree::test_support::row_states;
 use crate::file_system::write_operations::types::{ConflictResolution, VolumeCopyConfig};
-use crate::ignore_poison::IgnorePoison;
 use cmdr_fs::entry::FileEntry;
+use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::volume::scan_walk::{self, ScanSource, Walking};
+use cmdr_fs::volume::{
+    BatchScanResult, CopyScanResult, InMemoryVolume, ListingProgress, ScanBoundary, SpaceInfo, StreamLength,
+    StreamWriteProgress, StreamWritten, Volume, VolumeError, VolumeReadStream, WriteMode,
+};
 use cmdr_local::LocalPosixVolume;
 use std::future::Future;
 use std::path::{Path, PathBuf};

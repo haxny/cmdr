@@ -13,8 +13,8 @@ use super::scan_preview::{run_scan_preview, run_volume_scan_preview};
 use super::scan_watchdog::{ScanTarget, ScanWatchdog};
 use super::transfer_tree::test_support::outline;
 use super::types::ScanPreviewPurpose;
-use crate::file_system::volume::{InMemoryVolume, Volume};
 use crate::test_support::TestDir;
+use cmdr_fs::volume::{InMemoryVolume, Volume};
 
 fn fresh_state() -> Arc<ScanPreviewState> {
     Arc::new(ScanPreviewState {

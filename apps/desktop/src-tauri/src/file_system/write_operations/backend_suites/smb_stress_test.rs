@@ -10,8 +10,8 @@
 //! This pairs with `smb_soak_test.rs`.
 
 use super::smb_test_support::*;
-use crate::file_system::volume::smb_volume_id;
-use crate::file_system::volume::{StreamLength, WriteMode};
+use cmdr_fs::volume::smb_volume_id;
+use cmdr_fs::volume::{StreamLength, WriteMode};
 use cmdr_smb::volume::*;
 use std::sync::OnceLock;
 

@@ -20,7 +20,7 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use cmdr_fs::metadata::MetadataClasses;
 
 use super::types::{LostMetadata, LostMetadataClass, MetadataLeftBehind};
-use crate::file_system::volume::{Volume, VolumeReadStream};
+use cmdr_fs::volume::{Volume, VolumeReadStream};
 
 /// Every class in the order the completion event lists them.
 const CLASSES: [LostMetadataClass; 5] = [

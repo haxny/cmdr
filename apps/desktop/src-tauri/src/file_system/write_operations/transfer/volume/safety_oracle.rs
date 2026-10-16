@@ -34,7 +34,7 @@
 //! side, so this module extracts the ASSERTION only. `DETAILS.md` § "The safety
 //! oracle".
 
-use crate::file_system::volume::Volume;
+use cmdr_fs::volume::Volume;
 use std::path::Path;
 use std::sync::Arc;
 

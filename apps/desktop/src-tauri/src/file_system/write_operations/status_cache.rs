@@ -15,7 +15,7 @@
 //!
 //! Callers reach all of this through `state::` — see the re-export there.
 
-use crate::ignore_poison::IgnorePoison;
+use cmdr_fs::ignore_poison::IgnorePoison;
 use std::collections::{HashMap, HashSet};
 use std::sync::{LazyLock, OnceLock, RwLock};
 
@@ -225,7 +225,7 @@ fn compute_busy_volume_ids() -> HashSet<String> {
     cache
         .values()
         .flat_map(|status| status.volume_ids.iter())
-        .filter(|id| id.as_str() != crate::file_system::volume::DEFAULT_VOLUME_ID)
+        .filter(|id| id.as_str() != cmdr_fs::volume::DEFAULT_VOLUME_ID)
         .cloned()
         .collect()
 }

@@ -23,8 +23,8 @@ use std::sync::Arc;
 use cmdr_fs::metadata::{CarriedMetadata, ClassOutcome, MetadataClasses};
 
 use super::super::super::state::WriteOperationState;
-use crate::file_system::volume::{Volume, VolumeReadStream};
-use crate::ignore_poison::IgnorePoison as _;
+use cmdr_fs::ignore_poison::IgnorePoison as _;
+use cmdr_fs::volume::{Volume, VolumeReadStream};
 
 /// What the file `stream` reads waits to wear until it has its final name on
 /// `dest`: empty unless `dest` keeps flags, `source` reports them, and the file

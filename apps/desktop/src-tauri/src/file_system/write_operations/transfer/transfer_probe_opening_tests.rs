@@ -8,10 +8,10 @@
 
 use super::super::liveness_test_support::ScriptedConnectionVolume;
 use super::*;
-use crate::file_system::volume::Volume;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::test_support::TestOperationGuard;
 use crate::file_system::write_operations::types::WriteOperationType;
+use cmdr_fs::volume::Volume;
 
 fn probe_over(id: &str, state: &Arc<WriteOperationState>, ends: TransferEnds) -> Arc<OperationProbe> {
     Arc::new(OperationProbe {

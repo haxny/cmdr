@@ -7,13 +7,13 @@
 //! is still down, or a job admitted mid-outage).
 
 use super::*;
-use crate::file_system::volume::{InMemoryVolume, Volume};
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::outage_slot::OutagePolicy;
 use crate::file_system::write_operations::test_support::TestOperationGuard;
 use crate::file_system::write_operations::transfer::outage_volume_test_support::{OutageVolume, RenameDrop};
 use crate::file_system::write_operations::types::{ConflictResolution, WriteOperationError};
 use crate::test_support::wait_until_async;
+use cmdr_fs::volume::{InMemoryVolume, Volume};
 
 const WAIT: Duration = Duration::from_secs(10);
 const CADENCE: &[Duration] = &[Duration::from_millis(10), Duration::from_millis(20)];

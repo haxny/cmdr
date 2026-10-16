@@ -26,8 +26,8 @@
 
 use super::tests::make_state;
 use super::*;
-use crate::file_system::volume::{InMemoryVolume, UnwritableReason, WriteAccess};
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
+use cmdr_fs::volume::{InMemoryVolume, UnwritableReason, WriteAccess};
 
 // ========================================
 // The destination can't tell

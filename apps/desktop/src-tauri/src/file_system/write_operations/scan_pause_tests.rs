@@ -27,8 +27,8 @@ use super::types::{
     ScanPreviewProgressEvent, WriteOperationConfig, WriteOperationType,
 };
 use super::{OperationEventSink, copy_files_start};
-use crate::ignore_poison::IgnorePoison;
 use crate::test_support::{TestDir, wait_until_async};
+use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_operation_log::types::Initiator;
 
 /// Deadline for every wait here. Generous on purpose: each wait has a real

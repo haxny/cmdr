@@ -29,7 +29,6 @@ use super::move_resolved_into_place;
 use super::rename_onto_free_name;
 use super::source_sweep::{LandedOriginal, SourceStamp, SourceSweep, delete_sources_after_move};
 
-use crate::file_system::staging::StagingTemp;
 use crate::file_system::write_operations::cancellable::remove_staging_tree_in_background;
 use crate::file_system::write_operations::conflict::{ApplyToAll, IncomingItem, resolve_conflict};
 use crate::file_system::write_operations::durability::flush_created_destinations;
@@ -50,6 +49,7 @@ use crate::file_system::write_operations::types::{
 use crate::file_system::write_operations::validation::{
     is_real_directory, path_exists_or_is_symlink, validate_file_sizes_for_filesystem,
 };
+use cmdr_fs::staging::StagingTemp;
 
 /// Performs cross-filesystem move using atomic staging pattern.
 /// This ensures source files remain intact if the operation fails.

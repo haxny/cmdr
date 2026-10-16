@@ -16,7 +16,7 @@ use std::time::Duration;
 
 use super::super::state::WriteOperationState;
 use super::transfer_probe::{TaskPhase, set_task_bytes, set_task_phase};
-use crate::file_system::volume::{ScanStop, ScanStopSignal, Volume, VolumeError, VolumeReadStream};
+use cmdr_fs::volume::{ScanStop, ScanStopSignal, Volume, VolumeError, VolumeReadStream};
 
 /// Wraps a source read stream so a between-chunk cooperative checkpoint runs once
 /// per chunk for the cross-volume streaming path, where the per-chunk progress
@@ -135,7 +135,7 @@ impl VolumeReadStream for CheckpointStream {
         })
     }
 
-    fn total_size(&self) -> crate::file_system::volume::StreamLength {
+    fn total_size(&self) -> cmdr_fs::volume::StreamLength {
         self.inner.total_size()
     }
 

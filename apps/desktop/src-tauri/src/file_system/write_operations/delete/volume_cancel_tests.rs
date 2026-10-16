@@ -25,8 +25,8 @@ use super::super::test_support::TestOperationGuard;
 use super::super::types::WriteOperationConfig;
 use super::walker::delete_volume_files_with_progress_inner;
 use crate::file_system::volume::manager::get_volume_manager;
-use crate::file_system::volume::{InMemoryVolume, Volume, VolumeError};
 use crate::test_support::wait_until_async;
+use cmdr_fs::volume::{InMemoryVolume, Volume, VolumeError};
 use tokio_util::sync::CancellationToken;
 
 // ----------------------------------------------------------------------------
@@ -85,7 +85,7 @@ impl Volume for CancellingVolume {
     fn list_directory<'a>(
         &'a self,
         path: &'a Path,
-        on_progress: Option<&'a (dyn Fn(crate::file_system::volume::ListingProgress) + Sync)>,
+        on_progress: Option<&'a (dyn Fn(cmdr_fs::volume::ListingProgress) + Sync)>,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<cmdr_fs::entry::FileEntry>, VolumeError>> + Send + 'a>> {
         // No-cancel path: fall through to inner. Tests don't hit this; the
         // production code calls `list_directory_with_cancel`.
@@ -97,7 +97,7 @@ impl Volume for CancellingVolume {
     fn list_directory_with_cancel<'a>(
         &'a self,
         path: &'a Path,
-        on_progress: Option<&'a (dyn Fn(crate::file_system::volume::ListingProgress) + Sync)>,
+        on_progress: Option<&'a (dyn Fn(cmdr_fs::volume::ListingProgress) + Sync)>,
         cancel: Option<&'a CancellationToken>,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<cmdr_fs::entry::FileEntry>, VolumeError>> + Send + 'a>> {
         let _ = path;
@@ -114,7 +114,7 @@ impl Volume for CancellingVolume {
                 yielded.push(entry.clone());
                 self.fetched_live.fetch_add(1, Ordering::Release);
                 if let Some(cb) = on_progress {
-                    cb(crate::file_system::volume::ListingProgress {
+                    cb(cmdr_fs::volume::ListingProgress {
                         files: yielded.len(),
                         dirs: 0,
                         bytes: 0,
@@ -545,7 +545,7 @@ async fn volume_error_emits_write_settled_event() {
         fn list_directory<'a>(
             &'a self,
             _path: &'a Path,
-            _on_progress: Option<&'a (dyn Fn(crate::file_system::volume::ListingProgress) + Sync)>,
+            _on_progress: Option<&'a (dyn Fn(cmdr_fs::volume::ListingProgress) + Sync)>,
         ) -> Pin<Box<dyn Future<Output = Result<Vec<cmdr_fs::entry::FileEntry>, VolumeError>> + Send + 'a>> {
             Box::pin(async move {
                 Err(VolumeError::IoError {
@@ -557,7 +557,7 @@ async fn volume_error_emits_write_settled_event() {
         fn list_directory_with_cancel<'a>(
             &'a self,
             _path: &'a Path,
-            _on_progress: Option<&'a (dyn Fn(crate::file_system::volume::ListingProgress) + Sync)>,
+            _on_progress: Option<&'a (dyn Fn(cmdr_fs::volume::ListingProgress) + Sync)>,
             _cancel: Option<&'a CancellationToken>,
         ) -> Pin<Box<dyn Future<Output = Result<Vec<cmdr_fs::entry::FileEntry>, VolumeError>> + Send + 'a>> {
             Box::pin(async move {

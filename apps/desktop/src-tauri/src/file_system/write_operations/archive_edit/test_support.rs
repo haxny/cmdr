@@ -20,11 +20,11 @@ pub(super) use super::super::types::{
     WriteCompleteEvent, WriteConflictEvent, WriteConflictResolvedEvent, WriteErrorEvent, WriteOperationError,
     WriteOperationPhase, WriteOperationType, WriteProgressEvent, WriteSettledEvent, WriteSourceItemDoneEvent,
 };
-pub(super) use crate::file_system::volume::Volume;
 pub(super) use crate::file_system::volume::manager::get_volume_manager;
-pub(super) use crate::ignore_poison::IgnorePoison;
 pub(super) use crate::test_support::wait_until_async;
 pub(super) use cmdr_archive::mutator::Changeset;
+pub(super) use cmdr_fs::ignore_poison::IgnorePoison;
+pub(super) use cmdr_fs::volume::Volume;
 pub(super) use zip::write::SimpleFileOptions;
 pub(super) use zip::{ZipArchive, ZipWriter};
 
@@ -202,8 +202,8 @@ pub(super) fn zip_bytes(entries: &[(&str, &[u8])]) -> Vec<u8> {
 pub(super) async fn register_remote_zip(
     archive_path: &Path,
     entries: &[(&str, &[u8])],
-) -> (String, Arc<crate::file_system::volume::InMemoryVolume>) {
-    use crate::file_system::volume::InMemoryVolume;
+) -> (String, Arc<cmdr_fs::volume::InMemoryVolume>) {
+    use cmdr_fs::volume::InMemoryVolume;
     let id = format!("remote-test-{}", Uuid::new_v4());
     // The lane key is the unique volume id so each remote-parent op gets its own
     // operation-manager lane. An `InMemoryVolume` otherwise defaults its lane to
@@ -227,10 +227,8 @@ pub(super) async fn register_remote_zip(
 /// pre-populated with `files` (each `(relative_path, bytes)`), creating every
 /// parent directory the paths imply. Returns the volume id and the handle;
 /// unregister with `get_volume_manager().unregister(&id)` when done.
-pub(super) async fn register_remote_source(
-    files: &[(&str, &[u8])],
-) -> (String, Arc<crate::file_system::volume::InMemoryVolume>) {
-    use crate::file_system::volume::InMemoryVolume;
+pub(super) async fn register_remote_source(files: &[(&str, &[u8])]) -> (String, Arc<cmdr_fs::volume::InMemoryVolume>) {
+    use cmdr_fs::volume::InMemoryVolume;
     let source = InMemoryVolume::new("RemoteSource");
     for (rel, bytes) in files {
         let path = PathBuf::from("/").join(rel);

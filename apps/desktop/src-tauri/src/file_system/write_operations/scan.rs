@@ -19,7 +19,7 @@ use super::event_sinks::OperationEventSink;
 use super::scan_walker::{WalkContext, walk_dir_recursive};
 use super::state::{ScanResult, WriteOperationState, update_operation_status};
 use super::types::{WriteOperationError, WriteOperationPhase, WriteOperationType, WriteProgressEvent};
-use crate::file_system::volume::{CopyScanResult, ScanRecorder, Volume, VolumeError};
+use cmdr_fs::volume::{CopyScanResult, ScanRecorder, Volume, VolumeError};
 
 /// Totals returned by `scan_subtree_with_oracle`.
 ///
@@ -70,11 +70,11 @@ pub(super) async fn scan_subtree_with_oracle(
     path: &Path,
     is_cancelled: &(dyn Fn() -> bool + Sync),
     pause: Option<&super::scan_bridge::ScanPause>,
-    on_progress: Option<&(dyn Fn(crate::file_system::volume::ListingProgress) + Sync)>,
+    on_progress: Option<&(dyn Fn(cmdr_fs::volume::ListingProgress) + Sync)>,
     recorder: Option<&dyn ScanRecorder>,
     seen_inodes: &mut HashSet<u64>,
 ) -> Result<SubtreeTotals, VolumeError> {
-    use crate::file_system::volume::ListingProgress;
+    use cmdr_fs::volume::ListingProgress;
 
     if let Some(recorder) = recorder {
         recorder.dir(path);
@@ -346,7 +346,7 @@ fn scan_sources_internal(
     // the `"root"` volume. Passing it threads the oracle through: when the source
     // (or any subdirectory we recurse into) is open in a pane with a live FSEvents
     // watcher, the walker skips the disk read for that level.
-    let volume_id = Some(crate::file_system::volume::DEFAULT_VOLUME_ID);
+    let volume_id = Some(cmdr_fs::volume::DEFAULT_VOLUME_ID);
 
     for source in sources {
         let source_root = source.parent().unwrap_or(source);

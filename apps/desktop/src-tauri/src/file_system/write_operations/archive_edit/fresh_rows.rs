@@ -14,7 +14,7 @@ use std::sync::atomic::Ordering;
 
 use super::super::transfer_tree::{NodeId, TreeLeaf, TreeReporter};
 use super::fresh_zip::FreshZipProgress;
-use crate::ignore_poison::IgnorePoison;
+use cmdr_fs::ignore_poison::IgnorePoison;
 
 /// The compress's rows: each plan entry's, and the one in flight.
 pub(super) struct CompressRows {

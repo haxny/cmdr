@@ -16,7 +16,7 @@ use super::super::types::{
     CancelRollback, DryRunResult, WriteCancelledEvent, WriteCompleteEvent, WriteOperationConfig, WriteOperationError,
     WriteOperationPhase, WriteOperationType, WriteProgressEvent, WriteSourceItemDoneEvent,
 };
-use crate::file_system::volume::{Volume, VolumeError};
+use cmdr_fs::volume::{Volume, VolumeError};
 
 // ============================================================================
 // Delete implementation
@@ -367,7 +367,7 @@ async fn scan_volume_recursive(
         let tracker_for_cb = Arc::clone(tracker);
         let state_for_cb = Arc::clone(state);
 
-        let on_progress = move |p: crate::file_system::volume::ListingProgress| {
+        let on_progress = move |p: cmdr_fs::volume::ListingProgress| {
             if !tracker_for_cb.should_emit() {
                 return;
             }
@@ -411,7 +411,7 @@ async fn scan_volume_recursive(
                 // single end-of-listing progress tick (with the tally we'd
                 // have built incrementally) to keep the FE counter climbing
                 // during the cache-fed pass too.
-                let mut tally = crate::file_system::volume::ListingProgress::default();
+                let mut tally = cmdr_fs::volume::ListingProgress::default();
                 for e in &cached {
                     if e.is_directory {
                         tally.dirs += 1;
@@ -607,7 +607,7 @@ pub(in crate::file_system::write_operations) async fn delete_volume_files_with_p
 
         // Index cached per-path results by source path so we can look up
         // `top_level_is_directory` and `total_bytes` for each input source.
-        let by_path: std::collections::HashMap<PathBuf, &crate::file_system::volume::CopyScanResult> =
+        let by_path: std::collections::HashMap<PathBuf, &cmdr_fs::volume::CopyScanResult> =
             scan.per_path.iter().map(|(p, r)| (p.clone(), r)).collect();
 
         for source in sources {

@@ -32,8 +32,8 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex as StdMutex};
 use std::time::Duration;
 
-use crate::file_system::volume::{Volume, VolumeError};
 use crate::test_support::TestDir;
+use cmdr_fs::volume::{Volume, VolumeError};
 use cmdr_local::LocalPosixVolume;
 
 #[tokio::test(flavor = "current_thread")]

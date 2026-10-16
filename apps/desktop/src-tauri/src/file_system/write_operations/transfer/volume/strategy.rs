@@ -23,7 +23,7 @@ use super::merge_ctx::{CreatedPaths, MergeCtx};
 use super::preflight::SourceFileFacts;
 use super::stream_pipe::stream_pipe_file;
 use super::transfer_error::{AtPath, PathedVolumeError};
-use crate::file_system::volume::{Volume, VolumeError};
+use cmdr_fs::volume::{Volume, VolumeError};
 
 /// Answers "is this top-level source a directory?" from the preflight hint,
 /// probing the source volume only when there is no hint.

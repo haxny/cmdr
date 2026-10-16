@@ -24,8 +24,8 @@ use super::look_alike::{NewEntry, place_new_entry};
 use super::manager::{self, OperationDescriptor, OperationSummaryText};
 use super::mutation_error::MutationError;
 use super::types::WriteOperationType;
-use crate::file_system::volume::{RenameWork, Volume};
 use cmdr_archive::mutator::Changeset;
+use cmdr_fs::volume::{RenameWork, Volume};
 use cmdr_operation_log::types::{Initiator, OpKind};
 
 mod bulk;
@@ -234,7 +234,7 @@ async fn rename_managed_inner(
                 // the live validation the user just saw; everything else rides as the
                 // volume's own typed answer.
                 volume.rename(&from, &to, force).await.map_err(|e| match e {
-                    crate::file_system::VolumeError::AlreadyExists(_) => {
+                    cmdr_fs::volume::VolumeError::AlreadyExists(_) => {
                         MutationError::AlreadyExists { name: name_of(&to) }
                     }
                     other => MutationError::Volume { error: other },
@@ -499,7 +499,7 @@ fn rename_descriptor(from: &Path, to: &Path, volume_id: &str) -> OperationDescri
 
 /// Notifies the listing cache about a rename via the volume's `notify_mutation`.
 async fn notify_rename_in_listing(volume_id: &str, from: &Path, to: &Path) {
-    use crate::file_system::volume::MutationEvent;
+    use cmdr_fs::volume::MutationEvent;
 
     // Plain `get`, not `resolve`: a rename INSIDE an archive is rejected upstream,
     // so this only ever runs for a normal file (incl. the `.zip` file itself),

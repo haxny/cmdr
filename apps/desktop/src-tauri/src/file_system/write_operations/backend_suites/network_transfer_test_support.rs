@@ -29,8 +29,8 @@ use super::super::event_sinks::{CollectorEventSink, OperationEventSink};
 use super::super::state::{cancel_write_operation, resolve_write_conflict};
 use super::super::types::{ConflictResolution, ConflictResolutionOutcome, VolumeCopyConfig};
 use super::network_gated_source_test_support::{CANCEL_PAYLOAD_BYTES, gated_upload};
-use crate::ignore_poison::IgnorePoison;
 use crate::test_support::TestDir;
+use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_local::LocalPosixVolume;
 use cmdr_operation_log::types::Initiator;
 

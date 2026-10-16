@@ -11,7 +11,7 @@ use std::path::Path;
 use std::sync::Arc;
 
 use super::super::dest_name_index::fold;
-use crate::file_system::volume::Volume;
+use cmdr_fs::volume::Volume;
 
 /// Whether `source_path` and `dest_path` name the same item: the question
 /// `validation::is_same_file` settles with `dev+ino` on the local-FS side, asked

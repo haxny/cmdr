@@ -2,7 +2,7 @@
 //! place by key, or straight to a place by a drag), so the next lane to free
 //! admits the one the user put in front. `../DETAILS.md` § "Reordering the line".
 
-use crate::ignore_poison::IgnorePoison;
+use cmdr_fs::ignore_poison::IgnorePoison;
 
 use super::super::types::LifecycleStatus;
 use super::{OperationManager, QueueMoveDirection, QueueMoveOutcome};

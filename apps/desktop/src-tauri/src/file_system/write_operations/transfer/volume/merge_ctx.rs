@@ -20,7 +20,7 @@ use super::super::transfer_probe::{OperationProbe, TaskRow};
 use super::displaced_destination::DisplacedLedger;
 use super::preflight::SourceHint;
 use super::source_sweep::{SourceLedger, SourceStamp};
-use crate::ignore_poison::IgnorePoison;
+use cmdr_fs::ignore_poison::IgnorePoison;
 
 /// How many FILE byte-copies this operation may have in flight at once, across
 /// every merge walker at every level AND the concurrent driver's top-level file

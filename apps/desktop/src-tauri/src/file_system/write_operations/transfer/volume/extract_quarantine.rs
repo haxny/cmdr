@@ -41,7 +41,7 @@ use cmdr_fs::metadata::{CarriedMetadata, MetadataClasses, Xattr};
 use cmdr_fs::volume::ScanStop;
 
 use super::super::super::state::WriteOperationState;
-use crate::file_system::volume::{StreamLength, Volume, VolumeError, VolumeReadStream};
+use cmdr_fs::volume::{StreamLength, Volume, VolumeError, VolumeReadStream};
 
 /// Wraps `stream` so its xattrs carry the archive's quarantine, when
 /// `source_volume` is a quarantined archive on a local parent. Any other source

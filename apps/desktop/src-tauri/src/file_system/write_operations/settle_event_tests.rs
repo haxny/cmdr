@@ -27,9 +27,9 @@ use super::event_sinks::{CollectorEventSink, OperationEventSink};
 use super::manager::{ManagedTaskGuard, OperationDescriptor, OperationSummaryText, manager};
 use super::state::{WriteOperationState, WriteSettledGuard};
 use super::types::{CancelRollback, LifecycleStatus, WriteOperationConfig, WriteOperationType, WriteSettledEvent};
-use crate::file_system::volume::LaneKey;
-use crate::ignore_poison::IgnorePoison;
 use crate::test_support::TestDir;
+use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::volume::LaneKey;
 
 /// Bridge sink that keeps a direct handle to the underlying `CollectorEventSink`
 /// for inspection. Needed because the guard takes `Arc<dyn OperationEventSink>`,

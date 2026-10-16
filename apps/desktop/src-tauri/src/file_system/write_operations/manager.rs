@@ -66,8 +66,8 @@ use std::pin::Pin;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, LazyLock, Mutex, OnceLock};
 
-use crate::file_system::volume::LaneKey;
-use crate::ignore_poison::IgnorePoison;
+use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::volume::LaneKey;
 use cmdr_operation_log::types::OpKind;
 
 use super::scan_cache;

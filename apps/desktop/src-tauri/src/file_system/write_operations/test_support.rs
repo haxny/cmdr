@@ -14,7 +14,7 @@ use tokio::sync::oneshot;
 use super::manager::{OperationDescriptor, OperationSummaryText, manager};
 use super::state::{WRITE_OPERATION_STATE, WriteOperationState};
 use super::types::{ConflictId, LifecycleStatus, WriteConflictEvent, WriteOperationType};
-use crate::file_system::volume::LaneKey;
+use cmdr_fs::volume::LaneKey;
 
 /// A stand-in `write-conflict` event for a test that arms the conflict slot only
 /// to park an operation, and never reads the question back.

@@ -5,11 +5,11 @@ use super::{
     Deadline, SourceItemInput, VolumeScanError, merge_source_types_from_stats, scan_volume_for_conflicts_within,
 };
 use crate::file_system::volume::manager::test_support::TestVolumeRegistration;
-use crate::file_system::{InMemoryVolume, SourceItemInfo};
 use crate::test_support::WedgedVolume;
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::Volume;
 use cmdr_fs::volume::WatchCoverage;
+use cmdr_fs::volume::{InMemoryVolume, SourceItemInfo};
 use cmdr_listing::testing::{TestListing, WatchCoverageVolume};
 use cmdr_local::LocalPosixVolume;
 use std::path::{Path, PathBuf};

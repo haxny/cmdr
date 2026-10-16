@@ -48,8 +48,8 @@ use super::recovered_name::{
     AfterARefusedDelete, FinalizeFailure, discard_unplaced_temp, rescue_out_of_temp_space, what_a_refused_delete_left,
 };
 use super::transfer_probe::{TaskPhase, set_task_phase};
-use crate::file_system::staging::StagingTemp;
-use crate::file_system::volume::{Volume, VolumeError, WriteMode};
+use cmdr_fs::staging::StagingTemp;
+use cmdr_fs::volume::{Volume, VolumeError, WriteMode};
 
 /// Who owns the `.cmdr-tmp-*` staging for one file write.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -132,7 +132,7 @@ pub(in crate::file_system::write_operations) struct StagedWrite {
     /// [`WriteStaging::AlreadyStaged`] and [`WriteStaging::SingleShot`].
     ///
     /// The guard also keeps the temp out of the pane while it's being written
-    /// (`file_system::staging`). Dropping it un-hides the file, which is why
+    /// (`cmdr_fs::staging`). Dropping it un-hides the file, which is why
     /// `commit` and `abandon` hold it until the rename or delete is done — and
     /// why a landing that FAILS is right to let it go: a temp that survives one
     /// (a rescue or a discard that couldn't happen) is something the user may

@@ -16,7 +16,7 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use super::human_wait::{HumanWaitClock, HumanWaitSource};
-use crate::ignore_poison::IgnorePoison;
+use cmdr_fs::ignore_poison::IgnorePoison;
 
 /// How long a transfer waits for a volume that went away mid-copy before it
 /// gives up and fails the way it always did.

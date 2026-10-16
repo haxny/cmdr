@@ -10,7 +10,7 @@ use super::super::super::look_alike::{ListedFolders, NewEntry, spelled_new_path}
 use super::super::super::source_binding::normalized_path;
 use super::super::same_local_file;
 use super::{BulkRenameOutcome, BulkRenameRow};
-use crate::file_system::volume::{Volume, VolumeError};
+use cmdr_fs::volume::{Volume, VolumeError};
 
 /// Every destination is a NEW name: spelled the way `volume` wants new names
 /// before anything plans, runs, or journals, so all three see where each row

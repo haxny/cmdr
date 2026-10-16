@@ -21,9 +21,9 @@ use super::super::super::state::{StopMeans, WriteOperationState, update_operatio
 use super::super::super::types::{WriteOperationPhase, WriteOperationType, WriteProgressEvent};
 use super::super::super::unblocked_removal::{RemovalRefused, delete_clearing_blockers};
 use super::transfer_error::{AtPath, PathRole, PathedVolumeError};
-use crate::file_system::volume::{EntryKind, Volume, VolumeError};
-use crate::ignore_poison::IgnorePoison;
 use cmdr_fs::entry::FileEntry;
+use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::volume::{EntryKind, Volume, VolumeError};
 use cmdr_operation_log::rollback::ItemResult;
 use cmdr_operation_log::types::SkipReason;
 

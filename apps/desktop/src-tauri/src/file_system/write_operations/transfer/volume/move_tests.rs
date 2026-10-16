@@ -17,11 +17,11 @@
 use super::super::super::conflict_responder_test_support::await_prompted_clash;
 use super::test_support::{self, make_state, make_state_with_interval_ms, make_volumes};
 use super::*;
-use crate::file_system::volume::{InMemoryVolume, UnwritableReason, WriteAccess};
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::state::ConflictResolutionResponse;
 use crate::file_system::write_operations::types::{ConflictResolution, WriteOperationError};
 use crate::test_support::TestDir;
+use cmdr_fs::volume::{InMemoryVolume, UnwritableReason, WriteAccess};
 use cmdr_local::LocalPosixVolume;
 
 /// Happy path: every source lands at dest and is gone from source. Completion

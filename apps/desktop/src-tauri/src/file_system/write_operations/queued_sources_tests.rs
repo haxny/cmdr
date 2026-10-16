@@ -19,9 +19,9 @@ use super::super::types::{
     WriteOperationError, WriteOperationType,
 };
 use super::{continue_without_gone_sources, kept_after_queue_on, pending_sources_gone};
-use crate::file_system::volume::{InMemoryVolume, LaneKey, Volume};
-use crate::ignore_poison::IgnorePoison;
 use crate::test_support::{TestDir, wait_until_async};
+use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::volume::{InMemoryVolume, LaneKey, Volume};
 use cmdr_operation_log::types::Initiator;
 
 const WAIT: Duration = Duration::from_secs(5);

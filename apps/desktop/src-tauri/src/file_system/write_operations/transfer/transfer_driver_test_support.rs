@@ -9,7 +9,7 @@ use super::super::super::state::WriteOperationState;
 use super::super::super::test_support::TestOperationGuard;
 use super::super::super::types::{ConflictResolution, WriteOperationPhase, WriteOperationType};
 use super::DriverConfig;
-use crate::ignore_poison::IgnorePoison;
+use cmdr_fs::ignore_poison::IgnorePoison;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;

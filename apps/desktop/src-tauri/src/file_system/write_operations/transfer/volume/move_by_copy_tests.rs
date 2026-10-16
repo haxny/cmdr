@@ -14,11 +14,11 @@
 use super::super::move_same::move_within_same_volume_with_progress;
 use super::test_support::make_state_with_interval_ms;
 use super::*;
-use crate::file_system::volume::InMemoryVolume;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::state::{OperationIntent, WriteOperationState};
 use crate::file_system::write_operations::target_names::TargetNames;
 use crate::file_system::write_operations::types::WriteOperationError;
+use cmdr_fs::volume::InMemoryVolume;
 
 fn store() -> Arc<InMemoryVolume> {
     Arc::new(

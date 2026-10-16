@@ -19,8 +19,8 @@ use super::super::state::{CachedScanResult, OperationIntent, WriteOperationState
 use super::super::types::{CancelRollbackOutcome, WriteOperationConfig, WriteOperationError};
 use super::walker::delete_volume_files_with_progress_inner;
 use crate::file_system::volume::manager::get_volume_manager;
-use crate::file_system::volume::{BatchScanResult, CopyScanResult, InMemoryVolume, Volume, VolumeError, WatchCoverage};
 use cmdr_fs::entry::FileEntry;
+use cmdr_fs::volume::{BatchScanResult, CopyScanResult, InMemoryVolume, Volume, VolumeError, WatchCoverage};
 use cmdr_listing::testing::{TestListing, TestListingGuard};
 
 // ----------------------------------------------------------------------------
@@ -81,7 +81,7 @@ impl Volume for CountingVolume {
     fn list_directory<'a>(
         &'a self,
         path: &'a Path,
-        on_progress: Option<&'a (dyn Fn(crate::file_system::volume::ListingProgress) + Sync)>,
+        on_progress: Option<&'a (dyn Fn(cmdr_fs::volume::ListingProgress) + Sync)>,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<FileEntry>, VolumeError>> + Send + 'a>> {
         self.list_dir_calls.fetch_add(1, Ordering::Relaxed);
         self.inner.list_directory(path, on_progress)
@@ -129,7 +129,7 @@ impl Volume for CountingVolume {
     fn scan_for_copy_batch_with_boundary<'a>(
         &'a self,
         paths: &'a [PathBuf],
-        boundary: &'a crate::file_system::volume::ScanBoundary<'a>,
+        boundary: &'a cmdr_fs::volume::ScanBoundary<'a>,
     ) -> Pin<Box<dyn Future<Output = Result<BatchScanResult, VolumeError>> + Send + 'a>> {
         self.inner.scan_for_copy_batch_with_boundary(paths, boundary)
     }

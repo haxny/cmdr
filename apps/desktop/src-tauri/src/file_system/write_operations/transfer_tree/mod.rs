@@ -108,7 +108,7 @@ impl TransferTree {
     fn lock(&self) -> std::sync::MutexGuard<'_, TreeModel> {
         // A poisoned tree is a display model: what it held is still the best
         // picture of the transfer, and the transfer itself must not stop.
-        use crate::ignore_poison::IgnorePoison;
+        use cmdr_fs::ignore_poison::IgnorePoison;
         self.model.lock_ignore_poison()
     }
 }

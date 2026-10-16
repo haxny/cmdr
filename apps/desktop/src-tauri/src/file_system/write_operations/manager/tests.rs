@@ -767,7 +767,7 @@ async fn run_instant_marks_volume_busy_and_registers_record_for_op_duration() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn run_instant_marks_only_nonroot_volumes_busy() {
     // (b) A non-root volume is marked busy; the root volume is excluded.
-    use crate::file_system::volume::DEFAULT_VOLUME_ID;
+    use cmdr_fs::volume::DEFAULT_VOLUME_ID;
 
     // Non-root volume → busy while running.
     let vol = unique("inst-nonroot");

@@ -39,8 +39,8 @@ use super::preflight::SourceFileFacts;
 use super::preflight::SourceHint;
 use super::strategy::{Replaces, copy_single_path};
 use super::transfer_error::{PathRole, WriteFailure, map_volume_error};
-use crate::file_system::volume::Volume;
-use crate::ignore_poison::IgnorePoison;
+use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::volume::Volume;
 
 /// Everything the serial driver needs from its caller. The `Arc` fields are
 /// clones of `copy_volumes_with_progress`'s own ledgers, so the caller keeps

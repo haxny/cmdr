@@ -12,8 +12,8 @@
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::file_system::volume::DEFAULT_VOLUME_ID;
 use crate::operation_log_host::{journal_finalize, journal_open, journal_record_items};
+use cmdr_fs::volume::DEFAULT_VOLUME_ID;
 use cmdr_operation_log::capture::FinalizeInputs;
 use cmdr_operation_log::types::RowRole;
 use cmdr_operation_log::types::{

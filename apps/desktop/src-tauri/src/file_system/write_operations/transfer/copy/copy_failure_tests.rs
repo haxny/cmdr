@@ -8,7 +8,6 @@
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use super::*;
-use crate::file_system::volume::CopyScanResult;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::state::{
     CachedScanResult, ConflictResolutionResponse, FileInfo, insert_scan_result,
@@ -16,6 +15,7 @@ use crate::file_system::write_operations::state::{
 use crate::file_system::write_operations::types::{
     ConflictInfo, DryRunResult, ScanProgressEvent, WriteConflictEvent, WriteConflictResolvedEvent, WriteSettledEvent,
 };
+use cmdr_fs::volume::CopyScanResult;
 
 fn make_state(progress_interval_ms: u64) -> Arc<WriteOperationState> {
     Arc::new(WriteOperationState::new(Duration::from_millis(progress_interval_ms)))

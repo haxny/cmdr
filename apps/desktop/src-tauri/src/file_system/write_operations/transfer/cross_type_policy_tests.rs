@@ -27,8 +27,8 @@ use super::super::types::{ConflictResolution, SourceItemOutcome, WriteOperationC
 use super::conflict_responder_test_support::ConflictResponderSink;
 use super::copy::copy_files_with_progress_inner;
 use super::move_op::move_files_with_progress_inner;
-use crate::ignore_poison::IgnorePoison;
 use crate::test_support::TestDir;
+use cmdr_fs::ignore_poison::IgnorePoison;
 
 fn temp(name: &str) -> TestDir {
     TestDir::new(&format!("cross_type_policy_{}_{}", name, uuid::Uuid::new_v4()))

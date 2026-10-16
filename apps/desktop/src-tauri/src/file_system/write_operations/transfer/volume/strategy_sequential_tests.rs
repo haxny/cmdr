@@ -22,15 +22,15 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Duration;
 
-use crate::file_system::volume::{
-    InMemoryVolume, StreamLength, StreamWriteProgress, StreamWritten, Volume, VolumeError, VolumeReadStream,
-};
 use cmdr_archive::{ArchiveFormat, ArchiveVolume, TarCodec};
 use cmdr_fs::volume::host::VolumeHost;
+use cmdr_fs::volume::{
+    InMemoryVolume, StreamLength, StreamWriteProgress, StreamWritten, Volume, VolumeError, VolumeReadStream,
+};
 
-use crate::file_system::volume::WriteMode;
 use crate::file_system::write_operations::state::OperationIntent;
 use crate::test_support::TestDir;
+use cmdr_fs::volume::WriteMode;
 
 /// A tar entry to build into a fixture.
 enum Item<'a> {

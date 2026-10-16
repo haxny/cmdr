@@ -50,12 +50,33 @@
 //! panic unwind. Only a permanently stuck blocking thread leaks one, and that
 //! thread still owns the file.
 //!
+//! ## Two categories, two rules, and why they differ
+//!
+//! A directory watcher happily reports scratch to the pane, and macOS apps
+//! stage their saves too (`file.txt.sb-1e64c894-…`), so a listing has two kinds
+//! of other people's scratch to deal with.
+//!
+//! **Cmdr's own** (`.cmdr-tmp-*`, `.cmdr-temp-*`, `.cmdr-staging-*`) hides by
+//! OWNERSHIP. One a running operation put there is noise that'll be gone in
+//! moments; one nobody owns is a LEFTOVER from an interrupted transfer, and
+//! hiding that would be lying about what's on disk — and about a Cmdr bug worth
+//! seeing. So: hide a scratch file while an operation has it open, and show
+//! every other one.
+//!
+//! **Other apps'** (`.sb-`, macOS safe-save) hides by NAME, because we have no
+//! ownership signal for a file another process is writing and no way to tell a
+//! live one from an abandoned one. The coarser rule is defensible here precisely
+//! because it isn't ours: an abandoned `.sb-` is evidence of TextEdit's day, not
+//! of a Cmdr bug, so nothing is lost by not surfacing it. ❌ Don't reach for this
+//! rule for Cmdr's own scratch, where ownership is knowable and the leftover is
+//! the interesting case.
+//!
 //! ## What lives here and what doesn't
 //!
-//! This module answers "is this one of ours, and does a live operation own it?".
-//! Whether the user SEES it is the app's call, not a backend's: the settings and
-//! the listing read-path filter live in `file_system::staging`, which re-exports
-//! everything here.
+//! This module answers "is this one of ours, does a live operation own it, and
+//! does a listing hide it under these two settings?" ([`hidden_with_settings`]).
+//! The settings themselves are the app's, and the listing engine applies the
+//! answer on its read path (`cmdr-listing`'s `visible_rows.rs`).
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -285,8 +306,7 @@ pub fn could_be_hidden_from_listings(name: &str) -> bool {
 ///
 /// Cmdr's own scratch hides by OWNERSHIP (only while an operation has it in
 /// flight, so a leftover shows); another app's safe-save hides by NAME, since no
-/// ownership signal exists for it. Why the two rules differ, and where the
-/// settings live: the app's `file_system/staging.rs`.
+/// ownership signal exists for it. Why the two rules differ: the module docs.
 pub fn hidden_with_settings(name: &str, show_staging: bool, show_safe_save: bool) -> bool {
     could_be_hidden_from_listings(name)
         && ((!show_staging && is_staging_temp_in_flight(name)) || (!show_safe_save && is_safe_save_name(name)))
@@ -295,6 +315,10 @@ pub fn hidden_with_settings(name: &str, show_staging: bool, show_safe_save: bool
 #[cfg(test)]
 #[path = "staging/names_test.rs"]
 mod names_test;
+
+#[cfg(test)]
+#[path = "staging/hidden_test.rs"]
+mod hidden_test;
 
 #[cfg(test)]
 mod tests {

@@ -8,8 +8,8 @@ use super::super::OperationEventSink;
 use super::super::look_alike::{LookAlike, look_alike_in, spelled_new_path};
 use super::super::transfer::volume::{PathRole, map_volume_error};
 use super::super::types::{ConflictResolution, WriteOperationError, WriteOperationStartResult};
-use crate::file_system::volume::Volume;
 use crate::file_system::volume::manager::get_volume_manager;
+use cmdr_fs::volume::Volume;
 
 /// Picks the concrete remote spelling that the overwrite warning referred to.
 /// One equivalent spelling is the target; several are ambiguous and refused.

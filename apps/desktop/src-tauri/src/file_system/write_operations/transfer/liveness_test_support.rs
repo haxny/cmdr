@@ -21,8 +21,8 @@ use std::pin::Pin;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU8, AtomicU64, Ordering};
 
-use crate::file_system::volume::{ConnectionLiveness, InMemoryVolume, ListingProgress, Volume, VolumeError};
 use cmdr_fs::entry::FileEntry;
+use cmdr_fs::volume::{ConnectionLiveness, InMemoryVolume, ListingProgress, Volume, VolumeError};
 
 /// No byte count at all, as opposed to a count of zero.
 const NO_COUNT: u64 = u64::MAX;

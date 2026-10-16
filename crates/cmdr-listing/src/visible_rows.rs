@@ -5,7 +5,7 @@
 //! it's hidden (`FileEntry::is_hidden`: a dotfile, macOS's `UF_HIDDEN` flag, or
 //! `/.hidden` membership at a volume root) and the user hasn't asked for hidden
 //! files, its name misses the pane's quick filter (`name_filter.rs`), or it's
-//! scratch a running operation owns (`file_system::staging`).
+//! scratch a running operation owns (`cmdr_fs::staging`).
 //! Answering "which entry is row 7" by walking the entries and counting is what a listing accessor used to
 //! do, and at the bottom of a 74,144-entry directory that walk, times the ~100
 //! rows a visible range covers, times an index event every couple of seconds,

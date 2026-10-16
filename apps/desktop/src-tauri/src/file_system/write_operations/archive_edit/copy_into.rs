@@ -29,9 +29,9 @@ use super::edit_error::EditError;
 use super::engine::{MutatorHooks, emit_archive_terminal, run_managed_edit, to_write_error};
 use super::routing::{ensure_zip_writable, normalize_inner_path, read_only_error};
 use crate::file_system::volume::manager::get_volume_manager;
-use crate::file_system::volume::{LaneKey, Volume, VolumeError};
 use cmdr_archive::mutator::{self, AddEntry, AddSource, Changeset, MutationError};
 use cmdr_archive::{ArchiveFormat, ArchiveIndex, LocalFileSource};
+use cmdr_fs::volume::{LaneKey, Volume, VolumeError};
 use cmdr_local::LocalPosixVolume;
 use cmdr_operation_log::types::{ArchiveSubkind, ExecutionStatus};
 

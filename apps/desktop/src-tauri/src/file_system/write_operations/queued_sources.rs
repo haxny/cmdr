@@ -38,7 +38,7 @@ use super::types::{
     CancelRollback, SourceItemOutcome, SourcesGoneAnswerOutcome, SourcesGoneNext, WriteCancelledEvent,
     WriteCompleteEvent, WriteOperationType, WriteSourceItemDoneEvent, WriteSourcesGoneEvent,
 };
-use crate::file_system::volume::{Volume, VolumeError};
+use cmdr_fs::volume::{Volume, VolumeError};
 
 /// How many gone sources the question names. The count beside it is the whole
 /// truth; the names only help the person recognize what moved.

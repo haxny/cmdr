@@ -45,7 +45,7 @@ use crate::file_system::write_operations::event_sinks::OperationEventSink;
 use crate::file_system::write_operations::state::{WriteOperationState, is_cancelled};
 use crate::file_system::write_operations::transfer_tree::{NodeId, TreeLeaf, TreeReporter};
 use crate::file_system::write_operations::types::{WriteOperationPhase, WriteOperationType};
-use crate::ignore_poison::IgnorePoison;
+use cmdr_fs::ignore_poison::IgnorePoison;
 
 use super::emit_progress_and_status;
 

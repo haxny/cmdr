@@ -14,10 +14,10 @@
 
 use super::tests::{make_state, make_volumes};
 use super::*;
-use crate::file_system::volume::Volume;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::transfer::conflict_responder_test_support::ConflictResponderSink;
 use crate::file_system::write_operations::types::ConflictResolution;
+use cmdr_fs::volume::Volume;
 
 // ============================================================================
 // Helpers

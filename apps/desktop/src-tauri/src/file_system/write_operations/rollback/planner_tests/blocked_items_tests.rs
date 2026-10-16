@@ -11,7 +11,7 @@ use std::sync::Arc;
 use cmdr_fs::testing::metadata_fixture::{LOCKED_FLAG, MetadataFixture, add_deny_delete_acl, set_flags, set_mode};
 
 use super::test_support::*;
-use crate::file_system::volume::Volume;
+use cmdr_fs::volume::Volume;
 use cmdr_local::LocalPosixVolume;
 use cmdr_operation_log::types::{OpKind, RollbackState};
 

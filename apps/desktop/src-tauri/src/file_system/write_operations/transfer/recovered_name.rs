@@ -24,7 +24,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use super::super::unique_name::{NameCandidates, RESCUE_NAME_ATTEMPTS, recovered_sibling};
-use crate::file_system::volume::{Volume, VolumeError};
+use cmdr_fs::volume::{Volume, VolumeError};
 
 /// What a failed landing leaves behind, and where.
 ///

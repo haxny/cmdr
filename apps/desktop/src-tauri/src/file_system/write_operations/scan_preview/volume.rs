@@ -21,8 +21,8 @@ use super::super::types::{
     WriteOperationError,
 };
 use super::settle_failed_preview;
-use crate::file_system::volume::{BatchScanResult, CopyScanResult, ScanRecorder, Volume};
-use crate::ignore_poison::IgnorePoison;
+use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::volume::{BatchScanResult, CopyScanResult, ScanRecorder, Volume};
 
 /// The path a volume scan's failure names when the backend's error carries none
 /// of its own (a `NotFound` does): the one source, or the folder a multi-item
@@ -86,7 +86,7 @@ pub(in crate::file_system::write_operations) async fn run_volume_scan_preview(
     let events_for_cb = Arc::clone(&events);
     let watchdog_for_cb = Arc::clone(&watchdog);
     let preview_id_for_cb = preview_id.clone();
-    let on_progress = move |p: crate::file_system::volume::ListingProgress| {
+    let on_progress = move |p: cmdr_fs::volume::ListingProgress| {
         if state_for_cb.cancelled.load(Ordering::Relaxed) {
             return;
         }
@@ -242,11 +242,11 @@ pub(in crate::file_system::write_operations) async fn run_oracle_aware_batch_sca
     sources: &[PathBuf],
     is_cancelled: &(dyn Fn() -> bool + Sync),
     pause: Option<&Arc<ScanPause>>,
-    on_progress: &(dyn Fn(crate::file_system::volume::ListingProgress) + Sync),
+    on_progress: &(dyn Fn(cmdr_fs::volume::ListingProgress) + Sync),
     recorder: Option<Arc<dyn ScanRecorder>>,
-) -> Result<BatchScanResult, crate::file_system::volume::VolumeError> {
-    use crate::file_system::volume::ListingProgress;
+) -> Result<BatchScanResult, cmdr_fs::volume::VolumeError> {
     use cmdr_fs::entry::FileEntry;
+    use cmdr_fs::volume::ListingProgress;
     use std::collections::HashMap;
 
     // Group sources by parent dir, preserving the input order of paths within
@@ -280,7 +280,7 @@ pub(in crate::file_system::write_operations) async fn run_oracle_aware_batch_sca
     // Every file's size and date, for a cost estimate, while every group came
     // back with them (a backend that keeps files, walked cold). One group that
     // didn't makes the whole list partial, and a partial list would price low.
-    let mut files: Option<Vec<crate::file_system::volume::ScannedFile>> = Some(Vec::new());
+    let mut files: Option<Vec<cmdr_fs::volume::ScannedFile>> = Some(Vec::new());
     // Batch-scoped hardlink dedup for the source-footprint number. Shared
     // across all groups so a hardlink spanning two selected sources counts
     // once. Only `LocalPosixVolume` cached entries carry inodes; other
@@ -289,7 +289,7 @@ pub(in crate::file_system::write_operations) async fn run_oracle_aware_batch_sca
 
     for parent in &group_order {
         if is_cancelled() {
-            return Err(crate::file_system::volume::VolumeError::Cancelled(
+            return Err(cmdr_fs::volume::VolumeError::Cancelled(
                 "Operation cancelled by user".to_string(),
             ));
         }
@@ -466,10 +466,10 @@ pub(in crate::file_system::write_operations) async fn run_oracle_aware_batch_sca
             // share — answers Cancel and Pause from inside rather than when it
             // ends. Both routes to "stop" ride along: the operation that claimed
             // this preview, and the preview's own flag (`ScanPause`).
-            let mut group_boundary = crate::file_system::volume::ScanBoundary::new(Some(&shifted));
+            let mut group_boundary = cmdr_fs::volume::ScanBoundary::new(Some(&shifted));
             if let Some(pause) = pause {
-                group_boundary = group_boundary.stopping_at(crate::file_system::volume::ScanStop::new(
-                    Arc::clone(pause) as Arc<dyn crate::file_system::volume::ScanStopSignal>,
+                group_boundary = group_boundary.stopping_at(cmdr_fs::volume::ScanStop::new(
+                    Arc::clone(pause) as Arc<dyn cmdr_fs::volume::ScanStopSignal>
                 ));
             }
             if let Some(recorder) = &recorder {

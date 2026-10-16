@@ -10,11 +10,11 @@
 
 use super::tests::{make_state, make_volumes};
 use super::*;
-use crate::file_system::volume::InMemoryVolume;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::types::{
     ConflictResolution, WriteConflictEvent, WriteConflictResolvedEvent, WriteErrorEvent, WriteSourceItemDoneEvent,
 };
+use cmdr_fs::volume::InMemoryVolume;
 use std::sync::atomic::AtomicU8;
 
 /// Sink that flips the operation's intent to `RollingBack` once it sees a

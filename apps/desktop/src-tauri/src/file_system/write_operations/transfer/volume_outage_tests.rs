@@ -4,12 +4,12 @@
 //! `volume/copy_outage_tests.rs`.
 
 use super::*;
-use crate::file_system::volume::InMemoryVolume;
 use crate::file_system::write_operations::outage_slot::OutagePolicy;
 use crate::file_system::write_operations::test_support::TestOperationGuard;
 use crate::file_system::write_operations::transfer::outage_volume_test_support::OutageVolume;
 use crate::file_system::write_operations::types::TransferWaitReason;
 use crate::test_support::wait_until_async;
+use cmdr_fs::volume::InMemoryVolume;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 /// A policy that runs a whole outage in well under a second.

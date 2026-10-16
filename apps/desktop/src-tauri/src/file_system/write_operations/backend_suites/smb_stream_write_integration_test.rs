@@ -15,7 +15,7 @@ use std::sync::atomic::Ordering;
 use cmdr_fs::testing::TestDir;
 
 use super::smb_test_support::*;
-use crate::file_system::volume::{StreamLength, WriteMode};
+use cmdr_fs::volume::{StreamLength, WriteMode};
 
 /// A multi-MB local file streams onto the share through `LocalPosixVolume`'s
 /// `open_read_stream` into `SmbVolume`'s `write_from_stream`: progress fires more

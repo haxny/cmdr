@@ -13,8 +13,8 @@ use super::{
 };
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::types::{SourceItemOutcome, WriteOperationType};
-use crate::ignore_poison::IgnorePoison;
 use crate::test_support::TestDir;
+use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::volume::{InMemoryVolume, Volume};
 
 fn write_file(dir: &Path, name: &str, contents: &[u8]) -> PathBuf {

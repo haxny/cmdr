@@ -224,7 +224,7 @@ async fn sftp_integration_folders_copied_off_a_server_keep_their_dates() {
 #[ignore = "needs the SFTP fixture stack: sftp-servers/start.sh (sftp-fixture)"]
 async fn sftp_integration_a_tagged_upload_reports_its_tags_and_an_untagged_one_nothing() {
     use super::super::types::{LostMetadata, LostMetadataClass, MetadataLeftBehind};
-    use crate::ignore_poison::IgnorePoison as _;
+    use cmdr_fs::ignore_poison::IgnorePoison as _;
 
     let (remote, dir) = fixture("app-metadata-loss").await;
     let local_dir = TestDir::new("sftp_metadata_loss");

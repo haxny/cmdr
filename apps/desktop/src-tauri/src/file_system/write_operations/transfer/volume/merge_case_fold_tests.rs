@@ -17,13 +17,13 @@
 use super::super::super::conflict_responder_test_support::{ConflictResponderSink, file_conflict_count};
 use super::tests::make_state;
 use super::*;
-use crate::file_system::volume::WriteMode;
-use crate::file_system::volume::{
+use crate::file_system::write_operations::types::{ConflictResolution, VolumeCopyConfig, WriteOperationError};
+use cmdr_fs::entry::FileEntry;
+use cmdr_fs::volume::WriteMode;
+use cmdr_fs::volume::{
     CopyScanResult, InMemoryVolume, ListingProgress, SpaceInfo, StreamLength, StreamWriteProgress, StreamWritten,
     VolumeReadStream,
 };
-use crate::file_system::write_operations::types::{ConflictResolution, VolumeCopyConfig, WriteOperationError};
-use cmdr_fs::entry::FileEntry;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Mutex;
@@ -144,7 +144,7 @@ impl Volume for CaseFoldingDest {
     fn entry_kind<'a>(
         &'a self,
         path: &'a Path,
-    ) -> Pin<Box<dyn Future<Output = Result<crate::file_system::volume::EntryKind, VolumeError>> + Send + 'a>> {
+    ) -> Pin<Box<dyn Future<Output = Result<cmdr_fs::volume::EntryKind, VolumeError>> + Send + 'a>> {
         Box::pin(async move {
             let folded = self.fold(path).await;
             self.inner.entry_kind(&folded).await

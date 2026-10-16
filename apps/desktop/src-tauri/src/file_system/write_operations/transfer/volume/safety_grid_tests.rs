@@ -74,7 +74,6 @@ use super::faulty_volume::{FaultyOp, FaultyVolume};
 use super::safety_oracle::{SafetySpec, assert_operation_was_safe, collect_contents, try_read_all};
 use super::{copy_volumes_with_progress, move_volumes_with_progress};
 use crate::file_system::volume::manager::get_volume_manager;
-use crate::file_system::volume::{CopyScanResult, InMemoryVolume, Volume, VolumeError};
 use crate::file_system::write_operations::delete::delete_volume_files_with_progress_inner;
 use crate::file_system::write_operations::event_sinks::{CollectorEventSink, OperationEventSink};
 use crate::file_system::write_operations::scan_cache::seed_incoherent_scan_result_for_test;
@@ -87,6 +86,7 @@ use crate::file_system::write_operations::types::{
     WriteConflictResolvedEvent, WriteErrorEvent, WriteOperationConfig, WriteOperationPhase, WriteProgressEvent,
     WriteSourceItemDoneEvent,
 };
+use cmdr_fs::volume::{CopyScanResult, InMemoryVolume, Volume, VolumeError};
 
 // ============================================================================
 // The axes

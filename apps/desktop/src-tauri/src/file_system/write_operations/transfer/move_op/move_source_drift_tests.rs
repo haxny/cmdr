@@ -22,7 +22,7 @@ use crate::file_system::write_operations::types::{
     ConflictInfo, DryRunResult, ScanProgressEvent, WriteCancelledEvent, WriteCompleteEvent, WriteConflictEvent,
     WriteConflictResolvedEvent, WriteErrorEvent, WriteOperationPhase, WriteProgressEvent, WriteSettledEvent,
 };
-use crate::ignore_poison::IgnorePoison;
+use cmdr_fs::ignore_poison::IgnorePoison;
 
 /// Collects every event, and runs `before_sweep` once, on the first
 /// `Deleting`-phase tick: the moment the copy is flushed and nothing has been

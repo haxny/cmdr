@@ -10,10 +10,10 @@
 
 use super::move_same::move_within_same_volume_with_progress;
 use super::rename_merge_test_support::{exists, make_state, mkdir, write_file};
-use crate::file_system::volume::{Volume, VolumeError};
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::types::VolumeCopyConfig;
 use cmdr_fs::entry::FileEntry;
+use cmdr_fs::volume::{Volume, VolumeError};
 use cmdr_local::LocalPosixVolume;
 use std::future::Future;
 use std::path::{Path, PathBuf};
@@ -58,7 +58,7 @@ impl Volume for CountingVolume {
     fn list_directory<'a>(
         &'a self,
         path: &'a Path,
-        on_progress: Option<&'a (dyn Fn(crate::file_system::volume::ListingProgress) + Sync)>,
+        on_progress: Option<&'a (dyn Fn(cmdr_fs::volume::ListingProgress) + Sync)>,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<FileEntry>, VolumeError>> + Send + 'a>> {
         self.listed.lock().unwrap().push(path.to_path_buf());
         self.inner.list_directory(path, on_progress)
@@ -93,8 +93,7 @@ impl Volume for CountingVolume {
     fn scan_for_copy<'a>(
         &'a self,
         path: &'a Path,
-    ) -> Pin<Box<dyn Future<Output = Result<crate::file_system::volume::CopyScanResult, VolumeError>> + Send + 'a>>
-    {
+    ) -> Pin<Box<dyn Future<Output = Result<cmdr_fs::volume::CopyScanResult, VolumeError>> + Send + 'a>> {
         // A `scan_for_copy` that RECURSED would defeat the perf contract; count
         // it as a stat and assert the count stays O(top-level). LocalPosix's
         // `scan_for_copy` does recurse to count a subtree's bytes — exactly what

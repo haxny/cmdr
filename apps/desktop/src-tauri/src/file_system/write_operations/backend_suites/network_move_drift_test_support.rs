@@ -20,8 +20,8 @@ use super::super::transfer::volume::forward_volume_methods;
 use super::super::types::{AppearedDuringMove, ConflictResolution};
 use super::network_semantics_test_support::{Transfer, local_volume, seed, transfer, try_read};
 use super::network_transfer_test_support::clean_deep;
-use crate::file_system::volume::VolumeError;
-use crate::ignore_poison::IgnorePoison;
+use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::volume::VolumeError;
 
 type Edit = Box<dyn FnOnce() -> Pin<Box<dyn Future<Output = ()> + Send>> + Send>;
 

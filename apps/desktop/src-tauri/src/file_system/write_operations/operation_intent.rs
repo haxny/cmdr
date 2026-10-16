@@ -7,7 +7,7 @@
 //! `state::PauseGate` / `state::is_cancelled` / `state::load_intent` paths keep
 //! resolving.
 
-use crate::ignore_poison::IgnorePoison;
+use cmdr_fs::ignore_poison::IgnorePoison;
 use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
 use std::sync::{Arc, Condvar};
 

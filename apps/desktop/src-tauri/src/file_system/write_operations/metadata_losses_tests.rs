@@ -7,7 +7,7 @@ use std::pin::Pin;
 use cmdr_fs::metadata::{CarriedMetadata, MetadataCaps, MetadataClasses};
 
 use super::*;
-use crate::file_system::volume::{InMemoryVolume, StreamLength, VolumeError};
+use cmdr_fs::volume::{InMemoryVolume, StreamLength, VolumeError};
 
 /// A stream that fails the test the moment anyone asks what it carries.
 struct NeverAsked;

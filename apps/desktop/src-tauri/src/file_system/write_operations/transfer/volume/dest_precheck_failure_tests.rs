@@ -25,10 +25,10 @@ use std::time::Duration;
 
 use super::faulty_volume::{FaultyOp, FaultyVolume};
 use super::{copy_volumes_with_progress, move_volumes_with_progress, move_within_same_volume_with_progress};
-use crate::file_system::volume::{InMemoryVolume, Volume, VolumeError};
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::state::WriteOperationState;
 use crate::file_system::write_operations::types::{ConflictResolution, VolumeCopyConfig, WriteOperationError};
+use cmdr_fs::volume::{InMemoryVolume, Volume, VolumeError};
 
 fn make_state() -> Arc<WriteOperationState> {
     Arc::new(WriteOperationState::new(Duration::from_millis(50)))

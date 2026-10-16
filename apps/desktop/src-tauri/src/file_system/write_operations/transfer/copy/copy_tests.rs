@@ -307,8 +307,8 @@ fn copy_empty_directory_does_not_clobber_same_named_dest_file() {
 /// asked for and not the ones they did.
 #[test]
 fn a_local_copy_never_acts_on_a_preview_of_a_different_selection() {
-    use crate::file_system::volume::CopyScanResult;
     use crate::file_system::write_operations::state::{CachedScanResult, FileInfo, insert_scan_result};
+    use cmdr_fs::volume::CopyScanResult;
 
     let tmp = tempfile::tempdir().expect("tempdir");
     let src_dir = tmp.path().join("src");

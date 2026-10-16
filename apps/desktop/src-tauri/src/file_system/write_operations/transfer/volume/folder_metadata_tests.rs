@@ -11,10 +11,10 @@ use std::time::Duration;
 
 use super::copy_volumes_with_progress;
 use super::faulty_volume::{FaultyOp, FaultyVolume};
-use crate::file_system::volume::{InMemoryVolume, Volume, VolumeError};
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::state::WriteOperationState;
 use crate::file_system::write_operations::types::VolumeCopyConfig;
+use cmdr_fs::volume::{InMemoryVolume, Volume, VolumeError};
 
 /// The copied folder's date: 2021-01-29 08:30:15 UTC.
 const FOLDER_DATE: u64 = 1_611_909_015;

@@ -3,9 +3,9 @@
 //! temp when the landing fails or never finishes.
 
 use super::*;
-use crate::file_system::volume::InMemoryVolume;
 use crate::file_system::write_operations::transfer::volume::forward_volume_methods;
-use crate::ignore_poison::IgnorePoison;
+use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::volume::InMemoryVolume;
 use std::time::Duration;
 
 /// What `path` reports right now, which is how these cells tell "the

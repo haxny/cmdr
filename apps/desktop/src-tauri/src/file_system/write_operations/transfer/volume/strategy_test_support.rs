@@ -19,11 +19,11 @@ use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex as StdMutex};
 use std::time::Duration;
 
-use crate::file_system::volume::{
+use cmdr_fs::entry::FileEntry;
+use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::volume::{
     ListingProgress, StreamLength, StreamWriteProgress, StreamWritten, Volume, VolumeError, VolumeReadStream,
 };
-use crate::ignore_poison::IgnorePoison;
-use cmdr_fs::entry::FileEntry;
 
 pub(super) fn make_state() -> Arc<WriteOperationState> {
     Arc::new(WriteOperationState::new(Duration::from_millis(200)))
@@ -35,8 +35,8 @@ pub(super) async fn park_holds_at(seen: &std::sync::atomic::AtomicU64, what: &st
     crate::file_system::write_operations::test_support::park_holds_at(|| seen.load(Ordering::SeqCst), what).await
 }
 
-use crate::file_system::volume::WriteMode;
 pub(super) use crate::file_system::write_operations::test_support::PARK_WINDOW;
+use cmdr_fs::volume::WriteMode;
 
 // ========================================================================
 // Gated chunked source (mid-file pause): a multi-chunk volume copy whose
@@ -246,7 +246,7 @@ impl Volume for FailOnceStaleDest {
 /// - **It is a real volume underneath**, so staging, the landing rename, and the
 ///   final content are all observable end to end.
 pub(crate) struct FlakyDest {
-    pub(crate) inner: Arc<crate::file_system::volume::InMemoryVolume>,
+    pub(crate) inner: Arc<cmdr_fs::volume::InMemoryVolume>,
     pub(crate) fail_writes: usize,
     pub(crate) error: VolumeError,
     pub(crate) calls: AtomicUsize,
@@ -260,9 +260,7 @@ impl FlakyDest {
     /// A destination that fails `fail_writes` times with `error`, then works.
     pub(crate) fn new(fail_writes: usize, error: VolumeError) -> Arc<Self> {
         Arc::new(Self {
-            inner: Arc::new(
-                crate::file_system::volume::InMemoryVolume::new("flaky-dest").with_space_info(10_000_000, 10_000_000),
-            ),
+            inner: Arc::new(cmdr_fs::volume::InMemoryVolume::new("flaky-dest").with_space_info(10_000_000, 10_000_000)),
             fail_writes,
             error,
             calls: AtomicUsize::new(0),
@@ -385,11 +383,11 @@ impl Volume for FlakyDest {
 /// day someone writes a new `Volume`. Any code path that must not over-delete
 /// gets pointed at this volume and has to protect the user's data by itself.
 pub(crate) struct RecursiveDeleteVolume {
-    inner: Arc<crate::file_system::volume::InMemoryVolume>,
+    inner: Arc<cmdr_fs::volume::InMemoryVolume>,
 }
 
 impl RecursiveDeleteVolume {
-    pub(crate) fn wrapping(inner: Arc<crate::file_system::volume::InMemoryVolume>) -> Arc<Self> {
+    pub(crate) fn wrapping(inner: Arc<cmdr_fs::volume::InMemoryVolume>) -> Arc<Self> {
         Arc::new(Self { inner })
     }
 }
@@ -430,7 +428,7 @@ impl Volume for RecursiveDeleteVolume {
 /// instead. `InMemoryVolume` alone can't stage this: its `delete` drops a
 /// directory entry whether or not the directory still has children.
 pub(crate) struct UndeletableSource {
-    inner: Arc<crate::file_system::volume::InMemoryVolume>,
+    inner: Arc<cmdr_fs::volume::InMemoryVolume>,
     /// File name (exact) whose delete always fails.
     undeletable: String,
     error: VolumeError,
@@ -440,8 +438,7 @@ impl UndeletableSource {
     pub(crate) fn new(undeletable: &str, error: VolumeError) -> Arc<Self> {
         Arc::new(Self {
             inner: Arc::new(
-                crate::file_system::volume::InMemoryVolume::new("undeletable-source")
-                    .with_space_info(10_000_000, 10_000_000),
+                cmdr_fs::volume::InMemoryVolume::new("undeletable-source").with_space_info(10_000_000, 10_000_000),
             ),
             undeletable: undeletable.to_owned(),
             error,
@@ -513,7 +510,7 @@ impl Volume for UndeletableSource {
 /// will ever produce an error on its own, so the only thing that can end it is
 /// the watchdog, and the only thing that can then save the file is the retry.
 pub(super) struct WedgedThenWorkingDest {
-    pub(super) inner: Arc<crate::file_system::volume::InMemoryVolume>,
+    pub(super) inner: Arc<cmdr_fs::volume::InMemoryVolume>,
     pub(super) calls: AtomicUsize,
     /// Set once the wedged write has actually been entered, so a test waits on
     /// the state it needs instead of guessing at a duration.
@@ -524,7 +521,7 @@ impl WedgedThenWorkingDest {
     pub(super) fn new() -> Arc<Self> {
         Arc::new(Self {
             inner: Arc::new(
-                crate::file_system::volume::InMemoryVolume::new("wedged-dest").with_space_info(10_000_000, 10_000_000),
+                cmdr_fs::volume::InMemoryVolume::new("wedged-dest").with_space_info(10_000_000, 10_000_000),
             ),
             calls: AtomicUsize::new(0),
             wedged: Arc::new(AtomicBool::new(false)),
@@ -686,7 +683,7 @@ impl Volume for WedgedOpenSource {
 /// raced against `backend_cancel`. `own_cleanup_ran` is what a regression would
 /// leave `false`.
 pub(super) struct TierOneWitnessDest {
-    pub(super) inner: Arc<crate::file_system::volume::InMemoryVolume>,
+    pub(super) inner: Arc<cmdr_fs::volume::InMemoryVolume>,
     /// Set when the backend removed its own partial after observing the cancel.
     pub(super) own_cleanup_ran: Arc<AtomicBool>,
     /// Bytes handed to the destination so far, so a test can wait on "the write
@@ -698,8 +695,7 @@ impl TierOneWitnessDest {
     pub(super) fn new() -> Arc<Self> {
         Arc::new(Self {
             inner: Arc::new(
-                crate::file_system::volume::InMemoryVolume::new("tier-one-witness-dest")
-                    .with_space_info(10_000_000, 10_000_000),
+                cmdr_fs::volume::InMemoryVolume::new("tier-one-witness-dest").with_space_info(10_000_000, 10_000_000),
             ),
             own_cleanup_ran: Arc::new(AtomicBool::new(false)),
             written: Arc::new(std::sync::atomic::AtomicU64::new(0)),

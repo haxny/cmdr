@@ -25,7 +25,6 @@ mod provider;
 mod real_provider;
 #[cfg(target_os = "macos")]
 pub mod share;
-pub(crate) mod staging;
 #[cfg(target_os = "macos")]
 pub mod sync_status;
 pub mod tags;

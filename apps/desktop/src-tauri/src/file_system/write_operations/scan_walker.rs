@@ -19,8 +19,8 @@ use cmdr_fs::apple_double::SidecarRule;
 
 use super::state::FileInfo;
 use super::validation::is_symlink_loop;
-use crate::file_system::volume::CopyScanResult;
 use cmdr_fs::entry::FileEntry;
+use cmdr_fs::volume::CopyScanResult;
 /// Per-regular-file hook fired by the walk, receiving the file path and size (the `WalkContext::on_file` field).
 type OnFileHook<'a> = &'a dyn Fn(&Path, u64);
 

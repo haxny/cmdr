@@ -4,7 +4,7 @@
 //! every other `*_tests.rs` in this directory follows.
 
 use super::*;
-use crate::file_system::volume::InMemoryVolume;
+use cmdr_fs::volume::InMemoryVolume;
 
 // ======================================================================
 // find_unique_volume_name — TOCTOU reservation on local-FS dest volumes

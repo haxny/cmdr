@@ -36,17 +36,17 @@ use super::test_support::{
     AutoYieldTuningGuard, REL_CHUNK, REL_TOTAL, RelLog, ReleasingSource, make_state, park_holds_at, rel_expected_bytes,
 };
 use super::*;
-use crate::file_system::volume::StreamLength;
 use crate::file_system::write_operations::state::cancel_write_operation;
 use crate::file_system::write_operations::test_support::TestOperationGuard;
 use crate::file_system::write_operations::transfer::transfer_driver::{LeafProgressLedger, ObservedProgress};
 use crate::test_support::wait_until_async;
+use cmdr_fs::volume::StreamLength;
 use std::path::Path;
 use std::sync::atomic::Ordering;
 use std::sync::{Arc, Mutex as StdMutex};
 use std::time::{Duration, Instant};
 
-use crate::file_system::volume::{Volume, VolumeError};
+use cmdr_fs::volume::{Volume, VolumeError};
 
 /// A near-instant SMB-shaped source so the destination arm (not source latency)
 /// governs the copy's pacing. `ReleasingSource` streams the offset pattern and

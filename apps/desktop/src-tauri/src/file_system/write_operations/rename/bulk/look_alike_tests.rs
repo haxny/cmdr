@@ -17,11 +17,11 @@ use std::time::Duration;
 use super::super::super::event_sinks::{CollectorEventSink, OperationEventSink};
 use super::super::super::source_binding::SourceFingerprint;
 use super::{BulkRenameRow, start_bulk_rename};
-use crate::file_system::Volume;
-use crate::file_system::volume::InMemoryVolume;
 use crate::file_system::volume::manager::get_volume_manager;
-use crate::ignore_poison::IgnorePoison;
 use crate::test_support::wait_until_async;
+use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::volume::InMemoryVolume;
+use cmdr_fs::volume::Volume;
 use cmdr_operation_log::types::Initiator;
 
 const CAFE_NFC: &str = "caf\u{e9}.txt";

@@ -13,9 +13,9 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use tempfile::TempDir;
 
-use crate::file_system::volume::{LaneKey, ListingProgress};
-use crate::file_system::{Volume, VolumeError};
 use cmdr_fs::entry::FileEntry;
+use cmdr_fs::volume::{LaneKey, ListingProgress};
+use cmdr_fs::volume::{Volume, VolumeError};
 
 fn unique(label: &str) -> String {
     static N: AtomicU64 = AtomicU64::new(0);

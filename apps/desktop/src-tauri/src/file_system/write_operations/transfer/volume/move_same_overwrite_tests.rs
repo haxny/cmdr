@@ -16,9 +16,9 @@ use super::super::faulty_volume::{FaultyOp, FaultyVolume};
 use super::super::move_same::move_within_same_volume_with_progress;
 use super::test_support::make_state;
 use super::*;
-use crate::file_system::volume::{InMemoryVolume, VolumeError};
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::types::ConflictResolution;
+use cmdr_fs::volume::{InMemoryVolume, VolumeError};
 
 const THE_USERS_BYTES: &[u8] = b"the user's own copy";
 

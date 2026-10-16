@@ -20,7 +20,7 @@ use crate::file_system::write_operations::types::{
     WriteCompleteEvent, WriteConflictEvent, WriteErrorEvent, WriteOperationConfig, WriteOperationPhase,
     WriteOperationType, WriteProgressEvent, WriteSourceItemDoneEvent,
 };
-use crate::ignore_poison::IgnorePoison;
+use cmdr_fs::ignore_poison::IgnorePoison;
 use std::sync::Arc;
 use std::time::Duration;
 use tempfile::TempDir;

@@ -14,7 +14,7 @@ use std::sync::Arc;
 use super::super::super::look_alike::{LookAlike, look_alike_in};
 use super::super::super::unique_name::ClaimedNames;
 use super::super::super::unique_name::NameCandidates;
-use crate::file_system::volume::Volume;
+use cmdr_fs::volume::Volume;
 
 /// A name this operation has taken, and whether taking it PUT SOMETHING ON DISK.
 ///

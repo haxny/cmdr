@@ -13,7 +13,7 @@ use cmdr_fs::volume::host::VolumeHost;
 use super::super::types::{ArchiveNameRefusal, WriteOperationError};
 use super::edit_error::EditError;
 use super::fresh_plan::FreshPlan;
-use crate::file_system::volume::{Volume, VolumeError};
+use cmdr_fs::volume::{Volume, VolumeError};
 
 /// What a staged ZIP must read back as: every planned entry at the path the
 /// archive reader gives it, plus the ancestor directories the reader

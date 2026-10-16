@@ -53,8 +53,8 @@ use super::displaced_destination::DisplacedLedger;
 use super::merge_ctx::CreatedPaths;
 use super::preflight::SourceHint;
 use super::transfer_error::WriteFailure;
-use crate::file_system::volume::{Volume, VolumeError};
-use crate::ignore_poison::IgnorePoison;
+use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::volume::{Volume, VolumeError};
 
 /// Everything the concurrent driver needs from its caller.
 ///

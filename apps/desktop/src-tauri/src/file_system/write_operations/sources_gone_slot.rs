@@ -10,7 +10,7 @@ use std::sync::Mutex;
 use tokio::sync::oneshot;
 
 use super::types::WriteSourcesGoneEvent;
-use crate::ignore_poison::IgnorePoison;
+use cmdr_fs::ignore_poison::IgnorePoison;
 
 /// Where a queued operation's sources-gone question stands: asked (with the
 /// sender the parked operation listens on), or not.

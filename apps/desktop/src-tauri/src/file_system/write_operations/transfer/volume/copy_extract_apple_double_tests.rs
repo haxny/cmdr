@@ -6,10 +6,10 @@
 
 use super::tests::make_state;
 use super::*;
-use crate::file_system::volume::InMemoryVolume;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use cmdr_archive::ArchiveFormat;
 use cmdr_fs::testing::metadata_fixture::{QUARANTINE_VALUE, QUARANTINE_XATTR, TAGS_XATTR, set_xattr};
+use cmdr_fs::volume::InMemoryVolume;
 use cmdr_local::LocalPosixVolume;
 
 /// An `ArchiveVolume` over `archive` on a local-backed parent, on a lane of its

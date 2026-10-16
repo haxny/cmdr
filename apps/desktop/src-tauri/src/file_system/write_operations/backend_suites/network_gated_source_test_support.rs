@@ -22,8 +22,8 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use cmdr_fs::volume::Volume;
 
 use super::super::transfer::volume::forward_volume_methods;
-use crate::file_system::volume::{CopyScanResult, InMemoryVolume, ListingProgress, VolumeError, VolumeReadStream};
 use cmdr_fs::entry::FileEntry;
+use cmdr_fs::volume::{CopyScanResult, InMemoryVolume, ListingProgress, VolumeError, VolumeReadStream};
 
 /// How big the file a cancel interrupts is, and how much of it one permit buys.
 ///
@@ -59,8 +59,8 @@ impl VolumeReadStream for GatedChunks {
         })
     }
 
-    fn total_size(&self) -> crate::file_system::volume::StreamLength {
-        crate::file_system::volume::StreamLength::Known(self.bytes.len() as u64)
+    fn total_size(&self) -> cmdr_fs::volume::StreamLength {
+        cmdr_fs::volume::StreamLength::Known(self.bytes.len() as u64)
     }
 
     fn bytes_read(&self) -> u64 {
@@ -233,7 +233,7 @@ impl VolumeReadStream for GatedLiveStream {
         })
     }
 
-    fn total_size(&self) -> crate::file_system::volume::StreamLength {
+    fn total_size(&self) -> cmdr_fs::volume::StreamLength {
         self.inner.total_size()
     }
 

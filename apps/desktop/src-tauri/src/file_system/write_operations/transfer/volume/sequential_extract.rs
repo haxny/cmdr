@@ -29,8 +29,8 @@ use super::merge::copy_directory_streaming;
 use super::merge_ctx::{CreatedPaths, MergeCtx};
 use super::strategy::{LandingName, Replaces, note_pending_for_local_dest, resolve_staging, staging_for};
 use super::transfer_error::{AtPath, PathedVolumeError};
-use crate::file_system::volume::{Volume, VolumeError};
-use crate::ignore_poison::IgnorePoison;
+use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::volume::{Volume, VolumeError};
 
 /// One resolved file write the planning pass records: where the bytes land, and
 /// what that does to a file at the name (for a file→file Overwrite
@@ -160,7 +160,7 @@ pub(super) async fn extract_sequential_subtree(
         // final name. Same contract as `stream_pipe_file`; unlike it, a sequential
         // source can't be re-read, so a destination that can't land a staged write
         // fails the extract instead of falling back.
-        let length = crate::file_system::volume::StreamLength::Known(file.size);
+        let length = cmdr_fs::volume::StreamLength::Known(file.size);
         let lands_whole = dest_volume.write_is_single_shot(length).await || dest_volume.publishes_writes_whole();
         let staging = resolve_staging(staging_for(&planned.replaces, planned.landing), lands_whole);
         let staged = StagedWrite::begin(state, &planned.dest_path, staging);
@@ -179,8 +179,7 @@ pub(super) async fn extract_sequential_subtree(
         // takes a leaf handle of its own: it is what carries its bytes on the
         // bar while it writes, and what takes them back off if the write fails.
         let leaf = progress.begin_leaf(planned.row);
-        let on_chunk =
-            |progress: crate::file_system::volume::StreamWriteProgress| leaf.on_chunk(progress.bytes_written);
+        let on_chunk = |progress: cmdr_fs::volume::StreamWriteProgress| leaf.on_chunk(progress.bytes_written);
         let written = dest_volume
             .write_from_stream(staged.target(), staged.write_mode(), length, stream, &on_chunk)
             .await;

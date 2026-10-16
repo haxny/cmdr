@@ -14,12 +14,12 @@ use super::*;
 use std::pin::Pin;
 use std::time::Duration;
 
-use crate::file_system::volume::WriteMode;
-use crate::file_system::volume::{InMemoryVolume, StreamLength, StreamWriteProgress, StreamWritten, VolumeError};
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::types::{
     WriteConflictEvent, WriteConflictResolvedEvent, WriteErrorEvent, WriteProgressEvent, WriteSourceItemDoneEvent,
 };
+use cmdr_fs::volume::WriteMode;
+use cmdr_fs::volume::{InMemoryVolume, StreamLength, StreamWriteProgress, StreamWritten, VolumeError};
 use std::sync::atomic::{AtomicU8, Ordering};
 
 pub(super) fn make_state() -> Arc<WriteOperationState> {
@@ -177,7 +177,7 @@ impl Volume for MoveRenameFailsDestVolume {
     fn list_directory<'a>(
         &'a self,
         path: &'a Path,
-        on_progress: Option<&'a (dyn Fn(crate::file_system::volume::ListingProgress) + Sync)>,
+        on_progress: Option<&'a (dyn Fn(cmdr_fs::volume::ListingProgress) + Sync)>,
     ) -> Pin<Box<dyn Future<Output = Result<Vec<cmdr_fs::entry::FileEntry>, VolumeError>> + Send + 'a>> {
         self.inner.list_directory(path, on_progress)
     }
@@ -208,17 +208,14 @@ impl Volume for MoveRenameFailsDestVolume {
     }
     fn get_space_info<'a>(
         &'a self,
-    ) -> Pin<Box<dyn Future<Output = Result<crate::file_system::volume::SpaceInfo, VolumeError>> + Send + 'a>> {
+    ) -> Pin<Box<dyn Future<Output = Result<cmdr_fs::volume::SpaceInfo, VolumeError>> + Send + 'a>> {
         self.inner.get_space_info()
     }
     fn open_read_stream<'a>(
         &'a self,
         path: &'a Path,
-    ) -> Pin<
-        Box<
-            dyn Future<Output = Result<Box<dyn crate::file_system::volume::VolumeReadStream>, VolumeError>> + Send + 'a,
-        >,
-    > {
+    ) -> Pin<Box<dyn Future<Output = Result<Box<dyn cmdr_fs::volume::VolumeReadStream>, VolumeError>> + Send + 'a>>
+    {
         self.inner.open_read_stream(path)
     }
     fn write_from_stream<'a>(
@@ -226,7 +223,7 @@ impl Volume for MoveRenameFailsDestVolume {
         dest: &'a Path,
         mode: WriteMode,
         length: StreamLength,
-        stream: Box<dyn crate::file_system::volume::VolumeReadStream>,
+        stream: Box<dyn cmdr_fs::volume::VolumeReadStream>,
         on_progress: &'a (dyn Fn(StreamWriteProgress) -> std::ops::ControlFlow<()> + Sync),
     ) -> Pin<Box<dyn Future<Output = Result<StreamWritten, VolumeError>> + Send + 'a>> {
         self.inner.write_from_stream(dest, mode, length, stream, on_progress)

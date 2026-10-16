@@ -35,9 +35,9 @@ use super::super::super::transfer_probe::render_live_dump;
 use super::super::faulty_volume::forward_volume_methods;
 use super::test_support::make_state;
 use super::*;
-use crate::file_system::volume::WriteMode;
-use crate::file_system::volume::{InMemoryVolume, StreamLength, StreamWriteProgress, StreamWritten, VolumeError};
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
+use cmdr_fs::volume::WriteMode;
+use cmdr_fs::volume::{InMemoryVolume, StreamLength, StreamWriteProgress, StreamWritten, VolumeError};
 
 /// How long a leaf lingers inside `write_from_stream` waiting for siblings to
 /// join it, so the table can be photographed with several writes really open.
@@ -103,7 +103,7 @@ impl Volume for TablePhotographingDest {
         dest: &'a Path,
         mode: WriteMode,
         length: StreamLength,
-        stream: Box<dyn crate::file_system::volume::VolumeReadStream>,
+        stream: Box<dyn cmdr_fs::volume::VolumeReadStream>,
         on_progress: &'a (dyn Fn(StreamWriteProgress) -> std::ops::ControlFlow<()> + Sync),
     ) -> Pin<Box<dyn Future<Output = Result<StreamWritten, VolumeError>> + Send + 'a>> {
         Box::pin(async move {

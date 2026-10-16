@@ -37,9 +37,9 @@ use tokio::sync::oneshot;
 
 use crate::file_system::volume::manager::get_volume_manager;
 
-use crate::file_system::volume::{DEFAULT_VOLUME_ID, Volume};
-use crate::ignore_poison::IgnorePoison;
 use crate::operation_log_host::operation_log;
+use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::volume::{DEFAULT_VOLUME_ID, Volume};
 use cmdr_operation_log::rollback::{
     ActRefusal, InverseAct, InversePlan, RollbackDispatch, RollbackProgress, RollbackRefusal, RollbackReport,
     RollbackRunner, SkipBreakdown, execute_rollback, inverse_kind, rollback_operation, undo_order,
@@ -194,7 +194,7 @@ impl RollbackRunner for ReversalRunner {
                     let renames_in_one_call = same_volume
                         && matches!(
                             from.rename_work(from_path).await,
-                            Ok(crate::file_system::volume::RenameWork::OneCall)
+                            Ok(cmdr_fs::volume::RenameWork::OneCall)
                         );
                     if renames_in_one_call {
                         // A same-FS move / rename-back / trash-restore: one rename,
@@ -363,7 +363,7 @@ fn spawn_managed_inverse(
         }
     }
     if lanes.is_empty() {
-        lanes.push(crate::file_system::volume::LaneKey::new(DEFAULT_VOLUME_ID));
+        lanes.push(cmdr_fs::volume::LaneKey::new(DEFAULT_VOLUME_ID));
     }
 
     let op_type = write_op_type(inverse_kind(original.kind));
@@ -621,7 +621,7 @@ impl Reversal {
 
     /// Every progress frame emitted so far, oldest first.
     pub(crate) fn frames(&self) -> Vec<WriteProgressEvent> {
-        use crate::ignore_poison::IgnorePoison;
+        use cmdr_fs::ignore_poison::IgnorePoison;
         self.events.progress.lock_ignore_poison().clone()
     }
 
@@ -693,7 +693,7 @@ mod tests {
     /// copied and then deleted, never through the `rename` that would fail.
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn a_same_volume_restore_that_renames_by_copy_goes_back_by_copy() {
-        use crate::file_system::volume::{InMemoryVolume, Volume};
+        use cmdr_fs::volume::{InMemoryVolume, Volume};
         use std::path::Path;
 
         let volume: Arc<dyn Volume> = Arc::new(

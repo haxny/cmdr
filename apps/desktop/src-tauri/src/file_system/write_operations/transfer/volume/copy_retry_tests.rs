@@ -8,18 +8,18 @@
 
 use super::tests::make_state;
 use super::*;
-use crate::file_system::volume::{
-    DirectoryCreation, InMemoryVolume, ListingProgress, ScanConflict, SourceItemInfo, SpaceInfo, StreamLength,
-    StreamWriteProgress, Volume, VolumeReadStream,
-};
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::test_support::TestOperationGuard;
 use crate::file_system::write_operations::types::ConflictResolution;
 use cmdr_fs::entry::FileEntry;
+use cmdr_fs::volume::{
+    DirectoryCreation, InMemoryVolume, ListingProgress, ScanConflict, SourceItemInfo, SpaceInfo, StreamLength,
+    StreamWriteProgress, Volume, VolumeReadStream,
+};
 use std::pin::Pin as StdPin;
 
 use super::super::super::conflict_responder_test_support::{ConflictResponderSink, file_conflict_count};
-use crate::file_system::volume::{StreamWritten, WriteMode};
+use cmdr_fs::volume::{StreamWritten, WriteMode};
 
 /// A destination that fails the first `fail_writes` writes of ONE named file and
 /// otherwise behaves exactly like the `InMemoryVolume` it wraps.

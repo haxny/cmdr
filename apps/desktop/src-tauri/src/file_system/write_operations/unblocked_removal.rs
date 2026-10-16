@@ -16,7 +16,7 @@ use std::sync::Arc;
 
 use cmdr_fs::metadata::{ParentOpening, Unblock, open_parent_folder};
 
-use crate::file_system::volume::{Volume, VolumeError};
+use cmdr_fs::volume::{Volume, VolumeError};
 
 /// Why [`delete_clearing_blockers`] left the item where it is.
 #[derive(Debug)]

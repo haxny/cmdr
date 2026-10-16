@@ -43,7 +43,7 @@ use super::super::scratch_dir::ScratchDir;
 use super::super::state::{WriteOperationState, is_cancelled};
 use super::super::types::WriteOperationError;
 use super::edit_error::EditError;
-use crate::file_system::volume::{Volume, VolumeError, WriteMode};
+use cmdr_fs::volume::{Volume, VolumeError, WriteMode};
 use cmdr_local::LocalPosixVolume;
 
 #[derive(Debug, Clone, Copy)]
@@ -224,7 +224,7 @@ async fn upload_archive(
             bytes_total: size,
         });
     }
-    let progress = |progress: crate::file_system::volume::StreamWriteProgress| {
+    let progress = |progress: cmdr_fs::volume::StreamWriteProgress| {
         let written = progress.bytes_written;
         let total = size;
         if let Some(observer) = progress_observer {
@@ -249,7 +249,7 @@ async fn upload_archive(
         .write_from_stream(
             remote_temp,
             WriteMode::CreateOrReplace,
-            crate::file_system::volume::StreamLength::Known(size),
+            cmdr_fs::volume::StreamLength::Known(size),
             stream,
             &progress,
         )

@@ -20,9 +20,9 @@ use std::sync::Mutex;
 
 use super::test_support::make_state;
 use super::*;
-use crate::file_system::volume::{InMemoryVolume, Volume, VolumeError};
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::transfer::volume::forward_volume_methods;
+use cmdr_fs::volume::{InMemoryVolume, Volume, VolumeError};
 
 type Edit = Box<dyn FnOnce() -> Pin<Box<dyn Future<Output = ()> + Send>> + Send>;
 

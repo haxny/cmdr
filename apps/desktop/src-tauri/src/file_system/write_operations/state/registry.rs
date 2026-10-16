@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, LazyLock, RwLock};
 
 use super::{OperationIntent, WriteOperationState, WriteProgressEvent};
-use crate::ignore_poison::RwLockIgnorePoison;
+use cmdr_fs::ignore_poison::RwLockIgnorePoison;
 
 /// The live [`WriteOperationState`] of every registered operation, keyed by
 /// operation id.

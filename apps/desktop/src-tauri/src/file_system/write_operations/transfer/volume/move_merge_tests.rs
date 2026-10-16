@@ -19,9 +19,9 @@ use super::super::move_same::move_within_same_volume_with_progress;
 use super::super::safety_oracle::{SafetySpec, assert_operation_was_safe};
 use super::test_support::{make_state_with_interval_ms, make_volumes};
 use super::*;
-use crate::file_system::volume::InMemoryVolume;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::types::ConflictResolution;
+use cmdr_fs::volume::InMemoryVolume;
 
 /// A folder move that MERGES must keep the source of every child it skipped.
 ///

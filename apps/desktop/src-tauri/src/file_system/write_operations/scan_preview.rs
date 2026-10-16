@@ -54,7 +54,7 @@ use super::scan_cache::{
 use super::scan_watchdog::{SCAN_INACTIVITY_LIMIT, ScanTarget, ScanWatchdog};
 use super::state::ScanPreviewState;
 use super::types::{ScanPreviewErrorEvent, ScanPreviewPurpose, ScanPreviewStartResult, WriteOperationError};
-use crate::file_system::volume::Volume;
+use cmdr_fs::volume::Volume;
 
 mod local;
 mod volume;

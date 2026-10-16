@@ -19,9 +19,9 @@ use tokio::time::Duration;
 
 use crate::deadline::{Deadline, timeout_detached_within};
 use crate::file_system::volume::manager::get_volume_manager;
-use crate::file_system::volume::{ScanConflict, Volume, VolumeError};
 use crate::unregistered_volumes::{Unregistered, why_unregistered};
 use cmdr_fs::entry::FileEntry;
+use cmdr_fs::volume::{ScanConflict, Volume, VolumeError};
 
 use super::routing::{resolve_dest_path, resolve_source_volume, transfer_would_land_on_its_source};
 
@@ -140,9 +140,9 @@ pub(crate) async fn scan_volume_for_conflicts_within(
     // reports "no conflicts" for a folder full of them.
     let dest_path = resolve_dest_path(&volume, dest_path.to_string_lossy().into_owned());
 
-    let mut source_items: Vec<crate::file_system::SourceItemInfo> = source_items
+    let mut source_items: Vec<cmdr_fs::volume::SourceItemInfo> = source_items
         .into_iter()
-        .map(|item| crate::file_system::SourceItemInfo {
+        .map(|item| cmdr_fs::volume::SourceItemInfo {
             name: item.name,
             size: item.size,
             modified: item.modified,
@@ -378,7 +378,7 @@ fn stats_from_watched_panes(source_volume_id: &str, paths: &[PathBuf]) -> (Vec<(
 /// caller's `size` too: a directory's conflict-UI size is meaningless and the
 /// dir-dir case never renders one.
 fn merge_source_types_from_stats(
-    source_items: &mut [crate::file_system::SourceItemInfo],
+    source_items: &mut [cmdr_fs::volume::SourceItemInfo],
     stats: &[(PathBuf, FileEntry)],
     single_source: Option<&Path>,
 ) {

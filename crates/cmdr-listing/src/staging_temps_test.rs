@@ -1,4 +1,4 @@
-//! The listing side of `file_system::staging`: a scratch file a running
+//! The listing side of `cmdr_fs::staging`: a scratch file a running
 //! operation owns stays out of the pane, and everything else doesn't.
 //!
 //! The 2026-07-31 wedge's visible tail: a 768-file copy to a NAS finished with

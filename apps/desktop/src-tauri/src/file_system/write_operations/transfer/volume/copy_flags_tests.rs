@@ -19,10 +19,10 @@ use cmdr_fs::metadata::{CarriedMetadata, MetadataReport, UserFlags};
 
 use super::copy_volumes_with_progress;
 use super::faulty_volume::forward_volume_methods;
-use crate::file_system::volume::{InMemoryVolume, Volume};
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::state::WriteOperationState;
 use crate::file_system::write_operations::types::{ConflictResolution, VolumeCopyConfig};
+use cmdr_fs::volume::{InMemoryVolume, Volume};
 
 /// A destination that counts the `apply_metadata` calls on FILES, the one a
 /// copy spends after a landing.

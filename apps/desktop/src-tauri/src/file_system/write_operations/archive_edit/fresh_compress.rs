@@ -25,7 +25,7 @@ use super::fresh_rows::CompressRows;
 use super::fresh_validate::{ExpectedIndex, check_entry_names, validate_stage};
 use super::fresh_zip::{FreshZipCancellation, FreshZipError, FreshZipProgressObserver, spawn_fresh_zip_with_progress};
 use crate::file_system::volume::manager::get_volume_manager;
-use crate::file_system::volume::{
+use cmdr_fs::volume::{
     BackendKind, LaneKey, MutationEvent, StreamLength, StreamWriteProgress, Volume, VolumeError, VolumeReadStream,
     WriteMode,
 };
@@ -57,10 +57,8 @@ impl VolumeReadStream for PausableSpoolStream {
 
     /// This operation's own Cancel and pause, for a destination that buffers
     /// ahead of this stream (S3).
-    fn stop_signal(&self) -> crate::file_system::volume::ScanStop {
-        crate::file_system::volume::ScanStop::new(
-            Arc::clone(&self.state) as Arc<dyn crate::file_system::volume::ScanStopSignal>
-        )
+    fn stop_signal(&self) -> cmdr_fs::volume::ScanStop {
+        cmdr_fs::volume::ScanStop::new(Arc::clone(&self.state) as Arc<dyn cmdr_fs::volume::ScanStopSignal>)
     }
 
     fn modified_at(&self) -> Option<std::time::SystemTime> {

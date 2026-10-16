@@ -335,8 +335,8 @@ fn cross_fs_move_keeps_folder_dates() {
 /// nobody asked about, and a failure that has to unwind cleanly.
 #[test]
 fn a_local_move_never_acts_on_a_preview_of_a_different_selection() {
-    use crate::file_system::volume::CopyScanResult;
     use crate::file_system::write_operations::state::{CachedScanResult, FileInfo, insert_scan_result};
+    use cmdr_fs::volume::CopyScanResult;
 
     let tmp = tempfile::tempdir().expect("tempdir");
     let src_dir = tmp.path().join("src");

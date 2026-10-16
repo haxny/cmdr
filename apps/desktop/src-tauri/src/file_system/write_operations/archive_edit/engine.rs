@@ -20,8 +20,8 @@ use super::super::types::{
 use super::edit_error::EditError;
 use super::remote::{RemoteCommitProgress, RemoteProgressObserver, pull_apply_upload_swap};
 use crate::file_system::volume::manager::get_volume_manager;
-use crate::ignore_poison::IgnorePoison;
 use cmdr_archive::mutator::{MutationError, MutationHooks, MutationProgress};
+use cmdr_fs::ignore_poison::IgnorePoison;
 
 /// Runs a plan+apply closure against an archive, transparently LOCAL or REMOTE.
 ///
