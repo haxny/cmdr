@@ -39,7 +39,7 @@ pub(crate) fn live_space_info_for_path(path: &Path) -> Result<SpaceInfo, VolumeE
 }
 
 /// Gets space information using `statvfs`. Used as the primary method on Linux and as a
-/// fallback on macOS, and as macOS's whole answer in a test build ([`get_volume_space`]).
+/// fallback on macOS, and as macOS's whole answer in a test build (`get_volume_space`).
 pub(crate) fn get_space_info_statvfs(path: &Path) -> Result<SpaceInfo, VolumeError> {
     use std::ffi::CString;
 

@@ -46,8 +46,8 @@ pub trait ListingHost: Send + Sync {
     /// The guarantee is the same one a `list_directory` call gives: the state as
     /// of the most recent observation, not as of this instant. A backend whose
     /// watch can silently miss changes says so by reporting anything other than
-    /// [`WatchCoverage::EveryWriter`](crate::volume::WatchCoverage::EveryWriter)
-    /// from `Volume::listing_watch_coverage`, and the oracle then declines for it.
+    /// [`WatchCoverage::EveryWriter`] from `Volume::listing_watch_coverage`, and
+    /// the oracle then declines for it.
     fn authoritative_listing(&self, volume_id: &str, path: &Path) -> Option<Vec<FileEntry>>;
 
     /// The volume ids under `volume_id_prefix` that a pane is currently showing,
