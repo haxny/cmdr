@@ -671,6 +671,10 @@ pub fn run() {
 
             menu::install::at_startup(app, &saved_settings)?;
 
+            // Before the first status check: an older version may have left the license key in
+            // license.json in plain text; this moves it into the secret store.
+            licensing::move_license_key_into_secret_store(app.handle());
+
             // Set the window title from the licence status. The same call runs again on every
             // status change, so activating a licence mid-session clears "Personal use only"
             // from the Dock's window list without a relaunch.

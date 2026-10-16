@@ -512,9 +512,8 @@ pub fn refresh_window_title(app: &tauri::AppHandle) {
 /// Reset license data, returning the app to unlicensed (Personal) state.
 pub fn reset_license(app: &tauri::AppHandle) {
     crate::licensing::verification::clear_license_cache();
+    crate::licensing::key_storage::clear_stored_license(app);
     if let Ok(store) = app.store("license.json") {
-        store.delete("license_key");
-        store.delete("license_short_code");
         store.delete(STORE_KEY_CACHED_STATUS);
         store.delete(STORE_KEY_LAST_VALIDATION);
         store.delete(STORE_KEY_EXPIRATION_SHOWN);

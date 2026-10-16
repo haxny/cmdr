@@ -15,6 +15,8 @@ counterpart: `src/lib/licensing/CLAUDE.md`.
 - **`validation_client.rs`**: `POST /validate` (with a nonce) and `POST /activate`; debug → `localhost:8787`, release →
   `api.getcmdr.com`, E2E → no request. Returns `ValidationOutcome`.
 - **`device_id.rs`**: hashed `IOPlatformUUID` for fair-use tracking.
+- **`key_storage.rs`**: the key in the secret store (Keychain), the `license.json` marker, and the launch-time
+  migration out of the plaintext file.
 
 ## Must-knows
 
@@ -32,6 +34,10 @@ counterpart: `src/lib/licensing/CLAUDE.md`.
 - **`validate_license_async` returns `Result`**: `Err` means "couldn't get a trustworthy answer", `Ok(Personal)` means
   "the server rejected it". Single-flight with a 60 s failure cooldown for periodic runs; explicit activation always
   goes through.
+- **The key lives in the secret store, ❌ never `license.json`** (its payload carries the buyer's email). The file holds
+  only non-secret state plus a marker, so a Personal install never touches the Keychain. The launch migration drops
+  the file's plaintext key only after a verified read-back; on any failure the file stays as it was and the license
+  keeps working from it. `DETAILS.md` § Key storage.
 - **Time-limited licenses use `effective_now`** (the later of the clock and `license_clock_high_water`), so winding the
   clock back can't stretch one. Perpetual licenses never read the clock.
 - **`CMDR_MOCK_LICENSE` bypasses everything** (debug and `playwright-e2e` builds only): `personal`, `personal_reminder`,

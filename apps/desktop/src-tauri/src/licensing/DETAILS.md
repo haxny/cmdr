@@ -7,10 +7,39 @@ Depth and rationale. `CLAUDE.md` holds the must-knows; the flows, decisions, and
 1. In-memory `LICENSE_CACHE: Mutex<Option<LicenseInfo>>`: avoids re-parsing/verifying the Ed25519 signature on every
    call.
 2. `license.json` via `tauri-plugin-store`: persists the last verified server answer across sessions. Keys:
-   `license_key`, `license_short_code`, `cached_license_status`, `last_validation_timestamp`, `expiration_modal_shown`,
-   `commercial_reminder_last_dismissed`, `license_clock_high_water`.
+   `license_key_in_secret_store`, `cached_license_status`, `last_validation_timestamp`, `expiration_modal_shown`,
+   `commercial_reminder_last_dismissed`, `license_clock_high_water`. No secrets: the key itself is in the secret store
+   (§ Key storage).
 
 What the cached answer is worth as it ages: § Offline policy.
+
+## Key storage
+
+`key_storage.rs` keeps the full key and its short code as one JSON entry (`license.key`) in `crate::secrets::store()`:
+the Keychain on macOS (service `Cmdr`), Secret Service or the encrypted file on Linux, the plain file in dev and E2E.
+`license.json` gets only `license_key_in_secret_store: true`.
+
+- **Why the Keychain**: the key's payload embeds the buyer's email, and the key (or the short code, through
+  `/activate`) is what activates a license. That's a credential, so it sits where SMB passwords and AI API keys do,
+  and `license.json` (default file permissions, in Time Machine backups) holds nothing worth stealing. Part of the
+  CRA at-rest stance in `docs/threat-model.md` § 11.
+- **Why a marker**: status checks run often. Without it, every check on a Personal install would ask the Keychain for
+  a key that isn't there. With it, an install that never activated never touches the Keychain at all.
+- **Migration** (`move_license_key_into_secret_store`, from `lib.rs` setup before the first status check): older
+  versions wrote `license_key` and `license_short_code` into `license.json` in plain text. The migration writes them
+  to the secret store, reads the entry back, and only on a byte-identical read-back sets the marker and deletes the
+  two file keys. Any failure (a denied prompt, a locked keychain, a mismatched read-back) leaves the file exactly as it
+  was, `load` keeps reading the key from it, and the next launch retries. Never loses a license.
+- **A key in the file wins over the secret store** in `load`. It's either a pending migration (same key) or a newer
+  key an older version wrote after a downgrade, which the next migration moves over.
+- **A read error latches** (`KEY_UNREADABLE` in `verification.rs`): the license reads as absent until relaunch, a new
+  activation, or a reset, so a denied Keychain prompt can't come back on every status check.
+- **Keychain prompts**: an item Cmdr created is readable by Cmdr without a dialog, as long as the code signature
+  matches the item's ACL (a Developer ID build updating itself keeps its designated requirement). Dev and E2E never
+  reach the Keychain (`CMDR_SECRET_STORE=file`, `docs/tooling/instance-isolation.md`). `commit_license` and
+  `reset_license` run on a blocking task with no deadline, since a write can still raise a consent dialog.
+- **Leftovers**: migrating doesn't reach copies outside the live file, like a Time Machine snapshot of an older
+  `license.json` or freed APFS blocks. Accepted: same exposure as before, shrinking as backups age out.
 
 ## Offline policy
 
@@ -96,7 +125,9 @@ Network error / unverified   → commitLicense(fullKey, shortCode) → persist +
 Pasting the full key (from the license email) skips `/activate`, so with no server at all the key verifies, commits on
 the network-error path, and the offline policy carries it from there.
 
-`commit_license` does: store to `license.json`, write initial `cached_license_status`, update `LICENSE_CACHE`.
+`commit_license` does: store the key in the secret store (`StorageError` and nothing stored if that fails), write
+initial `cached_license_status`, update `LICENSE_CACHE`. The frontend shows a `storageError` with the generic "try
+again" copy.
 
 - `VerifyResult` fields: `info` (LicenseInfo), `full_key`, `short_code`.
 - `LicenseInfo` fields: `email`, `transaction_id`, `issued_at`, `organization_name`, `license_type`, `short_code`,
@@ -242,4 +273,4 @@ definitive and cached.
 
 - External: `ed25519-dalek`, `base64`, `reqwest`, `tauri_plugin_store`, `sha2`, `chrono` (date parsing), `rand`
   (nonces), `core-foundation` (macOS).
-- Internal: none.
+- Internal: `crate::secrets` (the key's storage).

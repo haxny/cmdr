@@ -3,12 +3,14 @@
 use crate::ignore_poison::IgnorePoison;
 use crate::licensing::LicenseData;
 use crate::licensing::app_status;
+use crate::licensing::key_storage::{self, LICENSE_FILE, StoredLicense};
 use crate::licensing::redact_email;
 use crate::licensing::validation_client::{activate_short_code, is_short_code};
 use base64::{Engine, engine::general_purpose::STANDARD as BASE64};
 use ed25519_dalek::{Signature, Verifier, VerifyingKey};
 use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
+use std::sync::atomic::{AtomicBool, Ordering};
 use tauri_plugin_store::StoreExt;
 
 /// Typed errors for the license activation flow.
@@ -32,6 +34,9 @@ pub enum LicenseActivationError {
     NetworkError { detail: String },
     /// License server returned an unexpected response.
     ServerError { detail: String },
+    /// Couldn't store the key (the Keychain refused the write, or `license.json` didn't open).
+    /// Nothing was stored, so trying again is safe.
+    StorageError { detail: String },
 }
 
 impl std::fmt::Display for LicenseActivationError {
@@ -44,6 +49,7 @@ impl std::fmt::Display for LicenseActivationError {
             Self::ShortCodeNotFound => write!(f, "License code not found"),
             Self::NetworkError { detail } => write!(f, "Failed to connect to license server: {detail}"),
             Self::ServerError { detail } => write!(f, "Invalid response from license server: {detail}"),
+            Self::StorageError { detail } => write!(f, "Couldn't store the license key: {detail}"),
         }
     }
 }
@@ -76,8 +82,10 @@ const PUBLIC_KEY_HEX: &str = "2b40172372fc65384f2f8e640fc4d546b1b20045be9187ea46
 #[cfg(not(debug_assertions))]
 const PUBLIC_KEY_HEX: &str = "c3b18e765fc5c74f9fb7f3a9869d14c6bdeda1f28ec85aa6182de78113930d26";
 
-const STORE_KEY_LICENSE: &str = "license_key";
-const STORE_KEY_SHORT_CODE: &str = "license_short_code";
+/// Set when the secret store errored on reading the key (a denied Keychain prompt, a locked
+/// keyring). Status checks run often, so retrying each time could raise a prompt per check; this
+/// holds the license as unreadable until the next launch, a new activation, or a reset.
+static KEY_UNREADABLE: AtomicBool = AtomicBool::new(false);
 
 /// Information about the current license.
 #[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
@@ -137,9 +145,10 @@ pub async fn verify_license_async(input: &str) -> Result<VerifyResult, LicenseAc
     })
 }
 
-/// Persist a verified license key to disk and update caches.
+/// Persist a verified license key to the secret store and update caches.
 /// This is the "save it" step: only call after verification confirms the key is good
 /// (or on network fallback when the key is crypto-valid but the server is unreachable).
+/// On `Err`, nothing was stored.
 pub fn commit_license(
     app: &tauri::AppHandle,
     license_key: &str,
@@ -150,17 +159,22 @@ pub fn commit_license(
     // Prefer the explicit short code (user typed it), fall back to the one embedded in the payload
     let resolved_short_code = short_code.map(|s| s.to_string()).or(data.short_code.clone());
 
-    // Store the license key and optionally the short code
     let store = app
-        .store("license.json")
-        .map_err(|e| LicenseActivationError::ServerError {
-            detail: format!("Failed to open store: {}", e),
+        .store(LICENSE_FILE)
+        .map_err(|e| LicenseActivationError::StorageError {
+            detail: format!("Couldn't open {LICENSE_FILE}: {e}"),
         })?;
 
-    store.set(STORE_KEY_LICENSE, serde_json::json!(license_key));
-    if let Some(ref code) = resolved_short_code {
-        store.set(STORE_KEY_SHORT_CODE, serde_json::json!(code));
-    }
+    // The key goes to the secret store (the Keychain on macOS); license.json only gets the marker.
+    let stored = StoredLicense {
+        license_key: license_key.to_string(),
+        short_code: resolved_short_code.clone(),
+    };
+    key_storage::save(&*store, crate::secrets::store(), &stored).map_err(|e| {
+        log::warn!("Couldn't store the license key in the secret store: {e}");
+        LicenseActivationError::StorageError { detail: e.to_string() }
+    })?;
+    KEY_UNREADABLE.store(false, Ordering::Relaxed);
 
     // Write an initial cached status so get_app_status returns the correct license type
     // even before server validation. Deliberately does NOT write last_validation_timestamp,
@@ -205,12 +219,26 @@ pub fn get_license_info(app: &tauri::AppHandle) -> Option<LicenseInfo> {
         return Some(info.clone());
     }
 
-    // Slow path: read from store and verify Ed25519 signature
-    let store = app.store("license.json").ok()?;
-    let license_key = store.get(STORE_KEY_LICENSE)?.as_str()?.to_string();
-    let short_code = store
-        .get(STORE_KEY_SHORT_CODE)
-        .and_then(|v| v.as_str().map(|s| s.to_string()));
+    if KEY_UNREADABLE.load(Ordering::Relaxed) {
+        return None;
+    }
+
+    // Slow path: read the key (secret store, or a not-yet-migrated license.json) and verify its
+    // Ed25519 signature
+    let store = app.store(LICENSE_FILE).ok()?;
+    let StoredLicense {
+        license_key,
+        short_code,
+    } = match key_storage::load(&*store, crate::secrets::store()) {
+        Ok(stored) => stored?,
+        Err(e) => {
+            log::warn!(
+                "Couldn't read the license key from the secret store, treating it as absent until relaunch: {e}"
+            );
+            KEY_UNREADABLE.store(true, Ordering::Relaxed);
+            return None;
+        }
+    };
 
     let info = validate_license_key(&license_key).ok().map(|data| {
         // Prefer the stored short code, fall back to the one embedded in the payload
@@ -237,6 +265,7 @@ pub fn get_license_info(app: &tauri::AppHandle) -> Option<LicenseInfo> {
 /// Clear the in-memory license cache. Called when the license is reset.
 pub fn clear_license_cache() {
     *LICENSE_CACHE.lock_ignore_poison() = None;
+    KEY_UNREADABLE.store(false, Ordering::Relaxed);
 }
 
 /// Validate a license key and extract the data.

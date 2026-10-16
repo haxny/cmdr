@@ -1,8 +1,9 @@
 # Secrets
 
 Generic key-value secret storage with pluggable backends. The trait stores opaque `&[u8]` / `Vec<u8>`; callers own
-their serialization. Consumers: `network/keychain.rs` (SMB creds, `username\0password` under `smb://server/share` keys)
-and `ai/api_keys.rs` (cloud AI API keys, raw UTF-8 under `ai.apiKey.<provider>` keys).
+their serialization. Consumers: `network/keychain.rs` (SMB creds, `username\0password` under `smb://server/share` keys),
+`ai/api_keys.rs` (cloud AI API keys, raw UTF-8 under `ai.apiKey.<provider>` keys), and `licensing/key_storage.rs` (the
+license key and short code, JSON under `license.key`).
 
 ## Module map
 

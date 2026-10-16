@@ -5,6 +5,7 @@
 
 mod app_status;
 mod device_id;
+mod key_storage;
 mod offline_policy;
 mod validation_client;
 mod verification;
@@ -14,6 +15,7 @@ pub use app_status::{
     mark_expiration_modal_shown, needs_validation, refresh_window_title, reset_license, update_cached_status,
     validate_license_async, write_cached_status_without_validation,
 };
+pub use key_storage::move_license_key_into_secret_store;
 pub use verification::{
     LicenseActivationError, LicenseInfo, VerifyResult, commit_license, get_license_info, verify_license_async,
 };

@@ -18,16 +18,23 @@ pub async fn verify_license(license_key: String) -> Result<licensing::VerifyResu
     licensing::verify_license_async(&license_key).await
 }
 
-/// Persist a verified license key to disk and update caches.
+/// Persist a verified license key to the secret store and update caches.
 /// Only call after verification confirms the key is valid.
+///
+/// On a blocking task with no deadline: the Keychain write can raise a consent dialog, which
+/// must neither stall the main thread nor be cut off while the person reads it.
 #[tauri::command]
 #[specta::specta]
-pub fn commit_license(
+pub async fn commit_license(
     app: tauri::AppHandle,
     license_key: String,
     short_code: Option<String>,
 ) -> Result<licensing::LicenseInfo, licensing::LicenseActivationError> {
-    licensing::commit_license(&app, &license_key, short_code.as_deref())
+    tokio::task::spawn_blocking(move || licensing::commit_license(&app, &license_key, short_code.as_deref()))
+        .await
+        .map_err(|e| licensing::LicenseActivationError::StorageError {
+            detail: format!("The license commit task stopped: {e}"),
+        })?
 }
 
 /// Get information about the current license (if any).
@@ -51,11 +58,13 @@ pub fn mark_commercial_reminder_dismissed(app: tauri::AppHandle) {
     licensing::mark_commercial_reminder_dismissed(&app);
 }
 
-/// Reset license data (debug builds only).
+/// Reset license data (debug builds only). On a blocking task, since it deletes the Keychain entry.
 #[tauri::command]
 #[specta::specta]
-pub fn reset_license(app: tauri::AppHandle) {
-    licensing::reset_license(&app);
+pub async fn reset_license(app: tauri::AppHandle) {
+    if let Err(e) = tokio::task::spawn_blocking(move || licensing::reset_license(&app)).await {
+        log::warn!("The license reset task stopped: {e}");
+    }
 }
 
 /// Check if license needs re-validation with the server.

@@ -40,6 +40,7 @@ export type LicenseActivationErrorCode =
   | 'shortCodeNotFound'
   | 'networkError'
   | 'serverError'
+  | 'storageError'
 
 /** Typed activation error returned by the backend. */
 export interface LicenseActivationError {
@@ -55,6 +56,7 @@ const validActivationErrorCodes = new Set<string>([
   'shortCodeNotFound',
   'networkError',
   'serverError',
+  'storageError',
 ])
 
 /**

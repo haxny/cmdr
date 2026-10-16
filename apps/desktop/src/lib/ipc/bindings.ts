@@ -2280,8 +2280,11 @@ export const commands = {
   verifyLicense: (licenseKey: string) =>
     typedError<VerifyResult, LicenseActivationError>(__TAURI_INVOKE('verify_license', { licenseKey })),
   /**
-   *  Persist a verified license key to disk and update caches.
+   *  Persist a verified license key to the secret store and update caches.
    *  Only call after verification confirms the key is valid.
+   *
+   *  On a blocking task with no deadline: the Keychain write can raise a consent dialog, which
+   *  must neither stall the main thread nor be cut off while the person reads it.
    */
   commitLicense: (licenseKey: string, shortCode: string | null) =>
     typedError<LicenseInfo, LicenseActivationError>(__TAURI_INVOKE('commit_license', { licenseKey, shortCode })),
@@ -2302,7 +2305,7 @@ export const commands = {
   markExpirationModalShown: () => __TAURI_INVOKE<void>('mark_expiration_modal_shown'),
   // Mark the commercial reminder as dismissed (resets the 30-day timer).
   markCommercialReminderDismissed: () => __TAURI_INVOKE<void>('mark_commercial_reminder_dismissed'),
-  // Reset license data (debug builds only).
+  // Reset license data (debug builds only). On a blocking task, since it deletes the Keychain entry.
   resetLicense: () => __TAURI_INVOKE<void>('reset_license'),
   // Check if license needs re-validation with the server.
   needsLicenseValidation: () => __TAURI_INVOKE<boolean>('needs_license_validation'),
@@ -9861,6 +9864,11 @@ export type LicenseActivationError =
   | { code: 'networkError'; detail: string }
   // License server returned an unexpected response.
   | { code: 'serverError'; detail: string }
+  /**
+   *  Couldn't store the key (the Keychain refused the write, or `license.json` didn't open).
+   *  Nothing was stored, so trying again is safe.
+   */
+  | { code: 'storageError'; detail: string }
 
 // Information about the current license.
 export type LicenseInfo = {
