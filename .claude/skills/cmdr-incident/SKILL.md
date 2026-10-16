@@ -27,9 +27,10 @@ minutes, not an hour.
    it in UTC (`date -u +%Y-%m-%dT%H:%MZ`). Stockholm is UTC+2 in summer time and UTC+1 in winter.
 2. **Deadlines.** Compute them from the aware time per § Deadlines (severe incident or exploited vulnerability; unsure
    means severe incident) and post them to David as a short list with weekday, UTC, and Stockholm time.
-3. **Open the issue** (pre-approved): `gh issue create -R vdavid/cmdr-reports --label claude-created` titled
-   `INCIDENT: <short name>`, with the aware time, the deadlines, the source, what's known, and an empty UTC timeline.
-   Log every later action there as a comment with its UTC time.
+3. **Open the issue** (pre-approved): `gh issue create -R vdavid/cmdr-reports --label claude-created` (add
+   `--label security-gap` when it's a flaw in Cmdr or its servers) titled `INCIDENT: <short name>`, with the aware time,
+   the deadlines, the source, what's known, and an empty UTC timeline. Log every later action there as a comment with
+   its UTC time.
 4. **Contain.** Walk David through § First hour step 4 and do the pre-approved parts. Don't wait for the root cause.
 5. **Day-1 audit-log checks**, read-only, per § Day 1. Run what the CLI and APIs reach, with the access recipes in the
    vault's `agents/tooling/` notes (`cloudflare.md`, `paddle.md`, `posthog.md`), and since the earliest plausible leak:

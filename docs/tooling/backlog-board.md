@@ -13,6 +13,12 @@ three-hourly cron copies that line onto the three fields, usually within a few h
 it can't. Grammar and mechanics: `apps/api-server/DETAILS.md` § Card ratings. To re-rate a report card, set the fields
 by hand or edit the comment's `Rating:` line; the cron never overwrites a field from a line it already applied.
 
+## Labels
+
+- **`security-gap`** (`vdavid/cmdr-reports`): a known weakness in Cmdr or its servers that `docs/threat-model.md` only
+  calls "tracked privately". Every release lists the open ones (`docs/guides/releasing.md`, step 1). Not for error
+  reports, crashes, feedback, or account-hygiene tasks. It stays on the issue after closing, as history.
+
 ## Severity
 
 Bugs and security issues only; leave it blank on everything else. A security card takes its severity from its CVSS v4.0

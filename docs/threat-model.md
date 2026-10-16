@@ -15,7 +15,7 @@ day.
 
 ❗ This repo is public. Gaps an attacker could use before they're fixed are tracked in a private tracker, not here. This
 file names the boundary and says "tracked privately"; don't add exploit detail. A newly found gap goes to the private
-tracker first.
+tracker (`vdavid/cmdr-reports`) first, labeled `security-gap`, which is what the release check lists.
 
 ## How to use this
 
