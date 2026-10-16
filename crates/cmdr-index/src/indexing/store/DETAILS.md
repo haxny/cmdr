@@ -168,9 +168,9 @@ two moments: right after a `TruncateData`, and on a database that has never held
 the `ROOT` sentinel alone — `lifecycle/state.rs`'s `prepare_database_for_a_walk`, where a search-driven walk stands a
 cold volume's index up and would otherwise write rows nothing ever trusts). A reconcile or a scoped fill over an index
 that ALREADY holds rows never re-lists the volume, so it can't clear what an older policy let in, and must leave the
-stamp alone. The three sites: `lifecycle/manager/start.rs` (local), `lifecycle/network_scan.rs` (SMB/MTP, alongside the
-NAS list's own `SYSTEM_DIR_EXCLUSIONS_KEY` stamp, which is the same pattern for a different list), and the cold
-bootstrap above. `CMDR_E2E_START_PATH` is deliberately outside the fingerprint: it narrows the effective policy at
+stamp alone. The three sites: `lifecycle/manager/start.rs` (local), `lifecycle/manager/network_scan.rs` (SMB/MTP,
+alongside the NAS list's own `SYSTEM_DIR_EXCLUSIONS_KEY` stamp, which is the same pattern for a different list), and the
+cold bootstrap above. `CMDR_E2E_START_PATH` is deliberately outside the fingerprint: it narrows the effective policy at
 runtime but it's a per-run fixture path, and folding it in would write a machine-specific value into every E2E index.
 
 **`read_high_water_id`** is `MAX(id)` on `entries`, the cheap write watermark half of `CoverageToken`. A watermark, not
@@ -201,8 +201,9 @@ existed, with no migration — the index is a disposable cache (`../CLAUDE.md` �
 per-kind key is just "no same-kind calibration yet".
 
 Which bucket a run reads and writes is decided ONCE, by `events::ScanRunKind::calibration_kind()` at the scan-start
-funnel, and threaded to the completion handler (`lifecycle/scan_completion.rs` for local, `lifecycle/network_scan.rs`'s
-completion arm for SMB/MTP). Pinned by `store::tests::meta_and_calibration::calibration_for_kind_*`.
+funnel, and threaded to the completion handler (`lifecycle/scan_completion.rs` for local,
+`lifecycle/manager/network_scan.rs`'s completion arm for SMB/MTP). Pinned by
+`store::tests::meta_and_calibration::calibration_for_kind_*`.
 
 ### The steps after the walk, for the overall "~X left"
 

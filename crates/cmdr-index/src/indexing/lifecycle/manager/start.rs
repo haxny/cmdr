@@ -297,7 +297,7 @@ impl IndexManager {
         // never-completed partial keeps the fast parallel guarded-walker bulk build
         // (see `local_rescan_reconciles` for the completeness gate). Read the entry
         // count from the live read connection BEFORE any truncate. (NOTE: the network
-        // predicate in `lifecycle/network_scan.rs` is intentionally left unchanged.)
+        // predicate in `lifecycle/manager/network_scan.rs` is intentionally left unchanged.)
         let predates_policy = scanner::index_predates_exclusion_policy(
             self.store.read_conn(),
             self.path_space().exclusion_scope().tier(),

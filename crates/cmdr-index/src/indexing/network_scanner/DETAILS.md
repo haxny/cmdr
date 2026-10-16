@@ -282,9 +282,9 @@ whatever ELSE an old build got wrong, which no targeted prune can claim.
 The mechanism, all in `system_dirs.rs` plus two call sites:
 
 - `exclusion_list_fingerprint()` digests the name list; `exclusion_stamp_message()` writes it under
-  `store::SYSTEM_DIR_EXCLUSIONS_KEY`, and `lifecycle/network_scan.rs::start_volume_scan` sends that message ONLY right
-  after a `TruncateData`. That's the one moment the DB provably holds nothing beneath an excluded dir. A reconcile never
-  stamps: it can't clear what an older list let in.
+  `store::SYSTEM_DIR_EXCLUSIONS_KEY`, and `lifecycle/manager/network_scan.rs::start_volume_scan` sends that message ONLY
+  right after a `TruncateData`. That's the one moment the DB provably holds nothing beneath an excluded dir. A reconcile
+  never stamps: it can't clear what an older list let in.
 - `index_predates_exclusion_list()` compares the stamp to the current list. `resume_or_scan_network` asks at load and,
   on a mismatch, runs `start_volume_scan(NetworkScanMode::Rebuild, …)` — a truncate + full walk, not a reconcile. **Why
   at load:** a completed network index loads Stale and never rescans on its own, so an existing install would otherwise

@@ -179,7 +179,7 @@ mod tests {
         assert_eq!(
             holders,
             vec![
-                "lifecycle/network_scan.rs".to_string(),
+                "lifecycle/manager/network_scan.rs".to_string(),
                 "lifecycle/scan_completion.rs".to_string(),
                 "watch/event_loop/replay.rs".to_string(),
             ],

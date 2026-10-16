@@ -5,8 +5,8 @@
 //!   bridge, the failure supervisor) re-exported from `state` itself. The
 //!   authority for WHICH volumes are indexed and each volume's lifecycle.
 //! - [`manager`]: `IndexManager`, the per-volume coordinator + the LOCAL scan
-//!   dispatch. [`network_scan`]: its SMB/MTP `Volume`-trait scan path (a sibling
-//!   `impl IndexManager` block). [`scan_completion`]: the post-scan handler.
+//!   dispatch, with its SMB/MTP `Volume`-trait scan path in
+//!   `manager/network_scan.rs`. [`scan_completion`]: the post-scan handler.
 //! - [`freshness`]: the Fresh/Stale/Scanning transition table.
 //! - [`failure`]: the fatal-storage-error Failed state.
 //! - [`lifecycle_bus`]: the neutral registration / dirs-changed event bus.
@@ -27,7 +27,6 @@ pub mod freshness;
 pub(crate) mod lifecycle_bus;
 pub(crate) mod manager;
 pub mod master;
-pub(crate) mod network_scan;
 pub(crate) mod partial_agg;
 /// A throwaway measurement harness over the real boot volume, comparing today's
 /// bulk build against stitch-plus-phased cover walks. `#[ignore]`d; it prints

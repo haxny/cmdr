@@ -143,7 +143,7 @@ fn seed_stale_subtree(writer: &IndexWriter, db_path: &Path, parent_id: i64, firs
 /// 13.5M-row, 1.88 GB index) and rolled a 10 TB NAS up to 89 TB.
 ///
 /// So a rescan-in-place is NOT a fix for such an index; only a truncate-and-build
-/// is (`lifecycle/network_scan.rs`, `NetworkScanMode::Rebuild`). This pins that
+/// is (`lifecycle/manager/network_scan.rs`, `NetworkScanMode::Rebuild`). This pins that
 /// premise, so nobody re-derives "a reconcile will clean it up".
 #[tokio::test]
 async fn reconcile_cannot_shed_rows_left_under_a_now_excluded_dir() {

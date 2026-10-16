@@ -105,8 +105,8 @@ caught-up point.
 `Flush` replies from INSIDE `process_message`, so `flush_blocking()` and `flush().await` return one hook run too early:
 every prior message is committed, but the hourglass is still up and the repair queue still full. No production caller
 minds, because every one of them uses a flush as a COMMIT barrier, which is exactly what the reply does guarantee:
-`../lifecycle/manager.rs` and `../lifecycle/network_scan.rs` flush so the walk reads the bumped `current_epoch` on its
-own connection, `../reconcile/local_reconcile.rs` and `../reconcile/reconciler.rs` so a read connection resolves
+`../lifecycle/manager.rs` and `../lifecycle/manager/network_scan.rs` flush so the walk reads the bumped `current_epoch`
+on its own connection, `../reconcile/local_reconcile.rs` and `../reconcile/reconciler.rs` so a read connection resolves
 freshly-assigned ids, `../lifecycle/scan_completion.rs` so the replay's snapshot includes the last batches. The
 hourglass lingering one iteration longer is invisible (nothing outside `../read/` reads it).
 

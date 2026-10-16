@@ -293,7 +293,7 @@ listings, and media enrichment's parallel prefetch reads.
   reconnect loops bail — a member must not keep walking an unmounted volume). `on_superseded` does NOT close it (an
   in-flight scan is still drawing from it); it only stops a retired volume opening a NEW one. Steady-state footprint
   between scans is unchanged (`scan_pool: RwLock<Option<Arc<ScanPool>>>` is `None`). The index-scan lifecycle brackets
-  the spawned walk task (`indexing/lifecycle/network_scan.rs`); the media pass brackets via a drop-guard in its
+  the spawned walk task (`indexing/lifecycle/manager/network_scan.rs`); the media pass brackets via a drop-guard in its
   scheduler — both run `end` on every outcome.
 - **Invisible to the scanner.** The `network_scanner` walk is unchanged and transport-agnostic; it keeps calling
   `list_directory_for_scan`, which draws from the pool (round-robin) when one is active and falls back to the main

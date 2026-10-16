@@ -190,7 +190,7 @@ stop signal paired with a share of the volume's hold), held by BOTH the registry
 `IndexManager`, so the two can't disagree. Everything below it runs on a child, and a child that reads the drive is a
 `VolumeWork` too, so a removable stop can wait for it:
 
-- the full scan and the network trait scan (`manager::start_scan`, `network_scan::start_volume_scan`)
+- the full scan and the network trait scan (`manager::start_scan`, `manager::network_scan::start_volume_scan`)
 - the local reconcile walk
 - the subtree-rescan drain, the per-navigation verifier, and background verification — the three that used to carry a
   flag hardcoded to `false`, i.e. couldn't be stopped at all

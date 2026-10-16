@@ -158,9 +158,10 @@ A serde `snake_case` specta enum shipped on `index-scan-started` (and, for a mid
   stay on screen (stale) throughout, and the run is roughly 5x slower per entry.
 
 `ScanRunKind::classify(reconciles_in_place, prior_total_entries)` is the whole derivation, called at both scan-start
-funnels (`lifecycle/manager.rs` for the local walker, `lifecycle/network_scan.rs` for the trait scan) right after each
-decides reconcile-vs-truncate. The frontend previously guessed from `prior_total_entries` alone, which disagrees on a
-populated index whose last scan never completed: that one truncates, so it's a rebuild, not a change check.
+funnels (`lifecycle/manager.rs` for the local walker, `lifecycle/manager/network_scan.rs` for the trait scan) right
+after each decides reconcile-vs-truncate. The frontend previously guessed from `prior_total_entries` alone, which
+disagrees on a populated index whose last scan never completed: that one truncates, so it's a rebuild, not a change
+check.
 
 `calibration_kind()` maps the run onto its ETA-calibration bucket (`store::ScanCalibrationKind`): the first scan and the
 full rebuild run the SAME walker so they share `FullWalk`, and only `ChangeCheck` gets its own. The buckets and the
@@ -182,10 +183,10 @@ There are TWO records of the top-level pipeline phase (`Scanning → Aggregating
 `set_phase_for(events, volume_id, phase, trigger)` (a `pub(super)` fn) does BOTH in one call — the global ring plus a
 fire-and-forget per-volume report — so the two can't drift. Every `set_phase` site where a `volume_id` and a sink are in
 scope goes through it: `lifecycle/manager.rs` (local `Replaying`/`Scanning`, the completion task's
-`Aggregating → Reconciling → Live`, `Idle` in stop/shutdown), `lifecycle/network_scan.rs` (`Scanning` at start; `Live`
-on clean finish, `Idle` on disconnect), `lifecycle/scan_completion.rs`, and `watch/event_loop/replay.rs` (`Live` at the
-end of replay). Spawned tasks capture a cloned sink / `volume_id`, never re-resolving the manager in the registry (same
-discipline as the freshness `Arc`).
+`Aggregating → Reconciling → Live`, `Idle` in stop/shutdown), `lifecycle/manager/network_scan.rs` (`Scanning` at start;
+`Live` on clean finish, `Idle` on disconnect), `lifecycle/scan_completion.rs`, and `watch/event_loop/replay.rs` (`Live`
+at the end of replay). Spawned tasks capture a cloned sink / `volume_id`, never re-resolving the manager in the registry
+(same discipline as the freshness `Arc`).
 
 The event fires only on TRANSITIONS, so a frontend that joins mid-scan (window reload) can't learn the current phase
 from it. The FE backfills observable steps from the scan/aggregation activity it already receives; the reconcile step is

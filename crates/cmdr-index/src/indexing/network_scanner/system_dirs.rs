@@ -265,7 +265,7 @@ mod tests {
             assert!(index_predates_exclusion_list(&conn), "test setup: an unstamped index");
         }
 
-        // What a `Rebuild` scan sends before it walks (`lifecycle/network_scan.rs`).
+        // What a `Rebuild` scan sends before it walks (`lifecycle/manager/network_scan.rs`).
         let writer = crate::indexing::writer::IndexWriter::spawn(&db_path, crate::NoopEventSink::shared())
             .expect("spawn writer");
         writer.send(WriteMessage::TruncateData).expect("truncate");

@@ -122,7 +122,7 @@ impl IndexVolumeKind {
     /// connected: FSEvents for a local disk, `CHANGE_NOTIFY` for SMB, PTP events
     /// for MTP. False only for ADB, which reports nothing.
     ///
-    /// Decides where a finished trait scan lands (`lifecycle/network_scan.rs`):
+    /// Decides where a finished trait scan lands (`lifecycle/manager/network_scan.rs`):
     /// a watched volume is Fresh until its watch breaks, an unwatched one is Stale
     /// from the moment the walk ends, because nothing will say when it drifts.
     pub fn has_live_watch(self) -> bool {

@@ -49,9 +49,9 @@ concurrently without corrupting each other. Every invariant below holds independ
 - **manager.rs** — `IndexManager`, the central per-volume coordinator, plus the LOCAL scan path and the shared dispatch.
   Owns the SQLite store (reads), the writer thread (writes), the scanner handle, and the FSEvents watcher.
   `resume_or_scan` / `force_rescan` dispatch by TYPED `IndexVolumeKind`: a trait-scanned (SMB/MTP) volume routes to
-  `network_scan.rs`, `Local`/`LocalExternal` to `start_scan` here. `start_scan` dispatches the guarded-walker scanner
-  (fresh) or the reconcile-in-place path (populated), and spawns the shared `ScanProgressReporter` (owned by
-  `../events`). Both scan-start funnels (here and `network_scan.rs`) classify the run with
+  `manager/network_scan.rs`, `Local`/`LocalExternal` to `start_scan` here. `start_scan` dispatches the guarded-walker
+  scanner (fresh) or the reconcile-in-place path (populated), and spawns the shared `ScanProgressReporter` (owned by
+  `../events`). Both scan-start funnels (here and `manager/network_scan.rs`) classify the run with
   `events::ScanRunKind::classify` right after deciding reconcile-vs-truncate: the kind rides `index-scan-started` (what
   the FE states) and picks the calibration bucket this run reads its ETA seed from and writes its timing back into
   (`../store/DETAILS.md` § "Scan calibration is stored PER WALK KIND"). The stashed `ScanCalibration` also surfaces the
@@ -63,7 +63,8 @@ concurrently without corrupting each other. Every invariant below holds independ
   largest raw component from 19 modules to 15 with no behavior change. `module-cycles` measures the result but is
   warn-only and doesn't run in CI, so nothing stops the glob coming back. The trap and its five siblings:
   `scripts/check/checks/DETAILS.md` § "Rust module cycles".
-- **network_scan.rs** — the SMB/MTP `Volume`-trait scan path, split out as a sibling `impl IndexManager` block. Holds
+- **manager/network_scan.rs** — the SMB/MTP `Volume`-trait scan path, a split `impl IndexManager` block beside
+  `manager/start.rs`'s local one, so the manager's two scan funnels sit under it rather than one beside it. Holds
   `resume_or_scan_network` (a completed prior scan loads Stale and does NOT auto-rescan; a never-completed one scans)
   and `start_volume_scan` (the scan/rescan entry plus its bespoke completion handler). Mirrors `start_scan` but walks
   via the `../network_scanner` trait BFS, starts NO `DriveWatcher` (the live-watch layer owns that), and fires freshness
@@ -84,8 +85,8 @@ concurrently without corrupting each other. Every invariant below holds independ
 - **scan_completion.rs** — the post-scan handler: the vanished-volume abort and the LOCAL failure→Stale arm (below). Its
   `stamps.rs` child holds what a completed walk writes about itself, and `stamp_what_every_completed_walk_records` there
   is the ONE place the `scan_completed_at` marker, the two-bucket calibration keys, and `volume_path` are written:
-  `network_scan.rs` calls it too, so a trait-scanned volume's completion can't drift from a local one's. Only the
-  shallow-sweep-window reset stays local-walk-only, since a trait-scanned volume has no FSEvents stream.
+  `manager/network_scan.rs` calls it too, so a trait-scanned volume's completion can't drift from a local one's. Only
+  the shallow-sweep-window reset stays local-walk-only, since a trait-scanned volume has no FSEvents stream.
   `stamp_step_durations` beside it records how long the save, compute, and catch-up steps took, per walk kind
   (`../store/DETAILS.md` § "The steps after the walk").
 - **steps_ahead.rs** — the remembered half of a host's overall "~X left": `StepsAhead::remembered(shape, durations)`
@@ -869,8 +870,8 @@ for, and the branch set a walk leaves watched.
 
 ### The two single-flight questions a scan has to ask
 
-**Both entries ask both** — `start_scan` (`manager/start.rs`) and `start_volume_scan` (`network_scan.rs`), because the
-trait half has the same doors and the slowest walks:
+**Both entries ask both** — `start_scan` (`manager/start.rs`) and `start_volume_scan` (`manager/network_scan.rs`),
+because the trait half has the same doors and the slowest walks:
 
 - **`phases_have_work()`** — the first-index machine covering this volume in pieces. Why it asks for WORK rather than
   for a walk in flight is canonical on the method itself (`manager/phased.rs`), and it is also why the machine holds no

@@ -61,7 +61,7 @@ pub(super) fn report_unfinished_scan(
             // If the failure is a VANISHED volume (its root went unlistable —
             // a yanked external drive), the scan will never complete on its own, so
             // clear the frontend's live activity and go Idle — mirroring the network
-            // disconnect arm (`lifecycle/network_scan.rs`). A legitimately empty root
+            // disconnect arm (`lifecycle/manager/network_scan.rs`). A legitimately empty root
             // (`EmptyRoot`) or a panic is NOT a vanished volume, so it does not
             // abort. No `scan_completed_at` was written (the meta writes live in the
             // clean-completion arm only), so the index heals to a rescan on remount.

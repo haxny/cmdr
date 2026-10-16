@@ -97,7 +97,7 @@ pub(in crate::indexing::lifecycle) fn split_save_and_compute(
 /// The three facts EVERY completed walk records, local or trait-scanned: when it
 /// finished, its calibration numbers, and the volume root it walked.
 ///
-/// Shared between the local completion path above and `network_scan.rs`, so the
+/// Shared between the local completion path above and `manager/network_scan.rs`, so the
 /// two-bucket calibration rule can't drift between them: a walk kind's own keys
 /// (so the next run of the same kind gets an ETA from a comparable run) AND the
 /// unsuffixed keys (the last-completed-scan facts the badge tooltip and the
