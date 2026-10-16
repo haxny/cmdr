@@ -125,7 +125,7 @@ async fn sweep_level(
         Ok(entries) => entries,
         // Gone already: whoever removed it, nothing of it is left to protect.
         Err(VolumeError::NotFound(_)) => return Ok(false),
-        Err(e) => return Err(e).at(dir),
+        Err(e) => return Err(e).at_source(dir),
     };
 
     let mut remains = false;
@@ -146,7 +146,9 @@ async fn sweep_level(
                 // A link the move carried goes as the link, ❌ never through it:
                 // on a backend whose listing follows links the walk copied what
                 // it points at, and that target is not the user's selection.
-                Ok(EntryKind::Symlink) if ledger.carried(&path) => volume.delete(&path).await.at(&path).map(|()| false),
+                Ok(EntryKind::Symlink) if ledger.carried(&path) => {
+                    volume.delete(&path).await.at_source(&path).map(|()| false)
+                }
                 Ok(EntryKind::Directory | EntryKind::Symlink) => {
                     left.appeared += 1;
                     Ok(true)
@@ -171,7 +173,7 @@ async fn sweep_level(
     }
     let results = volume.delete_files(&doomed).await;
     for (path, result) in doomed.iter().zip(results) {
-        note_outcome(result.at(path).map(|()| false), &mut remains, &mut first_failure);
+        note_outcome(result.at_source(path).map(|()| false), &mut remains, &mut first_failure);
     }
 
     if remains {
@@ -184,7 +186,7 @@ async fn sweep_level(
         // A folder that only existed through what was in it (an object
         // store's prefix with no marker) went with its last file.
         Ok(()) | Err(VolumeError::NotFound(_)) => Ok(false),
-        Err(e) => Err(e).at(dir),
+        Err(e) => Err(e).at_source(dir),
     }
 }
 
@@ -233,13 +235,13 @@ pub(in crate::file_system::write_operations) async fn stamp_source(
     volume: &Arc<dyn Volume>,
     source: &Path,
 ) -> Result<CarriedSource, PathedVolumeError> {
-    if volume.entry_kind(source).await.at(source)? != EntryKind::Directory {
+    if volume.entry_kind(source).await.at_source(source)? != EntryKind::Directory {
         return Ok(CarriedSource::File(stamp_file(volume, source).await));
     }
     let mut ledger = SourceLedger::default();
     let mut pending = vec![source.to_path_buf()];
     while let Some(dir) = pending.pop() {
-        for entry in volume.list_directory_as_source(&dir).await.at(&dir)? {
+        for entry in volume.list_directory_as_source(&dir).await.at_source(&dir)? {
             let path = PathBuf::from(&entry.path);
             match kind_of(volume, &entry, &path).await? {
                 EntryKind::Directory => pending.push(path),
@@ -267,15 +269,15 @@ pub(in crate::file_system::write_operations) async fn sweep_carried_source(
         CarriedSource::Folder(ledger) => match volume.entry_kind(source).await {
             // A selected link the walk followed: the link goes, its target stays.
             Ok(EntryKind::Symlink) => {
-                volume.delete(source).await.at(source)?;
+                volume.delete(source).await.at_source(source)?;
                 Ok(FolderLeftovers::default())
             }
             Ok(_) | Err(VolumeError::NotFound(_)) => sweep_moved_folder(volume, source, ledger, skipped).await,
-            Err(e) => Err(e).at(source),
+            Err(e) => Err(e).at_source(source),
         },
         CarriedSource::File(before) => {
             if file_is_unchanged(volume, source, *before).await? {
-                volume.delete(source).await.at(source)?;
+                volume.delete(source).await.at_source(source)?;
                 Ok(FolderLeftovers::default())
             } else {
                 Ok(FolderLeftovers {
@@ -308,7 +310,7 @@ async fn file_is_unchanged(
     match volume.get_metadata(file).await {
         Ok(now) => Ok(before == Some(SourceStamp::of(&now))),
         Err(VolumeError::NotFound(_)) => Ok(true),
-        Err(e) => Err(e).at(file),
+        Err(e) => Err(e).at_source(file),
     }
 }
 
@@ -318,7 +320,7 @@ async fn file_is_unchanged(
 /// (`../DETAILS.md` § "Symlinks are opaque to a move").
 async fn kind_of(volume: &Arc<dyn Volume>, entry: &FileEntry, path: &Path) -> Result<EntryKind, PathedVolumeError> {
     if entry.is_directory || entry.is_symlink {
-        volume.entry_kind(path).await.at(path)
+        volume.entry_kind(path).await.at_source(path)
     } else {
         Ok(EntryKind::File)
     }

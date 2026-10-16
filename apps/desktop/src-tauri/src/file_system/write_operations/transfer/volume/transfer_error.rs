@@ -13,6 +13,7 @@ use super::super::super::types::{
     PermissionSide, ReadOnlySide, WriteErrorEvent, WriteOperationError, WriteOperationType,
 };
 use super::super::recovered_name::FinalizeFailure;
+use super::super::volume_outage::{self, OutageFailure};
 use crate::file_system::volume::VolumeError;
 
 /// Which side of a transfer a failing path belongs to.
@@ -76,15 +77,16 @@ impl From<(VolumeError, PathBuf)> for WriteFailure {
 /// their temp name), the answer is `NewDataKeptAt` and it carries that path: the
 /// user's complete new file lives ONLY there, so an error that doesn't name it
 /// leaves them hunting. A finalize that failed on the DELETE rescued nothing
-/// and lost nothing, so it maps like any other volume failure.
+/// and lost nothing, so it maps like any other destination failure.
 pub(in crate::file_system::write_operations) fn map_finalize_failure(
     dest_path: &Path,
     failure: FinalizeFailure,
 ) -> WriteOperationError {
-    WriteFailure::from(PathedVolumeError::at_destination(failure, dest_path)).error
+    WriteFailure::from(PathedVolumeError::from_landing(failure, dest_path)).error
 }
 
-/// A `VolumeError` plus the path that actually produced it.
+/// A `VolumeError` plus the path that actually produced it, and which side's
+/// call that was.
 ///
 /// One `copy_single_path` or `remove_tree` call can descend a
 /// whole subtree, so the failure a caller sees may come from a file thousands of
@@ -100,10 +102,15 @@ pub(in crate::file_system::write_operations) fn map_finalize_failure(
 /// `remove_tree` returns it and `archive_edit` calls that.
 #[derive(Debug, Clone)]
 pub(in crate::file_system::write_operations) struct PathedVolumeError {
-    /// The item that failed, as deep in the tree as the walker got. A SOURCE
-    /// path from every `at()` site; a finalize failure's `at_destination` is the
-    /// one exception, and it says so by also filling `new_data_at`.
+    /// The item that failed, as deep in the tree as the walker got, on the
+    /// volume `role` names: a refused nested mkdir carries the DESTINATION
+    /// folder, a failed read the SOURCE file.
     pub path: PathBuf,
+    /// Which volume's call failed. Set by the constructor the failing call site
+    /// picked (`AtPath::at_source` / `at_destination`, `from_landing`), ❌ never
+    /// defaulted: a walker frame holds both paths, and only the call that failed
+    /// says which one the user has to look at.
+    pub role: PathRole,
     pub error: VolumeError,
     /// Set only by a failed safe-replace finalize that already deleted the
     /// original: where the complete new bytes are now. It changes what the user
@@ -112,16 +119,12 @@ pub(in crate::file_system::write_operations) struct PathedVolumeError {
     pub new_data_at: Option<PathBuf>,
 }
 
-/// `PathRole::Source` isn't a default here, it's what the carried path IS: every
-/// `at()` site labels the error with the SOURCE item the walker was on (that's the
-/// type's whole purpose), so the path a `PathedVolumeError` holds is a source path
-/// even when the failing call was a write. Naming it a destination would attach a
-/// destination verdict to a source path, which is worse than the mismatch it fixes.
-///
-/// The one exception is `new_data_at`, which only a failed finalize sets: there
-/// the carried path IS the destination (see `FinalizeFailure::at_destination`),
-/// and the user needs to be told where their new file ended up rather than which
-/// errno the rename answered.
+/// Maps with the side the failure carries. Both directions have cost a user a
+/// wrong diagnosis: a source delete's `EPERM` blamed on the destination
+/// (cmdr-reports#17), and a share refusing a nested folder read as the user's
+/// local source being locked (cmdr-reports#62). `new_data_at` turns it into
+/// `NewDataKeptAt` instead: the user needs to be told where their new file
+/// ended up rather than which errno the rename answered.
 impl From<PathedVolumeError> for WriteFailure {
     fn from(e: PathedVolumeError) -> Self {
         let error = match e.new_data_at {
@@ -130,68 +133,93 @@ impl From<PathedVolumeError> for WriteFailure {
                 kept_at: kept_at.display().to_string(),
                 message: e.error.to_string(),
             },
-            None => map_volume_error(&e.path.display().to_string(), PathRole::Source, e.error),
+            None => map_volume_error(&e.path.display().to_string(), e.role, e.error),
         };
         Self { error }
     }
 }
 
-/// The two ways a `FinalizeFailure` becomes a pathed one.
+/// Keeps the path and side through an outage wait, so a walk's listing that
+/// waited out a dropped share still names the side that failed.
+impl OutageFailure for PathedVolumeError {
+    fn volume_error(&self) -> &VolumeError {
+        &self.error
+    }
+
+    fn into_cancelled(mut self) -> Self {
+        self.error = volume_outage::cancelled();
+        self
+    }
+}
+
+/// The ways a `PathedVolumeError` comes to be, besides [`AtPath`].
 ///
-/// ❗ These are inherent to `PathedVolumeError`, the type they PRODUCE, and not
-/// methods on `FinalizeFailure`. `cargo-modules` attributes an `impl` to the
-/// module defining the type, so `impl FinalizeFailure` written here would print
-/// as `recovered_name → volume::transfer_error`, welding the two into a module
-/// cycle that reads backwards from the code. ❌ Don't move them onto
+/// ❗ `from_landing` is inherent to `PathedVolumeError`, the type it PRODUCES,
+/// and not a method on `FinalizeFailure`. `cargo-modules` attributes an `impl`
+/// to the module defining the type, so `impl FinalizeFailure` written here would
+/// print as `recovered_name → volume::transfer_error`, welding the two into a
+/// module cycle that reads backwards from the code. ❌ Don't move it onto
 /// `FinalizeFailure` for the nicer call syntax. `scripts/check/checks/DETAILS.md`
 /// § "Rust module cycles", trap 4.
 impl PathedVolumeError {
-    /// Labels a finalize failure with the destination name the new bytes were
-    /// meant to take. ❌ Never `at()`: that would label it with a source path,
-    /// and the failure is entirely the destination's.
-    pub(super) fn at_destination(failure: FinalizeFailure, dest_path: &Path) -> Self {
+    /// A failure of a call made on `role`'s volume, at `path` on it.
+    pub(super) fn new(role: PathRole, path: &Path, error: VolumeError) -> Self {
+        Self {
+            path: path.to_path_buf(),
+            role,
+            error,
+            new_data_at: None,
+        }
+    }
+
+    /// Labels a failed landing (a staged write's rename, a safe-replace
+    /// finalize) with the destination name the new bytes were meant to take. It
+    /// is entirely the destination's, and when it rescued the bytes,
+    /// `new_data_at` says where they went.
+    pub(super) fn from_landing(failure: FinalizeFailure, dest_path: &Path) -> Self {
         Self {
             path: dest_path.to_path_buf(),
+            role: PathRole::Destination,
             error: failure.error,
             new_data_at: failure.new_data_at,
         }
     }
 
-    /// Labels a failure that may or may not have rescued anything, for the write
-    /// paths that can produce either.
-    ///
-    /// A rescue means the user's new file is sitting under a name they'd never
-    /// find on their own, so the DESTINATION is what they have to be pointed at
-    /// (`at_destination`). Everything else is an ordinary transfer failure and
-    /// gets the source item the walker was on, which is what `at()` is for.
-    pub(super) fn at_source_or_rescued_dest(failure: FinalizeFailure, source_path: &Path, dest_path: &Path) -> Self {
-        if failure.new_data_at.is_some() {
-            return Self::at_destination(failure, dest_path);
+    /// Names a destination failure on a caller's safe-replace temp after the
+    /// file that temp replaces (`Replaces::swap_target`): the `.cmdr-tmp-*`
+    /// name means nothing to the user, the file they chose to overwrite does.
+    /// A source failure, or a write with no temp, passes through.
+    pub(super) fn naming_the_replaced(mut self, swap_target: Option<&Path>) -> Self {
+        if let (PathRole::Destination, Some(original)) = (self.role, swap_target) {
+            self.path = original.to_path_buf();
         }
-        Self {
-            path: source_path.to_path_buf(),
-            error: failure.error,
-            new_data_at: None,
-        }
+        self
     }
 }
 
-/// Attaches the failing path to a `Result<_, VolumeError>`.
+/// Attaches the failing path, and the side it's on, to a
+/// `Result<_, VolumeError>`.
 ///
 /// Use it at the site that KNOWS the path (the loop holding `child_source`),
-/// never higher: an `at()` applied one frame up re-labels the error with the
-/// parent, which is the bug this whole type exists to prevent.
+/// never higher: one applied a frame up re-labels the error with the parent,
+/// which is the bug this whole type exists to prevent. Pick the method by WHICH
+/// VOLUME the failing call went to, and pass that volume's path: a frame holding
+/// both `child_source` and `child_dest` reports a destination write at
+/// `child_dest`.
 pub(super) trait AtPath<T> {
-    fn at(self, path: &Path) -> Result<T, PathedVolumeError>;
+    /// The call went to the source volume, at `path` on it.
+    fn at_source(self, path: &Path) -> Result<T, PathedVolumeError>;
+    /// The call went to the destination volume, at `path` on it.
+    fn at_destination(self, path: &Path) -> Result<T, PathedVolumeError>;
 }
 
 impl<T> AtPath<T> for Result<T, VolumeError> {
-    fn at(self, path: &Path) -> Result<T, PathedVolumeError> {
-        self.map_err(|error| PathedVolumeError {
-            path: path.to_path_buf(),
-            error,
-            new_data_at: None,
-        })
+    fn at_source(self, path: &Path) -> Result<T, PathedVolumeError> {
+        self.map_err(|error| PathedVolumeError::new(PathRole::Source, path, error))
+    }
+
+    fn at_destination(self, path: &Path) -> Result<T, PathedVolumeError> {
+        self.map_err(|error| PathedVolumeError::new(PathRole::Destination, path, error))
     }
 }
 

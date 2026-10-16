@@ -133,14 +133,15 @@ pub(crate) async fn wait_while_out(
 /// a create whose second run answers `AlreadyExists` and is read as "there".
 /// A write that may have half-landed has its own loop (`strategy.rs`), which
 /// clears the attempt's partial first.
-pub(crate) async fn through_outages<T, F, Fut>(
+pub(crate) async fn through_outages<T, E, F, Fut>(
     state: &Arc<WriteOperationState>,
     volumes: &[&Arc<dyn Volume>],
     mut call: F,
-) -> Result<T, VolumeError>
+) -> Result<T, E>
 where
+    E: OutageFailure,
     F: FnMut() -> Fut,
-    Fut: Future<Output = Result<T, VolumeError>>,
+    Fut: Future<Output = Result<T, E>>,
 {
     let mut outages = 0;
     loop {
@@ -148,11 +149,31 @@ where
             Ok(value) => return Ok(value),
             Err(error) => error,
         };
-        match wait_after_failure(state, &error, volumes, &mut outages).await {
+        match wait_after_failure(state, error.volume_error(), volumes, &mut outages).await {
             OutageEnd::Back => {}
-            OutageEnd::Cancelled => return Err(cancelled()),
+            OutageEnd::Cancelled => return Err(error.into_cancelled()),
             OutageEnd::GaveUp | OutageEnd::NotWaitable => return Err(error),
         }
+    }
+}
+
+/// What [`through_outages`] needs of a call's error: the `VolumeError` to judge
+/// the outage by, and the same failure recast as the cancel that ended a wait.
+/// A bare `VolumeError`, or one that also carries where it happened
+/// (`volume::transfer_error::PathedVolumeError`), which keeps that through the
+/// wait.
+pub(crate) trait OutageFailure {
+    fn volume_error(&self) -> &VolumeError;
+    fn into_cancelled(self) -> Self;
+}
+
+impl OutageFailure for VolumeError {
+    fn volume_error(&self) -> &VolumeError {
+        self
+    }
+
+    fn into_cancelled(self) -> Self {
+        cancelled()
     }
 }
 

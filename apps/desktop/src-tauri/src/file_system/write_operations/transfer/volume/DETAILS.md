@@ -1219,10 +1219,10 @@ The serial drivers (`drive_transfer_serial_{sync,async}`) ask `stop_or_park_{syn
 
 ## Naming the item that failed
 
-**Decision**: a transfer failure travels as `PathedVolumeError { path, error }` (`transfer_error.rs`), not a
+**Decision**: a transfer failure travels as `PathedVolumeError { path, role, error }` (`transfer_error.rs`), not a
 bare `VolumeError`, from `copy_single_path` / `copy_directory_streaming` / `extract_sequential_subtree` /
-`remove_tree` out to the three drivers. The `AtPath::at()` helper attaches the path at the frame that
-knows it. Both phases of a cross-volume move are covered: the copy AND the source delete.
+`remove_tree` out to the three drivers. The frame that knows the item attaches it, through `AtPath::at_source` or
+`AtPath::at_destination`. Both phases of a cross-volume move are covered: the copy AND the source delete.
 
 **Why**: one `copy_single_path` call can walk an entire subtree, so the error a driver receives may come from a file
 thousands of entries below the top-level item the user selected. With a bare `VolumeError` the driver's only available
@@ -1235,37 +1235,56 @@ be reconstructed.
 about which volume answered, and the two readings are opposites for the user: `SourceNotFound` means "your file is
 gone", `DestinationNotFound` means "there was nowhere to put it". `map_volume_error` takes the role as an argument, so
 every call site has to decide; inferring it downstream is impossible anyway, since the only signal available is the
-path's shape and a volume-relative destination (`/photos`) looks exactly like a source path. The destination-side sites
-are the three `create_directory_all(dest_path)`
-calls (`copy.rs` Phase 0.5, `move_cross.rs`, `move_same.rs`), the dest space query, and the dest `is_directory` probes;
-everything else is source-side.
+path's shape and a volume-relative destination (`/photos`) looks exactly like a source path.
 
 **Why it matters**: with one shared `SourceNotFound`, a share that couldn't address the destination reported the user's
 intact source file as missing. A NAS user hit exactly that (`v0.38.1`): the dialog claimed the destination folder
 didn't exist, then the transfer claimed the source file didn't either, naming a file they had never touched. Two
 opposite diagnoses for one destination fault, and the alarming one was the wrong one.
 
-**`From<PathedVolumeError>` is `PathRole::Source` by construction, not by default**: every `at()` site labels the error
-with the SOURCE item the walker was on (that IS the type's purpose above), so the path it carries is a source path even
-when the failing call wrote to the destination. Naming that a destination would attach a destination verdict to a
-source path. A dest-side caller that needs the other verdict maps explicitly through
-`WriteFailure::from_volume(path, PathRole::Destination, e)`.
+**The side is the failing CALL's, and the path is that side's**: a walker frame holds both `child_source` and
+`child_dest`, so the call site picks `at_source(child_source)` or `at_destination(child_dest)` by which volume it just
+asked, and `From<PathedVolumeError> for WriteFailure` maps with the carried `role`. There is no single `at()`: a side
+that can be skipped gets skipped, and both directions have cost a user a wrong diagnosis. cmdr-reports#17 was a source
+delete's `EPERM` read as the destination's. cmdr-reports#62 (`ERR-UK5NH`) was the reverse: a local folder moved onto
+an SMB share whose `create_directory` refused a NESTED folder (`STATUS_ACCESS_DENIED`), labelled with the source item
+the walker was on, so the dialog told the user to unlock their intact local folder in Finder. Destination calls are
+the dest root's `create_directory_all`, the space query and `is_directory` probes, `merge_level`'s nested
+`create_directory` and level listing, every name probe (`landing.rs`), a deep clash's resolution, the file write, the
+staged landing, the safe-replace finalize, and `remove_tree` of a set-aside dest (`TreeRemoval::side`). Source calls
+are opening, listing, and reading the source, and the move's source sweep. Pinned by `failure_side_tests.rs` (a
+refused nested mkdir, file write, and landing on the serial copy, concurrent copy, and cross-volume move, plus source
+open and read failures) and `move_failure_tests.rs::cross_volume_move_that_cannot_remove_the_original_says_the_copy_landed`.
 
-**A `FinalizeFailure` becomes a pathed one through `PathedVolumeError::at_destination` /
-`at_source_or_rescued_dest`, which are inherent to `PathedVolumeError` rather than methods on `FinalizeFailure`.**
-`cargo-modules` attributes an `impl` to the module defining the type, so `impl FinalizeFailure` written in
-`transfer_error.rs` prints as `recovered_name → volume::transfer_error` and welds the two modules into a cycle that
-reads backwards from the code (`scripts/check/checks/DETAILS.md` § "Rust module cycles", trap 4). Hanging them off the
-type they PRODUCE leaves one honest edge, `transfer_error → recovered_name`. The call syntax is the wordier
-`PathedVolumeError::at_destination(f, path)`; that's the whole cost.
+**A failed read reaches the engine as the WRITE's error.** The destination's `write_from_stream` pulls the source's
+chunks itself, so a source that drops mid-file returns from a destination call with nothing saying which volume broke.
+`source_reads.rs::watch` wraps the source stream before it's handed over and remembers whether a read failed;
+`SourceReads::label` names the source at its path when one did, else the destination at its path. Both
+`stream_pipe_file` and the one-pass extract (`sequential_extract.rs`) watch their streams.
+
+**A destination failure on a safe-replace temp names the file the temp replaces**
+(`PathedVolumeError::naming_the_replaced`, applied wherever `Replaces` is in hand: `merge.rs::copy_leaf`, the extract,
+and all three drivers): the `.cmdr-tmp-*` name means nothing to the user, the file they chose to overwrite does.
+
+**A `FinalizeFailure` becomes a pathed one through `PathedVolumeError::from_landing`, which is inherent to
+`PathedVolumeError` rather than a method on `FinalizeFailure`.** It is always the destination's, and it keeps
+`new_data_at`, which turns the mapping into `NewDataKeptAt`. `cargo-modules` attributes an `impl` to the module defining
+the type, so `impl FinalizeFailure` written in `transfer_error.rs` prints as `recovered_name → volume::transfer_error`
+and welds the two modules into a cycle that reads backwards from the code (`scripts/check/checks/DETAILS.md` § "Rust
+module cycles", trap 4). Hanging it off the type it PRODUCES leaves one honest edge, `transfer_error → recovered_name`.
+The call syntax is the wordier `PathedVolumeError::from_landing(f, path)`; that's the whole cost.
+
+**A walk's outage retry keeps the side**: `merge_level` runs its two listings (and the nested mkdir) through
+`volume_outage.rs::through_outages`, which is generic over `OutageFailure`, so each leg's failure leaves the wait still
+labelled with its own volume.
 
 **Where each driver attaches it**:
 
-- Cross-volume move (`move_cross.rs`) and serial copy (`copy_serial.rs`) map with `e.path`, never the loop's
-  `source_path`.
+- Cross-volume move (`move_cross.rs`) and serial copy (`copy_serial.rs`) map the walker's `PathedVolumeError` through
+  `WriteFailure::from`, never the loop's `source_path`, so the side and a rescued file's `new_data_at` both survive.
 - The concurrent driver carries TWO paths on `CopyTaskFailure` (`copy_concurrent_task.rs`) and they are not
   interchangeable: `failed_path` is the DESTINATION entry to drop from `in_flight_partials` and possibly clean, while
-  `reported_path` is the SOURCE item the user is told about. Merging them would either clean the wrong path or report
+  `failure` is the `PathedVolumeError` the user is told about. Merging them would either clean the wrong path or report
   the dest dir root.
 - `pull_path_to_local` deliberately drops back to a bare `VolumeError`: it materializes into a scratch dir that is
   discarded wholesale on failure, so no consumer reads a per-item path.

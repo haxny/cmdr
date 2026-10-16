@@ -180,12 +180,12 @@ pub(super) async fn copy_single_path(
 ) -> Result<u64, PathedVolumeError> {
     // Check cancellation up front.
     if super::super::super::state::is_cancelled(&state.intent) {
-        return Err(VolumeError::Cancelled("Operation cancelled by user".to_string())).at(source_path);
+        return Err(VolumeError::Cancelled("Operation cancelled by user".to_string())).at_source(source_path);
     }
 
     let source_is_directory = resolve_source_is_directory(source_volume, source_path, source_is_directory)
         .await
-        .at(source_path)?;
+        .at_source(source_path)?;
 
     if source_is_directory {
         // A sequential source (compressed tar / solid 7z) would re-decode the
@@ -245,8 +245,7 @@ pub(super) async fn copy_single_path(
             &on_chunk,
             staging,
         )
-        .await
-        .map_err(|f| PathedVolumeError::at_source_or_rescued_dest(f, source_path, dest_path))?;
+        .await?;
         leaf.complete(bytes);
         Ok(bytes)
     }
@@ -327,7 +326,7 @@ pub(super) async fn stream_pipe_file(
     state: &Arc<WriteOperationState>,
     on_file_progress: &(dyn Fn(u64, u64) -> ControlFlow<()> + Sync),
     staging: WriteStaging,
-) -> Result<u64, FinalizeFailure> {
+) -> Result<u64, PathedVolumeError> {
     log::debug!("stream_pipe_file: {} -> {}", source_path.display(), dest_path.display());
     // Whether the CALLER lands this write (a safe-replace temp it swaps over the
     // original): then the flags that wait for the landing wait for that swap.
@@ -355,7 +354,8 @@ pub(super) async fn stream_pipe_file(
         on_file_progress,
         staging,
     )
-    .await?
+    .await
+    .map_err(|f| PathedVolumeError::from_landing(f, dest_path))?
     {
         // Landed, so a ` (N)` placeholder at the name is filled, not ours to take back.
         state.claimed_names.release_placeholder(dest_path);
@@ -410,7 +410,7 @@ pub(super) async fn stream_pipe_file(
         set_task_phase(TaskPhase::OpeningSource);
         let opened = tokio::select! {
             biased;
-            () = state.backend_abort.cancelled() => return Err(hard_abort_error(source_path).into()),
+            () = state.backend_abort.cancelled() => return Err(hard_abort_error(source_path)).at_source(source_path),
             opened = source_volume.open_read_stream_with_hint(source_path, source_facts.size) => opened,
         };
         let stream = match opened {
@@ -423,11 +423,14 @@ pub(super) async fn stream_pipe_file(
                     attempt = 1;
                     continue;
                 }
-                OutageEnd::Cancelled => return Err(volume_outage::cancelled().into()),
-                OutageEnd::GaveUp | OutageEnd::NotWaitable => return Err(e.into()),
+                OutageEnd::Cancelled => return Err(volume_outage::cancelled()).at_source(source_path),
+                OutageEnd::GaveUp | OutageEnd::NotWaitable => return Err(e).at_source(source_path),
             },
         };
-        let size = stream.total_size().known().ok_or(VolumeError::NotSupported)?;
+        let Some(size) = stream.total_size().known() else {
+            return Err(VolumeError::NotSupported).at_source(source_path);
+        };
+        let (stream, source_reads) = super::source_reads::watch(stream);
         let length = crate::file_system::volume::StreamLength::Known(size);
         // An extract carries the archive's quarantine with the rest of what
         // the source reports, so the destination puts it on before the landing
@@ -535,7 +538,7 @@ pub(super) async fn stream_pipe_file(
                 // promised one indivisible frame, so dropping it leaves either the
                 // whole file or nothing, which is the same outcome the process
                 // dying produces.
-                return Err(hard_abort_error(dest_path).into());
+                return Err(hard_abort_error(dest_path)).at_destination(dest_path);
             }
         };
         if create_went_unanswered(&staged, &write_result) {
@@ -597,7 +600,8 @@ pub(super) async fn stream_pipe_file(
                     // Cancelled during the backoff. Report it as the cancel it is
                     // rather than the transport error that triggered the retry, so
                     // the post-loop reclassifies it and emits `write-cancelled`.
-                    return Err(VolumeError::Cancelled("Operation cancelled by user".to_string()).into());
+                    return Err(VolumeError::Cancelled("Operation cancelled by user".to_string()))
+                        .at_destination(dest_path);
                 }
                 attempt += 1;
                 continue;
@@ -610,7 +614,8 @@ pub(super) async fn stream_pipe_file(
             Err(e) if retry::is_retryable(&e) && super::super::super::state::is_cancelled(&state.intent) => {
                 staged.abandon(dest_volume).await;
                 remove_unstaged_partial(writing_at_the_final_name, dest_volume, dest_path).await;
-                return Err(VolumeError::Cancelled("Operation cancelled by user".to_string()).into());
+                return Err(VolumeError::Cancelled("Operation cancelled by user".to_string()))
+                    .at_destination(dest_path);
             }
             Err(e) => {
                 // The staged bytes are a partial (a mid-stream failure, or the
@@ -624,7 +629,7 @@ pub(super) async fn stream_pipe_file(
                         dest_path.display(),
                     );
                 }
-                return Err(e.into());
+                return Err(source_reads.label(e, source_path, dest_path));
             }
         };
 
@@ -698,8 +703,10 @@ pub(super) async fn stream_pipe_file(
                         attempt = 1;
                         continue;
                     }
-                    OutageEnd::Cancelled => return Err(volume_outage::cancelled().into()),
-                    OutageEnd::GaveUp | OutageEnd::NotWaitable => return Err(failure),
+                    OutageEnd::Cancelled => return Err(volume_outage::cancelled()).at_destination(dest_path),
+                    OutageEnd::GaveUp | OutageEnd::NotWaitable => {
+                        return Err(PathedVolumeError::from_landing(failure, dest_path));
+                    }
                 }
             }
             // The write SUCCEEDED and the landing didn't: the temp holds the only
@@ -707,7 +714,7 @@ pub(super) async fn stream_pipe_file(
             // the in-flight set so nothing sweeps it. When the landing had already
             // cleared the way, `land` also got those bytes out of temp space and
             // `new_data_at` says where they are. Surface the failure.
-            Err(e) => return Err(e),
+            Err(e) => return Err(PathedVolumeError::from_landing(e, dest_path)),
         }
     }
 }

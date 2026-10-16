@@ -51,8 +51,8 @@ Copy and move across backends (Local ↔ MTP ↔ SMB ↔ archive). File map: `DE
 - **ONE `FileWindow` per operation** (`merge_ctx.rs`, on `MergeCtx`), taken by every merge leaf and top-level FILE task
   (width 1 keeps MTP serial). ❌ Never per level or per source. A walker ❌ never holds a permit while it recurses
   (deadlock at width 1) and ❌ never returns before draining its leaves.
-- **A failure carries the path it happened ON** (`transfer_error.rs::PathedVolumeError`): ❌ never re-labelled with the
-  top-level source or `.at()` above the frame that knows the item. § "Naming the item that failed".
+- **A failure carries its path AND side** (`transfer_error.rs::PathedVolumeError`): `at_source` / `at_destination`
+  by which volume's call failed, ❌ never above the frame that knows the item. § "Naming the item that failed".
 - **Two test traps**: a `*_tests.rs` here is a `#[path]` CHILD (`super::` one level shallower), and a
   `FaultyVolume` cell must **assert `fault_fired(op)`**.
 

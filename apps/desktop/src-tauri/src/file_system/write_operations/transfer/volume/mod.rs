@@ -43,6 +43,7 @@ mod preflight;
 mod rename_merge;
 mod sequential_extract;
 mod server_side_copy;
+mod source_reads;
 mod source_sweep;
 mod strategy;
 mod transfer_error;
@@ -135,6 +136,10 @@ mod finalize_recovery_tests;
 /// What each engine does when the destination won't say whether a name is taken.
 #[cfg(test)]
 mod dest_precheck_failure_tests;
+
+/// A refusal deep in a folder transfer is named against the side that refused.
+#[cfg(test)]
+mod failure_side_tests;
 
 /// A copied folder keeps its source folder's dates, stamped after its contents.
 #[cfg(test)]

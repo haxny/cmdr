@@ -20,7 +20,7 @@ use super::super::super::reversal::{PresentRecheck, ReversalTally, drained, rech
 use super::super::super::state::{StopMeans, WriteOperationState, update_operation_status};
 use super::super::super::types::{WriteOperationPhase, WriteOperationType, WriteProgressEvent};
 use super::super::super::unblocked_removal::{RemovalRefused, delete_clearing_blockers};
-use super::transfer_error::{AtPath, PathedVolumeError};
+use super::transfer_error::{AtPath, PathRole, PathedVolumeError};
 use crate::file_system::volume::{EntryKind, Volume, VolumeError};
 use crate::ignore_poison::IgnorePoison;
 use crate::operation_log::rollback::ItemResult;
@@ -429,11 +429,7 @@ pub(super) async fn reap_stale_transfer_temps(volume: &Arc<dyn Volume>, dir: &Pa
 async fn delete_written_file(volume: &Arc<dyn Volume>, path: &Path) -> Result<(), PathedVolumeError> {
     match volume.delete(path).await {
         Ok(()) | Err(VolumeError::NotFound(_)) => Ok(()),
-        Err(error) => Err(PathedVolumeError {
-            path: path.to_path_buf(),
-            error,
-            new_data_at: None,
-        }),
+        Err(error) => Err(error).at_destination(path),
     }
 }
 
@@ -501,6 +497,15 @@ pub(super) enum TreeRemoval {
     UserChoseOverwriteAcrossTypes,
 }
 
+impl TreeRemoval {
+    /// Which side's tree this removes, so a refusal is reported as that side's.
+    fn side(self) -> PathRole {
+        match self {
+            Self::UserChoseOverwriteAcrossTypes => PathRole::Destination,
+        }
+    }
+}
+
 /// Recursively removes a file or directory tree, reporting the path that
 /// actually refused to go.
 ///
@@ -533,12 +538,13 @@ pub(super) async fn remove_tree(
     why: TreeRemoval,
 ) -> Result<(), PathedVolumeError> {
     log::debug!(target: "delete", "remove_tree: {} ({why:?})", path.display());
-    remove_tree_inner(volume, path).await.map(|_| ())
+    remove_tree_inner(volume, path, why.side()).await.map(|_| ())
 }
 
 /// Recursion body. `Ok(true)` means "content remains under here", so the caller
-/// must keep this directory.
-async fn remove_tree_inner(volume: &Arc<dyn Volume>, path: &Path) -> Result<bool, PathedVolumeError> {
+/// must keep this directory. `side` is the volume's role in the transfer.
+async fn remove_tree_inner(volume: &Arc<dyn Volume>, path: &Path, side: PathRole) -> Result<bool, PathedVolumeError> {
+    let refused = |at: &Path, error| PathedVolumeError::new(side, at, error);
     let kind = match volume.entry_kind(path).await {
         Ok(kind) => kind,
         Err(_) => {
@@ -548,25 +554,29 @@ async fn remove_tree_inner(volume: &Arc<dyn Volume>, path: &Path) -> Result<bool
     };
 
     if kind != EntryKind::Directory {
-        volume.delete(path).await.at(path)?;
+        volume.delete(path).await.map_err(|e| refused(path, e))?;
         return Ok(false);
     }
 
     // List directory contents and delete children first
-    let children = volume.list_directory(path, None).await.at(path)?;
+    let children = volume.list_directory(path, None).await.map_err(|e| refused(path, e))?;
 
     let mut first_child_failure: Option<PathedVolumeError> = None;
     let mut content_remains = false;
     for child in &children {
         let child_path = PathBuf::from(&child.path);
-        // `.at(&child_path)` at the frame that knows the child: one level up and
-        // every leaf failure would answer with this directory's name instead.
+        // Labelled with `child_path` at the frame that knows the child: one level
+        // up and every leaf failure would answer with this directory's name instead.
         let outcome = if child.is_directory || child.is_symlink {
             // A link re-asks `entry_kind` one frame down, which deletes it as the
             // leaf it is.
-            Box::pin(remove_tree_inner(volume, &child_path)).await
+            Box::pin(remove_tree_inner(volume, &child_path, side)).await
         } else {
-            volume.delete(&child_path).await.at(&child_path).map(|()| false)
+            volume
+                .delete(&child_path)
+                .await
+                .map_err(|e| refused(&child_path, e))
+                .map(|()| false)
         };
         match outcome {
             Ok(remains) => content_remains |= remains,
@@ -596,11 +606,7 @@ async fn remove_tree_inner(volume: &Arc<dyn Volume>, path: &Path) -> Result<bool
     // Delete the now-empty directory
     match volume.delete(path).await {
         Ok(()) => Ok(false),
-        Err(e) => Err(PathedVolumeError {
-            path: path.to_path_buf(),
-            error: e,
-            new_data_at: None,
-        }),
+        Err(e) => Err(refused(path, e)),
     }
 }
 

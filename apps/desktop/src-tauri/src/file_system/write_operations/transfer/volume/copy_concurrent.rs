@@ -52,7 +52,7 @@ use super::copy_concurrent_task::{CopyTaskFailure, CopyTaskSuccess, run_copy_tas
 use super::displaced_destination::DisplacedLedger;
 use super::merge_ctx::CreatedPaths;
 use super::preflight::SourceHint;
-use super::transfer_error::{PathedVolumeError, WriteFailure};
+use super::transfer_error::WriteFailure;
 use crate::file_system::volume::{Volume, VolumeError};
 use crate::ignore_poison::IgnorePoison;
 
@@ -474,10 +474,8 @@ impl<'a> ConcurrentDriver<'a> {
     fn record_failure(&mut self, failure: CopyTaskFailure) {
         let CopyTaskFailure {
             failed_path: failed_dest,
-            reported_path,
+            failure: reported,
             source_path: done_source,
-            error: e,
-            new_data_at,
             cleanup_temp,
             source_is_dir,
             overwrote,
@@ -487,7 +485,7 @@ impl<'a> ConcurrentDriver<'a> {
         self.settle(&done_source);
         let ctx = &self.ctx;
         // A cancel decided nothing about the source, so it gets no verdict.
-        if !matches!(e, VolumeError::Cancelled(_)) {
+        if !matches!(reported.error, VolumeError::Cancelled(_)) {
             emit_source_outcome(
                 &*ctx.events,
                 ctx.operation_id,
@@ -540,14 +538,9 @@ impl<'a> ConcurrentDriver<'a> {
             // data loss.
             self.last_dest_path = Some(failed_dest);
         }
-        // `PathedVolumeError`'s conversion owns the branch: `new_data_at` set
-        // means `reported_path` is the DESTINATION and the user has to be told
-        // where their new file is; unset is the ordinary source-labelled mapping.
-        self.copy_error = Some(WriteFailure::from(PathedVolumeError {
-            path: reported_path,
-            error: e,
-            new_data_at,
-        }));
+        // `PathedVolumeError`'s conversion owns the branch: the side it carries
+        // picks the wording, and `new_data_at` says where the user's new file is.
+        self.copy_error = Some(WriteFailure::from(reported));
     }
 
     /// Conflict resolution failed while preparing a source, which is not one

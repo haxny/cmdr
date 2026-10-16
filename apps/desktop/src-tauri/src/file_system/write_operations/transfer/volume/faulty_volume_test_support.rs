@@ -302,6 +302,10 @@ pub(crate) enum FaultyOp {
     Rename,
     /// `open_read_stream` and `open_read_stream_with_hint`.
     OpenReadStream,
+    /// The Nth stream this volume opens fails its FIRST read: the open
+    /// answered, so the failure reaches the engine through the destination's
+    /// `write_from_stream`, the way a source that drops mid-file does.
+    ReadStream,
     /// `write_from_stream`.
     WriteFromStream,
 }
@@ -365,6 +369,22 @@ impl<V: Volume + 'static> FaultyVolume<V> {
             return false;
         };
         self.calls.lock_ignore_poison().get(&op).copied().unwrap_or(0) >= armed.nth
+    }
+
+    /// Hands back the inner volume's opened stream, broken on its first read
+    /// when this open is the one [`FaultyOp::ReadStream`] is armed on.
+    fn breaking_its_first_read<'a>(&'a self, opened: OpeningStream<'a>) -> OpeningStream<'a> {
+        let fault = self.fault_for(FaultyOp::ReadStream);
+        Box::pin(async move {
+            let inner = opened.await?;
+            Ok(match fault {
+                Some(error) => Box::new(FirstReadFails {
+                    inner,
+                    error: Some(error),
+                }) as Box<dyn VolumeReadStream>,
+                None => inner,
+            })
+        })
     }
 
     /// Counts this call to `op` and returns the error if it's the armed one.
@@ -526,7 +546,7 @@ impl<V: Volume + 'static> Volume for FaultyVolume<V> {
     ) -> Pin<Box<dyn Future<Output = Result<Box<dyn VolumeReadStream>, VolumeError>> + Send + 'a>> {
         match self.fault_for(FaultyOp::OpenReadStream) {
             Some(e) => Box::pin(async move { Err(e) }),
-            None => self.inner.open_read_stream(path),
+            None => self.breaking_its_first_read(self.inner.open_read_stream(path)),
         }
     }
 
@@ -537,7 +557,7 @@ impl<V: Volume + 'static> Volume for FaultyVolume<V> {
     ) -> Pin<Box<dyn Future<Output = Result<Box<dyn VolumeReadStream>, VolumeError>> + Send + 'a>> {
         match self.fault_for(FaultyOp::OpenReadStream) {
             Some(e) => Box::pin(async move { Err(e) }),
-            None => self.inner.open_read_stream_with_hint(path, size_hint),
+            None => self.breaking_its_first_read(self.inner.open_read_stream_with_hint(path, size_hint)),
         }
     }
 
@@ -553,6 +573,47 @@ impl<V: Volume + 'static> Volume for FaultyVolume<V> {
             Some(e) => Box::pin(async move { Err(e) }),
             None => self.inner.write_from_stream(dest, mode, length, stream, on_progress),
         }
+    }
+}
+
+/// What `open_read_stream` hands back.
+type OpeningStream<'a> = Pin<Box<dyn Future<Output = Result<Box<dyn VolumeReadStream>, VolumeError>> + Send + 'a>>;
+
+/// A source stream whose first read fails, for [`FaultyOp::ReadStream`].
+/// Everything else (size, date, metadata) is the inner stream's, so the
+/// destination sets up its write exactly as it would for the real file.
+struct FirstReadFails {
+    inner: Box<dyn VolumeReadStream>,
+    /// Taken by the first read; later reads forward.
+    error: Option<VolumeError>,
+}
+
+impl VolumeReadStream for FirstReadFails {
+    fn next_chunk(&mut self) -> Pin<Box<dyn Future<Output = Option<Result<Vec<u8>, VolumeError>>> + Send + '_>> {
+        match self.error.take() {
+            Some(error) => Box::pin(async move { Some(Err(error)) }),
+            None => self.inner.next_chunk(),
+        }
+    }
+
+    fn total_size(&self) -> StreamLength {
+        self.inner.total_size()
+    }
+
+    fn bytes_read(&self) -> u64 {
+        self.inner.bytes_read()
+    }
+
+    fn modified_at(&self) -> Option<std::time::SystemTime> {
+        self.inner.modified_at()
+    }
+
+    fn metadata(&self, wanted: cmdr_fs::metadata::MetadataClasses) -> cmdr_fs::metadata::CarriedMetadata {
+        self.inner.metadata(wanted)
+    }
+
+    fn metadata_outline(&self, wanted: cmdr_fs::metadata::MetadataClasses) -> cmdr_fs::metadata::CarriedMetadata {
+        self.inner.metadata_outline(wanted)
     }
 }
 

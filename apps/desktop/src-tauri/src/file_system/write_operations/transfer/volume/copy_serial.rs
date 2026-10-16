@@ -671,13 +671,10 @@ pub(super) async fn drive_transfer_serial(ctx: SerialCopy<'_>) -> SerialOutcome 
                                 created_dirs.lock_ignore_poison().extend(dirs);
                             }
                             // Report the path the walker actually failed on (for a
-                            // directory source, a file deep inside), ❌ never the
-                            // top-level `source_path` the user selected.
-                            Err(map_volume_error(
-                                &e.path.display().to_string(),
-                                PathRole::Source,
-                                e.error,
-                            ))
+                            // directory source, a file deep inside), on the side
+                            // that refused, ❌ never the top-level `source_path`
+                            // the user selected.
+                            Err(WriteFailure::from(e.naming_the_replaced(replaces.swap_target())).error)
                         }
                     }
                 })

@@ -138,15 +138,15 @@ pub(super) async fn extract_sequential_subtree(
     let mut extractor = source_volume
         .open_sequential_extract(source_path)
         .await
-        .at(source_path)?;
+        .at_source(source_path)?;
     let mut total_bytes = 0u64;
-    while let Some(file) = extractor.next_file().await.at(source_path)? {
+    while let Some(file) = extractor.next_file().await.at_source(source_path)? {
         // The cooperative boundary, between members. One decode pass can't be
         // re-entered, so this is the only place the extract can stop, and one
         // iteration covers the remainder of the subtree whenever skipped members
         // drain through it.
         if state.stop_or_park_async().await {
-            return Err(VolumeError::Cancelled("Operation cancelled by user".to_string())).at(source_path);
+            return Err(VolumeError::Cancelled("Operation cancelled by user".to_string())).at_source(source_path);
         }
         // Not in the plan ⇒ the file was skipped by conflict resolution (or isn't
         // wanted). Drop it; the next `next_file` drains its bytes.
@@ -170,7 +170,10 @@ pub(super) async fn extract_sequential_subtree(
         note_pending_for_local_dest(dest_volume, staged.target());
         // The member reports its own mode off the archive's index; an extract
         // adds the archive's quarantine to its xattrs (`extract_quarantine.rs`).
-        let stream = super::extract_quarantine::quarantine_stream(state, source_volume, extractor.current_stream());
+        // A member that fails to decode comes back as the WRITE's error; the
+        // watch is what still names the archive for it.
+        let (stream, source_reads) = super::source_reads::watch(extractor.current_stream());
+        let stream = super::extract_quarantine::quarantine_stream(state, source_volume, stream);
         let lost = super::super::super::metadata_losses::file_losses(&**source_volume, &**dest_volume, &*stream);
         // One decode pass means one member at a time, but this member still
         // takes a leaf handle of its own: it is what carries its bytes on the
@@ -185,13 +188,13 @@ pub(super) async fn extract_sequential_subtree(
             Ok(written) => written,
             Err(e) => {
                 staged.abandon(dest_volume).await;
-                return Err(e).at(&file.source_path);
+                let failure = source_reads.label(e, &file.source_path, &planned.dest_path);
+                return Err(failure.naming_the_replaced(planned.replaces.swap_target()));
             }
         };
-        staged
-            .commit(dest_volume)
-            .await
-            .map_err(|f| PathedVolumeError::at_source_or_rescued_dest(f, &file.source_path, &planned.dest_path))?;
+        staged.commit(dest_volume).await.map_err(|f| {
+            PathedVolumeError::from_landing(f, &planned.dest_path).naming_the_replaced(planned.replaces.swap_target())
+        })?;
         // Landed, so the ` (N)` placeholder the plan pass reserved here is filled.
         // Every one this pass never reaches (a failure, a cancel between members)
         // stays on the op's ledger for the post-loop to take back
@@ -211,7 +214,7 @@ pub(super) async fn extract_sequential_subtree(
             Replaces::ViaTemp(orig) => {
                 super::finalize::finalize_safe_replace(dest_volume, &planned.dest_path, &orig, state)
                     .await
-                    .map_err(|e| PathedVolumeError::at_destination(e, &orig))?;
+                    .map_err(|e| PathedVolumeError::from_landing(e, &orig))?;
                 created.record_overwrite();
                 orig
             }

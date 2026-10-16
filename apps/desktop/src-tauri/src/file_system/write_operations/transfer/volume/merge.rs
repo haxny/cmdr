@@ -47,7 +47,7 @@ use super::preflight::SourceFileFacts;
 use super::rename_merge::merges_as_a_directory;
 use super::strategy::Replaces;
 use super::strategy::{LandingName, WriteStaging, note_pending_for_local_dest, staging_for, stream_pipe_file};
-use super::transfer_error::{AtPath, PathedVolumeError};
+use super::transfer_error::{AtPath, PathRole, PathedVolumeError};
 use crate::file_system::volume::{ChildName, DirectoryCreation, Volume, VolumeError};
 use crate::ignore_poison::IgnorePoison;
 use cmdr_fs::entry::FileEntry;
@@ -250,9 +250,10 @@ async fn copy_leaf<'a>(
     // also the file's tree row, active from here.
     let leaf = progress.begin_leaf(node);
     let on_chunk = |file_bytes_done: u64, _file_bytes_total: u64| leaf.on_chunk(file_bytes_done);
-    // ❗ `.at(&child_source)` is the whole point: this is the deepest frame that
-    // knows WHICH file failed. Report it one level up and the user gets the name
-    // of the folder they selected instead of the file that broke.
+    // ❗ This is the deepest frame that knows WHICH file failed, and the error
+    // leaves it carrying that file's path on the side that refused. Report it
+    // one level up and the user gets the name of the folder they selected
+    // instead of the file that broke.
     let streamed = stream_pipe_file(
         source_volume,
         &child_source,
@@ -271,7 +272,7 @@ async fn copy_leaf<'a>(
     if streamed.is_err() && reserved_placeholder {
         take_back_reservation(dest_volume, &write_dest, &state.claimed_names).await;
     }
-    let bytes = streamed.map_err(|f| PathedVolumeError::at_source_or_rescued_dest(f, &child_source, &write_dest))?;
+    let bytes = streamed.map_err(|e| e.naming_the_replaced(replaces.swap_target()))?;
     // Safe-replace finalize for a file→file Overwrite: the temp now holds the
     // complete new bytes; swap it over the original. On finalize error the temp
     // is preserved as committed data (see `finalize_safe_replace`).
@@ -283,7 +284,7 @@ async fn copy_leaf<'a>(
         Replaces::ViaTemp(orig) => {
             super::finalize::finalize_safe_replace(dest_volume, &write_dest, &orig, state)
                 .await
-                .map_err(|e| PathedVolumeError::at_destination(e, &orig))?;
+                .map_err(|e| PathedVolumeError::from_landing(e, &orig))?;
             orig
         }
         Replaces::InPlace | Replaces::Nothing => write_dest,
@@ -560,10 +561,11 @@ async fn merge_level<'a>(
                 source_volume.list_directory_as_source(source_path).await,
             )
         };
-        Ok((dest_index?, entries?))
+        // Each leg's failure is its own volume's: a share that won't create the
+        // nested folder is the destination's refusal, at the destination path.
+        Ok::<_, PathedVolumeError>((dest_index.at_destination(dest_path)?, entries.at_source(source_path)?))
     })
-    .await
-    .at(source_path)?;
+    .await?;
     let ((dest_index, level_made_here), mut entries) = level;
     // Tree order, whatever order the backend listed in (SMB and MTP don't
     // sort): the walker starts files, asks conflicts, and creates folders in
@@ -593,7 +595,7 @@ async fn merge_level<'a>(
         // through the between-chunks checkpoint the byte path parks at, so this
         // is the only thing that stops a paused merge from walking on.
         if state.stop_or_park_async().await {
-            return Err(VolumeError::Cancelled("Operation cancelled by user".to_string())).at(source_path);
+            return Err(VolumeError::Cancelled("Operation cancelled by user".to_string())).at_source(source_path);
         }
 
         let child_source = PathBuf::from(&entry.path);
@@ -608,10 +610,11 @@ async fn merge_level<'a>(
         // device can name it `../x` or `/x`: ❌ never join it raw.
         let name = ChildName::new(&entry.name)
             .map_err(VolumeError::from)
-            .at(&child_source)?;
+            .at_source(&child_source)?;
         let (child_dest, dest_hit) = where_it_lands(dest_volume, dest_path, name, dest_folder, NewName::Respell)
             .await
-            .at(&child_source)?
+            // The probe asked the destination, about the name the child would take.
+            .map_err(|e| PathedVolumeError::new(PathRole::Destination, &name.under(dest_path), e))?
             .into_parts();
         let dest_hit = dest_hit.as_ref();
         // The scan's kind, which counts a link as one entry even where this
@@ -669,9 +672,12 @@ async fn merge_level<'a>(
         if let Some(hit) = dest_hit
             && let Some(ctx) = merge
         {
+            // What a resolution can fail on is the clashing destination entry
+            // (probing it, setting it aside): the source's type and size come
+            // from the listing in hand.
             match resolve_merge_child(ctx, source_volume, &child_source, entry, dest_volume, &child_dest, hit)
                 .await
-                .at(&child_source)?
+                .at_destination(&child_dest)?
             {
                 MergeChildDecision::Skip => {
                     // A DEEP skip: record it so the caller knows this subtree did
@@ -705,7 +711,7 @@ async fn merge_level<'a>(
             // merge context nobody freed the name, and recursing would merge
             // into the leaf that holds it (THROUGH it, for a link): refuse.
             if dest_hit.is_some() && merge.is_none() {
-                return Err(VolumeError::AlreadyExists(child_dest.display().to_string())).at(&child_source);
+                return Err(VolumeError::AlreadyExists(child_dest.display().to_string())).at_destination(&child_dest);
             }
             // Type-mismatch Overwrite/Rename that resolved to Proceed: the
             // resolver already set aside/relocated the dest leaf, so recurse
