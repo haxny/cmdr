@@ -169,11 +169,7 @@ pub(crate) async fn route_archive_move_out(
             // to the FE but withholds the copy's terminal events (the compound op
             // owns the single Move terminal); it captures the completion so we can
             // read `files_skipped`.
-            let suppress = Arc::new(SuppressTerminalsSink {
-                inner: Arc::clone(&events),
-                captured_complete: Mutex::new(None),
-                landed_clean: Mutex::new(Vec::new()),
-            });
+            let suppress = Arc::new(SuppressTerminalsSink::over(Arc::clone(&events)));
             let extract = crate::file_system::write_operations::copy_volumes_with_progress(
                 Arc::clone(&suppress) as Arc<dyn OperationEventSink>,
                 &op_id,
@@ -343,13 +339,24 @@ pub(crate) async fn route_archive_move_out(
 /// but WITHHOLDS the copy's terminal events (`write-complete` / `write-cancelled`
 /// / `write-error`) — the compound move op emits the single Move terminal itself.
 /// The completion is captured so the driver can read `files_skipped`.
-struct SuppressTerminalsSink {
+pub(super) struct SuppressTerminalsSink {
     inner: Arc<dyn OperationEventSink>,
     captured_complete: Mutex<Option<WriteCompleteEvent>>,
     /// Top-level sources that extracted in FULL (every file durably written,
     /// zero deep skips), collected via `note_source_landed_clean`. The compound
     /// op deletes exactly these from the archive.
     landed_clean: Mutex<Vec<PathBuf>>,
+}
+
+impl SuppressTerminalsSink {
+    /// A sink over `inner` that has captured nothing yet.
+    pub(super) fn over(inner: Arc<dyn OperationEventSink>) -> Self {
+        Self {
+            inner,
+            captured_complete: Mutex::new(None),
+            landed_clean: Mutex::new(Vec::new()),
+        }
+    }
 }
 
 impl OperationEventSink for SuppressTerminalsSink {
@@ -371,6 +378,9 @@ impl OperationEventSink for SuppressTerminalsSink {
     }
     fn emit_source_item_done(&self, event: super::super::types::WriteSourceItemDoneEvent) {
         self.inner.emit_source_item_done(event);
+    }
+    fn emit_sources_gone(&self, event: super::super::types::WriteSourcesGoneEvent) {
+        self.inner.emit_sources_gone(event);
     }
     fn emit_scan_progress(&self, event: super::super::types::ScanProgressEvent) {
         self.inner.emit_scan_progress(event);

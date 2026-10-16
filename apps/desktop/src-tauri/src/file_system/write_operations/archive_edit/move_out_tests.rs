@@ -720,3 +720,26 @@ async fn move_out_lands_tags_and_leaves_no_orphan_sidecar() {
     names.sort();
     assert_eq!(names, vec!["__MACOSX/", "__MACOSX/._plain.txt", "plain.txt"]);
 }
+
+/// ❗ The extract's sink WRAPS the real one, so it forwards everything but the
+/// copy's terminals, the sources-gone prompt included: swallowed, the person is
+/// never asked and the operation waits forever (`OperationEventSink`'s doc).
+#[test]
+fn the_extract_sink_forwards_the_sources_gone_prompt() {
+    use crate::file_system::write_operations::types::{SourcesGoneNext, WriteSourcesGoneEvent};
+
+    let inner = Arc::new(CollectorEventSink::new());
+    let sink = super::move_out::SuppressTerminalsSink::over(Arc::clone(&inner) as Arc<dyn OperationEventSink>);
+    let event = WriteSourcesGoneEvent {
+        operation_id: "move-out-sources-gone".to_string(),
+        operation_type: WriteOperationType::Move,
+        total_count: 2,
+        gone_count: 1,
+        gone_sample: vec!["/a.zip/gone.txt".to_string()],
+        next: SourcesGoneNext::AwaitingAnswer,
+    };
+
+    sink.emit_sources_gone(event.clone());
+
+    assert_eq!(*inner.sources_gone.lock_ignore_poison(), vec![event]);
+}
