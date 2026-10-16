@@ -156,9 +156,10 @@ schedule would let it go cold every time, defeating the cache. `*/6` on day-of-m
 Every other `ci.yml` job runs on ubuntu, so code under `cfg(target_os = "macos")` used to be compiled only on whichever
 Mac last ran `pnpm check`. This job runs on `macos-26` (the release builder's image, so it lints against the shipping
 SDK; free for a public repo) and asks the three questions Linux can't answer for that code: `desktop-rust-clippy`,
-`desktop-rust-rustdoc`, and `desktop-rust-tests`. The platform-blind scanners stay in `desktop-rust` alone. Gated on the
-`rust` filter like `desktop-rust`, so it runs in parallel and adds no wall time unless it outlasts that job (~29 min
-warm on 2026-10-05).
+`desktop-rust-rustdoc`, and `desktop-rust-tests`. It also runs `desktop-rust-module-cycles`, whose baseline is a macOS
+module graph (`scripts/check/checks/DETAILS.md` § "Rust module cycles"), after installing the cargo-modules version the
+check pins. The other platform-blind scanners stay in `desktop-rust` alone. Gated on the `rust` filter like
+`desktop-rust`, so it runs in parallel and adds no wall time unless it outlasts that job (~29 min warm on 2026-10-05).
 
 - **Required.** It's in `ci-ok`'s `needs`, so a red macOS job fails the run, `ci-ok`, and both release gates. Its first
   run (2026-10-06) failed on two tests that assumed David's Mac (a malloc zone macOS 26 doesn't register, a tight

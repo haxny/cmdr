@@ -1515,10 +1515,11 @@ Timings, 2026-09-30, OrbStack on 16 cores, host load 5–13 (shared machine):
 
 ## Rust module cycles
 
-`module-cycles` (`IsSlow`, warn-only, app scope `desktop`, `Tech: Rust`) is what stops a subsystem re-welding itself to
-another one unobserved, which had already happened twice before anything measured it. A component that spans SUBSYSTEMS
-says no module in it can be understood or changed alone, and it blocks a crate extraction outright, since a crate cannot
-import the app crate's facade. That is the whole reason this was ever measured.
+`module-cycles` (`IsSlow`, fails, app scope `desktop`, `Tech: Rust`, and in CI on the macOS job) is what stops a
+subsystem re-welding itself to another one unobserved, which had already happened twice before anything measured it. A
+component that spans SUBSYSTEMS says no module in it can be understood or changed alone, and it blocks a crate
+extraction outright, since a crate cannot import the app crate's facade. That is the whole reason this was ever
+measured.
 
 The measurement is
 `cargo modules dependencies --lib --package <p> --no-fns --no-types --no-traits --no-owns --no-externs --no-sysroot` per
@@ -1560,27 +1561,31 @@ and the value is the list of tangle sizes living there, largest first. A list ra
 independent tangles genuinely share a home (`write_operations::transfer::volume` has two), and a maximum would let a new
 one hide behind a bigger one.
 
-A home over its allowance, or a home not in the allowlist at all, warns. Local runs shrink-wrap the list down; raising a
-number needs David's OK (§ "Allowlist consent"), and the fix is to cut an edge.
+A home over its allowance, or a home not in the allowlist at all, fails. It used to warn, and a warning is logged as
+`pass`: seven homes sat over budget from 2026-08-22 to 2026-10-13 with nobody noticing. The allowlist should trend to
+empty; each entry is debt with an issue tracking it. Local runs shrink-wrap the list down; raising a number needs
+David's OK (§ "Allowlist consent"), and the fix is to cut an edge.
 
 ### The tool version is pinned, and a mismatch skips
 
 The absolute numbers move between cargo-modules releases (0.26.0 reports `cmdr` at 128 of 528 modules in a cycle where
 0.27.0 reports 126 of 522), so an unpinned tool would drift the ratchet silently and fire on somebody else's machine for
 no reason at all. `cargoModulesVersion` pins it, the allowlist records the same version in `toolVersion`, and
-`TestModuleCyclesAllowlistMatchesPinnedVersion` keeps the two together. A disagreement between them warns and asks for a
+`TestModuleCyclesAllowlistMatchesPinnedVersion` keeps the two together. A disagreement between them fails and asks for a
 deliberate re-seed rather than comparing numbers that don't compare.
 
-The check never installs anything: building cargo-modules pulls in rust-analyzer and costs minutes. A missing tool
-skips, naming the install command; a different version skips, naming both versions. Bumping the pin means editing the
-constant, installing it, running `pnpm check module-cycles`, and re-seeding the allowlist from what the new version
-reports.
+The check never installs anything: building cargo-modules pulls in rust-analyzer and costs minutes. Locally, a missing
+tool skips, naming the install command, and a different version skips, naming both versions. Under `--ci` both FAIL: CI
+installs the pin on purpose, so a skip there means the install broke, and a skipped step is green. Bumping the pin means
+editing the constant, installing it, running `pnpm check module-cycles`, and re-seeding the allowlist from what the new
+version reports.
 
-It carries a `NotInCI` reason instead of a workflow step. The baseline is a **macOS** module graph and every runner is
-ubuntu, which analyzes a different set of cfg-gated modules — `drag_image_detection` and `drag_image_swap`, one of the
-seeded tangles, are macOS-only and simply don't exist there. Its numbers would disagree with the baseline for reasons
-that have nothing to do with coupling, and it's warn-only besides, so a CI step could only print into a log nobody reads
-at the cost of a multi-minute `cargo install`.
+CI runs it on `ci.yml`'s `desktop-rust-macos` job only, after the Rust tests. The baseline is a **macOS** module graph,
+and an ubuntu runner analyzes a different set of cfg-gated modules (`drag_image_detection` and `drag_image_swap` are
+macOS-only and don't exist there), so its numbers would disagree for reasons that have nothing to do with coupling. The
+job installs the pin it reads from `--print-cargo-modules-version`, and rust-cache carries `~/.cargo/bin`, so the
+multi-minute install runs only on a cold cache or a bump. That job gates `ci-ok` and both release gates, so a tangle
+blocks a release until it's cut or David accepts it.
 
 ### The six traps
 
@@ -1607,8 +1612,9 @@ Every one was found the expensive way, and each makes the raw tool output say so
    as `network/` reaching into the backend when the code does the reverse. **Nothing under `network/` named
    `backends::smb` textually, so grep never finds an edge of this shape.** Locate it by re-running WITHOUT `--no-fns`
    and grepping for the `-> "<target module>"` line: the source node names the function, which names the impl. This is
-   also the one shape that can make `module-cycles` warn about a cycle the code doesn't have — the mutual dependency it
-   reports is real (the impl genuinely names both types), only the DIRECTION is reversed. The check's warn body says so.
+   also the one shape that can make `module-cycles` report a cycle the code doesn't have: the mutual dependency it
+   reports is real (the impl genuinely names both types), only the DIRECTION is reversed. The check's failure body says
+   so.
 5. **A re-export resolves to the DEFINING module.** Importing a facade path draws the edge to wherever the item is
    really declared, not the facade. For an item that a workspace crate defines, `--no-externs` then drops the edge
    entirely, so a facade import can be invisible rather than misattributed. Either way the printed source is not where
@@ -1978,15 +1984,16 @@ Checks by app and tech:
   provider, self-skipping without its key; `gemini-smoke` additionally has a warn-level "inconclusive" outcome — see §
   "Decision: a smoke lane has a THIRD outcome"), shipped-locales-fresh (regenerate-and-diff
   `intl/shipped_locales.gen.rs` from the message-catalog dirs, so the locale resolver's CLDR script table can't go stale
-  and leave a new locale both unreachable and unguarded), module-cycles (slow, warn-only; strongly-connected module
-  components per crate with parent-child hubs collapsed, on a per-home ratchet, behind a pinned `cargo-modules` that a
-  mismatched box skips rather than mis-measures — see § "Rust module cycles"), fixture-lane-coverage (a Docker-gated
-  cell in the app crate whose name the integration lane's filter won't select never runs anywhere, so it's a finding;
-  one cell lived its whole life that way, and it was the sole caller of the crate extraction's one sanctioned
-  public-surface widening — see § "Fixture lane coverage"), tests, integration-tests (Docker network fixtures),
-  disk-images (slow, macOS only, not in CI; the real-image tests on synthetic APFS and HFS+ disk images, see § "The
-  disk-image lane"), clippy-linux (slow, not in CI; CI's clippy and rustdoc commands against the Linux target, run from
-  a Mac in Docker), tests-linux (slow; both in § "The Linux Docker lanes share an image and a build cache")
+  and leave a new locale both unreachable and unguarded), module-cycles (slow, fails, and in CI on the macOS job;
+  strongly-connected module components per crate with parent-child hubs collapsed, on a per-home ratchet, behind a
+  pinned `cargo-modules` that a mismatched box skips rather than mis-measures — see § "Rust module cycles"),
+  fixture-lane-coverage (a Docker-gated cell in the app crate whose name the integration lane's filter won't select
+  never runs anywhere, so it's a finding; one cell lived its whole life that way, and it was the sole caller of the
+  crate extraction's one sanctioned public-surface widening — see § "Fixture lane coverage"), tests, integration-tests
+  (Docker network fixtures), disk-images (slow, macOS only, not in CI; the real-image tests on synthetic APFS and HFS+
+  disk images, see § "The disk-image lane"), clippy-linux (slow, not in CI; CI's clippy and rustdoc commands against the
+  Linux target, run from a Mac in Docker), tests-linux (slow; both in § "The Linux Docker lanes share an image and a
+  build cache")
 
 Four of those scanners share one region tracker, `rustTestModState` / `advanceTestModRegion`
 (`desktop-rust-test-sleep.go`), in opposite polarities: test-sleep and fixed-temp-dir scan ONLY inside an inline test

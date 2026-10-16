@@ -24,7 +24,7 @@ import (
 // improved the code. A ratchet that fires on it teaches people to silence
 // ratchets, so this one collapses parent-child hubs before it counts.
 //
-// Warn-only, like the other allowlist gauges: raising a number needs David's OK
+// A home over its numbers fails the run: raising a number needs David's OK
 // (`scripts/check/checks/DETAILS.md` § Allowlist consent), and the fix is to cut the edge.
 
 // cargoModulesVersion pins the tool the baseline was measured with. The absolute
@@ -37,6 +37,9 @@ import (
 // To bump: edit this line, install it, run `pnpm check module-cycles`, and re-seed
 // the allowlist deliberately with the numbers the new version reports.
 const cargoModulesVersion = "0.27.0"
+
+// CargoModulesVersion exposes the pin to the CLI (`--print-cargo-modules-version`).
+func CargoModulesVersion() string { return cargoModulesVersion }
 
 // moduleCyclesFlags is the measurement, and every flag earns its place:
 // `--no-fns`/`--no-types`/`--no-traits` reduce the graph to modules, `--no-owns`
@@ -601,11 +604,16 @@ func shortenModules(members []string) []string {
 
 // RunRustModuleCycles measures how much of each crate's module graph depends on
 // itself in a circle, with parent-child hubs collapsed so a file split into
-// submodules doesn't read as new coupling. Warn-only: it reports a home whose
-// tangles grew past its allowlisted sizes (or that isn't listed yet), and outside
+// submodules doesn't read as new coupling. It fails on a home whose tangles grew
+// past its allowlisted sizes (or that isn't listed yet), and outside
 // CI it shrink-wraps the allowlist so every cut edge shows up as a number falling.
 func RunRustModuleCycles(ctx *CheckContext) (CheckResult, error) {
 	if skipReason := cargoModulesSkipReason(); skipReason != "" {
+		// CI installs the pinned tool on purpose, so a skip there means the install
+		// broke, and a skipped step is green: it would guard nothing while looking fine.
+		if ctx.CI {
+			return CheckResult{}, fmt.Errorf("%s", skipReason)
+		}
 		return Skipped(skipReason), nil
 	}
 
@@ -625,25 +633,20 @@ func RunRustModuleCycles(ctx *CheckContext) (CheckResult, error) {
 	gauge := formatModuleCyclesGauge(measurements)
 	allowlist := loadModuleCyclesAllowlist(ctx.RootDir)
 	if allowlist.ToolVersion != cargoModulesVersion {
-		return CheckResult{
-			Code: ResultWarning,
-			Message: fmt.Sprintf(
-				"The baseline was measured with cargo-modules %s and this check now pins %s, so the two aren't comparable.\n"+
-					"Re-seed `scripts/check/checks/module-cycles-allowlist.json` from a run on %s, deliberately.\n%s",
-				allowlist.ToolVersion, cargoModulesVersion, cargoModulesVersion, gauge),
-			Total: len(packages), Issues: 1, Changes: -1,
-		}, nil
+		// Fails rather than warns: a baseline from another release guards nothing.
+		return CheckResult{}, fmt.Errorf(
+			"the baseline was measured with cargo-modules %s and this check now pins %s, so the two aren't comparable.\n"+
+				"Re-seed `scripts/check/checks/module-cycles-allowlist.json` from a run on %s, deliberately.\n%s",
+			allowlist.ToolVersion, cargoModulesVersion, cargoModulesVersion, gauge)
 	}
 
 	current := tangleSizesByHome(measurements)
 	staleChanges := shrinkwrapModuleCyclesAllowlist(&allowlist, current)
-	madeChanges := false
 	if len(staleChanges) > 0 && !ctx.CI {
 		if err := writeJSONAllowlist(moduleCyclesAllowlistPath(ctx.RootDir), allowlist); err != nil {
 			return CheckResult{}, err
 		}
 		reformatWithOxfmt(ctx.RootDir, "scripts/check/checks/module-cycles-allowlist.json")
-		madeChanges = true
 	}
 
 	var staleMsg string
@@ -656,27 +659,27 @@ func RunRustModuleCycles(ctx *CheckContext) (CheckResult, error) {
 	}
 
 	regressions := findModuleCyclesRegressions(current, allowlist)
-	if len(regressions) == 0 {
-		if staleMsg != "" {
-			msg := gauge + "\n" + staleMsg
-			if ctx.CI {
-				return CheckResult{Code: ResultWarning, Message: msg, Total: len(packages), Issues: 0, Changes: -1}, nil
-			}
-			return SuccessWithChanges(msg), nil
+	if len(regressions) == 0 && staleMsg != "" {
+		msg := gauge + "\n" + staleMsg
+		if ctx.CI {
+			return CheckResult{Code: ResultWarning, Message: msg, Total: len(packages), Issues: 0, Changes: -1}, nil
 		}
+		return SuccessWithChanges(msg), nil
+	}
+	return moduleCyclesVerdict(regressions, measurements, staleMsg)
+}
+
+// moduleCyclesVerdict turns the regressions into the run's outcome: a home over its
+// numbers fails. A warning would be logged as a pass, and that's how seven homes
+// sat over budget from 2026-08-22 to 2026-10-13 without anyone noticing.
+func moduleCyclesVerdict(regressions []moduleCyclesRegression, measurements []crateModuleCycles, staleMsg string) (CheckResult, error) {
+	gauge := formatModuleCyclesGauge(measurements)
+	if len(regressions) == 0 {
 		return Success(gauge), nil
 	}
-
 	msg := formatModuleCyclesRegressions(regressions, measurements) + "\n" + gauge
 	if staleMsg != "" {
 		msg += "\n" + staleMsg
 	}
-	return CheckResult{
-		Code:        ResultWarning,
-		Message:     msg,
-		MadeChanges: madeChanges,
-		Total:       len(packages),
-		Issues:      len(regressions),
-		Changes:     -1,
-	}, nil
+	return CheckResult{}, fmt.Errorf("%s", msg)
 }

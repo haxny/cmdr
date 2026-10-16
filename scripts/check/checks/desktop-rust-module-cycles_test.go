@@ -412,3 +412,32 @@ func TestCargoModulesSkipReason(t *testing.T) {
 		}
 	})
 }
+
+// CI installs the pinned tool on purpose, so a skip there means the install broke,
+// and a skipped step is a green one: it would guard nothing while looking fine.
+func TestModuleCyclesWithoutTheToolFailsInCI(t *testing.T) {
+	fakeCargoModules(t, "")
+	if _, err := RunRustModuleCycles(&CheckContext{RootDir: t.TempDir(), CI: true}); err == nil {
+		t.Error("a CI run without cargo-modules passed; want it to fail")
+	}
+
+	result, err := RunRustModuleCycles(&CheckContext{RootDir: t.TempDir()})
+	if err != nil || result.Code != ResultSkipped {
+		t.Errorf("local run without cargo-modules = %+v, %v; want a skip", result, err)
+	}
+}
+
+// A warning is logged as a pass, which is how seven homes sat over budget for
+// two months unnoticed. A home over its numbers fails the run.
+func TestModuleCyclesRegressionFails(t *testing.T) {
+	measurements := []crateModuleCycles{{pkg: "cmdr", modules: 3, inCycle: 2, maxRaw: 2,
+		tangles: []moduleTangle{{home: "cmdr::fresh", members: []string{"cmdr::fresh::a", "cmdr::fresh::b"}, rawSize: 2}}}}
+	regressions := []moduleCyclesRegression{{home: "cmdr::fresh", current: []int{2}}}
+
+	if _, err := moduleCyclesVerdict(regressions, measurements, ""); err == nil {
+		t.Error("a home over its allowlist passed; want the run to fail")
+	}
+	if result, err := moduleCyclesVerdict(nil, measurements, ""); err != nil || result.Code != ResultSuccess {
+		t.Errorf("no regressions = %+v, %v; want success", result, err)
+	}
+}

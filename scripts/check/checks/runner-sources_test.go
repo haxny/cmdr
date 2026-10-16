@@ -162,10 +162,11 @@ func TestRunnerCoreCoversWhatTheExecutorReaches(t *testing.T) {
 	// a CLI path that renders something and exits, so an edit to its file can't
 	// change a check's verdict.
 	offTheRunPath := map[string]string{
-		"NightlyToolchain": "printed by `--print-nightly` for CI's toolchain install; no check run touches it",
-		"BuildDocGraph":    "the `--docs-graph` renderer, which draws a diagram instead of running checks",
-		"DocGraph":         "the type that renderer hands around; same path, same reasoning",
-		"EnsureE2EBinary":  "`--ensure-e2e-binary` builds the E2E binary and exits; the Playwright lane reaches the same code through its own `Run`, so that lane fingerprints `e2e-build.go`",
+		"NightlyToolchain":    "printed by `--print-nightly` for CI's toolchain install; no check run touches it",
+		"CargoModulesVersion": "printed by `--print-cargo-modules-version` for CI's cargo-modules install; no check run touches it",
+		"BuildDocGraph":       "the `--docs-graph` renderer, which draws a diagram instead of running checks",
+		"DocGraph":            "the type that renderer hands around; same path, same reasoning",
+		"EnsureE2EBinary":     "`--ensure-e2e-binary` builds the E2E binary and exits; the Playwright lane reaches the same code through its own `Run`, so that lane fingerprints `e2e-build.go`",
 	}
 
 	declaringFile := map[string]string{}

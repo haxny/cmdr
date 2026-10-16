@@ -133,14 +133,11 @@ var AllChecks = []CheckDefinition{
 		DisplayName: "Rust module cycles",
 		App:         AppDesktop,
 		Tech:        "🦀 Rust",
-		// The baseline is a macOS module graph, and CI's cheap Rust lanes are ubuntu. A
-		// Linux analysis drops the macOS-gated modules (`drag_image_detection` and
-		// `drag_image_swap` ARE one of the seeded tangles), so its numbers would
-		// disagree with the baseline for reasons that have nothing to do with
-		// coupling. Warn-only besides, so a CI step could only ever print into a log
-		// nobody reads, at the cost of a multi-minute `cargo install`.
-		NotInCI: "warn-only metric measured against a macOS module graph; CI's ubuntu lanes analyze a different set of cfg-gated modules, and a warn-only step on the macOS job would print into a log nobody reads",
-		// ~30 s across the five library crates, most of it the app crate, and the
+		// CI runs it in `slow-checks.yml`'s macOS job, never in an ubuntu lane: the
+		// baseline is a macOS module graph, and a Linux analysis drops the macOS-gated
+		// modules (`drag_image_detection` and `drag_image_swap` are a tangle), so its
+		// numbers would disagree for reasons that have nothing to do with coupling.
+		// ~90 s across the library crates, most of it the app crate, and the
 		// thing it measures moves on the scale of a refactor rather than a commit.
 		IsSlow:    true,
 		DependsOn: nil,

@@ -416,6 +416,20 @@ jobs:
       - name: Run Rust tests
         run: ./scripts/check/check --check desktop-rust-tests --ci
 
+      # On this job because the module-cycles baseline is a macOS module graph (an ubuntu
+      # analysis drops the macOS-gated modules). The check owns the pin and prints it here.
+      # rust-cache carries `~/.cargo/bin`, so the multi-minute install only runs on a cold
+      # cache or a version bump.
+      - name: Install cargo-modules (pinned)
+        run: |
+          version="$(./scripts/check/check --print-cargo-modules-version)"
+          if [ "$(cargo-modules --version 2>/dev/null)" != "cargo-modules $version" ]; then
+            cargo install cargo-modules --version "$version" --locked
+          fi
+
+      - name: Check Rust module cycles
+        run: ./scripts/check/check --check desktop-rust-module-cycles --ci
+
   # ===========================================
   # Desktop app - Svelte frontend
   # ===========================================
