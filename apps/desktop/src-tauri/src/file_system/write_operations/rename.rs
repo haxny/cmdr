@@ -24,7 +24,7 @@ use super::host::{self, InstantMutationFact, InstantOp, InstantTarget};
 use super::look_alike::{NewEntry, place_new_entry};
 use super::manager::{self, OperationDescriptor, OperationSummaryText};
 use super::mutation_error::MutationError;
-use super::types::WriteOperationType;
+use super::types::{ReadOnlySide, WriteOperationType};
 use cmdr_archive::mutator::Changeset;
 use cmdr_fs::volume::{RenameWork, Volume};
 use cmdr_operation_log::types::{Initiator, OpKind};
@@ -407,7 +407,7 @@ async fn route_archive_rename(from: &Path, to: &Path, volume_id: &str) -> Result
         return Err(MutationError::RenameAcrossArchives);
     }
     // Only zip archives are writable; tar and 7z are browse + extract only.
-    archive_edit::ensure_zip_writable(&from_archive, crate::file_system::ReadOnlySide::Destination)
+    archive_edit::ensure_zip_writable(&from_archive, ReadOnlySide::Destination)
         .map_err(|_| MutationError::ArchiveReadOnly)?;
 
     let from_inner = archive_edit::normalize_inner_path(&from_inner);

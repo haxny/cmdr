@@ -27,7 +27,7 @@ use super::host::{self, InstantMutationFact, InstantOp, InstantTarget};
 use super::look_alike::{NewEntry, place_new_entry};
 use super::manager::{self, OperationDescriptor, OperationSummaryText};
 use super::mutation_error::MutationError;
-use super::types::WriteOperationType;
+use super::types::{ReadOnlySide, WriteOperationType};
 use cmdr_archive::mutator::{AddEntry, AddSource, Changeset};
 use cmdr_fs::volume::{MutationEvent, Volume};
 
@@ -226,7 +226,7 @@ async fn route_archive_create(
     let (archive_path, inner_parent) = cmdr_fs::archive_format::archive_boundary_candidate(Path::new(parent_path))
         .ok_or(MutationError::ArchiveNotEditable)?;
     // Only zip archives are writable; tar and 7z are browse + extract only.
-    archive_edit::ensure_zip_writable(&archive_path, crate::file_system::ReadOnlySide::Destination)
+    archive_edit::ensure_zip_writable(&archive_path, ReadOnlySide::Destination)
         .map_err(|_| MutationError::ArchiveReadOnly)?;
     let inner_path = archive_edit::join_inner_path(&inner_parent, name);
 

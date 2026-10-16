@@ -8,7 +8,7 @@ use super::super::OperationEventSink;
 use super::super::host;
 use super::super::look_alike::{LookAlike, look_alike_in, spelled_new_path};
 use super::super::transfer::volume::{PathRole, map_volume_error};
-use super::super::types::{ConflictResolution, WriteOperationError, WriteOperationStartResult};
+use super::super::types::{ConflictResolution, ReadOnlySide, WriteOperationError, WriteOperationStartResult};
 use cmdr_fs::volume::Volume;
 
 /// Picks the concrete remote spelling that the overwrite warning referred to.
@@ -52,7 +52,7 @@ pub(crate) async fn compress_start(
     preview_id: Option<String>,
     initiator: cmdr_operation_log::types::Initiator,
 ) -> Result<WriteOperationStartResult, WriteOperationError> {
-    super::routing::ensure_zip_writable(&dest_zip_full_path, crate::file_system::ReadOnlySide::Destination)?;
+    super::routing::ensure_zip_writable(&dest_zip_full_path, ReadOnlySide::Destination)?;
     // Plain `get`: the `.zip` file itself is a plain file on its parent drive.
     let (dest_zip_full_path, existed) = match host::installed().volumes().get(&parent_volume_id) {
         Some(parent) if !parent.supports_local_fs_access() => {

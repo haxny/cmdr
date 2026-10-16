@@ -18,8 +18,8 @@ use super::super::state::{WriteOperationState, WriteSettledGuard};
 use super::super::summary::volume_items;
 use super::super::types::ReadOnlySide;
 use super::super::types::{
-    CancelRollback, WriteCancelledEvent, WriteCompleteEvent, WriteConflictEvent, WriteErrorEvent, WriteOperationError,
-    WriteOperationStartResult, WriteOperationType, WriteProgressEvent,
+    CancelRollback, VolumeCopyConfig, WriteCancelledEvent, WriteCompleteEvent, WriteConflictEvent, WriteErrorEvent,
+    WriteOperationError, WriteOperationStartResult, WriteOperationType, WriteProgressEvent,
 };
 use super::edit_error::EditError;
 use super::engine::{MutatorHooks, run_managed_edit, to_write_error};
@@ -70,7 +70,7 @@ pub(crate) async fn route_archive_move_out(
     dest_volume_id: String,
     dest_volume: Arc<dyn Volume>,
     dest_path: PathBuf,
-    config: crate::file_system::VolumeCopyConfig,
+    config: VolumeCopyConfig,
 ) -> Result<WriteOperationStartResult, WriteOperationError> {
     // Resolve the one archive every source belongs to, and the inner path of each
     // (the `{ delete }` changeset needs archive-root-relative names).
