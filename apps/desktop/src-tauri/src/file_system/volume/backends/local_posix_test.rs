@@ -839,6 +839,50 @@ fn test_listing_watch_coverage_flips_with_watcher_lifecycle() {
     );
 }
 
+/// A local mutation patches the pane showing its folder on the spot, through the
+/// app's composer (index, badges, then panes), without waiting for FSEvents. A
+/// copy or rename that skipped it would leave the pane stale until the watcher
+/// caught up, and forever on a watcher that missed the event.
+#[tokio::test]
+async fn a_local_mutation_patches_the_pane_showing_its_folder() {
+    use cmdr_fs::testing::unique_test_id;
+    use cmdr_listing::testing::TestListing;
+
+    let dir = TestDir::new("local_posix_notify_mutation");
+    let volume_id = unique_test_id("local-posix-notify");
+    let volume = LocalPosixVolume::local_folder("Test", &*dir);
+    let listing = TestListing::new()
+        .volume(&volume_id)
+        .path(&*dir)
+        .entries(Vec::new())
+        .insert(crate::listing_host::listings(), "local-posix-notify");
+
+    std::fs::write(dir.join("landed.txt"), b"x").expect("writing the new file");
+    volume
+        .notify_mutation(&volume_id, &dir, MutationEvent::Created("landed.txt".to_string()))
+        .await;
+    assert_eq!(listing.entry_names(), ["landed.txt"], "the create reaches the pane");
+
+    std::fs::rename(dir.join("landed.txt"), dir.join("renamed.txt")).expect("renaming the file");
+    volume
+        .notify_mutation(
+            &volume_id,
+            &dir,
+            MutationEvent::Renamed {
+                from: "landed.txt".to_string(),
+                to: "renamed.txt".to_string(),
+            },
+        )
+        .await;
+    assert_eq!(listing.entry_names(), ["renamed.txt"], "the rename reaches the pane");
+
+    std::fs::remove_file(dir.join("renamed.txt")).expect("deleting the file");
+    volume
+        .notify_mutation(&volume_id, &dir, MutationEvent::Deleted("renamed.txt".to_string()))
+        .await;
+    assert!(listing.entry_names().is_empty(), "the delete reaches the pane");
+}
+
 /// The streaming listing UI renders "Loaded N files..." off these ticks, so a local
 /// listing that never calls `on_progress` leaves a big folder on "Opening folder…"
 /// for its entire read.
