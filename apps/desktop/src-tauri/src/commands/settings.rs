@@ -129,7 +129,7 @@ pub fn set_show_safe_save_files_cmd(show: bool) {
 /// Show or hide the temporary files Cmdr writes while copying
 /// (`advanced.showStagingTempFiles`). Pushed live from the frontend on change.
 /// Only affects scratch files a RUNNING operation owns: leftovers from an
-/// interrupted transfer stay visible either way (`cmdr_fs::staging`).
+/// interrupted transfer stay visible either way (`file_system::staging`).
 #[tauri::command]
 #[specta::specta]
 pub fn set_show_staging_temp_files_cmd(show: bool) {
