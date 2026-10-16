@@ -411,7 +411,9 @@ const toc = [
             A security event log, <code>security-events.jsonl</code>: security-relevant changes and refusals (consent
             given, an update installed or refused, a rejected access attempt), with no file names or secrets. Up to
             about 2 MB, never part of an error report. On by default; users can turn it off unless the organization
-            sets <code>DisableSecurityLogOptOut</code>.
+            sets <code>DisableSecurityLogOptOut</code>. When Cmdr turns something away in the moment (a web page
+            trying to reach its MCP server, a network share's reply without the server's signature, or an update that
+            isn't a genuine Cmdr release), it also says so on screen, whether or not the log is on.
         </li>
         <li>Search and selection history, AI chats, and the AI assistant's notes.</li>
         <li>Server addresses and usernames for saved network connections, and settings.</li>

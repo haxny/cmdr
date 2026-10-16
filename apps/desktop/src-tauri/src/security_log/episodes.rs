@@ -107,32 +107,41 @@ static SMB: LazyLock<Mutex<Episodes<String>>> = LazyLock::new(|| Mutex::new(Epis
 static CLOSER_RUNNING: AtomicBool = AtomicBool::new(false);
 
 /// The MCP server turned a request away for `reason`. Records the episode's start, if this opens
-/// one. Cheap enough for every rejected request: a lock and a map lookup.
+/// one, and hands every later one to subscribers as a repeat. Cheap enough for every rejected
+/// request: a lock and a map lookup.
 pub fn note_mcp_rejection(reason: McpRejection) {
+    let started = SecurityEvent::McpRejectionsStarted { reason };
     #[cfg(test)]
-    if let Some(events) = captured(|c| c.mcp.note(reason, Instant::now()).into_iter().map(mcp_event).collect()) {
-        return record_all(events);
+    if let Some(transitions) = captured(|c| c.mcp.note(reason, Instant::now())) {
+        return settle(transitions, mcp_event, started);
     }
     let transitions = MCP.lock_ignore_poison().note(reason, Instant::now());
-    record_all(transitions.into_iter().map(mcp_event).collect());
+    settle(transitions, mcp_event, started);
     ensure_closer();
 }
 
 /// An SMB reply on `volume_id` was refused for a bad or missing signature.
 pub fn note_smb_signature_rejection(volume_id: &str) {
+    let started = SecurityEvent::SmbSignatureRejectionsStarted {
+        volume_id: volume_id.to_string(),
+    };
     #[cfg(test)]
-    if let Some(events) = captured(|c| {
-        c.smb
-            .note(volume_id.to_string(), Instant::now())
-            .into_iter()
-            .map(smb_event)
-            .collect()
-    }) {
-        return record_all(events);
+    if let Some(transitions) = captured(|c| c.smb.note(volume_id.to_string(), Instant::now())) {
+        return settle(transitions, smb_event, started);
     }
     let transitions = SMB.lock_ignore_poison().note(volume_id.to_string(), Instant::now());
-    record_all(transitions.into_iter().map(smb_event).collect());
+    settle(transitions, smb_event, started);
     ensure_closer();
+}
+
+/// Records what a note did, and when it opened no episode, hands `started` (the open one's
+/// started event) to subscribers as a repeat.
+fn settle<K>(transitions: Vec<Transition<K>>, to_event: fn(Transition<K>) -> SecurityEvent, started: SecurityEvent) {
+    let opened = transitions.iter().any(|t| matches!(t, Transition::Started(_)));
+    record_all(transitions.into_iter().map(to_event).collect());
+    if !opened {
+        super::repeat(started);
+    }
 }
 
 /// Quit: ends every open episode so its count reaches the log.
@@ -213,7 +222,7 @@ fn ensure_closer() {
 
 /// Runs `f` against this thread's capture, if a test holds one.
 #[cfg(test)]
-fn captured(f: impl FnOnce(&mut super::testing::Captured) -> Vec<SecurityEvent>) -> Option<Vec<SecurityEvent>> {
+fn captured<T>(f: impl FnOnce(&mut super::testing::Captured) -> T) -> Option<T> {
     super::testing::CAPTURE.with_borrow_mut(|slot| slot.as_mut().map(f))
 }
 
@@ -266,6 +275,26 @@ mod tests {
             e.note("wrong", t0 + Duration::from_secs(1) + WINDOW),
             vec![Transition::Ended("wrong", 2), Transition::Started("wrong")]
         );
+    }
+
+    /// A subscriber (the notice gate) counts every rejection, so each one after the first in an
+    /// episode reaches it as a repeat, while the file still gets only the start.
+    #[test]
+    fn every_rejection_after_an_episodes_first_is_a_repeat_for_subscribers() {
+        let capture = crate::security_log::testing::capture_events();
+        for _ in 0..3 {
+            note_mcp_rejection(McpRejection::ForeignOrigin);
+        }
+        note_smb_signature_rejection("smb-nas");
+        note_smb_signature_rejection("smb-nas");
+        let mcp = SecurityEvent::McpRejectionsStarted {
+            reason: McpRejection::ForeignOrigin,
+        };
+        let smb = SecurityEvent::SmbSignatureRejectionsStarted {
+            volume_id: "smb-nas".into(),
+        };
+        assert_eq!(capture.events(), vec![mcp.clone(), smb.clone()]);
+        assert_eq!(capture.repeats(), vec![mcp.clone(), mcp, smb]);
     }
 
     #[test]

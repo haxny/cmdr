@@ -30,8 +30,18 @@ const LOG_TARGET: &str = "security_log";
 /// How long quit waits for queued lines to reach the file.
 const EXIT_FLUSH_TIMEOUT: Duration = Duration::from_millis(500);
 
-/// A consumer of every event, like the in-app notice gate.
-pub type Subscriber = Arc<dyn Fn(&SecurityEvent) + Send + Sync>;
+/// How a subscriber heard an event.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Heard {
+    /// It went through [`record`], so the file has it too while recording is on.
+    Recorded,
+    /// One more rejection inside an episode that's already open, delivered as that episode's
+    /// started event. ❗ Only subscribers hear it: the file gets the count when the episode ends.
+    Repeat,
+}
+
+/// A consumer of every event, like the in-app notice gate (`crate::security_notices`).
+pub type Subscriber = Arc<dyn Fn(&SecurityEvent, Heard) + Send + Sync>;
 
 type LogSink = Arc<dyn Fn(LogLine) + Send + Sync>;
 
@@ -48,13 +58,20 @@ pub fn record(event: SecurityEvent) {
     RECORDER.record(event);
 }
 
-/// Adds a consumer that hears every event from now on, on the recording thread. Keep it quick.
-#[allow(
-    dead_code,
-    reason = "the seam a second consumer (the in-app notice gate, #457) hooks into"
-)]
+/// Adds a consumer that hears every event from now on, and every repeat inside an open episode,
+/// on the recording thread. Keep it quick.
 pub fn subscribe(subscriber: Subscriber) {
     RECORDER.subscribers.write_ignore_poison().push(subscriber);
+}
+
+/// One more rejection inside an open episode: `started` is that episode's started event. Only
+/// subscribers hear it, whatever the opt-out says.
+fn repeat(started: SecurityEvent) {
+    #[cfg(test)]
+    if testing::capture_repeat(&started) {
+        return;
+    }
+    RECORDER.repeat(&started);
 }
 
 /// The person's switch (`securityLog.enabled`), pushed live by the settings applier.
@@ -163,6 +180,13 @@ impl Recorder {
         self.deliver(event, self.is_recording());
     }
 
+    fn repeat(&self, started: &SecurityEvent) {
+        let subscribers = self.subscribers.read_ignore_poison().clone();
+        for subscriber in &subscribers {
+            subscriber(started, Heard::Repeat);
+        }
+    }
+
     /// "Turned on" is the first line after switching on; "turned off" the last one before
     /// stopping, written although recording is now off.
     fn set_user_enabled(&self, enabled: bool) {
@@ -198,7 +222,7 @@ impl Recorder {
     fn deliver(&self, event: SecurityEvent, to_file: bool) {
         let subscribers = self.subscribers.read_ignore_poison().clone();
         for subscriber in &subscribers {
-            subscriber(&event);
+            subscriber(&event, Heard::Recorded);
         }
         if !to_file {
             return;
@@ -220,6 +244,7 @@ pub mod testing {
 
     pub(super) struct Captured {
         pub events: Vec<SecurityEvent>,
+        pub repeats: Vec<SecurityEvent>,
         pub mcp: Episodes<McpRejection>,
         pub smb: Episodes<String>,
     }
@@ -238,6 +263,7 @@ pub mod testing {
         CAPTURE.with_borrow_mut(|slot| {
             *slot = Some(Captured {
                 events: Vec::new(),
+                repeats: Vec::new(),
                 mcp: Episodes::new(super::episodes::QUIET),
                 smb: Episodes::new(super::episodes::QUIET),
             });
@@ -250,12 +276,28 @@ pub mod testing {
         pub fn events(&self) -> Vec<SecurityEvent> {
             CAPTURE.with_borrow(|slot| slot.as_ref().map(|c| c.events.clone()).unwrap_or_default())
         }
+
+        /// Every repeat inside an open episode so far, each as its episode's started event.
+        pub fn repeats(&self) -> Vec<SecurityEvent> {
+            CAPTURE.with_borrow(|slot| slot.as_ref().map(|c| c.repeats.clone()).unwrap_or_default())
+        }
     }
 
     impl Drop for CaptureGuard {
         fn drop(&mut self) {
             CAPTURE.with_borrow_mut(|slot| *slot = None);
         }
+    }
+
+    /// Whether a capture took the repeat `started`.
+    pub(super) fn capture_repeat(started: &SecurityEvent) -> bool {
+        CAPTURE.with_borrow_mut(|slot| match slot {
+            Some(captured) => {
+                captured.repeats.push(started.clone());
+                true
+            }
+            None => false,
+        })
     }
 
     /// Whether a capture took `event`.
@@ -276,10 +318,11 @@ mod tests {
 
     use super::*;
 
-    type Heard = Arc<Mutex<Vec<SecurityEvent>>>;
+    type Seen = Arc<Mutex<Vec<SecurityEvent>>>;
+    type HeardHow = Arc<Mutex<Vec<(SecurityEvent, Heard)>>>;
 
     /// A recorder whose file is a list, plus a subscriber's list.
-    fn recorder() -> (Recorder, Heard, Heard) {
+    fn recorder() -> (Recorder, Seen, Seen) {
         let recorder = Recorder::new();
         let file = Arc::new(Mutex::new(Vec::new()));
         let heard = Arc::new(Mutex::new(Vec::new()));
@@ -291,13 +334,13 @@ mod tests {
         recorder
             .subscribers
             .write_ignore_poison()
-            .push(Arc::new(move |event: &SecurityEvent| {
+            .push(Arc::new(move |event: &SecurityEvent, _: Heard| {
                 heard_sink.lock().expect("test lock").push(event.clone());
             }));
         (recorder, file, heard)
     }
 
-    fn taken(list: &Heard) -> Vec<SecurityEvent> {
+    fn taken(list: &Seen) -> Vec<SecurityEvent> {
         std::mem::take(&mut *list.lock().expect("test lock"))
     }
 
@@ -427,6 +470,26 @@ mod tests {
         assert_eq!(reveal_target(&dir), dir.to_path_buf());
         std::fs::write(file_path(&dir), "").expect("write");
         assert_eq!(reveal_target(&dir), file_path(&dir));
+    }
+
+    #[test]
+    fn a_repeat_reaches_subscribers_but_never_the_file() {
+        let (recorder, file, _) = recorder();
+        let how: HeardHow = Arc::new(Mutex::new(Vec::new()));
+        let sink = Arc::clone(&how);
+        recorder
+            .subscribers
+            .write_ignore_poison()
+            .push(Arc::new(move |event: &SecurityEvent, heard: Heard| {
+                sink.lock().expect("test lock").push((event.clone(), heard));
+            }));
+        recorder.record(consent());
+        recorder.repeat(&consent());
+        assert_eq!(taken(&file), vec![consent()], "the file has the record, not the repeat");
+        assert_eq!(
+            *how.lock().expect("test lock"),
+            vec![(consent(), Heard::Recorded), (consent(), Heard::Repeat)]
+        );
     }
 
     #[test]

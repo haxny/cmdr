@@ -143,6 +143,7 @@ pub mod search;
 mod secrets;
 mod security_advisories;
 mod security_log;
+mod security_notices;
 pub mod selection;
 mod send_schedule;
 // `Cmdr > Services`: what Cmdr tells AppKit it can hand a service, and what the selection is at the
@@ -307,6 +308,8 @@ pub fn run() {
             // The security event log, before anything that records into it: the managed policy
             // right below notes itself there at launch.
             security_log::init(app.handle());
+            // The in-app notice for a refused access attempt hangs off the same log (#457).
+            security_notices::init(app.handle());
 
             // The organization's managed policy, before anything that might send: the crash
             // reporter's next-launch path below is the first. The read is lazy anyway (no caller

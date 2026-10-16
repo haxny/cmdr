@@ -123,8 +123,10 @@ risk.
 - **Mitigations**:
   - **MCP server**: off by default in release builds and turned on by a developer setting. Once on, it binds loopback
     only, requires a per-start random bearer token on every request (compared in constant time), stores that token in an
-    owner-only file, and refuses a non-localhost `Origin`. The token is what stops DNS rebinding. Mechanism:
-    `apps/desktop/src-tauri/src/mcp/DETAILS.md` § Authentication.
+    owner-only file, and refuses a non-localhost `Origin`. The token is what stops DNS rebinding. A refused `Origin` is
+    also shown to the person, and every refusal lands in the security event log. Mechanism:
+    `apps/desktop/src-tauri/src/mcp/DETAILS.md` § Authentication, `docs/security.md` § Telling the person about a
+    refused access attempt.
   - **Apple Events** only navigate: an incoming file URL raises the window and moves the cursor, nothing more
     (`apps/desktop/src-tauri/src/reveal/CLAUDE.md`). Cmdr registers no URL scheme and no Service of its own.
   - **Drag and drop in** opens the normal transfer confirmation.
@@ -185,8 +187,10 @@ risk.
 - **Mitigations**:
   - **SMB**: NTLMv2 auth, signing whenever the session is authenticated or the server asks, unsigned replies on a signed
     session rejected, SMB 3.1.1 pre-auth integrity and a signed final session setup against downgrade, a guest session
-    refused when a named login was asked for, and a frame size cap. Credentials in the Keychain, keyed by server
-    (`crates/cmdr-smb/CLAUDE.md`, `apps/desktop/src-tauri/src/network/CLAUDE.md`).
+    refused when a named login was asked for, and a frame size cap. A refused reply drops the session and tells the
+    person (a toast per server, plus the transfer's own stopped reason); a refused guest session is its own pane state.
+    Credentials in the Keychain, keyed by server (`crates/cmdr-smb/CLAUDE.md`,
+    `apps/desktop/src-tauri/src/network/CLAUDE.md`).
   - **SFTP**: trust on first use with a prompt, a changed host key stops the connection, a revoked key is a hard stop,
     and `~/.ssh/known_hosts` is read but never written. No agent forwarding (`crates/cmdr-sftp/DETAILS.md` § Host-key
     trust, § The auth ladder).
@@ -248,6 +252,9 @@ risk.
     environment controls can turn the check off. So a leaked updater key alone can't ship anything: an archive it signs
     must still hold a bundle signed with the Developer ID identity, which is a separate key that Apple can revoke
     (`apps/desktop/src-tauri/src/updater/DETAILS.md` § Code signature).
+  - **A refused update is said out loud**: a toast saying it isn't a genuine Cmdr release, with an optional report, and
+    that version isn't downloaded again this session (`docs/security.md` § Telling the person about a refused access
+    attempt).
   - **Release builds are Developer ID signed and notarized** (`docs/guides/apple-signing-and-notarization.md`).
   - **The release pipeline**: release tags are SSH-signed and verified against `.github/release-signers` before a build
     starts; only admins can create `v*` tags (a repository ruleset); the only jobs that sign run in a `release`

@@ -78,6 +78,24 @@ async fn http_surface_requires_auth_before_dispatch_or_session_mutation() {
             .is_some()
     );
 
+    // A missing token and a wrong one get byte-for-byte the same answer, so the response is no
+    // oracle; only the security log tells them apart (`TokenRejection`, #457).
+    let rejection_bytes = |authorization: Option<&'static str>| {
+        let mut request = client
+            .post(&mcp_url)
+            .json(&json!({"jsonrpc":"2.0","id":19,"method":"tools/list"}));
+        if let Some(value) = authorization {
+            request = request.header(header::AUTHORIZATION, value);
+        }
+        async move {
+            let response = request.send().await.expect("rejected request should complete");
+            (response.status(), response.bytes().await.expect("body should read"))
+        }
+    };
+    let missing = rejection_bytes(None).await;
+    let wrong_again = rejection_bytes(Some("Bearer wrong-token")).await;
+    assert_eq!(missing, wrong_again);
+
     let notification = client
         .post(&mcp_url)
         .json(&json!({"jsonrpc":"2.0","method":"notifications/initialized"}))

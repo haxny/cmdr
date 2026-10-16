@@ -207,6 +207,26 @@ Part I (2)(l). Posture:
   and performance for little security value. The app log (`docs/tooling/logging.md`) stays always on as local
   diagnostics; the CRA opt-out covers this record (decided 2026-10-16).
 
+## Telling the person about a refused access attempt
+
+The security event log is the record; the security notice (`apps/desktop/src-tauri/src/security_notices/CLAUDE.md`) is
+the moment: Cmdr says on screen that it turned something away and what the person can do. It answers the CRA's Annex I
+Part I (2)(d), "report on possible unauthorised access". Posture:
+
+- **Who's told what.** A web page reaching the MCP server (a non-loopback `Origin`): a persistent warning. A server
+  reply refused for its signature on a signed SMB session: a persistent warning per server, plus the transfer's own
+  stopped reason, and the session is dropped so the next one is freshly signed. An update that isn't a genuine Cmdr
+  release (minisign or Developer ID): a persistent error with an optional report, and that version isn't fetched again
+  this session. A named login answered with a guest session: the pane says so ("Try another password…"), not a toast.
+- **Record-only, on purpose.** A missing or wrong MCP token (a client being set up, or one holding the previous run's
+  token: the token is fresh every start, and any local process can read the token file), and an older signed release
+  offered as an update (the install already refuses it). Decided by David, 2026-10-16.
+- **One event, one emitter.** The notice is a subscriber of the security log's `record`, so the two can't disagree, and
+  it hears the opt-out-free stream: turning the record off doesn't silence the notice.
+- **Can't be used to spam.** The backend raises each notice at most once a minute per source, updating one toast in
+  place with the count; once closed, it stays quiet for the session. Nothing in a notice names a web page's origin or a
+  path.
+
 ## Secret scanning (GitGuardian)
 
 GitGuardian watches the repo and opens an incident per suspected secret. Two independent surfaces, configured

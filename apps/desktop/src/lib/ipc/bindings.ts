@@ -5287,6 +5287,7 @@ export const events = {
   searchError: makeEvent<SearchErrorEvent>('search-error'),
   searchIndexReady: makeEvent<SearchIndexReadyEvent>('search-index-ready'),
   searchProgress: makeEvent<SearchProgressEvent>('search-progress'),
+  securityNoticeRaised: makeEvent<SecurityNoticeRaised>('security-notice-raised'),
   serverPlaceMoved: makeEvent<ServerPlaceMoved>('server-place-moved'),
   settingsChanged: makeEvent<SettingsChanged>('settings-changed'),
   showSearchResultInFolder: makeEvent<ShowSearchResultInFolder>('show-search-result-in-folder'),
@@ -5328,6 +5329,21 @@ export const events = {
 export type AccentColorChanged = {
   hex: string
 }
+
+/**
+ *  Something turned away that the person hears about. Carries its source, so it's also the
+ *  gate's key, and ❌ never anything the person shouldn't see in a toast (no origin, no path).
+ */
+export type AccessNotice =
+  /**
+   *  A web page in a browser tried to reach the MCP server (a non-loopback `Origin`). The
+   *  origin itself is in the log, never here: it's a site the person visits.
+   */
+  | { kind: 'mcpForeignOrigin' }
+  // A server reply on a signed session carried a bad or missing signature.
+  | { kind: 'smbSignatureRefused'; volumeId: string }
+  // An offered update didn't carry Cmdr's signature, so nothing was installed.
+  | { kind: 'updateNotGenuine'; version: string; check: SignatureCheck }
 
 // Active settings snapshot cached at startup for inclusion in crash reports.
 export type ActiveSettings = {
@@ -15146,6 +15162,18 @@ export type SecurityNotice = {
 }
 
 /**
+ *  Typed `security-notice-raised` event: tell the person about `notice`, seen `count` times
+ *  since Cmdr started. A later raise for the same notice carries the grown count, so the
+ *  frontend updates its toast in place.
+ *
+ *  `Serialize` only beside the derive, like `AgentWakeStaged`: nothing listens Rust-side.
+ */
+export type SecurityNoticeRaised = {
+  notice: AccessNotice
+  count: number
+}
+
+/**
  *  Which kind of seek the caller is asking for, as a value the wire enforces.
  *
  *  The command pairs it with a numeric `target_value`; keeping the KIND an enum
@@ -15876,6 +15904,16 @@ export type SignInShape =
       // Whether the sheet offers "Connect as guest" beside the two fields.
       guestAllowed: boolean
     }
+
+/**
+ *  Which signature didn't hold. Also crosses IPC in the update notice
+ *  (`crate::security_notices::AccessNotice`), where it rides the same tokens.
+ */
+export type SignatureCheck =
+  // The archive's minisign signature against the updater keys.
+  | 'minisign'
+  // The bundle's Apple code signature against Cmdr's Developer ID.
+  | 'code_signature'
 
 export type SigningInfoDto = {
   active: boolean
@@ -17241,6 +17279,11 @@ export type UpdateDownloadError =
    *  after the check). Nothing was fetched. Not a failure: ❌ never log it at warn or error.
    */
   | { type: 'blockedByPolicy' }
+  /**
+   *  This version didn't carry Cmdr's signature earlier this session, so nothing was fetched
+   *  again. The frontend words it exactly like the refusal it repeats.
+   */
+  | { type: 'notGenuineEarlier' }
 
 /**
  *  Why `install_update` didn't install. `Failed` covers everything local (extraction, the version
@@ -17721,6 +17764,13 @@ export type VolumeConnection =
    *  `events::volume_mapping::wire_state`.
    */
   | 'needs_host_key_approval'
+  /**
+   *  SMB: a reconnect signed in with a named login and the server answered with a guest
+   *  session, so the backend refused it. The pane says so and offers another password.
+   *  ❗ Not [`NeedsCredentials`](Self::NeedsCredentials), whose prompt doesn't say what
+   *  happened: usually a wrong password, rarely something tampering with the connection.
+   */
+  | 'guest_session_refused'
 
 /**
  *  Typed `volume-connection-changed` Tauri event. The frontend reconnect manager
@@ -18868,6 +18918,14 @@ export type WriteOperationError =
   | { type: 'trash_not_supported'; path: string }
   // Network connection was interrupted or timed out.
   | { type: 'connection_interrupted'; path: string }
+  /**
+   *  A server's reply on a signed session carried a bad or missing signature, so Cmdr refused
+   *  it and stopped (`VolumeError::SignatureInvalid`, SMB-only today). Its own variant so the
+   *  stopped state can say so: it's a possible sign of tampering between the Mac and the
+   *  server (or a broken network device), ❌ never a blip to retry. `message` is the backend's
+   *  diagnostic, for the technical details only.
+   */
+  | { type: 'reply_signature_refused'; path: string; message: string }
   // Couldn't read from the source.
   | { type: 'read_error'; path: string; message: string }
   // Couldn't write to the destination.

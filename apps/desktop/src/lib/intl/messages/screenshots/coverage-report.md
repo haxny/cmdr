@@ -16,48 +16,49 @@ Per catalog area, each renderable key is one of three:
 
 Coverage is PARTIAL by design. Uncoupled keys are expected, not bugs.
 
-**Total: 2814 / 4392 keys have a screenshot (64%):** 1595 direct (36%) and 1219 representative (28%). 1389 remain
+**Total: 2824 / 4425 keys have a screenshot (64%):** 1595 direct (36%) and 1229 representative (28%). 1412 remain
 uncoupled, and 189 are native surfaces a webview capture cannot reach.
 
-| Area           | Direct | Representative | Uncoupled | Native | Total | Any % |
-| -------------- | -----: | -------------: | --------: | -----: | ----: | ----: |
-| adb            |      3 |              0 |        17 |      0 |    20 |   15% |
-| ai             |      0 |            123 |         0 |      0 |   123 |  100% |
-| askCmdr        |     65 |              0 |       132 |      0 |   197 |   33% |
-| commandPalette |      3 |              2 |         2 |      0 |     7 |   71% |
-| commands       |    215 |              1 |        94 |      0 |   310 |   70% |
-| common         |      9 |              1 |         8 |      0 |    18 |   56% |
-| crashReporter  |     12 |             11 |         0 |      0 |    23 |  100% |
-| downloads      |     10 |              5 |        21 |      0 |    36 |   42% |
-| errorReporter  |     16 |              0 |        36 |      0 |    52 |   31% |
-| errors         |    116 |            425 |         0 |      0 |   541 |  100% |
-| feedback       |      7 |              5 |         1 |      0 |    13 |   92% |
-| fileExplorer   |    122 |             66 |       312 |      0 |   500 |   38% |
-| fileOperations |    124 |             68 |        98 |      0 |   290 |   66% |
-| goToPath       |      5 |              6 |         2 |      0 |    13 |   85% |
-| indexing       |     34 |             17 |        20 |      0 |    71 |   72% |
-| licensing      |     49 |             35 |        25 |      0 |   109 |   77% |
-| lowDiskSpace   |      0 |              0 |         5 |      0 |     5 |    0% |
-| main           |      7 |              0 |        46 |      2 |    55 |   13% |
-| menu           |      4 |              0 |         0 |    187 |   191 |    2% |
-| mtp            |     18 |              2 |         0 |      0 |    20 |  100% |
-| multiRename    |      0 |              0 |       123 |      0 |   123 |    0% |
-| notifications  |      0 |              0 |         1 |      0 |     1 |    0% |
-| onboarding     |     96 |             39 |        25 |      0 |   160 |   84% |
-| operationLog   |     26 |             29 |         0 |      0 |    55 |  100% |
-| queryUi        |     41 |            127 |         0 |      0 |   168 |  100% |
-| queue          |     27 |             20 |         5 |      0 |    52 |   90% |
-| search         |      9 |             48 |         0 |      0 |    57 |  100% |
-| selection      |     14 |              0 |         1 |      0 |    15 |   93% |
-| servers        |     73 |             23 |        92 |      0 |   188 |   51% |
-| settings       |    404 |             25 |       265 |      0 |   694 |   62% |
-| shortcuts      |     35 |             28 |         0 |      0 |    63 |  100% |
-| suggestedOps   |      0 |              0 |        38 |      0 |    38 |    0% |
-| transfer       |      2 |             18 |         0 |      0 |    20 |  100% |
-| ui             |      8 |              0 |        16 |      0 |    24 |   33% |
-| updates        |      5 |             20 |         0 |      0 |    25 |  100% |
-| viewer         |     30 |             74 |         0 |      0 |   104 |  100% |
-| whatsNew       |      6 |              1 |         4 |      0 |    11 |   64% |
+| Area            | Direct | Representative | Uncoupled | Native | Total | Any % |
+| --------------- | -----: | -------------: | --------: | -----: | ----: | ----: |
+| adb             |      3 |              0 |        17 |      0 |    20 |   15% |
+| ai              |      0 |            123 |         0 |      0 |   123 |  100% |
+| askCmdr         |     65 |              0 |       133 |      0 |   198 |   33% |
+| commandPalette  |      3 |              2 |         2 |      0 |     7 |   71% |
+| commands        |    215 |              1 |        94 |      0 |   310 |   70% |
+| common          |      9 |              1 |         8 |      0 |    18 |   56% |
+| crashReporter   |     12 |             11 |         0 |      0 |    23 |  100% |
+| downloads       |     10 |              5 |        21 |      0 |    36 |   42% |
+| errorReporter   |     16 |              0 |        37 |      0 |    53 |   30% |
+| errors          |    116 |            430 |         0 |      0 |   546 |  100% |
+| feedback        |      7 |              5 |         1 |      0 |    13 |   92% |
+| fileExplorer    |    122 |             66 |       312 |      0 |   500 |   38% |
+| fileOperations  |    124 |             68 |        98 |      0 |   290 |   66% |
+| goToPath        |      5 |              6 |         2 |      0 |    13 |   85% |
+| indexing        |     34 |             17 |        20 |      0 |    71 |   72% |
+| licensing       |     49 |             35 |        25 |      0 |   109 |   77% |
+| lowDiskSpace    |      0 |              0 |         5 |      0 |     5 |    0% |
+| main            |      7 |              0 |        46 |      2 |    55 |   13% |
+| menu            |      4 |              0 |         0 |    187 |   191 |    2% |
+| mtp             |     18 |              2 |         0 |      0 |    20 |  100% |
+| multiRename     |      0 |              0 |       123 |      0 |   123 |    0% |
+| notifications   |      0 |              0 |         1 |      0 |     1 |    0% |
+| onboarding      |     96 |             39 |        25 |      0 |   160 |   84% |
+| operationLog    |     26 |             30 |         0 |      0 |    56 |  100% |
+| queryUi         |     41 |            127 |         0 |      0 |   168 |  100% |
+| queue           |     27 |             20 |         5 |      0 |    52 |   90% |
+| search          |      9 |             48 |         0 |      0 |    57 |  100% |
+| securityNotices |      0 |              0 |        13 |      0 |    13 |    0% |
+| selection       |     14 |              0 |         1 |      0 |    15 |   93% |
+| servers         |     73 |             26 |        92 |      0 |   191 |   52% |
+| settings        |    404 |             25 |       273 |      0 |   702 |   61% |
+| shortcuts       |     35 |             28 |         0 |      0 |    63 |  100% |
+| suggestedOps    |      0 |              0 |        38 |      0 |    38 |    0% |
+| transfer        |      2 |             18 |         0 |      0 |    20 |  100% |
+| ui              |      8 |              0 |        16 |      0 |    24 |   33% |
+| updates         |      5 |             21 |         0 |      0 |    26 |  100% |
+| viewer          |     30 |             74 |         0 |      0 |   104 |  100% |
+| whatsNew        |      6 |              1 |         4 |      0 |    11 |   64% |
 
 ## Surfaces to review
 

@@ -35,8 +35,8 @@ Issue #456. Must-knows in `CLAUDE.md`; this is the why and the catalog.
 - `smb_signature_rejections_started` / `_ended` (`volume_id`): `cmdr-smb` reports each refused reply
   (`smb2::ErrorKind::SignatureInvalid`) through the volume host's `security_refusal` seam;
   `events/volume_mapping.rs` hands it to `note_smb_signature_rejection`, one episode per volume. A guest session offered
-  for a named login (`GuestSessionRefused`) isn't recorded: it reads as a wrong password today, and #457 gives it its
-  own pane state.
+  for a named login (`GuestSessionRefused`) isn't recorded: it reads as a wrong password, and the pane names it
+  (`VolumeConnection::GuestSessionRefused`).
 - `recording_turned_on` / `recording_turned_off` (`by`: `user` | `organization`): the opt-out itself.
 
 Not recorded: reads of file data. The operation log covers modifications; journaling every read would cost privacy and
@@ -70,13 +70,16 @@ closer hasn't swept yet ends the old episode before starting the new one, so two
 
 ## Consumers
 
-`subscribe` adds a consumer that hears every event, on the recording thread, before the file does. It exists for the
-in-app notice gate (#457), which decides per variant whether to tell the person. Subscribers ignore the opt-out: the
-switch is about the record, not about being told.
+`subscribe` adds a consumer that hears every event, on the recording thread, before the file does, as
+`Heard::Recorded`. Every rejection after an episode's first also reaches subscribers as that episode's started event,
+`Heard::Repeat`, so a consumer can count them; the file never sees those. The one consumer is the in-app notice gate
+(`../security_notices/CLAUDE.md`), which decides per variant whether to tell the person. Subscribers ignore the opt-out:
+the switch is about the record, not about being told.
 
 ## Testing
 
-`testing::capture_events()` captures what THIS thread records (and runs its own episodes), so hook tests elsewhere
+`testing::capture_events()` captures what THIS thread records (and runs its own episodes; `repeats()` lists the
+repeats subscribers would have heard), so hook tests elsewhere
 assert the exact events without touching the file or racing parallel tests. A `#[tokio::test]` runs its tasks on the
 test thread, so it reaches them too; a hook that records from a `spawn_blocking` thread is tested through the pure
 helper it calls (`accept_on`, `toggle_event`, `../updater/security_events.rs`). The opt-out logic is tested on a private

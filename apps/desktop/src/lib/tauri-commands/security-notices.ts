@@ -1,0 +1,19 @@
+// The in-app notice for a refused access attempt (#457): a web page at the MCP server, a server
+// reply refused for its signature, an update that isn't a genuine Cmdr release. The backend's
+// gate decides what reaches the person and how often (`src-tauri/src/security_notices/`).
+
+import type { UnlistenFn } from '@tauri-apps/api/event'
+import { events, type SecurityNoticeRaised } from '#lib/ipc/bindings.js'
+
+/**
+ * Subscribe to `security-notice-raised`. One-shot per raise and NOT seeded: a notice raised
+ * before this window existed was for a moment that's gone.
+ *
+ * ⚠️ It reaches EVERY window. Subscribe from the main window only, or the settings window raises
+ * its own copy of the toast.
+ */
+export function onSecurityNoticeRaised(callback: (payload: SecurityNoticeRaised) => void): Promise<UnlistenFn> {
+  return events.securityNoticeRaised.listen((event) => {
+    callback(event.payload)
+  })
+}

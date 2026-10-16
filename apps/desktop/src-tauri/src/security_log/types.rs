@@ -117,8 +117,9 @@ pub enum PolicyRefusal {
     AboveCeiling,
 }
 
-/// Which signature didn't hold.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+/// Which signature didn't hold. Also crosses IPC in the update notice
+/// (`crate::security_notices::AccessNotice`), where it rides the same tokens.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "snake_case")]
 pub enum SignatureCheck {
     /// The archive's minisign signature against the updater keys.

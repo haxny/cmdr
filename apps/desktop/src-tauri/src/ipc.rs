@@ -84,6 +84,7 @@ use crate::network::{
 };
 use crate::reveal::RevealDelivered;
 use crate::search::live::events::{SearchCancelledEvent, SearchCompleteEvent, SearchErrorEvent, SearchProgressEvent};
+use crate::security_notices::SecurityNoticeRaised;
 use crate::space_poller::{LowDiskSpacePayload, VolumeSpaceChanged};
 use crate::volume_broadcast::{
     ServerPlaceMoved, VolumeContextAction, VolumeMounted, VolumeRootChanged, VolumeUnmounted, VolumesChanged,
@@ -1087,6 +1088,9 @@ pub fn builder() -> Builder<tauri::Wry> {
             // A wake left proposals behind, so the main window can say so once
             // (agent/wake/staged.rs).
             AgentWakeStaged,
+            // Something refused for the person's safety that they should hear about now: a web
+            // page at the MCP server, a refused server reply, a fake update (security_notices/).
+            SecurityNoticeRaised,
             // The quit gate holding an exit while operations run, and the same quit
             // being called off from a surface that isn't holding the prompt (quit/).
             QuitRequested,

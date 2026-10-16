@@ -117,6 +117,8 @@ export type SettingsSurface =
   | 'local-download-toast'
   /** The "phones are turned off in Settings" toast after a favorite pick, deep-linking to the MTP or ADB section. */
   | 'favorite-toast'
+  /** A security notice about a web page at the MCP server, deep-linking to AI > MCP server. */
+  | 'security-notice-toast'
 
 /**
  * Opens the settings window, or focuses it if already open. When `section` is provided,

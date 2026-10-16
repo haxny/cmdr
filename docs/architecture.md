@@ -22,6 +22,9 @@ All under `apps/desktop/src/lib/`.
   and MCP encoding in `servers-hub-*.ts`), the places under one account (`PlacesBrowser.svelte`), SMB's side of the
   sign-in sheet (`smb-sign-in.ts`), the "Connect directly" upgrade, the per-volume reconnect cycle, and the mDNS
   discovery store
+- `security-notices/`: the toast that tells the person Cmdr turned an access attempt away (a web page at the MCP server,
+  a refused server reply, an update that isn't genuine), one per source, quiet once closed. See
+  `apps/desktop/src/lib/security-notices/CLAUDE.md`
 - `servers/`: Remote places the app dials (SFTP, WebDAV, S3): the `sftp://user@host:port/path` spelling, the connect
   flow that picks its move by the volume's standing, the ONE sign-in sheet every credential ask in the app opens
   (`SignInSheet.svelte`, add / sign-in / edit), the address parser behind add mode, the words for a connect that
@@ -259,6 +262,9 @@ All under `apps/desktop/src-tauri/src/`.
 - `security_log/`: The local security event log (`security-events.jsonl`): typed `SecurityEvent`s from consent, MCP,
   managed-policy, and updater hooks, one emitter that also feeds subscribers, a background writer, and the opt-out. See
   its `apps/desktop/src-tauri/src/security_log/CLAUDE.md`
+- `security_notices/`: the in-app notice for a refused access attempt: a `security_log` subscriber that picks which
+  events reach the person and rate-limits them per source (`NoticeGate`), raising the typed `security-notice-raised`
+  event. See its `apps/desktop/src-tauri/src/security_notices/CLAUDE.md`
 - `agent/`: The in-app AI agent, whose first user-facing slice is "Ask Cmdr" (a chat rail). Its `agent/llm/` holds the
   provider-agnostic `AgentLlm` seam over the shipped `genai` client, its deterministic fake, and the typed message-part
   model that keeps opaque provider reasoning state lossless. Its `agent/store/proposals/` holds the durable proposal

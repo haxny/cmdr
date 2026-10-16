@@ -493,6 +493,7 @@ export {
   onAgentWakeStatus,
   onAgentWakeStaged,
 } from './ask-cmdr'
+export { onSecurityNoticeRaised } from './security-notices'
 export type {
   WakeReadinessView,
   AskCmdrStreamEvent,

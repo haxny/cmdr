@@ -2941,23 +2941,19 @@
   },
   "settings.updates.card.securityEvents": "Security events",
   "@settings.updates.card.securityEvents": {
-    "description": "Heading of the security events card (the switch for the local security event log and its 'Show in Finder' button) in Settings > Updates & privacy. Sentence case.",
-    "screenshot": "settings-updates.png"
+    "description": "Heading of the security events card (the switch for the local security event log and its 'Show in Finder' button) in Settings > Updates & privacy. Sentence case."
   },
   "settings.securityLog.enabled.label": "Record security events",
   "@settings.securityLog.enabled.label": {
-    "description": "Label for the switch that turns the local security event log on or off. The log is a small file on the person's Mac listing security-relevant changes and refusals. In Settings > Updates & privacy.",
-    "screenshot": "settings-updates.png"
+    "description": "Label for the switch that turns the local security event log on or off. The log is a small file on the person's Mac listing security-relevant changes and refusals. In Settings > Updates & privacy."
   },
   "settings.securityLog.enabled.description": "Keep a small file on this Mac that notes security-relevant changes and refusals, like cloud AI consent, an installed update, or an app turned away from the MCP server. It holds no file names, contents, or passwords, and it never leaves your Mac.",
   "@settings.securityLog.enabled.description": {
-    "description": "Help text under the 'Record security events' switch. 'MCP server' is a technical feature name (Model Context Protocol): keep it untranslated. 'turned away' = refused access. Reassures that the file stays local and holds nothing private.",
-    "screenshot": "settings-updates.png"
+    "description": "Help text under the 'Record security events' switch. 'MCP server' is a technical feature name (Model Context Protocol): keep it untranslated. 'turned away' = refused access. Reassures that the file stays local and holds nothing private."
   },
   "settings.securityLog.showInFinder": "Show in Finder",
   "@settings.securityLog.showInFinder": {
-    "description": "Button under the 'Record security events' switch that opens Finder at the security event log file (or its folder when there's no file yet). 'Finder' is the macOS file manager: use the name macOS shows in your language.",
-    "screenshot": "settings-updates.png"
+    "description": "Button under the 'Record security events' switch that opens Finder at the security event log file (or its folder when there's no file yet). 'Finder' is the macOS file manager: use the name macOS shows in your language."
   },
   "settings.fileSystemWatching.globalShortcutHint": "Change the shortcut under Keyboard shortcuts → Go to latest download (global).",
   "@settings.fileSystemWatching.globalShortcutHint": {

@@ -17,7 +17,8 @@ dir, with an opt-out (`securityLog.enabled`, Settings › Updates & privacy). Th
   variant is free. ❌ Never a free-text field or a `String` from an error's `Display`; `types.rs` tests pin each
   variant's fields, so a new one fails until it's reviewed.
 - **One emitter, many consumers.** Every source calls `record`. Subscribers hear every event whatever the opt-out says
-  (a notice isn't the record); only the file obeys it. ❌ Don't add a second event enum for a new consumer.
+  (a notice isn't the record), plus every repeat inside an open episode (`Heard::Repeat`); only the file obeys the
+  opt-out, and never sees a repeat. ❌ Don't add a second event enum for a new consumer.
 - **Never blocks or fails the caller.** A failed write drops that one line with a warning.
 - **The writer checks `data_wipe::has_wiped()` before every write**, so a line recorded at quit can't recreate the file
   after "Delete all Cmdr data". ❌ It never creates the data dir either.

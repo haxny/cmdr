@@ -27,6 +27,7 @@ import { startMainWindowVisibilityReport } from './main-window-visibility'
 import { startAskCmdrTurnStream, stopAskCmdrTurnStream } from '#lib/ask-cmdr/ask-cmdr-turn-stream.svelte.js'
 import { startWakeIndicator, stopWakeIndicator } from '#lib/ask-cmdr/wake-indicator.svelte.js'
 import { startWakeToast, stopWakeToast } from '#lib/ask-cmdr/wake-toast.svelte.js'
+import { startSecurityNotices, stopSecurityNotices } from '#lib/security-notices/security-notices.js'
 import { startDragOutEventBridge } from '#lib/file-explorer/drag/drag-out-event-bridge.js'
 import { startOsMountNoticeBridge } from '#lib/file-explorer/network/os-mount-notice-bridge.js'
 import { startLeftoverNoticeBridge } from '#lib/file-operations/leftover-notice-bridge.js'
@@ -156,6 +157,10 @@ export function startEarlyWindowServices(): void {
   // for a wake that stayed quiet, and nothing when `askCmdr.wakeToast` is off. Early, for the
   // same reason as the two above: a wake can fire from launch replay.
   void startWakeToast()
+  // Tell the person when Cmdr turned an access attempt away (a web page at the MCP server, a
+  // refused server reply, a fake update). This window only, or the settings window would raise
+  // its own copy. Early: an update check can refuse one right at launch.
+  void startSecurityNotices()
 }
 
 /**
@@ -273,6 +278,7 @@ export function stopWindowServices(): void {
   stopAskCmdrTurnStream()
   stopWakeIndicator()
   stopWakeToast()
+  stopSecurityNotices()
   destroyIndexState()
   destroyMediaEnrichState()
   stopOperationFailureWatch()
