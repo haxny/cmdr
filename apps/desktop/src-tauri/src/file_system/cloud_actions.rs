@@ -32,13 +32,13 @@ fn home_dir() -> Option<PathBuf> {
 ///
 /// Asks the provider whether it supports eviction rather than re-deriving the
 /// path rule, so "which providers can be evicted" is stated in exactly one place
-/// (`cloud_provider.rs`).
+/// (`cmdr_fs::cloud_provider`).
 #[cfg(target_os = "macos")]
 pub fn is_in_icloud_drive(path: &Path) -> bool {
     let Some(home) = home_dir() else {
         return false;
     };
-    super::cloud_provider::locate(&home, path).is_some_and(|found| found.provider.supports_eviction())
+    cmdr_fs::cloud_provider::locate(&home, path).is_some_and(|found| found.provider.supports_eviction())
 }
 
 #[cfg(target_os = "macos")]
@@ -137,7 +137,7 @@ pub fn request_download(_path: &Path) -> Result<(), String> {
 #[cfg(all(test, target_os = "macos"))]
 mod tests {
     use super::*;
-    use crate::file_system::cloud_provider::ICLOUD_DRIVE_SUBPATH;
+    use cmdr_fs::cloud_provider::ICLOUD_DRIVE_SUBPATH;
 
     /// The real home directory, which is what `is_in_icloud_drive` resolves.
     ///

@@ -6,7 +6,7 @@ use super::{
     ICLOUD_VOLUME_ID, LocationCategory, LocationInfo, VolumeInfo, get_fs_type, get_icon_for_path,
     supports_trash_for_fs_type,
 };
-use crate::file_system::cloud_provider::{CloudProvider, ICLOUD_DRIVE_SUBPATH};
+use cmdr_fs::cloud_provider::{CloudProvider, ICLOUD_DRIVE_SUBPATH};
 use std::path::{Path, PathBuf};
 
 /// Get cloud drives (Dropbox, iCloud, Google Drive, etc.).
@@ -105,7 +105,7 @@ pub(crate) fn resolve_cloud_drive_for_path(path: &str) -> Option<VolumeInfo> {
 /// Pure (no I/O, matches by path prefix only) so it's unit-testable and cheap
 /// to call on every navigation. The I/O wrapper is [`resolve_cloud_drive_for_path`].
 fn match_cloud_drive_root(home: &Path, path: &str) -> Option<(String, String, PathBuf)> {
-    let found = crate::file_system::cloud_provider::locate(home, Path::new(path))?;
+    let found = cmdr_fs::cloud_provider::locate(home, Path::new(path))?;
     Some((
         found.provider.volume_id(),
         found.provider.display_name().to_string(),
@@ -117,7 +117,7 @@ fn match_cloud_drive_root(home: &Path, path: &str) -> Option<(String, String, Pa
 /// E.g., "Dropbox" -> "Dropbox", "GoogleDrive-email@gmail.com" -> "Google Drive".
 ///
 /// A thin adapter over [`CloudProvider`], which is where provider identity lives
-/// (`file_system/cloud_provider.rs`). Returns empty strings for a directory that
+/// (`cmdr_fs::cloud_provider`). Returns empty strings for a directory that
 /// names no provider, which is what the switcher treats as "not a cloud drive".
 fn parse_cloud_provider_name(dir_name: &str) -> (String, String) {
     match CloudProvider::from_cloud_storage_dir(dir_name) {

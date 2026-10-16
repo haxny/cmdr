@@ -3,8 +3,6 @@
 pub mod backend_settings;
 pub mod cloud_actions;
 #[cfg(target_os = "macos")]
-pub mod cloud_provider;
-#[cfg(target_os = "macos")]
 pub mod file_provider_actions;
 /// A bounded pool of 8 MB-stack OS threads for synchronous macOS framework calls.
 #[cfg(target_os = "macos")]
@@ -32,7 +30,6 @@ pub mod tags;
 pub mod terminal;
 /// Ungated: `open_in_editor` answers with its wire types on every platform.
 pub mod text_editor;
-pub mod validation;
 pub mod volume;
 pub(crate) mod watcher;
 pub(crate) mod write_operations;

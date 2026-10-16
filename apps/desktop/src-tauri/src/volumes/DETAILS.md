@@ -15,7 +15,7 @@ Depth and rationale. `CLAUDE.md` holds the must-knows; the decision detail lives
   that row is minted in `commands/volumes.rs`, not by this module.)
 - **MobileDevice**: MTP and ADB storages, appended by `device_volumes.rs`.
 
-Provider identity lives in `file_system/cloud_provider.rs`, not here: `CloudProvider::from_cloud_storage_dir` maps
+Provider identity lives in `cmdr_fs::cloud_provider`, not here: `CloudProvider::from_cloud_storage_dir` maps
 `~/Library/CloudStorage/` dir prefixes to a typed provider (Dropbox, GoogleDrive→Google Drive, OneDrive/Business, Box,
 pCloud, else `Other` carrying the first `-`-segment), and `locate` resolves a path to its drive plus that drive's root.
 `parse_cloud_provider_name` and `match_cloud_drive_root` here are thin adapters over it, so the switcher and the file

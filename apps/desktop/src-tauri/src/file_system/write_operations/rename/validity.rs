@@ -20,7 +20,7 @@ pub(crate) struct RenameValidityResult {
     /// Whether the new name is valid (passes filename validation).
     pub valid: bool,
     /// Validation error message, if any.
-    pub error: Option<crate::file_system::validation::ValidationError>,
+    pub error: Option<cmdr_fs::validation::ValidationError>,
     /// Whether a conflict exists (a sibling with the same name).
     pub has_conflict: bool,
     /// If there's a conflict, whether it's a case-only rename of the same file (same inode).
@@ -101,7 +101,7 @@ pub(crate) async fn check_rename_validity_impl(
     volume_id: String,
     data_dir: Option<PathBuf>,
 ) -> RenameValidityResult {
-    use crate::file_system::validation::{validate_filename, validate_path_length};
+    use cmdr_fs::validation::{validate_filename, validate_path_length};
 
     let trimmed = new_name.trim();
 

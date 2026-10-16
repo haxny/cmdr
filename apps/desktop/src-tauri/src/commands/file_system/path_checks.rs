@@ -5,10 +5,10 @@ use std::path::{Path, PathBuf};
 
 use tokio::time::Duration;
 
-use crate::file_system::validation::{MAX_NAME_BYTES, MAX_PATH_BYTES};
 use crate::file_system::volume::manager::get_volume_manager;
 use crate::file_system::write_operations::held_in_another_spelling;
 use cmdr_fs::deadline::{TimedOut, timeout_detached_typed};
+use cmdr_fs::validation::{MAX_NAME_BYTES, MAX_PATH_BYTES};
 
 use super::expand_tilde;
 

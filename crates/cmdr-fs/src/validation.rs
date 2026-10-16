@@ -13,6 +13,7 @@ pub const MAX_NAME_BYTES: usize = 255;
 /// macOS PATH_MAX is 1024; Linux PATH_MAX is 4096.
 #[cfg(target_os = "linux")]
 pub const MAX_PATH_BYTES: usize = 4096;
+/// Maximum path length in bytes (macOS `PATH_MAX`).
 #[cfg(not(target_os = "linux"))]
 pub const MAX_PATH_BYTES: usize = 1024;
 
@@ -23,14 +24,27 @@ pub enum ValidationError {
     /// Name is empty or whitespace-only after trimming.
     Empty,
     /// Name contains a disallowed character.
+    #[allow(
+        missing_docs,
+        reason = "a field doc would change `bindings.ts`; the variant doc says what it holds"
+    )]
     DisallowedCharacter { character: String },
     /// Name exceeds the maximum byte length for a single filename component.
+    #[allow(
+        missing_docs,
+        reason = "a field doc would change `bindings.ts`; the variant doc says what it holds"
+    )]
     NameTooLong { bytes: usize, max: usize },
     /// Full path exceeds the maximum byte length.
+    #[allow(
+        missing_docs,
+        reason = "a field doc would change `bindings.ts`; the variant doc says what it holds"
+    )]
     PathTooLong { bytes: usize, max: usize },
 }
 
 impl std::fmt::Display for ValidationError {
+    /// ❗ For logs and debugging only: the frontend words each variant from its own catalog.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Empty => write!(f, "Name can't be empty"),

@@ -214,7 +214,7 @@ symlink unfollowed, matching the rule below.
   perfectly well, and routing it to a permanent delete turns a working trash into data loss. Being in the drive only
   makes the flag meaningful.
 - A path strictly inside `~/Library/CloudStorage/<domain>/`, Apple's documented File Provider location since
-  macOS 12.3. Provider identity itself is `cloud_provider.rs`'s single source; this module only asks it.
+  macOS 12.3. Provider identity itself is `cmdr_fs::cloud_provider`'s single source; this module only asks it.
 - ❌ NOT iCloud Drive (`~/Library/Mobile Documents/`). Finder trashes from there fine, so it keeps today's behavior. A
   provider that refuses anyway is already covered by the typed `TrashRefusalKind` path.
 - ❌ NOT a provider Cmdr doesn't know by name (`CloudProvider::keeps_deleted_items_recoverable`). A `CloudStorage`

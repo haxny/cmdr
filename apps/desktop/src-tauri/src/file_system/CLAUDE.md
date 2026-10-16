@@ -42,7 +42,7 @@ this app hosts it from `listing_host/`.
   (10.15 floor) or a made-up `.txt` URL (no apps). § "Text editor".
 - **`cloud_actions.rs` is iCloud Drive only**, gated by `CloudProvider::supports_eviction`; the cross-provider-looking
   `NSFileProviderManager` methods need the bundled extension. Don't widen it. Provider identity lives once, in
-  `cloud_provider.rs`, which the volume switcher reads too.
+  `cmdr_fs::cloud_provider`, which the volume switcher reads too.
 - **Google Drive (`google_drive/`), three ❌:** never gate on a path prefix (mirror mode keeps real files outside
   `~/Library/CloudStorage` with no xattr, so we gate on a resolved item ID); never resolve a mirrored file by NAME;
   never read a mirror `stable_id` from the stream-mode `metadata_sqlite_db` (different id space). `mirror_db.rs` walks

@@ -55,7 +55,7 @@ use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 
 #[cfg(target_os = "macos")]
-use crate::file_system::cloud_provider::{CloudProvider, locate};
+use cmdr_fs::cloud_provider::{CloudProvider, locate};
 
 /// macOS's "file is dataless object" flag, the bit a File Provider sets when it
 /// evicts a file's contents and leaves a stub behind. Finder words it as

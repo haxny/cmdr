@@ -18,10 +18,10 @@ use super::store::{RenameDraft, RenameDraftRow, RenameProposalSnapshot};
 use crate::agent::AgentDb;
 use crate::agent::llm::types::AgentToolResult;
 use crate::agent::tools::propose::evidence::{EvidenceRejection, EvidenceScope, ImageFactsLedger};
-use crate::file_system::validation::validate_filename;
 use crate::mcp::pane_state::{PaneFileEntry, PaneState, PaneStateStore};
 use crate::mcp::params::{ParamViolation, check_object, list_names};
 use crate::mcp::{ToolError, ToolResult};
+use cmdr_fs::validation::validate_filename;
 
 pub(super) const MAX_RENAMES: usize = 200;
 

@@ -50,12 +50,19 @@ pub const CLOUD_STORAGE_SUBPATH: &str = "Library/CloudStorage";
 /// A cloud storage provider Cmdr recognizes.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CloudProvider {
+    /// Apple's iCloud Drive, under `~/Library/Mobile Documents`.
     ICloudDrive,
+    /// Google Drive for desktop in stream mode.
     GoogleDrive,
+    /// Dropbox.
     Dropbox,
+    /// Microsoft OneDrive, personal.
     OneDrive,
+    /// Microsoft OneDrive for a work or school account.
     OneDriveForBusiness,
+    /// Box.
     Box,
+    /// pCloud.
     PCloud,
     /// A provider we don't know by name, carrying the label parsed from its
     /// `CloudStorage` directory. Keeps an unrecognized provider a first-class
@@ -170,6 +177,7 @@ impl CloudProvider {
 /// A path's cloud provider plus the root folder of that provider's drive.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CloudLocation {
+    /// Whose drive it is.
     pub provider: CloudProvider,
     /// The drive's root, NOT the path that was looked up.
     pub root: PathBuf,

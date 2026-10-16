@@ -149,7 +149,7 @@ fn an_unbrowsable_fuse_container_gets_a_row_as_an_ordinary_volume() {
 #[test]
 fn a_mount_on_icloud_drive_lands_on_the_cloud_arms_path() {
     let home = dirs::home_dir().expect("a home folder");
-    let icloud = home.join(crate::file_system::cloud_provider::ICLOUD_DRIVE_SUBPATH);
+    let icloud = home.join(cmdr_fs::cloud_provider::ICLOUD_DRIVE_SUBPATH);
     let icloud = icloud.to_str().expect("a UTF-8 home folder");
     let loc = build_attached_location(&unbrowsable(icloud, "apfs"), plain_resolver)
         .expect("iCloud Drive's folder is a recognized provider");

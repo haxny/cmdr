@@ -24,8 +24,8 @@
 
 use super::cache::{Cache, Ttls};
 use super::{SyncKnowledge, SyncStatus};
-use crate::file_system::cloud_provider;
 use crate::file_system::framework_pool::{Pool, PoolConfig, WedgedWorker};
+use cmdr_fs::cloud_provider;
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::log_rollup::LogRollup;
 use std::collections::{HashMap, HashSet};

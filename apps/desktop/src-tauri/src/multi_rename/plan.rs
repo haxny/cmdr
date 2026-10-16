@@ -12,8 +12,8 @@ use cmdr_fs::name_fold::fold_name;
 use serde::{Deserialize, Serialize};
 use unicode_normalization::UnicodeNormalization;
 
-use crate::file_system::validation::{ValidationError, validate_filename};
 use cmdr_fs::entry::FileEntry;
+use cmdr_fs::validation::{ValidationError, validate_filename};
 
 use super::mask::{Mask, MaskError, RowFacts};
 use super::transform::{CaseChange, CompiledTransform, Replace, ReplaceError, Transform};

@@ -20,7 +20,8 @@ Three submodules carry their own docs: `write_operations/`, `volume/`, and `sync
   the index the same table, unfiltered (another account's mounts included), which it cuts the boot scan at. Its
   network answer is § "Local disk or not".
 - `backend_settings.rs`: live per-backend knobs.
-- `cloud_actions.rs`: iCloud download and eviction. `cloud_provider.rs`: who owns a path, and what they can do.
+- `cloud_actions.rs`: iCloud download and eviction, gated on `cmdr_fs::cloud_provider` (who owns a path, and what they
+  can do).
 - `google_drive/`: Drive item links, with `mirror_db.rs` as the mirror-mode fallback.
 - `file_provider_actions/`: every provider's own File Provider actions in the file context menu (Dropbox, Google Drive,
   MacDroid, any provider).
@@ -126,9 +127,9 @@ container, so the menu items are offered only for paths under `~/Library/Mobile 
 `is_in_icloud_drive` gates them, by asking `CloudProvider::supports_eviction` rather than re-deriving the path rule. The
 module-doc comment in `cloud_actions.rs` has the full story.
 
-## Cloud providers (`cloud_provider.rs`)
+## Cloud providers (`cmdr_fs::cloud_provider`)
 
-One source of truth for "is this path in a cloud folder, and whose?", shared by the volume switcher (which wants a
+`crates/cmdr-fs/src/cloud_provider.rs` is the one source of truth for "is this path in a cloud folder, and whose?", shared by the volume switcher (which wants a
 display name and a stable volume ID) and the file context menu (which wants to know what the provider can do).
 `locate(home, path)` is pure, so it's cheap on every navigation and unit-testable without a real cloud folder;
 `volumes/cloud.rs` is a thin adapter over it, and a test pins `CloudProvider::ICloudDrive.volume_id()` against
