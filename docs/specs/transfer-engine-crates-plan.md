@@ -1446,6 +1446,12 @@ anchors cited from elsewhere; `write_operations/DETAILS.md` sections are cited f
 `docs/architecture.md`. Single-source: the seam rationale lives in the crate's `host/DETAILS.md`; the adapters' side
 effects live only in `operations_host/DETAILS.md`.
 
+**Bench feature drift.** Cargo builds bench targets with dev-dependencies, so from `cmdr-local` onward every crate's
+`testing` feature is ON in the bench: the NSURL-free space answer (#357's gate) and the 1 ms progress sampler change
+what the "after" bench executes. Before comparing Criterion against M0b, either keep those behavioral gates out of the
+bench build (a separate feature the bench doesn't enable, or a runtime switch) or measure "before" with the same gates
+forced on; never compare across the drift silently. The build-time rows are unaffected.
+
 **DONE.** Lanes: `claude-md-length`, `claude-md-details-sibling`, `docs-reachable`, `docs-dead-links`,
 `docs-section-refs`, `docs-link-text`, `resident-doc-budget`, `claude-md-reminder`, then the effort's ONE full
 `pnpm check --include-slow` (the gate every slow lane skipped mid-effort waits for); the note committed; the review and
