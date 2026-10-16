@@ -14,8 +14,8 @@ import { listDirectoryStart } from '#lib/tauri-commands/file-listing' // wrong: 
 `favorites.ts`, `icons.ts`, `app-state.ts`, `write-operations.ts`, `rename.ts`, `storage.ts`, `networking.ts`, `mtp.ts`,
 `licensing.ts`, `settings.ts`, `logging.ts`, `tab.ts`, `function-key-bar.ts`, `clipboard-files.ts`, `git.ts`,
 `go-to-path.ts`, `tags.ts`, `updates.ts`, `debug.ts`, `usage.ts`, `dock.ts`, `notifications.ts`, `crash-reporter.ts`,
-`managed-policy.ts`, plus mostly-event modules (several also carry a few commands): `indexing.ts`, `ai.ts`,
-`appearance.ts`, `menu-events.ts`, `directory-watcher.ts`, `native-drag.ts`, `quick-look.ts`, `downloads.ts`,
+`managed-policy.ts`, `data-wipe.ts`, plus mostly-event modules (several also carry a few commands): `indexing.ts`,
+`ai.ts`, `appearance.ts`, `menu-events.ts`, `directory-watcher.ts`, `native-drag.ts`, `quick-look.ts`, `downloads.ts`,
 `reveal.ts`, `restricted-paths.ts`, `dialog-events.ts`. `ipc-types.ts` holds `TimedOut<T>` and the last-resort
 `throwIpcError`. `listing-gone.ts` is the listing reads' typed `gone` / `changed` refusal (`asListingLookupError` reads
 it back); `onListingGone` lets the pane showing that listing re-list (`file-explorer/pane/listing-liveness.ts`).

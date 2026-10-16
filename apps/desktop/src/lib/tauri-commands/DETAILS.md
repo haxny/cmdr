@@ -79,6 +79,8 @@ commands, and notable non-obvious placements.
   `QuitAnswer`) and the two subscriptions, `onQuitRequested` and `onQuitCalledOff`. There is deliberately no
   cancel-every-operation wrapper anywhere in this directory: that command belongs to the gate, which calls it in Rust
   (`src-tauri/src/quit/`), and a frontend wrapper is how a window teardown once came to kill backgrounded transfers.
+- **`data-wipe.ts`**: "Delete all Cmdr data": `getDataWipeSummary`, `deleteAllAppData` (both throw `DataWipeFailure`,
+  read back with `asDataWipeError`), and `quitAfterDataWipe`, which goes through the same quit gate.
 - **`storage.ts`**: `listVolumes`, `getVolumeSpace`, `watchVolumeSpace` / `unwatchVolumeSpace`, `ejectVolume`,
   `getBusyVolumeIds` (bootstrap for the eject-busy gate), `onVolumeContextAction`, `onVolumeConnectionChanged` (session
   health of any connecting volume, not just SMB), `checkFullDiskAccess`, `checkFullDiskAccessQuiet`,

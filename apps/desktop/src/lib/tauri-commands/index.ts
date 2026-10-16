@@ -709,6 +709,10 @@ export {
 } from './adb'
 export type { AdbConnectOutcomeError, AdbInstallStatus } from './adb'
 
+// "Delete all Cmdr data" (Settings › Updates & privacy)
+export { getDataWipeSummary, deleteAllAppData, quitAfterDataWipe, DataWipeFailure, asDataWipeError } from './data-wipe'
+export type { DataWipeError, DataWipeSummary, WipeLeftover, WipeReport } from './data-wipe'
+
 // Archive-password commands (encrypted-archive unlock)
 export {
   setArchivePassword,

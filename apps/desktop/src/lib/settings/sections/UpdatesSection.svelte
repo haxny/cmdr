@@ -18,6 +18,8 @@
     import { tString } from '#lib/intl/messages.svelte.js'
     import { getManagedPolicyView } from '#lib/managed-policy/managed-policy.svelte.js'
     import ManagedPolicySummary from '#lib/managed-policy/ManagedPolicySummary.svelte'
+    import DeleteAllDataDialog from './DeleteAllDataDialog.svelte'
+    import { createDataWipeFlow } from './delete-all-data-flow.svelte'
 
     interface Props {
         searchQuery: string
@@ -54,6 +56,9 @@
     function handleCheckForUpdates() {
         void checkForUpdates('settings')
     }
+
+    const dataWipe = createDataWipeFlow()
+    const dataWipeDescriptionId = 'data-wipe-description'
 </script>
 
 <SettingsSection title={tString('settings.section.updatesAndPrivacy')}>
@@ -187,6 +192,34 @@
             {/if}
         </SectionCard>
     {/if}
+
+    <!-- "Delete all Cmdr data": an action, not a setting, so a searchable row (`UpdatesSection.rows.ts`). -->
+    {#if shouldShow('row:updates.deleteAllData')}
+        <SectionCard label={tString('settings.dataWipe.card')}>
+            <div class="data-wipe-row">
+                <p class="data-wipe-description" id={dataWipeDescriptionId}>
+                    {tString('settings.dataWipe.description')}
+                </p>
+                <Button
+                    variant="secondary"
+                    size="mini"
+                    disabled={dataWipe.opening}
+                    aria-describedby={dataWipeDescriptionId}
+                    onclick={() => void dataWipe.open()}
+                >
+                    {tString('settings.dataWipe.button')}
+                </Button>
+            </div>
+        </SectionCard>
+    {/if}
+    {#if dataWipe.view}
+        <DeleteAllDataDialog
+            view={dataWipe.view}
+            onConfirm={() => void dataWipe.confirm()}
+            onCancel={dataWipe.cancel}
+            onQuit={() => void dataWipe.quit()}
+        />
+    {/if}
 </SettingsSection>
 
 <style>
@@ -221,6 +254,19 @@
 
     .signup-feedback.failure {
         color: var(--color-text-primary);
+    }
+
+    .data-wipe-row {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--spacing-sm);
+    }
+
+    .data-wipe-description {
+        margin: 0;
+        font-size: var(--font-size-sm);
+        color: var(--color-text-secondary);
     }
 
     .email-note {

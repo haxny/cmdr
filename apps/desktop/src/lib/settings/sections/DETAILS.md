@@ -233,7 +233,16 @@ sections compose).
   `analytics.email` contact field with its "never sent with your usage data" note, and the `updates.crashReports` /
   `updates.errorReports` opt-ins — Flow B auto-send; Flow A consent-on-click is always available). The cards are
   presentation only. Frames are gated via `anyVisible(shouldShow, ...)` (same pattern as FSW above). The email field
-  persists to settings here; the beta-signup network call is wired separately
+  persists to settings here; the beta-signup network call is wired separately. Last, the "Your data on this Mac" card
+  with the "Delete all Cmdr data" button (searchable row `row:updates.deleteAllData`), which opens
+  `DeleteAllDataDialog`.
+- **`DeleteAllDataDialog.svelte`** + **`delete-all-data.ts`** + **`delete-all-data-flow.svelte.ts`**: the CRA "remove
+  all data and settings" action. The flow (summary → confirm → deleting → done → quit) lives in the `.svelte.ts`; the
+  dialog only renders its `DataWipeView` (so the gallery passes real props), and `delete-all-data.ts` turns the
+  backend's typed summary, refusal, and leftovers into catalog copy. Decisions: Cancel is the focused default and no
+  typed-confirmation step (no house pattern has one; the destructive button plus a "can't be undone" line match the
+  other delete confirmations); the dialog can't be closed while deleting; closing the outcome quits, since an app left
+  running would write a fresh state back. What gets deleted and how: `apps/desktop/src-tauri/src/data_wipe/CLAUDE.md`.
 - **`LicenseSection.svelte`**: `License`: special (non-registry), reads `getLicenseInfo` / `getLicenseStatus`. The info
   block + action buttons live in one unlabeled `SectionCard`; the personal / commercial / expired / loading states are
   presentational variants of that one block, all inside the one card (no `anyVisible` gate — it's not registry

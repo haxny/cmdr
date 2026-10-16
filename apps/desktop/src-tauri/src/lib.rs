@@ -45,6 +45,7 @@ mod commands;
 pub mod config;
 mod crash_reporter;
 mod crate_deps;
+mod data_wipe;
 // Timeouts and budgets for blocking work: IPC commands and the subsystems under them share one policy.
 mod deadline;
 /// The dialog gallery's fixture tree (Debug > Soft dialogs). Dev and E2E builds:
@@ -332,6 +333,10 @@ pub fn run() {
             // Stash the AppHandle for the viewer's per-session watcher manager
             // threads so they can emit `viewer:file-changed:<sid>` events.
             file_viewer::init_app_handle(app.handle().clone());
+
+            // Finish a "Delete all Cmdr data" that a crash cut short: its tombstones sit beside
+            // the data dirs, which nothing reads. Background thread; a few directory reads.
+            data_wipe::sweep_interrupted(app.handle());
 
             // Point preview-in-zip temp-extraction at a per-instance dir under the app
             // data dir (so side-by-side dev/prod/worktree instances never reap each

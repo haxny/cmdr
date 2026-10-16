@@ -106,11 +106,15 @@ const DRIVE_INDEX_DIR_NAME: &str = "drive-index";
 /// `None` only when the OS has no cache dir. Doesn't create it. Why the index's folders are
 /// split this way: `crates/cmdr-index/DETAILS.md` § "Where the stores live".
 pub fn drive_index_dir() -> Option<PathBuf> {
+    app_cache_dir().map(|dir| dir.join(DRIVE_INDEX_DIR_NAME))
+}
+
+/// The app's cache dir, by the priority [`drive_index_dir`] lists. Doesn't create it.
+pub fn app_cache_dir() -> Option<PathBuf> {
     cache_dir_from(
         std::env::var("CMDR_CACHE_DIR").ok().as_deref(),
         std::env::var("CMDR_DATA_DIR").ok().as_deref(),
     )
-    .map(|dir| dir.join(DRIVE_INDEX_DIR_NAME))
 }
 
 fn cache_dir_from(cache_env: Option<&str>, data_env: Option<&str>) -> Option<PathBuf> {

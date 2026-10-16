@@ -7,6 +7,7 @@ pub mod child_window_state;
 pub mod clipboard;
 pub mod confirm_dialog;
 pub mod crash_reporter;
+pub mod data_wipe;
 // The macOS Dock. macOS only, mechanism and all (`../dock/`); no other platform has one to pin to.
 #[cfg(target_os = "macos")]
 pub mod dock;

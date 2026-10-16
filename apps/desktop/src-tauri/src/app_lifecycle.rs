@@ -15,7 +15,7 @@ use tauri::{AppHandle, Manager, Window, Wry};
 use crate::downloads;
 #[cfg(any(target_os = "macos", target_os = "linux"))]
 use crate::network;
-use crate::{ai, crash_reporter, file_viewer, mcp, quit, search, window_state};
+use crate::{ai, crash_reporter, data_wipe, file_viewer, mcp, quit, search, window_state};
 #[cfg(target_os = "macos")]
 use crate::{dock, drag_image_detection, mtp, reveal};
 
@@ -140,8 +140,11 @@ pub fn on_run_event(app: &AppHandle<Wry>, event: tauri::RunEvent) {
         }
         tauri::RunEvent::Exit => {
             // Flush window geometry synchronously: the debounced writer
-            // may have a pending change the process won't outlive.
-            window_state::save_on_exit(app);
+            // may have a pending change the process won't outlive. Not after
+            // "Delete all Cmdr data": that would write a fresh state back.
+            if !data_wipe::has_wiped() {
+                window_state::save_on_exit(app);
+            }
 
             // Stop any live search walk. Coverage stays honest either way
             // (a directory is marked listed only once its rows are
@@ -158,6 +161,10 @@ pub fn on_run_event(app: &AppHandle<Wry>, event: tauri::RunEvent) {
             }
 
             stop_background_services();
+
+            // Last, after the plugins' own Exit handlers (Tauri runs those first, and the store
+            // plugin saves every open store there): remove what shutdown wrote back after a wipe.
+            data_wipe::on_exit();
         }
         _ => {}
     }

@@ -197,8 +197,10 @@ All under `apps/desktop/src-tauri/src/`.
 - `network/`: SMB's app-side half: mDNS discovery, share listing (smb2 + smbutil/smbclient fallback), mounting,
   Keychain, the auto-upgrade passes, and the frontend's connection events. The backend under it is `crates/cmdr-smb/`
 - `clipboard/`: File clipboard (Cmd+C/X/V) with NSPasteboard interop; tracks cut state and validates at paste
-- `secrets/`: Pluggable secret storage: Keychain (macOS), Secret Service (Linux), encrypted-file fallback. SMB creds +
-  AI keys
+- `secrets/`: Pluggable secret storage: Keychain (macOS), Secret Service (Linux), encrypted-file fallback. Server
+  passwords, AI keys, and the license key
+- `data_wipe/`: "Delete all Cmdr data" (Settings › Updates & privacy): every folder, file, and secret-store item this
+  instance keeps, removed crash-safely before the app quits. See `apps/desktop/src-tauri/src/data_wipe/CLAUDE.md`
 - `mtp/`: the app-side half of the MTP backend (`crates/cmdr-mtp/`): the USB hotplug task with its enabled gate and
   auto-connect, the `tauri_specta` device events, the registrar and `MtpDeviceProvider` wiring, the macOS ptpcamerad
   workaround, and where the app parks the one connection manager it built. See `mtp/CLAUDE.md`

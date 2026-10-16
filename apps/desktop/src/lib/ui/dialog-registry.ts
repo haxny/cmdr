@@ -156,6 +156,12 @@ export const SOFT_DIALOG_REGISTRY = [
     description: 'Confirmation before deleting everything Ask Cmdr has written down about the user',
     whileOpen: allowsOperations(NOT_IN_THE_MAIN_WINDOW),
   },
+  {
+    id: 'delete-all-data',
+    description: 'Confirmation before deleting all of Cmdr’s data on this Mac, then its outcome and the quit',
+    // The wipe itself refuses while a file operation runs, so this gate doesn't need to.
+    whileOpen: allowsOperations(NOT_IN_THE_MAIN_WINDOW),
+  },
   { id: 'search', description: 'Whole-drive file search', whileOpen: BLOCKS_OPERATIONS },
   {
     id: 'go-to-path',

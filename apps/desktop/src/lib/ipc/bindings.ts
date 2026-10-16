@@ -3591,6 +3591,20 @@ export const commands = {
    *  what the confirmation dialog promises.
    */
   askCmdrForgetMemory: () => typedError<number, string>(__TAURI_INVOKE('ask_cmdr_forget_memory')),
+  // How much would go, and whether a license is activated here, for the confirmation dialog.
+  dataWipeSummary: () => typedError<DataWipeSummary, DataWipeError>(__TAURI_INVOKE('data_wipe_summary')),
+  /**
+   *  Delete everything Cmdr keeps on this Mac, and say what couldn't go.
+   *
+   *  No deadline, on purpose: answering "timed out" while the delete carries on would tell the
+   *  person it stopped when it didn't. The dialog shows it running and can't be closed meanwhile.
+   */
+  deleteAllAppData: () => typedError<WipeReport, DataWipeError>(__TAURI_INVOKE('delete_all_app_data')),
+  /**
+   *  Quit after a wipe, through the quit gate like ⌘Q: `true` when the app is on its way out,
+   *  `false` when the gate held it because a file operation started since (it then asks).
+   */
+  quitAfterDataWipe: () => __TAURI_INVOKE<boolean>('quit_after_data_wipe'),
   /**
    *  Translates a natural-language selection request into a glob/regex plus optional
    *  size and date filters.
@@ -7195,6 +7209,30 @@ export type CreditInfoDto = {
    *  the wedge is on OUR side of the wire, not the server's.
    */
   send_queue_depth: number
+}
+
+// Why a wipe didn't start. Nothing was deleted in either case.
+export type DataWipeError =
+  /**
+   *  Copies, moves, or deletes are still running; they'd write into the operation log and
+   *  the temp ledger mid-wipe. The person finishes or cancels them first.
+   */
+  | { type: 'fileOperationsRunning'; count: number }
+  // Another wipe is already running (a double confirm, or MCP and a click at once).
+  | { type: 'alreadyRunning' }
+  // The background task died before it answered.
+  | { type: 'interrupted' }
+  // Adding up the sizes took too long (the summary only; a wipe has no deadline).
+  | { type: 'timedOut' }
+
+// What the dialog shows before anyone confirms.
+export type DataWipeSummary = {
+  // Everything that would go, in bytes.
+  totalBytes: number
+  // The downloaded AI models among it (the local LLM and the image-search model), in bytes.
+  modelBytes: number
+  // A license key is activated on this Mac, so the dialog says how to get it back.
+  hasLicense: boolean
 }
 
 /**
@@ -18237,6 +18275,20 @@ export type WhatsNewSection = {
    *  markdown links flattened to text before rendering. Trusted, same as `lead_html`.
    */
   entriesHtml: string[]
+}
+
+// What the wipe couldn't remove, in terms the dialog can point a person at.
+export type WipeLeftover =
+  // A folder or file that's still on disk, to delete in Finder.
+  | { type: 'path'; path: string }
+  // Saved passwords or keys still in the OS store, under this item name.
+  | { type: 'secretItems'; count: number; itemName: string }
+  // The OS store didn't say what it holds, so some items may remain under this name.
+  | { type: 'secretsUnreadable'; itemName: string }
+
+// The outcome of a wipe. Empty `leftovers` means everything went.
+export type WipeReport = {
+  leftovers: WipeLeftover[]
 }
 
 /**

@@ -365,6 +365,9 @@ Per-file function inventory and decision rationale. `CLAUDE.md` holds the must-k
   backend-owned pending file, verifies the id, uploads, and conditionally deletes it. Network is skipped in debug
   builds, E2E builds (`playwright-e2e`, release builds whose reports would otherwise look real), and CI. A send that
   doesn't land returns the shared `ServerRequestError` and keeps the crash file for the next launch.
+- **`data_wipe.rs`**: `data_wipe_summary` (sizes and the license flag, 30 s deadline), `delete_all_app_data`, and
+  `quit_after_data_wipe` (through the quit gate). The delete has NO deadline on purpose: a "timed out" while deletion
+  carries on would lie. Errors are `DataWipeError`. Logic in `../data_wipe/CLAUDE.md`.
 - **`beta_signup.rs`**: `beta_signup(email)` POSTs ONLY the email (never an install id) to `POST /beta-signup`. Returns a
   typed `BetaSignupResult` (`subscribed`/`invalidEmail`/`softFailure`). Network, not filesystem, so no
   `blocking_with_timeout` (the `reqwest` client carries its own 10 s timeout). An E2E build answers `subscribed` without

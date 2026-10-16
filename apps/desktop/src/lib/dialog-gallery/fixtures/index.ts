@@ -27,7 +27,7 @@
 
 import type { SoftDialogId } from '#lib/ui/dialog-registry.js'
 import { alertFixtures } from './alert'
-import { deleteAiModelFixtures, forgetMemoryFixtures } from './ai-model'
+import { deleteAiModelFixtures, deleteAllDataFixtures, forgetMemoryFixtures } from './ai-model'
 import { archivePasswordFixtures } from './archive-password'
 import { crashReportFixtures } from './crash-report'
 import { deleteFixtures, goToPathFixtures, mkdirFixtures, newFileFixtures, transferFixtures } from './disk'
@@ -60,6 +60,7 @@ export const fixtureRecords = {
   'bulk-rename-review': bulkRenameFixtures,
   'crash-report': crashReportFixtures,
   'delete-ai-model': deleteAiModelFixtures,
+  'delete-all-data': deleteAllDataFixtures,
   'delete-confirmation': deleteFixtures,
   'drive-index-stale': staleDriveFixtures,
   'error-report': errorReportFixtures,

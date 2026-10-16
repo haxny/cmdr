@@ -3257,5 +3257,159 @@
   "settings.fileExplorer.quickFilterIntroSeen.description": "Whether the toast that explains the first quick filter has been shown.",
   "@settings.fileExplorer.quickFilterIntroSeen.description": {
     "description": "Internal setting, never shown in the Settings UI: its description in diagnostics only."
+  },
+  "settings.dataWipe.card": "Your data on this Mac",
+  "@settings.dataWipe.card": {
+    "description": "Heading of a card in Settings > Updates & privacy that holds the button deleting everything Cmdr has stored on this computer. Sentence case."
+  },
+  "settings.dataWipe.description": "Delete everything Cmdr keeps on this Mac: settings, saved passwords, histories, indexes, and downloaded models. Cmdr quits afterwards.",
+  "@settings.dataWipe.description": {
+    "description": "Explanation under that heading, beside the delete button. \"Cmdr\" is the app's name; don't translate it."
+  },
+  "settings.dataWipe.button": "Delete all Cmdr data",
+  "@settings.dataWipe.button": {
+    "description": "Button in Settings > Updates & privacy that opens a confirmation dialog about deleting all of the app's data on this computer. VERB phrase, sentence case. \"Cmdr\" is the app's name."
+  },
+  "settings.dataWipe.title": "Delete all Cmdr data on this Mac?",
+  "@settings.dataWipe.title": {
+    "description": "Title of the confirmation dialog that button opens. A question, sentence case."
+  },
+  "settings.dataWipe.intro": "Cmdr deletes everything it keeps on this Mac, then quits. This can’t be undone.",
+  "@settings.dataWipe.intro": {
+    "description": "First line of that dialog when the total size isn't known: what happens, and that it's permanent."
+  },
+  "settings.dataWipe.introWithSize": "Cmdr deletes the {sizeText} it keeps on this Mac, then quits. This can’t be undone.",
+  "@settings.dataWipe.introWithSize": {
+    "description": "First line of that dialog: what happens, how much disk space it frees, and that it's permanent.",
+    "placeholders": {
+      "sizeText": "the total size of everything that gets deleted, with its unit, already formatted (for example “1.2 GB”)"
+    }
+  },
+  "settings.dataWipe.goesHeading": "What goes",
+  "@settings.dataWipe.goesHeading": {
+    "description": "Small heading over the list of what gets deleted. Short noun phrase, sentence case."
+  },
+  "settings.dataWipe.goes.settings": "Settings and keyboard shortcuts",
+  "@settings.dataWipe.goes.settings": {
+    "description": "Item in the \"What goes\" list: the app's preferences and the user's custom keyboard shortcuts."
+  },
+  "settings.dataWipe.goes.servers": "Saved servers and their passwords",
+  "@settings.dataWipe.goes.servers": {
+    "description": "Item in the \"What goes\" list: the network servers (SMB, SFTP, WebDAV, S3) the user saved, and the passwords Cmdr keeps for them."
+  },
+  "settings.dataWipe.goes.apiKeys": "API keys for cloud AI",
+  "@settings.dataWipe.goes.apiKeys": {
+    "description": "Item in the \"What goes\" list: the keys the user entered for cloud AI providers. \"API\" stays as-is."
+  },
+  "settings.dataWipe.goes.license": "The license on this Mac. To activate it again, enter the license key from your purchase email.",
+  "@settings.dataWipe.goes.license": {
+    "description": "Item in the \"What goes\" list, shown when a paid license is activated: the license is removed from this computer, and the key in the purchase email activates it again."
+  },
+  "settings.dataWipe.goes.licenseIfAny": "The license on this Mac, if you activated one. To activate it again, enter the license key from your purchase email.",
+  "@settings.dataWipe.goes.licenseIfAny": {
+    "description": "Same item as the license one, for when Cmdr couldn't check whether a license is activated."
+  },
+  "settings.dataWipe.goes.askCmdr": "Ask Cmdr chats and what it remembers about you",
+  "@settings.dataWipe.goes.askCmdr": {
+    "description": "Item in the \"What goes\" list: conversations with the built-in assistant and the notes it keeps about the user. \"Ask Cmdr\" is a feature name; keep it as-is."
+  },
+  "settings.dataWipe.goes.histories": "Recent folders, searches, and other histories",
+  "@settings.dataWipe.goes.histories": {
+    "description": "Item in the \"What goes\" list: the lists of recently visited folders, past searches, and similar histories."
+  },
+  "settings.dataWipe.goes.operationLog": "The operation log of your copies, moves, and deletes",
+  "@settings.dataWipe.goes.operationLog": {
+    "description": "Item in the \"What goes\" list: the record of past file operations. \"Operation log\" is a feature name."
+  },
+  "settings.dataWipe.goes.indexes": "The drive index and image search data",
+  "@settings.dataWipe.goes.indexes": {
+    "description": "Item in the \"What goes\" list: the index of the user's drives (folder sizes, fast search) and what image search learned about their pictures. The user's actual files are NOT deleted."
+  },
+  "settings.dataWipe.goes.models": "Downloaded AI models",
+  "@settings.dataWipe.goes.models": {
+    "description": "Item in the \"What goes\" list, shown when the size isn't known: the AI models Cmdr downloaded (the local assistant and image search)."
+  },
+  "settings.dataWipe.goes.modelsWithSize": "Downloaded AI models ({sizeText})",
+  "@settings.dataWipe.goes.modelsWithSize": {
+    "description": "Item in the \"What goes\" list: the AI models Cmdr downloaded (the local assistant and image search), with their size.",
+    "placeholders": {
+      "sizeText": "the models' total size with its unit, already formatted (for example “4.1 GB”)"
+    }
+  },
+  "settings.dataWipe.goes.logs": "Logs and crash reports",
+  "@settings.dataWipe.goes.logs": {
+    "description": "Item in the \"What goes\" list: the app's diagnostic log files and saved crash reports."
+  },
+  "settings.dataWipe.staysHeading": "What stays",
+  "@settings.dataWipe.staysHeading": {
+    "description": "Small heading over the paragraph saying what is NOT deleted. Short noun phrase, sentence case."
+  },
+  "settings.dataWipe.stays": "Your own files, everything on your drives and servers, and the Cmdr app itself. Data on Cmdr’s servers stays too; the privacy policy says how to have it deleted.",
+  "@settings.dataWipe.stays": {
+    "description": "Paragraph under \"What stays\": none of the user's files are touched, nor the app, nor what Cmdr's online servers hold (the website's privacy policy explains how to request deletion there)."
+  },
+  "settings.dataWipe.cancel": "Cancel",
+  "@settings.dataWipe.cancel": {
+    "description": "Button that closes the dialog without deleting anything. It's the default button. Sentence case."
+  },
+  "settings.dataWipe.confirm": "Delete all and quit",
+  "@settings.dataWipe.confirm": {
+    "description": "Destructive button that deletes all the app's data and then quits the app. VERB phrase, sentence case."
+  },
+  "settings.dataWipe.deleting": "Deleting…",
+  "@settings.dataWipe.deleting": {
+    "description": "The destructive button's label while the delete runs. Ends with the ellipsis character."
+  },
+  "settings.dataWipe.refused.operationsRunning": "{count, plural, one {A file operation is still running. Let it finish or cancel it, then try again.} other {{countText} file operations are still running. Let them finish or cancel them, then try again.}}",
+  "@settings.dataWipe.refused.operationsRunning": {
+    "description": "Shown in the dialog when the user confirmed while copies, moves, or deletes are still running; nothing was deleted.",
+    "placeholders": {
+      "count": "how many file operations are running, a number used only to choose the plural form",
+      "countText": "the same number, already formatted for the locale"
+    }
+  },
+  "settings.dataWipe.refused.alreadyRunning": "Cmdr is already deleting its data. Give it a moment.",
+  "@settings.dataWipe.refused.alreadyRunning": {
+    "description": "Shown in the dialog in the rare case a second delete was started while one is still running."
+  },
+  "settings.dataWipe.refused.interrupted": "Something stopped Cmdr partway, so some data may be left. Try again?",
+  "@settings.dataWipe.refused.interrupted": {
+    "description": "Shown in the dialog when the delete stopped unexpectedly before finishing. Inviting the user to press the button again."
+  },
+  "settings.dataWipe.doneTitle": "Cmdr deleted its data",
+  "@settings.dataWipe.doneTitle": {
+    "description": "Title of the same dialog after everything was deleted. Sentence case."
+  },
+  "settings.dataWipe.doneMessage": "Everything Cmdr kept on this Mac is gone. To remove the app as well, move it to the Trash after Cmdr quits.",
+  "@settings.dataWipe.doneMessage": {
+    "description": "Body after everything was deleted. \"the Trash\" is the macOS Trash; use macOS's own name for it in your language."
+  },
+  "settings.dataWipe.partialTitle": "Cmdr deleted most of its data",
+  "@settings.dataWipe.partialTitle": {
+    "description": "Title of the same dialog when a few things couldn't be deleted. Sentence case."
+  },
+  "settings.dataWipe.partialMessage": "A few things couldn’t be deleted. To finish, remove these yourself:",
+  "@settings.dataWipe.partialMessage": {
+    "description": "Line introducing the list of what's left: folder and file paths the user can delete in Finder, or keychain items."
+  },
+  "settings.dataWipe.leftover.secretItems": "{count, plural, one {One item in Keychain Access named “{itemName}”} other {{countText} items in Keychain Access named “{itemName}”}}",
+  "@settings.dataWipe.leftover.secretItems": {
+    "description": "Item in the list of what's left: saved passwords or keys in the macOS Keychain Access app that couldn't be deleted. \"Keychain Access\" is the name of a macOS app; use its name in your language's macOS.",
+    "placeholders": {
+      "count": "how many items are left, a number used only to choose the plural form",
+      "countText": "the same number, already formatted for the locale",
+      "itemName": "the name the items appear under in Keychain Access (for example “Cmdr”); never translated"
+    }
+  },
+  "settings.dataWipe.leftover.secretsUnreadable": "Any items in Keychain Access named “{itemName}”",
+  "@settings.dataWipe.leftover.secretsUnreadable": {
+    "description": "Item in the list of what's left when Cmdr couldn't check its keychain items: the user should look for them in the macOS Keychain Access app.",
+    "placeholders": {
+      "itemName": "the name the items appear under in Keychain Access (for example “Cmdr”); never translated"
+    }
+  },
+  "settings.dataWipe.quit": "Quit Cmdr",
+  "@settings.dataWipe.quit": {
+    "description": "The only button after the delete finished: quits the app. VERB phrase, sentence case. \"Cmdr\" is the app's name."
   }
 }

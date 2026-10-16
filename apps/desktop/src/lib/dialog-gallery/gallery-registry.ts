@@ -435,6 +435,26 @@ export const DIALOG_GALLERY_ENTRIES: DialogGalleryEntry[] = [
       { id: 'forgetting', label: 'Delete in flight', note: 'Both buttons go dead, and Enter with them.' },
     ],
   },
+  {
+    dialogId: 'delete-all-data',
+    label: 'Delete all Cmdr data',
+    hostWindow: 'settings',
+    status: 'ready',
+    note: 'Deleting nothing: the wipe and the quit live in the onConfirm and onQuit props, which the gallery leaves empty. In the app this sits in the Settings window over Updates & privacy, under "Your data on this Mac".',
+    states: [
+      { id: 'confirm', label: 'Confirm (licensed, models downloaded)' },
+      { id: 'confirmPersonal', label: 'Confirm (no license, no models)' },
+      {
+        id: 'confirmNoSummary',
+        label: 'Confirm (sizes unknown)',
+        note: 'The sizes didn’t add up in time: no totals, and the license line in its “if you activated one” form.',
+      },
+      { id: 'refused', label: 'Refused: file operations running' },
+      { id: 'deleting', label: 'Delete in flight', note: 'Both buttons go dead, and Escape with them.' },
+      { id: 'done', label: 'Done, everything went' },
+      { id: 'partial', label: 'Done, some things left', note: 'A long path, and two Keychain items.' },
+    ],
+  },
 
   // ── Devices, network, and indexing ────────────────────────────────────────
   {

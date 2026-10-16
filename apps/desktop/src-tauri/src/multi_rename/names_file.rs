@@ -109,7 +109,15 @@ pub fn write(path: &Path, rows: &[PreviewRow]) -> io::Result<Written> {
 /// process id keeps two running Cmdrs (a dev build beside the app, a test process
 /// beside another) off each other's files: session ids count from 1 in each.
 pub fn path_for(session_id: &str) -> PathBuf {
-    std::env::temp_dir()
-        .join("cmdr-multi-rename")
-        .join(format!("{}-{session_id}.txt", std::process::id()))
+    let (dir, prefix) = this_process_files();
+    dir.join(format!("{prefix}{session_id}.txt"))
+}
+
+/// The folder Results files go to, and the name prefix that marks this process's: what "Delete
+/// all Cmdr data" removes, leaving other running Cmdrs' files alone.
+pub fn this_process_files() -> (PathBuf, String) {
+    (
+        std::env::temp_dir().join("cmdr-multi-rename"),
+        format!("{}-", std::process::id()),
+    )
 }

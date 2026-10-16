@@ -17,4 +17,12 @@ export const updatesRows: SearchableRow[] = [
     cardKey: 'settings.updates.card.updates',
     keywords: ['update', 'upgrade', 'check', 'version', 'new version'],
   },
+  {
+    // The "Delete all Cmdr data" button, alone in its card.
+    id: 'row:updates.deleteAllData',
+    section: ['Updates & privacy'],
+    labelKey: 'settings.dataWipe.button',
+    cardKey: 'settings.dataWipe.card',
+    keywords: ['delete', 'erase', 'remove', 'wipe', 'reset', 'uninstall', 'privacy', 'data', 'forget', 'gdpr'],
+  },
 ]
