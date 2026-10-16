@@ -402,9 +402,9 @@ pub(in crate::file_system::write_operations) fn map_volume_error(
             path: context_path.to_string(),
             message,
         },
-        // A reply refused for its signature stops the transfer. Its own stopped state and words
-        // are the notice work's (#457); until then it reads as the generic one.
-        VolumeError::SignatureInvalid(message) => WriteOperationError::IoError {
+        // A reply refused for its signature stops the transfer with its own stopped state; the
+        // person also hears about the server once per session (`crate::security_notices`).
+        VolumeError::SignatureInvalid(message) => WriteOperationError::ReplySignatureRefused {
             path: context_path.to_string(),
             message,
         },

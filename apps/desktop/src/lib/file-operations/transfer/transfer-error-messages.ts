@@ -140,6 +140,13 @@ const simpleMessageFactories: Partial<
     message: w('connectionInterrupted.message'),
     suggestion: w('connectionInterrupted.suggestion'),
   }),
+  // A server reply refused for its signature (#457). The person also hears about the server in
+  // a security notice (`#lib/security-notices`); this is the transfer's own stopped reason.
+  reply_signature_refused: () => ({
+    title: w('replySignatureRefused.title'),
+    message: w('replySignatureRefused.message'),
+    suggestion: w('replySignatureRefused.suggestion'),
+  }),
   // The destination refused a write for lack of room or quota. Nothing measured
   // it, so the copy names no sizes (a measured refusal is `insufficient_space`).
   destination_full: () => ({
@@ -230,6 +237,9 @@ const errorDisplayMetaMap: Record<WriteOperationError['type'], ErrorDisplayMeta>
   permission_denied: { category: 'needs_action', retryHint: false },
   insufficient_space: { category: 'needs_action', retryHint: false },
   destination_full: { category: 'needs_action', retryHint: false },
+  // No Retry: the same reply would be refused again, and the backend never retries it either.
+  // The way out is reconnecting, which the suggestion says.
+  reply_signature_refused: { category: 'needs_action', retryHint: false },
   destination_inside_source: { category: 'needs_action', retryHint: false },
   // No Retry: the same selection can only be refused again. The way out is
   // picking one of the two, or transferring them one at a time.

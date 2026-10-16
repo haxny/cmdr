@@ -128,6 +128,10 @@ export function createSmbViewState(deps: SmbViewStateDeps): SmbViewState {
         }
       case 'needs-host-key':
         return { kind: 'host_key_changed', checkKey: handleCheckHostKey, disconnect: handleDisconnectPlace }
+      case 'guest-refused':
+        // "Try another password" is the signed-out banner's own Sign in, and Disconnect the
+        // cycle's: the share is SMB, so it unmounts rather than dropping a place.
+        return { kind: 'guest_session_refused', signIn: handleSignIn, disconnect: handleSmbReconnectDisconnect }
       case 'gave-up':
         return null
     }

@@ -34,6 +34,12 @@ pub enum VolumeConnection {
     /// itself reaches the user through the connect command's typed outcome
     /// instead.
     NeedsHostKeyApproval,
+    /// A named login was answered with a guest session, so the backend refused it rather than
+    /// browse as a guest. Usually a wrong password on a Samba set to `map to guest = bad user`;
+    /// rarely, something tampering with the connection. ❗ Not
+    /// [`NeedsCredentials`](Self::NeedsCredentials): the pane names what it refused, and
+    /// another password is what moves it forward.
+    GuestSessionRefused,
 }
 
 /// Something a backend turned away for the user's safety, for the host's security record (and,

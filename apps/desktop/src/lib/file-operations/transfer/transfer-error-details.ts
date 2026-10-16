@@ -31,6 +31,7 @@ const pathAndMessageTypes = new Set<WriteOperationError['type']>([
   'write_error',
   'invalid_name',
   'io_error',
+  'reply_signature_refused',
 ])
 
 /**

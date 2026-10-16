@@ -347,6 +347,15 @@ pub enum WriteOperationError {
     ConnectionInterrupted {
         path: String,
     },
+    /// A server's reply on a signed session carried a bad or missing signature, so Cmdr refused
+    /// it and stopped (`VolumeError::SignatureInvalid`, SMB-only today). Its own variant so the
+    /// stopped state can say so: it's a possible sign of tampering between the Mac and the
+    /// server (or a broken network device), ❌ never a blip to retry. `message` is the backend's
+    /// diagnostic, for the technical details only.
+    ReplySignatureRefused {
+        path: String,
+        message: String,
+    },
     /// Couldn't read from the source.
     ReadError {
         path: String,
@@ -509,6 +518,7 @@ macro_rules! item_path_of {
             | WriteOperationError::PermissionDenied { path, .. }
             | WriteOperationError::DestinationFull { path }
             | WriteOperationError::ConnectionInterrupted { path }
+            | WriteOperationError::ReplySignatureRefused { path, .. }
             | WriteOperationError::FileLocked { path }
             | WriteOperationError::MoveNotConfirmed { path, .. }
             | WriteOperationError::NameTooLong { path }

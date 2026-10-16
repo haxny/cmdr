@@ -2137,9 +2137,9 @@ Two producers:
 - `place-connect.svelte.ts` owns the first-dial `connecting` and `refused`, for a pane landing on a `saved` place. It
   dials once per landing (a `dialed` guard), and its Cancel aims at the attempt id `connect-flow.ts` hands out before
   the dial.
-- `smb-view-state.svelte.ts` maps the reconnect manager's status onto `connecting` (with a `cycle`), `signed_out`, and
-  `host_key_changed`, in ONE exhaustive `switch`. ❗ Exhaustive, ❌ not a list of per-status booleans: a status without
-  its own arm used to render a plain listing over a dead session.
+- `smb-view-state.svelte.ts` maps the reconnect manager's status onto `connecting` (with a `cycle`), `signed_out`,
+  `host_key_changed`, and `guest_session_refused`, in ONE exhaustive `switch`. ❗ Exhaustive, ❌ not a list of
+  per-status booleans: a status without its own arm used to render a plain listing over a dead session.
 - `device-connect.svelte.ts` owns `waiting_for_device` and a phone's `connecting` / `refused`. Its sentences come from
   `#lib/adb/adb-connect-errors.ts`, so the view stays generic and the words stay Android's.
 
@@ -2185,6 +2185,10 @@ whose `needs_host_key_approval` outcome is what the sheet's key step renders, wi
 stops at the host key, before any secret is offered. Dropping the session sends the pane home (`volume-unmounted`), so a
 sheet that connects puts the pane back on the place (`enter`); a cancelled one leaves it home, where Disconnect leaves
 it too. A backend command handing back the pending prompt would skip the redial.
+
+❗ **A refused guest session (`guest_session_refused`, SMB) offers "Try another password…" and Disconnect.** A named
+login answered with a guest session is usually a wrong password and rarely tampering, and the hint says both. The first
+button is the signed-out banner's Sign in, so the sheet MENDS the registered volume; Disconnect unmounts the share.
 
 ❗ **A state lands only once something can act on it.** Adding one before its handler puts a button on screen that does
 nothing, which is the one thing this view refuses to do (`../../servers/DETAILS.md` § "The sheet contract").

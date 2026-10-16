@@ -887,6 +887,12 @@ describe('getErrorDisplayMeta', () => {
       retryHint: false,
     },
     { error: { type: 'destination_full', path: '/p' }, category: 'needs_action', retryHint: false },
+    // No Retry: the same reply would be refused again, and the backend never retries it either.
+    {
+      error: { type: 'reply_signature_refused', path: '/p', message: 'refused' },
+      category: 'needs_action',
+      retryHint: false,
+    },
     {
       error: { type: 'destination_inside_source', source: '/a', destination: '/a/b' },
       category: 'needs_action',

@@ -42,6 +42,7 @@ fn wire_state(connection: VolumeConnection) -> WireConnection {
         VolumeConnection::Disconnected => WireConnection::Disconnected,
         VolumeConnection::NeedsCredentials => WireConnection::NeedsCredentials,
         VolumeConnection::NeedsHostKeyApproval => WireConnection::NeedsHostKeyApproval,
+        VolumeConnection::GuestSessionRefused => WireConnection::GuestSessionRefused,
     }
 }
 
@@ -102,6 +103,10 @@ mod tests {
         assert_eq!(
             wire_state(VolumeConnection::NeedsHostKeyApproval),
             WireConnection::NeedsHostKeyApproval
+        );
+        assert_eq!(
+            wire_state(VolumeConnection::GuestSessionRefused),
+            WireConnection::GuestSessionRefused
         );
     }
 }

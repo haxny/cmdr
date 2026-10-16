@@ -92,6 +92,15 @@ export type RemoteConnectState =
    * choices. `disconnect` drops the session and leaves.
    */
   | { kind: 'host_key_changed'; checkKey: () => void; disconnect: () => void }
+  /**
+   * SMB only: a named login was answered with a guest session, so the backend
+   * refused it rather than browse as a guest. Usually a wrong password; rarely,
+   * something tampering with the connection, so the view says both.
+   *
+   * `signIn` opens the one sign-in sheet for the registered place ("Try another
+   * password"), and `disconnect` drops the share and leaves.
+   */
+  | { kind: 'guest_session_refused'; signIn: () => void; disconnect: () => void }
 
 /**
  * A backoff loop's own face, inside the `connecting` state.

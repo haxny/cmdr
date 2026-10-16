@@ -420,6 +420,7 @@ describe('toConnectionState — the wire enum the picker renders', () => {
     expect(toConnectionState('disconnected')).toBe('disconnected')
     expect(toConnectionState('needs_credentials')).toBe('needs_sign_in')
     expect(toConnectionState('needs_host_key_approval')).toBe('needs_host_key_approval')
+    expect(toConnectionState('guest_session_refused')).toBe('needs_sign_in')
   })
 })
 

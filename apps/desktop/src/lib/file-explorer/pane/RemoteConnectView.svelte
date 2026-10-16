@@ -192,6 +192,18 @@
                     {tString('servers.paneState.disconnect')}
                 </Button>
             </div>
+        {:else if connectState.kind === 'guest_session_refused'}
+            <span class="refusal-icon danger"><Icon name="triangle-alert" size={32} aria-hidden="true" /></span>
+            <h2 class="title">{tString('servers.paneState.guestSessionRefused', { name })}</h2>
+            <p class="hint">{tString('servers.paneState.guestSessionRefusedHint')}</p>
+            <div class="actions">
+                <Button variant="primary" size="mini" onclick={connectState.signIn}>
+                    {tString('servers.paneState.tryAnotherPassword')}
+                </Button>
+                <Button variant="secondary" size="mini" onclick={connectState.disconnect}>
+                    {tString('servers.paneState.disconnect')}
+                </Button>
+            </div>
         {:else}
             <span class="refusal-icon"><Icon name="triangle-alert" size={32} aria-hidden="true" /></span>
             <h2 class="title">{connectState.refusal}</h2>

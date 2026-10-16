@@ -138,12 +138,13 @@ backend state in memory and never writes into the real data dir. ❌ A backend n
 ### `VolumeEventSink`
 
 ⇐ a global `AppHandle` the SMB backend used to hold, emitting `network::VolumeConnectionChanged` through
-`tauri_specta::Event`. The seam carries `VolumeConnection`, a three-variant enum; the payload struct, its derives, and
-the wire enum it serializes stay app-side. The two enums meet in exactly one match, in `events/volume_mapping.rs`.
+`tauri_specta::Event`. The seam carries `VolumeConnection`, a small payload-free enum; the payload struct, its derives,
+and the wire enum it serializes stay app-side. The two enums meet in exactly one match, in `events/volume_mapping.rs`.
 
 `NeedsCredentials` is worth its own variant even though SMB's internal state machine is binary
 (`Direct ⇄ Disconnected`): it's the one transition the backend must NOT retry its way out of, and a string would let a
-UI copy edit change what a backend means.
+UI copy edit change what a backend means. `GuestSessionRefused` is its SMB sibling: a named login answered with a guest
+session, which the pane names instead of a bare sign-in prompt (usually a wrong password, rarely tampering).
 
 `security_refusal` is the seam's second, defaulted method: the backend reports each thing it refused for the user's
 safety (`SecurityRefusal`, today only a reply with a bad or missing signature), and the app feeds its security event

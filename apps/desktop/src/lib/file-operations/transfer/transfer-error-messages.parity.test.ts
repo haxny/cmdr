@@ -515,6 +515,18 @@ const cases: Case[] = [
     },
   },
   {
+    // A server reply refused for its signature has its own stopped state (#457), never the
+    // generic "couldn't finish" one.
+    name: 'reply_signature_refused',
+    error: { type: 'reply_signature_refused', path: '/p', message: 'signature verification failed' },
+    expected: {
+      title: 'Server reply refused',
+      message: 'The server’s reply wasn’t signed, so Cmdr stopped.',
+      suggestion:
+        'A flaky network device can cause this, and so can someone tampering with traffic between you and the server. Reconnect, and if it happens again, check your network.',
+    },
+  },
+  {
     // The write itself was refused for lack of room, so nothing was measured:
     // the copy names no sizes, where "needs 0 bytes but only has 0 bytes" used
     // to render.

@@ -97,6 +97,15 @@ const perVariant: Record<WriteOperationError['type'], TransferErrorFixture> = {
       volumeName: 'Naspolya media (SMB)',
     },
   },
+  reply_signature_refused: {
+    operationType: 'copy',
+    // A NAS reply on a signed session came back without its signature, mid-copy.
+    error: {
+      type: 'reply_signature_refused',
+      path: '/Volumes/naspi/photos/2026/DSC09241.arw',
+      message: 'signature verification failed for READ (message id 412): mismatch',
+    },
+  },
   destination_full: {
     operationType: 'copy',
     // A USB stick that filled up partway: the write refused, nothing measured.

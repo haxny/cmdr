@@ -34,6 +34,12 @@ Here, because the answer is yes:
   `VolumeError::SignatureInvalid`, never the `ProtocolError` that sends a listing down the CLI fallback.
 - Every error funnel (`handle_smb_result`, `update_state_on_smb_error`, and the scan paths that map directly) calls
   `session::report_security_refusal`, which tells the host's `security_refusal` seam about a refused signature.
+  `handle_smb_result` also drops the main session on one, like a lost connection: nothing can vouch for a signed
+  session's state after a refused reply, so the next dial (the pane's reconnect, the notice's Reconnect) builds a fresh,
+  freshly signed one (#457).
+- A reconnect the saved credentials can't bring back emits `VolumeConnection::GuestSessionRefused` when the server
+  answered the named login with a guest session, else `NeedsCredentials` (`reconnect::credentials_refusal_state`), so
+  the pane names what Cmdr refused.
 - `try_list_shares_as_guest` / `try_list_shares_authenticated` — one connect and one `list_shares`, nothing else.
 - `ShareInfo` / `AuthMode` / `ShareListResult` / `ShareListError` — what a listing attempt produced.
 

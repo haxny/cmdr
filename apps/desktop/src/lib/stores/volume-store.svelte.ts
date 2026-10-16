@@ -227,6 +227,10 @@ export function toConnectionState(state: VolumeConnection): ConnectionState {
       return 'needs_sign_in'
     case 'needs_host_key_approval':
       return 'needs_host_key_approval'
+    // The picker shows a share whose login was answered with a guest session as signed out:
+    // another password is what brings it back.
+    case 'guest_session_refused':
+      return 'needs_sign_in'
   }
 }
 

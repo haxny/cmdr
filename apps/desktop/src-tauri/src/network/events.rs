@@ -120,6 +120,11 @@ pub enum VolumeConnection {
     /// ❗ Payload-free, and it stays that way: this enum is `Copy` on both sides of
     /// `events::volume_mapping::wire_state`.
     NeedsHostKeyApproval,
+    /// SMB: a reconnect signed in with a named login and the server answered with a guest
+    /// session, so the backend refused it. The pane says so and offers another password.
+    /// ❗ Not [`NeedsCredentials`](Self::NeedsCredentials), whose prompt doesn't say what
+    /// happened: usually a wrong password, rarely something tampering with the connection.
+    GuestSessionRefused,
 }
 
 /// Typed `volume-connection-changed` Tauri event. The frontend reconnect manager

@@ -218,6 +218,9 @@ export type WriteOperationError =
   | { type: 'file_locked'; path: string }
   | { type: 'trash_not_supported'; path: string }
   | { type: 'connection_interrupted'; path: string }
+  // A server reply on a signed session carried a bad or missing signature, so Cmdr refused
+  // it and stopped. `message` is the backend's diagnostic, for the technical details only.
+  | { type: 'reply_signature_refused'; path: string; message: string }
   | { type: 'read_error'; path: string; message: string }
   | { type: 'write_error'; path: string; message: string }
   | { type: 'name_too_long'; path: string }

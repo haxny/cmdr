@@ -134,6 +134,18 @@ impl SmbVolume {
                         cmdr_fs::log_detail::LogDetail(&e.to_string())
                     );
                     self.inner.transition_to_disconnected();
+                } else if kind == smb2::ErrorKind::SignatureInvalid {
+                    // A refused reply leaves the signed session in a state nothing can vouch
+                    // for, so drop it like a lost connection: whatever runs next (the pane's
+                    // reconnect, the notice's Reconnect) builds a fresh, freshly signed session.
+                    warn!(
+                        "SmbVolume::{}(share={:?}): source=backend, backend=smb2, error_kind={:?}, detail={:?}; refused a reply for its signature, transitioning to Disconnected",
+                        op_name,
+                        self.inner.share_name,
+                        kind,
+                        cmdr_fs::log_detail::LogDetail(&e.to_string())
+                    );
+                    self.inner.transition_to_disconnected();
                 } else if matches!(
                     kind,
                     smb2::ErrorKind::NotFound | smb2::ErrorKind::IsADirectory | smb2::ErrorKind::AlreadyExists

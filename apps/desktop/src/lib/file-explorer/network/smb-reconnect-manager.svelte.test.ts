@@ -147,6 +147,33 @@ describe('smbReconnectManager', () => {
   })
 
   /**
+   * A named login the server answered with a guest session (#457): its own status, so the pane
+   * names what Cmdr refused. The backoff stops like a stale password's (retrying gets the same
+   * guest offer), and a later sign-in clears it.
+   */
+  it('stops the backoff and flips to guest-refused on a `guest_session_refused` event', async () => {
+    await smbReconnectManager.init()
+    const unsub = smbReconnectManager.subscribe('vol-guest')
+    mockReconnect.mockRejectedValue(new Error('guest session refused'))
+
+    smbReconnectManager.startCycle('vol-guest')
+    await vi.advanceTimersByTimeAsync(RECONNECT_DELAYS_MS[0])
+    emit('vol-guest', 'guest_session_refused')
+    expect(smbReconnectManager.getState('vol-guest')?.status).toBe('guest-refused')
+
+    const callsAtFlip = mockReconnect.mock.calls.length
+    for (const delay of RECONNECT_DELAYS_MS) {
+      await vi.advanceTimersByTimeAsync(delay)
+    }
+    expect(mockReconnect.mock.calls.length).toBe(callsAtFlip)
+
+    emit('vol-guest', 'connected')
+    expect(smbReconnectManager.getState('vol-guest')).toBeNull()
+    smbReconnectManager.cancel('vol-guest')
+    unsub()
+  })
+
+  /**
    * The banner asks the backend what a sign-in would want, at the moment it has
    * something to ask about. Nothing renders this yet (the SFTP sign-in UI isn't
    * built), so the cell asserts on the stored value.

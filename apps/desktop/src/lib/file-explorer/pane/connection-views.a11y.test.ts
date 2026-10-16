@@ -341,4 +341,17 @@ describe('RemoteConnectView a11y', () => {
     await tick()
     await expectNoA11yViolations(target)
   })
+
+  it('a refused guest session has no a11y violations', async () => {
+    const target = container()
+    mount(RemoteConnectView, {
+      target,
+      props: {
+        name: 'Naspolya',
+        state: { kind: 'guest_session_refused' as const, signIn: vi.fn(), disconnect: vi.fn() },
+      },
+    })
+    await tick()
+    await expectNoA11yViolations(target)
+  })
 })

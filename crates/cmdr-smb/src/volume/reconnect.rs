@@ -16,6 +16,16 @@ use std::sync::Arc;
 use std::sync::atomic::Ordering;
 use std::time::Duration;
 
+/// What a reconnect the saved credentials couldn't bring back tells the host: a guest session
+/// offered for a named login is its own state (the pane names the refusal), anything else asks
+/// for a sign-in. Read by kind, ❌ never the message.
+fn credentials_refusal_state(err: &smb2::Error) -> VolumeConnection {
+    match err.kind() {
+        smb2::ErrorKind::GuestSessionRefused => VolumeConnection::GuestSessionRefused,
+        _ => VolumeConnection::NeedsCredentials,
+    }
+}
+
 impl SmbVolumeInner {
     /// Cancels the existing watcher task (if any). The watcher exits on its
     /// next `select!` iteration. Best-effort: if the watcher already exited on
@@ -178,7 +188,7 @@ impl SmbVolumeInner {
                                 // The password on the server changed and what we have
                                 // saved no longer works. Tell the FE so it shows a
                                 // "Sign in" prompt instead of the generic "unreachable".
-                                self.emit_state_change_for_id(VolumeConnection::NeedsCredentials);
+                                self.emit_state_change_for_id(credentials_refusal_state(&e2));
                                 return Err(map_smb_error(e2, &share_root));
                             }
                         }
@@ -189,7 +199,7 @@ impl SmbVolumeInner {
                             "SmbVolumeInner::attempt_reconnect(share={:?}): no fresh credentials available; giving up on this attempt",
                             self.share_name
                         );
-                        self.emit_state_change_for_id(VolumeConnection::NeedsCredentials);
+                        self.emit_state_change_for_id(credentials_refusal_state(&err));
                         return Err(map_smb_error(err, &share_root));
                     }
                 }

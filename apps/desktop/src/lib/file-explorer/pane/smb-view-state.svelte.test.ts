@@ -181,6 +181,26 @@ describe('createSmbViewState', () => {
     expect(state).toEqual({ kind: 'signed_out', signIn: null })
   })
 
+  it('names a refused guest session and offers another password or Disconnect (#457)', async () => {
+    manager.getState.mockReturnValue({ status: 'guest-refused', attemptIndex: 0, currentDelayMs: 0, waitStartedAt: 0 })
+    const { openSignInForPlace } = await import('#lib/servers/open-sign-in.js')
+    const { sub, navigateToFallback } = create()
+    const state = sub.remoteConnectState
+    expect(state?.kind).toBe('guest_session_refused')
+    if (state?.kind !== 'guest_session_refused') throw new Error('unreachable')
+    state.signIn()
+    // ❗ The volume is registered, so the sheet mends it rather than dialing a second one.
+    await vi.waitFor(() => {
+      expect(vi.mocked(openSignInForPlace)).toHaveBeenCalledWith(
+        expect.objectContaining({ volumeId: 'smb-vol', registered: true }),
+      )
+    })
+    state.disconnect()
+    expect(manager.cancel).toHaveBeenCalledWith('smb-vol')
+    expect(ipc.disconnectSmbVolume).toHaveBeenCalledWith('smb-vol')
+    expect(navigateToFallback).toHaveBeenCalledWith(null)
+  })
+
   it('shows the changed-key banner, whose only way out is Disconnect', () => {
     manager.getState.mockReturnValue({
       status: 'needs-host-key',

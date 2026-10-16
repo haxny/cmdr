@@ -308,3 +308,22 @@ fn test_map_volume_error_needs_password() {
         WriteOperationError::ArchiveNeedsPassword { path, wrong_attempt: true } if path == "/ctx"
     ));
 }
+
+/// A server reply refused for its signature stops the transfer with its own typed reason (#457),
+/// ❌ never the generic `IoError`: the stopped state says the reply wasn't signed, and the backend
+/// already knows a retry invites the same answer.
+#[test]
+fn a_reply_refused_for_its_signature_stops_with_its_own_reason() {
+    let err = map_volume_error(
+        "/smb/share/photos/a.jpg",
+        PathRole::Source,
+        VolumeError::SignatureInvalid("signature verification failed".to_string()),
+    );
+    assert!(
+        matches!(
+            &err,
+            WriteOperationError::ReplySignatureRefused { path, .. } if path == "/smb/share/photos/a.jpg"
+        ),
+        "got {err:?}"
+    );
+}

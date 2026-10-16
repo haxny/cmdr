@@ -575,6 +575,13 @@ and asking one would be the first step toward putting a password box in front of
 `RemoteConnectView`'s `host_key_changed`, which offers "Check the key" and Disconnect (`../pane/DETAILS.md` § the
 connect views says why, and why never "Trust it"). `crates/cmdr-sftp/DETAILS.md` § "Connecting from the frontend".
 
+❗ `guest_session_refused` is the fifth state, SMB only: a reconnect signed in with a named login and the server
+answered with a guest session, so the backend refused it (usually a wrong password, rarely tampering). It gets its OWN
+status (`guest-refused`) rather than `needs-auth`, because the pane names what Cmdr refused. `handleGuestRefused` ends
+the backoff like `handleNeedsHostKey` (the same login gets the same guest offer), and the pane renders
+`RemoteConnectView`'s `guest_session_refused`: "Try another password…" is the signed-out banner's own Sign in (arm 2),
+and Disconnect the cycle's. The volume store shows it as `needs_sign_in`.
+
 Lazy-nav path: opening a share that's already `Disconnected` (no fresh event in flight), the `smb-view-state.svelte.ts`
 subscription `$effect` notices `currentVolumeInfo?.connectionState === 'disconnected'` and calls
 `connectPlace({ volumeId, connectionState: 'disconnected' })`. ❗ Through `#lib/servers/connect-flow.ts`'s arm 1 rather

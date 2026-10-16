@@ -921,6 +921,27 @@
     "screenshot": "servers-hub.png",
     "screenshotNote": "Shown inside a file pane while it connects to a server: \"Connecting…\", \"Signed out\", a changed host key, or a \"Reconnecting…\" state with a countdown and Retry/Cancel controls. This shows the servers list those connections start from; your string appears in the pane, in the same network context."
   },
+  "servers.paneState.guestSessionRefused": "Cmdr didn’t sign in to {name} as a guest",
+  "@servers.paneState.guestSessionRefused": {
+    "description": "Heading of the pane view shown when Cmdr signed in to a network share (SMB) with the person's account and the server answered with a guest session instead, so Cmdr refused it rather than browse as a guest. The innocent cause is a wrong password (some servers quietly offer a guest session then); the serious, rare one is someone tampering with the connection. “Cmdr” is the product name. Cmdr never uses the words \"error\" or \"failed\" in messages people read.",
+    "placeholders": {
+      "name": "the server’s display name, like “Naspolya”"
+    },
+    "screenshot": "servers-hub.png",
+    "screenshotNote": "Shown inside a file pane while it connects to a server: \"Connecting…\", \"Signed out\", a changed host key, or a \"Reconnecting…\" state with a countdown and Retry/Cancel controls. This shows the servers list those connections start from; your string appears in the pane, in the same network context."
+  },
+  "servers.paneState.guestSessionRefusedHint": "You asked to sign in with your account, but the server offered a guest session instead. Usually that means the password was wrong. Rarely, it means something is tampering with the connection.",
+  "@servers.paneState.guestSessionRefusedHint": {
+    "description": "The lines under that heading: what happened, the usual innocent cause (a wrong password), and the rare serious one (tampering). Calm, not alarming. A “Try another password…” button (servers.paneState.tryAnotherPassword) and a Disconnect button sit right below it. Plain text, no markdown.",
+    "screenshot": "servers-hub.png",
+    "screenshotNote": "Shown inside a file pane while it connects to a server: \"Connecting…\", \"Signed out\", a changed host key, or a \"Reconnecting…\" state with a countdown and Retry/Cancel controls. This shows the servers list those connections start from; your string appears in the pane, in the same network context."
+  },
+  "servers.paneState.tryAnotherPassword": "Try another password…",
+  "@servers.paneState.tryAnotherPassword": {
+    "description": "Button under the refused-guest-session message in a file pane. It opens the sign-in form for this share, where the person types the password again. VERB phrase, imperative, short control label. The ellipsis is the single character … (U+2026) and means “this opens something”; keep it.",
+    "screenshot": "servers-hub.png",
+    "screenshotNote": "Shown inside a file pane while it connects to a server: \"Connecting…\", \"Signed out\", a changed host key, or a \"Reconnecting…\" state with a countdown and Retry/Cancel controls. This shows the servers list those connections start from; your string appears in the pane, in the same network context."
+  },
   "servers.paneState.reconnecting": "Reconnecting to {name}…",
   "@servers.paneState.reconnecting": {
     "description": "Heading of the pane view shown while Cmdr keeps trying to bring back a server connection that dropped. ❗ NOT a first connection: the session existed and Cmdr is getting it back on its own. {name} is the server’s display name. The ellipsis is the single character … (U+2026).",

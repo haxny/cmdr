@@ -222,3 +222,39 @@ fn a_refused_signature_reaches_the_security_seam() {
         vec![(RECORDED_ID.to_string(), SecurityRefusal::ReplySignatureInvalid)]
     );
 }
+
+/// A named login the server answered with a guest session gets its own state, ❌ never the
+/// generic sign-in prompt: Cmdr refused the guest session, so the pane says so (#457). Any other
+/// credentials refusal is still the sign-in prompt.
+#[test]
+fn a_guest_session_offered_for_a_named_login_is_its_own_state() {
+    let guest = smb2::Error::GuestSessionRefused {
+        username: "david".to_string(),
+        anonymous: false,
+    };
+    assert_eq!(credentials_refusal_state(&guest), VolumeConnection::GuestSessionRefused);
+    let wrong = smb2::Error::Auth {
+        message: "logon failure".to_string(),
+    };
+    assert_eq!(credentials_refusal_state(&wrong), VolumeConnection::NeedsCredentials);
+}
+
+/// A refused reply leaves the signed session in a state nothing can vouch for, so it's dropped
+/// like a lost connection: the next operation, the pane's reconnect, or the notice's Reconnect
+/// builds a fresh, freshly signed one (#457).
+#[tokio::test]
+async fn a_refused_signature_drops_the_session() {
+    let (vol, events) = volume_with_recorded_events();
+    vol.inner.state.store(ConnectionState::Direct as u8, Ordering::Relaxed);
+    let refused = smb2::Error::SignatureInvalid {
+        command: smb2::types::Command::Read,
+        message_id: smb2::types::MessageId(7),
+        reason: smb2::error::SignatureFailure::Mismatch,
+    };
+    let _ = vol.handle_smb_result::<()>("read", "a.txt", Err(refused));
+    assert_eq!(vol.session_state(), ConnectionState::Disconnected);
+    assert_eq!(
+        events.transitions(),
+        vec![(RECORDED_ID.to_string(), VolumeConnection::Disconnected)]
+    );
+}

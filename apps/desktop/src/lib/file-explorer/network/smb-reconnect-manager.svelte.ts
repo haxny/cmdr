@@ -52,7 +52,7 @@ export const TOTAL_DURATION_MS = RECONNECT_DELAYS_MS.reduce((a, b) => a + b, 0)
 /** Number of attempts in a full cycle. */
 export const TOTAL_ATTEMPTS = RECONNECT_DELAYS_MS.length
 
-export type ReconnectStatus = 'waiting' | 'attempting' | 'gave-up' | 'needs-auth' | 'needs-host-key'
+export type ReconnectStatus = 'waiting' | 'attempting' | 'gave-up' | 'needs-auth' | 'needs-host-key' | 'guest-refused'
 
 export interface ReconnectState {
   status: ReconnectStatus
@@ -134,6 +134,11 @@ class SmbReconnectManager {
           // one. The pane renders `host_key_changed` instead, which says what
           // happened and offers Disconnect.
           this.handleNeedsHostKey(volumeId)
+          break
+        case 'guest_session_refused':
+          // ❗ Its own status rather than `needs-auth`: the pane names what Cmdr refused (a
+          // guest session offered for a named login), which a bare sign-in prompt doesn't.
+          this.handleGuestRefused(volumeId)
           break
       }
     })
@@ -337,6 +342,21 @@ class SmbReconnectManager {
     })
   }
 
+  /**
+   * The server answered a named login with a guest session, so the backend refused it. Ends the
+   * backoff (the same login gets the same guest offer) and flips to `guest-refused`, which the
+   * pane renders with "Try another password" and Disconnect.
+   */
+  private handleGuestRefused(volumeId: string): void {
+    untrack(() => {
+      const entry = this.map.get(volumeId)
+      if (!entry) return // No subscribers; the next nav re-enters the flow.
+      if (entry.timerId) clearTimeout(entry.timerId)
+      entry.timerId = null
+      entry.state = { ...entry.state, status: 'guest-refused' }
+    })
+  }
+
   private handleConnected(volumeId: string): void {
     untrack(() => {
       const entry = this.map.get(volumeId)
@@ -414,7 +434,12 @@ class SmbReconnectManager {
       if (!e2 || e2.cycle !== cycle) return
       // The backend may have emitted `needs_credentials` during this attempt (stale password).
       // `handleNeedsAuth` already stopped the cycle; don't schedule another doomed retry.
-      if (e2.state.status === 'needs-auth' || e2.state.status === 'needs-host-key') return
+      if (
+        e2.state.status === 'needs-auth' ||
+        e2.state.status === 'needs-host-key' ||
+        e2.state.status === 'guest-refused'
+      )
+        return
       const next = attemptIndex + 1
       if (next >= TOTAL_ATTEMPTS) {
         e2.state = { ...e2.state, status: 'gave-up' }

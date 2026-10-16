@@ -217,6 +217,7 @@ export const DIALOG_GALLERY_ENTRIES: DialogGalleryEntry[] = [
       { id: 'permission_denied', label: 'Permission denied' },
       { id: 'insufficient_space', label: 'Not enough space' },
       { id: 'destination_full', label: 'Destination full' },
+      { id: 'reply_signature_refused', label: 'Server reply refused' },
       { id: 'destination_inside_source', label: 'Destination inside source' },
       { id: 'duplicate_source_names', label: 'Two sources share a name' },
       { id: 'archive_entry_name_refused', label: 'Name a zip can’t hold' },
