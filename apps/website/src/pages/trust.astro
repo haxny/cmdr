@@ -412,6 +412,16 @@ const toc = [
         <strong>Passwords and API keys</strong> (for SMB, SFTP, WebDAV, and cloud AI) are stored in the macOS
         Keychain, never in Cmdr's settings files.
     </p>
+    <p id="remove">
+        <strong>Removing Cmdr and all its data</strong>: quit Cmdr, move the app to the Trash, and delete these folders
+        and files: <code>~/Library/Application Support/com.veszelovszki.cmdr/</code>,
+        <code>~/Library/Caches/com.veszelovszki.cmdr/</code>, <code>~/Library/Logs/com.veszelovszki.cmdr/</code>,
+        <code>~/Library/Preferences/com.veszelovszki.cmdr.plist</code>,
+        <code>~/Library/Saved Application State/com.veszelovszki.cmdr.savedState</code>, and
+        <code>~/Library/WebKit/com.veszelovszki.cmdr/</code>. With Homebrew,
+        <code>brew uninstall --zap --cask vdavid/tap/cmdr</code> does all of that. Then open Keychain Access and delete
+        the items named "Cmdr", which hold the saved passwords and API keys.
+    </p>
 
     <h3>On Cmdr's servers</h3>
     <p>A daily job on the API server deletes data on this schedule:</p>

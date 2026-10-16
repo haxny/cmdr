@@ -96,6 +96,7 @@ Writing them:
 - **CPU, RAM, or idle cost**: `docs/notes/performance/README.md` first.
 - **A report from a USER** (`ERR-XXXXX`, a crash, in-app feedback): `docs/tooling/feedback-and-error-digest.md`. The
   logging doc above covers the LOCAL app and won't find one.
+- **A privacy request** (someone asks for their data, or for it to be deleted): `docs/guides/privacy-requests.md`.
 - **A security incident** (leaked key, fake update, exploited flaw): `docs/security-incident-procedure.md`, first hour
   first.
 - **Branding / marketing**: `brand/CLAUDE.md`, `apps/website/`, and `README.md`. You don't need app internals.
