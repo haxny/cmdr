@@ -27,6 +27,7 @@ import { addToast } from '#lib/ui/toast/index.js'
 import { tString } from '#lib/intl/messages.svelte.js'
 import {
   composeTransferCompleteToast,
+  composeDurabilityUnconfirmedToast,
   composeTrashRefusedToast,
 } from '#lib/file-operations/transfer/transfer-complete-toast.js'
 import { getTechnicalDetails } from '#lib/file-operations/transfer/transfer-error-messages.js'
@@ -137,6 +138,7 @@ export function createAdoptedOperation(deps: AdoptedOperationDeps) {
       appearedDuringMove,
       refused,
       metadataLeftBehind,
+      durabilityUnconfirmed,
     }: TransferCompletePayload): void {
       const op = adoptedProps?.operationType ?? 'copy'
       log.info(
@@ -154,12 +156,16 @@ export function createAdoptedOperation(deps: AdoptedOperationDeps) {
       // does in the window that started it: the items are still in the pane, so
       // the completion can't be the only thing the user hears about.
       const refusedMessage = composeTrashRefusedToast(refused)
+      const durabilityMessage = composeDurabilityUnconfirmedToast(durabilityUnconfirmed)
       addToast(toastMessage, {
-        level: refusedMessage !== null ? 'warn' : allSkipped ? 'info' : 'success',
+        level: refusedMessage !== null || durabilityMessage !== null ? 'warn' : allSkipped ? 'info' : 'success',
         timeoutMs: 7000,
       })
       if (refusedMessage !== null) {
         addToast(refusedMessage, { level: 'warn', timeoutMs: 10000 })
+      }
+      if (durabilityMessage !== null) {
+        addToast(durabilityMessage, { level: 'warn', dismissal: 'persistent' })
       }
 
       settle()

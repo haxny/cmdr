@@ -358,6 +358,7 @@ pub(super) fn move_with_rename(
         top_level_skipped: Some(top_level_skipped),
         refused: None,
         metadata_left_behind: None,
+        durability_unconfirmed: None,
     });
 
     Ok(())

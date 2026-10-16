@@ -247,6 +247,7 @@ pub(crate) async fn route_archive_move_out(
                         top_level_skipped: None,
                         refused: None,
                         metadata_left_behind: state.metadata_losses.left_behind(&op_id),
+                        durability_unconfirmed: None,
                     }),
                     Some(err) => events.emit_error(WriteErrorEvent::new(op_id.clone(), WriteOperationType::Move, err)),
                 }
@@ -298,6 +299,7 @@ pub(crate) async fn route_archive_move_out(
                         top_level_skipped: None,
                         refused: None,
                         metadata_left_behind: state.metadata_losses.left_behind(&op_id),
+                        durability_unconfirmed: None,
                     }),
                     // The durable prefix moved out, but a later source failed to
                     // extract — surface the failure. A retry moves the rest (it

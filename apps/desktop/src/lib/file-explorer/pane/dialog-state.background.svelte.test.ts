@@ -441,6 +441,7 @@ describe('an archive password, for a job with no dialog', () => {
       topLevelSkipped: null,
       refused: null,
       metadataLeftBehind: null,
+      durabilityUnconfirmed: null,
     })
     await settle()
 

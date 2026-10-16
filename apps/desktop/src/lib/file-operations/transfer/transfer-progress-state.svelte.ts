@@ -394,6 +394,7 @@ export function createTransferProgressState(config: TransferProgressStateConfig)
             topLevelSkipped: event.topLevelSkipped ?? null,
             refused: event.refused ?? null,
             metadataLeftBehind: event.metadataLeftBehind ?? null,
+            durabilityUnconfirmed: event.durabilityUnconfirmed ?? null,
           })
         })
         return

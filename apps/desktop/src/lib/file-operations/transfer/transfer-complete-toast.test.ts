@@ -1,5 +1,9 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
-import { composeTransferCompleteToast, composeTrashRefusedToast } from './transfer-complete-toast'
+import {
+  composeDurabilityUnconfirmedToast,
+  composeTransferCompleteToast,
+  composeTrashRefusedToast,
+} from './transfer-complete-toast'
 import { _setLocaleForTests } from '#lib/intl/locale.js'
 import type { LostMetadata } from '#lib/ipc/bindings.js'
 
@@ -561,5 +565,22 @@ describe('composeTrashRefusedToast', () => {
     expect(composeTrashRefusedToast(null)).toBeNull()
     expect(composeTrashRefusedToast(undefined)).toBeNull()
     expect(composeTrashRefusedToast({ itemCount: 0, reason: 'other' })).toBeNull()
+  })
+})
+
+describe('composeDurabilityUnconfirmedToast', () => {
+  it('names the drive the copies went to', () => {
+    expect(composeDurabilityUnconfirmedToast({ volumeName: 'Backup' })).toBe(
+      'Cmdr couldn’t confirm the copies are fully written to Backup. If the drive was unplugged or is failing, check them before you rely on them.',
+    )
+  })
+
+  it('says “the disk” when the drive’s name isn’t known', () => {
+    expect(composeDurabilityUnconfirmedToast({ volumeName: null })).toContain('fully written to the disk.')
+  })
+
+  it('says nothing when the flush confirmed everything', () => {
+    expect(composeDurabilityUnconfirmedToast(null)).toBeNull()
+    expect(composeDurabilityUnconfirmedToast(undefined)).toBeNull()
   })
 })

@@ -236,6 +236,7 @@ pub(in crate::file_system::write_operations) fn delete_files_with_progress_inner
         top_level_skipped: None,
         refused: None,
         metadata_left_behind: None,
+        durability_unconfirmed: None,
     });
 
     Ok(())
@@ -987,6 +988,7 @@ pub(in crate::file_system::write_operations) async fn delete_volume_files_with_p
         top_level_skipped: None,
         refused: None,
         metadata_left_behind: None,
+        durability_unconfirmed: None,
     });
 
     Ok(())

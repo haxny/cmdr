@@ -129,6 +129,26 @@ pub(super) fn flush_created_destinations(
     first_failure.map_or(Ok(()), Err)
 }
 
+/// What a copy's completion says about its flush: nothing when it confirmed
+/// everything, else the typed warning, with the path and errno logged here. A
+/// copy deletes nothing, so a failed flush doesn't stop it (a move, which would
+/// delete its sources, stops with `MoveNotConfirmed` instead).
+pub(super) fn unconfirmed_copy(
+    flushed: Result<(), FlushFailure>,
+    operation_id: &str,
+    state: &WriteOperationState,
+) -> Option<super::types::DurabilityUnconfirmed> {
+    let failure = flushed.err()?;
+    log::warn!(
+        target: "write_durability",
+        "copy_files_with_progress: op={} completes without proof its output is durable ({failure})",
+        operation_id
+    );
+    Some(super::types::DurabilityUnconfirmed {
+        volume_name: state.sides.as_ref().map(|sides| sides.destination.volume_name.clone()),
+    })
+}
+
 /// The errnos a filesystem answers for a directory fsync it doesn't support at
 /// all. Raw `libc` values, which differ by platform: Linux's `ENOTSUP` and
 /// `EOPNOTSUPP` are one number, macOS keeps them apart, and `ENOSYS` is 78 on

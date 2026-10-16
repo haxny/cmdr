@@ -32,6 +32,7 @@ import type { MessageKey } from '#lib/intl/keys.gen.js'
 import { tString } from '#lib/intl/messages.svelte.js'
 import type {
   AppearedDuringMove,
+  DurabilityUnconfirmed,
   LostMetadataClass,
   MetadataLeftBehind,
   TopLevelSkipped,
@@ -109,6 +110,21 @@ function withMetadataLeftBehind(toast: string, left: MetadataLeftBehind | null |
 export function composeTrashRefusedToast(refused: TrashRefusedItems | null | undefined): string | null {
   if (!refused || refused.itemCount <= 0) return null
   return trashRefusedCountSentence(refused.reason, refused.itemCount)
+}
+
+/**
+ * The warning beside a copy whose closing flush couldn't confirm its files are on the disk:
+ * every file landed, but a power loss or an unplugged drive could still take them. `null` when
+ * the flush confirmed everything, which is the ordinary ending. Its own toast, like the trash
+ * refusal: the completion sentence stays true, and this one is read on its own.
+ */
+export function composeDurabilityUnconfirmedToast(
+  unconfirmed: DurabilityUnconfirmed | null | undefined,
+): string | null {
+  if (!unconfirmed) return null
+  return unconfirmed.volumeName
+    ? tString('transfer.durabilityUnconfirmed', { volumeName: unconfirmed.volumeName })
+    : tString('transfer.durabilityUnconfirmedUnnamed')
 }
 
 /** Appends what the move left in the source, when it left anything: what appeared there, then what changed. */

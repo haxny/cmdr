@@ -280,6 +280,7 @@ describe('TransferProgressDialog cancel-settle gate', () => {
         topLevelSkipped: null,
         refused: null,
         metadataLeftBehind: null,
+        durabilityUnconfirmed: null,
       })
       void unmount(component)
     } finally {

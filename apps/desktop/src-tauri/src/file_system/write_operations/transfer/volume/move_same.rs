@@ -894,6 +894,7 @@ pub(crate) async fn move_within_same_volume_with_progress(
                 top_level_skipped: None,
                 refused: None,
                 metadata_left_behind: None,
+                durability_unconfirmed: None,
             });
             Ok(())
         }

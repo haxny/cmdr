@@ -699,6 +699,7 @@ pub(super) fn move_with_staging(
         top_level_skipped: Some(staging_skipped),
         refused: None,
         metadata_left_behind: None,
+        durability_unconfirmed: None,
     });
 
     Ok(())

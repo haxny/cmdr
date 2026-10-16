@@ -139,6 +139,11 @@ prompt in § "Archive-password prompt", the `..` helpers in § "Index conversion
   byte landed. ❗ The wording is David's placeholder (the `@key` descriptions say so). There's no queue-row line: the
   queue window hides finished rows (`queue/CLAUDE.md`), so the toast is the one surface. Backend contract:
   `write_operations/transfer/volume/DETAILS.md` § "Copies keep the source's metadata".
+- **A copy whose closing flush couldn't confirm its files are on the disk raises a second, persistent `warn` toast**
+  (`composeDurabilityUnconfirmedToast`, off `WriteCompleteEvent.durabilityUnconfirmed`, which names only the destination
+  volume), and the completion drops to `warn` too, the way a partly refused trash does. Every file landed, so the
+  completion sentence stays true; the warning is the part worth reading in full, so it waits to be closed. Backend
+  contract: `write_operations/transfer/DETAILS.md` § "Durability" (#461).
 
 ## Single-item destinations
 

@@ -12,7 +12,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use super::super::conflict::ApplyToAll;
-use super::super::durability::flush_created_destinations;
+use super::super::durability::{flush_created_destinations, unconfirmed_copy};
 use super::super::event_sinks::OperationEventSink;
 use super::super::free_space::check_local_copy_space;
 use super::super::ledger::CopyTransaction;
@@ -653,8 +653,9 @@ pub(in crate::file_system::write_operations) fn copy_files_with_progress_inner(
             // transaction's own ledgers; skips data the strategy already synced.
             // Emits a `Flushing`-phase event first so the FE shows "Writing the
             // last piece…" instead of a bar frozen at 100% on slow media.
-            // Best-effort here: a copy deletes nothing, so a failure only logs.
-            if let Err(failure) = flush_created_destinations(
+            // A copy deletes nothing, so a failure doesn't stop it: it completes
+            // with the typed warning (a move keeps its sources instead).
+            let flushed = flush_created_destinations(
                 events,
                 operation_id,
                 WriteOperationType::Copy,
@@ -666,13 +667,8 @@ pub(in crate::file_system::write_operations) fn copy_files_with_progress_inner(
                 &transaction.created_file_paths(),
                 &transaction.created_dirs,
                 &already_synced,
-            ) {
-                log::warn!(
-                    target: "write_durability",
-                    "copy_files_with_progress: op={} completes without proof its output is durable ({failure})",
-                    operation_id
-                );
-            }
+            );
+            let durability_unconfirmed = unconfirmed_copy(flushed, operation_id, state);
             commit_journaling_created_dirs(transaction, operation_id);
 
             log::info!(
@@ -692,6 +688,7 @@ pub(in crate::file_system::write_operations) fn copy_files_with_progress_inner(
                 top_level_skipped: Some(top_level_skipped),
                 refused: None,
                 metadata_left_behind: None,
+                durability_unconfirmed,
             });
             Ok(())
         }

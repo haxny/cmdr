@@ -141,6 +141,14 @@ pub struct WriteCompleteEvent {
     /// nothing. See [`MetadataLeftBehind`].
     #[serde(default)]
     pub metadata_left_behind: Option<MetadataLeftBehind>,
+    /// The closing flush couldn't confirm a copy's output is on the disk (an
+    /// `fsync` answered with an error), so the files landed but may not
+    /// survive a power loss or an unplugged drive. `None`, the ordinary case,
+    /// means the flush confirmed everything, and the FE says nothing. A move
+    /// never completes with this: it keeps its sources and stops with
+    /// `MoveNotConfirmed` instead. See [`DurabilityUnconfirmed`].
+    #[serde(default)]
+    pub durability_unconfirmed: Option<DurabilityUnconfirmed>,
 }
 
 impl WriteCompleteEvent {
@@ -158,8 +166,20 @@ impl WriteCompleteEvent {
             top_level_skipped: None,
             refused: None,
             metadata_left_behind: None,
+            durability_unconfirmed: None,
         }
     }
+}
+
+/// A copy that landed every file but couldn't prove them durable, for the
+/// warning beside its completion. Typed, never a sentence: the FE words it,
+/// and the log keeps the path and the errno.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct DurabilityUnconfirmed {
+    /// The destination's name as the volume list shows it, or `None` when the
+    /// operation didn't capture its sides.
+    pub volume_name: Option<String>,
 }
 
 /// The metadata a copy or move couldn't carry to its destination, per class,

@@ -163,6 +163,21 @@
     "screenshotNote": "The toast Cmdr shows when an operation finishes, pictured here. Your string is another outcome of the same toast: a move to trash or a delete, a compress, some files skipped, or files that appeared during a move."
   },
 
+  "transfer.durabilityUnconfirmed": "Cmdr couldn’t confirm the copies are fully written to {volumeName}. If the drive was unplugged or is failing, check them before you rely on them.",
+  "@transfer.durabilityUnconfirmed": {
+    "description": "Warning shown in its own pop-up notice (toast) right after a copy finishes, when Cmdr's last step, asking the drive to confirm everything is physically written, didn't get a confirmation. Every file arrived, but they might not survive the drive being unplugged or losing power. Calm and honest: it doesn't say anything was lost. \"Cmdr\" is the product name. Avoid the words \"error\" and \"failed\". Stays on screen until the person closes it.",
+    "placeholders": {
+      "volumeName": "the destination drive's name as Cmdr's volume list shows it, like “Backup” or “Macintosh HD”"
+    },
+    "screenshot": "toast-transfer-complete.png",
+    "screenshotNote": "The toast Cmdr shows when an operation finishes, pictured here. Your string is another outcome of the same toast: a move to trash or a delete, a compress, some files skipped, or files that appeared during a move."
+  },
+  "transfer.durabilityUnconfirmedUnnamed": "Cmdr couldn’t confirm the copies are fully written to the disk. If the drive was unplugged or is failing, check them before you rely on them.",
+  "@transfer.durabilityUnconfirmedUnnamed": {
+    "description": "The same warning as transfer.durabilityUnconfirmed, for when Cmdr doesn't know the destination drive's name. Shown in its own pop-up notice (toast) right after a copy finishes. Calm and honest: it doesn't say anything was lost. \"Cmdr\" is the product name. Avoid the words \"error\" and \"failed\".",
+    "screenshot": "toast-transfer-complete.png",
+    "screenshotNote": "The toast Cmdr shows when an operation finishes, pictured here. Your string is another outcome of the same toast: a move to trash or a delete, a compress, some files skipped, or files that appeared during a move."
+  },
   "transfer.metadataLeftBehind": "This server can’t store {classes}, so those stayed behind.",
   "@transfer.metadataLeftBehind": {
     "description": "PLACEHOLDER wording: David rewrites this before it ships; translate it as written for now. Extra sentence appended to the copy-complete or move-complete toast when the destination (a server, a phone, a cloud bucket) has no place for some of the information the original files carried beyond their contents, such as creation dates or Finder tags. Every file arrived; only that information stayed behind, and the originals still have it after a copy. Keep it calm and matter-of-fact: nothing went wrong.",

@@ -4269,6 +4269,8 @@ export type MessageKey =
   | 'transfer.compress.fileOnly'
   | 'transfer.compress.split'
   | 'transfer.delete'
+  | 'transfer.durabilityUnconfirmed'
+  | 'transfer.durabilityUnconfirmedUnnamed'
   | 'transfer.fileOnly.allDone'
   | 'transfer.fileOnly.allSkippedMany'
   | 'transfer.fileOnly.allSkippedSingle'

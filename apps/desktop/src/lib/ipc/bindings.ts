@@ -7877,6 +7877,19 @@ export type DryRunResult = {
 }
 
 /**
+ *  A copy that landed every file but couldn't prove them durable, for the
+ *  warning beside its completion. Typed, never a sentence: the FE words it,
+ *  and the log keeps the path and the errno.
+ */
+export type DurabilityUnconfirmed = {
+  /**
+   *  The destination's name as the volume list shows it, or `None` when the
+   *  operation didn't capture its sides.
+   */
+  volumeName: string | null
+}
+
+/**
  *  What `open_in_editor` did with the file, so the frontend acts on a variant rather
  *  than reading a sentence.
  */
@@ -18641,6 +18654,15 @@ export type WriteCompleteEvent = {
    *  nothing. See [`MetadataLeftBehind`].
    */
   metadataLeftBehind?: MetadataLeftBehind | null
+  /**
+   *  The closing flush couldn't confirm a copy's output is on the disk (an
+   *  `fsync` answered with an error), so the files landed but may not
+   *  survive a power loss or an unplugged drive. `None`, the ordinary case,
+   *  means the flush confirmed everything, and the FE says nothing. A move
+   *  never completes with this: it keeps its sources and stops with
+   *  `MoveNotConfirmed` instead. See [`DurabilityUnconfirmed`].
+   */
+  durabilityUnconfirmed?: DurabilityUnconfirmed | null
 }
 
 // Conflict event payload (emitted when Stop mode encounters a conflict).

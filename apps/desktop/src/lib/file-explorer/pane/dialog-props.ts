@@ -12,6 +12,7 @@ import type { Initiator, ProgressAtStop } from '#lib/tauri-commands/index.js'
 import type {
   AppearedDuringMove,
   MetadataLeftBehind,
+  DurabilityUnconfirmed,
   TopLevelSkipped,
   TrashRefusedItems,
   OpKind,
@@ -117,6 +118,9 @@ export interface TransferCompletePayload {
   /** What the destination couldn't store of the sources' metadata. `null` when nothing worth
    *  keeping stayed behind, which is the ordinary case. */
   metadataLeftBehind: MetadataLeftBehind | null
+  /** A copy whose closing flush couldn't confirm its files are on the disk. `null` when the flush
+   *  confirmed everything, which is the ordinary case. */
+  durabilityUnconfirmed: DurabilityUnconfirmed | null
 }
 
 /**

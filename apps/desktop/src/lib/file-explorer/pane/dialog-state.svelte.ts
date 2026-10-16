@@ -33,6 +33,7 @@ import { dismissQueueHandoffToast } from '#lib/file-operations/queue/queue-hando
 import { tString } from '#lib/intl/messages.svelte.js'
 import {
   composeTransferCompleteToast,
+  composeDurabilityUnconfirmedToast,
   composeTrashRefusedToast,
 } from '#lib/file-operations/transfer/transfer-complete-toast.js'
 import { getTechnicalDetails } from '#lib/file-operations/transfer/transfer-error-messages.js'
@@ -205,6 +206,7 @@ export function createDialogState(deps: DialogStateDeps) {
     message: string,
     level: NonErrorToastLevel,
     refusedMessage: string | null,
+    durabilityMessage: string | null,
     sourceFolderPath: string | undefined,
     trashed: TrashedItems,
   ): void {
@@ -238,6 +240,11 @@ export function createDialogState(deps: DialogStateDeps) {
     if (refusedMessage !== null) {
       addToast(refusedMessage, { level: 'warn', timeoutMs: 10000 })
     }
+    // Stays until closed: the files landed, but they may not survive the drive going away, and
+    // that's worth reading in full.
+    if (durabilityMessage !== null) {
+      addToast(durabilityMessage, { level: 'warn', dismissal: 'persistent' })
+    }
   }
 
   /** Logs a finished operation and raises what it leaves on screen, for the
@@ -252,6 +259,7 @@ export function createDialogState(deps: DialogStateDeps) {
       topLevelSkipped,
       refused,
       metadataLeftBehind,
+      durabilityUnconfirmed,
     }: TransferCompletePayload,
     settledOperationId: string | null,
   ): void {
@@ -286,14 +294,18 @@ export function createDialogState(deps: DialogStateDeps) {
     // outcome, not a success). `success` everywhere else, including mixed: the
     // user's intent landed at the target.
     const refusedMessage = composeTrashRefusedToast(refused)
+    // Same for a copy whose files aren't confirmed on the disk: it landed, but not as a clean success.
+    const durabilityMessage = composeDurabilityUnconfirmedToast(durabilityUnconfirmed)
     const allSkipped = filesSkipped > 0 && filesSkipped === filesProcessed
-    const completeLevel: NonErrorToastLevel = refusedMessage !== null ? 'warn' : allSkipped ? 'info' : 'success'
+    const completeLevel: NonErrorToastLevel =
+      refusedMessage !== null || durabilityMessage !== null ? 'warn' : allSkipped ? 'info' : 'success'
     raiseCompletionToasts(
       op,
       settledOperationId,
       toastMessage,
       completeLevel,
       refusedMessage,
+      durabilityMessage,
       props?.sourceFolderPath,
       {
         sourcePaths: props?.sourcePaths ?? [],

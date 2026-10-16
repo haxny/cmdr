@@ -107,6 +107,7 @@ const ONE_FILE: TransferCompletePayload = {
   topLevelSkipped: null,
   refused: null,
   metadataLeftBehind: null,
+  durabilityUnconfirmed: null,
 }
 
 /** One file went, one the OS turned down and left in the pane. */
@@ -266,5 +267,33 @@ describe('every other completed operation', () => {
 
     expect(addToast).toHaveBeenCalledTimes(1)
     expect(typeof raisedToast().content).toBe('string')
+  })
+})
+
+describe('a copy whose files aren’t confirmed on the disk', () => {
+  const UNCONFIRMED: TransferCompletePayload = { ...ONE_FILE, durabilityUnconfirmed: { volumeName: 'Backup' } }
+
+  it('warns, beside the completion, until the person closes it', () => {
+    const dialogs = makeState()
+    dialogs.startTransferProgress(props('copy'))
+
+    dialogs.handleTransferComplete(UNCONFIRMED)
+
+    expect(addToast).toHaveBeenCalledTimes(2)
+    expect(raisedToast().options.level).toBe('warn')
+    expect(addToast).toHaveBeenLastCalledWith(
+      'Cmdr couldn’t confirm the copies are fully written to Backup. If the drive was unplugged or is failing, check them before you rely on them.',
+      expect.objectContaining({ level: 'warn', dismissal: 'persistent' }),
+    )
+  })
+
+  it('says nothing extra when the flush confirmed everything', () => {
+    const dialogs = makeState()
+    dialogs.startTransferProgress(props('copy'))
+
+    dialogs.handleTransferComplete(ONE_FILE)
+
+    expect(addToast).toHaveBeenCalledTimes(1)
+    expect(raisedToast().options.level).toBe('success')
   })
 })

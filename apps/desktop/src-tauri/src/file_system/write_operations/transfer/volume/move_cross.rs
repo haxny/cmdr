@@ -770,6 +770,7 @@ pub(crate) async fn move_volumes_with_progress(
                 top_level_skipped: None,
                 refused: None,
                 metadata_left_behind: state.metadata_losses.left_behind(operation_id),
+                durability_unconfirmed: None,
             });
             Ok(())
         }
