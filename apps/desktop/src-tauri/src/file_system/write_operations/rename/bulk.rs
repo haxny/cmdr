@@ -158,79 +158,84 @@ pub(crate) fn start_bulk_rename(
     let rows_for_task = rows.clone();
     let volume_id_for_task = volume_id.clone();
     let state_for_task = Arc::clone(&state);
-    let deferred = move || -> Pin<Box<dyn Future<Output = ()> + Send>> {
-        Box::pin(async move {
-            let task_guard = manager::ManagedTaskGuard::new(operation_id_for_task.clone());
-            let _settled_guard = WriteSettledGuard::new(
-                Arc::clone(&events_for_task),
-                operation_id_for_task.clone(),
-                WriteOperationType::Rename,
-                settled_volume,
-            );
-            super::super::journal::open_volume_op(
-                &operation_id_for_task,
-                OpKind::Rename,
-                initiator,
-                &volume_id_for_task,
-                Some(&volume_id_for_task),
-                rows_for_task.len() as u64,
-            );
+    let deferred =
+        move |ops: crate::file_system::write_operations::Operations| -> Pin<Box<dyn Future<Output = ()> + Send>> {
+            Box::pin(async move {
+                let task_guard = manager::ManagedTaskGuard::new(ops.manager(), operation_id_for_task.clone());
+                let _settled_guard = WriteSettledGuard::new(
+                    Arc::clone(&events_for_task),
+                    operation_id_for_task.clone(),
+                    WriteOperationType::Rename,
+                    settled_volume,
+                );
+                super::super::journal::open_volume_op(
+                    &operation_id_for_task,
+                    OpKind::Rename,
+                    initiator,
+                    &volume_id_for_task,
+                    Some(&volume_id_for_task),
+                    rows_for_task.len() as u64,
+                );
 
-            let recorder = BulkRenameRecorder::new(operation_id_for_task.clone(), volume_id_for_task.clone());
-            let run = if uses_local_paths {
-                let rows = rows_for_task.clone();
-                let intent = Arc::clone(&state_for_task.intent);
-                match tokio::task::spawn_blocking(move || bulk_rename_local(&rows, &intent, &recorder)).await {
-                    Ok(result) => result,
-                    Err(join_error) => BulkRenameRun::failed(rows_for_task.len(), join_error.to_string()),
-                }
-            } else {
-                bulk_rename_remote(&rows_for_task, &volume_id_for_task, &state_for_task.intent, &recorder).await
-            };
+                let recorder = BulkRenameRecorder::new(operation_id_for_task.clone(), volume_id_for_task.clone());
+                let run = if uses_local_paths {
+                    let rows = rows_for_task.clone();
+                    let intent = Arc::clone(&state_for_task.intent);
+                    match tokio::task::spawn_blocking(move || bulk_rename_local(&rows, &intent, &recorder)).await {
+                        Ok(result) => result,
+                        Err(join_error) => BulkRenameRun::failed(rows_for_task.len(), join_error.to_string()),
+                    }
+                } else {
+                    bulk_rename_remote(&rows_for_task, &volume_id_for_task, &state_for_task.intent, &recorder).await
+                };
 
-            if uses_local_paths {
-                for (row, outcome) in rows_for_task.iter().zip(run.outcomes.iter()) {
-                    if *outcome == BulkRenameOutcome::Done && row.source != row.destination {
-                        super::notify_rename_in_listing(&volume_id_for_task, &row.source, &row.destination).await;
+                if uses_local_paths {
+                    for (row, outcome) in rows_for_task.iter().zip(run.outcomes.iter()) {
+                        if *outcome == BulkRenameOutcome::Done && row.source != row.destination {
+                            super::notify_rename_in_listing(&volume_id_for_task, &row.source, &row.destination).await;
+                        }
                     }
                 }
-            }
 
-            emit_bulk_rename_progress(
-                events_for_task.as_ref(),
-                &state_for_task,
-                &operation_id_for_task,
-                &rows_for_task,
-                &run.outcomes,
-            );
-            if run.cancelled {
-                events_for_task.emit_cancelled(WriteCancelledEvent {
-                    operation_id: operation_id_for_task.clone(),
-                    operation_type: WriteOperationType::Rename,
-                    files_processed: run.processed(),
-                    rollback: CancelRollback::none(),
-                });
-                super::super::journal::finalize_op(&operation_id_for_task, OpKind::Rename, ExecutionStatus::Canceled);
-            } else {
-                events_for_task.emit_complete(WriteCompleteEvent {
-                    operation_id: operation_id_for_task.clone(),
-                    operation_type: WriteOperationType::Rename,
-                    files_processed: rows_for_task.len(),
-                    files_skipped: run.skipped(),
-                    bytes_processed: 0,
-                    appeared_during_move: None,
-                    top_level_skipped: None,
-                    refused: None,
-                    metadata_left_behind: None,
-                    durability_unconfirmed: None,
-                });
-                super::super::journal::finalize_op(&operation_id_for_task, OpKind::Rename, ExecutionStatus::Done);
-            }
+                emit_bulk_rename_progress(
+                    events_for_task.as_ref(),
+                    &state_for_task,
+                    &operation_id_for_task,
+                    &rows_for_task,
+                    &run.outcomes,
+                );
+                if run.cancelled {
+                    events_for_task.emit_cancelled(WriteCancelledEvent {
+                        operation_id: operation_id_for_task.clone(),
+                        operation_type: WriteOperationType::Rename,
+                        files_processed: run.processed(),
+                        rollback: CancelRollback::none(),
+                    });
+                    super::super::journal::finalize_op(
+                        &operation_id_for_task,
+                        OpKind::Rename,
+                        ExecutionStatus::Canceled,
+                    );
+                } else {
+                    events_for_task.emit_complete(WriteCompleteEvent {
+                        operation_id: operation_id_for_task.clone(),
+                        operation_type: WriteOperationType::Rename,
+                        files_processed: rows_for_task.len(),
+                        files_skipped: run.skipped(),
+                        bytes_processed: 0,
+                        appeared_during_move: None,
+                        top_level_skipped: None,
+                        refused: None,
+                        metadata_left_behind: None,
+                        durability_unconfirmed: None,
+                    });
+                    super::super::journal::finalize_op(&operation_id_for_task, OpKind::Rename, ExecutionStatus::Done);
+                }
 
-            task_guard.disarm();
-            manager::manager().on_settled(&operation_id_for_task);
-        })
-    };
+                task_guard.disarm();
+                ops.manager().on_settled(&operation_id_for_task);
+            })
+        };
 
     manager::manager().spawn_managed(descriptor, state, Box::new(deferred));
     Ok(WriteOperationStartResult {

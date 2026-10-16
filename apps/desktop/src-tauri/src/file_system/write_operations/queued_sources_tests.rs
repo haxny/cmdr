@@ -58,10 +58,10 @@ impl LaneHolder {
                 reverses: None,
             },
             Arc::new(WriteOperationState::new(Duration::from_millis(50))),
-            Box::new(move || {
+            Box::new(move |ops: crate::file_system::write_operations::Operations| {
                 Box::pin(async move {
                     let _ = released.await;
-                    manager().on_settled(&settle_id);
+                    ops.manager().on_settled(&settle_id);
                 })
             }),
         );

@@ -77,18 +77,20 @@ pub(in crate::file_system::write_operations) fn start_volume_delete(
     // A named future rather than a giant inline `async move` block: the body is
     // the whole lifecycle, and it reads better next to the walker than nested
     // four levels deep inside a closure inside a starter.
-    let deferred = move || -> Pin<Box<dyn Future<Output = ()> + Send>> {
-        Box::pin(drive_volume_delete(DeferredDelete {
-            events,
-            operation_id: deferred_id,
-            state: deferred_state,
-            volume_id,
-            sources,
-            config,
-            initiator,
-            expected_sources,
-        }))
-    };
+    let deferred =
+        move |ops: crate::file_system::write_operations::Operations| -> Pin<Box<dyn Future<Output = ()> + Send>> {
+            Box::pin(drive_volume_delete(DeferredDelete {
+                ops,
+                events,
+                operation_id: deferred_id,
+                state: deferred_state,
+                volume_id,
+                sources,
+                config,
+                initiator,
+                expected_sources,
+            }))
+        };
 
     manager::manager().spawn_managed(descriptor, state, Box::new(deferred));
 
@@ -101,6 +103,7 @@ pub(in crate::file_system::write_operations) fn start_volume_delete(
 /// Everything one volume delete's deferred start owns, moved in as a unit so the
 /// closure captures one value instead of eight.
 struct DeferredDelete {
+    ops: crate::file_system::write_operations::Operations,
     events: Arc<dyn OperationEventSink>,
     operation_id: String,
     state: Arc<WriteOperationState>,
@@ -115,6 +118,7 @@ struct DeferredDelete {
 /// journal open, the walk, the terminal event, and `on_settled`.
 async fn drive_volume_delete(op: DeferredDelete) {
     let DeferredDelete {
+        ops,
         events,
         operation_id,
         state,
@@ -124,7 +128,7 @@ async fn drive_volume_delete(op: DeferredDelete) {
         initiator,
         expected_sources,
     } = op;
-    let task_guard = manager::ManagedTaskGuard::new(operation_id.clone());
+    let task_guard = manager::ManagedTaskGuard::new(ops.manager(), operation_id.clone());
     // Fires `write-settled` at end of scope, AFTER the terminal event and AFTER
     // `on_settled`'s cache cleanup (this guard drops last). The FE ordering
     // contract depends on it.
@@ -142,7 +146,7 @@ async fn drive_volume_delete(op: DeferredDelete) {
         .stopped()
     {
         task_guard.disarm();
-        manager::manager().on_settled(&operation_id);
+        ops.manager().on_settled(&operation_id);
         return;
     }
 
@@ -170,7 +174,7 @@ async fn drive_volume_delete(op: DeferredDelete) {
     journal::finalize_op(&operation_id, OpKind::Delete, execution_status);
 
     task_guard.disarm();
-    manager::manager().on_settled(&operation_id);
+    ops.manager().on_settled(&operation_id);
 }
 
 /// The op body: resolve the volume, hold it to the caller's source binding, walk.

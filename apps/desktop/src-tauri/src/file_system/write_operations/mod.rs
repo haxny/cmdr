@@ -434,12 +434,12 @@ where
     // frees lanes, cleans caches, and admits the next op). The `ManagedTaskGuard`
     // is the panic safety net: if the task unwinds before `on_settled`, its Drop
     // still frees the lanes + caches (but never spawns).
-    let deferred = move || -> Pin<Box<dyn Future<Output = ()> + Send>> {
+    let deferred = move |ops: Operations| -> Pin<Box<dyn Future<Output = ()> + Send>> {
         Box::pin(async move {
             let events = events_for_op;
             let op_id = operation_id_for_op;
             let state = state_for_op;
-            let task_guard = manager::ManagedTaskGuard::new(op_id.clone());
+            let task_guard = manager::ManagedTaskGuard::new(ops.manager(), op_id.clone());
             // RAII guard: emits `write-settled` when this task exits, no matter
             // how (handler success, error, cancel, or panic via JoinError). FE
             // gates the "Cancelling…" dialog close on this event so the user
@@ -454,7 +454,7 @@ where
                 .stopped()
             {
                 task_guard.disarm();
-                manager::manager().on_settled(&op_id);
+                ops.manager().on_settled(&op_id);
                 return;
             }
 
@@ -523,7 +523,7 @@ where
             // via the settle guard's Drop at end of scope. Disarm the panic
             // guard first so its Drop doesn't redo the (now-done) cleanup.
             task_guard.disarm();
-            manager::manager().on_settled(&op_id);
+            ops.manager().on_settled(&op_id);
         })
     };
 

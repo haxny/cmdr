@@ -536,13 +536,13 @@ fn spawn_on_lane(
     manager().spawn_managed(
         descriptor,
         Arc::new(WriteOperationState::new(Duration::from_millis(200))),
-        Box::new(move || {
+        Box::new(move |ops: crate::file_system::write_operations::Operations| {
             at_admission();
             Box::pin(async move {
-                let guard = ManagedTaskGuard::new(id.clone());
+                let guard = ManagedTaskGuard::new(ops.manager(), id.clone());
                 work.await;
                 guard.disarm();
-                manager().on_settled(&id);
+                ops.manager().on_settled(&id);
             })
         }),
     );

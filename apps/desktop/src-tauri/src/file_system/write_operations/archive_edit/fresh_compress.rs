@@ -162,12 +162,12 @@ pub(super) async fn start(
     let op_id_for_task = operation_id.clone();
     let state_for_task = Arc::clone(&state);
     let events_for_task = Arc::clone(&events);
-    let deferred = move || {
+    let deferred = move |ops: crate::file_system::write_operations::Operations| {
         Box::pin(async move {
             let op_id = op_id_for_task;
             let state = state_for_task;
             let events = events_for_task;
-            let task_guard = ManagedTaskGuard::new(op_id.clone());
+            let task_guard = ManagedTaskGuard::new(ops.manager(), op_id.clone());
             let settle_volume = (parent_volume_id != "root").then(|| parent_volume_id.clone());
             let _settled = WriteSettledGuard::new(
                 Arc::clone(&events),
@@ -181,7 +181,7 @@ pub(super) async fn start(
                 .stopped()
             {
                 task_guard.disarm();
-                manager::manager().on_settled(&op_id);
+                ops.manager().on_settled(&op_id);
                 return;
             }
 
@@ -269,7 +269,7 @@ pub(super) async fn start(
                 &final_progress,
             );
             task_guard.disarm();
-            manager::manager().on_settled(&op_id);
+            ops.manager().on_settled(&op_id);
         }) as Pin<Box<dyn Future<Output = ()> + Send>>
     };
     manager::manager().spawn_managed(descriptor, state, Box::new(deferred));

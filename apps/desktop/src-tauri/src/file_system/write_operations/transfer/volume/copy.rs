@@ -271,137 +271,138 @@ pub async fn copy_between_volumes(
     let events_for_op = Arc::clone(&events);
     let op_id_outer = operation_id.clone();
     let state_for_op = Arc::clone(&state);
-    let deferred = move || -> Pin<Box<dyn Future<Output = ()> + Send>> {
-        Box::pin(async move {
-            let events = events_for_op;
-            let op_id = op_id_outer;
-            let state = state_for_op;
-            let task_guard = manager::ManagedTaskGuard::new(op_id.clone());
-            // Settle guard: emits `write-settled` at end of scope, after the
-            // terminal write-* event and after `on_settled`'s cache cleanup.
-            let _settled_guard = crate::file_system::write_operations::state::WriteSettledGuard::new(
-                Arc::clone(&events),
-                op_id.clone(),
-                WriteOperationType::Copy,
-                Some(source_volume_name),
-            );
+    let deferred =
+        move |ops: crate::file_system::write_operations::Operations| -> Pin<Box<dyn Future<Output = ()> + Send>> {
+            Box::pin(async move {
+                let events = events_for_op;
+                let op_id = op_id_outer;
+                let state = state_for_op;
+                let task_guard = manager::ManagedTaskGuard::new(ops.manager(), op_id.clone());
+                // Settle guard: emits `write-settled` at end of scope, after the
+                // terminal write-* event and after `on_settled`'s cache cleanup.
+                let _settled_guard = crate::file_system::write_operations::state::WriteSettledGuard::new(
+                    Arc::clone(&events),
+                    op_id.clone(),
+                    WriteOperationType::Copy,
+                    Some(source_volume_name),
+                );
 
-            // Wait out the confirming dialog's scan before journaling or
-            // touching either device; see `write_operations::start_write_operation`.
-            if crate::file_system::write_operations::scan_bridge::await_claimed_preview(
-                &*events,
-                &op_id,
-                WriteOperationType::Copy,
-                &state,
-            )
-            .await
-            .stopped()
-            {
+                // Wait out the confirming dialog's scan before journaling or
+                // touching either device; see `write_operations::start_write_operation`.
+                if crate::file_system::write_operations::scan_bridge::await_claimed_preview(
+                    &*events,
+                    &op_id,
+                    WriteOperationType::Copy,
+                    &state,
+                )
+                .await
+                .stopped()
+                {
+                    task_guard.disarm();
+                    ops.manager().on_settled(&op_id);
+                    return;
+                }
+
+                // Journal the cross-volume copy under the REAL volume ids (the local
+                // helpers bake in `"root"`). Per-leaf rows land inside
+                // `copy_volumes_with_progress`; this brackets the op.
+                journal::open_volume_op(
+                    &op_id,
+                    OpKind::Copy,
+                    initiator,
+                    &journal_source_volume_id,
+                    Some(&journal_dest_volume_id),
+                    source_paths.len() as u64,
+                );
+
+                // Hold the operation to what its caller was promised, at the latest
+                // moment there is: an approved operation can sit queued behind a long
+                // transfer, so the check belongs after admission, not at approval.
+                // `../../source_binding.rs`.
+                let bound = retain_bound_sources_on(
+                    source_volume.as_ref(),
+                    &*events,
+                    &op_id,
+                    WriteOperationType::Copy,
+                    expected_sources.as_ref(),
+                    source_paths,
+                )
+                .await;
+
+                // An emptied binding is a finished operation: `announce_empty_batch`
+                // has already emitted its `write-complete`, so it takes the Ok arm and
+                // the journal finalizes Done, exactly as a copy of nothing would.
+                let result: Result<(), WriteFailure> = match bound {
+                    None => Ok(()),
+                    Some(source_paths) => {
+                        copy_volumes_with_progress(
+                            Arc::clone(&events),
+                            &op_id,
+                            &state,
+                            source_volume,
+                            &source_paths,
+                            dest_volume,
+                            &dest_path,
+                            &config,
+                        )
+                        .await
+                    }
+                };
+
+                journal::finalize_op(
+                    &op_id,
+                    OpKind::Copy,
+                    journal::execution_status_from_error(result.as_ref().err().map(|f| &f.error)),
+                );
+
+                match result {
+                    Ok(()) => {
+                        // write-complete already emitted by copy_volumes_with_progress
+                    }
+                    Err(WriteFailure { ref error, .. }) if matches!(error, WriteOperationError::Cancelled { .. }) => {
+                        // write-cancelled was already emitted; don't also emit
+                        // write-error (the FE would log a user cancel as an error).
+                        log::info!("copy_between_volumes: operation {} cancelled", op_id);
+                    }
+                    Err(failure) if failure.error.is_expected_recoverable() => {
+                        // Expected, recoverable control flow (an encrypted-archive
+                        // source prompting for a password), NOT a reportable failure:
+                        // log at `warn` so it stays below the error-reporter's
+                        // auto-report threshold. See `WriteOperationError::is_expected_recoverable`.
+                        log::warn!(
+                            target: "copy",
+                            "copy_between_volumes: operation {} needs user input: {:?}",
+                            op_id,
+                            failure.error
+                        );
+                        events.emit_error(write_error_event_from(
+                            &state,
+                            op_id.clone(),
+                            WriteOperationType::Copy,
+                            failure,
+                        ));
+                    }
+                    Err(failure) => {
+                        // Toast-visible failure for cross-volume copy (Local↔SMB↔MTP).
+                        host::installed()
+                            .events()
+                            .error_report(OperationErrorReport::VolumeCopyFailed {
+                                operation_id: op_id.clone(),
+                                error: failure.error.clone(),
+                            });
+                        events.emit_error(write_error_event_from(
+                            &state,
+                            op_id.clone(),
+                            WriteOperationType::Copy,
+                            failure,
+                        ));
+                    }
+                }
+
                 task_guard.disarm();
-                manager::manager().on_settled(&op_id);
-                return;
-            }
-
-            // Journal the cross-volume copy under the REAL volume ids (the local
-            // helpers bake in `"root"`). Per-leaf rows land inside
-            // `copy_volumes_with_progress`; this brackets the op.
-            journal::open_volume_op(
-                &op_id,
-                OpKind::Copy,
-                initiator,
-                &journal_source_volume_id,
-                Some(&journal_dest_volume_id),
-                source_paths.len() as u64,
-            );
-
-            // Hold the operation to what its caller was promised, at the latest
-            // moment there is: an approved operation can sit queued behind a long
-            // transfer, so the check belongs after admission, not at approval.
-            // `../../source_binding.rs`.
-            let bound = retain_bound_sources_on(
-                source_volume.as_ref(),
-                &*events,
-                &op_id,
-                WriteOperationType::Copy,
-                expected_sources.as_ref(),
-                source_paths,
-            )
-            .await;
-
-            // An emptied binding is a finished operation: `announce_empty_batch`
-            // has already emitted its `write-complete`, so it takes the Ok arm and
-            // the journal finalizes Done, exactly as a copy of nothing would.
-            let result: Result<(), WriteFailure> = match bound {
-                None => Ok(()),
-                Some(source_paths) => {
-                    copy_volumes_with_progress(
-                        Arc::clone(&events),
-                        &op_id,
-                        &state,
-                        source_volume,
-                        &source_paths,
-                        dest_volume,
-                        &dest_path,
-                        &config,
-                    )
-                    .await
-                }
-            };
-
-            journal::finalize_op(
-                &op_id,
-                OpKind::Copy,
-                journal::execution_status_from_error(result.as_ref().err().map(|f| &f.error)),
-            );
-
-            match result {
-                Ok(()) => {
-                    // write-complete already emitted by copy_volumes_with_progress
-                }
-                Err(WriteFailure { ref error, .. }) if matches!(error, WriteOperationError::Cancelled { .. }) => {
-                    // write-cancelled was already emitted; don't also emit
-                    // write-error (the FE would log a user cancel as an error).
-                    log::info!("copy_between_volumes: operation {} cancelled", op_id);
-                }
-                Err(failure) if failure.error.is_expected_recoverable() => {
-                    // Expected, recoverable control flow (an encrypted-archive
-                    // source prompting for a password), NOT a reportable failure:
-                    // log at `warn` so it stays below the error-reporter's
-                    // auto-report threshold. See `WriteOperationError::is_expected_recoverable`.
-                    log::warn!(
-                        target: "copy",
-                        "copy_between_volumes: operation {} needs user input: {:?}",
-                        op_id,
-                        failure.error
-                    );
-                    events.emit_error(write_error_event_from(
-                        &state,
-                        op_id.clone(),
-                        WriteOperationType::Copy,
-                        failure,
-                    ));
-                }
-                Err(failure) => {
-                    // Toast-visible failure for cross-volume copy (Local↔SMB↔MTP).
-                    host::installed()
-                        .events()
-                        .error_report(OperationErrorReport::VolumeCopyFailed {
-                            operation_id: op_id.clone(),
-                            error: failure.error.clone(),
-                        });
-                    events.emit_error(write_error_event_from(
-                        &state,
-                        op_id.clone(),
-                        WriteOperationType::Copy,
-                        failure,
-                    ));
-                }
-            }
-
-            task_guard.disarm();
-            manager::manager().on_settled(&op_id);
-        })
-    };
+                ops.manager().on_settled(&op_id);
+            })
+        };
 
     manager::manager().spawn_managed(descriptor, state, Box::new(deferred));
 

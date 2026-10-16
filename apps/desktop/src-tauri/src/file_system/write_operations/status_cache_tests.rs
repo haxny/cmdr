@@ -94,10 +94,10 @@ impl ManagedOperationFixture {
                 reverses: None,
             },
             Arc::new(WriteOperationState::new(Duration::from_millis(50))),
-            Box::new(move || {
+            Box::new(move |ops: crate::file_system::write_operations::Operations| {
                 Box::pin(async move {
                     let _ = release_rx.await;
-                    manager().on_settled(&settle_id);
+                    ops.manager().on_settled(&settle_id);
                 })
             }),
         );
@@ -399,9 +399,9 @@ async fn a_panicking_op_task_finishes_its_transfer_start_exactly_once() {
             reverses: None,
         },
         Arc::new(WriteOperationState::new(Duration::from_millis(200))),
-        Box::new(move || {
+        Box::new(move |ops: crate::file_system::write_operations::Operations| {
             Box::pin(async move {
-                let _guard = ManagedTaskGuard::new(id);
+                let _guard = ManagedTaskGuard::new(ops.manager(), id);
                 panic!("simulated task panic");
             })
         }),

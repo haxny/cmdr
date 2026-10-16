@@ -64,7 +64,7 @@ use std::collections::{HashMap, VecDeque};
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, Weak};
 
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::volume::LaneKey;
@@ -126,10 +126,11 @@ pub(crate) struct OperationDescriptor {
 }
 
 /// A deferred start: data describing how to begin the real work. Spawned only
-/// on admission. The future it returns owns the whole op (settle guard, the
-/// actual transfer/delete, terminal-event emit) and ends by calling
-/// `OperationManager::on_settled(id)`.
-type DeferredStart = Box<dyn FnOnce() -> Pin<Box<dyn Future<Output = ()> + Send>> + Send>;
+/// on admission, which hands it the engine: a queued start holds none, so a
+/// dropped engine with a queued op ends. The future it returns owns the whole op
+/// (settle guard, the actual transfer/delete, terminal-event emit) and ends by
+/// calling `OperationManager::on_settled(id)`.
+pub(crate) type DeferredStart = Box<dyn FnOnce(super::Operations) -> Pin<Box<dyn Future<Output = ()> + Send>> + Send>;
 
 struct OpRecord {
     descriptor: OperationDescriptor,
@@ -265,6 +266,9 @@ pub(crate) struct OperationManager {
     registry: Arc<WriteOperationRegistry>,
     /// The engine's status cache, where an admitted op's volumes turn busy.
     status: Arc<StatusCache>,
+    /// The engine this manager belongs to, handed to each start it admits.
+    /// Weak: the engine owns the manager.
+    engine: Weak<super::Inner>,
     /// Completed admission passes, ever. Bumped once at the END of
     /// `run_admission_pass`, so an advance means a pass walked the whole queue
     /// and admitted everything it could. Nothing in production reads it: it's
@@ -288,7 +292,12 @@ pub(crate) fn manager() -> &'static Arc<OperationManager> {
 impl OperationManager {
     /// An empty manager that spawns on `host`'s runtime and keeps `registry`
     /// and `status` in step with its records.
-    pub(super) fn new(host: Arc<EngineHost>, registry: Arc<WriteOperationRegistry>, status: Arc<StatusCache>) -> Self {
+    pub(super) fn new(
+        host: Arc<EngineHost>,
+        registry: Arc<WriteOperationRegistry>,
+        status: Arc<StatusCache>,
+        engine: Weak<super::Inner>,
+    ) -> Self {
         Self {
             inner: Mutex::new(ManagerInner {
                 records: HashMap::new(),
@@ -299,6 +308,7 @@ impl OperationManager {
             host,
             registry,
             status,
+            engine,
             admission_passes: AtomicU64::new(0),
             emits: AtomicU64::new(0),
         }
@@ -429,6 +439,14 @@ impl OperationManager {
 
             match deferred {
                 Some(start) => {
+                    // Whoever runs a pass holds the engine (a start, a settle, a
+                    // registration), so it's alive here; an engine already gone has
+                    // nobody left to run this op for.
+                    let Some(inner) = self.engine.upgrade() else {
+                        log::warn!(target: "op_manager", "admit op={admit_id}: the engine is gone; dropping it");
+                        self.free_and_remove(&admit_id);
+                        continue;
+                    };
                     // Spawn on the host's long-lived runtime, NOT the ambient one
                     // (`tokio::spawn`). The admission pass runs on whatever runtime
                     // triggered it — this op's own `spawn_managed`, or a CONCURRENT
@@ -441,7 +459,7 @@ impl OperationManager {
                     // every later same-lane op. The host's runtime (the app's, or
                     // `cmdr-fs`'s shared fallback in a test binary) pins every op to
                     // one process-global runtime that outlives them all.
-                    self.host.runtime().spawn(start());
+                    self.host.runtime().spawn(start(super::Operations { inner }));
                 }
                 None => {
                     // Should never happen: a Queued op always has its deferred
@@ -939,9 +957,10 @@ pub(crate) struct ManagedTaskGuard {
 }
 
 impl ManagedTaskGuard {
-    pub(crate) fn new(operation_id: impl Into<String>) -> Self {
+    /// The net for `operation_id`, an op `manager` admitted.
+    pub(crate) fn new(manager: &Arc<OperationManager>, operation_id: impl Into<String>) -> Self {
         Self {
-            manager: Arc::clone(manager()),
+            manager: Arc::clone(manager),
             operation_id: operation_id.into(),
             armed: true,
         }

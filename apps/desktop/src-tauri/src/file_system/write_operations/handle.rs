@@ -130,16 +130,16 @@ impl Operations {
         let host = Arc::new(host);
         let registry = Arc::new(WriteOperationRegistry::new());
         let status = Arc::new(StatusCache::new(Arc::clone(host.events_arc())));
-        let manager = Arc::new(OperationManager::new(
-            Arc::clone(&host),
-            Arc::clone(&registry),
-            Arc::clone(&status),
-        ));
         Self {
-            inner: Arc::new(Inner {
+            inner: Arc::new_cyclic(|engine| Inner {
+                manager: Arc::new(OperationManager::new(
+                    Arc::clone(&host),
+                    Arc::clone(&registry),
+                    Arc::clone(&status),
+                    engine.clone(),
+                )),
                 host,
                 operation_log,
-                manager,
                 registry,
                 status,
             }),

@@ -145,100 +145,101 @@ pub(super) async fn move_within_same_volume(
     let events_for_op = Arc::clone(&events);
     let op_id_outer = operation_id.clone();
     let state_for_op = Arc::clone(&state);
-    let deferred = move || -> Pin<Box<dyn Future<Output = ()> + Send>> {
-        Box::pin(async move {
-            let events = events_for_op;
-            let op_id = op_id_outer;
-            let state = state_for_op;
-            let task_guard = manager::ManagedTaskGuard::new(op_id.clone());
-            let _settled_guard = crate::file_system::write_operations::state::WriteSettledGuard::new(
-                Arc::clone(&events),
-                op_id.clone(),
-                WriteOperationType::Move,
-                Some(volume_name),
-            );
+    let deferred =
+        move |ops: crate::file_system::write_operations::Operations| -> Pin<Box<dyn Future<Output = ()> + Send>> {
+            Box::pin(async move {
+                let events = events_for_op;
+                let op_id = op_id_outer;
+                let state = state_for_op;
+                let task_guard = manager::ManagedTaskGuard::new(ops.manager(), op_id.clone());
+                let _settled_guard = crate::file_system::write_operations::state::WriteSettledGuard::new(
+                    Arc::clone(&events),
+                    op_id.clone(),
+                    WriteOperationType::Move,
+                    Some(volume_name),
+                );
 
-            // Wait out the confirming dialog's scan before journaling or
-            // touching either device; see `write_operations::start_write_operation`.
-            if crate::file_system::write_operations::scan_bridge::await_claimed_preview(
-                &*events,
-                &op_id,
-                WriteOperationType::Move,
-                &state,
-            )
-            .await
-            .stopped()
-            {
+                // Wait out the confirming dialog's scan before journaling or
+                // touching either device; see `write_operations::start_write_operation`.
+                if crate::file_system::write_operations::scan_bridge::await_claimed_preview(
+                    &*events,
+                    &op_id,
+                    WriteOperationType::Move,
+                    &state,
+                )
+                .await
+                .stopped()
+                {
+                    task_guard.disarm();
+                    ops.manager().on_settled(&op_id);
+                    return;
+                }
+
+                // Journal the same-volume move under the REAL volume id. The top-level
+                // rename rows + search leaves land inside `_with_progress`.
+                journal::open_volume_op(
+                    &op_id,
+                    OpKind::Move,
+                    initiator,
+                    &journal_volume_id,
+                    Some(&journal_volume_id),
+                    source_paths.len() as u64,
+                );
+
+                // Hold the operation to what its caller was promised, at the latest
+                // moment there is: an approved operation can sit queued behind a long
+                // transfer, so the check belongs after admission, not at approval.
+                // `../../source_binding.rs`.
+                let bound = crate::file_system::write_operations::source_binding::retain_bound_sources_on(
+                    volume.as_ref(),
+                    &*events,
+                    &op_id,
+                    WriteOperationType::Move,
+                    expected_sources.as_ref(),
+                    source_paths,
+                )
+                .await;
+
+                // An emptied binding is a finished operation, and takes the Ok arm:
+                // `announce_empty_batch` has already emitted its `write-complete`.
+                let result: Result<(), WriteOperationError> = match bound {
+                    None => Ok(()),
+                    Some(source_paths) => {
+                        move_within_same_volume_with_progress(
+                            Arc::clone(&events),
+                            &op_id,
+                            &state,
+                            volume,
+                            &source_paths,
+                            &dest_path,
+                            &config,
+                        )
+                        .await
+                    }
+                };
+
+                journal::finalize_op(
+                    &op_id,
+                    OpKind::Move,
+                    journal::execution_status_from_error(result.as_ref().err()),
+                );
+
+                match result {
+                    Ok(()) => {}
+                    Err(ref e) if matches!(e, WriteOperationError::Cancelled { .. }) => {
+                        log::info!("move_within_same_volume: operation {} cancelled", op_id);
+                    }
+                    Err(e) => {
+                        log::warn!(target: "move", "move operation {} failed: {:?}", op_id, e);
+                        state.transfer_tree.note_failure(&e);
+                        events.emit_error(WriteErrorEvent::new(op_id.clone(), WriteOperationType::Move, e));
+                    }
+                }
+
                 task_guard.disarm();
-                manager::manager().on_settled(&op_id);
-                return;
-            }
-
-            // Journal the same-volume move under the REAL volume id. The top-level
-            // rename rows + search leaves land inside `_with_progress`.
-            journal::open_volume_op(
-                &op_id,
-                OpKind::Move,
-                initiator,
-                &journal_volume_id,
-                Some(&journal_volume_id),
-                source_paths.len() as u64,
-            );
-
-            // Hold the operation to what its caller was promised, at the latest
-            // moment there is: an approved operation can sit queued behind a long
-            // transfer, so the check belongs after admission, not at approval.
-            // `../../source_binding.rs`.
-            let bound = crate::file_system::write_operations::source_binding::retain_bound_sources_on(
-                volume.as_ref(),
-                &*events,
-                &op_id,
-                WriteOperationType::Move,
-                expected_sources.as_ref(),
-                source_paths,
-            )
-            .await;
-
-            // An emptied binding is a finished operation, and takes the Ok arm:
-            // `announce_empty_batch` has already emitted its `write-complete`.
-            let result: Result<(), WriteOperationError> = match bound {
-                None => Ok(()),
-                Some(source_paths) => {
-                    move_within_same_volume_with_progress(
-                        Arc::clone(&events),
-                        &op_id,
-                        &state,
-                        volume,
-                        &source_paths,
-                        &dest_path,
-                        &config,
-                    )
-                    .await
-                }
-            };
-
-            journal::finalize_op(
-                &op_id,
-                OpKind::Move,
-                journal::execution_status_from_error(result.as_ref().err()),
-            );
-
-            match result {
-                Ok(()) => {}
-                Err(ref e) if matches!(e, WriteOperationError::Cancelled { .. }) => {
-                    log::info!("move_within_same_volume: operation {} cancelled", op_id);
-                }
-                Err(e) => {
-                    log::warn!(target: "move", "move operation {} failed: {:?}", op_id, e);
-                    state.transfer_tree.note_failure(&e);
-                    events.emit_error(WriteErrorEvent::new(op_id.clone(), WriteOperationType::Move, e));
-                }
-            }
-
-            task_guard.disarm();
-            manager::manager().on_settled(&op_id);
-        })
-    };
+                ops.manager().on_settled(&op_id);
+            })
+        };
 
     manager::manager().spawn_managed(descriptor, state, Box::new(deferred));
 

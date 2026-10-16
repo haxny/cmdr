@@ -62,8 +62,20 @@ fn instant_descriptor(op_id: &str, op_type: WriteOperationType, volume_ids: Vec<
 /// `emit_count()`, which counts a WHOLE manager's broadcasts: on the shared
 /// one, a sibling test spawning or settling an op moves it underneath the
 /// assertion. Shared by `failures` and `reorder`.
-fn owned_manager() -> Arc<OperationManager> {
-    Arc::clone(super::super::Operations::detached().manager())
+fn owned_manager() -> OwnedEngine {
+    OwnedEngine(super::super::Operations::detached())
+}
+
+/// An engine a test owns, read as its manager: the manager hands admitted starts
+/// its engine, so the engine has to outlive the test's operations.
+struct OwnedEngine(super::super::Operations);
+
+impl std::ops::Deref for OwnedEngine {
+    type Target = Arc<OperationManager>;
+
+    fn deref(&self) -> &Arc<OperationManager> {
+        self.0.manager()
+    }
 }
 
 fn fresh_state() -> Arc<WriteOperationState> {
@@ -73,11 +85,7 @@ fn fresh_state() -> Arc<WriteOperationState> {
 /// A synthetic deferred start: signals "I started running" on `started`, waits
 /// for `release`, then settles the op (frees lanes + admits next). Lets a test
 /// hold an op "running" while it asserts the state of a second op.
-fn gated_deferred(
-    op_id: String,
-    started: oneshot::Sender<()>,
-    release: oneshot::Receiver<()>,
-) -> Box<dyn FnOnce() -> Pin<Box<dyn Future<Output = ()> + Send>> + Send> {
+fn gated_deferred(op_id: String, started: oneshot::Sender<()>, release: oneshot::Receiver<()>) -> DeferredStart {
     gated_deferred_on(manager(), op_id, started, release)
 }
 
@@ -93,11 +101,11 @@ fn gated_deferred_on(
     op_id: String,
     started: oneshot::Sender<()>,
     release: oneshot::Receiver<()>,
-) -> Box<dyn FnOnce() -> Pin<Box<dyn Future<Output = ()> + Send>> + Send> {
+) -> DeferredStart {
     let mgr = Arc::clone(mgr);
-    Box::new(move || {
+    Box::new(move |ops: crate::file_system::write_operations::Operations| {
         Box::pin(async move {
-            let guard = ManagedTaskGuard::new(op_id.clone());
+            let guard = ManagedTaskGuard::new(ops.manager(), op_id.clone());
             let _ = started.send(());
             let _ = release.await;
             guard.disarm();
@@ -324,12 +332,12 @@ async fn cancel_queued_op_removes_it_without_spawning() {
     let b_ran = Arc::new(AtomicBool::new(false));
     let b_ran_in_task = Arc::clone(&b_ran);
     let b_id = op_b.clone();
-    let b_deferred: Box<dyn FnOnce() -> Pin<Box<dyn Future<Output = ()> + Send>> + Send> = Box::new(move || {
+    let b_deferred: DeferredStart = Box::new(move |ops: crate::file_system::write_operations::Operations| {
         Box::pin(async move {
             b_ran_in_task.store(true, Ordering::SeqCst);
-            let guard = ManagedTaskGuard::new(b_id.clone());
+            let guard = ManagedTaskGuard::new(ops.manager(), b_id.clone());
             guard.disarm();
-            manager().on_settled(&b_id);
+            ops.manager().on_settled(&b_id);
         })
     });
     manager().spawn_managed(descriptor(&op_b, vec![&lane]), fresh_state(), b_deferred);
@@ -398,9 +406,9 @@ async fn panicking_op_releases_its_lane_without_spawning_next() {
 
     // A: a deferred that panics WITHOUT calling on_settled (guard armed).
     let a_id = op_a.clone();
-    let panic_deferred: Box<dyn FnOnce() -> Pin<Box<dyn Future<Output = ()> + Send>> + Send> = Box::new(move || {
+    let panic_deferred: DeferredStart = Box::new(move |ops: crate::file_system::write_operations::Operations| {
         Box::pin(async move {
-            let _guard = ManagedTaskGuard::new(a_id.clone());
+            let _guard = ManagedTaskGuard::new(ops.manager(), a_id.clone());
             panic!("simulated op panic");
         })
     });
@@ -663,15 +671,15 @@ async fn admitted_op_runs_even_if_the_admitting_runtime_is_dropped() {
 
     let ran_in_task = Arc::clone(&ran);
     let op_id = op.clone();
-    let deferred: Box<dyn FnOnce() -> Pin<Box<dyn Future<Output = ()> + Send>> + Send> = Box::new(move || {
+    let deferred: DeferredStart = Box::new(move |ops: crate::file_system::write_operations::Operations| {
         Box::pin(async move {
-            let guard = ManagedTaskGuard::new(op_id.clone());
+            let guard = ManagedTaskGuard::new(ops.manager(), op_id.clone());
             // Yield first, so this only finishes if a LIVE runtime keeps polling
             // it after the admitting runtime is gone.
             tokio::task::yield_now().await;
             ran_in_task.store(true, Ordering::SeqCst);
             guard.disarm();
-            manager().on_settled(&op_id);
+            ops.manager().on_settled(&op_id);
         })
     });
 

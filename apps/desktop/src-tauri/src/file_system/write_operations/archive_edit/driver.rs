@@ -144,77 +144,78 @@ pub(crate) async fn archive_edit_start(
         ..
     } = request;
 
-    let deferred = move || -> Pin<Box<dyn Future<Output = ()> + Send>> {
-        Box::pin(async move {
-            let events = events_for_op;
-            let op_id = op_id_outer;
-            let state = state_for_op;
-            let task_guard = ManagedTaskGuard::new(op_id.clone());
-            // `write-settled` fires at end of scope (after the terminal event and
-            // `on_settled`). `root` local edits carry no volume id (matches the
-            // local-op convention).
-            let settle_volume = (parent_volume_id != "root").then(|| parent_volume_id.clone());
-            let _settled = WriteSettledGuard::new(
-                Arc::clone(&events),
-                op_id.clone(),
-                WriteOperationType::ArchiveEdit,
-                settle_volume,
-            );
+    let deferred =
+        move |ops: crate::file_system::write_operations::Operations| -> Pin<Box<dyn Future<Output = ()> + Send>> {
+            Box::pin(async move {
+                let events = events_for_op;
+                let op_id = op_id_outer;
+                let state = state_for_op;
+                let task_guard = ManagedTaskGuard::new(ops.manager(), op_id.clone());
+                // `write-settled` fires at end of scope (after the terminal event and
+                // `on_settled`). `root` local edits carry no volume id (matches the
+                // local-op convention).
+                let settle_volume = (parent_volume_id != "root").then(|| parent_volume_id.clone());
+                let _settled = WriteSettledGuard::new(
+                    Arc::clone(&events),
+                    op_id.clone(),
+                    WriteOperationType::ArchiveEdit,
+                    settle_volume,
+                );
 
-            // Wait out the confirming dialog's scan; see
-            // `write_operations::start_write_operation`.
-            if crate::file_system::write_operations::scan_bridge::await_claimed_preview(
-                &*events,
-                &op_id,
-                WriteOperationType::ArchiveEdit,
-                &state,
-            )
-            .await
-            .stopped()
-            {
+                // Wait out the confirming dialog's scan; see
+                // `write_operations::start_write_operation`.
+                if crate::file_system::write_operations::scan_bridge::await_claimed_preview(
+                    &*events,
+                    &op_id,
+                    WriteOperationType::ArchiveEdit,
+                    &state,
+                )
+                .await
+                .stopped()
+                {
+                    task_guard.disarm();
+                    ops.manager().on_settled(&op_id);
+                    return;
+                }
+
+                let hooks = Arc::new(MutatorHooks::new(
+                    Arc::clone(&state),
+                    Arc::clone(&events),
+                    op_id.clone(),
+                    WriteOperationType::ArchiveEdit,
+                    progress_interval,
+                ));
+
+                let hooks_for_blocking = Arc::clone(&hooks);
+                let result = run_managed_edit(
+                    &parent_volume_id,
+                    archive_path.clone(),
+                    Arc::clone(&state),
+                    hooks.remote_progress_observer(),
+                    move |working: &Path| {
+                        mutator::apply(working, &changeset, &*hooks_for_blocking).map_err(|e| match e {
+                            MutationError::Cancelled => EditError::Cancelled,
+                            other => EditError::Op(to_write_error(working, other)),
+                        })
+                    },
+                )
+                .await;
+
+                let final_progress = hooks.latest_progress();
+                emit_archive_terminal(
+                    events.as_ref(),
+                    &op_id,
+                    WriteOperationType::ArchiveEdit,
+                    result,
+                    skipped_count,
+                    None,
+                    &final_progress,
+                );
+
                 task_guard.disarm();
-                manager::manager().on_settled(&op_id);
-                return;
-            }
-
-            let hooks = Arc::new(MutatorHooks::new(
-                Arc::clone(&state),
-                Arc::clone(&events),
-                op_id.clone(),
-                WriteOperationType::ArchiveEdit,
-                progress_interval,
-            ));
-
-            let hooks_for_blocking = Arc::clone(&hooks);
-            let result = run_managed_edit(
-                &parent_volume_id,
-                archive_path.clone(),
-                Arc::clone(&state),
-                hooks.remote_progress_observer(),
-                move |working: &Path| {
-                    mutator::apply(working, &changeset, &*hooks_for_blocking).map_err(|e| match e {
-                        MutationError::Cancelled => EditError::Cancelled,
-                        other => EditError::Op(to_write_error(working, other)),
-                    })
-                },
-            )
-            .await;
-
-            let final_progress = hooks.latest_progress();
-            emit_archive_terminal(
-                events.as_ref(),
-                &op_id,
-                WriteOperationType::ArchiveEdit,
-                result,
-                skipped_count,
-                None,
-                &final_progress,
-            );
-
-            task_guard.disarm();
-            manager::manager().on_settled(&op_id);
-        })
-    };
+                ops.manager().on_settled(&op_id);
+            })
+        };
 
     manager::manager().spawn_managed(descriptor, state, Box::new(deferred));
 

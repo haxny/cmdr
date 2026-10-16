@@ -401,31 +401,32 @@ fn spawn_managed_inverse(
 
     let writer = writer.clone();
     let state_for_op = Arc::clone(&state);
-    let deferred = move || -> Pin<Box<dyn Future<Output = ()> + Send>> {
-        Box::pin(async move {
-            let guard = ManagedTaskGuard::new(inverse_op_id.clone());
-            // The engine's hands and its three live answers. The reversal is its OWN
-            // managed operation, opened `Running`, so any move off `Running` is
-            // somebody stopping the reversal itself.
-            let runner = ReversalRunner::new(
-                inverse_op_id.clone(),
-                op_type,
-                state_for_op,
-                events,
-                StopMeans::IntentLeavesRunning,
-            );
-            let vm = host::installed().volumes();
-            let outcome = execute_rollback(vm, &writer, &original, &inverse_op_id, initiator, &runner).await;
-            // Hand the tally to a caller awaiting it (a multi-operation undo). A
-            // dropped receiver (the caller went away) is not a problem: the reversal
-            // already happened and is journaled.
-            if let Some(report) = report {
-                let _ = report.send(outcome);
-            }
-            guard.disarm();
-            manager().on_settled(&inverse_op_id);
-        })
-    };
+    let deferred =
+        move |ops: crate::file_system::write_operations::Operations| -> Pin<Box<dyn Future<Output = ()> + Send>> {
+            Box::pin(async move {
+                let guard = ManagedTaskGuard::new(ops.manager(), inverse_op_id.clone());
+                // The engine's hands and its three live answers. The reversal is its OWN
+                // managed operation, opened `Running`, so any move off `Running` is
+                // somebody stopping the reversal itself.
+                let runner = ReversalRunner::new(
+                    inverse_op_id.clone(),
+                    op_type,
+                    state_for_op,
+                    events,
+                    StopMeans::IntentLeavesRunning,
+                );
+                let vm = ops.host().volumes();
+                let outcome = execute_rollback(vm, &writer, &original, &inverse_op_id, initiator, &runner).await;
+                // Hand the tally to a caller awaiting it (a multi-operation undo). A
+                // dropped receiver (the caller went away) is not a problem: the reversal
+                // already happened and is journaled.
+                if let Some(report) = report {
+                    let _ = report.send(outcome);
+                }
+                guard.disarm();
+                ops.manager().on_settled(&inverse_op_id);
+            })
+        };
 
     manager().spawn_managed(descriptor, state, Box::new(deferred));
     Ok(())

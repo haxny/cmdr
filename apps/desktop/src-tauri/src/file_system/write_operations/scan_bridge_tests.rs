@@ -716,13 +716,13 @@ async fn cancelling_a_queued_operation_frees_the_preview_it_claimed() {
         Arc::new(super::state::WriteOperationState::new(Duration::from_millis(10))),
         Box::new({
             let blocker_id = blocker_id.clone();
-            move || {
+            move |ops: crate::file_system::write_operations::Operations| {
                 Box::pin(async move {
-                    let guard = super::manager::ManagedTaskGuard::new(blocker_id.clone());
+                    let guard = super::manager::ManagedTaskGuard::new(ops.manager(), blocker_id.clone());
                     let _ = blocker_started.send(());
                     let _ = release_rx.await;
                     guard.disarm();
-                    manager().on_settled(&blocker_id);
+                    ops.manager().on_settled(&blocker_id);
                 })
             }
         }),
@@ -733,7 +733,7 @@ async fn cancelling_a_queued_operation_frees_the_preview_it_claimed() {
     manager().spawn_managed(
         descriptor_on_lane(&queued_id, &lane, Some(preview_id.clone())),
         Arc::new(super::state::WriteOperationState::new(Duration::from_millis(10))),
-        Box::new(|| Box::pin(async {})),
+        Box::new(|_: crate::file_system::write_operations::Operations| Box::pin(async {})),
     );
     assert_eq!(
         manager().lifecycle_status(&queued_id),
