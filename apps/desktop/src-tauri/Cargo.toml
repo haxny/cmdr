@@ -48,7 +48,10 @@ smb-e2e = ["cmdr-smb/testing"]
 # So the bench declares `required-features` instead, which means no lane builds
 # it: lint it by hand with `cargo clippy -p cmdr --bench transfer_benchmarks
 # --features cmdr/transfer-bench,cmdr/virtual-mtp -- -D warnings`.
-transfer-bench = []
+#
+# It turns `cmdr-operation-log/testing` on: the bench puts its own journal in the
+# shared log's slot (`OperationLog::set_journal`), which only a test build exposes.
+transfer-bench = ["cmdr-operation-log/testing"]
 
 [[bin]]
 name = "Cmdr"
@@ -113,6 +116,11 @@ cmdr-index = { path = "../../../crates/cmdr-index" }
 # rename, local volume space, and the mount probes. No `tauri` in its tree, so
 # `cargo check -p cmdr-local` verifies it without building the app.
 cmdr-local = { path = "../../../crates/cmdr-local" }
+# The operation log: the durable journal of every file mutation, the rollback
+# planner, and the read API, behind one `OperationLog` handle the app builds once
+# (`operation_log_host`). No `tauri` in its tree, so
+# `cargo check -p cmdr-operation-log` verifies it without building the app.
+cmdr-operation-log = { path = "../../../crates/cmdr-operation-log" }
 # The directory listing engine: every pane's listing, its cache, sort, and diffs,
 # behind one handle (`listing_host::listings()`) the app answers seams for.
 cmdr-listing = { path = "../../../crates/cmdr-listing" }
@@ -493,6 +501,10 @@ cmdr-listing = { path = "../../../crates/cmdr-listing", features = ["testing"] }
 # A test build of the local backend: space from `statvfs` (#357), the 1 ms
 # progress sampler, and `with_sidecar_probe` / `reading::list_directory`.
 cmdr-local = { path = "../../../crates/cmdr-local", features = ["testing"] }
+# `TestJournalGuard` puts a journal in the shared log's slot and resets the
+# recording gate; the write-pipeline cells read the writer behind their
+# `WriterJournal`.
+cmdr-operation-log = { path = "../../../crates/cmdr-operation-log", features = ["testing"] }
 # `cmdr_smb::volume::testing`, the shared Docker fixtures the app's SMB suites
 # connect through. It also turns `smb2/testing` on for every dev target, which is
 # harmless: `smb-e2e` already does that, and nothing here reads `smb2::testing`.

@@ -2,15 +2,15 @@
 //!
 //! The engine reaches the journal by `op_id` at its record points; these keep
 //! that shape over [`operation_log()`] until each operation carries its own
-//! [`OpJournal`](crate::operation_log::OpJournal). Every call no-ops for an
+//! [`OpJournal`](cmdr_operation_log::OpJournal). Every call no-ops for an
 //! operation that opened with nothing to journal to, and never fails the
 //! operation.
 
 // shim: removed in M6a
 
-use crate::operation_log::capture::FinalizeInputs;
-use crate::operation_log::types::{NotRollbackableReason, SearchCoverage, SearchCoverageReason};
-use crate::operation_log::writer::{FinalizeOutcome, JournalItem, OpenOperation};
+use cmdr_operation_log::capture::FinalizeInputs;
+use cmdr_operation_log::types::{NotRollbackableReason, SearchCoverage, SearchCoverageReason};
+use cmdr_operation_log::writer::{FinalizeOutcome, JournalItem, OpenOperation};
 
 use super::operation_log;
 

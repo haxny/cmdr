@@ -511,13 +511,13 @@ pub(in crate::file_system::write_operations::transfer) fn copy_single_item(
 
         crate::file_system::write_operations::journal::record_local_leaf(
             operation_id,
-            crate::operation_log::types::EntryType::File,
+            cmdr_operation_log::types::EntryType::File,
             source,
             Some(&journal_dest(journal_dest_under, &actual_dest)),
             Some(write_weight as i64),
             source_mtime,
             needs_safe_overwrite,
-            crate::operation_log::types::ItemOutcome::Done,
+            cmdr_operation_log::types::ItemOutcome::Done,
         );
         // Snapshot the link that landed, so a reversal can tell it apart from
         // anything that replaced it since. One `lstat` on a path just written.
@@ -693,13 +693,13 @@ pub(in crate::file_system::write_operations::transfer) fn copy_single_item(
         // even when a clonefile reports 0 copied bytes.
         crate::file_system::write_operations::journal::record_local_leaf(
             operation_id,
-            crate::operation_log::types::EntryType::File,
+            cmdr_operation_log::types::EntryType::File,
             source,
             Some(&journal_dest(journal_dest_under, &actual_dest)),
             Some(write_weight as i64),
             source_mtime,
             needs_safe_overwrite,
-            crate::operation_log::types::ItemOutcome::Done,
+            cmdr_operation_log::types::ItemOutcome::Done,
         );
         // Snapshot the file that landed, so a reversal can tell it apart from
         // anything that replaced it since. One `lstat` on a path just written.

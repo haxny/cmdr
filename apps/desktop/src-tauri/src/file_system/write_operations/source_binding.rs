@@ -135,7 +135,7 @@ impl SourceFingerprint {
     /// item, in the journal's units: bytes, and Unix **seconds** for mtime.
     ///
     /// **The unit is the whole risk here.** Undo rechecks these two numbers against
-    /// the live entry (`operation_log::rollback::verify_snapshot` vs
+    /// the live entry (`cmdr_operation_log::rollback::verify_snapshot` vs
     /// `FileEntry::modified_at`), and every backend reports `modified_at` in whole
     /// Unix seconds — the local reader via `Duration::as_secs`, SMB pinned by
     /// `smb_integration_modified_at_is_unix_seconds`. Journal nanoseconds and every

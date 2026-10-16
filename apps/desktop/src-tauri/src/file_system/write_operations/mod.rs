@@ -100,7 +100,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use crate::file_system::volume::LaneKey;
-use crate::operation_log::types::Initiator;
+use cmdr_operation_log::types::Initiator;
 use delete::delete_files_with_progress_inner;
 use manager::OperationDescriptor;
 #[cfg(not(test))]
@@ -341,7 +341,7 @@ where
         + Send
         + 'static,
 {
-    let operation_id = crate::operation_log::new_operation_id();
+    let operation_id = cmdr_operation_log::new_operation_id();
     let state = Arc::new(WriteOperationState::new(Duration::from_millis(progress_interval_ms)).with_sides(sides));
 
     let descriptor = OperationDescriptor {
@@ -420,11 +420,9 @@ where
             // happened). A failed/canceled op stays rollbackable for the items it
             // reached.
             let execution_status = match &result {
-                Ok(Ok(())) => crate::operation_log::types::ExecutionStatus::Done,
-                Ok(Err(WriteOperationError::Cancelled { .. })) => {
-                    crate::operation_log::types::ExecutionStatus::Canceled
-                }
-                _ => crate::operation_log::types::ExecutionStatus::Failed,
+                Ok(Ok(())) => cmdr_operation_log::types::ExecutionStatus::Done,
+                Ok(Err(WriteOperationError::Cancelled { .. })) => cmdr_operation_log::types::ExecutionStatus::Canceled,
+                _ => cmdr_operation_log::types::ExecutionStatus::Failed,
             };
             journal::finalize_op(&op_id, op_kind, execution_status);
 

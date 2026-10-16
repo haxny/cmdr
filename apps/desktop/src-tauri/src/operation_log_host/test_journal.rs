@@ -3,7 +3,7 @@
 use std::sync::Arc;
 
 use crate::ignore_poison::IgnorePoison;
-use crate::operation_log::capture::OperationJournal;
+use cmdr_operation_log::capture::OperationJournal;
 
 use super::operation_log;
 

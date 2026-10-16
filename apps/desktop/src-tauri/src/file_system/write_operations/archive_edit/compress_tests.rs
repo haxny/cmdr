@@ -43,7 +43,7 @@ async fn compress_start_packs_local_files_into_a_new_zip() {
         0,
         None,
         None,
-        crate::operation_log::types::Initiator::User,
+        cmdr_operation_log::types::Initiator::User,
     )
     .await
     .expect("start compress");
@@ -166,7 +166,7 @@ async fn a_name_taken_after_start_is_not_replaced_or_reported_complete() {
         0,
         None,
         None,
-        crate::operation_log::types::Initiator::User,
+        cmdr_operation_log::types::Initiator::User,
     )
     .await
     .expect("start net-new compress");
@@ -215,7 +215,7 @@ async fn stop_policy_prompts_for_duplicate_source_names_and_honors_overwrite() {
         0,
         None,
         None,
-        crate::operation_log::types::Initiator::User,
+        cmdr_operation_log::types::Initiator::User,
     )
     .await
     .expect("start duplicate-name compress");
@@ -263,7 +263,7 @@ async fn an_existing_local_archive_stays_byte_exact_until_publication() {
         0,
         None,
         None,
-        crate::operation_log::types::Initiator::User,
+        cmdr_operation_log::types::Initiator::User,
     )
     .await
     .expect("start replacement compress");
@@ -307,7 +307,7 @@ async fn local_alias_and_destination_inside_source_are_refused_before_registrati
         0,
         None,
         None,
-        crate::operation_log::types::Initiator::User,
+        cmdr_operation_log::types::Initiator::User,
     )
     .await;
     assert!(matches!(
@@ -325,7 +325,7 @@ async fn local_alias_and_destination_inside_source_are_refused_before_registrati
         0,
         None,
         None,
-        crate::operation_log::types::Initiator::User,
+        cmdr_operation_log::types::Initiator::User,
     )
     .await;
     assert!(matches!(
@@ -372,7 +372,7 @@ async fn compress_refuses_a_read_only_destination_without_touching_its_bytes() {
             0,
             None,
             None,
-            crate::operation_log::types::Initiator::User,
+            cmdr_operation_log::types::Initiator::User,
         )
         .await;
 
@@ -404,14 +404,14 @@ async fn compress_refuses_a_read_only_destination_without_touching_its_bytes() {
 /// the driver, not the op type.
 #[tokio::test]
 async fn compress_journals_subkind_and_net_new_from_the_driver() {
-    use crate::operation_log::capture::WriterJournal;
-    use crate::operation_log::store::{
-        open_read_connection, operation_log_db_path, read_operation, read_operation_items,
-    };
-    use crate::operation_log::types::{ArchiveSubkind, ExecutionStatus, Initiator, OpKind, RollbackState, RowRole};
-    use crate::operation_log::writer::OperationLogWriter;
     use crate::operation_log_host::TestJournalGuard;
     use cmdr_local::LocalPosixVolume;
+    use cmdr_operation_log::capture::WriterJournal;
+    use cmdr_operation_log::store::{
+        open_read_connection, operation_log_db_path, read_operation, read_operation_items,
+    };
+    use cmdr_operation_log::types::{ArchiveSubkind, ExecutionStatus, Initiator, OpKind, RollbackState, RowRole};
+    use cmdr_operation_log::writer::OperationLogWriter;
 
     let jdir = tempfile::tempdir().expect("jdir");
     let jdb = operation_log_db_path(jdir.path());
@@ -493,12 +493,12 @@ async fn compress_journals_subkind_and_net_new_from_the_driver() {
 /// so a Mac-to-phone compress read as a phone-to-phone one that packed nothing.
 #[tokio::test]
 async fn compress_journals_the_source_volume_and_what_it_packed() {
-    use crate::operation_log::capture::WriterJournal;
-    use crate::operation_log::store::{open_read_connection, operation_log_db_path, read_operation};
-    use crate::operation_log::types::{ExecutionStatus, Initiator};
-    use crate::operation_log::writer::OperationLogWriter;
     use crate::operation_log_host::TestJournalGuard;
     use cmdr_local::LocalPosixVolume;
+    use cmdr_operation_log::capture::WriterJournal;
+    use cmdr_operation_log::store::{open_read_connection, operation_log_db_path, read_operation};
+    use cmdr_operation_log::types::{ExecutionStatus, Initiator};
+    use cmdr_operation_log::writer::OperationLogWriter;
 
     let jdir = tempfile::tempdir().expect("jdir");
     let jdb = operation_log_db_path(jdir.path());
@@ -588,7 +588,7 @@ async fn compress_start_packs_a_directory_subtree() {
         0,
         None,
         None,
-        crate::operation_log::types::Initiator::User,
+        cmdr_operation_log::types::Initiator::User,
     )
     .await
     .expect("start compress");
@@ -654,7 +654,7 @@ async fn compress_payload_at(dir: &Path, tag: &str, level: Option<i64>, payload:
         0,
         level,
         None,
-        crate::operation_log::types::Initiator::User,
+        cmdr_operation_log::types::Initiator::User,
     )
     .await
     .expect("start compress");
@@ -765,7 +765,7 @@ async fn a_tree_that_fails_to_build_leaves_the_compress_as_it_would_run_without_
         0,
         None,
         None,
-        crate::operation_log::types::Initiator::User,
+        cmdr_operation_log::types::Initiator::User,
     )
     .await
     .expect("start compress");

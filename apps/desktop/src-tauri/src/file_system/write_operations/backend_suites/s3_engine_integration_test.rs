@@ -33,15 +33,15 @@ use crate::file_system::write_operations::state::{
 use crate::file_system::write_operations::types::{ConflictResolution, VolumeCopyConfig, WriteOperationConfig};
 use crate::file_system::write_operations::{ScanCostFacts, delete_files_start};
 use crate::ignore_poison::IgnorePoison;
-use crate::operation_log::capture::WriterJournal;
-use crate::operation_log::rollback::{execute_rollback, rollback_operation};
-use crate::operation_log::store::operation_log_db_path;
-use crate::operation_log::types::Initiator;
-use crate::operation_log::writer::OperationLogWriter;
 use crate::operation_log_host::TestJournalGuard;
 use crate::s3_costs::{CostedOperation, planned_workloads};
 use crate::test_support::TestDir;
 use cmdr_local::LocalPosixVolume;
+use cmdr_operation_log::capture::WriterJournal;
+use cmdr_operation_log::rollback::{execute_rollback, rollback_operation};
+use cmdr_operation_log::store::operation_log_db_path;
+use cmdr_operation_log::types::Initiator;
+use cmdr_operation_log::writer::OperationLogWriter;
 
 const MIB: usize = 1024 * 1024;
 

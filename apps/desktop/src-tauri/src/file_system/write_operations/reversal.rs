@@ -9,7 +9,7 @@
 //!
 //! **Recheck immediately before acting.** ❌ Never verify a batch and then act
 //! on it: a verification that sat while other items were processed no longer
-//! authorizes anything. `operation_log/DETAILS.md` explains why the same rule
+//! authorizes anything. `crates/cmdr-operation-log/DETAILS.md` explains why the same rule
 //! shapes the history engine's loop.
 //!
 //! The vocabulary is deliberately the history engine's: [`verify_snapshot`]
@@ -29,8 +29,8 @@ use std::path::Path;
 
 use cmdr_fs::metadata::{RemovalRefusal, remove_dir_clearing_blockers, remove_file_clearing_blockers};
 
-use crate::operation_log::rollback::{ItemResult, SkipTally, SnapshotVerdict, verify_snapshot};
-use crate::operation_log::types::SkipReason;
+use cmdr_operation_log::rollback::{ItemResult, SkipTally, SnapshotVerdict, verify_snapshot};
+use cmdr_operation_log::types::SkipReason;
 
 #[cfg(test)]
 use super::ledger::CopyTransaction;
@@ -297,7 +297,7 @@ impl ReversalTally {
 
     /// Fold into the payload the `write-cancelled` event carries.
     ///
-    /// The three outcomes mirror `operation_log::rollback::resolve_final_state`:
+    /// The three outcomes mirror `cmdr_operation_log::rollback::resolve_final_state`:
     /// a stop before the reversal reached a single item undid nothing; a stop
     /// after it did, or a full pass that skipped something, is partial; a full
     /// pass with no skips is the complete undo (vacuously so for an empty

@@ -180,8 +180,8 @@ async fn a_copy_onto_a_saved_server_nobody_connected_is_refused_as_not_connected
     use crate::file_system::volume::manager::get_volume_manager;
     use crate::file_system::write_operations::CollectorEventSink;
     use crate::file_system::{VolumeCopyConfig, WriteOperationError, start_volume_copy};
-    use crate::operation_log::types::Initiator;
     use cmdr_local::LocalPosixVolume;
+    use cmdr_operation_log::types::Initiator;
 
     let host = "198.51.100.50";
     sftp_known_servers::remember(saved_sftp(host, true));

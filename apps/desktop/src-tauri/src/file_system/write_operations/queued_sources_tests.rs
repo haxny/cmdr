@@ -21,8 +21,8 @@ use super::super::types::{
 use super::{continue_without_gone_sources, kept_after_queue_on, pending_sources_gone};
 use crate::file_system::volume::{InMemoryVolume, LaneKey, Volume};
 use crate::ignore_poison::IgnorePoison;
-use crate::operation_log::types::Initiator;
 use crate::test_support::{TestDir, wait_until_async};
+use cmdr_operation_log::types::Initiator;
 
 const WAIT: Duration = Duration::from_secs(5);
 

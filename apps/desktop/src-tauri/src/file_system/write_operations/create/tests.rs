@@ -83,12 +83,12 @@ fn instant_descriptor_marks_only_nonroot_volumes_busy() {
 
 #[tokio::test]
 async fn create_directory_managed_journals_a_create_folder_op() {
-    use crate::operation_log::capture::WriterJournal;
-    use crate::operation_log::store::{
+    use cmdr_operation_log::capture::WriterJournal;
+    use cmdr_operation_log::store::{
         open_read_connection, operation_log_db_path, read_operation, read_operation_items,
     };
-    use crate::operation_log::types::{EntryType, OpKind, RollbackState};
-    use crate::operation_log::writer::OperationLogWriter;
+    use cmdr_operation_log::types::{EntryType, OpKind, RollbackState};
+    use cmdr_operation_log::writer::OperationLogWriter;
 
     ensure_root_volume();
     let jdir = tempfile::tempdir().expect("jdir");
@@ -104,14 +104,14 @@ async fn create_directory_managed_journals_a_create_folder_op() {
         None,
         parent,
         "made-folder".to_string(),
-        crate::operation_log::types::Initiator::User,
+        cmdr_operation_log::types::Initiator::User,
     )
     .await
     .expect("mkdir");
 
     let conn = open_read_connection(&jdb).expect("read conn");
     // Exactly one CreateFolder op, rollbackable (net-new), with one Dir item row.
-    let ops = crate::operation_log::store::recent_operations(&conn, 10).expect("ops");
+    let ops = cmdr_operation_log::store::recent_operations(&conn, 10).expect("ops");
     let op = ops
         .iter()
         .find(|o| o.kind == OpKind::CreateFolder)
@@ -271,7 +271,7 @@ async fn create_directory_managed_creates_folder_and_cleans_up_record() {
         None,
         parent,
         "made".to_string(),
-        crate::operation_log::types::Initiator::User,
+        cmdr_operation_log::types::Initiator::User,
     )
     .await;
     assert!(result.is_ok(), "managed create returns the new path");

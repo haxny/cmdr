@@ -23,11 +23,11 @@ use super::types::{VolumeCopyConfig, WriteOperationConfig};
 use super::{copy_volumes_with_progress, move_volumes_with_progress};
 
 use crate::file_system::volume::{InMemoryVolume, Volume};
-use crate::operation_log::capture::WriterJournal;
-use crate::operation_log::store::{open_read_connection, operation_log_db_path, read_operation, read_operation_items};
-use crate::operation_log::types::{EntryType, ExecutionStatus, Initiator, OpKind, RollbackState, RowRole};
-use crate::operation_log::writer::OperationLogWriter;
 use crate::operation_log_host::TestJournalGuard;
+use cmdr_operation_log::capture::WriterJournal;
+use cmdr_operation_log::store::{open_read_connection, operation_log_db_path, read_operation, read_operation_items};
+use cmdr_operation_log::types::{EntryType, ExecutionStatus, Initiator, OpKind, RollbackState, RowRole};
+use cmdr_operation_log::writer::OperationLogWriter;
 
 /// Install a fresh temp-DB journal as the process-global one; see the twin in
 /// `journal_capture_tests.rs`.
@@ -292,8 +292,8 @@ async fn volume_delete_journals_per_leaf_under_the_real_volume_id() {
 use super::event_sinks::OperationEventSink;
 use crate::file_system::VolumeManager;
 use crate::file_system::write_operations::rollback::Reversal;
-use crate::operation_log::rollback::{RollbackReport, execute_rollback, rollback_operation};
-use crate::operation_log::types::ItemOutcome;
+use cmdr_operation_log::rollback::{RollbackReport, execute_rollback, rollback_operation};
+use cmdr_operation_log::types::ItemOutcome;
 
 /// A real volume copy, journaled to a real DB, reversible through the real gate.
 struct VolumeLoop {
@@ -415,7 +415,7 @@ impl VolumeLoop {
         );
     }
 
-    fn items(&self) -> Vec<crate::operation_log::store::OperationItemRow> {
+    fn items(&self) -> Vec<cmdr_operation_log::store::OperationItemRow> {
         let conn = open_read_connection(self.writer_journal.writer().db_path()).expect("read conn");
         read_operation_items(&conn, &self.op_id, 1_000).expect("items")
     }
@@ -423,7 +423,7 @@ impl VolumeLoop {
     /// The dest paths this operation journaled, by entry type.
     fn journaled_dests(&self, entry_type: EntryType) -> Vec<String> {
         let conn = open_read_connection(self.writer_journal.writer().db_path()).expect("read conn");
-        let detail = crate::operation_log::query::get_operation(&conn, &self.op_id, 1_000, 0)
+        let detail = cmdr_operation_log::query::get_operation(&conn, &self.op_id, 1_000, 0)
             .expect("read detail")
             .expect("the copy is journaled");
         let mut out: Vec<String> = detail

@@ -25,7 +25,7 @@ use crate::file_system::write_operations::routing::start_rename_by_move;
 use crate::file_system::write_operations::source_binding::ExpectedSources;
 use crate::file_system::write_operations::transfer::volume::unregistered_source_error;
 use crate::file_system::write_operations::types::{ConflictResolution, VolumeCopyConfig, WriteOperationStartResult};
-use crate::operation_log::types::Initiator;
+use cmdr_operation_log::types::Initiator;
 
 /// How many entries a batch asks `Volume::rename_work` about at once.
 const RENAME_WORK_CONCURRENCY: usize = 8;

@@ -180,7 +180,7 @@ file activity (what was copied, moved, trashed, renamed, and where). Privacy pos
   for recording internal activity). Off, new operations aren't journaled and so can't be undone; existing history stays
   readable, undoable, and pruned by retention. The decision is per operation, at its start, so a running one is never
   half-recorded. MCP can't change it (`mcpSettable: false`): a client turning it off would hide what it does next.
-  Mechanism: `apps/desktop/src-tauri/src/operation_log/DETAILS.md` § "Turning recording off".
+  Mechanism: `crates/cmdr-operation-log/DETAILS.md` § "Turning recording off".
 - **The journal never compromises the operation.** Capture rides a bounded channel that blocks briefly under
   backpressure (lossless) and drops a single row on a DB error rather than failing the file op; the finalize-time
   completeness check then degrades that op to "can't undo" or "search marked partial" rather than silently

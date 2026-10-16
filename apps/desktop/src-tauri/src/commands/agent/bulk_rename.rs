@@ -255,14 +255,14 @@ pub async fn revise_bulk_rename_row(
 /// provenance rather than the agent's work.
 fn bulk_rename_initiator(
     rows: &[&crate::agent::tools::propose::rename::RenameProposalRow],
-) -> crate::operation_log::types::Initiator {
+) -> cmdr_operation_log::types::Initiator {
     let user_edited = rows
         .iter()
         .any(|row| row.evidence.source == crate::agent::tools::propose::evidence::EvidenceSource::UserEdited);
     if user_edited {
-        crate::operation_log::types::Initiator::AgentEdited
+        cmdr_operation_log::types::Initiator::AgentEdited
     } else {
-        crate::operation_log::types::Initiator::Agent
+        cmdr_operation_log::types::Initiator::Agent
     }
 }
 
@@ -350,7 +350,7 @@ mod tests {
     use super::*;
     use crate::agent::tools::propose::evidence::{EvidenceSource, RenameEvidence};
     use crate::agent::tools::propose::rename::RenameProposalRow;
-    use crate::operation_log::types::Initiator;
+    use cmdr_operation_log::types::Initiator;
 
     fn row_from(source: EvidenceSource) -> RenameProposalRow {
         RenameProposalRow {

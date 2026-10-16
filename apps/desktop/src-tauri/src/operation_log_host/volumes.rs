@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use crate::file_system::VolumeManager;
 use crate::file_system::volume::Volume;
-use crate::operation_log::rollback::VolumeLookup;
+use cmdr_operation_log::rollback::VolumeLookup;
 
 impl VolumeLookup for VolumeManager {
     fn get(&self, volume_id: &str) -> Option<Arc<dyn Volume>> {

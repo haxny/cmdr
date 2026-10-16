@@ -103,7 +103,7 @@ pub fn is_staging_temp_name(name: &str) -> bool {
 /// deliberately so: a sweep acts on one of these, and the only thing standing
 /// between a folder somebody named `.cmdr-staging-notes` by hand and that sweep
 /// is this function. So the whole name has to be the prefix plus exactly the
-/// hyphenated UUID `operation_log::new_operation_id` mints — nothing before it,
+/// hyphenated UUID `cmdr_operation_log::new_operation_id` mints — nothing before it,
 /// nothing after it.
 pub fn is_staging_dir_name(name: &str) -> bool {
     name.strip_prefix(STAGING_DIR_PREFIX)

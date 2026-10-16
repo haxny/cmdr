@@ -6,7 +6,7 @@ proposal spine. Depth: `DETAILS.md`.
 
 ## Module map
 
-- `migrations.rs` — the forward-migration ladder + the v1 DDL. Mirrors `operation_log/store/migrations.rs`.
+- `migrations.rs` — the forward-migration ladder + the v1 DDL. Mirrors `crates/cmdr-operation-log/src/store/migrations.rs`.
 - `connection.rs` — WAL/auto-vacuum pragmas; write connections run the ladder, no custom collation.
 - `query.rs` — conversations, messages, the FTS5 search + its input sanitizer, the cost meter. `AgentStore` (in
   `mod.rs`) owns the schema lifecycle; `agent::start` opens the DB and registers `AgentDb` in state.

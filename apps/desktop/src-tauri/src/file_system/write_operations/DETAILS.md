@@ -123,7 +123,7 @@ What the mechanisms DO is in the sections below: the registry, lanes, and `run_i
 the zip-edit driver in § "Archive edits"; cancellation, pause, Stop-mode conflicts, safe overwrite, scan-preview caching,
 and the compressed-size estimate in § "Key patterns and gotchas"; durability and the two byte totals in § "Key
 decisions"; the estimator in § "ETA + throughput"; `WriteSettledGuard` in § "Settle contract"; journaling in
-`../../operation_log/DETAILS.md` § Capture. Only the layout facts that none of those carry live here:
+`crates/cmdr-operation-log/DETAILS.md` § Capture. Only the layout facts that none of those carry live here:
 
 - **Two re-export facades are deliberate, not collapsible** (§ "Key decisions" has the why): `mod.rs` re-exports
   `transfer::*` + `delete::*` so callers keep their `crate::file_system::write_operations::<symbol>` paths, and

@@ -322,7 +322,7 @@ export const behaviorSettings: SettingDefinitionSource[] = [
   // `operationLog.enabled` is the recording switch: off stops journaling NEW
   // operations, so they can't be undone. The backend decides per operation at
   // its start, so a running one is never half-recorded, and history stays
-  // readable and keeps being pruned (`operation_log/recording.rs`). Seeded from
+  // readable and keeps being pruned (`crates/cmdr-operation-log/src/recording.rs`). Seeded from
   // `settings.json` at startup, live via `set_operation_log_enabled`.
   //
   // The two retention settings are read by the Rust retention loop each prune tick
@@ -330,7 +330,7 @@ export const behaviorSettings: SettingDefinitionSource[] = [
   // with no restart and no `settings-applier` case. Modeled on
   // `network.shareCacheDuration` (preset select + custom). Age is a duration in
   // ms where `0` is the "Forever" sentinel (never prune by age); size is a byte
-  // budget. Keys and units are the retention contract — see `operation_log/DETAILS.md`.
+  // budget. Keys and units are the retention contract — see `crates/cmdr-operation-log/DETAILS.md`.
   // ------------------------------------------------------------------------
   {
     id: 'operationLog.enabled',

@@ -24,7 +24,7 @@ use super::super::{journal, path_summary, scan_bridge};
 use super::delete_volume_files_with_progress_inner;
 use crate::file_system::volume::LaneKey;
 use crate::file_system::volume::manager::get_volume_manager;
-use crate::operation_log::types::{ExecutionStatus, Initiator, OpKind};
+use cmdr_operation_log::types::{ExecutionStatus, Initiator, OpKind};
 
 /// Registers a volume-aware delete with the manager and hands it a deferred
 /// async start.
@@ -41,7 +41,7 @@ pub(in crate::file_system::write_operations) fn start_volume_delete(
     initiator: Initiator,
     expected_sources: Option<ExpectedSources>,
 ) -> WriteOperationStartResult {
-    let operation_id = crate::operation_log::new_operation_id();
+    let operation_id = cmdr_operation_log::new_operation_id();
     let state = Arc::new(WriteOperationState::new(Duration::from_millis(
         config.progress_interval_ms,
     )));

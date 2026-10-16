@@ -4,7 +4,7 @@
 //! it touches the manager's lock, which is why it lives apart from the admission
 //! machinery in `../manager.rs`.
 
-use crate::operation_log::types::OpKind;
+use cmdr_operation_log::types::OpKind;
 
 use super::super::types::{ItemKinds, LifecycleStatus, WriteOperationError, WriteOperationType};
 

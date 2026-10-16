@@ -399,10 +399,11 @@ Stay app-side as integration cells (each named in the milestone that leaves it b
 - `transfer/volume/rename_merge_mtp_tests.rs` (virtual MTP), `transfer/real_image.rs` (the `disk-images` lane;
   `diskImageLaneTestAtoms` names its path), `transfer/volume/{copy_bench, copy_concurrency_bench}.rs` (ignored SMB
   measurement harnesses).
-- The operation-log rollback cells that drive the engine's executor
-  (`rollback/{control_tests, tests, blocked_items_tests, lifecycle_tests}.rs` and `rollback/test_support.rs`, which
-  import `write_operations::rollback::Reversal`): app-side after M2b, then into `cmdr-operations` at M8b (the crate that
-  has both halves).
+- The operation-log rollback cells that drive the engine's executor: since M2b they live at
+  `apps/desktop/src-tauri/src/file_system/write_operations/rollback/planner_tests/` (`tests`, `control_tests`,
+  `lifecycle_tests`, `blocked_items_tests`, plus `undo_tests` and `root_reach_tests`, which share the `Reversal`-driven
+  rig in `test_support`), then into `cmdr-operations` at M8b (the crate that has both halves). The planner's three pure
+  decision-helper cells moved into the crate (`rollback/decision_tests.rs`).
 - One cell per seam adapter proving the app's adapter reaches its subsystem (the `AppLeases` precedent from the
   listing): `OwnWrites` → the downloads ignore set, `OperationIndex` → `index_host`, `OperationVolumes` → the real
   registry, `EngineEvents` → `priority::transfers`.
@@ -629,11 +630,16 @@ Each lands as its own commit with a red test first, and the commit body names it
    - **The other 7 sites** (`status_cache.rs` 5, `state.rs` 1, `delete/walker.rs` 1): `*_ignore_poison`. A real fix for
      `status_cache.rs:66,100,121`: today a poisoned cache drops the busy entry, and Eject is then allowed mid-transfer.
      Never `.expect`.
-2. **The `no_global_sync` source scan becomes a clippy rule (M8a)**: `disallowed-methods = ["libc::sync"]` in the
+2. **An operation opened before the journal opens stays unjournaled for its whole life (M2a, landed in `e6ceee6f8`).**
+   It joins the unrecorded set at `journal_open`, so its later by-id record, note, and finalize calls never reach a
+   journal that arrived mid-op and holds no header row for it. Before, those calls re-read the slot and could. Not
+   observable in production (nothing journals before startup opens the log). Red test first:
+   `crates/cmdr-operation-log/src/handle/tests.rs::an_operation_opened_before_the_journal_journals_nothing_by_id`.
+3. **The `no_global_sync` source scan becomes a clippy rule (M8a)**: `disallowed-methods = ["libc::sync"]` in the
    crate's `clippy.toml`. `spawn_async_sync` is a deleted helper, so clippy can't name it; that half stays as a tiny
    fail-closed test (root exists, ≥300 files scanned). Not a behavior change in the app; listed because a test changes
    shape and its guarantee moves to a lint.
-3. **Nothing else.** In particular: terminal-outcome recording stays in the app's sink adapter, the admitted-op spawn
+4. **Nothing else.** In particular: terminal-outcome recording stays in the app's sink adapter, the admitted-op spawn
    stays on the APP runtime (the `VolumeHost`'s, which IS the app runtime), and an engine event before `install` is
    dropped by the default seam exactly as today's unset `AppHandle` statics drop it. The intent race is fixed before the
    effort (§ "Precondition"). A pre-install refusal is not a change: today no op can start before setup, and the refusal
@@ -1365,7 +1371,7 @@ milestone, because each goes red or silent the moment the directory moves:
   `allow-unwrap-in-tests` must be copied) plus `disallowed-methods` for `tokio::spawn`, `tokio::task::spawn`,
   `tokio::task::spawn_blocking`, `std::thread::spawn`, and `libc::sync`, lifted under `cfg(test)` the way
   `cmdr-listing/src/lib.rs:14-17` does. The `no_global_sync` test shrinks to its `spawn_async_sync` half, fail-closed
-  (behavior change 2).
+  (behavior change 3).
 - `desktop-rust-derive-default-justified` and `desktop-rust-probe-unwrap-justified` widen to
   `crates/cmdr-operations/src` with fail-closed counts; `desktop-rust-discarded-outcome` widens to the engine crate (or
   records a `Why` for staying `AppTreeOnly`, decided here).

@@ -44,7 +44,7 @@ use super::strategy::Replaces;
 use super::transfer_error::{PathRole, map_volume_error};
 use crate::file_system::volume::{EntryKind, RenameWork, Volume, VolumeError};
 use crate::ignore_poison::IgnorePoison;
-use crate::operation_log::types::OpKind;
+use cmdr_operation_log::types::OpKind;
 
 /// One item's rename landed: its row is done, and its verdict says whether the
 /// source is gone. The caller answers that: a plain rename that returned `Ok`
@@ -90,10 +90,10 @@ pub(super) async fn move_within_same_volume(
     dest_path: PathBuf,
     config: VolumeCopyConfig,
     target_names: super::super::super::target_names::TargetNames,
-    initiator: crate::operation_log::types::Initiator,
+    initiator: cmdr_operation_log::types::Initiator,
     expected_sources: Option<crate::file_system::write_operations::source_binding::ExpectedSources>,
 ) -> Result<WriteOperationStartResult, WriteOperationError> {
-    let operation_id = crate::operation_log::new_operation_id();
+    let operation_id = cmdr_operation_log::new_operation_id();
 
     log::info!(
         "move_within_same_volume: operation_id={}, volume={}, {} sources, dest={}",
@@ -274,7 +274,7 @@ fn journal_same_volume_moved_item(
     journal_volumes: Option<&(String, String)>,
     overwritten_sources: &std::sync::Mutex<std::collections::HashSet<PathBuf>>,
     merge_overwrote: &std::sync::atomic::AtomicBool,
-    entry_type: crate::operation_log::types::EntryType,
+    entry_type: cmdr_operation_log::types::EntryType,
     source: &Path,
     dest: &Path,
     size: Option<i64>,
@@ -294,7 +294,7 @@ fn journal_same_volume_moved_item(
         size,
         None,
         overwrote,
-        crate::operation_log::types::ItemOutcome::Done,
+        cmdr_operation_log::types::ItemOutcome::Done,
     );
     if let Some(buf) = buffered {
         super::super::super::journal_search::persist_and_note(op_id, src_vol, source, dst_vol, Some(dest), buf);
@@ -717,9 +717,9 @@ pub(crate) async fn move_within_same_volume_with_progress(
                     // A volume with no index downgrades to `index_absent`. `None`
                     // journal target (tests) skips all of this.
                     let entry_type = if source_is_dir {
-                        crate::operation_log::types::EntryType::Dir
+                        cmdr_operation_log::types::EntryType::Dir
                     } else {
-                        crate::operation_log::types::EntryType::File
+                        cmdr_operation_log::types::EntryType::File
                     };
                     let row_size = hint.and_then(|h| (!h.is_directory).then_some(h.size as i64));
                     let buffered_leaves = journal_volumes.as_ref().filter(|_| source_is_dir).map(|(src_vol, _)| {
@@ -781,11 +781,11 @@ pub(crate) async fn move_within_same_volume_with_progress(
                         // disqualifying condition is "merged", not "overwrote
                         // something" — a merge that overwrote nothing fails the
                         // same way. Mirrors the local path in `move_op.rs`;
-                        // rationale in `operation_log/DETAILS.md` § "Why a
+                        // rationale in `crates/cmdr-operation-log/DETAILS.md` § "Why a
                         // directory merge isn't reversible".
                         journal::note_not_rollbackable(
                             &operation_id,
-                            crate::operation_log::types::NotRollbackableReason::DirectoryMerge,
+                            cmdr_operation_log::types::NotRollbackableReason::DirectoryMerge,
                         );
                         journal_same_volume_moved_item(
                             &operation_id,

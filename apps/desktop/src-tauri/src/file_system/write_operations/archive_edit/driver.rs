@@ -106,7 +106,7 @@ pub(crate) async fn archive_edit_start(
     request: ArchiveEditRequest,
     progress_interval_ms: u64,
 ) -> Result<WriteOperationStartResult, WriteOperationError> {
-    let operation_id = crate::operation_log::new_operation_id();
+    let operation_id = cmdr_operation_log::new_operation_id();
     let state = Arc::new(WriteOperationState::new(Duration::from_millis(progress_interval_ms)));
 
     // Share the parent drive's lane so the op serializes against other work on

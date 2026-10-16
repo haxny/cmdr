@@ -99,7 +99,7 @@ pub(crate) async fn route_archive_move_out(
         inner_by_source.push((source.clone(), normalize_inner_path(&inner)));
     }
 
-    let operation_id = crate::operation_log::new_operation_id();
+    let operation_id = cmdr_operation_log::new_operation_id();
     let progress_interval_ms = config.progress_interval_ms;
     let state = Arc::new(WriteOperationState::new(Duration::from_millis(progress_interval_ms)));
 

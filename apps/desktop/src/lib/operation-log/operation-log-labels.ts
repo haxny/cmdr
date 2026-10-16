@@ -119,7 +119,7 @@ export function rollbackStateLabel(state: RollbackState): string {
  *
  * `finish` is a `partiallyRolledBack` row picking a reversal back up. The engine
  * admits that state through the same gate as `rollbackable`
- * (`operation_log/rollback.rs`, `check_rollbackable`) and re-attempts every item
+ * (`crates/cmdr-operation-log/src/rollback.rs`, `check_rollbackable`) and re-attempts every item
  * with a fresh recheck, so an item the first pass already reversed reads as gone
  * and is credited without acting. ❌ Never widen this to a state the backend gate
  * refuses: the row would offer a press that can only come back as a refusal.

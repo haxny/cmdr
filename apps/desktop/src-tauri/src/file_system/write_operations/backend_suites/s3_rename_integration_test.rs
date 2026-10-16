@@ -33,7 +33,7 @@ use crate::file_system::write_operations::state::{
 };
 use crate::file_system::write_operations::types::{VolumeCopyConfig, WriteOperationType};
 use crate::ignore_poison::IgnorePoison;
-use crate::operation_log::types::Initiator;
+use cmdr_operation_log::types::Initiator;
 
 const MIB: usize = 1024 * 1024;
 

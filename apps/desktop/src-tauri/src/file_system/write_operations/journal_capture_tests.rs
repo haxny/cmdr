@@ -4,7 +4,7 @@
 //!
 //! These exercise the record points (`single_item.rs`, `walker.rs`,
 //! `move_op/`) plus the open/finalize bracket, complementing the pure
-//! eligibility/completeness unit tests in `operation_log::capture`.
+//! eligibility/completeness unit tests in `cmdr_operation_log::capture`.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -16,11 +16,11 @@ use super::transfer::move_op::move_files_with_progress_inner;
 use super::types::{WriteOperationConfig, WriteOperationType};
 use super::{copy_files_with_progress_inner, delete_files_with_progress_inner};
 
-use crate::operation_log::capture::WriterJournal;
-use crate::operation_log::store::{open_read_connection, operation_log_db_path, read_operation, read_operation_items};
-use crate::operation_log::types::{EntryType, ExecutionStatus, Initiator, OpKind, RollbackState, RowRole};
-use crate::operation_log::writer::OperationLogWriter;
 use crate::operation_log_host::TestJournalGuard;
+use cmdr_operation_log::capture::WriterJournal;
+use cmdr_operation_log::store::{open_read_connection, operation_log_db_path, read_operation, read_operation_items};
+use cmdr_operation_log::types::{EntryType, ExecutionStatus, Initiator, OpKind, RollbackState, RowRole};
+use cmdr_operation_log::writer::OperationLogWriter;
 
 /// Install a fresh temp-DB journal as the process-global one and hand back the
 /// [`TestJournalGuard`] (teardown + serialization), the temp dir (kept alive by
@@ -311,7 +311,7 @@ fn delete_journals_search_leaves_and_stays_not_rollbackable() {
 // `journal_search::tests`.
 
 #[cfg(target_os = "macos")]
-use crate::operation_log::types::{SearchCoverage, SearchCoverageReason};
+use cmdr_operation_log::types::{SearchCoverage, SearchCoverageReason};
 
 /// A canned drive-index enumeration for the trashed subtree.
 #[cfg(target_os = "macos")]
@@ -499,7 +499,7 @@ fn capture_stays_off_the_hot_path_under_writer_load() {
     for i in 0..40 {
         let id = format!("seed-{i}");
         writer
-            .open_operation(crate::operation_log::writer::OpenOperation {
+            .open_operation(cmdr_operation_log::writer::OpenOperation {
                 op_id: id.clone(),
                 kind: OpKind::Delete,
                 initiator: Initiator::User,
@@ -521,7 +521,7 @@ fn capture_stays_off_the_hot_path_under_writer_load() {
         let stop = Arc::clone(&stop);
         std::thread::spawn(move || {
             while !stop.load(std::sync::atomic::Ordering::Relaxed) {
-                let _ = writer.prune(crate::operation_log::writer::PruneRequest {
+                let _ = writer.prune(cmdr_operation_log::writer::PruneRequest {
                     max_age_secs: Some(0),
                     max_size_bytes: None,
                     now_secs: 10,
@@ -558,13 +558,13 @@ fn capture_stays_off_the_hot_path_under_writer_load() {
 #[ignore = "benchmark; run explicitly to collect numbers"]
 #[allow(clippy::print_stdout, reason = "a benchmark prints its measurements")]
 fn bench_persist_throughput() {
-    use crate::operation_log::writer::JournalItem;
+    use cmdr_operation_log::writer::JournalItem;
     const N: usize = 50_000;
     let dir = tempfile::tempdir().expect("dir");
     let db = operation_log_db_path(dir.path());
     let writer = OperationLogWriter::spawn(&db).expect("spawn");
     writer
-        .open_operation(crate::operation_log::writer::OpenOperation {
+        .open_operation(cmdr_operation_log::writer::OpenOperation {
             op_id: "bench".into(),
             kind: OpKind::Delete,
             initiator: Initiator::User,
@@ -589,7 +589,7 @@ fn bench_persist_throughput() {
             dest_name: None,
             size: Some(10),
             mtime: Some(1),
-            outcome: crate::operation_log::types::ItemOutcome::Done,
+            outcome: cmdr_operation_log::types::ItemOutcome::Done,
             overwrote: false,
         })
         .collect();

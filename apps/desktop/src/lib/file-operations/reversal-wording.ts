@@ -19,7 +19,7 @@ import type { MessageKey } from '#lib/intl/keys.gen.js'
  * What rolling back will DO to the user's files.
  *
  * The three `undo*` values mirror the backend's `inverse_kind`
- * (`src-tauri/src/operation_log/rollback.rs`), the one place that decides whether an
+ * (`crates/cmdr-operation-log/src/rollback.rs`), the one place that decides whether an
  * inverse deletes, moves, or renames.
  */
 export type RollbackConfirmVariant =
@@ -39,7 +39,7 @@ export type RollbackConfirmVariant =
  * on what was done: undoing a copy deletes, undoing a move carries the files home,
  * undoing a rename only changes names back.
  *
- * Mirrors the backend's `inverse_kind` (`operation_log/rollback.rs`) arm for arm,
+ * Mirrors the backend's `inverse_kind` (`crates/cmdr-operation-log/src/rollback.rs`) arm for arm,
  * including its `delete → delete` arm: a permanent delete is never rollbackable, so the
  * button never appears on one, and the arm exists so a NEW `OpKind` is a compile error
  * here rather than a confidently wrong sentence in front of a user.

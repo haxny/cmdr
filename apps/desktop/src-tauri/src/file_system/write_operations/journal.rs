@@ -5,7 +5,7 @@
 //! The journal is the app's one `OperationLog`, reached by `op_id` through
 //! `operation_log_host`, mirroring the op-keyed `update_operation_status`
 //! status cache written at these same record points — so these are thin free
-//! functions, not threaded state (`operation_log/DETAILS.md` § "The seam: a
+//! functions, not threaded state (`crates/cmdr-operation-log/DETAILS.md` § "The seam: a
 //! journal reached by `op_id`"). Every function no-ops for an operation that
 //! opened with nothing to journal to, and never fails the operation.
 
@@ -13,13 +13,13 @@ use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::file_system::volume::DEFAULT_VOLUME_ID;
-use crate::operation_log::capture::FinalizeInputs;
-use crate::operation_log::types::RowRole;
-use crate::operation_log::types::{
+use crate::operation_log_host::{journal_finalize, journal_open, journal_record_items};
+use cmdr_operation_log::capture::FinalizeInputs;
+use cmdr_operation_log::types::RowRole;
+use cmdr_operation_log::types::{
     ArchiveSubkind, EntryType, ExecutionStatus, Initiator, ItemOutcome, NotRollbackableReason, OpKind,
 };
-use crate::operation_log::writer::{JournalItem, OpenOperation};
-use crate::operation_log_host::{journal_finalize, journal_open, journal_record_items};
+use cmdr_operation_log::writer::{JournalItem, OpenOperation};
 
 use super::ledger::WrittenFile;
 use super::types::{WriteOperationError, WriteOperationType};
@@ -414,7 +414,7 @@ fn header_totals_from_status(op_id: &str) -> (Option<u64>, u64, u64) {
 /// dialog renders a real "Copy N items" instead of zero.
 pub(super) fn finalize_op(op_id: &str, kind: OpKind, execution_status: ExecutionStatus) {
     let (item_count, items_done, bytes_total) = header_totals_from_status(op_id);
-    // allowed-discarded-outcome: `FinalizeOutcome`'s row counts feed the completeness check, which runs inside `operation_log::capture::finalize` where they're produced. These wrappers only pick the kind.
+    // allowed-discarded-outcome: `FinalizeOutcome`'s row counts feed the completeness check, which runs inside `cmdr_operation_log::capture::finalize` where they're produced. These wrappers only pick the kind.
     journal_finalize(
         op_id,
         FinalizeInputs {
@@ -455,7 +455,7 @@ pub(super) fn finalize_archive_op(
     // A compress that stopped before its plan finished has no entry total yet;
     // `None` keeps the open-time count (its top-level sources).
     let item_count = packed.map(|totals| totals.entries).filter(|entries| *entries > 0);
-    // allowed-discarded-outcome: `FinalizeOutcome`'s row counts feed the completeness check, which runs inside `operation_log::capture::finalize` where they're produced. These wrappers only pick the kind.
+    // allowed-discarded-outcome: `FinalizeOutcome`'s row counts feed the completeness check, which runs inside `cmdr_operation_log::capture::finalize` where they're produced. These wrappers only pick the kind.
     journal_finalize(
         op_id,
         FinalizeInputs {

@@ -22,7 +22,7 @@ use crate::clipboard::{
 };
 use crate::file_system::VolumeError;
 use crate::file_system::volume::manager::get_volume_manager;
-use crate::operation_log::types::{EntryType, Initiator, OpKind};
+use cmdr_operation_log::types::{EntryType, Initiator, OpKind};
 
 use super::manager;
 use super::mutation_error::MutationError;

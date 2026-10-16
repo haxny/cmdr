@@ -37,7 +37,7 @@ use tokio::time::Duration;
 use crate::deadline::{DeadlineError, blocking_with_timeout, timeout_detached_typed};
 use crate::file_system::Volume;
 use crate::file_system::volume::manager::get_volume_manager;
-use crate::operation_log::types::Initiator;
+use cmdr_operation_log::types::Initiator;
 
 use super::expand_tilde;
 use crate::file_system::volume::manager::path_routes_over_its_parent;

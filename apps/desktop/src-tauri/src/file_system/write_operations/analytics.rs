@@ -15,7 +15,7 @@
 
 use super::types::{WriteCompleteEvent, WriteOperationType};
 use crate::analytics::item_count_bucket;
-use crate::operation_log::types::Initiator;
+use cmdr_operation_log::types::Initiator;
 
 /// Emits the PII-free analytics event for a completed write operation. Copy/Move → `file_transfer_completed`
 /// (with `op`, an item-count bucket, and a `had_conflicts` bool); Delete/Trash → `delete_used` (with

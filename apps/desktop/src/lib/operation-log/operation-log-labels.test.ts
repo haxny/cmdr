@@ -191,7 +191,7 @@ describe('rollbackRefusalNotice', () => {
 
 describe('rowRollbackAction', () => {
   it('offers a press on exactly the states the backend gate admits', () => {
-    // Mirrors `check_rollbackable` (`operation_log/rollback.rs`) arm for arm. Offering
+    // Mirrors `check_rollbackable` (`crates/cmdr-operation-log/src/rollback.rs`) arm for arm. Offering
     // one on any other state would be a button whose only possible answer is a refusal.
     const cases: Record<RollbackState, 'start' | 'finish' | null> = {
       rollbackable: 'start',

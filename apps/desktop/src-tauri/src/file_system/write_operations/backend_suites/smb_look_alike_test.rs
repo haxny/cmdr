@@ -103,7 +103,7 @@ async fn smb_integration_a_case_only_rename_asks_nothing_and_lands() {
     use super::network_safety_test_support::Registered;
     use super::network_semantics_test_support::{names_in, seed, try_read};
     use super::network_transfer_test_support::clean_deep;
-    use crate::operation_log::types::Initiator;
+    use cmdr_operation_log::types::Initiator;
 
     let (remote, dir) = fixture().await;
     seed(remote.as_ref(), &dir, &[("c.txt", b"abcd")]).await;

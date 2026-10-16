@@ -15,7 +15,7 @@ use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 use tauri_specta::Event;
 
-use crate::operation_log::rollback::SkipBreakdown;
+use cmdr_operation_log::rollback::SkipBreakdown;
 
 use super::{
     ConflictId, ProgressAxis, RecoveredOriginal, TransferActivity, TrashRefusalKind, WriteOperationError,

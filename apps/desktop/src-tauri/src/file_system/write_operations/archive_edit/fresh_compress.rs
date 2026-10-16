@@ -29,8 +29,8 @@ use crate::file_system::volume::{
     BackendKind, LaneKey, MutationEvent, StreamLength, StreamWriteProgress, Volume, VolumeError, VolumeReadStream,
     WriteMode,
 };
-use crate::operation_log::types::{ArchiveSubkind, ExecutionStatus, Initiator};
 use cmdr_local::LocalPosixVolume;
+use cmdr_operation_log::types::{ArchiveSubkind, ExecutionStatus, Initiator};
 
 struct PausableSpoolStream {
     inner: Box<dyn VolumeReadStream>,
@@ -113,7 +113,7 @@ pub(super) async fn start(
     }
     validate_aliases(&source_volume, &source_paths, &dest_volume, &archive_path).await?;
 
-    let operation_id = crate::operation_log::new_operation_id();
+    let operation_id = cmdr_operation_log::new_operation_id();
     let registered_source = get_volume_manager()
         .find_by_root(source_volume.root())
         .filter(|(_, registered)| {

@@ -4,7 +4,7 @@
  *
  * The engine already knows how to reverse a trash — a trash row records the OS's
  * own in-trash location, and its inverse is a restore-move back to the source
- * (`operation_log/rollback.rs`). This is the surface that offers it the moment it
+ * (`crates/cmdr-operation-log/src/rollback.rs`). This is the surface that offers it the moment it
  * matters, instead of leaving it in the operation log where nobody looks three
  * seconds after a mis-keyed F8.
  *

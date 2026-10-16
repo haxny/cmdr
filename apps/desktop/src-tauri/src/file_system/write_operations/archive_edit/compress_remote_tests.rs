@@ -73,7 +73,7 @@ async fn compress_onto_a_remote_parent_spools_then_packs_local_files() {
         0,
         None,
         None,
-        crate::operation_log::types::Initiator::User,
+        cmdr_operation_log::types::Initiator::User,
     )
     .await
     .expect("start remote compress");
@@ -197,7 +197,7 @@ async fn cancel_during_remote_close_does_not_publish_or_complete() {
         0,
         None,
         None,
-        crate::operation_log::types::Initiator::User,
+        cmdr_operation_log::types::Initiator::User,
     )
     .await
     .expect("start remote compress for close-boundary cancellation");
@@ -257,7 +257,7 @@ async fn compress_onto_a_remote_parent_overwrites_an_existing_zip_with_a_fresh_a
         0,
         None,
         None,
-        crate::operation_log::types::Initiator::User,
+        cmdr_operation_log::types::Initiator::User,
     )
     .await
     .expect("start remote compress over existing");
@@ -307,7 +307,7 @@ async fn a_publication_refusal_recovers_and_names_the_displaced_original() {
         0,
         None,
         None,
-        crate::operation_log::types::Initiator::User,
+        cmdr_operation_log::types::Initiator::User,
     )
     .await
     .expect("start publication-failure compress");
@@ -363,7 +363,7 @@ async fn compress_onto_an_mtp_style_remote_parent_spools_and_packs() {
         0,
         None,
         None,
-        crate::operation_log::types::Initiator::User,
+        cmdr_operation_log::types::Initiator::User,
     )
     .await
     .expect("start mtp-style remote compress");
@@ -410,7 +410,7 @@ async fn a_remote_source_streams_into_a_direct_local_archive() {
         0,
         None,
         None,
-        crate::operation_log::types::Initiator::User,
+        cmdr_operation_log::types::Initiator::User,
     )
     .await
     .expect("start remote-source compress");
@@ -456,7 +456,7 @@ async fn same_device_mtp_source_finishes_spooling_before_the_upload_path() {
         0,
         None,
         None,
-        crate::operation_log::types::Initiator::User,
+        cmdr_operation_log::types::Initiator::User,
     )
     .await
     .expect("start same-device MTP compress");
@@ -516,7 +516,7 @@ async fn compress_to_share(parent_id: &str, name: &str) -> Result<(), WriteOpera
         0,
         None,
         None,
-        crate::operation_log::types::Initiator::User,
+        cmdr_operation_log::types::Initiator::User,
     )
     .await?;
     wait_until_async(Duration::from_secs(5), "a terminal event (complete or error)", || {

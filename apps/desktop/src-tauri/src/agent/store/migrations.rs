@@ -1,5 +1,5 @@
 //! The forward-migration ladder for `main.db` — the second in this codebase, mirroring
-//! the operation log's (`operation_log/store/migrations.rs`), which proved the pattern.
+//! the operation log's (`crates/cmdr-operation-log/src/store/migrations.rs`), which proved the pattern.
 //!
 //! `main.db` lives for years (agent decisions D1/D3), so it never delete-and-recreates on a
 //! schema change: it migrates forward. [`run_migrations`] compares the stored

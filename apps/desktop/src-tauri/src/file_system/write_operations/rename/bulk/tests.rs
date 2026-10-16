@@ -68,10 +68,10 @@ fn planning_row(source: &str, destination: &str) -> BulkRenameRow {
 /// replacement file was renamed back in place of the original.
 #[test]
 fn an_applied_bulk_rename_journals_the_mtime_undo_verifies_on() {
-    use crate::operation_log::capture::WriterJournal;
-    use crate::operation_log::store::{open_read_connection, operation_log_db_path, read_operation_items};
-    use crate::operation_log::writer::OperationLogWriter;
     use crate::operation_log_host::TestJournalGuard;
+    use cmdr_operation_log::capture::WriterJournal;
+    use cmdr_operation_log::store::{open_read_connection, operation_log_db_path, read_operation_items};
+    use cmdr_operation_log::writer::OperationLogWriter;
 
     let journal_dir = tempfile::tempdir().expect("journal tempdir");
     let db = operation_log_db_path(journal_dir.path());
@@ -108,7 +108,7 @@ fn an_applied_bulk_rename_journals_the_mtime_undo_verifies_on() {
 /// can't catch a capture-side snapshot defect, so this bed exists to.
 struct UndoLoop {
     _journal: crate::operation_log_host::TestJournalGuard,
-    writer_journal: Arc<crate::operation_log::capture::WriterJournal>,
+    writer_journal: Arc<cmdr_operation_log::capture::WriterJournal>,
     vm: crate::file_system::VolumeManager,
     /// Owns the scratch directory: holding the guard (rather than a bare path
     /// copied out of it) is what keeps the directory alive for the fixture's
@@ -122,10 +122,10 @@ struct UndoLoop {
 impl UndoLoop {
     fn new(name: &str) -> Self {
         use crate::file_system::volume::Volume;
-        use crate::operation_log::capture::WriterJournal;
-        use crate::operation_log::store::operation_log_db_path;
-        use crate::operation_log::writer::OperationLogWriter;
         use cmdr_local::LocalPosixVolume;
+        use cmdr_operation_log::capture::WriterJournal;
+        use cmdr_operation_log::store::operation_log_db_path;
+        use cmdr_operation_log::writer::OperationLogWriter;
 
         // Held in the struct below, not just here: the writer keeps using this
         // database for the fixture's whole life, so dropping the handle at the end
@@ -176,8 +176,8 @@ impl UndoLoop {
         super::super::super::journal::finalize_op(&self.op_id, OpKind::Rename, ExecutionStatus::Done);
     }
 
-    async fn undo(&self) -> crate::operation_log::rollback::RollbackReport {
-        use crate::operation_log::store::{open_read_connection, read_operation};
+    async fn undo(&self) -> cmdr_operation_log::rollback::RollbackReport {
+        use cmdr_operation_log::store::{open_read_connection, read_operation};
         let writer = self.writer_journal.writer();
         let conn = open_read_connection(writer.db_path()).expect("read conn");
         let original = read_operation(&conn, &self.op_id)
@@ -185,12 +185,12 @@ impl UndoLoop {
             .expect("the applied batch is journaled");
         assert_eq!(
             original.rollback_state,
-            crate::operation_log::types::RollbackState::Rollbackable,
+            cmdr_operation_log::types::RollbackState::Rollbackable,
             "an applied batch rename must be rollbackable"
         );
         drop(conn);
         let reversal = crate::file_system::write_operations::rollback::Reversal::new("bulk-rename-undo");
-        crate::operation_log::rollback::execute_rollback(
+        cmdr_operation_log::rollback::execute_rollback(
             &self.vm,
             writer,
             &original,
@@ -231,10 +231,7 @@ async fn undo_of_an_untouched_batch_rename_restores_the_original_name() {
 
     assert_eq!(report.reversed, 1, "an untouched rename reverses");
     assert_eq!(report.skipped, 0);
-    assert_eq!(
-        report.final_state,
-        crate::operation_log::types::RollbackState::RolledBack
-    );
+    assert_eq!(report.final_state, cmdr_operation_log::types::RollbackState::RolledBack);
     assert_eq!(fs::read_to_string(&source).expect("read restored source"), "reviewed");
     assert!(!destination.exists(), "the renamed name is released");
 }
@@ -259,7 +256,7 @@ async fn undo_refuses_a_same_size_replacement_instead_of_renaming_it_back() {
     assert_eq!(report.skipped, 1);
     assert_eq!(
         report.final_state,
-        crate::operation_log::types::RollbackState::PartiallyRolledBack,
+        cmdr_operation_log::types::RollbackState::PartiallyRolledBack,
         "a skip is reported as a partial undo, never as a clean one"
     );
     assert_eq!(
@@ -526,9 +523,9 @@ struct LandingJournal {
 
 impl LandingJournal {
     fn new(name: &str) -> Self {
-        use crate::operation_log::capture::WriterJournal;
-        use crate::operation_log::store::operation_log_db_path;
-        use crate::operation_log::writer::OperationLogWriter;
+        use cmdr_operation_log::capture::WriterJournal;
+        use cmdr_operation_log::store::operation_log_db_path;
+        use cmdr_operation_log::writer::OperationLogWriter;
 
         let journal_dir = create_test_dir(&format!("{name}_journal"));
         let db = operation_log_db_path(&journal_dir);
@@ -549,8 +546,8 @@ impl LandingJournal {
     }
 
     /// The rows as the journal holds them, after finalizing so the writer flushes.
-    fn rows(&self) -> Vec<crate::operation_log::store::OperationItemRow> {
-        use crate::operation_log::store::{open_read_connection, read_operation_items};
+    fn rows(&self) -> Vec<cmdr_operation_log::store::OperationItemRow> {
+        use cmdr_operation_log::store::{open_read_connection, read_operation_items};
         super::super::super::journal::finalize_op(&self.op_id, OpKind::Rename, ExecutionStatus::Done);
         let conn = open_read_connection(&self.db).expect("read conn");
         read_operation_items(&conn, &self.op_id, 100).expect("items")
@@ -692,7 +689,7 @@ fn a_name_swap_journals_every_hop_of_its_rotation() {
 /// Undo a batch that skipped a row and only the landed row is offered for reversal.
 #[test]
 fn a_skipped_row_is_logged_but_never_offered_to_undo_as_a_rollback_unit() {
-    use crate::operation_log::store::{open_read_connection, read_rollback_units_page};
+    use cmdr_operation_log::store::{open_read_connection, read_rollback_units_page};
 
     let bed = LandingJournal::new("skip_not_a_unit");
     let tmp = create_test_dir("skip_not_a_unit_files");

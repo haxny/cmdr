@@ -4,7 +4,7 @@
  * `write-settled` fires exactly once per operation, AFTER its terminal event and
  * after the journal's finalize barrier. That last part is the reason this module
  * exists: the journal batches item rows in memory and flushes the tail inside
- * `finalize` (`operation_log/capture.rs`, `RECORD_BATCH` is 512), and
+ * `finalize` (`crates/cmdr-operation-log/src/capture.rs`, `RECORD_BATCH` is 512), and
  * `finalize_operation` blocks on the writer thread's reply. So an operation
  * smaller than the batch has NOTHING readable in the journal at `write-complete`
  * time, and everything readable by `write-settled`. Anyone reading an

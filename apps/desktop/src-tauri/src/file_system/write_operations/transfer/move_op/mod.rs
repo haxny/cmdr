@@ -29,8 +29,8 @@ use super::super::types::{
     SourceItemOutcome, WriteOperationConfig, WriteOperationError, WriteOperationType, WriteSourceItemDoneEvent,
 };
 use super::super::validation::{is_real_directory, is_same_file, is_same_filesystem, path_exists_or_is_symlink};
-use crate::operation_log::rollback::ItemResult;
-use crate::operation_log::types::SkipReason;
+use cmdr_operation_log::rollback::ItemResult;
+use cmdr_operation_log::types::SkipReason;
 
 mod cross_fs;
 mod same_fs;

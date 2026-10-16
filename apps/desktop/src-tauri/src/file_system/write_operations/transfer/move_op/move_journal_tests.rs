@@ -25,16 +25,16 @@ use crate::file_system::write_operations::rollback::Reversal;
 use crate::file_system::write_operations::state::WriteOperationState;
 use crate::file_system::write_operations::types::{ConflictResolution, WriteOperationConfig};
 use crate::file_system::write_operations::{journal, journal_search};
-use crate::operation_log::capture::WriterJournal;
-use crate::operation_log::query::{OperationItemView, get_operation};
-use crate::operation_log::rollback::{RollbackRefusal, RollbackReport, execute_rollback, rollback_operation};
-use crate::operation_log::store::{OperationRow, open_read_connection, operation_log_db_path, read_operation};
-use crate::operation_log::types::{
-    EntryType, ExecutionStatus, Initiator, NotRollbackableReason, OpKind, RollbackState, RowRole, SearchCoverage,
-};
-use crate::operation_log::writer::OperationLogWriter;
 use crate::operation_log_host::TestJournalGuard;
 use cmdr_local::LocalPosixVolume;
+use cmdr_operation_log::capture::WriterJournal;
+use cmdr_operation_log::query::{OperationItemView, get_operation};
+use cmdr_operation_log::rollback::{RollbackRefusal, RollbackReport, execute_rollback, rollback_operation};
+use cmdr_operation_log::store::{OperationRow, open_read_connection, operation_log_db_path, read_operation};
+use cmdr_operation_log::types::{
+    EntryType, ExecutionStatus, Initiator, NotRollbackableReason, OpKind, RollbackState, RowRole, SearchCoverage,
+};
+use cmdr_operation_log::writer::OperationLogWriter;
 
 /// A real move, journaled to a real DB, reversible through the real gate.
 struct MoveLoop {

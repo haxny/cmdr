@@ -1,7 +1,7 @@
 # Operation log (frontend) details
 
 Depth behind `CLAUDE.md`. The durable journal, its schema, and the rollback engine live on the backend
-(`apps/desktop/src-tauri/src/operation_log/DETAILS.md`); this doc covers only the dialog over it.
+(`crates/cmdr-operation-log/DETAILS.md`); this doc covers only the dialog over it.
 
 ## File map
 
@@ -26,7 +26,7 @@ Depth behind `CLAUDE.md`. The durable journal, its schema, and the rollback engi
   `operationLog.enabled` off the backend journals nothing new, so those undos could only be refused. The dialog reads
   the reactive `getOperationLogRecording()` instead and, while off, puts a `recording-off` notice above the list (in
   place of the empty state, whose "copy something and it'll show up here" would be untrue). Backend side:
-  `src-tauri/src/operation_log/DETAILS.md` § "Turning recording off".
+  `crates/cmdr-operation-log/DETAILS.md` § "Turning recording off".
 - `operation-log-shortcut.test.ts` pins the ⌥⌘L route; `operation-log-trigger.test.ts` owns the paging assertions, so
   the component tests don't repeat them.
 
@@ -73,7 +73,7 @@ pause gate once per item — so this is buttons, not machinery.
 Pausing a row's own `op_id` would be a no-op at best; on the wrong id it would park something else entirely.
 
 **Where the id comes from.** `OperationRow.inverseOpId`, filled by every journal read (the backend's own
-`src-tauri/src/operation_log/DETAILS.md` holds why every reader fills it) and by the dispatch's own answer in step 4. ❌
+`crates/cmdr-operation-log/DETAILS.md` holds why every reader fills it) and by the dispatch's own answer in step 4. ❌
 Not two sources: both carry the same journal fact, which is why a reversal started in another window, by an agent over
 MCP, or before this dialog opened gets the same buttons as one started under the user's cursor.
 
@@ -113,7 +113,7 @@ A reversal a user cancels midway leaves the operation `partiallyRolledBack` with
 the destination. Offering nothing there is a dead end reached by an ordinary action (cancelling), so the row offers to
 finish. The reason that's safe is in the ENGINE, not in this dialog:
 
-- **The op-level gate already allows it.** `check_rollbackable` (`src-tauri/src/operation_log/rollback.rs`) refuses
+- **The op-level gate already allows it.** `check_rollbackable` (`crates/cmdr-operation-log/src/rollback.rs`) refuses
   `rollingBack`, `rolledBack`, and `notRollbackable`, and passes `rollbackable` and `partiallyRolledBack` alike. The
   `rolling_back` write happens synchronously before the dispatch returns, so two passes can never overlap.
 - **Every per-item inverse is recheck-then-act, and re-entrant by construction.** A second pass re-streams every

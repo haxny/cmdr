@@ -23,9 +23,9 @@ use super::super::super::unblocked_removal::{RemovalRefused, delete_clearing_blo
 use super::transfer_error::{AtPath, PathRole, PathedVolumeError};
 use crate::file_system::volume::{EntryKind, Volume, VolumeError};
 use crate::ignore_poison::IgnorePoison;
-use crate::operation_log::rollback::ItemResult;
-use crate::operation_log::types::SkipReason;
 use cmdr_fs::entry::FileEntry;
+use cmdr_operation_log::rollback::ItemResult;
+use cmdr_operation_log::types::SkipReason;
 
 use cmdr_fs::staging::STAGING_TEMP_MARKER as TEMP_INFIX;
 

@@ -33,11 +33,11 @@ use super::types::{
     WriteProgressEvent, WriteSettledEvent, WriteSourceItemDoneEvent,
 };
 use crate::file_system::volume::{DEFAULT_VOLUME_ID, Volume};
-use crate::operation_log::capture::WriterJournal;
-use crate::operation_log::store::{OperationLogStoreError, open_read_connection, read_operation_items};
-use crate::operation_log::types::{EntryType, ExecutionStatus, Initiator, OpKind};
-use crate::operation_log::writer::OperationLogWriter;
 use cmdr_local::LocalPosixVolume;
+use cmdr_operation_log::capture::WriterJournal;
+use cmdr_operation_log::store::{OperationLogStoreError, open_read_connection, read_operation_items};
+use cmdr_operation_log::types::{EntryType, ExecutionStatus, Initiator, OpKind};
+use cmdr_operation_log::writer::OperationLogWriter;
 
 pub use super::types::WriteOperationError;
 
@@ -80,7 +80,7 @@ fn fresh_state() -> Arc<WriteOperationState> {
 /// A local same-volume copy of `sources` into `destination`, through
 /// `copy_files_with_progress_inner` with no journal.
 pub fn copy_local(sources: &[PathBuf], destination: &Path) -> Result<(), WriteOperationError> {
-    let op_id = crate::operation_log::new_operation_id();
+    let op_id = cmdr_operation_log::new_operation_id();
     copy_files_with_progress_inner(
         &DiscardEvents,
         &op_id,
@@ -93,7 +93,7 @@ pub fn copy_local(sources: &[PathBuf], destination: &Path) -> Result<(), WriteOp
 
 /// A local delete of `sources`, through `delete_files_with_progress_inner`.
 pub fn delete_local(sources: &[PathBuf]) -> Result<(), WriteOperationError> {
-    let op_id = crate::operation_log::new_operation_id();
+    let op_id = cmdr_operation_log::new_operation_id();
     delete_files_with_progress_inner(
         &DiscardEvents,
         &op_id,
@@ -121,7 +121,7 @@ pub async fn copy_volumes(
     dest_volume: Arc<dyn Volume>,
     dest_path: &Path,
 ) -> Result<(), WriteOperationError> {
-    let op_id = crate::operation_log::new_operation_id();
+    let op_id = cmdr_operation_log::new_operation_id();
     copy_volumes_with_progress(
         Arc::new(DiscardEvents),
         &op_id,
@@ -189,7 +189,7 @@ impl BenchJournal {
     /// `start_write_operation` brackets it. Returns the operation's id, for
     /// [`Self::journaled_files`].
     pub fn copy_local(&self, sources: &[PathBuf], destination: &Path) -> Result<String, WriteOperationError> {
-        let op_id = crate::operation_log::new_operation_id();
+        let op_id = cmdr_operation_log::new_operation_id();
         journal::open_local_op(
             &op_id,
             OpKind::Copy,

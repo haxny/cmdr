@@ -30,8 +30,8 @@ use std::path::{Path, PathBuf};
 use rusqlite::Connection;
 
 use crate::index_host::index;
-use crate::operation_log::types::{EntryType, SearchCoverage, SearchCoverageReason};
 use cmdr_index::store::{IndexStore, resolve_path};
+use cmdr_operation_log::types::{EntryType, SearchCoverage, SearchCoverageReason};
 
 /// The per-operation cap on `search_only` leaves enumerated for one top-level
 /// trash / same-FS-move item. Because the enumeration is synchronous BEFORE a

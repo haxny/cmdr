@@ -11,6 +11,7 @@ members = [
   "crates/cmdr-listing",
   "crates/cmdr-local",
   "crates/cmdr-mtp",
+  "crates/cmdr-operation-log",
   "crates/cmdr-s3",
   "crates/cmdr-sftp",
   "crates/cmdr-smb",

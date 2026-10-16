@@ -1,7 +1,7 @@
 # Operation-log capture benchmarks
 
 Numbers behind the capture-layer performance decisions: the `search_only` leaf-enumeration cap, and the claim that
-journaling never measurably slows an operation (requirement 8). Linked from `src-tauri/src/operation_log/DETAILS.md`.
+journaling never measurably slows an operation (requirement 8). Linked from `crates/cmdr-operation-log/DETAILS.md`.
 
 Evidence anchor: measured on an Apple Silicon dev machine (macOS 15), release-adjacent `cargo nextest` test profile
 (unoptimized + debuginfo — so absolute numbers are conservative vs a release build), 2026-07-10, branch

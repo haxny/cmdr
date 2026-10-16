@@ -36,7 +36,7 @@ use super::super::super::types::{
 use super::move_same::move_within_same_volume;
 use super::transfer_error::{WriteFailure, write_error_event_from};
 use crate::file_system::volume::Volume;
-use crate::operation_log::types::OpKind;
+use cmdr_operation_log::types::OpKind;
 
 /// Unified move across volume types.
 ///
@@ -60,7 +60,7 @@ pub async fn move_between_volumes(
     dest_path: PathBuf,
     config: VolumeCopyConfig,
     target_names: TargetNames,
-    initiator: crate::operation_log::types::Initiator,
+    initiator: cmdr_operation_log::types::Initiator,
     expected_sources: Option<ExpectedSources>,
 ) -> Result<WriteOperationStartResult, WriteOperationError> {
     super::super::super::validation::validate_transfer_destination_name(
@@ -162,7 +162,7 @@ pub async fn move_between_volumes(
         source_paths.len()
     );
 
-    let operation_id = crate::operation_log::new_operation_id();
+    let operation_id = cmdr_operation_log::new_operation_id();
 
     // The per-leaf record points inside `move_volumes_with_progress` journal under
     // these REAL volume ids (carried on the op state so the test call sites stay

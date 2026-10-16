@@ -21,8 +21,8 @@ use crate::file_system::Volume;
 use crate::file_system::volume::InMemoryVolume;
 use crate::file_system::volume::manager::get_volume_manager;
 use crate::ignore_poison::IgnorePoison;
-use crate::operation_log::types::Initiator;
 use crate::test_support::wait_until_async;
+use cmdr_operation_log::types::Initiator;
 
 const CAFE_NFC: &str = "caf\u{e9}.txt";
 const CAFE_NFD: &str = "cafe\u{301}.txt";

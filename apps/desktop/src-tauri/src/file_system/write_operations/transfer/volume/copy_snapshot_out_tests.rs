@@ -198,7 +198,7 @@ async fn the_executable_bit_survives_a_copy_out_of_a_snapshot() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_move_out_of_a_snapshot_is_refused_before_a_byte_is_written() {
     use crate::file_system::write_operations::{ReadOnlySide, WriteOperationError, start_volume_move};
-    use crate::operation_log::types::Initiator;
+    use cmdr_operation_log::types::Initiator;
 
     let dir = repo_registered_as_the_local_drive("move_refused");
     let dest_dir = temp_dir("copy_snapshot_out", "move_refused_dest");
@@ -252,7 +252,7 @@ async fn a_move_out_of_a_snapshot_is_refused_before_a_byte_is_written() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_copy_into_a_snapshot_is_refused_up_front() {
     use crate::file_system::write_operations::{ReadOnlySide, WriteOperationError, start_volume_copy};
-    use crate::operation_log::types::Initiator;
+    use cmdr_operation_log::types::Initiator;
 
     let dir = repo_registered_as_the_local_drive("drop_refused");
     std::fs::write(dir.join("dropped.txt"), b"dropped").expect("write the dragged file");

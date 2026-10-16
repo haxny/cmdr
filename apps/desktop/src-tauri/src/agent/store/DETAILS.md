@@ -1,7 +1,7 @@
 # Agent store details
 
 Pull-tier docs for `agent/store/`. Must-knows live in `CLAUDE.md`. This store is the app's second durable DB,
-built on the operation log's proven template (`operation_log/store/`); this file records only what's specific to
+built on the operation log's proven template (`crates/cmdr-operation-log/src/store/`); this file records only what's specific to
 `main.db`, and points at the template for the shared discipline.
 
 ## Why a second durable DB, mirroring the operation log
@@ -135,7 +135,7 @@ group's thread line.
 ## No auto-retention in v1
 
 Transcripts are small (spec §3), so there's no pruning yet. When real sizes exist, the operation log's
-`operation_log/retention.rs` + `PruneRequest` scaffold (age + size prune, dir GC, vacuum on a startup + periodic timer)
+`crates/cmdr-operation-log/src/retention.rs` + `PruneRequest` scaffold (age + size prune, dir GC, vacuum on a startup + periodic timer)
 is the template to follow — a follow-up, not built now.
 
 ## Wiring

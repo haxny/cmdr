@@ -42,7 +42,7 @@ pub async fn move_to_trash(path: String) -> Result<(), MutationError> {
     match tokio::time::timeout(
         Duration::from_secs(15),
         tokio::task::spawn_blocking(move || {
-            trash_single_journaled(&path_buf, crate::operation_log::types::Initiator::User)
+            trash_single_journaled(&path_buf, cmdr_operation_log::types::Initiator::User)
         }),
     )
     .await
@@ -166,7 +166,7 @@ pub async fn rename_file(
     to: String,
     force: bool,
     volume_id: Option<String>,
-    initiator: Option<crate::operation_log::types::Initiator>,
+    initiator: Option<cmdr_operation_log::types::Initiator>,
 ) -> Result<MutationReply, MutationError> {
     rename_file_replying(from, to, force, volume_id, initiator, broadcast_settled(app)).await
 }
@@ -177,7 +177,7 @@ pub(crate) async fn rename_file_replying(
     to: String,
     force: bool,
     volume_id: Option<String>,
-    initiator: Option<crate::operation_log::types::Initiator>,
+    initiator: Option<cmdr_operation_log::types::Initiator>,
     on_settled: impl FnOnce(MutationSettled) + Send + 'static,
 ) -> Result<MutationReply, MutationError> {
     let volume_id_str = volume_id.unwrap_or_else(|| "root".to_string());
@@ -199,7 +199,7 @@ pub(crate) async fn rename_file_replying(
             to_path,
             force,
             volume_id_str,
-            initiator.unwrap_or(crate::operation_log::types::Initiator::User),
+            initiator.unwrap_or(cmdr_operation_log::types::Initiator::User),
         ),
         on_settled,
     )

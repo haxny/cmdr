@@ -1,6 +1,6 @@
 //! IPC commands over the operation log: the read side (the query API), plus undo.
 //!
-//! The reads are thin pass-throughs over [`crate::operation_log::query`]: the
+//! The reads are thin pass-throughs over [`cmdr_operation_log::query`]: the
 //! business logic (filtering, paging, dir-path resolution) lives in the query
 //! module; these commands only open a short-lived read-only connection off the IPC
 //! thread and forward the call. The Debug panel and alpha dialog consume them.
@@ -15,7 +15,7 @@
 //!   with the tally. Ask Cmdr's rename undo needs that tally to report what came
 //!   back, which a dispatch can't say yet.
 //!
-//! Both sit on the same engine (`crate::operation_log::rollback`); the MCP
+//! Both sit on the same engine (`cmdr_operation_log::rollback`); the MCP
 //! `operations_rollback` tool is the third consumer.
 
 use tauri::AppHandle;
@@ -24,10 +24,10 @@ use std::sync::Arc;
 
 use crate::file_system::write_operations::rollback::{UndoReport, dispatch_rollback, undo_operations as run_undo};
 use crate::file_system::write_operations::{OperationEventSink, TauriEventSink};
-use crate::operation_log::query::{self, OperationDetail};
-use crate::operation_log::rollback::{RollbackDispatch, RollbackRefusal};
-use crate::operation_log::store::{OperationLogStoreError, OperationRow, open_read_connection, operation_log_db_path};
-use crate::operation_log::types::Initiator;
+use cmdr_operation_log::query::{self, OperationDetail};
+use cmdr_operation_log::rollback::{RollbackDispatch, RollbackRefusal};
+use cmdr_operation_log::store::{OperationLogStoreError, OperationRow, open_read_connection, operation_log_db_path};
+use cmdr_operation_log::types::Initiator;
 
 /// Resolve the `operation-log.db` path and run `read` on a read-only connection,
 /// off the IPC thread. A missing/unopened DB (the journal failed to start) yields

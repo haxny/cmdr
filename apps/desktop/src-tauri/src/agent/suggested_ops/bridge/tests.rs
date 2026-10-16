@@ -601,7 +601,7 @@ async fn a_rename_the_review_started_settles_its_group_and_its_thread_line() {
         claimed,
         "root".to_string(),
         rows,
-        crate::operation_log::types::Initiator::Agent,
+        cmdr_operation_log::types::Initiator::Agent,
         None,
         210,
     )

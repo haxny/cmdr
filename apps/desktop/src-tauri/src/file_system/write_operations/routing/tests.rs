@@ -170,7 +170,7 @@ async fn a_copy_onto_an_id_nothing_knows_still_reads_as_a_missing_volume() {
     use crate::file_system::volume::manager::get_volume_manager;
     use crate::file_system::write_operations::event_sinks::CollectorEventSink;
     use crate::file_system::write_operations::{VolumeCopyConfig, WriteOperationError, start_volume_copy};
-    use crate::operation_log::types::Initiator;
+    use cmdr_operation_log::types::Initiator;
 
     let source_id = format!("routing-source-{}", uuid::Uuid::new_v4());
     let source = InMemoryVolume::new("Source");
@@ -209,7 +209,7 @@ async fn a_copy_from_an_id_nothing_knows_reads_as_a_source_no_longer_connected()
     use crate::file_system::volume::manager::get_volume_manager;
     use crate::file_system::write_operations::event_sinks::CollectorEventSink;
     use crate::file_system::write_operations::{VolumeCopyConfig, WriteOperationError, start_volume_copy};
-    use crate::operation_log::types::Initiator;
+    use cmdr_operation_log::types::Initiator;
 
     let dest_id = format!("routing-dest-{}", uuid::Uuid::new_v4());
     get_volume_manager().register(&dest_id, Arc::new(InMemoryVolume::new("Dest")));

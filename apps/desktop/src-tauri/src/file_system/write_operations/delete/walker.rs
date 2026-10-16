@@ -142,13 +142,13 @@ pub(in crate::file_system::write_operations) fn delete_files_with_progress_inner
         // these rows exist purely for search — one per leaf, deliberately.
         super::super::journal::record_local_leaf(
             operation_id,
-            crate::operation_log::types::EntryType::File,
+            cmdr_operation_log::types::EntryType::File,
             &file_info.path,
             None,
             Some(progress_bytes as i64),
             None,
             false,
-            crate::operation_log::types::ItemOutcome::Done,
+            cmdr_operation_log::types::ItemOutcome::Done,
         );
 
         files_done += 1;
@@ -906,14 +906,14 @@ pub(in crate::file_system::write_operations) async fn delete_volume_files_with_p
             // exist purely for search — one per leaf, deliberately.
             super::super::journal::record_volume_leaf(
                 operation_id,
-                crate::operation_log::types::EntryType::File,
+                cmdr_operation_log::types::EntryType::File,
                 volume_id,
                 &entry.path,
                 None,
                 Some(entry.progress_bytes as i64),
                 None,
                 false,
-                crate::operation_log::types::ItemOutcome::Done,
+                cmdr_operation_log::types::ItemOutcome::Done,
             );
 
             files_done += 1;

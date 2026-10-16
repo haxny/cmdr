@@ -256,14 +256,9 @@ All under `apps/desktop/src-tauri/src/`.
   pieces (last session's tabs, favorites, standard home folders, cloud roots, `$HOME`), answered through the
   `HostPolicy::priority_roots` seam and consumed by the index's phase machine. See its
   `apps/desktop/src-tauri/src/priority/CLAUDE.md`
-- `operation_log/`: The durable, cross-volume journal of file mutations — the app's first durable DB
-  (`operation-log.db`), the foundation for rollback, indexed name search, and a future undo. Single writer thread, a
-  forward-migration ladder (not delete-and-recreate) and retention discipline, interned dir prefixes + per-item rows,
-  app-side case folding with no collation (stays `sqlite3`-inspectable). Its state is one `OperationLog` handle. See its
-  `apps/desktop/src-tauri/src/operation_log/CLAUDE.md`
-- `operation_log_host/`: this app as the operation log's host: builds the one `OperationLog` (`operation_log()`), opens
-  it once the data dir is known, and answers its needs (settings, runtime, the volume registry). See
-  `apps/desktop/src-tauri/src/operation_log_host/CLAUDE.md`
+- `operation_log_host/`: this app as the operation log's host (the log itself is `crates/cmdr-operation-log/`): builds
+  the one `OperationLog` (`operation_log()`), opens it once the data dir is known, and answers its needs (settings,
+  runtime, the volume registry). See `apps/desktop/src-tauri/src/operation_log_host/CLAUDE.md`
 - `security_log/`: The local security event log (`security-events.jsonl`): typed `SecurityEvent`s from consent, MCP,
   managed-policy, and updater hooks, one emitter that also feeds subscribers, a background writer, and the opt-out. See
   its `apps/desktop/src-tauri/src/security_log/CLAUDE.md`
@@ -397,10 +392,11 @@ All under `apps/desktop/src-tauri/src/`.
 
 All under `crates/`, alongside the four apps. `cmdr-fs`, `cmdr-index`, `cmdr-archive`, `cmdr-smb`, `cmdr-sftp`,
 `cmdr-webdav`, `cmdr-s3`, `cmdr-adb`, `cmdr-mtp`, `cmdr-git`, `cmdr-http`, `cmdr-listing`, `cmdr-collation`,
-`cmdr-local`, and `cmdr-update-trust` carry no `tauri` dependency and no reach into the app; `index-crate-isolation`
-enforces that against the `cargo metadata` graph, and caps the public surface of `cmdr-index`, `cmdr-archive`,
-`cmdr-smb`, `cmdr-sftp`, `cmdr-webdav`, `cmdr-s3`, `cmdr-mtp`, `cmdr-git`, `cmdr-listing`, `cmdr-collation`, and
-`cmdr-local` at the numbers their audits landed on. The two dev CLIs and the vendored fork are ordinary members.
+`cmdr-local`, `cmdr-operation-log`, and `cmdr-update-trust` carry no `tauri` dependency and no reach into the app;
+`index-crate-isolation` enforces that against the `cargo metadata` graph, and caps the public surface of `cmdr-index`,
+`cmdr-archive`, `cmdr-smb`, `cmdr-sftp`, `cmdr-webdav`, `cmdr-s3`, `cmdr-mtp`, `cmdr-git`, `cmdr-listing`,
+`cmdr-collation`, `cmdr-local`, and `cmdr-operation-log` at the numbers their audits landed on. The two dev CLIs and the
+vendored fork are ordinary members.
 
 - `crates/cmdr-fs/`: the filesystem vocabulary and host primitives every layer speaks in — the `Volume` trait and its
   data types, `FileEntry`, typed error classification (`ListingError` / `ListingErrorReason` / `ErrorCategory`, errno →
@@ -429,6 +425,11 @@ enforces that against the `cargo metadata` graph, and caps the public surface of
   the watcher reads through too, `rename_local_exclusive` (the one no-replace rename), local volume space with the
   live-space memo, and the mount probes (`filesystem_kind`, the macOS mount table and `statfs`, Linux's `/proc/mounts`).
   It reaches the app through its `VolumeHost` alone. See `crates/cmdr-local/CLAUDE.md`
+- `crates/cmdr-operation-log/`: the durable, cross-volume journal of file mutations, the app's first durable DB
+  (`operation-log.db`) and the foundation for rollback, indexed name search, and a future undo. Single writer thread, a
+  forward-migration ladder (not delete-and-recreate) and retention discipline, interned dir prefixes + per-item rows,
+  case folding with no collation (stays `sqlite3`-inspectable), and the rollback PLANNER, which acts through an injected
+  runner. One `OperationLog` handle; Cmdr's host is `operation_log_host/`. See `crates/cmdr-operation-log/CLAUDE.md`
 - `crates/cmdr-http/`: the one door every HTTP client is built through (`client_builder()`), and the proxy routing
   behind it: loopback and link-local always direct, then the `*_PROXY` variables, then macOS's own verdict per URL
   (manual proxy, bypass list, PAC, WPAD). The app, `cmdr-webdav`, and `cmdr-s3` all build on it, and `clippy.toml`
@@ -536,8 +537,8 @@ enforces that against the `cargo metadata` graph, and caps the public surface of
 - `crates/index-query/`: developer CLI that queries the index DB with the `platform_case` collation `sqlite3` can't
   supply, plus the three importance measurement binaries. Depends on `cmdr-index` alone. See
   `docs/tooling/index-query.md`
-- `crates/operation-log-dump/`: developer CLI that renders `operation-log.db` through the app's own read functions. Its
-  own crate because `operation_log` is an app module, so this is the one dev tool that depends on `cmdr`
+- `crates/operation-log-dump/`: developer CLI that renders `operation-log.db` through the log's own read functions.
+  Depends on `cmdr-operation-log` alone
 - `crates/fsevent-stream/`: vendored fork of the FSEvents stream crate (published as `cmdr-fsevent-stream`), giving the
   drive watcher event IDs and `sinceWhen` replay. macOS-only
 - `fuzz/` (repo root, outside the workspace): libFuzzer targets for the parsers that read bytes someone else chose (ADB,

@@ -393,7 +393,7 @@ pub(super) fn move_with_staging(
                 // holds files this operation never touched.
                 journal::note_not_rollbackable(
                     operation_id,
-                    crate::operation_log::types::NotRollbackableReason::DirectoryMerge,
+                    cmdr_operation_log::types::NotRollbackableReason::DirectoryMerge,
                 );
             } else if path_exists_or_is_symlink(&final_path) {
                 // File conflict (or type mismatch). The symlink-aware gate, like
@@ -429,9 +429,9 @@ pub(super) fn move_with_staging(
                         journal::note_not_rollbackable(
                             operation_id,
                             if resolved.path == final_path {
-                                crate::operation_log::types::NotRollbackableReason::Overwrote
+                                cmdr_operation_log::types::NotRollbackableReason::Overwrote
                             } else {
-                                crate::operation_log::types::NotRollbackableReason::StagedConflictResolved
+                                cmdr_operation_log::types::NotRollbackableReason::StagedConflictResolved
                             },
                         );
                         move_resolved_into_place(state, &staged_path, &final_path, &resolved, None, &mut throwaway_tx)?;
@@ -454,7 +454,7 @@ pub(super) fn move_with_staging(
                         // source.
                         journal::note_not_rollbackable(
                             operation_id,
-                            crate::operation_log::types::NotRollbackableReason::StagedConflictResolved,
+                            cmdr_operation_log::types::NotRollbackableReason::StagedConflictResolved,
                         );
                         continue;
                     }

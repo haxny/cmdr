@@ -34,7 +34,7 @@ use super::network_semantics_test_support::{Transfer, local_volume, names_in, se
 use super::network_transfer_test_support::{assert_no_staging_litter, clean_deep, read_all};
 use crate::file_system::volume::manager::get_volume_manager;
 use crate::ignore_poison::IgnorePoison;
-use crate::operation_log::types::Initiator;
+use cmdr_operation_log::types::Initiator;
 
 /// How long an archive op gets to reach its terminal event. Under the 8 s
 /// nextest cap, so a hang says what it was waiting for.

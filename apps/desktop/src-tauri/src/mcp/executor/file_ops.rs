@@ -349,7 +349,7 @@ pub async fn execute_rename<R: Runtime>(app: &AppHandle<R>, params: &Value) -> T
             to_path,
             false,
             volume_id,
-            Some(crate::operation_log::types::Initiator::AiClient),
+            Some(cmdr_operation_log::types::Initiator::AiClient),
             // Nobody waits on the settle here: the reply below says it's pending,
             // and the pane's listing shows the end when it lands.
             |_| {},

@@ -25,8 +25,8 @@ use super::manager::{self, OperationDescriptor, OperationSummaryText};
 use super::mutation_error::MutationError;
 use super::types::WriteOperationType;
 use crate::file_system::volume::{RenameWork, Volume};
-use crate::operation_log::types::{Initiator, OpKind};
 use cmdr_archive::mutator::Changeset;
+use cmdr_operation_log::types::{Initiator, OpKind};
 
 mod bulk;
 mod validity;
@@ -293,7 +293,7 @@ async fn rename_managed_inner(
     // subtree moves by one rename). Rollbackable iff unchanged (rechecked at
     // rollback time).
     if let Some((from_path, to_path, meta, volume_is_dir)) = journal_snapshot {
-        use crate::operation_log::types::{EntryType, ExecutionStatus, ItemOutcome, OpKind};
+        use cmdr_operation_log::types::{EntryType, ExecutionStatus, ItemOutcome, OpKind};
         match &result {
             Ok(()) => {
                 let is_dir = meta.as_ref().map(|m| m.is_dir()).unwrap_or(volume_is_dir);
@@ -479,7 +479,7 @@ fn rename_descriptor(from: &Path, to: &Path, volume_id: &str) -> OperationDescri
         vec![volume_id.to_string()]
     };
     OperationDescriptor {
-        operation_id: crate::operation_log::new_operation_id(),
+        operation_id: cmdr_operation_log::new_operation_id(),
         operation_type: WriteOperationType::Rename,
         lanes: vec![],
         volume_ids,

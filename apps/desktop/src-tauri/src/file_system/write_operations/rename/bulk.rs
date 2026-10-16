@@ -25,8 +25,8 @@ use super::super::types::{
     WriteOperationStartResult, WriteOperationType, WriteProgressEvent, WriteSourceItemDoneEvent,
 };
 use crate::file_system::volume::{LaneKey, Volume};
-use crate::operation_log::types::{EntryType, ExecutionStatus, Initiator, ItemOutcome, OpKind};
 use cmdr_local::rename_local_exclusive;
+use cmdr_operation_log::types::{EntryType, ExecutionStatus, Initiator, ItemOutcome, OpKind};
 
 mod by_move;
 mod plan;
@@ -130,7 +130,7 @@ pub(crate) fn start_bulk_rename(
         )
     };
 
-    let operation_id = crate::operation_log::new_operation_id();
+    let operation_id = cmdr_operation_log::new_operation_id();
     let summary = OperationSummaryText {
         source: Some(format!("{} files", rows.len())),
         destination: None,

@@ -167,9 +167,9 @@ pub fn move_to_trash_sync(_path: &Path) -> Result<Option<PathBuf>, MutationError
 /// thread (sync index reads + journal sends are fine there).
 pub fn trash_single_journaled(
     source: &Path,
-    initiator: crate::operation_log::types::Initiator,
+    initiator: cmdr_operation_log::types::Initiator,
 ) -> Result<Option<PathBuf>, MutationError> {
-    use crate::operation_log::types::{EntryType, ExecutionStatus, ItemOutcome, OpKind};
+    use cmdr_operation_log::types::{EntryType, ExecutionStatus, ItemOutcome, OpKind};
 
     let source_meta = fs::symlink_metadata(source).map_err(|_| MutationError::NotFound {
         path: source.display().to_string(),
@@ -186,7 +186,7 @@ pub fn trash_single_journaled(
         None
     };
 
-    let op_id = crate::operation_log::new_operation_id();
+    let op_id = cmdr_operation_log::new_operation_id();
     // A single trash has no destination volume (the in-trash location rides on the
     // item row, not the header); one top-level item.
     super::super::journal::open_local_op(&op_id, OpKind::Trash, initiator, 1, None);
@@ -417,9 +417,9 @@ pub(in crate::file_system::write_operations) fn trash_files_with_progress(
                 // knows where to move it back FROM. The subtree's `search_only`
                 // leaves are enumerated from the drive index (search-leaf enumeration).
                 let entry_type = if source_meta.is_dir() {
-                    crate::operation_log::types::EntryType::Dir
+                    cmdr_operation_log::types::EntryType::Dir
                 } else {
-                    crate::operation_log::types::EntryType::File
+                    cmdr_operation_log::types::EntryType::File
                 };
                 super::super::journal::record_local_leaf(
                     operation_id,
@@ -429,7 +429,7 @@ pub(in crate::file_system::write_operations) fn trash_files_with_progress(
                     item_size.map(|s| s as i64).or(Some(source_meta.len() as i64)),
                     super::super::journal::mtime_secs(&source_meta),
                     false,
-                    crate::operation_log::types::ItemOutcome::Done,
+                    cmdr_operation_log::types::ItemOutcome::Done,
                 );
 
                 // Persist the buffered `search_only` leaves NOW that this item

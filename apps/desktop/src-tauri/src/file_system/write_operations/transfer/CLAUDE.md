@@ -31,7 +31,7 @@ Local: `copy/`, `move_op/`, `copy_strategy.rs`. Cross-volume facade: `transfer::
   keeps its original (`AppearedDuringMove`), as does one saved over after copying (`SourceStamp`).
 - **A MERGED move is NOT rollbackable, and a cross-FS move journals FINAL paths, never staging ones**
   (`note_not_rollbackable`; `JournalDestUnder` rebases, created-dir rows included).
-  `operation_log/DETAILS.md` § "Why a directory merge isn't reversible".
+  `crates/cmdr-operation-log/DETAILS.md` § "Why a directory merge isn't reversible".
 - **Created-dir rows journal on EVERY terminal path**: a canceled transfer keeps the dirs it made. ❌ A new `copy/` arm
   commits through `commit_journaling_created_dirs`, never bare; `move_with_staging` is the ONE exception. DETAILS §
   "Who may commit a `CopyTransaction` bare".

@@ -442,15 +442,15 @@ async fn journaled_same_volume_move(
     destination: &Path,
     config: &VolumeCopyConfig,
 ) -> (
-    crate::operation_log::store::OperationRow,
+    cmdr_operation_log::store::OperationRow,
     crate::operation_log_host::TestJournalGuard,
     TempDir,
 ) {
     use crate::file_system::write_operations::journal;
-    use crate::operation_log::capture::WriterJournal;
-    use crate::operation_log::store::{open_read_connection, operation_log_db_path, read_operation};
-    use crate::operation_log::types::{ExecutionStatus, Initiator, OpKind};
-    use crate::operation_log::writer::OperationLogWriter;
+    use cmdr_operation_log::capture::WriterJournal;
+    use cmdr_operation_log::store::{open_read_connection, operation_log_db_path, read_operation};
+    use cmdr_operation_log::types::{ExecutionStatus, Initiator, OpKind};
+    use cmdr_operation_log::writer::OperationLogWriter;
 
     let journal_dir = TempDir::new().unwrap();
     let db = operation_log_db_path(journal_dir.path());
@@ -489,7 +489,7 @@ async fn journaled_same_volume_move(
 /// is "merged", not "overwrote something".
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn same_volume_merge_that_overwrote_nothing_is_not_rollbackable() {
-    use crate::operation_log::types::{NotRollbackableReason, RollbackState};
+    use cmdr_operation_log::types::{NotRollbackableReason, RollbackState};
 
     let (volume, dir) = local_volume();
     let root = dir.path();
@@ -520,7 +520,7 @@ async fn same_volume_merge_that_overwrote_nothing_is_not_rollbackable() {
 /// the merge.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn same_volume_merge_that_replaced_a_destination_file_is_not_rollbackable() {
-    use crate::operation_log::types::RollbackState;
+    use cmdr_operation_log::types::RollbackState;
 
     let (volume, dir) = local_volume();
     let root = dir.path();
@@ -551,7 +551,7 @@ async fn same_volume_merge_that_replaced_a_destination_file_is_not_rollbackable(
 /// stays reversible, so the merge verdict can't quietly swallow every move.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_same_volume_move_with_no_folder_collision_stays_rollbackable() {
-    use crate::operation_log::types::RollbackState;
+    use cmdr_operation_log::types::RollbackState;
 
     let (volume, dir) = local_volume();
     let root = dir.path();

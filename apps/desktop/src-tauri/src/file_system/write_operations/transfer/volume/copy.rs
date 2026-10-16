@@ -43,7 +43,7 @@ use super::super::transfer_driver::{LeafProgressLedger, build_pre_skip_set};
 use super::preflight::{scan_volume_sources, sources_in_tree_order};
 use crate::file_system::volume::{DirectoryCreation, SpaceInfo, Volume, VolumeError};
 use crate::ignore_poison::IgnorePoison;
-use crate::operation_log::types::OpKind;
+use cmdr_operation_log::types::OpKind;
 
 use super::super::super::ledger::WrittenFile;
 use super::cleanup::{clean_partial_writes, volume_rollback_with_progress};
@@ -131,7 +131,7 @@ pub async fn copy_between_volumes(
     dest_volume: Arc<dyn Volume>,
     dest_path: PathBuf,
     config: VolumeCopyConfig,
-    initiator: crate::operation_log::types::Initiator,
+    initiator: cmdr_operation_log::types::Initiator,
     expected_sources: Option<ExpectedSources>,
 ) -> Result<WriteOperationStartResult, WriteOperationError> {
     super::super::super::validation::validate_transfer_destination_name(
@@ -217,7 +217,7 @@ pub async fn copy_between_volumes(
         .await;
     }
 
-    let operation_id = crate::operation_log::new_operation_id();
+    let operation_id = cmdr_operation_log::new_operation_id();
     log::info!(
         "copy_between_volumes: operation_id={}, source_volume={}, dest_volume={}, {} sources, dest={}",
         operation_id,

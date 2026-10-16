@@ -366,4 +366,28 @@ var surfaceGuardedCrates = []struct {
 			SubsystemItems: 39,
 		},
 	},
+	{
+		// Measured 2026-10-16, at the extraction, and set to exactly what the crate
+		// exposes, with no headroom (David approved the rule in the #415 plan).
+		//
+		// The 11 root promises are `OperationLog`, `OpJournal`, `OpenError`,
+		// `new_operation_id`, and the seven public modules: `store` and `query` (the
+		// read API the IPC commands, the MCP tools, and the dump tool use), `writer`
+		// and `capture` (the write engine journals through them), `types` (the
+		// classification tokens that cross IPC), `rollback` (the planner, its
+		// `RollbackRunner` / `VolumeLookup` traits, and the fail-safe verdicts the
+		// engine's in-flight reversals share), and `retention`. `HandleMethods`
+		// counts `detached` and four by-id journal methods that leave once each
+		// operation carries its `OpJournal`; the `testing`-gated `set_journal` and
+		// `reset_recording` count apart. Item-by-item:
+		// `crates/cmdr-operation-log/DETAILS.md` § "The public surface is capped".
+		Name:       "cmdr-operation-log",
+		HandleType: "OperationLog",
+		Ceilings: surfaceCeilings{
+			RootPromises:   11,
+			HandleMethods:  10,
+			PublicModules:  7,
+			SubsystemItems: 74,
+		},
+	},
 }

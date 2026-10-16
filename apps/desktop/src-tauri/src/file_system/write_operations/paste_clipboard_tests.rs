@@ -82,11 +82,11 @@ async fn png_payload_writes_pasted_png_verbatim() {
 /// `done` and `rollbackable` (a net-new file).
 #[tokio::test]
 async fn paste_journals_a_create_file_operation() {
-    use crate::operation_log::capture::WriterJournal;
-    use crate::operation_log::store::{open_read_connection, operation_log_db_path, recent_operations};
-    use crate::operation_log::types::{ExecutionStatus, OpKind, RollbackState};
-    use crate::operation_log::writer::OperationLogWriter;
     use crate::operation_log_host::TestJournalGuard;
+    use cmdr_operation_log::capture::WriterJournal;
+    use cmdr_operation_log::store::{open_read_connection, operation_log_db_path, recent_operations};
+    use cmdr_operation_log::types::{ExecutionStatus, OpKind, RollbackState};
+    use cmdr_operation_log::writer::OperationLogWriter;
     use std::sync::Arc;
 
     ensure_root_volume();

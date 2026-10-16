@@ -40,7 +40,7 @@ use std::sync::Arc;
 use super::super::event_sinks::OperationEventSink;
 use super::super::manager::StartAgain;
 use super::super::types::{VolumeCopyConfig, WriteOperationError, WriteOperationStartResult};
-use crate::operation_log::types::Initiator;
+use cmdr_operation_log::types::Initiator;
 
 /// Which start a retry runs again.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

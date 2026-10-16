@@ -19,9 +19,9 @@ use serde_json::{Value, json};
 use tauri::{AppHandle, Runtime};
 
 use super::{ToolError, ToolResult};
-use crate::operation_log::query::{self, NameFilter, NameMatch, OperationSearchFilters};
-use crate::operation_log::store::{OperationLogStoreError, open_read_connection, operation_log_db_path};
-use crate::operation_log::types::{ExecutionStatus, Initiator, OpKind, RollbackState};
+use cmdr_operation_log::query::{self, NameFilter, NameMatch, OperationSearchFilters};
+use cmdr_operation_log::store::{OperationLogStoreError, open_read_connection, operation_log_db_path};
+use cmdr_operation_log::types::{ExecutionStatus, Initiator, OpKind, RollbackState};
 
 /// Default op page for `operations_list`.
 const DEFAULT_LIST_LIMIT: u32 = 50;

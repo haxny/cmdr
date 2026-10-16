@@ -7,7 +7,7 @@ use crate::file_system::write_operations::ledger::WrittenFile;
 use crate::file_system::write_operations::test_support::TestOperationGuard;
 use crate::file_system::write_operations::types::{CancelRollback, CancelRollbackOutcome};
 use crate::ignore_poison::IgnorePoison;
-use crate::operation_log::types::SkipReason;
+use cmdr_operation_log::types::SkipReason;
 use std::fs;
 use std::path::Path;
 use std::time::Duration;

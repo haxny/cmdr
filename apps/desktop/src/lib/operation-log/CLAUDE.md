@@ -2,8 +2,7 @@
 
 The alpha "Operation log" dialog (View > Operation log, ⌥⌘L): your file operations newest first, each expandable to its
 per-item rows, and each reversible one carrying a Roll back button. Reads the journal through
-`#lib/tauri-commands/operation-log.ts`; the durable journal itself is
-`apps/desktop/src-tauri/src/operation_log/CLAUDE.md`.
+`#lib/tauri-commands/operation-log.ts`; the durable journal itself is `crates/cmdr-operation-log/CLAUDE.md`.
 
 ## Module map
 

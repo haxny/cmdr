@@ -154,11 +154,11 @@ pub(super) fn move_with_rename(
                 // The disqualifying condition is "merged", not "overwrote
                 // something": a merge that overwrote nothing has the same row and
                 // the same failure. Per-child rows would make it reversible;
-                // `operation_log/DETAILS.md` § "Why a directory merge isn't
+                // `crates/cmdr-operation-log/DETAILS.md` § "Why a directory merge isn't
                 // reversible" holds that decision.
                 journal::note_not_rollbackable(
                     operation_id,
-                    crate::operation_log::types::NotRollbackableReason::DirectoryMerge,
+                    cmdr_operation_log::types::NotRollbackableReason::DirectoryMerge,
                 );
             } else if path_exists_or_is_symlink(&dest_path) {
                 // File-to-file (or type mismatch) conflict
@@ -223,9 +223,9 @@ pub(super) fn move_with_rename(
             // subtree's `search_only` leaves are enumerated from the drive index
             // (search-leaf enumeration).
             let entry_type = if source_is_dir {
-                crate::operation_log::types::EntryType::Dir
+                cmdr_operation_log::types::EntryType::Dir
             } else {
-                crate::operation_log::types::EntryType::File
+                cmdr_operation_log::types::EntryType::File
             };
             journal::record_local_leaf(
                 operation_id,
@@ -235,7 +235,7 @@ pub(super) fn move_with_rename(
                 source_size,
                 source_mtime,
                 item_overwrote,
-                crate::operation_log::types::ItemOutcome::Done,
+                cmdr_operation_log::types::ItemOutcome::Done,
             );
 
             // Persist the buffered `search_only` leaves now that the move

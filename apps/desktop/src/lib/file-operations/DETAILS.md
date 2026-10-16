@@ -42,7 +42,7 @@ Umbrella-level files:
 - `settled-operations.ts`: one `write-settled` subscription per window plus `whenOperationSettled(id)`, the wait a
   follow-up takes before reading an operation's journal rows. It REMEMBERS recent settles, because the event lands
   before anyone asks: it follows its terminal event by microseconds while the completion handling is held for
-  `MIN_DISPLAY_MS`. Why the journal can't be read any earlier: `src-tauri/src/operation_log/DETAILS.md` § "Why a reader
+  `MIN_DISPLAY_MS`. Why the journal can't be read any earlier: `crates/cmdr-operation-log/DETAILS.md` § "Why a reader
   waits for `write-settled`".
 - `operation-conflict.svelte.ts` + `OperationConflictDialog.svelte`: the main window's conflict prompt for an operation
   no progress dialog is showing; its two rules are pure, in `operation-conflict-rules.ts` (§ below).

@@ -11,7 +11,7 @@
 //! column) are token-backed too, but they live in [`super::llm::types`] because the LLM
 //! seam owns them; this module carries the store-only enums.
 //!
-//! The `token_enum!` macro mirrors the operation log's (`operation_log/types.rs`): the
+//! The `token_enum!` macro mirrors the operation log's (`crates/cmdr-operation-log/src/types.rs`): the
 //! two are deliberately separate copies of a tiny code-generator so each durable store
 //! stays self-contained, with no cross-subsystem macro coupling.
 

@@ -31,7 +31,7 @@ use super::types::{ReadOnlySide, VolumeCopyConfig, WriteOperationError, WriteOpe
 use crate::file_system::volume::RoutedKind;
 use crate::file_system::volume::Volume;
 use crate::file_system::volume::manager::{get_volume_manager, path_routes_over_its_parent};
-use crate::operation_log::types::Initiator;
+use cmdr_operation_log::types::Initiator;
 
 /// Turns the destination a caller sent into the path the destination volume
 /// accepts: home shortcut expanded (local only), then anchored at the volume's

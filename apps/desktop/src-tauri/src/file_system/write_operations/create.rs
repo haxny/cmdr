@@ -58,7 +58,7 @@ pub(crate) async fn create_directory_managed(
     volume_id: Option<String>,
     parent_path: String,
     name: String,
-    initiator: crate::operation_log::types::Initiator,
+    initiator: cmdr_operation_log::types::Initiator,
 ) -> Result<String, MutationError> {
     // Wrapped, not emitted per branch: the archive route is an early return and
     // the instant path has three `?`s after it, so any in-body emit would count a
@@ -74,7 +74,7 @@ async fn create_directory_managed_inner(
     volume_id: Option<String>,
     parent_path: String,
     name: String,
-    initiator: crate::operation_log::types::Initiator,
+    initiator: cmdr_operation_log::types::Initiator,
 ) -> (Result<String, MutationError>, super::analytics::InstantTarget) {
     // A parent that crosses into a `.zip` means the new folder lands INSIDE the
     // archive: route to the managed archive-edit driver (an O(archive) rewrite
@@ -100,7 +100,7 @@ async fn create_directory_managed_inner(
     let op_id = descriptor.operation_id.clone();
     super::journal::open_volume_op(
         &op_id,
-        crate::operation_log::types::OpKind::CreateFolder,
+        cmdr_operation_log::types::OpKind::CreateFolder,
         initiator,
         &journal_volume_id,
         None,
@@ -112,8 +112,8 @@ async fn create_directory_managed_inner(
         .await;
     super::journal::journal_instant_create(
         &op_id,
-        crate::operation_log::types::OpKind::CreateFolder,
-        crate::operation_log::types::EntryType::Dir,
+        cmdr_operation_log::types::OpKind::CreateFolder,
+        cmdr_operation_log::types::EntryType::Dir,
         &journal_volume_id,
         result.as_ref().ok().map(|(new_path, _)| new_path.as_path()),
     );
@@ -141,7 +141,7 @@ pub(crate) async fn create_file_managed(
     volume_id: Option<String>,
     parent_path: String,
     name: String,
-    initiator: crate::operation_log::types::Initiator,
+    initiator: cmdr_operation_log::types::Initiator,
 ) -> Result<String, MutationError> {
     // Wrapped, not emitted per branch: the archive route is an early return and
     // the instant path has three `?`s after it, so any in-body emit would count a
@@ -157,7 +157,7 @@ async fn create_file_managed_inner(
     volume_id: Option<String>,
     parent_path: String,
     name: String,
-    initiator: crate::operation_log::types::Initiator,
+    initiator: cmdr_operation_log::types::Initiator,
 ) -> (Result<String, MutationError>, super::analytics::InstantTarget) {
     // See `create_directory_managed`: a `.zip`-crossing parent routes the new
     // (empty) file into the archive via the managed edit driver (parent-aware, so
@@ -178,7 +178,7 @@ async fn create_file_managed_inner(
     let op_id = descriptor.operation_id.clone();
     super::journal::open_volume_op(
         &op_id,
-        crate::operation_log::types::OpKind::CreateFile,
+        cmdr_operation_log::types::OpKind::CreateFile,
         initiator,
         &journal_volume_id,
         None,
@@ -190,8 +190,8 @@ async fn create_file_managed_inner(
         .await;
     super::journal::journal_instant_create(
         &op_id,
-        crate::operation_log::types::OpKind::CreateFile,
-        crate::operation_log::types::EntryType::File,
+        cmdr_operation_log::types::OpKind::CreateFile,
+        cmdr_operation_log::types::EntryType::File,
         &journal_volume_id,
         result.as_ref().ok().map(|(new_path, _)| new_path.as_path()),
     );
@@ -295,7 +295,7 @@ pub(super) fn instant_descriptor(
         Some(id) => vec![id.to_string()],
     };
     OperationDescriptor {
-        operation_id: crate::operation_log::new_operation_id(),
+        operation_id: cmdr_operation_log::new_operation_id(),
         operation_type: op_type,
         lanes: vec![],
         volume_ids,

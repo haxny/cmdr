@@ -140,7 +140,7 @@ pub fn set_rollback_throttle_override(ms: Option<u64>) {
 /// wins, then `CMDR_E2E_ROLLBACK_THROTTLE_MS`, then nothing.
 ///
 /// `None` in every real build, and `None` is the production path: the call site
-/// (`operation_log::rollback::execute_rollback`) does nothing at all with it.
+/// (`cmdr_operation_log::rollback::execute_rollback`) does nothing at all with it.
 pub fn effective_rollback_throttle_ms() -> Option<u64> {
     let override_val = ROLLBACK_THROTTLE_OVERRIDE.load(Ordering::Relaxed);
     if override_val > 0 {

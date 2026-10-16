@@ -105,9 +105,9 @@ is available. It carries two actions and, deliberately, no third.
 
 **Why Undo lives here.** The rollback engine could always reverse a trash: a trash row records the OS's own in-trash
 location (`resultingItemURL`), and its inverse is a pinned restore-move back to the source
-(`src-tauri/src/operation_log/rollback.rs`). What was missing was a surface at the moment it matters. The operation log
-can roll a trash back, but nobody has it open three seconds after a mis-keyed F8, and the queue's Rollback button is a
-different thing entirely (cancel-an-in-flight-op-and-undo-its-partials, gated on running/paused).
+(`crates/cmdr-operation-log/src/rollback.rs`). What was missing was a surface at the moment it matters. The operation
+log can roll a trash back, but nobody has it open three seconds after a mis-keyed F8, and the queue's Rollback button is
+a different thing entirely (cancel-an-in-flight-op-and-undo-its-partials, gated on running/paused).
 
 **Edit > Undo move to trash** (`edit.undoTrash`, also in the palette). The toast's Undo is mouse-first and gone after
 ten seconds, so the same action has a second home. `raiseCompletionToasts` (`file-explorer/pane/dialog-state.svelte.ts`)
@@ -128,7 +128,7 @@ the `trashUndoAvailable` condition and named by `trashUndoCommandLabel`. A langu
 reaches it then), which is why no "nothing to undo" toast exists.
 
 **A trash the trash no longer holds is said plainly.** The rollback engine reports an item gone from the trash AND from
-its old place as a `vanished` skip (`src-tauri/src/operation_log/DETAILS.md` § What counts as already gone), and
+its old place as a `vanished` skip (`crates/cmdr-operation-log/DETAILS.md` § What counts as already gone), and
 `trashUndoOutcome` keeps those apart from items that stayed in the trash: all gone reads "Nothing to put back: they’re
 no longer in the trash.", some gone appends "N items were no longer in the trash." Cmdr itself never empties the trash,
 so this is the only way the app learns the items are gone.

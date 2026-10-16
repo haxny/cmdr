@@ -1387,6 +1387,7 @@ dependencies = [
  "cmdr-listing",
  "cmdr-local",
  "cmdr-mtp",
+ "cmdr-operation-log",
  "cmdr-s3",
  "cmdr-sftp",
  "cmdr-smb",
@@ -1692,6 +1693,22 @@ dependencies = [
  "tempfile",
  "tokio",
  "tokio-util",
+]
+
+[[package]]
+name = "cmdr-operation-log"
+version = "0.0.0"
+dependencies = [
+ "cmdr-fs",
+ "cmdr-operation-log",
+ "log",
+ "rusqlite",
+ "serde",
+ "specta",
+ "tempfile",
+ "tokio",
+ "unicode-normalization",
+ "uuid",
 ]
 
 [[package]]
@@ -7228,7 +7245,7 @@ checksum = "7c87def4c32ab89d880effc9e097653c8da5d6ef28e6b539d313baaacfbafcbe"
 name = "operation-log-dump"
 version = "0.0.0"
 dependencies = [
- "cmdr",
+ "cmdr-operation-log",
  "rusqlite",
 ]
 

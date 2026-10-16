@@ -3,8 +3,8 @@
 //! (read connection, rollback dispatch) are exercised by the live MCP E2E.
 
 use super::*;
-use crate::operation_log::rollback::RollbackRefusal;
-use crate::operation_log::types::{ExecutionStatus, Initiator, NotRollbackableReason, OpKind, RollbackState};
+use cmdr_operation_log::rollback::RollbackRefusal;
+use cmdr_operation_log::types::{ExecutionStatus, Initiator, NotRollbackableReason, OpKind, RollbackState};
 use serde_json::json;
 
 #[test]

@@ -16,10 +16,10 @@ use std::sync::{Arc, OnceLock};
 
 use tauri::AppHandle;
 
-use crate::operation_log::OpenError;
-use crate::operation_log::OperationLog;
-use crate::operation_log::retention::{RetentionLimits, RetentionLimitsSource};
-use crate::operation_log::store::operation_log_db_path;
+use cmdr_operation_log::OpenError;
+use cmdr_operation_log::OperationLog;
+use cmdr_operation_log::retention::{RetentionLimits, RetentionLimitsSource};
+use cmdr_operation_log::store::operation_log_db_path;
 
 pub(crate) use journal::{
     journal_finalize, journal_note_coverage, journal_note_not_rollbackable, journal_open, journal_record_items,
@@ -114,7 +114,7 @@ mod early_reads {
     use std::sync::OnceLock;
     use std::sync::atomic::{AtomicBool, Ordering};
 
-    use crate::operation_log::OperationLog;
+    use cmdr_operation_log::OperationLog;
 
     static HAPPENED: AtomicBool = AtomicBool::new(false);
     static DETACHED: OnceLock<OperationLog> = OnceLock::new();

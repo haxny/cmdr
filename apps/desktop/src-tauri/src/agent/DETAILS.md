@@ -23,7 +23,7 @@ The backend modules:
 - `llm/`: the `AgentLlm` trait, its genai-backed impl over `crate::ai::AiBackend`, the deterministic fake,
   and the typed message-part model. This is the seam the whole runtime and UI test against. Depth:
   `llm/DETAILS.md`.
-- `store/`: the `main.db` durable store — a forward-migration ladder (mirroring `operation_log/store/`),
+- `store/`: the `main.db` durable store — a forward-migration ladder (mirroring `crates/cmdr-operation-log/src/store/`),
   FTS5 over message text, a per-day cost meter, and the durable proposal spine in `store/proposals/`.
   `agent::start(app)` (open the DB, register the `AgentDb` handle, run the interrupted-proposal sweep once) lands here,
   modeled on `operation_log_host::start`. Depth: `store/DETAILS.md`, `store/proposals/DETAILS.md`.

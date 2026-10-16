@@ -43,7 +43,7 @@ use crate::file_system::write_operations::{
     resolve_source_volume, start_renames, start_volume_compress, start_volume_copy, start_volume_move,
     trash_files_start, unregistered_source_error,
 };
-use crate::operation_log::types::Initiator;
+use cmdr_operation_log::types::Initiator;
 
 /// A group whose operation is running, and the operation it became.
 #[derive(Debug, Clone)]

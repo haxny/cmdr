@@ -50,7 +50,7 @@ pub(crate) async fn compress_start(
     progress_interval_ms: u64,
     compression_level: Option<i64>,
     preview_id: Option<String>,
-    initiator: crate::operation_log::types::Initiator,
+    initiator: cmdr_operation_log::types::Initiator,
 ) -> Result<WriteOperationStartResult, WriteOperationError> {
     super::routing::ensure_zip_writable(&dest_zip_full_path, crate::file_system::ReadOnlySide::Destination)?;
     let (dest_zip_full_path, existed) = match get_volume_manager().get(&parent_volume_id) {

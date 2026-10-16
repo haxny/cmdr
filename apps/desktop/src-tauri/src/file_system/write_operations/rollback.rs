@@ -1,7 +1,7 @@
 //! Managed dispatch of an operation-log rollback.
 //!
 //! The rollback ENGINE (what an inverse does, and the data-safety rechecks) lives
-//! in [`crate::operation_log::rollback`]; this thin glue is the only piece that
+//! in [`cmdr_operation_log::rollback`]; this thin glue is the only piece that
 //! needs the [`OperationManager`](super::manager) (reachable only here, inside
 //! `write_operations`), so it lives here. It spawns the inverse operation as a
 //! MANAGED op — cancelable, lane-serialized, and shown in the queue like any
@@ -39,14 +39,14 @@ use crate::file_system::volume::manager::get_volume_manager;
 
 use crate::file_system::volume::{DEFAULT_VOLUME_ID, Volume};
 use crate::ignore_poison::IgnorePoison;
-use crate::operation_log::rollback::{
+use crate::operation_log_host::operation_log;
+use cmdr_operation_log::rollback::{
     ActRefusal, InverseAct, InversePlan, RollbackDispatch, RollbackProgress, RollbackRefusal, RollbackReport,
     RollbackRunner, SkipBreakdown, execute_rollback, inverse_kind, rollback_operation, undo_order,
 };
-use crate::operation_log::store::{open_read_connection, read_operation};
-use crate::operation_log::types::{Initiator, OpKind, RollbackState};
-use crate::operation_log::writer::OperationLogWriter;
-use crate::operation_log_host::operation_log;
+use cmdr_operation_log::store::{open_read_connection, read_operation};
+use cmdr_operation_log::types::{Initiator, OpKind, RollbackState};
+use cmdr_operation_log::writer::OperationLogWriter;
 
 use super::event_sinks::OperationEventSink;
 use super::manager::{ManagedTaskGuard, OperationDescriptor, OperationSummaryText, manager};
@@ -373,7 +373,7 @@ fn spawn_managed_inverse(
         lanes,
         volume_ids,
         // Where the reversal will act, read off the newest journal row at dispatch
-        // (`operation_log::rollback::summarize_inverse`), so the queue row isn't
+        // (`cmdr_operation_log::rollback::summarize_inverse`), so the queue row isn't
         // nameless while it works.
         summary: OperationSummaryText {
             source: plan.summary.from.clone(),
@@ -536,10 +536,7 @@ fn refused(op_id: &str, refusal: RollbackRefusal) -> OperationUndoOutcome {
 /// Anything unreadable becomes an `UnknownOperation` outcome instead of vanishing.
 fn read_undoable_rows(
     operation_ids: &[String],
-) -> (
-    Vec<crate::operation_log::store::OperationRow>,
-    Vec<OperationUndoOutcome>,
-) {
+) -> (Vec<cmdr_operation_log::store::OperationRow>, Vec<OperationUndoOutcome>) {
     let Some(writer) = operation_log().writer() else {
         let missing = operation_ids
             .iter()
@@ -575,7 +572,7 @@ fn read_undoable_rows(
 /// reversal through the very calls the queue window makes
 /// (`cancel_write_operation` / `pause_operation`) instead of reaching into the
 /// intent atom, which `docs/testing.md` names as the anti-pattern for this hot
-/// spot. `pub(crate)` because the engine's own suite (in `operation_log::rollback`)
+/// spot. `pub(crate)` because the planner's end-to-end suite (`planner_tests`)
 /// drives the planner and this executor as the pair they are.
 #[cfg(test)]
 pub(crate) struct Reversal {
@@ -732,3 +729,8 @@ mod tests {
         );
     }
 }
+
+// The operation log's rollback planner, driven end to end by this executor. The
+// planner lives in `cmdr-operation-log`; its pure helpers are tested there.
+#[cfg(test)]
+mod planner_tests;

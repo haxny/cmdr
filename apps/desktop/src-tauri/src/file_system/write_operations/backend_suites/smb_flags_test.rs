@@ -17,13 +17,13 @@ use super::network_transfer_test_support::{clean_deep, run_copy, self_describing
 use super::smb_test_support::*;
 use crate::file_system::VolumeManager;
 use crate::file_system::write_operations::rollback::Reversal;
-use crate::operation_log::capture::WriterJournal;
-use crate::operation_log::rollback::{execute_rollback, rollback_operation};
-use crate::operation_log::store::operation_log_db_path;
-use crate::operation_log::types::Initiator;
-use crate::operation_log::writer::OperationLogWriter;
 use crate::operation_log_host::TestJournalGuard;
 use cmdr_local::LocalPosixVolume;
+use cmdr_operation_log::capture::WriterJournal;
+use cmdr_operation_log::rollback::{execute_rollback, rollback_operation};
+use cmdr_operation_log::store::operation_log_db_path;
+use cmdr_operation_log::types::Initiator;
+use cmdr_operation_log::writer::OperationLogWriter;
 
 /// Big enough for the streaming writer, not the one-frame write.
 const STREAMED_BYTES: usize = 10 * 1024 * 1024;

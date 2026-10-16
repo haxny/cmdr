@@ -1,6 +1,6 @@
 # Operation log host: details
 
-The app side of the operation log. The log (`../operation_log/`) owns its state in an `OperationLog` handle and knows
+The app side of the operation log. The log (`crates/cmdr-operation-log/`) owns its state in an `OperationLog` handle and knows
 nothing about Tauri, settings, or the data dir; this module supplies them.
 
 ## Startup
@@ -27,8 +27,9 @@ nothing about Tauri, settings, or the data dir; this module supplies them.
 through its unrecorded set, so an operation stays wholly journaled or wholly not even though the caller drops the
 `OpJournal`. Once each operation carries its `OpJournal`, these and the by-id methods go.
 
-- **Decision: these live here, not in `operation_log/`.** Why: they call the app accessor; from inside the log that
-  would make `operation_log ↔ operation_log_host` one cycle, and the log could never become its own crate.
+- **Decision: these live here, not in the crate.** Why: they call the app accessor, which the crate can't name. They
+  lived here from the start so the log could become its own crate without an `operation_log ↔ operation_log_host`
+  cycle in between.
 
 ## Answers passed in
 

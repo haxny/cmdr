@@ -17,7 +17,7 @@ use tokio::time::Duration;
 
 use crate::deadline::{Deadline, timeout_detached_typed};
 use crate::file_system::volume::manager::get_volume_manager;
-use crate::operation_log::types::Initiator;
+use cmdr_operation_log::types::Initiator;
 
 /// Unified copy across volume types (local, MTP, extract out of a `.zip`).
 /// Emits write-progress, write-complete, write-error, write-cancelled.

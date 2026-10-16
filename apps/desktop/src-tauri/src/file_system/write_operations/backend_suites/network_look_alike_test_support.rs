@@ -30,7 +30,7 @@ use super::network_safety_test_support::{Registered, delete_on};
 use super::network_semantics_test_support::{Transfer, local_volume, names_in, seed, transfer, try_read};
 use super::network_transfer_test_support::{budget, clean_deep};
 use crate::ignore_poison::IgnorePoison;
-use crate::operation_log::types::Initiator;
+use cmdr_operation_log::types::Initiator;
 
 pub(super) const CAFE_NFC: &str = "caf\u{e9}.txt";
 pub(super) const CAFE_NFD: &str = "cafe\u{301}.txt";

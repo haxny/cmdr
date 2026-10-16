@@ -125,7 +125,6 @@ mod network;
 mod notifications;
 #[cfg(feature = "playwright-e2e")]
 mod open_mock;
-pub mod operation_log;
 mod operation_log_host;
 #[cfg(target_os = "macos")]
 mod permissions;

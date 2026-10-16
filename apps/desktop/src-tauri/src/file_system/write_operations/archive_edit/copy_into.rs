@@ -30,10 +30,10 @@ use super::engine::{MutatorHooks, emit_archive_terminal, run_managed_edit, to_wr
 use super::routing::{ensure_zip_writable, normalize_inner_path, read_only_error};
 use crate::file_system::volume::manager::get_volume_manager;
 use crate::file_system::volume::{LaneKey, Volume, VolumeError};
-use crate::operation_log::types::{ArchiveSubkind, ExecutionStatus};
 use cmdr_archive::mutator::{self, AddEntry, AddSource, Changeset, MutationError};
 use cmdr_archive::{ArchiveFormat, ArchiveIndex, LocalFileSource};
 use cmdr_local::LocalPosixVolume;
+use cmdr_operation_log::types::{ArchiveSubkind, ExecutionStatus};
 
 /// Routes a copy/move INTO a zip (a source dropped onto an archive destination)
 /// to the managed edit driver as a SINGLE `{ add + mkdir }` changeset — the whole
@@ -87,7 +87,7 @@ pub(crate) async fn route_archive_copy_into(
         is_move,
         compression_level,
         preview_id,
-        super::super::journal::ArchiveProvenance::edit(crate::operation_log::types::Initiator::User),
+        super::super::journal::ArchiveProvenance::edit(cmdr_operation_log::types::Initiator::User),
         None,
     )
     .await
@@ -595,7 +595,7 @@ async fn archive_copy_into_start(
     prov: super::super::journal::ArchiveProvenance,
     destination_name: Option<String>,
 ) -> Result<WriteOperationStartResult, WriteOperationError> {
-    let operation_id = crate::operation_log::new_operation_id();
+    let operation_id = cmdr_operation_log::new_operation_id();
     let operation_type = if prov.subkind == ArchiveSubkind::Compress {
         WriteOperationType::Compress
     } else {

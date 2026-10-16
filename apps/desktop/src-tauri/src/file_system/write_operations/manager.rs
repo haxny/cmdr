@@ -68,7 +68,7 @@ use std::sync::{Arc, LazyLock, Mutex, OnceLock};
 
 use crate::file_system::volume::LaneKey;
 use crate::ignore_poison::IgnorePoison;
-use crate::operation_log::types::OpKind;
+use cmdr_operation_log::types::OpKind;
 
 use super::scan_cache;
 use super::state::{

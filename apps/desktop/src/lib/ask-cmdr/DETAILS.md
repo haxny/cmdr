@@ -423,9 +423,9 @@ A batch applied while the operation log is off (`operationLog.enabled`) was neve
 keeps covering the batches that were recorded (`#lib/operation-log/recording.ts`).
 
 **The id order is the data-safety part.** `undoOperations` receives them in APPLY order and the backend reverses
-newest-batch-first (`src-tauri/src/operation_log/rollback/order.rs`): a later batch can have renamed a file into a name
-an earlier batch freed, and oldest-first then finds that name occupied, correctly refuses to overwrite, and leaves the
-file unrestored. Apply order is also what breaks a same-second tie in the journal's whole-second clock.
+newest-batch-first (`crates/cmdr-operation-log/src/rollback/order.rs`): a later batch can have renamed a file into a
+name an earlier batch freed, and oldest-first then finds that name occupied, correctly refuses to overwrite, and leaves
+the file unrestored. Apply order is also what breaks a same-second tie in the journal's whole-second clock.
 
 The call resolves only when the reversal has actually finished, so the line reports what came back rather than claiming
 success on dispatch. `rename-undo.ts` maps the report to a display state, and anything left behind outranks what
@@ -436,8 +436,8 @@ otherwise offer an Undo for a batch reversed from the operation log meanwhile.
 
 **Each reason gets its own line, naming the file when it applies to just one** ("Left `invoice-2026.pdf` alone: it
 changed since the rename."). The backend carries a per-reason breakdown (`SkipBreakdown { reason, count, exampleName }`,
-complete counts — see `src-tauri/src/operation_log/DETAILS.md` § Undoing a job); `undoStateFromReport` merges those
-groups across the job's batches (counts sum; the first example wins, and the report arrives newest-batch-first) and
+complete counts — see `crates/cmdr-operation-log/DETAILS.md` § Undoing a job); `undoStateFromReport` merges those groups
+across the job's batches (counts sum; the first example wins, and the report arrives newest-batch-first) and
 `undoSkipMessage` maps each typed reason to copy through an exhaustive record, so a new reason is a compile error until
 it's decided.
 
