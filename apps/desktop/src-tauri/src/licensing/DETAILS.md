@@ -10,6 +10,11 @@ Depth and rationale. `CLAUDE.md` holds the must-knows; the flows, decisions, and
    `license_key_in_secret_store`, `cached_license_status`, `last_validation_timestamp`, `expiration_modal_shown`,
    `commercial_reminder_last_dismissed`, `license_clock_high_water`. No secrets: the key itself is in the secret store
    (§ Key storage).
+   Every change saves at once through `key_storage::save_license_file`, which logs a write that didn't land: the
+   plugin's debounced auto-save would drop that failure silently. Activation goes further and fails with
+   `StorageError` when the marker can't be saved, since without it the next launch reads as unlicensed. The save itself
+   is temp+rename (`vendor/tauri-plugin-store/CMDR-PATCH.md`), and an unreadable file is set aside at launch
+   (`../state_recovery/DETAILS.md`).
 
 What the cached answer is worth as it ages: § Offline policy.
 

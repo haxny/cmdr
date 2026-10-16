@@ -8,6 +8,7 @@
 //!
 //! What a license is worth offline is decided in `offline_policy.rs`.
 
+use crate::licensing::key_storage::save_license_file;
 use crate::licensing::license_key::{self, LicenseInfo, get_license_info};
 use crate::licensing::offline_policy::{self, CachedLicenseStatus, KeyTerms, LicenseState};
 use crate::licensing::verification::{LicenseActivationError, SignedValidationAnswer};
@@ -322,6 +323,7 @@ fn effective_now(app: &tauri::AppHandle) -> u64 {
         .unwrap_or(0);
     if now >= high_water.saturating_add(CLOCK_HIGH_WATER_STEP_SECS) {
         store.set(STORE_KEY_CLOCK_HIGH_WATER, serde_json::json!(now));
+        save_license_file(&store);
     }
     now.max(high_water)
 }
@@ -330,6 +332,7 @@ fn effective_now(app: &tauri::AppHandle) -> u64 {
 fn set_clock_high_water(app: &tauri::AppHandle, timestamp: u64) {
     if let Ok(store) = app.store("license.json") {
         store.set(STORE_KEY_CLOCK_HIGH_WATER, serde_json::json!(timestamp));
+        save_license_file(&store);
     }
 }
 
@@ -349,6 +352,7 @@ fn expiration_modal_shown(app: &tauri::AppHandle) -> bool {
 pub fn mark_expiration_modal_shown(app: &tauri::AppHandle) {
     if let Ok(store) = app.store("license.json") {
         store.set(STORE_KEY_EXPIRATION_SHOWN, serde_json::json!(true));
+        save_license_file(&store);
     }
 }
 
@@ -374,6 +378,7 @@ fn should_show_commercial_reminder(app: &tauri::AppHandle) -> bool {
                 STORE_KEY_REMINDER_LAST_DISMISSED,
                 serde_json::json!(current_timestamp()),
             );
+            save_license_file(&store);
             false
         }
     }
@@ -386,6 +391,7 @@ pub fn mark_commercial_reminder_dismissed(app: &tauri::AppHandle) {
             STORE_KEY_REMINDER_LAST_DISMISSED,
             serde_json::json!(current_timestamp()),
         );
+        save_license_file(&store);
     }
 }
 
@@ -438,6 +444,7 @@ pub fn write_cached_status_without_validation(
         if status != "expired" {
             store.delete(STORE_KEY_EXPIRATION_SHOWN);
         }
+        save_license_file(&store);
     }
 
     refresh_window_title(app);
@@ -466,6 +473,7 @@ pub fn update_cached_status(
         if status != "expired" {
             store.delete(STORE_KEY_EXPIRATION_SHOWN);
         }
+        save_license_file(&store);
     }
 
     refresh_window_title(app);
@@ -518,6 +526,7 @@ pub fn reset_license(app: &tauri::AppHandle) {
         store.delete(STORE_KEY_EXPIRATION_SHOWN);
         store.delete(STORE_KEY_REMINDER_LAST_DISMISSED);
         store.delete(STORE_KEY_CLOCK_HIGH_WATER);
+        save_license_file(&store);
     }
 
     refresh_window_title(app);

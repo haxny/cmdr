@@ -59,6 +59,16 @@ impl<R: tauri::Runtime> LicenseFile for tauri_plugin_store::Store<R> {
     }
 }
 
+/// Writes `license.json` now, and says so when it can't. The store plugin's debounced auto-save
+/// drops a failed write without a word, so every change here saves explicitly: the patched plugin
+/// leaves the old file whole on a failure (`vendor/tauri-plugin-store/CMDR-PATCH.md`), and the log
+/// says the change didn't land.
+pub(super) fn save_license_file<R: tauri::Runtime>(store: &tauri_plugin_store::Store<R>) {
+    if let Err(e) = store.save() {
+        log::warn!("Couldn't save {LICENSE_FILE}, so the last saved version stays: {e}");
+    }
+}
+
 /// Moves a license key an older version left in `license.json` in plain text into the secret
 /// store. Runs once per launch, before the first status check; a no-op once moved. A failure
 /// keeps the key in the file (the license keeps working from there) and retries next launch.
@@ -72,7 +82,10 @@ pub fn move_license_key_into_secret_store(app: &tauri::AppHandle) {
     };
     match migrate(&*store, crate::secrets::store()) {
         MigrationOutcome::NothingToMigrate => {}
-        MigrationOutcome::Migrated => log::info!("Moved the license key from {LICENSE_FILE} into the secret store"),
+        MigrationOutcome::Migrated => {
+            save_license_file(&store);
+            log::info!("Moved the license key from {LICENSE_FILE} into the secret store");
+        }
         MigrationOutcome::KeptInFile(reason) => log::warn!(
             "Couldn't move the license key into the secret store, keeping it in {LICENSE_FILE} and retrying next launch: {reason}"
         ),
@@ -83,6 +96,7 @@ pub fn move_license_key_into_secret_store(app: &tauri::AppHandle) {
 pub(super) fn clear_stored_license(app: &tauri::AppHandle) {
     if let Ok(store) = app.store(LICENSE_FILE) {
         clear(&*store, crate::secrets::store());
+        save_license_file(&store);
     }
 }
 

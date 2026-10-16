@@ -107,6 +107,11 @@ pub(super) fn store_license(
         log::warn!("Couldn't store the license key in the secret store: {e}");
         LicenseActivationError::StorageError { detail: e.to_string() }
     })?;
+    // The marker that says the key is in the secret store has to be on disk, or the next launch
+    // reads the app as unlicensed.
+    store.save().map_err(|e| LicenseActivationError::StorageError {
+        detail: format!("Couldn't save {LICENSE_FILE}: {e}"),
+    })?;
     KEY_UNREADABLE.store(false, Ordering::Relaxed);
 
     let info = LicenseInfo {
