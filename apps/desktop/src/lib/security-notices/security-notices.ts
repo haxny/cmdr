@@ -20,7 +20,7 @@ import { addToast } from '#lib/ui/toast/index.js'
 import SecurityNoticeToastContent from './SecurityNoticeToastContent.svelte'
 import { isDismissed, markDismissed, securityNoticeId } from './dismissed-notices'
 
-export { dismissSecurityNotice, securityNoticeId, _resetSecurityNoticesForTest } from './dismissed-notices'
+export { dismissSecurityNotice, _resetSecurityNoticesForTest } from './dismissed-notices'
 
 /** Every security notice counts against one group, so a burst can't push unrelated toasts off. */
 export const SECURITY_NOTICE_GROUP = 'security-notice'
