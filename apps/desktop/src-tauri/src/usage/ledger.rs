@@ -108,23 +108,12 @@ fn cleanup_tmp_file(path: &Path) {
     }
 }
 
-/// Renames the file to a `.broken` sibling so one unreadable ledger survives for debugging. A real
-/// ledger is never wiped without a copy left behind. If the rename itself fails, leave the file
-/// alone and let this launch run on an empty in-memory ledger: a hint that stays quiet costs less
-/// than a deleted history.
+/// Sets the file aside (`crate::state_recovery`) so the unreadable ledger survives and the person
+/// hears it reset. A real ledger is never wiped without a copy left behind. If the rename itself
+/// fails, the file stays and this launch runs on an empty in-memory ledger: a hint that stays quiet
+/// costs less than a deleted history.
 fn quarantine_broken(path: &Path) {
-    let broken = path.with_extension("json.broken");
-    if broken.exists() {
-        // Overwrite any previous quarantine; only the most recent corruption matters.
-        let _ = fs::remove_file(&broken);
-    }
-    match fs::rename(path, &broken) {
-        Ok(()) => log::warn!(target: LOG_TARGET, "Quarantined an unreadable launch-day ledger to {broken:?}"),
-        Err(e) => log::warn!(
-            target: LOG_TARGET,
-            "Couldn't quarantine the unreadable launch-day ledger at {path:?}: {e}"
-        ),
-    }
+    crate::state_recovery::set_aside(path, crate::state_recovery::StateFile::LaunchDays);
 }
 
 #[cfg(test)]
@@ -240,16 +229,20 @@ mod tests {
         let path = dir.path().join(FILE_NAME);
         fs::write(&path, "{not valid json at all").expect("write garbage");
 
+        let notices = crate::state_recovery::testing::capture_recoveries();
         record(&path, day(2026, 9, 9));
 
         assert_eq!(read(&path), days(&["2026-09-09"]));
-        let broken = path.with_extension("json.broken");
-        assert!(broken.exists(), "expected quarantine at {broken:?}");
+        let kept = crate::state_recovery::testing::kept_copies(&path);
+        assert_eq!(kept.len(), 1, "expected one set-aside copy: {kept:?}");
         assert_eq!(
-            fs::read_to_string(&broken).expect("read broken"),
+            fs::read_to_string(&kept[0]).expect("read the copy"),
             "{not valid json at all",
             "the unreadable ledger should survive as a copy, not be wiped"
         );
+        let recoveries = notices.recoveries();
+        assert_eq!(recoveries.len(), 1, "one notice, however many reads follow");
+        assert_eq!(recoveries[0].file, crate::state_recovery::StateFile::LaunchDays);
     }
 
     #[test]
@@ -258,11 +251,14 @@ mod tests {
         let path = dir.path().join(FILE_NAME);
         fs::write(&path, r#"{"_schemaVersion": 2, "launchDays": ["2026-01-01"]}"#).expect("write");
 
+        let notices = crate::state_recovery::testing::capture_recoveries();
         assert!(read(&path).is_empty());
-        assert!(
-            path.with_extension("json.broken").exists(),
-            "a version mismatch should quarantine"
+        assert_eq!(
+            crate::state_recovery::testing::kept_copies(&path).len(),
+            1,
+            "a version mismatch should set the file aside"
         );
+        assert_eq!(notices.recoveries().len(), 1);
     }
 
     #[test]

@@ -73,6 +73,7 @@ impl RecentEntry for MultiRenamePreset {
     const FILENAME: &'static str = "multi-rename-presets.json";
     const LOG_TARGET: &'static str = "multi_rename::presets";
     const LOG_NAME: &'static str = "multi-rename presets";
+    const STATE_FILE: crate::state_recovery::StateFile = crate::state_recovery::StateFile::MultiRenamePresets;
 
     fn id(&self) -> &str {
         &self.id
@@ -170,6 +171,7 @@ impl RecentEntry for LastSpec {
     const FILENAME: &'static str = "multi-rename-last.json";
     const LOG_TARGET: &'static str = "multi_rename::presets";
     const LOG_NAME: &'static str = "multi-rename last settings";
+    const STATE_FILE: crate::state_recovery::StateFile = crate::state_recovery::StateFile::MultiRenameLastSettings;
 
     fn id(&self) -> &str {
         &self.id

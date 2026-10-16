@@ -1,0 +1,14 @@
+{
+  "stateRecovery.license.title": "Cmdr couldn’t read its licence file",
+  "@stateRecovery.license.title": {
+    "sourceHash": "64726c1"
+  },
+  "stateRecovery.license.body": "If Cmdr shows as unlicensed now, enter your licence key again in Settings › Licence.",
+  "@stateRecovery.license.body": {
+    "sourceHash": "ea51589"
+  },
+  "stateRecovery.favorites.title": "Cmdr couldn’t read your favourites, so the list starts empty",
+  "@stateRecovery.favorites.title": {
+    "sourceHash": "1048c2b"
+  }
+}

@@ -23,7 +23,9 @@ pub use episodes::{note_mcp_rejection, note_smb_signature_rejection};
 // Only the macOS updater records a policy refusal, so the re-export would be unused elsewhere.
 #[cfg(target_os = "macos")]
 pub use types::PolicyRefusal;
-pub use types::{Initiator, LogLine, McpRejection, PolicyTrigger, RecordingSwitch, SecurityEvent, SignatureCheck};
+pub use types::{
+    Initiator, LogLine, McpRejection, PolicyTrigger, RecordingSwitch, SecurityEvent, SignatureCheck, StateFile,
+};
 pub use writer::file_path;
 
 const LOG_TARGET: &str = "security_log";

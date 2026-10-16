@@ -73,6 +73,11 @@ pub enum SecurityEvent {
     RecordingTurnedOff {
         by: RecordingSwitch,
     },
+    /// Cmdr couldn't read one of its own state files, so it set the file aside (or recreated a
+    /// database) and started that state fresh. Names which file, never its path.
+    StateFileRecovered {
+        file: StateFile,
+    },
 }
 
 /// Who started or stopped something.
@@ -138,6 +143,41 @@ pub enum RecordingSwitch {
     Organization,
 }
 
+/// One of Cmdr's own state files in the app data dir. Also crosses IPC in the recovery notice
+/// (`crate::state_recovery::StateRecovery`), where it rides the same tokens.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "snake_case")]
+pub enum StateFile {
+    /// `settings.json`.
+    Settings,
+    /// `shortcuts.json`.
+    Shortcuts,
+    /// `license.json`. The key itself lives in the secret store.
+    License,
+    /// `app-status.json`: each pane's folder, tabs, and layout.
+    AppStatus,
+    /// `operation-log.db`, which undo reads.
+    OperationLog,
+    /// `main.db`, Ask Cmdr's chats.
+    ChatHistory,
+    /// `favorites.json`.
+    Favorites,
+    /// The Go to path dialog's recent paths.
+    GoToPathHistory,
+    /// The search dialog's recent queries.
+    SearchHistory,
+    /// The Selection dialog's recent selections.
+    SelectionHistory,
+    /// Saved multi-rename presets.
+    MultiRenamePresets,
+    /// The multi-rename dialog's last settings.
+    MultiRenameLastSettings,
+    /// The multi-rename dialog's per-field history.
+    MultiRenameFieldHistory,
+    /// `usage.json`, the days Cmdr was opened on.
+    LaunchDays,
+}
+
 /// One line of the file: `{"v":1,"at":"<UTC ISO 8601>","event":{"kind":…}}`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct LogLine {
@@ -176,6 +216,7 @@ mod tests {
             SecurityEvent::SmbSignatureRejectionsStarted { .. } => &["volume_id"],
             SecurityEvent::SmbSignatureRejectionsEnded { .. } => &["volume_id", "count"],
             SecurityEvent::RecordingTurnedOn { .. } | SecurityEvent::RecordingTurnedOff { .. } => &["by"],
+            SecurityEvent::StateFileRecovered { .. } => &["file"],
         }
     }
 
@@ -265,6 +306,12 @@ mod tests {
                     by: RecordingSwitch::User,
                 },
                 r#"{"kind":"recording_turned_off","by":"user"}"#,
+            ),
+            (
+                SecurityEvent::StateFileRecovered {
+                    file: StateFile::OperationLog,
+                },
+                r#"{"kind":"state_file_recovered","file":"operation_log"}"#,
             ),
         ]
     }

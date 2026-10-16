@@ -49,6 +49,7 @@ impl RecentEntry for SelectionHistoryEntry {
     const FILENAME: &'static str = "selection-history.json";
     const LOG_TARGET: &'static str = "selection::history";
     const LOG_NAME: &'static str = "selection history";
+    const STATE_FILE: crate::state_recovery::StateFile = crate::state_recovery::StateFile::SelectionHistory;
 
     fn id(&self) -> &str {
         &self.id

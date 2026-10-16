@@ -1,5 +1,5 @@
 //! The JSON file under a recents list: a schema-versioned envelope, a durable
-//! write, and the quarantine path for a file we can't read.
+//! write, and the set-aside path for a file we can't read.
 
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -22,8 +22,8 @@ struct Envelope<C> {
 /// Reads the list at `path`, newest first.
 ///
 /// A file we can't parse, or one stamped with a schema version we don't know, is
-/// quarantined and we start empty: the user keeps using the dialog, and the
-/// unreadable file survives one rotation in case we want to look at it. There's
+/// set aside and we start empty: the user keeps using the dialog, hears once that
+/// it reset, and the unreadable file survives in case we want to look at it. There's
 /// only ever been one version, so a migrator would be speculative; when v2 lands,
 /// this version check becomes a `match`.
 pub(super) fn read<E: RecentEntry>(path: &Path) -> Vec<E> {
@@ -79,28 +79,12 @@ fn cleanup_tmp_file(path: &Path) {
     }
 }
 
-/// Renames the file to a `.broken` sibling so one unreadable snapshot survives for
-/// debugging without leaving the user blocked. If the rename itself fails, drop the
-/// file outright: a deleted history beats a broken one.
+/// Sets the file aside (`crate::state_recovery`) so the unreadable snapshot survives and the person
+/// hears that this list reset. If the rename itself fails, drop the file outright: a deleted
+/// history beats a broken one.
 fn quarantine_broken<E: RecentEntry>(path: &Path) {
-    let broken = path.with_extension("json.broken");
-    if broken.exists() {
-        // Overwrite any previous quarantine; only the most recent corruption matters.
-        let _ = fs::remove_file(&broken);
-    }
-    if let Err(e) = fs::rename(path, &broken) {
-        log::warn!(
-            target: E::LOG_TARGET,
-            "Couldn't quarantine corrupted {} at {:?} (will delete instead): {e}",
-            E::LOG_NAME, path
-        );
+    if crate::state_recovery::set_aside(path, E::STATE_FILE).is_none() {
         let _ = fs::remove_file(path);
-    } else {
-        log::warn!(
-            target: E::LOG_TARGET,
-            "Quarantined corrupted {} to {:?}",
-            E::LOG_NAME, broken
-        );
     }
 }
 
@@ -156,12 +140,16 @@ mod tests {
         let path = dir.path().join(TestEntry::FILENAME);
         fs::write(&path, "{not valid json at all").expect("write garbage");
 
+        let notices = crate::state_recovery::testing::capture_recoveries();
         let entries: Vec<TestEntry> = read(&path);
         assert!(entries.is_empty());
 
-        let broken = path.with_extension("json.broken");
-        assert!(broken.exists(), "expected quarantine at {broken:?}");
+        let kept = crate::state_recovery::testing::kept_copies(&path);
+        assert_eq!(kept.len(), 1, "expected one set-aside copy: {kept:?}");
         assert!(!path.exists(), "original file should be gone");
+        let recoveries = notices.recoveries();
+        assert_eq!(recoveries.len(), 1, "one notice");
+        assert_eq!(recoveries[0].file, TestEntry::STATE_FILE);
     }
 
     #[test]
@@ -171,25 +159,35 @@ mod tests {
         // Hand-write a v2 file that we don't know how to parse.
         fs::write(&path, r#"{"_schemaVersion": 2, "entries": []}"#).expect("write");
 
+        let notices = crate::state_recovery::testing::capture_recoveries();
         let entries: Vec<TestEntry> = read(&path);
         assert!(entries.is_empty());
 
-        let broken = path.with_extension("json.broken");
-        assert!(broken.exists(), "version mismatch should quarantine");
+        assert_eq!(
+            crate::state_recovery::testing::kept_copies(&path).len(),
+            1,
+            "version mismatch should set the file aside"
+        );
+        assert_eq!(notices.recoveries().len(), 1);
     }
 
     #[test]
-    fn a_second_corruption_replaces_the_quarantined_copy() {
+    fn a_second_corruption_keeps_both_copies() {
+        let _notices = crate::state_recovery::testing::capture_recoveries();
         let dir = tempfile::tempdir().expect("tempdir");
         let path = dir.path().join(TestEntry::FILENAME);
-        let broken = path.with_extension("json.broken");
 
         fs::write(&path, "first garbage").expect("write");
         let _: Vec<TestEntry> = read(&path);
         fs::write(&path, "second garbage").expect("write");
         let _: Vec<TestEntry> = read(&path);
 
-        assert_eq!(fs::read_to_string(&broken).expect("read broken"), "second garbage");
+        let kept = crate::state_recovery::testing::kept_copies(&path);
+        let contents: Vec<String> = kept
+            .iter()
+            .map(|copy| fs::read_to_string(copy).expect("read a copy"))
+            .collect();
+        assert_eq!(contents, vec!["first garbage", "second garbage"]);
     }
 
     #[test]

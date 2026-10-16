@@ -56,7 +56,7 @@ pub struct SecurityNoticeRaised {
 
 /// Which events the person hears about. Everything else is the record's alone: a missing or
 /// wrong MCP token (a client being set up, or one holding the previous run's token, David's
-/// call 2026-10-16), a policy refusal, an install, an episode's end.
+/// call 2026-10-16), a policy refusal, an install, an episode's end, a recovered state file.
 fn notice_for(event: &SecurityEvent) -> Option<AccessNotice> {
     match event {
         SecurityEvent::McpRejectionsStarted {
@@ -82,7 +82,10 @@ fn notice_for(event: &SecurityEvent) -> Option<AccessNotice> {
         | SecurityEvent::UpdateInstalled { .. }
         | SecurityEvent::UpdateRefusedByPolicy { .. }
         | SecurityEvent::RecordingTurnedOn { .. }
-        | SecurityEvent::RecordingTurnedOff { .. } => None,
+        | SecurityEvent::RecordingTurnedOff { .. }
+        // The recovery notice has its own channel, since it names where the copy went:
+        // `crate::state_recovery`.
+        | SecurityEvent::StateFileRecovered { .. } => None,
     }
 }
 

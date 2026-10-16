@@ -36,6 +36,7 @@ impl RecentEntry for RecentPathEntry {
     const FILENAME: &'static str = "go-to-path-history.json";
     const LOG_TARGET: &'static str = "go_to_path::history";
     const LOG_NAME: &'static str = "go-to-path history";
+    const STATE_FILE: crate::state_recovery::StateFile = crate::state_recovery::StateFile::GoToPathHistory;
 
     fn id(&self) -> &str {
         &self.id

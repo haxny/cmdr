@@ -54,7 +54,8 @@ it's uncapped, append-only, ordered by first sight, and its entries are bare str
 - **Missing file**: a fresh ledger, no warning. This is every first launch.
 - **Missing directory**: `write` creates the parents. `resolved_app_data_dir` already does too, so this only matters
   for a data dir removed mid-session.
-- **Unparseable file**: quarantined to `usage.json.broken` (one rotation kept), a warning logged, and this launch runs
+- **Unparseable file**: set aside as a timestamped `usage.json.broken-…` copy (`../state_recovery/DETAILS.md`, which
+  also tells the person once), a warning logged, and this launch runs
   on an empty in-memory ledger. The next write starts a new file, so a corrupted ledger costs the history but leaves a
   copy on disk for anyone debugging it.
 - **Unknown `_schemaVersion`**: same quarantine path. There's only ever been one version, so a migrator would be

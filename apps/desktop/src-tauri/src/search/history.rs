@@ -83,6 +83,7 @@ impl RecentEntry for HistoryEntry {
     const FILENAME: &'static str = "search-history.json";
     const LOG_TARGET: &'static str = "search::history";
     const LOG_NAME: &'static str = "search history";
+    const STATE_FILE: crate::state_recovery::StateFile = crate::state_recovery::StateFile::SearchHistory;
 
     fn id(&self) -> &str {
         &self.id

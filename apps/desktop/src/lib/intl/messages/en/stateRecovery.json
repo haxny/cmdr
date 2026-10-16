@@ -1,0 +1,89 @@
+{
+  "stateRecovery.settings.title": "Cmdr couldn’t read your settings, so it started with the defaults",
+  "@stateRecovery.settings.title": {
+    "description": "Headline of a notice shown once at launch: Cmdr's settings file was damaged (for example by a crash or a full disk while it was being saved), so Cmdr set it aside and started with default settings. \"Cmdr\" is the product name. Sentence case, no full stop. Avoid the words \"error\" and \"failed\". Pop-up notice (toast) in the corner of Cmdr's main window."
+  },
+  "stateRecovery.settings.body": "Usage stats and crash reports stay off until you turn them back on in Settings › Updates & privacy.",
+  "@stateRecovery.settings.body": {
+    "description": "Body of the notice above. Cmdr turned two privacy settings off on purpose (the person may have turned them off before, and Cmdr can't tell any more), and this says how to turn them back on. \"Settings › Updates & privacy\" names the settings window and its section: keep the › separator and use the section's translated name. Plain text. Pop-up notice (toast) in the corner of Cmdr's main window."
+  },
+  "stateRecovery.settings.openSettings": "Open Settings",
+  "@stateRecovery.settings.openSettings": {
+    "description": "Button on the notice above that opens Cmdr's Settings on the Updates & privacy section. VERB phrase, short control label. Pop-up notice (toast) in the corner of Cmdr's main window."
+  },
+  "stateRecovery.shortcuts.title": "Cmdr couldn’t read your keyboard shortcuts, so they’re back to the defaults",
+  "@stateRecovery.shortcuts.title": {
+    "description": "Headline of a notice shown once: the file holding the person's custom keyboard shortcuts was damaged, so Cmdr set it aside and every shortcut is back to its default key. \"Cmdr\" is the product name. Sentence case, no full stop. Avoid the words \"error\" and \"failed\". Pop-up notice (toast) in the corner of Cmdr's main window."
+  },
+  "stateRecovery.license.title": "Cmdr couldn’t read its license file",
+  "@stateRecovery.license.title": {
+    "description": "Headline of a notice shown once: the file where Cmdr keeps license details was damaged, so Cmdr set it aside. \"Cmdr\" is the product name. Sentence case, no full stop. Avoid the words \"error\" and \"failed\". Pop-up notice (toast) in the corner of Cmdr's main window."
+  },
+  "stateRecovery.license.body": "If Cmdr shows as unlicensed now, enter your license key again in Settings › License.",
+  "@stateRecovery.license.body": {
+    "description": "Body of the notice above: what to do if the license no longer shows. \"Settings › License\" names the settings window and its section: keep the › separator and use the section's translated name. Plain text. Pop-up notice (toast) in the corner of Cmdr's main window."
+  },
+  "stateRecovery.license.openSettings": "Open Settings",
+  "@stateRecovery.license.openSettings": {
+    "description": "Button on the notice above that opens Cmdr's Settings on the License section. VERB phrase, short control label. Pop-up notice (toast) in the corner of Cmdr's main window."
+  },
+  "stateRecovery.appStatus.title": "Cmdr couldn’t read which folders your panes had open, so they start at your home folder",
+  "@stateRecovery.appStatus.title": {
+    "description": "Headline of a notice shown once at launch: the file remembering each pane's folders, tabs, and layout was damaged, so both panes open at the home folder with the default layout. \"Cmdr\" is the product name; a \"pane\" is one of the two side-by-side file lists. Sentence case, no full stop. Avoid the words \"error\" and \"failed\". Pop-up notice (toast) in the corner of Cmdr's main window."
+  },
+  "stateRecovery.operationLog.title": "Cmdr couldn’t read your undo history, so it starts fresh",
+  "@stateRecovery.operationLog.title": {
+    "description": "Headline of a notice shown once: the record of past file operations that undo reads was damaged, so earlier operations can't be undone any more; new ones can. \"Cmdr\" is the product name. Sentence case, no full stop. Avoid the words \"error\" and \"failed\". Pop-up notice (toast) in the corner of Cmdr's main window."
+  },
+  "stateRecovery.chatHistory.title": "Cmdr couldn’t read your Ask Cmdr chats, so they start fresh",
+  "@stateRecovery.chatHistory.title": {
+    "description": "Headline of a notice shown once: the file holding the person's conversations with Ask Cmdr (Cmdr's built-in AI assistant) was damaged, so earlier chats are gone from the app. \"Cmdr\" and \"Ask Cmdr\" are product names. Sentence case, no full stop. Avoid the words \"error\" and \"failed\". Pop-up notice (toast) in the corner of Cmdr's main window."
+  },
+  "stateRecovery.favorites.title": "Cmdr couldn’t read your favorites, so the list starts empty",
+  "@stateRecovery.favorites.title": {
+    "description": "Headline of a notice shown once: the file holding the person's favorite folders was damaged, so the favorites list is empty now. \"Cmdr\" is the product name. Sentence case, no full stop. Avoid the words \"error\" and \"failed\". Pop-up notice (toast) in the corner of Cmdr's main window."
+  },
+  "stateRecovery.goToPathHistory.title": "Cmdr couldn’t read your recent Go to path entries, so the list starts fresh",
+  "@stateRecovery.goToPathHistory.title": {
+    "description": "Headline of a notice shown once: the list of recently visited paths in the \"Go to path\" dialog was damaged, so it's empty now. \"Go to path\" is the dialog's name: use its translated title. \"Cmdr\" is the product name. Sentence case, no full stop. Avoid the words \"error\" and \"failed\". Pop-up notice (toast) in the corner of Cmdr's main window."
+  },
+  "stateRecovery.searchHistory.title": "Cmdr couldn’t read your recent searches, so the list starts fresh",
+  "@stateRecovery.searchHistory.title": {
+    "description": "Headline of a notice shown once: the list of recent searches in the search dialog was damaged, so it's empty now. \"Cmdr\" is the product name. Sentence case, no full stop. Avoid the words \"error\" and \"failed\". Pop-up notice (toast) in the corner of Cmdr's main window."
+  },
+  "stateRecovery.selectionHistory.title": "Cmdr couldn’t read your recent selections, so the list starts fresh",
+  "@stateRecovery.selectionHistory.title": {
+    "description": "Headline of a notice shown once: the list of recent selection patterns in the Selection dialog (the one that selects files by name or pattern) was damaged, so it's empty now. \"Cmdr\" is the product name. Sentence case, no full stop. Avoid the words \"error\" and \"failed\". Pop-up notice (toast) in the corner of Cmdr's main window."
+  },
+  "stateRecovery.multiRenamePresets.title": "Cmdr couldn’t read your saved multi-rename presets, so the list starts empty",
+  "@stateRecovery.multiRenamePresets.title": {
+    "description": "Headline of a notice shown once: the file holding the person's saved presets for the multi-rename tool (renames many files at once by rules) was damaged, so no presets are saved now. \"Cmdr\" is the product name. Sentence case, no full stop. Avoid the words \"error\" and \"failed\". Pop-up notice (toast) in the corner of Cmdr's main window."
+  },
+  "stateRecovery.multiRenameLastSettings.title": "Cmdr couldn’t read your last multi-rename settings, so the tool opens with the defaults",
+  "@stateRecovery.multiRenameLastSettings.title": {
+    "description": "Headline of a notice shown once: the multi-rename tool (renames many files at once by rules) remembers the settings it last ran with, and that file was damaged, so it opens with its default settings next time. \"Cmdr\" is the product name. Sentence case, no full stop. Avoid the words \"error\" and \"failed\". Pop-up notice (toast) in the corner of Cmdr's main window."
+  },
+  "stateRecovery.multiRenameFieldHistory.title": "Cmdr couldn’t read your multi-rename field history, so it starts fresh",
+  "@stateRecovery.multiRenameFieldHistory.title": {
+    "description": "Headline of a notice shown once: the multi-rename tool (renames many files at once by rules) remembers what its text fields held in earlier runs, and that file was damaged, so the history is empty now. \"Cmdr\" is the product name. Sentence case, no full stop. Avoid the words \"error\" and \"failed\". Pop-up notice (toast) in the corner of Cmdr's main window."
+  },
+  "stateRecovery.launchDays.title": "Cmdr couldn’t read its record of the days you opened it, so the count starts over",
+  "@stateRecovery.launchDays.title": {
+    "description": "Headline of a notice shown once: Cmdr keeps a local, never-shared list of the days it was opened (it decides when to show a few tips), and that file was damaged, so the count starts from today. \"Cmdr\" is the product name. Sentence case, no full stop. Avoid the words \"error\" and \"failed\". Pop-up notice (toast) in the corner of Cmdr's main window."
+  },
+  "stateRecovery.keptCopy": "Cmdr kept the old file at {path}.",
+  "@stateRecovery.keptCopy": {
+    "description": "Line under any of the notices above that a damaged file was set aside rather than deleted, and where. Plain text. Pop-up notice (toast) in the corner of Cmdr's main window.",
+    "placeholders": {
+      "path": "the full path of the set-aside copy, like /Users/anna/Library/Application Support/com.veszelovszki.cmdr/settings.json.broken-2026-10-16T101500. Never translated."
+    }
+  },
+  "stateRecovery.showInFinder": "Show in Finder",
+  "@stateRecovery.showInFinder": {
+    "description": "Button on any of the notices above that opens a Finder window with the set-aside copy of the damaged file highlighted. VERB phrase (imperative). ❗ \"Finder\" is Apple's app name and stays verbatim as \"Finder\" in every language. Pop-up notice (toast) in the corner of Cmdr's main window."
+  },
+  "stateRecovery.dismiss": "Dismiss",
+  "@stateRecovery.dismiss": {
+    "description": "Button on any of the notices above that closes it. The notice doesn't come back. VERB, imperative, short control label. Pop-up notice (toast) in the corner of Cmdr's main window."
+  }
+}

@@ -16,11 +16,11 @@ import { listDirectoryStart } from '#lib/tauri-commands/file-listing' // wrong: 
 `go-to-path.ts`, `tags.ts`, `updates.ts`, `debug.ts`, `usage.ts`, `dock.ts`, `notifications.ts`, `crash-reporter.ts`,
 `managed-policy.ts`, `data-wipe.ts`, `cli-command.ts`, plus mostly-event modules (several also carry a few commands):
 `indexing.ts`, `ai.ts`, `appearance.ts`, `menu-events.ts`, `directory-watcher.ts`, `native-drag.ts`, `quick-look.ts`,
-`downloads.ts`, `reveal.ts`, `restricted-paths.ts`, `dialog-events.ts`, `security-notices.ts`. `ipc-types.ts` holds
-`TimedOut<T>` and the last-resort `throwIpcError`. `listing-gone.ts` is the listing reads' typed `gone` / `changed`
-refusal (`asListingLookupError` reads it back); `onListingGone` lets the pane showing that listing re-list
-(`file-explorer/pane/listing-liveness.ts`). DETAILS.md has the per-file contents and the "where to put a new command"
-routing map.
+`downloads.ts`, `reveal.ts`, `restricted-paths.ts`, `dialog-events.ts`, `security-notices.ts`, `state-recovery.ts`.
+`ipc-types.ts` holds `TimedOut<T>` and the last-resort `throwIpcError`. `listing-gone.ts` is the listing reads' typed
+`gone` / `changed` refusal (`asListingLookupError` reads it back); `onListingGone` lets the pane showing that listing
+re-list (`file-explorer/pane/listing-liveness.ts`). DETAILS.md has the per-file contents and the "where to put a new
+command" routing map.
 
 ## Must-knows (invariants and guardrails)
 

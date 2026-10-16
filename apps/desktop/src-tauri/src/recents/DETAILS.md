@@ -69,4 +69,4 @@ interfere through process-global state.
 Collapsing the three copies onto this type gave all three lists coverage only some of them had: the zero-cap and
 `trim_to` cases (Go to path had neither), and, new to all three, that an add/remove/clear/cap-change actually reaches
 disk, that a no-op remove and a cap that drops nothing skip the write, that `entries(limit)` truncates, that a write
-creates its parent dir, and that a second corruption replaces the first quarantined copy.
+creates its parent dir, and that a second corruption keeps both set-aside copies.

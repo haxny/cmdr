@@ -494,6 +494,7 @@ export {
   onAgentWakeStaged,
 } from './ask-cmdr'
 export { onSecurityNoticeRaised } from './security-notices'
+export { onStateRecoveryQueued, takeStateRecoveries } from './state-recovery'
 export type {
   WakeReadinessView,
   AskCmdrStreamEvent,

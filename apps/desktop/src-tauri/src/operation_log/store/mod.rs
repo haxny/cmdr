@@ -11,8 +11,8 @@
 //! One writer thread owns the single write connection
 //! ([`OperationLogWriter`](super::writer)); reads go through short-lived
 //! read-only connections. This handle ([`OperationLogStore`]) owns the schema
-//! lifecycle (migrate on open; delete-and-recreate only a genuinely unparseable
-//! file) and offers direct reads for tests and the dump bin.
+//! lifecycle (migrate on open; set aside and recreate only a genuinely
+//! unparseable file) and offers direct reads for tests and the dump bin.
 
 mod connection;
 mod migrations;
@@ -103,7 +103,7 @@ impl From<std::io::Error> for OperationLogStoreError {
 }
 
 /// Is this a file we can never parse as a SQLite DB (garbage bytes, corrupt
-/// header)? The one case where delete-and-recreate is the right move — matched on
+/// header)? The one case where set-aside-and-recreate is the right move — matched on
 /// the typed sqlite error code, never a message string.
 fn is_unparseable(err: &OperationLogStoreError) -> bool {
     matches!(
@@ -183,7 +183,7 @@ pub struct OperationLogStore {
 impl OperationLogStore {
     /// Open (or create) the DB, migrating the schema forward to the current
     /// version. A downgrade is refused (returned as an error, DB untouched); a
-    /// genuinely unparseable file is deleted and recreated fresh; a transient
+    /// genuinely unparseable file is set aside and recreated fresh; a transient
     /// error (IO) propagates without destroying anything.
     pub fn open(db_path: &Path) -> Result<Self, OperationLogStoreError> {
         match Self::try_open(db_path) {
@@ -196,8 +196,8 @@ impl OperationLogStore {
                 Err(OperationLogStoreError::SchemaDowngrade { found, expected })
             }
             Err(e) if is_unparseable(&e) => {
-                log::warn!(target: "operation_log", "operation-log DB is unparseable ({e}); deleting and recreating");
-                Self::delete_and_recreate(db_path)
+                log::warn!(target: "operation_log", "operation-log DB is unparseable ({e}); setting it aside and recreating");
+                Self::set_aside_and_recreate(db_path)
             }
             Err(e) => Err(e),
         }
@@ -211,8 +211,12 @@ impl OperationLogStore {
         })
     }
 
-    fn delete_and_recreate(db_path: &Path) -> Result<Self, OperationLogStoreError> {
-        if db_path.exists() {
+    fn set_aside_and_recreate(db_path: &Path) -> Result<Self, OperationLogStoreError> {
+        // Kept beside the new DB, and the person hears it reset. A rename that doesn't happen
+        // falls back to deleting, the one way forward.
+        if db_path.exists()
+            && crate::state_recovery::set_aside(db_path, crate::state_recovery::StateFile::OperationLog).is_none()
+        {
             std::fs::remove_file(db_path)?;
         }
         for sidecar in [db_path.with_extension("db-wal"), db_path.with_extension("db-shm")] {

@@ -227,6 +227,21 @@ Part I (2)(d), "report on possible unauthorised access". Posture:
   place with the count; once closed, it stays quiet for the session. Nothing in a notice names a web page's origin or a
   path.
 
+## Reporting a corrupted state file
+
+Cmdr's own state files are written temp file + fsync + rename (the settings stores through a patched
+`tauri-plugin-store`, `vendor/tauri-plugin-store/CMDR-PATCH.md`), so a crash mid-save leaves the old file or the new
+one. When one still can't be read, Cmdr says so (`apps/desktop/src-tauri/src/state_recovery/CLAUDE.md`). It answers the
+"report on corruptions" half of the CRA's Annex I Part I (2)(f). Posture:
+
+- **Nothing is overwritten.** The unreadable file is kept as a timestamped copy beside it (newest three), and the person
+  sees once which state reset and where the copy is. A later launch with a healthy file shows nothing.
+- **Fail toward privacy.** After a `settings.json` recovery, usage stats and crash reports start off, in Rust and the
+  frontend alike, until the person turns them back on. The operation log stays on: it never leaves the Mac (David,
+  2026-10-16).
+- **Recorded.** Each recovery writes one typed `state_file_recovered` line to the security event log, naming the store
+  and never a path.
+
 ## Secret scanning (GitGuardian)
 
 GitGuardian watches the repo and opens an incident per suspected secret. Two independent surfaces, configured

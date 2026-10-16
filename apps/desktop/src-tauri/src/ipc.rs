@@ -86,6 +86,7 @@ use crate::reveal::RevealDelivered;
 use crate::search::live::events::{SearchCancelledEvent, SearchCompleteEvent, SearchErrorEvent, SearchProgressEvent};
 use crate::security_notices::SecurityNoticeRaised;
 use crate::space_poller::{LowDiskSpacePayload, VolumeSpaceChanged};
+use crate::state_recovery::StateRecoveryQueued;
 use crate::volume_broadcast::{
     ServerPlaceMoved, VolumeContextAction, VolumeMounted, VolumeRootChanged, VolumeUnmounted, VolumesChanged,
 };
@@ -377,6 +378,7 @@ macro_rules! ipc_command_manifest {
                     crate::commands::settings::set_error_reports_enabled,
                     crate::commands::security_log::set_security_log_enabled,
                     crate::commands::security_log::reveal_security_log,
+                    crate::commands::state_recovery::take_state_recoveries,
                     crate::commands::settings::get_restricted_window_settings,
                     crate::commands::settings::get_restricted_window_shortcuts,
                     crate::commands::settings::persist_restricted_window_setting,
@@ -1091,6 +1093,9 @@ pub fn builder() -> Builder<tauri::Wry> {
             // Something refused for the person's safety that they should hear about now: a web
             // page at the MCP server, a refused server reply, a fake update (security_notices/).
             SecurityNoticeRaised,
+            // A state file Cmdr couldn't read was set aside; the main window drains the queue
+            // (state_recovery/).
+            StateRecoveryQueued,
             // The quit gate holding an exit while operations run, and the same quit
             // being called off from a surface that isn't holding the prompt (quit/).
             QuitRequested,

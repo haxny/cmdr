@@ -18,7 +18,7 @@ a disposable cache. MCP tools: `mcp/executor/operation_log.rs`; UI surfaces are 
 
 - **DURABLE and MIGRATES; never delete-and-recreate on a version bump.** The ladder (`store/migrations.rs`) is the
   template future durable DBs follow: append a `Migration`, NEVER edit or renumber a shipped step. A downgrade is
-  refused; delete-and-recreate only for an unparseable file (typed sqlite code, ❌ not a string).
+  refused; only an unparseable file is rebuilt (typed sqlite code, ❌ not a string).
 - **NO `platform_case` collation.** A precomputed `name_folded` column (Unicode-lowercase + NFC) plus plain b-tree
   equality keeps the file `sqlite3`-openable.
 - **One writer thread, one cross-volume DB, NO per-volume registry.** `record_items` BLOCKS under backpressure

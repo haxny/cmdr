@@ -38,6 +38,7 @@ impl RecentEntry for FieldHistoryEntry {
     const FILENAME: &'static str = "multi-rename-history.json";
     const LOG_TARGET: &'static str = "multi_rename::history";
     const LOG_NAME: &'static str = "multi-rename field history";
+    const STATE_FILE: crate::state_recovery::StateFile = crate::state_recovery::StateFile::MultiRenameFieldHistory;
 
     fn id(&self) -> &str {
         &self.id

@@ -246,7 +246,13 @@ pub fn load_settings<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Settings {
     let Some(data_dir) = crate::config::resolved_app_data_dir(app).ok() else {
         return Settings::default();
     };
+    load_settings_from_dir(&data_dir)
+}
 
+/// [`load_settings`] over a known data dir. An unparseable file reads as the defaults here, but
+/// `setup()` sets one aside before this runs (`crate::state_recovery::recover_plugin_stores`), so
+/// the launch that found it reads the fresh file, consent settings off.
+pub fn load_settings_from_dir(data_dir: &std::path::Path) -> Settings {
     let settings_path: PathBuf = data_dir.join("settings.json");
     if let Ok(contents) = fs::read_to_string(&settings_path)
         && let Ok(settings) = parse_settings(&contents)

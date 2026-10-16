@@ -22,7 +22,7 @@
 //!   a rename, and a user can re-add a path they removed, so the id must outlive the path string.
 //! - `add` dedups by normalized path: re-adding an existing path moves it to the end (keeps its id),
 //!   so the user's existing label and position context isn't silently dropped.
-//! - Schema-versioned: a parse error or version mismatch quarantines the file aside and starts
+//! - Schema-versioned: a parse error or version mismatch sets the file aside and starts
 //!   fresh, so a stray hand-edit can't break the menu forever.
 //! - The disk file is never locked across an `.await`; the in-memory mutex guard is always dropped
 //!   before any `fs` call.
@@ -382,21 +382,12 @@ fn cleanup_tmp_file(path: &Path) {
     }
 }
 
-/// Renames a corrupted file to a `.broken` sibling so one bad snapshot survives for debugging without
-/// leaving the user blocked. If the rename fails, drop the file outright.
+/// Sets a corrupted file aside (`crate::state_recovery`) so the bad snapshot survives and the person
+/// hears that their favorites reset. If the rename fails, drop the file outright: the defaults stay
+/// out either way, since a corrupt file is not a first launch.
 fn quarantine_broken(path: &Path) {
-    let broken = path.with_extension("json.broken");
-    if broken.exists() {
-        let _ = fs::remove_file(&broken);
-    }
-    if let Err(e) = fs::rename(path, &broken) {
-        log::warn!(
-            target: "favorites::store",
-            "Couldn't quarantine corrupted favorites at {path:?} (will delete instead): {e}"
-        );
+    if crate::state_recovery::set_aside(path, crate::state_recovery::StateFile::Favorites).is_none() {
         let _ = fs::remove_file(path);
-    } else {
-        log::warn!(target: "favorites::store", "Quarantined corrupted favorites to {broken:?}");
     }
 }
 

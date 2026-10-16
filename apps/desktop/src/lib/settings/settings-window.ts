@@ -119,6 +119,8 @@ export type SettingsSurface =
   | 'favorite-toast'
   /** A security notice about a web page at the MCP server, deep-linking to AI > MCP server. */
   | 'security-notice-toast'
+  /** The notice that Cmdr had to start `settings.json` fresh, deep-linking to Updates & privacy. */
+  | 'state-recovery-toast'
 
 /**
  * Opens the settings window, or focuses it if already open. When `section` is provided,

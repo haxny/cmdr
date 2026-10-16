@@ -38,6 +38,11 @@ Issue #456. Must-knows in `CLAUDE.md`; this is the why and the catalog.
   for a named login (`GuestSessionRefused`) isn't recorded: it reads as a wrong password, and the pane names it
   (`VolumeConnection::GuestSessionRefused`).
 - `recording_turned_on` / `recording_turned_off` (`by`: `user` | `organization`): the opt-out itself.
+- `state_file_recovered` (`file`: `settings` | `shortcuts` | `license` | `app_status` | `operation_log` |
+  `chat_history` | `favorites` | `go_to_path_history` | `search_history` | `selection_history` |
+  `multi_rename_presets` | `multi_rename_last_settings` | `multi_rename_field_history` | `launch_days`):
+  `../state_recovery/mod.rs` `report`, once per file Cmdr couldn't read and started fresh. Never the path. Its notice
+  rides `state_recovery`'s own queue, since it names where the copy went.
 
 Not recorded: reads of file data. The operation log covers modifications; journaling every read would cost privacy and
 performance for little security value. Also not yet: `installer::refuse_unless_newer` (an older signed release offered,

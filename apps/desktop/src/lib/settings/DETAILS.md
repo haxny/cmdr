@@ -99,6 +99,8 @@ config UIs), `KeyboardShortcutsSection` (command names from the command registry
   is atomic: Cmdr's patched plugin (`vendor/tauri-plugin-store/CMDR-PATCH.md`) writes a synced sibling temp file and
   renames it over `settings.json`, so a crash mid-save leaves the old file or the new one, never a torn one. A failed
   save rejects, and `saveToStore` logs it and retries once.
+- A `settings.json` that doesn't parse is set aside by the backend before this store loads it, and the fresh file starts
+  with usage stats and crash reports off: `apps/desktop/src-tauri/src/state_recovery/DETAILS.md`.
 - In-memory cache for synchronous reads via `getSetting()`
 - Cross-window sync: emits `settings:changed` events when values change (payload carries an `explicit` flag; see §
   Sparse persistence)

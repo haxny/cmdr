@@ -94,8 +94,8 @@ fn downgrade_is_refused_not_destroyed() {
     assert_eq!(a, "precious", "a refused downgrade must not destroy the DB");
 }
 
-/// A genuinely unparseable file (garbage bytes) is deleted and recreated fresh through
-/// `AgentStore::open` — the ONLY case where destroy-and-recreate is correct. The recreated
+/// A genuinely unparseable file (garbage bytes) is set aside and recreated fresh through
+/// `AgentStore::open` — the ONLY case where recreating is correct. The recreated
 /// DB is at the current schema version with the real tables present.
 #[test]
 fn unparseable_file_recreates_fresh() {
@@ -103,7 +103,17 @@ fn unparseable_file_recreates_fresh() {
     let path = main_db_path(dir.path());
     std::fs::write(&path, b"this is not a sqlite database at all").expect("write garbage");
 
+    let notices = crate::state_recovery::testing::capture_recoveries();
     let store = AgentStore::open(&path).expect("open recreates an unparseable file");
+    let kept = crate::state_recovery::testing::kept_copies(&path);
+    assert_eq!(kept.len(), 1, "the unreadable DB is kept beside the new one: {kept:?}");
+    assert_eq!(
+        std::fs::read(&kept[0]).expect("read the copy"),
+        b"this is not a sqlite database at all"
+    );
+    let recoveries = notices.recoveries();
+    assert_eq!(recoveries.len(), 1, "one notice");
+    assert_eq!(recoveries[0].file, crate::state_recovery::StateFile::ChatHistory);
     assert_eq!(
         store.schema_version().expect("version"),
         MIGRATIONS.last().expect("ladder non-empty").version,

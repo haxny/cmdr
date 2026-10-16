@@ -32,6 +32,9 @@ pub trait RecentEntry: Clone + Send + Serialize + DeserializeOwned + 'static {
     const LOG_TARGET: &'static str;
     /// How the list names itself mid-sentence in a log line ("search history").
     const LOG_NAME: &'static str;
+    /// Which file the recovery notice and the security log name when this list's file can't be
+    /// read (`crate::state_recovery`).
+    const STATE_FILE: crate::state_recovery::StateFile;
     /// Bump when this list's on-disk shape changes in a way an older build can't
     /// read. A file stamped with an unknown version is quarantined, not migrated.
     const SCHEMA_VERSION: u32 = 1;
@@ -295,6 +298,7 @@ pub(crate) mod test_support {
         const FILENAME: &'static str = "test-recents.json";
         const LOG_TARGET: &'static str = "recents::test";
         const LOG_NAME: &'static str = "test recents";
+        const STATE_FILE: crate::state_recovery::StateFile = crate::state_recovery::StateFile::SearchHistory;
 
         fn id(&self) -> &str {
             &self.id

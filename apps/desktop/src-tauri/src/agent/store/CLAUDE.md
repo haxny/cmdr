@@ -19,8 +19,8 @@ proposal spine. Depth: `DETAILS.md`.
 ## Must-knows
 
 - **The ladder is DURABLE and MIGRATES; it never delete-and-recreates on a version bump.** Same discipline as the
-  operation log: append a `Migration`, NEVER edit or renumber a shipped step; refuse a downgrade; delete-and-recreate
-  ONLY a genuinely unparseable file (the typed `NotADatabase`/`DatabaseCorrupt` code, never a string).
+  operation log: append a `Migration`, NEVER edit or renumber a shipped step; refuse a downgrade; set aside and
+  recreate ONLY an unparseable file (the typed `NotADatabase`/`DatabaseCorrupt` code, never a string).
 - **FTS5 needs NO rusqlite feature** — the `bundled` SQLite compiles it in. `fresh_open_builds_current_schema` is the
   runtime guard: it MATCHes the empty index, so a bundled build without FTS5 fails there.
 - **NEVER feed raw user input into `... MATCH ?`.** Filename fragments (`report(v2)`, `foo:bar`, a bareword

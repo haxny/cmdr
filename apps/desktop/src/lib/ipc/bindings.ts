@@ -2545,6 +2545,11 @@ export const commands = {
   // Shows the log file in Finder, or its folder while there's no file yet.
   revealSecurityLog: () => typedError<null, RevealSecurityLogError>(__TAURI_INVOKE('reveal_security_log')),
   /**
+   *  Every state file Cmdr set aside since the last call, oldest first. The main window calls it at
+   *  start and on each `state-recovery-queued` nudge; the queue drains, so each shows once.
+   */
+  takeStateRecoveries: () => __TAURI_INVOKE<StateRecovery[]>('take_state_recoveries'),
+  /**
    *  Settings snapshot for windows without `tauri-plugin-store` capability (the
    *  viewer). The viewer can't load `settings.json` itself by security design
    *  (see `capabilities/CLAUDE.md` § viewer); this returns the typed read
@@ -5293,6 +5298,7 @@ export const events = {
   showSearchResultInFolder: makeEvent<ShowSearchResultInFolder>('show-search-result-in-folder'),
   smbFellBackToOsMount: makeEvent<SmbFellBackToOsMount>('smb-fell-back-to-os-mount'),
   smbOsMountNoticeWithdrawn: makeEvent<SmbOsMountNoticeWithdrawn>('smb-os-mount-notice-withdrawn'),
+  stateRecoveryQueued: makeEvent<StateRecoveryQueued>('state-recovery-queued'),
   suggestionsChanged: makeEvent<SuggestionsChanged>('suggestions-changed'),
   systemTextSizeChanged: makeEvent<SystemTextSizeChanged>('system-text-size-changed'),
   tabContextAction: makeEvent<TabContextAction>('tab-context-action'),
@@ -16318,6 +16324,56 @@ export type StalledOn =
   | 'drive'
   // Anything else: a phone, a FUSE or cloud mount, or a mount we couldn't read.
   | 'unknown'
+
+/**
+ *  One of Cmdr's own state files in the app data dir. Also crosses IPC in the recovery notice
+ *  (`crate::state_recovery::StateRecovery`), where it rides the same tokens.
+ */
+export type StateFile =
+  // `settings.json`.
+  | 'settings'
+  // `shortcuts.json`.
+  | 'shortcuts'
+  // `license.json`. The key itself lives in the secret store.
+  | 'license'
+  // `app-status.json`: each pane's folder, tabs, and layout.
+  | 'app_status'
+  // `operation-log.db`, which undo reads.
+  | 'operation_log'
+  // `main.db`, Ask Cmdr's chats.
+  | 'chat_history'
+  // `favorites.json`.
+  | 'favorites'
+  // The Go to path dialog's recent paths.
+  | 'go_to_path_history'
+  // The search dialog's recent queries.
+  | 'search_history'
+  // The Selection dialog's recent selections.
+  | 'selection_history'
+  // Saved multi-rename presets.
+  | 'multi_rename_presets'
+  // The multi-rename dialog's last settings.
+  | 'multi_rename_last_settings'
+  // The multi-rename dialog's per-field history.
+  | 'multi_rename_field_history'
+  // `usage.json`, the days Cmdr was opened on.
+  | 'launch_days'
+
+// One state file Cmdr couldn't read and started fresh, as the person hears about it.
+export type StateRecovery = {
+  file: StateFile
+  // Where the unreadable file went, or `None` when it couldn't be kept.
+  keptCopy: string | null
+}
+
+/**
+ *  Typed `state-recovery-queued` event: a recovery is waiting in the queue. Carries nothing on
+ *  purpose: the main window drains the queue, so a recovery is shown once however many nudges
+ *  and window starts race it.
+ *
+ *  `Serialize` only beside the derive, like `SecurityNoticeRaised`: nothing listens Rust-side.
+ */
+export type StateRecoveryQueued = null
 
 /**
  *  The remembered time left after each checklist step finishes, keyed by the

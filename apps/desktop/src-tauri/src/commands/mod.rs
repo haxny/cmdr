@@ -45,6 +45,7 @@ pub mod restricted_paths;
 pub mod search;
 pub mod security_log;
 pub mod selection;
+pub mod state_recovery;
 // `Cmdr > Services` has no counterpart off macOS, so there's no stub either: the
 // frontend's wrapper no-ops elsewhere (`tauri-commands/app-state.ts`).
 #[cfg(target_os = "macos")]

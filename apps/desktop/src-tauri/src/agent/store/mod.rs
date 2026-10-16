@@ -9,7 +9,7 @@
 //! operation log folds a column in Rust instead of using FTS5). Full rationale:
 //! `DETAILS.md`.
 //!
-//! [`AgentStore`] owns the schema lifecycle (migrate on open; delete-and-recreate only a
+//! [`AgentStore`] owns the schema lifecycle (migrate on open; set aside and recreate only a
 //! genuinely unparseable file; refuse a downgrade). Reads and writes go through
 //! connections opened from the DB path (`connection`); the chat runtime owns the
 //! write-connection lifetime.
@@ -109,7 +109,7 @@ impl From<std::io::Error> for AgentStoreError {
 }
 
 /// Is this a file we can never parse as a SQLite DB (garbage bytes, corrupt header)? The
-/// one case where delete-and-recreate is the right move — matched on the typed sqlite
+/// one case where set-aside-and-recreate is the right move — matched on the typed sqlite
 /// error code, never a message string.
 fn is_unparseable(err: &AgentStoreError) -> bool {
     matches!(
@@ -129,7 +129,7 @@ pub struct AgentStore {
 impl AgentStore {
     /// Open (or create) the DB, migrating the schema forward to the current version. A
     /// downgrade is refused (returned as an error, DB untouched); a genuinely unparseable
-    /// file is deleted and recreated fresh; a transient error (IO) propagates without
+    /// file is set aside and recreated fresh; a transient error (IO) propagates without
     /// destroying anything.
     pub fn open(db_path: &Path) -> Result<Self, AgentStoreError> {
         match Self::try_open(db_path) {
@@ -142,8 +142,8 @@ impl AgentStore {
                 Err(AgentStoreError::SchemaDowngrade { found, expected })
             }
             Err(e) if is_unparseable(&e) => {
-                log::warn!(target: "agent::store", "main.db is unparseable ({e}); deleting and recreating");
-                Self::delete_and_recreate(db_path)
+                log::warn!(target: "agent::store", "main.db is unparseable ({e}); setting it aside and recreating");
+                Self::set_aside_and_recreate(db_path)
             }
             Err(e) => Err(e),
         }
@@ -157,8 +157,12 @@ impl AgentStore {
         })
     }
 
-    fn delete_and_recreate(db_path: &Path) -> Result<Self, AgentStoreError> {
-        if db_path.exists() {
+    fn set_aside_and_recreate(db_path: &Path) -> Result<Self, AgentStoreError> {
+        // Kept beside the new DB, and the person hears it reset. A rename that doesn't happen
+        // falls back to deleting, the one way forward.
+        if db_path.exists()
+            && crate::state_recovery::set_aside(db_path, crate::state_recovery::StateFile::ChatHistory).is_none()
+        {
             std::fs::remove_file(db_path)?;
         }
         for sidecar in [db_path.with_extension("db-wal"), db_path.with_extension("db-shm")] {

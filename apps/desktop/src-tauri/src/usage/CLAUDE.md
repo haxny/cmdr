@@ -9,7 +9,7 @@ It's the gate for usage-gated hints, the first being the "add Cmdr to your Dock"
 - **`mod.rs`**: the two public calls, `record_launch(data_dir)` (once per launch, from `lib.rs` setup) and
   `launch_day_count(data_dir)` (the read seam behind `commands::usage::get_launch_day_count`).
 - **`ledger.rs`**: the `_schemaVersion` envelope, the pure `appended` day-append, the durable temp+rename write, and
-  the `.broken` quarantine.
+  the set-aside path for a file it can't read.
 
 ## Must-knows
 
@@ -22,8 +22,8 @@ It's the gate for usage-gated hints, the first being the "add Cmdr to your Dock"
 - **The append guards on MEMBERSHIP, never on the last element.** A timezone move or a clock adjustment can leave the
   days out of order, and a tail comparison would then record a day the ledger already holds. Existing entries are kept
   verbatim (no sort, no dedupe), so `launch_day_count` counts DISTINCT days rather than trusting the file.
-- **A file we can't read is quarantined, not wiped.** A parse failure or an unknown `_schemaVersion` renames it
-  `.broken` (one rotation kept) and this launch runs on an empty in-memory ledger, matching `recents/persistence.rs`.
+- **A file we can't read is set aside, not wiped.** A parse failure or an unknown `_schemaVersion` hands it to
+  `state_recovery::set_aside` and this launch runs on an empty in-memory ledger, matching `recents/persistence.rs`.
 - **Every failure is a logged warning.** An unwritable ledger costs a hint, never a launch, and never an error a user
   sees.
 - **Unbounded growth is intended.** A decade of daily use is a few tens of KB; a cap would silently break "how long

@@ -15,7 +15,7 @@ each favorite row tells the frontend about where it points. Full depth in `DETAI
 ## Must-knows
 
 - **Seed-once via file presence.** ABSENT = first launch: seed and write. PRESENT (even empty) =
-  read verbatim, never re-seed. A corrupt or version-mismatched file quarantines and reads as
+  read verbatim, never re-seed. A corrupt or version-mismatched file is set aside and reads as
   `Some(empty)`, ❌ never `None`. Don't "simplify" `read_store_from_path`'s `Option` to a `Vec`: the
   absent-vs-empty distinction is the whole contract.
 - **No schema bump for additive fields**: a mismatch QUARANTINES, so a downgrader would lose the

@@ -28,6 +28,7 @@ import { startAskCmdrTurnStream, stopAskCmdrTurnStream } from '#lib/ask-cmdr/ask
 import { startWakeIndicator, stopWakeIndicator } from '#lib/ask-cmdr/wake-indicator.svelte.js'
 import { startWakeToast, stopWakeToast } from '#lib/ask-cmdr/wake-toast.svelte.js'
 import { startSecurityNotices, stopSecurityNotices } from '#lib/security-notices/security-notices.js'
+import { startStateRecoveryNotices, stopStateRecoveryNotices } from '#lib/state-recovery/state-recovery.js'
 import { startDragOutEventBridge } from '#lib/file-explorer/drag/drag-out-event-bridge.js'
 import { startOsMountNoticeBridge } from '#lib/file-explorer/network/os-mount-notice-bridge.js'
 import { startLeftoverNoticeBridge } from '#lib/file-operations/leftover-notice-bridge.js'
@@ -161,6 +162,9 @@ export function startEarlyWindowServices(): void {
   // refused server reply, a fake update). This window only, or the settings window would raise
   // its own copy. Early: an update check can refuse one right at launch.
   void startSecurityNotices()
+  // Tell the person once when Cmdr couldn't read one of its own state files and started it fresh.
+  // Launch finds most of them before this window exists, so this drains the backend's queue.
+  void startStateRecoveryNotices()
 }
 
 /**
@@ -279,6 +283,7 @@ export function stopWindowServices(): void {
   stopWakeIndicator()
   stopWakeToast()
   stopSecurityNotices()
+  stopStateRecoveryNotices()
   destroyIndexState()
   destroyMediaEnrichState()
   stopOperationFailureWatch()

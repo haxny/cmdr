@@ -269,11 +269,17 @@ fn corrupted_json_quarantines_and_starts_fresh() {
 
     // A corrupt file is "initialized but broken", so it reads as an empty store (Some), not None
     // (which would re-seed the defaults over the user's lost-but-not-first-launch state).
+    let notices = crate::state_recovery::testing::capture_recoveries();
     let store = read_store_from_path(&path).expect("corrupt reads as Some(empty)");
     assert!(store.favorites.is_empty());
-    let broken = path.with_extension("json.broken");
-    assert!(broken.exists(), "expected quarantine at {broken:?}");
+    let kept = crate::state_recovery::testing::kept_copies(&path);
+    assert_eq!(kept.len(), 1, "expected one set-aside copy: {kept:?}");
+    assert_eq!(fs::read_to_string(&kept[0]).expect("read the copy"), "{not valid json");
     assert!(!path.exists());
+    let recoveries = notices.recoveries();
+    assert_eq!(recoveries.len(), 1, "one notice");
+    assert_eq!(recoveries[0].file, crate::state_recovery::StateFile::Favorites);
+    assert_eq!(recoveries[0].kept_copy.as_deref(), kept[0].to_str());
 }
 
 #[test]
@@ -282,9 +288,11 @@ fn schema_version_mismatch_quarantines_and_starts_fresh() {
     let path = dir.path().join(FAVORITES_FILE_NAME);
     fs::write(&path, r#"{"_schemaVersion": 2, "favorites": []}"#).expect("write");
 
+    let notices = crate::state_recovery::testing::capture_recoveries();
     let store = read_store_from_path(&path).expect("mismatch reads as Some(empty)");
     assert!(store.favorites.is_empty());
-    assert!(path.with_extension("json.broken").exists());
+    assert_eq!(crate::state_recovery::testing::kept_copies(&path).len(), 1);
+    assert_eq!(notices.recoveries().len(), 1);
 }
 
 #[test]

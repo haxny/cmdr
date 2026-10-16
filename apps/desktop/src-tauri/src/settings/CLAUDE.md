@@ -16,7 +16,7 @@ satisfies the live-apply rule below.
 - `restricted_shortcuts.rs`: the viewer's read-only snapshot of `shortcuts.json` (its keys are remappable, and it has no
   store access); `lib/shortcuts/DETAILS.md` § "The viewer's keys".
 - `loader_tests.rs`: `loader`'s own tests, in a sibling file wired in with `#[path]` so they still reach its private
-  parse helpers.
+  parse helpers. `plugin_store_tests.rs`: the patched store plugin's atomic save (`vendor/tauri-plugin-store/`).
 
 ## Must-knows
 
@@ -28,7 +28,8 @@ satisfies the live-apply rule below.
   server: reconnect / rebind / restart the thread / swap the pool, whatever it takes.
 - **One-way read only.** This module never writes; all writes go through the frontend's settings store. The restricted
   window's write path (`persist_restricted_window_setting`) forwards to the main window's store rather than writing from
-  Rust, keeping this invariant intact.
+  Rust, keeping this invariant intact. The one Rust writer is `state_recovery`, which replaces an unparseable file
+  with a fresh one before anything reads it (`../state_recovery/CLAUDE.md`).
 - **Dot-notation keys are literal, parsed manually** (`"listing.showHiddenFiles"` is one flat key). Serde can't express
   them as struct fields, so `parse_settings` reads them by hand. Don't switch to serde auto-derivation.
 - **Direct file reading is intentional**: the MCP server, hidden-files filter, indexing, and crash reporter need their

@@ -25,6 +25,8 @@ All under `apps/desktop/src/lib/`.
 - `security-notices/`: the toast that tells the person Cmdr turned an access attempt away (a web page at the MCP server,
   a refused server reply, an update that isn't genuine), one per source, quiet once closed. See
   `apps/desktop/src/lib/security-notices/CLAUDE.md`
+- `state-recovery/`: the toast that says Cmdr couldn't read one of its own state files and started it fresh, naming
+  where the old copy went; drains the backend's queue. See `apps/desktop/src/lib/state-recovery/CLAUDE.md`
 - `servers/`: Remote places the app dials (SFTP, WebDAV, S3): the `sftp://user@host:port/path` spelling, the connect
   flow that picks its move by the volume's standing, the ONE sign-in sheet every credential ask in the app opens
   (`SignInSheet.svelte`, add / sign-in / edit), the address parser behind add mode, the words for a connect that
@@ -265,6 +267,9 @@ All under `apps/desktop/src-tauri/src/`.
 - `security_notices/`: the in-app notice for a refused access attempt: a `security_log` subscriber that picks which
   events reach the person and rate-limits them per source (`NoticeGate`), raising the typed `security-notice-raised`
   event. See its `apps/desktop/src-tauri/src/security_notices/CLAUDE.md`
+- `state_recovery/`: a state file Cmdr can't read (a plugin store, a recents list, a database) is set aside as a
+  timestamped copy, recorded in the security log, and queued as a one-time notice; the plugin stores are checked in
+  `setup()` before anything loads them. See its `apps/desktop/src-tauri/src/state_recovery/CLAUDE.md`
 - `agent/`: The in-app AI agent, whose first user-facing slice is "Ask Cmdr" (a chat rail). Its `agent/llm/` holds the
   provider-agnostic `AgentLlm` seam over the shipped `genai` client, its deterministic fake, and the typed message-part
   model that keeps opaque provider reasoning state lossless. Its `agent/store/proposals/` holds the durable proposal

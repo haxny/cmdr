@@ -166,6 +166,7 @@ mod space_poller;
 /// Ask Spotlight which folders this user has been working in. One narrow question,
 /// coupled to nothing: see the module's own docs.
 mod spotlight;
+mod state_recovery;
 mod subprocess;
 mod system_events;
 mod system_memory;
@@ -310,6 +311,14 @@ pub fn run() {
             security_log::init(app.handle());
             // The in-app notice for a refused access attempt hangs off the same log (#457).
             security_notices::init(app.handle());
+
+            // Set an unreadable settings, shortcuts, app-status, or license file aside before
+            // anything loads one: the store plugin would read it as empty and its next save would
+            // overwrite the evidence. After the instance lock (one process renames) and the
+            // security log (each recovery is recorded), before the policy and crash reporter
+            // below read `settings.json`. The notice waits in a queue until the main window asks.
+            state_recovery::init(app.handle());
+            state_recovery::recover_plugin_stores(app.handle());
 
             // The organization's managed policy, before anything that might send: the crash
             // reporter's next-launch path below is the first. The read is lazy anyway (no caller
