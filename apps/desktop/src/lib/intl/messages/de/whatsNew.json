@@ -7,6 +7,18 @@
   "@whatsNew.dialog.empty": {
     "sourceHash": "31a5a2e"
   },
+  "whatsNew.securityNotice.title": "Diese Version hat {count, plural, one {ein Sicherheitsproblem} other {# Sicherheitsprobleme}} behoben.",
+  "@whatsNew.securityNotice.title": {
+    "sourceHash": "26e4d7e"
+  },
+  "whatsNew.securityNotice.readAdvisory": "Sicherheitshinweis lesen",
+  "@whatsNew.securityNotice.readAdvisory": {
+    "sourceHash": "a96f533"
+  },
+  "whatsNew.securityNotice.readAdvisoryNamed": "Sicherheitshinweis {id} lesen",
+  "@whatsNew.securityNotice.readAdvisoryNamed": {
+    "sourceHash": "58d606c"
+  },
   "whatsNew.dialog.showMore": "Mehr anzeigen",
   "@whatsNew.dialog.showMore": {
     "sourceHash": "f5c9bd1"

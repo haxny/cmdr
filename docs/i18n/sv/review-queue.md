@@ -49,6 +49,8 @@ wording into `terms.json` (and `decisions.md` when the reason is worth keeping).
   `fliken Interoperabilitet`** (`servers.sheet.s3GcsKeyHelp`): unverified against Google Cloud's Swedish console.
 - **git dirty → `ändringar`** (`fileExplorer.git.repoChip.dirty`): a noun so it agrees with nothing; confirm
   `main · ändringar` reads as a state. Uploading badge → `Skickar` (Finder's column) over `Överför` (Finder's badge).
+- **security advisory → `säkerhetsmeddelande`** (`updates.toast.readAdvisory`, `whatsNew.securityNotice.*`): no pile
+  term; Microsoft gives only advisory → `rekommendation`.
 
 ## Phrasing and tone
 

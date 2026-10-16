@@ -4346,6 +4346,17 @@
     "confidence": "high",
     "sources": "MS (secret key → секретный ключ; access key → ключ доступа)"
   },
+  "security-advisory": {
+    "chosen": "бюллетень безопасности",
+    "confidence": "tentative",
+    "sources": "MS terminology security advisory → советы по безопасности (plural-only, reads as tips), advisory → предупреждение; бюллетень names one published document"
+  },
+  "security-issue": {
+    "chosen": "проблема безопасности",
+    "accept": ["проблем"],
+    "confidence": "tentative",
+    "sources": "MS terminology security vulnerability → уязвимость; проблема mirrors the calm English issue"
+  },
   "see": {
     "chosen": "Просмотр",
     "accept": ["просмотр", "посмотр", "смотр"],

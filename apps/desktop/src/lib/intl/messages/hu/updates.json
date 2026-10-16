@@ -23,6 +23,18 @@
   "@updates.toast.readyDetail": {
     "sourceHash": "42ce099"
   },
+  "updates.toast.securityFix": "Ez a frissítés {count, plural, one {egy biztonsági problémát} other {# biztonsági problémát}} javít ki.",
+  "@updates.toast.securityFix": {
+    "sourceHash": "3033a3b"
+  },
+  "updates.toast.securityFixDetail": "Indítsd újra a Cmdrt a telepítés befejezéséhez.",
+  "@updates.toast.securityFixDetail": {
+    "sourceHash": "8070021"
+  },
+  "updates.toast.readAdvisory": "Biztonsági közlemény elolvasása",
+  "@updates.toast.readAdvisory": {
+    "sourceHash": "a96f533"
+  },
   "updates.toast.versionChange": "v{prev} → v{next}",
   "@updates.toast.versionChange": {
     "sourceHash": "41b26f1",

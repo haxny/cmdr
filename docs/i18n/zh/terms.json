@@ -2844,6 +2844,16 @@
     "confidence": "high",
     "sources": "AWS zh-CN docs (访问密钥 ID 和秘密访问密钥, IAM and S3 access-management, checked 2026-10-02)"
   },
+  "security-advisory": {
+    "chosen": "安全公告",
+    "confidence": "high",
+    "sources": "MS terminology (security advisory → 安全公告)"
+  },
+  "security-issue": {
+    "chosen": "安全问题",
+    "confidence": "tentative",
+    "sources": "MS terminology vulnerability → 漏洞; 问题 mirrors the calm English issue"
+  },
   "see": {
     "chosen": "查看",
     "confidence": "high",

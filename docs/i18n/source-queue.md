@@ -7,6 +7,9 @@ rule into `translation-principles.md` or `translator-instructions.md`), then del
 
 ## Open
 
+- `whatsNew.securityNotice.title`: the English says "This version fixed", but the description says the count spans every
+  version installed since the dialog was last seen. Say which it is ("These updates fixed …"?); all locales mirrored
+  "this version". (all)
 - `main.cliCommand.*` / `menu.app.cliCommand*`: one action, three verb pairs (Install/Uninstall in the menu, "Removed"
   in toasts, "Adding or removing" in `canceled`). Pick one pair; most locales mirrored the split. (de, es, zh-Hant)
 - `main.cliCommand.notInApplications`: "From anywhere else" reads as installed-from or running-from; say "If you install

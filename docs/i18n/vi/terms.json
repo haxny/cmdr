@@ -1671,6 +1671,16 @@
     "confidence": "tentative",
     "sources": "catalog servers.sheet.secretAccessKey (the S3 form label), servers.refusal.s3SecretMissing, servers.refusal.s3SecretNotMoved; MS access key → khóa truy cập; no AWS console ships Vietnamese"
   },
+  "security-advisory": {
+    "chosen": "thông báo bảo mật",
+    "confidence": "tentative",
+    "sources": "MS terminology advisory → thông báo; bảo mật is the catalog's security word"
+  },
+  "security-issue": {
+    "chosen": "vấn đề bảo mật",
+    "confidence": "tentative",
+    "sources": "MS terminology vulnerability → khả năng bị tổn thương (too bookish); vấn đề mirrors the calm English issue and avoids lỗi"
+  },
   "sharing-and-permissions": {
     "chosen": "Chia sẻ & quyền",
     "forms": "in prose: ở phần Chia sẻ & quyền",

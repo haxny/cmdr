@@ -1615,6 +1615,17 @@
     ],
     "sources": "git-gui hu (Nem követett)"
   },
+  "security-advisory": {
+    "chosen": "biztonsági közlemény",
+    "confidence": "tentative",
+    "sources": "MS terminology has no security advisory (advisory → működési zavar is another sense); security update → biztonsági frissítés gives the adjective"
+  },
+  "security-issue": {
+    "chosen": "biztonsági probléma",
+    "accept": ["biztonsági problém"],
+    "confidence": "tentative",
+    "sources": "MS terminology security vulnerability → biztonsági rés; probléma mirrors the calm English issue and the style guide's prose word"
+  },
   "sync": {
     "chosen": "szinkronizálás",
     "accept": ["szinkron"],

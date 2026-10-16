@@ -63,6 +63,9 @@ settled wording into `terms.json` (and `decisions.md` when the reason is worth k
 - **`Interoperabilität`** (`servers.sheet.s3GcsKeyHelp`): assumed to be the Google Cloud console's German tab name.
 - **`Im Cold Storage archiviert`** (`fileExplorer.archivedFile.tooltip`): MS keeps `Cold Storage`; `Archivspeicher` is
   the native alternative.
+- **security advisory → `Sicherheitshinweis`** (`updates.toast.readAdvisory`, `whatsNew.securityNotice.*`): Microsoft
+  says `Sicherheitsempfehlung`; no macOS term. **security issue → `Sicherheitsproblem`**: Microsoft has
+  `Sicherheitsrisiko`.
 
 ## Overflow checks
 

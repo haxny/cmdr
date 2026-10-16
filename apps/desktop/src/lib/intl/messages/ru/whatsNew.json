@@ -7,6 +7,18 @@
   "@whatsNew.dialog.empty": {
     "sourceHash": "31a5a2e"
   },
+  "whatsNew.securityNotice.title": "В этой версии {count, plural, =1 {устранена проблема безопасности} one {устранена # проблема безопасности} few {устранены # проблемы безопасности} many {устранено # проблем безопасности} other {устранено # проблемы безопасности}}.",
+  "@whatsNew.securityNotice.title": {
+    "sourceHash": "26e4d7e"
+  },
+  "whatsNew.securityNotice.readAdvisory": "Прочитать бюллетень безопасности",
+  "@whatsNew.securityNotice.readAdvisory": {
+    "sourceHash": "a96f533"
+  },
+  "whatsNew.securityNotice.readAdvisoryNamed": "Прочитать бюллетень безопасности {id}",
+  "@whatsNew.securityNotice.readAdvisoryNamed": {
+    "sourceHash": "58d606c"
+  },
   "whatsNew.dialog.showMore": "Показать больше",
   "@whatsNew.dialog.showMore": {
     "sourceHash": "f5c9bd1"

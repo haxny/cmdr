@@ -1403,6 +1403,16 @@
     "forms": "the S3 form label → Geheimer Zugriffsschlüssel; acc./dat. → den / dem geheimen Zugriffsschlüssel",
     "sources": "catalog servers.sheet.secretAccessKey (the S3 form label), servers.refusal.s3SecretMissing, servers.refusal.s3SecretNotMoved; pairs with access-key-id (Zugriffsschlüssel-ID); MS access key → Zugriffsschlüssel"
   },
+  "security-advisory": {
+    "chosen": "Sicherheitshinweis",
+    "confidence": "tentative",
+    "sources": "MS terminology advisory → Hinweis, security advisory → Sicherheitsempfehlung; no macOS term. Hinweis over Empfehlung: the advisory reports a fix, it doesn't only recommend"
+  },
+  "security-issue": {
+    "chosen": "Sicherheitsproblem",
+    "confidence": "tentative",
+    "sources": "MS terminology security vulnerability → Sicherheitsrisiko; Problem mirrors the calm English issue (the catalog's own Problem wording)"
+  },
   "sharing-and-permissions": {
     "chosen": "Teilen & Zugriffsrechte",
     "forms": "quoted in prose: unter „Teilen & Zugriffsrechte“ (the panel header adds a colon)",
@@ -1695,11 +1705,11 @@
     "sources": "macOS (Eingabequelle)"
   },
   "install": {
-    "accept": ["Installiere", "installiert", "Installieren"],
+    "accept": ["Installiere", "installiert", "Installieren", "Installation"],
     "chosen": "installieren",
     "confidence": "high",
-    "forms": "button Installieren; an instruction → Installiere …",
-    "sources": "macOS AppKit/SystemSettings (Install → Installieren, 100288.title); MS terminology"
+    "forms": "button Installieren; an instruction → Installiere …; the noun → Installation (die Installation abschließen)",
+    "sources": "macOS AppKit/SystemSettings (Install → Installieren, 100288.title); MS terminology (installation → Installation)"
   },
   "item": {
     "accept": ["Objekte"],

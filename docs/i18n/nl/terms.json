@@ -2763,6 +2763,17 @@
     "confidence": "high",
     "sources": "decisions.md \"S3\" (MS geheime toegangssleutel); catalog servers.sheet.secretAccessKey (the S3 form label), servers.refusal.s3SecretMissing, servers.refusal.s3SecretNotMoved"
   },
+  "security-advisory": {
+    "chosen": "beveiligingsadvies",
+    "confidence": "high",
+    "sources": "MS terminology (security advisory → beveiligingsadvies)"
+  },
+  "security-issue": {
+    "chosen": "beveiligingsprobleem",
+    "accept": ["beveiligingsproblemen"],
+    "confidence": "high",
+    "sources": "MS terminology (security vulnerability → beveiligingsprobleem)"
+  },
   "see": {
     "accept": ["bekijken", "Toon", "bekeken"],
     "chosen": "Bekijk",

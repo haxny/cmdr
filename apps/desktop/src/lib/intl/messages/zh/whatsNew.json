@@ -7,6 +7,18 @@
   "@whatsNew.dialog.empty": {
     "sourceHash": "31a5a2e"
   },
+  "whatsNew.securityNotice.title": "这个版本修复了 {count, plural, other {# 个安全问题}}。",
+  "@whatsNew.securityNotice.title": {
+    "sourceHash": "26e4d7e"
+  },
+  "whatsNew.securityNotice.readAdvisory": "查看安全公告",
+  "@whatsNew.securityNotice.readAdvisory": {
+    "sourceHash": "a96f533"
+  },
+  "whatsNew.securityNotice.readAdvisoryNamed": "查看安全公告 {id}",
+  "@whatsNew.securityNotice.readAdvisoryNamed": {
+    "sourceHash": "58d606c"
+  },
   "whatsNew.dialog.showMore": "显示更多",
   "@whatsNew.dialog.showMore": {
     "sourceHash": "f5c9bd1"

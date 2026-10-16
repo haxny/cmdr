@@ -2896,6 +2896,16 @@
     "match": ["secret access key", "secret access keys"],
     "sense": "The private half of an S3 key pair; it works like a password."
   },
+  "security-advisory": {
+    "en": "advisory",
+    "match": ["advisory", "advisories", "security advisory"],
+    "sense": "A public security advisory (on GitHub or the Cmdr website) describing a fixed vulnerability and what to do; the What's new and update-toast links."
+  },
+  "security-issue": {
+    "en": "security issue",
+    "match": ["security issue", "security issues"],
+    "sense": "A security vulnerability an update fixes, named calmly as an issue (the update toast and What's new notice)."
+  },
   "see": {
     "distinct": ["show", "review", "viewer", "preview"],
     "en": "See",

@@ -23,6 +23,18 @@
   "@updates.toast.readyDetail": {
     "sourceHash": "42ce099"
   },
+  "updates.toast.securityFix": "这次更新修复了 {count, plural, other {# 个安全问题}}。",
+  "@updates.toast.securityFix": {
+    "sourceHash": "3033a3b"
+  },
+  "updates.toast.securityFixDetail": "重新启动 Cmdr 即可完成安装。",
+  "@updates.toast.securityFixDetail": {
+    "sourceHash": "8070021"
+  },
+  "updates.toast.readAdvisory": "查看安全公告",
+  "@updates.toast.readAdvisory": {
+    "sourceHash": "a96f533"
+  },
   "updates.toast.versionChange": "v{prev} → v{next}",
   "@updates.toast.versionChange": {
     "sourceHash": "41b26f1",

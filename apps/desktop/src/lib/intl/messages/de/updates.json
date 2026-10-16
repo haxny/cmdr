@@ -23,6 +23,18 @@
   "@updates.toast.readyDetail": {
     "sourceHash": "42ce099"
   },
+  "updates.toast.securityFix": "Dieses Update behebt {count, plural, one {ein Sicherheitsproblem} other {# Sicherheitsprobleme}}.",
+  "@updates.toast.securityFix": {
+    "sourceHash": "3033a3b"
+  },
+  "updates.toast.securityFixDetail": "Starte Cmdr neu, um die Installation abzuschließen.",
+  "@updates.toast.securityFixDetail": {
+    "sourceHash": "8070021"
+  },
+  "updates.toast.readAdvisory": "Sicherheitshinweis lesen",
+  "@updates.toast.readAdvisory": {
+    "sourceHash": "a96f533"
+  },
   "updates.toast.versionChange": "v{prev} → v{next}",
   "@updates.toast.versionChange": {
     "sourceHash": "41b26f1",

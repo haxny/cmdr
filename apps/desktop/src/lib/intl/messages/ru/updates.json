@@ -23,6 +23,18 @@
   "@updates.toast.readyDetail": {
     "sourceHash": "42ce099"
   },
+  "updates.toast.securityFix": "Это обновление устраняет {count, plural, =1 {проблему безопасности} one {# проблему безопасности} few {# проблемы безопасности} many {# проблем безопасности} other {# проблемы безопасности}}.",
+  "@updates.toast.securityFix": {
+    "sourceHash": "3033a3b"
+  },
+  "updates.toast.securityFixDetail": "Перезапустите Cmdr, чтобы завершить установку.",
+  "@updates.toast.securityFixDetail": {
+    "sourceHash": "8070021"
+  },
+  "updates.toast.readAdvisory": "Прочитать бюллетень безопасности",
+  "@updates.toast.readAdvisory": {
+    "sourceHash": "a96f533"
+  },
   "updates.toast.versionChange": "v{prev} → v{next}",
   "@updates.toast.versionChange": {
     "sourceHash": "41b26f1",

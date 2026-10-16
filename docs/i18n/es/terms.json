@@ -2612,6 +2612,17 @@
     "confidence": "high",
     "sources": "catalog servers.sheet.secretAccessKey (the S3 form label), servers.refusal.s3SecretMissing, servers.refusal.s3SecretNotMoved; decisions.md \"S3\" (AWS console and docs in this language (outside the pile, not verified live))"
   },
+  "security-advisory": {
+    "chosen": "aviso de seguridad",
+    "confidence": "high",
+    "sources": "MS terminology (security advisory → aviso de seguridad)"
+  },
+  "security-issue": {
+    "chosen": "problema de seguridad",
+    "accept": ["problemas de seguridad"],
+    "confidence": "tentative",
+    "sources": "MS terminology vulnerability → vulnerabilidad; problema mirrors the calm English issue"
+  },
   "see": {
     "chosen": "Ver",
     "accept": ["consult"],

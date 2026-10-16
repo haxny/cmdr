@@ -3157,6 +3157,16 @@
     "forms": "short mentions after the label → 金鑰 (不儲存金鑰直接登入); a key as a pair-noun takes 組 (那組私密存取金鑰, onboarding.cloudSetup.status.authError 那組金鑰)",
     "sources": "AWS zh-TW docs (MakingRequests, checked 2026-10-02); MS secret key → 祕密金鑰 loses to the provider console"
   },
+  "security-advisory": {
+    "chosen": "安全性公告",
+    "confidence": "tentative",
+    "sources": "MS terminology advisory → 公告 (security advisory → 資訊安全諮詢, too formal); 安全性 as in Apple's 隱私權與安全性"
+  },
+  "security-issue": {
+    "chosen": "安全性問題",
+    "confidence": "tentative",
+    "sources": "MS terminology security vulnerability → 資訊安全漏洞; 問題 mirrors the calm English issue, 安全性 as in Apple's 隱私權與安全性"
+  },
   "see": {
     "accept": ["檢視", "看看", "看一下", "看到"],
     "chosen": "查看",

@@ -35,6 +35,8 @@ wording into `terms.json` (and `decisions.md` when the reason is worth keeping).
 - **Git column states** (`fileExplorer.git.status.*`, spoken as „{status} a gitben”): git core has no hu.po, so
   `Nem követett` (git-gui), `Figyelmen kívül hagyva`, `Konfliktusos` (TortoiseGit), and `Típus módosítva` are tentative.
   Confirm what Hungarian git users say, especially `Konfliktusos` over `Ütközés`.
+- **security advisory → `biztonsági közlemény`** (`updates.toast.readAdvisory`, `whatsNew.securityNotice.*`): no pile
+  term; `biztonsági figyelmeztetés` is the alternative.
 
 ## Wording
 
