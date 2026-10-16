@@ -2527,7 +2527,7 @@
     "sources": "macOS (Volume amovible, Amovible); Nautilus, Thunar"
   },
   "remove": {
-    "accept": ["retire", "retiré"],
+    "accept": ["retire", "retiré", "retrait"],
     "avoid": [
       {
         "form": "Supprimer",

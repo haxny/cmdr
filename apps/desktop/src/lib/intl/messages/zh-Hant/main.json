@@ -163,59 +163,59 @@
   "@main.escapeFullScreenHint.onceNote": {
     "sourceHash": "210b892"
   },
-  "main.cliCommand.installed": "The “cmdr” command is ready. In a terminal, type “cmdr .” to open the folder you’re in.",
+  "main.cliCommand.installed": "「cmdr」指令已準備就緒。在終端機中輸入「cmdr .」，就能開啟你目前所在的資料夾。",
   "@main.cliCommand.installed": {
     "sourceHash": "5b72efe"
   },
-  "main.cliCommand.uninstalled": "Removed the “cmdr” command.",
+  "main.cliCommand.uninstalled": "已移除「cmdr」指令。",
   "@main.cliCommand.uninstalled": {
     "sourceHash": "43e8d91"
   },
-  "main.cliCommand.alreadyInstalled": "The “cmdr” command is already installed.",
+  "main.cliCommand.alreadyInstalled": "「cmdr」指令已經安裝好了。",
   "@main.cliCommand.alreadyInstalled": {
     "sourceHash": "4a67949"
   },
-  "main.cliCommand.alreadyUninstalled": "The “cmdr” command was already gone.",
+  "main.cliCommand.alreadyUninstalled": "「cmdr」指令已經不在了。",
   "@main.cliCommand.alreadyUninstalled": {
     "sourceHash": "7d49c8f"
   },
-  "main.cliCommand.canceled": "Nothing changed. Adding or removing the “cmdr” command takes an administrator password.",
+  "main.cliCommand.canceled": "沒有變化。加入或移除「cmdr」指令需要管理者密碼。",
   "@main.cliCommand.canceled": {
     "sourceHash": "d51acb1"
   },
-  "main.cliCommand.installFailed": "Couldn’t install the “cmdr” command. Check that /usr/local/bin is writable, then try again.",
+  "main.cliCommand.installFailed": "無法安裝「cmdr」指令。請確認 /usr/local/bin 可以寫入，然後再試一次。",
   "@main.cliCommand.installFailed": {
     "sourceHash": "de500b0"
   },
-  "main.cliCommand.uninstallFailed": "Couldn’t remove the “cmdr” command. Check that /usr/local/bin is writable, then try again.",
+  "main.cliCommand.uninstallFailed": "無法移除「cmdr」指令。請確認 /usr/local/bin 可以寫入，然後再試一次。",
   "@main.cliCommand.uninstallFailed": {
     "sourceHash": "c066530"
   },
-  "main.cliCommand.homebrew": "Homebrew installed the “cmdr” command along with Cmdr, so it’s already in your terminal. It goes away when you uninstall Cmdr with Homebrew.",
+  "main.cliCommand.homebrew": "Homebrew 在安裝 Cmdr 時一併安裝了「cmdr」指令，所以終端機裡已經可以直接使用。用 Homebrew 解除安裝 Cmdr 時，這個指令也會一起移除。",
   "@main.cliCommand.homebrew": {
     "sourceHash": "1525744"
   },
-  "main.cliCommand.takenByOther": "There’s already a different “cmdr” in /usr/local/bin, so Cmdr left it alone. Remove or rename it, then try again.",
+  "main.cliCommand.takenByOther": "/usr/local/bin 裡已經有另一個不同的「cmdr」，所以 Cmdr 沒有更動那個「cmdr」。請把它移除或重新命名，然後再試一次。",
   "@main.cliCommand.takenByOther": {
     "sourceHash": "bd4877c"
   },
-  "main.cliCommand.notInApplications": "Move Cmdr to your Applications folder first. From anywhere else, the “cmdr” command would stop working the moment Cmdr moves.",
+  "main.cliCommand.notInApplications": "請先把 Cmdr 移到「應用程式」資料夾。放在其他位置的話，Cmdr 一移動，「cmdr」指令就會停止運作。",
   "@main.cliCommand.notInApplications": {
     "sourceHash": "c9e3fc3"
   },
-  "main.cliCommand.notProductionBuild": "This is a development build of Cmdr, so it leaves the “cmdr” command alone. Use the Cmdr in your Applications folder for this.",
+  "main.cliCommand.notProductionBuild": "這是 Cmdr 的開發版，所以不會更動「cmdr」指令。請改用「應用程式」資料夾裡的 Cmdr 來做這件事。",
   "@main.cliCommand.notProductionBuild": {
     "sourceHash": "f3187b3"
   },
-  "main.cliCommand.unavailable": "Couldn’t check the “cmdr” command just now. Try again in a moment.",
+  "main.cliCommand.unavailable": "剛剛無法檢查「cmdr」指令。請稍後再試一次。",
   "@main.cliCommand.unavailable": {
     "sourceHash": "58814f2"
   },
-  "main.cliCommand.adminPromptInstall": "Cmdr wants to add the “cmdr” command to /usr/local/bin.",
+  "main.cliCommand.adminPromptInstall": "Cmdr 想把「cmdr」指令加入 /usr/local/bin。",
   "@main.cliCommand.adminPromptInstall": {
     "sourceHash": "3c16e21"
   },
-  "main.cliCommand.adminPromptUninstall": "Cmdr wants to remove the “cmdr” command from /usr/local/bin.",
+  "main.cliCommand.adminPromptUninstall": "Cmdr 想從 /usr/local/bin 移除「cmdr」指令。",
   "@main.cliCommand.adminPromptUninstall": {
     "sourceHash": "df420ea"
   }

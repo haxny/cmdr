@@ -2449,7 +2449,7 @@
   },
   "open": {
     "chosen": "megnyitás",
-    "accept": ["megnyit", "nyisd meg", "nyílt", "nyílik", "nyit", "nyiss", "nyíl", "indítsd", "indíts"],
+    "accept": ["megnyit", "megnyis", "nyisd meg", "nyílt", "nyílik", "nyit", "nyiss", "nyíl", "indítsd", "indíts"],
     "forms": "label Megnyitás (the server row and the file menu share it); Open with default app → Megnyitás az alapértelmezett appban; Open X → X megnyitása; imperative Nyisd meg",
     "confidence": "high",
     "sources": "macOS Finder (N151 Megnyitás, N152 Megnyitás ezzel, FV7 Megnyitás új ablakban)",

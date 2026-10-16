@@ -2316,6 +2316,13 @@
     "forms": "agrees: skrivskyddat arkiv, skrivskyddad volym",
     "sources": "macOS Finder, MS"
   },
+  "ready": {
+    "accept": ["klar"],
+    "chosen": "redo",
+    "confidence": "high",
+    "forms": "a tool or command → är redo; redo att + infinitive; Redo för namnbyte; a downloaded update that's done preparing → klar (En ny version är klar), never the bare label Klar, which is macOS's Done button",
+    "sources": "macOS (skivenheten inte var redo), catalog (Redo för namnbyte, redo att flyttas, redo att klistra in)"
+  },
   "reclaim": {
     "accept": ["frigjorde"],
     "chosen": "frigör",
@@ -2419,7 +2426,8 @@
     "chosen": "ta bort",
     "confidence": "high",
     "exceptions": {
-      "commands.queueToggleSelected.label": "Taking a row out of the selection is avmarkera, the pair of markera (catalog: Avmarkera allt)."
+      "commands.queueToggleSelected.label": "Taking a row out of the selection is avmarkera, the pair of markera (catalog: Avmarkera allt).",
+      "main.cliCommand.takenByOther": "The user deletes someone else's file from /usr/local/bin, so it takes the delete verb radera (Radera det eller byt namn på det)."
     },
     "forms": "out of a list or collection; never deleting files from disk (that is radera)",
     "sources": "macOS Finder (Ta bort), GNOME"

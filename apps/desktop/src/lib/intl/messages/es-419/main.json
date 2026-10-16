@@ -54,5 +54,41 @@
   "main.escapeFullScreenHint.settingsLine": "También puedes cambiarlo en <settingsLink>Configuración > Avanzado</settingsLink>.",
   "@main.escapeFullScreenHint.settingsLine": {
     "sourceHash": "e30e537"
+  },
+  "main.cliCommand.uninstalled": "Se quitó el comando “cmdr”.",
+  "@main.cliCommand.uninstalled": {
+    "sourceHash": "1675fbb"
+  },
+  "main.cliCommand.canceled": "No cambió nada. Para agregar o quitar el comando “cmdr” hace falta una contraseña de administrador.",
+  "@main.cliCommand.canceled": {
+    "sourceHash": "7deac65"
+  },
+  "main.cliCommand.installFailed": "No se pudo instalar el comando “cmdr”. Comprueba que se puede escribir en /usr/local/bin e inténtalo de nuevo.",
+  "@main.cliCommand.installFailed": {
+    "sourceHash": "d9ae4ef"
+  },
+  "main.cliCommand.uninstallFailed": "No se pudo quitar el comando “cmdr”. Comprueba que se puede escribir en /usr/local/bin e inténtalo de nuevo.",
+  "@main.cliCommand.uninstallFailed": {
+    "sourceHash": "9474514"
+  },
+  "main.cliCommand.homebrew": "Homebrew instaló el comando “cmdr” junto con Cmdr, así que ya está en tu terminal. Desaparece cuando desinstalas Cmdr con Homebrew.",
+  "@main.cliCommand.homebrew": {
+    "sourceHash": "f20a154"
+  },
+  "main.cliCommand.takenByOther": "Ya hay otro “cmdr” en /usr/local/bin, así que Cmdr lo dejó como está. Elimínalo o renómbralo e inténtalo de nuevo.",
+  "@main.cliCommand.takenByOther": {
+    "sourceHash": "3c74b9c"
+  },
+  "main.cliCommand.notInApplications": "Mueve primero Cmdr a tu carpeta Aplicaciones. Desde cualquier otro lugar, el comando “cmdr” dejaría de funcionar en cuanto Cmdr se moviera.",
+  "@main.cliCommand.notInApplications": {
+    "sourceHash": "0f2ed69"
+  },
+  "main.cliCommand.unavailable": "No se pudo comprobar el comando “cmdr” ahora mismo. Inténtalo de nuevo en un momento.",
+  "@main.cliCommand.unavailable": {
+    "sourceHash": "8a02316"
+  },
+  "main.cliCommand.adminPromptInstall": "Cmdr quiere agregar el comando “cmdr” a /usr/local/bin.",
+  "@main.cliCommand.adminPromptInstall": {
+    "sourceHash": "646ca96"
   }
 }

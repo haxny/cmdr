@@ -1911,6 +1911,12 @@
     "forms": "an index entry is also 項目",
     "sources": "AP-TW/HK (Items), MS"
   },
+  "just-now": {
+    "chosen": "剛剛",
+    "confidence": "high",
+    "forms": "relative-time label → 剛剛; \"couldn't X just now\" → 剛剛無法…",
+    "sources": "catalog queryUi.age.justNow, fileExplorer.errorPane.aMomentAgo, onboarding.stepBeta.signup.unreachable (剛剛無法連上…)"
+  },
   "keep": {
     "chosen": "保留",
     "confidence": "high",

@@ -1687,6 +1687,13 @@
     "note": "A list-final item placeholder takes no measure word (其他 App).",
     "sources": "macOS Finder"
   },
+  "just-now": {
+    "chosen": "刚刚",
+    "accept": ["刚才", "暂时"],
+    "confidence": "high",
+    "forms": "the relative-time label 刚刚; \"couldn't X just now\" prose 刚刚没能… or 暂时无法… (settings.mediaIndex.clip.deleteFailed)",
+    "sources": "catalog (shipped relative-time label 刚刚, 刚刚发生了什么？)"
+  },
   "keep": {
     "chosen": "保留",
     "confidence": "high",
@@ -2477,6 +2484,13 @@
     "confidence": "confirmed",
     "forms": "只读宗卷, 只读压缩文件, 只读设备",
     "sources": "macOS/MS"
+  },
+  "ready": {
+    "accept": ["准备好", "可以用了"],
+    "chosen": "就绪",
+    "confidence": "high",
+    "forms": "status 已就绪 (AI 已就绪, 新版本已就绪, “cmdr”命令已就绪); not-yet prose 还没准备好",
+    "sources": "catalog (18 shipped uses: 已就绪 in updates, AI, and index status; 还没准备好 in index prose)"
   },
   "recent": {
     "accept": ["最新"],

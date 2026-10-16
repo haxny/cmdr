@@ -7,6 +7,19 @@ rule into `translation-principles.md` or `translator-instructions.md`), then del
 
 ## Open
 
+- `main.cliCommand.*` / `menu.app.cliCommand*`: one action, three verb pairs (Install/Uninstall in the menu, "Removed"
+  in toasts, "Adding or removing" in `canceled`). Pick one pair; most locales mirrored the split. (de, es, zh-Hant)
+- `main.cliCommand.notInApplications`: "From anywhere else" reads as installed-from or running-from; say "If you install
+  it from anywhere else, …". (hu, zh)
+- `commands.appToggleCliCommand.description`: "open it" can point at the path or the terminal; say "open that file or
+  folder in Cmdr", which also spares gendered languages a pronoun. (de, es, hu, nl, pt, ru, sv)
+- `main.cliCommand.takenByOther`: "a different “cmdr”" leaves open file, link, or folder; gendered languages guessed.
+  The description could say it's usually a file or link from another tool. (nl, sv, es, de)
+- No `uninstall` concept: every locale ruled it ad hoc (de `deinstallieren`, nl `verwijderen`, zh `卸载`, …). Add one,
+  distinct from `remove`. Also proposed: an `administrator` concept. (all)
+- The termbase matcher counts words inside file-system paths (`local` in `/usr/local/bin`, now a `notMatch`). A
+  path-token rule in the matcher would cover the next path too. (hu, ru, sv, zh, zh-Hant)
+
 - `fileExplorer.pane.selectedCount`: English has only `=0` and `other`, so every `one`-category locale fails `plural`
   until it adds a `one` branch (nl copied `other`). Add `one {{countText} selected}` to the English so translators see
   it.

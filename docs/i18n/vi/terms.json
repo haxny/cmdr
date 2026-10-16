@@ -2260,6 +2260,13 @@
     "confidence": "high",
     "sources": "Xfce Thunar, GNOME (Chỉ đọc)"
   },
+  "ready": {
+    "accept": ["Đã có"],
+    "chosen": "sẵn sàng",
+    "confidence": "high",
+    "forms": "X is ready → X đã sẵn sàng; a new version is ready (updates.*) → Đã có phiên bản mới",
+    "sources": "MS terminology (ready → sẵn sàng); catalog (AI đã sẵn sàng, Kích cỡ chưa sẵn sàng)"
+  },
   "recent": {
     "accept": ["mới nhất"],
     "chosen": "gần đây",

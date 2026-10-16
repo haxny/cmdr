@@ -2236,6 +2236,13 @@
     "confidence": "high",
     "sources": "MS terminology pt-BR"
   },
+  "ready": {
+    "chosen": "pronto",
+    "accept": ["pront"],
+    "confidence": "high",
+    "sources": "MS terminology pt-BR (Pronto para…); catalog already uses pronto/pronta ~15 times (Índice pronto, IA pronta)",
+    "note": "Agrees in gender and number with what is ready: o comando está pronto, a IA está pronta."
+  },
   "read-only": {
     "chosen": "somente leitura",
     "avoid": [

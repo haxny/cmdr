@@ -61,15 +61,15 @@
     "sourceHash": "c4cc4aa",
     "sameAsSourceJustification": "Dutch product copy keeps the English \"onboarding\"; no native noun for a first-run wizard is in use, and the rest of the nl catalog already ships commands.cmdrOpenOnboarding.label as \"Onboarding…\"."
   },
-  "menu.app.cliCommandInstall": "Install “cmdr” command",
+  "menu.app.cliCommandInstall": "Installeer opdracht ‘cmdr’",
   "@menu.app.cliCommandInstall": {
     "sourceHash": "b99e6c4"
   },
-  "menu.app.cliCommandUninstall": "Uninstall “cmdr” command",
+  "menu.app.cliCommandUninstall": "Verwijder opdracht ‘cmdr’",
   "@menu.app.cliCommandUninstall": {
     "sourceHash": "ac1052e"
   },
-  "menu.app.cliCommandHomebrew": "“cmdr” command installed by Homebrew",
+  "menu.app.cliCommandHomebrew": "Opdracht ‘cmdr’ via Homebrew geïnstalleerd",
   "@menu.app.cliCommandHomebrew": {
     "sourceHash": "cc4c0fd"
   },

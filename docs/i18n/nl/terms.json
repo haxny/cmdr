@@ -1652,6 +1652,13 @@
     "forms": "het-woord; one other file → één ander bestand, N other items → N andere onderdelen; keeps item only for non-files (menu-item, stash-item, recent-list entries)",
     "sources": "macOS Finder (items → onderdelen), Keychain Access (Alle onderdelen)"
   },
+  "just-now": {
+    "accept": ["net", "nu even"],
+    "chosen": "zojuist",
+    "confidence": "high",
+    "forms": "relative-time label zojuist; in prose Kon … zojuist niet …; casual alternatives net / nu even where zojuist reads stiff",
+    "sources": "catalog (queryUi.age.justNow, queryUi.dialog.aiTranslateFailedToast, onboarding.stepBeta.signup.unreachable, settings.mediaIndex.clip.deleteFailed); macOS nl has no hit"
+  },
   "keep": {
     "accept": ["behouden", "behoudt", "houdt", "gehouden"],
     "chosen": "Behoud",
@@ -2409,6 +2416,19 @@
     "decision": "Eén ding, één naam: de interne driftronde",
     "forms": "a compound noun closes up: alleen-lezenvolume, alleen-lezenapparaat, alleen-lezenarchief, alleen-lezenmap, alleen-lezenbron; the adjective stays open as a predicate or after a comma (is alleen-lezen, een tijdelijke, alleen-lezen kopie); Alleen-lezen git-portaal stays open to avoid a double hyphen",
     "sources": "macOS Finder (Read Only → Alleen lezen; bevindt zich op een alleen-lezenvolume)"
+  },
+  "ready": {
+    "accept": ["klaarstaat", "staat klaar", "klaar voor gebruik"],
+    "avoid": [
+      {
+        "form": "gereed",
+        "why": "macOS uses Gereed for the Done button; a status sentence reads casual with klaar"
+      }
+    ],
+    "chosen": "klaar",
+    "confidence": "high",
+    "forms": "status sentence → … staat klaar (Er staat een nieuwe versie van Cmdr klaar; De opdracht ‘cmdr’ staat klaar)",
+    "sources": "catalog (updates.toast.ready, updates.moveToApplicationsDialog.*); macOS Finder (Gereed = Done button)"
   },
   "reclaim": {
     "accept": ["vrij te maken", "vrijgemaakt", "maakt", "vrij"],

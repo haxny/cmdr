@@ -2474,6 +2474,13 @@
     "forms": "write-protection switch → Schreibschutzschalter; read-only archive → Schreibgeschütztes Archiv",
     "sources": "MS terminology; macOS (schreibgeschützt)"
   },
+  "ready": {
+    "accept": ["Bereit"],
+    "chosen": "bereit",
+    "confidence": "high",
+    "forms": "X is ready → X ist bereit (main.cliCommand.installed, updates: Eine neue Version von Cmdr ist bereit.); a status line → Bereit …",
+    "sources": "catalog (updates.*, mediaIndex Bereit – suche deine Fotos …, Bereit zum Umbenennen)"
+  },
   "recent": {
     "accept": ["zuletzt", "neueste", "kürzlich", "aktuell", "neuer"],
     "chosen": "Letzte",

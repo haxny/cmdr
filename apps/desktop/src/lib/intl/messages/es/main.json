@@ -163,59 +163,59 @@
   "@main.escapeFullScreenHint.onceNote": {
     "sourceHash": "210b892"
   },
-  "main.cliCommand.installed": "The “cmdr” command is ready. In a terminal, type “cmdr .” to open the folder you’re in.",
+  "main.cliCommand.installed": "El comando “cmdr” está listo. En un terminal, escribe “cmdr .” para abrir la carpeta en la que estás.",
   "@main.cliCommand.installed": {
     "sourceHash": "5b72efe"
   },
-  "main.cliCommand.uninstalled": "Removed the “cmdr” command.",
+  "main.cliCommand.uninstalled": "Se ha quitado el comando “cmdr”.",
   "@main.cliCommand.uninstalled": {
     "sourceHash": "43e8d91"
   },
-  "main.cliCommand.alreadyInstalled": "The “cmdr” command is already installed.",
+  "main.cliCommand.alreadyInstalled": "El comando “cmdr” ya está instalado.",
   "@main.cliCommand.alreadyInstalled": {
     "sourceHash": "4a67949"
   },
-  "main.cliCommand.alreadyUninstalled": "The “cmdr” command was already gone.",
+  "main.cliCommand.alreadyUninstalled": "El comando “cmdr” ya se había quitado.",
   "@main.cliCommand.alreadyUninstalled": {
     "sourceHash": "7d49c8f"
   },
-  "main.cliCommand.canceled": "Nothing changed. Adding or removing the “cmdr” command takes an administrator password.",
+  "main.cliCommand.canceled": "No ha cambiado nada. Para añadir o quitar el comando “cmdr” hace falta una contraseña de administrador.",
   "@main.cliCommand.canceled": {
     "sourceHash": "d51acb1"
   },
-  "main.cliCommand.installFailed": "Couldn’t install the “cmdr” command. Check that /usr/local/bin is writable, then try again.",
+  "main.cliCommand.installFailed": "No se ha podido instalar el comando “cmdr”. Comprueba que se puede escribir en /usr/local/bin e inténtalo de nuevo.",
   "@main.cliCommand.installFailed": {
     "sourceHash": "de500b0"
   },
-  "main.cliCommand.uninstallFailed": "Couldn’t remove the “cmdr” command. Check that /usr/local/bin is writable, then try again.",
+  "main.cliCommand.uninstallFailed": "No se ha podido quitar el comando “cmdr”. Comprueba que se puede escribir en /usr/local/bin e inténtalo de nuevo.",
   "@main.cliCommand.uninstallFailed": {
     "sourceHash": "c066530"
   },
-  "main.cliCommand.homebrew": "Homebrew installed the “cmdr” command along with Cmdr, so it’s already in your terminal. It goes away when you uninstall Cmdr with Homebrew.",
+  "main.cliCommand.homebrew": "Homebrew ha instalado el comando “cmdr” junto con Cmdr, así que ya está en tu terminal. Desaparece cuando desinstalas Cmdr con Homebrew.",
   "@main.cliCommand.homebrew": {
     "sourceHash": "1525744"
   },
-  "main.cliCommand.takenByOther": "There’s already a different “cmdr” in /usr/local/bin, so Cmdr left it alone. Remove or rename it, then try again.",
+  "main.cliCommand.takenByOther": "Ya hay otro “cmdr” en /usr/local/bin, así que Cmdr lo ha dejado como está. Elimínalo o renómbralo e inténtalo de nuevo.",
   "@main.cliCommand.takenByOther": {
     "sourceHash": "bd4877c"
   },
-  "main.cliCommand.notInApplications": "Move Cmdr to your Applications folder first. From anywhere else, the “cmdr” command would stop working the moment Cmdr moves.",
+  "main.cliCommand.notInApplications": "Mueve primero Cmdr a tu carpeta Aplicaciones. Desde cualquier otro sitio, el comando “cmdr” dejaría de funcionar en cuanto Cmdr se moviera.",
   "@main.cliCommand.notInApplications": {
     "sourceHash": "c9e3fc3"
   },
-  "main.cliCommand.notProductionBuild": "This is a development build of Cmdr, so it leaves the “cmdr” command alone. Use the Cmdr in your Applications folder for this.",
+  "main.cliCommand.notProductionBuild": "Esta es una versión de desarrollo de Cmdr, así que deja el comando “cmdr” como está. Usa el Cmdr de tu carpeta Aplicaciones para esto.",
   "@main.cliCommand.notProductionBuild": {
     "sourceHash": "f3187b3"
   },
-  "main.cliCommand.unavailable": "Couldn’t check the “cmdr” command just now. Try again in a moment.",
+  "main.cliCommand.unavailable": "No se ha podido comprobar el comando “cmdr” ahora mismo. Inténtalo de nuevo en un momento.",
   "@main.cliCommand.unavailable": {
     "sourceHash": "58814f2"
   },
-  "main.cliCommand.adminPromptInstall": "Cmdr wants to add the “cmdr” command to /usr/local/bin.",
+  "main.cliCommand.adminPromptInstall": "Cmdr quiere añadir el comando “cmdr” a /usr/local/bin.",
   "@main.cliCommand.adminPromptInstall": {
     "sourceHash": "3c16e21"
   },
-  "main.cliCommand.adminPromptUninstall": "Cmdr wants to remove the “cmdr” command from /usr/local/bin.",
+  "main.cliCommand.adminPromptUninstall": "Cmdr quiere quitar el comando “cmdr” de /usr/local/bin.",
   "@main.cliCommand.adminPromptUninstall": {
     "sourceHash": "df420ea"
   }

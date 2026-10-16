@@ -1703,7 +1703,8 @@
   "just-now": {
     "en": "just now",
     "match": ["just now"],
-    "sense": "The newest step of a relative-time label (just now, 5m ago)."
+    "sense": "The newest step of a relative-time label (just now, 5m ago).",
+    "notMatch": ["just now. try"]
   },
   "keep": {
     "distinct": ["leave-alone"],
@@ -1852,7 +1853,7 @@
     "distinct": ["remote", "local-network"],
     "en": "local",
     "match": ["local", "locally"],
-    "notMatch": ["local network", "local networks", "nas.local"],
+    "notMatch": ["local network", "local networks", "nas.local", "/usr/local"],
     "sense": "On this Mac, as opposed to a server or the cloud (a local model, stored locally)."
   },
   "local-network": {
@@ -3208,7 +3209,8 @@
       "stopped moving",
       "stops listing",
       "after you stop",
-      "stop showing"
+      "stop showing",
+      "stop working"
     ],
     "sense": "Halting something that runs (a search, a local AI server, an operation during rollback)."
   },
