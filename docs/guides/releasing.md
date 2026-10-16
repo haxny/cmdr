@@ -247,6 +247,13 @@ check.
    - **`local`**: verify the key is readable from sops without printing it:
      `secret CMDR_TAURI_SIGNING_PRIVATE_KEY > /dev/null && secret CMDR_TAURI_SIGNING_PRIVATE_KEY_PASSWORD > /dev/null`.
      If it fails, warn the user and stop.
+   - **No known exploitable vulnerability ships** (EU Cyber Resilience Act, Annex I Part I (2)(a)). List the open
+     security gaps in the private tracker (`vdavid/cmdr-reports`), the ones `docs/threat-model.md` calls "tracked
+     privately", and for each, say whether this release's code is exploitable through it. David confirms. An exploitable
+     one stops the release until it's fixed, unless David writes a risk decision on its issue. Then add one line to the
+     vault's release log, `projects/Cmdr/business/CRA technical file/Release log.md` (create it on first use): the date,
+     the version (filled in at step 6), the issue numbers reviewed, and "none exploitable" or links to the risk
+     decisions. ❌ No exploit detail in this repo; the line stays in the vault.
 2. **Push `main` and start the CI gate now**: `git pull --rebase origin main && git push origin main`, then run
    `./scripts/release-ci-gate.sh` in the background. It starts a full (`run_all`) CI run on the pushed commit and waits
    for it (~25 min), overlapping it with the drafting below; `release.sh` re-runs it before tagging and aborts unless
@@ -356,6 +363,7 @@ with these differences. The procedure pre-approves building and publishing it, s
   `RELEASE_SKIP_CI_GATE_TAG` afterwards.
 - If the updater key itself leaked, make the fix release the rotation release too: § Rotating to the backup updater key,
   which also says when to sign it with the backup key and when with the leaked one.
+- If `main` carries unreleased features, cut the fix from the last release tag instead: § Security-only patch release.
 
 **Timeline**, from the tabletop's estimate (2026-10-15), not yet measured on a real incident: two to three hours of
 agent work on the fix and changelog, with the ~25-minute CI gate overlapping it, then about 90 minutes from the tag push
@@ -369,6 +377,67 @@ fix up within hours.
 - Confirm no release or tag exists that we didn't make (`gh release list -R vdavid/cmdr`), and that `latest.json` names
   ours.
 - Clear any bypass variable you set, and log the release with its UTC time in the `INCIDENT:` issue.
+
+## Security-only patch release
+
+When a security fix is ready and `main` already holds unreleased features, ship the fix on its own as a patch release
+(X.Y.Z+1) cut from the last release tag. The EU Cyber Resilience Act asks for security updates separate from feature
+updates where that's technically feasible (Annex I Part II (2)). If `main` holds nothing since the last tag but the fix
+(`git log --oneline vX.Y.Z..main`), release from `main` as usual instead.
+
+**What works from any tag, unchanged**: the whole tag-push pipeline (`guard`, `ci-gate`, `compile`, `sign`, the release
+gate, `sbom`, `attest`, `publish`, `bump-tap`) and `release-finish.sh`. They read the tag, and `publish` commits
+`latest.json` to `main` whichever branch the tag sits on. The `ci-gate` job accepts the tagged commit's parent when the
+tagged commit is the `chore(release): vX.Y.Z` commit, on any branch.
+
+**What assumes `main` HEAD, and how this procedure gets around it:**
+
+- ❌ **Don't run `release.sh`.** It runs `git pull --rebase --autostash origin main`, which would rebase the patch
+  branch onto `main` and ship every unreleased feature. Its gate, `release-ci-gate.sh`, also refuses any HEAD that isn't
+  `origin/main`, and dispatches CI on `main` only. Step 5 does its steps by hand.
+- **The pipeline runs from the tag's own commit**, so the workflow files, `release-finish.sh`, and
+  `.github/release-signers` are the old tag's. Before cutting, run
+  `git diff vX.Y.Z main -- .github/workflows/release.yml .github/workflows/release-pipeline.yml scripts/release-finish.sh scripts/release-finish/ .github/release-signers`.
+  A change there that a release depends on (a moved secret, a new signer key) has to come along to the patch branch.
+- **The website and `CHANGELOG.md` on `main`** don't see the patch until step 7 merges it back.
+
+Steps:
+
+1. **Prerequisites and the known-gaps check**: § The release procedure, step 1.
+2. **Branch from the tag** in a worktree: `~/.claude/scripts/new-worktree.sh security-vX.Y.Z+1 vX.Y.Z`.
+3. **Land only the fix**, with its tests: no features, refactors, or unrelated dependency bumps. Write it on this branch
+   first. If it already landed on `main`, `git cherry-pick -x` it. A dependency advisory fix bumps only that dependency.
+4. **Get the gates green on the branch's HEAD**: push the branch (`git push origin HEAD`), then
+   `gh workflow run ci.yml --ref <branch> -f run_all=true` and `gh workflow run codeql.yml --ref <branch>`. Watch the CI
+   run (`gh run list --workflow ci.yml --event workflow_dispatch --commit $(git rev-parse HEAD) --limit 1`, then
+   `gh run watch <id> --exit-status`), then run `./scripts/release-codeql-gate.sh --wait $(git rev-parse HEAD)`. The CI
+   run doesn't deploy the website: `deploy-website` runs on `main` only.
+   - **CI from an old tag can go red on what `main` has already fixed**, like a new dependency advisory or a lint from a
+     newer tool. Bring over only what the gate needs, as its own commit. A red lane that has nothing to do with the fix
+     can take the emergency bypass in § Release gates that abort before tagging.
+   - **The CodeQL gate also requires no open high or critical alert on `main`.** That's on purpose: fix or triage the
+     alert first.
+5. **Changelog, then the release commit and tag.** Add a `## [Unreleased]` section with a one-line lead and only
+   `### Security` entries, per § Writing the CHANGELOG, citing this branch's hashes. Run
+   `pnpm check changelog-links --fresh`, then do by hand every step of `scripts/release.sh` from the version bump
+   (`npm pkg set version=...`) through `git tag -s`, in its order, with the new version: the settings-defaults stamp,
+   `tauri.conf.json`, `Cargo.toml` plus `cargo update --workspace`, the CHANGELOG heading, the `LICENSE` change date,
+   the visual baselines, both `oxfmt` passes, the strict `i18n-stale` check, the `chore(release): vX.Y.Z+1` commit, and
+   the signed tag. Skip its pull and its CI gate (step 4 replaced them). The commit subject must match exactly, or the
+   server-side `ci-gate` looks for a full CI run on the release commit itself and fails.
+6. **Push the tag only** (`git push origin vX.Y.Z+1`), then follow § The release procedure from step 8 on: in `local`
+   mode `release-finish.sh`, run from this worktree so it reads the tag's own `tauri.conf.json` pubkey, then the build
+   monitoring and step 12's checks. Step 11's standalone `CI` run doesn't apply, since nothing went to `main`.
+7. **Merge the patch back into `main`** once it's published. Free `main` first (no other worktree may have it checked
+   out), then in the main clone: `git pull --rebase origin main` (it brings in `publish`'s `latest.json` commit),
+   `git merge --no-ff vX.Y.Z+1`, and `git push origin main`. The merge is what puts the patch's `CHANGELOG.md` section
+   on the website and in the next release's history, makes its hashes reachable for `changelog-links`, and moves
+   `main`'s version up to the live one. Resolve conflicts in favor of the patch for the version files and the
+   settings-defaults stamp, keep both sides in `CHANGELOG.md`, and keep `main`'s copy of a cherry-picked fix. It's the
+   one merge commit in `main`'s history that a fast-forward can't replace, since the two branches have diverged.
+8. **Tear down the worktree**: `~/.claude/scripts/remove-worktree.sh security-vX.Y.Z+1`.
+
+The next regular release drafts its CHANGELOG from `vX.Y.Z+1..main` and doesn't list the fix again.
 
 ## Writing the CHANGELOG
 
