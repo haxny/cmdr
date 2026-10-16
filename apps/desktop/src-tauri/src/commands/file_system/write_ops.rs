@@ -30,7 +30,7 @@ use crate::file_system::{
     resume_operation as ops_resume_operation, retry_failed_operation as ops_retry_failed_operation,
     trash_files_start as ops_trash_files_start,
 };
-use crate::operations_host::{TauriEventSink, TauriScanPreviewSink};
+use crate::operations_host::{TauriEventSink, TauriScanPreviewSink, wire};
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::time::Duration;
@@ -157,7 +157,14 @@ pub async fn create_directory(
     name: String,
     initiator: Option<Initiator>,
 ) -> Result<MutationReply, MutationError> {
-    create_directory_replying(volume_id, parent_path, name, initiator, broadcast_settled(app)).await
+    create_directory_replying(
+        volume_id,
+        parent_path,
+        name,
+        initiator,
+        broadcast_settled(app, wire::MutationSettled),
+    )
+    .await
 }
 
 /// [`create_directory`] with the settle delivery passed in.
@@ -187,7 +194,14 @@ pub async fn create_file(
     name: String,
     initiator: Option<Initiator>,
 ) -> Result<MutationReply, MutationError> {
-    create_file_replying(volume_id, parent_path, name, initiator, broadcast_settled(app)).await
+    create_file_replying(
+        volume_id,
+        parent_path,
+        name,
+        initiator,
+        broadcast_settled(app, wire::MutationSettled),
+    )
+    .await
 }
 
 /// [`create_file`] with the settle delivery passed in.

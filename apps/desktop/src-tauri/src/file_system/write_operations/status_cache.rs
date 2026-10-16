@@ -178,17 +178,6 @@ pub(crate) fn release_external_volume_op(op_id: &str) {
 // Busy-volumes set (drives "disable Eject while an op touches this device")
 // ============================================================================
 
-/// Typed `volumes-busy-changed` Tauri event. Wraps the busy volume-ID list in a
-/// struct because `tauri_specta::Event` payloads must be named types (a bare
-/// `Vec<String>` can't derive `Event`). The struct name kebab-cases to
-/// `volumes-busy-changed`.
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type, tauri_specta::Event)]
-#[serde(rename_all = "camelCase")]
-pub struct VolumesBusyChanged {
-    /// IDs of volumes with an in-flight copy / move / delete operation (sorted).
-    pub volume_ids: Vec<String>,
-}
-
 /// Last busy set we emitted, so a progress update that doesn't change
 /// membership produces no event (the cache changes on every progress tick, but
 /// the busy set only changes when an op starts or finishes).

@@ -1,6 +1,6 @@
 //! The app's answers to the engine's two sink seams: each event becomes a Tauri
-//! event, and a terminal one carries its app side effects first
-//! (`terminal_effects.rs`).
+//! event (wrapped for the wire, `wire.rs`), and a terminal one carries its app
+//! side effects first (`terminal_effects.rs`).
 //!
 //! Built at the IPC edge, one per operation or preview, and handed to the
 //! engine; the engine never builds one itself.
@@ -9,6 +9,7 @@ use tauri::AppHandle;
 use tauri_specta::Event;
 
 use super::terminal_effects::{self, AppTerminalEffects};
+use super::wire;
 use crate::file_system::write_operations::{
     ConflictInfo, DryRunResult, OperationEventSink, ScanPreviewCancelledEvent, ScanPreviewCompleteEvent,
     ScanPreviewErrorEvent, ScanPreviewEventSink, ScanPreviewProgressEvent, ScanProgressEvent, WriteCancelledEvent,
@@ -36,47 +37,47 @@ impl TauriEventSink {
 
 impl OperationEventSink for TauriEventSink {
     fn emit_progress(&self, event: WriteProgressEvent) {
-        let _ = event.emit(&self.app);
+        let _ = wire::WriteProgress(event).emit(&self.app);
     }
     fn emit_complete(&self, event: WriteCompleteEvent) {
         terminal_effects::complete(&self.effects(), event, |event| {
-            let _ = event.emit(&self.app);
+            let _ = wire::WriteComplete(event).emit(&self.app);
         });
     }
     fn emit_cancelled(&self, event: WriteCancelledEvent) {
         terminal_effects::cancelled(&self.effects(), event, |event| {
-            let _ = event.emit(&self.app);
+            let _ = wire::WriteCancelled(event).emit(&self.app);
         });
     }
     fn emit_error(&self, event: WriteErrorEvent) {
         terminal_effects::error(&self.effects(), event, |event| {
-            let _ = event.emit(&self.app);
+            let _ = wire::WriteError(event).emit(&self.app);
         });
     }
     fn emit_conflict(&self, event: WriteConflictEvent) {
-        let _ = event.emit(&self.app);
+        let _ = wire::WriteConflict(event).emit(&self.app);
     }
     fn emit_conflict_resolved(&self, event: WriteConflictResolvedEvent) {
-        let _ = event.emit(&self.app);
+        let _ = wire::WriteConflictResolved(event).emit(&self.app);
     }
     fn emit_source_item_done(&self, event: WriteSourceItemDoneEvent) {
-        let _ = event.emit(&self.app);
+        let _ = wire::WriteSourceItemDone(event).emit(&self.app);
     }
     fn emit_sources_gone(&self, event: WriteSourcesGoneEvent) {
-        let _ = event.emit(&self.app);
+        let _ = wire::WriteSourcesGone(event).emit(&self.app);
     }
     fn emit_scan_progress(&self, event: ScanProgressEvent) {
-        let _ = event.emit(&self.app);
+        let _ = wire::ScanProgress(event).emit(&self.app);
     }
     fn emit_scan_conflict(&self, conflict: ConflictInfo) {
-        let _ = conflict.emit(&self.app);
+        let _ = wire::ScanConflict(conflict).emit(&self.app);
     }
     fn emit_dry_run_complete(&self, result: DryRunResult) {
-        let _ = result.emit(&self.app);
+        let _ = wire::DryRunComplete(result).emit(&self.app);
     }
     fn emit_settled(&self, event: WriteSettledEvent) {
         terminal_effects::settled(&self.effects(), event, |event| {
-            let _ = event.emit(&self.app);
+            let _ = wire::WriteSettled(event).emit(&self.app);
         });
     }
 }
@@ -94,15 +95,15 @@ impl TauriScanPreviewSink {
 
 impl ScanPreviewEventSink for TauriScanPreviewSink {
     fn emit_progress(&self, event: ScanPreviewProgressEvent) {
-        let _ = event.emit(&self.app);
+        let _ = wire::ScanPreviewProgress(event).emit(&self.app);
     }
     fn emit_complete(&self, event: ScanPreviewCompleteEvent) {
-        let _ = event.emit(&self.app);
+        let _ = wire::ScanPreviewComplete(event).emit(&self.app);
     }
     fn emit_error(&self, event: ScanPreviewErrorEvent) {
-        let _ = event.emit(&self.app);
+        let _ = wire::ScanPreviewError(event).emit(&self.app);
     }
     fn emit_cancelled(&self, event: ScanPreviewCancelledEvent) {
-        let _ = event.emit(&self.app);
+        let _ = wire::ScanPreviewCancelled(event).emit(&self.app);
     }
 }

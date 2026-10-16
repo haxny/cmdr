@@ -9,13 +9,23 @@ use serde_json::{Value, json};
 use tauri::AppHandle;
 use tauri_specta::Event as _;
 
+use super::wire;
 use crate::file_system::write_operations::host::{
     AsideAttempt, EngineEvents, InstantMutationFact, InstantOp, InstantOutcome, InstantTarget, OperationErrorReport,
     TreeFailure,
 };
-use crate::file_system::write_operations::{
-    MoveLeftoversKeptEvent, OperationsChanged, VolumesBusyChanged, WriteProgressEvent,
-};
+use crate::file_system::write_operations::{MoveLeftoversKeptEvent, OperationsChanged, WriteProgressEvent};
+
+/// Typed `volumes-busy-changed` Tauri event. Wraps the busy volume-ID list in a
+/// struct because `tauri_specta::Event` payloads must be named types (a bare
+/// `Vec<String>` can't derive `Event`). The struct name kebab-cases to
+/// `volumes-busy-changed`.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type, tauri_specta::Event)]
+#[serde(rename_all = "camelCase")]
+pub struct VolumesBusyChanged {
+    /// IDs of volumes with an in-flight copy / move / delete operation (sorted).
+    pub volume_ids: Vec<String>,
+}
 
 /// Emits through the app handle when there is one; a test binary has none and
 /// still feeds the gauge and the analytics client, which work without an app.
@@ -34,7 +44,7 @@ impl EngineEvents for TauriEngineEvents {
         let Some(app) = &self.app else {
             return;
         };
-        if let Err(e) = snapshot.emit(app) {
+        if let Err(e) = wire::OperationsChanged(snapshot).emit(app) {
             log::warn!(target: "op_manager", "failed to emit operations-changed: {e}");
         }
     }
@@ -60,7 +70,7 @@ impl EngineEvents for TauriEngineEvents {
         let Some(app) = &self.app else {
             return;
         };
-        if let Err(e) = notice.emit(app) {
+        if let Err(e) = wire::MoveLeftoversKept(notice).emit(app) {
             log::warn!(target: "copy", "couldn't tell the frontend about the kept staging folder: {e}");
         }
     }
@@ -88,8 +98,9 @@ impl EngineEvents for TauriEngineEvents {
         let Some(app) = &self.app else {
             return;
         };
-        if let Err(e) = event.emit(app) {
-            log::warn!(target: "op_manager", "failed to forward scan progress for op={}: {e}", event.operation_id);
+        let tick = wire::WriteProgress(event);
+        if let Err(e) = tick.emit(app) {
+            log::warn!(target: "op_manager", "failed to forward scan progress for op={}: {e}", tick.0.operation_id);
         }
     }
 }

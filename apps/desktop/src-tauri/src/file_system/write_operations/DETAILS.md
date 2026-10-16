@@ -101,7 +101,7 @@ The full top-level inventory is here:
   names"). Cancellation and durability:
   `cancellable.rs`, `rollback.rs`, `durability.rs`.
   `rollback.rs` wears two hats: the history dialog's reversal, and the executor the operation-log engine injects.
-- Vocabulary and edges: `types.rs` (+ `types/events.rs`, every `#[tauri_specta(event_name)]` payload, and
+- Vocabulary and edges: `types.rs` (+ `types/events.rs`, every event payload the app broadcasts, and
   `types/errors.rs`, `WriteOperationError` with the typed payloads its variants carry — both re-exported through
   `types`), `event_sinks.rs` (the collector sinks and the event builders), `host/` (the seams the app answers, §
   "The engine's host"), `error_classification.rs`, `transfer_sides.rs` (the two volumes a transfer runs
@@ -135,7 +135,7 @@ decisions"; the estimator in § "ETA + throughput"; `WriteSettledGuard` in § "S
 - **Event structs and their builders live apart on purpose**: the struct definitions in `types/events.rs`, the
   `WriteProgressEvent` (`new` / `with_scan_meta`) and `WriteErrorEvent` (`new`) impls in `event_sinks.rs` beside the
   collector sinks.
-- **What splits `types.rs` from `types/events.rs` is one rule**: a struct carrying `#[tauri_specta(event_name = ...)]`
+- **What splits `types.rs` from `types/events.rs` is one rule**: a struct the app broadcasts as an event payload
   goes in `events.rs`, and so does an enum whose only carrier is one of them (`SourceItemOutcome`,
   `CancelRollbackOutcome`). A name two homes speak stays in `types.rs`, which is why `TransferActivity` sits there:
   `WriteProgressEvent` carries it AND so does `OperationStatus`, a snapshot nobody emits.
@@ -741,6 +741,9 @@ runtime. The app's answer is `apps/desktop/src-tauri/src/operations_host/`, whic
   `apps/desktop/src-tauri/src/operations_host/terminal_effects.rs` pins. An op the ENGINE starts on its own behalf (an instant op routed into a zip
   becomes a managed archive edit) gets its sink from the host's `OperationSinkFactory`
   (`archive_edit::host_operation_sink`); so does the MCP rollback tool, which is generic over the Tauri runtime.
+- **Event payloads are plain `serde` + `specta::Type` types**; the Tauri event and its wire name are the app's
+  (`apps/desktop/src-tauri/src/operations_host/wire.rs` wraps each). ❗ A payload's doc comments and `#[serde]`
+  attributes still reach `bindings.ts`, so they're wire: reword one and `desktop-bindings-fresh` fails.
 - **Before `install`, the answer depends on the binary.** In the app nothing can start an operation before setup, so it
   answers nothing. A test binary never installs, so it gets the app's own answers minus the frontend channel
   (`operations_host::without_frontend`): the real indexing gauge, analytics client, and error reporter, which

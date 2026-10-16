@@ -10,6 +10,8 @@
 //! - one operation's or preview's events — [`TauriEventSink`] and
 //!   [`TauriScanPreviewSink`] (`sinks.rs`), built at the IPC edge; a terminal
 //!   event's app side effects ride along (`terminal_effects.rs`)
+//! - the wire — `wire.rs` wraps each engine payload as the Tauri event it
+//!   travels as
 
 mod analytics;
 mod events;
@@ -18,6 +20,7 @@ pub(crate) mod terminal_effects;
 // Which app side effects each terminal event fires, and in what order around its emit.
 #[cfg(test)]
 mod terminal_effects_tests;
+pub(crate) mod wire;
 
 use std::sync::Arc;
 
@@ -25,6 +28,7 @@ use tauri::AppHandle;
 
 use crate::file_system::write_operations::OperationEventSink;
 use crate::file_system::write_operations::host::{self, EngineHost};
+pub(crate) use events::VolumesBusyChanged;
 pub use sinks::{TauriEventSink, TauriScanPreviewSink};
 
 /// Wire the write engine to this app. Call once, in `setup()`, after

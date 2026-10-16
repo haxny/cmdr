@@ -1,19 +1,22 @@
 //! Everything the backend BROADCASTS about a write operation: the payload of
 //! every `write-*` / `scan-*` event, and the enums that exist only to ride one.
 //!
-//! The rule that decides what belongs here: a struct carrying
-//! `#[tauri_specta(event_name = ...)]` lives in this file, and so does an enum
-//! whose only carrier is one of them. A name two homes speak (an event AND a
-//! status query, say) is vocabulary and stays in the parent `types`.
+//! The rule that decides what belongs here: a struct the app broadcasts as an
+//! event payload lives in this file, and so does an enum whose only carrier is
+//! one of them. A name two homes speak (an event AND a status query, say) is
+//! vocabulary and stays in the parent `types`.
+//!
+//! These are plain `serde` + `specta` types. The wire event, with its name,
+//! is the app's: `operations_host/wire.rs` wraps each one, and ❗ every doc
+//! comment and `#[serde]` attribute here reaches `bindings.ts` verbatim.
 //!
 //! The builders are elsewhere on purpose: `WriteProgressEvent::new` /
 //! `with_scan_meta` and `WriteErrorEvent::new` live in `event_sinks.rs` beside
-//! the sinks that emit them.
+//! the collector sinks.
 
 use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
-use tauri_specta::Event;
 
 use cmdr_operation_log::rollback::SkipBreakdown;
 
@@ -32,9 +35,8 @@ use super::{
 /// `eta::EtaEstimator` from `enrich_progress_event`. They're optional because
 /// the estimator returns `None` for both rates and ETA during the warm-up
 /// window (first ~800 ms of a phase or before the second sample lands).
-#[derive(Debug, Clone, Serialize, Deserialize, specta::Type, Event)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
-#[tauri_specta(event_name = "write-progress")]
 pub struct WriteProgressEvent {
     pub operation_id: String,
     pub operation_type: WriteOperationType,
@@ -110,9 +112,8 @@ pub struct ProgressStep {
 /// closure-side Skip such as same-inode self-copy). For delete/trash, skipping isn't a
 /// concept and the field is always 0. The FE uses both to compose user-facing summaries
 /// like "Copy complete: 3 copied, 2 skipped" instead of the misleading "0 files".
-#[derive(Debug, Clone, Serialize, Deserialize, specta::Type, Event)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
-#[tauri_specta(event_name = "write-complete")]
 pub struct WriteCompleteEvent {
     pub operation_id: String,
     pub operation_type: WriteOperationType,
@@ -298,9 +299,8 @@ pub struct AppearedDuringMove {
 /// user-facing copy (title, explanation, suggestion) plus the category/retry
 /// classification from this typed variant via `transfer-error-messages.ts`.
 /// No rendered prose crosses IPC.
-#[derive(Debug, Clone, Serialize, Deserialize, specta::Type, Event)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
-#[tauri_specta(event_name = "write-error")]
 pub struct WriteErrorEvent {
     pub operation_id: String,
     pub operation_type: WriteOperationType,
@@ -341,9 +341,8 @@ pub struct ProgressAtStop {
 /// the person (`continue_without_gone_sources` carries it on, a cancel ends it)
 /// or has already finished because nothing was left. `queued_sources.rs`, and
 /// `DETAILS.md` § "Sources that left while an operation queued".
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, specta::Type, Event)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
-#[tauri_specta(event_name = "write-sources-gone")]
 pub struct WriteSourcesGoneEvent {
     pub operation_id: String,
     pub operation_type: WriteOperationType,
@@ -399,9 +398,8 @@ pub enum SourceItemOutcome {
 /// (`#lib/search/snapshot-purge.ts`). Why the outcome rides on this event rather
 /// than a sibling one, and where each non-`Done` verdict comes from: `DETAILS.md`
 /// § "Per-source outcomes".
-#[derive(Debug, Clone, Serialize, Deserialize, specta::Type, Event)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
-#[tauri_specta(event_name = "write-source-item-done")]
 pub struct WriteSourceItemDoneEvent {
     pub operation_id: String,
     pub source_path: String,
@@ -587,9 +585,8 @@ impl CancelRollback {
 /// so files they might be missing from the source have a findable home. Fires
 /// once per folder the sweep meets, never per launch: the record retires the
 /// moment the folder does.
-#[derive(Debug, Clone, Serialize, Deserialize, specta::Type, Event)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
-#[tauri_specta(event_name = "move-leftovers-kept")]
 pub struct MoveLeftoversKeptEvent {
     /// The drive's display name, as the registry has it right now.
     pub volume_name: String,
@@ -602,16 +599,15 @@ pub struct MoveLeftoversKeptEvent {
 /// (membership + lifecycle status, NOT 200 ms progress). The struct name
 /// kebab-cases to `operations-changed`. The queue window subscribes to it for
 /// the row set and to the per-file `write-progress` stream for live bars.
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type, tauri_specta::Event)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct OperationsChanged {
     pub operations: Vec<OperationSnapshot>,
 }
 
 /// Cancelled event payload.
-#[derive(Debug, Clone, Serialize, Deserialize, specta::Type, Event)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
-#[tauri_specta(event_name = "write-cancelled")]
 pub struct WriteCancelledEvent {
     pub operation_id: String,
     pub operation_type: WriteOperationType,
@@ -637,9 +633,8 @@ pub struct WriteCancelledEvent {
 /// volume_id concept beyond the implicit "root"). The FE doesn't currently
 /// filter on volume_id — the per-op `operation_id` is the binding signal —
 /// but it's carried for future diagnostics and consistency.
-#[derive(Debug, Clone, Serialize, Deserialize, specta::Type, Event)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
-#[tauri_specta(event_name = "write-settled")]
 pub struct WriteSettledEvent {
     pub operation_id: String,
     pub operation_type: WriteOperationType,
@@ -650,9 +645,8 @@ pub struct WriteSettledEvent {
 }
 
 /// Conflict event payload (emitted when Stop mode encounters a conflict).
-#[derive(Debug, Clone, Serialize, Deserialize, specta::Type, Event)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
-#[tauri_specta(event_name = "write-conflict")]
 pub struct WriteConflictEvent {
     pub operation_id: String,
     /// Which clash this is, within its operation. The answer must name it back
@@ -719,9 +713,8 @@ pub struct WriteConflictEvent {
 /// Emitted only when an answer actually reached the operation. A cancel takes
 /// the clash away without one, and the surfaces drop it because the operation
 /// itself is gone.
-#[derive(Debug, Clone, Serialize, Deserialize, specta::Type, Event)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
-#[tauri_specta(event_name = "write-conflict-resolved")]
 pub struct WriteConflictResolvedEvent {
     pub operation_id: String,
     /// The clash that is over. Named, ❌ never implied: by the time this lands,
@@ -731,9 +724,8 @@ pub struct WriteConflictResolvedEvent {
 }
 
 /// Progress event during scanning phase (emitted in dry-run mode).
-#[derive(Debug, Clone, Serialize, Deserialize, specta::Type, Event)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
-#[tauri_specta(event_name = "scan-progress")]
 pub struct ScanProgressEvent {
     pub operation_id: String,
     pub operation_type: WriteOperationType,
@@ -745,9 +737,8 @@ pub struct ScanProgressEvent {
 }
 
 /// Detailed information about a single conflict.
-#[derive(Debug, Clone, Serialize, Deserialize, specta::Type, Event)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
-#[tauri_specta(event_name = "scan-conflict")]
 pub struct ConflictInfo {
     pub source_path: String,
     pub destination_path: String,
@@ -764,9 +755,8 @@ pub struct ConflictInfo {
 }
 
 /// Result of a dry-run operation.
-#[derive(Debug, Clone, Serialize, Deserialize, specta::Type, Event)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
-#[tauri_specta(event_name = "dry-run-complete")]
 pub struct DryRunResult {
     pub operation_id: String,
     pub operation_type: WriteOperationType,
@@ -784,9 +774,8 @@ pub struct DryRunResult {
 // ============================================================================
 
 /// Progress event for scan preview (shown in Copy dialog).
-#[derive(Debug, Clone, Serialize, Deserialize, specta::Type, Event)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
-#[tauri_specta(event_name = "scan-preview-progress")]
 pub struct ScanPreviewProgressEvent {
     pub preview_id: String,
     pub files_found: usize,
@@ -836,9 +825,8 @@ pub struct CompressedSizeEstimate {
 }
 
 /// Completion event for scan preview.
-#[derive(Debug, Clone, Serialize, Deserialize, specta::Type, Event)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
-#[tauri_specta(event_name = "scan-preview-complete")]
 pub struct ScanPreviewCompleteEvent {
     pub preview_id: String,
     pub files_total: usize,
@@ -865,9 +853,8 @@ pub struct ScanPreviewCompleteEvent {
 }
 
 /// Error event for scan preview.
-#[derive(Debug, Clone, Serialize, Deserialize, specta::Type, Event)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
-#[tauri_specta(event_name = "scan-preview-error")]
 pub struct ScanPreviewErrorEvent {
     pub preview_id: String,
     pub message: String,
@@ -882,9 +869,8 @@ pub struct ScanPreviewErrorEvent {
 }
 
 /// Cancelled event for scan preview.
-#[derive(Debug, Clone, Serialize, Deserialize, specta::Type, Event)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
-#[tauri_specta(event_name = "scan-preview-cancelled")]
 pub struct ScanPreviewCancelledEvent {
     pub preview_id: String,
 }

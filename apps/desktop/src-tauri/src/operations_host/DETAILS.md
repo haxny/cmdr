@@ -42,11 +42,33 @@ the event arrives, and a backgrounded op that fails while the queue window is cl
 analytics are categorical only (op kind, a count bucket, a bool), and an instant op has no completion category: it never
 emits `write-complete` and reports an `InstantMutationFact` instead.
 
+## The wire (`wire.rs`)
+
+The engine's payloads (`write_operations/types/events.rs`, plus `OperationsChanged` and `MutationSettled`) derive only
+`serde` + `specta::Type`; the Tauri event, with its wire name, is the app's. `wire_event!` gives each a newtype that
+derives `tauri_specta::Event` with `#[serde(transparent)]`, `ipc.rs`'s `collect_events!` registers the newtypes, and
+every emit site writes `wire::WriteProgress(event).emit(&app)`. A payload emitted unwrapped doesn't compile.
+
+- **Decision: wrappers, not app-side mirror structs.** Why: the orphan rule forbids implementing `tauri_specta::Event`
+  on another crate's type, and once the engine is a crate its payloads are foreign. A newtype is one line per payload;
+  mirrors would be 20 structs plus conversions, and the collector sink would assert on a second shape (verified across
+  a real crate boundary by the event-wire spike, commit `b10cc9821`, 2026-10-16: `bindings.ts` regenerated identical).
+- **Decision: the wrapper's `specta::Type` is hand-written**, returning the payload's own definition. Why: a derived
+  one, even with `#[specta(transparent)]`, exports `type WriteProgress = WriteProgressEvent` and renames the events
+  object's generic, so `bindings.ts` changes. The hand-written one keeps it byte-identical, and a command returning the
+  payload (`latest_operation_progress`) still names the payload itself.
+- **Wire names live only here now**, one literal per wrapper. The payload's doc comments and `#[serde]` attributes still
+  reach `bindings.ts` from the engine, so they stay part of the wire.
+- A settle callback the engine hands back (`MutationSettled`) goes out through `commands/settled.rs::broadcast_settled`,
+  which takes the wrapper constructor (`wire::MutationSettled`) as its `wire` argument.
+- A pin: `wire::tests::a_wrapped_payload_reaches_the_wire_unchanged` mounts a mock app and checks the raw JSON under
+  `write-settled` equals the payload's own.
+
 ## What each fact becomes
 
 - `operations_changed` → the `operations-changed` event (a failed emit `warn!`s under `op_manager`).
-- `volumes_busy_changed` → `volumes-busy-changed`, wrapped in `VolumesBusyChanged` (a failed emit is a `log_error!`
-  under `eject`).
+- `volumes_busy_changed` → `volumes-busy-changed`, wrapped in `VolumesBusyChanged`, an event struct this module owns
+  outright since the engine only reports the ids (a failed emit is a `log_error!` under `eject`).
 - `transfer_started` / `transfer_finished` → `priority::transfers::note_transfer_started` / `_finished`.
 - `staging_leftovers_kept` → `move-leftovers-kept` (a failed emit `warn!`s under `copy`).
 - `instant_mutation_settled` → `rename_used` / `folder_created` / `file_created`, with the `initiator`, `target`, and

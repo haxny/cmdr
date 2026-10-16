@@ -326,7 +326,7 @@ pub async fn paste_clipboard_as_file(
         volume_id,
         PathBuf::from(expanded),
         payload,
-        super::settled::broadcast_settled(app),
+        super::settled::broadcast_settled(app, std::convert::identity),
     )
     .await
 }

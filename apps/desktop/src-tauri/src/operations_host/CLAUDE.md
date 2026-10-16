@@ -12,6 +12,9 @@ facts, the per-op sinks, and what a terminal event does besides reaching the fro
 - **The engine says WHAT, this module says what the user sees.** Which fact becomes a Tauri event, a
   `priority::transfers` call, a PostHog capture, or an error report lives here. An analytics event name stays a LITERAL
   in its `capture("…")` arm, which `analytics-event-catalog` reads.
+- **An engine payload goes out wrapped**: `wire::WriteProgress(event).emit(&app)` (`wire.rs`), one `wire_event!` line
+  per payload, registered in `ipc.rs`. ❌ Never derive the wrapper's `specta::Type`: the hand-written one is what keeps
+  `bindings.ts` free of an alias.
 - **A terminal emit's side effects keep their order** (`terminal_effects.rs`): the MCP ring and the retained failure
   land BEFORE the emit. ❌ Never on `OperationEventSink` or a collector sink: test sinks stay side-effect-free.
 - **An engine error report keeps its message and target word for word** (`events.rs::raise`), including the engine's
@@ -23,6 +26,7 @@ facts, the per-op sinks, and what a terminal event does besides reaching the fro
 
 - `mod.rs`: `install`, `without_frontend`. `events.rs`: `TauriEngineEvents`, the instant-op analytics props, and the
   error-report re-raise. `sinks.rs`: `TauriEventSink`, `TauriScanPreviewSink`. `terminal_effects.rs` (+ `_tests.rs`):
-  the terminal side effects in order. `analytics.rs`: the completion analytics they fire.
+  the terminal side effects in order. `analytics.rs`: the completion analytics they fire. `wire.rs`: the payloads as
+  Tauri events.
 
-Startup order, the sinks, and the fallback's reasoning: `DETAILS.md`.
+Startup order, the sinks, the wire, and the fallback's reasoning: `DETAILS.md`.

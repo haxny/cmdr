@@ -19,7 +19,6 @@ use std::future::Future;
 use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
-use tauri_specta::Event;
 
 use super::mutation_error::MutationError;
 use cmdr_fs::deadline::{Raced, race_detached};
@@ -48,7 +47,7 @@ pub enum MutationReply {
 
 /// `mutation-settled`: how a mutation that answered `StillRunning` ended.
 /// Broadcast; the waiting caller picks its own by `pending_id`.
-#[derive(Debug, Clone, Serialize, Deserialize, specta::Type, Event)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct MutationSettled {
     /// The id the `StillRunning` reply carried.

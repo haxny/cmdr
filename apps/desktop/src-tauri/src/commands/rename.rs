@@ -21,6 +21,7 @@ use crate::file_system::write_operations::{
     MUTATION_REPLY_DEADLINE, MutationError, MutationReply, MutationSettled, RenameValidityResult,
     check_rename_permission_for_volume, check_rename_validity_impl, rename_managed, reply_within,
 };
+use crate::operations_host::wire;
 use cmdr_fs::deadline::timeout_detached_typed;
 
 // ============================================================================
@@ -170,7 +171,15 @@ pub async fn rename_file(
     volume_id: Option<String>,
     initiator: Option<cmdr_operation_log::types::Initiator>,
 ) -> Result<MutationReply, MutationError> {
-    rename_file_replying(from, to, force, volume_id, initiator, broadcast_settled(app)).await
+    rename_file_replying(
+        from,
+        to,
+        force,
+        volume_id,
+        initiator,
+        broadcast_settled(app, wire::MutationSettled),
+    )
+    .await
 }
 
 /// [`rename_file`] with the settle delivery passed in.

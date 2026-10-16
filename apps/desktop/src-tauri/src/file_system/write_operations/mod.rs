@@ -134,8 +134,8 @@ pub use in_flight_temps::init_and_sweep as init_and_sweep_in_flight_temps;
 pub(crate) use scan_cache::{ScanCostFacts, cached_cost_facts};
 pub use scan_preview::{cancel_scan_preview, get_scan_preview_totals, start_scan_preview};
 pub use state::{
-    VolumesBusyChanged, busy_volume_ids, cancel_all_write_operations, cancel_write_operation, get_operation_status,
-    pending_write_conflict, resolve_write_conflict,
+    busy_volume_ids, cancel_all_write_operations, cancel_write_operation, get_operation_status, pending_write_conflict,
+    resolve_write_conflict,
 };
 // A queue window that opens late seeds its rows from this (a paused operation emits nothing).
 pub use state::latest_operation_progress;

@@ -6,13 +6,19 @@ use serde::Serialize;
 use tauri_specta::Event;
 
 /// Broadcasts the settle event (`mutation-settled`, or a command's own, like
-/// `clipboard-paste-settled`) to every window.
-pub(crate) fn broadcast_settled<E>(app: tauri::AppHandle) -> impl FnOnce(E) + Send + 'static
+/// `clipboard-paste-settled`) to every window. `wire` turns what the callback
+/// receives into the event that goes out: an engine payload's wire wrapper
+/// (`operations_host::wire`), or `std::convert::identity` for an app-owned
+/// event.
+pub(crate) fn broadcast_settled<T, E>(
+    app: tauri::AppHandle,
+    wire: impl FnOnce(T) -> E + Send + 'static,
+) -> impl FnOnce(T) + Send + 'static
 where
-    E: Event + Serialize + Clone + Send + 'static,
+    E: Event + Serialize + Clone,
 {
     move |settled| {
-        if let Err(e) = settled.emit(&app) {
+        if let Err(e) = wire(settled).emit(&app) {
             log::warn!(target: "write_ops", "couldn't emit {}: {e}", E::NAME);
         }
     }

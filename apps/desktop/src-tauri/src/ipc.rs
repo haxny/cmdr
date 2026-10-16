@@ -59,13 +59,6 @@ use crate::events::index_mapping::{
 };
 use crate::file_system::git::wiring::GitStateChangedPayload;
 use crate::file_system::volume::eject::VolumesEjectingChanged;
-use crate::file_system::write_operations::{
-    ConflictInfo, DryRunResult, MoveLeftoversKeptEvent, ScanPreviewCancelledEvent, ScanPreviewCompleteEvent,
-    ScanPreviewErrorEvent, ScanPreviewProgressEvent, ScanProgressEvent, WriteCancelledEvent, WriteCompleteEvent,
-    WriteConflictEvent, WriteConflictResolvedEvent, WriteErrorEvent, WriteProgressEvent, WriteSettledEvent,
-    WriteSourceItemDoneEvent, WriteSourcesGoneEvent,
-};
-use crate::file_system::write_operations::{MutationSettled, OperationsChanged, VolumesBusyChanged};
 use crate::file_viewer::ViewerPullProgress;
 use crate::file_viewer::open_with_extract::OpenWithCopyRefused;
 use crate::listing_host::events::{
@@ -82,6 +75,7 @@ use crate::network::{
     NetworkDiscoveryStateChanged, NetworkHostContextAction, NetworkHostFound, NetworkHostLost, NetworkHostResolved,
     SmbFellBackToOsMount, SmbOsMountNoticeWithdrawn, VolumeConnectionChanged,
 };
+use crate::operations_host::{VolumesBusyChanged, wire};
 use crate::reveal::RevealDelivered;
 use crate::search::live::events::{SearchCancelledEvent, SearchCompleteEvent, SearchErrorEvent, SearchProgressEvent};
 use crate::security_notices::SecurityNoticeRaised;
@@ -1055,31 +1049,32 @@ pub fn builder() -> Builder<tauri::Wry> {
         // Mounted onto the app via `mount_events` in `crate::run`.
         .events(collect_events![
             VolumeSpaceChanged,
-            // Write-operations sink (file_system/write_operations/types.rs `TauriEventSink`).
-            WriteProgressEvent,
-            WriteCompleteEvent,
-            WriteCancelledEvent,
-            WriteErrorEvent,
-            WriteConflictEvent,
-            WriteConflictResolvedEvent,
-            WriteSourceItemDoneEvent,
-            WriteSourcesGoneEvent,
-            ScanProgressEvent,
-            ConflictInfo, // scan-conflict
-            DryRunResult, // dry-run-complete
-            WriteSettledEvent,
+            // Write-operations sink (operations_host/sinks.rs `TauriEventSink`), each engine
+            // payload wrapped for the wire (operations_host/wire.rs).
+            wire::WriteProgress,
+            wire::WriteComplete,
+            wire::WriteCancelled,
+            wire::WriteError,
+            wire::WriteConflict,
+            wire::WriteConflictResolved,
+            wire::WriteSourceItemDone,
+            wire::WriteSourcesGone,
+            wire::ScanProgress,
+            wire::ScanConflict,
+            wire::DryRunComplete,
+            wire::WriteSettled,
             // An instant mutation (new folder, new file, rename) that outlived its
             // reply deadline (write_operations/mutation_reply.rs).
-            MutationSettled,
+            wire::MutationSettled,
             ClipboardPasteSettled, // clipboard-paste-settled (the same, for paste-as-file)
             // The leftover sweep, which belongs to no operation
             // (write_operations/in_flight_sweep.rs).
-            MoveLeftoversKeptEvent, // event_name = "move-leftovers-kept"
+            wire::MoveLeftoversKept,
             // An "Open with" click on a file inside an archive that couldn't be copied
             // out, so no app launched (file_viewer/open_with_extract.rs).
             OpenWithCopyRefused,
             // Operation manager registry snapshot (write_operations/manager.rs).
-            OperationsChanged,
+            wire::OperationsChanged,
             SuggestionsChanged,
             // Every Ask Cmdr turn's progress, keyed by conversation: rail sends and wakes
             // alike (agent/chat/stream.rs).
@@ -1111,10 +1106,10 @@ pub fn builder() -> Builder<tauri::Wry> {
             // A listing's folder sizes moved in the index (listing_index_sizes/).
             ListingIndexSizesChanged,
             // Scan-preview (file_system/write_operations/scan_preview.rs).
-            ScanPreviewProgressEvent,
-            ScanPreviewCompleteEvent,
-            ScanPreviewErrorEvent,
-            ScanPreviewCancelledEvent,
+            wire::ScanPreviewProgress,
+            wire::ScanPreviewComplete,
+            wire::ScanPreviewError,
+            wire::ScanPreviewCancelled,
             // Volumes + disk space (volumes/, volumes_linux/, space_poller/,
             // write_operations/state.rs busy set, menu eject action).
             VolumesChanged,

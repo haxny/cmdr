@@ -1,5 +1,5 @@
-//! What the write engine needs from the app around it, as named seams instead
-//! of stashed `AppHandle`s and the Tauri runtime.
+//! What the write engine needs from the app around it, as named seams: the
+//! engine names no `AppHandle` and no Tauri runtime.
 //!
 //! - **The runtime** comes from the [`VolumeHost`]: one handle, so the engine
 //!   and the backends it drives share one thread pool, and the two can't
@@ -94,11 +94,10 @@ impl EngineHost {
 static INSTALLED: OnceLock<EngineHost> = OnceLock::new();
 
 /// What [`installed`] answers before [`install`]. In the app nothing can start
-/// an operation before setup, so this answers nothing, exactly as the unset
-/// `AppHandle`s it replaces did. A test binary never installs, so it gets the
-/// app's own answers minus the frontend channel (the real indexing gauge, the
-/// real analytics client), the shape `volume_host::host()` hands an uninstalled
-/// backend.
+/// an operation before setup, so this answers nothing. A test binary never
+/// installs, so it gets the app's own answers minus the frontend channel (the
+/// real indexing gauge, analytics client, and error reporter; no sink factory),
+/// the shape `volume_host::host()` hands an uninstalled backend.
 // shim: removed in M6a
 static UNINSTALLED: LazyLock<EngineHost> = LazyLock::new(|| {
     #[cfg(test)]
