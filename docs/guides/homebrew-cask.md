@@ -2,21 +2,26 @@
 
 How Cmdr ships through Homebrew, and how the cask stays current.
 
-Users install with `brew trust --cask vdavid/tap/cmdr && brew tap vdavid/tap && brew install --cask cmdr`. The live cask
-lives in the personal tap repo [`vdavid/homebrew-tap`](https://github.com/vdavid/homebrew-tap) (as `Casks/cmdr.rb`).
+Users install with `brew install --cask vdavid/tap/cmdr`. The live cask lives in the personal tap repo
+[`vdavid/homebrew-tap`](https://github.com/vdavid/homebrew-tap) (as `Casks/cmdr.rb`).
 
-The `brew trust` step is required as of Homebrew 6.0.0 (2026-06-11): Homebrew refuses to load a cask from any
-third-party tap until the user explicitly trusts it (`brew trust --cask <tap>/<cask>`), since a tap is arbitrary Ruby
-that runs with the user's privileges. It's a client-side consent gate with no publisher-side opt-out: nothing the tap
-can do pre-blesses itself. Landing the cask in `Homebrew/homebrew-cask` (the notability path below) is what removes both
-the tap and the trust step, since the official taps are trusted by default.
+Since Homebrew 6.0.0 (2026-06-11), Homebrew refuses to load a cask from any third-party tap until the user trusts it,
+since a tap is arbitrary Ruby that runs with the user's privileges. It's a client-side consent gate with no
+publisher-side opt-out: nothing the tap can do pre-blesses itself. `brew install` with a fully qualified
+`<user>/<tap>/<cask>` name counts as that consent: it auto-taps, then trusts that one cask
+(`Homebrew::Trust.trust_fully_qualified_items!`, in Homebrew since 5.1.15) and prints `Trusted cask vdavid/tap/cmdr`.
+Upgrades then need nothing more. Landing the cask in `Homebrew/homebrew-cask` (the notability path below) removes the
+tap prefix too, since the official taps are trusted by default.
 
-**Trust goes before `brew tap`.** Homebrew 7.0.0 and 7.0.1 load every cask while tapping, so tapping an untrusted tap
-dies with `Cannot tap vdavid/tap: invalid syntax in tap!` and the `&&` chain stops there (vdavid/cmdr#102; Homebrew
-7.0.2 fixed it in Homebrew/brew#23972). `brew trust --cask` with an explicit type needs no tap files, so trusting first
-works on every Homebrew from 6.0.0 on (verified reading `trust.rb` at 6.0.0, and running the chain on Homebrew 7.0.1-21,
-2026-09-16). Don't shorten it to `brew install --cask vdavid/tap/cmdr`: current Homebrew won't auto-tap an untrusted tap
-and asks for an explicit `brew tap` instead (same run).
+**Keep it one fully qualified command.** (verified on Homebrew 7.0.9, a clean M1 with no tap and an empty trust store:
+tap, trust, install, and a follow-up `brew upgrade` all succeeded, 2026-10-16.)
+
+- ❌ Don't go back to `brew trust ... && brew tap ... && brew install`: Homebrew before 5.1 has no `trust` command, so
+  that chain dies on its first step, while the single install works there and auto-updates Homebrew first.
+- A bare `brew install --cask cmdr` after `brew tap` doesn't trust anything, so it hits the untrusted-tap refusal.
+- Homebrew 7.0.0 and 7.0.1 loaded every cask while tapping, so auto-tapping an untrusted tap died with
+  `Cannot tap vdavid/tap: invalid syntax in tap!` (vdavid/cmdr#102; fixed in 7.0.2 by Homebrew/brew#23972).
+  `brew install` auto-updates Homebrew before tapping, which moves those users past it.
 
 The cask file in this repo, `apps/desktop/packaging/homebrew/cmdr.rb`, is the source of truth for the cask's **shape**:
 the `url`, `livecheck`, `depends_on`, `app`, `uninstall`, and `zap` blocks. Release CI rewrites only the tap's `version`
