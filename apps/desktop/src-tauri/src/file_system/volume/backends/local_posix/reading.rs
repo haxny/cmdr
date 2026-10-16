@@ -71,7 +71,7 @@ pub fn list_directory(path: &Path, listings: &dyn ListingHost) -> Result<Vec<Fil
     {
         let macos_start = std::time::Instant::now();
         for entry in &mut entries {
-            let macos_meta = crate::file_system::macos_metadata::get_macos_metadata(Path::new(&entry.path));
+            let macos_meta = super::macos_metadata::get_macos_metadata(Path::new(&entry.path));
             entry.added_at = macos_meta.added_at;
             entry.opened_at = macos_meta.opened_at;
             entry.extended_metadata_loaded = true;
@@ -415,7 +415,7 @@ pub fn get_extended_metadata_batch(paths: Vec<String>) -> Vec<ExtendedMetadata> 
         .into_iter()
         .map(|path_str| {
             let path = Path::new(&path_str);
-            let macos_meta = crate::file_system::macos_metadata::get_macos_metadata(path);
+            let macos_meta = super::macos_metadata::get_macos_metadata(path);
             ExtendedMetadata {
                 path: path_str,
                 added_at: macos_meta.added_at,

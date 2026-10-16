@@ -15,14 +15,21 @@ mod local_posix;
 #[cfg(any(target_os = "macos", target_os = "linux"))]
 pub use cmdr_mtp::MtpVolume;
 pub use local_posix::LocalPosixVolume;
-/// Cross-platform volume used-bytes helper (NSURL purgeable-aware on macOS,
-/// `statvfs` on Linux). Re-exported so the indexing module can read the scanned
-/// volume's used bytes for tier-2 scan progress without re-implementing statfs.
-pub(crate) use local_posix::get_space_info_for_path;
-#[cfg(all(test, target_os = "macos"))]
-pub(crate) use local_posix::get_space_info_statvfs;
+// The local backend's OS probes the rest of the app still reads: volume space
+// (the index's tier-2 scan progress, the copy pre-flight, the space poller, the
+// `get_volume_space` command), the NSURL resource readers and `statfs` strings
+// `volumes/` enriches with, and the live-space memo a settled write retires.
+#[cfg(target_os = "macos")]
+pub use local_posix::live_space::{expect_space_change, live_volume_space};
+#[cfg(target_os = "macos")]
+pub(crate) use local_posix::nsurl::{get_bool_resource, get_string_resource};
 pub(crate) use local_posix::rename_local_exclusive;
 pub(crate) use local_posix::rename_volume_error;
+pub(crate) use local_posix::space::get_space_info_for_path;
+#[cfg(target_os = "macos")]
+pub use local_posix::space::get_volume_space;
+#[cfg(target_os = "macos")]
+pub(crate) use local_posix::statfs::statfs_string;
 // The local reader: the `std::fs` listing and stat that `LocalPosixVolume`, the
 // watcher's unregistered-volume fallback, `tags.rs`, and `create.rs` read through.
 // `mutation.rs` beside it is what a local mutation means for the listing cache.

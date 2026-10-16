@@ -288,42 +288,9 @@ panes off ejected volumes.
 
 ## Volume space
 
-`get_volume_space(path)` uses `NSURLVolumeTotalCapacityKey` and `NSURLVolumeAvailableCapacityForImportantUsageKey`
-(falls back to `NSURLVolumeAvailableCapacityKey`). Returns `None` for non-existent paths.
-
-**Decision**: a test build answers from `statvfs` (`backends::get_space_info_statvfs`), and only the NSURL tests in
-`nsurl.rs` call the real `nsurl_volume_space`. **Why**: the first NSURL call in a process runs
-`CFBundleGetMainBundle`, which `readdir`s the test binary's own directory. On a bloated `target/debug/deps` (457k
-entries) with ~16 nextest processes doing that at once, transfer, archive move-out, and ADB tests reaching the copy
-pre-flight or `LocalPosixVolume::get_space_info` blew their 5 s waits (#357). Every space path (`get_space_info_for_path`,
-`live_volume_space`, the copy pre-flight, the IPC command) funnels through `get_volume_space`, so that one function is
-the seam. `nsurl::tests::a_test_build_answers_a_space_query_without_nsurl` pins it. Verified 2026-10-14 with a
-tripwire on every NSURL resource lookup: none of the 54 tests in the five suites #357 named reaches one.
-
-## Live volume space
-
-`live_space.rs::live_volume_space(path)` is what the space poller reads every 2 s (through
-`Volume::get_live_space_info` and the poller's unregistered-path fallback). It returns the same important-usage figure
-as `get_volume_space`, mostly at `statfs` cost:
-
-- **Why**: on the boot volume the important-usage query costs ~6.5 ms of CPU (5.9 of it system time, plus work in the
-  `deleted` daemon), against ~0.01 ms for `statfs`. The poller asks for the boot volume permanently (the low-space
-  check), so that alone was ~0.33% of a core. On external and SMB volumes the query is ~0.02 ms; the cost is
-  CacheDelete's purgeable accounting on the boot container.
-- **How**: important-usage free = `statfs` free + purgeable, and ordinary writes and deletes move `statfs` and the
-  important-usage figure by the same bytes while purgeable holds still. So each filesystem (keyed by mount point) keeps
-  an anchor: the last important-usage reading and the `statfs` taken beside it. A live reading is the anchor plus how far
-  `statfs` moved since, clamped to the drive.
-- **When it asks again** (`plan`): no anchor yet; the anchor is 60 s old; `statfs` drifted by 1/1,000 of the drive (one
-  readout step: past that it may be macOS purging, which raises `statfs` free while the important-usage figure holds);
-  the total changed; or a write operation settled since (`expect_space_change`, from `TauriEventSink::emit_settled`),
-  because deleting a file a Time Machine local snapshot still holds frees purgeable space `statfs` never sees.
-- **Evidence** (verified on macOS 27.0, a Swift probe sampling all three figures every 2 s for 5 min, 2026-09-27): `statfs`
-  free equals `NSURLVolumeAvailableCapacityKey` to the byte, purgeable held at 10.692 GB through 3.3 GB of writes,
-  and the anchor-plus-delta figure stayed within 0.4 MB of the real one (one sample 10 MB off: a write inside the call). Numbers and before/after CPU:
-  `docs/notes/performance/space-poll-cost-2026-09-27.md`.
-- ❌ **Only for readouts that poll.** Copy validation and the transfer pre-flight act on the figure once, so they keep
-  calling `get_volume_space`, which always asks.
+The space reading (`get_volume_space`, the live readout's memo, and the NSURL resource readers behind them) is the local
+backend's: `file_system/volume/backends/DETAILS.md` § "Local volume space". `volumes/` re-exports what it and the
+commands still call.
 
 ## The unmount approver
 

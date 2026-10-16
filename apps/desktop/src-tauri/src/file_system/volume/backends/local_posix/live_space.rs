@@ -6,15 +6,17 @@
 //! purgeable part out. The two differ by that purgeable part alone, and it holds still while
 //! ordinary writes move both by the same bytes. So a live reading is the last important-usage
 //! figure plus how far `statfs` moved since, and the expensive query runs again only when that
-//! stops being safe ([`plan`]). `DETAILS.md` § "Live volume space" has the evidence.
+//! stops being safe ([`plan`]). `backends/DETAILS.md` § "Live volume space" has the evidence.
 
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{LazyLock, Mutex};
 use std::time::{Duration, Instant};
 
-use crate::file_system::volume::SpaceInfo;
-use crate::ignore_poison::IgnorePoison;
+use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::volume::SpaceInfo;
+
+use super::space::get_volume_space;
 
 /// The longest a live reading leans on one important-usage figure. Bounds how stale the
 /// purgeable part can go when it moves without `statfs` moving (a file deleted from under a Time
@@ -64,13 +66,13 @@ static STALE_EPOCH: AtomicU64 = AtomicU64::new(0);
 static ANCHORS: LazyLock<Mutex<HashMap<String, Anchor>>> = LazyLock::new(|| Mutex::new(HashMap::new()));
 
 /// The space a live readout shows for the volume holding `path`: what
-/// [`get_volume_space`](super::get_volume_space) would say, at `statfs` cost on most calls.
+/// [`get_volume_space`] would say, at `statfs` cost on most calls.
 ///
 /// Only for readouts that poll. A caller that acts on the number once (the copy pre-flight) asks
-/// [`get_volume_space`](super::get_volume_space) directly.
+/// [`get_volume_space`] directly.
 pub fn live_volume_space(path: &str) -> Option<SpaceInfo> {
     let Some((mount_point, cheap)) = statfs_reading(path) else {
-        return super::get_volume_space(path);
+        return get_volume_space(path);
     };
     let epoch = STALE_EPOCH.load(Ordering::Acquire);
     let now = Instant::now();
@@ -78,7 +80,7 @@ pub fn live_volume_space(path: &str) -> Option<SpaceInfo> {
     match plan(anchor.as_ref(), cheap, now, epoch) {
         Plan::Derived(space) => Some(space),
         Plan::Refresh => {
-            let space = super::get_volume_space(path)?;
+            let space = get_volume_space(path)?;
             if let SpaceInfo::Bounded {
                 total_bytes,
                 available_bytes,
@@ -142,7 +144,7 @@ fn statfs_reading(path: &str) -> Option<(String, CheapReading)> {
     }
     // SAFETY: `statfs` returned 0, so the kernel fully initialized `stat`.
     let stat = unsafe { stat.assume_init() };
-    let mount_point = super::fs_type::statfs_string(&stat.f_mntonname);
+    let mount_point = super::statfs::statfs_string(&stat.f_mntonname);
     let block = u64::from(stat.f_bsize);
     Some((
         mount_point,
@@ -186,7 +188,7 @@ mod tests {
 
     #[test]
     fn the_boot_volume_reads_what_the_expensive_query_says() {
-        let direct = super::super::get_volume_space("/").expect("macOS reports space for the boot volume");
+        let direct = get_volume_space("/").expect("macOS reports space for the boot volume");
         expect_space_change();
         let refreshed = live_volume_space("/").expect("a live reading of the boot volume");
         let derived = live_volume_space("/").expect("a second live reading of the boot volume");

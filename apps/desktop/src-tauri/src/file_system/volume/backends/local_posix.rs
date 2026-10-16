@@ -7,11 +7,20 @@
 //! files, so those methods stay here as one-line delegations to inherent bodies
 //! over there.
 
+#[cfg(target_os = "macos")]
+pub(crate) mod live_space;
+#[cfg(target_os = "macos")]
+mod macos_metadata;
 pub(crate) mod mutation;
+#[cfg(target_os = "macos")]
+pub(crate) mod nsurl;
 pub(crate) mod reading;
 #[cfg(test)]
 mod reading_test;
 mod scan;
+pub(crate) mod space;
+#[cfg(target_os = "macos")]
+pub(crate) mod statfs;
 mod streams;
 
 use super::{
@@ -28,6 +37,7 @@ use cmdr_fs::volume::MountClass;
 use cmdr_fs::volume::host::VolumeHost;
 use cmdr_fs::volume::listing_progress::report_while;
 use reading::{ListingTally, get_single_entry, list_directory_core_with_tally};
+use space::{get_space_info_for_path, live_space_info_for_path};
 use std::future::Future;
 use std::io;
 use std::path::{Path, PathBuf};
@@ -819,79 +829,5 @@ pub(crate) fn write_access_for_path(path: &Path) -> crate::file_system::volume::
             reason: UnwritableReason::NoPermission,
         },
         _ => WriteAccess::Unknown,
-    }
-}
-
-/// Gets space information for a path.
-///
-/// On macOS, uses `NSURLVolumeAvailableCapacityForImportantUsageKey` which includes purgeable
-/// space (APFS snapshots, iCloud caches), matching what Finder reports. Falls back to `statvfs`
-/// if the NSURL query fails. On Linux, uses `statvfs` directly (no purgeable space concept).
-pub(crate) fn get_space_info_for_path(path: &Path) -> Result<SpaceInfo, VolumeError> {
-    // On macOS, prefer the NSURL API that accounts for purgeable space.
-    #[cfg(target_os = "macos")]
-    {
-        if let Some(space) = crate::volumes::get_volume_space(&path.to_string_lossy()) {
-            return Ok(space);
-        }
-    }
-
-    // Fallback (and Linux primary path): statvfs
-    get_space_info_statvfs(path)
-}
-
-/// [`get_space_info_for_path`] for a readout that polls: on macOS the same figure, mostly at
-/// `statfs` cost (`volumes::live_volume_space`). Linux's `statvfs` is already that cheap.
-pub(crate) fn live_space_info_for_path(path: &Path) -> Result<SpaceInfo, VolumeError> {
-    #[cfg(target_os = "macos")]
-    {
-        if let Some(space) = crate::volumes::live_volume_space(&path.to_string_lossy()) {
-            return Ok(space);
-        }
-    }
-
-    get_space_info_statvfs(path)
-}
-
-/// Gets space information using `statvfs`. Used as the primary method on Linux and as a
-/// fallback on macOS, and as macOS's whole answer in a test build (`volumes::get_volume_space`).
-pub(crate) fn get_space_info_statvfs(path: &Path) -> Result<SpaceInfo, VolumeError> {
-    use std::ffi::CString;
-
-    let path_c = CString::new(path.to_string_lossy().as_bytes()).map_err(|e| VolumeError::IoError {
-        message: e.to_string(),
-        raw_os_error: None,
-    })?;
-
-    // SAFETY: `path_c` is a valid NUL-terminated C string from `path`; `stat` is a zeroed,
-    // correctly-typed `libc::statvfs` out-buffer the kernel fills, and its fields are only read on
-    // the `== 0` (success) branch where the kernel initialized them.
-    unsafe {
-        let mut stat: libc::statvfs = std::mem::zeroed();
-        if libc::statvfs(path_c.as_ptr(), &mut stat) == 0 {
-            #[allow(clippy::unnecessary_cast, reason = "statvfs field types vary across platforms")]
-            let block_size = stat.f_frsize as u64;
-            #[allow(clippy::unnecessary_cast, reason = "statvfs field types vary across platforms")]
-            let total_bytes = (stat.f_blocks as u64) * block_size;
-            #[allow(clippy::unnecessary_cast, reason = "statvfs field types vary across platforms")]
-            let available_bytes = (stat.f_bavail as u64) * block_size;
-            #[allow(clippy::unnecessary_cast, reason = "statvfs field types vary across platforms")]
-            let used_bytes = total_bytes.saturating_sub((stat.f_bfree as u64) * block_size);
-
-            // ❗ `used` is NOT the complement of `available` here: `statvfs`
-            // reserves blocks that are neither free to a normal user nor holding
-            // anything, so the two come from different fields and `bounded`
-            // (which derives one from the other) would be wrong.
-            Ok(SpaceInfo::Bounded {
-                total_bytes,
-                available_bytes,
-                used_bytes,
-            })
-        } else {
-            Err(VolumeError::IoError {
-                message: "Failed to get space info".into(),
-                raw_os_error: None,
-            })
-        }
     }
 }

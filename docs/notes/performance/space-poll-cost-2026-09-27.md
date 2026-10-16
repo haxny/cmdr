@@ -4,7 +4,7 @@ The space poller read the boot volume's free space every 2 s with `NSURLVolumeAv
 all the time (the low-space check), plus each other local volume on screen. That query is the idle census's lever 1
 (`idle-census-2026-09-27.md` § "The levers"). The poller now reads it through `volumes::live_volume_space`: the same
 figure, anchored on an occasional important-usage query and moved by `statfs` in between. The mechanism lives in
-`apps/desktop/src-tauri/src/volumes/DETAILS.md` § "Live volume space"; this note holds the evidence.
+`apps/desktop/src-tauri/src/file_system/volume/backends/DETAILS.md` § "Live volume space"; this note holds the evidence.
 
 ## Is `statfs` a trustworthy change detector?
 

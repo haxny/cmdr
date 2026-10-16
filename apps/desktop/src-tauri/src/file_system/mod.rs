@@ -18,8 +18,6 @@ pub mod google_drive;
 pub(crate) mod index_provider;
 #[cfg(target_os = "linux")]
 pub(crate) mod linux_mounts;
-#[cfg(target_os = "macos")]
-mod macos_metadata;
 #[cfg(test)]
 mod mock_provider;
 #[cfg(target_os = "macos")]

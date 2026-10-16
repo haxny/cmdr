@@ -1,8 +1,9 @@
-//! NSURL resource lookups (volume name, ejectability, capacities), the
-//! path-derived volume-name fallback, per-path icon fetching, and volume-space
-//! reporting. The blocking macOS enrichment layer, only run for local mounts.
+//! NSURL resource lookups (volume name, ejectability), the path-derived
+//! volume-name fallback, and per-path icon fetching. The blocking macOS
+//! enrichment layer, only run for local mounts. The resource readers and the
+//! volume-space query are the local backend's (`backends/local_posix/`).
 
-use crate::file_system::volume::SpaceInfo;
+use crate::file_system::volume::backends::{get_bool_resource, get_string_resource};
 use std::path::Path;
 
 /// Display name derived purely from a mount path: the last path component, or
@@ -108,107 +109,9 @@ pub(crate) fn get_icon_for_path(path: &str) -> Option<String> {
     crate::icons::get_icon_for_path(path)
 }
 
-/// Get a resource value from an NSURL and convert it using the provided extractor.
-fn get_nsurl_resource<T>(
-    url: &objc2_foundation::NSURL,
-    key: &str,
-    extractor: impl FnOnce(objc2::rc::Retained<objc2::runtime::AnyObject>) -> Option<T>,
-) -> Option<T> {
-    use objc2::rc::Retained;
-    use objc2_foundation::NSString;
-
-    let key = NSString::from_str(key);
-    let mut value: Option<Retained<objc2::runtime::AnyObject>> = None;
-    // SAFETY: `url` is a live `NSURL` and `key` a live `NSString`; `getResourceValue:forKey:error:`
-    // writes the looked-up value into `value` (left `None` when the key is absent) and the cached
-    // resource value is autoreleased into the caller's pool. We only read `value` after success.
-    let success = unsafe { url.getResourceValue_forKey_error(&mut value, &key) };
-
-    if success.is_ok() {
-        value.and_then(extractor)
-    } else {
-        None
-    }
-}
-
-/// Get a boolean resource value from an NSURL.
-fn get_bool_resource(url: &objc2_foundation::NSURL, key: &str) -> Option<bool> {
-    use objc2_foundation::NSNumber;
-    get_nsurl_resource(url, key, |obj| obj.downcast::<NSNumber>().ok().map(|n| n.boolValue()))
-}
-
-/// Get a string resource value from an NSURL.
-fn get_string_resource(url: &objc2_foundation::NSURL, key: &str) -> Option<String> {
-    use objc2_foundation::NSString;
-    get_nsurl_resource(url, key, |obj| obj.downcast::<NSString>().ok().map(|s| s.to_string()))
-}
-
-/// Get a u64 resource value from an NSURL (for capacity values).
-fn get_u64_resource(url: &objc2_foundation::NSURL, key: &str) -> Option<u64> {
-    use objc2_foundation::NSNumber;
-    get_nsurl_resource(url, key, |obj| {
-        obj.downcast::<NSNumber>().ok().map(|n| n.unsignedLongLongValue())
-    })
-}
-
-/// Get space information for a volume containing the given path.
-///
-/// A mounted filesystem always has a capacity, so this is always
-/// [`SpaceInfo::Bounded`]. NSURL reports no used figure of its own, so
-/// [`SpaceInfo::bounded`] derives it.
-///
-/// ❗ A test build answers from `statvfs` instead (the same figure minus purgeable space): the
-/// first NSURL call in a process `readdir`s the test binary's own directory, which stalled
-/// parallel tests for seconds on a bloated `target/debug/deps` (#357). Tests of NSURL itself call
-/// `nsurl_volume_space`.
-pub fn get_volume_space(path: &str) -> Option<SpaceInfo> {
-    #[cfg(not(test))]
-    return nsurl_volume_space(path);
-    #[cfg(test)]
-    crate::file_system::volume::backends::get_space_info_statvfs(Path::new(path)).ok()
-}
-
-/// [`get_volume_space`]'s real answer, from NSURL.
-fn nsurl_volume_space(path: &str) -> Option<SpaceInfo> {
-    #[cfg(test)]
-    NSURL_SPACE_QUERIES.with(|n| n.set(n.get() + 1));
-    use objc2::rc::autoreleasepool;
-    use objc2_foundation::NSURL;
-
-    // Drain autoreleased ObjC objects (NSURL, NSString, NSNumber).
-    // Called from spawn_blocking threads that lack AppKit's autorelease pool.
-    autoreleasepool(|_| {
-        let url = NSURL::fileURLWithPath(&objc2_foundation::NSString::from_str(path));
-
-        let total = get_u64_resource(&url, "NSURLVolumeTotalCapacityKey")?;
-        let available = get_u64_resource(&url, "NSURLVolumeAvailableCapacityForImportantUsageKey")
-            .filter(|&v| v > 0)
-            .or_else(|| get_u64_resource(&url, "NSURLVolumeAvailableCapacityKey"))?;
-
-        Some(SpaceInfo::bounded(total, available))
-    })
-}
-
-#[cfg(test)]
-thread_local! {
-    /// How many NSURL space queries this thread made, so a test can prove it made none.
-    static NSURL_SPACE_QUERIES: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    // Regression anchor for #357: the first NSURL call in a test process `readdir`s the test
-    // binary's own directory, which stalled parallel tests for seconds on a bloated
-    // `target/debug/deps`. A space query in a test build must never get that far.
-    #[test]
-    fn a_test_build_answers_a_space_query_without_nsurl() {
-        let space = get_volume_space("/").expect("the boot volume has a size");
-
-        assert!(space.total_bytes().is_some_and(|total| total > 0), "got {space:?}");
-        assert_eq!(NSURL_SPACE_QUERIES.with(std::cell::Cell::get), 0);
-    }
 
     #[test]
     fn the_boot_volume_reports_a_uuid() {
@@ -223,37 +126,6 @@ mod tests {
     #[test]
     fn a_path_that_does_not_exist_has_no_uuid() {
         assert_eq!(get_volume_uuid_for_path("/Volumes/definitely-not-mounted-xyz"), None);
-    }
-
-    #[test]
-    fn the_boot_volume_reports_a_bounded_capacity_it_has_not_filled() {
-        let space = nsurl_volume_space("/").expect("macOS reports space for the boot volume");
-
-        let SpaceInfo::Bounded {
-            total_bytes,
-            available_bytes,
-            ..
-        } = space
-        else {
-            panic!("a mounted filesystem always has a capacity, got {space:?}");
-        };
-        assert!(total_bytes > 0, "total should be positive");
-        assert!(available_bytes > 0, "available should be positive");
-        assert!(available_bytes <= total_bytes, "available should be at most total");
-    }
-
-    #[test]
-    fn test_get_volume_space_home() {
-        let home = dirs::home_dir().expect("Should have home dir");
-        let space = nsurl_volume_space(home.to_str().unwrap());
-        assert!(space.is_some(), "Should get space info for home directory");
-    }
-
-    #[test]
-    fn test_get_volume_space_nonexistent() {
-        // Nonexistent paths return None - the NSURL resource API doesn't resolve to ancestor volumes
-        let space = nsurl_volume_space("/nonexistent/path/that/does/not/exist");
-        assert!(space.is_none(), "Nonexistent paths should return None");
     }
 
     fn facts(ejectable: Option<bool>, internal: Option<bool>) -> MediaFacts {
