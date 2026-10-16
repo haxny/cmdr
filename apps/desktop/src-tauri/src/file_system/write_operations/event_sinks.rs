@@ -256,7 +256,7 @@ impl OperationEventSink for TauriEventSink {
         // The pane's free-space readout re-reads purgeable space on its next poll: a delete
         // under a local snapshot frees space `statfs` never sees (`volumes/live_space.rs`).
         #[cfg(target_os = "macos")]
-        crate::volumes::expect_space_change();
+        cmdr_local::live_space::expect_space_change();
         let _ = event.emit(&self.app);
     }
 }

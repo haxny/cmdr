@@ -9,11 +9,12 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use super::copy_volumes_with_progress;
-use crate::file_system::volume::{InMemoryVolume, LocalPosixVolume, Volume};
+use crate::file_system::volume::{InMemoryVolume, Volume};
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::state::WriteOperationState;
 use crate::file_system::write_operations::types::VolumeCopyConfig;
 use crate::test_support::TestDir;
+use cmdr_local::LocalPosixVolume;
 
 /// `folder/` holding `child.txt` with its sidecar, a subfolder with its own,
 /// and an orphan sidecar whose owner is gone.

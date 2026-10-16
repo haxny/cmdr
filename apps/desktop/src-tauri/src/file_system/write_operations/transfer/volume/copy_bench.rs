@@ -31,9 +31,9 @@ use crate::file_system::write_operations::types::ConflictResolution;
     reason = "Bench test prints a timing report by design (run with --nocapture); the struct-update is intentional for future-proofing."
 )]
 async fn phase4_bench_baseline_smb_to_local_100_tiny_files() {
-    use crate::file_system::volume::LocalPosixVolume;
     use crate::file_system::volume::smb_volume_id;
     use crate::file_system::write_operations::event_sinks::CollectorEventSink;
+    use cmdr_local::LocalPosixVolume;
     use cmdr_smb::volume::MountAnchor;
     use cmdr_smb::volume::{SmbConnectionParams, connect_smb_volume};
 

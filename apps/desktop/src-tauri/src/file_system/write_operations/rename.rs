@@ -271,11 +271,7 @@ async fn rename_managed_inner(
                             };
                         }
                         MutationError::Volume {
-                            error: crate::file_system::volume::backends::rename_volume_error(
-                                &e,
-                                &from_syscall,
-                                &to_syscall,
-                            ),
+                            error: cmdr_local::rename_volume_error(&e, &from_syscall, &to_syscall),
                         }
                     })
                 })

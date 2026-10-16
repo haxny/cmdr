@@ -45,10 +45,11 @@ use cmdr_fs::metadata::{RemovalRefusal, remove_file_clearing_blockers};
 
 use super::{ItemHome, ItemKind, Ledger, Record, RecordedTemp, SweepTally, TrackedItem};
 use crate::file_system::volume::manager::get_volume_manager;
-use crate::file_system::volume::{Volume, VolumeError, rename_local_exclusive};
+use crate::file_system::volume::{Volume, VolumeError};
 use crate::file_system::write_operations::transfer_sides::root_is_listed;
 use crate::file_system::write_operations::types::MoveLeftoversKeptEvent;
 use crate::file_system::write_operations::unique_name::{NameCandidates, RESCUE_NAME_ATTEMPTS, recovered_sibling};
+use cmdr_local::rename_local_exclusive;
 
 /// Settles the records an earlier run left that the local filesystem can answer
 /// for on its own, then takes whatever pending volume is already reachable.

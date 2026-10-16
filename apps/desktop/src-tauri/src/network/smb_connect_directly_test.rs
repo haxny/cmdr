@@ -2,8 +2,8 @@
 //! there's no OS-mounted SMB share behind the volume anymore.
 
 use super::*;
-use crate::file_system::volume::LocalPosixVolume;
 use crate::test_support::TestDir;
+use cmdr_local::LocalPosixVolume;
 use std::sync::Arc;
 
 /// An id no test ever registers a volume under.

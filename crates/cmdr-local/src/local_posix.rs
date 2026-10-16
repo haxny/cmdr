@@ -7,27 +7,11 @@
 //! files, so those methods stay here as one-line delegations to inherent bodies
 //! over there.
 
-pub mod filesystem_kind;
-#[cfg(target_os = "linux")]
-pub(crate) mod linux_mounts;
-#[cfg(target_os = "macos")]
-pub(crate) mod live_space;
-#[cfg(target_os = "macos")]
-mod macos_metadata;
-#[cfg(target_os = "macos")]
-pub(crate) mod mount_table;
-pub(crate) mod mutation;
-#[cfg(target_os = "macos")]
-pub(crate) mod nsurl;
-pub(crate) mod reading;
-#[cfg(test)]
-mod reading_test;
 mod scan;
-pub(crate) mod space;
-#[cfg(target_os = "macos")]
-pub(crate) mod statfs;
 mod streams;
 
+use crate::reading::{ListingTally, get_single_entry, list_directory_core_with_tally};
+use crate::space::{get_space_info_for_path, live_space_info_for_path};
 use cmdr_fs::entry::FileEntry;
 #[cfg(feature = "playwright-e2e")]
 use cmdr_fs::ignore_poison::IgnorePoison;
@@ -39,8 +23,6 @@ use cmdr_fs::volume::{
     CopyScanResult, ScanConflict, SourceItemInfo, SpaceInfo, Volume, VolumeError, VolumeReadStream, WatchCoverage,
 };
 use cmdr_fs::volume::{EntryKind, ListingProgress, StreamLength, StreamWriteProgress, StreamWritten, WriteMode};
-use reading::{ListingTally, get_single_entry, list_directory_core_with_tally};
-use space::{get_space_info_for_path, live_space_info_for_path};
 use std::future::Future;
 use std::io;
 use std::path::{Path, PathBuf};
@@ -53,11 +35,13 @@ use tokio::task::spawn_blocking;
 ///
 /// Sets the cadence of the pane's "Loaded N files..." readout: fast enough that a
 /// multi-second folder visibly climbs, slow enough that the number stays readable.
-/// Shortened under test so a scratch dir produces ticks without needing to be huge.
-#[cfg(not(test))]
-const PROGRESS_SAMPLE_INTERVAL: Duration = Duration::from_millis(200);
-#[cfg(test)]
-const PROGRESS_SAMPLE_INTERVAL: Duration = Duration::from_millis(1);
+/// Shortened in a test build (this crate's or a consumer's, through `testing`) so
+/// a scratch dir produces ticks without needing to be huge.
+const PROGRESS_SAMPLE_INTERVAL: Duration = if cfg!(any(test, feature = "testing")) {
+    Duration::from_millis(1)
+} else {
+    Duration::from_millis(200)
+};
 
 /// Which of a rename's two paths an `io::Error` is talking about.
 ///
@@ -65,7 +49,7 @@ const PROGRESS_SAMPLE_INTERVAL: Duration = Duration::from_millis(1);
 /// DESTINATION that already is. Handing both to the same path would name the
 /// wrong file in "there's already something called that", which is the one
 /// sentence in the rename flow the user acts on.
-pub(crate) fn rename_volume_error(err: &io::Error, from: &Path, to: &Path) -> VolumeError {
+pub fn rename_volume_error(err: &io::Error, from: &Path, to: &Path) -> VolumeError {
     match err.kind() {
         io::ErrorKind::AlreadyExists | io::ErrorKind::DirectoryNotEmpty => VolumeError::from_io_at(err, to),
         _ => VolumeError::from_io_at(err, from),
@@ -80,7 +64,7 @@ pub(crate) fn rename_volume_error(err: &io::Error, from: &Path, to: &Path) -> Vo
 /// replaces silently, and both callers have a window between the check and the
 /// rename in which a file can appear, so destroying it would be silent and
 /// unrecoverable.
-pub(crate) fn rename_local_exclusive(source: &Path, destination: &Path) -> io::Result<()> {
+pub fn rename_local_exclusive(source: &Path, destination: &Path) -> io::Result<()> {
     rename_exclusive_with(source, destination, rename_exclusive_syscall)
 }
 
@@ -255,7 +239,7 @@ impl LocalPosixVolume {
 
     /// This volume with an injected sidecar probe, so a test on APFS can read
     /// it as a FAT volume.
-    #[cfg(test)]
+    #[cfg(any(test, feature = "testing"))]
     pub fn with_sidecar_probe(mut self, probe: fn(&Path) -> bool) -> Self {
         self.sidecar_probe = probe;
         self
@@ -363,7 +347,7 @@ impl Volume for LocalPosixVolume {
             // with the lister. Instead the lister publishes into a shared `ListingTally` and
             // this side samples it on a timer, leaving the callback on the async task that
             // owns it. Without this the pane sits on "Opening folder…" for a big folder's
-            // whole read. `volume/backends/DETAILS.md` § "The local reader".
+            // whole read. `DETAILS.md` § "The local reader".
             let tally = Arc::new(ListingTally::default());
             let tally_for_listing = Arc::clone(&tally);
             let host = self.host.clone();
@@ -460,7 +444,7 @@ impl Volume for LocalPosixVolume {
         mutation: cmdr_fs::volume::MutationEvent,
     ) -> Pin<Box<dyn Future<Output = ()> + Send + 'a>> {
         Box::pin(async move {
-            mutation::patch_listing_after_local_mutation(self.host.listings(), volume_id, parent_path, mutation);
+            crate::mutation::patch_listing_after_local_mutation(self.host.listings(), volume_id, parent_path, mutation);
         })
     }
 

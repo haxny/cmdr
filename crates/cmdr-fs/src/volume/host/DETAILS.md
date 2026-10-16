@@ -4,8 +4,8 @@
 
 `Volume` has always been the API between Cmdr and a storage backend, and it has always lived below the app. What it
 never had was exclusivity: a backend could implement the trait and ALSO reach sideways into the listing cache, the
-keychain, the volume registry, the analytics client, and the settings module. `local_posix` still does, and nothing but
-this boundary stops the next one; SMB's retrofit had to unpick roughly two dozen such sites, MTP's about the same.
+keychain, the volume registry, the analytics client, and the settings module. Nothing but this boundary stops the next
+one; SMB's retrofit had to unpick roughly two dozen such sites, MTP's about the same.
 
 Turning each reach into a named seam is what makes `cargo check -p cmdr-sftp` a complete verification loop: after the
 boundary, a sideways reach is either one of the traits here or a compile error. That's the whole payoff, and it's
@@ -431,9 +431,8 @@ Three things the adapters found that aren't trait shape, and matter to whoever w
 
 `cmdr-archive`, SMB, and SFTP are all fully on the seams: SMB takes a `VolumeHost` in `connect_smb_volume` and keeps it
 on the share-scoped `SmbVolumeInner`, SFTP takes one in `connect_sftp_volume`, and neither reaches anything in the app
-directly, and MTP is now the same. `local_posix` still calls the listing engine through `listing_host`,
-`network::keychain`, and the rest, and stays app-resident on purpose. Which backends move and which don't: § "Which
-backends move" below.
+directly, and MTP and the local backend (`cmdr-local`) are the same. Which backends moved and how: § "Which backends
+move" below.
 
 **Only the event sink needs a running app.** `volume_host::host()` hands out the app's real adapters even before
 `install()`, leaving only the frontend channel (and the app's runtime) unwired, because the listing cache, secret store,
@@ -487,7 +486,7 @@ because retrofitting is where all the cost sits:
   signature moved to fit it**. What it needed that didn't exist became a NEW seam, `HostKeys` (§ "Seam by seam") —
   growth rather than a break, because no earlier backend's security depended on recognizing a server across sessions.
   The backend itself: `crates/cmdr-sftp/DETAILS.md`.
-- **MTP was the last retrofit, and it is `crates/cmdr-mtp`.** It was the one backend still reaching sideways (the
+- **MTP was a retrofit too, and it is `crates/cmdr-mtp`.** It was the last protocol backend still reaching sideways (the
   listing cache at four sites, the index handle, `tokio::spawn`, and a `tauri::AppHandle` emitting seven frontend events
   from inside the session layer). The three things that once read as permanent refusals got the same three answers SMB
   gave: a crate-local typed event trait for the derives, `any(test, feature = "testing")` for the `cfg(test)` gates, and
@@ -500,11 +499,13 @@ because retrofitting is where all the cost sits:
   instead, off a crate-local `GitStateSink`: the same typed-event-trait answer MTP gave, rather than a new seam. The app
   keeps the two things only an app can decide, which paths route there and the `.git/` landing rows that reach a PANE
   and no walker. `crates/cmdr-git/DETAILS.md` § "Where the boundary runs, and why".
-- **`local_posix` stays app-resident permanently**, and that refusal was never the same shape as MTP's: it isn't a
-  protocol backend reaching sideways, it's the app's own local machinery. It's the only caller of the real-FS reader
-  that also serves the non-volume listing path, and the sole caller of `patch_listing_after_local_mutation`, which
-  `std::fs`-stats the changed entry and so can't exist on a protocol backend. The reasons are in the same section,
-  because that's where someone proposing "let's complete the set" will be standing.
+- **`cmdr-local` reaches the app through `ListingHost` alone**, and its couplings were never the same shape as MTP's:
+  not a protocol backend reaching sideways but the app's own local machinery. The pane patch after a mutation, the
+  watch-coverage oracle, and the panes' name order became `ListingHost` calls (`directory_changed`,
+  `local_watch_coverage`, `sort_listing`), and the real-FS reader, space, and the mount probes moved INTO the crate,
+  which the app's watcher and `volumes*/` then name directly. `patch_listing_after_local_mutation` stays the backend's
+  own: it `std::fs`-stats the changed entry, which no protocol backend can. `crates/cmdr-local/DETAILS.md` §
+  "Decisions".
 
 **Expect an extraction to surface latent defects**, and treat that as the point rather than a surprise. Archive's move
 found two: seven `.unwrap()`s that were legal only while the file was `cfg(test)` and became clippy `unwrap_used`

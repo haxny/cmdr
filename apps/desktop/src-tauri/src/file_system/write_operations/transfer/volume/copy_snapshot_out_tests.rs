@@ -12,11 +12,12 @@
 use super::tests::make_state;
 use super::*;
 use crate::file_system::git;
+use crate::file_system::volume::InMemoryVolume;
 use crate::file_system::volume::manager::get_volume_manager;
-use crate::file_system::volume::{InMemoryVolume, LocalPosixVolume};
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::resolve_source_volume;
 use cmdr_git::test_fixtures::{EntryKind, Fixture, cleanup, temp_dir};
+use cmdr_local::LocalPosixVolume;
 
 /// A repo whose `main` snapshot holds a top-level file, a two-file folder, and
 /// an executable script (both alone at the top level and inside a folder),

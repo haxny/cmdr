@@ -37,11 +37,8 @@ async fn smb_integration_write_from_stream_local_source_large_file() {
     let local_tmp = TestDir::new("smb-import");
     std::fs::write(local_tmp.join("import-large.bin"), &data).unwrap();
 
-    let local_vol = crate::file_system::volume::LocalPosixVolume::local_folder(
-        "local-src",
-        local_tmp.to_path_buf(),
-        crate::volume_host::host(),
-    );
+    let local_vol =
+        cmdr_local::LocalPosixVolume::local_folder("local-src", local_tmp.to_path_buf(), crate::volume_host::host());
 
     let smb_path = format!("{}/import-large.bin", dir);
     let progress_calls = AtomicUsize::new(0);
@@ -107,11 +104,8 @@ async fn smb_integration_staged_write_of_a_name_at_the_byte_limit_lands() {
     let data = b"a book, at last".to_vec();
     let local_tmp = TestDir::new("smb-long-name");
     std::fs::write(local_tmp.join("book.epub"), &data).unwrap();
-    let local_vol = crate::file_system::volume::LocalPosixVolume::local_folder(
-        "local-src",
-        local_tmp.to_path_buf(),
-        crate::volume_host::host(),
-    );
+    let local_vol =
+        cmdr_local::LocalPosixVolume::local_folder("local-src", local_tmp.to_path_buf(), crate::volume_host::host());
 
     for name in [
         format!("{}.epub", "a".repeat(250)),
@@ -174,11 +168,8 @@ async fn smb_integration_staged_write_of_a_name_past_the_byte_limit_is_an_invali
     let data = b"too long a name".to_vec();
     let local_tmp = TestDir::new("smb-too-long-name");
     std::fs::write(local_tmp.join("book.epub"), &data).unwrap();
-    let local_vol = crate::file_system::volume::LocalPosixVolume::local_folder(
-        "local-src",
-        local_tmp.to_path_buf(),
-        crate::volume_host::host(),
-    );
+    let local_vol =
+        cmdr_local::LocalPosixVolume::local_folder("local-src", local_tmp.to_path_buf(), crate::volume_host::host());
 
     // 150 Greek letters: 300 bytes, which a Windows server would hold (150
     // UTF-16 units) but a Linux one can't.

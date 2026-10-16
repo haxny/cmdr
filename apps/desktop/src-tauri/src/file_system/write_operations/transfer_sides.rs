@@ -250,11 +250,11 @@ pub(in crate::file_system::write_operations) fn root_is_listed(root: &Path) -> O
     let root = root.to_string_lossy();
     #[cfg(target_os = "macos")]
     {
-        crate::volumes::is_mount_point(&root)
+        cmdr_local::mount_table::is_mount_point(&root)
     }
     #[cfg(target_os = "linux")]
     {
-        crate::file_system::linux_mounts::is_mount_point(&root)
+        cmdr_local::linux_mounts::is_mount_point(&root)
     }
     #[cfg(not(any(target_os = "macos", target_os = "linux")))]
     {

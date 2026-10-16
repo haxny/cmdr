@@ -85,13 +85,13 @@ pub fn get_smb_mount_info(mount_path: &str) -> Option<SmbMountInfo> {
     let stat = unsafe { stat.assume_init() };
 
     // Check filesystem type is SMB
-    let fs_type = super::fs_type::statfs_string(&stat.f_fstypename);
+    let fs_type = cmdr_local::statfs::statfs_string(&stat.f_fstypename);
     if !is_smb_fs_type(Some(&fs_type)) {
         return None;
     }
 
     // Extract mount source (for example, "//david@192.168.1.111/naspi")
-    let mount_from = super::fs_type::statfs_string(&stat.f_mntfromname);
+    let mount_from = cmdr_local::statfs::statfs_string(&stat.f_mntfromname);
 
     parse_smb_mount_source(&mount_from)
 }

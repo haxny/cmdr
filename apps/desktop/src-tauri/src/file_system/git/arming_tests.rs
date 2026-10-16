@@ -15,12 +15,13 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use crate::file_system::volume::manager::get_volume_manager;
-use crate::file_system::volume::{InMemoryVolume, LocalPosixVolume, Volume};
+use crate::file_system::volume::{InMemoryVolume, Volume};
 use crate::listing_host::listings;
 use crate::test_support::wait_until_async;
 use cmdr_git::test_fixtures::{Fixture, cleanup, temp_dir};
 use cmdr_listing::ListingId;
 use cmdr_listing::testing::{read_to_end, request};
+use cmdr_local::LocalPosixVolume;
 
 use super::{arming, wiring};
 

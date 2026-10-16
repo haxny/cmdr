@@ -93,7 +93,7 @@ macOS 26.6, `cargo test --lib file_system::git::walker_exposure_tests`, 2026-09-
   delete walker, the trait scanner, and every other `Volume` consumer see a plain directory.
 - **The routed portal volume can't be walked into by accident either.** It serves only `.git/<category>/…`, refuses
   every mutation by trait default, and `mount_id_for_path` skips it by TYPE so nothing indexes through one.
-- **The copy scan never asks a volume at all.** `local_posix/scan.rs` walks with `walkdir` against the resolved path.
+- **The copy scan never asks a volume at all.** `cmdr-local`'s `local_posix/scan.rs` walks with `walkdir` against the resolved path.
 - **The LOCAL delete walker asks the fresh-listing oracle first**, and the oracle declines any listing an overlay
   decorated (`CachedListing::has_overlay_rows`). That is the one place where the pane's extra rows and a walker's read
   could have met: `.git/` is a real directory, so a pane on one arms a real watch and the listing would otherwise pass
@@ -106,7 +106,7 @@ portal on as much as off, which is what lets a repo-folder delete walk `.git/` t
 
 ## Two seams, no hooks
 
-`LocalPosixVolume` names git nowhere: `rg 'git' backends/local_posix.rs` is empty, and ❌ it must stay that way. A
+`LocalPosixVolume` names git nowhere: `rg 'git' crates/cmdr-local/src` is empty, and ❌ it must stay that way. A
 guard there once refused the REAL `.git/config` alongside the virtual folders, which stopped a repo-folder delete with
 `.git/` still on disk. Two seams reach a repository instead, each with a rule a TYPE enforces rather than an `if`:
 

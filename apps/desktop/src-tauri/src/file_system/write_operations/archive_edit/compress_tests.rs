@@ -7,7 +7,7 @@ use crate::file_system::write_operations::WriteOperationPhase;
 /// End-to-end: compress two local files into a new ZIP and read both entries back.
 #[tokio::test]
 async fn compress_start_packs_local_files_into_a_new_zip() {
-    use crate::file_system::volume::backends::LocalPosixVolume;
+    use cmdr_local::LocalPosixVolume;
 
     let tmp = tempfile::tempdir().expect("tempdir");
 
@@ -141,7 +141,7 @@ async fn compress_start_packs_local_files_into_a_new_zip() {
 
 #[tokio::test]
 async fn a_name_taken_after_start_is_not_replaced_or_reported_complete() {
-    use crate::file_system::volume::backends::LocalPosixVolume;
+    use cmdr_local::LocalPosixVolume;
 
     let tmp = tempfile::tempdir().expect("tempdir");
     let src_root = tmp.path().join("src");
@@ -188,8 +188,8 @@ async fn a_name_taken_after_start_is_not_replaced_or_reported_complete() {
 
 #[tokio::test]
 async fn stop_policy_prompts_for_duplicate_source_names_and_honors_overwrite() {
-    use crate::file_system::volume::backends::LocalPosixVolume;
     use crate::file_system::write_operations::resolve_write_conflict;
+    use cmdr_local::LocalPosixVolume;
 
     let tmp = tempfile::tempdir().expect("tempdir");
     let src_root = tmp.path().join("src");
@@ -237,7 +237,7 @@ async fn stop_policy_prompts_for_duplicate_source_names_and_honors_overwrite() {
 
 #[tokio::test]
 async fn an_existing_local_archive_stays_byte_exact_until_publication() {
-    use crate::file_system::volume::backends::LocalPosixVolume;
+    use cmdr_local::LocalPosixVolume;
 
     let tmp = tempfile::tempdir().expect("tempdir");
     let src_root = tmp.path().join("src");
@@ -284,7 +284,7 @@ async fn an_existing_local_archive_stays_byte_exact_until_publication() {
 
 #[tokio::test]
 async fn local_alias_and_destination_inside_source_are_refused_before_registration() {
-    use crate::file_system::volume::backends::LocalPosixVolume;
+    use cmdr_local::LocalPosixVolume;
 
     let tmp = tempfile::tempdir().expect("tempdir");
     let source_dir = tmp.path().join("source");
@@ -341,7 +341,7 @@ async fn local_alias_and_destination_inside_source_are_refused_before_registrati
 /// merely that the call returned an error.
 #[tokio::test]
 async fn compress_refuses_a_read_only_destination_without_touching_its_bytes() {
-    use crate::file_system::volume::backends::LocalPosixVolume;
+    use cmdr_local::LocalPosixVolume;
 
     let tmp = tempfile::tempdir().expect("tempdir");
     let src_root = tmp.path().join("src");
@@ -404,7 +404,6 @@ async fn compress_refuses_a_read_only_destination_without_touching_its_bytes() {
 /// the driver, not the op type.
 #[tokio::test]
 async fn compress_journals_subkind_and_net_new_from_the_driver() {
-    use crate::file_system::volume::backends::LocalPosixVolume;
     use crate::operation_log::TestJournalGuard;
     use crate::operation_log::capture::WriterJournal;
     use crate::operation_log::store::{
@@ -412,6 +411,7 @@ async fn compress_journals_subkind_and_net_new_from_the_driver() {
     };
     use crate::operation_log::types::{ArchiveSubkind, ExecutionStatus, Initiator, OpKind, RollbackState, RowRole};
     use crate::operation_log::writer::OperationLogWriter;
+    use cmdr_local::LocalPosixVolume;
 
     let jdir = tempfile::tempdir().expect("jdir");
     let jdb = operation_log_db_path(jdir.path());
@@ -493,12 +493,12 @@ async fn compress_journals_subkind_and_net_new_from_the_driver() {
 /// so a Mac-to-phone compress read as a phone-to-phone one that packed nothing.
 #[tokio::test]
 async fn compress_journals_the_source_volume_and_what_it_packed() {
-    use crate::file_system::volume::backends::LocalPosixVolume;
     use crate::operation_log::TestJournalGuard;
     use crate::operation_log::capture::WriterJournal;
     use crate::operation_log::store::{open_read_connection, operation_log_db_path, read_operation};
     use crate::operation_log::types::{ExecutionStatus, Initiator};
     use crate::operation_log::writer::OperationLogWriter;
+    use cmdr_local::LocalPosixVolume;
 
     let jdir = tempfile::tempdir().expect("jdir");
     let jdb = operation_log_db_path(jdir.path());
@@ -563,7 +563,7 @@ async fn compress_journals_the_source_volume_and_what_it_packed() {
 /// "compress the directory under the cursor" case.
 #[tokio::test]
 async fn compress_start_packs_a_directory_subtree() {
-    use crate::file_system::volume::backends::LocalPosixVolume;
+    use cmdr_local::LocalPosixVolume;
 
     let tmp = tempfile::tempdir().expect("tempdir");
     let src_root = tmp.path().join("src");
@@ -631,7 +631,7 @@ fn entry_compressed_size(path: &Path, name: &str) -> u64 {
 /// Compresses one file holding `payload` at `level` into a fresh zip and returns
 /// its path. The entry lands at the archive root as `data.txt`.
 async fn compress_payload_at(dir: &Path, tag: &str, level: Option<i64>, payload: &[u8]) -> PathBuf {
-    use crate::file_system::volume::backends::LocalPosixVolume;
+    use cmdr_local::LocalPosixVolume;
 
     let src_root = dir.join(format!("src-{tag}"));
     std::fs::create_dir_all(&src_root).expect("mkdir src");
@@ -739,8 +739,8 @@ async fn compress_out_of_range_level_clamps_instead_of_failing() {
 /// A bug while building the compress's tree costs the tree, never the zip.
 #[tokio::test]
 async fn a_tree_that_fails_to_build_leaves_the_compress_as_it_would_run_without_one() {
-    use crate::file_system::volume::backends::LocalPosixVolume;
     use crate::file_system::write_operations::transfer_tree::test_support::TREE_BUG_NAME;
+    use cmdr_local::LocalPosixVolume;
 
     let tmp = tempfile::tempdir().expect("tempdir");
     let src_root = tmp.path().join("src");

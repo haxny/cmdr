@@ -17,7 +17,7 @@ impl MountTable for AppMountTable {
 
     #[cfg(target_os = "linux")]
     fn mount_of(&self, path: &Path) -> Option<MountFacts> {
-        crate::file_system::linux_mounts::mount_entry_for_path(path).map(|entry| MountFacts {
+        cmdr_local::linux_mounts::mount_entry_for_path(path).map(|entry| MountFacts {
             fs_type: entry.fstype,
             source: entry.device,
         })

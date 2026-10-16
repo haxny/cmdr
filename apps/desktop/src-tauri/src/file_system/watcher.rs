@@ -23,12 +23,12 @@ use std::time::{Duration, SystemTime};
 use tauri::AppHandle;
 use tauri_specta::Event as _;
 
-use crate::file_system::volume::backends::{get_single_entry, list_directory_core};
 use cmdr_fs::firmlinks;
 use cmdr_fs::volume::WatchCoverage;
 use cmdr_listing::ListingId;
 use cmdr_listing::host::{ListingObserver, OpenedListing};
 use cmdr_listing::{Listings, RefreshOutcome};
+use cmdr_local::reading::{get_single_entry, list_directory_core};
 
 /// Default debounce duration in milliseconds (used if not configured)
 const DEFAULT_DEBOUNCE_MS: u64 = 200;
@@ -182,7 +182,7 @@ pub fn start_watching(listing_id: &str, path: &Path) -> Result<(), String> {
 /// user's own work, which is why the watch is worth arming at all; the oracle
 /// just can't treat that cache as a substitute for reading the directory.
 fn coverage_for_watched_path(path: &Path) -> WatchCoverage {
-    if crate::file_system::index_provider::path_is_on_network_mount(path) {
+    if cmdr_local::filesystem_kind::path_is_on_network_mount(path) {
         WatchCoverage::ThisMachineOnly
     } else {
         WatchCoverage::EveryWriter

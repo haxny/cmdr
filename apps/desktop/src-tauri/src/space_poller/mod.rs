@@ -508,7 +508,7 @@ fn emit_low_disk_space(
 fn fetch_space_for_path(path: &str) -> Option<SpaceInfo> {
     #[cfg(target_os = "macos")]
     {
-        crate::volumes::live_volume_space(path)
+        cmdr_local::live_space::live_volume_space(path)
     }
 
     #[cfg(target_os = "linux")]

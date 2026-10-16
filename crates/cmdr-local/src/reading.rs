@@ -3,11 +3,11 @@
 //! Pure I/O functions that read from disk and build `FileEntry` objects. No Tauri
 //! or caching dependencies: the name order comes from the caller's
 //! `ListingHost::sort_listing`. `LocalPosixVolume`, the watcher, `tags.rs`, and
-//! `create.rs` read through it. See `backends/DETAILS.md` § "The local reader".
+//! `create.rs` read through it. See `DETAILS.md` § "The local reader".
 
 #![allow(
     dead_code,
-    reason = "list_directory and get_extended_metadata_batch are part of the two-phase loading API"
+    reason = "get_extended_metadata_batch is the second phase of the two-phase loading API, not wired into the streaming path yet"
 )]
 
 use std::collections::HashSet;
@@ -61,6 +61,7 @@ fn read_dot_hidden_names(root_dir: &Path) -> HashSet<String> {
 ///
 /// Calls `list_directory_core()` for the fast path, then enriches entries
 /// with macOS-specific metadata (addedAt, openedAt).
+#[cfg(any(test, feature = "testing"))]
 pub fn list_directory(path: &Path, listings: &dyn ListingHost) -> Result<Vec<FileEntry>, std::io::Error> {
     let overall_start = std::time::Instant::now();
 
@@ -120,7 +121,7 @@ pub fn list_directory_core(path: &Path, listings: &dyn ListingHost) -> Result<Ve
 /// `LocalPosixVolume::list_directory` is the only caller, and it passes
 /// `abs_path == self.root()`, the one place Cmdr knows a directory IS a volume
 /// root rather than merely a directory somewhere under one.
-pub fn list_directory_core_with_tally(
+pub(crate) fn list_directory_core_with_tally(
     path: &Path,
     tally: &ListingTally,
     is_volume_root: bool,
@@ -134,7 +135,7 @@ pub fn list_directory_core_with_tally(
 // DEFAULT-OK: zero is where every tally starts, before the walk has stat'ed anything. It
 // claims nothing about the disk; it's the count of what we've looked at so far.
 #[derive(Default)]
-pub struct ListingTally {
+pub(crate) struct ListingTally {
     files: AtomicUsize,
     dirs: AtomicUsize,
     bytes: AtomicU64,
@@ -153,7 +154,7 @@ impl ListingTally {
     /// Reads the counts as they stand right now. The three fields are loaded
     /// separately, so a snapshot taken mid-stat can be an entry out of step with
     /// itself; that's fine for a progress readout and it never over-counts.
-    pub fn snapshot(&self) -> ListingProgress {
+    pub(crate) fn snapshot(&self) -> ListingProgress {
         ListingProgress {
             files: self.files.load(Ordering::Relaxed),
             dirs: self.dirs.load(Ordering::Relaxed),
@@ -409,7 +410,7 @@ pub(crate) fn process_dir_entry(entry: &fs::DirEntry, dot_hidden_names: &HashSet
 /// Called after the initial directory listing to populate
 /// macOS-specific metadata (addedAt, openedAt) without blocking initial render.
 #[cfg(target_os = "macos")]
-pub fn get_extended_metadata_batch(paths: Vec<String>) -> Vec<ExtendedMetadata> {
+pub(crate) fn get_extended_metadata_batch(paths: Vec<String>) -> Vec<ExtendedMetadata> {
     benchmark::log_event_value("get_extended_metadata_batch START, count", paths.len());
     let result: Vec<ExtendedMetadata> = paths
         .into_iter()
@@ -428,7 +429,7 @@ pub fn get_extended_metadata_batch(paths: Vec<String>) -> Vec<ExtendedMetadata> 
 }
 
 #[cfg(not(target_os = "macos"))]
-pub fn get_extended_metadata_batch(paths: Vec<String>) -> Vec<ExtendedMetadata> {
+pub(crate) fn get_extended_metadata_batch(paths: Vec<String>) -> Vec<ExtendedMetadata> {
     benchmark::log_event_value("get_extended_metadata_batch (non-macOS), count", paths.len());
     paths
         .into_iter()

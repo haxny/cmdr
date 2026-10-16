@@ -39,11 +39,11 @@ use super::network_transfer_test_support::{
 use crate::adb::device_provider::apply_device_list;
 use crate::adb::test_support::{a_listed_phone, dial, dials_seen, phone, retire_phone};
 use crate::commands::file_system::scan_volume_for_conflicts;
-use crate::file_system::volume::LocalPosixVolume;
 use crate::file_system::volume::manager::get_volume_manager;
 use crate::ignore_poison::IgnorePoison;
 use crate::operation_log::types::Initiator;
 use crate::test_support::TestDir;
+use cmdr_local::LocalPosixVolume;
 
 /// Big enough to cross the sync service's 64 KiB `DATA` frames a few times, so
 /// reassembly is exercised, and small enough to stay quick on a loaded machine.

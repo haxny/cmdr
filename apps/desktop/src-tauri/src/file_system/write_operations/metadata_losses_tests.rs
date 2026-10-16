@@ -45,7 +45,7 @@ fn a_pair_that_loses_nothing_never_asks_the_source() {
         reports: MetadataClasses::MODE.union(MetadataClasses::XATTRS),
         ..MetadataCaps::NONE
     });
-    let local = volume_with(crate::file_system::volume::LocalPosixVolume::METADATA_CAPS);
+    let local = volume_with(cmdr_local::LocalPosixVolume::METADATA_CAPS);
     let share = volume_with(cmdr_smb::volume::SmbVolume::METADATA_CAPS);
 
     assert!(file_losses(&archive, &local, &NeverAsked).is_empty());

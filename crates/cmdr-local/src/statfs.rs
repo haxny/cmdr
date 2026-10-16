@@ -14,13 +14,13 @@ use std::path::Path;
 /// Lossy rather than strict: a mount name is whatever bytes the volume was
 /// labelled with, and a replacement character in a display path beats losing the
 /// mount.
-pub(crate) fn statfs_string(field: &[libc::c_char]) -> String {
+pub fn statfs_string(field: &[libc::c_char]) -> String {
     let bytes: Vec<u8> = field.iter().take_while(|&&c| c != 0).map(|&c| c as u8).collect();
     String::from_utf8_lossy(&bytes).into_owned()
 }
 
 /// The mount a path lives on, as one `statfs` reports it.
-pub(crate) struct MountPointInfo {
+pub struct MountPointInfo {
     /// Where it's mounted, firmlink-normalized (`/System/Volumes/Data` reads as `/`).
     pub mount_point: String,
     /// `f_fstypename`, for example `apfs` or `smbfs`.
@@ -37,7 +37,7 @@ pub(crate) struct MountPointInfo {
 ///
 /// If `statfs` fails (ENOENT for a deleted directory), walks up parent
 /// directories until one succeeds. Returns `None` only if even `/` fails.
-pub(crate) fn get_mount_info(path: &str) -> Option<MountPointInfo> {
+pub fn get_mount_info(path: &str) -> Option<MountPointInfo> {
     use std::ffi::CString;
 
     let mut current = path.to_string();

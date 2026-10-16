@@ -12,6 +12,10 @@ mod archive_watch_integration_test;
 mod caching_reaper_test;
 mod foreign_path_test;
 mod lifecycle_order_test;
+// `cmdr-local`'s backend against the app's real host: the coverage answer
+// following the FSEvents watcher, the panes' name order, and the composer a
+// local mutation patches the pane through.
+mod local_posix_host_test;
 #[cfg(feature = "virtual-mtp")]
 mod mtp_listing_path_test;
 mod overlay_refresh_test;

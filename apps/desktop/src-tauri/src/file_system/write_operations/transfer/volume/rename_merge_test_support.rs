@@ -19,8 +19,9 @@
 //! (CI) and macOS. The case-fold suite wraps it in a case-insensitive volume so
 //! it's portable regardless of the host filesystem's case sensitivity.
 
-use crate::file_system::volume::{LocalPosixVolume, Volume};
+use crate::file_system::volume::Volume;
 use crate::file_system::write_operations::state::WriteOperationState;
+use cmdr_local::LocalPosixVolume;
 use std::path::Path;
 use std::sync::Arc;
 use std::time::Duration;

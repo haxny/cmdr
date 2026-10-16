@@ -1,0 +1,62 @@
+[package]
+name = "cmdr-local"
+version = "0.0.0"
+edition = "2024"
+license = "LicenseRef-BSL-1.1"
+publish = false
+
+# The house lint set lives in the workspace root's `[workspace.lints]`, so this
+# crate can't quietly become a lint-free zone. `unused_crate_dependencies` is the
+# one lint that stays at the crate root instead (it's judged per compilation unit).
+[lints]
+workspace = true
+
+[features]
+# "This is a test build." Consumers turn it on through a dev-dependency, which
+# keeps it off in every shipped build. It keeps a consumer's test build behaving
+# the way this crate's own does: space answers from `statvfs` rather than NSURL
+# (#357), a listing samples its progress every millisecond, and
+# `LocalPosixVolume::with_sidecar_probe` and `reading::list_directory` are
+# reachable. `cfg(test)` can't: it's set only while a crate compiles its OWN test
+# target.
+testing = ["cmdr-fs/testing"]
+# `Volume::inject_error`, which lets a Playwright spec make the next local
+# `list_directory` fail with a chosen errno. Never enable in a production build;
+# the app's `playwright-e2e` forwards to it.
+playwright-e2e = ["cmdr-fs/playwright-e2e"]
+
+[dependencies]
+# The `Volume` trait, every type it exchanges, the host seams this backend asks
+# the app through, and the shared primitives (the AppleDouble rule, the metadata
+# copy, the listing-progress sampler, the benchmark log). The only crate below
+# this one.
+cmdr-fs = { path = "../cmdr-fs" }
+log = "0.4"
+# `spawn_blocking` for every `std::fs` call a `Volume` method makes, so a slow
+# disk never stalls the async executor. `rt` only: the backend builds no runtime.
+tokio = { version = "1", features = ["rt"] }
+# The no-replace rename (`renamex_np` / `renameat2`), `statvfs`, `statfs`,
+# `getfsstat`, and the `st_flags` bits a listing reads.
+libc = "0.2"
+# The copy scan's subtree walk (`LocalPosixVolume::scan_subtree`).
+walkdir = "2"
+
+# NSURL resource values: volume space (important-usage, purgeable counted), the
+# volume names and ejectability `volumes/` enriches with, and a file's added and
+# opened dates. Same objc2 family and versions as the app, so no second copy
+# enters the graph.
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = { version = "0.6", features = ["std"] }
+objc2-foundation = { version = "0.3", features = ["NSURL", "NSString", "NSDate", "NSValue", "NSError"] }
+
+[dev-dependencies]
+# Depending on ourselves turns the `testing` feature on for every DEV target and
+# leaves it off for the lib, so a shipped build carries none of it.
+cmdr-local = { path = ".", features = ["testing"] }
+# `TestDir`, the scan recorder, the shared `volume::conformance` assertions, and
+# `InMemoryVolume`.
+cmdr-fs = { path = "../cmdr-fs", features = ["testing"] }
+# `#[tokio::test]`, some cells on a multi-threaded runtime.
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+# The home directory a space cell reads.
+dirs = "7"

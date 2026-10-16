@@ -15,11 +15,12 @@ use std::time::Duration;
 use cmdr_fs::metadata::CarriedMetadata;
 
 use super::copy_volumes_with_progress;
-use crate::file_system::volume::{InMemoryVolume, LocalPosixVolume, Volume};
+use crate::file_system::volume::{InMemoryVolume, Volume};
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::state::WriteOperationState;
 use crate::file_system::write_operations::types::VolumeCopyConfig;
 use crate::test_support::TestDir;
+use cmdr_local::LocalPosixVolume;
 
 async fn copy_onto_local(op: &str, source: Arc<InMemoryVolume>, paths: &[PathBuf], dest_dir: &Path) {
     let dest: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(

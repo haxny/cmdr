@@ -400,7 +400,7 @@ pub enum WriteOperationError {
     /// rather than failing partway through.
     FilesTooLargeForFilesystem {
         /// The destination filesystem, so the message can name it ("FAT32").
-        filesystem: crate::file_system::filesystem_kind::FilesystemKind,
+        filesystem: cmdr_fs::filesystem_kind::FilesystemKind,
         /// The per-file ceiling in bytes (FAT32: 4 GiB − 1).
         max_size: u64,
         /// Up to 10 offending files (name + size), largest first.

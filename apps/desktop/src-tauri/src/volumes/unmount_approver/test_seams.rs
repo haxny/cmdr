@@ -94,7 +94,7 @@ impl IndexDoor for FakeIndex {
     fn is_listed(&self, volume_id: &str) -> bool {
         let root = self.roots.lock_ignore_poison().get(volume_id).cloned();
         match root {
-            Some(root) => crate::volumes::is_mount_point(&root.to_string_lossy()) != Some(false),
+            Some(root) => cmdr_local::mount_table::is_mount_point(&root.to_string_lossy()) != Some(false),
             None => true,
         }
     }
@@ -208,7 +208,7 @@ impl FakeHost {
 
     fn is_mounted(&self, path: &Path) -> bool {
         match self.presence {
-            Presence::MountTable => crate::volumes::is_mount_point(&path.to_string_lossy()) == Some(true),
+            Presence::MountTable => cmdr_local::mount_table::is_mount_point(&path.to_string_lossy()) == Some(true),
             Presence::AsTold => self.mounted.lock_ignore_poison().contains(path),
         }
     }

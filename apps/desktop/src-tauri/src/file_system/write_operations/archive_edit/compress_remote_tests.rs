@@ -29,7 +29,7 @@ async fn register_remote_parent(dir: &Path, mtp_style: bool) -> (String, Arc<InM
 /// A local source volume over a temp dir holding `files` at its root. The common
 /// case: compress LOCAL files onto a remote share.
 fn local_source_with(files: &[(&str, &[u8])]) -> (tempfile::TempDir, Arc<dyn Volume>) {
-    use crate::file_system::volume::backends::LocalPosixVolume;
+    use cmdr_local::LocalPosixVolume;
     let tmp = tempfile::tempdir().expect("tempdir");
     for (name, bytes) in files {
         std::fs::write(tmp.path().join(name), bytes).expect("write source file");

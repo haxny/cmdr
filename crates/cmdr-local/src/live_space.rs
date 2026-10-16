@@ -6,7 +6,7 @@
 //! purgeable part out. The two differ by that purgeable part alone, and it holds still while
 //! ordinary writes move both by the same bytes. So a live reading is the last important-usage
 //! figure plus how far `statfs` moved since, and the expensive query runs again only when that
-//! stops being safe ([`plan`]). `backends/DETAILS.md` § "Live volume space" has the evidence.
+//! stops being safe ([`plan`]). `DETAILS.md` § "Live volume space" has the evidence.
 
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};

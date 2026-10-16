@@ -2,8 +2,8 @@
 //! by volume id. The hand-back itself is `smb_upgrade_test.rs`'s.
 
 use super::*;
-use crate::file_system::volume::LocalPosixVolume;
 use crate::test_support::TestDir;
+use cmdr_local::LocalPosixVolume;
 use std::sync::Arc;
 
 /// A volume registered for the length of one test, under an id no other test uses.

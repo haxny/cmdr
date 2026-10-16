@@ -26,10 +26,11 @@ use super::fresh_validate::{ExpectedIndex, check_entry_names, validate_stage};
 use super::fresh_zip::{FreshZipCancellation, FreshZipError, FreshZipProgressObserver, spawn_fresh_zip_with_progress};
 use crate::file_system::volume::manager::get_volume_manager;
 use crate::file_system::volume::{
-    BackendKind, LaneKey, LocalPosixVolume, MutationEvent, StreamLength, StreamWriteProgress, Volume, VolumeError,
-    VolumeReadStream, WriteMode,
+    BackendKind, LaneKey, MutationEvent, StreamLength, StreamWriteProgress, Volume, VolumeError, VolumeReadStream,
+    WriteMode,
 };
 use crate::operation_log::types::{ArchiveSubkind, ExecutionStatus, Initiator};
+use cmdr_local::LocalPosixVolume;
 
 struct PausableSpoolStream {
     inner: Box<dyn VolumeReadStream>,

@@ -94,7 +94,7 @@ async fn smb_integration_copy_100_unique_files_no_cross_contamination() {
     // volume → `copy_volumes_with_progress`). `dest_path` is "/" relative to
     // the local volume root (i.e. the TempDir itself).
     let local_dir = tempfile::TempDir::new().expect("create TempDir");
-    let dest_vol: Arc<dyn Volume> = Arc::new(crate::file_system::volume::LocalPosixVolume::local_folder(
+    let dest_vol: Arc<dyn Volume> = Arc::new(cmdr_local::LocalPosixVolume::local_folder(
         "dest",
         local_dir.path().to_path_buf(),
         crate::volume_host::host(),
@@ -382,7 +382,7 @@ async fn run_concurrent_write_pass(
     }
     log::info!("regression: pre-upload done");
 
-    let src_vol: Arc<dyn Volume> = Arc::new(crate::file_system::volume::LocalPosixVolume::local_folder(
+    let src_vol: Arc<dyn Volume> = Arc::new(cmdr_local::LocalPosixVolume::local_folder(
         "regression-src",
         local_dir.path().to_path_buf(),
         crate::volume_host::host(),

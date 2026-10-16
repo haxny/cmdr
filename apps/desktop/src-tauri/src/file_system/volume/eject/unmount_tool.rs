@@ -267,9 +267,9 @@ pub(super) fn settle(outcome: &ToolOutcome, verb: UnmountVerb, still_mounted: im
 /// as gone would turn a real refusal into a silent success.
 pub(in crate::file_system::volume) fn is_still_mounted(mount_path: &str) -> bool {
     #[cfg(target_os = "macos")]
-    let listed = crate::volumes::is_mount_point(mount_path);
+    let listed = cmdr_local::mount_table::is_mount_point(mount_path);
     #[cfg(target_os = "linux")]
-    let listed = crate::file_system::linux_mounts::is_mount_point(mount_path);
+    let listed = cmdr_local::linux_mounts::is_mount_point(mount_path);
     listed.unwrap_or(true)
 }
 

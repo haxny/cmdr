@@ -11,8 +11,9 @@ use std::sync::Arc;
 use cmdr_fs::testing::metadata_fixture::{LOCKED_FLAG, MetadataFixture, add_deny_delete_acl, set_flags, set_mode};
 
 use super::test_support::*;
-use crate::file_system::volume::{LocalPosixVolume, Volume};
+use crate::file_system::volume::Volume;
 use crate::operation_log::types::{OpKind, RollbackState};
+use cmdr_local::LocalPosixVolume;
 
 /// `/` as a local volume, so the seeded rows can name the fixture's real paths.
 fn register_root(rig: &Rig) {

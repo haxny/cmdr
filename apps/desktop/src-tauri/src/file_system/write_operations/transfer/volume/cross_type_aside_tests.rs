@@ -326,7 +326,7 @@ async fn a_replacement_that_lands_leaves_no_aside_behind() {
 /// keeps every file.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_folder_replacing_a_dir_link_drops_the_link_and_never_its_target() {
-    use crate::file_system::volume::LocalPosixVolume;
+    use cmdr_local::LocalPosixVolume;
 
     let dest_dir = tempfile::tempdir().expect("tempdir");
     let root = dest_dir.path().to_path_buf();

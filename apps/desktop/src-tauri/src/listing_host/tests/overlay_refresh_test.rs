@@ -14,11 +14,11 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use crate::file_system::volume::LocalPosixVolume;
 use crate::file_system::volume::manager::get_volume_manager;
 use cmdr_fs::testing::unique_test_id;
 use cmdr_fs::volume::Volume;
 use cmdr_listing::testing::{TestListing, decorate, full_refresh};
+use cmdr_local::LocalPosixVolume;
 
 use crate::listing_host::listings;
 use cmdr_git::test_fixtures::{Fixture, cleanup, temp_dir};

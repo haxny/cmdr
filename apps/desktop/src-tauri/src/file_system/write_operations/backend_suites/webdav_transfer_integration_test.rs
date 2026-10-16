@@ -32,8 +32,8 @@ use super::network_transfer_test_support::{
     run_copy, self_describing_bytes, sha256,
 };
 use super::webdav_test_support::{WebdavFixture, connect, fixture};
-use crate::file_system::volume::LocalPosixVolume;
 use crate::test_support::TestDir;
+use cmdr_local::LocalPosixVolume;
 
 /// Big enough to cross the read and write windows rather than ride in one
 /// request, so reassembly and offset bookkeeping are actually exercised.

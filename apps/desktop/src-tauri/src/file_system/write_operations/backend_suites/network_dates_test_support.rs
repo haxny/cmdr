@@ -17,8 +17,8 @@ use cmdr_fs::volume::Volume;
 use cmdr_fs::volume::conformance::{SOURCE_DATE_SECS, assert_write_from_stream_keeps_the_source_date};
 
 use super::network_transfer_test_support::{clean_deep, run_copy, self_describing_bytes};
-use crate::file_system::volume::LocalPosixVolume;
 use crate::test_support::TestDir;
+use cmdr_local::LocalPosixVolume;
 
 /// What `path` lists as its modification date, which the scenarios insist on.
 async fn listed_date(volume: &dyn Volume, path: &Path, what: &str) -> u64 {

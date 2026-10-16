@@ -13,9 +13,7 @@ use cmdr_fs::volume::canonical_root::collapse_by_volume_id;
 use cmdr_fs::volume::friendly_error::Provider;
 use std::path::Path;
 
-pub(crate) use crate::file_system::volume::backends::mount_table::{
-    MountEntry, MountedBy, enumerate_mounts, is_mount_point,
-};
+use cmdr_local::mount_table::{MountEntry, MountedBy, enumerate_mounts};
 
 /// Whether this is another account's own mount, which this account can't open:
 /// a cloud client's or FUSE layer's drive that someone else on this Mac mounted.
@@ -213,7 +211,7 @@ pub(crate) fn smb_mounts() -> Option<Vec<(String, SmbMountInfo)>> {
 }
 
 /// Whether any filesystem in the kernel mount table has identity `fsid`: `None` when
-/// the table couldn't be read. The index asks this, ❌ never [`is_mount_point`], to
+/// the table couldn't be read. The index asks this, ❌ never [`is_mount_point`](cmdr_local::mount_table::is_mount_point), to
 /// tell a drive that's gone from one a rename moved.
 pub(crate) fn has_mount_identity(fsid: u64) -> Option<bool> {
     let mounts = enumerate_mounts()?;

@@ -32,9 +32,9 @@ use super::super::types::{ConflictResolution, VolumeCopyConfig};
 use super::network_transfer_test_support::{
     assert_no_staging_litter, clean_deep, read_all, self_describing_bytes, sha256, tree_fingerprint,
 };
-use crate::file_system::volume::LocalPosixVolume;
 use crate::ignore_poison::IgnorePoison;
 use crate::test_support::TestDir;
+use cmdr_local::LocalPosixVolume;
 
 // ── Seeding and reading ──────────────────────────────────────────────
 

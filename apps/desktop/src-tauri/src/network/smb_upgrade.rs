@@ -569,7 +569,8 @@ pub(crate) async fn resolve_and_register_smb_volume(
 /// OS mount never went anywhere (the direct session is a "sneaky mount" beside it),
 /// so a `LocalPosixVolume` at the same root serves the share from here on.
 pub(crate) async fn return_to_os_mount(volume_id: &str) -> bool {
-    use crate::file_system::volume::{BackendKind, LocalPosixVolume};
+    use crate::file_system::volume::BackendKind;
+    use cmdr_local::LocalPosixVolume;
 
     let _upgrade_guard = lock_volume_upgrade(volume_id).await;
     let manager = crate::file_system::volume::manager::get_volume_manager();

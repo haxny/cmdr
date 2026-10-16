@@ -2,8 +2,8 @@
 //! classification, mount-point resolution, and free-space queries. All read
 //! `/proc/mounts` or call `statvfs`, never the mounted filesystem itself.
 
-use super::linux_mounts;
 use crate::file_system::volume::SpaceInfo;
+use cmdr_local::linux_mounts;
 use std::path::Path;
 
 /// Virtual filesystem types to filter out of mount listings.

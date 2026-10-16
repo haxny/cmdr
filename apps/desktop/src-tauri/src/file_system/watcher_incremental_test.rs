@@ -21,7 +21,6 @@ use notify_debouncer_full::DebouncedEvent;
 use notify_debouncer_full::notify::Event;
 use notify_debouncer_full::notify::event::{DataChange, EventKind, ModifyKind};
 
-use super::volume::backends::list_directory_core;
 use super::watcher::{handle_directory_change, handle_directory_change_incremental};
 use crate::test_support::{TestDir, wait_until};
 use cmdr_fs::entry::TagRef;
@@ -29,6 +28,7 @@ use cmdr_fs::testing::unique_test_id;
 use cmdr_listing::DiffChangeType;
 use cmdr_listing::testing::{TestListing, TestListingGuard};
 use cmdr_listing::testing::{hold_diffs, pending_changes};
+use cmdr_local::reading::list_directory_core;
 
 fn event(kind: EventKind, path: &Path) -> DebouncedEvent {
     DebouncedEvent::new(

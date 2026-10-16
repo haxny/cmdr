@@ -39,8 +39,8 @@ pub(crate) use smb::{parse_gvfs_smb_dirname, smb_mounts};
 )]
 pub use crate::file_system::volume::ConnectionState;
 
-use crate::file_system::linux_mounts::{self, MountEntry};
 use cmdr_fs::volume::published_locations::{PublishedLocation, dedupe_locations};
+use cmdr_local::linux_mounts::{self, MountEntry};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 

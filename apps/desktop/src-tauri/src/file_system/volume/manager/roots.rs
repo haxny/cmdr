@@ -374,10 +374,11 @@ pub fn is_stale_mount_errno(_errno: i32) -> bool {
 mod tests {
     use super::super::get_volume_manager;
     use super::*;
-    use crate::file_system::volume::{InMemoryVolume, LocalPosixVolume, VolumeError};
+    use crate::file_system::volume::{InMemoryVolume, VolumeError};
     use crate::ignore_poison::IgnorePoison;
     use cmdr_fs::entry::FileEntry;
     use cmdr_fs::volume::host::VolumeHost;
+    use cmdr_local::LocalPosixVolume;
     use std::pin::Pin;
 
     /// A local volume for a registry cell, which never reaches the panes.

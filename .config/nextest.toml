@@ -417,7 +417,7 @@ slow-timeout = { period = "20s", terminate-after = 1 }
 filter = '''
     test(listing_host::tests::caching_reaper_test::)
   + test(listing_host::tests::archive_watch_integration_test::)
-  + test(file_system::volume::backends::local_posix_host_test::test_listing_watch_coverage_flips_with_watcher_lifecycle)
+  + test(listing_host::tests::local_posix_host_test::test_listing_watch_coverage_flips_with_watcher_lifecycle)
 '''
 slow-timeout = { period = "20s", terminate-after = 1 }
 

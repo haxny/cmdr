@@ -24,8 +24,9 @@ use super::super::types::{
     CancelRollback, SourceItemOutcome, WriteCancelledEvent, WriteCompleteEvent, WriteOperationError,
     WriteOperationStartResult, WriteOperationType, WriteProgressEvent, WriteSourceItemDoneEvent,
 };
-use crate::file_system::volume::{LaneKey, Volume, rename_local_exclusive};
+use crate::file_system::volume::{LaneKey, Volume};
 use crate::operation_log::types::{EntryType, ExecutionStatus, Initiator, ItemOutcome, OpKind};
+use cmdr_local::rename_local_exclusive;
 
 mod by_move;
 mod plan;

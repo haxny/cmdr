@@ -175,9 +175,9 @@ mod tests {
     /// recovery branch left them with.
     #[tokio::test]
     async fn a_path_in_a_repos_history_recovers_its_kind_from_the_portal() {
-        use crate::file_system::volume::LocalPosixVolume;
         use crate::file_system::volume::manager::get_volume_manager;
         use cmdr_git::test_fixtures::{Fixture, cleanup, temp_dir};
+        use cmdr_local::LocalPosixVolume;
         use std::sync::Arc;
 
         let dir = temp_dir("stat_kinds", "snapshot");

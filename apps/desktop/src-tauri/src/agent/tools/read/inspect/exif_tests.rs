@@ -14,11 +14,11 @@ use ::exif::{Exif, Field, In, Rational, Tag, Value};
 use super::exif::exif_facts;
 use super::tests::assert_text_only;
 use super::*;
-use crate::file_system::volume::LocalPosixVolume;
 use crate::file_system::volume::manager::get_volume_manager;
 use crate::file_viewer::materialize::{PREVIEW_CAP_BYTES, extract_if_routed_with};
 use crate::test_support::TestDir;
 use cmdr_archive::test_fixtures::{build_zip, stored};
+use cmdr_local::LocalPosixVolume;
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 

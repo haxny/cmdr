@@ -14,13 +14,14 @@ use super::tests::assert_text_only;
 use super::*;
 use crate::file_system::volume::manager::get_volume_manager;
 use crate::file_system::volume::manager::test_support::TestVolumeRegistration;
-use crate::file_system::volume::{InMemoryVolume, ListingProgress, LocalPosixVolume, Volume, VolumeError};
+use crate::file_system::volume::{InMemoryVolume, ListingProgress, Volume, VolumeError};
 use crate::file_viewer::materialize::{PREVIEW_CAP_BYTES, extract_if_routed_with};
 use crate::test_support::TestDir;
 use cmdr_archive::test_fixtures::{
     build_encrypted_7z, build_zip, build_zipcrypto_zip, dir as zip_dir, encrypted_entry, plain_entry, stored,
 };
 use cmdr_fs::entry::FileEntry;
+use cmdr_local::LocalPosixVolume;
 
 /// Registers a real local-FS "root" volume so `resolve("root", …)` finds a parent for the
 /// on-demand `ArchiveVolume`. Idempotent; the shape `materialize_test.rs` uses.

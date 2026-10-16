@@ -30,8 +30,8 @@ use super::network_transfer_test_support::{
     assert_no_staging_litter, awkward_names_survive_a_round_trip, read_all, run_copy, self_describing_bytes, sha256,
     tree_files,
 };
-use crate::file_system::volume::LocalPosixVolume;
 use crate::test_support::TestDir;
+use cmdr_local::LocalPosixVolume;
 
 /// Big enough to cross the read windows rather than ride in one chunk.
 const PAYLOAD_BYTES: usize = 700_000;

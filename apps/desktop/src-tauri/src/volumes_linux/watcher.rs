@@ -9,9 +9,9 @@
 //! Both diff against known state and emit `volume-mounted` / `volume-unmounted`
 //! Tauri events. Also registers/unregisters volumes with the global `VolumeManager`.
 
-use crate::file_system::linux_mounts::{self, MountEntry};
 use crate::ignore_poison::IgnorePoison;
 use crate::volume_broadcast::{VolumeMounted, VolumeUnmounted};
+use cmdr_local::linux_mounts::{self, MountEntry};
 use log::{debug, error, info, warn};
 use notify::{Event, EventKind, RecommendedWatcher, Watcher};
 use std::collections::{HashMap, HashSet};
@@ -421,8 +421,8 @@ fn emit_volume_unmounted(volume_path: &str) {
 
 /// Register a volume with the global VolumeManager.
 fn register_volume_with_manager(volume_path: &str) {
-    use crate::file_system::volume::LocalPosixVolume;
     use crate::file_system::volume::manager::get_volume_manager;
+    use cmdr_local::LocalPosixVolume;
     use std::sync::Arc;
 
     let volume_id = super::volume_id_for_mount(volume_path);

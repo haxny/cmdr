@@ -4,8 +4,9 @@
 use std::future::Future;
 
 use super::*;
-use crate::file_system::volume::{InMemoryVolume, LocalPosixVolume};
+use crate::file_system::volume::InMemoryVolume;
 use crate::file_system::write_operations::transfer::volume::forward_volume_methods;
+use cmdr_local::LocalPosixVolume;
 
 #[tokio::test]
 async fn distinct_handles_for_one_remote_resource_still_reject_containment() {

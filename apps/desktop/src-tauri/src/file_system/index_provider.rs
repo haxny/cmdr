@@ -11,11 +11,10 @@ use std::sync::Arc;
 
 use cmdr_fs::volume::Volume;
 
-use super::filesystem_kind::is_network;
-pub use super::filesystem_kind::path_is_on_network_mount;
 use cmdr_index::host::volumes::{
     EnsureDirectSmbFut, MountFacts, MountIdentity, ResolveMtpFut, ResolvedMtpObject, SmbUpgradeRefusal, VolumeProvider,
 };
+use cmdr_local::filesystem_kind::{is_network, probe_mount_for_path};
 
 /// The [`MountClass`](cmdr_fs::volume::MountClass) of the mount at `root`, for a
 /// `LocalPosixVolume` being registered on it.
@@ -27,7 +26,7 @@ use cmdr_index::host::volumes::{
 /// and for a network mount the SMB lookup), so call it where registration already
 /// probes the mount, ❌ never per query.
 pub(crate) fn mount_class_at(root: &Path) -> cmdr_fs::volume::MountClass {
-    classify_mount(!is_network(&super::filesystem_kind::probe_mount_for_path(root)), || {
+    classify_mount(!is_network(&probe_mount_for_path(root)), || {
         smb_volume_id_for_path(&root.to_string_lossy()).is_some()
     })
 }
@@ -68,7 +67,7 @@ impl VolumeProvider for AppVolumeProvider {
     fn mount_facts(&self, path: &Path) -> MountFacts {
         // ONE `probe_mount_for_path` probe answers both questions: it can block on
         // a wedged mount, so don't grow this into two.
-        let probe = super::filesystem_kind::probe_mount_for_path(path);
+        let probe = probe_mount_for_path(path);
         MountFacts {
             is_network: is_network(&probe),
             inodes_trustworthy: probe.info.kind.has_stable_inodes(),
@@ -85,7 +84,7 @@ impl VolumeProvider for AppVolumeProvider {
         }
         #[cfg(target_os = "linux")]
         {
-            super::linux_mounts::mount_device_at(&root).map(MountIdentity::from_raw)
+            cmdr_local::linux_mounts::mount_device_at(&root).map(MountIdentity::from_raw)
         }
         #[cfg(not(any(target_os = "macos", target_os = "linux")))]
         {
@@ -101,7 +100,7 @@ impl VolumeProvider for AppVolumeProvider {
         }
         #[cfg(target_os = "linux")]
         {
-            super::linux_mounts::device_is_mounted(identity.raw())
+            cmdr_local::linux_mounts::device_is_mounted(identity.raw())
         }
         #[cfg(not(any(target_os = "macos", target_os = "linux")))]
         {
@@ -127,7 +126,7 @@ impl VolumeProvider for AppVolumeProvider {
     }
 
     fn volume_used_bytes(&self, path: &Path) -> Option<u64> {
-        super::volume::backends::get_space_info_for_path(path)
+        cmdr_local::space::get_space_info_for_path(path)
             .map(|info| info.used_bytes())
             .map_err(|e| log::warn!("Failed to read volume used bytes (tier-2 will degrade): {e}"))
             .ok()

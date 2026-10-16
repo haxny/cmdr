@@ -32,8 +32,9 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex as StdMutex};
 use std::time::Duration;
 
-use crate::file_system::volume::{LocalPosixVolume, Volume, VolumeError};
+use crate::file_system::volume::{Volume, VolumeError};
 use crate::test_support::TestDir;
+use cmdr_local::LocalPosixVolume;
 
 #[tokio::test(flavor = "current_thread")]
 async fn auto_yield_parks_before_next_window_then_resumes_byte_exact() {

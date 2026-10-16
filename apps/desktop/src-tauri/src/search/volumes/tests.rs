@@ -137,8 +137,8 @@ fn make_index_db_without_volume_path(data_dir: &Path, volume_id: &str) {
 /// failed → 0 results). Regression: mount root resolves via the registry fallback.
 #[test]
 fn mount_root_falls_back_to_the_volume_registry() {
-    use crate::file_system::volume::LocalPosixVolume;
     use crate::file_system::volume::manager::get_volume_manager;
+    use cmdr_local::LocalPosixVolume;
     use std::sync::Arc;
 
     let dir = tempfile::tempdir().expect("temp dir");

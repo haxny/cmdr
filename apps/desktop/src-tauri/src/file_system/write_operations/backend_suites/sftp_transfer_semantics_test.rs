@@ -42,11 +42,11 @@ use super::network_semantics_test_support::{
 };
 use super::network_transfer_test_support::clean_deep;
 use super::sftp_test_support::{SftpFixture, connect, fixture, fixture_on};
-use crate::file_system::volume::LocalPosixVolume;
 use crate::file_system::write_operations::{
     CollectorEventSink, VolumeCopyConfig, WriteOperationState, move_volumes_with_progress,
 };
 use crate::test_support::TestDir;
+use cmdr_local::LocalPosixVolume;
 
 // ── Merges and policies ──────────────────────────────────────────────
 

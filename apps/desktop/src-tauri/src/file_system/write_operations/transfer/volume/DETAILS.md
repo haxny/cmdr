@@ -999,7 +999,7 @@ every real store, so a folder dated when it's created lists "now" by the end of 
 
 **Where each backend stands.**
 
-- **Local** (`local_posix/streams.rs`): reports the open's `stat` (mtime, birth, mode, flags) and its xattrs off the fd
+- **Local** (`crates/cmdr-local/src/local_posix/streams.rs`): reports the open's `stat` (mtime, birth, mode, flags) and its xattrs off the fd
   when asked. Writes through `cmdr_fs::metadata::apply_staged` on the open handle after the last byte AND the flush
   (`cmdr_fs::durable::sync_file_data`): xattrs, the folded mode, then birth and mtime in one call. ❗ Flush first: on a
   macOS SMB mount, writes still buffered when the dates go on reach the server at the handle's real close, which

@@ -6,7 +6,6 @@ pub mod cloud_actions;
 pub mod cloud_provider;
 #[cfg(target_os = "macos")]
 pub mod file_provider_actions;
-pub use volume::backends::filesystem_kind;
 /// A bounded pool of 8 MB-stack OS threads for synchronous macOS framework calls.
 #[cfg(target_os = "macos")]
 pub(crate) mod framework_pool;
@@ -16,8 +15,6 @@ pub mod git;
 pub mod google_drive;
 /// The app's `VolumeProvider`: what the index asks about mounted volumes.
 pub(crate) mod index_provider;
-#[cfg(target_os = "linux")]
-pub(crate) use volume::backends::linux_mounts;
 #[cfg(test)]
 mod mock_provider;
 #[cfg(target_os = "macos")]
@@ -44,6 +41,7 @@ pub(crate) mod write_operations;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
+use cmdr_local::LocalPosixVolume;
 use volume::manager::get_volume_manager;
 
 // Re-export volume types (some not used externally yet)
@@ -54,8 +52,8 @@ pub use volume::MtpVolume;
 pub use volume::manager::VolumeManager;
 #[allow(unused_imports, reason = "Public API re-exports for future use")]
 pub use volume::{
-    BatchScanResult, CopyScanResult, InMemoryVolume, LocalPosixVolume, MutationEvent, ScanConflict, SourceItemInfo,
-    SpaceInfo, Volume, VolumeError,
+    BatchScanResult, CopyScanResult, InMemoryVolume, MutationEvent, ScanConflict, SourceItemInfo, SpaceInfo, Volume,
+    VolumeError,
 };
 // Watcher management - init_watcher_manager must be called from lib.rs
 #[cfg(feature = "playwright-e2e")]

@@ -2,7 +2,7 @@
 //! classification, mount-point resolution, and read-only detection. All
 //! non-blocking (pure `statfs` / `getfsstat` reads, no NSURL enrichment).
 
-pub(crate) use crate::file_system::volume::backends::{get_mount_info, statfs_string};
+use cmdr_local::statfs::{get_mount_info, statfs_string};
 
 /// Determine whether a filesystem type supports trash.
 ///

@@ -562,7 +562,7 @@ async fn a_rollback_removes_a_locked_copy_and_a_locked_folder_it_made() {
     std::fs::write(fixture.join("album/photo.jpg"), b"inside a locked folder").unwrap();
     set_flags(&fixture.join("loose.txt"), LOCKED_FLAG);
     set_flags(&fixture.join("album"), LOCKED_FLAG);
-    let volume: Arc<dyn Volume> = Arc::new(crate::file_system::volume::LocalPosixVolume::local_folder(
+    let volume: Arc<dyn Volume> = Arc::new(cmdr_local::LocalPosixVolume::local_folder(
         "Local",
         &*fixture,
         crate::volume_host::host(),

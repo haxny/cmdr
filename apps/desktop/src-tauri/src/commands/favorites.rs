@@ -372,9 +372,9 @@ async fn persist(f: impl FnOnce() -> Result<(), DeadlineError> + Send + 'static)
 #[cfg(test)]
 mod add_gate_tests {
     use super::*;
-    use crate::file_system::volume::LocalPosixVolume;
     use crate::file_system::volume::manager::get_volume_manager;
     use cmdr_fs::volume::ConnectionState;
+    use cmdr_local::LocalPosixVolume;
     use std::sync::Arc;
 
     /// Correctness tests must not inherit the production scheduling deadline. The mount-table read

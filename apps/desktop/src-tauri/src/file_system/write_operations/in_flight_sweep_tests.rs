@@ -6,10 +6,10 @@
 //! defers, what a producer records) lives in `in_flight_temps_tests.rs`.
 
 use super::*;
-use crate::file_system::volume::backends::LocalPosixVolume;
 use crate::file_system::volume::manager::test_support::TestVolumeRegistration;
 use crate::file_system::write_operations::transfer_sides::test_hook;
 use crate::test_support::TestDir;
+use cmdr_local::LocalPosixVolume;
 
 /// The aside a safe-overwrite would have left, with the destination it came
 /// from, so each cell states its fixture in the same two lines.

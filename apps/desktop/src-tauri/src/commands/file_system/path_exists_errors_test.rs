@@ -7,9 +7,10 @@ use std::io;
 use std::os::unix::fs::PermissionsExt;
 use std::sync::Arc;
 
+use crate::file_system::volume::Volume;
 use crate::file_system::volume::manager::get_volume_manager;
-use crate::file_system::volume::{LocalPosixVolume, Volume};
 use crate::test_support::TestDir;
+use cmdr_local::LocalPosixVolume;
 
 use super::{local_miss_is_definite, path_exists};
 

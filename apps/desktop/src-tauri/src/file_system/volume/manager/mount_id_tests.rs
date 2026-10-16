@@ -11,7 +11,7 @@ use std::sync::Arc;
 
 #[test]
 fn mount_id_for_path_returns_longest_non_root_ancestor() {
-    use crate::file_system::LocalPosixVolume;
+    use cmdr_local::LocalPosixVolume;
 
     let manager = VolumeManager::new();
     manager.register(
@@ -59,8 +59,8 @@ fn mount_id_for_path_returns_longest_non_root_ancestor() {
 /// backends have their own cells beside their routes.)
 #[test]
 fn mount_id_for_path_skips_any_volume_that_routes_over_a_parent() {
-    use crate::file_system::LocalPosixVolume;
     use crate::file_system::volume::InMemoryVolume;
+    use cmdr_local::LocalPosixVolume;
 
     let manager = VolumeManager::new();
     manager.register(

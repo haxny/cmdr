@@ -25,8 +25,8 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use super::Volume;
-use super::backends::LocalPosixVolume;
 use super::manager::get_volume_manager;
+use cmdr_local::LocalPosixVolume;
 
 #[cfg(target_os = "macos")]
 use crate::volumes as platform;

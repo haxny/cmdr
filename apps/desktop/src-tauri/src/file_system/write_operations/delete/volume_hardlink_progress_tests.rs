@@ -21,9 +21,10 @@ use super::super::state::WriteOperationState;
 use super::super::test_support::TestOperationGuard;
 use super::super::types::{WriteOperationConfig, WriteOperationPhase};
 use super::walker::delete_volume_files_with_progress_inner;
+use crate::file_system::volume::Volume;
 use crate::file_system::volume::manager::get_volume_manager;
-use crate::file_system::volume::{LocalPosixVolume, Volume};
 use crate::test_support::TestDir;
+use cmdr_local::LocalPosixVolume;
 
 fn create_temp_root(name: &str) -> TestDir {
     TestDir::new(&format!("volume_hardlink_{name}"))

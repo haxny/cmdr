@@ -891,7 +891,7 @@ async fn a_restore_recreates_the_folder_the_move_emptied() {
     let original = work.path().join("src/album/song.txt");
     rig.vm.register(
         "root",
-        Arc::new(crate::file_system::volume::LocalPosixVolume::local_folder(
+        Arc::new(cmdr_local::LocalPosixVolume::local_folder(
             "Test root",
             "/",
             crate::volume_host::host(),

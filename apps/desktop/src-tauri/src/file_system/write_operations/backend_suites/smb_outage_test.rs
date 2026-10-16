@@ -134,7 +134,7 @@ async fn smb_integration_a_copy_waits_out_a_dropped_network_and_finishes() {
     for index in 0..FILE_COUNT {
         std::fs::write(folder.join(format!("f-{index:02}.bin")), content(index)).expect("a source file");
     }
-    let source: Arc<dyn Volume> = Arc::new(crate::file_system::volume::LocalPosixVolume::local_folder(
+    let source: Arc<dyn Volume> = Arc::new(cmdr_local::LocalPosixVolume::local_folder(
         "src",
         local.path().to_path_buf(),
         crate::volume_host::host(),

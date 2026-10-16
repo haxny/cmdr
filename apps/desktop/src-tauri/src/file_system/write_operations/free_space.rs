@@ -52,7 +52,7 @@ pub(super) fn check_local_copy_space(
         operation_id,
     )?;
     check_copy_space(destination, total_bytes, available, config.space_shortfall, || {
-        if crate::file_system::index_provider::path_is_on_network_mount(destination) {
+        if cmdr_local::filesystem_kind::path_is_on_network_mount(destination) {
             return Ok(None);
         }
         let cancelled = || is_cancelled(&state.intent);
@@ -136,7 +136,7 @@ fn statvfs_available(path: &Path) -> Option<u64> {
 /// what macOS purges on demand, matching Finder and the status bar.
 #[cfg(target_os = "macos")]
 fn important_usage_available(destination: &Path) -> Option<u64> {
-    crate::volumes::get_volume_space(&destination.to_string_lossy())?.available_bytes()
+    cmdr_local::space::get_volume_space(&destination.to_string_lossy())?.available_bytes()
 }
 
 /// Linux has no purgeable space, so `statvfs` is the whole answer.

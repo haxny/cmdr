@@ -10,18 +10,18 @@ use objc2::rc::{Retained, autoreleasepool};
 use objc2_foundation::{NSDate, NSString, NSURL};
 
 /// Extended macOS metadata for a file.
-pub struct MacOSMetadata {
+pub(crate) struct MacOSMetadata {
     /// Unix timestamp: when the file was added to its current directory
-    pub added_at: Option<u64>,
+    pub(crate) added_at: Option<u64>,
     /// Unix timestamp: when the file was last opened
-    pub opened_at: Option<u64>,
+    pub(crate) opened_at: Option<u64>,
 }
 
 /// Retrieves macOS-specific metadata for a file using NSURL resource values.
 ///
 /// Returns `None` values for individual fields if they are unavailable on the volume
 /// or if any error occurs during retrieval.
-pub fn get_macos_metadata(path: &Path) -> MacOSMetadata {
+pub(crate) fn get_macos_metadata(path: &Path) -> MacOSMetadata {
     // Drain autoreleased ObjC objects (NSURL, NSString, NSDate) created per call.
     // Called from spawn_blocking threads that lack AppKit's autorelease pool.
     autoreleasepool(|_| {

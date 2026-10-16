@@ -21,7 +21,7 @@ workspace = true
 # builds and clippies this feature so the unused path can't rot.
 mimalloc = ["cmdr-fs/mimalloc"]
 # Playwright E2E testing plugin (socket bridge to real webview). Never enable in production builds.
-playwright-e2e = ["dep:tauri-plugin-playwright", "cmdr-fs/playwright-e2e", "cmdr-listing/playwright-e2e"]
+playwright-e2e = ["dep:tauri-plugin-playwright", "cmdr-fs/playwright-e2e", "cmdr-listing/playwright-e2e", "cmdr-local/playwright-e2e"]
 # Virtual MTP device for E2E testing (registers a fake Android device). Never enable in production builds.
 #
 # It forwards through `cmdr-mtp`, which owns the session layer and the virtual
@@ -109,6 +109,10 @@ cmdr-git = { path = "../../../crates/cmdr-git" }
 # `Index` handle. Tauri-free by design and enforced — the app is its host, which
 # is why every seam it needs is answered in `src/index_host.rs` and nowhere else.
 cmdr-index = { path = "../../../crates/cmdr-index" }
+# The local disk: `LocalPosixVolume`, the `std::fs` reader, the no-replace
+# rename, local volume space, and the mount probes. No `tauri` in its tree, so
+# `cargo check -p cmdr-local` verifies it without building the app.
+cmdr-local = { path = "../../../crates/cmdr-local" }
 # The directory listing engine: every pane's listing, its cache, sort, and diffs,
 # behind one handle (`listing_host::listings()`) the app answers seams for.
 cmdr-listing = { path = "../../../crates/cmdr-listing" }
@@ -486,6 +490,9 @@ cmdr-index = { path = "../../../crates/cmdr-index", features = ["testing"] }
 # `cmdr_archive::test_fixtures`.
 cmdr-archive = { path = "../../../crates/cmdr-archive", features = ["testing"] }
 cmdr-listing = { path = "../../../crates/cmdr-listing", features = ["testing"] }
+# A test build of the local backend: space from `statvfs` (#357), the 1 ms
+# progress sampler, and `with_sidecar_probe` / `reading::list_directory`.
+cmdr-local = { path = "../../../crates/cmdr-local", features = ["testing"] }
 # `cmdr_smb::volume::testing`, the shared Docker fixtures the app's SMB suites
 # connect through. It also turns `smb2/testing` on for every dev target, which is
 # harmless: `smb-e2e` already does that, and nothing here reads `smb2::testing`.

@@ -326,7 +326,8 @@ pub(crate) fn validate_file_sizes_for_filesystem(
     destination: &Path,
     files: &[super::state::FileInfo],
 ) -> Result<(), WriteOperationError> {
-    use crate::file_system::filesystem_kind::{MaxFileSize, detect_filesystem_for_path};
+    use cmdr_fs::filesystem_kind::MaxFileSize;
+    use cmdr_local::filesystem_kind::detect_filesystem_for_path;
 
     let filesystem = detect_filesystem_for_path(destination);
     let MaxFileSize::Limited { bytes: max_size } = filesystem.kind.max_file_size() else {

@@ -49,7 +49,7 @@ fn a_remote_destination_at_the_share_root_stays_the_root() {
 
 #[test]
 fn a_local_destination_still_expands_the_home_shortcut() {
-    let volume: Arc<dyn Volume> = Arc::new(crate::file_system::volume::LocalPosixVolume::local_folder(
+    let volume: Arc<dyn Volume> = Arc::new(cmdr_local::LocalPosixVolume::local_folder(
         "Root",
         "/",
         crate::volume_host::host(),
@@ -63,8 +63,8 @@ fn a_local_destination_still_expands_the_home_shortcut() {
 
 #[tokio::test]
 async fn resolve_source_treats_the_zip_file_itself_as_a_plain_file() {
-    use crate::file_system::volume::LocalPosixVolume;
     use crate::file_system::volume::manager::get_volume_manager;
+    use cmdr_local::LocalPosixVolume;
 
     let dir = tempfile::tempdir().expect("tempdir");
     let zip = dir.path().join("bundle.zip");
@@ -103,9 +103,9 @@ async fn resolve_source_treats_the_zip_file_itself_as_a_plain_file() {
 #[tokio::test]
 async fn resolve_source_routes_a_snapshot_path_to_the_git_portal() {
     use crate::file_system::git;
-    use crate::file_system::volume::LocalPosixVolume;
     use crate::file_system::volume::manager::get_volume_manager;
     use cmdr_git::test_fixtures::{Fixture, cleanup, temp_dir};
+    use cmdr_local::LocalPosixVolume;
 
     let dir = temp_dir("write_routing", "copy_out");
     let mut fixture = Fixture::init(dir.clone());

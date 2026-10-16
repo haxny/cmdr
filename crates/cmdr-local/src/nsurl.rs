@@ -27,13 +27,13 @@ pub(crate) fn get_nsurl_resource<T>(
 }
 
 /// Get a boolean resource value from an NSURL.
-pub(crate) fn get_bool_resource(url: &objc2_foundation::NSURL, key: &str) -> Option<bool> {
+pub fn get_bool_resource(url: &objc2_foundation::NSURL, key: &str) -> Option<bool> {
     use objc2_foundation::NSNumber;
     get_nsurl_resource(url, key, |obj| obj.downcast::<NSNumber>().ok().map(|n| n.boolValue()))
 }
 
 /// Get a string resource value from an NSURL.
-pub(crate) fn get_string_resource(url: &objc2_foundation::NSURL, key: &str) -> Option<String> {
+pub fn get_string_resource(url: &objc2_foundation::NSURL, key: &str) -> Option<String> {
     use objc2_foundation::NSString;
     get_nsurl_resource(url, key, |obj| obj.downcast::<NSString>().ok().map(|s| s.to_string()))
 }

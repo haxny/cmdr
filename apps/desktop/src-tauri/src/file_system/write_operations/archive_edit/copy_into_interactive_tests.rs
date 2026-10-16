@@ -24,8 +24,8 @@ async fn start_interactive_copy_into(
     src_root: &Path,
     src_rel: &str,
 ) -> (Arc<CollectorEventSink>, String) {
-    use crate::file_system::volume::backends::LocalPosixVolume;
     use crate::file_system::write_operations::route_archive_copy_into;
+    use cmdr_local::LocalPosixVolume;
 
     let source_volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "src",
@@ -248,8 +248,8 @@ async fn interactive_conflict_event_carries_both_sides_metadata() {
 
 #[tokio::test]
 async fn interactive_move_into_with_a_skipped_collision_keeps_the_source() {
-    use crate::file_system::volume::backends::LocalPosixVolume;
     use crate::file_system::write_operations::{resolve_write_conflict, route_archive_copy_into};
+    use cmdr_local::LocalPosixVolume;
 
     let tmp = tempfile::tempdir().expect("tempdir");
     let archive = tmp.path().join("a.zip");

@@ -12,10 +12,10 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::file_system::LocalPosixVolume;
 use crate::file_system::volume::{StreamLength, Volume, WriteMode};
 use cmdr_git::test_fixtures::{Fixture, cleanup, temp_dir};
 use cmdr_listing::testing::TestListing;
+use cmdr_local::LocalPosixVolume;
 
 const CATEGORIES: [&str; 6] = ["branches", "tags", "commits", "stash", "worktrees", "submodules"];
 

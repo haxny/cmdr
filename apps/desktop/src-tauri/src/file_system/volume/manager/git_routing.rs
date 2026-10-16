@@ -113,8 +113,8 @@ fn git_portal_volume_id(repo_root: &Path) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::file_system::volume::LocalPosixVolume;
     use cmdr_git::test_fixtures::{Fixture, cleanup, temp_dir};
+    use cmdr_local::LocalPosixVolume;
 
     /// The portal's root for the repo at `dir`. Canonical, because registration
     /// canonicalizes so two spellings of one repo share a registration, and on

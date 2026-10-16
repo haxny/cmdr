@@ -1,9 +1,9 @@
 //! NSURL resource lookups (volume name, ejectability), the path-derived
 //! volume-name fallback, and per-path icon fetching. The blocking macOS
 //! enrichment layer, only run for local mounts. The resource readers and the
-//! volume-space query are the local backend's (`backends/local_posix/`).
+//! volume-space query are the local backend's (`cmdr_local::{nsurl, space}`).
 
-use crate::file_system::volume::backends::{get_bool_resource, get_string_resource};
+use cmdr_local::nsurl::{get_bool_resource, get_string_resource};
 use std::path::Path;
 
 /// Display name derived purely from a mount path: the last path component, or

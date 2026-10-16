@@ -10,7 +10,6 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 use tokio_util::sync::CancellationToken;
 
-use crate::file_system::volume::LocalPosixVolume;
 use crate::file_system::volume::manager::get_volume_manager;
 use crate::listing_host::listings;
 use crate::priority::foreground;
@@ -21,6 +20,7 @@ use cmdr_fs::testing::unique_test_id;
 use cmdr_fs::volume::{ListingProgress, Volume, VolumeError};
 use cmdr_listing::ListingId;
 use cmdr_listing::testing::{TestEngine, TestListingGuard, request};
+use cmdr_local::LocalPosixVolume;
 
 /// Budget for a read to reach the backend.
 const STARTS_WITHIN: std::time::Duration = std::time::Duration::from_secs(2);

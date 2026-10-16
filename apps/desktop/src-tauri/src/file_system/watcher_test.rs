@@ -260,11 +260,11 @@ async fn test_handle_directory_change_detects_new_entries() {
 #[cfg(target_os = "macos")]
 #[test]
 fn entries_that_went_with_a_replaced_watch_root_leave_the_listing() {
-    use crate::file_system::volume::backends::list_directory_core;
     use crate::file_system::watcher::start_watching;
     use crate::test_support::{TestDir, wait_until};
     use cmdr_fs::testing::unique_test_id;
     use cmdr_listing::testing::TestListing;
+    use cmdr_local::reading::list_directory_core;
     use std::time::Duration;
 
     let scratch = TestDir::new("watch-root-replaced");
@@ -402,11 +402,11 @@ fn a_detached_arm_that_lost_the_race_leaves_no_watch_behind() {
 #[cfg(target_os = "macos")]
 #[test]
 fn a_detached_arm_rereads_a_change_that_landed_while_it_was_in_flight() {
-    use crate::file_system::volume::backends::list_directory_core;
     use crate::file_system::watcher::{arm_and_reconcile, start_watching, stop_watching};
     use crate::test_support::{TestDir, wait_until};
     use cmdr_fs::testing::unique_test_id;
     use cmdr_listing::testing::TestListing;
+    use cmdr_local::reading::list_directory_core;
     use std::time::{Duration, SystemTime};
 
     let scratch = TestDir::new("arm-in-flight-change");
@@ -494,11 +494,11 @@ fn rewrite_a_dotfile_beside_a_visible_file(
     tag: &str,
     hidden: bool,
 ) -> (crate::test_support::TestDir, cmdr_listing::testing::TestListingGuard) {
-    use crate::file_system::volume::backends::list_directory_core;
     use crate::file_system::watcher::handle_directory_change_incremental;
     use cmdr_fs::testing::unique_test_id;
     use cmdr_listing::testing::TestListing;
     use cmdr_listing::testing::hold_diffs;
+    use cmdr_local::reading::list_directory_core;
     use notify_debouncer_full::DebouncedEvent;
     use notify_debouncer_full::notify::{
         Event,

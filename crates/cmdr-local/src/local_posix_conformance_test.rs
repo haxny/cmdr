@@ -11,10 +11,10 @@
 //! so a contract it stops keeping is one the whole suite stops noticing.
 
 use super::*;
-use crate::file_system::volume::{StreamLength, WriteMode};
-use crate::test_support::TestDir;
+use cmdr_fs::testing::TestDir;
 use cmdr_fs::volume::Volume;
 use cmdr_fs::volume::host::VolumeHost;
+use cmdr_fs::volume::{StreamLength, WriteMode};
 use std::path::Path;
 
 /// The shared `Volume::delete` non-recursion assertion. LocalPosix gets it for

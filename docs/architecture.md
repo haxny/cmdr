@@ -185,11 +185,11 @@ All under `apps/desktop/src-tauri/src/`.
   flight that gates, stops, and resumes every sibling (`disk_flight.rs`), the guarded unmount tool, and `holders/`, the
   bounded scan and classification behind "which app is still using this drive" (`file_system/volume/DETAILS.md` §
   "Eject")
-- `file_system/volume/backends/`: the one `Volume` impl that still lives in the app, `LocalPosixVolume`. Every crate
-  backend (`cmdr-archive`, `cmdr-smb`, `cmdr-sftp`, `cmdr-webdav`, `cmdr-s3`, `cmdr-adb`, `cmdr-mtp`, `cmdr-git`) is
-  imported by crate name at its call sites, and each one's app-side tests sit beside the app code they assert on. What
-  stays app-side is what needs the app: archive routing and the archive LRU, SMB's mount and upgrade passes, and edit /
-  transfer driving
+- `file_system/volume/backends/`: what a caller reaching a backend from the app still has to know. Every backend is a
+  crate (`cmdr-local`, `cmdr-archive`, `cmdr-smb`, `cmdr-sftp`, `cmdr-webdav`, `cmdr-s3`, `cmdr-adb`, `cmdr-mtp`,
+  `cmdr-git`), imported by crate name at its call sites, and each one's app-side tests sit beside the app code they
+  assert on. What stays app-side is what needs the app: archive routing and the archive LRU, SMB's mount and upgrade
+  passes, and edit / transfer driving
 - `file_system/git/`: the app's two git seams, the `.git/` listing overlay and the wiring (the parked portal, the
   toggle, `volume_holds_real_repos`, and the `git-state-changed` event). The route itself sits with the registry in
   `file_system/volume/manager/git_routing.rs`; everything a repository answers, typed git-error classification
@@ -393,11 +393,11 @@ All under `apps/desktop/src-tauri/src/`.
 ## Workspace crates
 
 All under `crates/`, alongside the four apps. `cmdr-fs`, `cmdr-index`, `cmdr-archive`, `cmdr-smb`, `cmdr-sftp`,
-`cmdr-webdav`, `cmdr-s3`, `cmdr-adb`, `cmdr-mtp`, `cmdr-git`, `cmdr-http`, `cmdr-listing`, `cmdr-collation`, and
-`cmdr-update-trust` carry no `tauri` dependency and no reach into the app; `index-crate-isolation` enforces that against
-the `cargo metadata` graph, and caps the public surface of `cmdr-index`, `cmdr-archive`, `cmdr-smb`, `cmdr-sftp`,
-`cmdr-webdav`, `cmdr-s3`, `cmdr-mtp`, `cmdr-git`, `cmdr-listing`, and `cmdr-collation` at the numbers their audits
-landed on. The two dev CLIs and the vendored fork are ordinary members.
+`cmdr-webdav`, `cmdr-s3`, `cmdr-adb`, `cmdr-mtp`, `cmdr-git`, `cmdr-http`, `cmdr-listing`, `cmdr-collation`,
+`cmdr-local`, and `cmdr-update-trust` carry no `tauri` dependency and no reach into the app; `index-crate-isolation`
+enforces that against the `cargo metadata` graph, and caps the public surface of `cmdr-index`, `cmdr-archive`,
+`cmdr-smb`, `cmdr-sftp`, `cmdr-webdav`, `cmdr-s3`, `cmdr-mtp`, `cmdr-git`, `cmdr-listing`, `cmdr-collation`, and
+`cmdr-local` at the numbers their audits landed on. The two dev CLIs and the vendored fork are ordinary members.
 
 - `crates/cmdr-fs/`: the filesystem vocabulary and host primitives every layer speaks in — the `Volume` trait and its
   data types, `FileEntry`, typed error classification (`ListingError` / `ListingErrorReason` / `ErrorCategory`, errno →
@@ -422,6 +422,10 @@ landed on. The two dev CLIs and the vendored fork are ordinary members.
 - `crates/cmdr-collation/`: how two file names rank (`NameCollator`, ICU4X Unicode collation with numeric ordering, and
   the prebuilt `NameKey` a bulk sort compares). Below the listing engine, which re-exports it, so anything that orders
   names sorts the way a pane does without depending on the listing. See `crates/cmdr-collation/CLAUDE.md`
+- `crates/cmdr-local/`: the local disk: `LocalPosixVolume` (the `Volume` over a `std::fs` root), the `std::fs` reader
+  the watcher reads through too, `rename_local_exclusive` (the one no-replace rename), local volume space with the
+  live-space memo, and the mount probes (`filesystem_kind`, the macOS mount table and `statfs`, Linux's `/proc/mounts`).
+  It reaches the app through its `VolumeHost` alone. See `crates/cmdr-local/CLAUDE.md`
 - `crates/cmdr-http/`: the one door every HTTP client is built through (`client_builder()`), and the proxy routing
   behind it: loopback and link-local always direct, then the `*_PROXY` variables, then macOS's own verdict per URL
   (manual proxy, bypass list, PAC, WPAD). The app, `cmdr-webdav`, and `cmdr-s3` all build on it, and `clippy.toml`

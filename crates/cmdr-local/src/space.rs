@@ -1,7 +1,7 @@
 //! How much room a local volume has: NSURL's important-usage figure on macOS
 //! (purgeable space counted, so it matches Finder), `statvfs` on Linux and as the
 //! fallback, and the live readout's cheaper derivation of the same figure
-//! (`live_space`). `backends/DETAILS.md` § "Local volume space".
+//! (`live_space`). `DETAILS.md` § "Local volume space".
 
 use std::path::Path;
 
@@ -12,7 +12,7 @@ use cmdr_fs::volume::{SpaceInfo, VolumeError};
 /// On macOS, uses `NSURLVolumeAvailableCapacityForImportantUsageKey` which includes purgeable
 /// space (APFS snapshots, iCloud caches), matching what Finder reports. Falls back to `statvfs`
 /// if the NSURL query fails. On Linux, uses `statvfs` directly (no purgeable space concept).
-pub(crate) fn get_space_info_for_path(path: &Path) -> Result<SpaceInfo, VolumeError> {
+pub fn get_space_info_for_path(path: &Path) -> Result<SpaceInfo, VolumeError> {
     // On macOS, prefer the NSURL API that accounts for purgeable space.
     #[cfg(target_os = "macos")]
     {
@@ -87,16 +87,17 @@ pub(crate) fn get_space_info_statvfs(path: &Path) -> Result<SpaceInfo, VolumeErr
 /// [`SpaceInfo::Bounded`]. NSURL reports no used figure of its own, so
 /// [`SpaceInfo::bounded`] derives it.
 ///
-/// ❗ A test build answers from `statvfs` instead (the same figure minus purgeable space): the
-/// first NSURL call in a process `readdir`s the test binary's own directory, which stalled
-/// parallel tests for seconds on a bloated `target/debug/deps` (#357). Tests of NSURL itself call
-/// `nsurl_volume_space`.
+/// ❗ A test build (this crate's, or a consumer's through `testing`) answers from `statvfs`
+/// instead (the same figure minus purgeable space): the first NSURL call in a process `readdir`s
+/// the test binary's own directory, which stalled parallel tests for seconds on a bloated
+/// `target/debug/deps` (#357). Tests of NSURL itself call `nsurl_volume_space`.
 #[cfg(target_os = "macos")]
 pub fn get_volume_space(path: &str) -> Option<SpaceInfo> {
-    #[cfg(not(test))]
-    return nsurl_volume_space(path);
-    #[cfg(test)]
-    get_space_info_statvfs(Path::new(path)).ok()
+    if cfg!(any(test, feature = "testing")) {
+        get_space_info_statvfs(Path::new(path)).ok()
+    } else {
+        nsurl_volume_space(path)
+    }
 }
 
 /// [`get_volume_space`]'s real answer, from NSURL.

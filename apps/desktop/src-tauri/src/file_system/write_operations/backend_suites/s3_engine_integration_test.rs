@@ -23,7 +23,6 @@ use cmdr_s3::volume::testing::{
 use super::network_gated_source_test_support::{gated_files, gated_upload};
 use super::network_transfer_test_support::{budget, read_all, run_copy, sha256, start_copy};
 use crate::file_system::VolumeManager;
-use crate::file_system::volume::LocalPosixVolume;
 use crate::file_system::volume::ScannedFile;
 use crate::file_system::volume::manager::get_volume_manager;
 use crate::file_system::write_operations::event_sinks::{CollectorEventSink, OperationEventSink};
@@ -42,6 +41,7 @@ use crate::operation_log::types::Initiator;
 use crate::operation_log::writer::OperationLogWriter;
 use crate::s3_costs::{CostedOperation, planned_workloads};
 use crate::test_support::TestDir;
+use cmdr_local::LocalPosixVolume;
 
 const MIB: usize = 1024 * 1024;
 

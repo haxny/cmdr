@@ -33,16 +33,18 @@ use std::path::Path;
 
 pub use crate::file_system::volume::ConnectionState;
 
-pub use crate::file_system::volume::backends::{expect_space_change, get_volume_space, live_volume_space};
+// The platform facade `commands/volumes.rs` reaches as `platform::get_volume_space`, twin of
+// `volumes_linux::get_volume_space`.
 pub use cloud::get_cloud_drives;
 pub(crate) use cloud::resolve_cloud_drive_for_path;
+pub use cmdr_local::space::get_volume_space;
 pub(crate) use fs_type::{get_fs_type, get_mount_point, read_only_from_statfs};
 pub use fs_type::{is_network_fs_type, is_smb_fs_type, supports_trash_for_fs_type};
 pub(crate) use ids::{volume_id_for, volume_id_for_mount};
 pub use mounts::get_attached_volumes;
 pub(crate) use mounts::{
-    has_mount_identity, is_mount_point, is_private_to_another_user, mount_identity_at, mount_roots,
-    mount_type_and_source_for, network_mount_under, registrable_mount_roots, smb_mount_info_at, smb_mounts,
+    has_mount_identity, is_private_to_another_user, mount_identity_at, mount_roots, mount_type_and_source_for,
+    network_mount_under, registrable_mount_roots, smb_mount_info_at, smb_mounts,
 };
 pub(crate) use nsurl::{
     get_icon_for_path, get_volume_name, get_volume_uuid, get_volume_uuid_for_path, is_volume_ejectable,
@@ -329,7 +331,7 @@ pub fn list_locations() -> Vec<LocationInfo> {
     // One `getfsstat(MNT_NOWAIT)` snapshot for the whole listing. A table nobody could read means
     // no attached rows this pass (the switcher keeps what it has and the next discovery asks
     // again); ❌ nothing downstream may read that as "the disk is empty".
-    let mounts = mounts::enumerate_mounts().unwrap_or_default();
+    let mounts = cmdr_local::mount_table::enumerate_mounts().unwrap_or_default();
     let locations = get_favorites(&mounts)
         .into_iter()
         .chain(get_main_volume())
@@ -344,7 +346,7 @@ pub fn list_locations() -> Vec<LocationInfo> {
 /// (`favorites/reach.rs`) words what a pick would do, and hiding is what made favorites on an
 /// offline share silently vanish. Seeds the defaults on first launch (file absent); see
 /// `favorites/CLAUDE.md`.
-fn get_favorites(mounts: &[mounts::MountEntry]) -> Vec<LocationInfo> {
+fn get_favorites(mounts: &[cmdr_local::mount_table::MountEntry]) -> Vec<LocationInfo> {
     let fda_pending = crate::fda_gate::is_fda_pending_runtime();
     crate::favorites::store::list()
         .into_iter()
@@ -362,7 +364,7 @@ fn get_favorites(mounts: &[mounts::MountEntry]) -> Vec<LocationInfo> {
 /// with tccd.
 fn favorite_location(
     favorite: crate::favorites::store::Favorite,
-    mounts: &[mounts::MountEntry],
+    mounts: &[cmdr_local::mount_table::MountEntry],
     fda_pending: bool,
     exists: impl FnOnce(&Path) -> bool,
 ) -> LocationInfo {
@@ -527,7 +529,7 @@ mod tests {
         }
     }
 
-    fn snapshot() -> Vec<mounts::MountEntry> {
+    fn snapshot() -> Vec<cmdr_local::mount_table::MountEntry> {
         vec![
             mounts::mount_entry_for_test("/", "apfs"),
             mounts::mount_entry_for_test("/Volumes/naspi", "smbfs"),

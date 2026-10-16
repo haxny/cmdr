@@ -19,7 +19,7 @@ use super::cross_fs::move_with_staging;
 use super::move_files_with_progress_inner;
 
 use crate::file_system::VolumeManager;
-use crate::file_system::volume::{LocalPosixVolume, Volume};
+use crate::file_system::volume::Volume;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::rollback::Reversal;
 use crate::file_system::write_operations::state::WriteOperationState;
@@ -34,6 +34,7 @@ use crate::operation_log::types::{
     EntryType, ExecutionStatus, Initiator, NotRollbackableReason, OpKind, RollbackState, RowRole, SearchCoverage,
 };
 use crate::operation_log::writer::OperationLogWriter;
+use cmdr_local::LocalPosixVolume;
 
 /// A real move, journaled to a real DB, reversible through the real gate.
 struct MoveLoop {

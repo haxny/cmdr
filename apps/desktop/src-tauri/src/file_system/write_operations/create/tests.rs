@@ -43,8 +43,8 @@ fn create_test_dir(label: &str) -> TempDir {
 /// `volume_id = None` (→ "root") exercises the timed `Volume` path, the same one
 /// production hits. Idempotent via `register_if_absent`.
 fn ensure_root_volume() {
-    use crate::file_system::volume::LocalPosixVolume;
     use crate::file_system::volume::manager::get_volume_manager;
+    use cmdr_local::LocalPosixVolume;
     use std::sync::Arc;
     get_volume_manager().register_if_absent(
         "root",
@@ -548,10 +548,10 @@ fn synthetic_entry_diff_lands_only_in_listings_on_the_creates_volume() {
 /// taken name, paste retries `pasted (N)`), so the row at that path is this file.
 #[test]
 fn synthetic_entry_diff_refreshes_a_row_the_listing_already_holds() {
-    use crate::file_system::volume::backends::get_single_entry;
     use cmdr_listing::DiffChangeType;
     use cmdr_listing::testing::TestListing;
     use cmdr_listing::testing::{hold_diffs, pending_changes};
+    use cmdr_local::reading::get_single_entry;
 
     let tmp = create_test_dir("synthetic_diff_duplicate");
     let new_path = tmp.path().join("made.txt");

@@ -2,7 +2,7 @@
 //! every branch the filters take (virtual, root, plain, removable) beats a
 //! per-module copy that drifts.
 
-use crate::file_system::linux_mounts::{self, MountEntry};
+use cmdr_local::linux_mounts::{self, MountEntry};
 
 const SAMPLE_MOUNTS: &str = "\
 sysfs /sys sysfs rw,nosuid,nodev,noexec,relatime 0 0

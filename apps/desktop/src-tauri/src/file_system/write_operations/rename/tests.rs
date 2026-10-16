@@ -221,7 +221,7 @@ async fn rename_managed_routes_an_in_archive_rename_to_the_edit_driver() {
     // production always has. (nextest isolates the global per test process.)
     get_volume_manager().register_if_absent(
         "root",
-        Arc::new(crate::file_system::volume::LocalPosixVolume::local_folder(
+        Arc::new(cmdr_local::LocalPosixVolume::local_folder(
             "Test root",
             "/",
             crate::volume_host::host(),

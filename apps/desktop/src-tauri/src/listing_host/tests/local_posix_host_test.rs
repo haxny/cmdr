@@ -1,10 +1,10 @@
 //! `LocalPosixVolume` against the app's real host: the pane listing cache, the
 //! panes' collator, and the FSEvents watcher. The backend's own cells, which
-//! drive a detached or recording host, are in `local_posix_test.rs`.
+//! drive a detached or recording host, are in `crates/cmdr-local/src/local_posix_test.rs`.
 
-use super::*;
 use crate::test_support::TestDir;
 use cmdr_fs::volume::{MutationEvent, Volume, WatchCoverage};
+use cmdr_local::LocalPosixVolume;
 use std::path::Path;
 
 /// `listing_watch_coverage` follows the watcher lifecycle: `None` before a listing

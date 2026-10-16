@@ -12,9 +12,10 @@ use super::super::conflict_responder_test_support::{
 };
 use super::move_same::move_within_same_volume_with_progress;
 use super::rename_merge_test_support::{make_state, read, write_file};
-use crate::file_system::volume::{LocalPosixVolume, Volume, VolumeError};
+use crate::file_system::volume::{Volume, VolumeError};
 use crate::file_system::write_operations::types::{ConflictResolution, VolumeCopyConfig};
 use cmdr_fs::entry::FileEntry;
+use cmdr_local::LocalPosixVolume;
 use std::future::Future;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;

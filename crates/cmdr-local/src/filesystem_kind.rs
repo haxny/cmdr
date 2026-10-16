@@ -2,17 +2,21 @@
 //!
 //! The platform-specific half of filesystem identity. The classification itself
 //! (`FilesystemKind`, `MaxFileSize`, `FilesystemInfo`, and the kind → limit map)
-//! is platform-free and lives in `cmdr_fs::filesystem_kind`, re-exported here so
-//! `file_system::filesystem_kind::FilesystemKind` keeps resolving. Also the
-//! "is this on a network mount?" question asked of the same probe.
+//! is platform-free and lives in `cmdr_fs::filesystem_kind`; callers name it
+//! there. Also the "is this on a network mount?" question asked of the same
+//! probe.
 
-pub use cmdr_fs::filesystem_kind::*;
+use cmdr_fs::filesystem_kind::{FilesystemInfo, mount_is_local_disk};
+#[cfg(doc)]
+use cmdr_fs::filesystem_kind::{FilesystemKind, MaxFileSize};
 
 /// One mount probe: the filesystem a path lives on, plus the mount's source
 /// (`/dev/disk3s1`, `//me@nas/share`, whatever a FUSE mount chose). `None`
 /// source when the probe couldn't resolve the mount.
 pub struct MountProbe {
+    /// The filesystem the path lives on.
     pub info: FilesystemInfo,
+    /// The mount's source, `None` when the probe couldn't resolve the mount.
     pub source: Option<String>,
 }
 
@@ -44,6 +48,7 @@ pub fn probe_mount_for_path(path: &std::path::Path) -> MountProbe {
     }
 }
 
+/// [`detect_filesystem_for_path`] plus the mount's source, from the same single probe.
 #[cfg(target_os = "linux")]
 pub fn probe_mount_for_path(path: &std::path::Path) -> MountProbe {
     let entry = super::linux_mounts::mount_entry_for_path(path);
@@ -57,6 +62,7 @@ pub fn probe_mount_for_path(path: &std::path::Path) -> MountProbe {
     }
 }
 
+/// No mount table to read on this platform: the type is unknown.
 #[cfg(not(any(target_os = "macos", target_os = "linux")))]
 pub fn probe_mount_for_path(_path: &std::path::Path) -> MountProbe {
     MountProbe {
@@ -83,6 +89,6 @@ pub fn path_is_on_network_mount(path: &std::path::Path) -> bool {
 /// "Network" here means "not a known local disk" (`cmdr_fs::filesystem_kind::mount_is_local_disk`), so
 /// FUSE and cloud mounts count too. Split out so one probe can answer both of
 /// the index's `mount_facts` questions.
-pub(crate) fn is_network(probe: &MountProbe) -> bool {
+pub fn is_network(probe: &MountProbe) -> bool {
     !mount_is_local_disk(probe.source.as_deref(), probe.info.raw_type.as_deref())
 }

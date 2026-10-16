@@ -403,8 +403,8 @@ mod tests {
 
     #[test]
     fn handle_volume_unmounted_unregisters_from_volume_manager() {
-        use crate::file_system::volume::LocalPosixVolume;
         use crate::file_system::volume::manager::get_volume_manager;
+        use cmdr_local::LocalPosixVolume;
         use std::sync::Arc;
 
         let volume_path = "/Volumes/cmdr-test-mount-unregister";
@@ -432,8 +432,8 @@ mod tests {
 
     #[test]
     fn unmounting_the_active_root_promotes_a_surviving_sibling() {
-        use crate::file_system::volume::LocalPosixVolume;
         use crate::file_system::volume::manager::get_volume_manager;
+        use cmdr_local::LocalPosixVolume;
         use std::sync::Arc;
 
         // One share, two mount points: macOS suffixes the later mount. Both

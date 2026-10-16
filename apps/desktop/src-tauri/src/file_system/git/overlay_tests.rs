@@ -10,10 +10,11 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use super::overlay::GitPortalOverlay;
-use crate::file_system::volume::{LocalPosixVolume, Volume, WatchCoverage};
+use crate::file_system::volume::{Volume, WatchCoverage};
 use cmdr_git::test_fixtures::{Fixture, cleanup, temp_dir};
 use cmdr_listing::host::ListingOverlay;
 use cmdr_listing::testing::{TestListing, WatchCoverageVolume};
+use cmdr_local::LocalPosixVolume;
 
 fn repo(name: &str) -> PathBuf {
     let dir = temp_dir("git_overlay", name);

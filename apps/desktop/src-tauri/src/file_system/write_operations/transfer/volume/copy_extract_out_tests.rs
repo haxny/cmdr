@@ -7,8 +7,9 @@
 
 use super::tests::make_state;
 use super::*;
-use crate::file_system::volume::{InMemoryVolume, LocalPosixVolume};
+use crate::file_system::volume::InMemoryVolume;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
+use cmdr_local::LocalPosixVolume;
 
 // ========================================================================
 // Extract-out: copy a file + a directory subtree OUT of a zip archive

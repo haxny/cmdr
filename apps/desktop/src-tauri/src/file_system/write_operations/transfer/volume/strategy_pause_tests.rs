@@ -34,10 +34,10 @@ use std::time::Duration;
 
 use super::super::faulty_volume::forward_volume_methods;
 use crate::file_system::volume::{
-    InMemoryVolume, LocalPosixVolume, StreamLength, StreamWriteProgress, StreamWritten, Volume, VolumeError,
-    VolumeReadStream, WriteMode,
+    InMemoryVolume, StreamLength, StreamWriteProgress, StreamWritten, Volume, VolumeError, VolumeReadStream, WriteMode,
 };
 use crate::test_support::TestDir;
+use cmdr_local::LocalPosixVolume;
 
 /// Waits until the copy has reported at least `target` bytes. Progress is the
 /// real signal, so a descheduled runtime can't race the assertion.

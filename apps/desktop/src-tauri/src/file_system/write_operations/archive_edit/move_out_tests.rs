@@ -105,8 +105,8 @@ fn move_out_config() -> crate::file_system::VolumeCopyConfig {
 
 #[tokio::test]
 async fn move_out_lands_files_at_dest_deletes_entries_and_keeps_the_remainder() {
-    use crate::file_system::volume::backends::LocalPosixVolume;
     use crate::file_system::write_operations::route_archive_move_out;
+    use cmdr_local::LocalPosixVolume;
 
     let tmp = tempfile::tempdir().expect("tempdir");
     let archive = tmp.path().join("a.zip");
@@ -219,8 +219,8 @@ async fn move_out_dest_failure_deletes_nothing_and_leaves_the_archive_readable()
 
 #[tokio::test]
 async fn move_out_a_lone_skipped_source_stays_in_the_archive() {
-    use crate::file_system::volume::backends::LocalPosixVolume;
     use crate::file_system::write_operations::route_archive_move_out;
+    use cmdr_local::LocalPosixVolume;
 
     let tmp = tempfile::tempdir().expect("tempdir");
     let archive = tmp.path().join("a.zip");
@@ -280,8 +280,8 @@ async fn move_out_a_lone_skipped_source_stays_in_the_archive() {
 
 #[tokio::test]
 async fn move_out_cancel_leaves_the_archive_untouched() {
-    use crate::file_system::volume::backends::LocalPosixVolume;
     use crate::file_system::write_operations::{cancel_write_operation, route_archive_move_out};
+    use cmdr_local::LocalPosixVolume;
 
     let tmp = tempfile::tempdir().expect("tempdir");
     let archive = tmp.path().join("a.zip");
@@ -337,8 +337,8 @@ async fn move_out_cancel_leaves_the_archive_untouched() {
 
 #[tokio::test]
 async fn move_out_dir_with_a_deep_skipped_child_keeps_that_child_in_the_archive() {
-    use crate::file_system::volume::backends::LocalPosixVolume;
     use crate::file_system::write_operations::route_archive_move_out;
+    use cmdr_local::LocalPosixVolume;
 
     let tmp = tempfile::tempdir().expect("tempdir");
     let archive = tmp.path().join("a.zip");
@@ -493,8 +493,8 @@ impl Volume for FailOnNameVolume {
 
 #[tokio::test]
 async fn move_out_partial_skip_converges_deletes_landed_keeps_skipped() {
-    use crate::file_system::volume::backends::LocalPosixVolume;
     use crate::file_system::write_operations::route_archive_move_out;
+    use cmdr_local::LocalPosixVolume;
 
     let tmp = tempfile::tempdir().expect("tempdir");
     let archive = tmp.path().join("a.zip");
@@ -617,8 +617,8 @@ async fn move_out_error_mid_tree_deletes_only_the_durable_prefix() {
 
 #[tokio::test]
 async fn move_out_rollback_deletes_nothing_from_the_archive() {
-    use crate::file_system::volume::backends::LocalPosixVolume;
     use crate::file_system::write_operations::{cancel_write_operation, route_archive_move_out};
+    use cmdr_local::LocalPosixVolume;
 
     let tmp = tempfile::tempdir().expect("tempdir");
     let archive = tmp.path().join("a.zip");
@@ -672,9 +672,9 @@ async fn move_out_rollback_deletes_nothing_from_the_archive() {
 #[cfg(target_os = "macos")]
 #[tokio::test]
 async fn move_out_lands_tags_and_leaves_no_orphan_sidecar() {
-    use crate::file_system::volume::backends::LocalPosixVolume;
     use crate::file_system::write_operations::route_archive_move_out;
     use cmdr_fs::testing::metadata_fixture::TAGS_XATTR;
+    use cmdr_local::LocalPosixVolume;
 
     let tmp = tempfile::tempdir().expect("tempdir");
     let archive = tmp.path().join("tagged.zip");

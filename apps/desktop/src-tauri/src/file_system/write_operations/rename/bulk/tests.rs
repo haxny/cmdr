@@ -83,7 +83,7 @@ fn an_applied_bulk_rename_journals_the_mtime_undo_verifies_on() {
     let destination = tmp.join("after.txt");
     fs::write(&source, "reviewed").expect("write fixture");
     let row = local_row("journaled", source.clone(), destination.clone());
-    let live = crate::file_system::volume::backends::get_single_entry(&source).expect("read the live entry");
+    let live = cmdr_local::reading::get_single_entry(&source).expect("read the live entry");
 
     let op_id = "op-bulk-rename-mtime";
     super::super::super::journal::open_local_op(op_id, OpKind::Rename, Initiator::User, 1, Some("root"));
@@ -121,10 +121,11 @@ struct UndoLoop {
 
 impl UndoLoop {
     fn new(name: &str) -> Self {
-        use crate::file_system::volume::{LocalPosixVolume, Volume};
+        use crate::file_system::volume::Volume;
         use crate::operation_log::capture::WriterJournal;
         use crate::operation_log::store::operation_log_db_path;
         use crate::operation_log::writer::OperationLogWriter;
+        use cmdr_local::LocalPosixVolume;
 
         // Held in the struct below, not just here: the writer keeps using this
         // database for the fixture's whole life, so dropping the handle at the end

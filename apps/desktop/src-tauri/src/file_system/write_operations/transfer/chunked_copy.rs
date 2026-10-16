@@ -41,7 +41,7 @@ const CHUNK_SIZE: usize = 1024 * 1024;
 /// This function is only used on Linux.
 #[cfg(target_os = "linux")]
 pub fn is_network_filesystem(path: &Path) -> bool {
-    crate::file_system::linux_mounts::is_network_filesystem_linux(path)
+    cmdr_local::linux_mounts::is_network_filesystem_linux(path)
 }
 
 // ============================================================================

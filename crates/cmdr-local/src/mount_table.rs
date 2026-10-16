@@ -12,32 +12,32 @@ use super::statfs::statfs_string;
 /// building one never talks to the backing filesystem. That is the whole reason
 /// discovery uses `getfsstat` instead of NSFileManager's volume enumeration: the
 /// enumeration `getattrlist`s every mount, which blocks 30s–forever on a hung
-/// network mount and froze the app at launch. See `DETAILS.md` § "Hung mounts".
-pub(crate) struct MountEntry {
+/// network mount and froze the app at launch. See `apps/desktop/src-tauri/src/volumes/DETAILS.md` § "Hung mounts".
+pub struct MountEntry {
     /// Mount point, e.g. `/Volumes/naspi` (`f_mntonname`).
-    pub(crate) mount_point: String,
+    pub mount_point: String,
     /// Filesystem type, e.g. `apfs`, `exfat`, `smbfs` (`f_fstypename`).
-    pub(crate) fs_type: String,
+    pub fs_type: String,
     /// Mount source, e.g. `//david@192.168.1.111/naspi` for SMB (`f_mntfromname`).
-    pub(crate) mount_from: String,
+    pub mount_from: String,
     /// Whether the mount carries the `MNT_RDONLY` flag.
-    pub(crate) is_read_only: bool,
+    pub is_read_only: bool,
     /// Whether the OS says this mount belongs in a file manager's sidebar, i.e.
     /// it does NOT carry `MNT_DONTBROWSE`. Finder's own rule, and the one that
     /// separates real drives from the plumbing (`devfs`, `/System/Volumes/*`,
     /// `/Volumes/Recovery`, autofs triggers) without naming any of them.
-    pub(crate) is_browsable: bool,
+    pub is_browsable: bool,
     /// The mounted filesystem's identity (`f_fsid`, its two words packed high then
     /// low). Renaming a mounted volume moves the mount point and keeps this.
-    pub(crate) fsid: u64,
+    pub fsid: u64,
     /// Who mounted it (`f_owner`).
-    pub(crate) mounted_by: MountedBy,
+    pub mounted_by: MountedBy,
 }
 
 /// Who mounted a filesystem: the mount-table row's `f_owner`, which `mount` prints
 /// as "mounted by `<name>`" for every row whose owner isn't root.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum MountedBy {
+pub enum MountedBy {
     /// `f_owner` 0: the system's own mounts, and anything mounted as root.
     Root,
     /// The account Cmdr runs as.
@@ -72,7 +72,7 @@ impl MountedBy {
 /// groups a disk's volumes then lets an unmount take a sibling down under its live
 /// FSEvents watcher. Callers name the third answer (`is_mount_point`,
 /// `volumes::has_mount_identity`, `volumes::mount_sources`) or fold it deliberately.
-pub(crate) fn enumerate_mounts() -> Option<Vec<MountEntry>> {
+pub fn enumerate_mounts() -> Option<Vec<MountEntry>> {
     // First pass: ask how many mounts exist (null buffer writes nothing).
     // SAFETY: `getfsstat(NULL, 0, flags)` is the documented count query; with a
     // null buffer and zero size the kernel only returns the mount count.
@@ -125,7 +125,7 @@ fn packed_fsid(stat: &libc::statfs) -> u64 {
 /// Whether `path` is a mount point in the kernel mount table. Reads the same
 /// non-blocking `getfsstat` snapshot discovery does, so a hung mount can't stall
 /// it. `None` when the table couldn't be read (a live system always lists `/`).
-pub(crate) fn is_mount_point(path: &str) -> Option<bool> {
+pub fn is_mount_point(path: &str) -> Option<bool> {
     let mounts = enumerate_mounts()?;
     let path = Path::new(path);
     Some(mounts.iter().any(|m| Path::new(&m.mount_point) == path))

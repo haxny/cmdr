@@ -289,8 +289,8 @@ panes off ejected volumes.
 ## Volume space
 
 The space reading (`get_volume_space`, the live readout's memo, and the NSURL resource readers behind them) is the local
-backend's: `file_system/volume/backends/DETAILS.md` § "Local volume space". `volumes/` re-exports what it and the
-commands still call.
+backend's: `crates/cmdr-local/DETAILS.md` § "Local volume space". `volumes/` calls it by crate name, and re-exports
+only `get_volume_space`, the macOS half of the `platform::get_volume_space` facade `commands/volumes.rs` reaches.
 
 ## The unmount approver
 

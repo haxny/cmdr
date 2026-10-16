@@ -1,12 +1,12 @@
 //! Tests for LocalPosixVolume.
 
 use super::*;
-use crate::file_system::volume::WriteMode;
-use crate::file_system::volume::{ListingProgress, StreamLength, UnwritableReason, WriteAccess};
-use crate::ignore_poison::IgnorePoison;
-use crate::test_support::TestDir;
+use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::testing::TestDir;
 use cmdr_fs::volume::MountClass;
+use cmdr_fs::volume::WriteMode;
 use cmdr_fs::volume::host::VolumeHost;
+use cmdr_fs::volume::{ListingProgress, StreamLength, UnwritableReason, WriteAccess};
 use cmdr_fs::volume::{MutationEvent, SourceItemInfo, SpaceInfo, Volume, VolumeError, WatchCoverage};
 use std::path::Path;
 
@@ -614,7 +614,7 @@ async fn test_open_read_stream_rejects_directory() {
 
 #[tokio::test]
 async fn test_write_from_stream_creates_file() {
-    use crate::file_system::volume::InMemoryVolume;
+    use cmdr_fs::volume::InMemoryVolume;
     use std::fs;
 
     let vol_dir = TestDir::new("write_from_stream_test");
@@ -649,7 +649,7 @@ async fn test_write_from_stream_creates_file() {
 
 #[tokio::test]
 async fn test_write_from_stream_multichunk_is_durable_and_correct() {
-    use crate::file_system::volume::InMemoryVolume;
+    use cmdr_fs::volume::InMemoryVolume;
     use std::fs;
 
     // A multi-chunk payload (> InMemory's 64 KiB chunk) exercises the chunk
@@ -970,7 +970,7 @@ async fn write_access_on_the_sealed_system_volume_is_read_only() {
 #[cfg(target_os = "macos")]
 #[tokio::test]
 async fn a_stream_onto_a_read_only_filesystem_is_read_only() {
-    use crate::file_system::volume::InMemoryVolume;
+    use cmdr_fs::volume::InMemoryVolume;
 
     let source = InMemoryVolume::new("Source");
     source

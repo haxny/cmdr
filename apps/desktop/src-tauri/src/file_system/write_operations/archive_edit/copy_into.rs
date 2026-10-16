@@ -29,10 +29,11 @@ use super::edit_error::EditError;
 use super::engine::{MutatorHooks, emit_archive_terminal, run_managed_edit, to_write_error};
 use super::routing::{ensure_zip_writable, normalize_inner_path, read_only_error};
 use crate::file_system::volume::manager::get_volume_manager;
-use crate::file_system::volume::{LaneKey, LocalPosixVolume, Volume, VolumeError};
+use crate::file_system::volume::{LaneKey, Volume, VolumeError};
 use crate::operation_log::types::{ArchiveSubkind, ExecutionStatus};
 use cmdr_archive::mutator::{self, AddEntry, AddSource, Changeset, MutationError};
 use cmdr_archive::{ArchiveFormat, ArchiveIndex, LocalFileSource};
+use cmdr_local::LocalPosixVolume;
 
 /// Routes a copy/move INTO a zip (a source dropped onto an archive destination)
 /// to the managed edit driver as a SINGLE `{ add + mkdir }` changeset — the whole

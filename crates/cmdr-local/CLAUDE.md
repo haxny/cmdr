@@ -1,0 +1,37 @@
+# cmdr-local
+
+The local disk: `LocalPosixVolume` (the `Volume` over a `std::fs` root), the `std::fs` reader, the one no-replace
+rename, local volume space, and the mount probes. Tauri-free; the app builds every local volume with its `VolumeHost`.
+
+## Module map
+
+- **local_posix.rs** (the struct, the rename primitive, the query and mutation half of `impl Volume`), with
+  **local_posix/scan.rs** (the copy-scan family) and **local_posix/streams.rs** (bytes in and out). A trait impl can't
+  span files, so a moved method stays a one-line delegation to a `pub(super)` inherent body.
+- **reading.rs** (the `std::fs` reader the watcher and `tags.rs` read through too), **mutation.rs** (the listing patch a
+  local mutation sends), **space.rs** + **live_space.rs**, and the OS probes: **filesystem_kind.rs**,
+  **mount_table.rs**, **statfs.rs**, **nsurl.rs**, **macos_metadata.rs** (macOS), **linux_mounts.rs** (Linux).
+
+## Must-knows
+
+- **It reaches the app only through its `VolumeHost`** (`host.listings()`: pane patches, watch coverage, name order), a
+  required constructor argument. ❌ Never default it to `VolumeHost::detached()` in production: the scan oracle's fast
+  path turns off and panes go stale after every local copy. ❌ Never depend on `cmdr-listing` or the app.
+- **`rename_local_exclusive` is the ONE no-replace rename**, and it degrades on a filesystem with no kernel flag (smbfs
+  answers `ENOTSUP`). ❌ Never write a second `renamex_np` call: while `overwrite::rename_no_replace` was a separate
+  copy, only it degraded, and every rename on a mounted SMB share failed (ERR-8RFN4). DETAILS § "Local renames are
+  atomic-exclusive".
+- **`write_from_stream` `sync_data`s each file** (+ best-effort parent-dir fsync) before returning, known length or
+  unknown: every cross-volume copy landing on local disk flows through it, and `flush()` alone loses data on eject.
+- **Force-rename is an atomic replacement**, so `supports_atomic_replace_rename()` is true. Network backends whose force
+  path deletes first must not inherit that answer.
+- **`FileEntry::is_hidden` folds in `UF_HIDDEN` and root-only `/.hidden`** on top of the dot check, from data the
+  listing's `lstat` already has (no extra syscall).
+- **Feed `on_progress` in `list_directory`**: the stat loop runs on `spawn_blocking`, so it publishes into a tally the
+  async side samples. DETAILS § "The local reader".
+- **A test build answers space from `statvfs`, never NSURL** (#357). Gate test scaffolding on
+  `any(test, feature = "testing")`, ❌ never `cfg(test)` alone: the app's tests turn `testing` on and need the same
+  behavior.
+
+Decisions, the reader, space, the rename's degradation, the tests, and the capped surface: `DETAILS.md`. Read it before
+any non-trivial work here: editing, planning, reorganizing, or advising.

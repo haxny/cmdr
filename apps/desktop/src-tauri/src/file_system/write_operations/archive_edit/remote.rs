@@ -43,7 +43,8 @@ use super::super::scratch_dir::ScratchDir;
 use super::super::state::{WriteOperationState, is_cancelled};
 use super::super::types::WriteOperationError;
 use super::edit_error::EditError;
-use crate::file_system::volume::{LocalPosixVolume, Volume, VolumeError, WriteMode};
+use crate::file_system::volume::{Volume, VolumeError, WriteMode};
+use cmdr_local::LocalPosixVolume;
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum RemoteCommitProgress {

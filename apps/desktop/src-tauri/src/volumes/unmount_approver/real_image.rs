@@ -50,7 +50,7 @@ fn volume_id(index: usize) -> String {
 }
 
 fn is_mounted(path: &Path) -> bool {
-    crate::volumes::is_mount_point(&path.to_string_lossy()) == Some(true)
+    cmdr_local::mount_table::is_mount_point(&path.to_string_lossy()) == Some(true)
 }
 
 /// Waits for the idle after a settled request and lets its resume batches finish, so "nothing

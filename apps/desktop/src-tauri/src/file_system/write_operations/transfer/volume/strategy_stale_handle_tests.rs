@@ -15,8 +15,9 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Duration;
 
-use crate::file_system::volume::{LocalPosixVolume, Volume};
+use crate::file_system::volume::Volume;
 use crate::test_support::TestDir;
+use cmdr_local::LocalPosixVolume;
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn stream_pipe_file_retries_once_on_stale_destination_handle() {

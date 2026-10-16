@@ -16,13 +16,14 @@ use std::time::{Duration, Instant};
 use super::copy::copy_volumes_with_progress;
 use super::move_cross::move_volumes_with_progress;
 use super::rename_merge_test_support::make_state;
-use crate::file_system::volume::{InMemoryVolume, LocalPosixVolume, Volume};
+use crate::file_system::volume::{InMemoryVolume, Volume};
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::scan_walker::{WalkContext, walk_sources_with_per_path};
 use crate::file_system::write_operations::state::{CachedScanResult, insert_scan_result};
 use crate::file_system::write_operations::types::{VolumeCopyConfig, WriteOperationPhase, WriteProgressEvent};
 use crate::ignore_poison::IgnorePoison;
 use crate::test_support::TestDir;
+use cmdr_local::LocalPosixVolume;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 

@@ -1385,6 +1385,7 @@ dependencies = [
  "cmdr-http",
  "cmdr-index",
  "cmdr-listing",
+ "cmdr-local",
  "cmdr-mtp",
  "cmdr-s3",
  "cmdr-sftp",
@@ -1657,6 +1658,21 @@ dependencies = [
  "tokio",
  "tokio-util",
  "uuid",
+]
+
+[[package]]
+name = "cmdr-local"
+version = "0.0.0"
+dependencies = [
+ "cmdr-fs",
+ "cmdr-local",
+ "dirs 7.0.0",
+ "libc",
+ "log",
+ "objc2 0.6.5",
+ "objc2-foundation 0.3.2",
+ "tokio",
+ "walkdir",
 ]
 
 [[package]]

@@ -643,7 +643,7 @@ async fn a_trash_frees_its_preview_instead_of_waiting_on_it() {
 async fn a_compress_confirmed_mid_scan_awaits_its_preview() {
     use super::archive_edit::compress_start;
     use crate::file_system::volume::Volume;
-    use crate::file_system::volume::backends::LocalPosixVolume;
+    use cmdr_local::LocalPosixVolume;
 
     let dir = TestDir::new("scanwait-compress");
     let src_root = dir.join("src");

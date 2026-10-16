@@ -9,6 +9,7 @@ members = [
   "crates/cmdr-http",
   "crates/cmdr-index",
   "crates/cmdr-listing",
+  "crates/cmdr-local",
   "crates/cmdr-mtp",
   "crates/cmdr-s3",
   "crates/cmdr-sftp",

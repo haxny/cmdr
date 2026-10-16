@@ -96,7 +96,7 @@ turns that state off for every folder it serves. Nothing about that fails loudly
 appearing), which is why `a_local_directory_read_emits_progress_events` in `streaming_test.rs` drives the whole chain
 against a real `LocalPosixVolume`: the rest of that suite runs on `InMemoryVolume` and can't see a backend drop it.
 
-How `LocalPosixVolume` feeds the callback from a `spawn_blocking` stat loop: `volume/backends/DETAILS.md` § "The local
+How `LocalPosixVolume` feeds the callback from a `spawn_blocking` stat loop: `crates/cmdr-local/DETAILS.md` § "The local
 reader".
 
 ## Caching
@@ -650,9 +650,9 @@ shipped build.
   own composer (Cmdr's: `listing_host/DETAILS.md` § "The adapters"). **Why:** a backend's `directory_changed` must reach
   the index and the badges before the panes (`index → badges → panes`), and an engine-built host would patch the panes
   alone.
-- **What isn't the engine:** the local backend's `std::fs` reader and mutation patch
-  (`apps/desktop/src-tauri/src/file_system/volume/backends/local_posix/`), Brief column widths, the FSEvents watcher's
-  OS half, and every wire event struct. They answer to the engine's API from the app.
+- **What isn't the engine:** the local backend's `std::fs` reader and mutation patch (`crates/cmdr-local/`), Brief
+  column widths, the FSEvents watcher's OS half, and every wire event struct. They answer to the engine's API from the
+  app.
 - **A poisoned engine lock recovers** (`cmdr_fs`'s `*_ignore_poison`), ❌ never `.expect`: a panic would turn one
   poisoned cache into a crash on every later IPC, and skipping the work (the shape it replaced) silently dropped a
   listing while still reporting it complete.
@@ -862,7 +862,7 @@ queues through `Listings::flush_pending_diffs` (the `playwright-e2e` feature) wi
 
 ## File metadata tiers
 
-What the local reader fetches eagerly and what it defers: `volume/backends/DETAILS.md` § "The local reader".
+What the local reader fetches eagerly and what it defers: `crates/cmdr-local/DETAILS.md` § "The local reader".
 
 ## Finder tags
 

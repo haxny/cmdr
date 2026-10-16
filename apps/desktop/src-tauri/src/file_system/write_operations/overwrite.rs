@@ -417,7 +417,7 @@ fn land_temp(temp: &Path, dest: &Path, replacing: bool) -> std::io::Result<()> {
 /// implementations only this one degraded on a filesystem without the kernel's
 /// no-replace flag. That cost every rename on a mounted SMB share (ERR-8RFN4).
 pub(super) fn rename_no_replace(temp: &Path, dest: &Path) -> std::io::Result<()> {
-    crate::file_system::volume::rename_local_exclusive(temp, dest)
+    cmdr_local::rename_local_exclusive(temp, dest)
 }
 
 /// An entry this operation renamed out of the way, still on disk under its

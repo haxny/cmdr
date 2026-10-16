@@ -345,4 +345,25 @@ var surfaceGuardedCrates = []struct {
 			SubsystemItems: 4,
 		},
 	},
+	{
+		// Measured 2026-10-16, at the extraction, and set to exactly what the crate
+		// exposes, with no headroom (David approved the rule in the #415 plan).
+		//
+		// A backend's API is the `Volume` trait, `cmdr-fs`'s promise, so what's
+		// counted here serves the app's reads of a local disk that don't go through a
+		// volume. The 12 root promises are `LocalPosixVolume`, the two rename
+		// functions, and the nine public modules: the reader and the mutation patch
+		// (the watcher and tags read through them), space and live space (the poller,
+		// the pre-flight, the IPC command), and the mount probes (`filesystem_kind`,
+		// `mount_table`, `statfs`, `nsurl` on macOS, `linux_mounts` on Linux, all
+		// counted whatever the platform). Most of the 39 items are `linux_mounts`'
+		// `/proc/mounts` readers and the mount-table records. Item-by-item:
+		// `crates/cmdr-local/DETAILS.md` § "The public surface is capped".
+		Name: "cmdr-local",
+		Ceilings: surfaceCeilings{
+			RootPromises:   12,
+			PublicModules:  9,
+			SubsystemItems: 39,
+		},
+	},
 }

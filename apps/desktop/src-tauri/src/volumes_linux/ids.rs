@@ -6,8 +6,8 @@
 //! through [`volume_id_for_mount`] so discovery and `resolve_path_volume_fast`
 //! can't drift into handing one volume two IDs.
 
-use super::linux_mounts;
 use super::smb::get_smb_mount_info;
+use cmdr_local::linux_mounts;
 
 pub(crate) use crate::file_system::volume::{local_volume_id, smb_volume_id};
 

@@ -7,8 +7,8 @@ use super::test_support::*;
 
 #[tokio::test]
 async fn copy_into_adds_a_local_directory_tree_and_skips_conflicts() {
-    use crate::file_system::volume::backends::LocalPosixVolume;
     use crate::file_system::write_operations::route_archive_copy_into;
+    use cmdr_local::LocalPosixVolume;
 
     let tmp = tempfile::tempdir().expect("tempdir");
     // The archive already holds `payload/existing.txt`, so a Skip-policy copy of a
@@ -86,8 +86,8 @@ async fn run_policy_copy_into(
     policy: ConflictResolution,
     is_move: bool,
 ) -> Arc<CollectorEventSink> {
-    use crate::file_system::volume::backends::LocalPosixVolume;
     use crate::file_system::write_operations::route_archive_copy_into;
+    use cmdr_local::LocalPosixVolume;
 
     let source_volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "src",
@@ -400,8 +400,8 @@ async fn copy_into_preserves_an_empty_source_directory() {
 #[cfg(unix)]
 #[tokio::test]
 async fn move_into_a_top_level_symlink_preserves_the_source_and_surfaces_the_skip() {
-    use crate::file_system::volume::backends::LocalPosixVolume;
     use crate::file_system::write_operations::route_archive_copy_into;
+    use cmdr_local::LocalPosixVolume;
 
     let tmp = tempfile::tempdir().expect("tempdir");
     let archive = tmp.path().join("a.zip");
@@ -458,8 +458,8 @@ async fn move_into_a_top_level_symlink_preserves_the_source_and_surfaces_the_ski
 #[cfg(unix)]
 #[tokio::test]
 async fn move_into_a_dir_containing_a_symlink_preserves_the_whole_source_tree() {
-    use crate::file_system::volume::backends::LocalPosixVolume;
     use crate::file_system::write_operations::route_archive_copy_into;
+    use cmdr_local::LocalPosixVolume;
 
     let tmp = tempfile::tempdir().expect("tempdir");
     let archive = tmp.path().join("a.zip");
@@ -525,8 +525,8 @@ async fn move_into_a_dir_containing_a_symlink_preserves_the_whole_source_tree() 
 #[cfg(unix)]
 #[tokio::test]
 async fn move_into_a_broken_symlink_preserves_the_source() {
-    use crate::file_system::volume::backends::LocalPosixVolume;
     use crate::file_system::write_operations::route_archive_copy_into;
+    use cmdr_local::LocalPosixVolume;
 
     let tmp = tempfile::tempdir().expect("tempdir");
     let archive = tmp.path().join("a.zip");
@@ -584,8 +584,8 @@ async fn move_into_a_broken_symlink_preserves_the_source() {
 
 #[tokio::test]
 async fn copy_into_a_remote_archive_lands_the_file_via_the_pulled_local_copy() {
-    use crate::file_system::volume::backends::LocalPosixVolume;
     use crate::file_system::write_operations::route_archive_copy_into;
+    use cmdr_local::LocalPosixVolume;
 
     let tmp = tempfile::tempdir().expect("tempdir");
     // A local source file to copy INTO the remote archive.
@@ -694,7 +694,7 @@ async fn a_blanket_overwrite_never_replaces_an_archive_directory_with_a_file() {
 #[tokio::test]
 async fn a_named_copy_into_zip_uses_the_requested_leaf_and_preserves_existing_entries() {
     use super::copy_into::route_archive_copy_into_with_provenance;
-    use crate::file_system::volume::backends::LocalPosixVolume;
+    use cmdr_local::LocalPosixVolume;
     let tmp = tempfile::tempdir().unwrap();
     let archive = tmp.path().join("target.zip");
     {
@@ -749,7 +749,7 @@ async fn a_named_copy_into_zip_uses_the_requested_leaf_and_preserves_existing_en
 #[tokio::test]
 async fn a_named_move_into_zip_deletes_only_the_source_that_landed() {
     use super::copy_into::route_archive_copy_into_with_provenance;
-    use crate::file_system::volume::backends::LocalPosixVolume;
+    use cmdr_local::LocalPosixVolume;
     for policy in [ConflictResolution::Skip, ConflictResolution::Overwrite] {
         let tmp = tempfile::tempdir().unwrap();
         let archive = tmp.path().join("target.zip");

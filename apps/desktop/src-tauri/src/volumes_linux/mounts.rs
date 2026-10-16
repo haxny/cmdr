@@ -31,7 +31,7 @@ pub fn get_mounted_volumes(mounts: &[MountEntry]) -> Vec<LocationInfo> {
 /// be read, ❌ never an empty list.
 pub(crate) fn mount_roots() -> Option<Vec<String>> {
     Some(
-        crate::file_system::linux_mounts::parse_proc_mounts()?
+        cmdr_local::linux_mounts::parse_proc_mounts()?
             .into_iter()
             .map(|mount| mount.mountpoint)
             .collect(),
@@ -46,7 +46,7 @@ pub(crate) fn mount_roots() -> Option<Vec<String>> {
 /// when the table couldn't be read, ❌ never an empty list, or the sweep would read a machine with
 /// no mounts and register nothing.
 pub(crate) fn registrable_mount_roots() -> Option<Vec<String>> {
-    let mounts = crate::file_system::linux_mounts::parse_proc_mounts()?;
+    let mounts = cmdr_local::linux_mounts::parse_proc_mounts()?;
     Some(registrable_roots(mounts, this_user()))
 }
 
@@ -215,11 +215,11 @@ fn get_username() -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::file_system::linux_mounts;
     use crate::file_system::volume::path_volume_id;
     use crate::volumes_linux::ids::smb_volume_id;
     use crate::volumes_linux::smb::parse_smb_mount_source;
     use crate::volumes_linux::test_support::parse_test_mounts;
+    use cmdr_local::linux_mounts;
 
     #[test]
     fn test_is_removable_mount() {

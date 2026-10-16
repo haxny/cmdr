@@ -24,7 +24,7 @@ in-memory test fixture. Callers never touch the filesystem directly; they call `
 - **`manager.rs`** (+ `manager/roots.rs`): `VolumeManager`: thread-safe `RwLock<HashMap>` registry; supports a default
   volume. Also holds the process-wide instance and its `get_volume_manager()` accessor. `roots.rs` holds the mount-root
   set each entry owns and the promotion rules over it
-- **`backends/`**: the app-resident `Volume` impls (`LocalPosixVolume` only) and their tests, and nothing else. Every crate backend is imported by crate name at its call sites. See `backends/CLAUDE.md`.
+- **`backends/`**: what a caller reaching a backend crate from the app still has to know, and no backend: every one is a crate, imported by crate name at its call sites. See `backends/CLAUDE.md`.
 - **`friendly_error/`**: User-facing error messages + provider detection. See `friendly_error/CLAUDE.md`.
 
 ## Architecture
@@ -47,8 +47,8 @@ the crate boundary is what makes that a compile error rather than a habit.
      plus a `VolumeHost` handed in at construction; the app's adapters turn each answer into a frontend event or a
      cache write.
    - Crate backends (no `tauri`, verified alone by `cargo check -p <crate>`): `cmdr-archive`, `cmdr-smb`, `cmdr-sftp`,
-     `cmdr-webdav`, `cmdr-adb`, `cmdr-mtp`, `cmdr-git`. App-resident: `LocalPosixVolume` (`backends/local_posix.rs`,
-     permanently). `InMemoryVolume` (in `cmdr-fs`) is the test and stress fixture.
+     `cmdr-webdav`, `cmdr-adb`, `cmdr-mtp`, `cmdr-git`, and `cmdr-local` (`LocalPosixVolume`, the local disk).
+     `InMemoryVolume` (in `cmdr-fs`) is the test and stress fixture.
 3. **The app-side half of each backend.** What a backend can't answer from its protocol alone, and what must know the
    concrete type: discovery UI, the keychain, the OS mount, the ptpcamerad workaround, and REGISTRATION. A backend never
    registers itself; a wiring module (`network/smb_upgrade.rs`, `network/sftp_volume_wiring.rs`,
@@ -200,7 +200,7 @@ Optional methods default to `Err(VolumeError::NotSupported)` or `false`, so new 
   session (`crates/cmdr-smb/DETAILS.md` § "Re-rooting a share"). Declining is not a failure mode: a backend whose transport is
   anchored to the old root keeps its registration instead of being handed a root it can't serve.
 - `space_poll_interval()`: recommended interval for the live disk-space poller (`space_poller/`). Default 2 s (local volumes). `SmbVolume` and `MtpVolume` override to 5 s. `InMemoryVolume` returns `None` (no polling). The poller uses this to tick each volume at its own cadence.
-- `get_live_space_info()`: the figure the space poller reads each tick. Defaults to `get_space_info`. `LocalPosixVolume` overrides it on macOS with `live_space::live_volume_space`, Finder's important-usage figure at mostly `statfs` cost (`backends/DETAILS.md` § "Live volume space"). ❌ Don't call it from anything that acts on the figure once, like the transfer pre-flight: that keeps `get_space_info` / `get_space_info_at`, which always ask for the exact figure.
+- `get_live_space_info()`: the figure the space poller reads each tick. Defaults to `get_space_info`. `LocalPosixVolume` overrides it on macOS with `live_space::live_volume_space`, Finder's important-usage figure at mostly `statfs` cost (`crates/cmdr-local/DETAILS.md` § "Live volume space"). ❌ Don't call it from anything that acts on the figure once, like the transfer pre-flight: that keeps `get_space_info` / `get_space_info_at`, which always ask for the exact figure.
 - `write_access_at(path)`: whether a write into the folder at `path`, or the nearest existing one above it, would be taken, as a three-state `WriteAccess` (`Writable` / `Unwritable { reason }` / `Unknown`), asked WITHOUT writing. Default `Unknown`. `LocalPosixVolume` reads `statvfs` `ST_RDONLY` and `access(W_OK)`, so it tells `ReadOnlyFilesystem` from `NoPermission`; `MtpVolume` answers `ReadOnlyFilesystem` for a storage the device reports read-only and `Unknown` otherwise; `AdbVolume` runs `test -w`, whose exit 1 is `Unexplained` because the exit code can't say why. The transfer pre-flight asks it before the space check: `write_operations/transfer/volume/DETAILS.md` § "A destination folder that takes no writes".
 - `create_directory_errors_on_existing_dir()`: whether `create_directory` reliably returns `VolumeError::AlreadyExists` for an existing same-name dir. Default `true` (LocalPosix, SMB, InMemory all do). `MtpVolume` overrides to `false` — the MTP protocol allows same-name sibling objects and `create_folder` silently makes a duplicate, so the folder-merge walker (`write_operations/transfer/volume/strategy.rs`) pre-checks existence on MTP instead of trusting the create to error. A blindly-created duplicate would make a merge target the wrong directory.
 - `listing_watch_coverage(path)`: what a live watch on this volume's cached listing for `path` actually observes, as a three-state `WatchCoverage` (`None` / `ThisMachineOnly` / `EveryWriter`). Three consumers today:
@@ -269,7 +269,7 @@ Work through it top-to-bottom. Each tier depends on the previous being solid. Sh
 Without these, the volume can't even appear in the UI:
 
 - [ ] Implement `name()` and `root()` (return the display name and the path everything is relative to).
-- [ ] Implement `list_directory(path, on_progress)`: the core read. **Feed `on_progress` as you enumerate**, and don't rename the parameter to `_on_progress` to quiet the compiler. It drives the pane's "Loaded N files..." readout, which is all the user sees while a big folder reads; dropping it leaves them on "Opening folder..." for the whole wait, and nothing fails to say so. If your enumeration happens on a thread the callback can't reach (it's `Sync` but not `Send`, so `spawn_blocking` is out), publish counts into a shared tally and sample it from the async side: `LocalPosixVolume` is the worked example, described in `backends/DETAILS.md` § "The local reader".
+- [ ] Implement `list_directory(path, on_progress)`: the core read. **Feed `on_progress` as you enumerate**, and don't rename the parameter to `_on_progress` to quiet the compiler. It drives the pane's "Loaded N files..." readout, which is all the user sees while a big folder reads; dropping it leaves them on "Opening folder..." for the whole wait, and nothing fails to say so. If your enumeration happens on a thread the callback can't reach (it's `Sync` but not `Send`, so `spawn_blocking` is out), publish counts into a shared tally and sample it from the async side: `LocalPosixVolume` is the worked example, described in `crates/cmdr-local/DETAILS.md` § "The local reader".
 - [ ] Implement `get_metadata(path)`: per-entry stat.
 - [ ] Leave `exists(path)` and `is_directory(path)` on the trait default, which derives both from your `get_metadata`. Override one only for a cheaper protocol primitive, or for a truth `get_metadata` doesn't tell (a broken symlink, a probe that must not drive a reconnect).
 - [ ] Implement `get_space_info()`: for the volume usage bar and pre-copy space checks. Answer `SpaceInfo::Bounded` where the backend knows a capacity, `SpaceInfo::Unbounded { used_bytes }` where the storage has no ceiling but reports what it holds (a quota-less WebDAV account), and `VolumeError::NotSupported` where the protocol can't say at all. ❌ Never zeros: the pre-flight reads a zero `available` as "no room" and refuses every copy. A backend spanning several filesystems (ADB: a read-only system image at `/` beside the shared storage) also overrides `get_space_info_at(path)`, which the pre-flight asks about the destination folder. A volume over a parent (`ArchiveVolume`, `GitPortalVolume`) forwards `get_space_info_at` to the parent with its own path there. Answer `write_access_at(path)` too if your protocol can tell, without writing, that a folder takes no writes; otherwise leave the `Unknown` default, ❌ never a guess.
@@ -1106,7 +1106,7 @@ Pinned by `manager/root_move_tests.rs` and, on real APFS and HFS+ images,
 **Why**: A volume either has a total or it doesn't, and the two answers need different UI. Storage with no ceiling still knows what it holds, and a stock Nextcloud account is exactly that: RFC 4331 answers `quota-available-bytes: -3` (sabre/dav's unlimited sentinel) beside a real `quota-used-bytes`. Three `Option`s would let a caller build an `available` with no `total`, which is a percentage with no denominator, and every consumer would then owe a guard: the pane's bar would fill at an invented width, and the 80% / 95% severity bands would fire on a volume that can't run out. As an enum that value can't be constructed, so the guard is the type rather than a rule. `available_bytes()` returns `Option<u64>` and is the one accessor the free-space pre-flight reads (`write_operations/transfer/volume/DETAILS.md`); the frontend's `getUsageBar` is its twin, answering `null` where there's no bar to draw (`src/lib/file-explorer/DETAILS.md`). The whole enum crosses IPC, so an unbounded reading survives all the way to the indicator.
 
 **Gotcha**: On macOS, never use `statvfs` alone for disk space. Use `NSURLVolumeAvailableCapacityForImportantUsageKey`
-**Why**: `statvfs` reports only physically free blocks and ignores purgeable space (APFS snapshots, iCloud caches), which can be tens of GB. This causes inconsistent numbers between the status bar (NSURL API) and copy validation (`statvfs`), and prematurely blocks copies that would succeed. `get_space_info_for_path` (`backends/local_posix/space.rs`) calls `get_volume_space()` on macOS and falls back to `statvfs` on Linux.
+**Why**: `statvfs` reports only physically free blocks and ignores purgeable space (APFS snapshots, iCloud caches), which can be tens of GB. This causes inconsistent numbers between the status bar (NSURL API) and copy validation (`statvfs`), and prematurely blocks copies that would succeed. `get_space_info_for_path` (`crates/cmdr-local/src/space.rs`) calls `get_volume_space()` on macOS and falls back to `statvfs` on Linux.
 
 ## Testing
 
@@ -1118,7 +1118,7 @@ Pinned by `manager/root_move_tests.rs` and, on real APFS and HFS+ images,
   real `cmdr-smb` session (the BFS scanner, and media enrichment's byte fetcher). They live app-side because only this
   side can build both halves; the fixtures come from `write_operations::backend_suites::smb_test_support`
 
-`LocalPosixVolume`'s own tests are colocated in `backends/` (`backends/DETAILS.md` § "Testing"); `MtpVolume`'s live
+`LocalPosixVolume`'s own tests are in its crate (`crates/cmdr-local/DETAILS.md` § "Testing"); `MtpVolume`'s live
 with it in `crates/cmdr-mtp/src/volume/`. A crate backend's app-side cells sit beside the app code they assert on, not
 here or there: `crates/cmdr-smb/DETAILS.md` § "Which side a test lives on".
 
@@ -1147,7 +1147,7 @@ Same guard family as `cmdr_listing::testing::TestListingGuard` (over the listing
 `Volume::notify_mutation`'s trait default is a **no-op**, and that's deliberate: the trait lives in `cmdr-fs`, which
 knows nothing about the listing cache. Every backend that can be mutated overrides it.
 
-- `LocalPosixVolume` calls `local_posix/mutation.rs`'s `patch_listing_after_local_mutation`, which stats the affected
+- `LocalPosixVolume` calls `cmdr_local::mutation::patch_listing_after_local_mutation`, which stats the affected
   entry through `std::fs` and turns it into the right `DirectoryChange`. It needs no git exception: a path in a virtual
   `.git` tree never reaches this volume, because `resolve` routed it to the portal.
 - `SmbVolume` and `MtpVolume` build the entry from their own protocol's `get_metadata` (faster than `std::fs` would be,

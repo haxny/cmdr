@@ -1975,9 +1975,9 @@ fn test_set_encoding_ascii_compatible_is_instant() {
 #[test]
 fn opens_a_file_out_of_a_git_snapshot_and_reads_its_lines() {
     use crate::file_system::git;
-    use crate::file_system::volume::LocalPosixVolume;
     use crate::file_system::volume::manager::get_volume_manager;
     use cmdr_git::test_fixtures::{Fixture, cleanup, temp_dir};
+    use cmdr_local::LocalPosixVolume;
     use std::sync::Arc;
 
     let dir = temp_dir("viewer_session", "git_snapshot");

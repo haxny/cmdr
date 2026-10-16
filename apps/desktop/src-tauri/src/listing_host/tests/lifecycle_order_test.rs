@@ -6,7 +6,7 @@
 //! - A listing on a watchable volume arms its FSEvents watch in the TEST binary
 //!   too, since the test binary's engine (`listing_host::test_listings`) carries
 //!   the watch observer. Tests lean on that
-//!   (`local_posix_test::test_listing_watch_coverage_flips_with_watcher_lifecycle`,
+//!   (`local_posix_host_test::test_listing_watch_coverage_flips_with_watcher_lifecycle`,
 //!   `archive_watch_integration_test`), so an engine that armed only in the app
 //!   would leave them passing for the wrong reason.
 //!
@@ -43,8 +43,8 @@ fn is_watching(listing_id: &str) -> bool {
 
 /// A real folder on a `LocalPosixVolume`, registered under a fresh id.
 fn local_volume(tag: &str) -> (crate::test_support::TestDir, String) {
-    use crate::file_system::volume::LocalPosixVolume;
     use cmdr_fs::volume::Volume;
+    use cmdr_local::LocalPosixVolume;
 
     let scratch = crate::test_support::TestDir::new(tag);
     std::fs::write(scratch.join("a.txt"), b"a").expect("scratch dir is writable");

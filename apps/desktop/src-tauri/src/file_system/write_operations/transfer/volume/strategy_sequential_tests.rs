@@ -162,7 +162,7 @@ async fn a_sequential_extract_carries_the_executable_bit() {
     ]);
     let source = fixture.volume();
     let dest_dir = TestDir::new("seq-extract-dest");
-    let dest: Arc<dyn Volume> = Arc::new(crate::file_system::volume::LocalPosixVolume::local_folder(
+    let dest: Arc<dyn Volume> = Arc::new(cmdr_local::LocalPosixVolume::local_folder(
         "Dest",
         dest_dir.to_str().expect("dest path"),
         crate::volume_host::host(),
@@ -562,9 +562,9 @@ async fn sequential_extract_pauses_between_members_and_resumes() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_failed_sequential_extract_takes_back_every_unfilled_reservation() {
     use super::super::faulty_volume::{FaultyOp, FaultyVolume};
-    use crate::file_system::volume::LocalPosixVolume;
     use crate::file_system::write_operations::event_sinks::CollectorEventSink;
     use crate::file_system::write_operations::types::{ConflictResolution, VolumeCopyConfig};
+    use cmdr_local::LocalPosixVolume;
 
     let fixture = TarGzFixture::new(&[("album/a.txt", b"incoming a"), ("album/b.txt", b"incoming b")]);
     let source = fixture.volume();

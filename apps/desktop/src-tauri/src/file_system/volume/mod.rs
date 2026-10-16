@@ -6,16 +6,14 @@
 //! are re-exported here, so callers keep importing `volume::Volume`,
 //! `volume::VolumeError`, `volume::smb_volume_id`, and so on unchanged.
 //!
-//! What can't move sits below: the real-storage backends (`backends`, with their
-//! `smb2` / `mtp-rs` / git / mount-detection dependencies), the process-wide
-//! `manager` registry, and macOS/Linux `eject`.
+//! What stays app-side sits below: `backends` (what a caller reaching a backend
+//! crate still has to know), the process-wide `manager` registry, and
+//! macOS/Linux `eject`.
 
 pub use cmdr_fs::volume::*;
 
-// Per-backend `Volume` implementations live in `backends/`. The trait surface
-// stays here; submodule names are re-exported below so external callers keep
-// importing `volume::LocalPosixVolume`, `volume::MtpVolume`, etc. without
-// caring about the `backends/` split.
+// The backends are crates, imported by crate name; `backends/` keeps what a
+// caller reaching one from the app still has to know.
 pub mod backends;
 // The per-volume gate every app-side index stop of a removable drive and every
 // non-root index start goes through.
@@ -33,10 +31,8 @@ pub(crate) mod manager;
 pub(crate) mod mount_registration;
 pub mod reconnect_error;
 
-pub use backends::LocalPosixVolume;
 #[cfg(any(target_os = "macos", target_os = "linux"))]
 pub use backends::MtpVolume;
-pub(crate) use backends::rename_local_exclusive;
 
 /// Observe a failed volume operation and, when its errno PROVES the active mount
 /// root is gone, hand the volume's ID to a live sibling mount.

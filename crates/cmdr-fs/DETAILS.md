@@ -298,8 +298,8 @@ and ~7,600 lines here, and each is worth defending against a tidy-up pass.
 
 A default that patched the local listing cache would need the listing engine (`cmdr-listing`, which depends on this
 crate, so a cycle) and the app's local reader (`file_system::volume::backends::…`), and those two edges alone drag the
-listing cache and local I/O into the graph. So the default is a documented no-op, and the local-FS behavior lives
-app-side in `file_system::volume::backends::local_posix::mutation::patch_listing_after_local_mutation`.
+listing cache and local I/O into the graph. So the default is a documented no-op, and the local-FS behavior lives in
+`cmdr_local::mutation::patch_listing_after_local_mutation`.
 
 Why this over the alternatives:
 
@@ -426,7 +426,7 @@ they leave by"), and the three stores' schema-mismatch wipes call it too.
   `mtp-rs` / `gix` / mount-detection dependencies. Only their shared trait moved.
 - **`VolumeManager`** — the process-wide registry. The index reaches it through an injected provider, not by importing
   it.
-- **`file_system::volume::backends::local_posix::mutation::patch_listing_after_local_mutation`** — see cut 1.
+- **`cmdr_local::mutation::patch_listing_after_local_mutation`** — see cut 1.
 - **`detect_filesystem_for_path`** — see cut 3. The kind → network mapping over it stayed app-side too
   (`file_system::index_provider::path_is_on_network_mount`), which is why `WatchCoverage::ThisMachineOnly` is a variant
   this crate can NAME but never decide: the vocabulary is portable, the mount probe isn't. A backend here answers

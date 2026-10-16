@@ -4,7 +4,7 @@
 //! its way rides across on one rename). This suite pins the half that loses
 //! data: a link whose TARGET is a directory, meeting a same-named directory at
 //! the destination. The listing reports such a link as `is_directory: true`
-//! (`local_posix/reading.rs`: `metadata.is_dir() || target_is_dir`), so a merge that
+//! (`cmdr-local`'s `reading.rs`: `metadata.is_dir() || target_is_dir`), so a merge that
 //! believes it descends into the link, lists the target, and renames the
 //! target's real children out of a folder the user never selected.
 //!

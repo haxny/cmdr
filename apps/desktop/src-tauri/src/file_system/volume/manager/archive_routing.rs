@@ -40,7 +40,7 @@ const ARCHIVE_LRU_CAP: usize = 16;
 fn watch_coverage_for_backing_file(backing_path: &Path) -> WatchCoverage {
     let on_network = backing_path
         .parent()
-        .is_some_and(crate::file_system::index_provider::path_is_on_network_mount);
+        .is_some_and(cmdr_local::filesystem_kind::path_is_on_network_mount);
     if on_network {
         WatchCoverage::ThisMachineOnly
     } else {

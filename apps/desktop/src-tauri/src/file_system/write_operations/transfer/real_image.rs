@@ -21,7 +21,6 @@ use super::chunked_copy::chunk_park;
 use super::copy::copy_files_with_progress_inner;
 use super::move_op::move_files_with_progress_inner;
 use crate::file_system::volume::Volume;
-use crate::file_system::volume::backends::LocalPosixVolume;
 use crate::file_system::volume::manager::test_support::TestVolumeRegistration;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::in_flight_temps::Ledger;
@@ -35,6 +34,7 @@ use crate::file_system::write_operations::types::{
 };
 use crate::ignore_poison::IgnorePoison;
 use crate::test_support::TestDir;
+use cmdr_local::LocalPosixVolume;
 
 /// The bytes of the file already on the drive, which an overwrite displaces.
 /// Deliberately unlike the source's, so "the original survived" can't pass on

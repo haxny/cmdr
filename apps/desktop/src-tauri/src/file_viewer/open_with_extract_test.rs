@@ -13,8 +13,8 @@ use super::{ArchiveFailureKind, ViewerError};
 
 /// Registers a real local-FS "root" volume so the archive route finds a parent.
 fn ensure_root_volume() {
-    use crate::file_system::volume::LocalPosixVolume;
     use crate::file_system::volume::manager::get_volume_manager;
+    use cmdr_local::LocalPosixVolume;
     get_volume_manager().register_if_absent(
         "root",
         Arc::new(LocalPosixVolume::local_folder(
