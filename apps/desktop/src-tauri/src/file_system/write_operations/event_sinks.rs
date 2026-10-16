@@ -1,16 +1,18 @@
-//! Event sinks: the `OperationEventSink` trait and its production (`TauriEventSink`)
-//! and test (`CollectorEventSink`) implementations, plus the event-builder `impl`
-//! blocks for `WriteProgressEvent` and `WriteErrorEvent`.
+//! Event sinks: the production (`TauriEventSink`) and test (`CollectorEventSink`)
+//! implementations of `OperationEventSink`, plus the event-builder `impl` blocks
+//! for `WriteProgressEvent` and `WriteErrorEvent`.
 //!
 //! Decouples the copy/move/delete pipeline from `tauri::AppHandle`: the Tauri layer
 //! provides `TauriEventSink` (calls `app.emit`), tests use `CollectorEventSink`
-//! (stores events in a `Vec` for assertions).
+//! (stores events in a `Vec` for assertions). The trait itself is a seam and
+//! lives in `host/`; it's re-exported here so its many callers keep their path.
 
 use tauri_specta::Event;
 
 #[cfg(test)]
 use cmdr_fs::ignore_poison::IgnorePoison;
 
+pub use super::host::OperationEventSink;
 use super::manager::manager;
 use super::terminal_effects::{self, AppTerminalEffects};
 use super::types::{
@@ -113,48 +115,6 @@ impl WriteErrorEvent {
         self.progress_at_stop = progress;
         self
     }
-}
-
-/// Abstraction for emitting write operation events.
-///
-/// Decouples the copy/move/delete pipeline from `tauri::AppHandle`. The Tauri
-/// layer provides `TauriEventSink` (calls `app.emit`). Tests use
-/// `CollectorEventSink` (stores events in a `Vec` for assertions).
-pub trait OperationEventSink: Send + Sync {
-    fn emit_progress(&self, event: WriteProgressEvent);
-    fn emit_complete(&self, event: WriteCompleteEvent);
-    fn emit_cancelled(&self, event: WriteCancelledEvent);
-    fn emit_error(&self, event: WriteErrorEvent);
-    fn emit_conflict(&self, event: WriteConflictEvent);
-    /// The clash named by this event is over and the operation has carried on.
-    /// Every surface showing it takes it down, including the ones that answered
-    /// nothing (an agent over MCP answered, or another window won the race).
-    /// Emit it from wherever an answer lands, ❌ never from the answering call:
-    /// only the operation knows an answer actually reached it.
-    fn emit_conflict_resolved(&self, event: WriteConflictResolvedEvent);
-    fn emit_source_item_done(&self, event: WriteSourceItemDoneEvent);
-    /// A queued operation found some of its sources gone when its turn came
-    /// (`queued_sources.rs`). Default no-op so the many single-purpose test
-    /// sinks needn't spell it out; ❗ a sink that WRAPS another must forward it,
-    /// or the person is never asked and the operation waits forever.
-    fn emit_sources_gone(&self, _event: WriteSourcesGoneEvent) {}
-    /// Per-iteration progress during dry-run scanning (separate from `write-progress`).
-    fn emit_scan_progress(&self, event: ScanProgressEvent);
-    /// One `ConflictInfo` per conflicting file during dry-run scanning.
-    fn emit_scan_conflict(&self, conflict: ConflictInfo);
-    /// Final dry-run result with conflict sample.
-    fn emit_dry_run_complete(&self, result: DryRunResult);
-    /// Emitted exactly once per op, after the spawned task fully returns
-    /// (success, error, cancel, or panic). `WriteSettledGuard` calls this from
-    /// its `Drop`, so every op settles through the injected sink. See
-    /// `WriteSettledEvent` for the ordering contract.
-    fn emit_settled(&self, event: WriteSettledEvent);
-
-    /// Notes that a top-level source extracted in FULL (every file durably
-    /// written, zero deep skips). Only the out-of-zip move op cares: it collects
-    /// these to delete exactly the fully-extracted sources from the archive, so a
-    /// partial move converges on retry. Default no-op for every other sink.
-    fn note_source_landed_clean(&self, _source: &std::path::Path) {}
 }
 
 /// Tauri-backed event sink: calls `app.emit()` for each event.

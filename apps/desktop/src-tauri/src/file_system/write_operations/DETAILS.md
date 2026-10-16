@@ -737,8 +737,11 @@ runtime. The app's answer is `apps/desktop/src-tauri/src/operations_host/`, whic
   answers minus the frontend channel (`operations_host::without_frontend`): the real indexing gauge and analytics
   client, which `status_cache_tests`' gauge pins read, and `cmdr-fs`'s shared fallback runtime. No app handle, so
   `global_tauri_sink()` stays `None` and an archive-target instant op refuses, as before.
-- **A seam's value types live in `host/` or `types/`**, never in a module that calls the seam, or the two weld into a
-  cycle. That's why `OperationsChanged` and `OperationSnapshot` are `types` vocabulary.
+- **A seam trait and its value types live in `host/` or `types/`**, never in a module that calls the seam, or the two
+  weld into a cycle. That's why `OperationsChanged` and `OperationSnapshot` are `types` vocabulary, and why
+  `OperationEventSink` is defined in `host/operation_sink.rs` (`event_sinks` re-exports it): with the trait in
+  `event_sinks`, `state` (which takes a sink) → `event_sinks` → `manager` (the Tauri sink retains failures) → `state`
+  was a cycle `module-cycles` reports.
 
 ## Events emitted
 

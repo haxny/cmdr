@@ -11,7 +11,7 @@ use std::time::{Duration, Instant};
 use tokio_util::sync::CancellationToken;
 
 use super::eta::{EtaEstimator, EtaSample, ReversalBar};
-use super::event_sinks::OperationEventSink;
+use super::host::OperationEventSink;
 use super::human_wait::HumanWaitClock;
 use super::outage_slot::{OutagePolicy, OutageSlot};
 use super::sources_gone_slot::SourcesGoneSlot;

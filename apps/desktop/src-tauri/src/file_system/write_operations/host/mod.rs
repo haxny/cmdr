@@ -5,12 +5,15 @@
 //!   and the backends it drives share one thread pool, and the two can't
 //!   disagree.
 //! - **Engine-wide facts** go through [`EngineEvents`] (`events.rs`).
+//! - **One operation's events** go through [`OperationEventSink`]
+//!   (`operation_sink.rs`), which each operation is handed at start.
 //!
 //! The app builds an [`EngineHost`] once (`operations_host::install`) and parks
 //! it in a slot this module owns until the engine becomes a handle that carries
 //! its seams itself.
 
 mod events;
+mod operation_sink;
 
 use std::sync::{Arc, LazyLock, OnceLock};
 
@@ -19,6 +22,7 @@ use tokio::runtime::Handle;
 
 use events::NoEngineEvents;
 pub(crate) use events::{EngineEvents, InstantMutationFact, InstantOp, InstantOutcome, InstantTarget};
+pub use operation_sink::OperationEventSink;
 
 /// Everything the engine reaches the app through.
 pub(crate) struct EngineHost {
