@@ -252,9 +252,9 @@ check.
      `gh issue list -R vdavid/cmdr-reports --label security-gap --state open`. For each, read it and say whether this
      release's code is exploitable through it. David confirms. An exploitable one stops the release until it's fixed,
      unless David writes a risk decision on its issue. Then add one line to the vault's release log,
-     `projects/Cmdr/business/CRA technical file/Release log.md` (create it on first use): the date, the version (filled
-     in at step 6), the issue numbers reviewed, and "none exploitable" or links to the risk decisions. ❌ No exploit
-     detail in this repo; the line stays in the vault.
+     `projects/Cmdr/business/CRA technical file/Release log.md`: the date, the version (filled in at step 6), the issue
+     numbers reviewed, and "none exploitable" or links to the risk decisions. Step 13 adds the evidence under it. ❌ No
+     exploit detail in this repo; the line stays in the vault.
 2. **Push `main` and start the CI gate now**: `git pull --rebase origin main && git push origin main`, then run
    `./scripts/release-ci-gate.sh` in the background. It starts a full (`run_all`) CI run on the pushed commit and waits
    for it (~25 min), overlapping it with the drafting below; `release.sh` re-runs it before tagging and aborts unless
@@ -336,7 +336,36 @@ check.
       attest or sbom job failed".
     - **Stop the website dev server** started in step 5, once these checks pass: the deployed site has replaced it.
       `lsof -ti tcp:4829 -sTCP:LISTEN | xargs kill` (its `--ignore-lock` hides it from `astro dev stop`).
-13. **Minor or major release: offer to refresh the app-directory listings** (skip for patches), per § Refreshing the
+13. **Record the release evidence** (EU Cyber Resilience Act, Annex VII 6 and 8). The technical file keeps each
+    release's evidence for 10 years, and GitHub drops run logs and artifacts after 90 days, so every release saves its
+    own. Add the evidence sub-bullets under the release log line from step 1 (the note's header defines each one), then
+    copy the files below to the company's archive. The release log note names the archive folder and how agents reach
+    it. ❌ No archive host, share, or path in this repo.
+    - **Find the runs.** `SHA=$(git rev-parse vX.Y.Z^)`: the commit the CI gate passed, the parent of the
+      `chore(release)` commit. Then the full CI run,
+      `gh run list -R vdavid/cmdr --workflow ci.yml --commit "$SHA" --event workflow_dispatch --status success --json databaseId,conclusion`,
+      the CodeQL run (`--workflow codeql.yml --commit "$SHA"`), and the release runs,
+      `gh run list -R vdavid/cmdr --workflow release.yml --branch vX.Y.Z --json databaseId,event,conclusion` (two in
+      `local` mode: the tag push and the dispatch).
+    - **Collect** into a fresh scratch folder named `vX.Y.Z`:
+      - The release assets that make up the evidence:
+        `gh release download vX.Y.Z -R vdavid/cmdr -D <dir> -p '*.cdx.json' -p '*.intoto.jsonl' -p checksums.txt -p latest.json`.
+      - For the CI run and each release run:
+        `gh run view <id> -R vdavid/cmdr --json jobs > <dir>/<workflow>-<id>-jobs.json` and
+        `gh run view <id> -R vdavid/cmdr --log | gzip > <dir>/<workflow>-<id>-log.txt.gz` (a full CI log is about 3 MB,
+        330 KB gzipped).
+      - The CodeQL results, one SARIF per language: list the analyses with
+        `gh api 'repos/vdavid/cmdr/code-scanning/analyses?tool_name=CodeQL&per_page=100' --jq ".[] | select(.commit_sha==\"$SHA\") | .id"`
+        (the API has no commit filter, hence the `select`), then
+        `gh api -H 'Accept: application/sarif+json' repos/vdavid/cmdr/code-scanning/analyses/<id> > <dir>/codeql-<id>.sarif`
+        for each.
+      - Step 12's `gh attestation verify` output, saved as `attestation-verify.txt`.
+    - **Test counts** for the sub-bullet: each check-runner lane prints `N tests passed`, so
+      `gunzip -c <dir>/ci-<id>-log.txt.gz | grep 'tests passed' | perl -pe 's/\e\[[0-9;]*m//g'` lists them. Say whether
+      the old-macOS smoke test (§ Pre-release smoke test on old macOS) ran for this release.
+    - **Upload** the folder with the `smb2` CLI (`mkdir -p`, then one `put` per file), list it back to confirm every
+      file landed, and write its path in the archive sub-bullet.
+14. **Minor or major release: offer to refresh the app-directory listings** (skip for patches), per § Refreshing the
     app-directory listings.
 
 ## Emergency release during an incident
@@ -374,7 +403,7 @@ agent work on the fix and changelog, with the ~25-minute CI gate overlapping it,
 to `latest.json` (the build is about an hour of it). A running copy checks every three hours by default, so it picks the
 fix up within hours.
 
-**After it ships:** run step 12 of § The release procedure, then:
+**After it ships:** run steps 12 and 13 of § The release procedure, then:
 
 - Update an installed copy (**Cmdr > Check for updates**) and confirm it reaches the new version. For a key rotation,
   confirm the new build's `tauri.conf.json` pubkey is the new one.
@@ -432,7 +461,8 @@ Steps:
    server-side `ci-gate` looks for a full CI run on the release commit itself and fails.
 6. **Push the tag only** (`git push origin vX.Y.Z+1`), then follow § The release procedure from step 8 on: in `local`
    mode `release-finish.sh`, run from this worktree so it reads the tag's own `tauri.conf.json` pubkey, then the build
-   monitoring and step 12's checks. Step 11's standalone `CI` run doesn't apply, since nothing went to `main`.
+   monitoring, step 12's checks, and step 13's evidence. Step 11's standalone `CI` run doesn't apply, since nothing went
+   to `main`.
 7. **Merge the patch back into `main`** once it's published. Free `main` first (no other worktree may have it checked
    out), then in the main clone: `git pull --rebase origin main` (it brings in `publish`'s `latest.json` commit),
    `git merge --no-ff vX.Y.Z+1`, and `git push origin main`. The merge is what puts the patch's `CHANGELOG.md` section

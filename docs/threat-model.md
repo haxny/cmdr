@@ -171,7 +171,9 @@ risk.
 - **Residual risk**:
   - **Parsers run in Cmdr's process, unsandboxed, with Full Disk Access.** A memory-safety bug in a native dependency or
     Apple framework (ImageIO is a classic target) reached through a downloaded file would run with the user's full file
-    access. Low likelihood, high impact; the main mitigation is staying current on macOS and dependencies.
+    access. Low likelihood, high impact; the main mitigation is staying current on macOS and dependencies. Accepted for
+    the CRA (2026-10-16): only ImageIO (in the image index, off by default) and the zstd decoder for zip entries parse
+    untrusted bytes natively, the rest is Rust, and the viewer renders images and PDFs in WebKit's sandboxed process.
   - **Decompression bombs** are bounded by disk space and cancelation, not by a ratio cap. Low impact.
   - **File names aren't stripped of control and bidi characters**, so a name can look like something else in a log line
     or a confirmation. Low.
