@@ -1547,8 +1547,237 @@ Added by this refactor:
 
 ## Frozen must-knows
 
-(Appended by M0a: every bold-lead or `❌` must-know line from the eleven `CLAUDE.md`s named in § "Loud rules", quoted
-verbatim with its source path, at the M0a commit.)
+Extracted mechanically at `edad936ab` from the eleven `CLAUDE.md`s named in § "Loud rules": every bullet or paragraph
+that leads with bold or carries a `❌`, plus every bullet nested under one, verbatim, with its wrapped lines joined by
+one space (144 entries). The M9 conformance reviewer checks each quote against where it lives after the move: still
+there word for word, moved to a named new home, or shrunk to a pointer at the type that now holds it. A quote that is in
+none of those places is a lost rule. To re-run the extraction on a later tree, feed each file to this `gawk` script:
+
+```awk
+function flush(   keep) {
+    if (block != "") {
+        keep = (block_text ~ /^\*\*/ || block ~ /❌/)
+        if (nested) keep = keep || parent_kept
+        else parent_kept = keep
+        if (keep) print block
+    }
+    block = ""; block_text = ""
+}
+/^[[:space:]]*$/ { flush(); next }
+/^#/ { flush(); parent_kept = 0; next }
+/^[[:space:]]*- / {
+    flush()
+    block = $0
+    nested = ($0 ~ /^[[:space:]]+- /)
+    t = $0; sub(/^[[:space:]]*- /, "", t); block_text = t
+    next
+}
+{
+    if (block == "") { block = $0; block_text = $0; nested = 0; next }
+    line = $0; sub(/^[[:space:]]+/, "", line)
+    block = block " " line
+}
+END { flush() }
+```
+
+### `apps/desktop/src-tauri/src/file_system/write_operations/CLAUDE.md`
+
+```text
+- **`spawn_managed` for copy/move/delete/trash, `run_instant` for rename/mkdir/mkfile**; blocking work goes inside `spawn_blocking`, so a starter returns an id before I/O.
+- **An instant op emits no `WriteCompleteEvent`** (analytics WRAPS its driver): ❌ never emit inside one, or the in-archive early return drops in-zip ops. It refuses with a typed `MutationError`, ❌ never a sentence.
+- **A spawned op reserves every lane it touches or waits Queued**; the next admits on `on_settled`, ❌ never `Drop`.
+- **`OperationIntent` is one `AtomicU8`**, written ONLY via `transition_intent` (atomic, table-checked); ❌ never `store(...)` it. Cancel keeps copied files; Rollback removes what it still recognizes, VERIFYING before each destructive act (❌ never a batch or a fork; only the `Drop` net is unconditional). Pause is orthogonal, cancel wins. ❌ A reversal never asks `is_cancelled`; it reads `StopMeans`.
+- **A loop parks where it checks cancel**, via `state.stop_or_park_sync()` / `_async()`, ❌ never hand-rolled; a SCAN's own is `ScanPause`, owing `note_parked`. **Parking on a PERSON owes both edges**, the `human_wait.rs` clock AND `announce_human_wait(sink)`, or the ETA lies. Clicks stop via `backend_cancel`; `backend_abort` / `cancel_all_write_operations` are the quit deadline's.
+- **Arm `state.conflict_slot` with the QUESTION before emitting `write-conflict`** (emit-first hangs the recv); ❌ the dispatch mutex never spans a write. An answer NAMES its clash (`ConflictId`): ❌ never fuse `AlreadyResolved`, `StaleAnswer`, or `NoPendingConflict`, nor leave a settled prompt up.
+- **Crossing types takes a person's consent, per SHAPE** (`conflict::resolution_for_clash`, ALL THREE engines): only a plain Overwrite answered for that `ClashKind` replaces, ITS "* all" carry included; the config policy, same-kind carries, and `OverwriteSmaller`/`Older` `Skip`. ❌ Never reduce a conditional before it. What ARRIVES is the caller's word (`IncomingItem`).
+- **Emit through `OperationEventSink`, ❌ never `AppHandle`**; `write-settled` fires once, AFTER the terminal event. A cross-FS move speaks TWICE per source on `write-source-item-done`, so the LAST wins.
+- **EVERY local write lands via `overwrite::stage_and_land_file`** (temp+rename, rename-aside when replacing); register a destination via `downloads::note_pending_write_for_cmdr` BEFORE the syscall (renames: both ends). What it leaves carries a KIND: ❌ only a `temp` is removable on sight. DETAILS § "What the sweep does with each kind".
+- **Every managed mutation journals by `op_id`**; a VOLUME op passes its REAL volume id. Bulk rename journals each hop as it lands: ❌ never batch to the end, nor put a rotation temp in `in_flight_temps` (its sweep DELETES it).
+- **A transfer carries both volumes as typed sides** (`transfer_sides.rs`), captured at start: a vanished drive can't be named later. A drive that LEFT is the mount table's answer, ❌ never an errno.
+- **Free space: `free_space.rs`**, `statvfs` first, slow NSURL only on a shortfall; a shortfall is the person's call (`SpaceShortfall`). Copy reserves `total_bytes`, ❌ never the dedup'd `dedup_bytes` (delete's).
+- **❌ The `types` vocabulary floor `use`s no sibling**, `types/events.rs` included. It holds `LifecycleStatus`, the ONE lifecycle answer: ❌ never re-derive it from a presence test, no new variant.
+- **Every preview runs under a `ScanWatchdog`**, bounded by INACTIVITY: feed the progress callback, and whoever settles it CLAIMS the outcome.
+- **A FAILED op is retained out-of-band**, the one exception to removal-on-terminal; `record_failure` emits only after the record is GONE. **Test op state hangs off a guard**, ❌ never a `static`, ❌ never `cancel_all_write_operations()`.
+```
+
+### `apps/desktop/src-tauri/src/file_system/write_operations/transfer/CLAUDE.md`
+
+```text
+- **EVERY write stages, local included**: bytes land on a `.cmdr-tmp-<uuid>` SIBLING, then one same-directory rename. Local-FS uses `overwrite::stage_and_land_file` (❌ never straight to the destination); cross-volume asks `resolve_staging`. A non-overwrite landing REFUSES an occupied destination, a move's renames included (`move_op::rename_onto_free_name`); ❌ only a name the CALLER claimed earns `land`'s clear-and-rename (`staged_write::LandingName`).
+- **An explicit transfer leaf applies before conflict/identity checks**, on every engine; never copy then rename. DETAILS § "Named destinations".
+- **A source that would land on ITSELF is a duplicate, ❌ never a conflict**: settled by `dev+ino` per TOP-LEVEL source, before the loop. DETAILS § "Self-collision".
+- **A symlink is a LEAF to every move, and a DESTINATION one to every copy**: ask `validation::is_real_directory` / `Volume::entry_kind`, ❌ never `Path::is_dir` / `Volume::is_directory` (both walk into the TARGET). DETAILS § "Symlinks are opaque to a move".
+- **A ledger entry carries the identity it landed with, ❌ never an mtime** (`../ledger.rs`): local = size + `(dev,ino)`, volume = size, a partial marked as ITS OWN. Ledgers POP as they reverse. DETAILS § "What the in-flight ledgers record".
+- **A reversal RECHECKS each entry right before acting, ❌ never a batch** (`../reversal.rs`): changed or unprovable ⇒ leave it, report it on `write-cancelled`; an own-partial goes on sight; a move-back never overwrites an occupied source. Only the `Drop` net is unconditional, sweeping from `../ledger.rs`; ❌ don't route it through `reversal.rs` (module cycle). § "What a reversal does with that identity".
+- **A move's source delete removes the LEDGER of what it copied, ❌ never the tree** (`move_op/`, `volume/` `source_sweep.rs`; locally after the flush, DETAILS § Durability): what arrived mid-move keeps its original (`AppearedDuringMove`), as does one saved over after copying (`SourceStamp`).
+- **A MERGED move is NOT rollbackable, and a cross-FS move journals FINAL paths, never staging ones** (`note_not_rollbackable`; `JournalDestUnder` rebases, created-dir rows included). `operation_log/DETAILS.md` § "Why a directory merge isn't reversible".
+- **Created-dir rows journal on EVERY terminal path**: a canceled transfer keeps the dirs it made. ❌ A new `copy/` arm commits through `commit_journaling_created_dirs`, never bare; `move_with_staging` is the ONE exception. DETAILS § "Who may commit a `CopyTransaction` bare".
+- **Cross-volume copy parks and yields between chunks** (`CheckpointStream`), ❌ no release/reopen. TWO opt-ins, ❌ don't merge: SOURCE read-yield (MTP + SMB) is unbounded, DESTINATION write-yield (SMB) is capped, and a single-shot write is exempt from its floor.
+- **Every phase announces itself to `transfer_probe.rs`, on ALL THREE streaming paths**: ❌ no `.await` without a phase, ❌ never derive a stall from FE timing. A new streaming path owes BOTH `register_operation` and a `CURRENT_TASK_PROBE` scope, plus a `MergeCtx.probe` if it opens a `FileWindow`. The watchdog judges movement by the counters the UI shows; ❌ the probe gets none of its own. DETAILS § "The stall signal".
+- **Cancel has TWO tiers, and ❌ nothing a user clicks reaches tier 2.** Tier 1 (`state.backend_cancel`) travels via `on_progress` so the BACKEND deletes its own partial; ❌ never race a write against it. Tier 2 (`state.backend_abort`, the quit deadline's) skips cleanup. DETAILS § "Two tiers of cancel".
+- **Retry is per-FILE, ONLY inside `stream_pipe_file`** (`retry.rs`): ❌ never higher, ❌ never on a `Cancelled`. A `Disconnected` volume is WAITED for (`volume_outage.rs`); ❌ only re-runnable calls use `through_outages`. **The stall watchdog is GATED** (`connection_liveness() == Dead` AND `STALL_ABORT_AFTER`; only SMB answers `Dead`), so ❌ never collapse the AND.
+```
+
+### `apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/CLAUDE.md`
+
+```text
+- **A facade: outside code reaches it only as `transfer::volume::<item>`**; a new caller re-exports from `mod.rs`, ❌ never widens a submodule.
+- **The merge invariant**: a merge never deletes or overwrites a dest file the source doesn't shadow, under every policy, backend, and mid-merge cancel/rollback/retry. Assert it through `safety_oracle.rs`, ❌ never inline; new cells: `safety_grid_tests.rs`.
+- **Dir-vs-dir is NEVER a conflict**, and only for REAL dirs: ask `rename_merge::merges_as_a_directory` (an entry) or `Volume::entry_kind` (a path), ❌ never `is_directory` (it follows links). `transfer/DETAILS.md` § "Symlinks are opaque to a move".
+- **Overwrite merges dirs and replaces files**, enforced at `apply_volume_conflict_resolution`, ❌ not `Volume::delete`; NOT reversible. A BLANKET one ❌ never crosses types (`../../CLAUDE.md`); an answered one sets the dest ASIDE.
+- **A MOVE's source sweep deletes the walk's LEDGER, ❌ never the tree** (`source_sweep.rs`): Skips, newcomers, and changed files stay.
+- **❌ Never fabricate a destination size for the conflict dialog**: `None` (a fake `0` makes "Overwrite all smaller" unconditional).
+- **Skip the dest pre-check ONLY for a dir THIS op created** (`DirectoryCreation::Created`), ❌ never one that looks empty. Every name asks `landing.rs`, and an unanswerable probe fails the item. § "Look-alike names and new-name spelling".
+- **A listed name joins a destination ONLY as a `ChildName`**, ❌ never a raw `join` (`../x` escapes). § "Listed names are untrusted".
+- **A cross-volume file write stages on `.cmdr-tmp-<uuid>`**, renamed in after its last byte. Ask `../staged_write.rs::resolve_staging`; ❌ only single-shot or whole-publish earns an exemption, NEVER smallness.
+- **What a file carries rides its stream** (`VolumeReadStream::metadata`); the DESTINATION puts it on the temp. ❌ No engine-side `chmod` or xattr write; wrappers forward `metadata`. Extract quarantine: a stream decorator, and folders at creation, ❌ never in `folder_metadata.rs`. § "Copies keep the source's metadata".
+- **Every file copy asks `may_copy_on_server_from`, then `copy_on_server`**: the BACKEND picks, ❌ never by path, ❌ nothing stages before a yes. All but a cancel or a taken name falls back to streaming.
+- **A same-volume move whose `rename_work` says copy takes the copy-then-delete engine**, ❌ never `rename`.
+- **A staged temp the destination won't release is REPORTED** (`CancelRollback::staged_leftovers`), ❌ not just logged.
+- **Only `cleanup.rs::remove_tree` recurses** (its `TreeRemoval` names who authorized it); cleanup and rollback list before deleting.
+- **An unknown "is this a directory?" is ❌ never guessed**: a missing `source_hints` entry is UNKNOWN; `strategy.rs::resolve_source_is_directory` answers. ❌ No `.unwrap_or(false)`, no probing where a hint EXISTS.
+- **A same-volume move that renames is a rename-merge with top-level hints only**, ❌ never a subtree walk.
+- **A LOCAL `max_concurrent_ops` must ❌ NOT bound a REMOTE peer** (`copy.rs::transfer_concurrency`, ❌ never a `min()`). The concurrent driver watches cancel/rollback ON ITS AWAIT; EVERY driver sets its `DriverPhase`.
+- **ONE `FileWindow` per operation** (`merge_ctx.rs`, on `MergeCtx`), taken by every merge leaf and top-level FILE task (width 1 keeps MTP serial). ❌ Never per level or per source. A walker ❌ never holds a permit while it recurses (deadlock at width 1) and ❌ never returns before draining its leaves.
+- **A failure carries its path AND side** (`transfer_error.rs::PathedVolumeError`): `at_source` / `at_destination` by which volume's call failed, ❌ never above the frame that knows the item. § "Naming the item that failed".
+- **Two test traps**: a `*_tests.rs` here is a `#[path]` CHILD (`super::` one level shallower), and a `FaultyVolume` cell must **assert `fault_fired(op)`**.
+```
+
+### `apps/desktop/src-tauri/src/file_system/write_operations/delete/CLAUDE.md`
+
+```text
+- **`walker.rs`**: local and volume delete, both taking `&dyn OperationEventSink`; `delete_files_start` routes by `volume_id`. The volume walker asks `Listings::authoritative_listing` before every `list_directory`, so a subtree open in another pane is cache-fed; files batch per `Volume::delete_batch_size`. DETAILS § "Volume-delete internals".
+- **`trash.rs`**: `move_to_trash_sync()` (macOS `trashItemAtURL`; Linux `trash` crate; reused by `commands/rename.rs`), `trash_files_with_progress()` (batch, per-item progress, cancel), and `trash_dir_for_path()` (❌ keep its ancestor walk, DETAILS § Where a trash is). Refusals are a typed `MutationError`, ❌ never a sentence; every item it can't take emits its own `Failed` source-item event. Existence checks use `symlink_metadata()`.
+- **`cloud_trash.rs`**: `routing_for_selection()` behind the `trash_routing_for_paths` command, plus `is_online_only` (the one `SF_DATALESS` read). DETAILS § "A trash of online-only cloud content becomes a delete".
+- **`volume_start.rs`**: a volume delete's managed lifecycle (here, not `../mod.rs`, because its body is `async`). DETAILS § "The volume delete's own lifecycle".
+- **Delete order is files first, then directories deepest-first**: the walker collects in DFS order and deletes in reverse, so `remove_dir` always finds an empty one.
+- **Delete is not rollbackable.** Cancel stops further deletes; it can't restore what's gone.
+- **MTP/non-local volumes can't use `walkdir` or `fs::remove_*`**, hence the parallel path. Both emit identical events.
+- **Both delete paths reuse the scan-preview cache via `config.preview_id`**: on a hit the `ScanResult` is consumed directly and an initial `phase: Deleting` event fires, so the FE keeps the right denominator.
+- **A `preview_id` alone doesn't authorize acting on a path set.** The LOCAL walker iterates `scan_result.files` and never re-reads its `sources`, so an unbound cache deletes the PREVIEWED tree, with no rollback. Bind with `take_cached_scan_result`; ❌ never skip it.
+- **❌ Never resolve a top-level source's type with `.unwrap_or(false)`.** Hand the `Option` to `scan_volume_recursive`, which propagates a failed probe: a guessed "file" books zero bytes for a whole tree.
+- **Trash has no scan phase**: `trashItemAtURL` is atomic per top-level item, so progress tracks items. A PARTLY refused batch still COMPLETES, and its event carries `refused` (count + `strongest_refusal`): ❌ never `None`, or the ending reads as a clean success.
+- **ONLINE-ONLY content (`SF_DATALESS`) in `~/Library/CloudStorage/<domain>/` trashes as a permanent delete**: trashing an evicted file DOWNLOADS it first. ❌ Never route on the folder alone (an ordinary Dropbox file trashes fine; routing it is data loss), ❌ never on the refusal (two `NSError` codes, non-deterministic), ❌ never on "no trash here", ❌ not a volume question; only a provider we know by name, all-or-nothing. A FOLDER is answered by the scan preview's walk (`OnlineOnlyWatch`): ❌ no second walk, none for a plain-file selection. `TrashRefused.online_only` keeps the Full Disk Access advice off an evicted file. DETAILS.
+- **A refusal carries a typed `TrashRefusalKind`, read from the `NSError` DOMAIN + CODE**, ❌ never its localized words (`error-string-match` forbids it). A failed batch is `WriteOperationError::TrashRefused`, ❌ not an `IoError` (one flattened sentence leaves the dialog only "try again"), reporting `strongest_refusal`, ❌ not the most common one.
+- **Delete and trash don't `fsync`, and ❌ never a global `sync(2)`**: a non-durable delete is annoyance-class, and that `sync` stalled every other app without making "complete" durable. Pinned by `tests.rs::no_global_sync_or_spawn_async_sync_in_write_operations`.
+- **A recursive scan that bails with `Err(Cancelled)` must NOT emit `write-cancelled`; its top-level caller does**, via `emit_cancelled_if_aborted`. `scan_volume_recursive` checks cancel per level, so emitting at the bail site fires the terminal event once per stacked frame. Pinned by `delete_cancel_during_scan_emits_write_cancelled`.
+```
+
+### `apps/desktop/src-tauri/src/file_system/write_operations/archive_edit/CLAUDE.md`
+
+```text
+- **An archive edit is MANAGED, never instant**: it goes through `spawn_managed`, takes the PARENT drive's lane, and marks that drive busy. A `create` / `rename` returns an operation id, ❌ not a path.
+- **Every existing-archive apply site runs through `engine::run_managed_edit`**, ❌ never a bare `spawn_blocking(mutator::apply(...))`. Fresh compression never enters the mutator.
+- **❌ No in-place remote edit.** A remote parent (direct SMB / MTP) goes pull → apply locally → upload to a temp name → swap, and the remote ORIGINAL keeps its bytes until that final swap. Keep the four steps in that order and keep the cleanup on every early exit; the swap's shape depends on whether the backend allows same-name siblings. DETAILS § "Remote edit: the data-safety contract".
+- **Routing detection must be PARENT-AWARE**: the seams call the async `VolumeManager::path_is_inside_archive` / `path_crosses_archive_boundary`, ❌ never the sync `std::fs`-only predicates, which answer FALSE for an `smb://` / `mtp://` path and drop the write onto the parent volume.
+- **Fresh compression is seedless and publish-last**: reserve source + destination lanes, stream into a tracked stage, reconcile writer/producer/stat counts, parse it through `ArchiveVolume`, then publish. Local, SMB, SFTP, and ADB generate direct; WebDAV and MTP spool locally. DETAILS § Compress.
+- **Fresh-source name collisions honor the requested policy inside the registered op**: Stop prompts through its conflict slot; Skip, Rename, Overwrite, and conditional variants retain their ordinary meanings.
+- **`fresh_zip`: EOF is never success** on either queue (`Complete` in, `End` out); join off the async runtime. ONE cancellation source (a child of `backend_cancel`) reaches producer, feed, stream, and write callback (`Break`). ❌ Never race a write against it.
+- **Compress progress has two different byte axes**: `Compressing` is uncompressed source bytes; remote `Transferring` is completed-ZIP bytes. Both finishing phases clear BOTH totals and ETA. Ordinary archive mutation stays `ArchiveEdit` + `Copying`.
+- **Move OUT deletes only what durably landed**: extract first, then ONE batch `{ delete }` rewrite over the sources that extracted with ZERO deep skips (a hard error deletes the durable prefix; cancel and rollback delete nothing). The copy engine's deep `skipped_file_count` fold is what makes that count honest.
+- **Unrepresentable entries (symlinks, fifos, devices, broken links) are SKIPPED, never lost**, and any skip suppresses a move's source deletion. Every skip increments `skipped_count` and surfaces as `files_skipped`.
+- **Conflicts are planned INSIDE the op**, against the working copy `run_managed_edit` hands the closure — planning up front would break a remote edit. Stop-mode prompts per FILE (dirs merge silently), storing the sender BEFORE the emit.
+- **The terminal `files_processed` is `MutationProgress::entries_changed`**, ❌ not `entries_total`: deleting one file from a 3-entry zip reports 1.
+- **Compression level comes from `behavior.archiveCompressionLevel`**: fresh creation passes it to `new_stream`; existing mutation carries it on the `Changeset`. It applies only to newly written entries; `None` is level six.
+```
+
+### `apps/desktop/src-tauri/src/file_system/write_operations/transfer_tree/CLAUDE.md`
+
+```text
+- **Observation only.** Every report returns nothing a driver could branch on, is a no-op without a tree or a row, and a panicking one is caught (`TransferTree::guarded`) and turns the tree off. Building is caught too (`built`): every builder, recorded entry, and the local sort answer `None`, and the transfer runs as with no tree. ❌ Never build or rank outside `built`, and never let a transfer read the tree's STATE back.
+- **≤ 64 B per node, names included**, pinned at 1M nodes by `budget_tests.rs`. ❗ `Node` is 16 bytes on purpose; grow it or add a per-node side vector and the budget test says by how much. ❌ Never a global path map: the only paths kept are the selected sources' and their landing folders (`TreeLanding`).
+- **Ids are breadth-first, assigned once by `TreeBuilder::finish`**, so a folder's scanned children are one contiguous range in tree order. A child found later goes to `extra_children`, after them. ❌ Never renumber after `finish`: views key rows and hand toggles by id.
+- **One lock per file BOUNDARY** (begin, complete, skip, fail), ❌ never per chunk: an active file's bytes are its `TreeLeaf`'s counter, read at view time. A walker looks children up through one `TreeLevel` per level.
+- **A view is O(|expansion| + limit), ❌ never O(children)** (`view.rs`). Effective expansion is `(ancestors of the focus files ∪ expanded) − collapsed`, computed per request; ❌ no per-view state on the backend.
+- **Compaction happens at flatten time**: a folder whose only child is a folder shares its row, keyed by the deepest id. ❌ Never compact in the model: a discovered child breaks a chain.
+- **Built for copy, move, and compress only**, ❌ never delete or trash (`ScanPreviewPurpose`). A rename move's tree is its items alone (`from_sources`).
+- **Every driver STARTS files in tree order** (`../transfer/DETAILS.md` § "Processing order"). A new walk sorts each level with `TreeOrder`, ❌ never in listing or pane-sort order.
+```
+
+### `apps/desktop/src-tauri/src/file_system/write_operations/transfer/transfer_driver/CLAUDE.md`
+
+```text
+- **The whole point is that `transfer_one` is NEVER invoked** (1) for a source in the pre-known-conflicts bulk-skip set under `Skip`, (2) after a top-level conflict resolution returned Skip (async driver only), or (3) after cancellation is signaled. ❌ Never move a destructive call above those gates. The `transfer_driver_*_tests.rs` suites pin all three, so a violation is caught here rather than by inspecting four functions.
+- **The cancellation check sits BEFORE any destructive call**, ❌ not after the closure returns.
+- **EVERY leaf holds its OWN share of the in-flight total** (`progress.rs`: `LeafProgressLedger` per operation, `SourceProgress` per top-level source, `LeafProgress` per file). A directory streams many leaves AT ONCE through `volume/merge_ctx.rs::FileWindow`, so ❌ never a shared high-water slot: the next leaf to finish wipes it and the bar drops by everything the big one had streamed. Reported = `finished + sum(in-flight)`, under ONE lock.
+- **A leaf's mark is its HIGH-WATER**, because an attempt restarts at byte zero; ❌ never lower it on a restart (the prefix gets credited twice). `complete` swaps that share for the leaf's exact size; `Drop` withdraws it if the leaf never landed. The handle is also the file's transfer-tree row, settled at the same moments (`DETAILS.md`).
+- **The bars are leaf-granular against preflight LEAF totals**, so ❌ never reset the tally per inner file.
+- **Every skip credits the bars AND calls `state.note_skipped`** (`SourceProgress::skip_leaf` does both), ❌ never one without the other. The bars must reach their totals; the rate must not see bytes nothing moved, or one big skipped file spikes the reported speed. `../DETAILS.md` § "Skipped work moves the bars, and stays out of the rate".
+- **The three closure future shapes (`FetchFut` / `ResolveFut` / `TransferFut`) live HERE**, with the driver whose `where` clause they ARE; ❌ never copied into an operation's module. Three operations write those closures, and parking the aliases in one of them welded three `volume/` modules into a cycle.
+- **Sync and async are deliberate siblings, ❌ not one generic driver.** Boxing futures for the sync caller would cost an allocation per source and lose the closure's `&mut` captures.
+- **Conflict resolution is closure-owned for sync, driver-owned for async.** ❌ Don't unify without moving the sync closure's `&mut` state too.
+```
+
+### `apps/desktop/src-tauri/src/operation_log/CLAUDE.md`
+
+```text
+- **DURABLE and MIGRATES; never delete-and-recreate on a version bump.** The ladder (`store/migrations.rs`) is the template future durable DBs follow: append a `Migration`, NEVER edit or renumber a shipped step. A downgrade is refused; delete-and-recreate only for an unparseable file (typed sqlite code, ❌ not a string).
+- **NO `platform_case` collation.** A precomputed `name_folded` column (Unicode-lowercase + NFC) plus plain b-tree equality keeps the file `sqlite3`-openable.
+- **One writer thread, one cross-volume DB, NO per-volume registry.** `record_items` BLOCKS under backpressure (lossless); a DB error drops that ONE row, and the completeness check degrades the op rather than under-reversing it.
+- **Classification is typed end to end**: every `kind`, `initiator`, status, `row_role`, `outcome`, and `rollback_skip_reason` is a `types.rs` enum with a stable token, mapped ONLY there. Renaming a token is a schema change; renaming a variant is free.
+- **The writer stores terminal state; it does NOT compute eligibility.** That reasoning lives in `capture.rs`. A driver may also NOTE a reason the rows can't express (`note_not_rollbackable`, say a directory merge), and a note beats the per-kind rule.
+- **Capture is a process-global journal reached by `op_id`, NOT threaded through the pipeline.** ❌ Never extend `OperationEventSink`. Install via `set_journal` (production `start` only; tests use `TestJournalGuard`).
+- **Recording on/off is decided ONCE per op, at open** (`recording.rs`); ❌ never mid-op (half-journaled lies).
+- **A multi-operation undo reverses NEWEST FIRST** (`undo_order`): a later rename batch can take a name an earlier one freed. Callers pass ids in APPLY order.
+- **Rollback FAILS SAFE** (data-safety-critical): recheck each item against its snapshot AND its restore target; drift, unverifiable, or occupied target ⇒ SKIP (→ `partially_rolled_back`), never operate, and a restore-move never overwrites. `verify_snapshot` + `SkipReason` + `SkipTally` are SHARED with the in-flight reversals (`write_operations/reversal.rs`): ❌ don't fork them. `rolling_back` guards double-rollback and the retention race.
+- **The engine PLANS; an injected `RollbackRunner` acts.** ❌ Never import `write_operations` from here to perform an act. Pause parks BEFORE the item is verified (a stale verification must never authorize a destructive act), and a reversal's "should I stop?" is NOT `is_cancelled` (`StopMeans`). `DETAILS.md` § "Planner here, executor injected".
+- **Op ids are UUIDv7 (`new_operation_id`), never v4.** Same-second ops tie on the clock, so ordered reads fall back to `op_id`, which only v7 sorts chronologically.
+- **The journal records what SURVIVES an operation, whatever its terminal state**: a canceled copy's files AND the dirs it created, never the mid-write partial (both terminal paths remove it).
+- **Search spans every `row_role`; retention prunes whole ops only.** Name search matches `source_name_folded` across `rollback_unit` AND `search_only` rows, so a leaf hits inside a trashed folder. Retention never prunes a `rolling_back` op or its target.
+```
+
+### `apps/desktop/src-tauri/src/file_system/volume/backends/CLAUDE.md`
+
+```text
+- **Only one backend still lives IN the app**: `local_posix.rs`, with its own tests. `InMemoryVolume` rides with the trait in `cmdr-fs`. It's split by concern the way the remote backends are: the struct and the query/mutation methods here, `local_posix/{scan,streams}.rs` beside it, plus the `std::fs` reader the watcher and `tags.rs` share (`reading.rs`, `mutation.rs`; DETAILS § "The local reader"). A trait impl can't span files, so a moved method stays a one-line delegation to a `pub(super)` inherent body (SMB carries the pattern further; see `crates/cmdr-smb/CLAUDE.md`).
+- **Every other backend is a crate**, imported by crate name at its call sites, never re-exported through here: `cmdr-archive`, `cmdr-smb`, `cmdr-sftp`, `cmdr-webdav`, `cmdr-adb`, `cmdr-mtp`, and `cmdr-git` (the read-only `GitPortalVolume` a `.git/<category>/` path routes to). ❌ Don't add a `pub use <crate>::*;` module here to spare a call site the crate name: it puts the backend back in a directory it doesn't live in, and it becomes the place app-side tests drift to.
+- **A crate backend's app-side tests live beside the app code they assert on**, not here. SMB's are in `file_system/write_operations/` (transfers, remote archives, the shared `smb_test_support.rs`), `crates/cmdr-listing/` (the pane-close watcher cell), and `file_system/volume/` (index scan, media fetch); the archive watch cell is in `crates/cmdr-listing/`. Which side a cell belongs on: `crates/cmdr-smb/DETAILS.md` § "Which side a test lives on".
+- **Feed the progress callbacks** in `list_directory` and in a copy SCAN (`scan_for_copy_batch_with_boundary`); ❌ never quiet one to `_on_progress`. They drive the pane's only "Loaded N files…" readout and the transfer dialog's only climbing counter, and the scan one is the watchdog's proof the device is answering: a silent backend gets cut off as unresponsive.
+- **`rename_local_exclusive` is the ONE no-replace rename**, and it degrades on a filesystem with no kernel flag (smbfs answers `ENOTSUP`). ❌ Never write a second `renamex_np` call: while `overwrite::rename_no_replace` was a separate copy, only it degraded, and every rename on a mounted SMB share failed (ERR-8RFN4). DETAILS § "Local renames are atomic-exclusive".
+- **`LocalPosixVolume::write_from_stream` `sync_data`s each file** (+ best-effort parent-dir fsync) before returning: every cross-volume copy landing on local disk flows through it, and `flush()` alone loses data on eject.
+- **Local unknown-length writes use the same chunked durable path**: progress keeps `StreamLength::Unknown`, and success includes `sync_data` plus parent-dir fsync.
+- **Local force-rename is an atomic replacement**, so `supports_atomic_replace_rename()` is true. Network backends whose force path deletes first must not inherit that answer (SMB's doesn't: it's a `ReplaceIfExists` rename).
+- **`FileEntry::is_hidden` folds in `UF_HIDDEN` and root-only `/.hidden` on top of the dot check**, both read from data `reading.rs` already has at listing/stat time (no extra syscall). See `FileEntry::is_hidden`'s doc in `cmdr-fs`.
+- **MTP has no single-file stat**, so `get_metadata` lists the whole parent: avoid it in hot paths. Ranged reads and read sessions are canonical in `crates/cmdr-mtp/src/connection/CLAUDE.md`.
+- **`cmdr_mtp::volume::testing` is the ONLY way a test outside the backend reads it**: two numbers out (`list_directory_call_count`, `reset_list_directory_call_count`) and one in (`set_read_window`), gated on `any(test, feature = "testing")`, ❌ never `cfg(test)` alone. Don't grow it into a way to reach backend state.
+```
+
+### `apps/desktop/src-tauri/src/file_system/volume/CLAUDE.md`
+
+```text
+- **A site passing a path calls `VolumeManager::resolve(volume_id, path).await`, ❌ never `get(volume_id)`.** It routes `.zip`-crossing and `.git/<category>/` paths to their backends, path UNCHANGED, and answers `is_routed()`. The sync `resolve_local_only` serves the ONE caller that can't `.await`.
+- **❗ Registration must never be cleverer than resolution.** A mount is registered through `mount_registration`, ❌ never a caller's own `LocalPosixVolume::new` + `register`: resolution mints an ID for any mount this account can reach, so the sweep takes all of those (switcher rows are a separate, stricter question). Its net, adoption, takes a live mount ONLY when that mount derives exactly the requested ID, ❌ never on a prefix or path-shape test.
+- **Watcher-pre-registered volumes use `register_if_absent`** (else FSEvents overwrites an `SmbVolume`). `register` replaces only at the SAME root; an edited root uses `replace_root_in_place`.
+- **A registry entry owns a SET of mount roots, one active.** `remove_root` promotes a survivor and unregisters ONLY on the last; ❌ never `unregister` over one mount, or a share mounted twice vanishes on the first eject. `find_by_root` matches ANY known root, so compare `volume.root()`. A REMOVED volume is retired (`Volume::retirement`), standing its watcher and reconnect loop down; a replace isn't.
+- **❌ Never probe a mount root for liveness**: one on a wedged mount blocks 30–120 s and once froze the app at launch. Promotion runs on evidence that arrives on its own: an unmount event, or `note_root_failure`'s mount-is-gone errno (`volumes/DETAILS.md` § "Hung mounts").
+- **Work that must WAIT for a volume subscribes with `on_volume_arrival`, ❌ never polls the registry.** A listener gets the ID only and runs INSIDE the registration: return at once, hand work to a task.
+- **Cross-volume copy flows only through `open_read_stream` / `write_from_stream`, chunk by chunk**, ❌ never draining a `VolumeReadStream` or collecting a remote file into a `Vec<u8>`. Every mutation must call `notify_mutation`, `write_from_stream` included: its default is a no-op and SMB/MTP events are lossy, so skipping it strands the pane.
+- **Generated streams use `StreamLength::Unknown`, never `Known(0)`; unopted backends refuse before I/O.**
+- **Capability flags default conservative** (`Err(NotSupported)` / `false`), so a backend opts in; several break silently when answered wrong (`is_writable` is button state). `capabilities()` is a pure fold, ❌ never overridden.
+- **Two more rules each own a `DETAILS.md` section; read it before touching that area**: a row a pane sees that no volume holds is a `ListingOverlay`, ❌ never a `Volume` impl (§ Architecture), and a path from the UI is anchored by its CALLER, ❌ never the backend (§ Path handling gotchas).
+- **Every app-side index stop of a removable drive and every non-root index start goes through `drive_release`**, ❌ never a bare `Index::start_volume` / `rescan_volume` / `cover` / `stop_removable_volume`; every teardown goes through `run_teardown`. `eject/` stops through the gate BEFORE `diskutil` runs (FSKit wedge: kernel-panic risk), and an eject is **per PHYSICAL disk, ❌ never per volume**. ❗ `DiskMounts` and `HolderScan` each carry a "couldn't tell", ❌ never an empty one.
+```
+
+### `apps/desktop/src-tauri/src/file_system/CLAUDE.md`
+
+```text
+- **Reach the volume-manager singleton at `volume::manager::get_volume_manager()`; ❌ never re-export it from here**: a facade that also hands out the accessor welds the subtree into one cycle. `volume/DETAILS.md` § "Key decisions".
+- **Transient scratch hides on the listing READ path only** (`cmdr-listing`'s `CachedListing::rows`): a watcher-side skip strands an entry in the pane forever. Cmdr's own (`.cmdr-tmp-*`) hides by OWNERSHIP, other apps' (`.sb-`) by NAME. § "Hiding transient scratch".
+- **Tag writes (`tags.rs`) touch ONLY `_kMDItemUserTags`, never `com.apple.FinderInfo`** (zeroing it destroys custom folder icons), and encode a **binary** plist.
+- **Never call macOS frameworks from rayon or any constrained-stack pool**: FileProvider XPC blows the 2 MB stack and can block forever. Use pooled, hard-capped 8 MB OS threads (`framework_pool.rs`). § "Threading".
+- **Watcher rules.** Each has its own section in `DETAILS.md`; read them before touching `watcher.rs`:
+  - ❌ Never `tokio::spawn` from a watcher OS thread (no reactor: it panics). Use `tauri::async_runtime::spawn`.
+  - The watcher is the engine's first `ListingObserver` and keeps only the OS half: changes go to `Listings::observe_children`, full re-reads to `Listings::refresh`.
+  - Arm listing watches with `start_watching_detached`, ❌ never `start_watching` (inline was p90 653 ms of dead time). A late arm misses earlier changes, so `arm_missed_a_change` (mtime) gates a re-read, ❌ never an unconditional one.
+  - Rebase event paths (`rebase_event_path`), or firmlinks (`/tmp`, `/var`, `/etc`) plus a symlinked watch root drop every event.
+  - A created, removed, or renamed watch ROOT forces a full re-read; ❌ don't add `Modify(Metadata(_))`, since every child change bumps the dir's mtime.
+  - A row that jumped its sorted position is one `DiffChangeType::Move`, never a remove plus an add: the pane rides the cursor and selection along by identity. § "Reordered rows".
+- **A watch on an OS-mounted network share is `WatchCoverage::ThisMachineOnly`, never `EveryWriter`** (FSEvents on `smbfs` sees this machine's writes only). ❌ Don't refuse to arm it over that; what it must not do is let a delete walker or copy scan skip a read. `volume/DETAILS.md` § "Trait capability model".
+- **"Open terminal here" asks `NSWorkspace` per known app, ❌ never scans `/Applications`**; recipes are a pure `launch_argv`. New terminals need a sourced, dated `KNOWN_TERMINALS` entry. § "Open terminal here".
+- **F4's editors come from LaunchServices' editor-ROLE plain-text query** (`text_editor.rs`): ❌ never the UTI crate (10.15 floor) or a made-up `.txt` URL (no apps). § "Text editor".
+- **`cloud_actions.rs` is iCloud Drive only**, gated by `CloudProvider::supports_eviction`; the cross-provider-looking `NSFileProviderManager` methods need the bundled extension. Don't widen it. Provider identity lives once, in `cloud_provider.rs`, which the volume switcher reads too.
+- **Google Drive (`google_drive/`), three ❌:** never gate on a path prefix (mirror mode keeps real files outside `~/Library/CloudStorage` with no xattr, so we gate on a resolved item ID); never resolve a mirrored file by NAME; never read a mirror `stable_id` from the stream-mode `metadata_sqlite_db` (different id space). `mirror_db.rs` walks up to a root by inode, down by indexed `(parent, name)`, then proves the row with the file's inode. Read-only, and every failure means no menu item: a wrong link points at someone else's file. § "Mirror mode".
+```
 
 ## Review log
 
