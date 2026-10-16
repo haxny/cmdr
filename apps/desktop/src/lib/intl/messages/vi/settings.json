@@ -2651,139 +2651,139 @@
   "@settings.fileExplorer.quickFilterIntroSeen.description": {
     "sourceHash": "855c661"
   },
-  "settings.dataWipe.card": "Your data on this Mac",
+  "settings.dataWipe.card": "Dữ liệu của bạn trên máy Mac này",
   "@settings.dataWipe.card": {
     "sourceHash": "e4b3cee"
   },
-  "settings.dataWipe.description": "Delete everything Cmdr keeps on this Mac: settings, saved passwords, histories, indexes, and downloaded models. Cmdr quits afterwards.",
+  "settings.dataWipe.description": "Xóa mọi thứ Cmdr giữ trên máy Mac này: cài đặt, mật khẩu đã lưu, lịch sử, chỉ mục và mô hình đã tải về. Sau đó Cmdr sẽ thoát.",
   "@settings.dataWipe.description": {
     "sourceHash": "f1012f4"
   },
-  "settings.dataWipe.button": "Delete all Cmdr data",
+  "settings.dataWipe.button": "Xóa toàn bộ dữ liệu Cmdr",
   "@settings.dataWipe.button": {
     "sourceHash": "fbb253f"
   },
-  "settings.dataWipe.title": "Delete all Cmdr data on this Mac?",
+  "settings.dataWipe.title": "Xóa toàn bộ dữ liệu Cmdr trên máy Mac này?",
   "@settings.dataWipe.title": {
     "sourceHash": "35db003"
   },
-  "settings.dataWipe.intro": "Cmdr deletes everything it keeps on this Mac, then quits. This can’t be undone.",
+  "settings.dataWipe.intro": "Cmdr sẽ xóa mọi thứ đang giữ trên máy Mac này, rồi thoát. Bạn không thể hoàn tác việc này.",
   "@settings.dataWipe.intro": {
     "sourceHash": "61ed875"
   },
-  "settings.dataWipe.introWithSize": "Cmdr deletes the {sizeText} it keeps on this Mac, then quits. This can’t be undone.",
+  "settings.dataWipe.introWithSize": "Cmdr sẽ xóa {sizeText} dữ liệu đang giữ trên máy Mac này, rồi thoát. Bạn không thể hoàn tác việc này.",
   "@settings.dataWipe.introWithSize": {
     "sourceHash": "fffab2a"
   },
-  "settings.dataWipe.goesHeading": "What goes",
+  "settings.dataWipe.goesHeading": "Những gì bị xóa",
   "@settings.dataWipe.goesHeading": {
     "sourceHash": "8b63982"
   },
-  "settings.dataWipe.goes.settings": "Settings and keyboard shortcuts",
+  "settings.dataWipe.goes.settings": "Cài đặt và phím tắt",
   "@settings.dataWipe.goes.settings": {
     "sourceHash": "1601cfc"
   },
-  "settings.dataWipe.goes.servers": "Saved servers and their passwords",
+  "settings.dataWipe.goes.servers": "Máy chủ đã lưu cùng mật khẩu của chúng",
   "@settings.dataWipe.goes.servers": {
     "sourceHash": "9cf965e"
   },
-  "settings.dataWipe.goes.apiKeys": "API keys for cloud AI",
+  "settings.dataWipe.goes.apiKeys": "Khóa API cho AI đám mây",
   "@settings.dataWipe.goes.apiKeys": {
     "sourceHash": "146397c"
   },
-  "settings.dataWipe.goes.license": "The license on this Mac. To activate it again, enter the license key from your purchase email.",
+  "settings.dataWipe.goes.license": "Giấy phép trên máy Mac này. Để kích hoạt lại, hãy nhập khóa giấy phép từ email mua hàng của bạn.",
   "@settings.dataWipe.goes.license": {
     "sourceHash": "90b5b06"
   },
-  "settings.dataWipe.goes.licenseIfAny": "The license on this Mac, if you activated one. To activate it again, enter the license key from your purchase email.",
+  "settings.dataWipe.goes.licenseIfAny": "Giấy phép trên máy Mac này, nếu bạn đã kích hoạt. Để kích hoạt lại, hãy nhập khóa giấy phép từ email mua hàng của bạn.",
   "@settings.dataWipe.goes.licenseIfAny": {
     "sourceHash": "db7f6f2"
   },
-  "settings.dataWipe.goes.askCmdr": "Ask Cmdr chats and what it remembers about you",
+  "settings.dataWipe.goes.askCmdr": "Các cuộc trò chuyện Ask Cmdr và những gì Cmdr nhớ về bạn",
   "@settings.dataWipe.goes.askCmdr": {
     "sourceHash": "f1494a4"
   },
-  "settings.dataWipe.goes.histories": "Recent folders, searches, and other histories",
+  "settings.dataWipe.goes.histories": "Thư mục gần đây, tìm kiếm gần đây và các loại lịch sử khác",
   "@settings.dataWipe.goes.histories": {
     "sourceHash": "10b27a1"
   },
-  "settings.dataWipe.goes.operationLog": "The operation log of your copies, moves, and deletes",
+  "settings.dataWipe.goes.operationLog": "Nhật ký thao tác ghi lại các lần sao chép, di chuyển và xóa của bạn",
   "@settings.dataWipe.goes.operationLog": {
     "sourceHash": "d73e0a5"
   },
-  "settings.dataWipe.goes.indexes": "The drive index and image search data",
+  "settings.dataWipe.goes.indexes": "Chỉ mục ổ đĩa và dữ liệu tìm kiếm hình ảnh",
   "@settings.dataWipe.goes.indexes": {
     "sourceHash": "ac147df"
   },
-  "settings.dataWipe.goes.models": "Downloaded AI models",
+  "settings.dataWipe.goes.models": "Mô hình AI đã tải về",
   "@settings.dataWipe.goes.models": {
     "sourceHash": "b8cd7cb"
   },
-  "settings.dataWipe.goes.modelsWithSize": "Downloaded AI models ({sizeText})",
+  "settings.dataWipe.goes.modelsWithSize": "Mô hình AI đã tải về ({sizeText})",
   "@settings.dataWipe.goes.modelsWithSize": {
     "sourceHash": "f764f1c"
   },
-  "settings.dataWipe.goes.logs": "Logs and crash reports",
+  "settings.dataWipe.goes.logs": "Nhật ký và báo cáo sự cố",
   "@settings.dataWipe.goes.logs": {
     "sourceHash": "8e29ed1"
   },
-  "settings.dataWipe.staysHeading": "What stays",
+  "settings.dataWipe.staysHeading": "Những gì được giữ lại",
   "@settings.dataWipe.staysHeading": {
     "sourceHash": "012db50"
   },
-  "settings.dataWipe.stays": "Your own files, everything on your drives and servers, and the Cmdr app itself. Data on Cmdr’s servers stays too; the privacy policy says how to have it deleted.",
+  "settings.dataWipe.stays": "Tệp của chính bạn, mọi thứ trên ổ đĩa và máy chủ của bạn, cùng chính ứng dụng Cmdr. Dữ liệu trên máy chủ của Cmdr cũng được giữ lại; chính sách quyền riêng tư có hướng dẫn cách yêu cầu xóa dữ liệu đó.",
   "@settings.dataWipe.stays": {
     "sourceHash": "469e635"
   },
-  "settings.dataWipe.cancel": "Cancel",
+  "settings.dataWipe.cancel": "Hủy",
   "@settings.dataWipe.cancel": {
     "sourceHash": "19766ed"
   },
-  "settings.dataWipe.confirm": "Delete all and quit",
+  "settings.dataWipe.confirm": "Xóa hết và thoát",
   "@settings.dataWipe.confirm": {
     "sourceHash": "5efdab7"
   },
-  "settings.dataWipe.deleting": "Deleting…",
+  "settings.dataWipe.deleting": "Đang xóa…",
   "@settings.dataWipe.deleting": {
     "sourceHash": "43b5894"
   },
-  "settings.dataWipe.refused.operationsRunning": "{count, plural, one {A file operation is still running. Let it finish or cancel it, then try again.} other {{countText} file operations are still running. Let them finish or cancel them, then try again.}}",
+  "settings.dataWipe.refused.operationsRunning": "{count, plural, other {{countText} thao tác tệp vẫn đang chạy. Hãy chờ thao tác xong hoặc hủy thao tác, rồi thử lại.}}",
   "@settings.dataWipe.refused.operationsRunning": {
     "sourceHash": "00207ae"
   },
-  "settings.dataWipe.refused.alreadyRunning": "Cmdr is already deleting its data. Give it a moment.",
+  "settings.dataWipe.refused.alreadyRunning": "Cmdr đang xóa dữ liệu rồi. Hãy đợi giây lát.",
   "@settings.dataWipe.refused.alreadyRunning": {
     "sourceHash": "58e2485"
   },
-  "settings.dataWipe.refused.interrupted": "Something stopped Cmdr partway, so some data may be left. Try again?",
+  "settings.dataWipe.refused.interrupted": "Có gì đó đã làm Cmdr dừng giữa chừng, nên có thể vẫn còn sót lại một số dữ liệu. Thử lại?",
   "@settings.dataWipe.refused.interrupted": {
     "sourceHash": "a15fe21"
   },
-  "settings.dataWipe.doneTitle": "Cmdr deleted its data",
+  "settings.dataWipe.doneTitle": "Cmdr đã xóa xong dữ liệu",
   "@settings.dataWipe.doneTitle": {
     "sourceHash": "18aa13d"
   },
-  "settings.dataWipe.doneMessage": "Everything Cmdr kept on this Mac is gone. To remove the app as well, move it to the Trash after Cmdr quits.",
+  "settings.dataWipe.doneMessage": "Mọi thứ Cmdr giữ trên máy Mac này đã được xóa hết. Để xóa luôn cả ứng dụng, hãy chuyển ứng dụng vào Thùng rác sau khi Cmdr thoát.",
   "@settings.dataWipe.doneMessage": {
     "sourceHash": "a0d09dc"
   },
-  "settings.dataWipe.partialTitle": "Cmdr deleted most of its data",
+  "settings.dataWipe.partialTitle": "Cmdr đã xóa phần lớn dữ liệu",
   "@settings.dataWipe.partialTitle": {
     "sourceHash": "4a43b33"
   },
-  "settings.dataWipe.partialMessage": "A few things couldn’t be deleted. To finish, remove these yourself:",
+  "settings.dataWipe.partialMessage": "Có vài thứ không xóa được. Để hoàn tất, hãy tự xóa những mục này:",
   "@settings.dataWipe.partialMessage": {
     "sourceHash": "24d0b58"
   },
-  "settings.dataWipe.leftover.secretItems": "{count, plural, one {One item in Keychain Access named “{itemName}”} other {{countText} items in Keychain Access named “{itemName}”}}",
+  "settings.dataWipe.leftover.secretItems": "{count, plural, other {{countText} mục có tên “{itemName}” trong Truy cập chuỗi khóa}}",
   "@settings.dataWipe.leftover.secretItems": {
     "sourceHash": "91321bb"
   },
-  "settings.dataWipe.leftover.secretsUnreadable": "Any items in Keychain Access named “{itemName}”",
+  "settings.dataWipe.leftover.secretsUnreadable": "Mọi mục có tên “{itemName}” trong Truy cập chuỗi khóa, nếu có",
   "@settings.dataWipe.leftover.secretsUnreadable": {
     "sourceHash": "e3b3312"
   },
-  "settings.dataWipe.quit": "Quit Cmdr",
+  "settings.dataWipe.quit": "Thoát Cmdr",
   "@settings.dataWipe.quit": {
     "sourceHash": "b3455b4"
   }

@@ -2652,139 +2652,139 @@
   "@settings.fileExplorer.quickFilterIntroSeen.description": {
     "sourceHash": "855c661"
   },
-  "settings.dataWipe.card": "Your data on this Mac",
+  "settings.dataWipe.card": "你在这台 Mac 上的数据",
   "@settings.dataWipe.card": {
     "sourceHash": "e4b3cee"
   },
-  "settings.dataWipe.description": "Delete everything Cmdr keeps on this Mac: settings, saved passwords, histories, indexes, and downloaded models. Cmdr quits afterwards.",
+  "settings.dataWipe.description": "删除 Cmdr 在这台 Mac 上存放的所有内容：设置、保存的密码、历史记录、索引和下载的模型。之后 Cmdr 会退出。",
   "@settings.dataWipe.description": {
     "sourceHash": "f1012f4"
   },
-  "settings.dataWipe.button": "Delete all Cmdr data",
+  "settings.dataWipe.button": "删除所有 Cmdr 数据",
   "@settings.dataWipe.button": {
     "sourceHash": "fbb253f"
   },
-  "settings.dataWipe.title": "Delete all Cmdr data on this Mac?",
+  "settings.dataWipe.title": "删除这台 Mac 上的所有 Cmdr 数据？",
   "@settings.dataWipe.title": {
     "sourceHash": "35db003"
   },
-  "settings.dataWipe.intro": "Cmdr deletes everything it keeps on this Mac, then quits. This can’t be undone.",
+  "settings.dataWipe.intro": "Cmdr 会删除它在这台 Mac 上存放的所有内容，然后退出。这项操作无法撤销。",
   "@settings.dataWipe.intro": {
     "sourceHash": "61ed875"
   },
-  "settings.dataWipe.introWithSize": "Cmdr deletes the {sizeText} it keeps on this Mac, then quits. This can’t be undone.",
+  "settings.dataWipe.introWithSize": "Cmdr 会删除它在这台 Mac 上存放的 {sizeText} 数据，然后退出。这项操作无法撤销。",
   "@settings.dataWipe.introWithSize": {
     "sourceHash": "fffab2a"
   },
-  "settings.dataWipe.goesHeading": "What goes",
+  "settings.dataWipe.goesHeading": "会删除的内容",
   "@settings.dataWipe.goesHeading": {
     "sourceHash": "8b63982"
   },
-  "settings.dataWipe.goes.settings": "Settings and keyboard shortcuts",
+  "settings.dataWipe.goes.settings": "设置和键盘快捷键",
   "@settings.dataWipe.goes.settings": {
     "sourceHash": "1601cfc"
   },
-  "settings.dataWipe.goes.servers": "Saved servers and their passwords",
+  "settings.dataWipe.goes.servers": "保存的服务器和对应的密码",
   "@settings.dataWipe.goes.servers": {
     "sourceHash": "9cf965e"
   },
-  "settings.dataWipe.goes.apiKeys": "API keys for cloud AI",
+  "settings.dataWipe.goes.apiKeys": "云端 AI 的 API 密钥",
   "@settings.dataWipe.goes.apiKeys": {
     "sourceHash": "146397c"
   },
-  "settings.dataWipe.goes.license": "The license on this Mac. To activate it again, enter the license key from your purchase email.",
+  "settings.dataWipe.goes.license": "这台 Mac 上的许可证。要重新激活，请输入购买邮件中的许可证密钥。",
   "@settings.dataWipe.goes.license": {
     "sourceHash": "90b5b06"
   },
-  "settings.dataWipe.goes.licenseIfAny": "The license on this Mac, if you activated one. To activate it again, enter the license key from your purchase email.",
+  "settings.dataWipe.goes.licenseIfAny": "这台 Mac 上的许可证，如果你激活过的话。要重新激活，请输入购买邮件中的许可证密钥。",
   "@settings.dataWipe.goes.licenseIfAny": {
     "sourceHash": "db7f6f2"
   },
-  "settings.dataWipe.goes.askCmdr": "Ask Cmdr chats and what it remembers about you",
+  "settings.dataWipe.goes.askCmdr": "Ask Cmdr 聊天记录，以及 Cmdr 记住的关于你的内容",
   "@settings.dataWipe.goes.askCmdr": {
     "sourceHash": "f1494a4"
   },
-  "settings.dataWipe.goes.histories": "Recent folders, searches, and other histories",
+  "settings.dataWipe.goes.histories": "最近的文件夹、搜索和其他历史记录",
   "@settings.dataWipe.goes.histories": {
     "sourceHash": "10b27a1"
   },
-  "settings.dataWipe.goes.operationLog": "The operation log of your copies, moves, and deletes",
+  "settings.dataWipe.goes.operationLog": "记录你的拷贝、移动和删除的操作日志",
   "@settings.dataWipe.goes.operationLog": {
     "sourceHash": "d73e0a5"
   },
-  "settings.dataWipe.goes.indexes": "The drive index and image search data",
+  "settings.dataWipe.goes.indexes": "驱动器索引和图像搜索数据",
   "@settings.dataWipe.goes.indexes": {
     "sourceHash": "ac147df"
   },
-  "settings.dataWipe.goes.models": "Downloaded AI models",
+  "settings.dataWipe.goes.models": "下载的 AI 模型",
   "@settings.dataWipe.goes.models": {
     "sourceHash": "b8cd7cb"
   },
-  "settings.dataWipe.goes.modelsWithSize": "Downloaded AI models ({sizeText})",
+  "settings.dataWipe.goes.modelsWithSize": "下载的 AI 模型（{sizeText}）",
   "@settings.dataWipe.goes.modelsWithSize": {
     "sourceHash": "f764f1c"
   },
-  "settings.dataWipe.goes.logs": "Logs and crash reports",
+  "settings.dataWipe.goes.logs": "日志和崩溃报告",
   "@settings.dataWipe.goes.logs": {
     "sourceHash": "8e29ed1"
   },
-  "settings.dataWipe.staysHeading": "What stays",
+  "settings.dataWipe.staysHeading": "会保留的内容",
   "@settings.dataWipe.staysHeading": {
     "sourceHash": "012db50"
   },
-  "settings.dataWipe.stays": "Your own files, everything on your drives and servers, and the Cmdr app itself. Data on Cmdr’s servers stays too; the privacy policy says how to have it deleted.",
+  "settings.dataWipe.stays": "你自己的文件、驱动器和服务器上的所有内容，以及 Cmdr App 本身。Cmdr 自己服务器上的数据也会保留；隐私政策里写了怎样申请删除这些数据。",
   "@settings.dataWipe.stays": {
     "sourceHash": "469e635"
   },
-  "settings.dataWipe.cancel": "Cancel",
+  "settings.dataWipe.cancel": "取消",
   "@settings.dataWipe.cancel": {
     "sourceHash": "19766ed"
   },
-  "settings.dataWipe.confirm": "Delete all and quit",
+  "settings.dataWipe.confirm": "全部删除并退出",
   "@settings.dataWipe.confirm": {
     "sourceHash": "5efdab7"
   },
-  "settings.dataWipe.deleting": "Deleting…",
+  "settings.dataWipe.deleting": "正在删除…",
   "@settings.dataWipe.deleting": {
     "sourceHash": "43b5894"
   },
-  "settings.dataWipe.refused.operationsRunning": "{count, plural, one {A file operation is still running. Let it finish or cancel it, then try again.} other {{countText} file operations are still running. Let them finish or cancel them, then try again.}}",
+  "settings.dataWipe.refused.operationsRunning": "{count, plural, other {有 {countText} 项文件操作仍在进行。先等操作完成，或者把操作取消，然后再试一次。}}",
   "@settings.dataWipe.refused.operationsRunning": {
     "sourceHash": "00207ae"
   },
-  "settings.dataWipe.refused.alreadyRunning": "Cmdr is already deleting its data. Give it a moment.",
+  "settings.dataWipe.refused.alreadyRunning": "Cmdr 已经在删除它的数据了，请稍等一下。",
   "@settings.dataWipe.refused.alreadyRunning": {
     "sourceHash": "58e2485"
   },
-  "settings.dataWipe.refused.interrupted": "Something stopped Cmdr partway, so some data may be left. Try again?",
+  "settings.dataWipe.refused.interrupted": "有什么让 Cmdr 中途停下了，所以可能还剩下一些数据。要再试一次吗？",
   "@settings.dataWipe.refused.interrupted": {
     "sourceHash": "a15fe21"
   },
-  "settings.dataWipe.doneTitle": "Cmdr deleted its data",
+  "settings.dataWipe.doneTitle": "Cmdr 已删除它的数据",
   "@settings.dataWipe.doneTitle": {
     "sourceHash": "18aa13d"
   },
-  "settings.dataWipe.doneMessage": "Everything Cmdr kept on this Mac is gone. To remove the app as well, move it to the Trash after Cmdr quits.",
+  "settings.dataWipe.doneMessage": "Cmdr 在这台 Mac 上存放的所有内容都已删除。要把 App 也删掉，请在 Cmdr 退出后把它移到废纸篓。",
   "@settings.dataWipe.doneMessage": {
     "sourceHash": "a0d09dc"
   },
-  "settings.dataWipe.partialTitle": "Cmdr deleted most of its data",
+  "settings.dataWipe.partialTitle": "Cmdr 已删除它的大部分数据",
   "@settings.dataWipe.partialTitle": {
     "sourceHash": "4a43b33"
   },
-  "settings.dataWipe.partialMessage": "A few things couldn’t be deleted. To finish, remove these yourself:",
+  "settings.dataWipe.partialMessage": "有几项内容无法删除。要完成清理，请自己删掉下面这些：",
   "@settings.dataWipe.partialMessage": {
     "sourceHash": "24d0b58"
   },
-  "settings.dataWipe.leftover.secretItems": "{count, plural, one {One item in Keychain Access named “{itemName}”} other {{countText} items in Keychain Access named “{itemName}”}}",
+  "settings.dataWipe.leftover.secretItems": "{count, plural, other {“钥匙串访问”中名为“{itemName}”的 {countText} 个项目}}",
   "@settings.dataWipe.leftover.secretItems": {
     "sourceHash": "91321bb"
   },
-  "settings.dataWipe.leftover.secretsUnreadable": "Any items in Keychain Access named “{itemName}”",
+  "settings.dataWipe.leftover.secretsUnreadable": "“钥匙串访问”中名为“{itemName}”的项目，如果有的话",
   "@settings.dataWipe.leftover.secretsUnreadable": {
     "sourceHash": "e3b3312"
   },
-  "settings.dataWipe.quit": "Quit Cmdr",
+  "settings.dataWipe.quit": "退出 Cmdr",
   "@settings.dataWipe.quit": {
     "sourceHash": "b3455b4"
   }

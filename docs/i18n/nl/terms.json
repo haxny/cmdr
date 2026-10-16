@@ -2417,6 +2417,13 @@
     "forms": "reclaim {size} → {size} vrijmaken; This frees {size} → Dit maakt {size} vrij",
     "sources": "catalog (settings.mediaIndex.reclaim.*)"
   },
+  "recent": {
+    "accept": ["Recent", "recente", "meest recente", "onlangs"],
+    "chosen": "recent",
+    "confidence": "high",
+    "forms": "adjective before a noun recente (Recente mappen, Recente zoekopdrachten); the palette's Recent group → Recent (Finder Go menu); the latest download → je meest recente download",
+    "sources": "macOS Finder MenuBar (Recent Folders → Recente mappen, Recent → Recent); catalog (queryUi.recent.*, settings.dataWipe.goes.histories)"
+  },
   "recommended": {
     "chosen": "aanbevolen",
     "confidence": "high",

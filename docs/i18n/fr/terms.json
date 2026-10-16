@@ -1230,6 +1230,13 @@
     "forms": "masculine (l’historique); git history → historique git; the repo’s history → l’historique du dépôt; file history → historique de fichiers",
     "sources": "macOS AppKit (NSToolbarHistoryTemplate historique; historique des versions); catalog (operationLog.dialog.loadError, errors.git.blobTooLarge.title)"
   },
+  "recent": {
+    "chosen": "récent",
+    "confidence": "high",
+    "accept": ["récente", "récents", "récentes", "récemment", "plus récent"],
+    "forms": "an adjective after its noun, agreeing: Dossiers récents (Finder’s Go menu), Recherches récentes, Sélections récentes; the latest one → le plus récent",
+    "sources": "macOS Finder (Dossiers récents, Éléments récents in the fr pile); catalog (queryUi.recent.*: Recherches récentes, 10+ uses)"
+  },
   "overall": {
     "chosen": "Au total",
     "confidence": "high",
@@ -1902,6 +1909,7 @@
     "confidence": "high",
     "exceptions": {
       "commands.editUndoTrash.description": "English-sense: moving to the trash is placer dans la corbeille.",
+      "settings.dataWipe.doneMessage": "English-sense: moving to the trash is placer dans la corbeille.",
       "errors.mutation.trashRefused": "English-sense: moving to the trash is placer dans la corbeille.",
       "errors.write.fallback.message.trash": "English-sense: moving to the trash is placer dans la corbeille.",
       "errors.write.ioError.message.trash": "English-sense: moving to the trash is placer dans la corbeille.",
@@ -2530,7 +2538,9 @@
     "confidence": "high",
     "decision": "Revue qualité : renommages proposés et lignes d'outil",
     "exceptions": {
-      "errors.git.orphanedWorktree.suggestion": "English-sense: removing a git worktree deletes it."
+      "errors.git.orphanedWorktree.suggestion": "English-sense: removing a git worktree deletes it.",
+      "settings.dataWipe.doneMessage": "English-sense: removing the app means trashing it, a deletion, so supprimer.",
+      "settings.dataWipe.partialMessage": "English-sense: the user deletes the leftover files and keychain items, so supprimez-les."
     },
     "forms": "take off a list without deleting anything (a favorite, a folder from indexing, a tag, an attachment)",
     "sources": "catalog (Retirer la pièce jointe)"

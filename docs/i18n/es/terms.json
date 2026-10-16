@@ -2267,7 +2267,7 @@
   },
   "quit": {
     "chosen": "Salir",
-    "accept": ["salir", "cerrar", "cerrará", "se cerró", "cierre", "sal de", "salida", "sales de"],
+    "accept": ["salir", "cerrar", "cerrará", "se cerró", "se cierra", "cierre", "sal de", "salida", "sales de"],
     "forms": "the USER quitting → salir (Salir de Cmdr, Salir ahora); the APP ending itself → cerrarse (Cmdr se cerrará…); a crash → se cerró inesperadamente",
     "confidence": "high",
     "sources": "macOS Finder A17 (No se puede salir del Finder…), BN36 (El Finder está a punto de cerrarse), AppKit (Quit → Salir)",
@@ -2283,6 +2283,13 @@
     "forms": "de solo lectura",
     "confidence": "high",
     "sources": "macOS Finder/AppKit (Solo lectura; PE45 el disco es de solo lectura)"
+  },
+  "recent": {
+    "chosen": "reciente",
+    "accept": ["recientes", "recientemente", "hace poco"],
+    "forms": "plural recientes after the noun (Carpetas recientes, Búsquedas recientes); a shared adjective over a list agrees with the first noun's plural; most recent → más reciente; recently closed → cerradas recientemente",
+    "confidence": "high",
+    "sources": "macOS Finder (Carpetas recientes, Recientes); catalog (Búsquedas recientes, Selecciones recientes, Rutas recientes)"
   },
   "reclaim": {
     "chosen": "liberar",
@@ -2369,6 +2376,10 @@
     "chosen": "Quitar",
     "accept": ["quit"],
     "forms": "Quitar atajo, Quitar adjunto, Quitar “{color}”, Quitar de la lista; removing FILES or data is eliminar",
+    "exceptions": {
+      "settings.dataWipe.doneMessage": "remove the app = delete the app bundle from the Mac (eliminar), not a list edit",
+      "settings.dataWipe.partialMessage": "remove these = delete leftover files and Keychain items by hand (elimínalas tú), not a list edit"
+    },
     "avoid": [
       {
         "form": "Eliminar",

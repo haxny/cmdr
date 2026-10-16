@@ -36,7 +36,7 @@
   },
   "activate": {
     "chosen": "Ativar",
-    "accept": ["ativa"],
+    "accept": ["ativa", "ativá", "ativou"],
     "confidence": "high",
     "sources": "MS terminology pt-BR; shipped pt catalog"
   },
@@ -2252,6 +2252,13 @@
     "accept": ["liber"],
     "confidence": "confirmed",
     "sources": "shipped pt catalog (settings.mediaIndex.reclaim.*)"
+  },
+  "recent": {
+    "chosen": "recentes",
+    "accept": ["recente", "mais recente", "último", "há pouco"],
+    "confidence": "high",
+    "forms": "after the noun, agreeing in number: Buscas recentes, Pastas recentes, Caminhos recentes; the palette group Recentes; the latest download → o último download",
+    "sources": "macOS pt-BR Finder MenuBar (Pastas Recentes, Recentes); catalog (queryUi.recent.*, Seleções recentes, Caminhos recentes)"
   },
   "recommended": {
     "chosen": "recomendado",

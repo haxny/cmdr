@@ -72,3 +72,7 @@ settled wording into `terms.json` (and `decisions.md` when the reason is worth k
   `cursor de texto` (everyday) over Apple's `ponto de inserção`, and the hint is restructured
   (`leve até ele o cursor de texto ou o ponteiro do mouse`) so `ele` can't reach past `cursor` to `contador`. Confirm it
   reads naturally, and that `Aumenta {step} a cada vez` reads as the counter growing by that much per file.
+- **Delete-all-data dialog headings** (`settings.dataWipe.goesHeading`, `.staysHeading`): `O que sai` / `O que fica`
+  mirror the casual English pair. Confirm `O que sai` reads as "what gets deleted" over the list, or suggest
+  `O que é apagado`. Also confirm `os próprios dados` (`.doneTitle`, `.partialTitle`, `.refused.alreadyRunning`) reads
+  naturally for "its data", chosen because `seus dados` would read as the user's.

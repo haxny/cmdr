@@ -1820,6 +1820,13 @@
     "confidence": "high",
     "sources": "AP (JPEG影像, Preview 影像大小：)"
   },
+  "image-search": {
+    "accept": ["照片搜尋", "語意搜尋", "透過描述搜尋", "關鍵字搜尋", "標籤搜尋"],
+    "chosen": "影像搜尋",
+    "confidence": "high",
+    "forms": "the feature in general → 影像搜尋; its stored data → 影像搜尋資料 (settings.dataWipe.goes.indexes); the sub-features keep their own names: photo search → 照片搜尋, semantic search → 語意搜尋, search by description → 「透過描述搜尋」, keyword / tag search → 關鍵字搜尋 / 標籤搜尋",
+    "sources": "MS TBX (Image Search → 影像搜尋); catalog fileExplorer.imageIndex.drive.* (4 values); follows the image ruling 影像"
+  },
   "in-use": {
     "accept": ["在用", "佔著", "開著", "使用", "佔用"],
     "chosen": "使用中",

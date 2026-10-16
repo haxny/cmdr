@@ -398,5 +398,33 @@
   "settings.control.backToPresetsAriaLabel": "Volver a las preconfiguraciones",
   "@settings.control.backToPresetsAriaLabel": {
     "sourceHash": "ff0937a"
+  },
+  "settings.dataWipe.description": "Elimina todo lo que Cmdr guarda en este Mac: configuración, contraseñas guardadas, historiales, índices y modelos descargados. Después, Cmdr se cierra.",
+  "@settings.dataWipe.description": {
+    "sourceHash": "946e084"
+  },
+  "settings.dataWipe.goes.settings": "Configuración y atajos de teclado",
+  "@settings.dataWipe.goes.settings": {
+    "sourceHash": "8c0b976"
+  },
+  "settings.dataWipe.goes.license": "La licencia de este Mac. Para volver a activarla, ingresa la clave de licencia de tu correo de compra.",
+  "@settings.dataWipe.goes.license": {
+    "sourceHash": "2798b70"
+  },
+  "settings.dataWipe.goes.licenseIfAny": "La licencia de este Mac, si activaste una. Para volver a activarla, ingresa la clave de licencia de tu correo de compra.",
+  "@settings.dataWipe.goes.licenseIfAny": {
+    "sourceHash": "eea1edc"
+  },
+  "settings.dataWipe.goes.logs": "Registros y reportes de fallos",
+  "@settings.dataWipe.goes.logs": {
+    "sourceHash": "bb7ccf8"
+  },
+  "settings.dataWipe.doneMessage": "Ya no queda nada de lo que Cmdr guardaba en este Mac. Para eliminar también la app, muévela al basurero después de que Cmdr se cierre.",
+  "@settings.dataWipe.doneMessage": {
+    "sourceHash": "a51a0ed"
+  },
+  "settings.dataWipe.partialMessage": "No se pudieron eliminar algunas cosas. Para terminar, elimínalas tú:",
+  "@settings.dataWipe.partialMessage": {
+    "sourceHash": "a65b37f"
   }
 }

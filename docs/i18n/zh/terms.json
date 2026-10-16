@@ -2568,6 +2568,10 @@
   "remove": {
     "chosen": "移除",
     "confidence": "high",
+    "exceptions": {
+      "settings.dataWipe.doneMessage": "English sense: removing the app means deleting it from disk (via the Trash), so it takes the spoken delete 删掉, not the list verb 移除.",
+      "settings.dataWipe.partialMessage": "English sense: the user deletes leftover files and keychain items by hand, so it takes the spoken delete 删掉, not the list verb 移除."
+    },
     "forms": "从列表中移除; tags 移除“{color}”",
     "note": "Deleting what a rollback wrote, a leftover, or a model is 删除; 移除 only takes something out of a list or an archive.",
     "sources": "macOS"

@@ -362,3 +362,20 @@ rule into `translation-principles.md` or `translator-instructions.md`), then del
   `Modificado`, `Eliminado`). If the Git column ever shows a status on a folder row (git reports untracked or ignored
   directories), those read wrong for carpeta / pasta. State in the descriptions whether a folder row can carry a status.
   (es, pt)
+- `concepts.json` `remove` matches `settings.dataWipe.doneMessage` ("remove the app" = trash it) and
+  `settings.dataWipe.partialMessage` ("remove these yourself" = delete leftovers): both are deletions. Add them to
+  `remove`'s `notMatch`; fr, es, zh, and vi carry `exceptions` meanwhile. (fr, es, zh, vi, zh-Hant)
+- `settings.dataWipe.introWithSize`: "the {sizeText}" invites a definite article before a formatted amount, the same
+  trap as "the {countText} items". fr restructured to `…, soit {sizeText}, …`, es to `…, {sizeText} en total, …`;
+  mention it in the description. (fr, es, hu, nl, de, pt, sv)
+- No `data` or `privacy policy` concept, though nine `settings.dataWipe.*` keys use "data" and `.stays` names the
+  privacy policy. Add both to `concepts.json`; locales used gegevens, adatok, Daten, dữ liệu, 数据. (nl, hu, ru, de, vi,
+  sv)
+- `concepts.json` `item` matches "items in Keychain Access" (`settings.dataWipe.leftover.*`), which is the `entry`
+  sense; add it to `item`'s `notMatch`. de carries two `exceptions` meanwhile. Also say in the description what Keychain
+  Access calls one entry. (de, ru)
+- `concepts.json` `image-search` groups photo, semantic, by-description, keyword, and tag search under one term, though
+  each has its own UI name, so the term check flags every locale. Split it or give each feature its own match. (zh-Hant)
+- `settings.dataWipe.description` reads as an imperative ("Delete everything…") but describes what the button does; say
+  which in the description. `.stays`: say whether "the privacy policy" is a link, and that "Cmdr's servers" are Cmdr's
+  own online servers, not the user's. `.refused.interrupted`: say whether "Try again?" is a button. (ru, hu, zh, nl)

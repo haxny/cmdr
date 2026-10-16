@@ -1565,7 +1565,7 @@
     "sources": "catalog"
   },
   "history": {
-    "accept": ["Historie"],
+    "accept": ["Historie", "Verläufe"],
     "chosen": "Verlauf",
     "confidence": "high",
     "sources": "macOS (Verlauf); catalog (settings.operationLog.intro)"
@@ -1671,7 +1671,7 @@
     "sources": "MS terminology (the incoming-call label): Eingehend"
   },
   "index": {
-    "accept": ["Index", "Indizierung", "indiziert"],
+    "accept": ["Index", "Indizes", "Indizierung", "indiziert"],
     "avoid": [
       {
         "form": "indexieren",
@@ -1711,6 +1711,10 @@
     ],
     "chosen": "Objekt",
     "confidence": "high",
+    "exceptions": {
+      "settings.dataWipe.leftover.secretItems": "English sense: a Keychain item is a credential-store entry (concept entry), so it takes Eintrag, like ai.secretError.removeKeychainBody (den Eintrag „Cmdr“)",
+      "settings.dataWipe.leftover.secretsUnreadable": "English sense: a Keychain item is a credential-store entry (concept entry), so it takes Eintrag, like ai.secretError.removeKeychainBody (den Eintrag „Cmdr“)"
+    },
     "forms": "neuter: weiteres Objekt / weitere Objekte; a sentence that refers back to {name} repeats das Objekt, never a pronoun",
     "sources": "macOS Finder (Ausgewählte Objekte, Objekte komprimieren; PE82)"
   },

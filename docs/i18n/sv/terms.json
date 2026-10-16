@@ -2322,6 +2322,13 @@
     "confidence": "high",
     "sources": "catalog (reclaim.freed Frigjorde)"
   },
+  "recent": {
+    "accept": ["senast", "nyligen"],
+    "chosen": "senaste",
+    "confidence": "high",
+    "forms": "recent folders → Senaste mappar; recent searches → Senaste sökningar; the Recents group → Senaste",
+    "sources": "macOS Finder MenuBar (262.title Senaste mappar, 300636.title Senaste); catalog (queryUi.recent.* Senaste sökningar)"
+  },
   "recommended": {
     "chosen": "rekommenderas",
     "confidence": "high",

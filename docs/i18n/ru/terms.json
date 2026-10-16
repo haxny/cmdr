@@ -2507,7 +2507,9 @@
     "accept": ["объект"],
     "exceptions": {
       "errors.listing.attributeNotFound.explanation": "The item is carried by «атрибут файла» earlier in the same sentence.",
-      "settings.control.unitItems": "A unit after a number the user types: объект can't agree with every number (1 объектов), so the counting unit шт. stands in, like сек. for seconds."
+      "settings.control.unitItems": "A unit after a number the user types: объект can't agree with every number (1 объектов), so the counting unit шт. stands in, like сек. for seconds.",
+      "settings.dataWipe.leftover.secretItems": "English sense: a Keychain item is a credential-store entry (concept entry), so it takes запись, like the catalog's existing запись «Cmdr»",
+      "settings.dataWipe.leftover.secretsUnreadable": "English sense: a Keychain item is a credential-store entry (concept entry), so it takes запись, like the catalog's existing запись «Cmdr»"
     },
     "forms": "plural: {countText} объект / объекта / объектов; Copied N items → Скопировано: {countText} …",
     "avoid": [
