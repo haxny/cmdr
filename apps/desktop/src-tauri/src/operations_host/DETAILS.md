@@ -7,7 +7,8 @@ The app side of the write engine's seams. The engine declares what it needs in `
 
 `install(app)` runs in `setup()` right after `operation_log_host::install()`, which follows `volume_host::install`.
 It builds an `EngineHost` from `volume_host::host()` (the engine's runtime), a `TauriEngineEvents` holding the app
-handle, and a sink factory that builds a `TauriEventSink`, and hands it to `write_operations::host::install`. That's
+handle, the app's answer to every optional seam (`app_answers`, shared with the test binary's `without_frontend`), and
+a sink factory that builds a `TauriEventSink`, and hands it to `write_operations::host::install`. That's
 before anything can start an operation and before the in-flight sweep, whose staging-leftovers notice goes through it.
 
 - **Decision: the runtime comes from the volume host, with no second handle.** Why: the engine and the backends it
@@ -88,6 +89,14 @@ maps `unregistered_volumes::why_unregistered`'s answer onto the engine's `Unregi
 `routes_over_its_parent` is `path_routes_over_its_parent`, which reads the git portal's switch, so it stays app-side
 even though it's pure string work. Pinned by `volumes::tests::the_adapter_answers_from_the_live_registry`.
 
+## Own writes (`own_writes.rs`)
+
+`AppOwnWrites` answers `OwnWrites::announce` with `downloads::note_pending_write_for_cmdr`, which no-ops while the
+watcher sleeps and for a path outside the Downloads root (`downloads/DETAILS.md` § "Cmdr-own-write hook contract"). It's
+called beside a syscall on every file landing, so it stays one prefix-checked insert. Under `cfg(test)` the hook feeds
+`downloads/own_write_recorder.rs`, which is how `own_write_announce_tests.rs` sees every write path's announces through
+this adapter. Pinned by `own_writes::tests::an_announce_reaches_the_downloads_hook`.
+
 ## A test binary
 
 Nothing installs in a test binary, and some engine pins read the app's real answers: the transfer-gauge cells in
@@ -95,5 +104,6 @@ Nothing installs in a test binary, and some engine pins read the app's real answ
 only, with `without_frontend()`: `TauriEngineEvents` with no app handle (events go nowhere; the gauge, the analytics
 client, and the error reporter work as in the app) and the real `AppOperationVolumes` (cells register their volumes in
 the real registry) over `volume_host::host()`, whose runtime is `cmdr-fs`'s shared
-fallback, and no sink factory. Outside tests the pre-install answer is a detached host that drops everything; nothing
+fallback, the same optional seams as the app (own writes reach the downloads hook and its recorder), and no sink
+factory. Outside tests the pre-install answer is a detached host that drops everything; nothing
 can start an operation before setup.

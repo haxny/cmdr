@@ -42,6 +42,7 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+use super::super::host;
 use super::super::in_flight_temps::TempHome;
 use super::super::state::WriteOperationState;
 use super::recovered_name::{
@@ -727,7 +728,7 @@ pub(super) fn note_pending_for_local_dest(dest_volume: &Arc<dyn Volume>, dest_pa
     // The same anchoring `LocalPosixVolume::resolve` applies, so the path we
     // register matches the one `write_from_stream` will hit.
     let absolute = cmdr_fs::volume::root_anchored(&root, dest_path);
-    crate::downloads::note_pending_write_for_cmdr(&absolute);
+    host::installed().own_writes().announce(&absolute);
 }
 
 #[cfg(test)]

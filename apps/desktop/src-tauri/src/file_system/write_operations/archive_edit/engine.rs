@@ -466,7 +466,7 @@ impl MutationHooks for MutatorHooks {
     }
 
     fn note_pending(&self, path: &Path) {
-        crate::downloads::note_pending_write_for_cmdr(path);
+        host::installed().own_writes().announce(path);
     }
 }
 

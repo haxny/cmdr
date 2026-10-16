@@ -22,6 +22,7 @@ use std::time::Duration;
 
 use super::super::super::conflict::ApplyToAll;
 use super::super::super::event_sinks::OperationEventSink;
+use super::super::super::host;
 use super::super::super::journal;
 use super::super::super::manager;
 use super::super::super::state::WriteOperationState;
@@ -71,7 +72,7 @@ fn note_pending_for_local_volume(volume: &Arc<dyn Volume>, path: &Path) {
         return;
     };
     let absolute = cmdr_fs::volume::root_anchored(&root, path);
-    crate::downloads::note_pending_write_for_cmdr(&absolute);
+    host::installed().own_writes().announce(&absolute);
 }
 
 /// Moves files within the same volume using native `Volume::rename`.

@@ -20,6 +20,7 @@ use std::sync::Arc;
 use super::super::conflict::{ApplyToAll, IncomingItem, resolve_conflict};
 use super::super::error_classification::IoResultExt;
 use super::super::event_sinks::OperationEventSink;
+use super::super::host;
 use super::super::ledger::{WrittenFile, WrittenIdentity};
 use super::super::overwrite::{rename_no_replace, safe_overwrite_dir};
 use super::super::reversal::{Recheck, ReversalTally, recheck_local};
@@ -565,8 +566,8 @@ fn merge_move_directory(
                 Some(resolved) => {
                     // Hook the downloads watcher's ignore set for both
                     // halves of the rename; no-ops outside ~/Downloads.
-                    crate::downloads::note_pending_write_for_cmdr(&source_child);
-                    crate::downloads::note_pending_write_for_cmdr(&resolved.path);
+                    host::installed().own_writes().announce(&source_child);
+                    host::installed().own_writes().announce(&resolved.path);
                     move_resolved_into_place(
                         state,
                         &source_child,
@@ -588,8 +589,8 @@ fn merge_move_directory(
             }
         } else {
             // No conflict, just rename
-            crate::downloads::note_pending_write_for_cmdr(&source_child);
-            crate::downloads::note_pending_write_for_cmdr(&dest_child);
+            host::installed().own_writes().announce(&source_child);
+            host::installed().own_writes().announce(&dest_child);
             rename_onto_free_name(&source_child, &dest_child).with_path(&source_child)?;
             move_tx.record(source_child, WrittenFile::local_stat(dest_child, child_stat.as_ref()));
         }

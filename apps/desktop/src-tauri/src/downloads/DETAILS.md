@@ -19,8 +19,8 @@ the OS watch; the watcher holds no FDA-protected state beyond that, so the close
 
 ## Cmdr-own-write hook contract
 
-Write operations call `crate::downloads::note_pending_write_for_cmdr(&dest_path)` immediately before each filesystem
-syscall. `note_pending_write_for_cmdr` resolves the watcher via `runtime::with_watcher` and calls
+Write operations announce each path immediately before its filesystem syscall, through the engine's `OwnWrites` seam,
+which `operations_host/own_writes.rs` answers with `crate::downloads::note_pending_write_for_cmdr(&dest_path)`. `note_pending_write_for_cmdr` resolves the watcher via `runtime::with_watcher` and calls
 `IgnoreSet::note_pending`, whose root check silently no-ops for paths outside the watched Downloads root, so call
 sites invoke unconditionally; don't move the filter to the call sites.
 

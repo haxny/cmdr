@@ -221,8 +221,8 @@ async fn rename_managed_inner(
         .run_instant(descriptor, async move {
             // Register both halves of the rename with the downloads watcher's
             // ignore set BEFORE the syscall (no-ops outside ~/Downloads).
-            crate::downloads::note_pending_write_for_cmdr(&from);
-            crate::downloads::note_pending_write_for_cmdr(&to);
+            host::installed().own_writes().announce(&from);
+            host::installed().own_writes().announce(&to);
 
             if !is_root {
                 // Volume-aware rename (MTP, SMB, and other non-local volumes).

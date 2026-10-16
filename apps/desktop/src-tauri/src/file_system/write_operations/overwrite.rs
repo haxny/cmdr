@@ -147,8 +147,8 @@ where
     // CREATE lands on the temp and the RENAME carries it to the final name, and
     // the watcher keys on exact paths. Registering only the final name would let
     // a copy into ~/Downloads toast its own `.cmdr-tmp-*`. No-ops elsewhere.
-    crate::downloads::note_pending_write_for_cmdr(temp_path);
-    crate::downloads::note_pending_write_for_cmdr(dest);
+    host::installed().own_writes().announce(temp_path);
+    host::installed().own_writes().announce(dest);
 
     // Findable from the moment the file can exist until the moment it can't:
     // unlike the async cross-volume path (`transfer/staged_write.rs`), landing

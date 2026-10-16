@@ -635,8 +635,8 @@ async fn unique_remote_temporary_path(volume: &dyn Volume, source: &Path, row_id
 }
 
 fn note_rename_write(from: &Path, to: &Path) {
-    crate::downloads::note_pending_write_for_cmdr(from);
-    crate::downloads::note_pending_write_for_cmdr(to);
+    host::installed().own_writes().announce(from);
+    host::installed().own_writes().announce(to);
 }
 
 /// Whether the row's source on `volume` is still the file the preflight recorded.

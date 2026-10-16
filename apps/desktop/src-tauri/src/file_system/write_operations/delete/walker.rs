@@ -135,7 +135,7 @@ pub(in crate::file_system::write_operations) fn delete_files_with_progress_inner
         // Defensive: register with the downloads watcher's ignore set so a
         // future "deleted from Downloads" event source wouldn't surprise us.
         // No-ops outside ~/Downloads.
-        crate::downloads::note_pending_write_for_cmdr(&file_info.path);
+        host::installed().own_writes().announce(&file_info.path);
         fs::remove_file(&file_info.path).with_path(&file_info.path)?;
 
         // Journal the deleted leaf so "when did I delete dog.jpg" is searchable.
@@ -214,7 +214,7 @@ pub(in crate::file_system::write_operations) fn delete_files_with_progress_inner
         }
 
         // Only remove if empty (files should already be deleted)
-        crate::downloads::note_pending_write_for_cmdr(dir);
+        host::installed().own_writes().announce(dir);
         let _ = fs::remove_dir(dir);
     }
 

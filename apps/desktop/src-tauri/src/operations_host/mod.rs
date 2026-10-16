@@ -9,6 +9,8 @@
 //! - volumes — [`volumes::AppOperationVolumes`], the volume registry asked per
 //!   call
 //! - engine-wide events — [`events::TauriEngineEvents`]
+//! - own writes — [`own_writes::AppOwnWrites`], the downloads watcher's ignore
+//!   set
 //! - one operation's or preview's events — [`TauriEventSink`] and
 //!   [`TauriScanPreviewSink`] (`sinks.rs`), built at the IPC edge; a terminal
 //!   event's app side effects ride along (`terminal_effects.rs`)
@@ -17,6 +19,7 @@
 
 mod analytics;
 mod events;
+mod own_writes;
 mod sinks;
 pub(crate) mod terminal_effects;
 mod volumes;
@@ -39,12 +42,7 @@ pub use sinks::{TauriEventSink, TauriScanPreviewSink};
 /// before anything can start an operation or the leftover sweep runs.
 pub fn install(app: &AppHandle) {
     let sink_app = app.clone();
-    let engine_host = EngineHost::new(
-        crate::volume_host::host(),
-        Arc::new(volumes::AppOperationVolumes),
-        Arc::new(events::TauriEngineEvents::new(Some(app.clone()))),
-    )
-    .with_operation_sinks(Box::new(move || {
+    let engine_host = app_answers(Some(app.clone())).with_operation_sinks(Box::new(move || {
         Arc::new(TauriEventSink::new(sink_app.clone())) as Arc<dyn OperationEventSink>
     }));
     host::install(engine_host);
@@ -54,9 +52,16 @@ pub fn install(app: &AppHandle) {
 /// never installs.
 #[cfg(test)]
 pub(crate) fn without_frontend() -> EngineHost {
+    app_answers(None)
+}
+
+/// Every seam the app answers the same with or without a frontend; `app` is
+/// where the engine-wide events go out, if anywhere.
+fn app_answers(app: Option<AppHandle>) -> EngineHost {
     EngineHost::new(
         crate::volume_host::host(),
         Arc::new(volumes::AppOperationVolumes),
-        Arc::new(events::TauriEngineEvents::new(None)),
+        Arc::new(events::TauriEngineEvents::new(app)),
     )
+    .with_own_writes(Arc::new(own_writes::AppOwnWrites))
 }

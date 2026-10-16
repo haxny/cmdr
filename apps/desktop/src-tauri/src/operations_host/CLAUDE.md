@@ -27,6 +27,7 @@ engine-wide facts, the per-op sinks, and what a terminal event does besides reac
 - `mod.rs`: `install`, `without_frontend`. `events.rs`: `TauriEngineEvents`, the instant-op analytics props, and the
   error-report re-raise. `sinks.rs`: `TauriEventSink`, `TauriScanPreviewSink`. `terminal_effects.rs` (+ `_tests.rs`):
   the terminal side effects in order. `analytics.rs`: the completion analytics they fire. `wire.rs`: the payloads as
-  Tauri events. `volumes.rs`: `AppOperationVolumes`, the volume registry asked per call.
+  Tauri events. `volumes.rs`: `AppOperationVolumes`, the volume registry asked per call. `own_writes.rs`: `AppOwnWrites`, the downloads
+  watcher's ignore set.
 
 Startup order, the sinks, the wire, and the fallback's reasoning: `DETAILS.md`.

@@ -15,6 +15,11 @@
 //! - **An operation the engine starts on its own behalf** (an instant op routed
 //!   into a zip becomes a managed archive edit) gets its sink from the host's
 //!   [`OperationSinkFactory`].
+//! - **"Cmdr is about to write here"** goes through [`OwnWrites`]
+//!   (`own_writes.rs`), before every syscall that lands a path.
+//!
+//! The volumes and the events are required; every other seam defaults to an
+//! answer that does nothing, which the host replaces with `with_*`.
 //!
 //! The app builds an [`EngineHost`] once (`operations_host::install`) and parks
 //! it in a slot this module owns until the engine becomes a handle that carries
@@ -23,6 +28,7 @@
 mod error_report;
 mod events;
 mod operation_sink;
+mod own_writes;
 mod scan_preview_sink;
 mod volumes;
 
@@ -36,6 +42,8 @@ pub(crate) use error_report::{AsideAttempt, OperationErrorReport, TreeFailure};
 use events::NoEngineEvents;
 pub(crate) use events::{EngineEvents, InstantMutationFact, InstantOp, InstantOutcome, InstantTarget};
 pub use operation_sink::OperationEventSink;
+use own_writes::NoOwnWrites;
+pub(crate) use own_writes::OwnWrites;
 pub use scan_preview_sink::ScanPreviewEventSink;
 use volumes::NoOperationVolumes;
 pub(crate) use volumes::{OperationVolumes, UnregisteredVolume, VolumeAnswer};
@@ -49,11 +57,13 @@ pub(crate) struct EngineHost {
     volumes: Arc<dyn OperationVolumes>,
     events: Arc<dyn EngineEvents>,
     operation_sinks: Option<OperationSinkFactory>,
+    own_writes: Arc<dyn OwnWrites>,
 }
 
 impl EngineHost {
     /// A host over `volume_host` (whose runtime the engine spawns on),
-    /// `volumes`, and `events`, with no sink factory.
+    /// `volumes`, and `events`, with no sink factory and every other seam
+    /// answering nothing.
     pub(crate) fn new(
         volume_host: VolumeHost,
         volumes: Arc<dyn OperationVolumes>,
@@ -64,6 +74,7 @@ impl EngineHost {
             volumes,
             events,
             operation_sinks: None,
+            own_writes: Arc::new(NoOwnWrites),
         }
     }
 
@@ -71,6 +82,12 @@ impl EngineHost {
     /// own behalf.
     pub(crate) fn with_operation_sinks(mut self, factory: OperationSinkFactory) -> Self {
         self.operation_sinks = Some(factory);
+        self
+    }
+
+    /// Tells `own_writes` about every path the engine is about to write.
+    pub(crate) fn with_own_writes(mut self, own_writes: Arc<dyn OwnWrites>) -> Self {
+        self.own_writes = own_writes;
         self
     }
 
@@ -113,6 +130,11 @@ impl EngineHost {
 
     pub(crate) fn events(&self) -> &dyn EngineEvents {
         &*self.events
+    }
+
+    /// Where the engine announces a path before it writes there.
+    pub(crate) fn own_writes(&self) -> &dyn OwnWrites {
+        &*self.own_writes
     }
 
     /// A fresh sink for an operation the engine starts on its own behalf.

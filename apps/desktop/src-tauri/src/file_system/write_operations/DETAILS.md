@@ -29,7 +29,7 @@ Pre-flight scans reuse cached listings when the source volume reports `WatchCove
 Where a symbol lives and who calls it: `codegraph_search` / `codegraph_explore`. The spine: `CLAUDE.md` § Module map.
 The full top-level inventory is here:
 
-- `mod.rs` (public API + the `start_write_operation` lifecycle), `host/` (what the engine needs from the app: the runtime, the volumes, and the engine-wide events, § "The engine's host"), `manager.rs` (registry + lane admission; its request answers in `manager/wire.rs`, reordering the line in `manager/reorder.rs`, and a retained failure's way to start again in `manager/retry.rs`, § "Retained failures"), `state.rs`
+- `mod.rs` (public API + the `start_write_operation` lifecycle), `host/` (what the engine needs from the app: the runtime, the volumes, the engine-wide events, and the optional seams, § "The engine's host"), `manager.rs` (registry + lane admission; its request answers in `manager/wire.rs`, reordering the line in `manager/reorder.rs`, and a retained failure's way to start again in `manager/retry.rs`, § "Retained failures"), `state.rs`
   (`WriteOperationState`, the settle guard, plus `state/registry.rs`: `WriteOperationRegistry` and its walks, and
   `state/controls.rs`:
   the by-id cancel / abort / pause / resume / conflict-answer entry points, re-exported through `state`, and
@@ -689,11 +689,11 @@ errno and no folder, since nothing there proved one.
 
 ## Cmdr-own-write hook (downloads watcher)
 
-Every write-op driver MUST register its destination with the downloads watcher's ignore set BEFORE issuing the syscall. This is what makes the watcher silently suppress events Cmdr itself caused, so the user doesn't see a "Downloaded foo.bin" toast when they just used Cmdr to copy 100 files into `~/Downloads`.
+Every write-op driver MUST announce its destination BEFORE issuing the syscall. The host's answer registers it with the downloads watcher's ignore set (`operations_host/own_writes.rs` → `downloads::note_pending_write_for_cmdr`), which is what makes the watcher silently suppress events Cmdr itself caused, so the user doesn't see a "Downloaded foo.bin" toast when they just used Cmdr to copy 100 files into `~/Downloads`.
 
-**Contract:** call `crate::downloads::note_pending_write_for_cmdr(&dest_path)` immediately before the write syscall (or the volume-trait equivalent: `Volume::write_from_stream`, `Volume::create_file`, `Volume::create_directory`, `Volume::rename`, `Volume::delete`).
+**Contract:** call `host::installed().own_writes().announce(&dest_path)` (the `OwnWrites` seam, `host/own_writes.rs`) immediately before the write syscall (or the volume-trait equivalent: `Volume::write_from_stream`, `Volume::create_file`, `Volume::create_directory`, `Volume::rename`, `Volume::delete`). Once per path per file landing, never per chunk: the seam's `dyn` call sits beside a syscall, which the dispatch rule allows.
 
-**Locked-in scoping:** the prefix check lives INSIDE the helper (and the underlying `IgnoreSet::note_pending`). Call sites invoke unconditionally; paths outside the resolved Downloads root silently no-op. **Don't add `if path.starts_with(downloads_dir)` guards at call sites**: centralizing the scope in the helper keeps it from drifting across call sites (the downloads watcher's ignore-set design lives in the `downloads` module docs).
+**Locked-in scoping:** the prefix check lives INSIDE the downloads helper (and the underlying `IgnoreSet::note_pending`). Call sites invoke unconditionally; paths outside the resolved Downloads root silently no-op. **Don't add `if path.starts_with(downloads_dir)` guards at call sites**: centralizing the scope in the helper keeps it from drifting across call sites (the downloads watcher's ignore-set design lives in the `downloads` module docs).
 
 **No-op when the watcher is dormant.** If the FDA gate is closed (or `refresh_runtime` hasn't been called yet), the watcher isn't installed and the helper is a cheap no-op (single mutex `lock + is_none`). Production write ops fire freely; the cost is one atomic-bool read per write.
 
@@ -704,12 +704,12 @@ Every write-op driver MUST register its destination with the downloads watcher's
 Example placement:
 
 ```rust
-// In `copy_single_item` (transfer/copy.rs), just before `copy_file_with_strategy`:
-crate::downloads::note_pending_write_for_cmdr(&actual_dest);
+// In `copy_single_item` (transfer/copy/single_item.rs), just before `copy_file_with_strategy`:
+host::installed().own_writes().announce(&actual_dest);
 let bytes = copy_file_with_strategy(source, &actual_dest, ..)?;
 ```
 
-See also: `apps/desktop/src-tauri/src/downloads/CLAUDE.md` for the watcher architecture, ignore-set internals, and the FDA-gated lifecycle. End-to-end safety net for the contract lives in `downloads::runtime::tests::note_pending_write_for_cmdr_suppresses_watcher_event_end_to_end`. Each write path's exact announce sequence (which paths, in what order, and whether each existed yet) is pinned in `own_write_announce_tests.rs`, over the test-only recorder in `apps/desktop/src-tauri/src/downloads/own_write_recorder.rs`; a new write path gets a cell there.
+See also: `apps/desktop/src-tauri/src/downloads/CLAUDE.md` for the watcher architecture, ignore-set internals, and the FDA-gated lifecycle. End-to-end safety net for the contract lives in `downloads::runtime::tests::note_pending_write_for_cmdr_suppresses_watcher_event_end_to_end`. Each write path's exact announce sequence (which paths, in what order, and whether each existed yet) is pinned in `own_write_announce_tests.rs`, over the test-only recorder in `apps/desktop/src-tauri/src/downloads/own_write_recorder.rs` (the test binary's fallback host answers with the app's own `AppOwnWrites`, so every announce reaches it); a new write path gets a cell there.
 
 ## The engine's host
 
@@ -742,6 +742,12 @@ runtime. The app's answer is `apps/desktop/src-tauri/src/operations_host/`, whic
   failed, a displaced original is stranded under its aside name, a transfer is stuck on a silent backend, or a contained
   bug. The app re-raises each through `log_error!` with the message and target (the engine's module path) it always
   had, so bundles, greps, and dispatch filters see no change.
+- **"Cmdr is about to write here" goes through `OwnWrites`** (`host/own_writes.rs`), once per path BEFORE the syscall
+  that lands it (§ "Cmdr-own-write hook (downloads watcher)"). The one per-file seam the dispatch rule sanctions: a
+  landing already costs syscalls, so one `dyn` call beside it is noise.
+- **Optional seams default to doing nothing.** `EngineHost::new` takes only the runtime's `VolumeHost`, the volumes,
+  and the events (nothing works without those); every other seam starts as a no-op answer that `with_*` replaces. The
+  app wires them all in `operations_host::app_answers`.
 - **The app decides what each fact becomes**: a Tauri event, a `priority::transfers` call, a PostHog capture under a
   literal event name (`analytics-event-catalog` reads `capture("…")`), or an error report. The test-only counters a
   pin reads (`emit_count`, `busy_emit_count`, `KEPT_NOTICES`, the scan bridge's tick recorder) count on the engine side,

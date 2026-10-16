@@ -348,7 +348,7 @@ pub(crate) async fn create_directory_core(
 
         // Register the new directory path with the downloads watcher's
         // ignore set; no-ops for paths outside ~/Downloads.
-        crate::downloads::note_pending_write_for_cmdr(&new_path);
+        host::installed().own_writes().announce(&new_path);
 
         volume
             .create_directory(&new_path)
@@ -431,7 +431,7 @@ pub(crate) async fn create_file_core(
 
         // Register the new file path with the downloads watcher's ignore
         // set; no-ops for paths outside ~/Downloads.
-        crate::downloads::note_pending_write_for_cmdr(&new_path);
+        host::installed().own_writes().announce(&new_path);
 
         volume
             .create_file(&new_path, b"")

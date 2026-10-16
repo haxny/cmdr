@@ -181,7 +181,7 @@ commands in `commands/file_system/volume_copy.rs`) pass the destination through 
 transfer dialog's volume-relative box at the dest volume's root; `file_system/volume/DETAILS.md` § "Path handling
 gotchas" is the canonical account. Inside this directory the same `cmdr_fs::volume::root_anchored` re-derives the local
 absolute path in four places that must agree on it: the both-local shortcuts in `copy.rs` / `move.rs`, the O_EXCL
-reservation in `conflict.rs`, and the `note_pending_write_for_cmdr` registrations in `stream_pipe.rs` / `move_same.rs`
+reservation in `conflict.rs`, and the own-write announces in `stream_pipe.rs` / `move_same.rs`
 (register a different path than the writer hits, and the downloads watcher treats Cmdr's own write as somebody else's).
 ❌ Don't replace one with a raw `root.join(path.strip_prefix("/"))`: that re-roots an already-absolute destination under
 itself.

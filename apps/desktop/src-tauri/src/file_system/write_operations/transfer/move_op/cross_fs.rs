@@ -20,6 +20,7 @@ use std::sync::Arc;
 
 use cmdr_fs::metadata::{LandedMetadata, apply_landed};
 
+use super::super::super::host;
 use super::super::copy::{
     JournalDestUnder, apply_created_dirs_metadata, copy_single_item, create_scanned_dirs_at_destination,
 };
@@ -413,7 +414,7 @@ pub(super) fn move_with_staging(
                         // Cross-FS move: stage→final lands the file at its
                         // final visible name. Register so the watcher
                         // suppresses; no-ops outside ~/Downloads.
-                        crate::downloads::note_pending_write_for_cmdr(&resolved.path);
+                        host::installed().own_writes().announce(&resolved.path);
                         // Reuse the same Rename / Overwrite / type-mismatch logic the
                         // same-FS path uses, operating on the staged copy. The staged
                         // item mirrors the source's type, so `staged_path` drives the
@@ -461,7 +462,7 @@ pub(super) fn move_with_staging(
                 }
             } else {
                 // No conflict, just rename from staging to final
-                crate::downloads::note_pending_write_for_cmdr(&final_path);
+                host::installed().own_writes().announce(&final_path);
                 rename_onto_free_name(&staged_path, &final_path).map_err(|e| WriteOperationError::IoError {
                     path: staged_path.display().to_string(),
                     message: format!("Failed to move from staging: {}", e),

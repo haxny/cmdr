@@ -28,8 +28,8 @@ Full lifecycle, scope rationale, and v1 limits: `DETAILS.md`.
   `runtime::refresh_runtime(&app)` at startup (after `set_fda_pending`), on every main-window `Focused(true)` (the
   "toggled FDA in System Settings, came back" path), and the Settings pane mount calls `recheck_downloads_watcher_gate`
   (recovers from a stale focus-event read). The closed-gate side is a pure no-op.
-- **Cmdr-own-write hook: call `crate::downloads::note_pending_write_for_cmdr(&dest_path)` immediately before each write
-  syscall**, unconditionally: `IgnoreSet::note_pending` no-ops outside the watched root, and moving that filter to the
+- **Cmdr-own-write hook: `crate::downloads::note_pending_write_for_cmdr(&dest_path)` runs immediately before each write
+  syscall** (the write engine reaches it through its `OwnWrites` seam), unconditionally: `IgnoreSet::note_pending` no-ops outside the watched root, and moving that filter to the
   call sites is how one forgets it. Register the **final** path. ❌ Don't reduce the root check to one `starts_with`: it
   matches the declared AND symlink-resolved spellings, since events name canonical paths. ❌ Never `canonicalize` a
   registered path: share targets register too, and a network `realpath` stalls the write. § "Cmdr-own-write hook

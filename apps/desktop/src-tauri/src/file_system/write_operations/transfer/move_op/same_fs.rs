@@ -14,6 +14,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+use super::super::super::host;
 use super::super::super::ledger::WrittenFile;
 use super::{MoveTransaction, merge_move_directory, move_resolved_into_place, rename_onto_free_name};
 
@@ -177,8 +178,8 @@ pub(super) fn move_with_rename(
                         // ignore set: destination so rename-arrival is
                         // suppressed, source so a Cmdr move OUT of Downloads
                         // is also suppressed. No-ops outside ~/Downloads.
-                        crate::downloads::note_pending_write_for_cmdr(source);
-                        crate::downloads::note_pending_write_for_cmdr(&resolved.path);
+                        host::installed().own_writes().announce(source);
+                        host::installed().own_writes().announce(&resolved.path);
                         // Landing on the original dest name replaced a pre-existing
                         // file; a rename-aside (different name) did not.
                         item_overwrote = resolved.path == dest_path;
@@ -206,8 +207,8 @@ pub(super) fn move_with_rename(
                 }
             } else {
                 // No conflict, so just rename
-                crate::downloads::note_pending_write_for_cmdr(source);
-                crate::downloads::note_pending_write_for_cmdr(&dest_path);
+                host::installed().own_writes().announce(source);
+                host::installed().own_writes().announce(&dest_path);
                 // A locked source is the one refusal `rename(2)`'s errno can't side on its own.
                 rename_onto_free_name(source, &dest_path)
                     .with_path(source)
