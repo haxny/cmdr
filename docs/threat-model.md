@@ -44,14 +44,15 @@ Ranked by what losing them costs a user.
 1. **The user's files**, local and remote: integrity (no silent loss or corruption, no writes outside where the user
    aimed) and confidentiality (nothing leaves the Mac unless the user sends it). With Full Disk Access this is the whole
    home folder.
-2. **Credentials**: SMB, SFTP, WebDAV, and S3 passwords and keys, and the user's cloud AI API key. All live in the macOS
-   Keychain (`apps/desktop/src-tauri/src/secrets/CLAUDE.md`); SFTP can also use the user's SSH agent and key files.
+2. **Credentials**: SMB, SFTP, WebDAV, and S3 passwords and keys, the user's cloud AI API key, and the license key. All
+   live in the macOS Keychain (`apps/desktop/src-tauri/src/secrets/CLAUDE.md`); SFTP can also use the user's SSH agent
+   and key files.
 3. **The code that runs**: the signed app bundle, the update chain that replaces it (minisign key, Apple Developer ID
    certificate, notarization credentials, the release workflow, `latest.json`), and helper binaries the app starts
    (`llama-server`, `adb`).
 4. **Derived data on disk**: the drive index, media index (OCR text and image tags), folder-importance visits, the
    operation log (a map of the user's file activity), Ask Cmdr chats and memory, and logs. All local, none encrypted by
-   Cmdr (FileVault is the layer).
+   Cmdr on purpose (FileVault is the layer; § 11 says why).
 5. **Data that leaves the Mac**: crash reports, error-report bundles, usage stats, feedback, and what cloud AI sends to
    the user's provider. Every outbound connection is listed on `/trust` (`networkConnections` in `trust.ts`).
 6. **The license system**: the production Ed25519 license-signing key and the license ledger (`docs/security.md` §
@@ -370,14 +371,37 @@ risk.
 
 ### 11. Local data at rest
 
-- **What's there**: the indexes, media index (OCR text can be a passport number), the operation log, Ask Cmdr chats and
-  memory, logs, and settings, all under the user's app data and log folders.
-- **Threats**: disclosure on a stolen or shared Mac, or through backups.
-- **Mitigations**: all files sit in the user's own folders with normal user permissions; secrets go to the Keychain,
-  never a settings file; none of this is transmitted (`docs/security.md` § Folder-importance visit signal, § Operation
-  log).
-- **Residual risk**: Cmdr doesn't encrypt them, and they're included in Time Machine backups. FileVault is the
-  protection. Listed on `/trust`.
+- **What's there**: the drive index (in `~/Library/Caches/`), media index (OCR text can be a passport number), the
+  operation log, search and selection histories, Ask Cmdr chats and notes, logs, and settings, all under the user's
+  `~/Library` (Application Support, Caches, Logs).
+- **Threats**: disclosure on a stolen or lost Mac, to another local user account, to another process running as the
+  user, or through backups.
+- **Decision** (David, 2026-10-16): Cmdr doesn't encrypt its local data, on purpose. FileVault, macOS's per-user
+  `~/Library` protection, and the Keychain for secrets are the stance for the EU Cyber Resilience Act's at-rest
+  requirement (Annex I Part I (2)(e), "such as by encrypting relevant data at rest"). **Why**, per threat:
+  - **Another process running as the user**: app-level encryption doesn't help. Cmdr must hold the key to use the data,
+    so the key sits in the Keychain item or file that same process could read, or in Cmdr's memory, which it can also
+    read. It would add CPU and disk cost (principle 5) and a lost-key failure mode, and buy no confidentiality.
+    Same-user code is out of scope anyway (§ Security posture).
+  - **Stolen or lost Mac**: FileVault encrypts the whole disk at rest, Cmdr's data included. Setup Assistant offers it
+    on every new Mac, and IT can enforce it on managed Macs through MDM.
+  - **Another local user**: `~/Library` and its `Application Support` and `Caches` are mode `700` (owner-only), so other
+    accounts can't list or read anything Cmdr keeps there (verified on macOS 27.0.1 with `stat -f "%Sp %Lp"`,
+    2026-10-16).
+  - **Secrets** are kept apart from all this: SMB, SFTP, WebDAV, and S3 passwords, cloud AI API keys, and the license
+    key are in the Keychain (`apps/desktop/src-tauri/src/secrets/CLAUDE.md`,
+    `apps/desktop/src-tauri/src/licensing/DETAILS.md` § Key storage), and the MCP token is an owner-only `0600` file
+    (`apps/desktop/src-tauri/src/mcp/auth.rs`).
+- **Mitigations**: as above, and none of this is transmitted (`docs/security.md` § Folder-importance visit signal, §
+  Operation log). Time Machine skips `~/Library/Caches`, so the drive index never reaches a backup (verified with
+  `tmutil isexcluded`, macOS 27.0.1, 2026-10-16).
+- **Residual risk**:
+  - **A Mac without FileVault**: anyone with the disk reads everything in plain text. The user's choice, and the same
+    for every file they own.
+  - **Unencrypted Time Machine backups**: the rest of `~/Library/Application Support/com.veszelovszki.cmdr/` (operation
+    log, media index, histories, chats) is backed up, and a backup disk without encryption exposes it. Older backups can
+    also still hold a `license.json` from before the key moved to the Keychain.
+  - Both are described on `/trust` § What is stored where.
 
 ## Residual risks, ranked
 
@@ -399,7 +423,8 @@ Impact × likelihood, highest first. Gaps tracked privately aren't ranked here.
    (compliance, availability). IT can turn off cloud AI, telemetry, and updates through managed preferences
    (`apps/desktop/src-tauri/src/managed_policy/DETAILS.md`).
 7. **A malicious dependency** past the age window and review (boundary 10). Impact: high. Likelihood: low.
-8. **Local data at rest isn't encrypted by Cmdr** (boundary 11). Impact: medium. Likelihood: low with FileVault on.
+8. **Local data at rest is readable on a Mac without FileVault, or from an unencrypted backup** (boundary 11; Cmdr
+   doesn't add its own encryption, by decision). Impact: medium. Likelihood: low with FileVault on.
 9. **A missed escape at a new `{@html}` site** gives script full IPC (boundary 1). Impact: high. Likelihood: low.
 10. **Loopback services are reachable by other local users**: `llama-server` with no key, and MCP when a developer turns
     it on, behind its token (boundary 2). Impact: low. Likelihood: low.
