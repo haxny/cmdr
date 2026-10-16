@@ -11,7 +11,6 @@ use std::sync::Arc;
 use super::super::OperationEventSink;
 use super::super::host;
 use super::super::types::{ReadOnlySide, WriteOperationError};
-use crate::file_system::volume::manager::get_volume_manager;
 use cmdr_archive::{ArchiveFormat, ArchiveIndex, LocalFileSource};
 use cmdr_fs::volume::RoutedKind;
 
@@ -86,7 +85,7 @@ pub(crate) fn ensure_zip_writable(archive_path: &Path, side: ReadOnlySide) -> Re
 /// duplicate, so routing proceeds and the managed op surfaces the real fault
 /// through its normal error path rather than being masked here.
 pub(crate) async fn archive_inner_exists(parent_volume_id: &str, archive_path: &Path, inner_path: &str) -> bool {
-    let parent = get_volume_manager().get(parent_volume_id);
+    let parent = host::installed().volumes().get(parent_volume_id);
     let is_remote = parent.as_ref().is_some_and(|p| !p.supports_local_fs_access());
 
     if is_remote {
@@ -95,7 +94,7 @@ pub(crate) async fn archive_inner_exists(parent_volume_id: &str, archive_path: &
         } else {
             archive_path.join(inner_path)
         };
-        let resolved = get_volume_manager().resolve(parent_volume_id, &full_path).await;
+        let resolved = host::installed().volumes().resolve(parent_volume_id, &full_path).await;
         return match resolved.volume {
             Some(volume) if resolved.routed == Some(RoutedKind::Archive) => volume.exists(&full_path).await,
             _ => false,

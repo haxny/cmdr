@@ -17,6 +17,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use super::super::event_sinks::OperationEventSink;
+use super::super::host;
 use super::super::manager::{self, OperationDescriptor, OperationSummaryText};
 use super::super::source_binding::SourceFingerprint;
 use super::super::state::{WriteOperationState, WriteSettledGuard, is_cancelled, update_operation_status};
@@ -114,7 +115,8 @@ pub(crate) fn start_bulk_rename(
     } else {
         // `start_renames` classified an unregistered id before this; one missing NOW left the
         // registry in between (an unmount race).
-        let volume = crate::file_system::volume::manager::get_volume_manager()
+        let volume = host::installed()
+            .volumes()
             .get(&volume_id)
             .ok_or_else(|| RenameStartError::Engine {
                 error: WriteOperationError::SourceNoLongerConnected {
@@ -308,7 +310,7 @@ async fn bulk_rename_remote(
     intent: &AtomicU8,
     recorder: &BulkRenameRecorder,
 ) -> BulkRenameRun {
-    let Some(volume) = crate::file_system::volume::manager::get_volume_manager().get(volume_id) else {
+    let Some(volume) = host::installed().volumes().get(volume_id) else {
         return BulkRenameRun::failed(rows.len(), "volume unavailable".to_string());
     };
     let mut outcomes = vec![BulkRenameOutcome::Skipped; rows.len()];

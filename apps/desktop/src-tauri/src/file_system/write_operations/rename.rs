@@ -139,7 +139,7 @@ async fn rename_managed_inner(
     // renaming it must work like any other file — so only a genuinely-inner path
     // routes here. Parent-aware detection (not the `std::fs`-only sync predicate)
     // so a rename inside a REMOTE zip (direct SMB / MTP) routes too.
-    let manager = crate::file_system::volume::manager::get_volume_manager();
+    let manager = host::installed().volumes();
     if manager.path_is_inside_archive(&volume_id, &from).await || manager.path_is_inside_archive(&volume_id, &to).await
     {
         return (
@@ -226,7 +226,7 @@ async fn rename_managed_inner(
                 // Volume-aware rename (MTP, SMB, and other non-local volumes).
                 // The volume's `rename` calls `notify_mutation` internally, so
                 // the listing cache updates automatically.
-                let Some(volume) = crate::file_system::volume::manager::get_volume_manager().get(&volume_id) else {
+                let Some(volume) = host::installed().volumes().get(&volume_id) else {
                     return Err(super::mutation_error::unregistered_volume_refusal(volume_id.clone(), &from).await);
                 };
                 // A taken name is reported by the NAME, matching the local branch and
@@ -503,7 +503,7 @@ async fn notify_rename_in_listing(volume_id: &str, from: &Path, to: &Path) {
     // Plain `get`, not `resolve`: a rename INSIDE an archive is rejected upstream,
     // so this only ever runs for a normal file (incl. the `.zip` file itself),
     // which must notify through its own volume — never route to the ArchiveVolume.
-    let volume = match crate::file_system::volume::manager::get_volume_manager().get(volume_id) {
+    let volume = match host::installed().volumes().get(volume_id) {
         Some(v) => v,
         None => return,
     };
@@ -586,7 +586,8 @@ fn preflight_reaches(volume_id: &str) -> bool {
     if volume_id == "root" {
         return true;
     }
-    crate::file_system::volume::manager::get_volume_manager()
+    host::installed()
+        .volumes()
         .get(volume_id)
         .is_some_and(|volume| volume.supports_local_fs_access())
 }

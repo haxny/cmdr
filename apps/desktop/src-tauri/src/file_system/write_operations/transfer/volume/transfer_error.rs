@@ -8,6 +8,7 @@
 
 use std::path::{Path, PathBuf};
 
+use super::super::super::host::{self, UnregisteredVolume};
 use super::super::super::state::WriteOperationState;
 use super::super::super::types::{
     PermissionSide, ReadOnlySide, WriteErrorEvent, WriteOperationError, WriteOperationType,
@@ -246,21 +247,19 @@ pub(super) fn write_error_event_from(
 /// it is the way through. Any other id is a volume that left the registry: as a
 /// source, `SourceNoLongerConnected` (a phone unplugged under a search-results
 /// pane is how a person gets here); as a destination, an unmount race, an
-/// `IoError` naming the id. The classification itself: `crate::unregistered_volumes`.
+/// `IoError` naming the id. The classification itself: `OperationVolumes::unregistered`.
 pub(in crate::file_system::write_operations) async fn unregistered_volume_error(
     volume_id: &str,
     path: &str,
     role: PathRole,
 ) -> WriteOperationError {
-    use crate::unregistered_volumes::{Unregistered, why_unregistered};
-
-    match (why_unregistered(volume_id).await, role) {
-        (Unregistered::NotConnected, role) => not_connected(path, role),
-        (Unregistered::Gone, PathRole::Source) => {
+    match (host::installed().volumes().unregistered(volume_id).await, role) {
+        (UnregisteredVolume::NotConnected, role) => not_connected(path, role),
+        (UnregisteredVolume::Gone, PathRole::Source) => {
             WriteOperationError::SourceNoLongerConnected { path: path.to_string() }
         }
         // (Log and technical-details text, not rendered prose.)
-        (Unregistered::Gone, PathRole::Destination) => WriteOperationError::IoError {
+        (UnregisteredVolume::Gone, PathRole::Destination) => WriteOperationError::IoError {
             path: volume_id.to_string(),
             message: format!("Destination volume '{volume_id}' not found"),
         },

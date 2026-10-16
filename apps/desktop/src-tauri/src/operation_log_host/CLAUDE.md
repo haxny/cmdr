@@ -11,8 +11,8 @@ This app as the operation log's host: `install` builds the app's one `OperationL
 - **A read before `install` is loud** (`log_error!`, a separate detached handle), so the slot stays free. Only the test
   and bench binaries build their handle on first read.
 - **`journal.rs` holds the write engine's by-`op_id` journal calls**, over the app accessor the crate can't name.
-- **An app answer goes in as a value or a trait** (`VolumeLookup` over the registry, the retention-limits closure over
-  settings, the app's runtime): `cmdr-operation-log` has no `tauri` and never names settings or this module.
+- **An app answer goes in as a value or a trait** (`VolumeLookup` over the engine's volumes, the retention-limits
+  closure over settings, the app's runtime): `cmdr-operation-log` has no `tauri` and never names settings or this module.
 - **A write-pipeline test that wants journaling holds `TestJournalGuard`** (one per test); a test of the log itself
   builds its own `OperationLog` and needs none. The guard reaches the crate's `testing` gate (`set_journal`,
   `reset_recording`), which the app's dev-dependency turns on.
@@ -20,6 +20,6 @@ This app as the operation log's host: `install` builds the app's one `OperationL
 ## Module map
 
 - `mod.rs`: `install`, `operation_log()`, `start`, the retention limits. `journal.rs`: the engine's by-id calls.
-  `volumes.rs`: `VolumeLookup` for the `VolumeManager`. `test_journal.rs`: `TestJournalGuard`.
+  `volumes.rs` (test-only): `VolumeLookup` for a `VolumeManager`. `test_journal.rs`: `TestJournalGuard`.
 
 Startup order and why each answer is passed rather than reached: `DETAILS.md`.

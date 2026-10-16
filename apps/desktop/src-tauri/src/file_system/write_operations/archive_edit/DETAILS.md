@@ -15,10 +15,10 @@ A write only reaches this driver if the routing seam DETECTS its target as archi
 parent-aware, not `std::fs`-only: the sync `archive::path_is_inside_archive` / `path_crosses_archive_boundary`
 predicates confirm a `.zip` via `std::fs::metadata` + a local magic read, which silently returns FALSE for an
 `smb://` / `mtp://` path — so a write inside a remote zip would fall through to a plain parent-volume write and error
-confusingly (data-safe, but wrong). So the routing seams call the async `VolumeManager::path_is_inside_archive`
+confusingly (data-safe, but wrong). So the routing seams call the async `OperationVolumes::path_is_inside_archive`
 (delete `../delete/mod.rs`, rename `../rename.rs`, copy-out / move-out source `commands/file_system/volume_copy.rs::resolve_source`
 and the scan-preview source) and `path_crosses_archive_boundary` (create `../create.rs`), which confirm through the
-parent's OWN `get_metadata` + four-byte `read_range` for a remote parent (mirroring `VolumeManager::resolve`) and keep
+parent's OWN `get_metadata` + four-byte `read_range` for a remote parent (mirroring the registry's `resolve`) and keep
 the zero-network `std::fs` fast path for a local one. Copy/move INTO already routed correctly (the dest goes through
 the async `resolve` → `dest_resolved.is_archive`). The `route_*` functions then re-split the confirmed path with the
 pure-string `archive_boundary_candidate` (NOT `confirm_archive_boundary`, whose `std::fs` confirm would wrongly fail
@@ -43,7 +43,7 @@ defining it in either one welds the two into a module cycle, which is exactly wh
 before the two became one type.
 
 **A committed edit shows itself.** Once the dispatch returns `Ok`, `run_managed_edit` drops the archive's parsed index
-(`VolumeManager::forget_archive_index`) and re-reads every listing open at or inside the archive
+(`OperationVolumes::forget_archive_index`) and re-reads every listing open at or inside the archive
 (`refresh_archive_listings`), all before the caller emits its terminal event, local and remote alike. Nothing else does
 it reliably: the FE's post-op `refresh_listing` skips an archive listing (not local, and its volume claims a watch), the
 local content watch rides FSEvents (late or dropped for the app's own swap; `crates/cmdr-archive/src/watch/DETAILS.md` §

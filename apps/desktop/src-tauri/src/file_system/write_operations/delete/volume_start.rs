@@ -12,6 +12,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use super::super::event_sinks::OperationEventSink;
+use super::super::host;
 use super::super::manager::{self, OperationDescriptor};
 use super::super::source_binding::{ExpectedSources, retain_bound_sources_on};
 use super::super::state::{WriteOperationState, WriteSettledGuard};
@@ -22,7 +23,6 @@ use super::super::types::{
 };
 use super::super::{journal, path_summary, scan_bridge};
 use super::delete_volume_files_with_progress_inner;
-use crate::file_system::volume::manager::get_volume_manager;
 use cmdr_fs::volume::LaneKey;
 use cmdr_operation_log::types::{ExecutionStatus, Initiator, OpKind};
 
@@ -46,7 +46,7 @@ pub(in crate::file_system::write_operations) fn start_volume_delete(
         config.progress_interval_ms,
     )));
 
-    let volume = get_volume_manager().get(&volume_id);
+    let volume = host::installed().volumes().get(&volume_id);
     let lane = volume
         .as_ref()
         .map(|volume| volume.lane_key())
@@ -184,7 +184,7 @@ async fn run_volume_delete(
     config: &WriteOperationConfig,
     expected_sources: Option<&ExpectedSources>,
 ) -> ExecutionStatus {
-    let Some(volume) = get_volume_manager().get(volume_id) else {
+    let Some(volume) = host::installed().volumes().get(volume_id) else {
         let first_source = sources
             .first()
             .map_or_else(|| volume_id.to_string(), |p| p.display().to_string());

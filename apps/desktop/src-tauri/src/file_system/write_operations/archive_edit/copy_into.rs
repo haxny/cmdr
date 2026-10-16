@@ -16,6 +16,7 @@ use walkdir::WalkDir;
 
 use super::super::OperationEventSink;
 use super::super::conflict::ApplyToAll;
+use super::super::host;
 use super::super::manager::{self, ManagedTaskGuard, OperationDescriptor, OperationSummaryText};
 use super::super::scratch_dir::ScratchDir;
 use super::super::state::{WriteOperationState, WriteSettledGuard};
@@ -28,7 +29,6 @@ use super::conflicts::{ConflictMode, conditional_overwrites, find_unique_inner, 
 use super::edit_error::EditError;
 use super::engine::{MutatorHooks, emit_archive_terminal, run_managed_edit, to_write_error};
 use super::routing::{ensure_zip_writable, normalize_inner_path, read_only_error};
-use crate::file_system::volume::manager::get_volume_manager;
 use cmdr_archive::mutator::{self, AddEntry, AddSource, Changeset, MutationError};
 use cmdr_archive::{ArchiveFormat, ArchiveIndex, LocalFileSource};
 use cmdr_fs::volume::{LaneKey, Volume, VolumeError};
@@ -260,7 +260,7 @@ async fn materialize_sources(
     let dest_volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "archive-source-pull",
         scratch.path().to_path_buf(),
-        crate::volume_host::host(),
+        host::installed().volume_host().clone(),
     ));
 
     let mut absolute = Vec::with_capacity(source_paths.len());
@@ -603,7 +603,8 @@ async fn archive_copy_into_start(
     };
     let state = Arc::new(WriteOperationState::new(Duration::from_millis(progress_interval_ms)));
 
-    let lane = get_volume_manager()
+    let lane = host::installed()
+        .volumes()
         .get(&parent_volume_id)
         .map(|v| v.lane_key())
         .unwrap_or_else(|| LaneKey::new(parent_volume_id.clone()));

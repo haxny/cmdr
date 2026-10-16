@@ -24,7 +24,7 @@ are O(archive) temp+rename rewrites. Up: `../CLAUDE.md`; mutation: `crates/cmdr-
   swap, and the remote ORIGINAL keeps its bytes until that final swap. Keep the four steps in that order and keep the
   cleanup on every early exit; the swap's shape depends on whether the backend allows same-name siblings. DETAILS §
   "Remote edit: the data-safety contract".
-- **Routing detection must be PARENT-AWARE**: the seams call the async `VolumeManager::path_is_inside_archive` /
+- **Routing detection must be PARENT-AWARE**: the seams call the async `OperationVolumes::path_is_inside_archive` /
   `path_crosses_archive_boundary`, ❌ never the sync `std::fs`-only predicates, which answer FALSE for an `smb://` /
   `mtp://` path and drop the write onto the parent volume.
 - **Fresh compression is seedless and publish-last**: reserve source + destination lanes, stream into a tracked stage,

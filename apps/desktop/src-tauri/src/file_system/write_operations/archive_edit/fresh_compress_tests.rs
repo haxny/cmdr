@@ -1,6 +1,7 @@
 //! Fresh compression coordinator shutdown and stage-validation tests.
 
 use super::*;
+use crate::file_system::volume::manager::get_volume_manager;
 use crate::file_system::write_operations::archive_edit::fresh_plan::FreshPlan;
 use crate::file_system::write_operations::archive_edit::fresh_zip::{FreshZipEntry, FreshZipSource};
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;

@@ -12,6 +12,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use super::super::OperationEventSink;
+use super::super::host;
 use super::super::manager::{self, ManagedTaskGuard, OperationDescriptor, OperationSummaryText};
 use super::super::state::{WriteOperationState, WriteSettledGuard};
 use super::super::types::ReadOnlySide;
@@ -19,7 +20,6 @@ use super::super::types::{WriteOperationError, WriteOperationStartResult, WriteO
 use super::edit_error::EditError;
 use super::engine::{MutatorHooks, emit_archive_terminal, run_managed_edit, to_write_error};
 use super::routing::{ensure_zip_writable, normalize_inner_path, read_only_error};
-use crate::file_system::volume::manager::get_volume_manager;
 use cmdr_archive::mutator::{self, Changeset, MutationError};
 use cmdr_fs::volume::LaneKey;
 
@@ -112,7 +112,8 @@ pub(crate) async fn archive_edit_start(
     // Share the parent drive's lane so the op serializes against other work on
     // that device (falls back to the id itself if the volume isn't registered —
     // the mutator's own open will surface a real error on a truly-gone drive).
-    let lane = get_volume_manager()
+    let lane = host::installed()
+        .volumes()
         .get(&request.parent_volume_id)
         .map(|v| v.lane_key())
         .unwrap_or_else(|| LaneKey::new(request.parent_volume_id.clone()));

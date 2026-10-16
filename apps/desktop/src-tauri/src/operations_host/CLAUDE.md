@@ -1,8 +1,8 @@
 # Operations host
 
 This app as the write engine's host: `install` builds the engine's `EngineHost` in `setup()` and parks it in the
-engine's slot (`file_system/write_operations/host/`). Here live the app's answers to every engine seam: the engine-wide
-facts, the per-op sinks, and what a terminal event does besides reaching the frontend.
+engine's slot (`file_system/write_operations/host/`). Here live the app's answers to every engine seam: the volumes, the
+engine-wide facts, the per-op sinks, and what a terminal event does besides reaching the frontend.
 
 ## Must-knows
 
@@ -27,6 +27,6 @@ facts, the per-op sinks, and what a terminal event does besides reaching the fro
 - `mod.rs`: `install`, `without_frontend`. `events.rs`: `TauriEngineEvents`, the instant-op analytics props, and the
   error-report re-raise. `sinks.rs`: `TauriEventSink`, `TauriScanPreviewSink`. `terminal_effects.rs` (+ `_tests.rs`):
   the terminal side effects in order. `analytics.rs`: the completion analytics they fire. `wire.rs`: the payloads as
-  Tauri events.
+  Tauri events. `volumes.rs`: `AppOperationVolumes`, the volume registry asked per call.
 
 Startup order, the sinks, the wire, and the fallback's reasoning: `DETAILS.md`.

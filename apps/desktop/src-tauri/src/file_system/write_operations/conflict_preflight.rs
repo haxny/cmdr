@@ -17,12 +17,11 @@ use std::sync::Arc;
 
 use tokio::time::Duration;
 
-use crate::file_system::volume::manager::get_volume_manager;
-use crate::unregistered_volumes::{Unregistered, why_unregistered};
 use cmdr_fs::deadline::{Deadline, timeout_detached_within};
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::{ScanConflict, Volume, VolumeError};
 
+use super::host::{self, UnregisteredVolume};
 use super::routing::{resolve_dest_path, resolve_source_volume, transfer_would_land_on_its_source};
 
 /// Why a pre-flight scan or a conflict check couldn't answer.
@@ -39,7 +38,7 @@ pub enum VolumeScanError {
         volume_id: String,
     },
     /// The destination is a listed phone or a saved server that nothing has
-    /// connected yet (`crate::unregistered_volumes`).
+    /// connected yet (`OperationVolumes::unregistered`).
     DestinationVolumeNotConnected {
         /// The id nothing has connected.
         volume_id: String,
@@ -61,11 +60,11 @@ pub enum VolumeScanError {
 
 impl VolumeScanError {
     /// The refusal for a destination id the registry had nothing for: not
-    /// connected yet, or gone (`crate::unregistered_volumes`).
+    /// connected yet, or gone (`OperationVolumes::unregistered`).
     pub(crate) async fn destination_missing(volume_id: String) -> Self {
-        match why_unregistered(&volume_id).await {
-            Unregistered::NotConnected => Self::DestinationVolumeNotConnected { volume_id },
-            Unregistered::Gone => Self::DestinationVolumeNotFound { volume_id },
+        match host::installed().volumes().unregistered(&volume_id).await {
+            UnregisteredVolume::NotConnected => Self::DestinationVolumeNotConnected { volume_id },
+            UnregisteredVolume::Gone => Self::DestinationVolumeNotFound { volume_id },
         }
     }
 }
@@ -127,7 +126,15 @@ pub(crate) async fn scan_volume_for_conflicts_within(
         &deadline,
         || VolumeScanError::TimedOut,
         |detail| VolumeScanError::Unexpected { detail },
-        async move { Ok::<_, VolumeScanError>(get_volume_manager().resolve(&resolve_id, &resolve_path).await.volume) },
+        async move {
+            Ok::<_, VolumeScanError>(
+                host::installed()
+                    .volumes()
+                    .resolve(&resolve_id, &resolve_path)
+                    .await
+                    .volume,
+            )
+        },
     )
     .await
     .inspect_err(|e| log_conflict_outcome(&deadline, "couldn't reach the destination volume", e))?;
@@ -349,7 +356,9 @@ fn stats_from_watched_panes(source_volume_id: &str, paths: &[PathBuf]) -> (Vec<(
     let mut answered = Vec::new();
     let mut unanswered = Vec::new();
     for (parent, children) in by_parent {
-        let listing = crate::listing_host::listings().authoritative_listing(source_volume_id, parent);
+        let listing = host::installed()
+            .listings()
+            .authoritative_listing(source_volume_id, parent);
         let by_name: HashMap<&str, &FileEntry> = listing
             .iter()
             .flatten()

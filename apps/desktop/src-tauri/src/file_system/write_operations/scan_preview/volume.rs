@@ -9,6 +9,7 @@ use std::sync::atomic::Ordering;
 use std::time::{Duration, Instant};
 
 use super::super::event_sinks::ScanPreviewEventSink;
+use super::super::host;
 use super::super::scan::{SubtreeTotals, scan_subtree_with_oracle};
 use super::super::scan_bridge::{ScanCounts, ScanPause, forward_scan_progress};
 use super::super::scan_cache::{ScanOutcome, settle_preview};
@@ -304,7 +305,7 @@ pub(in crate::file_system::write_operations) async fn run_oracle_aware_batch_sca
             .get(parent)
             .expect("group_order tracks every parent inserted into groups");
 
-        if let Some(cached_entries) = crate::listing_host::listings().authoritative_listing(volume_id, parent) {
+        if let Some(cached_entries) = host::installed().listings().authoritative_listing(volume_id, parent) {
             files = None;
             log::debug!(
                 "scan-preview: oracle hit for parent {} ({} cached entries, {} selected children)",

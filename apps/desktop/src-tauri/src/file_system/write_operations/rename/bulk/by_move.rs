@@ -17,6 +17,7 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+use super::super::super::host;
 use super::plan::{RenamePlanStep, build_execution_plan, spelled_destinations};
 use super::{BulkRenameRow, RenameStartError, start_bulk_rename};
 use crate::file_system::write_operations::event_sinks::OperationEventSink;
@@ -53,7 +54,7 @@ pub(crate) async fn start_renames(
     initiator: Initiator,
 ) -> Result<RenamesStarted, RenameStartError> {
     if volume_id != "root" {
-        let Some(volume) = crate::file_system::volume::manager::get_volume_manager().get(&volume_id) else {
+        let Some(volume) = host::installed().volumes().get(&volume_id) else {
             // Asked before anything runs, so a phone or server nobody connected is worded the way
             // a clicked copy off it would be, ❌ never as a volume that vanished.
             let first = rows

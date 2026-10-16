@@ -11,6 +11,7 @@ use std::time::Duration;
 use cmdr_archive::mutator::{MutationHooks, MutationProgress};
 
 use super::super::OperationEventSink;
+use super::super::host;
 use super::super::manager::{self, ManagedTaskGuard, OperationDescriptor, OperationSummaryText};
 use super::super::scratch_dir::ScratchDir;
 use super::super::state::{WriteOperationState, WriteSettledGuard};
@@ -24,7 +25,6 @@ use super::fresh_plan::{FreshPlan, PlanProgress, RemoteFeed, plan_sources, valid
 use super::fresh_rows::CompressRows;
 use super::fresh_validate::{ExpectedIndex, check_entry_names, validate_stage};
 use super::fresh_zip::{FreshZipCancellation, FreshZipError, FreshZipProgressObserver, spawn_fresh_zip_with_progress};
-use crate::file_system::volume::manager::get_volume_manager;
 use cmdr_fs::volume::{
     BackendKind, LaneKey, MutationEvent, StreamLength, StreamWriteProgress, Volume, VolumeError, VolumeReadStream,
     WriteMode,
@@ -88,7 +88,7 @@ pub(super) async fn start(
     net_new: bool,
     initiator: Initiator,
 ) -> Result<WriteOperationStartResult, WriteOperationError> {
-    let (dest_volume, dest_lane) = match get_volume_manager().get(&parent_volume_id) {
+    let (dest_volume, dest_lane) = match host::installed().volumes().get(&parent_volume_id) {
         Some(volume) => {
             let lane = volume.lane_key();
             (volume, lane)
@@ -97,7 +97,7 @@ pub(super) async fn start(
             Arc::new(LocalPosixVolume::local_folder(
                 "local",
                 PathBuf::from("/"),
-                crate::volume_host::host(),
+                host::installed().volume_host().clone(),
             )) as Arc<dyn Volume>,
             LaneKey::new(parent_volume_id.clone()),
         ),
@@ -112,7 +112,8 @@ pub(super) async fn start(
     validate_aliases(&source_volume, &source_paths, &dest_volume, &archive_path).await?;
 
     let operation_id = cmdr_operation_log::new_operation_id();
-    let registered_source = get_volume_manager()
+    let registered_source = host::installed()
+        .volumes()
         .find_by_root(source_volume.root())
         .filter(|(_, registered)| {
             registered.root() == source_volume.root() && registered.lane_key() == source_volume.lane_key()
@@ -487,7 +488,7 @@ async fn produce_via_spool(
     let spool_volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "fresh-zip-spool",
         scratch.path().to_path_buf(),
-        crate::volume_host::host(),
+        host::installed().volume_host().clone(),
     ));
     let (written, produced) = produce_into(
         plan,

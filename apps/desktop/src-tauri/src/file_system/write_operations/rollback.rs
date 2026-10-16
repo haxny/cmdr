@@ -35,8 +35,6 @@ use std::time::{Duration, Instant};
 
 use tokio::sync::oneshot;
 
-use crate::file_system::volume::manager::get_volume_manager;
-
 use crate::operation_log_host::operation_log;
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::volume::{DEFAULT_VOLUME_ID, Volume};
@@ -49,6 +47,7 @@ use cmdr_operation_log::types::{Initiator, OpKind, RollbackState};
 use cmdr_operation_log::writer::OperationLogWriter;
 
 use super::event_sinks::OperationEventSink;
+use super::host;
 use super::manager::{ManagedTaskGuard, OperationDescriptor, OperationSummaryText, manager};
 use super::state::{StopMeans, WriteOperationState, update_operation_status};
 use super::transfer::volume::move_file_across_volumes;
@@ -312,7 +311,7 @@ fn dispatch_inverse(
 ) -> Result<RollbackDispatch, RollbackRefusal> {
     // No writer means the journal never opened, so there's nothing to roll back.
     let writer = operation_log().writer().ok_or(RollbackRefusal::UnknownOperation)?;
-    let vm = get_volume_manager();
+    let vm = host::installed().volumes();
 
     let plan = rollback_operation(vm, &writer, op_id, |plan| {
         spawn_managed_inverse(&writer, plan, initiator, Arc::clone(&events), report)
@@ -333,7 +332,7 @@ fn spawn_managed_inverse(
     events: Arc<dyn OperationEventSink>,
     report: Option<oneshot::Sender<RollbackReport>>,
 ) -> Result<(), RollbackRefusal> {
-    let vm = get_volume_manager();
+    let vm = host::installed().volumes();
     let original = plan.original.clone();
     let inverse_op_id = plan.inverse_op_id.clone();
 
@@ -413,7 +412,7 @@ fn spawn_managed_inverse(
                 events,
                 StopMeans::IntentLeavesRunning,
             );
-            let vm = get_volume_manager();
+            let vm = host::installed().volumes();
             let outcome = execute_rollback(vm, &writer, &original, &inverse_op_id, initiator, &runner).await;
             // Hand the tally to a caller awaiting it (a multi-operation undo). A
             // dropped receiver (the caller went away) is not a problem: the reversal

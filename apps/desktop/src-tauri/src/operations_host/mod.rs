@@ -6,6 +6,8 @@
 //!
 //! - runtime — the volume host's (`volume_host::host()`), which is the app's own
 //!   tokio runtime, so an admitted operation never runs on a caller's
+//! - volumes — [`volumes::AppOperationVolumes`], the volume registry asked per
+//!   call
 //! - engine-wide events — [`events::TauriEngineEvents`]
 //! - one operation's or preview's events — [`TauriEventSink`] and
 //!   [`TauriScanPreviewSink`] (`sinks.rs`), built at the IPC edge; a terminal
@@ -17,6 +19,7 @@ mod analytics;
 mod events;
 mod sinks;
 pub(crate) mod terminal_effects;
+mod volumes;
 // Which app side effects each terminal event fires, and in what order around its emit.
 #[cfg(test)]
 mod terminal_effects_tests;
@@ -38,6 +41,7 @@ pub fn install(app: &AppHandle) {
     let sink_app = app.clone();
     let engine_host = EngineHost::new(
         crate::volume_host::host(),
+        Arc::new(volumes::AppOperationVolumes),
         Arc::new(events::TauriEngineEvents::new(Some(app.clone()))),
     )
     .with_operation_sinks(Box::new(move || {
@@ -52,6 +56,7 @@ pub fn install(app: &AppHandle) {
 pub(crate) fn without_frontend() -> EngineHost {
     EngineHost::new(
         crate::volume_host::host(),
+        Arc::new(volumes::AppOperationVolumes),
         Arc::new(events::TauriEngineEvents::new(None)),
     )
 }

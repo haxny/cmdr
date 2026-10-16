@@ -79,11 +79,21 @@ every emit site writes `wire::WriteProgress(event).emit(&app)`. A payload emitte
   per-chain filters keep matching wherever the engine's code lives.
 - `scan_wait_progress` → `write-progress` (a failed emit `warn!`s under `op_manager`).
 
+## The volumes (`volumes.rs`)
+
+`AppOperationVolumes` answers the engine's `OperationVolumes` (and so the rollback planner's `VolumeLookup`) from
+`get_volume_manager()`, reached per call: the registry is where volumes come and go, so a host that captured it at
+`install` would answer from a stale picture, and one built before `init_volume_manager` from nothing. `unregistered`
+maps `unregistered_volumes::why_unregistered`'s answer onto the engine's `UnregisteredVolume`, one variant each.
+`routes_over_its_parent` is `path_routes_over_its_parent`, which reads the git portal's switch, so it stays app-side
+even though it's pure string work. Pinned by `volumes::tests::the_adapter_answers_from_the_live_registry`.
+
 ## A test binary
 
 Nothing installs in a test binary, and some engine pins read the app's real answers: the transfer-gauge cells in
 `status_cache_tests` assert on `priority::transfers`. So before `install` the engine's slot answers, under `cfg(test)`
 only, with `without_frontend()`: `TauriEngineEvents` with no app handle (events go nowhere; the gauge, the analytics
-client, and the error reporter work as in the app) over `volume_host::host()`, whose runtime is `cmdr-fs`'s shared
+client, and the error reporter work as in the app) and the real `AppOperationVolumes` (cells register their volumes in
+the real registry) over `volume_host::host()`, whose runtime is `cmdr-fs`'s shared
 fallback, and no sink factory. Outside tests the pre-install answer is a detached host that drops everything; nothing
 can start an operation before setup.

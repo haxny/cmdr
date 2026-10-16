@@ -12,6 +12,7 @@
 //! whole `VolumeError`, so a backend that grows a variant reaches the frontend
 //! without a second vocabulary to keep in step.
 
+use super::host::{self, UnregisteredVolume};
 use super::types::TrashRefusalKind;
 use cmdr_fs::volume::VolumeError;
 use serde::{Deserialize, Serialize};
@@ -147,14 +148,12 @@ impl From<VolumeError> for MutationError {
 /// phone or a saved server nothing has connected answers the volume's own
 /// `NotConnected`, which the frontend's volume factory already words; any other
 /// id is `VolumeGone` (an unmount race). `path` is what the mutation targeted.
-/// The classification: `crate::unregistered_volumes`.
+/// The classification: `OperationVolumes::unregistered`.
 pub(crate) async fn unregistered_volume_refusal(volume_id: String, path: &std::path::Path) -> MutationError {
-    use crate::unregistered_volumes::{Unregistered, why_unregistered};
-
-    match why_unregistered(&volume_id).await {
-        Unregistered::NotConnected => MutationError::Volume {
+    match host::installed().volumes().unregistered(&volume_id).await {
+        UnregisteredVolume::NotConnected => MutationError::Volume {
             error: VolumeError::NotConnected(path.display().to_string()),
         },
-        Unregistered::Gone => MutationError::VolumeGone { volume_id },
+        UnregisteredVolume::Gone => MutationError::VolumeGone { volume_id },
     }
 }

@@ -7,6 +7,7 @@
 use std::path::{Path, PathBuf};
 
 use super::super::ScanCostFacts;
+use super::super::host;
 use cmdr_fs::name_fold::fold_name;
 
 use super::super::look_alike::{ListedFolders, NewEntry, place_new_entry};
@@ -165,7 +166,7 @@ pub(crate) async fn check_rename_validity_impl(
 /// folder answers without listing all of it, and its files are what the cost
 /// estimate prices: no request is sent for the estimate itself.
 async fn rename_by_move_cost(volume_id: &str, old_path: &Path, data_dir: Option<&Path>) -> Option<RenameByMove> {
-    let volume = crate::file_system::volume::manager::get_volume_manager().get(volume_id)?;
+    let volume = host::installed().volumes().get(volume_id)?;
     match volume.rename_work(old_path).await {
         Ok(RenameWork::CopyThenDelete) => {}
         Ok(RenameWork::OneCall) | Err(_) => return None,
@@ -258,7 +259,7 @@ async fn check_sibling_conflict_via_volume(
     // Plain `get`, not `resolve`: renaming INTO an archive is rejected upstream, so
     // the target is always a normal sibling (incl. a `.zip` file), checked on its
     // own volume — routing to the ArchiveVolume would mis-consult the zip's index.
-    let volume = match crate::file_system::volume::manager::get_volume_manager().get(volume_id) {
+    let volume = match host::installed().volumes().get(volume_id) {
         Some(v) => v,
         None => return (false, false, None),
     };

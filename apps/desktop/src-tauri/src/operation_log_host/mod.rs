@@ -10,6 +10,9 @@
 mod journal;
 #[cfg(test)]
 mod test_journal;
+// The planner cells pass a private registry; the engine's own lookups go
+// through `operations_host::volumes`.
+#[cfg(test)]
 mod volumes;
 
 use std::sync::{Arc, OnceLock};

@@ -17,6 +17,7 @@ use std::time::{Duration, Instant};
 
 use cmdr_fs::apple_double::SidecarRule;
 
+use super::host;
 use super::state::FileInfo;
 use super::validation::is_symlink_loop;
 use cmdr_fs::entry::FileEntry;
@@ -281,7 +282,7 @@ pub(super) fn walk_dir_recursive<E>(
         // step below still goes through `walk_dir_recursive`, which re-applies
         // the oracle at each level.
         if let Some(vid) = volume_id
-            && let Some(cached_entries) = crate::listing_host::listings().authoritative_listing(vid, path)
+            && let Some(cached_entries) = host::installed().listings().authoritative_listing(vid, path)
         {
             walk_cached_entries(
                 path,

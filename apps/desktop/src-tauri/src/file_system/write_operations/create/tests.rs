@@ -5,6 +5,7 @@
 //! test pins the busy-set wiring (root → nothing busy, non-root → the volume).
 
 use super::*;
+use crate::file_system::volume::manager::get_volume_manager;
 use std::fs;
 use std::future::Future;
 use std::path::{Path, PathBuf};
@@ -43,7 +44,6 @@ fn create_test_dir(label: &str) -> TempDir {
 /// `volume_id = None` (→ "root") exercises the timed `Volume` path, the same one
 /// production hits. Idempotent via `register_if_absent`.
 fn ensure_root_volume() {
-    use crate::file_system::volume::manager::get_volume_manager;
     use cmdr_local::LocalPosixVolume;
     use std::sync::Arc;
     get_volume_manager().register_if_absent(

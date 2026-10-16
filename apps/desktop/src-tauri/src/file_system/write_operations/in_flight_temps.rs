@@ -56,7 +56,7 @@
 //! before `init_volume_manager`, and a NAS registers later still (or not at all
 //! this session), so a volume-borne record is normally DEFERRED: re-recorded on
 //! disk, held in [`Store::pending`], and acted on the moment that volume ID
-//! arrives in the registry (`VolumeManager::on_volume_arrival`). ❌ The sweep
+//! arrives in the registry (`OperationVolumes::on_volume_arrival`). ❌ The sweep
 //! never dials, mounts, or authenticates anything to reach a volume: a launch
 //! that blocks on a dead mount, or that pops a NAS password box, is worse than
 //! the leftover it was chasing. A record whose volume never comes back rides
@@ -109,8 +109,8 @@ use std::fs::File;
 use std::path::Path;
 use std::sync::{Arc, LazyLock, Mutex, MutexGuard, Once};
 
+use super::host;
 use super::state::WriteOperationState;
-use crate::file_system::volume::manager::get_volume_manager;
 use cmdr_fs::ignore_poison::IgnorePoison;
 use log_writer::LogWriter;
 
@@ -229,11 +229,13 @@ impl Ledger {
     fn ensure_arrival_listener(&self) {
         self.0.arrival_listener.call_once(|| {
             let ledger = Arc::downgrade(&self.0);
-            get_volume_manager().on_volume_arrival(move |volume_id| {
-                if let Some(inner) = ledger.upgrade() {
-                    sweep::on_volume_arrival(&Ledger(inner), volume_id);
-                }
-            });
+            host::installed()
+                .volumes()
+                .on_volume_arrival(Box::new(move |volume_id: &str| {
+                    if let Some(inner) = ledger.upgrade() {
+                        sweep::on_volume_arrival(&Ledger(inner), volume_id);
+                    }
+                }));
         });
     }
 }

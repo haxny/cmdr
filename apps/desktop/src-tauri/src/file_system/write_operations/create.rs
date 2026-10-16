@@ -28,7 +28,6 @@ use super::look_alike::{NewEntry, place_new_entry};
 use super::manager::{self, OperationDescriptor, OperationSummaryText};
 use super::mutation_error::MutationError;
 use super::types::WriteOperationType;
-use crate::file_system::volume::manager::get_volume_manager;
 use cmdr_archive::mutator::{AddEntry, AddSource, Changeset};
 use cmdr_fs::volume::{MutationEvent, Volume};
 
@@ -44,7 +43,8 @@ enum ArchiveEntryKind {
 /// `path_is_inside`) because the parent can BE the `.zip` file itself (creating an
 /// entry at the archive root).
 async fn parent_crosses_archive_boundary(volume_id: Option<&str>, parent_path: &str) -> bool {
-    get_volume_manager()
+    host::installed()
+        .volumes()
         .path_crosses_archive_boundary(volume_id.unwrap_or("root"), Path::new(parent_path))
         .await
 }
@@ -342,7 +342,7 @@ pub(crate) async fn create_directory_core(
     let expanded_path = parent_path.to_string();
 
     // Try to use Volume abstraction
-    if let Some(volume) = get_volume_manager().get(&volume_id) {
+    if let Some(volume) = host::installed().volumes().get(&volume_id) {
         let new_path = new_entry_path(volume.as_ref(), &volume_id, &expanded_path, name).await?;
 
         // Register the new directory path with the downloads watcher's
@@ -424,7 +424,7 @@ pub(crate) async fn create_file_core(
     let expanded_path = parent_path.to_string();
 
     // Try to use Volume abstraction
-    if let Some(volume) = get_volume_manager().get(&volume_id) {
+    if let Some(volume) = host::installed().volumes().get(&volume_id) {
         let new_path = new_entry_path(volume.as_ref(), &volume_id, &expanded_path, name).await?;
 
         // Register the new file path with the downloads watcher's ignore
@@ -454,7 +454,8 @@ pub(crate) async fn create_file_core(
 pub(super) fn should_emit_synthetic_diff(volume_id: Option<&str>) -> bool {
     match volume_id {
         None => true, // No volume_id means local filesystem
-        Some(id) => get_volume_manager()
+        Some(id) => host::installed()
+            .volumes()
             .get(id)
             .is_none_or(|v| v.supports_local_fs_access()),
     }
@@ -478,7 +479,7 @@ pub(super) fn patch_listings_after_create(volume_id: Option<&str>, new_path: &Pa
         return;
     };
     cmdr_local::mutation::patch_listing_after_local_mutation(
-        crate::volume_host::host().listings(),
+        host::installed().listings(),
         volume_id.unwrap_or(cmdr_fs::volume::DEFAULT_VOLUME_ID),
         parent_path,
         MutationEvent::Created(name.to_string_lossy().into_owned()),

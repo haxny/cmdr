@@ -16,6 +16,7 @@ use std::time::{Duration, Instant};
 
 use super::cancellable::run_cancellable_scoped;
 use super::event_sinks::OperationEventSink;
+use super::host;
 use super::scan_walker::{WalkContext, walk_dir_recursive};
 use super::state::{ScanResult, WriteOperationState, update_operation_status};
 use super::types::{WriteOperationError, WriteOperationPhase, WriteOperationType, WriteProgressEvent};
@@ -88,7 +89,7 @@ pub(super) async fn scan_subtree_with_oracle(
     }
 
     // Load entries from oracle or the volume itself.
-    let entries: Vec<FileEntry> = match crate::listing_host::listings().authoritative_listing(volume_id, path) {
+    let entries: Vec<FileEntry> = match host::installed().listings().authoritative_listing(volume_id, path) {
         Some(e) => e,
         None => volume.list_directory(path, on_progress).await?,
     };

@@ -29,7 +29,7 @@ Pre-flight scans reuse cached listings when the source volume reports `WatchCove
 Where a symbol lives and who calls it: `codegraph_search` / `codegraph_explore`. The spine: `CLAUDE.md` § Module map.
 The full top-level inventory is here:
 
-- `mod.rs` (public API + the `start_write_operation` lifecycle), `host/` (what the engine needs from the app: the runtime and the engine-wide events, § "The engine's host"), `manager.rs` (registry + lane admission; its request answers in `manager/wire.rs`, reordering the line in `manager/reorder.rs`, and a retained failure's way to start again in `manager/retry.rs`, § "Retained failures"), `state.rs`
+- `mod.rs` (public API + the `start_write_operation` lifecycle), `host/` (what the engine needs from the app: the runtime, the volumes, and the engine-wide events, § "The engine's host"), `manager.rs` (registry + lane admission; its request answers in `manager/wire.rs`, reordering the line in `manager/reorder.rs`, and a retained failure's way to start again in `manager/retry.rs`, § "Retained failures"), `state.rs`
   (`WriteOperationState`, the settle guard, plus `state/registry.rs`: `WriteOperationRegistry` and its walks, and
   `state/controls.rs`:
   the by-id cancel / abort / pause / resume / conflict-answer entry points, re-exported through `state`, and
@@ -721,6 +721,17 @@ runtime. The app's answer is `apps/desktop/src-tauri/src/operations_host/`, whic
 - **The runtime is the `VolumeHost`'s.** One handle for the engine and the backends it drives, so the two can't
   disagree. Everything the engine spawns goes there: the admission pass (§ "The admission pass spawns admitted ops on
   the APP runtime"), the stall watchdog, the arrival sweep's `spawn_blocking`, and the sweep's `block_on`s.
+- **The same `VolumeHost` answers the panes' questions and backs every volume the engine mints.** The fresh-listing
+  oracle (`authoritative_listing`), the archive pane refresh, and the pane patch after a local create go through
+  `host::installed().listings()`; a spool, an upload reader, or a pull's scratch folder is a `LocalPosixVolume` over
+  `host::installed().volume_host()`.
+- **Which volume serves an id or a path goes through `OperationVolumes`** (`host/volumes.rs`): the registry's `get`,
+  `resolve`, the archive-boundary questions, `find_by_root`, `forget_archive_index`, `on_volume_arrival`, and
+  `unregistered` (why an id has no volume, as an `UnregisteredVolume`). Its supertrait is the rollback planner's
+  `VolumeLookup`, so one answer serves both. The app answers it with `operations_host/volumes.rs`, which asks
+  `get_volume_manager()` per call. ❗ A site passing a path calls `resolve`; each that stays on `get` says why in one
+  line (the `.zip` file itself is a plain file on its parent; a lane key or a capability flag is a question about the
+  drive, not the path; an archive gate upstream already routed the in-zip case).
 - **Engine-wide facts go through `EngineEvents`**: operations changed, busy volumes changed, a transfer started /
   finished on volumes (indexing priority), staging leftovers kept, an instant mutation settled (analytics, as an
   `InstantMutationFact` of categories only), an error report, and the scan bridge's scanning-phase `write-progress`

@@ -33,8 +33,9 @@ through its unrecorded set, so an operation stays wholly journaled or wholly not
 
 ## Answers passed in
 
-- **Volumes**: `volumes.rs` implements the planner's `VolumeLookup` for the `VolumeManager`, so a rollback gate and
-  each reversed item look volumes up in the real registry, and a test passes a registry (or a fake) of its own.
+- **Volumes**: the planner's `VolumeLookup` is the write engine's `OperationVolumes` (its supertrait), so a rollback
+  gate and each reversed item look volumes up through the engine's host, which is the real registry in the app.
+  `volumes.rs` implements it for a bare `VolumeManager`, test-only, so a planner cell passes a registry of its own.
 - **Retention limits**: a closure over `settings::load_operation_log_retention_limits`, read on every tick so a
   settings change applies on the next one.
 - **Recording**: seeded here at `start`; live changes arrive through `commands/settings.rs::set_operation_log_enabled`,

@@ -24,11 +24,11 @@ use std::sync::Arc;
 
 use super::archive_edit::{compress_start, route_archive_copy_into_with_provenance};
 use super::event_sinks::OperationEventSink;
+use super::host;
 use super::source_binding::ExpectedSources;
 use super::target_names::{NotAName, TargetNames};
 use super::transfer::volume::{PathRole, copy_between_volumes, move_between_volumes, unregistered_volume_error};
 use super::types::{ReadOnlySide, VolumeCopyConfig, WriteOperationError, WriteOperationStartResult};
-use crate::file_system::volume::manager::{get_volume_manager, path_routes_over_its_parent};
 use cmdr_fs::volume::RoutedKind;
 use cmdr_fs::volume::Volume;
 use cmdr_operation_log::types::Initiator;
@@ -109,12 +109,12 @@ pub(crate) async fn resolve_source_volume(
     volume_id: &str,
     first_path: Option<&PathBuf>,
 ) -> Option<(Arc<dyn Volume>, Option<RoutedKind>)> {
-    let manager = get_volume_manager();
+    let manager = host::installed().volumes();
     let Some(path) = first_path else {
         return manager.get(volume_id).map(|v| (v, None));
     };
     // Pure string gate, so an ordinary local/remote path skips the resolve below.
-    if !path_routes_over_its_parent(path) {
+    if !manager.routes_over_its_parent(path) {
         return manager.get(volume_id).map(|v| (v, None));
     }
     // Parent-aware resolve (local `std::fs` OR remote via the parent's own I/O)
@@ -225,7 +225,8 @@ async fn route_volume_copy(
 
     // Resolve the destination. A `.zip`-crossing dest routes the whole copy to
     // the managed archive-edit driver (one `{ add }` changeset).
-    let dest_resolved = get_volume_manager()
+    let dest_resolved = host::installed()
+        .volumes()
         .resolve(&dest_volume_id, Path::new(&dest_path))
         .await;
     let Some(dest_volume) = dest_resolved.volume else {
@@ -306,7 +307,8 @@ async fn route_volume_move(
         return Err(source_cannot_give_up_its_files(&source_volume));
     }
 
-    let dest_resolved = get_volume_manager()
+    let dest_resolved = host::installed()
+        .volumes()
         .resolve(&dest_volume_id, Path::new(&dest_path))
         .await;
     let Some(dest_volume) = dest_resolved.volume else {
@@ -485,7 +487,7 @@ pub(crate) async fn start_rename_by_move(
             message: "a new name is one name, not a path".to_string(),
         })?;
     let sources: Vec<PathBuf> = renames.into_iter().map(|(source, _)| source).collect();
-    let Some(volume) = get_volume_manager().get(&volume_id) else {
+    let Some(volume) = host::installed().volumes().get(&volume_id) else {
         return Err(source_volume_missing(&volume_id, &sources).await);
     };
     let dest_path = resolve_dest_path(&volume, dest_path);
@@ -532,7 +534,8 @@ pub(crate) async fn start_volume_compress(
 
     // A new `.zip` resolves to its PARENT drive (nothing routes through an archive
     // that does not exist). `compress_start` owns staging and publication there.
-    let Some(dest_volume) = get_volume_manager()
+    let Some(dest_volume) = host::installed()
+        .volumes()
         .resolve(&dest_volume_id, Path::new(&dest_zip_path))
         .await
         .volume

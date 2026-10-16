@@ -44,7 +44,6 @@ use std::sync::Arc;
 use cmdr_fs::metadata::{RemovalRefusal, remove_file_clearing_blockers};
 
 use super::{ItemHome, ItemKind, Ledger, Record, RecordedTemp, SweepTally, TrackedItem};
-use crate::file_system::volume::manager::get_volume_manager;
 use crate::file_system::write_operations::host;
 use crate::file_system::write_operations::transfer_sides::root_is_listed;
 use crate::file_system::write_operations::types::MoveLeftoversKeptEvent;
@@ -74,7 +73,7 @@ pub(super) fn persisted_orphans(ledger: &Ledger, locals: &[Record]) -> SweepTall
     // arrival. Asking the registry whether an ID is present is a lock and a hash
     // lookup, so a dead NAS costs nothing and blocks nobody.
     for volume_id in ledger.pending_volume_ids() {
-        if get_volume_manager().get(&volume_id).is_none() {
+        if host::installed().volumes().get(&volume_id).is_none() {
             continue;
         }
         let claimed = ledger.claim_pending(&volume_id);
@@ -218,7 +217,7 @@ async fn settle_legacy(temp: &RecordedTemp) -> Outcome {
             // `resolve`, not `get`: the site is passing a path, and a read-only
             // routed volume (an archive, a git snapshot) is one this sweep must
             // never delete through.
-            let resolved = get_volume_manager().resolve(&temp.volume_id, &temp.path).await;
+            let resolved = host::installed().volumes().resolve(&temp.volume_id, &temp.path).await;
             let is_routed = resolved.is_routed();
             let Some(volume) = resolved.volume.filter(|_| !is_routed) else {
                 return Outcome::Deferred;
@@ -299,7 +298,7 @@ async fn locate(item: &TrackedItem) -> Located {
             drive_name: None,
         },
         ItemHome::Mount { volume_id } => {
-            let Some(volume) = get_volume_manager().get(volume_id) else {
+            let Some(volume) = host::installed().volumes().get(volume_id) else {
                 return Located::Unreachable;
             };
             let root = volume.root().to_path_buf();
@@ -320,7 +319,7 @@ async fn locate(item: &TrackedItem) -> Located {
             }
         }
         ItemHome::VolumeSpace { volume_id } => {
-            let resolved = get_volume_manager().resolve(volume_id, &item.path).await;
+            let resolved = host::installed().volumes().resolve(volume_id, &item.path).await;
             let is_routed = resolved.is_routed();
             let Some(volume) = resolved.volume.filter(|_| !is_routed) else {
                 return Located::Unreachable;

@@ -652,7 +652,8 @@ pub async fn delete_files_start(
     // falling through to a confusing parent-volume delete.
     let first_is_archive_inner = match sources.first() {
         Some(s) => {
-            crate::file_system::volume::manager::get_volume_manager()
+            host::installed()
+                .volumes()
                 .path_is_inside_archive(&volume_id_str, s)
                 .await
         }

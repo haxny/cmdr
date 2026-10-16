@@ -11,6 +11,7 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use super::super::OperationEventSink;
+use super::super::host;
 use super::super::operation_intent::is_cancelled;
 use super::super::state::{WriteOperationState, update_operation_status};
 use super::super::types::{
@@ -19,7 +20,6 @@ use super::super::types::{
 };
 use super::edit_error::EditError;
 use super::remote::{RemoteCommitProgress, RemoteProgressObserver, pull_apply_upload_swap};
-use crate::file_system::volume::manager::get_volume_manager;
 use cmdr_archive::mutator::{MutationError, MutationHooks, MutationProgress};
 use cmdr_fs::ignore_poison::IgnorePoison;
 
@@ -75,8 +75,9 @@ where
 /// re-entered, vdavid/cmdr-reports#55), and a remote parent has no watch at all.
 /// The parsed index goes first, since the cache key can miss the change.
 async fn show_the_edit(parent_volume_id: &str, archive_path: &Path) {
-    get_volume_manager().forget_archive_index(archive_path);
-    crate::listing_host::listings()
+    host::installed().volumes().forget_archive_index(archive_path);
+    host::installed()
+        .listings()
         .refresh_archive_listings(parent_volume_id, archive_path)
         .await;
 }
@@ -94,7 +95,7 @@ where
     F: FnOnce(&Path) -> Result<T, EditError> + Send + 'static,
     T: Send + 'static,
 {
-    let parent = get_volume_manager().get(parent_volume_id);
+    let parent = host::installed().volumes().get(parent_volume_id);
     let is_remote = parent.as_ref().is_some_and(|p| !p.supports_local_fs_access());
 
     if !is_remote {

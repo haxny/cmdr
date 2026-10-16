@@ -640,7 +640,7 @@ pending. ❌ The sweep must not mount, dial, reconnect, or authenticate to reach
 mount, or that pops a password box, is worse than the leftover it was chasing. Dropping the record instead would forget
 the only trace of a multi-gigabyte partial.
 
-**What makes the deferral terminate** is `VolumeManager::on_volume_arrival`: the ledger subscribes (once, and only when
+**What makes the deferral terminate** is `OperationVolumes::on_volume_arrival` (the registry's own, in the app): the ledger subscribes (once, and only when
 a launch actually has something waiting), and the moment that volume ID lands in the registry the records waiting on it
 are claimed and deleted on a task. A registration is the one moment a volume is known-usable without probing anything.
 The listener takes only the ID and the registry hands the volume back through `resolve`, which keeps the dependency

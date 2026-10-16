@@ -11,10 +11,10 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::file_system::volume::manager::get_volume_manager;
 use cmdr_fs::volume::VolumeError;
 use cmdr_operation_log::types::{EntryType, Initiator, OpKind};
 
+use super::host;
 use super::manager;
 use super::mutation_error::MutationError;
 use super::types::WriteOperationType;
@@ -36,7 +36,7 @@ pub(crate) async fn create_numbered_file(
     initiator: Initiator,
 ) -> Result<String, MutationError> {
     let volume_id_str = volume_id.clone().unwrap_or_else(|| "root".to_string());
-    let Some(volume) = get_volume_manager().get(&volume_id_str) else {
+    let Some(volume) = host::installed().volumes().get(&volume_id_str) else {
         return Err(super::mutation_error::unregistered_volume_refusal(volume_id_str, dir).await);
     };
 

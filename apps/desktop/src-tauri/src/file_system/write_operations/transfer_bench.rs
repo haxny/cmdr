@@ -19,6 +19,7 @@ use uuid::Uuid;
 
 use super::delete::delete_files_with_progress_inner;
 use super::event_sinks::{OperationEventSink, ScanPreviewEventSink};
+use super::host;
 use super::journal;
 use super::scan_cache::{ScanPreviewState, take_cached_scan_result};
 use super::scan_preview::run_scan_preview;
@@ -103,12 +104,13 @@ pub fn delete_local(sources: &[PathBuf]) -> Result<(), WriteOperationError> {
     )
 }
 
-/// A local volume over `root`, the destination a cross-volume copy streams into.
+/// A local volume over `root`, the destination a cross-volume copy streams into,
+/// on the host the engine itself runs on.
 pub fn local_volume(root: impl Into<PathBuf>) -> Arc<dyn Volume> {
     Arc::new(LocalPosixVolume::local_folder(
         "Transfer bench",
         root,
-        crate::volume_host::host(),
+        host::installed().volume_host().clone(),
     ))
 }
 

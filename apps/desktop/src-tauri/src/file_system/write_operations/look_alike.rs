@@ -19,6 +19,8 @@ use cmdr_fs::name_fold::differ_only_in_form;
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::{Volume, VolumeError};
 
+use super::host;
+
 /// What a folder holds under another spelling of one name.
 #[derive(Debug)]
 pub(crate) enum LookAlike {
@@ -204,7 +206,9 @@ impl<'v> ListedFolders<'v> {
     /// risks only a missed twin: a second, look-alike entry, never an
     /// overwrite, since the volume holds the two spellings as two names.
     fn pane_listing(&self, dir: &Path) -> Option<Vec<FileEntry>> {
-        let entries = crate::listing_host::listings().authoritative_listing(self.pane_listings_of?, dir)?;
+        let entries = host::installed()
+            .listings()
+            .authoritative_listing(self.pane_listings_of?, dir)?;
         log::debug!(
             target: "look_alike",
             "answered from a pane's listing of {} ({} entries)",

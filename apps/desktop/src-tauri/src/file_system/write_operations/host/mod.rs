@@ -3,7 +3,10 @@
 //!
 //! - **The runtime** comes from the [`VolumeHost`]: one handle, so the engine
 //!   and the backends it drives share one thread pool, and the two can't
-//!   disagree.
+//!   disagree. The same host answers the fresh-listing oracle and the archive
+//!   pane refresh (`listings()`), and every volume the engine mints gets it.
+//! - **Which volume serves an id or a path** goes through [`OperationVolumes`]
+//!   (`volumes.rs`), the host's registry as the engine asks it.
 //! - **Engine-wide facts** go through [`EngineEvents`] (`events.rs`), error
 //!   reports included, as typed [`OperationErrorReport`]s (`error_report.rs`).
 //! - **One operation's events** go through [`OperationEventSink`]
@@ -21,10 +24,12 @@ mod error_report;
 mod events;
 mod operation_sink;
 mod scan_preview_sink;
+mod volumes;
 
 use std::sync::{Arc, LazyLock, OnceLock};
 
 use cmdr_fs::volume::host::VolumeHost;
+use cmdr_fs::volume::host::listings::ListingHost;
 use tokio::runtime::Handle;
 
 pub(crate) use error_report::{AsideAttempt, OperationErrorReport, TreeFailure};
@@ -32,6 +37,8 @@ use events::NoEngineEvents;
 pub(crate) use events::{EngineEvents, InstantMutationFact, InstantOp, InstantOutcome, InstantTarget};
 pub use operation_sink::OperationEventSink;
 pub use scan_preview_sink::ScanPreviewEventSink;
+use volumes::NoOperationVolumes;
+pub(crate) use volumes::{OperationVolumes, UnregisteredVolume, VolumeAnswer};
 
 /// Builds a fresh sink for an operation no caller handed one.
 pub(crate) type OperationSinkFactory = Box<dyn Fn() -> Arc<dyn OperationEventSink> + Send + Sync>;
@@ -39,16 +46,22 @@ pub(crate) type OperationSinkFactory = Box<dyn Fn() -> Arc<dyn OperationEventSin
 /// Everything the engine reaches the app through.
 pub(crate) struct EngineHost {
     volume_host: VolumeHost,
+    volumes: Arc<dyn OperationVolumes>,
     events: Arc<dyn EngineEvents>,
     operation_sinks: Option<OperationSinkFactory>,
 }
 
 impl EngineHost {
-    /// A host over `volume_host` (whose runtime the engine spawns on) and
-    /// `events`, with no sink factory.
-    pub(crate) fn new(volume_host: VolumeHost, events: Arc<dyn EngineEvents>) -> Self {
+    /// A host over `volume_host` (whose runtime the engine spawns on),
+    /// `volumes`, and `events`, with no sink factory.
+    pub(crate) fn new(
+        volume_host: VolumeHost,
+        volumes: Arc<dyn OperationVolumes>,
+        events: Arc<dyn EngineEvents>,
+    ) -> Self {
         Self {
             volume_host,
+            volumes,
             events,
             operation_sinks: None,
         }
@@ -61,7 +74,7 @@ impl EngineHost {
         self
     }
 
-    /// A host that answers nothing: no events, and `cmdr-fs`'s shared fallback
+    /// A host that answers nothing: no volumes, no events, and `cmdr-fs`'s shared fallback
     /// runtime. ❌ Never a `Handle::current()` captured here: a runtime that is
     /// torn down later would orphan every operation admitted onto it.
     #[cfg_attr(
@@ -69,12 +82,33 @@ impl EngineHost {
         expect(dead_code, reason = "a test binary falls back to the app's own answers")
     )]
     fn detached() -> Self {
-        Self::new(VolumeHost::detached(), Arc::new(NoEngineEvents))
+        Self::new(
+            VolumeHost::detached(),
+            Arc::new(NoOperationVolumes),
+            Arc::new(NoEngineEvents),
+        )
     }
 
     /// The runtime the engine spawns its background work on.
     pub(crate) fn runtime(&self) -> Handle {
         self.volume_host.runtime()
+    }
+
+    /// The volume host, for a volume the engine mints itself (a spool, a
+    /// pull's scratch folder): it gets the same host the engine runs on.
+    pub(crate) fn volume_host(&self) -> &VolumeHost {
+        &self.volume_host
+    }
+
+    /// What the open panes show: the fresh-listing oracle, the archive pane
+    /// refresh, and the pane patch after a local create.
+    pub(crate) fn listings(&self) -> &dyn ListingHost {
+        self.volume_host.listings()
+    }
+
+    /// Which volume serves an id or a path.
+    pub(crate) fn volumes(&self) -> &dyn OperationVolumes {
+        &*self.volumes
     }
 
     pub(crate) fn events(&self) -> &dyn EngineEvents {
