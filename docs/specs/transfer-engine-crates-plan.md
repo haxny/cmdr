@@ -1126,6 +1126,21 @@ is empty outside inline `#[cfg(test)]` blocks and comments (say how you checked)
    `block_on` calls stay on their dedicated thread / blocking task, now `handle.block_on` (legal from a blocking-pool
    thread).
 
+**What landed differently** (recorded at execution):
+
+- No recording `EngineEvents` fake yet: nothing can inject one while the slot is process-global, so it would be dead
+  code. It lands with M6a, when tests build their own engine.
+- Before `install`, the slot answers under `cfg(test)` with `operations_host::without_frontend()` (the app's adapter
+  with no app handle), not a no-op: M3's gauge pins in `status_cache_tests` read the real `priority::transfers`. Outside
+  tests the pre-install answer is a detached no-op host.
+- The slot also carries the app handle (`// shim: removed in M5b`), because `OPERATIONS_APP` had two more readers M5b
+  owns: `archive_edit::global_tauri_sink()` and `scan_bridge.rs`'s progress forward, both via `operations_app_handle()`.
+- The busy set and the transfer pair stayed separate facts: the pair is per op and refcounted by the gauge, the busy set
+  a deduped union.
+- To keep the cycle rule, `OperationSnapshot` / `OperationsChanged` / `OperationSummaryText` / `OperationItems` moved
+  into `types` (docs byte-identical), and `OperationEventSink` into `host/operation_sink.rs`. The second also cleared a
+  `state` → `event_sinks` → `manager` → `state` tangle M3's `terminal_effects` `use` had made visible.
+
 **Intentions.** The engine stops reaching for a stashed `AppHandle` or the Tauri runtime.
 
 **Landmines.** The admission pass spawning on the APP runtime is load-bearing: the slot's `VolumeHost` must be
