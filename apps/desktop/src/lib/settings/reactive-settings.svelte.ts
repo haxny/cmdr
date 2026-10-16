@@ -54,6 +54,7 @@ let spaceCalculatesFolderSize = $state<boolean>(true)
 let typeToJumpMode = $state<TypeToJumpMode>('jump')
 let driveIndexingEnabled = $state<boolean>(true)
 let mediaIndexEnabled = $state<boolean>(false)
+let operationLogRecording = $state<boolean>(true)
 let mediaIndexShowFileStatusIcons = $state<boolean>(true)
 let showVirtualGitPortal = $state<boolean>(true)
 let viewerShowTextCursor = $state<boolean>(false)
@@ -117,6 +118,7 @@ async function runInit(options?: { restrictedWindow?: boolean }): Promise<void> 
     typeToJumpMode = getSetting('fileExplorer.typeToJump.mode')
     driveIndexingEnabled = getSetting('indexing.enabled')
     mediaIndexEnabled = getSetting('mediaIndex.enabled')
+    operationLogRecording = getSetting('operationLog.enabled')
     mediaIndexShowFileStatusIcons = getSetting('mediaIndex.showFileStatusIcons')
     showVirtualGitPortal = getSetting('fileExplorer.git.showVirtualGitPortal')
     viewerShowTextCursor = getSetting('viewer.showTextCursor')
@@ -225,6 +227,9 @@ function applySettingChange(id: string, value: unknown): void {
       break
     case 'mediaIndex.enabled':
       mediaIndexEnabled = value as boolean
+      break
+    case 'operationLog.enabled':
+      operationLogRecording = value as boolean
       break
     case 'mediaIndex.showFileStatusIcons':
       mediaIndexShowFileStatusIcons = value as boolean
@@ -436,6 +441,14 @@ export function getTypeToJumpMode(): TypeToJumpMode {
  */
 export function getDriveIndexingEnabled(): boolean {
   return driveIndexingEnabled
+}
+
+/**
+ * Whether the operation log records new operations (`operationLog.enabled`). Off, new
+ * operations aren't journaled and can't be undone; the history dialog says so.
+ */
+export function getOperationLogRecording(): boolean {
+  return operationLogRecording
 }
 
 /** Whether image-content (OCR) indexing is on (the `mediaIndex.enabled` master toggle). */

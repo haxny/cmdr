@@ -43,7 +43,7 @@ const explorer = { getFocusedPane: () => 'left' } as unknown as PaneRevealAPI
 
 let target: HTMLElement
 
-function render(): void {
+function render(undoable = true): void {
   target = document.createElement('div')
   document.body.appendChild(target)
   mount(TrashCompleteToastContent, {
@@ -54,6 +54,7 @@ function render(): void {
       operationId: 'op-1',
       sourceFolderPath: '/Users/me/Documents',
       explorer,
+      undoable,
     },
   })
   flushSync()
@@ -82,6 +83,12 @@ describe('TrashCompleteToastContent', () => {
     render()
     const labels = [...target.querySelectorAll('button')].map((b) => b.textContent.trim())
     expect(labels).toEqual(['Go to trash', 'Undo'])
+  })
+
+  it('offers only Go to trash when the operation log wasn’t recording, since there’s nothing to undo from', () => {
+    render(false)
+    const labels = [...target.querySelectorAll('button')].map((b) => b.textContent.trim())
+    expect(labels).toEqual(['Go to trash'])
   })
 
   it('never offers a permanent delete', () => {

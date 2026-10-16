@@ -9,7 +9,7 @@ a disposable cache. MCP tools: `mcp/executor/operation_log.rs`; UI surfaces are 
 - `store/` — the DB (connection factory, migration ladder, schema, `intern_dir`, `fold_name`, low-level reads).
 - `writer.rs` — the ONE writer thread (+ `writer/prune.rs`, the bounded retention sweep it runs); `capture.rs` feeds
   it; `types.rs` holds the typed tokens.
-- `query.rs` — reads; `retention.rs` — startup + periodic prune; IPC in `commands/operation_log.rs`.
+- `query.rs` — reads; `retention.rs` — prune; `recording.rs` — the on/off gate; IPC in `commands/operation_log.rs`.
 - `rollback.rs` (+ `order.rs`, `skips.rs`, `runner.rs`) — the rollback PLANNER; the executor it's handed, the spawn
   glue, and the multi-op driver live in `write_operations/rollback.rs`. `mod.rs::start` opens the DB, reconciles,
   spawns retention.
@@ -20,7 +20,7 @@ a disposable cache. MCP tools: `mcp/executor/operation_log.rs`; UI surfaces are 
   template future durable DBs follow: append a `Migration`, NEVER edit or renumber a shipped step. A downgrade is
   refused; delete-and-recreate only for an unparseable file (typed sqlite code, ❌ not a string).
 - **NO `platform_case` collation.** A precomputed `name_folded` column (Unicode-lowercase + NFC) plus plain b-tree
-  equality keeps the file `sqlite3`-openable. Don't add a collation like the other stores.
+  equality keeps the file `sqlite3`-openable.
 - **One writer thread, one cross-volume DB, NO per-volume registry.** `record_items` BLOCKS under backpressure
   (lossless); a DB error drops that ONE row, and the completeness check degrades the op rather than under-reversing
   it.
@@ -32,6 +32,7 @@ a disposable cache. MCP tools: `mcp/executor/operation_log.rs`; UI surfaces are 
   per-kind rule.
 - **Capture is a process-global journal reached by `op_id`, NOT threaded through the pipeline.** ❌ Never extend
   `OperationEventSink`. Install via `set_journal` (production `start` only; tests use `TestJournalGuard`).
+- **Recording on/off is decided ONCE per op, at open** (`recording.rs`); ❌ never mid-op (half-journaled lies).
 - **A multi-operation undo reverses NEWEST FIRST** (`undo_order`): a later rename batch can take a name an earlier one
   freed. Callers pass ids in APPLY order.
 - **Rollback FAILS SAFE** (data-safety-critical): recheck each item against its snapshot AND its restore target; drift,
@@ -41,8 +42,8 @@ a disposable cache. MCP tools: `mcp/executor/operation_log.rs`; UI surfaces are 
 - **The engine PLANS; an injected `RollbackRunner` acts.** ❌ Never import `write_operations` from here to perform an
   act. Pause parks BEFORE the item is verified (a stale verification must never authorize a destructive act), and a
   reversal's "should I stop?" is NOT `is_cancelled` (`StopMeans`). `DETAILS.md` § "Planner here, executor injected".
-- **Op ids are UUIDv7 (`new_operation_id`), never v4.** The clock is whole SECONDS, so same-second ops tie and every
-  ordered read falls back to `op_id`; v7 sorts chronologically, v4 is a coin flip.
+- **Op ids are UUIDv7 (`new_operation_id`), never v4.** Same-second ops tie on the clock, so ordered reads fall back to
+  `op_id`, which only v7 sorts chronologically.
 - **The journal records what SURVIVES an operation, whatever its terminal state**: a canceled copy's files AND the dirs
   it created, never the mid-write partial (both terminal paths remove it).
 - **Search spans every `row_role`; retention prunes whole ops only.** Name search matches `source_name_folded` across

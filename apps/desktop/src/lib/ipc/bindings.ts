@@ -2517,6 +2517,13 @@ export const commands = {
    */
   setImageIndexEnabled: (enabled: boolean) => __TAURI_INVOKE<void>('set_image_index_enabled', { enabled }),
   /**
+   *  Live-applies the operation log's on/off switch (`operationLog.enabled`). Off stops
+   *  journaling NEW operations, so they can't be undone; an operation already running
+   *  keeps the decision it started with, and existing history stays readable and
+   *  prunable (`operation_log/recording.rs`). Runtime-toggleable, no restart.
+   */
+  setOperationLogEnabled: (enabled: boolean) => __TAURI_INVOKE<void>('set_operation_log_enabled', { enabled }),
+  /**
    *  Updates the in-RAM log-storage cap and runs an eager prune so the user sees excess files
    *  disappear immediately when they lower the cap.
    *

@@ -108,6 +108,8 @@ export type RailMessage =
  * taken again) is left alone and said so. */
 export type RenameUndoState =
   | { status: 'undoable' }
+  /** The operation log was off when the batch ran, so it was never journaled and can't be undone. */
+  | { status: 'notRecorded' }
   | { status: 'undoing' }
   | { status: 'undone'; restored: number }
   | {

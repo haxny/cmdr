@@ -37,6 +37,7 @@ import {
 } from '#lib/file-operations/transfer/transfer-complete-toast.js'
 import { getTechnicalDetails } from '#lib/file-operations/transfer/transfer-error-messages.js'
 import TrashCompleteToastContent from '#lib/file-operations/delete/TrashCompleteToastContent.svelte'
+import { isOperationLogRecording } from '#lib/operation-log/recording.js'
 import {
   rememberTrashForUndo,
   trashCompleteToastId,
@@ -211,7 +212,9 @@ export function createDialogState(deps: DialogStateDeps) {
     // stale now: this toast takes its place (a no-op for a foreground one).
     if (settledOperationId) dismissQueueHandoffToast(settledOperationId)
     if (op === 'trash' && settledOperationId) {
-      rememberTrashForUndo(settledOperationId, trashed)
+      // With the operation log off, the trash was never journaled: no Undo, and nothing for Edit > Undo trash.
+      const undoable = isOperationLogRecording()
+      if (undoable) rememberTrashForUndo(settledOperationId, trashed)
       addToast(TrashCompleteToastContent, {
         id: trashCompleteToastId(settledOperationId),
         level,
@@ -225,6 +228,7 @@ export function createDialogState(deps: DialogStateDeps) {
           // trash was started from.
           sourceFolderPath: sourceFolderPath ?? deps.getFocusedPaneRef()?.getCurrentPath() ?? '',
           explorer: deps.getExplorer(),
+          undoable,
         },
       })
     } else {

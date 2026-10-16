@@ -317,15 +317,34 @@ export const behaviorSettings: SettingDefinitionSource[] = [
   },
 
   // ------------------------------------------------------------------------
-  // Operation log (retention), rendered as a card inside Navigation & file ops.
+  // Operation log, rendered as a card inside Navigation & file ops.
   //
-  // Both settings are read by the Rust retention loop each prune tick
+  // `operationLog.enabled` is the recording switch: off stops journaling NEW
+  // operations, so they can't be undone. The backend decides per operation at
+  // its start, so a running one is never half-recorded, and history stays
+  // readable and keeps being pruned (`operation_log/recording.rs`). Seeded from
+  // `settings.json` at startup, live via `set_operation_log_enabled`.
+  //
+  // The two retention settings are read by the Rust retention loop each prune tick
   // (`settings::load_operation_log_retention_limits`), so a change live-applies
   // with no restart and no `settings-applier` case. Modeled on
   // `network.shareCacheDuration` (preset select + custom). Age is a duration in
   // ms where `0` is the "Forever" sentinel (never prune by age); size is a byte
   // budget. Keys and units are the retention contract — see `operation_log/DETAILS.md`.
   // ------------------------------------------------------------------------
+  {
+    id: 'operationLog.enabled',
+    section: ['Behavior', 'Navigation & file ops'],
+    cardKey: 'settings.navigationAndFileOps.card.operationLog',
+    labelKey: 'settings.operationLog.enabled.label',
+    descriptionKey: 'settings.operationLog.enabled.description',
+    keywords: ['operation', 'log', 'history', 'record', 'recording', 'undo', 'journal', 'privacy', 'turn off'],
+    type: 'boolean',
+    default: true,
+    component: 'switch',
+    // An MCP client that could turn this off would hide what it does next, and take undo with it.
+    mcpSettable: false,
+  },
   {
     id: 'operationLog.maxAge',
     section: ['Behavior', 'Navigation & file ops'],

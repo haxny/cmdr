@@ -176,6 +176,11 @@ file activity (what was copied, moved, trashed, renamed, and where). Privacy pos
   GB) bounds that, and a future "exclude from backups" toggle is the identified escape hatch.
 - **File-activity metadata, not contents.** Rows hold operation kind, initiator, timestamps, per-item paths/names,
   sizes, mtimes, and outcomes — never file contents.
+- **The user can turn it off** (`operationLog.enabled`, Settings > Behavior > Navigation & file ops; the CRA's opt-out
+  for recording internal activity). Off, new operations aren't journaled and so can't be undone; existing history stays
+  readable, undoable, and pruned by retention. The decision is per operation, at its start, so a running one is never
+  half-recorded. MCP can't change it (`mcpSettable: false`): a client turning it off would hide what it does next.
+  Mechanism: `apps/desktop/src-tauri/src/operation_log/DETAILS.md` § "Turning recording off".
 - **The journal never compromises the operation.** Capture rides a bounded channel that blocks briefly under
   backpressure (lossless) and drops a single row on a DB error rather than failing the file op; the finalize-time
   completeness check then degrades that op to "can't undo" or "search marked partial" rather than silently

@@ -20,7 +20,7 @@
     import { tString } from '#lib/intl/messages.svelte.js'
     import Trans from '#lib/intl/Trans.svelte'
     import { formatInteger } from '#lib/intl/number-format.js'
-    import { formatDateTime } from '#lib/settings/reactive-settings.svelte.js'
+    import { formatDateTime, getOperationLogRecording } from '#lib/settings/reactive-settings.svelte.js'
     import RollbackConfirmDialog from '#lib/file-operations/RollbackConfirmDialog.svelte'
     import RollbackControls from './RollbackControls.svelte'
     import type { MessageKey } from '#lib/intl/keys.gen.js'
@@ -206,12 +206,20 @@
 
     <div class="body" id="operation-log-body">
         <div class="scroll-area">
+            <!-- Recording off: new operations never reach the journal, so the list is empty
+                 or stops at the point it was turned off. Say why, above whatever shows. -->
+            {#if !getOperationLogRecording()}
+                <p class="notice recording-off" role="status">{tString('operationLog.dialog.recordingOff')}</p>
+            {/if}
             {#if operationLogState.loading}
                 <div class="centered"><Spinner size="md" label={tString('operationLog.dialog.loading')} /></div>
             {:else if operationLogState.loadError}
                 <p class="notice">{tString('operationLog.dialog.loadError')}</p>
             {:else if operationLogState.entries.length === 0}
-                <p class="notice">{tString('operationLog.dialog.empty')}</p>
+                <!-- "Copy something and it'll show up here" would be untrue while recording is off. -->
+                {#if getOperationLogRecording()}
+                    <p class="notice">{tString('operationLog.dialog.empty')}</p>
+                {/if}
             {:else}
                 <ul class="op-list">
                     {#each operationLogState.entries as op (op.opId)}
@@ -462,6 +470,11 @@
         margin: var(--spacing-md) 0;
         font-size: var(--font-size-md);
         color: var(--color-text-secondary);
+    }
+
+    /* It leads the list rather than replacing it, so it needs no space above. */
+    .recording-off {
+        margin-top: 0;
     }
 
     .notice-sm {

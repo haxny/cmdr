@@ -683,6 +683,10 @@
       "count": "The same number of renames (decides whether the noun is singular or plural)."
     }
   },
+  "askCmdr.renameUndo.notRecorded": "The operation log is off, so this can’t be undone.",
+  "@askCmdr.renameUndo.notRecorded": {
+    "description": "A second line under askCmdr.renameUndo.applied in the Ask Cmdr chat thread, shown in place of the Undo button when the user has turned off the operation log (the \"Record file operations\" switch in Settings). Without it Cmdr keeps no record of the renames, so they can't be put back. The apostrophe is a curly typographic apostrophe (U+2019)."
+  },
   "askCmdr.renameUndo.undo": "Undo",
   "@askCmdr.renameUndo.undo": {
     "description": "Button beside the 'Renamed N files.' line in the Ask Cmdr chat thread. Puts the files' previous names back. Keep it short: it sits inline in a narrow side panel."

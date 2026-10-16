@@ -153,6 +153,7 @@ describe('TrashCompleteToastContent a11y', () => {
         operationId: 'op-1',
         sourceFolderPath: '/Users/test',
         explorer: undefined,
+        undoable: true,
       },
     })
     await tick()

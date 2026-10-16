@@ -14,6 +14,7 @@
 
 pub mod capture;
 pub mod query;
+pub mod recording;
 pub mod retention;
 pub mod rollback;
 pub mod store;
@@ -96,6 +97,7 @@ impl TestJournalGuard {
         // the slot, so the next holder starts from a clean baseline regardless.
         let lock = JOURNAL_TEST_LOCK.lock_ignore_poison();
         clear_journal();
+        recording::reset_for_test();
         Self { _lock: lock }
     }
 
@@ -115,6 +117,7 @@ impl TestJournalGuard {
 impl Drop for TestJournalGuard {
     fn drop(&mut self) {
         clear_journal();
+        recording::reset_for_test();
     }
 }
 
@@ -149,8 +152,12 @@ pub fn new_operation_id() -> String {
     uuid::Uuid::now_v7().to_string()
 }
 
-/// Open an operation row. No-op when no journal is installed.
+/// Open an operation row. No-op when no journal is installed, or when recording
+/// is off (`recording`), which then holds for the operation's whole life.
 pub fn journal_open(open: OpenOperation) {
+    if !recording::admit(&open.op_id) {
+        return;
+    }
     if let Some(j) = current_journal() {
         j.open(open);
     }
@@ -159,6 +166,9 @@ pub fn journal_open(open: OpenOperation) {
 /// Record item rows for an open operation (buffered + batched by the journal).
 /// No-op when no journal is installed.
 pub fn journal_record_items(op_id: &str, items: Vec<JournalItem>) {
+    if recording::is_unrecorded(op_id) {
+        return;
+    }
     if let Some(j) = current_journal() {
         j.record_items(op_id, items);
     }
@@ -166,6 +176,9 @@ pub fn journal_record_items(op_id: &str, items: Vec<JournalItem>) {
 
 /// Downgrade an op's search coverage (worst-wins). No-op when no journal.
 pub fn journal_note_coverage(op_id: &str, coverage: SearchCoverage, reason: Option<SearchCoverageReason>) {
+    if recording::is_unrecorded(op_id) {
+        return;
+    }
     if let Some(j) = current_journal() {
         j.note_search_coverage(op_id, coverage, reason);
     }
@@ -175,17 +188,23 @@ pub fn journal_note_coverage(op_id: &str, coverage: SearchCoverage, reason: Opti
 /// merge, a conflict resolved after the rows were written). Beats the per-kind
 /// eligibility at finalize. No-op when no journal.
 pub fn journal_note_not_rollbackable(op_id: &str, reason: NotRollbackableReason) {
+    if recording::is_unrecorded(op_id) {
+        return;
+    }
     if let Some(j) = current_journal() {
         j.note_not_rollbackable(op_id, reason);
     }
 }
 
 /// Finalize an operation, returning the durable per-`row_role` counts (mostly for
-/// tests). No-op — returning zero counts — when no journal is installed.
+/// tests). No-op — returning zero counts — when no journal is installed or the
+/// operation opened while recording was off.
 pub fn journal_finalize(op_id: &str, inputs: FinalizeInputs) -> FinalizeOutcome {
+    // Released first, so an unrecorded op is forgotten even with no journal installed.
+    let unrecorded = recording::release(op_id);
     match current_journal() {
-        Some(j) => j.finalize(op_id, inputs),
-        None => FinalizeOutcome {
+        Some(j) if !unrecorded => j.finalize(op_id, inputs),
+        _ => FinalizeOutcome {
             rollback_unit_rows: 0,
             search_only_rows: 0,
         },
@@ -206,6 +225,7 @@ pub fn start(app: &AppHandle) {
         }
     };
     let db_path = store::operation_log_db_path(&data_dir);
+    recording::set_enabled(crate::settings::load_operation_log_enabled(app));
 
     // Open the store first — it owns the schema lifecycle (migrate forward, or
     // recreate a genuinely unparseable file, or refuse a downgrade). The writer

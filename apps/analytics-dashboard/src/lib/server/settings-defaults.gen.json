@@ -2381,6 +2381,7 @@
     "network.timeoutMode": "normal",
     "onboarding.completed": false,
     "onboarding.upgradeNudgeShown": false,
+    "operationLog.enabled": true,
     "operationLog.maxAge": 0,
     "operationLog.maxSize": 3221225472,
     "search.autoApply": true,

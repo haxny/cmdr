@@ -29,9 +29,11 @@ vi.mock('#lib/tauri-commands/index.js', () => ({
 }))
 
 // Avoid pulling the reactive-settings chain; a stable stamp is all the row needs.
+const recordingOn = vi.hoisted(() => ({ value: true }))
 vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({
   getFileSizeFormat: () => 'binary',
   formatDateTime: () => '2026-07-09 12:00',
+  getOperationLogRecording: () => recordingOn.value,
 }))
 
 vi.mock('#lib/logging/logger.js', () => ({
@@ -81,6 +83,7 @@ async function mountDialog(): Promise<HTMLElement> {
 
 describe('OperationLogDialog', () => {
   beforeEach(() => {
+    recordingOn.value = true
     closeOperationLog()
     document.body.innerHTML = ''
     getOperationLogDetailMock.mockReset()
@@ -117,6 +120,28 @@ describe('OperationLogDialog', () => {
     const target = await mountDialog()
     expect(target.querySelector('.notice')).not.toBeNull()
     expect(target.textContent).toContain('No operations yet')
+  })
+
+  it('says recording is off in place of the empty state, so an empty log doesn’t read as “nothing happened”', async () => {
+    recordingOn.value = false
+    setEntries([])
+    const target = await mountDialog()
+    expect(target.querySelector('.recording-off')?.textContent).toContain('isn’t recording')
+    expect(target.textContent).not.toContain('No operations yet')
+  })
+
+  it('says recording is off above the history, which explains why it stops at a point', async () => {
+    recordingOn.value = false
+    setEntries([opRow({ opId: 'op-old' })])
+    const target = await mountDialog()
+    expect(target.querySelector('.recording-off')).not.toBeNull()
+    expect(target.querySelectorAll('.op')).toHaveLength(1)
+  })
+
+  it('says nothing about recording while it’s on', async () => {
+    setEntries([opRow({ opId: 'op-old' })])
+    const target = await mountDialog()
+    expect(target.querySelector('.recording-off')).toBeNull()
   })
 
   it('expands a row to its per-item detail, fetched lazily over IPC', async () => {

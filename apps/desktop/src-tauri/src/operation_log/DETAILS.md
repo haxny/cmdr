@@ -269,6 +269,33 @@ cap + 1`, so a 1M-child folder pays a bounded (~59 ms) synchronous read before t
 over the cap ⇒ top-level row only + `capped` (rollback unaffected — the top-level row is the undo unit regardless).
 Numbers + the cap-tuning rationale: `docs/notes/operation-log-capture-bench.md`.
 
+### Turning recording off (`recording.rs`)
+
+`operationLog.enabled` (default on) is the user's opt-out from recording file activity (CRA Annex I, Part I, (2)(l)).
+The registry entry and its Settings row live in `apps/desktop/src/lib/settings/definitions/behavior.ts`; Rust seeds the
+gate from `settings.json` at `start` (`settings::load_operation_log_enabled`, absent ⇒ on) and the frontend pushes every
+change through `set_operation_log_enabled`.
+
+- **The gate sits in the free functions, not in a journal.** `journal_open` asks `recording::admit`; an op opened while
+  off goes into the `UNRECORDED` set, and every later `journal_record_items` / `journal_note_*` / `journal_finalize` for
+  it returns early, and `journal_finalize` forgets it. The journal stays installed, so production and the test journals
+  see one gate, and nothing about the writer or `WriterJournal` changes.
+- **Decision/Why: decided once, at open, held to finalize.** An op that opened while on journals every item even if the
+  switch flips mid-way; one that opened while off journals nothing even if it flips back on. Gating each record call
+  instead would leave a header with only some of its rows, and the completeness check can't catch that: it compares
+  rows written against rows ISSUED, and a gated row was never issued. The op would read `rollbackable` while its
+  reversal put back only part of what happened. Pinned by `recording/tests.rs`.
+- **What keeps working while off**: the writer, retention (it prunes on its own timer through the writer), every read,
+  and rollback of operations already in the log. Rollback opens its inverse op through the writer directly, so undoing
+  an old entry still records the reversal and moves the original to `rolled_back`; that's the history's own state
+  machine, not a new recording.
+- **Undo for an unrecorded op is refused, never wrong**: `rollback_operation` finds no row ⇒ `UnknownOperation`. The
+  surfaces that offer Undo right after an op (the trash toast and Edit > Undo move to trash, Undo rename, Ask Cmdr's
+  rename undo) don't offer it while recording is off (`apps/desktop/src/lib/operation-log/recording.ts`), and the
+  history dialog says recording is off.
+- **The record path stays cheap while on**: `UNRECORDED_LEN` is an atomic, so with nothing unrecorded a record call
+  never takes the set's lock.
+
 ### The bypass boundary
 
 - **`run_instant` ops (rename / mkdir / mkfile)** don't flow through the sink; capture hooks the managed functions

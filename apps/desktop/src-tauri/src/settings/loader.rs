@@ -705,6 +705,28 @@ fn parse_operation_log_retention_limits(contents: &str) -> OperationLogRetention
     }
 }
 
+/// Whether the operation log records new operations (`operationLog.enabled`),
+/// read at `operation_log::start` to seed the recording gate before any
+/// operation can run. Absent or unreadable ⇒ on, the registry default. Later
+/// changes arrive through `set_operation_log_enabled`.
+pub fn load_operation_log_enabled<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> bool {
+    let Ok(data_dir) = crate::config::resolved_app_data_dir(app) else {
+        return true;
+    };
+    let Ok(contents) = fs::read_to_string(data_dir.join("settings.json")) else {
+        return true;
+    };
+    parse_operation_log_enabled(&contents)
+}
+
+/// Pure parse step for [`load_operation_log_enabled`], split out for unit tests.
+fn parse_operation_log_enabled(contents: &str) -> bool {
+    serde_json::from_str::<serde_json::Value>(contents)
+        .ok()
+        .and_then(|json| json.get("operationLog.enabled").and_then(|v| v.as_bool()))
+        .unwrap_or(true)
+}
+
 #[cfg(test)]
 #[path = "loader_tests.rs"]
 mod tests;

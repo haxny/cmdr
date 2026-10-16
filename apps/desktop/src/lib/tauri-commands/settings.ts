@@ -254,6 +254,15 @@ export async function setImageIndexEnabled(enabled: boolean): Promise<void> {
 }
 
 /**
+ * Live-applies the operation log's recording switch (`operationLog.enabled`). Off stops the
+ * backend journaling NEW operations, so they can't be undone; one already running keeps the
+ * decision it started with. No restart needed.
+ */
+export async function setOperationLogEnabled(enabled: boolean): Promise<void> {
+  await commands.setOperationLogEnabled(enabled)
+}
+
+/**
  * Opens the backend FDA gate: clears the pending flag, starts the MTP watcher, and starts
  * the drive indexer.
  *

@@ -418,6 +418,10 @@ which is the same shape as a run built one turn at a time. Only the newest still
 "Undo all N batches", and its `jobOperationIds` are built from the run's own lines — never from a previous line's set,
 which already includes its predecessors (that bug shipped duplicate ids to the backend and a test caught it).
 
+A batch applied while the operation log is off (`operationLog.enabled`) was never journaled, so its line lands as
+`notRecorded`: the count, a note saying it can't be undone, and no button. It stays out of the run, so the job-wide undo
+keeps covering the batches that were recorded (`#lib/operation-log/recording.ts`).
+
 **The id order is the data-safety part.** `undoOperations` receives them in APPLY order and the backend reverses
 newest-batch-first (`src-tauri/src/operation_log/rollback/order.rs`): a later batch can have renamed a file into a name
 an earlier batch freed, and oldest-first then finds that name occupied, correctly refuses to overwrite, and leaves the

@@ -53,6 +53,8 @@ vi.mock('#lib/file-operations/delete/trash-undo.js', async (importOriginal) => (
   rememberTrashForUndo,
 }))
 vi.mock('#lib/search/snapshot-store.svelte.js', () => ({ removeEntryFromAllSnapshots: vi.fn() }))
+const recording = vi.hoisted(() => ({ on: true }))
+vi.mock('#lib/operation-log/recording.js', () => ({ isOperationLogRecording: () => recording.on }))
 
 const FOLDER = '/Users/me/photos'
 
@@ -116,6 +118,7 @@ const ONE_FILE_ONE_REFUSED: TransferCompletePayload = {
 beforeEach(() => {
   vi.clearAllMocks()
   setForegroundOperationId(null)
+  recording.on = true
 })
 
 describe('a completed trash', () => {
@@ -134,7 +137,21 @@ describe('a completed trash', () => {
       operationId: 'op-1',
       sourceFolderPath: FOLDER,
       explorer,
+      undoable: true,
     })
+  })
+
+  // Recording off means the trash never reached the journal: an Undo would only be refused.
+  it('offers no undo for a trash the operation log didn’t record', () => {
+    recording.on = false
+    const dialogs = makeState()
+    dialogs.startTransferProgress(props('trash'))
+    setForegroundOperationId('op-1')
+
+    dialogs.handleTransferComplete(ONE_FILE)
+
+    expect(raisedToast().options.props).toMatchObject({ operationId: 'op-1', undoable: false })
+    expect(rememberTrashForUndo).not.toHaveBeenCalled()
   })
 
   // Edit > Undo trash reverses this same trash later, and takes this toast down by its id

@@ -26,6 +26,8 @@ vi.mock('#lib/tauri-commands/index.js', () => ({
   undoOperations: (ids: string[]) => undoOperationsMock(ids),
 }))
 vi.mock('#lib/app-status-store.js', () => ({ saveAppStatus: vi.fn() }))
+const recording = vi.hoisted(() => ({ on: true }))
+vi.mock('#lib/operation-log/recording.js', () => ({ isOperationLogRecording: () => recording.on }))
 vi.mock('#lib/logging/logger.js', () => ({
   getAppLogger: () => ({ warn: vi.fn(), info: vi.fn(), debug: vi.fn(), error: vi.fn() }),
 }))
@@ -66,6 +68,7 @@ function operation(operationId: string, restored: number, skipped = 0): UndoRepo
 
 beforeEach(() => {
   vi.clearAllMocks()
+  recording.on = true
   newChat()
   askCmdrState.messages = []
 })
@@ -97,6 +100,26 @@ describe('a finished batch', () => {
     noteRenameApplied('op-1', 23)
 
     expect(lines()[0].jobOperationIds).toEqual([])
+  })
+})
+
+describe('a batch the operation log didn’t record', () => {
+  it('says so in place of an Undo, since there’s nothing to undo from', () => {
+    recording.on = false
+    noteRenameApplied('op-1', 23)
+
+    expect(lines()[0]).toMatchObject({ operationId: 'op-1', fileCount: 23, undo: { status: 'notRecorded' } })
+  })
+
+  it('stays out of the job-wide undo, which keeps covering the batches that were recorded', () => {
+    noteRenameApplied('op-1', 10)
+    noteRenameApplied('op-2', 5)
+    recording.on = false
+    noteRenameApplied('op-3', 8)
+
+    const [, second, third] = lines()
+    expect(second.jobOperationIds).toEqual(['op-1', 'op-2'])
+    expect(third.jobOperationIds).toEqual([])
   })
 })
 

@@ -764,6 +764,7 @@ export {
   setShowVirtualGitPortal,
   setIndexingEnabled,
   setImageIndexEnabled,
+  setOperationLogEnabled,
   startIndexingAfterFdaDecision,
   getDirStatsBatch,
   getE2eStartPath,

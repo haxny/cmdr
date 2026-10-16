@@ -21,6 +21,12 @@ Depth behind `CLAUDE.md`. The durable journal, its schema, and the rollback engi
   row, binding a session to the ROW'S `inverseOpId`, and reporting the reversal's end (`onEnded`) so the row re-reads.
 - `rollback-refusal.ts`: `RollbackRefusalFailure` / `throwRollbackRefusal` / `asRollbackRefusal`, the three-line
   `TypedFailure` family (`#lib/ipc/typed-failure.ts` is the pattern).
+- `recording.ts`: `isOperationLogRecording()`, the one check every right-after-the-operation Undo makes before offering
+  itself (the trash toast and Edit > Undo move to trash, Undo rename, Ask Cmdr's rename undo). With
+  `operationLog.enabled` off the backend journals nothing new, so those undos could only be refused. The dialog reads
+  the reactive `getOperationLogRecording()` instead and, while off, puts a `recording-off` notice above the list (in
+  place of the empty state, whose "copy something and it'll show up here" would be untrue). Backend side:
+  `src-tauri/src/operation_log/DETAILS.md` § "Turning recording off".
 - `operation-log-shortcut.test.ts` pins the ⌥⌘L route; `operation-log-trigger.test.ts` owns the paging assertions, so
   the component tests don't repeat them.
 

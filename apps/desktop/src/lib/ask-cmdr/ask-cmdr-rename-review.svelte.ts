@@ -20,6 +20,7 @@ import { SvelteSet } from 'svelte/reactivity'
 import type { RailMessage } from './ask-cmdr-messages'
 import { askCmdrState, type BulkRenameReviewProposal, type BulkRenameReviewRow } from './ask-cmdr-state.svelte'
 import { undoStateFromReport } from './rename-undo'
+import { isOperationLogRecording } from '#lib/operation-log/recording.js'
 import {
   applyBulkRename,
   cancelBulkRenameProposal,
@@ -273,6 +274,20 @@ function dropAppliedProposal(proposalId: string): void {
  * whether the ids arrive one turn at a time or together from one Apply.
  */
 export function noteRenameApplied(operationId: string, fileCount: number, swapsSkipped = 0): void {
+  // With the operation log off the batch wasn't journaled: no Undo of its own, and it
+  // stays out of the run's job-wide undo, which keeps covering what was recorded.
+  if (!isOperationLogRecording()) {
+    askCmdrState.messages.push({
+      kind: 'renameApplied',
+      operationId,
+      fileCount,
+      jobOperationIds: [],
+      jobFileCount: 0,
+      swapsSkipped,
+      undo: { status: 'notRecorded' },
+    })
+    return
+  }
   const run = renameRunLines()
   // Built from the lines themselves, never from a previous line's stored job set:
   // that set already includes its predecessors, so folding it in would repeat ids.

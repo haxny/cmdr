@@ -141,6 +141,15 @@ fn restricted_window_settings_carry_the_pinned_ui_language() {
 }
 
 #[test]
+fn operation_log_recording_defaults_on_and_reads_an_explicit_off() {
+    // The store is sparse: an untouched switch is absent and means on, and so does a file we can't read.
+    assert!(parse_operation_log_enabled("{}"));
+    assert!(parse_operation_log_enabled("not json"));
+    assert!(parse_operation_log_enabled(r#"{ "operationLog.enabled": true }"#));
+    assert!(!parse_operation_log_enabled(r#"{ "operationLog.enabled": false }"#));
+}
+
+#[test]
 fn operation_log_retention_defaults_forever_and_3gb() {
     // Absent keys ⇒ forever age, 3 GB size.
     let limits = parse_operation_log_retention_limits("{}");

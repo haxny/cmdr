@@ -759,3 +759,17 @@ describe('File systems > Android (ADB)', () => {
     ])
   })
 })
+
+describe('operationLog.enabled (recording on or off)', () => {
+  it('registers an on-by-default switch in the Operation log card', () => {
+    const def = getSettingDefinition('operationLog.enabled')
+    expect(def?.type).toBe('boolean')
+    expect(def?.default).toBe(true)
+    expect(def?.component).toBe('switch')
+    expect(def?.section).toEqual(['Behavior', 'Navigation & file ops'])
+  })
+
+  it('is off-limits to MCP, so a client can’t hide what it does next', () => {
+    expect(getSettingDefinition('operationLog.enabled')?.mcpSettable).toBe(false)
+  })
+})

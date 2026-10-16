@@ -20,6 +20,7 @@ vi.mock('#lib/settings/settings-store.js', () => ({
     if (key === 'behavior.doubleClickPaneNavigatesToParent') return true
     if (key === 'behavior.textEditorApp') return 'system'
     if (key === 'behavior.openTerminalHereApp') return 'com.apple.Terminal'
+    if (key === 'operationLog.enabled') return true
     if (key === 'operationLog.maxAge') return 0
     if (key === 'operationLog.maxSize') return 3221225472
     return undefined
@@ -106,6 +107,7 @@ describe('NavigationAndFileOpsSection', () => {
     expect(fors).toContain('fileOperations.allowFileExtensionChanges')
     expect(fors).toContain('behavior.textEditorApp')
     expect(fors).toContain('behavior.openTerminalHereApp')
+    expect(fors).toContain('operationLog.enabled')
     expect(fors).toContain('operationLog.maxAge')
     expect(fors).toContain('operationLog.maxSize')
     target.remove()

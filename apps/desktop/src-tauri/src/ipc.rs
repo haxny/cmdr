@@ -371,6 +371,7 @@ macro_rules! ipc_command_manifest {
                     crate::commands::settings::set_smb_concurrency_cmd,
                     crate::commands::settings::set_log_llm_calls,
                     crate::commands::settings::set_image_index_enabled,
+                    crate::commands::settings::set_operation_log_enabled,
                     crate::commands::settings::set_max_log_storage_mb,
                     crate::commands::settings::set_error_reports_enabled,
                     crate::commands::settings::get_restricted_window_settings,

@@ -42,9 +42,14 @@
          * no-ops without it (HMR or pre-mount).
          */
         explorer: PaneRevealAPI | undefined
+        /**
+         * Whether the operation log recorded this trash. Off, there's nothing to undo
+         * from, so the toast offers only "Go to trash".
+         */
+        undoable: boolean
     }
 
-    const { toastId, message, operationId, sourceFolderPath, explorer }: Props = $props()
+    const { toastId, message, operationId, sourceFolderPath, explorer, undoable }: Props = $props()
 
     /**
      * Both actions hand the conversation to something else (the undo raises its own
@@ -68,9 +73,11 @@
         <Button size="mini" variant="secondary" onclick={handleGoToTrash}>
             {tString('fileOperations.trash.goToTrashAction')}
         </Button>
-        <Button size="mini" variant="primary" onclick={handleUndo}>
-            {tString('fileOperations.trash.undoAction')}
-        </Button>
+        {#if undoable}
+            <Button size="mini" variant="primary" onclick={handleUndo}>
+                {tString('fileOperations.trash.undoAction')}
+            </Button>
+        {/if}
     </div>
 </div>
 

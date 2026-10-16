@@ -32,6 +32,9 @@ const ipc = vi.hoisted(() => ({
   getMultiRenameHistory: vi.fn(() => Promise.resolve([])),
 }))
 
+const recording = vi.hoisted(() => ({ on: true }))
+vi.mock('#lib/operation-log/recording.js', () => ({ isOperationLogRecording: () => recording.on }))
+
 vi.mock('#lib/tauri-commands/index.js', () => ({
   notifyDialogOpened: vi.fn(() => Promise.resolve()),
   notifyDialogClosed: vi.fn(() => Promise.resolve()),
@@ -104,6 +107,7 @@ describe('MultiRenameDialog', () => {
     ipc.getMultiRenameLastSettings.mockResolvedValue(null)
     ipc.saveMultiRenameLastSettings.mockResolvedValue(undefined)
     setLastMultiRenameRun(null)
+    recording.on = true
   })
 
   it.each([
@@ -416,6 +420,19 @@ describe('MultiRenameDialog', () => {
       document.body.innerHTML = ''
       const again = await mountSheet()
       expect(undoLink(again)).toBeTruthy()
+    })
+
+    // An unrecorded run can't be rolled back, and an older run's undo would leave the newer renames in place.
+    it('a rename started while the operation log is off offers no undo, not even the previous run’s', async () => {
+      setLastMultiRenameRun({ operationId: 'op0', renaming: 1 })
+      recording.on = false
+      ipc.applyMultiRename.mockResolvedValue({ ok: true, value: { operationId: 'op1', renaming: 1, swapsLeftOut: 0 } })
+      const root = await mountSheet()
+      key(inputs(root)[0], 'Enter')
+      await settle()
+      document.body.innerHTML = ''
+      const again = await mountSheet()
+      expect(undoLink(again)).toBeUndefined()
     })
 
     it('⌘⌥Z, or the footer link, rolls back the session’s last run and hands it to the page', async () => {

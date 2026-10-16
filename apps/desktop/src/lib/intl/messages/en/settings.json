@@ -2360,10 +2360,18 @@
     "description": "Heading of the Operation log card (file-operation history and undo retention limits) in Settings > Behavior > Navigation & file ops.",
     "screenshot": "settings-behavior-navigation-and-file-ops.png"
   },
-  "settings.operationLog.intro": "Cmdr logs your file operations so you can review your history and undo actions. Choose how long to keep the log and how much disk space it can use.",
+  "settings.operationLog.intro": "Cmdr logs your file operations so you can review your history and undo actions. Choose whether to record them, how long to keep the log, and how much disk space it can use.",
   "@settings.operationLog.intro": {
-    "description": "Intro paragraph at the top of the Operation log card in Settings > Behavior > Navigation & file ops. Explains what the log is; the two settings below control retention. \"Cmdr\" is the product name; do not translate it.",
+    "description": "Intro paragraph at the top of the Operation log card in Settings > Behavior > Navigation & file ops. Explains what the log is; the settings below turn recording on or off and control retention. \"Cmdr\" is the product name; do not translate it.",
     "screenshot": "settings-behavior-navigation-and-file-ops.png"
+  },
+  "settings.operationLog.enabled.label": "Record file operations",
+  "@settings.operationLog.enabled.label": {
+    "description": "Label of the switch that turns the operation log on or off, in the Operation log card of Settings › Behavior › Navigation & file ops. When on, Cmdr records every copy, move, rename, and delete so they can be reviewed and undone. Sentence case."
+  },
+  "settings.operationLog.enabled.description": "Undo needs this. While it’s off, Cmdr doesn’t record new copies, moves, renames, or deletes, so you can’t undo them. Your existing history stays, and you can still undo what’s in it.",
+  "@settings.operationLog.enabled.description": {
+    "description": "Help text under the switch that turns the operation log on or off (settings.operationLog.enabled.label). It must say plainly that undo stops working for new operations while the switch is off, and that the history already recorded is kept. The apostrophes are curly typographic apostrophes (U+2019)."
   },
   "settings.operationLog.maxAge.label": "Keep history for",
   "@settings.operationLog.maxAge.label": {

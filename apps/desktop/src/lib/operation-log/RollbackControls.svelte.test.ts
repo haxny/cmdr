@@ -52,6 +52,7 @@ vi.mock('#lib/tauri-commands/index.js', () => ({
 vi.mock('#lib/settings/reactive-settings.svelte.js', () => ({
   getFileSizeFormat: () => 'binary',
   formatDateTime: () => '2026-07-09 12:00',
+  getOperationLogRecording: () => true,
 }))
 
 vi.mock('#lib/logging/logger.js', () => ({

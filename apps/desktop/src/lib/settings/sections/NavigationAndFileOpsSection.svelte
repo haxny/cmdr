@@ -19,8 +19,9 @@
      *      macOS preference rather than the registry, so it owns its own card
      *      and gates it on search itself (`RevealHandlerCard.rows.ts`). Its own
      *      doc comment says why.
-     *   6. **Operation log** — the retention limits (`operationLog.maxAge` /
-     *      `operationLog.maxSize`) for the file-operation history and undo log.
+     *   6. **Operation log** — the recording switch (`operationLog.enabled`) and
+     *      the retention limits (`operationLog.maxAge` / `operationLog.maxSize`)
+     *      for the file-operation history and undo log.
      *
      * Card visibility is section-owned: each `SectionCard` frame is wrapped in
      * `{#if anyVisible(shouldShow, ...ids)}` over the SAME `shouldShow` predicate
@@ -60,6 +61,7 @@
     const skipConfirmationDef = getSettingDefinition('fileOperations.skipConfirmation') ?? defaultDef
     const textEditorAppDef = getSettingDefinition('behavior.textEditorApp') ?? defaultDef
     const openTerminalHereAppDef = getSettingDefinition('behavior.openTerminalHereApp') ?? defaultDef
+    const operationLogEnabledDef = getSettingDefinition('operationLog.enabled') ?? defaultDef
     const operationLogMaxAgeDef = getSettingDefinition('operationLog.maxAge') ?? defaultDef
     const operationLogMaxSizeDef = getSettingDefinition('operationLog.maxSize') ?? defaultDef
 </script>
@@ -151,9 +153,20 @@
          only it can tell whether there's anything to render. -->
     <RevealHandlerCard {searchQuery} />
 
-    {#if anyVisible(shouldShow, 'operationLog.maxAge', 'operationLog.maxSize')}
+    {#if anyVisible(shouldShow, 'operationLog.enabled', 'operationLog.maxAge', 'operationLog.maxSize')}
         <SectionCard label={tString('settings.navigationAndFileOps.card.operationLog')}>
             <p class="operation-log-intro">{tString('settings.operationLog.intro')}</p>
+
+            {#if shouldShow('operationLog.enabled')}
+                <SettingRow
+                    id="operationLog.enabled"
+                    label={operationLogEnabledDef.label}
+                    description={operationLogEnabledDef.description}
+                    {searchQuery}
+                >
+                    <SettingSwitch id="operationLog.enabled" />
+                </SettingRow>
+            {/if}
 
             {#if shouldShow('operationLog.maxAge')}
                 <SettingRow

@@ -55,6 +55,7 @@
     import { SEARCH_OPTIONS, searchOptionExamples } from './search-option-help'
     import SearchOptionChips from './SearchOptionChips.svelte'
     import { getLastMultiRenameRun, setLastMultiRenameRun, type MultiRenameRun } from './last-run.svelte'
+    import { isOperationLogRecording } from '#lib/operation-log/recording.js'
     import { createResults } from './results.svelte'
     import { createFieldHistoryMenu } from './field-history-menu.svelte'
 
@@ -194,7 +195,11 @@
         if (!canStart) return
         const started = await tool.apply()
         if (started) {
-            setLastMultiRenameRun({ operationId: started.operationId, renaming: started.renaming })
+            // With the operation log off this run isn't journaled, and undoing an older one would
+            // leave this one's names in place, so nothing is offered.
+            setLastMultiRenameRun(
+                isOperationLogRecording() ? { operationId: started.operationId, renaming: started.renaming } : null,
+            )
             onApplied(started)
         }
     }

@@ -178,6 +178,11 @@
             </div>
         {:else if message.undo.status === 'unavailable'}
             <span class="rename-note">{tString('askCmdr.renameUndo.unavailable')}</span>
+        {:else if message.undo.status === 'notRecorded'}
+            <div class="rename-lines">
+                <span>{tString('askCmdr.renameUndo.applied', undoCounts(message.fileCount))}</span>
+                <span class="rename-note">{tString('askCmdr.renameUndo.notRecorded')}</span>
+            </div>
         {:else}
             {#if message.swapsSkipped > 0}
                 <div class="rename-lines">

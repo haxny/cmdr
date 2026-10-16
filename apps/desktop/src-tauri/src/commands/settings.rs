@@ -158,6 +158,16 @@ pub fn set_log_llm_calls(enabled: bool) {
     crate::ai::llm_log::set_enabled(enabled);
 }
 
+/// Live-applies the operation log's on/off switch (`operationLog.enabled`). Off stops
+/// journaling NEW operations, so they can't be undone; an operation already running
+/// keeps the decision it started with, and existing history stays readable and
+/// prunable (`operation_log/recording.rs`). Runtime-toggleable, no restart.
+#[tauri::command]
+#[specta::specta]
+pub fn set_operation_log_enabled(enabled: bool) {
+    crate::operation_log::recording::set_enabled(enabled);
+}
+
 /// Live-applies the master "Index image contents" toggle (`mediaIndex.enabled`) for
 /// the media-ML enrichment subsystem. Enabling clears any prior memory-watchdog stop
 /// so enrichment resumes AND kicks an immediate pass for every ready volume, so work
