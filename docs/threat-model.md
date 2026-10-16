@@ -14,8 +14,9 @@ security fixes, fuzzing, release environment, and managed-preferences mitigation
 day.
 
 ❗ This repo is public. Gaps an attacker could use before they're fixed are tracked in a private tracker, not here. This
-file names the boundary and says "tracked privately"; don't add exploit detail. A newly found gap goes to the private
-tracker (`vdavid/cmdr-reports`) first, labeled `security-gap`, which is what the release check lists.
+file names each boundary and says where its gaps go, whether or not one is open right now; don't add exploit detail. A
+newly found gap goes to the private tracker (`vdavid/cmdr-reports`) first, labeled `security-gap`, which is what the
+release check lists.
 
 ## How to use this
 
@@ -174,7 +175,7 @@ risk.
   - **Decompression bombs** are bounded by disk space and cancelation, not by a ratio cap. Low impact.
   - **File names aren't stripped of control and bidi characters**, so a name can look like something else in a log line
     or a confirmation. Low.
-  - Some gaps in hostile-content handling are tracked privately.
+  - Gaps found in hostile-content handling are tracked privately and reviewed before every release.
 
 ### 4. Remote servers and devices
 
@@ -212,7 +213,8 @@ risk.
   - **A spoofed Bonjour answer** can impersonate a saved SMB server name and receive an NTLMv2 response that can be
     cracked offline. Medium likelihood on untrusted networks, impact bounded by password strength.
   - **No Kerberos**, so domain-joined shares use NTLMv2 with stored passwords.
-  - Some gaps in hostile-server and hostile-device input handling are tracked privately.
+  - Gaps found in hostile-server and hostile-device input handling are tracked privately and reviewed before every
+    release.
 
 ### 5. The network path
 
@@ -280,7 +282,7 @@ risk.
     and reads `.github/release-signers` from the tagged commit itself, so whoever can push a `v*` tag controls both.
     What stops an attacker is who holds that right (admins only, behind hardware-key 2FA). Stronger options (a required
     approval on the `release` environment, or a deployment-protection rule that verifies the signature outside the
-    tagged commit) are tracked privately.
+    tagged commit) would close this; neither is in place yet.
   - **No reproducible builds**, so a reviewer can't rebuild and compare a release.
   - **A malicious build from inside the release pipeline still gets signed.** Signing locally checks where an archive
     was built, not what went into it, so a compromised third-party action or dependency in the compile job still ships
@@ -299,7 +301,7 @@ risk.
     every install whose network blocks Apple's OCSP responder), so it relies on macOS's default revocation handling.
   - **Outside macOS the updater trusts minisign alone**: those builds use the Tauri updater plugin, which has no
     code-signature step.
-  - Some release-chain hardening is tracked privately.
+  - Gaps found in the release chain are tracked privately and reviewed before every release.
 
 ### 7. Licensing
 
@@ -360,7 +362,7 @@ risk.
     `/trust`.
   - **Usage stats are opt-out during the beta**, and their settings list is kept clean by review, not a filter.
   - **Data leaves the EU** for several subprocessors (`trust.ts`'s `dataLocations`).
-  - Some server-side hardening is tracked privately.
+  - Gaps found on the server side are tracked privately and reviewed before every release.
 
 ### 10. Dependencies and contributors
 
