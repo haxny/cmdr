@@ -333,6 +333,12 @@ mod tests {
     #[test]
     fn a_folder_that_refuses_is_reported_and_the_rest_still_goes() {
         use std::os::unix::fs::PermissionsExt;
+        // Root ignores the permission bits this folder relies on to refuse (the Linux Docker lane runs as root).
+        // SAFETY: (test) `geteuid` takes no arguments, shares no memory, and can't fail; it only reads this
+        // process's effective uid.
+        if unsafe { libc::geteuid() } == 0 {
+            return;
+        }
         let root = TestDir::new("wipe-partial");
         let stuck_parent = root.join("Logs");
         let stuck = stuck_parent.join("cmdr");
