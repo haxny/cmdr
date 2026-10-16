@@ -38,6 +38,27 @@
     "screenshot": "settings-updates.png",
     "screenshotNote": "App-update messaging. The status line renders in the Settings > Updates & privacy panel pictured here, and the update toasts appear while that check runs. Version numbers are substituted, not translated."
   },
+  "updates.toast.securityFix": "This update fixes {count, plural, one {a security issue} other {# security issues}}.",
+  "@updates.toast.securityFix": {
+    "description": "Headline of the persistent update-ready toast when the downloaded update fixes one or more security vulnerabilities. Replaces updates.toast.ready for such updates. States the situation calmly, without alarm: the fix is already downloaded and written into the app. {count} is how many vulnerabilities it fixes; the singular form says \"a security issue\" rather than a numeral. Sentence case.",
+    "placeholders": {
+      "count": "how many security issues the update fixes, 1 or more"
+    },
+    "screenshot": "settings-updates.png",
+    "screenshotNote": "App-update messaging. The status line renders in the Settings > Updates & privacy panel pictured here, and the update toasts appear while that check runs. Version numbers are substituted, not translated."
+  },
+  "updates.toast.securityFixDetail": "Restart Cmdr to finish installing it.",
+  "@updates.toast.securityFixDetail": {
+    "description": "Second line of the security variant of the update-ready toast, under updates.toast.securityFix. Says what to do: restarting is the one step left before the security fix takes effect (\"it\" is the update). Paired with \"Restart now\" and \"Later\" buttons; nothing forces the restart. \"Cmdr\" is the product name (do not translate).",
+    "screenshot": "settings-updates.png",
+    "screenshotNote": "App-update messaging. The status line renders in the Settings > Updates & privacy panel pictured here, and the update toasts appear while that check runs. Version numbers are substituted, not translated."
+  },
+  "updates.toast.readAdvisory": "Read the advisory",
+  "@updates.toast.readAdvisory": {
+    "description": "Link in the security variant of the update-ready toast that opens the public security advisory (on GitHub or the Cmdr website) describing what the update fixes and what to do. A short link label, not a sentence.",
+    "screenshot": "settings-updates.png",
+    "screenshotNote": "App-update messaging. The status line renders in the Settings > Updates & privacy panel pictured here, and the update toasts appear while that check runs. Version numbers are substituted, not translated."
+  },
   "updates.toast.versionChange": "v{prev} → v{next}",
   "@updates.toast.versionChange": {
     "description": "Small, dimmed metadata line at the bottom of the update-ready toast, showing which version replaces which. Version numbers and an arrow only, with no words to translate; the literal \"v\" prefix and the arrow are both intentional. Keep it identical to English unless your language writes version numbers differently.",

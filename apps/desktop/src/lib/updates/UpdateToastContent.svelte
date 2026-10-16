@@ -2,8 +2,21 @@
     import { relaunch } from '@tauri-apps/plugin-process'
     import { dismissToast } from '#lib/ui/toast/index.js'
     import Button from '#lib/ui/Button.svelte'
+    import LinkButton from '#lib/ui/LinkButton.svelte'
+    import { openExternalUrl } from '#lib/tauri-commands/index.js'
+    import { getAppLogger } from '#lib/logging/logger.js'
     import { tString } from '#lib/intl/messages.svelte.js'
     import { updateState } from './update-state.svelte'
+
+    const log = getAppLogger('updater')
+
+    /**
+     * What the staged update fixes, security-wise. Set, the toast leads with that and says what to
+     * do; `null`, it reads exactly as it always has. The link is already vetted backend-side against
+     * the advisory allowlist (`src-tauri/src/security_advisories/`), so `url` is `null` rather than
+     * anything else when the list named a link it refused.
+     */
+    const notice = $derived(updateState.securityNotice)
 
     /**
      * Both ends of the version row, or `null` when either is unknown. A toast raised from `ready`
@@ -24,11 +37,36 @@
     function handleDismiss() {
         dismissToast('update')
     }
+
+    async function handleOpenAdvisory(url: string) {
+        try {
+            await openExternalUrl(url)
+        } catch (e) {
+            log.warn("Couldn't open the security advisory link: {error}", { error: String(e) })
+        }
+    }
 </script>
 
 <div>
-    <span class="update-headline">{tString('updates.toast.ready')}</span>
-    <span class="update-detail">{tString('updates.toast.readyDetail')}</span>
+    {#if notice !== null}
+        <span class="update-headline">{tString('updates.toast.securityFix', { count: notice.count })}</span>
+        <span class="update-detail">{tString('updates.toast.securityFixDetail')}</span>
+        {#if notice.url !== null}
+            {@const url = notice.url}
+            <span class="update-advisory">
+                <LinkButton
+                    href={url}
+                    onclick={(e: MouseEvent) => {
+                        e.preventDefault()
+                        void handleOpenAdvisory(url)
+                    }}>{tString('updates.toast.readAdvisory')}</LinkButton
+                >
+            </span>
+        {/if}
+    {:else}
+        <span class="update-headline">{tString('updates.toast.ready')}</span>
+        <span class="update-detail">{tString('updates.toast.readyDetail')}</span>
+    {/if}
     {#if versions !== null}
         <!-- `role="img"` so the arrow is announced as the sentence in `versionChangeAria` rather
              than read out as a bare symbol, in whatever language the screen reader names it. -->
@@ -52,6 +90,10 @@
     .update-detail {
         font-size: var(--font-size-sm);
         color: var(--color-text-primary);
+    }
+
+    .update-advisory {
+        font-size: var(--font-size-sm);
     }
 
     .update-versions {

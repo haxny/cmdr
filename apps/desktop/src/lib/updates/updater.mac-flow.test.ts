@@ -9,6 +9,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import type { SecurityNotice } from '#lib/ipc/bindings.js'
 
 const {
   addToastMock,
@@ -22,7 +23,9 @@ const {
   addToastMock: vi.fn(),
   checkForUpdateMock: vi.fn(),
   downloadUpdateMock: vi.fn(() => Promise.resolve()),
-  installUpdateMock: vi.fn(() => Promise.resolve()),
+  installUpdateMock: vi.fn<() => Promise<{ securityNotice: SecurityNotice | null }>>(() =>
+    Promise.resolve({ securityNotice: null }),
+  ),
   updateWriteBlockerMock: vi.fn<() => Promise<'translocated' | 'readOnlyVolume' | null>>(() => Promise.resolve(null)),
   trackEventMock: vi.fn(),
   getVersionMock: vi.fn(() => Promise.resolve('0.28.0')),
@@ -62,6 +65,8 @@ vi.mock('#lib/logging/logger.js', () => ({
 }))
 
 import {
+  CRITICAL_RESTART_NUDGE_INTERVAL_MS,
+  RESTART_NUDGE_INTERVAL_MS,
   UPDATE_WAKE_TICK_MS,
   _resetUpdaterStateForTest,
   applyAutoCheckEnabled,
@@ -266,5 +271,107 @@ describe('what set a check going', () => {
     await checkForUpdates('settings')
     await checkForUpdates('command')
     expect(reportedTriggers()).toEqual(['settings', 'command'])
+  })
+})
+
+/**
+ * The install answers whether the update fixes a security issue (read from the staged bundle's
+ * own signed list, `src-tauri/src/updater/DETAILS.md` § Security notices). The state carries it
+ * for the restart toast, and a critical one comes back sooner after "Later".
+ */
+describe('an update that fixes a security issue', () => {
+  const critical: SecurityNotice = {
+    severity: 'critical',
+    count: 1,
+    url: 'https://github.com/vdavid/cmdr/security/advisories/GHSA-aaaa-bbbb-cccc',
+  }
+  const medium: SecurityNotice = { severity: 'medium', count: 2, url: 'https://getcmdr.com/changelog' }
+
+  beforeEach(() => {
+    _resetUpdaterStateForTest()
+    addToastMock.mockClear()
+    checkForUpdateMock.mockReset()
+    installUpdateMock.mockReset()
+    installUpdateMock.mockResolvedValue({ securityNotice: null })
+    updateWriteBlockerMock.mockReset()
+    updateWriteBlockerMock.mockResolvedValue(null)
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+    _resetUpdaterStateForTest()
+  })
+
+  it('carries the notice the install answered', async () => {
+    await notifyOnboardingComplete()
+    checkForUpdateMock.mockResolvedValueOnce(anUpdate)
+    installUpdateMock.mockResolvedValueOnce({ securityNotice: critical })
+
+    await checkForUpdates('poll')
+
+    expect(updateState.status).toBe('ready')
+    expect(updateState.securityNotice).toEqual(critical)
+  })
+
+  it('leaves it null for an update with nothing to say', async () => {
+    await notifyOnboardingComplete()
+    checkForUpdateMock.mockResolvedValueOnce(anUpdate)
+
+    await checkForUpdates('poll')
+
+    expect(updateState.status).toBe('ready')
+    expect(updateState.securityNotice).toBeNull()
+  })
+
+  it('replaces the notice when a newer build supersedes the staged one', async () => {
+    await notifyOnboardingComplete()
+    checkForUpdateMock.mockResolvedValueOnce(anUpdate)
+    installUpdateMock.mockResolvedValueOnce({ securityNotice: critical })
+    await checkForUpdates('poll')
+
+    // The newer bundle's list is cumulative, so its answer is the whole truth: replace, never merge.
+    checkForUpdateMock.mockResolvedValueOnce({ kind: 'available', version: '0.34.0' })
+    installUpdateMock.mockResolvedValueOnce({ securityNotice: medium })
+    await checkForUpdates('poll')
+
+    expect(updateState.update?.version).toBe('0.34.0')
+    expect(updateState.securityNotice).toEqual(medium)
+  })
+
+  it('brings a critical fix’s restart prompt back after four hours instead of a day', async () => {
+    expect(CRITICAL_RESTART_NUDGE_INTERVAL_MS).toBe(4 * 60 * 60 * 1000)
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-10-16T09:00:00Z'))
+    await notifyOnboardingComplete()
+    checkForUpdateMock.mockResolvedValue(anUpdate)
+    installUpdateMock.mockResolvedValueOnce({ securityNotice: critical })
+    await checkForUpdates('poll')
+    addToastMock.mockClear()
+
+    vi.setSystemTime(Date.now() + CRITICAL_RESTART_NUDGE_INTERVAL_MS - 60 * 1000)
+    await checkForUpdates('poll')
+    expect(addToastMock).not.toHaveBeenCalled()
+
+    vi.setSystemTime(Date.now() + 60 * 1000)
+    await checkForUpdates('poll')
+    expect(addToastMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps the day-long cadence for anything below critical', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-10-16T09:00:00Z'))
+    await notifyOnboardingComplete()
+    checkForUpdateMock.mockResolvedValue(anUpdate)
+    installUpdateMock.mockResolvedValueOnce({ securityNotice: { ...critical, severity: 'high' } })
+    await checkForUpdates('poll')
+    addToastMock.mockClear()
+
+    vi.setSystemTime(Date.now() + CRITICAL_RESTART_NUDGE_INTERVAL_MS)
+    await checkForUpdates('poll')
+    expect(addToastMock).not.toHaveBeenCalled()
+
+    vi.setSystemTime(Date.now() + RESTART_NUDGE_INTERVAL_MS)
+    await checkForUpdates('poll')
+    expect(addToastMock).toHaveBeenCalledTimes(1)
   })
 })

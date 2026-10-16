@@ -15,7 +15,7 @@ import { UpdateDownloadFailure } from './update-download-failure'
 const { checkForUpdateMock, downloadUpdateMock, installUpdateMock, logger } = vi.hoisted(() => ({
   checkForUpdateMock: vi.fn(),
   downloadUpdateMock: vi.fn(() => Promise.resolve()),
-  installUpdateMock: vi.fn(() => Promise.resolve()),
+  installUpdateMock: vi.fn(() => Promise.resolve({ securityNotice: null })),
   logger: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }))
 

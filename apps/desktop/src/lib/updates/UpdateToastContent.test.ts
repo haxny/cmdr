@@ -8,13 +8,15 @@
 import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest'
 import { mount, tick } from 'svelte'
 
-const { relaunchMock, dismissToastMock } = vi.hoisted(() => ({
+const { relaunchMock, dismissToastMock, openExternalUrlMock } = vi.hoisted(() => ({
   relaunchMock: vi.fn(() => Promise.resolve()),
   dismissToastMock: vi.fn(),
+  openExternalUrlMock: vi.fn(() => Promise.resolve()),
 }))
 
 vi.mock('@tauri-apps/plugin-process', () => ({ relaunch: relaunchMock }))
 vi.mock('#lib/ui/toast/index.js', () => ({ dismissToast: dismissToastMock }))
+vi.mock('#lib/tauri-commands/index.js', () => ({ openExternalUrl: openExternalUrlMock }))
 
 import UpdateToastContent from './UpdateToastContent.svelte'
 import { updateState } from './update-state.svelte'
@@ -32,6 +34,7 @@ function resetState() {
   updateState.failure = null
   updateState.previousVersion = null
   updateState.nextVersion = null
+  updateState.securityNotice = null
 }
 
 describe('UpdateToastContent', () => {
@@ -39,6 +42,7 @@ describe('UpdateToastContent', () => {
     resetState()
     relaunchMock.mockClear()
     dismissToastMock.mockClear()
+    openExternalUrlMock.mockClear()
   })
 
   afterEach(resetState)
@@ -90,5 +94,60 @@ describe('UpdateToastContent', () => {
 
     restart?.click()
     expect(relaunchMock).toHaveBeenCalledTimes(1)
+  })
+
+  /** An update with nothing to say about security must read exactly as it always has. */
+  it('renders the plain toast unchanged when the update carries no security notice', async () => {
+    updateState.previousVersion = '0.28.3'
+    updateState.nextVersion = '0.29.0'
+    const target = render()
+    await tick()
+    // Scoped-CSS hashes and Svelte's empty block anchors are framework bookkeeping that moves with any
+    // edit to the component; the elements, attributes, and copy are what must not.
+    const markup = target.innerHTML.replace(/svelte-[a-z0-9]+/g, 'svelte-HASH').replaceAll('<!---->', '')
+    expect(markup).toMatchInlineSnapshot(
+      `"<div><span class="update-headline svelte-HASH">A new version of Cmdr is ready.</span> <span class="update-detail svelte-HASH">Restart now, or you’ll get it the next time you open Cmdr.</span> <span class="update-versions svelte-HASH" role="img" aria-label="Updating from version 0.28.3 to version 0.29.0">v0.28.3 → v0.29.0</span> <div class="update-actions svelte-HASH"><button type="button" class="btn btn-secondary btn-mini svelte-HASH">Later</button> <button type="button" class="btn btn-primary btn-mini svelte-HASH">Restart now</button></div></div>"`,
+    )
+  })
+
+  describe('when the update fixes a security issue', () => {
+    const advisoryUrl = 'https://github.com/vdavid/cmdr/security/advisories/GHSA-aaaa-bbbb-cccc'
+
+    it('says so, says what to do, and links the advisory', async () => {
+      updateState.securityNotice = { severity: 'high', count: 1, url: advisoryUrl }
+      const target = render()
+      await tick()
+      expect(target.textContent).toContain('This update fixes a security issue.')
+      expect(target.textContent).toContain('Restart Cmdr to finish installing it.')
+      expect(target.textContent).not.toContain('A new version of Cmdr is ready.')
+
+      const link = [...target.querySelectorAll('a')].find((a) => a.textContent.includes('Read the advisory'))
+      expect(link?.getAttribute('href')).toBe(advisoryUrl)
+      link?.click()
+      expect(openExternalUrlMock).toHaveBeenCalledWith(advisoryUrl)
+    })
+
+    it('counts several fixes', async () => {
+      updateState.securityNotice = { severity: 'critical', count: 3, url: advisoryUrl }
+      const target = render()
+      await tick()
+      expect(target.textContent).toContain('This update fixes 3 security issues.')
+    })
+
+    it('drops the link when the notice has none, keeping the rest', async () => {
+      updateState.securityNotice = { severity: 'low', count: 1, url: null }
+      const target = render()
+      await tick()
+      expect(target.textContent).toContain('This update fixes a security issue.')
+      expect(target.querySelector('a')).toBeNull()
+    })
+
+    it('keeps both buttons: the notice never forces a restart', async () => {
+      updateState.securityNotice = { severity: 'critical', count: 1, url: advisoryUrl }
+      const target = render()
+      await tick()
+      const labels = [...target.querySelectorAll('button')].map((b) => b.textContent.trim())
+      expect(labels).toEqual(['Later', 'Restart now'])
+    })
   })
 })

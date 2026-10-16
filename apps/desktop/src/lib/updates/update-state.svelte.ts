@@ -6,7 +6,7 @@
  */
 
 import type { BundleWriteBlocker } from '#lib/tauri-commands/index.js'
-import type { ServerRequestError, UpdateCheckOutcome } from '#lib/ipc/bindings.js'
+import type { SecurityNotice, ServerRequestError, UpdateCheckOutcome } from '#lib/ipc/bindings.js'
 
 /** The update the last check found and staged. The backend keeps where it came from; the frontend needs the version. */
 export interface UpdateInfo {
@@ -42,6 +42,12 @@ export interface UpdateState {
   previousVersion: string | null
   /** Version we're moving to. Set when an update is found. Cleared on `idle`. */
   nextVersion: string | null
+  /**
+   * What the staged update fixes, security-wise, or `null` when nothing the running build lacks. Set from the install's
+   * own answer (the staged bundle's signed list, never `latest.json`) and REPLACED when a newer build supersedes it: that
+   * bundle's list is cumulative, so its answer is the whole truth.
+   */
+  securityNotice: SecurityNotice | null
 }
 
 export const updateState = $state<UpdateState>({
@@ -51,6 +57,7 @@ export const updateState = $state<UpdateState>({
   managed: null,
   previousVersion: null,
   nextVersion: null,
+  securityNotice: null,
 })
 
 /**

@@ -19,7 +19,7 @@ const {
   addToastMock: vi.fn(),
   checkForUpdateMock: vi.fn(),
   downloadUpdateMock: vi.fn(() => Promise.resolve()),
-  installUpdateMock: vi.fn(() => Promise.resolve()),
+  installUpdateMock: vi.fn(() => Promise.resolve({ securityNotice: null })),
   trackEventMock: vi.fn(),
   getSettingMock: vi.fn((id: string): unknown => {
     if (id === 'onboarding.completed') return true

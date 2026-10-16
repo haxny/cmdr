@@ -8,6 +8,7 @@ import {
   type BundleWriteBlocker,
   type UpdateCheckOutcome,
   type UpdateCheckTrigger,
+  type UpdateInstalled,
 } from '#lib/ipc/bindings.js'
 import { throwServerRequestError } from '#lib/error-messages/server-request.js'
 import { UpdateDownloadFailure } from '#lib/updates/update-download-failure.js'
@@ -48,12 +49,13 @@ export async function downloadUpdate(): Promise<void> {
 }
 
 /**
- * Installs the downloaded update by syncing files into the running `.app` bundle. A refusal or failure throws an
- * `UpdateInstallFailure`.
+ * Installs the downloaded update by syncing files into the running `.app` bundle, and answers what it fixes
+ * security-wise (read from the staged bundle's own signed list). A refusal or failure throws an `UpdateInstallFailure`.
  */
-export async function installUpdate(): Promise<void> {
+export async function installUpdate(): Promise<UpdateInstalled> {
   const res = await commands.installUpdate()
   if (res.status === 'error') throw new UpdateInstallFailure(res.error)
+  return res.data
 }
 
 /**

@@ -10,7 +10,7 @@ import type { BundleWriteBlocker } from '#lib/tauri-commands/index.js'
 import { failureOf } from '#lib/ipc/typed-failure.js'
 import { UpdateDownloadFailure } from './update-download-failure'
 import { UpdateInstallFailure } from './update-install-failure'
-import type { ServerRequestError, UpdateCheckOutcome } from '#lib/ipc/bindings.js'
+import type { SecurityNotice, ServerRequestError, UpdateCheckOutcome } from '#lib/ipc/bindings.js'
 import { getVersion } from '@tauri-apps/api/app'
 import { forceSave, getSetting, setSetting } from '#lib/settings/settings-store.js'
 import { getAppLogger } from '#lib/logging/logger.js'
@@ -80,6 +80,17 @@ export function shouldShowUpdateToast(args: {
  */
 export const RESTART_NUDGE_INTERVAL_MS = 24 * 60 * 60 * 1000
 
+/**
+ * The re-nudge interval for a staged update whose most severe fix is `critical`: the person still decides when to
+ * restart (nothing ever forces one), but a critical hole stays open for hours, not a day, after "Later".
+ */
+export const CRITICAL_RESTART_NUDGE_INTERVAL_MS = 4 * 60 * 60 * 1000
+
+/** How long the restart prompt stays quiet after it last showed, given what the staged update fixes. */
+function restartNudgeIntervalMs(notice: SecurityNotice | null): number {
+  return notice?.severity === 'critical' ? CRITICAL_RESTART_NUDGE_INTERVAL_MS : RESTART_NUDGE_INTERVAL_MS
+}
+
 /** When the restart toast last actually rendered, driving the re-nudge cadence. `null` = never. */
 let lastRestartToastAt: number | null = null
 
@@ -135,7 +146,10 @@ export function dismissMoveToApplicationsNudge(): void {
  * is refreshed in place instead of stacking.
  */
 function renudgeRestartIfDue(): void {
-  if (lastRestartToastAt !== null && Date.now() - lastRestartToastAt < RESTART_NUDGE_INTERVAL_MS) {
+  if (
+    lastRestartToastAt !== null &&
+    Date.now() - lastRestartToastAt < restartNudgeIntervalMs(updateState.securityNotice)
+  ) {
     return
   }
   showUpdateToast()
@@ -296,10 +310,11 @@ async function runMacUpdateFlow(
   updateState.nextVersion = update.version
   updateState.status = 'downloading'
 
+  let installed: Awaited<ReturnType<typeof installUpdate>>
   try {
     await downloadUpdate()
     updateState.status = 'installing'
-    await installUpdate()
+    installed = await installUpdate()
   } catch (error) {
     if (refusedByPolicy(error)) {
       finishDownloadInstallRefusedByPolicy(trigger, staged)
@@ -309,7 +324,7 @@ async function runMacUpdateFlow(
     return
   }
 
-  finishCheckWithStagedUpdate(trigger, update)
+  finishCheckWithStagedUpdate(trigger, update, installed.securityNotice)
 }
 
 /** Whether the backend refused the download or the install because a policy arrived after the check. */
@@ -423,7 +438,8 @@ async function runPluginUpdateFlow(
     return
   }
 
-  finishCheckWithStagedUpdate(trigger, { version: update.version })
+  // The plugin's fused flow reads no advisory list (Linux is out of scope until it leaves alpha).
+  finishCheckWithStagedUpdate(trigger, { version: update.version }, null)
 }
 
 /**
@@ -474,14 +490,20 @@ function finishCheckWithUnwritableBundle(
 
 /**
  * A build is now synced into the bundle and only a restart away. A newer one earns a fresh prompt
- * even when the previous version's was dismissed, so the nudge clock resets here.
+ * even when the previous version's was dismissed, so the nudge clock resets here. Its security
+ * notice replaces the old one outright: the newer bundle's list is cumulative.
  */
-function finishCheckWithStagedUpdate(trigger: UpdateCheckTrigger, update: UpdateInfo): void {
+function finishCheckWithStagedUpdate(
+  trigger: UpdateCheckTrigger,
+  update: UpdateInfo,
+  securityNotice: SecurityNotice | null,
+): void {
   log.info('v{version} installed, restart to apply', { version: update.version })
   updateState.status = 'ready'
   updateState.update = update
   updateState.nextVersion = update.version
   updateState.failure = null
+  updateState.securityNotice = securityNotice
   lastRestartToastAt = null
   reportUpdateCheck({ trigger, outcome: 'staged', stagedVersion: update.version })
   showUpdateToast()
@@ -738,6 +760,7 @@ export function _resetUpdaterStateForTest(): void {
   updateState.managed = null
   updateState.previousVersion = null
   updateState.nextVersion = null
+  updateState.securityNotice = null
 }
 
 /**
