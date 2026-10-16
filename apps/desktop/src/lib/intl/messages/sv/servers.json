@@ -726,6 +726,18 @@
   "@servers.paneState.checkHostKey": {
     "sourceHash": "fefa256"
   },
+  "servers.paneState.guestSessionRefused": "Cmdr loggade inte in på {name} som gäst",
+  "@servers.paneState.guestSessionRefused": {
+    "sourceHash": "36ad371"
+  },
+  "servers.paneState.guestSessionRefusedHint": "Du ville logga in med ditt konto, men servern erbjöd en gästsession i stället. Oftast betyder det att lösenordet inte stämde. I sällsynta fall betyder det att något manipulerar anslutningen.",
+  "@servers.paneState.guestSessionRefusedHint": {
+    "sourceHash": "ca5c60f"
+  },
+  "servers.paneState.tryAnotherPassword": "Prova ett annat lösenord…",
+  "@servers.paneState.tryAnotherPassword": {
+    "sourceHash": "2e10067"
+  },
   "servers.paneState.reconnecting": "Återansluter till {name}…",
   "@servers.paneState.reconnecting": {
     "sourceHash": "dce8cef"

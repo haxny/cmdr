@@ -1341,6 +1341,18 @@
   "@errors.write.connectionInterrupted.suggestion": {
     "sourceHash": "d8d3c79"
   },
+  "errors.write.replySignatureRefused.title": "Elutasított szerverválasz",
+  "@errors.write.replySignatureRefused.title": {
+    "sourceHash": "829a591"
+  },
+  "errors.write.replySignatureRefused.message": "A szerver válasza nem volt aláírva, ezért a Cmdr leállt.",
+  "@errors.write.replySignatureRefused.message": {
+    "sourceHash": "ba50c7b"
+  },
+  "errors.write.replySignatureRefused.suggestion": "Ezt okozhatja egy rosszul működő hálózati eszköz, de az is, ha valaki beavatkozik a közted és a szerver közötti forgalomba. Csatlakoztasd újra, és ha ismét előfordul, ellenőrizd a hálózatodat.",
+  "@errors.write.replySignatureRefused.suggestion": {
+    "sourceHash": "1fc6259"
+  },
   "errors.write.readError.title.copy": "Nem sikerült a másolás",
   "@errors.write.readError.title.copy": {
     "sourceHash": "dbb854f"

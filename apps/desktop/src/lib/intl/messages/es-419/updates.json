@@ -26,5 +26,9 @@
   "updates.status.managedOff": "Tu organización administra las actualizaciones de Cmdr.",
   "@updates.status.managedOff": {
     "sourceHash": "452084b"
+  },
+  "updates.failure.notGenuine": "Cmdr no instaló esta actualización: no es una versión auténtica de Cmdr.",
+  "@updates.failure.notGenuine": {
+    "sourceHash": "8eb9570"
   }
 }

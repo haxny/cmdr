@@ -350,6 +350,13 @@
     "confidence": "high",
     "sources": "TC Lister (2 二进制); DC (二进制方式显示); MS (binary → 二进制)"
   },
+  "blocked": {
+    "accept": ["拦下"],
+    "chosen": "阻止",
+    "confidence": "high",
+    "forms": "Cmdr blocked X → Cmdr 阻止了…; status 已阻止",
+    "sources": "catalog (errors.listing.notPermitted.explanation macOS 阻止了 Cmdr 访问…, askCmdr.renameReview.status 已阻止); GNOME Nautilus zh-CN 防火墙可能阻止了连接; Microsoft terminology 被阻止的联系人"
+  },
   "brief-view": {
     "chosen": "简洁",
     "confidence": "high",
@@ -3395,6 +3402,13 @@
     "confidence": "high",
     "forms": "the originals are untouched → 原文件没有被动过",
     "sources": "catalog (errors.write.destinationNotFound.message.copy, errors.write.deviceDisconnected.sided.destination.copy); macOS AppKit Document (To keep the file unchanged…): 保持文件不变"
+  },
+  "up-to-date": {
+    "accept": ["最新版", "最新"],
+    "chosen": "最新版本",
+    "confidence": "high",
+    "forms": "get the latest version → 获取最新版本; get the latest Cmdr → 获取最新版 Cmdr; is up to date → 已是最新版本",
+    "sources": "catalog (updates.failure.install 获取最新版 Cmdr, commands.helpWhatsNew.description 最新版本); Microsoft terminology 最新版本; Total Commander zh-CN 已是最新版本"
   },
   "update": {
     "chosen": "更新",

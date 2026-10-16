@@ -104,7 +104,7 @@
     "distinct": ["answer", "respond"],
     "en": "reply",
     "match": ["reply", "replies"],
-    "notMatch": ["so we can reply", "server's reply", "trust the reply"],
+    "notMatch": ["so we can reply", "a reply from", "server reply", "server's reply", "trust the reply"],
     "sense": "An Ask Cmdr assistant answer, or an AI provider response."
   },
   "ai-tool": {
@@ -2679,7 +2679,7 @@
     "distinct": ["answer"],
     "en": "reply",
     "match": ["reply", "replies"],
-    "notMatch": ["server's reply", "trust the reply"],
+    "notMatch": ["a reply from", "server reply", "server's reply", "so we can reply", "trust the reply"],
     "sense": "The AI's answer in an Ask Cmdr chat, or a logged model response."
   },
   "report": {

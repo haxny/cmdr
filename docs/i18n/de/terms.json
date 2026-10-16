@@ -384,6 +384,12 @@
     "confidence": "high",
     "sources": "TC Lister (2 Binär); DC (Binär anzeigen); MS (binary → Binär)"
   },
+  "blocked": {
+    "accept": ["blockier", "gehindert", "verwehrt"],
+    "chosen": "blockiert",
+    "confidence": "high",
+    "sources": "Microsoft Terminology (Blocked → Blockiert); catalog (Diese Umbenennung ist zu ihrem Schutz blockiert)"
+  },
   "brief-view": {
     "accept": ["Kompaktansicht", "Kompaktmodus"],
     "chosen": "Kompakt",
@@ -2666,6 +2672,13 @@
     "confidence": "high",
     "sources": "macOS Finder (Replace → Ersetzen)"
   },
+  "reply": {
+    "accept": ["Antworten"],
+    "chosen": "Antwort",
+    "confidence": "high",
+    "note": "also a network server's reply (SMB signing): Antwort des Servers, as errors.volume.signatureInvalid writes it",
+    "sources": "Microsoft Terminology (reply → Antwort); catalog (errors.volume.signatureInvalid, askCmdr.error.unfinishedReply)"
+  },
   "report": {
     "accept": ["Berichte"],
     "chosen": "Bericht",
@@ -3387,6 +3400,13 @@
     "confidence": "high",
     "forms": "the originals are untouched → die Originale sind unberührt",
     "sources": "catalog (errors.write.destinationNotFound.message.copy, errors.write.deviceDisconnected.sided.destination.copy); macOS AppKit Document (To keep the file unchanged…): unverändert lassen, the verb-side form"
+  },
+  "up-to-date": {
+    "accept": ["aktuell", "neueste", "neuesten"],
+    "chosen": "aktuell",
+    "confidence": "high",
+    "forms": "latest version → neueste Version; the latest Cmdr → das neueste Cmdr",
+    "sources": "catalog (updates.status.noUpdates Aktuelle Version, updates.failure.install das neueste Cmdr)"
   },
   "update": {
     "accept": ["Updates", "aktualisier", "Aktualisierung", "Softwareupdate"],

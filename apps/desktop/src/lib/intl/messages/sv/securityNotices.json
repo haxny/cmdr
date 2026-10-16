@@ -1,0 +1,54 @@
+{
+  "securityNotices.count": "{countText} {count, plural, one {gång} other {gånger}} sedan du öppnade Cmdr",
+  "@securityNotices.count": {
+    "sourceHash": "f766fdb"
+  },
+  "securityNotices.dismiss": "Avfärda",
+  "@securityNotices.dismiss": {
+    "sourceHash": "48845bf"
+  },
+  "securityNotices.mcpForeignOrigin.title": "Cmdr blockerade en webbsida som försökte nå MCP-servern",
+  "@securityNotices.mcpForeignOrigin.title": {
+    "sourceHash": "5b54b21"
+  },
+  "securityNotices.mcpForeignOrigin.body": "En webbplats som är öppen i din webbläsare försökte prata med Cmdr. Inget kom in. Om det fortsätter, stäng flikar du inte litar på.",
+  "@securityNotices.mcpForeignOrigin.body": {
+    "sourceHash": "5515a9d"
+  },
+  "securityNotices.mcpForeignOrigin.openSettings": "MCP-inställningar",
+  "@securityNotices.mcpForeignOrigin.openSettings": {
+    "sourceHash": "c63c58c"
+  },
+  "securityNotices.smbSignatureRefused.title": "Cmdr avvisade ett svar från {name}",
+  "@securityNotices.smbSignatureRefused.title": {
+    "sourceHash": "aedb947"
+  },
+  "securityNotices.smbSignatureRefused.titleUnnamed": "Cmdr avvisade ett svar från en delad mapp på nätverket",
+  "@securityNotices.smbSignatureRefused.titleUnnamed": {
+    "sourceHash": "8cbb7cd"
+  },
+  "securityNotices.smbSignatureRefused.body": "Svaret saknade serverns signatur, så Cmdr litade inte på det. Det kan bero på en nätverksenhet som krånglar, men också på att någon manipulerar trafiken mellan dig och servern. Återanslut, och om det händer igen, kontrollera ditt nätverk.",
+  "@securityNotices.smbSignatureRefused.body": {
+    "sourceHash": "2c1abec"
+  },
+  "securityNotices.smbSignatureRefused.reconnect": "Återanslut",
+  "@securityNotices.smbSignatureRefused.reconnect": {
+    "sourceHash": "bf8a9ea"
+  },
+  "securityNotices.smbSignatureRefused.disconnect": "Koppla från",
+  "@securityNotices.smbSignatureRefused.disconnect": {
+    "sourceHash": "acfc5be"
+  },
+  "securityNotices.updateNotGenuine.title": "Cmdr installerade inte den här uppdateringen: den är ingen äkta Cmdr-version",
+  "@securityNotices.updateNotGenuine.title": {
+    "sourceHash": "be55b39"
+  },
+  "securityNotices.updateNotGenuine.body": "Varje uppdatering måste vara signerad av Cmdr, och den här är inte det. Ingenting har installerats och din nuvarande Cmdr är orörd. Hämta den senaste versionen från getcmdr.com och berätta gärna för David: det kan betyda att någon manipulerar uppdateringarna.",
+  "@securityNotices.updateNotGenuine.body": {
+    "sourceHash": "53936ec"
+  },
+  "securityNotices.updateNotGenuine.openWebsite": "Öppna getcmdr.com",
+  "@securityNotices.updateNotGenuine.openWebsite": {
+    "sourceHash": "077f325"
+  }
+}

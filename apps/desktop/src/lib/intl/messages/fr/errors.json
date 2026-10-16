@@ -1341,6 +1341,18 @@
   "@errors.write.connectionInterrupted.suggestion": {
     "sourceHash": "d8d3c79"
   },
+  "errors.write.replySignatureRefused.title": "Réponse du serveur refusée",
+  "@errors.write.replySignatureRefused.title": {
+    "sourceHash": "829a591"
+  },
+  "errors.write.replySignatureRefused.message": "La réponse du serveur n’était pas signée, donc Cmdr s’est arrêté.",
+  "@errors.write.replySignatureRefused.message": {
+    "sourceHash": "ba50c7b"
+  },
+  "errors.write.replySignatureRefused.suggestion": "Un appareil réseau capricieux peut en être la cause, tout comme quelqu’un qui trafique les échanges entre vous et le serveur. Reconnectez-vous, et si cela se reproduit, vérifiez votre réseau.",
+  "@errors.write.replySignatureRefused.suggestion": {
+    "sourceHash": "1fc6259"
+  },
   "errors.write.readError.title.copy": "Copie impossible",
   "@errors.write.readError.title.copy": {
     "sourceHash": "dbb854f"

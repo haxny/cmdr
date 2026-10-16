@@ -1340,6 +1340,18 @@
   "@errors.write.connectionInterrupted.suggestion": {
     "sourceHash": "d8d3c79"
   },
+  "errors.write.replySignatureRefused.title": "已拒绝服务器的回复",
+  "@errors.write.replySignatureRefused.title": {
+    "sourceHash": "829a591"
+  },
+  "errors.write.replySignatureRefused.message": "服务器的回复没有签名，所以 Cmdr 停止了这项操作。",
+  "@errors.write.replySignatureRefused.message": {
+    "sourceHash": "ba50c7b"
+  },
+  "errors.write.replySignatureRefused.suggestion": "网络设备不稳定可能导致这种情况，有人篡改你和服务器之间的通信也可能导致。请重新连接，如果再次出现，请检查你的网络。",
+  "@errors.write.replySignatureRefused.suggestion": {
+    "sourceHash": "1fc6259"
+  },
   "errors.write.readError.title.copy": "无法拷贝",
   "@errors.write.readError.title.copy": {
     "sourceHash": "dbb854f"

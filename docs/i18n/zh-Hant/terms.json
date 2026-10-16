@@ -128,6 +128,12 @@
     "forms": "AI provider → AI 提供者; the cloud-storage company is 雲端服務供應商 (see cloud-provider)",
     "sources": "MS; catalog settings.askCmdr.provider.title"
   },
+  "ai-reply": {
+    "chosen": "回覆",
+    "confidence": "high",
+    "note": "same word as the `reply` ruling: the catalog writes an AI answer and a server's answer both as 回覆",
+    "sources": "MS reply → 回覆; catalog askCmdr.json, ai.json"
+  },
   "alias": {
     "chosen": "替身",
     "confidence": "confirmed",
@@ -363,6 +369,13 @@
     "decision": "Onboarding checklist",
     "forms": "the alpha status badge → 標記 (看到 <alpha></alpha> 標記的地方); the title-bar pill → 警告標記 (tentative)",
     "sources": "catalog onboarding.stepBeta.openBeta"
+  },
+  "blocked": {
+    "accept": ["擋下", "擋著", "被擋下", "封鎖"],
+    "chosen": "擋下",
+    "confidence": "high",
+    "forms": "Cmdr blocked X → Cmdr 擋下了 X; macOS blocked access → macOS 擋下了 Cmdr; a blocked rename → 被擋下來了; a blocked contact or site (a block list) → 封鎖",
+    "sources": "catalog askCmdr (已擋下, 被擋下來了), errors (macOS 擋下了 Cmdr, 被防火牆擋著); MS Blocked → 封鎖 (block-list sense only)"
   },
   "binary-view": {
     "chosen": "二進位",
@@ -2935,6 +2948,12 @@
     "confidence": "high",
     "note": "更新 stays the word for a software update.",
     "sources": "AP-TW App Store"
+  },
+  "reply": {
+    "chosen": "回覆",
+    "confidence": "high",
+    "forms": "a server's reply → 伺服器的回覆; a reply from {name} → 來自 {name} 的回覆; the AI's reply → 回覆",
+    "sources": "MS reply → 回覆; catalog errors.volume.signatureInvalid, errors.shareList.signatureInvalid, askCmdr (5 uses, 0 for 回應 in this sense)"
   },
   "replace": {
     "accept": ["換成", "換掉"],

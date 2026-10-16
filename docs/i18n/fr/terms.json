@@ -70,6 +70,12 @@
     "forms": "AI provider → fournisseur d’IA; votre fournisseur",
     "sources": "MS terminology FRA; catalog (ai.translateError.unavailable.title)"
   },
+  "ai-reply": {
+    "chosen": "réponse",
+    "confidence": "high",
+    "forms": "same word as reply; a server’s reply too (Réponse du serveur refusée)",
+    "sources": "catalog: askCmdr.error.unfinishedReply, errors.shareList.signatureInvalid"
+  },
   "ai-tool": {
     "accept": ["Platform Tools"],
     "chosen": "outil",
@@ -315,6 +321,23 @@
     "chosen": "Binaire",
     "confidence": "high",
     "sources": "DC (Vue en Binaire); MS (binary → binaire); TC 5842 Lister start mode (Texte / Binaire / Hexa)"
+  },
+  "blocked": {
+    "accept": ["empêche", "empêché"],
+    "avoid": [
+      {
+        "form": "bloqué",
+        "why": "style guide bans it in prose: it reads as a verdict"
+      }
+    ],
+    "chosen": "empêcher",
+    "exceptions": {
+      "askCmdr.renameReview.overwriteTooltip": "a rename-preflight STATUS (the plan holds this rename back), shipped as bloqué; empêcher fits only an agent doing the blocking. Native reviewer to confirm (review-queue.md)",
+      "askCmdr.renameReview.status": "a counted preflight status (# bloqués) beside # renommages autorisés; no verb form of empêcher counts. Native reviewer to confirm (review-queue.md)"
+    },
+    "confidence": "high",
+    "forms": "Cmdr blocked X from reaching Y → Cmdr a empêché X de joindre Y; macOS blocked access → macOS a empêché Cmdr d’accéder à …",
+    "sources": "catalog: errors.listing.notPermitted.explanation; MS terminology FRA has bloqué, overruled by docs/i18n/fr/style.md"
   },
   "brief-view": {
     "accept": ["brève"],
@@ -2574,6 +2597,12 @@
     "confidence": "high",
     "sources": "macOS Finder (« Souhaitez-vous le remplacer… »)"
   },
+  "reply": {
+    "chosen": "réponse",
+    "confidence": "high",
+    "forms": "an AI reply → la réponse (Une nouvelle conversation garde les réponses rapides); a server’s reply is the same word (La réponse du serveur n’était pas signée)",
+    "sources": "catalog: askCmdr.softCap.message, askCmdr.error.unfinishedReply, errors.volume.signatureInvalid"
+  },
   "report": {
     "chosen": "rapport",
     "confidence": "high",
@@ -3430,6 +3459,13 @@
     "confidence": "high",
     "forms": "the originals are untouched → les originaux sont intacts",
     "sources": "catalog (errors.write.destinationNotFound.message.copy, errors.write.deviceDisconnected.sided.destination.copy); macOS AppKit Document (To keep the file unchanged…): conserver le fichier tel quel"
+  },
+  "up-to-date": {
+    "accept": ["dernière version"],
+    "chosen": "à jour",
+    "confidence": "high",
+    "forms": "the latest version → la dernière version (Téléchargez la dernière version sur getcmdr.com)",
+    "sources": "catalog: updates.failure.install, errors.serverRequest.refused"
   },
   "update": {
     "accept": ["à jour"],

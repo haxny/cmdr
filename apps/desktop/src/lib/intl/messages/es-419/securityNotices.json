@@ -1,0 +1,34 @@
+{
+  "securityNotices.mcpForeignOrigin.title": "Cmdr bloqueó el acceso de una página web a su servidor MCP",
+  "@securityNotices.mcpForeignOrigin.title": {
+    "sourceHash": "5d79795"
+  },
+  "securityNotices.mcpForeignOrigin.body": "Una página web abierta en tu navegador intentó comunicarse con Cmdr. No entró nada. Si sigue pasando, cierra las pestañas en las que no confíes.",
+  "@securityNotices.mcpForeignOrigin.body": {
+    "sourceHash": "a5305a1"
+  },
+  "securityNotices.mcpForeignOrigin.openSettings": "Configuración de MCP",
+  "@securityNotices.mcpForeignOrigin.openSettings": {
+    "sourceHash": "aa20168"
+  },
+  "securityNotices.smbSignatureRefused.title": "Cmdr rechazó una respuesta de {name}",
+  "@securityNotices.smbSignatureRefused.title": {
+    "sourceHash": "03309f5"
+  },
+  "securityNotices.smbSignatureRefused.titleUnnamed": "Cmdr rechazó una respuesta de un recurso compartido de red",
+  "@securityNotices.smbSignatureRefused.titleUnnamed": {
+    "sourceHash": "f867a15"
+  },
+  "securityNotices.smbSignatureRefused.body": "La respuesta no llevaba la firma del servidor, así que Cmdr no confió en ella. Puede deberse a un dispositivo de red inestable o a que alguien esté manipulando el tráfico entre tú y el servidor. Vuelve a conectarte y, si se repite, comprueba tu red.",
+  "@securityNotices.smbSignatureRefused.body": {
+    "sourceHash": "1d0191d"
+  },
+  "securityNotices.updateNotGenuine.title": "Cmdr no instaló esta actualización: no es una versión auténtica de Cmdr",
+  "@securityNotices.updateNotGenuine.title": {
+    "sourceHash": "25d4814"
+  },
+  "securityNotices.updateNotGenuine.body": "Todas las actualizaciones tienen que llevar la firma de Cmdr, y esta no la lleva. No se instaló nada y tu Cmdr actual está intacto. Descarga la versión más reciente desde getcmdr.com y, por favor, cuéntaselo a David: puede que alguien esté manipulando las actualizaciones.",
+  "@securityNotices.updateNotGenuine.body": {
+    "sourceHash": "9af9fb9"
+  }
+}

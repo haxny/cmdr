@@ -15,6 +15,10 @@
   "@updates.failure.install": {
     "sourceHash": "05a4714"
   },
+  "updates.failure.notGenuine": "A Cmdr nem telepítette ezt a frissítést: nem hiteles Cmdr-kiadás.",
+  "@updates.failure.notGenuine": {
+    "sourceHash": "1858e23"
+  },
   "updates.toast.ready": "Kész a Cmdr új verziója.",
   "@updates.toast.ready": {
     "sourceHash": "622668e"

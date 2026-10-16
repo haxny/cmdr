@@ -1,0 +1,54 @@
+{
+  "securityNotices.count": "{countText} {count, plural, one {vez} many {vezes} other {vezes}} desde que você abriu o Cmdr",
+  "@securityNotices.count": {
+    "sourceHash": "f766fdb"
+  },
+  "securityNotices.dismiss": "Dispensar",
+  "@securityNotices.dismiss": {
+    "sourceHash": "48845bf"
+  },
+  "securityNotices.mcpForeignOrigin.title": "O Cmdr bloqueou o acesso de uma página da web ao servidor MCP dele",
+  "@securityNotices.mcpForeignOrigin.title": {
+    "sourceHash": "5b54b21"
+  },
+  "securityNotices.mcpForeignOrigin.body": "Um site aberto no seu navegador tentou falar com o Cmdr. Nada passou. Se continuar acontecendo, feche as abas em que você não confia.",
+  "@securityNotices.mcpForeignOrigin.body": {
+    "sourceHash": "5515a9d"
+  },
+  "securityNotices.mcpForeignOrigin.openSettings": "Ajustes do MCP",
+  "@securityNotices.mcpForeignOrigin.openSettings": {
+    "sourceHash": "c63c58c"
+  },
+  "securityNotices.smbSignatureRefused.title": "O Cmdr recusou uma resposta de {name}",
+  "@securityNotices.smbSignatureRefused.title": {
+    "sourceHash": "aedb947"
+  },
+  "securityNotices.smbSignatureRefused.titleUnnamed": "O Cmdr recusou uma resposta de um compartilhamento de rede",
+  "@securityNotices.smbSignatureRefused.titleUnnamed": {
+    "sourceHash": "8cbb7cd"
+  },
+  "securityNotices.smbSignatureRefused.body": "A resposta não tinha a assinatura do servidor, então o Cmdr não confiou nela. Um dispositivo de rede instável pode causar isso, e também alguém adulterando o tráfego entre você e o servidor. Reconecte e, se acontecer de novo, verifique sua rede.",
+  "@securityNotices.smbSignatureRefused.body": {
+    "sourceHash": "2c1abec"
+  },
+  "securityNotices.smbSignatureRefused.reconnect": "Reconectar",
+  "@securityNotices.smbSignatureRefused.reconnect": {
+    "sourceHash": "bf8a9ea"
+  },
+  "securityNotices.smbSignatureRefused.disconnect": "Desconectar",
+  "@securityNotices.smbSignatureRefused.disconnect": {
+    "sourceHash": "acfc5be"
+  },
+  "securityNotices.updateNotGenuine.title": "O Cmdr não instalou esta atualização: ela não é uma versão genuína do Cmdr",
+  "@securityNotices.updateNotGenuine.title": {
+    "sourceHash": "be55b39"
+  },
+  "securityNotices.updateNotGenuine.body": "Toda atualização precisa ter a assinatura do Cmdr, e esta não tem. O Cmdr não instalou nada, e o Cmdr que você tem agora continua intacto. Baixe a versão mais recente em getcmdr.com e, por favor, avise o David: isso pode significar que alguém está adulterando as atualizações.",
+  "@securityNotices.updateNotGenuine.body": {
+    "sourceHash": "53936ec"
+  },
+  "securityNotices.updateNotGenuine.openWebsite": "Abrir getcmdr.com",
+  "@securityNotices.updateNotGenuine.openWebsite": {
+    "sourceHash": "077f325"
+  }
+}

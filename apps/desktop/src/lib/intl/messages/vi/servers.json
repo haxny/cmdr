@@ -723,6 +723,18 @@
   "@servers.paneState.checkHostKey": {
     "sourceHash": "fefa256"
   },
+  "servers.paneState.guestSessionRefused": "Cmdr đã không đăng nhập vào {name} với tư cách khách",
+  "@servers.paneState.guestSessionRefused": {
+    "sourceHash": "36ad371"
+  },
+  "servers.paneState.guestSessionRefusedHint": "Bạn đã yêu cầu đăng nhập bằng tài khoản của bạn, nhưng máy chủ lại cho vào với tư cách khách. Thường thì điều đó có nghĩa là mật khẩu không đúng. Trong một số ít trường hợp, đó là dấu hiệu có thứ gì đó đang can thiệp vào kết nối.",
+  "@servers.paneState.guestSessionRefusedHint": {
+    "sourceHash": "ca5c60f"
+  },
+  "servers.paneState.tryAnotherPassword": "Thử mật khẩu khác…",
+  "@servers.paneState.tryAnotherPassword": {
+    "sourceHash": "2e10067"
+  },
   "servers.paneState.reconnecting": "Đang kết nối lại tới {name}…",
   "@servers.paneState.reconnecting": {
     "sourceHash": "dce8cef"

@@ -15,6 +15,10 @@
   "@updates.failure.install": {
     "sourceHash": "05a4714"
   },
+  "updates.failure.notGenuine": "Cmdr 没有安装这个更新：它不是真正的 Cmdr 版本。",
+  "@updates.failure.notGenuine": {
+    "sourceHash": "1858e23"
+  },
   "updates.toast.ready": "Cmdr 新版本已就绪。",
   "@updates.toast.ready": {
     "sourceHash": "622668e"

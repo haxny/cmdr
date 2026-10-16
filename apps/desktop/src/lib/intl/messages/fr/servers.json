@@ -724,6 +724,18 @@
   "@servers.paneState.checkHostKey": {
     "sourceHash": "fefa256"
   },
+  "servers.paneState.guestSessionRefused": "Cmdr ne s’est pas identifié sur {name} en tant qu’invité",
+  "@servers.paneState.guestSessionRefused": {
+    "sourceHash": "36ad371"
+  },
+  "servers.paneState.guestSessionRefusedHint": "Vous avez demandé à vous identifier avec votre compte, mais le serveur a proposé une session d’invité à la place. En général, cela signifie que le mot de passe n’était pas le bon. Plus rarement, cela signifie que la connexion est trafiquée.",
+  "@servers.paneState.guestSessionRefusedHint": {
+    "sourceHash": "ca5c60f"
+  },
+  "servers.paneState.tryAnotherPassword": "Essayer un autre mot de passe…",
+  "@servers.paneState.tryAnotherPassword": {
+    "sourceHash": "2e10067"
+  },
   "servers.paneState.reconnecting": "Reconnexion à {name}…",
   "@servers.paneState.reconnecting": {
     "sourceHash": "dce8cef"

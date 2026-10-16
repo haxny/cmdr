@@ -1,0 +1,54 @@
+{
+  "securityNotices.count": "{count, plural, other {自你打开 Cmdr 以来已出现 {countText} 次}}",
+  "@securityNotices.count": {
+    "sourceHash": "f766fdb"
+  },
+  "securityNotices.dismiss": "关闭",
+  "@securityNotices.dismiss": {
+    "sourceHash": "48845bf"
+  },
+  "securityNotices.mcpForeignOrigin.title": "Cmdr 阻止了一个网页访问 MCP 服务器",
+  "@securityNotices.mcpForeignOrigin.title": {
+    "sourceHash": "5b54b21"
+  },
+  "securityNotices.mcpForeignOrigin.body": "你浏览器里开着的一个网站想和 Cmdr 通信。什么也没进来。如果一直这样，请关掉你不信任的标签页。",
+  "@securityNotices.mcpForeignOrigin.body": {
+    "sourceHash": "5515a9d"
+  },
+  "securityNotices.mcpForeignOrigin.openSettings": "MCP 设置",
+  "@securityNotices.mcpForeignOrigin.openSettings": {
+    "sourceHash": "c63c58c"
+  },
+  "securityNotices.smbSignatureRefused.title": "Cmdr 拒绝了来自 {name} 的回复",
+  "@securityNotices.smbSignatureRefused.title": {
+    "sourceHash": "aedb947"
+  },
+  "securityNotices.smbSignatureRefused.titleUnnamed": "Cmdr 拒绝了来自一个网络共享的回复",
+  "@securityNotices.smbSignatureRefused.titleUnnamed": {
+    "sourceHash": "8cbb7cd"
+  },
+  "securityNotices.smbSignatureRefused.body": "这个回复没有服务器的签名，所以 Cmdr 不信任它。网络设备不稳定可能导致这种情况，有人篡改你和服务器之间的通信也可能导致。请重新连接，如果再次出现，请检查你的网络。",
+  "@securityNotices.smbSignatureRefused.body": {
+    "sourceHash": "2c1abec"
+  },
+  "securityNotices.smbSignatureRefused.reconnect": "重新连接",
+  "@securityNotices.smbSignatureRefused.reconnect": {
+    "sourceHash": "bf8a9ea"
+  },
+  "securityNotices.smbSignatureRefused.disconnect": "断开连接",
+  "@securityNotices.smbSignatureRefused.disconnect": {
+    "sourceHash": "acfc5be"
+  },
+  "securityNotices.updateNotGenuine.title": "Cmdr 没有安装这个更新：它不是真正的 Cmdr 版本",
+  "@securityNotices.updateNotGenuine.title": {
+    "sourceHash": "be55b39"
+  },
+  "securityNotices.updateNotGenuine.body": "每个更新都必须带有 Cmdr 的签名，而这个更新没有。Cmdr 什么都没有安装，你现在的 Cmdr 也没有被动过。请从 getcmdr.com 获取最新版本，也请告诉 David：这可能意味着有人在篡改更新。",
+  "@securityNotices.updateNotGenuine.body": {
+    "sourceHash": "53936ec"
+  },
+  "securityNotices.updateNotGenuine.openWebsite": "打开 getcmdr.com",
+  "@securityNotices.updateNotGenuine.openWebsite": {
+    "sourceHash": "077f325"
+  }
+}

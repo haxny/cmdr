@@ -84,3 +84,6 @@ settled wording into `terms.json` (and `decisions.md` when the reason is worth k
 - **Git branch pill** (`fileExplorer.git.repoChip.*`): dirty is `有改动` (Microsoft's git term `脏` rejected as an
   unfriendly calque), detached is `（分离）{id}` (git zh_CN says `分离头指针`), and the unborn tooltip carries "unborn"
   as `新分支` plus `（还没有提交）` instead of git's `尚未诞生的分支`. Confirm a git user reads all three at a glance.
+- **Security notices** (`securityNotices.updateNotGenuine.*`, `updates.failure.notGenuine`): confirm
+  `不是真正的 Cmdr 版本` reads as "not a real/official release" without sounding like piracy, and that `客人会话`
+  (`servers.paneState.guestSessionRefusedHint`) is clear next to the shipped `以客人身份连接`.

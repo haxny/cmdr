@@ -729,6 +729,18 @@
   "@servers.paneState.checkHostKey": {
     "sourceHash": "fefa256"
   },
+  "servers.paneState.guestSessionRefused": "Cmdr hat sich bei {name} nicht als Gast angemeldet",
+  "@servers.paneState.guestSessionRefused": {
+    "sourceHash": "36ad371"
+  },
+  "servers.paneState.guestSessionRefusedHint": "Du wolltest dich mit deinem Konto anmelden, aber der Server hat stattdessen eine Gastsitzung angeboten. Meist heißt das, dass das Passwort falsch war. Selten heißt es, dass etwas die Verbindung manipuliert.",
+  "@servers.paneState.guestSessionRefusedHint": {
+    "sourceHash": "ca5c60f"
+  },
+  "servers.paneState.tryAnotherPassword": "Anderes Passwort versuchen …",
+  "@servers.paneState.tryAnotherPassword": {
+    "sourceHash": "2e10067"
+  },
   "servers.paneState.reconnecting": "Verbindung zu {name} wird wiederhergestellt …",
   "@servers.paneState.reconnecting": {
     "sourceHash": "dce8cef"

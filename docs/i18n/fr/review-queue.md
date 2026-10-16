@@ -37,6 +37,11 @@ wording into `terms.json` (and `decisions.md` when the reason is worth keeping).
 - **Uploading badge → `Chargement`** (`fileExplorer.fileIcon.sync.uploading`): copied from Finder’s own iCloud badge
   (`AXBADGE7`/`NE88.6`), but the catalog also uses `Chargement` for "Loading"; confirm a screen-reader user hears it as
   an upload next to the `Téléchargement` badge.
+- **blocked → `empêcher` vs the shipped `bloqué`** (`askCmdr.renameReview.overwriteTooltip`, `.status`): the style guide
+  bans `bloqué`, but the rename preflight ships it as a status and a count (`# bloqués`); confirm, or pick a status word
+  (`retenu`, `refusé`) for both.
+- **tampering → `trafiquer`** (`securityNotices.*`, `errors.write.replySignatureRefused.suggestion`): copied from
+  `errors.shareList.signatureInvalid`; confirm it reads calm, not slangy.
 
 ## Phrasing
 

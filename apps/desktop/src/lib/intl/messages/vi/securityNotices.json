@@ -1,0 +1,54 @@
+{
+  "securityNotices.count": "{countText} {count, plural, other {lần}} kể từ khi bạn mở Cmdr",
+  "@securityNotices.count": {
+    "sourceHash": "f766fdb"
+  },
+  "securityNotices.dismiss": "Bỏ qua",
+  "@securityNotices.dismiss": {
+    "sourceHash": "48845bf"
+  },
+  "securityNotices.mcpForeignOrigin.title": "Cmdr đã chặn một trang web kết nối tới máy chủ MCP của Cmdr",
+  "@securityNotices.mcpForeignOrigin.title": {
+    "sourceHash": "5b54b21"
+  },
+  "securityNotices.mcpForeignOrigin.body": "Một trang web đang mở trong trình duyệt của bạn đã cố liên lạc với Cmdr. Không có gì lọt vào được. Nếu việc này cứ tiếp diễn, hãy đóng các tab bạn không tin cậy.",
+  "@securityNotices.mcpForeignOrigin.body": {
+    "sourceHash": "5515a9d"
+  },
+  "securityNotices.mcpForeignOrigin.openSettings": "Cài đặt MCP",
+  "@securityNotices.mcpForeignOrigin.openSettings": {
+    "sourceHash": "c63c58c"
+  },
+  "securityNotices.smbSignatureRefused.title": "Cmdr đã từ chối phản hồi từ {name}",
+  "@securityNotices.smbSignatureRefused.title": {
+    "sourceHash": "aedb947"
+  },
+  "securityNotices.smbSignatureRefused.titleUnnamed": "Cmdr đã từ chối phản hồi từ một mục chia sẻ mạng",
+  "@securityNotices.smbSignatureRefused.titleUnnamed": {
+    "sourceHash": "8cbb7cd"
+  },
+  "securityNotices.smbSignatureRefused.body": "Phản hồi này không có chữ ký của máy chủ, nên Cmdr không tin cậy nó. Một thiết bị mạng chập chờn có thể gây ra chuyện này, và ai đó can thiệp vào dữ liệu truyền giữa bạn và máy chủ cũng vậy. Hãy kết nối lại, và nếu việc này xảy ra lần nữa, hãy kiểm tra mạng của bạn.",
+  "@securityNotices.smbSignatureRefused.body": {
+    "sourceHash": "2c1abec"
+  },
+  "securityNotices.smbSignatureRefused.reconnect": "Kết nối lại",
+  "@securityNotices.smbSignatureRefused.reconnect": {
+    "sourceHash": "bf8a9ea"
+  },
+  "securityNotices.smbSignatureRefused.disconnect": "Ngắt kết nối",
+  "@securityNotices.smbSignatureRefused.disconnect": {
+    "sourceHash": "acfc5be"
+  },
+  "securityNotices.updateNotGenuine.title": "Cmdr đã không cài đặt bản cập nhật này: đây không phải bản phát hành chính thức của Cmdr",
+  "@securityNotices.updateNotGenuine.title": {
+    "sourceHash": "be55b39"
+  },
+  "securityNotices.updateNotGenuine.body": "Mọi bản cập nhật đều phải có chữ ký của Cmdr, và bản này thì không. Không có gì được cài đặt, và bản Cmdr hiện tại của bạn vẫn nguyên vẹn. Hãy tải phiên bản mới nhất từ getcmdr.com, và nhớ báo cho David: việc này có thể có nghĩa là ai đó đang can thiệp vào các bản cập nhật.",
+  "@securityNotices.updateNotGenuine.body": {
+    "sourceHash": "53936ec"
+  },
+  "securityNotices.updateNotGenuine.openWebsite": "Mở getcmdr.com",
+  "@securityNotices.updateNotGenuine.openWebsite": {
+    "sourceHash": "077f325"
+  }
+}

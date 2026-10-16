@@ -1341,6 +1341,18 @@
   "@errors.write.connectionInterrupted.suggestion": {
     "sourceHash": "d8d3c79"
   },
+  "errors.write.replySignatureRefused.title": "Respuesta del servidor rechazada",
+  "@errors.write.replySignatureRefused.title": {
+    "sourceHash": "829a591"
+  },
+  "errors.write.replySignatureRefused.message": "La respuesta del servidor no estaba firmada, así que Cmdr se ha detenido.",
+  "@errors.write.replySignatureRefused.message": {
+    "sourceHash": "ba50c7b"
+  },
+  "errors.write.replySignatureRefused.suggestion": "Puede deberse a un dispositivo de red inestable o a que alguien esté manipulando el tráfico entre tú y el servidor. Vuelve a conectarte y, si se repite, comprueba tu red.",
+  "@errors.write.replySignatureRefused.suggestion": {
+    "sourceHash": "1fc6259"
+  },
   "errors.write.readError.title.copy": "No se ha podido copiar",
   "@errors.write.readError.title.copy": {
     "sourceHash": "dbb854f"

@@ -1341,6 +1341,18 @@
   "@errors.write.connectionInterrupted.suggestion": {
     "sourceHash": "d8d3c79"
   },
+  "errors.write.replySignatureRefused.title": "Antwort des Servers abgelehnt",
+  "@errors.write.replySignatureRefused.title": {
+    "sourceHash": "829a591"
+  },
+  "errors.write.replySignatureRefused.message": "Die Antwort des Servers war nicht signiert, deshalb hat Cmdr den Vorgang gestoppt.",
+  "@errors.write.replySignatureRefused.message": {
+    "sourceHash": "ba50c7b"
+  },
+  "errors.write.replySignatureRefused.suggestion": "Das kann an einem unzuverlässigen Netzwerkgerät liegen, aber auch daran, dass jemand den Datenverkehr zwischen dir und dem Server manipuliert. Stelle die Verbindung wieder her, und wenn das noch einmal passiert, prüfe dein Netzwerk.",
+  "@errors.write.replySignatureRefused.suggestion": {
+    "sourceHash": "1fc6259"
+  },
   "errors.write.readError.title.copy": "Kopieren nicht möglich",
   "@errors.write.readError.title.copy": {
     "sourceHash": "dbb854f"

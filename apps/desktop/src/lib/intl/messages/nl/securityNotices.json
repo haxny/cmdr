@@ -1,0 +1,55 @@
+{
+  "securityNotices.count": "{countText} {count, plural, one {keer} other {keer}} sinds je Cmdr hebt geopend",
+  "@securityNotices.count": {
+    "sourceHash": "f766fdb"
+  },
+  "securityNotices.dismiss": "Sluit",
+  "@securityNotices.dismiss": {
+    "sourceHash": "48845bf"
+  },
+  "securityNotices.mcpForeignOrigin.title": "Cmdr blokkeerde een webpagina die zijn MCP-server wilde bereiken",
+  "@securityNotices.mcpForeignOrigin.title": {
+    "sourceHash": "5b54b21"
+  },
+  "securityNotices.mcpForeignOrigin.body": "Een site die in je browser openstaat, probeerde met Cmdr te praten. Er is niets binnengekomen. Blijft het gebeuren, sluit dan tabbladen die je niet vertrouwt.",
+  "@securityNotices.mcpForeignOrigin.body": {
+    "sourceHash": "5515a9d"
+  },
+  "securityNotices.mcpForeignOrigin.openSettings": "MCP-instellingen",
+  "@securityNotices.mcpForeignOrigin.openSettings": {
+    "sourceHash": "c63c58c"
+  },
+  "securityNotices.smbSignatureRefused.title": "Cmdr weigerde een antwoord van {name}",
+  "@securityNotices.smbSignatureRefused.title": {
+    "sourceHash": "aedb947"
+  },
+  "securityNotices.smbSignatureRefused.titleUnnamed": "Cmdr weigerde een antwoord van een netwerkshare",
+  "@securityNotices.smbSignatureRefused.titleUnnamed": {
+    "sourceHash": "8cbb7cd"
+  },
+  "securityNotices.smbSignatureRefused.body": "Het antwoord had geen handtekening van de server, dus Cmdr vertrouwde het niet. Een haperend netwerkapparaat kan dit veroorzaken, maar ook iemand die met het verkeer tussen jou en de server knoeit. Maak opnieuw verbinding, en als het weer gebeurt, controleer dan je netwerk.",
+  "@securityNotices.smbSignatureRefused.body": {
+    "sourceHash": "2c1abec"
+  },
+  "securityNotices.smbSignatureRefused.reconnect": "Verbind opnieuw",
+  "@securityNotices.smbSignatureRefused.reconnect": {
+    "sourceHash": "bf8a9ea"
+  },
+  "securityNotices.smbSignatureRefused.disconnect": "Verbreek",
+  "@securityNotices.smbSignatureRefused.disconnect": {
+    "sourceHash": "acfc5be"
+  },
+  "securityNotices.updateNotGenuine.title": "Cmdr heeft deze update niet geïnstalleerd: het is geen echte versie van Cmdr",
+  "@securityNotices.updateNotGenuine.title": {
+    "sourceHash": "be55b39"
+  },
+  "securityNotices.updateNotGenuine.body": "Elke update moet de handtekening van Cmdr hebben, en deze heeft die niet. Er is niets geïnstalleerd en je huidige Cmdr is onaangeroerd. Download de nieuwste versie van getcmdr.com, en laat het David alsjeblieft weten: het kan betekenen dat iemand met updates knoeit.",
+  "@securityNotices.updateNotGenuine.body": {
+    "sourceHash": "53936ec"
+  },
+  "securityNotices.updateNotGenuine.openWebsite": "Open getcmdr.com",
+  "@securityNotices.updateNotGenuine.openWebsite": {
+    "sourceHash": "077f325",
+    "sameAsSourceJustification": "The button 'Open' is the settled Dutch imperative (terms.json open: button Open, like Finder) and getcmdr.com is a kept address; matches the shipped 'Open de gids … op getcmdr.com'."
+  }
+}

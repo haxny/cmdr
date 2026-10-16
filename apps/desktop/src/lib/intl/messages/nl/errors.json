@@ -1341,6 +1341,18 @@
   "@errors.write.connectionInterrupted.suggestion": {
     "sourceHash": "d8d3c79"
   },
+  "errors.write.replySignatureRefused.title": "Antwoord van de server geweigerd",
+  "@errors.write.replySignatureRefused.title": {
+    "sourceHash": "829a591"
+  },
+  "errors.write.replySignatureRefused.message": "Het antwoord van de server was niet ondertekend, dus Cmdr is gestopt.",
+  "@errors.write.replySignatureRefused.message": {
+    "sourceHash": "ba50c7b"
+  },
+  "errors.write.replySignatureRefused.suggestion": "Een haperend netwerkapparaat kan dit veroorzaken, maar ook iemand die met het verkeer tussen jou en de server knoeit. Maak opnieuw verbinding, en als het weer gebeurt, controleer dan je netwerk.",
+  "@errors.write.replySignatureRefused.suggestion": {
+    "sourceHash": "1fc6259"
+  },
   "errors.write.readError.title.copy": "Kopiëren lukte niet",
   "@errors.write.readError.title.copy": {
     "sourceHash": "dbb854f"

@@ -204,6 +204,10 @@
   "@errorReporter.prefill.slow": {
     "sourceHash": "42c0ee2"
   },
+  "errorReporter.prefill.updateNotGenuine": "有一個標示為版本 {version} 的更新沒有 Cmdr 的簽章，所以 Cmdr 沒有安裝。",
+  "@errorReporter.prefill.updateNotGenuine": {
+    "sourceHash": "0e007a7"
+  },
   "errorReporter.prefill.reference": "參考：{code}",
   "@errorReporter.prefill.reference": {
     "sourceHash": "c0b8ba2"

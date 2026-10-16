@@ -1341,6 +1341,18 @@
   "@errors.write.connectionInterrupted.suggestion": {
     "sourceHash": "d8d3c79"
   },
+  "errors.write.replySignatureRefused.title": "Cmdr avvisade serverns svar",
+  "@errors.write.replySignatureRefused.title": {
+    "sourceHash": "829a591"
+  },
+  "errors.write.replySignatureRefused.message": "Serverns svar var inte signerat, så Cmdr stoppade åtgärden.",
+  "@errors.write.replySignatureRefused.message": {
+    "sourceHash": "ba50c7b"
+  },
+  "errors.write.replySignatureRefused.suggestion": "Det kan bero på en nätverksenhet som krånglar, men också på att någon manipulerar trafiken mellan dig och servern. Återanslut, och om det händer igen, kontrollera ditt nätverk.",
+  "@errors.write.replySignatureRefused.suggestion": {
+    "sourceHash": "1fc6259"
+  },
   "errors.write.readError.title.copy": "Det gick inte att kopiera",
   "@errors.write.readError.title.copy": {
     "sourceHash": "dbb854f"

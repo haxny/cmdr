@@ -723,6 +723,18 @@
   "@servers.paneState.checkHostKey": {
     "sourceHash": "fefa256"
   },
+  "servers.paneState.guestSessionRefused": "Cmdr 没有以客人身份登录 {name}",
+  "@servers.paneState.guestSessionRefused": {
+    "sourceHash": "36ad371"
+  },
+  "servers.paneState.guestSessionRefusedHint": "你要求用自己的账户登录，但服务器给的是客人会话。这通常说明密码不对。在极少数情况下，这说明有东西在篡改连接。",
+  "@servers.paneState.guestSessionRefusedHint": {
+    "sourceHash": "ca5c60f"
+  },
+  "servers.paneState.tryAnotherPassword": "换个密码试试…",
+  "@servers.paneState.tryAnotherPassword": {
+    "sourceHash": "2e10067"
+  },
   "servers.paneState.reconnecting": "正在重新连接到 {name}…",
   "@servers.paneState.reconnecting": {
     "sourceHash": "dce8cef"

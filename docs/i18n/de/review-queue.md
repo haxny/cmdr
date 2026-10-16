@@ -125,3 +125,5 @@ German runs 20–35% longer than English. Look at these against the pseudolocale
   adverbial so the view-mode words stay byte-identical, beside `Als Text anzeigen`.
   `commands.viewerToggleImageZoom.label` uses `Fenstergröße` (Total Commander) for „fit“ where the status hint says
   `einpassen`.
+- `securityNotices.smbSignatureRefused.reconnect` (`Verbindung wiederherstellen`): the termbase's button form, long for
+  a toast button beside `Trennen`; check it fits. `securityNotices.count` renders `4-mal, seit du Cmdr geöffnet hast`.

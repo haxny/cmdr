@@ -90,5 +90,9 @@
   "errorReporter.offer.slow": "¿Está tardando mucho? Envía un reporte",
   "@errorReporter.offer.slow": {
     "sourceHash": "d6be3ab"
+  },
+  "errorReporter.prefill.updateNotGenuine": "Una actualización que se presentaba como la versión {version} no llevaba la firma de Cmdr, así que Cmdr no la instaló.",
+  "@errorReporter.prefill.updateNotGenuine": {
+    "sourceHash": "d63e012"
   }
 }

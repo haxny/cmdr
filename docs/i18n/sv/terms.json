@@ -323,6 +323,13 @@
     "confidence": "high",
     "sources": "TC Lister (2 Binärt); no DC sv in the pile"
   },
+  "blocked": {
+    "accept": ["blockerade", "blockeras", "blockerat"],
+    "chosen": "blockera",
+    "confidence": "high",
+    "forms": "Cmdr blockerade en webbsida …; macOS blockerade Cmdr från att …; rename preflight blockerat / blockerade",
+    "sources": "MS terminology (Blockerade kontakter, blockerade IP-adresser); catalog precedent errors.listing.notPermitted.explanation, askCmdr.renameReview.status"
+  },
   "brief-view": {
     "accept": ["Kortfattat"],
     "chosen": "Kortfattad",
@@ -2805,7 +2812,7 @@
     "sources": "Thunar (Sidopanel)"
   },
   "sign-in": {
-    "accept": ["loggar in", "loggat in", "inlogg"],
+    "accept": ["loggar in", "loggat in", "loggade inte in", "inlogg"],
     "chosen": "logga in",
     "confidence": "high",
     "exceptions": {
@@ -3154,7 +3161,16 @@
     "sources": "macOS Finder, GNOME, Thunar"
   },
   "trust": {
-    "accept": ["litar på", "betrodd", "betrott", "förtroende", "litar inte på", "lita sedan på", "litat på"],
+    "accept": [
+      "litar på",
+      "betrodd",
+      "betrott",
+      "förtroende",
+      "litar inte på",
+      "lita sedan på",
+      "litat på",
+      "litade inte på"
+    ],
     "chosen": "lita på",
     "confidence": "high",
     "decision": "Server hub: connection state",

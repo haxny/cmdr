@@ -754,5 +754,9 @@
   "errors.serverRequest.blockedByPolicy": "Tu organización desactivó esto para Cmdr.",
   "@errors.serverRequest.blockedByPolicy": {
     "sourceHash": "4ef1553"
+  },
+  "errors.write.replySignatureRefused.message": "La respuesta del servidor no estaba firmada, así que Cmdr se detuvo.",
+  "@errors.write.replySignatureRefused.message": {
+    "sourceHash": "fda22af"
   }
 }

@@ -723,6 +723,18 @@
   "@servers.paneState.checkHostKey": {
     "sourceHash": "fefa256"
   },
+  "servers.paneState.guestSessionRefused": "Cmdr не стал входить на сервер {name} как гость",
+  "@servers.paneState.guestSessionRefused": {
+    "sourceHash": "36ad371"
+  },
+  "servers.paneState.guestSessionRefusedHint": "Вы хотели войти под своей учетной записью, но сервер вместо этого предложил гостевой сеанс. Обычно это значит, что пароль не подошел. В редких случаях дело во вмешательстве в соединение.",
+  "@servers.paneState.guestSessionRefusedHint": {
+    "sourceHash": "ca5c60f"
+  },
+  "servers.paneState.tryAnotherPassword": "Попробовать другой пароль…",
+  "@servers.paneState.tryAnotherPassword": {
+    "sourceHash": "2e10067"
+  },
   "servers.paneState.reconnecting": "Повторное подключение к серверу {name}…",
   "@servers.paneState.reconnecting": {
     "sourceHash": "dce8cef"

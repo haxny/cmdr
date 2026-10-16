@@ -110,6 +110,13 @@
     "confidence": "high",
     "sources": "ms (provider → szolgáltató); catalog"
   },
+  "ai-reply": {
+    "chosen": "válasz",
+    "accept": ["válaszol"],
+    "forms": "an assistant answer → válasz; a server reply refused → elutasított egy választ",
+    "confidence": "high",
+    "sources": "catalog (askCmdr.* A válasz nem fejeződött be; errors.volume.signatureInvalid A szerver válasza)"
+  },
   "ai-tool": {
     "chosen": "eszköz",
     "forms": "tool status chips: verbal noun while doing (Egy mappa listázása), -va/-ve participle when done (Egy mappa listázva), same object in both; Finding/Found → X keresése / X megtalálva; searching a log or a collection → X átvizsgálása / X átvizsgálva; fallback Working → Folyamatban, Used a tool → Egy eszköz használva",
@@ -358,8 +365,8 @@
   },
   "blocked": {
     "chosen": "blokkolva",
-    "accept": ["megakadályoz", "foglalja"],
-    "forms": "a rename row preflight won't let through → blokkolva (overwriteTooltip, the status {blocked} blokkolva); macOS blocked access → a macOS megakadályozta",
+    "accept": ["megakadályoz", "foglalja", "blokkol"],
+    "forms": "a rename row preflight won't let through → blokkolva (overwriteTooltip, the status {blocked} blokkolva); macOS blocked access → a macOS megakadályozta; Cmdr blocked a web page from its MCP server → A Cmdr blokkolta egy weboldal hozzáférését az MCP-szerverhez",
     "avoid": [
       {
         "form": "letiltva",
@@ -3034,6 +3041,13 @@
     "confidence": "high",
     "sources": "macOS Finder (Replace → Kicserélés, Csere)"
   },
+  "reply": {
+    "chosen": "válasz",
+    "accept": ["válaszol"],
+    "forms": "the AI's replies → a válaszok; a server reply (SMB signing) → a szerver válasza, title Elutasított szerverválasz",
+    "confidence": "high",
+    "sources": "catalog (askCmdr.* A válasz nem fejeződött be; errors.volume.signatureInvalid A szerver válasza); macOS (Válasz)"
+  },
   "report": {
     "chosen": "jelentés",
     "forms": "Send report (button) → Jelentés küldése; the dialog title asks → Elküldöd a jelentést?; send a report → küldj jelentést",
@@ -3745,6 +3759,13 @@
     "forms": "Can’t reach a fixed noun → Nem érhető el a szerver; Cmdr couldn’t reach → A Cmdr nem tudta elérni; isn’t available any more → már nem érhető el",
     "confidence": "high",
     "sources": "macOS Finder (NE7 nem érhető el többé)"
+  },
+  "up-to-date": {
+    "chosen": "naprakész",
+    "accept": ["legújabb", "friss"],
+    "forms": "the index is up to date → az index naprakész; get the latest version → töltsd le a legújabb verziót / a legújabb Cmdrt",
+    "confidence": "high",
+    "sources": "catalog (settings index status Indexelve és naprakész; updates.failure.install a legújabb Cmdrt)"
   },
   "untouched": {
     "accept": ["érintetlenek", "érintetlenül"],

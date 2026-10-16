@@ -725,6 +725,18 @@
   "@servers.paneState.checkHostKey": {
     "sourceHash": "fefa256"
   },
+  "servers.paneState.guestSessionRefused": "O Cmdr não iniciou a sessão em {name} como convidado",
+  "@servers.paneState.guestSessionRefused": {
+    "sourceHash": "36ad371"
+  },
+  "servers.paneState.guestSessionRefusedHint": "Você pediu para iniciar a sessão com sua conta, mas o servidor ofereceu uma sessão de convidado. Em geral isso significa que a senha estava errada. Em casos raros, significa que algo está adulterando a conexão.",
+  "@servers.paneState.guestSessionRefusedHint": {
+    "sourceHash": "ca5c60f"
+  },
+  "servers.paneState.tryAnotherPassword": "Tentar outra senha…",
+  "@servers.paneState.tryAnotherPassword": {
+    "sourceHash": "2e10067"
+  },
   "servers.paneState.reconnecting": "Reconectando a {name}…",
   "@servers.paneState.reconnecting": {
     "sourceHash": "dce8cef"

@@ -280,6 +280,12 @@
     "forms": "status badge → huy hiệu trạng thái; the corner progress chip is also a huy hiệu",
     "sources": "descriptive; no pile term for this shape"
   },
+  "blocked": {
+    "chosen": "chặn",
+    "confidence": "high",
+    "forms": "X was blocked → bị chặn; Cmdr blocked X from doing Y → Cmdr đã chặn X + verb (`securityNotices.mcpForeignOrigin.title`)",
+    "sources": "MS terminology (Blocked → bị chặn, Chặn Tệp); catalog (errors.listing.notPermitted.explanation đã chặn, askCmdr.renameReview.status bị chặn)"
+  },
   "binary-view": {
     "chosen": "Nhị phân",
     "confidence": "high",
@@ -3078,6 +3084,13 @@
     "confidence": "high",
     "forms": "the originals are untouched → các bản gốc vẫn nguyên vẹn",
     "sources": "catalog (errors.write.destinationNotFound.message.copy, errors.write.deviceDisconnected.sided.destination.copy); macOS AppKit Document (To keep the file unchanged…): không bị thay đổi, the verb-side form"
+  },
+  "up-to-date": {
+    "accept": ["cập nhật"],
+    "chosen": "mới nhất",
+    "confidence": "high",
+    "forms": "the latest version → phiên bản mới nhất; the latest Cmdr → bản Cmdr mới nhất; an index or a tool that is up to date → (đã được) cập nhật",
+    "sources": "catalog (updates.failure.install, errors.serverRequest.refused: bản Cmdr mới nhất)"
   },
   "update": {
     "chosen": "cập nhật",

@@ -205,6 +205,10 @@
   "@errorReporter.prefill.slow": {
     "sourceHash": "42c0ee2"
   },
+  "errorReporter.prefill.updateNotGenuine": "Cmdr installerade inte en uppdatering som erbjöds som version {version}: uppdateringen saknade Cmdrs signatur.",
+  "@errorReporter.prefill.updateNotGenuine": {
+    "sourceHash": "0e007a7"
+  },
   "errorReporter.prefill.reference": "Referens: {code}",
   "@errorReporter.prefill.reference": {
     "sourceHash": "c0b8ba2"

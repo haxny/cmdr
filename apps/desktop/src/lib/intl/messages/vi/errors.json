@@ -1341,6 +1341,18 @@
   "@errors.write.connectionInterrupted.suggestion": {
     "sourceHash": "d8d3c79"
   },
+  "errors.write.replySignatureRefused.title": "Đã từ chối phản hồi của máy chủ",
+  "@errors.write.replySignatureRefused.title": {
+    "sourceHash": "829a591"
+  },
+  "errors.write.replySignatureRefused.message": "Phản hồi của máy chủ không được ký, nên Cmdr đã dừng.",
+  "@errors.write.replySignatureRefused.message": {
+    "sourceHash": "ba50c7b"
+  },
+  "errors.write.replySignatureRefused.suggestion": "Một thiết bị mạng chập chờn có thể gây ra chuyện này, và ai đó can thiệp vào dữ liệu truyền giữa bạn và máy chủ cũng vậy. Hãy kết nối lại, và nếu việc này xảy ra lần nữa, hãy kiểm tra mạng của bạn.",
+  "@errors.write.replySignatureRefused.suggestion": {
+    "sourceHash": "1fc6259"
+  },
   "errors.write.readError.title.copy": "Không thể sao chép",
   "@errors.write.readError.title.copy": {
     "sourceHash": "dbb854f"

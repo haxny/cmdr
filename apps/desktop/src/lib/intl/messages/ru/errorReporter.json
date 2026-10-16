@@ -204,6 +204,10 @@
   "@errorReporter.prefill.slow": {
     "sourceHash": "42c0ee2"
   },
+  "errorReporter.prefill.updateNotGenuine": "Обновление, предложенное как версия {version}, не было подписано Cmdr, поэтому Cmdr не стал его устанавливать.",
+  "@errorReporter.prefill.updateNotGenuine": {
+    "sourceHash": "0e007a7"
+  },
   "errorReporter.prefill.reference": "Код: {code}",
   "@errorReporter.prefill.reference": {
     "sourceHash": "c0b8ba2"

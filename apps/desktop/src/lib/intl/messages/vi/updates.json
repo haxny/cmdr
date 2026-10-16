@@ -15,6 +15,10 @@
   "@updates.failure.install": {
     "sourceHash": "05a4714"
   },
+  "updates.failure.notGenuine": "Cmdr đã không cài đặt bản cập nhật này: đây không phải bản phát hành chính thức của Cmdr.",
+  "@updates.failure.notGenuine": {
+    "sourceHash": "1858e23"
+  },
   "updates.toast.ready": "Đã có phiên bản mới của Cmdr.",
   "@updates.toast.ready": {
     "sourceHash": "622668e"

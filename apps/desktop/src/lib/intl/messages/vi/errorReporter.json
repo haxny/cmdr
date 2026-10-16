@@ -204,6 +204,10 @@
   "@errorReporter.prefill.slow": {
     "sourceHash": "42c0ee2"
   },
+  "errorReporter.prefill.updateNotGenuine": "Một bản cập nhật được giới thiệu là phiên bản {version} không có chữ ký của Cmdr, nên Cmdr đã không cài đặt bản này.",
+  "@errorReporter.prefill.updateNotGenuine": {
+    "sourceHash": "0e007a7"
+  },
   "errorReporter.prefill.reference": "Tham chiếu: {code}",
   "@errorReporter.prefill.reference": {
     "sourceHash": "c0b8ba2"

@@ -252,6 +252,13 @@
     "confidence": "high",
     "sources": "TC pt-BR Lister (2 Binário); DC pt-BR (Mostrar com binário); MS pt-BR (binary → binário)"
   },
+  "blocked": {
+    "chosen": "bloquear",
+    "accept": ["bloque", "impedi"],
+    "forms": "a blocked rename → renomeação bloqueada; Cmdr blocked a web page from reaching X → O Cmdr bloqueou o acesso de uma página da web a X",
+    "confidence": "high",
+    "sources": "MS pt-BR (Blocked Contacts → Contatos Bloqueados); catalog askCmdr.renameReview.status (bloqueada)"
+  },
   "brief-view": {
     "chosen": "visualização resumida",
     "accept": ["resumid"],

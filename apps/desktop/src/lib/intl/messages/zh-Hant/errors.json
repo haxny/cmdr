@@ -1341,6 +1341,18 @@
   "@errors.write.connectionInterrupted.suggestion": {
     "sourceHash": "d8d3c79"
   },
+  "errors.write.replySignatureRefused.title": "已拒絕伺服器的回覆",
+  "@errors.write.replySignatureRefused.title": {
+    "sourceHash": "829a591"
+  },
+  "errors.write.replySignatureRefused.message": "伺服器的回覆沒有簽章，所以 Cmdr 停下來了。",
+  "@errors.write.replySignatureRefused.message": {
+    "sourceHash": "ba50c7b"
+  },
+  "errors.write.replySignatureRefused.suggestion": "網路裝置不穩定可能造成這種情況，有人竄改你和伺服器之間傳輸的資料也可能。請重新連線，如果再次發生，請檢查你的網路。",
+  "@errors.write.replySignatureRefused.suggestion": {
+    "sourceHash": "1fc6259"
+  },
   "errors.write.readError.title.copy": "無法複製",
   "@errors.write.readError.title.copy": {
     "sourceHash": "dbb854f"

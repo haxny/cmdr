@@ -728,6 +728,18 @@
   "@servers.paneState.checkHostKey": {
     "sourceHash": "fefa256"
   },
+  "servers.paneState.guestSessionRefused": "Cmdr heeft niet als gast ingelogd bij {name}",
+  "@servers.paneState.guestSessionRefused": {
+    "sourceHash": "36ad371"
+  },
+  "servers.paneState.guestSessionRefusedHint": "Je vroeg om in te loggen met je account, maar de server bood in plaats daarvan een gastsessie aan. Meestal komt dat doordat het wachtwoord niet klopte. In zeldzame gevallen knoeit er iets met de verbinding.",
+  "@servers.paneState.guestSessionRefusedHint": {
+    "sourceHash": "ca5c60f"
+  },
+  "servers.paneState.tryAnotherPassword": "Probeer een ander wachtwoord…",
+  "@servers.paneState.tryAnotherPassword": {
+    "sourceHash": "2e10067"
+  },
   "servers.paneState.reconnecting": "Opnieuw verbinden met {name}…",
   "@servers.paneState.reconnecting": {
     "sourceHash": "dce8cef"

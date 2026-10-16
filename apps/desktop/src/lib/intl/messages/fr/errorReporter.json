@@ -204,6 +204,10 @@
   "@errorReporter.prefill.slow": {
     "sourceHash": "42c0ee2"
   },
+  "errorReporter.prefill.updateNotGenuine": "Une mise à jour se présentait comme la version {version} sans porter la signature de Cmdr, donc Cmdr n’a rien installé.",
+  "@errorReporter.prefill.updateNotGenuine": {
+    "sourceHash": "0e007a7"
+  },
   "errorReporter.prefill.reference": "Référence : {code}",
   "@errorReporter.prefill.reference": {
     "sourceHash": "c0b8ba2"

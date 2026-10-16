@@ -77,6 +77,13 @@
     "confidence": "high",
     "sources": "catalog (ai.translateError.unavailable.title, askCmdr.composer.providerOff)"
   },
+  "ai-reply": {
+    "chosen": "respuesta",
+    "accept": ["respuesta", "respuestas", "respond"],
+    "forms": "the AI's reply → la respuesta; a server's reply (SMB signing) → la respuesta del servidor",
+    "confidence": "high",
+    "sources": "macOS es (respuesta); Microsoft (reply → responder); catalog askCmdr.error.unfinishedReply, errors.volume.signatureInvalid"
+  },
   "ai-tool": {
     "chosen": "herramienta",
     "forms": "tool status lines: gerund for doing (Mirando dentro de los archivos), impersonal Se + preterite for done (Se buscó en tus fotos, Se usó una herramienta); Android platform tools → herramientas de plataforma de Android",
@@ -276,6 +283,14 @@
     "chosen": "Binario",
     "confidence": "high",
     "sources": "TC Lister (2 Binario); DC (Mostrar como binario); MS (binary → binario)"
+  },
+  "blocked": {
+    "chosen": "bloquear",
+    "accept": ["bloque", "impedi", "impid"],
+    "proseAccept": ["impedir a X que", "impedir que"],
+    "forms": "Cmdr blocked X from reaching Y → Cmdr ha bloqueado el acceso de X a Y; macOS blocked Cmdr from accessing → macOS ha impedido a Cmdr acceder; a blocked rename → está bloqueado",
+    "confidence": "high",
+    "sources": "Microsoft (Blocked → Bloqueado); macOS Finder (bloqueado); catalog askCmdr.renameReview.overwriteTooltip, errors.listing.notPermitted.explanation"
   },
   "brief-view": {
     "chosen": "vista breve",
@@ -2452,6 +2467,12 @@
     "confidence": "high",
     "sources": "macOS Finder (Replace → Reemplazar)"
   },
+  "reply": {
+    "chosen": "respuesta",
+    "accept": ["respuesta", "respuestas", "respond"],
+    "confidence": "high",
+    "sources": "macOS es (respuesta); Microsoft (reply → responder); catalog askCmdr.error.unfinishedReply"
+  },
   "report": {
     "chosen": "informe",
     "accept": ["informes"],
@@ -3223,6 +3244,13 @@
     "confidence": "high",
     "forms": "the originals are untouched → los originales están intactos",
     "sources": "macOS AppKit Document (To keep the file unchanged…): dejar el archivo intacto; catalog (errors.write.destinationNotFound.message.copy, errors.write.deviceDisconnected.sided.destination.copy)"
+  },
+  "up-to-date": {
+    "chosen": "al día",
+    "accept": ["actualizad", "más reciente"],
+    "forms": "Indexed and up to date → Indexada y al día; get the index up to date → poner el índice al día; the latest version → la versión más reciente",
+    "confidence": "high",
+    "sources": "macOS Finder (Puede que los ítems no estén actualizados); catalog fileExplorer.navigation.driveIndex.tooltipFresh, updates.failure.install"
   },
   "update": {
     "chosen": "actualización",

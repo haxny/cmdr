@@ -15,6 +15,10 @@
   "@updates.failure.install": {
     "sourceHash": "05a4714"
   },
+  "updates.failure.notGenuine": "Cmdr heeft deze update niet geïnstalleerd: het is geen echte versie van Cmdr.",
+  "@updates.failure.notGenuine": {
+    "sourceHash": "1858e23"
+  },
   "updates.toast.ready": "Er staat een nieuwe versie van Cmdr klaar.",
   "@updates.toast.ready": {
     "sourceHash": "622668e"

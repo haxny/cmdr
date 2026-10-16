@@ -204,6 +204,10 @@
   "@errorReporter.prefill.slow": {
     "sourceHash": "42c0ee2"
   },
+  "errorReporter.prefill.updateNotGenuine": "Egy {version} verzióként felkínált frissítésen nem volt rajta a Cmdr aláírása, ezért a Cmdr nem telepítette.",
+  "@errorReporter.prefill.updateNotGenuine": {
+    "sourceHash": "0e007a7"
+  },
   "errorReporter.prefill.reference": "Hivatkozás: {code}",
   "@errorReporter.prefill.reference": {
     "sourceHash": "c0b8ba2"

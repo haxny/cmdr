@@ -323,6 +323,12 @@
     "confidence": "high",
     "sources": "TC Lister (2 Binair); DC (Toon als binair); MS (binary → binair)"
   },
+  "blocked": {
+    "accept": ["blokkeerde", "blokkeren", "blokkeert"],
+    "chosen": "geblokkeerd",
+    "confidence": "high",
+    "sources": "Microsoft Terminology (Blocked → Geblokkeerd); catalog askCmdr.renameReview.*, errors.listing.notPermitted.explanation (macOS blokkeerde)"
+  },
   "brief-view": {
     "accept": ["beknopt"],
     "avoid": [

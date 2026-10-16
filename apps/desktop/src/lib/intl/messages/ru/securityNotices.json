@@ -1,0 +1,54 @@
+{
+  "securityNotices.count": "{countText} {count, plural, one {раз} few {раза} many {раз} other {раза}} с тех пор, как вы открыли Cmdr",
+  "@securityNotices.count": {
+    "sourceHash": "f766fdb"
+  },
+  "securityNotices.dismiss": "Закрыть",
+  "@securityNotices.dismiss": {
+    "sourceHash": "48845bf"
+  },
+  "securityNotices.mcpForeignOrigin.title": "Cmdr заблокировал доступ веб-страницы к своему серверу MCP",
+  "@securityNotices.mcpForeignOrigin.title": {
+    "sourceHash": "5b54b21"
+  },
+  "securityNotices.mcpForeignOrigin.body": "Сайт, открытый в вашем браузере, пытался связаться с Cmdr. Доступа он не получил. Если это повторяется, закройте вкладки, которым вы не доверяете.",
+  "@securityNotices.mcpForeignOrigin.body": {
+    "sourceHash": "5515a9d"
+  },
+  "securityNotices.mcpForeignOrigin.openSettings": "Настройки MCP",
+  "@securityNotices.mcpForeignOrigin.openSettings": {
+    "sourceHash": "c63c58c"
+  },
+  "securityNotices.smbSignatureRefused.title": "Cmdr отклонил ответ общей папки «{name}»",
+  "@securityNotices.smbSignatureRefused.title": {
+    "sourceHash": "aedb947"
+  },
+  "securityNotices.smbSignatureRefused.titleUnnamed": "Cmdr отклонил ответ общей папки в сети",
+  "@securityNotices.smbSignatureRefused.titleUnnamed": {
+    "sourceHash": "8cbb7cd"
+  },
+  "securityNotices.smbSignatureRefused.body": "В ответе не было подписи сервера, поэтому Cmdr не стал ему доверять. Причиной может быть ненадежное сетевое устройство или чье-то вмешательство в трафик между вами и сервером. Подключитесь снова, а если это повторится, проверьте сеть.",
+  "@securityNotices.smbSignatureRefused.body": {
+    "sourceHash": "2c1abec"
+  },
+  "securityNotices.smbSignatureRefused.reconnect": "Подключиться снова",
+  "@securityNotices.smbSignatureRefused.reconnect": {
+    "sourceHash": "bf8a9ea"
+  },
+  "securityNotices.smbSignatureRefused.disconnect": "Отключиться",
+  "@securityNotices.smbSignatureRefused.disconnect": {
+    "sourceHash": "acfc5be"
+  },
+  "securityNotices.updateNotGenuine.title": "Cmdr не стал устанавливать обновление: это не подлинный выпуск Cmdr",
+  "@securityNotices.updateNotGenuine.title": {
+    "sourceHash": "be55b39"
+  },
+  "securityNotices.updateNotGenuine.body": "Каждое обновление должно быть подписано Cmdr, а это не подписано. Ничего не установлено, ваша текущая версия Cmdr осталась без изменений. Скачайте последнюю версию с getcmdr.com и, пожалуйста, сообщите Дэвиду: возможно, кто-то вмешивается в обновления.",
+  "@securityNotices.updateNotGenuine.body": {
+    "sourceHash": "53936ec"
+  },
+  "securityNotices.updateNotGenuine.openWebsite": "Открыть getcmdr.com",
+  "@securityNotices.updateNotGenuine.openWebsite": {
+    "sourceHash": "077f325"
+  }
+}

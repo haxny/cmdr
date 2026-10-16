@@ -2462,7 +2462,8 @@
   },
   "install": {
     "chosen": "установить",
-    "accept": ["установ"],
+    "accept": ["установ", "устанавл"],
+    "forms": "a deliberate refusal → Cmdr не стал устанавливать (imperfective stem устанавлива-)",
     "confidence": "high",
     "sources": "macOS SystemSettings (Install → Установить); MS; KDE Dolphin"
   },

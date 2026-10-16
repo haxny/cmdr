@@ -166,5 +166,13 @@
   "servers.refusal.shareEjectRefused": "Cmdr no pudo expulsar el recurso compartido {name}, así que no se guardó nada. {reason}",
   "@servers.refusal.shareEjectRefused": {
     "sourceHash": "82da163"
+  },
+  "servers.paneState.guestSessionRefused": "Cmdr no inició sesión en {name} como invitado",
+  "@servers.paneState.guestSessionRefused": {
+    "sourceHash": "8603ce5"
+  },
+  "servers.paneState.guestSessionRefusedHint": "Pediste iniciar sesión con tu cuenta, pero el servidor te ofreció una sesión como invitado. Normalmente eso significa que la contraseña no era correcta. Rara vez se debe a que algo esté manipulando la conexión.",
+  "@servers.paneState.guestSessionRefusedHint": {
+    "sourceHash": "620682a"
   }
 }

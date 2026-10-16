@@ -407,3 +407,28 @@ rule into `translation-principles.md` or `translator-instructions.md`), then del
   Cmdr stopped." Locales mirrored "wasn't signed". (all)
 - No concept for the security event log or a reply's signature: added `security-event` and `signature`, and taught
   `watcher` ("events"), `note` ("that notes"), and both `reply` concepts ("server's reply") to skip these strings. (all)
+- `servers.paneState.guestSessionRefusedHint`: "something is tampering with the connection", while every sibling (#457
+  notices, `errors.shareList.signatureInvalid`) says "someone". Confirm or align; locales split. (de, nl, ru, vi,
+  zh-Hant)
+- `securityNotices.mcpForeignOrigin.title`: "its MCP server" can point at the web page once translated; most locales
+  dropped the possessive. Say "Cmdr's MCP server" or "the MCP server". (hu, vi, zh, zh-Hant)
+- `securityNotices.mcpForeignOrigin.openSettings`: the Settings section it opens is titled "MCP server"; name it in the
+  description (and consider matching the label) so locales can quote it. (fr, ru)
+- `securityNotices.smbSignatureRefused.body` opens with "It", pointing back at the separate title; pronoun languages had
+  to name "this reply". Proposed rule: a toast body never refers to its title by pronoun. (fr)
+- `securityNotices.smbSignatureRefused.titleUnnamed`: "a reply from a network share" reads oddly (the server replies,
+  not the share). Consider "from a server". (sv)
+- `securityNotices.mcpForeignOrigin.*`: the title says "web page", the body "site"; pick one. (nl, sv)
+- `securityNotices.updateNotGenuine.body`: say whether "David" may take a case ending or transliteration in running
+  prose (ru wrote `Дэвиду`, following the existing `с Дэвидом`). (ru)
+- No `tamper` concept, though five #457 keys and `errors.shareList.signatureInvalid` use it (de `manipulieren`, ru
+  `вмешательство`, zh `篡改`). Add one; ru also proposes a `genuine` concept (an update really from Cmdr). (de, ru, zh)
+- `up-to-date` matches "latest version", so "Get the latest version" (`securityNotices.updateNotGenuine.body`) is held
+  to it, and zh's short `最新版` then fails the `version` ruling. Consider dropping that match. (es, nl, pt, sv, zh)
+- `blocked` spans a rename-preflight STATUS and an actor turning something away (#457's MCP notice); French can't use
+  one word for both. Consider splitting it. (fr)
+- Both `reply` concepts matched the #457 SMB strings ("Server reply refused", "refused a reply from"): taught them
+  `server reply` and `a reply from`. (all)
+- `decisions.md` is at its byte budget for es and zh, so the #457 rulings (zh genuine `真正的`, guest session
+  `客人会话`) went to `review-queue.md` instead. Bump `decisionsBytes` in `i18n-termbase-baseline.json` if they belong
+  there. (es, zh)

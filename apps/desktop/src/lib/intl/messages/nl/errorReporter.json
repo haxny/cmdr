@@ -205,6 +205,10 @@
   "@errorReporter.prefill.slow": {
     "sourceHash": "42c0ee2"
   },
+  "errorReporter.prefill.updateNotGenuine": "Een update die als versie {version} werd aangeboden, had geen handtekening van Cmdr, dus Cmdr heeft hem niet geïnstalleerd.",
+  "@errorReporter.prefill.updateNotGenuine": {
+    "sourceHash": "0e007a7"
+  },
   "errorReporter.prefill.reference": "Referentie: {code}",
   "@errorReporter.prefill.reference": {
     "sourceHash": "c0b8ba2"
