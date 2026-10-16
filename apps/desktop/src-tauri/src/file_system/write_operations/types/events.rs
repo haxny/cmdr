@@ -143,6 +143,25 @@ pub struct WriteCompleteEvent {
     pub metadata_left_behind: Option<MetadataLeftBehind>,
 }
 
+impl WriteCompleteEvent {
+    /// The completion of an operation that skipped every one of its `skipped`
+    /// top-level sources before touching anything: nothing was written, so
+    /// `bytes_processed` is zero and `files_skipped` is the whole batch.
+    pub fn all_skipped(operation_id: &str, operation_type: WriteOperationType, skipped: usize) -> Self {
+        Self {
+            operation_id: operation_id.to_string(),
+            operation_type,
+            files_processed: 0,
+            files_skipped: skipped,
+            bytes_processed: 0,
+            appeared_during_move: None,
+            top_level_skipped: None,
+            refused: None,
+            metadata_left_behind: None,
+        }
+    }
+}
+
 /// The metadata a copy or move couldn't carry to its destination, per class,
 /// for the one calm note on its completion
 /// (`transfer/volume/DETAILS.md` § "Copies keep the source's metadata").

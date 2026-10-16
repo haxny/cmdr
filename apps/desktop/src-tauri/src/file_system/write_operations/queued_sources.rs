@@ -8,7 +8,7 @@
 //! and when some are gone it asks the person instead of failing on the first one:
 //!
 //! - **Some gone**: it emits `write-sources-gone` (`AwaitingAnswer`) and parks on
-//!   [`SourcesGoneSlot`], holding its lanes the way a conflict prompt does.
+//!   `state.sources_gone` (`sources_gone_slot.rs`), holding its lanes the way a conflict prompt does.
 //!   [`continue_without_gone_sources`] carries it on with the rest, each gone
 //!   source reported `Skipped` with `source_removed: true`; a cancel ends it
 //!   through the ordinary cancel path, which abandons the slot.
@@ -29,71 +29,20 @@
 //! a bound one already drops a changed source on its own terms.
 
 use std::path::{Path, PathBuf};
-use std::sync::Mutex;
 
 use tokio::sync::oneshot;
 
 use super::event_sinks::OperationEventSink;
-use super::source_binding::{announce_empty_batch, local_source_is_gone};
 use super::state::{WRITE_OPERATION_STATE, WriteOperationState, is_cancelled};
 use super::types::{
     CancelRollback, SourceItemOutcome, SourcesGoneAnswerOutcome, SourcesGoneNext, WriteCancelledEvent,
-    WriteOperationType, WriteSourceItemDoneEvent, WriteSourcesGoneEvent,
+    WriteCompleteEvent, WriteOperationType, WriteSourceItemDoneEvent, WriteSourcesGoneEvent,
 };
 use crate::file_system::volume::{Volume, VolumeError};
-use crate::ignore_poison::IgnorePoison;
 
 /// How many gone sources the question names. The count beside it is the whole
 /// truth; the names only help the person recognize what moved.
 const GONE_SAMPLE_LEN: usize = 5;
-
-/// Where a queued operation's sources-gone question stands: asked (with the
-/// sender the parked operation listens on), or not.
-// DEFAULT-OK: the empty slot means "nothing asked", which is the truth for every
-// operation until its queue check finds a source gone.
-#[derive(Default)]
-pub(crate) struct SourcesGoneSlot {
-    asking: Mutex<Option<Asking>>,
-}
-
-struct Asking {
-    carry_on: oneshot::Sender<()>,
-    question: WriteSourcesGoneEvent,
-}
-
-impl SourcesGoneSlot {
-    /// Arms the slot with `question` and hands back what the operation waits on.
-    /// Arm BEFORE emitting: an answer can only follow a question someone saw.
-    fn arm(&self, question: WriteSourcesGoneEvent) -> oneshot::Receiver<()> {
-        let (carry_on, answer) = oneshot::channel();
-        *self.asking.lock_ignore_poison() = Some(Asking { carry_on, question });
-        answer
-    }
-
-    /// The question this operation is parked on, for a reader that wasn't
-    /// listening when it went out. `None` once answered or abandoned.
-    pub(crate) fn pending(&self) -> Option<WriteSourcesGoneEvent> {
-        self.asking
-            .lock_ignore_poison()
-            .as_ref()
-            .map(|asking| asking.question.clone())
-    }
-
-    /// Drops the pending question, so the parked operation's receiver returns
-    /// `Err` and the operation reads it as a cancel. What a cancel does.
-    pub(crate) fn abandon(&self) {
-        self.asking.lock_ignore_poison().take();
-    }
-
-    /// Delivers "carry on". `false` when nothing was asked, or the operation
-    /// stopped listening.
-    fn carry_on(&self) -> bool {
-        let Some(asking) = self.asking.lock_ignore_poison().take() else {
-            return false;
-        };
-        asking.carry_on.send(()).is_ok()
-    }
-}
 
 /// Carries a queued operation on with the sources that are still there. The
 /// person's "Move the rest" (or "Copy the rest", …); cancelling is the ordinary
@@ -223,7 +172,11 @@ fn plan(
         );
         announce_gone(events, operation_id, sources, gone);
         events.emit_sources_gone(question(SourcesGoneNext::NothingLeft));
-        announce_empty_batch(events, operation_id, operation_type, sources.len());
+        events.emit_complete(WriteCompleteEvent::all_skipped(
+            operation_id,
+            operation_type,
+            sources.len(),
+        ));
         return Plan::Stopped;
     }
 
@@ -280,7 +233,17 @@ fn announce_gone(events: &dyn OperationEventSink, operation_id: &str, sources: &
     }
 }
 
-/// `local_source_is_gone` asked of a volume. ❌ Not `Volume::exists`, which
+/// Whether a local source is positively absent, as opposed to merely unreadable.
+/// A permission error leaves `source_removed: false`, because "we couldn't look"
+/// is not evidence the file is gone and the flag drives snapshot purging.
+pub(super) fn local_source_is_gone(source: &Path) -> bool {
+    matches!(
+        std::fs::symlink_metadata(source),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound
+    )
+}
+
+/// [`local_source_is_gone`] asked of a volume. ❌ Not `Volume::exists`, which
 /// answers `false` for an unreachable source too.
 async fn volume_source_is_gone(volume: &dyn Volume, source: &Path) -> bool {
     matches!(volume.get_metadata(source).await, Err(VolumeError::NotFound(_)))

@@ -61,6 +61,7 @@ mod scan_walker;
 mod scan_watchdog;
 mod scratch_dir;
 mod source_binding;
+mod sources_gone_slot;
 mod state;
 mod status_cache;
 mod summary;

@@ -19,7 +19,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use super::event_sinks::OperationEventSink;
-use super::queued_sources::{kept_after_queue_local, kept_after_queue_on};
+use super::queued_sources::{kept_after_queue_local, kept_after_queue_on, local_source_is_gone};
 use super::types::{SourceItemOutcome, WriteCompleteEvent, WriteOperationType, WriteSourceItemDoneEvent};
 use crate::file_system::volume::Volume;
 
@@ -395,16 +395,6 @@ fn finish_or_keep(
     Some(select(&sources, &kept))
 }
 
-/// Whether a local source is positively absent, as opposed to merely unreadable.
-/// A permission error leaves `source_removed: false`, because "we couldn't look"
-/// is not evidence the file is gone and the flag drives snapshot purging.
-pub(super) fn local_source_is_gone(source: &Path) -> bool {
-    matches!(
-        std::fs::symlink_metadata(source),
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound
-    )
-}
-
 fn announce_skip(events: &dyn OperationEventSink, operation_id: &str, source: &Path, source_removed: bool) {
     log::info!(
         target: "source_binding",
@@ -419,15 +409,14 @@ fn announce_skip(events: &dyn OperationEventSink, operation_id: &str, source: &P
     });
 }
 
-/// The terminal event for an operation whose binding left it nothing to do, or
-/// whose every source left while it queued (`queued_sources.rs`).
+/// The terminal event for an operation whose binding left it nothing to do.
 ///
 /// ❌ Not a `write-error`. Every source was already announced as a `Skipped`
 /// item, so the caller has its per-source answers; a failure dialog on top of them
 /// would be the engine editorializing about a decision the person is entitled to
-/// make differently. Nothing was written, so `bytes_processed` is zero and
-/// `files_skipped` is the whole batch.
-pub(crate) fn announce_empty_batch(
+/// make differently. The event's shape is [`WriteCompleteEvent::all_skipped`],
+/// shared with the queue check whose every source left (`queued_sources.rs`).
+fn announce_empty_batch(
     events: &dyn OperationEventSink,
     operation_id: &str,
     operation_type: WriteOperationType,
@@ -437,17 +426,7 @@ pub(crate) fn announce_empty_batch(
         target: "source_binding",
         "operation {operation_id} has nothing left to do: all {skipped} source(s) were skipped"
     );
-    events.emit_complete(WriteCompleteEvent {
-        operation_id: operation_id.to_string(),
-        operation_type,
-        files_processed: 0,
-        files_skipped: skipped,
-        bytes_processed: 0,
-        appeared_during_move: None,
-        top_level_skipped: None,
-        refused: None,
-        metadata_left_behind: None,
-    });
+    events.emit_complete(WriteCompleteEvent::all_skipped(operation_id, operation_type, skipped));
 }
 
 #[cfg(test)]

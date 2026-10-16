@@ -14,6 +14,7 @@ use super::eta::{EtaEstimator, EtaSample, ReversalBar};
 use super::event_sinks::OperationEventSink;
 use super::human_wait::HumanWaitClock;
 use super::outage_slot::{OutagePolicy, OutageSlot};
+use super::sources_gone_slot::SourcesGoneSlot;
 use super::types::{
     ConflictId, ConflictResolution, ConflictResolutionOutcome, TransferActivity, TransferWaitReason,
     WriteConflictEvent, WriteOperationType, WriteProgressEvent, WriteSettledEvent,
@@ -74,7 +75,7 @@ pub struct WriteOperationState {
     /// The question a queued operation asks when sources left while it waited:
     /// armed by `queued_sources.rs`, answered by `continue_without_gone_sources`,
     /// and abandoned by a cancel exactly like [`conflict_slot`](Self::conflict_slot).
-    pub(super) sources_gone: super::queued_sources::SourcesGoneSlot,
+    pub(super) sources_gone: SourcesGoneSlot,
     /// Set by the manager when this operation's registration couldn't admit it,
     /// so it sat `Queued` behind another operation's lanes. Only an operation
     /// that waited checks its sources on admission: one admitted at once runs
@@ -277,7 +278,7 @@ impl WriteOperationState {
             progress_interval,
             conflict_slot: ConflictSlot::new(Arc::clone(&human_wait)),
             conflict_dispatch_lock: tokio::sync::Mutex::new(()),
-            sources_gone: super::queued_sources::SourcesGoneSlot::default(),
+            sources_gone: SourcesGoneSlot::default(),
             waited_in_queue: AtomicBool::new(false),
             estimator: std::sync::Mutex::new(EtaEstimator::new()),
             skipped_files: AtomicUsize::new(0),
