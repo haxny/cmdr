@@ -1186,6 +1186,31 @@ releases the manager lock before logging or emitting (`manager.rs:741-745`); `re
 finds nothing outside comments; M3's pins green; lanes: `desktop-rust-tests`, `desktop-rust-clippy`,
 `desktop-bindings-fresh`, `desktop-rust-log-error-macro`, `desktop-rust-discarded-outcome`.
 
+**What landed differently** (recorded at execution):
+
+- 11 `log_error!` sites, not 12 (M5a's count). `OperationErrorReport` has seven variants in four groups (an op failed, a
+  displaced original stranded under its aside name, a transfer stuck on a silent backend, a contained bug), in
+  `host/error_report.rs`. The app re-raises each with today's message and target; the eight sites that had no explicit
+  target keep the engine module's path as a literal (`cmdr_lib::file_system::write_operations::overwrite`, …), so they
+  won't follow the code into the crate at M8a. The probe's report is still raised while `tasks` is locked (as the
+  `log_error!` was): M6c's lock audit should look at `transfer_probe.rs`'s stall loop.
+- The scan bridge's direct emit goes through a new `EngineEvents::scan_wait_progress(WriteProgressEvent)`, not the op's
+  sink: the preview's worker holds no op's sink, and threading one into the manager record would touch ~50
+  `spawn_managed` call sites. Byte-identical (the agent's decorator never saw these ticks).
+- `global_tauri_sink()` became `archive_edit::host_operation_sink()` over an `OperationSinkFactory` on `EngineHost`
+  (`with_operation_sinks`); the MCP rollback tool reads it too. M6a's builder should carry it as an optional seam.
+- `terminal_effects.rs` (+ its pins) and the completion analytics (`analytics.rs`) moved app-side with the sinks; the
+  pins moved with path-only changes. `manager/tests/failures.rs`'s production-effects pin now imports
+  `crate::operations_host::terminal_effects`, an engine test reaching app code: it belongs with M7f's app-side suites.
+  `record_failure` → `OperationManager::retain_failure`; the app reaches the manager through a temporary
+  `write_operations::operation_manager()` re-export, which `Operations` replaces at M6a.
+- `ScanPreviewEventSink` moved to `host/scan_preview_sink.rs`; `start_scan_preview` takes the sink.
+- Wrappers live in `operations_host/wire.rs` (not `events.rs`, which is `TauriEngineEvents`) and are always written
+  `wire::<Name>` (`wire::OperationsChanged` wraps `OperationsChanged`). 19 wrappers, not 22: `VolumesBusyChanged` moved
+  app-side whole (the engine only reports ids since M5a), and the staging-leftovers notice is `MoveLeftoversKeptEvent`,
+  already in `types/events.rs`. `broadcast_settled` takes the wrapper constructor. A mock-app pin
+  (`wire::tests::a_wrapped_payload_reaches_the_wire_unchanged`) guards the JSON.
+
 ### M5d: Seams III — volumes and the engine's `VolumeHost`
 
 **Scope.** `OperationVolumes` (default, fake, app adapter), answering `VolumeLookup` too; the 54 `get_volume_manager()`
