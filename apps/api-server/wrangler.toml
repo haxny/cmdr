@@ -190,6 +190,17 @@ namespace_id = "1010"
 limit = 60
 period = 60
 
+# Rate limit for every /admin/ route, keyed by the caller IP (transient, never stored), checked before
+# the token (`admin-auth.ts`). 60/min/IP is far above what the analytics dashboard sends. `period`
+# must be 10 or 60. `namespace_id` is a per-account integer id.
+[[ratelimits]]
+name = "ADMIN_LIMITER"
+namespace_id = "1011"
+
+[ratelimits.simple]
+limit = 60
+period = 60
+
 [triggers]
 crons = ["0 */3 * * *", "30 4,5 * * *"]
 

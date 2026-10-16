@@ -31,6 +31,7 @@ import {
   type ManualLicenseRecord,
 } from './license-issuance'
 import { sendLicenseEmail } from '../email/license'
+import { verifyAdminAuth } from '../admin-auth'
 import {
   type Bindings,
   isValidEmail,
@@ -38,7 +39,6 @@ import {
   maxLicenseNoteLength,
   maxOrganizationNameLength,
   redactEmail,
-  verifyAdminAuth,
 } from '../types'
 
 const manualLicenses = new Hono<{ Bindings: Bindings }>()
@@ -67,7 +67,7 @@ interface MintBody {
 }
 
 manualLicenses.post('/admin/generate', async (c) => {
-  const unauthorized = verifyAdminAuth(c)
+  const unauthorized = await verifyAdminAuth(c)
   if (unauthorized) return unauthorized
 
   const parsed = parseMintRequest(await c.req.json<MintBody>())
@@ -151,7 +151,7 @@ interface RevokeBody {
 }
 
 manualLicenses.post('/admin/revoke', async (c) => {
-  const unauthorized = verifyAdminAuth(c)
+  const unauthorized = await verifyAdminAuth(c)
   if (unauthorized) return unauthorized
 
   const body = await c.req.json<RevokeBody>()

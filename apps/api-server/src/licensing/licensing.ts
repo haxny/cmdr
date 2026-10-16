@@ -44,7 +44,9 @@ import {
   maxTransactionIdLength,
   redactEmail,
   getPaddleConfig,
+  scheduleBackground,
 } from '../types'
+import { countOpsEvent, rejectedWebhookMessage } from '../ops-events'
 
 const licensing = new Hono<{ Bindings: Bindings }>()
 
@@ -379,6 +381,10 @@ licensing.post('/webhook/paddle', async (c) => {
   ])
   if (!isValid) {
     console.error('Webhook signature verification failed')
+    await scheduleBackground(
+      c,
+      countOpsEvent(c.env.TELEMETRY_DB, 'webhook-signature-rejected', rejectedWebhookMessage('Paddle')),
+    )
     return c.json({ error: 'Invalid signature' }, 401)
   }
 

@@ -11,7 +11,8 @@ import { Hono } from 'hono'
 import { isValidShortCode } from './license'
 import { listLedger, updateLedgerNote, type LedgerEntry } from './license-issuance'
 import { listAdjustments, type AdjustmentEntry } from './refunds'
-import { type Bindings, maxLicenseNoteLength, maxTransactionIdLength, verifyAdminAuth } from '../types'
+import { verifyAdminAuth } from '../admin-auth'
+import { type Bindings, maxLicenseNoteLength, maxTransactionIdLength } from '../types'
 
 const adminLicenses = new Hono<{ Bindings: Bindings }>()
 
@@ -74,7 +75,7 @@ export function classifyLedgerEntry(entry: LedgerEntry, nowMs: number): LicenseS
 }
 
 adminLicenses.get('/admin/licenses', async (c) => {
-  const unauthorized = verifyAdminAuth(c)
+  const unauthorized = await verifyAdminAuth(c)
   if (unauthorized) return unauthorized
 
   const [ledger, codesInKv, adjustments] = await Promise.all([
@@ -117,7 +118,7 @@ interface NoteBody {
  * holds the money and knows nothing else.
  */
 adminLicenses.put('/admin/licenses/:transactionId/note', async (c) => {
-  const unauthorized = verifyAdminAuth(c)
+  const unauthorized = await verifyAdminAuth(c)
   if (unauthorized) return unauthorized
 
   const transactionId = c.req.param('transactionId')

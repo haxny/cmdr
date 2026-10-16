@@ -14,7 +14,7 @@ import { sendReportDigestEmail, digestSize, type DigestContent } from './email/d
 import type { CrashFate } from './email/crash'
 import type { BoardCard } from './email/layout'
 import { humanReportRecipient } from './email/send'
-import { SIGNUP_KINDS } from './ops-events'
+import { SIGNUP_KINDS, type OpsEventKind } from './ops-events'
 import { parseOsFrames } from './report-outbox'
 import { PRESIGN_TTL_HOURS, buildPresignedUrl } from './telemetry/error-report'
 import type { Bindings } from './types'
@@ -93,6 +93,8 @@ interface OpsRow {
   created_at: string
   kind: string
   message: string
+  /** More than one for a repeating event (`countOpsEvent`). */
+  occurrences: number
 }
 
 /** The rows one digest carries, by table, so the stamp touches exactly these and nothing newer. */
@@ -135,7 +137,7 @@ async function readPending(db: D1Database): Promise<PendingRows> {
     .all<FeedbackRow>()
   const opsAlerts = await db
     .prepare(
-      `SELECT id, created_at, kind, message FROM ops_events
+      `SELECT id, created_at, kind, message, occurrences FROM ops_events
          WHERE notified_at IS NULL AND ${NOT_A_SIGNUP} ORDER BY id DESC`,
     )
     .all<OpsRow>()
@@ -147,6 +149,36 @@ async function readPending(db: D1Database): Promise<PendingRows> {
     feedback: feedback.results,
     opsAlerts: opsAlerts.results,
   }
+}
+
+/**
+ * Kinds that only alert once one digest window holds this many occurrences, across all their rows. A
+ * payment provider retrying a delivery can produce a bad signature now and then; a run of them is
+ * the signal. Every other kind alerts on its first occurrence, rejected admin requests included.
+ */
+const ALERT_THRESHOLDS: Partial<Record<OpsEventKind, number>> = { 'webhook-signature-rejected': 3 }
+
+/**
+ * Split the window's ops events into what the digest mails and what stays below its kind's
+ * threshold. The quiet ones are stamped all the same, so the window closes on them and a few now
+ * plus a few next time never add up to an alert.
+ */
+function splitBelowThreshold(rows: OpsRow[]): { alerts: OpsRow[]; quiet: OpsRow[] } {
+  const totals = new Map<string, number>()
+  for (const row of rows) totals.set(row.kind, (totals.get(row.kind) ?? 0) + row.occurrences)
+  const alerts: OpsRow[] = []
+  const quiet: OpsRow[] = []
+  for (const row of rows) {
+    const threshold = ALERT_THRESHOLDS[row.kind as OpsEventKind] ?? 1
+    if ((totals.get(row.kind) ?? 0) >= threshold) alerts.push(row)
+    else quiet.push(row)
+  }
+  return { alerts, quiet }
+}
+
+/** The alert's text, with how often it happened when that's more than once. */
+function opsAlertMessage(row: OpsRow): string {
+  return row.occurrences > 1 ? `${row.message} (${String(row.occurrences)} times)` : row.message
 }
 
 async function presignQuietly(env: Bindings, key: string): Promise<string | null> {
@@ -207,7 +239,7 @@ async function toContent(env: Bindings, rows: PendingRows): Promise<DigestConten
       email: row.email,
       card: cardFor(env, row.issue_number),
     })),
-    opsAlerts: rows.opsAlerts.map((row) => ({ when: row.created_at, kind: row.kind, message: row.message })),
+    opsAlerts: rows.opsAlerts.map((row) => ({ when: row.created_at, kind: row.kind, message: opsAlertMessage(row) })),
   }
 }
 
@@ -225,9 +257,15 @@ export async function handleReportDigest(env: Bindings): Promise<void> {
   const to = humanReportRecipient(env)
   if (!to || !env.RESEND_API_KEY) return
 
-  const rows = await readPending(env.TELEMETRY_DB)
+  const pending = await readPending(env.TELEMETRY_DB)
+  const { alerts, quiet } = splitBelowThreshold(pending.opsAlerts)
+  const rows = { ...pending, opsAlerts: alerts }
+  const quietIds = quiet.map((row) => row.id)
   const content = await toContent(env, rows)
-  if (digestSize(content) === 0) return
+  if (digestSize(content) === 0) {
+    await stamp(env.TELEMETRY_DB, 'ops_events', quietIds, new Date().toISOString())
+    return
+  }
 
   await sendReportDigestEmail({ content, to, resendApiKey: env.RESEND_API_KEY })
 
@@ -256,10 +294,5 @@ export async function handleReportDigest(env: Bindings): Promise<void> {
     rows.feedback.map((row) => row.id),
     now,
   )
-  await stamp(
-    env.TELEMETRY_DB,
-    'ops_events',
-    rows.opsAlerts.map((row) => row.id),
-    now,
-  )
+  await stamp(env.TELEMETRY_DB, 'ops_events', [...rows.opsAlerts.map((row) => row.id), ...quietIds], now)
 }

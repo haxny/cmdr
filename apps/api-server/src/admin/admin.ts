@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
-import { constantTimeEqual } from '../licensing/paddle'
-import { type Bindings, activationCountKey, verifyAdminAuth } from '../types'
+import { verifyAdminAuth } from '../admin-auth'
+import { type Bindings, activationCountKey } from '../types'
 import { extractDateSegment, isAmendSidecarKey } from '../telemetry/error-report-eviction'
 
 const admin = new Hono<{ Bindings: Bindings }>()
@@ -86,15 +86,8 @@ async function listProdErrorReports(bucket: R2Bucket, cutoffDate: string | null)
 // Admin stats: returns activation count and device count
 // Auth: ADMIN_API_TOKEN, the one admin credential (the Paddle secrets verify webhooks, nothing else)
 admin.get('/admin/stats', async (c) => {
-  const token = c.env.ADMIN_API_TOKEN
-  if (!token) {
-    return c.json({ error: 'Admin API not configured' }, 500)
-  }
-
-  const authHeader = c.req.header('Authorization')
-  if (!authHeader || !constantTimeEqual(authHeader, `Bearer ${token}`)) {
-    return c.json({ error: 'Unauthorized' }, 401)
-  }
+  const authError = await verifyAdminAuth(c)
+  if (authError) return authError
 
   const raw = await c.env.LICENSE_CODES.get(activationCountKey)
   const totalActivations = parseInt(raw ?? '0', 10)
@@ -110,7 +103,7 @@ admin.get('/admin/stats', async (c) => {
 
 // Admin downloads: aggregated download data from D1
 admin.get('/admin/downloads', async (c) => {
-  const authError = verifyAdminAuth(c)
+  const authError = await verifyAdminAuth(c)
   if (authError) return authError
 
   const range = c.req.query('range') ?? '7d'
@@ -166,7 +159,7 @@ admin.get('/admin/downloads', async (c) => {
 // `COUNT(DISTINCT hashed_ip)` from the raw table for today. That makes the series both retention-proof
 // (30d range stays complete) and fresh (today shows without waiting for the cron).
 admin.get('/admin/update-activity', async (c) => {
-  const authError = verifyAdminAuth(c)
+  const authError = await verifyAdminAuth(c)
   if (authError) return authError
 
   const range = c.req.query('range') ?? '7d'
@@ -198,7 +191,7 @@ admin.get('/admin/update-activity', async (c) => {
 
 // Admin active users: aggregated daily active user data from D1
 admin.get('/admin/active-users', async (c) => {
-  const authError = verifyAdminAuth(c)
+  const authError = await verifyAdminAuth(c)
   if (authError) return authError
 
   const range = c.req.query('range') ?? '7d'
@@ -220,7 +213,7 @@ admin.get('/admin/active-users', async (c) => {
 
 // Admin crashes: aggregated crash data from D1
 admin.get('/admin/crashes', async (c) => {
-  const authError = verifyAdminAuth(c)
+  const authError = await verifyAdminAuth(c)
   if (authError) return authError
 
   const range = c.req.query('range') ?? '7d'
@@ -263,7 +256,7 @@ function heartbeatDauSql(whereClause: string): string {
 
 // Admin heartbeat DAU: true daily-active counts plus app hours per day. See `heartbeatDauSql`.
 admin.get('/admin/heartbeat-dau', async (c) => {
-  const authError = verifyAdminAuth(c)
+  const authError = await verifyAdminAuth(c)
   if (authError) return authError
 
   const range = c.req.query('range') ?? '7d'
@@ -294,7 +287,7 @@ admin.get('/admin/heartbeat-dau', async (c) => {
 // dashboard can tell those apart. `value` comes back beside its SQLite `type` because a JSON `true`
 // arrives as `1` over D1; the dashboard rebuilds the real type from the pair.
 admin.get('/admin/config-shape', async (c) => {
-  const authError = verifyAdminAuth(c)
+  const authError = await verifyAdminAuth(c)
   if (authError) return authError
 
   const range = c.req.query('range') ?? '30d'
@@ -340,7 +333,7 @@ admin.get('/admin/config-shape', async (c) => {
 // (Cloudflare Access), so the full message text and any reply-to email are returned for triage.
 // No install id is stored alongside feedback, so there's nothing to join it to.
 admin.get('/admin/feedback', async (c) => {
-  const authError = verifyAdminAuth(c)
+  const authError = await verifyAdminAuth(c)
   if (authError) return authError
 
   const range = c.req.query('range') ?? '7d'
@@ -375,7 +368,7 @@ admin.get('/admin/feedback', async (c) => {
 // 90-day lifecycle, and `bucket.list` returns the id/kind/version metadata we need for aggregation
 // without downloading any zip. Deep dives into a bundle's log tail stay in the local digest command.
 admin.get('/admin/error-reports', async (c) => {
-  const authError = verifyAdminAuth(c)
+  const authError = await verifyAdminAuth(c)
   if (authError) return authError
 
   const range = c.req.query('range') ?? '7d'

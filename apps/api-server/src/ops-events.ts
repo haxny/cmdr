@@ -19,6 +19,8 @@ export type OpsEventKind =
   | 'eviction'
   | 'eviction-blocked'
   | 'intake-rejected'
+  | 'admin-auth-rejected'
+  | 'webhook-signature-rejected'
   | 'beta-signup'
   | 'newsletter-signup'
 
@@ -33,6 +35,42 @@ export async function recordOpsEvent(db: D1Database | undefined, kind: OpsEventK
   } catch (e) {
     console.error(`Ops event (${kind}) could not be recorded: ${message}`, e)
   }
+}
+
+/**
+ * Count one more occurrence of a repeating event: add to its unnotified row with the same kind and
+ * message, or start one. The digest shows the count, so a burst is one line and one small row however
+ * long it runs. Two first occurrences racing can each start a row; the digest sums them. Never throws.
+ */
+export async function countOpsEvent(db: D1Database | undefined, kind: OpsEventKind, message: string): Promise<void> {
+  if (!db) return
+  try {
+    const bumped = await db
+      .prepare(
+        `UPDATE ops_events SET occurrences = occurrences + 1 WHERE kind = ? AND message = ? AND notified_at IS NULL`,
+      )
+      .bind(kind, message)
+      .run()
+    if (bumped.meta.changes > 0) return
+    await db.prepare(`INSERT INTO ops_events (kind, message) VALUES (?, ?)`).bind(kind, message).run()
+  } catch (e) {
+    console.error(`Ops event (${kind}) could not be counted: ${message}`, e)
+  }
+}
+
+/**
+ * A request to an admin route that came without a valid admin token. Names the route PATTERN (as
+ * Hono matched it), never the raw path, the caller, or what they sent, so the message set is the
+ * route list and nothing a stranger chooses.
+ */
+export function rejectedAdminRequestMessage(method: string, routePattern: string): string {
+  return `${method} ${routePattern} was turned away: the request had no valid admin token.`
+}
+
+export type SignedWebhookSource = 'Paddle' | 'GitHub'
+
+export function rejectedWebhookMessage(source: SignedWebhookSource): string {
+  return `A ${source} webhook delivery was turned away: its signature didn't verify.`
 }
 
 /**

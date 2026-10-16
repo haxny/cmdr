@@ -416,6 +416,47 @@ describe('ops alerts', () => {
     expect(unnotified('ops_events')).toBe(1)
   })
 
+  function insertRejections(kind: string, message: string, occurrences: number): void {
+    db.sqlite
+      .prepare(`INSERT INTO ops_events (kind, message, occurrences) VALUES (?, ?, ?)`)
+      .run(kind, message, occurrences)
+  }
+
+  it('flags even one rejected admin request, with how many times it happened', async () => {
+    insertRejections('admin-auth-rejected', 'GET /admin/stats was turned away.', 1)
+    insertRejections('admin-auth-rejected', 'GET /admin/crashes was turned away.', 4)
+
+    await handleReportDigest(testEnv())
+
+    const { subject, html } = lastEmail()
+    expect(subject).toBe('Cmdr digest: 2 ops alerts in the past 3h')
+    expect(html).toContain('GET /admin/stats was turned away.')
+    expect(html).toContain('4 times')
+    expect(unnotified('ops_events')).toBe(0)
+  })
+
+  it('keeps quiet about one or two bad webhook signatures in a window, and closes the window on them', async () => {
+    insertRejections('webhook-signature-rejected', 'A Paddle webhook signature did not verify.', 2)
+
+    await handleReportDigest(testEnv())
+
+    expect(mockSend).not.toHaveBeenCalled()
+    // Stamped anyway, so two now and two next window never add up to an alert.
+    expect(unnotified('ops_events')).toBe(0)
+  })
+
+  it('flags bad webhook signatures once a window holds three of them', async () => {
+    insertRejections('webhook-signature-rejected', 'A Paddle webhook signature did not verify.', 2)
+    insertRejections('webhook-signature-rejected', 'A GitHub webhook signature did not verify.', 1)
+
+    await handleReportDigest(testEnv())
+
+    const { html } = lastEmail()
+    expect(html).toContain('A Paddle webhook signature did not verify.')
+    expect(html).toContain('A GitHub webhook signature did not verify.')
+    expect(unnotified('ops_events')).toBe(0)
+  })
+
   it('escapes an alert message, which can quote a URL a stranger chose', async () => {
     insertOpsEvent('csp-violation', 'blocked https://x.test/<script>')
     await handleReportDigest(testEnv())

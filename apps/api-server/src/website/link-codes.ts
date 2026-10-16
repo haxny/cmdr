@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
-import { type Bindings, verifyAdminAuth } from '../types'
+import { verifyAdminAuth } from '../admin-auth'
+import type { Bindings } from '../types'
 
 // Tracking-link short codes. A `?r=<code>` on getcmdr.com or the personal blog expands to UTM
 // params client-side; the blogs fetch the code -> meaning map from GET /r-codes.json (edge-cached).
@@ -97,14 +98,14 @@ linkCodes.get('/r-codes.json', async (c) => {
 // --- Admin CRUD (Bearer ADMIN_API_TOKEN) ---
 
 linkCodes.get('/admin/r-codes', async (c) => {
-  const unauthorized = verifyAdminAuth(c)
+  const unauthorized = await verifyAdminAuth(c)
   if (unauthorized) return unauthorized
   const map = await readMap(c.env.LINK_CODES)
   return c.json(map)
 })
 
 linkCodes.put('/admin/r-codes/:code', async (c) => {
-  const unauthorized = verifyAdminAuth(c)
+  const unauthorized = await verifyAdminAuth(c)
   if (unauthorized) return unauthorized
 
   const code = c.req.param('code')
@@ -138,7 +139,7 @@ linkCodes.put('/admin/r-codes/:code', async (c) => {
 })
 
 linkCodes.delete('/admin/r-codes/:code', async (c) => {
-  const unauthorized = verifyAdminAuth(c)
+  const unauthorized = await verifyAdminAuth(c)
   if (unauthorized) return unauthorized
 
   const code = c.req.param('code')

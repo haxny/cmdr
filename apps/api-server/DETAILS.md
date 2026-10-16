@@ -14,12 +14,12 @@ Read this before any non-trivial work here: editing, planning, reorganizing, or 
 ## Root files
 
 - **`index.ts`**: Hono app assembly — mounts each area's route modules, wires the scheduled handler.
-- **`types.ts`**: `Bindings`, shared constants, and the helpers every area calls: `verifyAdminAuth`,
-  `enforceIpRateLimit`, `callerIp`, `hashCallerIp`, `isValidEmail`, `hasEmailShape` / `emailShapePattern` (the one loose
-  reply-to check, shared by crash reports, feedback, error reports, and amendments), `isAbsent`, `readCappedBody`,
-  `scheduleBackground`, `redactEmail`, `activationCountKey`, `formatBytes`. The last four live here rather than beside
-  one route precisely so a second route can't reimplement them: a hand-rolled body read is how a size cap becomes
-  decorative.
+- **`admin-auth.ts`**: `verifyAdminAuth`, the one admin gate every `/admin/` route calls first (§ Admin gate).
+- **`types.ts`**: `Bindings`, shared constants, and the helpers every area calls: `enforceIpRateLimit`, `callerIp`,
+  `hashCallerIp`, `isValidEmail`, `hasEmailShape` / `emailShapePattern` (the one loose reply-to check, shared by crash
+  reports, feedback, error reports, and amendments), `isAbsent`, `readCappedBody`, `scheduleBackground`, `redactEmail`,
+  `activationCountKey`, `formatBytes`. The last four live here rather than beside one route precisely so a second route
+  can't reimplement them: a hand-rolled body read is how a size cap becomes decorative.
 - **`email/`**: Resend delivery, split one module per audience so a sender is read and changed without the others in
   view.
   - **`send.ts`**: the only door out. `sendViaResend` (every sender goes through it), `humanReportRecipient` (the one
@@ -201,9 +201,18 @@ other namespaces).
 ### Ops events
 
 `ops-events.ts` writes the operational notices to the D1 `ops_events` table: `cron-failure`, `board-add-failed`,
-`board-rating-failed`, `csp-violation`, `eviction`, `eviction-blocked`, `intake-rejected`, and the two signup kinds. The
-three-hour digest mails the alerts (§ Cron handler job 2) and leaves the signups for the morning brief to count. Nothing
-else watches a channel: there is no Discord integration.
+`board-rating-failed`, `csp-violation`, `eviction`, `eviction-blocked`, `intake-rejected`, `admin-auth-rejected`,
+`webhook-signature-rejected`, and the two signup kinds. The three-hour digest mails the alerts (§ Cron handler job 2)
+and leaves the signups for the morning brief to count. Nothing else watches a channel: there is no Discord integration.
+
+- **Rejected requests are counted, not logged one by one** (`countOpsEvent`): a repeat adds to the unnotified row with
+  the same kind and message (`occurrences`, migration `0024`), so a burst is one digest line and one small row, and the
+  digest's stamp stays a short id list. The message names the route PATTERN or the webhook source, never the raw path,
+  the caller, or what they sent, so the set of messages is fixed by the code.
+- **Thresholds per kind** (`report-digest.ts::ALERT_THRESHOLDS`): a rejected admin request alerts on the first one (the
+  only admin is David, so the expected count is zero), and bad webhook signatures alert once one window holds a few,
+  since a provider retry can produce one now and then. Rows below their threshold are stamped without an email, which
+  closes the window on them.
 
 - **`recordOpsEvent` never throws**: it sits inside the paths whose failures it reports, so a broken D1 costs that
   alert, never the caller. A cron failure has healthchecks.io as its second, independent channel (§ Cron alarms).
@@ -211,6 +220,17 @@ else watches a channel: there is no Discord integration.
   URLs with their query strings stripped. Pinned by `listmonk-signup.test.ts` and `csp-report.test.ts`.
 - Rare alerts are deduped where they could flood: CSP once a day per `(directive, blocked origin)` (`CSP_ALERTS` KV),
   the intake budget once a day (`budget_alert:` key).
+
+### Admin gate
+
+`admin-auth.ts::verifyAdminAuth` is the one check in front of every `/admin/` route, wherever the route lives (`admin/`,
+`licensing/`, `website/link-codes.ts`): ❌ no route compares the token itself. In order, it answers 500 when
+`ADMIN_API_TOKEN` isn't set, 429 when the caller's IP is over `ADMIN_LIMITER` (checked before the token, per data center
+like every limiter here), and 401 when the `Authorization` header doesn't carry the token (compared with
+`constantTimeEqual`). A 401 counts an `admin-auth-rejected` ops event against the route pattern (§ Ops events).
+`admin-auth.test.ts` walks `app.routes`, so a new `/admin/` route that skips the gate fails there.
+
+Bad webhook signatures (`/webhook/paddle`, `/webhook/github`) count a `webhook-signature-rejected` event the same way.
 
 ### R2 presigned URLs (for error-report download links)
 

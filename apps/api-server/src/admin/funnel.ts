@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
-import { type Bindings, verifyAdminAuth } from '../types'
+import { verifyAdminAuth } from '../admin-auth'
+import type { Bindings } from '../types'
 import { resolveUaFamily } from '../user-agent'
 
 /**
@@ -420,7 +421,7 @@ export function assembleFunnel(
  * dashboard can tell "no signups" from "couldn't ask".
  */
 funnel.get('/admin/funnel', async (c) => {
-  const authError = verifyAdminAuth(c)
+  const authError = await verifyAdminAuth(c)
   if (authError) return authError
 
   const rawDays = parseInt(c.req.query('days') ?? String(defaultDays), 10)

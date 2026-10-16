@@ -10,7 +10,7 @@
 import { Hono, type Context } from 'hono'
 import { readCappedBody, scheduleBackground, type Bindings } from './types'
 import { addIssueToBoard, resolveBoardTarget, verifyGitHubWebhook } from './project-board'
-import { recordOpsEvent } from './ops-events'
+import { countOpsEvent, recordOpsEvent, rejectedWebhookMessage } from './ops-events'
 
 const webhookGitHub = new Hono<{ Bindings: Bindings }>()
 
@@ -88,6 +88,10 @@ async function readSignedBody(c: Context<{ Bindings: Bindings }>, secret: string
   const signature = c.req.header('x-hub-signature-256') ?? ''
   if (!(await verifyGitHubWebhook(body, signature, secret))) {
     console.error('GitHub webhook: signature did not verify')
+    await scheduleBackground(
+      c,
+      countOpsEvent(c.env.TELEMETRY_DB, 'webhook-signature-rejected', rejectedWebhookMessage('GitHub')),
+    )
     return c.json({ error: 'Bad signature' }, 401)
   }
   return body

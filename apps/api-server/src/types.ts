@@ -49,6 +49,9 @@ export type Bindings = {
   // 429 only keeps a Mac on its cached status until its next try. Optional; the route skips the
   // gate when absent.
   VALIDATE_LIMITER?: RateLimit
+  // Workers rate-limit binding gating every `/admin/` route, keyed by the caller IP (never stored),
+  // checked before the token (`admin-auth.ts`). Optional; the gate skips it when absent.
+  ADMIN_LIMITER?: RateLimit
   // Paddle webhook secrets (both optional to support gradual rollout)
   PADDLE_WEBHOOK_SECRET_LIVE?: string
   PADDLE_WEBHOOK_SECRET_SANDBOX?: string
@@ -369,21 +372,4 @@ export async function hashCallerIp(ip: string, salt: string, pepper: string | un
   return [...new Uint8Array(hashBuffer)].map((b) => b.toString(16).padStart(2, '0')).join('')
 }
 
-/** Verify admin auth and return error response if unauthorized, or null if authorized. */
-export function verifyAdminAuth(c: {
-  env: Bindings
-  req: { header: (name: string) => string | undefined }
-}): Response | null {
-  const token = c.env.ADMIN_API_TOKEN
-  if (!token) {
-    return Response.json({ error: 'Admin API not configured' }, { status: 500 })
-  }
-  const authHeader = c.req.header('Authorization')
-  if (!authHeader || !constantTimeEqual(authHeader, `Bearer ${token}`)) {
-    return Response.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-  return null
-}
-
 import { licenseTypes, type LicenseType } from './licensing/license'
-import { constantTimeEqual } from './licensing/paddle'

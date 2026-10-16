@@ -37,15 +37,12 @@ cadence that shifts a little runtime across a day boundary and changes no weekly
 
 ## Auth
 
-Every route here takes `Authorization: Bearer <ADMIN_API_TOKEN>` through `verifyAdminAuth` (`../types.ts`), which
-compares with the timing-safe `constantTimeEqual`. `/admin/generate`, `/admin/revoke`, and `/admin/licenses` take the
-same token but live in `../licensing/`: they mint, kill, and list licenses rather than aggregate telemetry, so they
-belong with the money code. The last is what the dashboard's Licenses page calls (every ledger row with a computed
-state, plus activation codes in KV that no row explains): `../licensing/DETAILS.md` § The licenses listing.
-
-**Gotcha:** `verifyAdminAuth` uses a manual type annotation for `c` instead of Hono's `Context`. Using
-`Context<{ Bindings: Bindings }>` would mean importing Hono's internal generic types and threading them through; the
-manual shape `{ env: Bindings; req: { header: ... } }` is simpler and avoids coupling to Hono internals.
+Every route here takes `Authorization: Bearer <ADMIN_API_TOKEN>` through `verifyAdminAuth` (`../admin-auth.ts`), which
+rate-limits, compares with the timing-safe `constantTimeEqual`, and records a rejection (`../../DETAILS.md` § Admin
+gate). `/admin/generate`, `/admin/revoke`, and `/admin/licenses` take the same token but live in `../licensing/`: they
+mint, kill, and list licenses rather than aggregate telemetry, so they belong with the money code. The last is what the
+dashboard's Licenses page calls (every ledger row with a computed state, plus activation codes in KV that no row
+explains): `../licensing/DETAILS.md` § The licenses listing.
 
 ## Per-day funnel (`GET /admin/funnel`)
 
