@@ -2,7 +2,12 @@
 
 The crates.io release of `tauri-plugin-store` 2.5.0 (upstream `tauri-apps/plugins-workspace` at `a2364a5f`, path
 `plugins/store`), swapped in through the root `Cargo.toml`'s `[patch.crates-io]`. Everything here is the published
-package byte for byte, apart from the change below.
+package byte for byte, apart from the change below and two files left out:
+
+- `Cargo.lock`: a path dependency resolves through the workspace lockfile, so it was never read, and `osv` would scan
+  its stale pins as if they shipped.
+- `LICENSE.spdx`: `osv-scanner` reads any `*.spdx` as an SBOM and stops on this one. The license texts and copyright
+  stay in `LICENSE_MIT` and `LICENSE_APACHE-2.0`.
 
 ## The change
 
