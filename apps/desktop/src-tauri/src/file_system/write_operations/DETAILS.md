@@ -747,14 +747,14 @@ The both-local branches of `copy_between_volumes` / `move_between_volumes` compu
 
 The manager keeps one ordered queue (`order`) plus a `lane_use` table (lane → in-use count; budget 1 per lane in v1, a lane is free iff its count is 0; a `HashMap` not a set so v2 budgets > 1 reshape nothing). An admission pass walks pending ops front to back (registration order unless the user reordered the line, § "Reordering the line") and admits the first whose EVERY lane is free, reserving all its slots atomically, flipping it to Running, registering its volumes busy, and spawning its deferred start. It loops so one pass can admit several disjoint-lane ops. A two-lane op can't starve behind churn on a single lane — there are no per-lane queues, so the multi-lane op is always considered at its FIFO position against the whole lane table.
 
-### Reordering the line (`move_queued`)
+### Reordering the line (`move_queued` / `place_queued`)
 
-The user can move a WAITING op one place earlier or later (the queue window's ⌥↑ / ⌥↓, `move_queued_operation(id, direction)`). `order` is then admission order rather than strictly registration order.
+The user can move a WAITING op one place earlier or later (the queue window's ⌥↑ / ⌥↓, `move_queued_operation(id, direction)`), or drag it straight to a place (`place_queued_operation(id, position)`, 1-based among waiting ops, clamped to the line). Both go through one `reorder` in `manager/reorder.rs`. `order` is then admission order rather than strictly registration order.
 
-- **Only waiting ops trade places, and only with each other.** A move swaps the op's `order` slot with the nearest WAITING op's slot on that side, so a running or paused op between them keeps its slot. Its slot decides nothing anyway: it already holds its lanes. A running, paused, settled, or unknown id answers `NotQueued` and changes nothing.
-- **It answers with the new place** (`QueueMoveOutcome::Moved { position, waiting }`, or `AtEdge` with the unchanged place), counted among waiting ops, 1-based. The window announces that answer, so a screen reader hears where the op really is. `AtEdge` broadcasts nothing.
+- **Only waiting ops move, and only among each other.** The waiting ops are rewritten into the `order` slots waiting ops already hold, so a running or paused op between them keeps its slot. Its slot decides nothing anyway: it already holds its lanes. A step trades places with the nearest waiting op on that side; a placement shifts the waiting ops in between by one. A running, paused, settled, or unknown id answers `NotQueued` and changes nothing.
+- **It answers with the new place** (`QueueMoveOutcome::Moved { position, waiting }`; `AtEdge` for a step off the front or back; `Unchanged` for a placement where it already is), counted among waiting ops, 1-based. The window announces that answer, so a screen reader hears where the op really is. Only `Moved` broadcasts.
 - **No admission pass.** Every pass leaves no admittable waiting op behind, and a reorder frees no lane, so the pass would admit nobody. What a reorder changes is who goes FIRST when a lane frees, which is the whole feature (`manager::tests::reorder::the_op_moved_to_the_front_is_the_one_admitted_next`).
-- **"Run next" (#256) is a move to the front**, so it belongs here as a third `QueueMoveDirection`, ❌ not a second ordering mechanism.
+- **A new way to reorder is a new `Target` in `reorder.rs`**, ❌ not a second ordering mechanism.
 - Tests run on a private manager (`leaked_manager`): "the nearest waiting op" is a question about the WHOLE line, which a sibling test's op would answer on the global one.
 
 ### Deferred start, not "spawn then block on a semaphore"

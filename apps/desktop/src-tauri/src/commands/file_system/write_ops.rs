@@ -25,7 +25,8 @@ use crate::file_system::{
     dismiss_failed_operation as ops_dismiss_failed_operation,
     latest_operation_progress as ops_latest_operation_progress, list_operations as ops_list_operations,
     move_files_start as ops_move_files_start, move_queued_operation as ops_move_queued_operation,
-    pause_all as ops_pause_all, pause_operation as ops_pause_operation, resume_all as ops_resume_all,
+    pause_all as ops_pause_all, pause_operation as ops_pause_operation,
+    place_queued_operation as ops_place_queued_operation, resume_all as ops_resume_all,
     resume_operation as ops_resume_operation, retry_failed_operation as ops_retry_failed_operation,
     trash_files_start as ops_trash_files_start,
 };
@@ -568,6 +569,18 @@ pub fn resume_all() -> PauseAllOutcome {
 #[specta::specta]
 pub fn move_queued_operation(operation_id: String, direction: QueueMoveDirection) -> QueueMoveOutcome {
     ops_move_queued_operation(&operation_id, direction)
+}
+
+/// Puts a waiting operation at `position` in line (1-based, counting waiting
+/// operations only): the drop of a drag in the queue window. Only waiting
+/// operations move; running and paused ones keep their place.
+///
+/// Returns where the operation ended up, so the window announces its real
+/// place in line.
+#[tauri::command]
+#[specta::specta]
+pub fn place_queued_operation(operation_id: String, position: u32) -> QueueMoveOutcome {
+    ops_place_queued_operation(&operation_id, position)
 }
 
 /// Drops one retained failure from the snapshot (the queue row's Dismiss, and

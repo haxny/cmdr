@@ -213,3 +213,130 @@ async fn the_op_moved_to_the_front_is_the_one_admitted_next() {
     mgr.cancel_if_queued(&b.id);
     let _ = c.release.send(());
 }
+
+// ── Placing a waiting op at a given place (a drag's drop) ──────────────────
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn placing_the_last_waiting_op_first_shifts_the_others_back() {
+    let mgr = leaked_manager();
+    let (running, queued) = line(mgr, 3).await;
+    let ids: Vec<String> = queued.iter().map(|h| h.id.clone()).collect();
+
+    let outcome = mgr.place_queued(&ids[2], 1);
+
+    assert_eq!(
+        outcome,
+        QueueMoveOutcome::Moved {
+            position: 1,
+            waiting: 3
+        }
+    );
+    assert_eq!(
+        order_of(mgr),
+        vec![running.id.clone(), ids[2].clone(), ids[0].clone(), ids[1].clone()]
+    );
+    finish(mgr, running, queued);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn placing_the_first_waiting_op_last_shifts_the_others_forward() {
+    let mgr = leaked_manager();
+    let (running, queued) = line(mgr, 3).await;
+    let ids: Vec<String> = queued.iter().map(|h| h.id.clone()).collect();
+
+    let outcome = mgr.place_queued(&ids[0], 3);
+
+    assert_eq!(
+        outcome,
+        QueueMoveOutcome::Moved {
+            position: 3,
+            waiting: 3
+        }
+    );
+    assert_eq!(
+        order_of(mgr),
+        vec![running.id.clone(), ids[1].clone(), ids[2].clone(), ids[0].clone()]
+    );
+    finish(mgr, running, queued);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_place_past_the_end_lands_last() {
+    let mgr = leaked_manager();
+    let (running, queued) = line(mgr, 2).await;
+    let ids: Vec<String> = queued.iter().map(|h| h.id.clone()).collect();
+
+    let outcome = mgr.place_queued(&ids[0], 99);
+
+    assert_eq!(
+        outcome,
+        QueueMoveOutcome::Moved {
+            position: 2,
+            waiting: 2
+        }
+    );
+    assert_eq!(order_of(mgr), vec![running.id.clone(), ids[1].clone(), ids[0].clone()]);
+    finish(mgr, running, queued);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn placing_an_op_where_it_already_is_changes_nothing_and_tells_nobody() {
+    let mgr = leaked_manager();
+    let (running, queued) = line(mgr, 2).await;
+    let before = order_of(mgr);
+    let emits = mgr.emit_count();
+
+    assert_eq!(
+        mgr.place_queued(&queued[1].id, 2),
+        QueueMoveOutcome::Unchanged {
+            position: 2,
+            waiting: 2
+        }
+    );
+    assert_eq!(order_of(mgr), before);
+    assert_eq!(mgr.emit_count(), emits);
+    finish(mgr, running, queued);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn placing_a_running_or_unknown_op_does_nothing() {
+    let mgr = leaked_manager();
+    let (running, queued) = line(mgr, 1).await;
+    let before = order_of(mgr);
+
+    assert_eq!(mgr.place_queued(&running.id, 1), QueueMoveOutcome::NotQueued);
+    assert_eq!(mgr.place_queued("no-such-op", 1), QueueMoveOutcome::NotQueued);
+    assert_eq!(order_of(mgr), before);
+    finish(mgr, running, queued);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 3)]
+async fn placing_an_op_first_passes_a_running_op_without_moving_it() {
+    // [A running on L] [B waiting on L] [D running on M] [C waiting on L]:
+    // C placed first takes B's slot, B takes C's, and D stays third.
+    let mgr = leaked_manager();
+    let lane = unique("lane");
+    let other_lane = unique("other-lane");
+    let mut a = hold(mgr, "a", vec![&lane]);
+    (&mut a.started).await.expect("A admitted");
+    let b = hold(mgr, "b", vec![&lane]);
+    let mut d = hold(mgr, "d", vec![&other_lane]);
+    (&mut d.started).await.expect("D admitted on its own lane");
+    let c = hold(mgr, "c", vec![&lane]);
+
+    let outcome = mgr.place_queued(&c.id, 1);
+
+    assert_eq!(
+        outcome,
+        QueueMoveOutcome::Moved {
+            position: 1,
+            waiting: 2
+        }
+    );
+    assert_eq!(
+        order_of(mgr),
+        vec![a.id.clone(), c.id.clone(), d.id.clone(), b.id.clone()]
+    );
+    let _ = d.release.send(());
+    finish(mgr, a, vec![b, c]);
+}

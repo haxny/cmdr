@@ -1002,6 +1002,16 @@ export const commands = {
   moveQueuedOperation: (operationId: string, direction: QueueMoveDirection) =>
     __TAURI_INVOKE<QueueMoveOutcome>('move_queued_operation', { operationId, direction }),
   /**
+   *  Puts a waiting operation at `position` in line (1-based, counting waiting
+   *  operations only): the drop of a drag in the queue window. Only waiting
+   *  operations move; running and paused ones keep their place.
+   *
+   *  Returns where the operation ended up, so the window announces its real
+   *  place in line.
+   */
+  placeQueuedOperation: (operationId: string, position: number) =>
+    __TAURI_INVOKE<QueueMoveOutcome>('place_queued_operation', { operationId, position }),
+  /**
    *  Drops one retained failure from the snapshot (the queue row's Dismiss, and
    *  the foreground error dialog's close path). Dismissal is always explicit: a
    *  failure never expires on its own.
@@ -13172,6 +13182,11 @@ export type QueueMoveOutcome =
    *  changed and nothing was broadcast.
    */
   | { kind: 'at_edge'; position: number; waiting: number }
+  /**
+   *  Asked to go to the place it already holds (a drop where it started).
+   *  Nothing changed and nothing was broadcast.
+   */
+  | { kind: 'unchanged'; position: number; waiting: number }
   /**
    *  Not waiting: running, paused, settled, or never registered. Only a
    *  waiting operation has a place in line to change.

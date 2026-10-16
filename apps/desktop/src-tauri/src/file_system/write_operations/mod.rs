@@ -156,7 +156,7 @@ pub use manager::{
     OperationSnapshot, OperationSummaryText, OperationsChanged, PauseAllOutcome, PauseOutcome, QueueMoveDirection,
     QueueMoveOutcome, cancel_operation, cancel_operations, dismiss_all_failed_operations, dismiss_failed_operation,
     init_operation_event_emitter, list_operations, move_queued_operation, operations_need_volume, pause_all,
-    pause_operation, resume_all, resume_operation, retry_failed_operation,
+    pause_operation, place_queued_operation, resume_all, resume_operation, retry_failed_operation,
 };
 pub use queued_sources::continue_without_gone_sources;
 pub(crate) use queued_sources::pending_sources_gone;

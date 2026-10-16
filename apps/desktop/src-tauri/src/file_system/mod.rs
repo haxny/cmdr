@@ -76,7 +76,7 @@ pub use write_operations::{
     OperationSnapshot, PauseAllOutcome, PauseOutcome, QueueMoveDirection, QueueMoveOutcome, cancel_operation,
     cancel_operations, dismiss_all_failed_operations, dismiss_failed_operation, init_operation_event_emitter,
     latest_operation_progress, list_operations, move_queued_operation, operations_need_volume, pause_all,
-    pause_operation, resume_all, resume_operation, retry_failed_operation,
+    pause_operation, place_queued_operation, resume_all, resume_operation, retry_failed_operation,
 };
 // Cross-volume transfers. The three `start_volume_*` entry points own the volume
 // and destination-path resolution and every archive fork (extract out, copy/move

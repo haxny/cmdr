@@ -1116,6 +1116,13 @@ pub fn move_queued_operation(operation_id: &str, direction: QueueMoveDirection) 
     manager().move_queued(operation_id, direction)
 }
 
+/// Puts a waiting operation at `position` (1-based, counting waiting
+/// operations only), shifting the ones in between. Backs
+/// `place_queued_operation(id, position)`, the queue window's drag-to-reorder.
+pub fn place_queued_operation(operation_id: &str, position: u32) -> QueueMoveOutcome {
+    manager().place_queued(operation_id, position)
+}
+
 /// Drops one retained failure and re-broadcasts the snapshot. Backs
 /// `dismiss_failed_operation(id)`: the queue row's Dismiss button, and the
 /// foreground error dialog's close path for the operation it was showing.

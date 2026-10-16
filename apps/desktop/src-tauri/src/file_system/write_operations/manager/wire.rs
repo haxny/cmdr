@@ -109,6 +109,9 @@ pub enum QueueMoveOutcome {
     /// It was already first (moving earlier) or last (moving later). Nothing
     /// changed and nothing was broadcast.
     AtEdge { position: u32, waiting: u32 },
+    /// Asked to go to the place it already holds (a drop where it started).
+    /// Nothing changed and nothing was broadcast.
+    Unchanged { position: u32, waiting: u32 },
     /// Not waiting: running, paused, settled, or never registered. Only a
     /// waiting operation has a place in line to change.
     NotQueued,
