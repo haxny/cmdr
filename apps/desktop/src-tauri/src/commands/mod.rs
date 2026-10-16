@@ -59,6 +59,8 @@ pub mod share_link;
 // as `sftp` and `webdav`, whose commands it faces.
 #[cfg(any(target_os = "macos", target_os = "linux"))]
 pub mod servers;
+// The IPC side of a mutation's late end: the engine hands it to a callback, this broadcasts it.
+pub(crate) mod settled;
 // SFTP works wherever the app does; the gate matches `network`, whose stores and
 // wiring it reaches through. ❌ No stub counterpart: stubbing it would turn SFTP
 // off on Linux, where the Docker E2E lane runs.

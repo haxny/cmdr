@@ -118,6 +118,12 @@ pub enum ClipboardPasteOutcome {
 #[cfg(target_os = "macos")]
 pub use payload::{ClipboardPayload, payload_to_content, pick_clipboard_payload};
 
+// Paste clipboard content as a file: the payload goes through the engine's numbered-create instant op.
+#[cfg(target_os = "macos")]
+mod paste_file;
+#[cfg(target_os = "macos")]
+pub(crate) use paste_file::write_payload_replying;
+
 #[cfg(all(target_os = "macos", not(feature = "playwright-e2e")))]
 pub use pasteboard::{
     read_file_urls_from_clipboard, read_pasteboard_data, read_text_from_clipboard, write_file_urls_to_clipboard,

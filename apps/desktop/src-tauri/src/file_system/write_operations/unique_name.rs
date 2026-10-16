@@ -10,7 +10,7 @@
 //! written — is what [`ClaimedNames`] remembers.
 //!
 //! The volume namer (`transfer/volume/naming.rs::find_unique_volume_name`)
-//! and the clipboard-paste writer (`paste_clipboard.rs`) walk these same
+//! and the numbered create behind paste-as-file (`create_numbered.rs`) walk these same
 //! candidates, so the numbering can't drift between backends.
 
 use std::collections::HashSet;

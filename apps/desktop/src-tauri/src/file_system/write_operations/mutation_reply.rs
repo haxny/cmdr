@@ -155,19 +155,6 @@ fn flatten_join<T>(joined: Result<Result<T, MutationError>, tokio::task::JoinErr
     }
 }
 
-/// The production `on_settled`: broadcasts the settle event (`mutation-settled`,
-/// or a command's own, like `clipboard-paste-settled`) to every window.
-pub(crate) fn broadcast_settled<E>(app: tauri::AppHandle) -> impl FnOnce(E) + Send + 'static
-where
-    E: Event + Serialize + Clone + Send + 'static,
-{
-    move |settled| {
-        if let Err(e) = settled.emit(&app) {
-            log::warn!(target: "write_ops", "couldn't emit {}: {e}", E::NAME);
-        }
-    }
-}
-
 #[cfg(test)]
 #[path = "mutation_reply_tests.rs"]
 mod tests;

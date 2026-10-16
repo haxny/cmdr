@@ -1,12 +1,12 @@
 //! Tauri commands for write operations (create, copy, move, delete, trash) and scan preview.
 
+use crate::commands::settled::broadcast_settled;
 use crate::file_system::write_operations::RetryOutcome;
 use crate::file_system::write_operations::TrashRoutingAnswer;
 use crate::file_system::write_operations::{
     ConflictId, ConflictResolution, ConflictResolutionOutcome, MUTATION_REPLY_DEADLINE, MutationError, MutationReply,
     MutationSettled, ScanPreviewPurpose, ScanPreviewRefusal, ScanPreviewStartResult, SourcesGoneAnswerOutcome,
-    broadcast_settled, cancel_scan_preview as ops_cancel_scan_preview,
-    continue_without_gone_sources as ops_continue_without_gone_sources,
+    cancel_scan_preview as ops_cancel_scan_preview, continue_without_gone_sources as ops_continue_without_gone_sources,
     create_directory_managed as ops_create_directory_managed, create_file_managed as ops_create_file_managed,
     get_scan_preview_totals as ops_get_scan_preview_totals, reply_within,
     resolve_write_conflict as ops_resolve_write_conflict, start_scan_preview as ops_start_scan_preview,

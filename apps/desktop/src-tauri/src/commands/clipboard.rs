@@ -277,7 +277,7 @@ pub async fn read_clipboard_text(app: tauri::AppHandle) -> Result<Option<String>
 /// Thin edge: reads the RAW pasteboard flavors on the main thread (NSPasteboard is
 /// main-thread-only), then picks the flavor + converts TIFF→PNG OFF the main
 /// thread (that decode can be hundreds of ms — never on the UI thread), and hands
-/// the result to `write_operations::write_payload_replying`.
+/// the result to `clipboard::write_payload_replying`.
 /// `directory` is tilde-expanded for the local `root` volume only.
 #[cfg(target_os = "macos")]
 #[tauri::command]
@@ -322,11 +322,11 @@ pub async fn paste_clipboard_as_file(
     // 3. Write, detached: a slow write (a large image onto a busy share) answers
     // `StillRunning` and reports its end on `clipboard-paste-settled`, never a
     // timeout that drops the write mid-flight.
-    crate::file_system::write_operations::write_payload_replying(
+    clipboard::write_payload_replying(
         volume_id,
         PathBuf::from(expanded),
         payload,
-        crate::file_system::write_operations::broadcast_settled(app),
+        super::settled::broadcast_settled(app),
     )
     .await
 }

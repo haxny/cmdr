@@ -14,10 +14,11 @@ use std::path::PathBuf;
 use tokio::time::Duration;
 
 use super::file_system::expand_tilde;
+use super::settled::broadcast_settled;
 use crate::file_system::volume::io_budget_for_volume;
 use crate::file_system::write_operations::trash::{trash_dir_for_path, trash_single_journaled};
 use crate::file_system::write_operations::{
-    MUTATION_REPLY_DEADLINE, MutationError, MutationReply, MutationSettled, RenameValidityResult, broadcast_settled,
+    MUTATION_REPLY_DEADLINE, MutationError, MutationReply, MutationSettled, RenameValidityResult,
     check_rename_permission_for_volume, check_rename_validity_impl, rename_managed, reply_within,
 };
 use cmdr_fs::deadline::timeout_detached_typed;

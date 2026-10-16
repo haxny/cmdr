@@ -109,7 +109,7 @@ The full top-level inventory is here:
   `target_names.rs` (the new NAME a renamed source takes in a move, § "Renames that run as moves"),
   `mutation_error.rs` (the typed refusal an instant mutation returns), `mutation_reply.rs` (its reply within the deadline, and the late settle, § "A slow instant mutation says it is still running"), `validation.rs`, `free_space.rs` (the copy's free-space pre-flight, § "The free-space pre-flight"), `analytics.rs`, `eta.rs`. Journaling: `journal.rs`, `journal_search.rs`. The
   scratch dir archive edits stage local bytes in: `scratch_dir.rs` (the remote edit itself is `archive_edit/remote.rs`). Entry points: `create/` + `create.rs`, `rename/` +
-  `rename.rs`, `paste_clipboard.rs`, `routing.rs` (the one routing every cross-volume transfer takes:
+  `rename.rs`, `create_numbered.rs` (paste-as-file's numbered create), `routing.rs` (the one routing every cross-volume transfer takes:
   `start_volume_{copy,move,compress}`, plus `start_rename_by_move`; `routing/retry.rs` is the Retry recipe a copy or move
   leaves with the manager). `source_binding.rs` is the optional set of sources an op may touch. `queued_sources.rs` is the check an op that waited in the queue runs on its sources when admitted, parking on `sources_gone_slot.rs` (a leaf the state owns, like `outage_slot.rs`). Layering, so the three stay out of a cycle: `source_binding` → `queued_sources` → `state` → `sources_gone_slot`, and the empty batch's terminal shape is `WriteCompleteEvent::all_skipped` in `types`. Fixtures:
   `test_support.rs`. Every backend's cells through this pipeline live in `backend_suites/`: the backend-blind
@@ -185,7 +185,7 @@ decisions"; the estimator in § "ETA + throughput"; `WriteSettledGuard` in § "S
   `validation_integration_test.rs::{two_sources_sharing_a_name_are_refused, sources_differing_only_in_case_are_allowed,
   distinct_source_names_are_allowed}`.
 - **`unique_name.rs::numbered_name(stem, ext, counter)` is the ONE ` (N)` formatter** (`counter 0` = bare, `1..` = ` (N)`).
-  `find_unique_name`, `next_available_name`, `paste_clipboard.rs`, and the volume namer
+  `find_unique_name`, `next_available_name`, `create_numbered.rs`, and the volume namer
   (`transfer/volume/naming.rs::find_unique_volume_name`) all go through it, so the numbering paths can't drift.
   `archive_edit/conflicts.rs::find_unique_inner` is deliberately outside this: it numbers slash-joined inner-path
   strings against an `ArchiveIndex`, and its doc comment says so.
@@ -234,7 +234,7 @@ decisions"; the estimator in § "ETA + throughput"; `WriteSettledGuard` in § "S
 - **`create.rs` co-locates the instant listing update** (`should_emit_synthetic_diff` / `patch_listings_after_create`,
   both `pub(super)`) that lands a brand-new entry in the pane on local-FS-backed volumes, through the local backend's
   mutation patch (`MutationEvent::Created`, so the composer's index apply and badge invalidation run too).
-  `paste_clipboard.rs` reuses both so a pasted file cursor-lands exactly like mkfile.
+  `create_numbered.rs` reuses both so a pasted file cursor-lands exactly like mkfile.
 - **Scan-phase `expected_files_total` / `expected_bytes_total` come from
   `crate::indexing::read::expected_totals::expected_totals_for_sources`** and are `None` when the index doesn't cover
   every source; the FE then falls back to a tally-only display instead of a progress bar. `scan.rs`'s walker derives
@@ -249,12 +249,12 @@ decisions"; the estimator in § "ETA + throughput"; `WriteSettledGuard` in § "S
   again. It journals one header and one final outcome per row. The Ask Cmdr command is the only caller, and it never
   receives paths or names from the frontend. On a non-root volume its destinations are new names: § "Look-alike
   names".
-- **`paste_clipboard.rs::write_payload_to_dir` runs detached under the instant-mutation reply deadline**
-  (`write_payload_replying`, § "A slow instant mutation says it is still running"), since the payload can be a large
+- **Paste-as-file (`clipboard/paste_file.rs::write_payload_to_dir` over `create_numbered.rs`) runs detached under the
+  instant-mutation reply deadline** (`write_payload_replying`, § "A slow instant mutation says it is still running"), since the payload can be a large
   image landing on a slow network volume. ❌ Never a bare timeout around it: that DROPS the write mid-flight. Its reply
   and settle carry the created file (`PasteClipboardReply`, `clipboard-paste-settled`), which is why it uses
-  `reply_or_hand_off`, the value-carrying core of `reply_within`. The writer takes an already-read `ClipboardPayload` + a `&Path`, decoupled from NSPasteboard and the IPC edge, so it's
-  `TempDir`-testable; the retry loop writes via `Volume::create_file` (O_EXCL) and bumps the counter on the TYPED
+  `reply_or_hand_off`, the value-carrying core of `reply_within`. The app half takes an already-read `ClipboardPayload` + a `&Path`, decoupled from NSPasteboard and the IPC edge, so it's
+  `TempDir`-testable; the engine's retry loop writes via `Volume::create_file` (O_EXCL) and bumps the counter on the TYPED
   `VolumeError::AlreadyExists`, so there's no pre-scan-then-write TOCTOU and it works on any writable volume.
   **Partial-file-on-timeout edge (accepted):** past 30 s the write future is dropped and a partial `pasted.<ext>` may
   remain (the user sees a timeout and can retry or delete). It's bounded and rare (local writes never approach 30 s, and
@@ -488,7 +488,7 @@ Four command families answer with it, so every instant-mutation surface matches 
 `check_rename_permission`, and `move_to_trash` (`commands/rename.rs`); `create_directory` / `create_file`
 (`commands/file_system/write_ops.rs`); `check_rename_validity`, whose own answer is a typed `RenameValidityResult` so
 the only `Err` it can produce is the deadline or a panicked task; and `paste_clipboard_as_file`, which is a managed
-`CreateFile` op under the hood and refuses the way one does (`paste_clipboard.rs`). A volume's own refusal rides through
+`CreateFile` op under the hood and refuses the way one does (`create_numbered.rs`). A volume's own refusal rides through
 `MutationError::Volume` carrying the whole `VolumeError`. Full rules: `docs/guides/error-handling.md`.
 
 ## A slow instant mutation says it is still running (`mutation_reply.rs`)

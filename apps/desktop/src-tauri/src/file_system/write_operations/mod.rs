@@ -44,8 +44,9 @@ mod mutation_reply;
 mod operation_intent;
 mod outage_slot;
 mod overwrite;
+// The engine half of "paste clipboard content as a file"; its only caller is macOS.
 #[cfg(target_os = "macos")]
-mod paste_clipboard;
+mod create_numbered;
 mod queued_sources;
 mod rename;
 mod reversal;
@@ -171,9 +172,9 @@ pub(crate) use queued_sources::pending_sources_gone;
 // `check_rename_validity` command signature.
 pub(crate) use create::{create_directory_managed, create_file_managed};
 // The transfer and compress dialogs' destination probe (`destination_exists`).
-pub(crate) use look_alike::held_in_another_spelling;
 #[cfg(target_os = "macos")]
-pub(crate) use paste_clipboard::write_payload_replying;
+pub(crate) use create_numbered::create_numbered_file;
+pub(crate) use look_alike::held_in_another_spelling;
 pub(crate) use rename::{
     BulkRenameRow, RenameStartError, RenameValidityResult, RenamesStarted, check_rename_permission_for_volume,
     check_rename_validity_impl, rename_managed, same_local_file, start_renames,
@@ -274,7 +275,7 @@ pub(crate) fn test_retain_failure(operation_id: &str, operation_type: WriteOpera
 pub use mutation_error::MutationError;
 #[cfg(test)]
 pub(crate) use mutation_reply::MutationSettledOutcome;
-pub(crate) use mutation_reply::{MUTATION_REPLY_DEADLINE, broadcast_settled, reply_within};
+pub(crate) use mutation_reply::{MUTATION_REPLY_DEADLINE, Replied, reply_or_hand_off, reply_within};
 pub use mutation_reply::{MutationReply, MutationSettled};
 pub use types::VolumeCopyConfig;
 // The transfer dialog's pre-flight conflict check: `commands/file_system/

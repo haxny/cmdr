@@ -283,7 +283,7 @@ async fn route_archive_create(
 /// ejectable, so it stays out of the busy set — no eject-menu churn for local
 /// creates).
 ///
-/// `pub(super)` so the sibling paste-clipboard writer routes through the same
+/// `pub(super)` so the sibling numbered create (`create_numbered.rs`) routes through the same
 /// managed `CreateFile` instant op (and journals for free).
 pub(super) fn instant_descriptor(
     op_type: WriteOperationType,
@@ -452,7 +452,7 @@ pub(crate) async fn create_file_core(
 /// Protocol-only volumes (like MTP) don't support `std::fs` access, so synthetic
 /// diffs would fail. These volumes handle UI updates through their own event systems.
 ///
-/// `pub(super)` so the sibling paste-clipboard writer reuses the same
+/// `pub(super)` so the sibling numbered create (`create_numbered.rs`) reuses the same
 /// listing-cache update the create op emits (cursor-land parity with mkfile).
 pub(super) fn should_emit_synthetic_diff(volume_id: Option<&str>) -> bool {
     match volume_id {
@@ -473,7 +473,7 @@ pub(super) fn should_emit_synthetic_diff(volume_id: Option<&str>) -> bool {
 /// loop may have picked `pasted (N)`. `None` is the local filesystem (`root`);
 /// this only runs for local-FS volumes (`should_emit_synthetic_diff`).
 ///
-/// `pub(super)` so the sibling paste-clipboard writer reuses it (see
+/// `pub(super)` so the sibling numbered create (`create_numbered.rs`) reuses it (see
 /// `should_emit_synthetic_diff`).
 pub(super) fn patch_listings_after_create(volume_id: Option<&str>, new_path: &Path, parent_path: &Path) {
     let Some(name) = new_path.file_name() else {
