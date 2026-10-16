@@ -1,13 +1,13 @@
 /**
  * The `/trust` page's list content: every network connection the app makes, where backend data
- * lives, the subprocessors, retention, and the "Not in place yet" gaps. `src/pages/trust.astro` is
+ * lives, the subprocessors, retention, and the known limitations. `src/pages/trust.astro` is
  * a template over this and owns the layout plus the prose sections.
  *
  * ❗ Every claim here must be true of the RELEASED app on the date in `verifiedAgainst`. The audience
  * is a security reviewer who will check it against the source, so an overstatement costs more than
  * a gap. The evidence behind each line is David's fact sheet
  * (`projects/Cmdr/business/2026-09-23 Cmdr security posture fact sheet.md` in his vault) and
- * `docs/security.md`. When a gap closes, move it out of `notInPlaceYet` and update the section.
+ * `docs/security.md`. When a gap closes, move it out of `knownLimitations` and update the section.
  *
  * Strings marked "Inline HTML" render through `set:html` (for `<code>`, `<strong>`, and links).
  * `devTodo` fields are for David only: they render through `DevTodo.astro`, which prints nothing
@@ -85,7 +85,7 @@ export const networkConnections: NetworkConnection[] = [
     control:
       'Sent by hand only, by default. Automatic sending is Settings &gt; Updates &amp; privacy &gt; "Send error reports automatically", off by default. IT can turn off both kinds for everyone with <code>DisableCrashAndErrorReports</code>.',
     devTodo:
-      'Release timing: AI search and selection words stopped reaching the log in 3bfa0e246, and the redactor started covering paths under any prefix and a name repeated next to its path on 2026-10-06. Both ship in the release after 0.50.0, so this wording is only true from then. Remaining: a name logged with no path on its line (<code>redact/DETAILS.md</code> § "Names in prose"). If it ever closes, drop the "Known gap" sentence here, the matching gap in "Not in place yet", and the gap sentences in the privacy policy (section 2, the paragraph after the list, and the intro).',
+      'Release timing: AI search and selection words stopped reaching the log in 3bfa0e246, and the redactor started covering paths under any prefix and a name repeated next to its path on 2026-10-06. Both ship in the release after 0.50.0, so this wording is only true from then. Remaining: a name logged with no path on its line (<code>redact/DETAILS.md</code> § "Names in prose"). If it ever closes, drop the "Known gap" sentence here, the matching line in "Known limitations", and the gap sentences in the privacy policy (section 2, the paragraph after the list, and the intro).',
   },
   {
     id: 'license',
@@ -308,24 +308,19 @@ export const serverRetention: RetentionRule[] = [
 ]
 
 /**
- * Honest gaps a strict review would find anyway. Inline HTML. Keep each item one or two short
- * sentences; the reviewer scans this list.
+ * Known limitations: what Cmdr doesn't do, each with what covers it. Inline HTML, one or two short
+ * sentences per item; the reviewer scans this list. A fact about how Cmdr works (one maintainer,
+ * telemetry defaults) belongs in its own section of the page, not here.
  */
-export const notInPlaceYet: string[] = [
-  '<strong>Usage stats and crash reports are on by default.</strong> Each user can turn them off, and IT can turn them off for everyone (<a href="#mdm">central management</a>).',
-  "<strong>No update channels and no staged rollout.</strong> IT can turn updates off or hold Cmdr at a version, but can't install an older release through the updater.",
-  '<strong>No managed preference turns off the remaining traffic</strong>: license checks, S3 prices, and the image-search model download (<a href="#mdm-not-covered">why each one stays</a>).',
-  "<strong>Data leaves the EU</strong> (see above), and Cloudflare storage isn't locked to the EU jurisdiction.",
-  '<strong>Error-report cleaning has a known gap</strong>: a file name logged on its own, with no path on the same line, can be included.',
-  '<strong>No reproducible builds.</strong> Each release publishes SHA-256 checksums, signed build provenance, and signed SBOMs, and its tag is signed.',
-  '<strong>No second-person code review.</strong> Cmdr has one maintainer, and development is AI-assisted. Automated checks stand in for a reviewer (<a href="/trust/development#review">details</a>).',
-  "<strong>One maintainer can publish a release</strong> to every install. The Apple signing keys sit in a protected GitHub environment that only signed release tags reach, and updates also need the update signing key, which stays on the maintainer's Mac.",
-  "<strong>Checks on GitHub run after a change lands</strong>, on Linux and macOS. A release waits for a full, green run of the commit it's cut from, checked by both the maintainer's release script and the release workflow on GitHub. The macOS end-to-end tests run only on the maintainer's Mac.",
-  '<strong>No automated tests on older macOS versions.</strong> A release-time check catches system frameworks and functions that are too new for them.',
-  '<strong>No third-party audit or penetration test, and no SOC 2 or ISO 27001.</strong> The CSA STAR listing is a self-assessment.',
-  "<strong>One person maintains Cmdr</strong> and holds all signing keys. There's no written support commitment.",
-  "<strong>No sign-in for proxies</strong> beyond a user name and password in the proxy's address (<code>HTTPS_PROXY</code> or <code>ALL_PROXY</code>).",
-  "<strong>No published security advisories yet</strong>, so there's no track record of how Cmdr handles a reported issue.",
+export const knownLimitations: string[] = [
+  '<strong>No update channels or staged rollout</strong>: every install gets a release at the same time. IT can turn updates off or hold Cmdr at a version (<a href="#mdm">central management</a>), though the updater never installs an older release.',
+  '<strong>Three connections have no managed off switch</strong>: license checks, S3 prices, and the image-search model download, each for a stated reason (<a href="#mdm-not-covered">why each one stays</a>).',
+  '<strong>Some data leaves the EU</strong> (<a href="#eu">details</a>), and Cloudflare storage isn\'t locked to the EU jurisdiction.',
+  '<strong>Error-report cleaning has one known gap</strong>: a file name logged on its own, with no path on the same line, can be included.',
+  '<strong>No reproducible builds.</strong> Instead, each release publishes SHA-256 checksums, signed build provenance, and signed SBOMs, and its tag is signed.',
+  '<strong>Automated tests run on current macOS only.</strong> A release-time check catches system frameworks and functions too new for older versions.',
+  '<strong>No third-party audit, penetration test, SOC 2, or ISO 27001.</strong> Cmdr is self-assessed instead: the CSA STAR listing and the OpenChain self-certifications above.',
+  "<strong>Proxy sign-in is limited</strong> to a user name and password in the proxy's address (<code>HTTPS_PROXY</code> or <code>ALL_PROXY</code>).",
 ]
 
 /** Response times for vulnerability reports. Keep in sync with the repo-root `SECURITY.md`. */

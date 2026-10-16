@@ -96,9 +96,9 @@ const toc = [
             {latestAdvisories.map((fix) => fix.days).sort((a, b) => a - b).join(' and ')} days after they were published.
         </li>
         <li>
-            <strong>Gaps</strong>: no third-party audit, and checks on GitHub run
+            <strong>Limits</strong>: no third-party audit, and checks on GitHub run
             after a change lands instead of before. The full list is in
-            <a href="/trust#gaps">Not in place yet</a>.
+            <a href="/trust#gaps">Known limitations</a>.
         </li>
     </ul>
 
@@ -191,11 +191,6 @@ const toc = [
         </li>
         <li>The source code is public, so anyone can review any change after it lands.</li>
     </ul>
-    <DevTodo>
-        To narrow the no-second-reviewer gap: a required automated review pass per merge with its findings recorded
-        (for example <code>/code-review</code> on each worktree branch before the FF-merge, logged in the commit body),
-        or a paid human review of the riskiest areas (updater, write engine, protocol parsers).
-    </DevTodo>
 
     <h2 id="test">Test</h2>
     <h3>What's tested</h3>

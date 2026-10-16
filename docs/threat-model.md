@@ -24,8 +24,8 @@ tracker first.
 - **Adding a new boundary** (a new network backend, a new IPC surface, a new outbound host, a new parser of untrusted
   bytes): add a section with the same four parts (entry points, threats, mitigations, residual risk), and re-rank the
   list at the end.
-- **Closing a residual risk?** Move it to mitigations, and update `/trust` (`trust.ts`'s `notInPlaceYet`) if it's listed
-  there.
+- **Closing a residual risk?** Move it to mitigations, and update `/trust` (`trust.ts`'s `knownLimitations`) if it's
+  listed there.
 
 ## Security posture in one paragraph
 
