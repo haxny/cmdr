@@ -458,28 +458,20 @@ pub async fn install_update(state: State<'_, UpdateState>) -> Result<UpdateInsta
     // installer asks the policy again about THAT version once it has extracted it.
     let offered = staged.version.clone();
     let result = tokio::task::spawn_blocking(move || {
-        // The version the policy is asked about is the one the bundle's own `Info.plist` names, so
-        // it's the version that gets installed when the install goes through.
-        let judged = Mutex::new(None);
-        let installed = installer::install(&staged.tarball, &|version| {
-            *judged.lock_ignore_poison() = Some(version.clone());
+        installer::install(&staged.tarball, &|version| {
             policy
                 .update_to(version)
                 .inspect_err(|refusal| security_events::on_policy_refusal(version, *refusal))
                 .is_ok()
-        });
-        installed.map(|notice| (notice, judged.lock_ignore_poison().take()))
+        })
     })
     .await
     .map_err(|e| UpdateInstallError::Failed {
         detail: format!("Install task panicked: {e}"),
     })
     .and_then(|installed| installed);
-    security_events::on_install_result(
-        &offered,
-        result.as_ref().map(|(_, judged)| judged.as_ref().unwrap_or(&offered)),
-    );
-    let (security_notice, _) = result?;
+    security_events::on_install_result(&offered, result.as_ref().map(|vetted| &vetted.version));
+    let security_notice = result?.security_notice;
     if let Some(notice) = &security_notice {
         log::info!(
             "The update fixes {} security issue(s), the most severe {:?}",
