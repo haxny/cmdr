@@ -91,9 +91,10 @@ Out of scope:
 
 ## Supported versions
 
-Only the **latest released version** gets security fixes. Cmdr checks for updates every three hours by default and
-installs them automatically, so the latest version is what most users run. If you find a problem in an older version,
-please check that it still happens in the latest one.
+**Support period**: every Cmdr version gets security fixes for at least five years after its release. The fixes ship as
+updates to the latest version, free for every user, so only the **latest released version** gets security fixes. Cmdr
+checks for updates every three hours by default and installs them automatically, so the latest version is what most
+users run. If you find a problem in an older version, please check that it still happens in the latest one.
 
 ## Safe harbor
 

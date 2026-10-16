@@ -335,4 +335,5 @@ export const vulnerabilityResponse: string[] = [
   'A first assessment within 14 days.',
   'A fix for critical and high-severity issues within 30 days where technically possible, and within 90 days for the rest.',
   'Status updates at least every 14 days until the issue is closed.',
+  'Support period: every Cmdr version gets security fixes for at least five years after its release, as free updates to the latest version.',
 ]
