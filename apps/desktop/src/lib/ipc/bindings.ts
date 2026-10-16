@@ -5059,6 +5059,21 @@ export const commands = {
    *  that has to answer it is the same frontend that would be waiting on this call.
    */
   drainPendingReveals: () => __TAURI_INVOKE<void>('drain_pending_reveals'),
+  // Where the `cmdr` command stands. `None` only if the filesystem didn't answer in time.
+  getCliCommandStatus: () =>
+    __TAURI_INVOKE<{
+      state: CliCommandState
+      // Why a click on the item would be refused, or `None` when it would go ahead.
+      blockedBy: CliCommandBlocker | null
+    } | null>('get_cli_command_status'),
+  /**
+   *  Put the `cmdr` command on PATH. `admin_prompt` is the sentence macOS shows in its password
+   *  dialog, when the folder needs one; the frontend words it so it's in the user's language.
+   */
+  installCliCommand: (adminPrompt: string) => __TAURI_INVOKE<CliCommandResult>('install_cli_command', { adminPrompt }),
+  // Take the `cmdr` command off PATH, if it's ours to take.
+  uninstallCliCommand: (adminPrompt: string) =>
+    __TAURI_INVOKE<CliCommandResult>('uninstall_cli_command', { adminPrompt }),
   /**
    *  Fetches `latest.json` (via the update check proxy for analytics) and says what it found, with
    *  the organization's policy applied. An `Available` release is remembered for `download_update`.
@@ -6394,6 +6409,66 @@ export type ChunkEnd =
 export type ClashPlan = {
   resolution: ConflictResolution
   clashes: KnownClash[]
+}
+
+// Why this copy of Cmdr won't install the command.
+export type CliCommandBlocker =
+  /**
+   *  A debug build or a dev / worktree / E2E instance (`reveal::registration::own_bundle_id`).
+   *  Its link would point into a `target/` dir that comes and goes. Holds in both directions:
+   *  such a build doesn't remove the installed copy's link either.
+   */
+  | 'notProductionBuild'
+  /**
+   *  This copy isn't in an Applications folder, so it's one that gets moved or deleted, and the
+   *  link would dangle (`crate::install_location`). Blocks installing only, never removing.
+   */
+  | 'notInApplications'
+
+// What an install or uninstall did.
+export type CliCommandOutcome =
+  | { kind: 'installed' }
+  | { kind: 'uninstalled' }
+  // It was already the way the click asked for.
+  | { kind: 'unchanged' }
+  // The user dismissed the administrator prompt.
+  | { kind: 'canceled' }
+  /**
+   *  Refused without touching anything. The returned status says why (its state or its
+   *  `blocked_by`), so the frontend words it from one place.
+   */
+  | { kind: 'refused' }
+  // The OS said no. `code` is an errno or an AppleScript error number, for the log.
+  | { kind: 'failed'; code: number | null }
+
+// An outcome plus the state it left things in, so the caller renders the truth.
+export type CliCommandResult = {
+  outcome: CliCommandOutcome
+  status: CliCommandStatus
+}
+
+// Where the command stands, read through to the filesystem.
+export type CliCommandState =
+  // Nothing at `/usr/local/bin/cmdr`, and no Homebrew install either.
+  | 'notInstalled'
+  /**
+   *  Our link: `/usr/local/bin/cmdr` points at a Cmdr bundle's script. Any Cmdr copy's, so a
+   *  link made from an older location still reads as installed and can be removed.
+   */
+  | 'installed'
+  /**
+   *  The Homebrew cask put `cmdr` on PATH. We leave it alone: `brew` owns that link, and
+   *  uninstalling the cask removes it.
+   */
+  | 'installedByHomebrew'
+  // Something else is at `/usr/local/bin/cmdr`. ❌ Never touched: it's someone else's `cmdr`.
+  | 'takenByOther'
+
+// What the menu item and the palette row show.
+export type CliCommandStatus = {
+  state: CliCommandState
+  // Why a click on the item would be refused, or `None` when it would go ahead.
+  blockedBy: CliCommandBlocker | null
 }
 
 export type ClientInfoDto = {

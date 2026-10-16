@@ -907,6 +907,16 @@ macro_rules! ipc_command_manifest {
                 ]
                 dispatch_only: []
             }
+            // The app menu's "Install “cmdr” command" (`cli/`). macOS only: the link, the
+            // script, and the delivery path it feeds all are.
+            cfg(target_os = "macos") {
+                typed: [
+                    crate::cli::commands::get_cli_command_status,
+                    crate::cli::commands::install_cli_command,
+                    crate::cli::commands::uninstall_cli_command,
+                ]
+                dispatch_only: []
+            }
             // The custom updater.
             cfg(target_os = "macos") {
                 typed: [

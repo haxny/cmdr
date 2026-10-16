@@ -16,7 +16,7 @@
  * non-macOS labels and asserts the macOS catalog keys exist separately.
  */
 import { describe, it, expect } from 'vitest'
-import { commands, updateLicenseCommandName } from './command-registry'
+import { commands, updateCliCommandName, updateLicenseCommandName } from './command-registry'
 import { tString } from '#lib/intl/messages.svelte.js'
 
 /** id → exact pre-migration English `name`. */
@@ -241,6 +241,7 @@ const EXPECTED_DESCRIPTIONS: Record<string, string | undefined> = {
   'file.multiRename':
     'Renames the selected files (or the whole folder) with a name mask, counter, and search & replace',
   'app.checkForUpdates': 'Check whether a newer version of Cmdr is available, and download it if so',
+  'app.toggleCliCommand': 'Type cmdr and a path in a terminal to open it in Cmdr',
   'cmdr.openOnboarding': 'Reopen the onboarding wizard to review or change first-launch setup options',
   'help.openShortcuts': 'Open a read-only window listing every keyboard shortcut, live-synced with your customizations',
   'help.accessibility': 'Open the guide to Cmdr’s accessibility features on getcmdr.com',
@@ -306,7 +307,8 @@ const EXPECTED_DESCRIPTIONS: Record<string, string | undefined> = {
 describe('command registry en parity', () => {
   it('every command name is byte-identical to the pre-migration English', () => {
     for (const command of commands) {
-      if (command.id === 'app.licenseKey') continue // state-dependent, checked below
+      // State-dependent, both checked below.
+      if (command.id === 'app.licenseKey' || command.id === 'app.toggleCliCommand') continue
       expect(command.name, command.id).toBe(EXPECTED_NAMES[command.id])
     }
   })
@@ -329,6 +331,19 @@ describe('command registry en parity', () => {
     updateLicenseCommandName(false)
     expect(commands.find((c) => c.id === 'app.licenseKey')?.name).toBe('Enter license key')
     updateLicenseCommandName(true) // restore default
+  })
+
+  it('the cmdr command name follows where the command stands (all three branches)', () => {
+    const name = (): string | undefined => commands.find((c) => c.id === 'app.toggleCliCommand')?.name
+    updateCliCommandName('installed')
+    expect(name()).toBe('Uninstall “cmdr” command')
+    updateCliCommandName('installedByHomebrew')
+    expect(name()).toBe('“cmdr” command installed by Homebrew')
+    // Someone else's `cmdr` still reads as Install: running it explains why it can't.
+    updateCliCommandName('takenByOther')
+    expect(name()).toBe('Install “cmdr” command')
+    updateCliCommandName('notInstalled') // restore default
+    expect(name()).toBe('Install “cmdr” command')
   })
 
   it('the macOS platform-conditional labels exist in the catalog with the right English', () => {

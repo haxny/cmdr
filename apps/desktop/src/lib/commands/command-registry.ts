@@ -198,4 +198,4 @@ export function getPaletteCommands(holds?: (condition: PaletteCondition) => bool
 // Re-exported from `sources/app.ts`, where the flag it flips lives beside the
 // `app.licenseKey` entry that reads it. Callers (`routes/(main)/+page.svelte`)
 // keep importing it from the registry.
-export { updateLicenseCommandName } from './sources/app'
+export { updateLicenseCommandName, updateCliCommandName } from './sources/app'

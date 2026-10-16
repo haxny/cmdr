@@ -1,8 +1,8 @@
 /**
  * Handlers for the app-level dialog and window openers: the command palette,
  * search, "Go to path", settings, about, license key, error report, feedback,
- * "What's new", updates, onboarding re-entry, and the about-window
- * website/upgrade/close actions.
+ * "What's new", updates, onboarding re-entry, the `cmdr` command's install
+ * toggle, and the about-window website/upgrade/close actions.
  *
  * The selection-dialog openers (`selection.selectFiles` / `selection.deselectFiles`)
  * live in `selection-handlers`, not here.
@@ -20,6 +20,7 @@ import { openOperationLog } from '#lib/operation-log/operation-log-trigger.svelt
 import { openSuggestedOps } from '#lib/suggested-ops/suggested-ops-trigger.svelte.js'
 import { toggleRail } from '#lib/ask-cmdr/ask-cmdr-trigger.svelte.js'
 import { runMenuTriggeredCheck } from '#lib/updates/updater.svelte.js'
+import { toggleCliCommand } from '#lib/cli-command/toggle-cli-command.js'
 import { detached } from './detached'
 import type { CommandHandlerRecord } from './types'
 
@@ -99,6 +100,11 @@ export const appDialogHandlers = {
 
   'cmdr.openOnboarding': async ({ ctx }) => {
     await ctx.dialogs.openOnboarding()
+  },
+
+  'app.toggleCliCommand': () => {
+    // Detached: an install can sit on macOS's password dialog for as long as the user takes.
+    detached(toggleCliCommand())
   },
 
   'about.openWebsite': async () => {

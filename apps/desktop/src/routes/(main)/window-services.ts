@@ -60,6 +60,7 @@ import { initSnapshotPurge, destroySnapshotPurge } from '#lib/search/snapshot-pu
 import { getSetting } from '#lib/settings/index.js'
 import { drainPendingReveals } from '#lib/tauri-commands/index.js'
 import { startRevealActivationNotice } from '#lib/reveal/reveal-activation-notice.js'
+import { refreshCliCommandName } from '#lib/cli-command/toggle-cli-command.js'
 import {
   startOperationFailureWatch,
   stopOperationFailureWatch,
@@ -259,6 +260,9 @@ export async function startWindowServices(ctx: WindowServicesContext): Promise<v
   // would emit into a window with no listener. Fire-and-forget: the backend answers straight
   // away and does the pane move on its own runtime. See `src-tauri/src/reveal/CLAUDE.md`.
   void drainPendingReveals()
+  // The palette's "Install “cmdr” command" row names what it would do; it learns where the
+  // command stands here and on every focus-gain (`listener-setup.ts`).
+  void refreshCliCommandName()
 }
 
 /** Tear down everything both phases started. Safe to call when neither ran. */

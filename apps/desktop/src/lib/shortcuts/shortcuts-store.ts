@@ -272,6 +272,7 @@ export const menuCommands = [
   'app.settings',
   'app.checkForUpdates',
   'cmdr.openOnboarding',
+  'app.toggleCliCommand',
   // Help (registered in MenuState.items so a future custom binding syncs its accelerator)
   'help.whatsNew',
   'help.viewDebugLog',

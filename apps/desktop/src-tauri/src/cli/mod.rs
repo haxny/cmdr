@@ -9,7 +9,10 @@
 //! owns the app menu's "Install 'cmdr' command" link in `/usr/local/bin`. macOS-only, like the
 //! delivery path it feeds. `DETAILS.md` for the decisions.
 
+pub(crate) mod commands;
+pub(crate) mod install;
 pub(crate) mod open_url;
+mod system_host;
 
 #[cfg(test)]
 mod script_tests;

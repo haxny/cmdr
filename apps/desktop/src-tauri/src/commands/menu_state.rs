@@ -241,7 +241,12 @@ pub fn activate_window_menu<R: Runtime>(app: AppHandle<R>, kind: String) -> Resu
     match kind.as_str() {
         "main" => {
             #[cfg(target_os = "macos")]
-            swap_to_main_menu(&app);
+            {
+                swap_to_main_menu(&app);
+                // Coming back from a terminal is when the `cmdr` command may have changed under
+                // us (`rm`, `brew install`), so its menu label re-reads the filesystem here.
+                crate::cli::commands::refresh_menu_item(&app);
+            }
             set_menu_context(app, "explorer".to_string())
         }
         "viewer" => {

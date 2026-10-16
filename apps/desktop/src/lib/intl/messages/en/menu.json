@@ -59,6 +59,18 @@
   "@menu.app.onboarding": {
     "description": "NOUN. App-menu item that reopens the first-run welcome wizard (the multi-step setup a new user sees once). macOS only. The trailing … is U+2026 and must stay. If your language has no natural noun for this, phrase it as the welcome or setup guide rather than inventing a loanword."
   },
+  "menu.app.cliCommandInstall": "Install “cmdr” command",
+  "@menu.app.cliCommandInstall": {
+    "description": "App-menu item (macOS only) that puts a terminal command named cmdr on the user's PATH, so typing `cmdr <folder>` in Terminal opens that folder in Cmdr. \"Install\" is a VERB. Keep cmdr exactly as is, lowercase, in the quotation marks your language uses: it's the literal word the user types. Mirrors VS Code's \"Install 'code' command in PATH\". Once installed, the same item reads as menu.app.cliCommandUninstall instead."
+  },
+  "menu.app.cliCommandUninstall": "Uninstall “cmdr” command",
+  "@menu.app.cliCommandUninstall": {
+    "description": "App-menu item (macOS only), shown in place of menu.app.cliCommandInstall once the cmdr terminal command is installed; clicking it removes the command again. \"Uninstall\" is a VERB. Keep cmdr exactly as is, lowercase, in the quotation marks your language uses: it's the literal word the user types in Terminal."
+  },
+  "menu.app.cliCommandHomebrew": "“cmdr” command installed by Homebrew",
+  "@menu.app.cliCommandHomebrew": {
+    "description": "App-menu item (macOS only), shown in place of menu.app.cliCommandInstall when the cmdr terminal command came with Cmdr's Homebrew package, so Cmdr leaves it alone; clicking it explains that Homebrew manages it. A status, not an action. Keep cmdr and Homebrew exactly as they are: cmdr is the literal word the user types in Terminal, Homebrew is a product name."
+  },
   "menu.app.settings": "Settings…",
   "@menu.app.settings": {
     "description": "NOUN (plural). Opens Cmdr's Settings window. ⌘, on macOS. Use the exact word macOS uses for the same app-menu item in this language (recent macOS says \"Settings\", older versions said \"Preferences\"); matching the system is what makes it findable. The trailing … is U+2026 and must stay."

@@ -69,6 +69,9 @@ pub fn rebuild_menu_bar<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
     if let Err(e) = (MenuBarRebuilt {}).emit(app) {
         log::warn!(target: "menu", "Menu bar rebuilt, but the frontend wasn't told, so custom accelerators stay stale: {e}");
     }
+    // The new bar says "Install “cmdr” command" whatever the filesystem says; put the real words back.
+    #[cfg(target_os = "macos")]
+    crate::cli::commands::refresh_menu_item(app);
     Ok(())
 }
 

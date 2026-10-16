@@ -96,5 +96,9 @@ pub fn at_startup(app: &tauri::App, settings: &Settings) -> tauri::Result<()> {
 
     app.manage(menu_state);
 
+    // The bar is built saying "Install “cmdr” command"; this puts the filesystem's answer on it.
+    #[cfg(target_os = "macos")]
+    crate::cli::commands::refresh_menu_item(app.handle());
+
     Ok(())
 }

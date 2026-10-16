@@ -121,6 +121,8 @@ All under `apps/desktop/src/lib/`.
 - `reveal/`: macOS-only. How "Reveal in Cmdr" reaches a person: the once-per-install offer to catch "Show in Finder",
   and the once-ever notice the first time one lands. The machine-facing half is `src-tauri/src/reveal/`. See
   `apps/desktop/src/lib/reveal/CLAUDE.md`
+- `cli-command/`: macOS-only. The app menu's "Install “cmdr” command" toggle and its palette twin: what a click does and
+  the toast after it. The machine-facing half is `src-tauri/src/cli/`. See `apps/desktop/src/lib/cli-command/CLAUDE.md`
 - `ui/`: Shared UI primitives: ModalDialog, Button, AlertDialog, Notification, dialog registry, `SectionCard`
 - `routes/(main)/`: The main route: app orchestrator mounting the dual-pane explorer plus top-level dialogs
 - `routes/dev/components/`: Dev-only catalog of every `lib/ui/` primitive (Storybook replacement), in the Debug window
@@ -322,7 +324,11 @@ All under `apps/desktop/src-tauri/src/`.
   shared stop-background-services path all three shutdown routes take
 - `reveal/`: "Reveal in Cmdr": another app's "Show in Finder" lands in a pane instead, via the undocumented
   `NSFileViewer` global default. Owns the registration state machine (macOS-only), the arriving-reveal dispatch, the
-  cold-start buffer, and the `RevealDelivered` announcement. See `apps/desktop/src-tauri/src/reveal/CLAUDE.md`
+  cold-start buffer, and the `RevealDelivered` announcement. The `cmdr` terminal command arrives through the same door.
+  See `apps/desktop/src-tauri/src/reveal/CLAUDE.md`
+- `cli/`: macOS-only. The `cmdr <path>` terminal command: the bundled script's `cmdr-cli://open` URL (parsed here,
+  delivered by `reveal/`), and the app menu's install link at `/usr/local/bin/cmdr`. The script is
+  `apps/desktop/src-tauri/resources/bin/cmdr`. See `apps/desktop/src-tauri/src/cli/CLAUDE.md`
 - `stubs/`: Linux compilation stubs for macOS-only modules (Docker E2E pipeline)
 - `menu/`: Native menu bar: construction, dispatch mapping, accelerator sync, context-aware enable/disable. The Help
   menu carries the "What's new" item (above "Send feedback…")

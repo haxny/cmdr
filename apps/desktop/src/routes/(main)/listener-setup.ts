@@ -51,6 +51,7 @@ import type { ViewMode } from '#lib/app-status-store.js'
 import { adoptedOperationFor } from '#lib/file-operations/foreground-request.js'
 import { getMainWindowOperationRows } from '#lib/file-operations/queue/main-window-operations.svelte.js'
 import { openSettingsWindow } from '#lib/settings/settings-window.js'
+import { refreshCliCommandName } from '#lib/cli-command/toggle-cli-command.js'
 import { seedSettingForE2E, setSetting } from '#lib/settings/index.js'
 import { openFileViewerForPath } from '#lib/file-viewer/open-viewer-for-path.js'
 import {
@@ -677,6 +678,9 @@ export async function setupWindowFocusListener(ctx: ListenerSetupContext): Promi
     const { getCurrentWindow } = await import('@tauri-apps/api/window')
     const unlisten = await getCurrentWindow().onFocusChanged(({ payload: focused }) => {
       void activateWindowMenu(focused ? 'main' : 'other')
+      // Back from a terminal is when the `cmdr` command may have changed under us; the
+      // native menu item re-reads in Rust on the same focus-gain, the palette row here.
+      if (focused) void refreshCliCommandName()
     })
     ctx.unlistenFns.push(unlisten)
   } catch {

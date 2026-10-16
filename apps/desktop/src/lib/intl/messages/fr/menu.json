@@ -59,6 +59,18 @@
   "@menu.app.onboarding": {
     "sourceHash": "c4cc4aa"
   },
+  "menu.app.cliCommandInstall": "Install “cmdr” command",
+  "@menu.app.cliCommandInstall": {
+    "sourceHash": "b99e6c4"
+  },
+  "menu.app.cliCommandUninstall": "Uninstall “cmdr” command",
+  "@menu.app.cliCommandUninstall": {
+    "sourceHash": "ac1052e"
+  },
+  "menu.app.cliCommandHomebrew": "“cmdr” command installed by Homebrew",
+  "@menu.app.cliCommandHomebrew": {
+    "sourceHash": "cc4c0fd"
+  },
   "menu.app.settings": "Réglages…",
   "@menu.app.settings": {
     "sourceHash": "7a04083"

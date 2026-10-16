@@ -341,6 +341,10 @@ pub const CHANGELOG_ID: &str = "changelog";
 /// `apps/desktop/src/lib/onboarding/CLAUDE.md` § "Re-entry points").
 pub const OPEN_ONBOARDING_ID: &str = "open_onboarding";
 
+/// Menu item ID for "Install “cmdr” command" / "Uninstall “cmdr” command" (under the Cmdr app
+/// menu, macOS only). Its label follows the filesystem (`crate::cli::commands`), not a setting.
+pub const CLI_INSTALL_ID: &str = "cli_install";
+
 /// Maps a menu item ID to its command registry ID and scope.
 /// Returns `None` for items handled specially (CheckMenuItems, close-tab, viewer word wrap,
 /// tab context menu, context menu file actions, sort items).
@@ -374,6 +378,7 @@ pub fn menu_id_to_command(menu_id: &str) -> Option<(&'static str, CommandScope)>
         HELP_SEND_FEEDBACK_ID => Some(("feedback.send", CommandScope::App)),
         CHECK_FOR_UPDATES_ID => Some(("app.checkForUpdates", CommandScope::App)),
         OPEN_ONBOARDING_ID => Some(("cmdr.openOnboarding", CommandScope::App)),
+        CLI_INSTALL_ID => Some(("app.toggleCliCommand", CommandScope::App)),
 
         // Pane commands (file-scoped)
         SWITCH_PANE_ID => Some(("pane.switch", CommandScope::FileScoped)),
@@ -504,6 +509,7 @@ pub fn command_id_to_menu_id(command_id: &str) -> Option<&'static str> {
         "feedback.send" => Some(HELP_SEND_FEEDBACK_ID),
         "app.checkForUpdates" => Some(CHECK_FOR_UPDATES_ID),
         "cmdr.openOnboarding" => Some(OPEN_ONBOARDING_ID),
+        "app.toggleCliCommand" => Some(CLI_INSTALL_ID),
         "pane.switch" => Some(SWITCH_PANE_ID),
         "pane.swap" => Some(SWAP_PANES_ID),
         "pane.clone" => Some(CLONE_PANE_ID),

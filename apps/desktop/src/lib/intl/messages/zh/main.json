@@ -162,5 +162,61 @@
   "main.escapeFullScreenHint.onceNote": "这条提示只会显示一次。",
   "@main.escapeFullScreenHint.onceNote": {
     "sourceHash": "210b892"
+  },
+  "main.cliCommand.installed": "The “cmdr” command is ready. In a terminal, type “cmdr .” to open the folder you’re in.",
+  "@main.cliCommand.installed": {
+    "sourceHash": "5b72efe"
+  },
+  "main.cliCommand.uninstalled": "Removed the “cmdr” command.",
+  "@main.cliCommand.uninstalled": {
+    "sourceHash": "43e8d91"
+  },
+  "main.cliCommand.alreadyInstalled": "The “cmdr” command is already installed.",
+  "@main.cliCommand.alreadyInstalled": {
+    "sourceHash": "4a67949"
+  },
+  "main.cliCommand.alreadyUninstalled": "The “cmdr” command was already gone.",
+  "@main.cliCommand.alreadyUninstalled": {
+    "sourceHash": "7d49c8f"
+  },
+  "main.cliCommand.canceled": "Nothing changed. Adding or removing the “cmdr” command takes an administrator password.",
+  "@main.cliCommand.canceled": {
+    "sourceHash": "d51acb1"
+  },
+  "main.cliCommand.installFailed": "Couldn’t install the “cmdr” command. Check that /usr/local/bin is writable, then try again.",
+  "@main.cliCommand.installFailed": {
+    "sourceHash": "de500b0"
+  },
+  "main.cliCommand.uninstallFailed": "Couldn’t remove the “cmdr” command. Check that /usr/local/bin is writable, then try again.",
+  "@main.cliCommand.uninstallFailed": {
+    "sourceHash": "c066530"
+  },
+  "main.cliCommand.homebrew": "Homebrew installed the “cmdr” command along with Cmdr, so it’s already in your terminal. It goes away when you uninstall Cmdr with Homebrew.",
+  "@main.cliCommand.homebrew": {
+    "sourceHash": "1525744"
+  },
+  "main.cliCommand.takenByOther": "There’s already a different “cmdr” in /usr/local/bin, so Cmdr left it alone. Remove or rename it, then try again.",
+  "@main.cliCommand.takenByOther": {
+    "sourceHash": "bd4877c"
+  },
+  "main.cliCommand.notInApplications": "Move Cmdr to your Applications folder first. From anywhere else, the “cmdr” command would stop working the moment Cmdr moves.",
+  "@main.cliCommand.notInApplications": {
+    "sourceHash": "c9e3fc3"
+  },
+  "main.cliCommand.notProductionBuild": "This is a development build of Cmdr, so it leaves the “cmdr” command alone. Use the Cmdr in your Applications folder for this.",
+  "@main.cliCommand.notProductionBuild": {
+    "sourceHash": "f3187b3"
+  },
+  "main.cliCommand.unavailable": "Couldn’t check the “cmdr” command just now. Try again in a moment.",
+  "@main.cliCommand.unavailable": {
+    "sourceHash": "58814f2"
+  },
+  "main.cliCommand.adminPromptInstall": "Cmdr wants to add the “cmdr” command to /usr/local/bin.",
+  "@main.cliCommand.adminPromptInstall": {
+    "sourceHash": "3c16e21"
+  },
+  "main.cliCommand.adminPromptUninstall": "Cmdr wants to remove the “cmdr” command from /usr/local/bin.",
+  "@main.cliCommand.adminPromptUninstall": {
+    "sourceHash": "df420ea"
   }
 }

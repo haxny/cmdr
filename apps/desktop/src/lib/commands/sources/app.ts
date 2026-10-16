@@ -4,7 +4,10 @@
  * registry and resolved into `Command`s.
  */
 import type { CommandSource } from '../types'
+import type { CliCommandState } from '#lib/ipc/bindings.js'
+import type { MessageKey } from '#lib/intl/keys.gen.js'
 import { getBadgeStatus } from '#lib/feature-status.js'
+import { isMacOS } from '#lib/shortcuts/key-capture.js'
 import { BLOCKED_BY_DIALOGS, runsOverDialogs } from '../while-dialog-open'
 
 // macOS owns these four outright via PredefinedMenuItems; they never reach the dispatch core, so
@@ -38,6 +41,24 @@ let hasExistingLicense = true
  */
 export function updateLicenseCommandName(hasLicense: boolean): void {
   hasExistingLicense = hasLicense
+}
+
+/**
+ * Where the `cmdr` terminal command stands, picking `app.toggleCliCommand`'s label
+ * between Install, Uninstall, and Homebrew's. `#lib/cli-command/` writes it from every
+ * status it reads; the native menu item reads the same filesystem fact through Rust
+ * (`src-tauri/src/cli/commands.rs`), a separate mechanism like the license's.
+ */
+let cliCommandState: CliCommandState = 'notInstalled'
+
+export function updateCliCommandName(state: CliCommandState): void {
+  cliCommandState = state
+}
+
+function cliCommandNameKey(): MessageKey {
+  if (cliCommandState === 'installed') return 'commands.appToggleCliCommand.uninstall.label'
+  if (cliCommandState === 'installedByHomebrew') return 'commands.appToggleCliCommand.homebrew.label'
+  return 'commands.appToggleCliCommand.install.label'
 }
 
 export const appCommands: CommandSource[] = [
@@ -144,6 +165,18 @@ export const appCommands: CommandSource[] = [
     shortcuts: [],
     whileDialogOpen: BLOCKED_BY_DIALOGS,
     descriptionKey: 'commands.cmdrOpenOnboarding.description',
+  },
+  {
+    // Installs or removes the `cmdr` terminal command, whichever the filesystem says is next.
+    // macOS only, like the link and the script it points at.
+    id: 'app.toggleCliCommand',
+    nameKey: cliCommandNameKey,
+    scope: 'App',
+    showInPalette: isMacOS(),
+    shortcuts: [],
+    whileDialogOpen: BLOCKED_BY_DIALOGS,
+    descriptionKey: 'commands.appToggleCliCommand.description',
+    keywords: ['terminal', 'shell', 'path', 'cli', 'command line'],
   },
   {
     id: 'help.openShortcuts',

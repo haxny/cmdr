@@ -29,16 +29,17 @@ menu Cmdr id=menu_app
   3 item check_for_updates menu.app.checkForUpdates tracked
   4 item changelog menu.app.changelog tracked
   5 item open_onboarding menu.app.onboarding tracked
-  6 separator
-  7 item settings menu.app.settings [Cmd+,] untracked
-  8 separator
-  9 predefined services menu.app.services
-  10 separator
-  11 predefined hide menu.app.hide
-  12 predefined hide_others menu.app.hideOthers
-  13 predefined show_all menu.app.showAll
-  14 separator
-  15 predefined quit menu.app.quit
+  6 item cli_install menu.app.cliCommandInstall tracked
+  7 separator
+  8 item settings menu.app.settings [Cmd+,] untracked
+  9 separator
+  10 predefined services menu.app.services
+  11 separator
+  12 predefined hide menu.app.hide
+  13 predefined hide_others menu.app.hideOthers
+  14 predefined show_all menu.app.showAll
+  15 separator
+  16 predefined quit menu.app.quit
 menu menu.bar.file id=menu_file
   0 item open menu.file.open tracked
   1 item file_view menu.file.view [F3] tracked

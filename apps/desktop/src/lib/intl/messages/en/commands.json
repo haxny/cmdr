@@ -67,6 +67,22 @@
   "@commands.cmdrOpenOnboarding.description": {
     "description": "Longer help text for the \"Onboarding…\" command, shown as a secondary line in the command palette."
   },
+  "commands.appToggleCliCommand.install.label": "Install “cmdr” command",
+  "@commands.appToggleCliCommand.install.label": {
+    "description": "Command-palette name (macOS only) that puts a terminal command named cmdr on the user's PATH, so typing `cmdr <folder>` in Terminal opens that folder in Cmdr. \"Install\" is a VERB. Keep cmdr exactly as is, lowercase, in your language's quotation marks: it's the literal word the user types. Must match the app-menu item menu.app.cliCommandInstall."
+  },
+  "commands.appToggleCliCommand.uninstall.label": "Uninstall “cmdr” command",
+  "@commands.appToggleCliCommand.uninstall.label": {
+    "description": "Command-palette name (macOS only), shown instead of commands.appToggleCliCommand.install.label once the cmdr terminal command is installed; running it removes the command. \"Uninstall\" is a VERB. Keep cmdr exactly as is, lowercase. Must match the app-menu item menu.app.cliCommandUninstall."
+  },
+  "commands.appToggleCliCommand.homebrew.label": "“cmdr” command installed by Homebrew",
+  "@commands.appToggleCliCommand.homebrew.label": {
+    "description": "Command-palette name (macOS only), shown when the cmdr terminal command came with Cmdr's Homebrew package; running it explains that Homebrew manages it. Keep cmdr and Homebrew exactly as they are. Must match the app-menu item menu.app.cliCommandHomebrew."
+  },
+  "commands.appToggleCliCommand.description": "Type cmdr and a path in a terminal to open it in Cmdr",
+  "@commands.appToggleCliCommand.description": {
+    "description": "Longer help text under the \"Install “cmdr” command\" row in the command palette, saying what the command is for. Keep cmdr exactly as is: it's the literal word the user types."
+  },
   "commands.helpOpenShortcuts.label": "Keyboard shortcuts",
   "@commands.helpOpenShortcuts.label": {
     "description": "Command name that opens a window listing every keyboard shortcut. Appears in the command palette and the Help menu.",

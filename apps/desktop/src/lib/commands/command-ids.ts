@@ -41,6 +41,7 @@ export const COMMAND_IDS = [
   'app.settings',
   'app.checkForUpdates',
   'cmdr.openOnboarding',
+  'app.toggleCliCommand',
   'help.openShortcuts',
   'help.accessibility',
   'help.viewDebugLog',

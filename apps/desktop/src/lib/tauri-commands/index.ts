@@ -626,6 +626,9 @@ export { getNotificationPermission, showNotification } from './notifications'
 // "Reveal in Cmdr" (macOS)
 export { drainPendingReveals, getRevealHandlerState, onRevealDelivered, setRevealHandlerEnabled } from './reveal'
 
+// The `cmdr` terminal command (macOS)
+export { getCliCommandStatus, installCliCommand, uninstallCliCommand } from './cli-command'
+
 // Restricted-paths event
 export { onRestrictedPathsChanged } from './restricted-paths'
 

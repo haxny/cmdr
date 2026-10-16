@@ -55,6 +55,22 @@
   "@commands.cmdrOpenOnboarding.description": {
     "sourceHash": "a45c542"
   },
+  "commands.appToggleCliCommand.install.label": "Install “cmdr” command",
+  "@commands.appToggleCliCommand.install.label": {
+    "sourceHash": "b99e6c4"
+  },
+  "commands.appToggleCliCommand.uninstall.label": "Uninstall “cmdr” command",
+  "@commands.appToggleCliCommand.uninstall.label": {
+    "sourceHash": "ac1052e"
+  },
+  "commands.appToggleCliCommand.homebrew.label": "“cmdr” command installed by Homebrew",
+  "@commands.appToggleCliCommand.homebrew.label": {
+    "sourceHash": "cc4c0fd"
+  },
+  "commands.appToggleCliCommand.description": "Type cmdr and a path in a terminal to open it in Cmdr",
+  "@commands.appToggleCliCommand.description": {
+    "sourceHash": "c2198ad"
+  },
   "commands.helpOpenShortcuts.label": "Raccourcis clavier",
   "@commands.helpOpenShortcuts.label": {
     "sourceHash": "e9bef0b"

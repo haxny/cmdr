@@ -42,6 +42,7 @@ const m = vi.hoisted(() => ({
   openErrorReportDialog: vi.fn<() => void>(),
   openFeedbackDialog: vi.fn<() => void>(),
   runMenuTriggeredCheck: vi.fn(() => Promise.resolve()),
+  toggleCliCommand: vi.fn(() => Promise.resolve()),
   goToLatestDownload: vi.fn<(...a: unknown[]) => Promise<void>>(() => Promise.resolve()),
   goToTrash: vi.fn<(...a: unknown[]) => Promise<void>>(() => Promise.resolve()),
   openExternalUrl: vi.fn<(...a: unknown[]) => Promise<void>>(() => Promise.resolve()),
@@ -77,6 +78,7 @@ const {
   openErrorReportDialog,
   openFeedbackDialog,
   runMenuTriggeredCheck,
+  toggleCliCommand,
   goToLatestDownload,
   goToTrash,
   openExternalUrl,
@@ -157,6 +159,10 @@ vi.mock('#lib/updates/updater.svelte.js', () => ({
   runMenuTriggeredCheck: () => m.runMenuTriggeredCheck(),
 }))
 
+vi.mock('#lib/cli-command/toggle-cli-command.js', () => ({
+  toggleCliCommand: () => m.toggleCliCommand(),
+}))
+
 vi.mock('#lib/downloads/go-to-latest.js', () => ({
   goToLatestDownload: (...args: unknown[]) => m.goToLatestDownload(...args),
 }))
@@ -223,8 +229,8 @@ describe('characterization — id partition self-check', () => {
     for (const id of EXEMPT_IDS) expect(COMMAND_IDS).toContain(id)
   })
 
-  it('dispatchable set is exactly 145 ids', () => {
-    expect(DISPATCHABLE_IDS).toHaveLength(145)
+  it('dispatchable set is exactly 146 ids', () => {
+    expect(DISPATCHABLE_IDS).toHaveLength(146)
   })
 
   it('dispatchable ∪ exempt = COMMAND_IDS, disjoint', () => {
@@ -266,6 +272,11 @@ describe('characterization — module-delegate arms', () => {
   it('app.checkForUpdates → runMenuTriggeredCheck()', async () => {
     await handleCommandExecute('app.checkForUpdates', makeCtx({}))
     expect(runMenuTriggeredCheck).toHaveBeenCalledOnce()
+  })
+
+  it('app.toggleCliCommand → toggleCliCommand()', async () => {
+    await handleCommandExecute('app.toggleCliCommand', makeCtx({}))
+    expect(toggleCliCommand).toHaveBeenCalledOnce()
   })
 
   it('downloads.goToLatest → goToLatestDownload(explorerRef)', async () => {
