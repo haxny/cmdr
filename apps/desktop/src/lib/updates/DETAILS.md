@@ -48,9 +48,10 @@ idle ──invoke──► checking ──update found──► downloading ─�
 ```
 
 `updateState` carries `status`, `failure` (a typed `UpdateFailure` for the check, download, or install that didn't
-finish, cleared when a check starts), `previousVersion` (snapshot of `getVersion()` taken when entering `checking`), and
-`nextVersion` (set when an update is found). Settings > Updates and `UpdateCheckToastContent.svelte` both read the
-singleton and format via `formatUpdateStatus()`, or `describeUpdateFailure()` while a failure stands.
+finish, cleared when a check starts), `previousVersion` (snapshot of `getVersion()` taken when entering `checking`),
+`nextVersion` (set when an update is found), and `securityNotice` (what the staged update fixes, § The security
+variant). Settings > Updates and `UpdateCheckToastContent.svelte` both read the singleton and format via
+`formatUpdateStatus()`, or `describeUpdateFailure()` while a failure stands.
 
 The macOS path runs `download_update` and `install_update` as two commands (distinct `downloading` / `installing`
 phases). `download_update` takes no URL: the backend fetches the build its own last check offered, so nothing the
@@ -116,6 +117,31 @@ The version row is data, not prose, which is why it's a separate key rather than
 `sameAsSourceJustification`, and no locale has to reorder a version number inside a clause. It renders only when both
 ends are known, and carries `role="img"` plus `updates.toast.versionChangeAria`, so a screen reader gets "Updating from
 version 0.28.3 to version 0.29.0" instead of the arrow's symbol name in whatever language the reader uses.
+
+## The security variant
+
+When the staged update fixes a vulnerability, the restart toast says so and says what to do. The notice is the backend's
+answer: `installUpdate()` returns `UpdateInstalled { securityNotice }`, read from the staged bundle's own signed
+advisory list once the bundle is trusted (`src-tauri/src/updater/DETAILS.md` § Security notices). ❌ Nothing on this
+side derives it, least of all from the manifest.
+
+- **State.** `finishCheckWithStagedUpdate` sets `updateState.securityNotice` from the install's answer, replacing (never
+  merging) the previous one when a newer build supersedes the staged one: that bundle's list is cumulative, so its
+  answer is the whole truth. The plugin path (Linux) passes `null`; it reads no list.
+- **Toast.** With a notice, `UpdateToastContent.svelte` swaps its first two lines for `updates.toast.securityFix` ("This
+  update fixes a security issue.", or the count) and `updates.toast.securityFixDetail` ("Restart Cmdr to finish
+  installing it."), adds a "Read the advisory" link (`updates.toast.readAdvisory`) to the most severe advisory when its
+  link survived the backend's allowlist, and keeps the version row and both buttons. Without one, the toast is
+  unchanged, which `UpdateToastContent.test.ts` pins with a markup snapshot.
+- **Re-nudge.** Same gating, same persistent toast, and "Later" still works: nothing forces a restart. The prompt comes
+  back after `CRITICAL_RESTART_NUDGE_INTERVAL_MS` (4 h) when the most severe fix is `critical`, after the usual 24 h
+  otherwise (David's decision, 2026-10-16). A critical hole shouldn't sit open a whole day after one "Later", and a
+  prompt every few minutes would teach people to ignore it.
+- **Coverage.** Silent automatic updates and a manual "Check for updates" ride the same install path, so both get the
+  variant. A managed install (`DisableUpdates`, a held version) installs nothing, so it gets no notice. Someone who
+  never sees the toast (quit first, onboarding up) gets the notice from the What's new popup after the restart
+  (`#lib/whats-new/DETAILS.md` § Security notice).
+- No MCP resource exposes update state, so there's no agent-facing surface to extend.
 
 ## What a check reports
 

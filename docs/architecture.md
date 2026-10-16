@@ -359,6 +359,9 @@ All under `apps/desktop/src-tauri/src/`.
   media index, importance). See `events/CLAUDE.md`
 - `updater/`: macOS custom updater: syncs files into the running `.app` in place so FDA survives updates. Other
   platforms use stock Tauri
+- `security_advisories/`: The committed list of fixed vulnerabilities (`resources/security-advisories.json`), read from
+  a vetted staged bundle by `updater/` for the restart toast's security variant and from this build's embedded copy by
+  the What's new popup. See `apps/desktop/src-tauri/src/security_advisories/CLAUDE.md`
 - `managed_policy/`: What an organization's MDM profile restricts (telemetry, updates, AI), read from the forced layer
   of the app's preferences domain, cached, refreshed at egress, and shown as one `ManagedPolicyView`. Holds the
   canonical key catalog. See `apps/desktop/src-tauri/src/managed_policy/CLAUDE.md`; the frontend half (the settings

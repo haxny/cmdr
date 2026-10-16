@@ -39,8 +39,9 @@ Read this before any non-trivial work here: editing, planning, reorganizing, or 
 - **The tarball download is typed too (`UpdateDownloadError`).** `fetch_verified_tarball` also goes through
   `crate::server_request`, so a 5xx maintenance page is a `Request { Refused }` rather than bytes that fail their
   signature. `SignatureMismatch` and `Disk` stay separate variants: the frontend logs those at error and a network
-  `Request` failure at warn. `install_update` answers `UpdateInstallError` (`BlockedByPolicy`, `NothingStaged`,
-  `Failed { detail }`): every `Failed` is local and logs at error; `BlockedByPolicy` is quiet.
+  `Request` failure at warn. `install_update` answers `UpdateInstalled { securityNotice }` (§ Security notices) or
+  `UpdateInstallError` (`BlockedByPolicy`, `NothingStaged`, `Failed { detail }`): every `Failed` is local and logs at
+  error; `BlockedByPolicy` is quiet.
 - **Walk `reqwest::Error::source()` for log-friendly messages (`crate::server_request::describe_error_chain`).** `reqwest::Error`'s `Display`
   only prints the outermost layer, hiding the real cause (DNS, TCP connect timeout, TLS). Walking the source chain
   surfaces the underlying class without pulling in `anyhow`.
@@ -86,6 +87,8 @@ The organization's `DisableUpdates`, `DisableAutomaticUpdateChecks`, and `MaxUpd
 - The ceiling compares the release core only (`UpdateCeiling::allows`), so `0.53.0-rc.1` doesn't pass `"0.52"`.
 - Out of scope: the Linux Tauri-plugin path (the frontend calls `@tauri-apps/plugin-updater` directly), since the policy
   source is macOS-only.
+- **No install, no notice.** Under `DisableUpdates` or a held version nothing is staged, so no bundle can say a fix
+  exists. Advisories for managed fleets go out through the channels `docs/security-incident-procedure.md` lists.
 
 ## Code signature
 
@@ -105,6 +108,29 @@ check would refuse. What's the updater's own:
 
 **The whole path proven end to end** (a pipeline-built archive, the release gate, and a real installed app updating
 itself and refusing doctored archives): `docs/notes/2026-10-15-update-path-proof.md`.
+
+## Security notices
+
+When an update fixes a vulnerability, the restart toast says so and what to do (the CRA's advisory-message point). The
+list itself, what gets an entry, and the link allowlist: `../security_advisories/DETAILS.md`. What's the updater's own:
+
+- **Read from the staged bundle, never from `latest.json`.** The manifest isn't signed (the minisign trusted comment
+  names only `file:Cmdr.app.tar.gz`), so a `security` field there would let anyone who can serve or tamper with it
+  show a fake "critical" notice with a phishing link, or hide a real one. The staged bundle's
+  `Contents/Resources/security-advisories.json` sits inside the minisign-verified archive AND under the Developer ID
+  code signature, which seals `Contents/Resources/`. ❌ Nothing in `latest.json` may show, hide, or change a notice;
+  a mirror of the flag there, if ever added for the website, is for the website only.
+- **Order.** `vet_staged_bundle` reads the list (its injected `read_advisories`) only after the code signature, the
+  rollback check, and the policy have all passed. Before that the file is just bytes the updater key's holder chose.
+  `the_advisory_list_of_an_untrusted_or_refused_bundle_is_never_read` pins it.
+- **Never in the way.** A missing, unreadable, or malformed list is logged at warn and reads as no notice; the install
+  goes on. The update is the security fix itself.
+- **The window is (running, staged].** `advisories::notice_from` keeps `running < fixedIn <= staged` from the STAGED
+  list, which is cumulative, so a jump over several releases counts every fix in between. The notice carries the
+  highest severity, the count, and the most severe advisory's vetted link (`None` when the allowlist refuses it).
+- **Superseded staging replaces it.** A newer staged build answers its own notice, and the frontend replaces the old
+  one rather than merging (`apps/desktop/src/lib/updates/DETAILS.md` § The security variant).
+- Out of scope: the Linux plugin path, which reads no list (it follows the unsigned `notes`), until Linux leaves alpha.
 
 ## Two updater keys
 

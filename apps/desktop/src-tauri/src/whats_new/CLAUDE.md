@@ -10,7 +10,8 @@ older notes live on the website.
   `releases_between(since, current, max)` slicing, and a `OnceLock` cache over the embedded changelog.
 - `tests.rs`: fixture tests plus two tests over the real embedded file: `smoke_real_changelog_parses` (the canary if the
   format drifts) and `real_changelog_renders_as_commonmark_blocks` (what the popup shows).
-- IPC: `../commands/whats_new.rs` (thin `get_whats_new` + `whats_new_dev_override`).
+- IPC: `../commands/whats_new.rs` (thin `get_whats_new` + `whats_new_dev_override`, plus `get_security_advisories`
+  over `../security_advisories/CLAUDE.md`).
 
 ## Guardrails
 

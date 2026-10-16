@@ -13,7 +13,9 @@ current version and acts on `decideWhatsNew`:
 - **Inaugural showcase** (no `lastSeenVersion`, onboarded): the user updated INTO the feature, so show the current
   release only (`since=null, max=1`), then stamp. Disabled → stamp silently. Keyed on `isOnboarded`, NOT the version key
   alone: that flag is the only thing telling a fresh install from an existing user updating in.
-- **Upgrade**: enabled → show `lastSeen < v <= current`, newest first, `max:5`, then stamp. Disabled → stamp silently.
+- **Upgrade**: enabled → show `lastSeen < v <= current`, newest first, `max:5`, then stamp. Disabled → stamp silently,
+  unless a security advisory was fixed in that range: then the notice shows alone (`changelog: false`), then stamps (§
+  Security notice).
 - **Downgrade**: rewrite `lastSeenVersion` to current, no popup. **Unchanged**: nothing.
 
 The onboarded flag is the `onboarding.completed` setting. The trigger still takes it as a parameter rather than reading
@@ -23,6 +25,29 @@ passes it in.
 Version ordering comes from `compareVersions` (`#lib/utils/version.ts`), shared with the updater's "is the offered build
 newer than the staged one" question. It compares numerically per component: a string compare would order `0.10.0` before
 `0.9.0` and misread an upgrade as a downgrade.
+
+## Security notice
+
+After a restart into a release with a security fix, the popup says so above the releases, with a link per advisory. It's
+what reaches people who never saw the restart toast: they quit before it showed, onboarding was up, or the update
+applied on next launch. The toast side: `#lib/updates/DETAILS.md` § The security variant.
+
+- **Source.** `getSecurityAdvisories(lastSeen)` reads THIS build's own embedded list
+  (`src-tauri/src/security_advisories/`) for `lastSeen < fixedIn <= current`, most severe first. The running build is
+  the trusted one, so nothing here comes from the network.
+- **Asked before deciding.** `runWhatsNewStartupTrigger` fetches them first (only when there's a stamp; a fresh install
+  asks nothing) and passes `hasSecurityNotice` into `decideWhatsNew`. A lookup that throws reads as none, logged at
+  warn, so a broken notice never costs the changelog.
+- **It never gets stamped away.** An empty changelog slice with a notice still opens. Changelogs turned off still show
+  the notice on its own, because "Not interested in changelogs" isn't an opt-out from security advisories. Like any
+  show, it waits out onboarding and startup modals (`wait` never stamps), so the next chance still has it.
+- **Shape.** One fix: "This version fixed a security issue." plus "Read the advisory". Several: the plural headline and
+  one "Read advisory {id}" link each, so identical link texts never point at different pages. An advisory whose link the
+  backend refused still counts, without a link. The notice sits above `.scroll-area`, so it stays in view and its links
+  aren't double-opened by the markdown click delegate.
+- **Not on the manual reopen.** Help > What's new isn't tied to an update, so `openWhatsNew` passes no advisories. The
+  dev override (`CMDR_SIMULATE_UPDATE_FROM`) does ask, from its simulated version.
+- Gallery states `security-notice` and `security-notice-only` show both shapes for design review.
 
 ## Reading shape (highlights first, details on demand)
 

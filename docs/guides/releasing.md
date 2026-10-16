@@ -262,6 +262,9 @@ check.
    tagging.
 3. **Draft the CHANGELOG** from the git commits since the last release, per § Writing the CHANGELOG, and present the
    draft for review.
+   - **Ask David: "Does this release fix a vulnerability users should act on?"** Yes means an entry per fixed
+     vulnerability in the security advisory list, beside its CHANGELOG Security line, per § Security advisories. Most
+     releases add nothing. Leave the edit uncommitted: it rides the release commit, like the changelog.
 4. **Self-hosted runner only** (`release-pipeline.yml`'s `build.runs-on` is GitHub-hosted `macos-26` today, so normally
    skip): right after presenting the draft, read the runner node's Finder Automation `auth_value` per § "`bundle_dmg.sh`
    hangs ~2 minutes then fails on every matrix job", so a denial surfaces before anything is tagged. `0` blocks the
@@ -418,7 +421,8 @@ Steps:
    - **The CodeQL gate also requires no open high or critical alert on `main`.** That's on purpose: fix or triage the
      alert first.
 5. **Changelog, then the release commit and tag.** Add a `## [Unreleased]` section with a one-line lead and only
-   `### Security` entries, per § Writing the CHANGELOG, citing this branch's hashes. Run
+   `### Security` entries, per § Writing the CHANGELOG, citing this branch's hashes. Add the fix's entry to the security
+   advisory list too (§ Security advisories), and include it in the release commit. Run
    `pnpm check changelog-links --fresh`, then do by hand every step of `scripts/release.sh` from the version bump
    (`npm pkg set version=...`) through `git tag -s`, in its order, with the new version: the settings-defaults stamp,
    `tauri.conf.json`, `Cargo.toml` plus `cargo update --workspace`, the CHANGELOG heading, the `LICENSE` change date,
@@ -528,6 +532,28 @@ Before / after examples:
 - Merge entries that share hashes or describe one change from two angles (a real past draft had a Fixed entry whose
   hashes were a strict subset of an Added entry's).
 - Strip internal symbol names, file paths, and enum variants that survived the first pass.
+
+## Security advisories
+
+When a release fixes a vulnerability, the app says so: the restart toast leads with "This update fixes a security
+issue." and links the advisory, and the What's new popup names it after the restart. Both read
+`apps/desktop/src-tauri/resources/security-advisories.json`, which ships inside the signed bundle. The list, its
+readers, and why it's never `latest.json`: `apps/desktop/src-tauri/src/security_advisories/DETAILS.md`.
+
+- **What gets an entry**: every fixed vulnerability that has a severity score, the same set that gets a public note
+  under `SECURITY.md` § How fixed vulnerabilities are published. Hardening without a vulnerability gets none, even when
+  it's in the `### Security` section.
+- **The entry**: `id` (the GHSA id, or a date slug like `2026-10-16-smb-path` when there's no GitHub advisory),
+  `fixedIn` (this release's version, no `v`), `severity` (`low` / `medium` / `high` / `critical`, the CVSS v4.0 rating
+  in the CHANGELOG line), and `url` (the GitHub security advisory if there is one, else this release's entry on
+  `https://getcmdr.com/changelog`). Nothing else: the app shows generic, translated text.
+- **Append, never prune.** The list is cumulative, which is how an install that skips releases still hears about every
+  fix it jumped over.
+- **Leave it uncommitted for `release.sh`**, which lets it through its dirty-tree guard and puts it in the release
+  commit. `desktop-security-advisories` refuses a `fixedIn` newer than the app version, so committing it before the bump
+  turns the CI gate red.
+- **The GitHub advisory goes public after the release ships**, so a link to it 404s until then. Publish it in the same
+  sitting, or, when its details are held back (`SECURITY.md`), link the changelog entry instead.
 
 ## Which runner builds the release
 

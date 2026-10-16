@@ -94,40 +94,54 @@ func securityAdvisoryProblems(data []byte, appVersion string) []string {
 	seen := map[string]bool{}
 	for i, entry := range file.Advisories {
 		label := fmt.Sprintf("advisory %d", i+1)
-		if entry.ID != nil && *entry.ID != "" {
-			label = fmt.Sprintf("advisory %q", *entry.ID)
-		}
-		for _, field := range []struct {
-			name  string
-			value *string
-		}{{"id", entry.ID}, {"fixedIn", entry.FixedIn}, {"severity", entry.Severity}, {"url", entry.URL}} {
-			if field.value == nil || *field.value == "" {
-				problems = append(problems, fmt.Sprintf("%s: `%s` is missing or empty", label, field.name))
-			}
-		}
-		if entry.ID != nil && *entry.ID != "" {
-			if seen[*entry.ID] {
+		if id := advisoryField(entry.ID); id != "" {
+			label = fmt.Sprintf("advisory %q", id)
+			if seen[id] {
 				problems = append(problems, fmt.Sprintf("%s: duplicate `id`; each advisory needs its own", label))
 			}
-			seen[*entry.ID] = true
+			seen[id] = true
 		}
-		if entry.FixedIn != nil && *entry.FixedIn != "" {
-			fixed, ok := parseStrictSemver(*entry.FixedIn)
-			switch {
-			case !ok:
-				problems = append(problems, fmt.Sprintf("%s: `fixedIn` %q isn't semver (like `0.54.0`)", label, *entry.FixedIn))
-			case fixed.compare(app) > 0:
-				problems = append(problems, fmt.Sprintf("%s: `fixedIn` %s is newer than the app (v%s); an entry names the release that fixes it", label, *entry.FixedIn, appVersion))
-			}
-		}
-		if entry.Severity != nil && *entry.Severity != "" && !securitySeverities[*entry.Severity] {
-			problems = append(problems, fmt.Sprintf("%s: `severity` %q isn't one of low, medium, high, critical", label, *entry.Severity))
-		}
-		if entry.URL != nil && *entry.URL != "" && !isAllowedAdvisoryURL(*entry.URL) {
-			problems = append(problems, fmt.Sprintf("%s: `url` %q isn't an allowed advisory link (https://github.com/vdavid/cmdr/security/advisories/<id> or https://getcmdr.com/changelog…)", label, *entry.URL))
-		}
+		problems = append(problems, securityAdvisoryEntryProblems(entry, label, app, appVersion)...)
 	}
 	return problems
+}
+
+// securityAdvisoryEntryProblems judges one entry on its own: every field present,
+// `fixedIn` strict semver and not past the app, a known severity, an allowed link.
+func securityAdvisoryEntryProblems(entry securityAdvisoryEntry, label string, app strictSemver, appVersion string) []string {
+	var problems []string
+	for _, field := range []struct {
+		name  string
+		value *string
+	}{{"id", entry.ID}, {"fixedIn", entry.FixedIn}, {"severity", entry.Severity}, {"url", entry.URL}} {
+		if advisoryField(field.value) == "" {
+			problems = append(problems, fmt.Sprintf("%s: `%s` is missing or empty", label, field.name))
+		}
+	}
+	if fixedIn := advisoryField(entry.FixedIn); fixedIn != "" {
+		fixed, ok := parseStrictSemver(fixedIn)
+		switch {
+		case !ok:
+			problems = append(problems, fmt.Sprintf("%s: `fixedIn` %q isn't semver (like `0.54.0`)", label, fixedIn))
+		case fixed.compare(app) > 0:
+			problems = append(problems, fmt.Sprintf("%s: `fixedIn` %s is newer than the app (v%s); an entry names the release that fixes it, added in that release's commit", label, fixedIn, appVersion))
+		}
+	}
+	if severity := advisoryField(entry.Severity); severity != "" && !securitySeverities[severity] {
+		problems = append(problems, fmt.Sprintf("%s: `severity` %q isn't one of low, medium, high, critical", label, severity))
+	}
+	if link := advisoryField(entry.URL); link != "" && !isAllowedAdvisoryURL(link) {
+		problems = append(problems, fmt.Sprintf("%s: `url` %q isn't an allowed advisory link (https://github.com/vdavid/cmdr/security/advisories/<id> or https://getcmdr.com/changelog…)", label, link))
+	}
+	return problems
+}
+
+// advisoryField reads an optional JSON string, "" when absent.
+func advisoryField(value *string) string {
+	if value == nil {
+		return ""
+	}
+	return *value
 }
 
 // isAllowedAdvisoryURL mirrors the app's `is_allowed_advisory_url`: exactly

@@ -27,7 +27,9 @@ into a typed model; this frontend decides when to show it and renders it.
   settings registry, so `+page.svelte` passes it in.
 - **`wait` must NOT stamp** (onboarding or another startup modal is up → retry later); stamping would eat the changelog
   forever.
-- **An auto-show with an empty slice silent-stamps**, never an empty popup (the empty state is manual-reopen only).
+- **An auto-show with an empty slice silent-stamps**, never an empty popup (the empty state is manual-reopen only),
+  unless a security notice has something to say. That notice shows even with changelogs off. `DETAILS.md` § Security
+  notice.
 - **An entry's bullet column is a hanging indent (`padding-left` + a negative-margin `::before`), ❌ never a grid.**
   Entries are rendered markdown: a grid makes every `<code>` / `<strong>` its own ITEM, and one lands in the bullet
   column stacked a character per line. `whats-new-markup.spec.ts` measures it; rationale in `DETAILS.md`.

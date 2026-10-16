@@ -26,7 +26,10 @@ Frontend auto-update checker, restart toast, and the manual "Check for updates" 
 - **`checkForUpdates()` ❌ never returns early on `ready`.** That guard let installs sit 25-38 days on a build newer
   releases had passed; only `supersedesStagedUpdate` may overwrite a staged one.
 - **"Later" can't silence the restart prompt, and the toast's second line is why it needn't.** ❌ Don't shorten the 24 h
-  re-nudge into nagging, and ❌ don't cut `readyDetail` or the version row's `role="img"` label.
+  re-nudge into nagging (4 h only for a `critical` security fix, David's call), and ❌ don't cut `readyDetail` or the
+  version row's `role="img"` label.
+- **The security variant reads `updateState.securityNotice`**, the install's own answer from the signed staged bundle;
+  ❌ never derive it from the manifest or the release notes. `DETAILS.md` § The security variant.
 - **A bundle that can't be written never downloads**, but a FAILED classification is ❌ not permission to update.
 - **Every exit of `checkForUpdates()` fires one `update_check` event**, with the phase read off `updateState.status`, ❌
   never off the error message. `trigger` is defaultless, so a new call site has to pick its own bucket.

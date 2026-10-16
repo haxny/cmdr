@@ -17,15 +17,18 @@ fi
 
 # Check for uncommitted changes. The release-prep edits are allowed through and get included in
 # the release commit: the changelog, the roadmap (content in roadmap.ts, layout in roadmap.astro),
-# and the feature-status source of truth. See docs/guides/releasing.md § The release procedure for the steps that produce them.
+# the feature-status source of truth, and the security advisory list (its new entry names this
+# version, which the `desktop-security-advisories` check only accepts once the bump below lands).
+# See docs/guides/releasing.md § The release procedure for the steps that produce them.
 EXCLUDE=(
   ':!CHANGELOG.md'
   ':!feature-status.json'
   ':!apps/website/src/lib/roadmap.ts'
   ':!apps/website/src/pages/roadmap.astro'
+  ':!apps/desktop/src-tauri/resources/security-advisories.json'
 )
 if ! git diff --quiet -- "${EXCLUDE[@]}" || ! git diff --staged --quiet -- "${EXCLUDE[@]}"; then
-  echo "Error: Working tree has uncommitted changes (other than the changelog, roadmap, and feature status). Commit or stash them first."
+  echo "Error: Working tree has uncommitted changes (other than the changelog, roadmap, feature status, and security advisory list). Commit or stash them first."
   exit 1
 fi
 
@@ -42,7 +45,7 @@ while IFS= read -r vol; do
 done < <(mount | awk -F' on ' '/\/Volumes\/Cmdr/ { sub(/ \(.*$/, "", $2); print $2 }')
 
 # Stage allowed files before rebase so they don't block it
-git add CHANGELOG.md feature-status.json apps/website/src/lib/roadmap.ts apps/website/src/pages/roadmap.astro 2>/dev/null || true
+git add CHANGELOG.md feature-status.json apps/website/src/lib/roadmap.ts apps/website/src/pages/roadmap.astro apps/desktop/src-tauri/resources/security-advisories.json 2>/dev/null || true
 
 # Pull latest main to avoid push rejection after tagging
 # --autostash: temporarily stashes staged changelog/roadmap changes so rebase can proceed
@@ -132,6 +135,7 @@ git add \
   feature-status.json \
   apps/website/src/lib/roadmap.ts \
   apps/website/src/pages/roadmap.astro \
+  apps/desktop/src-tauri/resources/security-advisories.json \
   apps/desktop/package.json \
   apps/desktop/src-tauri/tauri.conf.json \
   apps/desktop/src-tauri/Cargo.toml \

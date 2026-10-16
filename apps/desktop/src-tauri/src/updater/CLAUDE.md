@@ -1,8 +1,8 @@
 # Updater module
 
 Custom macOS updater that syncs files *into* the existing `.app` bundle, keeping its `com.apple.macl` xattr and giving
-each per-file write the fresh inode the code-signing cache needs. macOS-only (`#[cfg(target_os = "macos")]`); other
-platforms use the Tauri updater plugin and the frontend calls the plugin API directly.
+each per-file write the fresh inode the code-signing cache needs. macOS-only; other platforms use the Tauri updater
+plugin from the frontend.
 
 ## File map
 
@@ -14,9 +14,9 @@ platforms use the Tauri updater plugin and the frontend calls the plugin API dir
 - `signature.rs`: minisign verification against the main and backup updater keys.
 - The Apple code-signature check and the tarball extraction live in `crates/cmdr-update-trust/CLAUDE.md`, shared with
   the release gate.
-- `installer.rs`: tarball extraction, sync into the running bundle, privilege escalation. Its
-  `running_bundle()` is crate-visible: `crate::install_location` asks the same "where is this copy installed" question
-  on behalf of the Dock pin and the reveal handler.
+- `installer.rs`: tarball extraction, sync into the running bundle, privilege escalation. `running_bundle()` is
+  crate-visible for `crate::install_location` (the Dock pin and the reveal handler).
+- `advisories.rs`: the `SecurityNotice` an install answers, from the staged bundle's list.
 
 ## Must-knows
 
@@ -45,9 +45,10 @@ platforms use the Tauri updater plugin and the frontend calls the plugin API dir
   takes no URL and fetches only what the last check offered; `install_update` re-asks
   `ManagedPolicy::update_to` on a fresh read, then again for the version the extracted `Info.plist` names. ❌ Never let
   the frontend name a URL or version. `DETAILS.md` § Managed policy.
-- **Manifest fetch is bounded** (10 s connect, 30 s overall); download and install are intentionally untimed (they run
-  with user attention). The check and the download ride `server_request::send` (`Egress::UpdateCheck`,
-  `UpdateDownload`).
+- **Security notices come only from the vetted staged bundle, ❌ never `latest.json`** (unsigned). Read after every
+  vet check passes; a broken list ❌ never blocks the install. `DETAILS.md` § Security notices.
+- **Manifest fetch is bounded** (10 s connect, 30 s overall); download and install are untimed. The check and the
+  download ride `server_request::send` (`Egress::UpdateCheck`, `UpdateDownload`).
 
 Sync order, deletion pass, signatures, privilege escalation, who may check, and the managed policy: `DETAILS.md`. Read
 it before any non-trivial work here.
