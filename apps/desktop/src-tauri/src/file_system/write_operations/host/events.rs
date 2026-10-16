@@ -9,7 +9,7 @@
 
 use cmdr_operation_log::types::Initiator;
 
-use super::super::types::{MoveLeftoversKeptEvent, OperationsChanged};
+use super::super::types::{MoveLeftoversKeptEvent, OperationsChanged, WriteProgressEvent};
 use super::error_report::OperationErrorReport;
 
 /// Everything the engine reports that belongs to no single operation.
@@ -44,6 +44,11 @@ pub(crate) trait EngineEvents: Send + Sync {
 
     /// Something went wrong badly enough to raise an error report.
     fn error_report(&self, report: OperationErrorReport);
+
+    /// A scanning-phase `write-progress` for an operation waiting on the
+    /// confirming dialog's walk. One operation's event, yet here: the walk
+    /// belongs to the preview, which holds no operation's sink.
+    fn scan_wait_progress(&self, event: WriteProgressEvent);
 }
 
 /// The answer for a host that wants none of it: a bench, a tool, an engine
@@ -62,6 +67,7 @@ impl EngineEvents for NoEngineEvents {
     fn staging_leftovers_kept(&self, _notice: MoveLeftoversKeptEvent) {}
     fn instant_mutation_settled(&self, _fact: InstantMutationFact) {}
     fn error_report(&self, _report: OperationErrorReport) {}
+    fn scan_wait_progress(&self, _event: WriteProgressEvent) {}
 }
 
 /// How one instant metadata op ended, as categories only: no name, no path, no

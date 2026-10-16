@@ -1,26 +1,23 @@
-//! Event sinks: the production (`TauriEventSink`) and test (`CollectorEventSink`)
-//! implementations of `OperationEventSink`, plus the event-builder `impl` blocks
-//! for `WriteProgressEvent` and `WriteErrorEvent`.
+//! Event sinks: the test implementations of the two sink seams
+//! (`CollectorEventSink`, `CollectorScanPreviewSink`, which store events in a
+//! `Vec` for assertions), plus the event-builder `impl` blocks for
+//! `WriteProgressEvent` and `WriteErrorEvent`.
 //!
-//! Decouples the copy/move/delete pipeline from `tauri::AppHandle`: the Tauri layer
-//! provides `TauriEventSink` (calls `app.emit`), tests use `CollectorEventSink`
-//! (stores events in a `Vec` for assertions). The trait itself is a seam and
-//! lives in `host/`; it's re-exported here so its many callers keep their path.
-
-use tauri_specta::Event;
+//! The traits themselves are seams and live in `host/`; they're re-exported here
+//! so their many callers keep their path. The app's Tauri-backed answers live in
+//! `operations_host::sinks`.
 
 #[cfg(test)]
 use cmdr_fs::ignore_poison::IgnorePoison;
 
-pub use super::host::OperationEventSink;
-use super::manager::manager;
-use super::terminal_effects::{self, AppTerminalEffects};
+pub use super::host::{OperationEventSink, ScanPreviewEventSink};
+#[cfg(test)]
 use super::types::{
     ConflictInfo, DryRunResult, ScanPreviewCancelledEvent, ScanPreviewCompleteEvent, ScanPreviewErrorEvent,
     ScanPreviewProgressEvent, ScanProgressEvent, WriteCancelledEvent, WriteCompleteEvent, WriteConflictEvent,
-    WriteConflictResolvedEvent, WriteErrorEvent, WriteOperationError, WriteOperationType, WriteProgressEvent,
-    WriteSettledEvent, WriteSourceItemDoneEvent, WriteSourcesGoneEvent,
+    WriteConflictResolvedEvent, WriteSettledEvent, WriteSourceItemDoneEvent, WriteSourcesGoneEvent,
 };
+use super::types::{WriteErrorEvent, WriteOperationError, WriteOperationType, WriteProgressEvent};
 use cmdr_index::ExpectedTotals;
 
 impl WriteProgressEvent {
@@ -114,109 +111,6 @@ impl WriteErrorEvent {
     pub(super) fn with_progress_at_stop(mut self, progress: Option<super::types::ProgressAtStop>) -> Self {
         self.progress_at_stop = progress;
         self
-    }
-}
-
-/// Tauri-backed event sink: calls `app.emit()` for each event.
-pub struct TauriEventSink {
-    app: tauri::AppHandle,
-}
-
-impl TauriEventSink {
-    pub fn new(app: tauri::AppHandle) -> Self {
-        Self { app }
-    }
-
-    /// The app side effects each terminal emit carries (`terminal_effects.rs`).
-    fn effects(&self) -> AppTerminalEffects {
-        AppTerminalEffects { manager: manager() }
-    }
-}
-
-impl OperationEventSink for TauriEventSink {
-    fn emit_progress(&self, event: WriteProgressEvent) {
-        let _ = event.emit(&self.app);
-    }
-    fn emit_complete(&self, event: WriteCompleteEvent) {
-        terminal_effects::complete(&self.effects(), event, |event| {
-            let _ = event.emit(&self.app);
-        });
-    }
-    fn emit_cancelled(&self, event: WriteCancelledEvent) {
-        terminal_effects::cancelled(&self.effects(), event, |event| {
-            let _ = event.emit(&self.app);
-        });
-    }
-    fn emit_error(&self, event: WriteErrorEvent) {
-        terminal_effects::error(&self.effects(), event, |event| {
-            let _ = event.emit(&self.app);
-        });
-    }
-    fn emit_conflict(&self, event: WriteConflictEvent) {
-        let _ = event.emit(&self.app);
-    }
-    fn emit_conflict_resolved(&self, event: WriteConflictResolvedEvent) {
-        let _ = event.emit(&self.app);
-    }
-    fn emit_source_item_done(&self, event: WriteSourceItemDoneEvent) {
-        let _ = event.emit(&self.app);
-    }
-    fn emit_sources_gone(&self, event: WriteSourcesGoneEvent) {
-        let _ = event.emit(&self.app);
-    }
-    fn emit_scan_progress(&self, event: ScanProgressEvent) {
-        let _ = event.emit(&self.app);
-    }
-    fn emit_scan_conflict(&self, conflict: ConflictInfo) {
-        let _ = conflict.emit(&self.app);
-    }
-    fn emit_dry_run_complete(&self, result: DryRunResult) {
-        let _ = result.emit(&self.app);
-    }
-    fn emit_settled(&self, event: WriteSettledEvent) {
-        terminal_effects::settled(&self.effects(), event, |event| {
-            let _ = event.emit(&self.app);
-        });
-    }
-}
-
-/// Abstraction for emitting the four SCAN PREVIEW events.
-///
-/// Same reason `OperationEventSink` exists, applied to the pre-confirm dialog's
-/// own counters: the preview workers and the watchdog that bounds them hold a
-/// sink rather than a `tauri::AppHandle`, so a test can point a walk at a volume
-/// that never answers and watch the preview settle anyway. Without the seam that
-/// case is only reachable through a real window.
-pub(super) trait ScanPreviewEventSink: Send + Sync + 'static {
-    fn emit_progress(&self, event: ScanPreviewProgressEvent);
-    fn emit_complete(&self, event: ScanPreviewCompleteEvent);
-    fn emit_error(&self, event: ScanPreviewErrorEvent);
-    fn emit_cancelled(&self, event: ScanPreviewCancelledEvent);
-}
-
-/// Tauri-backed scan-preview sink: calls `app.emit()` for each event.
-pub(super) struct TauriScanPreviewSink {
-    app: tauri::AppHandle,
-}
-
-impl TauriScanPreviewSink {
-    pub(super) fn new(app: tauri::AppHandle) -> Self {
-        Self { app }
-    }
-}
-
-impl ScanPreviewEventSink for TauriScanPreviewSink {
-    fn emit_progress(&self, event: ScanPreviewProgressEvent) {
-        let _ = event.emit(&self.app);
-    }
-    fn emit_complete(&self, event: ScanPreviewCompleteEvent) {
-        let _ = event.emit(&self.app);
-    }
-    fn emit_error(&self, event: ScanPreviewErrorEvent) {
-        let _ = event.emit(&self.app);
-    }
-    fn emit_cancelled(&self, event: ScanPreviewCancelledEvent) {
-        let _ = event.emit(&self.app);
     }
 }
 

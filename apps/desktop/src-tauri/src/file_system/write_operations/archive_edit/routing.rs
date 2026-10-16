@@ -9,19 +9,19 @@ use std::path::Path;
 use std::sync::Arc;
 
 use super::super::OperationEventSink;
-use super::super::manager;
+use super::super::host;
 use super::super::types::{ReadOnlySide, WriteOperationError};
 use crate::file_system::volume::manager::get_volume_manager;
 use cmdr_archive::{ArchiveFormat, ArchiveIndex, LocalFileSource};
 use cmdr_fs::volume::RoutedKind;
 
-/// Builds a Tauri-backed event sink from the startup-wired app handle, for
-/// routing an archive-target instant op (mkdir / mkfile / rename) to the managed
-/// edit driver. `None` before the app handle is wired (unit tests), so callers
-/// fall back to a plain refusal rather than silently dropping the op.
-pub(crate) fn global_tauri_sink() -> Option<Arc<dyn OperationEventSink>> {
-    manager::operations_app_handle()
-        .map(|app| Arc::new(super::super::TauriEventSink::new(app)) as Arc<dyn OperationEventSink>)
+/// A sink from the host's factory, for routing an archive-target instant op
+/// (mkdir / mkfile / rename) to the managed edit driver, and for an edge that is
+/// generic over the Tauri runtime (the MCP tools) and so can't build the app's
+/// concrete sink itself. `None` before the host is installed (unit tests), so
+/// callers fall back to a plain refusal rather than silently dropping the op.
+pub(crate) fn host_operation_sink() -> Option<Arc<dyn OperationEventSink>> {
+    host::installed().operation_sink()
 }
 
 /// Joins an archive-inner parent path and a new child name into a single

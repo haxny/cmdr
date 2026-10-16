@@ -3,7 +3,7 @@
 //! **Initiate, never start.** This is the one thing to keep true here. A person
 //! who types the password gets the copy re-dispatched for them; an agent that
 //! supplies one must NOT, because that re-dispatch is a brand-new write (the
-//! operation that hit the prompt is already settled — `record_failure` excludes
+//! operation that hit the prompt is already settled — `retain_failure` excludes
 //! `ArchiveNeedsPassword` by typed variant, so there is nothing to unpark) and a
 //! new write goes through the confirmation and the token gate every other copy
 //! goes through. So the transfer arm stores the password, settles what is left

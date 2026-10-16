@@ -15,7 +15,6 @@
 //! - Symlink loop detection to prevent infinite recursion
 //! - Atomic cross-filesystem moves using staging directory
 
-mod analytics;
 mod archive_edit;
 mod cancellable;
 mod compress_estimate;
@@ -69,7 +68,6 @@ mod status_cache;
 mod summary;
 pub(crate) use summary::path_summary;
 mod target_names;
-mod terminal_effects;
 mod transfer;
 // The Criterion bench's one door into the engine, re-exported at the crate root.
 #[cfg(feature = "transfer-bench")]
@@ -113,15 +111,13 @@ use transfer::copy::copy_files_with_progress_inner;
 use transfer::move_op::move_files_with_progress_inner;
 use trash::trash_files_with_progress;
 
-// The event sink trait + its Tauri-backed implementation. Re-exported so the
-// IPC command layer can build `Arc::new(TauriEventSink::new(app))` at the edge
-// and inject it into the managed pipeline; the pipeline itself never constructs
-// a sink (grep confirms zero `TauriEventSink::new` under `write_operations/`).
-/// A sink over the STARTUP-WIRED app handle, for an edge that is generic over the
-/// Tauri runtime (`AppHandle<R>`, which the MCP tools are) and so can't build a
-/// concrete one from the handle it holds. `None` before wiring (unit tests).
-pub(crate) use archive_edit::global_tauri_sink;
-pub use event_sinks::{OperationEventSink, TauriEventSink};
+// The two event sink seams. The app builds its Tauri-backed answers
+// (`operations_host::sinks`) at the IPC edge and injects them into the managed
+// pipeline; the pipeline itself never constructs a sink.
+pub use event_sinks::{OperationEventSink, ScanPreviewEventSink};
+/// The engine's manager, for the app's terminal side effects to retain a
+/// failure on (`OperationManager::retain_failure`).
+pub(crate) use manager::{OperationManager, manager as operation_manager};
 #[cfg(not(test))]
 use validation::{
     ensure_destination_dir, validate_destination_not_inside_source, validate_destination_writable,
@@ -206,14 +202,14 @@ pub(crate) use source_binding::retain_bound_sources;
 pub(crate) use state::{register_external_volume_op, release_external_volume_op};
 #[allow(unused_imports, reason = "Public API re-exports for consumers of this module")]
 pub use types::{
-    ConflictId, ConflictInfo, ConflictResolution, ConflictResolutionOutcome, DryRunResult, ItemKinds, LifecycleStatus,
-    MoveLeftoversKeptEvent, OperationStatus, ProgressAxis, ReadOnlySide, RetryOutcome, ScanPreviewCancelledEvent,
-    ScanPreviewCompleteEvent, ScanPreviewErrorEvent, ScanPreviewProgressEvent, ScanPreviewPurpose, ScanPreviewRefusal,
-    ScanPreviewStartResult, ScanPreviewTotals, ScanProgressEvent, SourceItemOutcome, SourcesGoneAnswerOutcome,
-    SourcesGoneNext, SpaceShortfall, TransferActivity, TransferWaitReason, WriteCancelledEvent, WriteCompleteEvent,
-    WriteConflictEvent, WriteConflictResolvedEvent, WriteErrorEvent, WriteOperationConfig, WriteOperationError,
-    WriteOperationPhase, WriteOperationStartResult, WriteOperationType, WriteProgressEvent, WriteSettledEvent,
-    WriteSourceItemDoneEvent, WriteSourcesGoneEvent,
+    CancelRollback, ConflictId, ConflictInfo, ConflictResolution, ConflictResolutionOutcome, DryRunResult, ItemKinds,
+    LifecycleStatus, MoveLeftoversKeptEvent, OperationStatus, ProgressAxis, ReadOnlySide, RetryOutcome,
+    ScanPreviewCancelledEvent, ScanPreviewCompleteEvent, ScanPreviewErrorEvent, ScanPreviewProgressEvent,
+    ScanPreviewPurpose, ScanPreviewRefusal, ScanPreviewStartResult, ScanPreviewTotals, ScanProgressEvent,
+    SourceItemOutcome, SourcesGoneAnswerOutcome, SourcesGoneNext, SpaceShortfall, TransferActivity, TransferWaitReason,
+    WriteCancelledEvent, WriteCompleteEvent, WriteConflictEvent, WriteConflictResolvedEvent, WriteErrorEvent,
+    WriteOperationConfig, WriteOperationError, WriteOperationPhase, WriteOperationStartResult, WriteOperationType,
+    WriteProgressEvent, WriteSettledEvent, WriteSourceItemDoneEvent, WriteSourcesGoneEvent,
 };
 
 // Re-export for tests (these are pub(crate) in validation.rs and state.rs)
@@ -260,7 +256,7 @@ pub(crate) use transfer::volume::{FaultyOp, FaultyVolume};
 /// `cfg(test)`.
 #[cfg(test)]
 pub(crate) fn test_retain_failure(operation_id: &str, operation_type: WriteOperationType, error: &WriteOperationError) {
-    manager::manager().record_failure(operation_id, operation_type, error);
+    manager::manager().retain_failure(operation_id, operation_type, error);
 }
 
 // Re-export volume copy types and functions. `routing.rs` owns which of
@@ -815,9 +811,6 @@ mod scan_preview_tree_tests;
 mod scan_watchdog_tests;
 #[cfg(test)]
 mod settle_event_tests;
-// Which app side effects each terminal event fires, and in what order around its emit.
-#[cfg(test)]
-mod terminal_effects_tests;
 // The one cooperative-stop boundary every serial loop here asks at.
 #[cfg(test)]
 mod free_space_tests;

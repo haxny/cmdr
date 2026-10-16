@@ -101,7 +101,7 @@ pub async fn apply_multi_rename(
     session_id: String,
     preview_id: u64,
 ) -> Result<MultiRenameStarted, MultiRenameError> {
-    let events = Arc::new(crate::file_system::write_operations::TauriEventSink::new(app.clone()));
+    let events = Arc::new(crate::operations_host::TauriEventSink::new(app.clone()));
     // Read before apply: the spec of the preview it starts from, for the fields' history.
     let spec = session::spec_of(&session_id, preview_id).ok();
     let started = apply(events, session_id, preview_id).await?;

@@ -103,11 +103,11 @@ The full top-level inventory is here:
   `rollback.rs` wears two hats: the history dialog's reversal, and the executor the operation-log engine injects.
 - Vocabulary and edges: `types.rs` (+ `types/events.rs`, every `#[tauri_specta(event_name)]` payload, and
   `types/errors.rs`, `WriteOperationError` with the typed payloads its variants carry — both re-exported through
-  `types`), `event_sinks.rs`, `terminal_effects.rs` (the app side effects `TauriEventSink`'s four terminal emits run,
-  in a pinned order around the emit; tests in `terminal_effects_tests.rs`), `error_classification.rs`, `transfer_sides.rs` (the two volumes a transfer runs
+  `types`), `event_sinks.rs` (the collector sinks and the event builders), `host/` (the seams the app answers, §
+  "The engine's host"), `error_classification.rs`, `transfer_sides.rs` (the two volumes a transfer runs
   between, the mount-table question, and the one boundary that words a stop; tests in `transfer_sides_tests.rs`),
   `target_names.rs` (the new NAME a renamed source takes in a move, § "Renames that run as moves"),
-  `mutation_error.rs` (the typed refusal an instant mutation returns), `mutation_reply.rs` (its reply within the deadline, and the late settle, § "A slow instant mutation says it is still running"), `validation.rs`, `free_space.rs` (the copy's free-space pre-flight, § "The free-space pre-flight"), `analytics.rs`, `eta.rs`. Journaling: `journal.rs`, `journal_search.rs`. The
+  `mutation_error.rs` (the typed refusal an instant mutation returns), `mutation_reply.rs` (its reply within the deadline, and the late settle, § "A slow instant mutation says it is still running"), `validation.rs`, `free_space.rs` (the copy's free-space pre-flight, § "The free-space pre-flight"), `eta.rs`. Journaling: `journal.rs`, `journal_search.rs`. The
   scratch dir archive edits stage local bytes in: `scratch_dir.rs` (the remote edit itself is `archive_edit/remote.rs`). Entry points: `create/` + `create.rs`, `rename/` +
   `rename.rs`, `create_numbered.rs` (paste-as-file's numbered create), `routing.rs` (the one routing every cross-volume transfer takes:
   `start_volume_{copy,move,compress}`, plus `start_rename_by_move`; `routing/retry.rs` is the Retry recipe a copy or move
@@ -130,11 +130,11 @@ decisions"; the estimator in § "ETA + throughput"; `WriteSettledGuard` in § "S
   `transfer::*` + `delete::*` so callers keep their `crate::file_system::write_operations::<symbol>` paths, and
   `state.rs` re-exports the `operation_intent` + `scan_cache` + `status_cache` names. `types.rs` has none: it is the
   vocabulary floor (§ "Why `types` imports nothing"), so a sink, a classifier, or a lifecycle name is imported from the
-  module that DEFINES it. `OperationEventSink` and `TauriEventSink` are re-exported at the `write_operations` module
-  root (and up through `file_system`) for the IPC edge.
+  module that DEFINES it. `OperationEventSink` and `ScanPreviewEventSink` are re-exported at the `write_operations`
+  module root for the IPC edge, which builds the app's sinks from `operations_host`.
 - **Event structs and their builders live apart on purpose**: the struct definitions in `types/events.rs`, the
   `WriteProgressEvent` (`new` / `with_scan_meta`) and `WriteErrorEvent` (`new`) impls in `event_sinks.rs` beside the
-  sinks that emit them.
+  collector sinks.
 - **What splits `types.rs` from `types/events.rs` is one rule**: a struct carrying `#[tauri_specta(event_name = ...)]`
   goes in `events.rs`, and so does an enum whose only carrier is one of them (`SourceItemOutcome`,
   `CancelRollbackOutcome`). A name two homes speak stays in `types.rs`, which is why `TransferActivity` sits there:
@@ -143,10 +143,6 @@ decisions"; the estimator in § "ETA + throughput"; `WriteSettledGuard` in § "S
   payloads (`ReadOnlySide`, `TransferRole`, `DisconnectedSide`, `TrashRefusalKind`, `RecoveredOriginal`,
   `OversizedFile`). ❗ `RecoveredOriginal::new` is `pub(in …write_operations)` rather than `pub(super)`: `super` is
   `types` from down here, and its callers are the transfer engines a level up.
-- **`analytics.rs` is `pub(super)` and reached ONLY from `TauriEventSink::emit_complete`** (via
-  `terminal_effects::complete`). Every property is
-  categorical (op kind, a count bucket, a bool): no names, no paths ever. Copy/Move → `file_transfer_completed`,
-  Delete/Trash → `delete_used`.
 - **`error_classification.rs` classifies from `errno` / `ErrorKind` only, never the message**. The native copy calls
   on both platforms (`macos_copy`, `linux_copy`) share `classify_copy_io_error`, which also picks the path: a refused
   write names the destination, anything else the source. One table, so the platforms can't drift apart again.
@@ -726,22 +722,35 @@ runtime. The app's answer is `apps/desktop/src-tauri/src/operations_host/`, whic
   disagree. Everything the engine spawns goes there: the admission pass (§ "The admission pass spawns admitted ops on
   the APP runtime"), the stall watchdog, the arrival sweep's `spawn_blocking`, and the sweep's `block_on`s.
 - **Engine-wide facts go through `EngineEvents`**: operations changed, busy volumes changed, a transfer started /
-  finished on volumes (indexing priority), staging leftovers kept, and an instant mutation settled (analytics, as an
-  `InstantMutationFact` of categories only). Per-op events stay on `OperationEventSink`. Every method is required, is
-  called with no engine lock held, and returns at once.
-- **The app decides what each fact becomes**: a Tauri event, a `priority::transfers` call, or a PostHog capture under a
-  literal event name (`analytics-event-catalog` reads `capture("…")`). The test-only counters a pin reads
-  (`emit_count`, `busy_emit_count`, `KEPT_NOTICES`) count on the engine side, before the seam.
+  finished on volumes (indexing priority), staging leftovers kept, an instant mutation settled (analytics, as an
+  `InstantMutationFact` of categories only), an error report, and the scan bridge's scanning-phase `write-progress`
+  (one op's event, but the preview's worker that produces it holds no op's sink). Per-op events stay on
+  `OperationEventSink`. Every method is required, is called with no engine lock held, and returns at once.
+- **Error reports are typed facts** (`host/error_report.rs`): the engine never calls `log_error!` (the app's macro, at
+  its crate root), it names what happened as an `OperationErrorReport`, grouped by what it means for the person: an op
+  failed, a displaced original is stranded under its aside name, a transfer is stuck on a silent backend, or a contained
+  bug. The app re-raises each through `log_error!` with the message and target (the engine's module path) it always
+  had, so bundles, greps, and dispatch filters see no change.
+- **The app decides what each fact becomes**: a Tauri event, a `priority::transfers` call, a PostHog capture under a
+  literal event name (`analytics-event-catalog` reads `capture("…")`), or an error report. The test-only counters a
+  pin reads (`emit_count`, `busy_emit_count`, `KEPT_NOTICES`, the scan bridge's tick recorder) count on the engine side,
+  before the seam.
+- **The per-op sinks are the app's too.** `TauriEventSink` and `TauriScanPreviewSink` live in
+  `apps/desktop/src-tauri/src/operations_host/sinks.rs`, built at the IPC edge and injected; a terminal emit runs its app side effects (completion
+  analytics, the MCP ring, the failure `warn!`, `OperationManager::retain_failure`, the free-space hint) in the order
+  `apps/desktop/src-tauri/src/operations_host/terminal_effects.rs` pins. An op the ENGINE starts on its own behalf (an instant op routed into a zip
+  becomes a managed archive edit) gets its sink from the host's `OperationSinkFactory`
+  (`archive_edit::host_operation_sink`); so does the MCP rollback tool, which is generic over the Tauri runtime.
 - **Before `install`, the answer depends on the binary.** In the app nothing can start an operation before setup, so it
-  answers nothing, as the unset `AppHandle`s it replaced did. A test binary never installs, so it gets the app's own
-  answers minus the frontend channel (`operations_host::without_frontend`): the real indexing gauge and analytics
-  client, which `status_cache_tests`' gauge pins read, and `cmdr-fs`'s shared fallback runtime. No app handle, so
-  `global_tauri_sink()` stays `None` and an archive-target instant op refuses, as before.
+  answers nothing. A test binary never installs, so it gets the app's own answers minus the frontend channel
+  (`operations_host::without_frontend`): the real indexing gauge, analytics client, and error reporter, which
+  `status_cache_tests`' gauge pins read, and `cmdr-fs`'s shared fallback runtime. No sink factory, so
+  `host_operation_sink()` stays `None` and an archive-target instant op refuses plainly.
 - **A seam trait and its value types live in `host/` or `types/`**, never in a module that calls the seam, or the two
   weld into a cycle. That's why `OperationsChanged` and `OperationSnapshot` are `types` vocabulary, and why
-  `OperationEventSink` is defined in `host/operation_sink.rs` (`event_sinks` re-exports it): with the trait in
-  `event_sinks`, `state` (which takes a sink) → `event_sinks` → `manager` (the Tauri sink retains failures) → `state`
-  was a cycle `module-cycles` reports.
+  `OperationEventSink` and `ScanPreviewEventSink` are defined in `host/` (`event_sinks` re-exports them): with the
+  trait in `event_sinks`, `state` (which takes a sink) → `event_sinks` → `manager` (the Tauri sink retained failures
+  there) → `state` was a cycle `module-cycles` reports.
 
 ## Events emitted
 
@@ -854,13 +863,13 @@ registration by `summary.rs` (`path_summary` for local ops, `volume_items` for v
 **The exception to removal-on-terminal.** Nothing else can hold the failure of an operation that was backgrounded: the record is deleted on settle, and `write-error` only reaches a window that is listening at that moment — and the queue window being closed is the exact scenario this is for. So the manager keeps a bounded list of failures OUT OF BAND — `ManagerInner::failures`, a `VecDeque<RetainedFailure>` (the row plus its way to start again, `manager/retry.rs`) capped at `FAILURE_CAPACITY = 20`, oldest evicted first — and `snapshot()` appends them after the live rows.
 
 - **`free_and_remove` is untouched.** Admission, laning, the busy-volumes set, and settling behave exactly as before: a failed op frees its lane slots, cleans its caches, deletes its record, and admits the next op on the same `on_settled` it always did. Retention is a separate structure the settle path never consults. Pinned by `manager::tests::a_failed_op_frees_its_lane_and_admits_the_next_exactly_as_before`.
-- **Recorded at the emit site.** `TauriEventSink::emit_error` calls `record_failure` through `terminal_effects::error`, after the `mcp::terminal_ops::record` line and before the emit (order pinned by `terminal_effects_tests.rs`). ❌ Not in the `OperationEventSink` trait and not in `CollectorEventSink`: test sinks stay side-effect-free.
-- **⚠️ A failure whose record is still LIVE is filtered out of the snapshot.** `emit_error` runs inside the op's own task, before `on_settled` removes the record, so for a moment the op is both running and failed. Emitting both rows would put one `operationId` in the list twice, and the queue window's keyed `{#each}` throws on a duplicate key. `record_failure` therefore stays silent whenever the record is live; the row surfaces on `on_settled`'s existing `emit_changed`, which is the honest moment anyway. It DOES emit on the other branch, where the record is already gone: no duplicate is possible without a record, and no `on_settled` is coming, so the row would otherwise sit unbroadcast until some unrelated emit — no toast, no chip, nothing until the queue window next opens. Pinned by `a_failure_with_no_live_record_broadcasts_itself`.
+- **Recorded at the emit site.** The app's `TauriEventSink::emit_error` calls `OperationManager::retain_failure` through `terminal_effects::error` (`apps/desktop/src-tauri/src/operations_host/terminal_effects.rs`), after the `mcp::terminal_ops::record` line and before the emit (order pinned by `terminal_effects_tests.rs`). ❌ Not in the `OperationEventSink` trait and not in `CollectorEventSink`: test sinks stay side-effect-free.
+- **⚠️ A failure whose record is still LIVE is filtered out of the snapshot.** `emit_error` runs inside the op's own task, before `on_settled` removes the record, so for a moment the op is both running and failed. Emitting both rows would put one `operationId` in the list twice, and the queue window's keyed `{#each}` throws on a duplicate key. `retain_failure` therefore stays silent whenever the record is live; the row surfaces on `on_settled`'s existing `emit_changed`, which is the honest moment anyway. It DOES emit on the other branch, where the record is already gone: no duplicate is possible without a record, and no `on_settled` is coming, so the row would otherwise sit unbroadcast until some unrelated emit — no toast, no chip, nothing until the queue window next opens. Pinned by `a_failure_with_no_live_record_broadcasts_itself`.
 - **Not every `write-error` is a failure.** `WriteOperationError::Cancelled` (some volume paths emit it) and `ArchiveNeedsPassword` (a recoverable prompt the frontend answers and retries) are excluded by TYPED variant match, never by message text.
 - **First error per id wins.** `write-error` can fire twice for one op — an inner handler emits and returns `Err`, then `mod.rs`'s safety net emits again — and the first one is what actually stopped it.
 - **A retained row reports `supports_rollback: false`** and reuses the live record's source/destination summary, so it reads like the running row it replaces. If the record is already gone, it falls back to the event's own `operation_type` and no summary.
 - **Only an explicit action clears one**: `dismiss_failed_operation(id)`, `dismiss_all_failed_operations()`, or a Retry that started. ❌ Never a timer, ❌ never a window close, ❌ never "the next operation starting". A 40-minute copy that failed while the user was away has to still be there.
-- **A retained failure can keep a way to start again** (`RetainedFailure::retry`, a `manager::StartAgain`), which the queue row's Retry runs through `retry_failed_operation(id)`. The routing entry every cross-volume copy and move takes attaches it right after the start (`routing/retry.rs::RetryRecipe`, captured from the start's own arguments), to the live record or, for an op that already failed in between, straight to its failure; `record_failure` carries it from the record onto the failure. `OperationSnapshot::can_retry` says a row has one (whether the ERROR is worth retrying is the frontend's `offersRetry`, the error dialog's own rule). A started retry dismisses the row; a refused one leaves it, Retry and all, and returns the typed error. A second click while one is starting finds `retrying` set and gets `NothingToRetry`, so a double click can't start the transfer twice.
+- **A retained failure can keep a way to start again** (`RetainedFailure::retry`, a `manager::StartAgain`), which the queue row's Retry runs through `retry_failed_operation(id)`. The routing entry every cross-volume copy and move takes attaches it right after the start (`routing/retry.rs::RetryRecipe`, captured from the start's own arguments), to the live record or, for an op that already failed in between, straight to its failure; `retain_failure` carries it from the record onto the failure. `OperationSnapshot::can_retry` says a row has one (whether the ERROR is worth retrying is the frontend's `offersRetry`, the error dialog's own rule). A started retry dismisses the row; a refused one leaves it, Retry and all, and returns the typed error. A second click while one is starting finds `retrying` set and gets `NothingToRetry`, so a double click can't start the transfer twice.
 
 **Decision: retention lives in the manager, not the frontend. Why.** The failure has to reach two separate webviews, and it can land while either is closed. A store in the queue window misses it outright (that window is closed in the exact scenario this exists for); a store in the main window can't be read by the queue window and would need a hand-rolled state server over `emitTo`, inverting the dependency. The operation log (`journal.rs`) is the durable history and stays that, but it records an `ExecutionStatus`, not the typed `WriteOperationError` the frontend's message pipeline needs, and browsing the past is a different job from a live notice. The manager already owns membership and already broadcasts it to both windows, so retention there needs no new event, no new listener, and seeds correctly through the existing `list_operations` on window open.
 
@@ -876,7 +885,7 @@ registration by `summary.rs` (`path_summary` for local ops, `volume_items` for v
 
 **Why not a phase.** `WriteOperationPhase::RollingBack` is NOT the signal: a cancelled copy cleaning up its own partials wears that phase too, and there the existing "Rolling back..." wording is honest, because it really is deleting. Reading the phase instead of this field is how a history reversal of a MOVE ends up telling someone their files are being deleted.
 
-A retained failure keeps the field (`record_failure` copies it off the live record), so a reversal that stopped early still reads as a reversal on the row that explains why.
+A retained failure keeps the field (`retain_failure` copies it off the live record), so a reversal that stopped early still reads as a reversal on the row that explains why.
 
 ### Rollback availability (`supports_rollback`)
 
@@ -1327,7 +1336,7 @@ add a second feed site (see `../../priority/CLAUDE.md`).
 **Why**: 20+ emit sites construct `WriteProgressEvent` literals for active-phase events. Adding four optional fields to the struct would force every site to spell out their defaults, pure mechanical noise. The `new(...)` constructor takes the eight core counter fields and defaults the scan meta (`None` / `0`); the scan emit sites in `scan.rs`, `scan_preview.rs`, and `delete/walker.rs::scan_volume_recursive` opt in via `.with_scan_meta(current_dir, dirs_done, expected)`. Future scan-related fields go through the same builder. If a real refactor of the 20 literals to `new(...)` ever happens, the builder pattern still composes cleanly on top.
 
 **Decision**: All write operations go through `OperationEventSink` instead of `tauri::AppHandle`, and the sink is constructed **only at the IPC edge** (`commands/file_system/write_ops.rs` + `commands/file_system/volume_copy.rs`), then injected all the way down.
-**Why**: Decouples the copy/move/delete/trash orchestration from the Tauri framework. `TauriEventSink` wraps AppHandle for production; `CollectorEventSink` stores events for test assertions. The whole managed layer — `start_write_operation`, the four starters, the volume entry points (`copy_between_volumes` / `move_between_volumes` / `move_within_same_volume`), every `*_with_progress` function, and `WriteSettledGuard` — takes `&dyn OperationEventSink` / `Arc<dyn OperationEventSink>`, never an `AppHandle`. Each command builds `Arc::new(TauriEventSink::new(app))` once and passes it in (grep confirms zero `TauriEventSink::new` under `write_operations/`). This lets the full pipeline (multi-file copy, cancellation, conflict resolution, progress, the managed spawn path, and settle) run end-to-end under a `CollectorEventSink` with no Tauri runtime — see `tests.rs::injected_sink_receives_complete_and_settled_for_local_copy` and the trash unit tests (`delete/trash.rs::tests::trash_*_via_sink`). `state.emit_progress_via_sink` is the only progress-emit method — `emit_progress_via_app` is gone. The write-error safety-net arms in each deferred also route through `sink.emit_error(...)` rather than a string-named `app.emit("write-error", ...)`.
+**Why**: Decouples the copy/move/delete/trash orchestration from the Tauri framework. The app's `TauriEventSink` (`apps/desktop/src-tauri/src/operations_host/sinks.rs`) wraps AppHandle for production; `CollectorEventSink` stores events for test assertions. The whole managed layer — `start_write_operation`, the four starters, the volume entry points (`copy_between_volumes` / `move_between_volumes` / `move_within_same_volume`), every `*_with_progress` function, and `WriteSettledGuard` — takes `&dyn OperationEventSink` / `Arc<dyn OperationEventSink>`, never an `AppHandle`. Each command builds `Arc::new(TauriEventSink::new(app))` once and passes it in; the engine names no Tauri sink at all. This lets the full pipeline (multi-file copy, cancellation, conflict resolution, progress, the managed spawn path, and settle) run end-to-end under a `CollectorEventSink` with no Tauri runtime — see `tests.rs::injected_sink_receives_complete_and_settled_for_local_copy` and the trash unit tests (`delete/trash.rs::tests::trash_*_via_sink`). `state.emit_progress_via_sink` is the only progress-emit method — `emit_progress_via_app` is gone. The write-error safety-net arms in each deferred also route through `sink.emit_error(...)` rather than a string-named `app.emit("write-error", ...)`.
 
 **Decision**: Scan preview reuses watched listings (the "fresh-listing oracle").
 **Why**: Pre-flight scans for copy/move on MTP (and to a lesser degree SMB and big local trees) used to duplicate work the backend already had in the listing cache. Selecting 135 photos in a watched `/DCIM/Camera` (~15k entries) and pressing F5 would re-list the parent dir over USB just to look up size by name — ~17 s of "Verifying before copy…" while the listing was already fresh on the pane behind the dialog. `run_volume_scan_preview` now groups input sources by parent dir and consults `try_get_authoritative_listing(volume_id, parent)` first. On hit, sizes and `is_directory` flags come from the cached `FileEntry` for top-level files; top-level directories recurse via `scan_subtree_with_oracle`, which re-applies the oracle at every level (so a subfolder open in another pane also short-circuits). On miss, the call falls through to `volume.scan_for_copy_batch_with_boundary(paths_in_group, ...)` — same code path as before — so MTP's parent-grouping and SMB's pipelined-stat optimizations still run for cold-cache parents. The local-FS walker (`walk_dir_recursive` in `scan.rs`) also takes an oracle check at the top of each recursive call, with `volume_id = "root"` plumbed through from `scan_sources_internal` and `run_scan_preview`. The freshness contract is bright-line at the watcher boundary: no "5 seconds is fresh enough" TTL, just "the volume's `listing_watch_coverage(path)` returned `EveryWriter`." See `crates/cmdr-listing/src/caching.rs::try_get_authoritative_listing` for the per-backend debounce windows that contract tolerates.

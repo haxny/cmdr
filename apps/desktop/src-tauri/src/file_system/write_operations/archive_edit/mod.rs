@@ -64,7 +64,7 @@ pub(crate) use copy_into::route_archive_copy_into_with_provenance;
 pub(crate) use driver::{ArchiveEditRequest, archive_edit_start, route_archive_delete};
 pub(crate) use move_out::route_archive_move_out;
 pub(crate) use routing::{
-    archive_inner_exists, ensure_zip_writable, global_tauri_sink, join_inner_path, normalize_inner_path,
+    archive_inner_exists, ensure_zip_writable, host_operation_sink, join_inner_path, normalize_inner_path,
 };
 // The remote edit, exposed for the live-SMB / MTP integration suites one level up.
 #[cfg(test)]

@@ -7,7 +7,11 @@
 //! - **Engine-wide facts** go through [`EngineEvents`] (`events.rs`), error
 //!   reports included, as typed [`OperationErrorReport`]s (`error_report.rs`).
 //! - **One operation's events** go through [`OperationEventSink`]
-//!   (`operation_sink.rs`), which each operation is handed at start.
+//!   (`operation_sink.rs`), which each operation is handed at start; one scan
+//!   preview's through [`ScanPreviewEventSink`] (`scan_preview_sink.rs`).
+//! - **An operation the engine starts on its own behalf** (an instant op routed
+//!   into a zip becomes a managed archive edit) gets its sink from the host's
+//!   [`OperationSinkFactory`].
 //!
 //! The app builds an [`EngineHost`] once (`operations_host::install`) and parks
 //! it in a slot this module owns until the engine becomes a handle that carries
@@ -16,6 +20,7 @@
 mod error_report;
 mod events;
 mod operation_sink;
+mod scan_preview_sink;
 
 use std::sync::{Arc, LazyLock, OnceLock};
 
@@ -26,32 +31,33 @@ pub(crate) use error_report::{AsideAttempt, OperationErrorReport, TreeFailure};
 use events::NoEngineEvents;
 pub(crate) use events::{EngineEvents, InstantMutationFact, InstantOp, InstantOutcome, InstantTarget};
 pub use operation_sink::OperationEventSink;
+pub use scan_preview_sink::ScanPreviewEventSink;
+
+/// Builds a fresh sink for an operation no caller handed one.
+pub(crate) type OperationSinkFactory = Box<dyn Fn() -> Arc<dyn OperationEventSink> + Send + Sync>;
 
 /// Everything the engine reaches the app through.
 pub(crate) struct EngineHost {
     volume_host: VolumeHost,
     events: Arc<dyn EngineEvents>,
-    /// What the archive-edit instant routes and the scan bridge still build a
-    /// Tauri sink from.
-    // shim: removed in M5b
-    app: Option<tauri::AppHandle>,
+    operation_sinks: Option<OperationSinkFactory>,
 }
 
 impl EngineHost {
     /// A host over `volume_host` (whose runtime the engine spawns on) and
-    /// `events`.
+    /// `events`, with no sink factory.
     pub(crate) fn new(volume_host: VolumeHost, events: Arc<dyn EngineEvents>) -> Self {
         Self {
             volume_host,
             events,
-            app: None,
+            operation_sinks: None,
         }
     }
 
-    /// Hands the remaining Tauri sink builders the app handle.
-    // shim: removed in M5b
-    pub(crate) fn with_app(mut self, app: tauri::AppHandle) -> Self {
-        self.app = Some(app);
+    /// Gives the engine a way to build a sink for an operation it starts on its
+    /// own behalf.
+    pub(crate) fn with_operation_sinks(mut self, factory: OperationSinkFactory) -> Self {
+        self.operation_sinks = Some(factory);
         self
     }
 
@@ -75,11 +81,11 @@ impl EngineHost {
         &*self.events
     }
 
-    /// The startup-wired app handle. `None` before wiring and in every test, so
-    /// a caller falls back to a plain refusal.
-    // shim: removed in M5b
-    pub(crate) fn app(&self) -> Option<&tauri::AppHandle> {
-        self.app.as_ref()
+    /// A fresh sink for an operation the engine starts on its own behalf.
+    /// `None` when the host gave no factory (before `install`, and in every
+    /// test), so a caller refuses plainly rather than run an op nobody hears.
+    pub(crate) fn operation_sink(&self) -> Option<Arc<dyn OperationEventSink>> {
+        self.operation_sinks.as_ref().map(|factory| factory())
     }
 }
 

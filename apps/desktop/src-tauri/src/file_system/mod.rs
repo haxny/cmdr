@@ -57,9 +57,8 @@ pub use watcher::flush_all_watchers;
 pub use watcher::{init_watcher_manager, update_debounce_ms};
 // Re-export write operation types
 pub use write_operations::{
-    OperationEventSink, ReadOnlySide, TauriEventSink, WriteOperationConfig, WriteOperationError,
-    WriteOperationStartResult, busy_volume_ids, cancel_write_operation, delete_files_start, move_files_start,
-    trash_files_start,
+    OperationEventSink, ReadOnlySide, WriteOperationConfig, WriteOperationError, WriteOperationStartResult,
+    busy_volume_ids, cancel_write_operation, delete_files_start, move_files_start, trash_files_start,
 };
 // Re-export the operation manager surface (queue + lifecycle). `LifecycleStatus`
 // and `OperationsChanged` are reached directly via `write_operations::` (the IPC

@@ -328,7 +328,7 @@ async fn start_rename_as_move(
     volume_id: &str,
     initiator: Initiator,
 ) -> Result<(), MutationError> {
-    let events = archive_edit::global_tauri_sink().ok_or_else(|| MutationError::Unexpected {
+    let events = archive_edit::host_operation_sink().ok_or_else(|| MutationError::Unexpected {
         detail: "the operation manager isn't ready to start a move".to_string(),
     })?;
     let parent = to.parent().ok_or(MutationError::CantRenameVolumeRoot)?;
@@ -423,7 +423,7 @@ async fn route_archive_rename(from: &Path, to: &Path, volume_id: &str) -> Result
         return Err(MutationError::AlreadyExists { name: leaf(&to_inner) });
     }
 
-    let events = archive_edit::global_tauri_sink().ok_or(MutationError::ArchiveEditNotReady)?;
+    let events = archive_edit::host_operation_sink().ok_or(MutationError::ArchiveEditNotReady)?;
     let summary = OperationSummaryText {
         source: Some(leaf(&from_inner)),
         destination: Some(leaf(&to_inner)),

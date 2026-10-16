@@ -17,7 +17,8 @@
 //!   Without it every scan-phase surface goes blank rather than live:
 //!   `scan-preview-progress` is keyed by `previewId` and carries no
 //!   `operationId`, and nothing else emits for an operation that is only
-//!   waiting.
+//!   waiting. It goes out through `EngineEvents::scan_wait_progress`, since
+//!   the preview's worker holds no operation's sink.
 //! - **The park.** [`ScanPause`] lets the walk honor its owner's Pause. The
 //!   scan is the minutes-long part of a big transfer, so it is where a person
 //!   presses Pause; a scan that carried on regardless would make the button a
@@ -30,6 +31,7 @@ use std::sync::atomic::Ordering;
 use std::sync::{Arc, OnceLock};
 
 use super::event_sinks::OperationEventSink;
+use super::host;
 use super::manager;
 use super::scan_cache::{PREVIEW_SETTLED, ScanOutcome, ScanPreviewState, abandon_claim, finish_claim, poll_claim};
 use super::scan_watchdog::ScanWatchdog;
@@ -357,8 +359,6 @@ pub(super) struct ScanCounts {
 /// knows emits nothing, which is how a walk that outlives its cancelled owner
 /// goes quiet.
 pub(super) fn emit_scan_progress(operation_id: &str, counts: ScanCounts) {
-    use tauri_specta::Event as _;
-
     let Some(operation_type) = manager::manager().operation_type_of(operation_id) else {
         return;
     };
@@ -391,14 +391,7 @@ pub(super) fn emit_scan_progress(operation_id: &str, counts: ScanCounts) {
     };
     #[cfg(test)]
     record_tick_for_test(&event);
-    // Absent before the app handle is wired (unit tests), where recording above
-    // is the whole point of the call.
-    let Some(app) = manager::operations_app_handle() else {
-        return;
-    };
-    if let Err(e) = event.emit(&app) {
-        log::warn!(target: "op_manager", "failed to forward scan progress for op={operation_id}: {e}");
-    }
+    host::installed().events().scan_wait_progress(event);
 }
 
 /// Emits the one synthetic tick that turns a scanning row from blank into live.

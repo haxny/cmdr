@@ -253,7 +253,7 @@ async fn route_archive_create(
         },
     };
 
-    let events = archive_edit::global_tauri_sink().ok_or(MutationError::ArchiveEditNotReady)?;
+    let events = archive_edit::host_operation_sink().ok_or(MutationError::ArchiveEditNotReady)?;
     let request = ArchiveEditRequest {
         archive_path,
         parent_volume_id: volume_id.unwrap_or_else(|| "root".to_string()),

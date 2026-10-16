@@ -8,9 +8,9 @@ use super::super::types::{
 
 /// Abstraction for emitting write operation events.
 ///
-/// Decouples the copy/move/delete pipeline from `tauri::AppHandle`. The Tauri
-/// layer provides `TauriEventSink` (calls `app.emit`). Tests use
-/// `CollectorEventSink` (stores events in a `Vec` for assertions).
+/// Decouples the copy/move/delete pipeline from `tauri::AppHandle`. The app
+/// provides `TauriEventSink` (`operations_host::sinks`, calls `app.emit`). Tests
+/// use `CollectorEventSink` (stores events in a `Vec` for assertions).
 pub trait OperationEventSink: Send + Sync {
     fn emit_progress(&self, event: WriteProgressEvent);
     fn emit_complete(&self, event: WriteCompleteEvent);

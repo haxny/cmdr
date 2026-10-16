@@ -13,7 +13,9 @@ use crate::file_system::write_operations::host::{
     AsideAttempt, EngineEvents, InstantMutationFact, InstantOp, InstantOutcome, InstantTarget, OperationErrorReport,
     TreeFailure,
 };
-use crate::file_system::write_operations::{MoveLeftoversKeptEvent, OperationsChanged, VolumesBusyChanged};
+use crate::file_system::write_operations::{
+    MoveLeftoversKeptEvent, OperationsChanged, VolumesBusyChanged, WriteProgressEvent,
+};
 
 /// Emits through the app handle when there is one; a test binary has none and
 /// still feeds the gauge and the analytics client, which work without an app.
@@ -80,6 +82,15 @@ impl EngineEvents for TauriEngineEvents {
 
     fn error_report(&self, report: OperationErrorReport) {
         raise(report);
+    }
+
+    fn scan_wait_progress(&self, event: WriteProgressEvent) {
+        let Some(app) = &self.app else {
+            return;
+        };
+        if let Err(e) = event.emit(app) {
+            log::warn!(target: "op_manager", "failed to forward scan progress for op={}: {e}", event.operation_id);
+        }
     }
 }
 

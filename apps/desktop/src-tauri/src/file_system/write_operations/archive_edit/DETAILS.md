@@ -137,8 +137,8 @@ fresh spared, other-archive ignored, delete-failure doesn't fail the edit).
   progress dialog can offer an enabled Cancel. Production reads one atomic and never sleeps.
 - **Routing seams.** The former archive rejections become routing: `create_directory_managed` / `create_file_managed`
   (a `.zip`-crossing parent), `rename_managed` (an in-archive path), `delete_files_start` (in-archive sources), and the
-  `copy`/`move_between_volumes` COMMANDS (an archive-resolved destination). The instant-op forks reach a `TauriEventSink`
-  via the manager's startup-wired app handle (`operations_app_handle`), so no command signature changes; a
+  `copy`/`move_between_volumes` COMMANDS (an archive-resolved destination). The instant-op forks get a sink from the engine
+  host's factory (`routing.rs::host_operation_sink`), so no command signature changes; a
   `create`/`rename` return is the operation id, not a path (the FE reads it as an op handle).
 - **Changeset per op.** mkdir → `{ mkdir }`; mkfile → `{ add }` (empty bytes); rename inside → `{ rename }`; delete
   inside → `{ delete }` (batched across a multi-select in one zip); copy/move INTO → one `{ add + mkdir }` for the whole

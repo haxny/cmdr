@@ -46,7 +46,7 @@ use std::time::Duration;
 
 use uuid::Uuid;
 
-use super::event_sinks::{ScanPreviewEventSink, TauriScanPreviewSink};
+use super::event_sinks::ScanPreviewEventSink;
 use super::scan_cache::{
     ScanOutcome, cached_scan_totals, claimed_operation, in_flight_state, register_preview, release_preview,
     settle_preview,
@@ -64,7 +64,7 @@ pub(super) use local::run_scan_preview;
 pub(super) use volume::run_oracle_aware_batch_scan;
 pub(super) use volume::run_volume_scan_preview;
 
-/// Starts a scan preview for the Copy dialog.
+/// Starts a scan preview for the Copy dialog, reporting through `events`.
 /// Returns a preview_id that can be used to cancel or to pass to copy_files.
 ///
 /// When `source_volume` is provided, uses `Volume::scan_for_copy()` instead of `std::fs`,
@@ -79,7 +79,7 @@ pub(super) use volume::run_volume_scan_preview;
 /// operation in the cached result. A compress's LOCAL walk samples a
 /// compressed-size estimate (`compress_estimate`); a volume walk never samples.
 pub fn start_scan_preview(
-    app: tauri::AppHandle,
+    events: Arc<dyn ScanPreviewEventSink>,
     sources: Vec<PathBuf>,
     source_volume: Option<Arc<dyn Volume>>,
     source_volume_id: String,
@@ -96,7 +96,6 @@ pub fn start_scan_preview(
 
     register_preview(preview_id.clone(), Arc::clone(&state));
 
-    let events: Arc<dyn ScanPreviewEventSink> = Arc::new(TauriScanPreviewSink::new(app));
     // Bounds the walk by INACTIVITY and narrates it in the log. Started here,
     // before either worker spawns, so a walk that wedges on its very first
     // syscall is still bounded — the workers only feed it.

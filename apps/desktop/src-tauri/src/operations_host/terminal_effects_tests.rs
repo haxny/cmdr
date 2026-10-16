@@ -1,6 +1,6 @@
 //! The terminal side-effect matrix: per outcome, which app side effects fire and
-//! in what order relative to the emit (`terminal_effects.rs`). The sink adapter
-//! that carries these must keep this sequence when it moves.
+//! in what order relative to the emit (`terminal_effects.rs`), which the sink
+//! adapter (`sinks.rs`) runs.
 //!
 //! The retained-failure half through the production effects lives with the
 //! other retained-failure pins (`manager/tests/failures.rs`), which own a
@@ -9,9 +9,9 @@
 use std::sync::Mutex;
 
 use super::analytics::{CompletionCategory, completion_category};
-use super::manager::manager;
 use super::terminal_effects::{self, AppTerminalEffects, TerminalEffects};
-use super::types::{
+use crate::file_system::write_operations::operation_manager as manager;
+use crate::file_system::write_operations::{
     CancelRollback, WriteCancelledEvent, WriteCompleteEvent, WriteErrorEvent, WriteOperationError, WriteOperationType,
     WriteSettledEvent,
 };

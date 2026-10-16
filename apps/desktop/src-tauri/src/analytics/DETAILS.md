@@ -207,7 +207,7 @@ Backend events fire at success chokepoints; frontend events ride `track_event`.
 - `search_cta_offered` / `search_cta_used` (frontend, same file): `cta` enum. See below.
 - `select_files_used` (frontend, `SelectionDialog.svelte` `commitMatches`): `mode` (the same `SearchMode` union:
   `filename` / `regex` / `ai`) + `action` (add/remove); never the pattern.
-- `file_transfer_completed` (backend, `write_operations/analytics.rs` `emit_completion_analytics`): `op` (copy/move),
+- `file_transfer_completed` (backend, `operations_host/analytics.rs` `emit_completion_analytics`): `op` (copy/move),
   `item_count` bucket, `had_conflicts` bool (proxied from `files_skipped > 0`); never names/paths.
 - `delete_used` (backend, same function): `trashed` bool, `item_count` bucket.
 - `archive_edit_completed` (backend, same function): `item_count` bucket.

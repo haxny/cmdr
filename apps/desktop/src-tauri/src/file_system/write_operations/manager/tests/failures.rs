@@ -61,7 +61,7 @@ async fn retained_failure_stays_hidden_until_the_record_settles() {
     started_rx.await.expect("started");
 
     let emits_before = mgr.emit_count();
-    mgr.record_failure(&op, WriteOperationType::Copy, &io_error("/Users/me/photos/a.raw"));
+    mgr.retain_failure(&op, WriteOperationType::Copy, &io_error("/Users/me/photos/a.raw"));
 
     let live = rows_for(mgr, &op);
     assert_eq!(live.len(), 1, "the retained failure must not duplicate a live op's id");
@@ -70,7 +70,7 @@ async fn retained_failure_stays_hidden_until_the_record_settles() {
     assert_eq!(
         mgr.emit_count(),
         emits_before,
-        "record_failure must not emit; on_settled's existing emit is the correct moment"
+        "retain_failure must not emit; on_settled's existing emit is the correct moment"
     );
 
     // Settle → the record goes and the retained failure takes its place.
@@ -113,8 +113,8 @@ async fn a_failure_through_the_production_sink_effects_is_retained_and_surfaces_
     // The same contract as above, reached the way production reaches it: the
     // sink's `write-error` side effects (`terminal_effects::error` over
     // `AppTerminalEffects`), fired from inside the live op.
-    use crate::file_system::write_operations::terminal_effects::{self, AppTerminalEffects};
     use crate::file_system::write_operations::types::WriteErrorEvent;
+    use crate::operations_host::terminal_effects::{self, AppTerminalEffects};
 
     let mgr = leaked_manager();
     let op = unique("fail-through-sink");
@@ -171,8 +171,8 @@ fn a_second_failure_for_one_operation_keeps_the_first_error() {
         device_name: Some("stick".to_string()),
         side: crate::file_system::ReadOnlySide::Destination,
     };
-    mgr.record_failure("op-double", WriteOperationType::Delete, &first);
-    mgr.record_failure(
+    mgr.retain_failure("op-double", WriteOperationType::Delete, &first);
+    mgr.retain_failure(
         "op-double",
         WriteOperationType::Delete,
         &io_error("/Volumes/stick/a.txt"),
@@ -199,14 +199,14 @@ fn cancels_and_password_prompts_are_not_retained_as_failures() {
     // the FE sets the password and retries. Excluded by typed variant, never by
     // message text.
     let mgr = private_manager();
-    mgr.record_failure(
+    mgr.retain_failure(
         "op-cancelled",
         WriteOperationType::Copy,
         &WriteOperationError::Cancelled {
             message: "cancelled".to_string(),
         },
     );
-    mgr.record_failure(
+    mgr.retain_failure(
         "op-password",
         WriteOperationType::Copy,
         &WriteOperationError::ArchiveNeedsPassword {
@@ -221,7 +221,7 @@ fn cancels_and_password_prompts_are_not_retained_as_failures() {
 
     // ...and a real failure alongside them still lands, so this is a filter and
     // not a blanket refusal.
-    mgr.record_failure("op-real", WriteOperationType::Copy, &io_error("/Users/me/a.txt"));
+    mgr.retain_failure("op-real", WriteOperationType::Copy, &io_error("/Users/me/a.txt"));
     assert_eq!(mgr.list().len(), 1);
     assert_eq!(mgr.list()[0].operation_id, "op-real");
 }
@@ -234,7 +234,7 @@ fn a_failure_with_no_live_record_broadcasts_itself() {
     let mgr = private_manager();
     let emits_before = mgr.emit_count();
 
-    mgr.record_failure("op-orphan", WriteOperationType::Copy, &io_error("/a"));
+    mgr.retain_failure("op-orphan", WriteOperationType::Copy, &io_error("/a"));
 
     assert!(
         mgr.emit_count() > emits_before,
@@ -246,7 +246,7 @@ fn a_failure_with_no_live_record_broadcasts_itself() {
 fn retained_failures_evict_the_oldest_past_capacity() {
     let mgr = private_manager();
     for i in 0..(FAILURE_CAPACITY + 5) {
-        mgr.record_failure(&format!("op-{i}"), WriteOperationType::Copy, &io_error("/x"));
+        mgr.retain_failure(&format!("op-{i}"), WriteOperationType::Copy, &io_error("/x"));
     }
     let rows = mgr.list();
     assert_eq!(rows.len(), FAILURE_CAPACITY, "the list stays bounded");
@@ -261,8 +261,8 @@ fn retained_failures_evict_the_oldest_past_capacity() {
 #[test]
 fn dismissing_one_failure_removes_exactly_it_and_re_emits() {
     let mgr = private_manager();
-    mgr.record_failure("op-a", WriteOperationType::Copy, &io_error("/a"));
-    mgr.record_failure("op-b", WriteOperationType::Move, &io_error("/b"));
+    mgr.retain_failure("op-a", WriteOperationType::Copy, &io_error("/a"));
+    mgr.retain_failure("op-b", WriteOperationType::Move, &io_error("/b"));
 
     let emits_before = mgr.emit_count();
     mgr.dismiss_failure("op-a");
@@ -280,8 +280,8 @@ fn dismissing_one_failure_removes_exactly_it_and_re_emits() {
 #[test]
 fn dismissing_all_failures_empties_the_list_and_re_emits() {
     let mgr = private_manager();
-    mgr.record_failure("op-a", WriteOperationType::Copy, &io_error("/a"));
-    mgr.record_failure("op-b", WriteOperationType::Trash, &io_error("/b"));
+    mgr.retain_failure("op-a", WriteOperationType::Copy, &io_error("/a"));
+    mgr.retain_failure("op-b", WriteOperationType::Trash, &io_error("/b"));
 
     let emits_before = mgr.emit_count();
     mgr.dismiss_all_failures();
@@ -316,7 +316,7 @@ async fn a_failed_op_frees_its_lane_and_admits_the_next_exactly_as_before() {
     );
     assert_eq!(manager().lifecycle_status(&op_b), Some(LifecycleStatus::Queued));
 
-    manager().record_failure(&op_a, WriteOperationType::Copy, &io_error("/a"));
+    manager().retain_failure(&op_a, WriteOperationType::Copy, &io_error("/a"));
     let _ = a_rel_tx.send(());
 
     tokio::time::timeout(Duration::from_secs(2), b_started_rx)
@@ -425,8 +425,8 @@ fn only_a_failure_with_a_way_to_start_again_offers_retry() {
     let mgr = private_manager();
     let with = unique("retry-with");
     let without = unique("retry-without");
-    mgr.record_failure(&with, WriteOperationType::Copy, &io_error("/a"));
-    mgr.record_failure(&without, WriteOperationType::Copy, &io_error("/b"));
+    mgr.retain_failure(&with, WriteOperationType::Copy, &io_error("/a"));
+    mgr.retain_failure(&without, WriteOperationType::Copy, &io_error("/b"));
     // The routing attaches the recipe right after the start returns, which can
     // be after an op that failed at once already settled.
     mgr.attach_retry(&with, FakeStart::starting("new"));
@@ -441,7 +441,7 @@ async fn a_retry_starts_again_and_drops_the_failed_row() {
     let mgr = leaked_manager();
     let op = unique("retry-start");
     let start = FakeStart::starting("op-again");
-    mgr.record_failure(&op, WriteOperationType::Copy, &io_error("/a"));
+    mgr.retain_failure(&op, WriteOperationType::Copy, &io_error("/a"));
     mgr.attach_retry(&op, Arc::clone(&start) as Arc<dyn StartAgain>);
 
     let outcome = mgr.retry_failure(&op).await.expect("the start went through");
@@ -465,7 +465,7 @@ async fn a_retry_starts_again_and_drops_the_failed_row() {
 async fn a_refused_retry_keeps_the_row_and_its_retry() {
     let mgr = leaked_manager();
     let op = unique("retry-refused");
-    mgr.record_failure(&op, WriteOperationType::Copy, &io_error("/a"));
+    mgr.retain_failure(&op, WriteOperationType::Copy, &io_error("/a"));
     mgr.attach_retry(&op, FakeStart::refusing(io_error("/gone")));
 
     let refused = mgr.retry_failure(&op).await;
@@ -481,7 +481,7 @@ async fn a_refused_retry_keeps_the_row_and_its_retry() {
 async fn a_retry_with_nothing_behind_it_says_so() {
     let mgr = leaked_manager();
     let op = unique("retry-nothing");
-    mgr.record_failure(&op, WriteOperationType::Copy, &io_error("/a"));
+    mgr.retain_failure(&op, WriteOperationType::Copy, &io_error("/a"));
 
     assert!(matches!(mgr.retry_failure(&op).await, Ok(RetryOutcome::NothingToRetry)));
     assert!(matches!(
@@ -506,7 +506,7 @@ async fn a_live_operations_recipe_carries_onto_its_failure() {
     );
     started_rx.await.expect("started");
     mgr.attach_retry(&op, FakeStart::starting("again"));
-    mgr.record_failure(&op, WriteOperationType::Copy, &io_error("/a"));
+    mgr.retain_failure(&op, WriteOperationType::Copy, &io_error("/a"));
     rel_tx.send(()).expect("release");
     wait_until_async(WAIT, "the failed op to settle", || {
         rows_for(mgr, &op)

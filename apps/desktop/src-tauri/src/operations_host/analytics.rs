@@ -6,15 +6,15 @@
 //!   `TauriEventSink::emit_complete` (via `terminal_effects::complete`) with a
 //!   `WriteCompleteEvent`, and [`emit_completion_analytics`] reads it.
 //! - **Instant metadata ops** (rename / new folder / new file) never produce a
-//!   `WriteCompleteEvent` at all — `manager::run_instant` returns their `Result`
-//!   inline — so their driver's single exit reports an `InstantMutationFact`
-//!   through `EngineEvents`, and the app's `operations_host::events` captures it.
+//!   `WriteCompleteEvent` at all — the engine's `manager::run_instant` returns
+//!   their `Result` inline — so their driver's single exit reports an
+//!   `InstantMutationFact` through `EngineEvents`, and `events.rs` captures it.
 //!
 //! Every emitted property is categorical (op kind, a coarse count bucket, a bool);
 //! no names or paths ever cross.
 
-use super::types::{WriteCompleteEvent, WriteOperationType};
 use crate::analytics::item_count_bucket;
+use crate::file_system::write_operations::{WriteCompleteEvent, WriteOperationType};
 
 /// Emits the PII-free analytics event for a completed write operation. Copy/Move → `file_transfer_completed`
 /// (with `op`, an item-count bucket, and a `had_conflicts` bool); Delete/Trash → `delete_used` (with

@@ -18,7 +18,7 @@ use crate::file_system::write_operations::{
 };
 use crate::file_system::{
     OperationEventSink, OperationSnapshot, PauseAllOutcome, PauseOutcome, QueueMoveDirection, QueueMoveOutcome,
-    ReadOnlySide, TauriEventSink, WriteOperationConfig, WriteOperationError, WriteOperationStartResult,
+    ReadOnlySide, WriteOperationConfig, WriteOperationError, WriteOperationStartResult,
     cancel_operation as ops_cancel_operation, cancel_operations as ops_cancel_operations,
     cancel_write_operation as ops_cancel_write_operation, delete_files_start as ops_delete_files_start,
     dismiss_all_failed_operations as ops_dismiss_all_failed_operations,
@@ -30,6 +30,7 @@ use crate::file_system::{
     resume_operation as ops_resume_operation, retry_failed_operation as ops_retry_failed_operation,
     trash_files_start as ops_trash_files_start,
 };
+use crate::operations_host::{TauriEventSink, TauriScanPreviewSink};
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::time::Duration;
@@ -400,7 +401,7 @@ pub async fn start_scan_preview(
 
     let progress_interval = progress_interval_ms.unwrap_or(500);
     Ok(ops_start_scan_preview(
-        app,
+        Arc::new(TauriScanPreviewSink::new(app)),
         sources,
         source_volume,
         volume_id,

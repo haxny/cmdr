@@ -265,7 +265,7 @@ pub(crate) struct OperationManager {
     /// `emit_changed`, before the host hears it, so it counts in unit tests,
     /// which have no frontend. Nothing in production reads it: like `admission_passes`,
     /// it's what lets a test assert that a mutation told the windows about
-    /// itself (or, for `record_failure`, deliberately didn't).
+    /// itself (or, for `retain_failure`, deliberately didn't).
     emits: AtomicU64,
 }
 
@@ -276,15 +276,6 @@ static MANAGER: LazyLock<OperationManager> = LazyLock::new(OperationManager::new
 /// Returns the global operation manager.
 pub(crate) fn manager() -> &'static OperationManager {
     &MANAGER
-}
-
-/// The startup-wired app handle, if present. Lets the instant-op forks
-/// (mkdir/mkfile/rename) build a `TauriEventSink` to route an archive target to
-/// the managed edit driver without threading an `AppHandle` through every
-/// command signature. `None` before wiring (unit tests).
-// shim: removed in M5b
-pub(crate) fn operations_app_handle() -> Option<tauri::AppHandle> {
-    host::installed().app().cloned()
 }
 
 impl OperationManager {
@@ -706,7 +697,7 @@ impl OperationManager {
     }
 
     /// Retains a failed operation so its reason outlives the record. Called from
-    /// `TauriEventSink::emit_error`, next to the terminal-ops ring. Three things
+    /// the app's `TauriEventSink::emit_error`, next to the terminal-ops ring. Three things
     /// it deliberately does NOT do (rationale: DETAILS § "Retained failures"):
     ///
     /// - **Retain a non-failure**: `write-error` also carries `Cancelled` and
@@ -718,7 +709,7 @@ impl OperationManager {
     ///   `operation_id` twice (see [`ManagerInner::snapshot`]), and `on_settled`
     ///   always comes to emit it. With the record already GONE it DOES emit: no
     ///   duplicate is possible, and nothing else would broadcast the row.
-    pub(crate) fn record_failure(
+    pub(crate) fn retain_failure(
         &self,
         operation_id: &str,
         operation_type: WriteOperationType,

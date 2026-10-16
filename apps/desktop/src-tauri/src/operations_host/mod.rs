@@ -7,24 +7,38 @@
 //! - runtime — the volume host's (`volume_host::host()`), which is the app's own
 //!   tokio runtime, so an admitted operation never runs on a caller's
 //! - engine-wide events — [`events::TauriEngineEvents`]
+//! - one operation's or preview's events — [`TauriEventSink`] and
+//!   [`TauriScanPreviewSink`] (`sinks.rs`), built at the IPC edge; a terminal
+//!   event's app side effects ride along (`terminal_effects.rs`)
 
+mod analytics;
 mod events;
+mod sinks;
+pub(crate) mod terminal_effects;
+// Which app side effects each terminal event fires, and in what order around its emit.
+#[cfg(test)]
+mod terminal_effects_tests;
 
 use std::sync::Arc;
 
 use tauri::AppHandle;
 
+use crate::file_system::write_operations::OperationEventSink;
 use crate::file_system::write_operations::host::{self, EngineHost};
+pub use sinks::{TauriEventSink, TauriScanPreviewSink};
 
 /// Wire the write engine to this app. Call once, in `setup()`, after
 /// `volume_host::install` (the engine's runtime is the volume host's) and
 /// before anything can start an operation or the leftover sweep runs.
 pub fn install(app: &AppHandle) {
+    let sink_app = app.clone();
     let engine_host = EngineHost::new(
         crate::volume_host::host(),
         Arc::new(events::TauriEngineEvents::new(Some(app.clone()))),
     )
-    .with_app(app.clone());
+    .with_operation_sinks(Box::new(move || {
+        Arc::new(TauriEventSink::new(sink_app.clone())) as Arc<dyn OperationEventSink>
+    }));
     host::install(engine_host);
 }
 

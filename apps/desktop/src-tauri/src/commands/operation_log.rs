@@ -22,8 +22,9 @@ use tauri::AppHandle;
 
 use std::sync::Arc;
 
+use crate::file_system::write_operations::OperationEventSink;
 use crate::file_system::write_operations::rollback::{UndoReport, dispatch_rollback, undo_operations as run_undo};
-use crate::file_system::write_operations::{OperationEventSink, TauriEventSink};
+use crate::operations_host::TauriEventSink;
 use cmdr_operation_log::query::{self, OperationDetail};
 use cmdr_operation_log::rollback::{RollbackDispatch, RollbackRefusal};
 use cmdr_operation_log::store::{OperationLogStoreError, OperationRow, open_read_connection, operation_log_db_path};

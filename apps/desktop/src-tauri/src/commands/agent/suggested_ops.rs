@@ -679,7 +679,7 @@ pub async fn suggested_ops_approve(
             // A second connection, MOVED into the sink decorator: the operation outlives this
             // call by minutes, so its writer can't borrow the one above.
             let reporting = crate::agent::store::open_write_connection(&db_path).map_err(|e| e.to_string())?;
-            let sink = std::sync::Arc::new(crate::file_system::write_operations::TauriEventSink::new(app));
+            let sink = std::sync::Arc::new(crate::operations_host::TauriEventSink::new(app));
             crate::agent::suggested_ops::bridge::approve_and_execute(
                 &conn,
                 reporting,

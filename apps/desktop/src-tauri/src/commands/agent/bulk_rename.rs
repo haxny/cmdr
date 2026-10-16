@@ -192,7 +192,7 @@ pub async fn apply_bulk_rename(
     let started = crate::agent::suggested_ops::bridge::start_reviewed_renames(
         conn,
         reporting,
-        Arc::new(crate::file_system::write_operations::TauriEventSink::new(app)),
+        Arc::new(crate::operations_host::TauriEventSink::new(app)),
         claimed,
         volume_id,
         rows,

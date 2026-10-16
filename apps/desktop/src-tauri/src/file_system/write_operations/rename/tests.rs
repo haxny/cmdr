@@ -280,8 +280,8 @@ async fn rename_managed_routes_an_in_archive_rename_to_the_edit_driver() {
     let zip = tmp.join("bundle.zip");
     fs::write(&zip, b"PK\x03\x04not-a-real-body").expect("write zip magic");
 
-    // A rename INSIDE the archive routes to the managed edit driver. With no app
-    // handle wired in the unit test, `global_tauri_sink()` is absent, so routing
+    // A rename INSIDE the archive routes to the managed edit driver. With no
+    // host installed in the unit test, `host_operation_sink()` is absent, so routing
     // surfaces the "app isn't ready" signal — which proves the ROUTING fork fired
     // rather than the old flat "isn't available yet" refusal or an instant rename.
     let from = zip.join("old.txt");

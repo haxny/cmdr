@@ -13,12 +13,13 @@
 //! side-effect-free.
 
 use super::analytics::emit_completion_analytics;
-use super::manager::OperationManager;
-use super::types::{WriteCancelledEvent, WriteCompleteEvent, WriteErrorEvent, WriteOperationType, WriteSettledEvent};
+use crate::file_system::write_operations::{
+    OperationManager, WriteCancelledEvent, WriteCompleteEvent, WriteErrorEvent, WriteOperationType, WriteSettledEvent,
+};
 use crate::mcp::terminal_ops::{self, TerminalStatus};
 
 /// The app side effects a terminal event can carry, one method each.
-pub(super) trait TerminalEffects {
+pub(crate) trait TerminalEffects {
     /// PII-free completion analytics for a progressed op.
     fn completion_analytics(&self, event: &WriteCompleteEvent);
     /// MCP's terminal ring, which its `await operation_complete` reads.
@@ -32,8 +33,8 @@ pub(super) trait TerminalEffects {
 }
 
 /// The production effects, retaining failures on `manager`.
-pub(super) struct AppTerminalEffects {
-    pub(super) manager: &'static OperationManager,
+pub(crate) struct AppTerminalEffects {
+    pub(crate) manager: &'static OperationManager,
 }
 
 impl TerminalEffects for AppTerminalEffects {
@@ -71,10 +72,10 @@ impl TerminalEffects for AppTerminalEffects {
     }
 
     fn retain_failure(&self, event: &WriteErrorEvent) {
-        // `record_failure` itself decides what counts as a failure and emits
-        // nothing while the op's record is live.
+        // The engine's `retain_failure` itself decides what counts as a failure
+        // and emits nothing while the op's record is live.
         self.manager
-            .record_failure(&event.operation_id, event.operation_type, &event.error);
+            .retain_failure(&event.operation_id, event.operation_type, &event.error);
     }
 
     fn expect_space_change(&self) {
@@ -86,7 +87,7 @@ impl TerminalEffects for AppTerminalEffects {
 }
 
 /// `write-complete`: analytics, then the ring, then the emit.
-pub(super) fn complete(fx: &impl TerminalEffects, event: WriteCompleteEvent, emit: impl FnOnce(WriteCompleteEvent)) {
+pub(crate) fn complete(fx: &impl TerminalEffects, event: WriteCompleteEvent, emit: impl FnOnce(WriteCompleteEvent)) {
     // Categorical only (op, a count bucket, a bool); never names or paths. Fires
     // before the emit so it can read the event the emit moves.
     fx.completion_analytics(&event);
@@ -98,13 +99,13 @@ pub(super) fn complete(fx: &impl TerminalEffects, event: WriteCompleteEvent, emi
 }
 
 /// `write-cancelled`: the ring, then the emit.
-pub(super) fn cancelled(fx: &impl TerminalEffects, event: WriteCancelledEvent, emit: impl FnOnce(WriteCancelledEvent)) {
+pub(crate) fn cancelled(fx: &impl TerminalEffects, event: WriteCancelledEvent, emit: impl FnOnce(WriteCancelledEvent)) {
     fx.record_terminal(&event.operation_id, event.operation_type, TerminalStatus::Cancelled);
     emit(event);
 }
 
 /// `write-error`: the ring, the `warn!`, the retained failure, then the emit.
-pub(super) fn error(fx: &impl TerminalEffects, event: WriteErrorEvent, emit: impl FnOnce(WriteErrorEvent)) {
+pub(crate) fn error(fx: &impl TerminalEffects, event: WriteErrorEvent, emit: impl FnOnce(WriteErrorEvent)) {
     fx.record_terminal(&event.operation_id, event.operation_type, TerminalStatus::Failed);
     fx.warn_failure(&event);
     // Retained so the failure outlives the record the manager is about to
@@ -115,7 +116,7 @@ pub(super) fn error(fx: &impl TerminalEffects, event: WriteErrorEvent, emit: imp
 }
 
 /// `write-settled`: the free-space hint, then the emit.
-pub(super) fn settled(fx: &impl TerminalEffects, event: WriteSettledEvent, emit: impl FnOnce(WriteSettledEvent)) {
+pub(crate) fn settled(fx: &impl TerminalEffects, event: WriteSettledEvent, emit: impl FnOnce(WriteSettledEvent)) {
     fx.expect_space_change();
     emit(event);
 }
