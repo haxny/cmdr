@@ -263,6 +263,11 @@ pub struct WriteOperationState {
     /// driver ABANDONED after the cancel deadline still holds one of those, and
     /// the whole point is that a wedge's leftovers become visible anyway.
     liveness: std::sync::Mutex<Option<Arc<()>>>,
+    /// Runs once, between an intent writer reading the current intent and
+    /// writing the next one, so a test can land a second writer in exactly that
+    /// gap. See [`with_intent_write_gap`](Self::with_intent_write_gap).
+    #[cfg(test)]
+    intent_write_gap: std::sync::Mutex<Option<Box<dyn FnOnce() + Send>>>,
 }
 
 impl WriteOperationState {
@@ -304,6 +309,8 @@ impl WriteOperationState {
             #[cfg(target_os = "macos")]
             extract_quarantine: std::sync::OnceLock::new(),
             transfer_tree: super::transfer_tree::TransferTreeSlot::default(),
+            #[cfg(test)]
+            intent_write_gap: std::sync::Mutex::new(None),
         }
     }
 
@@ -422,6 +429,35 @@ impl WriteOperationState {
     pub(crate) fn with_outage_policy(mut self, policy: OutagePolicy) -> Self {
         self.outage_policy = policy;
         self
+    }
+
+    /// Moves this operation's intent to `next` if the transition table allows it,
+    /// atomically: the one writer every stop goes through. Returns the intent it
+    /// moved from, or the one that refused. See
+    /// [`transition_intent`](super::operation_intent::transition_intent).
+    pub(super) fn transition_intent(&self, next: OperationIntent) -> Result<OperationIntent, OperationIntent> {
+        super::operation_intent::transition_intent(&self.intent, next, || {
+            #[cfg(test)]
+            self.pass_intent_write_gap();
+        })
+    }
+
+    /// Parks the first intent writer between its read and its write by running
+    /// `gap` there, once. The race tests use it to land a second stop in that
+    /// window deterministically.
+    #[cfg(test)]
+    pub(super) fn with_intent_write_gap(self, gap: impl FnOnce() + Send + 'static) -> Self {
+        *self.intent_write_gap.lock_ignore_poison() = Some(Box::new(gap));
+        self
+    }
+
+    /// The test seam's call site: runs the armed gap, if any, exactly once.
+    #[cfg(test)]
+    fn pass_intent_write_gap(&self) {
+        let gap = self.intent_write_gap.lock_ignore_poison().take();
+        if let Some(gap) = gap {
+            gap();
+        }
     }
 
     /// Records this operation's leftovers into a test's own ledger rather than

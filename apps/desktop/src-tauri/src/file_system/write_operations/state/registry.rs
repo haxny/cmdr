@@ -4,10 +4,9 @@
 //! for a window that opens late).
 
 use std::collections::HashMap;
-use std::sync::atomic::Ordering;
 use std::sync::{Arc, LazyLock, RwLock};
 
-use super::{OperationIntent, WriteOperationState, WriteProgressEvent, load_intent};
+use super::{OperationIntent, WriteOperationState, WriteProgressEvent};
 use crate::ignore_poison::RwLockIgnorePoison;
 
 /// The live [`WriteOperationState`] of every registered operation, keyed by
@@ -104,10 +103,10 @@ impl WriteOperationRegistry {
     pub(in crate::file_system::write_operations) fn cancel_all(&self) {
         let entries = self.entries.read_ignore_poison();
         for (id, state) in entries.iter() {
-            let current = load_intent(&state.intent);
-            if current != OperationIntent::Stopped {
+            // Atomic, like every intent write: an already-`Stopped` op refuses
+            // and is left alone.
+            if state.transition_intent(OperationIntent::Stopped).is_ok() {
                 log::info!("cancel_all_write_operations: stopping op={id}");
-                state.intent.store(OperationIntent::Stopped as u8, Ordering::Relaxed);
                 state.backend_cancel.cancel();
                 // Drop the conflict resolution sender to unblock any waiting receiver
                 state.conflict_slot.abandon();

@@ -41,6 +41,45 @@ impl OperationIntent {
             _ => Self::Running,
         }
     }
+
+    /// The whole transition table: `Running` → `RollingBack` or `Stopped`,
+    /// `RollingBack` → `Stopped`. Everything else, `Stopped` → anything included,
+    /// is refused.
+    pub(super) fn may_become(self, next: Self) -> bool {
+        matches!(
+            (self, next),
+            (Self::Running, Self::RollingBack | Self::Stopped) | (Self::RollingBack, Self::Stopped)
+        )
+    }
+}
+
+/// Moves `intent` to `next` if the table allows it from the value that's there
+/// AT THE WRITE, and returns the intent it moved from; a refusal returns the
+/// intent that refused it.
+///
+/// One read-modify-write, ❌ never a load then a `store`: two stops can race (a
+/// Rollback click and quit's teardown walk), and a writer that validated against
+/// a stale `Running` would overwrite a terminal `Stopped` with `RollingBack`,
+/// turning "keep the partial files" into "delete them". A lost race re-checks
+/// the table against what the winner wrote.
+///
+/// `in_gap` runs between each read and its write. Production passes a no-op; it's
+/// the seam the race tests park a writer on.
+pub(super) fn transition_intent(
+    intent: &AtomicU8,
+    next: OperationIntent,
+    mut in_gap: impl FnMut(),
+) -> Result<OperationIntent, OperationIntent> {
+    intent
+        .try_update(Ordering::Relaxed, Ordering::Relaxed, |current| {
+            if !OperationIntent::from_u8(current).may_become(next) {
+                return None;
+            }
+            in_gap();
+            Some(next as u8)
+        })
+        .map(OperationIntent::from_u8)
+        .map_err(OperationIntent::from_u8)
 }
 
 /// Loads the current intent from an `AtomicU8`.
@@ -304,6 +343,39 @@ mod tests {
 
         let stopped = AtomicU8::new(OperationIntent::Stopped as u8);
         assert!(is_cancelled(&stopped), "Stopped must be reported as cancelled");
+    }
+
+    // ---- transition_intent ----
+
+    #[test]
+    fn transition_intent_follows_the_whole_table() {
+        use OperationIntent::{RollingBack, Running, Stopped};
+        let allowed = [(Running, RollingBack), (Running, Stopped), (RollingBack, Stopped)];
+        for from in [Running, RollingBack, Stopped] {
+            for to in [Running, RollingBack, Stopped] {
+                let atom = AtomicU8::new(from as u8);
+                let result = transition_intent(&atom, to, || {});
+                if allowed.contains(&(from, to)) {
+                    assert_eq!(result, Ok(from), "{from:?} -> {to:?} is allowed");
+                    assert_eq!(load_intent(&atom), to);
+                } else {
+                    assert_eq!(result, Err(from), "{from:?} -> {to:?} is refused");
+                    assert_eq!(load_intent(&atom), from, "a refusal writes nothing");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn transition_intent_rechecks_the_table_against_a_write_that_landed_in_its_gap() {
+        // The writer read `Running`; `Stopped` lands before it writes. Its retry
+        // sees `Stopped`, which `RollingBack` can't follow.
+        let atom = AtomicU8::new(OperationIntent::Running as u8);
+        let result = transition_intent(&atom, OperationIntent::RollingBack, || {
+            atom.fetch_max(OperationIntent::Stopped as u8, Ordering::Relaxed);
+        });
+        assert_eq!(result, Err(OperationIntent::Stopped));
+        assert_eq!(load_intent(&atom), OperationIntent::Stopped);
     }
 
     /// The whole reason [`StopMeans`] exists: `RollingBack` reads as "stop" to a

@@ -10,8 +10,6 @@
 //! reaches, `abort_*` is the quit deadline's and severs in-flight backend calls
 //! outright. `transfer/DETAILS.md` § "Two tiers of cancel".
 
-use std::sync::atomic::Ordering;
-
 use super::{
     ConflictId, ConflictResolution, ConflictResolutionOutcome, ConflictResolutionResponse, OperationIntent,
     WRITE_OPERATION_STATE, WriteConflictEvent,
@@ -41,23 +39,19 @@ pub fn cancel_write_operation(operation_id: &str, rollback: bool) {
     } else {
         OperationIntent::Stopped
     };
-    let current = OperationIntent::from_u8(state.intent.load(Ordering::Relaxed));
-
-    // Valid transitions: Running → RollingBack/Stopped, RollingBack → Stopped.
-    // Stopped is terminal; no further transitions.
-    let valid = matches!(
-        (current, target),
-        (OperationIntent::Running, _) | (OperationIntent::RollingBack, OperationIntent::Stopped)
-    );
-    if !valid {
-        log::info!(
-            "cancel_write_operation: op={operation_id} {current:?} -> {target:?} is not a valid transition, ignoring"
-        );
-        return;
-    }
+    // Atomic against a concurrent stop (quit's walk, another window's click), so
+    // a terminal `Stopped` can't be overwritten by a Rollback that read `Running`.
+    let current = match state.transition_intent(target) {
+        Ok(previous) => previous,
+        Err(current) => {
+            log::info!(
+                "cancel_write_operation: op={operation_id} {current:?} -> {target:?} is not a valid transition, ignoring"
+            );
+            return;
+        }
+    };
 
     log::info!("cancel_write_operation: op={operation_id} {current:?} -> {target:?}, signalling backends");
-    state.intent.store(target as u8, Ordering::Relaxed);
     // Any transition out of `Running` should also stop in-flight backend
     // I/O (per-handle MTP loops, etc.) — not just the loop above it.
     state.backend_cancel.cancel();

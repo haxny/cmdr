@@ -201,6 +201,85 @@ fn cancel_stopped_is_noop_for_backend_cancel_too() {
     );
 }
 
+// ---- two stops racing on one intent ----
+//
+// A Rollback click reads `Running`, and before it writes `RollingBack` a second
+// stop lands `Stopped`. Whatever the second stop is (quit's teardown walk, a
+// Cancel click from another window or over MCP), `Stopped` is terminal: the
+// Rollback must not overwrite it, or "keep the partial files" becomes "delete
+// them". The gap seam parks the Rollback in exactly that window.
+
+/// Registers a state whose first intent writer parks in the read-to-write gap,
+/// and returns it with the two edges of the park: `parked` fires once the writer
+/// is in the gap, and sending on the returned sender lets it continue.
+fn op_with_a_parked_intent_writer(
+    label: &str,
+) -> (
+    TestOperationGuard,
+    std::sync::mpsc::Receiver<()>,
+    std::sync::mpsc::Sender<()>,
+) {
+    let (parked_tx, parked) = std::sync::mpsc::channel();
+    let (release, release_rx) = std::sync::mpsc::channel::<()>();
+    let state = WriteOperationState::new(Duration::from_millis(50)).with_intent_write_gap(move || {
+        parked_tx.send(()).expect("the test waits for the park");
+        release_rx.recv().expect("the test releases the park");
+    });
+    (
+        TestOperationGuard::register_state(label, Arc::new(state)),
+        parked,
+        release,
+    )
+}
+
+/// Starts a Rollback click on its own thread and returns once it's parked in the
+/// gap, having already read `Running`.
+fn rollback_parked_in_the_gap(
+    op: &TestOperationGuard,
+    parked: &std::sync::mpsc::Receiver<()>,
+) -> std::thread::JoinHandle<()> {
+    let id = op.id().to_owned();
+    let rollback = std::thread::spawn(move || cancel_write_operation(&id, true));
+    parked
+        .recv_timeout(Duration::from_secs(5))
+        .expect("the Rollback reaches the gap between its read and its write");
+    rollback
+}
+
+#[test]
+fn a_rollback_click_racing_quit_keeps_the_partial_files_quit_meant_to_keep() {
+    let (op, parked, release) = op_with_a_parked_intent_writer("race-rollback-vs-quit");
+    let quit_walk = WriteOperationRegistry::new();
+    quit_walk.insert(op.id().to_owned(), Arc::clone(op.state()));
+
+    let rollback = rollback_parked_in_the_gap(&op, &parked);
+    quit_walk.cancel_all();
+    release.send(()).expect("the Rollback is still parked");
+    rollback.join().expect("the Rollback returns");
+
+    assert_eq!(
+        load_intent(&op.state().intent),
+        OperationIntent::Stopped,
+        "quit stopped the op to keep its partials; a Rollback that read `Running` before quit landed must not turn that into a delete"
+    );
+}
+
+#[test]
+fn a_rollback_click_racing_a_cancel_click_leaves_the_cancel_standing() {
+    let (op, parked, release) = op_with_a_parked_intent_writer("race-rollback-vs-cancel");
+
+    let rollback = rollback_parked_in_the_gap(&op, &parked);
+    cancel_write_operation(op.id(), false);
+    release.send(()).expect("the Rollback is still parked");
+    rollback.join().expect("the Rollback returns");
+
+    assert_eq!(
+        load_intent(&op.state().intent),
+        OperationIntent::Stopped,
+        "`Stopped` is terminal, whichever stop got there first"
+    );
+}
+
 #[test]
 fn cancel_unknown_operation_is_a_silent_noop() {
     // No installed state; must not panic, must not affect anything.
