@@ -4,6 +4,7 @@
 //! the binary (`include_str!`), so these commands touch no filesystem at runtime
 //! and need no `blocking_with_timeout`: there's nothing to hang on.
 
+use crate::security_advisories::SecurityAdvisory;
 use crate::whats_new::{self, WhatsNewRelease};
 
 /// Returns the displayable releases in `since_version < v <= current`, newest
@@ -27,4 +28,13 @@ pub fn whats_new_dev_override() -> Option<String> {
     std::env::var("CMDR_SIMULATE_UPDATE_FROM")
         .ok()
         .filter(|v| !v.is_empty())
+}
+
+/// Returns the security advisories this build's own list says were fixed in
+/// `since_version < fixedIn <= current`, most severe first, for the What's new popup's notice.
+/// Embedded like the changelog, so this touches no filesystem either.
+#[tauri::command]
+#[specta::specta]
+pub fn get_security_advisories(since_version: String) -> Vec<SecurityAdvisory> {
+    crate::security_advisories::embedded_fixed_since(&since_version, env!("CARGO_PKG_VERSION"))
 }

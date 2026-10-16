@@ -67,7 +67,8 @@
       "entitlements": "./Entitlements.plist",
       "files": {
         "Resources/Assets.car": "resources/Assets.car",
-        "Resources/bin/cmdr": "resources/bin/cmdr"
+        "Resources/bin/cmdr": "resources/bin/cmdr",
+        "Resources/security-advisories.json": "resources/security-advisories.json"
       }
     }
   }

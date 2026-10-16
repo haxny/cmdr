@@ -452,6 +452,7 @@ macro_rules! ipc_command_manifest {
                     crate::commands::favorites::reorder_favorites,
                     crate::commands::whats_new::get_whats_new,
                     crate::commands::whats_new::whats_new_dev_override,
+                    crate::commands::whats_new::get_security_advisories,
                     crate::quit::commands::quit_confirm,
                     crate::quit::commands::quit_cancel,
                     crate::commands::operation_log::get_recent_operation_log_entries,

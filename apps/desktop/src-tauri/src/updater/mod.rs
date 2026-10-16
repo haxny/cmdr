@@ -9,6 +9,7 @@
 //! - `download_update`: downloads tarball, verifies minisign signature
 //! - `install_update`: extracts and syncs into the running `.app` bundle
 
+mod advisories;
 mod bundle_location;
 // Crate-visible for `installer::running_bundle`, which `dock/` needs to decide whether a Dock tile
 // could point at this copy. Nothing else outside `updater` reaches in.
@@ -16,6 +17,7 @@ pub(crate) mod installer;
 mod manifest;
 mod signature;
 
+pub use advisories::SecurityNotice;
 pub use bundle_location::BundleWriteBlocker;
 use manifest::UpdateInfo;
 use std::path::PathBuf;
@@ -430,25 +432,42 @@ impl From<String> for UpdateInstallError {
     }
 }
 
+/// What a finished install tells the frontend beyond "restart to apply".
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateInstalled {
+    /// The security fixes this update carries, from the staged bundle's own signed advisory list
+    /// (never from `latest.json`), or `None` when it carries none the running build lacks.
+    pub security_notice: Option<SecurityNotice>,
+}
+
 /// Installs a previously downloaded update by syncing files into the running `.app` bundle.
 ///
 /// Takes the download `download_update` recorded, and refuses it when the CURRENT policy doesn't
 /// allow its version: a download staged before a profile arrived must not install.
 #[tauri::command]
 #[specta::specta]
-pub async fn install_update(state: State<'_, UpdateState>) -> Result<(), UpdateInstallError> {
+pub async fn install_update(state: State<'_, UpdateState>) -> Result<UpdateInstalled, UpdateInstallError> {
     let (staged, policy) = staged_to_install(&state).await?;
     log::info!("Installing update {} from {}", staged.version, staged.tarball.display());
 
     // The archive's own `Info.plist` is what binds its version (the manifest isn't signed), so the
     // installer asks the policy again about THAT version once it has extracted it.
-    tokio::task::spawn_blocking(move || {
+    let security_notice = tokio::task::spawn_blocking(move || {
         installer::install(&staged.tarball, &|version| policy.update_to(version).is_ok())
     })
     .await
     .map_err(|e| UpdateInstallError::Failed {
         detail: format!("Install task panicked: {e}"),
-    })?
+    })??;
+    if let Some(notice) = &security_notice {
+        log::info!(
+            "The update fixes {} security issue(s), the most severe {:?}",
+            notice.count,
+            notice.severity
+        );
+    }
+    Ok(UpdateInstalled { security_notice })
 }
 
 /// The staged download and the fresh policy that allows it, or why not.

@@ -141,6 +141,7 @@ mod reveal;
 mod s3_costs;
 pub mod search;
 mod secrets;
+mod security_advisories;
 pub mod selection;
 mod send_schedule;
 // `Cmdr > Services`: what Cmdr tells AppKit it can hand a service, and what the selection is at the

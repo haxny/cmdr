@@ -13,6 +13,7 @@ use std::process::Command;
 use cmdr_update_trust::{CodeSignatureRefusal, extract_tarball};
 
 use super::UpdateInstallError;
+use super::advisories::{self, SecurityNotice};
 
 /// Error type for the sync pipeline (`sync_bundle` + its inner helpers).
 ///
@@ -91,7 +92,10 @@ pub fn is_running_from_app_bundle() -> bool {
 ///
 /// The tarball is expected to contain a `Cmdr.app/` root directory (as produced by `tauri-action`).
 /// `may_install` is the managed policy's answer for the version the extracted bundle names.
-pub fn install(tarball_path: &Path, may_install: &dyn Fn(&semver::Version) -> bool) -> Result<(), UpdateInstallError> {
+pub fn install(
+    tarball_path: &Path,
+    may_install: &dyn Fn(&semver::Version) -> bool,
+) -> Result<Option<SecurityNotice>, UpdateInstallError> {
     // Resolved (and vetted) before extraction: unpacking ~63 MB into staging only to find the
     // destination unwritable is work nobody gets anything for. The frontend gates on the same
     // classification one step earlier; this arm is what keeps a direct caller honest.
@@ -122,11 +126,12 @@ pub fn install(tarball_path: &Path, may_install: &dyn Fn(&semver::Version) -> bo
         )));
     }
 
-    vet_staged_bundle(
+    let security_notice = vet_staged_bundle(
         &staged_app,
         env!("CARGO_PKG_VERSION"),
         may_install,
         &cmdr_update_trust::verify_release_bundle,
+        &advisories::read_bundle_list,
     )?;
 
     log::info!("Installing update into bundle: {}", bundle_path.display());
@@ -165,7 +170,7 @@ pub fn install(tarball_path: &Path, may_install: &dyn Fn(&semver::Version) -> bo
     }
 
     log::info!("Update installed successfully");
-    Ok(())
+    Ok(security_notice)
 }
 
 /// Refuses a staged bundle that isn't code-signed by Cmdr's Developer ID (`cmdr_update_trust`), whose
@@ -176,12 +181,17 @@ pub fn install(tarball_path: &Path, may_install: &dyn Fn(&semver::Version) -> bo
 ///
 /// The policy is asked about the version the bundle NAMES, not the one the check offered: an
 /// unsigned manifest could offer a version under the ceiling and serve a signed release above it.
+///
+/// Answers the security notice the bundle's own advisory list names (`read_advisories`, injected
+/// so tests can see it's never called early). Read only once every check has passed, for the same
+/// reason as the version: before that, the list is just bytes the updater key's holder chose.
 fn vet_staged_bundle(
     staged_app: &Path,
     current: &str,
     may_install: &dyn Fn(&semver::Version) -> bool,
     code_signature: &dyn Fn(&Path) -> Result<(), CodeSignatureRefusal>,
-) -> Result<(), UpdateInstallError> {
+    read_advisories: &dyn Fn(&Path) -> Option<String>,
+) -> Result<Option<SecurityNotice>, UpdateInstallError> {
     if let Err(refusal) = code_signature(staged_app) {
         crate::log_error!("Refusing the update: its minisign signature verified, but {refusal}");
         return Err(UpdateInstallError::UntrustedCodeSignature {
@@ -193,7 +203,11 @@ fn vet_staged_bundle(
         log::info!(target: "managed_policy", "Not installing update {version}: the organization's policy refuses it");
         return Err(UpdateInstallError::BlockedByPolicy);
     }
-    Ok(())
+    // `refuse_unless_newer` already parsed `current`, so this can only fail if it stops doing that.
+    let Ok(running) = semver::Version::parse(current) else {
+        return Ok(None);
+    };
+    Ok(read_advisories(staged_app).and_then(|json| advisories::notice_from(&json, &running, &version)))
 }
 
 /// Refuses a staged bundle whose own version isn't newer than `current`, and answers that version.
@@ -646,12 +660,12 @@ mod tests {
         let ceiling = crate::managed_policy::UpdateCeiling::Minor(0, 52);
         let held = |version: &semver::Version| ceiling.allows(version);
         assert_eq!(
-            vet_staged_bundle(&dir.path().join("Cmdr.app"), "0.51.0", &held, &trusted),
+            vet_staged_bundle(&dir.path().join("Cmdr.app"), "0.51.0", &held, &trusted, &no_list),
             Err(UpdateInstallError::BlockedByPolicy)
         );
         assert_eq!(
-            vet_staged_bundle(&dir.path().join("Cmdr.app"), "0.51.0", &|_| true, &trusted),
-            Ok(())
+            vet_staged_bundle(&dir.path().join("Cmdr.app"), "0.51.0", &|_| true, &trusted, &no_list),
+            Ok(None)
         );
     }
 
@@ -668,7 +682,13 @@ mod tests {
         };
         let not_ours = |_: &Path| Err(CodeSignatureRefusal::NotOurs);
         assert!(matches!(
-            vet_staged_bundle(&dir.path().join("Cmdr.app"), "0.51.0", &may_install, &not_ours),
+            vet_staged_bundle(
+                &dir.path().join("Cmdr.app"),
+                "0.51.0",
+                &may_install,
+                &not_ours,
+                &no_list
+            ),
             Err(UpdateInstallError::UntrustedCodeSignature { .. })
         ));
         assert!(
@@ -682,9 +702,86 @@ mod tests {
     fn an_older_archive_is_a_failure_not_a_policy_refusal() {
         let dir = staged_app_with_version(Some("0.50.0"));
         assert!(matches!(
-            vet_staged_bundle(&dir.path().join("Cmdr.app"), "0.51.0", &|_| true, &trusted),
+            vet_staged_bundle(&dir.path().join("Cmdr.app"), "0.51.0", &|_| true, &trusted, &no_list),
             Err(UpdateInstallError::Failed { .. })
         ));
+    }
+
+    /// The advisory reader for tests that don't care about the list.
+    fn no_list(_: &Path) -> Option<String> {
+        None
+    }
+
+    /// Writes `json` where a bundle carries its advisory list.
+    fn with_advisory_list(dir: &tempfile::TempDir, json: &str) {
+        let resources = dir.path().join("Cmdr.app/Contents/Resources");
+        fs::create_dir_all(&resources).unwrap();
+        fs::write(resources.join("security-advisories.json"), json).unwrap();
+    }
+
+    const STAGED_LIST: &str = r#"{"advisories":[
+        {"id":"GHSA-high-0000-0000","fixedIn":"0.52.0","severity":"high","url":"https://github.com/vdavid/cmdr/security/advisories/GHSA-high-0000-0000"},
+        {"id":"GHSA-old0-0000-0000","fixedIn":"0.51.0","severity":"critical","url":"https://github.com/vdavid/cmdr/security/advisories/GHSA-old0-0000-0000"}
+    ]}"#;
+
+    /// ❗ Until the code signature holds, the list inside the bundle is whatever the updater key's
+    /// holder chose to write, so it's never read. Nor is the list of a bundle the policy refuses.
+    #[test]
+    fn the_advisory_list_of_an_untrusted_or_refused_bundle_is_never_read() {
+        let dir = staged_app_with_version(Some("0.53.0"));
+        let list_read = std::cell::Cell::new(false);
+        let read = |_: &Path| {
+            list_read.set(true);
+            Some(STAGED_LIST.to_string())
+        };
+        let not_ours = |_: &Path| Err(CodeSignatureRefusal::NotOurs);
+        assert!(vet_staged_bundle(&dir.path().join("Cmdr.app"), "0.51.0", &|_| true, &not_ours, &read).is_err());
+        assert!(!list_read.get(), "an untrusted bundle's advisory list must not be read");
+
+        assert_eq!(
+            vet_staged_bundle(&dir.path().join("Cmdr.app"), "0.51.0", &|_| false, &trusted, &read),
+            Err(UpdateInstallError::BlockedByPolicy)
+        );
+        assert!(!list_read.get(), "a refused bundle's advisory list must not be read");
+    }
+
+    /// A trusted bundle's own list names the notice, counting only what's newer than the running
+    /// build: 0.51.0 already carries the fix it was built with.
+    #[test]
+    fn a_trusted_bundle_answers_the_notice_its_own_list_names() {
+        let dir = staged_app_with_version(Some("0.53.0"));
+        with_advisory_list(&dir, STAGED_LIST);
+        assert_eq!(
+            vet_staged_bundle(
+                &dir.path().join("Cmdr.app"),
+                "0.51.0",
+                &|_| true,
+                &trusted,
+                &advisories::read_bundle_list
+            ),
+            Ok(Some(SecurityNotice {
+                severity: crate::security_advisories::Severity::High,
+                count: 1,
+                url: Some("https://github.com/vdavid/cmdr/security/advisories/GHSA-high-0000-0000".to_string()),
+            }))
+        );
+    }
+
+    /// The update is the security fix itself: a list that's missing or broken costs the notice,
+    /// never the install.
+    #[test]
+    fn a_missing_or_malformed_list_still_installs() {
+        let dir = staged_app_with_version(Some("0.53.0"));
+        let app = dir.path().join("Cmdr.app");
+        assert_eq!(
+            vet_staged_bundle(&app, "0.51.0", &|_| true, &trusted, &advisories::read_bundle_list),
+            Ok(None)
+        );
+        with_advisory_list(&dir, "{ not json");
+        assert_eq!(
+            vet_staged_bundle(&app, "0.51.0", &|_| true, &trusted, &advisories::read_bundle_list),
+            Ok(None)
+        );
     }
 
     #[test]

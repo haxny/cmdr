@@ -3303,6 +3303,13 @@ export const commands = {
    */
   whatsNewDevOverride: () => __TAURI_INVOKE<string | null>('whats_new_dev_override'),
   /**
+   *  Returns the security advisories this build's own list says were fixed in
+   *  `since_version < fixedIn <= current`, most severe first, for the What's new popup's notice.
+   *  Embedded like the changelog, so this touches no filesystem either.
+   */
+  getSecurityAdvisories: (sinceVersion: string) =>
+    __TAURI_INVOKE<SecurityAdvisory[]>('get_security_advisories', { sinceVersion }),
+  /**
    *  The user pressed Quit. Stops every operation and ends the process; see
    *  [`super::tear_down_and_exit`] for the order and the budget.
    */
@@ -5125,7 +5132,7 @@ export const commands = {
    *  Takes the download `download_update` recorded, and refuses it when the CURRENT policy doesn't
    *  allow its version: a download staged before a profile arrived must not install.
    */
-  installUpdate: () => typedError<null, UpdateInstallError>(__TAURI_INVOKE('install_update')),
+  installUpdate: () => typedError<UpdateInstalled, UpdateInstallError>(__TAURI_INVOKE('install_update')),
   // The organization's policy as the UI shows it. Reads the cache, never CFPreferences.
   getManagedPolicy: () => __TAURI_INVOKE<ManagedPolicyView>('get_managed_policy'),
   /**
@@ -15098,6 +15105,26 @@ export type SecretOffer = {
   remember: boolean
 }
 
+// One advisory as the What's new popup shows it.
+export type SecurityAdvisory = {
+  id: string
+  fixedIn: string
+  severity: Severity
+  // `None` when the list names a link the allowlist refuses: the notice still shows, without it.
+  url: string | null
+}
+
+/**
+ *  What the restart toast says about security: the update fixes `count` advisories, the most
+ *  severe of them `severity`, whose public note is `url`.
+ */
+export type SecurityNotice = {
+  severity: Severity
+  count: number
+  // The most severe advisory's link, or `None` when the allowlist refuses it.
+  url: string | null
+}
+
 /**
  *  Which kind of seek the caller is asking for, as a value the wire enforces.
  *
@@ -15582,6 +15609,12 @@ export type SettingValue = boolean | number | string
 export type SettingsChanged = {
   showHiddenFiles: boolean
 }
+
+/**
+ *  How severe a fixed vulnerability is: the CVSS v4.0 rating its public note carries. Ordered, so
+ *  `max` is the most severe.
+ */
+export type Severity = 'low' | 'medium' | 'high' | 'critical'
 
 // What approving a host key produced.
 export type SftpHostKeyApprovalResult =
@@ -17202,6 +17235,15 @@ export type UpdateInstallError =
   | { type: 'untrustedCodeSignature'; detail: string }
   // The install ran and didn't finish.
   | { type: 'failed'; detail: string }
+
+// What a finished install tells the frontend beyond "restart to apply".
+export type UpdateInstalled = {
+  /**
+   *  The security fixes this update carries, from the staged bundle's own signed advisory list
+   *  (never from `latest.json`), or `None` when it carries none the running build lacks.
+   */
+  securityNotice: SecurityNotice | null
+}
 
 export type UpdatePolicyView =
   | { kind: 'disabled' }
