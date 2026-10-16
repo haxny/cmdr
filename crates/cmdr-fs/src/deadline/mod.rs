@@ -8,6 +8,8 @@
 #[cfg(test)]
 mod budget_tests;
 #[cfg(test)]
+mod fallback_tests;
+#[cfg(test)]
 mod stall_tests;
 
 use crate::volume::ConnectionState;

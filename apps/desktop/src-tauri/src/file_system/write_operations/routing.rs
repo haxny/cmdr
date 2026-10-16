@@ -49,7 +49,7 @@ use cmdr_operation_log::types::Initiator;
 /// paths" rule: on a share, `~` is an ordinary folder name.
 pub(crate) fn resolve_dest_path(dest_volume: &Arc<dyn Volume>, dest_path: String) -> PathBuf {
     let expanded = if dest_volume.local_path().is_some() {
-        crate::commands::file_system::expand_tilde(&dest_path)
+        cmdr_fs::tilde::expand_tilde(&dest_path)
     } else {
         dest_path
     };

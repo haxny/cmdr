@@ -46,6 +46,7 @@ pub mod staging;
 pub mod tcc_paths;
 pub mod thread_cpu;
 pub mod thread_qos;
+pub mod tilde;
 pub mod utility_pool;
 pub mod validation;
 pub mod volume;
