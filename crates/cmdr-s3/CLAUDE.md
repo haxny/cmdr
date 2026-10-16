@@ -11,11 +11,10 @@ bucket, or an account root listing them). Plan: `docs/specs/s3-support-plan.md`.
 - `params.rs`, `refusal.rs` (`S3ConnectError` + the probe's table), `transport/` (`S3Client`; `answer.rs` reads what
   comes back; the only `reqwest` user), `routing.rs` (an AWS or Wasabi account root's per-bucket regions).
 - `volume/`: a file per job: `mod.rs` (connect), `query.rs` + `listing.rs`, `streams.rs` (GET), `writes.rs` (PUT),
-  `multipart_upload.rs` (+ the sweep), `server_copy.rs`, `batch.rs`, `mutation.rs`, `paths.rs`, `state.rs` +
-  `reconnect.rs`; `testing.rs` + `testing/` (fixtures, `S3Target`) and `live_*` (real accounts).
+  `multipart_upload.rs` (+ the sweep), `upload.rs` (their shared types), `server_copy.rs`, `batch.rs`, `mutation.rs`,
+  `paths.rs`, `state.rs` + `reconnect.rs`; `testing.rs` + `testing/` (fixtures, `S3Target`), `live_*` (real accounts).
 - `cost/`: the price table (`s3-prices.json`, byte-identical to `apps/api-server`'s), `Workload` (requests counted the
-  way the write paths send them), `Estimate`. ❗ A write path that sends a request more or less updates its `Workload`
-  method too.
+  way the write paths send them), `Estimate`. ❗ A write path's request count changes → update its `Workload` method.
 
 ## Must-knows
 

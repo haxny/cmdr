@@ -34,10 +34,11 @@ use log::{debug, warn};
 
 use super::S3Volume;
 use super::errors::map_s3_error;
-use super::multipart_upload::{abort_upload, retry_after, upload_refusal};
+use super::multipart_upload::{abort_upload, upload_refusal};
 use super::paths::{Target, target_of};
 use super::query::{body_error, stored_mtime};
-use super::writes::{WriteTarget, normalize_etag, overwrite_for, refuse_unstorable};
+use super::upload::{WriteTarget, overwrite_for, retry_after};
+use super::writes::{normalize_etag, refuse_unstorable};
 use crate::error::{S3Error, S3ErrorCode};
 use crate::metadata::{MTIME_HEADER, WRITE_TOKEN_HEADER};
 use crate::multipart::{MAX_COPY_OBJECT_SIZE, PartPlan, TooLarge, plan_parts_with_floor};

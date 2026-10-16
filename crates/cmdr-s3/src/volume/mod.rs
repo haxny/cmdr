@@ -43,6 +43,7 @@ mod server_copy;
 mod share_link;
 mod state;
 mod streams;
+mod upload;
 mod upload_body;
 mod upload_ledger;
 mod volume_impl;

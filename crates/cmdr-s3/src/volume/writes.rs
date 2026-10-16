@@ -41,7 +41,6 @@ use bytes::Bytes;
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::metadata::MetadataClasses;
-use cmdr_fs::pluralize::pluralize_grouped;
 use cmdr_fs::volume::patching::patch_created;
 use cmdr_fs::volume::{StreamLength, StreamWriteProgress, StreamWritten, VolumeError, VolumeReadStream, WriteMode};
 use log::{debug, warn};
@@ -49,17 +48,16 @@ use tokio_util::sync::CancellationToken;
 
 use super::S3Volume;
 use super::errors::map_s3_error;
-use super::multipart_upload::{PartReader, retry_after};
 use super::paths::{Target, target_of};
+use super::upload::{
+    PROGRESS_TICK, PartReader, Progress, ShortStream, WriteTarget, overwrite_for, retry_after, size_mismatch,
+};
 use super::upload_body::{BodyWatch, Halt, HaltSlot, PauseHold, buffered_body};
 use crate::error::S3Error;
 use crate::multipart::{PartPlan, ShortTail, TooLarge, plan_parts_with_floor};
 use crate::ops::{self, ObjectMetadata, Overwrite};
 use crate::request::{Body, S3Request};
 use crate::transport::{Answer, QUERY_BUDGET, S3Client, map_exchange_error};
-
-/// How often an upload reports progress while its body is in flight.
-pub(super) const PROGRESS_TICK: Duration = Duration::from_millis(200);
 
 /// How many times a throttled or faulted PUT goes again ([`retry_after`]'s
 /// first two waits, 3 s in all): a file of a copy waits that long at most.
@@ -83,17 +81,6 @@ pub(super) enum UploadShape {
     /// A multipart upload of a stream whose length shows only at its end; a
     /// stream that ends inside the first part goes out as one PUT after all.
     Open,
-}
-
-/// What a write that fits one part does with it.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(super) enum ShortStream {
-    /// One PUT: three requests for a small file is waste.
-    OnePut,
-    /// A one-part multipart upload, which publishes nothing until its
-    /// completion: an overwrite on a server that may publish a cut-off PUT.
-    /// An empty stream still goes as one PUT, having nothing to cut short.
-    OnePart,
 }
 
 /// The shape for `length`: one PUT when it fits one part with a short tail
@@ -178,61 +165,6 @@ fn is_ours_whole(head: &Answer, token: &str, size: u64) -> bool {
 
 pub(super) fn normalize_etag(etag: &str) -> String {
     etag.trim().trim_matches('"').to_ascii_lowercase()
-}
-
-/// The overwrite a write mode asks of a conditional builder.
-pub(super) fn overwrite_for(mode: WriteMode) -> Overwrite {
-    match mode {
-        WriteMode::CreateNew | WriteMode::CreateNewInFreshFolder => Overwrite::Refuse,
-        WriteMode::CreateOrReplace => Overwrite::Replace,
-    }
-}
-
-/// The user's hold on a write: the progress callback (where a Cancel
-/// arrives), with what it shows held monotonic so a part sent again doesn't
-/// move the bar backwards, and the operation's pause.
-pub(super) struct Progress<'a> {
-    report: &'a (dyn Fn(StreamWriteProgress) -> ControlFlow<()> + Sync),
-    expected: StreamLength,
-    shown: AtomicU64,
-    pub(super) pause: PauseHold,
-}
-
-impl<'a> Progress<'a> {
-    pub(super) fn new(
-        report: &'a (dyn Fn(StreamWriteProgress) -> ControlFlow<()> + Sync),
-        expected: StreamLength,
-        pause: PauseHold,
-    ) -> Self {
-        Self {
-            report,
-            expected,
-            shown: AtomicU64::new(0),
-            pause,
-        }
-    }
-
-    /// Reports `sent` bytes (or the most shown so far, if more), answering
-    /// whether the caller wants to stop.
-    pub(super) fn at(&self, sent: u64) -> ControlFlow<()> {
-        let shown = self.shown.fetch_max(sent, Ordering::Relaxed).max(sent);
-        (self.report)(StreamWriteProgress {
-            bytes_written: shown,
-            expected_length: self.expected,
-        })
-    }
-}
-
-/// The source yielded a different byte count than it promised.
-pub(super) fn size_mismatch(remote: &str, got: u64, size: u64) -> VolumeError {
-    VolumeError::IoError {
-        message: format!(
-            "{remote}: the source promised {} and yielded {}",
-            pluralize_grouped(size, "byte"),
-            pluralize_grouped(got, "byte")
-        ),
-        raw_os_error: None,
-    }
 }
 
 /// How many just-written objects' entries to keep for the pane patch that
@@ -781,16 +713,6 @@ impl S3Volume {
         patch_created(self, path).await;
         Ok(())
     }
-}
-
-/// Where a write goes and how it may treat what's there.
-pub(super) struct WriteTarget<'a> {
-    pub bucket: &'a str,
-    pub key: &'a str,
-    /// The server-side path, what every error names.
-    pub remote: &'a str,
-    pub mode: WriteMode,
-    pub metadata: &'a ObjectMetadata,
 }
 
 #[cfg(test)]

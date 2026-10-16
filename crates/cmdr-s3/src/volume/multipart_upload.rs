@@ -27,9 +27,11 @@ use tokio_util::sync::CancellationToken;
 
 use super::errors::map_s3_error;
 use super::query::body_error;
+use super::upload::{
+    PROGRESS_TICK, PartReader, Progress, ShortStream, WriteTarget, overwrite_for, retry_after, size_mismatch,
+};
 use super::upload_body::{BodyWatch, Halt, HaltSlot, PauseHold, buffered_body};
 use super::upload_ledger::{UnfinishedUpload, UploadLedger};
-use super::writes::{PROGRESS_TICK, Progress, ShortStream, WriteTarget, overwrite_for, size_mismatch};
 use super::{S3Volume, S3VolumeInner};
 use crate::error::{S3Error, S3ErrorCode};
 use crate::multipart::{MAX_PARTS, PartPlan};
@@ -38,122 +40,6 @@ use crate::profile::{ConditionalOp, NoOverwrite};
 use crate::transport::{COMPLETE_BUDGET, QUERY_BUDGET, S3Client, map_exchange_error};
 use crate::xml::build::CompletedPart;
 use crate::xml::{parse_complete_multipart, parse_initiate_multipart};
-
-/// How long to wait before sending a failed part again, after `attempt`
-/// failures; `None` once it has failed four times.
-pub(super) fn retry_after(attempt: u32) -> Option<Duration> {
-    match attempt {
-        1 => Some(Duration::from_secs(1)),
-        2 => Some(Duration::from_secs(2)),
-        3 => Some(Duration::from_secs(4)),
-        _ => None,
-    }
-}
-
-/// Cuts a stream into parts of exactly the size asked for, carrying a piece
-/// that straddles a boundary into the next part.
-pub(super) struct PartReader {
-    stream: Box<dyn VolumeReadStream>,
-    carry: Vec<u8>,
-    ended: bool,
-    /// Bytes handed out in parts so far.
-    pub(super) taken: u64,
-}
-
-impl PartReader {
-    pub(super) fn new(stream: Box<dyn VolumeReadStream>) -> Self {
-        Self {
-            stream,
-            carry: Vec::new(),
-            ended: false,
-            taken: 0,
-        }
-    }
-
-    /// The next `want` bytes, or fewer only at the source's end (empty when
-    /// it had nothing left).
-    #[cfg(test)]
-    pub(super) async fn fill(&mut self, want: usize) -> Result<Vec<u8>, VolumeError> {
-        self.fill_with(want, &mut || Ok(())).await
-    }
-
-    /// The next `want` bytes, as `fill` reads them, calling `between` after
-    /// every piece it pulls and every [`PROGRESS_TICK`] while one is pending,
-    /// so a slow or stalled source still reports progress and can be
-    /// cancelled ([`Self::pull_with`]).
-    pub(super) async fn fill_with(
-        &mut self,
-        want: usize,
-        between: &mut (dyn FnMut() -> Result<(), VolumeError> + Send),
-    ) -> Result<Vec<u8>, VolumeError> {
-        while self.carry.len() < want && !self.ended {
-            self.pull_with(between).await?;
-        }
-        let rest = self.carry.split_off(want.min(self.carry.len()));
-        let part = std::mem::replace(&mut self.carry, rest);
-        self.taken += part.len() as u64;
-        Ok(part)
-    }
-
-    /// Whether the source has nothing left, reading one piece ahead to find
-    /// out (kept for the next `fill`).
-    #[cfg(test)]
-    pub(super) async fn at_end(&mut self) -> Result<bool, VolumeError> {
-        self.at_end_with(&mut || Ok(())).await
-    }
-
-    /// Whether the source has nothing left, as `at_end` finds out, calling
-    /// `between` the way `fill_with` does: a source that stalls right at its
-    /// end still reports progress and can be cancelled.
-    pub(super) async fn at_end_with(
-        &mut self,
-        between: &mut (dyn FnMut() -> Result<(), VolumeError> + Send),
-    ) -> Result<bool, VolumeError> {
-        while self.carry.is_empty() && !self.ended {
-            self.pull_with(between).await?;
-        }
-        Ok(self.carry.is_empty())
-    }
-
-    /// One `pull`, calling `between` every [`PROGRESS_TICK`] while it's
-    /// pending and once after it lands. ❗ A `next_chunk` is dropped half-read
-    /// only when `between` fails, which ends the upload: no later part reads
-    /// past the lost bytes.
-    async fn pull_with(
-        &mut self,
-        between: &mut (dyn FnMut() -> Result<(), VolumeError> + Send),
-    ) -> Result<(), VolumeError> {
-        let start = tokio::time::Instant::now() + PROGRESS_TICK;
-        let mut tick = tokio::time::interval_at(start, PROGRESS_TICK);
-        tick.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
-        let pull = self.pull();
-        tokio::pin!(pull);
-        loop {
-            tokio::select! {
-                pulled = &mut pull => {
-                    pulled?;
-                    break;
-                }
-                _ = tick.tick() => between()?,
-            }
-        }
-        between()
-    }
-
-    /// Every byte out of the source so far, the read-ahead included.
-    pub(super) fn read_so_far(&self) -> u64 {
-        self.taken + self.carry.len() as u64
-    }
-
-    async fn pull(&mut self) -> Result<(), VolumeError> {
-        match self.stream.next_chunk().await {
-            Some(Ok(chunk)) => self.carry.extend_from_slice(&chunk),
-            Some(Err(e)) => return Err(e),
-            None => self.ended = true,
-        }
-        Ok(())
-    }
-}
 
 /// Marks an upload abandoned in the ledger if its task ends without settling
 /// it, which covers a future dropped mid-upload (the silence watch, the quit
@@ -755,7 +641,3 @@ impl S3VolumeInner {
         aborted
     }
 }
-
-#[cfg(test)]
-#[path = "multipart_upload_test.rs"]
-mod multipart_upload_test;
