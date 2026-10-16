@@ -317,6 +317,18 @@ var AllChecks = []CheckDefinition{
 		Run:    RunVendorPatchApplied,
 	},
 	{
+		ID:          "desktop-security-advisories",
+		Nickname:    "security-advisories",
+		DisplayName: "security advisory list is valid",
+		App:         AppDesktop,
+		Tech:        "🔒 Security",
+		DependsOn:   nil,
+		IsFast:      true,
+		// The committed list and the app version it may not pass; no cargo call.
+		Inputs: inputs([]string{securityAdvisoriesRelPath, tauriConfRelPath}),
+		Run:    RunSecurityAdvisories,
+	},
+	{
 		ID:          "desktop-rust-probe-unwrap-justified",
 		Nickname:    "probe-unwrap-justified",
 		DisplayName: "probe-unwrap-justified",

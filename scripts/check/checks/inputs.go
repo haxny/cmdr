@@ -163,7 +163,8 @@ var rustWorkspaceConfigInputs = []string{
 // must invalidate every Rust lane that compiles or scans the app crate. The managed-policy
 // drift guard reads the public MDM files and the `/trust` key list
 // (`managed_policy/public_docs_test.rs`). The updater compiles in the offline backup
-// updater key (`updater/signature.rs` reads `updater-backup.pub`).
+// updater key (`updater/signature.rs` reads `updater-backup.pub`). The security
+// advisory module embeds the committed advisory list (`security_advisories/mod.rs`).
 //
 // A lane carries this whenever its own set covers the tree that does the
 // embedding, which is what `TestRustInputsCoverEveryEmbeddedFile` walks the whole
@@ -175,6 +176,7 @@ var rustEmbeddedInputs = []string{
 	"CHANGELOG.md",
 	"apps/desktop/src/lib/commands/command-ids.ts",
 	"apps/desktop/src/lib/units/drive-figure-cases.json",
+	"apps/desktop/src-tauri/resources/security-advisories.json",
 	"apps/desktop/src-tauri/tauri.conf.json",
 	"apps/desktop/src-tauri/updater-backup.pub",
 	"apps/website/public/mdm/**",

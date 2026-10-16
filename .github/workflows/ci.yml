@@ -236,6 +236,11 @@ jobs:
       - name: Check vendored patches still apply
         run: ./scripts/check/check --check desktop-rust-vendor-patch-applied --ci
 
+      # The app reads the advisory list leniently (a broken one is "no advisory"), so a
+      # typo would silently drop a notice users should act on. Validate it before it ships.
+      - name: Check the security advisory list
+        run: ./scripts/check/check --check desktop-security-advisories --ci
+
       - name: Check cfg-gate
         run: ./scripts/check/check --check desktop-rust-cfg-gate --ci
 
