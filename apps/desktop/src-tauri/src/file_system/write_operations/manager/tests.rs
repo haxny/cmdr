@@ -651,8 +651,9 @@ async fn admitted_op_runs_even_if_the_admitting_runtime_is_dropped() {
     // `on_settled`). If it spawned admitted work onto that caller runtime and the
     // caller runtime went away, the op would be orphaned — it would never run,
     // never settle, and leak its lane forever. The manager instead spawns on the
-    // app's long-lived runtime (`tauri::async_runtime::spawn`), so an op admitted
-    // by a short-lived runtime still runs to completion after that runtime dies.
+    // host's long-lived runtime (`host::installed().runtime()`: the app's, or
+    // `cmdr-fs`'s shared fallback in a test binary), so an op admitted by a
+    // short-lived runtime still runs to completion after that runtime dies.
     //
     // Here a throwaway current-thread runtime admits the op and is then dropped
     // WITHOUT ever driving it. With a bare `tokio::spawn` in the admission pass,

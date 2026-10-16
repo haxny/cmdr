@@ -29,7 +29,7 @@ Pre-flight scans reuse cached listings when the source volume reports `WatchCove
 Where a symbol lives and who calls it: `codegraph_search` / `codegraph_explore`. The spine: `CLAUDE.md` § Module map.
 The full top-level inventory is here:
 
-- `mod.rs` (public API + the `start_write_operation` lifecycle), `manager.rs` (registry + lane admission; its wire types in `manager/wire.rs`, reordering the line in `manager/reorder.rs`, and a retained failure's way to start again in `manager/retry.rs`, § "Retained failures"), `state.rs`
+- `mod.rs` (public API + the `start_write_operation` lifecycle), `host/` (what the engine needs from the app: the runtime and the engine-wide events, § "The engine's host"), `manager.rs` (registry + lane admission; its request answers in `manager/wire.rs`, reordering the line in `manager/reorder.rs`, and a retained failure's way to start again in `manager/retry.rs`, § "Retained failures"), `state.rs`
   (`WriteOperationState`, the settle guard, plus `state/registry.rs`: `WriteOperationRegistry` and its walks, and
   `state/controls.rs`:
   the by-id cancel / abort / pause / resume / conflict-answer entry points, re-exported through `state`, and
@@ -715,6 +715,31 @@ let bytes = copy_file_with_strategy(source, &actual_dest, ..)?;
 
 See also: `apps/desktop/src-tauri/src/downloads/CLAUDE.md` for the watcher architecture, ignore-set internals, and the FDA-gated lifecycle. End-to-end safety net for the contract lives in `downloads::runtime::tests::note_pending_write_for_cmdr_suppresses_watcher_event_end_to_end`. Each write path's exact announce sequence (which paths, in what order, and whether each existed yet) is pinned in `own_write_announce_tests.rs`, over the test-only recorder in `apps/desktop/src-tauri/src/downloads/own_write_recorder.rs`; a new write path gets a cell there.
 
+## The engine's host
+
+`host/` is what the engine needs from the app around it, as named seams instead of stashed `AppHandle`s and the Tauri
+runtime. The app's answer is `apps/desktop/src-tauri/src/operations_host/`, which builds one `EngineHost` in `setup()`
+(after `volume_host::install`, before the leftover sweep) and parks it in `host::install`; engine code reaches it with
+`host::installed()`. The slot is temporary: once the engine is a handle, the handle carries its seams.
+
+- **The runtime is the `VolumeHost`'s.** One handle for the engine and the backends it drives, so the two can't
+  disagree. Everything the engine spawns goes there: the admission pass (§ "The admission pass spawns admitted ops on
+  the APP runtime"), the stall watchdog, the arrival sweep's `spawn_blocking`, and the sweep's `block_on`s.
+- **Engine-wide facts go through `EngineEvents`**: operations changed, busy volumes changed, a transfer started /
+  finished on volumes (indexing priority), staging leftovers kept, and an instant mutation settled (analytics, as an
+  `InstantMutationFact` of categories only). Per-op events stay on `OperationEventSink`. Every method is required, is
+  called with no engine lock held, and returns at once.
+- **The app decides what each fact becomes**: a Tauri event, a `priority::transfers` call, or a PostHog capture under a
+  literal event name (`analytics-event-catalog` reads `capture("…")`). The test-only counters a pin reads
+  (`emit_count`, `busy_emit_count`, `KEPT_NOTICES`) count on the engine side, before the seam.
+- **Before `install`, the answer depends on the binary.** In the app nothing can start an operation before setup, so it
+  answers nothing, as the unset `AppHandle`s it replaced did. A test binary never installs, so it gets the app's own
+  answers minus the frontend channel (`operations_host::without_frontend`): the real indexing gauge and analytics
+  client, which `status_cache_tests`' gauge pins read, and `cmdr-fs`'s shared fallback runtime. No app handle, so
+  `global_tauri_sink()` stays `None` and an archive-target instant op refuses, as before.
+- **A seam's value types live in `host/` or `types/`**, never in a module that calls the seam, or the two weld into a
+  cycle. That's why `OperationsChanged` and `OperationSnapshot` are `types` vocabulary.
+
 ## Events emitted
 
 - **`write-progress`**: Every ~200 ms during copy/move/delete/trash
@@ -785,16 +810,16 @@ Admission is otherwise invisible from outside: a pass that walks the queue and a
 
 ### The admission pass spawns admitted ops on the APP runtime, not the caller's
 
-The admission pass (from `spawn_managed` or `on_settled`) spawns each admitted op's deferred start with **`tauri::async_runtime::spawn`, deliberately NOT `tokio::spawn`**. `tokio::spawn` binds to whatever runtime is current when the pass runs — and the pass can run on a runtime that has nothing to do with the op it's admitting. Admission is global and there is a lock-free window between an op's registration (`spawn_managed` inserts it Queued, drops the lock) and its own admission pass: a CONCURRENT op's `on_settled`, running on a different runtime, can reach the pass first and admit the freshly-registered op. So the runtime that spawns an op is racy, not "the op's own caller". `async_runtime::spawn` pins every op to the one process-global runtime that outlives them all.
+The admission pass (from `spawn_managed` or `on_settled`) spawns each admitted op's deferred start on **the host's runtime (`host::installed().runtime()`), deliberately NOT `tokio::spawn`**. `tokio::spawn` binds to whatever runtime is current when the pass runs — and the pass can run on a runtime that has nothing to do with the op it's admitting. Admission is global and there is a lock-free window between an op's registration (`spawn_managed` inserts it Queued, drops the lock) and its own admission pass: a CONCURRENT op's `on_settled`, running on a different runtime, can reach the pass first and admit the freshly-registered op. So the runtime that spawns an op is racy, not "the op's own caller". The host's runtime pins every op to the one process-global runtime that outlives them all: the app's own (`operations_host` passes `volume_host::host()`, whose runtime is Tauri's), or `cmdr-fs`'s shared fallback in a test binary. ❌ Never a `Handle::current()` captured at setup: that's a caller's runtime again, one level up.
 
-In production this is a no-op (there is exactly one long-lived Tauri runtime, so ambient and app runtime are identical). **The guard exists for the process-global-manager + per-runtime-caller topology**, which is the test harness: every `#[tokio::test]` runs on its own runtime, and with a bare `tokio::spawn` an op admitted by a runtime that is then torn down is orphaned — it never runs, never settles, and leaks its lane forever, wedging later ops (the observed nondeterministic `wait_until` timeouts). Pinned by `manager::tests::admitted_op_runs_even_if_the_admitting_runtime_is_dropped` (a throwaway runtime admits an op and is dropped without driving it; the op must still complete). This race is lane-INDEPENDENT — it hit even unique-lane ops — so a hermetic-lanes-only test fix could not close it; the guard is the actual fix.
+In production this is a no-op (there is exactly one long-lived app runtime, so ambient and app runtime are identical). **The guard exists for the process-global-manager + per-runtime-caller topology**, which is the test harness: every `#[tokio::test]` runs on its own runtime, and with a bare `tokio::spawn` an op admitted by a runtime that is then torn down is orphaned — it never runs, never settles, and leaks its lane forever, wedging later ops (the observed nondeterministic `wait_until` timeouts). Pinned by `manager::tests::admitted_op_runs_even_if_the_admitting_runtime_is_dropped` (a throwaway runtime admits an op and is dropped without driving it; the op must still complete). This race is lane-INDEPENDENT — it hit even unique-lane ops — so a hermetic-lanes-only test fix could not close it; the guard is the actual fix.
 
 Independently, the archive-edit tests still give each op its OWN lane (`archive_edit::test_support::unique_lane_id`, and `InMemoryVolume::with_lane_key`), matching the `manager::tests` discipline ("unique operation ids + lane keys"). That's for test ISOLATION and parallel speed — a shared global lane serializes unrelated tests and couples their timing — not for orphan-safety, which the guard now owns. The one behavior that needs a `"root"` id (a root parent settling with `None`) is pinned by `move_out_tests`, whose lanes come from the volume objects, so it passes a `"root"` settle id WITHOUT reserving the `"root"` lane.
 
 ### Lifecycle status and `operations-changed`
 
 `LifecycleStatus` (Queued/Running/Paused/Done/Cancelled/Failed) lives on the manager record. The snapshot also carries
-`supports_rollback` (see below), `error` (see [Retained failures](#retained-failures)), and `items` (see [What a row says it acts on](#what-a-row-says-it-acts-on-items)). Admission and settle set Queued/Running and removal-on-terminal; the pause/resume path sets the `Paused`↔`Running` flip (see [Pause / resume](#pause--resume)). It is distinct from `WriteOperationPhase` (the progress phase) and `OperationIntent` (the cancel/rollback machine). The `operations-changed` typed event carries a THIN snapshot (`Vec<OperationSnapshot>`: id, type, status, source/dest summary), emitted from `spawn_managed` / `on_settled` / `cancel_if_queued` / `set_paused` / the two dismiss commands. It deliberately excludes 200 ms progress — the queue window reads the per-file `write-progress` stream for live bars. `init_operation_event_emitter(app)` wires the emitter at startup (`lib.rs`), mirroring `init_busy_volume_emitter`.
+`supports_rollback` (see below), `error` (see [Retained failures](#retained-failures)), and `items` (see [What a row says it acts on](#what-a-row-says-it-acts-on-items)). Admission and settle set Queued/Running and removal-on-terminal; the pause/resume path sets the `Paused`↔`Running` flip (see [Pause / resume](#pause--resume)). It is distinct from `WriteOperationPhase` (the progress phase) and `OperationIntent` (the cancel/rollback machine). The `operations-changed` typed event carries a THIN snapshot (`Vec<OperationSnapshot>`: id, type, status, source/dest summary), emitted from `spawn_managed` / `on_settled` / `cancel_if_queued` / `set_paused` / the two dismiss commands. It deliberately excludes 200 ms progress — the queue window reads the per-file `write-progress` stream for live bars. The manager reports it as an engine-wide fact (`EngineEvents::operations_changed`, § "The engine's host"); the app emits it.
 
 A live RECORD only ever holds `Queued` / `Running` / `Paused`: `Done` and `Cancelled` are declared but never assigned, because `on_settled` deletes the record before anything could set them. `Failed` is the one terminal status that reaches a snapshot, and only through the retained-failure list below, never on a record.
 
@@ -1258,15 +1283,16 @@ runs as a managed op, driven by the `archive_edit/` module: `archive_edit/CLAUDE
 
 Drives "disable Eject while an op reads from / writes to this device" so a disconnect can't truncate an in-flight file. Lives in `status_cache.rs`, alongside the cache it derives from: `recompute_and_emit_busy_volumes` reads that module's own `OPERATION_STATUS_CACHE`, and register / unregister are the only two places membership can change, so the two can't be separated without putting a private static on the wrong side of a module boundary.
 
-The same two register/unregister functions also feed `crate::priority::transfers` (the per-volume "a transfer is
-running" gauge indexing yields to — transfers trump indexing). ONE lifecycle choke point on purpose: a new op kind that
+The same two register/unregister functions also report `EngineEvents::transfer_started` / `transfer_finished`, which
+the app feeds into `crate::priority::transfers` (the per-volume "a transfer is running" gauge indexing yields to —
+transfers trump indexing). ONE lifecycle choke point on purpose: a new op kind that
 guards eject automatically also outranks indexing, and the panic-safe unregister paths below cover both signals. Don't
 add a second feed site (see `../../priority/CLAUDE.md`).
 
 - The manager registers an op's volume IDs busy (`register_operation_status(op_id, type, volume_ids)`) **only when it admits the op (Running)** — a Queued op isn't touching the device, so it marks nothing busy. Source **and** destination go in (a download from a phone is as corruptible as an upload to it). The manager's `on_settled` / `ManagedTaskGuard` Drop unregisters on every exit (including panic), so a finished or panicking op can't leave a volume stuck busy.
 - The busy set is the union of every Running op's `volume_ids` **∪ external registrations**, minus `root` (never ejectable). `recompute_and_emit_busy_volumes` fires `volumes-busy-changed` only when membership changes — progress ticks don't churn it (`LAST_EMITTED_BUSY`; pinned through a `cfg(test)` emit counter by `status_cache_tests::volumes_busy_changed_fires_once_per_distinct_change`, a one-test-per-process cell since the dedupe is global). Every transfer-gauge start has exactly one finish on success, cancel, error, a panicking handler, and the panic net (`status_cache_tests::every_transfer_start_has_exactly_one_finish_however_the_op_ends`). Membership-by-union means two concurrent transfers to one device keep it busy until both finish, with no manual refcount.
 - **Where `volume_ids` come from**: the `OperationDescriptor` each spawn site hands the manager. The cross-volume entry points (`copy_between_volumes`, `move_between_volumes`, `move_within_same_volume`) and the volume-aware delete carry the IDs; the both-local branch of `copy_between_volumes` (a local→USB / DMG copy) passes both IDs through `copy_files_start` / `move_files_start` so the ejectable destination is still marked. The plain `move_files` / `trash` commands pass an empty list — the unified transfer dialog only routes through them for same-`root` ops, where no ejectable volume is involved.
-- **Consumers**: `busy_volume_ids()` backs the `get_busy_volume_ids` bootstrap command, the `eject_volume` server-side guard (refuses a busy volume — the real safety net, since the picker's disable is only UX), and the native breadcrumb-menu builder (renders the Eject item disabled with a ` (busy)` suffix). The frontend `volume-busy-store.svelte.ts` subscribes to `volumes-busy-changed` and exposes `isVolumeBusy(id)` to disable the picker's eject controls. `init_busy_volume_emitter(app)` wires the emitter at startup (`lib.rs`).
+- **Consumers**: `busy_volume_ids()` backs the `get_busy_volume_ids` bootstrap command, the `eject_volume` server-side guard (refuses a busy volume — the real safety net, since the picker's disable is only UX), and the native breadcrumb-menu builder (renders the Eject item disabled with a ` (busy)` suffix). The frontend `volume-busy-store.svelte.ts` subscribes to `volumes-busy-changed` and exposes `isVolumeBusy(id)` to disable the picker's eject controls. The engine reports each change through `EngineEvents::volumes_busy_changed`; the app emits it.
 - **A wider question, `operations_need_volume(id)`** (`manager.rs`): every op the manager HOLDS (Queued too) plus the busy set. A queued op hasn't touched the device, so Eject ignores it, but it names the volume and will set out for it, so retiring a volume id for good (a saved server moving to a new address, `server_move.rs`) waits for it too.
 - **External (non-write-op) seam**: the drag-out file-promise fulfillment service (`native_drag::fulfillment`) marks the source volume busy while it streams a promise to a Finder destination, but it isn't a real write op (no `WRITE_OPERATION_STATE`, no progress events, no settle). The `pub(crate)` `register_external_volume_op(op_id, volume_ids)` / `release_external_volume_op(op_id)` pair (in `status_cache.rs`, surfaced through `state::` and re-exported from `mod.rs`) is the seam: it touches only the `OPERATION_STATUS_CACHE` half that `recompute_and_emit_busy_volumes` reads, registering under `WriteOperationType::Copy` (the type only affects `get_operation_status` diagnostics; the busy set is type-agnostic). The fulfillment side wraps it in an RAII guard so release fires on every exit path.
 
@@ -1641,7 +1667,8 @@ being gone and the partial is still on the drive.
 ❌ **Neither entry point runs on a runtime worker.** The rules are `async` so the `Surface::Volume` arm can await a
 backend, but every `Surface::Local` arm is plain blocking `std::fs` aimed at a removable drive — the one place a `stat`
 or an `unlink` sits for 30-120 s on a wedged mount. The launch sweep gets its own thread, the arrival sweep a
-`spawn_blocking`, and both `block_on` from there. ❌ Never `async_runtime::spawn`.
+`spawn_blocking`, and both `block_on` the host's runtime from there (`Handle::block_on` is legal off a runtime
+worker). ❌ Never `runtime().spawn` for either.
 
 **A file→folder overwrite sets a whole DIRECTORY aside.** Even with the replacement provably complete it gets a real
 name rather than a recursive delete; the person decides what to do with the folder.
@@ -1663,11 +1690,11 @@ skips an op byte it doesn't know and truncates the log at launch, so a rollback 
 would have been read by that build as a temp, and a temp is the one kind it removes on sight — which is exactly the
 aside it must never touch. `is_one_of_ours` stopped accepting `.cmdr-temp-` for a plain removal for the same reason.
 
-**The notice.** A kept staging folder raises `move-leftovers-kept` (drive name + folder name) through an `AppHandle`
-stashed at startup; the sweep belongs to no operation and has no event sink. A Mac-internal one gets the `warn` alone —
-the copy names a drive, and the boot disk never goes away, so it meets the rule again next launch. Tests have no
-`AppHandle`, so under `cfg(test)` every notice is also recorded by folder (`KEPT_NOTICES`); `in_flight_sweep_tests.rs`
-pins both halves.
+**The notice.** A kept staging folder raises `move-leftovers-kept` (drive name + folder name) as an engine-wide fact
+(`EngineEvents::staging_leftovers_kept`); the sweep belongs to no operation and has no event sink. A Mac-internal one
+gets the `warn` alone — the copy names a drive, and the boot disk never goes away, so it meets the rule again next
+launch. Tests have no frontend, so under `cfg(test)` every notice is also recorded by folder (`KEPT_NOTICES`);
+`in_flight_sweep_tests.rs` pins both halves.
 
 ## Testing the in-flight temp ledger
 

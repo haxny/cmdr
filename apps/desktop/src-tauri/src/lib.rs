@@ -124,6 +124,7 @@ mod notifications;
 #[cfg(feature = "playwright-e2e")]
 mod open_mock;
 mod operation_log_host;
+mod operations_host;
 #[cfg(target_os = "macos")]
 mod permissions;
 #[cfg(target_os = "linux")]
@@ -267,6 +268,12 @@ pub fn run() {
             // below: anything that journals or rolls back reaches this one handle.
             let operation_log = operation_log_host::install();
 
+            // Everything the write engine needs from this app: its runtime (the
+            // volume host's, so after it) and its engine-wide events. Before
+            // anything can start an operation and before the leftover sweep
+            // below. Mirror of `write_operations::host`.
+            operations_host::install(app.handle());
+
             // Mount the typed `tauri-specta` events onto the app. Required before any
             // `Event::emit` / `Event::listen` resolves a name. Collection: `ipc.rs`.
             specta_builder.mount_events(app);
@@ -384,7 +391,6 @@ pub fn run() {
                 // before the volume registry below by design: one on a share is held
                 // and settled when that volume arrives, rather than chased from here.
                 // See `file_system/write_operations/in_flight_temps.rs`.
-                file_system::write_operations::init_sweep_app_handle(app.handle().clone());
                 drop(file_system::write_operations::init_and_sweep_in_flight_temps(&data_dir));
             }
 
@@ -435,17 +441,12 @@ pub fn run() {
             #[cfg(any(target_os = "macos", target_os = "linux"))]
             adb::volume_wiring::install_device_provider();
 
-            // Wire the "busy volumes" emitter so write ops can broadcast
-            // `volumes-busy-changed` (drives disabling Eject while a transfer touches a
-            // device). Before any write op can run.
-            file_system::init_busy_volume_emitter(app.handle());
-            // Its eject twin, `volumes-ejecting-changed`: which Eject controls show an
-            // eject still running. Before the frontend can ask for one.
+            // `volumes-ejecting-changed`, the twin of the write engine's
+            // `volumes-busy-changed`: which Eject controls show an eject still
+            // running. Before the frontend can ask for one.
             #[cfg(any(target_os = "macos", target_os = "linux"))]
             file_system::volume::eject::init_ejecting_volume_emitter(app.handle());
 
-            // Operation-manager emitter for `operations-changed` (the queue window's row set).
-            file_system::init_operation_event_emitter(app.handle());
             // The status-corner indicator subscribes to this rather than polling `main.db`.
             agent::suggested_ops::init_suggestions_event_emitter(app.handle());
             // Every Ask Cmdr turn — a rail send or a wake — streams over this one event, keyed

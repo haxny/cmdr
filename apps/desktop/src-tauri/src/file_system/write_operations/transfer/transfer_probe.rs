@@ -1032,17 +1032,19 @@ impl WatchdogState {
 }
 
 fn spawn_watchdog(operation_id: String) {
-    tauri::async_runtime::spawn(async move {
-        let mut watchdog = WatchdogState::new();
-        let started = Instant::now();
-        loop {
-            tokio::time::sleep(STALL_TICK).await;
-            let Some(probe) = REGISTRY.lock_ignore_poison().get(&operation_id).cloned() else {
-                return; // operation finished; guard removed it
-            };
-            probe.watchdog_step(&mut watchdog, started.elapsed());
-        }
-    });
+    crate::file_system::write_operations::host::installed()
+        .runtime()
+        .spawn(async move {
+            let mut watchdog = WatchdogState::new();
+            let started = Instant::now();
+            loop {
+                tokio::time::sleep(STALL_TICK).await;
+                let Some(probe) = REGISTRY.lock_ignore_poison().get(&operation_id).cloned() else {
+                    return; // operation finished; guard removed it
+                };
+                probe.watchdog_step(&mut watchdog, started.elapsed());
+            }
+        });
 }
 
 #[cfg(test)]

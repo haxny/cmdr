@@ -211,8 +211,8 @@ Backend events fire at success chokepoints; frontend events ride `track_event`.
   `item_count` bucket, `had_conflicts` bool (proxied from `files_skipped > 0`); never names/paths.
 - `delete_used` (backend, same function): `trashed` bool, `item_count` bucket.
 - `archive_edit_completed` (backend, same function): `item_count` bucket.
-- `rename_used` / `folder_created` / `file_created` (backend, `write_operations/analytics.rs`, emitted from the
-  `rename_managed` / `create_directory_managed` / `create_file_managed` wrappers): `initiator` (the `Initiator` token:
+- `rename_used` / `folder_created` / `file_created` (backend, `apps/desktop/src-tauri/src/operations_host/events.rs`, from the
+  `InstantMutationFact` the `rename_managed` / `create_directory_managed` / `create_file_managed` wrappers report): `initiator` (the `Initiator` token:
   `user` / `ai_client` / `agent` / `agent_edited`), `target` (`volume` / `archive`), `outcome` (`done` / `failed`);
   never a name or a path. These three are INSTANT metadata ops (`manager::run_instant`) that return their `Result`
   inline and produce no `WriteCompleteEvent` at all, so they can't ride `emit_completion_analytics` — its arms for them

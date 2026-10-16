@@ -17,8 +17,9 @@
 
 use cmdr_fs::ignore_poison::IgnorePoison;
 use std::collections::{HashMap, HashSet};
-use std::sync::{LazyLock, OnceLock, RwLock};
+use std::sync::{LazyLock, RwLock};
 
+use super::host;
 use super::types::{OperationStatus, WriteOperationPhase, WriteOperationType};
 
 #[cfg(test)]
@@ -91,12 +92,12 @@ pub(super) fn register_operation_status(
         .map(|d| d.as_millis() as u64)
         .unwrap_or(0);
 
-    // Raise the priority transfer gauge alongside the eject busy set: these two
+    // Report the transfer alongside the eject busy set: these two
     // register/unregister functions are the ONE write-op lifecycle choke point, so
-    // indexing's "a transfer trumps me" signal (`crate::priority::transfers`) and
-    // eject's guard can't drift apart. The finish fires from the same panic-safe
-    // cleanup paths that unregister.
-    crate::priority::transfers::note_transfer_started(&volume_ids);
+    // indexing's "a transfer trumps me" signal (the app feeds its priority gauge
+    // from it) and eject's guard can't drift apart. The finish fires from the same
+    // panic-safe cleanup paths that unregister.
+    host::installed().events().transfer_started(&volume_ids);
     if let Ok(mut cache) = OPERATION_STATUS_CACHE.write() {
         cache.insert(
             operation_id.to_string(),
@@ -123,11 +124,11 @@ pub(super) fn unregister_operation_status(operation_id: &str) {
     } else {
         None
     };
-    // Lower the priority transfer gauge with the SAME ids the register raised it
-    // with (they ride the cache entry, so the pair can't drift). A double
-    // unregister removed nothing and lowers nothing.
+    // Finish the transfer with the SAME ids the register started it with (they
+    // ride the cache entry, so the pair can't drift). A double unregister
+    // removed nothing and finishes nothing.
     if let Some(volume_ids) = removed_volume_ids {
-        crate::priority::transfers::note_transfer_finished(&volume_ids);
+        host::installed().events().transfer_finished(&volume_ids);
     }
     recompute_and_emit_busy_volumes();
 }
@@ -188,11 +189,6 @@ pub struct VolumesBusyChanged {
     pub volume_ids: Vec<String>,
 }
 
-/// App handle for emitting `volumes-busy-changed`. Set once at startup via
-/// `init_busy_volume_emitter`. Absent in unit tests, where the recompute is a
-/// no-op emit (the set is still queryable via `busy_volume_ids`).
-static BUSY_APP: OnceLock<tauri::AppHandle> = OnceLock::new();
-
 /// Last busy set we emitted, so a progress update that doesn't change
 /// membership produces no event (the cache changes on every progress tick, but
 /// the busy set only changes when an op starts or finishes).
@@ -200,19 +196,13 @@ static LAST_EMITTED_BUSY: LazyLock<std::sync::Mutex<HashSet<String>>> =
     LazyLock::new(|| std::sync::Mutex::new(HashSet::new()));
 
 /// Test-only: `volumes-busy-changed` broadcasts that got past the dedupe, ever,
-/// counted before the "no app handle" return so unit tests see them.
+/// counted before the host hears them, since unit tests have no frontend.
 #[cfg(test)]
 static BUSY_EMITS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
 
 #[cfg(test)]
 fn busy_emit_count() -> u64 {
     BUSY_EMITS.load(std::sync::atomic::Ordering::SeqCst)
-}
-
-/// Stores the app handle used to broadcast `volumes-busy-changed`. Call once at
-/// app setup, before any write op can run.
-pub fn init_busy_volume_emitter(app: &tauri::AppHandle) {
-    let _ = BUSY_APP.set(app.clone());
 }
 
 /// Computes the current set of busy volume IDs: the union of every active
@@ -256,16 +246,9 @@ fn recompute_and_emit_busy_volumes() {
     #[cfg(test)]
     BUSY_EMITS.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
 
-    let Some(app) = BUSY_APP.get() else {
-        return;
-    };
     let mut volume_ids: Vec<String> = current.into_iter().collect();
     volume_ids.sort();
-    use tauri_specta::Event as _;
-    let payload = VolumesBusyChanged { volume_ids };
-    if let Err(e) = payload.emit(app) {
-        crate::log_error!(target: "eject", "Failed to emit volumes-busy-changed: {}", e);
-    }
+    host::installed().events().volumes_busy_changed(volume_ids);
 }
 
 // Panic-safe cache cleanup for managed write ops now lives in

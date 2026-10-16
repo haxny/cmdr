@@ -758,7 +758,6 @@ pub(super) use records::{
 
 #[path = "in_flight_sweep.rs"]
 mod sweep;
-pub use sweep::init_app_handle as init_sweep_app_handle;
 
 #[cfg(test)]
 #[path = "in_flight_temps_test_support.rs"]

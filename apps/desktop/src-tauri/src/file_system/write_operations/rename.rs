@@ -20,6 +20,7 @@
 use std::path::{Path, PathBuf};
 
 use super::archive_edit::{self, ArchiveEditRequest};
+use super::host::{self, InstantMutationFact, InstantOp, InstantTarget};
 use super::look_alike::{NewEntry, place_new_entry};
 use super::manager::{self, OperationDescriptor, OperationSummaryText};
 use super::mutation_error::MutationError;
@@ -70,7 +71,8 @@ pub(crate) async fn rename_managed(
     if let Err(error) = &result {
         log_rename_refusal(RenameStage::Rename, &attempted, &attempted_volume, error);
     }
-    super::analytics::emit_rename_analytics(initiator, target, &result);
+    let fact = InstantMutationFact::of(InstantOp::Rename, initiator, target, &result);
+    host::installed().events().instant_mutation_settled(fact);
     result
 }
 
@@ -131,7 +133,7 @@ async fn rename_managed_inner(
     force: bool,
     volume_id: String,
     initiator: Initiator,
-) -> (Result<(), MutationError>, super::analytics::InstantTarget) {
+) -> (Result<(), MutationError>, InstantTarget) {
     // Renaming a path INSIDE an archive is a zip mutation: route it to the
     // managed archive-edit driver. The `.zip` file itself is a regular file —
     // renaming it must work like any other file — so only a genuinely-inner path
@@ -142,7 +144,7 @@ async fn rename_managed_inner(
     {
         return (
             route_archive_rename(&from, &to, &volume_id).await,
-            super::analytics::InstantTarget::Archive,
+            InstantTarget::Archive,
         );
     }
 
@@ -157,7 +159,7 @@ async fn rename_managed_inner(
         match manager.get(&volume_id) {
             Some(volume) => match rename_target(volume.as_ref(), &volume_id, &from, to, force).await {
                 Ok(target) => target,
-                Err(refusal) => return (Err(refusal), super::analytics::InstantTarget::Volume),
+                Err(refusal) => return (Err(refusal), InstantTarget::Volume),
             },
             // The closure below refuses an unregistered volume in its own words.
             None => to,
@@ -173,14 +175,11 @@ async fn rename_managed_inner(
             Ok(RenameWork::CopyThenDelete) => {
                 return (
                     start_rename_as_move(&from, &to, force, &volume_id, initiator).await,
-                    super::analytics::InstantTarget::Volume,
+                    InstantTarget::Volume,
                 );
             }
             Err(error) => {
-                return (
-                    Err(MutationError::Volume { error }),
-                    super::analytics::InstantTarget::Volume,
-                );
+                return (Err(MutationError::Volume { error }), InstantTarget::Volume);
             }
         }
     }
@@ -314,7 +313,7 @@ async fn rename_managed_inner(
             Err(_) => super::journal::finalize_op(&op_id, OpKind::Rename, ExecutionStatus::Failed),
         }
     }
-    (result, super::analytics::InstantTarget::Volume)
+    (result, InstantTarget::Volume)
 }
 
 /// Starts the background move a rename that copies runs as

@@ -39,12 +39,13 @@
 //! points `remove_file` at the user's Mac.
 
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, OnceLock};
+use std::sync::Arc;
 
 use cmdr_fs::metadata::{RemovalRefusal, remove_file_clearing_blockers};
 
 use super::{ItemHome, ItemKind, Ledger, Record, RecordedTemp, SweepTally, TrackedItem};
 use crate::file_system::volume::manager::get_volume_manager;
+use crate::file_system::write_operations::host;
 use crate::file_system::write_operations::transfer_sides::root_is_listed;
 use crate::file_system::write_operations::types::MoveLeftoversKeptEvent;
 use crate::file_system::write_operations::unique_name::{NameCandidates, RESCUE_NAME_ATTEMPTS, recovered_sibling};
@@ -60,9 +61,12 @@ use cmdr_fs::ignore_poison::IgnorePoison;
 /// Runs on its own thread (`init_and_sweep` says why nothing waits on it), so
 /// blocking filesystem calls inside the async rules are free here.
 pub(super) fn persisted_orphans(ledger: &Ledger, locals: &[Record]) -> SweepTally {
+    // Legal here and only here: this is the sweep's own thread, never a runtime
+    // worker, so `block_on` parks nothing the app shares.
+    let runtime = host::installed().runtime();
     let mut tally = SweepTally::default();
     for record in locals {
-        tauri::async_runtime::block_on(settle_and_record(ledger, record, &mut tally));
+        runtime.block_on(settle_and_record(ledger, record, &mut tally));
     }
 
     // A volume registered before the sweep thread got here (the boot volume, an
@@ -74,7 +78,7 @@ pub(super) fn persisted_orphans(ledger: &Ledger, locals: &[Record]) -> SweepTall
             continue;
         }
         let claimed = ledger.claim_pending(&volume_id);
-        tally.add(tauri::async_runtime::block_on(on_volume(ledger, &volume_id, claimed)));
+        tally.add(runtime.block_on(on_volume(ledger, &volume_id, claimed)));
     }
     // ASSIGNED, not added: a record a reachable volume then refused is already
     // back in `pending`, so counting both would report it twice. What's still
@@ -107,11 +111,13 @@ pub(super) fn on_volume_arrival(ledger: &Ledger, volume_id: &str) {
     }
     let volume_id = volume_id.to_string();
     let ledger = ledger.clone();
-    tauri::async_runtime::spawn_blocking(move || {
+    let runtime = host::installed().runtime();
+    runtime.clone().spawn_blocking(move || {
         // The same shape the launch sweep runs in: a blocking context that
         // `block_on`s the volume-backed rules. One shape for both entry points
-        // is what keeps the rules themselves a single set.
-        let tally = tauri::async_runtime::block_on(on_volume(&ledger, &volume_id, claimed));
+        // is what keeps the rules themselves a single set. A blocking-pool
+        // thread is no runtime worker, so `block_on` is legal here.
+        let tally = runtime.block_on(on_volume(&ledger, &volume_id, claimed));
         report(&tally);
     });
 }
@@ -658,29 +664,19 @@ impl Surface {
     }
 }
 
-/// The `AppHandle` the staging-folder notice is emitted through, stashed once
-/// from `lib.rs::setup`.
-///
-/// The sweep runs off the launch thread and, later, inside a volume-arrival
-/// task, so it has no operation and no event sink to speak through. `None`
-/// before setup, and in every test, where the notice is simply not emitted.
-static APP_HANDLE: OnceLock<tauri::AppHandle> = OnceLock::new();
-
-/// Gives the leftover sweep a way to reach the frontend. Startup only.
-pub fn init_app_handle(handle: tauri::AppHandle) {
-    let _ = APP_HANDLE.set(handle);
-}
-
 /// Tells the frontend a staging folder is staying where it is, so the files
 /// inside it have a findable home rather than being a silent absence at the
 /// source.
+///
+/// The sweep runs off the launch thread and, later, inside a volume-arrival
+/// task, so it has no operation and no event sink to speak through: the notice
+/// is an engine-wide fact (`EngineEvents::staging_leftovers_kept`).
 ///
 /// Silent when the record doesn't name a drive: the copy names one, and a
 /// Mac-internal staging folder (a move whose destination is the boot volume)
 /// gets the `warn` alone. Its disk never goes away, so it meets this rule again
 /// at the next launch.
 fn announce_leftovers_kept(drive_name: Option<&str>, path: &Path) {
-    use tauri_specta::Event;
     let Some(volume_name) = drive_name else {
         return;
     };
@@ -691,17 +687,12 @@ fn announce_leftovers_kept(drive_name: Option<&str>, path: &Path) {
         volume_name: volume_name.to_string(),
         folder_name,
     };
-    // Before the app-handle check: tests run with no app handle.
+    // Recorded here, before the host hears it: tests have no frontend.
     #[cfg(test)]
     KEPT_NOTICES
         .lock_ignore_poison()
         .push((path.to_path_buf(), notice.clone()));
-    let Some(app) = APP_HANDLE.get() else {
-        return;
-    };
-    if let Err(e) = notice.emit(app) {
-        log::warn!(target: "copy", "couldn't tell the frontend about the kept staging folder: {e}");
-    }
+    host::installed().events().staging_leftovers_kept(notice);
 }
 
 /// Test-only: every staging-folder notice raised, with the folder it named, so a

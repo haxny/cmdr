@@ -29,7 +29,7 @@ Copy, move, delete, trash, and zip edits as managed background ops.
   plain Overwrite answered for that `ClashKind` replaces, ITS "* all" carry included; the config policy, same-kind
   carries, and `OverwriteSmaller`/`Older` `Skip`. ❌ Never reduce a conditional before it. What ARRIVES is the caller's
   word (`IncomingItem`).
-- **Emit through `OperationEventSink`, ❌ never `AppHandle`**; `write-settled` fires once, AFTER the terminal event. A
+- **Emit through `OperationEventSink`, ❌ never `AppHandle`** (spawns: `host/`); `write-settled` fires once, AFTER the terminal event. A
   cross-FS move speaks TWICE per source on `write-source-item-done`, so the LAST wins.
 - **EVERY local write lands via `overwrite::stage_and_land_file`** (temp+rename, rename-aside when replacing); register
   a destination via `downloads::note_pending_write_for_cmdr` BEFORE the syscall (renames: both ends). What it leaves

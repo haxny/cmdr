@@ -64,12 +64,13 @@ use std::collections::{HashMap, VecDeque};
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Arc, LazyLock, Mutex, OnceLock};
+use std::sync::{Arc, LazyLock, Mutex};
 
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::volume::LaneKey;
 use cmdr_operation_log::types::OpKind;
 
+use super::host;
 use super::scan_cache;
 use super::state::{
     WRITE_OPERATION_STATE, WriteOperationState, forget_operation, register_operation_status,
@@ -261,40 +262,29 @@ pub(crate) struct OperationManager {
     /// § "Observing an admission pass" for why.
     admission_passes: AtomicU64,
     /// `operations-changed` broadcasts attempted, ever. Bumped at the top of
-    /// `emit_changed`, BEFORE the "no app handle" early return, so it counts in
-    /// unit tests too. Nothing in production reads it: like `admission_passes`,
+    /// `emit_changed`, before the host hears it, so it counts in unit tests,
+    /// which have no frontend. Nothing in production reads it: like `admission_passes`,
     /// it's what lets a test assert that a mutation told the windows about
     /// itself (or, for `record_failure`, deliberately didn't).
     emits: AtomicU64,
 }
 
-/// Global manager handle. `OnceLock` rather than `LazyLock` only because the
-/// app handle for emitting `operations-changed` is set at startup; the manager
-/// itself has no construction args, so a `LazyLock` backs it.
+/// Global manager handle. The manager has no construction args, so a
+/// `LazyLock` backs it.
 static MANAGER: LazyLock<OperationManager> = LazyLock::new(OperationManager::new);
-
-/// App handle for emitting `operations-changed`. Set once at startup via
-/// `init_operation_event_emitter`. Absent in unit tests (the emit is a no-op;
-/// the registry is still queryable via `list_operations`).
-static OPERATIONS_APP: OnceLock<tauri::AppHandle> = OnceLock::new();
 
 /// Returns the global operation manager.
 pub(crate) fn manager() -> &'static OperationManager {
     &MANAGER
 }
 
-/// Stores the app handle used to broadcast `operations-changed`. Call once at
-/// app setup, before any write op can run (mirrors `init_busy_volume_emitter`).
-pub fn init_operation_event_emitter(app: &tauri::AppHandle) {
-    let _ = OPERATIONS_APP.set(app.clone());
-}
-
 /// The startup-wired app handle, if present. Lets the instant-op forks
 /// (mkdir/mkfile/rename) build a `TauriEventSink` to route an archive target to
 /// the managed edit driver without threading an `AppHandle` through every
 /// command signature. `None` before wiring (unit tests).
+// shim: removed in M5b
 pub(crate) fn operations_app_handle() -> Option<tauri::AppHandle> {
-    OPERATIONS_APP.get().cloned()
+    host::installed().app().cloned()
 }
 
 impl OperationManager {
@@ -436,18 +426,19 @@ impl OperationManager {
 
             match deferred {
                 Some(start) => {
-                    // Spawn on the app's long-lived runtime, NOT the ambient one
+                    // Spawn on the host's long-lived runtime, NOT the ambient one
                     // (`tokio::spawn`). The admission pass runs on whatever runtime
                     // triggered it — this op's own `spawn_managed`, or a CONCURRENT
                     // op's `on_settled` that reached the pass first (admission is
                     // global, and there's a lock-free window between an op's
                     // registration and its own pass). In production that's always
-                    // the single Tauri runtime, so this is a no-op; but under the
+                    // the single app runtime, so this is a no-op; but under the
                     // per-test-runtime harness, spawning onto a caller runtime that
                     // is then torn down orphans the task, leaks its lane, and wedges
-                    // every later same-lane op. `async_runtime::spawn` pins every op
-                    // to the one process-global runtime that outlives them all.
-                    tauri::async_runtime::spawn(start());
+                    // every later same-lane op. The host's runtime (the app's, or
+                    // `cmdr-fs`'s shared fallback in a test binary) pins every op to
+                    // one process-global runtime that outlives them all.
+                    host::installed().runtime().spawn(start());
                 }
                 None => {
                     // Should never happen: a Queued op always has its deferred
@@ -919,16 +910,9 @@ impl OperationManager {
 
     fn emit_changed(&self) {
         self.emits.fetch_add(1, Ordering::SeqCst);
-        let Some(app) = OPERATIONS_APP.get() else {
-            return;
-        };
-        use tauri_specta::Event as _;
-        let payload = OperationsChanged {
+        host::installed().events().operations_changed(OperationsChanged {
             operations: self.list(),
-        };
-        if let Err(e) = payload.emit(app) {
-            log::warn!(target: "op_manager", "failed to emit operations-changed: {e}");
-        }
+        });
     }
 }
 

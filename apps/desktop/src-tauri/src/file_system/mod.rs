@@ -58,17 +58,17 @@ pub use watcher::{init_watcher_manager, update_debounce_ms};
 // Re-export write operation types
 pub use write_operations::{
     OperationEventSink, ReadOnlySide, TauriEventSink, WriteOperationConfig, WriteOperationError,
-    WriteOperationStartResult, busy_volume_ids, cancel_write_operation, delete_files_start, init_busy_volume_emitter,
-    move_files_start, trash_files_start,
+    WriteOperationStartResult, busy_volume_ids, cancel_write_operation, delete_files_start, move_files_start,
+    trash_files_start,
 };
 // Re-export the operation manager surface (queue + lifecycle). `LifecycleStatus`
 // and `OperationsChanged` are reached directly via `write_operations::` (the IPC
 // event registration and snapshot field), so they don't need a re-export here.
 pub use write_operations::{
     OperationSnapshot, PauseAllOutcome, PauseOutcome, QueueMoveDirection, QueueMoveOutcome, cancel_operation,
-    cancel_operations, dismiss_all_failed_operations, dismiss_failed_operation, init_operation_event_emitter,
-    latest_operation_progress, list_operations, move_queued_operation, operations_need_volume, pause_all,
-    pause_operation, place_queued_operation, resume_all, resume_operation, retry_failed_operation,
+    cancel_operations, dismiss_all_failed_operations, dismiss_failed_operation, latest_operation_progress,
+    list_operations, move_queued_operation, operations_need_volume, pause_all, pause_operation, place_queued_operation,
+    resume_all, resume_operation, retry_failed_operation,
 };
 // Cross-volume transfers. The three `start_volume_*` entry points own the volume
 // and destination-path resolution and every archive fork (extract out, copy/move

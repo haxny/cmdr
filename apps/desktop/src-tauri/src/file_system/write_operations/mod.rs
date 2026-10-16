@@ -29,6 +29,7 @@ mod error_classification;
 mod eta;
 mod event_sinks;
 mod free_space;
+pub(crate) mod host;
 mod human_wait;
 mod in_flight_temps;
 mod journal;
@@ -134,15 +135,11 @@ pub use in_flight_temps::flush as flush_in_flight_temps;
 /// Points the in-flight transfer-partial ledger at the app data dir and clears
 /// what an earlier run left behind. Startup only, before any copy can start.
 pub use in_flight_temps::init_and_sweep as init_and_sweep_in_flight_temps;
-/// Gives the leftover sweep a way to reach the frontend, so a staging folder it
-/// leaves on a returning drive is something the person hears about rather than
-/// a silent absence at the source. Startup only.
-pub use in_flight_temps::init_sweep_app_handle;
 pub(crate) use scan_cache::{ScanCostFacts, cached_cost_facts};
 pub use scan_preview::{cancel_scan_preview, get_scan_preview_totals, start_scan_preview};
 pub use state::{
     VolumesBusyChanged, busy_volume_ids, cancel_all_write_operations, cancel_write_operation, get_operation_status,
-    init_busy_volume_emitter, pending_write_conflict, resolve_write_conflict,
+    pending_write_conflict, resolve_write_conflict,
 };
 // A queue window that opens late seeds its rows from this (a paused operation emits nothing).
 pub use state::latest_operation_progress;
@@ -154,15 +151,14 @@ pub use state::abort_all_write_operations;
 // Operation manager: the single scheduler + registry every write op flows
 // through. `OperationsChanged` / `OperationSnapshot` are the thin
 // `operations-changed` event payload (the queue window consumes them). The
-// `LifecycleStatus` they carry is vocabulary and lives in `types`.
-// `init_operation_event_emitter` wires the emitter at startup; the command
-// helpers back the new `list_operations` / `cancel_operation(s)` IPC.
+// `LifecycleStatus` they carry is vocabulary and lives in `types`. The
+// command helpers back the `list_operations` / `cancel_operation(s)` IPC.
 // A queued operation whose sources left while it waited asks before carrying on.
 pub use manager::{
     OperationSnapshot, OperationSummaryText, OperationsChanged, PauseAllOutcome, PauseOutcome, QueueMoveDirection,
     QueueMoveOutcome, cancel_operation, cancel_operations, dismiss_all_failed_operations, dismiss_failed_operation,
-    init_operation_event_emitter, list_operations, move_queued_operation, operations_need_volume, pause_all,
-    pause_operation, place_queued_operation, resume_all, resume_operation, retry_failed_operation,
+    list_operations, move_queued_operation, operations_need_volume, pause_all, pause_operation, place_queued_operation,
+    resume_all, resume_operation, retry_failed_operation,
 };
 pub use queued_sources::continue_without_gone_sources;
 pub(crate) use queued_sources::pending_sources_gone;

@@ -257,6 +257,9 @@ All under `apps/desktop/src-tauri/src/`.
 - `operation_log_host/`: this app as the operation log's host (the log itself is `crates/cmdr-operation-log/`): builds
   the one `OperationLog` (`operation_log()`), opens it once the data dir is known, and answers its needs (settings,
   runtime, the volume registry). See `apps/desktop/src-tauri/src/operation_log_host/CLAUDE.md`
+- `operations_host/`: this app as the write engine's host: gives the engine its runtime (the volume host's) and answers
+  its engine-wide facts (Tauri events, the indexing transfer gauge, instant-op analytics). See
+  `apps/desktop/src-tauri/src/operations_host/CLAUDE.md`
 - `security_log/`: The local security event log (`security-events.jsonl`): typed `SecurityEvent`s from consent, MCP,
   managed-policy, and updater hooks, one emitter that also feeds subscribers, a background writer, and the opt-out. See
   its `apps/desktop/src-tauri/src/security_log/CLAUDE.md`
