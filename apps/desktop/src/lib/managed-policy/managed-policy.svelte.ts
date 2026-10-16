@@ -18,6 +18,7 @@ export const UNMANAGED: ManagedPolicyView = {
   managed: false,
   usageStatsDisabled: false,
   reportsDisabled: false,
+  securityLogRequired: false,
   updates: { kind: 'enabled', automaticChecks: true, ceiling: null },
   ai: { mode: 'allowed', allowedCloudHosts: null },
   lockedSettings: [],

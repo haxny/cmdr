@@ -2540,6 +2540,10 @@ export const commands = {
    *  Pushed live from the frontend whenever `updates.errorReports` changes.
    */
   setErrorReportsEnabled: (value: boolean) => __TAURI_INVOKE<void>('set_error_reports_enabled', { value }),
+  // Pushed live from the frontend whenever `securityLog.enabled` changes.
+  setSecurityLogEnabled: (value: boolean) => __TAURI_INVOKE<void>('set_security_log_enabled', { value }),
+  // Shows the log file in Finder, or its folder while there's no file yet.
+  revealSecurityLog: () => typedError<null, RevealSecurityLogError>(__TAURI_INVOKE('reveal_security_log')),
   /**
    *  Settings snapshot for windows without `tauri-plugin-store` capability (the
    *  viewer). The viewer can't load `settings.json` itself by security design
@@ -10865,6 +10869,8 @@ export type ManagedPolicyView = {
   managed: boolean
   usageStatsDisabled: boolean
   reportsDisabled: boolean
+  // The organization requires the security event log, so its switch is pinned on.
+  securityLogRequired: boolean
   updates: UpdatePolicyView
   ai: AiPolicyView
   lockedSettings: LockedSetting[]
@@ -13928,6 +13934,13 @@ export type RevealHandlerStatus = {
 export type RevealPath = {
   path: string
 }
+
+// Why the log couldn't be shown.
+export type RevealSecurityLogError =
+  // The app data dir didn't resolve, so there's no place the log could be.
+  | { kind: 'noDataDir' }
+  // The file manager didn't open, or the check didn't finish in time.
+  | { kind: 'unavailable' }
 
 /**
  *  How far an approved group can be taken back, stored in `proposals.reversible`. A FACT

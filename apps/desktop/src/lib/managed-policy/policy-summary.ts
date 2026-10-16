@@ -35,6 +35,12 @@ export function managedPolicySummary(view: ManagedPolicyView): ManagedSummaryLin
   if (updates !== null) lines.push({ label: tString('settings.managed.summary.updates'), value: updates })
   const ai = describeAi(view.ai)
   if (ai !== null) lines.push({ label: tString('settings.managed.summary.ai'), value: ai })
+  if (view.securityLogRequired) {
+    lines.push({
+      label: tString('settings.managed.summary.securityLog'),
+      value: tString('settings.managed.summary.securityLogRequired'),
+    })
+  }
   return lines
 }
 

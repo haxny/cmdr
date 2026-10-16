@@ -2,7 +2,7 @@
 
 import { Channel, invoke } from '@tauri-apps/api/core'
 import { type UnlistenFn } from '@tauri-apps/api/event'
-import type { AiApiKeyError, ManagedAiRefusal } from '#lib/ipc/bindings.js'
+import type { AiApiKeyError, ManagedAiRefusal, RevealSecurityLogError } from '#lib/ipc/bindings.js'
 import {
   commands,
   events,
@@ -169,6 +169,21 @@ export async function setMaxLogStorageMb(value: number): Promise<void> {
  */
 export async function setErrorReportsEnabled(value: boolean): Promise<void> {
   await commands.setErrorReportsEnabled(value)
+}
+
+/**
+ * Turns the security event log on or off. Pushed live whenever `securityLog.enabled` changes;
+ * the backend writes the "turned off" line itself and ignores this while the organization
+ * requires the log.
+ */
+export async function setSecurityLogEnabled(value: boolean): Promise<void> {
+  await commands.setSecurityLogEnabled(value)
+}
+
+/** Shows the security event log in Finder (its folder while there's no file yet). `null` when it worked. */
+export async function revealSecurityLog(): Promise<RevealSecurityLogError | null> {
+  const res = await commands.revealSecurityLog()
+  return res.status === 'ok' ? null : res.error
 }
 
 /**

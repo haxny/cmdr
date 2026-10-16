@@ -186,6 +186,27 @@ file activity (what was copied, moved, trashed, renamed, and where). Privacy pos
   completeness check then degrades that op to "can't undo" or "search marked partial" rather than silently
   under-reversing or claiming false coverage.
 
+## Security event log
+
+The security event log (`apps/desktop/src-tauri/src/security_log/CLAUDE.md`) is a small, local, append-only record of
+security-relevant changes and refusals: cloud AI consent given or withdrawn, the MCP server turned on or off, MCP
+requests turned away (per episode, with a count), an organization's policy applied or changed, an update installed,
+refused by policy, or refused for a bad signature, and recording itself turned on or off. It answers the CRA's Annex I
+Part I (2)(l). Posture:
+
+- **Local-only, never transmitted.** `security-events.jsonl` sits in the app data dir, not the log dir, so error-report
+  bundles (which collect `logging::log_dir()`) never carry it. "Delete all Cmdr data" removes it with the data dir.
+- **Typed, secret-free by construction.** Every line is a typed `SecurityEvent` with typed fields: versions, volume ids,
+  managed-policy key names, counts. No tokens, keys, passwords, file names, contents, or error text.
+- **Opt-out, unless the organization requires it.** Settings › Updates & privacy › "Record security events" turns it off
+  (one last "turned off" line, then nothing; the file stays). An MCP client can't flip it (`mcpSettable: false`).
+  `DisableSecurityLogOptOut` pins it on (`managed_policy/DETAILS.md` § Key catalog).
+- **Never in the way.** One background writer; a write that fails drops that line with a warning, so recording never
+  blocks or fails what it records. Size-capped: 1 MiB plus one rotated file.
+- **Reads aren't recorded.** File modifications are the operation log's job; journaling every read would cost privacy
+  and performance for little security value. The app log (`docs/tooling/logging.md`) stays always on as local
+  diagnostics; the CRA opt-out covers this record (decided 2026-10-16).
+
 ## Secret scanning (GitGuardian)
 
 GitGuardian watches the repo and opens an incident per suspected secret. Two independent surfaces, configured

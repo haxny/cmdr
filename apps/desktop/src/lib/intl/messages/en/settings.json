@@ -2604,6 +2604,15 @@
     "description": "Value beside the row label 'Crash and error reports' (the crash and error reports Cmdr can send to its developer) in the 'Managed by your organization' card (Settings > Updates & privacy). The organization turned this off. Each row has its own 'Off' key so the word can agree in gender and number with that row's label: use the form your language's macOS Settings shows for a switched-off feature, agreeing with the label where your grammar asks for it. One or two words.",
     "agreesWith": "settings.managed.summary.reports"
   },
+  "settings.managed.summary.securityLog": "Security events",
+  "@settings.managed.summary.securityLog": {
+    "description": "Row label in the 'Managed by your organization' card: the local security event log (a file on the Mac noting security-relevant changes and refusals). The value beside it says what the organization set. Short, sentence case."
+  },
+  "settings.managed.summary.securityLogRequired": "Always recorded",
+  "@settings.managed.summary.securityLogRequired": {
+    "description": "Value beside the row label 'Security events' in the 'Managed by your organization' card (Settings > Updates & privacy). The organization requires the security event log, so the person can't turn it off. One to three words.",
+    "agreesWith": "settings.managed.summary.securityLog"
+  },
   "settings.managed.summary.updates": "Updates",
   "@settings.managed.summary.updates": {
     "description": "Row label in the 'Managed by your organization' card: Cmdr's own app updates. The value beside it says what the organization set (for example 'Off' or 'Up to 0.52'). Short, sentence case."
@@ -2928,6 +2937,26 @@
   "settings.updates.card.privacyAndDataSharing": "Privacy and data sharing",
   "@settings.updates.card.privacyAndDataSharing": {
     "description": "Heading of the privacy-and-data-sharing card (analytics opt-in, beta contact email, crash reports, error reports) in Settings > Updates & privacy.",
+    "screenshot": "settings-updates.png"
+  },
+  "settings.updates.card.securityEvents": "Security events",
+  "@settings.updates.card.securityEvents": {
+    "description": "Heading of the security events card (the switch for the local security event log and its 'Show in Finder' button) in Settings > Updates & privacy. Sentence case.",
+    "screenshot": "settings-updates.png"
+  },
+  "settings.securityLog.enabled.label": "Record security events",
+  "@settings.securityLog.enabled.label": {
+    "description": "Label for the switch that turns the local security event log on or off. The log is a small file on the person's Mac listing security-relevant changes and refusals. In Settings > Updates & privacy.",
+    "screenshot": "settings-updates.png"
+  },
+  "settings.securityLog.enabled.description": "Keep a small file on this Mac that notes security-relevant changes and refusals, like cloud AI consent, an installed update, or an app turned away from the MCP server. It holds no file names, contents, or passwords, and it never leaves your Mac.",
+  "@settings.securityLog.enabled.description": {
+    "description": "Help text under the 'Record security events' switch. 'MCP server' is a technical feature name (Model Context Protocol): keep it untranslated. 'turned away' = refused access. Reassures that the file stays local and holds nothing private.",
+    "screenshot": "settings-updates.png"
+  },
+  "settings.securityLog.showInFinder": "Show in Finder",
+  "@settings.securityLog.showInFinder": {
+    "description": "Button under the 'Record security events' switch that opens Finder at the security event log file (or its folder when there's no file yet). 'Finder' is the macOS file manager: use the name macOS shows in your language.",
     "screenshot": "settings-updates.png"
   },
   "settings.fileSystemWatching.globalShortcutHint": "Change the shortcut under Keyboard shortcuts → Go to latest download (global).",

@@ -127,6 +127,7 @@ mod tests {
             ai_disabled: true,
             cloud_ai_disabled: true,
             allowed_cloud_ai_hosts: Some(vec![]),
+            security_log_required: true,
         };
         assert!(policy.allows(Egress::S3PriceList));
         assert_eq!(blocked(&policy).len(), ALL.len() - 1);

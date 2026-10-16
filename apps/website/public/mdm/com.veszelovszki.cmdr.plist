@@ -49,5 +49,9 @@
         <string>localhost</string>
         <string>127.0.0.1</string>
     </array>
+
+    <!-- true: the security event log (a local file of security-relevant changes and refusals) stays on, and users can't turn it off. -->
+    <key>DisableSecurityLogOptOut</key>
+    <false/>
 </dict>
 </plist>

@@ -59,6 +59,7 @@ function policy(lockedSettings: LockedSetting[]): ManagedPolicyView {
     managed: lockedSettings.length > 0,
     usageStatsDisabled: false,
     reportsDisabled: false,
+    securityLogRequired: false,
     updates: { kind: 'enabled', automaticChecks: true, ceiling: null },
     ai: { mode: 'allowed', allowedCloudHosts: null },
     lockedSettings,

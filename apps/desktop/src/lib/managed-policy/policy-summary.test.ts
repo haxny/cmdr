@@ -16,6 +16,12 @@ function view(overrides: Partial<ManagedPolicyView>): ManagedPolicyView {
 }
 
 describe('managedPolicySummary', () => {
+  it('names a required security event log', () => {
+    expect(managedPolicySummary(view({ securityLogRequired: true }))).toEqual([
+      { label: 'Security events', value: 'Always recorded' },
+    ])
+  })
+
   it('lists nothing when nothing is managed', () => {
     expect(managedPolicySummary(UNMANAGED)).toEqual([])
   })

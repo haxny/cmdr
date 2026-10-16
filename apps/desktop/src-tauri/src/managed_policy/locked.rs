@@ -12,6 +12,7 @@ const ERROR_REPORTS: &str = "updates.errorReports";
 const AUTO_CHECK: &str = "updates.autoCheck";
 const AI_PROVIDER: &str = "ai.provider";
 const ASK_CMDR_ENABLED: &str = "askCmdr.enabled";
+const SECURITY_LOG_ENABLED: &str = "securityLog.enabled";
 
 /// A setting value the policy pins. Typed rather than `serde_json::Value`, which can't cross IPC
 /// (`src/lib/ipc/CLAUDE.md`); crosses as a plain `boolean | string`.
@@ -99,6 +100,15 @@ pub fn locked_settings(policy: &ManagedPolicy) -> Vec<LockedSetting> {
             },
             off(ASK_CMDR_ENABLED),
         ]),
+    }
+    if policy.security_log_required() {
+        // The one lock that pins a switch ON: it takes an opt-out away, so it still only restricts.
+        locked.push(LockedSetting {
+            id: SECURITY_LOG_ENABLED.to_string(),
+            lock: SettingLock::Fixed {
+                value: LockedValue::Bool(true),
+            },
+        });
     }
     locked
 }
@@ -244,6 +254,19 @@ mod tests {
                 },
             }]
         );
+    }
+
+    #[test]
+    fn a_required_security_log_pins_its_switch_on() {
+        let policy = ManagedPolicy {
+            security_log_required: true,
+            ..Default::default()
+        };
+        assert_eq!(locked_settings(&policy), vec![fixed_bool(SECURITY_LOG_ENABLED, true)]);
+        assert!(refuses_write(&policy, SECURITY_LOG_ENABLED, &json!(false)));
+        let mut settings = json!({ "securityLog.enabled": false });
+        overlay(&policy, &mut settings);
+        assert_eq!(settings, json!({ "securityLog.enabled": true }));
     }
 
     #[test]

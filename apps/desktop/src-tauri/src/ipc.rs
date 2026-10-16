@@ -374,6 +374,8 @@ macro_rules! ipc_command_manifest {
                     crate::commands::settings::set_operation_log_enabled,
                     crate::commands::settings::set_max_log_storage_mb,
                     crate::commands::settings::set_error_reports_enabled,
+                    crate::commands::security_log::set_security_log_enabled,
+                    crate::commands::security_log::reveal_security_log,
                     crate::commands::settings::get_restricted_window_settings,
                     crate::commands::settings::get_restricted_window_shortcuts,
                     crate::commands::settings::persist_restricted_window_setting,

@@ -347,3 +347,12 @@ fn absent_adb_settings_leave_the_defaults_to_the_caller() {
     assert_eq!(settings.adb_enabled, None);
     assert_eq!(settings.adb_binary_path, None);
 }
+
+#[test]
+fn the_security_log_reads_as_on_unless_the_file_says_false() {
+    assert!(parse_security_log_enabled("{}"));
+    assert!(parse_security_log_enabled("not json"));
+    assert!(parse_security_log_enabled(r#"{ "securityLog.enabled": "no" }"#));
+    assert!(parse_security_log_enabled(r#"{ "securityLog.enabled": true }"#));
+    assert!(!parse_security_log_enabled(r#"{ "securityLog.enabled": false }"#));
+}

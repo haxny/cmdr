@@ -72,12 +72,35 @@ pub(crate) fn validate_origin(headers: &HeaderMap) -> Result<(), Box<Response>> 
         let origin_str = origin.to_str().unwrap_or("");
         if !is_localhost_origin(origin_str) {
             log::warn!("MCP: Rejected request with invalid Origin: {}", origin_str);
+            crate::security_log::note_mcp_rejection(crate::security_log::McpRejection::ForeignOrigin);
             let error_response = McpResponse::error(None, INVALID_REQUEST, "Invalid Origin header");
             return Err(Box::new((StatusCode::FORBIDDEN, Json(error_response)).into_response()));
         }
     }
     // If no Origin header, allow (non-browser clients typically don't send it)
     Ok(())
+}
+
+/// Why [`validate_token`] turned a request away. The client gets the same response for every
+/// one (so the answer isn't an oracle); the reason is for the security log.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum TokenRejection {
+    /// No `Authorization: Bearer` header, or an empty one: usually a client still being set up.
+    Missing,
+    /// A token that isn't this run's: usually a client still holding the previous run's.
+    Wrong,
+    /// The server has no token to compare against (it shouldn't happen while serving).
+    NotConfigured,
+}
+
+impl From<TokenRejection> for crate::security_log::McpRejection {
+    fn from(rejection: TokenRejection) -> Self {
+        match rejection {
+            TokenRejection::Missing => Self::MissingToken,
+            TokenRejection::Wrong => Self::WrongToken,
+            TokenRejection::NotConfigured => Self::NoTokenConfigured,
+        }
+    }
 }
 
 /// Validate the per-instance bearer token for the entire MCP HTTP surface. macOS doesn't
@@ -88,12 +111,21 @@ pub(crate) fn validate_origin(headers: &HeaderMap) -> Result<(), Box<Response>> 
 /// Reads `Authorization: Bearer <token>`, compares against the stored token in constant
 /// time, and rejects on any miss. Fails closed if the server somehow has no token set
 /// (shouldn't happen while serving). The caller chooses the protocol-compatible rejection
-/// shape for requests, notifications, and SSE connections.
-pub(super) fn validate_token(headers: &HeaderMap) -> Result<(), ()> {
+/// shape for requests, notifications, and SSE connections. Every rejection is noted in the
+/// security log, coalesced per episode.
+pub(super) fn validate_token(headers: &HeaderMap) -> Result<(), TokenRejection> {
+    let checked = check_token(headers);
+    if let Err(rejection) = checked {
+        crate::security_log::note_mcp_rejection(rejection.into());
+    }
+    checked
+}
+
+fn check_token(headers: &HeaderMap) -> Result<(), TokenRejection> {
     let Some(expected) = current_mcp_token() else {
         // Fail closed: no token set means we can't authenticate anyone.
         log::warn!(target: "mcp::server", "MCP: rejecting request, no auth token configured");
-        return Err(());
+        return Err(TokenRejection::NotConfigured);
     };
 
     let presented = headers
@@ -108,7 +140,11 @@ pub(super) fn validate_token(headers: &HeaderMap) -> Result<(), ()> {
         // the actionable rejection, configure the header, and retry. Keep it above `debug` so a
         // local non-Cmdr process probing the boundary stays visible in terminal and bundles.
         log::info!(target: "mcp::server", "MCP: rejected request with missing/invalid bearer token");
-        return Err(());
+        return Err(if presented.is_empty() {
+            TokenRejection::Missing
+        } else {
+            TokenRejection::Wrong
+        });
     }
 
     Ok(())
@@ -267,7 +303,7 @@ mod tests {
         let _guard = TOKEN_TEST_LOCK.blocking_lock();
         set_mcp_token(Some("secret-token-abc".to_string()));
         let headers = HeaderMap::new();
-        assert!(validate_token(&headers).is_err());
+        assert_eq!(validate_token(&headers), Err(TokenRejection::Missing));
     }
 
     #[test]
@@ -276,7 +312,7 @@ mod tests {
         set_mcp_token(Some("secret-token-abc".to_string()));
         let mut headers = HeaderMap::new();
         headers.insert(header::AUTHORIZATION, HeaderValue::from_static("Bearer wrong-token"));
-        assert!(validate_token(&headers).is_err());
+        assert_eq!(validate_token(&headers), Err(TokenRejection::Wrong));
     }
 
     #[test]
@@ -285,7 +321,7 @@ mod tests {
         set_mcp_token(Some("secret-token-abc".to_string()));
         let mut headers = HeaderMap::new();
         headers.insert(header::AUTHORIZATION, HeaderValue::from_static("Bearer "));
-        assert!(validate_token(&headers).is_err());
+        assert_eq!(validate_token(&headers), Err(TokenRejection::Missing));
     }
 
     #[test]
@@ -306,7 +342,55 @@ mod tests {
         set_mcp_token(None);
         let mut headers = HeaderMap::new();
         headers.insert(header::AUTHORIZATION, HeaderValue::from_static("Bearer anything"));
-        assert!(validate_token(&headers).is_err());
+        assert_eq!(validate_token(&headers), Err(TokenRejection::NotConfigured));
+    }
+
+    /// A client retrying with a stale token makes one episode in the security log, not a line
+    /// per request, and a valid request records nothing.
+    #[test]
+    fn token_rejections_reach_the_security_log_once_per_episode() {
+        use crate::security_log::{McpRejection, SecurityEvent, testing};
+        let _guard = TOKEN_TEST_LOCK.blocking_lock();
+        set_mcp_token(Some("secret-token-abc".to_string()));
+        let capture = testing::capture_events();
+        let mut wrong = HeaderMap::new();
+        wrong.insert(header::AUTHORIZATION, HeaderValue::from_static("Bearer stale"));
+        for _ in 0..50 {
+            assert!(validate_token(&wrong).is_err());
+        }
+        let mut right = HeaderMap::new();
+        right.insert(
+            header::AUTHORIZATION,
+            HeaderValue::from_static("Bearer secret-token-abc"),
+        );
+        assert!(validate_token(&right).is_ok());
+        assert!(validate_token(&HeaderMap::new()).is_err());
+        assert_eq!(
+            capture.events(),
+            vec![
+                SecurityEvent::McpRejectionsStarted {
+                    reason: McpRejection::WrongToken
+                },
+                SecurityEvent::McpRejectionsStarted {
+                    reason: McpRejection::MissingToken
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn a_refused_origin_reaches_the_security_log() {
+        use crate::security_log::{McpRejection, SecurityEvent, testing};
+        let capture = testing::capture_events();
+        let mut headers = HeaderMap::new();
+        headers.insert(header::ORIGIN, HeaderValue::from_static("https://evil.com"));
+        assert!(validate_origin(&headers).is_err());
+        assert_eq!(
+            capture.events(),
+            vec![SecurityEvent::McpRejectionsStarted {
+                reason: McpRejection::ForeignOrigin
+            }]
+        );
     }
 
     #[test]

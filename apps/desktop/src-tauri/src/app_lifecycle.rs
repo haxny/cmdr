@@ -15,7 +15,7 @@ use tauri::{AppHandle, Manager, Window, Wry};
 use crate::downloads;
 #[cfg(any(target_os = "macos", target_os = "linux"))]
 use crate::network;
-use crate::{ai, crash_reporter, data_wipe, file_viewer, mcp, quit, search, window_state};
+use crate::{ai, crash_reporter, data_wipe, file_viewer, mcp, quit, search, security_log, window_state};
 #[cfg(target_os = "macos")]
 use crate::{dock, drag_image_detection, mtp, reveal};
 
@@ -161,6 +161,10 @@ pub fn on_run_event(app: &AppHandle<Wry>, event: tauri::RunEvent) {
             }
 
             stop_background_services();
+
+            // Ends the open rejection episodes so their counts land, then waits briefly for the
+            // file. After a wipe the writer writes nothing.
+            security_log::on_exit();
 
             // Last, after the plugins' own Exit handlers (Tauri runs those first, and the store
             // plugin saves every open store there): remove what shutdown wrote back after a wipe.

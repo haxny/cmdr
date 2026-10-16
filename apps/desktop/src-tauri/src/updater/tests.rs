@@ -312,8 +312,17 @@ async fn a_policy_that_arrives_after_the_download_blocks_the_install() {
         let state = UpdateState::new();
         staged(&state, "0.53.0");
         let _policy = override_for_test(policy);
+        let capture = crate::security_log::testing::capture_events();
         let err = staged_to_install(&state).await.expect_err("refused");
         assert_eq!(err, UpdateInstallError::BlockedByPolicy);
+        assert!(
+            matches!(
+                capture.events().as_slice(),
+                [crate::security_log::SecurityEvent::UpdateRefusedByPolicy { version, .. }] if version == "0.53.0"
+            ),
+            "the refusal reaches the security log: {:?}",
+            capture.events()
+        );
     }
 }
 

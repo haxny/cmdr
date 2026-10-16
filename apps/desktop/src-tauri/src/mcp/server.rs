@@ -422,8 +422,17 @@ fn build_router<R: Runtime>(state: Arc<McpState<R>>) -> Router {
 /// Logs errors instead of returning them.
 pub fn start_mcp_server_background<R: Runtime + 'static>(app: AppHandle<R>, config: McpConfig) {
     tauri::async_runtime::spawn(async move {
-        if let Err(e) = start_mcp_server(app, config).await {
-            crate::log_error!("MCP server failed to start: {}", e);
+        let enabled = config.enabled;
+        match start_mcp_server(app, config).await {
+            // The security log says the server runs from launch, so a log that starts
+            // mid-session still knows.
+            Ok(()) if enabled && is_mcp_running() => {
+                crate::security_log::record(crate::security_log::SecurityEvent::McpServerTurnedOn {
+                    by: crate::security_log::Initiator::Launch,
+                })
+            }
+            Ok(()) => {}
+            Err(e) => crate::log_error!("MCP server failed to start: {}", e),
         }
     });
 }

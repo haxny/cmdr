@@ -142,6 +142,7 @@ mod s3_costs;
 pub mod search;
 mod secrets;
 mod security_advisories;
+mod security_log;
 pub mod selection;
 mod send_schedule;
 // `Cmdr > Services`: what Cmdr tells AppKit it can hand a service, and what the selection is at the
@@ -302,6 +303,10 @@ pub fn run() {
             // so the panic hook can read it without allocating or locking. Mints both install
             // ids on first launch.
             install_id::init();
+
+            // The security event log, before anything that records into it: the managed policy
+            // right below notes itself there at launch.
+            security_log::init(app.handle());
 
             // The organization's managed policy, before anything that might send: the crash
             // reporter's next-launch path below is the first. The read is lazy anyway (no caller

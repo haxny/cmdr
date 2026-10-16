@@ -12,6 +12,8 @@ plugin from the frontend.
 - `bundle_location.rs`: whether the running bundle can be written into at all (`BundleWriteBlocker`).
 - `manifest.rs`: parses `latest.json`, compares versions, resolves the platform key.
 - `signature.rs`: minisign verification against the main and backup updater keys.
+- `security_events.rs`: what the updater notes in the security event log (`../security_log/CLAUDE.md`), behind
+  one-line hooks in the commands.
 - The Apple code-signature check and the tarball extraction live in `crates/cmdr-update-trust/CLAUDE.md`, shared with
   the release gate.
 - `installer.rs`: tarball extraction, sync into the running bundle, privilege escalation. `running_bundle()` is

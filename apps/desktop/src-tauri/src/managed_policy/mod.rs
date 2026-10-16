@@ -69,6 +69,8 @@ pub struct ManagedPolicy {
     cloud_ai_disabled: bool,
     /// `None`: the key is absent. `Some(empty)`: nothing allowed, the same as `cloud_ai_disabled`.
     allowed_cloud_ai_hosts: Option<Vec<HostPattern>>,
+    /// `DisableSecurityLogOptOut`: the security event log records whatever the person's switch says.
+    security_log_required: bool,
 }
 
 /// How updates may run.
@@ -119,6 +121,11 @@ impl ManagedPolicy {
 
     pub fn reports_disabled(&self) -> bool {
         self.reports_disabled
+    }
+
+    /// Whether the organization requires the security event log, so the person can't turn it off.
+    pub fn security_log_required(&self) -> bool {
+        self.security_log_required
     }
 
     /// `DisableUpdates` wins over the other two update keys, which combine with each other.

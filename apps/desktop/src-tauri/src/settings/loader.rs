@@ -509,6 +509,25 @@ pub fn early_load_max_log_storage_mb() -> Option<u64> {
     json.get("advanced.maxLogStorageMb").and_then(|v| v.as_u64())
 }
 
+/// The security event log switch (`securityLog.enabled`), read once at launch; the settings
+/// applier pushes every later change. Anything but a real JSON `false` (no file, no key, a
+/// garbled file) reads as on, so the record never stops on its own.
+pub fn load_security_log_enabled<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> bool {
+    let Ok(data_dir) = crate::config::resolved_app_data_dir(app) else {
+        return true;
+    };
+    fs::read_to_string(data_dir.join("settings.json"))
+        .map(|contents| parse_security_log_enabled(&contents))
+        .unwrap_or(true)
+}
+
+fn parse_security_log_enabled(contents: &str) -> bool {
+    serde_json::from_str::<serde_json::Value>(contents)
+        .ok()
+        .and_then(|json| json.get("securityLog.enabled").and_then(serde_json::Value::as_bool))
+        .unwrap_or(true)
+}
+
 /// The Ask Cmdr interactive-slot model override, read fresh from `settings.json` each
 /// send (so a settings change takes effect on the next message, no restart).
 ///

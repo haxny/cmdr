@@ -18,6 +18,14 @@ export const updatesRows: SearchableRow[] = [
     keywords: ['update', 'upgrade', 'check', 'version', 'new version'],
   },
   {
+    // The "Show in Finder" button under the security events switch.
+    id: 'row:updates.showSecurityLog',
+    section: ['Updates & privacy'],
+    labelKey: 'settings.securityLog.showInFinder',
+    cardKey: 'settings.updates.card.securityEvents',
+    keywords: ['security', 'log', 'audit', 'events', 'file', 'finder', 'open'],
+  },
+  {
     // The "Delete all Cmdr data" button, alone in its card.
     id: 'row:updates.deleteAllData',
     section: ['Updates & privacy'],

@@ -761,6 +761,8 @@ export {
   setSmbConcurrency,
   setMaxLogStorageMb,
   setErrorReportsEnabled,
+  setSecurityLogEnabled,
+  revealSecurityLog,
   setShowVirtualGitPortal,
   setIndexingEnabled,
   setImageIndexEnabled,

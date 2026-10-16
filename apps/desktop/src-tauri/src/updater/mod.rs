@@ -15,6 +15,7 @@ mod bundle_location;
 // could point at this copy. Nothing else outside `updater` reaches in.
 pub(crate) mod installer;
 mod manifest;
+mod security_events;
 mod signature;
 
 pub use advisories::SecurityNotice;
@@ -372,7 +373,9 @@ pub async fn download_update(state: State<'_, UpdateState>) -> Result<(), Update
     let offer = offer_to_download(&state).await?;
     log::info!("Downloading update {} from {}", offer.version, offer.url);
 
-    let bytes = fetch_verified_tarball(&offer.url, &offer.signature).await?;
+    let bytes = fetch_verified_tarball(&offer.url, &offer.signature)
+        .await
+        .inspect_err(|e| security_events::on_download_error(&offer.version, e))?;
 
     let temp_dir = std::env::temp_dir().join("cmdr-update");
     std::fs::create_dir_all(&temp_dir).map_err(|e| UpdateDownloadError::Disk {
@@ -453,13 +456,32 @@ pub async fn install_update(state: State<'_, UpdateState>) -> Result<UpdateInsta
 
     // The archive's own `Info.plist` is what binds its version (the manifest isn't signed), so the
     // installer asks the policy again about THAT version once it has extracted it.
-    let security_notice = tokio::task::spawn_blocking(move || {
-        installer::install(&staged.tarball, &|version| policy.update_to(version).is_ok())
+    let offered = staged.version.clone();
+    let result = tokio::task::spawn_blocking(move || {
+        // The version the policy is asked about is the one the bundle's own `Info.plist` names, so
+        // it's the version that gets installed when the install goes through.
+        let judged = Mutex::new(None);
+        let installed = installer::install(&staged.tarball, &|version| {
+            *judged.lock_ignore_poison() = Some(version.clone());
+            policy
+                .update_to(version)
+                .inspect_err(|refusal| security_events::on_policy_refusal(version, *refusal))
+                .is_ok()
+        });
+        installed.map(|notice| (notice, judged.lock_ignore_poison().take()))
     })
     .await
     .map_err(|e| UpdateInstallError::Failed {
         detail: format!("Install task panicked: {e}"),
-    })??;
+    })
+    .and_then(|installed| installed);
+    security_events::on_install_result(
+        &offered,
+        result
+            .as_ref()
+            .map(|(_, judged)| judged.as_ref().unwrap_or(&offered)),
+    );
+    let (security_notice, _) = result?;
     if let Some(notice) = &security_notice {
         log::info!(
             "The update fixes {} security issue(s), the most severe {:?}",
@@ -482,6 +504,7 @@ async fn staged_to_install(
     let policy = crate::managed_policy::for_egress().await;
     if let Err(refusal) = policy.update_to(&staged.version) {
         log::info!(target: "managed_policy", "Not installing update {}: the organization's policy refuses it ({refusal:?})", staged.version);
+        security_events::on_policy_refusal(&staged.version, refusal);
         return Err(UpdateInstallError::BlockedByPolicy);
     }
     Ok((staged, policy))

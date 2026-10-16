@@ -101,6 +101,9 @@ pub fn init(app: &AppHandle) {
     let _ = APP.set(app.clone());
     let policy = current();
     log::info!(target: "managed_policy", "Managed policy at launch: {}", summary(&policy));
+    if policy.is_managed() {
+        crate::security_log::on_policy_applied(None, &policy);
+    }
     #[cfg(any(debug_assertions, feature = "playwright-e2e", test))]
     if let Some(path) = std::env::var_os(OVERRIDE_ENV) {
         // The file stands in for the whole managed layer, so its own watch is the trigger that
@@ -111,8 +114,9 @@ pub fn init(app: &AppHandle) {
     super::watch::start();
 }
 
-/// Everything a policy change does, in one visible list: log it, tell every window, and make AI
-/// stop what the new policy refuses (in-flight calls, the local server, a model download).
+/// Everything a policy change does, in one visible list: log it, note it in the security log,
+/// tell every window, and make AI stop what the new policy refuses (in-flight calls, the local
+/// server, a model download).
 fn apply_change(change: &Change) {
     log::info!(
         target: "managed_policy",
@@ -120,6 +124,7 @@ fn apply_change(change: &Change) {
         summary(&change.new),
         summary(&change.old)
     );
+    crate::security_log::on_policy_applied(Some(&change.old), &change.new);
     if let Some(app) = APP.get() {
         let payload = ManagedPolicyChanged {
             policy: ManagedPolicyView::from(&*change.new),
@@ -260,6 +265,23 @@ mod tests {
 
     fn updates_off() -> Parsed {
         keys::parse(&FakeSource::with(&[(DISABLE_UPDATES, plist::Value::Boolean(true))]))
+    }
+
+    #[test]
+    fn a_change_reaches_the_security_log_with_key_names_only() {
+        use crate::security_log::{PolicyTrigger, SecurityEvent, testing};
+        let capture = testing::capture_events();
+        let old = Arc::new(ManagedPolicy::default());
+        let new = Arc::new(updates_off().policy);
+        apply_change(&Change { old, new });
+        assert_eq!(
+            capture.events(),
+            vec![SecurityEvent::ManagedPolicyApplied {
+                trigger: PolicyTrigger::Change,
+                keys_before: vec![],
+                keys_after: vec![DISABLE_UPDATES.to_string()],
+            }]
+        );
     }
 
     #[test]

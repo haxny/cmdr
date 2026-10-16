@@ -36,6 +36,7 @@ import {
   setSmbConcurrency,
   setMaxLogStorageMb,
   setErrorReportsEnabled,
+  setSecurityLogEnabled,
   setShowVirtualGitPortal,
   setNetworkEnabled,
   syncMenuShowHidden,
@@ -136,6 +137,9 @@ async function applyBackendSettings(): Promise<void> {
   // from settings.json, but pushing it here makes the dev/hot-reload path consistent
   // and survives the (rare) case where the file's been edited out-of-band.
   await setErrorReportsEnabled(getSetting('updates.errorReports'))
+
+  // Security event log switch: read at startup too; a same-value push is no change backend-side.
+  await setSecurityLogEnabled(getSetting('securityLog.enabled'))
 
   // Virtual `.git` portal toggle. Same rationale as above: backend reads at startup,
   // but a re-push keeps dev/hot-reload aligned with whatever the user persisted.
@@ -239,6 +243,7 @@ const passthroughBackendHandlers: Partial<Record<string, (value: unknown) => voi
   'advanced.logLlmCalls': (v) => void setLogLlmCalls(v as boolean),
   'network.smbConcurrency': (v) => void setSmbConcurrency(v as number),
   'updates.errorReports': (v) => void setErrorReportsEnabled(v as boolean),
+  'securityLog.enabled': (v) => void setSecurityLogEnabled(v as boolean),
   'fileExplorer.git.showVirtualGitPortal': (v) => void setShowVirtualGitPortal(v as boolean),
   'network.enabled': (v) => void setNetworkEnabled(v as boolean),
   'search.recentSearches.maxCount': (v) => void applyRecentSearchesMaxCount(v as number),

@@ -29,6 +29,7 @@ const view: ManagedPolicyView = {
   managed: true,
   usageStatsDisabled: true,
   reportsDisabled: false,
+  securityLogRequired: false,
   updates: { kind: 'disabled' },
   ai: { mode: 'off', allowedCloudHosts: null },
   lockedSettings: [{ id: 'analytics.enabled', lock: { kind: 'fixed', value: false } }],

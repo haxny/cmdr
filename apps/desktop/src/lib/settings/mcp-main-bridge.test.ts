@@ -105,6 +105,16 @@ describe('MCP set_setting', () => {
     expect(setSettingMock).not.toHaveBeenCalled()
   })
 
+  // An MCP client must not be able to turn off the record of what MCP clients do, either way.
+  it('refuses the security event log switch in both directions', async () => {
+    expect(getSettingDefinition('securityLog.enabled')?.mcpSettable).toBe(false)
+    for (const value of [false, true]) {
+      const response = await setOverMcp('securityLog.enabled', value)
+      expect(response, String(value)).toMatchObject({ ok: false, refusal: 'notSettableOverMcp' })
+    }
+    expect(setSettingMock).not.toHaveBeenCalled()
+  })
+
   it('turns a data-sharing switch off, so a client can help someone opt out', async () => {
     for (const id of OFF_ONLY) {
       expect(getSettingDefinition(id)?.mcpSettable, id).toBe('offOnly')

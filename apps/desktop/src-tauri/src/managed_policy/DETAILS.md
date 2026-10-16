@@ -72,6 +72,10 @@ Every key only turns something off or narrows it. Absent or forced to its permis
   without matches any. Malformed entries (`*`, `*.`, a pattern on an IP, a `*` elsewhere, an unparseable port, a path
   without a scheme) are dropped with a warning. An empty list, or a non-array value, allows no host, which equals
   `DisableCloudAI`. Recipe for "local Ollama only": leave `DisableCloudAI` off and list `localhost` and `127.0.0.1`.
+- **`DisableSecurityLogOptOut`** (bool): the security event log (`../security_log/CLAUDE.md`) records whatever the
+  person's switch says. It turns off an opt-out, so it still only restricts, but it's the one lock that pins a switch
+  ON: `securityLog.enabled` to on. The log's own state follows it live (`security_log::on_policy_applied`), writing
+  "recording turned on/off by the organization" when the policy starts or stops requiring it (decided 2026-10-16, #456).
 
 Not keys (stay out until an admin asks; decided 2026-10-05): `DisableMCPServer`, a Jamf JSON schema, and "force on"
 keys such as a pre-configured corporate AI gateway.
@@ -126,7 +130,8 @@ download, and the user-initiated feedback and beta signup.
   periodically, calling it "undocumented and therefore fragile".
 - **Every egress**: `for_egress().await`, coalesced to one read per second, behind a lock so racing callers make one
   trip.
-- A change calls `apply_change` (cache.rs): it logs, emits `managed-policy-changed`, and hands the change to
+- A change calls `apply_change` (cache.rs): it logs, notes the change in the security event log (key names only, never
+  values; `init` does the same for a policy present at launch), emits `managed-policy-changed`, and hands the change to
   `ai::managed::apply_policy_change`, which cancels in-flight AI calls on any narrowing and stops `llama-server` plus a
   model download when `DisableAI` arrives (`ai/DETAILS.md` § Managed policy).
 

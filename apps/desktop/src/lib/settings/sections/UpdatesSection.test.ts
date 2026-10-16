@@ -11,7 +11,8 @@ import type { BetaSignupResult } from '#lib/tauri-commands/index.js'
 import type { ManagedPolicyView } from '#lib/ipc/bindings.js'
 import { expectNoA11yViolations } from '#lib/test-a11y.js'
 
-const { openErrorReportForMock, checkForUpdatesMock, betaSignupMock } = vi.hoisted(() => ({
+const { openErrorReportForMock, checkForUpdatesMock, betaSignupMock, revealSecurityLogMock } = vi.hoisted(() => ({
+  revealSecurityLogMock: vi.fn(() => Promise.resolve(null)),
   openErrorReportForMock: vi.fn(),
   checkForUpdatesMock: vi.fn(() => Promise.resolve()),
   betaSignupMock: vi.fn((): Promise<BetaSignupResult> => Promise.resolve({ kind: 'subscribed' })),
@@ -26,7 +27,7 @@ vi.mock('#lib/error-reporter/error-report-flow.svelte.js', () => ({
 // 5 reactive graph; see `lib/ipc/CLAUDE.md` § Test-mock upkeep).
 vi.mock('#lib/tauri-commands/index.js', async () => {
   const real = await vi.importActual<typeof import('#lib/tauri-commands/index.js')>('#lib/tauri-commands/index.js')
-  return { ...real, betaSignup: betaSignupMock }
+  return { ...real, betaSignup: betaSignupMock, revealSecurityLog: revealSecurityLogMock }
 })
 
 // Stubs the updater module so this test isolates the section's UI logic. We use the real
@@ -118,6 +119,17 @@ describe('UpdatesSection', () => {
 
   afterEach(() => {
     _resetUpdaterStateForTest()
+  })
+
+  it('shows the security events card with its switch and a Show in Finder button that reveals the log', async () => {
+    const target = render()
+    await tick()
+    expect(target.textContent).toContain('Security events')
+    expect(target.textContent).toContain('Record security events')
+    const button = Array.from(target.querySelectorAll('button')).find((b) => b.textContent.trim() === 'Show in Finder')
+    expect(button).toBeTruthy()
+    button?.click()
+    expect(revealSecurityLogMock).toHaveBeenCalledTimes(1)
   })
 
   it('renders the Check for updates button enabled when status is idle', async () => {
@@ -307,6 +319,7 @@ describe('UpdatesSection under an organization’s policy', () => {
     managed: true,
     usageStatsDisabled: false,
     reportsDisabled: false,
+    securityLogRequired: false,
     updates: { kind: 'enabled', automaticChecks: true, ceiling: null },
     ai: { mode: 'allowed', allowedCloudHosts: null },
     lockedSettings: [],

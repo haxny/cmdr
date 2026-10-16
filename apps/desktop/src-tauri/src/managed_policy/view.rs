@@ -14,6 +14,8 @@ pub struct ManagedPolicyView {
     pub managed: bool,
     pub usage_stats_disabled: bool,
     pub reports_disabled: bool,
+    /// The organization requires the security event log, so its switch is pinned on.
+    pub security_log_required: bool,
     pub updates: UpdatePolicyView,
     pub ai: AiPolicyView,
     pub locked_settings: Vec<LockedSetting>,
@@ -62,6 +64,7 @@ impl From<&ManagedPolicy> for ManagedPolicyView {
             managed: policy.is_managed(),
             usage_stats_disabled: policy.usage_stats_disabled(),
             reports_disabled: policy.reports_disabled(),
+            security_log_required: policy.security_log_required(),
             updates,
             ai: AiPolicyView {
                 mode: policy.ai(),
@@ -96,6 +99,7 @@ mod tests {
                 managed: false,
                 usage_stats_disabled: false,
                 reports_disabled: false,
+                security_log_required: false,
                 updates: UpdatePolicyView::Enabled {
                     automatic_checks: true,
                     ceiling: None
@@ -118,6 +122,7 @@ mod tests {
                 "managed": false,
                 "usageStatsDisabled": false,
                 "reportsDisabled": false,
+                "securityLogRequired": false,
                 "updates": { "kind": "enabled", "automaticChecks": true, "ceiling": null },
                 "ai": { "mode": "allowed", "allowedCloudHosts": null },
                 "lockedSettings": [],
@@ -155,6 +160,7 @@ mod tests {
                 managed: true,
                 usage_stats_disabled: false,
                 reports_disabled: true,
+                security_log_required: false,
                 updates: UpdatePolicyView::Enabled {
                     automatic_checks: false,
                     ceiling: Some("0.52".into())

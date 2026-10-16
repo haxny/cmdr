@@ -101,4 +101,17 @@ export const updatesPrivacySettings: SettingDefinitionSource[] = [
     // A consent answer: an MCP client may help someone opt out, but only the person opts in.
     mcpSettable: 'offOnly',
   },
+  {
+    id: 'securityLog.enabled',
+    section: ['Updates & privacy'],
+    cardKey: 'settings.updates.card.securityEvents',
+    labelKey: 'settings.securityLog.enabled.label',
+    descriptionKey: 'settings.securityLog.enabled.description',
+    keywords: ['security', 'log', 'audit', 'record', 'events', 'cra', 'access', 'privacy'],
+    type: 'boolean',
+    default: true,
+    component: 'switch',
+    // ❌ Not even off: an MCP client must not be able to switch off the record of what MCP clients do.
+    mcpSettable: false,
+  },
 ]

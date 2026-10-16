@@ -465,6 +465,7 @@ export interface SettingsValues {
   'updates.autoCheck': boolean
   'updates.crashReports': boolean
   'updates.errorReports': boolean
+  'securityLog.enabled': boolean
   /** Sticky default for the report dialogs' attach-email checkbox; also a manual toggle in Advanced. */
   'updates.attachEmailToReports': boolean
   /** Show the "What's new" popup after Cmdr updates itself. */

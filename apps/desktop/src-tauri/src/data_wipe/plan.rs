@@ -215,6 +215,21 @@ mod tests {
         assert!(plan[..plan.len() - 1].iter().all(|t| t.shape == TargetShape::Whole));
     }
 
+    /// The security event log lives in the data dir, so the data dir's target takes it. Named here
+    /// so moving the file elsewhere can't silently escape the wipe.
+    #[test]
+    fn the_security_event_log_goes_with_the_wipe() {
+        let roots = prod_roots();
+        let log = crate::security_log::file_path(&roots.data_dir);
+        assert!(
+            build_plan(&roots)
+                .iter()
+                .any(|t| t.shape == TargetShape::Whole && log.starts_with(&t.path)),
+            "{} isn't inside any whole target",
+            log.display()
+        );
+    }
+
     /// A worktree dev instance runs under its own identifier and data dir. Every target is that
     /// instance's, never production's.
     #[test]

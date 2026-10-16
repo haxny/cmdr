@@ -190,10 +190,7 @@ fn status_from(
 #[specta::specta]
 pub async fn accept_cloud_ai_consent(app: AppHandle) -> Result<(), CloudAiConsentWriteError> {
     let now = now_secs();
-    let recorded = write(&app, move |conn| {
-        store::set_cloud_ai_consent(conn, CLOUD_AI_CONSENT_VERSION, now)
-    })
-    .await;
+    let recorded = write(&app, move |conn| accept_on(conn, now)).await;
     announce_change(&app);
     recorded
 }
@@ -205,10 +202,35 @@ pub async fn accept_cloud_ai_consent(app: AppHandle) -> Result<(), CloudAiConsen
 #[tauri::command]
 #[specta::specta]
 pub async fn revoke_cloud_ai_consent(app: AppHandle) -> Result<(), CloudAiConsentWriteError> {
-    let cleared = write(&app, store::clear_cloud_ai_consent).await;
+    let cleared = write(&app, revoke_on).await;
     stop_in_flight_calls("cloud AI turned off");
     announce_change(&app);
     cleared
+}
+
+/// Records the consent, and notes it in the security log when it changes the answer: a repeat
+/// click on an already current consent isn't a new one.
+fn accept_on(conn: &Connection, now: i64) -> Result<(), AgentStoreError> {
+    let already = matches!(
+        store::get_consent(conn, ConsentRecord::CloudAi),
+        Ok(Some(consent)) if consent.version == CLOUD_AI_CONSENT_VERSION
+    );
+    store::set_cloud_ai_consent(conn, CLOUD_AI_CONSENT_VERSION, now)?;
+    if !already {
+        crate::security_log::record(crate::security_log::SecurityEvent::CloudAiConsentGiven);
+    }
+    Ok(())
+}
+
+/// Clears the consent, and notes it in the security log when there was one to clear: the
+/// frontend retries a held "no" until the store takes it, and only the take is a withdrawal.
+fn revoke_on(conn: &Connection) -> Result<(), AgentStoreError> {
+    let had = matches!(store::get_consent(conn, ConsentRecord::CloudAi), Ok(Some(_)));
+    store::clear_cloud_ai_consent(conn)?;
+    if had {
+        crate::security_log::record(crate::security_log::SecurityEvent::CloudAiConsentWithdrawn);
+    }
+    Ok(())
 }
 
 /// Tell the cloud gates that a held "no" (`ai.cloudConsentRevokePending`) was just set or let go
@@ -323,6 +345,25 @@ mod tests {
         let conn = crate::sqlite_util::open_in_memory().expect("in-memory db");
         store::run_migrations(&conn, store::MIGRATIONS).expect("migrate");
         conn
+    }
+
+    #[test]
+    fn consent_changes_reach_the_security_log_once_per_change() {
+        use crate::security_log::{SecurityEvent, testing};
+        let conn = migrated_conn();
+        let capture = testing::capture_events();
+        accept_on(&conn, 1_780_000_000).expect("accept");
+        accept_on(&conn, 1_780_000_001).expect("accept again");
+        revoke_on(&conn).expect("revoke");
+        revoke_on(&conn).expect("revoke again");
+        assert_eq!(
+            capture.events(),
+            vec![
+                SecurityEvent::CloudAiConsentGiven,
+                SecurityEvent::CloudAiConsentWithdrawn
+            ]
+        );
+        assert!(!has_current_cloud_consent(&conn, RevokePending::No, &no_policy()));
     }
 
     #[test]

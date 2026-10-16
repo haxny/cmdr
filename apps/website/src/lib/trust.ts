@@ -207,6 +207,12 @@ export const managedPreferenceKeys: ManagedPreferenceKey[] = [
     effect:
       "Cloud AI may reach only these hosts. Each entry is a host (<code>api.openai.com</code>), a host and port (<code>localhost:11434</code>), a pattern for any subdomain (<code>*.openai.azure.com</code>, which doesn't match <code>openai.azure.com</code> itself), or a pasted URL, of which only the host and port count. Case doesn't matter. Cmdr checks every request and every redirect. It skips entries it can't read, and an empty list allows no host, the same as <code>DisableCloudAI</code>.",
   },
+  {
+    key: 'DisableSecurityLogOptOut',
+    type: 'Boolean',
+    effect:
+      'The security event log stays on, and users can\'t turn it off. It\'s a small local file of security-relevant changes and refusals (a policy taking effect, an update installed or refused, the MCP server switching on, a rejected access attempt). It never leaves the Mac, and "Delete all Cmdr data" still removes it.',
+  },
 ]
 
 /** Hosts to allow on a proxy or firewall, with whether Cmdr needs them to work. */

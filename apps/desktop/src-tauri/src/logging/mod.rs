@@ -22,7 +22,7 @@
 mod coalesce;
 pub mod dispatch;
 pub mod ram_gauge;
-mod rotating_file;
+pub(crate) mod rotating_file;
 pub mod startup;
 mod target_style;
 

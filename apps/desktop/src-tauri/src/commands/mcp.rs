@@ -3,6 +3,7 @@
 use tauri::{AppHandle, Runtime};
 
 use crate::mcp;
+use crate::security_log::{self, Initiator, SecurityEvent};
 
 /// Start or stop the MCP server based on the user's setting. On enable, binds the requested
 /// port exactly: a busy port returns `McpServerOutcome::PortInUse` (server left as it was)
@@ -15,12 +16,29 @@ pub async fn set_mcp_enabled<R: Runtime + 'static>(
     enabled: bool,
     port: u16,
 ) -> Result<mcp::McpServerOutcome, String> {
-    if enabled {
+    let was_running = mcp::is_mcp_running();
+    let outcome = if enabled {
         let config = mcp::McpConfig::from_settings_and_env(Some(true), Some(port));
-        mcp::rebind_interactive(app, config).await
+        mcp::rebind_interactive(app, config).await?
     } else {
         mcp::stop_mcp_server_and_wait().await;
-        Ok(mcp::McpServerOutcome::Stopped)
+        mcp::McpServerOutcome::Stopped
+    };
+    if let Some(event) = toggle_event(was_running, &outcome) {
+        security_log::record(event);
+    }
+    Ok(outcome)
+}
+
+/// What the security log notes about a toggle: only a real start or stop. A re-apply that leaves
+/// the server as it was (a rebind on a new port, a busy port, off while off) notes nothing.
+fn toggle_event(was_running: bool, outcome: &mcp::McpServerOutcome) -> Option<SecurityEvent> {
+    match (was_running, outcome) {
+        (false, mcp::McpServerOutcome::Running { .. }) => {
+            Some(SecurityEvent::McpServerTurnedOn { by: Initiator::User })
+        }
+        (true, mcp::McpServerOutcome::Stopped) => Some(SecurityEvent::McpServerTurnedOff { by: Initiator::User }),
+        _ => None,
     }
 }
 
@@ -60,4 +78,24 @@ pub fn get_mcp_port() -> Option<u16> {
 #[specta::specta]
 pub fn get_mcp_token() -> Option<String> {
     mcp::current_mcp_token()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use mcp::McpServerOutcome;
+
+    #[test]
+    fn only_a_real_start_or_stop_reaches_the_security_log() {
+        let on = Some(SecurityEvent::McpServerTurnedOn { by: Initiator::User });
+        let off = Some(SecurityEvent::McpServerTurnedOff { by: Initiator::User });
+        assert_eq!(toggle_event(false, &McpServerOutcome::Running { port: 19225 }), on);
+        assert_eq!(toggle_event(true, &McpServerOutcome::Stopped), off);
+        assert_eq!(toggle_event(true, &McpServerOutcome::Running { port: 19226 }), None);
+        assert_eq!(
+            toggle_event(false, &McpServerOutcome::PortInUse { requested: 19225 }),
+            None
+        );
+        assert_eq!(toggle_event(false, &McpServerOutcome::Stopped), None);
+    }
 }

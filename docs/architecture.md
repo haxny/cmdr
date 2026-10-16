@@ -256,6 +256,9 @@ All under `apps/desktop/src-tauri/src/`.
   forward-migration ladder (not delete-and-recreate) and retention discipline, interned dir prefixes + per-item rows,
   app-side case folding with no collation (stays `sqlite3`-inspectable). See its
   `apps/desktop/src-tauri/src/operation_log/CLAUDE.md`
+- `security_log/`: The local security event log (`security-events.jsonl`): typed `SecurityEvent`s from consent, MCP,
+  managed-policy, and updater hooks, one emitter that also feeds subscribers, a background writer, and the opt-out. See
+  its `apps/desktop/src-tauri/src/security_log/CLAUDE.md`
 - `agent/`: The in-app AI agent, whose first user-facing slice is "Ask Cmdr" (a chat rail). Its `agent/llm/` holds the
   provider-agnostic `AgentLlm` seam over the shipped `genai` client, its deterministic fake, and the typed message-part
   model that keeps opaque provider reasoning state lossless. Its `agent/store/proposals/` holds the durable proposal

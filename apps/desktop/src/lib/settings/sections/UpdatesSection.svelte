@@ -20,6 +20,8 @@
     import ManagedPolicySummary from '#lib/managed-policy/ManagedPolicySummary.svelte'
     import DeleteAllDataDialog from './DeleteAllDataDialog.svelte'
     import { createDataWipeFlow } from './delete-all-data-flow.svelte'
+    import { revealSecurityLog } from '#lib/tauri-commands/index.js'
+    import { getAppLogger } from '#lib/logging/logger.js'
 
     interface Props {
         searchQuery: string
@@ -35,6 +37,7 @@
     const emailDef = getSettingDefinition('analytics.email') ?? { label: '', description: '' }
     const crashReportsDef = getSettingDefinition('updates.crashReports') ?? { label: '', description: '' }
     const errorReportsDef = getSettingDefinition('updates.errorReports') ?? { label: '', description: '' }
+    const securityLogDef = getSettingDefinition('securityLog.enabled') ?? { label: '', description: '' }
 
     // Under the organization's `DisableUpdates` a check could only say so, so the button stays off and
     // the status line says why up front. A build already staged keeps its own line: it still applies.
@@ -55,6 +58,13 @@
 
     function handleCheckForUpdates() {
         void checkForUpdates('settings')
+    }
+
+    async function handleShowSecurityLog() {
+        const refusal = await revealSecurityLog()
+        if (refusal !== null) {
+            getAppLogger('settings').warn('Couldn’t show the security event log: {kind}', { kind: refusal.kind })
+        }
     }
 
     const dataWipe = createDataWipeFlow()
@@ -193,6 +203,29 @@
         </SectionCard>
     {/if}
 
+    {#if anyVisible(shouldShow, 'securityLog.enabled', 'row:updates.showSecurityLog')}
+        <SectionCard label={tString('settings.updates.card.securityEvents')}>
+            {#if shouldShow('securityLog.enabled')}
+                <SettingRow
+                    id="securityLog.enabled"
+                    label={securityLogDef.label}
+                    description={securityLogDef.description}
+                    {searchQuery}
+                >
+                    <SettingSwitch id="securityLog.enabled" />
+                </SettingRow>
+            {/if}
+            <!-- Not a setting: a searchable row (`UpdatesSection.rows.ts`). -->
+            {#if shouldShow('row:updates.showSecurityLog')}
+                <div class="security-log-row">
+                    <Button variant="secondary" size="mini" onclick={() => void handleShowSecurityLog()}>
+                        {tString('settings.securityLog.showInFinder')}
+                    </Button>
+                </div>
+            {/if}
+        </SectionCard>
+    {/if}
+
     <!-- "Delete all Cmdr data": an action, not a setting, so a searchable row (`UpdatesSection.rows.ts`). -->
     {#if shouldShow('row:updates.deleteAllData')}
         <SectionCard label={tString('settings.dataWipe.card')}>
@@ -254,6 +287,10 @@
 
     .signup-feedback.failure {
         color: var(--color-text-primary);
+    }
+
+    .security-log-row {
+        margin-top: var(--spacing-sm);
     }
 
     .data-wipe-row {

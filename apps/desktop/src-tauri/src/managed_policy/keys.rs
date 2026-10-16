@@ -12,9 +12,10 @@ pub const MAX_UPDATE_VERSION: &str = "MaxUpdateVersion";
 pub const DISABLE_AI: &str = "DisableAI";
 pub const DISABLE_CLOUD_AI: &str = "DisableCloudAI";
 pub const ALLOWED_CLOUD_AI_HOSTS: &str = "AllowedCloudAIHosts";
+pub const DISABLE_SECURITY_LOG_OPT_OUT: &str = "DisableSecurityLogOptOut";
 
 /// Every key Cmdr reads. The drift guard compares the sample profile and `/trust` against it.
-pub const ALL_KEYS: [&str; 8] = [
+pub const ALL_KEYS: [&str; 9] = [
     DISABLE_USAGE_STATS,
     DISABLE_CRASH_AND_ERROR_REPORTS,
     DISABLE_AUTOMATIC_UPDATE_CHECKS,
@@ -23,6 +24,7 @@ pub const ALL_KEYS: [&str; 8] = [
     DISABLE_AI,
     DISABLE_CLOUD_AI,
     ALLOWED_CLOUD_AI_HOSTS,
+    DISABLE_SECURITY_LOG_OPT_OUT,
 ];
 
 /// A parse result: the policy, plus one line per value we couldn't read as written. The cache logs
@@ -49,6 +51,7 @@ pub fn parse(source: &dyn ManagedPrefsSource) -> Parsed {
     let mut updates_disabled = flag(DISABLE_UPDATES);
     let ai_disabled = flag(DISABLE_AI);
     let cloud_ai_disabled = flag(DISABLE_CLOUD_AI);
+    let security_log_required = flag(DISABLE_SECURITY_LOG_OPT_OUT);
 
     let update_ceiling = match source.forced_value(MAX_UPDATE_VERSION) {
         None => None,
@@ -84,9 +87,28 @@ pub fn parse(source: &dyn ManagedPrefsSource) -> Parsed {
             ai_disabled,
             cloud_ai_disabled,
             allowed_cloud_ai_hosts,
+            security_log_required,
         },
         warnings,
     }
+}
+
+/// The keys whose restriction `policy` has in force, in [`ALL_KEYS`] order: what the security event
+/// log records about a policy, never the values. An unreadable `MaxUpdateVersion` reads as
+/// `DisableUpdates` here, because that's what it does (rule 4).
+pub fn restricting(policy: &ManagedPolicy) -> Vec<&'static str> {
+    let in_force = [
+        (DISABLE_USAGE_STATS, policy.usage_stats_disabled),
+        (DISABLE_CRASH_AND_ERROR_REPORTS, policy.reports_disabled),
+        (DISABLE_AUTOMATIC_UPDATE_CHECKS, policy.automatic_update_checks_disabled),
+        (DISABLE_UPDATES, policy.updates_disabled),
+        (MAX_UPDATE_VERSION, policy.update_ceiling.is_some()),
+        (DISABLE_AI, policy.ai_disabled),
+        (DISABLE_CLOUD_AI, policy.cloud_ai_disabled),
+        (ALLOWED_CLOUD_AI_HOSTS, policy.allowed_cloud_ai_hosts.is_some()),
+        (DISABLE_SECURITY_LOG_OPT_OUT, policy.security_log_required),
+    ];
+    in_force.into_iter().filter(|(_, on)| *on).map(|(key, _)| key).collect()
 }
 
 /// A bool the way admins write one: `<true/>`, an integer (`0` is false), or one of the strings
@@ -241,6 +263,35 @@ mod tests {
         assert_eq!(
             parse_one(DISABLE_CLOUD_AI, Value::Boolean(true)).policy.ai(),
             AiPolicy::LocalOnly
+        );
+        assert!(
+            parse_one(DISABLE_SECURITY_LOG_OPT_OUT, Value::Boolean(true))
+                .policy
+                .security_log_required()
+        );
+        assert!(
+            !parse_one(DISABLE_SECURITY_LOG_OPT_OUT, Value::Boolean(false))
+                .policy
+                .security_log_required()
+        );
+    }
+
+    #[test]
+    fn restricting_names_only_the_keys_in_force_in_catalog_order() {
+        assert!(restricting(&ManagedPolicy::default()).is_empty());
+        let parsed = parse(&FakeSource::with(&[
+            (DISABLE_SECURITY_LOG_OPT_OUT, Value::Boolean(true)),
+            (DISABLE_USAGE_STATS, Value::Boolean(true)),
+            (DISABLE_AI, Value::Boolean(false)),
+            (ALLOWED_CLOUD_AI_HOSTS, strings(&["api.openai.com"])),
+        ]));
+        assert_eq!(
+            restricting(&parsed.policy),
+            vec![
+                DISABLE_USAGE_STATS,
+                ALLOWED_CLOUD_AI_HOSTS,
+                DISABLE_SECURITY_LOG_OPT_OUT
+            ]
         );
     }
 

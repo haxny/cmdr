@@ -12,6 +12,7 @@ const managed: ManagedPolicyView = {
   managed: true,
   usageStatsDisabled: true,
   reportsDisabled: true,
+  securityLogRequired: true,
   updates: { kind: 'enabled', automaticChecks: false, ceiling: '0.52' },
   ai: { mode: 'allowed', allowedCloudHosts: ['api.openai.com', 'localhost'] },
   lockedSettings: [],
@@ -35,7 +36,7 @@ describe('ManagedPolicySummary a11y', () => {
     mount(ManagedPolicySummary, { target })
     await tick()
 
-    expect(target.querySelectorAll('dt')).toHaveLength(4)
+    expect(target.querySelectorAll('dt')).toHaveLength(5)
     await expectNoA11yViolations(target)
   })
 })
