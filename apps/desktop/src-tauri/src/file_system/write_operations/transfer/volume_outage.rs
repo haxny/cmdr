@@ -131,7 +131,7 @@ pub(crate) async fn wait_while_out(
 ///
 /// ❗ Only for a call that's safe to run twice: a read (a listing, a `stat`), or
 /// a create whose second run answers `AlreadyExists` and is read as "there".
-/// A write that may have half-landed has its own loop (`strategy.rs`), which
+/// A write that may have half-landed has its own loop (`volume/stream_pipe.rs`), which
 /// clears the attempt's partial first.
 pub(crate) async fn through_outages<T, E, F, Fut>(
     state: &Arc<WriteOperationState>,

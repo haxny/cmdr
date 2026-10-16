@@ -29,6 +29,7 @@
 //! path so the arm's WIRING (opt-in gate, floor, cap, cancel-awareness, byte-exact
 //! resume) is covered end to end.
 
+use super::super::stream_pipe::MIN_PROGRESS_FLOOR_BYTES;
 use super::super::transfer_error::PathedVolumeError;
 use super::dest_yield_test_support::{BUSY_DEST_SHARE, ForegroundBusyDest, PanicIfProbedDest};
 use super::test_support::{

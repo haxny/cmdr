@@ -26,6 +26,7 @@ use std::path::Path;
 use std::pin::Pin;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::time::Duration;
 
 use super::super::faulty_volume::forward_volume_methods;
 use super::super::transfer_error::PathedVolumeError;

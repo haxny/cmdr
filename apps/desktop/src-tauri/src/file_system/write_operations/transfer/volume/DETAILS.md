@@ -27,10 +27,12 @@ invariants: `CLAUDE.md`. Only the layout facts neither of those carries live her
   window to the borrowed context and blocks every further split. `copy_concurrent_driver_tests.rs` drives
   `drive_transfer_concurrent` and `prepare_source` directly, because the post-loop's delete-capability split (below)
   means an end-to-end assertion can't tell a right rollback ledger from a wrong one.
-- **The engine is two files, and they call each other.** `strategy.rs` moves ONE file's bytes (staging,
-  `stream_pipe_file`, both cancel tiers, `copy_single_path`); the vocabulary both halves and both drivers speak
-  (`FileWindow`, `MergeCtx`, `MergeProbe`, `CreatedPaths`) sits beside it in `merge_ctx.rs`. `merge.rs` walks a tree (`copy_directory_streaming`, `resolve_merge_child`): a directory child
-  recurses there, a file child goes to `strategy.rs`. `sequential_extract.rs` reuses the same walk in plan mode, which
+- **The engine is a dispatcher over two halves, with the file half as the leaf.** `strategy.rs` dispatches ONE source (`copy_single_path`,
+  `resolve_source_is_directory`, `pull_path_to_local`); `stream_pipe.rs` moves one file's bytes (`stream_pipe_file`:
+  staging, retry, outages, the auto-yield tuning, both cancel tiers) and calls neither half back. The vocabulary both
+  halves and both drivers speak (`FileWindow`, `MergeCtx`, `MergeProbe`, `CreatedPaths`) sits beside them in
+  `merge_ctx.rs`. `merge.rs` walks a tree (`copy_directory_streaming`, `resolve_merge_child`): a directory child
+  recurses there, a file child goes to `stream_pipe.rs`. `sequential_extract.rs` reuses the same walk in plan mode, which
   is why the merge/conflict/rollback code is not reimplemented for one-pass archives. `folder_metadata.rs` holds what
   the walk notes about the folders it created, stamped once the subtree landed, and `landed_flags.rs` the flags a FILE
   waits to wear until its landing (both § "Copies keep the source's metadata").
@@ -179,7 +181,7 @@ commands in `commands/file_system/volume_copy.rs`) pass the destination through 
 transfer dialog's volume-relative box at the dest volume's root; `file_system/volume/DETAILS.md` § "Path handling
 gotchas" is the canonical account. Inside this directory the same `cmdr_fs::volume::root_anchored` re-derives the local
 absolute path in four places that must agree on it: the both-local shortcuts in `copy.rs` / `move.rs`, the O_EXCL
-reservation in `conflict.rs`, and the `note_pending_write_for_cmdr` registrations in `strategy.rs` / `move_same.rs`
+reservation in `conflict.rs`, and the `note_pending_write_for_cmdr` registrations in `stream_pipe.rs` / `move_same.rs`
 (register a different path than the writer hits, and the downloads watcher treats Cmdr's own write as somebody else's).
 ❌ Don't replace one with a raw `root.join(path.strip_prefix("/"))`: that re-roots an already-absolute destination under
 itself.
@@ -1181,7 +1183,7 @@ it yet.
 The engine waits for a share that dropped off the network rather than failing on it, through `../volume_outage.rs`
 (`../DETAILS.md` § "Waiting out a volume that went away" owns the why and the guarantees). Where this directory asks:
 
-- **`strategy.rs::stream_pipe_file`**: the source open, the write, and a landing rename that failed with nothing
+- **`stream_pipe.rs::stream_pipe_file`**: the source open, the write, and a landing rename that failed with nothing
   cleared. After the wait, the file runs again from its first byte with a fresh set of attempts, its failed attempt's
   temp cleared once the share can hear the delete.
 - **`merge.rs`'s level prepare** (the create, the destination listing, the source listing) and **every driver's

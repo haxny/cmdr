@@ -14,7 +14,8 @@ use std::sync::Arc;
 
 use super::super::super::state::WriteOperationState;
 use super::preflight::SourceFileFacts;
-use super::strategy::{WriteStaging, stream_pipe_file};
+use super::strategy::WriteStaging;
+use super::stream_pipe::stream_pipe_file;
 use crate::file_system::volume::{Volume, VolumeError};
 
 /// Move one file from `source_volume` to `dest_volume`, streaming its bytes and

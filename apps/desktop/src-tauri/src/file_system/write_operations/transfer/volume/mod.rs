@@ -46,6 +46,7 @@ mod server_side_copy;
 mod source_reads;
 mod source_sweep;
 mod strategy;
+mod stream_pipe;
 mod transfer_error;
 
 // The public surface. Everything else in here is an implementation detail of

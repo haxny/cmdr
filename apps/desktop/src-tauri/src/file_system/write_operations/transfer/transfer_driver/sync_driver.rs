@@ -110,7 +110,7 @@ where
     for source_path in sources {
         // CRITICAL: the cooperative boundary is BEFORE any destructive call.
         // This is the BETWEEN-FILES one; the cross-volume streaming path also
-        // parks BETWEEN CHUNKS (`volume/strategy.rs` `CheckpointStream`). The
+        // parks BETWEEN CHUNKS (`volume/stream_pipe.rs` `CheckpointStream`). The
         // local-FS sync chunk loop (`chunked_copy.rs`) is the one path that
         // still pauses only between files — it receives just the cancel atom,
         // not the `PauseGate` (see transfer/DETAILS.md § "Pause reaches between

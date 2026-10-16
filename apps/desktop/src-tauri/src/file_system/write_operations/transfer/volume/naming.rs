@@ -219,7 +219,7 @@ pub(super) async fn take_back_reservation(dest_volume: &Arc<dyn Volume>, path: &
 ///
 /// Every copy and cross-volume move post-loop runs it, whatever the ending.
 /// Safe on success too: every landed write released its placeholder
-/// (`strategy.rs::stream_pipe_file`, `sequential_extract.rs`), so what's left
+/// (`stream_pipe.rs::stream_pipe_file`, `sequential_extract.rs`), so what's left
 /// is only ever ours and empty, and [`take_back_reservation`]'s size check
 /// still spares anything someone wrote into.
 pub(super) async fn take_back_unfilled_reservations(dest_volume: &Arc<dyn Volume>, claimed: &ClaimedNames) {

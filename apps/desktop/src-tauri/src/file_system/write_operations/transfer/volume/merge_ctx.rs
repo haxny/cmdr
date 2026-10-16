@@ -3,9 +3,9 @@
 //! clashes through ([`MergeCtx`], [`MergeProbe`]), and the per-source rollback
 //! ledger ([`CreatedPaths`]).
 //!
-//! Kept out of `strategy.rs`, whose job is moving ONE file's bytes: these types
-//! are what `merge.rs`, both copy drivers, both moves, `naming.rs`, and
-//! `sequential_extract.rs` import.
+//! Kept out of `strategy.rs` and `stream_pipe.rs`, whose job is one source's
+//! bytes: these types are what `merge.rs`, both copy drivers, both moves,
+//! `naming.rs`, and `sequential_extract.rs` import.
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};

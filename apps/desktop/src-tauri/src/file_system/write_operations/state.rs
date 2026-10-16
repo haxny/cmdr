@@ -155,7 +155,7 @@ pub struct WriteOperationState {
     ///
     /// Tier 2 is what a deadline holder fires when that is too long: the
     /// cross-volume streaming write is raced against this token
-    /// (`transfer/volume/strategy.rs`), so the wait ends whether or not the
+    /// (`transfer/volume/stream_pipe.rs`), so the wait ends whether or not the
     /// backend ever comes back. The cost is that the backend's own cleanup is
     /// skipped, which is why it is NEVER fired by an ordinary cancel — the
     /// abandoned bytes are a registered `.cmdr-tmp-*` that the staging layer's

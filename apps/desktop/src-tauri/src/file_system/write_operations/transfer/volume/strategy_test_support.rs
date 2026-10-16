@@ -6,11 +6,12 @@
 //! plus the auto-yield tuning override. Items are `pub(super)` so the sibling
 //! test modules (all children of the `volume::strategy` module) can reach them
 //! through `super::test_support::…`. The override is also read by
-//! `super::auto_yield_tuning()` in test builds.
+//! `stream_pipe.rs::auto_yield_tuning()` in test builds.
 
 use super::super::faulty_volume::forward_volume_methods;
 use super::*;
 use std::future::Future;
+use std::ops::ControlFlow;
 use std::path::Path;
 use std::path::PathBuf;
 use std::pin::Pin;
@@ -965,8 +966,8 @@ thread_local! {
     static AUTO_YIELD_TUNING: std::cell::Cell<Option<(Duration, u64, Duration)>> = const { std::cell::Cell::new(None) };
 }
 
-/// Read by `super::auto_yield_tuning()` in test builds; production returns `None`.
-pub(super) fn auto_yield_tuning_override() -> Option<(Duration, u64, Duration)> {
+/// Read by `stream_pipe.rs::auto_yield_tuning()` in test builds; production returns `None`.
+pub(in super::super) fn auto_yield_tuning_override() -> Option<(Duration, u64, Duration)> {
     AUTO_YIELD_TUNING.with(|c| c.get())
 }
 

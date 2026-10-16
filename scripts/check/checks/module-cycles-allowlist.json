@@ -7,7 +7,6 @@
     "cmdr-fs::volume": [2],
     "cmdr-index::importance::scheduler": [2],
     "cmdr-index::indexing::writer": [2],
-    "cmdr::file_system::write_operations::transfer::volume": [2],
     "cmdr::file_viewer": [2],
     "cmdr::licensing": [3],
     "cmdr::mcp": [2]

@@ -2,10 +2,10 @@
 //!
 //! The tree walk half of the cross-volume engine: [`copy_directory_streaming`]
 //! recurses a source directory into a destination, resolving deep conflicts
-//! inline as it discovers them. Its sibling `strategy.rs` owns the other half —
-//! how ONE file's bytes get from A to B (staging, the write itself, and the two
-//! cancel tiers) — and the two call into each other: a directory child comes
-//! back here, a file child goes there.
+//! inline as it discovers them. Its siblings own the other half: `strategy.rs`
+//! dispatches one source, and `stream_pipe.rs` gets ONE file's bytes from A to
+//! B (staging, the write itself, and the two cancel tiers). A directory child
+//! recurses here, a file child goes to `stream_pipe.rs`.
 //!
 //! Shared vocabulary (`MergeCtx`, `CreatedPaths`, `FileWindow`) lives in
 //! `merge_ctx.rs` because both halves, both drivers, and `sequential_extract.rs`
@@ -46,7 +46,8 @@ use super::naming::take_back_reservation;
 use super::preflight::SourceFileFacts;
 use super::rename_merge::merges_as_a_directory;
 use super::strategy::Replaces;
-use super::strategy::{LandingName, WriteStaging, note_pending_for_local_dest, staging_for, stream_pipe_file};
+use super::strategy::{LandingName, WriteStaging, note_pending_for_local_dest, staging_for};
+use super::stream_pipe::stream_pipe_file;
 use super::transfer_error::{AtPath, PathRole, PathedVolumeError};
 use crate::file_system::volume::{ChildName, DirectoryCreation, Volume, VolumeError};
 use crate::ignore_poison::IgnorePoison;
