@@ -176,7 +176,7 @@ fn test_operation_intent_transitions() {
 /// isn't worth its cost there.)
 #[test]
 fn no_global_sync_or_spawn_async_sync_in_write_operations() {
-    fn walk(dir: &Path, hits: &mut Vec<String>) {
+    fn walk(dir: &Path, hits: &mut Vec<String>, scanned: &mut usize) {
         let entries = match fs::read_dir(dir) {
             Ok(e) => e,
             Err(_) => return,
@@ -184,7 +184,7 @@ fn no_global_sync_or_spawn_async_sync_in_write_operations() {
         for entry in entries.flatten() {
             let path = entry.path();
             if path.is_dir() {
-                walk(&path, hits);
+                walk(&path, hits, scanned);
                 continue;
             }
             if path.extension().and_then(|e| e.to_str()) != Some("rs") {
@@ -200,6 +200,7 @@ fn no_global_sync_or_spawn_async_sync_in_write_operations() {
                 Ok(s) => s,
                 Err(_) => continue,
             };
+            *scanned += 1;
             // `spawn_async_sync` (the deleted helper) and a raw whole-machine
             // `libc::sync()` are both banned.
             if src.contains("spawn_async_sync") || src.contains("libc::sync(") {
@@ -212,8 +213,16 @@ fn no_global_sync_or_spawn_async_sync_in_write_operations() {
         .join("src")
         .join("file_system")
         .join("write_operations");
+    // Fail closed: a moved or renamed root would otherwise scan nothing and pass.
+    assert!(root.is_dir(), "the scan root {} must exist", root.display());
     let mut hits = Vec::new();
-    walk(&root, &mut hits);
+    let mut scanned = 0;
+    walk(&root, &mut hits, &mut scanned);
+    assert!(
+        scanned > 300,
+        "scanned only {scanned} files under {}; the engine has hundreds",
+        root.display()
+    );
     assert!(
         hits.is_empty(),
         "found banned global-sync references (spawn_async_sync / libc::sync()) in: {hits:?}"

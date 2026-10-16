@@ -389,9 +389,17 @@ mod tests {
             }
         }
         let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
+        // Fail closed: the 20% bar was set on a realistic mix of thousands of
+        // files, so a missing or tiny corpus must fail, never measure nothing.
+        assert!(root.is_dir(), "the corpus root {} must exist", root.display());
         let mut files = Vec::new();
         collect(&root, &mut files);
-        assert!(!files.is_empty(), "expected source files under {}", root.display());
+        assert!(
+            files.len() > 1_000,
+            "expected a realistic corpus under {}, found {} files",
+            root.display(),
+            files.len()
+        );
 
         let mut est = CompressEstimator::new();
         let mut actual: u64 = 0;
@@ -401,6 +409,10 @@ mod tests {
             actual += deflate_len(&bytes) as u64;
         }
         let out = est.finish();
+        assert!(
+            actual > 0 && out.compressible_bytes > 0,
+            "the corpus must hold compressible bytes to measure against"
+        );
         let predicted = total(&out);
         let err = (predicted as f64 - actual as f64).abs() / actual as f64 * 100.0;
         println!(

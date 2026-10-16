@@ -321,6 +321,52 @@ async fn an_empty_staging_folder_on_a_drive_that_comes_back_is_removed() {
 
     assert_eq!(outcome, Outcome::Swept);
     assert!(!drive.staging.exists());
+    assert!(
+        kept_notices_for(&drive.staging).is_empty(),
+        "nothing was kept, so nothing to say"
+    );
+}
+
+/// A kept, non-empty staging folder on a drive raises the `move-leftovers-kept`
+/// notice, naming the drive and the folder, so the files inside have a findable
+/// home.
+#[tokio::test]
+async fn a_staging_folder_kept_on_a_drive_raises_the_notice() {
+    let drive = returned_drive(
+        "sweep-notice-drive",
+        "in-flight-sweep-test-stick-notice",
+        Some(b"the whole staged file"),
+    );
+
+    assert_eq!(settle(&staging_record(&drive)).await, Outcome::LeftAlone);
+
+    let notices = kept_notices_for(&drive.staging);
+    assert_eq!(notices.len(), 1, "one notice for the one kept folder");
+    assert_eq!(notices[0].volume_name, "Fältkamera");
+    assert_eq!(notices[0].folder_name, drive.staging_name);
+}
+
+/// A Mac-internal staging folder (a move onto the boot volume) is kept just the
+/// same, but only `warn`s: its disk never leaves, so the next launch meets it
+/// again.
+#[tokio::test]
+async fn a_staging_folder_kept_on_the_mac_only_warns() {
+    let dir = TestDir::new("sweep-notice-local");
+    let staging = dir.join(format!(".cmdr-staging-{}", uuid::Uuid::new_v4()));
+    std::fs::create_dir(&staging).expect("create the staging folder");
+    std::fs::write(staging.join("footage.mov"), b"a whole staged file").expect("stage a file");
+    let record = Record::Tracked(TrackedItem {
+        kind: ItemKind::StagingDir,
+        home: ItemHome::Local,
+        path: staging.clone(),
+    });
+
+    assert_eq!(settle(&record).await, Outcome::LeftAlone);
+    assert!(staging.join("footage.mov").exists(), "the staged file stays");
+    assert!(
+        kept_notices_for(&staging).is_empty(),
+        "no notice for a Mac-internal folder"
+    );
 }
 
 /// A record whose drive isn't registered decides nothing at all. ❗ It must not

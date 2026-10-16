@@ -54,6 +54,54 @@ fn rename_descriptor_marks_only_nonroot_volumes_busy() {
 // Managed-wrapper transparency (local root: same returns as the old command)
 // ============================================================================
 
+/// An instant rename journals through the real store: its own `rename` row,
+/// finalized `done` and rollbackable, with one item row naming both ends. The
+/// op id isn't returned, so the row is found by the test's unique file name.
+#[tokio::test]
+async fn an_instant_rename_journals_its_row_through_the_real_store() {
+    use cmdr_operation_log::capture::WriterJournal;
+    use cmdr_operation_log::store::{
+        open_read_connection, operation_log_db_path, read_operation_items, recent_operations,
+    };
+    use cmdr_operation_log::types::{ExecutionStatus, OpKind, RollbackState};
+    use cmdr_operation_log::writer::OperationLogWriter;
+
+    let journal_dir = create_test_dir("journal_db");
+    let db = operation_log_db_path(&journal_dir);
+    let _journal = crate::operation_log_host::TestJournalGuard::install(Arc::new(WriterJournal::new(
+        OperationLogWriter::spawn(&db).expect("writer"),
+    )));
+    let tmp = create_test_dir("journaled");
+    let old_name = format!("{}.txt", unique("journaled-old"));
+    fs::write(tmp.join(&old_name), "content").expect("source");
+
+    rename_managed(
+        tmp.join(&old_name),
+        tmp.join("new.txt"),
+        false,
+        "root".to_string(),
+        Initiator::User,
+    )
+    .await
+    .expect("rename");
+
+    let conn = open_read_connection(&db).expect("read conn");
+    let (op, items) = recent_operations(&conn, 50)
+        .expect("ops")
+        .into_iter()
+        .filter(|op| op.kind == OpKind::Rename)
+        .map(|op| {
+            let items = read_operation_items(&conn, &op.op_id, 10).expect("items");
+            (op, items)
+        })
+        .find(|(_, items)| items.iter().any(|item| item.source_name == old_name))
+        .expect("the rename's own row");
+    assert_eq!(op.execution_status, ExecutionStatus::Done);
+    assert_eq!(op.rollback_state, RollbackState::Rollbackable);
+    assert_eq!(items.len(), 1, "one row: the whole entry moves by one rename");
+    assert_eq!(items[0].dest_name.as_deref(), Some("new.txt"));
+}
+
 #[tokio::test]
 async fn rename_managed_local_success() {
     let tmp = create_test_dir("managed_ok");

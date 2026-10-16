@@ -51,6 +51,9 @@ use crate::file_system::write_operations::types::MoveLeftoversKeptEvent;
 use crate::file_system::write_operations::unique_name::{NameCandidates, RESCUE_NAME_ATTEMPTS, recovered_sibling};
 use cmdr_local::rename_local_exclusive;
 
+#[cfg(test)]
+use crate::ignore_poison::IgnorePoison;
+
 /// Settles the records an earlier run left that the local filesystem can answer
 /// for on its own, then takes whatever pending volume is already reachable.
 ///
@@ -678,20 +681,42 @@ pub fn init_app_handle(handle: tauri::AppHandle) {
 /// at the next launch.
 fn announce_leftovers_kept(drive_name: Option<&str>, path: &Path) {
     use tauri_specta::Event;
-    let (Some(app), Some(volume_name)) = (APP_HANDLE.get(), drive_name) else {
+    let Some(volume_name) = drive_name else {
         return;
     };
     let Some(folder_name) = path.file_name().map(|n| n.to_string_lossy().into_owned()) else {
         return;
     };
-    if let Err(e) = (MoveLeftoversKeptEvent {
+    let notice = MoveLeftoversKeptEvent {
         volume_name: volume_name.to_string(),
         folder_name,
-    })
-    .emit(app)
-    {
+    };
+    // Before the app-handle check: tests run with no app handle.
+    #[cfg(test)]
+    KEPT_NOTICES
+        .lock_ignore_poison()
+        .push((path.to_path_buf(), notice.clone()));
+    let Some(app) = APP_HANDLE.get() else {
+        return;
+    };
+    if let Err(e) = notice.emit(app) {
         log::warn!(target: "copy", "couldn't tell the frontend about the kept staging folder: {e}");
     }
+}
+
+/// Test-only: every staging-folder notice raised, with the folder it named, so a
+/// test reads back only the notices for its own folder.
+#[cfg(test)]
+static KEPT_NOTICES: std::sync::Mutex<Vec<(PathBuf, MoveLeftoversKeptEvent)>> = std::sync::Mutex::new(Vec::new());
+
+#[cfg(test)]
+fn kept_notices_for(path: &Path) -> Vec<MoveLeftoversKeptEvent> {
+    KEPT_NOTICES
+        .lock_ignore_poison()
+        .iter()
+        .filter(|(at, _)| at == path)
+        .map(|(_, notice)| notice.clone())
+        .collect()
 }
 
 /// Says what the sweep did, so a leftover that survives leaves a trail.

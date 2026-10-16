@@ -1665,7 +1665,9 @@ aside it must never touch. `is_one_of_ours` stopped accepting `.cmdr-temp-` for 
 
 **The notice.** A kept staging folder raises `move-leftovers-kept` (drive name + folder name) through an `AppHandle`
 stashed at startup; the sweep belongs to no operation and has no event sink. A Mac-internal one gets the `warn` alone —
-the copy names a drive, and the boot disk never goes away, so it meets the rule again next launch.
+the copy names a drive, and the boot disk never goes away, so it meets the rule again next launch. Tests have no
+`AppHandle`, so under `cfg(test)` every notice is also recorded by folder (`KEPT_NOTICES`); `in_flight_sweep_tests.rs`
+pins both halves.
 
 ## Testing the in-flight temp ledger
 
