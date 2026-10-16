@@ -28,11 +28,12 @@ use super::full_load::FullLoadBackend;
 use super::line_index::LineIndexBackend;
 use super::media;
 use super::media_session::{self, MediaDimensions};
+use super::origin::{SourceOrigin, open_for_viewer};
 use super::range_read::{
     RangeEnd, STREAM_CHUNK_BYTES, read_range as do_read_range, read_range_streamed as stream_range,
 };
 use super::search_matcher::{Matcher, SearchMode};
-use super::source::{OpenedFile, SourceOrigin, read_head};
+use super::source::{OpenedFile, read_head};
 use super::watcher::{VIEWER_WATCHER_MANAGER, WatcherEvent};
 use super::{
     BackendCapabilities, FULL_LOAD_THRESHOLD, FileViewerBackend, LineChunk, MAX_SEARCH_MATCHES, SearchMatch,
@@ -496,7 +497,7 @@ fn open_session_core(
     // `volume_source`.
     let on_volume = match reuse {
         Some(_) => None,
-        None => super::volume_source::open_for_viewer(&requested, volume_id),
+        None => open_for_viewer(&requested, volume_id),
     };
     let temp = match (reuse, &on_volume) {
         (Some(temp), _) => Some(temp),

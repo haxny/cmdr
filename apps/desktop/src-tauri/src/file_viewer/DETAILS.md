@@ -42,10 +42,12 @@ Frontend counterpart: `apps/desktop/src/routes/viewer/CLAUDE.md` for the viewer 
   the checkpoint before the old file's last row
 - `search_matcher.rs`: `Matcher` (literal or regex), `SearchMode`, `scan_line_with_matcher` helper. One matcher built
   per search; reused across every line. Huge-line chunking (1 MB windows, 256 byte overlap) lives here.
-- `source.rs`: `ByteSource` (positioned `read_at`), `SharedSource`, `LocalFileSource` (`pread` on a held `File`),
-  `OpenedFile` (source + size + name), and `SourceOrigin` (how a session opens its file again). See § "Byte sources"
+- `source.rs`: the floor every backend imports. `ByteSource` (positioned `read_at`), `SharedSource`,
+  `LocalFileSource` (`pread` on a held `File`), `OpenedFile` (source + size + name), `open_local`. See § "Byte sources"
 - `volume_source.rs`: `VolumeSource`, a `ByteSource` over a volume's held `VolumeRandomReader` (SMB) with a small
-  block cache, and `open_for_viewer`, which `open_session` asks first. See § "A file read through its volume"
+  block cache, plus `open_on_volume` / `size_on_volume`. See § "A file read through its volume"
+- `origin.rs`: above both readers. `SourceOrigin` (how a session opens its file again, `Local` or `Volume`) and
+  `open_for_viewer`, which `open_session` asks first. The two readers never import each other or this.
 - `headless.rs`: `open_text_backend(path, encoding, cancel) -> HeadlessBackend`, the backend pick with nothing around
   it, for callers that read a file the viewer's way without a window. See § "Headless reads".
 - `*_test.rs`: unit tests for each backend: UTF-8 edge cases, search highlighting, checkpoint math, range reads,
@@ -72,7 +74,7 @@ handle sees them, and `extend_to` only moves the size.
 
 ### A file read through its volume
 
-`open_session` first asks `volume_source::open_for_viewer`: when the pane's volume answers `open_random_reader` (today
+`open_session` first asks `origin::open_for_viewer`: when the pane's volume answers `open_random_reader` (today
 only `SmbVolume`, one smb2 `FileReader`), the session reads the file through it, whether or not the share's OS mount is
 alive. No temp, no `PREVIEW_CAP_BYTES`, no OS open: a 5 GiB log on a share opens and jumps like a local one. Every other
 volume answers `NotSupported` and the open goes on exactly as before (`std::fs`, or a pull into a temp). A routed path

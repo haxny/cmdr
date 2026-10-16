@@ -11,13 +11,10 @@
 
 use std::fs::File;
 use std::os::unix::fs::FileExt;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::sync::Arc;
 
 use super::ViewerError;
-use super::materialize::map_volume_error;
-use super::volume_source::{open_on_volume, size_on_volume};
-use crate::file_system::volume::{Volume, VolumeError};
 
 /// A file the viewer reads by absolute offset.
 pub trait ByteSource: Send + Sync {
@@ -74,42 +71,6 @@ pub struct OpenedFile {
     pub total_bytes: u64,
     /// Last path component, as the title bar shows it.
     pub file_name: String,
-}
-
-/// Where a session's file lives, so the session can open it again: a reload, or a file
-/// replaced under it, needs a fresh handle rather than the one it holds.
-#[derive(Clone)]
-pub enum SourceOrigin {
-    /// A path `std::fs` opens.
-    Local(PathBuf),
-    /// A file read through its volume's held random reader (`volume_source.rs`).
-    Volume { volume: Arc<dyn Volume>, path: PathBuf },
-}
-
-impl SourceOrigin {
-    pub fn open(&self) -> Result<OpenedFile, ViewerError> {
-        match self {
-            Self::Local(path) => open_local(path),
-            Self::Volume { .. } => self.open_volume().map_err(|e| map_volume_error(e, None)),
-        }
-    }
-
-    /// [`open`](Self::open) for a volume origin, keeping the volume's own error so a
-    /// caller can tell `NotSupported` (fall back) from a real failure.
-    pub fn open_volume(&self) -> Result<OpenedFile, VolumeError> {
-        match self {
-            Self::Local(_) => Err(VolumeError::NotSupported),
-            Self::Volume { volume, path } => open_on_volume(volume, path),
-        }
-    }
-
-    /// The file's size right now, for tail mode's catch-up on enable.
-    pub fn current_size(&self) -> Result<u64, ViewerError> {
-        match self {
-            Self::Local(path) => Ok(std::fs::metadata(path)?.len()),
-            Self::Volume { volume, path } => size_on_volume(volume, path),
-        }
-    }
 }
 
 /// Opens a local (or OS-mounted) file for a session: stat once, then hold the handle.

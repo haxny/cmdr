@@ -25,8 +25,8 @@ use super::encoding::FileEncoding;
 use super::materialize::PreviewTemp;
 use super::media::{self, MediaEntry};
 use super::media_backend::MediaBackend;
+use super::origin::SourceOrigin;
 use super::session::{BackendType, SESSIONS, ViewerOpenResult, ViewerSession, ViewerSessionInit, generate_session_id};
-use super::source::SourceOrigin;
 use super::{FileViewerBackend, LineChunk, ViewerError};
 
 /// Image pixel dimensions, read header-only at open time.

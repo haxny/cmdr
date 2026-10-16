@@ -18,6 +18,7 @@ mod media_backend;
 pub mod media_protocol;
 mod media_session;
 pub(crate) mod open_with_extract;
+mod origin;
 pub mod pending_open;
 pub(crate) mod range_read;
 mod row_walk;

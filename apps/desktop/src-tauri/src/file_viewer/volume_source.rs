@@ -15,8 +15,7 @@ use log::debug;
 
 use super::ViewerError;
 use super::materialize::map_volume_error;
-use super::source::{ByteSource, OpenedFile, SourceOrigin, file_name_of};
-use crate::file_system::volume::manager::{get_volume_manager, path_routes_over_its_parent};
+use super::source::{ByteSource, OpenedFile, file_name_of};
 use crate::file_system::volume::{Volume, VolumeError, VolumeRandomReader};
 use crate::ignore_poison::IgnorePoison;
 
@@ -202,48 +201,6 @@ impl ByteSource for VolumeSource {
             }
         }
         Ok(filled)
-    }
-}
-
-/// A file a session reads through its volume, and whether its path is also open to the
-/// OS (a live SMB mount), which is what decides whether a watcher can follow it.
-pub(super) struct VolumeOpen {
-    pub origin: SourceOrigin,
-    pub opened: OpenedFile,
-    pub os_visible: bool,
-}
-
-/// Opens `requested` through `volume_id`'s random reader when the volume offers one,
-/// or `None` to open it the way the viewer always has (`std::fs`, or a temp pull).
-///
-/// A routed path (inside a `.zip`, a `.git` portal tree) goes to the materializer:
-/// its route mints the volume that serves it. Any open error falls back too, so a share
-/// whose smb2 session is down still opens through a live mount, and a missing file gets
-/// the same `NotFound` the old path gives.
-pub(super) fn open_for_viewer(requested: &Path, volume_id: &str) -> Option<VolumeOpen> {
-    if path_routes_over_its_parent(requested) {
-        return None;
-    }
-    let volume = get_volume_manager().get(volume_id)?;
-    let os_visible = volume.paths_are_os_visible();
-    let origin = SourceOrigin::Volume {
-        volume,
-        path: requested.to_path_buf(),
-    };
-    match origin.open_volume() {
-        Ok(opened) => Some(VolumeOpen {
-            origin,
-            opened,
-            os_visible,
-        }),
-        Err(VolumeError::NotSupported) => None,
-        Err(e) => {
-            debug!(
-                "viewer: {} doesn't open through its volume ({e}); opening it the usual way",
-                requested.display()
-            );
-            None
-        }
     }
 }
 
