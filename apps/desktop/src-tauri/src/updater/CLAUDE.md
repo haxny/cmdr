@@ -6,16 +6,13 @@ plugin from the frontend.
 
 ## File map
 
-- `mod.rs`: the four Tauri commands (`check_for_update`, `update_write_blocker`, `download_update`, `install_update`),
-  shared `UpdateState` (what the last check offered, what the last download staged), and the typed outcome and errors.
-  Tests in `tests.rs`.
+- `mod.rs`: the four Tauri commands, shared `UpdateState` (what the last check offered, what the last download
+  staged), and the typed outcome and errors. Tests in `tests.rs`.
 - `bundle_location.rs`: whether the running bundle can be written into at all (`BundleWriteBlocker`).
 - `manifest.rs`: parses `latest.json`, compares versions, resolves the platform key.
 - `signature.rs`: minisign verification against the main and backup updater keys.
-- `security_events.rs`: what the updater notes in the security event log (`../security_log/CLAUDE.md`), behind
-  one-line hooks in the commands.
-- The Apple code-signature check and the tarball extraction live in `crates/cmdr-update-trust/CLAUDE.md`, shared with
-  the release gate.
+- `security_events.rs`: the security event log's updater events (`../security_log/CLAUDE.md`).
+- Code-signature check and tarball extraction: `crates/cmdr-update-trust/CLAUDE.md` (shared with the release gate).
 - `installer.rs`: tarball extraction, sync into the running bundle, privilege escalation. `running_bundle()` is
   crate-visible for `crate::install_location` (the Dock pin and the reveal handler).
 - `advisories.rs`: the `SecurityNotice` an install answers, from the staged bundle's list.

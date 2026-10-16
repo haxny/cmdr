@@ -477,9 +477,7 @@ pub async fn install_update(state: State<'_, UpdateState>) -> Result<UpdateInsta
     .and_then(|installed| installed);
     security_events::on_install_result(
         &offered,
-        result
-            .as_ref()
-            .map(|(_, judged)| judged.as_ref().unwrap_or(&offered)),
+        result.as_ref().map(|(_, judged)| judged.as_ref().unwrap_or(&offered)),
     );
     let (security_notice, _) = result?;
     if let Some(notice) = &security_notice {
