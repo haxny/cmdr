@@ -20,8 +20,10 @@ use super::paths::{ends_filename, ends_sentence, has_extension_like_suffix};
 /// - everything from the first `": "`, the `{path}: {message}` seam nearly every caller
 ///   formats with. macOS forbids `:` in a filename, so this can't cut a real name short.
 /// - everything after the first token that ENDS the path: one carrying a letter-led
-///   extension (`report.pdf`, `PM-2.jpeg`) or ending a sentence (`naspi-1)`, `state.`).
-/// - trailing sentence-ending punctuation (`,`, `;`, `!`, `?`, `)`, `]`, `}`)
+///   extension (`report.pdf`, `PM-2.jpeg`) or ending a sentence (`naspi-1)`, `state.`). Only a
+///   token past the last separator qualifies, and a bare number or initial with a dot (`12.`,
+///   `J.`) opens a name instead of ending a sentence.
+/// - trailing sentence-ending punctuation (`.`, `,`, `;`, `!`, `?`, `)`, `]`, `}`)
 /// - trailing `:<digits>` groups (line/column markers like `:42:5`)
 /// - a trailing RUN of space-separated words that are lowercase-initial AND carry no
 ///   extension (` failed to open`). The run never eats into the first segment after the
@@ -51,11 +53,23 @@ pub(super) fn split_trailing_noise_with(s: &str, trim_prose_run: bool) -> (&str,
     // `Screenshot 2026-09-04 at 01.13.03 PM-2.jpeg` (no letter-led extension until the very
     // end, so the whole name stays). A backwards scan can't tell those apart: the email's
     // `.com` looks exactly like a filename extension from the right.
+    //
+    // Nothing before the last separator can end the path: a deeper segment after a token
+    // proves the path goes on, whatever punctuation the token ends with. That keeps
+    // `12. Summer trip/beach.jpg` and `Dr. Dre/track.mp3` whole. A match never holds ` /` (a
+    // space before a slash ends it), so a later separator belongs to the same path, unless
+    // its word starts a new reference (`and https://…`).
     {
+        let separator = separator_of(s);
+        let last_separator = s[..same_path_end(s, end)].rfind(separator);
         let mut offset = 0usize;
         for token in s[..end].split(' ') {
             let token_end = offset + token.len();
-            if !token.is_empty() && (ends_filename(token) || ends_sentence(token)) {
+            let can_end = last_separator.is_none_or(|sep| token_end > sep);
+            if can_end
+                && !token.is_empty()
+                && (ends_filename(token) || (ends_sentence(token) && !opens_a_name(token, separator)))
+            {
                 end = token_end;
                 break;
             }
@@ -91,7 +105,7 @@ pub(super) fn split_trailing_noise_with(s: &str, trim_prose_run: bool) -> (&str,
     // An extension ends the run on the spot, because a word carrying one is part of the
     // filename, not prose — that is what holds `my secret notes.txt` together.
     if trim_prose_run && seam != Some(end) {
-        let floor = s[..end].rfind('/').map_or(0, |i| i + 1);
+        let floor = s[..end].rfind(separator_of(s)).map_or(0, |i| i + 1);
         loop {
             let mut i = end;
             while i > floor && bytes[i - 1] != b' ' {
@@ -114,6 +128,12 @@ pub(super) fn split_trailing_noise_with(s: &str, trim_prose_run: bool) -> (&str,
         }
     }
 
+    // A lone trailing `-` is the start of a `{from} -> {to}` arrow (the regex stops at `>`).
+    // After the prose run, so the `-` has already stopped it from eating the name's last word.
+    if s[..end].ends_with(" -") {
+        end -= 2;
+    }
+
     // Finally, strip a trailing `.` or `,` that was exposed by the above steps.
     end = trim_closing_punctuation(s, end);
 
@@ -121,7 +141,7 @@ pub(super) fn split_trailing_noise_with(s: &str, trim_prose_run: bool) -> (&str,
     (&s[..end], &s[end..])
 }
 
-/// Step `end` back over closing punctuation (`,` `;` `!` `?` `)` `]` `}`), one at a time.
+/// Step `end` back over closing punctuation (`.` `,` `;` `!` `?` `)` `]` `}`), one at a time.
 /// The `}` closing a `\u{301}` escape stays: it's the middle of a `{:?}`-printed name.
 fn trim_closing_punctuation(s: &str, mut end: usize) -> usize {
     let bytes = s.as_bytes();
@@ -130,13 +150,53 @@ fn trim_closing_punctuation(s: &str, mut end: usize) -> usize {
         if b == b'}' && ends_with_unicode_escape(&s[..end]) {
             break;
         }
-        if matches!(b, b',' | b';' | b'!' | b'?' | b')' | b']' | b'}') {
+        if matches!(b, b'.' | b',' | b';' | b'!' | b'?' | b')' | b']' | b'}') {
             end -= 1;
         } else {
             break;
         }
     }
     end
+}
+
+/// The character a path's segments are separated by: `\` for a Windows home (`C:\Users\…`) or
+/// a UNC path (`\\host\share\…`), `/` for everything else. On a `/` path a `\` is a `{:?}`
+/// escape, never a separator.
+fn separator_of(s: &str) -> char {
+    let bytes = s.as_bytes();
+    let windows_drive = bytes.len() >= 3 && bytes[0].is_ascii_alphabetic() && bytes[1] == b':' && bytes[2] == b'\\';
+    if windows_drive || s.starts_with("\\\\") {
+        '\\'
+    } else {
+        '/'
+    }
+}
+
+/// Where the separators that can belong to this path stop: before the first later word that
+/// starts a new reference (`https://u:p@a.com and https://x:y@b.com`).
+fn same_path_end(s: &str, end: usize) -> usize {
+    let mut offset = 0usize;
+    for (i, word) in s[..end].split(' ').enumerate() {
+        if i > 0 && word.contains("://") {
+            return offset;
+        }
+        offset += word.len() + 1;
+    }
+    end
+}
+
+/// A word that ends in a dot but opens a name rather than closing a sentence: a bare number
+/// (`12.` of `12. Summer trip`, `1.` of `Chapter 1. Intro`) or a lone initial (`J.` of
+/// `J. Smith`). A path rarely ends a sentence on one of those, and when it does, the cost is a
+/// word of prose redacted; cutting there ships the rest of the folder's name.
+fn opens_a_name(token: &str, separator: char) -> bool {
+    let word = token.rsplit(separator).next().unwrap_or(token);
+    let Some(stem) = word.strip_suffix('.') else {
+        return false;
+    };
+    let all_digits = !stem.is_empty() && stem.bytes().all(|b| b.is_ascii_digit());
+    let initial = stem.len() == 1 && stem.bytes().all(|b| b.is_ascii_uppercase());
+    all_digits || initial
 }
 
 /// A word prose doesn't produce: an inner dot (`me\u{301}retek.jpg.cmdr-tmp-…`, whose

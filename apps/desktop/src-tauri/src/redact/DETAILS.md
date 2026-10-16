@@ -158,11 +158,22 @@ The boundary rules, in order, each earning its place against one of those:
 2. **Forward scan to the first token that ends the path**: one carrying a letter-led extension (`report.pdf`), or one
    ending a sentence (`naspi-1)`, `state.`). Forward, not backward, is the load-bearing part:
    `report.pdf for alice@example.com` has to cut after `report.pdf`, and from the right the email's `.com` is
-   indistinguishable from a real extension.
+   indistinguishable from a real extension. Two limits keep it from cutting inside a name:
+   - **Nothing before the last separator ends the path.** A deeper segment after a token proves the path goes on, so
+     `12. Summer trip/beach.jpg`, `Dr. Dre/track.mp3`, and `Report (final) v2/x.pdf` stay whole. Cutting at the `12.`
+     shipped ` Summer trip/beach.jpg` (ERR-UK5NH). This is free: a match never holds ` /` (the space before a slash
+     ends it), so a later separator belongs to the same path, unless its word starts a new reference (`… and
+     https://…`), where the search for the last separator stops. The separator is `\` for a Windows home or UNC
+     path, `/` otherwise (there a `\` is a `{:?}` escape).
+   - **A bare number or a lone capital with a dot (`12.`, `J.`) opens a name**, so the leaf `12. Summer Trip on
+     volume root` keeps its words. A sentence ending on one costs a word of prose, never a leak.
 3. **`ends_filename` demands a LETTER-led extension**, unlike the looser `has_extension_like_suffix` used for the
    `<dir>`/`<file>` decision. `01.13.03` in a timestamp otherwise reads as an extension and halves the name. A digit-led
    real extension (`.7z`) just doesn't end the scan, which costs a word of prose, never a leak.
-4. **Backward trim of a lowercase extension-less run**, floored at the first segment after the last `/`. That floor is
+4. **Backward trim of closing punctuation** (`.` included, so `…/state. Then` keeps its period as prose), then of a
+   **lowercase extension-less run**, floored at the first segment after the last separator. After the run, a lone
+   trailing ` -` goes back too: it's the start of a `{from} -> {to}` arrow (the regex stops at `>`), and it already
+   stopped the run from eating the name's last word. That floor is
    what leaves `/Volumes/naspi and then it failed` as `naspi` rather than nothing. It is skipped when the path runs
    right up to the seam, since the seam already marked the end: `/Volumes/x/summer trip: failed` used to ship `trip`. A
    word with an inner dot or a `{:?}` escape (`me\u{301}retek.jpg.cmdr-tmp-…`) also stops it: prose has neither, and

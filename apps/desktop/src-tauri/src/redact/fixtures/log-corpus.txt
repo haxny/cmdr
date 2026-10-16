@@ -169,3 +169,6 @@
 23:40:00.003 INFO  identity  host="Client Nimbus" server=Some("Office NAS") share="Private Vault" volumeId="legacy-private-volume" serverId="private-server" deviceId="private-device"
 23:40:00.004 WARN  indexing::cover  Cover: can't walk /srv/clients/Acme Corp/plans.pdf: permission denied
 23:40:00.005 WARN  trash  op 01a0 (Trash) failed: /Users/kajotac/Desktop/Shot 1.jpeg: the Trash refused it: “Shot 1.jpeg”
+23:41:00.000 WARN  move  source sweep: couldn't remove /Volumes/naspi/Photos/12. Summer trip/beach.jpg: NotFound
+23:41:00.001 INFO  scan_preview  scan preview 7 started: /Users/ada/Pictures/3. Invoices 2024 on volume root
+23:41:00.002 ERROR FE:transferProgress  Move error: Path: /Users/ada/Pictures/12. Summer trip/beach.jpg; Error type: io_error

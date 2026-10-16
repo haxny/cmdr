@@ -169,3 +169,6 @@
 23:40:00.003 INFO  identity  host="<host>" server=Some("<host>") share="<share>" volumeId="<volume-id>" serverId="<server-id>" deviceId="<device-id>"
 23:40:00.004 WARN  indexing::cover  Cover: can't walk /<dir>/<dir>/<dir>/<file>.pdf: permission denied
 23:40:00.005 WARN  trash  op 01a0 (Trash) failed: $HOME/Desktop/<file>.jpeg: the Trash refused it: “<file>.jpeg”
+23:41:00.000 WARN  move  source sweep: couldn't remove /Volumes/<volume>/<dir>/<dir>/<file>.jpg: NotFound
+23:41:00.001 INFO  scan_preview  scan preview 7 started: $HOME/Pictures/<dir> on volume root
+23:41:00.002 ERROR FE:transferProgress  Move error: Path: $HOME/Pictures/<dir>/<file>.jpg; Error type: io_error

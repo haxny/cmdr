@@ -214,6 +214,121 @@ fn multi_word_filenames_are_redacted_whole() {
     }
 }
 
+/// A folder named like a numbered list item (`12. Summer trip`) is redacted WHOLE.
+///
+/// Real incident (ERR-UK5NH): its `12.` read as the end of a sentence, so only `12.` became a
+/// token and ` Summer trip/beach.jpg` shipped verbatim in `move`, `scan_preview`, and
+/// `FE:transferProgress` lines. A path can't end before its last separator, and a bare number
+/// with a dot opens a name rather than closing a sentence.
+#[test]
+fn a_numbered_folder_is_redacted_whole() {
+    let cases = [
+        // Mid-path, in each path flavor, followed by the `: ` seam.
+        (
+            "source sweep: couldn't remove /Users/ada/Pictures/12. Summer trip/beach.jpg: NotFound",
+            "source sweep: couldn't remove $HOME/Pictures/<dir>/<file>.jpg: NotFound",
+        ),
+        (
+            "Move error: Path: /Volumes/naspi/Photos/3. Invoices 2024/scan.pdf; Error type: io_error",
+            "Move error: Path: /Volumes/<volume>/<dir>/<dir>/<file>.pdf; Error type: io_error",
+        ),
+        (
+            "Cover: can't walk /srv/clients/12. Summer trip/beach.jpg: permission denied",
+            "Cover: can't walk /<dir>/<dir>/<dir>/<file>.jpg: permission denied",
+        ),
+        (
+            "Reading /tmp/stage/12. Summer trip/beach.jpg failed",
+            "Reading /tmp/<dir>/<dir>/<file>.jpg failed",
+        ),
+        (
+            "Opening smb://192.168.1.20/photos/12. Summer trip/beach.jpg failed",
+            "Opening smb://<ipv4-private>/<share>/<dir>/<file>.jpg failed",
+        ),
+        // Backslash-separated: a Windows home, and an `smb2` share-relative field.
+        (
+            r"Wrote C:\Users\Bob\Pictures\12. Summer trip\beach.jpg failed",
+            r"Wrote $HOME\Pictures\<dir>\<file>.jpg failed",
+        ),
+        (
+            r"tree: deleted file=trips\12. Summer trip\beach.jpg",
+            r"tree: deleted file=<dir>\<dir>\<file>.jpg",
+        ),
+        (
+            r#"SmbVolume::delete: share=media, path="trips/12. Summer trip/beach.jpg""#,
+            r#"SmbVolume::delete: share=media, path="<dir>/<dir>/<file>.jpg""#,
+        ),
+        // The `move` line's three paths, two of them leaf folders before ` ->` and `)`.
+        (
+            "move_between_volumes: copy phase failed for /Users/ada/Pictures/12. Summer trip/beach.jpg \
+             (under /Users/ada/Pictures/12. Summer trip -> /Volumes/naspi/Photos/12. Summer Trip): disk full",
+            "move_between_volumes: copy phase failed for $HOME/Pictures/<dir>/<file>.jpg \
+             (under $HOME/Pictures/<dir> -> /Volumes/<volume>/<dir>/<dir>): disk full",
+        ),
+        // As the leaf, followed by a seam, a comma, a quote, `;`, and the end of the line.
+        (
+            "/Volumes/naspi/Photos/12. Summer Trip: it timed out",
+            "/Volumes/<volume>/<dir>/<dir>: it timed out",
+        ),
+        (
+            "Copied /Volumes/naspi/Photos/12. Summer Trip, retrying",
+            "Copied /Volumes/<volume>/<dir>/<dir>, retrying",
+        ),
+        (
+            "Copied \"/Users/ada/Pictures/3. Invoices 2024\" ok",
+            "Copied \"$HOME/Pictures/<dir>\" ok",
+        ),
+        (
+            "Move error: Path: /Volumes/naspi/Photos/3. Invoices 2024; Error type: io_error",
+            "Move error: Path: /Volumes/<volume>/<dir>/<dir>; Error type: io_error",
+        ),
+        (
+            "Copied /Users/ada/Pictures/12. Summer Trip",
+            "Copied $HOME/Pictures/<dir>",
+        ),
+        // The `scan_preview` label: the source, then ` on volume <id>`.
+        (
+            "scan preview 3 started: /Users/ada/Pictures/12. Summer Trip on volume root",
+            "scan preview 3 started: $HOME/Pictures/<dir> on volume root",
+        ),
+        // Neighbors: a number mid-name, a digit-led dot, and several numbered segments.
+        (
+            "Reading /Users/ada/Books/Chapter 1. Intro/v1.2 notes/draft.md",
+            "Reading $HOME/<dir>/<dir>/<dir>/<file>.md",
+        ),
+        (
+            "Copied '/Users/ada/Work/1. Plans/2. Budget/3. Final' failed",
+            "Copied '$HOME/<dir>/<dir>/<dir>/<dir>' failed",
+        ),
+        // Any word ending in sentence punctuation before a deeper segment: an abbreviation,
+        // a comma, a closing paren, or an extension-looking word.
+        (
+            "Reading /Users/ada/Music/Dr. Dre, Snoop (live) Mr.Big/track.mp3",
+            "Reading $HOME/Music/<dir>/<file>.mp3",
+        ),
+    ];
+    for (input, expected) in cases {
+        assert_eq!(r(input), expected, "input: {input:?}");
+    }
+}
+
+/// A sentence that really ends at the path still gives its prose back.
+#[test]
+fn sentence_end_after_a_path_stays_prose() {
+    let cases = [
+        (
+            "Wrote /Users/ada/Documents/state. Then we moved on",
+            "Wrote $HOME/Documents/<dir>. Then we moved on",
+        ),
+        (
+            "Saved to /Volumes/naspi/Photos/report.pdf. Next up",
+            "Saved to /Volumes/<volume>/<dir>/<file>.pdf. Next up",
+        ),
+    ];
+    for (input, expected) in cases {
+        assert_eq!(r(input), expected, "input: {input:?}");
+    }
+}
+
 /// The reported line, end to end.
 ///
 /// ⚠️ Known gap, deliberately pinned here: macOS repeats the filename inside its own error
