@@ -15,6 +15,10 @@
   "@operationLog.dialog.empty": {
     "sourceHash": "2dea414"
   },
+  "operationLog.dialog.recordingOff": "「操作記錄」目前沒有在記錄，所以新的複製、移動、重新命名和刪除不會出現在這裡，也無法還原。到「設定」重新開啟，就能再次記錄。",
+  "@operationLog.dialog.recordingOff": {
+    "sourceHash": "0519736"
+  },
   "operationLog.dialog.itemsError": "無法載入這些項目。",
   "@operationLog.dialog.itemsError": {
     "sourceHash": "596819e"

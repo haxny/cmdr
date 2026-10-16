@@ -1922,9 +1922,17 @@
   "@settings.navigationAndFileOps.card.operationLog": {
     "sourceHash": "2c97965"
   },
-  "settings.operationLog.intro": "Cmdr записывает файловые операции, чтобы вы могли просматривать историю и отменять действия. Выберите срок хранения журнала и допустимое место на диске.",
+  "settings.operationLog.intro": "Cmdr записывает файловые операции, чтобы вы могли просматривать историю и отменять действия. Выберите, записывать ли их, сколько хранить журнал и сколько места на диске он может занимать.",
   "@settings.operationLog.intro": {
-    "sourceHash": "0c62f4f"
+    "sourceHash": "2185fcd"
+  },
+  "settings.operationLog.enabled.label": "Записывать файловые операции",
+  "@settings.operationLog.enabled.label": {
+    "sourceHash": "edfee55"
+  },
+  "settings.operationLog.enabled.description": "Нужно для отмены. Пока этот параметр выключен, Cmdr не записывает новые операции копирования, перемещения, переименования и удаления, поэтому их нельзя отменить. Уже записанная история сохраняется, и то, что в ней есть, по-прежнему можно отменить.",
+  "@settings.operationLog.enabled.description": {
+    "sourceHash": "78571fc"
   },
   "settings.operationLog.maxAge.label": "Хранить историю",
   "@settings.operationLog.maxAge.label": {

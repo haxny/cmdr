@@ -2505,6 +2505,13 @@
     "forms": "reclaim {size} → {size} freigeben; This frees {size} → Das gibt {size} frei",
     "sources": "macOS pile (Speicherplatz freigeben)"
   },
+  "record-operations": {
+    "accept": ["zeichn"],
+    "chosen": "aufzeichnen",
+    "confidence": "tentative",
+    "forms": "label Dateivorgänge aufzeichnen; prose zeichnet … auf; the log as a feature still protokolliert (settings.operationLog.intro)",
+    "sources": "catalog (settings.search.recentSearches.maxCount.description aufgezeichnet); macOS has no data-recording sense (AppKit's only Record strings are media start/stop recording)"
+  },
   "reconnect": {
     "accept": [
       "wiederhergestellt",
@@ -3302,7 +3309,7 @@
     "sources": "macOS de; catalog (Klicke unten auf die Taste „+“ …)"
   },
   "undo": {
-    "accept": ["widerrufen", "rückgängig", "zurückgesetzt", "zurückgelegt", "zurückzulegen", "zurückn"],
+    "accept": ["widerrufen", "rückgängig", "zurückgesetzt", "zurücksetz", "zurückgelegt", "zurückzulegen", "zurückn"],
     "avoid": [
       {
         "form": "Rückgängig",

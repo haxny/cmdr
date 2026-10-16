@@ -584,6 +584,10 @@
   "@askCmdr.renameUndo.swapsSkipped": {
     "sourceHash": "90e8dfc"
   },
+  "askCmdr.renameUndo.notRecorded": "操作日志已关闭，所以没法恢复原来的名称。",
+  "@askCmdr.renameUndo.notRecorded": {
+    "sourceHash": "eb01aff"
+  },
   "askCmdr.renameUndo.undo": "撤销",
   "@askCmdr.renameUndo.undo": {
     "sourceHash": "a8283ad"

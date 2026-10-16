@@ -584,6 +584,10 @@
   "@askCmdr.renameUndo.swapsSkipped": {
     "sourceHash": "90e8dfc"
   },
+  "askCmdr.renameUndo.notRecorded": "操作記錄已關閉，所以沒辦法把名稱改回去。",
+  "@askCmdr.renameUndo.notRecorded": {
+    "sourceHash": "eb01aff"
+  },
   "askCmdr.renameUndo.undo": "還原",
   "@askCmdr.renameUndo.undo": {
     "sourceHash": "a8283ad"

@@ -585,6 +585,10 @@
   "@askCmdr.renameUndo.swapsSkipped": {
     "sourceHash": "90e8dfc"
   },
+  "askCmdr.renameUndo.notRecorded": "A műveletnapló ki van kapcsolva, így ezt nem lehet visszavonni.",
+  "@askCmdr.renameUndo.notRecorded": {
+    "sourceHash": "eb01aff"
+  },
   "askCmdr.renameUndo.undo": "Visszavonás",
   "@askCmdr.renameUndo.undo": {
     "sourceHash": "a8283ad"

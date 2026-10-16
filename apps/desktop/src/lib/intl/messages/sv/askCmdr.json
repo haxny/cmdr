@@ -585,6 +585,10 @@
   "@askCmdr.renameUndo.swapsSkipped": {
     "sourceHash": "90e8dfc"
   },
+  "askCmdr.renameUndo.notRecorded": "Åtgärdsloggen är avstängd, så det här går inte att ångra.",
+  "@askCmdr.renameUndo.notRecorded": {
+    "sourceHash": "eb01aff"
+  },
   "askCmdr.renameUndo.undo": "Ångra",
   "@askCmdr.renameUndo.undo": {
     "sourceHash": "a8283ad"

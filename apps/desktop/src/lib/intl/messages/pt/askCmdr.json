@@ -587,6 +587,10 @@
   "@askCmdr.renameUndo.swapsSkipped": {
     "sourceHash": "90e8dfc"
   },
+  "askCmdr.renameUndo.notRecorded": "O Registro de operações está desativado, então não dá para desfazer isso.",
+  "@askCmdr.renameUndo.notRecorded": {
+    "sourceHash": "eb01aff"
+  },
   "askCmdr.renameUndo.undo": "Desfazer",
   "@askCmdr.renameUndo.undo": {
     "sourceHash": "a8283ad"

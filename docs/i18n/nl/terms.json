@@ -2449,6 +2449,13 @@
     "confidence": "high",
     "sources": "standard NL"
   },
+  "record-operations": {
+    "accept": ["houdt", "bij te houden", "bijgehouden"],
+    "chosen": "bijhouden",
+    "confidence": "tentative",
+    "forms": "label Bestandsbewerkingen bijhouden; separable in prose (houdt Cmdr niet bij)",
+    "sources": "catalog (settings.operationLog.intro houdt … bij); macOS has no data-recording sense (AppKit's only Record strings are media start/stop recording)"
+  },
   "reconnect": {
     "accept": ["Opnieuw verbinden", "opnieuw verbinding", "Verbind opnieuw", "verbinding", "opnieuw"],
     "chosen": "opnieuw verbinden",

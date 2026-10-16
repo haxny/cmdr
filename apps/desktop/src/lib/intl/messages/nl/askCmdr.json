@@ -588,6 +588,10 @@
   "@askCmdr.renameUndo.swapsSkipped": {
     "sourceHash": "90e8dfc"
   },
+  "askCmdr.renameUndo.notRecorded": "Het bewerkingenlogboek staat uit, dus dit kun je niet ongedaan maken.",
+  "@askCmdr.renameUndo.notRecorded": {
+    "sourceHash": "eb01aff"
+  },
   "askCmdr.renameUndo.undo": "Ongedaan maken",
   "@askCmdr.renameUndo.undo": {
     "sourceHash": "a8283ad"

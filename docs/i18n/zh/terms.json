@@ -2511,6 +2511,12 @@
     "confidence": "high",
     "sources": "standard"
   },
+  "record-operations": {
+    "chosen": "记录",
+    "confidence": "tentative",
+    "forms": "label 记录文件操作; not recording → 没有在记录",
+    "sources": "catalog (settings.operationLog.intro 记录, settings.search.recentSearches.maxCount.description 不再记录); macOS has no data-recording sense (AppKit's only Record strings are media start/stop recording)"
+  },
   "reconnect": {
     "accept": ["重新连", "重连"],
     "chosen": "重新连接",
@@ -3330,6 +3336,9 @@
   "undo": {
     "chosen": "撤销",
     "confidence": "high",
+    "exceptions": {
+      "askCmdr.renameUndo.notRecorded": "Undoing an Ask Cmdr rename run puts the old names back, which this catalog says as 恢复…原来的名称 (style.md digest)."
+    },
     "forms": "the toast button 撤销; undoing one file 撤销…的改动",
     "note": "撤销 is a real undo; rolling back a whole operation is 回滚.",
     "sources": "macOS AppKit"

@@ -2870,6 +2870,12 @@
     "confidence": "high",
     "sources": "catalog"
   },
+  "record-operations": {
+    "chosen": "rögzít",
+    "confidence": "tentative",
+    "forms": "label Fájlműveletek rögzítése; the log itself naplóz (settings.operationLog.intro)",
+    "sources": "catalog (settings.search.recentSearches.maxCount.description rögzül); macOS has no data-recording sense (AppKit's only Record strings are media start/stop recording)"
+  },
   "reconnect": {
     "chosen": "újracsatlakozás",
     "accept": ["újracsatlakoz", "újra csatlakoz", "csatlakoztasd újra", "csatlakoztass újra"],
@@ -3690,7 +3696,7 @@
   },
   "undo": {
     "chosen": "visszavonás",
-    "accept": ["visszavon", "visszaállít", "visszagörget", "vonható vissza", "vissza tudod von"],
+    "accept": ["visszavon", "visszaállít", "visszagörget", "vonható vissza", "vonhatók vissza", "vissza tudod von"],
     "forms": "the button → Visszavonás; This can't be undone → Ezt nem lehet visszavonni; Undo all N → Az összes {csomag} visszavonása ({countText})",
     "confidence": "high",
     "sources": "macOS Finder (ME13 Visszavonás, Ezt a műveletet nem vonhatja vissza); catalog (askCmdr.renameUndo.undo)"

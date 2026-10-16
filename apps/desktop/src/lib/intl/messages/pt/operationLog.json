@@ -15,6 +15,10 @@
   "@operationLog.dialog.empty": {
     "sourceHash": "2dea414"
   },
+  "operationLog.dialog.recordingOff": "O Registro de operações não está registrando nada, então novas cópias, movimentações, renomeações e apagamentos não aparecem aqui e não podem ser desfeitos. Ative-o de novo nos Ajustes para voltar a registrá-los.",
+  "@operationLog.dialog.recordingOff": {
+    "sourceHash": "0519736"
+  },
   "operationLog.dialog.itemsError": "Não foi possível carregar estes itens.",
   "@operationLog.dialog.itemsError": {
     "sourceHash": "596819e"

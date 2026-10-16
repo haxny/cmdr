@@ -2536,6 +2536,12 @@
     "match": ["recommended"],
     "sense": "The suggested option in a choice."
   },
+  "record-operations": {
+    "distinct": ["operation-log", "log"],
+    "en": "record (file operations)",
+    "match": ["record file operations", "whether to record", "isn't recording", "doesn't record new"],
+    "sense": "The operation log's on/off switch and the prose around it: Cmdr keeping, or not keeping, a record of each file operation so it can be reviewed and undone."
+  },
   "reconnect": {
     "distinct": ["connect"],
     "en": "reconnect",

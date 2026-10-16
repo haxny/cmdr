@@ -2316,6 +2316,13 @@
     "confidence": "high",
     "sources": "standard"
   },
+  "record-operations": {
+    "accept": ["registr"],
+    "chosen": "registrar",
+    "confidence": "tentative",
+    "forms": "label Registrar operaciones de archivos; the feature stays el registro de operaciones",
+    "sources": "catalog (settings.operationLog.intro registra, settings.search.recentSearches.maxCount.description se registran); macOS has no data-recording sense (AppKit's only Record strings are media start/stop recording)"
+  },
   "reconnect": {
     "chosen": "reconectar",
     "accept": [

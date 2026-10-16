@@ -1933,9 +1933,17 @@
   "@settings.navigationAndFileOps.card.operationLog": {
     "sourceHash": "2c97965"
   },
-  "settings.operationLog.intro": "Cmdr protokolliert deine Dateivorgänge, damit du deinen Verlauf ansehen und Aktionen rückgängig machen kannst. Lege fest, wie lange das Protokoll aufbewahrt wird und wie viel Speicherplatz es belegen darf.",
+  "settings.operationLog.intro": "Cmdr protokolliert deine Dateivorgänge, damit du deinen Verlauf ansehen und Aktionen rückgängig machen kannst. Lege fest, ob sie aufgezeichnet werden, wie lange das Protokoll aufbewahrt wird und wie viel Speicherplatz es belegen darf.",
   "@settings.operationLog.intro": {
-    "sourceHash": "0c62f4f"
+    "sourceHash": "2185fcd"
+  },
+  "settings.operationLog.enabled.label": "Dateivorgänge aufzeichnen",
+  "@settings.operationLog.enabled.label": {
+    "sourceHash": "edfee55"
+  },
+  "settings.operationLog.enabled.description": "Wird zum Rückgängigmachen gebraucht. Solange das aus ist, zeichnet Cmdr nicht auf, was du neu kopierst, bewegst, umbenennst oder löschst, und du kannst es nicht rückgängig machen. Dein bisheriger Verlauf bleibt erhalten, und was darin steht, kannst du weiterhin rückgängig machen.",
+  "@settings.operationLog.enabled.description": {
+    "sourceHash": "78571fc"
   },
   "settings.operationLog.maxAge.label": "Verlauf aufbewahren für",
   "@settings.operationLog.maxAge.label": {

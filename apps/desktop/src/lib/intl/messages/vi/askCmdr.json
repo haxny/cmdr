@@ -585,6 +585,10 @@
   "@askCmdr.renameUndo.swapsSkipped": {
     "sourceHash": "90e8dfc"
   },
+  "askCmdr.renameUndo.notRecorded": "Nhật ký thao tác đang tắt, nên không thể hoàn tác việc này.",
+  "@askCmdr.renameUndo.notRecorded": {
+    "sourceHash": "eb01aff"
+  },
   "askCmdr.renameUndo.undo": "Hoàn tác",
   "@askCmdr.renameUndo.undo": {
     "sourceHash": "a8283ad"

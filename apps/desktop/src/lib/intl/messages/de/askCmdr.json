@@ -586,6 +586,10 @@
   "@askCmdr.renameUndo.swapsSkipped": {
     "sourceHash": "90e8dfc"
   },
+  "askCmdr.renameUndo.notRecorded": "Das Vorgangsprotokoll ist aus, daher lässt sich das nicht zurücksetzen.",
+  "@askCmdr.renameUndo.notRecorded": {
+    "sourceHash": "eb01aff"
+  },
   "askCmdr.renameUndo.undo": "Widerrufen",
   "@askCmdr.renameUndo.undo": {
     "sourceHash": "a8283ad"

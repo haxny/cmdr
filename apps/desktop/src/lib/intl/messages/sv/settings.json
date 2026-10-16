@@ -1933,9 +1933,17 @@
   "@settings.navigationAndFileOps.card.operationLog": {
     "sourceHash": "2c97965"
   },
-  "settings.operationLog.intro": "Cmdr loggar dina filåtgärder så att du kan gå igenom din historik och ångra åtgärder. Välj hur länge loggen sparas och hur mycket diskutrymme den får använda.",
+  "settings.operationLog.intro": "Cmdr loggar dina filåtgärder så att du kan gå igenom din historik och ångra åtgärder. Välj om de ska loggas, hur länge loggen sparas och hur mycket diskutrymme den får använda.",
   "@settings.operationLog.intro": {
-    "sourceHash": "0c62f4f"
+    "sourceHash": "2185fcd"
+  },
+  "settings.operationLog.enabled.label": "Logga filåtgärder",
+  "@settings.operationLog.enabled.label": {
+    "sourceHash": "edfee55"
+  },
+  "settings.operationLog.enabled.description": "Behövs för att kunna ångra. När det här är avstängt loggar Cmdr inte nya kopieringar, flyttar, namnbyten eller raderingar, så du kan inte ångra dem. Din befintliga historik finns kvar, och det som finns i den kan du fortfarande ångra.",
+  "@settings.operationLog.enabled.description": {
+    "sourceHash": "78571fc"
   },
   "settings.operationLog.maxAge.label": "Behåll historik i",
   "@settings.operationLog.maxAge.label": {

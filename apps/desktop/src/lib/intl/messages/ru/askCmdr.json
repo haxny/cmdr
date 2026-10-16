@@ -584,6 +584,10 @@
   "@askCmdr.renameUndo.swapsSkipped": {
     "sourceHash": "90e8dfc"
   },
+  "askCmdr.renameUndo.notRecorded": "Журнал операций выключен, поэтому это нельзя отменить.",
+  "@askCmdr.renameUndo.notRecorded": {
+    "sourceHash": "eb01aff"
+  },
   "askCmdr.renameUndo.undo": "Отменить",
   "@askCmdr.renameUndo.undo": {
     "sourceHash": "a8283ad"

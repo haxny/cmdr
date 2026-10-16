@@ -1924,9 +1924,17 @@
   "@settings.navigationAndFileOps.card.operationLog": {
     "sourceHash": "2c97965"
   },
-  "settings.operationLog.intro": "Cmdr 会记录你的文件操作，方便你查看历史并撤销操作。请选择日志的保留时长以及可占用的磁盘空间。",
+  "settings.operationLog.intro": "Cmdr 会记录你的文件操作，方便你查看历史并撤销操作。请选择是否记录、日志的保留时长以及可占用的磁盘空间。",
   "@settings.operationLog.intro": {
-    "sourceHash": "0c62f4f"
+    "sourceHash": "2185fcd"
+  },
+  "settings.operationLog.enabled.label": "记录文件操作",
+  "@settings.operationLog.enabled.label": {
+    "sourceHash": "edfee55"
+  },
+  "settings.operationLog.enabled.description": "撤销功能需要它。关闭期间，Cmdr 不会记录新的拷贝、移动、重命名或删除，因此你无法撤销它们。已有的历史记录会保留，其中的操作仍然可以撤销。",
+  "@settings.operationLog.enabled.description": {
+    "sourceHash": "78571fc"
   },
   "settings.operationLog.maxAge.label": "保留历史记录时长",
   "@settings.operationLog.maxAge.label": {

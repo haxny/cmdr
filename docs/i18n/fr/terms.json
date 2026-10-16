@@ -2448,6 +2448,13 @@
     "confidence": "high",
     "sources": "standard FR"
   },
+  "record-operations": {
+    "accept": ["enregistr"],
+    "chosen": "enregistrer",
+    "confidence": "tentative",
+    "forms": "label Enregistrer les opérations sur les fichiers",
+    "sources": "catalog (settings.operationLog.intro enregistre, settings.search.recentSearches.maxCount.description enregistrée); macOS has no data-recording sense (AppKit's only Record strings are media start/stop recording)"
+  },
   "reconnect": {
     "accept": ["reconnecte", "reconnexion"],
     "chosen": "se reconnecter",

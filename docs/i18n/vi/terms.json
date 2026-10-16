@@ -2297,6 +2297,13 @@
     "confidence": "high",
     "sources": "catalog"
   },
+  "record-operations": {
+    "accept": ["ghi"],
+    "chosen": "ghi lại",
+    "confidence": "tentative",
+    "forms": "label Ghi lại thao tác tệp",
+    "sources": "catalog (settings.operationLog.intro ghi lại); macOS has no data-recording sense (AppKit's only Record strings are media start/stop recording)"
+  },
   "reconnect": {
     "chosen": "kết nối lại",
     "confidence": "high",

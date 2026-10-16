@@ -395,3 +395,10 @@ rule into `translation-principles.md` or `translator-instructions.md`), then del
 - `settings.dataWipe.description` reads as an imperative ("Delete everything…") but describes what the button does; say
   which in the description. `.stays`: say whether "the privacy policy" is a link, and that "Cmdr's servers" are Cmdr's
   own online servers, not the user's. `.refused.interrupted`: say whether "Try again?" is a button. (ru, hu, zh, nl)
+- `operationLog.dialog.recordingOff`: its `screenshotNote` says the string belongs to "loading, empty, or a load error",
+  but it's a notice above the list in every state. Say where it sits, or capture the dialog with recording off. (all)
+- `settings.operationLog.enabled.description`: "Undo needs this." is a bare fragment whose "this" is the switch, and it
+  reads as if undo stops entirely, which the last sentence then walks back. Consider "Turn this off and new operations
+  can't be undone." Locales rendered it as "needed for undo". (de, fr, nl, pt, ru, sv)
+- No concept for recording file operations (the new switch, `settings.operationLog.intro`): added `record-operations`
+  with `tentative` rulings, since macOS has no data-recording sense to anchor them. (all)

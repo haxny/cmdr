@@ -15,6 +15,10 @@
   "@operationLog.dialog.empty": {
     "sourceHash": "2dea414"
   },
+  "operationLog.dialog.recordingOff": "L’historique des opérations n’enregistre rien en ce moment : les copies, déplacements, renommages et suppressions effectués depuis n’apparaissent pas ici et ne peuvent pas être annulés. Réactivez-le dans les Réglages pour les enregistrer à nouveau.",
+  "@operationLog.dialog.recordingOff": {
+    "sourceHash": "0519736"
+  },
   "operationLog.dialog.itemsError": "Impossible de charger ces éléments.",
   "@operationLog.dialog.itemsError": {
     "sourceHash": "596819e"

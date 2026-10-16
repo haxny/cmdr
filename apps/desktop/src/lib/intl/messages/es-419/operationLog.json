@@ -1,4 +1,8 @@
 {
+  "operationLog.dialog.recordingOff": "El registro de operaciones está desactivado, así que las nuevas copias, movimientos, cambios de nombre y eliminaciones no aparecen aquí y no se pueden deshacer. Vuelve a activarlo en Configuración para que se registren de nuevo.",
+  "@operationLog.dialog.recordingOff": {
+    "sourceHash": "5e268ed"
+  },
   "operationLog.dialog.loadError": "No se pudo cargar tu historial de operaciones. Inténtalo de nuevo en un momento.",
   "@operationLog.dialog.loadError": {
     "sourceHash": "e8f023d"

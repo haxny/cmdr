@@ -586,6 +586,10 @@
   "@askCmdr.renameUndo.swapsSkipped": {
     "sourceHash": "90e8dfc"
   },
+  "askCmdr.renameUndo.notRecorded": "L’historique des opérations est désactivé : les anciens noms ne peuvent donc pas être restaurés.",
+  "@askCmdr.renameUndo.notRecorded": {
+    "sourceHash": "eb01aff"
+  },
   "askCmdr.renameUndo.undo": "Annuler",
   "@askCmdr.renameUndo.undo": {
     "sourceHash": "a8283ad"

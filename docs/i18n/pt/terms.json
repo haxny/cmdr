@@ -2273,6 +2273,13 @@
     "confidence": "high",
     "sources": "MS terminology pt-BR"
   },
+  "record-operations": {
+    "accept": ["registr"],
+    "chosen": "Registrar",
+    "confidence": "tentative",
+    "forms": "label Registrar operações de arquivo",
+    "sources": "catalog (settings.operationLog.intro registra, settings.search.recentSearches.maxCount.description registrada); macOS has no data-recording sense (AppKit's only Record strings are media start/stop recording)"
+  },
   "reconnect": {
     "chosen": "reconectar",
     "accept": ["reconect", "reconexão"],

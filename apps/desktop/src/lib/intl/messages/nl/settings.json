@@ -1934,9 +1934,17 @@
   "@settings.navigationAndFileOps.card.operationLog": {
     "sourceHash": "2c97965"
   },
-  "settings.operationLog.intro": "Cmdr houdt je bestandsbewerkingen bij, zodat je je geschiedenis kunt bekijken en acties ongedaan kunt maken. Kies hoe lang het logboek bewaard blijft en hoeveel schijfruimte het mag gebruiken.",
+  "settings.operationLog.intro": "Cmdr houdt je bestandsbewerkingen bij, zodat je je geschiedenis kunt bekijken en acties ongedaan kunt maken. Kies of ze worden bijgehouden, hoe lang het logboek bewaard blijft en hoeveel schijfruimte het mag gebruiken.",
   "@settings.operationLog.intro": {
-    "sourceHash": "0c62f4f"
+    "sourceHash": "2185fcd"
+  },
+  "settings.operationLog.enabled.label": "Bestandsbewerkingen bijhouden",
+  "@settings.operationLog.enabled.label": {
+    "sourceHash": "edfee55"
+  },
+  "settings.operationLog.enabled.description": "Nodig voor ongedaan maken. Zolang dit uit staat, houdt Cmdr niet bij wat je daarna kopieert, verplaatst of verwijdert, of welke namen je wijzigt, dus dat kun je niet ongedaan maken. Je bestaande geschiedenis blijft bewaard en wat erin staat, kun je nog steeds ongedaan maken.",
+  "@settings.operationLog.enabled.description": {
+    "sourceHash": "78571fc"
   },
   "settings.operationLog.maxAge.label": "Geschiedenis bewaren gedurende",
   "@settings.operationLog.maxAge.label": {

@@ -2341,6 +2341,13 @@
     "confidence": "high",
     "sources": "catalog"
   },
+  "record-operations": {
+    "accept": ["logg"],
+    "chosen": "logga",
+    "confidence": "tentative",
+    "forms": "label Logga filåtgärder; the log switched off → åtgärdsloggen är avstängd",
+    "sources": "catalog (settings.operationLog.intro loggar); macOS has no data-recording sense (AppKit's only Record strings are media start/stop recording)"
+  },
   "reconnect": {
     "accept": ["anslut"],
     "chosen": "återanslut",

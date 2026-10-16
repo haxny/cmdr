@@ -1924,9 +1924,17 @@
   "@settings.navigationAndFileOps.card.operationLog": {
     "sourceHash": "2c97965"
   },
-  "settings.operationLog.intro": "Cmdr ghi lại các thao tác tệp của bạn để bạn có thể xem lại lịch sử và hoàn tác các thao tác. Chọn thời gian giữ nhật ký và dung lượng đĩa nó có thể dùng.",
+  "settings.operationLog.intro": "Cmdr ghi lại các thao tác tệp của bạn để bạn có thể xem lại lịch sử và hoàn tác các thao tác. Chọn có ghi lại hay không, thời gian giữ nhật ký và dung lượng đĩa nó có thể dùng.",
   "@settings.operationLog.intro": {
-    "sourceHash": "0c62f4f"
+    "sourceHash": "2185fcd"
+  },
+  "settings.operationLog.enabled.label": "Ghi lại thao tác tệp",
+  "@settings.operationLog.enabled.label": {
+    "sourceHash": "edfee55"
+  },
+  "settings.operationLog.enabled.description": "Cần mục này để hoàn tác. Khi tắt, Cmdr không ghi lại các lần sao chép, di chuyển, đổi tên hay xóa mới, nên bạn không thể hoàn tác chúng. Lịch sử hiện có vẫn được giữ, và bạn vẫn có thể hoàn tác những gì có trong đó.",
+  "@settings.operationLog.enabled.description": {
+    "sourceHash": "78571fc"
   },
   "settings.operationLog.maxAge.label": "Giữ lịch sử trong",
   "@settings.operationLog.maxAge.label": {

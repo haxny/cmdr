@@ -3806,6 +3806,13 @@
     "confidence": "high",
     "sources": "macOS live «(Recommended)» → «(рекомендуется)», «Auto (Recommended)» → «Автоматически (рекомендуется)», 6 occurrences of the parenthetical"
   },
+  "record-operations": {
+    "accept": ["запис"],
+    "chosen": "Записывать",
+    "confidence": "tentative",
+    "forms": "label Записывать файловые операции (imperfective: a standing behavior); recording as a noun → запись",
+    "sources": "catalog (settings.operationLog.intro записывает); macOS has no data-recording sense (AppKit's only Record strings are media start/stop recording)"
+  },
   "reconnect": {
     "chosen": "подключиться снова",
     "accept": ["снова", "повторн", "переподключ", "восстанов"],

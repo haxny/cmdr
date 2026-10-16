@@ -1924,9 +1924,17 @@
   "@settings.navigationAndFileOps.card.operationLog": {
     "sourceHash": "2c97965"
   },
-  "settings.operationLog.intro": "Cmdr 會記錄你的檔案操作，方便你回顧歷史並還原動作。請選擇記錄要保留多久，以及可以佔用多少磁碟空間。",
+  "settings.operationLog.intro": "Cmdr 會記錄你的檔案操作，方便你回顧歷史並還原動作。請選擇要不要記錄、記錄保留多久，以及可以佔用多少磁碟空間。",
   "@settings.operationLog.intro": {
-    "sourceHash": "0c62f4f"
+    "sourceHash": "2185fcd"
+  },
+  "settings.operationLog.enabled.label": "記錄檔案操作",
+  "@settings.operationLog.enabled.label": {
+    "sourceHash": "edfee55"
+  },
+  "settings.operationLog.enabled.description": "還原需要這項設定。關閉時，Cmdr 不會記錄新的複製、移動、重新命名或刪除，所以你無法還原它們。現有的歷史記錄會保留，裡面的操作仍然可以還原。",
+  "@settings.operationLog.enabled.description": {
+    "sourceHash": "78571fc"
   },
   "settings.operationLog.maxAge.label": "保留歷史記錄",
   "@settings.operationLog.maxAge.label": {
