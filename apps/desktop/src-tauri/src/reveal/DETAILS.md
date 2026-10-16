@@ -72,16 +72,21 @@ All of this is `delivery.rs`, which is macOS-only like the rest of the mechanism
 
 `app_lifecycle.rs`'s `RunEvent::Opened` arm hands the URLs to `on_urls_opened`. From there:
 
-1. Keep the `file://` URLs, drop everything else.
+1. `requests_from_urls` sorts them into `RevealRequest`s: every `file://` URL into one Finder request (focused pane,
+   current tab), every `cmdr-cli://open` URL into a terminal request of its own, parsed and validated by
+   `crate::cli::open_url` (its target pane and new-tab flag ride along). Anything else, and any invalid terminal URL,
+   is dropped with a log line. The terminal sender is `apps/desktop/src-tauri/src/cli/DETAILS.md`.
 2. Raise the main window (`unminimize` → `show` → `set_focus`), the same three calls the go-to-latest-download hotkey
    makes. The reveal was fired from another app, so without the raise the result stays hidden behind it. On a cold
    launch there is no window yet and this does nothing, which is correct: the window is on its way up anyway.
-3. Park the paths in `PendingReveals`, and deliver them right away if the frontend has drained at least once.
-4. `plan_reveal` decides the pane move, then `crate::mcp::go_to_in_focused_pane` makes it.
-5. On success, `RevealDelivered` goes out. **Decision: after the move, ❌ never before it.** The frontend spends a
-   once-ever notice on the first one it sees (`apps/desktop/src/lib/reveal/DETAILS.md`), and a reveal onto a dead mount
-   or an unreadable path must not be what spends it. It carries no payload: the paths are already crossing over
-   `mcp-nav-to-path`, and a second copy would be a second thing that can disagree.
+3. Park the requests in `PendingReveals`, and deliver them right away if the frontend has drained at least once.
+   Delivery is one task per batch, moving the pane request by request, so two can't race for the same pane.
+4. `plan_reveal` decides the pane move, then `crate::mcp::go_to_in_pane` makes it with the request's `GoToTarget`.
+5. On success, and only for a Finder request, `RevealDelivered` goes out. **Decision: after the move, ❌ never before
+   it, and ❌ never for a terminal open.** The frontend spends a once-ever "Show in Finder now lands here" notice on the
+   first one it sees (`apps/desktop/src/lib/reveal/DETAILS.md`); a reveal onto a dead mount, an unreadable path, or a
+   `cmdr` typed in a terminal (which says nothing about Finder) must not be what spends it. It carries no payload: the
+   paths are already crossing over `mcp-nav-to-path`, and a second copy would be a second thing that can disagree.
 
 Verified end to end on macOS 26.6 (bundled debug build, `open -R`, 2026-09-09): cold launch with a file, already
 running with a file in another directory, already running with a folder, and two siblings at once. `open -R` with
@@ -103,8 +108,10 @@ where `is_dir` blocks for minutes, and a reveal that quietly does nothing beats 
 
 ### Buffering
 
-`PendingReveals` is a `Vec` plus a `frontend_ready` flag, not an `Option`: two reveals can land back to back and the
-second must not erase the first. Nothing is delivered until the frontend calls `drain_pending_reveals`, because the
+`PendingReveals` is a `Vec<RevealRequest>` plus a `frontend_ready` flag, not an `Option`: two reveals can land back to
+back and the second must not erase the first. Back-to-back Finder requests MERGE into one (`open -R a b` sends one event
+per path, and on a cold launch they must still become one move with both selected); terminal requests never merge,
+since each carries its own pane and tab. Nothing is delivered until the frontend calls `drain_pending_reveals`, because the
 delivery rides `mcp-nav-to-path` and an emit into a window with no listener is simply lost.
 
 This is what carries a cold-launch reveal across the ~1 s between the event arriving and the frontend being able to act
@@ -121,19 +128,25 @@ not await the move: the frontend that has to answer `mcp-nav-to-path` is the sam
 
 ## Where the pane primitive lives
 
-`go_to_in_focused_pane` sits in `mcp/executor/nav.rs` and is re-exported from `mcp` as a named seam. Two callers: the
-`go_to_latest_download` MCP tool, which reaches `executor::nav` directly from inside the module, and this one, which is
-the seam's only user. That's why the re-export itself carries a `#[cfg(target_os = "macos")]`: without it the export is
-dead on Linux and `-D unused` fails the build.
+`go_to_in_pane` sits in `mcp/executor/nav.rs` and is re-exported from `mcp` (with `GoToTarget` and `PaneChoice`) as a
+named seam. Two callers: the `go_to_latest_download` MCP tool (`GoToTarget::FOCUSED`), which reaches `executor::nav`
+directly from inside the module, and this one, which is the seam's only user. That's why the re-export itself carries a
+`#[cfg(target_os = "macos")]`: without it the export is dead on Linux and `-D unused` fails the build. For the same
+reason `PaneChoice` allows `dead_code` off macOS: only the terminal command builds `Left` / `Right`.
 
-**Decision: it lives with the MCP executor rather than here or in a neutral module.** "Take the focused pane there and
-point at that" is spoken entirely in the `mcp-*` frontend protocol (`mcp-nav-to-path`, `mcp-move-cursor`,
+A `GoToTarget` names the pane (`Focused`, `Left`, `Right`; an explicit one also takes focus, like `nav_to_path`) and
+whether to open a new tab there first, through the `tab` tool's own `new`. A new tab is the frontend's clone trick: the
+clone keeps the old location to the LEFT and the active tab moves on, so the navigation lands in the active tab. A pane
+at its tab limit refuses, and the move then happens in the current tab, logged.
+
+**Decision: it lives with the MCP executor rather than here or in a neutral module.** "Take a pane there and point at
+that" is spoken entirely in the `mcp-*` frontend protocol (`mcp-tab`, `mcp-nav-to-path`, `mcp-move-cursor`,
 `mcp-select-names`) and needs the round-trip machinery that only exists inside `mcp::executor` — the request-id
 correlation, the typed `NavAck` landing check, the ack budgets. Moving it out would mean either widening `executor`'s
 surface or duplicating that machinery. The name `mcp` is about the protocol these events are named for, not about who
 is allowed to speak it; an OS reveal makes the same move a user or an agent does.
 
-Ordering inside it is load-bearing: navigate, move the cursor, THEN multi-select. The frontend's cursor move resets the
+Ordering inside it is load-bearing: new tab, navigate, move the cursor, THEN multi-select. The frontend's cursor move resets the
 selection, so selecting first would lose it.
 
 ## Registration

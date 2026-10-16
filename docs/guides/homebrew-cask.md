@@ -24,9 +24,9 @@ tap, trust, install, and a follow-up `brew upgrade` all succeeded, 2026-10-16.)
   `brew install` auto-updates Homebrew before tapping, which moves those users past it.
 
 The cask file in this repo, `apps/desktop/packaging/homebrew/cmdr.rb`, is the source of truth for the cask's **shape**:
-the `url`, `livecheck`, `depends_on`, `app`, `uninstall`, and `zap` blocks. Release CI rewrites only the tap's `version`
-and `sha256` lines, so a shape edit here reaches users only when you copy the file into the tap in the same effort,
-keeping the tap's `version` and `sha256`. Skipping that once left the tap on a Monterey floor and without the
+the `url`, `livecheck`, `depends_on`, `app`, `binary`, `uninstall`, and `zap` blocks. Release CI rewrites only the tap's
+`version` and `sha256` lines, so a shape edit here reaches users only when you copy the file into the tap in the same
+effort, keeping the tap's `version` and `sha256`. Skipping that once left the tap on a Monterey floor and without the
 `uninstall` block for several releases. Let CI propagate version bumps.
 
 ## Release automation: the tap bump
@@ -85,6 +85,12 @@ This shape also satisfies a future `Homebrew/homebrew-cask` resubmission, so kee
     cases leave the switch off, which the user can turn back on in Settings. A dangling key can't be turned back on by
     anyone, so this is the right way round. `auto_updates true` keeps plain `brew upgrade` out of it entirely.
   - **`must_succeed: false`** so a `defaults` that fails can't abort somebody's uninstall.
+- **`binary` puts the `cmdr` terminal command on PATH**: Homebrew links `<prefix>/bin/cmdr` to the script inside the
+  bundle (`Cmdr.app/Contents/Resources/bin/cmdr`) and removes the link on uninstall. Cmdr's app menu sees the
+  `<prefix>/Caskroom/cmdr` dir next to that link, reads it as Homebrew's, and won't install its own or remove this one
+  (`apps/desktop/src-tauri/src/cli/DETAILS.md` § "The menu item"). ❗ Copy this stanza into the tap only once a release
+  that ships the script is out: against an older bundle, `brew install` fails on the missing link source. The script
+  path is pinned in three places: here, `tauri.conf.json` `bundle.macOS.files`, and `cli::install::BUNDLE_SCRIPT`.
 - **`zap` paths** were verified on a prod machine. `~/Library/HTTPStorages/` is deliberately absent (Cmdr doesn't create
   it).
 

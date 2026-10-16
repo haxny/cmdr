@@ -104,8 +104,25 @@ the `with prompt` sentence makes up for.
 build in `target/` would plant a link that dangles on the next `cargo clean`, and a dev build removing the installed
 copy's link would be reaching into a setup it doesn't own. Such a build still READS the state, so its label is honest.
 
+## Verified end to end
+
+Bundled debug build (`CMDR_INSTANCE_ID=cmdr-cli … pnpm build --debug --bundles app`, id `com.veszelovszki.cmdr-cmdr-cli`),
+driven through a symlink to the bundled script, state read over MCP (`cmdr://state`), macOS 27.0, 2026-10-16:
+
+- Cold launch with a file: the focused pane opened its folder, cursor on the file (name with a space).
+- Cold launch with `--right --new-tab <file>`: the right pane got a new tab there, cursor on the file, focus right.
+- Running, `--right --new-tab <folder>`: new tab in the right pane inside the folder, focus moved right.
+- Running, `--left a b <other-folder>/c`: stderr warned about the stray path; left pane on the folder, `a` and `b`
+  selected, cursor on `a`.
+- Running, no path, `--new-tab`: a new tab in the focused pane on the working folder.
+- The bundled script kept its executable bit, `--version` read the bundle's version through the symlink, and no
+  `behavior.revealActivationNoticeSeen` landed in `settings.json` (the Finder notice wasn't spent).
+- App menu (read via System Events): "Install “cmdr” command" sits under "Onboarding…"; a click on this dev build shows
+  the `notProductionBuild` toast and changes nothing.
+
 ## What's unverified or left out
 
 - Linux: nothing yet. The script and the URL are macOS-shaped (`open -a`, bundles).
 - The admin-prompt path needs a production build in `/Applications` and a human at the password dialog, so it's covered
-  by unit tests over a fake host plus manual QA, not by an automated run.
+  by unit tests over a fake host plus manual QA, not by an automated run. Same for the label flipping to Uninstall or
+  to Homebrew's wording on a real Mac, and the cask's `binary` stanza (it needs a release that ships the script).

@@ -148,6 +148,9 @@ commands, and notable non-obvious placements.
   actually moved a pane, which is what the first-landing notice listens for). Every command wrapper swallows the
   missing-command rejection other platforms give; the two handler wrappers answer `null` then, while a dev or E2E build
   gets a real answer carrying `blockedBy: 'notProductionBuild'`.
+- **`cli-command.ts`**: the `cmdr` terminal command's install link (macOS). `getCliCommandStatus`, `installCliCommand` /
+  `uninstallCliCommand` (each takes the admin prompt's sentence and answers with the outcome plus the state it left).
+  Each swallows the missing-command rejection other platforms give and answers `null`.
 - **`restricted-paths.ts`**: `onRestrictedPathsChanged` over the TCC-restricted-path-set event.
 - **`dialog-events.ts`**: window-management events: `onExecuteCommand` + `emitExecuteCommand` (the unified
   menu/cross-window relay), the MCP `dialog` lifecycle (`on{Open,Focus,Close}Settings` / `…FileViewer` / `…About` /
@@ -215,6 +218,7 @@ commands, and notable non-obvious placements.
 - Downloads watcher (status, go-to-latest, global hotkey) → `downloads.ts`.
 - Native system notifications (send, macOS permission) → `notifications.ts`.
 - "Reveal in Cmdr" (`NSFileViewer` registration, the cold-start drain) → `reveal.ts`.
+- The `cmdr` terminal command's install link → `cli-command.ts`.
 - ⌘G path resolution and recent paths → `go-to-path.ts`.
 - macOS Finder color tags → `tags.ts`.
 - App updater → `updates.ts`.

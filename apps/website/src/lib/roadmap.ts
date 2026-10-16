@@ -712,6 +712,12 @@ export const roadmapSections: RoadmapSection[] = [
             description: 'Support for VoiceOver, "Increase contrast", "Show borders", and full keyboard navi.',
             done: true,
           },
+          {
+            date: '(Oct 16)',
+            title: '"cmdr" in your terminal',
+            description: 'Type "cmdr ." to open the folder you\'re in. Pick a pane or a new tab with a flag.',
+            done: true,
+          },
         ],
       },
     ],
