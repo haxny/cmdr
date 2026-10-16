@@ -39,19 +39,9 @@ A report without a severity score gets one from us, with the
 [CVSS v4.0 calculator](https://www.first.org/cvss/calculator/4.0), and that score sets the fix deadline: critical and
 high within 30 days, the rest within 90.
 
-Once the fix has shipped, we note it in the `### Security` section of the [changelog](CHANGELOG.md) and, with your
-permission, credit you by name.
-
-We also publish a [GitHub security advisory](https://github.com/vdavid/cmdr/security/advisories) and request a CVE ID
-when a flaw meets either of these:
-
-- Someone can exploit it without already running code on the user's Mac, for example through a file, a network server, a
-  web page, or the update channel.
-- It exposes passwords, keys, or user data to someone other than the user.
-
-Fixes that only guard against an attacker who already runs code on the Mac get a changelog note, but no advisory.
-Security problems on Cmdr's servers (for example `api.getcmdr.com`) have nothing for users to update, so they get no
-CVE. If one exposes user data, we tell the people affected whenever it could harm them.
+Once the fix has shipped, we publish a note about it (see
+[How fixed vulnerabilities are published](#how-fixed-vulnerabilities-are-published)) and, with your permission, credit
+you by name.
 
 We ask for **coordinated disclosure**: please give us 90 days from your report, or until a fix has shipped, whichever
 comes first, before you publish details. Cmdr updates itself automatically, so a running copy picks up a fix within
@@ -63,6 +53,32 @@ There's no bug bounty. We can't pay for reports, but we're grateful for them.
 When a flaw is being actively exploited, or something bad happens to Cmdr itself (like a stolen signing key), we follow
 our [security incident procedure](docs/security-incident-procedure.md), which includes reporting to CERT-SE and ENISA
 under the EU Cyber Resilience Act.
+
+## How fixed vulnerabilities are published
+
+Every fixed vulnerability gets a public note once the fix has shipped. Every note says:
+
+- **What the flaw was** and what it let an attacker do.
+- **How severe it is**: its CVSS v4.0 score and rating (low, medium, high, or critical).
+- **What it affects**: the app versions, from the first affected one to the last, or the part of Cmdr's servers.
+- **What to do**: usually "update to version X.Y.Z", which Cmdr does by itself unless updates are turned off. For a flaw
+  on Cmdr's servers, the note says whether users need to do anything, like replacing a key.
+
+Where the note goes:
+
+- **Fixes in the app** go in the `### Security` section of the [changelog](CHANGELOG.md), in the release that fixes
+  them.
+- **A [GitHub security advisory](https://github.com/vdavid/cmdr/security/advisories) with a CVE ID** comes on top when
+  someone can exploit the flaw without already running code on the user's Mac (for example through a file, a network
+  server, a web page, or the update channel), or when it exposes passwords, keys, or user data to someone other than the
+  user. Fixes that only guard against an attacker who already runs code on the Mac get the changelog note alone.
+- **Flaws on Cmdr's servers** (`api.getcmdr.com`, its older alias `license.getcmdr.com`, and `getcmdr.com`, including
+  `latest.json`) are part of Cmdr too, so they get a GitHub security advisory on this repository once fixed. There's no
+  app version to update, so the advisory gets no CVE ID. If the flaw exposed user data, we also tell the people affected
+  directly.
+
+When publishing the details right away would put users at more risk than it protects them, we may hold them back until
+users have had the chance to update.
 
 ## Scope
 

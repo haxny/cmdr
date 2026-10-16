@@ -413,6 +413,10 @@ introduced and fixed inside this release window doesn't qualify. `git cat-file -
 - **Each entry is one sentence**, and the headline IS the entry (no `**Bold title:** Body.`). Most land under 20 words,
   many under 10. Only a tentpole feature bundling many commits (think Linux alpha) runs several lines. Wrote a period
   and kept going? Merge with a colon or cut the rest.
+- **A Security entry that fixes a vulnerability names its severity and the affected versions** after a colon, before the
+  hashes: `Fix a path escape in zip extraction: high (CVSS 8.2), 0.31.0–0.53.0 (b626d7a4b)`. The release it sits in is
+  the remediation, so it needs no "update" clause. Hardening with no flaw behind it (a new check, a backup key) stays a
+  plain entry. The contract is `SECURITY.md` § How fixed vulnerabilities are published.
 - **No trailing benefit clauses**: delete ", so you always know…" and every other ", so [reader benefit]" ending. A
   well-written entry implies the benefit.
 - **No em-dashes**: use parens, commas, colons, or rephrase (en-dashes in ranges are fine). Vary the connector rather
