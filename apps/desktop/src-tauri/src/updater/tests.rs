@@ -434,3 +434,85 @@ async fn a_5xx_maintenance_page_is_refused_not_malformed() {
         "expected a 503 Refused, got {err:?}"
     );
 }
+
+fn offer(state: &UpdateState, version: &str, url: &str) {
+    state.slots().offered = Some(UpdateInfo {
+        version: semver::Version::parse(version).expect("a valid test version"),
+        url: url.to_string(),
+        signature: "not-a-signature".to_string(),
+    });
+}
+
+/// An offered version that didn't carry Cmdr's signature is fetched once a session: the
+/// background loop offering it again doesn't download it again (or tell the person twice), and a
+/// newer release still gets through, so a real fix can arrive (#457, David's call 2026-10-16).
+#[tokio::test]
+async fn a_version_that_failed_its_signature_is_not_fetched_again_this_session() {
+    let server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .respond_with(ResponseTemplate::new(200).set_body_bytes(b"not the real tarball".to_vec()))
+        .expect(1)
+        .mount(&server)
+        .await;
+    let url = format!("{}/Cmdr.app.tar.gz", server.uri());
+    let state = UpdateState::new();
+    let capture = crate::security_log::testing::capture_events();
+
+    offer(&state, "0.53.0", &url);
+    let first = download_verified(&state).await.expect_err("garbage doesn't verify");
+    assert!(
+        matches!(first, UpdateDownloadError::SignatureMismatch { .. }),
+        "{first:?}"
+    );
+
+    offer(&state, "0.53.0", &url);
+    assert_eq!(
+        download_verified(&state).await.expect_err("refused before fetching"),
+        UpdateDownloadError::NotGenuineEarlier
+    );
+    assert_eq!(
+        capture.events(),
+        vec![crate::security_log::SecurityEvent::UpdateSignatureInvalid {
+            version: "0.53.0".into(),
+            check: crate::security_log::SignatureCheck::Minisign,
+        }],
+        "the record and the notice hear it once"
+    );
+
+    offer(&state, "0.53.1", &url);
+    assert_eq!(
+        offer_to_download(&state)
+            .await
+            .expect("a newer release is still offered")
+            .version,
+        semver::Version::new(0, 53, 1)
+    );
+}
+
+/// A bundle refused for its code signature at install is the same: that version isn't fetched
+/// again this session.
+#[tokio::test]
+async fn a_version_refused_for_its_code_signature_is_not_fetched_again_this_session() {
+    let state = UpdateState::new();
+    let version = semver::Version::new(0, 53, 0);
+    note_install_refusal(
+        &state,
+        &version,
+        &UpdateInstallError::UntrustedCodeSignature { detail: "x".into() },
+    );
+    note_install_refusal(
+        &state,
+        &semver::Version::new(0, 53, 1),
+        &UpdateInstallError::Failed { detail: "x".into() },
+    );
+    offer(&state, "0.53.0", "https://example.invalid/Cmdr.app.tar.gz");
+    assert_eq!(
+        offer_to_download(&state).await.expect_err("refused"),
+        UpdateDownloadError::NotGenuineEarlier
+    );
+    offer(&state, "0.53.1", "https://example.invalid/Cmdr.app.tar.gz");
+    assert!(
+        offer_to_download(&state).await.is_ok(),
+        "a broken install isn't a fake one"
+    );
+}

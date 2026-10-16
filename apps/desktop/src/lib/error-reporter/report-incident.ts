@@ -20,6 +20,7 @@ import type {
   ErrorReportEntry,
   ListingErrorReason,
   MutationError,
+  SignatureCheck,
   SlowOperation,
   SlowWaitingOn,
   UpgradeFailure,
@@ -62,6 +63,8 @@ export type ReportIncident =
   | { kind: 'createRefused'; entry: 'folder' | 'file'; refusal: MutationError['type']; reason: string }
   /** A direct SMB connection that didn't come about. */
   | { kind: 'connectionFailed'; reason: UpgradeFailure; text: string }
+  /** An offered update that didn't carry Cmdr's signature, so nothing was installed (`#lib/security-notices`). */
+  | { kind: 'updateNotGenuine'; version: string; check: SignatureCheck }
   | SlowIncident
 
 // `SlowOperation` is the breadcrumb's own copy of `WriteOperationType`; this fails to
@@ -83,6 +86,8 @@ export function reportEntryFor(incident: ReportIncident): ErrorReportEntry {
       return 'createRefusal'
     case 'connectionFailed':
       return 'connectionFailure'
+    case 'updateNotGenuine':
+      return 'updateFailure'
     case 'slow':
       return 'slowOperation'
   }
@@ -158,6 +163,11 @@ export function reportNoteFor(incident: ReportIncident, now: number = Date.now()
         ]
       case 'connectionFailed':
         return [incident.text, reference(`smb/${incident.reason}`)]
+      case 'updateNotGenuine':
+        return [
+          tString('errorReporter.prefill.updateNotGenuine', { version: incident.version }),
+          reference(`update/not_genuine/${incident.check}`),
+        ]
       case 'slow':
         return slowNote(incident, now)
     }

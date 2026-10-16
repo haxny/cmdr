@@ -82,6 +82,12 @@ The organization's `DisableUpdates`, `DisableAutomaticUpdateChecks`, and `MaxUpd
   `Info.plist` names: the manifest isn't signed, so it could offer 0.52.1 under a `"0.52"` ceiling and serve a genuine,
   signed 0.53.0. The code-signature check runs first (§ Code signature), then the rollback check
   (`refuse_unless_newer`), so an older archive is a `Failed`, not a policy refusal.
+- **A version that isn't genuine.** A tarball that fails minisign (`SignatureMismatch`) or a bundle refused for its
+  code signature (`UntrustedCodeSignature`) puts its version in `UpdateSlots::not_genuine` for the session, and
+  `offer_to_download` refuses that version with `NotGenuineEarlier` before fetching, so the background loop can't
+  re-download a fake every run. A newer version still goes through, so a real fix can arrive (David, 2026-10-16). Both
+  refusals reach the security log once (`security_events.rs`), which raises the person's notice
+  (`../security_notices/CLAUDE.md`); the frontend's standing status words all three the same (`notGenuine`).
 - **Already synced.** A build `install_update` already wrote into the bundle (frontend `ready`) applies at the next
   restart whatever the policy says later: the sync is the install.
 - The ceiling compares the release core only (`UpdateCeiling::allows`), so `0.53.0-rc.1` doesn't pass `"0.52"`.

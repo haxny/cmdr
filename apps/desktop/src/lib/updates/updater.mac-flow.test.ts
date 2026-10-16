@@ -10,6 +10,8 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { SecurityNotice } from '#lib/ipc/bindings.js'
+import { UpdateDownloadFailure } from './update-download-failure'
+import { UpdateInstallFailure } from './update-install-failure'
 
 const {
   addToastMock,
@@ -181,6 +183,30 @@ describe('an update found on an install that can’t write its own bundle', () =
       failure: 'install',
       staged_version: 'none',
     })
+  })
+
+  /**
+   * An update that isn't a genuine Cmdr release (#457): the standing status says what the
+   * security notice says, never "try again later", and a repeat of the same version (which the
+   * backend refuses to fetch again) reads the same.
+   */
+  it('says an update without Cmdr’s signature isn’t genuine, for every way it can be refused', async () => {
+    await notifyOnboardingComplete()
+    const refusals = [
+      () =>
+        downloadUpdateMock.mockRejectedValueOnce(new UpdateDownloadFailure({ type: 'signatureMismatch', detail: 'x' })),
+      () => downloadUpdateMock.mockRejectedValueOnce(new UpdateDownloadFailure({ type: 'notGenuineEarlier' })),
+      () =>
+        installUpdateMock.mockRejectedValueOnce(
+          new UpdateInstallFailure({ type: 'untrustedCodeSignature', detail: 'x' }),
+        ),
+    ]
+    for (const refuse of refusals) {
+      checkForUpdateMock.mockResolvedValueOnce(anUpdate)
+      refuse()
+      await checkForUpdates('poll')
+      expect(updateState.failure).toEqual({ phase: 'notGenuine' })
+    }
   })
 
   it('tells a manual check apart from the background loop on an otherwise identical outcome', async () => {

@@ -64,6 +64,8 @@ export function describeUpdateFailure(failure: UpdateFailure): string {
       return tString('updates.failure.download')
     case 'install':
       return tString('updates.failure.install')
+    case 'notGenuine':
+      return tString('updates.failure.notGenuine')
   }
 }
 

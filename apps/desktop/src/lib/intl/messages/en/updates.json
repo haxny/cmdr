@@ -26,6 +26,12 @@
     "screenshot": "settings-updates.png",
     "screenshotNote": "App-update messaging. The status line renders in the Settings > Updates & privacy panel pictured here, and the update toasts appear while that check runs. Version numbers are substituted, not translated."
   },
+  "updates.failure.notGenuine": "Cmdr didn’t install this update: it isn’t a genuine Cmdr release.",
+  "@updates.failure.notGenuine": {
+    "description": "Shown in the update-check toast and in Settings > Updates & privacy when an offered update didn't carry Cmdr's signature, so Cmdr refused it and installed nothing. Serious: it may mean someone is tampering with updates. Must read the same as the title of the security notice for this (securityNotices.updateNotGenuine.title). \"Cmdr\" is the product name. Avoid the words \"error\" and \"failed\".",
+    "screenshot": "settings-updates.png",
+    "screenshotNote": "App-update messaging. The status line renders in the Settings > Updates & privacy panel pictured here, and the update toasts appear while that check runs. Version numbers are substituted, not translated."
+  },
   "updates.toast.ready": "A new version of Cmdr is ready.",
   "@updates.toast.ready": {
     "description": "Headline of the persistent toast that appears once an update has been downloaded and written into the app. It states the situation; the line below it says what happens next. Sentence case.",

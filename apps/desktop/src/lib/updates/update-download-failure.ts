@@ -24,6 +24,7 @@ function downloadDiagnostic(failure: UpdateDownloadError): string {
       return `${failure.type}: ${failure.detail}`
     case 'nothingOffered':
     case 'blockedByPolicy':
+    case 'notGenuineEarlier':
       return failure.type
   }
 }

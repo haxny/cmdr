@@ -16,6 +16,7 @@ describe('reportEntryFor', () => {
       [{ kind: 'listingFailed', reason: 'networkDown', title: 't' }, 'listingFailure'],
       [{ kind: 'createRefused', entry: 'folder', refusal: 'nameEmpty', reason: 'r' }, 'createRefusal'],
       [{ kind: 'connectionFailed', reason: 'unreachable', text: 't' }, 'connectionFailure'],
+      [{ kind: 'updateNotGenuine', version: '0.53.0', check: 'minisign' }, 'updateFailure'],
       [{ kind: 'slow', operation: 'copy', since: NOW, waitingOn: null }, 'slowOperation'],
     ]
     for (const [incident, from] of cases) expect(reportEntryFor(incident)).toBe(from)
@@ -23,6 +24,12 @@ describe('reportEntryFor', () => {
 })
 
 describe('reportNoteFor', () => {
+  it('names an update that wasn’t genuine by its version and which signature didn’t hold (#457)', () => {
+    expect(reportNoteFor({ kind: 'updateNotGenuine', version: '0.53.0', check: 'code_signature' })).toBe(
+      'An update offered as version 0.53.0 didn’t carry Cmdr’s signature, so Cmdr didn’t install it.\nReference: update/not_genuine/code_signature',
+    )
+  })
+
   it('keeps an already-worded message as the whole note', () => {
     expect(reportNoteFor({ kind: 'message', from: 'errorToast', text: 'Couldn’t open “a.txt”.' })).toBe(
       'Couldn’t open “a.txt”.',

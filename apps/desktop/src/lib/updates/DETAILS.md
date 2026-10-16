@@ -53,6 +53,11 @@ finish, cleared when a check starts), `previousVersion` (snapshot of `getVersion
 variant). Settings > Updates and `UpdateCheckToastContent.svelte` both read the singleton and format via
 `formatUpdateStatus()`, or `describeUpdateFailure()` while a failure stands.
 
+An update refused for its signature (a minisign `signatureMismatch`, an `untrustedCodeSignature` bundle, or the
+backend's `notGenuineEarlier` for a version it won't fetch again this session) stands as `{ phase: 'notGenuine' }`,
+worded like the security notice the backend raises for it (`#lib/security-notices`), ❌ never "try again later". The
+repeat logs at info: the first refusal already logged at error.
+
 The macOS path runs `download_update` and `install_update` as two commands (distinct `downloading` / `installing`
 phases). `download_update` takes no URL: the backend fetches the build its own last check offered, so nothing the
 frontend holds picks what gets installed. The non-macOS path uses the plugin's fused `downloadAndInstall()` (stays in

@@ -30,6 +30,12 @@ export type UpdateFailure =
   | { phase: 'check'; request: ServerRequestError | null }
   | { phase: 'download' }
   | { phase: 'install' }
+  /**
+   * The offered update didn't carry Cmdr's signature (minisign on the archive, or the Developer ID on the bundle), or
+   * is a version that didn't earlier this session, so nothing was installed. Worded like its security notice
+   * (`#lib/security-notices`), ❌ never "try again later".
+   */
+  | { phase: 'notGenuine' }
 
 export interface UpdateState {
   status: 'idle' | 'checking' | 'downloading' | 'installing' | 'ready'

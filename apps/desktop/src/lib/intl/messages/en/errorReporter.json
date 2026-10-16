@@ -298,6 +298,14 @@
     }
   },
 
+  "errorReporter.prefill.updateNotGenuine": "An update offered as version {version} didn’t carry Cmdr’s signature, so Cmdr didn’t install it.",
+  "@errorReporter.prefill.updateNotGenuine": {
+    "description": "First line of the note pre-filled into the Send error report dialog when the person reports an update Cmdr refused because it wasn't a genuine Cmdr release (its signature didn't check out). The person can edit or delete it before sending, and it reaches the team as part of the report. \"Cmdr\" is the product name. Avoid the words \"error\" and \"failed\".",
+    "placeholders": {
+      "version": "the version number the update said it was, like 0.53.0. Never translated"
+    }
+  },
+
   "errorReporter.prefill.reference": "Reference: {code}",
   "@errorReporter.prefill.reference": {
     "description": "Last line of the note pre-filled into the Send error report dialog when it opens from a specific problem. It names the KIND of problem in a short technical code the team searches for, such as copy/insufficient_space or listing/networkDown: a problem code, not a case or ticket ID (the report’s own ID is shown elsewhere in the dialog). The person can edit or delete it before sending. Translate only the word before the colon.",

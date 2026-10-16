@@ -574,7 +574,7 @@ function finishCheckWithFailure(
     standing = { phase: 'check', request }
     logCheckFailure(request, message)
   } else {
-    standing = { phase: failure === 'install' ? 'install' : 'download' }
+    standing = isNotGenuine(error) ? { phase: 'notGenuine' } : { phase: failure === 'install' ? 'install' : 'download' }
     const level = downloadInstallLogLevel(error)
     if (level === 'error') {
       log.error('Download/install failed: {error}', { error: message })
@@ -599,11 +599,28 @@ function finishCheckWithFailure(
 
 /**
  * A download the network or the tarball host's bad moment stopped follows the check's rule (`serverRequestLogLevel`).
- * Everything else stays at error: a signature mismatch, a disk failure, an install, and the plugin's untyped failures.
+ * A version the backend wouldn't fetch again (it wasn't genuine earlier this session) is info: the first refusal
+ * already logged at error. Everything else stays at error: a signature mismatch, a disk failure, an install, and the
+ * plugin's untyped failures.
  */
 function downloadInstallLogLevel(error: unknown): 'info' | 'warn' | 'error' {
   const download = failureOf(UpdateDownloadFailure, error)
+  if (download?.type === 'notGenuineEarlier') return 'info'
   return download?.type === 'request' ? serverRequestLogLevel(download.failure) : 'error'
+}
+
+/**
+ * Whether the backend refused the update for its signature: the archive's, the bundle's, or the same version again.
+ * The security notice tells the person in the moment (`#lib/security-notices`); this keeps the standing status saying
+ * the same thing.
+ */
+function isNotGenuine(error: unknown): boolean {
+  const download = failureOf(UpdateDownloadFailure, error)?.type
+  return (
+    download === 'signatureMismatch' ||
+    download === 'notGenuineEarlier' ||
+    failureOf(UpdateInstallFailure, error)?.type === 'untrustedCodeSignature'
+  )
 }
 
 /** One line per failing condition until a check gets an answer, at the level the failure earns. */

@@ -55,6 +55,11 @@ pub struct UpdateState {
 struct UpdateSlots {
     offered: Option<UpdateInfo>,
     downloaded: Option<DownloadedUpdate>,
+    /// Versions refused this session because they didn't carry Cmdr's signature (minisign on
+    /// the archive, or the Developer ID on the bundle). ❗ Never fetched again until Cmdr
+    /// restarts, so the background loop can't re-download a fake every run; a newer version
+    /// still goes through, so a real fix can arrive.
+    not_genuine: std::collections::HashSet<semver::Version>,
 }
 
 /// A verified tarball waiting for `install_update`, and the version the check said it holds.
@@ -324,6 +329,9 @@ pub enum UpdateDownloadError {
     /// The organization's policy, read fresh, no longer allows the offered version (it arrived
     /// after the check). Nothing was fetched. Not a failure: ❌ never log it at warn or error.
     BlockedByPolicy,
+    /// This version didn't carry Cmdr's signature earlier this session, so nothing was fetched
+    /// again. The frontend words it exactly like the refusal it repeats.
+    NotGenuineEarlier,
 }
 
 impl From<crate::server_request::ServerRequestError> for UpdateDownloadError {
@@ -370,12 +378,7 @@ async fn fetch_verified_tarball(url: &str, signature: &str) -> Result<Vec<u8>, U
 #[tauri::command]
 #[specta::specta]
 pub async fn download_update(state: State<'_, UpdateState>) -> Result<(), UpdateDownloadError> {
-    let offer = offer_to_download(&state).await?;
-    log::info!("Downloading update {} from {}", offer.version, offer.url);
-
-    let bytes = fetch_verified_tarball(&offer.url, &offer.signature)
-        .await
-        .inspect_err(|e| security_events::on_download_error(&offer.version, e))?;
+    let (offer, bytes) = download_verified(&state).await?;
 
     let temp_dir = std::env::temp_dir().join("cmdr-update");
     std::fs::create_dir_all(&temp_dir).map_err(|e| UpdateDownloadError::Disk {
@@ -394,7 +397,24 @@ pub async fn download_update(state: State<'_, UpdateState>) -> Result<(), Update
     Ok(())
 }
 
-/// The offered update, if the policy, read fresh, still allows its version. A profile that arrived
+/// Fetches the offered tarball and verifies it. A signature that doesn't hold reaches the security
+/// log (and so the person's notice) and marks the version as not genuine for the session.
+async fn download_verified(state: &UpdateState) -> Result<(UpdateInfo, Vec<u8>), UpdateDownloadError> {
+    let offer = offer_to_download(state).await?;
+    log::info!("Downloading update {} from {}", offer.version, offer.url);
+    let bytes = fetch_verified_tarball(&offer.url, &offer.signature)
+        .await
+        .inspect_err(|e| {
+            security_events::on_download_error(&offer.version, e);
+            if matches!(e, UpdateDownloadError::SignatureMismatch { .. }) {
+                state.slots().not_genuine.insert(offer.version.clone());
+            }
+        })?;
+    Ok((offer, bytes))
+}
+
+/// The offered update, if the policy, read fresh, still allows its version and it hasn't
+/// already turned out not to be genuine this session. A profile that arrived
 /// between the check and the download stops it here, before a byte is fetched.
 async fn offer_to_download(state: &UpdateState) -> Result<UpdateInfo, UpdateDownloadError> {
     let offer = state
@@ -402,6 +422,13 @@ async fn offer_to_download(state: &UpdateState) -> Result<UpdateInfo, UpdateDown
         .offered
         .clone()
         .ok_or(UpdateDownloadError::NothingOffered)?;
+    if state.slots().not_genuine.contains(&offer.version) {
+        log::info!(
+            "Not downloading update {} again: it didn't carry Cmdr's signature earlier this session",
+            offer.version
+        );
+        return Err(UpdateDownloadError::NotGenuineEarlier);
+    }
     if let Err(refusal) = crate::managed_policy::for_egress().await.update_to(&offer.version) {
         log::info!(target: "managed_policy", "Not downloading update {}: the organization's policy refuses it ({refusal:?})", offer.version);
         return Err(UpdateDownloadError::BlockedByPolicy);
@@ -471,6 +498,9 @@ pub async fn install_update(state: State<'_, UpdateState>) -> Result<UpdateInsta
     })
     .and_then(|installed| installed);
     security_events::on_install_result(&offered, result.as_ref().map(|vetted| &vetted.version));
+    if let Err(error) = &result {
+        note_install_refusal(&state, &offered, error);
+    }
     let security_notice = result?.security_notice;
     if let Some(notice) = &security_notice {
         log::info!(
@@ -480,6 +510,13 @@ pub async fn install_update(state: State<'_, UpdateState>) -> Result<UpdateInsta
         );
     }
     Ok(UpdateInstalled { security_notice })
+}
+
+/// A bundle refused for its code signature marks its version as not genuine for the session.
+fn note_install_refusal(state: &UpdateState, offered: &semver::Version, error: &UpdateInstallError) {
+    if matches!(error, UpdateInstallError::UntrustedCodeSignature { .. }) {
+        state.slots().not_genuine.insert(offered.clone());
+    }
 }
 
 /// The staged download and the fresh policy that allows it, or why not.
