@@ -89,45 +89,14 @@ pub(crate) fn on_mtp_watch_continuity_lost(device_id: &str) {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
-
     use super::*;
     use crate::indexing::lifecycle::freshness::Freshness;
-    use crate::indexing::lifecycle::signals::VolumeSignals;
-    use crate::indexing::lifecycle::state::{INDEX_REGISTRY, get_freshness, try_reserve_initializing_phase};
-    use crate::indexing::read::enrichment::{ReadPool, uninstall_read_pool};
-    use crate::indexing::read::pending_sizes::{PendingSizes, uninstall_pending_sizes};
-    use crate::indexing::store::IndexStore;
+    use crate::indexing::lifecycle::state::get_freshness;
+    use crate::indexing::stress_test_helpers;
     use crate::indexing::volume::IndexVolumeKind;
 
-    /// Reserve a volume's registry instance at a given freshness, run the body,
-    /// then remove it. Mirrors `transports/smb/index`'s test harness.
     fn with_reserved_volume(vid: &str, initial: Freshness, body: impl FnOnce()) {
-        let dir = tempfile::tempdir().expect("temp dir");
-        let db_path = dir.path().join(format!("{vid}.db"));
-        let store = IndexStore::open(&db_path).expect("open store");
-        let pool = Arc::new(ReadPool::new(db_path.clone()).expect("pool"));
-        let pending = Arc::new(PendingSizes::new());
-        INDEX_REGISTRY.lock().expect("registry").remove(vid);
-        assert!(
-            try_reserve_initializing_phase(
-                vid,
-                state::StartRequest::for_test(IndexVolumeKind::Mtp),
-                store,
-                pool,
-                pending,
-                VolumeSignals::new(
-                    Arc::new(std::sync::Mutex::new(Some(initial))),
-                    crate::NoopEventSink::shared()
-                ),
-            )
-            .is_ok(),
-            "reserve must succeed",
-        );
-        body();
-        INDEX_REGISTRY.lock().expect("registry").remove(vid);
-        uninstall_read_pool(vid);
-        uninstall_pending_sizes(vid);
+        stress_test_helpers::with_reserved_volume(vid, IndexVolumeKind::Mtp, initial, body);
     }
 
     #[test]

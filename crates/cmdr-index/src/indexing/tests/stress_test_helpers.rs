@@ -525,3 +525,41 @@ pub fn make_file_entry(name: &str, path: &str, is_directory: bool) -> FileEntry 
         ..FileEntry::new(name.to_string(), path.to_string(), is_directory, false)
     }
 }
+
+/// Reserves `vid`'s registry instance as `kind` at `initial` freshness, runs `body`, then removes it.
+///
+/// The teardown is why this has one home: the registry remove, `uninstall_read_pool`, and
+/// `uninstall_pending_sizes` all key on process-global state, so a copy that drops one leaks into whatever
+/// test runs next. Freshness lives on the instance, so removing it fully resets the volume.
+pub fn with_reserved_volume(
+    vid: &str,
+    kind: IndexVolumeKind,
+    initial: crate::indexing::lifecycle::freshness::Freshness,
+    body: impl FnOnce(),
+) {
+    let dir = tempfile::tempdir().expect("temp dir");
+    let db_path = dir.path().join(format!("{vid}.db"));
+    let store = IndexStore::open(&db_path).expect("open store");
+    let pool = Arc::new(ReadPool::new(db_path.clone()).expect("pool"));
+    let pending = Arc::new(PendingSizes::new());
+    INDEX_REGISTRY.lock().expect("registry").remove(vid);
+    assert!(
+        crate::indexing::lifecycle::state::try_reserve_initializing_phase(
+            vid,
+            crate::indexing::lifecycle::state::StartRequest::for_test(kind),
+            store,
+            pool,
+            pending,
+            VolumeSignals::new(
+                Arc::new(std::sync::Mutex::new(Some(initial))),
+                crate::NoopEventSink::shared()
+            ),
+        )
+        .is_ok(),
+        "reserve must succeed",
+    );
+    body();
+    INDEX_REGISTRY.lock().expect("registry").remove(vid);
+    uninstall_read_pool(vid);
+    uninstall_pending_sizes(vid);
+}
