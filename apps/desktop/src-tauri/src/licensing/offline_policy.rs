@@ -12,7 +12,8 @@
 //!   [`UNCONFIRMED_TERM_GRACE_SECS`] from activation, then Personal. The only case that needs the
 //!   server, and only subscriptions, which are no longer sold, can reach it.
 
-use crate::licensing::app_status::{CachedLicenseStatus, LicenseType};
+use crate::licensing::LicenseType;
+use serde::{Deserialize, Serialize};
 
 /// How long past a renewing subscription's last known period end it stays valid (30 days).
 pub(super) const RENEWAL_GRACE_SECS: u64 = 30 * 24 * 60 * 60;
@@ -20,6 +21,17 @@ pub(super) const RENEWAL_GRACE_SECS: u64 = 30 * 24 * 60 * 60;
 /// How long a time-limited license with no known end date stays valid after its last confirmation
 /// (or activation): 30 days.
 pub(super) const UNCONFIRMED_TERM_GRACE_SECS: u64 = 30 * 24 * 60 * 60;
+
+/// The last server answer, as `app_status` caches it in `license.json`. Seeded unverified by
+/// `commit_license`, replaced by each verified `/validate` answer.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CachedLicenseStatus {
+    pub status: String, // "active", "expired", "invalid"
+    pub license_type: Option<LicenseType>,
+    pub organization_name: Option<String>,
+    pub expires_at: Option<String>,
+    pub cached_at: u64,
+}
 
 /// What the signed key itself says about its term.
 #[derive(Debug, Clone, Default)]

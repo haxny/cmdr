@@ -6,12 +6,14 @@ counterpart: `src/lib/licensing/CLAUDE.md`.
 
 ## Module map
 
-- **`verification.rs`**: Ed25519 crypto, `PUBLIC_KEY_HEX`, `LicenseActivationError`, the verify/commit split
-  (`verify_license_async`, `commit_license`), `get_license_info`, and `verify_validation_answer` (signed `/validate`
-  answers).
+- **`verification.rs`**: the trust check. Ed25519 over keys and `verify_validation_answer` (signed `/validate`
+  answers), `PUBLIC_KEY_HEX`, `LicenseActivationError`. Pure; ❌ never import a sibling into it (layering: `DETAILS.md`
+  § Module layering).
+- **`license_key.rs`**: the user's key: `verify_license_async`, `store_license`, `get_license_info` and its cache.
 - **`offline_policy.rs`**: `resolve_license_state`, the pure decision of what a license is worth without the server.
-- **`app_status.rs`**: `AppStatus`, server re-validation, the cached verdict, the clock guard, reminder timer,
-  `CMDR_MOCK_LICENSE`, and `refresh_window_title`. ❗ Every cached-status write calls it; keep it that way.
+- **`app_status.rs`**: `AppStatus`, `commit_license`, server re-validation, the cached verdict, the clock guard,
+  reminder timer, `CMDR_MOCK_LICENSE`, and `refresh_window_title`. ❗ Every cached-status write calls it; keep it that
+  way.
 - **`validation_client.rs`**: `POST /validate` (with a nonce) and `POST /activate`; debug → `localhost:8787`, release →
   `api.getcmdr.com`, E2E → no request. Returns `ValidationOutcome`.
 - **`device_id.rs`**: hashed `IOPlatformUUID` for fair-use tracking.

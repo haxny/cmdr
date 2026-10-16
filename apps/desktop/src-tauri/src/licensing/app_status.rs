@@ -8,8 +8,10 @@
 //!
 //! What a license is worth offline is decided in `offline_policy.rs`.
 
-use crate::licensing::offline_policy::{self, KeyTerms, LicenseState};
-use crate::licensing::verification::{LicenseInfo, SignedValidationAnswer, get_license_info};
+use crate::licensing::license_key::{self, LicenseInfo, get_license_info};
+use crate::licensing::offline_policy::{self, CachedLicenseStatus, KeyTerms, LicenseState};
+use crate::licensing::verification::{LicenseActivationError, SignedValidationAnswer};
+use crate::licensing::{LicenseType, string_to_license_type};
 use serde::{Deserialize, Serialize};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -45,14 +47,6 @@ const STORE_KEY_REMINDER_LAST_DISMISSED: &str = "commercial_reminder_last_dismis
 /// it, so setting the clock back doesn't stretch one. A verified server answer resets it.
 const STORE_KEY_CLOCK_HIGH_WATER: &str = "license_clock_high_water";
 
-/// Type of license.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
-#[serde(rename_all = "snake_case")]
-pub enum LicenseType {
-    CommercialSubscription,
-    CommercialPerpetual,
-}
-
 /// Current status of the application license.
 #[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(tag = "type", rename_all = "camelCase")]
@@ -77,16 +71,6 @@ pub enum AppStatus {
         expired_at: String,
         show_modal: bool,
     },
-}
-
-/// Cached license status from server validation.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CachedLicenseStatus {
-    pub status: String, // "active", "expired", "invalid"
-    pub license_type: Option<LicenseType>,
-    pub organization_name: Option<String>,
-    pub expires_at: Option<String>,
-    pub cached_at: u64,
 }
 
 /// Get the current application status.
@@ -253,17 +237,6 @@ fn response_to_app_status(app: &tauri::AppHandle, resp: &SignedValidationAnswer)
     )
 }
 
-/// Convert string to LicenseType.
-///
-/// Legacy "supporter" keys are treated as personal (returns `None`).
-pub fn string_to_license_type(s: &str) -> Option<LicenseType> {
-    match s {
-        "commercial_subscription" => Some(LicenseType::CommercialSubscription),
-        "commercial_perpetual" => Some(LicenseType::CommercialPerpetual),
-        _ => None,
-    }
-}
-
 /// Shared logic for converting a status string + license metadata into AppStatus.
 fn to_app_status(
     app: &tauri::AppHandle,
@@ -416,6 +389,32 @@ pub fn mark_commercial_reminder_dismissed(app: &tauri::AppHandle) {
     }
 }
 
+/// Persist a verified license key and seed the cached status from it.
+/// This is the "save it" step: only call after verification confirms the key is good
+/// (or on network fallback when the key is crypto-valid but the server is unreachable).
+/// On `Err`, nothing was stored.
+pub fn commit_license(
+    app: &tauri::AppHandle,
+    license_key: &str,
+    short_code: Option<&str>,
+) -> Result<LicenseInfo, LicenseActivationError> {
+    let info = license_key::store_license(app, license_key, short_code)?;
+
+    // Write an initial cached status so get_app_status returns the correct license type
+    // even before server validation. Deliberately does NOT write last_validation_timestamp,
+    // so needs_validation() returns true and the frontend can detect "pending verification."
+    let license_type = info.license_type.as_deref().and_then(string_to_license_type);
+    write_cached_status_without_validation(
+        app,
+        "active",
+        license_type,
+        info.organization_name.clone(),
+        info.expires_at.clone(),
+    );
+
+    Ok(info)
+}
+
 /// Write cached license status without marking it as server-validated.
 /// Used by `commit_license` so the app shows the correct license type immediately,
 /// while `needs_validation()` still returns true (triggering server verification on next launch).
@@ -511,7 +510,7 @@ pub fn refresh_window_title(app: &tauri::AppHandle) {
 
 /// Reset license data, returning the app to unlicensed (Personal) state.
 pub fn reset_license(app: &tauri::AppHandle) {
-    crate::licensing::verification::clear_license_cache();
+    license_key::clear_license_cache();
     crate::licensing::key_storage::clear_stored_license(app);
     if let Ok(store) = app.store("license.json") {
         store.delete(STORE_KEY_CACHED_STATUS);

@@ -32,7 +32,7 @@ the Keychain on macOS (service `Cmdr`), Secret Service or the encrypted file on 
   was, `load` keeps reading the key from it, and the next launch retries. Never loses a license.
 - **A key in the file wins over the secret store** in `load`. It's either a pending migration (same key) or a newer
   key an older version wrote after a downgrade, which the next migration moves over.
-- **A read error latches** (`KEY_UNREADABLE` in `verification.rs`): the license reads as absent until relaunch, a new
+- **A read error latches** (`KEY_UNREADABLE` in `license_key.rs`): the license reads as absent until relaunch, a new
   activation, or a reset, so a denied Keychain prompt can't come back on every status check.
 - **Keychain prompts**: an item Cmdr created is readable by Cmdr without a dialog, as long as the code signature
   matches the item's ACL (a Developer ID build updating itself keeps its designated requirement). Dev and E2E never
@@ -125,8 +125,9 @@ Network error / unverified   → commitLicense(fullKey, shortCode) → persist +
 Pasting the full key (from the license email) skips `/activate`, so with no server at all the key verifies, commits on
 the network-error path, and the offline policy carries it from there.
 
-`commit_license` does: store the key in the secret store (`StorageError` and nothing stored if that fails), write
-initial `cached_license_status`, update `LICENSE_CACHE`. The frontend shows a `storageError` with the generic "try
+`commit_license` (in `app_status.rs`) does: `license_key::store_license` stores the key in the secret store
+(`StorageError` and nothing stored if that fails) and updates `LICENSE_CACHE`, then it writes the initial
+`cached_license_status`. The frontend shows a `storageError` with the generic "try
 again" copy.
 
 - `VerifyResult` fields: `info` (LicenseInfo), `full_key`, `short_code`.
@@ -268,6 +269,28 @@ definitive and cached.
 **Why**: The Tauri command must propagate network/upstream errors so the frontend distinguishes "server rejected the key"
 (`Ok(Personal)`) from "couldn't reach the server" (`Err`). Without this, the frontend's catch never fires (Tauri's
 `invoke` only throws on `Err`), and stale cached `Personal` is misread as a server rejection.
+
+## Module layering
+
+Dependencies point down, toward the trust check, and never back up. `module-cycles` holds `cmdr::licensing` to no
+tangle.
+
+1. `verification.rs` (the trust check): pure Ed25519 over license keys and `/validate` answers. Imports only the parent's
+   `LicenseData` and `redact_email`, so it can be audited alone. No I/O, no state, no `tauri`.
+2. `validation_client.rs` (HTTP, verifies answers through 1), `key_storage.rs` (secret store), `offline_policy.rs` (pure
+   decision; owns `CachedLicenseStatus`, its input).
+3. `license_key.rs`: the user's key. Verify what they enter (exchanging a short code via 2), store it, read the
+   installed one back verified, with the in-memory cache.
+4. `app_status.rs`: the top. Status, re-validation, the cached verdict, and `commit_license` (store via 3, then seed the
+   cached status).
+
+`LicenseType` and `string_to_license_type` sit in `mod.rs` beside `LicenseData`, the vocabulary every layer shares.
+
+**Decision**: `commit_license` lives in `app_status.rs`, not beside `store_license`.
+**Why**: seeding the cached status is `app_status`'s write, and `app_status` already reads the stored key through
+`license_key`. Doing the seed from `license_key` was the upward edge that tangled the two (with `verification` in the
+middle when all of this lived there). The key reaches `LICENSE_CACHE` before the seed's `refresh_window_title` runs, so
+the title reads the license just committed.
 
 ## Dependencies
 
