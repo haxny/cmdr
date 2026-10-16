@@ -108,8 +108,10 @@ import LegalLayout from '../layouts/LegalLayout.astro'
             <strong>Error reports</strong> (opt-in): a zip of recent app logs plus your app and macOS version, sent from
             Help &gt; Send error report. The app shows you what's inside before it goes anywhere. File and folder names
             are replaced with placeholders on your Mac first, so a path arrives as something like
-            <code>$HOME/Documents/&lt;file&gt;.pdf</code>. This covers every path, and a name repeated in the same log
-            line as its path. One gap remains: a name that appears in a log line on its own, with no path next to it,
+            <code>$HOME/Documents/&lt;file&gt;.pdf</code>. This covers every path, a name repeated in the same log
+            line as its path, and the names of servers, shares, and user accounts. A placeholder stays the same within
+            one report, so we can tell which lines are about the same file, but not across reports. Error messages from
+            other systems are cleaned the same way and cut at 200 characters. One gap remains: a name that appears in a log line on its own, with no path next to it,
             can slip through. That's why you see the preview first. If you've added a beta
             contact email, you can tick a box to
             attach it so we can reply; we include it only when you do. You can also add a note or your email address to

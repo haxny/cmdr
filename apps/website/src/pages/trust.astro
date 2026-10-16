@@ -553,8 +553,8 @@ const toc = [
         </li>
         <li>
             The optional MCP server, which lets outside AI tools control Cmdr, is off by default. When on, it listens
-            on <code>127.0.0.1</code> only. Deleting and other actions that skip Cmdr's confirmation need an access
-            token; other commands are open to any program on the same Mac.
+            on <code>127.0.0.1</code> only, and every request needs an access token. Cmdr creates a new random token
+            each time it starts and keeps it in a file only the user's account can read.
         </li>
         <li>
             Cmdr opens no port that other machines can connect to: everything it listens on is <code>127.0.0.1</code>.
@@ -705,7 +705,10 @@ const toc = [
         private reporting. Please don't open a public GitHub issue. The full policy, including scope and safe harbor, is
         <a href="https://github.com/vdavid/cmdr/blob/main/SECURITY.md">SECURITY.md</a> on GitHub, also linked from
         <a href="/.well-known/security.txt">security.txt</a>. Only the latest version gets fixes. No security advisories
-        have been published so far. What to expect:
+        have been published so far. An actively exploited vulnerability or a severe incident gets reported to CERT-SE
+        and ENISA, as the EU Cyber Resilience Act requires, following the public
+        <a href="https://github.com/vdavid/cmdr/blob/main/docs/security-incident-procedure.md">incident procedure</a>.
+        What to expect:
     </p>
     <ul>
         {vulnerabilityResponse.map((line) => <li>{line}</li>)}
