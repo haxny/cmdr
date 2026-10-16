@@ -199,6 +199,16 @@ static BUSY_APP: OnceLock<tauri::AppHandle> = OnceLock::new();
 static LAST_EMITTED_BUSY: LazyLock<std::sync::Mutex<HashSet<String>>> =
     LazyLock::new(|| std::sync::Mutex::new(HashSet::new()));
 
+/// Test-only: `volumes-busy-changed` broadcasts that got past the dedupe, ever,
+/// counted before the "no app handle" return so unit tests see them.
+#[cfg(test)]
+static BUSY_EMITS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+#[cfg(test)]
+fn busy_emit_count() -> u64 {
+    BUSY_EMITS.load(std::sync::atomic::Ordering::SeqCst)
+}
+
 /// Stores the app handle used to broadcast `volumes-busy-changed`. Call once at
 /// app setup, before any write op can run.
 pub fn init_busy_volume_emitter(app: &tauri::AppHandle) {
@@ -243,6 +253,8 @@ fn recompute_and_emit_busy_volumes() {
         }
         *last = current.clone();
     }
+    #[cfg(test)]
+    BUSY_EMITS.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
 
     let Some(app) = BUSY_APP.get() else {
         return;

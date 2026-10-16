@@ -977,3 +977,62 @@ async fn run_instant_returns_the_ops_result_unchanged() {
         "record removed after a failed instant op"
     );
 }
+
+/// `operations-changed` fires on register, admit, and settle, with today's
+/// count per op: one broadcast when a free lane admits at registration, one
+/// when an op queues, one for a settle that also admits the next op, one per
+/// settle, and two per instant op. On a private manager, so every broadcast
+/// counted is this test's own.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn operations_changed_fires_on_register_admit_and_settle_with_todays_counts() {
+    let mgr = leaked_manager();
+    let lane = unique("lane");
+    let (a, b) = (unique("emits-a"), unique("emits-b"));
+    let (a_started_tx, a_started_rx) = oneshot::channel();
+    let (a_release_tx, a_release_rx) = oneshot::channel();
+    let (b_started_tx, b_started_rx) = oneshot::channel();
+    let (b_release_tx, b_release_rx) = oneshot::channel();
+    let base = mgr.emit_count();
+
+    mgr.spawn_managed(
+        descriptor(&a, vec![&lane]),
+        fresh_state(),
+        gated_deferred_on(mgr, a.clone(), a_started_tx, a_release_rx),
+    );
+    assert_eq!(mgr.emit_count(), base + 1, "A registered and admitted in one broadcast");
+    a_started_rx.await.expect("A started");
+
+    mgr.spawn_managed(
+        descriptor(&b, vec![&lane]),
+        fresh_state(),
+        gated_deferred_on(mgr, b.clone(), b_started_tx, b_release_rx),
+    );
+    assert_eq!(mgr.lifecycle_status(&b), Some(LifecycleStatus::Queued));
+    assert_eq!(mgr.emit_count(), base + 2, "B registered and queued");
+
+    let _ = a_release_tx.send(());
+    b_started_rx.await.expect("B admitted on A's settle");
+    wait_until_async(WAIT, "A's settle broadcast", || mgr.emit_count() >= base + 3).await;
+    assert_eq!(
+        mgr.emit_count(),
+        base + 3,
+        "A's settle and B's admission share one broadcast"
+    );
+
+    let _ = b_release_tx.send(());
+    wait_until_async(WAIT, "B's settle broadcast", || mgr.emit_count() >= base + 4).await;
+    assert_eq!(mgr.lifecycle_status(&b), None);
+    assert_eq!(mgr.emit_count(), base + 4, "B's settle");
+
+    let instant = unique("emits-instant");
+    mgr.run_instant(
+        instant_descriptor(&instant, WriteOperationType::Rename, vec![]),
+        async {},
+    )
+    .await;
+    assert_eq!(
+        mgr.emit_count(),
+        base + 6,
+        "an instant op broadcasts its start and its end"
+    );
+}

@@ -273,3 +273,150 @@ fn indeterminate_compress_phases_clear_both_percent_fallback_axes() {
     }
     unregister_operation_status(&id);
 }
+
+// ---- `volumes-busy-changed` and the transfer gauge ----
+
+/// `volumes-busy-changed` fires once per distinct change of the busy SET: a
+/// progress update, a second op on an already-busy volume, a `root`-only op,
+/// and releasing one of two holders all leave membership alone and stay quiet.
+///
+/// Its subject is the process-global dedupe (`LAST_EMITTED_BUSY`), which any
+/// sibling's register moves, so it runs only one-test-per-process.
+#[test]
+fn volumes_busy_changed_fires_once_per_distinct_change() {
+    if !crate::file_system::write_operations::test_support::one_test_per_process() {
+        return;
+    }
+    let volume = unique_id("busy-dedupe-volume");
+    let (first, second, local) = (unique_id("busy-1"), unique_id("busy-2"), unique_id("busy-root"));
+    let emits = busy_emit_count();
+
+    register_operation_status(&first, WriteOperationType::Copy, vec![volume.clone()]);
+    assert_eq!(busy_emit_count(), emits + 1, "the volume became busy");
+    update_operation_status(&first, WriteOperationPhase::Copying, None, 1, 2, 10, 20);
+    register_operation_status(&second, WriteOperationType::Copy, vec![volume.clone()]);
+    register_operation_status(&local, WriteOperationType::Copy, vec!["root".to_string()]);
+    unregister_operation_status(&first);
+    assert_eq!(busy_emit_count(), emits + 1, "nothing changed the set's membership");
+    unregister_operation_status(&second);
+    assert_eq!(busy_emit_count(), emits + 2, "the last holder left");
+    unregister_operation_status(&local);
+    assert_eq!(busy_emit_count(), emits + 2, "`root` was never in the set");
+}
+
+/// How a synthetic managed op ends.
+#[derive(Debug, Clone, Copy)]
+enum Ending {
+    Completes,
+    Cancels,
+    Fails,
+    HandlerPanics,
+}
+
+/// Every transfer-gauge start an op makes has exactly one finish, however the
+/// op ends. A spare start held across the op proves the "exactly": a second
+/// finish would spend it and clear the volume early.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn every_transfer_start_has_exactly_one_finish_however_the_op_ends() {
+    use crate::file_system::write_operations::start_write_operation;
+    use crate::file_system::write_operations::types::WriteOperationError;
+    use crate::file_system::write_operations::{CollectorEventSink, OperationEventSink};
+    use crate::priority::transfers::{note_transfer_finished, note_transfer_started, transfer_active};
+    use std::sync::atomic::AtomicBool;
+
+    for ending in [Ending::Completes, Ending::Cancels, Ending::Fails, Ending::HandlerPanics] {
+        let volume = unique_id("gauge-volume");
+        let spare = vec![volume.clone()];
+        note_transfer_started(&spare);
+
+        let events = Arc::new(CollectorEventSink::new());
+        let active_inside = Arc::new(AtomicBool::new(false));
+        let (seen, probe) = (Arc::clone(&active_inside), volume.clone());
+        start_write_operation(
+            Arc::clone(&events) as Arc<dyn OperationEventSink>,
+            WriteOperationType::Copy,
+            cmdr_operation_log::types::Initiator::User,
+            200,
+            vec![volume.clone()],
+            vec![LaneKey::new(unique_id("gauge-lane"))],
+            OperationSummaryText::default(),
+            None,
+            1,
+            None,
+            move |_events, _op_id, _state| {
+                seen.store(transfer_active(&probe), Ordering::SeqCst);
+                match ending {
+                    Ending::Completes => Ok(()),
+                    Ending::Cancels => Err(WriteOperationError::Cancelled {
+                        message: "stopped".to_string(),
+                    }),
+                    Ending::Fails => Err(WriteOperationError::IoError {
+                        path: "/x".to_string(),
+                        message: "gone".to_string(),
+                    }),
+                    Ending::HandlerPanics => panic!("simulated handler panic"),
+                }
+            },
+        )
+        .await
+        .expect("start");
+        crate::test_support::wait_until_async(Duration::from_secs(5), "the op to settle", || {
+            !events.settled.lock_ignore_poison().is_empty()
+        })
+        .await;
+
+        assert!(active_inside.load(Ordering::SeqCst), "{ending:?}: busy while it ran");
+        assert!(
+            transfer_active(&volume),
+            "{ending:?}: the op's finish must not spend the spare start too"
+        );
+        note_transfer_finished(&spare);
+        assert!(!transfer_active(&volume), "{ending:?}: its own start was finished");
+    }
+}
+
+/// The panic net (`ManagedTaskGuard`, no `on_settled`) finishes the gauge too.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_panicking_op_task_finishes_its_transfer_start_exactly_once() {
+    use crate::file_system::write_operations::manager::ManagedTaskGuard;
+    use crate::priority::transfers::{note_transfer_finished, note_transfer_started, transfer_active};
+
+    let volume = unique_id("gauge-panic-volume");
+    let spare = vec![volume.clone()];
+    note_transfer_started(&spare);
+
+    let op = unique_id("gauge-panic-op");
+    let id = op.clone();
+    manager().spawn_managed(
+        OperationDescriptor {
+            operation_id: op.clone(),
+            operation_type: WriteOperationType::Copy,
+            lanes: vec![LaneKey::new(unique_id("gauge-panic-lane"))],
+            volume_ids: vec![volume.clone()],
+            summary: OperationSummaryText::default(),
+            supports_rollback: false,
+            preview_id: None,
+            reverses: None,
+        },
+        Arc::new(WriteOperationState::new(Duration::from_millis(200))),
+        Box::new(move || {
+            Box::pin(async move {
+                let _guard = ManagedTaskGuard::new(id);
+                panic!("simulated task panic");
+            })
+        }),
+    );
+    crate::test_support::wait_until_async(Duration::from_secs(5), "the panic net to unregister the op", || {
+        manager().lifecycle_status(&op).is_none() && get_operation_status(&op).is_none()
+    })
+    .await;
+
+    assert!(transfer_active(&volume), "the net must not spend the spare start too");
+    note_transfer_finished(&spare);
+    // A wait, not an assert: the net lowers the gauge just after it drops the
+    // status row the wait above watched.
+    crate::test_support::wait_until_async(Duration::from_secs(5), "the net to finish the op's own start", || {
+        !transfer_active(&volume)
+    })
+    .await;
+}

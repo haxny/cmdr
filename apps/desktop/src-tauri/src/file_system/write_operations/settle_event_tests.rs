@@ -11,20 +11,52 @@
 //! the full lifecycle runs without a Tauri runtime.
 
 use std::fs;
+use std::future::Future;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
 
+use cmdr_operation_log::capture::WriterJournal;
+use cmdr_operation_log::store::{open_read_connection, operation_log_db_path, read_operation};
+use cmdr_operation_log::types::{ExecutionStatus, RollbackState};
+use cmdr_operation_log::writer::OperationLogWriter;
+use tokio::sync::oneshot;
+
 use super::copy_files_start;
 use super::event_sinks::{CollectorEventSink, OperationEventSink};
-use super::state::WriteSettledGuard;
-use super::types::{CancelRollback, WriteOperationConfig, WriteOperationType, WriteSettledEvent};
+use super::manager::{ManagedTaskGuard, OperationDescriptor, OperationSummaryText, manager};
+use super::state::{WriteOperationState, WriteSettledGuard};
+use super::types::{CancelRollback, LifecycleStatus, WriteOperationConfig, WriteOperationType, WriteSettledEvent};
+use crate::file_system::volume::LaneKey;
+use crate::ignore_poison::IgnorePoison;
 use crate::test_support::TestDir;
 
 /// Bridge sink that keeps a direct handle to the underlying `CollectorEventSink`
 /// for inspection. Needed because the guard takes `Arc<dyn OperationEventSink>`,
-/// and `dyn OperationEventSink` isn't downcastable.
+/// and `dyn OperationEventSink` isn't downcastable. An optional `probe` runs at
+/// each terminal and settle emit, before the collector records it, so a test can
+/// read the world as it stood at that moment.
 struct Bridge {
     inner: Arc<CollectorEventSink>,
+    probe: Option<Probe>,
+}
+
+/// The emit a probe is called at.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Moment {
+    Complete,
+    Error,
+    Settled,
+}
+
+type Probe = Arc<dyn Fn(Moment, &str) + Send + Sync>;
+
+impl Bridge {
+    fn probe(&self, moment: Moment, operation_id: &str) {
+        if let Some(probe) = &self.probe {
+            probe(moment, operation_id);
+        }
+    }
 }
 
 impl OperationEventSink for Bridge {
@@ -32,12 +64,14 @@ impl OperationEventSink for Bridge {
         self.inner.emit_progress(e);
     }
     fn emit_complete(&self, e: super::types::WriteCompleteEvent) {
+        self.probe(Moment::Complete, &e.operation_id);
         self.inner.emit_complete(e);
     }
     fn emit_cancelled(&self, e: super::types::WriteCancelledEvent) {
         self.inner.emit_cancelled(e);
     }
     fn emit_error(&self, e: super::types::WriteErrorEvent) {
+        self.probe(Moment::Error, &e.operation_id);
         self.inner.emit_error(e);
     }
     fn emit_conflict(&self, e: super::types::WriteConflictEvent) {
@@ -59,14 +93,20 @@ impl OperationEventSink for Bridge {
         self.inner.emit_dry_run_complete(r);
     }
     fn emit_settled(&self, e: WriteSettledEvent) {
+        self.probe(Moment::Settled, &e.operation_id);
         self.inner.emit_settled(e);
     }
 }
 
 fn pair() -> (Arc<dyn OperationEventSink>, Arc<CollectorEventSink>) {
+    probed_pair(None)
+}
+
+fn probed_pair(probe: Option<Probe>) -> (Arc<dyn OperationEventSink>, Arc<CollectorEventSink>) {
     let inner = Arc::new(CollectorEventSink::new());
     let bridge: Arc<dyn OperationEventSink> = Arc::new(Bridge {
         inner: Arc::clone(&inner),
+        probe,
     });
     (bridge, inner)
 }
@@ -246,5 +286,264 @@ async fn injected_sink_receives_complete_and_settled_for_local_copy() {
     assert!(
         dst_dir.join("hello.txt").exists(),
         "the copied file must exist at the destination"
+    );
+}
+
+// ============================================================================
+// The full settle order, through a real managed op
+// ============================================================================
+
+/// What a probe saw at one emit: the op's journal row status, whether the
+/// manager still holds its record, and whether its lane is still reserved.
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct Seen {
+    moment: Moment,
+    journal: Option<ExecutionStatus>,
+    record_live: bool,
+    lane_held: bool,
+}
+
+/// A journal over a scratch DB, installed for the test's duration. The guard
+/// serializes journal tests; other ops still journal into it, so every read is
+/// scoped to the test's own op id.
+struct ScratchJournal {
+    _dir: TestDir,
+    db: PathBuf,
+    _guard: crate::operation_log_host::TestJournalGuard,
+}
+
+impl ScratchJournal {
+    fn install(label: &str) -> Self {
+        let dir = TestDir::new(label);
+        let db = operation_log_db_path(&dir);
+        let guard = crate::operation_log_host::TestJournalGuard::install(Arc::new(WriterJournal::new(
+            OperationLogWriter::spawn(&db).expect("writer"),
+        )));
+        Self {
+            _dir: dir,
+            db,
+            _guard: guard,
+        }
+    }
+}
+
+fn execution_status(db: &Path, op_id: &str) -> Option<ExecutionStatus> {
+    let conn = open_read_connection(db).expect("read conn");
+    read_operation(&conn, op_id)
+        .expect("read operation")
+        .map(|row| row.execution_status)
+}
+
+type SeenLog = Arc<std::sync::Mutex<Vec<Seen>>>;
+
+/// A sink whose probe records [`Seen`] at every terminal and settle emit.
+fn recording_pair(
+    journal_db: PathBuf,
+    lane: String,
+) -> (Arc<dyn OperationEventSink>, Arc<CollectorEventSink>, SeenLog) {
+    let seen: SeenLog = Arc::default();
+    let log = Arc::clone(&seen);
+    let probe: Probe = Arc::new(move |moment, op_id| {
+        let journal = execution_status(&journal_db, op_id);
+        log.lock_ignore_poison().push(Seen {
+            moment,
+            journal,
+            record_live: manager().lifecycle_status(op_id).is_some(),
+            lane_held: manager().lane_use_snapshot().contains_key(&lane),
+        });
+    });
+    let (sink, collector) = probed_pair(Some(probe));
+    (sink, collector, seen)
+}
+
+fn unique_lane(label: &str) -> String {
+    format!("settle-order-{label}-{}", uuid::Uuid::new_v4())
+}
+
+async fn start_copy(events: Arc<dyn OperationEventSink>, source: PathBuf, dst: &Path, lane: &str) -> String {
+    copy_files_start(
+        events,
+        vec![source],
+        dst.to_path_buf(),
+        WriteOperationConfig::default(),
+        vec![],
+        Some(vec![LaneKey::new(lane)]),
+        cmdr_operation_log::types::Initiator::User,
+        None,
+        None,
+    )
+    .await
+    .expect("copy_files_start")
+    .operation_id
+}
+
+async fn wait_settled(collector: &CollectorEventSink) {
+    crate::test_support::wait_until_async(Duration::from_secs(5), "the write-settled event", || {
+        !collector.settled.lock_ignore_poison().is_empty()
+    })
+    .await;
+}
+
+/// A handler that emits its own terminal event does so INSIDE the blocking
+/// handler, before the journal finalizes: `write-complete` sees the row still
+/// running, with the record live and the lane held. `write-settled` comes after
+/// finalize and after `on_settled` freed both.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_completed_op_emits_complete_then_finalizes_then_frees_then_settles() {
+    let journal = ScratchJournal::install("settle_order_journal");
+    let dir = create_temp_dir("settle_order_ok");
+    fs::write(dir.join("a.txt"), b"a").expect("source");
+    fs::create_dir(dir.join("dst")).expect("dst");
+    let lane = unique_lane("ok");
+    let (sink, collector, seen) = recording_pair(journal.db.clone(), lane.clone());
+
+    let op_id = start_copy(sink, dir.join("a.txt"), &dir.join("dst"), &lane).await;
+    wait_settled(&collector).await;
+
+    assert_eq!(
+        *seen.lock_ignore_poison(),
+        vec![
+            Seen {
+                moment: Moment::Complete,
+                journal: Some(ExecutionStatus::Running),
+                record_live: true,
+                lane_held: true
+            },
+            Seen {
+                moment: Moment::Settled,
+                journal: Some(ExecutionStatus::Done),
+                record_live: false,
+                lane_held: false
+            },
+        ]
+    );
+    assert_eq!(
+        collector.settled.lock_ignore_poison().len(),
+        1,
+        "write-settled fires once"
+    );
+    assert_eq!(execution_status(&journal.db, &op_id), Some(ExecutionStatus::Done));
+}
+
+/// A handler that returns an error without emitting one gets the safety net's
+/// `write-error`, which fires AFTER the journal finalized the op as failed, and
+/// still before `on_settled`.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_failed_op_finalizes_then_emits_the_safety_net_error_then_frees_then_settles() {
+    let journal = ScratchJournal::install("settle_order_fail_journal");
+    let dir = create_temp_dir("settle_order_fail");
+    fs::create_dir(dir.join("dst")).expect("dst");
+    let lane = unique_lane("fail");
+    let (sink, collector, seen) = recording_pair(journal.db.clone(), lane.clone());
+
+    // A missing source fails validation inside the handler, which emits nothing.
+    start_copy(sink, dir.join("missing.txt"), &dir.join("dst"), &lane).await;
+    wait_settled(&collector).await;
+
+    assert_eq!(
+        *seen.lock_ignore_poison(),
+        vec![
+            Seen {
+                moment: Moment::Error,
+                journal: Some(ExecutionStatus::Failed),
+                record_live: true,
+                lane_held: true
+            },
+            Seen {
+                moment: Moment::Settled,
+                journal: Some(ExecutionStatus::Failed),
+                record_live: false,
+                lane_held: false
+            },
+        ]
+    );
+    assert_eq!(
+        collector.errors.lock_ignore_poison().len(),
+        1,
+        "exactly one write-error"
+    );
+}
+
+/// The next op on a lane is admitted only by `on_settled`, which runs after the
+/// journal finalized the op ahead of it: an op queued behind a copy reads that
+/// copy's row already finalized, eligibility computed, when its turn comes.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn an_op_queued_behind_a_copy_reads_its_row_finalized_when_admitted() {
+    let journal = ScratchJournal::install("settle_order_queue_journal");
+    let dir = create_temp_dir("settle_order_queue");
+    fs::write(dir.join("a.txt"), b"a").expect("source");
+    fs::create_dir(dir.join("dst")).expect("dst");
+    let lane = unique_lane("queue");
+
+    // A blocker holds the lane so the copy queues; the reader queues behind it.
+    let blocker = format!("settle-order-blocker-{}", uuid::Uuid::new_v4());
+    let (release_blocker, blocker_released) = oneshot::channel::<()>();
+    spawn_on_lane(&blocker, &lane, || {}, async move {
+        let _ = blocker_released.await;
+    });
+
+    let (sink, collector) = pair();
+    let copy_id = start_copy(sink, dir.join("a.txt"), &dir.join("dst"), &lane).await;
+    assert_eq!(manager().lifecycle_status(&copy_id), Some(LifecycleStatus::Queued));
+
+    let reader = format!("settle-order-reader-{}", uuid::Uuid::new_v4());
+    let (row_tx, row_rx) = oneshot::channel::<Option<(ExecutionStatus, RollbackState)>>();
+    let db = journal.db.clone();
+    let read_id = copy_id.clone();
+    // Read at the admission instant itself, inside the admission pass, so a
+    // finalize that ran after `on_settled` can't win a race to the row.
+    let at_admission = move || {
+        let conn = open_read_connection(&db).expect("read conn");
+        let row = read_operation(&conn, &read_id).expect("read");
+        let _ = row_tx.send(row.map(|r| (r.execution_status, r.rollback_state)));
+    };
+    spawn_on_lane(&reader, &lane, at_admission, async {});
+    assert_eq!(manager().lifecycle_status(&reader), Some(LifecycleStatus::Queued));
+
+    let _ = release_blocker.send(());
+    let row = tokio::time::timeout(Duration::from_secs(5), row_rx)
+        .await
+        .expect("the reader to be admitted")
+        .expect("the reader to report");
+    assert_eq!(
+        row,
+        Some((ExecutionStatus::Done, RollbackState::Rollbackable)),
+        "the op ahead was finalized, eligibility included, before the next one was admitted"
+    );
+    wait_settled(&collector).await;
+}
+
+/// Registers a synthetic op on `lane` whose body is `work`, settling on the
+/// global manager when it ends. `at_admission` runs synchronously inside the
+/// admission pass that admits it, where its deferred start is built.
+fn spawn_on_lane(
+    op_id: &str,
+    lane: &str,
+    at_admission: impl FnOnce() + Send + 'static,
+    work: impl Future<Output = ()> + Send + 'static,
+) {
+    let descriptor = OperationDescriptor {
+        operation_id: op_id.to_string(),
+        operation_type: WriteOperationType::Copy,
+        lanes: vec![LaneKey::new(lane)],
+        volume_ids: vec![],
+        summary: OperationSummaryText::default(),
+        supports_rollback: false,
+        preview_id: None,
+        reverses: None,
+    };
+    let id = op_id.to_string();
+    manager().spawn_managed(
+        descriptor,
+        Arc::new(WriteOperationState::new(Duration::from_millis(200))),
+        Box::new(move || {
+            at_admission();
+            Box::pin(async move {
+                let guard = ManagedTaskGuard::new(id.clone());
+                work.await;
+                guard.disarm();
+                manager().on_settled(&id);
+            })
+        }),
     );
 }
