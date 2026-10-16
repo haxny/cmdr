@@ -28,7 +28,8 @@ use super::paths::{ends_filename, ends_sentence, has_extension_like_suffix};
 /// - a trailing RUN of space-separated words that are lowercase-initial AND carry no
 ///   extension (` failed to open`). The run never eats into the first segment after the
 ///   last `/`, which is what keeps `/Volumes/naspi and then it failed` down to `naspi`. It
-///   never runs when the path reaches the seam: the seam already said where it ends.
+///   never runs when the path reaches the seam, closing brackets in between included: the
+///   seam already said where it ends.
 pub(super) fn split_trailing_noise(s: &str) -> (&str, &str) {
     split_trailing_noise_with(s, true)
 }
@@ -104,7 +105,10 @@ pub(super) fn split_trailing_noise_with(s: &str, trim_prose_run: bool) -> (&str,
     // however lowercase it looks, so `/Volumes/naspi and then it failed` keeps `naspi`.
     // An extension ends the run on the spot, because a word carrying one is part of the
     // filename, not prose — that is what holds `my secret notes.txt` together.
-    if trim_prose_run && seam != Some(end) {
+    // Closing brackets in between don't hide the seam: `(under …/Summer trip): disk full` still
+    // runs up to it, and trimming there shipped `trip`.
+    let reaches_seam = seam.is_some_and(|seam| s[end..seam].bytes().all(|b| matches!(b, b')' | b']' | b'}')));
+    if trim_prose_run && !reaches_seam {
         let floor = s[..end].rfind(separator_of(s)).map_or(0, |i| i + 1);
         loop {
             let mut i = end;

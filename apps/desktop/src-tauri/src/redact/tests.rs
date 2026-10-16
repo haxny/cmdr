@@ -311,6 +311,33 @@ fn a_numbered_folder_is_redacted_whole() {
     }
 }
 
+/// Closing brackets between a path and the `: ` seam don't hide the seam: the path still runs
+/// up to it, so a lowercase last word stays part of the name. The `move` line's
+/// `(under {src} -> {dest}): {error}` shipped `trip` of `Summer trip` that way.
+#[test]
+fn closing_brackets_before_the_seam_keep_a_lowercase_leaf() {
+    let cases = [
+        (
+            "move_between_volumes: copy phase failed for /Users/ada/Pictures/Summer trip/a.jpg \
+             (under /Users/ada/Pictures/Summer trip -> /Volumes/naspi/Photos/Summer trip): disk full",
+            "move_between_volumes: copy phase failed for $HOME/Pictures/<dir>/<file>.jpg \
+             (under $HOME/Pictures/<dir> -> /Volumes/<volume>/<dir>/<dir>): disk full",
+        ),
+        (
+            "Skipped [/srv/data/summer trip]: busy",
+            "Skipped [/<dir>/<dir>/<dir>]: busy",
+        ),
+        // Without the seam, the lowercase run is still prose.
+        (
+            "(/Volumes/naspi and then it failed) again",
+            "(/Volumes/<volume> and then it failed) again",
+        ),
+    ];
+    for (input, expected) in cases {
+        assert_eq!(r(input), expected, "input: {input:?}");
+    }
+}
+
 /// A sentence that really ends at the path still gives its prose back.
 #[test]
 fn sentence_end_after_a_path_stays_prose() {

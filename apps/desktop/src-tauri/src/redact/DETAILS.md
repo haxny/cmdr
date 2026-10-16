@@ -175,7 +175,8 @@ The boundary rules, in order, each earning its place against one of those:
    trailing ` -` goes back too: it's the start of a `{from} -> {to}` arrow (the regex stops at `>`), and it already
    stopped the run from eating the name's last word. That floor is
    what leaves `/Volumes/naspi and then it failed` as `naspi` rather than nothing. It is skipped when the path runs
-   right up to the seam, since the seam already marked the end: `/Volumes/x/summer trip: failed` used to ship `trip`. A
+   right up to the seam, since the seam already marked the end: `/Volumes/x/summer trip: failed` used to ship `trip`.
+   Closing brackets in between still count as reaching it (`(under …/Summer trip): disk full`, the `move` line). A
    word with an inner dot or a `{:?}` escape (`me\u{301}retek.jpg.cmdr-tmp-…`) also stops it: prose has neither, and
    trimming one shipped the tail of a temp name.
 5. **A `\u{…}` escape is part of a name.** Its closing `}` neither ends a sentence nor gets trimmed as punctuation, so
