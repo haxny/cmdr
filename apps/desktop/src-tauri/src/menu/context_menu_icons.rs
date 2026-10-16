@@ -52,10 +52,10 @@ use tauri::Runtime;
 use tauri::menu::{Menu, MenuItem, MenuItemKind, Submenu};
 
 use super::context_menu_facts::FileContextInfo;
+use super::context_menu_slots::find_title_run;
 use super::file_provider_items::file_provider_action_id;
 use super::macos_appkit::{
-    find_ns_submenu, menu_item_text, observe_menu_tracking, plain_title, set_menu_item_image, sf_symbol_image,
-    tracking_menu,
+    find_ns_submenu, menu_item_text, observe_menu_tracking, set_menu_item_image, sf_symbol_image, tracking_menu,
 };
 use super::open_with::{LabelPart, OPEN_WITH_ID_PREFIX, OPEN_WITH_SUBMENU_ID, default_label};
 use super::provider_logos::{ProviderLogo, logo_for_provider};
@@ -225,23 +225,6 @@ fn share_run(count: usize) -> Option<ImageRun> {
             .map(|index| (share_service_id(index), Some(ItemImage::ShareService(index))))
             .collect(),
         first_label: None,
-    })
-}
-
-/// Where `run` starts as one contiguous stretch of `titles`, or `None` when it doesn't.
-///
-/// Titles compare without the display-accelerator run `display_accelerators.rs` may have
-/// put after a TAB. An empty run, or one holding an empty title, matches nothing: a
-/// separator's title is empty, and a match on it would be a match on nothing.
-pub(super) fn find_title_run<S: AsRef<str>>(titles: &[S], run: &[String]) -> Option<usize> {
-    if run.is_empty() || run.iter().any(String::is_empty) {
-        return None;
-    }
-    titles.windows(run.len()).position(|window| {
-        window
-            .iter()
-            .zip(run)
-            .all(|(title, want)| plain_title(title.as_ref()) == want)
     })
 }
 

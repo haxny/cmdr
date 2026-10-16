@@ -29,7 +29,7 @@ use tauri::{
     menu::{MenuItem, PredefinedMenuItem, Submenu},
 };
 
-use super::context_menu_live::Placeheld;
+use super::context_menu_slots::Placeheld;
 use crate::file_system::open_with::AppCandidate;
 use crate::intl::menu_t;
 

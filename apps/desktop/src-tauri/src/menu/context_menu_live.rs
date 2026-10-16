@@ -30,94 +30,21 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use dispatch2::DispatchQueue;
 use objc2::MainThreadMarker;
 use objc2::rc::Retained;
-use objc2_app_kit::{NSMenu, NSMenuItem};
+use objc2_app_kit::NSMenu;
 use objc2_foundation::NSNotification;
-use tauri::menu::{MenuItem, PredefinedMenuItem, Submenu};
+use tauri::menu::MenuItem;
 use tauri::{AppHandle, Manager, Runtime};
 
 use super::MenuState;
 use super::context_menu_facts::{CancelGathering, Fact};
-use super::context_menu_icons::{
-    find_title_run, land_open_with_icons, land_provider_logos, land_share_icons, land_tag_circles,
-};
+use super::context_menu_icons::{land_open_with_icons, land_provider_logos, land_share_icons, land_tag_circles};
+use super::context_menu_slots::{Placeheld, SlotGroup};
+use super::file_provider_items::group_entries;
 use super::macos_appkit::{observe_menu_tracking, tracking_menu};
+use super::open_with::fill_open_with_submenu;
+use super::share_submenu::fill_share_submenu;
 use crate::file_system::sync_status::SyncStatus;
 use crate::ignore_poison::IgnorePoison as _;
-
-/// A submenu that opened before its contents were known: the disabled line standing in for
-/// them, and the separator between that line and the submenu's fixed last item.
-pub struct Placeheld<R: Runtime> {
-    pub submenu: Submenu<R>,
-    pub placeholder: MenuItem<R>,
-    pub separator: PredefinedMenuItem<R>,
-}
-
-/// A group of context-menu rows built before their fact answered, hidden when the menu
-/// starts tracking and revealed when it does. The group's leading separator is the row just
-/// above its first item.
-///
-/// Built with their final IDs, so a click routes exactly as it would on a group built with
-/// the answer in hand, and with titles that tell them apart ([`find_title_run`] finds the
-/// group by them, as one run).
-pub struct SlotGroup<R: Runtime> {
-    pub items: Vec<MenuItem<R>>,
-    /// The live rows, separator first, found when the menu starts tracking. Empty until
-    /// then, and for good if the group wasn't found, in which case nothing is revealed.
-    rows: Vec<Retained<NSMenuItem>>,
-}
-
-impl<R: Runtime> SlotGroup<R> {
-    pub fn new(items: Vec<MenuItem<R>>) -> Self {
-        Self {
-            items,
-            rows: Vec::new(),
-        }
-    }
-
-    /// Finds the group's rows in `root` and hides them, before AppKit lays the menu out.
-    fn hide(&mut self, root: &NSMenu) {
-        let titles: Option<Vec<String>> = self.items.iter().map(|item| item.text().ok()).collect();
-        let all: Vec<Retained<NSMenuItem>> = (0..root.numberOfItems())
-            .filter_map(|index| root.itemAtIndex(index))
-            .collect();
-        let live_titles: Vec<String> = all.iter().map(|item| item.title().to_string()).collect();
-        let Some(start) = titles.and_then(|titles| find_title_run(&live_titles, &titles)) else {
-            log::warn!(target: "menu", "A right-click group that was still loading isn't in the menu, so it stays as built");
-            return;
-        };
-        let Some(separator) = start
-            .checked_sub(1)
-            .and_then(|index| all.get(index))
-            .filter(|row| row.isSeparatorItem())
-        else {
-            log::warn!(target: "menu", "A right-click group that was still loading has no separator above it, so it stays as built");
-            return;
-        };
-        self.rows = std::iter::once(separator.clone())
-            .chain(all[start..start + self.items.len()].iter().cloned())
-            .collect();
-        for row in &self.rows {
-            row.setHidden(true);
-        }
-    }
-
-    /// Shows the separator and the items at `which`.
-    fn reveal(&self, which: impl IntoIterator<Item = usize>) {
-        let Some((separator, items)) = self.rows.split_first() else {
-            return;
-        };
-        let mut any = false;
-        for index in which {
-            if let Some(row) = items.get(index) {
-                row.setHidden(false);
-                any = true;
-            }
-        }
-        if any {
-            separator.setHidden(false);
-        }
-    }
-}
 
 /// Everything in one context menu that a late fact fills in. Only the facts still pending
 /// when the menu went up have a target.
@@ -180,7 +107,7 @@ impl<R: Runtime> LateTargets<R> {
         match fact {
             Fact::OpenWith(choices) => {
                 if let Some(pending) = &self.open_with {
-                    let map = super::open_with::fill_open_with_submenu(&self.app, pending, &choices.candidates)?;
+                    let map = fill_open_with_submenu(&self.app, pending, &choices.candidates)?;
                     state.context.lock_ignore_poison().open_with_apps = map;
                     land_open_with_icons(mtm, root, &pending.submenu, &choices);
                 }
@@ -194,7 +121,7 @@ impl<R: Runtime> LateTargets<R> {
                     // Armed before the items exist, so neither a click nor an icon can find an
                     // index the offer doesn't have.
                     crate::file_system::share::arm_offer(mtm, offer);
-                    super::share_submenu::fill_share_submenu(&self.app, pending, &services)?;
+                    fill_share_submenu(&self.app, pending, &services)?;
                     land_share_icons(mtm, root, &pending.submenu, services.len());
                 }
             }
@@ -224,7 +151,7 @@ impl<R: Runtime> LateTargets<R> {
             }
             Fact::ProviderOffer(offer) => {
                 if let (Some(group), Some(offer)) = (&self.provider, offer) {
-                    let entries = super::file_provider_items::group_entries(&offer);
+                    let entries = group_entries(&offer);
                     let shown = entries.len().min(group.items.len());
                     if entries.len() > shown {
                         log::warn!(target: "menu", "{} offered {} actions and the menu had room for {shown}", offer.provider_id, entries.len());

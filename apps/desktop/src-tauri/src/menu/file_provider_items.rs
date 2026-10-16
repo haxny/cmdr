@@ -8,7 +8,7 @@
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
 use tauri::{AppHandle, Runtime};
 
-use super::context_menu_live::SlotGroup;
+use super::context_menu_slots::SlotGroup;
 use crate::file_system::file_provider_actions::ProviderOffer;
 
 /// Menu item ID prefix for one offered action. Followed by its index in the offer,

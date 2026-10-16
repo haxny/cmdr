@@ -32,11 +32,19 @@ use super::OPEN_TERMINAL_HERE_ID;
 use super::context_menu_facts::{FileContextInfo, Slow};
 use super::context_menu_header::{ContextMenuTargetFacts, append_context_menu_header};
 #[cfg(target_os = "macos")]
-use super::context_menu_live::{LateTargets, SlotGroup};
+use super::context_menu_live::LateTargets;
+#[cfg(target_os = "macos")]
+use super::context_menu_slots::SlotGroup;
+#[cfg(target_os = "macos")]
+use super::file_provider_items::{append_file_provider_group, append_pending_file_provider_group};
 use super::menu_bar::SHOW_IN_FILE_MANAGER_KEY;
 use super::menu_items::{COPY_FILENAME_MAX_CHARS, SameKindTarget, truncate_for_menu_label};
 use super::menu_structure::{ContextMenuShortcuts, context_item};
+#[cfg(target_os = "macos")]
+use super::open_with::{build_open_with_submenu, build_pending_open_with_submenu};
 use super::selection_submenu::build_selection_submenu;
+#[cfg(target_os = "macos")]
+use super::share_submenu::{build_pending_share_submenu, build_share_submenu};
 #[cfg(target_os = "macos")]
 use super::{
     CLOUD_MAKE_OFFLINE_ID, CLOUD_REMOVE_DOWNLOAD_ID, DRIVE_ASK_GEMINI_ID, DRIVE_COPY_LINK_ID, DRIVE_OPEN_ID,
@@ -180,12 +188,12 @@ pub fn build_context_menu<R: Runtime>(
             // Open with submenu: Finder convention, shown for files, not directories.
             match &info.open_with {
                 Slow::Ready(choices) => {
-                    let (submenu, map) = super::open_with::build_open_with_submenu(app, &choices.candidates)?;
+                    let (submenu, map) = build_open_with_submenu(app, &choices.candidates)?;
                     menu.append(&submenu)?;
                     open_with_apps = map;
                 }
                 Slow::Pending => {
-                    let pending = super::open_with::build_pending_open_with_submenu(app)?;
+                    let pending = build_pending_open_with_submenu(app)?;
                     menu.append(&pending.submenu)?;
                     late.open_with = Some(pending);
                 }
@@ -309,11 +317,11 @@ pub fn build_context_menu<R: Runtime>(
         if can_share {
             match &info.share_services {
                 Slow::Ready(services) if !services.is_empty() => {
-                    menu.append(&super::share_submenu::build_share_submenu(app, services)?)?;
+                    menu.append(&build_share_submenu(app, services)?)?;
                 }
                 Slow::Ready(_) => {}
                 Slow::Pending => {
-                    let pending = super::share_submenu::build_pending_share_submenu(app)?;
+                    let pending = build_pending_share_submenu(app)?;
                     menu.append(&pending.submenu)?;
                     late.share = Some(pending);
                 }
@@ -418,12 +426,10 @@ pub fn build_context_menu<R: Runtime>(
     // Finder does and in the provider's order and words, below Cmdr's own cloud items.
     #[cfg(target_os = "macos")]
     match &info.file_provider_offer {
-        Slow::Ready(Some(offer)) => super::file_provider_items::append_file_provider_group(app, &menu, offer)?,
+        Slow::Ready(Some(offer)) => append_file_provider_group(app, &menu, offer)?,
         Slow::Ready(None) => {}
         Slow::Pending => {
-            late.provider = Some(super::file_provider_items::append_pending_file_provider_group(
-                app, &menu,
-            )?);
+            late.provider = Some(append_pending_file_provider_group(app, &menu)?);
         }
     }
 

@@ -22,7 +22,7 @@
 use tauri::menu::{MenuItem, PredefinedMenuItem, Submenu};
 use tauri::{AppHandle, Runtime};
 
-use super::context_menu_live::Placeheld;
+use super::context_menu_slots::Placeheld;
 use crate::file_system::share::ShareService;
 use crate::intl::menu_t;
 

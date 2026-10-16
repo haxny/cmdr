@@ -71,6 +71,10 @@ window focus context.
   `FileContextInfo` the builder reads (defined here with its `Slow<T>`), `Slow::Pending` for the rest. See "Slow facts and the live menu".
 - `context_menu_live.rs` (macOS): `lend_live_menu`, which lands every fact that missed the grace period on the menu
   while it's open (`LateTargets`, `Placeheld` submenus, `SlotGroup` rows). Same section.
+- `context_menu_slots.rs` (macOS): the late-row vocabulary every builder makes for a fact still out (`Placeheld`
+  submenus, `SlotGroup` rows, revealed by the live menu), plus `find_title_run`, which both a `SlotGroup` and
+  `context_menu_icons.rs` use to find their rows in the live `NSMenu`. A leaf below the sub-builders and the live menu,
+  so none of them cycles through another.
 - `open_with.rs` (macOS): `build_open_with_submenu` for the file context menu's "Open with"
   submenu (`OPEN_WITH_SUBMENU_ID`). Returns the submenu plus a `bundle_id → app_path` map that callers stash in
   `MenuState.context.open_with_apps` so `on_menu_event` can resolve dynamic `open-with:<bundle-id>`

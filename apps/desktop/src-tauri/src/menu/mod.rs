@@ -35,6 +35,8 @@
 //! - `context_menu_facts.rs` (macOS): the file context menu's slow facts (tags, Drive, File
 //!   Provider, "Open with", Share, iCloud status), gathered off the main thread under a grace
 //!   period. `context_menu_live.rs` fills in the ones that answered after the menu went up.
+//! - `context_menu_slots.rs` (macOS): the parts a builder makes for a fact still out (`Placeheld`
+//!   submenus, `SlotGroup` rows), and `find_title_run`, which finds rows in the live menu by title.
 //! - `open_with.rs` (macOS): "Open with" submenu builder.
 //! - `context_menu_icons.rs` (macOS): every image on right-click items (SF Symbols, provider
 //!   logos, app icons, share icons, tag circles), which needs the tracking notification because
@@ -55,6 +57,8 @@ mod context_menu_header;
 mod context_menu_icons;
 #[cfg(target_os = "macos")]
 mod context_menu_live;
+#[cfg(target_os = "macos")]
+mod context_menu_slots;
 #[cfg(target_os = "macos")]
 mod display_accelerators;
 mod file_context_menu;
