@@ -36,6 +36,7 @@ const toc = [
     { id: 'company', label: 'Company, license, and continuity' },
     { id: 'report', label: 'Report a vulnerability' },
     { id: 'gaps', label: 'Known limitations' },
+    { id: 'product-information', label: 'Product information (EU Cyber Resilience Act)' },
 ]
 ---
 
@@ -721,5 +722,128 @@ const toc = [
     <p>What Cmdr doesn't do, and what covers each one instead. They're listed here so you don't have to look for them.</p>
     <ul>
         {knownLimitations.map((limitation) => <li set:html={limitation} />)}
+    </ul>
+
+    <h2 id="product-information">Product information (EU Cyber Resilience Act)</h2>
+    <p>
+        The EU Cyber Resilience Act lists what a software maker has to tell the people who use its product. All of it
+        is here in one place. Where another section of this page already covers a point, the point links there.
+    </p>
+    <ul>
+        <li>
+            <strong>Manufacturer</strong>: Rymdskottkärra AB, Vattmyragränd 47, 176 65 Järfälla, Sweden. Email
+            <a href="mailto:legal@getcmdr.com">legal@getcmdr.com</a>, website <a href="/">getcmdr.com</a>
+            (<a href="#company">company details</a>).
+        </li>
+        <li>
+            <strong>Reporting a vulnerability</strong>: <a href="mailto:security@getcmdr.com">security@getcmdr.com</a>
+            is the single point of contact. The coordinated disclosure policy is
+            <a href="https://github.com/vdavid/cmdr/blob/main/SECURITY.md">SECURITY.md</a>, summed up under
+            <a href="#report">Report a vulnerability</a>.
+        </li>
+        <li>
+            <strong>Product</strong>: Cmdr, a two-pane file manager. It's software for macOS 10.15 and later, on Apple
+            silicon and Intel Macs. Each version has its own number, shown in Cmdr › About Cmdr. The app's bundle id is
+            <code>com.veszelovszki.cmdr</code>, and its signature names Rymdskottkarra AB, Team ID
+            <code>83H6YAQMNP</code> (<a href="#signing">signing</a>).
+        </li>
+        <li>
+            <strong>What it's for</strong>: browsing, searching, previewing, and managing files from the keyboard.
+            That's copying, moving, renaming, deleting, comparing, and organizing files and folders on the Mac's own
+            drives, and on servers, phones, and archives the user connects. It's for individuals and businesses, and it
+            runs as the logged-in macOS user. It isn't made to serve files to other machines or to be built into
+            another product. Its main security properties are in the <a href="#summary">summary</a> and under
+            <a href="#permissions">Sandbox and permissions</a>.
+        </li>
+        <li>
+            <strong>When the risk goes up</strong>: Cmdr's defaults are the safest setup. These choices and situations
+            raise the risk, and each one is up to the user or their IT team:
+            <ul>
+                <li>
+                    <strong>Granting Full Disk Access</strong>: a flaw in Cmdr, or in a file format it reads, then
+                    reaches every file on the Mac. Without it, macOS asks before Cmdr opens each protected folder.
+                </li>
+                <li>
+                    <strong>Opening files from people you don't trust</strong>, like archives, PDFs, and images: Cmdr
+                    reads them inside the app, which isn't sandboxed.
+                </li>
+                <li>
+                    <strong>Connecting without encryption on a network you don't trust</strong>: a WebDAV or S3
+                    server over plain <code>http://</code>, or an SMB server that doesn't encrypt, lets others on the
+                    network read passwords and files on the way.
+                </li>
+                <li>
+                    <strong>Turning on cloud AI</strong>: file names and, when asked, parts of files go to the AI
+                    provider. Text inside a file can try to steer the assistant, which still can't change a file
+                    without the user's approval.
+                </li>
+                <li>
+                    <strong>Turning on the MCP server</strong>: AI tools on the same Mac that have its access token can
+                    then control Cmdr.
+                </li>
+                <li>
+                    <strong>Turning off updates</strong>, or holding Cmdr at a version: flaws that later releases fix
+                    stay open on that Mac.
+                </li>
+                <li>
+                    <strong>Using a Mac without FileVault</strong>: Cmdr's own data, like the index of file names and
+                    the log of file operations, sits unencrypted on the disk.
+                </li>
+            </ul>
+            What Cmdr doesn't do is under <a href="#gaps">Known limitations</a>, and the remaining risks, ranked, are
+            in the
+            <a href="https://github.com/vdavid/cmdr/blob/main/docs/threat-model.md#residual-risks-ranked">threat model</a
+            >.
+        </li>
+        <li>
+            <strong>Support period</strong>: how long each version gets security fixes is under
+            <a href="#report">Report a vulnerability</a> and in
+            <a href="https://github.com/vdavid/cmdr/blob/main/SECURITY.md#supported-versions">SECURITY.md</a>.
+        </li>
+        <li>
+            <strong>EU declaration of conformity</strong>: the Act's main requirements apply from 2027-12-11. Cmdr's
+            declaration of conformity will be published on this page once it's signed, before that date.
+        </li>
+        <li>
+            <strong>Software bills of materials (SBOMs)</strong>: attached to each release on GitHub
+            (<a href="#signing">details</a>).
+        </li>
+        <li>
+            <strong>Setting up Cmdr securely</strong>:
+            <ul>
+                <li>
+                    Download Cmdr only from getcmdr.com, its
+                    <a href="https://github.com/vdavid/cmdr/releases/latest">GitHub releases</a>, or the Homebrew
+                    cask. To check a download, see "Build provenance" under <a href="#signing">signing</a>.
+                </li>
+                <li>
+                    Keep the defaults unless you need something else: automatic updates on, AI and the MCP server off,
+                    and nothing that other machines can connect to. Settings › Advanced › "Reset all to defaults"
+                    brings them back.
+                </li>
+                <li>
+                    Full Disk Access is optional. Grant it during setup to browse every folder without macOS asking
+                    each time, or skip it.
+                </li>
+                <li>
+                    For remote storage on a network you don't trust, pick SFTP, <code>https://</code>, or SMB with
+                    encryption.
+                </li>
+                <li>Keep FileVault on.</li>
+            </ul>
+        </li>
+        <li>
+            <strong>How updates install</strong>: by default, Cmdr checks for updates at launch and then every three
+            hours. It downloads a new version, checks its signature, and installs it by itself, then asks you to
+            restart. "Later" waits, and Cmdr asks again 24 hours later. Turning updates off is under
+            <a href="#signing">signing</a>; managed Macs are under <a href="#mdm-deploy">deploying Cmdr</a>.
+        </li>
+        <li>
+            <strong>Removing Cmdr and its data</strong>: Settings › Updates &amp; privacy ›
+            <strong>Delete all Cmdr data</strong>, then move the app to the Trash. What it removes, and how to do it
+            by hand, is under <a href="#remove">removing Cmdr and all its data</a>. To have data on Cmdr's servers
+            deleted, write to <a href="mailto:legal@getcmdr.com">legal@getcmdr.com</a>
+            (<a href="/privacy-policy">privacy policy</a>, section 9).
+        </li>
     </ul>
 </LegalLayout>
