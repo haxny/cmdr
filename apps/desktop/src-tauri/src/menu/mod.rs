@@ -140,7 +140,7 @@ pub use menu_structure::{
     build_network_host_context_menu, build_parent_row_context_menu, build_tab_context_menu, build_viewer_context_menu,
     build_viewer_menu,
 };
-pub use queue_row_menu::{QueueRowMenuAction, QueueRowMenuEntry, build_queue_row_context_menu};
+pub use queue_row_menu::{QueueRowMenuEntry, build_queue_row_context_menu};
 pub use rebuild::rebuild_menu_bar;
 #[cfg(target_os = "macos")]
 pub use services_context::lend_services_menu;

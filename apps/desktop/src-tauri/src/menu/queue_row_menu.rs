@@ -13,23 +13,7 @@ use tauri::{
 
 use super::menu_structure::ContextMenuShortcuts;
 use crate::intl::menu_t;
-
-/// One thing a queue row's menu can do. Pause and Resume share a key but are separate
-/// actions, so the label can say which one this click is, and so a pick that went stale
-/// while the menu was up can be told apart.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize, specta::Type)]
-#[serde(rename_all = "camelCase")]
-pub enum QueueRowMenuAction {
-    MoveEarlier,
-    MoveLater,
-    Select,
-    Cancel,
-    Dismiss,
-    Show,
-    Pause,
-    Resume,
-    Rollback,
-}
+use crate::window_events::QueueRowMenuAction;
 
 impl QueueRowMenuAction {
     const ALL: [Self; 9] = [

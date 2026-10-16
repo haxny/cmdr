@@ -195,7 +195,8 @@ Exceptions that do NOT use `"execute-command"`:
   bar's `VIEWER_EDIT_COPY_ID` / `VIEWER_SELECT_ALL_ID`: those defer to the search box, this pair always acts on the file
   (`src/routes/viewer/DETAILS.md` § Gotchas)
 - **Queue row right-click menu**: `queue_row_*` ids (`QueueRowMenuAction::from_menu_id`), emitting
-  `QueueRowContextAction` to the `queue` window, which runs the pick on the row it opened the menu over
+  `QueueRowContextAction` to the `queue` window (both payload types live in `window_events.rs`, the enum's inherent impl
+  in `queue_row_menu.rs`, so `window_events` never names `menu`), which runs the pick on the row it opened the menu over
   (`apps/desktop/src/lib/file-operations/queue/DETAILS.md` § "The row's right-click menu")
 - **Open with** (macOS): items have dynamic IDs like `open-with:com.apple.Xcode` that can't be
   enumerated in `menu_id_to_command`. `on_menu_event` prefix-matches `open-with:` and calls

@@ -155,13 +155,31 @@ pub struct ViewerContextMenuAction {
     pub action: ViewerEditActionKind,
 }
 
+/// One thing a queue row's menu can do. Pause and Resume share a key but are separate
+/// actions, so the label can say which one this click is, and so a pick that went stale
+/// while the menu was up can be told apart. Its menu ids, labels, and commands live with the
+/// menu builder (`menu/queue_row_menu.rs`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub enum QueueRowMenuAction {
+    MoveEarlier,
+    MoveLater,
+    Select,
+    Cancel,
+    Dismiss,
+    Show,
+    Pause,
+    Resume,
+    Rollback,
+}
+
 /// `queue-row-context-action`: an item was picked from a queue row's right-click menu. Emitted
 /// to the `queue` window, which runs it on the row it opened the menu over, through the same
 /// action that row's key runs.
 #[derive(Debug, Clone, Serialize, Deserialize, specta::Type, Event)]
 #[serde(rename_all = "camelCase")]
 pub struct QueueRowContextAction {
-    pub action: crate::menu::QueueRowMenuAction,
+    pub action: QueueRowMenuAction,
 }
 
 /// `function-key-bar-hide-requested`: the function key bar's right-click context

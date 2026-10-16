@@ -15,7 +15,7 @@ use tauri::{AppHandle, Manager};
 
 use crate::ignore_poison::IgnorePoison;
 use crate::volume_broadcast::VolumeContextActionKind;
-use crate::window_events::ViewerEditActionKind;
+use crate::window_events::{QueueRowMenuAction, ViewerEditActionKind};
 
 use super::{
     CLOSE_TAB_ID, CommandScope, EDIT_COPY_ID, EDIT_CUT_ID, EDIT_PASTE_ID, EJECT_VOLUME_ID, FAVORITES_ADD_CONTEXT_ID,
@@ -420,7 +420,7 @@ pub fn handle_menu_event(app: &AppHandle<tauri::Wry>, event: tauri::menu::MenuEv
     }
 
     // === A queue row's right-click menu: emit to the queue window, which knows the row ===
-    if let Some(action) = super::QueueRowMenuAction::from_menu_id(id) {
+    if let Some(action) = QueueRowMenuAction::from_menu_id(id) {
         use tauri_specta::Event as _;
         let event = crate::window_events::QueueRowContextAction { action };
         if let Err(e) = event.emit_to(app, "queue") {
