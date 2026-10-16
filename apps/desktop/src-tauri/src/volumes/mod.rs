@@ -24,7 +24,7 @@ mod mounts;
 mod nsurl;
 mod smb;
 
-mod rename;
+mod lifecycle;
 #[cfg(all(test, target_os = "macos"))]
 mod rename_real_image;
 

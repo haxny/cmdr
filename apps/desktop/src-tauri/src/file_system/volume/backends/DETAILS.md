@@ -47,7 +47,7 @@ SMB mounts are automatically upgraded to `SmbVolume` (direct smb2 connection) in
    is on (default `true`), it starts the browse — that's when the macOS prompt fires, once per app per data dir. Without
    this, dev profiles with auto-reconnected SMB shares would stay on the slow OS-mount path forever.
 
-2. **Mount detection** (`volumes/watcher.rs::try_upgrade_smb_mount`): When FSEvents detects a new volume in `/Volumes/`
+2. **Mount detection** (`volumes/lifecycle.rs::try_upgrade_smb_mount`): When FSEvents detects a new volume in `/Volumes/`
    and it's `smbfs`, spawns a background upgrade attempt, which holds the mDNS browse through `discover_server`.
 
 3. **Pane open** (`network::smb_pane_upgrade::upgrade_on_pane_open`, from `list_directory_start_streaming`): a pane
@@ -150,7 +150,7 @@ The SMB backend's own decisions moved with its code: `crates/cmdr-smb/DETAILS.md
 
 - **`on_unmount`**: the device is gone (ejected, network mount torn down, FSEvents unmount). Tear everything down.
   `SmbVolume` flips `unmounted`, forces state to `Disconnected`, cancels the watcher, closes the scan pool, and drops
-  the smb2 `Tree` + `SmbClient`. Callers: `volumes::watcher::handle_volume_unmounted` and `volume::eject`.
+  the smb2 `Tree` + `SmbClient`. Callers: `volumes::lifecycle::handle_volume_unmounted` and `volume::eject`.
 - **`on_superseded`**: a NEWER instance took this volume's id in the `VolumeManager`, but the device is still there.
   Sole caller: `network::smb_upgrade::register_replacing_predecessor`.
 

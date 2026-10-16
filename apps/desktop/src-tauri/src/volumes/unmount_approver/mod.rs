@@ -223,7 +223,7 @@ pub(crate) fn install_for_app() {
 
 /// Whether the app's approver is answering DiskArbitration.
 ///
-/// The post-unmount cleanup hook (`volumes/watcher.rs`) reads it: with the approver installed, a
+/// The post-unmount cleanup hook (`volumes/lifecycle.rs`) reads it: with the approver installed, a
 /// drive that went away is stopped by the cause machine that also knows WHY it went, and a second
 /// hook would only race it to the same stop.
 pub(crate) fn is_installed() -> bool {

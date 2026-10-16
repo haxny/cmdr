@@ -2,7 +2,7 @@
 //!
 //! Shared across four upgrade paths:
 //! 1. **Startup** (`file_system::upgrade_existing_smb_mounts`): scans existing mounts
-//! 2. **Mount-time** (`volumes::watcher::try_upgrade_smb_mount`): FSEvents detects new mount
+//! 2. **Mount-time** (`volumes::lifecycle::try_upgrade_smb_mount`): FSEvents detects new mount
 //! 3. **Pane-open** (`smb_pane_upgrade::upgrade_on_pane_open`): a pane lands on an OS-mounted share
 //! 4. **Manual** (`smb_connect_directly`): user clicks "Connect directly"
 //!
@@ -525,7 +525,7 @@ pub(crate) async fn register_smb_volume(
 ///
 /// Single entry point for the three fire-and-forget auto-upgrade paths: startup
 /// (`file_system::upgrade_existing_smb_mounts`), mount-time
-/// (`volumes::watcher::try_upgrade_smb_mount`), and pane-open
+/// (`volumes::lifecycle::try_upgrade_smb_mount`), and pane-open
 /// (`smb_pane_upgrade::upgrade_on_pane_open`). A private copy that used the one-shot
 /// `resolve_ip_to_hostname` looked up creds by LAN IP and missed hostname-keyed
 /// creds → guest → `STATUS_LOGON_FAILURE`. Keeping every caller here means the

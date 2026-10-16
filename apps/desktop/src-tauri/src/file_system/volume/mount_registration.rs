@@ -18,7 +18,7 @@
 //!
 //! Three callers share this module: the startup sweep
 //! (`file_system::register_discovered_volumes`), the mount watcher
-//! (`volumes::watcher`), and the listing's last-chance adoption
+//! (`volumes::lifecycle`), and the listing's last-chance adoption
 //! (`listing_host::volumes::AppVolumes::unregistered`).
 
 use std::path::{Path, PathBuf};

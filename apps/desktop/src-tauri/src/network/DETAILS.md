@@ -249,7 +249,7 @@ Every `NSWorkspaceDidMountNotification` on an SMB share triggers a fresh `regist
 
 **A replace is not a disconnect, and the predecessor's session must survive it.** The full lifecycle contract, the in-flight holders it protects, and the id-scoped parts that do retire live in `file_system/volume/backends/DETAILS.md` § "Supersede vs. unmount", the canonical doc, next to the `SmbVolume` code that implements it.
 
-**Gotcha**: the `Volume::on_superseded` DEFAULT delegates to `on_unmount`, which uses `blocking_write()` / `blocking_lock()` because its FSEvents-thread call site (`volumes::watcher::handle_volume_unmounted`) is sync. Inside `register_replacing_predecessor` we're in an async context, so a direct call would panic ("cannot block_on within a runtime") for any backend that hasn't overridden the hook. The helper wraps the call in `tokio::task::spawn_blocking(...).await` so the lock acquisition runs on the blocking-thread pool. Don't switch back to a direct call.
+**Gotcha**: the `Volume::on_superseded` DEFAULT delegates to `on_unmount`, which uses `blocking_write()` / `blocking_lock()` because its FSEvents-thread call site (`volumes::lifecycle::handle_volume_unmounted`) is sync. Inside `register_replacing_predecessor` we're in an async context, so a direct call would panic ("cannot block_on within a runtime") for any backend that hasn't overridden the hook. The helper wraps the call in `tokio::task::spawn_blocking(...).await` so the lock acquisition runs on the blocking-thread pool. Don't switch back to a direct call.
 
 ### Linux mounting via GVFS
 
@@ -1241,7 +1241,7 @@ credential's shape (`user_empty`, `user_domain=none|backslash|at`, `password_emp
   help there. The wait fails open: if mDNS never warms, the IP-only Keychain lookup still runs. The returned
   `DiscoveredServer` carries the lease, so keep it alive until the dial is done. **Every upgrade path is covered.** The
   three fire-and-forget paths, startup (`file_system::upgrade_existing_smb_mounts`), mount-time
-  (`volumes::watcher::try_upgrade_smb_mount`), and pane-open (`smb_pane_upgrade::upgrade_on_pane_open`), all go through
+  (`volumes::lifecycle::try_upgrade_smb_mount`), and pane-open (`smb_pane_upgrade::upgrade_on_pane_open`), all go through
   the shared `smb_upgrade::resolve_and_register_smb_volume`, so the resolver choice can't drift between them (a startup
   copy that used the one-shot `resolve_ip_to_hostname` looked creds up by LAN IP, missed hostname-keyed creds, and fell
   back to guest → `STATUS_LOGON_FAILURE`). The manual "Connect directly" path (`smb_connect_directly`) stays separate

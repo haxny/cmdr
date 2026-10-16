@@ -12,8 +12,7 @@
 
 use cmdr_fs::testing::disk_images::{DiskImage, DiskImageSession, ImageSpec};
 
-use super::rename::handle_volume_renamed;
-use super::watcher::handle_volume_mounted;
+use super::lifecycle::{handle_volume_mounted, handle_volume_renamed};
 use crate::file_system::volume::manager::get_volume_manager;
 use crate::volume_broadcast::{RootChangeKind, volume_root_changes};
 

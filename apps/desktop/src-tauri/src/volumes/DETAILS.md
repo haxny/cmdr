@@ -270,10 +270,16 @@ so a subsystem that saturates the pool starves it just as effectively (`commands
 `list_locations` time out (2s), so that listing carries no fresh volumes at all and the broadcast falls back to the last
 good set. Fully fixing "one dead mount never hides the others" here needs per-item timeouts for it, tracked separately.
 
-## Global state in `watcher.rs`
+## The mount watcher: observer and handlers
 
-- `APP_HANDLE: OnceLock<AppHandle>`: app handle for emitting events.
-- `OBSERVER_INSTALLED: OnceLock<()>`: idempotency gate.
+`watcher.rs` is only the `NSWorkspace` observer plumbing: it installs the blocks and pulls the volume path out of each
+notification. `lifecycle.rs` holds what each event means (registration, index stop or follow, SMB upgrade, the
+`volume-mounted` / `volume-unmounted` events), including the rename handler, which falls back to unmount + mount. The
+dependency runs one way, observer to handlers.
+
+- `APP_HANDLE: OnceLock<AppHandle>` (`lifecycle.rs`): app handle the handlers emit through. `start_volume_watcher` sets
+  it via `set_app_handle`, and a second set failing is the idempotency gate.
+- `OBSERVER_INSTALLED: OnceLock<()>` (`watcher.rs`): idempotency gate for the observer install.
 
 The observer `RcBlock` closures aren't kept in our own static; `addObserverForName:object:queue:usingBlock:` retains the
 block for the lifetime of the registration, and we never remove the observer. Same pattern as
@@ -628,7 +634,8 @@ objects accumulate in a default pool that's never drained, leaking memory over h
 
 **Gotcha**: The observer block in `watcher.rs::install_observers` runs on the main thread.
 **Why**: With `queue: nil`, AppKit dispatches the block on the thread that posted the notification, and
-`diskarbitrationd` posts on the main thread. Keep the body cheap: `register_volume_with_manager` is microseconds,
+`diskarbitrationd` posts on the main thread, and the mount and unmount blocks run their `lifecycle.rs` handler inline.
+Keep both cheap: `register_mount_root` is microseconds,
 `try_upgrade_smb_mount` and `emit_volumes_changed` both `tauri::async_runtime::spawn`, and `app.emit` is non-blocking.
 Don't add blocking I/O here without moving it onto a background task. The rename block does exactly that: following a
 rename derives an id (an NSURL read) and restarts the drive's index (a drain of up to seconds), so it hands

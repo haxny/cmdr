@@ -210,8 +210,7 @@ Copy-paste commands for common debugging scenarios. All include `info` as the ba
 - **Directory listing**: `RUST_LOG=cmdr_listing=debug,info pnpm dev`
 - **File viewer**: `RUST_LOG=cmdr_lib::file_viewer=debug,FE:viewer=debug,info pnpm dev`
 - **MTP (Android devices)**: `RUST_LOG=cmdr_lib::mtp=debug,FE:mtp=debug,info pnpm dev`
-- **Volume discovery + broadcast**:
-  `RUST_LOG=cmdr_lib::volume_broadcast=debug,cmdr_lib::volumes::watcher=debug,info pnpm dev`
+- **Volume discovery + broadcast**: `RUST_LOG=cmdr_lib::volume_broadcast=debug,cmdr_lib::volumes=debug,info pnpm dev`
 - **AI/LLM**: `RUST_LOG=cmdr_lib::ai=debug,info pnpm dev`
 - **Licensing**: `RUST_LOG=cmdr_lib::licensing=debug,info pnpm dev`
 - **MCP server**: `RUST_LOG=cmdr_lib::mcp=debug,info pnpm dev`
