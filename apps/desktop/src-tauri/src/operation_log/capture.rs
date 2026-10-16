@@ -35,15 +35,14 @@ use super::types::{
 use super::writer::{FinalizeOperation, FinalizeOutcome, JournalItem, OpenOperation, OperationLogWriter};
 
 /// The per-item observer that journals a managed operation. Sibling to
-/// `OperationEventSink` (UI events). The write pipeline reaches the installed
-/// journal by `op_id` through the free functions in [`super`] (`journal_open` /
-/// `journal_record_items` / `journal_finalize`), mirroring the op-keyed
-/// `update_operation_status` status cache written at the same record points
-/// rather than riding a context threaded down the pipeline, which is what keeps
-/// `OperationEventSink` unextended (`DETAILS.md` § "The seam: a global journal
-/// reached by `op_id`"). Production installs
-/// a [`WriterJournal`]; a test installs a `CapturingJournal`; when no journal is
-/// installed (the DB failed to open), the free functions no-op.
+/// `OperationEventSink` (UI events). The write pipeline reaches the journal
+/// in an [`OperationLog`](super::OperationLog) by `op_id`, mirroring the
+/// op-keyed `update_operation_status` status cache written at the same record
+/// points rather than riding a context threaded down the pipeline, which is
+/// what keeps `OperationEventSink` unextended (`DETAILS.md` § "The seam: a
+/// journal reached by `op_id`"). `OperationLog::open` installs a
+/// [`WriterJournal`]; a test installs a `CapturingJournal`; with no journal (the
+/// DB failed to open), every call no-ops.
 ///
 /// The journal NEVER fails the operation: every method swallows its own errors
 /// (logged), because the file operation's data safety outranks the journal's

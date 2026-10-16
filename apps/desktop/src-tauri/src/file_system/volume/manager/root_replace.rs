@@ -18,6 +18,13 @@ pub enum RootReplacement {
     Replaced {
         /// The instance that served the id until now. ❗ NOT retired: it may
         /// share its connection with the one that replaced it.
+        #[cfg_attr(
+            not(test),
+            expect(
+                dead_code,
+                reason = "the app only needs to know a replace happened; the tests check which instance left"
+            )
+        )]
         previous: Arc<dyn Volume>,
     },
     /// Nothing is registered under the id, so nothing was replaced and nothing

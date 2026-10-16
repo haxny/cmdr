@@ -259,8 +259,11 @@ All under `apps/desktop/src-tauri/src/`.
 - `operation_log/`: The durable, cross-volume journal of file mutations — the app's first durable DB
   (`operation-log.db`), the foundation for rollback, indexed name search, and a future undo. Single writer thread, a
   forward-migration ladder (not delete-and-recreate) and retention discipline, interned dir prefixes + per-item rows,
-  app-side case folding with no collation (stays `sqlite3`-inspectable). See its
+  app-side case folding with no collation (stays `sqlite3`-inspectable). Its state is one `OperationLog` handle. See its
   `apps/desktop/src-tauri/src/operation_log/CLAUDE.md`
+- `operation_log_host/`: this app as the operation log's host: builds the one `OperationLog` (`operation_log()`), opens
+  it once the data dir is known, and answers its needs (settings, runtime, the volume registry). See
+  `apps/desktop/src-tauri/src/operation_log_host/CLAUDE.md`
 - `security_log/`: The local security event log (`security-events.jsonl`): typed `SecurityEvent`s from consent, MCP,
   managed-policy, and updater hooks, one emitter that also feeds subscribers, a background writer, and the opt-out. See
   its `apps/desktop/src-tauri/src/security_log/CLAUDE.md`

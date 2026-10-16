@@ -16,11 +16,11 @@ use super::transfer::move_op::move_files_with_progress_inner;
 use super::types::{WriteOperationConfig, WriteOperationType};
 use super::{copy_files_with_progress_inner, delete_files_with_progress_inner};
 
-use crate::operation_log::TestJournalGuard;
 use crate::operation_log::capture::WriterJournal;
 use crate::operation_log::store::{open_read_connection, operation_log_db_path, read_operation, read_operation_items};
 use crate::operation_log::types::{EntryType, ExecutionStatus, Initiator, OpKind, RollbackState, RowRole};
 use crate::operation_log::writer::OperationLogWriter;
+use crate::operation_log_host::TestJournalGuard;
 
 /// Install a fresh temp-DB journal as the process-global one and hand back the
 /// [`TestJournalGuard`] (teardown + serialization), the temp dir (kept alive by

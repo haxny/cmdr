@@ -443,7 +443,7 @@ async fn journaled_same_volume_move(
     config: &VolumeCopyConfig,
 ) -> (
     crate::operation_log::store::OperationRow,
-    crate::operation_log::TestJournalGuard,
+    crate::operation_log_host::TestJournalGuard,
     TempDir,
 ) {
     use crate::file_system::write_operations::journal;
@@ -455,7 +455,7 @@ async fn journaled_same_volume_move(
     let journal_dir = TempDir::new().unwrap();
     let db = operation_log_db_path(journal_dir.path());
     let writer = OperationLogWriter::spawn(&db).expect("spawn writer");
-    let guard = crate::operation_log::TestJournalGuard::install(Arc::new(WriterJournal::new(writer)));
+    let guard = crate::operation_log_host::TestJournalGuard::install(Arc::new(WriterJournal::new(writer)));
 
     // A same-volume move journals under the REAL volume id on both sides.
     let state =

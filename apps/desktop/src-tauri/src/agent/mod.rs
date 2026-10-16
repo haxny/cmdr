@@ -59,7 +59,7 @@ impl AgentDb {
 }
 
 /// Open `main.db` and register the [`AgentDb`] handle in managed state so the chat runtime
-/// can read and write. Modeled on `operation_log::start`: the store owns the schema
+/// can read and write. Modeled on `operation_log_host::start`: the store owns the schema
 /// lifecycle on open (migrate forward, recreate a genuinely unparseable file, or refuse a
 /// downgrade). Failure is non-fatal — the app runs without the agent store rather than
 /// refusing to start.

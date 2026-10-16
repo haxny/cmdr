@@ -23,11 +23,11 @@ use super::types::{VolumeCopyConfig, WriteOperationConfig};
 use super::{copy_volumes_with_progress, move_volumes_with_progress};
 
 use crate::file_system::volume::{InMemoryVolume, Volume};
-use crate::operation_log::TestJournalGuard;
 use crate::operation_log::capture::WriterJournal;
 use crate::operation_log::store::{open_read_connection, operation_log_db_path, read_operation, read_operation_items};
 use crate::operation_log::types::{EntryType, ExecutionStatus, Initiator, OpKind, RollbackState, RowRole};
 use crate::operation_log::writer::OperationLogWriter;
+use crate::operation_log_host::TestJournalGuard;
 
 /// Install a fresh temp-DB journal as the process-global one; see the twin in
 /// `journal_capture_tests.rs`.

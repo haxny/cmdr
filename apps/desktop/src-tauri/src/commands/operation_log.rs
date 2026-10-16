@@ -101,8 +101,8 @@ pub async fn get_operation_log_detail(
 pub async fn rollback_operation(app: AppHandle, operation_id: String) -> Result<RollbackDispatch, RollbackRefusal> {
     // The gate opens a read connection and reads the operation's row before it
     // spawns anything, so it runs on the blocking pool like every other DB touch here.
-    let events: Arc<dyn OperationEventSink> = Arc::new(TauriEventSink::new(app.clone()));
-    tauri::async_runtime::spawn_blocking(move || dispatch_rollback(&app, &operation_id, Initiator::User, events))
+    let events: Arc<dyn OperationEventSink> = Arc::new(TauriEventSink::new(app));
+    tauri::async_runtime::spawn_blocking(move || dispatch_rollback(&operation_id, Initiator::User, events))
         .await
         // The gate panicked, so nothing was dispatched and nothing changed on disk.
         // `UnknownOperation` is already this module's answer for "we couldn't
@@ -125,6 +125,6 @@ pub async fn rollback_operation(app: AppHandle, operation_id: String) -> Result<
 #[tauri::command]
 #[specta::specta]
 pub async fn undo_operations(app: AppHandle, operation_ids: Vec<String>) -> Result<UndoReport, String> {
-    let events: Arc<dyn OperationEventSink> = Arc::new(TauriEventSink::new(app.clone()));
-    Ok(run_undo(&app, &operation_ids, Initiator::User, events).await)
+    let events: Arc<dyn OperationEventSink> = Arc::new(TauriEventSink::new(app));
+    Ok(run_undo(&operation_ids, Initiator::User, events).await)
 }

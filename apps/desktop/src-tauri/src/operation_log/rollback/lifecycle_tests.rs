@@ -11,6 +11,7 @@ use std::sync::Arc;
 
 use super::test_support::*;
 use super::*;
+use crate::file_system::VolumeManager;
 use crate::file_system::volume::{InMemoryVolume, Volume};
 use crate::operation_log::store::{open_read_connection, read_operation};
 use crate::operation_log::types::{

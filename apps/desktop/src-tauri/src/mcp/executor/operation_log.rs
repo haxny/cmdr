@@ -104,7 +104,7 @@ pub async fn execute_operations_get<R: Runtime>(app: &AppHandle<R>, params: &Val
 /// `rollingBack`. A domain refusal (unknown / already rolling back / not
 /// rollbackable / a volume disconnected) comes back as a typed `refusal` body, not
 /// a message the caller must parse.
-pub async fn execute_operations_rollback<R: Runtime>(app: &AppHandle<R>, params: &Value) -> ToolResult {
+pub async fn execute_operations_rollback<R: Runtime>(_app: &AppHandle<R>, params: &Value) -> ToolResult {
     let op_id = required_operation_id(params)?;
     let auto_confirm = params.get("autoConfirm").and_then(|v| v.as_bool()).unwrap_or(false);
     if !auto_confirm {
@@ -118,13 +118,12 @@ pub async fn execute_operations_rollback<R: Runtime>(app: &AppHandle<R>, params:
     // spawning the async inverse, so run it off the MCP task like every other
     // blocking DB touch. The token was already validated at the HTTP boundary
     // before dispatch reached here.
-    let app = app.clone();
     // The sink is built at the edge like every other managed op's; this edge is
     // generic over the runtime, so it takes the startup-wired handle.
     let events = crate::file_system::write_operations::global_tauri_sink()
         .ok_or_else(|| ToolError::internal("the app isn't wired up to report operation progress yet"))?;
     let outcome = tokio::task::spawn_blocking(move || {
-        crate::file_system::write_operations::rollback::dispatch_rollback(&app, &op_id, Initiator::AiClient, events)
+        crate::file_system::write_operations::rollback::dispatch_rollback(&op_id, Initiator::AiClient, events)
     })
     .await
     .map_err(|e| ToolError::internal(e.to_string()))?;

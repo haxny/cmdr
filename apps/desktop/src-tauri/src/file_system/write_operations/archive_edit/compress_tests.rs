@@ -404,13 +404,13 @@ async fn compress_refuses_a_read_only_destination_without_touching_its_bytes() {
 /// the driver, not the op type.
 #[tokio::test]
 async fn compress_journals_subkind_and_net_new_from_the_driver() {
-    use crate::operation_log::TestJournalGuard;
     use crate::operation_log::capture::WriterJournal;
     use crate::operation_log::store::{
         open_read_connection, operation_log_db_path, read_operation, read_operation_items,
     };
     use crate::operation_log::types::{ArchiveSubkind, ExecutionStatus, Initiator, OpKind, RollbackState, RowRole};
     use crate::operation_log::writer::OperationLogWriter;
+    use crate::operation_log_host::TestJournalGuard;
     use cmdr_local::LocalPosixVolume;
 
     let jdir = tempfile::tempdir().expect("jdir");
@@ -493,11 +493,11 @@ async fn compress_journals_subkind_and_net_new_from_the_driver() {
 /// so a Mac-to-phone compress read as a phone-to-phone one that packed nothing.
 #[tokio::test]
 async fn compress_journals_the_source_volume_and_what_it_packed() {
-    use crate::operation_log::TestJournalGuard;
     use crate::operation_log::capture::WriterJournal;
     use crate::operation_log::store::{open_read_connection, operation_log_db_path, read_operation};
     use crate::operation_log::types::{ExecutionStatus, Initiator};
     use crate::operation_log::writer::OperationLogWriter;
+    use crate::operation_log_host::TestJournalGuard;
     use cmdr_local::LocalPosixVolume;
 
     let jdir = tempfile::tempdir().expect("jdir");

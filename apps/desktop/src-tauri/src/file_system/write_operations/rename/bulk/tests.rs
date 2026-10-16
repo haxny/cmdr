@@ -68,10 +68,10 @@ fn planning_row(source: &str, destination: &str) -> BulkRenameRow {
 /// replacement file was renamed back in place of the original.
 #[test]
 fn an_applied_bulk_rename_journals_the_mtime_undo_verifies_on() {
-    use crate::operation_log::TestJournalGuard;
     use crate::operation_log::capture::WriterJournal;
     use crate::operation_log::store::{open_read_connection, operation_log_db_path, read_operation_items};
     use crate::operation_log::writer::OperationLogWriter;
+    use crate::operation_log_host::TestJournalGuard;
 
     let journal_dir = tempfile::tempdir().expect("journal tempdir");
     let db = operation_log_db_path(journal_dir.path());
@@ -107,7 +107,7 @@ fn an_applied_bulk_rename_journals_the_mtime_undo_verifies_on() {
 /// capture actually wrote. Hand-seeded journal rows (as `rollback/tests.rs` uses)
 /// can't catch a capture-side snapshot defect, so this bed exists to.
 struct UndoLoop {
-    _journal: crate::operation_log::TestJournalGuard,
+    _journal: crate::operation_log_host::TestJournalGuard,
     writer_journal: Arc<crate::operation_log::capture::WriterJournal>,
     vm: crate::file_system::VolumeManager,
     /// Owns the scratch directory: holding the guard (rather than a bare path
@@ -133,7 +133,7 @@ impl UndoLoop {
         let journal_dir = create_test_dir(&format!("{name}_journal"));
         let writer = OperationLogWriter::spawn(&operation_log_db_path(&journal_dir)).expect("spawn writer");
         let writer_journal = Arc::new(WriterJournal::new(writer));
-        let journal = crate::operation_log::TestJournalGuard::install(writer_journal.clone());
+        let journal = crate::operation_log_host::TestJournalGuard::install(writer_journal.clone());
 
         let vm = crate::file_system::VolumeManager::new();
         // Rooted at `/` so the fixture's absolute paths resolve, matching how the
@@ -518,7 +518,7 @@ fn bulk_local_rename_preserves_a_destination_created_after_review() {
 /// `record_bulk_rename_outcomes` — these tests exist to prove the RUN journals,
 /// not a later pass.
 struct LandingJournal {
-    _journal: crate::operation_log::TestJournalGuard,
+    _journal: crate::operation_log_host::TestJournalGuard,
     _journal_dir: TestDir,
     db: PathBuf,
     op_id: String,
@@ -533,7 +533,7 @@ impl LandingJournal {
         let journal_dir = create_test_dir(&format!("{name}_journal"));
         let db = operation_log_db_path(&journal_dir);
         let writer = OperationLogWriter::spawn(&db).expect("spawn writer");
-        let journal = crate::operation_log::TestJournalGuard::install(Arc::new(WriterJournal::new(writer)));
+        let journal = crate::operation_log_host::TestJournalGuard::install(Arc::new(WriterJournal::new(writer)));
         let op_id = format!("op-{name}");
         super::super::super::journal::open_local_op(&op_id, OpKind::Rename, Initiator::Agent, 1, Some("root"));
         Self {

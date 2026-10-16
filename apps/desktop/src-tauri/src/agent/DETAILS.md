@@ -26,7 +26,7 @@ The backend modules:
 - `store/`: the `main.db` durable store — a forward-migration ladder (mirroring `operation_log/store/`),
   FTS5 over message text, a per-day cost meter, and the durable proposal spine in `store/proposals/`.
   `agent::start(app)` (open the DB, register the `AgentDb` handle, run the interrupted-proposal sweep once) lands here,
-  modeled on `operation_log::start`. Depth: `store/DETAILS.md`, `store/proposals/DETAILS.md`.
+  modeled on `operation_log_host::start`. Depth: `store/DETAILS.md`, `store/proposals/DETAILS.md`.
 - `suggested_ops/`: the service over the spine — resolving a selector to a frozen op list against the drive index,
   wrapping the store's claim, and the acceptance-rate metric. Depth: `suggested_ops/DETAILS.md`.
 - `tools/`: the in-process toolset — the read families authored as `consumers: [Agent]` entries in the consolidated

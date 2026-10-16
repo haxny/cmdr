@@ -180,6 +180,7 @@ impl Registration {
 /// active seat, and the read that shows the whole set.
 impl VolumeManager {
     /// Every mount root known to reach `id`, active one first.
+    #[cfg(test)]
     pub fn known_roots(&self, id: &str) -> Vec<PathBuf> {
         let volumes = self.volumes.read_ignore_poison();
         let Some(entry) = volumes.get(id) else {

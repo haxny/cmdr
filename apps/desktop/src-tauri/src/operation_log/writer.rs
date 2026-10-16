@@ -4,7 +4,7 @@
 //! owns the single write connection, and all writes cross a bounded channel. The
 //! handle is cloneable; every clone shares the one channel and thread. **Unlike
 //! importance there is NO per-volume registry** — the operation log is a single
-//! cross-volume DB, so one `OperationLogWriter` lives in managed state.
+//! cross-volume DB, so one `OperationLogWriter` lives in the app's `OperationLog`.
 //!
 //! ## Send discipline
 //!

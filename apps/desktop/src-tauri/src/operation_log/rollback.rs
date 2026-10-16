@@ -41,7 +41,6 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::file_system::VolumeManager;
 use crate::file_system::volume::{Volume, VolumeError};
 use cmdr_fs::entry::FileEntry;
 
@@ -311,7 +310,7 @@ fn resolve_final_state(reversed: u64, skipped: u64, canceled: bool) -> RollbackS
 /// and (for a connected-volume requirement) whether every volume it touches is
 /// registered. Returns `Ok(())` to proceed, or the typed refusal. Does NOT mutate
 /// anything — the caller sets `rolling_back` only on a successful spawn.
-pub fn check_rollbackable(vm: &VolumeManager, op: &OperationRow) -> Result<(), RollbackRefusal> {
+pub fn check_rollbackable(volumes: &dyn VolumeLookup, op: &OperationRow) -> Result<(), RollbackRefusal> {
     match op.rollback_state {
         RollbackState::RollingBack => return Err(RollbackRefusal::AlreadyRollingBack),
         RollbackState::RolledBack => return Err(RollbackRefusal::AlreadyRolledBack),
@@ -330,7 +329,7 @@ pub fn check_rollbackable(vm: &VolumeManager, op: &OperationRow) -> Result<(), R
         .into_iter()
         .flatten()
     {
-        if vm.get(volume_id).is_none() {
+        if volumes.get(volume_id).is_none() {
             return Err(RollbackRefusal::VolumeUnavailable {
                 volume_id: volume_id.to_string(),
             });
@@ -353,11 +352,11 @@ pub fn check_rollbackable(vm: &VolumeManager, op: &OperationRow) -> Result<(), R
 /// leaves the rest untouched for a retry.
 ///
 /// This is the awaitable core the managed rollback entry point spawns; it takes only
-/// the `VolumeManager`, the `writer` (which yields the read connection via its
+/// the volumes, the `writer` (which yields the read connection via its
 /// db path), and the runner, so it's driven directly in tests without a live
 /// manager/runtime.
 pub async fn execute_rollback(
-    vm: &VolumeManager,
+    volumes: &dyn VolumeLookup,
     writer: &OperationLogWriter,
     original: &OperationRow,
     inverse_op_id: &str,
@@ -444,17 +443,16 @@ pub async fn execute_rollback(
                 deferred_dirs.push(unit);
                 continue;
             }
-            // E2E-only pacing. In production both the env var and the IPC override are
-            // unset, so this is one atomic load plus one `LazyLock` deref and nothing
-            // else happens. Under E2E it opens a known window per item, which is what
-            // lets a spec watch a reversal run and press Cancel or Pause inside it
-            // without staging thousands of files. It sits ABOVE the two gates below so
-            // a click landing inside the window is honored for THIS item rather than
-            // the next one. Only the FILE loop is paced: the deferred-dir phase below
-            // removes empty leftovers, so slowing it would buy a spec dead time rather
-            // than a window.
-            if let Some(ms) = crate::test_mode::effective_rollback_throttle_ms() {
-                tokio::time::sleep(std::time::Duration::from_millis(ms)).await;
+            // E2E-only pacing, answered by the runner. In production it answers
+            // `None` and nothing else happens. Under E2E it opens a known window per
+            // item, which is what lets a spec watch a reversal run and press Cancel or
+            // Pause inside it without staging thousands of files. It sits ABOVE the
+            // two gates below so a click landing inside the window is honored for
+            // THIS item rather than the next one. Only the FILE loop is paced: the
+            // deferred-dir phase below removes empty leftovers, so slowing it would
+            // buy a spec dead time rather than a window.
+            if let Some(pace) = runner.pace_between_items() {
+                tokio::time::sleep(pace).await;
             }
             // Park here, BEFORE the item is verified — never between "verified
             // unchanged" and the act, where a ten-minute pause would leave a stale
@@ -466,7 +464,7 @@ pub async fn execute_rollback(
                 break 'pages;
             }
             stand.announce(runner, Some(&unit));
-            let result = reverse_item(vm, runner, original.kind, &unit).await;
+            let result = reverse_item(volumes, runner, original.kind, &unit).await;
             // A stop observed INSIDE an item (a cancel during a cross-volume stream)
             // ends the run instead of recording a skip: nothing was left behind for a
             // reason the skip column exists to explain, and an unrecorded item is one
@@ -498,7 +496,7 @@ pub async fn execute_rollback(
                 canceled = true;
                 break;
             }
-            let result = reverse_item(vm, runner, original.kind, unit).await;
+            let result = reverse_item(volumes, runner, original.kind, unit).await;
             acc.record(unit, result);
         }
     }
@@ -530,7 +528,7 @@ pub async fn execute_rollback(
 /// runner. Every read here goes through the `Volume` trait, so local and remote
 /// verify uniformly.
 async fn reverse_item(
-    vm: &VolumeManager,
+    volumes: &dyn VolumeLookup,
     runner: &dyn RollbackRunner,
     kind: OpKind,
     unit: &RollbackUnit,
@@ -547,9 +545,9 @@ async fn reverse_item(
         }
     };
     match action {
-        InverseAction::RemoveFileIfUnchanged => remove_file_if_unchanged(vm, runner, unit).await,
-        InverseAction::RemoveDirIfEmpty => remove_dir_if_empty(vm, runner, unit).await,
-        InverseAction::RestoreMove => restore_move(vm, runner, unit).await,
+        InverseAction::RemoveFileIfUnchanged => remove_file_if_unchanged(volumes, runner, unit).await,
+        InverseAction::RemoveDirIfEmpty => remove_dir_if_empty(volumes, runner, unit).await,
+        InverseAction::RestoreMove => restore_move(volumes, runner, unit).await,
     }
 }
 
@@ -589,9 +587,13 @@ fn vanished_item(sides: &[(&dyn Volume, &Path)]) -> ItemResult {
     }
 }
 
-async fn remove_file_if_unchanged(vm: &VolumeManager, runner: &dyn RollbackRunner, unit: &RollbackUnit) -> ItemResult {
+async fn remove_file_if_unchanged(
+    volumes: &dyn VolumeLookup,
+    runner: &dyn RollbackRunner,
+    unit: &RollbackUnit,
+) -> ItemResult {
     let (vol_id, path) = removal_target(unit);
-    let Some(volume) = vm.get(&vol_id) else {
+    let Some(volume) = volumes.get(&vol_id) else {
         return ItemResult::Skipped(SkipReason::Failed);
     };
     let live = match volume.get_metadata(&path).await {
@@ -627,9 +629,13 @@ fn removal_verdict(removed: Result<(), ActRefusal>, volume: &dyn Volume, path: &
     }
 }
 
-async fn remove_dir_if_empty(vm: &VolumeManager, runner: &dyn RollbackRunner, unit: &RollbackUnit) -> ItemResult {
+async fn remove_dir_if_empty(
+    volumes: &dyn VolumeLookup,
+    runner: &dyn RollbackRunner,
+    unit: &RollbackUnit,
+) -> ItemResult {
     let (vol_id, path) = removal_target(unit);
-    let Some(volume) = vm.get(&vol_id) else {
+    let Some(volume) = volumes.get(&vol_id) else {
         return ItemResult::Skipped(SkipReason::Failed);
     };
     if !volume.exists(&path).await {
@@ -655,7 +661,7 @@ async fn remove_dir_if_empty(vm: &VolumeManager, runner: &dyn RollbackRunner, un
     }
 }
 
-async fn restore_move(vm: &VolumeManager, runner: &dyn RollbackRunner, unit: &RollbackUnit) -> ItemResult {
+async fn restore_move(volumes: &dyn VolumeLookup, runner: &dyn RollbackRunner, unit: &RollbackUnit) -> ItemResult {
     if unit.outcome != ItemOutcome::Done {
         return ItemResult::Skipped(SkipReason::Failed);
     }
@@ -668,10 +674,10 @@ async fn restore_move(vm: &VolumeManager, runner: &dyn RollbackRunner, unit: &Ro
     let to_vol_id = &unit.source_volume_id;
     let to_path = &unit.source_path;
 
-    let Some(from_volume) = vm.get(from_vol_id) else {
+    let Some(from_volume) = volumes.get(from_vol_id) else {
         return ItemResult::Skipped(SkipReason::Failed);
     };
-    let Some(to_volume) = vm.get(to_vol_id) else {
+    let Some(to_volume) = volumes.get(to_vol_id) else {
         return ItemResult::Skipped(SkipReason::Failed);
     };
     // Either side refusing a path means the same thing `missing_item` guards: a
@@ -816,7 +822,7 @@ fn summarize_inverse(conn: &rusqlite::Connection, op: &OperationRow) -> InverseS
 /// where the `OperationManager` is reachable) supplies the real managed-op spawn,
 /// while tests drive the gate/reset logic directly.
 pub fn rollback_operation<F>(
-    vm: &VolumeManager,
+    volumes: &dyn VolumeLookup,
     writer: &OperationLogWriter,
     op_id: &str,
     spawn: F,
@@ -829,7 +835,7 @@ where
         .map_err(|_| RollbackRefusal::UnknownOperation)?
         .ok_or(RollbackRefusal::UnknownOperation)?;
 
-    check_rollbackable(vm, &op)?;
+    check_rollbackable(volumes, &op)?;
 
     let summary = summarize_inverse(&conn, &op);
     drop(conn);
@@ -872,7 +878,7 @@ where
 ///
 /// Either way a re-issued rollback resumes safely — every per-item inverse is an
 /// idempotent recheck-then-act, so already-reversed items no-op. Called once at
-/// [`start`](super::start), beside the migration-ladder open path.
+/// [`OperationLog::open`](super::OperationLog::open), before the journal is reachable.
 pub fn reconcile_rolling_back_on_open(writer: &OperationLogWriter) {
     let conn = match open_read_connection(writer.db_path()) {
         Ok(c) => c,
@@ -921,7 +927,7 @@ mod skips;
 use bookkeeping::{InverseTotals, RunAcc, finalize_inverse, inverse_planned_item_count};
 pub use order::undo_order;
 use runner::ProgressStand;
-pub use runner::{ActRefusal, InverseAct, RollbackProgress, RollbackRunner};
+pub use runner::{ActRefusal, InverseAct, RollbackProgress, RollbackRunner, VolumeLookup};
 pub use skips::SkipBreakdown;
 pub(crate) use skips::SkipTally;
 

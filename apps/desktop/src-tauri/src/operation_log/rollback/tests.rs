@@ -777,8 +777,9 @@ async fn cancel_stops_and_keeps_what_was_reversed() {
 /// Pinned here rather than only in `test_mode`, because the helper existing proves
 /// nothing: the value of the hook is that a Playwright spec gets a real window in
 /// which to press Cancel on a running reversal, and that window exists only if the
-/// loop consults it. Deleting the three lines at the call site would leave every
-/// `test_mode` assertion green and every rollback E2E racing the engine.
+/// loop asks its runner and the engine's runner answers from `test_mode`. Deleting
+/// either end would leave every `test_mode` assertion green and every rollback E2E
+/// racing the engine.
 ///
 /// A lower bound on elapsed time, never an upper one: a sleep can overshoot under
 /// load but never returns early, so this can't flake. The throttle is process-wide,

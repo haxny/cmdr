@@ -2,12 +2,12 @@
 //! operation-log open/finalize and builds per-item `JournalItem`s at the record
 //! points.
 //!
-//! The journal is a process-global reached by `op_id` (see
-//! [`crate::operation_log`]), mirroring the op-keyed `update_operation_status`
+//! The journal is the app's one `OperationLog`, reached by `op_id` through
+//! `operation_log_host`, mirroring the op-keyed `update_operation_status`
 //! status cache written at these same record points — so these are thin free
 //! functions, not threaded state (`operation_log/DETAILS.md` § "The seam: a
-//! global journal reached by `op_id`"). Every function no-ops when no journal
-//! is installed, and never fails the operation.
+//! journal reached by `op_id`"). Every function no-ops for an operation that
+//! opened with nothing to journal to, and never fails the operation.
 
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -19,7 +19,7 @@ use crate::operation_log::types::{
     ArchiveSubkind, EntryType, ExecutionStatus, Initiator, ItemOutcome, NotRollbackableReason, OpKind,
 };
 use crate::operation_log::writer::{JournalItem, OpenOperation};
-use crate::operation_log::{journal_finalize, journal_open, journal_record_items};
+use crate::operation_log_host::{journal_finalize, journal_open, journal_record_items};
 
 use super::ledger::WrittenFile;
 use super::types::{WriteOperationError, WriteOperationType};
@@ -389,7 +389,7 @@ pub(super) fn journal_instant_create(
 /// whose phase-3 conflict resolution landed the files somewhere other than the
 /// destinations phase 2 journaled. No-ops when no journal is installed.
 pub(super) fn note_not_rollbackable(op_id: &str, reason: NotRollbackableReason) {
-    crate::operation_log::journal_note_not_rollbackable(op_id, reason);
+    crate::operation_log_host::journal_note_not_rollbackable(op_id, reason);
 }
 
 /// The op's terminal header aggregates — planned total, completed items, and

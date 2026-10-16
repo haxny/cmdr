@@ -9,10 +9,11 @@ a disposable cache. MCP tools: `mcp/executor/operation_log.rs`; UI surfaces are 
 - `store/` — the DB (connection factory, migration ladder, schema, `intern_dir`, `fold_name`, low-level reads).
 - `writer.rs` — the ONE writer thread (+ `writer/prune.rs`, the bounded retention sweep it runs); `capture.rs` feeds
   it; `types.rs` holds the typed tokens.
-- `query.rs` — reads; `retention.rs` — prune; `recording.rs` — the on/off gate; IPC in `commands/operation_log.rs`.
+- `handle.rs` — `OperationLog` (journal slot, writer, the `recording.rs` gate) and `OpJournal`; the app's glue is
+  `operation_log_host/`.
+- `query.rs` — reads; `retention.rs` — prune; IPC in `commands/operation_log.rs`.
 - `rollback.rs` (+ `order.rs`, `skips.rs`, `runner.rs`) — the rollback PLANNER; the executor it's handed, the spawn
-  glue, and the multi-op driver live in `write_operations/rollback.rs`. `mod.rs::start` opens the DB, reconciles,
-  spawns retention.
+  glue, and the multi-op driver live in `write_operations/rollback.rs`.
 
 ## Must-knows
 
@@ -30,8 +31,8 @@ a disposable cache. MCP tools: `mcp/executor/operation_log.rs`; UI surfaces are 
 - **The writer stores terminal state; it does NOT compute eligibility.** That reasoning lives in `capture.rs`. A driver
   may also NOTE a reason the rows can't express (`note_not_rollbackable`, say a directory merge), and a note beats the
   per-kind rule.
-- **Capture is a process-global journal reached by `op_id`, NOT threaded through the pipeline.** ❌ Never extend
-  `OperationEventSink`. Install via `set_journal` (production `start` only; tests use `TestJournalGuard`).
+- **Capture is the app's one `OperationLog`, reached by `op_id`, NOT threaded through the pipeline** (❌ never extend
+  `OperationEventSink`).
 - **Recording on/off is decided ONCE per op, at open** (`recording.rs`); ❌ never mid-op (half-journaled lies).
 - **A multi-operation undo reverses NEWEST FIRST** (`undo_order`): a later rename batch can take a name an earlier one
   freed. Callers pass ids in APPLY order.

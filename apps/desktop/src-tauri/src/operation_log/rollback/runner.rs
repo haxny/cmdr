@@ -1,6 +1,6 @@
-//! What the rollback engine needs from the operation it runs inside: hands that
-//! perform a decided act, two answers that stop or park the loop, and a voice
-//! that says where it stands.
+//! What the rollback engine needs from whoever runs it: the volumes an operation
+//! touched, hands that perform a decided act, answers that pace, stop, or park
+//! the loop, and a voice that says where it stands.
 //!
 //! The engine here is a **planner**: it pages the journal, verifies each item
 //! against its snapshot, decides the inverse act, and keeps the journal's books.
@@ -16,10 +16,18 @@ use std::future::Future;
 use std::path::Path;
 use std::pin::Pin;
 use std::sync::Arc;
+use std::time::Duration;
 
 use super::super::store::RollbackUnit;
 use super::removal_target;
 use crate::file_system::volume::{Volume, VolumeError};
+
+/// Which volume serves an id, asked when the gate checks that every volume an
+/// operation touched is connected, and once per item for the volumes it acts on.
+pub trait VolumeLookup: Send + Sync {
+    /// The volume registered under `volume_id`, or `None` when it isn't connected.
+    fn get(&self, volume_id: &str) -> Option<Arc<dyn Volume>>;
+}
 
 /// One decided inverse act. The planner has already resolved both volumes,
 /// verified the item against its recorded snapshot, and established that the
@@ -116,6 +124,12 @@ pub trait RollbackRunner: Sync {
     /// verified: parking between "verified unchanged" and "delete" would let a
     /// ten-minute-stale verification authorize a destructive act.
     fn wait_while_paused(&self) -> Pin<Box<dyn Future<Output = ()> + Send + '_>>;
+
+    /// How long to wait before each file item, for an E2E spec that has to act
+    /// inside a running reversal. `None`, the default, waits not at all.
+    fn pace_between_items(&self) -> Option<Duration> {
+        None
+    }
 
     /// Report where the reversal stands. Called once per item; throttling to the
     /// operation's progress interval is the implementation's business, as is

@@ -33,8 +33,6 @@ use std::pin::Pin;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use tauri::{AppHandle, Manager, Runtime};
-
 use tokio::sync::oneshot;
 
 use crate::file_system::volume::manager::get_volume_manager;
@@ -48,6 +46,7 @@ use crate::operation_log::rollback::{
 use crate::operation_log::store::{open_read_connection, read_operation};
 use crate::operation_log::types::{Initiator, OpKind, RollbackState};
 use crate::operation_log::writer::OperationLogWriter;
+use crate::operation_log_host::operation_log;
 
 use super::event_sinks::OperationEventSink;
 use super::manager::{ManagedTaskGuard, OperationDescriptor, OperationSummaryText, manager};
@@ -229,6 +228,10 @@ impl RollbackRunner for ReversalRunner {
         self.stop.requested(&self.state.intent)
     }
 
+    fn pace_between_items(&self) -> Option<Duration> {
+        crate::test_mode::effective_rollback_throttle_ms().map(Duration::from_millis)
+    }
+
     fn wait_while_paused(&self) -> Pin<Box<dyn Future<Output = ()> + Send + '_>> {
         Box::pin(async move {
             self.state
@@ -275,13 +278,12 @@ async fn delete_clearing_blockers(volume: &Arc<dyn Volume>, path: &Path) -> Resu
 ///
 /// `events` is built at the IPC/MCP edge like every other managed op's sink: the
 /// pipeline in here never constructs one (see `mod.rs`).
-pub fn dispatch_rollback<R: Runtime>(
-    app: &AppHandle<R>,
+pub fn dispatch_rollback(
     op_id: &str,
     initiator: Initiator,
     events: Arc<dyn OperationEventSink>,
 ) -> Result<RollbackDispatch, RollbackRefusal> {
-    dispatch_inverse(app, op_id, initiator, events, None)
+    dispatch_inverse(op_id, initiator, events, None)
 }
 
 /// [`dispatch_rollback`] plus a channel that resolves with the inverse's
@@ -292,30 +294,24 @@ pub fn dispatch_rollback<R: Runtime>(
 /// all and hoping the queue reverses them in the right sequence. The reversal is
 /// still a normal managed op — queued, lane-serialized, and cancelable — so
 /// awaiting it also waits out anything already holding the lane.
-fn dispatch_inverse_reported<R: Runtime>(
-    app: &AppHandle<R>,
+fn dispatch_inverse_reported(
     op_id: &str,
     initiator: Initiator,
     events: Arc<dyn OperationEventSink>,
 ) -> Result<oneshot::Receiver<RollbackReport>, RollbackRefusal> {
     let (report_tx, report_rx) = oneshot::channel();
-    dispatch_inverse(app, op_id, initiator, events, Some(report_tx))?;
+    dispatch_inverse(op_id, initiator, events, Some(report_tx))?;
     Ok(report_rx)
 }
 
-fn dispatch_inverse<R: Runtime>(
-    app: &AppHandle<R>,
+fn dispatch_inverse(
     op_id: &str,
     initiator: Initiator,
     events: Arc<dyn OperationEventSink>,
     report: Option<oneshot::Sender<RollbackReport>>,
 ) -> Result<RollbackDispatch, RollbackRefusal> {
-    // The writer lives in managed state (the durable store). Its absence means the journal never
-    // opened, so there's nothing to roll back.
-    let writer = app
-        .try_state::<OperationLogWriter>()
-        .map(|s| s.inner().clone())
-        .ok_or(RollbackRefusal::UnknownOperation)?;
+    // No writer means the journal never opened, so there's nothing to roll back.
+    let writer = operation_log().writer().ok_or(RollbackRefusal::UnknownOperation)?;
     let vm = get_volume_manager();
 
     let plan = rollback_operation(vm, &writer, op_id, |plan| {
@@ -483,8 +479,7 @@ pub struct UndoReport {
 /// what breaks a same-second tie). An id with no journal row is reported as an
 /// `UnknownOperation` refusal rather than dropped, so the caller's count of
 /// operations always matches what came back (invariant 9).
-pub async fn undo_operations<R: Runtime>(
-    app: &AppHandle<R>,
+pub async fn undo_operations(
     operation_ids: &[String],
     initiator: Initiator,
     events: Arc<dyn OperationEventSink>,
@@ -494,10 +489,10 @@ pub async fn undo_operations<R: Runtime>(
         restored: 0,
         skipped: 0,
     };
-    let (rows, mut unknown) = read_undoable_rows(app, operation_ids);
+    let (rows, mut unknown) = read_undoable_rows(operation_ids);
 
     for op in undo_order(rows) {
-        let outcome = match dispatch_inverse_reported(app, &op.op_id, initiator, Arc::clone(&events)) {
+        let outcome = match dispatch_inverse_reported(&op.op_id, initiator, Arc::clone(&events)) {
             // A dropped sender means the inverse task died without reporting (a
             // panic). The reversal's own journaling is authoritative either way, so
             // report nothing reversed rather than inventing a tally.
@@ -539,14 +534,13 @@ fn refused(op_id: &str, refusal: RollbackRefusal) -> OperationUndoOutcome {
 
 /// Read each requested operation's journal row, keeping the caller's order.
 /// Anything unreadable becomes an `UnknownOperation` outcome instead of vanishing.
-fn read_undoable_rows<R: Runtime>(
-    app: &AppHandle<R>,
+fn read_undoable_rows(
     operation_ids: &[String],
 ) -> (
     Vec<crate::operation_log::store::OperationRow>,
     Vec<OperationUndoOutcome>,
 ) {
-    let Some(writer) = app.try_state::<OperationLogWriter>() else {
+    let Some(writer) = operation_log().writer() else {
         let missing = operation_ids
             .iter()
             .map(|id| refused(id, RollbackRefusal::UnknownOperation))

@@ -165,7 +165,7 @@ pub fn set_log_llm_calls(enabled: bool) {
 #[tauri::command]
 #[specta::specta]
 pub fn set_operation_log_enabled(enabled: bool) {
-    crate::operation_log::recording::set_enabled(enabled);
+    crate::operation_log_host::operation_log().set_recording(enabled);
 }
 
 /// Live-applies the master "Index image contents" toggle (`mediaIndex.enabled`) for

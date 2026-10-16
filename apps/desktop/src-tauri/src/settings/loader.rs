@@ -731,7 +731,7 @@ fn parse_operation_log_retention_limits(contents: &str) -> OperationLogRetention
 }
 
 /// Whether the operation log records new operations (`operationLog.enabled`),
-/// read at `operation_log::start` to seed the recording gate before any
+/// read at `operation_log_host::start` to seed the recording gate before any
 /// operation can run. Absent or unreadable ⇒ on, the registry default. Later
 /// changes arrive through `set_operation_log_enabled`.
 pub fn load_operation_log_enabled<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> bool {

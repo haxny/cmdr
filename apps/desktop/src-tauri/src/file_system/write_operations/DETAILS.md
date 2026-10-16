@@ -1381,9 +1381,9 @@ Same shape as `cmdr_listing::testing::TestListingGuard` (over the listing cache)
 `indexing::tests::stress_test_helpers::TestInstanceGuard` (over `INDEX_REGISTRY`).
 
 The operation-log journal slot is the exception to the unique-key pattern: it's a single value, not a keyed map, so
-tests that install a journal SERIALIZE on `operation_log::TestJournalGuard` (one guard per test, lock held for the
+tests that install a journal SERIALIZE on `operation_log_host::TestJournalGuard` (one guard per test, lock held for the
 test's duration, slot cleared on drop — see its doc for the multi-arm `hold_empty`/`set` shape and the non-reentrancy
-deadlock warning). Never call `set_journal` directly from a test. Residual under plain `cargo test`: non-journal
+deadlock warning). Never call `OperationLog::set_journal` on the shared handle directly from a test. Residual under plain `cargo test`: non-journal
 write-op tests still journal their own ops into whatever DB is installed, so journal assertions stay scoped to the
 test's own `op_id` (`journal_capture_tests::dir_volume_ids` joins dirs through the op's item rows for this reason).
 

@@ -94,7 +94,7 @@ async fn create_directory_managed_journals_a_create_folder_op() {
     let jdir = tempfile::tempdir().expect("jdir");
     let jdb = operation_log_db_path(jdir.path());
     // Serializes journal-slot tests under plain `cargo test`; clears on drop.
-    let _journal = crate::operation_log::TestJournalGuard::install(Arc::new(WriterJournal::new(
+    let _journal = crate::operation_log_host::TestJournalGuard::install(Arc::new(WriterJournal::new(
         OperationLogWriter::spawn(&jdb).expect("writer"),
     )));
 

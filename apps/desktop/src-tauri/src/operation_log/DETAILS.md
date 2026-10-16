@@ -143,20 +143,35 @@ counts), `Prune` (retention), `Flush` (barrier), `Shutdown`.
 `file_system/write_operations/journal.rs`. Together they make every managed mutation journal itself with per-item rows,
 two-axis status, and computed rollback eligibility — without measurably slowing the op.
 
-### The seam: a global journal reached by `op_id`
+### The seam: a journal reached by `op_id`
 
-**The journal is a process-global singleton** (`operation_log::JOURNAL`, installed at `start`) reached BY `op_id`
-through free functions — `journal_open`, `journal_record_items`,
-`journal_note_coverage`, `journal_finalize` — exactly mirroring the op-keyed `update_operation_status(op_id, …)` status
-cache that the same record points already write, and the `manager()` operation-manager singleton.
+**The journal lives in an `OperationLog` handle** (`handle.rs`): its slot, the recording gate, and the writer. The app
+builds ONE (`operation_log_host::install`, first thing in `setup`), opens it late (`OperationLog::open`, from
+`operation_log_host::start`), and the write pipeline reaches it BY `op_id` through `operation_log_host`'s
+`journal_open`, `journal_record_items`, `journal_note_coverage`, `journal_note_not_rollbackable`, and
+`journal_finalize`, mirroring the op-keyed `update_operation_status(op_id, …)` status cache that the same record points
+already write. Those by-id calls are the interim shape: `journal_open` returns an `OpJournal`, the operation's journal
+fixed at open, which an operation carries once its pipeline has a scope to carry it in.
+
+- **`open` publishes last.** It migrates the store, spawns the writer, reconciles the operations a crash left
+  `rolling_back`, and only THEN puts the journal and the writer in the slot, in one write. So nothing can journal, and
+  no rollback can be dispatched, into a reconcile. Once per handle: a second `open` is `AlreadyOpen` and starts no
+  second writer, and a failed one leaves the handle without a journal (the app runs without history rather than
+  refusing to start).
+- **An operation is journaled wholly or not at all, decided at open.** One opened before the journal was (or while
+  recording is off) joins the handle's unrecorded set, and every later by-id call for it no-ops even if the journal
+  arrives mid-op: a tail and a finalize sent to a journal that never opened it would be rows with no header. Pinned by
+  `handle/tests.rs`.
 
 - **Why a global rather than a context threaded down the pipeline.** Threading one replaces `Arc<dyn OperationEventSink>` through the entire
   transfer/delete signature chain (`copy_single_item`, the transfer driver, the volume paths, …) — a large, high-risk
   refactor of the app's most data-safety-critical code. The op-id-keyed global is (a) how `update_operation_status`
   already works at the identical call sites, (b) how `manager()` already works, and (c) zero-churn to those signatures.
   The hard constraint holds either way: the sink stays a sink, and nothing here extends `OperationEventSink`.
-- **Testability holds.** `set_journal` / `clear_journal` install a `CapturingJournal` or a temp-DB `WriterJournal` per
-  test; nextest isolates each test in its own process, so the global is hermetic.
+- **Testability holds.** A test of the operation log builds its own handle, so it needs no lock. A write-pipeline test
+  reaches the app's shared handle by `op_id`, so it holds `operation_log_host::TestJournalGuard`, which puts a
+  `CapturingJournal` or a temp-DB `WriterJournal` in the shared slot under a lock (`file_system/write_operations/DETAILS.md`
+  § the test-isolation guards).
 - **Lifecycle.** `journal_open` is called when the op actually STARTS (inside the manager's deferred), not at
   registration, so a queued op that's canceled before admission never journals and leaks no accumulator. `journal_finalize`
   removes the per-op accumulator.
@@ -273,13 +288,13 @@ Numbers + the cap-tuning rationale: `docs/notes/operation-log-capture-bench.md`.
 
 `operationLog.enabled` (default on) is the user's opt-out from recording file activity (CRA Annex I, Part I, (2)(l)).
 The registry entry and its Settings row live in `apps/desktop/src/lib/settings/definitions/behavior.ts`; Rust seeds the
-gate from `settings.json` at `start` (`settings::load_operation_log_enabled`, absent ⇒ on) and the frontend pushes every
-change through `set_operation_log_enabled`.
+gate from `settings.json` in `operation_log_host::start` (`settings::load_operation_log_enabled`, absent ⇒ on) and the
+frontend pushes every change through `set_operation_log_enabled` (`OperationLog::set_recording`).
 
-- **The gate sits in the free functions, not in a journal.** `journal_open` asks `recording::admit`; an op opened while
-  off goes into the `UNRECORDED` set, and every later `journal_record_items` / `journal_note_*` / `journal_finalize` for
-  it returns early, and `journal_finalize` forgets it. The journal stays installed, so production and the test journals
-  see one gate, and nothing about the writer or `WriterJournal` changes.
+- **The gate sits in the handle, not in a journal.** `OperationLog::journal_open` reads the switch; an op opened while
+  off gets an empty `OpJournal` and joins the handle's unrecorded set, so every later by-id record / note / finalize
+  for it returns early, and finalize forgets it. The journal stays installed, so production and the test journals see
+  one gate, and nothing about the writer or `WriterJournal` changes.
 - **Decision/Why: decided once, at open, held to finalize.** An op that opened while on journals every item even if the
   switch flips mid-way; one that opened while off journals nothing even if it flips back on. Gating each record call
   instead would leave a header with only some of its rows, and the completeness check can't catch that: it compares
@@ -293,8 +308,8 @@ change through `set_operation_log_enabled`.
   surfaces that offer Undo right after an op (the trash toast and Edit > Undo move to trash, Undo rename, Ask Cmdr's
   rename undo) don't offer it while recording is off (`apps/desktop/src/lib/operation-log/recording.ts`), and the
   history dialog says recording is off.
-- **The record path stays cheap while on**: `UNRECORDED_LEN` is an atomic, so with nothing unrecorded a record call
-  never takes the set's lock.
+- **The record path stays cheap while on**: the unrecorded set's length is an atomic, so with nothing unrecorded a
+  record call never takes the set's lock.
 
 ### The bypass boundary
 
@@ -415,7 +430,8 @@ cancelable managed op is `file_system/write_operations/rollback.rs::dispatch_rol
 ### Planner here, executor injected
 
 `rollback.rs` **plans**: it pages the journal, verifies each item, decides the inverse act, maps every failure to a
-typed skip reason, and keeps the books. It performs nothing. Each decided act goes to an injected `RollbackRunner`
+typed skip reason, and keeps the books. It performs nothing. It looks volumes up through an injected `VolumeLookup` (`rollback/runner.rs`),
+which the app answers with its volume registry (`apps/desktop/src-tauri/src/operation_log_host/volumes.rs`). Each decided act goes to an injected `RollbackRunner`
 (`rollback/runner.rs`), whose production implementation is `write_operations::rollback::ReversalRunner`. An act that
 didn't happen comes back as an `ActRefusal`: the volume's raw `VolumeError`, which the planner maps to a skip, or
 `Locked`, which `ReversalRunner` answers for a verified LOCAL item whose removal was refused and whose lock it can't clear
@@ -562,9 +578,10 @@ skipped or unsuccessful planned rename must never make an untouched destination 
 
 ### The E2E pacing hook in the item loop
 
-The file loop pauses `crate::test_mode::effective_rollback_throttle_ms()` before each item (above the pause gate, so a
-click landing inside the window is honored for THAT item rather than the next one). In production both its
-sources are unset, so it costs one atomic load and one `LazyLock` deref per item and changes nothing; under E2E it is
+The file loop pauses for `RollbackRunner::pace_between_items()` before each item (above the pause gate, so a click
+landing inside the window is honored for THAT item rather than the next one). The planner owns no knob: the default
+answers `None`, and `ReversalRunner` answers from `test_mode::effective_rollback_throttle_ms()`. In production both of
+that one's sources are unset, so it costs one atomic load and one `LazyLock` deref per item and changes nothing; under E2E it is
 what gives a spec a window to press Cancel on a reversal that would otherwise be over in single-digit milliseconds
 (`apps/desktop/test/e2e-playwright/operation-log-rollback.spec.ts`). Its own knob rather than a reuse of the copy
 throttle, because a spec has to stage a fast copy and then reverse it slowly. Pinned by
@@ -627,7 +644,7 @@ even if nothing could be reversed — those skips won't clear on retry), or back
 CANCELED with nothing reversed (a clean retry). It marks the original's items `rolled_back`/`skipped` and journals the
 inverse op's own item rows (reversed ⇒ `done`, skipped ⇒ `skipped`), which drive the reconcile.
 
-**Startup reconcile** (`reconcile_rolling_back_on_open`, called at `start` beside the migration-ladder open path)
+**Startup reconcile** (`reconcile_rolling_back_on_open`, called by `OperationLog::open` before the journal is reachable)
 resolves any op a crash left `rolling_back`: from its unfinalized inverse op's recorded outcomes (any `done` item ⇒
 `partially_rolled_back`, else `rollbackable`), or — when **no inverse op row exists** (crashed after setting
 `rolling_back` but before the spawn) — straight back to `rollbackable`. Either way a re-issued rollback resumes
@@ -755,9 +772,10 @@ reshape it (likely into a sidebar) without sunk cost.
 
 ## Retention — prune by age + size, GC dirs, reclaim
 
-Retention runs the writer's `Prune` on startup and on a periodic timer (`retention.rs`, every 6 h), with the age/size
-limits read fresh from settings each tick (`load_operation_log_retention_limits`) so a settings change takes effect on
-the next tick with no restart or applier case. Defaults: **age = forever, size = 3 GB**. The settings contract:
+Retention runs the writer's `Prune` on startup and on a periodic timer (`retention.rs`, every 6 h), started by
+`OperationLog::spawn_retention` on the runtime the host passes. The age/size limits come from a `RetentionLimitsSource`
+the host reads fresh from settings each tick (`operation_log_host` over `load_operation_log_retention_limits`), so a
+settings change takes effect on the next tick with no restart or applier case. Defaults: **age = forever, size = 3 GB**. The settings contract:
 `operationLog.maxAge` (duration ms; `0` = forever; absent ⇒ forever) and `operationLog.maxSize` (bytes; absent ⇒ 3 GB;
 `0` = unlimited). The user-facing controls are the "Operation log" settings section (`OperationLogSection.svelte` + the
 `operationLog.*` entries in `settings-registry.ts`), which persist exactly these keys — see

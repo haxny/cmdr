@@ -126,6 +126,7 @@ mod notifications;
 #[cfg(feature = "playwright-e2e")]
 mod open_mock;
 pub mod operation_log;
+mod operation_log_host;
 #[cfg(target_os = "macos")]
 mod permissions;
 #[cfg(target_os = "linux")]
@@ -264,6 +265,10 @@ pub fn run() {
             // Must run before any volume is constructed. Mirror of
             // `cmdr_fs::volume::host`, which declares the other side of each seam.
             volume_host::install(app.handle());
+
+            // The operation log, detached until `operation_log_host::start` opens it
+            // below: anything that journals or rolls back reaches this one handle.
+            let operation_log = operation_log_host::install();
 
             // Mount the typed `tauri-specta` events onto the app. Required before any
             // `Event::emit` / `Event::listen` resolves a name. Collection: `ipc.rs`.
@@ -828,10 +833,9 @@ pub fn run() {
                 Err(e) => log::warn!("search importance weights and the launch-day ledger not wired: {e}"),
             }
 
-            // Open the durable operation log and spawn its writer thread. Nothing
-            // journals through it yet (the durable store is the foundation); capture hooks
-            // the write pipeline into the managed writer this places in state.
-            operation_log::start(app.handle());
+            // Open the durable operation log on the handle installed above and spawn
+            // its writer thread; from here on, the write pipeline's operations journal.
+            operation_log_host::start(app.handle(), &operation_log);
 
             // Open the agent's durable store (`main.db`, peer to `operation-log.db`) and
             // register its handle. The chat runtime and the Ask Cmdr IPC commands are its

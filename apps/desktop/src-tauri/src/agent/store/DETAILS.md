@@ -140,7 +140,7 @@ is the template to follow — a follow-up, not built now.
 
 ## Wiring
 
-`agent::start(app)` (in `agent/mod.rs`, modeled on `operation_log::start`) opens the DB through `AgentStore::open` (which
+`agent::start(app)` (in `agent/mod.rs`, modeled on `operation_log_host::start`) opens the DB through `AgentStore::open` (which
 runs the schema lifecycle) and registers an `AgentDb` handle in managed state. `AgentDb` holds the DB path and hands out
 read/write connections; the chat runtime owns the write-connection lifetime and single-writer discipline (the store
 itself does not add a writer thread).

@@ -291,6 +291,7 @@ impl VolumeManager {
     }
 
     /// Gets the default volume.
+    #[cfg(test)]
     pub fn default_volume(&self) -> Option<Arc<dyn Volume>> {
         let default_id = self.default_volume_id.read_ignore_poison().clone()?;
         self.get(&default_id)
@@ -339,6 +340,7 @@ impl VolumeManager {
     }
 
     /// Returns the number of registered volumes.
+    #[cfg(test)]
     pub fn count(&self) -> usize {
         self.volumes.read_ignore_poison().len()
     }
