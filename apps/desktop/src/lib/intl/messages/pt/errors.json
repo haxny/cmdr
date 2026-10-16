@@ -1961,6 +1961,10 @@
   "@errors.volume.staleDestinationHandle": {
     "sourceHash": "b31958a"
   },
+  "errors.volume.signatureInvalid": "A resposta do servidor não estava assinada, então o Cmdr parou.",
+  "@errors.volume.signatureInvalid": {
+    "sourceHash": "ba50c7b"
+  },
   "errors.volume.ioError": "O volume não conseguiu concluir isso.",
   "@errors.volume.ioError": {
     "sourceHash": "59e7d6a"
@@ -2148,6 +2152,10 @@
   "errors.shareList.authFailed": "Esse nome de usuário e essa senha não funcionaram em “{server}”. Confira os dois e inicie a sessão de novo.",
   "@errors.shareList.authFailed": {
     "sourceHash": "b88b224"
+  },
+  "errors.shareList.signatureInvalid": "“{server}” respondeu sem uma assinatura válida, então o Cmdr não confiou na resposta. Um dispositivo de rede instável pode causar isso, e também alguém adulterando a conexão. Tente de novo e, se continuar acontecendo, verifique sua rede.",
+  "@errors.shareList.signatureInvalid": {
+    "sourceHash": "6523e32"
   },
   "errors.shareList.protocolError": "Algo deu errado ao pedir a lista de compartilhamentos a “{server}”. Tente novamente em instantes.",
   "@errors.shareList.protocolError": {

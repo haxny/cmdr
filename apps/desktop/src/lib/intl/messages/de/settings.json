@@ -2137,6 +2137,14 @@
   "@settings.managed.summary.reportsOff": {
     "sourceHash": "ca7981b"
   },
+  "settings.managed.summary.securityLog": "Sicherheitsereignisse",
+  "@settings.managed.summary.securityLog": {
+    "sourceHash": "774b6e0"
+  },
+  "settings.managed.summary.securityLogRequired": "Immer aufgezeichnet",
+  "@settings.managed.summary.securityLogRequired": {
+    "sourceHash": "baf73d6"
+  },
   "settings.managed.summary.updates": "Updates",
   "@settings.managed.summary.updates": {
     "sourceHash": "22e2bad",
@@ -2405,6 +2413,22 @@
   "settings.updates.card.privacyAndDataSharing": "Datenschutz und Datenfreigabe",
   "@settings.updates.card.privacyAndDataSharing": {
     "sourceHash": "ae4aabf"
+  },
+  "settings.updates.card.securityEvents": "Sicherheitsereignisse",
+  "@settings.updates.card.securityEvents": {
+    "sourceHash": "774b6e0"
+  },
+  "settings.securityLog.enabled.label": "Sicherheitsereignisse aufzeichnen",
+  "@settings.securityLog.enabled.label": {
+    "sourceHash": "9f5e32e"
+  },
+  "settings.securityLog.enabled.description": "Hält in einer kleinen Datei auf diesem Mac sicherheitsrelevante Änderungen und Ablehnungen fest, etwa die Zustimmung zur Cloud-KI, ein installiertes Update oder eine App, die der MCP-Server abgewiesen hat. Die Datei enthält keine Dateinamen, Inhalte oder Passwörter und verlässt deinen Mac nie.",
+  "@settings.securityLog.enabled.description": {
+    "sourceHash": "11361eb"
+  },
+  "settings.securityLog.showInFinder": "Im Finder anzeigen",
+  "@settings.securityLog.showInFinder": {
+    "sourceHash": "c2a9c77"
   },
   "settings.fileSystemWatching.globalShortcutHint": "Ändere den Kurzbefehl unter Tastaturkurzbefehle → Zum neuesten Download springen (global).",
   "@settings.fileSystemWatching.globalShortcutHint": {

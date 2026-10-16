@@ -2128,6 +2128,14 @@
   "@settings.managed.summary.reportsOff": {
     "sourceHash": "ca7981b"
   },
+  "settings.managed.summary.securityLog": "Sự kiện bảo mật",
+  "@settings.managed.summary.securityLog": {
+    "sourceHash": "774b6e0"
+  },
+  "settings.managed.summary.securityLogRequired": "Luôn được ghi lại",
+  "@settings.managed.summary.securityLogRequired": {
+    "sourceHash": "baf73d6"
+  },
   "settings.managed.summary.updates": "Cập nhật",
   "@settings.managed.summary.updates": {
     "sourceHash": "22e2bad"
@@ -2393,6 +2401,22 @@
   "settings.updates.card.privacyAndDataSharing": "Quyền riêng tư và chia sẻ dữ liệu",
   "@settings.updates.card.privacyAndDataSharing": {
     "sourceHash": "ae4aabf"
+  },
+  "settings.updates.card.securityEvents": "Sự kiện bảo mật",
+  "@settings.updates.card.securityEvents": {
+    "sourceHash": "774b6e0"
+  },
+  "settings.securityLog.enabled.label": "Ghi lại sự kiện bảo mật",
+  "@settings.securityLog.enabled.label": {
+    "sourceHash": "9f5e32e"
+  },
+  "settings.securityLog.enabled.description": "Giữ một tệp nhỏ trên máy Mac này để ghi lại các thay đổi và lần từ chối liên quan đến bảo mật, như việc đồng ý dùng AI đám mây, một bản cập nhật đã cài đặt hoặc một ứng dụng bị máy chủ MCP từ chối. Tệp này không chứa tên tệp, nội dung hay mật khẩu, và không bao giờ rời khỏi máy Mac của bạn.",
+  "@settings.securityLog.enabled.description": {
+    "sourceHash": "11361eb"
+  },
+  "settings.securityLog.showInFinder": "Hiển thị trong Finder",
+  "@settings.securityLog.showInFinder": {
+    "sourceHash": "c2a9c77"
   },
   "settings.fileSystemWatching.globalShortcutHint": "Đổi phím tắt trong Phím tắt → Đến tệp tải về mới nhất (toàn cục).",
   "@settings.fileSystemWatching.globalShortcutHint": {

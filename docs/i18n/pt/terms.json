@@ -606,6 +606,11 @@
     "confidence": "confirmed",
     "sources": "macOS Finder pt-BR ConnectToWindow, NetAuthAgent (Conectar)"
   },
+  "mcp-server": {
+    "chosen": "servidor MCP",
+    "confidence": "high",
+    "sources": "catalog (settings.section.mcpServer, settings.developer.mcpEnabled.label)"
+  },
   "menu": {
     "chosen": "menu",
     "accept": ["menus"],
@@ -2527,7 +2532,12 @@
   "screen": {
     "chosen": "tela",
     "forms": "on screen → na tela; compounds Protetor de Tela, Tela Bloqueada",
-    "avoid": [{ "form": "ecrã", "why": "pt-PT; Cmdr ships pt-BR" }],
+    "avoid": [
+      {
+        "form": "ecrã",
+        "why": "pt-PT; Cmdr ships pt-BR"
+      }
+    ],
     "confidence": "high",
     "sources": "live macOS 26 bundles (pile absent on this machine): Accessibility Keyboard strings (Localizable-WidgetExtension.loctable, \"on screen keyboard\") and Screen Saver (\"On Screen Saver and Lock Screen\"): No Protetor de Tela e na Tela Bloqueada (pt_BR)"
   },
@@ -2566,6 +2576,13 @@
     "chosen": "aviso de segurança",
     "confidence": "tentative",
     "sources": "MS terminology pt-BR advisory → aviso (no security advisory entry); es/MS aviso de seguridad parallels it"
+  },
+  "security-event": {
+    "chosen": "evento de segurança",
+    "accept": ["eventos de segurança"],
+    "forms": "card and summary row Eventos de segurança; switch Registrar eventos de segurança (the record-operations verb registrar); managed value Sempre registrados",
+    "confidence": "high",
+    "sources": "ms pt-BR (security event → evento de segurança)"
   },
   "security-issue": {
     "chosen": "problema de segurança",
@@ -2685,6 +2702,13 @@
     "confidence": "high",
     "sources": "macOS pt-BR (Encerrar Sessão)",
     "decision": "Server pane, sign in, and forget"
+  },
+  "signature": {
+    "chosen": "assinatura",
+    "accept": ["assinad"],
+    "forms": "wasn’t signed → não estava assinada; without a valid signature → sem uma assinatura válida",
+    "confidence": "high",
+    "sources": "ms pt-BR (digital signature → assinatura)"
   },
   "similar": {
     "chosen": "semelhante",

@@ -2126,6 +2126,14 @@
   "@settings.managed.summary.reportsOff": {
     "sourceHash": "ca7981b"
   },
+  "settings.managed.summary.securityLog": "События безопасности",
+  "@settings.managed.summary.securityLog": {
+    "sourceHash": "774b6e0"
+  },
+  "settings.managed.summary.securityLogRequired": "Записываются всегда",
+  "@settings.managed.summary.securityLogRequired": {
+    "sourceHash": "baf73d6"
+  },
   "settings.managed.summary.updates": "Обновления",
   "@settings.managed.summary.updates": {
     "sourceHash": "22e2bad"
@@ -2390,6 +2398,22 @@
   "settings.updates.card.privacyAndDataSharing": "Конфиденциальность и обмен данными",
   "@settings.updates.card.privacyAndDataSharing": {
     "sourceHash": "ae4aabf"
+  },
+  "settings.updates.card.securityEvents": "События безопасности",
+  "@settings.updates.card.securityEvents": {
+    "sourceHash": "774b6e0"
+  },
+  "settings.securityLog.enabled.label": "Записывать события безопасности",
+  "@settings.securityLog.enabled.label": {
+    "sourceHash": "9f5e32e"
+  },
+  "settings.securityLog.enabled.description": "Вести на этом Mac небольшой файл, где отмечаются изменения и отказы, важные для безопасности: например, согласие на облачный ИИ, установленное обновление или приложение, которому сервер MCP отказал в доступе. В файле нет имен файлов, их содержимого и паролей, и он никогда не покидает ваш Mac.",
+  "@settings.securityLog.enabled.description": {
+    "sourceHash": "11361eb"
+  },
+  "settings.securityLog.showInFinder": "Показать в Finder",
+  "@settings.securityLog.showInFinder": {
+    "sourceHash": "c2a9c77"
   },
   "settings.fileSystemWatching.globalShortcutHint": "Измените сочетание в разделе «Сочетания клавиш» → «Перейти к последней загрузке (глобальное)».",
   "@settings.fileSystemWatching.globalShortcutHint": {

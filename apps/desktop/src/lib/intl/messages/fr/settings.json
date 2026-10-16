@@ -2141,6 +2141,14 @@
   "@settings.managed.summary.reportsOff": {
     "sourceHash": "ca7981b"
   },
+  "settings.managed.summary.securityLog": "Évènements de sécurité",
+  "@settings.managed.summary.securityLog": {
+    "sourceHash": "774b6e0"
+  },
+  "settings.managed.summary.securityLogRequired": "Toujours enregistrés",
+  "@settings.managed.summary.securityLogRequired": {
+    "sourceHash": "baf73d6"
+  },
   "settings.managed.summary.updates": "Mises à jour",
   "@settings.managed.summary.updates": {
     "sourceHash": "22e2bad"
@@ -2406,6 +2414,22 @@
   "settings.updates.card.privacyAndDataSharing": "Confidentialité et partage de données",
   "@settings.updates.card.privacyAndDataSharing": {
     "sourceHash": "ae4aabf"
+  },
+  "settings.updates.card.securityEvents": "Évènements de sécurité",
+  "@settings.updates.card.securityEvents": {
+    "sourceHash": "774b6e0"
+  },
+  "settings.securityLog.enabled.label": "Enregistrer les évènements de sécurité",
+  "@settings.securityLog.enabled.label": {
+    "sourceHash": "9f5e32e"
+  },
+  "settings.securityLog.enabled.description": "Conserve sur ce Mac un petit fichier qui note les changements et les refus liés à la sécurité, comme le consentement à l’IA dans le cloud, une mise à jour installée ou une app refusée par le serveur MCP. Ce fichier ne contient aucun nom de fichier, aucun contenu ni aucun mot de passe, et ne quitte jamais votre Mac.",
+  "@settings.securityLog.enabled.description": {
+    "sourceHash": "11361eb"
+  },
+  "settings.securityLog.showInFinder": "Afficher dans le Finder",
+  "@settings.securityLog.showInFinder": {
+    "sourceHash": "c2a9c77"
   },
   "settings.fileSystemWatching.globalShortcutHint": "Modifiez le raccourci sous Raccourcis clavier → Aller au dernier téléchargement (global).",
   "@settings.fileSystemWatching.globalShortcutHint": {

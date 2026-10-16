@@ -1044,7 +1044,12 @@
     "forms": "Remove diacritics → Ékezetek eltávolítása (checkbox, preset, and shortcut row alike)",
     "confidence": "high",
     "sources": "the shipped catalog (multiRename.removeDiacritics, multiRename.preset.removeDiacritics); ékezet is the everyday Hungarian word for á, ö, ű, while diakritikus jel is linguistics jargon",
-    "avoid": [{ "form": "diakritikus jelek", "why": "bookish linguistics jargon; the everyday word is ékezet" }]
+    "avoid": [
+      {
+        "form": "diakritikus jelek",
+        "why": "bookish linguistics jargon; the everyday word is ékezet"
+      }
+    ]
   },
   "dialog": {
     "chosen": "párbeszédablak",
@@ -1620,11 +1625,24 @@
     "confidence": "tentative",
     "sources": "MS terminology has no security advisory (advisory → működési zavar is another sense); security update → biztonsági frissítés gives the adjective"
   },
+  "security-event": {
+    "chosen": "biztonsági esemény",
+    "forms": "card and summary row Biztonsági események; switch Biztonsági események rögzítése (the record-operations verb rögzít); managed value Mindig rögzítve",
+    "confidence": "high",
+    "sources": "ms (security event → biztonsági esemény, security log → biztonsági napló)"
+  },
   "security-issue": {
     "chosen": "biztonsági probléma",
     "accept": ["biztonsági problém"],
     "confidence": "tentative",
     "sources": "MS terminology security vulnerability → biztonsági rés; probléma mirrors the calm English issue and the style guide's prose word"
+  },
+  "signature": {
+    "chosen": "aláírás",
+    "accept": ["aláír"],
+    "forms": "wasn’t signed → nem volt aláírva; without a valid signature → érvényes aláírás nélkül",
+    "confidence": "high",
+    "sources": "ms (digital signature → aláírás)"
   },
   "sync": {
     "chosen": "szinkronizálás",

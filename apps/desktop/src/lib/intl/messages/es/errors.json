@@ -1961,6 +1961,10 @@
   "@errors.volume.staleDestinationHandle": {
     "sourceHash": "b31958a"
   },
+  "errors.volume.signatureInvalid": "La respuesta del servidor no estaba firmada, así que Cmdr se ha detenido.",
+  "@errors.volume.signatureInvalid": {
+    "sourceHash": "ba50c7b"
+  },
   "errors.volume.ioError": "El volumen no ha podido completarlo.",
   "@errors.volume.ioError": {
     "sourceHash": "59e7d6a"
@@ -2148,6 +2152,10 @@
   "errors.shareList.authFailed": "Ese nombre de usuario y esa contraseña no han funcionado en “{server}”. Revísalos y vuelve a iniciar sesión.",
   "@errors.shareList.authFailed": {
     "sourceHash": "b88b224"
+  },
+  "errors.shareList.signatureInvalid": "“{server}” ha respondido sin una firma válida, así que Cmdr no ha confiado en la respuesta. Puede deberse a un dispositivo de red inestable o a que alguien esté manipulando la conexión. Inténtalo de nuevo y, si sigue pasando, comprueba tu red.",
+  "@errors.shareList.signatureInvalid": {
+    "sourceHash": "6523e32"
   },
   "errors.shareList.protocolError": "Algo ha ido mal al pedirle a “{server}” sus recursos compartidos. Vuelve a intentarlo en un momento.",
   "@errors.shareList.protocolError": {

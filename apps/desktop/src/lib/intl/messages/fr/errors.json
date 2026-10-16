@@ -1961,6 +1961,10 @@
   "@errors.volume.staleDestinationHandle": {
     "sourceHash": "b31958a"
   },
+  "errors.volume.signatureInvalid": "La réponse du serveur n’était pas signée, donc Cmdr s’est arrêté.",
+  "@errors.volume.signatureInvalid": {
+    "sourceHash": "ba50c7b"
+  },
   "errors.volume.ioError": "Le volume n’a pas pu terminer cette opération.",
   "@errors.volume.ioError": {
     "sourceHash": "59e7d6a"
@@ -2148,6 +2152,10 @@
   "errors.shareList.authFailed": "Ce nom d’utilisateur et ce mot de passe n’ont pas fonctionné sur « {server} ». Vérifiez-les et identifiez-vous à nouveau.",
   "@errors.shareList.authFailed": {
     "sourceHash": "b88b224"
+  },
+  "errors.shareList.signatureInvalid": "« {server} » a répondu sans signature valide, donc Cmdr n’a pas fait confiance à la réponse. Un appareil réseau capricieux peut en être la cause, tout comme quelqu’un qui trafique la connexion. Réessayez, et si cela continue, vérifiez votre réseau.",
+  "@errors.shareList.signatureInvalid": {
+    "sourceHash": "6523e32"
   },
   "errors.shareList.protocolError": "Un problème est survenu lors de la récupération des partages de « {server} ». Réessayez dans un instant.",
   "@errors.shareList.protocolError": {

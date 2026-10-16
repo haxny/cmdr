@@ -1961,6 +1961,10 @@
   "@errors.volume.staleDestinationHandle": {
     "sourceHash": "b31958a"
   },
+  "errors.volume.signatureInvalid": "A szerver válasza nem volt aláírva, ezért a Cmdr leállt.",
+  "@errors.volume.signatureInvalid": {
+    "sourceHash": "ba50c7b"
+  },
   "errors.volume.ioError": "A kötet nem tudta befejezni a műveletet.",
   "@errors.volume.ioError": {
     "sourceHash": "59e7d6a"
@@ -2148,6 +2152,10 @@
   "errors.shareList.authFailed": "Ez a felhasználónév és jelszó nem jó ehhez a szerverhez: „{server}”. Ellenőrizd őket, és jelentkezz be újra.",
   "@errors.shareList.authFailed": {
     "sourceHash": "b88b224"
+  },
+  "errors.shareList.signatureInvalid": "„{server}” érvényes aláírás nélkül válaszolt, ezért a Cmdr nem tekintette megbízhatónak a választ. Ezt okozhatja egy rosszul működő hálózati eszköz, de az is, ha valaki beavatkozik a kapcsolatba. Próbáld újra, és ha ez továbbra is előfordul, ellenőrizd a hálózatodat.",
+  "@errors.shareList.signatureInvalid": {
+    "sourceHash": "6523e32"
   },
   "errors.shareList.protocolError": "Valami nem sikerült, miközben a Cmdr lekérte ennek a szervernek a megosztásait: „{server}”. Próbáld újra egy pillanat múlva.",
   "@errors.shareList.protocolError": {

@@ -600,6 +600,11 @@
     "forms": "connect to a server → kết nối tới (prose) but the label Kết nối với máy chủ… (Finder N84); reconnect → kết nối lại; the connection dropped → Đã mất kết nối",
     "sources": "Xfce Thunar (kết nối mạng), macOS Finder (Kết nối với máy chủ), CFNetwork (Đã mất kết nối mạng)"
   },
+  "mcp-server": {
+    "chosen": "máy chủ MCP",
+    "confidence": "high",
+    "sources": "catalog (settings.section.mcpServer, settings.developer.mcpEnabled.label)"
+  },
   "menu": {
     "chosen": "menu",
     "forms": "Open the X menu → Mở menu X (Mở menu chuột phải, Menu mục ưa thích)",
@@ -1676,6 +1681,12 @@
     "confidence": "tentative",
     "sources": "MS terminology advisory → thông báo; bảo mật is the catalog's security word"
   },
+  "security-event": {
+    "chosen": "sự kiện bảo mật",
+    "forms": "card and summary row Sự kiện bảo mật; switch Ghi lại sự kiện bảo mật (the record-operations verb ghi lại); managed value Luôn được ghi lại",
+    "confidence": "high",
+    "sources": "ms (security event → sự kiện bảo mật); bảo mật matches the security-issue ruling"
+  },
   "security-issue": {
     "chosen": "vấn đề bảo mật",
     "confidence": "tentative",
@@ -1686,6 +1697,13 @@
     "forms": "in prose: ở phần Chia sẻ & quyền",
     "confidence": "high",
     "sources": "macOS 27.0 Finder InfoWindowPermissionsView 6.title (plutil, 2026-10-14); matches the shipped `errors.write.permissionDenied.suggestion.needsAdminMac` (panel label Chia sẻ & quyền:)"
+  },
+  "signature": {
+    "chosen": "chữ ký",
+    "accept": ["được ký"],
+    "forms": "wasn’t signed → không được ký; without a valid signature → không có chữ ký hợp lệ",
+    "confidence": "high",
+    "sources": "ms (signature → chữ ký, digital signature → chữ ký số)"
   },
   "size-unit-gibibyte": {
     "chosen": "GiB",

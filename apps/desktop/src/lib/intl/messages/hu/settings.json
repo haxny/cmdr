@@ -2130,6 +2130,14 @@
   "@settings.managed.summary.reportsOff": {
     "sourceHash": "ca7981b"
   },
+  "settings.managed.summary.securityLog": "Biztonsági események",
+  "@settings.managed.summary.securityLog": {
+    "sourceHash": "774b6e0"
+  },
+  "settings.managed.summary.securityLogRequired": "Mindig rögzítve",
+  "@settings.managed.summary.securityLogRequired": {
+    "sourceHash": "baf73d6"
+  },
   "settings.managed.summary.updates": "Frissítések",
   "@settings.managed.summary.updates": {
     "sourceHash": "22e2bad"
@@ -2395,6 +2403,22 @@
   "settings.updates.card.privacyAndDataSharing": "Adatvédelem és adatmegosztás",
   "@settings.updates.card.privacyAndDataSharing": {
     "sourceHash": "ae4aabf"
+  },
+  "settings.updates.card.securityEvents": "Biztonsági események",
+  "@settings.updates.card.securityEvents": {
+    "sourceHash": "774b6e0"
+  },
+  "settings.securityLog.enabled.label": "Biztonsági események rögzítése",
+  "@settings.securityLog.enabled.label": {
+    "sourceHash": "9f5e32e"
+  },
+  "settings.securityLog.enabled.description": "Egy kis fájlban rögzíti ezen a Macen a biztonsági szempontból fontos változásokat és elutasításokat, például a felhő-AI-hoz adott hozzájárulást, egy telepített frissítést vagy egy appot, amelyet az MCP-szerver visszautasított. A fájl nem tartalmaz se fájlnevet, se tartalmat, se jelszót, és sosem kerül ki erről a Macről.",
+  "@settings.securityLog.enabled.description": {
+    "sourceHash": "11361eb"
+  },
+  "settings.securityLog.showInFinder": "Megjelenítés a Finderben",
+  "@settings.securityLog.showInFinder": {
+    "sourceHash": "c2a9c77"
   },
   "settings.fileSystemWatching.globalShortcutHint": "A parancsot a Billentyűparancsok → Ugrás a legutóbbi letöltéshez (globális) alatt módosíthatod.",
   "@settings.fileSystemWatching.globalShortcutHint": {

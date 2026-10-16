@@ -773,6 +773,11 @@
     "forms": "a button or status → 連線 (已連線, 正在連線⋯); the verb in a sentence or command name → 連接 (連接伺服器⋯); casual → 連上 / 連著 / 連不上; a network connection → 網路連線",
     "sources": "AP-TW = AP-HK (Connect → 連線; Connect to Server… → 連接伺服器⋯), MS"
   },
+  "mcp-server": {
+    "chosen": "MCP 伺服器",
+    "confidence": "high",
+    "sources": "catalog (settings.section.mcpServer, settings.developer.mcpEnabled.label)"
+  },
   "pane-divider": {
     "accept": ["分隔線"],
     "chosen": "窗格分隔線",
@@ -3168,6 +3173,12 @@
     "confidence": "tentative",
     "sources": "MS terminology advisory → 公告 (security advisory → 資訊安全諮詢, too formal); 安全性 as in Apple's 隱私權與安全性"
   },
+  "security-event": {
+    "chosen": "安全性事件",
+    "forms": "switch 記錄安全性事件 (the record-operations verb 記錄); managed value 一律記錄",
+    "confidence": "high",
+    "sources": "ms zh-TW (security event → 安全性事件); 安全性 matches the security-issue ruling"
+  },
   "security-issue": {
     "chosen": "安全性問題",
     "confidence": "tentative",
@@ -3322,6 +3333,17 @@
     "chosen": "註冊",
     "confidence": "high",
     "sources": "MS id 112681 → 2510936 (To enroll in a service; HKG, TWN)"
+  },
+  "signature": {
+    "chosen": "簽章",
+    "avoid": [
+      {
+        "form": "簽名",
+        "why": "the mainland and handwritten form; Taiwan says 數位簽章"
+      }
+    ],
+    "confidence": "high",
+    "sources": "ms zh-TW (digital signature → 簽章, signature → 簽章)"
   },
   "size": {
     "accept": ["容量"],

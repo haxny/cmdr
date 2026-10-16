@@ -638,6 +638,11 @@
     "forms": "button Verbind; Connect to server → Verbind met server; Connect as guest → Verbind als gast; progress Verbinden met {name}…; status Verbonden; in a sentence verbinding maken; a phone plugged in by cable is aangesloten, not verbonden",
     "sources": "macOS Finder (Connect to server → Verbind met server, Connect As… → Verbind als…), AppKit (Connecting… → Verbinden…, Connected → Verbonden)"
   },
+  "mcp-server": {
+    "chosen": "MCP-server",
+    "confidence": "high",
+    "sources": "catalog (settings.section.mcpServer, settings.developer.mcpEnabled.label)"
+  },
   "menu": {
     "chosen": "menu",
     "accept": ["menu’s", "menu's"],
@@ -2775,6 +2780,12 @@
     "confidence": "high",
     "sources": "MS terminology (security advisory → beveiligingsadvies)"
   },
+  "security-event": {
+    "chosen": "beveiligingsgebeurtenis",
+    "forms": "card and summary row Beveiligingsgebeurtenissen; switch Beveiligingsgebeurtenissen bijhouden (the record-operations verb bijhouden); managed value Altijd bijgehouden",
+    "confidence": "high",
+    "sources": "ms (security event → beveiligingsgebeurtenis, security log → beveiligingslogboek)"
+  },
   "security-issue": {
     "chosen": "beveiligingsprobleem",
     "accept": ["beveiligingsproblemen"],
@@ -2919,6 +2930,13 @@
     "confidence": "high",
     "forms": "status Uitgelogd; Signed out of X → Uitgelogd bij X; log out of the Mac → uitloggen",
     "sources": "macOS Localizable.loctable (iCloud Signed Out → Uitgelogd bij iCloud), menu Log uit"
+  },
+  "signature": {
+    "chosen": "handtekening",
+    "accept": ["ondertekend"],
+    "forms": "wasn’t signed → was niet ondertekend; without a valid signature → zonder geldige handtekening",
+    "confidence": "high",
+    "sources": "ms (digital signature → handtekening)"
   },
   "size": {
     "accept": ["grootte", "groottes"],

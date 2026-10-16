@@ -1960,6 +1960,10 @@
   "@errors.volume.staleDestinationHandle": {
     "sourceHash": "b31958a"
   },
+  "errors.volume.signatureInvalid": "服务器的回复没有签名，所以 Cmdr 停止了这项操作。",
+  "@errors.volume.signatureInvalid": {
+    "sourceHash": "ba50c7b"
+  },
   "errors.volume.ioError": "这个宗卷没能完成这项操作。",
   "@errors.volume.ioError": {
     "sourceHash": "59e7d6a"
@@ -2147,6 +2151,10 @@
   "errors.shareList.authFailed": "这个用户名和密码在“{server}”上不起作用。请检查后重新登录。",
   "@errors.shareList.authFailed": {
     "sourceHash": "b88b224"
+  },
+  "errors.shareList.signatureInvalid": "“{server}”的回复没有有效签名，所以 Cmdr 不信任这个回复。网络设备不稳定可能导致这种情况，有人篡改连接也可能导致。请再试一次，如果一直这样，请检查你的网络。",
+  "@errors.shareList.signatureInvalid": {
+    "sourceHash": "6523e32"
   },
   "errors.shareList.protocolError": "向“{server}”获取共享列表时出了点问题。请稍后重试。",
   "@errors.shareList.protocolError": {

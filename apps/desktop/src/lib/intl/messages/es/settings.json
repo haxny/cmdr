@@ -2131,6 +2131,14 @@
   "@settings.managed.summary.reportsOff": {
     "sourceHash": "ca7981b"
   },
+  "settings.managed.summary.securityLog": "Eventos de seguridad",
+  "@settings.managed.summary.securityLog": {
+    "sourceHash": "774b6e0"
+  },
+  "settings.managed.summary.securityLogRequired": "Siempre registrados",
+  "@settings.managed.summary.securityLogRequired": {
+    "sourceHash": "baf73d6"
+  },
   "settings.managed.summary.updates": "Actualizaciones",
   "@settings.managed.summary.updates": {
     "sourceHash": "22e2bad"
@@ -2395,6 +2403,22 @@
   "settings.updates.card.privacyAndDataSharing": "Privacidad e intercambio de datos",
   "@settings.updates.card.privacyAndDataSharing": {
     "sourceHash": "ae4aabf"
+  },
+  "settings.updates.card.securityEvents": "Eventos de seguridad",
+  "@settings.updates.card.securityEvents": {
+    "sourceHash": "774b6e0"
+  },
+  "settings.securityLog.enabled.label": "Registrar eventos de seguridad",
+  "@settings.securityLog.enabled.label": {
+    "sourceHash": "9f5e32e"
+  },
+  "settings.securityLog.enabled.description": "Guarda en este Mac un pequeño archivo que anota los cambios y rechazos relacionados con la seguridad, como el consentimiento para la IA en la nube, una actualización instalada o una app rechazada por el servidor MCP. No contiene nombres de archivo, contenidos ni contraseñas, y nunca sale de tu Mac.",
+  "@settings.securityLog.enabled.description": {
+    "sourceHash": "11361eb"
+  },
+  "settings.securityLog.showInFinder": "Mostrar en el Finder",
+  "@settings.securityLog.showInFinder": {
+    "sourceHash": "c2a9c77"
   },
   "settings.fileSystemWatching.globalShortcutHint": "Cambia el atajo en Atajos de teclado → Ir a la última descarga (global).",
   "@settings.fileSystemWatching.globalShortcutHint": {

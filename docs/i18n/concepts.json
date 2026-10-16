@@ -104,7 +104,7 @@
     "distinct": ["answer", "respond"],
     "en": "reply",
     "match": ["reply", "replies"],
-    "notMatch": ["so we can reply"],
+    "notMatch": ["so we can reply", "server's reply", "trust the reply"],
     "sense": "An Ask Cmdr assistant answer, or an AI provider response."
   },
   "ai-tool": {
@@ -2123,7 +2123,7 @@
     "distinct": ["feedback"],
     "en": "note",
     "match": ["note", "notes"],
-    "notMatch": ["note that", "read the note", "notes.txt", "update notes", "=note"],
+    "notMatch": ["note that", "read the note", "notes.txt", "update notes", "=note", "that notes"],
     "sense": "Free text the user writes (a note on an error report, the feedback message), or Ask Cmdr's saved notes."
   },
   "notification": {
@@ -2679,6 +2679,7 @@
     "distinct": ["answer"],
     "en": "reply",
     "match": ["reply", "replies"],
+    "notMatch": ["server's reply", "trust the reply"],
     "sense": "The AI's answer in an Ask Cmdr chat, or a logged model response."
   },
   "report": {
@@ -2907,6 +2908,12 @@
     "match": ["advisory", "advisories", "security advisory"],
     "sense": "A public security advisory (on GitHub or the Cmdr website) describing a fixed vulnerability and what to do; the What's new and update-toast links."
   },
+  "security-event": {
+    "distinct": ["security-issue", "watcher", "record-operations"],
+    "en": "security events",
+    "match": ["security event", "security events"],
+    "sense": "The local security event log: a small file on the Mac noting security-relevant changes and refusals, its Settings card, its on/off switch (Record security events), and its managed-summary row."
+  },
   "security-issue": {
     "en": "security issue",
     "match": ["security issue", "security issues"],
@@ -3038,6 +3045,11 @@
     "match": ["sign up", "signs up", "signing up", "signed up", "signup"],
     "notMatch": ["signup server"],
     "sense": "Joining the occasional-updates mailing list, or creating an account with a provider."
+  },
+  "signature": {
+    "en": "signature",
+    "match": ["signature", "signatures", "wasn't signed"],
+    "sense": "The cryptographic signature on a network server's reply (SMB signing): a reply with no valid one is refused. Not a person's handwritten signature."
   },
   "similar": {
     "distinct": ["image-search"],
@@ -3659,7 +3671,7 @@
   "watcher": {
     "en": "watcher",
     "match": ["watcher", "watching", "events"],
-    "notMatch": ["watching for phones"],
+    "notMatch": ["watching for phones", "security events"],
     "sense": "The file-system change watcher and the change events it reports."
   },
   "whats-new": {

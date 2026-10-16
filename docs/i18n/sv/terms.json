@@ -657,6 +657,11 @@
     "forms": "ansluta, Anslut, Ansluter till {name}…, anslutning, ansluten; Connect as guest → Anslut som gäst",
     "sources": "macOS Finder (Anslut till server, Ansluter till ^0…)"
   },
+  "mcp-server": {
+    "chosen": "MCP-server",
+    "confidence": "high",
+    "sources": "catalog (settings.section.mcpServer, settings.developer.mcpEnabled.label)"
+  },
   "menu": {
     "chosen": "meny",
     "accept": ["menyn", "menyer"],
@@ -1297,7 +1302,12 @@
     "sources": "git po/sv.po (On branch → På grenen, (no branch) → (ingen gren)); MS förgrena is the verb sense"
   },
   "git-commit": {
-    "avoid": [{ "form": "commit", "why": "English loanword; the catalog uses incheckning nine times and more" }],
+    "avoid": [
+      {
+        "form": "commit",
+        "why": "English loanword; the catalog uses incheckning nine times and more"
+      }
+    ],
     "chosen": "incheckning",
     "confidence": "high",
     "forms": "incheckningen, incheckningar; parent commit → föräldraincheckningen",
@@ -1317,7 +1327,10 @@
     "confidence": "tentative",
     "forms": "chip state {branch} · ändringar; tooltip Arbetsträdet har ändringar som inte checkats in",
     "avoid": [
-      { "form": "lortig", "why": "git po/sv.po’s jokey rendering of -dirty; reads as a slur on the user’s work" }
+      {
+        "form": "lortig",
+        "why": "git po/sv.po’s jokey rendering of -dirty; reads as a slur on the user’s work"
+      }
     ],
     "note": "A noun, not a participle: the chip names no row noun to agree with (grenen is en, repot is ett), so ändrad/ändrat would guess a gender.",
     "sources": "git po/sv.po (uncommitted changes → ändringar som inte checkats in); catalog ändringsstatus (settings.fileExplorer.git.showRepoChip.description)"
@@ -2692,6 +2705,12 @@
     "confidence": "tentative",
     "sources": "MS terminology advisory → rekommendation (no security advisory entry); meddelande names a published notice"
   },
+  "security-event": {
+    "chosen": "säkerhetshändelse",
+    "forms": "card and summary row Säkerhetshändelser; switch Logga säkerhetshändelser (the record-operations verb logga); managed value Loggas alltid",
+    "confidence": "high",
+    "sources": "ms (security event → säkerhetshändelse, security log → säkerhetslogg)"
+  },
   "security-issue": {
     "chosen": "säkerhetsproblem",
     "confidence": "tentative",
@@ -2809,6 +2828,13 @@
     "decision": "Mailing-list signup",
     "forms": "signup server → registreringsservern",
     "sources": "MS terminology (sign up → registrera)"
+  },
+  "signature": {
+    "chosen": "signatur",
+    "accept": ["signerat", "signerad"],
+    "forms": "wasn’t signed → var inte signerat (agrees with svar); without a valid signature → utan giltig signatur",
+    "confidence": "high",
+    "sources": "ms (digital signature → signatur)"
   },
   "size": {
     "chosen": "storlek",

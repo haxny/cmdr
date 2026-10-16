@@ -4358,6 +4358,13 @@
     "confidence": "tentative",
     "sources": "MS terminology security advisory → советы по безопасности (plural-only, reads as tips), advisory → предупреждение; бюллетень names one published document"
   },
+  "security-event": {
+    "chosen": "событие безопасности",
+    "accept": ["события безопасности", "событий безопасности"],
+    "forms": "card and summary row События безопасности; switch Записывать события безопасности (the record-operations verb, imperfective); managed value Записываются всегда",
+    "confidence": "high",
+    "sources": "ms (security event → событие безопасности, security log → журнал безопасности)"
+  },
   "security-issue": {
     "chosen": "проблема безопасности",
     "accept": ["проблем"],
@@ -4666,6 +4673,13 @@
     "forms": "«Зарегистрируйтесь на …»; noun «регистрация»",
     "confidence": "high",
     "sources": "MS: sign up → зарегистрироваться; no macOS or file-manager hit"
+  },
+  "signature": {
+    "chosen": "подпись",
+    "accept": ["подписи", "подписан"],
+    "forms": "wasn’t signed → не был подписан; without a valid signature → без действительной подписи",
+    "confidence": "high",
+    "sources": "ms (digital signature → подпись)"
   },
   "similar": {
     "chosen": "похожие",

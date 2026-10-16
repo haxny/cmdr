@@ -2138,6 +2138,14 @@
   "@settings.managed.summary.reportsOff": {
     "sourceHash": "ca7981b"
   },
+  "settings.managed.summary.securityLog": "Beveiligingsgebeurtenissen",
+  "@settings.managed.summary.securityLog": {
+    "sourceHash": "774b6e0"
+  },
+  "settings.managed.summary.securityLogRequired": "Altijd bijgehouden",
+  "@settings.managed.summary.securityLogRequired": {
+    "sourceHash": "baf73d6"
+  },
   "settings.managed.summary.updates": "Updates",
   "@settings.managed.summary.updates": {
     "sourceHash": "22e2bad",
@@ -2407,6 +2415,22 @@
   "settings.updates.card.privacyAndDataSharing": "Privacy en gegevensdeling",
   "@settings.updates.card.privacyAndDataSharing": {
     "sourceHash": "ae4aabf"
+  },
+  "settings.updates.card.securityEvents": "Beveiligingsgebeurtenissen",
+  "@settings.updates.card.securityEvents": {
+    "sourceHash": "774b6e0"
+  },
+  "settings.securityLog.enabled.label": "Beveiligingsgebeurtenissen bijhouden",
+  "@settings.securityLog.enabled.label": {
+    "sourceHash": "9f5e32e"
+  },
+  "settings.securityLog.enabled.description": "Houd op deze Mac een klein bestand bij met beveiligingsrelevante wijzigingen en weigeringen, zoals toestemming voor cloud-AI, een geïnstalleerde update of een app die de MCP-server heeft geweigerd. Het bestand bevat geen bestandsnamen, inhoud of wachtwoorden en verlaat je Mac nooit.",
+  "@settings.securityLog.enabled.description": {
+    "sourceHash": "11361eb"
+  },
+  "settings.securityLog.showInFinder": "Toon in Finder",
+  "@settings.securityLog.showInFinder": {
+    "sourceHash": "c2a9c77"
   },
   "settings.fileSystemWatching.globalShortcutHint": "Wijzig de sneltoets onder Sneltoetsen → Ga naar laatste download (globaal).",
   "@settings.fileSystemWatching.globalShortcutHint": {

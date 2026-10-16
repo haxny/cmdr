@@ -2128,6 +2128,14 @@
   "@settings.managed.summary.reportsOff": {
     "sourceHash": "ca7981b"
   },
+  "settings.managed.summary.securityLog": "安全事件",
+  "@settings.managed.summary.securityLog": {
+    "sourceHash": "774b6e0"
+  },
+  "settings.managed.summary.securityLogRequired": "始终记录",
+  "@settings.managed.summary.securityLogRequired": {
+    "sourceHash": "baf73d6"
+  },
   "settings.managed.summary.updates": "更新",
   "@settings.managed.summary.updates": {
     "sourceHash": "22e2bad"
@@ -2393,6 +2401,22 @@
   "settings.updates.card.privacyAndDataSharing": "隐私和数据共享",
   "@settings.updates.card.privacyAndDataSharing": {
     "sourceHash": "ae4aabf"
+  },
+  "settings.updates.card.securityEvents": "安全事件",
+  "@settings.updates.card.securityEvents": {
+    "sourceHash": "774b6e0"
+  },
+  "settings.securityLog.enabled.label": "记录安全事件",
+  "@settings.securityLog.enabled.label": {
+    "sourceHash": "9f5e32e"
+  },
+  "settings.securityLog.enabled.description": "在这台 Mac 上保留一个小文件，记下与安全相关的更改和拒绝，比如对云端 AI 的同意、安装的更新，或被 MCP 服务器拒绝的 App。这个文件不含文件名、文件内容或密码，也绝不会离开你的 Mac。",
+  "@settings.securityLog.enabled.description": {
+    "sourceHash": "11361eb"
+  },
+  "settings.securityLog.showInFinder": "在 Finder 中显示",
+  "@settings.securityLog.showInFinder": {
+    "sourceHash": "c2a9c77"
   },
   "settings.fileSystemWatching.globalShortcutHint": "在“键盘快捷键 → 前往最新下载（全局）”下更改这个快捷键。",
   "@settings.fileSystemWatching.globalShortcutHint": {

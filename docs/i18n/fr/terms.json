@@ -708,6 +708,11 @@
     "note": "`se connecter` is the network action; signing in is `s’identifier`.",
     "sources": "macOS Finder (\"Se connecter comme…\", MenuBar 266.title, MN1 « Connexion à « ^0 »… »)"
   },
+  "mcp-server": {
+    "chosen": "serveur MCP",
+    "confidence": "high",
+    "sources": "catalog (settings.section.mcpServer, settings.developer.mcpEnabled.label)"
+  },
   "menu": {
     "chosen": "menu",
     "accept": ["menus"],
@@ -2795,6 +2800,13 @@
     "confidence": "high",
     "sources": "MS terminology (security advisory → avis de sécurité)"
   },
+  "security-event": {
+    "chosen": "évènement de sécurité",
+    "accept": ["évènements de sécurité"],
+    "forms": "card and summary row Évènements de sécurité; switch Enregistrer les évènements de sécurité (the record-operations verb enregistrer); managed value Toujours enregistrés",
+    "confidence": "high",
+    "sources": "ms (security event → événement de sécurité); the modern spelling évènement follows the catalog (watcher ruling, 4 values)"
+  },
   "security-issue": {
     "chosen": "problème de sécurité",
     "accept": ["problèmes de sécurité"],
@@ -2958,6 +2970,13 @@
     "confidence": "high",
     "forms": "signed out (a server state) → Session fermée, Session fermée sur {name}; logging out of the Mac → la fermeture de session",
     "sources": "macOS AppKit Menus.json (Log Out → Fermer la session); MS terminology FRA"
+  },
+  "signature": {
+    "chosen": "signature",
+    "accept": ["signé"],
+    "forms": "wasn’t signed → n’était pas signée; without a valid signature → sans signature valide",
+    "confidence": "high",
+    "sources": "ms (digital signature → signature)"
   },
   "size": {
     "chosen": "taille",

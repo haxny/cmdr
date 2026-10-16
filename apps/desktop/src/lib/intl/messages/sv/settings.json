@@ -2137,6 +2137,14 @@
   "@settings.managed.summary.reportsOff": {
     "sourceHash": "ca7981b"
   },
+  "settings.managed.summary.securityLog": "Säkerhetshändelser",
+  "@settings.managed.summary.securityLog": {
+    "sourceHash": "774b6e0"
+  },
+  "settings.managed.summary.securityLogRequired": "Loggas alltid",
+  "@settings.managed.summary.securityLogRequired": {
+    "sourceHash": "baf73d6"
+  },
   "settings.managed.summary.updates": "Uppdateringar",
   "@settings.managed.summary.updates": {
     "sourceHash": "22e2bad"
@@ -2402,6 +2410,22 @@
   "settings.updates.card.privacyAndDataSharing": "Integritet och datadelning",
   "@settings.updates.card.privacyAndDataSharing": {
     "sourceHash": "ae4aabf"
+  },
+  "settings.updates.card.securityEvents": "Säkerhetshändelser",
+  "@settings.updates.card.securityEvents": {
+    "sourceHash": "774b6e0"
+  },
+  "settings.securityLog.enabled.label": "Logga säkerhetshändelser",
+  "@settings.securityLog.enabled.label": {
+    "sourceHash": "9f5e32e"
+  },
+  "settings.securityLog.enabled.description": "Spara en liten fil på den här Macen som noterar säkerhetsrelevanta ändringar och avvisningar, till exempel samtycke till moln-AI, en installerad uppdatering eller en app som MCP-servern har avvisat. Filen innehåller inga filnamn, innehåll eller lösenord och lämnar aldrig din Mac.",
+  "@settings.securityLog.enabled.description": {
+    "sourceHash": "11361eb"
+  },
+  "settings.securityLog.showInFinder": "Visa i Finder",
+  "@settings.securityLog.showInFinder": {
+    "sourceHash": "c2a9c77"
   },
   "settings.fileSystemWatching.globalShortcutHint": "Ändra genvägen under Tangentbordsgenvägar → Gå till senaste hämtning (global).",
   "@settings.fileSystemWatching.globalShortcutHint": {

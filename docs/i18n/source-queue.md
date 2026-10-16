@@ -402,3 +402,8 @@ rule into `translation-principles.md` or `translator-instructions.md`), then del
   can't be undone." Locales rendered it as "needed for undo". (de, fr, nl, pt, ru, sv)
 - No concept for recording file operations (the new switch, `settings.operationLog.intro`): added `record-operations`
   with `tentative` rulings, since macOS has no data-recording sense to anchor them. (all)
+- `errors.volume.signatureInvalid`: "wasn’t signed" says the reply carried no signature, but the description (and
+  `errors.shareList.signatureInvalid`) say it had no VALID one. Consider "The server’s reply had no valid signature, so
+  Cmdr stopped." Locales mirrored "wasn't signed". (all)
+- No concept for the security event log or a reply's signature: added `security-event` and `signature`, and taught
+  `watcher` ("events"), `note` ("that notes"), and both `reply` concepts ("server's reply") to skip these strings. (all)

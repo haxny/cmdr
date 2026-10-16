@@ -1961,6 +1961,10 @@
   "@errors.volume.staleDestinationHandle": {
     "sourceHash": "b31958a"
   },
+  "errors.volume.signatureInvalid": "伺服器的回覆沒有簽章，所以 Cmdr 停下來了。",
+  "@errors.volume.signatureInvalid": {
+    "sourceHash": "ba50c7b"
+  },
   "errors.volume.ioError": "這個卷宗沒能完成那件事。",
   "@errors.volume.ioError": {
     "sourceHash": "59e7d6a"
@@ -2148,6 +2152,10 @@
   "errors.shareList.authFailed": "這組使用者名稱和密碼在「{server}」上不管用。請檢查一下，再重新登入。",
   "@errors.shareList.authFailed": {
     "sourceHash": "b88b224"
+  },
+  "errors.shareList.signatureInvalid": "「{server}」的回覆沒有有效的簽章，所以 Cmdr 不信任這個回覆。網路裝置不穩定可能造成這種情況，有人竄改連線也可能。請再試一次，如果一直發生，請檢查你的網路。",
+  "@errors.shareList.signatureInvalid": {
+    "sourceHash": "6523e32"
   },
   "errors.shareList.protocolError": "向「{server}」取得共享資料夾列表時出了點狀況。請稍後再試一次。",
   "@errors.shareList.protocolError": {

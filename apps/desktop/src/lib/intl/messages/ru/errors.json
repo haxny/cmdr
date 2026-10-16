@@ -1961,6 +1961,10 @@
   "@errors.volume.staleDestinationHandle": {
     "sourceHash": "b31958a"
   },
+  "errors.volume.signatureInvalid": "Ответ сервера не был подписан, поэтому Cmdr остановил операцию.",
+  "@errors.volume.signatureInvalid": {
+    "sourceHash": "ba50c7b"
+  },
   "errors.volume.ioError": "Тому не удалось завершить это действие.",
   "@errors.volume.ioError": {
     "sourceHash": "59e7d6a"
@@ -2148,6 +2152,10 @@
   "errors.shareList.authFailed": "Имя пользователя и пароль не подошли для сервера «{server}». Проверьте их и войдите снова.",
   "@errors.shareList.authFailed": {
     "sourceHash": "b88b224"
+  },
+  "errors.shareList.signatureInvalid": "Сервер «{server}» ответил без действительной подписи, поэтому Cmdr не стал доверять ответу. Причиной может быть ненадежное сетевое устройство или чье-то вмешательство в соединение. Попробуйте еще раз, а если это повторяется, проверьте сеть.",
+  "@errors.shareList.signatureInvalid": {
+    "sourceHash": "6523e32"
   },
   "errors.shareList.protocolError": "Что-то пошло не так при запросе общих папок у сервера «{server}». Попробуйте еще раз чуть позже.",
   "@errors.shareList.protocolError": {

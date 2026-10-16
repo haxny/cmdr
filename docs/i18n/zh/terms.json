@@ -675,6 +675,11 @@
     "forms": "Connecting to X… → 正在连接到 {name}…; Connect to server… → 连接服务器…; Connect as guest → 以来宾身份连接; internet connection → 联网 / 互联网连接",
     "sources": "macOS Finder, NetAuthAgent"
   },
+  "mcp-server": {
+    "chosen": "MCP 服务器",
+    "confidence": "high",
+    "sources": "catalog (settings.section.mcpServer, settings.developer.mcpEnabled.label)"
+  },
   "menu": {
     "chosen": "菜单",
     "forms": "X menu → X菜单, tight (个人收藏菜单, 预置菜单); context menu → 右键菜单; a named menu in prose → “帮助”菜单",
@@ -2855,6 +2860,12 @@
     "confidence": "high",
     "sources": "MS terminology (security advisory → 安全公告)"
   },
+  "security-event": {
+    "chosen": "安全事件",
+    "forms": "switch 记录安全事件 (the record-operations verb 记录); managed value 始终记录",
+    "confidence": "high",
+    "sources": "ms (security event → 安全事件, security log → 安全日志)"
+  },
   "security-issue": {
     "chosen": "安全问题",
     "confidence": "tentative",
@@ -2990,6 +3001,11 @@
     },
     "forms": "status 已退出登录; Signed out of {name} → 已从 {name} 退出登录",
     "sources": "macOS"
+  },
+  "signature": {
+    "chosen": "签名",
+    "confidence": "high",
+    "sources": "ms (digital signature → 签名)"
   },
   "size": {
     "chosen": "大小",

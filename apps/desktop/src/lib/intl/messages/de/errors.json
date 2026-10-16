@@ -1961,6 +1961,10 @@
   "@errors.volume.staleDestinationHandle": {
     "sourceHash": "b31958a"
   },
+  "errors.volume.signatureInvalid": "Die Antwort des Servers war nicht signiert, deshalb hat Cmdr den Vorgang gestoppt.",
+  "@errors.volume.signatureInvalid": {
+    "sourceHash": "ba50c7b"
+  },
   "errors.volume.ioError": "Das Volume konnte das nicht abschließen.",
   "@errors.volume.ioError": {
     "sourceHash": "59e7d6a"
@@ -2148,6 +2152,10 @@
   "errors.shareList.authFailed": "Benutzername und Passwort haben auf „{server}“ nicht geklappt. Prüfe sie und melde dich erneut an.",
   "@errors.shareList.authFailed": {
     "sourceHash": "b88b224"
+  },
+  "errors.shareList.signatureInvalid": "„{server}“ hat ohne gültige Signatur geantwortet, deshalb hat Cmdr der Antwort nicht vertraut. Das kann an einem unzuverlässigen Netzwerkgerät liegen, aber auch daran, dass jemand die Verbindung manipuliert. Versuche es erneut, und wenn das immer wieder passiert, prüfe dein Netzwerk.",
+  "@errors.shareList.signatureInvalid": {
+    "sourceHash": "6523e32"
   },
   "errors.shareList.protocolError": "Beim Abrufen der Freigaben von „{server}“ ist etwas schiefgelaufen. Versuche es gleich noch einmal.",
   "@errors.shareList.protocolError": {

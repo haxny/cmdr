@@ -625,6 +625,11 @@
     "confidence": "high",
     "sources": "macOS/Microsoft es (combinación de teclas, 7 hits in the pile); catalog combinación (shortcuts.conflict.*, downloads.shortcutRow.invalidCombo)"
   },
+  "mcp-server": {
+    "chosen": "servidor MCP",
+    "confidence": "high",
+    "sources": "catalog (settings.section.mcpServer, settings.developer.mcpEnabled.label)"
+  },
   "menu": {
     "chosen": "menú",
     "accept": ["menús"],
@@ -2624,6 +2629,13 @@
     "confidence": "high",
     "sources": "MS terminology (security advisory → aviso de seguridad)"
   },
+  "security-event": {
+    "chosen": "evento de seguridad",
+    "accept": ["eventos de seguridad"],
+    "forms": "card and summary row Eventos de seguridad; switch Registrar eventos de seguridad (the record-operations verb registrar); managed value Siempre registrados (masculine plural, agreeing with eventos)",
+    "confidence": "high",
+    "sources": "ms (security event → evento de seguridad, security log → registro de seguridad)"
+  },
   "security-issue": {
     "chosen": "problema de seguridad",
     "accept": ["problemas de seguridad"],
@@ -2754,6 +2766,13 @@
     "forms": "state Sesión cerrada de {name}; log out of the Mac → cerrar sesión",
     "confidence": "high",
     "sources": "macOS Finder (NE103 Se ha cerrado la sesión de “^0”), AppKit (Log Out → Cerrar sesión)"
+  },
+  "signature": {
+    "chosen": "firma",
+    "accept": ["firmad"],
+    "forms": "wasn’t signed → no estaba firmada; without a valid signature → sin una firma válida",
+    "confidence": "high",
+    "sources": "ms (digital signature → firma)"
   },
   "size": {
     "chosen": "tamaño",

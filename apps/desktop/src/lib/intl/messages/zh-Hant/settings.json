@@ -2128,6 +2128,14 @@
   "@settings.managed.summary.reportsOff": {
     "sourceHash": "ca7981b"
   },
+  "settings.managed.summary.securityLog": "安全性事件",
+  "@settings.managed.summary.securityLog": {
+    "sourceHash": "774b6e0"
+  },
+  "settings.managed.summary.securityLogRequired": "一律記錄",
+  "@settings.managed.summary.securityLogRequired": {
+    "sourceHash": "baf73d6"
+  },
   "settings.managed.summary.updates": "更新",
   "@settings.managed.summary.updates": {
     "sourceHash": "22e2bad"
@@ -2393,6 +2401,22 @@
   "settings.updates.card.privacyAndDataSharing": "隱私和資料分享",
   "@settings.updates.card.privacyAndDataSharing": {
     "sourceHash": "ae4aabf"
+  },
+  "settings.updates.card.securityEvents": "安全性事件",
+  "@settings.updates.card.securityEvents": {
+    "sourceHash": "774b6e0"
+  },
+  "settings.securityLog.enabled.label": "記錄安全性事件",
+  "@settings.securityLog.enabled.label": {
+    "sourceHash": "9f5e32e"
+  },
+  "settings.securityLog.enabled.description": "在這部 Mac 上保留一個小檔案，記下與安全性相關的變更和拒絕，例如雲端 AI 的同意、安裝的更新，或被 MCP 伺服器拒絕的 App。這個檔案不含檔名、內容或密碼，也絕不會離開你的 Mac。",
+  "@settings.securityLog.enabled.description": {
+    "sourceHash": "11361eb"
+  },
+  "settings.securityLog.showInFinder": "在 Finder 中顯示",
+  "@settings.securityLog.showInFinder": {
+    "sourceHash": "c2a9c77"
   },
   "settings.fileSystemWatching.globalShortcutHint": "在「鍵盤快速鍵 → 前往最新下載項目（全域）」底下更改這個快速鍵。",
   "@settings.fileSystemWatching.globalShortcutHint": {

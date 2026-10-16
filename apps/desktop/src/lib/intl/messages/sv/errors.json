@@ -1961,6 +1961,10 @@
   "@errors.volume.staleDestinationHandle": {
     "sourceHash": "b31958a"
   },
+  "errors.volume.signatureInvalid": "Serverns svar var inte signerat, så Cmdr stoppade åtgärden.",
+  "@errors.volume.signatureInvalid": {
+    "sourceHash": "ba50c7b"
+  },
   "errors.volume.ioError": "Volymen kunde inte slutföra åtgärden.",
   "@errors.volume.ioError": {
     "sourceHash": "59e7d6a"
@@ -2148,6 +2152,10 @@
   "errors.shareList.authFailed": "Det användarnamnet och lösenordet fungerade inte på ”{server}”. Kontrollera dem och logga in igen.",
   "@errors.shareList.authFailed": {
     "sourceHash": "b88b224"
+  },
+  "errors.shareList.signatureInvalid": "”{server}” svarade utan giltig signatur, så Cmdr litar inte på svaret. Det kan bero på en nätverksenhet som krånglar, men också på att någon manipulerar anslutningen. Försök igen, och om det fortsätter, kontrollera ditt nätverk.",
+  "@errors.shareList.signatureInvalid": {
+    "sourceHash": "6523e32"
   },
   "errors.shareList.protocolError": "Något gick fel när listan över delade mappar hämtades från ”{server}”. Försök igen om en stund.",
   "@errors.shareList.protocolError": {
