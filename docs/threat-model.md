@@ -224,9 +224,10 @@ risk.
   - **A TLS-inspecting proxy sees everything** that crosses it, by design of the organization: report bundles, usage
     stats, and cloud AI requests including file names and requested file contents. Organizations that inspect TLS should
     treat cloud AI as visible to the proxy.
-  - **macOS system proxy settings and PAC files aren't read**; only the `HTTP(S)_PROXY` environment variables are. On a
-    proxy-only network, Cmdr's own calls fail rather than leak. Availability, not confidentiality. Already listed on
-    `/trust`.
+  - **Proxy sign-in is limited to a user name and password in the proxy's address** (`HTTPS_PROXY` / `ALL_PROXY`).
+    Routing itself follows macOS: the system proxy settings, PAC files, auto-discovery (WPAD), the bypass list, and
+    `NO_PROXY`, with loopback always direct (`crates/cmdr-http/CLAUDE.md`). A proxy that wants another kind of sign-in
+    makes Cmdr's own calls fail rather than leak. Availability, not confidentiality. Already listed on `/trust`.
 
 ### 6. The update channel and the release pipeline
 
@@ -419,8 +420,9 @@ Impact × likelihood, highest first. Gaps tracked privately aren't ranked here.
    NTLMv2 to a spoofed Bonjour name (boundary 4). Impact: medium. Likelihood: medium on untrusted networks.
 5. **Personal data in reports**: free-text file names in error reports, opt-out usage stats, data leaving the EU
    (boundary 9). Impact: medium (privacy, compliance). Likelihood: medium.
-6. **Enterprise network policy isn't honored**: system proxy and PAC settings aren't read (boundary 5). Impact: medium
-   (compliance, availability). IT can turn off cloud AI, telemetry, and updates through managed preferences
+6. **A proxy that needs more than a user name and password in its address**: Cmdr follows macOS's proxy settings and PAC
+   files, but can't sign in to such a proxy, so its calls fail there (boundary 5). Impact: medium (availability). IT can
+   turn off cloud AI, telemetry, and updates through managed preferences
    (`apps/desktop/src-tauri/src/managed_policy/DETAILS.md`).
 7. **A malicious dependency** past the age window and review (boundary 10). Impact: high. Likelihood: low.
 8. **Local data at rest is readable on a Mac without FileVault, or from an unencrypted backup** (boundary 11; Cmdr
