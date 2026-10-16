@@ -50,7 +50,7 @@ pub(crate) fn set_journal(journal: Arc<dyn OperationJournal>) {
 }
 
 /// Clear the global journal (test teardown; nextest isolates per process, so this
-/// is belt-and-suspenders). Tests never call this directly — [`TestJournalGuard`]
+/// is belt-and-suspenders). Tests never call this directly — `TestJournalGuard`
 /// owns install AND teardown; the transfer bench's `BenchJournal` does the same
 /// for the bench binary.
 #[cfg(any(test, feature = "transfer-bench"))]
