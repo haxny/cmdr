@@ -2,12 +2,14 @@
 //!
 //! A per-entry read of a sequential archive re-decodes the whole prefix in front
 //! of each entry ([`super::format::ArchiveFormat::is_sequential`]), so extracting
-//! a subtree file-by-file is O(n²). This module decodes the stream ONCE: a
-//! `spawn_blocking` producer drives a single decoder over the archive and, for
-//! each wanted FILE member (in ARCHIVE order), emits a header frame followed by
-//! its data chunks through one bounded channel. The consumer
-//! ([`SubtreeExtractReader`]) pulls members one at a time and streams each
-//! member's bytes to the destination's safe-write path.
+//! a subtree file-by-file is O(n²). The one-pass path decodes the stream ONCE: a
+//! `spawn_blocking` producer (`tar::stream_subtree` / `sevenz::stream_subtree`,
+//! picked by the index's `EntryStore`) drives a single decoder over the archive
+//! and, for each wanted FILE member (in ARCHIVE order), emits a header frame
+//! followed by its data chunks through one bounded channel. This module is that
+//! channel: the producer's send side ([`SubtreeTx`]) and the consumer
+//! ([`SubtreeExtractReader`]), which pulls members one at a time and streams each
+//! member's bytes to the destination's safe-write path. It knows no format.
 //!
 //! **Files only.** The producer yields file (and symlink) members, never
 //! directories: the directory structure comes from the parsed tree (cheap, no
@@ -20,17 +22,11 @@
 //! dropping the reader drops the channel receiver, so the producer's next `send`
 //! fails and it stops decoding.
 
-use std::collections::HashMap;
-use std::sync::Arc;
-
 use tokio::sync::mpsc;
-use tokio::task::spawn_blocking;
 
 use cmdr_fs::metadata::Xattr;
 
 use super::error::ArchiveError;
-use super::index::EntryStore;
-use super::source::ArchiveByteSource;
 
 /// Channel depth for the member/chunk frame stream. Peak in-flight decoded
 /// memory is `CHANNEL_CAPACITY × CHUNK_SIZE`, independent of the subtree's size.
@@ -102,41 +98,19 @@ pub struct SubtreeExtractReader {
 }
 
 impl SubtreeExtractReader {
-    /// Spawns the one-pass producer for `store`'s format over `source`, emitting
-    /// every file in `wanted` (inner path → the member the tree describes) in
-    /// archive order.
-    ///
-    /// Only sequential formats have a producer; a random-access store (zip, plain
-    /// tar) yields nothing — the copy planner never routes those here (it gates on
-    /// [`Volume::extraction_is_sequential`](cmdr_fs::volume::Volume::extraction_is_sequential)),
-    /// so an empty stream is the correct defensive fallback.
-    pub(super) fn spawn(
-        store: &EntryStore,
-        source: Arc<dyn ArchiveByteSource>,
-        wanted: HashMap<String, SubtreeMember>,
-        password: Option<&str>,
-    ) -> Self {
+    /// A reader plus the send side its producer writes to. The format's producer
+    /// (`EntryStore::spawn_subtree_extract` picks it) runs on `spawn_blocking`
+    /// and owns the `SubtreeTx`; dropping it unsent closes the channel, so the
+    /// reader yields no members.
+    pub(super) fn channel() -> (Self, SubtreeTx) {
         let (tx, rx) = mpsc::channel(CHANNEL_CAPACITY);
-        let sink = SubtreeTx(tx);
-        match store {
-            EntryStore::Tar(tar_store) => {
-                let codec = tar_store.codec();
-                spawn_blocking(move || super::tar::stream_subtree(source, codec, wanted, &sink));
-            }
-            EntryStore::SevenZ(_) => {
-                let password = password.map(str::to_owned);
-                spawn_blocking(move || super::sevenz::stream_subtree(source, wanted, password.as_deref(), &sink));
-            }
-            // Random-access: no one-pass producer. Dropping `sink` closes the
-            // channel, so the reader yields no members.
-            EntryStore::Zip(_) => drop(sink),
-        }
-        Self {
+        let reader = Self {
             rx,
             pending: None,
             current_open: false,
             done: false,
-        }
+        };
+        (reader, SubtreeTx(tx))
     }
 
     /// Advances to the next file member (draining any unread chunks of the current

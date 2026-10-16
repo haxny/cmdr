@@ -41,6 +41,7 @@ mod extract;
 mod format;
 mod index;
 mod name;
+mod raw;
 mod reader;
 mod sevenz;
 mod sidecars;

@@ -10,8 +10,9 @@ the `Volume` trait, capability flags, and any write path.
 
 ## Module map
 
-- `index.rs`: `ArchiveIndex` (parsed tree + query surface), `ArchiveNode`, the generic `build_index<H>` seam,
-  `EntryStore` dispatch, and the DoS caps.
+- `index.rs`: `ArchiveIndex` (parsed tree + query surface), `ArchiveNode`, the generic `build_index<H>` seam, and
+  `EntryStore`, the one per-format dispatcher (entry reads and the one-pass producer). `raw.rs`: the leaf parser
+  contract, `RawEntry` + `MAX_TREE_NODES`. Nothing imports back from `index` (DETAILS § Layering).
 - `format.rs`: `open_tar_decoder` (the codecs), plus a re-export of the naming vocabulary — `ArchiveFormat`,
   `format_for_name` (detection SoT), `is_sequential` — which lives in `crates/cmdr-fs/src/archive_format.rs` because
   `FileEntry.is_archive` reads it.
@@ -46,7 +47,7 @@ the `Volume` trait, capability flags, and any write path.
 - **The index cache key is `(path, size, mtime)`** (external edits auto-invalidate); `index_for_local` is blocking, call
   it from `spawn_blocking`.
 - **DoS caps**: per-entry depth (`name::MAX_COMPONENT_DEPTH`, over-deep entries quarantine), total node count
-  (`index::MAX_TREE_NODES`), and an xz block's dictionary (`format::XZ_MEMORY_LIMIT_KIB`) fail as `TooLarge`; one
+  (`raw::MAX_TREE_NODES`), and an xz block's dictionary (`format::XZ_MEMORY_LIMIT_KIB`) fail as `TooLarge`; one
   sidecar's and one index's held xattr bytes drop metadata. ❌ Don't remove any. DETAILS § "Resource caps".
 - **AppleDouble sidecars (`__MACOSX/._x`, a tar's `._x`) pair AFTER the sanitizer and never become nodes**: their xattrs
   ride the item (`item_xattrs`). DETAILS § "AppleDouble sidecars".

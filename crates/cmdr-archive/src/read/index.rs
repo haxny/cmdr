@@ -3,8 +3,9 @@
 //! tree.
 //!
 //! Each format's `parse` (in [`super::zip`] / [`super::tar`] / [`super::sevenz`])
-//! produces a `Vec<(RawEntry, H)>` — a format-neutral [`RawEntry`] plus a
-//! per-format read handle `H`. [`build_index`] then does the format-independent
+//! produces a `Vec<(RawEntry, H)>` — a format-neutral [`RawEntry`] (the parser
+//! contract in [`super::raw`]) plus a per-format read handle `H`. [`build_index`]
+//! then does the format-independent
 //! work over any `H`:
 //!
 //! 1. sanitize each name (Zip Slip defense, see [`super::name`]), and
@@ -12,43 +13,26 @@
 //!    prefixes — most archives carry no explicit directory entries, so the tree
 //!    is inferred from `a/b/c.txt` implying `a/` and `a/b/`.
 //!
-//! The pruned handle map is wrapped into an [`EntryStore`] variant; [`ArchiveIndex::open_read`]
-//! dispatches per format to open a streaming reader.
+//! The pruned handle map is wrapped into an [`EntryStore`] variant, the one place
+//! that dispatches per format: [`ArchiveIndex::open_read`] opens a streaming
+//! reader through it, and [`ArchiveIndex::open_subtree_extract`] picks the
+//! format's one-pass producer for [`super::extract`]'s channel.
 
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use cmdr_fs::metadata::Xattr;
+use tokio::task::spawn_blocking;
 
 use super::error::ArchiveError;
+use super::extract::{SubtreeExtractReader, SubtreeMember};
 use super::format::ArchiveFormat;
 use super::name::{QuarantineReason, SanitizedName, sanitize_entry_name};
+use super::raw::{MAX_TREE_NODES, RawEntry};
 use super::reader::ArchiveEntryReader;
-use super::sidecars::{self, EntryRole, HeldXattrs, LazySidecar, SidecarLayout};
+use super::sidecars::{self, EntryRole, HeldXattrs, LazySidecar, MAX_HELD_XATTR_BYTES, SidecarLayout};
 use super::source::ArchiveByteSource;
 use crate::apple_double;
-
-/// Maximum number of nodes (files plus synthesized directories) in one archive's
-/// tree. The backstop against the many-entries axis of memory amplification: the
-/// per-entry `MAX_COMPONENT_DEPTH` cap (in `name.rs`) bounds each entry's cost,
-/// but a central directory with a huge number of deep-ish
-/// entries could still sum to an oversized tree from a modest input. Exceeding
-/// this fails the whole parse with a typed error rather than risking an OOM.
-///
-/// 2,000,000 is well beyond real archives (the Linux kernel source is ~90k
-/// files, a Chromium checkout ~400k), so a legitimate archive never trips it; it
-/// only fires on a hostile blow-up. It bounds node *count*; per-node path length
-/// is separately bounded by the zip name field (`u16`, 64 KB), so worst-case
-/// tree memory is bounded too.
-pub(super) const MAX_TREE_NODES: usize = 2_000_000;
-
-/// The most xattr bytes (names plus values) one index holds from its parse: a
-/// tar's `SCHILY.xattr.*` pax records and its `._name` sidecars, which a forward
-/// scan can only read as it passes them. The backstop against a tar that pins
-/// memory in the cached index with metadata; past it the rest is dropped and
-/// logged, and those items land without their xattrs. Real archives hold
-/// kilobytes (a Finder tag is ~50 bytes).
-pub(super) const MAX_HELD_XATTR_BYTES: usize = 32 * 1024 * 1024;
 
 /// One node in the synthetic tree: a file, a directory (explicit or implied),
 /// or a symlink. Archive-native — the volume layer maps this onto `FileEntry`.
@@ -117,36 +101,6 @@ struct NodeSeed {
     mode: Option<u32>,
 }
 
-/// A format-neutral parsed entry: the fields every format's parser produces for
-/// the shared tree builder. The per-format read handle (`H` in
-/// [`build_index`]) travels alongside it, not inside.
-pub(super) struct RawEntry {
-    /// Raw, attacker-controlled entry name (pre-sanitization). `\` and `..` and
-    /// absolute paths are handled by [`sanitize_entry_name`], identically for
-    /// every format — the Zip Slip defense is format-independent.
-    pub name: String,
-    pub is_dir: bool,
-    pub is_symlink: bool,
-    /// Uncompressed size (0 for a dir/symlink is fine — dirs report `None`).
-    pub size: u64,
-    pub compressed_size: u64,
-    pub modified: Option<i64>,
-    pub encrypted: bool,
-    /// The POSIX permission bits the archive recorded, `None` when it recorded
-    /// none. Each format's parser reads its own carrier (zip external
-    /// attributes, the tar header, the 7z unix extension) and every one of them
-    /// answers `None` rather than a plausible default.
-    pub mode: Option<u32>,
-    /// The xattrs the archive recorded on the entry itself (a tar's
-    /// `SCHILY.xattr.*` pax records), already filtered to names a file may take.
-    pub xattrs: Vec<Xattr>,
-    /// A tar `._name` entry's bytes, read during the one forward scan because
-    /// the scan can't come back for them: if it pairs with a sibling, they're
-    /// that sibling's AppleDouble sidecar. `None` for every other entry, and
-    /// for one past [`apple_double::MAX_SIDECAR_BYTES`].
-    pub sidecar_bytes: Option<Vec<u8>>,
-}
-
 /// The per-format read handles, keyed by sanitized inner path. Each variant
 /// knows how to open a streaming reader for one entry; [`Self::open_read`]
 /// dispatches. The zip store IS the rc-zip entry map; tar and 7z carry their own
@@ -182,6 +136,37 @@ impl EntryStore {
             EntryStore::Tar(store) => store.open_read(inner, size, source),
             EntryStore::SevenZ(store) => store.open_read(inner, size, source, password),
         }
+    }
+
+    /// Spawns the one-pass subtree producer for this store's format over
+    /// `source`, emitting every file in `wanted` (inner path → the member the
+    /// tree describes) in archive order (see [`super::extract`]).
+    ///
+    /// Only sequential formats have a producer; a random-access store (zip, plain
+    /// tar) yields nothing — the copy planner never routes those here (it gates on
+    /// [`Volume::extraction_is_sequential`](cmdr_fs::volume::Volume::extraction_is_sequential)),
+    /// so an empty stream is the correct defensive fallback.
+    fn spawn_subtree_extract(
+        &self,
+        source: Arc<dyn ArchiveByteSource>,
+        wanted: HashMap<String, SubtreeMember>,
+        password: Option<&str>,
+    ) -> SubtreeExtractReader {
+        let (reader, sink) = SubtreeExtractReader::channel();
+        match self {
+            EntryStore::Tar(tar_store) => {
+                let codec = tar_store.codec();
+                spawn_blocking(move || super::tar::stream_subtree(source, codec, wanted, &sink));
+            }
+            EntryStore::SevenZ(_) => {
+                let password = password.map(str::to_owned);
+                spawn_blocking(move || super::sevenz::stream_subtree(source, wanted, password.as_deref(), &sink));
+            }
+            // Random-access: no one-pass producer. Dropping `sink` closes the
+            // channel, so the reader yields no members.
+            EntryStore::Zip(_) => drop(sink),
+        }
+        reader
     }
 }
 
@@ -383,7 +368,7 @@ impl ArchiveIndex {
         let key = normalize_lookup(inner_path);
         let mut xattrs = self.held_xattrs.get(key).cloned().unwrap_or_default();
         if let Some(sidecar) = self.lazy_sidecars.get(key)
-            && let Some(bytes) = sidecar.read(&self.store, source, password).await
+            && let Some(bytes) = self.read_sidecar(sidecar, source, password).await
         {
             for xattr in apple_double::parse(&bytes) {
                 if !xattrs.iter().any(|held| held.name == xattr.name) {
@@ -392,6 +377,28 @@ impl ArchiveIndex {
             }
         }
         xattrs
+    }
+
+    /// `sidecar`'s bytes, or `None` (logged) when it can't be read whole within
+    /// the cap. The claimed size is checked BEFORE the entry opens, so an
+    /// oversized sidecar never starts a decode.
+    async fn read_sidecar(
+        &self,
+        sidecar: &LazySidecar,
+        source: Arc<dyn ArchiveByteSource>,
+        password: Option<&str>,
+    ) -> Option<Vec<u8>> {
+        if !sidecar.claimed_size_fits() {
+            return None;
+        }
+        let reader = match self.store.open_read(&sidecar.key, sidecar.size, source, password) {
+            Ok(reader) => reader,
+            Err(e) => {
+                log::debug!(target: "archive", "Couldn't open the sidecar {}: {e:?}", sidecar.key);
+                return None;
+            }
+        };
+        sidecar.read_capped(reader).await
     }
 
     /// The uncompressed size of the file at `inner_path`, or `None` for a missing
@@ -417,10 +424,10 @@ impl ArchiveIndex {
         inner_path: &str,
         source: Arc<dyn ArchiveByteSource>,
         password: Option<&str>,
-    ) -> super::extract::SubtreeExtractReader {
+    ) -> SubtreeExtractReader {
         let root = normalize_lookup(inner_path);
-        let mut wanted: HashMap<String, super::extract::SubtreeMember> = HashMap::new();
-        let member = |path: &str, node: &ArchiveNode| super::extract::SubtreeMember {
+        let mut wanted: HashMap<String, SubtreeMember> = HashMap::new();
+        let member = |path: &str, node: &ArchiveNode| SubtreeMember {
             inner_path: path.to_string(),
             size: self.file_size(path).unwrap_or(0),
             modified: node.modified,
@@ -455,7 +462,7 @@ impl ArchiveIndex {
             }
         }
 
-        super::extract::SubtreeExtractReader::spawn(&self.store, source, wanted, password)
+        self.store.spawn_subtree_extract(source, wanted, password)
     }
 }
 

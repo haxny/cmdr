@@ -17,7 +17,7 @@ use zip::ZipArchive;
 use zip::result::ZipError;
 
 use super::error::ArchiveError;
-use super::index::RawEntry;
+use super::raw::RawEntry;
 use super::reader::{ArchiveEntryReader, CHUNK_SIZE, ChunkTx};
 use super::source::{ArchiveByteSource, SourceReader};
 use super::zip_times;

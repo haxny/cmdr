@@ -27,8 +27,8 @@ use sevenz_rust2::{ArchiveReader, EncoderMethod, Password};
 
 use super::error::ArchiveError;
 use super::extract::{SubtreeMember, SubtreeTx};
-use super::index::{MAX_TREE_NODES, RawEntry};
 use super::name::{SanitizedName, sanitize_entry_name};
+use super::raw::{MAX_TREE_NODES, RawEntry};
 use super::reader::{ArchiveEntryReader, pump_chunks, pump_read};
 use super::source::{ArchiveByteSource, SourceReader};
 

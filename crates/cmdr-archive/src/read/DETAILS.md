@@ -135,9 +135,9 @@ decoder:
   whose path strings sum to O(N²) bytes; a `u16` name field allows N ≈ 32k (≈1 GB from one entry). Over-deep entries are
   **quarantined** at sanitize time (`QuarantineReason::TooDeep`), before any tree building, so the archive stays
   browsable. 256 is an order of magnitude past any real archive's nesting.
-- **Total node count** (`index::MAX_TREE_NODES`, 2,000,000): the many-entries backstop. Exceeding it fails the whole
-  parse with `ArchiveError::TooLarge` rather than risking an OOM. Checked once per seed in `build_tree` (a seed adds at
-  most `MAX_COMPONENT_DEPTH` nodes, so the overshoot is bounded). Well beyond real archives (Linux kernel ~90k files,
+- **Total node count** (`raw::MAX_TREE_NODES`, 2,000,000): the many-entries backstop. Exceeding it fails the whole parse
+  with `ArchiveError::TooLarge` rather than risking an OOM. Checked once per seed in `build_tree` (a seed adds at most
+  `MAX_COMPONENT_DEPTH` nodes, so the overshoot is bounded). Well beyond real archives (Linux kernel ~90k files,
   Chromium ~400k); per-node path length is separately bounded by the 64 KB name field, so worst-case memory is bounded
   too. Tested via `build_tree`'s injectable cap (`tree_building_fails_when_node_count_exceeds_the_cap`) rather than a
   multi-million-node fixture.
@@ -145,8 +145,8 @@ decoder:
 Two more bound AppleDouble metadata (§ "AppleDouble sidecars"): **one sidecar** (`apple_double::MAX_SIDECAR_BYTES`, 16
 MiB, room for a resource fork) is checked against the claimed size AND the decoder's actual output, since a zip entry
 can claim anything and inflate to more; and **the xattrs one index holds** from a tar's parse
-(`index::MAX_HELD_XATTR_BYTES`, 32 MiB), since a cached index lives as long as its volume. Past either, the xattrs are
-dropped and logged, never an error.
+(`sidecars::MAX_HELD_XATTR_BYTES`, 32 MiB), since a cached index lives as long as its volume. Past either, the xattrs
+are dropped and logged, never an error.
 
 A further cap sits in a decoder, not the tree: **an xz block's LZMA2 dictionary** (`format::XZ_MEMORY_LIMIT_KIB`, 256
 MiB plus 1 MiB). The block header names the dictionary and `lzma-rust2` allocates and zeroes it up front, so 40 hostile
@@ -279,6 +279,15 @@ sanitize + `build_tree` + prune over any `H`, returning a `BuiltIndex<H>` the fo
 `ArchiveIndex::open_read` looks the node up (dir → `IsADirectory`), then dispatches to the store. So a new format is a
 new `parse` + producer + `EntryStore` arm; the tree, safety, and caps come for free. `ArchiveVolume` holds the
 `ArchiveFormat` (decided from the path at resolve time) and threads it into every parse.
+
+**Layering: nothing points back at `index`.** `raw.rs` is the leaf parser contract (`RawEntry`, `MAX_TREE_NODES`) that
+the parsers and the index share. `EntryStore` (in `index.rs`) is the ONLY per-format dispatcher: it opens an entry
+reader and, in `spawn_subtree_extract`, picks the one-pass producer, so `extract.rs` stays a format-free channel plus
+consumer. `sidecars.rs` never sees the store: `ArchiveIndex::read_sidecar` checks the claimed size
+(`LazySidecar::claimed_size_fits`), opens the entry, and hands the reader to `LazySidecar::read_capped`, which bounds
+the decoder's actual output. So `index → {raw, sidecars, extract, zip, tar, sevenz}`, each parser → `{raw, extract}`,
+and `sidecars → raw`. Why: `index.rs` used to be the vocabulary floor AND the dispatcher, so these five modules sat in
+one `module-cycles` tangle (#421). A parser or `sidecars` importing from `index` re-welds it.
 
 **Format detection (`format.rs`).** `format_for_name` is the single source of truth (both
 `has_supported_archive_extension` and the FE mirror defer to it). It matches by NAME SUFFIX, longest-first, so `.tar.gz`

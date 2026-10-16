@@ -4,13 +4,20 @@
 //! `DETAILS.md` § "AppleDouble sidecars".
 
 use std::collections::{HashMap, HashSet};
-use std::sync::Arc;
 
 use cmdr_fs::metadata::Xattr;
 
-use super::index::{EntryStore, MAX_HELD_XATTR_BYTES, RawEntry};
-use super::source::ArchiveByteSource;
+use super::raw::RawEntry;
+use super::reader::ArchiveEntryReader;
 use crate::apple_double::{self, MacosxEntry};
+
+/// The most xattr bytes (names plus values) one index holds from its parse: a
+/// tar's `SCHILY.xattr.*` pax records and its `._name` sidecars, which a forward
+/// scan can only read as it passes them. The backstop against a tar that pins
+/// memory in the cached index with metadata; past it the rest is dropped and
+/// logged, and those items land without their xattrs. Real archives hold
+/// kilobytes (a Finder tag is ~50 bytes). [`HeldXattrs::add`] enforces it.
+pub(super) const MAX_HELD_XATTR_BYTES: usize = 32 * 1024 * 1024;
 
 /// Where a format keeps its AppleDouble sidecars, which the index pairs with
 /// their items and hides (`crate::apple_double`).
@@ -77,32 +84,27 @@ impl HeldXattrs {
 }
 
 impl LazySidecar {
-    /// This sidecar's bytes, or `None` (logged) when it can't be read whole
-    /// within the cap.
-    pub(super) async fn read(
-        &self,
-        store: &EntryStore,
-        source: Arc<dyn ArchiveByteSource>,
-        password: Option<&str>,
-    ) -> Option<Vec<u8>> {
-        let sidecar = self;
+    /// Whether the size the archive claims fits [`apple_double::MAX_SIDECAR_BYTES`];
+    /// logs the skip when it doesn't. Checked before the entry opens, so an
+    /// oversized sidecar never starts a decode.
+    pub(super) fn claimed_size_fits(&self) -> bool {
         let cap = apple_double::MAX_SIDECAR_BYTES;
-        if sidecar.size > cap {
+        if self.size > cap {
             log::warn!(
                 target: "archive",
                 "Skipped the {}-byte sidecar {}: past the {cap}-byte cap, so its item lands without its xattrs",
-                sidecar.size,
-                sidecar.key
+                self.size,
+                self.key
             );
-            return None;
+            return false;
         }
-        let mut reader = match store.open_read(&sidecar.key, sidecar.size, source, password) {
-            Ok(reader) => reader,
-            Err(e) => {
-                log::debug!(target: "archive", "Couldn't open the sidecar {}: {e:?}", sidecar.key);
-                return None;
-            }
-        };
+        true
+    }
+
+    /// Drains `reader` (opened on this sidecar's entry) into memory, or `None`
+    /// (logged) when it inflates past the cap or fails mid-read.
+    pub(super) async fn read_capped(&self, mut reader: ArchiveEntryReader) -> Option<Vec<u8>> {
+        let cap = apple_double::MAX_SIDECAR_BYTES;
         let mut bytes = Vec::new();
         while let Some(chunk) = reader.next_chunk().await {
             match chunk {
@@ -110,11 +112,11 @@ impl LazySidecar {
                 // what's bounded.
                 Ok(chunk) if (bytes.len() + chunk.len()) as u64 <= cap => bytes.extend_from_slice(&chunk),
                 Ok(_) => {
-                    log::warn!(target: "archive", "Skipped the sidecar {}: it inflates past the {cap}-byte cap", sidecar.key);
+                    log::warn!(target: "archive", "Skipped the sidecar {}: it inflates past the {cap}-byte cap", self.key);
                     return None;
                 }
                 Err(e) => {
-                    log::debug!(target: "archive", "Couldn't read the sidecar {}: {e:?}", sidecar.key);
+                    log::debug!(target: "archive", "Couldn't read the sidecar {}: {e:?}", self.key);
                     return None;
                 }
             }
