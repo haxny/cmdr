@@ -10,6 +10,7 @@
 use cmdr_operation_log::types::Initiator;
 
 use super::super::types::{MoveLeftoversKeptEvent, OperationsChanged};
+use super::error_report::OperationErrorReport;
 
 /// Everything the engine reports that belongs to no single operation.
 ///
@@ -40,6 +41,9 @@ pub(crate) trait EngineEvents: Send + Sync {
     /// An instant metadata op (rename, new folder, new file) finished, however
     /// it ended. Exactly one per op, from the wrapper around its whole driver.
     fn instant_mutation_settled(&self, fact: InstantMutationFact);
+
+    /// Something went wrong badly enough to raise an error report.
+    fn error_report(&self, report: OperationErrorReport);
 }
 
 /// The answer for a host that wants none of it: a bench, a tool, an engine
@@ -57,6 +61,7 @@ impl EngineEvents for NoEngineEvents {
     fn transfer_finished(&self, _volume_ids: &[String]) {}
     fn staging_leftovers_kept(&self, _notice: MoveLeftoversKeptEvent) {}
     fn instant_mutation_settled(&self, _fact: InstantMutationFact) {}
+    fn error_report(&self, _report: OperationErrorReport) {}
 }
 
 /// How one instant metadata op ended, as categories only: no name, no path, no

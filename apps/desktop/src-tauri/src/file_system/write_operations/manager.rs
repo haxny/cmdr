@@ -70,7 +70,7 @@ use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::volume::LaneKey;
 use cmdr_operation_log::types::OpKind;
 
-use super::host;
+use super::host::{self, OperationErrorReport};
 use super::scan_cache;
 use super::state::{
     WRITE_OPERATION_STATE, WriteOperationState, forget_operation, register_operation_status,
@@ -444,7 +444,11 @@ impl OperationManager {
                     // Should never happen: a Queued op always has its deferred
                     // start. Free what we reserved so a logic bug can't wedge
                     // the lane forever.
-                    crate::log_error!(target: "op_manager", "admitted op={admit_id} had no deferred start; releasing lanes");
+                    host::installed()
+                        .events()
+                        .error_report(OperationErrorReport::AdmittedWithoutStart {
+                            operation_id: admit_id.clone(),
+                        });
                     self.on_settled(&admit_id);
                 }
             }

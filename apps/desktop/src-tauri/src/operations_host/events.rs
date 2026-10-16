@@ -10,7 +10,8 @@ use tauri::AppHandle;
 use tauri_specta::Event as _;
 
 use crate::file_system::write_operations::host::{
-    EngineEvents, InstantMutationFact, InstantOp, InstantOutcome, InstantTarget,
+    AsideAttempt, EngineEvents, InstantMutationFact, InstantOp, InstantOutcome, InstantTarget, OperationErrorReport,
+    TreeFailure,
 };
 use crate::file_system::write_operations::{MoveLeftoversKeptEvent, OperationsChanged, VolumesBusyChanged};
 
@@ -75,6 +76,111 @@ impl EngineEvents for TauriEngineEvents {
             InstantOp::CreateFolder => crate::analytics::events::capture("folder_created", props),
             InstantOp::CreateFile => crate::analytics::events::capture("file_created", props),
         }
+    }
+
+    fn error_report(&self, report: OperationErrorReport) {
+        raise(report);
+    }
+}
+
+/// The engine's module paths, as the targets its reports always carried. The
+/// log format and the report dispatch's per-chain filters key off a target, so
+/// these stay put wherever the code that raises them lives.
+const OVERWRITE_TARGET: &str = "cmdr_lib::file_system::write_operations::overwrite";
+const TRANSFER_TREE_TARGET: &str = "cmdr_lib::file_system::write_operations::transfer_tree";
+const LOCAL_COPY_TARGET: &str = "cmdr_lib::file_system::write_operations::transfer::copy";
+const VOLUME_COPY_TARGET: &str = "cmdr_lib::file_system::write_operations::transfer::volume::copy";
+
+/// Raises `report` through `log_error!`, in the words error-report bundles and
+/// log greps already know.
+fn raise(report: OperationErrorReport) {
+    match report {
+        OperationErrorReport::LocalCopyFailed {
+            operation_id,
+            error,
+            kept_files,
+        } => crate::log_error!(
+            target: LOCAL_COPY_TARGET,
+            "copy_files_with_progress: failed op={} error={:?}, keeping {} completed files",
+            operation_id,
+            error,
+            kept_files,
+        ),
+        OperationErrorReport::VolumeCopyFailed { operation_id, error } => crate::log_error!(
+            target: VOLUME_COPY_TARGET,
+            "copy_between_volumes: operation {} failed: {:?}",
+            operation_id,
+            error,
+        ),
+        OperationErrorReport::AsideStranded { attempt, aside, error } => match attempt {
+            AsideAttempt::LandingRestore { original } => crate::log_error!(
+                target: OVERWRITE_TARGET,
+                "stage_and_land_file: failed to restore aside {} -> {}: {}",
+                aside.display(),
+                original.display(),
+                error
+            ),
+            AsideAttempt::DisplacedRestore { original } => crate::log_error!(
+                target: OVERWRITE_TARGET,
+                "DisplacedEntry::restore: failed to put {} back at {}: {}",
+                aside.display(),
+                original.display(),
+                error
+            ),
+            AsideAttempt::DirOverwriteRestore { original } => crate::log_error!(
+                target: OVERWRITE_TARGET,
+                "safe_overwrite_dir: failed to restore aside {} -> {}: {}",
+                aside.display(),
+                original.display(),
+                error
+            ),
+            AsideAttempt::RecoveredName => crate::log_error!(
+                target: OVERWRITE_TARGET,
+                "DisplacedEntry::keep_as_recovered_sibling: couldn't give {} a real name: {}",
+                aside.display(),
+                error
+            ),
+        },
+        OperationErrorReport::StalledTaskAbandoned {
+            operation_id,
+            still_for_secs,
+            task,
+        } => crate::log_error!(
+            target: "copy",
+            "transfer probe: op={op} ending the wait on a task that has moved no bytes for {secs}s. \
+             The write is abandoned and the file runs again if it has attempts left.\n  {task}",
+            op = operation_id,
+            secs = still_for_secs,
+            task = task,
+        ),
+        OperationErrorReport::WindDownAbandoned {
+            operation_id,
+            tasks,
+            deadline,
+            probe_dump,
+        } => crate::log_error!(
+            target: "copy",
+            "copy_volumes_with_progress: op={} abandoning {} task(s) that did not wind down within {:?} of the cancel. \
+             Their handles are left for the backend to reap; their staged partials are cleaned up below.{}",
+            operation_id,
+            tasks,
+            deadline,
+            probe_dump.map(|dump| format!("\n{dump}")).unwrap_or_default(),
+        ),
+        OperationErrorReport::TreeAbandoned { cause } => match cause {
+            TreeFailure::ReportPanicked => crate::log_error!(
+                target: TRANSFER_TREE_TARGET,
+                "transfer tree: a report panicked, so this operation shows no tree from here on (the transfer carries on)"
+            ),
+            TreeFailure::BuildPanicked { step } => crate::log_error!(
+                target: TRANSFER_TREE_TARGET,
+                "transfer tree: building it panicked ({step}), so this operation shows no tree (the transfer carries on)"
+            ),
+        },
+        OperationErrorReport::AdmittedWithoutStart { operation_id } => crate::log_error!(
+            target: "op_manager",
+            "admitted op={operation_id} had no deferred start; releasing lanes"
+        ),
     }
 }
 

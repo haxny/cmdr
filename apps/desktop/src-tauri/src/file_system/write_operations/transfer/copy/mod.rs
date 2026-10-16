@@ -15,6 +15,7 @@ use super::super::conflict::ApplyToAll;
 use super::super::durability::{flush_created_destinations, unconfirmed_copy};
 use super::super::event_sinks::OperationEventSink;
 use super::super::free_space::check_local_copy_space;
+use super::super::host::{self, OperationErrorReport};
 use super::super::ledger::CopyTransaction;
 use super::super::scan::scan_sources;
 use super::super::scan_cache::take_cached_scan_result;
@@ -753,17 +754,18 @@ pub(in crate::file_system::write_operations) fn copy_files_with_progress_inner(
             // bytes took its name — so removing the replacement leaves neither
             // copy. The user can still roll the operation back from history,
             // where the same reversal runs with the whole picture in front of
-            // them. Routed through `log_error!` so opt-in users get an auto
-            // error report (copy failures are exactly the kind of "this didn't
-            // work" we want signal on). A folder that replaced one of the user's
-            // FILES keeps its name too, so the file it displaced becomes a
-            // ` (recovered)` sibling rather than going with the aside.
-            crate::log_error!(
-                "copy_files_with_progress: failed op={} error={:?}, keeping {} completed files",
-                operation_id,
-                e,
-                transaction.created_files().len(),
-            );
+            // them. Raised as an error report so opt-in users send one (copy
+            // failures are exactly the kind of "this didn't work" we want signal
+            // on). A folder that replaced one of the user's FILES keeps its name
+            // too, so the file it displaced becomes a ` (recovered)` sibling
+            // rather than going with the aside.
+            host::installed()
+                .events()
+                .error_report(OperationErrorReport::LocalCopyFailed {
+                    operation_id: operation_id.to_string(),
+                    error: e.clone(),
+                    kept_files: transaction.created_files().len(),
+                });
             let e = fail_keeping_displaced_aside(transaction, operation_id, e);
             let event = transfer_stop_event(operation_id, WriteOperationType::Copy, state, e, None);
             let e = event.error.clone();

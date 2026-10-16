@@ -4,7 +4,8 @@
 //! - **The runtime** comes from the [`VolumeHost`]: one handle, so the engine
 //!   and the backends it drives share one thread pool, and the two can't
 //!   disagree.
-//! - **Engine-wide facts** go through [`EngineEvents`] (`events.rs`).
+//! - **Engine-wide facts** go through [`EngineEvents`] (`events.rs`), error
+//!   reports included, as typed [`OperationErrorReport`]s (`error_report.rs`).
 //! - **One operation's events** go through [`OperationEventSink`]
 //!   (`operation_sink.rs`), which each operation is handed at start.
 //!
@@ -12,6 +13,7 @@
 //! it in a slot this module owns until the engine becomes a handle that carries
 //! its seams itself.
 
+mod error_report;
 mod events;
 mod operation_sink;
 
@@ -20,6 +22,7 @@ use std::sync::{Arc, LazyLock, OnceLock};
 use cmdr_fs::volume::host::VolumeHost;
 use tokio::runtime::Handle;
 
+pub(crate) use error_report::{AsideAttempt, OperationErrorReport, TreeFailure};
 use events::NoEngineEvents;
 pub(crate) use events::{EngineEvents, InstantMutationFact, InstantOp, InstantOutcome, InstantTarget};
 pub use operation_sink::OperationEventSink;

@@ -34,6 +34,7 @@ pub(crate) use report::{TreeLeaf, TreeReporter};
 pub(crate) use view::TransferTreeAncestor;
 pub(crate) use view::{TransferTreeRow, TransferTreeView, TransferTreeViewRequest, TreeRowKind};
 
+use super::host::{self, OperationErrorReport, TreeFailure};
 use super::types::{ProgressAxis, WriteOperationError};
 
 /// One operation's tree, shared by its drivers (which report into it) and every
@@ -97,9 +98,11 @@ impl TransferTree {
             Ok(result) => Some(result),
             Err(_) => {
                 self.broken.store(true, Ordering::Relaxed);
-                crate::log_error!(
-                    "transfer tree: a report panicked, so this operation shows no tree from here on (the transfer carries on)"
-                );
+                host::installed()
+                    .events()
+                    .error_report(OperationErrorReport::TreeAbandoned {
+                        cause: TreeFailure::ReportPanicked,
+                    });
                 None
             }
         }
@@ -120,13 +123,15 @@ impl TransferTree {
 /// through here, so a tree bug costs the tree, never the transfer. The panic
 /// still reaches the crash reporter's hook (it's a bug); the caller carries on
 /// exactly as it would with no tree.
-pub(super) fn built<R>(what: &str, build: impl FnOnce() -> R) -> Option<R> {
+pub(super) fn built<R>(what: &'static str, build: impl FnOnce() -> R) -> Option<R> {
     match catch_unwind(AssertUnwindSafe(build)) {
         Ok(result) => Some(result),
         Err(_) => {
-            crate::log_error!(
-                "transfer tree: building it panicked ({what}), so this operation shows no tree (the transfer carries on)"
-            );
+            host::installed()
+                .events()
+                .error_report(OperationErrorReport::TreeAbandoned {
+                    cause: TreeFailure::BuildPanicked { step: what },
+                });
             None
         }
     }

@@ -31,6 +31,7 @@ use tokio_util::sync::CancellationToken;
 use cmdr_fs::ignore_poison::IgnorePoison;
 
 use super::super::event_sinks::OperationEventSink;
+use super::super::host::{self, OperationErrorReport};
 use super::super::state::{OperationIntent, WriteOperationState, load_intent};
 use super::super::types::{TransferActivity, TransferWaitReason, WriteOperationPhase, WriteProgressEvent};
 
@@ -613,14 +614,13 @@ impl OperationProbe {
             if still_for_ms < abort_after_ms || !proven_dead {
                 continue;
             }
-            crate::log_error!(
-                target: "copy",
-                "transfer probe: op={op} ending the wait on a task that has moved no bytes for {secs}s. \
-                 The write is abandoned and the file runs again if it has attempts left.\n  {task}",
-                op = self.operation_id,
-                secs = still_for_ms / 1_000,
-                task = task.render(),
-            );
+            host::installed()
+                .events()
+                .error_report(OperationErrorReport::StalledTaskAbandoned {
+                    operation_id: self.operation_id.clone(),
+                    still_for_secs: still_for_ms / 1_000,
+                    task: task.render(),
+                });
             task.trip_stall_abort();
         }
     }
@@ -1032,19 +1032,17 @@ impl WatchdogState {
 }
 
 fn spawn_watchdog(operation_id: String) {
-    crate::file_system::write_operations::host::installed()
-        .runtime()
-        .spawn(async move {
-            let mut watchdog = WatchdogState::new();
-            let started = Instant::now();
-            loop {
-                tokio::time::sleep(STALL_TICK).await;
-                let Some(probe) = REGISTRY.lock_ignore_poison().get(&operation_id).cloned() else {
-                    return; // operation finished; guard removed it
-                };
-                probe.watchdog_step(&mut watchdog, started.elapsed());
-            }
-        });
+    host::installed().runtime().spawn(async move {
+        let mut watchdog = WatchdogState::new();
+        let started = Instant::now();
+        loop {
+            tokio::time::sleep(STALL_TICK).await;
+            let Some(probe) = REGISTRY.lock_ignore_poison().get(&operation_id).cloned() else {
+                return; // operation finished; guard removed it
+            };
+            probe.watchdog_step(&mut watchdog, started.elapsed());
+        }
+    });
 }
 
 #[cfg(test)]

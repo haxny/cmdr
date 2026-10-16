@@ -30,6 +30,7 @@ use uuid::Uuid;
 use cmdr_fs::metadata::{LandedMetadata, Unblock, apply_landed, clear_blockers};
 
 use super::error_classification::classify_io_error;
+use super::host::{self, AsideAttempt, OperationErrorReport};
 use super::in_flight_temps::{self, ItemKind, TrackedRecord};
 use super::state::WriteOperationState;
 use super::types::{RecoveredOriginal, WriteOperationError};
@@ -226,12 +227,15 @@ where
                     }
                 }
                 Err(restore_err) => {
-                    crate::log_error!(
-                        "stage_and_land_file: failed to restore aside {} -> {}: {}",
-                        aside.path().display(),
-                        dest.display(),
-                        restore_err
-                    );
+                    host::installed()
+                        .events()
+                        .error_report(OperationErrorReport::AsideStranded {
+                            attempt: AsideAttempt::LandingRestore {
+                                original: dest.to_path_buf(),
+                            },
+                            aside: aside.path().to_path_buf(),
+                            error: restore_err.to_string(),
+                        });
                     if let Some(record) = aside_record {
                         in_flight_temps::keep_for_arrival(state, record);
                     }
@@ -469,12 +473,15 @@ impl DisplacedEntry {
         match rename_no_replace(aside, &self.original) {
             Ok(()) => in_flight_temps::retire(&self.state, &self.record),
             Err(e) => {
-                crate::log_error!(
-                    "DisplacedEntry::restore: failed to put {} back at {}: {}",
-                    aside.display(),
-                    self.original.display(),
-                    e
-                );
+                host::installed()
+                    .events()
+                    .error_report(OperationErrorReport::AsideStranded {
+                        attempt: AsideAttempt::DisplacedRestore {
+                            original: self.original.clone(),
+                        },
+                        aside: aside.to_path_buf(),
+                        error: e.to_string(),
+                    });
                 in_flight_temps::keep_for_arrival(&self.state, self.record.clone());
             }
         }
@@ -510,11 +517,13 @@ impl DisplacedEntry {
                 }
                 Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => {}
                 Err(e) => {
-                    crate::log_error!(
-                        "DisplacedEntry::keep_as_recovered_sibling: couldn't give {} a real name: {}",
-                        self.aside.path().display(),
-                        e
-                    );
+                    host::installed()
+                        .events()
+                        .error_report(OperationErrorReport::AsideStranded {
+                            attempt: AsideAttempt::RecoveredName,
+                            aside: self.aside.path().to_path_buf(),
+                            error: e.to_string(),
+                        });
                     in_flight_temps::keep_for_arrival(&self.state, self.record.clone());
                     return RecoveredOriginal::new(&self.original, self.aside.path());
                 }
@@ -695,12 +704,15 @@ where
             // dest and rename the aside back.
             let restored = restore_after_materialize_failure(aside_path, dest, |path| fs::symlink_metadata(path));
             if let Err(restore_err) = &restored {
-                crate::log_error!(
-                    "safe_overwrite_dir: failed to restore aside {} -> {}: {}",
-                    aside_path.display(),
-                    dest.display(),
-                    restore_err
-                );
+                host::installed()
+                    .events()
+                    .error_report(OperationErrorReport::AsideStranded {
+                        attempt: AsideAttempt::DirOverwriteRestore {
+                            original: dest.to_path_buf(),
+                        },
+                        aside: aside_path.to_path_buf(),
+                        error: restore_err.to_string(),
+                    });
             }
             settle_aside_record(state, record, restored, aside_path);
             Err(e)
