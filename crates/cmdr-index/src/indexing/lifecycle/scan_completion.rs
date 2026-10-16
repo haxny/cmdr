@@ -22,6 +22,7 @@ use crate::indexing::events::{
     ActivityPhase, DEBUG_STATS, EventSink, IndexEvent, RescanReason, emit_rescan_notification, set_phase_for,
 };
 use crate::indexing::lifecycle::cover;
+use crate::indexing::lifecycle::manager::after_live_loop;
 use crate::indexing::reconcile::reconciler::EventReconciler;
 use crate::indexing::scanner::{ScanError, ScanSummary};
 use crate::indexing::store::{IndexStore, ScanCalibrationKind, StepDurations};
@@ -418,19 +419,20 @@ async fn finish_the_scan(params: ScanCompletion) {
     let overflow_live = watcher_overflow_flag.clone();
     let space_live = space.clone();
     let handle = crate::indexing::host::runtime::spawn(async move {
-        run_live_event_loop(
+        let end = run_live_event_loop(
             event_rx,
             reconciler,
             writer_live,
             events_live,
             LiveConfig {
-                volume_id: volume_id_live,
+                volume_id: volume_id_live.clone(),
                 space: space_live,
                 watcher_overflow: overflow_live,
                 scope,
             },
         )
         .await;
+        after_live_loop(volume_id_live, end);
     });
 
     // Store the handle so shutdown() can wait for it to drain

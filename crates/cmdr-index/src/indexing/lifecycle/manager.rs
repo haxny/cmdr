@@ -6,7 +6,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
 use super::phases;
-use super::state::{self, Handover};
+use super::state;
 use super::steps_ahead::StepsAhead;
 use crate::indexing::IndexPathSpace;
 use crate::indexing::deletes;
@@ -258,45 +258,6 @@ fn should_replay_journal(
     stored_event_id: Option<u64>,
 ) -> bool {
     kind.has_event_journal() && supports_event_replay && scan_completed && stored_event_id.is_some_and(|id| id > 0)
-}
-
-/// Take a volume's manager OUT of the registry (transient `ShuttingDown`), stop
-/// its current watcher + live loop, run a fresh `start_scan` OFF the registry
-/// lock, then reinsert it as `Running`. Re-resolves the manager by volume id, so
-/// it can be spawned fire-and-forget with no captured manager.
-///
-/// Shared by two triggers that both mean "roll forward from the visible scanner,
-/// not the invisible reconcile": the cold-start replay full-scan fallback
-/// (`start_replay`) and the shallow-`MustScanSubDirs` scanner routing
-/// (`reconcile/reconciler/rescan/mod.rs`). Single-flight: `start_scan` no-ops if a scan is
-/// already running, so overlapping triggers coalesce.
-///
-/// Runs the blocking `start_scan` prelude off the lock (holding it across
-/// `flush_blocking` + the space-info query would freeze every concurrent registry
-/// user; the freshness firing inside `start_scan` would also re-lock the registry,
-/// now fired through the manager's own `Arc`). Mirrors `state::force_scan`'s
-/// extract-drop-run-reinsert flow.
-pub(in crate::indexing) async fn perform_registry_rescan(volume_id: &str, trigger: &str) {
-    let handover = state::off_the_registry(volume_id, |mgr| {
-        // Retire the current watcher and live loop (the fresh scan starts its own).
-        // Off the lock with the rest: stopping a watcher joins its run-loop thread.
-        if let Some(mut watcher) = mgr.retire_the_watcher() {
-            watcher.stop();
-        }
-        // The blocking-prelude scan start. The same door "Rescan now" goes
-        // through, so a volume the machine is still building has its phases
-        // restarted rather than its half-built index truncated.
-        if let Err(ref e) = mgr.cover_or_scan(trigger) {
-            log::warn!("Scanner rescan for '{volume_id}' failed to start: {e}");
-        }
-    });
-    match handover {
-        Err(e) => log::debug!("Scanner rescan for '{volume_id}' found nothing running: {e}"),
-        Ok(Handover::Restored(())) => {}
-        Ok(Handover::TornDownWhileAway(())) => {
-            log::info!("scanner rescan: '{volume_id}' was torn down during scan start; the teardown ran instead");
-        }
-    }
 }
 
 impl IndexManager {
@@ -787,11 +748,14 @@ mod branch_watch;
 mod launch_route;
 mod network_scan;
 mod phased;
+mod registry_rescan;
 mod start;
 
 pub(in crate::indexing) use branch_watch::BranchWatchStart;
 
 pub(in crate::indexing::lifecycle) use phased::{PendingPhases, PhaseResume, PhasedStart};
+pub(in crate::indexing::lifecycle) use registry_rescan::after_live_loop;
+pub(in crate::indexing) use registry_rescan::perform_registry_rescan;
 
 #[cfg(test)]
 mod tests;

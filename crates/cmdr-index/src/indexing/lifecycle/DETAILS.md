@@ -55,7 +55,10 @@ concurrently without corrupting each other. Every invariant below holds independ
   `events::ScanRunKind::classify` right after deciding reconcile-vs-truncate: the kind rides `index-scan-started` (what
   the FE states) and picks the calibration bucket this run reads its ETA seed from and writes its timing back into
   (`../store/DETAILS.md` § "Scan calibration is stored PER WALK KIND"). The stashed `ScanCalibration` also surfaces the
-  kind on `get_status`, so a mid-scan window reload recovers it.
+  kind on `get_status`, so a mid-scan window reload recovers it. `manager/registry_rescan.rs` holds
+  `perform_registry_rescan` and `after_live_loop`: the door a "this volume needs a fresh scan" trigger from below the
+  manager (a replay fallback, a live loop's backlog, the reconciler) comes back in through, re-resolving the manager by
+  volume id.
 - **`manager/`'s submodules import what they use, and a top-level `use super::*` here is not free.** `cargo-modules`
   resolves such a glob to every item the parent re-exports, so each child gains a phantom edge to every sibling: while
   `start.rs` and `phased.rs` carried one, `manager.rs`'s seven child-only imports all printed as `manager` edges and
@@ -154,7 +157,8 @@ into `start_scan`. Four reach it, and each was its own way to blank a half-built
   shapes it serves have rows, so a row-count key would make the button a silent no-op on exactly them).
 - **The FDA-deny launch** (`start_indexing_after_fda_decision` → `start_volume`), which is the same call.
 - **`manager::perform_registry_rescan`**: a coalesced shallow `MustScanSubDirs`, a replay that couldn't roll forward, an
-  ingestion backlog.
+  ingestion backlog. The live loop can't call it (it sits in `watch/`, below the registry), so it RETURNS
+  `LiveLoopEnd::IngestionBacklog` and every task that runs one ends through `manager::after_live_loop`.
 
 During the phased window a rescan RESTARTS the machine: the queue is recomputed from the host's current answers plus a
 coverage query per root, so it picks up folders the user has come to care about since, and covered ground stays covered.

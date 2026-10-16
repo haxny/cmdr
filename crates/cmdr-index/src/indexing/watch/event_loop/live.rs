@@ -25,7 +25,7 @@ use crate::indexing::IndexPathSpace;
 use crate::indexing::events::{
     Diagnostic, EventSink, IndexErrorReport, IndexEvent, RescanReason, emit_rescan_notification,
 };
-use crate::indexing::lifecycle::{lifecycle_bus, manager};
+use crate::indexing::lifecycle::lifecycle_bus;
 use crate::indexing::paths::path_prefix;
 use crate::indexing::read::pending_sizes;
 use crate::indexing::reconcile::reconciler::EventReconciler;
@@ -155,6 +155,22 @@ pub(in crate::indexing) struct LiveConfig {
     pub(in crate::indexing) scope: WatchScope,
 }
 
+/// Why a live loop ended, which is what its owner has left to do.
+///
+/// The loop sits below the registry, so when only a fresh scan can catch the index
+/// up it SAYS so here and the lifecycle code that started it runs the scan, the
+/// way a replay's journal gap reaches its owner through `fallback_tx`.
+#[must_use]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(in crate::indexing) enum LiveLoopEnd {
+    /// The watcher's channel closed, the index failed, or the loop couldn't start:
+    /// nothing is owed.
+    Stopped,
+    /// The ingestion queue passed its hard cap and the loop threw the backlog away,
+    /// so the volume needs a fresh scan.
+    IngestionBacklog,
+}
+
 /// Process FSEvents in real time after scan + reconciliation completes.
 ///
 /// Runs as a tokio task, reading events from the watcher channel and
@@ -162,14 +178,14 @@ pub(in crate::indexing) struct LiveConfig {
 /// Only the deduplicated batch is processed through the reconciler, which
 /// cuts allocations dramatically during event storms. Batches
 /// `DirsUpdated` notifications with a 1s flush interval.
-/// Exits when the channel closes (watcher stopped).
+/// Exits when the channel closes (watcher stopped), and says what it left owing.
 pub(in crate::indexing) async fn run_live_event_loop(
     mut event_rx: tokio::sync::mpsc::UnboundedReceiver<watcher::FsChangeEvent>,
     mut reconciler: EventReconciler,
     writer: IndexWriter,
     events: Arc<dyn EventSink>,
     config: LiveConfig,
-) {
+) -> LiveLoopEnd {
     let LiveConfig {
         volume_id,
         space,
@@ -197,7 +213,7 @@ pub(in crate::indexing) async fn run_live_event_loop(
                     detail: Diagnostic(e.to_string()),
                 },
             });
-            return;
+            return LiveLoopEnd::Stopped;
         }
     };
 
@@ -243,6 +259,7 @@ pub(in crate::indexing) async fn run_live_event_loop(
     // raw-event counter the loop already maintains.
     let mut observers = BatchObservers::from_env(&volume_id, Arc::clone(&events), Instant::now());
 
+    let mut end = LiveLoopEnd::Stopped;
     loop {
         tokio::select! {
             event = event_rx.recv() => {
@@ -323,13 +340,10 @@ pub(in crate::indexing) async fn run_live_event_loop(
                                  Running a fresh scan to catch up."
                             ),
                         );
-                        let vid = volume_id.clone();
-                        crate::indexing::host::runtime::spawn(async move {
-                            manager::perform_registry_rescan(&vid, "ingestion backlog").await;
-                        });
                         // Drain and discard the backlog; the fresh scan supersedes it.
                         event_rx.close();
                         while event_rx.recv().await.is_some() {}
+                        end = LiveLoopEnd::IngestionBacklog;
                         break;
                     }
                     IngestionPressure::FallingBehind => {
@@ -433,6 +447,7 @@ pub(in crate::indexing) async fn run_live_event_loop(
 
     log::info!("Live event processing: stopped ({})", pluralize(event_count, "event"));
     log::info!(target: "stall_probe::reconciler", "live_event_loop_stopped events={event_count}");
+    end
 }
 
 /// Drain the pending events map, process each through the reconciler, and

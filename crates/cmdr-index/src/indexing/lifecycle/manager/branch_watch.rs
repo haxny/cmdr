@@ -21,7 +21,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use super::IndexManager;
+use super::{IndexManager, after_live_loop};
 use crate::indexing::events::DEBUG_STATS;
 use crate::indexing::hold::HoldKind;
 use crate::indexing::lifecycle::master;
@@ -227,19 +227,20 @@ impl IndexManager {
         let events = Arc::clone(&self.events);
         let volume_id = self.volume_id.clone();
         let handle = crate::indexing::host::runtime::spawn(async move {
-            run_live_event_loop(
+            let end = run_live_event_loop(
                 event_rx,
                 reconciler,
                 writer,
                 events,
                 LiveConfig {
-                    volume_id,
+                    volume_id: volume_id.clone(),
                     space,
                     watcher_overflow,
                     scope,
                 },
             )
             .await;
+            after_live_loop(volume_id, end);
         });
         let mut guard = self.live_event_task.lock_ignore_poison();
         if let Some(previous) = guard.replace(handle) {

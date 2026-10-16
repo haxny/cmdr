@@ -16,6 +16,8 @@ event loop that turns its stream into index writes.
 
 ## Must-knows
 
+- **A loop needing a rescan SAYS so** (`LiveLoopEnd`, `fallback_tx`); its lifecycle spawner runs it. ❌ No
+  `lifecycle::manager` / `state` import here: it welds `watch` into the lifecycle's cycle.
 - **The watcher→loop channel is UNBOUNDED** (`lifecycle/manager.rs`). ❌ Don't re-bound it: a bounded channel
   backpressured a slow replay drain into an FSEvents overflow → a forced full scan, throwing away a working replay. The
   LOOP bounds memory (`classify_ingestion_pressure`, `INGESTION_HARD_CAP` = 5,000,000 ≈ 1.5 GB).

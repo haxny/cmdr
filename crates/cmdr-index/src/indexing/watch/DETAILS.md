@@ -272,10 +272,12 @@ boundary):
   share one tracker each via `report_backlog`.
 - **Overflowing** (`> INGESTION_HARD_CAP = 5_000_000` ≈ 1.5 GB): DELIBERATELY fall back to a full scan (RescanReason
   `IngestionBacklog`) — OUR decision that we're hopelessly behind, at a far higher threshold than the old OS overflow,
-  and comfortably below the global 16 GB memory watchdog. The live loop spawns `manager::perform_registry_rescan`; the
-  replay loop uses its `fallback_tx`. The genuine upstream-drop `WatcherChannelOverflow` path is preserved
-  (cmdr-fsevent-stream can still drop before our forward task reads). `classify_ingestion_pressure` is pure/unit-tested;
-  the repro (a backlog past the old 20K cap absorbs without forcing a scan) lives in `event_loop/tests/ingestion.rs`.
+  and comfortably below the global 16 GB memory watchdog. Neither loop starts the scan itself, since `watch/` sits below
+  the registry: the live loop returns `LiveLoopEnd::IngestionBacklog` and its spawner hands that to
+  `manager::after_live_loop`, and the replay loop signals its `fallback_tx`. The genuine upstream-drop
+  `WatcherChannelOverflow` path is preserved (cmdr-fsevent-stream can still drop before our forward task reads).
+  `classify_ingestion_pressure` is pure/unit-tested; the repro (a backlog past the old 20K cap absorbs without forcing a
+  scan) lives in `event_loop/tests/ingestion.rs`.
 
 ## Rename detection by inode (FS identity, not intent tracking)
 

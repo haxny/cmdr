@@ -46,7 +46,11 @@ async fn the_live_loop_holds_its_volume_until_it_ends() {
     );
 
     drop(watcher);
-    live.await.expect("the loop ends once its watcher's channel closes");
+    assert_eq!(
+        live.await.expect("the loop ends once its watcher's channel closes"),
+        LiveLoopEnd::Stopped,
+        "a closed channel leaves the owner nothing to run"
+    );
     assert_eq!(
         hold::wait_until_released(volume_id, Duration::from_secs(5)),
         Release::Released,
