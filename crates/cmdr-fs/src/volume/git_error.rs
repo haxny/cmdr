@@ -1,5 +1,9 @@
 //! Git-specific error CLASSIFICATION.
 //!
+//! A leaf that imports nothing from `volume`: `VolumeError::FriendlyGit` carries a
+//! `FriendlyGitError`, and `friendly_error` maps its kind onto an `ErrorCategory`
+//! (`git_category` in `friendly_error/volume_error.rs`), so both point here.
+//!
 //! Carries a typed `FriendlyGitErrorKind`; the user-facing words live on the
 //! frontend (`src/lib/error-messages/git-error-messages.ts`), warm and active voice,
 //! never the words "error" or "failed".
@@ -19,8 +23,6 @@ use std::error::Error as StdError;
 use std::fmt;
 
 use serde::{Deserialize, Serialize};
-
-use crate::volume::friendly_error::ErrorCategory;
 
 /// What went wrong in the git layer. The frontend renders the words from its
 /// parallel factory; nothing here is user-facing prose.
@@ -55,25 +57,6 @@ pub enum FriendlyGitErrorKind {
 }
 
 impl FriendlyGitErrorKind {
-    /// Maps each variant to the closest `ErrorCategory` so `ErrorPane` picks
-    /// the right icon and severity color.
-    pub fn category(&self) -> ErrorCategory {
-        match self {
-            // The user can act on these (clone differently, prune, fetch, fix permissions).
-            FriendlyGitErrorKind::NotARepo
-            | FriendlyGitErrorKind::OrphanedWorktree
-            | FriendlyGitErrorKind::PermissionDenied
-            | FriendlyGitErrorKind::BareRepo
-            | FriendlyGitErrorKind::BlobTooLarge
-            | FriendlyGitErrorKind::ShallowBoundary
-            | FriendlyGitErrorKind::GitDirPermissionDenied => ErrorCategory::NeedsAction,
-            // Goes away on its own once the other git command completes.
-            FriendlyGitErrorKind::IndexLocked => ErrorCategory::Transient,
-            // On-disk damage: serious, retry won't help.
-            FriendlyGitErrorKind::CorruptRepo | FriendlyGitErrorKind::MissingObject => ErrorCategory::Serious,
-        }
-    }
-
     /// Stable identifier used inside `raw_detail` so power users can grep
     /// logs and bug reports for a specific kind.
     fn token(&self) -> &'static str {
@@ -159,71 +142,3 @@ impl fmt::Display for FriendlyGitError {
 }
 
 impl StdError for FriendlyGitError {}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    // The user-facing words now live on the frontend
-    // (`src/lib/error-messages/git-error-messages.ts`); the writing-rules checks moved
-    // there too (`friendly-error-style.test.ts`, every kind × rendered output).
-    // These tests assert only the typed mapping (category) and that the technical
-    // detail preserves the path.
-
-    #[test]
-    fn category_assignments_match_intent() {
-        // Spot-check the three categories so future renames don't silently
-        // change severity colors.
-        assert_eq!(FriendlyGitErrorKind::IndexLocked.category(), ErrorCategory::Transient);
-        assert_eq!(FriendlyGitErrorKind::NotARepo.category(), ErrorCategory::NeedsAction);
-        assert_eq!(FriendlyGitErrorKind::CorruptRepo.category(), ErrorCategory::Serious);
-        assert_eq!(
-            FriendlyGitErrorKind::ShallowBoundary.category(),
-            ErrorCategory::NeedsAction
-        );
-        assert_eq!(FriendlyGitErrorKind::MissingObject.category(), ErrorCategory::Serious);
-        assert_eq!(
-            FriendlyGitErrorKind::GitDirPermissionDenied.category(),
-            ErrorCategory::NeedsAction
-        );
-    }
-
-    #[test]
-    fn typed_variant_preserves_path_with_colon_chars() {
-        use crate::volume::VolumeError;
-        use crate::volume::friendly_error::{ListingErrorReason, listing_error_from_volume_error};
-
-        // macOS resource fork style, Windows drive letter, a stash spec, and
-        // a path with embedded colons all need to ride through the typed
-        // variant unchanged. The earlier `:`-split sentinel path mangled
-        // these; the typed variant just carries them.
-        for path in [
-            "/Users/me/repo/file:rsrc",
-            "C:/Users/me/repo",
-            "stash@{0}",
-            "/repo/.git/stash/0/path:with:colons.txt",
-        ] {
-            let err = VolumeError::FriendlyGit(FriendlyGitError::new(FriendlyGitErrorKind::ShallowBoundary, path));
-            let listing = listing_error_from_volume_error(&err, std::path::Path::new(path));
-            assert!(
-                matches!(
-                    listing.reason,
-                    ListingErrorReason::Git {
-                        kind: FriendlyGitErrorKind::ShallowBoundary
-                    }
-                ),
-                "should carry the git kind as the Git reason, got {:?}",
-                listing.reason
-            );
-            assert_eq!(listing.category, ErrorCategory::NeedsAction);
-            assert!(!listing.retry_hint, "needs-action variants don't retry");
-            // The path lands in `raw_detail` via `raw_detail()`'s `path=...`
-            // branch, so log greps still find it.
-            assert!(
-                listing.raw_detail.contains(path),
-                "raw_detail {:?} should preserve path {path:?}",
-                listing.raw_detail
-            );
-        }
-    }
-}

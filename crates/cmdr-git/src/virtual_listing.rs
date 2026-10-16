@@ -29,7 +29,7 @@ use crate::column_meta::{
 use crate::path::{Cat, strip_ref_prefix};
 use crate::repo::RepoHandle;
 use cmdr_fs::git_meta::{GitCountKind, GitEntryMeta};
-use cmdr_fs::volume::friendly_error::git::{FriendlyGitError, FriendlyGitErrorKind};
+use cmdr_fs::volume::git_error::{FriendlyGitError, FriendlyGitErrorKind};
 
 /// The six virtual category rows on their own, in display order, with their
 /// Modified and Size cells filled in.

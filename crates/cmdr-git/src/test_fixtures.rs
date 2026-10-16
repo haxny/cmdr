@@ -48,7 +48,7 @@ use gix::bstr::BStr;
 /// Re-exported so a caller doesn't need its own `gix` dependency to say so.
 pub use gix::object::tree::EntryKind;
 
-use cmdr_fs::volume::friendly_error::git::FriendlyGitError;
+use cmdr_fs::volume::git_error::FriendlyGitError;
 
 use crate::repo::{RepoCache, RepoHandle};
 

@@ -21,7 +21,7 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use cmdr_fs::ignore_poison::IgnorePoison;
-use cmdr_fs::volume::friendly_error::git::{FriendlyGitError, FriendlyGitErrorKind};
+use cmdr_fs::volume::git_error::{FriendlyGitError, FriendlyGitErrorKind};
 use notify::event::{AccessKind, AccessMode};
 use notify::{EventKind, RecommendedWatcher, RecursiveMode};
 use notify_debouncer_full::{DebounceEventResult, NoCache, new_debouncer_opt};
@@ -200,7 +200,7 @@ pub(crate) use scripted::ScriptedWatcherBackend;
 mod scripted {
     use super::{GitWatcherBackend, RepoChanged};
     use cmdr_fs::ignore_poison::IgnorePoison;
-    use cmdr_fs::volume::friendly_error::git::FriendlyGitError;
+    use cmdr_fs::volume::git_error::FriendlyGitError;
     use std::collections::HashMap;
     use std::path::{Path, PathBuf};
     use std::sync::{Arc, Mutex};

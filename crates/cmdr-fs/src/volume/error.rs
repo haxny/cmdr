@@ -8,6 +8,8 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::volume::git_error::FriendlyGitError;
+
 /// Error type for volume operations, and the value the frontend renders words
 /// from.
 ///
@@ -183,7 +185,7 @@ pub enum VolumeError {
     /// kind, no baked prose) without parsing strings; the FE renders the
     /// git-specific copy. Built by the volume hooks in `file_system::git::mod`
     /// (`try_route_listing`, `try_route_metadata`, `try_open_blob_stream`).
-    FriendlyGit(crate::volume::friendly_error::git::FriendlyGitError),
+    FriendlyGit(FriendlyGitError),
 }
 
 /// ❗ **For logs and debugging only.** Nothing a user reads comes from here: the

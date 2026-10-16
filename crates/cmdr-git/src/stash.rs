@@ -29,7 +29,7 @@ use cmdr_fs::entry::FileEntry;
 
 use crate::repo::RepoHandle;
 use cmdr_fs::git_meta::GitEntryMeta;
-use cmdr_fs::volume::friendly_error::git::{FriendlyGitError, FriendlyGitErrorKind};
+use cmdr_fs::volume::git_error::{FriendlyGitError, FriendlyGitErrorKind};
 
 /// Lists stash entries as virtual directory entries `0`, `1`, …
 ///

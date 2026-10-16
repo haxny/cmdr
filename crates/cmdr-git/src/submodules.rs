@@ -19,7 +19,7 @@ use cmdr_fs::entry::FileEntry;
 
 use crate::repo::RepoHandle;
 use cmdr_fs::git_meta::GitEntryMeta;
-use cmdr_fs::volume::friendly_error::git::{FriendlyGitError, FriendlyGitErrorKind};
+use cmdr_fs::volume::git_error::{FriendlyGitError, FriendlyGitErrorKind};
 
 /// Lists submodules as virtual entries with `redirectToPath` set.
 pub fn list_submodules(handle: &RepoHandle, repo_root: &Path) -> Result<Vec<FileEntry>, FriendlyGitError> {

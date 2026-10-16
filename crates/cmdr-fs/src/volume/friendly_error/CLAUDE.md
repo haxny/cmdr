@@ -11,9 +11,10 @@ trait's app-side wiring, backends, capability matrix). App-wide error convention
 
 - `mod.rs`: data model (`ListingError`, `ListingErrorReason`, `ErrorCategory`, `ErrorActionKind`) + public re-exports.
   `tests.rs`: the typed-mapping tests, which drive the public entry points so they cover every sibling module at once.
-- `git.rs`: `FriendlyGitError` / `FriendlyGitErrorKind` and their `ErrorCategory` mapping. It lives here, not with the
-  git module, because the two reference each other: `VolumeError::FriendlyGit` carries the whole thing.
-- `volume_error.rs`: `VolumeError` → `ListingError` (the entry point; dispatches to `errno` for raw `IoError`s).
+- `volume_error.rs`: `VolumeError` → `ListingError` (the entry point; dispatches to `errno` for raw `IoError`s), plus
+  `git_category`, the `FriendlyGitErrorKind` → `ErrorCategory` map. The git types themselves are the leaf
+  `volume/git_error.rs`, which `VolumeError::FriendlyGit` carries; keep `git_category` a free fn here, ❌ never an
+  inherent method on the kind, or the module graph re-welds `git_error` to this module.
 - `errno.rs`: raw macOS errno → `ListingError` (one reason per distinct outcome); off macOS, transient errnos via `std`
   `ErrorKind`, the rest unknown.
 - `kinds.rs`: shared `ListingError` constructors for `VolumeError` variants that map to the same conceptual reason.

@@ -13,7 +13,7 @@ use std::path::{Path, PathBuf};
 
 use crate::repo::repo_info;
 use crate::test_fixtures::{Fixture, cleanup, discover_repo, git_cli, temp_dir};
-use cmdr_fs::volume::friendly_error::git::FriendlyGitErrorKind;
+use cmdr_fs::volume::git_error::FriendlyGitErrorKind;
 
 fn temp(name: &str) -> PathBuf {
     temp_dir("repo", name)

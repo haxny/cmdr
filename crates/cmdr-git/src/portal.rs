@@ -13,7 +13,7 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use cmdr_fs::volume::friendly_error::git::FriendlyGitError;
+use cmdr_fs::volume::git_error::FriendlyGitError;
 use cmdr_fs::volume::host::VolumeHost;
 
 use crate::path::{self, Cat, VirtualGitPath};

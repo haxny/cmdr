@@ -13,6 +13,30 @@ use std::path::Path;
 use super::errno::listing_error_from_errno;
 use super::{ErrorCategory, ListingError, ListingErrorReason, kinds};
 use crate::volume::VolumeError;
+use crate::volume::git_error::FriendlyGitErrorKind;
+
+/// Maps each git kind to the closest `ErrorCategory` so `ErrorPane` picks the
+/// right icon and severity color.
+///
+/// A free function here, ❌ never an inherent method on `FriendlyGitErrorKind`:
+/// the module graph attributes an impl's methods to the type's module, so it
+/// would draw `git_error → friendly_error` and re-weld the two.
+pub(super) fn git_category(kind: FriendlyGitErrorKind) -> ErrorCategory {
+    match kind {
+        // The user can act on these (clone differently, prune, fetch, fix permissions).
+        FriendlyGitErrorKind::NotARepo
+        | FriendlyGitErrorKind::OrphanedWorktree
+        | FriendlyGitErrorKind::PermissionDenied
+        | FriendlyGitErrorKind::BareRepo
+        | FriendlyGitErrorKind::BlobTooLarge
+        | FriendlyGitErrorKind::ShallowBoundary
+        | FriendlyGitErrorKind::GitDirPermissionDenied => ErrorCategory::NeedsAction,
+        // Goes away on its own once the other git command completes.
+        FriendlyGitErrorKind::IndexLocked => ErrorCategory::Transient,
+        // On-disk damage: serious, retry won't help.
+        FriendlyGitErrorKind::CorruptRepo | FriendlyGitErrorKind::MissingObject => ErrorCategory::Serious,
+    }
+}
 
 /// Converts a `VolumeError` into a typed, word-free `ListingError`.
 ///
@@ -72,11 +96,11 @@ pub fn listing_error_from_volume_error(err: &VolumeError, path: &Path) -> Listin
         VolumeError::FriendlyGit(git_err) => {
             let raw_detail = git_err.raw_detail();
             ListingError {
-                category: git_err.kind.category(),
+                category: git_category(git_err.kind),
                 reason: ListingErrorReason::Git { kind: git_err.kind },
                 provider: None,
                 action_kind: None,
-                retry_hint: matches!(git_err.kind.category(), ErrorCategory::Transient),
+                retry_hint: matches!(git_category(git_err.kind), ErrorCategory::Transient),
                 raw_detail,
             }
         }

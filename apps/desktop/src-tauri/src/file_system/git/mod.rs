@@ -31,12 +31,9 @@ mod walker_exposure_tests;
 #[cfg(test)]
 mod wiring_tests;
 
-// `FriendlyGitError` lives in `cmdr-fs`: `VolumeError::FriendlyGit` carries it,
-// and it maps onto `friendly_error::ErrorCategory`, so the two must live
-// together. Aliased so `git::friendly::…` keeps resolving.
-pub use cmdr_fs::volume::friendly_error::git as friendly;
-
+// `FriendlyGitError` lives in `cmdr-fs` (`volume::git_error`) because
+// `VolumeError::FriendlyGit` carries it.
+#[allow(unused_imports, reason = "Public API re-exports consumed by IPC commands")]
+pub use cmdr_fs::volume::git_error::{FriendlyGitError, FriendlyGitErrorKind};
 #[allow(unused_imports, reason = "Public API re-exports consumed by IPC commands")]
 pub use cmdr_git::{EntryStatus, EntryStatusCode, RepoInfo, list_status, repo_info};
-#[allow(unused_imports, reason = "Public API re-exports consumed by IPC commands")]
-pub use friendly::{FriendlyGitError, FriendlyGitErrorKind};

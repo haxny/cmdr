@@ -24,17 +24,13 @@
 
 mod empty_root;
 mod errno;
-/// Git-specific error classification. It lives under `friendly_error` because
-/// the two reference each other: a `FriendlyGitErrorKind` maps to an
-/// [`ErrorCategory`], and `VolumeError::FriendlyGit` carries the whole thing.
-pub mod git;
 mod kinds;
 mod provider;
 mod volume_error;
 
 use serde::{Deserialize, Serialize};
 
-use crate::volume::friendly_error::git::FriendlyGitErrorKind;
+use crate::volume::git_error::FriendlyGitErrorKind;
 
 // Public API re-exports: keep the `volume::friendly_error::*` import surface
 // unchanged for callers regardless of how the module is split internally.

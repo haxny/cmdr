@@ -54,7 +54,7 @@ use gix::revision::walk::Sorting;
 use gix::traverse::commit::simple::CommitTimeOrder;
 
 use crate::repo::RepoHandle;
-use cmdr_fs::volume::friendly_error::git::{FriendlyGitError, FriendlyGitErrorKind};
+use cmdr_fs::volume::git_error::{FriendlyGitError, FriendlyGitErrorKind};
 
 /// How many commits we'll walk back per listing before falling back to the
 /// snapshot date. Bigger than the typical churn window for a 50k-commit

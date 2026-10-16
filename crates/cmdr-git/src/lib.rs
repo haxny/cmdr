@@ -61,7 +61,7 @@ use cmdr_git as _;
 use std::path::Path;
 
 use cmdr_fs::entry::FileEntry;
-use cmdr_fs::volume::friendly_error::git::FriendlyGitError;
+use cmdr_fs::volume::git_error::FriendlyGitError;
 use cmdr_fs::volume::{VolumeError, VolumeReadStream};
 
 mod column_meta;

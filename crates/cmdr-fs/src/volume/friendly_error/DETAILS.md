@@ -30,9 +30,9 @@ Sources that produce a `ListingError`:
 - **Layer 0: typed git pass-through.** `VolumeError::FriendlyGit(FriendlyGitError)` is a dedicated variant the git
   module's volume hooks (`try_route_listing`, `try_route_metadata`, `try_open_blob_stream`) return on a git-shaped
   failure. `listing_error_from_volume_error` matches it FIRST and ships the carried `FriendlyGitErrorKind` as the `Git`
-  reason (category from `kind.category()`, retry only when transient), with no errno mapping and no provider enrichment.
-  Keeps git copy from being clobbered by the generic I/O fallback; end-to-end type-checked, no string parsing. The FE
-  routes the `Git` reason to its parallel git factory (`git-error-messages.ts`).
+  reason (category from `git_category(kind)`, retry only when transient), with no errno mapping and no provider
+  enrichment. Keeps git copy from being clobbered by the generic I/O fallback; end-to-end type-checked, no string
+  parsing. The FE routes the `Git` reason to its parallel git factory (`git-error-messages.ts`).
 - **`listing_error_from_volume_error(err, path)`** (`volume_error.rs`): the entry point. Maps typed `VolumeError`
   variants through the shared `kinds::*` constructors, and dispatches `IoError { raw_os_error: Some(_) }` to
   `errno::listing_error_from_errno`. The permission-denied arm splits three ways (see § The permission-denied three-way

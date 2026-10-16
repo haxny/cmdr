@@ -18,7 +18,7 @@ use crate::Lookup;
 use crate::column_meta::recursive_tree_size;
 use crate::repo::RepoHandle;
 use crate::snapshot_dates;
-use cmdr_fs::volume::friendly_error::git::{FriendlyGitError, FriendlyGitErrorKind};
+use cmdr_fs::volume::git_error::{FriendlyGitError, FriendlyGitErrorKind};
 
 /// Per-blob byte cap for cross-volume copies and previews. Above this we
 /// surface a friendly "blob too big" rather than allocate the whole thing.

@@ -23,7 +23,7 @@ use std::time::SystemTime;
 use serde::{Deserialize, Serialize};
 
 use crate::repo::RepoHandle;
-use cmdr_fs::volume::friendly_error::git::{FriendlyGitError, FriendlyGitErrorKind};
+use cmdr_fs::volume::git_error::{FriendlyGitError, FriendlyGitErrorKind};
 
 /// Single-character status code.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, specta::Type)]

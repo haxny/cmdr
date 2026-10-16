@@ -10,9 +10,10 @@
 
 use std::path::Path;
 
+use super::volume_error::git_category;
 use super::*;
 use crate::volume::VolumeError;
-use crate::volume::friendly_error::git::{FriendlyGitError, FriendlyGitErrorKind};
+use crate::volume::git_error::{FriendlyGitError, FriendlyGitErrorKind};
 
 // ── Errno category + reason tests ───────────────────────────────────
 //
@@ -687,4 +688,72 @@ fn linux_timeouts_and_resets_are_transient_and_the_rest_stays_unknown() {
     let unknown = listing_error_from_volume_error(&make_io_error(9999), path);
     assert_eq!(unknown.category, ErrorCategory::Serious);
     assert!(matches!(unknown.reason, ListingErrorReason::CouldntReadUnknown { .. }));
+}
+
+// ── Git pass-through tests ──────────────────────────────────────────
+//
+// The user-facing words live on the frontend
+// (`src/lib/error-messages/git-error-messages.ts`), and so do the writing-rules
+// checks (`friendly-error-style.test.ts`, every kind × rendered output). These
+// assert only the typed mapping (category) and that the technical detail
+// preserves the path.
+
+#[test]
+fn git_category_assignments_match_intent() {
+    // Spot-check the three categories so future renames don't silently
+    // change severity colors.
+    assert_eq!(
+        git_category(FriendlyGitErrorKind::IndexLocked),
+        ErrorCategory::Transient
+    );
+    assert_eq!(git_category(FriendlyGitErrorKind::NotARepo), ErrorCategory::NeedsAction);
+    assert_eq!(git_category(FriendlyGitErrorKind::CorruptRepo), ErrorCategory::Serious);
+    assert_eq!(
+        git_category(FriendlyGitErrorKind::ShallowBoundary),
+        ErrorCategory::NeedsAction
+    );
+    assert_eq!(
+        git_category(FriendlyGitErrorKind::MissingObject),
+        ErrorCategory::Serious
+    );
+    assert_eq!(
+        git_category(FriendlyGitErrorKind::GitDirPermissionDenied),
+        ErrorCategory::NeedsAction
+    );
+}
+
+#[test]
+fn git_typed_variant_preserves_path_with_colon_chars() {
+    // macOS resource fork style, Windows drive letter, a stash spec, and
+    // a path with embedded colons all need to ride through the typed
+    // variant unchanged. The earlier `:`-split sentinel path mangled
+    // these; the typed variant just carries them.
+    for path in [
+        "/Users/me/repo/file:rsrc",
+        "C:/Users/me/repo",
+        "stash@{0}",
+        "/repo/.git/stash/0/path:with:colons.txt",
+    ] {
+        let err = VolumeError::FriendlyGit(FriendlyGitError::new(FriendlyGitErrorKind::ShallowBoundary, path));
+        let listing = listing_error_from_volume_error(&err, Path::new(path));
+        assert!(
+            matches!(
+                listing.reason,
+                ListingErrorReason::Git {
+                    kind: FriendlyGitErrorKind::ShallowBoundary
+                }
+            ),
+            "should carry the git kind as the Git reason, got {:?}",
+            listing.reason
+        );
+        assert_eq!(listing.category, ErrorCategory::NeedsAction);
+        assert!(!listing.retry_hint, "needs-action variants don't retry");
+        // The path lands in `raw_detail` via `raw_detail()`'s `path=...`
+        // branch, so log greps still find it.
+        assert!(
+            listing.raw_detail.contains(path),
+            "raw_detail {:?} should preserve path {path:?}",
+            listing.raw_detail
+        );
+    }
 }
