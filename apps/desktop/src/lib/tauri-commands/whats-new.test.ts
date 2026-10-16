@@ -9,11 +9,12 @@ vi.mock('#lib/ipc/bindings.js', () => ({
   commands: {
     getWhatsNew: vi.fn(),
     whatsNewDevOverride: vi.fn(),
+    getSecurityAdvisories: vi.fn(),
   },
 }))
 
 import { commands } from '#lib/ipc/bindings.js'
-import { getWhatsNew, whatsNewDevOverride } from './whats-new'
+import { getSecurityAdvisories, getWhatsNew, whatsNewDevOverride } from './whats-new'
 
 describe('getWhatsNew wrapper', () => {
   beforeEach(() => {
@@ -48,5 +49,22 @@ describe('whatsNewDevOverride wrapper', () => {
   it('returns null when the flag is unset', async () => {
     vi.mocked(commands.whatsNewDevOverride).mockResolvedValueOnce(null)
     expect(await whatsNewDevOverride()).toBeNull()
+  })
+})
+
+describe('getSecurityAdvisories wrapper', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('forwards sinceVersion and returns the advisories as the backend ordered them', async () => {
+    const advisories = [
+      { id: 'GHSA-a', fixedIn: '0.26.0', severity: 'high' as const, url: null },
+      { id: 'GHSA-b', fixedIn: '0.25.0', severity: 'low' as const, url: 'https://getcmdr.com/changelog' },
+    ]
+    vi.mocked(commands.getSecurityAdvisories).mockResolvedValueOnce(advisories)
+    const result = await getSecurityAdvisories('0.20.0')
+    expect(commands.getSecurityAdvisories).toHaveBeenCalledWith('0.20.0')
+    expect(result).toBe(advisories)
   })
 })
