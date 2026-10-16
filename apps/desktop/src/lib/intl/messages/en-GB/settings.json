@@ -118,5 +118,17 @@
   "settings.fileOperations.skipConfirmation.description": "F5 and F6 copy and move into the other pane right away, and F8 moves to the Bin without asking. A bit risky, since one keypress acts at once. Deleting permanently always asks first.",
   "@settings.fileOperations.skipConfirmation.description": {
     "sourceHash": "086379d"
+  },
+  "settings.dataWipe.goes.license": "The licence on this Mac. To activate it again, enter the licence key from your purchase email.",
+  "@settings.dataWipe.goes.license": {
+    "sourceHash": "90b5b06"
+  },
+  "settings.dataWipe.goes.licenseIfAny": "The licence on this Mac, if you activated one. To activate it again, enter the licence key from your purchase email.",
+  "@settings.dataWipe.goes.licenseIfAny": {
+    "sourceHash": "db7f6f2"
+  },
+  "settings.dataWipe.doneMessage": "Everything Cmdr kept on this Mac is gone. To remove the app as well, move it to the Bin after Cmdr quits.",
+  "@settings.dataWipe.doneMessage": {
+    "sourceHash": "a0d09dc"
   }
 }
