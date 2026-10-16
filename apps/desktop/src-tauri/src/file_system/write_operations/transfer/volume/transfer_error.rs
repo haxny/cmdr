@@ -98,8 +98,8 @@ pub(in crate::file_system::write_operations) fn map_finalize_failure(
 /// this back to a bare `VolumeError`: the caller cannot reconstruct the path,
 /// and its only honest fallback is the top-level item, which is the wrong
 /// answer for every directory transfer.
-/// Visible across `write_operations` (not just `transfer`) because
-/// `remove_tree` returns it and `archive_edit` calls that.
+/// Visible beyond `volume/` because `transfer/volume_outage.rs` carries it
+/// through an outage wait.
 #[derive(Debug, Clone)]
 pub(in crate::file_system::write_operations) struct PathedVolumeError {
     /// The item that failed, as deep in the tree as the walker got, on the
