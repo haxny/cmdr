@@ -49,7 +49,11 @@ fn local_volume(tag: &str) -> (crate::test_support::TestDir, String) {
     let scratch = crate::test_support::TestDir::new(tag);
     std::fs::write(scratch.join("a.txt"), b"a").expect("scratch dir is writable");
     let volume_id = unique_test_id(&format!("{tag}-vol"));
-    let volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder("Arming", scratch.to_path_buf()));
+    let volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
+        "Arming",
+        scratch.to_path_buf(),
+        crate::volume_host::host(),
+    ));
     assert!(volume.can_watch_listings(), "the fixture must be watchable");
     get_volume_manager().register(&volume_id, volume);
     (scratch, volume_id)

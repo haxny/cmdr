@@ -139,7 +139,11 @@ impl UndoLoop {
         // real `root` volume is registered.
         vm.register(
             "root",
-            Arc::new(LocalPosixVolume::local_folder("Test root", "/")) as Arc<dyn Volume>,
+            Arc::new(LocalPosixVolume::local_folder(
+                "Test root",
+                "/",
+                crate::volume_host::host(),
+            )) as Arc<dyn Volume>,
         );
         UndoLoop {
             _journal: journal,

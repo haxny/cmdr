@@ -232,6 +232,7 @@ async fn smb_soak_copy_loop() {
         let dest_vol: Arc<dyn Volume> = Arc::new(crate::file_system::volume::LocalPosixVolume::local_folder(
             "dest",
             local_dir.path().to_path_buf(),
+            crate::volume_host::host(),
         ));
         let state = Arc::new(WriteOperationState::new(Duration::from_millis(200)));
         let events = Arc::new(CollectorEventSink::new());

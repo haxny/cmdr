@@ -64,7 +64,11 @@ async fn sftp_integration_copying_off_a_server_lands_every_byte() {
     assert_eq!(source_digest, sha256(&content), "the fixture seed must round-trip");
 
     let local_dir = TestDir::new("sftp_copy_off_server");
-    let local: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder("Local", &*local_dir));
+    let local: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
+        "Local",
+        &*local_dir,
+        crate::volume_host::host(),
+    ));
 
     run_copy(
         "copy-off-sftp",
@@ -110,7 +114,11 @@ async fn sftp_integration_copying_onto_a_server_lands_every_byte() {
 
     let content = self_describing_bytes(PAYLOAD_BYTES, "uploaded.bin");
     let local_dir = TestDir::new("sftp_copy_onto_server");
-    let local: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder("Local", &*local_dir));
+    let local: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
+        "Local",
+        &*local_dir,
+        crate::volume_host::host(),
+    ));
     local
         .create_file(Path::new("uploaded.bin"), &content)
         .await
@@ -230,7 +238,11 @@ async fn sftp_integration_a_tagged_upload_reports_its_tags_and_an_untagged_one_n
             .expect("date it");
     }
     xattr::set(local_dir.join("tagged.txt"), "user.cmdr.tag", b"red").expect("tag it");
-    let local: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder("Local", &*local_dir));
+    let local: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
+        "Local",
+        &*local_dir,
+        crate::volume_host::host(),
+    ));
 
     let left_behind = |copy: &super::network_transfer_test_support::RunningCopy| {
         copy.events.complete.lock_ignore_poison()[0]

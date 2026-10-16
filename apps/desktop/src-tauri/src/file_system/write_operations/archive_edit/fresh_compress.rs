@@ -95,7 +95,11 @@ pub(super) async fn start(
             (volume, lane)
         }
         None => (
-            Arc::new(LocalPosixVolume::local_folder("local", PathBuf::from("/"))) as Arc<dyn Volume>,
+            Arc::new(LocalPosixVolume::local_folder(
+                "local",
+                PathBuf::from("/"),
+                crate::volume_host::host(),
+            )) as Arc<dyn Volume>,
             LaneKey::new(parent_volume_id.clone()),
         ),
     };
@@ -484,6 +488,7 @@ async fn produce_via_spool(
     let spool_volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "fresh-zip-spool",
         scratch.path().to_path_buf(),
+        crate::volume_host::host(),
     ));
     let (written, produced) = produce_into(
         plan,

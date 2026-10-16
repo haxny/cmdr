@@ -10,12 +10,13 @@
 use std::path::Path;
 
 use super::reading::get_single_entry;
-use crate::listing_host::directory_changed;
+use cmdr_fs::volume::host::listings::ListingHost;
 use cmdr_fs::volume::{DirectoryChange, MutationEvent};
 
 /// Patches the listing cache after a mutation on a LOCAL-FS-backed volume: stats
 /// the affected entry through `std::fs` and turns it into the right
-/// [`DirectoryChange`].
+/// [`DirectoryChange`], which `listings` hands on (in Cmdr, to the composer:
+/// index, badges, then panes).
 ///
 /// This is what `Volume::notify_mutation` means for a backend whose paths are
 /// real `std::fs` paths. It lives here rather than on the trait because
@@ -25,7 +26,12 @@ use cmdr_fs::volume::{DirectoryChange, MutationEvent};
 ///
 /// Fire-and-forget: a failed stat logs and drops the patch, because the mutation
 /// it follows has already succeeded and a watcher event may still land.
-pub fn patch_listing_after_local_mutation(volume_id: &str, parent_path: &Path, mutation: MutationEvent) {
+pub fn patch_listing_after_local_mutation(
+    listings: &dyn ListingHost,
+    volume_id: &str,
+    parent_path: &Path,
+    mutation: MutationEvent,
+) {
     match mutation {
         MutationEvent::Created(ref name) | MutationEvent::Modified(ref name) => {
             let entry_path = parent_path.join(name);
@@ -36,7 +42,7 @@ pub fn patch_listing_after_local_mutation(volume_id: &str, parent_path: &Path, m
                     } else {
                         DirectoryChange::Modified(entry)
                     };
-                    directory_changed(volume_id, parent_path, change);
+                    listings.directory_changed(volume_id, parent_path, change);
                 }
                 Err(e) => {
                     log::warn!("notify_mutation: couldn't stat {}: {}", entry_path.display(), e);
@@ -44,13 +50,13 @@ pub fn patch_listing_after_local_mutation(volume_id: &str, parent_path: &Path, m
             }
         }
         MutationEvent::Deleted(name) => {
-            directory_changed(volume_id, parent_path, DirectoryChange::Removed(name));
+            listings.directory_changed(volume_id, parent_path, DirectoryChange::Removed(name));
         }
         MutationEvent::Renamed { from, to } => {
             let new_path = parent_path.join(&to);
             match get_single_entry(&new_path) {
                 Ok(entry) => {
-                    directory_changed(
+                    listings.directory_changed(
                         volume_id,
                         parent_path,
                         DirectoryChange::Renamed {

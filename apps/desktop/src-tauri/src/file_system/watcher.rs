@@ -191,8 +191,9 @@ fn coverage_for_watched_path(path: &Path) -> WatchCoverage {
 
 /// The coverage recorded for any live watch on `listing_ids`, best answer first.
 ///
-/// Backs `LocalPosixVolume::listing_watch_coverage`, so it must stay a pure
-/// in-memory read: it runs once per directory inside recursive scan walkers.
+/// Backs `LocalPosixVolume::listing_watch_coverage` (through `AppListings`), so
+/// it must stay a pure in-memory read: it runs once per directory inside
+/// recursive scan walkers.
 pub(crate) fn coverage_for_listings(listing_ids: &[String]) -> WatchCoverage {
     let manager = WATCHER_MANAGER.read_ignore_poison();
     let mut best = WatchCoverage::None;
@@ -550,7 +551,7 @@ async fn reread_with_std_fs(listings: &Listings, id: &ListingId) {
     let Some(ticket) = listings.begin_read(id) else {
         return;
     };
-    match list_directory_core(ticket.path()) {
+    match list_directory_core(ticket.path(), &crate::listing_host::backends::AppListings) {
         Ok(entries) => {
             listings.refresh_from_entries(ticket, entries).await;
         }

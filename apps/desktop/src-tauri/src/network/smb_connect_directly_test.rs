@@ -15,7 +15,10 @@ struct Registered(String);
 impl Registered {
     fn at(label: &str, root: &std::path::Path) -> Self {
         let id = format!("test-connect-directly-{label}");
-        get_volume_manager().register(&id, Arc::new(LocalPosixVolume::local_folder(label, root)));
+        get_volume_manager().register(
+            &id,
+            Arc::new(LocalPosixVolume::local_folder(label, root, crate::volume_host::host())),
+        );
         Self(id)
     }
 }

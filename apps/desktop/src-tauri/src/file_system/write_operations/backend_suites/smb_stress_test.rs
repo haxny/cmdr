@@ -97,6 +97,7 @@ async fn smb_integration_copy_100_unique_files_no_cross_contamination() {
     let dest_vol: Arc<dyn Volume> = Arc::new(crate::file_system::volume::LocalPosixVolume::local_folder(
         "dest",
         local_dir.path().to_path_buf(),
+        crate::volume_host::host(),
     ));
 
     let state = Arc::new(WriteOperationState::new(Duration::from_millis(200)));
@@ -384,6 +385,7 @@ async fn run_concurrent_write_pass(
     let src_vol: Arc<dyn Volume> = Arc::new(crate::file_system::volume::LocalPosixVolume::local_folder(
         "regression-src",
         local_dir.path().to_path_buf(),
+        crate::volume_host::host(),
     ));
     let dst_vol: Arc<dyn Volume> = vol.clone() as Arc<dyn Volume>;
     let source_rel_paths: Vec<PathBuf> = (0..n_files).map(|i| PathBuf::from(format!("f_{i:04}.bin"))).collect();

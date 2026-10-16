@@ -36,7 +36,8 @@ where credentials live, which runtime to spawn on, who to tell when a watch brea
 ## Module map
 
 - `mod.rs`: `VolumeHost`, its builder, `detached()`, and `state_dir` (a path: a backend's durable private state).
-- `listings.rs`: `ListingHost`, the busiest seam. Report a change, ask the fresh-listing oracle, refresh archive panes.
+- `listings.rs`: `ListingHost`, the busiest seam. Report a change, ask the fresh-listing oracle, refresh archive panes,
+  and answer the local backend's watch coverage and name order.
 - One seam per file: `runtime.rs` (the injected `tokio::runtime::Handle`, not a trait), `events.rs` (`VolumeEventSink` +
   `VolumeConnection`), `credentials.rs` (`CredentialStore`), `host_keys.rs` (`HostKeys`), `indexing.rs`
   (`IndexNotifier` + `WatchGap`), `settings.rs` (`BackendSettings`), `activity.rs` (`UserActivity`), `analytics.rs`

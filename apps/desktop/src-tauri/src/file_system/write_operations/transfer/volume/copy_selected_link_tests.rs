@@ -66,7 +66,11 @@ fn publish_local_preview(preview_id: &str, sources: &[PathBuf]) {
 /// The boot volume as production registers it: rooted at `/`, so the
 /// preview's absolute paths are the volume's own paths.
 fn boot_volume() -> Arc<dyn Volume> {
-    Arc::new(LocalPosixVolume::local_folder("Macintosh HD", PathBuf::from("/")))
+    Arc::new(LocalPosixVolume::local_folder(
+        "Macintosh HD",
+        PathBuf::from("/"),
+        crate::volume_host::host(),
+    ))
 }
 
 fn dest_volume() -> Arc<dyn Volume> {

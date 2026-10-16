@@ -2,10 +2,11 @@
 //!
 //! A storage backend can't reach the listing engine from its own crate, so it
 //! asks through `cmdr_fs::volume::host::listings::ListingHost` and this is what
-//! the app installs. The oracle, the open-listing question, and the archive
-//! refresh are the engine's own answers; `directory_changed` goes through the
-//! composer (index, badges, then panes), which is why the app answers this seam
-//! itself instead of handing backends `Listings::listing_host`.
+//! the app installs. The oracle, the open-listing question, the archive refresh,
+//! and the name order are the engine's own answers; `directory_changed` goes
+//! through the composer (index, badges, then panes) and the local watch coverage
+//! through the FSEvents watcher, which is why the app answers this seam itself
+//! instead of handing backends `Listings::listing_host`.
 //!
 //! ❌ The seam is per mutation, never per entry. That rule is the backend's to
 //! keep, but it's this module's to know: `Listings::directory_changed` walks every
@@ -19,7 +20,8 @@ use std::pin::Pin;
 use cmdr_fs::volume::host::listings::ListingHost;
 
 use cmdr_fs::entry::FileEntry;
-use cmdr_fs::volume::DirectoryChange;
+use cmdr_fs::volume::{DirectoryChange, WatchCoverage};
+use cmdr_listing::{DirectorySortMode, SortColumn, SortOrder, sort_entries};
 
 /// Answers a backend's listing questions from the app's real listing cache.
 pub struct AppListings;
@@ -47,6 +49,37 @@ impl ListingHost for AppListings {
                 .refresh_archive_listings(volume_id, archive_path)
                 .await
         })
+    }
+
+    fn local_watch_coverage(&self, abs_path: &Path) -> WatchCoverage {
+        // Volume-agnostic: the listing cache is keyed by listing id and tagged
+        // with a volume id, but a local volume doesn't know its own id (the
+        // registry assigns it), so this asks by path.
+        let listings = super::listings().listings_for_local_path(abs_path);
+        if listings.is_empty() {
+            return WatchCoverage::None;
+        }
+        // A listing exists; report what the FSEvents watch attached to it covers.
+        // There's a race window between the listing being populated and the watcher
+        // being registered, during which this deliberately answers `None` (the
+        // listing exists but isn't being kept fresh yet).
+        //
+        // The coverage was decided when the watch was armed, so this stays a pure
+        // in-memory read: a `statfs` here would land in the middle of every
+        // recursive scan walk. `watcher::coverage_for_watched_path` is where the
+        // network-mount question is actually asked.
+        let listing_ids: Vec<String> = listings.into_iter().map(|id| id.as_str().to_string()).collect();
+        crate::file_system::watcher::coverage_for_listings(&listing_ids)
+    }
+
+    fn sort_listing(&self, entries: &mut [FileEntry]) {
+        sort_entries(
+            &super::listings().collator(),
+            entries,
+            SortColumn::Name,
+            SortOrder::Ascending,
+            DirectorySortMode::LikeFiles,
+        );
     }
 }
 

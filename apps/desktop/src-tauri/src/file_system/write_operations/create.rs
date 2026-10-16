@@ -481,6 +481,7 @@ pub(super) fn patch_listings_after_create(volume_id: Option<&str>, new_path: &Pa
         return;
     };
     crate::file_system::volume::backends::patch_listing_after_local_mutation(
+        crate::volume_host::host().listings(),
         volume_id.unwrap_or(cmdr_index::ROOT_VOLUME_ID),
         parent_path,
         MutationEvent::Created(name.to_string_lossy().into_owned()),

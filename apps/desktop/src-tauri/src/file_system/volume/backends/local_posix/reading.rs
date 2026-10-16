@@ -1,7 +1,8 @@
 //! The local `std::fs` reader: directory reading and `FileEntry` construction.
 //!
 //! Pure I/O functions that read from disk and build `FileEntry` objects. No Tauri
-//! or caching dependencies; `LocalPosixVolume`, the watcher, `tags.rs`, and
+//! or caching dependencies: the name order comes from the caller's
+//! `ListingHost::sort_listing`. `LocalPosixVolume`, the watcher, `tags.rs`, and
 //! `create.rs` read through it. See `backends/DETAILS.md` § "The local reader".
 
 #![allow(
@@ -18,7 +19,7 @@ use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 use cmdr_fs::benchmark;
 use cmdr_fs::entry::{ExtendedMetadata, FileEntry, get_group_name, get_owner_name, is_hidden_by_name};
 use cmdr_fs::volume::ListingProgress;
-use cmdr_listing::{DirectorySortMode, SortColumn, SortOrder, sort_entries};
+use cmdr_fs::volume::host::listings::ListingHost;
 
 /// Whether a POSIX entry's `st_flags` carries `UF_HIDDEN`, what `chflags hidden`
 /// sets. macOS only; the flag doesn't exist on Linux, so this is always `false`
@@ -60,10 +61,10 @@ fn read_dot_hidden_names(root_dir: &Path) -> HashSet<String> {
 ///
 /// Calls `list_directory_core()` for the fast path, then enriches entries
 /// with macOS-specific metadata (addedAt, openedAt).
-pub fn list_directory(path: &Path) -> Result<Vec<FileEntry>, std::io::Error> {
+pub fn list_directory(path: &Path, listings: &dyn ListingHost) -> Result<Vec<FileEntry>, std::io::Error> {
     let overall_start = std::time::Instant::now();
 
-    let mut entries = list_directory_core(path)?;
+    let mut entries = list_directory_core(path, listings)?;
 
     // Enrich with macOS-specific metadata
     #[cfg(target_os = "macos")]
@@ -102,8 +103,9 @@ pub fn list_directory(path: &Path) -> Result<Vec<FileEntry>, std::io::Error> {
 /// macOS-specific metadata (addedAt, openedAt) which require additional system calls.
 ///
 /// Use `get_extended_metadata_batch()` to fetch extended metadata later.
-pub fn list_directory_core(path: &Path) -> Result<Vec<FileEntry>, std::io::Error> {
-    list_directory_core_impl(path, None, false)
+/// `listings` decides the order (`ListingHost::sort_listing`).
+pub fn list_directory_core(path: &Path, listings: &dyn ListingHost) -> Result<Vec<FileEntry>, std::io::Error> {
+    list_directory_core_impl(path, None, false, listings)
 }
 
 /// Like `list_directory_core`, but publishes a running count into `tally` as it stats.
@@ -122,8 +124,9 @@ pub fn list_directory_core_with_tally(
     path: &Path,
     tally: &ListingTally,
     is_volume_root: bool,
+    listings: &dyn ListingHost,
 ) -> Result<Vec<FileEntry>, std::io::Error> {
-    list_directory_core_impl(path, Some(tally), is_volume_root)
+    list_directory_core_impl(path, Some(tally), is_volume_root, listings)
 }
 
 /// A listing's running entry counts, readable from another thread while the stat loop
@@ -163,6 +166,7 @@ fn list_directory_core_impl(
     path: &Path,
     tally: Option<&ListingTally>,
     is_volume_root: bool,
+    listings: &dyn ListingHost,
 ) -> Result<Vec<FileEntry>, std::io::Error> {
     benchmark::log_event("list_directory_core START");
     let overall_start = std::time::Instant::now();
@@ -212,15 +216,10 @@ fn list_directory_core_impl(
     }
     benchmark::log_event_value("stat_loop END, entries", entries.len());
 
-    // Sort: directories first, then files, both alphabetically (using natural sort)
+    // Sort: directories first, then files, both by name in the panes' order. One
+    // seam call per directory, never per entry.
     benchmark::log_event("sort START");
-    sort_entries(
-        &crate::listing_host::listings().collator(),
-        &mut entries,
-        SortColumn::Name,
-        SortOrder::Ascending,
-        DirectorySortMode::LikeFiles,
-    );
+    listings.sort_listing(&mut entries);
     benchmark::log_event("sort END");
 
     let total_time = overall_start.elapsed();

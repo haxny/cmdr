@@ -318,6 +318,7 @@ async fn smb_integration_many_files_at_full_concurrency_land_intact() {
     let source_vol: Arc<dyn Volume> = Arc::new(crate::file_system::volume::LocalPosixVolume::local_folder(
         "src",
         local_dir.path().to_path_buf(),
+        crate::volume_host::host(),
     ));
     let total_bytes: usize = source_sizes.iter().sum();
     log::info!(
@@ -504,6 +505,7 @@ async fn smb_integration_a_wedged_copy_is_caught_and_names_its_phase() {
     let source_vol: Arc<dyn Volume> = Arc::new(crate::file_system::volume::LocalPosixVolume::local_folder(
         "src",
         local_dir.path().to_path_buf(),
+        crate::volume_host::host(),
     ));
 
     let guard = TestOperationGuard::register("smb-wedged-copy");

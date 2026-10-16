@@ -439,7 +439,12 @@ fn register_volume_with_manager(volume_path: &str) {
     };
 
     let mount = crate::file_system::index_provider::mount_class_at(Path::new(volume_path));
-    let volume = Arc::new(LocalPosixVolume::on_mount(&name, volume_path, mount));
+    let volume = Arc::new(LocalPosixVolume::on_mount(
+        &name,
+        volume_path,
+        mount,
+        crate::volume_host::host(),
+    ));
     get_volume_manager().register(&volume_id, volume);
     debug!("Registered mounted volume: {} -> {}", volume_id, volume_path);
 }

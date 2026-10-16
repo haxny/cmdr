@@ -83,7 +83,12 @@ pub(crate) fn register_mount_root(root: &str) {
 /// ❌ Never call this with an ID from anywhere but `volume_id_for_mount(root)`.
 fn register_mount_root_as(volume_id: &str, root: &str) {
     let mount = crate::file_system::index_provider::mount_class_at(Path::new(root));
-    let volume = Arc::new(LocalPosixVolume::on_mount(name_for_root(Path::new(root)), root, mount));
+    let volume = Arc::new(LocalPosixVolume::on_mount(
+        name_for_root(Path::new(root)),
+        root,
+        mount,
+        crate::volume_host::host(),
+    ));
     if get_volume_manager().register_if_absent(volume_id, volume) {
         log::debug!(target: "volume", "Registered mount {root} as {volume_id}");
     }

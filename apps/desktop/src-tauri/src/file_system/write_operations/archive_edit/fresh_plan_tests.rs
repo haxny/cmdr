@@ -181,7 +181,11 @@ async fn planning_skips_local_symlinks_and_special_files_without_a_stat_each() {
     std::fs::write(temp.path().join("tree/real.txt"), b"real").expect("write");
     std::os::unix::fs::symlink("real.txt", temp.path().join("tree/link")).expect("symlink");
     let _socket = std::os::unix::net::UnixListener::bind(temp.path().join("tree/sock")).expect("bind a socket file");
-    let source: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder("source", temp.path().to_path_buf()));
+    let source: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
+        "source",
+        temp.path().to_path_buf(),
+        crate::volume_host::host(),
+    ));
     let state = Arc::new(WriteOperationState::new(Duration::ZERO));
 
     let plan = plan_sources_with_context(
@@ -209,7 +213,11 @@ async fn duplicate_top_names_honor_rename_and_skip_policies() {
     std::fs::create_dir_all(temp.path().join("b")).expect("create b");
     std::fs::write(temp.path().join("a/report.txt"), b"first").expect("write first");
     std::fs::write(temp.path().join("b/report.txt"), b"second").expect("write second");
-    let source: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder("source", temp.path().to_path_buf()));
+    let source: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
+        "source",
+        temp.path().to_path_buf(),
+        crate::volume_host::host(),
+    ));
     let paths = [PathBuf::from("a/report.txt"), PathBuf::from("b/report.txt")];
     let state = Arc::new(WriteOperationState::new(Duration::ZERO));
 
@@ -243,7 +251,11 @@ async fn a_selected_macosx_folder_is_skipped_and_a_local_folder_is_its_own_sourc
     std::fs::create_dir_all(temp.path().join("__MACOSX")).expect("mkdir");
     std::fs::write(temp.path().join("__MACOSX/._a"), b"x").expect("write");
     std::fs::create_dir_all(temp.path().join("docs")).expect("mkdir");
-    let source: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder("source", temp.path().to_path_buf()));
+    let source: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
+        "source",
+        temp.path().to_path_buf(),
+        crate::volume_host::host(),
+    ));
     let state = Arc::new(WriteOperationState::new(Duration::ZERO));
 
     let plan = plan_sources_with_context(

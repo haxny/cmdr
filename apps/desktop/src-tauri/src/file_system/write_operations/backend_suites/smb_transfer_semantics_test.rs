@@ -174,6 +174,7 @@ async fn smb_integration_move_into_a_subfolder_addressed_the_way_the_dialog_addr
     let source_vol: Arc<dyn Volume> = Arc::new(crate::file_system::volume::LocalPosixVolume::local_folder(
         "src",
         local_dir.path().to_path_buf(),
+        crate::volume_host::host(),
     ));
 
     // What the dialog puts on the wire, and what the boundary makes of it.
@@ -270,6 +271,7 @@ async fn smb_integration_a_running_copy_survives_the_volume_being_replaced() {
     let source_vol: Arc<dyn Volume> = Arc::new(crate::file_system::volume::LocalPosixVolume::local_folder(
         "src",
         local_dir.path().to_path_buf(),
+        crate::volume_host::host(),
     ));
 
     // What the running operation holds: an `Arc` taken before the swap.

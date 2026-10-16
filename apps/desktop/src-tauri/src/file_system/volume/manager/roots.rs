@@ -377,10 +377,16 @@ mod tests {
     use crate::file_system::volume::{InMemoryVolume, LocalPosixVolume, VolumeError};
     use crate::ignore_poison::IgnorePoison;
     use cmdr_fs::entry::FileEntry;
+    use cmdr_fs::volume::host::VolumeHost;
     use std::pin::Pin;
 
+    /// A local volume for a registry cell, which never reaches the panes.
+    fn local_volume(name: &str, root: &str) -> Arc<LocalPosixVolume> {
+        Arc::new(LocalPosixVolume::local_folder(name, root, VolumeHost::detached()))
+    }
+
     fn registration_over(roots: &[&str]) -> Registration {
-        let mut reg = Registration::new(Arc::new(LocalPosixVolume::local_folder("share", roots[0])));
+        let mut reg = Registration::new(local_volume("share", roots[0]));
         for root in &roots[1..] {
             reg.record_root(Path::new(root));
         }
@@ -553,10 +559,7 @@ mod tests {
         let manager = VolumeManager::new();
         let (spy, told) = root_spy("/Volumes/naspi");
         manager.register("share", spy);
-        manager.register(
-            "share",
-            Arc::new(LocalPosixVolume::local_folder("naspi", "/Volumes/naspi-1")),
-        );
+        manager.register("share", local_volume("naspi", "/Volumes/naspi-1"));
 
         manager.mark_root_stale("share", Path::new("/Volumes/naspi-1"));
         assert!(told().is_empty(), "the ACTIVE root still looks alive");
@@ -572,17 +575,9 @@ mod tests {
     /// A registry holding one share reached through two mount points, the
     /// shortest one active. The shape every multi-root test starts from.
     fn doubly_mounted_share() -> VolumeManager {
-        use crate::file_system::LocalPosixVolume;
-
         let manager = VolumeManager::new();
-        manager.register(
-            "share",
-            Arc::new(LocalPosixVolume::local_folder("naspi", "/Volumes/naspi")),
-        );
-        manager.register(
-            "share",
-            Arc::new(LocalPosixVolume::local_folder("naspi", "/Volumes/naspi-1")),
-        );
+        manager.register("share", local_volume("naspi", "/Volumes/naspi"));
+        manager.register("share", local_volume("naspi", "/Volumes/naspi-1"));
         manager
     }
 
@@ -704,7 +699,6 @@ mod tests {
 
     #[test]
     fn a_failed_operation_promotes_only_on_an_errno_that_proves_the_mount_is_gone() {
-        use crate::file_system::LocalPosixVolume;
         use crate::file_system::volume::{VolumeError, note_root_failure};
 
         // Drives the global registry (that's what `note_root_failure` reads), so
@@ -712,14 +706,8 @@ mod tests {
         let id = "cmdr-test-stale-errno-share";
         let manager = get_volume_manager();
         manager.unregister(id);
-        manager.register(
-            id,
-            Arc::new(LocalPosixVolume::local_folder("naspi", "/Volumes/cmdr-test-stale")),
-        );
-        manager.register(
-            id,
-            Arc::new(LocalPosixVolume::local_folder("naspi", "/Volumes/cmdr-test-stale-1")),
-        );
+        manager.register(id, local_volume("naspi", "/Volumes/cmdr-test-stale"));
+        manager.register(id, local_volume("naspi", "/Volumes/cmdr-test-stale-1"));
 
         // A missing file says nothing about the mount.
         note_root_failure(

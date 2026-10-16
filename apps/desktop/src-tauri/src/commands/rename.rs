@@ -223,7 +223,14 @@ mod tests {
         use crate::file_system::volume::LocalPosixVolume;
         use crate::file_system::volume::manager::get_volume_manager;
         use std::sync::Arc;
-        get_volume_manager().register_if_absent("root", Arc::new(LocalPosixVolume::local_folder("Test root", "/")));
+        get_volume_manager().register_if_absent(
+            "root",
+            Arc::new(LocalPosixVolume::local_folder(
+                "Test root",
+                "/",
+                crate::volume_host::host(),
+            )),
+        );
     }
 
     // ========================================================================

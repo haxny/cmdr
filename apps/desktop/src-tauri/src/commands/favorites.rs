@@ -385,7 +385,14 @@ mod add_gate_tests {
     /// `register_if_absent` because the registry is process-wide and shared with every other test
     /// in this binary.
     fn ensure_root_volume() {
-        get_volume_manager().register_if_absent("root", Arc::new(LocalPosixVolume::local_folder("Test root", "/")));
+        get_volume_manager().register_if_absent(
+            "root",
+            Arc::new(LocalPosixVolume::local_folder(
+                "Test root",
+                "/",
+                crate::volume_host::host(),
+            )),
+        );
     }
 
     /// A resolved row, the way the resolver hands one back.
@@ -517,7 +524,14 @@ mod add_gate_tests {
 
     /// A share registered at the mount point the table names, the way a connected one is.
     fn register_share(id: &str, root: &str) {
-        get_volume_manager().register_if_absent(id, Arc::new(LocalPosixVolume::local_folder("Share", root)));
+        get_volume_manager().register_if_absent(
+            id,
+            Arc::new(LocalPosixVolume::local_folder(
+                "Share",
+                root,
+                crate::volume_host::host(),
+            )),
+        );
     }
 
     fn network_mount(mount_point: &str) -> NetworkMount {

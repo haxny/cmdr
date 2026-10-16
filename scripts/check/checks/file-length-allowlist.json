@@ -28,6 +28,10 @@
       "lines": 900,
       "reason": "TODO: the `impl Volume for LocalPosixVolume` block plus the query and mutation bodies it can't spread across files. `scan` and `streams` already moved to `local_posix/`; the mutation bodies (create, delete, rename, `apply_metadata`) should follow into `local_posix/mutation.rs` as `pub(super)` inherent methods with one-line delegators here, the shape `cmdr-sftp` and `cmdr-smb` use."
     },
+    "apps/desktop/src-tauri/src/file_system/write_operations/archive_edit/copy_into.rs": {
+      "lines": 800,
+      "reason": "TODO: pulling the sources is its own concern beside the changeset planning. Move `MaterializedSources` (with its impl), `materialize_sources`, and `pull_one_source` into `archive_edit/copy_into_sources.rs`, about 150 lines out. What stays is the two routing entry points, the changeset builders, `plan_file_add`, and `archive_copy_into_start`."
+    },
     "apps/desktop/src-tauri/src/file_system/write_operations/delete/walker.rs": {
       "lines": 942,
       "reason": "TODO: this is two delete engines in one file, sharing imports and nothing else. Split at the banner on line 259: `delete_files_with_progress_inner` (the `walkdir` plus `fs::remove_*` local path, about 230 lines) stays in `walker.rs`, and `VolumeDeleteEntry`, `VolumeScanTracker`, `scan_volume_recursive`, `emit_cancelled_if_aborted`, and `delete_volume_files_with_progress_inner` (about 700 lines) move to `volume_walker.rs`, beside the existing `volume_start.rs` that already holds the volume delete's managed lifecycle for the same reason. `delete/CLAUDE.md` already describes them as parallel paths with `delete_files_start` routing by `volume_id`, and the test siblings are split the same way (`delete_cancel_tests.rs` against the local path, `volume_cancel_tests.rs` and `delete_volume_reuse_tests.rs` against the volume one)."

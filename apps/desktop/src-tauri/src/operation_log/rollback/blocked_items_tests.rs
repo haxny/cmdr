@@ -18,7 +18,11 @@ use crate::operation_log::types::{OpKind, RollbackState};
 fn register_root(rig: &Rig) {
     rig.vm.register(
         "root",
-        Arc::new(LocalPosixVolume::local_folder("Test root", "/")) as Arc<dyn Volume>,
+        Arc::new(LocalPosixVolume::local_folder(
+            "Test root",
+            "/",
+            crate::volume_host::host(),
+        )) as Arc<dyn Volume>,
     );
 }
 

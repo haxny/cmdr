@@ -563,7 +563,9 @@ async fn a_rollback_removes_a_locked_copy_and_a_locked_folder_it_made() {
     set_flags(&fixture.join("loose.txt"), LOCKED_FLAG);
     set_flags(&fixture.join("album"), LOCKED_FLAG);
     let volume: Arc<dyn Volume> = Arc::new(crate::file_system::volume::LocalPosixVolume::local_folder(
-        "Local", &*fixture,
+        "Local",
+        &*fixture,
+        crate::volume_host::host(),
     ));
 
     roll_back(

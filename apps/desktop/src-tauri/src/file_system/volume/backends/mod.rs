@@ -41,6 +41,10 @@ pub(crate) use super::{
 
 #[cfg(test)]
 mod local_posix_test;
+// The cells that drive the app's real host (listing cache, collator, FSEvents
+// watcher) rather than a detached or recording one.
+#[cfg(test)]
+mod local_posix_host_test;
 // The shared `volume::conformance` assertions LocalPosix runs, split out the way
 // every other backend keeps its own (SMB's, SFTP's, and MTP's
 // `volume::conformance_test`).

@@ -104,7 +104,11 @@ pub fn delete_local(sources: &[PathBuf]) -> Result<(), WriteOperationError> {
 
 /// A local volume over `root`, the destination a cross-volume copy streams into.
 pub fn local_volume(root: impl Into<PathBuf>) -> Arc<dyn Volume> {
-    Arc::new(LocalPosixVolume::local_folder("Transfer bench", root))
+    Arc::new(LocalPosixVolume::local_folder(
+        "Transfer bench",
+        root,
+        crate::volume_host::host(),
+    ))
 }
 
 /// A cross-volume copy through `copy_volumes_with_progress`: the chunked

@@ -583,6 +583,7 @@ pub(crate) async fn return_to_os_mount(volume_id: &str) -> bool {
         current.name(),
         current.root(),
         cmdr_fs::volume::MountClass::SmbShare,
+        crate::volume_host::host(),
     ));
     register_replacing_predecessor(volume_id, os_mount).await;
     log::info!(

@@ -26,7 +26,11 @@ fn repo_registered_as_the_local_drive(name: &str) -> std::path::PathBuf {
     fixture.commit_file("notes.txt", b"line one\nline two\n", "initial");
     get_volume_manager().register(
         "root",
-        Arc::new(LocalPosixVolume::local_folder("Root", dir.to_str().unwrap())),
+        Arc::new(LocalPosixVolume::local_folder(
+            "Root",
+            dir.to_str().unwrap(),
+            crate::volume_host::host(),
+        )),
     );
     git::wiring::set_virtual_portal_enabled(true);
     dir

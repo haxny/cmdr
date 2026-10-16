@@ -25,6 +25,7 @@ use crate::ignore_poison::IgnorePoison;
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::metadata::{CarriedMetadata, MetadataCaps, MetadataClasses, MetadataReport, Unblock, UserFlags};
 use cmdr_fs::volume::MountClass;
+use cmdr_fs::volume::host::VolumeHost;
 use cmdr_fs::volume::listing_progress::report_while;
 use reading::{ListingTally, get_single_entry, list_directory_core_with_tally};
 use std::future::Future;
@@ -197,6 +198,12 @@ pub struct LocalPosixVolume {
     /// path. The real probe outside tests, which inject one to play a FAT
     /// volume on APFS. See [`Volume::list_directory_as_source`].
     sidecar_probe: fn(&Path) -> bool,
+    /// The app around this volume: the pane listings it patches after a
+    /// mutation, the watch coverage it reports, and the name order its listings
+    /// come back in. ❗ A required argument, never a default: a volume built with
+    /// a detached host silently turns off the scan oracle's fast path and leaves
+    /// panes stale after every local copy.
+    host: VolumeHost,
     /// Raw errno to inject on the next `list_directory` call. Cleared after use.
     #[cfg(feature = "playwright-e2e")]
     injected_error: std::sync::Mutex<Option<i32>>,
@@ -209,23 +216,25 @@ impl LocalPosixVolume {
     /// # Arguments
     /// * `name` - Display name (like "Macintosh HD", "Dropbox")
     /// * `root` - Absolute path to the volume root (like "/", "/Users/you/Dropbox")
+    /// * `host` - The app around it (`volume_host::host()` in Cmdr)
     ///
     /// ❗ Named for what it assumes. A MOUNT goes through [`Self::on_mount`] with
     /// the class its registration probed: a network mount built here would
     /// publish itself as indexable, and the user would be offered indexing that
     /// could only be refused.
-    pub fn local_folder(name: impl Into<String>, root: impl Into<PathBuf>) -> Self {
-        Self::on_mount(name, root, MountClass::LocalDisk)
+    pub fn local_folder(name: impl Into<String>, root: impl Into<PathBuf>, host: VolumeHost) -> Self {
+        Self::on_mount(name, root, MountClass::LocalDisk, host)
     }
 
     /// A volume rooted at a mount, with the [`MountClass`] its registration found
     /// (`index_provider::mount_class_at`).
-    pub fn on_mount(name: impl Into<String>, root: impl Into<PathBuf>, mount: MountClass) -> Self {
+    pub fn on_mount(name: impl Into<String>, root: impl Into<PathBuf>, mount: MountClass, host: VolumeHost) -> Self {
         Self {
             name: name.into(),
             root: root.into(),
             mount,
             sidecar_probe: cmdr_fs::apple_double::volume_keeps_sidecars,
+            host,
             #[cfg(feature = "playwright-e2e")]
             injected_error: std::sync::Mutex::new(None),
         }
@@ -299,12 +308,14 @@ impl Volume for LocalPosixVolume {
     /// The root is pure addressing here (every method `resolve`s against it and
     /// calls `std::fs`), so a re-root is a new instance at the new prefix. That
     /// is what lets the registry hand a doubly-mounted share's ID to the mount
-    /// that's still live when the active one goes away.
+    /// that's still live when the active one goes away. The new instance keeps
+    /// this one's host.
     fn rerooted(&self, new_root: &Path) -> Option<Arc<dyn Volume>> {
         Some(Arc::new(LocalPosixVolume::on_mount(
             self.name.clone(),
             new_root,
             self.mount,
+            self.host.clone(),
         )))
     }
 
@@ -342,8 +353,9 @@ impl Volume for LocalPosixVolume {
             // whole read. `volume/backends/DETAILS.md` § "The local reader".
             let tally = Arc::new(ListingTally::default());
             let tally_for_listing = Arc::clone(&tally);
+            let host = self.host.clone();
             let listing = spawn_blocking(move || {
-                list_directory_core_with_tally(&abs_path, &tally_for_listing, is_volume_root)
+                list_directory_core_with_tally(&abs_path, &tally_for_listing, is_volume_root, host.listings())
                     .map_err(|e| VolumeError::from_io_at(&e, &abs_path))
             });
             report_while(listing, PROGRESS_SAMPLE_INTERVAL, || tally.snapshot(), on_progress)
@@ -435,7 +447,7 @@ impl Volume for LocalPosixVolume {
         mutation: super::MutationEvent,
     ) -> Pin<Box<dyn Future<Output = ()> + Send + 'a>> {
         Box::pin(async move {
-            mutation::patch_listing_after_local_mutation(volume_id, parent_path, mutation);
+            mutation::patch_listing_after_local_mutation(self.host.listings(), volume_id, parent_path, mutation);
         })
     }
 
@@ -447,24 +459,8 @@ impl Volume for LocalPosixVolume {
         // Resolve relative-to-volume paths to their absolute form so the comparison
         // against the listing cache (which stores absolute paths) lines up.
         let abs_path = self.resolve(path);
-        // Find any listing on this path (volume-agnostic: the listing cache is keyed
-        // by listing_id and tagged with a volume_id, but LocalPosixVolume doesn't
-        // store its own volume_id — the manager assigns it at registration time).
-        let listings = crate::listing_host::listings().listings_for_local_path(&abs_path);
-        if listings.is_empty() {
-            return WatchCoverage::None;
-        }
-        // A listing exists; report what the FSEvents watch attached to it covers.
-        // There's a race window between the listing being populated and the watcher
-        // being registered, during which this deliberately answers `None` (the
-        // listing exists but isn't being kept fresh yet).
-        //
-        // The coverage was decided when the watch was armed, so this stays a pure
-        // in-memory read: a `statfs` here would land in the middle of every
-        // recursive scan walk. `watcher::coverage_for_watched_path` is where the
-        // network-mount question is actually asked.
-        let listing_ids: Vec<String> = listings.into_iter().map(|id| id.as_str().to_string()).collect();
-        crate::file_system::watcher::coverage_for_listings(&listing_ids)
+        // By path: this volume doesn't know its own id (the registry assigns it).
+        self.host.listings().local_watch_coverage(&abs_path)
     }
 
     fn local_path(&self) -> Option<PathBuf> {

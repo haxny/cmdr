@@ -85,7 +85,11 @@ const COPIED: [&str; 4] = ["hidden.txt", "locked.txt", "big.bin", "album"];
 async fn smb_integration_a_copy_onto_a_share_keeps_hidden_and_locked() {
     let (remote, dir) = fixture().await;
     let tree = flagged_local_tree("smb_flags_onto_share");
-    let local: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder("Local", &*tree));
+    let local: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
+        "Local",
+        &*tree,
+        crate::volume_host::host(),
+    ));
 
     run_copy(
         "flags-onto-share",
@@ -152,7 +156,11 @@ async fn smb_integration_a_copy_off_a_share_keeps_hidden_and_locked() {
         );
     }
     let landed = MetadataFixture::new("smb_flags_off_share");
-    let local: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder("Local", &*landed));
+    let local: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
+        "Local",
+        &*landed,
+        crate::volume_host::host(),
+    ));
 
     run_copy(
         "flags-off-share",
@@ -209,7 +217,11 @@ async fn smb_integration_a_rollback_removes_a_locked_copy_on_the_share() {
     // the volume's root: the path the transfer dialog would hand in.
     let dir = remote.root().join(dir);
     let tree = flagged_local_tree("smb_flags_rollback");
-    let local: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder("Local", &*tree));
+    let local: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
+        "Local",
+        &*tree,
+        crate::volume_host::host(),
+    ));
     let vm = VolumeManager::new();
     vm.register("smb-flags-rollback-source", Arc::clone(&local));
     vm.register("smb-flags-rollback-dest", Arc::clone(&remote));

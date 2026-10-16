@@ -649,7 +649,11 @@ async fn a_compress_confirmed_mid_scan_awaits_its_preview() {
     let src_root = dir.join("src");
     std::fs::create_dir_all(&src_root).expect("mkdir src");
     std::fs::write(src_root.join("one.txt"), b"first").expect("w1");
-    let source_volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder("src", src_root.clone()));
+    let source_volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
+        "src",
+        src_root.clone(),
+        crate::volume_host::host(),
+    ));
     let dest = dir.join("bundle.zip");
 
     let preview_id = unique("preview");

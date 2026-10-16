@@ -69,7 +69,7 @@ use std::time::{Duration, Instant};
 /// body keep reading like the `PathBuf` it replaced (`dir.join("a.txt")`,
 /// `dir.to_string_lossy()`). `AsRef` is what a generic `impl AsRef<Path>`
 /// parameter takes, and deref coercion cannot reach through a type parameter:
-/// `LocalPosixVolume::local_folder("Test", &dir)` fails to compile without it.
+/// `LocalPosixVolume::local_folder("Test", &dir, host)` fails to compile without it.
 /// `tempfile::TempDir` ships only the `AsRef` half, which is exactly why this
 /// wrapper exists.
 #[derive(Debug)]

@@ -35,7 +35,7 @@ fn repo(name: &str) -> PathBuf {
 async fn a_volume_listing_of_dot_git_carries_no_virtual_category() {
     let dir = repo("volume_listing");
     super::wiring::set_virtual_portal_enabled(true);
-    let volume = LocalPosixVolume::local_folder("Test", &dir);
+    let volume = LocalPosixVolume::local_folder("Test", &dir, crate::volume_host::host());
 
     let names: Vec<String> = volume
         .list_directory(Path::new(".git"), None)
@@ -61,7 +61,8 @@ async fn a_volume_listing_of_dot_git_carries_no_virtual_category() {
 async fn an_overlay_decorated_listing_of_dot_git_shows_the_six_rows() {
     let dir = repo("overlay_listing");
     super::wiring::set_virtual_portal_enabled(true);
-    let volume: std::sync::Arc<dyn Volume> = std::sync::Arc::new(LocalPosixVolume::local_folder("Test", &dir));
+    let volume: std::sync::Arc<dyn Volume> =
+        std::sync::Arc::new(LocalPosixVolume::local_folder("Test", &dir, crate::volume_host::host()));
     let dot_git = dir.join(".git");
 
     let mut entries = volume.list_directory(&dot_git, None).await.expect("listing .git");
@@ -84,7 +85,8 @@ async fn an_overlay_decorated_listing_of_dot_git_shows_the_six_rows() {
 #[tokio::test]
 async fn the_toggle_off_contributes_nothing_to_a_dot_git_listing() {
     let dir = repo("overlay_toggle_off");
-    let volume: std::sync::Arc<dyn Volume> = std::sync::Arc::new(LocalPosixVolume::local_folder("Test", &dir));
+    let volume: std::sync::Arc<dyn Volume> =
+        std::sync::Arc::new(LocalPosixVolume::local_folder("Test", &dir, crate::volume_host::host()));
     let dot_git = dir.join(".git");
 
     super::wiring::set_virtual_portal_enabled(false);
@@ -109,7 +111,7 @@ async fn the_toggle_off_contributes_nothing_to_a_dot_git_listing() {
 async fn the_volume_delete_walker_never_meets_a_virtual_folder() {
     let dir = repo("volume_delete_walk");
     super::wiring::set_virtual_portal_enabled(true);
-    let volume = LocalPosixVolume::local_folder("Test", &dir);
+    let volume = LocalPosixVolume::local_folder("Test", &dir, crate::volume_host::host());
 
     // What `delete_volume_files_with_progress_inner` does per directory.
     let children = volume.list_directory(Path::new(".git"), None).await.unwrap();
@@ -150,7 +152,7 @@ async fn the_volume_delete_walker_never_meets_a_virtual_folder() {
 async fn real_files_under_dot_git_stay_fully_mutable() {
     let dir = repo("real_file_mutability");
     super::wiring::set_virtual_portal_enabled(true);
-    let volume = LocalPosixVolume::local_folder("Test", &dir);
+    let volume = LocalPosixVolume::local_folder("Test", &dir, crate::volume_host::host());
 
     // Reading `.git/config`'s real bytes and streaming them back out to a copy
     // beside it: the two stream methods that used to be claimed by the portal.
@@ -205,7 +207,7 @@ async fn real_files_under_dot_git_stay_fully_mutable() {
 async fn the_copy_scan_counts_only_what_is_on_disk() {
     let dir = repo("copy_scan");
     super::wiring::set_virtual_portal_enabled(true);
-    let volume = LocalPosixVolume::local_folder("Test", &dir);
+    let volume = LocalPosixVolume::local_folder("Test", &dir, crate::volume_host::host());
 
     let scanned = volume
         .scan_for_copy_batch(std::slice::from_ref(&dir))
@@ -239,7 +241,8 @@ async fn the_listing_oracle_declines_an_overlay_decorated_dot_git_listing() {
     let dot_git = dir.join(".git");
     super::wiring::set_virtual_portal_enabled(true);
 
-    let volume: std::sync::Arc<dyn Volume> = std::sync::Arc::new(LocalPosixVolume::local_folder("Test", &dir));
+    let volume: std::sync::Arc<dyn Volume> =
+        std::sync::Arc::new(LocalPosixVolume::local_folder("Test", &dir, crate::volume_host::host()));
     let mut cached = volume.list_directory(&dot_git, None).await.unwrap();
     let added = cmdr_listing::testing::decorate(crate::listing_host::listings(), &volume, &dot_git, &mut cached).await;
     assert_eq!(added, 6, "the pane's listing holds the six virtual rows");
@@ -288,7 +291,11 @@ async fn a_linked_worktree_serves_the_categories_but_has_no_dot_git_landing() {
     // overlay never runs. The rewritten real rows it used to show couldn't be
     // opened anyway (`<linked>/.git/HEAD` is a path THROUGH a file), so the
     // portal simply starts one level down here.
-    let volume: std::sync::Arc<dyn Volume> = std::sync::Arc::new(LocalPosixVolume::local_folder("Test", &linked));
+    let volume: std::sync::Arc<dyn Volume> = std::sync::Arc::new(LocalPosixVolume::local_folder(
+        "Test",
+        &linked,
+        crate::volume_host::host(),
+    ));
     assert!(
         volume.list_directory(&gitlink, None).await.is_err(),
         "listing a gitlink file is an error, not a portal root"
@@ -304,7 +311,11 @@ async fn a_linked_worktree_serves_the_categories_but_has_no_dot_git_landing() {
         crate::volume_host::host(),
         cmdr_git::no_git_state_sink(),
     ));
-    let parent: std::sync::Arc<dyn Volume> = std::sync::Arc::new(LocalPosixVolume::local_folder("Parent", &linked));
+    let parent: std::sync::Arc<dyn Volume> = std::sync::Arc::new(LocalPosixVolume::local_folder(
+        "Parent",
+        &linked,
+        crate::volume_host::host(),
+    ));
     let branches = cmdr_git::GitPortalVolume::new(portal, linked.clone(), parent)
         .list_directory(&gitlink.join("branches"), None)
         .await

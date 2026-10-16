@@ -25,7 +25,14 @@ use cmdr_fs::entry::FileEntry;
 /// Registers a real local-FS "root" volume so `resolve("root", …)` finds a parent for the
 /// on-demand `ArchiveVolume`. Idempotent; the shape `materialize_test.rs` uses.
 fn ensure_root_volume() {
-    get_volume_manager().register_if_absent("root", Arc::new(LocalPosixVolume::local_folder("Test root", "/")));
+    get_volume_manager().register_if_absent(
+        "root",
+        Arc::new(LocalPosixVolume::local_folder(
+            "Test root",
+            "/",
+            crate::volume_host::host(),
+        )),
+    );
 }
 
 fn write_bytes(dir: &TestDir, name: &str, bytes: &[u8]) -> PathBuf {

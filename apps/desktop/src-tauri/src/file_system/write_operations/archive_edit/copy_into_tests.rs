@@ -32,7 +32,11 @@ async fn copy_into_adds_a_local_directory_tree_and_skips_conflicts() {
     std::fs::write(src_root.join("payload/sub/deep.txt"), b"deep").expect("w3");
 
     // A local-FS source volume rooted at src_root (drives `local_path()`).
-    let source_volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder("src", src_root.clone()));
+    let source_volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
+        "src",
+        src_root.clone(),
+        crate::volume_host::host(),
+    ));
 
     let events = Arc::new(CollectorEventSink::new());
     // Destination is the archive ROOT, so the source dir `payload` lands as `payload/`.
@@ -85,7 +89,11 @@ async fn run_policy_copy_into(
     use crate::file_system::volume::backends::LocalPosixVolume;
     use crate::file_system::write_operations::route_archive_copy_into;
 
-    let source_volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder("src", src_root.to_path_buf()));
+    let source_volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
+        "src",
+        src_root.to_path_buf(),
+        crate::volume_host::host(),
+    ));
     let events = Arc::new(CollectorEventSink::new());
     route_archive_copy_into(
         Arc::clone(&events) as Arc<dyn OperationEventSink>,
@@ -404,7 +412,11 @@ async fn move_into_a_top_level_symlink_preserves_the_source_and_surfaces_the_ski
     std::fs::write(src_root.join("target.txt"), b"real").expect("target");
     std::os::unix::fs::symlink("target.txt", src_root.join("link")).expect("symlink");
 
-    let source_volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder("src", src_root.clone()));
+    let source_volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
+        "src",
+        src_root.clone(),
+        crate::volume_host::host(),
+    ));
     let events = Arc::new(CollectorEventSink::new());
     route_archive_copy_into(
         Arc::clone(&events) as Arc<dyn OperationEventSink>,
@@ -460,7 +472,11 @@ async fn move_into_a_dir_containing_a_symlink_preserves_the_whole_source_tree() 
     std::fs::write(src_root.join("d/real.txt"), b"real").expect("real");
     std::os::unix::fs::symlink("real.txt", src_root.join("d/link")).expect("symlink");
 
-    let source_volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder("src", src_root.clone()));
+    let source_volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
+        "src",
+        src_root.clone(),
+        crate::volume_host::host(),
+    ));
     let events = Arc::new(CollectorEventSink::new());
     route_archive_copy_into(
         Arc::clone(&events) as Arc<dyn OperationEventSink>,
@@ -522,7 +538,11 @@ async fn move_into_a_broken_symlink_preserves_the_source() {
     std::fs::create_dir_all(&src_root).expect("mkdir src");
     std::os::unix::fs::symlink("/nonexistent/target-xyz", src_root.join("broken")).expect("symlink");
 
-    let source_volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder("src", src_root.clone()));
+    let source_volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
+        "src",
+        src_root.clone(),
+        crate::volume_host::host(),
+    ));
     let events = Arc::new(CollectorEventSink::new());
     route_archive_copy_into(
         Arc::clone(&events) as Arc<dyn OperationEventSink>,
@@ -572,7 +592,11 @@ async fn copy_into_a_remote_archive_lands_the_file_via_the_pulled_local_copy() {
     let src_root = tmp.path().join("src");
     std::fs::create_dir_all(&src_root).expect("mkdir src");
     std::fs::write(src_root.join("new.txt"), b"fresh").expect("w");
-    let source_volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder("src", src_root.clone()));
+    let source_volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
+        "src",
+        src_root.clone(),
+        crate::volume_host::host(),
+    ));
 
     // The archive lives on a NON-local parent — `/device/bundle.zip` is not a real
     // local file, so planning MUST run against the pulled-local working copy.
@@ -682,7 +706,11 @@ async fn a_named_copy_into_zip_uses_the_requested_leaf_and_preserves_existing_en
     }
     std::fs::write(tmp.path().join("original.txt"), b"new bytes").unwrap();
     for policy in [ConflictResolution::Skip, ConflictResolution::Overwrite] {
-        let source: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder("src", tmp.path().to_path_buf()));
+        let source: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
+            "src",
+            tmp.path().to_path_buf(),
+            crate::volume_host::host(),
+        ));
         let events = Arc::new(CollectorEventSink::new());
         route_archive_copy_into_with_provenance(
             events.clone(),
@@ -733,7 +761,11 @@ async fn a_named_move_into_zip_deletes_only_the_source_that_landed() {
         }
         let original = tmp.path().join("original.txt");
         std::fs::write(&original, b"new bytes").unwrap();
-        let source: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder("src", tmp.path().to_path_buf()));
+        let source: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
+            "src",
+            tmp.path().to_path_buf(),
+            crate::volume_host::host(),
+        ));
         let events = Arc::new(CollectorEventSink::new());
         route_archive_copy_into_with_provenance(
             events.clone(),

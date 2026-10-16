@@ -86,7 +86,11 @@ async fn a_source_that_never_answers_still_lets_the_destination_answer() {
     );
     let _dest = TestVolumeRegistration::install(
         "starving-dest",
-        Arc::new(LocalPosixVolume::local_folder("Dest", dest_dir.path())) as Arc<dyn Volume>,
+        Arc::new(LocalPosixVolume::local_folder(
+            "Dest",
+            dest_dir.path(),
+            crate::volume_host::host(),
+        )) as Arc<dyn Volume>,
     );
 
     let budget = Duration::from_millis(900);
@@ -123,7 +127,11 @@ async fn a_same_folder_copy_finds_no_conflicts() {
     std::fs::create_dir(dir.path().join("docs")).expect("create source dir");
     let _volume = TestVolumeRegistration::install(
         "self-collision-scan",
-        Arc::new(LocalPosixVolume::local_folder("Duplicates", dir.path())) as Arc<dyn Volume>,
+        Arc::new(LocalPosixVolume::local_folder(
+            "Duplicates",
+            dir.path(),
+            crate::volume_host::host(),
+        )) as Arc<dyn Volume>,
     );
 
     let conflicts = scan_volume_for_conflicts_within(
@@ -156,11 +164,19 @@ async fn a_different_file_of_the_same_name_is_still_a_conflict() {
     std::fs::write(dest_dir.path().join("photo.jpg"), b"theirs").expect("write dest");
     let _source = TestVolumeRegistration::install(
         "self-collision-scan-source",
-        Arc::new(LocalPosixVolume::local_folder("Source", source_dir.path())) as Arc<dyn Volume>,
+        Arc::new(LocalPosixVolume::local_folder(
+            "Source",
+            source_dir.path(),
+            crate::volume_host::host(),
+        )) as Arc<dyn Volume>,
     );
     let _dest = TestVolumeRegistration::install(
         "self-collision-scan-dest",
-        Arc::new(LocalPosixVolume::local_folder("Dest", dest_dir.path())) as Arc<dyn Volume>,
+        Arc::new(LocalPosixVolume::local_folder(
+            "Dest",
+            dest_dir.path(),
+            crate::volume_host::host(),
+        )) as Arc<dyn Volume>,
     );
 
     let conflicts = scan_volume_for_conflicts_within(
@@ -192,7 +208,11 @@ async fn a_source_reached_through_a_symlinked_parent_finds_no_conflicts() {
     std::os::unix::fs::symlink(&real, &link).expect("symlink the parent");
     let _volume = TestVolumeRegistration::install(
         "self-collision-scan-symlink",
-        Arc::new(LocalPosixVolume::local_folder("Duplicates", dir.path())) as Arc<dyn Volume>,
+        Arc::new(LocalPosixVolume::local_folder(
+            "Duplicates",
+            dir.path(),
+            crate::volume_host::host(),
+        )) as Arc<dyn Volume>,
     );
 
     let conflicts = scan_volume_for_conflicts_within(

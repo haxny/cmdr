@@ -137,7 +137,11 @@ async fn streaming_copy_cancel_while_paused_mid_file_unblocks() {
     // `LocalPosixVolume`. On cancel its `write_from_stream` returns typed
     // `VolumeError::Cancelled` and removes the in-flight partial.
     let dst_dir = TestDir::new("midchunk_cancel_dst");
-    let dest: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder("Dest", dst_dir.to_str().unwrap()));
+    let dest: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
+        "Dest",
+        dst_dir.to_str().unwrap(),
+        crate::volume_host::host(),
+    ));
 
     // Install into the global state cache so the production cancel API reaches it.
     let op = TestOperationGuard::register_state("test-midchunk-cancel", make_state());
@@ -228,7 +232,11 @@ async fn paused_mtp_copy_parks_in_place_then_resumes_byte_exact() {
     });
 
     let dst_dir = TestDir::new("relpause_dst");
-    let dest: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder("Dest", dst_dir.to_str().unwrap()));
+    let dest: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
+        "Dest",
+        dst_dir.to_str().unwrap(),
+        crate::volume_host::host(),
+    ));
 
     let state = make_state();
     // Watches the bytes the copy REPORTS, which is the number the transfer
@@ -327,7 +335,11 @@ async fn paused_mtp_copy_cancel_while_paused_keeps_no_partial() {
     });
 
     let dst_dir = TestDir::new("relpause_cancel_dst");
-    let dest: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder("Dest", dst_dir.to_str().unwrap()));
+    let dest: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
+        "Dest",
+        dst_dir.to_str().unwrap(),
+        crate::volume_host::host(),
+    ));
 
     let op = TestOperationGuard::register_state("test-relpause-cancel", make_state());
     let op_id = op.id().to_string();
@@ -416,7 +428,11 @@ async fn unpaused_mtp_copy_streams_straight_through() {
     });
 
     let dst_dir = TestDir::new("relpause_nopause_dst");
-    let dest: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder("Dest", dst_dir.to_str().unwrap()));
+    let dest: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
+        "Dest",
+        dst_dir.to_str().unwrap(),
+        crate::volume_host::host(),
+    ));
 
     let state = make_state();
     let bytes = copy_single_path(

@@ -716,7 +716,8 @@ mod macos_fs_tests {
         // Sanity: the tag really is on disk.
         assert_eq!(read_tags(&file).len(), 1, "fixture precondition: file is tagged");
 
-        let entries = list_directory_core(&dir).expect("list temp dir");
+        let entries =
+            list_directory_core(&dir, cmdr_fs::volume::host::VolumeHost::detached().listings()).expect("list temp dir");
         let entry = entries.iter().find(|e| e.name == "tagged.txt").expect("entry present");
         assert!(
             entry.tags.is_empty(),

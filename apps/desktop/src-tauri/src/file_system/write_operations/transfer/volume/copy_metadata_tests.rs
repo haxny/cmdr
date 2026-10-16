@@ -22,7 +22,11 @@ use crate::file_system::write_operations::types::VolumeCopyConfig;
 use crate::test_support::TestDir;
 
 async fn copy_onto_local(op: &str, source: Arc<InMemoryVolume>, paths: &[PathBuf], dest_dir: &Path) {
-    let dest: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder("Local", dest_dir));
+    let dest: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
+        "Local",
+        dest_dir,
+        crate::volume_host::host(),
+    ));
     copy_volumes_with_progress(
         Arc::new(CollectorEventSink::new()),
         op,

@@ -15,12 +15,12 @@ use std::path::Path;
 use std::pin::Pin;
 
 use crate::entry::FileEntry;
-use crate::volume::DirectoryChange;
+use crate::volume::{DirectoryChange, WatchCoverage};
 
 /// The pane listings, from a backend's point of view.
 ///
-/// Cmdr answers all three from `cmdr_listing::caching`; a test or a tool
-/// answers none (`NoListings`).
+/// Cmdr answers these from `cmdr_listing::caching`; a test or a tool answers
+/// none (`NoListings`).
 pub trait ListingHost: Send + Sync {
     /// A directory's contents changed on `volume_id`.
     ///
@@ -86,6 +86,31 @@ pub trait ListingHost: Send + Sync {
         volume_id: &'a str,
         archive_path: &'a Path,
     ) -> Pin<Box<dyn Future<Output = ()> + Send + 'a>>;
+
+    /// What the live watch on a pane showing the LOCAL directory `abs_path`
+    /// covers, or [`WatchCoverage::None`] when no pane shows it or its watch
+    /// isn't armed yet.
+    ///
+    /// For the local backend's `Volume::listing_watch_coverage`: a local volume
+    /// doesn't know its own id, so it asks by absolute path. A pure in-memory
+    /// read, called once per directory a walker visits, which the dispatch rule
+    /// allows; ❌ never a `statfs` here, since the coverage was decided when the
+    /// watch was armed.
+    fn local_watch_coverage(&self, _abs_path: &Path) -> WatchCoverage {
+        WatchCoverage::None
+    }
+
+    /// Puts one directory's entries in the panes' name order: folders first,
+    /// then by name.
+    ///
+    /// For the local reader, whose callers (the engine's walkers, the rollback
+    /// planner, the watcher's fallback re-read) take a listing's order as is.
+    /// One call per directory, ❌ never per entry. The default orders names by
+    /// their bytes, since only the host knows the panes' collator; Cmdr answers
+    /// with the locale's natural order.
+    fn sort_listing(&self, entries: &mut [FileEntry]) {
+        entries.sort_by(|a, b| b.is_directory.cmp(&a.is_directory).then_with(|| a.name.cmp(&b.name)));
+    }
 }
 
 /// Nothing is showing anything: changes go nowhere and the oracle always misses.
@@ -123,7 +148,7 @@ mod recording {
     use std::sync::Mutex;
     use std::sync::atomic::{AtomicUsize, Ordering};
 
-    use super::{DirectoryChange, FileEntry, Future, ListingHost, Path, Pin};
+    use super::{DirectoryChange, FileEntry, Future, ListingHost, Path, Pin, WatchCoverage};
     use crate::ignore_poison::IgnorePoison;
 
     /// A [`ListingHost`] that remembers what it was told, so
@@ -141,6 +166,7 @@ mod recording {
         open_volumes: Mutex<Vec<String>>,
         authoritative_lookups: AtomicUsize,
         archive_refreshes: Mutex<Vec<(String, PathBuf)>>,
+        local_coverage: Mutex<Vec<(PathBuf, WatchCoverage)>>,
     }
 
     impl RecordingListings {
@@ -177,6 +203,17 @@ mod recording {
                 open.push(volume_id.to_string());
             }
             drop(open);
+            self
+        }
+
+        /// Makes `coverage` the answer for one
+        /// [`local_watch_coverage`](super::ListingHost::local_watch_coverage)
+        /// lookup, as if a pane were showing the local directory `abs_path` under
+        /// a watch that covers that much. Every other path answers `None`.
+        pub fn with_local_watch_coverage(self, abs_path: impl Into<PathBuf>, coverage: WatchCoverage) -> Self {
+            self.local_coverage
+                .lock_ignore_poison()
+                .push((abs_path.into(), coverage));
             self
         }
 
@@ -236,6 +273,14 @@ mod recording {
                 .lock_ignore_poison()
                 .push((volume_id.to_string(), archive_path.to_path_buf()));
             Box::pin(async {})
+        }
+
+        fn local_watch_coverage(&self, abs_path: &Path) -> WatchCoverage {
+            self.local_coverage
+                .lock_ignore_poison()
+                .iter()
+                .find(|(path, _)| path == abs_path)
+                .map_or(WatchCoverage::None, |(_, coverage)| *coverage)
         }
     }
 }

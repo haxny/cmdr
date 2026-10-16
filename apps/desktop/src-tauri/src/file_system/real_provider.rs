@@ -10,6 +10,6 @@ pub struct RealFileSystemProvider;
 
 impl FileSystemProvider for RealFileSystemProvider {
     fn list_directory(&self, path: &Path) -> Result<Vec<FileEntry>, std::io::Error> {
-        list_directory(path)
+        list_directory(path, &crate::listing_host::backends::AppListings)
     }
 }

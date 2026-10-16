@@ -155,7 +155,7 @@ impl Volume for LinkFollowingVolume {
 fn following_volume() -> (Arc<dyn Volume>, TempDir) {
     let dir = TempDir::new().unwrap();
     let volume: Arc<dyn Volume> = Arc::new(LinkFollowingVolume {
-        inner: LocalPosixVolume::local_folder("V", dir.path().to_path_buf()),
+        inner: LocalPosixVolume::local_folder("V", dir.path().to_path_buf(), crate::volume_host::host()),
         link_takes_freed_name: None,
         shared_scan_walk: false,
     });
@@ -172,7 +172,7 @@ async fn a_copied_folder_holding_a_dir_link_ends_with_every_tree_row_done() {
     let dir = TempDir::new().unwrap();
     let root = dir.path();
     let source: Arc<dyn Volume> = Arc::new(LinkFollowingVolume {
-        inner: LocalPosixVolume::local_folder("V", root.to_path_buf()),
+        inner: LocalPosixVolume::local_folder("V", root.to_path_buf(), crate::volume_host::host()),
         link_takes_freed_name: None,
         shared_scan_walk: true,
     });
@@ -213,7 +213,7 @@ async fn a_link_racing_into_a_freed_name_is_never_merged_into() {
     let dir = TempDir::new().unwrap();
     let root = dir.path();
     let volume: Arc<dyn Volume> = Arc::new(LinkFollowingVolume {
-        inner: LocalPosixVolume::local_folder("V", root.to_path_buf()),
+        inner: LocalPosixVolume::local_folder("V", root.to_path_buf(), crate::volume_host::host()),
         link_takes_freed_name: Some((PathBuf::from("dst/album/thing"), root.join("outside/target"))),
         shared_scan_walk: false,
     });
@@ -381,7 +381,11 @@ async fn a_same_volume_move_onto_a_dir_link_never_lands_in_the_target() {
 
 fn plain_volume() -> (Arc<dyn Volume>, TempDir) {
     let dir = TempDir::new().unwrap();
-    let volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder("V", dir.path().to_path_buf()));
+    let volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
+        "V",
+        dir.path().to_path_buf(),
+        crate::volume_host::host(),
+    ));
     (volume, dir)
 }
 

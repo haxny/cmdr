@@ -240,6 +240,51 @@ fn open_listings_are_answered_by_volume_id_prefix() {
     assert!(listings.volumes_with_open_listings("mtp-0-3").is_empty());
 }
 
+/// A local volume asks what a pane's watch covers by absolute path. With no pane
+/// showing the path, the answer is `None` ("ask the disk"), ❌ never a claim that
+/// some watch keeps it fresh.
+#[test]
+fn local_watch_coverage_is_none_unless_a_pane_watches_that_exact_path() {
+    use crate::volume::WatchCoverage;
+
+    assert_eq!(
+        VolumeHost::detached()
+            .listings()
+            .local_watch_coverage(Path::new("/shown")),
+        WatchCoverage::None
+    );
+    let listings = RecordingListings::new().with_local_watch_coverage("/shown", WatchCoverage::ThisMachineOnly);
+    assert_eq!(
+        listings.local_watch_coverage(Path::new("/shown")),
+        WatchCoverage::ThisMachineOnly
+    );
+    assert_eq!(
+        listings.local_watch_coverage(Path::new("/shown/child")),
+        WatchCoverage::None,
+        "a watch covers the directory a pane shows, not the tree under it"
+    );
+}
+
+/// Without the app's collator, a listing still comes out folders first, then
+/// by name, so a walker's order is stable from run to run.
+#[test]
+fn a_detached_host_sorts_a_listing_folders_first_then_by_name_bytes() {
+    let entry = |name: &str, is_dir: bool| FileEntry::new(name.to_string(), format!("/d/{name}"), is_dir, false);
+    let mut entries = vec![
+        entry("b.txt", false),
+        entry("Z-folder", true),
+        entry("B.txt", false),
+        entry("a-folder", true),
+    ];
+
+    VolumeHost::detached().listings().sort_listing(&mut entries);
+
+    assert_eq!(
+        entries.iter().map(|e| e.name.as_str()).collect::<Vec<_>>(),
+        ["Z-folder", "a-folder", "B.txt", "b.txt"]
+    );
+}
+
 /// A device reports object changes by bare PTP handle, and the index resolves
 /// what they are. The seam carries the handle and nothing else, so a backend
 /// never pays a device round trip the index may be about to make anyway.

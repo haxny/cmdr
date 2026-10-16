@@ -224,6 +224,7 @@ async fn rename_managed_routes_an_in_archive_rename_to_the_edit_driver() {
         Arc::new(crate::file_system::volume::LocalPosixVolume::local_folder(
             "Test root",
             "/",
+            crate::volume_host::host(),
         )),
     );
 

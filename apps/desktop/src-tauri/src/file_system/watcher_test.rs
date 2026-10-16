@@ -280,7 +280,9 @@ fn entries_that_went_with_a_replaced_watch_root_leave_the_listing() {
     let listing = TestListing::new()
         .volume(&unique_test_id("watch-root-replaced-vol"))
         .path(&watched)
-        .entries(list_directory_core(&watched).expect("the fresh dir lists"))
+        .entries(
+            list_directory_core(&watched, &crate::listing_host::backends::AppListings).expect("the fresh dir lists"),
+        )
         .insert(crate::listing_host::listings(), "watch-root-replaced");
     start_watching(listing.id(), &watched).expect("start_watching should succeed on a real dir");
 
@@ -419,7 +421,9 @@ fn a_detached_arm_rereads_a_change_that_landed_while_it_was_in_flight() {
     let listing = TestListing::new()
         .volume(&unique_test_id("arm-in-flight-vol"))
         .path(&watched)
-        .entries(list_directory_core(&watched).expect("the fresh dir lists"))
+        .entries(
+            list_directory_core(&watched, &crate::listing_host::backends::AppListings).expect("the fresh dir lists"),
+        )
         .insert(crate::listing_host::listings(), "arm-in-flight-change");
 
     arm_and_reconcile(listing.id(), &watched, SystemTime::now(), |id, path| {
@@ -511,7 +515,9 @@ fn rewrite_a_dotfile_beside_a_visible_file(
         .volume(&unique_test_id(&format!("{tag}-vol")))
         .path(scratch.to_path_buf())
         .include_hidden(hidden)
-        .entries(list_directory_core(&scratch).expect("the fresh dir lists"))
+        .entries(
+            list_directory_core(&scratch, &crate::listing_host::backends::AppListings).expect("the fresh dir lists"),
+        )
         .insert(crate::listing_host::listings(), tag);
     hold_diffs(listing.engine(), listing.id());
 

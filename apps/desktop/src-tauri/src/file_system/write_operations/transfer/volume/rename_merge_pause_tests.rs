@@ -112,7 +112,11 @@ async fn a_paused_rename_merge_stops_moving_children_until_it_resumes() {
 
     let op = TestOperationGuard::register_state("rename-merge-pause", make_state());
     let volume: Arc<dyn Volume> = Arc::new(PauseOnFirstRenameVolume {
-        inner: Arc::new(LocalPosixVolume::local_folder("V", root.to_path_buf())),
+        inner: Arc::new(LocalPosixVolume::local_folder(
+            "V",
+            root.to_path_buf(),
+            crate::volume_host::host(),
+        )),
         state: Arc::clone(op.state()),
         renames: AtomicUsize::new(0),
     });

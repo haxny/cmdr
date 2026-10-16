@@ -135,7 +135,11 @@ async fn a_merge_child_whose_destination_cannot_be_stat_d_fails_and_touches_noth
     write_file(root, "dst/album/keep-me.txt", b"dest only");
 
     let volume: Arc<dyn Volume> = Arc::new(StatFailingVolume {
-        inner: Arc::new(LocalPosixVolume::local_folder("V", root.to_path_buf())),
+        inner: Arc::new(LocalPosixVolume::local_folder(
+            "V",
+            root.to_path_buf(),
+            crate::volume_host::host(),
+        )),
         unanswerable: PathBuf::from("/dst/album/clash.txt"),
         hidden_from_listings: Vec::new(),
     });
@@ -199,7 +203,11 @@ async fn a_hintless_directory_source_still_takes_the_rename_merge_path() {
     // `album` is dropped from every listing, so `top_level_move_hints` records
     // no hint for it and the move loop has to resolve the type itself.
     let volume: Arc<dyn Volume> = Arc::new(StatFailingVolume {
-        inner: Arc::new(LocalPosixVolume::local_folder("V", root.to_path_buf())),
+        inner: Arc::new(LocalPosixVolume::local_folder(
+            "V",
+            root.to_path_buf(),
+            crate::volume_host::host(),
+        )),
         unanswerable: PathBuf::from("/nothing-here"),
         hidden_from_listings: vec!["album".to_string()],
     });

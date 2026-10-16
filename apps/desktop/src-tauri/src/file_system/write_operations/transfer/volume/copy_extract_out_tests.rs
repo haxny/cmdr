@@ -141,6 +141,7 @@ async fn the_executable_bit_survives_an_extract_out_of_a_zip() {
     let dest: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "Dest",
         dest_dir.path().to_str().expect("dest path"),
+        crate::volume_host::host(),
     ));
 
     let sources = vec![zip_path.join("run.sh"), zip_path.join("scripts")];
@@ -219,7 +220,11 @@ async fn extracting_a_symlink_entry_writes_a_regular_file_never_a_symlink() {
 
     // A real-filesystem destination so we can stat the landed entry's kind.
     let dst_dir = tempfile::tempdir().expect("dst tempdir");
-    let dest: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder("Dest", dst_dir.path().to_str().unwrap()));
+    let dest: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
+        "Dest",
+        dst_dir.path().to_str().unwrap(),
+        crate::volume_host::host(),
+    ));
 
     let events = Arc::new(CollectorEventSink::new());
     let state = make_state();
@@ -361,7 +366,11 @@ mod quarantine {
     }
 
     fn local_dest(dir: &Path) -> Arc<dyn Volume> {
-        Arc::new(LocalPosixVolume::local_folder("Dest", dir.to_str().expect("dest path")))
+        Arc::new(LocalPosixVolume::local_folder(
+            "Dest",
+            dir.to_str().expect("dest path"),
+            crate::volume_host::host(),
+        ))
     }
 
     /// Files and folders, the implicit folder included, carry the archive's value
@@ -566,6 +575,7 @@ mod quarantine {
             inner: Arc::new(LocalPosixVolume::local_folder(
                 "Dest",
                 dest_dir.path().to_str().expect("dest path"),
+                crate::volume_host::host(),
             )),
             state: Arc::clone(&state),
             writes: AtomicUsize::new(0),

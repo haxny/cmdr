@@ -147,7 +147,11 @@ pub fn init_volume_manager() {
     #[cfg(not(target_os = "macos"))]
     let root_name = "Root";
 
-    let root_volume = Arc::new(LocalPosixVolume::local_folder(root_name, "/"));
+    let root_volume = Arc::new(LocalPosixVolume::local_folder(
+        root_name,
+        "/",
+        crate::volume_host::host(),
+    ));
     let manager = get_volume_manager();
     manager.register("root", root_volume);
     manager.set_default("root");
@@ -192,7 +196,12 @@ fn register_discovered_volumes() {
         log::debug!("Registering {} attached volume(s)", attached.len());
         for location in attached {
             let mount = index_provider::mount_class_at(std::path::Path::new(&location.path));
-            let volume = Arc::new(LocalPosixVolume::on_mount(&location.name, &location.path, mount));
+            let volume = Arc::new(LocalPosixVolume::on_mount(
+                &location.name,
+                &location.path,
+                mount,
+                crate::volume_host::host(),
+            ));
             get_volume_manager().register(&location.id, volume);
             log::debug!("  Registered attached volume: {} -> {}", location.id, location.path);
         }
@@ -200,7 +209,11 @@ fn register_discovered_volumes() {
         let cloud = crate::volumes::get_cloud_drives();
         log::debug!("Registering {} cloud drive(s)", cloud.len());
         for location in cloud {
-            let volume = Arc::new(LocalPosixVolume::local_folder(&location.name, &location.path));
+            let volume = Arc::new(LocalPosixVolume::local_folder(
+                &location.name,
+                &location.path,
+                crate::volume_host::host(),
+            ));
             get_volume_manager().register(&location.id, volume);
             log::debug!("  Registered cloud drive: {} -> {}", location.id, location.path);
         }
@@ -217,7 +230,12 @@ fn register_discovered_volumes() {
         log::debug!("Registering {} volume(s)", non_fav.len());
         for location in non_fav {
             let mount = index_provider::mount_class_at(std::path::Path::new(&location.path));
-            let volume = Arc::new(LocalPosixVolume::on_mount(&location.name, &location.path, mount));
+            let volume = Arc::new(LocalPosixVolume::on_mount(
+                &location.name,
+                &location.path,
+                mount,
+                crate::volume_host::host(),
+            ));
             get_volume_manager().register(&location.id, volume);
             log::debug!("  Registered volume: {} -> {}", location.id, location.path);
         }

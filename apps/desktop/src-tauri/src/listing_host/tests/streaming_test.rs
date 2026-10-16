@@ -41,7 +41,11 @@ async fn a_local_directory_read_emits_progress_events() {
     let listing = TestListingGuard::adopt(&engine, unique_test_id("streaming-local-progress"));
     engine.volumes.register(
         volume_id,
-        Arc::new(LocalPosixVolume::local_folder("Test Volume", &*dir)),
+        Arc::new(LocalPosixVolume::local_folder(
+            "Test Volume",
+            &*dir,
+            crate::volume_host::host(),
+        )),
     );
 
     let sink = &engine.events;

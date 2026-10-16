@@ -452,8 +452,16 @@ async fn cross_volume_move_on_real_local_volumes() {
     fs::write(src_dir.join("doc.txt"), "hello").unwrap();
     fs::write(src_dir.join("note.txt"), "world").unwrap();
 
-    let source: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder("Source", src_dir.to_str().unwrap()));
-    let dest: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder("Dest", dst_dir.to_str().unwrap()));
+    let source: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
+        "Source",
+        src_dir.to_str().unwrap(),
+        crate::volume_host::host(),
+    ));
+    let dest: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
+        "Dest",
+        dst_dir.to_str().unwrap(),
+        crate::volume_host::host(),
+    ));
 
     let events = Arc::new(CollectorEventSink::new());
     let state = make_state();
@@ -503,8 +511,16 @@ async fn a_cross_volume_move_carries_the_executable_bit() {
     fs::write(src_dir.join("scripts/notes.txt"), "nnn").unwrap();
     fs::set_permissions(src_dir.join("scripts/notes.txt"), fs::Permissions::from_mode(0o644)).unwrap();
 
-    let source: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder("Source", src_dir.to_str().unwrap()));
-    let dest: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder("Dest", dst_dir.to_str().unwrap()));
+    let source: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
+        "Source",
+        src_dir.to_str().unwrap(),
+        crate::volume_host::host(),
+    ));
+    let dest: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
+        "Dest",
+        dst_dir.to_str().unwrap(),
+        crate::volume_host::host(),
+    ));
 
     let result = move_volumes_with_progress(
         Arc::new(CollectorEventSink::new()),

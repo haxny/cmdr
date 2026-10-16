@@ -43,7 +43,7 @@ pub(super) fn folder(tag: &str, names: &[&str]) -> (TestDir, TestListingGuard) {
     let listing = TestListing::new()
         .volume("root")
         .path(dir.to_path_buf())
-        .entries(list_directory_core(&dir).expect("the dir lists"))
+        .entries(list_directory_core(&dir, &crate::listing_host::backends::AppListings).expect("the dir lists"))
         .insert(crate::listing_host::listings(), tag);
     (dir, listing)
 }
@@ -61,7 +61,7 @@ pub(super) fn names_on_disk(dir: &Path) -> Vec<String> {
 /// file. Every name a cell lands sorts before everything else, so it takes row 0.
 fn land_file_on_top(listing: &TestListingGuard, dir: &Path, name: &str) {
     std::fs::write(dir.join(name), b"x").expect("scratch dir is writable");
-    let entry = list_directory_core(dir)
+    let entry = list_directory_core(dir, &crate::listing_host::backends::AppListings)
         .expect("the dir lists")
         .into_iter()
         .find(|e| e.name == name)

@@ -4,6 +4,7 @@ use super::reading::{get_extended_metadata_batch, get_single_entry, list_directo
 use crate::file_system::provider::FileSystemProvider;
 use crate::file_system::real_provider::RealFileSystemProvider;
 use crate::test_support::TestDir;
+use cmdr_fs::volume::host::VolumeHost;
 use std::fs;
 
 #[test]
@@ -42,7 +43,7 @@ fn test_list_directory_core_returns_entries_without_extended_metadata() {
     let test_file = temp_dir.join("core_test.txt");
     fs::write(&test_file, "content").unwrap();
 
-    let entries = list_directory_core(&temp_dir).unwrap();
+    let entries = list_directory_core(&temp_dir, VolumeHost::detached().listings()).unwrap();
 
     assert!(!entries.is_empty());
     let file_entry = entries.iter().find(|e| e.name == "core_test.txt").unwrap();
@@ -67,7 +68,7 @@ fn test_list_directory_core_is_sorted() {
     fs::write(temp_dir.join("alpha.txt"), "").unwrap();
     fs::create_dir(temp_dir.join("a_dir")).unwrap();
 
-    let entries = list_directory_core(&temp_dir).unwrap();
+    let entries = list_directory_core(&temp_dir, VolumeHost::detached().listings()).unwrap();
 
     // Directories should come first, then sorted alphabetically. The fixture dir is
     // ours alone, so the count is exact rather than a floor over someone's leftovers.

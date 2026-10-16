@@ -201,7 +201,11 @@ fn aside_records(ledger: &Ledger) -> Vec<std::path::PathBuf> {
 fn drive_is_back(volume: &MountedVolume) -> TestVolumeRegistration {
     TestVolumeRegistration::install(
         "vol-image",
-        Arc::new(LocalPosixVolume::local_folder(volume.name.clone(), &volume.mount_point)) as Arc<dyn Volume>,
+        Arc::new(LocalPosixVolume::local_folder(
+            volume.name.clone(),
+            &volume.mount_point,
+            crate::volume_host::host(),
+        )) as Arc<dyn Volume>,
     )
 }
 

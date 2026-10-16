@@ -50,7 +50,7 @@ fn listing_of(dir: &Path, tag: &str) -> TestListingGuard {
     TestListing::new()
         .volume(&unique_test_id(&format!("{tag}-vol")))
         .path(dir.to_path_buf())
-        .entries(list_directory_core(dir).expect("the scratch dir lists"))
+        .entries(list_directory_core(dir, &crate::listing_host::backends::AppListings).expect("the scratch dir lists"))
         .insert(crate::listing_host::listings(), tag)
 }
 
@@ -97,7 +97,8 @@ fn a_modify_keeps_the_finder_tags_the_cache_holds() {
     let scratch = TestDir::new("watch-modify-tags");
     let tagged = scratch.join("tagged.txt");
     std::fs::write(&tagged, b"t").expect("scratch dir is writable");
-    let mut entries = list_directory_core(&scratch).expect("the scratch dir lists");
+    let mut entries =
+        list_directory_core(&scratch, &crate::listing_host::backends::AppListings).expect("the scratch dir lists");
     entries[0].tags = vec![TagRef {
         name: "Red".to_string(),
         color: 6,

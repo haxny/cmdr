@@ -92,6 +92,14 @@ most entangled one, with archive, MTP, and local POSIX checked for anything SMB 
 - `volumes_with_open_listings` ⇐ `Listings::volume_ids_with_listings`. For a DEVICE backend, one level above the volumes
   it serves: an MTP phone's event names a bare PTP handle, and resolving it costs a round trip per storage, so the
   backend asks which storages a pane is showing and searches only those.
+- `local_watch_coverage` ⇐ `Listings::listings_for_local_path` + `watcher::coverage_for_listings`. Only the local
+  backend asks: it doesn't know its own volume id, so it asks by absolute path, once per directory a walker visits. A
+  pure in-memory read; the coverage was decided when the watch was armed.
+- `sort_listing` ⇐ `cmdr_listing::sort_entries` with the panes' collator, name ascending, folders first. The local
+  reader's order, once per directory: its callers (the engine's walkers, the rollback planner, the watcher's fallback
+  re-read) take a listing's order as is, and only the listing engine re-sorts. The default orders by name bytes, since
+  `cmdr-fs` can't name the collator without putting ICU on every backend's build path. Pinned by
+  `local_posix_host_test::a_local_listing_comes_back_in_the_panes_name_order`.
 
 **`DirectoryChange::Replaced` is the variant a device backend reports.** It carries the directory's new contents, so the
 host sorts them the way each pane sorts, diffs, and patches. `FullRefresh` asks the host to do the read instead; report
@@ -102,12 +110,10 @@ device event out of a per-entry loop.
 found a pane to land on. That's deliberate: the seam is fire-and-forget in both directions, and a backend that wants a
 safety net reports `FullRefresh` for the volume, which the host fans out to every listing on it.
 
-**Two of the five listing functions the survey listed are NOT seams.** `Listings::listings_for_local_path` and
-`patch_listing_after_local_mutation` have exactly one caller between them, `local_posix.rs`, which is permanently
-app-resident. `patch_listing_after_local_mutation` is by definition local: it `std::fs`-stats the changed entry, which a
-backend on a protocol can neither do nor want (it can build the entry from a cheaper protocol reply). And SMB's own
-`listing_watch_coverage` answers from its connection state and watcher handle, not from the listing cache, so it needs
-neither. Adding them would have meant two trait methods no extractable backend could ever call.
+**`patch_listing_after_local_mutation` is NOT a seam.** It's the local backend's own: it `std::fs`-stats the changed
+entry and reports the result through `directory_changed`, which a backend on a protocol can neither do nor want (it
+builds the entry from a cheaper protocol reply). SMB's `listing_watch_coverage` answers from its connection state and
+watcher handle, so `local_watch_coverage` is the local backend's question alone.
 
 **`FullRefresh` re-enters the backend, but never synchronously.** The host answers a `FullRefresh` by re-reading the
 directory through `Volume::list_directory` — the backend that reported it. That dispatch is spawned, not inline, so a

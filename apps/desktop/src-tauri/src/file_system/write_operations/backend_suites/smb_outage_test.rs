@@ -137,6 +137,7 @@ async fn smb_integration_a_copy_waits_out_a_dropped_network_and_finishes() {
     let source: Arc<dyn Volume> = Arc::new(crate::file_system::volume::LocalPosixVolume::local_folder(
         "src",
         local.path().to_path_buf(),
+        crate::volume_host::host(),
     ));
 
     let state = Arc::new(

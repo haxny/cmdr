@@ -259,6 +259,7 @@ async fn materialize_sources(
     let dest_volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "archive-source-pull",
         scratch.path().to_path_buf(),
+        crate::volume_host::host(),
     ));
 
     let mut absolute = Vec::with_capacity(source_paths.len());

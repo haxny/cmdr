@@ -39,7 +39,11 @@ fn repo_registered_as_the_local_drive(name: &str) -> PathBuf {
     // (nextest isolates the process-global manager per test.)
     get_volume_manager().register(
         "root",
-        Arc::new(LocalPosixVolume::local_folder("Root", dir.to_str().unwrap())),
+        Arc::new(LocalPosixVolume::local_folder(
+            "Root",
+            dir.to_str().unwrap(),
+            crate::volume_host::host(),
+        )),
     );
     git::wiring::set_virtual_portal_enabled(true);
     dir
@@ -145,7 +149,11 @@ async fn the_executable_bit_survives_a_copy_out_of_a_snapshot() {
     let (source, _route) = resolve_source_volume("root", sources.first())
         .await
         .expect("the source volume");
-    let dest: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder("Dest", dest_dir.to_str().unwrap()));
+    let dest: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
+        "Dest",
+        dest_dir.to_str().unwrap(),
+        crate::volume_host::host(),
+    ));
 
     let result = copy_volumes_with_progress(
         Arc::new(CollectorEventSink::new()),
@@ -196,7 +204,11 @@ async fn a_move_out_of_a_snapshot_is_refused_before_a_byte_is_written() {
     std::fs::create_dir_all(&dest_dir).expect("dest dir");
     get_volume_manager().register(
         "dest",
-        Arc::new(LocalPosixVolume::local_folder("Dest", dest_dir.to_str().unwrap())),
+        Arc::new(LocalPosixVolume::local_folder(
+            "Dest",
+            dest_dir.to_str().unwrap(),
+            crate::volume_host::host(),
+        )),
     );
 
     let err = start_volume_move(
