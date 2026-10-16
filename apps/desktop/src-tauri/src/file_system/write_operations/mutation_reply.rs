@@ -130,6 +130,16 @@ where
         Raced::StillRunning(handle) => {
             let pending_id = uuid::Uuid::new_v4().to_string();
             let settled_id = pending_id.clone();
+            // Ambient by design, like `cmdr_fs::deadline::race_detached`, whose
+            // handle this waits out: the reply runs inside the caller's task (an
+            // IPC command, or a test on its own paused clock), and the work is
+            // already running on that same runtime, so its continuation belongs
+            // there too. A host-runtime spawn would split the two, and would put
+            // the paused-clock tests' continuation on a clock they don't drive.
+            #[allow(
+                clippy::disallowed_methods,
+                reason = "the continuation of `race_detached`'s ambient spawn; see the comment above"
+            )]
             tokio::spawn(async move {
                 let result = flatten_join(handle.await);
                 match &result {

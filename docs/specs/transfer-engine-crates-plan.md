@@ -1080,6 +1080,23 @@ never one unkeyed list a sibling test can fill.
    `start_paused` tests (`mutation_reply_tests.rs:29-114`) and `strategy_yield_tests.rs:149` drive on the test's paused
    clock. Either it stays ambient by design (documented, with the crate clippy's `#[allow]` and a reason), or those
    tests build their engine on their own paused runtime. ❌ Not by loosening the tests. Record the choice here.
+   **Decided: it stays ambient**, documented at the spawn with a reasoned `#[allow(clippy::disallowed_methods)]` ready
+   for the crate clippy. It is the continuation of `cmdr_fs::deadline::race_detached`'s own ambient spawn (already a
+   documented exception), so the work and the task that waits it out share the caller's runtime; a host-runtime spawn
+   would split them and move the paused-clock tests' continuation onto a clock they don't drive.
+
+**What landed differently** (recorded at execution):
+
+- `expand_tilde` moved DOWN to `cmdr_fs::tilde` instead of into the callers. `routing.rs` expands after the registry's
+  `resolve` has run on the raw path, so hoisting it into the callers would start routing a `~/x.zip/…` destination into
+  the archive: a behavior change. The call stays in the engine; the function no longer belongs to `commands`.
+- `paste_clipboard.rs` split: the engine keeps `create_numbered.rs` (`create_numbered_file`, the numbered-create instant
+  op), and the clipboard half moved to `clipboard/paste_file.rs`. `broadcast_settled` moved to `commands/settled.rs`.
+- Also moved down: `format_size` (`cmdr_fs::byte_size`, `search::` re-exports it), `normalize_for_comparison`
+  (`cmdr_fs::name_fold`, `cmdr_index::store` re-exports it), and `cmdr_index::ROOT_VOLUME_ID` is now defined as
+  `cmdr_fs::volume::DEFAULT_VOLUME_ID`. The app's `file_system/staging.rs` was only a re-export plus tests; the tests
+  joined `cmdr_fs::staging` and the module is gone. `deadline::io_budget_for_volume` reads the registry, so it stayed
+  app-side as `file_system::volume::io_budget_for_volume`.
 
 **Intentions.** The engine's boundary shrinks to the questions that genuinely need the app.
 
