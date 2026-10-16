@@ -534,7 +534,7 @@ fn format_skipped_suffix(files_skipped: usize, bytes_skipped: u64) -> String {
         " (of which skipped {} {}, {})",
         files_skipped,
         noun,
-        crate::search::query::format_size(bytes_skipped),
+        cmdr_fs::byte_size::format_size(bytes_skipped),
     )
 }
 

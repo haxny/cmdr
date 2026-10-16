@@ -21,6 +21,7 @@
 pub mod apple_double;
 pub mod archive_format;
 pub mod benchmark;
+pub mod byte_size;
 #[cfg(target_os = "macos")]
 pub mod cloud_provider;
 pub mod deadline;

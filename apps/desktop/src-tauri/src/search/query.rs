@@ -164,27 +164,9 @@ fn keyed_list(key: &str, values: &[String]) -> String {
     format!("[{}]", items.join(", "))
 }
 
-/// A byte count for a model or a log to read ("1.5 KiB", "214.3 GiB"). Base 1024, so the symbols are IEC
-/// binary (KiB, MiB, GiB, TiB): a symbol always names the base its number was divided by.
-pub(crate) fn format_size(bytes: u64) -> String {
-    const KIB: u64 = 1_024;
-    const MIB: u64 = 1_024 * KIB;
-    const GIB: u64 = 1_024 * MIB;
-    const TIB: u64 = 1_024 * GIB;
-    const UNITS: &[(u64, &str)] = &[(TIB, "TiB"), (GIB, "GiB"), (MIB, "MiB"), (KIB, "KiB")];
-
-    for &(threshold, unit) in UNITS {
-        if bytes >= threshold {
-            let val = bytes as f64 / threshold as f64;
-            return if val.fract() == 0.0 {
-                format!("{} {unit}", val as u64)
-            } else {
-                format!("{val:.1} {unit}")
-            };
-        }
-    }
-    format!("{bytes} B")
-}
+/// A byte count for a model or a log to read, the inverse of [`parse_size`]. Re-exported for the model-facing
+/// callers that reach it through `search::`.
+pub(crate) use cmdr_fs::byte_size::format_size;
 
 /// Parse a size a person or a model wrote ("50 MB", "1.5GiB", "500kb", "4096") into bytes, case-insensitively.
 /// The symbol decides the base, matching what Cmdr's own sizes mean: IEC `KiB`/`MiB`/`GiB`/`TiB` are base 1024,
