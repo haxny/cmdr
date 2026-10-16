@@ -1,0 +1,86 @@
+{
+  "stateRecovery.settings.title": "Cmdr no ha podido leer tus ajustes, así que ha empezado con los valores por omisión",
+  "@stateRecovery.settings.title": {
+    "sourceHash": "b5b4b8e"
+  },
+  "stateRecovery.settings.body": "Las estadísticas de uso y los informes de fallos siguen desactivados hasta que vuelvas a activarlos en Ajustes › Actualizaciones y privacidad.",
+  "@stateRecovery.settings.body": {
+    "sourceHash": "20439e1"
+  },
+  "stateRecovery.settings.openSettings": "Abrir Ajustes",
+  "@stateRecovery.settings.openSettings": {
+    "sourceHash": "3f94010"
+  },
+  "stateRecovery.shortcuts.title": "Cmdr no ha podido leer tus atajos de teclado, así que han vuelto a sus valores por omisión",
+  "@stateRecovery.shortcuts.title": {
+    "sourceHash": "35093bd"
+  },
+  "stateRecovery.license.title": "Cmdr no ha podido leer su archivo de licencia",
+  "@stateRecovery.license.title": {
+    "sourceHash": "64726c1"
+  },
+  "stateRecovery.license.body": "Si ahora Cmdr aparece sin licencia, vuelve a introducir tu clave de licencia en Ajustes › Licencia.",
+  "@stateRecovery.license.body": {
+    "sourceHash": "ea51589"
+  },
+  "stateRecovery.license.openSettings": "Abrir Ajustes",
+  "@stateRecovery.license.openSettings": {
+    "sourceHash": "3f94010"
+  },
+  "stateRecovery.appStatus.title": "Cmdr no ha podido leer qué carpetas tenían abiertas tus paneles, así que se abren en tu carpeta de inicio",
+  "@stateRecovery.appStatus.title": {
+    "sourceHash": "521f5eb"
+  },
+  "stateRecovery.operationLog.title": "Cmdr no ha podido leer el historial de lo que puedes deshacer, así que empieza de cero",
+  "@stateRecovery.operationLog.title": {
+    "sourceHash": "bc354f1"
+  },
+  "stateRecovery.chatHistory.title": "Cmdr no ha podido leer tus chats de Ask Cmdr, así que empiezan de cero",
+  "@stateRecovery.chatHistory.title": {
+    "sourceHash": "65ee72b"
+  },
+  "stateRecovery.favorites.title": "Cmdr no ha podido leer tus favoritos, así que la lista empieza vacía",
+  "@stateRecovery.favorites.title": {
+    "sourceHash": "1048c2b"
+  },
+  "stateRecovery.goToPathHistory.title": "Cmdr no ha podido leer tus entradas recientes de “Ir a la carpeta”, así que la lista empieza de cero",
+  "@stateRecovery.goToPathHistory.title": {
+    "sourceHash": "d2b499b"
+  },
+  "stateRecovery.searchHistory.title": "Cmdr no ha podido leer tus búsquedas recientes, así que la lista empieza de cero",
+  "@stateRecovery.searchHistory.title": {
+    "sourceHash": "75fe9db"
+  },
+  "stateRecovery.selectionHistory.title": "Cmdr no ha podido leer tus selecciones recientes, así que la lista empieza de cero",
+  "@stateRecovery.selectionHistory.title": {
+    "sourceHash": "a93f574"
+  },
+  "stateRecovery.multiRenamePresets.title": "Cmdr no ha podido leer tus preajustes guardados de renombrado múltiple, así que la lista empieza vacía",
+  "@stateRecovery.multiRenamePresets.title": {
+    "sourceHash": "b6f2a3b"
+  },
+  "stateRecovery.multiRenameLastSettings.title": "Cmdr no ha podido leer tus últimos ajustes de renombrado múltiple, así que la herramienta se abre con los valores por omisión",
+  "@stateRecovery.multiRenameLastSettings.title": {
+    "sourceHash": "b830e12"
+  },
+  "stateRecovery.multiRenameFieldHistory.title": "Cmdr no ha podido leer el historial de los campos de renombrado múltiple, así que empieza de cero",
+  "@stateRecovery.multiRenameFieldHistory.title": {
+    "sourceHash": "7b31c57"
+  },
+  "stateRecovery.launchDays.title": "Cmdr no ha podido leer su registro de los días en que lo abriste, así que el recuento vuelve a empezar",
+  "@stateRecovery.launchDays.title": {
+    "sourceHash": "00f947b"
+  },
+  "stateRecovery.keptCopy": "Cmdr ha conservado el archivo antiguo en “{path}”.",
+  "@stateRecovery.keptCopy": {
+    "sourceHash": "634e87d"
+  },
+  "stateRecovery.showInFinder": "Mostrar en el Finder",
+  "@stateRecovery.showInFinder": {
+    "sourceHash": "c2a9c77"
+  },
+  "stateRecovery.dismiss": "Descartar",
+  "@stateRecovery.dismiss": {
+    "sourceHash": "48845bf"
+  }
+}

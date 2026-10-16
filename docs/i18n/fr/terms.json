@@ -3407,7 +3407,7 @@
     "sources": "kept verbatim"
   },
   "undo": {
-    "accept": ["annulé", "restaur", "irréversible", "revenir en arrière"],
+    "accept": ["annulé", "annulation", "restaur", "irréversible", "revenir en arrière"],
     "chosen": "Annuler",
     "confidence": "high",
     "decision": "La notification de corbeille : annuler et remettre en place",

@@ -29,7 +29,7 @@
   "@indexing.phase.priorityFolders": {
     "sourceHash": "09dd19d"
   },
-  "indexing.phase.home": "De rest van je persoonlijke map wordt geïndexeerd",
+  "indexing.phase.home": "De rest van je thuismap wordt geïndexeerd",
   "@indexing.phase.home": {
     "sourceHash": "8c31671"
   },

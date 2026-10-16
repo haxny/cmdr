@@ -1423,6 +1423,21 @@
     "forms": "file history (Ask Cmdr) → lịch sử thao tác; the repo’s history → lịch sử của repo",
     "sources": "macOS AppKit (NSToolbarHistoryTemplate lịch sử; lịch sử phiên bản); catalog (errors.git.blobTooLarge.title, operationLog.dialog.loadError)"
   },
+  "home-folder": {
+    "avoid": [
+      {
+        "form": "thư mục nhà",
+        "why": "KDE Dolphin and Thunar's literal calque; macOS Finder writes thư mục chính"
+      }
+    ],
+    "chosen": "thư mục chính",
+    "confidence": "high",
+    "exceptions": {
+      "menu.go.home": "The Go-menu item copies the vi Finder menu label `Nhà` (see style.md § Menu gốc); prose says thư mục chính."
+    },
+    "forms": "the Finder Go-menu item itself is Nhà (menu.go.home); everywhere else thư mục chính",
+    "sources": "macOS Finder (TL_HELP_HOME Đi tới thư mục chính; A4–A6 Thư mục chính cho người dùng…); catalog (commands.navGoHome.label, fileExplorer.errorPane.goHome, fileExplorer.unreachable.openHome)"
+  },
   "host": {
     "chosen": "máy chủ",
     "confidence": "high",

@@ -1,0 +1,86 @@
+{
+  "stateRecovery.settings.title": "Cmdr konnte deine Einstellungen nicht lesen, deshalb ist es mit den Standardeinstellungen gestartet",
+  "@stateRecovery.settings.title": {
+    "sourceHash": "b5b4b8e"
+  },
+  "stateRecovery.settings.body": "Nutzungsstatistiken und Absturzberichte bleiben aus, bis du sie unter Einstellungen › Updates & Datenschutz wieder einschaltest.",
+  "@stateRecovery.settings.body": {
+    "sourceHash": "20439e1"
+  },
+  "stateRecovery.settings.openSettings": "Einstellungen öffnen",
+  "@stateRecovery.settings.openSettings": {
+    "sourceHash": "3f94010"
+  },
+  "stateRecovery.shortcuts.title": "Cmdr konnte deine Tastaturkurzbefehle nicht lesen, deshalb gelten wieder die Standardkurzbefehle",
+  "@stateRecovery.shortcuts.title": {
+    "sourceHash": "35093bd"
+  },
+  "stateRecovery.license.title": "Cmdr konnte die Lizenzdatei nicht lesen",
+  "@stateRecovery.license.title": {
+    "sourceHash": "64726c1"
+  },
+  "stateRecovery.license.body": "Falls Cmdr jetzt ohne Lizenz läuft, gib deinen Lizenzschlüssel unter Einstellungen › Lizenz noch einmal ein.",
+  "@stateRecovery.license.body": {
+    "sourceHash": "ea51589"
+  },
+  "stateRecovery.license.openSettings": "Einstellungen öffnen",
+  "@stateRecovery.license.openSettings": {
+    "sourceHash": "3f94010"
+  },
+  "stateRecovery.appStatus.title": "Cmdr konnte nicht lesen, welche Ordner in deinen Bereichen geöffnet waren, deshalb starten beide Bereiche im persönlichen Ordner",
+  "@stateRecovery.appStatus.title": {
+    "sourceHash": "521f5eb"
+  },
+  "stateRecovery.operationLog.title": "Cmdr konnte deinen Verlauf zum Rückgängigmachen nicht lesen, deshalb startet er von vorn",
+  "@stateRecovery.operationLog.title": {
+    "sourceHash": "bc354f1"
+  },
+  "stateRecovery.chatHistory.title": "Cmdr konnte deine Ask-Cmdr-Chats nicht lesen, deshalb starten sie von vorn",
+  "@stateRecovery.chatHistory.title": {
+    "sourceHash": "65ee72b"
+  },
+  "stateRecovery.favorites.title": "Cmdr konnte deine Favoriten nicht lesen, deshalb startet die Liste leer",
+  "@stateRecovery.favorites.title": {
+    "sourceHash": "1048c2b"
+  },
+  "stateRecovery.goToPathHistory.title": "Cmdr konnte deine letzten Einträge in „Gehe zu Ordner“ nicht lesen, deshalb startet die Liste von vorn",
+  "@stateRecovery.goToPathHistory.title": {
+    "sourceHash": "d2b499b"
+  },
+  "stateRecovery.searchHistory.title": "Cmdr konnte deine letzten Suchen nicht lesen, deshalb startet die Liste von vorn",
+  "@stateRecovery.searchHistory.title": {
+    "sourceHash": "75fe9db"
+  },
+  "stateRecovery.selectionHistory.title": "Cmdr konnte deine letzten Auswahlen nicht lesen, deshalb startet die Liste von vorn",
+  "@stateRecovery.selectionHistory.title": {
+    "sourceHash": "a93f574"
+  },
+  "stateRecovery.multiRenamePresets.title": "Cmdr konnte deine gesicherten Voreinstellungen für „Mehrfach umbenennen“ nicht lesen, deshalb startet die Liste leer",
+  "@stateRecovery.multiRenamePresets.title": {
+    "sourceHash": "b6f2a3b"
+  },
+  "stateRecovery.multiRenameLastSettings.title": "Cmdr konnte deine letzten Einstellungen für „Mehrfach umbenennen“ nicht lesen, deshalb öffnet sich das Werkzeug mit den Standardeinstellungen",
+  "@stateRecovery.multiRenameLastSettings.title": {
+    "sourceHash": "b830e12"
+  },
+  "stateRecovery.multiRenameFieldHistory.title": "Cmdr konnte deinen Feldverlauf für „Mehrfach umbenennen“ nicht lesen, deshalb startet er von vorn",
+  "@stateRecovery.multiRenameFieldHistory.title": {
+    "sourceHash": "7b31c57"
+  },
+  "stateRecovery.launchDays.title": "Cmdr konnte nicht lesen, an welchen Tagen du es geöffnet hast, deshalb startet die Zählung von vorn",
+  "@stateRecovery.launchDays.title": {
+    "sourceHash": "00f947b"
+  },
+  "stateRecovery.keptCopy": "Cmdr hat die alte Datei unter „{path}“ aufbewahrt.",
+  "@stateRecovery.keptCopy": {
+    "sourceHash": "634e87d"
+  },
+  "stateRecovery.showInFinder": "Im Finder anzeigen",
+  "@stateRecovery.showInFinder": {
+    "sourceHash": "c2a9c77"
+  },
+  "stateRecovery.dismiss": "Schließen",
+  "@stateRecovery.dismiss": {
+    "sourceHash": "48845bf"
+  }
+}

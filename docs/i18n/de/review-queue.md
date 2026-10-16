@@ -127,3 +127,7 @@ German runs 20–35% longer than English. Look at these against the pseudolocale
   `einpassen`.
 - `securityNotices.smbSignatureRefused.reconnect` (`Verbindung wiederherstellen`): the termbase's button form, long for
   a toast button beside `Trennen`; check it fits. `securityNotices.count` renders `4-mal, seit du Cmdr geöffnet hast`.
+- `stateRecovery.*.title`: the recovery toasts share the frame `Cmdr konnte … nicht lesen, deshalb …`, with „starts
+  fresh“ → `startet von vorn` and „starts empty“ → `startet leer`; check `startet leer` reads naturally and the long
+  titles (`appStatus`, `multiRenameLastSettings`) fit the toast. `transfer.durabilityUnconfirmed*` renders „is failing“
+  as `Probleme macht` (calm, no failure claim).

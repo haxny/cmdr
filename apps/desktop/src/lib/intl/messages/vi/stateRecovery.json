@@ -1,0 +1,86 @@
+{
+  "stateRecovery.settings.title": "Cmdr không đọc được cài đặt của bạn, nên đã khởi động với cài đặt mặc định",
+  "@stateRecovery.settings.title": {
+    "sourceHash": "b5b4b8e"
+  },
+  "stateRecovery.settings.body": "Thống kê sử dụng và báo cáo sự cố vẫn tắt cho đến khi bạn bật lại trong Cài đặt › Cập nhật & quyền riêng tư.",
+  "@stateRecovery.settings.body": {
+    "sourceHash": "20439e1"
+  },
+  "stateRecovery.settings.openSettings": "Mở cài đặt",
+  "@stateRecovery.settings.openSettings": {
+    "sourceHash": "3f94010"
+  },
+  "stateRecovery.shortcuts.title": "Cmdr không đọc được phím tắt của bạn, nên các phím tắt đã trở về mặc định",
+  "@stateRecovery.shortcuts.title": {
+    "sourceHash": "35093bd"
+  },
+  "stateRecovery.license.title": "Cmdr không đọc được tệp giấy phép",
+  "@stateRecovery.license.title": {
+    "sourceHash": "64726c1"
+  },
+  "stateRecovery.license.body": "Nếu giờ Cmdr hiển thị là không có giấy phép, hãy nhập lại khóa giấy phép trong Cài đặt › Giấy phép.",
+  "@stateRecovery.license.body": {
+    "sourceHash": "ea51589"
+  },
+  "stateRecovery.license.openSettings": "Mở cài đặt",
+  "@stateRecovery.license.openSettings": {
+    "sourceHash": "3f94010"
+  },
+  "stateRecovery.appStatus.title": "Cmdr không đọc được các thư mục mà khung đã mở trước đó, nên các khung bắt đầu ở thư mục chính",
+  "@stateRecovery.appStatus.title": {
+    "sourceHash": "521f5eb"
+  },
+  "stateRecovery.operationLog.title": "Cmdr không đọc được lịch sử hoàn tác của bạn, nên lịch sử bắt đầu lại từ đầu",
+  "@stateRecovery.operationLog.title": {
+    "sourceHash": "bc354f1"
+  },
+  "stateRecovery.chatHistory.title": "Cmdr không đọc được các cuộc trò chuyện Ask Cmdr của bạn, nên danh sách trò chuyện bắt đầu lại từ đầu",
+  "@stateRecovery.chatHistory.title": {
+    "sourceHash": "65ee72b"
+  },
+  "stateRecovery.favorites.title": "Cmdr không đọc được mục ưa thích của bạn, nên danh sách đang trống",
+  "@stateRecovery.favorites.title": {
+    "sourceHash": "1048c2b"
+  },
+  "stateRecovery.goToPathHistory.title": "Cmdr không đọc được các mục gần đây trong “Đi tới thư mục”, nên danh sách bắt đầu lại từ đầu",
+  "@stateRecovery.goToPathHistory.title": {
+    "sourceHash": "d2b499b"
+  },
+  "stateRecovery.searchHistory.title": "Cmdr không đọc được các tìm kiếm gần đây của bạn, nên danh sách bắt đầu lại từ đầu",
+  "@stateRecovery.searchHistory.title": {
+    "sourceHash": "75fe9db"
+  },
+  "stateRecovery.selectionHistory.title": "Cmdr không đọc được các lựa chọn gần đây của bạn, nên danh sách bắt đầu lại từ đầu",
+  "@stateRecovery.selectionHistory.title": {
+    "sourceHash": "a93f574"
+  },
+  "stateRecovery.multiRenamePresets.title": "Cmdr không đọc được các giá trị đặt trước đã lưu cho đổi tên hàng loạt, nên danh sách đang trống",
+  "@stateRecovery.multiRenamePresets.title": {
+    "sourceHash": "b6f2a3b"
+  },
+  "stateRecovery.multiRenameLastSettings.title": "Cmdr không đọc được cài đặt đổi tên hàng loạt lần gần nhất của bạn, nên công cụ sẽ mở với cài đặt mặc định",
+  "@stateRecovery.multiRenameLastSettings.title": {
+    "sourceHash": "b830e12"
+  },
+  "stateRecovery.multiRenameFieldHistory.title": "Cmdr không đọc được lịch sử các trường của đổi tên hàng loạt, nên lịch sử bắt đầu lại từ đầu",
+  "@stateRecovery.multiRenameFieldHistory.title": {
+    "sourceHash": "7b31c57"
+  },
+  "stateRecovery.launchDays.title": "Cmdr không đọc được ghi chép về những ngày bạn đã mở ứng dụng, nên số ngày được đếm lại từ đầu",
+  "@stateRecovery.launchDays.title": {
+    "sourceHash": "00f947b"
+  },
+  "stateRecovery.keptCopy": "Cmdr đã giữ tệp cũ tại {path}.",
+  "@stateRecovery.keptCopy": {
+    "sourceHash": "634e87d"
+  },
+  "stateRecovery.showInFinder": "Hiển thị trong Finder",
+  "@stateRecovery.showInFinder": {
+    "sourceHash": "c2a9c77"
+  },
+  "stateRecovery.dismiss": "Bỏ qua",
+  "@stateRecovery.dismiss": {
+    "sourceHash": "48845bf"
+  }
+}

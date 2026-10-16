@@ -1053,7 +1053,8 @@
     "chosen": "post",
     "confidence": "high",
     "exceptions": {
-      "commands.selectionSelectSameKind.description": "An entry in the file list is an objekt, the catalog's word for a file-or-folder row."
+      "commands.selectionSelectSameKind.description": "An entry in the file list is an objekt, the catalog's word for a file-or-folder row.",
+      "stateRecovery.goToPathHistory.title": "The Go to folder history holds paths, so naming them sökvägar says what the list held; dina senaste poster i ”Gå till mapp” reads like database records."
     },
     "forms": "poster; a Keychain entry → posten ”Cmdr”",
     "sources": "standard Swedish (post = record)"
@@ -1518,6 +1519,19 @@
     "confidence": "high",
     "forms": "åtgärdshistorik, filhistorik",
     "sources": "catalog (settings.operationLog)"
+  },
+  "home-folder": {
+    "avoid": [
+      {
+        "form": "hemkatalog",
+        "why": "the Linux and Microsoft word (Dolphin, Thunar, MS terminology); macOS Finder says hemmappen"
+      }
+    ],
+    "chosen": "hemmapp",
+    "confidence": "high",
+    "accept": ["Hem"],
+    "forms": "hemmappen; Go to home folder → Gå till hemmappen; the Go menu item → Hem (macOS Finder Gå menu)",
+    "sources": "macOS Finder LocalizableMerged (Gå till hemmappen), Nautilus (hemmappen), catalog (commands.navGoHome.label)"
   },
   "host": {
     "chosen": "värd",
@@ -3197,10 +3211,11 @@
     "sources": "kept verbatim"
   },
   "undo": {
+    "accept": ["ångring"],
     "chosen": "ångra",
     "confidence": "high",
     "decision": "Trash toast",
-    "forms": "button Ångra; Det här går inte att ångra",
+    "forms": "button Ångra; Det här går inte att ångra; undo history → ångringshistorik",
     "sources": "macOS (ME13 Undo → Ångra)"
   },
   "unexpected": {

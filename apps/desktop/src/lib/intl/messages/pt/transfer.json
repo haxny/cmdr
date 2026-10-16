@@ -55,6 +55,14 @@
   "@transfer.changedDuringMove": {
     "sourceHash": "b446f54"
   },
+  "transfer.durabilityUnconfirmed": "O Cmdr não conseguiu confirmar que as cópias foram totalmente gravadas no disco {volumeName}. Se o disco foi desconectado ou está com problemas, confira as cópias antes de contar com elas.",
+  "@transfer.durabilityUnconfirmed": {
+    "sourceHash": "48f67b4"
+  },
+  "transfer.durabilityUnconfirmedUnnamed": "O Cmdr não conseguiu confirmar que as cópias foram totalmente gravadas no disco. Se o disco foi desconectado ou está com problemas, confira as cópias antes de contar com elas.",
+  "@transfer.durabilityUnconfirmedUnnamed": {
+    "sourceHash": "33cda48"
+  },
   "transfer.metadataLeftBehind": "Este servidor não consegue armazenar {classes}, então essas informações ficaram para trás.",
   "@transfer.metadataLeftBehind": {
     "sourceHash": "e8c3789"

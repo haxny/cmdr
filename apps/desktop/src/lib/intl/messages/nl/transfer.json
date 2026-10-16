@@ -55,6 +55,14 @@
   "@transfer.changedDuringMove": {
     "sourceHash": "b446f54"
   },
+  "transfer.durabilityUnconfirmed": "Cmdr kon niet bevestigen dat de kopieën volledig naar {volumeName} zijn geschreven. Als de schijf werd losgekoppeld of defect raakt, controleer de kopieën dan voordat je erop vertrouwt.",
+  "@transfer.durabilityUnconfirmed": {
+    "sourceHash": "48f67b4"
+  },
+  "transfer.durabilityUnconfirmedUnnamed": "Cmdr kon niet bevestigen dat de kopieën volledig naar de schijf zijn geschreven. Als de schijf werd losgekoppeld of defect raakt, controleer de kopieën dan voordat je erop vertrouwt.",
+  "@transfer.durabilityUnconfirmedUnnamed": {
+    "sourceHash": "33cda48"
+  },
   "transfer.metadataLeftBehind": "Deze server kan {classes} niet opslaan, dus die gegevens zijn achtergebleven.",
   "@transfer.metadataLeftBehind": {
     "sourceHash": "e8c3789"

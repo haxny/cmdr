@@ -1,0 +1,86 @@
+{
+  "stateRecovery.settings.title": "Cmdr не удалось прочитать ваши настройки, поэтому он запустился с настройками по умолчанию",
+  "@stateRecovery.settings.title": {
+    "sourceHash": "b5b4b8e"
+  },
+  "stateRecovery.settings.body": "Статистика использования и отчеты о сбоях останутся выключенными, пока вы снова не включите их в разделе «Настройки › Обновления и конфиденциальность».",
+  "@stateRecovery.settings.body": {
+    "sourceHash": "20439e1"
+  },
+  "stateRecovery.settings.openSettings": "Открыть настройки",
+  "@stateRecovery.settings.openSettings": {
+    "sourceHash": "3f94010"
+  },
+  "stateRecovery.shortcuts.title": "Cmdr не удалось прочитать ваши сочетания клавиш, поэтому все сочетания вернулись к значениям по умолчанию",
+  "@stateRecovery.shortcuts.title": {
+    "sourceHash": "35093bd"
+  },
+  "stateRecovery.license.title": "Cmdr не удалось прочитать файл лицензии",
+  "@stateRecovery.license.title": {
+    "sourceHash": "64726c1"
+  },
+  "stateRecovery.license.body": "Если Cmdr теперь показывает, что лицензии нет, снова введите лицензионный ключ в разделе «Настройки › Лицензия».",
+  "@stateRecovery.license.body": {
+    "sourceHash": "ea51589"
+  },
+  "stateRecovery.license.openSettings": "Открыть настройки",
+  "@stateRecovery.license.openSettings": {
+    "sourceHash": "3f94010"
+  },
+  "stateRecovery.appStatus.title": "Cmdr не удалось прочитать, какие папки были открыты в панелях, поэтому панели открываются в папке пользователя",
+  "@stateRecovery.appStatus.title": {
+    "sourceHash": "521f5eb"
+  },
+  "stateRecovery.operationLog.title": "Cmdr не удалось прочитать историю действий для отмены, поэтому история начинается заново",
+  "@stateRecovery.operationLog.title": {
+    "sourceHash": "bc354f1"
+  },
+  "stateRecovery.chatHistory.title": "Cmdr не удалось прочитать ваши чаты Ask Cmdr, поэтому список чатов начинается заново",
+  "@stateRecovery.chatHistory.title": {
+    "sourceHash": "65ee72b"
+  },
+  "stateRecovery.favorites.title": "Cmdr не удалось прочитать ваше избранное, поэтому список пока пуст",
+  "@stateRecovery.favorites.title": {
+    "sourceHash": "1048c2b"
+  },
+  "stateRecovery.goToPathHistory.title": "Cmdr не удалось прочитать недавние записи в окне «Переход к папке», поэтому список начинается заново",
+  "@stateRecovery.goToPathHistory.title": {
+    "sourceHash": "d2b499b"
+  },
+  "stateRecovery.searchHistory.title": "Cmdr не удалось прочитать ваши недавние запросы, поэтому список начинается заново",
+  "@stateRecovery.searchHistory.title": {
+    "sourceHash": "75fe9db"
+  },
+  "stateRecovery.selectionHistory.title": "Cmdr не удалось прочитать ваши недавние выделения, поэтому список начинается заново",
+  "@stateRecovery.selectionHistory.title": {
+    "sourceHash": "a93f574"
+  },
+  "stateRecovery.multiRenamePresets.title": "Cmdr не удалось прочитать сохраненные наборы настроек для группового переименования, поэтому список пока пуст",
+  "@stateRecovery.multiRenamePresets.title": {
+    "sourceHash": "b6f2a3b"
+  },
+  "stateRecovery.multiRenameLastSettings.title": "Cmdr не удалось прочитать последние настройки группового переименования, поэтому инструмент откроется с настройками по умолчанию",
+  "@stateRecovery.multiRenameLastSettings.title": {
+    "sourceHash": "b830e12"
+  },
+  "stateRecovery.multiRenameFieldHistory.title": "Cmdr не удалось прочитать историю полей группового переименования, поэтому история начинается заново",
+  "@stateRecovery.multiRenameFieldHistory.title": {
+    "sourceHash": "7b31c57"
+  },
+  "stateRecovery.launchDays.title": "Cmdr не удалось прочитать список дней, когда вы его открывали, поэтому отсчет начинается заново",
+  "@stateRecovery.launchDays.title": {
+    "sourceHash": "00f947b"
+  },
+  "stateRecovery.keptCopy": "Cmdr оставил старый файл здесь: {path}.",
+  "@stateRecovery.keptCopy": {
+    "sourceHash": "634e87d"
+  },
+  "stateRecovery.showInFinder": "Показать в Finder",
+  "@stateRecovery.showInFinder": {
+    "sourceHash": "c2a9c77"
+  },
+  "stateRecovery.dismiss": "Закрыть",
+  "@stateRecovery.dismiss": {
+    "sourceHash": "48845bf"
+  }
+}

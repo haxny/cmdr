@@ -1,0 +1,86 @@
+{
+  "stateRecovery.settings.title": "Cmdr kon je instellingen niet lezen en is met de standaardinstellingen gestart",
+  "@stateRecovery.settings.title": {
+    "sourceHash": "b5b4b8e"
+  },
+  "stateRecovery.settings.body": "Gebruiksstatistieken en crashrapporten blijven uit tot je ze weer aanzet in Instellingen › Updates en privacy.",
+  "@stateRecovery.settings.body": {
+    "sourceHash": "20439e1"
+  },
+  "stateRecovery.settings.openSettings": "Open Instellingen",
+  "@stateRecovery.settings.openSettings": {
+    "sourceHash": "3f94010"
+  },
+  "stateRecovery.shortcuts.title": "Cmdr kon je sneltoetsen niet lezen, dus ze staan weer op de standaardwaarden",
+  "@stateRecovery.shortcuts.title": {
+    "sourceHash": "35093bd"
+  },
+  "stateRecovery.license.title": "Cmdr kon het licentiebestand niet lezen",
+  "@stateRecovery.license.title": {
+    "sourceHash": "64726c1"
+  },
+  "stateRecovery.license.body": "Heeft Cmdr nu geen licentie meer, voer je licentiesleutel dan opnieuw in via Instellingen › Licentie.",
+  "@stateRecovery.license.body": {
+    "sourceHash": "ea51589"
+  },
+  "stateRecovery.license.openSettings": "Open Instellingen",
+  "@stateRecovery.license.openSettings": {
+    "sourceHash": "3f94010"
+  },
+  "stateRecovery.appStatus.title": "Cmdr kon niet lezen welke mappen er in je panelen openstonden, dus beide panelen beginnen in je thuismap",
+  "@stateRecovery.appStatus.title": {
+    "sourceHash": "521f5eb"
+  },
+  "stateRecovery.operationLog.title": "Cmdr kon je geschiedenis voor ongedaan maken niet lezen, dus die begint opnieuw",
+  "@stateRecovery.operationLog.title": {
+    "sourceHash": "bc354f1"
+  },
+  "stateRecovery.chatHistory.title": "Cmdr kon je Ask Cmdr-chats niet lezen, dus die beginnen opnieuw",
+  "@stateRecovery.chatHistory.title": {
+    "sourceHash": "65ee72b"
+  },
+  "stateRecovery.favorites.title": "Cmdr kon je favorieten niet lezen, dus de lijst begint leeg",
+  "@stateRecovery.favorites.title": {
+    "sourceHash": "1048c2b"
+  },
+  "stateRecovery.goToPathHistory.title": "Cmdr kon je recente paden in ‘Ga naar map’ niet lezen, dus de lijst begint opnieuw",
+  "@stateRecovery.goToPathHistory.title": {
+    "sourceHash": "d2b499b"
+  },
+  "stateRecovery.searchHistory.title": "Cmdr kon je recente zoekopdrachten niet lezen, dus de lijst begint opnieuw",
+  "@stateRecovery.searchHistory.title": {
+    "sourceHash": "75fe9db"
+  },
+  "stateRecovery.selectionHistory.title": "Cmdr kon je recente selecties niet lezen, dus de lijst begint opnieuw",
+  "@stateRecovery.selectionHistory.title": {
+    "sourceHash": "a93f574"
+  },
+  "stateRecovery.multiRenamePresets.title": "Cmdr kon je opgeslagen voorinstellingen van ‘Wijzig meerdere namen’ niet lezen, dus de lijst begint leeg",
+  "@stateRecovery.multiRenamePresets.title": {
+    "sourceHash": "b6f2a3b"
+  },
+  "stateRecovery.multiRenameLastSettings.title": "Cmdr kon je laatste instellingen van ‘Wijzig meerdere namen’ niet lezen, dus het venster opent met de standaardinstellingen",
+  "@stateRecovery.multiRenameLastSettings.title": {
+    "sourceHash": "b830e12"
+  },
+  "stateRecovery.multiRenameFieldHistory.title": "Cmdr kon je veldgeschiedenis van ‘Wijzig meerdere namen’ niet lezen, dus die begint opnieuw",
+  "@stateRecovery.multiRenameFieldHistory.title": {
+    "sourceHash": "7b31c57"
+  },
+  "stateRecovery.launchDays.title": "Cmdr kon niet lezen op welke dagen je Cmdr hebt geopend, dus de telling begint opnieuw",
+  "@stateRecovery.launchDays.title": {
+    "sourceHash": "00f947b"
+  },
+  "stateRecovery.keptCopy": "Cmdr heeft het oude bestand bewaard in {path}.",
+  "@stateRecovery.keptCopy": {
+    "sourceHash": "634e87d"
+  },
+  "stateRecovery.showInFinder": "Toon in Finder",
+  "@stateRecovery.showInFinder": {
+    "sourceHash": "c2a9c77"
+  },
+  "stateRecovery.dismiss": "Sluit",
+  "@stateRecovery.dismiss": {
+    "sourceHash": "48845bf"
+  }
+}

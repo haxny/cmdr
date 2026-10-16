@@ -55,6 +55,14 @@
   "@transfer.changedDuringMove": {
     "sourceHash": "b446f54"
   },
+  "transfer.durabilityUnconfirmed": "Cmdr chưa xác nhận được các bản sao đã được ghi đầy đủ vào {volumeName}. Nếu ổ đĩa đã bị rút ra hoặc đang trục trặc, hãy kiểm tra các bản sao trước khi dựa vào chúng.",
+  "@transfer.durabilityUnconfirmed": {
+    "sourceHash": "48f67b4"
+  },
+  "transfer.durabilityUnconfirmedUnnamed": "Cmdr chưa xác nhận được các bản sao đã được ghi đầy đủ vào đĩa. Nếu ổ đĩa đã bị rút ra hoặc đang trục trặc, hãy kiểm tra các bản sao trước khi dựa vào chúng.",
+  "@transfer.durabilityUnconfirmedUnnamed": {
+    "sourceHash": "33cda48"
+  },
   "transfer.metadataLeftBehind": "Máy chủ này không thể lưu {classes}, nên những thông tin đó không được chuyển theo.",
   "@transfer.metadataLeftBehind": {
     "sourceHash": "e8c3789"

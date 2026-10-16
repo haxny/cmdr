@@ -1,0 +1,86 @@
+{
+  "stateRecovery.settings.title": "A Cmdr nem tudta beolvasni a beállításaidat, ezért az alapértelmezett beállításokkal indult",
+  "@stateRecovery.settings.title": {
+    "sourceHash": "b5b4b8e"
+  },
+  "stateRecovery.settings.body": "A használati statisztika és az összeomlási jelentések kikapcsolva maradnak, amíg vissza nem kapcsolod őket itt: Beállítások › Frissítések és adatvédelem.",
+  "@stateRecovery.settings.body": {
+    "sourceHash": "20439e1"
+  },
+  "stateRecovery.settings.openSettings": "Beállítások megnyitása",
+  "@stateRecovery.settings.openSettings": {
+    "sourceHash": "3f94010"
+  },
+  "stateRecovery.shortcuts.title": "A Cmdr nem tudta beolvasni a billentyűparancsaidat, ezért visszaálltak alapértékre",
+  "@stateRecovery.shortcuts.title": {
+    "sourceHash": "35093bd"
+  },
+  "stateRecovery.license.title": "A Cmdr nem tudta beolvasni a licencfájlját",
+  "@stateRecovery.license.title": {
+    "sourceHash": "64726c1"
+  },
+  "stateRecovery.license.body": "Ha a Cmdr most licenc nélkülinek látszik, add meg újra a licenckulcsodat itt: Beállítások › Licenc.",
+  "@stateRecovery.license.body": {
+    "sourceHash": "ea51589"
+  },
+  "stateRecovery.license.openSettings": "Beállítások megnyitása",
+  "@stateRecovery.license.openSettings": {
+    "sourceHash": "3f94010"
+  },
+  "stateRecovery.appStatus.title": "A Cmdr nem tudta beolvasni, mely mappák voltak megnyitva a paneleidben, ezért a panelek a saját mappádban nyílnak meg",
+  "@stateRecovery.appStatus.title": {
+    "sourceHash": "521f5eb"
+  },
+  "stateRecovery.operationLog.title": "A Cmdr nem tudta beolvasni a visszavonási előzményeidet, ezért tiszta lappal indulnak",
+  "@stateRecovery.operationLog.title": {
+    "sourceHash": "bc354f1"
+  },
+  "stateRecovery.chatHistory.title": "A Cmdr nem tudta beolvasni az Ask Cmdr-csevegéseidet, ezért tiszta lappal indulnak",
+  "@stateRecovery.chatHistory.title": {
+    "sourceHash": "65ee72b"
+  },
+  "stateRecovery.favorites.title": "A Cmdr nem tudta beolvasni a kedvenceidet, ezért a lista üresen indul",
+  "@stateRecovery.favorites.title": {
+    "sourceHash": "1048c2b"
+  },
+  "stateRecovery.goToPathHistory.title": "A Cmdr nem tudta beolvasni az „Ugrás mappához” ablak legutóbbi bejegyzéseit, ezért a lista tiszta lappal indul",
+  "@stateRecovery.goToPathHistory.title": {
+    "sourceHash": "d2b499b"
+  },
+  "stateRecovery.searchHistory.title": "A Cmdr nem tudta beolvasni a legutóbbi kereséseidet, ezért a lista tiszta lappal indul",
+  "@stateRecovery.searchHistory.title": {
+    "sourceHash": "75fe9db"
+  },
+  "stateRecovery.selectionHistory.title": "A Cmdr nem tudta beolvasni a legutóbbi kijelöléseidet, ezért a lista tiszta lappal indul",
+  "@stateRecovery.selectionHistory.title": {
+    "sourceHash": "a93f574"
+  },
+  "stateRecovery.multiRenamePresets.title": "A Cmdr nem tudta beolvasni a csoportos átnevezés mentett előbeállításait, ezért a lista üresen indul",
+  "@stateRecovery.multiRenamePresets.title": {
+    "sourceHash": "b6f2a3b"
+  },
+  "stateRecovery.multiRenameLastSettings.title": "A Cmdr nem tudta beolvasni a csoportos átnevezés legutóbbi beállításait, ezért az eszköz az alapértelmezett beállításokkal nyílik meg",
+  "@stateRecovery.multiRenameLastSettings.title": {
+    "sourceHash": "b830e12"
+  },
+  "stateRecovery.multiRenameFieldHistory.title": "A Cmdr nem tudta beolvasni a csoportos átnevezés mezőinek előzményeit, ezért tiszta lappal indulnak",
+  "@stateRecovery.multiRenameFieldHistory.title": {
+    "sourceHash": "7b31c57"
+  },
+  "stateRecovery.launchDays.title": "A Cmdr nem tudta beolvasni, mely napokon nyitottad meg, ezért a számolás elölről kezdődik",
+  "@stateRecovery.launchDays.title": {
+    "sourceHash": "00f947b"
+  },
+  "stateRecovery.keptCopy": "A Cmdr megtartotta a régi fájlt itt: {path}.",
+  "@stateRecovery.keptCopy": {
+    "sourceHash": "634e87d"
+  },
+  "stateRecovery.showInFinder": "Megjelenítés a Finderben",
+  "@stateRecovery.showInFinder": {
+    "sourceHash": "c2a9c77"
+  },
+  "stateRecovery.dismiss": "Elvetés",
+  "@stateRecovery.dismiss": {
+    "sourceHash": "48845bf"
+  }
+}

@@ -1227,6 +1227,9 @@
     "accept": ["項"],
     "chosen": "項目",
     "confidence": "high",
+    "exceptions": {
+      "stateRecovery.goToPathHistory.title": "The entries are paths, and the dialog itself names its list 最近的路徑 (goToPath.dialog.recentsAriaLabel), so the notice reuses that phrase."
+    },
     "forms": "an index or scan entry → {n} 個項目 (same word as item); a stash entry → 項 (項貯藏)",
     "sources": "MS (entry → 項目, the inputting sense aside); catalog queryUi.empty.indexReady, settings.mediaIndex.reclaim.*"
   },

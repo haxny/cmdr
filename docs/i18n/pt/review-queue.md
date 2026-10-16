@@ -76,3 +76,5 @@ settled wording into `terms.json` (and `decisions.md` when the reason is worth k
   mirror the casual English pair. Confirm `O que sai` reads as "what gets deleted" over the list, or suggest
   `O que é apagado`. Also confirm `os próprios dados` (`.doneTitle`, `.partialTitle`, `.refused.alreadyRunning`) reads
   naturally for "its data", chosen because `seus dados` would read as the user's.
+- **Undo history notice** (`stateRecovery.operationLog.title`): `seu histórico de desfazer` renders "your undo history".
+  Confirm it reads naturally, or suggest `o histórico do Desfazer` / `o histórico de operações para desfazer`.

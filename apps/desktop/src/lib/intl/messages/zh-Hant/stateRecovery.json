@@ -1,0 +1,86 @@
+{
+  "stateRecovery.settings.title": "Cmdr 無法讀取你的設定，所以用預設設定啟動",
+  "@stateRecovery.settings.title": {
+    "sourceHash": "b5b4b8e"
+  },
+  "stateRecovery.settings.body": "使用統計和當機報告會保持關閉，直到你在「設定 › 更新與隱私」重新開啟。",
+  "@stateRecovery.settings.body": {
+    "sourceHash": "20439e1"
+  },
+  "stateRecovery.settings.openSettings": "開啟設定",
+  "@stateRecovery.settings.openSettings": {
+    "sourceHash": "3f94010"
+  },
+  "stateRecovery.shortcuts.title": "Cmdr 無法讀取你的鍵盤快速鍵，所以快速鍵已回到預設值",
+  "@stateRecovery.shortcuts.title": {
+    "sourceHash": "35093bd"
+  },
+  "stateRecovery.license.title": "Cmdr 無法讀取自己的授權檔案",
+  "@stateRecovery.license.title": {
+    "sourceHash": "64726c1"
+  },
+  "stateRecovery.license.body": "如果 Cmdr 現在顯示為未授權，請到「設定 › 授權」重新輸入授權碼。",
+  "@stateRecovery.license.body": {
+    "sourceHash": "ea51589"
+  },
+  "stateRecovery.license.openSettings": "開啟設定",
+  "@stateRecovery.license.openSettings": {
+    "sourceHash": "3f94010"
+  },
+  "stateRecovery.appStatus.title": "Cmdr 無法讀取窗格之前開啟的資料夾，所以窗格改從你的個人專屬資料夾開始",
+  "@stateRecovery.appStatus.title": {
+    "sourceHash": "521f5eb"
+  },
+  "stateRecovery.operationLog.title": "Cmdr 無法讀取你的還原記錄，所以記錄重新開始",
+  "@stateRecovery.operationLog.title": {
+    "sourceHash": "bc354f1"
+  },
+  "stateRecovery.chatHistory.title": "Cmdr 無法讀取你的 Ask Cmdr 對話，所以對話記錄重新開始",
+  "@stateRecovery.chatHistory.title": {
+    "sourceHash": "65ee72b"
+  },
+  "stateRecovery.favorites.title": "Cmdr 無法讀取你的喜好項目，所以列表現在是空的",
+  "@stateRecovery.favorites.title": {
+    "sourceHash": "1048c2b"
+  },
+  "stateRecovery.goToPathHistory.title": "Cmdr 無法讀取「前往資料夾」中最近的路徑，所以列表重新開始",
+  "@stateRecovery.goToPathHistory.title": {
+    "sourceHash": "d2b499b"
+  },
+  "stateRecovery.searchHistory.title": "Cmdr 無法讀取你最近的搜尋，所以列表重新開始",
+  "@stateRecovery.searchHistory.title": {
+    "sourceHash": "75fe9db"
+  },
+  "stateRecovery.selectionHistory.title": "Cmdr 無法讀取你最近的選取，所以列表重新開始",
+  "@stateRecovery.selectionHistory.title": {
+    "sourceHash": "a93f574"
+  },
+  "stateRecovery.multiRenamePresets.title": "Cmdr 無法讀取你儲存的多檔重新命名預設組，所以列表現在是空的",
+  "@stateRecovery.multiRenamePresets.title": {
+    "sourceHash": "b6f2a3b"
+  },
+  "stateRecovery.multiRenameLastSettings.title": "Cmdr 無法讀取你上次的多檔重新命名設定，所以這個工具會用預設設定開啟",
+  "@stateRecovery.multiRenameLastSettings.title": {
+    "sourceHash": "b830e12"
+  },
+  "stateRecovery.multiRenameFieldHistory.title": "Cmdr 無法讀取你的多檔重新命名欄位記錄，所以記錄重新開始",
+  "@stateRecovery.multiRenameFieldHistory.title": {
+    "sourceHash": "7b31c57"
+  },
+  "stateRecovery.launchDays.title": "Cmdr 無法讀取你開啟 Cmdr 的日期記錄，所以重新開始計算",
+  "@stateRecovery.launchDays.title": {
+    "sourceHash": "00f947b"
+  },
+  "stateRecovery.keptCopy": "Cmdr 已把舊檔案保留在 {path}。",
+  "@stateRecovery.keptCopy": {
+    "sourceHash": "634e87d"
+  },
+  "stateRecovery.showInFinder": "在 Finder 中顯示",
+  "@stateRecovery.showInFinder": {
+    "sourceHash": "c2a9c77"
+  },
+  "stateRecovery.dismiss": "關閉",
+  "@stateRecovery.dismiss": {
+    "sourceHash": "48845bf"
+  }
+}

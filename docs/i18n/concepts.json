@@ -111,7 +111,15 @@
     "en": "tool (AI)",
     "match": ["tool", "tools"],
     "note": "Developer tooling (Android platform tools) is not this concept.",
-    "notMatch": ["platform tools", "android tools", "backup tools", "zip tools", "some tools", "open the tool"],
+    "notMatch": [
+      "platform tools",
+      "android tools",
+      "backup tools",
+      "zip tools",
+      "some tools",
+      "open the tool",
+      "the tool opens"
+    ],
     "sense": "A function the AI can call (list a folder, search), and its status lines."
   },
   "alias": {
@@ -313,7 +321,15 @@
     "en": "Back",
     "match": ["=back", "back to"],
     "note": "A standalone back button in a list you drill into differs from the paired previous/next of a wizard or the Go menu in many locales.",
-    "notMatch": ["tied back", "comes back", "come back", "chat back", "take you back", "switch back"],
+    "notMatch": [
+      "tied back",
+      "comes back",
+      "come back",
+      "chat back",
+      "take you back",
+      "switch back",
+      "back to the defaults"
+    ],
     "sense": "Returning to the previous step, screen, or location."
   },
   "background": {
@@ -2306,7 +2322,7 @@
     "distinct": ["go-to-path", "absolute-path"],
     "en": "path",
     "match": ["path", "paths"],
-    "notMatch": ["folder-path"],
+    "notMatch": ["folder-path", "go to path"],
     "sense": "A file-system path string."
   },
   "pattern": {
@@ -2995,7 +3011,7 @@
     "distinct": ["see", "open", "hide"],
     "en": "Show",
     "match": ["show", "shows", "showing", "shown", "show all", "show details"],
-    "notMatch": ["is shown in the list", "it shows what", "showing whether", "show up"],
+    "notMatch": ["is shown in the list", "it shows what", "showing whether", "show up", "shows as"],
     "sense": "Making something visible (Show hidden files, Show favorites, Show all)."
   },
   "show-in-finder": {

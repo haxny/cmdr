@@ -432,3 +432,20 @@ rule into `translation-principles.md` or `translator-instructions.md`), then del
 - `decisions.md` is at its byte budget for es and zh, so the #457 rulings (zh genuine `真正的`, guest session
   `客人会话`) went to `review-queue.md` instead. Bump `decisionsBytes` in `i18n-termbase-baseline.json` if they belong
   there. (es, zh)
+- `stateRecovery.goToPathHistory.title`: English says "Go to path", but the dialog is now "Go to folder"
+  (`goToPath.dialog.title`). Rename it in the English; hu quoted the shipped title; de added `go to path` to `path`'s
+  `notMatch` instead. (hu, de, vi, zh, nl, pt, zh-Hant, sv, ru, es, fr)
+- `transfer.durabilityUnconfirmedUnnamed`: "written to the disk" then "If the drive…" names one device two ways in one
+  sentence pair; consider "written to the drive" to match `transfer.durabilityUnconfirmed`'s second sentence. (vi, zh,
+  pt, nl, zh-Hant, sv, hu, es, fr, ru)
+- `stateRecovery.operationLog.title`: "your undo history" names a record the UI elsewhere calls the operation log (its
+  Settings section, the multi-rename undo hint). A reader can't tell they're the same thing; consider naming the
+  feature, or say in the `@key` description which UI name it should match. (zh-Hant, pt, sv, fr, es, ru)
+- `stateRecovery.multiRenameLastSettings.title`: "the tool opens" tripped `ai-tool`; added `the tool opens` to its
+  `notMatch`. (hu)
+- `stateRecovery.*`: two more English senses tripped concepts; taught them in `notMatch`: "back to the defaults"
+  (`back`, `stateRecovery.shortcuts.title`) and "shows as" (`show`, `stateRecovery.license.body`, meaning "appears as").
+  (de)
+- `stateRecovery.chatHistory.title`: "so they start fresh" says the chats themselves restart, while the description says
+  earlier chats are gone. A literal "die beginnen opnieuw" reads odd for chats; consider "so your chat list starts
+  empty", matching the favorites/presets "the list starts empty" frame. (nl, zh-Hant, sv, pt, fr, es, hu, ru)

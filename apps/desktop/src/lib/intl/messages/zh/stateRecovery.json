@@ -1,0 +1,86 @@
+{
+  "stateRecovery.settings.title": "Cmdr 无法读取你的设置，所以用默认设置启动了",
+  "@stateRecovery.settings.title": {
+    "sourceHash": "b5b4b8e"
+  },
+  "stateRecovery.settings.body": "使用统计和崩溃报告会保持关闭，直到你在“设置 › 更新与隐私”中重新开启。",
+  "@stateRecovery.settings.body": {
+    "sourceHash": "20439e1"
+  },
+  "stateRecovery.settings.openSettings": "打开设置",
+  "@stateRecovery.settings.openSettings": {
+    "sourceHash": "3f94010"
+  },
+  "stateRecovery.shortcuts.title": "Cmdr 无法读取你的键盘快捷键，所以快捷键已恢复为默认",
+  "@stateRecovery.shortcuts.title": {
+    "sourceHash": "35093bd"
+  },
+  "stateRecovery.license.title": "Cmdr 无法读取自己的许可证文件",
+  "@stateRecovery.license.title": {
+    "sourceHash": "64726c1"
+  },
+  "stateRecovery.license.body": "如果 Cmdr 现在显示为无许可证，请在“设置 › 许可证”中重新输入你的许可证密钥。",
+  "@stateRecovery.license.body": {
+    "sourceHash": "ea51589"
+  },
+  "stateRecovery.license.openSettings": "打开设置",
+  "@stateRecovery.license.openSettings": {
+    "sourceHash": "3f94010"
+  },
+  "stateRecovery.appStatus.title": "Cmdr 无法读取窗格之前打开了哪些文件夹，所以窗格会从你的个人文件夹开始",
+  "@stateRecovery.appStatus.title": {
+    "sourceHash": "521f5eb"
+  },
+  "stateRecovery.operationLog.title": "Cmdr 无法读取你的撤销历史记录，所以历史记录从头开始",
+  "@stateRecovery.operationLog.title": {
+    "sourceHash": "bc354f1"
+  },
+  "stateRecovery.chatHistory.title": "Cmdr 无法读取你的 Ask Cmdr 聊天记录，所以聊天记录从头开始",
+  "@stateRecovery.chatHistory.title": {
+    "sourceHash": "65ee72b"
+  },
+  "stateRecovery.favorites.title": "Cmdr 无法读取你的个人收藏，所以列表现在是空的",
+  "@stateRecovery.favorites.title": {
+    "sourceHash": "1048c2b"
+  },
+  "stateRecovery.goToPathHistory.title": "Cmdr 无法读取“前往文件夹”里最近的条目，所以列表从头开始",
+  "@stateRecovery.goToPathHistory.title": {
+    "sourceHash": "d2b499b"
+  },
+  "stateRecovery.searchHistory.title": "Cmdr 无法读取你最近的搜索，所以列表从头开始",
+  "@stateRecovery.searchHistory.title": {
+    "sourceHash": "75fe9db"
+  },
+  "stateRecovery.selectionHistory.title": "Cmdr 无法读取你最近的选择，所以列表从头开始",
+  "@stateRecovery.selectionHistory.title": {
+    "sourceHash": "a93f574"
+  },
+  "stateRecovery.multiRenamePresets.title": "Cmdr 无法读取你保存的批量重命名预置，所以列表现在是空的",
+  "@stateRecovery.multiRenamePresets.title": {
+    "sourceHash": "b6f2a3b"
+  },
+  "stateRecovery.multiRenameLastSettings.title": "Cmdr 无法读取你上次的批量重命名设置，所以这个工具会用默认设置打开",
+  "@stateRecovery.multiRenameLastSettings.title": {
+    "sourceHash": "b830e12"
+  },
+  "stateRecovery.multiRenameFieldHistory.title": "Cmdr 无法读取批量重命名的输入历史记录，所以历史记录从头开始",
+  "@stateRecovery.multiRenameFieldHistory.title": {
+    "sourceHash": "7b31c57"
+  },
+  "stateRecovery.launchDays.title": "Cmdr 无法读取你打开 Cmdr 的日期记录，所以重新开始计数",
+  "@stateRecovery.launchDays.title": {
+    "sourceHash": "00f947b"
+  },
+  "stateRecovery.keptCopy": "Cmdr 已把旧文件保留在 {path}。",
+  "@stateRecovery.keptCopy": {
+    "sourceHash": "634e87d"
+  },
+  "stateRecovery.showInFinder": "在 Finder 中显示",
+  "@stateRecovery.showInFinder": {
+    "sourceHash": "c2a9c77"
+  },
+  "stateRecovery.dismiss": "关闭",
+  "@stateRecovery.dismiss": {
+    "sourceHash": "48845bf"
+  }
+}

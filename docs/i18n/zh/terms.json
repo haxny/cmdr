@@ -1569,6 +1569,19 @@
     "forms": "operation history and the generic noun → 历史记录; git and repo history → git 历史 / 仓库历史; file history (Ask Cmdr) → 文件历史",
     "sources": "macOS AppKit (NSToolbarHistoryTemplate 历史记录; 版本历史记录); MS terminology zh-Hans (历史记录); catalog (errors.git.blobTooLarge.title, fileExplorer.readOnly.gitPortalMessage)"
   },
+  "home-folder": {
+    "accept": ["个人"],
+    "avoid": [
+      {
+        "form": "主文件夹",
+        "why": "Nautilus/Thunar wording; macOS Finder calls Home 个人, and the catalog already says 个人文件夹"
+      }
+    ],
+    "chosen": "个人文件夹",
+    "confidence": "high",
+    "forms": "the Go menu's bare Home item follows Finder: 个人; in a sentence or command 个人文件夹 (前往个人文件夹, 打开个人文件夹)",
+    "sources": "macOS Finder zh-CN (Home → 个人); catalog (commands.navGoHome.label, fileExplorer.errorPane.goHome, fileExplorer.unreachable.openHome); GNOME Nautilus / Xfce Thunar (主文件夹, not taken)"
+  },
   "host": {
     "chosen": "主机",
     "confidence": "high",

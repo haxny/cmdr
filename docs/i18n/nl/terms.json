@@ -1518,6 +1518,12 @@
     "forms": "git history → git-geschiedenis; file history → bestandsgeschiedenis; operation history → bewerkingsgeschiedenis; the repo’s history → de geschiedenis van de repo",
     "sources": "macOS AppKit (NSToolbarHistoryTemplate geschiedenis; versiegeschiedenis); catalog (errors.git.blobTooLarge.title, operationLog.rollback.refusalUnknown)"
   },
+  "home-folder": {
+    "chosen": "thuismap",
+    "confidence": "high",
+    "forms": "the Go menu item → Thuismap; in prose je thuismap (Ga naar je thuismap, Finder); Go to home folder → Ga naar thuismap",
+    "sources": "macOS Finder (MenuBar, PreferencesWindow, LocalizableMerged: Thuismap, Ga naar je thuismap); Thunar (thuismap); catalog (commands.navGoHome.label, fileExplorer.unreachable.openHome)"
+  },
   "host": {
     "accept": ["hosts"],
     "chosen": "host",
@@ -3575,6 +3581,9 @@
     "chosen": "onderdeel",
     "accept": ["onderdelen", "vermelding", "vermeldingen", "item", "items"],
     "confidence": "high",
+    "exceptions": {
+      "stateRecovery.goToPathHistory.title": "Every entry in that list is a path, so ‘je recente paden in ‘Ga naar map’’ names what it holds; ‘items’ would read vaguer"
+    },
     "forms": "a scanned or indexed file or folder → onderdeel (indexing.scan.counters, queryUi.results.*); an image-index record → vermelding (settings.mediaIndex.reclaim.*); a stash or recent-list entry → item",
     "sources": "catalog (queryUi.empty.indexReady, settings.mediaIndex.reclaim.*, fileExplorer.git.size.stashEntries); MS terminology (entry → vermelding); macOS has no vermelding, and says onderdelen for Finder items"
   },

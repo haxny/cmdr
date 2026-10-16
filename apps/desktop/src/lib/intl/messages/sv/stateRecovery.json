@@ -1,0 +1,86 @@
+{
+  "stateRecovery.settings.title": "Cmdr kunde inte läsa dina inställningar och startade med standardinställningarna",
+  "@stateRecovery.settings.title": {
+    "sourceHash": "b5b4b8e"
+  },
+  "stateRecovery.settings.body": "Användningsstatistik och kraschrapporter förblir avstängda tills du slår på dem igen i Inställningar › Uppdateringar och integritet.",
+  "@stateRecovery.settings.body": {
+    "sourceHash": "20439e1"
+  },
+  "stateRecovery.settings.openSettings": "Öppna inställningar",
+  "@stateRecovery.settings.openSettings": {
+    "sourceHash": "3f94010"
+  },
+  "stateRecovery.shortcuts.title": "Cmdr kunde inte läsa dina tangentbordsgenvägar, så standardgenvägarna gäller igen",
+  "@stateRecovery.shortcuts.title": {
+    "sourceHash": "35093bd"
+  },
+  "stateRecovery.license.title": "Cmdr kunde inte läsa sin licensfil",
+  "@stateRecovery.license.title": {
+    "sourceHash": "64726c1"
+  },
+  "stateRecovery.license.body": "Om Cmdr nu säger att du inte har någon licens, ange din licensnyckel igen i Inställningar › Licens.",
+  "@stateRecovery.license.body": {
+    "sourceHash": "ea51589"
+  },
+  "stateRecovery.license.openSettings": "Öppna inställningar",
+  "@stateRecovery.license.openSettings": {
+    "sourceHash": "3f94010"
+  },
+  "stateRecovery.appStatus.title": "Cmdr kunde inte läsa vilka mappar dina paneler hade öppna, så panelerna börjar i din hemmapp",
+  "@stateRecovery.appStatus.title": {
+    "sourceHash": "521f5eb"
+  },
+  "stateRecovery.operationLog.title": "Cmdr kunde inte läsa din ångringshistorik, så historiken börjar om",
+  "@stateRecovery.operationLog.title": {
+    "sourceHash": "bc354f1"
+  },
+  "stateRecovery.chatHistory.title": "Cmdr kunde inte läsa dina chattar i Ask Cmdr, så chattlistan börjar om",
+  "@stateRecovery.chatHistory.title": {
+    "sourceHash": "65ee72b"
+  },
+  "stateRecovery.favorites.title": "Cmdr kunde inte läsa dina favoriter, så listan är tom",
+  "@stateRecovery.favorites.title": {
+    "sourceHash": "1048c2b"
+  },
+  "stateRecovery.goToPathHistory.title": "Cmdr kunde inte läsa dina senaste sökvägar i ”Gå till mapp”, så listan börjar om",
+  "@stateRecovery.goToPathHistory.title": {
+    "sourceHash": "d2b499b"
+  },
+  "stateRecovery.searchHistory.title": "Cmdr kunde inte läsa dina senaste sökningar, så listan börjar om",
+  "@stateRecovery.searchHistory.title": {
+    "sourceHash": "75fe9db"
+  },
+  "stateRecovery.selectionHistory.title": "Cmdr kunde inte läsa dina senaste markeringar, så listan börjar om",
+  "@stateRecovery.selectionHistory.title": {
+    "sourceHash": "a93f574"
+  },
+  "stateRecovery.multiRenamePresets.title": "Cmdr kunde inte läsa dina sparade förinställningar för Massbyt namn, så listan är tom",
+  "@stateRecovery.multiRenamePresets.title": {
+    "sourceHash": "b6f2a3b"
+  },
+  "stateRecovery.multiRenameLastSettings.title": "Cmdr kunde inte läsa dina senaste inställningar för Massbyt namn, så verktyget öppnas med standardinställningarna",
+  "@stateRecovery.multiRenameLastSettings.title": {
+    "sourceHash": "b830e12"
+  },
+  "stateRecovery.multiRenameFieldHistory.title": "Cmdr kunde inte läsa fälthistoriken för Massbyt namn, så historiken börjar om",
+  "@stateRecovery.multiRenameFieldHistory.title": {
+    "sourceHash": "7b31c57"
+  },
+  "stateRecovery.launchDays.title": "Cmdr kunde inte läsa sin lista över dagarna du har öppnat Cmdr, så räkningen börjar om",
+  "@stateRecovery.launchDays.title": {
+    "sourceHash": "00f947b"
+  },
+  "stateRecovery.keptCopy": "Cmdr behöll den gamla filen på {path}.",
+  "@stateRecovery.keptCopy": {
+    "sourceHash": "634e87d"
+  },
+  "stateRecovery.showInFinder": "Visa i Finder",
+  "@stateRecovery.showInFinder": {
+    "sourceHash": "c2a9c77"
+  },
+  "stateRecovery.dismiss": "Avfärda",
+  "@stateRecovery.dismiss": {
+    "sourceHash": "48845bf"
+  }
+}

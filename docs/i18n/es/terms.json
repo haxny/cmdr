@@ -245,7 +245,7 @@
   },
   "back": {
     "chosen": "Atrás",
-    "accept": ["volver", "vuelve"],
+    "accept": ["volver", "vuelve", "vuelto"],
     "forms": "the bare Back button is the adverb Atrás; Back to X needs the verb: Volver a X (Volver a los preajustes, Volver al chat)",
     "confidence": "high",
     "exceptions": {
@@ -432,7 +432,8 @@
       "consult",
       "compar",
       "mira",
-      "revís"
+      "revís",
+      "compruéb"
     ],
     "forms": "Checking for changes → Comprobación de cambios; Check Again / Re-check → Comprobar de nuevo; Check your X → Comprueba tu X; Have a look at → Revisa; pre-compress count Verificando antes de comprimir...",
     "confidence": "high",
@@ -1529,6 +1530,22 @@
     "confidence": "high",
     "sources": "macOS (historial, historial de versiones)",
     "decision": "El registro de operaciones"
+  },
+  "home-folder": {
+    "chosen": "carpeta de inicio",
+    "accept": ["Carpeta de inicio"],
+    "forms": "Go to home folder → Ir a la carpeta de inicio; with tu in prose: tu carpeta de inicio",
+    "confidence": "high",
+    "avoid": [
+      {
+        "form": "carpeta personal",
+        "why": "Microsoft's and GNOME's form; macOS es writes carpeta de inicio"
+      }
+    ],
+    "exceptions": {
+      "menu.go.home": "the Go menu item copies Finder's own Home → Inicio"
+    },
+    "sources": "macOS es (carpeta de inicio ×5, no carpeta personal); Nautilus (carpeta de inicio ×7 vs carpeta personal ×4); MS terminology (carpeta personal); catalog fileExplorer.unreachable.openHome, commands.navGoHome.label"
   },
   "host": {
     "chosen": "host",
