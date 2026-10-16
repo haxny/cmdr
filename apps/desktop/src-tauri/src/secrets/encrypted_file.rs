@@ -150,6 +150,13 @@ impl SecretStore for EncryptedFileStore {
         }
         write_store(&self.path, &contents)
     }
+
+    fn keys(&self) -> Result<Vec<String>, SecretStoreError> {
+        let _lock = FILE_STORE_LOCK
+            .lock()
+            .map_err(|e| SecretStoreError::Other(format!("Lock error: {}", e)))?;
+        Ok(read_store(&self.path)?.0.into_keys().collect())
+    }
 }
 
 #[cfg(test)]

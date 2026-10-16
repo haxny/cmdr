@@ -3,7 +3,7 @@
 Generic key-value secret storage with pluggable backends. The trait stores opaque `&[u8]` / `Vec<u8>`; callers own
 their serialization. Consumers: `network/keychain.rs` (SMB creds, `username\0password` under `smb://server/share` keys),
 `ai/api_keys.rs` (cloud AI API keys, raw UTF-8 under `ai.apiKey.<provider>` keys), and `licensing/key_storage.rs` (the
-license key and short code, JSON under `license.key`).
+license key and short code, JSON under `license.key`). `data_wipe/` lists (`keys`) and deletes them all.
 
 ## Module map
 
@@ -46,6 +46,9 @@ and ignores both, so an env var can't downgrade a user's Keychain to plaintext);
 - **`is_file_backed()`** drives a one-time frontend info toast about credential storage. It's true only when the store
   FELL BACK to a file for lack of a keyring; a file store chosen on purpose (tests, dev, E2E) returns false, so dev shows
   no toast.
+- **`keys` is a required trait method, ❌ never a default**: "Delete all Cmdr data" finds what to delete through it, so a
+  backend that answered empty would leave every password behind. The Keychain listing reads attributes only, which
+  raises no consent dialog.
 - **`KeyringStore::is_available()` does a full write-read-delete probe** once at startup, to catch locked keyrings that
   silently accept writes without persisting.
 

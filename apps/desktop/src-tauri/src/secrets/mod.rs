@@ -54,6 +54,23 @@ pub trait SecretStore: Send + Sync {
     fn set(&self, key: &str, value: &[u8]) -> Result<(), SecretStoreError>;
     fn get(&self, key: &str) -> Result<Vec<u8>, SecretStoreError>;
     fn delete(&self, key: &str) -> Result<(), SecretStoreError>;
+    /// Every key this store holds for Cmdr (this instance's, on the Keychain), so "Delete all Cmdr
+    /// data" can remove each one. ❌ No default impl: a backend that forgot it would leave every
+    /// password behind while the wipe reported success.
+    fn keys(&self) -> Result<Vec<String>, SecretStoreError>;
+}
+
+/// What the person sees the store's items under: the Keychain item name on macOS (instance
+/// suffixed off prod), else the plain product name. For pointing at leftovers in plain words.
+pub fn item_name() -> String {
+    #[cfg(target_os = "macos")]
+    {
+        keychain_macos::item_name().to_string()
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        "Cmdr".to_string()
+    }
 }
 
 /// Set during `init_store()` when the store FELL BACK to a file for lack of a system
@@ -189,6 +206,10 @@ impl SecretStore for TestStore {
 
     fn delete(&self, key: &str) -> Result<(), SecretStoreError> {
         plain_file::PlainFileStore::new(isolated_store_dir()).delete(key)
+    }
+
+    fn keys(&self) -> Result<Vec<String>, SecretStoreError> {
+        plain_file::PlainFileStore::new(isolated_store_dir()).keys()
     }
 }
 

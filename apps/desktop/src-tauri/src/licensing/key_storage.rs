@@ -282,6 +282,9 @@ mod tests {
                 .map(|_| ())
                 .ok_or_else(|| SecretStoreError::NotFound(key.to_string()))
         }
+        fn keys(&self) -> Result<Vec<String>, SecretStoreError> {
+            Ok(self.entries.lock_ignore_poison().keys().cloned().collect())
+        }
     }
 
     const KEY: &str = "eyJlbWFpbCI6ImJ1eWVyQGV4YW1wbGUuY29tIn0=.c2lnbmF0dXJl";

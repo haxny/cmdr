@@ -2,6 +2,7 @@
 
 use super::{SecretStore, SecretStoreError};
 use log::debug;
+use security_framework::item::{ItemClass, ItemSearchOptions, Limit, SearchResult};
 use security_framework::passwords::{delete_generic_password, get_generic_password, set_generic_password};
 use std::sync::OnceLock;
 
@@ -35,6 +36,11 @@ fn service_name() -> &'static str {
     })
 }
 
+/// The name Keychain Access shows this instance's items under.
+pub(super) fn item_name() -> &'static str {
+    service_name()
+}
+
 /// Stores secrets in the macOS Keychain.
 pub struct KeychainStore;
 
@@ -54,7 +60,32 @@ impl SecretStore for KeychainStore {
         debug!("Keychain: deleting secret for key: {}", key);
         delete_generic_password(service_name(), key).map_err(|e| classify_security_error(key, e))
     }
+
+    /// Every generic password under this instance's service. Reads attributes only, never the
+    /// secret data, so it raises no Keychain consent dialog.
+    fn keys(&self) -> Result<Vec<String>, SecretStoreError> {
+        debug!("Keychain: listing keys");
+        let found = ItemSearchOptions::new()
+            .class(ItemClass::generic_password())
+            .service(service_name())
+            .load_attributes(true)
+            .limit(Limit::All)
+            .search();
+        match found {
+            Ok(results) => Ok(results
+                .iter()
+                .filter_map(SearchResult::simplify_dict)
+                .filter_map(|attributes| attributes.get(ACCOUNT_ATTRIBUTE).cloned())
+                .collect()),
+            Err(e) if e.code() == ERR_SEC_ITEM_NOT_FOUND => Ok(Vec::new()),
+            Err(e) => Err(classify_security_error(service_name(), e)),
+        }
+    }
 }
+
+/// `kSecAttrAccount`'s key in a simplified attribute dictionary: where a generic password keeps
+/// the key we stored it under.
+const ACCOUNT_ATTRIBUTE: &str = "acct";
 
 /// Stable OSStatus codes from Apple's `SecBase.h`. Match on these instead of
 /// the `security-framework` `Display` impl, which localizes on non-English

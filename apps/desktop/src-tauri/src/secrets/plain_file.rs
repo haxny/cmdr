@@ -127,6 +127,13 @@ impl SecretStore for PlainFileStore {
         }
         write_store(&self.path, &contents)
     }
+
+    fn keys(&self) -> Result<Vec<String>, SecretStoreError> {
+        let _lock = FILE_STORE_LOCK
+            .lock()
+            .map_err(|e| SecretStoreError::Other(format!("Lock error: {}", e)))?;
+        Ok(read_store(&self.path)?.0.into_keys().collect())
+    }
 }
 
 #[cfg(test)]
@@ -233,5 +240,23 @@ mod tests {
             store.delete("no-such-key"),
             Err(SecretStoreError::NotFound(_))
         ));
+    }
+
+    /// "Delete all Cmdr data" finds what to delete through `keys`, so a key it misses is a
+    /// password that survives the wipe.
+    #[test]
+    fn keys_lists_every_stored_key_and_nothing_else() {
+        let dir = TestDir::new("plain-file-keys");
+        let store = PlainFileStore::new(dir.to_path_buf());
+        assert!(store.keys().unwrap().is_empty(), "no file yet means no keys");
+
+        store.set("smb://nas/share", b"a").unwrap();
+        store.set("license.key", b"b").unwrap();
+        store.set("gone", b"c").unwrap();
+        store.delete("gone").unwrap();
+
+        let mut keys = store.keys().unwrap();
+        keys.sort();
+        assert_eq!(keys, vec!["license.key".to_string(), "smb://nas/share".to_string()]);
     }
 }

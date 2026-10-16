@@ -85,4 +85,22 @@ impl SecretStore for KeyringStore {
             Err(e) => Err(SecretStoreError::Other(format!("Failed to delete secret: {}", e))),
         }
     }
+
+    fn keys(&self) -> Result<Vec<String>, SecretStoreError> {
+        debug!("Keyring: listing keys");
+        ensure_default_store();
+        let spec = std::collections::HashMap::from([("service", SERVICE_NAME)]);
+        let entries = keyring_core::Entry::search(&spec)
+            .map_err(|e| SecretStoreError::Other(format!("Failed to search the keyring: {}", e)))?;
+        // A locked item yields no specifiers: it's still there, so say so rather than skip it.
+        entries
+            .iter()
+            .map(|entry| {
+                entry
+                    .get_specifiers()
+                    .map(|(_, user)| user)
+                    .ok_or_else(|| SecretStoreError::AccessDenied("a keyring item stayed locked".to_string()))
+            })
+            .collect()
+    }
 }
