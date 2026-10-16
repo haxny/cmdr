@@ -149,6 +149,13 @@ export async function moveQueuedOperation(
   return commands.moveQueuedOperation(operationId, direction)
 }
 
+/** Put a waiting operation at `position` in line (1-based, counting waiting
+ *  operations only): the drop of a drag in the queue window. Answers like
+ *  `moveQueuedOperation`, plus `unchanged` for a drop where it already was. */
+export async function placeQueuedOperation(operationId: string, position: number): Promise<QueueMoveOutcome> {
+  return commands.placeQueuedOperation(operationId, position)
+}
+
 /** Drop one retained failure from the snapshot. Dismissal is always explicit —
  *  a failed row waits until someone reads it, however long that takes. */
 export async function dismissFailedOperation(operationId: string): Promise<void> {

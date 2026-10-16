@@ -18,9 +18,11 @@
         onQueueRowContextAction,
         onQueueSelectAll,
         pauseAll,
+        placeQueuedOperation,
         resumeAll,
         showQueueRowContextMenu,
         type QueueMoveDirection,
+        type QueueMoveOutcome,
         type QueueRowMenuAction,
     } from '#lib/tauri-commands/index.js'
     import { boundShortcuts } from '#lib/shortcuts/index.js'
@@ -41,6 +43,8 @@
         isTerminalStatus,
     } from '#lib/file-operations/queue/operations-store.svelte.js'
     import { treesCollapsible } from '#lib/file-operations/queue/row-tree.js'
+    import { createQueueDrag } from '#lib/file-operations/queue/queue-drag.svelte.js'
+    import { measureRowTops, slideRowsFrom } from '#lib/file-operations/queue/queue-flip.js'
     import {
         queuedNeighbors,
         queueRowMenuEntries,
@@ -162,20 +166,95 @@
         const id = cursor.cursorId
         if (id === null) return
         try {
-            const outcome = await moveQueuedOperation(id, direction)
-            // Announced fresh each time: a live region repeats nothing it already says.
-            announcement = ''
-            await tick()
-            announcement =
-                outcome.kind === 'moved'
-                    ? tString('queue.reorder.moved', { direction, position: outcome.position, waiting: outcome.waiting })
-                    : outcome.kind === 'at_edge'
-                      ? tString('queue.reorder.atEdge', { direction })
-                      : tString('queue.reorder.notQueued')
+            await announceMove(await moveQueuedOperation(id, direction), direction)
         } catch (error) {
             log.warn('Failed to move operation {operationId}: {error}', { operationId: id, error: String(error) })
         }
     }
+
+    /** Says where a moved operation landed. A drop where it started says nothing. */
+    async function announceMove(outcome: QueueMoveOutcome, direction: QueueMoveDirection): Promise<void> {
+        if (outcome.kind === 'unchanged') return
+        // Announced fresh each time: a live region repeats nothing it already says.
+        announcement = ''
+        await tick()
+        switch (outcome.kind) {
+            case 'moved':
+                announcement = tString('queue.reorder.moved', {
+                    direction,
+                    position: outcome.position,
+                    waiting: outcome.waiting,
+                })
+                return
+            case 'at_edge':
+                announcement = tString('queue.reorder.atEdge', { direction })
+                return
+            case 'not_queued':
+                announcement = tString('queue.reorder.notQueued')
+        }
+    }
+
+    // ── Dragging to reorder (DETAILS § "Dragging to reorder") ───────────────
+    // The mouse half of ⌥↑ / ⌥↓: a waiting row's grip drags it among the waiting
+    // rows, and the drop puts it at a place in line in one backend call.
+
+    const waitingIds = $derived(rows.filter((r) => r.snapshot.status === 'queued').map((r) => r.snapshot.operationId))
+    /** A lone waiting row has nobody to trade with, so it gets no grip, and with no
+     *  grips the column goes too. */
+    const reorderable = $derived(waitingIds.length >= 2)
+
+    function rowElement(id: string): HTMLElement | undefined {
+        return gridEl?.querySelector<HTMLElement>(`[data-operation-id="${CSS.escape(id)}"]`) ?? undefined
+    }
+
+    const drag = createQueueDrag({
+        waitingIds: () => waitingIds,
+        rowElement,
+        scroller: () => gridEl,
+        onLift: (id) => {
+            if (cursor.cursorId !== id) cursor.place(id)
+            rowApis[id]?.focusRow()
+        },
+        onDrop: async (id, position) => {
+            const from = waitingIds.indexOf(id) + 1
+            try {
+                const outcome = await placeQueuedOperation(id, position)
+                await announceMove(outcome, position < from ? 'earlier' : 'later')
+                return outcome.kind === 'moved'
+            } catch (error) {
+                log.warn('Failed to place operation {operationId}: {error}', { operationId: id, error: String(error) })
+                return false
+            }
+        },
+    })
+
+    /** The gap the dragged row would land in, drawn on the waiting row that borders it. */
+    function dropCueFor(id: string): 'above' | 'below' | null {
+        const slot = drag.dropSlot
+        if (slot === null) return null
+        const index = waitingIds.indexOf(id)
+        if (index === slot) return 'above'
+        if (slot === waitingIds.length && index === waitingIds.length - 1) return 'below'
+        return null
+    }
+
+    // FLIP: when the line's order changes (a drop, ⌥↑ / ⌥↓, a row that finished),
+    // measure every row where it's drawn BEFORE the DOM moves, then slide each
+    // from there into its new slot. A dropped row is measured where it was dropped.
+    let flipOrder = ''
+    $effect.pre(() => {
+        const order = rowIds.join('\n')
+        if (order === flipOrder) return
+        const firstRender = flipOrder === ''
+        flipOrder = order
+        if (firstRender || !gridEl) return
+        const list = gridEl
+        const before = measureRowTops(list)
+        drag.listChanging()
+        void tick().then(() => {
+            slideRowsFrom(list, before)
+        })
+    })
 
     /** Runs a key the grid answers. `false` leaves the key to whoever else wants it. */
     function runGridAction(action: QueueKeyAction): boolean {
@@ -375,7 +454,8 @@
         if (action === null) return
         if (action.kind === 'close') {
             event.preventDefault()
-            closeWindow()
+            // Mid-drag, Escape puts the row back instead, as in any list.
+            if (!drag.cancel()) closeWindow()
             return
         }
         if (!gridHears(event.target) || isRowOnlyKey(action, event)) return
@@ -430,6 +510,7 @@
     })
 
     onDestroy(() => {
+        drag.cancel()
         unlistenFocusSelf?.()
         unlistenRectTracking?.()
         unlistenSelectAll?.()
@@ -446,7 +527,7 @@
 
 <svelte:window onkeydown={handleKeydown} />
 
-<main class="queue-window" tabindex="-1">
+<main class="queue-window" class:is-reordering={drag.active} tabindex="-1">
     <h1 class="sr-only">{tString('queue.windowTitle')}</h1>
     <!-- The title sits on the traffic lights' line, centered like a native window
          title (the main window's title bar does the same), and the whole strip
@@ -517,6 +598,14 @@
                         }}
                         onContextMenu={() => void openRowMenu(id)}
                         onDismiss={() => void dismissRow(id)}
+                        gripColumn={reorderable}
+                        draggable={reorderable && row.snapshot.status === 'queued'}
+                        onGripPointerDown={(event: PointerEvent) => {
+                            drag.start(id, event)
+                        }}
+                        dragOffset={drag.draggingId === id ? drag.offsetY : null}
+                        lifted={drag.active && drag.draggingId === id}
+                        dropCue={dropCueFor(id)}
                     />
                 {/each}
             </div>
@@ -539,6 +628,15 @@
         display: flex;
         flex-direction: column;
         position: relative;
+    }
+
+    /* While a row is held, the closed hand wins over every hover cursor it passes, and
+       nothing it crosses starts a text selection. */
+    .queue-window.is-reordering,
+    .queue-window.is-reordering :global(*) {
+        cursor: grabbing;
+        user-select: none;
+        -webkit-user-select: none;
     }
 
     /* The overlay title bar's own line, shared with the traffic lights. */

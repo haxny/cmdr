@@ -495,8 +495,30 @@ extend. The page sends `moveQueuedOperation(id, direction)` and announces the ba
 (`queue.reorder.*`: the new place among WAITING operations, "already first/last", or "only waiting operations can
 move"). Only a waiting row moves; running and paused ones keep their place. The row itself moves when the next
 `operations-changed` lands, and the cursor (an id) moves with it. Backend:
-`apps/desktop/src-tauri/src/file_system/write_operations/DETAILS.md` § "Reordering the line". Drag-to-reorder and "Run
-next" are still #256.
+`apps/desktop/src-tauri/src/file_system/write_operations/DETAILS.md` § "Reordering the line". The mouse does the same
+with the grip (below).
+
+### Dragging to reorder
+
+A waiting row's grip (`grip-vertical`, left of its checkbox) drags it among the WAITING rows; the drop sends one
+`placeQueuedOperation(id, position)` and announces the answer in the same live region as ⌥↑ / ⌥↓.
+
+- **Who gets a grip**: a waiting row, and only while two or more are waiting (a lone one has nobody to trade with). The
+  grip COLUMN is all-or-nothing across the list (`gripColumn`), so the checkboxes stay in one line. The grip is
+  `aria-hidden`: keyboard and screen-reader users have ⌥↑ / ⌥↓ and the row menu.
+- **Pointer events, ❌ never HTML5 drag-and-drop**: Tauri's `dragDropEnabled` takes the gesture before WKWebView fires
+  `dragstart`. `queue-drag.svelte.ts` owns the gesture: a 4 px threshold (a shorter press is a click), pointer capture,
+  the house reorder math (`#lib/ui/menu-reorder.ts`) over the waiting rows' live midpoints, and a wheel mid-drag keeps
+  the row under the pointer. Escape mid-drag (the page's `queue.close`) puts the row back instead of closing the window.
+- **The look**: the held row lifts into an opaque card (shadow, 1% larger) that follows the pointer; an accent drop line
+  with a ring at its start (like Finder's) marks the gap it would land in, and no line shows over its own two gaps (a
+  no-op). While held, `.is-reordering` on the window makes every cursor `grabbing` and stops text selection.
+- **The drop slides, it doesn't jump**: the dropped row HOLDS its offset until the reordered `operations-changed` lands
+  (or one second passes, or the answer isn't `moved`). The page measures every row in `$effect.pre` when the order
+  changes, before the DOM moves, then FLIPs them into place after `tick()` (`queue-flip.ts`); the dropped row is
+  measured where it was dropped. ❌ Not `animate:flip`: it measures the END position before the row's reactive offset
+  clears, so the dropped row would slide from the wrong place and jump. The same FLIP slides rows on ⌥↑ / ⌥↓ and when a
+  row finishes. `prefers-reduced-motion` skips the slide.
 
 ## The row's right-click menu
 
@@ -589,6 +611,9 @@ the MAIN window, which already holds those perms — nothing to add there (see `
 - `queue-row-menu.test.ts`: the right-click menu's entries per row state (order, dividers, greying, Select's tick,
   Resume), each pick's keyboard action, a stale pick refused, and which waiting rows can move. `QueueRow.svelte.test.ts`
   pins the row's `menuFacts()` against its buttons; the page test the right-click → menu → pick road end to end.
+- `queue-drag.svelte.test.ts`: the drag gesture (a press under the threshold is a click, drops to the first and last
+  place, the drop line's gap and its no-op gaps, a drop where it started sends nothing, the dropped row holding until
+  the list changes, Escape, a non-waiting row). Placement itself is pinned in Rust (`manager::tests::reorder`).
 - `queue-keys.test.ts`: which keypress means which action, whole-combo (⌥⇧↑ is neither a reorder nor an extend).
 - `queue-cursor.svelte.test.ts`: the cursor's steps and edges, following its operation through a reorder or a finish,
   Space / ⌘A, and the ⇧-arrow range (shrinking back toward the anchor, keeping what was checked before it, skipping a

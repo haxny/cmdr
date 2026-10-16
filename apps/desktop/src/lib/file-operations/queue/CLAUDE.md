@@ -10,7 +10,8 @@ The standalone macOS window for running, waiting, and couldn't-finish operations
   `routes/queue/+page.svelte`.
 - Pure helpers: `failure-reason.ts` (a retained failure's title/explanation/suggestion), `queue-backlog.ts`
   (`hasOtherQueuedWork`, behind the progress dialog's Background/Queue label), `row-tree.ts` (which rows show the live
-  transfer tree, and when they get a collapse toggle), `queue-row-menu.ts` (right-click menu).
+  transfer tree, and when they get a collapse toggle), `queue-row-menu.ts` (right-click menu), `queue-drag.svelte.ts` +
+  `queue-flip.ts` (dragging).
 
 ## Must-knows
 
@@ -36,17 +37,18 @@ The standalone macOS window for running, waiting, and couldn't-finish operations
 - **Show hands a row's operation back to the main window's progress dialog**, over `foreground-operation` carrying the
   id alone. ❌ Not a command on the operation, ❌ never offered on a `queued` row. DETAILS § Show.
 - **A row commands its own operation through its session** (`../operation-session/CLAUDE.md`); the page keeps only the
-  fleet actions (Pause all / Resume all / Cancel selected, Dismiss).
+  fleet actions and Dismiss.
 - **Cancel keeps partials, no confirm; Rollback is the opt-in undo**, shown ONLY where `supportsRollback` and
   `reversalWindowClosed` allow it, ❌ never inferred from the type.
-- **Window perms fail SILENTLY**: `await` every Tauri call in try/catch with a `log.warn`, and smoke-test with
-  `pnpm dev` after a perm change. The page inits its own settings (`initWindowSettings()`).
+- **Window perms fail SILENTLY**: `await` every Tauri call in try/catch + `log.warn`; smoke-test with `pnpm dev` after a
+  perm change.
 - **The list is a one-Tab-stop ARIA grid; its cursor is an operation ID**, ❌ not an index. ⌘A arrives as
   `queue-select-all` from the menu, ❌ never a keydown. DETAILS § Keyboard.
+- **Drag-to-reorder: pointer events and our own FLIP**, ❌ never HTML5 DnD or `animate:flip`. DETAILS § "Dragging to
+  reorder".
 - **A running row's live tree is its own widget**: Tab from the cursor row enters it, Escape returns. ❌ The grid hears
   no key inside `[data-queue-tree]` (⌫ there would cancel the whole copy). DETAILS § "The inline tree".
 - **One opener, one store per webview**: `openQueueWindow`, plus the main window's own
-  (`main-window-operations.svelte.ts`). ❌ Backgrounding never opens it: `queue-handoff-toast.ts` instead (DETAILS §
-  "Backgrounding never opens the window").
+  (`main-window-operations.svelte.ts`). ❌ Backgrounding never opens it (`queue-handoff-toast.ts`).
 
 Depth (store API, failures, keyboard, decisions): `DETAILS.md`. Read it before non-trivial work here.

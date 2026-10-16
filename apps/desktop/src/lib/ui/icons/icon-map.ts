@@ -34,6 +34,7 @@ import IconGitBranch from '~icons/lucide/git-branch'
 import IconGitCommitHorizontal from '~icons/lucide/git-commit-horizontal'
 import IconGitFork from '~icons/lucide/git-fork'
 import IconGlobe from '~icons/lucide/globe'
+import IconGripVertical from '~icons/lucide/grip-vertical'
 import IconHeart from '~icons/lucide/heart'
 import IconHourglass from '~icons/lucide/hourglass'
 import IconInfo from '~icons/lucide/info'
@@ -124,6 +125,7 @@ export const ICON_COMPONENTS = {
   'git-commit-horizontal': IconGitCommitHorizontal,
   'git-fork': IconGitFork,
   globe: IconGlobe,
+  'grip-vertical': IconGripVertical,
   heart: IconHeart,
   hourglass: IconHourglass,
   info: IconInfo,

@@ -43,6 +43,7 @@
         'git-branch': 'Git repo branch chip, and the branch portal entry inside a `.git` directory.',
         'git-commit-horizontal': 'Commit portal entry inside a virtual `.git` directory.',
         'git-fork': 'Fallback git portal entry inside a virtual `.git` directory.',
+        'grip-vertical': 'Drag handle on a waiting operation row in the operation queue, which drags it to another place in line.',
         globe: 'Network volume marker in the volume breadcrumb (volume row and placeholder).',
         heart: 'The "Like Cmdr on AlternativeTo" row of the onboarding open-beta checklist.',
         hourglass:

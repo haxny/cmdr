@@ -57,6 +57,19 @@
          *  way one leaves the list — no timer, no window close, no next
          *  operation. */
         onDismiss: () => void
+        /** Rows reserve the grip's column while ANY row can be dragged, so the
+         *  checkboxes stay in one line. The page decides: it's a question about the list. */
+        gripColumn?: boolean
+        /** This row shows a grip: it's waiting, and there's another waiting row to trade with. */
+        draggable?: boolean
+        /** A press on the grip: the page's drag controller (`queue-drag.svelte.ts`) takes it. */
+        onGripPointerDown?: (event: PointerEvent) => void
+        /** How far a drag has moved this row from its slot, in px; `null` when it isn't dragged. */
+        dragOffset?: number | null
+        /** The pointer holds this row (it floats above the list while it does). */
+        lifted?: boolean
+        /** A dragged row would land in the gap above or below this one. */
+        dropCue?: 'above' | 'below' | null
     }
 
     const {
@@ -69,6 +82,12 @@
         onToggleSelect,
         onContextMenu,
         onDismiss,
+        gripColumn = false,
+        draggable = false,
+        onGripPointerDown,
+        dragOffset = null,
+        lifted = false,
+        dropCue = null,
     }: Props = $props()
 
     /** Prefix for the ids the row's name and description point at. */
@@ -424,6 +443,11 @@
     class="queue-row"
     class:selected
     class:is-under-cursor={isCursor}
+    class:is-dragged={dragOffset !== null}
+    class:is-lifted={lifted}
+    class:is-drop-above={dropCue === 'above'}
+    class:is-drop-below={dropCue === 'below'}
+    style:transform={dragOffset === null ? undefined : `translateY(${String(dragOffset)}px)`}
     role="row"
     tabindex={tabbable ? 0 : -1}
     aria-selected={isFailed ? undefined : selected}
@@ -437,6 +461,15 @@
     onkeydown={resumeTreeFollowing}
 >
     <div class="select-cell" role="gridcell">
+        <!-- The mouse half of ⌥↑ / ⌥↓, which is what keyboard and screen-reader users
+             have, so the grip itself is hidden from them. -->
+        {#if gripColumn}
+            <span class="grip" class:is-draggable={draggable} aria-hidden="true" onpointerdown={draggable ? onGripPointerDown : undefined}>
+                {#if draggable}
+                    <Icon name="grip-vertical" size={14} />
+                {/if}
+            </span>
+        {/if}
         <!-- The checkbox exists for "Cancel selected", so a settled failure has
              nothing to offer it. Out of the Tab order and the ← / → walk: Space on
              the row checks it, and the row's `aria-selected` says so. -->
@@ -717,6 +750,95 @@
         padding: var(--spacing-sm) var(--spacing-md);
         border-radius: var(--radius-md);
         border: 1px solid transparent;
+        /* The drop line hangs off the row, into the gap above or below it. */
+        position: relative;
+    }
+
+    /* ── Dragging to reorder (DETAILS § "Dragging to reorder") ── */
+
+    .grip {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: calc(14px * var(--font-scale));
+        align-self: stretch;
+        color: var(--color-text-tertiary);
+    }
+
+    .grip.is-draggable {
+        cursor: grab;
+    }
+
+    .grip.is-draggable:hover,
+    .queue-row.is-lifted .grip {
+        color: var(--color-text-secondary);
+    }
+
+    /* A dragged row (held, or dropped and on its way into place) draws above the
+       rows it passes. */
+    .queue-row.is-dragged {
+        z-index: 1;
+    }
+
+    /* Lifted off the list: an opaque card with a shadow, a touch larger, so it reads
+       as picked up and can't be confused with the rows it floats over. */
+    .queue-row.is-lifted {
+        background: var(--color-bg-primary);
+        border-color: var(--color-border-subtle);
+        box-shadow: var(--shadow-md);
+        scale: 1.01;
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+        .queue-row {
+            transition:
+                scale 0.12s ease-out,
+                box-shadow 0.12s ease-out;
+        }
+    }
+
+    /* The drop line: an accent rule in the gap the dragged row would land in, with a
+       ring at its start, like Finder's. */
+    .queue-row.is-drop-above::before,
+    .queue-row.is-drop-below::before {
+        content: '';
+        position: absolute;
+        left: var(--spacing-md);
+        right: var(--spacing-xs);
+        height: 2px;
+        border-radius: 1px;
+        background: var(--color-accent);
+        pointer-events: none;
+    }
+
+    .queue-row.is-drop-above::after,
+    .queue-row.is-drop-below::after {
+        content: '';
+        position: absolute;
+        left: var(--spacing-xs);
+        width: 6px;
+        height: 6px;
+        border: 2px solid var(--color-accent);
+        border-radius: 50%;
+        background: var(--color-bg-primary);
+        pointer-events: none;
+    }
+
+    /* Centered on the gap between rows (the list's `--spacing-xxs`), past the 1px border. */
+    .queue-row.is-drop-above::before {
+        top: calc(-1px - var(--spacing-xxs) / 2 - 1px);
+    }
+
+    .queue-row.is-drop-above::after {
+        top: calc(-1px - var(--spacing-xxs) / 2 - 5px);
+    }
+
+    .queue-row.is-drop-below::before {
+        bottom: calc(-1px - var(--spacing-xxs) / 2 - 1px);
+    }
+
+    .queue-row.is-drop-below::after {
+        bottom: calc(-1px - var(--spacing-xxs) / 2 - 5px);
     }
 
     .queue-row.selected {
@@ -757,6 +879,8 @@
     .select-cell {
         display: flex;
         align-items: center;
+        gap: var(--spacing-xxs);
+        align-self: stretch;
     }
 
     .type-cell {

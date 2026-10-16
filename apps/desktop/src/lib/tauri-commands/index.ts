@@ -352,6 +352,7 @@ export {
   dismissFailedOperation,
   dismissAllFailedOperations,
   moveQueuedOperation,
+  placeQueuedOperation,
   retryFailedOperation,
   onOperationsChanged,
   onQueueSelectAll,
