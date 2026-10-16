@@ -49,7 +49,8 @@ type probeUnwrapSite struct {
 // hand-written and type-free, so removing a `Default` from a type catches none
 // of these — which is why a scanner is the only mechanism there is.
 //
-// Jurisdiction is PRODUCTION code under `file_system/`: a dedicated test file
+// Jurisdiction is PRODUCTION code under the app's `file_system/` and all of
+// `cmdr-local` (`probeUnwrapTree`): a dedicated test file
 // (isRustTestPath) and the body of an inline `#[cfg(test)] mod` inside a
 // production file are both exempt, because every such site reads a final state
 // in an assertion rather than driving a branch.
@@ -61,22 +62,33 @@ func RunProbeUnwrapJustified(ctx *CheckContext) (CheckResult, error) {
 
 	var violations []probeUnwrapSite
 	var orphans []orphanDirective
+	var emptyRoots []string
 	scanned := 0
 	for _, root := range roots {
-		fsRoot := filepath.Join(root, "file_system")
-		if _, statErr := os.Stat(fsRoot); statErr != nil {
+		tree := probeUnwrapTree(root)
+		if tree == "" {
 			continue
 		}
-		rootViolations, rootOrphans, rootScanned, scanErr := scanForProbeUnwrap(ctx.RootDir, fsRoot)
-		if scanErr != nil {
-			return CheckResult{}, fmt.Errorf("failed to scan Rust files: %w", scanErr)
+		rootScanned := 0
+		if _, statErr := os.Stat(tree); statErr == nil {
+			treeViolations, treeOrphans, treeScanned, scanErr := scanForProbeUnwrap(ctx.RootDir, tree)
+			if scanErr != nil {
+				return CheckResult{}, fmt.Errorf("failed to scan Rust files: %w", scanErr)
+			}
+			violations = append(violations, treeViolations...)
+			orphans = append(orphans, treeOrphans...)
+			rootScanned = treeScanned
 		}
-		violations = append(violations, rootViolations...)
-		orphans = append(orphans, rootOrphans...)
+		if rootScanned < minScannedPerGovernedRoot {
+			emptyRoots = append(emptyRoots, relToRoot(ctx.RootDir, root))
+		}
 		scanned += rootScanned
 	}
 
 	var parts []string
+	if len(emptyRoots) > 0 {
+		parts = append(parts, formatEmptyGovernedRoots("probeUnwrapTree", emptyRoots))
+	}
 	if len(violations) > 0 {
 		sort.Slice(violations, func(i, j int) bool {
 			if violations[i].relPath == violations[j].relPath {
@@ -108,6 +120,21 @@ func RunProbeUnwrapJustified(ctx *CheckContext) (CheckResult, error) {
 		"%d Rust %s scanned, every directory probe either propagates or says why its guess is truthful",
 		scanned, Pluralize(scanned, "file", "files"),
 	)), nil
+}
+
+// probeUnwrapTree narrows a member's `src/` to the tree where a write engine or a
+// backend answers "is this a directory?", or "" for a member outside the
+// jurisdiction: the app's `file_system/`, and all of `cmdr-local`, the local
+// backend that answers the probe itself.
+func probeUnwrapTree(srcDir string) string {
+	slashed := filepath.ToSlash(srcDir)
+	switch {
+	case strings.HasSuffix(slashed, "crates/cmdr-local/src"):
+		return srcDir
+	case strings.HasSuffix(slashed, appRustSrcSuffix):
+		return filepath.Join(srcDir, "file_system")
+	}
+	return ""
 }
 
 func scanForProbeUnwrap(rootDir, srcDir string) ([]probeUnwrapSite, []orphanDirective, int, error) {

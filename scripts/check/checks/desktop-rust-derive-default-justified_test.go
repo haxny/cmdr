@@ -222,6 +222,8 @@ pub struct Prefs {}
 #[derive(Default)]
 pub struct Plan {}
 `,
+		// One production file under `file_system/`, so the governed tree isn't empty.
+		"file_system/mod.rs": "pub mod volume;\n",
 	})
 	if _, err := RunDeriveDefaultJustified(&CheckContext{RootDir: root}); err != nil {
 		t.Fatalf("outside `file_system/` is out of scope, got: %s", err.Error())
@@ -236,4 +238,51 @@ func seedCmdrFsFixtureWorkspace(t *testing.T, root string) {
 		"[workspace]\nmembers = [\"crates/cmdr-fs\"]\nresolver = \"2\"\n")
 	mustWrite(t, filepath.Join(root, "crates", "cmdr-fs", "Cargo.toml"),
 		"[package]\nname = \"cmdr-fs\"\nversion = \"0.0.0\"\n")
+}
+
+// All of `cmdr-local` is in scope too: the local backend's types carry facts about
+// a disk end to end, so it has no `file_system/` subdir to narrow to.
+func TestDeriveDefault_CoversTheWholeCmdrLocalTree(t *testing.T) {
+	root := t.TempDir()
+	seedCmdrLocalFixtureWorkspace(t, root)
+	writeFixtureFiles(t, filepath.Join(root, "crates", "cmdr-local", "src"), map[string]string{
+		"mount_table.rs": `
+#[derive(Debug, Clone, Default)]
+pub struct MountEntry {}
+`,
+	})
+	_, err := RunDeriveDefaultJustified(&CheckContext{RootDir: root})
+	if err == nil {
+		t.Fatal("expected a violation in cmdr-local, got success")
+	}
+	if !strings.Contains(err.Error(), "mount_table.rs:2") {
+		t.Errorf("expected mount_table.rs:2, got: %s", err.Error())
+	}
+}
+
+// A governed tree that scans nothing is a failure, never a pass: it's what a tree
+// moving out from under the check looks like.
+func TestDeriveDefault_FailsWhenAGovernedTreeScansNothing(t *testing.T) {
+	root := t.TempDir()
+	seedCmdrLocalFixtureWorkspace(t, root)
+	if err := os.MkdirAll(filepath.Join(root, "crates", "cmdr-local", "src"), 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	_, err := RunDeriveDefaultJustified(&CheckContext{RootDir: root})
+	if err == nil {
+		t.Fatal("expected an empty governed tree to fail, got success")
+	}
+	if !strings.Contains(err.Error(), "crates/cmdr-local/src") {
+		t.Errorf("expected the empty tree named, got: %s", err.Error())
+	}
+}
+
+// seedCmdrLocalFixtureWorkspace builds a one-member workspace whose member is
+// `crates/cmdr-local`, so the cmdr-local half of the jurisdiction can be exercised.
+func seedCmdrLocalFixtureWorkspace(t *testing.T, root string) {
+	t.Helper()
+	mustWrite(t, filepath.Join(root, "Cargo.toml"),
+		"[workspace]\nmembers = [\"crates/cmdr-local\"]\nresolver = \"2\"\n")
+	mustWrite(t, filepath.Join(root, "crates", "cmdr-local", "Cargo.toml"),
+		"[package]\nname = \"cmdr-local\"\nversion = \"0.0.0\"\n")
 }

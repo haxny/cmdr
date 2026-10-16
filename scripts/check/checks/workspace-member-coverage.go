@@ -3,6 +3,7 @@ package checks
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 )
@@ -45,11 +46,11 @@ var rustScannerJurisdictions = map[string]ScannerJurisdiction{
 	},
 	"desktop-rust-derive-default-justified": {
 		Kinds: []MemberKind{KindApp},
-		Why:   "narrowed further to the two filesystem trees (`file_system/` and all of `cmdr-fs`), where a zero value is a claim about a disk; elsewhere a `Default` carries no filesystem fact and the rule would be churn",
+		Why:   "narrowed further to the filesystem trees (the app's `file_system/`, and all of `cmdr-fs` and `cmdr-local`), where a zero value is a claim about a disk; elsewhere a `Default` carries no filesystem fact and the rule would be churn. Each governed member must scan at least one file, so a tree moving away fails instead of passing on nothing",
 	},
 	"desktop-rust-probe-unwrap-justified": {
 		Kinds: []MemberKind{KindApp},
-		Why:   "narrowed further to `file_system/`, the only tree where `Volume::is_directory` is called at all",
+		Why:   "narrowed further to the app's `file_system/` and all of `cmdr-local`, the trees where `Volume::is_directory` is called or answered. Each governed member must scan at least one file, so a tree moving away fails instead of passing on nothing",
 	},
 	"desktop-rust-discarded-outcome": {
 		AppTreeOnly: true,
@@ -161,6 +162,32 @@ func liveRustCheckClassification() rustCheckClassification {
 		scanners:   rustScannerJurisdictions,
 		metaChecks: rustMetaChecks,
 	}
+}
+
+// minScannedPerGovernedRoot is the floor a narrowed scanner holds each member it
+// governs to. A scanner that narrows a member to named subtrees passes on an empty
+// walk, which is exactly what a tree moving out from under it looks like (the local
+// backend leaving `file_system/` for `crates/cmdr-local`, the write engine leaving
+// for its own crate), so scanning less than this under a governed member fails.
+const minScannedPerGovernedRoot = 1
+
+// relToRoot names a path relative to the repo root, for a message.
+func relToRoot(rootDir, path string) string {
+	rel, err := filepath.Rel(rootDir, path)
+	if err != nil {
+		return path
+	}
+	return filepath.ToSlash(rel)
+}
+
+// formatEmptyGovernedRoots is the failure a narrowed scanner reports for the
+// members it governs but scanned no production file under.
+func formatEmptyGovernedRoots(treesFunc string, roots []string) string {
+	return fmt.Sprintf(
+		"scanned no production Rust file under %d governed %s, so this check would pass on nothing. "+
+			"A tree moved or was renamed: point `%s` at its new home.\n  %s",
+		len(roots), Pluralize(len(roots), "member", "members"), treesFunc, strings.Join(roots, "\n  "),
+	)
 }
 
 // ScannerRoots returns the source roots the named Rust scanner should walk. Every

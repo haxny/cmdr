@@ -105,6 +105,8 @@ async fn lying_delete(inner: &Arc<dyn Volume>, p: &Path) {
     if inner.is_directory(p).await.unwrap_or(false) { }
 }
 `,
+		// One production file, so the governed tree isn't empty.
+		"mod.rs": "pub mod volume;\n",
 	})
 	if err != nil {
 		t.Fatalf("test files are out of jurisdiction, got: %s", err.Error())
@@ -176,6 +178,10 @@ async fn f(volume: &Arc<dyn Volume>, p: &Path) -> bool {
 func TestProbeUnwrap_IgnoresTreesOutsideFileSystem(t *testing.T) {
 	root := t.TempDir()
 	seedAppFixtureWorkspace(t, root)
+	// One production file under `file_system/`, so the governed tree isn't empty.
+	writeFixtureFiles(t, filepath.Join(root, "apps", "desktop", "src-tauri", "src"), map[string]string{
+		"file_system/mod.rs": "pub mod volume;\n",
+	})
 	other := filepath.Join(root, "apps", "desktop", "src-tauri", "src", "mtp")
 	if err := os.MkdirAll(other, 0o755); err != nil {
 		t.Fatalf("mkdir: %v", err)
@@ -186,5 +192,39 @@ func TestProbeUnwrap_IgnoresTreesOutsideFileSystem(t *testing.T) {
 	}
 	if _, err := RunProbeUnwrapJustified(&CheckContext{RootDir: root}); err != nil {
 		t.Fatalf("outside `file_system/` is out of scope, got: %s", err.Error())
+	}
+}
+
+// All of `cmdr-local` is in scope: the local backend answers `is_directory` itself,
+// and has no `file_system/` subdir to narrow to.
+func TestProbeUnwrap_CoversTheWholeCmdrLocalTree(t *testing.T) {
+	root := t.TempDir()
+	seedCmdrLocalFixtureWorkspace(t, root)
+	writeFixtureFiles(t, filepath.Join(root, "crates", "cmdr-local", "src"), map[string]string{
+		"local_posix/scan.rs": "async fn f() { v.is_directory(p).await.unwrap_or(false); }\n",
+	})
+	_, err := RunProbeUnwrapJustified(&CheckContext{RootDir: root})
+	if err == nil {
+		t.Fatal("expected a violation in cmdr-local, got success")
+	}
+	if !strings.Contains(err.Error(), "scan.rs:1") {
+		t.Errorf("expected scan.rs:1, got: %s", err.Error())
+	}
+}
+
+// A governed tree that scans nothing is a failure, never a pass: it's what a tree
+// moving out from under the check looks like.
+func TestProbeUnwrap_FailsWhenAGovernedTreeScansNothing(t *testing.T) {
+	root := t.TempDir()
+	seedAppFixtureWorkspace(t, root)
+	if err := os.MkdirAll(filepath.Join(root, "apps", "desktop", "src-tauri", "src"), 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	_, err := RunProbeUnwrapJustified(&CheckContext{RootDir: root})
+	if err == nil {
+		t.Fatal("expected an empty governed tree to fail, got success")
+	}
+	if !strings.Contains(err.Error(), "apps/desktop/src-tauri/src") {
+		t.Errorf("expected the empty tree named, got: %s", err.Error())
 	}
 }

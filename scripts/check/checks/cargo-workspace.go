@@ -314,9 +314,12 @@ func cargoOSName(goos string) string {
 	return goos
 }
 
+// appRustSrcSuffix is the app crate's source tree, relative to the repo root.
+const appRustSrcSuffix = "apps/desktop/src-tauri/src"
+
 // appRustSrcDir is the app crate's source tree. Only the scanners that are pinned to
 // the app tree on purpose use it (see `rustScannerJurisdictions`); everything else
 // derives its roots from the member list.
 func appRustSrcDir(rootDir string) string {
-	return filepath.Join(rootDir, "apps", "desktop", "src-tauri", "src")
+	return filepath.Join(rootDir, filepath.FromSlash(appRustSrcSuffix))
 }

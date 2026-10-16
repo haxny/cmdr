@@ -43,7 +43,7 @@ type deriveDefaultSite struct {
 // moment someone writes it.
 //
 // Jurisdiction is PRODUCTION code under the app's `file_system/`, all of
-// `cmdr-fs`, and the app's IPC twins of `cmdr-fs` file types
+// `cmdr-fs` and `cmdr-local`, and the app's IPC twins of `cmdr-fs` file types
 // (`deriveDefaultTrees`) — where a zero value is a claim about a disk. Test
 // code is exempt in both senses the word has: a dedicated test file
 // (isRustTestPath), AND the body of an inline test module inside a production
@@ -59,9 +59,15 @@ func RunDeriveDefaultJustified(ctx *CheckContext) (CheckResult, error) {
 
 	var violations []deriveDefaultSite
 	var orphans []orphanDirective
+	var emptyRoots []string
 	scanned := 0
 	for _, root := range roots {
-		for _, tree := range deriveDefaultTrees(root) {
+		trees := deriveDefaultTrees(root)
+		if len(trees) == 0 {
+			continue
+		}
+		rootScanned := 0
+		for _, tree := range trees {
 			if _, statErr := os.Stat(tree); statErr != nil {
 				continue
 			}
@@ -71,11 +77,18 @@ func RunDeriveDefaultJustified(ctx *CheckContext) (CheckResult, error) {
 			}
 			violations = append(violations, treeViolations...)
 			orphans = append(orphans, treeOrphans...)
-			scanned += treeScanned
+			rootScanned += treeScanned
 		}
+		if rootScanned < minScannedPerGovernedRoot {
+			emptyRoots = append(emptyRoots, relToRoot(ctx.RootDir, root))
+		}
+		scanned += rootScanned
 	}
 
 	var parts []string
+	if len(emptyRoots) > 0 {
+		parts = append(parts, formatEmptyGovernedRoots("deriveDefaultTrees", emptyRoots))
+	}
 	if len(violations) > 0 {
 		sort.Slice(violations, func(i, j int) bool {
 			if violations[i].relPath == violations[j].relPath {
@@ -109,10 +122,11 @@ func RunDeriveDefaultJustified(ctx *CheckContext) (CheckResult, error) {
 }
 
 // deriveDefaultTrees narrows a member's `src/` to the subtrees where a zero
-// value is a claim about a disk. In the app that's `file_system/` plus the IPC
-// twins of `cmdr-fs` file types; a member whose whole reason to exist is
-// filesystem vocabulary (`cmdr-fs`) is in scope end to end. Everything else in
-// the workspace stays out: widening to every member would put ~120 more derives
+// value is a claim about a disk, or nil for a member outside the jurisdiction. In
+// the app that's `file_system/` plus the IPC twins of `cmdr-fs` file types; a
+// member whose whole reason to exist is filesystem vocabulary (`cmdr-fs`) or the
+// local disk (`cmdr-local`) is in scope end to end. Everything else in the
+// workspace stays out: widening to every member would put ~120 more derives
 // under the rule and buy nothing, since the fault class is specifically "a type
 // that carries a fact about a file".
 //
@@ -132,13 +146,17 @@ func RunDeriveDefaultJustified(ctx *CheckContext) (CheckResult, error) {
 // date, or a kind (surveyed 2026-10-01 by grepping every `Default` derive's
 // fields). A new twin goes in the list above.
 func deriveDefaultTrees(srcDir string) []string {
-	if strings.HasSuffix(filepath.ToSlash(srcDir), "crates/cmdr-fs/src") {
+	slashed := filepath.ToSlash(srcDir)
+	switch {
+	case strings.HasSuffix(slashed, "crates/cmdr-fs/src"), strings.HasSuffix(slashed, "crates/cmdr-local/src"):
 		return []string{srcDir}
+	case strings.HasSuffix(slashed, appRustSrcSuffix):
+		return []string{
+			filepath.Join(srcDir, "file_system"),
+			filepath.Join(srcDir, "mcp", "pane_state.rs"),
+		}
 	}
-	return []string{
-		filepath.Join(srcDir, "file_system"),
-		filepath.Join(srcDir, "mcp", "pane_state.rs"),
-	}
+	return nil
 }
 
 func scanForDeriveDefault(rootDir, srcDir string) ([]deriveDefaultSite, []orphanDirective, int, error) {

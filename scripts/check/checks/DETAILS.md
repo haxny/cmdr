@@ -1966,34 +1966,35 @@ Checks by app and tech:
   the shapes a named constructor actually builds; it ships with ZERO findings on purpose and is a regression fence
   rather than a finder — the shapes are already clean, and the point is that the next test author can't undo that by
   copy-pasting an old literal), derive-default-justified (every `#[derive(..., Default, ...)]` under `file_system/`,
-  `cmdr-fs`, and the IPC twins of `cmdr-fs` file types listed in `deriveDefaultTrees` carries a `// DEFAULT-OK: <why>`
-  line, because a zero value on a fact-carrying type isn't "no information", it's a claim about the disk that nobody
-  made), probe-unwrap-justified (flags `\.is_directory(…).await.unwrap_or(…)` in production `file_system/` code, where a
-  probe that COULDN'T answer gets collapsed into a confident "no" and picks the branch that deletes; opt out with
-  `// allowed-probe-unwrap: <why the guess is truthful>`), discarded-outcome (a function that returns NOTHING while
-  dropping a typed answer from the free function it delegates to; three of these shipped before it existed, and each
-  ended as an IPC command or MCP tool inventing a success. `Result` and `Option` returns are deliberately out of scope:
-  `Result` is `#[must_use]`, so the compiler already warns, and an `Option` discard is the map/set idiom. That leaves
-  exactly the gap the compiler can't see, a bare `bool` or a named outcome type. Every ambiguity resolves to "don't
-  flag" — an unresolvable name, two definitions disagreeing on their return type, a method call — because a check people
-  learn to ignore is worse than none. Opt out with `// allowed-discarded-outcome: <why nobody above needs the answer>`),
-  mtp-dropping-timeout, mtp-no-transport-reset, bindings-fresh, ipc-enum-camelcase, vendor-patch-applied (every
-  `[patch.crates-io]` path entry in the root `Cargo.toml` still resolves to that path in `Cargo.lock`: a bump past the
-  vendored version makes cargo resolve crates.io again and park the patch under `[[patch.unused]]` with one warning;
-  skipped while there's no patch), the five `<provider>-smoke` lanes (CI-only: one `--lib` module each against a live
-  provider, self-skipping without its key; `gemini-smoke` additionally has a warn-level "inconclusive" outcome — see §
-  "Decision: a smoke lane has a THIRD outcome"), shipped-locales-fresh (regenerate-and-diff
-  `intl/shipped_locales.gen.rs` from the message-catalog dirs, so the locale resolver's CLDR script table can't go stale
-  and leave a new locale both unreachable and unguarded), module-cycles (slow, fails, and in CI on the macOS job;
-  strongly-connected module components per crate with parent-child hubs collapsed, on a per-home ratchet, behind a
-  pinned `cargo-modules` that a mismatched box skips rather than mis-measures — see § "Rust module cycles"),
-  fixture-lane-coverage (a Docker-gated cell in the app crate whose name the integration lane's filter won't select
-  never runs anywhere, so it's a finding; one cell lived its whole life that way, and it was the sole caller of the
-  crate extraction's one sanctioned public-surface widening — see § "Fixture lane coverage"), tests, integration-tests
-  (Docker network fixtures), disk-images (slow, macOS only, not in CI; the real-image tests on synthetic APFS and HFS+
-  disk images, see § "The disk-image lane"), clippy-linux (slow, not in CI; CI's clippy and rustdoc commands against the
-  Linux target, run from a Mac in Docker), tests-linux (slow; both in § "The Linux Docker lanes share an image and a
-  build cache")
+  `cmdr-fs`, `cmdr-local`, and the IPC twins of `cmdr-fs` file types listed in `deriveDefaultTrees` carries a
+  `// DEFAULT-OK: <why>` line, because a zero value on a fact-carrying type isn't "no information", it's a claim about
+  the disk that nobody made; it and probe-unwrap fail when a governed member scans no file, `minScannedPerGovernedRoot`,
+  so a tree moving out from under them reads red), probe-unwrap-justified (flags `\.is_directory(…).await.unwrap_or(…)`
+  in production `file_system/` and `cmdr-local` code, where a probe that COULDN'T answer gets collapsed into a confident
+  "no" and picks the branch that deletes; opt out with `// allowed-probe-unwrap: <why the guess is truthful>`),
+  discarded-outcome (a function that returns NOTHING while dropping a typed answer from the free function it delegates
+  to; three of these shipped before it existed, and each ended as an IPC command or MCP tool inventing a success.
+  `Result` and `Option` returns are deliberately out of scope: `Result` is `#[must_use]`, so the compiler already warns,
+  and an `Option` discard is the map/set idiom. That leaves exactly the gap the compiler can't see, a bare `bool` or a
+  named outcome type. Every ambiguity resolves to "don't flag" — an unresolvable name, two definitions disagreeing on
+  their return type, a method call — because a check people learn to ignore is worse than none. Opt out with
+  `// allowed-discarded-outcome: <why nobody above needs the answer>`), mtp-dropping-timeout, mtp-no-transport-reset,
+  bindings-fresh, ipc-enum-camelcase, vendor-patch-applied (every `[patch.crates-io]` path entry in the root
+  `Cargo.toml` still resolves to that path in `Cargo.lock`: a bump past the vendored version makes cargo resolve
+  crates.io again and park the patch under `[[patch.unused]]` with one warning; skipped while there's no patch), the
+  five `<provider>-smoke` lanes (CI-only: one `--lib` module each against a live provider, self-skipping without its
+  key; `gemini-smoke` additionally has a warn-level "inconclusive" outcome — see § "Decision: a smoke lane has a THIRD
+  outcome"), shipped-locales-fresh (regenerate-and-diff `intl/shipped_locales.gen.rs` from the message-catalog dirs, so
+  the locale resolver's CLDR script table can't go stale and leave a new locale both unreachable and unguarded),
+  module-cycles (slow, fails, and in CI on the macOS job; strongly-connected module components per crate with
+  parent-child hubs collapsed, on a per-home ratchet, behind a pinned `cargo-modules` that a mismatched box skips rather
+  than mis-measures — see § "Rust module cycles"), fixture-lane-coverage (a Docker-gated cell in the app crate whose
+  name the integration lane's filter won't select never runs anywhere, so it's a finding; one cell lived its whole life
+  that way, and it was the sole caller of the crate extraction's one sanctioned public-surface widening — see § "Fixture
+  lane coverage"), tests, integration-tests (Docker network fixtures), disk-images (slow, macOS only, not in CI; the
+  real-image tests on synthetic APFS and HFS+ disk images, see § "The disk-image lane"), clippy-linux (slow, not in CI;
+  CI's clippy and rustdoc commands against the Linux target, run from a Mac in Docker), tests-linux (slow; both in §
+  "The Linux Docker lanes share an image and a build cache")
 
 Four of those scanners share one region tracker, `rustTestModState` / `advanceTestModRegion`
 (`desktop-rust-test-sleep.go`), in opposite polarities: test-sleep and fixed-temp-dir scan ONLY inside an inline test
@@ -2425,8 +2426,8 @@ in recovery".
 **Both MTP scanners walk two trees**, because the subsystem does: `crates/cmdr-mtp/src` holds the session layer and the
 `Volume`, and the app's `src/mtp/` keeps the hotplug watcher, the registrar wiring, and the ptpcamerad workaround, all
 of which still issue mtp-rs calls. They resolve their roots through `rustScannerJurisdictions` (`Kinds: [KindApp]`,
-narrowed by a shared `mtpTrees`), the same shape `derive-default-justified` uses for the two filesystem trees. ❗ Pinned
-to `AppTreeOnly` they would have kept passing while guarding nothing, which is why each carries a Go cell that plants a
+narrowed by a shared `mtpTrees`), the same shape `derive-default-justified` uses for the filesystem trees. ❗ Pinned to
+`AppTreeOnly` they would have kept passing while guarding nothing, which is why each carries a Go cell that plants a
 violation inside the crate.
 
 **Decision**: Split `desktop-svelte-eslint` into fast (non-type-aware) and slow (full) checks. **Why**: Type-aware rules
