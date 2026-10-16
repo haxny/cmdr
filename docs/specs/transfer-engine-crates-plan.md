@@ -1262,6 +1262,34 @@ is empty. The `rg -v` drops self-references, the two shims, comment lines, and t
 `delete/cloud_trash.rs:336`, …; they go with M7b–M7e). Read any other hit: an inline-test hit is fine and listed in the
 report, a production hit is not. Lanes: `desktop-rust-tests`, `desktop-rust-clippy`, `desktop-bindings-fresh`.
 
+**What landed differently** (recorded at execution):
+
+- Optional seams ride `EngineHost::with_own_writes` / `with_index` / `with_pacing` / `with_name_order`, each defaulting
+  to a do-nothing answer in `EngineHost::new`; the app wires all four in `operations_host::app_answers`, which `install`
+  and the test binary's `without_frontend` share. M6a's builder should keep them optional.
+- No `RecordingOwnWrites` fake yet, for M5a's reason (nothing can inject one into the process-wide slot). The own-write
+  pin stays byte-unchanged because the test binary's fallback answers with the app's `AppOwnWrites`, which feeds the
+  downloads recorder; red-checked by making `AppOwnWrites::announce` drop the call (all 11 pins fail). The fake lands
+  with M6a.
+- `OperationIndex::search_leaves` takes the index `volume_id` too, and its default downgrades `volume_not_live` (what an
+  unindexed volume reads as). `ExpectedTotals`, `BufferedLeaves`, and `Leaf` are `host/` types; `journal_search.rs`'s
+  index cells moved with the reads to `operations_host/index.rs`.
+- `Pacing` has `copy_throttle()` beside `copy_throttle_for(path)`: the delete batches and the archive rewrite pace
+  without a path (and without the gallery's per-folder pace). Not hoisted: the copy cases showed no change against a
+  like-for-like pre-milestone build, and a per-op value would stop a spec's mid-run throttle change.
+- `NameOrder`'s default is English, built once on the answer (a field-level `OnceLock`); the app depends on
+  `cmdr-collation` directly so the engine names `NameCollator` from there.
+- The rename cost: `check_rename_validity_impl` returns a `RenameValidityCheck` (the answer plus the complete count as
+  `ScanCostFacts`), and only `priced(costs_something)` yields the wire `RenameValidityResult`; a field on `RenameByMove`
+  would have changed `bindings.ts`.
+- Also: four `crate::file_system::{ReadOnlySide, VolumeCopyConfig}` facade reaches re-pointed at `types`; M5d's reworded
+  `DestinationVolumeNotConnected` doc comment restored (it had changed `bindings.ts`); the stale app path in it joins
+  M9's comment-only wire fixes.
+- The DONE grep's remaining hits are all test or sanctioned: `host/mod.rs`'s `cfg(test)` fallback, `journal.rs`'s
+  `operation_log_host::{journal_…}` shim (the grep's pattern misses the brace form), and the `cfg(test)` modules
+  `transfer/volume/copy_bench.rs`, `copy_concurrency_bench.rs` (`volume_host::host()`, `file_system::smb_concurrency`),
+  and `transfer/real_image.rs`.
+
 ### M6a: The engine owns its state, the core (`Operations`)
 
 **Scope.** `Operations` (an `Arc<Inner>`), `OperationsBuilder`, `Operations::detached()`. The manager, the registry, the
