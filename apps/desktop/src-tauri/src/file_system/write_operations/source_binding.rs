@@ -186,7 +186,7 @@ impl SourceFingerprint {
 /// The comparison key a remote fingerprint is stored under, so two spellings of
 /// one path can't read as two different sources.
 pub(crate) fn normalized_path(path: &Path) -> String {
-    cmdr_index::store::normalize_for_comparison(&path.to_string_lossy())
+    cmdr_fs::name_fold::normalize_for_comparison(&path.to_string_lossy())
 }
 
 /// The top-level sources one operation is allowed to touch, and what each was

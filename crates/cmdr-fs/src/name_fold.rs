@@ -56,6 +56,30 @@ pub fn composed(name: &str) -> Cow<'_, str> {
     Cow::Owned(name.nfc().collect())
 }
 
+/// A string folded the way THIS machine's local filesystem compares names: the
+/// key the drive index stores and matches paths under.
+///
+/// Unlike [`fold_name`], it follows the platform rather than one rule
+/// everywhere: macOS folds Unicode form and case (NFD, then lowercase, as APFS
+/// does), so two spellings of one name share a key; elsewhere the filesystem is
+/// case- and form-sensitive, so it changes nothing, and two names that differ
+/// in case stay two genuinely distinct rows.
+#[cfg(target_os = "macos")]
+pub fn normalize_for_comparison(s: &str) -> String {
+    s.nfd().collect::<String>().to_lowercase()
+}
+
+/// A string folded the way THIS machine's local filesystem compares names: the
+/// key the drive index stores and matches paths under.
+///
+/// Case- and form-sensitive off macOS, where the filesystem is: two names that
+/// differ in case are two different files, so folding them would merge rows that
+/// are genuinely distinct.
+#[cfg(not(target_os = "macos"))]
+pub fn normalize_for_comparison(s: &str) -> String {
+    s.to_string()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

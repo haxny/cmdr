@@ -10,8 +10,10 @@
 pub(crate) type VolumeId = String;
 
 /// The local-disk volume id. The only volume registered when no network drive
-/// is indexed.
-pub const ROOT_VOLUME_ID: &str = "root";
+/// is indexed. It IS the volume registry's id for the root filesystem, by
+/// construction, so an index row and a registered volume can't name the local
+/// disk two ways.
+pub const ROOT_VOLUME_ID: &str = cmdr_fs::volume::DEFAULT_VOLUME_ID;
 
 /// How a volume's index is scanned, watched, rooted, and searched.
 ///

@@ -34,19 +34,7 @@ pub(super) fn platform_case_compare(a: &str, b: &str) -> std::cmp::Ordering {
     a.cmp(b)
 }
 
-/// Normalize a string for case-insensitive comparison.
-#[cfg(target_os = "macos")]
-pub fn normalize_for_comparison(s: &str) -> String {
-    use unicode_normalization::UnicodeNormalization;
-    s.nfd().collect::<String>().to_lowercase()
-}
-
-/// Normalize a string for case-insensitive comparison.
-///
-/// Case- and form-sensitive off macOS, where the filesystem is: two names that
-/// differ in case are two different files, so folding them would merge rows that
-/// are genuinely distinct.
-#[cfg(not(target_os = "macos"))]
-pub fn normalize_for_comparison(s: &str) -> String {
-    s.to_string()
-}
+/// The same folding as a plain function, owned by `cmdr-fs` so a crate that
+/// matches paths against the index (the write engine) shares one key without
+/// depending on the index.
+pub use cmdr_fs::name_fold::normalize_for_comparison;
