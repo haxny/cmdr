@@ -613,6 +613,16 @@ export const DIALOG_GALLERY_ENTRIES: DialogGalleryEntry[] = [
         note: 'The lead is a numbered list, which is why it renders in a div rather than a p.',
       },
       {
+        id: 'security-notice',
+        label: 'Fixed two security issues',
+        note: 'The notice from this build’s own advisory list, above the releases. The advisory links are placeholders and open GitHub or getcmdr.com.',
+      },
+      {
+        id: 'security-notice-only',
+        label: 'Security notice, changelogs off',
+        note: 'Someone who turned changelogs off still gets the notice, on its own.',
+      },
+      {
         id: 'empty',
         label: 'Nothing to show',
         note: 'Manual-reopen only in the app: an auto-show with an empty slice silently stamps instead.',

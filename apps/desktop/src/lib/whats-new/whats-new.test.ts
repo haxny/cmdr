@@ -10,6 +10,7 @@ import { decideWhatsNew } from './whats-new'
 
 const base = {
   enabled: true,
+  hasSecurityNotice: false,
   onboarded: true,
   onboardingShowing: false,
   otherStartupModalOpen: false,
@@ -23,7 +24,7 @@ describe('decideWhatsNew', () => {
 
   it('inaugural showcase (no lastSeen, onboarded, enabled): show current only', () => {
     const result = decideWhatsNew({ ...base, lastSeen: '', current: '0.26.0' })
-    expect(result).toEqual({ action: 'show', since: null, max: 1 })
+    expect(result).toEqual({ action: 'show', since: null, max: 1, changelog: true })
   })
 
   it('inaugural showcase but feature disabled: stamp silently', () => {
@@ -33,7 +34,7 @@ describe('decideWhatsNew', () => {
 
   it('upgrade with feature on: show the diff from lastSeen, capped at five', () => {
     const result = decideWhatsNew({ ...base, lastSeen: '0.20.0', current: '0.26.0' })
-    expect(result).toEqual({ action: 'show', since: '0.20.0', max: 5 })
+    expect(result).toEqual({ action: 'show', since: '0.20.0', max: 5, changelog: true })
   })
 
   it('upgrade with feature off: stamp silently (no backlog on re-enable)', () => {
@@ -91,6 +92,27 @@ describe('decideWhatsNew', () => {
   it('double-digit upgrade is treated as an increase, not a downgrade', () => {
     // 0.9.0 < 0.10.0: a string compare would read this as a downgrade and silently stamp.
     const result = decideWhatsNew({ ...base, lastSeen: '0.9.0', current: '0.10.0' })
-    expect(result).toEqual({ action: 'show', since: '0.9.0', max: 5 })
+    expect(result).toEqual({ action: 'show', since: '0.9.0', max: 5, changelog: true })
+  })
+  describe('with a security advisory fixed since lastSeen', () => {
+    const withNotice = { ...base, lastSeen: '0.20.0', current: '0.26.0', hasSecurityNotice: true }
+
+    it('shows the changelog and the notice when the feature is on', () => {
+      expect(decideWhatsNew(withNotice)).toEqual({ action: 'show', since: '0.20.0', max: 5, changelog: true })
+    })
+
+    it('shows the notice alone when changelogs are turned off: that opt-out is for changelogs, not security', () => {
+      expect(decideWhatsNew({ ...withNotice, enabled: false })).toEqual({
+        action: 'show',
+        since: '0.20.0',
+        max: 5,
+        changelog: false,
+      })
+    })
+
+    it('waits behind onboarding or a startup modal instead of stamping the notice away', () => {
+      expect(decideWhatsNew({ ...withNotice, enabled: false, onboardingShowing: true })).toEqual({ action: 'wait' })
+      expect(decideWhatsNew({ ...withNotice, otherStartupModalOpen: true })).toEqual({ action: 'wait' })
+    })
   })
 })

@@ -353,6 +353,44 @@ export const whatsNewFixtures: Record<string, Patch<typeof whatsNewState>> = {
       },
     ],
   },
+  // An update that fixed two security issues: the notice above the releases, one link per
+  // advisory, most severe first. The ids and links are placeholders that pass the allowlist.
+  'security-notice': {
+    open: true,
+    allowEmpty: false,
+    advisories: [
+      {
+        id: 'GHSA-xxxx-xxxx-xxxx',
+        fixedIn: '0.31.0',
+        severity: 'high',
+        url: 'https://github.com/vdavid/cmdr/security/advisories/GHSA-xxxx-xxxx-xxxx',
+      },
+      { id: '2026-07-10-example', fixedIn: '0.30.0', severity: 'low', url: 'https://getcmdr.com/changelog' },
+    ],
+    releases: [
+      {
+        version: '0.31.0',
+        date: '2026-07-20',
+        leadHtml:
+          '<p><strong>Ask Cmdr can rename in bulk now.</strong> Describe the naming you want and review every row before anything touches disk.</p>\n',
+        sections: [{ title: 'Security', entriesHtml: ['Fixed a path check that a crafted archive could slip past.'] }],
+      },
+    ],
+  },
+  // Changelogs turned off: the notice is the whole dialog.
+  'security-notice-only': {
+    open: true,
+    allowEmpty: false,
+    releases: [],
+    advisories: [
+      {
+        id: 'GHSA-xxxx-xxxx-xxxx',
+        fixedIn: '0.31.0',
+        severity: 'critical',
+        url: 'https://github.com/vdavid/cmdr/security/advisories/GHSA-xxxx-xxxx-xxxx',
+      },
+    ],
+  },
   // The realistic post-update case: several releases, long entries, and a lead with
   // two paragraphs and a numbered list nesting a bulleted one. The HTML is exactly what
   // the backend's CommonMark renderer (`src-tauri/src/whats_new/`) emits for that shape.

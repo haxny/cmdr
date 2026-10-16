@@ -448,8 +448,8 @@ export { sendFeedback } from './feedback'
 export type { SendFeedbackResult } from './feedback'
 
 // What's new popup
-export { getWhatsNew, whatsNewDevOverride } from './whats-new'
-export type { WhatsNewRelease, WhatsNewSection } from './whats-new'
+export { getSecurityAdvisories, getWhatsNew, whatsNewDevOverride } from './whats-new'
+export type { SecurityAdvisory, WhatsNewRelease, WhatsNewSection } from './whats-new'
 
 export { getRecentOperationLogEntries, getOperationLogDetail, rollbackOperation, undoOperations } from './operation-log'
 export type {

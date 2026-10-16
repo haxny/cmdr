@@ -20,9 +20,17 @@ interface MockRelease {
 }
 const getWhatsNewMock = vi.fn<(since: string | null, max: number) => Promise<MockRelease[]>>()
 const whatsNewDevOverrideMock = vi.fn<() => Promise<string | null>>(() => Promise.resolve(null))
+interface MockAdvisory {
+  id: string
+  fixedIn: string
+  severity: 'low' | 'medium' | 'high' | 'critical'
+  url: string | null
+}
+const getSecurityAdvisoriesMock = vi.fn<(since: string) => Promise<MockAdvisory[]>>(() => Promise.resolve([]))
 vi.mock('#lib/tauri-commands/index.js', () => ({
   getWhatsNew: (since: string | null, max: number) => getWhatsNewMock(since, max),
   whatsNewDevOverride: () => whatsNewDevOverrideMock(),
+  getSecurityAdvisories: (since: string) => getSecurityAdvisoriesMock(since),
 }))
 
 let mockLastSeen = ''
@@ -59,9 +67,12 @@ describe('runWhatsNewStartupTrigger', () => {
     getWhatsNewMock.mockResolvedValue([sampleRelease])
     whatsNewDevOverrideMock.mockReset()
     whatsNewDevOverrideMock.mockResolvedValue(null)
+    getSecurityAdvisoriesMock.mockReset()
+    getSecurityAdvisoriesMock.mockResolvedValue([])
     setSettingMock.mockClear()
     closeWhatsNew()
     whatsNewState.releases = []
+    whatsNewState.advisories = []
     whatsNewState.allowEmpty = false
   })
 
@@ -109,6 +120,62 @@ describe('runWhatsNewStartupTrigger', () => {
 
     expect(whatsNewState.open).toBe(false)
     expect(setSettingMock).not.toHaveBeenCalled()
+  })
+
+  describe('with a security advisory fixed since lastSeen', () => {
+    const advisory: MockAdvisory = {
+      id: 'GHSA-aaaa-bbbb-cccc',
+      fixedIn: '0.24.0',
+      severity: 'high',
+      url: 'https://github.com/vdavid/cmdr/security/advisories/GHSA-aaaa-bbbb-cccc',
+    }
+
+    beforeEach(() => {
+      mockLastSeen = '0.20.0'
+      getSecurityAdvisoriesMock.mockResolvedValue([advisory])
+    })
+
+    it('asks for the advisories fixed since the last version the user saw, and shows them', async () => {
+      await runWhatsNewStartupTrigger(openGates)
+
+      expect(getSecurityAdvisoriesMock).toHaveBeenCalledWith('0.20.0')
+      expect(whatsNewState.open).toBe(true)
+      expect(whatsNewState.advisories).toEqual([advisory])
+      expect(setSettingMock).toHaveBeenCalledWith('whatsNew.lastSeenVersion', '0.26.0')
+    })
+
+    it('never silent-stamps the notice away when the changelog slice is empty', async () => {
+      getWhatsNewMock.mockResolvedValue([])
+      await runWhatsNewStartupTrigger(openGates)
+
+      expect(whatsNewState.open).toBe(true)
+      expect(whatsNewState.releases).toEqual([])
+      expect(whatsNewState.advisories).toEqual([advisory])
+    })
+
+    it('shows the notice alone when changelogs are turned off', async () => {
+      mockEnabled = false
+      await runWhatsNewStartupTrigger(openGates)
+
+      expect(getWhatsNewMock).not.toHaveBeenCalled()
+      expect(whatsNewState.open).toBe(true)
+      expect(whatsNewState.releases).toEqual([])
+      expect(whatsNewState.advisories).toEqual([advisory])
+      expect(setSettingMock).toHaveBeenCalledWith('whatsNew.lastSeenVersion', '0.26.0')
+    })
+
+    it('treats an advisory lookup that throws as none, and still shows the changelog', async () => {
+      getSecurityAdvisoriesMock.mockRejectedValue(new Error('ipc down'))
+      await runWhatsNewStartupTrigger(openGates)
+
+      expect(whatsNewState.open).toBe(true)
+      expect(whatsNewState.advisories).toEqual([])
+    })
+  })
+
+  it('asks for no advisories on a fresh install', async () => {
+    await runWhatsNewStartupTrigger({ ...openGates, onboarded: false })
+    expect(getSecurityAdvisoriesMock).not.toHaveBeenCalled()
   })
 
   it('dev override forces the show path from the given version and never stamps', async () => {

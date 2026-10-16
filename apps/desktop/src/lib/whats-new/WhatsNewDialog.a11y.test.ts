@@ -60,8 +60,11 @@ const sampleReleases = [
   },
 ]
 
-function setReleases(releases: typeof sampleReleases | [], allowEmpty: boolean): void {
+type Advisory = (typeof whatsNewState.advisories)[number]
+
+function setReleases(releases: typeof sampleReleases | [], allowEmpty: boolean, advisories: Advisory[] = []): void {
   whatsNewState.releases = releases
+  whatsNewState.advisories = advisories
   whatsNewState.allowEmpty = allowEmpty
   whatsNewState.open = true
 }
@@ -213,5 +216,69 @@ describe('WhatsNewDialog', () => {
     expect(setSettingMock).toHaveBeenCalledWith('whatsNew.showOnUpdate', false)
     expect(whatsNewState.open).toBe(false)
     expect(addToastMock).toHaveBeenCalled()
+  })
+  describe('with security advisories fixed since the last version seen', () => {
+    const critical: Advisory = {
+      id: 'GHSA-crit-0000-0000',
+      fixedIn: '0.26.0',
+      severity: 'critical',
+      url: 'https://github.com/vdavid/cmdr/security/advisories/GHSA-crit-0000-0000',
+    }
+    const medium: Advisory = {
+      id: '2026-06-01-medium',
+      fixedIn: '0.25.0',
+      severity: 'medium',
+      url: 'https://getcmdr.com/changelog',
+    }
+
+    function advisoryLinks(target: HTMLElement): HTMLAnchorElement[] {
+      return Array.from(target.querySelectorAll<HTMLAnchorElement>('.security-notice a'))
+    }
+
+    it('names one fix and links its advisory through the opener', async () => {
+      setReleases(sampleReleases, false, [critical])
+      const target = await mountDialog()
+
+      expect(target.textContent).toContain('This version fixed a security issue.')
+      const links = advisoryLinks(target)
+      expect(links.map((a) => a.textContent.trim())).toEqual(['Read the advisory'])
+      links[0].dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
+      await tick()
+      expect(openExternalUrlMock).toHaveBeenCalledExactlyOnceWith(critical.url)
+    })
+
+    it('lists every fix with its own link, most severe first', async () => {
+      setReleases(sampleReleases, false, [critical, medium])
+      const target = await mountDialog()
+
+      expect(target.textContent).toContain('This version fixed 2 security issues.')
+      expect(advisoryLinks(target).map((a) => a.getAttribute('href'))).toEqual([critical.url, medium.url])
+      expect(advisoryLinks(target).map((a) => a.textContent.trim())).toEqual([
+        'Read advisory GHSA-crit-0000-0000',
+        'Read advisory 2026-06-01-medium',
+      ])
+    })
+
+    it('keeps an advisory whose link was refused in the count, without a link', async () => {
+      setReleases(sampleReleases, false, [critical, { ...medium, url: null }])
+      const target = await mountDialog()
+
+      expect(target.textContent).toContain('This version fixed 2 security issues.')
+      expect(advisoryLinks(target).map((a) => a.getAttribute('href'))).toEqual([critical.url])
+    })
+
+    it('shows the notice alone, with no empty state, when there are no releases to show', async () => {
+      setReleases([], false, [critical])
+      const target = await mountDialog()
+
+      expect(target.textContent).toContain('This version fixed a security issue.')
+      expect(target.querySelector('.empty')).toBeNull()
+    })
+
+    it('has no a11y violations with the notice showing', async () => {
+      setReleases(sampleReleases, false, [critical, medium])
+      const target = await mountDialog()
+      await expectNoA11yViolations(target)
+    })
   })
 })

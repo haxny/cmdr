@@ -11,7 +11,13 @@
 
 import { getVersion } from '@tauri-apps/api/app'
 import { getSetting, setSetting } from '#lib/settings/index.js'
-import { getWhatsNew, whatsNewDevOverride, type WhatsNewRelease } from '#lib/tauri-commands/index.js'
+import {
+  getSecurityAdvisories,
+  getWhatsNew,
+  whatsNewDevOverride,
+  type SecurityAdvisory,
+  type WhatsNewRelease,
+} from '#lib/tauri-commands/index.js'
 import { getAppLogger } from '#lib/logging/logger.js'
 import { decideWhatsNew } from './whats-new'
 
@@ -23,6 +29,11 @@ const MANUAL_MAX = 5
 interface WhatsNewState {
   open: boolean
   releases: WhatsNewRelease[]
+  /**
+   * Security advisories fixed since the version the user last saw, most severe first, from this build's own list. Shown
+   * as a notice above the releases. Empty on the manual reopen, which isn't tied to an update.
+   */
+  advisories: SecurityAdvisory[]
   /** `true` only for the manual Help reopen and the dev override, where an empty slice shows the empty state. */
   allowEmpty: boolean
 }
@@ -30,6 +41,7 @@ interface WhatsNewState {
 export const whatsNewState = $state<WhatsNewState>({
   open: false,
   releases: [],
+  advisories: [],
   allowEmpty: false,
 })
 
@@ -41,8 +53,9 @@ function stamp(current: string): void {
   setSetting('whatsNew.lastSeenVersion', current)
 }
 
-function openWith(releases: WhatsNewRelease[], allowEmpty: boolean): void {
+function openWith(releases: WhatsNewRelease[], advisories: SecurityAdvisory[], allowEmpty: boolean): void {
   whatsNewState.releases = releases
+  whatsNewState.advisories = advisories
   whatsNewState.allowEmpty = allowEmpty
   whatsNewState.open = true
 }
@@ -57,9 +70,22 @@ export async function openWhatsNew(): Promise<void> {
   if (whatsNewState.open) return // Idempotent: a menu/palette double-fire opens it once.
   try {
     const releases = await getWhatsNew(null, MANUAL_MAX)
-    openWith(releases, true)
+    openWith(releases, [], true)
   } catch (e) {
     log.warn("Couldn't load the changelog for the What's new popup: {error}", { error: String(e) })
+  }
+}
+
+/**
+ * The advisories fixed since `since`, or none when the lookup throws: losing the notice beats losing the changelog,
+ * and the restart toast may already have said it.
+ */
+async function advisoriesSince(since: string): Promise<SecurityAdvisory[]> {
+  try {
+    return await getSecurityAdvisories(since)
+  } catch (e) {
+    log.warn("Couldn't load the security advisories for the What's new popup: {error}", { error: String(e) })
+    return []
   }
 }
 
@@ -96,17 +122,23 @@ export async function runWhatsNewStartupTrigger(gates: StartupGates): Promise<vo
     log.info("CMDR_SIMULATE_UPDATE_FROM={from} active: forcing the What's new popup", { from: override })
     try {
       const releases = await getWhatsNew(override, MANUAL_MAX)
-      openWith(releases, true)
+      openWith(releases, await advisoriesSince(override), true)
     } catch (e) {
       log.debug("Couldn't load the changelog for the dev override: {error}", { error: String(e) })
     }
     return
   }
 
+  // Asked before deciding: an advisory shows even with changelogs off, and keeps an empty slice from silent-stamping
+  // the notice away. Bounded below by the stamp, so a fresh install (no stamp) asks nothing.
+  const lastSeen = getSetting('whatsNew.lastSeenVersion')
+  const advisories = lastSeen === '' ? [] : await advisoriesSince(lastSeen)
+
   const decision = decideWhatsNew({
-    lastSeen: getSetting('whatsNew.lastSeenVersion'),
+    lastSeen,
     current,
     enabled: getSetting('whatsNew.showOnUpdate'),
+    hasSecurityNotice: advisories.length > 0,
     onboarded: gates.onboarded,
     onboardingShowing: gates.onboardingShowing,
     otherStartupModalOpen: gates.otherStartupModalOpen,
@@ -121,20 +153,21 @@ export async function runWhatsNewStartupTrigger(gates: StartupGates): Promise<vo
       stamp(current)
       return
     case 'show': {
-      let releases: WhatsNewRelease[]
+      let releases: WhatsNewRelease[] = []
       try {
-        releases = await getWhatsNew(decision.since, decision.max)
+        if (decision.changelog) releases = await getWhatsNew(decision.since, decision.max)
       } catch (e) {
         // Don't stamp on a fetch failure: a later launch can still show the diff.
         log.warn("Couldn't load the changelog for the What's new popup: {error}", { error: String(e) })
         return
       }
-      // An empty slice on an auto-show collapses to a silent stamp (never an empty auto-popup).
-      if (releases.length === 0) {
+      // An empty slice on an auto-show collapses to a silent stamp (never an empty auto-popup), unless the security
+      // notice has something to say.
+      if (releases.length === 0 && advisories.length === 0) {
         stamp(current)
         return
       }
-      openWith(releases, false)
+      openWith(releases, advisories, false)
       stamp(current)
       return
     }

@@ -1,9 +1,10 @@
-// "What's new" popup: fetch the changelog slice and read the dev simulate-update override.
+// "What's new" popup: fetch the changelog slice and the security advisories fixed since the last seen version, and
+// read the dev simulate-update override.
 
 import { commands } from '#lib/ipc/bindings.js'
-import type { WhatsNewRelease, WhatsNewSection } from '#lib/ipc/bindings.js'
+import type { SecurityAdvisory, WhatsNewRelease, WhatsNewSection } from '#lib/ipc/bindings.js'
 
-export type { WhatsNewRelease, WhatsNewSection }
+export type { SecurityAdvisory, WhatsNewRelease, WhatsNewSection }
 
 /**
  * Returns the displayable releases in `sinceVersion < release <= current`, newest first,
@@ -22,4 +23,12 @@ export function getWhatsNew(sinceVersion: string | null, max: number): Promise<W
  */
 export function whatsNewDevOverride(): Promise<string | null> {
   return commands.whatsNewDevOverride()
+}
+
+/**
+ * Returns the security advisories this build's own list says were fixed in `sinceVersion < fixedIn <= current`, most
+ * severe first. Each link is already vetted against the advisory allowlist backend-side (`null` when refused).
+ */
+export function getSecurityAdvisories(sinceVersion: string): Promise<SecurityAdvisory[]> {
+  return commands.getSecurityAdvisories(sinceVersion)
 }

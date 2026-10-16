@@ -11,8 +11,11 @@ import { compareVersions } from '#lib/utils/version.js'
 
 /** What the startup effect should do with this launch. */
 export type WhatsNewDecision =
-  /** Open the dialog with this slice, then stamp `lastSeen = current`. */
-  | { action: 'show'; since: string | null; max: number }
+  /**
+   * Open the dialog with this slice, then stamp `lastSeen = current`. `changelog: false` shows only the security notice:
+   * the person turned changelogs off, which isn't turning security advisories off.
+   */
+  | { action: 'show'; since: string | null; max: number; changelog: boolean }
   /** Write `lastSeen = current`, no dialog (fresh install, downgrade, or feature off). */
   | { action: 'stamp' }
   /** A would-show is blocked by onboarding or another startup modal. Don't stamp; retry later. */
@@ -25,8 +28,13 @@ export interface DecideWhatsNewArgs {
   lastSeen: string
   /** The version running right now (`getVersion()`). */
   current: string
-  /** `whatsNew.showOnUpdate`: governs only the automatic popup. */
+  /** `whatsNew.showOnUpdate`: governs only the automatic popup's changelog. */
   enabled: boolean
+  /**
+   * A security advisory was fixed in `lastSeen < fixedIn <= current` (this build's own list). It shows even with
+   * `enabled` off, and like any show it waits out onboarding rather than being stamped away.
+   */
+  hasSecurityNotice: boolean
   /** `isOnboarded`: the discriminator between a fresh install and an existing user. */
   onboarded: boolean
   /** The onboarding wizard (or legacy FDA modal) is on screen. */
@@ -53,7 +61,7 @@ export function decideWhatsNew(args: DecideWhatsNewArgs): WhatsNewDecision {
     // Inaugural showcase: show off the feature with the current release only.
     if (!args.enabled) return { action: 'stamp' }
     if (isGated(args)) return { action: 'wait' }
-    return { action: 'show', since: null, max: 1 }
+    return { action: 'show', since: null, max: 1, changelog: true }
   }
 
   const order = compareVersions(args.current, args.lastSeen)
@@ -64,8 +72,9 @@ export function decideWhatsNew(args: DecideWhatsNewArgs): WhatsNewDecision {
   // Downgrade: rewrite `lastSeen` to current so a later re-upgrade behaves sanely.
   if (order < 0) return { action: 'stamp' }
 
-  // Upgrade. Feature off → stamp silently (no backlog replay when re-enabled later).
-  if (!args.enabled) return { action: 'stamp' }
+  // Upgrade. Feature off → stamp silently (no backlog replay when re-enabled later), unless a security fix landed:
+  // then the notice shows on its own.
+  if (!args.enabled && !args.hasSecurityNotice) return { action: 'stamp' }
   if (isGated(args)) return { action: 'wait' }
-  return { action: 'show', since: args.lastSeen, max: 5 }
+  return { action: 'show', since: args.lastSeen, max: 5, changelog: args.enabled }
 }

@@ -11,7 +11,9 @@
      * of entries.
      *
      * The auto-popup never opens empty (the trigger collapses an empty slice to a silent
-     * stamp); the empty state is reachable only via the manual Help reopen.
+     * stamp); the empty state is reachable only via the manual Help reopen. A security notice
+     * (advisories fixed since the version last seen) sits above the releases, and can be the
+     * whole content when changelogs are turned off.
      */
     import { SvelteSet } from 'svelte/reactivity'
     import ModalDialog from '#lib/ui/ModalDialog.svelte'
@@ -31,7 +33,16 @@
     const CHANGELOG_URL = 'https://getcmdr.com/changelog/'
 
     const releases = $derived(whatsNewState.releases)
-    const isEmpty = $derived(releases.length === 0)
+    /**
+     * Security fixes since the version last seen, most severe first. Links arrive vetted against
+     * the advisory allowlist backend-side; one it refused is `null` and still counts.
+     */
+    const advisories = $derived(whatsNewState.advisories)
+    const linkedAdvisories = $derived(
+        advisories.flatMap((advisory) => (advisory.url === null ? [] : [{ id: advisory.id, url: advisory.url }])),
+    )
+    // A notice on its own is content too: the empty state is for a dialog with nothing at all.
+    const isEmpty = $derived(releases.length === 0 && advisories.length === 0)
 
     /**
      * The versions whose detail lists are open. A `SvelteSet` (not a keyed object) so
@@ -61,6 +72,14 @@
         }
     }
 
+    async function handleOpenAdvisory(url: string) {
+        try {
+            await openExternalUrl(url)
+        } catch (e) {
+            log.warn("Couldn't open the security advisory link: {error}", { error: String(e) })
+        }
+    }
+
     function handleClose() {
         closeWhatsNew()
     }
@@ -86,6 +105,36 @@
     {#snippet title()}{tString('whatsNew.dialog.title')}{/snippet}
 
     <div class="body" id="whats-new-body">
+        {#if advisories.length > 0}
+            <!-- Above the scroll area, so it stays in view however long the slice is, and
+                 outside its markdown click delegate, so a link here opens exactly once. -->
+            <section class="security-notice" aria-labelledby="whats-new-security-notice">
+                <p class="security-notice-title" id="whats-new-security-notice">
+                    {tString('whatsNew.securityNotice.title', { count: advisories.length })}
+                </p>
+                {#if linkedAdvisories.length > 0}
+                    <ul class="security-notice-links">
+                        {#each linkedAdvisories as advisory (advisory.id)}
+                            <li>
+                                <LinkButton
+                                    href={advisory.url}
+                                    onclick={(e: MouseEvent) => {
+                                        e.preventDefault()
+                                        void handleOpenAdvisory(advisory.url)
+                                    }}
+                                    >{advisories.length === 1
+                                        ? tString('whatsNew.securityNotice.readAdvisory')
+                                        : tString('whatsNew.securityNotice.readAdvisoryNamed', {
+                                              id: advisory.id,
+                                          })}</LinkButton
+                                >
+                            </li>
+                        {/each}
+                    </ul>
+                {/if}
+            </section>
+        {/if}
+
         <!-- Click delegate for anchor tags inside rendered markdown: an entry or a lead
              can carry a Markdown link, and Tauri blocks raw <a> navigation. Each link is
              focusable, and its Enter bubbles here as a click. -->
@@ -200,6 +249,33 @@
         min-height: 0;
         /* Keep a little room so the scrollbar doesn't crowd the text. */
         padding-right: var(--spacing-xs);
+    }
+
+    /* Calm on purpose: the fix is already running, so this informs rather than warns. */
+    .security-notice {
+        flex: none;
+        margin: 0 0 var(--spacing-lg);
+        padding: var(--spacing-sm) var(--spacing-md);
+        background: var(--color-bg-secondary);
+        border: 1px solid var(--color-border-subtle);
+        border-radius: var(--radius-md);
+        font-size: var(--font-size-md);
+    }
+
+    .security-notice-title {
+        margin: 0;
+        font-weight: 600;
+        color: var(--color-text-primary);
+    }
+
+    .security-notice-links {
+        margin: var(--spacing-xs) 0 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    .security-notice-links li + li {
+        margin-top: var(--spacing-xxs);
     }
 
     .empty {
