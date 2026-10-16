@@ -14,6 +14,10 @@ Read this before adding, wiping, or reorganizing a spec.
 
 ## The specs
 
+- `transfer-engine-crates-plan.md`: **The code that writes and deletes user files is a third of the app crate, slow to
+  build and test, and held together by 52 statics.** Four Tauri-free crates (`cmdr-collation`, `cmdr-local`,
+  `cmdr-operation-log`, `cmdr-operations`) with explicit seams, rules turned into types, and before/after numbers.
+  Issue: [#415](https://github.com/vdavid/cmdr/issues/415).
 - `saved-smb-shares.md`: **A saved SMB server holds only a host, not the user and share the person wants.** A share row
   under its server, recorded at mount time, pinnable and openable like an SFTP place. Issue:
   [cmdr-reports#7](https://github.com/vdavid/cmdr-reports/issues/7).
