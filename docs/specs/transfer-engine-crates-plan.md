@@ -170,11 +170,14 @@ David approved the effort; the lead decided the rest. Approving this plan approv
    complete when first measured: the mount probes move in M1b, not M4.) M7a decides, from
    `index-crate-isolation-ceilings.go`, how `testing`-gated items are counted, and sizes the `testing` export list
    against that.
-8. **Event payloads: decided by the M0c spike.** 22 payload structs derive `tauri_specta::Event` today (19 in
-   `types/events.rs`, plus `OperationsChanged` in `manager/wire.rs`, `VolumesBusyChanged` in `status_cache.rs`, and the
-   staging-leftovers notice in `in_flight_sweep.rs`), and the engine BUILDS most of them; the orphan rule forbids the
-   app from implementing `tauri_specta::Event` on a crate's type. The candidate is a hand-written `specta::Type` impl on
-   an app-side wrapper (§ M0c); the fallback is the listing's app-side envelopes plus an M5c.
+8. **Event payloads stay crate types; the app wraps each one for the wire (decided by the M0c spike, § "Spike
+   result").** 22 payload structs derive `tauri_specta::Event` today (19 in `types/events.rs`, plus `OperationsChanged`
+   in `manager/wire.rs`, `VolumesBusyChanged` in `status_cache.rs`, and the staging-leftovers notice in
+   `in_flight_sweep.rs`), and the engine BUILDS most of them; the orphan rule forbids the app from implementing
+   `tauri_specta::Event` on a crate's type. Each payload keeps `serde` + `specta::Type` in the crate and loses its
+   `Event` derive; the app's `operations_host/events.rs` gives each a one-line `wire_event!` newtype with a hand-written
+   `specta::Type`, which leaves `bindings.ts` byte-identical. Rejected: the listing's app-side envelopes (22 mirror
+   structs plus conversions, and the collector sink asserting on a second shape).
 9. **`OperationId` newtype at the public API and in every seam trait**, wrapping at the IPC boundary so `bindings.ts`
    doesn't change. Internals adopt it where a milestone already touches the signature; a full internal sweep is a
    follow-up issue.
@@ -1123,26 +1126,27 @@ cycle rules for seam value types start holding here).
    sink factory on the slot.
 3. The 12 `log_error!` sites become `EngineEvents::error_report(OperationErrorReport::…)`, typed variants grouped by
    what the app does with them; the app adapter re-raises through `log_error!` with today's target and message.
-4. The event payloads per M0c's decision (the wrapper macro, if it won).
+4. The event payloads drop `tauri_specta::Event` (§ "Spike result" has the exact shape). `operations_host/events.rs`
+   holds the `wire_event!` macro and one line per payload the engine owns; `ipc.rs`'s `collect_events!` names the
+   wrappers instead of the payloads; every app-side `.emit(&app)` of one becomes `Wrapper(event).emit(&app)` (the moved
+   Tauri sinks, plus the adapters for M5a's `EngineEvents`: operations changed, busy volumes, leftovers kept). Commands
+   that return a payload (`latest_operation_progress`) keep returning the crate type, unwrapped. The engine-side direct
+   emit at `scan_bridge.rs:399` (it reads `manager::operations_app_handle()`) goes through the op's sink or
+   `EngineEvents` here, since it's an `AppHandle` reach. A forgotten wrap can't compile: the crate type has no `emit`.
+   Small and mechanical, with `desktop-bindings-fresh` as the referee.
 
 **Intentions.** After this, `write_operations/` names no `tauri` and no `AppHandle`.
 
 **Landmines.** `SuppressTerminalsSink` and the agent's `ProposalReportingSink` wrap the Tauri sink; their forwarding
-must stay exact (`emit_sources_gone` must be forwarded, per the trait doc). `record_failure` releases the manager lock
-before logging or emitting (`manager.rs:741-745`); `retain_failure` keeps that.
+must stay exact (`emit_sources_gone` must be forwarded, per the trait doc). A payload's doc comments and `#[serde]`
+attributes are part of `bindings.ts` (specta exports docs as JSDoc), so they move verbatim. The wrapper's `specta::Type`
+must be the hand-written one: a derived one, even with `#[specta(transparent)]`, adds an alias. `record_failure`
+releases the manager lock before logging or emitting (`manager.rs:741-745`); `retain_failure` keeps that.
 
 **DONE.**
 `rg -n '\btauri(_specta)?\b|AppHandle' apps/desktop/src-tauri/src/file_system/write_operations -t rust --glob '!*test*'`
 finds nothing outside comments; M3's pins green; lanes: `desktop-rust-tests`, `desktop-rust-clippy`,
 `desktop-bindings-fresh`, `desktop-rust-log-error-macro`, `desktop-rust-discarded-outcome`.
-
-### M5c: App-side envelopes (only if M0c rejects the wrapper; then it runs BEFORE M5b)
-
-**Scope.** The listing shape: the 22 envelopes move to `operations_host/events.rs` with their derives; the engine
-reports crate-side facts; the app converts; the collector sink asserts on the facts. M0c rewrites this section
-concretely (size, any split) before M1a starts, or deletes it if the wrapper wins.
-
-**DONE.** `desktop-bindings-fresh` zero diff; lanes: `desktop-rust-tests`, `desktop-rust-clippy`.
 
 ### M5d: Seams III — volumes and the engine's `VolumeHost`
 
@@ -1831,3 +1835,90 @@ Round 2 (adversarial, executor). Every finding not listed here was folded in abo
 - **The lead's lanes ruling** replaced every mid-effort `--include-slow` and full `pnpm check`. Slow lanes now appear
   only where named with a reason (§ "Loud rules"). Dropped: `desktop-rust-tests-linux` from M1b, M6a, and M6b, and
   `desktop-rust-module-cycles` from M1a, M4, M5b–M5e, M6b–M6d (all covered by M9's run).
+
+## Spike result
+
+M0c ran on 2026-10-16 on branch `spike-event-wire` (commit `b10cc9821`, off `6c410996f`), in this worktree rather than a
+separate one, since nothing else was running. **Verdict: the wrapper works. `bindings.ts` is byte-identical**
+(regenerated blob `dc6b6bb0d`, the same as `HEAD`'s; `pnpm check desktop-bindings-fresh` green). M5c is deleted and M5b
+item 4 converts the payloads.
+
+What the spike moved, to make the orphan rule bite across a real crate boundary: a scratch workspace crate
+`crates/spike-event-wire` (deps: `serde`, `specta = "=2.0.0-rc.24"` with `derive`, and `cmdr-index` for
+`ExpectedTotals`) took `WriteSettledEvent`, `WriteProgressEvent`, the vocabulary they carry (`WriteOperationType`,
+`WriteOperationPhase`, `ProgressAxis`, `ProgressStep`, `TransferActivity`, `TransferWaitReason`), and
+`impl WriteProgressEvent { new, with_step, with_scan_meta }`, all verbatim, minus the `Event` derive and the
+`#[tauri_specta(event_name)]` attribute. `types.rs` re-exports them, so no engine call site changed.
+
+The shape, app-side (`write_operations/event_wire.rs` on the spike; `operations_host/events.rs` in M5b):
+
+```rust
+macro_rules! wire_event {
+    ($wrapper:ident, $inner:ty, $name:literal) => {
+        #[derive(Clone, serde::Serialize, tauri_specta::Event)]
+        #[serde(transparent)]
+        #[tauri_specta(event_name = $name)]
+        pub struct $wrapper(pub $inner);
+
+        impl specta::Type for $wrapper {
+            fn definition(types: &mut specta::Types) -> specta::datatype::DataType {
+                <$inner as specta::Type>::definition(types)
+            }
+        }
+    };
+}
+
+wire_event!(WriteProgress, cmdr_operations::WriteProgressEvent, "write-progress");
+wire_event!(WriteSettled, cmdr_operations::WriteSettledEvent, "write-settled");
+```
+
+`ipc.rs`'s `collect_events!` names `WriteProgress` / `WriteSettled` (paths work there), and the two emit sites became
+`WriteProgress(event).emit(&app)` / `WriteSettled(event).emit(&self.app)`.
+
+Evidence:
+
+- **Bindings**: `pnpm bindings:regen` rewrote `bindings.ts` (fresh mtime) to the identical blob. The events-object keys
+  (`writeProgress`, `writeSettled`), `makeEvent<WriteProgressEvent>` / `makeEvent<WriteSettledEvent>`, both type bodies
+  with their JSDoc, and every command signature are unchanged.
+- **Command return**: `latest_operation_progress` returns `Vec<WriteProgressEvent>`, the CRATE type, with no wrapper. It
+  still exports `__TAURI_INVOKE<WriteProgressEvent[]>`, and the type reached from both the command and the event wrapper
+  collapses to one named type. Same for `WriteOperationType`, which dozens of commands also reach.
+- **Wire**: a mock-app test (`event_wire::tests::a_wrapped_payload_reaches_the_wire_unchanged`) mounts a
+  `tauri_specta::Builder<MockRuntime>` with the wrapper, listens on the raw `"write-settled"` name, emits the wrapper,
+  and gets exactly `serde_json::to_string(&inner)`: `{"operationId":"op-1","operationType":"copy","volumeId":"vol"}`.
+- **Control**: the same wrapper with a DERIVED `specta::Type` plus `#[specta(transparent)]` is not identical, which
+  confirms round 1's review:
+
+  ```diff
+  -  writeSettled: makeEvent<WriteSettledEvent>('write-settled'),
+  +  writeSettled: makeEvent<WriteSettled>('write-settled'),
+  ...
+  +export type WriteSettled = WriteSettledEvent
+  +
+  ```
+
+Edge cases, each with what it means for the effort:
+
+- **A forgotten wrap is a compile error, not a runtime panic.** The registry is keyed by the wrapper's `TypeId`, but the
+  crate type has no `Event` impl at all, so `inner.emit(&app)` doesn't exist. The spike's first build found the one emit
+  outside the sink this way: `scan_bridge.rs:399` sends `WriteProgressEvent` straight through
+  `manager::operations_app_handle()`. M5b routes it through a sink or `EngineEvents` (M5b item 4).
+- **`register_event` panics on a non-reference type**, at `ipc::builder()`, which the regen test calls, so a bad wrapper
+  fails `desktop-bindings-fresh` loudly. The hand-written impl returns the inner's `DataType::Reference`; all 22
+  payloads are named structs, so none is at risk.
+- **Inherent impls move with their type.** `impl WriteProgressEvent` (in `event_sinks.rs` today) can't stay app-side
+  once the type is foreign, so the builders move into the crate beside it. `with_scan_meta` takes `ExpectedTotals`,
+  which the spike crate pulled from `cmdr-index`; in the real crate it's the `host/` value type § "Seam design" already
+  plans, so `cmdr-operations` still doesn't depend on `cmdr-index`.
+- **Docs and serde attributes are wire.** specta exports doc comments as JSDoc, so moving a payload means moving its
+  docs verbatim; a reworded comment shows up as a `bindings.ts` diff, which the lane catches.
+- **The wrapper derives only `Serialize` + `Clone`.** Nothing in Rust `listen`s to an engine payload today; one that
+  ever does adds `Deserialize` (with `#[serde(transparent)]`) to the macro.
+- **The wrapper's name is free**: the events-object key comes from the event name, never the ident. `WriteProgress` for
+  `WriteProgressEvent` reads fine.
+- **The collector sink and every engine-side test are untouched**: they keep building and asserting on the crate types,
+  since the wrap happens only at the Tauri edge.
+
+Sizing: M5b item 4 is one macro plus about 22 one-line wrappers, the `collect_events!` renames, and about 20 emit sites,
+all mechanical. M5c, the envelope fallback (22 mirror structs, conversions, and a collector sink that asserts on facts),
+isn't needed. The spike branch stays for the lead to delete; nothing on it merges.
