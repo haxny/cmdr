@@ -390,8 +390,10 @@ const toc = [
     <p>
         Cmdr keeps its data in <code>~/Library/Application Support/com.veszelovszki.cmdr/</code>, its drive index in
         <code>~/Library/Caches/com.veszelovszki.cmdr/</code>, and its logs in
-        <code>~/Library/Logs/com.veszelovszki.cmdr/</code>. Cmdr doesn't add its own encryption, so this data is as safe
-        as the Mac's FileVault. It includes:
+        <code>~/Library/Logs/com.veszelovszki.cmdr/</code>. All three are in the user's own Library folder, which other
+        user accounts on the Mac can't open. With FileVault on, macOS encrypts all of it at rest along with the rest of
+        the disk. Cmdr adds no second layer of its own, since its key would have to sit on the same Mac. The data
+        includes:
     </p>
     <ul>
         <li>
@@ -402,15 +404,19 @@ const toc = [
         <li>For image search: text read from images (OCR), tags, and image fingerprints.</li>
         <li>A log of every copy, move, rename, and delete, with paths (up to 3 GB by default).</li>
         <li>Search and selection history, AI chats, and the AI assistant's notes.</li>
-        <li>Server addresses and usernames for saved network connections, settings, and the license key.</li>
+        <li>Server addresses and usernames for saved network connections, and settings.</li>
         <li>
             Logs with full paths, up to 200 MB by default. Paths are cleaned only when a report is sent, not in the
             local file.
         </li>
     </ul>
     <p>
-        <strong>Passwords and API keys</strong> (for SMB, SFTP, WebDAV, and cloud AI) are stored in the macOS
-        Keychain, never in Cmdr's settings files.
+        Time Machine backs up everything in <code>Application Support</code> (the index stays out, in
+        <code>Caches</code>). An encrypted backup disk keeps those copies encrypted too.
+    </p>
+    <p>
+        <strong>Passwords and API keys</strong> (for SMB, SFTP, WebDAV, S3, and cloud AI) and
+        <strong>the license key</strong> are stored in the macOS Keychain, never in Cmdr's files.
     </p>
     <p id="remove">
         <strong>Removing Cmdr and all its data</strong>: quit Cmdr, move the app to the Trash, and delete these folders
@@ -420,7 +426,7 @@ const toc = [
         <code>~/Library/Saved Application State/com.veszelovszki.cmdr.savedState</code>, and
         <code>~/Library/WebKit/com.veszelovszki.cmdr/</code>. With Homebrew,
         <code>brew uninstall --zap --cask vdavid/tap/cmdr</code> does all of that. Then open Keychain Access and delete
-        the items named "Cmdr", which hold the saved passwords and API keys.
+        the items named "Cmdr", which hold the saved passwords, API keys, and the license key.
     </p>
 
     <h3>On Cmdr's servers</h3>
