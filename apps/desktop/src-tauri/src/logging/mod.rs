@@ -229,3 +229,12 @@ pub fn eager_prune(log_dir: &Path, keep_n: usize) -> std::io::Result<usize> {
     }
     Ok(deleted)
 }
+
+/// Logs a warning at most once per app session, for a defect that would otherwise recur on
+/// every event (each drag tick, each Dock right-click). `flag` is the caller's own static.
+#[cfg(target_os = "macos")]
+pub(crate) fn warn_once(flag: &AtomicBool, msg: &str) {
+    if !flag.swap(true, Ordering::Relaxed) {
+        log::warn!("{msg}");
+    }
+}

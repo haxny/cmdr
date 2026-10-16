@@ -57,6 +57,10 @@ exists, so they call `config::standalone_app_data_dir()` (the OS data dir plus `
   cap so files vanish now.
 - **`cleanup_legacy_log_files(dir)`**: one-shot startup sweep removing `Cmdr_<timestamp>.log` files left from the
   earlier `tauri-plugin-log` setup.
+- **`warn_once(flag, msg)`** (macOS): a warning at most once per session, keyed by the caller's own `AtomicBool`, for
+  defects that would recur on every event (the drag swizzles in `drag_image_detection` / `drag_image_swap`, the Dock
+  menu). It lives here, in a leaf, so those modules don't import each other for it. Its lines carry the
+  `cmdr_lib::logging` target, so each message names its subsystem in its own text.
 
 ## Duplicate coalescing (file chain)
 

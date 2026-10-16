@@ -26,7 +26,7 @@ use objc2::runtime::{AnyClass, AnyObject, Bool};
 use objc2_app_kit::{NSDraggingItem, NSDraggingItemEnumerationOptions};
 use objc2_foundation::{NSDictionary, NSInteger, NSPoint, NSRect, NSSize};
 
-use crate::drag_image_detection::warn_once;
+use crate::logging::warn_once;
 
 /// Whether a self-drag is active. When true, `draggingEntered:` swaps the OS drag image
 /// to transparent so the DOM overlay provides visual feedback instead.

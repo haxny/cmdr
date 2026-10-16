@@ -36,6 +36,7 @@ use tauri::{AppHandle, Manager};
 use tauri_specta::Event as _;
 
 use crate::drag_image_swap::{self, SelfDragOp};
+use crate::logging::warn_once;
 use crate::system_events::{DragImageSize, DragModifiers};
 
 /// NSEventModifierFlagShift = 1 << 17
@@ -62,13 +63,6 @@ static WARNED_UPDATED_PANIC: AtomicBool = AtomicBool::new(false);
 static WARNED_EXITED_PANIC: AtomicBool = AtomicBool::new(false);
 static WARNED_NSARRAY_MISSING: AtomicBool = AtomicBool::new(false);
 static WARNED_DRAGGED_IMAGE_REMOVED: AtomicBool = AtomicBool::new(false);
-
-/// Logs a warning message at most once per app session.
-pub(crate) fn warn_once(flag: &AtomicBool, msg: &str) {
-    if !flag.swap(true, Ordering::Relaxed) {
-        log::warn!("{msg}");
-    }
-}
 
 /// Installs swizzles on wry's webview class. Call once during app setup after the
 /// webview is created (e.g. `RunEvent::Ready`).

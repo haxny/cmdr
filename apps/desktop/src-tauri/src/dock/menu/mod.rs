@@ -44,7 +44,7 @@ use objc2_app_kit::{NSMenu, NSMenuItem};
 use tauri::{AppHandle, Manager};
 use tauri_specta::Event as _;
 
-use crate::drag_image_detection::warn_once;
+use crate::logging::warn_once;
 use crate::window_events::{ExecuteCommand, OpenFavorite, RevealPath};
 use rows::{DockCommand, DockRow, LocationClick};
 
