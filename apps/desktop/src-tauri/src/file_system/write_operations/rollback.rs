@@ -35,7 +35,6 @@ use std::time::{Duration, Instant};
 
 use tokio::sync::oneshot;
 
-use crate::operation_log_host::operation_log;
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::volume::{DEFAULT_VOLUME_ID, Volume};
 use cmdr_operation_log::rollback::{
@@ -310,7 +309,10 @@ fn dispatch_inverse(
     report: Option<oneshot::Sender<RollbackReport>>,
 ) -> Result<RollbackDispatch, RollbackRefusal> {
     // No writer means the journal never opened, so there's nothing to roll back.
-    let writer = operation_log().writer().ok_or(RollbackRefusal::UnknownOperation)?;
+    let writer = super::installed()
+        .operation_log()
+        .writer()
+        .ok_or(RollbackRefusal::UnknownOperation)?;
     let vm = host::installed().volumes();
 
     let plan = rollback_operation(vm, &writer, op_id, |plan| {
@@ -536,7 +538,7 @@ fn refused(op_id: &str, refusal: RollbackRefusal) -> OperationUndoOutcome {
 fn read_undoable_rows(
     operation_ids: &[String],
 ) -> (Vec<cmdr_operation_log::store::OperationRow>, Vec<OperationUndoOutcome>) {
-    let Some(writer) = operation_log().writer() else {
+    let Some(writer) = super::installed().operation_log().writer() else {
         let missing = operation_ids
             .iter()
             .map(|id| refused(id, RollbackRefusal::UnknownOperation))

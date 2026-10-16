@@ -789,7 +789,7 @@ fn guard_unregisters_its_state_even_when_the_test_body_panics() {
     let payload = std::panic::catch_unwind(|| {
         let op = TestOperationGuard::register("guard-panic-safety");
         let id = op.id().to_string();
-        assert!(WRITE_OPERATION_STATE.contains(&id));
+        assert!(operation_states().contains(&id));
         panic!("simulated assertion failure while the state is registered: {id}");
     })
     .expect_err("the closure should have panicked");
@@ -802,7 +802,7 @@ fn guard_unregisters_its_state_even_when_the_test_body_panics() {
         .to_string();
 
     assert!(
-        !WRITE_OPERATION_STATE.contains(&id),
+        !operation_states().contains(&id),
         "Drop must unregister on unwind, not only on the happy path"
     );
 }
@@ -820,7 +820,7 @@ fn latest_progress_hands_a_late_window_the_tick_a_paused_operation_last_emitted(
     op.state().enrich_progress(&mut event);
     op.state().pause_gate.pause();
 
-    let latest = WRITE_OPERATION_STATE.latest_progress();
+    let latest = operation_states().latest_progress();
     let tick = latest
         .iter()
         .find(|tick| tick.operation_id == op.id())
@@ -842,7 +842,7 @@ fn latest_progress_hands_a_late_window_the_tick_a_paused_operation_last_emitted(
 fn latest_progress_skips_an_operation_that_has_emitted_nothing_yet() {
     let op = install_state("latest-progress-silent", OperationIntent::Running);
 
-    let latest = WRITE_OPERATION_STATE.latest_progress();
+    let latest = operation_states().latest_progress();
 
     assert!(
         latest.iter().all(|tick| tick.operation_id != op.id()),

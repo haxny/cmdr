@@ -717,9 +717,12 @@ See also: `apps/desktop/src-tauri/src/downloads/CLAUDE.md` for the watcher archi
 ## The engine's host
 
 `host/` is what the engine needs from the app around it, as named seams instead of stashed `AppHandle`s and the Tauri
-runtime. The app's answer is `apps/desktop/src-tauri/src/operations_host/`, which builds one `EngineHost` in `setup()`
-(after `volume_host::install`, before the leftover sweep) and parks it in `host::install`; engine code reaches it with
-`host::installed()`. The slot is temporary: once the engine is a handle, the handle carries its seams.
+runtime. The engine is a handle, `Operations` (`mod.rs`, built in `handle.rs`): an `Arc<Inner>` holding the seams as one
+`EngineHost`, the operation log it journals into, the manager, the registry of live states, and the status cache, so two
+engines share nothing. The app's answer is `apps/desktop/src-tauri/src/operations_host/`, which builds the app's one
+engine in `setup()` with `Operations::builder` (after `volume_host::install` and `operation_log_host::install`, before
+the leftover sweep). Free functions callers outside the engine still use reach that engine through the engine's own
+slot (`write_operations::installed()`), until they call `operations_host::operations()` themselves.
 
 - **The runtime is the `VolumeHost`'s.** One handle for the engine and the backends it drives, so the two can't
   disagree. Everything the engine spawns goes there: the admission pass (§ "The admission pass spawns admitted ops on
@@ -778,11 +781,13 @@ runtime. The app's answer is `apps/desktop/src-tauri/src/operations_host/`, whic
 - **Event payloads are plain `serde` + `specta::Type` types**; the Tauri event and its wire name are the app's
   (`apps/desktop/src-tauri/src/operations_host/wire.rs` wraps each). ❗ A payload's doc comments and `#[serde]`
   attributes still reach `bindings.ts`, so they're wire: reword one and `desktop-bindings-fresh` fails.
-- **Before `install`, the answer depends on the binary.** In the app nothing can start an operation before setup, so it
-  answers nothing. A test binary never installs, so it gets the app's own answers minus the frontend channel
-  (`operations_host::without_frontend`): the real indexing gauge, analytics client, and error reporter, which
+- **Before `install`, the answer depends on the binary.** In the app the IPC start commands refuse
+  (`operations_host::operations()` is `Err(NotInstalled)`), and nothing else can reach the engine before `setup()`. A
+  test binary never installs, so its first read builds the engine every test shares (`test_support::shared_engine`, the
+  app's own answers minus the frontend channel): the real indexing gauge, analytics client, and error reporter, which
   `status_cache_tests`' gauge pins read, and `cmdr-fs`'s shared fallback runtime. No sink factory, so
-  `host_operation_sink()` stays `None` and an archive-target instant op refuses plainly.
+  `host_operation_sink()` stays `None` and an archive-target instant op refuses plainly. The bench builds a detached
+  engine.
 - **A seam trait and its value types live in `host/` or `types/`**, never in a module that calls the seam, or the two
   weld into a cycle. That's why `OperationsChanged` and `OperationSnapshot` are `types` vocabulary, and why
   `OperationEventSink` and `ScanPreviewEventSink` are defined in `host/` (`event_sinks` re-exports them): with the

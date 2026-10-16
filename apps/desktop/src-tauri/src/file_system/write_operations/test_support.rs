@@ -1,6 +1,6 @@
-//! Cross-cutting write-operation test fixtures: isolation for the process-global
-//! `WRITE_OPERATION_STATE` map, the one sanctioned "a park is holding" wait, and
-//! a real queued operation for suites outside this module.
+//! Cross-cutting write-operation test fixtures: the engine the test binary
+//! shares, isolation for its operation registry, the one sanctioned "a park is
+//! holding" wait, and a real queued operation for suites outside this module.
 //!
 //! Per-driver fixtures (fake volumes, gated sources, collector sinks) stay in
 //! their own module's `test_support`, like `transfer/test_support.rs`.
@@ -12,9 +12,16 @@ use std::time::Duration;
 use tokio::sync::oneshot;
 
 use super::manager::{OperationDescriptor, OperationSummaryText, manager};
-use super::state::{WRITE_OPERATION_STATE, WriteOperationState};
+use super::state::{WriteOperationState, operation_states};
 use super::types::{ConflictId, LifecycleStatus, WriteConflictEvent, WriteOperationType};
 use cmdr_fs::volume::LaneKey;
+
+/// The engine every test shares when it reaches the engine's free functions,
+/// since nothing in a test binary installs one: the app's own answers with no
+/// frontend behind them.
+pub(crate) fn shared_engine() -> super::Operations {
+    crate::operations_host::test_engine()
+}
 
 /// A stand-in `write-conflict` event for a test that arms the conflict slot only
 /// to park an operation, and never reads the question back.
@@ -41,11 +48,11 @@ pub(crate) fn placeholder_conflict(conflict_id: ConflictId) -> WriteConflictEven
     }
 }
 
-/// A `WRITE_OPERATION_STATE` entry registered under a unique-per-test operation
+/// An entry in the shared engine's registry under a unique-per-test operation
 /// id, removed on drop.
 ///
 /// **Why this exists.** `cargo test` runs a crate's tests as threads in ONE
-/// process, so `WRITE_OPERATION_STATE` is shared by every write-op test at once.
+/// process, so the shared engine's registry is shared by every write-op test at once.
 /// A hardcoded op id (`"op-merge-cancel"`) collides with any sibling test using
 /// the same literal, and a manual `remove` placed after the assertions leaks the
 /// entry whenever an assertion fails first: the next test's
@@ -79,7 +86,7 @@ impl TestOperationGuard {
     /// where the id threads through the call under test and its assertions.
     pub(crate) fn register_as(op_id: impl Into<String>, state: Arc<WriteOperationState>) -> Self {
         let op_id = op_id.into();
-        WRITE_OPERATION_STATE.insert(op_id.clone(), Arc::clone(&state));
+        operation_states().insert(op_id.clone(), Arc::clone(&state));
         Self { op_id, state }
     }
 

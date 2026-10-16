@@ -14,7 +14,7 @@ use crate::file_system::write_operations::{
     ConflictInfo, DryRunResult, OperationEventSink, ScanPreviewCancelledEvent, ScanPreviewCompleteEvent,
     ScanPreviewErrorEvent, ScanPreviewEventSink, ScanPreviewProgressEvent, ScanProgressEvent, WriteCancelledEvent,
     WriteCompleteEvent, WriteConflictEvent, WriteConflictResolvedEvent, WriteErrorEvent, WriteProgressEvent,
-    WriteSettledEvent, WriteSourceItemDoneEvent, WriteSourcesGoneEvent, operation_manager,
+    WriteSettledEvent, WriteSourceItemDoneEvent, WriteSourcesGoneEvent,
 };
 
 /// Tauri-backed event sink: calls `app.emit()` for each event.
@@ -28,9 +28,9 @@ impl TauriEventSink {
     }
 
     /// The app side effects each terminal emit carries (`terminal_effects.rs`).
-    fn effects(&self) -> AppTerminalEffects {
+    fn effects(&self) -> AppTerminalEffects<'static> {
         AppTerminalEffects {
-            manager: operation_manager(),
+            operations: super::operations().ok(),
         }
     }
 }

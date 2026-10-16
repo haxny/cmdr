@@ -33,7 +33,7 @@ use std::path::{Path, PathBuf};
 use tokio::sync::oneshot;
 
 use super::event_sinks::OperationEventSink;
-use super::state::{WRITE_OPERATION_STATE, WriteOperationState, is_cancelled};
+use super::state::{WriteOperationState, is_cancelled, operation_states};
 use super::types::{
     CancelRollback, SourceItemOutcome, SourcesGoneAnswerOutcome, SourcesGoneNext, WriteCancelledEvent,
     WriteCompleteEvent, WriteOperationType, WriteSourceItemDoneEvent, WriteSourcesGoneEvent,
@@ -48,7 +48,7 @@ const GONE_SAMPLE_LEN: usize = 5;
 /// person's "Move the rest" (or "Copy the rest", …); cancelling is the ordinary
 /// `cancel_operation`.
 pub fn continue_without_gone_sources(operation_id: &str) -> SourcesGoneAnswerOutcome {
-    let Some(state) = WRITE_OPERATION_STATE.get(operation_id) else {
+    let Some(state) = operation_states().get(operation_id) else {
         log::info!(target: "queued_sources", "continue for op={operation_id}: no such operation");
         return SourcesGoneAnswerOutcome::UnknownOperation;
     };
@@ -64,7 +64,7 @@ pub fn continue_without_gone_sources(operation_id: &str) -> SourcesGoneAnswerOut
 /// The question `operation_id` is parked on, if any. For a surface that arrives
 /// after the broadcast.
 pub(crate) fn pending_sources_gone(operation_id: &str) -> Option<WriteSourcesGoneEvent> {
-    WRITE_OPERATION_STATE.get(operation_id)?.sources_gone.pending()
+    operation_states().get(operation_id)?.sources_gone.pending()
 }
 
 /// The positions in `sources` this operation may still touch, after checking
@@ -80,7 +80,7 @@ pub(crate) fn kept_after_queue_local(
     sources: &[PathBuf],
 ) -> Option<Vec<usize>> {
     let all = || (0..sources.len()).collect();
-    let Some(state) = WRITE_OPERATION_STATE.get(operation_id) else {
+    let Some(state) = operation_states().get(operation_id) else {
         return Some(all());
     };
     if !state.waited_in_queue() {
@@ -107,7 +107,7 @@ pub(crate) async fn kept_after_queue_on(
     sources: &[PathBuf],
 ) -> Option<Vec<usize>> {
     let all = || (0..sources.len()).collect();
-    let Some(state) = WRITE_OPERATION_STATE.get(operation_id) else {
+    let Some(state) = operation_states().get(operation_id) else {
         return Some(all());
     };
     if !state.waited_in_queue() {

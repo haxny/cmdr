@@ -64,18 +64,16 @@ use std::collections::{HashMap, VecDeque};
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Arc, LazyLock, Mutex};
+use std::sync::{Arc, Mutex};
 
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::volume::LaneKey;
 use cmdr_operation_log::types::OpKind;
 
-use super::host::{self, OperationErrorReport};
+use super::host::{EngineHost, OperationErrorReport};
 use super::scan_cache;
-use super::state::{
-    WRITE_OPERATION_STATE, WriteOperationState, forget_operation, register_operation_status,
-    unregister_operation_status,
-};
+use super::state::{WriteOperationRegistry, WriteOperationState};
+use super::status_cache::StatusCache;
 use super::types::{LifecycleStatus, WriteOperationError, WriteOperationType};
 
 mod reorder;
@@ -253,8 +251,20 @@ const FAILURE_CAPACITY: usize = 20;
 /// table under one mutex (the critical sections are tiny — register, admit,
 /// free — so one lock keeps the invariants obvious without lock-ordering
 /// hazards). Spawning happens OUTSIDE the lock.
+///
+/// One per engine, shared (`Arc`) with every task it admits, so an admitted
+/// operation can settle on the manager that admitted it. A QUEUED operation's
+/// deferred start never holds it: a dropped engine with a queued op ends.
 pub(crate) struct OperationManager {
     inner: Mutex<ManagerInner>,
+    /// The runtime admitted ops spawn on, and where `operations-changed` and
+    /// error reports go.
+    host: Arc<EngineHost>,
+    /// The engine's registry of live operation states: an op's state is
+    /// registered when the op is, and forgotten when it settles.
+    registry: Arc<WriteOperationRegistry>,
+    /// The engine's status cache, where an admitted op's volumes turn busy.
+    status: Arc<StatusCache>,
     /// Completed admission passes, ever. Bumped once at the END of
     /// `run_admission_pass`, so an advance means a pass walked the whole queue
     /// and admitted everything it could. Nothing in production reads it: it's
@@ -269,17 +279,16 @@ pub(crate) struct OperationManager {
     emits: AtomicU64,
 }
 
-/// Global manager handle. The manager has no construction args, so a
-/// `LazyLock` backs it.
-static MANAGER: LazyLock<OperationManager> = LazyLock::new(OperationManager::new);
-
-/// Returns the global operation manager.
-pub(crate) fn manager() -> &'static OperationManager {
-    &MANAGER
+/// The installed engine's manager.
+// shim: removed in M6a
+pub(crate) fn manager() -> &'static Arc<OperationManager> {
+    super::installed().manager()
 }
 
 impl OperationManager {
-    fn new() -> Self {
+    /// An empty manager that spawns on `host`'s runtime and keeps `registry`
+    /// and `status` in step with its records.
+    pub(super) fn new(host: Arc<EngineHost>, registry: Arc<WriteOperationRegistry>, status: Arc<StatusCache>) -> Self {
         Self {
             inner: Mutex::new(ManagerInner {
                 records: HashMap::new(),
@@ -287,6 +296,9 @@ impl OperationManager {
                 lane_use: HashMap::new(),
                 failures: VecDeque::new(),
             }),
+            host,
+            registry,
+            status,
             admission_passes: AtomicU64::new(0),
             emits: AtomicU64::new(0),
         }
@@ -296,19 +308,19 @@ impl OperationManager {
     /// shows the queued/running row at once); the real work spawns only if the
     /// op is admitted on this pass.
     ///
-    /// `state` is inserted into `WRITE_OPERATION_STATE` here so the op id is
+    /// `state` is inserted into the engine's registry here so the op id is
     /// valid for cancel/conflict-resolution the instant it's registered. The
     /// `deferred` future owns the op end-to-end and MUST call `on_settled(id)`
     /// on its normal exit.
     pub(crate) fn spawn_managed(
-        &'static self,
+        self: &Arc<Self>,
         descriptor: OperationDescriptor,
         state: Arc<WriteOperationState>,
         deferred: DeferredStart,
     ) {
         let operation_id = descriptor.operation_id.clone();
 
-        WRITE_OPERATION_STATE.insert(operation_id.clone(), Arc::clone(&state));
+        self.registry.insert(operation_id.clone(), Arc::clone(&state));
 
         // Claim the confirming dialog's preview before the record exists, so a
         // second op naming the same id is refused rather than racing for one
@@ -367,7 +379,7 @@ impl OperationManager {
     ///
     /// Ends by bumping `admission_passes`; keep that bump last and unconditional
     /// (it's what makes "a pass ran and declined" observable to a test).
-    fn run_admission_pass(&'static self) {
+    fn run_admission_pass(self: &Arc<Self>) {
         loop {
             let to_spawn = {
                 let mut inner = self.inner.lock_ignore_poison();
@@ -412,7 +424,7 @@ impl OperationManager {
             // Mark the volumes busy now that the op is actually running (a
             // Queued op isn't touching the device). The external drag-out seam
             // registers directly; together they form the busy-set union.
-            register_operation_status(&admit_id, op_type, volume_ids);
+            self.status.register(&admit_id, op_type, volume_ids);
             log::info!(target: "op_manager", "admit op={admit_id}");
 
             match deferred {
@@ -429,13 +441,13 @@ impl OperationManager {
                     // every later same-lane op. The host's runtime (the app's, or
                     // `cmdr-fs`'s shared fallback in a test binary) pins every op to
                     // one process-global runtime that outlives them all.
-                    host::installed().runtime().spawn(start());
+                    self.host.runtime().spawn(start());
                 }
                 None => {
                     // Should never happen: a Queued op always has its deferred
                     // start. Free what we reserved so a logic bug can't wedge
                     // the lane forever.
-                    host::installed()
+                    self.host
                         .events()
                         .error_report(OperationErrorReport::AdmittedWithoutStart {
                             operation_id: admit_id.clone(),
@@ -452,7 +464,7 @@ impl OperationManager {
     /// op). Called by the spawned task on its NORMAL exit, sequenced after the
     /// terminal event like the old cache cleanup. Idempotent: a later `Drop`
     /// safety net for the same op is a no-op.
-    pub(crate) fn on_settled(&'static self, operation_id: &str) {
+    pub(crate) fn on_settled(self: &Arc<Self>, operation_id: &str) {
         self.free_and_remove(operation_id);
         self.run_admission_pass();
         self.emit_changed();
@@ -485,7 +497,7 @@ impl OperationManager {
     /// instant op is a safe no-op (`cancel_if_queued` is false for a Running op,
     /// then `cancel_write_operation` finds no state).
     pub(crate) async fn run_instant<T>(
-        &'static self,
+        self: &Arc<Self>,
         descriptor: OperationDescriptor,
         op: impl Future<Output = T>,
     ) -> T {
@@ -514,14 +526,14 @@ impl OperationManager {
             );
             inner.order.push(operation_id.clone());
         }
-        register_operation_status(&operation_id, op_type, volume_ids);
+        self.status.register(&operation_id, op_type, volume_ids);
         self.emit_changed();
         log::info!(target: "op_manager", "run instant op={operation_id}");
 
         // The RAII net: on a timeout-drop of this future or a panic in `op`, the
         // guard's Drop frees the record + unregisters the busy status (and
         // re-emits the snapshot) during unwind. Held across the `op.await`.
-        let guard = InstantTaskGuard::new(operation_id.clone());
+        let guard = InstantTaskGuard::new(Arc::clone(self), operation_id.clone());
 
         let result = op.await;
 
@@ -559,8 +571,8 @@ impl OperationManager {
             if let Some(preview_id) = claimed_preview {
                 scan_cache::abandon_claim(&preview_id);
             }
-            forget_operation(operation_id);
-            unregister_operation_status(operation_id);
+            self.registry.forget(operation_id);
+            self.status.unregister(operation_id);
         }
     }
 
@@ -568,7 +580,7 @@ impl OperationManager {
     /// frees its (unreserved) state. Returns `true` if it removed a Queued op,
     /// `false` if the op was Running/Paused/absent (the caller then routes
     /// through the existing `cancel_write_operation` intent path).
-    pub(crate) fn cancel_if_queued(&'static self, operation_id: &str) -> bool {
+    pub(crate) fn cancel_if_queued(&self, operation_id: &str) -> bool {
         let (was_queued, claimed_preview) = {
             let mut inner = self.inner.lock_ignore_poison();
             match inner.records.get(operation_id) {
@@ -590,8 +602,8 @@ impl OperationManager {
                 scan_cache::abandon_claim(&preview_id);
             }
             // A queued op never reserved lanes nor registered busy status, so
-            // only the `WRITE_OPERATION_STATE` entry needs clearing.
-            forget_operation(operation_id);
+            // only its registry entry needs clearing.
+            self.registry.forget(operation_id);
             log::info!(target: "op_manager", "cancel queued op={operation_id}");
             self.emit_changed();
         }
@@ -657,7 +669,7 @@ impl OperationManager {
     /// A pause issued during the wait needs nothing from here: it already set
     /// the op's `PauseGate`, so the driver that takes over from the walk parks
     /// at its first boundary the same way the walk did.
-    pub(super) fn end_scan_wait(&'static self, operation_id: &str) {
+    pub(super) fn end_scan_wait(&self, operation_id: &str) {
         let mut inner = self.inner.lock_ignore_poison();
         if let Some(rec) = inner.records.get_mut(operation_id) {
             rec.in_scan_wait = false;
@@ -876,7 +888,7 @@ impl OperationManager {
     /// paths production never runs one on: pause admits nobody, so a test proving
     /// "not even a pass would admit this queued op" has to run one itself.
     #[cfg(test)]
-    pub(crate) fn force_admission_pass(&'static self) {
+    pub(crate) fn force_admission_pass(self: &Arc<Self>) {
         self.run_admission_pass();
     }
 
@@ -905,7 +917,7 @@ impl OperationManager {
 
     fn emit_changed(&self) {
         self.emits.fetch_add(1, Ordering::SeqCst);
-        host::installed().events().operations_changed(OperationsChanged {
+        self.host.events().operations_changed(OperationsChanged {
             operations: self.list(),
         });
     }
@@ -921,6 +933,7 @@ impl OperationManager {
 /// for managed ops, and adds lane release. The op's `WriteSettledGuard` (the FE
 /// `write-settled` event) is separate and still lives inside each op's body.
 pub(crate) struct ManagedTaskGuard {
+    manager: Arc<OperationManager>,
     operation_id: String,
     armed: bool,
 }
@@ -928,6 +941,7 @@ pub(crate) struct ManagedTaskGuard {
 impl ManagedTaskGuard {
     pub(crate) fn new(operation_id: impl Into<String>) -> Self {
         Self {
+            manager: Arc::clone(manager()),
             operation_id: operation_id.into(),
             armed: true,
         }
@@ -946,7 +960,7 @@ impl Drop for ManagedTaskGuard {
     fn drop(&mut self) {
         if self.armed {
             log::warn!(target: "op_manager", "op={} task ended without on_settled (panic?); freeing lanes", self.operation_id);
-            manager().free_and_remove(&self.operation_id);
+            self.manager.free_and_remove(&self.operation_id);
         }
     }
 }
@@ -961,13 +975,15 @@ impl Drop for ManagedTaskGuard {
 /// release there. The happy path disarms it after an explicit `free_and_remove`
 /// + `emit_changed`, making the Drop a no-op.
 struct InstantTaskGuard {
+    manager: Arc<OperationManager>,
     operation_id: String,
     armed: bool,
 }
 
 impl InstantTaskGuard {
-    fn new(operation_id: impl Into<String>) -> Self {
+    fn new(manager: Arc<OperationManager>, operation_id: impl Into<String>) -> Self {
         Self {
+            manager,
             operation_id: operation_id.into(),
             armed: true,
         }
@@ -984,9 +1000,8 @@ impl Drop for InstantTaskGuard {
     fn drop(&mut self) {
         if self.armed {
             log::warn!(target: "op_manager", "instant op={} dropped/panicked before completion; freeing record + busy status", self.operation_id);
-            let mgr = manager();
-            mgr.free_and_remove(&self.operation_id);
-            mgr.emit_changed();
+            self.manager.free_and_remove(&self.operation_id);
+            self.manager.emit_changed();
         }
     }
 }

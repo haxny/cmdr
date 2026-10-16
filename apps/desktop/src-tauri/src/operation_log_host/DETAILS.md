@@ -5,8 +5,8 @@ nothing about Tauri, settings, or the data dir; this module supplies them.
 
 ## Startup
 
-1. `install()` runs in `setup()` right after the volume host, before anything can start an operation, and returns the
-   detached handle. A detached handle journals nothing: an operation opened on it stays unjournaled for its whole life.
+1. `install()` runs in `setup()` right after the volume host, before the write engine is built
+   (`operations_host::install` takes the handle), and returns the detached handle. A detached handle journals nothing: an operation opened on it stays unjournaled for its whole life.
 2. `start(app, &log)` runs late (beside `agent::start`), once the data dir resolves: it seeds the recording switch from
    `settings.json`, calls `OperationLog::open` (store, writer, reconcile, then publish), and starts retention on the
    app's runtime. A data-dir or open failure logs a warning and leaves the app running without history, as before the
@@ -20,16 +20,11 @@ nothing about Tauri, settings, or the data dir; this module supplies them.
   silently, and every later journal call would go nowhere. The test and bench binaries never call `install`, so there
   the first read builds the shared handle.
 
-## The engine's journal calls
+## The write engine's journal
 
-`journal.rs` keeps the write engine's by-`op_id` shape (`journal_open`, `journal_record_items`, `journal_note_*`,
-`journal_finalize`) over `operation_log()`. The handle's by-id methods find each operation's open-time decision again
-through its unrecorded set, so an operation stays wholly journaled or wholly not even though the caller drops the
-`OpJournal`. Once each operation carries its `OpJournal`, these and the by-id methods go.
-
-- **Decision: these live here, not in the crate.** Why: they call the app accessor, which the crate can't name. They
-  lived here from the start so the log could become its own crate without an `operation_log ↔ operation_log_host`
-  cycle in between.
+`install` returns the handle, and `operations_host::install` hands that same handle to the write engine, which journals
+into it (`Operations::operation_log`) and never reads `operation_log()`. The test binary's shared engine is built over
+the shared handle too, so `TestJournalGuard` reaches what the write pipeline journals into.
 
 ## Answers passed in
 

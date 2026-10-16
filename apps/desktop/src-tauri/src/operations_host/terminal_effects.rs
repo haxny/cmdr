@@ -14,7 +14,7 @@
 
 use super::analytics::emit_completion_analytics;
 use crate::file_system::write_operations::{
-    OperationManager, WriteCancelledEvent, WriteCompleteEvent, WriteErrorEvent, WriteOperationType, WriteSettledEvent,
+    Operations, WriteCancelledEvent, WriteCompleteEvent, WriteErrorEvent, WriteOperationType, WriteSettledEvent,
 };
 use crate::mcp::terminal_ops::{self, TerminalStatus};
 
@@ -32,12 +32,13 @@ pub(crate) trait TerminalEffects {
     fn expect_space_change(&self);
 }
 
-/// The production effects, retaining failures on `manager`.
-pub(crate) struct AppTerminalEffects {
-    pub(crate) manager: &'static OperationManager,
+/// The production effects, retaining failures on `operations` (`None` only
+/// before `install`, which no sink can reach).
+pub(crate) struct AppTerminalEffects<'a> {
+    pub(crate) operations: Option<&'a Operations>,
 }
 
-impl TerminalEffects for AppTerminalEffects {
+impl TerminalEffects for AppTerminalEffects<'_> {
     fn completion_analytics(&self, event: &WriteCompleteEvent) {
         emit_completion_analytics(event);
     }
@@ -74,8 +75,9 @@ impl TerminalEffects for AppTerminalEffects {
     fn retain_failure(&self, event: &WriteErrorEvent) {
         // The engine's `retain_failure` itself decides what counts as a failure
         // and emits nothing while the op's record is live.
-        self.manager
-            .retain_failure(&event.operation_id, event.operation_type, &event.error);
+        if let Some(operations) = self.operations {
+            operations.retain_failure(&event.operation_id, event.operation_type, &event.error);
+        }
     }
 
     fn expect_space_change(&self) {

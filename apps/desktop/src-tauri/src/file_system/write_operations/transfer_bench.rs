@@ -181,7 +181,9 @@ impl BenchJournal {
     /// Spawns the writer over `db_path` (created if missing) and installs it.
     pub fn install(db_path: &Path) -> Result<Self, OperationLogStoreError> {
         let writer = OperationLogWriter::spawn(db_path)?;
-        crate::operation_log_host::operation_log().set_journal(Some(Arc::new(WriterJournal::new(writer))));
+        super::installed()
+            .operation_log()
+            .set_journal(Some(Arc::new(WriterJournal::new(writer))));
         Ok(Self {
             db_path: db_path.to_path_buf(),
         })
@@ -227,6 +229,6 @@ impl BenchJournal {
 
 impl Drop for BenchJournal {
     fn drop(&mut self) {
-        crate::operation_log_host::operation_log().set_journal(None);
+        super::installed().operation_log().set_journal(None);
     }
 }

@@ -2,8 +2,8 @@
 //! operation-log open/finalize and builds per-item `JournalItem`s at the record
 //! points.
 //!
-//! The journal is the app's one `OperationLog`, reached by `op_id` through
-//! `operation_log_host`, mirroring the op-keyed `update_operation_status`
+//! The journal is the engine's `OperationLog`, reached by `op_id`, mirroring
+//! the op-keyed `update_operation_status`
 //! status cache written at these same record points — so these are thin free
 //! functions, not threaded state (`crates/cmdr-operation-log/DETAILS.md` § "The seam: a
 //! journal reached by `op_id`"). Every function no-ops for an operation that
@@ -12,7 +12,6 @@
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::operation_log_host::{journal_finalize, journal_open, journal_record_items};
 use cmdr_fs::volume::DEFAULT_VOLUME_ID;
 use cmdr_operation_log::capture::FinalizeInputs;
 use cmdr_operation_log::types::RowRole;
@@ -23,6 +22,34 @@ use cmdr_operation_log::writer::{JournalItem, OpenOperation};
 
 use super::ledger::WrittenFile;
 use super::types::{WriteOperationError, WriteOperationType};
+use cmdr_operation_log::types::{SearchCoverage, SearchCoverageReason};
+use cmdr_operation_log::writer::FinalizeOutcome;
+
+// shim: removed in M6a. The installed engine's log, by `op_id`, until every
+// operation carries its own `OpJournal`.
+
+/// Open an operation row, deciding once whether the operation is journaled.
+fn journal_open(open: OpenOperation) {
+    // The by-id calls below find the decision again, so the handle isn't kept.
+    drop(super::installed().operation_log().journal_open(open));
+}
+
+/// Record item rows for an open operation (buffered and batched by the journal).
+fn journal_record_items(op_id: &str, items: Vec<JournalItem>) {
+    super::installed().operation_log().record_items(op_id, items);
+}
+
+/// Downgrade an operation's search coverage (worst wins).
+pub(super) fn journal_note_coverage(op_id: &str, coverage: SearchCoverage, reason: Option<SearchCoverageReason>) {
+    super::installed()
+        .operation_log()
+        .note_coverage(op_id, coverage, reason);
+}
+
+/// Finalize an operation, returning the durable per-`row_role` counts.
+fn journal_finalize(op_id: &str, inputs: FinalizeInputs) -> FinalizeOutcome {
+    super::installed().operation_log().finalize(op_id, inputs)
+}
 
 /// Map the pipeline's op type to the journal taxonomy (1:1). The `archive_edit`
 /// subkind + net-new flag are supplied separately by the compress/zip driver
@@ -389,7 +416,7 @@ pub(super) fn journal_instant_create(
 /// whose phase-3 conflict resolution landed the files somewhere other than the
 /// destinations phase 2 journaled. No-ops when no journal is installed.
 pub(super) fn note_not_rollbackable(op_id: &str, reason: NotRollbackableReason) {
-    crate::operation_log_host::journal_note_not_rollbackable(op_id, reason);
+    super::installed().operation_log().note_not_rollbackable(op_id, reason);
 }
 
 /// The op's terminal header aggregates — planned total, completed items, and

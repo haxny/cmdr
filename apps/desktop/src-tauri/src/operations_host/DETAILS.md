@@ -5,11 +5,20 @@ The app side of the write engine's seams. The engine declares what it needs in `
 
 ## Startup
 
-`install(app)` runs in `setup()` right after `operation_log_host::install()`, which follows `volume_host::install`.
-It builds an `EngineHost` from `volume_host::host()` (the engine's runtime), a `TauriEngineEvents` holding the app
-handle, the app's answer to every optional seam (`app_answers`, shared with the test binary's `without_frontend`), and
-a sink factory that builds a `TauriEventSink`, and hands it to `write_operations::host::install`. That's
-before anything can start an operation and before the in-flight sweep, whose staging-leftovers notice goes through it.
+`install(app, operation_log)` runs in `setup()` right after `operation_log_host::install()`, which follows
+`volume_host::install`, and runs unconditionally. It builds the app's one `Operations` with `Operations::builder` over
+`volume_host::host()` (the engine's runtime), a `TauriEngineEvents` holding the app handle, the operation log
+`operation_log_host::install` returned (passed by value, so the engine's log IS `operation_log()`), the app's answer
+to every optional seam (`app_answers`, shared with the test binary's `test_engine`), and a sink factory that builds a
+`TauriEventSink`, and keeps it behind `operations()`. That's before anything can start an operation, before the
+in-flight sweep (whose staging-leftovers notice goes through it), and before `init_volume_manager`. It also fills the
+engine's own slot (`write_operations::install`), which the free functions app callers still use read until they call
+`operations()` directly.
+
+- **Decision: a start before `install` is refused, never run detached.** `operations()` answers `Err(NotInstalled)`,
+  and the IPC start commands map it through `refuse_not_installed` to the frontend's generic `IoError` (its dialog
+  renders that without naming a file, and no new variant reaches `bindings.ts`) plus a `log_error!`. Unreachable in the
+  app, which installs at the top of `setup()`; the crate knows nothing about installs.
 
 - **Decision: the runtime comes from the volume host, with no second handle.** Why: the engine and the backends it
   drives then share one pool, and the two can't disagree about which runtime is the app's. The admission pass
@@ -123,10 +132,9 @@ the panes rank names identically. Pinned by `name_order::tests::the_engine_sorts
 ## A test binary
 
 Nothing installs in a test binary, and some engine pins read the app's real answers: the transfer-gauge cells in
-`status_cache_tests` assert on `priority::transfers`. So before `install` the engine's slot answers, under `cfg(test)`
-only, with `without_frontend()`: `TauriEngineEvents` with no app handle (events go nowhere; the gauge, the analytics
-client, and the error reporter work as in the app) and the real `AppOperationVolumes` (cells register their volumes in
-the real registry) over `volume_host::host()`, whose runtime is `cmdr-fs`'s shared
-fallback, the same optional seams as the app (own writes reach the downloads hook and its recorder), and no sink
-factory. Outside tests the pre-install answer is a detached host that drops everything; nothing
-can start an operation before setup.
+`status_cache_tests` assert on `priority::transfers`. So the first read of the engine's slot builds `test_engine()`, and
+`operations()` hands out that same engine: `TauriEngineEvents` with no app handle (events go nowhere; the gauge, the
+analytics client, and the error reporter work as in the app), the real `AppOperationVolumes` (cells register their
+volumes in the real registry) over `volume_host::host()`, whose runtime is `cmdr-fs`'s shared fallback, the test
+binary's shared operation log (what `TestJournalGuard` fills), the same optional seams as the app (own writes reach the
+downloads hook and its recorder), and no sink factory.

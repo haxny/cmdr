@@ -27,9 +27,8 @@
 //! The volumes and the events are required; every other seam defaults to an
 //! answer that does nothing, which the host replaces with `with_*`.
 //!
-//! The app builds an [`EngineHost`] once (`operations_host::install`) and parks
-//! it in a slot this module owns until the engine becomes a handle that carries
-//! its seams itself.
+//! The host hands these to `Operations::builder`; the engine keeps them as one
+//! [`EngineHost`], shared by every operation's scope.
 
 mod error_report;
 mod events;
@@ -41,13 +40,14 @@ mod pacing;
 mod scan_preview_sink;
 mod volumes;
 
-use std::sync::{Arc, LazyLock, OnceLock};
+use std::sync::Arc;
 
 use cmdr_fs::volume::host::VolumeHost;
 use cmdr_fs::volume::host::listings::ListingHost;
 use tokio::runtime::Handle;
 
 pub(crate) use error_report::{AsideAttempt, OperationErrorReport, TreeFailure};
+#[cfg(any(test, feature = "transfer-bench"))]
 use events::NoEngineEvents;
 pub(crate) use events::{EngineEvents, InstantMutationFact, InstantOp, InstantOutcome, InstantTarget};
 use index::NoOperationIndex;
@@ -60,6 +60,7 @@ pub(crate) use own_writes::OwnWrites;
 use pacing::NoPacing;
 pub(crate) use pacing::Pacing;
 pub use scan_preview_sink::ScanPreviewEventSink;
+#[cfg(any(test, feature = "transfer-bench"))]
 use volumes::NoOperationVolumes;
 pub(crate) use volumes::{OperationVolumes, UnregisteredVolume, VolumeAnswer};
 
@@ -133,11 +134,8 @@ impl EngineHost {
     /// A host that answers nothing: no volumes, no events, and `cmdr-fs`'s shared fallback
     /// runtime. ❌ Never a `Handle::current()` captured here: a runtime that is
     /// torn down later would orphan every operation admitted onto it.
-    #[cfg_attr(
-        test,
-        expect(dead_code, reason = "a test binary falls back to the app's own answers")
-    )]
-    fn detached() -> Self {
+    #[cfg(any(test, feature = "transfer-bench"))]
+    pub(crate) fn detached() -> Self {
         Self::new(
             VolumeHost::detached(),
             Arc::new(NoOperationVolumes),
@@ -171,6 +169,12 @@ impl EngineHost {
         &*self.events
     }
 
+    /// The engine-wide events seam itself, for a part of the engine that keeps
+    /// its own handle on it (the status cache).
+    pub(crate) fn events_arc(&self) -> &Arc<dyn EngineEvents> {
+        &self.events
+    }
+
     /// Where the engine announces a path before it writes there.
     pub(crate) fn own_writes(&self) -> &dyn OwnWrites {
         &*self.own_writes
@@ -199,38 +203,8 @@ impl EngineHost {
     }
 }
 
-/// The host [`install`] parked.
-// shim: removed in M6a
-static INSTALLED: OnceLock<EngineHost> = OnceLock::new();
-
-/// What [`installed`] answers before [`install`]. In the app nothing can start
-/// an operation before setup, so this answers nothing. A test binary never
-/// installs, so it gets the app's own answers minus the frontend channel (the
-/// real indexing gauge, analytics client, and error reporter; no sink factory),
-/// the shape `volume_host::host()` hands an uninstalled backend.
-// shim: removed in M6a
-static UNINSTALLED: LazyLock<EngineHost> = LazyLock::new(|| {
-    #[cfg(test)]
-    {
-        crate::operations_host::without_frontend()
-    }
-    #[cfg(not(test))]
-    {
-        EngineHost::detached()
-    }
-});
-
-/// Parks the app's host. Call once, in `setup()`, before anything can start an
-/// operation.
-// shim: removed in M6a
-pub(crate) fn install(host: EngineHost) {
-    if INSTALLED.set(host).is_err() {
-        log::warn!(target: "op_manager", "the write engine's host was already installed; keeping the first one");
-    }
-}
-
-/// The host the engine reaches the app through.
+/// The installed engine's host.
 // shim: removed in M6a
 pub(crate) fn installed() -> &'static EngineHost {
-    INSTALLED.get().unwrap_or_else(|| &UNINSTALLED)
+    super::installed().host()
 }

@@ -4,7 +4,7 @@
 //! for a window that opens late).
 
 use std::collections::HashMap;
-use std::sync::{Arc, LazyLock, RwLock};
+use std::sync::{Arc, RwLock};
 
 use super::{OperationIntent, WriteOperationState, WriteProgressEvent};
 use cmdr_fs::ignore_poison::RwLockIgnorePoison;
@@ -17,12 +17,12 @@ use cmdr_fs::ignore_poison::RwLockIgnorePoison;
 /// A walk is only honestly testable against a registry the caller OWNS — driving
 /// the process-global one from a test cancels whatever operations OTHER tests
 /// have in flight at that moment. DETAILS § "Test isolation".
-pub(in crate::file_system::write_operations) struct WriteOperationRegistry {
+pub(crate) struct WriteOperationRegistry {
     entries: RwLock<HashMap<String, Arc<WriteOperationState>>>,
 }
 
 impl WriteOperationRegistry {
-    pub(super) fn new() -> Self {
+    pub(in crate::file_system::write_operations) fn new() -> Self {
         Self {
             entries: RwLock::new(HashMap::new()),
         }
@@ -135,18 +135,21 @@ impl WriteOperationRegistry {
     }
 }
 
-/// Global registry of in-progress write operation states.
-pub(in crate::file_system::write_operations) static WRITE_OPERATION_STATE: LazyLock<WriteOperationRegistry> =
-    LazyLock::new(WriteOperationRegistry::new);
+/// The installed engine's registry.
+// shim: removed in M6a
+pub(in crate::file_system::write_operations) fn operation_states() -> &'static WriteOperationRegistry {
+    super::super::installed().registry()
+}
 
 /// The newest progress tick of every live operation that has emitted one. See
 /// [`WriteOperationRegistry::latest_progress`].
 pub fn latest_operation_progress() -> Vec<WriteProgressEvent> {
-    WRITE_OPERATION_STATE.latest_progress()
+    operation_states().latest_progress()
 }
 
 /// Drops `operation_id`'s state, ending its liveness first. See
 /// [`WriteOperationRegistry::forget`].
+#[cfg(test)]
 pub(in crate::file_system::write_operations) fn forget_operation(operation_id: &str) {
-    WRITE_OPERATION_STATE.forget(operation_id);
+    operation_states().forget(operation_id);
 }

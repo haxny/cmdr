@@ -6,7 +6,7 @@
 
 use super::*;
 use crate::file_system::write_operations::manager::{OperationDescriptor, OperationSummaryText, PauseOutcome, manager};
-use crate::file_system::write_operations::state::{OperationIntent, WRITE_OPERATION_STATE, WriteOperationState};
+use crate::file_system::write_operations::state::{OperationIntent, WriteOperationState, operation_states};
 use crate::file_system::write_operations::test_support::{TestOperationGuard, placeholder_conflict};
 use crate::file_system::write_operations::types::{
     LifecycleStatus, TransferWaitReason, WriteOperationPhase, WriteOperationType,
@@ -139,7 +139,7 @@ fn a_paused_operation_reports_paused_not_running() {
     assert_eq!(status.lifecycle, Some(LifecycleStatus::Paused));
     // The state-map entry is still there, which is exactly why the old boolean
     // got this backwards.
-    assert!(WRITE_OPERATION_STATE.contains(&op.id));
+    assert!(operation_states().contains(&op.id));
 }
 
 /// The other half of the same bug, and the one that shows how far the boolean
@@ -156,7 +156,7 @@ fn a_queued_operation_reports_queued() {
     let status = get_operation_status(&queued.id).expect("a queued operation has a status-cache row");
     assert_eq!(status.lifecycle, Some(LifecycleStatus::Queued));
     assert!(
-        WRITE_OPERATION_STATE.contains(&queued.id),
+        operation_states().contains(&queued.id),
         "the state entry lands at spawn, not at admission — which is exactly why a presence test called this one running"
     );
 }

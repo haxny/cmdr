@@ -2,10 +2,12 @@
 //!
 //! The mirror of `file_system::write_operations::host`: that module declares
 //! what the engine needs from the app around it, and this is where the app
-//! answers.
+//! answers, once, in `setup()`, by building the app's one engine
+//! ([`operations`]).
 //!
 //! - runtime — the volume host's (`volume_host::host()`), which is the app's own
 //!   tokio runtime, so an admitted operation never runs on a caller's
+//! - the journal — the app's one `OperationLog`, handed in by `install`
 //! - volumes — [`volumes::AppOperationVolumes`], the volume registry asked per
 //!   call
 //! - engine-wide events — [`events::TauriEngineEvents`]
@@ -35,43 +37,108 @@ mod volumes;
 mod terminal_effects_tests;
 pub(crate) mod wire;
 
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 
+use cmdr_operation_log::OperationLog;
 use tauri::AppHandle;
 
-use crate::file_system::write_operations::OperationEventSink;
-use crate::file_system::write_operations::host::{self, EngineHost};
+use crate::file_system::write_operations::{self, OperationEventSink, Operations, OperationsBuilder};
 pub(crate) use events::VolumesBusyChanged;
 pub use sinks::{TauriEventSink, TauriScanPreviewSink};
 
-/// Wire the write engine to this app. Call once, in `setup()`, after
-/// `volume_host::install` (the engine's runtime is the volume host's) and
-/// before anything can start an operation or the leftover sweep runs.
-pub fn install(app: &AppHandle) {
+/// The app's write engine, once [`install`] built it.
+static OPERATIONS: OnceLock<Operations> = OnceLock::new();
+
+/// Why [`operations`] has no engine to hand out: [`install`] hasn't run.
+///
+/// Unreachable in the app, which installs at the top of `setup()`; a caller
+/// that meets it refuses rather than starting anything.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct NotInstalled;
+
+/// Builds the app's write engine, wired to this app, journaling into
+/// `operation_log` (the handle `operation_log_host::install` returned, never a
+/// second `operation_log()` read).
+///
+/// Call once, in `setup()`, unconditionally: after `volume_host::install` (the
+/// engine's runtime is the volume host's) and `operation_log_host::install`, and
+/// before the leftover sweep, `init_volume_manager`, or anything that can start
+/// an operation. A second call keeps the first engine.
+pub fn install(app: &AppHandle, operation_log: OperationLog) {
     let sink_app = app.clone();
-    let engine_host = app_answers(Some(app.clone())).with_operation_sinks(Box::new(move || {
-        Arc::new(TauriEventSink::new(sink_app.clone())) as Arc<dyn OperationEventSink>
-    }));
-    host::install(engine_host);
+    let engine = app_answers(Some(app.clone()))
+        .operation_log(operation_log)
+        .operation_sinks(Box::new(move || {
+            Arc::new(TauriEventSink::new(sink_app.clone())) as Arc<dyn OperationEventSink>
+        }))
+        .build();
+    if OPERATIONS.set(engine.clone()).is_err() {
+        crate::log_error!(target: "op_manager", "the write engine was installed twice; keeping the first");
+        return;
+    }
+    // The engine's own slot, for the free functions the app still calls.
+    // shim: removed in M7a
+    if write_operations::install(engine).is_err() {
+        crate::log_error!(target: "op_manager", "the write engine's shim slot was already filled; keeping the first");
+    }
 }
 
-/// The app's answers with no frontend behind them, for a test binary, which
-/// never installs.
+/// The app's write engine.
+///
+/// `Err(NotInstalled)` before [`install`]: a caller refuses with a variant the
+/// frontend already handles and raises an error report (see
+/// [`refuse_not_installed`]); it never falls back to a detached engine, which
+/// would write with nobody hearing. In a test binary nothing installs, so the
+/// first read shares the engine the engine's own tests use.
+pub(crate) fn operations() -> Result<&'static Operations, NotInstalled> {
+    operations_in(&OPERATIONS)
+}
+
+/// [`operations`] over a given slot, so a test can hand an empty one in.
+fn operations_in(slot: &'static OnceLock<Operations>) -> Result<&'static Operations, NotInstalled> {
+    if let Some(engine) = slot.get() {
+        return Ok(engine);
+    }
+    #[cfg(test)]
+    if std::ptr::eq(slot, &OPERATIONS) {
+        return Ok(OPERATIONS.get_or_init(|| write_operations::installed().clone()));
+    }
+    Err(NotInstalled)
+}
+
+/// What a start refused before `install` answers: the frontend's generic I/O
+/// failure, which its error dialog renders without naming a file, plus an error
+/// report, since the app can't reach this after `setup()`.
+pub(crate) fn refuse_not_installed(_: NotInstalled) -> write_operations::WriteOperationError {
+    crate::log_error!(target: "op_manager", "an operation was started before the write engine was installed; refused");
+    write_operations::WriteOperationError::IoError {
+        path: String::new(),
+        message: "the write engine isn't ready yet".to_string(),
+    }
+}
+
+/// The engine a test binary shares, since nothing there calls [`install`]: the
+/// app's answers with no frontend behind them (the real indexing gauge,
+/// analytics client, and error reporter, which `status_cache_tests`' gauge pins
+/// read), the test binary's shared operation log (what `TestJournalGuard` fills), and
+/// no sink factory.
 #[cfg(test)]
-pub(crate) fn without_frontend() -> EngineHost {
+pub(crate) fn test_engine() -> Operations {
     app_answers(None)
+        .operation_log(crate::operation_log_host::operation_log().clone())
+        .build()
 }
 
 /// Every seam the app answers the same with or without a frontend; `app` is
 /// where the engine-wide events go out, if anywhere.
-fn app_answers(app: Option<AppHandle>) -> EngineHost {
-    EngineHost::new(
-        crate::volume_host::host(),
+fn app_answers(app: Option<AppHandle>) -> OperationsBuilder {
+    Operations::builder(
         Arc::new(volumes::AppOperationVolumes),
         Arc::new(events::TauriEngineEvents::new(app)),
     )
-    .with_own_writes(Arc::new(own_writes::AppOwnWrites))
-    .with_index(Arc::new(index::AppOperationIndex))
-    .with_pacing(Arc::new(pacing::AppPacing))
-    .with_name_order(Arc::new(name_order::AppNameOrder))
+    .volume_host(crate::volume_host::host())
+    .own_writes(Arc::new(own_writes::AppOwnWrites))
+    .index(Arc::new(index::AppOperationIndex))
+    .pacing(Arc::new(pacing::AppPacing))
+    .name_order(Arc::new(name_order::AppNameOrder))
 }

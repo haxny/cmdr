@@ -57,17 +57,13 @@ fn instant_descriptor(op_id: &str, op_type: WriteOperationType, volume_ids: Vec<
     }
 }
 
-/// A private manager that also satisfies `spawn_managed`'s `&'static self`, so
-/// a test can drive a real spawn-to-settle lifecycle in isolation. Needed by
-/// any assertion on `emit_count()`, which counts a WHOLE manager's broadcasts:
-/// on the global one, a sibling test spawning or settling an op moves it
-/// underneath the assertion.
-///
-/// Leaking is the honest price of that signature (an admitted op's task
-/// outlives every borrow), and it's bounded: one small struct per test that
-/// calls this, reclaimed at process exit. Shared by `failures` and `reorder`.
-fn leaked_manager() -> &'static OperationManager {
-    Box::leak(Box::new(OperationManager::new()))
+/// The manager of an engine the test owns, so a test can drive a real
+/// spawn-to-settle lifecycle in isolation. Needed by any assertion on
+/// `emit_count()`, which counts a WHOLE manager's broadcasts: on the shared
+/// one, a sibling test spawning or settling an op moves it underneath the
+/// assertion. Shared by `failures` and `reorder`.
+fn owned_manager() -> Arc<OperationManager> {
+    Arc::clone(super::super::Operations::detached().manager())
 }
 
 fn fresh_state() -> Arc<WriteOperationState> {
@@ -86,18 +82,19 @@ fn gated_deferred(
 }
 
 /// [`gated_deferred`], settling on a GIVEN manager rather than the global one,
-/// so a test that owns a private manager (`failures::leaked_manager`) can drive
+/// so a test that owns a private manager (`owned_manager`) can drive
 /// a full spawn-to-settle lifecycle on it.
 ///
 /// The `ManagedTaskGuard` is still the global one: it's the panic net, and the
 /// happy path disarms it before settling, so it never touches the global
 /// manager here.
 fn gated_deferred_on(
-    mgr: &'static OperationManager,
+    mgr: &Arc<OperationManager>,
     op_id: String,
     started: oneshot::Sender<()>,
     release: oneshot::Receiver<()>,
 ) -> Box<dyn FnOnce() -> Pin<Box<dyn Future<Output = ()> + Send>> + Send> {
+    let mgr = Arc::clone(mgr);
     Box::new(move || {
         Box::pin(async move {
             let guard = ManagedTaskGuard::new(op_id.clone());
@@ -986,7 +983,7 @@ async fn run_instant_returns_the_ops_result_unchanged() {
 /// counted is this test's own.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn operations_changed_fires_on_register_admit_and_settle_with_todays_counts() {
-    let mgr = leaked_manager();
+    let mgr = owned_manager();
     let lane = unique("lane");
     let (a, b) = (unique("emits-a"), unique("emits-b"));
     let (a_started_tx, a_started_rx) = oneshot::channel();
@@ -998,7 +995,7 @@ async fn operations_changed_fires_on_register_admit_and_settle_with_todays_count
     mgr.spawn_managed(
         descriptor(&a, vec![&lane]),
         fresh_state(),
-        gated_deferred_on(mgr, a.clone(), a_started_tx, a_release_rx),
+        gated_deferred_on(&mgr, a.clone(), a_started_tx, a_release_rx),
     );
     assert_eq!(mgr.emit_count(), base + 1, "A registered and admitted in one broadcast");
     a_started_rx.await.expect("A started");
@@ -1006,7 +1003,7 @@ async fn operations_changed_fires_on_register_admit_and_settle_with_todays_count
     mgr.spawn_managed(
         descriptor(&b, vec![&lane]),
         fresh_state(),
-        gated_deferred_on(mgr, b.clone(), b_started_tx, b_release_rx),
+        gated_deferred_on(&mgr, b.clone(), b_started_tx, b_release_rx),
     );
     assert_eq!(mgr.lifecycle_status(&b), Some(LifecycleStatus::Queued));
     assert_eq!(mgr.emit_count(), base + 2, "B registered and queued");

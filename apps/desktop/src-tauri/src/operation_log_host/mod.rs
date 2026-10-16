@@ -7,7 +7,6 @@
 //! switch and the retention limits from settings, the app's runtime, and the
 //! volume registry the rollback planner looks volumes up in ([`volumes`]).
 
-mod journal;
 #[cfg(test)]
 mod test_journal;
 // The planner cells pass a private registry; the engine's own lookups go
@@ -25,9 +24,6 @@ use cmdr_operation_log::OperationLog;
 use cmdr_operation_log::retention::{RetentionLimits, RetentionLimitsSource};
 use cmdr_operation_log::store::operation_log_db_path;
 
-pub(crate) use journal::{
-    journal_finalize, journal_note_coverage, journal_note_not_rollbackable, journal_open, journal_record_items,
-};
 #[cfg(test)]
 pub(crate) use test_journal::TestJournalGuard;
 

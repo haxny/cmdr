@@ -90,7 +90,7 @@ pub(super) fn persist_and_note(
         );
     }
     if buffered.coverage != SearchCoverage::Full {
-        crate::operation_log_host::journal_note_coverage(op_id, buffered.coverage, buffered.reason);
+        super::journal::journal_note_coverage(op_id, buffered.coverage, buffered.reason);
     }
 }
 

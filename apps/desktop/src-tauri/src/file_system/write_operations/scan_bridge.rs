@@ -35,7 +35,7 @@ use super::host;
 use super::manager;
 use super::scan_cache::{PREVIEW_SETTLED, ScanOutcome, ScanPreviewState, abandon_claim, finish_claim, poll_claim};
 use super::scan_watchdog::ScanWatchdog;
-use super::state::{WRITE_OPERATION_STATE, WriteOperationState, is_cancelled};
+use super::state::{WriteOperationState, is_cancelled, operation_states};
 use super::types::{
     CancelRollback, WriteCancelledEvent, WriteErrorEvent, WriteOperationPhase, WriteOperationType, WriteProgressEvent,
 };
@@ -219,7 +219,7 @@ impl ScanPause {
         let Some(operation_id) = super::scan_cache::claimed_operation(&claim.preview_id) else {
             return;
         };
-        let Some(state) = WRITE_OPERATION_STATE.get(&operation_id) else {
+        let Some(state) = operation_states().get(&operation_id) else {
             return;
         };
         let _ = self.owner.set(state);

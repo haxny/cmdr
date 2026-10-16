@@ -701,10 +701,12 @@ impl Drop for WriteSettledGuard {
 // `state::register_operation_status`, `state::busy_volume_ids`, etc. paths keep
 // resolving for every caller, the same way `operation_intent` and `scan_cache`
 // are surfaced above.
+pub(super) use super::status_cache::update_operation_status;
 pub use super::status_cache::{busy_volume_ids, get_operation_status};
 #[cfg(target_os = "macos")]
 pub(crate) use super::status_cache::{register_external_volume_op, release_external_volume_op};
-pub(super) use super::status_cache::{register_operation_status, unregister_operation_status, update_operation_status};
+#[cfg(test)]
+pub(super) use super::status_cache::{register_operation_status, unregister_operation_status};
 
 // The by-id controls (cancel / abort / pause / resume / conflict answer) live in
 // `state/controls.rs`: each is a registry lookup plus one flag flip, and keeping
@@ -722,10 +724,11 @@ pub use controls::{
     resolve_write_conflict,
 };
 pub(super) use controls::{pause_write_operation, resume_write_operation};
+pub(super) use registry::WriteOperationRegistry;
 #[cfg(test)]
-use registry::WriteOperationRegistry;
+pub(super) use registry::forget_operation;
 pub use registry::latest_operation_progress;
-pub(super) use registry::{WRITE_OPERATION_STATE, forget_operation};
+pub(super) use registry::operation_states;
 
 #[cfg(test)]
 #[path = "state_tests.rs"]

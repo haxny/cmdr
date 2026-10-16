@@ -268,11 +268,13 @@ pub fn run() {
             // below: anything that journals or rolls back reaches this one handle.
             let operation_log = operation_log_host::install();
 
-            // Everything the write engine needs from this app: its runtime (the
-            // volume host's, so after it) and its engine-wide events. Before
-            // anything can start an operation and before the leftover sweep
-            // below. Mirror of `write_operations::host`.
-            operations_host::install(app.handle());
+            // The write engine, journaling into the log above (passed by value,
+            // never re-read). ❗ Startup order is a contract: the operation log,
+            // then this, then the leftover sweep below, then `init_volume_manager`.
+            // Its runtime is the volume host's, so after it; unconditional, so a
+            // data-dir failure still leaves an app that can copy. Mirror of
+            // `write_operations::host`.
+            operations_host::install(app.handle(), operation_log.clone());
 
             // Mount the typed `tauri-specta` events onto the app. Required before any
             // `Event::emit` / `Event::listen` resolves a name. Collection: `ipc.rs`.

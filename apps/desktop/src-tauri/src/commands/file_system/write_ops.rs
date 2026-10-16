@@ -31,6 +31,7 @@ use crate::file_system::{
     trash_files_start as ops_trash_files_start,
 };
 use crate::operations_host::{TauriEventSink, TauriScanPreviewSink, wire};
+use crate::operations_host::{operations, refuse_not_installed};
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::time::Duration;
@@ -265,6 +266,8 @@ pub async fn move_files(
     config: Option<WriteOperationConfig>,
     initiator: Option<Initiator>,
 ) -> Result<WriteOperationStartResult, WriteOperationError> {
+    // Before `install` there is no engine to start on: refuse, never write.
+    operations().map_err(refuse_not_installed)?;
     let (sources, destination, config) = local_transfer_request(&sources, &destination, config)?;
 
     // Same-`root` local move (the FE uses `move_between_volumes` whenever the
@@ -298,6 +301,8 @@ pub async fn delete_files(
     config: Option<WriteOperationConfig>,
     initiator: Option<Initiator>,
 ) -> Result<WriteOperationStartResult, WriteOperationError> {
+    // Before `install` there is no engine to start on: refuse, never write.
+    operations().map_err(refuse_not_installed)?;
     let is_local = volume_id.as_deref().unwrap_or("root") == "root";
     let sources: Vec<PathBuf> = if is_local {
         sources.iter().map(|s| PathBuf::from(expand_tilde(s))).collect()
@@ -331,6 +336,8 @@ pub async fn trash_files(
     config: Option<WriteOperationConfig>,
     initiator: Option<Initiator>,
 ) -> Result<WriteOperationStartResult, WriteOperationError> {
+    // Before `install` there is no engine to start on: refuse, never write.
+    operations().map_err(refuse_not_installed)?;
     let sources: Vec<PathBuf> = sources.iter().map(|s| PathBuf::from(expand_tilde(s))).collect();
     let config = config.unwrap_or_default();
 

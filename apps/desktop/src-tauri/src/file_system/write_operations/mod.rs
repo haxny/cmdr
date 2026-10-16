@@ -28,6 +28,8 @@ mod error_classification;
 mod eta;
 mod event_sinks;
 mod free_space;
+mod handle;
+pub(crate) use handle::OperationsBuilder;
 pub(crate) mod host;
 mod human_wait;
 mod in_flight_temps;
@@ -117,9 +119,6 @@ use trash::trash_files_with_progress;
 // (`operations_host::sinks`) at the IPC edge and injects them into the managed
 // pipeline; the pipeline itself never constructs a sink.
 pub use event_sinks::{OperationEventSink, ScanPreviewEventSink};
-/// The engine's manager, for the app's terminal side effects to retain a
-/// failure on (`OperationManager::retain_failure`).
-pub(crate) use manager::{OperationManager, manager as operation_manager};
 #[cfg(not(test))]
 use validation::{
     ensure_destination_dir, validate_destination_not_inside_source, validate_destination_writable,
@@ -297,6 +296,77 @@ pub(crate) use archive_edit::{EditError, pull_apply_upload_swap};
 // full-concurrency suite, which sits outside this module.
 #[cfg(test)]
 pub(crate) use transfer::transfer_probe::render_live_dump as render_live_transfer_dump;
+
+// ============================================================================
+// The engine handle
+// ============================================================================
+
+/// The write engine: a cheap-to-clone handle, every clone sharing one state.
+///
+/// The host builds one with [`Operations::builder`] and holds it; a test or a
+/// tool builds its own. Two engines share nothing: an operation registered in
+/// one is invisible to the other.
+#[derive(Clone)]
+pub struct Operations {
+    inner: Arc<Inner>,
+}
+
+/// The engine's state: the seams it asks, and everything it keeps between two
+/// calls. One per [`Operations`]; nothing here is process-wide.
+///
+/// Defined here at the module root, the parent of every module that works on a
+/// part of it, so those modules hang off one hub instead of circling through a
+/// sibling.
+pub(crate) struct Inner {
+    /// Everything the engine reaches the host through, shared with each
+    /// operation's scope.
+    host: Arc<host::EngineHost>,
+    /// The journal every operation this engine runs is recorded in.
+    operation_log: cmdr_operation_log::OperationLog,
+    /// Admission, lanes, and the queue's records.
+    manager: Arc<manager::OperationManager>,
+    /// Every live operation's state, by id.
+    registry: Arc<state::WriteOperationRegistry>,
+    /// Every registered operation's status, and the busy-volume set.
+    status: Arc<status_cache::StatusCache>,
+}
+
+/// The engine the host installed, for the free functions callers outside the
+/// engine still reach it through.
+// shim: removed in M7a
+static INSTALLED: std::sync::OnceLock<Operations> = std::sync::OnceLock::new();
+
+/// Parks the host's engine for the free-function shims. A second call hands
+/// its engine back untouched.
+// shim: removed in M7a
+pub(crate) fn install(operations: Operations) -> Result<(), Operations> {
+    INSTALLED.set(operations)
+}
+
+/// The engine the host installed.
+///
+/// A test binary never installs, so its first read builds the engine every
+/// test shares (`test_support::shared_engine`); the bench binary's builds a
+/// detached one. In the app, `operations_host::install` runs at the top of
+/// `setup()`, before any caller can exist, and the IPC start commands refuse
+/// through the app's accessor rather than reach this.
+// shim: removed in M7a
+pub(crate) fn installed() -> &'static Operations {
+    #[cfg(test)]
+    {
+        INSTALLED.get_or_init(test_support::shared_engine)
+    }
+    #[cfg(all(not(test), feature = "transfer-bench"))]
+    {
+        INSTALLED.get_or_init(Operations::detached)
+    }
+    #[cfg(all(not(test), not(feature = "transfer-bench")))]
+    {
+        INSTALLED
+            .get()
+            .expect("operations_host::install runs at the top of setup(), before anything can reach the engine")
+    }
+}
 
 // ============================================================================
 // Public API functions

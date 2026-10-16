@@ -7,28 +7,23 @@
 //! operation's touched volumes become "busy", so the eject guard and the
 //! indexing priority gauge can't drift apart from each other.
 //!
-//! The cache and the busy set are one module because they are one mechanism:
-//! `recompute_and_emit_busy_volumes` derives the busy set by reading this
-//! module's own `OPERATION_STATUS_CACHE`, and every membership change comes
-//! from a register / unregister here. Splitting them would put a private
-//! static on the wrong side of a module boundary.
+//! The cache and the busy set are one struct because they are one mechanism:
+//! the busy set is derived from the cache, and every membership change comes
+//! from a register / unregister here. One per engine ([`StatusCache`]), owned
+//! by its `Inner` and shared with each operation's scope.
 //!
 //! Callers reach all of this through `state::` — see the re-export there.
 
 use cmdr_fs::ignore_poison::IgnorePoison;
 use std::collections::{HashMap, HashSet};
-use std::sync::{LazyLock, RwLock};
+use std::sync::{Arc, RwLock};
 
-use super::host;
-use super::types::{OperationStatus, WriteOperationPhase, WriteOperationType};
+use super::host::EngineEvents;
+use super::types::{LifecycleStatus, OperationStatus, WriteOperationPhase, WriteOperationType};
 
 #[cfg(test)]
 #[path = "status_cache_tests.rs"]
 mod tests;
-
-/// Global cache for operation status (for query APIs).
-static OPERATION_STATUS_CACHE: LazyLock<RwLock<HashMap<String, OperationStatusInternal>>> =
-    LazyLock::new(|| RwLock::new(HashMap::new()));
 
 /// Internal status tracking for operations.
 #[derive(Debug, Clone)]
@@ -50,9 +45,190 @@ struct OperationStatusInternal {
     volume_ids: Vec<String>,
 }
 
+/// One engine's status cache and the busy-volume set it drives.
+pub(crate) struct StatusCache {
+    /// Every registered operation's status, by operation id.
+    entries: RwLock<HashMap<String, OperationStatusInternal>>,
+    /// Last busy set reported, so a progress update that doesn't change
+    /// membership reports nothing (the cache changes on every progress tick,
+    /// but the busy set only changes when an op starts or finishes).
+    last_reported_busy: std::sync::Mutex<HashSet<String>>,
+    /// Where the transfer gauge pair and the busy-set changes go.
+    events: Arc<dyn EngineEvents>,
+    /// `volumes-busy-changed` reports that got past the dedupe, ever, counted
+    /// before the host hears them, since unit tests have no frontend.
+    #[cfg(test)]
+    busy_emits: std::sync::atomic::AtomicU64,
+}
+
+impl StatusCache {
+    /// An empty cache reporting to `events`.
+    pub(super) fn new(events: Arc<dyn EngineEvents>) -> Self {
+        Self {
+            entries: RwLock::new(HashMap::new()),
+            last_reported_busy: std::sync::Mutex::new(HashSet::new()),
+            events,
+            #[cfg(test)]
+            busy_emits: std::sync::atomic::AtomicU64::new(0),
+        }
+    }
+
+    /// Updates the internal status for an operation.
+    #[allow(clippy::too_many_arguments, reason = "the counters of one progress tick")]
+    pub(super) fn update(
+        &self,
+        operation_id: &str,
+        phase: WriteOperationPhase,
+        current_file: Option<String>,
+        files_done: usize,
+        files_total: usize,
+        bytes_done: u64,
+        bytes_total: u64,
+    ) {
+        if let Ok(mut cache) = self.entries.write()
+            && let Some(status) = cache.get_mut(operation_id)
+        {
+            status.phase = phase;
+            status.current_file = current_file;
+            status.files_done = files_done;
+            status.files_total = files_total;
+            status.bytes_done = bytes_done;
+            status.bytes_total = bytes_total;
+        }
+    }
+
+    /// Registers a new operation in the status cache.
+    ///
+    /// `volume_ids` lists every volume the operation touches (source and/or
+    /// destination). Pass an empty `Vec` for pure same-`root` local ops. Any
+    /// ejectable volume in the list is marked "busy" until the op unregisters, so
+    /// the volume picker can disable Eject for it (see [`Self::busy_volume_ids`]).
+    pub(super) fn register(&self, operation_id: &str, operation_type: WriteOperationType, volume_ids: Vec<String>) {
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_millis() as u64)
+            .unwrap_or(0);
+
+        // Report the transfer alongside the eject busy set: register/unregister
+        // are the ONE write-op lifecycle choke point, so indexing's "a transfer
+        // trumps me" signal (the app feeds its priority gauge from it) and
+        // eject's guard can't drift apart. The finish fires from the same
+        // panic-safe cleanup paths that unregister.
+        self.events.transfer_started(&volume_ids);
+        if let Ok(mut cache) = self.entries.write() {
+            cache.insert(
+                operation_id.to_string(),
+                OperationStatusInternal {
+                    operation_type,
+                    phase: WriteOperationPhase::Scanning,
+                    current_file: None,
+                    files_done: 0,
+                    files_total: 0,
+                    bytes_done: 0,
+                    bytes_total: 0,
+                    started_at: now,
+                    volume_ids,
+                },
+            );
+        }
+        self.recompute_and_report_busy_volumes();
+    }
+
+    /// Removes an operation from the status cache.
+    pub(super) fn unregister(&self, operation_id: &str) {
+        let removed_volume_ids = if let Ok(mut cache) = self.entries.write() {
+            cache.remove(operation_id).map(|status| status.volume_ids)
+        } else {
+            None
+        };
+        // Finish the transfer with the SAME ids the register started it with (they
+        // ride the cache entry, so the pair can't drift). A double unregister
+        // removed nothing and finishes nothing.
+        if let Some(volume_ids) = removed_volume_ids {
+            self.events.transfer_finished(&volume_ids);
+        }
+        self.recompute_and_report_busy_volumes();
+    }
+
+    /// Computes the current set of busy volume IDs: the union of every active
+    /// operation's touched volumes, minus the default `root` volume (never
+    /// ejectable, so marking it busy is pointless noise).
+    fn compute_busy_volume_ids(&self) -> HashSet<String> {
+        let Ok(cache) = self.entries.read() else {
+            return HashSet::new();
+        };
+        cache
+            .values()
+            .flat_map(|status| status.volume_ids.iter())
+            .filter(|id| id.as_str() != cmdr_fs::volume::DEFAULT_VOLUME_ID)
+            .cloned()
+            .collect()
+    }
+
+    /// Returns the busy volume IDs (sorted, for a stable payload / bootstrap).
+    /// Used by the `get_busy_volume_ids` bootstrap command, the `eject_volume`
+    /// guard, and the native breadcrumb-menu builder.
+    pub(super) fn busy_volume_ids(&self) -> Vec<String> {
+        let mut ids: Vec<String> = self.compute_busy_volume_ids().into_iter().collect();
+        ids.sort();
+        ids
+    }
+
+    /// Recomputes the busy set and reports it only when its membership changed.
+    /// Called from register/unregister (the only two points where membership
+    /// can change), so it's panic-safe: unregister runs from the manager's
+    /// `ManagedTaskGuard` / external-seam cleanup that fires even on unwind.
+    fn recompute_and_report_busy_volumes(&self) {
+        let current = self.compute_busy_volume_ids();
+
+        {
+            let mut last = self.last_reported_busy.lock_ignore_poison();
+            if *last == current {
+                return;
+            }
+            *last = current.clone();
+        }
+        #[cfg(test)]
+        self.busy_emits.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+
+        let mut volume_ids: Vec<String> = current.into_iter().collect();
+        volume_ids.sort();
+        self.events.volumes_busy_changed(volume_ids);
+    }
+
+    /// `volumes-busy-changed` reports that got past the dedupe so far.
+    #[cfg(test)]
+    pub(super) fn busy_emit_count(&self) -> u64 {
+        self.busy_emits.load(std::sync::atomic::Ordering::SeqCst)
+    }
+
+    /// `operation_id`'s cached status, with `lifecycle` as the manager answered
+    /// it and no activity (the caller classifies the wait outside this lock).
+    pub(super) fn snapshot(&self, operation_id: &str, lifecycle: Option<LifecycleStatus>) -> Option<OperationStatus> {
+        let cache = self.entries.read().ok()?;
+        let status = cache.get(operation_id)?;
+        Some(OperationStatus {
+            operation_id: operation_id.to_string(),
+            operation_type: status.operation_type,
+            phase: status.phase,
+            lifecycle,
+            current_file: status.current_file.clone(),
+            files_done: status.files_done,
+            files_total: status.files_total,
+            bytes_done: status.bytes_done,
+            bytes_total: status.bytes_total,
+            started_at: status.started_at,
+            activity: None,
+        })
+    }
+}
+
 // ============================================================================
-// Status cache management
+// The installed engine's cache, by free function
 // ============================================================================
+//
+// shim: removed in M6a. Each reads the installed engine; engine code moves to
+// its operation's scope or `self`.
 
 /// Updates the internal status for an operation.
 pub(super) fn update_operation_status(
@@ -64,90 +240,48 @@ pub(super) fn update_operation_status(
     bytes_done: u64,
     bytes_total: u64,
 ) {
-    if let Ok(mut cache) = OPERATION_STATUS_CACHE.write()
-        && let Some(status) = cache.get_mut(operation_id)
-    {
-        status.phase = phase;
-        status.current_file = current_file;
-        status.files_done = files_done;
-        status.files_total = files_total;
-        status.bytes_done = bytes_done;
-        status.bytes_total = bytes_total;
-    }
+    super::installed().status().update(
+        operation_id,
+        phase,
+        current_file,
+        files_done,
+        files_total,
+        bytes_done,
+        bytes_total,
+    );
 }
 
-/// Registers a new operation in the status cache.
-///
-/// `volume_ids` lists every volume the operation touches (source and/or
-/// destination). Pass an empty `Vec` for pure same-`root` local ops. Any
-/// ejectable volume in the list is marked "busy" until the op unregisters, so
-/// the volume picker can disable Eject for it (see `busy_volume_ids`).
+/// Registers a new operation in the status cache. See [`StatusCache::register`].
+#[cfg(any(test, target_os = "macos"))]
 pub(super) fn register_operation_status(
     operation_id: &str,
     operation_type: WriteOperationType,
     volume_ids: Vec<String>,
 ) {
-    let now = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|d| d.as_millis() as u64)
-        .unwrap_or(0);
-
-    // Report the transfer alongside the eject busy set: these two
-    // register/unregister functions are the ONE write-op lifecycle choke point, so
-    // indexing's "a transfer trumps me" signal (the app feeds its priority gauge
-    // from it) and eject's guard can't drift apart. The finish fires from the same
-    // panic-safe cleanup paths that unregister.
-    host::installed().events().transfer_started(&volume_ids);
-    if let Ok(mut cache) = OPERATION_STATUS_CACHE.write() {
-        cache.insert(
-            operation_id.to_string(),
-            OperationStatusInternal {
-                operation_type,
-                phase: WriteOperationPhase::Scanning,
-                current_file: None,
-                files_done: 0,
-                files_total: 0,
-                bytes_done: 0,
-                bytes_total: 0,
-                started_at: now,
-                volume_ids,
-            },
-        );
-    }
-    recompute_and_emit_busy_volumes();
+    super::installed()
+        .status()
+        .register(operation_id, operation_type, volume_ids);
 }
 
 /// Removes an operation from the status cache.
+#[cfg(any(test, target_os = "macos"))]
 pub(super) fn unregister_operation_status(operation_id: &str) {
-    let removed_volume_ids = if let Ok(mut cache) = OPERATION_STATUS_CACHE.write() {
-        cache.remove(operation_id).map(|status| status.volume_ids)
-    } else {
-        None
-    };
-    // Finish the transfer with the SAME ids the register started it with (they
-    // ride the cache entry, so the pair can't drift). A double unregister
-    // removed nothing and finishes nothing.
-    if let Some(volume_ids) = removed_volume_ids {
-        host::installed().events().transfer_finished(&volume_ids);
-    }
-    recompute_and_emit_busy_volumes();
+    super::installed().status().unregister(operation_id);
 }
 
 // ============================================================================
 // External busy-volume seam (drag-out file promises)
 // ============================================================================
 //
-// `register_operation_status` / `unregister_operation_status` are `pub(super)`,
-// reachable only inside `write_operations`. The drag-out fulfillment service
-// (`crate::native_drag::fulfillment`) lives outside this module but needs the
-// same eject guard: while it streams bytes off an MTP/SMB device into a
-// Finder-chosen destination, the source volume must register as busy so the
-// user can't eject the phone mid-download (the server-side `eject_volume` guard
-// reads `busy_volume_ids()`). It is NOT a real write operation — no
-// `WRITE_OPERATION_STATE` entry, no progress events, no settle — so it can't go
-// through `start_write_operation`. This thin `pub(crate)` pair is the smallest
-// honest seam: it touches only the `OPERATION_STATUS_CACHE` half (which is what
-// `recompute_and_emit_busy_volumes` reads), keeping the busy set and the
+// The drag-out fulfillment service (`crate::native_drag::fulfillment`) lives
+// outside this module but needs the same eject guard: while it streams bytes
+// off an MTP/SMB device into a Finder-chosen destination, the source volume
+// must register as busy so the user can't eject the phone mid-download (the
+// server-side `eject_volume` guard reads `busy_volume_ids()`). It is NOT a real
+// write operation — no registered state, no progress events, no settle — so it
+// can't go through `start_write_operation`. This thin `pub(crate)` pair is the
+// smallest honest seam: it touches only the status-cache half (which is what
+// the busy set is derived from), keeping the busy set and the
 // `volumes-busy-changed` event firing exactly as a real op would.
 
 /// Marks `volume_ids` busy for the duration of an external (non-write-op)
@@ -174,120 +308,26 @@ pub(crate) fn release_external_volume_op(op_id: &str) {
     unregister_operation_status(op_id);
 }
 
-// ============================================================================
-// Busy-volumes set (drives "disable Eject while an op touches this device")
-// ============================================================================
-
-/// Last busy set we emitted, so a progress update that doesn't change
-/// membership produces no event (the cache changes on every progress tick, but
-/// the busy set only changes when an op starts or finishes).
-static LAST_EMITTED_BUSY: LazyLock<std::sync::Mutex<HashSet<String>>> =
-    LazyLock::new(|| std::sync::Mutex::new(HashSet::new()));
-
-/// Test-only: `volumes-busy-changed` broadcasts that got past the dedupe, ever,
-/// counted before the host hears them, since unit tests have no frontend.
-#[cfg(test)]
-static BUSY_EMITS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
-
+/// `volumes-busy-changed` reports the installed engine's cache let through.
 #[cfg(test)]
 fn busy_emit_count() -> u64 {
-    BUSY_EMITS.load(std::sync::atomic::Ordering::SeqCst)
+    super::installed().status().busy_emit_count()
 }
-
-/// Computes the current set of busy volume IDs: the union of every active
-/// operation's touched volumes, minus the default `root` volume (never
-/// ejectable, so marking it busy is pointless noise).
-fn compute_busy_volume_ids() -> HashSet<String> {
-    let Ok(cache) = OPERATION_STATUS_CACHE.read() else {
-        return HashSet::new();
-    };
-    cache
-        .values()
-        .flat_map(|status| status.volume_ids.iter())
-        .filter(|id| id.as_str() != cmdr_fs::volume::DEFAULT_VOLUME_ID)
-        .cloned()
-        .collect()
-}
-
-/// Returns the busy volume IDs (sorted, for a stable payload / bootstrap).
-/// Used by the `get_busy_volume_ids` bootstrap command, the `eject_volume`
-/// guard, and the native breadcrumb-menu builder.
-pub fn busy_volume_ids() -> Vec<String> {
-    let mut ids: Vec<String> = compute_busy_volume_ids().into_iter().collect();
-    ids.sort();
-    ids
-}
-
-/// Recomputes the busy set and emits `volumes-busy-changed` only when its
-/// membership changed. Called from register/unregister (the only two points
-/// where membership can change), so it's panic-safe: unregister runs from the
-/// manager's `ManagedTaskGuard` / external-seam cleanup that fires even on unwind.
-fn recompute_and_emit_busy_volumes() {
-    let current = compute_busy_volume_ids();
-
-    {
-        let mut last = LAST_EMITTED_BUSY.lock_ignore_poison();
-        if *last == current {
-            return;
-        }
-        *last = current.clone();
-    }
-    #[cfg(test)]
-    BUSY_EMITS.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-
-    let mut volume_ids: Vec<String> = current.into_iter().collect();
-    volume_ids.sort();
-    host::installed().events().volumes_busy_changed(volume_ids);
-}
-
-// Panic-safe cache cleanup for managed write ops now lives in
-// `manager::ManagedTaskGuard` (it also frees the op's lane slots). The old
-// standalone `OperationStateGuard` was retired when every spawn path moved
-// behind the operation manager.
 
 // ============================================================================
 // Public query functions
 // ============================================================================
 
+/// Returns the busy volume IDs (sorted, for a stable payload / bootstrap).
+/// Used by the `get_busy_volume_ids` bootstrap command, the `eject_volume`
+/// guard, and the native breadcrumb-menu builder.
+pub fn busy_volume_ids() -> Vec<String> {
+    super::installed().status().busy_volume_ids()
+}
+
 /// Gets the detailed status of a specific operation.
 ///
 /// Returns `None` if the operation is not found (either never existed or already completed).
 pub fn get_operation_status(operation_id: &str) -> Option<OperationStatus> {
-    // Asked BEFORE the cache lock, never inside it: this is the only place the
-    // two locks meet, and taking them in one order here means there is no order
-    // to get wrong. The busy-volume recompute already walks the other way (cache
-    // lock, then out), so nesting would close a cycle through data-safety code.
-    let lifecycle = super::manager::manager().lifecycle_status(operation_id);
-
-    let mut snapshot = {
-        let cache = OPERATION_STATUS_CACHE.read().ok()?;
-        let status = cache.get(operation_id)?;
-        OperationStatus {
-            operation_id: operation_id.to_string(),
-            operation_type: status.operation_type,
-            phase: status.phase,
-            lifecycle,
-            current_file: status.current_file.clone(),
-            files_done: status.files_done,
-            files_total: status.files_total,
-            bytes_done: status.bytes_done,
-            bytes_total: status.bytes_total,
-            started_at: status.started_at,
-            activity: None,
-        }
-    };
-
-    // The counters above are a cached echo of the last progress tick; the WAIT is
-    // classified live, off the same `WriteOperationState::activity` the event
-    // stream reads. A reader that never caught an event (an agent polling
-    // `cmdr://state`, a window opened mid-transfer) still has to tell a slow copy
-    // from a wedged mount from a parked conflict prompt, and the cache can't hold
-    // that: it would be stale the moment the operation moved on.
-    //
-    // Outside the cache guard, like `lifecycle` above: the probe registry and the
-    // state map are other locks, and this function keeps them all un-nested.
-    snapshot.activity = super::state::WRITE_OPERATION_STATE
-        .get(operation_id)
-        .and_then(|state| state.activity(operation_id, None));
-    Some(snapshot)
+    super::installed().get_operation_status(operation_id)
 }

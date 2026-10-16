@@ -11,6 +11,7 @@ use crate::file_system::{
     start_rename_by_move, start_volume_compress, start_volume_copy, start_volume_move,
 };
 use crate::operations_host::TauriEventSink;
+use crate::operations_host::{operations, refuse_not_installed};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tokio::time::Duration;
@@ -32,6 +33,8 @@ pub async fn copy_between_volumes(
     config: Option<VolumeCopyConfig>,
     initiator: Option<Initiator>,
 ) -> Result<WriteOperationStartResult, WriteOperationError> {
+    // Before `install` there is no engine to start on: refuse, never write.
+    operations().map_err(refuse_not_installed)?;
     let events: Arc<dyn OperationEventSink> = Arc::new(TauriEventSink::new(app));
     start_volume_copy(
         events,
@@ -61,6 +64,8 @@ pub async fn move_between_volumes(
     config: Option<VolumeCopyConfig>,
     initiator: Option<Initiator>,
 ) -> Result<WriteOperationStartResult, WriteOperationError> {
+    // Before `install` there is no engine to start on: refuse, never write.
+    operations().map_err(refuse_not_installed)?;
     let events: Arc<dyn OperationEventSink> = Arc::new(TauriEventSink::new(app));
     start_volume_move(
         events,
@@ -91,6 +96,8 @@ pub async fn rename_by_move(
     config: Option<VolumeCopyConfig>,
     initiator: Option<Initiator>,
 ) -> Result<WriteOperationStartResult, WriteOperationError> {
+    // Before `install` there is no engine to start on: refuse, never write.
+    operations().map_err(refuse_not_installed)?;
     let events: Arc<dyn OperationEventSink> = Arc::new(TauriEventSink::new(app));
     start_rename_by_move(
         events,
@@ -119,6 +126,8 @@ pub async fn compress_files(
     config: Option<VolumeCopyConfig>,
     initiator: Option<Initiator>,
 ) -> Result<WriteOperationStartResult, WriteOperationError> {
+    // Before `install` there is no engine to start on: refuse, never write.
+    operations().map_err(refuse_not_installed)?;
     let events: Arc<dyn OperationEventSink> = Arc::new(TauriEventSink::new(app));
     start_volume_compress(
         events,

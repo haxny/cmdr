@@ -53,12 +53,10 @@ pub(crate) trait EngineEvents: Send + Sync {
 
 /// The answer for a host that wants none of it: a bench, a tool, an engine
 /// before the app wired its own.
-#[cfg_attr(
-    test,
-    expect(dead_code, reason = "a test binary falls back to the app's own answers")
-)]
+#[cfg(any(test, feature = "transfer-bench"))]
 pub(super) struct NoEngineEvents;
 
+#[cfg(any(test, feature = "transfer-bench"))]
 impl EngineEvents for NoEngineEvents {
     fn operations_changed(&self, _snapshot: OperationsChanged) {}
     fn volumes_busy_changed(&self, _volume_ids: Vec<String>) {}

@@ -8,7 +8,7 @@
 use serde::Serialize;
 
 use super::manager;
-use super::state::WRITE_OPERATION_STATE;
+use super::state::operation_states;
 use super::transfer_tree::{TransferTreeView, TransferTreeViewRequest};
 use super::types::{ProgressAxis, WriteOperationType};
 
@@ -40,7 +40,7 @@ pub(crate) fn transfer_tree_view(
     if !builds_a_tree(operation_type) {
         return Err(TransferTreeViewError::NotATransfer);
     }
-    let Some(state) = WRITE_OPERATION_STATE.get(operation_id) else {
+    let Some(state) = operation_states().get(operation_id) else {
         // Admitted but not yet started: nothing scanned, nothing to show.
         return Ok(TransferTreeView::not_ready(ProgressAxis::Bytes));
     };

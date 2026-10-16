@@ -10,7 +10,6 @@ use std::sync::Mutex;
 
 use super::analytics::{CompletionCategory, completion_category};
 use super::terminal_effects::{self, AppTerminalEffects, TerminalEffects};
-use crate::file_system::write_operations::operation_manager as manager;
 use crate::file_system::write_operations::{
     CancelRollback, WriteCancelledEvent, WriteCompleteEvent, WriteErrorEvent, WriteOperationError, WriteOperationType,
     WriteSettledEvent,
@@ -185,7 +184,9 @@ fn settle_fires_the_space_hint_then_the_emit() {
 /// arrives. Unique ids: the ring is process-global.
 #[test]
 fn the_production_ring_already_holds_the_outcome_when_the_emit_runs() {
-    let fx = AppTerminalEffects { manager: manager() };
+    let fx = AppTerminalEffects {
+        operations: Some(crate::file_system::write_operations::installed()),
+    };
     let complete_id = format!("terminal-ring-complete-{}", uuid::Uuid::new_v4());
     let mut seen = None;
     terminal_effects::complete(&fx, complete_event(&complete_id, WriteOperationType::Copy), |event| {

@@ -12,7 +12,7 @@
 
 use super::{
     ConflictId, ConflictResolution, ConflictResolutionOutcome, ConflictResolutionResponse, OperationIntent,
-    WRITE_OPERATION_STATE, WriteConflictEvent,
+    WriteConflictEvent, operation_states,
 };
 
 /// Cancels an in-progress write operation.
@@ -30,7 +30,7 @@ pub fn cancel_write_operation(operation_id: &str, rollback: bool) {
     // invalid transition) were indistinguishable from "the intent was set and the
     // driver never observed it", which left the whole failure unexplained. See
     // `docs/notes/incidents/2026-07-31-transfer-wedge/README.md`.
-    let Some(state) = WRITE_OPERATION_STATE.get(operation_id) else {
+    let Some(state) = operation_states().get(operation_id) else {
         log::warn!("cancel_write_operation: op={operation_id} rollback={rollback}: no such operation, ignoring");
         return;
     };
@@ -77,7 +77,7 @@ pub fn cancel_write_operation(operation_id: &str, rollback: bool) {
 /// `src/lib/quit/no-teardown-cancel.test.ts`; the full rule is in `DETAILS.md`
 /// § "Key patterns and gotchas (shared)".
 pub fn cancel_all_write_operations() {
-    WRITE_OPERATION_STATE.cancel_all();
+    operation_states().cancel_all();
 }
 
 /// TIER 2 for one operation: cancel it, and stop waiting for whatever in-flight
@@ -100,7 +100,7 @@ pub fn cancel_all_write_operations() {
 #[cfg(test)]
 pub fn abort_write_operation(operation_id: &str) {
     cancel_write_operation(operation_id, false);
-    let Some(state) = WRITE_OPERATION_STATE.get(operation_id) else {
+    let Some(state) = operation_states().get(operation_id) else {
         log::warn!("abort_write_operation: op={operation_id}: no such operation, ignoring");
         return;
     };
@@ -120,17 +120,17 @@ pub fn abort_write_operation(operation_id: &str) {
 /// operations a beat to settle, and call this for whatever is still there.
 /// `crate::quit` is that caller, and ❌ nothing a person clicked ever is.
 pub fn abort_all_write_operations() {
-    WRITE_OPERATION_STATE.abort_all();
+    operation_states().abort_all();
 }
 
 /// Sets the pause flag on the live state for `operation_id`, if present.
-/// Returns `true` if a state existed (the op is in `WRITE_OPERATION_STATE`,
+/// Returns `true` if a state existed (the op is in `operation_states`,
 /// i.e. Running — including pause-gated Running). The op parks at its next
 /// between-files boundary. Cancellation still wins: a paused op that's then
 /// cancelled unblocks immediately. The manager record's `LifecycleStatus` is
 /// flipped separately (see `manager::set_paused`).
 pub fn pause_write_operation(operation_id: &str) -> bool {
-    if let Some(state) = WRITE_OPERATION_STATE.get(operation_id) {
+    if let Some(state) = operation_states().get(operation_id) {
         state.pause_gate.pause();
         return true;
     }
@@ -141,7 +141,7 @@ pub fn pause_write_operation(operation_id: &str) -> bool {
 /// Returns `true` if a state existed. Resuming a not-paused op is a harmless
 /// no-op.
 pub fn resume_write_operation(operation_id: &str) -> bool {
-    if let Some(state) = WRITE_OPERATION_STATE.get(operation_id) {
+    if let Some(state) = operation_states().get(operation_id) {
         state.pause_gate.resume();
         return true;
     }
@@ -175,7 +175,7 @@ pub fn resolve_write_conflict(
     resolution: ConflictResolution,
     apply_to_all: bool,
 ) -> ConflictResolutionOutcome {
-    let Some(state) = WRITE_OPERATION_STATE.get(operation_id) else {
+    let Some(state) = operation_states().get(operation_id) else {
         log::info!("resolve_write_conflict: op={operation_id}: no such operation, ignoring");
         return ConflictResolutionOutcome::UnknownOperation;
     };
@@ -200,5 +200,5 @@ pub fn resolve_write_conflict(
 /// that arrives afterwards: `cmdr://state` renders it so an agent can see WHICH
 /// clash is owed an answer, and answer that one by id rather than guessing.
 pub fn pending_write_conflict(operation_id: &str) -> Option<WriteConflictEvent> {
-    WRITE_OPERATION_STATE.get(operation_id)?.conflict_slot.pending()
+    operation_states().get(operation_id)?.conflict_slot.pending()
 }
