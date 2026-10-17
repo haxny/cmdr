@@ -26,7 +26,7 @@ use crate::file_system::write_operations::event_sinks::OperationEventSink;
 use crate::file_system::write_operations::ledger::{CopyTransaction, WrittenFile};
 use crate::file_system::write_operations::overwrite::{PostLanding, displace_with_directory, safe_overwrite_dir};
 use crate::file_system::write_operations::scan_source_tracker::FileVerdict;
-use crate::file_system::write_operations::state::{WriteOperationState, is_cancelled, update_operation_status};
+use crate::file_system::write_operations::state::{WriteOperationState, is_cancelled};
 use crate::file_system::write_operations::transfer_tree::TreeLeaf;
 use crate::file_system::write_operations::types::{
     WriteOperationConfig, WriteOperationError, WriteOperationPhase, WriteOperationType, WriteProgressEvent,
@@ -641,7 +641,7 @@ pub(in crate::file_system::write_operations::transfer) fn copy_single_item(
                         bytes_total,
                     ),
                 );
-                update_operation_status(
+                state.scope().status().update(
                     operation_id,
                     WriteOperationPhase::Copying,
                     Some(current_file_name.clone()),

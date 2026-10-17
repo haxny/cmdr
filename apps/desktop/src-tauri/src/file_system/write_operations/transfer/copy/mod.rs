@@ -24,7 +24,7 @@ use super::super::scan::scan_sources;
 use super::super::scan_cache::take_cached_scan_result;
 use super::super::scan_dry_run::handle_dry_run;
 use super::super::scan_source_tracker::{FileVerdict, SourceItemTracker, top_level_source_path};
-use super::super::state::{OperationIntent, WriteOperationState, load_intent, update_operation_status};
+use super::super::state::{OperationIntent, WriteOperationState, load_intent};
 use super::super::transfer_sides::transfer_stop_event;
 use super::super::transfer_tree::TreeLanding;
 use super::super::types::{
@@ -327,7 +327,7 @@ pub(in crate::file_system::write_operations) fn copy_files_with_progress_inner(
             scan_result.total_bytes,
         ),
     );
-    update_operation_status(
+    state.scope().status().update(
         operation_id,
         WriteOperationPhase::Copying,
         None,

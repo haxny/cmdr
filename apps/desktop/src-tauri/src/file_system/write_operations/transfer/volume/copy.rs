@@ -31,9 +31,7 @@ use super::super::super::host::OperationErrorReport;
 use super::super::super::journal;
 use super::super::super::manager;
 use super::super::super::source_binding::{ExpectedSources, retain_bound_sources_on};
-use super::super::super::state::{
-    OperationIntent, WriteOperationState, is_cancelled, load_intent, update_operation_status,
-};
+use super::super::super::state::{OperationIntent, WriteOperationState, is_cancelled, load_intent};
 use super::super::super::transfer_tree::TreeLanding;
 use super::super::super::types::{
     CancelRollback, SpaceShortfall, VolumeCopyConfig, WriteCancelledEvent, WriteCompleteEvent, WriteOperationConfig,
@@ -818,7 +816,7 @@ pub(crate) async fn copy_volumes_with_progress(
             total_bytes,
         ),
     );
-    update_operation_status(
+    state.scope().status().update(
         operation_id,
         WriteOperationPhase::Copying,
         None,
@@ -910,7 +908,7 @@ pub(crate) async fn copy_volumes_with_progress(
                 total_bytes,
             ),
         );
-        update_operation_status(
+        state.scope().status().update(
             operation_id,
             WriteOperationPhase::Copying,
             None,

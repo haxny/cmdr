@@ -41,7 +41,7 @@ use super::super::super::event_sinks::OperationEventSink;
 use super::super::super::host::OperationErrorReport;
 use super::super::super::journal;
 use super::super::super::ledger::WrittenFile;
-use super::super::super::state::{WriteOperationState, is_cancelled, load_intent, update_operation_status};
+use super::super::super::state::{WriteOperationState, is_cancelled, load_intent};
 use super::super::super::types::{
     SourceItemOutcome, VolumeCopyConfig, WriteOperationPhase, WriteOperationType, WriteProgressEvent,
 };
@@ -456,7 +456,7 @@ impl<'a> ConcurrentDriver<'a> {
                 ctx.total_bytes,
             ),
         );
-        update_operation_status(
+        ctx.state.scope().status().update(
             ctx.operation_id,
             WriteOperationPhase::Copying,
             file_name_done,

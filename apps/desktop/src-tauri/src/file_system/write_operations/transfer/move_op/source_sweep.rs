@@ -30,7 +30,7 @@ use crate::file_system::write_operations::error_classification::IoResultExt;
 use crate::file_system::write_operations::event_sinks::OperationEventSink;
 use crate::file_system::write_operations::ledger::{NodeId, WrittenIdentity};
 use crate::file_system::write_operations::state::ScanResult;
-use crate::file_system::write_operations::state::{WriteOperationState, update_operation_status};
+use crate::file_system::write_operations::state::WriteOperationState;
 use crate::file_system::write_operations::transfer_sides::{MoveSourceCounts, TransferSide};
 use crate::file_system::write_operations::types::{
     CancelRollback, SourceItemOutcome, WriteCancelledEvent, WriteOperationError, WriteOperationPhase,
@@ -513,7 +513,7 @@ fn emit_source_sweep_progress(
             0,
         ),
     );
-    update_operation_status(
+    state.scope().status().update(
         operation_id,
         WriteOperationPhase::Deleting,
         current_file,

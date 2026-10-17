@@ -20,7 +20,7 @@ use super::super::event_sinks::OperationEventSink;
 use super::super::host;
 use super::super::manager::{self, OperationDescriptor, OperationSummaryText};
 use super::super::source_binding::SourceFingerprint;
-use super::super::state::{WriteOperationState, WriteSettledGuard, is_cancelled, update_operation_status};
+use super::super::state::{WriteOperationState, WriteSettledGuard, is_cancelled};
 use super::super::types::{
     CancelRollback, SourceItemOutcome, WriteCancelledEvent, WriteCompleteEvent, WriteOperationError,
     WriteOperationStartResult, WriteOperationType, WriteProgressEvent, WriteSourceItemDoneEvent,
@@ -741,7 +741,7 @@ fn emit_bulk_rename_progress(
     outcomes: &[BulkRenameOutcome],
 ) {
     for (index, (row, outcome)) in rows.iter().zip(outcomes.iter()).enumerate() {
-        update_operation_status(
+        state.scope().status().update(
             operation_id,
             super::super::types::WriteOperationPhase::Copying,
             Some(

@@ -13,7 +13,7 @@ use std::time::{Duration, Instant};
 use super::super::OperationEventSink;
 use super::super::host;
 use super::super::operation_intent::is_cancelled;
-use super::super::state::{WriteOperationState, update_operation_status};
+use super::super::state::WriteOperationState;
 use super::super::types::{
     AppearedDuringMove, CancelRollback, ProgressStep, WriteCancelledEvent, WriteCompleteEvent, WriteErrorEvent,
     WriteOperationError, WriteOperationPhase, WriteOperationType, WriteProgressEvent,
@@ -304,7 +304,7 @@ impl MutatorHooks {
     /// resource), and an op that only emits reads there as `Scanning` with no
     /// bytes from start to finish.
     fn emit(&self, event: WriteProgressEvent) {
-        update_operation_status(
+        self.state.scope().status().update(
             &self.operation_id,
             event.phase,
             event.current_file.clone(),

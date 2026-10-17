@@ -231,6 +231,7 @@ impl StatusCache {
 // its operation's scope or `self`.
 
 /// Updates the internal status for an operation.
+#[cfg(test)]
 pub(super) fn update_operation_status(
     operation_id: &str,
     phase: WriteOperationPhase,

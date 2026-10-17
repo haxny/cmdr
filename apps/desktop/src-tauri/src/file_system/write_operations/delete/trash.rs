@@ -10,7 +10,7 @@ use std::time::Instant;
 
 use super::super::event_sinks::OperationEventSink;
 use super::super::mutation_error::MutationError;
-use super::super::state::{WriteOperationState, update_operation_status};
+use super::super::state::WriteOperationState;
 use super::super::types::{
     CancelRollback, SourceItemOutcome, TrashRefusalKind, TrashRefusedItems, WriteCancelledEvent, WriteCompleteEvent,
     WriteErrorEvent, WriteOperationError, WriteOperationPhase, WriteOperationType, WriteProgressEvent,
@@ -510,7 +510,7 @@ pub(in crate::file_system::write_operations) fn trash_files_with_progress(
                     bytes_total,
                 ),
             );
-            update_operation_status(
+            state.scope().status().update(
                 operation_id,
                 WriteOperationPhase::Trashing,
                 current_file,

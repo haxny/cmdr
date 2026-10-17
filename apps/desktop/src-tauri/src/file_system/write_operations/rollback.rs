@@ -48,7 +48,7 @@ use cmdr_operation_log::writer::OperationLogWriter;
 use super::event_sinks::OperationEventSink;
 use super::host;
 use super::manager::{ManagedTaskGuard, OperationDescriptor, OperationSummaryText, manager};
-use super::state::{StopMeans, WriteOperationState, update_operation_status};
+use super::state::{StopMeans, WriteOperationState};
 use super::transfer::volume::move_file_across_volumes;
 use super::types::{DEFAULT_PROGRESS_INTERVAL_MS, WriteOperationPhase, WriteOperationType, WriteProgressEvent};
 use super::unblocked_removal::RemovalRefused;
@@ -143,7 +143,7 @@ impl ReversalRunner {
                 stand.bytes_total,
             )
         };
-        update_operation_status(
+        self.state.scope().status().update(
             &self.operation_id,
             WriteOperationPhase::RollingBack,
             event.current_file.clone(),

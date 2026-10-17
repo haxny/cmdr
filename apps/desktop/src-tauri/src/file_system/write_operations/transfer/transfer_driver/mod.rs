@@ -17,7 +17,7 @@
 //! - per-iter cancellation check (positioned BEFORE any destructive call)
 //! - per-iter skip accounting (bumps `files_done` / `bytes_done` and emits throttled progress)
 //! - post-loop bookkeeping (final progress event, completion event)
-//! - paired `state.emit_progress_via_sink` + `update_operation_status` updates
+//! - paired `state.emit_progress_via_sink` + status-cache updates
 //!
 //! Each operation supplies a per-source `transfer_one` closure. The closure does
 //! ONLY the per-source transfer work and reports back via `TransferOutcome`.
@@ -121,7 +121,7 @@ use std::pin::Pin;
 use std::sync::Arc;
 
 use super::super::event_sinks::OperationEventSink;
-use super::super::state::{WriteOperationState, update_operation_status};
+use super::super::state::WriteOperationState;
 use super::super::types::{
     ConflictResolution, SourceItemOutcome, WriteOperationError, WriteOperationPhase, WriteOperationType,
     WriteProgressEvent, WriteSourceItemDoneEvent,
@@ -354,7 +354,7 @@ pub(super) fn build_pre_skip_set(
         .collect()
 }
 
-/// Emits a paired `write-progress` event AND `update_operation_status` call,
+/// Emits a paired `write-progress` event AND status-cache update,
 /// so callers can't forget one or the other. Always go through this from the
 /// driver.
 #[allow(
@@ -386,7 +386,7 @@ pub(super) fn emit_progress_and_status(
             bytes_total,
         ),
     );
-    update_operation_status(
+    state.scope().status().update(
         operation_id,
         phase,
         current_file,

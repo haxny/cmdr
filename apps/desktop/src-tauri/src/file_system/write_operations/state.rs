@@ -725,7 +725,6 @@ impl Drop for WriteSettledGuard {
 // `state::register_operation_status`, `state::busy_volume_ids`, etc. paths keep
 // resolving for every caller, the same way `operation_intent` and `scan_cache`
 // are surfaced above.
-pub(super) use super::status_cache::update_operation_status;
 pub use super::status_cache::{busy_volume_ids, get_operation_status};
 #[cfg(target_os = "macos")]
 pub(crate) use super::status_cache::{register_external_volume_op, release_external_volume_op};

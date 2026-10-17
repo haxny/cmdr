@@ -39,7 +39,7 @@ use crate::file_system::write_operations::ledger::CopyTransaction;
 use crate::file_system::write_operations::scan::scan_sources;
 use crate::file_system::write_operations::scan_cache::take_cached_scan_result;
 use crate::file_system::write_operations::scan_source_tracker::SourceItemTracker;
-use crate::file_system::write_operations::state::{WriteOperationState, update_operation_status};
+use crate::file_system::write_operations::state::WriteOperationState;
 use crate::file_system::write_operations::transfer_sides::transfer_stop_event;
 use crate::file_system::write_operations::transfer_tree::TreeLanding;
 use crate::file_system::write_operations::types::{
@@ -157,7 +157,7 @@ pub(super) fn move_with_staging(
             scan_result.total_bytes,
         ),
     );
-    update_operation_status(
+    state.scope().status().update(
         operation_id,
         WriteOperationPhase::Copying,
         None,

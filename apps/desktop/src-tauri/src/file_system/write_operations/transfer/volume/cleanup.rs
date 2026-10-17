@@ -17,7 +17,7 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use super::super::super::event_sinks::OperationEventSink;
 use super::super::super::ledger::{WrittenFile, WrittenIdentity};
 use super::super::super::reversal::{PresentRecheck, ReversalTally, drained, recheck_volume};
-use super::super::super::state::{StopMeans, WriteOperationState, update_operation_status};
+use super::super::super::state::{StopMeans, WriteOperationState};
 use super::super::super::types::{WriteOperationPhase, WriteOperationType, WriteProgressEvent};
 use super::super::super::unblocked_removal::{RemovalRefused, delete_clearing_blockers};
 use super::transfer_error::{AtPath, PathRole, PathedVolumeError};
@@ -98,7 +98,7 @@ pub(super) async fn volume_rollback_with_progress(
                 bytes_total,
             ),
         );
-        update_operation_status(
+        state.scope().status().update(
             operation_id,
             WriteOperationPhase::RollingBack,
             current_file,

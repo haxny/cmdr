@@ -18,7 +18,7 @@ use super::cancellable::run_cancellable_scoped;
 use super::event_sinks::OperationEventSink;
 use super::host;
 use super::scan_walker::{WalkContext, walk_dir_recursive};
-use super::state::{ScanResult, WriteOperationState, update_operation_status};
+use super::state::{ScanResult, WriteOperationState};
 use super::types::{WriteOperationError, WriteOperationPhase, WriteOperationType, WriteProgressEvent};
 use cmdr_fs::volume::{CopyScanResult, ScanRecorder, Volume, VolumeError};
 
@@ -326,7 +326,7 @@ fn scan_sources_internal(
                 )
                 .with_scan_meta(current_dir, dirs_done, expected),
             );
-            update_operation_status(
+            state.scope().status().update(
                 operation_id,
                 WriteOperationPhase::Scanning,
                 current_file,

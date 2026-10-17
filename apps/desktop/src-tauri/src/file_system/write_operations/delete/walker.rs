@@ -10,7 +10,7 @@ use super::super::event_sinks::OperationEventSink;
 use super::super::scan::scan_sources;
 use super::super::scan_cache::take_cached_scan_result;
 use super::super::scan_source_tracker::{FileVerdict, SourceItemTracker};
-use super::super::state::{WriteOperationState, update_operation_status};
+use super::super::state::WriteOperationState;
 use super::super::transfer::volume::{PathRole, map_volume_error};
 use super::super::types::{
     CancelRollback, DryRunResult, WriteCancelledEvent, WriteCompleteEvent, WriteOperationConfig, WriteOperationError,
@@ -96,7 +96,7 @@ pub(in crate::file_system::write_operations) fn delete_files_with_progress_inner
             scan_result.dedup_bytes,
         ),
     );
-    update_operation_status(
+    state.scope().status().update(
         operation_id,
         WriteOperationPhase::Deleting,
         None,
@@ -184,7 +184,7 @@ pub(in crate::file_system::write_operations) fn delete_files_with_progress_inner
                     scan_result.dedup_bytes,
                 ),
             );
-            update_operation_status(
+            state.scope().status().update(
                 operation_id,
                 WriteOperationPhase::Deleting,
                 current_file,
@@ -390,7 +390,7 @@ async fn scan_volume_recursive(
                 )
                 .with_scan_meta(Some(current_dir_str.clone()), dirs_before + p.dirs, None),
             );
-            update_operation_status(
+            state.scope().status().update(
                 &op_id_for_cb,
                 WriteOperationPhase::Scanning,
                 None,
@@ -518,7 +518,7 @@ async fn scan_volume_recursive(
             )
             .with_scan_meta(Some(current_dir_str), dirs_done, None),
         );
-        update_operation_status(
+        state.scope().status().update(
             operation_id,
             WriteOperationPhase::Scanning,
             None,
@@ -716,7 +716,7 @@ pub(in crate::file_system::write_operations) async fn delete_volume_files_with_p
                     )
                     .with_scan_meta(Some(source.display().to_string()), dirs_done, None),
                 );
-                update_operation_status(
+                state.scope().status().update(
                     operation_id,
                     WriteOperationPhase::Scanning,
                     None,
@@ -945,7 +945,7 @@ pub(in crate::file_system::write_operations) async fn delete_volume_files_with_p
                     total_bytes,
                 ),
             );
-            update_operation_status(
+            state.scope().status().update(
                 operation_id,
                 WriteOperationPhase::Deleting,
                 current_file,

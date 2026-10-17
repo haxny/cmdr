@@ -17,7 +17,6 @@ use std::sync::Arc;
 use std::sync::atomic::Ordering;
 use std::time::Instant;
 
-use super::super::super::state::update_operation_status;
 use super::super::super::types::{SourceItemOutcome, WriteOperationPhase, WriteOperationType, WriteProgressEvent};
 use super::super::transfer_driver::emit_source_outcome;
 use super::super::volume_outage::through_outages;
@@ -439,7 +438,7 @@ impl ConcurrentCopy<'_> {
                     self.total_bytes,
                 ),
             );
-            update_operation_status(
+            self.state.scope().status().update(
                 self.operation_id,
                 WriteOperationPhase::Copying,
                 source_path.file_name().map(|n| n.to_string_lossy().to_string()),
