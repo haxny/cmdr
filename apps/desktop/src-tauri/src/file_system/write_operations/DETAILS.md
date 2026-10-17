@@ -1363,7 +1363,7 @@ guards eject automatically also outranks indexing, and the panic-safe unregister
 add a second feed site (see `../../priority/CLAUDE.md`).
 
 - The manager registers an op's volume IDs busy (`register_operation_status(op_id, type, volume_ids)`) **only when it admits the op (Running)** — a Queued op isn't touching the device, so it marks nothing busy. Source **and** destination go in (a download from a phone is as corruptible as an upload to it). The manager's `on_settled` / `ManagedTaskGuard` Drop unregisters on every exit (including panic), so a finished or panicking op can't leave a volume stuck busy.
-- The busy set is the union of every Running op's `volume_ids` **∪ external registrations**, minus `root` (never ejectable). `recompute_and_emit_busy_volumes` fires `volumes-busy-changed` only when membership changes — progress ticks don't churn it (the cache's last-reported set; pinned through a `cfg(test)` emit counter by `status_cache_tests::volumes_busy_changed_fires_once_per_distinct_change`, a one-test-per-process cell since the shared engine's dedupe sees its siblings). Every transfer-gauge start has exactly one finish on success, cancel, error, a panicking handler, and the panic net (`status_cache_tests::every_transfer_start_has_exactly_one_finish_however_the_op_ends`). Membership-by-union means two concurrent transfers to one device keep it busy until both finish, with no manual refcount.
+- The busy set is the union of every Running op's `volume_ids` **∪ external registrations**, minus `root` (never ejectable). `recompute_and_emit_busy_volumes` fires `volumes-busy-changed` only when membership changes — progress ticks don't churn it (the cache's last-reported set; pinned through a `cfg(test)` emit counter by `status_cache_tests::volumes_busy_changed_fires_once_per_distinct_change`, on an engine of its own). Every transfer-gauge start has exactly one finish on success, cancel, error, a panicking handler, and the panic net (`status_cache_tests::every_transfer_start_has_exactly_one_finish_however_the_op_ends`). Membership-by-union means two concurrent transfers to one device keep it busy until both finish, with no manual refcount.
 - **Where `volume_ids` come from**: the `OperationDescriptor` each spawn site hands the manager. The cross-volume entry points (`copy_between_volumes`, `move_between_volumes`, `move_within_same_volume`) and the volume-aware delete carry the IDs; the both-local branch of `copy_between_volumes` (a local→USB / DMG copy) passes both IDs through `copy_files_start` / `move_files_start` so the ejectable destination is still marked. The plain `move_files` / `trash` commands pass an empty list — the unified transfer dialog only routes through them for same-`root` ops, where no ejectable volume is involved.
 - **Consumers**: `busy_volume_ids()` backs the `get_busy_volume_ids` bootstrap command, the `eject_volume` server-side guard (refuses a busy volume — the real safety net, since the picker's disable is only UX), and the native breadcrumb-menu builder (renders the Eject item disabled with a ` (busy)` suffix). The frontend `volume-busy-store.svelte.ts` subscribes to `volumes-busy-changed` and exposes `isVolumeBusy(id)` to disable the picker's eject controls. The engine reports each change through `EngineEvents::volumes_busy_changed`; the app emits it.
 - **A wider question, `operations_need_volume(id)`** (`manager.rs`): every op the manager HOLDS (Queued too) plus the busy set. A queued op hasn't touched the device, so Eject ignores it, but it names the volume and will set out for it, so retiring a volume id for good (a saved server moving to a new address, `server_move.rs`) waits for it too.
@@ -1476,11 +1476,13 @@ and line are that test's alone, under plain `cargo test` as under nextest:
 
 - **Getting one.** `TestOperations::new()` journals nothing;
   `TestOperations::journaling_into(&TestOperationLog::new(label))` journals into a scratch database the test reads rows
-  back from (`log.db()`); `TestOperations::with(|builder| …)` replaces any other seam (a volume host, pacing). It derefs
-  to the engine, so a test calls `engine.manager()`, `engine.cancel_write_operation(…)`, or `engine.status()` directly.
+  back from (`log.db()`); `TestOperations::with(|builder| …)` replaces any other seam (a volume host, pacing).
+  `TestOperations::seeing_app_listings()` is one whose host sees the app's pane listings, for a cell that seeds the
+  fresh-listing oracle (on `new()`'s detached host every oracle question misses). It derefs to the engine, so a test
+  calls `engine.manager()`, `engine.cancel_write_operation(…)`, or `engine.status()` directly.
 - **Reading back.** `engine.events()` (`RecordingEngineEvents`: the busy set, the transfer pair, `operations-changed`,
-  error reports), `engine.volumes()` (`FakeVolumes`, which the test fills before an op names a volume id), and
-  `engine.own_writes()` (`RecordingOwnWrites`).
+  error reports), `engine.volumes()` (`FakeVolumes`, which the test fills before an op names a volume id;
+  `engine.register_local_root()` puts the local `root` volume there), and `engine.own_writes()` (`RecordingOwnWrites`).
 - **States.** `engine.new_state()` builds a state on THIS engine (`WriteOperationState::new` is the shared engine's);
   `engine.register(id)` / `engine.register_state(id, state)` put one in the registry as a running op's is, returning a
   `RegisteredOperation` (`id()`, `state()`). No guard: the entry dies with the engine. Ids, lanes, and volume names only
@@ -1490,8 +1492,13 @@ and line are that test's alone, under plain `cargo test` as under nextest:
   journaled with `log.writer()`, and drive a reversal with `rollback::Reversal::on(&engine, tag)`. A fixture that
   cancels from inside a seam (a sink, a volume) holds an `Operations::clone(&engine)`. A state on one engine and a
   preview, probe, or registration on another is a test of nothing: the op reads its own engine's stores.
-- **A cell that needs the app's registry** (the git portal's routing, `copy_snapshot_out_tests.rs`) builds its own
-  engine over the app's answers with `operations_host::test_engine()`; `FakeVolumes` routes nothing.
+- **A cell that needs the app's registry** (the git portal's routing, `copy_snapshot_out_tests.rs`; an archive inside a
+  remote parent, `archive_edit/routing_tests.rs`; the in-archive rename route; the in-flight sweep's deferred records,
+  `Ledger::launch_in`) builds its own engine over the app's answers with `operations_host::test_engine()`;
+  `FakeVolumes` routes nothing. The listing engine keeps its own registry too: an oracle cell keeps its volume in
+  `get_volume_manager()` as well, since that's where the listing engine asks about watch coverage.
+- **A walk that never touches an engine** (a `WalkContext`, `run_oracle_aware_batch_scan`) takes `&AppListings`
+  directly: the app's listings and name order, with no engine to build.
 - **Walks and counters are honest.** `engine.cancel_all_write_operations()`, `emit_count()`, `admission_pass_count()`,
   and `busy_emit_count()` see only this test's operations, so an equality assertion on one holds under plain
   `cargo test` (`retained_failure_stays_hidden_until_the_record_settles` once passed only because nextest forks per
@@ -1636,8 +1643,8 @@ and hands it to the states it drives with `WriteOperationState::with_in_flight_l
 fresh log there; `die()` is the crash (it waits for the writer thread, then stops writing, so a state still holding a
 clone can't add to the log the next run replays); a cell that reads the log while its ledger lives calls `flush_log()`
 first, since lines reach the file from the writer thread; `hold_writer()` parks that thread, which is how the ordering
-cell proves a temp only queues while an aside waits to be on disk (seams: `in_flight_temps_test_support.rs`); `Ledger::for_test().launch_in(data_dir)` is the next launch, replaying that
-log, its sweep on the shared engine's host; `live_paths()` is what that ledger alone believes is on disk. So a cell's log, tally, and live set hold its own
+cell proves a temp only queues while an aside waits to be on disk (seams: `in_flight_temps_test_support.rs`); `Ledger::for_test().launch_in(data_dir, &engine)` is the next launch, replaying that
+log, its sweep on the host of the engine it's handed (one over the app's answers, held while the cell waits on an arrival); `live_paths()` is what that ledger alone believes is on disk. So a cell's log, tally, and live set hold its own
 records and nothing else, and it can assert on all of them whole.
 
 - ❌ **Don't reintroduce a singleton that tests install a log into.** That's how a sweep cell replayed the records of

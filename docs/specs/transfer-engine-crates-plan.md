@@ -1751,6 +1751,32 @@ per slice: `desktop-rust-tests`, `desktop-rust-clippy`, `desktop-rust-test-sleep
 - **Still needed by later slices:** every shim the first slice listed, `render_live_dump`, `Reversal::new`, and the
   preview shims (`scan_cache_previews.rs`).
 
+**What landed differently in the third slice** (recorded at execution):
+
+- **Converted, each test on its own engine:** `delete/` (8 files), `archive_edit/` (14), `rename/` and `create/` (4),
+  the scan and preview suites (11), and the in-flight ledger cells (`in_flight_temps_tests.rs`,
+  `in_flight_temps_claim_tests.rs`); counts unchanged. The sweep, ledger, and reversal suites already owned their hosts.
+  Journal cells (`create`, `rename`, bulk rename's `UndoLoop` / `LandingJournal`, the two compress pins) dropped
+  `TestJournalGuard` for `TestOperations::journaling_into`.
+- **Harness additions:** `TestOperations::seeing_app_listings()` (a host over the app's pane listings, for oracle and
+  pane-refresh cells) and `register_local_root()`. `own_writes()` still carries its `#[expect(dead_code)]`.
+- **Not every reach was an engine reach:** the `WalkContext` and `run_oracle_aware_batch_scan` cells only borrowed the
+  shared engine's listing host, so they take `&AppListings` directly. Oracle cells keep their volume in the app's
+  registry too, because the listing engine checks watch coverage there.
+- **Left on the app's answers** (`operations_host::test_engine()` per cell): the remote-archive duplicate pre-check, the
+  in-archive rename route, and `Ledger::launch_in` (deferred records wait on the app registry's arrivals).
+- **Shims retired:** the free preview fns in `scan_cache_previews.rs` except `seed_incoherent_scan_result_for_test`, and
+  `state::insert_scan_result`. `route_archive_copy_into` became an `Operations` method; the free fn delegates.
+- **Cross-engine probe:** seeding the preview on a second engine fails `delete_consumes_preview_id_skips_rescan` (the
+  rescan shows). `preview_binding_tests.rs` can't catch it: a miss rescans the requested sources, which is also what the
+  binding guarantees, so its assertions hold either way.
+- **Still needed by M7e:** `installed()`, `manager()`, `operation_states()`, `forget_operation`,
+  `register_operation_status`, `WriteOperationState::new`, `create_directory_core` / `create_file_core`, the free
+  `route_archive_copy_into` and `seed_incoherent_scan_result_for_test`, `render_live_dump`, `Reversal::new`, and
+  `QueuedOperationFixture::park` / `park_naming`. Engine suites no slice named still reach them: `approved_op_parity`,
+  `conflict_preflight`, `conflict_stop`, `durability`, `journal_capture(_volume)`, `look_alike(_instant)`, `overwrite`,
+  `rollback/planner_tests/`, `routing/tests`, `source_binding/tests`, `stop_or_park`, and `transfer_tree/report_tests`.
+
 ### M8a: The move
 
 **Scope.** `git mv apps/desktop/src-tauri/src/file_system/write_operations crates/cmdr-operations/src` (minus what stays
