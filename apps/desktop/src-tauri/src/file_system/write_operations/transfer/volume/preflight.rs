@@ -242,11 +242,11 @@ pub(super) async fn scan_volume_sources(
     // Cached preview from the TransferDialog: same scan results, no second
     // walk over the device. Unless it counted a selected link as the link: see
     // `counted_a_selected_link_as_a_link`.
+    let previews = state.scope().stores().previews();
     if let Some(mut cached) = config
         .preview_id
         .as_deref()
-        .and_then(|preview_id| state.scope().stores().previews().take_cached_scan_result(preview_id, source_paths))
-
+        .and_then(|preview_id| previews.take_cached_scan_result(preview_id, source_paths))
         .filter(|cached| {
             let describes_another_transfer = counted_a_selected_link_as_a_link(cached, source_paths);
             if describes_another_transfer {

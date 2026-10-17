@@ -203,6 +203,11 @@ fn raise(report: OperationErrorReport) {
             target: "op_manager",
             "admitted op={operation_id} had no deferred start; releasing lanes"
         ),
+        OperationErrorReport::LedgerUnpersisted => crate::log_error!(
+            target: "copy",
+            "no app data dir for the in-flight temp ledger; a copy interrupted this session will leave its \
+             leftovers for the next transfer into that directory to reap"
+        ),
     }
 }
 

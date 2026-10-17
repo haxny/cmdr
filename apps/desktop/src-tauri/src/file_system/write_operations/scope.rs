@@ -53,6 +53,12 @@ impl OpScope {
         &self.host
     }
 
+    /// The same host, shared, for work that outlives this call (a listener,
+    /// a background loop), which holds it weakly.
+    pub(super) fn host_arc(&self) -> &Arc<EngineHost> {
+        &self.host
+    }
+
     /// The engine's status cache.
     pub(super) fn status(&self) -> &StatusCache {
         &self.status

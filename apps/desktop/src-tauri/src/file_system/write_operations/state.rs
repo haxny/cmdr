@@ -226,9 +226,9 @@ pub struct WriteOperationState {
     pub in_flight_temps: std::sync::Mutex<Vec<PathBuf>>,
     /// A test's own persisted ledger, which the in-flight temps above are also
     /// recorded in (`with_in_flight_ledger`, test builds only). `None`, always so
-    /// in the app, means the process's one; `in_flight_temps` resolves it.
-    /// ❌ Don't default it to `Ledger::process()` here: a call from this module
-    /// into `in_flight_temps` welds the two and `transfer_sides` into one module
+    /// in the app, means the engine's, through the scope; `in_flight_temps`
+    /// resolves it. ❌ Don't resolve it here: a call from this module into
+    /// `in_flight_temps` welds the two and `transfer_sides` into one module
     /// cycle.
     pub(super) in_flight_ledger: Option<super::in_flight_temps::Ledger>,
     /// The newest `write-progress` this operation emitted, kept so whoever has

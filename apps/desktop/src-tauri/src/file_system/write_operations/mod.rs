@@ -115,12 +115,12 @@ use std::sync::Arc;
 pub use event_sinks::{OperationEventSink, ScanPreviewEventSink};
 
 // Re-export public types
-/// The quit teardown's fence over that same ledger: everything recorded is with
-/// the kernel before the process ends, so the next launch's sweep sees it.
+/// Why a second `Operations::claim_ledger` refused.
+pub(crate) use in_flight_temps::AlreadyClaimed;
+/// The quit teardown's fence over the installed engine's in-flight ledger:
+/// everything recorded is with the kernel before the process ends, so the next
+/// launch's sweep sees it.
 pub use in_flight_temps::flush as flush_in_flight_temps;
-/// Points the in-flight transfer-partial ledger at the app data dir and clears
-/// what an earlier run left behind. Startup only, before any copy can start.
-pub use in_flight_temps::init_and_sweep as init_and_sweep_in_flight_temps;
 pub(crate) use scan_cache::{ScanCostFacts, cached_cost_facts};
 pub use scan_preview::{cancel_scan_preview, get_scan_preview_totals, start_scan_preview};
 pub use state::{
@@ -325,13 +325,30 @@ pub(crate) struct Inner {
 /// this type instead.
 pub(in crate::file_system::write_operations) struct EngineStores {
     previews: Arc<scan_cache::ScanPreviews>,
+    /// What this engine has on a disk that isn't the user's file yet. In
+    /// memory until the engine's one claim points it at a data dir.
+    ledger: in_flight_temps::Ledger,
+    /// Set by the claim, once ever (`Operations::claim_ledger`).
+    ledger_claimed: std::sync::atomic::AtomicBool,
 }
 
 impl EngineStores {
     fn new() -> Self {
         Self {
             previews: Arc::new(scan_cache::ScanPreviews::new()),
+            ledger: in_flight_temps::Ledger::new(),
+            ledger_claimed: std::sync::atomic::AtomicBool::new(false),
         }
+    }
+
+    /// The in-flight ledger every operation on this engine records into.
+    pub(in crate::file_system::write_operations) fn ledger(&self) -> &in_flight_temps::Ledger {
+        &self.ledger
+    }
+
+    /// Takes the ledger's one claim: `true` the first time, `false` ever after.
+    pub(in crate::file_system::write_operations) fn take_ledger_claim(&self) -> bool {
+        !self.ledger_claimed.swap(true, std::sync::atomic::Ordering::SeqCst)
     }
 
     /// Every scan preview this engine knows about, in flight or settled.

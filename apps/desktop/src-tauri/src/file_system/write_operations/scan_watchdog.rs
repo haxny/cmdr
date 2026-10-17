@@ -353,7 +353,6 @@ impl ScanWatchdog {
         if let Some(previews) = self.previews.upgrade() {
             previews.settle_preview(&self.preview_id, ScanOutcome::Error(failure), None);
         }
-
         events.emit_error(ScanPreviewErrorEvent {
             preview_id: self.preview_id.clone(),
             message,

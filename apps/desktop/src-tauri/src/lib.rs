@@ -378,23 +378,24 @@ pub fn run() {
             // Point preview-in-zip temp-extraction at a per-instance dir under the app
             // data dir (so side-by-side dev/prod/worktree instances never reap each
             // other's live temps), and reap any `.cmdr-viewer-*` orphan left by a crash.
-            if let Ok(data_dir) = config::resolved_app_data_dir(app.handle()) {
+            let data_dir = config::resolved_app_data_dir(app.handle()).ok();
+            if let Some(data_dir) = &data_dir {
                 file_viewer::init_materialize_dir(data_dir.join("viewer-extract"));
                 // "Open with" on a file inside an archive gets its own dir and prefix
                 // for the same reason, and its own startup-only reaper.
                 file_viewer::init_open_with_extract_dir(data_dir.join("open-with-extract"));
-
-                // Point the leftover ledger at the data dir and settle what an
-                // earlier run left (a quit or a crash mid-copy), each under the rules
-                // its kind gets. Before any copy can start, so nothing we're about to
-                // write is in the set we sweep. The returned handle is dropped on
-                // purpose: a recorded leftover can sit on a dead mount where `unlink`
-                // blocks for minutes, and a launch must never wait on that. Runs
-                // before the volume registry below by design: one on a share is held
-                // and settled when that volume arrives, rather than chased from here.
-                // See `file_system/write_operations/in_flight_temps.rs`.
-                drop(file_system::write_operations::init_and_sweep_in_flight_temps(&data_dir));
             }
+
+            // The write engine claims its leftover ledger: points it at the data dir
+            // and settles what an earlier run left (a quit or a crash mid-copy),
+            // each under the rules its kind gets. After the instance lock above (no
+            // other process holds this data dir) and before any copy can start, so
+            // nothing we're about to write is in the set we sweep. Unconditional: with
+            // no data dir the ledger runs unpersisted and the engine reports it. Runs
+            // before the volume registry below by design: a leftover on a share is
+            // held and settled when that volume arrives, rather than chased from here.
+            // See `operations_host::claim_ledger`.
+            operations_host::claim_ledger(data_dir.as_deref());
 
             // Initialize the volume manager with the root volume
             file_system::init_volume_manager();

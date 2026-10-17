@@ -61,10 +61,10 @@ impl Ledger {
         self.store().log = None;
     }
 
-    /// [`init_and_sweep`] against this ledger: a launch that replays
+    /// A claim's launch against this ledger, on the shared engine's host: a launch that replays
     /// `data_dir`'s log.
     pub(in crate::file_system::write_operations) fn launch_in(&self, data_dir: &Path) -> SweepHandle {
-        self.init_and_sweep(data_dir)
+        self.init_and_sweep(data_dir, super::super::installed().host_arc())
     }
 
     /// The set this ledger currently believes is on disk.

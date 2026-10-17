@@ -1,8 +1,9 @@
 //! What a launch, and a drive coming back, do with what the ledger recorded.
 //!
-//! One set of rules, run from two places: `init_and_sweep` at startup, and the
-//! volume registry's arrival announcement whenever a volume a record waits on
-//! shows up. ❗ They must stay ONE set. A leftover on a USB stick meets whichever
+//! One set of rules, run from two places: the engine's ledger claim at startup
+//! (`Operations::claim_ledger`), and the volume registry's arrival announcement
+//! whenever a volume a record waits on shows up. Both run on the claiming
+//! engine's host, which they're handed. ❗ They must stay ONE set. A leftover on a USB stick meets whichever
 //! of the two happens first, and rules that drifted apart would mean the drive's
 //! fate depended on whether it was plugged in at launch.
 //!
@@ -44,7 +45,7 @@ use std::sync::Arc;
 use cmdr_fs::metadata::{RemovalRefusal, remove_file_clearing_blockers};
 
 use super::{ItemHome, ItemKind, Ledger, Record, RecordedTemp, SweepTally, TrackedItem};
-use crate::file_system::write_operations::host;
+use crate::file_system::write_operations::host::EngineHost;
 use crate::file_system::write_operations::transfer_sides::root_is_listed;
 use crate::file_system::write_operations::types::MoveLeftoversKeptEvent;
 use crate::file_system::write_operations::unique_name::{NameCandidates, RESCUE_NAME_ATTEMPTS, recovered_sibling};
@@ -57,19 +58,15 @@ use cmdr_fs::ignore_poison::IgnorePoison;
 /// Settles the records an earlier run left that the local filesystem can answer
 /// for on its own, then takes whatever pending volume is already reachable.
 ///
-/// Runs on its own thread (`init_and_sweep` says why nothing waits on it), so
+/// Runs on its own thread (`Operations::claim_ledger` says why nothing waits on it), so
 /// blocking filesystem calls inside the async rules are free here.
-pub(super) fn persisted_orphans(ledger: &Ledger, locals: &[Record]) -> SweepTally {
+pub(super) fn persisted_orphans(ledger: &Ledger, host: &EngineHost, locals: &[Record]) -> SweepTally {
     // Legal here and only here: this is the sweep's own thread, never a runtime
     // worker, so `block_on` parks nothing the app shares.
-    // Before `install` nothing is settled: every record stays for the next run.
-    let Some(host) = host::installed_for("the leftover sweep") else {
-        return SweepTally::default();
-    };
     let runtime = host.runtime();
     let mut tally = SweepTally::default();
     for record in locals {
-        runtime.block_on(settle_and_record(ledger, record, &mut tally));
+        runtime.block_on(settle_and_record(ledger, host, record, &mut tally));
     }
 
     // A volume registered before the sweep thread got here (the boot volume, an
@@ -81,7 +78,7 @@ pub(super) fn persisted_orphans(ledger: &Ledger, locals: &[Record]) -> SweepTall
             continue;
         }
         let claimed = ledger.claim_pending(&volume_id);
-        tally.add(runtime.block_on(on_volume(ledger, &volume_id, claimed)));
+        tally.add(runtime.block_on(on_volume(ledger, host, &volume_id, claimed)));
     }
     // ASSIGNED, not added: a record a reachable volume then refused is already
     // back in `pending`, so counting both would report it twice. What's still
@@ -107,24 +104,21 @@ pub(super) fn persisted_orphans(ledger: &Ledger, locals: &[Record]) -> SweepTall
 /// mount for 30-120 s. On a runtime worker that parks a thread the whole app
 /// shares. "It's only a handful of records" is today's shape, not a property: a
 /// drive back from a long trip can carry many.
-pub(super) fn on_volume_arrival(ledger: &Ledger, volume_id: &str) {
-    // Asked before the claim, so a call before `install` leaves the records pending.
-    let Some(host) = host::installed_for("the leftover sweep on a volume's arrival") else {
-        return;
-    };
+pub(super) fn on_volume_arrival(ledger: &Ledger, host: &Arc<EngineHost>, volume_id: &str) {
     let claimed = ledger.claim_pending(volume_id);
     if claimed.is_empty() {
         return;
     }
     let volume_id = volume_id.to_string();
     let ledger = ledger.clone();
+    let host = Arc::clone(host);
     let runtime = host.runtime();
     runtime.clone().spawn_blocking(move || {
         // The same shape the launch sweep runs in: a blocking context that
         // `block_on`s the volume-backed rules. One shape for both entry points
         // is what keeps the rules themselves a single set. A blocking-pool
         // thread is no runtime worker, so `block_on` is legal here.
-        let tally = runtime.block_on(on_volume(&ledger, &volume_id, claimed));
+        let tally = runtime.block_on(on_volume(&ledger, &host, &volume_id, claimed));
         report(&tally);
     });
 }
@@ -135,18 +129,18 @@ pub(super) fn on_volume_arrival(ledger: &Ledger, volume_id: &str) {
 /// arrives (this session or a later launch) the sweep tries again. ❌ Never
 /// reconnects or authenticates: the volume is used exactly as the registry hands
 /// it over.
-async fn on_volume(ledger: &Ledger, volume_id: &str, records: Vec<Record>) -> SweepTally {
+async fn on_volume(ledger: &Ledger, host: &EngineHost, volume_id: &str, records: Vec<Record>) -> SweepTally {
     let mut tally = SweepTally::default();
     for record in &records {
-        settle_and_record(ledger, record, &mut tally).await;
+        settle_and_record(ledger, host, record, &mut tally).await;
     }
     log::debug!(target: "copy", "settled {} recorded leftovers on `{volume_id}`: {tally:?}", records.len());
     tally
 }
 
 /// Settles one record and puts the ledger in step with what happened.
-async fn settle_and_record(ledger: &Ledger, record: &Record, tally: &mut SweepTally) {
-    match settle(record).await {
+async fn settle_and_record(ledger: &Ledger, host: &EngineHost, record: &Record, tally: &mut SweepTally) {
+    match settle(host, record).await {
         Outcome::Deferred => {
             ledger.defer(vec![record.clone()]);
             // A volume-homed record is counted once at the end, by what's still
@@ -196,10 +190,10 @@ impl Outcome {
 }
 
 /// Decides one record's fate without touching the ledger.
-async fn settle(record: &Record) -> Outcome {
+async fn settle(host: &EngineHost, record: &Record) -> Outcome {
     match record {
-        Record::Legacy(temp) => settle_legacy(temp).await,
-        Record::Tracked(item) => settle_tracked(item).await,
+        Record::Legacy(temp) => settle_legacy(host, temp).await,
+        Record::Tracked(item) => settle_tracked(host, item).await,
     }
 }
 
@@ -210,7 +204,7 @@ async fn settle(record: &Record) -> Outcome {
 /// deletes a user's original on sight — an aside says the replacement that
 /// displaced it never landed. A kinded record is the only way to ask for
 /// anything but a plain removal.
-async fn settle_legacy(temp: &RecordedTemp) -> Outcome {
+async fn settle_legacy(host: &EngineHost, temp: &RecordedTemp) -> Outcome {
     match temp {
         RecordedTemp::Local(path) => {
             if !is_a_staged_partial(path) {
@@ -225,9 +219,6 @@ async fn settle_legacy(temp: &RecordedTemp) -> Outcome {
             // `resolve`, not `get`: the site is passing a path, and a read-only
             // routed volume (an archive, a git snapshot) is one this sweep must
             // never delete through.
-            let Some(host) = host::installed_for("the leftover sweep") else {
-                return Outcome::Deferred;
-            };
             let resolved = host.volumes().resolve(&temp.volume_id, &temp.path).await;
             let is_routed = resolved.is_routed();
             let Some(volume) = resolved.volume.filter(|_| !is_routed) else {
@@ -254,13 +245,13 @@ fn is_a_staged_partial(path: &Path) -> bool {
 }
 
 /// An `A` line: the kind decides.
-async fn settle_tracked(item: &TrackedItem) -> Outcome {
+async fn settle_tracked(host: &EngineHost, item: &TrackedItem) -> Outcome {
     let Located::At {
         surface,
         path,
         destination,
         drive_name,
-    } = locate(item).await
+    } = locate(host, item).await
     else {
         return Outcome::Deferred;
     };
@@ -274,6 +265,7 @@ async fn settle_tracked(item: &TrackedItem) -> Outcome {
         return Outcome::LeftAlone;
     }
     settle_kind(
+        host,
         &surface,
         &item.kind,
         &path,
@@ -299,7 +291,7 @@ enum Located {
 }
 
 /// Resolves a record's stored paths into paths some filesystem can answer for.
-async fn locate(item: &TrackedItem) -> Located {
+async fn locate(host: &EngineHost, item: &TrackedItem) -> Located {
     let destination = item.kind.destination().map(Path::to_path_buf);
     match &item.home {
         ItemHome::Local => Located::At {
@@ -310,8 +302,7 @@ async fn locate(item: &TrackedItem) -> Located {
         },
         ItemHome::Mount { volume_id } => {
             // Plain `get`: only the mount's root is read; the item is reached at `root.join(path)`.
-            let Some(volume) = host::installed_for("the leftover sweep").and_then(|host| host.volumes().get(volume_id))
-            else {
+            let Some(volume) = host.volumes().get(volume_id) else {
                 return Located::Unreachable;
             };
             let root = volume.root().to_path_buf();
@@ -332,9 +323,6 @@ async fn locate(item: &TrackedItem) -> Located {
             }
         }
         ItemHome::VolumeSpace { volume_id } => {
-            let Some(host) = host::installed_for("the leftover sweep") else {
-                return Located::Unreachable;
-            };
             let resolved = host.volumes().resolve(volume_id, &item.path).await;
             let is_routed = resolved.is_routed();
             let Some(volume) = resolved.volume.filter(|_| !is_routed) else {
@@ -372,6 +360,7 @@ fn name_matches_kind(kind: &ItemKind, path: &Path) -> bool {
 
 /// The rules themselves, one arm per kind.
 async fn settle_kind(
+    host: &EngineHost,
     surface: &Surface,
     kind: &ItemKind,
     path: &Path,
@@ -391,7 +380,7 @@ async fn settle_kind(
                     "an unfinished move's staging folder still holds files, so it stays where it is: {}",
                     path.display()
                 );
-                announce_leftovers_kept(drive_name, path);
+                announce_leftovers_kept(host, drive_name, path);
                 Outcome::LeftAlone
             }
         },
@@ -691,7 +680,7 @@ impl Surface {
 /// Mac-internal staging folder (a move whose destination is the boot volume)
 /// gets the `warn` alone. Its disk never goes away, so it meets this rule again
 /// at the next launch.
-fn announce_leftovers_kept(drive_name: Option<&str>, path: &Path) {
+fn announce_leftovers_kept(host: &EngineHost, drive_name: Option<&str>, path: &Path) {
     let Some(volume_name) = drive_name else {
         return;
     };
@@ -707,9 +696,7 @@ fn announce_leftovers_kept(drive_name: Option<&str>, path: &Path) {
     KEPT_NOTICES
         .lock_ignore_poison()
         .push((path.to_path_buf(), notice.clone()));
-    if let Some(host) = host::installed_for("the staging-leftovers notice") {
-        host.events().staging_leftovers_kept(notice);
-    }
+    host.events().staging_leftovers_kept(notice);
 }
 
 /// Test-only: every staging-folder notice raised, with the folder it named, so a

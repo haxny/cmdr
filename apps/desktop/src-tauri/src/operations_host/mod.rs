@@ -105,6 +105,34 @@ pub(crate) fn operations_in(slot: &'static OnceLock<Operations>) -> Result<&'sta
     Err(NotInstalled)
 }
 
+/// The app's write engine claims its in-flight ledger in `data_dir`: the one
+/// claim that reads, truncates, and sweeps the ledger file, taken on the engine
+/// [`install`] set and no other (a duplicate that lost the install was dropped
+/// untouched).
+///
+/// Call once in `setup()`, unconditionally, after the instance lock claims the
+/// data dir and before anything can start a copy. With no data dir the ledger
+/// runs unpersisted and the engine raises an error report. The sweep's handle
+/// is dropped on purpose: a recorded leftover can sit on a dead mount where
+/// `unlink` blocks for minutes, and a launch must never wait on that.
+pub fn claim_ledger(data_dir: Option<&std::path::Path>) {
+    claim_ledger_in(&OPERATIONS, data_dir);
+}
+
+/// [`claim_ledger`] on a given slot, so a test can hand in its own.
+pub(crate) fn claim_ledger_in(slot: &'static OnceLock<Operations>, data_dir: Option<&std::path::Path>) {
+    let Ok(engine) = operations_in(slot) else {
+        crate::log_error!(target: "op_manager", "the leftover ledger was claimed before the write engine was installed; skipped");
+        return;
+    };
+    match engine.claim_ledger(data_dir) {
+        Ok(sweep) => drop(sweep),
+        Err(write_operations::AlreadyClaimed) => {
+            crate::log_error!(target: "op_manager", "the leftover ledger was claimed twice; keeping the first claim");
+        }
+    }
+}
+
 /// What a start refused before `install` answers: the frontend's generic I/O
 /// failure, which its error dialog renders without naming a file, plus an error
 /// report, since the app can't reach this after `setup()`.
@@ -153,6 +181,7 @@ mod tests {
     use cmdr_operation_log::writer::OpenOperation;
 
     use crate::file_system::write_operations::Operations;
+    use crate::file_system::write_operations::host::testing::{FakeVolumes, RecordingEngineEvents};
 
     fn header(op_id: &str) -> OpenOperation {
         OpenOperation {
@@ -186,6 +215,38 @@ mod tests {
         let log = OperationLog::detached();
         let engine = super::app_answers(None, log.clone()).build();
         assert!(journals_into(&engine, &log));
+    }
+
+    /// The app claims the installed engine's leftover ledger, and only once: a
+    /// second claim is refused and leaves the ledger file as the first left it.
+    #[test]
+    fn the_app_claims_the_installed_engines_ledger_once() {
+        static SLOT: std::sync::OnceLock<Operations> = std::sync::OnceLock::new();
+        let engine = Operations::builder(
+            Arc::new(FakeVolumes::default()),
+            Arc::new(RecordingEngineEvents::default()),
+        )
+        .build();
+        assert!(SLOT.set(engine.clone()).is_ok());
+        let dir = crate::test_support::TestDir::new("app-ledger-claim");
+        // The persisted file's name, which every build since the ledger existed reads.
+        let ledger_file = dir.join("in-flight-temps.log");
+
+        super::claim_ledger_in(&SLOT, Some(&*dir));
+        assert!(ledger_file.exists(), "the claim opened the ledger in the data dir");
+        std::fs::write(&ledger_file, b"+\"/a/live.cmdr-tmp-1\"\n").expect("a live record");
+        super::claim_ledger_in(&SLOT, Some(&*dir));
+
+        assert_eq!(
+            std::fs::read(&ledger_file).expect("the ledger file"),
+            b"+\"/a/live.cmdr-tmp-1\"\n",
+            "a second claim neither truncates nor replays the ledger"
+        );
+        assert_eq!(
+            engine.claim_ledger(Some(&*dir)).err(),
+            Some(crate::file_system::write_operations::AlreadyClaimed),
+            "the claim was the installed engine's"
+        );
     }
 
     /// The test binary's shared engine journals into `operation_log()`, which is

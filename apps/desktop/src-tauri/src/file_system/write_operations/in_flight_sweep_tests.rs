@@ -34,6 +34,7 @@ fn displaced(name: &str, original: &[u8]) -> Displaced {
 
 async fn settle_aside(kind: ItemKind, fixture: &Displaced) -> Outcome {
     settle_kind(
+        crate::file_system::write_operations::installed().host(),
         &Surface::Local,
         &kind,
         &fixture.aside,
@@ -141,6 +142,7 @@ async fn a_folder_set_aside_for_a_file_is_never_removed_recursively() {
     let expected_size = std::fs::metadata(&destination).expect("stat").len();
 
     let outcome = settle_kind(
+        crate::file_system::write_operations::installed().host(),
         &Surface::Local,
         &ItemKind::FileAside {
             destination: destination.clone(),
@@ -219,7 +221,15 @@ async fn a_staging_folder_with_files_in_it_is_never_removed() {
     std::fs::create_dir(&staging).expect("create the staging folder");
     std::fs::write(staging.join("footage.mov"), b"a whole staged file").expect("stage a file");
 
-    let outcome = settle_kind(&Surface::Local, &ItemKind::StagingDir, &staging, None, None).await;
+    let outcome = settle_kind(
+        crate::file_system::write_operations::installed().host(),
+        &Surface::Local,
+        &ItemKind::StagingDir,
+        &staging,
+        None,
+        None,
+    )
+    .await;
 
     assert_eq!(outcome, Outcome::LeftAlone);
     assert_eq!(
@@ -236,7 +246,15 @@ async fn an_empty_staging_folder_is_removed() {
     let staging = dir.join(format!(".cmdr-staging-{}", uuid::Uuid::new_v4()));
     std::fs::create_dir(&staging).expect("create the staging folder");
 
-    let outcome = settle_kind(&Surface::Local, &ItemKind::StagingDir, &staging, None, None).await;
+    let outcome = settle_kind(
+        crate::file_system::write_operations::installed().host(),
+        &Surface::Local,
+        &ItemKind::StagingDir,
+        &staging,
+        None,
+        None,
+    )
+    .await;
 
     assert_eq!(outcome, Outcome::Swept);
     assert!(!staging.exists());
@@ -302,7 +320,11 @@ async fn a_staging_folder_on_a_drive_that_comes_back_keeps_what_is_inside_it() {
         Some(b"the whole staged file"),
     );
 
-    let outcome = settle(&staging_record(&drive)).await;
+    let outcome = settle(
+        crate::file_system::write_operations::installed().host(),
+        &staging_record(&drive),
+    )
+    .await;
 
     assert_eq!(outcome, Outcome::LeftAlone);
     assert_eq!(
@@ -317,7 +339,11 @@ async fn a_staging_folder_on_a_drive_that_comes_back_keeps_what_is_inside_it() {
 async fn an_empty_staging_folder_on_a_drive_that_comes_back_is_removed() {
     let drive = returned_drive("sweep-arrival-staging-empty", "in-flight-sweep-test-stick-empty", None);
 
-    let outcome = settle(&staging_record(&drive)).await;
+    let outcome = settle(
+        crate::file_system::write_operations::installed().host(),
+        &staging_record(&drive),
+    )
+    .await;
 
     assert_eq!(outcome, Outcome::Swept);
     assert!(!drive.staging.exists());
@@ -338,7 +364,14 @@ async fn a_staging_folder_kept_on_a_drive_raises_the_notice() {
         Some(b"the whole staged file"),
     );
 
-    assert_eq!(settle(&staging_record(&drive)).await, Outcome::LeftAlone);
+    assert_eq!(
+        settle(
+            crate::file_system::write_operations::installed().host(),
+            &staging_record(&drive)
+        )
+        .await,
+        Outcome::LeftAlone
+    );
 
     let notices = kept_notices_for(&drive.staging);
     assert_eq!(notices.len(), 1, "one notice for the one kept folder");
@@ -361,7 +394,10 @@ async fn a_staging_folder_kept_on_the_mac_only_warns() {
         path: staging.clone(),
     });
 
-    assert_eq!(settle(&record).await, Outcome::LeftAlone);
+    assert_eq!(
+        settle(crate::file_system::write_operations::installed().host(), &record).await,
+        Outcome::LeftAlone
+    );
     assert!(staging.join("footage.mov").exists(), "the staged file stays");
     assert!(
         kept_notices_for(&staging).is_empty(),
@@ -382,7 +418,10 @@ async fn a_record_whose_drive_isnt_here_decides_nothing() {
         path: PathBuf::from(".cmdr-staging-2a6f1f1e-0000-7000-8000-000000000000"),
     });
 
-    assert_eq!(settle(&record).await, Outcome::Deferred);
+    assert_eq!(
+        settle(crate::file_system::write_operations::installed().host(), &record).await,
+        Outcome::Deferred
+    );
 }
 
 /// The name gate, which is the whole defense against a corrupted or hand-edited
@@ -445,7 +484,15 @@ async fn a_locked_or_deny_delete_temp_is_cleared_and_swept() {
     add_deny_delete_acl(&acl);
 
     for temp in [&locked, &acl] {
-        let outcome = settle_kind(&Surface::Local, &ItemKind::Temp, temp, None, None).await;
+        let outcome = settle_kind(
+            crate::file_system::write_operations::installed().host(),
+            &Surface::Local,
+            &ItemKind::Temp,
+            temp,
+            None,
+            None,
+        )
+        .await;
         assert_eq!(outcome, Outcome::Swept, "{}", temp.display());
         assert!(!temp.exists());
     }

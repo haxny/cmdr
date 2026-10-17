@@ -64,6 +64,13 @@ pub(crate) enum OperationErrorReport {
     /// The admission pass found a queued op with no deferred start, and freed
     /// its lanes.
     AdmittedWithoutStart { operation_id: String },
+
+    // Startup.
+    /// The engine claimed its in-flight ledger with no data dir to keep it in,
+    /// so this session's leftovers live in memory only: a crash or a force-quit
+    /// leaves them for the hour-gated directory scan instead of the next
+    /// launch's sweep.
+    LedgerUnpersisted,
 }
 
 /// Which attempt to give a displaced original a name back failed.

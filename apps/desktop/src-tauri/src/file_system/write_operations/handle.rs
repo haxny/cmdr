@@ -157,6 +157,12 @@ impl Operations {
         &self.inner.host
     }
 
+    /// The same host, shared, for work that outlives the call (a listener, a
+    /// sweep thread), which holds it weakly where it runs in the background.
+    pub(super) fn host_arc(&self) -> &Arc<EngineHost> {
+        &self.inner.host
+    }
+
     /// The operation log this engine journals into.
     pub(crate) fn operation_log(&self) -> &OperationLog {
         &self.inner.operation_log
