@@ -1850,6 +1850,25 @@ host-swap mistake is still caught where it was caught before.
 finds only comments. Lanes per commit: `desktop-rust-tests`, `desktop-rust-clippy`, `desktop-rust-test-sleep`; a plain
 threaded `cargo test` over the engine at the end.
 
+**What landed differently** (recorded at execution):
+
+- **A plain `VolumeHost::detached()` wasn't a faithful swap**: the local reader orders a listing through
+  `ListingHost::sort_listing`, detached orders by bytes with folders first, and the walkers take that order as is. So
+  the 39 files got `host::testing::pane_order_host()` (no panes, the app's sort in English), pinned against
+  `AppListings` by `operations_host::name_order::tests::the_engine_test_host_lists_in_the_order_the_apps_host_does`.
+- **Oracle cells run on panes of their own**: `host::testing::PaneListings` (a `cmdr_listing` test engine answering
+  `ListingHost` as `AppListings` does) and `TestOperations::seeing(&panes)`, which replaced `seeing_app_listings()`.
+  `FakeVolumes` gained arrival announcements, which let `in_flight_temps_tests` and `transfer/real_image` (each cell on
+  an engine of its own) leave the app; `real_image` stays in the engine, so M8a's `git mv` carries it and its lane
+  atoms.
+- **Moved app-side** (14 cells): `operations_host/registry_routing_tests.rs` (8), `copy_snapshot_out_tests.rs` (4),
+  `log_redaction_tests.rs` (1), and the registry's arrival cell to `file_system/volume/manager/arrival_tests.rs`. The
+  quit cell split: the engine pins the `Running` `Copy` row, `quit::tests` pins that it holds. `testing` grew by four
+  (`ArchiveEditRequest`, `archive_inner_exists`, `OperationSummaryText`, `ScanTarget`); `WedgedVolume` moved to
+  `cmdr_fs::testing`.
+- Plain threaded `cargo test -p cmdr --lib --features cmdr/virtual-mtp -- file_system::write_operations operation_log`:
+  1,969 passed, 11 ignored.
+
 ### M8a: The move
 
 **Scope.** `git mv apps/desktop/src-tauri/src/file_system/write_operations crates/cmdr-operations/src` (minus what stays
