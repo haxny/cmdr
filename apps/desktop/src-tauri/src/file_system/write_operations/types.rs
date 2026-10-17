@@ -412,7 +412,7 @@ pub struct OperationStatus {
     /// The manager's own lifecycle status. `None` once the operation has left the
     /// registry and only its status-cache row survives.
     ///
-    /// ❌ Never re-derive one from `WRITE_OPERATION_STATE.contains` or any other
+    /// ❌ Never re-derive one from the state registry's `contains` or any other
     /// presence test: the entry lands at spawn and survives a pause, so presence
     /// is `true` for queued, running, and parked alike. DETAILS § "Lifecycle
     /// status and `operations-changed`".

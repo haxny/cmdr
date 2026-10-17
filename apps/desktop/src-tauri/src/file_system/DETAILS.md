@@ -101,7 +101,7 @@ union is the LISTING's question only: the sweep that removes one asks the strict
 only copy and a look-alike name must never reach a `remove_dir`.
 
 **Which token the app hands it.** An operation's temps carry a `Weak` to `WriteOperationState`'s liveness token, dropped
-by `end_liveness` wherever the operation leaves `WRITE_OPERATION_STATE`. ❌ Not `Arc<WriteOperationState>` reachability —
+by `end_liveness` wherever the operation leaves its engine's registry. ❌ Not `Arc<WriteOperationState>` reachability —
 a task the driver abandoned holds one of those too, and the whole point is that its leftovers stop being hidden. A temp
 minted outside any operation (the local safe-overwrite's two files) passes `None` and hides only until its function
 returns.

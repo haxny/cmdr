@@ -29,7 +29,7 @@ Pre-flight scans reuse cached listings when the source volume reports `WatchCove
 Where a symbol lives and who calls it: `codegraph_search` / `codegraph_explore`. The spine: `CLAUDE.md` § Module map.
 The full top-level inventory is here:
 
-- `mod.rs` (public API + the `start_write_operation` lifecycle), `host/` (what the engine needs from the app: the runtime, the volumes, the engine-wide events, and the optional seams, § "The engine's host"), `manager.rs` (registry + lane admission; its request answers in `manager/wire.rs`, reordering the line in `manager/reorder.rs`, and a retained failure's way to start again in `manager/retry.rs`, § "Retained failures"), `state.rs`
+- `mod.rs` (the `Operations` handle and its `Inner`, the public API, and the `start_write_operation` lifecycle), `handle.rs` (building an `Operations` and reaching its parts), `scope.rs` (`OpScope`, what one operation reaches its engine through), `host/` (what the engine needs from the app: the runtime, the volumes, the engine-wide events, and the optional seams, § "The engine's host"), `manager.rs` (registry + lane admission; its request answers in `manager/wire.rs`, reordering the line in `manager/reorder.rs`, and a retained failure's way to start again in `manager/retry.rs`, § "Retained failures"), `state.rs`
   (`WriteOperationState`, the settle guard, plus `state/registry.rs`: `WriteOperationRegistry` and its walks, and
   `state/controls.rs`:
   the by-id cancel / abort / pause / resume / conflict-answer entry points, re-exported through `state`, and
@@ -298,7 +298,7 @@ sat (`archive_edit/DETAILS.md` § "Local vs remote: one closure, one dispatcher"
 ```
 Frontend
   → WriteOperationState created (AtomicU8 intent, oneshot channel for Stop conflicts)
-  → stored in WRITE_OPERATION_STATE + OPERATION_STATUS_CACHE
+  → stored in the engine's registry + status cache (the state carries the op's `OpScope`)
   → operationId returned to frontend immediately (dialog opens, cancel is possible)
   → tokio::spawn (async wrapper)
       → tokio::task::spawn_blocking (local I/O) or direct async (volume ops)
@@ -694,7 +694,7 @@ errno and no folder, since nothing there proved one.
 
 Every write-op driver MUST announce its destination BEFORE issuing the syscall. The host's answer registers it with the downloads watcher's ignore set (`operations_host/own_writes.rs` → `downloads::note_pending_write_for_cmdr`), which is what makes the watcher silently suppress events Cmdr itself caused, so the user doesn't see a "Downloaded foo.bin" toast when they just used Cmdr to copy 100 files into `~/Downloads`.
 
-**Contract:** call `host::installed().own_writes().announce(&dest_path)` (the `OwnWrites` seam, `host/own_writes.rs`) immediately before the write syscall (or the volume-trait equivalent: `Volume::write_from_stream`, `Volume::create_file`, `Volume::create_directory`, `Volume::rename`, `Volume::delete`). Once per path per file landing, never per chunk: the seam's `dyn` call sits beside a syscall, which the dispatch rule allows.
+**Contract:** call `state.scope().host().own_writes().announce(&dest_path)` (the `OwnWrites` seam through the op's scope, `host/own_writes.rs`) immediately before the write syscall (or the volume-trait equivalent: `Volume::write_from_stream`, `Volume::create_file`, `Volume::create_directory`, `Volume::rename`, `Volume::delete`). Once per path per file landing, never per chunk: the seam's `dyn` call sits beside a syscall, which the dispatch rule allows.
 
 **Locked-in scoping:** the prefix check lives INSIDE the downloads helper (and the underlying `IgnoreSet::note_pending`). Call sites invoke unconditionally; paths outside the resolved Downloads root silently no-op. **Don't add `if path.starts_with(downloads_dir)` guards at call sites**: centralizing the scope in the helper keeps it from drifting across call sites (the downloads watcher's ignore-set design lives in the `downloads` module docs).
 
@@ -708,7 +708,7 @@ Example placement:
 
 ```rust
 // In `copy_single_item` (transfer/copy/single_item.rs), just before `copy_file_with_strategy`:
-host::installed().own_writes().announce(&actual_dest);
+state.scope().host().own_writes().announce(&actual_dest);
 let bytes = copy_file_with_strategy(source, &actual_dest, ..)?;
 ```
 
@@ -729,8 +729,15 @@ slot (`write_operations::installed()`), until they call `operations_host::operat
   the APP runtime"), the stall watchdog, the arrival sweep's `spawn_blocking`, and the sweep's `block_on`s.
 - **The same `VolumeHost` answers the panes' questions and backs every volume the engine mints.** The fresh-listing
   oracle (`authoritative_listing`), the archive pane refresh, and the pane patch after a local create go through
-  `host::installed().listings()`; a spool, an upload reader, or a pull's scratch folder is a `LocalPosixVolume` over
-  `host::installed().volume_host()`.
+  the op's `scope.host().listings()`; a spool, an upload reader, or a pull's scratch folder is a `LocalPosixVolume` over
+  `scope.host().volume_host()`.
+- **An operation reaches its engine through its `OpScope`** (`scope.rs`): the host's seams, the status cache, and the
+  op's `OpJournal` once it opens, built by the engine that runs it. A managed op's rides on its `WriteOperationState`
+  (`state.scope()`); an instant op builds one beside `run_instant`. A scope holds parts of the engine, never the engine
+  (the registry holds the states, so that would be a cycle), and ❌ a missing scope never falls back to another log.
+  Entry points (starters, routing, previews, pre-flight checks) take the engine as `self` or a parameter; the free
+  functions callers outside the engine use are shims over the installed engine until they call
+  `operations_host::operations()` themselves.
 - **Which volume serves an id or a path goes through `OperationVolumes`** (`host/volumes.rs`): the registry's `get`,
   `resolve`, the archive-boundary questions, `find_by_root`, `forget_archive_index`, `on_volume_arrival`, and
   `unregistered` (why an id has no volume, as an `UnregisteredVolume`). Its supertrait is the rollback planner's
@@ -838,15 +845,15 @@ The user can move a WAITING op one place earlier or later (the queue window's �
 - **It answers with the new place** (`QueueMoveOutcome::Moved { position, waiting }`; `AtEdge` for a step off the front or back; `Unchanged` for a placement where it already is), counted among waiting ops, 1-based. The window announces that answer, so a screen reader hears where the op really is. Only `Moved` broadcasts.
 - **No admission pass.** Every pass leaves no admittable waiting op behind, and a reorder frees no lane, so the pass would admit nobody. What a reorder changes is who goes FIRST when a lane frees, which is the whole feature (`manager::tests::reorder::the_op_moved_to_the_front_is_the_one_admitted_next`).
 - **A new way to reorder is a new `Target` in `reorder.rs`**, ❌ not a second ordering mechanism.
-- Tests run on a private manager (`leaked_manager`): "the nearest waiting op" is a question about the WHOLE line, which a sibling test's op would answer on the global one.
+- Tests run on an engine they own (`owned_manager`): "the nearest waiting op" is a question about the WHOLE line, which a sibling test's op would answer on the shared one.
 
 ### Deferred start, not "spawn then block on a semaphore"
 
-A queued op holds only DATA describing how to begin: a boxed `FnOnce() -> Pin<Box<dyn Future + Send>>` (`DeferredStart`). The manager spawns it only on admission. Blocking a spawned op on a lane semaphore would pin a `spawn_blocking` pool thread idle per queued op — a leak that can deadlock the finite pool under many queued ops. Each deferred future owns the op end-to-end (the `WriteSettledGuard`, the actual transfer/delete, the terminal-event emit) and ends by calling `manager().on_settled(id)`.
+A queued op holds only DATA describing how to begin: a boxed `FnOnce(Operations) -> Pin<Box<dyn Future + Send>>` (`DeferredStart`). The manager spawns it only on admission, handing it the engine (the manager keeps a `Weak` to it and upgrades there), so a queued start owns nothing that keeps a dropped engine alive. Blocking a spawned op on a lane semaphore would pin a `spawn_blocking` pool thread idle per queued op — a leak that can deadlock the finite pool under many queued ops. Each deferred future owns the op end-to-end (the `WriteSettledGuard`, the actual transfer/delete, the terminal-event emit) and ends by calling `ops.manager().on_settled(id)` on the engine it was handed.
 
 ### Dequeue on settle — explicit, NOT in `Drop`
 
-`on_settled(id)` (the happy path) frees the op's lane slots, removes it from the registry, cleans `WRITE_OPERATION_STATE` + the status cache, and runs an admission pass (which may spawn the next op). It's sequenced after the terminal event, exactly where the old per-site cache cleanup ran. The `ManagedTaskGuard` is the panic safety net: held by each spawned task, its `Drop` frees lanes + cleans caches but NEVER spawns (no admission pass). Spawning during the previous op's unwind would re-enter the manager mid-panic (abort) or deadlock on a lock held up-stack. So a panicking op still releases its lanes, but the next op is admitted only on a healthy settle (the next registration's admission pass, or another op's `on_settled`, picks it up). The happy path calls `task_guard.disarm()` right before `on_settled` so its now-redundant Drop is a no-op. Pinned by `manager::tests::panicking_op_releases_its_lane_without_spawning_next`.
+`on_settled(id)` (the happy path) frees the op's lane slots, removes it from the registry, cleans the state registry + the status cache, and runs an admission pass (which may spawn the next op). It's sequenced after the terminal event, exactly where the old per-site cache cleanup ran. The `ManagedTaskGuard` is the panic safety net: held by each spawned task, its `Drop` frees lanes + cleans caches but NEVER spawns (no admission pass). Spawning during the previous op's unwind would re-enter the manager mid-panic (abort) or deadlock on a lock held up-stack. So a panicking op still releases its lanes, but the next op is admitted only on a healthy settle (the next registration's admission pass, or another op's `on_settled`, picks it up). The happy path calls `task_guard.disarm()` right before `on_settled` so its now-redundant Drop is a no-op. Pinned by `manager::tests::panicking_op_releases_its_lane_without_spawning_next`.
 
 ### Observing an admission pass (`admission_passes`)
 
@@ -864,7 +871,7 @@ Admission is otherwise invisible from outside: a pass that walks the queue and a
 
 ### The admission pass spawns admitted ops on the APP runtime, not the caller's
 
-The admission pass (from `spawn_managed` or `on_settled`) spawns each admitted op's deferred start on **the host's runtime (`host::installed().runtime()`), deliberately NOT `tokio::spawn`**. `tokio::spawn` binds to whatever runtime is current when the pass runs — and the pass can run on a runtime that has nothing to do with the op it's admitting. Admission is global and there is a lock-free window between an op's registration (`spawn_managed` inserts it Queued, drops the lock) and its own admission pass: a CONCURRENT op's `on_settled`, running on a different runtime, can reach the pass first and admit the freshly-registered op. So the runtime that spawns an op is racy, not "the op's own caller". The host's runtime pins every op to the one process-global runtime that outlives them all: the app's own (`operations_host` passes `volume_host::host()`, whose runtime is Tauri's), or `cmdr-fs`'s shared fallback in a test binary. ❌ Never a `Handle::current()` captured at setup: that's a caller's runtime again, one level up.
+The admission pass (from `spawn_managed` or `on_settled`) spawns each admitted op's deferred start on **the engine host's runtime (its `VolumeHost`'s), deliberately NOT `tokio::spawn`**. `tokio::spawn` binds to whatever runtime is current when the pass runs — and the pass can run on a runtime that has nothing to do with the op it's admitting. Admission is global and there is a lock-free window between an op's registration (`spawn_managed` inserts it Queued, drops the lock) and its own admission pass: a CONCURRENT op's `on_settled`, running on a different runtime, can reach the pass first and admit the freshly-registered op. So the runtime that spawns an op is racy, not "the op's own caller". The host's runtime pins every op to the one process-global runtime that outlives them all: the app's own (`operations_host` passes `volume_host::host()`, whose runtime is Tauri's), or `cmdr-fs`'s shared fallback in a test binary. ❌ Never a `Handle::current()` captured at setup: that's a caller's runtime again, one level up.
 
 In production this is a no-op (there is exactly one long-lived app runtime, so ambient and app runtime are identical). **The guard exists for the process-global-manager + per-runtime-caller topology**, which is the test harness: every `#[tokio::test]` runs on its own runtime, and with a bare `tokio::spawn` an op admitted by a runtime that is then torn down is orphaned — it never runs, never settles, and leaks its lane forever, wedging later ops (the observed nondeterministic `wait_until` timeouts). Pinned by `manager::tests::admitted_op_runs_even_if_the_admitting_runtime_is_dropped` (a throwaway runtime admits an op and is dropped without driving it; the op must still complete). This race is lane-INDEPENDENT — it hit even unique-lane ops — so a hermetic-lanes-only test fix could not close it; the guard is the actual fix.
 
@@ -877,7 +884,7 @@ Independently, the archive-edit tests still give each op its OWN lane (`archive_
 
 A live RECORD only ever holds `Queued` / `Running` / `Paused`: `Done` and `Cancelled` are declared but never assigned, because `on_settled` deletes the record before anything could set them. `Failed` is the one terminal status that reaches a snapshot, and only through the retained-failure list below, never on a record.
 
-**One lifecycle answer, and the query API carries it too.** `OperationStatus` (`get_operation_status`, the progress/detail query) reports the manager's `LifecycleStatus` in its `lifecycle` field, read through `manager().lifecycle_status(id)`. ❌ Never re-derive a lifecycle from `WRITE_OPERATION_STATE.contains` or any other presence test: `spawn_managed` inserts the state entry BEFORE admission and a paused op keeps it, so presence means "exists and hasn't been torn down" and is true for queued, running, and parked alike. A boolean in that spot reported a parked copy as running, which is what the pause/resume toggle steers by. `lifecycle` is `None` only in the window between an op settling and its status-cache row being unregistered. Pinned by `status_cache_tests::a_paused_operation_reports_paused_not_running` and `a_queued_operation_reports_queued`.
+**One lifecycle answer, and the query API carries it too.** `OperationStatus` (`get_operation_status`, the progress/detail query) reports the manager's `LifecycleStatus` in its `lifecycle` field, read through `manager().lifecycle_status(id)`. ❌ Never re-derive a lifecycle from the state registry's `contains` or any other presence test: `spawn_managed` inserts the state entry BEFORE admission and a paused op keeps it, so presence means "exists and hasn't been torn down" and is true for queued, running, and parked alike. A boolean in that spot reported a parked copy as running, which is what the pause/resume toggle steers by. `lifecycle` is `None` only in the window between an op settling and its status-cache row being unregistered. Pinned by `status_cache_tests::a_paused_operation_reports_paused_not_running` and `a_queued_operation_reports_queued`.
 
 `lifecycle_status(id)` reads live RECORDS only, so `None` means one thing: the manager no longer tracks this id. It deliberately does not consult retained failures, which it cannot reach anyway — a failure is retained from the same cleanup that unregisters the status-cache row, so `get_operation_status` has already returned `None` by then. `snapshot()` is the one place the two sources are joined.
 
@@ -1335,7 +1342,7 @@ runs as a managed op, driven by the `archive_edit/` module: `archive_edit/CLAUDE
 
 ## Busy-volumes set
 
-Drives "disable Eject while an op reads from / writes to this device" so a disconnect can't truncate an in-flight file. Lives in `status_cache.rs`, alongside the cache it derives from: `recompute_and_emit_busy_volumes` reads that module's own `OPERATION_STATUS_CACHE`, and register / unregister are the only two places membership can change, so the two can't be separated without putting a private static on the wrong side of a module boundary.
+Drives "disable Eject while an op reads from / writes to this device" so a disconnect can't truncate an in-flight file. Lives in `status_cache.rs` (`StatusCache`, one per engine), alongside the cache it derives from: the recompute reads that cache, and register / unregister are the only two places membership can change, so the two stay one struct.
 
 The same two register/unregister functions also report `EngineEvents::transfer_started` / `transfer_finished`, which
 the app feeds into `crate::priority::transfers` (the per-volume "a transfer is running" gauge indexing yields to —
@@ -1344,11 +1351,11 @@ guards eject automatically also outranks indexing, and the panic-safe unregister
 add a second feed site (see `../../priority/CLAUDE.md`).
 
 - The manager registers an op's volume IDs busy (`register_operation_status(op_id, type, volume_ids)`) **only when it admits the op (Running)** — a Queued op isn't touching the device, so it marks nothing busy. Source **and** destination go in (a download from a phone is as corruptible as an upload to it). The manager's `on_settled` / `ManagedTaskGuard` Drop unregisters on every exit (including panic), so a finished or panicking op can't leave a volume stuck busy.
-- The busy set is the union of every Running op's `volume_ids` **∪ external registrations**, minus `root` (never ejectable). `recompute_and_emit_busy_volumes` fires `volumes-busy-changed` only when membership changes — progress ticks don't churn it (`LAST_EMITTED_BUSY`; pinned through a `cfg(test)` emit counter by `status_cache_tests::volumes_busy_changed_fires_once_per_distinct_change`, a one-test-per-process cell since the dedupe is global). Every transfer-gauge start has exactly one finish on success, cancel, error, a panicking handler, and the panic net (`status_cache_tests::every_transfer_start_has_exactly_one_finish_however_the_op_ends`). Membership-by-union means two concurrent transfers to one device keep it busy until both finish, with no manual refcount.
+- The busy set is the union of every Running op's `volume_ids` **∪ external registrations**, minus `root` (never ejectable). `recompute_and_emit_busy_volumes` fires `volumes-busy-changed` only when membership changes — progress ticks don't churn it (the cache's last-reported set; pinned through a `cfg(test)` emit counter by `status_cache_tests::volumes_busy_changed_fires_once_per_distinct_change`, a one-test-per-process cell since the shared engine's dedupe sees its siblings). Every transfer-gauge start has exactly one finish on success, cancel, error, a panicking handler, and the panic net (`status_cache_tests::every_transfer_start_has_exactly_one_finish_however_the_op_ends`). Membership-by-union means two concurrent transfers to one device keep it busy until both finish, with no manual refcount.
 - **Where `volume_ids` come from**: the `OperationDescriptor` each spawn site hands the manager. The cross-volume entry points (`copy_between_volumes`, `move_between_volumes`, `move_within_same_volume`) and the volume-aware delete carry the IDs; the both-local branch of `copy_between_volumes` (a local→USB / DMG copy) passes both IDs through `copy_files_start` / `move_files_start` so the ejectable destination is still marked. The plain `move_files` / `trash` commands pass an empty list — the unified transfer dialog only routes through them for same-`root` ops, where no ejectable volume is involved.
 - **Consumers**: `busy_volume_ids()` backs the `get_busy_volume_ids` bootstrap command, the `eject_volume` server-side guard (refuses a busy volume — the real safety net, since the picker's disable is only UX), and the native breadcrumb-menu builder (renders the Eject item disabled with a ` (busy)` suffix). The frontend `volume-busy-store.svelte.ts` subscribes to `volumes-busy-changed` and exposes `isVolumeBusy(id)` to disable the picker's eject controls. The engine reports each change through `EngineEvents::volumes_busy_changed`; the app emits it.
 - **A wider question, `operations_need_volume(id)`** (`manager.rs`): every op the manager HOLDS (Queued too) plus the busy set. A queued op hasn't touched the device, so Eject ignores it, but it names the volume and will set out for it, so retiring a volume id for good (a saved server moving to a new address, `server_move.rs`) waits for it too.
-- **External (non-write-op) seam**: the drag-out file-promise fulfillment service (`native_drag::fulfillment`) marks the source volume busy while it streams a promise to a Finder destination, but it isn't a real write op (no `WRITE_OPERATION_STATE`, no progress events, no settle). The `pub(crate)` `register_external_volume_op(op_id, volume_ids)` / `release_external_volume_op(op_id)` pair (in `status_cache.rs`, surfaced through `state::` and re-exported from `mod.rs`) is the seam: it touches only the `OPERATION_STATUS_CACHE` half that `recompute_and_emit_busy_volumes` reads, registering under `WriteOperationType::Copy` (the type only affects `get_operation_status` diagnostics; the busy set is type-agnostic). The fulfillment side wraps it in an RAII guard so release fires on every exit path.
+- **External (non-write-op) seam**: the drag-out file-promise fulfillment service (`native_drag::fulfillment`) marks the source volume busy while it streams a promise to a Finder destination, but it isn't a real write op (no registered state, no progress events, no settle). The `pub(crate)` `register_external_volume_op(op_id, volume_ids)` / `release_external_volume_op(op_id)` pair (in `status_cache.rs`, surfaced through `state::` and re-exported from `mod.rs`) is the seam: it touches only the status-cache half the busy set is derived from, registering under `WriteOperationType::Copy` (the type only affects `get_operation_status` diagnostics; the busy set is type-agnostic). The fulfillment side wraps it in an RAII guard so release fires on every exit path.
 
 ## Settle contract
 
@@ -1358,7 +1365,7 @@ add a second feed site (see `../../priority/CLAUDE.md`).
 
 **Guard pattern**: every op's deferred start (the future the manager spawns from each of the five entry points) constructs a `WriteSettledGuard` at the top, from the same injected `Arc<dyn OperationEventSink>` the rest of the op emits through. The guard's `Drop` impl calls `sink.emit_settled(...)`. This makes the emit panic-safe: even if the op body panics and the task exits via `JoinError`, the guard still drops during stack unwinding, so the FE never hangs waiting for a settle that never comes. `emit_settled` is a required `OperationEventSink` method (no default no-op), so a new sink can't silently swallow settle. See `settle_event_tests.rs::settled_fires_on_panic_unwind` for the safety-net pin.
 
-**Cache-cleanup panic safety**: removal from `WRITE_OPERATION_STATE` + `OPERATION_STATUS_CACHE` must survive a panic, or the op lingers forever in the status cache. The manager owns this: `on_settled` removes both maps on the happy path, and the `ManagedTaskGuard` Drop (held by every spawned task, declared so it drops AFTER the `WriteSettledGuard`'s scope cleanup runs but frees caches before the settle emit) does it on unwind. The guard NEVER spawns in Drop — see [Operation manager](#operation-manager) § "Dequeue on settle". Pinned by `manager::tests::panicking_op_releases_its_lane_without_spawning_next`.
+**Cache-cleanup panic safety**: removal from the state registry + the status cache must survive a panic, or the op lingers forever in the status cache. The manager owns this: `on_settled` removes both maps on the happy path, and the `ManagedTaskGuard` Drop (held by every spawned task, declared so it drops AFTER the `WriteSettledGuard`'s scope cleanup runs but frees caches before the settle emit) does it on unwind. The guard NEVER spawns in Drop — see [Operation manager](#operation-manager) § "Dequeue on settle". Pinned by `manager::tests::panicking_op_releases_its_lane_without_spawning_next`.
 
 **Payload**: `{ operationId: String, operationType, volumeId: Option<String> }`. The `volume_id` is best-effort: filled with the source volume's display name for volume-aware ops (copy/move between volumes, volume delete), `None` for pure local-FS operations. The FE currently filters only by `operationId`; `volume_id` is for diagnostics and forward compatibility.
 
@@ -1448,9 +1455,9 @@ This module's state machine (`state.rs`) is the spine of the cancel UX. Past inv
 3. **Add at least one E2E test** for user-visible flows (transfer dialogs, conflict policies); use `dispatchMenuCommand` for keyboard-shortcut triggers, see `docs/testing.md` § "❌ Synthesized F-key dispatches".
 4. **Run `cargo mutants --file src/file_system/write_operations/<file>.rs`** after substantial changes; this module has ~85-90% mutation score per file and shouldn't regress. See `docs/testing.md` § "Process".
 
-### Test isolation for `WRITE_OPERATION_STATE`
+### Test isolation for the shared engine's registry
 
-`cargo test` runs the crate's tests as threads in ONE process, so the `WRITE_OPERATION_STATE` map is shared by every
+`cargo test` runs the crate's tests as threads in ONE process, so the shared test engine's state registry is shared by every
 write-op test at once. `test_support::TestOperationGuard` owns one entry per test:
 
 - **Unique key.** `register(tag)` / `register_state(tag, state)` mint a process-unique op id (tag + pid + counter), so a
@@ -1481,7 +1488,7 @@ co-scheduling. It reads exactly like environment flake, which is how it survived
 and on a dependency upgrade once.
 
 **The fix is a registry the test owns, not a lock around the tests.** `WriteOperationRegistry` (in `state/registry.rs`) holds the
-map and owns `cancel_all`; `WRITE_OPERATION_STATE` is one instance of it and `cancel_all_write_operations()` is a
+map and owns `cancel_all`; each engine owns one, and `cancel_all_write_operations()` is a
 one-line delegation. A test constructs its own `WriteOperationRegistry`, registers states in it, and calls
 `cancel_all()` — the same production code, on a registry nothing else can see. Serializing the two suites behind a
 mutex, `#[ignore]`ing the victim, or loosening its assertion would all have hidden the defect instead.
@@ -1499,10 +1506,9 @@ failing assertion leaks the entry (unique uuid keys keep it from poisoning anyon
 **A manager counter is never scoped by a unique op id.** `emit_count()` and `admission_pass_count()` count a WHOLE
 manager's activity, so a sibling test spawning or settling ANY op moves them; a unique id, which is what keeps the
 record-and-lane assertions honest, buys nothing here. A test asserting on either drives its own manager instead of
-`manager()`: `private_manager()` for the lock-only paths, and `failures::leaked_manager()` (a `Box::leak`) when the test
-has to `spawn_managed`, which takes `&'static self` because an admitted op's task outlives every borrow. Pair it with
-`tests::gated_deferred_on`, so the synthetic op settles on the same private manager. The leak is one small struct per
-test that asks for one. An equality assertion against the global counter passes only because nextest forks per test;
+`manager()`: `owned_manager()` (the manager of an engine the test owns, kept alive for it, since admission hands
+starts that engine). Pair it with `tests::gated_deferred_on`, so the synthetic op settles on the same private manager.
+An equality assertion against the global counter passes only because nextest forks per test;
 under plain `cargo test` it fails outright (`retained_failure_stays_hidden_until_the_record_settles` did).
 The two `admission_pass_count()` waits in `tests.rs` stay on the global one: they wait for GROWTH, not an equality, so a
 sibling's pass can only satisfy them early, never fail them.

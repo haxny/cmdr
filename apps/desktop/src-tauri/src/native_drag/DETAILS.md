@@ -84,9 +84,9 @@ ended state). Pinned by `session_counters_wait_for_in_flight_to_drain`.
 
 The fulfillment service marks the source volume busy for the eject guard via the `pub(crate)`
 `write_operations::{register_external_volume_op, release_external_volume_op}` seam (an RAII `BusyGuard` releases on
-every exit). This is the smallest honest seam: a drag-out download isn't a real write op (no `WRITE_OPERATION_STATE`,
-no progress events), but it must guard the device the same way, so it touches only the `OPERATION_STATUS_CACHE` half
-that `recompute_and_emit_busy_volumes` reads. Pinned by `source_volume_is_busy_during_fulfillment_and_released_after`.
+every exit). This is the smallest honest seam: a drag-out download isn't a real write op (no registered state,
+no progress events), but it must guard the device the same way, so it touches only the status-cache half the busy set
+is derived from. Pinned by `source_volume_is_busy_during_fulfillment_and_released_after`.
 
 ### App-quit / device-disconnect abort
 

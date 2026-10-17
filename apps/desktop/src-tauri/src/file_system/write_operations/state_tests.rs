@@ -4,9 +4,9 @@
 //! `operation_intent.rs`; the `FileInfo` sort-key and scan-result TTL tests
 //! live in `scan_cache.rs`; `CopyTransaction`'s live in `ledger_tests.rs`.
 //!
-//! Tests that touch the global `WRITE_OPERATION_STATE` /
-//! `OPERATION_STATUS_CACHE` caches key their entries per test, so they don't
-//! collide with concurrent test runs in the same process. `WRITE_OPERATION_STATE`
+//! Tests that touch the shared engine's registry /
+//! status caches key their entries per test, so they don't
+//! collide with concurrent test runs in the same process. registry
 //! entries go through `TestOperationGuard`, which also removes them on unwind.
 use super::*;
 use crate::file_system::write_operations::test_support::{TestOperationGuard, placeholder_conflict};
@@ -666,7 +666,7 @@ fn cancelling_takes_the_pending_conflict_away() {
 // ── Busy-volumes set (drives "disable Eject while an op touches a device") ──
 // These assert membership of the test's own unique volume IDs (not the whole
 // set) and clean up, so they stay correct under nextest's in-process
-// parallelism where the global `OPERATION_STATUS_CACHE` is shared.
+// parallelism where the shared engine's status cache is shared.
 
 #[test]
 fn busy_volume_ids_reflects_registered_volumes() {
@@ -757,7 +757,7 @@ fn busy_volume_ids_clears_on_panic_unwind_via_unregister() {
 
 // ---- pause / resume on the live state ------------------------------------
 // The pure `PauseGate` mechanics (sync/async parking, cancel-wins) are
-// tested in `operation_intent.rs`; these pin the `WRITE_OPERATION_STATE`
+// tested in `operation_intent.rs`; these pin the registry
 // lookup wiring of `pause_write_operation` / `resume_write_operation`.
 
 #[test]

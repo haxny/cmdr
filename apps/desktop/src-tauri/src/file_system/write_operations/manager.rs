@@ -54,7 +54,7 @@
 //! ## Busy-volumes set
 //!
 //! The "disable Eject while a device is in use" set derives from
-//! `OPERATION_STATUS_CACHE`, which the manager populates ONLY for Running ops
+//! the engine's status cache, which the manager populates ONLY for Running ops
 //! (a Queued op isn't touching the device yet) and the external drag-out seam
 //! (`register_external_volume_op`) populates directly. So the busy set stays
 //! `(running manager ops' volumes) ∪ (external registrations)` with no

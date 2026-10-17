@@ -1139,7 +1139,7 @@ Under plain `cargo test` a crate's tests share one process, so those tests are a
   create/paste assertion fails against an in-memory volume with no hint of who swapped it.
 
 Same guard family as `cmdr_listing::testing::TestListingGuard` (over the listing cache),
-`write_operations::test_support::TestOperationGuard` (over `WRITE_OPERATION_STATE`), and
+`write_operations::test_support::TestOperationGuard` (over the shared engine's registry), and
 `indexing::tests::stress_test_helpers::TestInstanceGuard` (over `INDEX_REGISTRY`).
 
 ## Mutation notification

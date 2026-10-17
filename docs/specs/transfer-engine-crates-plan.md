@@ -1340,6 +1340,63 @@ path reaches a detached `OperationLog`; `write_operations/` names no `operations
 `desktop-rust-clippy`, `desktop-bindings-fresh`, `desktop-rust-module-cycles` (slow, needed: the handle, `OpScope`, and
 the in-engine slot are the riskiest new edges of the effort).
 
+**What landed differently** (recorded at execution):
+
+- The rebase onto `main` had left the branch red: main's state recovery put `crate::state_recovery::set_aside` into the
+  operation-log store, which is now a crate. Fixed first (`d0382532c`): `OperationLogStore::open(db_path, set_aside)`
+  and `OperationLog::open(db_path, set_aside)` take the host's hook (the app passes `state_recovery::set_aside`), the
+  kept-copy cell moved to `operation_log_host::tests`, and no new crate item (the surface stays at its ceiling).
+- `Operations` and `Inner` live at the `write_operations` hub (`mod.rs`), the builder and accessors in `handle.rs`.
+  `OperationManager` keeps `Arc`s of the host, registry, and status cache it keeps in step, plus a `Weak` to its engine
+  (`Arc::new_cyclic`): admission upgrades it and hands the start an `Operations` (`DeferredStart` is
+  `FnOnce(Operations)`), so a queued start owns nothing. The manager tests own their engine (`OwnedEngine`); no
+  `Box::leak` remains.
+- `OpScope` (`scope.rs`) carries the host's seams as one `Arc<EngineHost>` (not `OwnWrites` and `Pacing` alone, since
+  deep code also asks volumes, events, listings, the index, and the runtime), the status cache, the `OperationLog`, and
+  the op's `OpJournal` once opened. Production states come only from an engine (`Operations::new_operation_state`);
+  `WriteOperationState::new` is test- and bench-only. Instant ops build their scope right before `run_instant`, so
+  open-then-register order is unchanged; `run_instant` itself didn't change.
+- The by-id journal shim went with M6a, not later: `OperationLog::{record_items, note_*, finalize}`, `journal_of`, and
+  the unrecorded set are gone, `OpJournal` is `Clone` with `op_id()`, and `operation_log_host/journal.rs` is deleted.
+  Behavior change 2's named red test is now
+  `an_operation_opened_before_the_journal_journals_nothing_through_its_journal` (it also asserts the note is dropped).
+- The pre-install refusal: `operations_host::operations()` is `Result<&Operations, NotInstalled>`, the seven IPC start
+  commands refuse through `refuse_not_installed` (`IoError`, which the error dialog renders without naming a file, plus
+  `log_error!`). The in-engine shim slot (`write_operations::installed()`) `expect`s in the app (install is the top of
+  `setup()`), builds the shared engine in the test binary (via `test_support::shared_engine`, the one place engine-side
+  code names `operations_host`) and a detached one in the bench.
+- `Operations::retain_failure` replaced the `operation_manager()` re-export; the terminal effects hold
+  `Option<&Operations>`.
+- `host::testing` holds `RecordingEngineEvents`, `FakeVolumes`, `RecordingOwnWrites`; the last two carry an
+  `expect(dead_code)` until the write paths they serve ask their scope (see below).
+
+**M6a: what's left** (hand-off; the branch is green at `HEAD`):
+
+1. **Entry points take their engine.** Still reading the installed engine (59 `host::installed()`, 22
+   `super::installed()`, 9 `write_operations::installed()` in production engine code): the managed starters and their
+   deferreds' `spawn_managed` (`mod.rs` `start_write_operation` + the four `*_files_start`,
+   `transfer/volume/{copy, move, move_same}.rs`, `delete/volume_start.rs`,
+   `archive_edit/{copy_into, move_out, driver, fresh_compress, compress, routing, engine}.rs`, `rename/bulk.rs`,
+   `rename/bulk/by_move.rs`, `rollback.rs`), `routing.rs` + `routing/retry.rs` (`StartAgain::start_again` should take
+   `&Operations`), the pre-flight answers (`conflict_preflight.rs`, `rename/validity.rs`, `look_alike.rs::pane_listing`,
+   `rename.rs::preflight_reaches`, `transfer/volume/transfer_error.rs`), `durability.rs::lookup_indexed_size`,
+   `overwrite.rs::{restore, keep_as_recovered_sibling}` (error reports; thread the scope), `transfer/staged_write.rs`
+   and `transfer/volume/move_same.rs` own-write hooks, `transfer_tree/{mod, order}.rs`. Pattern (as the instant ops and
+   `trash_single_journaled` landed): the body becomes an `impl Operations` method or takes `&Operations` / the scope,
+   and the free function of the same name stays as the `// shim: removed in M7a` the app and tests call.
+2. **The manager's free functions** (`list_operations`, `cancel_operation(s)`, `pause_*`, `resume_*`, the queue moves,
+   `dismiss_*`, `retry_failed_operation`, `operations_need_volume`), `state/controls.rs`, `queued_sources.rs`,
+   `tree_view.rs`, `status_cache.rs`'s free functions, and the internal `manager::manager()` / `operation_states()` /
+   `update_operation_status` reads (21 / 17 / 25 in production) become `Operations` methods or scope reads; the free
+   names stay as shims. Then `manager()` and `operation_states()` (marked `// shim: removed in M6a`) go.
+3. **Coupled to M6b, deliberately left:** the scan-preview path (`scan_preview/{local, volume}.rs`, `scan_bridge.rs`'s
+   owner lookup and scan-wait emit, `scan.rs`, `scan_walker.rs`), whose owner lookup goes through `PREVIEWS`; the
+   leftover sweep and the arrival listener (`in_flight_sweep.rs`, `in_flight_temps.rs`), which `claim_ledger` rebuilds;
+   the probe watchdog (`transfer_probe.rs`, `REGISTRY`). `ScanPreviewState` should carry its engine's host.
+4. **Then:** move `own_write_announce_tests.rs` onto `RecordingOwnWrites` over a test-built engine (unchanged in what it
+   asserts) and drop the two `expect(dead_code)`s; register cells' volumes in `FakeVolumes` where they no longer need
+   the real registry.
+
 ### M6b: The engine owns its state, the rest
 
 **Scope.** The preview cache (`PREVIEWS`, `PREVIEW_SETTLED`), the in-flight ledger (`PROCESS_LEDGER`), outages

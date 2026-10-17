@@ -417,7 +417,7 @@ impl WriteOperationState {
 
     /// Declares the operation over. Everything it staged stops being hidden.
     ///
-    /// Called where the operation leaves `WRITE_OPERATION_STATE`, so it fires
+    /// Called where the operation leaves its engine's registry, so it fires
     /// for every ending — done, cancelled, rolled back, or wedged and abandoned.
     pub(super) fn end_liveness(&self) {
         self.liveness.lock_ignore_poison().take();

@@ -2,7 +2,7 @@
 //!
 //! Each test keys its cache entries per test (via `unique_id`) so they don't
 //! collide when nextest runs them in one process against the module's
-//! process-global `OPERATION_STATUS_CACHE`.
+//! shared engine's status cache.
 
 use super::*;
 use crate::file_system::write_operations::manager::{OperationDescriptor, OperationSummaryText, PauseOutcome, manager};
@@ -25,7 +25,7 @@ fn unique_id(label: &str) -> String {
     format!("test-status-cache-{label}-{n}-{:?}", std::thread::current().id())
 }
 
-/// Installs a live `WRITE_OPERATION_STATE` entry. The guard removes it on drop,
+/// Installs a live registry entry. The guard removes it on drop,
 /// so a failing assertion can't leak it into another test.
 fn install_state(label: &str, initial: OperationIntent) -> TestOperationGuard {
     let op = TestOperationGuard::register(label);
@@ -120,7 +120,7 @@ impl Drop for ManagedOperationFixture {
 }
 
 /// The bug the `lifecycle` field exists to prevent: a paused operation keeps its
-/// `WRITE_OPERATION_STATE` entry (it still holds its lane slots and parks between
+/// registry entry (it still holds its lane slots and parks between
 /// files), so the presence test this replaced answered "running" while parked.
 /// Every surface that steers off the answer — the pause/resume toggle above all
 /// — then tried to pause what was already parked.
@@ -236,7 +236,7 @@ fn a_paused_operation_reads_as_paused_rather_than_stalled() {
 
 #[test]
 fn a_settled_operation_reports_no_activity() {
-    // The status cache outlives `WRITE_OPERATION_STATE`, and once the state entry
+    // The status cache outlives registry, and once the state entry
     // is gone there is nothing left to classify.
     let op = install_state("settled", OperationIntent::Running);
     let id = op.id().to_string();
@@ -280,7 +280,7 @@ fn indeterminate_compress_phases_clear_both_percent_fallback_axes() {
 /// progress update, a second op on an already-busy volume, a `root`-only op,
 /// and releasing one of two holders all leave membership alone and stay quiet.
 ///
-/// Its subject is the process-global dedupe (`LAST_EMITTED_BUSY`), which any
+/// Its subject is the process-global dedupe (the busy set's last-reported value), which any
 /// sibling's register moves, so it runs only one-test-per-process.
 #[test]
 fn volumes_busy_changed_fires_once_per_distinct_change() {

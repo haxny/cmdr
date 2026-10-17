@@ -28,7 +28,7 @@ pub(super) fn make_state() -> Arc<WriteOperationState> {
 }
 
 /// Registers `state` under `op_id`. Bind the returned guard for the whole test:
-/// it removes the `WRITE_OPERATION_STATE` entry on drop, so a failing assertion
+/// it removes the registry entry on drop, so a failing assertion
 /// can't leave a corpse for the next test's `cancel_all_write_operations` to walk.
 #[must_use = "bind the guard; dropping it immediately unregisters the state"]
 pub(super) fn install_state(op_id: &str, state: Arc<WriteOperationState>) -> TestOperationGuard {

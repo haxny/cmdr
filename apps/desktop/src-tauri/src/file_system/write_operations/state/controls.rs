@@ -1,7 +1,7 @@
 //! Reaching a REGISTERED operation by id and telling it something: stop, abort,
 //! pause, resume, or "here's your answer to that conflict".
 //!
-//! Every function here is a lookup in `WRITE_OPERATION_STATE` followed by one
+//! Every function here is a lookup in the engine's registry followed by one
 //! flag flip or one send, and every one of them tolerates an id that has
 //! already settled: the caller holds a string a person or an agent typed, so
 //! "no such operation" is an ordinary outcome, ❌ never a panic.
