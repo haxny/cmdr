@@ -1501,6 +1501,27 @@ guess. Each finding is its own commit, named, red first where a test can show it
 **DONE.** Findings listed in the commit bodies (an empty audit says so); `lock-poison-allowlist.json` has no engine
 entry; lanes: `desktop-rust-tests`, `desktop-rust-clippy`, `desktop-rust-lock-poison`.
 
+**What landed differently** (recorded at execution):
+
+- **Audit findings, each its own commit:** the stall report under `OperationProbe::tasks` (`d6eb1b179`, red first); the
+  registry's quit walks logging and touching operations under its lock (`f4dbbf72d`); `ConflictSlot::answer` logging
+  under the slot lock (`634645ebf`); `take_cached_scan_result` logging under the preview lock (`103f0999e`). Clean: the
+  manager, `EngineStores` (an atomic claim flag), `Probes`, `Outages`, the ledger store (its log appends are queue
+  sends, kept under the lock for ordering), the outage and sources-gone slots, the transfer tree (its error report runs
+  after the unwind drops the guard), and every `block_on` (none under a lock). Kept under a lock on purpose: the
+  human-wait clock beside the conflict and outage slots (documented at the field), and the arrival listener's seam call
+  inside its `Once`. A std lock across an `.await` is clippy's `await_holding_lock`, green.
+- **Seen, not fixed:** `StatusCache::recompute_and_report_busy_volumes` computes the busy set and reports it outside any
+  one lock, so two racing register/unregister calls can report an older set last (a stale Eject guard until the next
+  change). Fixing it means reporting under the dedupe lock, a judgment call left to the lead.
+- **The poison change:** the preview map forgets everything on poison (`ScanPreviews::write` / `read`, `1b92667e6`;
+  `cached_cost_facts`, which already recovered, now forgets too); `status_cache.rs` (`aaaa185ee`), the estimator in
+  `state.rs` (`9dc1a0674`), and `delete/walker.rs` (`748d89bf6`) recover. Each has a red test. Engine entries in
+  `lock-poison-allowlist.json`: 4 entries, 20 sites (the 13 `scan_cache.rs` ones had moved to `scan_cache_previews.rs`
+  with M6b) → 0.
+- Lanes: `desktop-rust-tests`, `desktop-rust-clippy`, `desktop-rust-lock-poison`, `desktop-rust-module-cycles` green;
+  the bench `cargo check` green.
+
 ### M6d: Rules become types
 
 **Scope.** § "Rules that become types": `Announced`, `ArmedConflict`, `IntentCell` (over the landed
