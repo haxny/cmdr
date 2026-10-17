@@ -134,7 +134,7 @@ fn refine_permission_refusal(path: &Path, reason: TrashRefusalKind) -> TrashRefu
 }
 
 #[cfg(target_os = "linux")]
-pub fn move_to_trash_sync(path: &Path) -> Result<Option<PathBuf>, MutationError> {
+pub(crate) fn move_to_trash_sync(path: &Path) -> Result<Option<PathBuf>, MutationError> {
     if fs::symlink_metadata(path).is_err() {
         return Err(MutationError::NotFound {
             path: path.display().to_string(),
@@ -153,7 +153,7 @@ pub fn move_to_trash_sync(path: &Path) -> Result<Option<PathBuf>, MutationError>
 }
 
 #[cfg(not(any(target_os = "macos", target_os = "linux")))]
-pub fn move_to_trash_sync(_path: &Path) -> Result<Option<PathBuf>, MutationError> {
+pub(crate) fn move_to_trash_sync(_path: &Path) -> Result<Option<PathBuf>, MutationError> {
     Err(MutationError::TrashNotSupported)
 }
 
@@ -288,10 +288,11 @@ pub fn trash_dir_for_path(path: &Path) -> Option<PathBuf> {
     })
 }
 
+/// The trash directory `path` would go to: always `None` here. The `trash` crate
+/// doesn't surface a trash location, and the XDG layout has no single answer for
+/// a non-home volume either, so callers degrade to "nowhere to go".
 #[cfg(not(target_os = "macos"))]
 pub fn trash_dir_for_path(_path: &Path) -> Option<PathBuf> {
-    // The `trash` crate doesn't surface a trash location, and the XDG layout has no
-    // single answer for a non-home volume either. Callers degrade to "nowhere to go".
     None
 }
 

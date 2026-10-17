@@ -39,7 +39,7 @@ const CHUNK_SIZE: usize = 1024 * 1024;
 /// On macOS, copy strategy uses `is_same_apfs_volume` instead (see `copy_strategy.rs`).
 /// This function is only used on Linux.
 #[cfg(target_os = "linux")]
-pub fn is_network_filesystem(path: &Path) -> bool {
+pub(crate) fn is_network_filesystem(path: &Path) -> bool {
     cmdr_local::linux_mounts::is_network_filesystem_linux(path)
 }
 

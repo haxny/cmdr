@@ -4,12 +4,12 @@
 //! A `#[path]` child of `trash.rs`, so `super::` here is `trash`.
 
 use super::*;
+use crate::testing::TestOperations;
 use crate::types::CancelRollbackOutcome;
 #[cfg(target_os = "macos")]
 use crate::types::TrashRefusedItems;
 // Only the macOS-gated cases below build a real directory.
 #[cfg(target_os = "macos")]
-use crate::testing::TestOperations;
 use cmdr_fs::testing::TestDir;
 use std::sync::Arc;
 use std::time::Duration;

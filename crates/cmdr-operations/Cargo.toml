@@ -73,8 +73,6 @@ uuid = { version = "1.19.0", features = ["v4", "v7"] }
 dirs = "7"
 # Walking a local tree for the compress estimate.
 walkdir = "2"
-# Extended attributes a local copy carries and a quarantine marks.
-xattr = "1"
 # Fresh compression's writer. The features match the app's copy, so the graph
 # links one `zip`.
 zip = { version = "9.0.1", default-features = false, features = ["deflate", "aes-crypto", "unreserved"] }
@@ -92,6 +90,9 @@ trash = "5.2"
 # uses.
 objc2 = { version = "0.6", features = ["std", "exception"] }
 objc2-foundation = { version = "0.3", features = ["NSURL", "NSString", "NSError", "NSFileManager", "NSPathUtilities"] }
+# Reading the quarantine an extracted archive carries onto what it extracts.
+# Linux has no quarantine, so the shipped engine reads no xattr there.
+xattr = "1"
 
 [dev-dependencies]
 # Depending on ourselves turns the `testing` feature on for every DEV target and
@@ -125,6 +126,8 @@ tempfile = "3"
 tokio = { version = "1", features = ["rt-multi-thread", "test-util"] }
 # Hostile names in their composed and decomposed forms.
 unicode-normalization = "0.1"
+# Setting and reading back the xattrs the metadata cells check, on both platforms.
+xattr = "1"
 
 # The self dev-dependency above turns `testing` on for this target, so it needs
 # no `required-features` and every `--all-targets` lane builds and lints it.

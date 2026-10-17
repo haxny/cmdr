@@ -803,8 +803,9 @@ mod linux {
     use std::sync::Arc;
     use std::time::Duration;
 
+    use crate::host::Announced;
     use crate::overwrite::PostLanding;
-    use crate::state::WriteOperationState;
+    use crate::testing::TestOperations;
     use crate::transfer::copy_strategy::{LocalCopyStrategy, copy_file_using};
     use cmdr_fs::testing::TestDir;
 
@@ -823,6 +824,7 @@ mod linux {
     }
 
     fn copy(strategy: LocalCopyStrategy, source: &Path, dest: &Path) {
+        let engine = TestOperations::new();
         let state = Arc::new(engine.new_operation_state(Duration::from_millis(50)));
         copy_file_using(
             strategy,

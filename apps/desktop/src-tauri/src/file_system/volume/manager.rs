@@ -23,6 +23,8 @@ mod roots;
 mod root_replace;
 
 /// Following a mount root that moved while its filesystem stayed mounted (a rename).
+/// Only the macOS mount watcher sees a rename.
+#[cfg(any(target_os = "macos", test))]
 mod root_move;
 
 #[cfg(target_os = "macos")]
@@ -298,6 +300,7 @@ impl VolumeManager {
     }
 
     /// Gets the default volume ID.
+    #[cfg(any(target_os = "macos", test))]
     pub fn default_volume_id(&self) -> Option<String> {
         self.default_volume_id.read_ignore_poison().clone()
     }

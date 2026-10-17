@@ -10,7 +10,6 @@ use std::fs;
 use std::os::unix::fs::OpenOptionsExt as _;
 use std::os::unix::io::AsRawFd;
 use std::path::Path;
-use std::sync::Arc;
 
 use cmdr_fs::metadata::{CarriedMetadata, StagedItem, StagedTimes, apply_staged};
 
@@ -33,7 +32,7 @@ const COPY_RANGE_CHUNK: usize = 4 * 1024 * 1024;
 /// * `overwrite` - If true, overwrite existing destination
 /// * `cancelled` - Cancellation flag checked between chunks
 /// * `progress_callback` - Optional callback called with (bytes_so_far, total)
-pub fn copy_single_file_linux(
+pub(crate) fn copy_single_file_linux(
     source: &Path,
     destination: &Path,
     overwrite: bool,
@@ -156,6 +155,7 @@ pub fn copy_single_file_linux(
 mod tests {
     use super::*;
     use cmdr_fs::testing::TestDir;
+    use std::sync::Arc;
     use std::sync::atomic::Ordering;
 
     fn create_temp_dir(name: &str) -> TestDir {

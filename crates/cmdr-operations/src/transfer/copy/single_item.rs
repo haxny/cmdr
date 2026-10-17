@@ -9,6 +9,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
+#[cfg(target_os = "macos")]
 use super::super::macos_copy::copy_symlink;
 
 use super::super::chunked_copy::ChunkedCopyProgressFn;
