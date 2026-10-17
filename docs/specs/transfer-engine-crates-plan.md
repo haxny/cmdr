@@ -1777,6 +1777,28 @@ per slice: `desktop-rust-tests`, `desktop-rust-clippy`, `desktop-rust-test-sleep
   `conflict_preflight`, `conflict_stop`, `durability`, `journal_capture(_volume)`, `look_alike(_instant)`, `overwrite`,
   `rollback/planner_tests/`, `routing/tests`, `source_binding/tests`, `stop_or_park`, and `transfer_tree/report_tests`.
 
+**What landed differently in the fourth slice** (recorded at execution):
+
+- **Journal cells:** every `TestJournalGuard` user journals into a `TestOperationLog` on an engine of its own; app-side
+  ones build `operations_host::test_engine_journaling_into(&log)` (the paste pin through the new
+  `paste_file::write_content_on`, the S3 and SMB rollback cells through `run_copy_on`; `RunningCopy` carries its
+  engine). `OperationLog::reset_recording` went with the guard. `Reversal::new` became `Reversal::on(&engine, tag)` over
+  any `Operations`.
+- **Pacing:** the planner's paced cells set a pace on their own engine (`host::testing::SettablePacing`); the app half
+  of that wiring got its own pin, `operations_host::tests::the_app_engine_paces_rollbacks_from_test_mode`.
+- **App-side cells** share the app's engine through `operations_host::app_engine()` (what `operations()` builds from
+  `test_engine()` in a test binary) and keep unique ids; `QueuedOperationFixture::park_on` / `park_naming_on` take the
+  engine. Cells that only needed a registered state or a probe table (SMB outage, SMB full concurrency, the concurrency
+  bench) build `TestOperations`. `testing` gained `new_operation_state(engine, …)` and
+  `seed_incoherent_scan_result(engine, …)`.
+- **The Criterion bench** owns its engines (`transfer_bench::BenchEngine`, `BenchJournal::open`, over the new
+  `Operations::detached_journaling_into`), since `installed()` was its shared one too.
+- **`transfer_tree/report_tests`** was a false positive: its `installed()` is a local tree-slot helper.
+- **`routing/tests`** registered its parent drive as the app registry's `root`, failing beside any sibling that
+  registered `root` first; it registers under a unique id now. The ADB suites still fail under plain threaded
+  `cargo test` (the fake phone list is process-global) and pass under nextest; they sit outside the DONE filter.
+- **Deleted cell:** `state::tests::guard_unregisters_its_state_even_when_the_test_body_panics`, with the guard.
+
 ### M8a: The move
 
 **Scope.** `git mv apps/desktop/src-tauri/src/file_system/write_operations crates/cmdr-operations/src` (minus what stays
