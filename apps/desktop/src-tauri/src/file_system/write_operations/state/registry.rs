@@ -66,24 +66,27 @@ impl WriteOperationRegistry {
     /// abandoned still holds an `Arc` to the state, so the map entry going away
     /// doesn't drop it): `WriteOperationState::end_liveness`.
     pub(in crate::file_system::write_operations) fn forget(&self, operation_id: &str) {
-        let mut entries = self.entries.write_ignore_poison();
-        if let Some(state) = entries.remove(operation_id) {
+        let removed = self.entries.write_ignore_poison().remove(operation_id);
+        if let Some(state) = removed {
             state.end_liveness();
         }
     }
 
-    /// The newest progress tick of every registered operation that has emitted
-    /// one, its wait classified now: the stored tick was measured while the
-    /// operation was still moving. The states are copied out first, so no
-    /// operation's own locks are taken under the registry's.
-    pub(in crate::file_system::write_operations) fn latest_progress(&self) -> Vec<WriteProgressEvent> {
-        let states: Vec<(String, Arc<WriteOperationState>)> = self
-            .entries
+    /// Every registered operation, copied out, so a walk takes no operation's
+    /// own locks (and writes no log line) under the registry's.
+    fn snapshot(&self) -> Vec<(String, Arc<WriteOperationState>)> {
+        self.entries
             .read_ignore_poison()
             .iter()
             .map(|(id, state)| (id.clone(), Arc::clone(state)))
-            .collect();
-        states
+            .collect()
+    }
+
+    /// The newest progress tick of every registered operation that has emitted
+    /// one, its wait classified now: the stored tick was measured while the
+    /// operation was still moving.
+    pub(in crate::file_system::write_operations) fn latest_progress(&self) -> Vec<WriteProgressEvent> {
+        self.snapshot()
             .into_iter()
             .filter_map(|(id, state)| {
                 let mut event = state.last_progress()?;
@@ -101,8 +104,7 @@ impl WriteOperationRegistry {
     /// its waiter, and wakes a paused op so it observes the cancel. Already-
     /// `Stopped` operations are left alone.
     pub(in crate::file_system::write_operations) fn cancel_all(&self) {
-        let entries = self.entries.read_ignore_poison();
-        for (id, state) in entries.iter() {
+        for (id, state) in self.snapshot() {
             // Atomic, like every intent write: an already-`Stopped` op refuses
             // and is left alone.
             if state.transition_intent(OperationIntent::Stopped).is_ok() {
@@ -125,8 +127,7 @@ impl WriteOperationRegistry {
         // cooperative signal that gives its backends the chance to wind down
         // cleanly in the moments before the process goes.
         self.cancel_all();
-        let entries = self.entries.read_ignore_poison();
-        for (id, state) in entries.iter() {
+        for (id, state) in self.snapshot() {
             if !state.backend_abort.is_cancelled() {
                 log::info!("abort_all_write_operations: no longer waiting for op={id}");
                 state.backend_abort.cancel();
