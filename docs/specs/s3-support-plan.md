@@ -78,8 +78,8 @@ few modules, typed errors, the operations as the liveness detector, the shared-c
 
 Every `Volume::rename` caller assumes one cheap server-side call: F2 (`rename_managed`, an instant op with a 5 s
 frontend wait), same-volume move (`transfer/volume/move_same.rs`, "a whole subtree moves with one rename"), bulk rename
-(`write_operations/rename/bulk.rs`), Ask Cmdr's rename proposals, and the MCP rename tool. On S3 a folder rename is one
-copy and one delete per object, and a big file's is a slow server-side copy.
+(`crates/cmdr-operations/src/rename/bulk.rs`), Ask Cmdr's rename proposals, and the MCP rename tool. On S3 a folder
+rename is one copy and one delete per object, and a big file's is a slow server-side copy.
 
 - **A new `Volume` capability**, `Volume::rename_work(path)` → `RenameWork::{OneCall, CopyThenDelete}`, says whether
   renaming a given entry is one call. Default: yes, with no I/O. S3: no for a folder, and no for an object past the

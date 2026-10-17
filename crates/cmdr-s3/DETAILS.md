@@ -10,8 +10,8 @@ Connect, browse, read, write, and server-side copy work: the transport, the conn
 stats, streams, scans for a copy, uploads (one PUT or in parts), copies within the account without the bytes leaving the
 server, makes folders, deletes one node or a batch, and renames one small file. A folder or a big object answers
 `RenameWork::CopyThenDelete`, and the app routes such a rename through its transfer engine as a move
-(`crates/cmdr-operations/src/DETAILS.md` § "Renames that run as moves"). `cost/` prices a planned operation at list
-prices (§ "Cost estimates").
+(`crates/cmdr-operations/DETAILS.md` § "Renames that run as moves"). `cost/` prices a planned operation at list prices
+(§ "Cost estimates").
 
 Every dependency was already in `Cargo.lock` when the crate was built. Check `cargo tree -d` before adding one.
 

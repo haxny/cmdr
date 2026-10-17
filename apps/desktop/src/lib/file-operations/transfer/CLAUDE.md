@@ -1,7 +1,7 @@
 # Transfer (copy and move)
 
 Copy (F5), move (F6), compress (⌥F5): setup, conflict scan, progress, errors. Delete/trash reuse progress. Backend:
-`crates/cmdr-operations/src/CLAUDE.md`.
+`crates/cmdr-operations/CLAUDE.md`.
 
 ## Module map
 

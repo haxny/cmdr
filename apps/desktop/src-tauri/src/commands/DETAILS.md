@@ -23,16 +23,16 @@ Per-file function inventory and decision rationale. `CLAUDE.md` holds the must-k
   `volume_copy.rs`: cross-volume copy/move/compress/scan. The three transfer commands are pass-throughs that build the
   `TauriEventSink` and hand everything to `Operations::start_volume_{copy, move, compress}`, which own the volume
   + destination-path resolution and the archive forks so a backend caller reaches the same routing
-  (`crates/cmdr-operations/src/DETAILS.md` § "Routing a transfer"). `scan_volume_for_conflicts` is itself a thin
+  (`crates/cmdr-operations/DETAILS.md` § "Routing a transfer"). `scan_volume_for_conflicts` is itself a thin
   wrapper around `Operations::scan_volume_for_conflicts_within` (`conflict_preflight.rs`), which owns the whole
   budgeted pre-flight check (`VolumeScanError`, `SourceItemInput`, the source-stat/self-collision machinery):
-  `crates/cmdr-operations/src/DETAILS.md` § "The pre-flight conflict check". `stat.rs`:
+  `crates/cmdr-operations/DETAILS.md` § "The pre-flight conflict check". `stat.rs`:
   `stat_paths_kinds(paths) -> TimedOut<Vec<Option<bool>>>`, a batched top-level "is this a directory?" probe for the
   drag-and-drop transfer path (`Some(true)` = dir, `Some(false)` = file, `None` = unknown / non-local / vanished). One
   `spawn_blocking` under the read timeout, never a subtree walk; per-item failures map to `None` so a virtual MTP/SMB
   path on the pasteboard can't poison the batch. The pure `stat_paths_kinds_blocking` helper is reused by
   `clipboard.rs::read_clipboard_files`. `drag.rs`: native drag, self-drag overlay (see "Drag session locality" below).
-  `e2e_support.rs`: feature-gated E2E/debug commands. `path_checks.rs` holds the path limits and the existence probes: `path_exists` means these exact bytes; its twin `destination_exists` (the transfer and compress dialogs) also counts a name the volume holds in another Unicode spelling (`write_operations::held_in_another_spelling`, one parent listing only after an exact miss of a non-ASCII name on a byte-exact volume), because the write lands on that entry. Both run detached (`deadline::timeout_detached_typed`) and are session-aware: a remote volume whose session
+  `e2e_support.rs`: feature-gated E2E/debug commands. `path_checks.rs` holds the path limits and the existence probes: `path_exists` means these exact bytes; its twin `destination_exists` (the transfer and compress dialogs) also counts a name the volume holds in another Unicode spelling (`cmdr_operations::held_in_another_spelling`, one parent listing only after an exact miss of a non-ASCII name on a byte-exact volume), because the write lands on that entry. Both run detached (`deadline::timeout_detached_typed`) and are session-aware: a remote volume whose session
   drops returns an immediate `false`, so it re-checks `connection_state()` and reports `timedOut: true` unless the
   session is still live, and a transient blip can't evict the user from a network folder. An id nothing registered but
   something still names answers `timedOut: true` too, never a confident `false`: a phone its device provider lists but
@@ -209,7 +209,7 @@ Per-file function inventory and decision rationale. `CLAUDE.md` holds the must-k
   The teardown logic (joining an eject already running, kind dispatch, the pure unit-tested `decide_eject_action`, the
   busy-volume guard, and the `diskutil`/`umount`/MTP shell-out) lives in `file_system::volume::eject`. `EjectError` IS the wire type, so the command returns it unchanged
   and the frontend words each variant from `errors.eject.*`. `get_busy_volume_ids()` bootstraps the picker's busy set (see
-  `crates/cmdr-operations/src/DETAILS.md` § "Busy-volumes set").
+  `crates/cmdr-operations/DETAILS.md` § "Busy-volumes set").
 - **`favorites.rs`**: `add_favorite`, `remove_favorite`, `rename_favorite`, `reorder_favorites`. Pass-throughs over
   `crate::favorites::store`; each persists `favorites.json` (5s write timeout) then re-emits `volumes-changed`. No
   `list_favorites` (listing rides `list_volumes` / `volumes-changed`). Carries one piece of judgment, the add gate
@@ -229,15 +229,15 @@ Per-file function inventory and decision rationale. `CLAUDE.md` holds the must-k
   `check_rename_validity` sizes its wait with `file_system::volume::io_budget_for_volume`: on a live session a stalled `stat` once
   failed the user's rename with `TimedOut`. `rename_file` has no timeout answer at all: see the next bullet.
 - **`volume_id` on the write commands.** `create_directory` / `create_file` / `rename_file` only expand tilde (root),
-  resolve the `volume_id`, and answer within `MUTATION_REPLY_DEADLINE` (2 s) through `write_operations::reply_within`:
+  resolve the `volume_id`, and answer within `MUTATION_REPLY_DEADLINE` (2 s) through `cmdr_operations::reply_within`:
   `Done`, the typed `MutationError`, or `StillRunning { pendingId }` with the real end following on `mutation-settled`
   (`crates/cmdr-operations/src/mutation_reply.rs`). Each has a `*_replying` twin taking the settle delivery, which the tests and
   the MCP rename tool call; the logic and the managed instant op live
-  in `file_system::write_operations::{create,rename}`. For a non-root `volume_id`, `delete_files` uses the volume-aware
+  in `cmdr-operations`' `create.rs` and `rename.rs`. For a non-root `volume_id`, `delete_files` uses the volume-aware
   delete and skips local `validate_sources` (MTP virtual paths fail `symlink_metadata`), and `rename_file` passes the id
   through. The local rename notifies the listing cache via `notify_rename_in_listing`, the volume one via its own
   `notify_mutation`. `check_rename_permission` takes the id too, and hands the whole decision to
-  `write_operations::rename::check_rename_permission_for_volume`: its three syscalls only speak plain POSIX paths, so a
+  `Operations::check_rename_permission_for_volume`: its three syscalls only speak plain POSIX paths, so a
   volume whose `supports_local_fs_access()` is false (and an id that resolves to no volume at all) answers `Ok`
   untouched. ❗ It used to run unconditionally, which made every F2 on an SFTP / WebDAV / ADB pane fail with a
   `NotFound` naming the scheme-prefixed path (ERR-KVERS).
@@ -516,7 +516,7 @@ either).
 
 For a WRITE that detached work will still land, a `TimedOut` answer is a lie the user sees disproven seconds later (a
 new folder that "timed out" and then appeared, ERR-AREUV). Those commands use `deadline::race_detached` through
-`write_operations::reply_within` instead, which keeps the join handle and reports the real end
+`cmdr_operations::reply_within` instead, which keeps the join handle and reports the real end
 (`crates/cmdr-operations/src/mutation_reply.rs`).
 
 The `blocking_*` helpers already have this property for free: they wrap `spawn_blocking`, so their timeout races a join

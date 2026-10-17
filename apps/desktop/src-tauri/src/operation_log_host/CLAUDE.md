@@ -13,8 +13,9 @@ This app as the operation log's host: `install` builds the app's one `OperationL
 - **The write engine journals into the handle `install` returned**, passed to `operations_host::install`, ❌ never a
   read of `operation_log()` from engine code.
 - **An app answer goes in as a value or a trait** (`VolumeLookup` over the engine's volumes, the retention-limits
-  closure over settings, the app's runtime): `cmdr-operation-log` has no `tauri` and never names settings or this module.
-- **A test that wants journaling builds its own log** (`write_operations::testing::TestOperationLog`) and runs its
+  closure over settings, the app's runtime): `cmdr-operation-log` has no `tauri` and never names settings or this
+  module.
+- **A test that wants journaling builds its own log** (`cmdr_operations::testing::TestOperationLog`) and runs its
   operations on an engine journaling into it (app-side: `operations_host::test_engine_journaling_into`), ❌ never
   on the shared `operation_log()`. A test of the log itself builds an `OperationLog`.
 
@@ -23,4 +24,5 @@ This app as the operation log's host: `install` builds the app's one `OperationL
 - `mod.rs`: `install`, `operation_log()`, `start`, the retention limits, the unreadable-DB set-aside.
   `volumes.rs` (test-only): `VolumeLookup` for a `VolumeManager`.
 
-Startup order and why each answer is passed rather than reached: `DETAILS.md`.
+Startup order and why each answer is passed rather than reached: `DETAILS.md`. Read it before any non-trivial work
+here: editing, planning, reorganizing, or advising.

@@ -15,15 +15,14 @@ spike before M2 starts.
 
 ## What already exists
 
-- **Where the move stops**: `apps/desktop/src-tauri/src/file_system/write_operations/transfer/move_op/mod.rs` picks the
-  same-volume engine by `st_dev`, and
-  `apps/desktop/src-tauri/src/file_system/write_operations/transfer/move_op/same_fs.rs` renames with `?`, so a refusal
-  aborts the operation with no fallback. The pre-flight in
-  `apps/desktop/src-tauri/src/file_system/write_operations/validation.rs` checks only that the DESTINATION is writable.
+- **Where the move stops**: `crates/cmdr-operations/src/transfer/move_op/mod.rs` picks the same-volume engine by
+  `st_dev`, and `crates/cmdr-operations/src/transfer/move_op/same_fs.rs` renames with `?`, so a refusal aborts the
+  operation with no fallback. The pre-flight in `crates/cmdr-operations/src/validation.rs` checks only that the
+  DESTINATION is writable.
 - **The errno already travels, typed**: `WriteOperationError::PermissionDenied` carries `errno`, a `PermissionRefusal`
   derived from it (`FolderPermissions` for `EACCES`, where root helps; `SystemProtected` for `EPERM`, where it doesn't),
   and a `refused_folder` proved with `access(W_OK)` at the refusal. Built only through
-  `WriteOperationError::permission_denied`. See `write_operations/DETAILS.md` § "Naming the folder that refused a
+  `WriteOperationError::permission_denied`. See `crates/cmdr-operations/DETAILS.md` § "Naming the folder that refused a
   write"; decision 12 below is what branches on it.
 - **Elevation today**: only the updater, which runs `rsync` through `do shell script ... with administrator privileges`
   (`apps/desktop/src-tauri/src/updater/installer.rs`).
@@ -31,8 +30,8 @@ spike before M2 starts.
   `CFUserNotificationDisplayAlert`, drawn by macOS's own UserNotificationCenter agent and localized through
   `crate::intl::menu_t`. Its doc comment explains why `NSAlert::runModal` and `tauri-plugin-dialog` don't fit.
 - **Parking on a person**: the write-operations engine already parks a running operation on a human answer for name
-  clashes (`apps/desktop/src-tauri/src/file_system/write_operations/conflict_slot.rs`,
-  `apps/desktop/src-tauri/src/file_system/write_operations/human_wait.rs`). The elevation question parks the same way.
+  clashes (`crates/cmdr-operations/src/conflict_slot.rs`, `crates/cmdr-operations/src/human_wait.rs`). The elevation
+  question parks the same way.
 - **MCP writes without a dialog**: `copy` / `move` / `delete` with `autoConfirm: true` plus the token from
   `<data_dir>/mcp.token`, and `dialog` with `action: "confirm"`, apply an operation with no human click
   (`apps/desktop/src-tauri/src/mcp/auth.rs`, `apps/desktop/src-tauri/src/mcp/executor/file_ops.rs`). Seven Playwright
@@ -186,8 +185,8 @@ For David's review; not final.
 ## Milestones
 
 The groundwork that needed no helper already shipped: the empty entitlements plist (`docs/security.md` § Entitlements)
-and the typed errno plus proved folder that decision 12 branches on (`write_operations/DETAILS.md` § "Naming the folder
-that refused a write").
+and the typed errno plus proved folder that decision 12 branches on (`crates/cmdr-operations/DETAILS.md` § "Naming the
+folder that refused a write").
 
 - [ ] **M1: spike on macOS 13 and 26** (throwaway code). Answers every open question below, plus: daemon on-demand start
       and idle exit, descriptor passing with `renameatx_np`, and a `CFUserNotification` with three buttons and a

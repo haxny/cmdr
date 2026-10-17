@@ -39,7 +39,7 @@ Depth for the MCP tool-execution layer. `CLAUDE.md` holds the must-knows.
   the answer to a `pendingSourcesGone` question). Thin adapter over the manager: no FE action, so no ack. Only a
   `Continued` outcome earns an `OK`.
 - **`conflicts.rs`**: `resolve_conflict` — answers ONE Stop-mode clash a running operation is parked on. Same adapter
-  shape as `queue.rs`, over `write_operations::resolve_write_conflict`, and the whole point of it is reporting the
+  shape as `queue.rs`, over `Operations::resolve_write_conflict`, and the whole point of it is reporting the
   ARBITRATION honestly: `Resolved` / `AlreadyResolved` answer `OK` (the clash is settled either way), `StaleAnswer` /
   `NoPendingConflict` / `UnknownOperation` are refusals, and every one of them crosses the wire as a typed `outcome`
   field or `data.outcome`, never as prose an agent would have to parse. `stop` is rejected as a resolution: it is the
@@ -59,7 +59,7 @@ Depth for the MCP tool-execution layer. `CLAUDE.md` holds the must-knows.
   `mcp-nav-to-path` + `mcp-move-cursor`).
 - **`operation_log.rs`**: `operations_list`, `operations_get` (short-lived read-only connection over the query API,
   the `commands/operation_log.rs` pattern), `operations_rollback` (dispatches the rollback engine via
-  `write_operations::rollback::dispatch_rollback`; returns after dispatch — see `mcp/DETAILS.md` § dispatch-then-poll).
+  `Operations::dispatch_rollback`; returns after dispatch — see `mcp/DETAILS.md` § dispatch-then-poll).
   The pure filter/param parsers and the typed-refusal shape are unit-tested in `operation_log/tests.rs`. Both read
   responses go through `fit_to_result_budget` and carry `returned` / `total` / `truncated` (`operations_list` keeps its
   original `count`, equal to `returned`), so a page cut for size is visible and resumable with `offset`.

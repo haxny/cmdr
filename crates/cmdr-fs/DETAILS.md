@@ -457,7 +457,7 @@ they leave by"), and the three stores' schema-mismatch wipes call it too.
   (`Volume::composes_new_names`, read through the provided `spell_new_name`;
   `Volume::matches_names_in_any_unicode_form`), `name_fold` holds the two comparisons (`composed`,
   `differ_only_in_form`), and the app decides which writes create a name and which address an existing entry
-  (`crates/cmdr-operations/src/DETAILS.md` § "Look-alike names").
+  (`crates/cmdr-operations/DETAILS.md` § "Look-alike names").
 - **`icons/per_path.rs`'s custom-folder-icon half**, the NSWorkspace fetch, and the icon disk cache.
 - **The scratch-visibility settings** (`advanced.showStagingTempFiles`, `advanced.showSafeSaveFiles`) and the listing
   read-path filter over them. "Is this ours, and does a live operation own it?" is vocabulary; "does the user see it?"
@@ -515,10 +515,11 @@ everything on `scan_walk`) asks per entry; one whose per-path scan is a bounded 
 
 ### The recorder: the selection's shape, entry by entry
 
-A transfer shows its selection as a live tree (`write_operations/transfer_tree/`), and the copy scan is the only walk
-that ever sees every entry of a remote selection. So **every entry carries its path**, and a caller that wants the shape
-hangs a `ScanRecorder` on the boundary (`recording_to`); `dir` / `file` hand it each entry they count. Same reasoning as
-the stop: the call a backend already makes per entry is the one it can't forget, and nobody pays when nobody listens.
+A transfer shows its selection as a live tree (`crates/cmdr-operations/src/transfer_tree/`), and the copy scan is the
+only walk that ever sees every entry of a remote selection. So **every entry carries its path**, and a caller that wants
+the shape hangs a `ScanRecorder` on the boundary (`recording_to`); `dir` / `file` hand it each entry they count. Same
+reasoning as the stop: the call a backend already makes per entry is the one it can't forget, and nobody pays when
+nobody listens.
 
 - **Paths are in the CALLER's form**: the path the batch was handed for a source, joined with each child's name. A
   backend walking in its own path space carries the caller's path down beside its own (SMB's share-relative
@@ -537,9 +538,9 @@ the stop: the call a backend already makes per entry is the one it can't forget,
 `server_side.rs` holds the vocabulary for work a server does on its own.
 
 **`Volume::copy_on_server(source, from, to, mode, progress)`** is the transfer engine's one server-side copy, asked
-before every streamed file (`write_operations/transfer/volume/server_side_copy.rs::try_server_side_copy`). Some
-protocols copy a file without the bytes travelling through Cmdr (SFTP's `copy-data@openssh.com`, S3's `CopyObject` and
-`UploadPartCopy`, SMB's `FSCTL_SRV_COPYCHUNK` within one share). Contract points, all load-bearing:
+before every streamed file (`crates/cmdr-operations/src/transfer/volume/server_side_copy.rs::try_server_side_copy`).
+Some protocols copy a file without the bytes travelling through Cmdr (SFTP's `copy-data@openssh.com`, S3's `CopyObject`
+and `UploadPartCopy`, SMB's `FSCTL_SRV_COPYCHUNK` within one share). Contract points, all load-bearing:
 
 - ❗ **The backend decides which sources it can copy from**, from `source`'s concrete type and identity
   (`as_any().downcast_ref`), ❌ never a path: two S3 places of one account are two instances that can copy between them,

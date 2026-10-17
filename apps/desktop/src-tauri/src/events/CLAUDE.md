@@ -24,7 +24,7 @@ all live on this side of the boundary.
   `cmdr-index` (the crate reports what it's doing), ❌ never in the frontend (which holds no timers). `DirsUpdated`
   isn't forwarded at all: it goes to `listing_index_sizes/`, which emits per touched listing.
 - ❗ **Two `TauriEventSink` types exist in the crate**: this one (`IndexEvent`) and
-  `file_system::write_operations::TauriEventSink` (`OperationEventSink`). Deliberate, but a bare grep returns both.
+  `operations_host::sinks::TauriEventSink` (`OperationEventSink`). Deliberate, but a bare grep returns both.
 
 ## Module map
 

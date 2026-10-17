@@ -155,7 +155,7 @@ the registry is the writer, and why a re-root deliberately isn't a retirement:
 **The invariant: a superseded volume keeps serving its holders.** The `VolumeManager` is not the only owner of a
 `Volume`. Anything that resolved the id earlier holds an `Arc` for the whole duration of its work:
 
-- a running transfer clones `src_vol` / `dst_vol` into every per-file task (`write_operations::transfer::volume::copy`),
+- a running transfer clones `src_vol` / `dst_vol` into every per-file task (`cmdr_operations::transfer::volume::copy`),
 - the file viewer holds an open `VolumeReadStream`,
 - an in-flight listing, a conflict scan, and a preflight walk each hold one,
 - the indexer holds one across a scan session.

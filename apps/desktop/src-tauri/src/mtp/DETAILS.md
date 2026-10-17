@@ -254,7 +254,7 @@ class-cancel path (see "Transfer cancellation" in `~/projects-git/vdavid/mtp-rs/
 
 Some Android devices (Pixel 6/7-era firmware observed) may still leave the session degraded after a flurry of ops even
 when cancel is clean on our side. This is hardware-side and unfixable in software; the settled-state gate (see
-`crates/cmdr-operations/src/DETAILS.md` § "Settle contract") ensures the user doesn't issue the next op until our side
+`crates/cmdr-operations/DETAILS.md` § "Settle contract") ensures the user doesn't issue the next op until our side
 is fully quiet, which avoids provoking the bug in practice.
 
 ## Dependencies

@@ -186,7 +186,7 @@ provider-egress question and `CLOUD_AI_CONSENT_VERSION` are unchanged by this ti
   (`set_app_handle` in `setup()`). Status is NOT an action — it lives in `cmdr://indexing`.
 - Queue (1): `queue` (`action` = `pause` | `resume` | `cancel` | `pause_all` | `resume_all`; `operationId` for the
   per-op actions, `operationIds` array for multi-cancel, `rollback` bool on cancel). A thin adapter over the
-  `write_operations` manager (`pause_operation` / `resume_operation` / `pause_all` / `resume_all` / `cancel_operation` /
+  `cmdr-operations` manager (`pause_operation` / `resume_operation` / `pause_all` / `resume_all` / `cancel_operation` /
   `cancel_operations` / `cancel_write_operation(id, rollback)`) — direct backend calls, no FE ack (the `indexing`
   precedent). Per-op actions validate the id against `list_operations` for an honest "unknown operationId" instead of a
   silent backend no-op — skipping the RETAINED FAILURES that snapshot also carries (`is_controllable`), since acting on
@@ -219,7 +219,7 @@ provider-egress question and `CLOUD_AI_CONSENT_VERSION` are unchanged by this ti
 
 #### `operations_rollback`: dispatch-then-poll (how an agent observes the terminal result)
 
-`operations_rollback` **requires `autoConfirm: true`** — a rollback writes to disk, so an authenticated caller must opt in explicitly rather than trigger it through a default (MCP has no interactive confirmation of its own; the app's `RollbackConfirmDialog` sits in front of the human-driven paths, the operation log's Roll back button among them). It calls the backend `write_operations::rollback::dispatch_rollback` directly (tagging `initiator = ai_client`), NOT through an FE round-trip: unlike copy/delete, a rollback's whole plan lives in the backend engine, so there's no FE knowledge to defer to.
+`operations_rollback` **requires `autoConfirm: true`** — a rollback writes to disk, so an authenticated caller must opt in explicitly rather than trigger it through a default (MCP has no interactive confirmation of its own; the app's `RollbackConfirmDialog` sits in front of the human-driven paths, the operation log's Roll back button among them). It calls the backend `Operations::dispatch_rollback` directly (tagging `initiator = ai_client`), NOT through an FE round-trip: unlike copy/delete, a rollback's whole plan lives in the backend engine, so there's no FE knowledge to defer to.
 
 **It returns after DISPATCH, not completion.** The inverse operation spawns as an async managed op (cancelable, shown in the operation queue), so the tool replies `{ status: "dispatched", inverseOpId }` the moment the original op is set to `rollingBack`. To observe the terminal result, the caller **polls `operations_get` on the original `operationId` until `rollbackState` leaves `rollingBack`** — settling to `rolledBack` (everything reversed), or `partiallyRolledBack` (some items skipped: drift, an occupied restore target, or an unverifiable precondition — the data-safety rechecks never overwrite). The MCP `await` tool can gate the poll cadence on a pane signal for the ack. A domain refusal (unknown op, already rolling back, not rollbackable, a disconnected volume) comes back as a typed `{ status: "refused", refusal: { kind, detail } }` body — branch on `kind`, never a message.
 
@@ -231,7 +231,7 @@ The loop, all MCP: `copy` → `dialog confirm transfer-confirmation` with **`onC
 
 **One policy list, three tools, one frontend map.** `executor/mod.rs::CONFLICT_POLICIES` (`stop`, `skip_all`, `overwrite_all`, `rename_all`, `overwrite_smaller_all`, `overwrite_older_all`) is what `copy`, `move`, and `dialog confirm` all validate against, mirrored once in `#lib/file-operations/transfer/conflict-policy.ts`. Before this there were two private frontend maps, and they had drifted: one spelled the conditional policies `overwrite_all_smaller`, the other `overwrite_smaller_all`, and neither spelling was reachable through any tool, so nothing ever surfaced it. The failure mode is silent — an unmapped name falls back to `skip`, turning "ask me about each file" into "skip every file" over the user's data — so the frontend now logs a name it doesn't know instead of quietly defaulting.
 
-**The `conflictId` is required, never defaulted.** An operation raises its clashes one at a time, but an answer's round trip can outlast the clash it belongs to; a tool that answered "whatever is pending" would silently decide a question nobody was shown. The backend arbitrates by id (`crates/cmdr-operations/src/DETAILS.md` § "Answering a conflict is arbitrated"), and this tool reports that verdict rather than flattening it:
+**The `conflictId` is required, never defaulted.** An operation raises its clashes one at a time, but an answer's round trip can outlast the clash it belongs to; a tool that answered "whatever is pending" would silently decide a question nobody was shown. The backend arbitrates by id (`crates/cmdr-operations/DETAILS.md` § "Answering a conflict is arbitrated"), and this tool reports that verdict rather than flattening it:
 
 - `Resolved` → `OK` + `outcome: "resolved"`. This answer is the one the operation carried on with.
 - `AlreadyResolved` → `OK` + `outcome: "already_resolved"`. Somebody answered the SAME clash first; the clash is settled, but with THEIR answer.
@@ -265,7 +265,7 @@ observable that a stored one was just REJECTED is the whole feedback signal.
 the parked copy for them; the agent path settles it instead (`archive-password-flow.svelte.ts::supplyStoredPassword` →
 `settleBirthOperation`, ❌ never `redispatchBirthOperation`). Two reasons it isn't merely conservative: that re-dispatch
 is a genuinely NEW operation — the backend already settled the old one, because `retain_failure` excludes
-`ArchiveNeedsPassword` by typed variant (`crates/cmdr-operations/src/DETAILS.md` § "Retained failures") — and a new operation
+`ArchiveNeedsPassword` by typed variant (`crates/cmdr-operations/DETAILS.md` § "Retained failures") — and a new operation
 started from inside an unlock would be the one write on this surface reaching disk with no confirmation dialog and no
 `autoConfirm` token in front of it. Sending the caller back through `copy` also sidesteps the re-dispatch's known hazard
 (it re-scans against birth context captured before the prompt, so a pane that moved meanwhile aims it at the wrong

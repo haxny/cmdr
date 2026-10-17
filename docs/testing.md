@@ -130,6 +130,18 @@ few seconds one directory buys. Measure the directory in isolation and read the 
 - **A network volume's server going away (refused, or silent)**: a `cmdr_fs::testing::tcp_proxy::TcpProxy` the test
   owns, between the client and the fixture. ❌ Never pause or stop a shared fixture container
 
+## Test scaffolding a crate shares (Rust)
+
+`cfg(test)` is set only while a crate compiles its OWN tests, so a fake, a fixture, or a test-only gate that another
+crate's tests reach (the app's, or the write engine's reaching `cmdr-local`) is `any(test, feature = "testing")`, and
+the consumer turns `testing` on through its `[dev-dependencies]`, which keeps it off in every shipped build. A gate left
+on `cfg(test)` alone silently runs the production path in the consumer's tests (`crates/cmdr-local/DETAILS.md` § "A
+consumer's test build is a test build here too" has the #357 stall that taught it). The `testing` module a crate exports
+counts apart from its capped surface (`index-crate-isolation`), but it's still a review question: it widens exactly what
+a consumer's cells reach. A crate with a handle exports an engine a test owns
+(`cmdr_operations::testing::TestOperations`, `cmdr_listing::testing::TestEngine`), so a test never shares engine state
+with its neighbors.
+
 ## The app data dir under test (Rust)
 
 Every store that resolves its data dir without an `AppHandle` (favorites, the icon disk cache, install ids, settings
@@ -403,7 +415,7 @@ running beside it own.
 so it reads as environment flake. Fix it by giving the walk a scope the test owns (make the registry a struct, keep the
 global as one instance of it, and let the test build its own), never by serializing the suites behind a mutex,
 `#[ignore]`ing the victim, or loosening the victim's assertion. Worked example, including how the global wiring stays
-covered: `crates/cmdr-operations/src/DETAILS.md` § "Test isolation: an engine of the test's own".
+covered: `crates/cmdr-operations/DETAILS.md` § "Test isolation: an engine of the test's own".
 
 ### ❌ `retries: 1` to mask a race
 
@@ -779,9 +791,8 @@ entry needs a real "we can't make this faster" justification, not convenience.
 
 These modules have invested test infrastructure. New code here must keep that bar:
 
-- **`apps/desktop/src-tauri/src/file_system/write_operations/`**: state.rs has 30+ tests pinning every state-machine
-  transition. Pattern: `cancel_write_operation` through the public interface, never via direct atomic mutation. See
-  state.rs `mod tests`.
+- **`crates/cmdr-operations/src/`**: state.rs has 30+ tests pinning every state-machine transition. Pattern:
+  `cancel_write_operation` through the public interface, never via direct atomic mutation. See state.rs `mod tests`.
 - **`crates/cmdr-index/src/indexing/`**: `IndexPhase` lifecycle tests in indexing/mod.rs require a real `IndexStore`
   (use `tempdir`-backed) and a dedicated test mutex (INDEXING is global).
 - **`apps/desktop/src-tauri/src/file_viewer/`**: `SearchStatus` transitions through `search_cancel` are subtle (the

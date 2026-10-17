@@ -1556,10 +1556,9 @@ folding keeps it and reports two survivors. `TestCollapseHubs` pins every shape,
 independent circles under one hub.
 
 Each tangle gets a **home**: the longest module path its survivors share, spelled with the cargo package name in front
-(`cmdr::file_system::write_operations`, or bare `cmdr` when they share nothing but the crate). That's the allowlist key,
-and the value is the list of tangle sizes living there, largest first. A list rather than one number because two
-independent tangles genuinely share a home (`write_operations::transfer::volume` has two), and a maximum would let a new
-one hide behind a bigger one.
+(`cmdr-index::indexing::lifecycle`, or bare `cmdr` when they share nothing but the crate). That's the allowlist key, and
+the value is the list of tangle sizes living there, largest first. A list rather than one number because two independent
+tangles can genuinely share a home, and a maximum would let a new one hide behind a bigger one.
 
 A home over its allowance, or a home not in the allowlist at all, fails. It used to warn, and a warning is logged as
 `pass`: seven homes sat over budget from 2026-08-22 to 2026-10-13 with nobody noticing. The allowlist should trend to
@@ -1776,6 +1775,11 @@ nothing" and passes). Anything narrower than every first-party member carries a 
   generated row can't carry the opt-out comment.
 - **`desktop-rust-cfg-gate`** governs every kind, because it pairs each member's OWN manifest with that member's tree
   and skips members that are already macOS-only at the crate level.
+- **`desktop-rust-discarded-outcome`** is `AppTreeOnly`, the write engine's crate included. It guards the IPC and MCP
+  surfaces, which exist only in the app tree, and its scanner resolves a callee's return type by NAME across everything
+  it scans: scanning the library crates beside the app reads `tauri::async_runtime::spawn_blocking` as `cmdr-index`'s
+  and flags sites that drop nothing (28, measured 2026-10-17 when the engine became a crate). The engine's typed
+  outcomes still reach the app's pass-throughs, which the check does scan.
 
 `claude-md-length` needed no re-rooting: it enumerates via `git ls-files` across the whole repo already.
 

@@ -159,7 +159,7 @@ risk.
   - **PDF parsing** in `inspect_file` runs under panic containment with size and time caps (`docs/security.md` § Cloud
     AI egress, the `inspect_file` item).
   - **Copy and delete** don't descend into symlinks, copy a link as a link, and write through temp+rename
-    (`crates/cmdr-operations/src/DETAILS.md`).
+    (`crates/cmdr-operations/DETAILS.md`).
   - **Git**: read-only by construction. Cmdr never fetches, pushes, or runs hooks, and strips a repo's `filter` config
     before reading status, so a repo's own commands never run (`crates/cmdr-git/CLAUDE.md`).
   - **Size caps before allocating**: the xz dictionary an archive asks for is capped, and a PDF page whose `Parent`

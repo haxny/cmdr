@@ -8,8 +8,8 @@ Two boundaries run through this crate, and they answer different questions.
 everything else through the other, so nothing here names the app. What stayed up there is what genuinely needs the app:
 finding a share and mounting it (`apps/desktop/src-tauri/src/network/`), minting an `SmbVolume` and registering it
 (`network/smb_upgrade.rs`), and driving every copy, move, and delete with the real event sink and pause gate
-(`apps/desktop/src-tauri/src/file_system/write_operations/`). App call sites import this crate by name, the way they do
-`cmdr-sftp` and `cmdr-webdav`.
+(`crates/cmdr-operations/src/`). App call sites import this crate by name, the way they do `cmdr-sftp` and
+`cmdr-webdav`.
 
 **The protocol / app boundary** is older and sits inside `network/`, which grew as one pile: mDNS discovery, share
 listing, mounting, the keychain, the auto-upgrade passes, and the Tauri events, plus a handful of pure functions over
@@ -168,7 +168,7 @@ The suites split by what a cell ASSERTS, never by what it connects to. Both side
   shared conformance promises, the retirement wiring, the watcher's archive-refresh routing, and every session-free unit
   case. § "The suites" below has the file-by-file map.
 - **In the app**, if the assertion is about what the APP does with a share, and the cell sits beside the app code it
-  asserts on rather than beside the backend. `file_system/write_operations/` holds the transfer suites
+  asserts on rather than beside the backend. `crates/cmdr-operations/src/` holds the transfer suites
   (`smb_transfer_safety_test.rs`, `smb_transfer_semantics_test.rs`, `smb_full_concurrency_test.rs`,
   `smb_stress_test.rs`, `smb_soak_test.rs`), the remote-archive cells (`smb_archive_integration_test.rs`), the
   local-source stream write (`smb_stream_write_integration_test.rs`), and the fixture wiring they share
@@ -420,10 +420,10 @@ case, so a look-alike twin is rare but not impossible.
   overwrite, a merge, a same-share move) must keep the stored bytes or it plants a twin. Why composed: a decomposed name
   on a share is one Finder over the kernel mount (composes on lookup), Windows, and Linux clients list and can't open,
   and every name older Cmdr builds wrote to a share is composed. A policy, one override to revert:
-  `crates/cmdr-operations/src/DETAILS.md` § "Look-alike names".
+  `crates/cmdr-operations/DETAILS.md` § "Look-alike names".
 - **A name the share holds in another spelling is taken, never free**: a write that asked in the wrong spelling would
   stand a second, identical-looking entry beside it. The app's write layer finds it with one listing after a byte-exact
-  miss (`crates/cmdr-operations/src/DETAILS.md` § "Look-alike names"). Docker-pinned by
+  miss (`crates/cmdr-operations/DETAILS.md` § "Look-alike names"). Docker-pinned by
   `operations_host/backend_suites/smb_look_alike_test.rs`.
 
 ### Resolving a foreign path

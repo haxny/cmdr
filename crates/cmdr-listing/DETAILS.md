@@ -618,7 +618,7 @@ shipped build.
   `insert_entry_sorted` / `remove_entries_by_paths` / `update_entry_sorted`. Falls back to full
   `handle_directory_change` when events exceed 500 or contain unknown kinds (`Any` / `Other`), which can't be reliably
   classified.
-- **Instant row for entry creation** (the app's `write_operations/create.rs::patch_listings_after_create`):
+- **Instant row for entry creation** (the app's `crates/cmdr-operations/src/create.rs::patch_listings_after_create`):
   `create_directory` / `create_file` and the paste writer return before the watcher fires; without it the new entry
   wouldn't appear until the next debounce (~200 ms). The create hands the local backend's mutation patch a
   `MutationEvent::Created` for `new_path`'s file name, which stats the entry and sends an `Added` through the app's

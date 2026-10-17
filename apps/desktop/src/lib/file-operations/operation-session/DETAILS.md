@@ -287,8 +287,8 @@ somebody else answer would hide its speed for the rest of the transfer.
 
 Every path reports the clash wait, including a local copy, which keeps no in-flight table: the backend classifies the
 wait off the operation's own pause gate and conflict slot, and re-sends its last tick on both edges of the wait so a
-parked operation says so even though it emits nothing while parked (`crates/cmdr-operations/src/DETAILS.md` § "Parking
-on a person"). ❌ So there is nothing here for a frontend to infer: a view that finds no `activity` is being told the
+parked operation says so even though it emits nothing while parked (`crates/cmdr-operations/DETAILS.md` § "Parking on a
+person"). ❌ So there is nothing here for a frontend to infer: a view that finds no `activity` is being told the
 operation is moving.
 
 ## The command surface
@@ -346,9 +346,9 @@ and being a modal, refuses to let any new operation start behind it. Scoped by i
 retraction for the old clash routinely lands with the new one already on screen.
 
 **An ended operation asks nothing.** A cancel takes a parked clash away WITHOUT answering it, so no
-`write-conflict-resolved` names it (`write_operations/conflict_slot.rs::abandon`); the terminal event is the only word a
-view gets. So `conflict` reads `null` and `awaitingAnswer` reads `false` once `outcome` is set, whatever the last event
-said. The raw clash stays held underneath, which keeps `outcome` the one fact both getters branch on.
+`write-conflict-resolved` names it (`crates/cmdr-operations/src/conflict_slot.rs::abandon`); the terminal event is the
+only word a view gets. So `conflict` reads `null` and `awaitingAnswer` reads `false` once `outcome` is set, whatever the
+last event said. The raw clash stays held underneath, which keeps `outcome` the one fact both getters branch on.
 
 Three rules follow, and all three are guardrails rather than observations:
 

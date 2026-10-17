@@ -2,7 +2,7 @@
 
 F7 dialog to create a folder in the focused pane: name validation, conflict detection, optional AI name suggestions.
 
-Backend: `create_directory` lives directly under `crates/cmdr-operations/src/CLAUDE.md` (no dedicated subdir).
+Backend: `create_directory` lives directly under `crates/cmdr-operations/CLAUDE.md` (no dedicated subdir).
 
 ## Module map
 

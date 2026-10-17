@@ -31,7 +31,7 @@ themselves; the index subsystems are the reverse, since they can't carry `tauri:
 - **`expand_tilde` is conditional**: gated on `volume_id == "root"` for listing, always applied for writes. ❌ Never
   tilde-expand an MTP or network path.
 - **A path from the transfer dialog is VOLUME-RELATIVE and must be anchored where its volume is still known**
-  (`write_operations::resolve_dest_path`, `path_exists`): handing `/photos` to a share unanchored breaks the write
+  (`cmdr_operations::resolve_dest_path`, `path_exists`): handing `/photos` to a share unanchored breaks the write
   before any I/O. `../file_system/volume/CLAUDE.md`.
 - **The create core errors on an unregistered volume; ❌ NO `std::fs` fallback** (it would carry no timeout). An
   unregistered id means an unmount race. Unit tests use `ensure_root_volume()`, ❌ never `init_volume_manager`.

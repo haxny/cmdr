@@ -36,8 +36,8 @@ under `/Volumes/<share>` goes to the kernel SMB mount even for a direct-SMB volu
 untimed 7–12 s gaps before direct-SMB New Folders on a busy NAS (ERR-AREUV, 0.50.0; inferred from the log, not
 reproduced). `downloads::watcher_test::note_pending_write_never_resolves_the_path` guards it. The end-to-end safety net is
 `downloads::runtime::tests::note_pending_write_for_cmdr_suppresses_watcher_event_end_to_end`. Call sites live across
-`file_system/write_operations/` (copy, move, delete walker, trash, volume strategy); renames register BOTH halves. See
-`crates/cmdr-operations/src/DETAILS.md` for the write-side contract.
+`crates/cmdr-operations/src/` (copy, move, delete walker, trash, volume strategy); renames register BOTH halves. See
+`crates/cmdr-operations/DETAILS.md` for the write-side contract.
 
 Under `cfg(test)` the hook also feeds `own_write_recorder.rs`, BEFORE the watcher check (tests run with no watcher): a
 process-wide registry keyed by each test's root, recording every call with whether its path existed yet. Never per

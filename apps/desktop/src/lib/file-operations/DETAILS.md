@@ -316,7 +316,7 @@ that's free to narrow later.
   the hold releases exactly as if this answer had won, with an info log naming the outcome; the progress dialog's
   `handleConflictResolution` clears its own prompt the same way. ❌ Never treat a non-`resolved` outcome as an error and
   leave the question on screen: nobody can answer it any more. Which outcome means what, and why the backend arbitrates
-  rather than a frontend rule naming who may answer: `crates/cmdr-operations/src/DETAILS.md` § "Answering a conflict is
+  rather than a frontend rule naming who may answer: `crates/cmdr-operations/DETAILS.md` § "Answering a conflict is
   arbitrated".
 - **One prompt at a time, in arrival order**, resuming only after the last. The backend serializes prompts within one
   operation (`conflict_dispatch_lock` plus a single conflict slot), so the queue holds at most one entry per operation;
@@ -350,8 +350,8 @@ that's free to narrow later.
 
 `sources-gone.svelte.ts` is the main window's host for `write-sources-gone`: an operation that waited in the queue
 found, when its turn came, that some of its top-level sources were moved or deleted meanwhile (ERR-962JD). The backend's
-half (who checks, how, and what the operation does with the answer): `crates/cmdr-operations/src/DETAILS.md` § "Sources
-that left while an operation queued".
+half (who checks, how, and what the operation does with the answer): `crates/cmdr-operations/DETAILS.md` § "Sources that
+left while an operation queued".
 
 - **Some gone (`awaiting_answer`)**: the host queues the question and shows `SourcesGoneDialog` (mounted by
   `SourcesGonePrompt.svelte` beside the conflict prompt): the honest count ("4 of the 22 items this move was waiting on

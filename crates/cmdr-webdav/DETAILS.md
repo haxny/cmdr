@@ -141,8 +141,8 @@ server's bytes.
 
 Why: a WebDAV server on Linux stores the bytes the URL spelled, where web servers, PHP, and scripts match bytes, so a
 decomposed `café.jpg` from macOS looks right and breaks every link to it. The decision and which other tools do the
-same: `crates/cmdr-operations/src/DETAILS.md` § "Look-alike names". Unit cells: `src/volume/paths_test.rs`; Docker
-cells: `apps/desktop/src-tauri/src/operations_host/backend_suites/webdav_look_alike_test.rs`.
+same: `crates/cmdr-operations/DETAILS.md` § "Look-alike names". Unit cells: `src/volume/paths_test.rs`; Docker cells:
+`apps/desktop/src-tauri/src/operations_host/backend_suites/webdav_look_alike_test.rs`.
 
 ## Write staging
 

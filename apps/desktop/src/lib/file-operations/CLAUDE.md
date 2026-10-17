@@ -47,7 +47,7 @@ F6 (move), F7 (new folder), F8 / Shift+F8 (trash / delete).
 - **`ScanThroughput` is SCAN-phase only** (the backend `EtaEstimator` owns every write phase), returns nulls until two
   samples land, needs `reset()` between scans.
 
-Backend counterpart: `crates/cmdr-operations/src/CLAUDE.md`.
+Backend counterpart: `crates/cmdr-operations/CLAUDE.md`.
 
 Depth on all of the above: `DETAILS.md`. Read it before any non-trivial work here: editing, planning, reorganizing, or
 advising.

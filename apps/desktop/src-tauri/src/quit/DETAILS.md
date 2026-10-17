@@ -102,7 +102,7 @@ The 2 s budget is `DRAIN` plus a tier-2 abort (token flips, no I/O), a ledger fl
 
 - **That every worker thread observed the cancel.** A thread wedged in `read()` on a dead mount may still be sitting
   there when the process dies, and no amount of tuning here changes that: a blocking regular-file read takes no
-  timeout, so ending the WAIT is the only move available (`crates/cmdr-operations/src/DETAILS.md` § "A local blocking read or
+  timeout, so ending the WAIT is the only move available (`crates/cmdr-operations/DETAILS.md` § "A local blocking read or
   write cannot be given a timeout"). The user-visible contract is "the app quits in 2 s and nothing on disk is corrupt
   or misleading", not "every thread wound down politely".
 - **That the 2 s covers a wedged Tauri event loop.** Step 5 posts to it, so a main thread that has stopped turning
@@ -123,7 +123,7 @@ The 2 s budget is `DRAIN` plus a tier-2 abort (token flips, no I/O), a ledger fl
 - **Nor does a scan-wait**: a transfer confirmed before its scan preview finished is registered from that moment and is
   `Running` with `phase: 'scanning'`, so ⌘Q during a scan now prompts where it used to walk straight past and let the
   scan die. Reusing `Running` rather than minting a status of its own is exactly what makes this correct with no edit
-  here (`crates/cmdr-operations/src/DETAILS.md` § "The scan-wait").
+  here (`crates/cmdr-operations/DETAILS.md` § "The scan-wait").
 - **Instant metadata ops never block** (`Rename` / `CreateFolder` / `CreateFile`, the `run_instant` family). They
   finish faster than a human could read a dialog about them, and a `Running` record for one is often already stale.
 - **Retained failures never block**: they're `Failed`, and there's nothing left to lose.

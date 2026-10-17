@@ -986,9 +986,9 @@ resolves `pressed` / `notStarted` (`ConfirmPress`), and only a press that starte
 
 `handleTransferConfirm` takes no scan flag: the progress dialog doesn't wait for a `TransferDialog` preview, because the
 backend registers the operation at confirm and its own task waits for the preview it claimed
-(`crates/cmdr-operations/src/DETAILS.md` § "The scan-wait"). What the handler MUST keep threading is `previewId`, and
-the archive-password retry MUST keep clearing it: that retry is a new operation, a preview accepts exactly one claimant,
-so a carried-over id would silently downgrade to a full re-walk.
+(`crates/cmdr-operations/DETAILS.md` § "The scan-wait"). What the handler MUST keep threading is `previewId`, and the
+archive-password retry MUST keep clearing it: that retry is a new operation, a preview accepts exactly one claimant, so
+a carried-over id would silently downgrade to a full re-walk.
 
 ### Skipping a confirmation
 

@@ -1,7 +1,7 @@
 # Operation queue window
 
 The standalone macOS window for running, waiting, and couldn't-finish operations. Opens from View > Operation queue
-(⌥⌘Q) or the palette. Backend: `crates/cmdr-operations/src/CLAUDE.md`.
+(⌥⌘Q) or the palette. Backend: `crates/cmdr-operations/CLAUDE.md`.
 
 ## Module map
 

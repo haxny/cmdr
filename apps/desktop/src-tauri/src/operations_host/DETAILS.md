@@ -1,7 +1,8 @@
 # Operations host: details
 
-The app side of the write engine's seams. The engine declares what it needs in `file_system/write_operations/host/`
-(`crates/cmdr-operations/src/DETAILS.md` § "The engine's host"); this module answers.
+The app side of the write engine's seams. The engine declares what it needs in `crates/cmdr-operations/src/host/`
+(each seam's contract: `crates/cmdr-operations/src/host/DETAILS.md`); this module answers, and this doc is the one
+place the side effects of those answers are written down.
 
 ## Startup
 
@@ -14,11 +15,11 @@ to every optional seam (`app_answers`, shared with the test binary's `test_engin
 ledger claim, and before `init_volume_manager`. Every app caller reaches the engine through `operations()` and calls a
 method on it; the engine's root `pub use` list is all it may name.
 
-`claim_ledger(data_dir)` runs later in `setup()`, where the leftover sweep always ran: after the instance lock (no other
+`claim_ledger(data_dir)` runs later in `setup()`: after the instance lock (no other
 process holds this data dir) and before `init_volume_manager`, unconditionally. It claims the installed engine's
 in-flight ledger through `operations()`, so a duplicate that lost the install is never the one claimed; a second claim
 is refused and logged. With no data dir the engine runs the ledger unpersisted and reports it
-(`crates/cmdr-operations/src/DETAILS.md` § "Who claims the ledger").
+(`crates/cmdr-operations/DETAILS.md` § "Who claims the ledger").
 
 - **Decision: a call before `install` is refused, never run detached.** `operations()` answers `Err(NotInstalled)`
   and raises a `log_error!`. A start maps it through `refuse_not_installed` to the frontend's generic `IoError` (its
@@ -30,7 +31,7 @@ is refused and logged. With no data dir the engine runs the ledger unpersisted a
 
 - **Decision: the runtime comes from the volume host, with no second handle.** Why: the engine and the backends it
   drives then share one pool, and the two can't disagree about which runtime is the app's. The admission pass
-  depends on it being the app's (`crates/cmdr-operations/src/DETAILS.md` § "The admission pass spawns admitted ops on the APP
+  depends on it being the app's (`crates/cmdr-operations/DETAILS.md` § "The admission pass spawns admitted ops on the APP
   runtime").
 - **Decision: the sink factory is the engine's only way to a Tauri sink.** Why: an instant op routed into a zip becomes
   a managed archive edit the ENGINE starts, with no caller-built sink to hand it; and the MCP rollback tool is generic
@@ -51,9 +52,15 @@ The four terminal emits carry app side effects in a pinned order (`terminal_effe
 - `write-complete`: completion analytics (`analytics.rs`), then the MCP terminal ring, then the emit.
 - `write-cancelled`: the ring, then the emit.
 - `write-error`: the ring, the failure `warn!` (target `write_operations`, the one place the technical reason is
-  written down; `crates/cmdr-operations/src/DETAILS.md` has the WARN-not-error decision), the engine's
+  written down; `crates/cmdr-operations/DETAILS.md` has the WARN-not-error decision), the engine's
   `OperationManager::retain_failure`, then the emit.
 - `write-settled`: the free-space hint (`cmdr_local::live_space::expect_space_change`, macOS), then the emit.
+
+- **Decision: the terminal side effects live in this sink, not behind an engine-level "operation ended" observer.** Why:
+  the MCP ring, the completion analytics, the failure `warn!`, and the space hint are app concerns, and the sink is
+  already the app's per-op voice. An engine observer would double-fire under archive move-out's `SuppressTerminalsSink`
+  (which swallows the inner extract's terminals on purpose) and would make every collector-sink test retain failures.
+  So the engine keeps only the fact it owns, `retain_failure`, and test sinks stay side-effect-free.
 
 The ring and the retained failure land BEFORE the frontend hears: MCP's `await operation_complete` answers the instant
 the event arrives, and a backgrounded op that fails while the queue window is closed can still say why. Completion
@@ -156,16 +163,16 @@ The engine's tests never name the app, so the few cells that need the app's answ
 `registry_routing_tests.rs` (an archive or the git portal inside a parent drive, an id nothing knows, a pane open
 inside a zip the edit rewrote), `copy_snapshot_out_tests.rs` (copying out of the git portal end to end), and
 `log_redaction_tests.rs` (an engine log label through the report redactor). Each reaches the engine through its public
-list plus `write_operations::testing`.
+list plus `cmdr_operations::testing`.
 
 ## Backend suites (`backend_suites/`)
 
 Every backend's cells through the app's real engine, and the backend-blind scenarios they share. They sit here, beside
 the host, because each needs the app around the engine: a Docker fixture, the real volume registry over
 `volume_host::host()`, virtual MTP, or the ADB fake with the downloads watcher. They drive the engine through its
-public list plus `write_operations::testing` (the volume drivers they run with a state and sink of
-their own, the fault injector, the safety oracle), ❌ never an engine module by path, so the engine can leave the app
-crate without them.
+public list plus `cmdr_operations::testing` (the volume drivers they run with a state and sink of
+their own, the fault injector, the safety oracle), ❌ never an engine module by path, so they compile against the crate's promised surface
+and nothing else.
 
 ### The network transfer suites
 
@@ -221,7 +228,7 @@ predicate the crate never states, and a free-space pre-flight reading `NotSuppor
   `PermissionDenied`), loses nothing, and ❗ leaves the volume connected, since a refusal is an answer. The refusal
   comes from `webdav_refusing_proxy_test_support.rs`, an HTTP proxy in front of the real Apache that answers one
   request itself; ❌ never reconfigure the shared container for a cell. A refused `COPY` falls back to streaming by
-  design (`file_system/write_operations/transfer/volume/server_side_copy.rs::try_server_side_copy`).
+  design (`crates/cmdr-operations/src/transfer/volume/server_side_copy.rs::try_server_side_copy`).
 - **`adb_transfer_test.rs` runs the same scenarios against a phone on `cmdr-adb`'s in-process fake server**, so it
   needs no Docker, runs in the unit lane, and has no name prefix to keep. Its own cells start a copy from two registered
   ids (`start_copy_by_id`, through `start_volume_copy`), check that a copy onto the phone lands through the writer's own

@@ -122,7 +122,7 @@ prompt in § "Archive-password prompt", the `..` helpers in § "Index conversion
   counts as skipped only when NOTHING under it landed; one refused child leaves it copied, because it partly arrived.
   The `?? filesSkipped` fallback is that old heuristic on purpose, for the engines that report no breakdown
   (cross-volume, in-archive), whose skips are all top-level files today. Backend contract:
-  `write_operations/types/events.rs::TopLevelSkipped`.
+  `crates/cmdr-operations/src/types/events.rs::TopLevelSkipped`.
 - **A move that left something in the source appends a sentence per kind** ("2 items appeared in Work during the move
   and stay there", "1 item changed during the move and stays in Work"), off `WriteCompleteEvent.appearedDuringMove` —
   typed data (`itemCount`, `changedCount`, `folderName`, `folderCount`), never prose crossing IPC. It means a
@@ -527,15 +527,15 @@ copy/move:
   moving either reflects in the other live. `dispatchTransferOperation` reads the setting once at dispatch and passes
   `compressionLevel` in the op config for compress, copy, AND cross-volume move (one uniform level for every user-driven
   zip write; the backend ignores it for non-archive copies). The level's effect on the archive (added-entries-only,
-  clamped 1..=9, `None` = crate default 6) is single-sourced in `crates/cmdr-operations/src/DETAILS.md` § "Archive
-  edits" → the mutation `DETAILS.md`.
+  clamped 1..=9, `None` = crate default 6) is single-sourced in `crates/cmdr-operations/DETAILS.md` § "Archive edits" →
+  the mutation `DETAILS.md`.
 - **An explicitly-approximate estimated size shows in compress mode only** (`CompressEstimateLine.svelte`, beside the
   scan tallies). The backend samples it once during the deep scan (local sources only; suppressed for remote) and ships
   per-class level-6 subtotals on `scan-preview-complete`; `transfer-scan-state` exposes them as `estimatedBytes`. The
   line re-scales to the selected level via `compress-estimate-scaling.ts` with no re-scan (it subscribes to the same
   `behavior.archiveCompressionLevel` setting the slider writes), shows a loading affordance while a local scan runs, and
   renders nothing when the estimate is absent. The sampler, budgets, and level curve are single-sourced in
-  `crates/cmdr-operations/src/DETAILS.md` § "Compressed-size estimate".
+  `crates/cmdr-operations/DETAILS.md` § "Compressed-size estimate".
 - **The Copy / Move / Compress row is the `ui/ToggleGroup` primitive** (`semantics: 'toggles'`, `fullWidth`), wrapped in
   a `.operation-toggle` div that supplies only the side inset. `toggles`, not `tabs`: the row picks a stored value and
   has no tab panels, so AT should hear "toggle button, Compress, pressed" rather than a promised "tab 1 of 3". E2E and
@@ -700,7 +700,7 @@ reaches for a fixed `sleep`. `waitForConflictCheck` in `conflict-helpers.ts` pol
 The destination box (`editedPath`) accepts the home shortcut as well as absolute paths: `validateDirectoryPath` passes a
 leading `/`, a bare `~`, or `~/…`. `~` is the app's internal stand-in for the home dir; the backend expands it on
 execution (the local `move_files` command always did, and `copy_between_volumes`/`move_between_volumes` expand a leading
-`~` for a destination volume with a local path via `write_operations/routing.rs::resolve_dest_path`, which the
+`~` for a destination volume with a local path via `crates/cmdr-operations/src/routing.rs::resolve_dest_path`, which the
 write-access probe below anchors through too).
 
 Two niceties on top:
@@ -860,7 +860,7 @@ enough space" and the error dialog offers **Copy anyway** beside Close. The clic
 `dialog-state.handleTransferErrorCopyAnyway`, which starts the failed copy's birth context again (`retryPropsFrom`,
 fresh preview, same conflict policy) with `spaceShortfall: 'proceed'`, settling the failed one like a close. The field
 rides `TransferProgressPropsData` → `TransferProgressDialog` → `TransferDispatchConfig` → `copyBetweenVolumes`, and the
-backend then skips its free-space check (`SpaceShortfall` in `crates/cmdr-operations/src/DETAILS.md` § "The free-space
+backend then skips its free-space check (`SpaceShortfall` in `crates/cmdr-operations/DETAILS.md` § "The free-space
 pre-flight"). A destination that really fills up still stops the copy, as `destination_full`.
 
 Close stays primary, so Enter takes the safe way out. The button appears only for a `copy` with a birth context: an
@@ -883,7 +883,7 @@ Pinned by `TransferErrorDialog.typed.test.ts`, `DialogManager.svelte.test.ts`, a
   all (the driver treats `RollingBack` exactly like `Stopped` and reports `rolled_back: false`) and looks, from the
   props, exactly like a perfectly reversible transfer. So both this dialog's footers read `supportsRollback` off the
   registry snapshot, the same flag the queue window reads. The props-only same-volume-move rule stands beside it for the
-  frames before the first snapshot lands. See `crates/cmdr-operations/src/DETAILS.md` § "Rollback availability".
+  frames before the first snapshot lands. See `crates/cmdr-operations/DETAILS.md` § "Rollback availability".
 - **Dry-run conflict sampling.** If >200 conflicts, `DryRunResult.conflicts` contains a random sample. Check
   `conflictsSampled: true` and `conflictsTotal` for the exact count.
 - **Progress dialog edge case.** Same-FS move completes so fast that the complete event may fire before the dialog

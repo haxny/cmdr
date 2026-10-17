@@ -303,7 +303,7 @@ An `ArchiveVolume` is never constructed here directly in production — it's min
   `apps/desktop/src-tauri/src/file_system/volume/manager/`), the async siblings of the `std::fs`-only `src/boundary.rs`
   predicates. Same `supports_local_fs_access()` fork, same `confirm_remote_archive_boundary` for a remote parent.
   Without them a write inside a remote zip falls through to the parent volume and errors; see
-  `crates/cmdr-operations/src/DETAILS.md` for the "Reaching the edit driver: parent-aware write-routing" section.
+  `crates/cmdr-operations/DETAILS.md` for the "Reaching the edit driver: parent-aware write-routing" section.
 
 **resolve returns the FULL path, unchanged.** The decision (over returning a stripped inner path): `ArchiveVolume`
 already maps a volume-namespace path to its inner key via `inner_path()`, `node_to_entry` builds full paths, and

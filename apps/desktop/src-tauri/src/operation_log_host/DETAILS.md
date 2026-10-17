@@ -1,16 +1,17 @@
 # Operation log host: details
 
-The app side of the operation log. The log (`crates/cmdr-operation-log/`) owns its state in an `OperationLog` handle and knows
-nothing about Tauri, settings, or the data dir; this module supplies them.
+The app side of the operation log. The log (`crates/cmdr-operation-log/`) owns its state in an `OperationLog` handle
+and knows nothing about Tauri, settings, or the data dir; this module supplies them. Read this before any non-trivial
+work here: editing, planning, reorganizing, or advising.
 
 ## Startup
 
 1. `install()` runs in `setup()` right after the volume host, before the write engine is built
-   (`operations_host::install` takes the handle), and returns the detached handle. A detached handle journals nothing: an operation opened on it stays unjournaled for its whole life.
+   (`operations_host::install` takes the handle), and returns the handle, not yet open. Until `start` opens it, it
+   journals nothing: an operation opened before then stays unjournaled for its whole life.
 2. `start(app, &log)` runs late (beside `agent::start`), once the data dir resolves: it seeds the recording switch from
    `settings.json`, calls `OperationLog::open` (store, writer, reconcile, then publish), and starts retention on the
-   app's runtime. A data-dir or open failure logs a warning and leaves the app running without history, as before the
-   handle existed.
+   app's runtime. A data-dir or open failure logs a warning and leaves the app running without history.
 
 - **Decision: `start` takes the handle `install` returned.** Why: a re-read through `operation_log()` could, in a
   mis-ordered startup, open a detached placeholder while the engine journals into the installed one. Passing it makes
@@ -42,6 +43,5 @@ the shared handle too, as the app's engine is over the installed one.
 
 Tests leave the shared handle's journal slot alone (one cell,
 `operations_host::tests::the_shared_test_engine_journals_into_operation_log`, probes its wiring): a write-pipeline test
-builds a log of its own
-(`write_operations::testing::TestOperationLog`) and an engine journaling into it, app-side through
-`operations_host::test_engine_journaling_into`, so plain `cargo test` needs no lock around the slot.
+builds a log of its own (`cmdr_operations::testing::TestOperationLog`) and an engine journaling into it, app-side
+through `operations_host::test_engine_journaling_into`, so plain `cargo test` needs no lock around the slot.

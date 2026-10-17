@@ -615,7 +615,7 @@ operation.
 **The armed state holds the QUESTION, and `arm` builds it.** `arm(tx, |id| event)` mints the id, calls the builder with
 it, stores the event, and hands it back for the caller to emit, so the id on the wire, the id the slot is armed with,
 and the id `answer` requires back are one value by construction. That question is then readable through `pending()` /
-`cmdr_operations::pending_write_conflict(op_id)` for anyone who arrives after the broadcast: `write-conflict` only ever
+`Operations::pending_write_conflict(op_id)` for anyone who arrives after the broadcast: `write-conflict` only ever
 reaches whoever was listening when it went out, so `cmdr://state`'s `pendingConflict:` block (the surface an AGENT
 answers from) has no other way to know what is being asked. ❌ Don't add a second way to arm that skips the question: an
 operation parked on something nobody can read back is answerable only by a surface that happened to be listening.

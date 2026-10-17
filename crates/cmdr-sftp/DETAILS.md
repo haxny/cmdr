@@ -265,7 +265,7 @@ nothing.
 
 `copy.rs` answers `Volume::copy_within`, which the trait's default `copy_on_server` calls when both sides of a copy are
 the same volume instance; the app asks it BEFORE reaching for a stream
-(`write_operations/transfer/volume/server_side_copy.rs::try_server_side_copy`).
+(`crates/cmdr-operations/src/transfer/volume/server_side_copy.rs::try_server_side_copy`).
 
 - ❗ **Chunked, ❌ never one request for the whole file.** One `copy-data` for 4 GB is a single unanswered request for
   as long as the server's disks take, with no progress and nowhere to cancel. `COPY_CHUNK_BYTES` is 8 MiB, and each
@@ -493,8 +493,8 @@ protocol DOES distinguish is never re-read through it.
 
 **`force = true` uses `Fs::rename` directly**, which reaches for `posix-rename@openssh.com` when the server offers it.
 Here that is exactly right: the extension is defined to replace the destination atomically, which is what gives a remote
-archive edit its atomic swap (`write_operations/archive_edit/remote.rs::swap_into_place` gates that fast path on
-`create_directory_errors_on_existing_dir()` plus a forced rename succeeding, and this backend answers both). A server
+archive edit its atomic swap (`crates/cmdr-operations/src/archive_edit/remote.rs::swap_into_place` gates that fast path
+on `create_directory_errors_on_existing_dir()` plus a forced rename succeeding, and this backend answers both). A server
 without the extension sends plain `SSH_FXP_RENAME`, which REFUSES an occupied destination, so that one gets the
 destination cleared first — ❗ and only once the probe proves something is in it, because clearing on any failure is the
 shape the app-side landing fix exists to stop.
@@ -909,7 +909,7 @@ never this crate, which can't tell a new name from an existing one. Downloads ke
 
 Why: OpenSSH on Linux stores a name's bytes as sent, and web servers, PHP, and scripts there match bytes, so a
 decomposed `café.jpg` from macOS looks right and breaks every link to it. The decision, its reasoning, and which other
-tools do the same: `crates/cmdr-operations/src/DETAILS.md` § "Look-alike names". Unit cells: `src/volume/paths_test.rs`;
+tools do the same: `crates/cmdr-operations/DETAILS.md` § "Look-alike names". Unit cells: `src/volume/paths_test.rs`;
 Docker cells: `apps/desktop/src-tauri/src/operations_host/backend_suites/sftp_look_alike_test.rs`.
 
 ## The `Volume` answers, and why
@@ -975,9 +975,9 @@ Beyond the four required methods, `volume_impl.rs` states these deliberately:
   cadence costs nothing on the wire there. `sftp-fixture-noposixrename` is that server. ❗ **The app owes the other half
   of this contract**, and for a while it didn't pay it: the transfer pre-flight propagated the `NotSupported` as a
   failure, so every copy INTO a server died after ~500 ms. `NotSupported` here means "can't tell", ❌ never "no room".
-  Both pre-flights go through `write_operations/transfer/volume/copy.rs::dest_space_if_known`, which reads the refusal
-  as `None` and proceeds while still propagating every OTHER error. ❌ Don't answer this with a guessed number to make a
-  caller's life easier; the caller is the one that has to cope.
+  Both pre-flights go through `crates/cmdr-operations/src/transfer/volume/copy.rs::dest_space_if_known`, which reads the
+  refusal as `None` and proceeds while still propagating every OTHER error. ❌ Don't answer this with a guessed number
+  to make a caller's life easier; the caller is the one that has to cope.
 
 ## Connecting from the frontend
 
@@ -1236,7 +1236,7 @@ A cell lives with whatever it **asserts**, never with whatever it connects to.
   the offset on purpose: only the small-limits cell went red).
 - ❗ **Every write cell works inside a `scratch_dir` of its own.** The whole binary shares one export and `nextest` runs
   its cells in parallel, so a fixed name has two of them deleting each other's files and reporting it as a backend bug.
-- **App-side**: anything driving `write_operations`, the volume registry, or the listing cache. ❌ Don't widen this
+- **App-side**: anything driving `cmdr-operations`, the volume registry, or the listing cache. ❌ Don't widen this
   crate's public surface to keep a test on that side; move the test instead. ❗ **A green suite here is not evidence
   that a copy works.** Two blockers shipped with every cell in this crate passing, because neither lived here:
   `supports_export` is a declaration the copy ENGINE reads, and the free-space pre-flight is the engine's own. The cells

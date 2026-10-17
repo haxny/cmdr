@@ -159,7 +159,8 @@ condition), never re-deriving freshness.
 `expected_totals_for_sources()` returns the index-derived `(file count, byte total)` for a set of source paths so a
 write operation (copy/move/delete) can render a real scan-phase progress bar before the foolproof re-scan completes. Per
 source: `resolve_path` → `get_entry_by_id` → if a dir use `dir_stats`, if a file use the entry's `logical_size`. Uses
-the same `ReadPool` as enrichment for lock-free reads. Used by `scan_preview.rs` and `scan.rs` in `write_operations/`.
+the same `ReadPool` as enrichment for lock-free reads. Used by `scan_preview.rs` and `scan.rs` in
+`crates/cmdr-operations/src/`.
 
 **It returns `None` if ANY source isn't covered by the index** — no pool, no entry, no `dir_stats`, no `logical_size`,
 OR (via `per_source_contribution`) a directory whose subtree is incomplete (`min_subtree_epoch == 0`). A partial or

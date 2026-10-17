@@ -278,7 +278,7 @@ A cell lives with whatever it **asserts**, never with whatever it connects to.
   faults, `hold_answers` / `release_answers` to hold a dial provably in flight, and `requests` (every service request,
   in order) for counting dials or proving none happened. `volume/testing.rs` holds the volume-level fixtures on top of
   it. No `adb` binary, no device, no Docker: every cell runs in the unit lane.
-- **App-side** (`apps/desktop/src-tauri/src/adb/`): anything driving `write_operations`, the volume registry,
+- **App-side** (`apps/desktop/src-tauri/src/adb/`): anything driving `cmdr-operations`, the volume registry,
   `volume_listing::complete`, or the listing cache. The transfer engine's cells sit beside the SFTP suite, in
   `apps/desktop/src-tauri/src/operations_host/backend_suites/adb_transfer_test.rs`; the list of what exists is
   `apps/desktop/src-tauri/src/adb/DETAILS.md` § "Testing". ❌ Don't widen this crate's public surface to keep a test on

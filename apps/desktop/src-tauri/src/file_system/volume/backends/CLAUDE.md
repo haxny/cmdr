@@ -12,7 +12,7 @@ What a caller reaching a backend from the app still has to know. Trait shape, ca
   `pub use <crate>::*;` module here to spare a call site the crate name: it puts the backend back in a directory it
   doesn't live in, and it becomes the place app-side tests drift to.
 - **A crate backend's app-side tests live beside the app code they assert on**, not here. The local backend's are in
-  `listing_host/tests/` (they assert on the app's `AppListings`); SMB's are in `file_system/write_operations/`
+  `listing_host/tests/` (they assert on the app's `AppListings`); SMB's are in `crates/cmdr-operations/src/`
   (transfers, remote archives, the shared `smb_test_support.rs`), `crates/cmdr-listing/` (the pane-close watcher cell),
   and `file_system/volume/` (index scan, media fetch); the archive watch cell is in `crates/cmdr-listing/`. Which side a
   cell belongs on: `crates/cmdr-smb/DETAILS.md` § "Which side a test lives on".

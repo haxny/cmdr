@@ -92,7 +92,7 @@ automate it, and survives `oxfmt` (which collapses whitespace in regular markdow
 ### Test-suite health
 
 - **Quarterly: mutation-testing sweep on hot-spot modules**. Run `cargo mutants` on each module listed in
-  `docs/testing.md` § "Hot spots" (write_operations, indexing, file_viewer, file_system/index/store). Triage survivors.
+  `docs/testing.md` § "Hot spots" (cmdr-operations, indexing, file_viewer, file_system/index/store). Triage survivors.
   If mutation score drops below 80% on any of them, add tests to bring it back. The pass is slow (~10–15 min per file on
   this hardware); budget half a day. Document the run + score in the log below.
 - **Per release: E2E suite health check**. Three back-to-back `pnpm check desktop-e2e-playwright` runs. All three must

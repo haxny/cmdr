@@ -2,7 +2,7 @@
 
 Depth and rationale. `CLAUDE.md` holds the must-knows; this is everything else. Submodule depth lives in each
 submodule's own `DETAILS.md` (`volume/`); the listing engine's is `crates/cmdr-listing/DETAILS.md`, the write engine's
-`crates/cmdr-operations/src/DETAILS.md`.
+`crates/cmdr-operations/DETAILS.md`.
 
 ## Module map
 
@@ -11,7 +11,6 @@ Two submodules carry their own docs: `volume/` and `sync_status/` (the cloud bad
 - `watcher.rs`: FSEvents-driven listing updates: the OS half (debounce, rebasing, the stat, the full-re-read decision,
   the `std::fs` fallback on `RefreshOutcome::NoVolume`, `directory-deleted`) over the engine's `observe_children` and
   `refresh`.
-- `staging.rs`: scratch visibility. The `StagingTemp` mint itself is `cmdr_fs::staging`.
 - `index_provider.rs`: the app's `VolumeProvider`, so the index never has to import `VolumeManager`. Its
   `ensure_direct_smb` is `network::smb_connect_directly::connect_directly`, with every `UpgradeResult` but `Success`
   read as a refusal. Its presence answer (`mount_identity`, `is_mounted`) reads the non-blocking mount table by
@@ -63,7 +62,7 @@ What it deliberately does NOT own is the volume registry itself. The singleton a
 `volume/manager.rs` beside the type, and call sites import them from there. Reasons, and why a `pub use` shim back into
 this module is the thing to resist: `volume/DETAILS.md` § "Key decisions".
 
-## Hiding transient scratch (`staging.rs`)
+## Hiding transient scratch (`cmdr_fs::staging`)
 
 Every write lands on a `.cmdr-tmp-*` sibling and takes its real name by a rename, so a copy makes files appear under
 names the user didn't create for as long as it takes to write them. The 2026-07-31 incident's visible tail was one of
@@ -98,7 +97,7 @@ cross-filesystem move's staging DIRECTORY (`.cmdr-staging-<op>`), which sits in 
 the length of the move. `cmdr_fs::staging::is_cmdr_scratch_name` is the union the gate asks, and the directory
 registers through the same `StagingTemp` mint, so it hides and un-hides by ownership like everything else. ❗ The
 union is the LISTING's question only: the sweep that removes one asks the strict per-kind test instead
-(`crates/cmdr-operations/src/DETAILS.md` § "What the sweep does with each kind"), because a staging directory can hold the user's
+(`crates/cmdr-operations/DETAILS.md` § "What the sweep does with each kind"), because a staging directory can hold the user's
 only copy and a look-alike name must never reach a `remove_dir`.
 
 **Which token the app hands it.** An operation's temps carry a `Weak` to `WriteOperationState`'s liveness token, dropped

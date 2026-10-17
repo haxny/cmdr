@@ -1,7 +1,7 @@
 # File system module
 
-File writing, sync status, volume management, and file watching. The listing engine itself is `crates/cmdr-listing`;
-this app hosts it from `listing_host/`.
+Sync status, volume management, and file watching. The engines are crates: listing `crates/cmdr-listing`, writes
+`crates/cmdr-operations`.
 
 ## Module map
 
