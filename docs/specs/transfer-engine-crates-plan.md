@@ -1730,6 +1730,27 @@ per slice: `desktop-rust-tests`, `desktop-rust-clippy`, `desktop-rust-test-sleep
   `operation_states()`, `forget_operation`, `register_operation_status` / `unregister_operation_status`,
   `WriteOperationState::new`, and `QueuedOperationFixture::park` / `park_naming`.
 
+**What landed differently in the second slice** (recorded at execution):
+
+- **Converted, each test on its own engine:** every `transfer/` suite (115 touched test files, 843 tests, counts
+  unchanged), local, volume, driver, probe, outage, and retry. Each suite's `make_state` and run helpers take the
+  engine; fixtures that cancel from inside a seam (sinks, volumes, `ConflictResponderSink::cancelling`) hold an
+  `Operations::clone`. The driver suites' `unique_op_id` / `install_state` and the hardlink suite's went.
+- **Shared reaches this slice found beyond the named shims:** the scan-preview shims (`insert_scan_result`,
+  `seed_incoherent_scan_result_for_test`) became `engine.stores().previews()`; `render_live_dump` got
+  `Operations::render_live_transfer_dump` (the free fn delegates for the backend suites); `rollback::Reversal` got
+  `Reversal::on(&engine, tag)` beside `new`; `TestOperationLog` got `writer()`, so `move_journal_tests` and
+  `rename_merge_tests` journal through `TestOperations::journaling_into` and dropped their `TestJournalGuard`.
+  `engine.volumes()` lost its `#[expect(dead_code)]` (the safety grid registers there).
+- **Left on the app:** `copy_snapshot_out_tests` builds `operations_host::test_engine()` per cell (the git portal's
+  routing lives in the app's registry, which `FakeVolumes` doesn't route through), and `real_image.rs` stays on the
+  shared engine (app-side, the disk-images lane).
+- **A process static that made plain `cargo test` flaky:** `chunked_copy::chunk_park` armed ONE park for any chunked
+  copy, so a sibling's copy could take it. Each park now names the source it holds; the real-image cells passed with
+  `--ignored`.
+- **Still needed by later slices:** every shim the first slice listed, `render_live_dump`, `Reversal::new`, and the
+  preview shims (`scan_cache_previews.rs`).
+
 ### M8a: The move
 
 **Scope.** `git mv apps/desktop/src-tauri/src/file_system/write_operations crates/cmdr-operations/src` (minus what stays
