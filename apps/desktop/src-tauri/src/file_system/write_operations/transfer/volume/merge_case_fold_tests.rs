@@ -17,6 +17,7 @@
 use super::super::super::conflict_responder_test_support::{ConflictResponderSink, file_conflict_count};
 use super::tests::make_state;
 use super::*;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::{ConflictResolution, VolumeCopyConfig, WriteOperationError};
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::WriteMode;
@@ -262,12 +263,13 @@ async fn stored_bytes(dest: &Arc<InMemoryVolume>, path: &str) -> Option<Vec<u8>>
 /// Copies `/album` from `source` into `dest`'s root under `policy`, answering
 /// nothing (no prompt is expected unless the caller scripts one).
 async fn merge_album(
+    engine: &TestOperations,
     label: &str,
     source: &Arc<dyn Volume>,
     dest: Arc<dyn Volume>,
     policy: ConflictResolution,
 ) -> (Arc<ConflictResponderSink>, Arc<WriteOperationState>) {
-    let state = make_state();
+    let state = make_state(engine);
     let events = Arc::new(ConflictResponderSink::new(&state, ConflictResolution::Skip, false));
     let config = VolumeCopyConfig {
         conflict_resolution: policy,
@@ -294,10 +296,11 @@ async fn merge_album(
 /// the child must be reported as the skip it is.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_deep_child_differing_only_in_case_is_a_conflict_the_policy_decides() {
+    let engine = TestOperations::new();
     let (source, dest_inner) = folded_pair("Report.docx", "report.docx").await;
     let dest: Arc<dyn Volume> = Arc::new(CaseFoldingDest::new(&dest_inner));
 
-    let (_events, state) = merge_album("op-fold-case", &source, dest, ConflictResolution::Skip).await;
+    let (_events, state) = merge_album(&engine, "op-fold-case", &source, dest, ConflictResolution::Skip).await;
 
     assert_eq!(
         stored_bytes(&dest_inner, "/album/report.docx").await.as_deref(),
@@ -320,11 +323,12 @@ async fn a_deep_child_differing_only_in_case_is_a_conflict_the_policy_decides() 
 /// destination name is one file on macOS and SMB.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_deep_child_differing_only_in_normalization_is_a_conflict_too() {
+    let engine = TestOperations::new();
     // "café.txt" decomposed (e + U+0301) against the composed spelling.
     let (source, dest_inner) = folded_pair("cafe\u{301}.txt", "caf\u{e9}.txt").await;
     let dest: Arc<dyn Volume> = Arc::new(CaseFoldingDest::new(&dest_inner));
 
-    let (_events, state) = merge_album("op-fold-nfd", &source, dest, ConflictResolution::Skip).await;
+    let (_events, state) = merge_album(&engine, "op-fold-nfd", &source, dest, ConflictResolution::Skip).await;
 
     assert_eq!(
         stored_bytes(&dest_inner, "/album/caf\u{e9}.txt").await.as_deref(),
@@ -343,10 +347,11 @@ async fn a_deep_child_differing_only_in_normalization_is_a_conflict_too() {
 /// answers `NotFound` and the child lands beside its neighbor with no prompt.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_case_sensitive_destination_keeps_both_spellings_and_prompts_for_neither() {
+    let engine = TestOperations::new();
     let (source, dest_inner) = folded_pair("Report.docx", "report.docx").await;
     let dest: Arc<dyn Volume> = Arc::clone(&dest_inner) as Arc<dyn Volume>;
 
-    let (events, _state) = merge_album("op-fold-sensitive", &source, dest, ConflictResolution::Stop).await;
+    let (events, _state) = merge_album(&engine, "op-fold-sensitive", &source, dest, ConflictResolution::Stop).await;
 
     assert_eq!(
         stored_bytes(&dest_inner, "/album/report.docx").await.as_deref(),
@@ -369,10 +374,11 @@ async fn a_case_sensitive_destination_keeps_both_spellings_and_prompts_for_neith
 /// reading writes over the file the probe was asked about.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn an_unanswerable_probe_fails_the_item_instead_of_writing() {
+    let engine = TestOperations::new();
     let (source, dest_inner) = folded_pair("Report.docx", "report.docx").await;
     let dest: Arc<dyn Volume> = Arc::new(CaseFoldingDest::with_an_unanswerable_probe(&dest_inner));
 
-    let state = make_state();
+    let state = make_state(&engine);
     let events = Arc::new(ConflictResponderSink::new(&state, ConflictResolution::Skip, false));
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Overwrite,
@@ -416,6 +422,7 @@ async fn an_unanswerable_probe_fails_the_item_instead_of_writing() {
 /// destination already has, rather than standing a second one beside it.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_case_differing_directory_child_merges_into_the_one_that_is_there() {
+    let engine = TestOperations::new();
     let source: Arc<dyn Volume> = Arc::new(InMemoryVolume::new("Source").with_space_info(10_000_000, 10_000_000));
     source.create_directory(Path::new("/album")).await.unwrap();
     source.create_directory(Path::new("/album/Sub")).await.unwrap();
@@ -433,7 +440,7 @@ async fn a_case_differing_directory_child_merges_into_the_one_that_is_there() {
         .unwrap();
     let dest: Arc<dyn Volume> = Arc::new(CaseFoldingDest::new(&dest_inner));
 
-    let (events, _state) = merge_album("op-fold-dir", &source, dest, ConflictResolution::Stop).await;
+    let (events, _state) = merge_album(&engine, "op-fold-dir", &source, dest, ConflictResolution::Stop).await;
 
     assert_eq!(
         stored_bytes(&dest_inner, "/album/sub/keep.txt").await.as_deref(),
@@ -562,13 +569,14 @@ impl Volume for LateArrivalDest {
 /// landing must leave it alone rather than clear the way.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_name_that_fills_up_after_the_listing_is_not_cleared_by_the_landing() {
+    let engine = TestOperations::new();
     let (source, dest_inner) = folded_pair("notes.txt", "notes.txt").await;
     let dest: Arc<dyn Volume> = Arc::new(LateArrivalDest {
         inner: Arc::clone(&dest_inner),
         arriving: PathBuf::from("/album/notes.txt"),
     });
 
-    let state = make_state();
+    let state = make_state(&engine);
     let events = Arc::new(ConflictResponderSink::new(&state, ConflictResolution::Skip, false));
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Skip,
@@ -608,6 +616,7 @@ async fn a_name_that_fills_up_after_the_listing_is_not_cleared_by_the_landing() 
 /// `get_metadata` only a fold-only name needs is never asked for.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn an_ordinary_merge_costs_no_probes() {
+    let engine = TestOperations::new();
     let source: Arc<dyn Volume> = Arc::new(InMemoryVolume::new("Source").with_space_info(10_000_000, 10_000_000));
     source.create_directory(Path::new("/album")).await.unwrap();
     source.create_directory(Path::new("/album/sub")).await.unwrap();
@@ -625,7 +634,7 @@ async fn an_ordinary_merge_costs_no_probes() {
     let counting = Arc::new(CaseFoldingDest::new(&dest_inner));
     let dest: Arc<dyn Volume> = Arc::clone(&counting) as Arc<dyn Volume>;
 
-    let (_events, _state) = merge_album("op-fold-cost", &source, dest, ConflictResolution::Skip).await;
+    let (_events, _state) = merge_album(&engine, "op-fold-cost", &source, dest, ConflictResolution::Skip).await;
 
     // The one probe an ordinary copy still pays is the SERIAL driver's own
     // top-level pre-check for `/album`, which predates this and is documented

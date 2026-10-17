@@ -9,16 +9,15 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
-use crate::file_system::write_operations::state::{
-    CachedScanResult, ConflictResolutionResponse, FileInfo, insert_scan_result,
-};
+use crate::file_system::write_operations::state::{CachedScanResult, ConflictResolutionResponse, FileInfo};
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::{
     ConflictInfo, DryRunResult, ScanProgressEvent, WriteConflictResolvedEvent, WriteSettledEvent,
 };
 use cmdr_fs::volume::CopyScanResult;
 
-fn make_state(progress_interval_ms: u64) -> Arc<WriteOperationState> {
-    Arc::new(WriteOperationState::new(Duration::from_millis(progress_interval_ms)))
+fn make_state(engine: &TestOperations, progress_interval_ms: u64) -> Arc<WriteOperationState> {
+    Arc::new(engine.new_operation_state(Duration::from_millis(progress_interval_ms)))
 }
 
 /// Answers the one conflict this file's folder→file cells raise with Overwrite,
@@ -78,7 +77,7 @@ impl OperationEventSink for AnswerOverwrite {
 /// copy, exactly like a source somebody deletes (or unplugs) mid-transfer.
 ///
 /// Answers the destination directory so a cell can ask what survived.
-fn copy_batch_whose_second_item_fails(preview_id: &str) -> (tempfile::TempDir, PathBuf) {
+fn copy_batch_whose_second_item_fails(engine: &TestOperations, preview_id: &str) -> (tempfile::TempDir, PathBuf) {
     let tmp = tempfile::tempdir().expect("tempdir");
     let src_dir = tmp.path().join("src");
     let dst_dir = tmp.path().join("dst");
@@ -117,7 +116,7 @@ fn copy_batch_whose_second_item_fails(preview_id: &str) -> (tempfile::TempDir, P
             )
         })
         .collect();
-    insert_scan_result(
+    engine.stores().previews().insert_scan_result(
         preview_id.to_string(),
         CachedScanResult::from_local_walk(
             sources.clone(),
@@ -134,7 +133,7 @@ fn copy_batch_whose_second_item_fails(preview_id: &str) -> (tempfile::TempDir, P
     fs::remove_file(&second).unwrap();
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state(200);
+    let state = make_state(engine, 200);
     let config = WriteOperationConfig {
         conflict_resolution: ConflictResolution::Overwrite,
         preview_id: Some(preview_id.to_string()),
@@ -155,7 +154,8 @@ fn copy_batch_whose_second_item_fails(preview_id: &str) -> (tempfile::TempDir, P
 /// just landed, so the recheck passes and the deletion goes through.
 #[test]
 fn a_mid_batch_failure_keeps_the_file_that_replaced_the_users_original() {
-    let (_tmp, dst_dir) = copy_batch_whose_second_item_fails("op-local-copy-failure-keeps-landed");
+    let engine = TestOperations::new();
+    let (_tmp, dst_dir) = copy_batch_whose_second_item_fails(&engine, "op-local-copy-failure-keeps-landed");
 
     let landed = dst_dir.join("a.txt");
     assert!(
@@ -173,7 +173,8 @@ fn a_mid_batch_failure_keeps_the_file_that_replaced_the_users_original() {
 /// item was writing is the one thing the error path does clean.
 #[test]
 fn a_mid_batch_failure_leaves_no_partial_behind() {
-    let (_tmp, dst_dir) = copy_batch_whose_second_item_fails("op-local-copy-failure-no-partial");
+    let engine = TestOperations::new();
+    let (_tmp, dst_dir) = copy_batch_whose_second_item_fails(&engine, "op-local-copy-failure-no-partial");
 
     let leftovers: Vec<_> = fs::read_dir(&dst_dir)
         .unwrap()
@@ -198,6 +199,7 @@ fn a_mid_batch_failure_leaves_no_partial_behind() {
 /// Answers the destination directory so a cell can ask what survived, plus the
 /// error the operation reported.
 fn folder_over_file_copy_whose_second_leaf_fails(
+    engine: &TestOperations,
     preview_id: &str,
 ) -> (tempfile::TempDir, PathBuf, WriteOperationError) {
     let tmp = tempfile::tempdir().expect("tempdir");
@@ -220,7 +222,7 @@ fn folder_over_file_copy_whose_second_leaf_fails(
         })
         .collect();
     let total_bytes: u64 = files.iter().map(|f| f.size).sum();
-    insert_scan_result(
+    engine.stores().previews().insert_scan_result(
         preview_id.to_string(),
         CachedScanResult::from_local_walk(
             vec![source.clone()],
@@ -247,7 +249,7 @@ fn folder_over_file_copy_whose_second_leaf_fails(
     // The scan has been taken; now the second leaf goes away.
     fs::remove_file(&second).unwrap();
 
-    let state = make_state(0);
+    let state = make_state(engine, 0);
     let events = AnswerOverwrite {
         inner: CollectorEventSink::new(),
         state: Arc::clone(&state),
@@ -274,8 +276,9 @@ fn folder_over_file_copy_whose_second_leaf_fails(
 /// `thing` was deleted to make room for a directory holding one of two files.
 #[test]
 fn a_failed_folder_over_file_overwrite_keeps_the_users_file_beside_the_folder() {
+    let engine = TestOperations::new();
     let (_tmp, dst_dir, _error) =
-        folder_over_file_copy_whose_second_leaf_fails("op-local-folder-over-file-failure-keeps-aside");
+        folder_over_file_copy_whose_second_leaf_fails(&engine, "op-local-folder-over-file-failure-keeps-aside");
 
     let folder = dst_dir.join("thing");
     assert!(folder.is_dir(), "the folder that replaced the file keeps the name");
@@ -305,8 +308,9 @@ fn a_failed_folder_over_file_overwrite_keeps_the_users_file_beside_the_folder() 
 /// where it went, as typed data rather than a sentence anyone has to parse.
 #[test]
 fn a_failed_folder_over_file_overwrite_names_the_recovered_path() {
+    let engine = TestOperations::new();
     let (_tmp, dst_dir, error) =
-        folder_over_file_copy_whose_second_leaf_fails("op-local-folder-over-file-failure-names-path");
+        folder_over_file_copy_whose_second_leaf_fails(&engine, "op-local-folder-over-file-failure-names-path");
 
     let WriteOperationError::OriginalsKeptAside { cause, recovered } = error else {
         panic!("a failure that renamed the user's file has to say so: {error:?}");

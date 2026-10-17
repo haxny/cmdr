@@ -12,6 +12,7 @@ use super::tests::{make_state, make_volumes};
 use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::state::ConflictResolutionResponse;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::{
     ConflictResolution, WriteConflictResolvedEvent, WriteErrorEvent, WriteOperationError, WriteSourceItemDoneEvent,
 };
@@ -134,6 +135,7 @@ fn source_failing_first_read(source: Arc<InMemoryVolume>) -> Arc<FaultyVolume<In
 /// failure left neither the file nor a complete folder.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_folder_that_fails_halfway_over_a_file_keeps_the_file() {
+    let engine = TestOperations::new();
     let (_, dest) = make_volumes();
     let source = in_memory_source();
     source.create_directory(Path::new("/clash")).await.unwrap();
@@ -150,7 +152,7 @@ async fn a_folder_that_fails_halfway_over_a_file_keeps_the_file() {
         .unwrap();
     let faulty = source_failing_first_read(source);
 
-    let state = make_state();
+    let state = make_state(&engine);
     let events = OverwriteThenMaybeRollback::new(&state, false);
     let result = copy_volumes_with_progress(
         events.clone(),
@@ -179,6 +181,7 @@ async fn a_folder_that_fails_halfway_over_a_file_keeps_the_file() {
 /// still free, so the folder goes straight back, children and all.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_file_that_fails_over_a_folder_puts_the_folder_back() {
+    let engine = TestOperations::new();
     let (_, dest) = make_volumes();
     let source = in_memory_source();
     source.create_file(Path::new("/clash"), b"incoming").await.unwrap();
@@ -188,7 +191,7 @@ async fn a_file_that_fails_over_a_folder_puts_the_folder_back() {
         .unwrap();
     let faulty = source_failing_first_read(source);
 
-    let state = make_state();
+    let state = make_state(&engine);
     let events = OverwriteThenMaybeRollback::new(&state, false);
     let result = copy_volumes_with_progress(
         events.clone(),
@@ -212,6 +215,7 @@ async fn a_file_that_fails_over_a_folder_puts_the_folder_back() {
 /// landing on a destination FILE of the same name.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_deep_folder_that_fails_over_a_file_keeps_the_file() {
+    let engine = TestOperations::new();
     let (_, dest) = make_volumes();
     let source = in_memory_source();
     source.create_directory(Path::new("/album")).await.unwrap();
@@ -226,7 +230,7 @@ async fn a_deep_folder_that_fails_over_a_file_keeps_the_file() {
         .unwrap();
     let faulty = source_failing_first_read(source);
 
-    let state = make_state();
+    let state = make_state(&engine);
     let events = OverwriteThenMaybeRollback::new(&state, false);
     let result = copy_volumes_with_progress(
         events.clone(),
@@ -249,6 +253,7 @@ async fn a_deep_folder_that_fails_over_a_file_keeps_the_file() {
 /// and puts the file back at its own name.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_rollback_puts_the_replaced_file_back() {
+    let engine = TestOperations::new();
     let (source, dest) = make_volumes();
     source.create_directory(Path::new("/clash")).await.unwrap();
     source
@@ -259,7 +264,7 @@ async fn a_rollback_puts_the_replaced_file_back() {
         .await
         .unwrap();
 
-    let state = make_state();
+    let state = make_state(&engine);
     let events = OverwriteThenMaybeRollback::new(&state, true);
     let _ = copy_volumes_with_progress(
         events.clone(),
@@ -285,6 +290,7 @@ async fn a_rollback_puts_the_replaced_file_back() {
 /// The guard: a replacement that lands drops the aside, whichever way round.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_replacement_that_lands_leaves_no_aside_behind() {
+    let engine = TestOperations::new();
     let (source, dest) = make_volumes();
     source.create_directory(Path::new("/folder_in")).await.unwrap();
     source
@@ -299,7 +305,7 @@ async fn a_replacement_that_lands_leaves_no_aside_behind() {
     dest.create_directory(Path::new("/file_in")).await.unwrap();
     dest.create_file(Path::new("/file_in/old.txt"), b"old").await.unwrap();
 
-    let state = make_state();
+    let state = make_state(&engine);
     let events = OverwriteThenMaybeRollback::new(&state, false);
     let result = copy_volumes_with_progress(
         events.clone(),
@@ -327,6 +333,8 @@ async fn a_replacement_that_lands_leaves_no_aside_behind() {
 async fn a_folder_replacing_a_dir_link_drops_the_link_and_never_its_target() {
     use cmdr_local::LocalPosixVolume;
 
+    let engine = TestOperations::new();
+
     let dest_dir = tempfile::tempdir().expect("tempdir");
     let root = dest_dir.path().to_path_buf();
     std::fs::create_dir(root.join("target")).unwrap();
@@ -345,7 +353,7 @@ async fn a_folder_replacing_a_dir_link_drops_the_link_and_never_its_target() {
         .await
         .unwrap();
 
-    let state = make_state();
+    let state = make_state(&engine);
     let events = OverwriteThenMaybeRollback::new(&state, false);
     copy_volumes_with_progress(
         events.clone(),

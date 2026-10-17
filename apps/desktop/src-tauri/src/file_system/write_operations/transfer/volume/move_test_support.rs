@@ -9,6 +9,8 @@
 //! `volume/move_progress_tests.rs`, and `volume/move_merge_tests.rs`.
 
 use super::*;
+use crate::file_system::write_operations::Operations;
+use crate::file_system::write_operations::testing::TestOperations;
 // Named here rather than inherited through the glob above: the engine module
 // beside this one uses neither, so a `use` there would be dead in a release build.
 use std::pin::Pin;
@@ -21,16 +23,16 @@ use crate::file_system::write_operations::types::{
 use cmdr_fs::volume::WriteMode;
 use cmdr_fs::volume::{InMemoryVolume, StreamLength, StreamWriteProgress, StreamWritten, VolumeError};
 
-pub(super) fn make_state() -> Arc<WriteOperationState> {
-    Arc::new(WriteOperationState::new(Duration::from_millis(50)))
+pub(super) fn make_state(engine: &TestOperations) -> Arc<WriteOperationState> {
+    Arc::new(engine.new_operation_state(Duration::from_millis(50)))
 }
 
 /// State whose `progress_interval` mirrors what the production wrapper does:
 /// derived from the config. Without this, tests that set
 /// `config.progress_interval_ms = 0` would still see the default 50 ms throttle
 /// (state ignores the config it didn't construct from).
-pub(super) fn make_state_with_interval_ms(ms: u64) -> Arc<WriteOperationState> {
-    Arc::new(WriteOperationState::new(Duration::from_millis(ms)))
+pub(super) fn make_state_with_interval_ms(engine: &TestOperations, ms: u64) -> Arc<WriteOperationState> {
+    Arc::new(engine.new_operation_state(Duration::from_millis(ms)))
 }
 
 pub(super) fn make_volumes() -> (Arc<dyn Volume>, Arc<dyn Volume>) {
@@ -93,14 +95,16 @@ impl OperationEventSink for CancelAfterFirstSink {
 /// operation is deregistered when the transfer returns.
 pub(super) struct SampleInFlightTableSink {
     pub(super) inner: CollectorEventSink,
+    engine: Operations,
     operation_id: String,
     dump: std::sync::Mutex<Option<String>>,
 }
 
 impl SampleInFlightTableSink {
-    pub(super) fn new(operation_id: &str) -> Self {
+    pub(super) fn new(engine: &Operations, operation_id: &str) -> Self {
         Self {
             inner: CollectorEventSink::new(),
+            engine: engine.clone(),
             operation_id: operation_id.to_owned(),
             dump: std::sync::Mutex::new(None),
         }
@@ -119,10 +123,9 @@ impl OperationEventSink for SampleInFlightTableSink {
         if event.phase == WriteOperationPhase::Copying {
             let mut slot = self.dump.lock_ignore_poison();
             if slot.is_none() {
-                *slot = crate::file_system::write_operations::transfer::transfer_probe::render_live_dump(
-                    &self.operation_id,
-                    "mid-write sample",
-                );
+                *slot = self
+                    .engine
+                    .render_live_transfer_dump(&self.operation_id, "mid-write sample");
             }
         }
         self.inner.emit_progress(event);

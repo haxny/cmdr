@@ -4,8 +4,7 @@
 use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::ledger::WrittenFile;
-use crate::file_system::write_operations::state::WriteOperationState;
-use crate::file_system::write_operations::test_support::TestOperationGuard;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::{CancelRollback, CancelRollbackOutcome};
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_operation_log::types::SkipReason;
@@ -16,12 +15,16 @@ use std::time::Duration;
 
 /// Drive a reversal over an already-recorded ledger, plus the one directory the
 /// copy created. Returns the frames it emitted and what it reported.
-fn reverse(created_dir: &Path, recorded: Vec<WrittenFile>) -> (Vec<WriteProgressEvent>, CancelRollback) {
-    let _guard = TestOperationGuard::register("reversal");
+fn reverse(
+    engine: &TestOperations,
+    created_dir: &Path,
+    recorded: Vec<WrittenFile>,
+) -> (Vec<WriteProgressEvent>, CancelRollback) {
+    let _guard = engine.register("reversal");
     let events = Arc::new(CollectorEventSink::new());
     // A zero interval so every item emits a frame; the throttle isn't what these
     // tests are about.
-    let state = Arc::new(WriteOperationState::new(Duration::from_millis(0)));
+    let state = Arc::new(engine.new_operation_state(Duration::from_millis(0)));
 
     let files = recorded.len();
     let mut transaction = CopyTransaction::new();
@@ -52,6 +55,7 @@ fn reverse(created_dir: &Path, recorded: Vec<WrittenFile>) -> (Vec<WriteProgress
 /// reads the summary that would have explained what stayed.
 #[test]
 fn the_bar_reaches_zero_even_when_the_reversal_leaves_files_behind() {
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().unwrap();
     let dir = tmp.path().join("album");
     fs::create_dir(&dir).unwrap();
@@ -64,7 +68,7 @@ fn the_bar_reaches_zero_even_when_the_reversal_leaves_files_behind() {
     // Somebody else edits one of them after the copy wrote it.
     fs::write(&theirs, b"a different length entirely").unwrap();
 
-    let (frames, report) = reverse(&dir, recorded);
+    let (frames, report) = reverse(&engine, &dir, recorded);
 
     let last = frames.last().expect("a reversal emits at least one frame");
     assert_eq!(last.files_done, 0, "the file axis lands on zero");
@@ -87,6 +91,7 @@ fn the_bar_reaches_zero_even_when_the_reversal_leaves_files_behind() {
 /// directory it created, now that it's empty.
 #[test]
 fn an_untouched_copy_reverses_completely() {
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().unwrap();
     let dir = tmp.path().join("album");
     fs::create_dir(&dir).unwrap();
@@ -96,7 +101,7 @@ fn an_untouched_copy_reverses_completely() {
     fs::write(&two, b"second").unwrap();
     let recorded = vec![WrittenFile::local(one), WrittenFile::local(two)];
 
-    let (frames, report) = reverse(&dir, recorded);
+    let (frames, report) = reverse(&engine, &dir, recorded);
 
     assert_eq!(report.outcome, CancelRollbackOutcome::RolledBack);
     assert!(report.skips.is_empty());
@@ -110,6 +115,7 @@ fn an_untouched_copy_reverses_completely() {
 /// mid-file exists to prevent.
 #[test]
 fn a_partial_still_goes_while_a_changed_file_stays() {
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().unwrap();
     let dir = tmp.path().join("album");
     fs::create_dir(&dir).unwrap();
@@ -123,7 +129,7 @@ fn a_partial_still_goes_while_a_changed_file_stays() {
     ];
     fs::write(&changed, b"somebody else edited this in place").unwrap();
 
-    let (_frames, report) = reverse(&dir, recorded);
+    let (_frames, report) = reverse(&engine, &dir, recorded);
 
     assert!(!partial.exists(), "a partial must never be left behind");
     assert!(changed.exists(), "a file that changed must never be deleted");

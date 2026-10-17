@@ -16,6 +16,7 @@
 use super::super::conflict_responder_test_support::ConflictResponderSink;
 use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::test_support::TestDir;
 use cmdr_fs::ignore_poison::IgnorePoison;
 
@@ -25,8 +26,8 @@ fn temp(name: &str) -> TestDir {
     TestDir::new(&format!("copy_dest_link_{}_{}", name, uuid::Uuid::new_v4()))
 }
 
-fn state() -> Arc<WriteOperationState> {
-    Arc::new(WriteOperationState::new(Duration::from_millis(0)))
+fn state(engine: &TestOperations) -> Arc<WriteOperationState> {
+    Arc::new(engine.new_operation_state(Duration::from_millis(0)))
 }
 
 fn policy(conflict_resolution: ConflictResolution) -> WriteOperationConfig {
@@ -101,7 +102,7 @@ fn assert_target_untouched(target: &Path, policy: &str) {
 
 /// Skip, and a BLANKET Overwrite (which never crosses types): the link stays
 /// the link, its target is untouched, and the rest of the folder still merges.
-fn a_copy_leaves_a_deep_dest_link_alone(resolution: ConflictResolution) {
+fn a_copy_leaves_a_deep_dest_link_alone(engine: &TestOperations, resolution: ConflictResolution) {
     let policy_name = format!("{resolution:?}");
     let dir = temp(&policy_name);
     let target = plant_target(&dir);
@@ -111,7 +112,7 @@ fn a_copy_leaves_a_deep_dest_link_alone(resolution: ConflictResolution) {
     let result = copy_files_with_progress_inner(
         &CollectorEventSink::new(),
         &format!("op-local-deep-dest-link-{policy_name}"),
-        &state(),
+        &state(engine),
         std::slice::from_ref(&album),
         &dst,
         &policy(resolution),
@@ -132,18 +133,21 @@ fn a_copy_leaves_a_deep_dest_link_alone(resolution: ConflictResolution) {
 
 #[test]
 fn a_skipping_copy_leaves_a_deep_dest_link_alone() {
-    a_copy_leaves_a_deep_dest_link_alone(ConflictResolution::Skip);
+    let engine = TestOperations::new();
+    a_copy_leaves_a_deep_dest_link_alone(&engine, ConflictResolution::Skip);
 }
 
 #[test]
 fn a_blanket_overwrite_copy_leaves_a_deep_dest_link_alone() {
-    a_copy_leaves_a_deep_dest_link_alone(ConflictResolution::Overwrite);
+    let engine = TestOperations::new();
+    a_copy_leaves_a_deep_dest_link_alone(&engine, ConflictResolution::Overwrite);
 }
 
 /// Rename: the incoming folder lands beside the link under a free name, empty
 /// subfolder included.
 #[test]
 fn a_renaming_copy_lands_beside_a_deep_dest_link() {
+    let engine = TestOperations::new();
     let dir = temp("rename");
     let target = plant_target(&dir);
     let album = plant_incoming_album(&dir);
@@ -152,7 +156,7 @@ fn a_renaming_copy_lands_beside_a_deep_dest_link() {
     let result = copy_files_with_progress_inner(
         &CollectorEventSink::new(),
         "op-local-deep-dest-link-rename",
-        &state(),
+        &state(&engine),
         std::slice::from_ref(&album),
         &dst,
         &policy(ConflictResolution::Rename),
@@ -173,11 +177,12 @@ fn a_renaming_copy_lands_beside_a_deep_dest_link() {
 /// target keeps every byte.
 #[test]
 fn an_answered_overwrite_replaces_a_deep_dest_link_never_its_target() {
+    let engine = TestOperations::new();
     let dir = temp("answered");
     let target = plant_target(&dir);
     let album = plant_incoming_album(&dir);
     let dst = plant_album_holding_a_link(&dir, &target);
-    let state = state();
+    let state = state(&engine);
     let events = ConflictResponderSink::new(&state, ConflictResolution::Overwrite, false);
 
     let result = copy_files_with_progress_inner(
@@ -224,6 +229,7 @@ fn an_answered_overwrite_replaces_a_deep_dest_link_never_its_target() {
 /// nothing through it.
 #[test]
 fn an_empty_incoming_folder_creates_nothing_through_a_deep_dest_link() {
+    let engine = TestOperations::new();
     let dir = temp("empty_only");
     let target = plant_target(&dir);
     let album = dir.join("src/album");
@@ -233,7 +239,7 @@ fn an_empty_incoming_folder_creates_nothing_through_a_deep_dest_link() {
     let result = copy_files_with_progress_inner(
         &CollectorEventSink::new(),
         "op-local-deep-dest-link-empty",
-        &state(),
+        &state(&engine),
         std::slice::from_ref(&album),
         &dst,
         &policy(ConflictResolution::Overwrite),
@@ -248,6 +254,7 @@ fn an_empty_incoming_folder_creates_nothing_through_a_deep_dest_link() {
 /// the destination.
 #[test]
 fn a_copy_leaves_a_top_level_dest_link_alone() {
+    let engine = TestOperations::new();
     let dir = temp("top_level");
     let target = plant_target(&dir);
     let incoming = dir.join("src/link");
@@ -261,7 +268,7 @@ fn a_copy_leaves_a_top_level_dest_link_alone() {
     let result = copy_files_with_progress_inner(
         &CollectorEventSink::new(),
         "op-local-top-dest-link",
-        &state(),
+        &state(&engine),
         std::slice::from_ref(&incoming),
         &dst,
         &policy(ConflictResolution::Overwrite),
@@ -276,6 +283,7 @@ fn a_copy_leaves_a_top_level_dest_link_alone() {
 /// IS the folder they chose, so the copy merges into it as into any other.
 #[test]
 fn a_destination_that_is_itself_a_link_still_takes_the_copy() {
+    let engine = TestOperations::new();
     let dir = temp("dest_is_link");
     let album = plant_incoming_album(&dir);
     let real = dir.join("real-dst");
@@ -288,7 +296,7 @@ fn a_destination_that_is_itself_a_link_still_takes_the_copy() {
     let result = copy_files_with_progress_inner(
         &events,
         "op-local-dest-is-link",
-        &state(),
+        &state(&engine),
         std::slice::from_ref(&album),
         &dst,
         &policy(ConflictResolution::Stop),

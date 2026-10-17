@@ -15,6 +15,7 @@
 use super::tests::{make_state, make_volumes};
 use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::transfer::conflict_responder_test_support::ConflictResponderSink;
 use crate::file_system::write_operations::types::ConflictResolution;
 use cmdr_fs::volume::Volume;
@@ -41,6 +42,7 @@ async fn read_all(vol: &Arc<dyn Volume>, path: &str) -> Vec<u8> {
 /// can ever prompt.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn dir_vs_dir_never_prompts_top_level_or_deep_under_every_policy() {
+    let engine = TestOperations::new();
     for policy in [
         ConflictResolution::Skip,
         ConflictResolution::Overwrite,
@@ -56,7 +58,7 @@ async fn dir_vs_dir_never_prompts_top_level_or_deep_under_every_policy() {
         dest.create_directory(Path::new("/a/b")).await.unwrap();
         dest.create_file(Path::new("/a/b/only-dest.txt"), b"D").await.unwrap();
 
-        let state = make_state();
+        let state = make_state(&engine);
         let events = Arc::new(CollectorEventSink::new());
         let config = VolumeCopyConfig {
             conflict_resolution: policy,
@@ -114,6 +116,7 @@ async fn dir_vs_dir_never_prompts_top_level_or_deep_under_every_policy() {
 /// would Skip and this branch would never run.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn source_dir_over_dest_file_overwrite_replaces_file_with_dir() {
+    let engine = TestOperations::new();
     let (source, dest) = make_volumes();
     source.create_directory(Path::new("/album")).await.unwrap();
     // source `D` is a DIRECTORY holding a file.
@@ -129,7 +132,7 @@ async fn source_dir_over_dest_file_overwrite_replaces_file_with_dir() {
         .await
         .unwrap();
 
-    let state = make_state();
+    let state = make_state(&engine);
     let events = Arc::new(ConflictResponderSink::new(&state, ConflictResolution::Overwrite, false));
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Stop,
@@ -182,6 +185,7 @@ async fn source_dir_over_dest_file_overwrite_replaces_file_with_dir() {
 /// the `dir_clashes_with_file` branch.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn source_dir_over_dest_file_skip_keeps_dest_file() {
+    let engine = TestOperations::new();
     let (source, dest) = make_volumes();
     source.create_directory(Path::new("/album")).await.unwrap();
     source.create_directory(Path::new("/album/D")).await.unwrap();
@@ -192,7 +196,7 @@ async fn source_dir_over_dest_file_skip_keeps_dest_file() {
     dest.create_directory(Path::new("/album")).await.unwrap();
     dest.create_file(Path::new("/album/D"), b"DEST-file").await.unwrap();
 
-    let state = make_state();
+    let state = make_state(&engine);
     let events = Arc::new(CollectorEventSink::new());
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Skip,
@@ -229,6 +233,7 @@ async fn source_dir_over_dest_file_skip_keeps_dest_file() {
 /// it routes through the resolver. Under Skip it leaves the dest dir untouched.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn type_mismatch_inside_merge_routes_through_resolver_and_skip_keeps_dest() {
+    let engine = TestOperations::new();
     let (source, dest) = make_volumes();
     source.create_directory(Path::new("/album")).await.unwrap();
     // source `swap` is a FILE.
@@ -240,7 +245,7 @@ async fn type_mismatch_inside_merge_routes_through_resolver_and_skip_keeps_dest(
         .await
         .unwrap();
 
-    let state = make_state();
+    let state = make_state(&engine);
     let events = Arc::new(CollectorEventSink::new());
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Skip,
@@ -277,6 +282,7 @@ async fn type_mismatch_inside_merge_routes_through_resolver_and_skip_keeps_dest(
 /// on a fresh level.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn fresh_dest_level_streams_without_listing_or_prompting() {
+    let engine = TestOperations::new();
     let (source, dest) = make_volumes();
     source.create_directory(Path::new("/brand-new")).await.unwrap();
     source.create_file(Path::new("/brand-new/a.txt"), b"A").await.unwrap();
@@ -287,7 +293,7 @@ async fn fresh_dest_level_streams_without_listing_or_prompting() {
         .unwrap();
     // dest has NO `/brand-new`.
 
-    let state = make_state();
+    let state = make_state(&engine);
     let events = Arc::new(CollectorEventSink::new());
     let config = VolumeCopyConfig {
         // Even under Stop, a fresh level can't clash, so nothing prompts.

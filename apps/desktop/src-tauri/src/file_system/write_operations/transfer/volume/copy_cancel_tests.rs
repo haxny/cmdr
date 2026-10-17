@@ -17,9 +17,8 @@ use super::tests::make_state;
 use super::wedge_test_support::*;
 use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
-use crate::file_system::write_operations::installed;
+use crate::file_system::write_operations::testing::TestOperations;
 
-use crate::file_system::write_operations::test_support::TestOperationGuard;
 use crate::file_system::write_operations::types::CancelRollbackOutcome;
 use cmdr_fs::testing::wait_until_async;
 use std::sync::atomic::Ordering;
@@ -71,10 +70,11 @@ async fn wait_until_parked(fx: &Fixture, expected: u64) {
 /// loop, and the wedged tasks never complete, so the driver never returns to it.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn cancel_reaches_a_driver_parked_on_its_in_flight_tasks() {
+    let engine = TestOperations::new();
     let _drain = CancelDrainGuard::set(TEST_DRAIN);
     let (fx, sources) = wedged_fixture(false).await;
     let events = Arc::new(CollectorEventSink::new());
-    let op = TestOperationGuard::register_state("cancel-parked-driver", make_state());
+    let op = engine.register_state("cancel-parked-driver", make_state(&engine));
     let config = VolumeCopyConfig::default();
 
     let copy = copy_volumes_with_progress(
@@ -92,7 +92,7 @@ async fn cancel_reaches_a_driver_parked_on_its_in_flight_tasks() {
     let result = tokio::select! {
         r = &mut copy => panic!("the copy must still be running: {r:?}"),
         () = wait_until_parked(&fx, 3) => {
-            installed().cancel_write_operation(op.id(), false);
+            engine.cancel_write_operation(op.id(), false);
             tokio::time::timeout(RETURN_WITHIN, copy)
                 .await
                 .expect("a cancelled driver must return even while parked on wedged tasks")
@@ -120,10 +120,11 @@ async fn cancel_reaches_a_driver_parked_on_its_in_flight_tasks() {
 /// `rolling back op=` line.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn rollback_reaches_a_parked_driver_and_undoes_what_landed() {
+    let engine = TestOperations::new();
     let _drain = CancelDrainGuard::set(TEST_DRAIN);
     let (fx, sources) = wedged_fixture(true).await;
     let events = Arc::new(CollectorEventSink::new());
-    let op = TestOperationGuard::register_state("rollback-parked-driver", make_state());
+    let op = engine.register_state("rollback-parked-driver", make_state(&engine));
     let config = VolumeCopyConfig::default();
 
     let copy = copy_volumes_with_progress(
@@ -143,7 +144,7 @@ async fn rollback_reaches_a_parked_driver_and_undoes_what_landed() {
         () = wait_until_async(WAIT, "the landed file to arrive at the destination", || {
             fx.written.load(Ordering::SeqCst) == 0 && fx.opened.load(Ordering::SeqCst) >= 4
         }) => {
-            installed().cancel_write_operation(op.id(), true);
+            engine.cancel_write_operation(op.id(), true);
             tokio::time::timeout(RETURN_WITHIN, copy)
                 .await
                 .expect("a rolled-back driver must return even while parked on wedged tasks")
@@ -179,10 +180,11 @@ async fn rollback_reaches_a_parked_driver_and_undoes_what_landed() {
 /// file's real name.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_task_that_never_winds_down_is_abandoned_at_the_deadline() {
+    let engine = TestOperations::new();
     let _drain = CancelDrainGuard::set(TEST_DRAIN);
     let (fx, sources) = wedged_fixture(false).await;
     let events = Arc::new(CollectorEventSink::new());
-    let op = TestOperationGuard::register_state("abandon-wedged-task", make_state());
+    let op = engine.register_state("abandon-wedged-task", make_state(&engine));
     let config = VolumeCopyConfig::default();
 
     let copy = copy_volumes_with_progress(
@@ -214,7 +216,7 @@ async fn a_task_that_never_winds_down_is_abandoned_at_the_deadline() {
         }) => {}
     }
 
-    installed().cancel_write_operation(op.id(), false);
+    engine.cancel_write_operation(op.id(), false);
     tokio::time::timeout(RETURN_WITHIN, &mut copy)
         .await
         .expect("the driver must abandon a task that will not wind down")
@@ -243,6 +245,7 @@ async fn a_task_that_never_winds_down_is_abandoned_at_the_deadline() {
 /// else.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn an_abort_shortens_the_drain_window_a_cancel_already_armed() {
+    let engine = TestOperations::new();
     // A cooperative window far longer than the test's own patience, so a fast
     // return can only be the abort's doing.
     let _drain = CancelDrainGuard::set_both(Duration::from_secs(60), Duration::from_millis(150));
@@ -257,7 +260,7 @@ async fn an_abort_shortens_the_drain_window_a_cancel_already_armed() {
     }
 
     let events = Arc::new(CollectorEventSink::new());
-    let op = TestOperationGuard::register_state("abort-shortens-drain", make_state());
+    let op = engine.register_state("abort-shortens-drain", make_state(&engine));
     let config = VolumeCopyConfig::default();
 
     let copy = copy_volumes_with_progress(
@@ -284,7 +287,7 @@ async fn an_abort_shortens_the_drain_window_a_cancel_already_armed() {
 
     // The cancel arms the 60 s cooperative window. Nothing about these tasks can
     // end before it.
-    installed().cancel_write_operation(op.id(), false);
+    engine.cancel_write_operation(op.id(), false);
     tokio::select! {
         r = &mut copy => panic!("the cooperative drain must still be running: {r:?}"),
         // allowed-test-sleep: a negative assertion over a window — the 60 s drain
@@ -293,7 +296,7 @@ async fn an_abort_shortens_the_drain_window_a_cancel_already_armed() {
     }
 
     let started = tokio::time::Instant::now();
-    installed().abort_write_operation(op.id());
+    engine.abort_write_operation(op.id());
     tokio::time::timeout(RETURN_WITHIN, copy)
         .await
         .expect("the abort must shorten the drain the cancel armed")
@@ -318,6 +321,8 @@ async fn an_abort_shortens_the_drain_window_a_cancel_already_armed() {
 async fn refusing_a_conflict_prompt_mid_copy_sweeps_the_partials_and_reports_cancelled() {
     use super::super::super::conflict_responder_test_support::ConflictResponderSink;
     use futures_util::FutureExt;
+
+    let engine = TestOperations::new();
 
     let _drain = CancelDrainGuard::set(TEST_DRAIN);
     let fx = fixture(CHUNK as u64 * 16);
@@ -351,12 +356,12 @@ async fn refusing_a_conflict_prompt_mid_copy_sweeps_the_partials_and_reports_can
     // empty file a write opens with.
     fx.gate.add_permits(3);
 
-    let op = TestOperationGuard::register_state("refuse-conflict-mid-copy", make_state());
+    let op = engine.register_state("refuse-conflict-mid-copy", make_state(&engine));
     let dest_at_prompt = Arc::new(std::sync::Mutex::new(Vec::<String>::new()));
     let events = Arc::new({
         let dest_inner = Arc::clone(&fx.dest_inner);
         let dest_at_prompt = Arc::clone(&dest_at_prompt);
-        ConflictResponderSink::cancelling(op.state(), op.id()).on_prompt(move || {
+        ConflictResponderSink::cancelling(&engine, op.state(), op.id()).on_prompt(move || {
             // The in-memory volume answers without awaiting anything.
             let names = dest_inner
                 .list_directory(Path::new("/"), None)
@@ -432,6 +437,7 @@ async fn refusing_a_conflict_prompt_mid_copy_sweeps_the_partials_and_reports_can
 /// task, and the child that landed is only in that task's own per-source ledger.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn rollback_undoes_what_an_abandoned_folder_task_already_landed() {
+    let engine = TestOperations::new();
     let _drain = CancelDrainGuard::set(TEST_DRAIN);
     let fx = fixture(CHUNK as u64 * 4);
     fx.source_inner.create_directory(Path::new("/folder")).await.unwrap();
@@ -452,7 +458,7 @@ async fn rollback_undoes_what_an_abandoned_folder_task_already_landed() {
         PathBuf::from("/wedge-c.bin"),
     ];
     let events = Arc::new(CollectorEventSink::new());
-    let op = TestOperationGuard::register_state("rollback-abandoned-folder-task", make_state());
+    let op = engine.register_state("rollback-abandoned-folder-task", make_state(&engine));
     let config = VolumeCopyConfig::default();
 
     let copy = copy_volumes_with_progress(
@@ -477,7 +483,7 @@ async fn rollback_undoes_what_an_abandoned_folder_task_already_landed() {
                 && dest_inner.exists(Path::new("/folder/landed.txt")).now_or_never() == Some(true)
         }) => {}
     }
-    installed().cancel_write_operation(op.id(), true);
+    engine.cancel_write_operation(op.id(), true);
     tokio::time::timeout(RETURN_WITHIN, &mut copy)
         .await
         .expect("the driver must abandon the wedged tasks")

@@ -15,6 +15,7 @@ use super::faulty_volume::forward_volume_methods;
 use super::move_same::move_within_same_volume_with_progress;
 use super::rename_merge_test_support::{make_state, write_file};
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::{VolumeCopyConfig, WriteOperationError};
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::{InMemoryVolume, ListingProgress, Volume, VolumeError};
@@ -72,6 +73,7 @@ fn assert_refused_as_invalid_name(error: &WriteOperationError, name: &str) {
 /// lands anywhere but inside the copied folder.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_copy_refuses_a_listed_name_that_isnt_one_plain_component() {
+    let engine = TestOperations::new();
     for &name in HOSTILE_NAMES {
         let source = InMemoryVolume::new("Phone").with_space_info(10_000_000, 10_000_000);
         source.create_directory(Path::new("/album")).await.unwrap();
@@ -90,7 +92,7 @@ async fn a_copy_refuses_a_listed_name_that_isnt_one_plain_component() {
         let result = copy_volumes_with_progress(
             Arc::new(CollectorEventSink::new()),
             "hostile-name-copy",
-            &make_state(),
+            &make_state(&engine),
             source,
             &[PathBuf::from("/album")],
             dest,
@@ -116,6 +118,7 @@ async fn a_copy_refuses_a_listed_name_that_isnt_one_plain_component() {
 /// parent.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_copy_refuses_a_folder_listed_under_a_parent_name() {
+    let engine = TestOperations::new();
     let source = InMemoryVolume::new("Phone").with_space_info(10_000_000, 10_000_000);
     source.create_directory(Path::new("/album")).await.unwrap();
     source.create_directory(Path::new("/album/sub")).await.unwrap();
@@ -137,7 +140,7 @@ async fn a_copy_refuses_a_folder_listed_under_a_parent_name() {
     let result = copy_volumes_with_progress(
         Arc::new(CollectorEventSink::new()),
         "hostile-dir-copy",
-        &make_state(),
+        &make_state(&engine),
         source,
         &[PathBuf::from("/album")],
         dest,
@@ -161,6 +164,8 @@ async fn a_copy_refuses_a_folder_listed_under_a_parent_name() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_copy_never_merges_through_a_destination_link() {
     use crate::file_system::write_operations::types::ConflictResolution;
+
+    let engine = TestOperations::new();
     for policy in [
         ConflictResolution::Skip,
         ConflictResolution::Overwrite,
@@ -187,7 +192,7 @@ async fn a_copy_never_merges_through_a_destination_link() {
         let _ = copy_volumes_with_progress(
             Arc::new(CollectorEventSink::new()),
             "link-then-dir-copy",
-            &make_state(),
+            &make_state(&engine),
             source,
             &[PathBuf::from("/album")],
             dest,
@@ -212,6 +217,7 @@ async fn a_copy_never_merges_through_a_destination_link() {
 /// lead it outside.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_copy_with_a_file_and_folder_listed_under_one_name_stays_inside() {
+    let engine = TestOperations::new();
     let source = InMemoryVolume::new("Phone").with_space_info(10_000_000, 10_000_000);
     source.create_directory(Path::new("/album")).await.unwrap();
     source.create_file(Path::new("/album/link"), b"LINK").await.unwrap();
@@ -231,7 +237,7 @@ async fn a_copy_with_a_file_and_folder_listed_under_one_name_stays_inside() {
     let _ = copy_volumes_with_progress(
         Arc::new(CollectorEventSink::new()),
         "file-and-dir-one-name",
-        &make_state(),
+        &make_state(&engine),
         source,
         &[PathBuf::from("/album")],
         dest,
@@ -283,6 +289,7 @@ impl Volume for RenamingListings {
 /// The same-volume rename-merge joins listed names onto the destination too.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_rename_merge_refuses_a_listed_name_that_isnt_one_plain_component() {
+    let engine = TestOperations::new();
     for &name in ["../escape.txt", "/escape.txt", "nested/escape.txt"].iter() {
         let dir = TempDir::new().unwrap();
         let root = dir.path();
@@ -297,7 +304,7 @@ async fn a_rename_merge_refuses_a_listed_name_that_isnt_one_plain_component() {
         let result = move_within_same_volume_with_progress(
             Arc::new(CollectorEventSink::new()),
             "hostile-name-rename-merge",
-            &make_state(),
+            &make_state(&engine),
             volume,
             &[PathBuf::from("src/album")],
             Path::new("dst"),

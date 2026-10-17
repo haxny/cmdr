@@ -13,6 +13,7 @@ use super::cross_fs::move_with_staging;
 use super::test_support::{make_state, outcomes_for, removal_flags_for, run_cross_fs_move, run_same_fs_move};
 use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::{ConflictResolution, WriteOperationPhase, WriteProgressEvent};
 
 /// CRITICAL ordering invariant. The final destination's dir entry must be
@@ -25,6 +26,7 @@ use crate::file_system::write_operations::types::{ConflictResolution, WriteOpera
 /// would already be gone here; post-reorder it must still exist.
 #[test]
 fn cross_fs_local_move_flushes_final_dests_before_deleting_sources() {
+    let engine = TestOperations::new();
     use crate::file_system::write_operations::types::{
         ConflictInfo, DryRunResult, ScanProgressEvent, WriteCancelledEvent, WriteCompleteEvent, WriteErrorEvent,
         WriteSourceItemDoneEvent,
@@ -76,7 +78,7 @@ fn cross_fs_local_move_flushes_final_dests_before_deleting_sources() {
         source_existed_at_flush: AtomicBool::new(false),
         saw_flushing: AtomicBool::new(false),
     });
-    let state = make_state(200);
+    let state = make_state(&engine, 200);
     let config = WriteOperationConfig::default();
 
     let result = move_with_staging(
@@ -118,6 +120,7 @@ fn cross_fs_local_move_flushes_final_dests_before_deleting_sources() {
 /// without touching the source.
 #[test]
 fn cross_fs_move_skip_preserves_source_and_dest() {
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     let src_dir = tmp.path().join("src");
     let dst_dir = tmp.path().join("dst");
@@ -131,7 +134,7 @@ fn cross_fs_move_skip_preserves_source_and_dest() {
     fs::write(&dst_file, b"pre-existing dest").unwrap();
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state(200);
+    let state = make_state(&engine, 200);
     let config = WriteOperationConfig {
         conflict_resolution: ConflictResolution::Skip,
         ..WriteOperationConfig::default()
@@ -175,6 +178,7 @@ fn cross_fs_move_skip_preserves_source_and_dest() {
 /// the destination). That's silent data loss for the skipped child.
 #[test]
 fn cross_fs_move_dir_merge_skip_child_preserves_source_child() {
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     let src_root = tmp.path().join("src");
     let dst_root = tmp.path().join("dst");
@@ -193,7 +197,7 @@ fn cross_fs_move_dir_merge_skip_child_preserves_source_child() {
     fs::write(dst_dir.join("collide.jpg"), b"dest collide").unwrap();
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state(200);
+    let state = make_state(&engine, 200);
     let config = WriteOperationConfig {
         conflict_resolution: ConflictResolution::Skip,
         ..WriteOperationConfig::default()
@@ -250,6 +254,7 @@ fn cross_fs_move_dir_merge_skip_child_preserves_source_child() {
 /// of the empty-dir hole (the copy sibling merely failed to create it).
 #[test]
 fn cross_fs_move_preserves_empty_directories() {
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     let src_dir = tmp.path().join("src");
     let dst_dir = tmp.path().join("dst");
@@ -259,7 +264,7 @@ fn cross_fs_move_preserves_empty_directories() {
     fs::create_dir_all(&dst_dir).unwrap();
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state(200);
+    let state = make_state(&engine, 200);
     let config = WriteOperationConfig::default();
 
     let source = src_dir.join("tree");
@@ -289,6 +294,7 @@ fn cross_fs_move_preserves_empty_directories() {
 /// it created, and Phase 3's rename carries the date along.
 #[test]
 fn cross_fs_move_keeps_folder_dates() {
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     let src_dir = tmp.path().join("src");
     let dst_dir = tmp.path().join("dst");
@@ -304,7 +310,7 @@ fn cross_fs_move_keeps_folder_dates() {
     let result = move_with_staging(
         &*events,
         "op-cross-fs-move-folder-dates",
-        &make_state(200),
+        &make_state(&engine, 200),
         std::slice::from_ref(&source),
         &dst_dir,
         &WriteOperationConfig::default(),
@@ -335,8 +341,10 @@ fn cross_fs_move_keeps_folder_dates() {
 /// nobody asked about, and a failure that has to unwind cleanly.
 #[test]
 fn a_local_move_never_acts_on_a_preview_of_a_different_selection() {
-    use crate::file_system::write_operations::state::{CachedScanResult, FileInfo, insert_scan_result};
+    use crate::file_system::write_operations::state::{CachedScanResult, FileInfo};
     use cmdr_fs::volume::CopyScanResult;
+
+    let engine = TestOperations::new();
 
     let tmp = tempfile::tempdir().expect("tempdir");
     let src_dir = tmp.path().join("src");
@@ -351,7 +359,7 @@ fn a_local_move_never_acts_on_a_preview_of_a_different_selection() {
 
     let preview_id = "move-binding-foreign-preview".to_string();
     let other_metadata = fs::symlink_metadata(&other).expect("other exists");
-    insert_scan_result(
+    engine.stores().previews().insert_scan_result(
         preview_id.clone(),
         CachedScanResult::from_local_walk(
             vec![other.clone()],
@@ -376,7 +384,7 @@ fn a_local_move_never_acts_on_a_preview_of_a_different_selection() {
     );
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state(0);
+    let state = make_state(&engine, 0);
     let config = WriteOperationConfig {
         preview_id: Some(preview_id),
         ..WriteOperationConfig::default()
@@ -419,6 +427,7 @@ fn a_local_move_never_acts_on_a_preview_of_a_different_selection() {
 
 #[test]
 fn a_same_fs_move_that_took_the_whole_item_reports_it_removed() {
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     let src_root = tmp.path().join("src");
     let dst_root = tmp.path().join("dst");
@@ -428,6 +437,7 @@ fn a_same_fs_move_that_took_the_whole_item_reports_it_removed() {
     fs::write(&source, b"content").unwrap();
 
     let events = run_same_fs_move(
+        &engine,
         std::slice::from_ref(&source),
         &dst_root,
         ConflictResolution::Stop,
@@ -441,6 +451,7 @@ fn a_same_fs_move_that_took_the_whole_item_reports_it_removed() {
 
 #[test]
 fn a_same_fs_merge_that_skipped_a_child_reports_the_source_still_there() {
+    let engine = TestOperations::new();
     // The directory stays behind holding its skipped child, so a purge keyed on
     // "it was a move" would drop a row for a folder that is still on disk.
     let tmp = tempfile::tempdir().expect("tempdir");
@@ -458,6 +469,7 @@ fn a_same_fs_merge_that_skipped_a_child_reports_the_source_still_there() {
     fs::write(dst_dir.join("collide.bin"), b"BBBB").unwrap();
 
     let events = run_same_fs_move(
+        &engine,
         std::slice::from_ref(&src_dir),
         &dst_root,
         ConflictResolution::Skip,
@@ -476,6 +488,8 @@ fn a_same_fs_merge_that_skipped_a_child_reports_the_source_still_there() {
 fn a_same_fs_move_shows_one_row_per_item_settled_by_its_rename() {
     use crate::file_system::write_operations::transfer_tree::test_support::row_states;
 
+    let engine = TestOperations::new();
+
     let tmp = tempfile::tempdir().expect("tempdir");
     let src_root = tmp.path().join("src");
     let dst_root = tmp.path().join("dst");
@@ -485,7 +499,7 @@ fn a_same_fs_move_shows_one_row_per_item_settled_by_its_rename() {
     fs::write(src_root.join("moved.bin"), b"moved").unwrap();
     fs::write(src_root.join("clash.bin"), b"incoming").unwrap();
     fs::write(dst_root.join("clash.bin"), b"theirs").unwrap();
-    let state = make_state(200);
+    let state = make_state(&engine, 200);
     let config = WriteOperationConfig {
         conflict_resolution: ConflictResolution::Skip,
         ..WriteOperationConfig::default()
@@ -514,6 +528,7 @@ fn a_same_fs_move_shows_one_row_per_item_settled_by_its_rename() {
 
 #[test]
 fn a_cross_fs_move_reports_removal_only_after_the_source_delete_phase() {
+    let engine = TestOperations::new();
     // Phase 2 finishes staging while the original is untouched; Phase 4 deletes
     // it. Reading the first event as "gone" would purge a live file for as long
     // as the copy takes, and forever if a Skip in between keeps the source.
@@ -526,6 +541,7 @@ fn a_cross_fs_move_reports_removal_only_after_the_source_delete_phase() {
     fs::write(&source, b"content").unwrap();
 
     let events = run_cross_fs_move(
+        &engine,
         std::slice::from_ref(&source),
         &dst_root,
         ConflictResolution::Stop,
@@ -538,6 +554,7 @@ fn a_cross_fs_move_reports_removal_only_after_the_source_delete_phase() {
 
 #[test]
 fn a_cross_fs_move_that_skipped_the_item_never_reports_it_removed() {
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     let src_root = tmp.path().join("src");
     let dst_root = tmp.path().join("dst");
@@ -548,6 +565,7 @@ fn a_cross_fs_move_that_skipped_the_item_never_reports_it_removed() {
     fs::write(dst_root.join("a.bin"), b"dest").unwrap();
 
     let events = run_cross_fs_move(
+        &engine,
         std::slice::from_ref(&source),
         &dst_root,
         ConflictResolution::Skip,
@@ -564,6 +582,7 @@ fn a_cross_fs_move_that_skipped_the_item_never_reports_it_removed() {
 
 #[test]
 fn a_cross_fs_merge_that_preserved_a_skipped_child_reports_the_source_still_there() {
+    let engine = TestOperations::new();
     // The source sweep deletes the tree while stepping AROUND every skipped
     // descendant (`delete_dir_preserving_skipped`), so the directory survives
     // holding that child. Reporting it removed makes the snapshot purge drop
@@ -584,6 +603,7 @@ fn a_cross_fs_merge_that_preserved_a_skipped_child_reports_the_source_still_ther
     fs::write(dst_dir.join("collide.bin"), b"BBBB").unwrap();
 
     let events = run_cross_fs_move(
+        &engine,
         std::slice::from_ref(&src_dir),
         &dst_root,
         ConflictResolution::Skip,
@@ -607,6 +627,7 @@ fn a_cross_fs_merge_that_preserved_a_skipped_child_reports_the_source_still_ther
 /// and a caller recording per-source outcomes wrote down that the move happened.
 #[test]
 fn a_cross_fs_move_that_skipped_the_item_ends_on_skipped_not_done() {
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     let src_root = tmp.path().join("src");
     let dst_root = tmp.path().join("dst");
@@ -617,6 +638,7 @@ fn a_cross_fs_move_that_skipped_the_item_ends_on_skipped_not_done() {
     fs::write(dst_root.join("a.bin"), b"dest").unwrap();
 
     let events = run_cross_fs_move(
+        &engine,
         std::slice::from_ref(&source),
         &dst_root,
         ConflictResolution::Skip,
@@ -636,6 +658,7 @@ fn a_cross_fs_move_that_skipped_the_item_ends_on_skipped_not_done() {
 /// isn't just "the second event is always a skip".
 #[test]
 fn a_cross_fs_move_that_took_the_item_ends_on_done() {
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     let src_root = tmp.path().join("src");
     let dst_root = tmp.path().join("dst");
@@ -645,6 +668,7 @@ fn a_cross_fs_move_that_took_the_item_ends_on_done() {
     fs::write(&source, b"content").unwrap();
 
     let events = run_cross_fs_move(
+        &engine,
         std::slice::from_ref(&source),
         &dst_root,
         ConflictResolution::Stop,

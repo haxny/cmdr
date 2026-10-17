@@ -514,7 +514,7 @@ impl ObservedProgress {
 mod tests {
     use super::*;
     use crate::file_system::write_operations::event_sinks::CollectorEventSink;
-    use crate::file_system::write_operations::test_support::TestOperationGuard;
+    use crate::file_system::write_operations::testing::{RegisteredOperation, TestOperations};
 
     /// The bytes the FE was told about, in order.
     fn totals(sink: &CollectorEventSink) -> Vec<u64> {
@@ -525,7 +525,7 @@ mod tests {
             .collect()
     }
 
-    fn source_progress(guard: &TestOperationGuard, sink: &Arc<CollectorEventSink>, seed: u64) -> Arc<SourceProgress> {
+    fn source_progress(guard: &RegisteredOperation, sink: &Arc<CollectorEventSink>, seed: u64) -> Arc<SourceProgress> {
         let ledger = LeafProgressLedger::new(
             Arc::clone(sink) as Arc<dyn OperationEventSink>,
             Arc::clone(guard.state()),
@@ -551,7 +551,8 @@ mod tests {
     /// negative throughput.
     #[test]
     fn a_retried_leaf_never_walks_the_size_bar_backwards() {
-        let guard = TestOperationGuard::register("leaf-retry-progress");
+        let engine = TestOperations::new();
+        let guard = engine.register("leaf-retry-progress");
         let sink = Arc::new(CollectorEventSink::new());
         let progress = source_progress(&guard, &sink, 1_000);
 
@@ -585,7 +586,8 @@ mod tests {
     /// streamed.
     #[test]
     fn a_small_leaf_finishing_does_not_wipe_a_big_leaf_still_in_flight() {
-        let guard = TestOperationGuard::register("leaf-interleaved-progress");
+        let engine = TestOperations::new();
+        let guard = engine.register("leaf-interleaved-progress");
         let sink = Arc::new(CollectorEventSink::new());
         let progress = source_progress(&guard, &sink, 0);
 
@@ -616,7 +618,8 @@ mod tests {
     /// progress between completions.
     #[test]
     fn leaves_in_flight_sum_instead_of_reporting_the_largest() {
-        let guard = TestOperationGuard::register("leaf-in-flight-sum");
+        let engine = TestOperations::new();
+        let guard = engine.register("leaf-in-flight-sum");
         let sink = Arc::new(CollectorEventSink::new());
         let progress = source_progress(&guard, &sink, 0);
 
@@ -640,7 +643,8 @@ mod tests {
     /// direction this accounting must never lie in.
     #[test]
     fn a_leaf_that_never_landed_withdraws_its_bytes() {
-        let guard = TestOperationGuard::register("leaf-failed-withdraws");
+        let engine = TestOperations::new();
+        let guard = engine.register("leaf-failed-withdraws");
         let sink = Arc::new(CollectorEventSink::new());
         let progress = source_progress(&guard, &sink, 0);
 
@@ -671,7 +675,8 @@ mod tests {
     /// which would silently erase bytes that really did land.
     #[test]
     fn a_completed_leaf_is_not_withdrawn_again_when_it_drops() {
-        let guard = TestOperationGuard::register("leaf-complete-then-drop");
+        let engine = TestOperations::new();
+        let guard = engine.register("leaf-complete-then-drop");
         let sink = Arc::new(CollectorEventSink::new());
         let progress = source_progress(&guard, &sink, 0);
 
@@ -694,7 +699,8 @@ mod tests {
     /// rate.
     #[test]
     fn a_skipped_leaf_credits_both_bars() {
-        let guard = TestOperationGuard::register("leaf-skipped-credits");
+        let engine = TestOperations::new();
+        let guard = engine.register("leaf-skipped-credits");
         let sink = Arc::new(CollectorEventSink::new());
         let progress = source_progress(&guard, &sink, 0);
 

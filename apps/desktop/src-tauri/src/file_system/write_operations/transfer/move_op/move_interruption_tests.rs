@@ -9,6 +9,7 @@ use super::cross_fs::move_with_staging;
 use super::test_support::make_state;
 use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::{WriteOperationPhase, WriteProgressEvent};
 use cmdr_fs::ignore_poison::IgnorePoison;
 
@@ -23,6 +24,8 @@ use cmdr_fs::ignore_poison::IgnorePoison;
 #[test]
 fn a_rollback_clicked_as_the_last_item_lands_puts_the_move_back() {
     use crate::file_system::write_operations::state::OperationIntent;
+
+    let engine = TestOperations::new();
     use crate::file_system::write_operations::types::{
         CancelRollbackOutcome, ConflictInfo, DryRunResult, ScanProgressEvent, WriteCancelledEvent, WriteCompleteEvent,
         WriteErrorEvent, WriteSourceItemDoneEvent,
@@ -70,7 +73,7 @@ fn a_rollback_clicked_as_the_last_item_lands_puts_the_move_back() {
     let src_file = src_dir.join("notes.txt");
     fs::write(&src_file, b"the only copy").unwrap();
 
-    let state = make_state(200);
+    let state = make_state(&engine, 200);
     let events = Arc::new(RollBackWhenTheItemLands {
         state: Arc::clone(&state),
         cancelled: Mutex::new(Vec::new()),
@@ -120,6 +123,7 @@ fn a_rollback_clicked_as_the_last_item_lands_puts_the_move_back() {
 /// arriving at full speed.
 #[test]
 fn a_paused_move_stops_renaming_until_it_resumes() {
+    let engine = TestOperations::new();
     use crate::file_system::write_operations::types::{
         ConflictInfo, DryRunResult, ScanProgressEvent, WriteCancelledEvent, WriteCompleteEvent, WriteErrorEvent,
         WriteSourceItemDoneEvent,
@@ -166,7 +170,7 @@ fn a_paused_move_stops_renaming_until_it_resumes() {
     fs::write(&first, b"one").unwrap();
     fs::write(&second, b"two").unwrap();
 
-    let state = make_state(200);
+    let state = make_state(&engine, 200);
     let events = Arc::new(PauseAfterTheFirstItem {
         state: Arc::clone(&state),
         items_done: AtomicUsize::new(0),
@@ -221,6 +225,8 @@ fn a_paused_move_stops_renaming_until_it_resumes() {
 fn a_paused_folder_merge_stops_renaming_its_children() {
     use std::time::Duration;
 
+    let engine = TestOperations::new();
+
     let tmp = tempfile::tempdir().expect("tempdir");
     let source_dir = tmp.path().join("from/album");
     let dest_dir = tmp.path().join("into/album");
@@ -232,7 +238,7 @@ fn a_paused_folder_merge_stops_renaming_its_children() {
     }
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state(200);
+    let state = make_state(&engine, 200);
     state.pause_gate.pause();
 
     let source_for_merge = source_dir.clone();
@@ -287,6 +293,8 @@ fn a_paused_folder_merge_stops_renaming_its_children() {
 #[test]
 fn a_cancelled_cross_fs_move_takes_its_staging_folder_with_it() {
     use crate::file_system::write_operations::state::OperationIntent;
+
+    let engine = TestOperations::new();
     use crate::file_system::write_operations::types::{
         ConflictInfo, DryRunResult, ScanProgressEvent, WriteCancelledEvent, WriteCompleteEvent, WriteErrorEvent,
         WriteSourceItemDoneEvent,
@@ -328,7 +336,7 @@ fn a_cancelled_cross_fs_move_takes_its_staging_folder_with_it() {
     let src_file = src_dir.join("file.bin");
     fs::write(&src_file, vec![3u8; 4096]).unwrap();
 
-    let state = make_state(200);
+    let state = make_state(&engine, 200);
     let events = Arc::new(CancelAtTheFlush {
         state: Arc::clone(&state),
     });
@@ -373,6 +381,8 @@ fn a_cancelled_cross_fs_move_takes_its_staging_folder_with_it() {
 #[test]
 fn a_rollback_during_the_source_sweep_reports_the_originals_it_did_not_reach() {
     use crate::file_system::write_operations::state::OperationIntent;
+
+    let engine = TestOperations::new();
     use crate::file_system::write_operations::types::{
         CancelRollbackOutcome, ConflictInfo, DryRunResult, ScanProgressEvent, WriteCancelledEvent, WriteCompleteEvent,
         WriteErrorEvent, WriteSourceItemDoneEvent,
@@ -428,7 +438,7 @@ fn a_rollback_during_the_source_sweep_reports_the_originals_it_did_not_reach() {
         })
         .collect();
 
-    let state = make_state(0);
+    let state = make_state(&engine, 0);
     let events = Arc::new(RollBackMidSweep {
         state: Arc::clone(&state),
         after: 2,
@@ -490,6 +500,8 @@ fn a_rollback_during_the_source_sweep_reports_the_originals_it_did_not_reach() {
 #[test]
 fn a_rollback_before_the_sweep_starts_reports_every_original_still_in_place() {
     use crate::file_system::write_operations::state::OperationIntent;
+
+    let engine = TestOperations::new();
     use crate::file_system::write_operations::types::{
         ConflictInfo, DryRunResult, ScanProgressEvent, WriteCancelledEvent, WriteCompleteEvent, WriteErrorEvent,
         WriteSourceItemDoneEvent,
@@ -541,7 +553,7 @@ fn a_rollback_before_the_sweep_starts_reports_every_original_still_in_place() {
         })
         .collect();
 
-    let state = make_state(0);
+    let state = make_state(&engine, 0);
     let events = Arc::new(RollBackAtTheFlush {
         state: Arc::clone(&state),
         cancelled: Mutex::new(Vec::new()),
@@ -581,6 +593,8 @@ fn a_rollback_before_the_sweep_starts_reports_every_original_still_in_place() {
 #[test]
 fn the_sweeps_account_counts_a_skipped_source_as_still_in_place() {
     use crate::file_system::write_operations::state::OperationIntent;
+
+    let engine = TestOperations::new();
     use crate::file_system::write_operations::types::{
         ConflictInfo, ConflictResolution, DryRunResult, ScanProgressEvent, WriteCancelledEvent, WriteCompleteEvent,
         WriteErrorEvent, WriteSourceItemDoneEvent,
@@ -636,7 +650,7 @@ fn the_sweeps_account_counts_a_skipped_source_as_still_in_place() {
         })
         .collect();
 
-    let state = make_state(0);
+    let state = make_state(&engine, 0);
     let events = Arc::new(RollBackAfterTheFirstRemoval {
         state: Arc::clone(&state),
         cancelled: Mutex::new(Vec::new()),

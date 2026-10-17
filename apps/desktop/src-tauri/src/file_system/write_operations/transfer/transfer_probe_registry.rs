@@ -110,28 +110,37 @@ pub(in crate::file_system::write_operations::transfer) fn register_operation(
     }
 }
 
-/// The in-flight table of a still-running operation, rendered.
-///
-/// The watchdog logs the same text once an operation has been still for
-/// `STALL_AFTER`, which is right for a user's session and useless to a test: a
-/// test that bounds its own wait needs the table AT the moment its deadline
-/// expires, in its panic message, where a human will actually read it. The SMB
-/// full-concurrency suite calls this before it abandons a copy that overran, so
-/// a red run names the phase every task was parked in instead of only saying
-/// "timed out".
-///
-/// `None` once the operation has settled (its guard deregistered it), so the
-/// caller must keep the copy alive — awaiting a `JoinHandle`, not the copy
-/// future itself, which would drop the guard before the dump could be taken.
-/// Asks the engine every test shares.
+#[cfg(test)]
+impl super::super::super::Operations {
+    /// The in-flight table of a still-running operation on this engine,
+    /// rendered.
+    ///
+    /// The watchdog logs the same text once an operation has been still for
+    /// `STALL_AFTER`, which is right for a user's session and useless to a
+    /// test: a test that bounds its own wait needs the table AT the moment its
+    /// deadline expires, in its panic message, where a human will actually read
+    /// it. The SMB full-concurrency suite calls this before it abandons a copy
+    /// that overran, so a red run names the phase every task was parked in
+    /// instead of only saying "timed out".
+    ///
+    /// `None` once the operation has settled (its guard deregistered it), so
+    /// the caller must keep the copy alive — awaiting a `JoinHandle`, not the
+    /// copy future itself, which would drop the guard before the dump could be
+    /// taken.
+    pub(crate) fn render_live_transfer_dump(&self, operation_id: &str, reason: &str) -> Option<String> {
+        self.stores()
+            .probes()
+            .get(operation_id)
+            .map(|probe| probe.render_dump(reason))
+    }
+}
+
+/// [`Operations::render_live_transfer_dump`](super::super::super::Operations::render_live_transfer_dump),
+/// asked of the engine every test shares.
 // shim: removed in M7b–M7e
 #[cfg(test)]
 pub(crate) fn render_live_dump(operation_id: &str, reason: &str) -> Option<String> {
-    super::super::super::installed()
-        .stores()
-        .probes()
-        .get(operation_id)
-        .map(|probe| probe.render_dump(reason))
+    super::super::super::installed().render_live_transfer_dump(operation_id, reason)
 }
 
 /// Deregisters its operation on drop.

@@ -23,6 +23,7 @@ use super::super::types::{
     WriteSettledEvent, WriteSourceItemDoneEvent,
 };
 use super::copy::copy_files_with_progress_inner;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::test_support::TestDir;
 
 /// Answers the folder→file clash with Overwrite (the explicit consent a blanket
@@ -80,6 +81,7 @@ impl OperationEventSink for AnswerThenRollBack {
 
 #[test]
 fn a_rollback_mid_folder_over_file_overwrite_puts_the_file_back() {
+    let engine = TestOperations::new();
     let temp_dir = TestDir::new(&format!("folder_over_file_rollback_{}", uuid::Uuid::new_v4()));
     let src_root = temp_dir.join("src");
     let dst_root = temp_dir.join("dst");
@@ -90,7 +92,7 @@ fn a_rollback_mid_folder_over_file_overwrite_puts_the_file_back() {
     fs::write(src_root.join("thing/b.txt"), "source-b").unwrap();
     fs::write(dst_root.join("thing"), "the user's only copy").unwrap();
 
-    let state = Arc::new(WriteOperationState::new(Duration::from_millis(0)));
+    let state = Arc::new(engine.new_operation_state(Duration::from_millis(0)));
     let events = AnswerThenRollBack {
         inner: CollectorEventSink::new(),
         state: Arc::clone(&state),
@@ -149,6 +151,7 @@ fn a_rollback_mid_folder_over_file_overwrite_puts_the_file_back() {
 /// subtree. Without this the fix above would just be "never overwrite".
 #[test]
 fn a_completed_folder_over_file_overwrite_replaces_the_file_and_drops_the_aside() {
+    let engine = TestOperations::new();
     let temp_dir = TestDir::new(&format!("folder_over_file_commit_{}", uuid::Uuid::new_v4()));
     let src_root = temp_dir.join("src");
     let dst_root = temp_dir.join("dst");
@@ -158,7 +161,7 @@ fn a_completed_folder_over_file_overwrite_replaces_the_file_and_drops_the_aside(
     fs::write(src_root.join("thing/nested/deep.txt"), "source-deep").unwrap();
     fs::write(dst_root.join("thing"), "the file being replaced").unwrap();
 
-    let state = Arc::new(WriteOperationState::new(Duration::from_millis(0)));
+    let state = Arc::new(engine.new_operation_state(Duration::from_millis(0)));
     let events = super::conflict_responder_test_support::ConflictResponderSink::new(
         &state,
         ConflictResolution::Overwrite,
@@ -206,6 +209,7 @@ fn a_completed_folder_over_file_overwrite_replaces_the_file_and_drops_the_aside(
 /// folder under a ` (recovered)` name, the same as a failure.
 #[test]
 fn a_stopped_folder_over_file_overwrite_keeps_the_users_file_beside_the_folder() {
+    let engine = TestOperations::new();
     let temp_dir = TestDir::new(&format!("folder_over_file_stop_{}", uuid::Uuid::new_v4()));
     let src_root = temp_dir.join("src");
     let dst_root = temp_dir.join("dst");
@@ -215,7 +219,7 @@ fn a_stopped_folder_over_file_overwrite_keeps_the_users_file_beside_the_folder()
     fs::write(src_root.join("thing/b.txt"), "source-b").unwrap();
     fs::write(dst_root.join("thing"), "the user's only copy").unwrap();
 
-    let state = Arc::new(WriteOperationState::new(Duration::from_millis(0)));
+    let state = Arc::new(engine.new_operation_state(Duration::from_millis(0)));
     let events = AnswerThenRollBack {
         inner: CollectorEventSink::new(),
         state: Arc::clone(&state),

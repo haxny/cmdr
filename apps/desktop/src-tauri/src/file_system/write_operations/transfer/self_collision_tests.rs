@@ -28,6 +28,7 @@ use super::super::types::{ConflictResolution, SourceItemOutcome, WriteOperationC
 use super::conflict_responder_test_support::ConflictResponderSink;
 use super::copy::copy_files_with_progress_inner;
 use super::move_op::move_files_with_progress_inner;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::test_support::TestDir;
 use cmdr_fs::ignore_poison::IgnorePoison;
 
@@ -35,8 +36,8 @@ fn create_temp_dir(name: &str) -> TestDir {
     TestDir::new(&format!("self_collision_{}_{}", name, uuid::Uuid::new_v4()))
 }
 
-fn make_state() -> Arc<WriteOperationState> {
-    Arc::new(WriteOperationState::new(Duration::from_millis(0)))
+fn make_state(engine: &TestOperations) -> Arc<WriteOperationState> {
+    Arc::new(engine.new_operation_state(Duration::from_millis(0)))
 }
 
 /// The inode of `path`, the identity that survives a rename and doesn't survive
@@ -128,6 +129,7 @@ impl OperationEventSink for RollBackOnFirstItem {
 /// prompt and no policy question.
 #[test]
 fn duplicating_a_file_in_place_lands_a_numbered_copy_beside_it() {
+    let engine = TestOperations::new();
     let tmp = create_temp_dir("file");
     let folder = tmp.join("folder");
     fs::create_dir_all(&folder).unwrap();
@@ -135,7 +137,7 @@ fn duplicating_a_file_in_place_lands_a_numbered_copy_beside_it() {
     fs::write(&original, b"pixels").unwrap();
     let original_ino = inode(&original);
 
-    let state = make_state();
+    let state = make_state(&engine);
     let events = ConflictResponderSink::new(&state, ConflictResolution::Rename, true);
     copy_files_with_progress_inner(
         &events,
@@ -177,6 +179,7 @@ fn duplicating_a_file_in_place_lands_a_numbered_copy_beside_it() {
 /// it, and leaves both earlier files alone.
 #[test]
 fn duplicating_a_file_twice_continues_the_series() {
+    let engine = TestOperations::new();
     let tmp = create_temp_dir("twice");
     let folder = tmp.join("folder");
     fs::create_dir_all(&folder).unwrap();
@@ -184,7 +187,7 @@ fn duplicating_a_file_twice_continues_the_series() {
     fs::write(&original, b"pixels").unwrap();
 
     for op_id in ["op-duplicate-twice-1", "op-duplicate-twice-2"] {
-        let state = make_state();
+        let state = make_state(&engine);
         let events = ConflictResponderSink::new(&state, ConflictResolution::Rename, true);
         copy_files_with_progress_inner(
             &events,
@@ -218,6 +221,7 @@ fn duplicating_a_file_twice_continues_the_series() {
 /// conflict path).
 #[test]
 fn two_sources_in_one_series_duplicated_together_get_a_name_each() {
+    let engine = TestOperations::new();
     let tmp = create_temp_dir("series_pair");
     let folder = tmp.join("folder");
     fs::create_dir_all(&folder).unwrap();
@@ -226,7 +230,7 @@ fn two_sources_in_one_series_duplicated_together_get_a_name_each() {
     fs::write(&first, b"first").unwrap();
     fs::write(&second, b"second").unwrap();
 
-    let state = make_state();
+    let state = make_state(&engine);
     let events = ConflictResponderSink::new(&state, ConflictResolution::Rename, true);
     copy_files_with_progress_inner(
         &events,
@@ -263,6 +267,7 @@ fn two_sources_in_one_series_duplicated_together_get_a_name_each() {
 /// its own.
 #[test]
 fn a_whole_series_duplicated_in_reverse_order_still_gives_each_source_its_own_name() {
+    let engine = TestOperations::new();
     let tmp = create_temp_dir("series_reverse");
     let folder = tmp.join("folder");
     fs::create_dir_all(&folder).unwrap();
@@ -270,7 +275,7 @@ fn a_whole_series_duplicated_in_reverse_order_still_gives_each_source_its_own_na
         fs::write(folder.join(name), bytes).unwrap();
     }
 
-    let state = make_state();
+    let state = make_state(&engine);
     let events = ConflictResponderSink::new(&state, ConflictResolution::Rename, true);
     copy_files_with_progress_inner(
         &events,
@@ -313,6 +318,7 @@ fn a_whole_series_duplicated_in_reverse_order_still_gives_each_source_its_own_na
 /// a per-leaf rule would scatter `a (1).txt` through the original instead.
 #[test]
 fn duplicating_a_folder_in_place_lands_a_sibling_copy_and_never_touches_the_original() {
+    let engine = TestOperations::new();
     let tmp = create_temp_dir("folder");
     let parent = tmp.join("parent");
     let docs = parent.join("docs");
@@ -320,7 +326,7 @@ fn duplicating_a_folder_in_place_lands_a_sibling_copy_and_never_touches_the_orig
     fs::write(docs.join("a.txt"), b"alpha").unwrap();
     fs::write(docs.join("sub/b.txt"), b"beta").unwrap();
 
-    let state = make_state();
+    let state = make_state(&engine);
     let events = ConflictResponderSink::new(&state, ConflictResolution::Rename, true);
     copy_files_with_progress_inner(
         &events,
@@ -359,13 +365,14 @@ fn duplicating_a_folder_in_place_lands_a_sibling_copy_and_never_touches_the_orig
 /// `backup.2024 (1)`.
 #[test]
 fn duplicating_a_folder_whose_name_holds_a_dot_numbers_the_whole_name() {
+    let engine = TestOperations::new();
     let tmp = create_temp_dir("dotted_folder");
     let folder = tmp.join("folder");
     let dotted = folder.join("backup.2024");
     fs::create_dir_all(&dotted).unwrap();
     fs::write(dotted.join("a.txt"), b"alpha").unwrap();
 
-    let state = make_state();
+    let state = make_state(&engine);
     let events = ConflictResponderSink::new(&state, ConflictResolution::Rename, true);
     copy_files_with_progress_inner(
         &events,
@@ -390,12 +397,13 @@ fn duplicating_a_folder_whose_name_holds_a_dot_numbers_the_whole_name() {
 /// for it: the redirect has to be in place before the scanned-dirs pass runs.
 #[test]
 fn duplicating_an_empty_folder_in_place_lands_an_empty_sibling() {
+    let engine = TestOperations::new();
     let tmp = create_temp_dir("empty-folder");
     let parent = tmp.join("parent");
     let docs = parent.join("docs");
     fs::create_dir_all(&docs).unwrap();
 
-    let state = make_state();
+    let state = make_state(&engine);
     let events = ConflictResponderSink::new(&state, ConflictResolution::Rename, true);
     copy_files_with_progress_inner(
         &events,
@@ -421,6 +429,7 @@ fn duplicating_an_empty_folder_in_place_lands_an_empty_sibling() {
 /// over the one item.
 #[test]
 fn a_mixed_batch_duplicates_the_local_source_and_copies_the_other() {
+    let engine = TestOperations::new();
     let tmp = create_temp_dir("mixed");
     let folder = tmp.join("folder");
     let elsewhere = tmp.join("elsewhere");
@@ -431,7 +440,7 @@ fn a_mixed_batch_duplicates_the_local_source_and_copies_the_other() {
     fs::write(&already_there, b"pixels").unwrap();
     fs::write(&from_elsewhere, b"words").unwrap();
 
-    let state = make_state();
+    let state = make_state(&engine);
     let events = ConflictResponderSink::new(&state, ConflictResolution::Rename, true);
     copy_files_with_progress_inner(
         &events,
@@ -460,6 +469,7 @@ fn a_mixed_batch_duplicates_the_local_source_and_copies_the_other() {
 /// symlinks, so the same file reached by another route still counts.
 #[test]
 fn a_source_reached_through_a_symlinked_parent_is_a_self_collision() {
+    let engine = TestOperations::new();
     let tmp = create_temp_dir("symlink");
     let real = tmp.join("real");
     fs::create_dir_all(&real).unwrap();
@@ -469,7 +479,7 @@ fn a_source_reached_through_a_symlinked_parent_is_a_self_collision() {
     std::os::unix::fs::symlink(&real, &link).unwrap();
     let original_ino = inode(&original);
 
-    let state = make_state();
+    let state = make_state(&engine);
     let events = ConflictResponderSink::new(&state, ConflictResolution::Rename, true);
     let via_link = link.join("photo.jpg");
     copy_files_with_progress_inner(
@@ -493,6 +503,7 @@ fn a_source_reached_through_a_symlinked_parent_is_a_self_collision() {
 /// reset. The rule has to win before the policy is ever consulted.
 #[test]
 fn duplicating_under_overwrite_still_duplicates_and_never_replaces_the_original() {
+    let engine = TestOperations::new();
     let tmp = create_temp_dir("overwrite");
     let folder = tmp.join("folder");
     fs::create_dir_all(&folder).unwrap();
@@ -500,7 +511,7 @@ fn duplicating_under_overwrite_still_duplicates_and_never_replaces_the_original(
     fs::write(&original, b"pixels").unwrap();
     let original_ino = inode(&original);
 
-    let state = make_state();
+    let state = make_state(&engine);
     let events = Arc::new(CollectorEventSink::new());
     copy_files_with_progress_inner(
         &*events,
@@ -528,6 +539,7 @@ fn duplicating_under_overwrite_still_duplicates_and_never_replaces_the_original(
 /// earlier, genuine conflict in the same batch must not reach the duplicate.
 #[test]
 fn duplicating_under_an_apply_to_all_overwrite_latch_never_replaces_the_original() {
+    let engine = TestOperations::new();
     let tmp = create_temp_dir("latch");
     let folder = tmp.join("folder");
     let elsewhere = tmp.join("elsewhere");
@@ -542,7 +554,7 @@ fn duplicating_under_an_apply_to_all_overwrite_latch_never_replaces_the_original
     fs::write(&original, b"pixels").unwrap();
     let original_ino = inode(&original);
 
-    let state = make_state();
+    let state = make_state(&engine);
     let events = ConflictResponderSink::new(&state, ConflictResolution::Overwrite, true);
     copy_files_with_progress_inner(
         &events,
@@ -581,13 +593,14 @@ fn duplicating_under_an_apply_to_all_overwrite_latch_never_replaces_the_original
 /// isn't one.
 #[test]
 fn a_pre_known_conflict_naming_the_source_itself_does_not_skip_the_duplicate() {
+    let engine = TestOperations::new();
     let tmp = create_temp_dir("pre-known");
     let folder = tmp.join("folder");
     fs::create_dir_all(&folder).unwrap();
     let original = folder.join("photo.jpg");
     fs::write(&original, b"pixels").unwrap();
 
-    let state = make_state();
+    let state = make_state(&engine);
     let events = Arc::new(CollectorEventSink::new());
     copy_files_with_progress_inner(
         &*events,
@@ -614,6 +627,7 @@ fn a_pre_known_conflict_naming_the_source_itself_does_not_skip_the_duplicate() {
 /// is entirely the operation's own work, so it goes; the original never can.
 #[test]
 fn rolling_back_a_duplicate_removes_the_copy_and_keeps_the_original() {
+    let engine = TestOperations::new();
     let tmp = create_temp_dir("rollback");
     let folder = tmp.join("folder");
     fs::create_dir_all(&folder).unwrap();
@@ -621,7 +635,7 @@ fn rolling_back_a_duplicate_removes_the_copy_and_keeps_the_original() {
     fs::write(&original, b"pixels").unwrap();
     let original_ino = inode(&original);
 
-    let state = make_state();
+    let state = make_state(&engine);
     let events = RollBackOnFirstItem {
         inner: ConflictResponderSink::new(&state, ConflictResolution::Rename, true),
         state: Arc::clone(&state),
@@ -653,6 +667,7 @@ fn rolling_back_a_duplicate_removes_the_copy_and_keeps_the_original() {
 /// already holds is still an ordinary conflict, prompt and all.
 #[test]
 fn a_genuine_conflict_still_raises_the_normal_flow() {
+    let engine = TestOperations::new();
     let tmp = create_temp_dir("genuine");
     let folder = tmp.join("folder");
     let elsewhere = tmp.join("elsewhere");
@@ -662,7 +677,7 @@ fn a_genuine_conflict_still_raises_the_normal_flow() {
     let incoming = elsewhere.join("photo.jpg");
     fs::write(&incoming, b"a different photo").unwrap();
 
-    let state = make_state();
+    let state = make_state(&engine);
     let events = ConflictResponderSink::new(&state, ConflictResolution::Rename, false);
     copy_files_with_progress_inner(
         &events,
@@ -692,6 +707,7 @@ fn a_genuine_conflict_still_raises_the_normal_flow() {
 /// is written, nothing is renamed aside, and the item reports itself finished.
 #[test]
 fn moving_a_file_into_its_own_folder_leaves_it_alone() {
+    let engine = TestOperations::new();
     let tmp = create_temp_dir("move-file");
     let folder = tmp.join("folder");
     fs::create_dir_all(&folder).unwrap();
@@ -699,7 +715,7 @@ fn moving_a_file_into_its_own_folder_leaves_it_alone() {
     fs::write(&original, b"pixels").unwrap();
     let original_ino = inode(&original);
 
-    let state = make_state();
+    let state = make_state(&engine);
     let events = ConflictResponderSink::new(&state, ConflictResolution::Skip, true);
     move_files_with_progress_inner(
         &events,
@@ -732,6 +748,7 @@ fn moving_a_file_into_its_own_folder_leaves_it_alone() {
 /// every leaf onto itself or shuffle it aside to `name (1)`.
 #[test]
 fn moving_a_folder_into_its_own_parent_leaves_the_subtree_alone() {
+    let engine = TestOperations::new();
     let tmp = create_temp_dir("move-folder");
     let parent = tmp.join("parent");
     let docs = parent.join("docs");
@@ -739,7 +756,7 @@ fn moving_a_folder_into_its_own_parent_leaves_the_subtree_alone() {
     fs::write(docs.join("a.txt"), b"alpha").unwrap();
     fs::write(docs.join("sub/b.txt"), b"beta").unwrap();
 
-    let state = make_state();
+    let state = make_state(&engine);
     let events = ConflictResponderSink::new(&state, ConflictResolution::Skip, true);
     move_files_with_progress_inner(
         &events,
@@ -764,6 +781,7 @@ fn moving_a_folder_into_its_own_parent_leaves_the_subtree_alone() {
 /// from elsewhere moves.
 #[test]
 fn a_mixed_move_batch_leaves_the_local_source_and_moves_the_other() {
+    let engine = TestOperations::new();
     let tmp = create_temp_dir("move-mixed");
     let folder = tmp.join("folder");
     let elsewhere = tmp.join("elsewhere");
@@ -775,7 +793,7 @@ fn a_mixed_move_batch_leaves_the_local_source_and_moves_the_other() {
     fs::write(&from_elsewhere, b"words").unwrap();
     let original_ino = inode(&already_there);
 
-    let state = make_state();
+    let state = make_state(&engine);
     let events = ConflictResponderSink::new(&state, ConflictResolution::Skip, true);
     move_files_with_progress_inner(
         &events,

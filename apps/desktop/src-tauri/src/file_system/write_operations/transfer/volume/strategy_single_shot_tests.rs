@@ -11,6 +11,7 @@
 
 use super::test_support::make_state;
 use super::*;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::transfer::transfer_driver::LeafProgressLedger;
 use std::ops::ControlFlow;
 use std::path::{Path, PathBuf};
@@ -153,18 +154,20 @@ impl Volume for SingleShotDest {
 /// Copies one in-memory source file of `size` bytes into a `SingleShotDest`,
 /// returning the paths it was asked to write to and the renames it saw.
 async fn copy_one(
+    engine: &TestOperations,
     size: usize,
     limit: Option<u64>,
     staging: WriteStaging,
     dest_path: &Path,
 ) -> (Vec<PathBuf>, Vec<(PathBuf, PathBuf)>, Arc<WriteOperationState>) {
-    let (writes, renames, state) = copy_one_to(size, limit, false, staging, dest_path).await;
+    let (writes, renames, state) = copy_one_to(engine, size, limit, false, staging, dest_path).await;
     (writes.into_iter().map(|(path, _)| path).collect(), renames, state)
 }
 
 /// [`copy_one`], into a destination that may also publish whole, keeping the
 /// mode each write was asked for.
 async fn copy_one_to(
+    engine: &TestOperations,
     size: usize,
     limit: Option<u64>,
     whole: bool,
@@ -181,7 +184,7 @@ async fn copy_one_to(
         .await
         .unwrap();
     let Fixture { dest, writes, renames } = SingleShotDest::fixture(limit, whole);
-    let state = make_state();
+    let state = make_state(engine);
 
     copy_single_path(
         &source,
@@ -214,7 +217,9 @@ fn is_temp(path: &Path) -> bool {
 /// of a file the compound fast path would otherwise finish in one.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_single_shot_write_skips_staging_entirely() {
-    let (writes, renames, state) = copy_one(100, Some(1024), WriteStaging::Stage, Path::new("/notes.txt")).await;
+    let engine = TestOperations::new();
+    let (writes, renames, state) =
+        copy_one(&engine, 100, Some(1024), WriteStaging::Stage, Path::new("/notes.txt")).await;
 
     assert_eq!(
         writes,
@@ -236,7 +241,9 @@ async fn a_single_shot_write_skips_staging_entirely() {
 /// — the invariant the 2026-07-31 wedge cost us.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_write_the_destination_cant_do_in_one_shot_still_stages() {
-    let (writes, renames, _state) = copy_one(4096, Some(1024), WriteStaging::Stage, Path::new("/notes.txt")).await;
+    let engine = TestOperations::new();
+    let (writes, renames, _state) =
+        copy_one(&engine, 4096, Some(1024), WriteStaging::Stage, Path::new("/notes.txt")).await;
 
     assert_eq!(writes.len(), 1, "one write attempt; got {writes:?}");
     assert!(
@@ -255,7 +262,8 @@ async fn a_write_the_destination_cant_do_in_one_shot_still_stages() {
 /// is NOT what buys the exemption.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_tiny_write_to_a_backend_without_the_guarantee_still_stages() {
-    let (writes, renames, _state) = copy_one(100, None, WriteStaging::Stage, Path::new("/notes.txt")).await;
+    let engine = TestOperations::new();
+    let (writes, renames, _state) = copy_one(&engine, 100, None, WriteStaging::Stage, Path::new("/notes.txt")).await;
 
     assert_eq!(writes.len(), 1, "one write attempt; got {writes:?}");
     assert!(
@@ -275,8 +283,9 @@ async fn a_tiny_write_to_a_backend_without_the_guarantee_still_stages() {
 /// is the caller's job.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_caller_staged_write_is_never_turned_into_a_single_shot() {
+    let engine = TestOperations::new();
     let caller_temp = Path::new("/notes.txt.cmdr-tmp-abc");
-    let (writes, renames, _state) = copy_one(100, Some(1024), WriteStaging::AlreadyStaged, caller_temp).await;
+    let (writes, renames, _state) = copy_one(&engine, 100, Some(1024), WriteStaging::AlreadyStaged, caller_temp).await;
 
     assert_eq!(
         writes,
@@ -293,7 +302,9 @@ async fn a_caller_staged_write_is_never_turned_into_a_single_shot() {
 /// `CreateNew`.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_whole_publishing_destination_takes_a_fresh_file_at_its_final_name() {
-    let (writes, renames, state) = copy_one_to(4096, None, true, WriteStaging::Stage, Path::new("/notes.txt")).await;
+    let engine = TestOperations::new();
+    let (writes, renames, state) =
+        copy_one_to(&engine, 4096, None, true, WriteStaging::Stage, Path::new("/notes.txt")).await;
 
     assert_eq!(
         writes,
@@ -314,7 +325,9 @@ async fn a_whole_publishing_destination_takes_a_fresh_file_at_its_final_name() {
 /// `CreateOrReplace`, still at the final name.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_whole_publishing_destination_writes_a_claimed_name_over_in_place() {
+    let engine = TestOperations::new();
     let (writes, renames, _state) = copy_one_to(
+        &engine,
         4096,
         None,
         true,

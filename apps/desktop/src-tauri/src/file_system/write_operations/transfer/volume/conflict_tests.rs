@@ -13,6 +13,7 @@ use super::super::super::staged_write::Replaces;
 use super::super::finalize::finalize_safe_replace;
 use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
+use crate::file_system::write_operations::testing::TestOperations;
 use cmdr_fs::volume::InMemoryVolume;
 use std::sync::Arc;
 
@@ -22,6 +23,7 @@ use super::super::strategy::test_support::RecursiveDeleteVolume;
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn dir_overwrite_must_merge_not_replace_even_with_recursive_delete() {
+    let engine = TestOperations::new();
     // Build a dest dir with two files: one will conflict with the source,
     // one is unique to dest (`keep-me.jpg`) and MUST survive merge.
     let inner = Arc::new(InMemoryVolume::new("dest"));
@@ -44,7 +46,7 @@ async fn dir_overwrite_must_merge_not_replace_even_with_recursive_delete() {
         &dest_recursive,
         Path::new("/photos"),
         true,
-        &Arc::new(WriteOperationState::new(std::time::Duration::from_millis(0))),
+        &Arc::new(engine.new_operation_state(std::time::Duration::from_millis(0))),
     )
     .await
     .unwrap()
@@ -88,6 +90,7 @@ async fn dir_overwrite_must_merge_not_replace_even_with_recursive_delete() {
 /// Pre-fix this goes red by `/album/precious.txt` disappearing.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_source_whose_type_cannot_be_established_never_clears_the_destination_folder() {
+    let engine = TestOperations::new();
     let source = Arc::new(InMemoryVolume::new("source"));
     source.create_directory(Path::new("/album")).await.unwrap();
     source.create_file(Path::new("/album/new.jpg"), b"new").await.unwrap();
@@ -102,7 +105,7 @@ async fn a_source_whose_type_cannot_be_established_never_clears_the_destination_
     let dest_dyn: Arc<dyn Volume> = dest.clone();
 
     let events = CollectorEventSink::new();
-    let state = Arc::new(WriteOperationState::new(std::time::Duration::from_millis(0)));
+    let state = Arc::new(engine.new_operation_state(std::time::Duration::from_millis(0)));
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Overwrite,
         ..VolumeCopyConfig::default()
@@ -147,6 +150,7 @@ async fn a_source_whose_type_cannot_be_established_never_clears_the_destination_
 /// `false`, so a guessed `false` on a real (empty) folder removes it.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_destination_whose_type_cannot_be_established_is_left_alone() {
+    let engine = TestOperations::new();
     let source = Arc::new(InMemoryVolume::new("source"));
     source.create_file(Path::new("/notes.txt"), b"new").await.unwrap();
     let source_dyn: Arc<dyn Volume> = source.clone();
@@ -157,7 +161,7 @@ async fn a_destination_whose_type_cannot_be_established_is_left_alone() {
     let dest_dyn: Arc<dyn Volume> = dest.clone();
 
     let events = CollectorEventSink::new();
-    let state = Arc::new(WriteOperationState::new(std::time::Duration::from_millis(0)));
+    let state = Arc::new(engine.new_operation_state(std::time::Duration::from_millis(0)));
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Overwrite,
         ..VolumeCopyConfig::default()
@@ -197,6 +201,7 @@ async fn a_destination_whose_type_cannot_be_established_is_left_alone() {
 /// where the write would simply have succeeded.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_destination_that_raced_away_still_resolves_as_a_plain_write() {
+    let engine = TestOperations::new();
     let source = Arc::new(InMemoryVolume::new("source"));
     source.create_file(Path::new("/notes.txt"), b"new").await.unwrap();
     let source_dyn: Arc<dyn Volume> = source.clone();
@@ -205,7 +210,7 @@ async fn a_destination_that_raced_away_still_resolves_as_a_plain_write() {
     let dest_dyn: Arc<dyn Volume> = Arc::new(InMemoryVolume::new("dest"));
 
     let events = CollectorEventSink::new();
-    let state = Arc::new(WriteOperationState::new(std::time::Duration::from_millis(0)));
+    let state = Arc::new(engine.new_operation_state(std::time::Duration::from_millis(0)));
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Overwrite,
         ..VolumeCopyConfig::default()
@@ -242,6 +247,7 @@ async fn a_destination_that_raced_away_still_resolves_as_a_plain_write() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn file_overwrite_keeps_original_until_temp_is_written() {
+    let engine = TestOperations::new();
     // For a file→file Overwrite, the resolver must NOT delete the existing
     // destination. Instead it hands back a temp sibling to write into plus
     // `Replaces::ViaTemp(orig)`, so the original survives the full
@@ -256,7 +262,7 @@ async fn file_overwrite_keeps_original_until_temp_is_written() {
         &dest_dyn,
         Path::new("/notes.txt"),
         false,
-        &Arc::new(WriteOperationState::new(std::time::Duration::from_millis(0))),
+        &Arc::new(engine.new_operation_state(std::time::Duration::from_millis(0))),
     )
     .await
     .unwrap()
@@ -295,6 +301,7 @@ async fn file_overwrite_keeps_original_until_temp_is_written() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn finalize_safe_replace_swaps_temp_over_original() {
+    let engine = TestOperations::new();
     // After the streaming write lands the new bytes in the temp sibling,
     // `finalize_safe_replace` must delete the original and rename the temp
     // into its place — leaving exactly the new content and no temp behind.
@@ -309,7 +316,7 @@ async fn finalize_safe_replace_swaps_temp_over_original() {
         &dest_dyn,
         Path::new("/notes.txt.cmdr-tmp-abc"),
         Path::new("/notes.txt"),
-        &WriteOperationState::new(std::time::Duration::ZERO),
+        &engine.new_operation_state(std::time::Duration::ZERO),
     )
     .await
     .unwrap();
@@ -325,6 +332,7 @@ async fn finalize_safe_replace_swaps_temp_over_original() {
 /// cost a server-side copy plus a delete to land. Still no delete here.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn file_overwrite_on_a_whole_publishing_destination_writes_in_place() {
+    let engine = TestOperations::new();
     let dest = Arc::new(InMemoryVolume::new("dest").with_whole_publish());
     dest.create_file(Path::new("/notes.txt"), b"old content").await.unwrap();
     let dest_dyn: Arc<dyn Volume> = dest.clone();
@@ -334,7 +342,7 @@ async fn file_overwrite_on_a_whole_publishing_destination_writes_in_place() {
         &dest_dyn,
         Path::new("/notes.txt"),
         false,
-        &Arc::new(WriteOperationState::new(std::time::Duration::from_millis(0))),
+        &Arc::new(engine.new_operation_state(std::time::Duration::from_millis(0))),
     )
     .await
     .unwrap()

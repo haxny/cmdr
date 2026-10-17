@@ -2,6 +2,7 @@
 //! `scan_for_copy_batch` progress callback.
 
 use super::*;
+use crate::file_system::write_operations::testing::TestOperations;
 
 #[test]
 fn test_volume_copy_config_default() {
@@ -44,6 +45,8 @@ fn test_format_skipped_suffix_plural() {
 async fn a_volume_copy_hands_its_operation_the_tree_its_scan_recorded() {
     use crate::file_system::write_operations::transfer_tree::test_support::outline;
 
+    let engine = TestOperations::new();
+
     let (source, dest) = make_volumes();
     source.create_directory(Path::new("/src/photos/2024")).await.unwrap();
     source
@@ -55,7 +58,7 @@ async fn a_volume_copy_hands_its_operation_the_tree_its_scan_recorded() {
         .await
         .unwrap();
     source.create_file(Path::new("/src/notes.txt"), b"nn").await.unwrap();
-    let state = make_state();
+    let state = make_state(&engine);
 
     copy_volumes_with_progress(
         Arc::new(CollectorEventSink::new()),
@@ -87,9 +90,11 @@ async fn a_volume_copy_hands_its_operation_the_tree_its_scan_recorded() {
 /// source is: files, and folders whose contents the drivers list as they go.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_cached_preview_without_a_tree_gives_the_operation_its_sources_as_opaque_rows() {
-    use crate::file_system::write_operations::state::{CachedScanResult, insert_scan_result};
+    use crate::file_system::write_operations::state::CachedScanResult;
     use crate::file_system::write_operations::transfer_tree::test_support::outline;
     use cmdr_fs::volume::CopyScanResult;
+
+    let engine = TestOperations::new();
 
     let (source, dest) = make_volumes();
     source.create_directory(Path::new("/src/photos")).await.unwrap();
@@ -109,7 +114,7 @@ async fn a_cached_preview_without_a_tree_gives_the_operation_its_sources_as_opaq
     };
     let sources = vec![PathBuf::from("/src/photos"), PathBuf::from("/src/notes.txt")];
     let preview_id = format!("tree-opaque-{}", std::process::id());
-    insert_scan_result(
+    engine.stores().previews().insert_scan_result(
         preview_id.clone(),
         CachedScanResult::from_volume_batch(
             sources.clone(),
@@ -122,7 +127,7 @@ async fn a_cached_preview_without_a_tree_gives_the_operation_its_sources_as_opaq
             ],
         ),
     );
-    let state = make_state();
+    let state = make_state(&engine);
 
     copy_volumes_with_progress(
         Arc::new(CollectorEventSink::new()),

@@ -19,6 +19,7 @@ use super::test_support::{self, make_state, make_state_with_interval_ms, make_vo
 use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::state::ConflictResolutionResponse;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::{ConflictResolution, WriteOperationError};
 use crate::test_support::TestDir;
 use cmdr_fs::volume::{InMemoryVolume, UnwritableReason, WriteAccess};
@@ -28,6 +29,7 @@ use cmdr_local::LocalPosixVolume;
 /// event reports the right totals.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn cross_volume_move_happy_path() {
+    let engine = TestOperations::new();
     let (source, dest) = make_volumes();
 
     source.create_file(Path::new("/a.txt"), b"alpha").await.unwrap();
@@ -36,7 +38,7 @@ async fn cross_volume_move_happy_path() {
     source.create_file(Path::new("/dir/c.txt"), b"charlie").await.unwrap();
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     let config = VolumeCopyConfig::default();
 
     let result = move_volumes_with_progress(
@@ -75,6 +77,7 @@ async fn cross_volume_move_happy_path() {
 /// advances through the skip.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn cross_volume_move_conflict_skip_preserves_source_and_dest() {
+    let engine = TestOperations::new();
     let (source, dest) = make_volumes();
 
     source.create_file(Path::new("/keep.txt"), b"new").await.unwrap();
@@ -82,7 +85,7 @@ async fn cross_volume_move_conflict_skip_preserves_source_and_dest() {
     dest.create_file(Path::new("/keep.txt"), b"old").await.unwrap();
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state_with_interval_ms(0);
+    let state = make_state_with_interval_ms(&engine, 0);
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Skip,
         progress_interval_ms: 0,
@@ -133,12 +136,13 @@ async fn cross_volume_move_conflict_skip_preserves_source_and_dest() {
 /// Conflict + Overwrite: dest replaced with source content; source removed.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn cross_volume_move_conflict_overwrite_replaces_dest_and_deletes_source() {
+    let engine = TestOperations::new();
     let (source, dest) = make_volumes();
     source.create_file(Path::new("/f.txt"), b"new").await.unwrap();
     dest.create_file(Path::new("/f.txt"), b"old").await.unwrap();
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Overwrite,
         ..VolumeCopyConfig::default()
@@ -168,12 +172,13 @@ async fn cross_volume_move_conflict_overwrite_replaces_dest_and_deletes_source()
 /// Closes the cross-volume Rename cell of the move conflict×resolution matrix.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn cross_volume_move_conflict_rename_keeps_dest_and_renames_incoming() {
+    let engine = TestOperations::new();
     let (source, dest) = make_volumes();
     source.create_file(Path::new("/notes.txt"), b"incoming").await.unwrap();
     dest.create_file(Path::new("/notes.txt"), b"existing").await.unwrap();
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Rename,
         ..VolumeCopyConfig::default()
@@ -212,12 +217,13 @@ async fn cross_volume_move_conflict_rename_keeps_dest_and_renames_incoming() {
 /// resolution from the test side to verify the chosen path applies.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn cross_volume_move_conflict_stop_resolves_via_oneshot() {
+    let engine = TestOperations::new();
     let (source, dest) = make_volumes();
     source.create_file(Path::new("/x.txt"), b"new").await.unwrap();
     dest.create_file(Path::new("/x.txt"), b"old").await.unwrap();
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Stop,
         ..VolumeCopyConfig::default()
@@ -266,6 +272,7 @@ async fn cross_volume_move_conflict_stop_resolves_via_oneshot() {
 /// This pins the data-safety invariant the bulk-skip work introduced.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn cross_volume_move_pre_known_conflicts_bulk_skip() {
+    let engine = TestOperations::new();
     let (source, dest) = make_volumes();
 
     // 5 sources: a, c, e are pre-known conflicts; b, d are fresh.
@@ -280,7 +287,7 @@ async fn cross_volume_move_pre_known_conflicts_bulk_skip() {
     dest.create_file(Path::new("/e.txt"), b"old-e").await.unwrap();
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state_with_interval_ms(0);
+    let state = make_state_with_interval_ms(&engine, 0);
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Skip,
         progress_interval_ms: 0,
@@ -377,6 +384,7 @@ async fn cross_volume_move_pre_known_conflicts_bulk_skip() {
 ///   `file.txt` (files_done = 1).
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn cross_volume_move_top_level_directory_excluded_from_bulk_skip() {
+    let engine = TestOperations::new();
     let (source, dest) = make_volumes();
 
     source.create_file(Path::new("/file.txt"), b"new-file").await.unwrap();
@@ -393,7 +401,7 @@ async fn cross_volume_move_top_level_directory_excluded_from_bulk_skip() {
         .unwrap();
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state_with_interval_ms(0);
+    let state = make_state_with_interval_ms(&engine, 0);
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Skip,
         progress_interval_ms: 0,
@@ -444,6 +452,8 @@ async fn cross_volume_move_top_level_directory_excluded_from_bulk_skip() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn cross_volume_move_on_real_local_volumes() {
     use std::fs;
+
+    let engine = TestOperations::new();
     let base = TestDir::new("move_real_fs");
     let src_dir = base.join("src");
     let dst_dir = base.join("dst");
@@ -465,7 +475,7 @@ async fn cross_volume_move_on_real_local_volumes() {
     ));
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     let result = move_volumes_with_progress(
         events.clone(),
         "op-move-real-fs",
@@ -499,6 +509,8 @@ async fn a_cross_volume_move_carries_the_executable_bit() {
     use std::fs;
     use std::os::unix::fs::PermissionsExt;
 
+    let engine = TestOperations::new();
+
     let base = TestDir::new("move_exec_bit");
     let src_dir = base.join("src");
     let dst_dir = base.join("dst");
@@ -526,7 +538,7 @@ async fn a_cross_volume_move_carries_the_executable_bit() {
     let result = move_volumes_with_progress(
         Arc::new(CollectorEventSink::new()),
         "op-move-exec-bit",
-        &make_state(),
+        &make_state(&engine),
         Arc::clone(&source),
         &[PathBuf::from("run.sh"), PathBuf::from("scripts")],
         Arc::clone(&dest),
@@ -560,13 +572,14 @@ async fn a_cross_volume_move_carries_the_executable_bit() {
 /// (and ancestors) on the dest volume, then lands the files.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn cross_volume_move_creates_missing_nested_dest() {
+    let engine = TestOperations::new();
     let (source, dest) = make_volumes();
     source.create_file(Path::new("/a.txt"), b"alpha").await.unwrap();
     source.create_file(Path::new("/b.txt"), b"bravo").await.unwrap();
     assert!(!dest.exists(Path::new("/incoming")).await);
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     let config = VolumeCopyConfig::default();
 
     let result = move_volumes_with_progress(
@@ -613,6 +626,7 @@ async fn cross_volume_move_creates_missing_nested_dest() {
 /// running right now, in this app or another instance on the same share.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_move_into_a_directory_reaps_the_stale_temps_a_crash_left_there() {
+    let engine = TestOperations::new();
     let source_vol = Arc::new(InMemoryVolume::new("Source"));
     let dest_vol = Arc::new(InMemoryVolume::new("Dest"));
     source_vol.create_file(Path::new("/notes.txt"), b"hello").await.unwrap();
@@ -632,7 +646,7 @@ async fn a_move_into_a_directory_reaps_the_stale_temps_a_crash_left_there() {
     let source: Arc<dyn Volume> = source_vol.clone();
     let dest: Arc<dyn Volume> = dest_vol.clone();
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
 
     move_volumes_with_progress(
         events,
@@ -666,6 +680,7 @@ async fn a_move_into_a_directory_reaps_the_stale_temps_a_crash_left_there() {
 /// stays whole and nothing half-lands.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_cross_volume_move_into_a_folder_that_takes_no_writes_is_refused_before_anything_moves() {
+    let engine = TestOperations::new();
     let source: Arc<dyn Volume> = Arc::new(InMemoryVolume::new("Source").with_space_info(10_000_000, 10_000_000));
     source.create_file(Path::new("/a.txt"), b"alpha").await.unwrap();
     let dest: Arc<dyn Volume> = Arc::new(
@@ -682,7 +697,7 @@ async fn a_cross_volume_move_into_a_folder_that_takes_no_writes_is_refused_befor
     let failure = move_volumes_with_progress(
         Arc::new(CollectorEventSink::new()),
         "op-move-unwritable",
-        &make_state(),
+        &make_state(&engine),
         Arc::clone(&source),
         &[PathBuf::from("/a.txt")],
         Arc::clone(&dest),

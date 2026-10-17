@@ -14,7 +14,7 @@
 use super::move_same::move_within_same_volume_with_progress;
 use super::rename_merge_test_support::{exists, make_state, mkdir, write_file};
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
-use crate::file_system::write_operations::test_support::TestOperationGuard;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::{ConflictResolution, VolumeCopyConfig};
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::{Volume, VolumeError};
@@ -102,6 +102,7 @@ impl Volume for PauseOnFirstRenameVolume {
 /// finishes the tree intact.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_paused_rename_merge_stops_moving_children_until_it_resumes() {
+    let engine = TestOperations::new();
     let dir = TempDir::new().unwrap();
     let root = dir.path();
 
@@ -110,7 +111,7 @@ async fn a_paused_rename_merge_stops_moving_children_until_it_resumes() {
     }
     mkdir(root, "dst/album");
 
-    let op = TestOperationGuard::register_state("rename-merge-pause", make_state());
+    let op = engine.register_state("rename-merge-pause", make_state(&engine));
     let volume: Arc<dyn Volume> = Arc::new(PauseOnFirstRenameVolume {
         inner: Arc::new(LocalPosixVolume::local_folder(
             "V",

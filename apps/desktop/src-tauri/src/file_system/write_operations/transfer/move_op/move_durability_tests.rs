@@ -14,6 +14,7 @@ use super::test_support::make_state;
 use super::*;
 use crate::file_system::write_operations::durability::test_hook;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::ConflictResolution;
 use crate::test_support::TestDir;
 use cmdr_fs::ignore_poison::IgnorePoison;
@@ -75,13 +76,14 @@ fn fail_at(target: PathBuf, errno: i32) -> impl FnMut(&Path) -> Option<io::Resul
 }
 
 fn run(
+    engine: &TestOperations,
     sources: &[PathBuf],
     dst: &Path,
     resolution: ConflictResolution,
     op_id: &str,
 ) -> (Arc<CollectorEventSink>, Result<(), WriteOperationError>) {
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state(200);
+    let state = make_state(engine, 200);
     let config = WriteOperationConfig {
         conflict_resolution: resolution,
         ..WriteOperationConfig::default()
@@ -139,10 +141,12 @@ const UNSUPPORTED_ERRNOS: [i32; 5] = [
 /// gained an entry, including one holding only a subdirectory, is fsynced once.
 #[test]
 fn a_move_fsyncs_every_final_directory_that_gained_an_entry_once_before_deleting_sources() {
+    let engine = TestOperations::new();
     let fixture = nested_move();
     let log = test_hook::record(|_| None);
 
     let (_events, result) = run(
+        &engine,
         &fixture.sources,
         &fixture.dst,
         ConflictResolution::Stop,
@@ -162,11 +166,13 @@ fn a_move_fsyncs_every_final_directory_that_gained_an_entry_once_before_deleting
 /// flush actually saw (M10 typed what M0 raised as a generic `IoError`).
 #[test]
 fn a_directory_fsync_failing_with_eio_keeps_every_source_and_what_landed() {
+    let engine = TestOperations::new();
     let fixture = nested_move();
     let failing = fixture.dst.join("tree").join("sub");
     let _log = test_hook::record(fail_at(failing.clone(), libc::EIO));
 
     let (events, result) = run(
+        &engine,
         &fixture.sources,
         &fixture.dst,
         ConflictResolution::Stop,
@@ -218,11 +224,13 @@ fn a_directory_fsync_failing_with_eio_keeps_every_source_and_what_landed() {
 /// files, so the move completes.
 #[test]
 fn a_directory_that_doesnt_support_fsync_still_completes_the_move() {
+    let engine = TestOperations::new();
     for errno in UNSUPPORTED_ERRNOS {
         let fixture = nested_move();
         let log = test_hook::record(fail_at(fixture.dst.join("tree"), errno));
 
         let (events, result) = run(
+            &engine,
             &fixture.sources,
             &fixture.dst,
             ConflictResolution::Stop,
@@ -248,6 +256,7 @@ fn a_directory_that_doesnt_support_fsync_still_completes_the_move() {
 /// fail a move that landed fine, while the real landing went unflushed.
 #[test]
 fn a_folder_renamed_onto_a_same_named_file_flushes_where_it_landed() {
+    let engine = TestOperations::new();
     let dir = TestDir::new("move-durability-rename");
     let src = dir.join("src");
     let dst = dir.join("dst");
@@ -258,6 +267,7 @@ fn a_folder_renamed_onto_a_same_named_file_flushes_where_it_landed() {
     let log = test_hook::record(|_| None);
 
     let (_events, result) = run(
+        &engine,
         &[src.join("tree")],
         &dst,
         ConflictResolution::Rename,
@@ -282,6 +292,7 @@ fn a_folder_renamed_onto_a_same_named_file_flushes_where_it_landed() {
 /// `sub (1)`; the flush follows it there.
 #[test]
 fn a_merged_child_renamed_onto_a_same_named_file_flushes_where_it_landed() {
+    let engine = TestOperations::new();
     let dir = TestDir::new("move-durability-merge-rename");
     let src = dir.join("src");
     let dst = dir.join("dst");
@@ -292,6 +303,7 @@ fn a_merged_child_renamed_onto_a_same_named_file_flushes_where_it_landed() {
     let log = test_hook::record(|_| None);
 
     let (_events, result) = run(
+        &engine,
         &[src.join("tree")],
         &dst,
         ConflictResolution::Rename,
@@ -317,6 +329,7 @@ fn a_merged_child_renamed_onto_a_same_named_file_flushes_where_it_landed() {
 /// staged paths is a directory to flush; the rest of the move still completes.
 #[test]
 fn a_folder_skipped_against_a_same_named_file_flushes_only_what_landed() {
+    let engine = TestOperations::new();
     let dir = TestDir::new("move-durability-skip");
     let src = dir.join("src");
     let dst = dir.join("dst");
@@ -328,6 +341,7 @@ fn a_folder_skipped_against_a_same_named_file_flushes_only_what_landed() {
     let log = test_hook::record(|_| None);
 
     let (_events, result) = run(
+        &engine,
         &[src.join("tree"), src.join("other.txt")],
         &dst,
         ConflictResolution::Skip,
@@ -350,6 +364,7 @@ fn a_folder_skipped_against_a_same_named_file_flushes_only_what_landed() {
 /// leaves them out, while the sibling that did land is flushed and moves on.
 #[test]
 fn a_merged_child_skipped_against_a_same_named_file_flushes_only_what_landed() {
+    let engine = TestOperations::new();
     let dir = TestDir::new("move-durability-merge-skip");
     let src = dir.join("src");
     let dst = dir.join("dst");
@@ -361,6 +376,7 @@ fn a_merged_child_skipped_against_a_same_named_file_flushes_only_what_landed() {
     let log = test_hook::record(|_| None);
 
     let (_events, result) = run(
+        &engine,
         &[src.join("tree")],
         &dst,
         ConflictResolution::Skip,

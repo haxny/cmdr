@@ -27,6 +27,7 @@
 use super::tests::make_state;
 use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
+use crate::file_system::write_operations::testing::TestOperations;
 use cmdr_fs::volume::{InMemoryVolume, UnwritableReason, WriteAccess};
 
 // ========================================
@@ -35,6 +36,7 @@ use cmdr_fs::volume::{InMemoryVolume, UnwritableReason, WriteAccess};
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_destination_that_cant_report_free_space_is_still_copyable_into() {
+    let engine = TestOperations::new();
     // ❗ The cross-backend contract, not an SFTP quirk: ANY backend may answer
     // `NotSupported` to `get_space_info`, and the trait explicitly allows it. A
     // pre-flight that read the refusal as "no room" would make such a volume a
@@ -51,7 +53,7 @@ async fn a_destination_that_cant_report_free_space_is_still_copyable_into() {
     let result = copy_volumes_with_progress(
         events.clone(),
         "test-op-space-unknown",
-        &make_state(),
+        &make_state(&engine),
         Arc::clone(&source),
         &[PathBuf::from("/a.txt"), PathBuf::from("/b.txt")],
         Arc::clone(&dest),
@@ -85,6 +87,7 @@ async fn a_destination_that_cant_report_free_space_is_still_copyable_into() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_destination_that_does_report_free_space_still_refuses_what_it_cant_hold() {
+    let engine = TestOperations::new();
     // ❗ The other half, and the one an over-eager fix breaks: tolerating "can't
     // tell" must not turn into ignoring a real "no room". A volume that ANSWERS
     // keeps the check exactly as it was.
@@ -98,7 +101,7 @@ async fn a_destination_that_does_report_free_space_still_refuses_what_it_cant_ho
     let failure = copy_volumes_with_progress(
         Arc::new(CollectorEventSink::new()),
         "test-op-space-too-small",
-        &make_state(),
+        &make_state(&engine),
         Arc::clone(&source),
         &[PathBuf::from("/big.bin")],
         Arc::clone(&dest),
@@ -117,6 +120,7 @@ async fn a_destination_that_does_report_free_space_still_refuses_what_it_cant_ho
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn copy_anyway_goes_past_a_destination_that_says_it_is_too_small() {
+    let engine = TestOperations::new();
     // The pre-flight's figure is an upper bound, so a shortfall is the person's
     // call: "Copy anyway" starts the same copy with `SpaceShortfall::Proceed`,
     // and a destination that really fills up stops it as `DestinationFull`.
@@ -130,7 +134,7 @@ async fn copy_anyway_goes_past_a_destination_that_says_it_is_too_small() {
     copy_volumes_with_progress(
         Arc::new(CollectorEventSink::new()),
         "test-op-space-copy-anyway",
-        &make_state(),
+        &make_state(&engine),
         Arc::clone(&source),
         &[PathBuf::from("/big.bin")],
         Arc::clone(&dest),
@@ -163,6 +167,7 @@ async fn phone_with_room_under_sdcard() -> Arc<dyn Volume> {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_copy_is_judged_by_the_filesystem_its_destination_folder_is_on() {
+    let engine = TestOperations::new();
     // ❗ A phone over ADB is the live case: its `/` is a read-only system image
     // reporting 0 free, and asking the VOLUME refused a 920 KB copy into a Pixel's
     // shared storage with "only has 0 bytes available". The pre-flight asks
@@ -177,7 +182,7 @@ async fn a_copy_is_judged_by_the_filesystem_its_destination_folder_is_on() {
     let result = copy_volumes_with_progress(
         Arc::new(CollectorEventSink::new()),
         "test-op-space-per-folder",
-        &make_state(),
+        &make_state(&engine),
         Arc::clone(&source),
         &[PathBuf::from("/photo.jpg")],
         Arc::clone(&dest),
@@ -195,6 +200,7 @@ async fn a_copy_is_judged_by_the_filesystem_its_destination_folder_is_on() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_full_destination_folder_refuses_even_when_the_volume_has_room() {
+    let engine = TestOperations::new();
     // The other half: the folder's filesystem is what decides, in both directions.
     let source: Arc<dyn Volume> = Arc::new(InMemoryVolume::new("Source").with_space_info(10_000_000, 10_000_000));
     source
@@ -211,7 +217,7 @@ async fn a_full_destination_folder_refuses_even_when_the_volume_has_room() {
     let failure = copy_volumes_with_progress(
         Arc::new(CollectorEventSink::new()),
         "test-op-space-full-folder",
-        &make_state(),
+        &make_state(&engine),
         Arc::clone(&source),
         &[PathBuf::from("/big.bin")],
         Arc::clone(&dest),
@@ -236,6 +242,7 @@ async fn a_full_destination_folder_refuses_even_when_the_volume_has_room() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_destination_with_no_ceiling_accepts_a_copy_bigger_than_anything_it_holds() {
+    let engine = TestOperations::new();
     // ❗ The third answer, and the one that shipped broken: a destination that
     // MEASURED and has no ceiling. A quota-less Nextcloud account is the live
     // case, and it is the DEFAULT state of a real account, so reading it as
@@ -253,7 +260,7 @@ async fn a_destination_with_no_ceiling_accepts_a_copy_bigger_than_anything_it_ho
     let result = copy_volumes_with_progress(
         events.clone(),
         "test-op-space-unbounded",
-        &make_state(),
+        &make_state(&engine),
         Arc::clone(&source),
         &[PathBuf::from("/big.bin")],
         Arc::clone(&dest),
@@ -293,6 +300,7 @@ async fn phone_with_a_read_only_root() -> Arc<dyn Volume> {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_copy_into_a_folder_that_takes_no_writes_is_refused_as_such_before_anything_is_created_or_measured() {
+    let engine = TestOperations::new();
     // ❗ The live case: a copy onto a Pixel's `/` said "Not enough space: the
     // destination needs X but only has 0 bytes available". `df` was right about
     // the 0 and wrong as the reason, since nothing lands there at any size. The
@@ -308,7 +316,7 @@ async fn a_copy_into_a_folder_that_takes_no_writes_is_refused_as_such_before_any
     let failure = copy_volumes_with_progress(
         Arc::new(CollectorEventSink::new()),
         "test-op-unwritable-dest",
-        &make_state(),
+        &make_state(&engine),
         Arc::clone(&source),
         &[PathBuf::from("/photo.jpg")],
         Arc::clone(&dest),
@@ -337,6 +345,7 @@ async fn a_copy_into_a_folder_that_takes_no_writes_is_refused_as_such_before_any
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_folder_that_takes_writes_beside_a_read_only_root_still_copies() {
+    let engine = TestOperations::new();
     // The other half, and the one an over-eager fix breaks: the answer is about
     // the FOLDER. The shared storage beside the read-only root takes the copy.
     let source: Arc<dyn Volume> = Arc::new(InMemoryVolume::new("Source").with_space_info(10_000_000, 10_000_000));
@@ -349,7 +358,7 @@ async fn a_folder_that_takes_writes_beside_a_read_only_root_still_copies() {
     let result = copy_volumes_with_progress(
         Arc::new(CollectorEventSink::new()),
         "test-op-writable-beside-read-only",
-        &make_state(),
+        &make_state(&engine),
         Arc::clone(&source),
         &[PathBuf::from("/photo.jpg")],
         Arc::clone(&dest),

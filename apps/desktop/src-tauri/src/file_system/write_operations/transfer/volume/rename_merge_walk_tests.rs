@@ -11,6 +11,7 @@
 use super::move_same::move_within_same_volume_with_progress;
 use super::rename_merge_test_support::{exists, make_state, mkdir, write_file};
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::VolumeCopyConfig;
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::{Volume, VolumeError};
@@ -110,6 +111,7 @@ impl Volume for CountingVolume {
 /// Stat count stays O(top-level items), not O(subtree).
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn non_conflicting_move_does_no_subtree_walk() {
+    let engine = TestOperations::new();
     let dir = TempDir::new().unwrap();
     let root = dir.path();
 
@@ -130,7 +132,7 @@ async fn non_conflicting_move_does_no_subtree_walk() {
     let stat_calls = Arc::clone(&counting.stat_calls);
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     let config = VolumeCopyConfig {
         progress_interval_ms: 0,
         ..VolumeCopyConfig::default()

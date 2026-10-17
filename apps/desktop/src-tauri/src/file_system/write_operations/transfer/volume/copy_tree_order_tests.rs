@@ -12,6 +12,7 @@ use super::super::faulty_volume::forward_volume_methods;
 use super::tests::make_state;
 use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
+use crate::file_system::write_operations::testing::TestOperations;
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::volume::{InMemoryVolume, ListingProgress};
@@ -122,12 +123,13 @@ fn dest() -> Arc<dyn Volume> {
 /// must start each level's files in tree order however the listing came back.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_merge_whose_listing_comes_back_shuffled_still_starts_files_in_tree_order() {
+    let engine = TestOperations::new();
     let source = tree_source(1).await;
 
     copy_volumes_with_progress(
         Arc::new(CollectorEventSink::new()),
         "tree-order-merge",
-        &make_state(),
+        &make_state(&engine),
         Arc::clone(&source) as Arc<dyn Volume>,
         &[PathBuf::from("/src/a")],
         dest(),
@@ -143,12 +145,13 @@ async fn a_merge_whose_listing_comes_back_shuffled_still_starts_files_in_tree_or
 /// Fewer than three sources take the serial driver, one source at a time.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn the_serial_driver_starts_its_sources_in_tree_order() {
+    let engine = TestOperations::new();
     let source = tree_source(1).await;
 
     copy_volumes_with_progress(
         Arc::new(CollectorEventSink::new()),
         "tree-order-serial",
-        &make_state(),
+        &make_state(&engine),
         Arc::clone(&source) as Arc<dyn Volume>,
         &[PathBuf::from("/src/z.txt"), PathBuf::from("/src/a")],
         dest(),
@@ -166,12 +169,13 @@ async fn the_serial_driver_starts_its_sources_in_tree_order() {
 /// tree position, ❌ never at its selection position.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn the_concurrent_driver_starts_its_sources_in_tree_order() {
+    let engine = TestOperations::new();
     let source = tree_source(2).await;
 
     copy_volumes_with_progress(
         Arc::new(CollectorEventSink::new()),
         "tree-order-concurrent",
-        &make_state(),
+        &make_state(&engine),
         Arc::clone(&source) as Arc<dyn Volume>,
         &shuffled_selection(),
         dest(),
@@ -198,12 +202,13 @@ async fn the_concurrent_driver_starts_its_sources_in_tree_order() {
 /// A cross-volume move copies through the same serial driver and walker.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_cross_volume_move_starts_files_in_tree_order() {
+    let engine = TestOperations::new();
     let source = tree_source(1).await;
 
     super::super::move_cross::move_volumes_with_progress(
         Arc::new(CollectorEventSink::new()),
         "tree-order-move",
-        &make_state(),
+        &make_state(&engine),
         Arc::clone(&source) as Arc<dyn Volume>,
         &shuffled_selection(),
         dest(),

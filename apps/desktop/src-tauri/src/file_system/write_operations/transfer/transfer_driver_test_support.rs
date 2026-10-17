@@ -6,33 +6,18 @@
 //! `transfer_driver` module) can reach them through `super::test_support::…`.
 
 use super::super::super::state::WriteOperationState;
-use super::super::super::test_support::TestOperationGuard;
 use super::super::super::types::{ConflictResolution, WriteOperationPhase, WriteOperationType};
 use super::DriverConfig;
+use crate::file_system::write_operations::testing::TestOperations;
 use cmdr_fs::ignore_poison::IgnorePoison;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-pub(super) fn unique_op_id(label: &str) -> String {
-    use std::sync::atomic::{AtomicU64, Ordering};
-    static N: AtomicU64 = AtomicU64::new(0);
-    let n = N.fetch_add(1, Ordering::Relaxed);
-    format!("test-driver-{label}-{n}-{:?}", std::thread::current().id())
-}
-
-pub(super) fn make_state() -> Arc<WriteOperationState> {
+pub(super) fn make_state(engine: &TestOperations) -> Arc<WriteOperationState> {
     // Zero progress interval so throttled emits ALWAYS fire — tests that
     // count emits would otherwise be flaky.
-    Arc::new(WriteOperationState::new(Duration::from_millis(0)))
-}
-
-/// Registers `state` under `op_id`. Bind the returned guard for the whole test:
-/// it removes the registry entry on drop, so a failing assertion
-/// can't leave a corpse for the next test's `cancel_all_write_operations` to walk.
-#[must_use = "bind the guard; dropping it immediately unregisters the state"]
-pub(super) fn install_state(op_id: &str, state: Arc<WriteOperationState>) -> TestOperationGuard {
-    TestOperationGuard::register_as(op_id, state)
+    Arc::new(engine.new_operation_state(Duration::from_millis(0)))
 }
 
 pub(super) fn paths(names: &[&str]) -> Vec<PathBuf> {

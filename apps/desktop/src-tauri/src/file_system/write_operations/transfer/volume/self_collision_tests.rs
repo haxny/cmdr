@@ -23,12 +23,13 @@ use super::move_same::move_within_same_volume_with_progress;
 use crate::file_system::write_operations::conflict::ApplyToAll;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::state::WriteOperationState;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::{ConflictResolution, SourceItemOutcome, VolumeCopyConfig};
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::volume::{InMemoryVolume, Volume};
 
-fn make_state() -> Arc<WriteOperationState> {
-    Arc::new(WriteOperationState::new(Duration::from_millis(0)))
+fn make_state(engine: &TestOperations) -> Arc<WriteOperationState> {
+    Arc::new(engine.new_operation_state(Duration::from_millis(0)))
 }
 
 /// One volume standing in for an MTP device or an SMB share: the source and the
@@ -100,6 +101,7 @@ async fn subtree(vol: &Arc<dyn Volume>, root: &str) -> Vec<String> {
 /// A file copied into the folder it already lives in duplicates, silently.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn duplicating_a_file_in_place_on_one_volume_renames_it_and_never_prompts() {
+    let engine = TestOperations::new();
     let volume = one_volume();
     volume.create_directory(Path::new("/photos")).await.unwrap();
     volume
@@ -107,7 +109,7 @@ async fn duplicating_a_file_in_place_on_one_volume_renames_it_and_never_prompts(
         .await
         .unwrap();
 
-    let state = make_state();
+    let state = make_state(&engine);
     let events = Arc::new(ConflictResponderSink::new(&state, ConflictResolution::Rename, true));
 
     copy_volumes_with_progress(
@@ -143,6 +145,7 @@ async fn duplicating_a_file_in_place_on_one_volume_renames_it_and_never_prompts(
 /// namer's `exists()` probe can't see a name whose bytes haven't landed yet.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn duplicating_a_whole_series_at_once_gives_every_source_its_own_name() {
+    let engine = TestOperations::new();
     let volume = one_volume();
     volume.create_directory(Path::new("/photos")).await.unwrap();
     for (name, bytes) in [("photo.jpg", b"a"), ("photo (1).jpg", b"b"), ("photo (2).jpg", b"c")] {
@@ -152,7 +155,7 @@ async fn duplicating_a_whole_series_at_once_gives_every_source_its_own_name() {
             .unwrap();
     }
 
-    let state = make_state();
+    let state = make_state(&engine);
     let events = Arc::new(ConflictResponderSink::new(&state, ConflictResolution::Rename, true));
 
     copy_volumes_with_progress(
@@ -215,6 +218,7 @@ async fn duplicating_a_whole_series_at_once_gives_every_source_its_own_name() {
 /// it. Nothing inside the original may be touched, and no ` (N)` may appear there.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn duplicating_a_folder_in_place_lands_the_whole_subtree_under_the_renamed_root() {
+    let engine = TestOperations::new();
     let volume = one_volume();
     volume.create_directory(Path::new("/photos")).await.unwrap();
     volume.create_directory(Path::new("/photos/docs")).await.unwrap();
@@ -228,7 +232,7 @@ async fn duplicating_a_folder_in_place_lands_the_whole_subtree_under_the_renamed
         .await
         .unwrap();
 
-    let state = make_state();
+    let state = make_state(&engine);
     let events = Arc::new(ConflictResponderSink::new(&state, ConflictResolution::Rename, true));
 
     copy_volumes_with_progress(
@@ -268,11 +272,12 @@ async fn duplicating_a_folder_in_place_lands_the_whole_subtree_under_the_renamed
 /// is needed.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn duplicating_an_empty_folder_in_place_lands_an_empty_sibling() {
+    let engine = TestOperations::new();
     let volume = one_volume();
     volume.create_directory(Path::new("/photos")).await.unwrap();
     volume.create_directory(Path::new("/photos/docs")).await.unwrap();
 
-    let state = make_state();
+    let state = make_state(&engine);
     let events = Arc::new(ConflictResponderSink::new(&state, ConflictResolution::Rename, true));
 
     copy_volumes_with_progress(
@@ -298,6 +303,7 @@ async fn duplicating_an_empty_folder_in_place_lands_an_empty_sibling() {
 /// prelude would drop them all and the duplicate would silently do nothing.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_pre_known_conflict_naming_the_source_itself_does_not_skip_the_duplicate() {
+    let engine = TestOperations::new();
     let volume = one_volume();
     volume.create_directory(Path::new("/photos")).await.unwrap();
     volume
@@ -305,7 +311,7 @@ async fn a_pre_known_conflict_naming_the_source_itself_does_not_skip_the_duplica
         .await
         .unwrap();
 
-    let state = make_state();
+    let state = make_state(&engine);
     let events = Arc::new(CollectorEventSink::new());
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Skip,
@@ -338,6 +344,7 @@ async fn a_pre_known_conflict_naming_the_source_itself_does_not_skip_the_duplica
 /// conflict, and still asks.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_genuine_conflict_on_one_volume_still_raises_the_normal_flow() {
+    let engine = TestOperations::new();
     let volume = one_volume();
     volume.create_directory(Path::new("/from")).await.unwrap();
     volume.create_directory(Path::new("/to")).await.unwrap();
@@ -350,7 +357,7 @@ async fn a_genuine_conflict_on_one_volume_still_raises_the_normal_flow() {
         .await
         .unwrap();
 
-    let state = make_state();
+    let state = make_state(&engine);
     let events = Arc::new(ConflictResponderSink::new(&state, ConflictResolution::Rename, true));
 
     copy_volumes_with_progress(
@@ -392,6 +399,7 @@ async fn a_genuine_conflict_on_one_volume_still_raises_the_normal_flow() {
 /// pin is the policy that would answer `None`. A regression shows up as a skip,
 /// not as a differently-named file.
 async fn resolve(
+    engine: &TestOperations,
     source_volume: &Arc<dyn Volume>,
     source_path: &str,
     dest_volume: &Arc<dyn Volume>,
@@ -399,7 +407,7 @@ async fn resolve(
     policy: ConflictResolution,
     events: &CollectorEventSink,
 ) -> Option<PathBuf> {
-    let state = make_state();
+    let state = make_state(engine);
     let mut apply_to_all = ApplyToAll::default();
     let config = VolumeCopyConfig {
         conflict_resolution: policy,
@@ -427,6 +435,7 @@ async fn resolve(
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_case_differing_path_on_one_volume_is_the_same_item() {
+    let engine = TestOperations::new();
     let volume = one_volume();
     volume.create_directory(Path::new("/photos")).await.unwrap();
     volume
@@ -436,6 +445,7 @@ async fn a_case_differing_path_on_one_volume_is_the_same_item() {
 
     let events = CollectorEventSink::new();
     let write_path = resolve(
+        &engine,
         &volume,
         "/photos/Photo.JPG",
         &volume,
@@ -454,6 +464,7 @@ async fn a_case_differing_path_on_one_volume_is_the_same_item() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn an_nfd_path_on_one_volume_is_the_same_item_as_its_nfc_twin() {
+    let engine = TestOperations::new();
     // "café.jpg" composed (NFC) vs decomposed (NFD): macOS and SMB move paths
     // between the two routinely, and the clipboard can introduce either.
     let composed = "/photos/caf\u{e9}.jpg";
@@ -465,6 +476,7 @@ async fn an_nfd_path_on_one_volume_is_the_same_item_as_its_nfc_twin() {
 
     let events = CollectorEventSink::new();
     let write_path = resolve(
+        &engine,
         &volume,
         decomposed,
         &volume,
@@ -486,6 +498,7 @@ async fn an_nfd_path_on_one_volume_is_the_same_item_as_its_nfc_twin() {
 /// self-collision.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_case_differing_parent_is_not_the_same_item() {
+    let engine = TestOperations::new();
     let volume = one_volume();
     volume.create_directory(Path::new("/DCIM")).await.unwrap();
     volume.create_directory(Path::new("/dcim")).await.unwrap();
@@ -500,6 +513,7 @@ async fn a_case_differing_parent_is_not_the_same_item() {
 
     let events = CollectorEventSink::new();
     let write_path = resolve(
+        &engine,
         &volume,
         "/DCIM/photo.jpg",
         &volume,
@@ -521,6 +535,7 @@ async fn a_case_differing_parent_is_not_the_same_item() {
 /// different files, so it stays an ordinary conflict.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn the_same_path_on_two_volumes_is_not_a_self_collision() {
+    let engine = TestOperations::new();
     let source = one_volume();
     let dest = one_volume();
     source.create_directory(Path::new("/photos")).await.unwrap();
@@ -533,6 +548,7 @@ async fn the_same_path_on_two_volumes_is_not_a_self_collision() {
 
     let events = CollectorEventSink::new();
     let write_path = resolve(
+        &engine,
         &source,
         "/photos/photo.jpg",
         &dest,
@@ -556,6 +572,7 @@ async fn the_same_path_on_two_volumes_is_not_a_self_collision() {
 /// is renamed, nothing is shuffled aside, and the item reports itself finished.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn moving_a_file_into_its_own_folder_on_one_volume_leaves_it_alone() {
+    let engine = TestOperations::new();
     let volume = one_volume();
     volume.create_directory(Path::new("/photos")).await.unwrap();
     volume
@@ -563,7 +580,7 @@ async fn moving_a_file_into_its_own_folder_on_one_volume_leaves_it_alone() {
         .await
         .unwrap();
 
-    let state = make_state();
+    let state = make_state(&engine);
     let events = Arc::new(ConflictResponderSink::new(&state, ConflictResolution::Rename, true));
 
     move_within_same_volume_with_progress(
@@ -605,6 +622,7 @@ async fn moving_a_file_into_its_own_folder_on_one_volume_leaves_it_alone() {
 /// the user it moved.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn moving_into_a_case_differing_folder_on_one_volume_really_moves() {
+    let engine = TestOperations::new();
     let volume = one_volume();
     volume.create_directory(Path::new("/DCIM")).await.unwrap();
     volume.create_directory(Path::new("/dcim")).await.unwrap();
@@ -613,7 +631,7 @@ async fn moving_into_a_case_differing_folder_on_one_volume_really_moves() {
         .await
         .unwrap();
 
-    let state = make_state();
+    let state = make_state(&engine);
     let events = Arc::new(ConflictResponderSink::new(&state, ConflictResolution::Rename, true));
 
     move_within_same_volume_with_progress(
@@ -663,6 +681,7 @@ async fn moving_into_a_case_differing_folder_on_one_volume_really_moves() {
 /// leaf onto itself or shuffle it aside.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn moving_a_folder_into_its_own_parent_on_one_volume_leaves_the_subtree_alone() {
+    let engine = TestOperations::new();
     let volume = one_volume();
     volume.create_directory(Path::new("/photos")).await.unwrap();
     volume.create_directory(Path::new("/photos/docs")).await.unwrap();
@@ -676,7 +695,7 @@ async fn moving_a_folder_into_its_own_parent_on_one_volume_leaves_the_subtree_al
         .await
         .unwrap();
 
-    let state = make_state();
+    let state = make_state(&engine);
     let events = Arc::new(ConflictResponderSink::new(&state, ConflictResolution::Rename, true));
 
     move_within_same_volume_with_progress(
@@ -705,6 +724,7 @@ async fn moving_a_folder_into_its_own_parent_on_one_volume_leaves_the_subtree_al
 /// both.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_mixed_move_batch_on_one_volume_leaves_the_local_source_and_moves_the_other() {
+    let engine = TestOperations::new();
     let volume = one_volume();
     volume.create_directory(Path::new("/photos")).await.unwrap();
     volume.create_directory(Path::new("/elsewhere")).await.unwrap();
@@ -717,7 +737,7 @@ async fn a_mixed_move_batch_on_one_volume_leaves_the_local_source_and_moves_the_
         .await
         .unwrap();
 
-    let state = make_state();
+    let state = make_state(&engine);
     let events = Arc::new(ConflictResponderSink::new(&state, ConflictResolution::Rename, true));
 
     move_within_same_volume_with_progress(

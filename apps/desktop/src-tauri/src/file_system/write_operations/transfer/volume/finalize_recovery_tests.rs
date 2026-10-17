@@ -12,6 +12,7 @@ use super::faulty_volume::forward_volume_methods;
 use super::finalize::finalize_safe_replace;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::state::WriteOperationState;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::{ConflictResolution, VolumeCopyConfig, WriteOperationError};
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::{InMemoryVolume, Volume, VolumeError};
@@ -94,9 +95,10 @@ async fn names_in_root(volume: &InMemoryVolume) -> Vec<String> {
 /// were meant to land, and nothing is left wearing a temp name.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_failed_finalize_moves_the_new_data_out_of_temp_space() {
+    let engine = TestOperations::new();
     let (inner, dest, temp) = dest_mid_finalize("/notes.txt").await;
 
-    let failure = finalize_safe_replace(&dest, &temp, Path::new("/notes.txt"), &unwatched_state())
+    let failure = finalize_safe_replace(&dest, &temp, Path::new("/notes.txt"), &unwatched_state(&engine))
         .await
         .expect_err("the finalize rename is rigged to fail");
 
@@ -125,8 +127,9 @@ async fn a_failed_finalize_moves_the_new_data_out_of_temp_space() {
 /// transfer into that folder deleted the only copy.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn the_stale_temp_reap_cannot_touch_rescued_data() {
+    let engine = TestOperations::new();
     let (inner, dest, temp) = dest_mid_finalize("/notes.txt").await;
-    finalize_safe_replace(&dest, &temp, Path::new("/notes.txt"), &unwatched_state())
+    finalize_safe_replace(&dest, &temp, Path::new("/notes.txt"), &unwatched_state(&engine))
         .await
         .expect_err("the finalize rename is rigged to fail");
 
@@ -147,13 +150,14 @@ async fn the_stale_temp_reap_cannot_touch_rescued_data() {
 /// than replacing whatever is there.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_taken_recovered_name_continues_the_house_series() {
+    let engine = TestOperations::new();
     let (inner, dest, temp) = dest_mid_finalize("/notes.txt").await;
     inner
         .create_file(Path::new("/notes (recovered).txt"), b"AN EARLIER RESCUE")
         .await
         .unwrap();
 
-    let failure = finalize_safe_replace(&dest, &temp, Path::new("/notes.txt"), &unwatched_state())
+    let failure = finalize_safe_replace(&dest, &temp, Path::new("/notes.txt"), &unwatched_state(&engine))
         .await
         .expect_err("the finalize rename is rigged to fail");
 
@@ -174,6 +178,7 @@ async fn a_taken_recovered_name_continues_the_house_series() {
 /// that isn't there.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_rescue_that_cannot_rename_reports_the_temp_it_left() {
+    let engine = TestOperations::new();
     let inner = Arc::new(
         InMemoryVolume::new("Dest")
             .with_space_info(10_000_000, 10_000_000)
@@ -184,7 +189,7 @@ async fn a_rescue_that_cannot_rename_reports_the_temp_it_left() {
     inner.create_file(&temp, b"NEW").await.unwrap();
     let dest: Arc<dyn Volume> = Arc::clone(&inner) as Arc<dyn Volume>;
 
-    let failure = finalize_safe_replace(&dest, &temp, Path::new("/notes.txt"), &unwatched_state())
+    let failure = finalize_safe_replace(&dest, &temp, Path::new("/notes.txt"), &unwatched_state(&engine))
         .await
         .expect_err("every rename fails here");
 
@@ -251,9 +256,10 @@ async fn dest_refusing_the_delete(goes_through: bool) -> (Arc<InMemoryVolume>, A
 /// removing them loses nothing.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_refused_delete_keeps_the_original_and_takes_its_own_temp_away() {
+    let engine = TestOperations::new();
     let (inner, dest, temp) = dest_refusing_the_delete(false).await;
 
-    let failure = finalize_safe_replace(&dest, &temp, Path::new("/notes.txt"), &unwatched_state())
+    let failure = finalize_safe_replace(&dest, &temp, Path::new("/notes.txt"), &unwatched_state(&engine))
         .await
         .expect_err("the delete is rigged to be refused");
 
@@ -283,9 +289,10 @@ async fn a_refused_delete_keeps_the_original_and_takes_its_own_temp_away() {
 /// leave neither file at the destination; landing it is what the user asked for.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_delete_that_went_through_despite_its_answer_still_lands_the_new_bytes() {
+    let engine = TestOperations::new();
     let (inner, dest, temp) = dest_refusing_the_delete(true).await;
 
-    finalize_safe_replace(&dest, &temp, Path::new("/notes.txt"), &unwatched_state())
+    finalize_safe_replace(&dest, &temp, Path::new("/notes.txt"), &unwatched_state(&engine))
         .await
         .expect("the original is gone, so the swap completes");
 
@@ -301,10 +308,11 @@ async fn a_delete_that_went_through_despite_its_answer_still_lands_the_new_bytes
 /// and this is not the moment to guess.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_refused_delete_nobody_can_confirm_keeps_the_temp() {
+    let engine = TestOperations::new();
     let (inner, dest, temp) = dest_refusing_the_delete(false).await;
     inner.set_stat_failing(Path::new("/notes.txt"));
 
-    let failure = finalize_safe_replace(&dest, &temp, Path::new("/notes.txt"), &unwatched_state())
+    let failure = finalize_safe_replace(&dest, &temp, Path::new("/notes.txt"), &unwatched_state(&engine))
         .await
         .expect_err("the delete is rigged to be refused");
 
@@ -314,7 +322,7 @@ async fn a_refused_delete_nobody_can_confirm_keeps_the_temp() {
 
 /// A refused replace through the whole copy pipeline, on both drivers: the
 /// user's file stays, the copy fails typed, and no staging is left behind.
-async fn copy_over_a_file_the_server_wont_let_go(names: &[&str]) {
+async fn copy_over_a_file_the_server_wont_let_go(engine: &TestOperations, names: &[&str]) {
     let source = Arc::new(InMemoryVolume::new("Source").with_space_info(10_000_000, 10_000_000));
     for name in names {
         source
@@ -338,7 +346,7 @@ async fn copy_over_a_file_the_server_wont_let_go(names: &[&str]) {
     let result = super::copy::copy_volumes_with_progress(
         Arc::new(CollectorEventSink::new()),
         "test-op-refused-replace",
-        &Arc::new(WriteOperationState::new(std::time::Duration::from_millis(50))),
+        &Arc::new(engine.new_operation_state(std::time::Duration::from_millis(50))),
         source as Arc<dyn Volume>,
         &sources,
         dest,
@@ -376,13 +384,15 @@ async fn copy_over_a_file_the_server_wont_let_go(names: &[&str]) {
 /// One source, so the SERIAL driver runs it.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn serial_a_refused_replace_leaves_no_staging() {
-    copy_over_a_file_the_server_wont_let_go(&["notes.txt"]).await;
+    let engine = TestOperations::new();
+    copy_over_a_file_the_server_wont_let_go(&engine, &["notes.txt"]).await;
 }
 
 /// Three sources, so the CONCURRENT driver runs them.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn concurrent_a_refused_replace_leaves_no_staging() {
-    copy_over_a_file_the_server_wont_let_go(&["a.txt", "notes.txt", "z.txt"]).await;
+    let engine = TestOperations::new();
+    copy_over_a_file_the_server_wont_let_go(&engine, &["a.txt", "notes.txt", "z.txt"]).await;
 }
 
 /// A finalize that fails on the DELETE rescued nothing and lost nothing: the
@@ -391,6 +401,7 @@ async fn concurrent_a_refused_replace_leaves_no_staging() {
 /// reap, which is safe because the source still holds its bytes.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_finalize_that_never_deleted_the_original_reports_no_rescue() {
+    let engine = TestOperations::new();
     let inner = Arc::new(
         InMemoryVolume::new("Dest")
             .with_space_info(10_000_000, 10_000_000)
@@ -401,7 +412,7 @@ async fn a_finalize_that_never_deleted_the_original_reports_no_rescue() {
     inner.create_file(&temp, b"NEW").await.unwrap();
     let dest: Arc<dyn Volume> = Arc::clone(&inner) as Arc<dyn Volume>;
 
-    let failure = finalize_safe_replace(&dest, &temp, Path::new("/notes.txt"), &unwatched_state())
+    let failure = finalize_safe_replace(&dest, &temp, Path::new("/notes.txt"), &unwatched_state(&engine))
         .await
         .expect_err("the delete is rigged to fail");
 
@@ -427,6 +438,6 @@ type ListingRow = FileEntry;
 
 /// A state for a finalize no operation is watching: it holds no flags for any
 /// temp, so the swap is all that happens.
-fn unwatched_state() -> WriteOperationState {
-    WriteOperationState::new(std::time::Duration::ZERO)
+fn unwatched_state(engine: &TestOperations) -> WriteOperationState {
+    engine.new_operation_state(std::time::Duration::ZERO)
 }

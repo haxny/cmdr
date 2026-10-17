@@ -16,7 +16,7 @@
 use super::tests::{make_state, make_volumes};
 use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
-use crate::file_system::write_operations::scan_cache::seed_incoherent_scan_result_for_test;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::{ConflictResolution, WriteConflictEvent};
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::ignore_poison::IgnorePoison;
@@ -27,8 +27,14 @@ use cmdr_fs::volume::{CopyScanResult, InMemoryVolume, ListingProgress, SpaceInfo
 /// canary is a `debug_assert!`: in a release build the entry lands anyway and
 /// the drivers still have to handle it without lying about what a source is.
 /// These fixtures are that defense's proof, so they seed past the canary.
-fn seed_preview_without_per_path(preview_id: &str, sources: &[&str], file_count: usize, total_bytes: u64) {
-    seed_incoherent_scan_result_for_test(
+fn seed_preview_without_per_path(
+    engine: &TestOperations,
+    preview_id: &str,
+    sources: &[&str],
+    file_count: usize,
+    total_bytes: u64,
+) {
+    engine.stores().previews().seed_incoherent_scan_result_for_test(
         preview_id.to_string(),
         sources.iter().map(PathBuf::from).collect(),
         file_count,
@@ -162,6 +168,7 @@ async fn read_dest_file(dest: &Arc<dyn Volume>, path: &str) -> Option<Vec<u8>> {
 /// copy hit in production.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn directory_source_copies_when_preview_carries_no_per_path_serial() {
+    let engine = TestOperations::new();
     let (source, dest) = make_volumes();
     source.create_directory(Path::new("/album")).await.unwrap();
     source.create_file(Path::new("/album/one.bin"), b"first").await.unwrap();
@@ -172,10 +179,10 @@ async fn directory_source_copies_when_preview_carries_no_per_path_serial() {
         .unwrap();
 
     let preview_id = "test-preview-no-per-path-serial";
-    seed_preview_without_per_path(preview_id, &["/album"], 2, 11);
+    seed_preview_without_per_path(&engine, preview_id, &["/album"], 2, 11);
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     let config = VolumeCopyConfig {
         preview_id: Some(preview_id.to_string()),
         progress_interval_ms: 0,
@@ -208,6 +215,7 @@ async fn directory_source_copies_when_preview_carries_no_per_path_serial() {
 /// CONCURRENT driver (3+ sources, `max_concurrent_ops() > 1`): same contract.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn directory_source_copies_when_preview_carries_no_per_path_concurrent() {
+    let engine = TestOperations::new();
     let (source, dest) = make_volumes();
     source.create_directory(Path::new("/album")).await.unwrap();
     source.create_file(Path::new("/album/one.bin"), b"first").await.unwrap();
@@ -220,10 +228,10 @@ async fn directory_source_copies_when_preview_carries_no_per_path_concurrent() {
     source.create_file(Path::new("/loose_b.bin"), b"bbbb").await.unwrap();
 
     let preview_id = "test-preview-no-per-path-concurrent";
-    seed_preview_without_per_path(preview_id, &["/album", "/loose_a.bin", "/loose_b.bin"], 4, 19);
+    seed_preview_without_per_path(&engine, preview_id, &["/album", "/loose_a.bin", "/loose_b.bin"], 4, 19);
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     let config = VolumeCopyConfig {
         preview_id: Some(preview_id.to_string()),
         progress_interval_ms: 0,
@@ -276,13 +284,14 @@ async fn directory_source_copies_when_preview_carries_no_per_path_concurrent() {
 /// that list.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn failed_directory_copy_spares_preexisting_dest_dir_serial() {
+    let engine = TestOperations::new();
     let (source, dest) = poisoned_dir_source_and_merged_dest(&[]).await;
 
     let preview_id = "test-preview-no-per-path-fail-serial";
-    seed_preview_without_per_path(preview_id, &["/album"], 1, 4096);
+    seed_preview_without_per_path(&engine, preview_id, &["/album"], 1, 4096);
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     let config = VolumeCopyConfig {
         // Dir-vs-dir merges under any policy; Overwrite keeps the run
         // prompt-free.
@@ -315,13 +324,20 @@ async fn failed_directory_copy_spares_preexisting_dest_dir_serial() {
 /// CONCURRENT driver: same data-safety contract, via `in_flight_partials`.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn failed_directory_copy_spares_preexisting_dest_dir_concurrent() {
+    let engine = TestOperations::new();
     let (source, dest) = poisoned_dir_source_and_merged_dest(&["/loose_a.bin", "/loose_b.bin"]).await;
 
     let preview_id = "test-preview-no-per-path-fail-concurrent";
-    seed_preview_without_per_path(preview_id, &["/album", "/loose_a.bin", "/loose_b.bin"], 3, 4104);
+    seed_preview_without_per_path(
+        &engine,
+        preview_id,
+        &["/album", "/loose_a.bin", "/loose_b.bin"],
+        3,
+        4104,
+    );
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Overwrite,
         preview_id: Some(preview_id.to_string()),

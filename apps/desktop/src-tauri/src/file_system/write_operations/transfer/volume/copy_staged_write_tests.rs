@@ -16,6 +16,7 @@ use super::tests::make_state;
 use super::wedge_test_support::*;
 use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::ConflictResolution;
 use cmdr_fs::testing::wait_until_async;
 use std::sync::atomic::Ordering;
@@ -30,6 +31,7 @@ use std::sync::atomic::Ordering;
 /// looked complete.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn abandoned_fresh_copy_leaves_no_partial_at_the_final_name() {
+    let engine = TestOperations::new();
     let Fixture {
         source,
         source_inner,
@@ -45,7 +47,7 @@ async fn abandoned_fresh_copy_leaves_no_partial_at_the_final_name() {
         .unwrap();
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     let config = VolumeCopyConfig::default();
 
     {
@@ -90,6 +92,7 @@ async fn abandoned_fresh_copy_leaves_no_partial_at_the_final_name() {
 /// bytes at the final name.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn abandoned_overwrite_leaves_the_original_intact() {
+    let engine = TestOperations::new();
     let Fixture {
         source,
         source_inner,
@@ -109,7 +112,7 @@ async fn abandoned_overwrite_leaves_the_original_intact() {
         .unwrap();
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Overwrite,
         ..VolumeCopyConfig::default()
@@ -150,6 +153,7 @@ async fn abandoned_overwrite_leaves_the_original_intact() {
 /// the least protected case of all.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn abandoned_directory_child_leaves_no_partial_at_the_final_name() {
+    let engine = TestOperations::new();
     let Fixture {
         source,
         source_inner,
@@ -166,7 +170,7 @@ async fn abandoned_directory_child_leaves_no_partial_at_the_final_name() {
         .unwrap();
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     let config = VolumeCopyConfig::default();
 
     {
@@ -209,6 +213,7 @@ async fn abandoned_directory_child_leaves_no_partial_at_the_final_name() {
 /// the full content at the final name and leaves no temp behind.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_completed_copy_lands_at_the_final_name_with_no_temp_left() {
+    let engine = TestOperations::new();
     let Fixture {
         source,
         source_inner,
@@ -224,7 +229,7 @@ async fn a_completed_copy_lands_at_the_final_name_with_no_temp_left() {
     gate.add_permits(8); // enough for the whole file
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     let config = VolumeCopyConfig::default();
 
     copy_volumes_with_progress(

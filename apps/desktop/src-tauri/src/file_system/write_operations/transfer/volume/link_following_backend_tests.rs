@@ -21,6 +21,7 @@ use super::move_same::move_within_same_volume_with_progress;
 use super::rename_merge_test_support::{exists, make_state, mkdir, read, write_file};
 use crate::file_system::write_operations::event_sinks::{CollectorEventSink, OperationEventSink};
 use crate::file_system::write_operations::state::WriteOperationState;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::transfer_tree::test_support::row_states;
 use crate::file_system::write_operations::types::{ConflictResolution, VolumeCopyConfig};
 use cmdr_fs::entry::FileEntry;
@@ -170,6 +171,7 @@ fn following_volume() -> (Arc<dyn Volume>, TempDir) {
 /// folder above it never reads done.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_copied_folder_holding_a_dir_link_ends_with_every_tree_row_done() {
+    let engine = TestOperations::new();
     let dir = TempDir::new().unwrap();
     let root = dir.path();
     let source: Arc<dyn Volume> = Arc::new(LinkFollowingVolume {
@@ -181,7 +183,7 @@ async fn a_copied_folder_holding_a_dir_link_ends_with_every_tree_row_done() {
     write_file(root, "src/album/plain.txt", b"PLAIN");
     link(root, "src/album/link", "outside/target");
     let dest: Arc<dyn Volume> = Arc::new(InMemoryVolume::new("Dest").with_space_info(10_000_000, 10_000_000));
-    let state = make_state();
+    let state = make_state(&engine);
 
     let result = copy_volumes_with_progress(
         Arc::new(CollectorEventSink::new()),
@@ -211,6 +213,7 @@ async fn a_copied_folder_holding_a_dir_link_ends_with_every_tree_row_done() {
 /// here now, merge into it": that renames the source's files into its target.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_link_racing_into_a_freed_name_is_never_merged_into() {
+    let engine = TestOperations::new();
     let dir = TempDir::new().unwrap();
     let root = dir.path();
     let volume: Arc<dyn Volume> = Arc::new(LinkFollowingVolume {
@@ -221,7 +224,7 @@ async fn a_link_racing_into_a_freed_name_is_never_merged_into() {
     plant_target(root);
     write_file(root, "src/album/thing/mine.txt", b"MINE");
     write_file(root, "dst/album/thing", b"THE USER'S FILE");
-    let state = make_state();
+    let state = make_state(&engine);
     let events = Arc::new(ConflictResponderSink::new(&state, ConflictResolution::Overwrite, false));
 
     let result = move_within_same_volume_with_progress(
@@ -278,12 +281,17 @@ fn config(resolution: ConflictResolution) -> VolumeCopyConfig {
     }
 }
 
-async fn move_across(source: &Arc<dyn Volume>, op_id: &str, sources: &[PathBuf]) -> Arc<dyn Volume> {
+async fn move_across(
+    engine: &TestOperations,
+    source: &Arc<dyn Volume>,
+    op_id: &str,
+    sources: &[PathBuf],
+) -> Arc<dyn Volume> {
     let dest: Arc<dyn Volume> = Arc::new(InMemoryVolume::new("Dest").with_space_info(10_000_000, 10_000_000));
     let result = move_volumes_with_progress(
         Arc::new(CollectorEventSink::new()),
         op_id,
-        &make_state(),
+        &make_state(engine),
         Arc::clone(source),
         sources,
         Arc::clone(&dest),
@@ -300,13 +308,20 @@ async fn move_across(source: &Arc<dyn Volume>, op_id: &str, sources: &[PathBuf])
 /// the LINK. The target keeps every byte.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_cross_volume_move_of_a_dir_link_removes_the_link_never_the_target() {
+    let engine = TestOperations::new();
     let (source, dir) = following_volume();
     let root = dir.path();
     plant_target(root);
     mkdir(root, "src");
     link(root, "src/album", "outside/target");
 
-    let dest = move_across(&source, "op-follow-cross-top-link", &[PathBuf::from("src/album")]).await;
+    let dest = move_across(
+        &engine,
+        &source,
+        "op-follow-cross-top-link",
+        &[PathBuf::from("src/album")],
+    )
+    .await;
 
     assert_eq!(
         read(root, "outside/target/inside.txt"),
@@ -326,13 +341,20 @@ async fn a_cross_volume_move_of_a_dir_link_removes_the_link_never_the_target() {
 /// The same sweep one level down: a moved folder holding a link to a folder.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_cross_volume_move_of_a_folder_holding_a_dir_link_spares_the_target() {
+    let engine = TestOperations::new();
     let (source, dir) = following_volume();
     let root = dir.path();
     plant_target(root);
     write_file(root, "src/album/plain.txt", b"PLAIN");
     link(root, "src/album/link", "outside/target");
 
-    let dest = move_across(&source, "op-follow-cross-child-link", &[PathBuf::from("src/album")]).await;
+    let dest = move_across(
+        &engine,
+        &source,
+        "op-follow-cross-child-link",
+        &[PathBuf::from("src/album")],
+    )
+    .await;
 
     assert_eq!(read(root, "outside/target/inside.txt"), b"OUTSIDE THE SELECTION");
     assert!(!exists(root, "src/album"), "the moved folder is gone, link and all");
@@ -344,6 +366,7 @@ async fn a_cross_volume_move_of_a_folder_holding_a_dir_link_spares_the_target() 
 /// source's files into the link's target.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_same_volume_move_onto_a_dir_link_never_lands_in_the_target() {
+    let engine = TestOperations::new();
     let (volume, dir) = following_volume();
     let root = dir.path();
     plant_target(root);
@@ -354,7 +377,7 @@ async fn a_same_volume_move_onto_a_dir_link_never_lands_in_the_target() {
     let result = move_within_same_volume_with_progress(
         Arc::new(CollectorEventSink::new()),
         "op-follow-same-dest-link",
-        &make_state(),
+        &make_state(&engine),
         Arc::clone(&volume),
         &[PathBuf::from("src/album")],
         Path::new("dst"),
@@ -392,13 +415,20 @@ fn plain_volume() -> (Arc<dyn Volume>, TempDir) {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn on_an_lstat_backend_a_moved_dir_link_goes_as_the_link() {
+    let engine = TestOperations::new();
     let (source, dir) = plain_volume();
     let root = dir.path();
     plant_target(root);
     mkdir(root, "src");
     link(root, "src/album", "outside/target");
 
-    move_across(&source, "op-plain-cross-top-link", &[PathBuf::from("src/album")]).await;
+    move_across(
+        &engine,
+        &source,
+        "op-plain-cross-top-link",
+        &[PathBuf::from("src/album")],
+    )
+    .await;
 
     assert_eq!(read(root, "outside/target/inside.txt"), b"OUTSIDE THE SELECTION");
     assert!(!is_link(root, "src/album"), "the moved link is gone");
@@ -406,13 +436,20 @@ async fn on_an_lstat_backend_a_moved_dir_link_goes_as_the_link() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn on_an_lstat_backend_a_moved_folder_holding_a_dir_link_spares_the_target() {
+    let engine = TestOperations::new();
     let (source, dir) = plain_volume();
     let root = dir.path();
     plant_target(root);
     write_file(root, "src/album/plain.txt", b"PLAIN");
     link(root, "src/album/link", "outside/target");
 
-    move_across(&source, "op-plain-cross-child-link", &[PathBuf::from("src/album")]).await;
+    move_across(
+        &engine,
+        &source,
+        "op-plain-cross-child-link",
+        &[PathBuf::from("src/album")],
+    )
+    .await;
 
     assert_eq!(read(root, "outside/target/inside.txt"), b"OUTSIDE THE SELECTION");
     assert!(!exists(root, "src/album/plain.txt"), "the carried file went");
@@ -523,7 +560,12 @@ async fn copy_album_onto(
 
 /// Skip, and a BLANKET Overwrite (which never crosses types): the link stays
 /// the link, its target is untouched, and the rest of the folder still merges.
-async fn a_merge_leaves_a_deep_dest_link_alone(dest: Arc<dyn Volume>, root: &Path, resolution: ConflictResolution) {
+async fn a_merge_leaves_a_deep_dest_link_alone(
+    engine: &TestOperations,
+    dest: Arc<dyn Volume>,
+    root: &Path,
+    resolution: ConflictResolution,
+) {
     plant_album_holding_a_link(root);
     let policy = format!("{resolution:?}");
 
@@ -531,7 +573,7 @@ async fn a_merge_leaves_a_deep_dest_link_alone(dest: Arc<dyn Volume>, root: &Pat
         &dest,
         &format!("op-deep-dest-link-{policy}"),
         Arc::new(CollectorEventSink::new()),
-        &make_state(),
+        &make_state(engine),
         resolution,
     )
     .await;
@@ -546,14 +588,14 @@ async fn a_merge_leaves_a_deep_dest_link_alone(dest: Arc<dyn Volume>, root: &Pat
 }
 
 /// Rename: the incoming folder lands beside the link under a free name.
-async fn a_renaming_merge_lands_beside_a_deep_dest_link(dest: Arc<dyn Volume>, root: &Path) {
+async fn a_renaming_merge_lands_beside_a_deep_dest_link(engine: &TestOperations, dest: Arc<dyn Volume>, root: &Path) {
     plant_album_holding_a_link(root);
 
     copy_album_onto(
         &dest,
         "op-deep-dest-link-rename",
         Arc::new(CollectorEventSink::new()),
-        &make_state(),
+        &make_state(engine),
         ConflictResolution::Rename,
     )
     .await;
@@ -567,9 +609,13 @@ async fn a_renaming_merge_lands_beside_a_deep_dest_link(dest: Arc<dyn Volume>, r
 /// An Overwrite a person ANSWERED for this clash: the prompt names a folder
 /// landing on a non-folder, and the folder replaces the LINK. The target keeps
 /// every byte.
-async fn an_answered_overwrite_replaces_a_deep_dest_link_never_its_target(dest: Arc<dyn Volume>, root: &Path) {
+async fn an_answered_overwrite_replaces_a_deep_dest_link_never_its_target(
+    engine: &TestOperations,
+    dest: Arc<dyn Volume>,
+    root: &Path,
+) {
     plant_album_holding_a_link(root);
-    let state = make_state();
+    let state = make_state(engine);
     let events = Arc::new(ConflictResponderSink::new(&state, ConflictResolution::Overwrite, false));
 
     copy_album_onto(
@@ -604,56 +650,65 @@ async fn an_answered_overwrite_replaces_a_deep_dest_link_never_its_target(dest: 
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_skipping_merge_leaves_a_deep_dest_link_alone_on_a_following_backend() {
+    let engine = TestOperations::new();
     let (dest, dir) = following_volume();
-    a_merge_leaves_a_deep_dest_link_alone(dest, dir.path(), ConflictResolution::Skip).await;
+    a_merge_leaves_a_deep_dest_link_alone(&engine, dest, dir.path(), ConflictResolution::Skip).await;
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_skipping_merge_leaves_a_deep_dest_link_alone_on_an_lstat_backend() {
+    let engine = TestOperations::new();
     let (dest, dir) = plain_volume();
-    a_merge_leaves_a_deep_dest_link_alone(dest, dir.path(), ConflictResolution::Skip).await;
+    a_merge_leaves_a_deep_dest_link_alone(&engine, dest, dir.path(), ConflictResolution::Skip).await;
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_blanket_overwrite_merge_leaves_a_deep_dest_link_alone_on_a_following_backend() {
+    let engine = TestOperations::new();
     let (dest, dir) = following_volume();
-    a_merge_leaves_a_deep_dest_link_alone(dest, dir.path(), ConflictResolution::Overwrite).await;
+    a_merge_leaves_a_deep_dest_link_alone(&engine, dest, dir.path(), ConflictResolution::Overwrite).await;
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_blanket_overwrite_merge_leaves_a_deep_dest_link_alone_on_an_lstat_backend() {
+    let engine = TestOperations::new();
     let (dest, dir) = plain_volume();
-    a_merge_leaves_a_deep_dest_link_alone(dest, dir.path(), ConflictResolution::Overwrite).await;
+    a_merge_leaves_a_deep_dest_link_alone(&engine, dest, dir.path(), ConflictResolution::Overwrite).await;
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_renaming_merge_lands_beside_a_deep_dest_link_on_a_following_backend() {
+    let engine = TestOperations::new();
     let (dest, dir) = following_volume();
-    a_renaming_merge_lands_beside_a_deep_dest_link(dest, dir.path()).await;
+    a_renaming_merge_lands_beside_a_deep_dest_link(&engine, dest, dir.path()).await;
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_renaming_merge_lands_beside_a_deep_dest_link_on_an_lstat_backend() {
+    let engine = TestOperations::new();
     let (dest, dir) = plain_volume();
-    a_renaming_merge_lands_beside_a_deep_dest_link(dest, dir.path()).await;
+    a_renaming_merge_lands_beside_a_deep_dest_link(&engine, dest, dir.path()).await;
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn an_answered_overwrite_replaces_a_deep_dest_link_never_its_target_on_a_following_backend() {
+    let engine = TestOperations::new();
     let (dest, dir) = following_volume();
-    an_answered_overwrite_replaces_a_deep_dest_link_never_its_target(dest, dir.path()).await;
+    an_answered_overwrite_replaces_a_deep_dest_link_never_its_target(&engine, dest, dir.path()).await;
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn an_answered_overwrite_replaces_a_deep_dest_link_never_its_target_on_an_lstat_backend() {
+    let engine = TestOperations::new();
     let (dest, dir) = plain_volume();
-    an_answered_overwrite_replaces_a_deep_dest_link_never_its_target(dest, dir.path()).await;
+    an_answered_overwrite_replaces_a_deep_dest_link_never_its_target(&engine, dest, dir.path()).await;
 }
 
 /// The same clash one level up, where the top-level pre-check meets it: the
 /// selected folder's own name is a link in the destination.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_blanket_overwrite_copy_leaves_a_top_level_dest_link_alone() {
+    let engine = TestOperations::new();
     let (dest, dir) = following_volume();
     let root = dir.path();
     plant_target(root);
@@ -664,7 +719,7 @@ async fn a_blanket_overwrite_copy_leaves_a_top_level_dest_link_alone() {
     let result = copy_volumes_with_progress(
         Arc::new(CollectorEventSink::new()),
         "op-top-dest-link-copy",
-        &make_state(),
+        &make_state(&engine),
         source,
         &[PathBuf::from("/album/link")],
         Arc::clone(&dest),
@@ -683,6 +738,7 @@ async fn a_blanket_overwrite_copy_leaves_a_top_level_dest_link_alone() {
 /// refused outright. It never recurses through one.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_policy_free_pull_refuses_a_deep_dest_link_instead_of_walking_through_it() {
+    let engine = TestOperations::new();
     let (dest, dir) = plain_volume();
     let root = dir.path();
     plant_target(root);
@@ -705,7 +761,7 @@ async fn a_policy_free_pull_refuses_a_deep_dest_link_instead_of_walking_through_
         true,
         &dest,
         Path::new("scratch/album"),
-        &make_state(),
+        &make_state(&engine),
     )
     .await;
 
@@ -721,6 +777,7 @@ async fn a_policy_free_pull_refuses_a_deep_dest_link_instead_of_walking_through_
 /// land stays in the source, because the sweep removes only what was carried.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_cross_volume_move_onto_a_deep_dest_link_keeps_the_target_and_the_unlanded_source() {
+    let engine = TestOperations::new();
     let (dest, dir) = following_volume();
     let root = dir.path();
     plant_album_holding_a_link(root);
@@ -729,7 +786,7 @@ async fn a_cross_volume_move_onto_a_deep_dest_link_keeps_the_target_and_the_unla
     let result = move_volumes_with_progress(
         Arc::new(CollectorEventSink::new()),
         "op-deep-dest-link-move",
-        &make_state(),
+        &make_state(&engine),
         Arc::clone(&source),
         &[PathBuf::from("/album")],
         Arc::clone(&dest),

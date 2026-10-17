@@ -15,6 +15,7 @@
 use super::move_same::move_within_same_volume_with_progress;
 use super::rename_merge_test_support::{exists, make_state, read, write_file};
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::{ConflictResolution, VolumeCopyConfig, WriteOperationError};
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::{Volume, VolumeError};
@@ -126,6 +127,7 @@ impl Volume for StatFailingVolume {
 /// item fails and nothing on either side moves.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_merge_child_whose_destination_cannot_be_stat_d_fails_and_touches_nothing() {
+    let engine = TestOperations::new();
     let dir = TempDir::new().unwrap();
     let root = dir.path();
 
@@ -145,7 +147,7 @@ async fn a_merge_child_whose_destination_cannot_be_stat_d_fails_and_touches_noth
     });
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Overwrite,
         progress_interval_ms: 0,
@@ -194,6 +196,7 @@ async fn a_merge_child_whose_destination_cannot_be_stat_d_fails_and_touches_noth
 /// the dest-only file survives, exactly as with a hint.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_hintless_directory_source_still_takes_the_rename_merge_path() {
+    let engine = TestOperations::new();
     let dir = TempDir::new().unwrap();
     let root = dir.path();
 
@@ -213,7 +216,7 @@ async fn a_hintless_directory_source_still_takes_the_rename_merge_path() {
     });
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Overwrite,
         progress_interval_ms: 0,

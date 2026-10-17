@@ -22,9 +22,7 @@ use super::test_support::{
     park_holds_at, rel_expected_bytes,
 };
 use super::*;
-use crate::file_system::write_operations::installed;
 use crate::file_system::write_operations::state::OperationIntent;
-use crate::file_system::write_operations::test_support::TestOperationGuard;
 use crate::file_system::write_operations::transfer::transfer_driver::{LeafProgressLedger, ObservedProgress};
 use crate::test_support::wait_until_async;
 use std::ops::ControlFlow;
@@ -34,6 +32,7 @@ use std::sync::{Arc, Mutex as StdMutex};
 use std::time::Duration;
 
 use super::super::faulty_volume::forward_volume_methods;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::test_support::TestDir;
 use cmdr_fs::volume::{
     InMemoryVolume, StreamLength, StreamWriteProgress, StreamWritten, Volume, VolumeError, VolumeReadStream, WriteMode,
@@ -51,6 +50,7 @@ async fn wait_for_bytes(seen: &AtomicU64, target: u64) {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn streaming_copy_parks_mid_file_while_paused_then_resumes() {
+    let engine = TestOperations::new();
     // A chunk-budget gate holds the source at an exact byte offset, so the pause
     // lands mid-file by construction.
     let gate = Arc::new(tokio::sync::Semaphore::new(0));
@@ -60,7 +60,7 @@ async fn streaming_copy_parks_mid_file_while_paused_then_resumes() {
     let dest: Arc<dyn Volume> = Arc::new(InMemoryVolume::new("Dest"));
     let total = (SLOW_CHUNK_COUNT * SLOW_CHUNK_SIZE) as u64;
 
-    let state = make_state();
+    let state = make_state(&engine);
     // Watches the bytes the copy REPORTS, which is the number the transfer
     // dialog shows: the engine owns the per-chunk callback now.
     let progress = ObservedProgress::new(&state, "observed-copy");
@@ -130,6 +130,7 @@ async fn streaming_copy_parks_mid_file_while_paused_then_resumes() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn streaming_copy_cancel_while_paused_mid_file_unblocks() {
+    let engine = TestOperations::new();
     let gate = Arc::new(tokio::sync::Semaphore::new(0));
     let source: Arc<dyn Volume> = Arc::new(SlowSource {
         gate: Arc::clone(&gate),
@@ -145,7 +146,7 @@ async fn streaming_copy_cancel_while_paused_mid_file_unblocks() {
     ));
 
     // Install into the global state cache so the production cancel API reaches it.
-    let op = TestOperationGuard::register_state("test-midchunk-cancel", make_state());
+    let op = engine.register_state("test-midchunk-cancel", make_state(&engine));
     let op_id = op.id().to_string();
     let state = Arc::clone(op.state());
 
@@ -190,7 +191,7 @@ async fn streaming_copy_cancel_while_paused_mid_file_unblocks() {
     // Cancel (keep partials) while paused: the production cancel path flips
     // intent AND wakes the gate, so the parked stream unblocks and the backend's
     // on_progress cancel check breaks + cleans up the partial.
-    installed().cancel_write_operation(&op_id, false);
+    engine.cancel_write_operation(&op_id, false);
 
     let result = tokio::time::timeout(Duration::from_secs(10), op)
         .await
@@ -223,6 +224,8 @@ async fn streaming_copy_cancel_while_paused_mid_file_unblocks() {
 async fn paused_mtp_copy_parks_in_place_then_resumes_byte_exact() {
     use std::fs;
 
+    let engine = TestOperations::new();
+
     let log = Arc::new(StdMutex::new(RelLog::default()));
     // A chunk-budget gate lets us hold the source at an exact byte offset, so the
     // pause lands deterministically mid-file instead of racing a wall-clock timer.
@@ -239,7 +242,7 @@ async fn paused_mtp_copy_parks_in_place_then_resumes_byte_exact() {
         crate::volume_host::host(),
     ));
 
-    let state = make_state();
+    let state = make_state(&engine);
     // Watches the bytes the copy REPORTS, which is the number the transfer
     // dialog shows: the engine owns the per-chunk callback now.
     let progress = ObservedProgress::new(&state, "observed-copy");
@@ -328,6 +331,7 @@ async fn paused_mtp_copy_parks_in_place_then_resumes_byte_exact() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn paused_mtp_copy_cancel_while_paused_keeps_no_partial() {
+    let engine = TestOperations::new();
     let log = Arc::new(StdMutex::new(RelLog::default()));
     let gate = Arc::new(tokio::sync::Semaphore::new(0));
     let source: Arc<dyn Volume> = Arc::new(ReleasingSource {
@@ -342,7 +346,7 @@ async fn paused_mtp_copy_cancel_while_paused_keeps_no_partial() {
         crate::volume_host::host(),
     ));
 
-    let op = TestOperationGuard::register_state("test-relpause-cancel", make_state());
+    let op = engine.register_state("test-relpause-cancel", make_state(&engine));
     let op_id = op.id().to_string();
     let state = Arc::clone(op.state());
 
@@ -394,7 +398,7 @@ async fn paused_mtp_copy_cancel_while_paused_keeps_no_partial() {
     // Cancel (keep partials) while paused. The parked stream unblocks and the
     // next chunk flows through to on_progress, which breaks on cancel and the
     // local sink removes its in-flight temp.
-    installed().cancel_write_operation(&op_id, false);
+    engine.cancel_write_operation(&op_id, false);
 
     let result = tokio::time::timeout(Duration::from_secs(10), op)
         .await
@@ -420,6 +424,8 @@ async fn paused_mtp_copy_cancel_while_paused_keeps_no_partial() {
 async fn unpaused_mtp_copy_streams_straight_through() {
     use std::fs;
 
+    let engine = TestOperations::new();
+
     // Sanity: with no pause, an MTP-shaped source streams straight through with a
     // single open and no release — the pause/yield machinery stays dormant.
     let log = Arc::new(StdMutex::new(RelLog::default()));
@@ -435,7 +441,7 @@ async fn unpaused_mtp_copy_streams_straight_through() {
         crate::volume_host::host(),
     ));
 
-    let state = make_state();
+    let state = make_state(&engine);
     let bytes = copy_single_path(
         &source,
         Path::new("/movie.bin"),
@@ -514,6 +520,7 @@ impl Volume for BufferingDest {
 /// the stream answered no signal, so the "upload" ran to its end while paused.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_destination_that_buffers_ahead_parks_on_the_operation_pause() {
+    let engine = TestOperations::new();
     let source = Arc::new(InMemoryVolume::new("Source"));
     source
         .create_file(Path::new("/big.bin"), &vec![9u8; 3 * 1024 * 1024])
@@ -527,7 +534,7 @@ async fn a_destination_that_buffers_ahead_parks_on_the_operation_pause() {
         drained: Arc::clone(&drained),
         go: Arc::clone(&go),
     });
-    let state = make_state();
+    let state = make_state(&engine);
     let progress = ObservedProgress::new(&state, "buffering-copy");
 
     let state_drv = Arc::clone(&state);

@@ -73,13 +73,11 @@ use std::time::Duration;
 use super::faulty_volume::{FaultyOp, FaultyVolume};
 use super::safety_oracle::{SafetySpec, assert_operation_was_safe, collect_contents, try_read_all};
 use super::{copy_volumes_with_progress, move_volumes_with_progress};
-use crate::file_system::volume::manager::get_volume_manager;
+use crate::file_system::write_operations::Operations;
 use crate::file_system::write_operations::delete::delete_volume_files_with_progress_inner;
 use crate::file_system::write_operations::event_sinks::{CollectorEventSink, OperationEventSink};
-use crate::file_system::write_operations::installed;
-use crate::file_system::write_operations::scan_cache::seed_incoherent_scan_result_for_test;
-use crate::file_system::write_operations::state::{CachedScanResult, WriteOperationState, insert_scan_result};
-use crate::file_system::write_operations::test_support::TestOperationGuard;
+use crate::file_system::write_operations::state::{CachedScanResult, WriteOperationState};
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::{
     ConflictResolution, VolumeCopyConfig, WriteCancelledEvent, WriteCompleteEvent, WriteConflictResolvedEvent,
     WriteErrorEvent, WriteOperationConfig, WriteOperationPhase, WriteProgressEvent, WriteSourceItemDoneEvent,
@@ -131,8 +129,8 @@ const CACHE_STATES: &[CacheState] = &[
 /// its emission on `state.progress_interval`, so at the 50 ms default a small
 /// fixture finishes without ever emitting one, the cancelling sink never fires,
 /// and nine "cancel-mid-op" cells quietly run to completion.
-fn make_state() -> Arc<WriteOperationState> {
-    Arc::new(WriteOperationState::new(Duration::from_millis(0)))
+fn make_state(engine: &TestOperations) -> Arc<WriteOperationState> {
+    Arc::new(engine.new_operation_state(Duration::from_millis(0)))
 }
 
 /// A unique preview id per cell, so no two cells share a cache entry.
@@ -145,7 +143,14 @@ fn preview_id_for(cell: &str) -> String {
 /// `HitWithoutPerPath` goes through the narrowly-named incoherent seeder on
 /// purpose: `insert_scan_result`'s canary is a `debug_assert!`, so a release
 /// build still admits the shape and the drivers still have to survive it.
-fn seed_cache(state: CacheState, cell: &str, sources: &[&str], file_count: usize, bytes: u64) -> Option<String> {
+fn seed_cache(
+    engine: &TestOperations,
+    state: CacheState,
+    cell: &str,
+    sources: &[&str],
+    file_count: usize,
+    bytes: u64,
+) -> Option<String> {
     match state {
         CacheState::Miss => None,
         CacheState::HitWithPerPath => {
@@ -168,7 +173,7 @@ fn seed_cache(state: CacheState, cell: &str, sources: &[&str], file_count: usize
                     )
                 })
                 .collect();
-            insert_scan_result(
+            engine.stores().previews().insert_scan_result(
                 id.clone(),
                 CachedScanResult::from_volume_batch(paths, file_count, bytes, bytes, per_path),
             );
@@ -176,7 +181,7 @@ fn seed_cache(state: CacheState, cell: &str, sources: &[&str], file_count: usize
         }
         CacheState::HitWithoutPerPath => {
             let id = preview_id_for(cell);
-            seed_incoherent_scan_result_for_test(
+            engine.stores().previews().seed_incoherent_scan_result_for_test(
                 id.clone(),
                 sources.iter().map(PathBuf::from).collect(),
                 file_count,
@@ -236,6 +241,7 @@ const TIER_A_UNTOUCHED_DEST: &[(&str, &[u8])] = &[("/keep.txt", b"DEST-keep"), (
 /// grid also needs it for the Deleting phase.
 struct CancelOnFirstProgressSink {
     inner: CollectorEventSink,
+    engine: Operations,
     op_id: String,
     fired: AtomicU8,
 }
@@ -250,7 +256,7 @@ impl OperationEventSink for CancelOnFirstProgressSink {
             WriteOperationPhase::Copying | WriteOperationPhase::Deleting
         );
         if working && (event.bytes_done > 0 || event.files_done > 0) && self.fired.swap(1, Ordering::Relaxed) == 0 {
-            installed().cancel_write_operation(&self.op_id, false);
+            self.engine.cancel_write_operation(&self.op_id, false);
         }
         self.inner.emit_progress(event);
     }
@@ -320,7 +326,7 @@ fn tier_a_spec<'a>(label: &'a str, expect_delivery: bool) -> SafetySpec<'a> {
 // ============================================================================
 
 /// Runs one Tier A COPY cell and asserts the oracle over it.
-async fn run_tier_a_copy(cache: CacheState, cell: &str, faulty: bool, cancel: bool) {
+async fn run_tier_a_copy(engine: &TestOperations, cache: CacheState, cell: &str, faulty: bool, cancel: bool) {
     let inner_source = tier_a_source().await;
     let source: Arc<dyn Volume> = if faulty {
         FaultyVolume::wrapping(Arc::clone(&inner_source))
@@ -332,8 +338,8 @@ async fn run_tier_a_copy(cache: CacheState, cell: &str, faulty: bool, cancel: bo
     let dest = tier_a_dest().await;
 
     let label = format!("{cell}/{}", cache.label());
-    let preview_id = seed_cache(cache, cell, &["/album"], 3, 6144);
-    let state = make_state();
+    let preview_id = seed_cache(engine, cache, cell, &["/album"], 3, 6144);
+    let state = make_state(engine);
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Overwrite,
         progress_interval_ms: 0,
@@ -342,9 +348,10 @@ async fn run_tier_a_copy(cache: CacheState, cell: &str, faulty: bool, cancel: bo
     };
 
     let op_id = format!("grid-{cell}-{}", cache.label());
-    let guard = cancel.then(|| TestOperationGuard::register_state(&op_id, Arc::clone(&state)));
+    let guard = cancel.then(|| engine.register_state(&op_id, Arc::clone(&state)));
     let events = Arc::new(CancelOnFirstProgressSink {
         inner: CollectorEventSink::new(),
+        engine: Operations::clone(engine),
         op_id: guard.as_ref().map_or_else(|| op_id.clone(), |g| g.id().to_string()),
         fired: AtomicU8::new(if cancel { 0 } else { 1 }),
     });
@@ -371,8 +378,9 @@ async fn run_tier_a_copy(cache: CacheState, cell: &str, faulty: bool, cancel: bo
 /// and touches none of their files, whatever the cache held.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn tier_a_copy_merge_is_safe_when_it_completes() {
+    let engine = TestOperations::new();
     for cache in CACHE_STATES {
-        run_tier_a_copy(*cache, "copy-clean", false, false).await;
+        run_tier_a_copy(&engine, *cache, "copy-clean", false, false).await;
     }
 }
 
@@ -382,8 +390,9 @@ async fn tier_a_copy_merge_is_safe_when_it_completes() {
 /// about the source's type that a half-populated cache had corrupted.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn tier_a_copy_merge_is_safe_when_it_fails_mid_op() {
+    let engine = TestOperations::new();
     for cache in CACHE_STATES {
-        run_tier_a_copy(*cache, "copy-fail", true, false).await;
+        run_tier_a_copy(&engine, *cache, "copy-fail", true, false).await;
     }
 }
 
@@ -391,8 +400,9 @@ async fn tier_a_copy_merge_is_safe_when_it_fails_mid_op() {
 /// under test is the other one: it must never take a dest-only file with it.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn tier_a_copy_merge_is_safe_when_it_is_cancelled_mid_op() {
+    let engine = TestOperations::new();
     for cache in CACHE_STATES {
-        run_tier_a_copy(*cache, "copy-cancel", false, true).await;
+        run_tier_a_copy(&engine, *cache, "copy-cancel", false, true).await;
     }
 }
 
@@ -402,7 +412,7 @@ async fn tier_a_copy_merge_is_safe_when_it_is_cancelled_mid_op() {
 
 /// Runs one Tier A MOVE cell. A move is copy-then-delete-source, so clause 1
 /// carries real weight here: a file gone from both sides is destroyed data.
-async fn run_tier_a_move(cache: CacheState, cell: &str, faulty: bool, cancel: bool) {
+async fn run_tier_a_move(engine: &TestOperations, cache: CacheState, cell: &str, faulty: bool, cancel: bool) {
     let inner_source = tier_a_source().await;
     let source: Arc<dyn Volume> = if faulty {
         FaultyVolume::wrapping(Arc::clone(&inner_source))
@@ -414,8 +424,8 @@ async fn run_tier_a_move(cache: CacheState, cell: &str, faulty: bool, cancel: bo
     let dest = tier_a_dest().await;
 
     let label = format!("{cell}/{}", cache.label());
-    let preview_id = seed_cache(cache, cell, &["/album"], 3, 6144);
-    let state = make_state();
+    let preview_id = seed_cache(engine, cache, cell, &["/album"], 3, 6144);
+    let state = make_state(engine);
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Overwrite,
         progress_interval_ms: 0,
@@ -424,9 +434,10 @@ async fn run_tier_a_move(cache: CacheState, cell: &str, faulty: bool, cancel: bo
     };
 
     let op_id = format!("grid-{cell}-{}", cache.label());
-    let guard = cancel.then(|| TestOperationGuard::register_state(&op_id, Arc::clone(&state)));
+    let guard = cancel.then(|| engine.register_state(&op_id, Arc::clone(&state)));
     let events = Arc::new(CancelOnFirstProgressSink {
         inner: CollectorEventSink::new(),
+        engine: Operations::clone(engine),
         op_id: guard.as_ref().map_or_else(|| op_id.clone(), |g| g.id().to_string()),
         fired: AtomicU8::new(if cancel { 0 } else { 1 }),
     });
@@ -451,8 +462,9 @@ async fn run_tier_a_move(cache: CacheState, cell: &str, faulty: bool, cancel: bo
 /// Tier A, move, CLEAN.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn tier_a_move_merge_is_safe_when_it_completes() {
+    let engine = TestOperations::new();
     for cache in CACHE_STATES {
-        run_tier_a_move(*cache, "move-clean", false, false).await;
+        run_tier_a_move(&engine, *cache, "move-clean", false, false).await;
     }
 }
 
@@ -460,16 +472,18 @@ async fn tier_a_move_merge_is_safe_when_it_completes() {
 /// actually landed, whatever the cache claimed about the source's shape.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn tier_a_move_merge_is_safe_when_it_fails_mid_op() {
+    let engine = TestOperations::new();
     for cache in CACHE_STATES {
-        run_tier_a_move(*cache, "move-fail", true, false).await;
+        run_tier_a_move(&engine, *cache, "move-fail", true, false).await;
     }
 }
 
 /// Tier A, move, CANCEL MID-OP.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn tier_a_move_merge_is_safe_when_it_is_cancelled_mid_op() {
+    let engine = TestOperations::new();
     for cache in CACHE_STATES {
-        run_tier_a_move(*cache, "move-cancel", false, true).await;
+        run_tier_a_move(&engine, *cache, "move-cancel", false, true).await;
     }
 }
 
@@ -514,7 +528,7 @@ async fn tier_a_delete_volume() -> Arc<InMemoryVolume> {
 }
 
 /// Runs one Tier A DELETE cell and asserts the degenerate oracle over it.
-async fn run_tier_a_delete(cache: CacheState, cell: &str, faulty: bool, cancel: bool) {
+async fn run_tier_a_delete(engine: &TestOperations, cache: CacheState, cell: &str, faulty: bool, cancel: bool) {
     let inner = tier_a_delete_volume().await;
     let volume: Arc<dyn Volume> = if faulty {
         FaultyVolume::wrapping(Arc::clone(&inner))
@@ -526,10 +540,10 @@ async fn run_tier_a_delete(cache: CacheState, cell: &str, faulty: bool, cancel: 
 
     let label = format!("{cell}/{}", cache.label());
     let volume_id = format!("safety-grid-{cell}-{}", uuid::Uuid::new_v4());
-    get_volume_manager().register(&volume_id, Arc::clone(&volume));
+    engine.volumes().register(&volume_id, Arc::clone(&volume));
 
-    let preview_id = seed_cache(cache, cell, &["/requested"], 16, 16384);
-    let state = make_state();
+    let preview_id = seed_cache(engine, cache, cell, &["/requested"], 16, 16384);
+    let state = make_state(engine);
     let config = WriteOperationConfig {
         progress_interval_ms: 0,
         preview_id,
@@ -537,9 +551,10 @@ async fn run_tier_a_delete(cache: CacheState, cell: &str, faulty: bool, cancel: 
     };
 
     let op_id = format!("grid-{cell}-{}", cache.label());
-    let guard = cancel.then(|| TestOperationGuard::register_state(&op_id, Arc::clone(&state)));
+    let guard = cancel.then(|| engine.register_state(&op_id, Arc::clone(&state)));
     let events = Arc::new(CancelOnFirstProgressSink {
         inner: CollectorEventSink::new(),
+        engine: Operations::clone(engine),
         op_id: guard.as_ref().map_or_else(|| op_id.clone(), |g| g.id().to_string()),
         fired: AtomicU8::new(if cancel { 0 } else { 1 }),
     });
@@ -555,8 +570,6 @@ async fn run_tier_a_delete(cache: CacheState, cell: &str, faulty: bool, cancel: 
     )
     .await;
     assert_interruption_landed(&label, faulty || cancel, result.is_err());
-
-    get_volume_manager().unregister(&volume_id);
 
     // ❗ THE ONLY CLAUSE THAT MEANS ANYTHING FOR DELETE: nothing outside the
     // requested set is gone. Read on the real volume, not the lying wrapper.
@@ -594,8 +607,9 @@ async fn run_tier_a_delete(cache: CacheState, cell: &str, faulty: bool, cancel: 
 /// Tier A, delete, CLEAN.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn tier_a_delete_is_safe_when_it_completes() {
+    let engine = TestOperations::new();
     for cache in CACHE_STATES {
-        run_tier_a_delete(*cache, "delete-clean", false, false).await;
+        run_tier_a_delete(&engine, *cache, "delete-clean", false, false).await;
     }
 }
 
@@ -603,16 +617,18 @@ async fn tier_a_delete_is_safe_when_it_completes() {
 /// wrong or missing fact costs the most here.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn tier_a_delete_is_safe_when_it_fails_mid_op() {
+    let engine = TestOperations::new();
     for cache in CACHE_STATES {
-        run_tier_a_delete(*cache, "delete-fail", true, false).await;
+        run_tier_a_delete(&engine, *cache, "delete-fail", true, false).await;
     }
 }
 
 /// Tier A, delete, CANCEL MID-OP.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn tier_a_delete_is_safe_when_it_is_cancelled_mid_op() {
+    let engine = TestOperations::new();
     for cache in CACHE_STATES {
-        run_tier_a_delete(*cache, "delete-cancel", false, true).await;
+        run_tier_a_delete(&engine, *cache, "delete-cancel", false, true).await;
     }
 }
 
@@ -742,7 +758,7 @@ async fn tier_b_fixture(
 
 /// Drives one Tier B cell through the copy or move pipeline against a cache
 /// entry that counted files but recorded no per-source result.
-async fn run_tier_b(kind: ItemKind, concurrent: bool, is_move: bool) {
+async fn run_tier_b(engine: &TestOperations, kind: ItemKind, concurrent: bool, is_move: bool) {
     let (source, dest, sources, outcome) = tier_b_fixture(kind, concurrent).await;
     let driver = if concurrent { "concurrent" } else { "serial" };
     let op = if is_move { "move" } else { "copy" };
@@ -751,9 +767,16 @@ async fn run_tier_b(kind: ItemKind, concurrent: bool, is_move: bool) {
 
     let source_strs: Vec<String> = sources.iter().map(|p| p.to_string_lossy().into_owned()).collect();
     let source_refs: Vec<&str> = source_strs.iter().map(String::as_str).collect();
-    let preview_id = seed_cache(CacheState::HitWithoutPerPath, &cell, &source_refs, sources.len(), 64);
+    let preview_id = seed_cache(
+        engine,
+        CacheState::HitWithoutPerPath,
+        &cell,
+        &source_refs,
+        sources.len(),
+        64,
+    );
 
-    let state = make_state();
+    let state = make_state(engine);
     let events = Arc::new(CollectorEventSink::new());
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Overwrite,
@@ -818,8 +841,9 @@ async fn run_tier_b(kind: ItemKind, concurrent: bool, is_move: bool) {
 /// copy driver.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn tier_b_copy_serial_survives_a_cache_with_no_per_path() {
+    let engine = TestOperations::new();
     for kind in ITEM_KINDS {
-        run_tier_b(*kind, false, false).await;
+        run_tier_b(&engine, *kind, false, false).await;
     }
 }
 
@@ -827,8 +851,9 @@ async fn tier_b_copy_serial_survives_a_cache_with_no_per_path() {
 /// each source's type on its own task.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn tier_b_copy_concurrent_survives_a_cache_with_no_per_path() {
+    let engine = TestOperations::new();
     for kind in ITEM_KINDS {
-        run_tier_b(*kind, true, false).await;
+        run_tier_b(&engine, *kind, true, false).await;
     }
 }
 
@@ -836,15 +861,17 @@ async fn tier_b_copy_concurrent_survives_a_cache_with_no_per_path() {
 /// sweep is what a wrong type answer turns destructive.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn tier_b_move_serial_survives_a_cache_with_no_per_path() {
+    let engine = TestOperations::new();
     for kind in ITEM_KINDS {
-        run_tier_b(*kind, false, true).await;
+        run_tier_b(&engine, *kind, false, true).await;
     }
 }
 
 /// Tier B: the same three shapes on the CONCURRENT move pipeline.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn tier_b_move_concurrent_survives_a_cache_with_no_per_path() {
+    let engine = TestOperations::new();
     for kind in ITEM_KINDS {
-        run_tier_b(*kind, true, true).await;
+        run_tier_b(&engine, *kind, true, true).await;
     }
 }

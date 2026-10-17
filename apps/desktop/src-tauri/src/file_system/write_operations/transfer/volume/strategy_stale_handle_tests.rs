@@ -15,6 +15,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Duration;
 
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::test_support::TestDir;
 use cmdr_fs::volume::Volume;
 use cmdr_local::LocalPosixVolume;
@@ -22,6 +23,8 @@ use cmdr_local::LocalPosixVolume;
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn stream_pipe_file_retries_once_on_stale_destination_handle() {
     use std::fs;
+
+    let engine = TestOperations::new();
 
     let src_dir = TestDir::new("retry_stale_src");
     fs::write(src_dir.join("a.txt"), "payload-bytes").unwrap(); // 13 bytes
@@ -35,7 +38,7 @@ async fn stream_pipe_file_retries_once_on_stale_destination_handle() {
         calls: AtomicUsize::new(0),
     });
 
-    let state = Arc::new(WriteOperationState::new(Duration::from_millis(200)));
+    let state = Arc::new(engine.new_operation_state(Duration::from_millis(200)));
 
     let bytes = copy_single_path(
         &source,

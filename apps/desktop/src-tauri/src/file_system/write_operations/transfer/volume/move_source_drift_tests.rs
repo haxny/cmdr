@@ -21,6 +21,7 @@ use std::sync::Mutex;
 use super::test_support::make_state;
 use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::transfer::volume::forward_volume_methods;
 use cmdr_fs::volume::{InMemoryVolume, Volume, VolumeError};
 
@@ -135,6 +136,7 @@ async fn read(volume: &dyn Volume, path: &str) -> Vec<u8> {
 
 /// Moves `sources` from `source` into `/` on `dest` and returns the events.
 async fn run_move(
+    engine: &TestOperations,
     source: &Arc<InMemoryVolume>,
     dest: &Arc<EditSourceAtLanding>,
     sources: &[&str],
@@ -145,7 +147,7 @@ async fn run_move(
     let result = move_volumes_with_progress(
         events.clone(),
         op_id,
-        &make_state(),
+        &make_state(engine),
         Arc::clone(source) as Arc<dyn Volume>,
         &sources,
         Arc::clone(dest) as Arc<dyn Volume>,
@@ -162,6 +164,7 @@ async fn run_move(
 /// landed has its new bytes only in the source; the sweep must leave it.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_folder_original_saved_over_after_its_copy_survives_the_sweep() {
+    let engine = TestOperations::new();
     let source = source_volume();
     source.create_directory(Path::new("/Work")).await.unwrap();
     source
@@ -178,7 +181,7 @@ async fn a_folder_original_saved_over_after_its_copy_survives_the_sweep() {
         save_over(&source, "/Work/draft.txt", b"final draft"),
     )]));
 
-    let events = run_move(&source, &dest, &["/Work"], "op-vol-drift-folder").await;
+    let events = run_move(&engine, &source, &dest, &["/Work"], "op-vol-drift-folder").await;
 
     assert_eq!(read(&*source, "/Work/draft.txt").await, b"final draft");
     assert_eq!(read(&*dest, "/Work/draft.txt").await, b"first draft");
@@ -201,6 +204,7 @@ async fn a_folder_original_saved_over_after_its_copy_survives_the_sweep() {
 /// unknown subtree.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn items_that_appeared_while_a_folder_copied_survive_the_sweep() {
+    let engine = TestOperations::new();
     let source = source_volume();
     source.create_directory(Path::new("/Work")).await.unwrap();
     source.create_directory(Path::new("/Work/notes")).await.unwrap();
@@ -232,7 +236,7 @@ async fn items_that_appeared_while_a_folder_copied_survive_the_sweep() {
         ),
     ]));
 
-    let events = run_move(&source, &dest, &["/Work"], "op-vol-drift-appeared").await;
+    let events = run_move(&engine, &source, &dest, &["/Work"], "op-vol-drift-appeared").await;
 
     assert_eq!(read(&*source, "/Work/download.zip").await, b"arrived mid-move");
     assert_eq!(read(&*source, "/Work/notes/new/a.txt").await, b"a");
@@ -249,6 +253,7 @@ async fn items_that_appeared_while_a_folder_copied_survive_the_sweep() {
 /// sits in.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_top_level_file_saved_over_after_its_copy_survives() {
+    let engine = TestOperations::new();
     let source = source_volume();
     source.create_directory(Path::new("/Documents")).await.unwrap();
     source
@@ -260,7 +265,14 @@ async fn a_top_level_file_saved_over_after_its_copy_survives() {
         save_over(&source, "/Documents/budget.xlsx", b"new numbers, and more"),
     )]));
 
-    let events = run_move(&source, &dest, &["/Documents/budget.xlsx"], "op-vol-drift-file").await;
+    let events = run_move(
+        &engine,
+        &source,
+        &dest,
+        &["/Documents/budget.xlsx"],
+        "op-vol-drift-file",
+    )
+    .await;
 
     assert_eq!(read(&*source, "/Documents/budget.xlsx").await, b"new numbers, and more");
     assert_eq!(read(&*dest, "/budget.xlsx").await, b"old numbers");
@@ -276,6 +288,7 @@ async fn a_top_level_file_saved_over_after_its_copy_survives() {
 /// The ordinary move still takes everything and reports nothing.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_clean_folder_move_takes_everything_and_reports_nothing() {
+    let engine = TestOperations::new();
     let source = source_volume();
     source.create_directory(Path::new("/Work")).await.unwrap();
     source.create_directory(Path::new("/Work/empty")).await.unwrap();
@@ -285,7 +298,7 @@ async fn a_clean_folder_move_takes_everything_and_reports_nothing() {
         .unwrap();
     let dest = Arc::new(EditSourceAtLanding::new(Vec::new()));
 
-    let events = run_move(&source, &dest, &["/Work"], "op-vol-drift-clean").await;
+    let events = run_move(&engine, &source, &dest, &["/Work"], "op-vol-drift-clean").await;
 
     assert!(!source.exists(Path::new("/Work")).await, "the whole folder went");
     assert!(dest.exists(Path::new("/Work/empty")).await);

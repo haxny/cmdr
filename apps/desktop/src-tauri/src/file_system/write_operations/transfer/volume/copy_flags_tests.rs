@@ -20,7 +20,7 @@ use cmdr_fs::metadata::{CarriedMetadata, MetadataReport, UserFlags};
 use super::copy_volumes_with_progress;
 use super::faulty_volume::forward_volume_methods;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
-use crate::file_system::write_operations::state::WriteOperationState;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::{ConflictResolution, VolumeCopyConfig};
 use cmdr_fs::volume::{InMemoryVolume, Volume};
 
@@ -58,12 +58,18 @@ impl Volume for CountingDest {
     }
 }
 
-async fn copy(source: Arc<InMemoryVolume>, paths: &[&str], dest: Arc<dyn Volume>, config: &VolumeCopyConfig) {
+async fn copy(
+    engine: &TestOperations,
+    source: Arc<InMemoryVolume>,
+    paths: &[&str],
+    dest: Arc<dyn Volume>,
+    config: &VolumeCopyConfig,
+) {
     let paths: Vec<PathBuf> = paths.iter().map(PathBuf::from).collect();
     copy_volumes_with_progress(
         Arc::new(CollectorEventSink::new()),
         "op-copy-flags",
-        &Arc::new(WriteOperationState::new(Duration::from_millis(50))),
+        &Arc::new(engine.new_operation_state(Duration::from_millis(50))),
         source as Arc<dyn Volume>,
         &paths,
         dest,
@@ -100,6 +106,7 @@ fn flags_at(volume: &InMemoryVolume, path: &str) -> UserFlags {
 /// once it has its final name, a folder once its contents are in.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn hidden_and_locked_land_on_files_and_folders() {
+    let engine = TestOperations::new();
     let source = source();
     seed_file(&source, "/locked.txt", UserFlags::HIDDEN | UserFlags::LOCKED).await;
     seed_file(&source, "/hidden.txt", UserFlags::HIDDEN).await;
@@ -115,6 +122,7 @@ async fn hidden_and_locked_land_on_files_and_folders() {
     let dest = Arc::new(InMemoryVolume::new("Dest").with_space_info(10_000_000, 10_000_000));
 
     copy(
+        &engine,
         source,
         &["/locked.txt", "/hidden.txt", "/album"],
         dest.clone() as Arc<dyn Volume>,
@@ -132,6 +140,7 @@ async fn hidden_and_locked_land_on_files_and_folders() {
 /// takes its flags there, on the ORIGINAL's name, never on the temp.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn an_overwrite_lands_locked_at_the_name_it_replaced() {
+    let engine = TestOperations::new();
     let source = source();
     seed_file(&source, "/notes.txt", UserFlags::LOCKED).await;
     let dest = Arc::new(InMemoryVolume::new("Dest").with_space_info(10_000_000, 10_000_000));
@@ -140,6 +149,7 @@ async fn an_overwrite_lands_locked_at_the_name_it_replaced() {
         .unwrap();
 
     copy(
+        &engine,
         source,
         &["/notes.txt"],
         dest.clone() as Arc<dyn Volume>,
@@ -166,6 +176,7 @@ async fn an_overwrite_lands_locked_at_the_name_it_replaced() {
 /// attribute write keeps Hidden. A plain file costs nothing.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn onto_smbs_caps_only_a_locked_file_costs_a_call_after_its_landing() {
+    let engine = TestOperations::new();
     let source = source();
     seed_file(&source, "/plain.txt", UserFlags::NONE).await;
     seed_file(&source, "/hidden.txt", UserFlags::HIDDEN).await;
@@ -180,6 +191,7 @@ async fn onto_smbs_caps_only_a_locked_file_costs_a_call_after_its_landing() {
     });
 
     copy(
+        &engine,
         Arc::clone(&source),
         &["/plain.txt", "/hidden.txt"],
         dest.clone() as Arc<dyn Volume>,
@@ -199,6 +211,7 @@ async fn onto_smbs_caps_only_a_locked_file_costs_a_call_after_its_landing() {
 
     seed_file(&source, "/locked.txt", UserFlags::HIDDEN | UserFlags::LOCKED).await;
     copy(
+        &engine,
         source,
         &["/locked.txt"],
         dest.clone() as Arc<dyn Volume>,

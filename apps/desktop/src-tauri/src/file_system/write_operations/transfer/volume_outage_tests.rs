@@ -4,9 +4,8 @@
 //! `volume/copy_outage_tests.rs`.
 
 use super::*;
-use crate::file_system::write_operations::installed;
 use crate::file_system::write_operations::outage_slot::OutagePolicy;
-use crate::file_system::write_operations::test_support::TestOperationGuard;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::transfer::outage_volume_test_support::OutageVolume;
 use crate::file_system::write_operations::types::TransferWaitReason;
 use crate::test_support::wait_until_async;
@@ -24,8 +23,12 @@ const QUICK: OutagePolicy = OutagePolicy {
 /// How long a test waits for something it caused to show.
 const WAIT: Duration = Duration::from_secs(5);
 
-fn quick_state() -> Arc<WriteOperationState> {
-    Arc::new(WriteOperationState::new(Duration::from_millis(50)).with_outage_policy(QUICK))
+fn quick_state(engine: &TestOperations) -> Arc<WriteOperationState> {
+    Arc::new(
+        engine
+            .new_operation_state(Duration::from_millis(50))
+            .with_outage_policy(QUICK),
+    )
 }
 
 fn nas(lane: &str) -> (Arc<OutageVolume>, Arc<dyn Volume>) {
@@ -36,7 +39,8 @@ fn nas(lane: &str) -> (Arc<OutageVolume>, Arc<dyn Volume>) {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_volume_that_comes_back_ends_the_wait() {
-    let op = TestOperationGuard::register_state("outage-back", quick_state());
+    let engine = TestOperations::new();
+    let op = engine.register_state("outage-back", quick_state(&engine));
     let (nas, volume) = nas("outage-back");
     nas.go_away();
     let control = Arc::clone(&nas);
@@ -60,7 +64,8 @@ async fn a_volume_that_comes_back_ends_the_wait() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_volume_that_stays_gone_is_given_up_on_at_the_budget() {
-    let op = TestOperationGuard::register_state("outage-gives-up", quick_state());
+    let engine = TestOperations::new();
+    let op = engine.register_state("outage-gives-up", quick_state(&engine));
     let (nas, volume) = nas("outage-gives-up");
     nas.go_away();
 
@@ -78,20 +83,23 @@ async fn a_volume_that_stays_gone_is_given_up_on_at_the_budget() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_cancel_ends_the_wait_at_once() {
+    let engine = TestOperations::new();
     let state = Arc::new(
-        WriteOperationState::new(Duration::from_millis(50)).with_outage_policy(OutagePolicy {
-            budget: Duration::from_secs(60),
-            ..QUICK
-        }),
+        engine
+            .new_operation_state(Duration::from_millis(50))
+            .with_outage_policy(OutagePolicy {
+                budget: Duration::from_secs(60),
+                ..QUICK
+            }),
     );
-    let op = TestOperationGuard::register_state("outage-cancel", state);
+    let op = engine.register_state("outage-cancel", state);
     let (nas, volume) = nas("outage-cancel");
     nas.go_away();
     let op_id = op.id().to_owned();
     let watched = Arc::clone(op.state());
     tokio::spawn(async move {
         wait_until_async(WAIT, "the wait to start", || watched.outage.waiting_for().is_some()).await;
-        installed().cancel_write_operation(&op_id, false);
+        engine.cancel_write_operation(&op_id, false);
     });
 
     let started = std::time::Instant::now();
@@ -111,12 +119,17 @@ async fn a_cancel_ends_the_wait_at_once() {
 /// (`#406`). Before, the copy sat on the hung attempt until the budget ran out.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_reconnect_attempt_that_never_returns_is_abandoned_and_tried_again() {
+    let engine = TestOperations::new();
     let policy = OutagePolicy {
         budget: Duration::from_secs(3),
         ..QUICK
     };
-    let state = Arc::new(WriteOperationState::new(Duration::from_millis(50)).with_outage_policy(policy));
-    let op = TestOperationGuard::register_state("outage-hung-attempt", state);
+    let state = Arc::new(
+        engine
+            .new_operation_state(Duration::from_millis(50))
+            .with_outage_policy(policy),
+    );
+    let op = engine.register_state("outage-hung-attempt", state);
     let (nas, volume) = nas("outage-hung-attempt");
     nas.go_away();
     nas.hang_reconnects();
@@ -150,14 +163,17 @@ async fn a_reconnect_attempt_that_never_returns_is_abandoned_and_tried_again() {
 /// rather than leaving it dialing behind a finished operation.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_cancel_drops_a_hung_reconnect_attempt() {
+    let engine = TestOperations::new();
     let state = Arc::new(
-        WriteOperationState::new(Duration::from_millis(50)).with_outage_policy(OutagePolicy {
-            budget: Duration::from_secs(60),
-            attempt_timeout: Duration::from_secs(60),
-            ..QUICK
-        }),
+        engine
+            .new_operation_state(Duration::from_millis(50))
+            .with_outage_policy(OutagePolicy {
+                budget: Duration::from_secs(60),
+                attempt_timeout: Duration::from_secs(60),
+                ..QUICK
+            }),
     );
-    let op = TestOperationGuard::register_state("outage-cancel-hung", state);
+    let op = engine.register_state("outage-cancel-hung", state);
     let (nas, volume) = nas("outage-cancel-hung");
     nas.go_away();
     nas.hang_reconnects();
@@ -165,7 +181,7 @@ async fn a_cancel_drops_a_hung_reconnect_attempt() {
     let control = Arc::clone(&nas);
     tokio::spawn(async move {
         wait_until_async(WAIT, "an attempt to hang", || control.reconnect_attempts() >= 1).await;
-        installed().cancel_write_operation(&op_id, false);
+        engine.cancel_write_operation(&op_id, false);
     });
 
     let started = std::time::Instant::now();
@@ -188,8 +204,9 @@ async fn a_cancel_drops_a_hung_reconnect_attempt() {
 /// attempt there would otherwise hold the job until someone cancels it.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn the_one_look_after_a_give_up_is_bounded_too() {
-    let queued = TestOperationGuard::register_state("outage-hung-look-queued", quick_state());
-    let first = TestOperationGuard::register_state("outage-hung-look-first", quick_state());
+    let engine = TestOperations::new();
+    let queued = engine.register_state("outage-hung-look-queued", quick_state(&engine));
+    let first = engine.register_state("outage-hung-look-first", quick_state(&engine));
     let (nas, volume) = nas("outage-hung-look-lane");
     nas.go_away();
     assert_eq!(wait_while_out(first.state(), &[&volume], None).await, OutageEnd::GaveUp);
@@ -212,7 +229,8 @@ async fn the_one_look_after_a_give_up_is_bounded_too() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_volume_that_needs_a_sign_in_is_not_waited_for() {
-    let op = TestOperationGuard::register_state("outage-sign-in", quick_state());
+    let engine = TestOperations::new();
+    let op = engine.register_state("outage-sign-in", quick_state(&engine));
     let (nas, volume) = nas("outage-sign-in");
     nas.go_away();
     nas.require_sign_in();
@@ -226,7 +244,8 @@ async fn a_volume_that_needs_a_sign_in_is_not_waited_for() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_reconnect_refused_for_its_credentials_stops_the_wait() {
-    let op = TestOperationGuard::register_state("outage-auth", quick_state());
+    let engine = TestOperations::new();
+    let op = engine.register_state("outage-auth", quick_state(&engine));
     let (nas, volume) = nas("outage-auth");
     // Disconnected, and the server refuses the saved password on the way back.
     nas.go_away();
@@ -246,7 +265,8 @@ async fn a_reconnect_refused_for_its_credentials_stops_the_wait() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_volume_that_is_not_out_is_not_waited_for() {
-    let op = TestOperationGuard::register_state("outage-none", quick_state());
+    let engine = TestOperations::new();
+    let op = engine.register_state("outage-none", quick_state(&engine));
     let (nas, volume) = nas("outage-none");
     let local: Arc<dyn Volume> = Arc::new(InMemoryVolume::new("Macintosh HD"));
 
@@ -261,7 +281,8 @@ async fn a_volume_that_is_not_out_is_not_waited_for() {
 /// and which volume. `still_for_seconds` stays 0, since a known wait isn't a stall.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn the_operation_names_the_volume_while_it_waits() {
-    let op = TestOperationGuard::register_state("outage-named", quick_state());
+    let engine = TestOperations::new();
+    let op = engine.register_state("outage-named", quick_state(&engine));
     let (nas, volume) = nas("outage-named");
     nas.go_away();
     let state = Arc::clone(op.state());
@@ -286,8 +307,9 @@ async fn the_operation_names_the_volume_while_it_waits() {
 /// A pause outranks the wait in what the operation says, and stops the dialing.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_paused_wait_stops_dialing_and_resumes_with_a_fresh_budget() {
-    let state = quick_state();
-    let op = TestOperationGuard::register_state("outage-pause", Arc::clone(&state));
+    let engine = TestOperations::new();
+    let state = quick_state(&engine);
+    let op = engine.register_state("outage-pause", Arc::clone(&state));
     let (nas, volume) = nas("outage-pause");
     nas.go_away();
     state.pause_gate.pause();
@@ -318,9 +340,10 @@ async fn a_paused_wait_stops_dialing_and_resumes_with_a_fresh_budget() {
 /// add another fifteen minutes to a NAS that's already been waited for.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_job_queued_before_a_give_up_does_not_wait_again() {
-    let queued_state = quick_state();
-    let first = TestOperationGuard::register_state("outage-first", quick_state());
-    let queued = TestOperationGuard::register_state("outage-queued", Arc::clone(&queued_state));
+    let engine = TestOperations::new();
+    let queued_state = quick_state(&engine);
+    let first = engine.register_state("outage-first", quick_state(&engine));
+    let queued = engine.register_state("outage-queued", Arc::clone(&queued_state));
     let (nas, volume) = nas("outage-queued-lane");
     nas.go_away();
 
@@ -348,12 +371,13 @@ async fn a_job_queued_before_a_give_up_does_not_wait_again() {
 /// gets a fresh wait.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_job_created_after_a_give_up_waits_afresh() {
-    let first = TestOperationGuard::register_state("outage-before-retry", quick_state());
+    let engine = TestOperations::new();
+    let first = engine.register_state("outage-before-retry", quick_state(&engine));
     let (nas, volume) = nas("outage-retry-lane");
     nas.go_away();
     assert_eq!(wait_while_out(first.state(), &[&volume], None).await, OutageEnd::GaveUp);
 
-    let retry = TestOperationGuard::register_state("outage-retry", quick_state());
+    let retry = engine.register_state("outage-retry", quick_state(&engine));
     let started = std::time::Instant::now();
     assert_eq!(wait_while_out(retry.state(), &[&volume], None).await, OutageEnd::GaveUp);
     assert!(
@@ -367,7 +391,8 @@ async fn a_job_created_after_a_give_up_waits_afresh() {
 /// they give up together rather than one by one.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn waiters_on_one_volume_share_its_deadline() {
-    let op = TestOperationGuard::register_state("outage-shared", quick_state());
+    let engine = TestOperations::new();
+    let op = engine.register_state("outage-shared", quick_state(&engine));
     let (nas, volume) = nas("outage-shared");
     nas.go_away();
 
@@ -391,7 +416,8 @@ async fn waiters_on_one_volume_share_its_deadline() {
 /// A reconnect somebody else made (a pane's own backoff) ends the wait too.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_reconnect_made_elsewhere_ends_the_wait() {
-    let op = TestOperationGuard::register_state("outage-elsewhere", quick_state());
+    let engine = TestOperations::new();
+    let op = engine.register_state("outage-elsewhere", quick_state(&engine));
     let (nas, volume) = nas("outage-elsewhere");
     nas.go_away();
     let control = Arc::clone(&nas);
@@ -405,7 +431,8 @@ async fn a_reconnect_made_elsewhere_ends_the_wait() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn through_outages_runs_the_call_again_once_the_volume_is_back() {
-    let op = TestOperationGuard::register_state("outage-through", quick_state());
+    let engine = TestOperations::new();
+    let op = engine.register_state("outage-through", quick_state(&engine));
     let (nas, volume) = nas("outage-through");
     let calls = AtomicUsize::new(0);
     let result = through_outages(op.state(), &[&volume], || {
@@ -429,7 +456,8 @@ async fn through_outages_runs_the_call_again_once_the_volume_is_back() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn through_outages_leaves_a_failure_that_is_not_an_outage_alone() {
-    let op = TestOperationGuard::register_state("outage-not-transport", quick_state());
+    let engine = TestOperations::new();
+    let op = engine.register_state("outage-not-transport", quick_state(&engine));
     let (nas, volume) = nas("outage-not-transport");
     let calls = AtomicUsize::new(0);
     let result: Result<(), VolumeError> = through_outages(op.state(), &[&volume], || {
@@ -451,7 +479,8 @@ async fn through_outages_leaves_a_failure_that_is_not_an_outage_alone() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn through_outages_stops_after_its_outage_cap() {
-    let op = TestOperationGuard::register_state("outage-cap", quick_state());
+    let engine = TestOperations::new();
+    let op = engine.register_state("outage-cap", quick_state(&engine));
     let (nas, volume) = nas("outage-cap");
     let calls = AtomicUsize::new(0);
     let result: Result<(), VolumeError> = through_outages(op.state(), &[&volume], || {

@@ -303,6 +303,7 @@ pub(super) fn copy_file_using(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::file_system::write_operations::testing::TestOperations;
     use crate::test_support::TestDir;
     use std::fs;
     use std::time::Duration;
@@ -313,12 +314,13 @@ mod tests {
 
     /// A running operation to copy under. Its `intent` is the cancel token and
     /// its liveness owns whatever the copy stages.
-    fn running_state() -> Arc<WriteOperationState> {
-        Arc::new(WriteOperationState::new(Duration::from_millis(50)))
+    fn running_state(engine: &TestOperations) -> Arc<WriteOperationState> {
+        Arc::new(engine.new_operation_state(Duration::from_millis(50)))
     }
 
     #[test]
     fn test_copy_file_with_strategy_basic() {
+        let engine = TestOperations::new();
         let temp_dir = create_temp_dir("basic");
         let src = temp_dir.join("source.txt");
         let dst = temp_dir.join("dest.txt");
@@ -326,7 +328,7 @@ mod tests {
         fs::write(&src, "Hello, copy strategy!").unwrap();
 
         let result = copy_file_with_strategy(
-            &running_state(),
+            &running_state(&engine),
             &src,
             Announced::assumed(&dst),
             false,
@@ -342,6 +344,7 @@ mod tests {
 
     #[test]
     fn test_copy_file_with_strategy_safe_overwrite() {
+        let engine = TestOperations::new();
         let temp_dir = create_temp_dir("safe_overwrite");
         let src = temp_dir.join("source.txt");
         let dst = temp_dir.join("dest.txt");
@@ -350,7 +353,7 @@ mod tests {
         fs::write(&dst, "Old content").unwrap();
 
         let result = copy_file_with_strategy(
-            &running_state(),
+            &running_state(&engine),
             &src,
             Announced::assumed(&dst),
             true,
@@ -367,6 +370,8 @@ mod tests {
     fn test_copy_file_with_strategy_preserves_permissions() {
         use std::os::unix::fs::PermissionsExt;
 
+        let engine = TestOperations::new();
+
         let temp_dir = create_temp_dir("perms");
         let src = temp_dir.join("source.sh");
         let dst = temp_dir.join("dest.sh");
@@ -375,7 +380,7 @@ mod tests {
         fs::set_permissions(&src, fs::Permissions::from_mode(0o755)).unwrap();
 
         let result = copy_file_with_strategy(
-            &running_state(),
+            &running_state(&engine),
             &src,
             Announced::assumed(&dst),
             false,
@@ -459,6 +464,7 @@ mod tests {
 
     #[test]
     fn test_copy_file_with_strategy_empty_file() {
+        let engine = TestOperations::new();
         let temp_dir = create_temp_dir("empty");
         let src = temp_dir.join("empty.txt");
         let dst = temp_dir.join("dest.txt");
@@ -466,7 +472,7 @@ mod tests {
         fs::write(&src, "").unwrap();
 
         let result = copy_file_with_strategy(
-            &running_state(),
+            &running_state(&engine),
             &src,
             Announced::assumed(&dst),
             false,

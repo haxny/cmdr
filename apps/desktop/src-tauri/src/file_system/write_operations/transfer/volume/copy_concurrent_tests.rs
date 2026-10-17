@@ -12,6 +12,7 @@ use super::tests::{make_state, make_volumes};
 use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::state::ConflictResolutionResponse;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::{
     ConflictResolution, WriteConflictResolvedEvent, WriteErrorEvent, WriteSourceItemDoneEvent,
 };
@@ -26,6 +27,7 @@ use cmdr_fs::volume::{CopyScanResult, InMemoryVolume, ListingProgress, SpaceInfo
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_concurrent_copy_50_files_all_succeed() {
+    let engine = TestOperations::new();
     let (source, dest) = make_volumes();
 
     // 50 small files, well over the threshold=3 and concurrency=32.
@@ -38,7 +40,7 @@ async fn test_concurrent_copy_50_files_all_succeed() {
     }
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     let config = VolumeCopyConfig {
         progress_interval_ms: 0, // Emit on every progress call
         ..VolumeCopyConfig::default()
@@ -161,6 +163,7 @@ impl Volume for PoisonedReadVolume {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_concurrent_copy_aborts_on_first_error() {
+    let engine = TestOperations::new();
     let inner_source = Arc::new(InMemoryVolume::new("Source").with_space_info(10_000_000, 10_000_000));
     for i in 0..20 {
         let name = format!("/file_{:02}.bin", i);
@@ -177,7 +180,7 @@ async fn test_concurrent_copy_aborts_on_first_error() {
     let dest: Arc<dyn Volume> = Arc::new(InMemoryVolume::new("Dest").with_space_info(10_000_000, 10_000_000));
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     let config = VolumeCopyConfig::default();
 
     let paths: Vec<PathBuf> = (0..20).map(|i| PathBuf::from(format!("/file_{:02}.bin", i))).collect();
@@ -211,6 +214,7 @@ async fn test_concurrent_copy_aborts_on_first_error() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn test_concurrent_copy_cancellation_mid_batch() {
+    let engine = TestOperations::new();
     // Custom event sink that flips the intent to Stopped after a few
     // progress events land. Deterministic: doesn't rely on timing.
     struct CancelOnProgressSink {
@@ -263,7 +267,7 @@ async fn test_concurrent_copy_cancellation_mid_batch() {
             .unwrap();
     }
 
-    let state = make_state();
+    let state = make_state(&engine);
     let events = Arc::new(CancelOnProgressSink {
         inner: CollectorEventSink::new(),
         intent: state.intent().clone(),
@@ -333,6 +337,7 @@ async fn test_concurrent_copy_cancellation_mid_batch() {
 /// still being asked about.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_top_level_conflict_prompt_holds_the_whole_batch_still() {
+    let engine = TestOperations::new();
     let (source, dest) = make_volumes();
 
     // One source before the clash (pushed into the window, and must stay
@@ -342,7 +347,7 @@ async fn a_top_level_conflict_prompt_holds_the_whole_batch_still() {
     source.create_file(Path::new("/later.bin"), b"TWO").await.unwrap();
     dest.create_file(Path::new("/clash.txt"), b"DEST").await.unwrap();
 
-    let state = make_state();
+    let state = make_state(&engine);
     let events = Arc::new(CollectorEventSink::new());
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Stop,

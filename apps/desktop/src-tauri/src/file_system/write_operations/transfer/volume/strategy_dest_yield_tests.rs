@@ -36,9 +36,8 @@ use super::test_support::{
     AutoYieldTuningGuard, REL_CHUNK, REL_TOTAL, RelLog, ReleasingSource, make_state, park_holds_at, rel_expected_bytes,
 };
 use super::*;
+use crate::file_system::write_operations::testing::TestOperations;
 
-use crate::file_system::write_operations::installed;
-use crate::file_system::write_operations::test_support::TestOperationGuard;
 use crate::file_system::write_operations::transfer::transfer_driver::{LeafProgressLedger, ObservedProgress};
 use crate::test_support::wait_until_async;
 use cmdr_fs::volume::StreamLength;
@@ -63,6 +62,7 @@ fn releasing_source() -> (Arc<dyn Volume>, Arc<StdMutex<RelLog>>) {
 
 #[tokio::test(flavor = "current_thread")]
 async fn dest_yield_parks_before_next_write_then_resumes_byte_exact() {
+    let engine = TestOperations::new();
     // Tiny floor (one chunk) so the arm fires early; a long cap so the park is
     // governed purely by the foreground flag for this test (the cap is exercised
     // by `dest_yield_hard_cap_bounds_the_park_under_continuous_browsing`).
@@ -74,7 +74,7 @@ async fn dest_yield_parks_before_next_write_then_resumes_byte_exact() {
     let (busy_dest, share) = ForegroundBusyDest::quiet(Arc::clone(&written));
     let dest: Arc<dyn Volume> = busy_dest;
 
-    let state = make_state();
+    let state = make_state(&engine);
     // Watches the bytes the copy REPORTS, which is the number the transfer
     // dialog shows: the engine owns the per-chunk callback now.
     let progress = ObservedProgress::new(&state, "observed-copy");
@@ -162,6 +162,7 @@ async fn dest_yield_parks_before_next_write_then_resumes_byte_exact() {
 
 #[tokio::test(flavor = "current_thread")]
 async fn dest_yield_waits_on_the_share_instead_of_re_asking_it() {
+    let engine = TestOperations::new();
     // The park is a WAIT on the share's own signal, not a loop that re-asks. A
     // parked upload therefore costs nothing while it stands aside, and it resumes
     // the moment the user's listing ends rather than up to one tick later. The
@@ -177,7 +178,7 @@ async fn dest_yield_waits_on_the_share_instead_of_re_asking_it() {
     let waits = Arc::clone(&busy_dest.waits);
     let dest: Arc<dyn Volume> = busy_dest;
 
-    let state = make_state();
+    let state = make_state(&engine);
     // Watches the bytes the copy REPORTS, which is the number the transfer
     // dialog shows: the engine owns the per-chunk callback now.
     let progress = ObservedProgress::new(&state, "observed-copy");
@@ -253,6 +254,7 @@ async fn dest_yield_waits_on_the_share_instead_of_re_asking_it() {
 
 #[tokio::test(flavor = "current_thread")]
 async fn single_shot_upload_stands_aside_even_below_the_min_progress_floor() {
+    let engine = TestOperations::new();
     // A small file, at the PRODUCTION floor. `REL_TOTAL` (200 KiB) is ~20x under
     // `MIN_PROGRESS_FLOOR_BYTES`, so the floor can never be satisfied anywhere
     // inside this file — the shape of every photo and document copied to a NAS,
@@ -283,7 +285,7 @@ async fn single_shot_upload_stands_aside_even_below_the_min_progress_floor() {
     // first checkpoint (before a single byte has moved) is the one that must park.
     share.takes_a_lease(BUSY_DEST_SHARE);
 
-    let state = make_state();
+    let state = make_state(&engine);
     // Watches the bytes the copy REPORTS, which is the number the transfer
     // dialog shows: the engine owns the per-chunk callback now.
     let progress = ObservedProgress::new(&state, "observed-copy");
@@ -350,6 +352,7 @@ async fn single_shot_upload_stands_aside_even_below_the_min_progress_floor() {
 
 #[tokio::test(flavor = "current_thread")]
 async fn dest_yield_hard_cap_bounds_the_park_under_continuous_browsing() {
+    let engine = TestOperations::new();
     // THE data-safety test. The share stays busy for the WHOLE upload (the user
     // never stops browsing). With an UNBOUNDED park (the source-arm path) the
     // upload would stall forever and this test would hit its timeout. The hard cap
@@ -366,7 +369,7 @@ async fn dest_yield_hard_cap_bounds_the_park_under_continuous_browsing() {
     share.takes_a_lease(BUSY_DEST_SHARE);
     let dest: Arc<dyn Volume> = busy_dest;
 
-    let state = make_state();
+    let state = make_state(&engine);
     let local = tokio::task::LocalSet::new();
     local
         .run_until(async {
@@ -417,6 +420,7 @@ async fn dest_yield_hard_cap_bounds_the_park_under_continuous_browsing() {
 
 #[tokio::test(flavor = "current_thread")]
 async fn single_shot_dest_yield_is_still_hard_capped_under_continuous_browsing() {
+    let engine = TestOperations::new();
     // The floor exemption must not become an unbounded park. A single-shot write
     // is exempt because nothing is open on the server DURING the drain, but the
     // write that follows it is a separate moment: a reconnect in between can
@@ -434,7 +438,7 @@ async fn single_shot_dest_yield_is_still_hard_capped_under_continuous_browsing()
     share.takes_a_lease(BUSY_DEST_SHARE);
     let dest: Arc<dyn Volume> = busy_dest;
 
-    let state = make_state();
+    let state = make_state(&engine);
     let local = tokio::task::LocalSet::new();
     local
         .run_until(async {
@@ -482,6 +486,7 @@ async fn single_shot_dest_yield_is_still_hard_capped_under_continuous_browsing()
 
 #[tokio::test(flavor = "current_thread")]
 async fn a_streaming_upload_below_the_floor_still_does_not_yield() {
+    let engine = TestOperations::new();
     // The other half of the exemption: it NARROWS the floor to the writes it was
     // written for, it doesn't lift it. This upload is the same small file, to the
     // same busy share, but the destination lands it through the streaming writer,
@@ -510,7 +515,7 @@ async fn a_streaming_upload_below_the_floor_still_does_not_yield() {
     );
     share.takes_a_lease(BUSY_DEST_SHARE);
 
-    let state = make_state();
+    let state = make_state(&engine);
     let bytes = copy_single_path(
         &source,
         Path::new("/photo.jpg"),
@@ -538,6 +543,7 @@ async fn a_streaming_upload_below_the_floor_still_does_not_yield() {
 
 #[tokio::test(flavor = "current_thread")]
 async fn dest_yield_cancel_while_parked_returns_cancelled_promptly() {
+    let engine = TestOperations::new();
     // A cancel WHILE the upload is standing aside for the busy share must unblock
     // the park promptly (no hang): the park loop is cancel-aware, so it breaks, the
     // next chunk flows to `on_progress`, which returns `Break`, and the write ends
@@ -554,7 +560,7 @@ async fn dest_yield_cancel_while_parked_returns_cancelled_promptly() {
     let (busy_dest, share) = ForegroundBusyDest::quiet(Arc::clone(&written));
     let dest: Arc<dyn Volume> = busy_dest;
 
-    let op = TestOperationGuard::register_state("test-dest-yield-cancel", make_state());
+    let op = engine.register_state("test-dest-yield-cancel", make_state(&engine));
     let op_id = op.id().to_string();
     let state = Arc::clone(op.state());
     // Watches the bytes the copy REPORTS, which is the number the transfer
@@ -608,7 +614,7 @@ async fn dest_yield_cancel_while_parked_returns_cancelled_promptly() {
 
             // Cancel (keep partials) WHILE parked. The cancel-aware park must bail
             // promptly instead of waiting out the cap.
-            installed().cancel_write_operation(&op_id, false);
+            engine.cancel_write_operation(&op_id, false);
 
             let result = tokio::time::timeout(Duration::from_secs(5), op)
                 .await
@@ -634,6 +640,7 @@ async fn dest_yield_cancel_while_parked_returns_cancelled_promptly() {
 
 #[tokio::test(flavor = "current_thread")]
 async fn non_opting_dest_never_dest_yields() {
+    let engine = TestOperations::new();
     // Regression guard on the enable-switch: a destination that does NOT opt into
     // `supports_foreground_yield_as_destination()` (the trait default: local FS,
     // in-memory, and MTP, whose one `SendObject` transaction can't pause mid-write)
@@ -653,7 +660,7 @@ async fn non_opting_dest_never_dest_yields() {
         "the double must NOT opt into the destination yield"
     );
 
-    let state = make_state();
+    let state = make_state(&engine);
     let bytes = copy_single_path(
         &source,
         Path::new("/movie.bin"),

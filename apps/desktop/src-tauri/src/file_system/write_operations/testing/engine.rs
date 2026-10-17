@@ -78,10 +78,6 @@ impl TestOperations {
 
     /// The volumes this engine knows: register a test volume here before an
     /// operation names its id.
-    #[expect(
-        dead_code,
-        reason = "the transfer, delete, and archive suites register their volumes here"
-    )]
     pub(crate) fn volumes(&self) -> &Arc<FakeVolumes> {
         &self.volumes
     }
@@ -153,6 +149,7 @@ impl RegisteredOperation {
 /// [`TestOperations::journaling_into`].
 pub(crate) struct TestOperationLog {
     log: OperationLog,
+    journal: Arc<WriterJournal>,
     db: PathBuf,
     _dir: TestDir,
 }
@@ -162,16 +159,28 @@ impl TestOperationLog {
     pub(crate) fn new(label: &str) -> Self {
         let dir = TestDir::new(label);
         let db = operation_log_db_path(&dir);
-        let log = OperationLog::detached();
-        log.set_journal(Some(Arc::new(WriterJournal::new(
+        let journal = Arc::new(WriterJournal::new(
             OperationLogWriter::spawn(&db).expect("a scratch operation-log writer"),
-        ))));
-        Self { log, db, _dir: dir }
+        ));
+        let log = OperationLog::detached();
+        log.set_journal(Some(journal.clone()));
+        Self {
+            log,
+            journal,
+            db,
+            _dir: dir,
+        }
     }
 
     /// The log itself, as an engine's builder takes it.
     pub(crate) fn log(&self) -> &OperationLog {
         &self.log
+    }
+
+    /// The writer behind the log, for a test that reverses what its engine
+    /// journaled (`rollback_operation` takes it).
+    pub(crate) fn writer(&self) -> &OperationLogWriter {
+        self.journal.writer()
     }
 
     /// The database the log writes, for reading rows back.

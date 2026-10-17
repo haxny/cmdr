@@ -2,10 +2,12 @@
 use super::test_support::{make_state, make_volumes};
 use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::ConflictResolution;
 
 #[tokio::test]
 async fn named_volume_moves_honor_skip_and_overwrite_at_the_requested_leaf() {
+    let engine = TestOperations::new();
     for same_volume in [false, true] {
         for policy in [ConflictResolution::Skip, ConflictResolution::Overwrite] {
             let (source, other) = make_volumes();
@@ -24,7 +26,7 @@ async fn named_volume_moves_honor_skip_and_overwrite_at_the_requested_leaf() {
                 ..Default::default()
             };
             let events = Arc::new(CollectorEventSink::new());
-            let state = make_state();
+            let state = make_state(&engine);
             let sources = [PathBuf::from("/original.txt")];
             if same_volume {
                 super::super::move_same::move_within_same_volume_with_progress(
@@ -64,6 +66,7 @@ async fn named_volume_moves_honor_skip_and_overwrite_at_the_requested_leaf() {
 
 #[tokio::test]
 async fn named_volume_folder_moves_keep_empty_directories() {
+    let engine = TestOperations::new();
     for same_volume in [false, true] {
         let (source, other) = make_volumes();
         let dest = if same_volume { Arc::clone(&source) } else { other };
@@ -80,7 +83,7 @@ async fn named_volume_folder_moves_keep_empty_directories() {
             ..Default::default()
         };
         let events = Arc::new(CollectorEventSink::new());
-        let state = make_state();
+        let state = make_state(&engine);
         let sources = [PathBuf::from("/original")];
         if same_volume {
             super::super::move_same::move_within_same_volume_with_progress(

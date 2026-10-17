@@ -20,9 +20,9 @@
 //! file/folder flags too, so assertions derive from the sink, not a side-channel
 //! `AtomicUsize`. See [`file_conflict_count`].
 
-use crate::file_system::write_operations::installed;
 use std::sync::Arc;
 
+use super::super::Operations;
 use super::super::event_sinks::{CollectorEventSink, OperationEventSink};
 use super::super::state::{ConflictResolutionResponse, WriteOperationState};
 use super::super::types::{
@@ -61,7 +61,7 @@ enum Answer {
     },
     /// Refuses the prompt: the dialog's Cancel, which stops the whole operation
     /// (keeping what landed) rather than answering the clash.
-    CancelOperation { operation_id: String },
+    CancelOperation { engine: Operations, operation_id: String },
 }
 
 impl ConflictResponderSink {
@@ -78,13 +78,14 @@ impl ConflictResponderSink {
         }
     }
 
-    /// Refuses every prompt by cancelling `operation_id` (without rollback), the
-    /// way a person pressing Cancel on the conflict dialog does.
-    pub(super) fn cancelling(state: &Arc<WriteOperationState>, operation_id: &str) -> Self {
+    /// Refuses every prompt by cancelling `operation_id` on `engine` (without
+    /// rollback), the way a person pressing Cancel on the conflict dialog does.
+    pub(super) fn cancelling(engine: &Operations, state: &Arc<WriteOperationState>, operation_id: &str) -> Self {
         Self {
             inner: CollectorEventSink::new(),
             state: Arc::clone(state),
             answer: Answer::CancelOperation {
+                engine: engine.clone(),
                 operation_id: operation_id.to_string(),
             },
             on_prompt: None,
@@ -137,8 +138,8 @@ impl OperationEventSink for ConflictResponderSink {
                     },
                 );
             }
-            Answer::CancelOperation { operation_id } => {
-                installed().cancel_write_operation(operation_id, false);
+            Answer::CancelOperation { engine, operation_id } => {
+                engine.cancel_write_operation(operation_id, false);
             }
         }
     }

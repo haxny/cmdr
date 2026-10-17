@@ -3,10 +3,12 @@
 //! under a blanket policy, and skipped files still counting toward progress.
 
 use super::*;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::transfer::conflict_responder_test_support::ConflictResponderSink;
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_multi_file_copy_skip_conflict() {
+    let engine = TestOperations::new();
     let (source, dest) = make_volumes();
 
     source.create_file(Path::new("/new.txt"), b"new content").await.unwrap();
@@ -20,7 +22,7 @@ async fn test_multi_file_copy_skip_conflict() {
         .unwrap();
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Skip,
         ..VolumeCopyConfig::default()
@@ -51,6 +53,7 @@ async fn test_multi_file_copy_skip_conflict() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_multi_file_copy_overwrite_conflict() {
+    let engine = TestOperations::new();
     let (source, dest) = make_volumes();
 
     source
@@ -60,7 +63,7 @@ async fn test_multi_file_copy_overwrite_conflict() {
     dest.create_file(Path::new("/file.txt"), b"old version").await.unwrap();
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Overwrite,
         ..VolumeCopyConfig::default()
@@ -92,6 +95,7 @@ async fn test_multi_file_copy_overwrite_conflict() {
 /// is the proof that nothing staged.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_overwrite_on_a_whole_publishing_destination_replaces_in_place() {
+    let engine = TestOperations::new();
     let source: Arc<dyn Volume> = Arc::new(InMemoryVolume::new("Source").with_space_info(10_000_000, 10_000_000));
     let dest: Arc<dyn Volume> = Arc::new(
         InMemoryVolume::new("Dest")
@@ -121,7 +125,7 @@ async fn test_overwrite_on_a_whole_publishing_destination_replaces_in_place() {
     let result = copy_volumes_with_progress(
         Arc::new(CollectorEventSink::new()),
         "test-op-overwrite-in-place",
-        &make_state(),
+        &make_state(&engine),
         Arc::clone(&source),
         &[PathBuf::from("/file.txt"), PathBuf::from("/album")],
         Arc::clone(&dest),
@@ -156,6 +160,8 @@ async fn test_overwrite_on_a_whole_publishing_destination_replaces_in_place() {
 async fn test_a_failed_in_place_overwrite_leaves_the_original() {
     use crate::file_system::write_operations::transfer::volume::{FaultyOp, FaultyVolume};
 
+    let engine = TestOperations::new();
+
     let source: Arc<dyn Volume> = Arc::new(InMemoryVolume::new("Source").with_space_info(10_000_000, 10_000_000));
     let inner = Arc::new(
         InMemoryVolume::new("Dest")
@@ -186,7 +192,7 @@ async fn test_a_failed_in_place_overwrite_leaves_the_original() {
     let result = copy_volumes_with_progress(
         Arc::new(CollectorEventSink::new()),
         "test-op-failed-in-place",
-        &make_state(),
+        &make_state(&engine),
         Arc::clone(&source),
         &[PathBuf::from("/file.txt")],
         Arc::clone(&dest),
@@ -219,6 +225,7 @@ async fn test_a_failed_in_place_overwrite_leaves_the_original() {
 /// would never reach the branch this pins.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_volume_overwrite_file_over_existing_folder() {
+    let engine = TestOperations::new();
     let (source, dest) = make_volumes();
 
     source
@@ -229,7 +236,7 @@ async fn test_volume_overwrite_file_over_existing_folder() {
     dest.create_directory(Path::new("/clash")).await.unwrap();
     dest.create_file(Path::new("/clash/inner.txt"), b"inner").await.unwrap();
 
-    let state = make_state();
+    let state = make_state(&engine);
     let events = Arc::new(ConflictResponderSink::new(&state, ConflictResolution::Overwrite, false));
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Stop,
@@ -265,6 +272,7 @@ async fn test_volume_overwrite_file_over_existing_folder() {
 /// A blanket Overwrite refuses this shape too, which the cell below pins.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_volume_overwrite_folder_over_existing_file() {
+    let engine = TestOperations::new();
     let (source, dest) = make_volumes();
 
     source.create_directory(Path::new("/clash")).await.unwrap();
@@ -277,7 +285,7 @@ async fn test_volume_overwrite_folder_over_existing_file() {
         .await
         .unwrap();
 
-    let state = make_state();
+    let state = make_state(&engine);
     let events = Arc::new(ConflictResponderSink::new(&state, ConflictResolution::Overwrite, false));
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Stop,
@@ -313,6 +321,7 @@ async fn test_volume_overwrite_folder_over_existing_file() {
 /// (`conflict.rs::a_blanket_overwrite_never_clears_a_folder_a_file_landed_on`).
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_volume_blanket_overwrite_refuses_both_cross_type_shapes() {
+    let engine = TestOperations::new();
     let (source, dest) = make_volumes();
 
     // A file landing on a folder, and a folder landing on a file.
@@ -329,7 +338,7 @@ async fn test_volume_blanket_overwrite_refuses_both_cross_type_shapes() {
     dest.create_file(Path::new("/thing"), b"precious bytes").await.unwrap();
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Overwrite,
         ..VolumeCopyConfig::default()
@@ -370,6 +379,7 @@ async fn test_volume_blanket_overwrite_refuses_both_cross_type_shapes() {
 /// the operation was making progress through every source.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_skipped_files_count_toward_progress() {
+    let engine = TestOperations::new();
     let (source, dest) = make_volumes();
 
     // 3 conflicting sources (all skipped) + 1 fresh source (copied).
@@ -384,7 +394,7 @@ async fn test_skipped_files_count_toward_progress() {
     dest.create_file(Path::new("/c.txt"), b"old").await.unwrap();
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     // Skip applies to all 3 conflicts; d.txt copies through. `progress_interval_ms: 0`
     // forces every skip + copy to emit a progress event.
     let config = VolumeCopyConfig {

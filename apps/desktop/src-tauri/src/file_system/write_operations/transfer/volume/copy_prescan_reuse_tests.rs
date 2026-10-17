@@ -26,6 +26,7 @@ use super::super::super::conflict_responder_test_support::await_prompted_clash;
 use super::tests::{make_state, make_volumes};
 use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::ConflictResolution;
 use crate::test_support::TestDir;
 use cmdr_fs::entry::FileEntry;
@@ -42,6 +43,8 @@ use cmdr_local::LocalPosixVolume;
 async fn test_stop_conflict_does_not_rescan_source_when_hint_provided() {
     use std::pin::Pin;
     use std::sync::atomic::AtomicUsize;
+
+    let engine = TestOperations::new();
 
     /// Wraps `InMemoryVolume` and counts `scan_for_copy`, `is_directory`, and
     /// `get_metadata` invocations. On MTP each of these lists the parent dir
@@ -120,7 +123,7 @@ async fn test_stop_conflict_does_not_rescan_source_when_hint_provided() {
     // Priming the cache through the real `start_scan_preview` path would need a
     // Tauri AppHandle. Seed it through the same choke point instead: the cached
     // branch takes the entry back out keyed by `preview_id`.
-    use crate::file_system::write_operations::state::{CachedScanResult, insert_scan_result};
+    use crate::file_system::write_operations::state::CachedScanResult;
     use cmdr_fs::volume::CopyScanResult as CSR;
     let one_photo = || {
         vec![(
@@ -137,7 +140,7 @@ async fn test_stop_conflict_does_not_rescan_source_when_hint_provided() {
         )]
     };
     let preview_id = "test-preview-id-skip-source-scan".to_string();
-    insert_scan_result(
+    engine.stores().previews().insert_scan_result(
         preview_id.clone(),
         CachedScanResult::from_volume_batch(vec![PathBuf::from("/photo.jpg")], 1, 15, 15, one_photo()),
     );
@@ -147,7 +150,7 @@ async fn test_stop_conflict_does_not_rescan_source_when_hint_provided() {
     // `scan_for_copy` wasn't invoked between conflict detection and resolution,
     // not to walk the full Stop-mode dialog round-trip.
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Skip,
         preview_id: Some(preview_id),
@@ -180,7 +183,7 @@ async fn test_stop_conflict_does_not_rescan_source_when_hint_provided() {
     assert_eq!(scans_via_skip, 0, "Skip mode must not call scan_for_copy on the source",);
 
     // ── Stop mode with a hint: also no scan ─────────────────────────
-    insert_scan_result(
+    engine.stores().previews().insert_scan_result(
         "test-preview-id-stop".to_string(),
         CachedScanResult::from_volume_batch(vec![PathBuf::from("/photo.jpg")], 1, 15, 15, one_photo()),
     );
@@ -189,7 +192,7 @@ async fn test_stop_conflict_does_not_rescan_source_when_hint_provided() {
         preview_id: Some("test-preview-id-stop".to_string()),
         ..VolumeCopyConfig::default()
     };
-    let stop_state = make_state();
+    let stop_state = make_state(&engine);
     let stop_events = Arc::new(CollectorEventSink::new());
 
     // Drive the copy in a task; resolve the conflict via the state's oneshot
@@ -270,6 +273,7 @@ async fn test_stop_conflict_does_not_rescan_source_when_hint_provided() {
 /// looks broken when conflicts are scattered through the iteration order.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_pre_known_conflicts_are_bulk_skipped_upfront() {
+    let engine = TestOperations::new();
     let (source, dest) = make_volumes();
 
     // 5 sources: 3 pre-known conflicts (a, c, e) + 2 fresh (b, d).
@@ -287,7 +291,7 @@ async fn test_pre_known_conflicts_are_bulk_skipped_upfront() {
     dest.create_file(Path::new("/e.txt"), b"old").await.unwrap();
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Skip,
         progress_interval_ms: 0,
@@ -369,13 +373,14 @@ async fn test_pre_known_conflicts_are_bulk_skipped_upfront() {
 /// to make per-file decisions.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_stop_mode_does_not_bulk_skip_pre_known_conflicts() {
+    let engine = TestOperations::new();
     let (source, dest) = make_volumes();
 
     source.create_file(Path::new("/a.txt"), b"new").await.unwrap();
     dest.create_file(Path::new("/a.txt"), b"old").await.unwrap();
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Stop,
         progress_interval_ms: 0,
@@ -438,6 +443,7 @@ async fn test_stop_mode_does_not_bulk_skip_pre_known_conflicts() {
 ///    data loss on either side.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_pre_known_conflicts_with_stale_entries_is_safe() {
+    let engine = TestOperations::new();
     let (source, dest) = make_volumes();
 
     source.create_file(Path::new("/a.txt"), b"AA").await.unwrap();
@@ -446,7 +452,7 @@ async fn test_pre_known_conflicts_with_stale_entries_is_safe() {
     // "a.txt" conflicts but dest doesn't actually have it.
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Skip,
         progress_interval_ms: 0,
@@ -498,13 +504,14 @@ async fn test_pre_known_conflicts_with_stale_entries_is_safe() {
 /// that mode the user wants to overwrite.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_pre_known_conflicts_ignored_outside_skip_mode() {
+    let engine = TestOperations::new();
     let (source, dest) = make_volumes();
 
     source.create_file(Path::new("/a.txt"), b"new").await.unwrap();
     dest.create_file(Path::new("/a.txt"), b"old").await.unwrap();
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Overwrite,
         progress_interval_ms: 0,
@@ -544,6 +551,8 @@ async fn test_pre_known_conflicts_ignored_outside_skip_mode() {
 async fn test_pre_known_conflicts_bulk_skip_on_real_local_volumes() {
     use std::fs;
 
+    let engine = TestOperations::new();
+
     let src_dir = TestDir::new("prek_bulk_skip_src");
     let dst_dir = TestDir::new("prek_bulk_skip_dst");
 
@@ -571,7 +580,7 @@ async fn test_pre_known_conflicts_bulk_skip_on_real_local_volumes() {
     ));
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Skip,
         progress_interval_ms: 0,

@@ -10,6 +10,7 @@
 
 use super::super::faulty_volume::forward_volume_methods;
 use super::*;
+use crate::file_system::write_operations::testing::TestOperations;
 use std::future::Future;
 use std::ops::ControlFlow;
 use std::path::Path;
@@ -25,8 +26,8 @@ use cmdr_fs::volume::{
     ListingProgress, StreamLength, StreamWriteProgress, StreamWritten, Volume, VolumeError, VolumeReadStream,
 };
 
-pub(super) fn make_state() -> Arc<WriteOperationState> {
-    Arc::new(WriteOperationState::new(Duration::from_millis(200)))
+pub(super) fn make_state(engine: &TestOperations) -> Arc<WriteOperationState> {
+    Arc::new(engine.new_operation_state(Duration::from_millis(200)))
 }
 
 /// Byte-offset flavor of the shared [`crate::file_system::write_operations::test_support::park_holds_at`],

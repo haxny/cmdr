@@ -10,14 +10,13 @@
 
 use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
-use crate::file_system::write_operations::installed;
 use crate::file_system::write_operations::ledger::WrittenIdentity;
-use crate::file_system::write_operations::test_support::TestOperationGuard;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::{CancelRollback, CancelRollbackOutcome};
 use cmdr_fs::volume::InMemoryVolume;
 
-fn make_state() -> Arc<WriteOperationState> {
-    Arc::new(WriteOperationState::new(Duration::from_millis(50)))
+fn make_state(engine: &TestOperations) -> Arc<WriteOperationState> {
+    Arc::new(engine.new_operation_state(Duration::from_millis(50)))
 }
 
 /// Runs a rollback over the given ledger of complete volume files, and reports
@@ -26,14 +25,19 @@ fn make_state() -> Arc<WriteOperationState> {
 /// Each entry is recorded with the size the backend reports right now, which is
 /// what a copy that just wrote the file would have recorded — so the reversal's
 /// recheck sees an undisturbed destination.
-async fn roll_back(volume: &Arc<dyn Volume>, copied_paths: &[PathBuf], created_dirs: &[PathBuf]) -> CancelRollback {
+async fn roll_back(
+    engine: &TestOperations,
+    volume: &Arc<dyn Volume>,
+    copied_paths: &[PathBuf],
+    created_dirs: &[PathBuf],
+) -> CancelRollback {
     let mut ledger: Vec<WrittenFile> = Vec::new();
     for path in copied_paths {
         let size = volume.get_metadata(path).await.ok().and_then(|e| e.size).unwrap_or(0);
         ledger.push(WrittenFile::volume(path.clone(), size));
     }
     let events = CollectorEventSink::new();
-    let state = make_state();
+    let state = make_state(engine);
     volume_rollback_with_progress(
         volume,
         &mut ledger,
@@ -85,6 +89,7 @@ async fn partial_sweep_leaves_a_directory_and_its_contents_alone() {
 /// entry. Same cell, same directory, same loss.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn rollback_leaves_a_directory_in_copied_paths_alone() {
+    let engine = TestOperations::new();
     let vol = Arc::new(InMemoryVolume::new("Dest"));
     vol.create_directory(Path::new("/album")).await.unwrap();
     vol.create_file(Path::new("/album/keep-me.jpg"), b"the user's own file")
@@ -92,7 +97,7 @@ async fn rollback_leaves_a_directory_in_copied_paths_alone() {
         .unwrap();
     let volume: Arc<dyn Volume> = vol.clone();
 
-    let report = roll_back(&volume, &[PathBuf::from("/album")], &[]).await;
+    let report = roll_back(&engine, &volume, &[PathBuf::from("/album")], &[]).await;
 
     assert_eq!(
         report.outcome,
@@ -109,6 +114,7 @@ async fn rollback_leaves_a_directory_in_copied_paths_alone() {
 /// failure worth logging: the sweep's job is "make sure this isn't there".
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn rollback_removes_the_files_the_copy_wrote() {
+    let engine = TestOperations::new();
     let vol = Arc::new(InMemoryVolume::new("Dest"));
     vol.create_directory(Path::new("/album")).await.unwrap();
     vol.create_file(Path::new("/album/ours.jpg"), b"we wrote this")
@@ -120,6 +126,7 @@ async fn rollback_removes_the_files_the_copy_wrote() {
     let volume: Arc<dyn Volume> = vol.clone();
 
     roll_back(
+        &engine,
         &volume,
         &[
             PathBuf::from("/album/ours.jpg"),
@@ -141,6 +148,7 @@ async fn rollback_removes_the_files_the_copy_wrote() {
 /// fixture for exactly this, ❌ never a hand-rolled forwarder.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn rollback_leaves_a_file_the_backend_now_reports_at_another_size() {
+    let engine = TestOperations::new();
     let vol = Arc::new(InMemoryVolume::new("Dest"));
     vol.create_directory(Path::new("/album")).await.unwrap();
     vol.create_file(Path::new("/album/ours.jpg"), b"we wrote this")
@@ -162,7 +170,7 @@ async fn rollback_leaves_a_file_the_backend_now_reports_at_another_size() {
     vol.set_reported_size(Path::new("/album/theirs.jpg"), 4096);
 
     let events = CollectorEventSink::new();
-    let state = make_state();
+    let state = make_state(&engine);
     let report = volume_rollback_with_progress(
         &volume,
         &mut ledger,
@@ -198,6 +206,7 @@ async fn rollback_leaves_a_file_the_backend_now_reports_at_another_size() {
 /// together: a partial left at the destination is a truncated file.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_partial_still_goes_while_a_changed_file_stays() {
+    let engine = TestOperations::new();
     let vol = Arc::new(InMemoryVolume::new("Dest"));
     vol.create_directory(Path::new("/album")).await.unwrap();
     vol.create_file(Path::new("/album/half.mov"), b"the first chunk")
@@ -215,7 +224,7 @@ async fn a_partial_still_goes_while_a_changed_file_stays() {
     vol.set_reported_size(Path::new("/album/done.jpg"), 999_999);
 
     let events = CollectorEventSink::new();
-    let state = make_state();
+    let state = make_state(&engine);
     volume_rollback_with_progress(
         &volume,
         &mut ledger,
@@ -253,6 +262,8 @@ async fn a_partial_still_goes_while_a_changed_file_stays() {
 async fn created_dir_prune_checks_emptiness_itself_even_on_a_recursive_backend() {
     use super::super::strategy::test_support::RecursiveDeleteVolume;
 
+    let engine = TestOperations::new();
+
     let inner = Arc::new(InMemoryVolume::new("Dest"));
     inner.create_directory(Path::new("/album")).await.unwrap();
     inner
@@ -261,7 +272,7 @@ async fn created_dir_prune_checks_emptiness_itself_even_on_a_recursive_backend()
         .unwrap();
     let volume: Arc<dyn Volume> = RecursiveDeleteVolume::wrapping(Arc::clone(&inner));
 
-    roll_back(&volume, &[], &[PathBuf::from("/album")]).await;
+    roll_back(&engine, &volume, &[], &[PathBuf::from("/album")]).await;
 
     assert!(
         inner.exists(Path::new("/album/keep-me.jpg")).await,
@@ -275,6 +286,8 @@ async fn created_dir_prune_checks_emptiness_itself_even_on_a_recursive_backend()
 async fn created_dir_prune_still_removes_an_empty_directory() {
     use super::super::strategy::test_support::RecursiveDeleteVolume;
 
+    let engine = TestOperations::new();
+
     let inner = Arc::new(InMemoryVolume::new("Dest"));
     inner.create_directory(Path::new("/album")).await.unwrap();
     inner.create_directory(Path::new("/album/raw")).await.unwrap();
@@ -282,7 +295,13 @@ async fn created_dir_prune_still_removes_an_empty_directory() {
 
     // Creation order is shallowest-first; the prune walks it in reverse, so the
     // leaf empties before its parent is tried.
-    roll_back(&volume, &[], &[PathBuf::from("/album"), PathBuf::from("/album/raw")]).await;
+    roll_back(
+        &engine,
+        &volume,
+        &[],
+        &[PathBuf::from("/album"), PathBuf::from("/album/raw")],
+    )
+    .await;
 
     assert!(!inner.exists(Path::new("/album/raw")).await);
     assert!(!inner.exists(Path::new("/album")).await);
@@ -348,6 +367,7 @@ fn a_partial_the_ledger_already_carries_is_not_added_twice() {
 /// claiming exactly what's still on the volume.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_stopped_volume_reversal_leaves_the_ledger_claiming_what_is_still_there() {
+    let engine = TestOperations::new();
     let vol = Arc::new(InMemoryVolume::new("Dest"));
     vol.create_directory(Path::new("/album")).await.unwrap();
     let mut ledger = Vec::new();
@@ -358,11 +378,11 @@ async fn a_stopped_volume_reversal_leaves_the_ledger_claiming_what_is_still_ther
     }
     let volume: Arc<dyn Volume> = vol.clone();
 
-    let state = make_state();
-    let guard = TestOperationGuard::register_state("volume-ledger-stop", Arc::clone(&state));
+    let state = make_state(&engine);
+    let guard = engine.register_state("volume-ledger-stop", Arc::clone(&state));
     // Rolling back, and the user stops the reversal before it starts deleting.
-    installed().cancel_write_operation(guard.id(), true);
-    installed().cancel_write_operation(guard.id(), false);
+    engine.cancel_write_operation(guard.id(), true);
+    engine.cancel_write_operation(guard.id(), false);
     let events = CollectorEventSink::new();
     let report = volume_rollback_with_progress(
         &volume,
@@ -505,9 +525,10 @@ async fn remove_tree_missing_path_is_ok() {
 /// reporting it is the whole remedy.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_staged_partial_the_destination_keeps_comes_back_from_the_sweep() {
+    let engine = TestOperations::new();
     let vol = Arc::new(InMemoryVolume::new("Dest").with_delete_failing());
     let volume: Arc<dyn Volume> = vol.clone();
-    let state = make_state();
+    let state = make_state(&engine);
     let temp = PathBuf::from("/album/holiday.jpg.cmdr-tmp-4d1f9c");
     state.in_flight_temps.lock_ignore_poison().push(temp.clone());
 
@@ -535,12 +556,13 @@ async fn a_staged_partial_the_destination_keeps_comes_back_from_the_sweep() {
 /// there.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_sweep_that_cleared_the_destination_reports_no_leftovers() {
+    let engine = TestOperations::new();
     let vol = Arc::new(InMemoryVolume::new("Dest"));
     vol.create_directory(Path::new("/album")).await.unwrap();
     let present = PathBuf::from("/album/holiday.jpg.cmdr-tmp-4d1f9c");
     vol.create_file(&present, b"half a photo").await.unwrap();
     let volume: Arc<dyn Volume> = vol.clone();
-    let state = make_state();
+    let state = make_state(&engine);
     state.in_flight_temps.lock_ignore_poison().extend([
         present.clone(),
         PathBuf::from("/album/already-landed.jpg.cmdr-tmp-77aa10"),
@@ -567,6 +589,8 @@ async fn a_sweep_that_cleared_the_destination_reports_no_leftovers() {
 async fn a_rollback_removes_a_locked_copy_and_a_locked_folder_it_made() {
     use cmdr_fs::testing::metadata_fixture::{LOCKED_FLAG, MetadataFixture, set_flags};
 
+    let engine = TestOperations::new();
+
     let fixture = MetadataFixture::new("cleanup_locked_rollback");
     std::fs::write(fixture.join("loose.txt"), b"locked copy").unwrap();
     std::fs::create_dir(fixture.join("album")).unwrap();
@@ -580,6 +604,7 @@ async fn a_rollback_removes_a_locked_copy_and_a_locked_folder_it_made() {
     ));
 
     roll_back(
+        &engine,
         &volume,
         &[PathBuf::from("loose.txt"), PathBuf::from("album/photo.jpg")],
         &[PathBuf::from("album")],

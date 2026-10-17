@@ -9,10 +9,10 @@
 
 use super::move_same::move_within_same_volume_with_progress;
 use super::rename_merge_test_support::{exists, make_state, mkdir, write_file};
+use crate::file_system::write_operations::Operations;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
-use crate::file_system::write_operations::installed;
+use crate::file_system::write_operations::testing::TestOperations;
 
-use crate::file_system::write_operations::test_support::TestOperationGuard;
 use crate::file_system::write_operations::types::{ConflictResolution, VolumeCopyConfig, WriteOperationError};
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::{Volume, VolumeError};
@@ -34,6 +34,7 @@ use tempfile::TempDir;
 /// merge before the sleep elapsed, so the op returned `Ok` and the test failed).
 struct CancelOnFirstRenameVolume {
     inner: Arc<LocalPosixVolume>,
+    engine: Operations,
     operation_id: String,
     renames: AtomicUsize,
 }
@@ -85,7 +86,7 @@ impl Volume for CancelOnFirstRenameVolume {
             // loop iteration's `is_cancelled` recheck bails with `Cancelled`
             // while children remain — no wall clock, no race.
             if result.is_ok() && self.renames.fetch_add(1, Ordering::SeqCst) == 0 {
-                installed().cancel_write_operation(&self.operation_id, false);
+                self.engine.cancel_write_operation(&self.operation_id, false);
             }
             result
         })
@@ -105,6 +106,7 @@ impl Volume for CancelOnFirstRenameVolume {
 /// the source — robust regardless of how fast the merge runs.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn rename_merge_cancel_keeps_moved_children_and_preserves_source() {
+    let engine = TestOperations::new();
     let dir = TempDir::new().unwrap();
     let root = dir.path();
 
@@ -114,8 +116,9 @@ async fn rename_merge_cancel_keeps_moved_children_and_preserves_source() {
     }
     mkdir(root, "dst/album");
 
-    let op = TestOperationGuard::register_state("rename-merge-cancel", make_state());
+    let op = engine.register_state("rename-merge-cancel", make_state(&engine));
     let volume: Arc<dyn Volume> = Arc::new(CancelOnFirstRenameVolume {
+        engine: Operations::clone(&engine),
         inner: Arc::new(LocalPosixVolume::local_folder(
             "V",
             root.to_path_buf(),

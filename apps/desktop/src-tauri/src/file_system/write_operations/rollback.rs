@@ -593,7 +593,12 @@ impl crate::file_system::write_operations::Operations {
 /// drives the planner and this executor as the pair they are.
 #[cfg(test)]
 pub(crate) struct Reversal {
-    guard: super::test_support::TestOperationGuard,
+    /// The engine its state is registered in, which the controls ask.
+    engine: super::Operations,
+    operation_id: String,
+    /// Unregisters a reversal on the shared engine when it drops; one on a
+    /// test's own engine goes with that engine.
+    _guard: Option<super::test_support::TestOperationGuard>,
     events: Arc<super::CollectorEventSink>,
     runner: ReversalRunner,
 }
@@ -614,14 +619,41 @@ impl Reversal {
     pub(crate) fn emitting_every(tag: &str, progress_interval: Duration) -> Self {
         let state = Arc::new(WriteOperationState::new(progress_interval));
         let guard = super::test_support::TestOperationGuard::register_state(tag, Arc::clone(&state));
+        let operation_id = guard.id().to_string();
+        Self::running(super::installed().clone(), operation_id, state, Some(guard))
+    }
+
+    /// [`Self::new`], registered under `tag` on a test's own `engine`.
+    pub(crate) fn on(engine: &super::testing::TestOperations, tag: &str) -> Self {
+        let op = engine.register_state(tag, Arc::new(engine.new_operation_state(Duration::ZERO)));
+        Self::running(
+            super::Operations::clone(engine),
+            op.id().to_string(),
+            Arc::clone(op.state()),
+            None,
+        )
+    }
+
+    fn running(
+        engine: super::Operations,
+        operation_id: String,
+        state: Arc<WriteOperationState>,
+        guard: Option<super::test_support::TestOperationGuard>,
+    ) -> Self {
         let events = Arc::new(super::CollectorEventSink::new());
         let runner = ReversalRunner::new(
-            guard.id().to_string(),
+            operation_id.clone(),
             WriteOperationType::Move,
             state,
             Arc::clone(&events) as Arc<dyn OperationEventSink>,
         );
-        Reversal { guard, events, runner }
+        Reversal {
+            engine,
+            operation_id,
+            _guard: guard,
+            events,
+            runner,
+        }
     }
 
     /// The executor, for `execute_rollback`.
@@ -632,7 +664,7 @@ impl Reversal {
     /// The id the reversal is registered under: what a test hands to
     /// `cancel_write_operation`, `pause_operation`, or `resume_operation`.
     pub(crate) fn op_id(&self) -> &str {
-        self.guard.id()
+        &self.operation_id
     }
 
     /// Every progress frame emitted so far, oldest first.
@@ -643,14 +675,14 @@ impl Reversal {
 
     /// Stop the reversal, through the call the queue window's Cancel makes.
     pub(crate) fn stop(&self) {
-        crate::file_system::write_operations::installed().cancel_write_operation(self.op_id(), false);
+        self.engine.cancel_write_operation(self.op_id(), false);
     }
 
     /// Park the reversal, through the call `pause_operation` makes on the live
     /// state (the manager half of that pair only flips the row's status).
     pub(crate) fn pause(&self) {
         assert!(
-            crate::file_system::write_operations::installed().pause_write_operation(self.op_id()),
+            self.engine.pause_write_operation(self.op_id()),
             "the reversal's state must be registered for a pause to reach it"
         );
     }
@@ -658,7 +690,7 @@ impl Reversal {
     /// Let it go again, through `resume_operation`'s half of the same pair.
     pub(crate) fn resume(&self) {
         assert!(
-            crate::file_system::write_operations::installed().resume_write_operation(self.op_id()),
+            self.engine.resume_write_operation(self.op_id()),
             "the reversal's state must be registered for a resume to reach it"
         );
     }

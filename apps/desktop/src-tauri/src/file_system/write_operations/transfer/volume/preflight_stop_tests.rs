@@ -14,10 +14,10 @@
 
 use super::preflight::scan_volume_sources;
 use super::rename_merge_test_support::make_state;
+use crate::file_system::write_operations::Operations;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
-use crate::file_system::write_operations::installed;
 use crate::file_system::write_operations::state::WriteOperationState;
-use crate::file_system::write_operations::test_support::TestOperationGuard;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::{
     ConflictResolution, VolumeCopyConfig, WriteOperationError, WriteOperationType,
 };
@@ -55,6 +55,7 @@ enum TripAction {
 /// owes them: a boundary that carries the operation's Cancel and Pause into
 /// whatever the backend is doing.
 struct BoundaryWalkingVolume {
+    engine: Operations,
     state: Arc<WriteOperationState>,
     operation_id: String,
     action: TripAction,
@@ -62,8 +63,9 @@ struct BoundaryWalkingVolume {
 }
 
 impl BoundaryWalkingVolume {
-    fn new(state: &Arc<WriteOperationState>, operation_id: &str, action: TripAction) -> Arc<Self> {
+    fn new(engine: &Operations, state: &Arc<WriteOperationState>, operation_id: &str, action: TripAction) -> Arc<Self> {
         Arc::new(Self {
+            engine: engine.clone(),
             state: Arc::clone(state),
             operation_id: operation_id.to_string(),
             action,
@@ -126,7 +128,7 @@ impl Volume for BoundaryWalkingVolume {
                     match self.action {
                         // The real path, so the gate is woken the way a click
                         // wakes it. ❌ Never a bare `set_for_test`.
-                        TripAction::Cancel => installed().cancel_write_operation(&self.operation_id, false),
+                        TripAction::Cancel => self.engine.cancel_write_operation(&self.operation_id, false),
                         TripAction::Pause => self.state.pause_gate.pause(),
                     }
                 }
@@ -165,9 +167,10 @@ fn config() -> VolumeCopyConfig {
 /// Cancel mid-scan stops the walk where it landed, ❌ not at the end of the tree.
 #[tokio::test]
 async fn a_cancel_during_the_operations_own_scan_stops_the_walk() {
-    let state = make_state();
-    let op = TestOperationGuard::register_state("preflight-scan-cancel", Arc::clone(&state));
-    let volume = BoundaryWalkingVolume::new(&state, op.id(), TripAction::Cancel);
+    let engine = TestOperations::new();
+    let state = make_state(&engine);
+    let op = engine.register_state("preflight-scan-cancel", Arc::clone(&state));
+    let volume = BoundaryWalkingVolume::new(&engine, &state, op.id(), TripAction::Cancel);
     let as_volume: Arc<dyn Volume> = Arc::clone(&volume) as Arc<dyn Volume>;
     let events = CollectorEventSink::new();
 
@@ -205,9 +208,10 @@ async fn a_cancel_during_the_operations_own_scan_stops_the_walk() {
 /// tree's totals: Pause is ❌ not a slower Cancel.
 #[tokio::test]
 async fn a_pause_during_the_operations_own_scan_holds_it_until_resume() {
-    let state = make_state();
-    let op = TestOperationGuard::register_state("preflight-scan-pause", Arc::clone(&state));
-    let volume = BoundaryWalkingVolume::new(&state, op.id(), TripAction::Pause);
+    let engine = TestOperations::new();
+    let state = make_state(&engine);
+    let op = engine.register_state("preflight-scan-pause", Arc::clone(&state));
+    let volume = BoundaryWalkingVolume::new(&engine, &state, op.id(), TripAction::Pause);
     let as_volume: Arc<dyn Volume> = Arc::clone(&volume) as Arc<dyn Volume>;
     let events = CollectorEventSink::new();
 

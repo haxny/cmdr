@@ -31,11 +31,12 @@ use std::pin::Pin;
 use std::sync::Mutex;
 use std::time::Duration;
 
-use super::super::super::transfer_probe::render_live_dump;
 use super::super::faulty_volume::forward_volume_methods;
 use super::test_support::make_state;
 use super::*;
+use crate::file_system::write_operations::Operations;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
+use crate::file_system::write_operations::testing::TestOperations;
 use cmdr_fs::volume::WriteMode;
 use cmdr_fs::volume::{InMemoryVolume, StreamLength, StreamWriteProgress, StreamWritten, VolumeError};
 
@@ -50,6 +51,7 @@ const LEAF_BYTES: usize = 4_096;
 /// write, once `rendezvous` writes are open at the same moment.
 struct TablePhotographingDest {
     inner: Arc<InMemoryVolume>,
+    engine: Operations,
     operation_id: String,
     /// A real transport limit, so `transfer_concurrency` reads it as the binding
     /// cap for the pair (the `InMemoryVolume` source declares itself local).
@@ -61,9 +63,10 @@ struct TablePhotographingDest {
 }
 
 impl TablePhotographingDest {
-    fn new(operation_id: &str, cap: usize, rendezvous: usize) -> Arc<Self> {
+    fn new(engine: &Operations, operation_id: &str, cap: usize, rendezvous: usize) -> Arc<Self> {
         Arc::new(Self {
             inner: Arc::new(InMemoryVolume::new("Dest").with_space_info(10_000_000, 10_000_000)),
+            engine: engine.clone(),
             operation_id: operation_id.to_owned(),
             cap,
             rendezvous,
@@ -113,7 +116,7 @@ impl Volume for TablePhotographingDest {
                 // allowed-test-sleep: the linger IS the subject — it's the fake write latency that makes overlap observable at all.
                 tokio::time::sleep(Duration::from_millis(2)).await;
             }
-            if let Some(dump) = render_live_dump(&self.operation_id, "photo") {
+            if let Some(dump) = self.engine.render_live_transfer_dump(&self.operation_id, "photo") {
                 self.dumps.lock_ignore_poison().push(dump);
             }
             let result = self
@@ -280,12 +283,13 @@ fn assert_driver_names_the_source_it_is_streaming(dumps: &[String]) {
 /// and it opens the same window over the subtree. Its table has to say so.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_folder_moves_leaves_each_get_a_row_and_the_dump_declares_the_real_width() {
+    let engine = TestOperations::new();
     let source = folder_of(12).await;
-    let dest = TablePhotographingDest::new("probe-rows-move", 4, 4);
+    let dest = TablePhotographingDest::new(&engine, "probe-rows-move", 4, 4);
     let dest_volume: Arc<dyn Volume> = Arc::clone(&dest) as Arc<dyn Volume>;
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     let result = move_volumes_with_progress(
         events,
         "probe-rows-move",
@@ -308,12 +312,13 @@ async fn a_folder_moves_leaves_each_get_a_row_and_the_dump_declares_the_real_wid
 /// two drivers can't drift apart again.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_folder_copys_leaves_each_get_a_row_and_the_dump_declares_the_real_width() {
+    let engine = TestOperations::new();
     let source = folder_of(12).await;
-    let dest = TablePhotographingDest::new("probe-rows-copy", 4, 4);
+    let dest = TablePhotographingDest::new(&engine, "probe-rows-copy", 4, 4);
     let dest_volume: Arc<dyn Volume> = Arc::clone(&dest) as Arc<dyn Volume>;
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     let result = super::super::copy::copy_volumes_with_progress(
         events,
         "probe-rows-copy",
@@ -348,12 +353,13 @@ fn row_number(row: &str) -> &str {
 /// wouldn't.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn every_row_in_one_dump_carries_its_own_number() {
+    let engine = TestOperations::new();
     let source = folder_of(12).await;
-    let dest = TablePhotographingDest::new("probe-rows-unique", 4, 4);
+    let dest = TablePhotographingDest::new(&engine, "probe-rows-unique", 4, 4);
     let dest_volume: Arc<dyn Volume> = Arc::clone(&dest) as Arc<dyn Volume>;
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     let result = super::super::copy::copy_volumes_with_progress(
         events,
         "probe-rows-unique",

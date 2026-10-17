@@ -12,6 +12,7 @@ use super::super::conflict_responder_test_support::{
 };
 use super::move_same::move_within_same_volume_with_progress;
 use super::rename_merge_test_support::{make_state, read, write_file};
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::{ConflictResolution, VolumeCopyConfig};
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::{Volume, VolumeError};
@@ -132,6 +133,7 @@ impl Volume for CaseInsensitiveVolume {
 /// late-detected path routes it through the resolver instead of erroring.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn case_folded_file_collision_prompts_exactly_once() {
+    let engine = TestOperations::new();
     let dir = TempDir::new().unwrap();
     let root = dir.path();
     write_file(root, "src/album/Clash.txt", b"SRC");
@@ -145,7 +147,7 @@ async fn case_folded_file_collision_prompts_exactly_once() {
         )),
     });
 
-    let state = make_state();
+    let state = make_state(&engine);
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Stop,
         progress_interval_ms: 0,
@@ -183,6 +185,7 @@ async fn case_folded_file_collision_prompts_exactly_once() {
 /// resolver answers Overwrite once; the late path finalizes it.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn case_folded_overwrite_does_not_prompt_twice() {
+    let engine = TestOperations::new();
     let dir = TempDir::new().unwrap();
     let root = dir.path();
     write_file(root, "src/album/Photo.JPG", b"SRC-NEW");
@@ -196,7 +199,7 @@ async fn case_folded_overwrite_does_not_prompt_twice() {
         )),
     });
 
-    let state = make_state();
+    let state = make_state(&engine);
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Stop,
         progress_interval_ms: 0,

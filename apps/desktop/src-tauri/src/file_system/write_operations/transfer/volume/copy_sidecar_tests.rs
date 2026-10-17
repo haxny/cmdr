@@ -10,7 +10,7 @@ use std::time::Duration;
 
 use super::copy_volumes_with_progress;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
-use crate::file_system::write_operations::state::WriteOperationState;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::VolumeCopyConfig;
 use crate::test_support::TestDir;
 use cmdr_fs::volume::{InMemoryVolume, Volume};
@@ -43,6 +43,7 @@ async fn names_in(volume: &dyn Volume, dir: &str) -> Vec<String> {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_copy_out_of_a_fat_folder_leaves_paired_sidecars_behind() {
+    let engine = TestOperations::new();
     let scratch = TestDir::new("volume_sidecar_copy");
     let source = fat_source(&scratch);
     let dest = Arc::new(InMemoryVolume::new("Dest").with_space_info(10_000_000, 10_000_000));
@@ -50,7 +51,7 @@ async fn a_copy_out_of_a_fat_folder_leaves_paired_sidecars_behind() {
     copy_volumes_with_progress(
         Arc::new(CollectorEventSink::new()),
         "op-volume-sidecar-copy",
-        &Arc::new(WriteOperationState::new(Duration::from_millis(50))),
+        &Arc::new(engine.new_operation_state(Duration::from_millis(50))),
         Arc::clone(&source) as Arc<dyn Volume>,
         &[PathBuf::from("folder")],
         Arc::clone(&dest) as Arc<dyn Volume>,

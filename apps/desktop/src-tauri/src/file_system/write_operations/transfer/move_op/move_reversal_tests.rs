@@ -6,6 +6,7 @@
 use super::test_support::make_state;
 use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::CancelRollbackOutcome;
 
 /// The item at the landed path isn't the one this move put there any more, so
@@ -150,6 +151,7 @@ fn an_untouched_move_restores_every_item() {
 /// clicked "put it back" is told it was undone.
 #[test]
 fn a_rollback_after_a_merge_recreates_the_source_folders_and_brings_the_children_home() {
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().unwrap();
     let src_dir = tmp.path().join("src").join("d");
     let dst_dir = tmp.path().join("dst").join("d");
@@ -160,7 +162,7 @@ fn a_rollback_after_a_merge_recreates_the_source_folders_and_brings_the_children
     fs::create_dir_all(&dst_dir).unwrap();
 
     let events = CollectorEventSink::new();
-    let state = make_state(200);
+    let state = make_state(&engine, 200);
     let mut move_tx = MoveTransaction::new();
     let mut apply_to_all = ApplyToAll::default();
     let mut files_skipped = 0usize;

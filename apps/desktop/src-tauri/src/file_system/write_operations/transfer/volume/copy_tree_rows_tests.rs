@@ -15,8 +15,7 @@ use super::tests::{make_state, make_volumes};
 use super::wedge_test_support::*;
 use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
-use crate::file_system::write_operations::installed;
-use crate::file_system::write_operations::test_support::TestOperationGuard;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::transfer_tree::test_support::row_states;
 use crate::file_system::write_operations::types::{ConflictResolution, SourceItemOutcome};
 use cmdr_fs::ignore_poison::IgnorePoison;
@@ -81,6 +80,7 @@ async fn copy(
 /// bytes flow, every row ends done and every source says so.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_concurrent_copy_shows_files_in_flight_across_folders_and_every_row_ends_done() {
+    let engine = TestOperations::new();
     let fx = fixture(CHUNK as u64 * 2);
     for path in ["/a/1.bin", "/a/2.bin", "/b/1.bin", "/c/1.bin"] {
         fx.source_inner
@@ -93,7 +93,7 @@ async fn a_concurrent_copy_shows_files_in_flight_across_folders_and_every_row_en
             .expect("file");
     }
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     let config = VolumeCopyConfig::default();
 
     let running = copy(&events, &state, &fx.source, &["/a", "/b", "/c"], &fx.dest, &config);
@@ -156,6 +156,7 @@ async fn a_concurrent_copy_shows_files_in_flight_across_folders_and_every_row_en
 /// Two sources take the serial driver, three the concurrent one.
 #[tokio::test]
 async fn skipping_every_known_clash_marks_each_row_skipped_and_says_so_per_source() {
+    let engine = TestOperations::new();
     for names in [vec!["x.txt", "y.txt"], vec!["x.txt", "y.txt", "z.txt"]] {
         let (source, dest) = make_volumes();
         for name in &names {
@@ -164,7 +165,7 @@ async fn skipping_every_known_clash_marks_each_row_skipped_and_says_so_per_sourc
         }
         let sources: Vec<String> = names.iter().map(|name| format!("/src/{name}")).collect();
         let events = Arc::new(CollectorEventSink::new());
-        let state = make_state();
+        let state = make_state(&engine);
         let config = VolumeCopyConfig {
             conflict_resolution: ConflictResolution::Skip,
             pre_known_conflicts: names.iter().map(|name| (*name).to_owned()).collect(),
@@ -199,6 +200,7 @@ async fn skipping_every_known_clash_marks_each_row_skipped_and_says_so_per_sourc
 /// nothing, so it reads (and reports) skipped.
 #[tokio::test]
 async fn a_clash_inside_a_folder_skips_its_row_and_a_folder_of_only_clashes_is_skipped() {
+    let engine = TestOperations::new();
     let (source, dest) = make_volumes();
     put(&source, "/src/mixed/a.txt", b"incoming").await;
     put(&source, "/src/mixed/b.txt", b"incoming").await;
@@ -206,7 +208,7 @@ async fn a_clash_inside_a_folder_skips_its_row_and_a_folder_of_only_clashes_is_s
     put(&dest, "/mixed/a.txt", b"theirs").await;
     put(&dest, "/clashing/c.txt", b"theirs").await;
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Skip,
         ..VolumeCopyConfig::default()
@@ -247,6 +249,7 @@ async fn a_clash_inside_a_folder_skips_its_row_and_a_folder_of_only_clashes_is_s
 /// landed before it stays done.
 #[tokio::test]
 async fn a_failure_marks_the_row_of_the_file_it_names() {
+    let engine = TestOperations::new();
     let inner = Arc::new(InMemoryVolume::new("Source").with_space_info(10_000_000, 10_000_000));
     let plain: Arc<dyn Volume> = Arc::clone(&inner) as Arc<dyn Volume>;
     put(&plain, "/src/f/a.txt", b"aaa").await;
@@ -264,7 +267,7 @@ async fn a_failure_marks_the_row_of_the_file_it_names() {
     let source: Arc<dyn Volume> = Arc::clone(&faulty) as Arc<dyn Volume>;
     let (_, dest) = make_volumes();
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
 
     let failure = copy(
         &events,
@@ -295,6 +298,7 @@ async fn a_failure_marks_the_row_of_the_file_it_names() {
 /// was decided about them. The file that landed first stays done.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_cancel_leaves_the_rows_it_stopped_waiting() {
+    let engine = TestOperations::new();
     let _drain = CancelDrainGuard::set(Duration::from_millis(150));
     let fx = fixture(CHUNK as u64 * 4);
     fx.source_inner
@@ -308,7 +312,7 @@ async fn a_cancel_leaves_the_rows_it_stopped_waiting() {
             .expect("file");
     }
     let events = Arc::new(CollectorEventSink::new());
-    let op = TestOperationGuard::register_state("tree-rows-cancel", make_state());
+    let op = engine.register_state("tree-rows-cancel", make_state(&engine));
     let config = VolumeCopyConfig::default();
 
     let running = copy(
@@ -333,7 +337,7 @@ async fn a_cancel_leaves_the_rows_it_stopped_waiting() {
             fx.opened.load(Ordering::SeqCst) >= 4 && landed()
         }) => {}
     }
-    installed().cancel_write_operation(op.id(), false);
+    engine.cancel_write_operation(op.id(), false);
     let result = tokio::time::timeout(Duration::from_secs(5), running)
         .await
         .expect("a cancelled copy returns");
@@ -362,12 +366,13 @@ async fn a_cancel_leaves_the_rows_it_stopped_waiting() {
 /// the source gone.
 #[tokio::test]
 async fn a_same_volume_move_shows_one_row_per_item_and_reports_each_rename() {
+    let engine = TestOperations::new();
     let (volume, _) = make_volumes();
     put(&volume, "/src/folder/inner.txt", b"inner").await;
     put(&volume, "/src/file.txt", b"file").await;
     volume.create_directory_all(Path::new("/dest")).await.expect("dest");
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
 
     super::super::move_same::move_within_same_volume_with_progress(
         Arc::clone(&events) as Arc<dyn OperationEventSink>,
@@ -427,6 +432,7 @@ impl Volume for StatFailsAfterCleanup {
 /// snapshots (`../../DETAILS.md` § "Per-source outcomes").
 #[tokio::test]
 async fn a_same_volume_merge_that_kept_its_source_never_reports_it_removed_on_a_failed_stat() {
+    let engine = TestOperations::new();
     let inner = Arc::new(InMemoryVolume::new("Volume").with_space_info(10_000_000, 10_000_000));
     let plain: Arc<dyn Volume> = Arc::clone(&inner) as Arc<dyn Volume>;
     put(&plain, "/src/keep/a.txt", b"incoming").await;
@@ -434,7 +440,7 @@ async fn a_same_volume_merge_that_kept_its_source_never_reports_it_removed_on_a_
     put(&plain, "/dest/keep/a.txt", b"theirs").await;
     let volume: Arc<dyn Volume> = Arc::new(StatFailsAfterCleanup { inner });
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Skip,
         ..VolumeCopyConfig::default()
@@ -464,13 +470,14 @@ async fn a_same_volume_merge_that_kept_its_source_never_reports_it_removed_on_a_
 /// file that moved is gone.
 #[tokio::test]
 async fn a_cross_volume_move_reports_each_source_twice_and_the_sweep_has_the_last_word() {
+    let engine = TestOperations::new();
     let (source, dest) = make_volumes();
     put(&source, "/src/keep/a.txt", b"incoming").await;
     put(&source, "/src/keep/b.txt", b"incoming").await;
     put(&source, "/src/solo.txt", b"solo").await;
     put(&dest, "/keep/a.txt", b"theirs").await;
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Skip,
         ..VolumeCopyConfig::default()
@@ -510,13 +517,15 @@ async fn a_cross_volume_move_reports_each_source_twice_and_the_sweep_has_the_las
 async fn a_tree_that_fails_to_build_leaves_a_volume_copy_as_it_would_run_without_one() {
     use crate::file_system::write_operations::transfer_tree::test_support::TREE_BUG_NAME;
 
+    let engine = TestOperations::new();
+
     let (source, dest) = make_volumes();
     let bug = format!("/a/{TREE_BUG_NAME}");
     put(&source, "/a/1.bin", b"one").await;
     put(&source, &bug, b"two").await;
     put(&source, "/b.bin", b"three").await;
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
 
     copy(
         &events,

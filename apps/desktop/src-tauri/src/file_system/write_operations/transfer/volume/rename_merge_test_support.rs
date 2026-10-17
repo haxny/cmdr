@@ -20,6 +20,7 @@
 //! it's portable regardless of the host filesystem's case sensitivity.
 
 use crate::file_system::write_operations::state::WriteOperationState;
+use crate::file_system::write_operations::testing::TestOperations;
 use cmdr_fs::volume::Volume;
 use cmdr_local::LocalPosixVolume;
 use std::path::Path;
@@ -27,8 +28,8 @@ use std::sync::Arc;
 use std::time::Duration;
 use tempfile::TempDir;
 
-pub(super) fn make_state() -> Arc<WriteOperationState> {
-    Arc::new(WriteOperationState::new(Duration::from_millis(0)))
+pub(super) fn make_state(engine: &TestOperations) -> Arc<WriteOperationState> {
+    Arc::new(engine.new_operation_state(Duration::from_millis(0)))
 }
 
 /// A `LocalPosixVolume` rooted at a fresh tempdir. The `TempDir` is returned so

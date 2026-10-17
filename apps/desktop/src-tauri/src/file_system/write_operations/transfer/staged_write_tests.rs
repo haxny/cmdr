@@ -3,6 +3,7 @@
 //! temp when the landing fails or never finishes.
 
 use super::*;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::transfer::volume::forward_volume_methods;
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::volume::InMemoryVolume;
@@ -14,15 +15,16 @@ async fn size_of(volume: &InMemoryVolume, path: &str) -> Option<u64> {
     volume.get_metadata(Path::new(path)).await.ok().and_then(|e| e.size)
 }
 
-fn state() -> Arc<WriteOperationState> {
-    Arc::new(WriteOperationState::new(Duration::from_millis(50)))
+fn state(engine: &TestOperations) -> Arc<WriteOperationState> {
+    Arc::new(engine.new_operation_state(Duration::from_millis(50)))
 }
 
 /// A staged write must never hand the writer the final name, and the temp it
 /// picks must be a recognizable sibling.
 #[test]
 fn staging_writes_to_a_recognizable_temp_sibling() {
-    let state = state();
+    let engine = TestOperations::new();
+    let state = state(&engine);
     let staged = StagedWrite::begin_unannounced(&state, Path::new("/dir/notes.txt"), WriteStaging::Stage);
     assert_ne!(staged.target(), Path::new("/dir/notes.txt"));
     assert_eq!(staged.target().parent(), Some(Path::new("/dir")));
@@ -42,7 +44,8 @@ fn staging_writes_to_a_recognizable_temp_sibling() {
 /// registered (the caller owns that path's lifetime).
 #[test]
 fn a_caller_staged_write_is_not_staged_again() {
-    let state = state();
+    let engine = TestOperations::new();
+    let state = state(&engine);
     let caller_temp = Path::new("/dir/notes.txt.cmdr-tmp-abc");
     let staged = StagedWrite::begin_unannounced(&state, caller_temp, WriteStaging::AlreadyStaged);
     assert_eq!(staged.target(), caller_temp);
@@ -54,7 +57,8 @@ fn a_caller_staged_write_is_not_staged_again() {
 /// partial to find, sweep, or land.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_single_shot_write_targets_the_final_name_and_needs_no_landing() {
-    let state = state();
+    let engine = TestOperations::new();
+    let state = state(&engine);
     let inner = Arc::new(InMemoryVolume::new("dest"));
     let dest: Arc<dyn Volume> = Arc::clone(&inner) as Arc<dyn Volume>;
 
@@ -79,7 +83,8 @@ async fn a_single_shot_write_targets_the_final_name_and_needs_no_landing() {
 /// caller's temp, or a name the caller claimed with a placeholder).
 #[test]
 fn only_a_single_shot_write_onto_a_name_expected_free_must_create_new() {
-    let state = state();
+    let engine = TestOperations::new();
+    let state = state(&engine);
     let mode_for = |requested: WriteStaging, single_shot: bool| {
         StagedWrite::begin_unannounced(&state, Path::new("/notes.txt"), resolve_staging(requested, single_shot))
             .write_mode()
@@ -119,7 +124,8 @@ fn only_a_single_shot_write_onto_a_name_expected_free_must_create_new() {
 /// in-flight set, so nothing can sweep the committed data afterwards.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn commit_lands_the_bytes_and_stops_tracking_them() {
-    let state = state();
+    let engine = TestOperations::new();
+    let state = state(&engine);
     let inner = Arc::new(InMemoryVolume::new("dest"));
     let dest: Arc<dyn Volume> = Arc::clone(&inner) as Arc<dyn Volume>;
 
@@ -330,7 +336,8 @@ async fn a_landing_that_cleared_the_way_and_then_could_not_rename_rescues_the_ne
 /// Abandoning removes the partial and stops tracking it.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn abandon_removes_the_partial() {
-    let state = state();
+    let engine = TestOperations::new();
+    let state = state(&engine);
     let inner = Arc::new(InMemoryVolume::new("dest"));
     let dest: Arc<dyn Volume> = Arc::clone(&inner) as Arc<dyn Volume>;
 
@@ -349,7 +356,8 @@ async fn abandon_removes_the_partial() {
 /// is left for a sweep to chase.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_refused_landing_takes_its_temp_away_and_stops_tracking_it() {
-    let state = state();
+    let engine = TestOperations::new();
+    let state = state(&engine);
     let inner = Arc::new(InMemoryVolume::new("dest"));
     let dest: Arc<dyn Volume> = Arc::clone(&inner) as Arc<dyn Volume>;
     inner
@@ -384,7 +392,8 @@ async fn a_refused_landing_takes_its_temp_away_and_stops_tracking_it() {
 /// record immediately rather than leaving cleanup to a later sweep.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_refused_displacement_preserves_the_original_and_cleans_the_generated_stage() {
-    let state = state();
+    let engine = TestOperations::new();
+    let state = state(&engine);
     let inner =
         Arc::new(InMemoryVolume::new("dest").with_rename_failing(VolumeError::DeviceDisconnected("blip".to_string())));
     let dest: Arc<dyn Volume> = Arc::clone(&inner) as Arc<dyn Volume>;
@@ -437,7 +446,8 @@ impl Volume for RenameNeverAnswers {
 /// its bytes, so the sweep deleting it loses nothing.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_landing_dropped_midway_leaves_its_temp_to_the_abandoned_write_sweep() {
-    let state = state();
+    let engine = TestOperations::new();
+    let state = state(&engine);
     let inner = Arc::new(InMemoryVolume::new("dest"));
     let dest: Arc<dyn Volume> = Arc::new(RenameNeverAnswers {
         inner: Arc::clone(&inner),

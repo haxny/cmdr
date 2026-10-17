@@ -15,6 +15,7 @@ use super::cross_fs::move_with_staging;
 use super::test_support::{make_state, run_same_fs_move};
 use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::{ConflictResolution, WriteOperationPhase};
 
 /// Cross-FS local move of a single file must emit at least one `Copying`-
@@ -30,6 +31,7 @@ use crate::file_system::write_operations::types::{ConflictResolution, WriteOpera
 /// the milestone unconditionally so the assertion holds.
 #[test]
 fn cross_fs_local_move_single_file_reaches_files_done_n() {
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     let src_dir = tmp.path().join("src");
     let dst_dir = tmp.path().join("dst");
@@ -40,7 +42,7 @@ fn cross_fs_local_move_single_file_reaches_files_done_n() {
     fs::write(&src_file, vec![0u8; 1_048_576]).unwrap();
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state(200);
+    let state = make_state(&engine, 200);
     let config = WriteOperationConfig::default();
 
     let result = move_with_staging(
@@ -90,6 +92,7 @@ fn cross_fs_local_move_single_file_reaches_files_done_n() {
 /// proxy for the end-of-op `fdatasync` over the moved destinations.
 #[test]
 fn cross_fs_local_move_emits_flushing_phase_before_complete() {
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     let src_dir = tmp.path().join("src");
     let dst_dir = tmp.path().join("dst");
@@ -100,7 +103,7 @@ fn cross_fs_local_move_emits_flushing_phase_before_complete() {
     fs::write(&src_file, vec![0u8; 4096]).unwrap();
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state(200);
+    let state = make_state(&engine, 200);
     let config = WriteOperationConfig::default();
 
     let result = move_with_staging(
@@ -141,6 +144,7 @@ fn cross_fs_local_move_emits_flushing_phase_before_complete() {
 /// something and gives the dialog a phase to name.
 #[test]
 fn cross_fs_local_move_reports_the_source_deletion_instead_of_sitting_at_full() {
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     let src_dir = tmp.path().join("src");
     let dst_dir = tmp.path().join("dst");
@@ -158,7 +162,7 @@ fn cross_fs_local_move_reports_the_source_deletion_instead_of_sitting_at_full() 
         .collect();
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state(200);
+    let state = make_state(&engine, 200);
     let config = WriteOperationConfig::default();
 
     let result = move_with_staging(
@@ -232,6 +236,7 @@ fn cross_fs_local_move_reports_the_source_deletion_instead_of_sitting_at_full() 
 /// and this event is the observable proxy for that pass.
 #[test]
 fn same_fs_local_move_emits_flushing_phase_before_complete() {
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     let src_dir = tmp.path().join("src");
     let dst_dir = tmp.path().join("dst");
@@ -242,6 +247,7 @@ fn same_fs_local_move_emits_flushing_phase_before_complete() {
     fs::write(&src_file, vec![0u8; 4096]).unwrap();
 
     let events = run_same_fs_move(
+        &engine,
         std::slice::from_ref(&src_file),
         &dst_dir,
         ConflictResolution::Stop,

@@ -15,9 +15,8 @@ use super::super::super::conflict_responder_test_support::{ConflictResponderSink
 use super::tests::{make_state, make_volumes};
 use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
-use crate::file_system::write_operations::installed;
+use crate::file_system::write_operations::testing::TestOperations;
 
-use crate::file_system::write_operations::test_support::TestOperationGuard;
 use crate::file_system::write_operations::types::ConflictResolution;
 use cmdr_fs::volume::Volume;
 
@@ -44,6 +43,7 @@ async fn read_all(vol: &Arc<dyn Volume>, path: &str) -> Vec<u8> {
 /// slot. Both clashes resolve, both dest-only files survive.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn concurrent_merge_with_two_deep_clashes_serializes_prompts() {
+    let engine = TestOperations::new();
     let (source, dest) = make_volumes();
 
     // 3 top-level sources ⇒ concurrent path (>=3 and InMemory max_concurrent=32).
@@ -65,7 +65,7 @@ async fn concurrent_merge_with_two_deep_clashes_serializes_prompts() {
     }
     source.create_file(Path::new("/three.txt"), b"THREE").await.unwrap();
 
-    let state = make_state();
+    let state = make_state(&engine);
     let events = Arc::new(ConflictResponderSink::new(&state, ConflictResolution::Overwrite, false));
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Stop,
@@ -108,6 +108,7 @@ async fn concurrent_merge_with_two_deep_clashes_serializes_prompts() {
 /// with "…all" Overwrite; everything overwrites, dest-only file survives.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn top_level_and_deep_clash_share_the_dispatch_mutex() {
+    let engine = TestOperations::new();
     let (source, dest) = make_volumes();
 
     // Top-level file clash.
@@ -127,7 +128,7 @@ async fn top_level_and_deep_clash_share_the_dispatch_mutex() {
     // Third source to force the concurrent path.
     source.create_file(Path::new("/extra.txt"), b"EXTRA").await.unwrap();
 
-    let state = make_state();
+    let state = make_state(&engine);
     // One "…all" answer collapses any queued prompt via the latch double-check,
     // so at most 2 prompts ever emit (top + deep), often just 1.
     let events = Arc::new(ConflictResponderSink::new(&state, ConflictResolution::Overwrite, true));
@@ -167,6 +168,7 @@ async fn top_level_and_deep_clash_share_the_dispatch_mutex() {
 /// no-hang assertion).
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn cancel_while_queued_unblocks_both_no_hang() {
+    let engine = TestOperations::new();
     let (source, dest) = make_volumes();
 
     // Two merging dirs that each hide a deep file clash, plus a third source for
@@ -185,8 +187,8 @@ async fn cancel_while_queued_unblocks_both_no_hang() {
     }
     source.create_file(Path::new("/three.txt"), b"THREE").await.unwrap();
 
-    let state = make_state();
-    let op = TestOperationGuard::register_state("cancel-while-queued", Arc::clone(&state));
+    let state = make_state(&engine);
+    let op = engine.register_state("cancel-while-queued", Arc::clone(&state));
     let op_id = op.id();
 
     // Wait until the FIRST prompt is installed (proving task A is awaiting and
@@ -206,7 +208,7 @@ async fn cancel_while_queued_unblocks_both_no_hang() {
         // point is the cancel landing WHILE B is queued, so we give B a beat to reach the mutex.
         // allowed-test-sleep: no signal for "B is queued on the dispatch mutex"; the window creates the race.
         tokio::time::sleep(Duration::from_millis(20)).await;
-        installed().cancel_write_operation(&op_id_for_cancel, false);
+        engine.cancel_write_operation(&op_id_for_cancel, false);
     });
 
     let events = Arc::new(CollectorEventSink::new());

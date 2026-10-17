@@ -13,6 +13,7 @@ use super::copy_volumes_with_progress;
 use super::faulty_volume::{FaultyOp, FaultyVolume};
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::state::WriteOperationState;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::VolumeCopyConfig;
 use cmdr_fs::volume::{InMemoryVolume, Volume, VolumeError};
 
@@ -21,8 +22,8 @@ const FOLDER_DATE: u64 = 1_611_909_015;
 /// The folder inside it, dated apart so a stamp on the wrong level can't pass.
 const INNER_FOLDER_DATE: u64 = 1_577_836_800;
 
-fn make_state() -> Arc<WriteOperationState> {
-    Arc::new(WriteOperationState::new(Duration::from_millis(50)))
+fn make_state(engine: &TestOperations) -> Arc<WriteOperationState> {
+    Arc::new(engine.new_operation_state(Duration::from_millis(50)))
 }
 
 /// `/<name>` holding a file and `inner/` (with a file of its own), both folders
@@ -55,6 +56,7 @@ async fn listed_date(volume: &InMemoryVolume, path: &str) -> Option<u64> {
 }
 
 async fn copy(
+    engine: &TestOperations,
     op: &str,
     source: &Arc<InMemoryVolume>,
     paths: &[PathBuf],
@@ -63,7 +65,7 @@ async fn copy(
     copy_volumes_with_progress(
         Arc::new(CollectorEventSink::new()),
         op,
-        &make_state(),
+        &make_state(engine),
         Arc::clone(source) as Arc<dyn Volume>,
         paths,
         dest,
@@ -78,11 +80,13 @@ async fn copy(
 /// One folder source takes the serial driver.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_copied_folder_keeps_its_date_and_so_does_the_folder_inside_it() {
+    let engine = TestOperations::new();
     let (source, dest) = volumes();
     dest.create_directory(Path::new("/inbox")).await.unwrap();
     let album = seed_dated_folder(&source, "album").await;
 
     copy(
+        &engine,
         "op-folder-dates-serial",
         &source,
         &[album],
@@ -98,6 +102,7 @@ async fn a_copied_folder_keeps_its_date_and_so_does_the_folder_inside_it() {
 /// Three sources and a remote peer take the concurrent driver.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn copied_folders_keep_their_dates_through_the_concurrent_driver() {
+    let engine = TestOperations::new();
     let (source, dest) = volumes();
     dest.create_directory(Path::new("/inbox")).await.unwrap();
     let mut sources = Vec::new();
@@ -106,6 +111,7 @@ async fn copied_folders_keep_their_dates_through_the_concurrent_driver() {
     }
 
     copy(
+        &engine,
         "op-folder-dates-concurrent",
         &source,
         &sources,
@@ -128,12 +134,14 @@ async fn copied_folders_keep_their_dates_through_the_concurrent_driver() {
 /// the merge created inside it is the copy's own and keeps its source date.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_merge_leaves_the_existing_folders_date_alone() {
+    let engine = TestOperations::new();
     let (source, dest) = volumes();
     dest.create_directory(Path::new("/inbox")).await.unwrap();
     dest.create_directory(Path::new("/inbox/album")).await.unwrap();
     let album = seed_dated_folder(&source, "album").await;
 
     copy(
+        &engine,
         "op-folder-dates-merge",
         &source,
         &[album],
@@ -152,6 +160,7 @@ async fn a_merge_leaves_the_existing_folders_date_alone() {
 /// the stamp runs only once the whole subtree landed.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_copy_that_fails_partway_dates_no_folder() {
+    let engine = TestOperations::new();
     let (source, dest_inner) = volumes();
     dest_inner.create_directory(Path::new("/inbox")).await.unwrap();
     let album = seed_dated_folder(&source, "album").await;
@@ -167,6 +176,7 @@ async fn a_copy_that_fails_partway_dates_no_folder() {
         .arc();
 
     let result = copy(
+        &engine,
         "op-folder-dates-failed",
         &source,
         &[album],
@@ -195,6 +205,7 @@ async fn a_copy_that_fails_partway_dates_no_folder() {
 /// comes from the scan's stat like its modification date.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn copied_folders_keep_their_creation_dates_through_both_drivers() {
+    let engine = TestOperations::new();
     const BORN: u64 = 1_425_168_000; // 2015-03-01
     const INNER_BORN: u64 = 1_451_606_400; // 2016-01-01
     let born = |secs: u64| cmdr_fs::metadata::CarriedMetadata {
@@ -215,7 +226,7 @@ async fn copied_folders_keep_their_creation_dates_through_both_drivers() {
             sources.push(root);
         }
 
-        copy(op, &source, &sources, Arc::clone(&dest) as Arc<dyn Volume>)
+        copy(&engine, op, &source, &sources, Arc::clone(&dest) as Arc<dyn Volume>)
             .await
             .expect("the copy succeeds");
 

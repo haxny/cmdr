@@ -9,6 +9,7 @@
 //! directory". These cells run the REAL local walk, publish it the way the
 //! dialog does, and copy through it.
 
+use crate::file_system::write_operations::testing::TestOperations;
 use std::collections::HashSet;
 use std::os::unix::fs::symlink;
 use std::time::{Duration, Instant};
@@ -18,7 +19,7 @@ use super::move_cross::move_volumes_with_progress;
 use super::rename_merge_test_support::make_state;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::scan_walker::{WalkContext, walk_sources_with_per_path};
-use crate::file_system::write_operations::state::{CachedScanResult, insert_scan_result};
+use crate::file_system::write_operations::state::CachedScanResult;
 use crate::file_system::write_operations::types::{VolumeCopyConfig, WriteOperationPhase, WriteProgressEvent};
 use crate::test_support::TestDir;
 use cmdr_fs::ignore_poison::IgnorePoison;
@@ -29,10 +30,10 @@ use std::sync::Arc;
 
 /// Walks `sources` with the local preview's walker and publishes the result
 /// under `preview_id`, exactly as a settled copy-dialog preview would be.
-fn publish_local_preview(preview_id: &str, sources: &[PathBuf]) {
+fn publish_local_preview(engine: &TestOperations, preview_id: &str, sources: &[PathBuf]) {
     let sidecars = cmdr_fs::apple_double::SidecarRule::new();
     let ctx: WalkContext<'_, String> = WalkContext {
-        listings: crate::file_system::write_operations::installed().host().listings(),
+        listings: engine.host().listings(),
         park_while_paused: &|| {},
         progress_interval: Duration::from_secs(3600),
         is_cancelled: &|| false,
@@ -59,7 +60,7 @@ fn publish_local_preview(preview_id: &str, sources: &[PathBuf]) {
         &ctx,
     )
     .expect("the fixture tree walks cleanly");
-    insert_scan_result(
+    engine.stores().previews().insert_scan_result(
         preview_id.to_string(),
         CachedScanResult::from_local_walk(sources.to_vec(), files, dirs, total_bytes, dedup_bytes, per_path, None),
     );
@@ -106,16 +107,17 @@ async fn read_dest(dest: &Arc<dyn Volume>, path: &str) -> Vec<u8> {
 /// everything it holds.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_selected_link_to_a_folder_copies_as_the_folder_through_a_preview() {
+    let engine = TestOperations::new();
     let dir = TestDir::new("selected-link-folder");
     let link = plant_linked_folder(&dir);
     let preview_id = "selected-link-folder-preview";
-    publish_local_preview(preview_id, std::slice::from_ref(&link));
+    publish_local_preview(&engine, preview_id, std::slice::from_ref(&link));
 
     let dest = dest_volume();
     let result = copy_volumes_with_progress(
         Arc::new(CollectorEventSink::new()),
         "op-selected-link-folder",
-        &make_state(),
+        &make_state(&engine),
         boot_volume(),
         std::slice::from_ref(&link),
         Arc::clone(&dest),
@@ -133,16 +135,17 @@ async fn a_selected_link_to_a_folder_copies_as_the_folder_through_a_preview() {
 /// files and eight bytes, never the link's own one entry.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_selected_link_counts_what_it_points_at() {
+    let engine = TestOperations::new();
     let dir = TestDir::new("selected-link-totals");
     let link = plant_linked_folder(&dir);
     let preview_id = "selected-link-totals-preview";
-    publish_local_preview(preview_id, std::slice::from_ref(&link));
+    publish_local_preview(&engine, preview_id, std::slice::from_ref(&link));
 
     let events = Arc::new(CollectorEventSink::new());
     let result = copy_volumes_with_progress(
         Arc::clone(&events) as _,
         "op-selected-link-totals",
-        &make_state(),
+        &make_state(&engine),
         boot_volume(),
         std::slice::from_ref(&link),
         dest_volume(),
@@ -174,19 +177,20 @@ fn last_copying_bytes_total(events: &CollectorEventSink) -> u64 {
 /// A selected link to a FILE streams the file's bytes, and counts them.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_selected_link_to_a_file_copies_the_file_through_a_preview() {
+    let engine = TestOperations::new();
     let dir = TestDir::new("selected-link-file");
     std::fs::write(dir.join("real.txt"), b"the real bytes").unwrap();
     symlink(dir.join("real.txt"), dir.join("alias.txt")).unwrap();
     let link = dir.join("alias.txt");
     let preview_id = "selected-link-file-preview";
-    publish_local_preview(preview_id, std::slice::from_ref(&link));
+    publish_local_preview(&engine, preview_id, std::slice::from_ref(&link));
 
     let dest = dest_volume();
     let events = Arc::new(CollectorEventSink::new());
     let result = copy_volumes_with_progress(
         Arc::clone(&events) as _,
         "op-selected-link-file",
-        &make_state(),
+        &make_state(&engine),
         boot_volume(),
         std::slice::from_ref(&link),
         Arc::clone(&dest),
@@ -209,16 +213,17 @@ async fn a_selected_link_to_a_file_copies_the_file_through_a_preview() {
 /// (a cloud drive, for `~/Dropbox`), which the person never selected.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_selected_link_moved_through_a_preview_removes_the_link_never_the_target() {
+    let engine = TestOperations::new();
     let dir = TestDir::new("selected-link-move");
     let link = plant_linked_folder(&dir);
     let preview_id = "selected-link-move-preview";
-    publish_local_preview(preview_id, std::slice::from_ref(&link));
+    publish_local_preview(&engine, preview_id, std::slice::from_ref(&link));
 
     let dest = dest_volume();
     let result = move_volumes_with_progress(
         Arc::new(CollectorEventSink::new()),
         "op-selected-link-move",
-        &make_state(),
+        &make_state(&engine),
         boot_volume(),
         std::slice::from_ref(&link),
         Arc::clone(&dest),

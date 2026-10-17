@@ -5,26 +5,26 @@
 use super::cross_fs::move_with_staging;
 use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::ConflictResolution;
 use cmdr_fs::ignore_poison::IgnorePoison;
 
-pub(super) fn make_state(progress_interval_ms: u64) -> Arc<WriteOperationState> {
-    Arc::new(WriteOperationState::new(std::time::Duration::from_millis(
-        progress_interval_ms,
-    )))
+pub(super) fn make_state(engine: &TestOperations, progress_interval_ms: u64) -> Arc<WriteOperationState> {
+    Arc::new(engine.new_operation_state(std::time::Duration::from_millis(progress_interval_ms)))
 }
 
 /// Drives a same-FS local move (`move_with_rename`) of `sources` into `dst_dir`
 /// under the given resolution. Within one tempdir, source and dest share a
 /// filesystem, so `move_files_with_progress_inner` routes to the rename path.
 pub(in crate::file_system::write_operations::transfer) fn run_same_fs_move(
+    engine: &TestOperations,
     sources: &[PathBuf],
     dst_dir: &Path,
     resolution: ConflictResolution,
     op_id: &str,
 ) -> Result<Arc<CollectorEventSink>, WriteOperationError> {
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state(200);
+    let state = make_state(engine, 200);
     let config = WriteOperationConfig {
         conflict_resolution: resolution,
         ..WriteOperationConfig::default()
@@ -36,12 +36,13 @@ pub(in crate::file_system::write_operations::transfer) fn run_same_fs_move(
 /// Drives a cross-FS local move (`move_with_staging`) of `sources` into
 /// `dst_dir` under the given resolution.
 pub(in crate::file_system::write_operations) fn run_cross_fs_move(
+    engine: &TestOperations,
     sources: &[PathBuf],
     dst_dir: &Path,
     resolution: ConflictResolution,
     op_id: &str,
 ) -> Result<Arc<CollectorEventSink>, WriteOperationError> {
-    run_cross_fs_move_on(&make_state(200), sources, dst_dir, resolution, op_id)
+    run_cross_fs_move_on(&make_state(engine, 200), sources, dst_dir, resolution, op_id)
 }
 
 /// [`run_cross_fs_move`] under a state the caller built (on an engine of its own).

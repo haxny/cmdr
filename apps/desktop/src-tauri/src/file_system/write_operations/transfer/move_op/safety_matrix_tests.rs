@@ -23,6 +23,7 @@
 
 use super::test_support::{run_cross_fs_move, run_same_fs_move};
 use super::*;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::ConflictResolution;
 
 /// One single-file matrix cell: a source file collides with a same-named dest
@@ -37,6 +38,7 @@ struct SingleFileCell {
 }
 
 fn assert_single_file_cell(
+    engine: &TestOperations,
     cross_fs: bool,
     cell: &SingleFileCell,
     src_bytes: &[u8],
@@ -63,9 +65,21 @@ fn assert_single_file_cell(
         cell.resolution
     );
     let result = if cross_fs {
-        run_cross_fs_move(std::slice::from_ref(&src_file), &dst_dir, cell.resolution, &op_id)
+        run_cross_fs_move(
+            engine,
+            std::slice::from_ref(&src_file),
+            &dst_dir,
+            cell.resolution,
+            &op_id,
+        )
     } else {
-        run_same_fs_move(std::slice::from_ref(&src_file), &dst_dir, cell.resolution, &op_id)
+        run_same_fs_move(
+            engine,
+            std::slice::from_ref(&src_file),
+            &dst_dir,
+            cell.resolution,
+            &op_id,
+        )
     };
     assert!(result.is_ok(), "{:?} on {}: {:?}", cell.resolution, op_id, result.err());
 
@@ -126,77 +140,87 @@ fn set_mtimes(src: &Path, dst: &Path, src_newer: bool) {
 
 #[test]
 fn matrix_single_file_skip_preserves_source_both_move_kinds() {
+    let engine = TestOperations::new();
     let cell = SingleFileCell {
         resolution: ConflictResolution::Skip,
         landed_as_overwrite: None,
     };
-    assert_single_file_cell(false, &cell, b"SRC", b"DST", true);
-    assert_single_file_cell(true, &cell, b"SRC", b"DST", true);
+    assert_single_file_cell(&engine, false, &cell, b"SRC", b"DST", true);
+    assert_single_file_cell(&engine, true, &cell, b"SRC", b"DST", true);
 }
 
 #[test]
 fn matrix_single_file_overwrite_replaces_dest_both_move_kinds() {
+    let engine = TestOperations::new();
     let cell = SingleFileCell {
         resolution: ConflictResolution::Overwrite,
         landed_as_overwrite: Some(true),
     };
-    assert_single_file_cell(false, &cell, b"SRC-NEW", b"DST-OLD", true);
-    assert_single_file_cell(true, &cell, b"SRC-NEW", b"DST-OLD", true);
+    assert_single_file_cell(&engine, false, &cell, b"SRC-NEW", b"DST-OLD", true);
+    assert_single_file_cell(&engine, true, &cell, b"SRC-NEW", b"DST-OLD", true);
 }
 
 #[test]
 fn matrix_single_file_rename_keeps_both_both_move_kinds() {
+    let engine = TestOperations::new();
     let cell = SingleFileCell {
         resolution: ConflictResolution::Rename,
         landed_as_overwrite: Some(false),
     };
-    assert_single_file_cell(false, &cell, b"SRC", b"DST", true);
-    assert_single_file_cell(true, &cell, b"SRC", b"DST", true);
+    assert_single_file_cell(&engine, false, &cell, b"SRC", b"DST", true);
+    assert_single_file_cell(&engine, true, &cell, b"SRC", b"DST", true);
 }
 
 #[test]
 fn matrix_single_file_overwrite_smaller_strict_semantics() {
+    let engine = TestOperations::new();
     // dest strictly smaller than source => overwrite lands.
     let landed = SingleFileCell {
         resolution: ConflictResolution::OverwriteSmaller,
         landed_as_overwrite: Some(true),
     };
-    assert_single_file_cell(false, &landed, b"source-is-bigger", b"dst", true);
-    assert_single_file_cell(true, &landed, b"source-is-bigger", b"dst", true);
+    assert_single_file_cell(&engine, false, &landed, b"source-is-bigger", b"dst", true);
+    assert_single_file_cell(&engine, true, &landed, b"source-is-bigger", b"dst", true);
 
     // dest NOT strictly smaller (equal size) => Skip-equivalent, source survives.
     let skipped = SingleFileCell {
         resolution: ConflictResolution::OverwriteSmaller,
         landed_as_overwrite: None,
     };
-    assert_single_file_cell(false, &skipped, b"AAAA", b"BBBB", true);
-    assert_single_file_cell(true, &skipped, b"AAAA", b"BBBB", true);
+    assert_single_file_cell(&engine, false, &skipped, b"AAAA", b"BBBB", true);
+    assert_single_file_cell(&engine, true, &skipped, b"AAAA", b"BBBB", true);
 }
 
 #[test]
 fn matrix_single_file_overwrite_older_strict_semantics() {
+    let engine = TestOperations::new();
     // dest strictly older than source => overwrite lands (src_newer = true).
     let landed = SingleFileCell {
         resolution: ConflictResolution::OverwriteOlder,
         landed_as_overwrite: Some(true),
     };
-    assert_single_file_cell(false, &landed, b"SRC", b"DST", true);
-    assert_single_file_cell(true, &landed, b"SRC", b"DST", true);
+    assert_single_file_cell(&engine, false, &landed, b"SRC", b"DST", true);
+    assert_single_file_cell(&engine, true, &landed, b"SRC", b"DST", true);
 
     // dest newer than source => Skip-equivalent, source survives (src_newer = false).
     let skipped = SingleFileCell {
         resolution: ConflictResolution::OverwriteOlder,
         landed_as_overwrite: None,
     };
-    assert_single_file_cell(false, &skipped, b"SRC", b"DST", false);
-    assert_single_file_cell(true, &skipped, b"SRC", b"DST", false);
+    assert_single_file_cell(&engine, false, &skipped, b"SRC", b"DST", false);
+    assert_single_file_cell(&engine, true, &skipped, b"SRC", b"DST", false);
 }
 
 /// Directory-with-one-skipped-child cell for the conditional policies: the
 /// colliding child does NOT meet the condition (Skip-equivalent), the other
 /// child is new. The skipped child's source must survive; the new child moves.
 /// This is the conditional sibling of `cross_fs_move_dir_merge_skip_child_*`.
-fn assert_dir_one_skipped_child(cross_fs: bool, resolution: ConflictResolution, src_newer_for_collide: bool) {
+fn assert_dir_one_skipped_child(
+    engine: &TestOperations,
+    cross_fs: bool,
+    resolution: ConflictResolution,
+    src_newer_for_collide: bool,
+) {
     let tmp = tempfile::tempdir().expect("tempdir");
     let src_root = tmp.path().join("src");
     let dst_root = tmp.path().join("dst");
@@ -224,9 +248,9 @@ fn assert_dir_one_skipped_child(cross_fs: bool, resolution: ConflictResolution, 
         resolution
     );
     let result = if cross_fs {
-        run_cross_fs_move(std::slice::from_ref(&src_dir), &dst_root, resolution, &op_id)
+        run_cross_fs_move(engine, std::slice::from_ref(&src_dir), &dst_root, resolution, &op_id)
     } else {
-        run_same_fs_move(std::slice::from_ref(&src_dir), &dst_root, resolution, &op_id)
+        run_same_fs_move(engine, std::slice::from_ref(&src_dir), &dst_root, resolution, &op_id)
     };
     assert!(result.is_ok(), "{op_id}: {:?}", result.err());
 
@@ -255,15 +279,17 @@ fn assert_dir_one_skipped_child(cross_fs: bool, resolution: ConflictResolution, 
 
 #[test]
 fn matrix_dir_overwrite_smaller_skips_equal_child_preserves_source() {
+    let engine = TestOperations::new();
     // Equal-size collide child => not strictly smaller => Skip-equivalent.
-    assert_dir_one_skipped_child(false, ConflictResolution::OverwriteSmaller, true);
-    assert_dir_one_skipped_child(true, ConflictResolution::OverwriteSmaller, true);
+    assert_dir_one_skipped_child(&engine, false, ConflictResolution::OverwriteSmaller, true);
+    assert_dir_one_skipped_child(&engine, true, ConflictResolution::OverwriteSmaller, true);
 }
 
 #[test]
 fn matrix_dir_overwrite_older_skips_newer_child_preserves_source() {
+    let engine = TestOperations::new();
     // Collide child where source is NOT newer (dest newer) => not strictly
     // older => Skip-equivalent.
-    assert_dir_one_skipped_child(false, ConflictResolution::OverwriteOlder, false);
-    assert_dir_one_skipped_child(true, ConflictResolution::OverwriteOlder, false);
+    assert_dir_one_skipped_child(&engine, false, ConflictResolution::OverwriteOlder, false);
+    assert_dir_one_skipped_child(&engine, true, ConflictResolution::OverwriteOlder, false);
 }

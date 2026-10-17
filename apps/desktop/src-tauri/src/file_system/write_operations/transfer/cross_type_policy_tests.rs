@@ -27,6 +27,7 @@ use super::super::types::{ConflictResolution, SourceItemOutcome, WriteOperationC
 use super::conflict_responder_test_support::ConflictResponderSink;
 use super::copy::copy_files_with_progress_inner;
 use super::move_op::move_files_with_progress_inner;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::test_support::TestDir;
 use cmdr_fs::ignore_poison::IgnorePoison;
 
@@ -41,8 +42,8 @@ fn policy(conflict_resolution: ConflictResolution) -> WriteOperationConfig {
     }
 }
 
-fn state() -> Arc<WriteOperationState> {
-    Arc::new(WriteOperationState::new(Duration::from_millis(50)))
+fn state(engine: &TestOperations) -> Arc<WriteOperationState> {
+    Arc::new(engine.new_operation_state(Duration::from_millis(50)))
 }
 
 /// Source: a plain file `notes` with real bytes. Destination: a folder `notes/`
@@ -102,13 +103,14 @@ fn assert_file_survived(dst_root: &std::path::Path) {
 
 #[test]
 fn overwrite_smaller_never_deletes_a_folder_a_file_landed_on() {
+    let engine = TestOperations::new();
     let dir = temp("smaller_file_over_folder");
     let (src_root, dst_root) = file_over_folder_fixture(&dir);
 
     copy_files_with_progress_inner(
         &CollectorEventSink::new(),
         "op-smaller-file-over-folder",
-        &state(),
+        &state(&engine),
         &[src_root.join("notes")],
         &dst_root,
         &policy(ConflictResolution::OverwriteSmaller),
@@ -120,6 +122,7 @@ fn overwrite_smaller_never_deletes_a_folder_a_file_landed_on() {
 
 #[test]
 fn overwrite_older_never_deletes_a_folder_a_file_landed_on() {
+    let engine = TestOperations::new();
     let dir = temp("older_file_over_folder");
     let (src_root, dst_root) = file_over_folder_fixture(&dir);
     // The source is newer than the destination folder, so the mtime comparison
@@ -130,7 +133,7 @@ fn overwrite_older_never_deletes_a_folder_a_file_landed_on() {
     copy_files_with_progress_inner(
         &CollectorEventSink::new(),
         "op-older-file-over-folder",
-        &state(),
+        &state(&engine),
         &[src_root.join("notes")],
         &dst_root,
         &policy(ConflictResolution::OverwriteOlder),
@@ -142,13 +145,14 @@ fn overwrite_older_never_deletes_a_folder_a_file_landed_on() {
 
 #[test]
 fn overwrite_all_never_deletes_a_folder_a_file_landed_on() {
+    let engine = TestOperations::new();
     let dir = temp("overwrite_file_over_folder");
     let (src_root, dst_root) = file_over_folder_fixture(&dir);
 
     copy_files_with_progress_inner(
         &CollectorEventSink::new(),
         "op-overwrite-file-over-folder",
-        &state(),
+        &state(&engine),
         &[src_root.join("notes")],
         &dst_root,
         &policy(ConflictResolution::Overwrite),
@@ -164,13 +168,14 @@ fn overwrite_all_never_deletes_a_folder_a_file_landed_on() {
 
 #[test]
 fn overwrite_all_never_deletes_a_file_a_folder_landed_on() {
+    let engine = TestOperations::new();
     let dir = temp("overwrite_folder_over_file");
     let (src_root, dst_root) = folder_over_file_fixture(&dir);
 
     copy_files_with_progress_inner(
         &CollectorEventSink::new(),
         "op-overwrite-folder-over-file",
-        &state(),
+        &state(&engine),
         &[src_root.join("thing")],
         &dst_root,
         &policy(ConflictResolution::Overwrite),
@@ -182,13 +187,14 @@ fn overwrite_all_never_deletes_a_file_a_folder_landed_on() {
 
 #[test]
 fn overwrite_smaller_never_deletes_a_file_a_folder_landed_on() {
+    let engine = TestOperations::new();
     let dir = temp("smaller_folder_over_file");
     let (src_root, dst_root) = folder_over_file_fixture(&dir);
 
     copy_files_with_progress_inner(
         &CollectorEventSink::new(),
         "op-smaller-folder-over-file",
-        &state(),
+        &state(&engine),
         &[src_root.join("thing")],
         &dst_root,
         &policy(ConflictResolution::OverwriteSmaller),
@@ -205,6 +211,7 @@ fn overwrite_smaller_never_deletes_a_file_a_folder_landed_on() {
 /// the whole operation over a clash it had already settled.
 #[test]
 fn a_skipped_folder_with_subfolders_finishes_and_leaves_the_file() {
+    let engine = TestOperations::new();
     let dir = temp("skipped_folder_with_subfolders");
     let (src_root, dst_root) = folder_over_file_fixture(&dir);
     fs::create_dir_all(src_root.join("thing/sub/empty")).unwrap();
@@ -213,7 +220,7 @@ fn a_skipped_folder_with_subfolders_finishes_and_leaves_the_file() {
     copy_files_with_progress_inner(
         &CollectorEventSink::new(),
         "op-skipped-folder-with-subfolders",
-        &state(),
+        &state(&engine),
         &[src_root.join("thing")],
         &dst_root,
         &policy(ConflictResolution::Overwrite),
@@ -228,12 +235,13 @@ fn a_skipped_folder_with_subfolders_finishes_and_leaves_the_file() {
 /// it is skipped without asking again.
 #[test]
 fn one_skip_answers_for_the_whole_incoming_folder() {
+    let engine = TestOperations::new();
     let dir = temp("one_skip_whole_folder");
     let (src_root, dst_root) = folder_over_file_fixture(&dir);
     fs::write(src_root.join("thing/second.txt"), "second").unwrap();
     fs::create_dir_all(src_root.join("thing/sub")).unwrap();
     fs::write(src_root.join("thing/sub/third.txt"), "third").unwrap();
-    let state = state();
+    let state = state(&engine);
     // `apply_to_all: false`: one item's answer, and still one prompt.
     let events = ConflictResponderSink::new(&state, ConflictResolution::Skip, false);
 
@@ -269,6 +277,7 @@ fn one_skip_answers_for_the_whole_incoming_folder() {
 /// said `Done`. The refusal only protects the user if the report is honest.
 #[test]
 fn a_refused_cross_type_item_reports_as_skipped_not_copied() {
+    let engine = TestOperations::new();
     let dir = temp("refused_is_reported");
     let (src_root, dst_root) = file_over_folder_fixture(&dir);
     let events = CollectorEventSink::new();
@@ -276,7 +285,7 @@ fn a_refused_cross_type_item_reports_as_skipped_not_copied() {
     copy_files_with_progress_inner(
         &events,
         "op-refused-reporting",
-        &state(),
+        &state(&engine),
         &[src_root.join("notes")],
         &dst_root,
         &policy(ConflictResolution::Overwrite),
@@ -308,6 +317,7 @@ fn a_refused_cross_type_item_reports_as_skipped_not_copied() {
 /// skipped 3 files" and lose the top-level file that did copy.
 #[test]
 fn a_refused_item_is_counted_against_its_own_kind_not_the_leaf_total() {
+    let engine = TestOperations::new();
     let dir = temp("top_level_split");
     let src_root = dir.join("src");
     let dst_root = dir.join("dst");
@@ -326,7 +336,7 @@ fn a_refused_item_is_counted_against_its_own_kind_not_the_leaf_total() {
     copy_files_with_progress_inner(
         &events,
         "op-top-level-split",
-        &state(),
+        &state(&engine),
         &[src_root.join("notes"), src_root.join("tree")],
         &dst_root,
         &policy(ConflictResolution::Overwrite),
@@ -347,6 +357,7 @@ fn a_refused_item_is_counted_against_its_own_kind_not_the_leaf_total() {
 /// per file, and one refused child doesn't make the whole source a skip.
 #[test]
 fn a_source_that_partly_landed_still_reports_done() {
+    let engine = TestOperations::new();
     let dir = temp("partly_landed");
     let src_root = dir.join("src");
     let dst_root = dir.join("dst");
@@ -361,7 +372,7 @@ fn a_source_that_partly_landed_still_reports_done() {
     copy_files_with_progress_inner(
         &events,
         "op-partly-landed",
-        &state(),
+        &state(&engine),
         &[src_root.join("tree")],
         &dst_root,
         &policy(ConflictResolution::Overwrite),
@@ -391,13 +402,14 @@ fn a_source_that_partly_landed_still_reports_done() {
 
 #[test]
 fn a_move_under_overwrite_all_never_deletes_a_folder_a_file_landed_on() {
+    let engine = TestOperations::new();
     let dir = temp("move_overwrite_file_over_folder");
     let (src_root, dst_root) = file_over_folder_fixture(&dir);
 
     move_files_with_progress_inner(
         &CollectorEventSink::new(),
         "mv-overwrite-file-over-folder",
-        &state(),
+        &state(&engine),
         &[src_root.join("notes")],
         &dst_root,
         &policy(ConflictResolution::Overwrite),
@@ -413,13 +425,14 @@ fn a_move_under_overwrite_all_never_deletes_a_folder_a_file_landed_on() {
 
 #[test]
 fn a_move_under_overwrite_all_never_deletes_a_file_a_folder_landed_on() {
+    let engine = TestOperations::new();
     let dir = temp("move_overwrite_folder_over_file");
     let (src_root, dst_root) = folder_over_file_fixture(&dir);
 
     move_files_with_progress_inner(
         &CollectorEventSink::new(),
         "mv-overwrite-folder-over-file",
-        &state(),
+        &state(&engine),
         &[src_root.join("thing")],
         &dst_root,
         &policy(ConflictResolution::Overwrite),
@@ -442,9 +455,10 @@ fn a_move_under_overwrite_all_never_deletes_a_file_a_folder_landed_on() {
 /// for. Refusing here would make the dialog's own button a lie.
 #[test]
 fn an_explicitly_answered_overwrite_still_replaces_a_folder_with_a_file() {
+    let engine = TestOperations::new();
     let dir = temp("explicit_file_over_folder");
     let (src_root, dst_root) = file_over_folder_fixture(&dir);
-    let state = state();
+    let state = state(&engine);
     // `apply_to_all: false` — this is the ONE item's answer, which is exactly
     // what the refusal above spares.
     let events = ConflictResponderSink::new(&state, ConflictResolution::Overwrite, false);
@@ -488,6 +502,7 @@ fn an_explicitly_answered_overwrite_still_replaces_a_folder_with_a_file() {
 /// still be replaced.
 #[test]
 fn an_answered_overwrite_all_carries_to_the_next_folder_a_file_lands_on() {
+    let engine = TestOperations::new();
     let dir = temp("carry_file_over_folder");
     let src_root = dir.join("src");
     let dst_root = dir.join("dst");
@@ -497,7 +512,7 @@ fn an_answered_overwrite_all_carries_to_the_next_folder_a_file_lands_on() {
         fs::write(src_root.join(name), format!("source-{name}")).unwrap();
         fs::write(dst_root.join(name).join("precious.txt"), "precious user data").unwrap();
     }
-    let state = state();
+    let state = state(&engine);
     let events = ConflictResponderSink::new(&state, ConflictResolution::Overwrite, true);
 
     copy_files_with_progress_inner(
@@ -528,6 +543,7 @@ fn an_answered_overwrite_all_carries_to_the_next_folder_a_file_lands_on() {
 /// The mirror shape: two folder→file clashes, one answer, both replaced.
 #[test]
 fn an_answered_overwrite_all_carries_to_the_next_file_a_folder_lands_on() {
+    let engine = TestOperations::new();
     let dir = temp("carry_folder_over_file");
     let src_root = dir.join("src");
     let dst_root = dir.join("dst");
@@ -537,7 +553,7 @@ fn an_answered_overwrite_all_carries_to_the_next_file_a_folder_lands_on() {
         fs::write(src_root.join(name).join("sentinel.txt"), format!("source-{name}")).unwrap();
         fs::write(dst_root.join(name), "precious user bytes").unwrap();
     }
-    let state = state();
+    let state = state(&engine);
     let events = ConflictResponderSink::new(&state, ConflictResolution::Overwrite, true);
 
     copy_files_with_progress_inner(
@@ -573,6 +589,7 @@ fn an_answered_overwrite_all_carries_to_the_next_file_a_folder_lands_on() {
 /// away, so the cross-type clash after it must still ask. Two prompts, not one.
 #[test]
 fn an_overwrite_all_answered_on_a_plain_clash_never_carries_across_types() {
+    let engine = TestOperations::new();
     let dir = temp("no_carry_from_plain");
     let src_root = dir.join("src");
     let dst_root = dir.join("dst");
@@ -584,7 +601,7 @@ fn an_overwrite_all_answered_on_a_plain_clash_never_carries_across_types() {
     fs::write(src_root.join("2-notes"), "source-notes").unwrap();
     fs::create_dir_all(dst_root.join("2-notes")).unwrap();
     fs::write(dst_root.join("2-notes/precious.txt"), "precious user data").unwrap();
-    let state = state();
+    let state = state(&engine);
     let events = ConflictResponderSink::new(&state, ConflictResolution::Overwrite, true);
 
     copy_files_with_progress_inner(
@@ -613,9 +630,10 @@ fn an_overwrite_all_answered_on_a_plain_clash_never_carries_across_types() {
 /// folder goes. Clicking one on a cross-type prompt must skip, not delete.
 #[test]
 fn an_answered_overwrite_smaller_never_deletes_the_folder_it_cannot_compare() {
+    let engine = TestOperations::new();
     let dir = temp("answered_smaller_file_over_folder");
     let (src_root, dst_root) = file_over_folder_fixture(&dir);
-    let state = state();
+    let state = state(&engine);
     // The dialog's smaller/older buttons only ever send `apply_to_all: true`.
     let events = ConflictResponderSink::new(&state, ConflictResolution::OverwriteSmaller, true);
 
@@ -635,9 +653,10 @@ fn an_answered_overwrite_smaller_never_deletes_the_folder_it_cannot_compare() {
 /// The mirror: a folder landing on a file, answered "Overwrite all older".
 #[test]
 fn an_answered_overwrite_older_never_deletes_the_file_it_cannot_compare() {
+    let engine = TestOperations::new();
     let dir = temp("answered_older_folder_over_file");
     let (src_root, dst_root) = folder_over_file_fixture(&dir);
-    let state = state();
+    let state = state(&engine);
     let events = ConflictResponderSink::new(&state, ConflictResolution::OverwriteOlder, true);
 
     copy_files_with_progress_inner(

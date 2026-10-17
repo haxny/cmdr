@@ -14,7 +14,8 @@ use super::cross_fs::move_with_staging;
 use super::test_support::{make_state, outcomes_for, removal_flags_for};
 use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
-use crate::file_system::write_operations::state::{CachedScanResult, FileInfo, insert_scan_result};
+use crate::file_system::write_operations::state::{CachedScanResult, FileInfo};
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::ConflictResolution;
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::volume::CopyScanResult;
@@ -22,7 +23,7 @@ use cmdr_fs::volume::CopyScanResult;
 /// Seeds the scan preview a transfer dialog would have cached for `source`,
 /// listing exactly `files` and `dirs`. Anything else on disk under `source` is
 /// what "appeared after the scan" means to the engine.
-fn seed_preview(preview_id: &str, source: &Path, files: &[PathBuf], dirs: Vec<PathBuf>) {
+fn seed_preview(engine: &TestOperations, preview_id: &str, source: &Path, files: &[PathBuf], dirs: Vec<PathBuf>) {
     let source_root = source.parent().expect("a source has a parent").to_path_buf();
     let mut infos = Vec::new();
     let mut total_bytes = 0u64;
@@ -31,7 +32,7 @@ fn seed_preview(preview_id: &str, source: &Path, files: &[PathBuf], dirs: Vec<Pa
         total_bytes += metadata.len();
         infos.push(FileInfo::new(file.clone(), source_root.clone(), &metadata));
     }
-    insert_scan_result(
+    engine.stores().previews().insert_scan_result(
         preview_id.to_string(),
         CachedScanResult::from_local_walk(
             vec![source.to_path_buf()],
@@ -58,9 +59,15 @@ fn seed_preview(preview_id: &str, source: &Path, files: &[PathBuf], dirs: Vec<Pa
 
 /// A cross-FS move of `source` into `dst_dir` running off the seeded preview
 /// `preview_id`, under Stop (nothing here provokes a conflict prompt).
-fn run_preview_backed_move(source: &Path, dst_dir: &Path, preview_id: &str, op_id: &str) -> Arc<CollectorEventSink> {
+fn run_preview_backed_move(
+    engine: &TestOperations,
+    source: &Path,
+    dst_dir: &Path,
+    preview_id: &str,
+    op_id: &str,
+) -> Arc<CollectorEventSink> {
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state(0);
+    let state = make_state(engine, 0);
     let config = WriteOperationConfig {
         preview_id: Some(preview_id.to_string()),
         ..WriteOperationConfig::default()
@@ -85,6 +92,7 @@ fn run_preview_backed_move(source: &Path, dst_dir: &Path, preview_id: &str, op_i
 /// anywhere else.
 #[test]
 fn a_file_that_appeared_after_the_scan_survives_the_source_sweep() {
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     let src_root = tmp.path().join("src");
     let dst_root = tmp.path().join("dst");
@@ -95,6 +103,7 @@ fn a_file_that_appeared_after_the_scan_survives_the_source_sweep() {
     let scanned = source.join("notes/report.txt");
     fs::write(&scanned, b"counted by the scan").unwrap();
     seed_preview(
+        &engine,
         "sweep-newcomer",
         &source,
         std::slice::from_ref(&scanned),
@@ -105,7 +114,7 @@ fn a_file_that_appeared_after_the_scan_survives_the_source_sweep() {
     let newcomer = source.join("notes/download.zip");
     fs::write(&newcomer, b"arrived after the scan").unwrap();
 
-    run_preview_backed_move(&source, &dst_root, "sweep-newcomer", "op-sweep-newcomer");
+    run_preview_backed_move(&engine, &source, &dst_root, "sweep-newcomer", "op-sweep-newcomer");
 
     assert!(
         dst_root.join("work/notes/report.txt").is_file(),
@@ -133,6 +142,7 @@ fn a_file_that_appeared_after_the_scan_survives_the_source_sweep() {
 /// pane to deselect a folder that is still there.
 #[test]
 fn a_source_that_kept_a_newcomer_ends_on_skipped_and_never_reports_removal() {
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     let src_root = tmp.path().join("src");
     let dst_root = tmp.path().join("dst");
@@ -143,6 +153,7 @@ fn a_source_that_kept_a_newcomer_ends_on_skipped_and_never_reports_removal() {
     let scanned = source.join("report.txt");
     fs::write(&scanned, b"counted by the scan").unwrap();
     seed_preview(
+        &engine,
         "sweep-newcomer-outcome",
         &source,
         std::slice::from_ref(&scanned),
@@ -151,6 +162,7 @@ fn a_source_that_kept_a_newcomer_ends_on_skipped_and_never_reports_removal() {
     fs::write(source.join("download.zip"), b"arrived after the scan").unwrap();
 
     let events = run_preview_backed_move(
+        &engine,
         &source,
         &dst_root,
         "sweep-newcomer-outcome",
@@ -174,6 +186,7 @@ fn a_source_that_kept_a_newcomer_ends_on_skipped_and_never_reports_removal() {
 /// while part of the user's selection is still in the source folder.
 #[test]
 fn the_completion_event_counts_what_stayed_behind() {
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     let src_root = tmp.path().join("src");
     let dst_root = tmp.path().join("dst");
@@ -184,6 +197,7 @@ fn the_completion_event_counts_what_stayed_behind() {
     let scanned = source.join("report.txt");
     fs::write(&scanned, b"counted by the scan").unwrap();
     seed_preview(
+        &engine,
         "sweep-newcomer-report",
         &source,
         std::slice::from_ref(&scanned),
@@ -192,7 +206,13 @@ fn the_completion_event_counts_what_stayed_behind() {
     fs::write(source.join("download.zip"), b"arrived after the scan").unwrap();
     fs::write(source.join("notes/todo.md"), b"and so did this").unwrap();
 
-    let events = run_preview_backed_move(&source, &dst_root, "sweep-newcomer-report", "op-sweep-newcomer-report");
+    let events = run_preview_backed_move(
+        &engine,
+        &source,
+        &dst_root,
+        "sweep-newcomer-report",
+        "op-sweep-newcomer-report",
+    );
 
     let complete = events.complete.lock_ignore_poison();
     let appeared = complete[0]
@@ -208,6 +228,7 @@ fn the_completion_event_counts_what_stayed_behind() {
 /// show. Without this the "items stayed" notice fires on every clean move.
 #[test]
 fn a_clean_move_removes_every_source_and_reports_nothing_left_behind() {
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     let src_root = tmp.path().join("src");
     let dst_root = tmp.path().join("dst");
@@ -218,7 +239,7 @@ fn a_clean_move_removes_every_source_and_reports_nothing_left_behind() {
     fs::write(source.join("notes/todo.md"), b"two").unwrap();
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state(0);
+    let state = make_state(&engine, 0);
     let config = WriteOperationConfig::default();
     let result = move_with_staging(
         &*events,
@@ -251,6 +272,7 @@ fn a_clean_move_removes_every_source_and_reports_nothing_left_behind() {
 /// drops the row for a folder the user can still open.
 #[test]
 fn a_source_dir_that_kept_a_skipped_child_never_reports_removal() {
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     let src_root = tmp.path().join("src");
     let dst_root = tmp.path().join("dst");
@@ -266,7 +288,7 @@ fn a_source_dir_that_kept_a_skipped_child_never_reports_removal() {
     fs::write(dst_dir.join("collide.jpg"), b"dest collide").unwrap();
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state(0);
+    let state = make_state(&engine, 0);
     let config = WriteOperationConfig {
         conflict_resolution: ConflictResolution::Skip,
         ..WriteOperationConfig::default()
@@ -304,6 +326,8 @@ fn a_source_dir_that_kept_a_skipped_child_never_reports_removal() {
 fn a_symlinked_source_file_is_removed_as_a_link_and_its_target_is_untouched() {
     use std::os::unix::fs::symlink;
 
+    let engine = TestOperations::new();
+
     let tmp = tempfile::tempdir().expect("tempdir");
     let src_root = tmp.path().join("src");
     let dst_root = tmp.path().join("dst");
@@ -317,7 +341,7 @@ fn a_symlinked_source_file_is_removed_as_a_link_and_its_target_is_untouched() {
     symlink(&outsider, source.join("shortcut.txt")).unwrap();
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state(0);
+    let state = make_state(&engine, 0);
     let config = WriteOperationConfig::default();
     let result = move_with_staging(
         &*events,
@@ -355,6 +379,7 @@ fn a_symlinked_source_file_is_removed_as_a_link_and_its_target_is_untouched() {
 /// enforces is "delete what staged", not "delete unless Phase 3 said otherwise".
 #[test]
 fn a_skip_while_staging_keeps_the_original() {
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     let dst_root = tmp.path().join("dst");
     fs::create_dir_all(&dst_root).unwrap();
@@ -367,7 +392,7 @@ fn a_skip_while_staging_keeps_the_original() {
     fs::write(second.join("summary.pdf"), b"the second one, never staged").unwrap();
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state(0);
+    let state = make_state(&engine, 0);
     let config = WriteOperationConfig {
         conflict_resolution: ConflictResolution::Skip,
         ..WriteOperationConfig::default()

@@ -22,6 +22,7 @@ use super::super::types::{ConflictResolution, WriteConflictEvent, WriteOperation
 use super::conflict_responder_test_support::ConflictResponderSink;
 use super::copy::copy_files_with_progress_inner;
 use super::move_op::move_files_with_progress_inner;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::test_support::TestDir;
 use cmdr_fs::ignore_poison::IgnorePoison;
 
@@ -36,8 +37,8 @@ fn ask_each() -> WriteOperationConfig {
     }
 }
 
-fn state() -> Arc<WriteOperationState> {
-    Arc::new(WriteOperationState::new(Duration::from_millis(50)))
+fn state(engine: &TestOperations) -> Arc<WriteOperationState> {
+    Arc::new(engine.new_operation_state(Duration::from_millis(50)))
 }
 
 enum Engine {
@@ -47,10 +48,15 @@ enum Engine {
 
 /// Runs one copy or move of `sources` into `dst_root` under "Ask for each",
 /// answers every prompt with Skip, and returns the prompts it raised.
-fn prompts_for(engine: Engine, sources: &[std::path::PathBuf], dst_root: &Path) -> Vec<WriteConflictEvent> {
-    let state = state();
+fn prompts_for(
+    engine: &TestOperations,
+    driver: Engine,
+    sources: &[std::path::PathBuf],
+    dst_root: &Path,
+) -> Vec<WriteConflictEvent> {
+    let state = state(engine);
     let events = ConflictResponderSink::new(&state, ConflictResolution::Skip, false);
-    let run = match engine {
+    let run = match driver {
         Engine::Copy => copy_files_with_progress_inner,
         Engine::Move => move_files_with_progress_inner,
     };
@@ -83,10 +89,11 @@ fn folder_over_file_fixture(dir: &TestDir) -> (std::path::PathBuf, std::path::Pa
 /// the folder that's arriving: its own path, and a folder.
 #[test]
 fn a_copied_folder_meeting_a_file_is_described_as_the_folder() {
+    let engine = TestOperations::new();
     let dir = temp("copy_folder_over_file");
     let (src_root, dst_root) = folder_over_file_fixture(&dir);
 
-    let prompt = the_one_prompt(prompts_for(Engine::Copy, &[src_root.join("thing")], &dst_root));
+    let prompt = the_one_prompt(prompts_for(&engine, Engine::Copy, &[src_root.join("thing")], &dst_root));
 
     assert!(prompt.source_is_directory, "a whole folder is arriving: {prompt:#?}");
     assert!(!prompt.destination_is_directory, "a file is in the way: {prompt:#?}");
@@ -107,6 +114,7 @@ fn a_copied_folder_meeting_a_file_is_described_as_the_folder() {
 /// the nested source folder that maps onto the blocking file, not the merge root.
 #[test]
 fn a_nested_copied_folder_meeting_a_file_is_described_as_that_folder() {
+    let engine = TestOperations::new();
     let dir = temp("copy_nested_folder_over_file");
     let src_root = dir.join("src");
     let dst_root = dir.join("dst");
@@ -115,7 +123,7 @@ fn a_nested_copied_folder_meeting_a_file_is_described_as_that_folder() {
     fs::create_dir_all(dst_root.join("album")).unwrap();
     fs::write(dst_root.join("album/raw"), "a file named raw").unwrap();
 
-    let prompt = the_one_prompt(prompts_for(Engine::Copy, &[src_root.join("album")], &dst_root));
+    let prompt = the_one_prompt(prompts_for(&engine, Engine::Copy, &[src_root.join("album")], &dst_root));
 
     assert!(prompt.source_is_directory, "a whole folder is arriving: {prompt:#?}");
     assert!(!prompt.destination_is_directory, "a file is in the way: {prompt:#?}");
@@ -128,10 +136,11 @@ fn a_nested_copied_folder_meeting_a_file_is_described_as_that_folder() {
 
 #[test]
 fn a_moved_folder_meeting_a_file_is_described_as_the_folder() {
+    let engine = TestOperations::new();
     let dir = temp("move_folder_over_file");
     let (src_root, dst_root) = folder_over_file_fixture(&dir);
 
-    let prompt = the_one_prompt(prompts_for(Engine::Move, &[src_root.join("thing")], &dst_root));
+    let prompt = the_one_prompt(prompts_for(&engine, Engine::Move, &[src_root.join("thing")], &dst_root));
 
     assert!(prompt.source_is_directory, "{prompt:#?}");
     assert!(!prompt.destination_is_directory, "{prompt:#?}");
@@ -154,10 +163,11 @@ fn file_over_folder_fixture(dir: &TestDir) -> (std::path::PathBuf, std::path::Pa
 
 #[test]
 fn a_copied_file_meeting_a_folder_is_described_as_a_file() {
+    let engine = TestOperations::new();
     let dir = temp("copy_file_over_folder");
     let (src_root, dst_root) = file_over_folder_fixture(&dir);
 
-    let prompt = the_one_prompt(prompts_for(Engine::Copy, &[src_root.join("notes")], &dst_root));
+    let prompt = the_one_prompt(prompts_for(&engine, Engine::Copy, &[src_root.join("notes")], &dst_root));
 
     assert!(!prompt.source_is_directory, "{prompt:#?}");
     assert!(prompt.destination_is_directory, "{prompt:#?}");
@@ -167,10 +177,11 @@ fn a_copied_file_meeting_a_folder_is_described_as_a_file() {
 
 #[test]
 fn a_moved_file_meeting_a_folder_is_described_as_a_file() {
+    let engine = TestOperations::new();
     let dir = temp("move_file_over_folder");
     let (src_root, dst_root) = file_over_folder_fixture(&dir);
 
-    let prompt = the_one_prompt(prompts_for(Engine::Move, &[src_root.join("notes")], &dst_root));
+    let prompt = the_one_prompt(prompts_for(&engine, Engine::Move, &[src_root.join("notes")], &dst_root));
 
     assert!(!prompt.source_is_directory, "{prompt:#?}");
     assert!(prompt.destination_is_directory, "{prompt:#?}");
@@ -202,10 +213,11 @@ fn link_over_folder_fixture(dir: &TestDir) -> (std::path::PathBuf, std::path::Pa
 
 #[test]
 fn a_copied_link_to_a_folder_meeting_a_folder_is_described_as_a_leaf() {
+    let engine = TestOperations::new();
     let dir = temp("copy_link_over_folder");
     let (src_root, dst_root) = link_over_folder_fixture(&dir);
 
-    let prompt = the_one_prompt(prompts_for(Engine::Copy, &[src_root.join("docs")], &dst_root));
+    let prompt = the_one_prompt(prompts_for(&engine, Engine::Copy, &[src_root.join("docs")], &dst_root));
 
     assert!(!prompt.source_is_directory, "the link is a leaf: {prompt:#?}");
     assert!(prompt.destination_is_directory, "{prompt:#?}");
@@ -213,10 +225,11 @@ fn a_copied_link_to_a_folder_meeting_a_folder_is_described_as_a_leaf() {
 
 #[test]
 fn a_moved_link_to_a_folder_meeting_a_folder_is_described_as_a_leaf() {
+    let engine = TestOperations::new();
     let dir = temp("move_link_over_folder");
     let (src_root, dst_root) = link_over_folder_fixture(&dir);
 
-    let prompt = the_one_prompt(prompts_for(Engine::Move, &[src_root.join("docs")], &dst_root));
+    let prompt = the_one_prompt(prompts_for(&engine, Engine::Move, &[src_root.join("docs")], &dst_root));
 
     assert!(!prompt.source_is_directory, "the link is a leaf: {prompt:#?}");
     assert!(prompt.destination_is_directory, "{prompt:#?}");
@@ -226,6 +239,7 @@ fn a_moved_link_to_a_folder_meeting_a_folder_is_described_as_a_leaf() {
 /// the link, so the existing side is a leaf.
 #[test]
 fn a_moved_folder_meeting_a_link_to_a_folder_is_described_as_folder_over_leaf() {
+    let engine = TestOperations::new();
     let dir = temp("move_folder_over_link");
     let src_root = dir.join("src");
     let dst_root = dir.join("dst");
@@ -236,7 +250,7 @@ fn a_moved_folder_meeting_a_link_to_a_folder_is_described_as_folder_over_leaf() 
     fs::create_dir_all(&dst_root).unwrap();
     std::os::unix::fs::symlink(&target, dst_root.join("docs")).unwrap();
 
-    let prompt = the_one_prompt(prompts_for(Engine::Move, &[src_root.join("docs")], &dst_root));
+    let prompt = the_one_prompt(prompts_for(&engine, Engine::Move, &[src_root.join("docs")], &dst_root));
 
     assert!(prompt.source_is_directory, "{prompt:#?}");
     assert!(!prompt.destination_is_directory, "the link is a leaf: {prompt:#?}");

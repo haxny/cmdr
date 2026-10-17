@@ -5,6 +5,7 @@
 
 use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::{
     ConflictResolution, WriteConflictResolvedEvent, WriteErrorEvent, WriteSourceItemDoneEvent,
 };
@@ -13,8 +14,8 @@ use cmdr_fs::volume::{InMemoryVolume, ListingProgress};
 // `pub(super)` so the sibling `volume_copy_crashsafe_tests` and
 // `volume_copy_rollback_tests` modules can share these fixtures without
 // duplicating them.
-pub(super) fn make_state() -> Arc<WriteOperationState> {
-    Arc::new(WriteOperationState::new(Duration::from_millis(50)))
+pub(super) fn make_state(engine: &TestOperations) -> Arc<WriteOperationState> {
+    Arc::new(engine.new_operation_state(Duration::from_millis(50)))
 }
 
 pub(super) fn make_volumes() -> (Arc<dyn Volume>, Arc<dyn Volume>) {

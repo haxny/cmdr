@@ -21,6 +21,7 @@ use std::sync::Arc;
 use super::tests::make_state;
 use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::transfer::volume::forward_volume_methods;
 use crate::file_system::write_operations::types::{ConflictResolution, WriteOperationError};
 use cmdr_fs::volume::{InMemoryVolume, Volume, VolumeError};
@@ -89,6 +90,7 @@ impl Volume for TakenAtLanding {
 /// another writer takes `taken` at landing, and returns the destination and the
 /// copy's failure.
 async fn copy_with_a_name_taken_at_landing(
+    engine: &TestOperations,
     names: &[&str],
     taken: &'static str,
     policy: ConflictResolution,
@@ -112,7 +114,7 @@ async fn copy_with_a_name_taken_at_landing(
     let result = copy_volumes_with_progress(
         Arc::new(CollectorEventSink::new()),
         "test-op-name-taken-at-landing",
-        &make_state(),
+        &make_state(engine),
         source as Arc<dyn Volume>,
         &sources,
         Arc::clone(&dest) as Arc<dyn Volume>,
@@ -163,16 +165,23 @@ async fn assert_theirs_survives(dest: &TakenAtLanding, error: &WriteOperationErr
 /// One source, so the SERIAL driver runs it.
 #[tokio::test]
 async fn serial_a_name_taken_at_landing_is_never_deleted_by_the_failed_copy() {
-    let (dest, error) = copy_with_a_name_taken_at_landing(&["photo.jpg"], "photo.jpg", ConflictResolution::Skip).await;
+    let engine = TestOperations::new();
+    let (dest, error) =
+        copy_with_a_name_taken_at_landing(&engine, &["photo.jpg"], "photo.jpg", ConflictResolution::Skip).await;
     assert_theirs_survives(&dest, &error, "photo.jpg").await;
 }
 
 /// Three sources, so the CONCURRENT driver runs them.
 #[tokio::test]
 async fn concurrent_a_name_taken_at_landing_is_never_deleted_by_the_failed_copy() {
-    let (dest, error) =
-        copy_with_a_name_taken_at_landing(&["a.jpg", "photo.jpg", "z.jpg"], "photo.jpg", ConflictResolution::Skip)
-            .await;
+    let engine = TestOperations::new();
+    let (dest, error) = copy_with_a_name_taken_at_landing(
+        &engine,
+        &["a.jpg", "photo.jpg", "z.jpg"],
+        "photo.jpg",
+        ConflictResolution::Skip,
+    )
+    .await;
     assert_theirs_survives(&dest, &error, "photo.jpg").await;
 }
 
@@ -180,7 +189,8 @@ async fn concurrent_a_name_taken_at_landing_is_never_deleted_by_the_failed_copy(
 /// resolution ran and nothing claimed it.
 #[tokio::test]
 async fn serial_a_name_taken_at_landing_survives_under_rename_too() {
+    let engine = TestOperations::new();
     let (dest, error) =
-        copy_with_a_name_taken_at_landing(&["photo.jpg"], "photo.jpg", ConflictResolution::Rename).await;
+        copy_with_a_name_taken_at_landing(&engine, &["photo.jpg"], "photo.jpg", ConflictResolution::Rename).await;
     assert_theirs_survives(&dest, &error, "photo.jpg").await;
 }

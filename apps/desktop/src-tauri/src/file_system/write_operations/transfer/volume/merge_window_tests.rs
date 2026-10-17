@@ -26,9 +26,8 @@ use super::super::faulty_volume::forward_volume_methods;
 use super::tests::{make_state, make_volumes};
 use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
-use crate::file_system::write_operations::installed;
+use crate::file_system::write_operations::testing::TestOperations;
 
-use crate::file_system::write_operations::test_support::TestOperationGuard;
 use crate::file_system::write_operations::types::{
     ConflictResolution, ScanProgressEvent, WriteCancelledEvent, WriteCompleteEvent, WriteConflictResolvedEvent,
     WriteErrorEvent, WriteSettledEvent, WriteSourceItemDoneEvent,
@@ -206,12 +205,13 @@ fn overwrite_config() -> VolumeCopyConfig {
 /// existed this peaked at 1 no matter what `network.smbConcurrency` said.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn one_folders_subtree_fills_the_operation_window() {
+    let engine = TestOperations::new();
     let source = folder_of(12).await;
     let dest = WindowWatchingDest::new(4, 4);
     let dest_volume: Arc<dyn Volume> = Arc::clone(&dest) as Arc<dyn Volume>;
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     let result = copy_volumes_with_progress(
         events,
         "merge-window-one-folder",
@@ -246,6 +246,7 @@ async fn one_folders_subtree_fills_the_operation_window() {
 /// carry four writes, never sixteen.
 #[tokio::test(flavor = "multi_thread", worker_threads = 8)]
 async fn four_folder_sources_share_one_window_rather_than_taking_one_each() {
+    let engine = TestOperations::new();
     let (source, _) = make_volumes();
     let mut sources = Vec::new();
     for folder in 0..4 {
@@ -266,7 +267,7 @@ async fn four_folder_sources_share_one_window_rather_than_taking_one_each() {
     let dest_volume: Arc<dyn Volume> = Arc::clone(&dest) as Arc<dyn Volume>;
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     let result = copy_volumes_with_progress(
         events,
         "merge-window-n-squared",
@@ -303,6 +304,7 @@ async fn four_folder_sources_share_one_window_rather_than_taking_one_each() {
 /// against a live write.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_cap_of_one_keeps_a_subtree_strictly_one_operation_at_a_time() {
+    let engine = TestOperations::new();
     let (source, _) = make_volumes();
     source.create_directory(Path::new("/album")).await.unwrap();
     source.create_directory(Path::new("/album/sub")).await.unwrap();
@@ -320,7 +322,7 @@ async fn a_cap_of_one_keeps_a_subtree_strictly_one_operation_at_a_time() {
     let dest_volume: Arc<dyn Volume> = Arc::clone(&dest) as Arc<dyn Volume>;
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     let result = copy_volumes_with_progress(
         events,
         "merge-window-mtp-shape",
@@ -350,6 +352,7 @@ async fn a_cap_of_one_keeps_a_subtree_strictly_one_operation_at_a_time() {
 /// prompts in the order they'd expect however wide the byte copies run.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn deep_prompts_keep_listing_order_while_the_copies_overlap() {
+    let engine = TestOperations::new();
     let source = folder_of(8).await;
     let dest = WindowWatchingDest::new(8, 8);
     let dest_volume: Arc<dyn Volume> = Arc::clone(&dest) as Arc<dyn Volume>;
@@ -363,7 +366,7 @@ async fn deep_prompts_keep_listing_order_while_the_copies_overlap() {
             .unwrap();
     }
 
-    let guard = TestOperationGuard::register("merge-window-prompt-order");
+    let guard = engine.register("merge-window-prompt-order");
     let state = Arc::clone(guard.state());
     let events = Arc::new(ConflictResponderSink::new(&state, ConflictResolution::Overwrite, false));
     let config = VolumeCopyConfig {
@@ -407,11 +410,12 @@ async fn deep_prompts_keep_listing_order_while_the_copies_overlap() {
 /// never races a live write.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_cancel_mid_subtree_leaves_no_leaf_still_writing() {
+    let engine = TestOperations::new();
     let source = folder_of(40).await;
     let dest = WindowWatchingDest::new(8, 8);
     let dest_volume: Arc<dyn Volume> = Arc::clone(&dest) as Arc<dyn Volume>;
 
-    let guard = TestOperationGuard::register("merge-window-cancel");
+    let guard = engine.register("merge-window-cancel");
     let state = Arc::clone(guard.state());
     let events = Arc::new(CollectorEventSink::new());
     let operation_id = guard.id().to_owned();
@@ -439,7 +443,7 @@ async fn a_cancel_mid_subtree_leaves_no_leaf_still_writing() {
     // Let the window fill, then cancel through the real user-facing path.
     // allowed-test-sleep: the canceller's head start IS the subject — the cancel has to land while several leaves are mid-write.
     tokio::time::sleep(Duration::from_millis(60)).await;
-    installed().cancel_write_operation(&operation_id, false);
+    engine.cancel_write_operation(&operation_id, false);
 
     let result = tokio::time::timeout(Duration::from_secs(20), copy)
         .await
@@ -463,6 +467,7 @@ async fn a_cancel_mid_subtree_leaves_no_leaf_still_writing() {
 /// that refused to go.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_rolled_back_wide_window_copy_leaves_no_directory_it_created() {
+    let engine = TestOperations::new();
     struct RollbackOnceCopying {
         inner: CollectorEventSink,
         intent: crate::file_system::write_operations::state::IntentCell,
@@ -516,7 +521,7 @@ async fn a_rolled_back_wide_window_copy_leaves_no_directory_it_created() {
     let dest = WindowWatchingDest::new(6, 6);
     let dest_volume: Arc<dyn Volume> = Arc::clone(&dest) as Arc<dyn Volume>;
 
-    let state = make_state();
+    let state = make_state(&engine);
     let events = Arc::new(RollbackOnceCopying {
         inner: CollectorEventSink::new(),
         intent: state.intent().clone(),
@@ -563,6 +568,7 @@ async fn a_rolled_back_wide_window_copy_leaves_no_directory_it_created() {
 /// complete even though several leaves were producing into it at once.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_failing_leaf_names_itself_and_its_landed_siblings_stay_recorded() {
+    let engine = TestOperations::new();
     let inner_source = Arc::new(InMemoryVolume::new("Source").with_space_info(10_000_000, 10_000_000));
     inner_source.create_directory(Path::new("/album")).await.unwrap();
     for index in 0..8 {
@@ -579,7 +585,7 @@ async fn a_failing_leaf_names_itself_and_its_landed_siblings_stay_recorded() {
     let dest_volume: Arc<dyn Volume> = Arc::clone(&dest) as Arc<dyn Volume>;
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     let result = copy_volumes_with_progress(
         events,
         "merge-window-leaf-failure",

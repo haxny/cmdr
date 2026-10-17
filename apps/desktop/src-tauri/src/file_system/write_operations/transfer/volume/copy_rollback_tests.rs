@@ -11,6 +11,7 @@
 use super::tests::{make_state, make_volumes};
 use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::{
     ConflictResolution, WriteConflictResolvedEvent, WriteErrorEvent, WriteSourceItemDoneEvent,
 };
@@ -69,6 +70,7 @@ impl OperationEventSink for RollbackAfterFirstFileSink {
 /// merged directory — and Rollback (the advertised safe undo) was destroying them.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn rollback_of_merged_directory_preserves_preexisting_dest_files() {
+    let engine = TestOperations::new();
     let (source, dest) = make_volumes();
 
     // Source directory with two new files the op will write.
@@ -89,7 +91,7 @@ async fn rollback_of_merged_directory_preserves_preexisting_dest_files() {
         .await
         .unwrap();
 
-    let state = make_state();
+    let state = make_state(&engine);
     let events = Arc::new(RollbackAfterFirstFileSink {
         inner: CollectorEventSink::new(),
         intent: state.intent().clone(),
@@ -150,6 +152,7 @@ async fn rollback_of_merged_directory_preserves_preexisting_dest_files() {
 /// volume fills.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn same_volume_copy_into_own_descendant_is_rejected() {
+    let engine = TestOperations::new();
     // One volume used as BOTH source and dest (same Arc ⇒ Arc::ptr_eq is true,
     // matching how the command layer resolves a same-volume-id copy).
     let vol: Arc<dyn Volume> = Arc::new(InMemoryVolume::new("V").with_space_info(10_000_000, 10_000_000));
@@ -158,7 +161,7 @@ async fn same_volume_copy_into_own_descendant_is_rejected() {
     vol.create_file(Path::new("/A/file.txt"), b"payload").await.unwrap();
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     let config = VolumeCopyConfig::default();
 
     // Copy `/A` INTO `/A/sub` (its own descendant). Dest dir is `/A/sub`, so the
@@ -192,13 +195,14 @@ async fn same_volume_copy_into_own_descendant_is_rejected() {
 /// directory into a SIBLING (not a descendant) is legitimate and must proceed.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn same_volume_copy_into_sibling_dir_is_allowed() {
+    let engine = TestOperations::new();
     let vol: Arc<dyn Volume> = Arc::new(InMemoryVolume::new("V").with_space_info(10_000_000, 10_000_000));
     vol.create_directory(Path::new("/A")).await.unwrap();
     vol.create_file(Path::new("/A/file.txt"), b"payload").await.unwrap();
     vol.create_directory(Path::new("/dest")).await.unwrap();
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     let config = VolumeCopyConfig::default();
 
     // Copy `/A` into `/dest` (a sibling, not inside `/A`). Lands at `/dest/A`.
@@ -297,9 +301,10 @@ async fn make_merge_scenario(n: usize) -> (Arc<dyn Volume>, Arc<dyn Volume>) {
 /// sentinel. This is the sibling cell flagged during the round-4 fix.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn cancel_mid_merge_stream_preserves_preexisting_dest_file() {
+    let engine = TestOperations::new();
     let (source, dest) = make_merge_scenario(3).await;
 
-    let state = make_state();
+    let state = make_state(&engine);
     let events = Arc::new(TripIntentOnFirstByteSink {
         inner: CollectorEventSink::new(),
         intent: state.intent().clone(),
@@ -339,9 +344,10 @@ async fn cancel_mid_merge_stream_preserves_preexisting_dest_file() {
 /// `in_flight_partials` into `copied_paths` and deletes them recursively).
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn rollback_mid_merge_stream_preserves_preexisting_dest_file() {
+    let engine = TestOperations::new();
     let (source, dest) = make_merge_scenario(3).await;
 
-    let state = make_state();
+    let state = make_state(&engine);
     let events = Arc::new(TripIntentOnFirstByteSink {
         inner: CollectorEventSink::new(),
         intent: state.intent().clone(),
@@ -382,6 +388,7 @@ async fn rollback_mid_merge_stream_preserves_preexisting_dest_file() {
 /// ledger; the fix threads the ledger out so cleanup/rollback is per-file.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn cancel_mid_merge_stream_concurrent_preserves_preexisting_dest_file() {
+    let engine = TestOperations::new();
     let (source, dest) = make_volumes();
 
     // Directory source that merges into a pre-existing dest dir with a sentinel.
@@ -407,7 +414,7 @@ async fn cancel_mid_merge_stream_concurrent_preserves_preexisting_dest_file() {
         .await
         .unwrap();
 
-    let state = make_state();
+    let state = make_state(&engine);
     let events = Arc::new(TripIntentOnFirstByteSink {
         inner: CollectorEventSink::new(),
         intent: state.intent().clone(),
@@ -497,6 +504,7 @@ impl OperationEventSink for TripIntentAtFilesDoneSink {
 /// op created it") for the Rename resolution.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn rollback_after_rename_keeps_preexisting_dest_file() {
+    let engine = TestOperations::new();
     let (source, dest) = make_volumes();
 
     // A non-conflicting source so rollback has a clean first file to land,
@@ -509,7 +517,7 @@ async fn rollback_after_rename_keeps_preexisting_dest_file() {
     source.create_file(Path::new("/doc.txt"), b"incoming").await.unwrap();
     dest.create_file(Path::new("/doc.txt"), b"original dest").await.unwrap();
 
-    let state = make_state();
+    let state = make_state(&engine);
     // Trip Rollback after 2 files done (both sources landed), so the rollback
     // pass deletes what the op created in reverse.
     let events = Arc::new(TripIntentAtFilesDoneSink {
@@ -575,6 +583,7 @@ async fn rollback_after_rename_keeps_preexisting_dest_file() {
 /// through its own result arm.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn rollback_of_a_concurrently_merged_directory_preserves_preexisting_dest_files() {
+    let engine = TestOperations::new();
     let (source, dest) = make_volumes();
 
     source.create_directory(Path::new("/album")).await.unwrap();
@@ -599,7 +608,7 @@ async fn rollback_of_a_concurrently_merged_directory_preserves_preexisting_dest_
         .await
         .unwrap();
 
-    let state = make_state();
+    let state = make_state(&engine);
     // Five files in total; tripping at the last one means every source landed
     // before the user's Rollback, so the post-loop rolls back a COMPLETED merge.
     let events = Arc::new(TripIntentAtFilesDoneSink {

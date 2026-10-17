@@ -30,10 +30,10 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use super::super::event_sinks::CollectorEventSink;
-use super::super::state::WriteOperationState;
 use super::super::types::{ConflictResolution, WriteOperationConfig};
 use super::copy::copy_files_with_progress_inner;
 use super::move_op::move_files_with_progress_inner;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::test_support::TestDir;
 
 fn create_temp_dir(name: &str) -> TestDir {
@@ -82,6 +82,7 @@ fn assert_no_temp_artifacts(dir: &std::path::Path) {
 /// expected to keep.
 #[test]
 fn folder_over_file_rename_keeps_existing_file_lands_folder_renamed() {
+    let engine = TestOperations::new();
     let temp_dir = create_temp_dir("folder_over_file");
     let src_root = temp_dir.join("src");
     let dst_root = temp_dir.join("dst");
@@ -94,7 +95,7 @@ fn folder_over_file_rename_keeps_existing_file_lands_folder_renamed() {
     fs::write(dst_root.join("thing"), "dest-thing-bytes").unwrap();
 
     let events = CollectorEventSink::new();
-    let state = Arc::new(WriteOperationState::new(Duration::from_millis(50)));
+    let state = Arc::new(engine.new_operation_state(Duration::from_millis(50)));
     let sources = vec![src_root.join("thing")];
     let config = rename_config();
 
@@ -144,6 +145,7 @@ fn folder_over_file_rename_keeps_existing_file_lands_folder_renamed() {
 /// `find_unique_name` placeholder — the source bytes were lost.
 #[test]
 fn file_over_folder_rename_keeps_existing_folder_lands_file_with_bytes() {
+    let engine = TestOperations::new();
     let temp_dir = create_temp_dir("file_over_folder");
     let src_root = temp_dir.join("src");
     let dst_root = temp_dir.join("dst");
@@ -158,7 +160,7 @@ fn file_over_folder_rename_keeps_existing_folder_lands_file_with_bytes() {
     fs::write(dst_root.join("item/inside.txt"), "dest-inside").unwrap();
 
     let events = CollectorEventSink::new();
-    let state = Arc::new(WriteOperationState::new(Duration::from_millis(50)));
+    let state = Arc::new(engine.new_operation_state(Duration::from_millis(50)));
     let sources = vec![src_root.join("item")];
     let config = rename_config();
 
@@ -206,6 +208,7 @@ fn file_over_folder_rename_keeps_existing_folder_lands_file_with_bytes() {
 /// regressed by making the copy land on the reserved placeholder.
 #[test]
 fn file_over_folder_rename_escalates_past_existing_numbered_name() {
+    let engine = TestOperations::new();
     let temp_dir = create_temp_dir("file_over_folder_escalate");
     let src_root = temp_dir.join("src");
     let dst_root = temp_dir.join("dst");
@@ -220,7 +223,7 @@ fn file_over_folder_rename_escalates_past_existing_numbered_name() {
     fs::write(dst_root.join("item (1)"), "pre-existing-one").unwrap();
 
     let events = CollectorEventSink::new();
-    let state = Arc::new(WriteOperationState::new(Duration::from_millis(50)));
+    let state = Arc::new(engine.new_operation_state(Duration::from_millis(50)));
     let sources = vec![src_root.join("item")];
     let config = rename_config();
 
@@ -246,6 +249,7 @@ fn file_over_folder_rename_escalates_past_existing_numbered_name() {
 /// incoming folder's child still lands.
 #[test]
 fn folder_over_file_rename_escalates_past_existing_numbered_name() {
+    let engine = TestOperations::new();
     let temp_dir = create_temp_dir("folder_over_file_escalate");
     let src_root = temp_dir.join("src");
     let dst_root = temp_dir.join("dst");
@@ -257,7 +261,7 @@ fn folder_over_file_rename_escalates_past_existing_numbered_name() {
     fs::write(dst_root.join("thing (1)"), "pre-existing-one").unwrap();
 
     let events = CollectorEventSink::new();
-    let state = Arc::new(WriteOperationState::new(Duration::from_millis(50)));
+    let state = Arc::new(engine.new_operation_state(Duration::from_millis(50)));
     let sources = vec![src_root.join("thing")];
     let config = rename_config();
 
@@ -289,6 +293,7 @@ fn folder_over_file_rename_escalates_past_existing_numbered_name() {
 /// `needs_safe_overwrite`; this pins the corrected `move_resolved_into_place`.
 #[test]
 fn move_folder_over_file_rename_keeps_existing_file_lands_folder_renamed() {
+    let engine = TestOperations::new();
     let temp_dir = create_temp_dir("move_folder_over_file");
     let src_root = temp_dir.join("src");
     let dst_root = temp_dir.join("dst");
@@ -299,7 +304,7 @@ fn move_folder_over_file_rename_keeps_existing_file_lands_folder_renamed() {
     fs::write(dst_root.join("thing"), "dest-thing-bytes").unwrap();
 
     let events = CollectorEventSink::new();
-    let state = Arc::new(WriteOperationState::new(Duration::from_millis(50)));
+    let state = Arc::new(engine.new_operation_state(Duration::from_millis(50)));
     let sources = vec![src_root.join("thing")];
     let config = rename_config();
 
@@ -328,6 +333,7 @@ fn move_folder_over_file_rename_keeps_existing_file_lands_folder_renamed() {
 /// file lands at `name (1)` with its real bytes (placeholder consumed).
 #[test]
 fn move_file_over_folder_rename_keeps_existing_folder_lands_file() {
+    let engine = TestOperations::new();
     let temp_dir = create_temp_dir("move_file_over_folder");
     let src_root = temp_dir.join("src");
     let dst_root = temp_dir.join("dst");
@@ -340,7 +346,7 @@ fn move_file_over_folder_rename_keeps_existing_folder_lands_file() {
     fs::write(dst_root.join("item/inside.txt"), "dest-inside").unwrap();
 
     let events = CollectorEventSink::new();
-    let state = Arc::new(WriteOperationState::new(Duration::from_millis(50)));
+    let state = Arc::new(engine.new_operation_state(Duration::from_millis(50)));
     let sources = vec![src_root.join("item")];
     let config = rename_config();
 

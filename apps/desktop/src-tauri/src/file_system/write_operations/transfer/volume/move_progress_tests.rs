@@ -15,6 +15,7 @@ use super::super::move_same::move_within_same_volume_with_progress;
 use super::test_support::{make_state_with_interval_ms, make_volumes};
 use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::TransferWaitReason;
 use cmdr_fs::volume::InMemoryVolume;
 
@@ -25,13 +26,14 @@ use cmdr_fs::volume::InMemoryVolume;
 /// scan now feeds the real total into the driver and every per-source emit.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn cross_volume_move_emits_bytes_total_on_progress() {
+    let engine = TestOperations::new();
     let (source, dest) = make_volumes();
     source.create_file(Path::new("/a.txt"), b"alpha").await.unwrap();
     source.create_file(Path::new("/b.txt"), b"bravo-bravo").await.unwrap();
     let expected_total = (b"alpha".len() + b"bravo-bravo".len()) as u64;
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state_with_interval_ms(0);
+    let state = make_state_with_interval_ms(&engine, 0);
     let config = VolumeCopyConfig {
         progress_interval_ms: 0,
         ..VolumeCopyConfig::default()
@@ -75,13 +77,14 @@ async fn cross_volume_move_emits_bytes_total_on_progress() {
 /// items, not a recursive file count.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn same_volume_move_reports_zero_bytes_total() {
+    let engine = TestOperations::new();
     let volume: Arc<dyn Volume> = Arc::new(InMemoryVolume::new("V").with_space_info(10_000_000, 10_000_000));
     volume.create_file(Path::new("/a.txt"), b"alpha").await.unwrap();
     volume.create_file(Path::new("/b.txt"), b"bravo-bravo").await.unwrap();
     volume.create_directory(Path::new("/dst")).await.unwrap();
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state_with_interval_ms(0);
+    let state = make_state_with_interval_ms(&engine, 0);
     let config = VolumeCopyConfig {
         progress_interval_ms: 0,
         ..VolumeCopyConfig::default()
@@ -132,6 +135,7 @@ async fn same_volume_move_reports_zero_bytes_total() {
 /// tally before the scan finishes.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn cross_volume_move_emits_scan_phase_tallies_during_walk() {
+    let engine = TestOperations::new();
     let (source, dest) = make_volumes();
     let payload = vec![0u8; 4096];
     for i in 0..4 {
@@ -143,7 +147,7 @@ async fn cross_volume_move_emits_scan_phase_tallies_during_walk() {
     let total_bytes = (payload.len() * 4) as u64;
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state_with_interval_ms(0);
+    let state = make_state_with_interval_ms(&engine, 0);
     let config = VolumeCopyConfig {
         progress_interval_ms: 0,
         ..VolumeCopyConfig::default()
@@ -213,12 +217,13 @@ async fn cross_volume_move_emits_scan_phase_tallies_during_walk() {
 /// fix produces, so it's robust against scheduler jitter on busy CI.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn cross_volume_move_emits_intra_file_progress() {
+    let engine = TestOperations::new();
     let (source, dest) = make_volumes();
     let payload: Vec<u8> = vec![0u8; 1_048_576];
     source.create_file(Path::new("/big.bin"), &payload).await.unwrap();
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state_with_interval_ms(0);
+    let state = make_state_with_interval_ms(&engine, 0);
     let config = VolumeCopyConfig {
         progress_interval_ms: 0,
         ..VolumeCopyConfig::default()
@@ -280,6 +285,7 @@ async fn cross_volume_move_emits_intra_file_progress() {
 /// it separately and sets `emit_per_source_milestone: false`).
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn cross_volume_move_directory_source_progress_is_leaf_granular() {
+    let engine = TestOperations::new();
     let (source, dest) = make_volumes();
     source.create_directory(Path::new("/folder")).await.unwrap();
     let one_mb: Vec<u8> = vec![0u8; 1_048_576];
@@ -289,7 +295,7 @@ async fn cross_volume_move_directory_source_progress_is_leaf_granular() {
     let one_file = one_mb.len() as u64;
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state_with_interval_ms(0);
+    let state = make_state_with_interval_ms(&engine, 0);
     let config = VolumeCopyConfig {
         progress_interval_ms: 0,
         ..VolumeCopyConfig::default()
@@ -354,11 +360,12 @@ async fn cross_volume_move_directory_source_progress_is_leaf_granular() {
 /// user's only copy of their data mid-flight.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn cross_volume_move_tells_the_dialog_what_it_is_doing() {
+    let engine = TestOperations::new();
     let (source, dest) = make_volumes();
     source.create_file(Path::new("/a.txt"), b"alpha").await.unwrap();
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state_with_interval_ms(0);
+    let state = make_state_with_interval_ms(&engine, 0);
     let config = VolumeCopyConfig {
         progress_interval_ms: 0,
         ..VolumeCopyConfig::default()
@@ -415,14 +422,15 @@ async fn cross_volume_move_tells_the_dialog_what_it_is_doing() {
 /// failure than no probe at all, because it looks wired.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_cross_volume_move_in_flight_shows_its_source_and_phase() {
+    let engine = TestOperations::new();
     let (source, dest) = make_volumes();
     source
         .create_file(Path::new("/holiday.mov"), b"a-few-bytes")
         .await
         .unwrap();
 
-    let events = Arc::new(test_support::SampleInFlightTableSink::new("op-move-table"));
-    let state = make_state_with_interval_ms(0);
+    let events = Arc::new(test_support::SampleInFlightTableSink::new(&engine, "op-move-table"));
+    let state = make_state_with_interval_ms(&engine, 0);
     let config = VolumeCopyConfig {
         progress_interval_ms: 0,
         ..VolumeCopyConfig::default()

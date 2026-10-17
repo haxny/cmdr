@@ -9,7 +9,7 @@
 use super::super::liveness_test_support::ScriptedConnectionVolume;
 use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
-use crate::file_system::write_operations::test_support::TestOperationGuard;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::WriteOperationType;
 use cmdr_fs::volume::Volume;
 
@@ -61,7 +61,8 @@ fn last_heartbeat(sink: &CollectorEventSink) -> TransferActivity {
 /// this".
 #[test]
 fn an_opening_task_is_waiting_on_the_source() {
-    let guard = TestOperationGuard::register("opening-waits-on-source");
+    let engine = TestOperations::new();
+    let guard = engine.register("opening-waits-on-source");
     let probe = probe_over(guard.id(), guard.state(), TransferEnds::none());
     probe.still_for_seconds.store(12, Ordering::Relaxed);
 
@@ -81,7 +82,8 @@ fn an_opening_task_is_waiting_on_the_source() {
 /// notice's 10 s. The heartbeat carries it; nothing in the UI times anything.
 #[test]
 fn a_first_file_still_opening_says_so_from_the_first_still_second() {
-    let guard = TestOperationGuard::register("opening-says-so");
+    let engine = TestOperations::new();
+    let guard = engine.register("opening-says-so");
     let state = guard.state();
     let sink = Arc::new(CollectorEventSink::new());
     let probe = probe_over(guard.id(), state, TransferEnds::none());
@@ -107,7 +109,8 @@ fn a_first_file_still_opening_says_so_from_the_first_still_second() {
 /// file rows under it from saying they're opening.
 #[test]
 fn a_walker_does_not_hide_the_files_it_is_opening() {
-    let guard = TestOperationGuard::register("opening-with-walker");
+    let engine = TestOperations::new();
+    let guard = engine.register("opening-with-walker");
     let state = guard.state();
     let probe = probe_over(guard.id(), state, TransferEnds::none());
     publish(state, guard.id(), 0, 0);
@@ -132,7 +135,8 @@ fn a_walker_does_not_hide_the_files_it_is_opening() {
 /// sitting in its open is an ordinary stall, with an ETA worth protecting.
 #[test]
 fn opening_ends_once_anything_has_landed() {
-    let guard = TestOperationGuard::register("opening-ends");
+    let engine = TestOperations::new();
+    let guard = engine.register("opening-ends");
     let state = guard.state();
     let probe = probe_over(guard.id(), state, TransferEnds::none());
     publish(state, guard.id(), 1, 377_436);
@@ -147,7 +151,8 @@ fn opening_ends_once_anything_has_landed() {
 /// ~19 KB/s is what the ERR-CNK7M read averaged.
 #[test]
 fn the_source_s_receive_rate_rides_the_heartbeat_while_nothing_lands() {
-    let guard = TestOperationGuard::register("inbound-rate");
+    let engine = TestOperations::new();
+    let guard = engine.register("inbound-rate");
     let state = guard.state();
     let sink = Arc::new(CollectorEventSink::new());
     let source = ScriptedConnectionVolume::new();
@@ -183,7 +188,8 @@ fn the_source_s_receive_rate_rides_the_heartbeat_while_nothing_lands() {
 /// there's no receive rate to show.
 #[test]
 fn a_transfer_landing_bytes_reports_no_receive_rate() {
-    let guard = TestOperationGuard::register("inbound-rate-moving");
+    let engine = TestOperations::new();
+    let guard = engine.register("inbound-rate-moving");
     let state = guard.state();
     let source = ScriptedConnectionVolume::new();
     source.receive(0);
@@ -209,7 +215,8 @@ fn a_transfer_landing_bytes_reports_no_receive_rate() {
 /// already in flight isn't the transfer's news.
 #[test]
 fn a_paused_transfer_reports_no_receive_rate() {
-    let guard = TestOperationGuard::register("inbound-rate-paused");
+    let engine = TestOperations::new();
+    let guard = engine.register("inbound-rate-paused");
     let state = guard.state();
     let source = ScriptedConnectionVolume::new();
     source.receive(0);
@@ -238,7 +245,8 @@ fn a_paused_transfer_reports_no_receive_rate() {
 /// and holding that on screen until the next event.
 #[test]
 fn an_event_that_moved_the_counters_goes_out_as_moving() {
-    let guard = TestOperationGuard::register("event-moved");
+    let engine = TestOperations::new();
+    let guard = engine.register("event-moved");
     let state = guard.state();
     let probe = probe_over(guard.id(), state, TransferEnds::none());
     state.scope().stores().probes().insert(guard.id(), Arc::clone(&probe));

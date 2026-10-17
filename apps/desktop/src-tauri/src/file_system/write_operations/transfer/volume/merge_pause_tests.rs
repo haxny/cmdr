@@ -15,6 +15,7 @@ use super::super::super::conflict_responder_test_support::{ConflictResponderSink
 use super::tests::{make_state, make_volumes};
 use super::*;
 use crate::file_system::write_operations::event_sinks::OperationEventSink;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::{
     ConflictInfo, ConflictResolution, DryRunResult, ScanProgressEvent, WriteCancelledEvent, WriteCompleteEvent,
     WriteConflictResolvedEvent, WriteErrorEvent, WriteSettledEvent, WriteSourceItemDoneEvent,
@@ -70,6 +71,7 @@ impl OperationEventSink for PauseAfterTheFirstPrompt {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_paused_cross_volume_merge_stops_walking_until_it_resumes() {
+    let engine = TestOperations::new();
     let (source, dest) = make_volumes();
     source.create_directory(Path::new("/album")).await.unwrap();
     dest.create_directory(Path::new("/album")).await.unwrap();
@@ -79,7 +81,7 @@ async fn a_paused_cross_volume_merge_stops_walking_until_it_resumes() {
         dest.create_file(Path::new(&name), b"DEST").await.unwrap();
     }
 
-    let state = make_state();
+    let state = make_state(&engine);
     let events = Arc::new(PauseAfterTheFirstPrompt {
         responder: ConflictResponderSink::new(&state, ConflictResolution::Skip, false),
         state: Arc::clone(&state),

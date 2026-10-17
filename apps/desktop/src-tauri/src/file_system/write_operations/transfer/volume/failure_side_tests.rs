@@ -24,7 +24,7 @@ use std::time::Duration;
 use super::faulty_volume::{FaultyOp, FaultyVolume};
 use super::{copy_volumes_with_progress, move_volumes_with_progress};
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
-use crate::file_system::write_operations::state::WriteOperationState;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::{PermissionSide, VolumeCopyConfig, WriteOperationError};
 use cmdr_fs::volume::{InMemoryVolume, Volume, VolumeError};
 
@@ -78,12 +78,13 @@ async fn empty_dest() -> Arc<InMemoryVolume> {
 }
 
 async fn run(
+    engine: &TestOperations,
     driver: Driver,
     source: Arc<dyn Volume>,
     paths: &[PathBuf],
     dest: Arc<dyn Volume>,
 ) -> Result<(), WriteOperationError> {
-    let state = Arc::new(WriteOperationState::new(Duration::from_millis(50)));
+    let state = Arc::new(engine.new_operation_state(Duration::from_millis(50)));
     let events = Arc::new(CollectorEventSink::new());
     let config = VolumeCopyConfig::default();
     let result = match driver {
@@ -120,13 +121,26 @@ async fn run(
 /// Runs `driver` against a destination armed with `op` failing on its `nth`
 /// call, and checks the refusal comes back as the destination's, at a
 /// destination path ending in `ends_with`.
-async fn assert_destination_refusal(driver: Driver, op: FaultyOp, nth: usize, ends_with: &str) {
+async fn assert_destination_refusal(
+    engine: &TestOperations,
+    driver: Driver,
+    op: FaultyOp,
+    nth: usize,
+    ends_with: &str,
+) {
     let (source, paths) = seeded_source(driver.sources()).await;
     let dest = FaultyVolume::wrapping(empty_dest().await)
         .failing_call(op, nth, refused("/the share's own words"))
         .arc();
 
-    let result = run(driver, source.clone(), &paths, Arc::clone(&dest) as Arc<dyn Volume>).await;
+    let result = run(
+        engine,
+        driver,
+        source.clone(),
+        &paths,
+        Arc::clone(&dest) as Arc<dyn Volume>,
+    )
+    .await;
 
     assert!(
         dest.fault_fired(op),
@@ -153,13 +167,14 @@ async fn assert_destination_refusal(driver: Driver, op: FaultyOp, nth: usize, en
 
 /// Runs `driver` against a source armed with `op` failing on its first call,
 /// and checks the failure stays the source's, at the source file's path.
-async fn assert_source_refusal(driver: Driver, op: FaultyOp) {
+async fn assert_source_refusal(engine: &TestOperations, driver: Driver, op: FaultyOp) {
     let (source, paths) = seeded_source(driver.sources()).await;
     let source = FaultyVolume::wrapping(source)
         .failing_call(op, 1, refused("/the source's own words"))
         .arc();
 
     let result = run(
+        engine,
         driver,
         Arc::clone(&source) as Arc<dyn Volume>,
         &paths,
@@ -193,34 +208,62 @@ async fn assert_source_refusal(driver: Driver, op: FaultyOp) {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_serial_copy_reports_a_refused_nested_folder_as_the_destinations() {
-    assert_destination_refusal(Driver::SerialCopy, FaultyOp::CreateDirectory, 3, "/nested").await;
+    let engine = TestOperations::new();
+    assert_destination_refusal(&engine, Driver::SerialCopy, FaultyOp::CreateDirectory, 3, "/nested").await;
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_concurrent_copy_reports_a_refused_nested_folder_as_the_destinations() {
-    assert_destination_refusal(Driver::ConcurrentCopy, FaultyOp::CreateDirectory, 5, "").await;
+    let engine = TestOperations::new();
+    assert_destination_refusal(&engine, Driver::ConcurrentCopy, FaultyOp::CreateDirectory, 5, "").await;
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_cross_volume_move_reports_a_refused_nested_folder_as_the_destinations() {
-    assert_destination_refusal(Driver::CrossVolumeMove, FaultyOp::CreateDirectory, 3, "/nested").await;
+    let engine = TestOperations::new();
+    assert_destination_refusal(
+        &engine,
+        Driver::CrossVolumeMove,
+        FaultyOp::CreateDirectory,
+        3,
+        "/nested",
+    )
+    .await;
 }
 
 // A file write deep in the tree.
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_serial_copy_reports_a_refused_file_write_as_the_destinations() {
-    assert_destination_refusal(Driver::SerialCopy, FaultyOp::WriteFromStream, 1, "/nested/deep.txt").await;
+    let engine = TestOperations::new();
+    assert_destination_refusal(
+        &engine,
+        Driver::SerialCopy,
+        FaultyOp::WriteFromStream,
+        1,
+        "/nested/deep.txt",
+    )
+    .await;
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_concurrent_copy_reports_a_refused_file_write_as_the_destinations() {
-    assert_destination_refusal(Driver::ConcurrentCopy, FaultyOp::WriteFromStream, 1, "/nested/deep.txt").await;
+    let engine = TestOperations::new();
+    assert_destination_refusal(
+        &engine,
+        Driver::ConcurrentCopy,
+        FaultyOp::WriteFromStream,
+        1,
+        "/nested/deep.txt",
+    )
+    .await;
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_cross_volume_move_reports_a_refused_file_write_as_the_destinations() {
+    let engine = TestOperations::new();
     assert_destination_refusal(
+        &engine,
         Driver::CrossVolumeMove,
         FaultyOp::WriteFromStream,
         1,
@@ -233,17 +276,27 @@ async fn a_cross_volume_move_reports_a_refused_file_write_as_the_destinations() 
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_serial_copy_reports_a_refused_landing_as_the_destinations() {
-    assert_destination_refusal(Driver::SerialCopy, FaultyOp::Rename, 1, "/nested/deep.txt").await;
+    let engine = TestOperations::new();
+    assert_destination_refusal(&engine, Driver::SerialCopy, FaultyOp::Rename, 1, "/nested/deep.txt").await;
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_concurrent_copy_reports_a_refused_landing_as_the_destinations() {
-    assert_destination_refusal(Driver::ConcurrentCopy, FaultyOp::Rename, 1, "/nested/deep.txt").await;
+    let engine = TestOperations::new();
+    assert_destination_refusal(&engine, Driver::ConcurrentCopy, FaultyOp::Rename, 1, "/nested/deep.txt").await;
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_cross_volume_move_reports_a_refused_landing_as_the_destinations() {
-    assert_destination_refusal(Driver::CrossVolumeMove, FaultyOp::Rename, 1, "/nested/deep.txt").await;
+    let engine = TestOperations::new();
+    assert_destination_refusal(
+        &engine,
+        Driver::CrossVolumeMove,
+        FaultyOp::Rename,
+        1,
+        "/nested/deep.txt",
+    )
+    .await;
 }
 
 // The source side stays the source's: a file that won't open, and one that
@@ -252,25 +305,30 @@ async fn a_cross_volume_move_reports_a_refused_landing_as_the_destinations() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_serial_copy_reports_an_unopenable_source_file_as_the_sources() {
-    assert_source_refusal(Driver::SerialCopy, FaultyOp::OpenReadStream).await;
+    let engine = TestOperations::new();
+    assert_source_refusal(&engine, Driver::SerialCopy, FaultyOp::OpenReadStream).await;
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_serial_copy_reports_an_unreadable_source_file_as_the_sources() {
-    assert_source_refusal(Driver::SerialCopy, FaultyOp::ReadStream).await;
+    let engine = TestOperations::new();
+    assert_source_refusal(&engine, Driver::SerialCopy, FaultyOp::ReadStream).await;
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_concurrent_copy_reports_an_unreadable_source_file_as_the_sources() {
-    assert_source_refusal(Driver::ConcurrentCopy, FaultyOp::ReadStream).await;
+    let engine = TestOperations::new();
+    assert_source_refusal(&engine, Driver::ConcurrentCopy, FaultyOp::ReadStream).await;
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_cross_volume_move_reports_an_unopenable_source_file_as_the_sources() {
-    assert_source_refusal(Driver::CrossVolumeMove, FaultyOp::OpenReadStream).await;
+    let engine = TestOperations::new();
+    assert_source_refusal(&engine, Driver::CrossVolumeMove, FaultyOp::OpenReadStream).await;
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_cross_volume_move_reports_an_unreadable_source_file_as_the_sources() {
-    assert_source_refusal(Driver::CrossVolumeMove, FaultyOp::ReadStream).await;
+    let engine = TestOperations::new();
+    assert_source_refusal(&engine, Driver::CrossVolumeMove, FaultyOp::ReadStream).await;
 }

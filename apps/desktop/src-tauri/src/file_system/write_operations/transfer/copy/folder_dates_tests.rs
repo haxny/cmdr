@@ -4,6 +4,7 @@
 
 use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
+use crate::file_system::write_operations::testing::TestOperations;
 
 /// 2021-01-29 08:30:15 UTC.
 const FOLDER_DATE: i64 = 1_611_909_015;
@@ -34,9 +35,9 @@ fn seed(src_dir: &Path) -> PathBuf {
     album
 }
 
-fn copy(album: &Path, dst_dir: &Path) {
+fn copy(engine: &TestOperations, album: &Path, dst_dir: &Path) {
     let events = Arc::new(CollectorEventSink::new());
-    let state = Arc::new(WriteOperationState::new(Duration::from_millis(50)));
+    let state = Arc::new(engine.new_operation_state(Duration::from_millis(50)));
     let result = copy_files_with_progress_inner(
         &*events,
         "op-local-folder-dates",
@@ -50,12 +51,13 @@ fn copy(album: &Path, dst_dir: &Path) {
 
 #[test]
 fn a_copied_folder_keeps_its_date_and_so_do_the_folders_inside_it() {
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     let dst_dir = tmp.path().join("dst");
     fs::create_dir_all(&dst_dir).unwrap();
     let album = seed(&tmp.path().join("src"));
 
-    copy(&album, &dst_dir);
+    copy(&engine, &album, &dst_dir);
 
     assert_eq!(mtime(&dst_dir.join("album")), FOLDER_DATE);
     assert_eq!(mtime(&dst_dir.join("album/inner")), INNER_FOLDER_DATE);
@@ -66,12 +68,13 @@ fn a_copied_folder_keeps_its_date_and_so_do_the_folders_inside_it() {
 /// the filesystem: it's the user's folder, and the copy only added to it.
 #[test]
 fn a_merge_leaves_the_existing_folders_date_alone() {
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     let dst_dir = tmp.path().join("dst");
     fs::create_dir_all(dst_dir.join("album")).unwrap();
     let album = seed(&tmp.path().join("src"));
 
-    copy(&album, &dst_dir);
+    copy(&engine, &album, &dst_dir);
 
     assert_ne!(mtime(&dst_dir.join("album")), FOLDER_DATE);
     assert_eq!(mtime(&dst_dir.join("album/inner")), INNER_FOLDER_DATE);

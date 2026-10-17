@@ -29,6 +29,7 @@ use cmdr_fs::volume::{
 };
 
 use crate::file_system::write_operations::state::OperationIntent;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::test_support::TestDir;
 use cmdr_fs::volume::WriteMode;
 
@@ -156,6 +157,8 @@ async fn read_dest(dest: &Arc<dyn Volume>, path: &str) -> Result<Vec<u8>, Volume
 async fn a_sequential_extract_carries_the_executable_bit() {
     use std::os::unix::fs::PermissionsExt;
 
+    let engine = TestOperations::new();
+
     let fixture = TarGzFixture::from_items(&[
         Item::ExecFile("bin/run.sh", b"#!/bin/sh\n"),
         Item::File("bin/notes.txt", b"nnn"),
@@ -168,7 +171,7 @@ async fn a_sequential_extract_carries_the_executable_bit() {
         crate::volume_host::host(),
     ));
 
-    let state = make_state();
+    let state = make_state(&engine);
     copy_single_path(
         &source,
         &fixture.inner("bin"),
@@ -206,6 +209,7 @@ async fn a_sequential_extract_carries_the_executable_bit() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn sequential_extract_materializes_a_nested_subtree() {
+    let engine = TestOperations::new();
     // A later, chunk-spanning member proves the single decode reaches deep files.
     let big: Vec<u8> = (0..300_000u32).map(|i| (i % 251) as u8).collect();
     let fixture = TarGzFixture::new(&[
@@ -217,7 +221,7 @@ async fn sequential_extract_materializes_a_nested_subtree() {
     ]);
     let source = fixture.volume();
     let dest: Arc<dyn Volume> = Arc::new(InMemoryVolume::new("dest"));
-    let state = make_state();
+    let state = make_state(&engine);
 
     let bytes = copy_single_path(
         &source,
@@ -250,6 +254,7 @@ async fn sequential_extract_materializes_a_nested_subtree() {
 /// nothing, so dating them there would lose to the members landing after.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn sequential_extract_keeps_the_folders_dates() {
+    let engine = TestOperations::new();
     let fixture = TarGzFixture::from_items(&[
         Item::Dir("docs/"),
         Item::Dir("docs/sub/"),
@@ -258,7 +263,7 @@ async fn sequential_extract_keeps_the_folders_dates() {
     ]);
     let source = fixture.volume();
     let dest: Arc<dyn Volume> = Arc::new(InMemoryVolume::new("dest"));
-    let state = make_state();
+    let state = make_state(&engine);
     // The top-level folder's date arrives the way a copy's does: from the scan.
     let scan = source.scan_for_copy(&fixture.inner("docs")).await.expect("scan");
 
@@ -321,6 +326,7 @@ async fn compressed_tar_is_sequential_but_zip_is_random() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn sequential_extract_lands_empty_dirs_and_symlinks() {
+    let engine = TestOperations::new();
     // The directory structure (including an EMPTY explicit dir with no file
     // members, and a dir entry appearing AFTER a file already inside it) comes
     // from the parsed tree in the plan pass, not the byte stream. A symlink entry
@@ -336,7 +342,7 @@ async fn sequential_extract_lands_empty_dirs_and_symlinks() {
     ]);
     let source = fixture.volume();
     let dest: Arc<dyn Volume> = Arc::new(InMemoryVolume::new("dest"));
-    let state = make_state();
+    let state = make_state(&engine);
 
     copy_single_path(
         &source,
@@ -418,13 +424,14 @@ impl Volume for StopAfterFirstWrite {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn sequential_extract_cancels_between_members() {
+    let engine = TestOperations::new();
     let fixture = TarGzFixture::new(&[
         ("docs/a.txt", b"alpha"),
         ("docs/b.txt", b"bravo"),
         ("docs/c.txt", b"charlie"),
     ]);
     let source = fixture.volume();
-    let state = make_state();
+    let state = make_state(&engine);
 
     // Cancel right after the FIRST file lands: the data pass's between-member
     // `is_cancelled` check must then stop before writing the second file.
@@ -484,13 +491,14 @@ async fn sequential_extract_cancels_between_members() {
 /// the gate, "Paused" stood over an extract running to completion.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn sequential_extract_pauses_between_members_and_resumes() {
+    let engine = TestOperations::new();
     let fixture = TarGzFixture::new(&[
         ("docs/a.txt", b"alpha"),
         ("docs/b.txt", b"bravo"),
         ("docs/c.txt", b"charlie"),
     ]);
     let source = fixture.volume();
-    let state = make_state();
+    let state = make_state(&engine);
 
     // Pause right after the FIRST member lands, so the pause is tied to the
     // extract's own progress rather than a wall clock.
@@ -566,6 +574,8 @@ async fn a_failed_sequential_extract_takes_back_every_unfilled_reservation() {
     use crate::file_system::write_operations::types::{ConflictResolution, VolumeCopyConfig};
     use cmdr_local::LocalPosixVolume;
 
+    let engine = TestOperations::new();
+
     let fixture = TarGzFixture::new(&[("album/a.txt", b"incoming a"), ("album/b.txt", b"incoming b")]);
     let source = fixture.volume();
     let dest_dir = TestDir::new("seq-extract-reservations");
@@ -590,7 +600,7 @@ async fn a_failed_sequential_extract_takes_back_every_unfilled_reservation() {
     let result = super::super::copy::copy_volumes_with_progress(
         Arc::new(CollectorEventSink::new()),
         "op-seq-extract-reservations",
-        &make_state(),
+        &make_state(&engine),
         source,
         &[fixture.inner("album")],
         Arc::clone(&dest) as Arc<dyn Volume>,

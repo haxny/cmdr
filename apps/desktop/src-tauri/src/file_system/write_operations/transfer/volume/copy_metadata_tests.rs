@@ -16,13 +16,19 @@ use cmdr_fs::metadata::CarriedMetadata;
 
 use super::copy_volumes_with_progress;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
-use crate::file_system::write_operations::state::WriteOperationState;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::VolumeCopyConfig;
 use crate::test_support::TestDir;
 use cmdr_fs::volume::{InMemoryVolume, Volume};
 use cmdr_local::LocalPosixVolume;
 
-async fn copy_onto_local(op: &str, source: Arc<InMemoryVolume>, paths: &[PathBuf], dest_dir: &Path) {
+async fn copy_onto_local(
+    engine: &TestOperations,
+    op: &str,
+    source: Arc<InMemoryVolume>,
+    paths: &[PathBuf],
+    dest_dir: &Path,
+) {
     let dest: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "Local",
         dest_dir,
@@ -31,7 +37,7 @@ async fn copy_onto_local(op: &str, source: Arc<InMemoryVolume>, paths: &[PathBuf
     copy_volumes_with_progress(
         Arc::new(CollectorEventSink::new()),
         op,
-        &Arc::new(WriteOperationState::new(Duration::from_millis(50))),
+        &Arc::new(engine.new_operation_state(Duration::from_millis(50))),
         source as Arc<dyn Volume>,
         paths,
         dest,
@@ -57,6 +63,7 @@ fn mode_of(path: &Path) -> u32 {
 /// the umask's default.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_routed_mode_lands_folded_with_no_source_stat() {
+    let engine = TestOperations::new();
     let source = Arc::new(InMemoryVolume::new("Source").with_space_info(10_000_000, 10_000_000));
     for (name, mode) in [("run.sh", 0o755), ("private.txt", 0o600), ("modeless.txt", 0)] {
         let path = PathBuf::from("/").join(name);
@@ -71,6 +78,7 @@ async fn a_routed_mode_lands_folded_with_no_source_stat() {
     let default = cmdr_fs::metadata::default_file_mode();
 
     copy_onto_local(
+        &engine,
         "op-routed-mode",
         source,
         &[
@@ -165,11 +173,12 @@ mod birth {
     /// dates.
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn a_copy_onto_local_disk_keeps_the_creation_dates_of_files_and_folders() {
+        let engine = TestOperations::new();
         let source = Arc::new(InMemoryVolume::new("Source").with_space_info(10_000_000, 10_000_000));
         let album = seed_born_album(&source).await;
         let dest_dir = TestDir::new("copy_metadata_birth");
 
-        copy_onto_local("op-birth-onto-local", source, &[album], &dest_dir).await;
+        copy_onto_local(&engine, "op-birth-onto-local", source, &[album], &dest_dir).await;
 
         let landed = dest_dir.join("album");
         assert_eq!(
@@ -194,13 +203,21 @@ mod birth {
     /// no listing in hand: its birth still rides the stream.
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn a_file_selected_on_its_own_keeps_its_creation_date() {
+        let engine = TestOperations::new();
         let source = Arc::new(InMemoryVolume::new("Source").with_space_info(10_000_000, 10_000_000));
         source.create_file(Path::new("/old.txt"), b"old").await.unwrap();
         source.set_carried_metadata(Path::new("/old.txt"), born(PHOTO_BORN));
         source.set_modified_at(Path::new("/old.txt"), Some(MODIFIED));
         let dest_dir = TestDir::new("copy_metadata_birth_alone");
 
-        copy_onto_local("op-birth-alone", source, &[PathBuf::from("/old.txt")], &dest_dir).await;
+        copy_onto_local(
+            &engine,
+            "op-birth-alone",
+            source,
+            &[PathBuf::from("/old.txt")],
+            &dest_dir,
+        )
+        .await;
 
         assert_eq!(birth_of(&dest_dir.join("old.txt")), PHOTO_BORN);
     }

@@ -15,6 +15,7 @@ use super::super::strategy::test_support::{FlakyDest, UndeletableSource};
 use super::test_support::{MoveRenameFailsDestVolume, config_default, make_state};
 use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::{ConflictResolution, PermissionRefusal, PermissionSide};
 use cmdr_fs::volume::{InMemoryVolume, VolumeError};
 
@@ -26,6 +27,7 @@ use cmdr_fs::volume::{InMemoryVolume, VolumeError};
 /// refactor can't reintroduce the data-loss hole.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn cross_volume_move_preserves_new_data_on_finalize_failure() {
+    let engine = TestOperations::new();
     let source = Arc::new(InMemoryVolume::new("Source").with_space_info(10_000_000, 10_000_000));
     source.create_file(Path::new("/f.txt"), b"NEW").await.unwrap();
     let source: Arc<dyn Volume> = source;
@@ -37,7 +39,7 @@ async fn cross_volume_move_preserves_new_data_on_finalize_failure() {
     });
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Overwrite,
         ..VolumeCopyConfig::default()
@@ -94,6 +96,7 @@ async fn cross_volume_move_preserves_new_data_on_finalize_failure() {
 /// the leaf is the entire content of the report.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn cross_volume_move_error_names_the_child_that_failed_not_the_selected_folder() {
+    let engine = TestOperations::new();
     let src = Arc::new(InMemoryVolume::new("source").with_space_info(10_000_000, 10_000_000));
     src.create_directory(Path::new("/tree")).await.unwrap();
     src.create_directory(Path::new("/tree/nested")).await.unwrap();
@@ -118,7 +121,7 @@ async fn cross_volume_move_error_names_the_child_that_failed_not_the_selected_fo
     let result = move_volumes_with_progress(
         events.clone(),
         "op-move-deep-child-error",
-        &make_state(),
+        &make_state(&engine),
         Arc::clone(&source),
         &[PathBuf::from("/tree")],
         Arc::clone(&dest),
@@ -151,6 +154,7 @@ async fn cross_volume_move_error_names_the_child_that_failed_not_the_selected_fo
 /// only inside the walker.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn cross_volume_move_delete_error_names_the_child_that_failed_not_the_selected_folder() {
+    let engine = TestOperations::new();
     let src = UndeletableSource::new(
         "doomed.txt",
         VolumeError::IoError {
@@ -173,7 +177,7 @@ async fn cross_volume_move_delete_error_names_the_child_that_failed_not_the_sele
     let result = move_volumes_with_progress(
         events.clone(),
         "op-move-deep-child-delete-error",
-        &make_state(),
+        &make_state(&engine),
         Arc::clone(&source),
         &[PathBuf::from("/tree")],
         Arc::clone(&dest),
@@ -207,6 +211,7 @@ async fn cross_volume_move_delete_error_names_the_child_that_failed_not_the_sele
 /// failure says so.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_cross_type_move_that_fails_halfway_keeps_the_file_it_was_replacing() {
+    let engine = TestOperations::new();
     let src = Arc::new(InMemoryVolume::new("source").with_space_info(10_000_000, 10_000_000));
     src.create_directory(Path::new("/clash")).await.unwrap();
     src.create_file(Path::new("/clash/a.txt"), b"incoming").await.unwrap();
@@ -227,7 +232,7 @@ async fn a_cross_type_move_that_fails_halfway_keeps_the_file_it_was_replacing() 
         .unwrap();
     let dest: Arc<dyn Volume> = dest_inner.clone();
 
-    let state = make_state();
+    let state = make_state(&engine);
     let events = Arc::new(
         super::super::super::conflict_responder_test_support::ConflictResponderSink::new(
             &state,
@@ -276,6 +281,7 @@ async fn a_cross_type_move_that_fails_halfway_keeps_the_file_it_was_replacing() 
 #[cfg(unix)]
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn cross_volume_move_that_cannot_remove_the_original_says_the_copy_landed() {
+    let engine = TestOperations::new();
     let src = UndeletableSource::new(
         "locked.jpg",
         VolumeError::from_io_at(&std::io::Error::from_raw_os_error(libc::EPERM), "/locked.jpg"),
@@ -287,7 +293,7 @@ async fn cross_volume_move_that_cannot_remove_the_original_says_the_copy_landed(
     let result = move_volumes_with_progress(
         Arc::new(CollectorEventSink::new()),
         "op-move-source-not-removed",
-        &make_state(),
+        &make_state(&engine),
         Arc::clone(&source),
         &[PathBuf::from("/locked.jpg")],
         Arc::clone(&dest),

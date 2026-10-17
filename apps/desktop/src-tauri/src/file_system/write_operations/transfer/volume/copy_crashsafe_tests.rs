@@ -15,6 +15,7 @@
 use super::tests::{make_state, make_volumes};
 use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::ConflictResolution;
 use cmdr_fs::volume::InMemoryVolume;
 
@@ -147,6 +148,7 @@ impl Volume for FailingReadSourceVolume {
 /// a complete new file.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn cross_volume_overwrite_preserves_dest_on_midstream_failure() {
+    let engine = TestOperations::new();
     let source_inner = Arc::new(InMemoryVolume::new("Source").with_space_info(10_000_000, 10_000_000));
     // 100 bytes: bigger than the one 4-byte chunk the stream yields, so the
     // dest write loop pulls a second chunk and hits the failure.
@@ -167,7 +169,7 @@ async fn cross_volume_overwrite_preserves_dest_on_midstream_failure() {
     let dest: Arc<dyn Volume> = Arc::clone(&dest_inner) as Arc<dyn Volume>;
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     let config = VolumeCopyConfig {
         // < 3 sources → serial path.
         conflict_resolution: ConflictResolution::Overwrite,
@@ -209,6 +211,7 @@ async fn cross_volume_overwrite_preserves_dest_on_midstream_failure() {
 /// and leaves no temp sibling behind.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn cross_volume_overwrite_success_replaces_and_cleans_temp() {
+    let engine = TestOperations::new();
     let source = Arc::new(InMemoryVolume::new("Source").with_space_info(10_000_000, 10_000_000));
     source.create_file(Path::new("/file.txt"), b"NEW").await.unwrap();
     let source: Arc<dyn Volume> = source;
@@ -218,7 +221,7 @@ async fn cross_volume_overwrite_success_replaces_and_cleans_temp() {
     let dest: Arc<dyn Volume> = Arc::clone(&dest_inner) as Arc<dyn Volume>;
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Overwrite,
         ..VolumeCopyConfig::default()
@@ -257,6 +260,7 @@ async fn cross_volume_overwrite_success_replaces_and_cleans_temp() {
 /// the conflicting one ends up with the source content.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn cross_volume_overwrite_concurrent_replaces_and_cleans_temp() {
+    let engine = TestOperations::new();
     let (source, dest) = make_volumes();
     source.create_file(Path::new("/a.txt"), b"AAA").await.unwrap();
     source.create_file(Path::new("/b.txt"), b"BBB-new").await.unwrap();
@@ -265,7 +269,7 @@ async fn cross_volume_overwrite_concurrent_replaces_and_cleans_temp() {
     dest.create_file(Path::new("/b.txt"), b"BBB-old").await.unwrap();
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Overwrite,
         ..VolumeCopyConfig::default()
@@ -451,6 +455,7 @@ async fn assert_new_data_survives(dest_inner: &Arc<InMemoryVolume>, expected_new
 /// already deleted the original. Net: both gone.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn cross_volume_overwrite_serial_preserves_new_data_on_finalize_failure() {
+    let engine = TestOperations::new();
     let source = Arc::new(InMemoryVolume::new("Source").with_space_info(10_000_000, 10_000_000));
     source.create_file(Path::new("/notes.txt"), b"NEW").await.unwrap();
     let source: Arc<dyn Volume> = source;
@@ -463,7 +468,7 @@ async fn cross_volume_overwrite_serial_preserves_new_data_on_finalize_failure() 
     });
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     let config = VolumeCopyConfig {
         // 1 source → serial path.
         conflict_resolution: ConflictResolution::Overwrite,
@@ -492,6 +497,7 @@ async fn cross_volume_overwrite_serial_preserves_new_data_on_finalize_failure() 
 /// the post-loop deletes it — after finalize already deleted the original.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn cross_volume_overwrite_concurrent_preserves_new_data_on_finalize_failure() {
+    let engine = TestOperations::new();
     let source = Arc::new(InMemoryVolume::new("Source").with_space_info(10_000_000, 10_000_000));
     source.create_file(Path::new("/a.txt"), b"AAA").await.unwrap();
     source.create_file(Path::new("/b.txt"), b"BBB-new").await.unwrap();
@@ -507,7 +513,7 @@ async fn cross_volume_overwrite_concurrent_preserves_new_data_on_finalize_failur
     });
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Overwrite,
         ..VolumeCopyConfig::default()
@@ -554,6 +560,7 @@ mod local_staging {
     use crate::file_system::write_operations::host::Announced;
     use crate::file_system::write_operations::overwrite::PostLanding;
     use crate::file_system::write_operations::state::{OperationIntent, WriteOperationState};
+    use crate::file_system::write_operations::testing::TestOperations;
     use crate::file_system::write_operations::transfer::copy_strategy::{LocalCopyStrategy, copy_file_using};
     use crate::file_system::write_operations::types::WriteOperationError;
     use crate::test_support::TestDir;
@@ -569,8 +576,8 @@ mod local_staging {
     /// callback fires several times mid-write.
     const MULTI_CHUNK_BYTES: usize = 1024 * 1024 * 3 + 12_345;
 
-    fn running_state() -> Arc<WriteOperationState> {
-        Arc::new(WriteOperationState::new(Duration::from_millis(50)))
+    fn running_state(engine: &TestOperations) -> Arc<WriteOperationState> {
+        Arc::new(engine.new_operation_state(Duration::from_millis(50)))
     }
 
     /// The names in `dir` that carry Cmdr's incoming-scratch marker.
@@ -591,13 +598,14 @@ mod local_staging {
     /// in-process equivalent of pulling the plug.
     #[test]
     fn an_abandoned_local_copy_leaves_a_cmdr_temp_and_no_file_at_the_real_name() {
+        let engine = TestOperations::new();
         let dir = TestDir::new("local_staging_abandoned");
         let src = dir.join("holiday.raw");
         let dest = dir.join("dst").join("holiday.raw");
         fs::create_dir_all(dest.parent().expect("dest has a parent")).unwrap();
         fs::write(&src, vec![0x5A_u8; MULTI_CHUNK_BYTES]).unwrap();
 
-        let state = running_state();
+        let state = running_state(&engine);
         let dest_dir = dest.parent().expect("dest has a parent").to_path_buf();
         let saw_real_name = Cell::new(false);
         let saw_temp = Cell::new(false);
@@ -655,6 +663,7 @@ mod local_staging {
     /// observation is taken from inside the write rather than after it.
     #[test]
     fn a_cancelled_local_chunked_copy_leaves_no_file_at_the_destination_name() {
+        let engine = TestOperations::new();
         let dir = TestDir::new("local_staging_cancelled");
         let src = dir.join("holiday.raw");
         let dest = dir.join("dst").join("holiday.raw");
@@ -662,7 +671,7 @@ mod local_staging {
         fs::create_dir_all(&dest_dir).unwrap();
         fs::write(&src, vec![0x5A_u8; MULTI_CHUNK_BYTES]).unwrap();
 
-        let state = running_state();
+        let state = running_state(&engine);
         let saw_real_name = Cell::new(false);
         let cancel_after_first_chunk = |_done: u64, _total: u64| {
             if dest.exists() {
@@ -705,6 +714,7 @@ mod local_staging {
     /// `O_EXCL` create used to.
     #[test]
     fn a_non_overwrite_local_copy_refuses_to_clobber_a_destination_that_appeared() {
+        let engine = TestOperations::new();
         let dir = TestDir::new("local_staging_no_clobber");
         let src = dir.join("incoming.txt");
         let dest = dir.join("occupied.txt");
@@ -713,7 +723,7 @@ mod local_staging {
 
         let result = copy_file_using(
             LocalCopyStrategy::Chunked,
-            &running_state(),
+            &running_state(&engine),
             &src,
             Announced::assumed(&dest),
             // Not an overwrite: nobody resolved a conflict for this path.
@@ -741,6 +751,7 @@ mod local_staging {
     /// An overwrite still replaces, and still leaves no scratch behind.
     #[test]
     fn a_local_overwrite_replaces_the_destination_and_cleans_up_both_scratch_files() {
+        let engine = TestOperations::new();
         let dir = TestDir::new("local_staging_overwrite");
         let src = dir.join("incoming.txt");
         let dest = dir.join("target.txt");
@@ -749,7 +760,7 @@ mod local_staging {
 
         copy_file_using(
             LocalCopyStrategy::Chunked,
-            &running_state(),
+            &running_state(&engine),
             &src,
             Announced::assumed(&dest),
             true,

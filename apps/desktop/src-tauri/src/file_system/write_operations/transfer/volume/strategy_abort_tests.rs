@@ -28,8 +28,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
-use crate::file_system::write_operations::installed;
-use crate::file_system::write_operations::test_support::TestOperationGuard;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::transfer::transfer_driver::{
     LeafProgressLedger, ObservedProgress, SourceProgress,
 };
@@ -94,7 +93,8 @@ async fn copy_one(
 /// the per-file path can end that await.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_hard_abort_ends_a_wedged_write_instead_of_waiting_for_the_backend() {
-    let op = TestOperationGuard::register_state("abort-wedged-write", make_state());
+    let engine = TestOperations::new();
+    let op = engine.register_state("abort-wedged-write", make_state(&engine));
     let source = source_with_payload().await;
     let wedged = WedgedThenWorkingDest::new();
     let dest: Arc<dyn Volume> = Arc::clone(&wedged) as Arc<dyn Volume>;
@@ -112,7 +112,7 @@ async fn a_hard_abort_ends_a_wedged_write_instead_of_waiting_for_the_backend() {
     }
 
     let started = tokio::time::Instant::now();
-    installed().abort_write_operation(op.id());
+    engine.abort_write_operation(op.id());
     let err = tokio::time::timeout(ABORT_WITHIN, copy)
         .await
         .expect("tier 2 must end the wait; without it this write never returns")
@@ -139,7 +139,8 @@ async fn a_hard_abort_ends_a_wedged_write_instead_of_waiting_for_the_backend() {
 /// nothing above `stream_pipe_file` can end that wait either.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_hard_abort_ends_a_wedged_source_open() {
-    let op = TestOperationGuard::register_state("abort-wedged-open", make_state());
+    let engine = TestOperations::new();
+    let op = engine.register_state("abort-wedged-open", make_state(&engine));
     let opening = Arc::new(AtomicBool::new(false));
     let source: Arc<dyn Volume> = Arc::new(WedgedOpenSource {
         opening: Arc::clone(&opening),
@@ -155,7 +156,7 @@ async fn a_hard_abort_ends_a_wedged_source_open() {
         () = wait_until_async(WAIT, "the source open to wedge", || opening.load(Ordering::SeqCst)) => {}
     }
 
-    installed().abort_write_operation(op.id());
+    engine.abort_write_operation(op.id());
     let err = tokio::time::timeout(ABORT_WITHIN, copy)
         .await
         .expect("tier 2 must end the wait on a source open too")
@@ -170,7 +171,8 @@ async fn a_hard_abort_ends_a_wedged_source_open() {
 /// (`write_operations/in_flight_temps.rs`).
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_hard_abort_leaves_the_partial_for_the_sweep_rather_than_deleting_it_through_the_backend() {
-    let op = TestOperationGuard::register_state("abort-leaves-partial", make_state());
+    let engine = TestOperations::new();
+    let op = engine.register_state("abort-leaves-partial", make_state(&engine));
     let source = source_with_payload().await;
     let wedged = WedgedThenWorkingDest::new();
     let dest: Arc<dyn Volume> = Arc::clone(&wedged) as Arc<dyn Volume>;
@@ -184,7 +186,7 @@ async fn a_hard_abort_leaves_the_partial_for_the_sweep_rather_than_deleting_it_t
         () = wait_until_async(WAIT, "the destination write to wedge", || is_wedged.load(Ordering::SeqCst)) => {}
     }
 
-    installed().abort_write_operation(op.id());
+    engine.abort_write_operation(op.id());
     tokio::time::timeout(ABORT_WITHIN, copy)
         .await
         .expect("tier 2 must end the wait")
@@ -217,7 +219,8 @@ async fn a_hard_abort_leaves_the_partial_for_the_sweep_rather_than_deleting_it_t
 /// staged temp is left behind instead of removed.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn an_ordinary_cancel_still_routes_through_tier_one_and_the_backend_deletes_its_own_partial() {
-    let op = TestOperationGuard::register_state("cancel-stays-in-tier-one", make_state());
+    let engine = TestOperations::new();
+    let op = engine.register_state("cancel-stays-in-tier-one", make_state(&engine));
     let gate = Arc::new(tokio::sync::Semaphore::new(0));
     let source: Arc<dyn Volume> = Arc::new(SlowSource {
         gate: Arc::clone(&gate),
@@ -243,7 +246,7 @@ async fn an_ordinary_cancel_still_routes_through_tier_one_and_the_backend_delete
         () = wait_until_async(WAIT, "the first chunk to reach the destination", || written.load(Ordering::SeqCst) > 0) => {}
     }
 
-    installed().cancel_write_operation(op.id(), false);
+    engine.cancel_write_operation(op.id(), false);
     // Let the next chunk flow so the destination's loop reaches its `on_progress`
     // check — which is exactly the cooperative path under test.
     gate.add_permits(1);

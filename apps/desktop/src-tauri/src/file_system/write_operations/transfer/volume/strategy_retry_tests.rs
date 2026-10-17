@@ -22,13 +22,12 @@
 use super::super::super::transfer_probe::TaskRow;
 use super::test_support::{FlakyDest, make_state};
 use super::*;
-use crate::file_system::write_operations::installed;
 use crate::file_system::write_operations::transfer::transfer_driver::LeafProgressLedger;
 use std::path::Path;
 use std::sync::Arc;
 use std::time::Duration;
 
-use crate::file_system::write_operations::test_support::TestOperationGuard;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::transfer::{retry, transfer_probe};
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::volume::{InMemoryVolume, Volume, VolumeError};
@@ -74,7 +73,8 @@ async fn copy_one(
 /// failed write ended the whole operation.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_transport_blip_runs_the_file_again_and_it_lands_whole() {
-    let guard = TestOperationGuard::register_state("retry-blip", make_state());
+    let engine = TestOperations::new();
+    let guard = engine.register_state("retry-blip", make_state(&engine));
     let source = source_with_payload().await;
     let flaky = FlakyDest::new(1, VolumeError::ConnectionTimeout("send timed out".into()));
     let dest: Arc<dyn Volume> = Arc::clone(&flaky) as Arc<dyn Volume>;
@@ -96,7 +96,8 @@ async fn a_transport_blip_runs_the_file_again_and_it_lands_whole() {
 /// then the failure is reported — never a fourth, never a spin.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_destination_that_never_recovers_gives_up_at_the_attempt_cap() {
-    let guard = TestOperationGuard::register_state("retry-cap", make_state());
+    let engine = TestOperations::new();
+    let guard = engine.register_state("retry-cap", make_state(&engine));
     let source = source_with_payload().await;
     let flaky = FlakyDest::new(usize::MAX, VolumeError::ConnectionTimeout("send timed out".into()));
     let dest: Arc<dyn Volume> = Arc::clone(&flaky) as Arc<dyn Volume>;
@@ -117,7 +118,8 @@ async fn a_destination_that_never_recovers_gives_up_at_the_attempt_cap() {
 /// more and delay the report the user is waiting for.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_refusal_is_reported_at_once_and_never_retried() {
-    let guard = TestOperationGuard::register_state("retry-refusal", make_state());
+    let engine = TestOperations::new();
+    let guard = engine.register_state("retry-refusal", make_state(&engine));
     let source = source_with_payload().await;
     let flaky = FlakyDest::new(
         usize::MAX,
@@ -141,7 +143,8 @@ async fn a_refusal_is_reported_at_once_and_never_retried() {
 /// logging the user's own click as a transport failure.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_cancel_during_the_backoff_ends_the_retries() {
-    let guard = TestOperationGuard::register_state("retry-cancel", make_state());
+    let engine = TestOperations::new();
+    let guard = engine.register_state("retry-cancel", make_state(&engine));
     let source = source_with_payload().await;
     let flaky = FlakyDest::new(usize::MAX, VolumeError::ConnectionTimeout("send timed out".into()));
     let dest: Arc<dyn Volume> = Arc::clone(&flaky) as Arc<dyn Volume>;
@@ -154,7 +157,7 @@ async fn a_cancel_during_the_backoff_ends_the_retries() {
             flaky_for_watcher.write_calls() >= 1
         })
         .await;
-        installed().cancel_write_operation(&op_id, false);
+        engine.cancel_write_operation(&op_id, false);
     });
 
     let err = copy_one(&source, &dest, guard.state(), WriteStaging::Stage, "/a.txt")
@@ -179,7 +182,8 @@ async fn a_cancel_during_the_backoff_ends_the_retries() {
 ///   or to hide from the pane forever.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_retry_leaves_no_partial_behind_and_never_lands_one_at_the_final_name() {
-    let guard = TestOperationGuard::register_state("retry-no-litter", make_state());
+    let engine = TestOperations::new();
+    let guard = engine.register_state("retry-no-litter", make_state(&engine));
     let source = source_with_payload().await;
     let flaky = FlakyDest::new(1, VolumeError::ConnectionTimeout("send timed out".into()));
     let dest: Arc<dyn Volume> = Arc::clone(&flaky) as Arc<dyn Volume>;
@@ -204,7 +208,8 @@ async fn a_retry_leaves_no_partial_behind_and_never_lands_one_at_the_final_name(
 /// exhausts its attempts must leave the destination as it found it.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_file_that_exhausts_its_attempts_leaves_nothing_behind() {
-    let guard = TestOperationGuard::register_state("retry-exhausted-clean", make_state());
+    let engine = TestOperations::new();
+    let guard = engine.register_state("retry-exhausted-clean", make_state(&engine));
     let source = source_with_payload().await;
     let flaky = FlakyDest::new(usize::MAX, VolumeError::ConnectionTimeout("send timed out".into()));
     let dest: Arc<dyn Volume> = Arc::clone(&flaky) as Arc<dyn Volume>;
@@ -225,7 +230,8 @@ async fn a_file_that_exhausts_its_attempts_leaves_nothing_behind() {
 /// runs after this returns) ever touches the original.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_retried_safe_replace_keeps_the_original_intact_the_whole_way() {
-    let guard = TestOperationGuard::register_state("retry-safe-replace", make_state());
+    let engine = TestOperations::new();
+    let guard = engine.register_state("retry-safe-replace", make_state(&engine));
     let source = source_with_payload().await;
     let flaky = FlakyDest::new(1, VolumeError::ConnectionTimeout("send timed out".into()));
     let dest: Arc<dyn Volume> = Arc::clone(&flaky) as Arc<dyn Volume>;
@@ -255,7 +261,8 @@ async fn a_retried_safe_replace_keeps_the_original_intact_the_whole_way() {
 /// must leave the user's existing file exactly where it was.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_safe_replace_that_fails_every_attempt_still_leaves_the_original() {
-    let guard = TestOperationGuard::register_state("retry-safe-replace-fail", make_state());
+    let engine = TestOperations::new();
+    let guard = engine.register_state("retry-safe-replace-fail", make_state(&engine));
     let source = source_with_payload().await;
     let flaky = FlakyDest::new(usize::MAX, VolumeError::ConnectionTimeout("send timed out".into()));
     let dest: Arc<dyn Volume> = Arc::clone(&flaky) as Arc<dyn Volume>;
@@ -281,7 +288,8 @@ async fn a_safe_replace_that_fails_every_attempt_still_leaves_the_original() {
 /// gets the full budget rather than a single extra try.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_stale_destination_handle_still_retries() {
-    let guard = TestOperationGuard::register_state("retry-stale", make_state());
+    let engine = TestOperations::new();
+    let guard = engine.register_state("retry-stale", make_state(&engine));
     let source = source_with_payload().await;
     let flaky = FlakyDest::new(2, VolumeError::StaleDestinationHandle("/Documents".into()));
     let dest: Arc<dyn Volume> = Arc::clone(&flaky) as Arc<dyn Volume>;
@@ -298,7 +306,8 @@ async fn a_stale_destination_handle_still_retries() {
 /// rows disagree with what is on disk.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_retried_child_is_recorded_in_the_rollback_ledger_exactly_once() {
-    let guard = TestOperationGuard::register_state("retry-ledger", make_state());
+    let engine = TestOperations::new();
+    let guard = engine.register_state("retry-ledger", make_state(&engine));
     let src = Arc::new(InMemoryVolume::new("source").with_space_info(10_000_000, 10_000_000));
     src.create_directory(Path::new("/tree")).await.unwrap();
     src.create_file(Path::new("/tree/one.txt"), b"one").await.unwrap();
@@ -353,7 +362,8 @@ async fn a_retried_child_is_recorded_in_the_rollback_ledger_exactly_once() {
 /// file runs again.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn the_watchdog_ends_a_wedged_write_and_the_file_runs_again() {
-    let guard = TestOperationGuard::register_state("retry-wedge", make_state());
+    let engine = TestOperations::new();
+    let guard = engine.register_state("retry-wedge", make_state(&engine));
     let source = source_with_payload().await;
     let wedged = test_support::WedgedThenWorkingDest::new();
     let dest: Arc<dyn Volume> = Arc::clone(&wedged) as Arc<dyn Volume>;
@@ -401,7 +411,8 @@ async fn the_watchdog_ends_a_wedged_write_and_the_file_runs_again() {
 /// three tries" and "this file never happened" into the same log.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_retry_shows_up_in_the_in_flight_table() {
-    let guard = TestOperationGuard::register_state("retry-visible", make_state());
+    let engine = TestOperations::new();
+    let guard = engine.register_state("retry-visible", make_state(&engine));
     let source = source_with_payload().await;
     let flaky = FlakyDest::new(1, VolumeError::ConnectionTimeout("send timed out".into()));
     let dest: Arc<dyn Volume> = Arc::clone(&flaky) as Arc<dyn Volume>;

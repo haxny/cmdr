@@ -22,7 +22,7 @@
 
 use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
-use crate::file_system::write_operations::test_support::TestOperationGuard;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::ConflictResolution;
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::ignore_poison::IgnorePoison;
@@ -319,13 +319,14 @@ async fn sources_named(names: &[&str]) -> (Arc<InMemoryVolume>, Vec<PathBuf>) {
 }
 
 async fn run_copy(
+    engine: &TestOperations,
     source: &Arc<InMemoryVolume>,
     paths: &[PathBuf],
     dest: &Arc<RecordingDest>,
     dest_dir: &str,
     conflict_resolution: ConflictResolution,
 ) -> Result<(), WriteFailure> {
-    let guard = TestOperationGuard::register("listing-precheck");
+    let guard = engine.register("listing-precheck");
     let state = Arc::clone(guard.state());
     let events = Arc::new(CollectorEventSink::new());
     let config = VolumeCopyConfig {
@@ -350,6 +351,7 @@ async fn run_copy(
 /// of one round trip per source.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_merge_answers_every_conflict_from_one_listing() {
+    let engine = TestOperations::new();
     let (source, paths) = five_sources().await;
     let dest = RecordingDest::new();
     dest.inner
@@ -361,7 +363,7 @@ async fn a_merge_answers_every_conflict_from_one_listing() {
         .await
         .expect("seed the colliding file");
 
-    run_copy(&source, &paths, &dest, "/inbox", ConflictResolution::Skip)
+    run_copy(&engine, &source, &paths, &dest, "/inbox", ConflictResolution::Skip)
         .await
         .expect("a Skip-policy merge completes");
 
@@ -397,6 +399,7 @@ async fn a_merge_answers_every_conflict_from_one_listing() {
 /// prompted about gets overwritten.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_destination_name_differing_only_in_case_is_still_a_conflict() {
+    let engine = TestOperations::new();
     let (source, paths) = five_sources().await;
     let dest = RecordingDest::new();
     dest.inner
@@ -408,7 +411,7 @@ async fn a_destination_name_differing_only_in_case_is_still_a_conflict() {
         .await
         .expect("seed the colliding file, spelled differently");
 
-    run_copy(&source, &paths, &dest, "/inbox", ConflictResolution::Skip)
+    run_copy(&engine, &source, &paths, &dest, "/inbox", ConflictResolution::Skip)
         .await
         .expect("a Skip-policy merge completes");
 
@@ -441,6 +444,7 @@ async fn a_destination_name_differing_only_in_case_is_still_a_conflict() {
 /// misses an entry that differs only by normalization; the backend would not.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_destination_name_differing_only_in_unicode_normalization_is_still_a_conflict() {
+    let engine = TestOperations::new();
     // NFD: `e` + COMBINING ACUTE ACCENT. The destination stores NFC.
     let (source, paths) = sources_named(&["a.txt", "b.txt", "cafe\u{301}.txt"]).await;
     let dest = RecordingDest::new();
@@ -453,7 +457,7 @@ async fn a_destination_name_differing_only_in_unicode_normalization_is_still_a_c
         .await
         .expect("seed the colliding file, composed differently");
 
-    run_copy(&source, &paths, &dest, "/inbox", ConflictResolution::Skip)
+    run_copy(&engine, &source, &paths, &dest, "/inbox", ConflictResolution::Skip)
         .await
         .expect("a Skip-policy merge completes");
 
@@ -474,6 +478,7 @@ async fn a_destination_name_differing_only_in_unicode_normalization_is_still_a_c
 /// rather than be treated as conflict-free.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_failed_listing_falls_back_to_per_file_probes() {
+    let engine = TestOperations::new();
     let (source, paths) = five_sources().await;
     let dest = RecordingDest::with_failing_listing();
     dest.inner
@@ -485,7 +490,7 @@ async fn a_failed_listing_falls_back_to_per_file_probes() {
         .await
         .expect("seed the colliding file");
 
-    run_copy(&source, &paths, &dest, "/inbox", ConflictResolution::Skip)
+    run_copy(&engine, &source, &paths, &dest, "/inbox", ConflictResolution::Skip)
         .await
         .expect("a Skip-policy merge completes");
 
@@ -514,12 +519,20 @@ async fn a_failed_listing_falls_back_to_per_file_probes() {
 /// so there is nothing to index and nothing to probe.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_destination_directory_this_operation_created_needs_neither_probe_nor_index() {
+    let engine = TestOperations::new();
     let (source, paths) = five_sources().await;
     let dest = RecordingDest::new();
 
-    run_copy(&source, &paths, &dest, "/backup/2026-08-02", ConflictResolution::Stop)
-        .await
-        .expect("a copy into a fresh destination has nothing to conflict with");
+    run_copy(
+        &engine,
+        &source,
+        &paths,
+        &dest,
+        "/backup/2026-08-02",
+        ConflictResolution::Stop,
+    )
+    .await
+    .expect("a copy into a fresh destination has nothing to conflict with");
 
     assert_eq!(
         dest.probes_under("/backup/2026-08-02"),
@@ -545,6 +558,7 @@ async fn a_destination_directory_this_operation_created_needs_neither_probe_nor_
 /// "free" without a probe, which is why that isn't the test.)
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn an_empty_but_preexisting_destination_is_never_assumed_free() {
+    let engine = TestOperations::new();
     let (source, paths) = five_sources().await;
     let dest = RecordingDest::with_failing_listing();
     dest.inner
@@ -552,7 +566,7 @@ async fn an_empty_but_preexisting_destination_is_never_assumed_free() {
         .await
         .expect("seed an empty pre-existing destination");
 
-    run_copy(&source, &paths, &dest, "/empty", ConflictResolution::Stop)
+    run_copy(&engine, &source, &paths, &dest, "/empty", ConflictResolution::Stop)
         .await
         .expect("nothing is actually there, so the copy completes");
 
@@ -565,9 +579,16 @@ async fn an_empty_but_preexisting_destination_is_never_assumed_free() {
     // The same failing listing, into a directory this operation creates.
     let (source, paths) = five_sources().await;
     let fresh = RecordingDest::with_failing_listing();
-    run_copy(&source, &paths, &fresh, "/backup/2026-08-02", ConflictResolution::Stop)
-        .await
-        .expect("a copy into a fresh destination has nothing to conflict with");
+    run_copy(
+        &engine,
+        &source,
+        &paths,
+        &fresh,
+        "/backup/2026-08-02",
+        ConflictResolution::Stop,
+    )
+    .await
+    .expect("a copy into a fresh destination has nothing to conflict with");
     assert_eq!(
         fresh.probes_under("/backup/2026-08-02").len(),
         0,
@@ -580,6 +601,7 @@ async fn an_empty_but_preexisting_destination_is_never_assumed_free() {
 /// pane's current folder.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_copy_into_the_volume_root_is_a_merge() {
+    let engine = TestOperations::new();
     let (source, paths) = five_sources().await;
     let dest = RecordingDest::new();
     dest.inner
@@ -587,7 +609,7 @@ async fn a_copy_into_the_volume_root_is_a_merge() {
         .await
         .expect("seed the colliding file at the root");
 
-    run_copy(&source, &paths, &dest, "/", ConflictResolution::Skip)
+    run_copy(&engine, &source, &paths, &dest, "/", ConflictResolution::Skip)
         .await
         .expect("a Skip-policy merge completes");
 
@@ -608,6 +630,7 @@ async fn a_copy_into_the_volume_root_is_a_merge() {
 /// 200k entries to copy a handful of files into it is the worse trade.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_local_destination_keeps_its_per_file_probes() {
+    let engine = TestOperations::new();
     let (source, paths) = five_sources().await;
     let dest = RecordingDest::local();
     dest.inner
@@ -619,7 +642,7 @@ async fn a_local_destination_keeps_its_per_file_probes() {
         .await
         .expect("seed the colliding file");
 
-    run_copy(&source, &paths, &dest, "/inbox", ConflictResolution::Skip)
+    run_copy(&engine, &source, &paths, &dest, "/inbox", ConflictResolution::Skip)
         .await
         .expect("a Skip-policy merge completes");
 
@@ -641,6 +664,7 @@ async fn a_local_destination_keeps_its_per_file_probes() {
 /// top-level answer comes from a listing.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_directory_source_still_merges_and_keeps_destination_only_files() {
+    let engine = TestOperations::new();
     let source = Arc::new(InMemoryVolume::new("source").with_space_info(10_000_000, 10_000_000));
     for name in ["/loose-a.txt", "/loose-b.txt"] {
         source
@@ -676,7 +700,7 @@ async fn a_directory_source_still_merges_and_keeps_destination_only_files() {
         .await
         .expect("seed a destination-only file inside it");
 
-    run_copy(&source, &paths, &dest, "/inbox", ConflictResolution::Stop)
+    run_copy(&engine, &source, &paths, &dest, "/inbox", ConflictResolution::Stop)
         .await
         .expect("dir-vs-dir merges without prompting");
 

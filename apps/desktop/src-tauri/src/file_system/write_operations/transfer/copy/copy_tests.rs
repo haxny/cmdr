@@ -6,14 +6,14 @@
 //! `InMemoryVolume`.
 
 use super::*;
+use crate::file_system::write_operations::Operations;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
-use crate::file_system::write_operations::installed;
 use crate::file_system::write_operations::ledger::{WrittenFile, WrittenIdentity};
-use crate::file_system::write_operations::test_support::TestOperationGuard;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::transfer_tree::TreeLeaf;
 
-fn make_state(progress_interval_ms: u64) -> Arc<WriteOperationState> {
-    Arc::new(WriteOperationState::new(Duration::from_millis(progress_interval_ms)))
+fn make_state(engine: &TestOperations, progress_interval_ms: u64) -> Arc<WriteOperationState> {
+    Arc::new(engine.new_operation_state(Duration::from_millis(progress_interval_ms)))
 }
 
 /// Local-FS copy of a single file must emit at least one `Copying`-phase
@@ -30,6 +30,7 @@ fn make_state(progress_interval_ms: u64) -> Arc<WriteOperationState> {
 /// unconditionally so the assertion holds regardless of throttle timing.
 #[test]
 fn local_copy_single_file_reaches_files_done_n() {
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     let src_dir = tmp.path().join("src");
     let dst_dir = tmp.path().join("dst");
@@ -44,7 +45,7 @@ fn local_copy_single_file_reaches_files_done_n() {
     fs::write(&src_file, vec![0u8; 1_048_576]).unwrap();
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state(200);
+    let state = make_state(&engine, 200);
     let config = WriteOperationConfig::default();
 
     let result = copy_files_with_progress_inner(
@@ -84,6 +85,7 @@ fn local_copy_single_file_reaches_files_done_n() {
 /// unit test).
 #[test]
 fn local_copy_emits_flushing_phase_before_complete() {
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     let src_dir = tmp.path().join("src");
     let dst_dir = tmp.path().join("dst");
@@ -94,7 +96,7 @@ fn local_copy_emits_flushing_phase_before_complete() {
     fs::write(&src_file, vec![0u8; 4096]).unwrap();
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state(200);
+    let state = make_state(&engine, 200);
     let config = WriteOperationConfig::default();
 
     let result = copy_files_with_progress_inner(
@@ -130,6 +132,8 @@ fn local_copy_emits_flushing_phase_before_complete() {
 fn local_copy_fsyncs_its_created_directories_and_completes_unconfirmed_on_a_flush_failure() {
     use crate::file_system::write_operations::durability::test_hook;
 
+    let engine = TestOperations::new();
+
     let dir = crate::test_support::TestDir::new("copy-durability");
     let src = dir.join("src");
     let dst = dir.join("dst");
@@ -142,7 +146,7 @@ fn local_copy_fsyncs_its_created_directories_and_completes_unconfirmed_on_a_flus
     let result = copy_files_with_progress_inner(
         &*events,
         "op-local-copy-durability",
-        &make_state(200),
+        &make_state(&engine, 200),
         &[src.join("tree")],
         &dst,
         &WriteOperationConfig::default(),
@@ -169,6 +173,8 @@ fn local_copy_fsyncs_its_created_directories_and_completes_unconfirmed_on_a_flus
 fn a_local_copy_whose_flush_holds_completes_with_nothing_unconfirmed() {
     use crate::file_system::write_operations::durability::test_hook;
 
+    let engine = TestOperations::new();
+
     let dir = crate::test_support::TestDir::new("copy-durability-ok");
     let src = dir.join("src");
     let dst = dir.join("dst");
@@ -181,7 +187,7 @@ fn a_local_copy_whose_flush_holds_completes_with_nothing_unconfirmed() {
     let result = copy_files_with_progress_inner(
         &*events,
         "op-local-copy-durability-ok",
-        &make_state(200),
+        &make_state(&engine, 200),
         &[src.join("a.txt")],
         &dst,
         &WriteOperationConfig::default(),
@@ -199,6 +205,7 @@ fn a_local_copy_whose_flush_holds_completes_with_nothing_unconfirmed() {
 /// while creating nothing — the empty dir silently never arrived.
 #[test]
 fn copy_creates_empty_directory_at_destination() {
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     let src_dir = tmp.path().join("src");
     let dst_dir = tmp.path().join("dst");
@@ -206,7 +213,7 @@ fn copy_creates_empty_directory_at_destination() {
     fs::create_dir_all(&dst_dir).unwrap();
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state(200);
+    let state = make_state(&engine, 200);
     let config = WriteOperationConfig::default();
 
     let source = src_dir.join("empty-dir");
@@ -230,6 +237,7 @@ fn copy_creates_empty_directory_at_destination() {
 /// anywhere under it) needs the explicit scanned-dirs pass.
 #[test]
 fn copy_creates_nested_empty_directories() {
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     let src_dir = tmp.path().join("src");
     let dst_dir = tmp.path().join("dst");
@@ -239,7 +247,7 @@ fn copy_creates_nested_empty_directories() {
     fs::create_dir_all(&dst_dir).unwrap();
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state(200);
+    let state = make_state(&engine, 200);
     let config = WriteOperationConfig::default();
 
     let source = src_dir.join("tree");
@@ -267,6 +275,7 @@ fn copy_creates_nested_empty_directories() {
 /// alone rather than silently replacing user data).
 #[test]
 fn copy_empty_directory_does_not_clobber_same_named_dest_file() {
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     let src_dir = tmp.path().join("src");
     let dst_dir = tmp.path().join("dst");
@@ -275,7 +284,7 @@ fn copy_empty_directory_does_not_clobber_same_named_dest_file() {
     fs::write(dst_dir.join("clash"), b"existing user data").unwrap();
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state(200);
+    let state = make_state(&engine, 200);
     let config = WriteOperationConfig::default();
 
     let source = src_dir.join("clash");
@@ -307,8 +316,10 @@ fn copy_empty_directory_does_not_clobber_same_named_dest_file() {
 /// asked for and not the ones they did.
 #[test]
 fn a_local_copy_never_acts_on_a_preview_of_a_different_selection() {
-    use crate::file_system::write_operations::state::{CachedScanResult, FileInfo, insert_scan_result};
+    use crate::file_system::write_operations::state::{CachedScanResult, FileInfo};
     use cmdr_fs::volume::CopyScanResult;
+
+    let engine = TestOperations::new();
 
     let tmp = tempfile::tempdir().expect("tempdir");
     let src_dir = tmp.path().join("src");
@@ -324,7 +335,7 @@ fn a_local_copy_never_acts_on_a_preview_of_a_different_selection() {
     // A completed local preview of the OTHER file.
     let preview_id = "copy-binding-foreign-preview".to_string();
     let other_metadata = fs::symlink_metadata(&other).expect("other exists");
-    insert_scan_result(
+    engine.stores().previews().insert_scan_result(
         preview_id.clone(),
         CachedScanResult::from_local_walk(
             vec![other.clone()],
@@ -349,7 +360,7 @@ fn a_local_copy_never_acts_on_a_preview_of_a_different_selection() {
     );
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state(0);
+    let state = make_state(&engine, 0);
     let config = WriteOperationConfig {
         preview_id: Some(preview_id),
         ..WriteOperationConfig::default()
@@ -396,6 +407,7 @@ fn a_local_copy_never_acts_on_a_preview_of_a_different_selection() {
     reason = "Bench prints its timing report by design (run with --nocapture)."
 )]
 fn local_copy_bench_many_small_files() {
+    let engine = TestOperations::new();
     const FILE_COUNT: usize = 2_000;
     const FILE_BYTES: usize = 4 * 1024;
     const ROUNDS: usize = 5;
@@ -422,8 +434,11 @@ fn local_copy_bench_many_small_files() {
 
         let events = Arc::new(CollectorEventSink::new());
         // Effectively no progress emits.
-        let state =
-            Arc::new(WriteOperationState::new(Duration::from_millis(1_000_000)).with_in_flight_ledger(ledger.clone()));
+        let state = Arc::new(
+            engine
+                .new_operation_state(Duration::from_millis(1_000_000))
+                .with_in_flight_ledger(ledger.clone()),
+        );
         let config = WriteOperationConfig::default();
 
         let started = std::time::Instant::now();
@@ -458,6 +473,8 @@ fn local_copy_bench_many_small_files() {
 fn a_bulk_skipped_source_reports_itself_as_skipped() {
     use crate::file_system::write_operations::types::{ConflictResolution, SourceItemOutcome};
 
+    let engine = TestOperations::new();
+
     let tmp = tempfile::tempdir().expect("tempdir");
     let src_dir = tmp.path().join("src");
     let dst_dir = tmp.path().join("dst");
@@ -473,7 +490,7 @@ fn a_bulk_skipped_source_reports_itself_as_skipped() {
     fs::write(dst_dir.join("collide.bin"), b"dest").unwrap();
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state(0);
+    let state = make_state(&engine, 0);
     let config = WriteOperationConfig {
         conflict_resolution: ConflictResolution::Skip,
         pre_known_conflicts: vec!["collide.bin".to_string()],
@@ -510,15 +527,20 @@ fn a_bulk_skipped_source_reports_itself_as_skipped() {
 
 /// Copies one file through `copy_single_item` and hands back the ledger it
 /// recorded into, so a test can ask what the copy claims to have written.
-fn copy_one_file(source: &Path, dest_dir: &Path) -> CopyTransaction {
-    copy_one_file_knowing(source, dest_dir, &mut HashSet::new())
+fn copy_one_file(engine: &TestOperations, source: &Path, dest_dir: &Path) -> CopyTransaction {
+    copy_one_file_knowing(engine, source, dest_dir, &mut HashSet::new())
 }
 
 /// [`copy_one_file`] over a caller-held `created_dirs`, the operation's set of
 /// directories it has already proven or made.
-fn copy_one_file_knowing(source: &Path, dest_dir: &Path, created_dirs: &mut HashSet<PathBuf>) -> CopyTransaction {
+fn copy_one_file_knowing(
+    engine: &TestOperations,
+    source: &Path,
+    dest_dir: &Path,
+    created_dirs: &mut HashSet<PathBuf>,
+) -> CopyTransaction {
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state(200);
+    let state = make_state(engine, 200);
     let config = WriteOperationConfig::default();
     let mut transaction = CopyTransaction::new();
     let mut files_done = 0usize;
@@ -563,6 +585,7 @@ fn copy_one_file_knowing(source: &Path, dest_dir: &Path, created_dirs: &mut Hash
 /// of many files paid a stat of the same folder per file.
 #[test]
 fn a_file_landing_in_the_destination_root_proves_the_root_once() {
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     let dest_dir = tmp.path().join("dst");
     fs::create_dir_all(&dest_dir).unwrap();
@@ -570,7 +593,7 @@ fn a_file_landing_in_the_destination_root_proves_the_root_once() {
     fs::write(&source, "A").unwrap();
     let mut created_dirs = HashSet::new();
 
-    copy_one_file_knowing(&source, &dest_dir, &mut created_dirs);
+    copy_one_file_knowing(&engine, &source, &dest_dir, &mut created_dirs);
 
     assert!(
         created_dirs.contains(&dest_dir),
@@ -584,6 +607,7 @@ fn a_file_landing_in_the_destination_root_proves_the_root_once() {
 /// what deletes a file someone else replaced.
 #[test]
 fn a_copied_file_is_recorded_with_the_identity_it_landed_with() {
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().unwrap();
     let src_dir = tmp.path().join("src");
     let dst_dir = tmp.path().join("dst");
@@ -592,7 +616,7 @@ fn a_copied_file_is_recorded_with_the_identity_it_landed_with() {
     let source = src_dir.join("report.pdf");
     fs::write(&source, vec![7u8; 2048]).unwrap();
 
-    let transaction = copy_one_file(&source, &dst_dir);
+    let transaction = copy_one_file(&engine, &source, &dst_dir);
 
     let landed = dst_dir.join("report.pdf");
     let recorded = transaction.created_files();
@@ -615,6 +639,7 @@ fn a_copied_file_is_recorded_with_the_identity_it_landed_with() {
 /// one snapshot that survives a dangling target.
 #[test]
 fn a_copied_symlink_is_recorded_as_the_link() {
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().unwrap();
     let src_dir = tmp.path().join("src");
     let dst_dir = tmp.path().join("dst");
@@ -625,7 +650,7 @@ fn a_copied_symlink_is_recorded_as_the_link() {
     let link = src_dir.join("shortcut");
     std::os::unix::fs::symlink(&target, &link).unwrap();
 
-    let transaction = copy_one_file(&link, &dst_dir);
+    let transaction = copy_one_file(&engine, &link, &dst_dir);
 
     let landed = dst_dir.join("shortcut");
     let recorded = transaction.created_files();
@@ -648,9 +673,10 @@ fn a_copied_symlink_is_recorded_as_the_link() {
 /// honestly (and a second pass can't try to delete the same file twice).
 #[test]
 fn a_stopped_reversal_leaves_the_ledger_claiming_what_is_still_on_disk() {
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().unwrap();
-    let state = make_state(0);
-    let guard = TestOperationGuard::register_state("ledger-stop", Arc::clone(&state));
+    let state = make_state(&engine, 0);
+    let guard = engine.register_state("ledger-stop", Arc::clone(&state));
 
     let mut transaction = CopyTransaction::new();
     let files: Vec<PathBuf> = (0..4)
@@ -663,9 +689,10 @@ fn a_stopped_reversal_leaves_the_ledger_claiming_what_is_still_on_disk() {
         .collect();
 
     // Rolling back, and the user stops the reversal once it reports progress.
-    installed().cancel_write_operation(guard.id(), true);
+    engine.cancel_write_operation(guard.id(), true);
     let events = StopTheReversalSink {
         inner: CollectorEventSink::new(),
+        engine: Operations::clone(&engine),
         operation_id: guard.id().to_string(),
     };
     let completed = rollback_with_progress(
@@ -715,6 +742,7 @@ fn a_stopped_reversal_leaves_the_ledger_claiming_what_is_still_on_disk() {
 /// Cancel mid-rollback does.
 struct StopTheReversalSink {
     inner: CollectorEventSink,
+    engine: Operations,
     operation_id: String,
 }
 
@@ -724,7 +752,7 @@ impl OperationEventSink for StopTheReversalSink {
     }
     fn emit_progress(&self, event: WriteProgressEvent) {
         if event.phase == WriteOperationPhase::RollingBack && event.current_file.is_some() {
-            installed().cancel_write_operation(&self.operation_id, false);
+            self.engine.cancel_write_operation(&self.operation_id, false);
         }
         self.inner.emit_progress(event);
     }
@@ -765,6 +793,8 @@ fn a_paused_copy_stops_landing_scanned_dirs_until_it_resumes() {
     use crate::file_system::write_operations::ledger::CopyTransaction;
     use std::collections::{HashMap, HashSet};
 
+    let engine = TestOperations::new();
+
     let tmp = tempfile::tempdir().expect("tempdir");
     let source = tmp.path().join("src/album");
     let destination = tmp.path().join("dst");
@@ -779,7 +809,7 @@ fn a_paused_copy_stops_landing_scanned_dirs_until_it_resumes() {
     let mut scanned_dirs: Vec<PathBuf> = empties.iter().map(|n| source.join(n)).collect();
     scanned_dirs.push(source.clone());
 
-    let state = make_state(0);
+    let state = make_state(&engine, 0);
     state.pause_gate.pause();
 
     let sources = vec![source.clone()];
@@ -832,6 +862,8 @@ fn a_paused_copy_stops_landing_scanned_dirs_until_it_resumes() {
 fn a_local_copy_hands_its_operation_the_tree_of_its_selection() {
     use crate::file_system::write_operations::transfer_tree::test_support::outline;
 
+    let engine = TestOperations::new();
+
     let tmp = tempfile::tempdir().expect("tempdir");
     let src = tmp.path().join("src");
     let dst = tmp.path().join("dst");
@@ -840,7 +872,7 @@ fn a_local_copy_hands_its_operation_the_tree_of_its_selection() {
     fs::write(src.join("photos/a.jpg"), b"aaa").unwrap();
     fs::write(src.join("photos/2024/b.jpg"), b"bbbbb").unwrap();
     fs::write(src.join("notes.txt"), b"nn").unwrap();
-    let state = make_state(0);
+    let state = make_state(&engine, 0);
 
     copy_files_with_progress_inner(
         &CollectorEventSink::new(),
@@ -873,6 +905,8 @@ fn a_local_copy_settles_every_row_the_way_its_file_ended() {
     use crate::file_system::write_operations::transfer_tree::test_support::row_states;
     use crate::file_system::write_operations::types::ConflictResolution;
 
+    let engine = TestOperations::new();
+
     let tmp = tempfile::tempdir().expect("tempdir");
     let src = tmp.path().join("src");
     let dst = tmp.path().join("dst");
@@ -881,7 +915,7 @@ fn a_local_copy_settles_every_row_the_way_its_file_ended() {
     fs::write(src.join("photos/a.jpg"), b"aaa").unwrap();
     fs::write(src.join("photos/b.jpg"), b"bbbbb").unwrap();
     fs::write(dst.join("photos/a.jpg"), b"theirs").unwrap();
-    let state = make_state(0);
+    let state = make_state(&engine, 0);
 
     copy_files_with_progress_inner(
         &CollectorEventSink::new(),
@@ -910,6 +944,7 @@ fn a_local_copy_settles_every_row_the_way_its_file_ended() {
 /// the folders would interleave.
 #[test]
 fn a_local_copy_starts_its_files_in_tree_order() {
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     let src = tmp.path().join("src");
     let dst = tmp.path().join("dst");
@@ -922,7 +957,7 @@ fn a_local_copy_starts_its_files_in_tree_order() {
     fs::write(src.join("Y.txt"), b"4").unwrap();
     fs::write(src.join("z.txt"), b"5").unwrap();
     let events = CollectorEventSink::new();
-    let state = make_state(0);
+    let state = make_state(&engine, 0);
 
     copy_files_with_progress_inner(
         &events,
@@ -954,6 +989,8 @@ fn a_local_copy_starts_its_files_in_tree_order() {
 fn a_tree_that_fails_to_build_leaves_the_local_copy_as_it_would_run_without_one() {
     use crate::file_system::write_operations::transfer_tree::test_support::TREE_BUG_NAME;
 
+    let engine = TestOperations::new();
+
     let tmp = tempfile::tempdir().expect("tempdir");
     let src = tmp.path().join("src");
     let dst = tmp.path().join("dst");
@@ -963,7 +1000,7 @@ fn a_tree_that_fails_to_build_leaves_the_local_copy_as_it_would_run_without_one(
     fs::write(src.join("b").join(TREE_BUG_NAME), b"2").unwrap();
     fs::write(src.join("Y.txt"), b"3").unwrap();
     let events = CollectorEventSink::new();
-    let state = make_state(0);
+    let state = make_state(&engine, 0);
 
     copy_files_with_progress_inner(
         &events,
@@ -1002,6 +1039,8 @@ fn a_write_the_destination_refuses_marks_the_row_it_was_writing() {
     use crate::file_system::write_operations::transfer_tree::test_support::row_states;
     use std::os::unix::fs::PermissionsExt;
 
+    let engine = TestOperations::new();
+
     // Root writes through a read-only folder, so the refusal never happens. The CI
     // Linux suite runs as root in Docker, like the other permission tests skip for.
     // SAFETY: (test) `geteuid` takes no arguments, shares no memory, and can't fail — it just
@@ -1017,7 +1056,7 @@ fn a_write_the_destination_refuses_marks_the_row_it_was_writing() {
     fs::create_dir_all(dst.join("photos")).unwrap();
     fs::write(src.join("photos/a.jpg"), b"aaa").unwrap();
     fs::set_permissions(dst.join("photos"), fs::Permissions::from_mode(0o555)).unwrap();
-    let state = make_state(0);
+    let state = make_state(&engine, 0);
 
     let result = copy_files_with_progress_inner(
         &CollectorEventSink::new(),

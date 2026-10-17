@@ -17,6 +17,7 @@ use super::super::move_same::move_within_same_volume_with_progress;
 use super::test_support::make_state;
 use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::ConflictResolution;
 use cmdr_fs::volume::{InMemoryVolume, VolumeError};
 
@@ -50,6 +51,7 @@ fn overwrite_config() -> VolumeCopyConfig {
 /// never moved.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_refused_rename_leaves_the_destination_the_overwrite_was_replacing() {
+    let engine = TestOperations::new();
     let inner = Arc::new(InMemoryVolume::new("V").with_space_info(10_000_000, 10_000_000));
     inner.create_directory(Path::new("/inbox")).await.unwrap();
     inner
@@ -67,7 +69,7 @@ async fn a_refused_rename_leaves_the_destination_the_overwrite_was_replacing() {
     let result = move_within_same_volume_with_progress(
         Arc::new(CollectorEventSink::new()),
         "op-same-move-overwrite-rename-refused",
-        &make_state(),
+        &make_state(&engine),
         Arc::clone(&volume) as Arc<dyn Volume>,
         &[PathBuf::from("/doc.txt")],
         Path::new("/inbox"),
@@ -96,6 +98,7 @@ async fn a_refused_rename_leaves_the_destination_the_overwrite_was_replacing() {
 /// clashing child is an Overwrite, and whose rename is refused.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_refused_child_rename_leaves_the_merged_destination_child() {
+    let engine = TestOperations::new();
     let inner = Arc::new(InMemoryVolume::new("V").with_space_info(10_000_000, 10_000_000));
     inner.create_directory(Path::new("/album")).await.unwrap();
     inner
@@ -115,7 +118,7 @@ async fn a_refused_child_rename_leaves_the_merged_destination_child() {
     let result = move_within_same_volume_with_progress(
         Arc::new(CollectorEventSink::new()),
         "op-same-merge-child-rename-refused",
-        &make_state(),
+        &make_state(&engine),
         Arc::clone(&volume) as Arc<dyn Volume>,
         &[PathBuf::from("/album")],
         Path::new("/inbox"),
@@ -147,6 +150,7 @@ async fn a_refused_child_rename_leaves_the_merged_destination_child() {
 /// Rename #1 is that aside; #2 is the one that would have replaced it.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_refused_rename_puts_back_the_folder_a_file_was_replacing() {
+    let engine = TestOperations::new();
     let inner = Arc::new(InMemoryVolume::new("V").with_space_info(10_000_000, 10_000_000));
     inner.create_directory(Path::new("/inbox")).await.unwrap();
     inner
@@ -161,7 +165,7 @@ async fn a_refused_rename_puts_back_the_folder_a_file_was_replacing() {
     let volume = FaultyVolume::wrapping(Arc::clone(&inner))
         .failing_call(FaultyOp::Rename, 2, refused())
         .arc();
-    let state = make_state();
+    let state = make_state(&engine);
     let events = Arc::new(
         super::super::super::conflict_responder_test_support::ConflictResponderSink::new(
             &state,

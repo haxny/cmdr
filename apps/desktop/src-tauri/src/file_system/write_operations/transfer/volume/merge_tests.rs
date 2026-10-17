@@ -17,10 +17,10 @@ use super::super::super::conflict_responder_test_support::{
 use super::super::safety_oracle::{SafetySpec, assert_operation_was_safe};
 use super::tests::{make_state, make_volumes};
 use super::*;
+use crate::file_system::write_operations::Operations;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
-use crate::file_system::write_operations::installed;
+use crate::file_system::write_operations::testing::TestOperations;
 
-use crate::file_system::write_operations::test_support::TestOperationGuard;
 use crate::file_system::write_operations::types::{
     ConflictResolution, WriteCancelledEvent, WriteCompleteEvent, WriteConflictResolvedEvent, WriteErrorEvent,
     WriteSourceItemDoneEvent,
@@ -151,6 +151,7 @@ fn rich_merge_spec(label: &str) -> SafetySpec<'_> {
 /// `volume/copy_rollback_tests.rs`.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn merge_never_deletes_unshadowed_dest_files_under_every_policy() {
+    let engine = TestOperations::new();
     // (policy, scripted Stop answer or None, apply_to_all)
     let cases: &[(ConflictResolution, Option<ConflictResolution>)] = &[
         (ConflictResolution::Skip, None),
@@ -165,7 +166,7 @@ async fn merge_never_deletes_unshadowed_dest_files_under_every_policy() {
 
     for (policy, scripted) in cases {
         let (source, dest) = make_rich_merge().await;
-        let state = make_state();
+        let state = make_state(&engine);
 
         // The responder sink IS the events sink: it forwards every event to its
         // inner collector and auto-answers any Stop-mode prompt. For non-Stop
@@ -219,18 +220,20 @@ async fn merge_never_deletes_unshadowed_dest_files_under_every_policy() {
 /// dest-only sentinel must still survive.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn merge_cancel_mid_stream_preserves_unshadowed_dest_files() {
+    let engine = TestOperations::new();
     let (source, dest) = make_rich_merge().await;
-    let state = make_state();
+    let state = make_state(&engine);
 
-    // Register the op in the global cache so `cancel_write_operation` (the
+    // Register the op in the engine so `cancel_write_operation` (the
     // public path) can find and transition it — exercising the real cancel
     // machinery, not a direct intent store.
-    let op = TestOperationGuard::register_state("merge-cancel-public", Arc::clone(&state));
+    let op = engine.register_state("merge-cancel-public", Arc::clone(&state));
     let op_id = op.id();
 
     // A sink that cancels (public path) once any byte has been copied.
     struct CancelOnByteSink {
         inner: CollectorEventSink,
+        engine: Operations,
         op_id: String,
         fired: AtomicU8,
     }
@@ -244,7 +247,7 @@ async fn merge_cancel_mid_stream_preserves_unshadowed_dest_files() {
                 && self.fired.swap(1, Ordering::Relaxed) == 0
             {
                 // Public cancel path (Stopped, keep partials).
-                installed().cancel_write_operation(&self.op_id, false);
+                self.engine.cancel_write_operation(&self.op_id, false);
             }
             self.inner.emit_progress(event);
         }
@@ -271,6 +274,7 @@ async fn merge_cancel_mid_stream_preserves_unshadowed_dest_files() {
 
     let events = Arc::new(CancelOnByteSink {
         inner: CollectorEventSink::new(),
+        engine: Operations::clone(&engine),
         op_id: op_id.to_string(),
         fired: AtomicU8::new(0),
     });
@@ -311,8 +315,9 @@ async fn merge_cancel_mid_stream_preserves_unshadowed_dest_files() {
 /// source files still arrive.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn skip_all_merges_folder_and_skips_only_clashing_files() {
+    let engine = TestOperations::new();
     let (source, dest) = make_rich_merge().await;
-    let state = make_state();
+    let state = make_state(&engine);
     let events = Arc::new(CollectorEventSink::new());
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Skip,
@@ -361,8 +366,9 @@ async fn skip_all_merges_folder_and_skips_only_clashing_files() {
 /// on screen moved.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_deep_skip_credits_both_progress_bars() {
+    let engine = TestOperations::new();
     let (source, dest) = make_rich_merge().await;
-    let state = make_state();
+    let state = make_state(&engine);
     let events = Arc::new(CollectorEventSink::new());
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Skip,
@@ -417,8 +423,9 @@ async fn a_deep_skip_credits_both_progress_bars() {
 /// that is not a blip, it IS the reported speed.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_deep_skip_stays_out_of_the_rate() {
+    let engine = TestOperations::new();
     let (source, dest) = make_rich_merge().await;
-    let state = make_state();
+    let state = make_state(&engine);
     let events = Arc::new(CollectorEventSink::new());
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Skip,
@@ -459,6 +466,7 @@ async fn a_deep_skip_stays_out_of_the_rate() {
 /// changed.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn stop_mode_deep_file_clash_emits_conflict_and_resumes() {
+    let engine = TestOperations::new();
     let (source, dest) = make_volumes();
     // One deep clash, plus a dest-only sibling that must survive.
     source.create_directory(Path::new("/album")).await.unwrap();
@@ -476,7 +484,7 @@ async fn stop_mode_deep_file_clash_emits_conflict_and_resumes() {
         .await
         .unwrap();
 
-    let state = make_state();
+    let state = make_state(&engine);
     let events = Arc::new(ConflictResponderSink::new(&state, ConflictResolution::Overwrite, false));
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Stop,
@@ -541,6 +549,7 @@ async fn stop_mode_deep_file_clash_emits_conflict_and_resumes() {
 /// Overwrite so every clashing file is also written (counts toward the sum).
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn merge_reports_exact_byte_total_across_levels() {
+    let engine = TestOperations::new();
     let (source, dest) = make_volumes();
     // Source: top-level file (7), a deep file (11), and a deeper file (13).
     source.create_directory(Path::new("/album")).await.unwrap();
@@ -565,7 +574,7 @@ async fn merge_reports_exact_byte_total_across_levels() {
         .await
         .unwrap();
 
-    let state = make_state();
+    let state = make_state(&engine);
     let events = Arc::new(CollectorEventSink::new());
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Overwrite,
@@ -627,8 +636,9 @@ async fn make_deep_clash_with_bigger_dest() -> (Arc<dyn Volume>, Arc<dyn Volume>
 /// that `0` into the conditional reduction the sibling test pins.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn deep_merge_clash_reports_the_real_destination_size() {
+    let engine = TestOperations::new();
     let (source, dest) = make_deep_clash_with_bigger_dest().await;
-    let state = make_state();
+    let state = make_state(&engine);
     let events = Arc::new(ConflictResponderSink::new(&state, ConflictResolution::Skip, false));
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Stop,
@@ -673,8 +683,9 @@ async fn deep_merge_clash_reports_the_real_destination_size() {
 /// user was looking at when they clicked.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn overwrite_all_smaller_keeps_a_larger_destination_on_the_first_deep_clash() {
+    let engine = TestOperations::new();
     let (source, dest) = make_deep_clash_with_bigger_dest().await;
-    let state = make_state();
+    let state = make_state(&engine);
     let events = Arc::new(ConflictResponderSink::new(
         &state,
         ConflictResolution::OverwriteSmaller,

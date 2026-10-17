@@ -5,9 +5,7 @@
 
 use super::test_support::{SLOW_CHUNK_COUNT, SlowSource, make_state};
 use super::*;
-use crate::file_system::write_operations::installed;
 use crate::file_system::write_operations::state::OperationIntent;
-use crate::file_system::write_operations::test_support::TestOperationGuard;
 use crate::file_system::write_operations::transfer::transfer_driver::{LeafProgressLedger, ObservedProgress};
 use crate::test_support::wait_until_async;
 use std::path::Path;
@@ -15,6 +13,7 @@ use std::sync::Arc;
 use std::sync::atomic::Ordering;
 use std::time::Duration;
 
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::test_support::TestDir;
 use cmdr_fs::volume::{InMemoryVolume, Volume, VolumeError};
 use cmdr_local::LocalPosixVolume;
@@ -22,6 +21,8 @@ use cmdr_local::LocalPosixVolume;
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_copy_single_path_local_to_local() {
     use std::fs;
+
+    let engine = TestOperations::new();
 
     let src_dir = TestDir::new("copy_single_src");
     let dst_dir = TestDir::new("copy_single_dst");
@@ -39,7 +40,7 @@ async fn test_copy_single_path_local_to_local() {
         crate::volume_host::host(),
     ));
 
-    let state = Arc::new(WriteOperationState::new(Duration::from_millis(200)));
+    let state = Arc::new(engine.new_operation_state(Duration::from_millis(200)));
 
     let bytes = copy_single_path(
         &source,
@@ -65,6 +66,8 @@ async fn test_copy_single_path_local_to_local() {
 async fn test_copy_single_path_cancelled() {
     use std::fs;
 
+    let engine = TestOperations::new();
+
     let src_dir = TestDir::new("copy_cancel_src");
     let dst_dir = TestDir::new("copy_cancel_dst");
 
@@ -81,7 +84,7 @@ async fn test_copy_single_path_cancelled() {
         crate::volume_host::host(),
     ));
 
-    let state = Arc::new(WriteOperationState::new(Duration::from_millis(200)));
+    let state = Arc::new(engine.new_operation_state(Duration::from_millis(200)));
     state.intent().set_for_test(OperationIntent::Stopped);
 
     let result = copy_single_path(
@@ -109,6 +112,7 @@ async fn test_copy_single_path_cancelled() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_streaming_copy_single_file() {
+    let engine = TestOperations::new();
     let source: Arc<dyn Volume> = Arc::new(InMemoryVolume::new("Source"));
     let dest: Arc<dyn Volume> = Arc::new(InMemoryVolume::new("Dest"));
     source
@@ -116,7 +120,7 @@ async fn test_streaming_copy_single_file() {
         .await
         .unwrap();
 
-    let state = make_state();
+    let state = make_state(&engine);
     let bytes = copy_single_path(
         &source,
         Path::new("/photo.jpg"),
@@ -142,12 +146,13 @@ async fn test_streaming_copy_single_file() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_streaming_copy_large_file_with_progress() {
+    let engine = TestOperations::new();
     let source: Arc<dyn Volume> = Arc::new(InMemoryVolume::new("Source"));
     let dest: Arc<dyn Volume> = Arc::new(InMemoryVolume::new("Dest"));
     let data: Vec<u8> = (0..=255).cycle().take(200_000).collect();
     source.create_file(Path::new("/big.bin"), &data).await.unwrap();
 
-    let state = make_state();
+    let state = make_state(&engine);
     // What the copy REPORTS, read off the progress events the dialog reads.
     let progress = ObservedProgress::new(&state, "large-file-progress");
 
@@ -194,6 +199,7 @@ async fn test_streaming_copy_large_file_with_progress() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_streaming_copy_cancel_mid_file() {
+    let engine = TestOperations::new();
     // A GATED source, so the copy is provably mid-file when the cancel lands.
     // Racing a cancel against an in-memory copy loses: the file is over before
     // the canceller wakes, and the test then asserts nothing.
@@ -205,7 +211,7 @@ async fn test_streaming_copy_cancel_mid_file() {
 
     // Tier 1 travels through the engine's own per-chunk progress callback, which
     // is what carries the stop down to the backend so it drops its own partial.
-    let op = TestOperationGuard::register_state("copy-cancel-mid-file", make_state());
+    let op = engine.register_state("copy-cancel-mid-file", make_state(&engine));
     let state = Arc::clone(op.state());
     let progress = ObservedProgress::new(&state, op.id());
 
@@ -234,7 +240,7 @@ async fn test_streaming_copy_cancel_mid_file() {
         }) => {}
     }
 
-    installed().cancel_write_operation(op.id(), false);
+    engine.cancel_write_operation(op.id(), false);
     gate.add_permits(SLOW_CHUNK_COUNT);
     let result = copy.await;
 
@@ -246,11 +252,12 @@ async fn test_streaming_copy_cancel_mid_file() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_streaming_copy_empty_file() {
+    let engine = TestOperations::new();
     let source: Arc<dyn Volume> = Arc::new(InMemoryVolume::new("Source"));
     let dest: Arc<dyn Volume> = Arc::new(InMemoryVolume::new("Dest"));
     source.create_file(Path::new("/empty.txt"), b"").await.unwrap();
 
-    let state = make_state();
+    let state = make_state(&engine);
     let bytes = copy_single_path(
         &source,
         Path::new("/empty.txt"),
@@ -273,10 +280,11 @@ async fn test_streaming_copy_empty_file() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_streaming_copy_nonexistent_source_fails() {
+    let engine = TestOperations::new();
     let source: Arc<dyn Volume> = Arc::new(InMemoryVolume::new("Source"));
     let dest: Arc<dyn Volume> = Arc::new(InMemoryVolume::new("Dest"));
 
-    let state = make_state();
+    let state = make_state(&engine);
     let result = copy_single_path(
         &source,
         Path::new("/nope.txt"),
@@ -297,6 +305,7 @@ async fn test_streaming_copy_nonexistent_source_fails() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_streaming_copy_uses_streaming_for_non_local_volumes() {
+    let engine = TestOperations::new();
     // InMemoryVolume has local_path() = None and supports_streaming() = true.
     // Verify that copy_single_path routes through the streaming path.
     let source: Arc<dyn Volume> = Arc::new(InMemoryVolume::new("Source"));
@@ -312,7 +321,7 @@ async fn test_streaming_copy_uses_streaming_for_non_local_volumes() {
         .await
         .unwrap();
 
-    let state = make_state();
+    let state = make_state(&engine);
     let progress = ObservedProgress::new(&state, "routing-leaf-count");
     let bytes = copy_single_path(
         &source,
@@ -344,6 +353,7 @@ async fn test_streaming_copy_uses_streaming_for_non_local_volumes() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_streaming_copy_directory_recursive() {
+    let engine = TestOperations::new();
     let source: Arc<dyn Volume> = Arc::new(InMemoryVolume::new("Source"));
     let dest: Arc<dyn Volume> = Arc::new(InMemoryVolume::new("Dest"));
 
@@ -357,7 +367,7 @@ async fn test_streaming_copy_directory_recursive() {
         .await
         .unwrap();
 
-    let state = make_state();
+    let state = make_state(&engine);
     let progress = ObservedProgress::new(&state, "routing-leaf-count");
     let bytes = copy_single_path(
         &source,

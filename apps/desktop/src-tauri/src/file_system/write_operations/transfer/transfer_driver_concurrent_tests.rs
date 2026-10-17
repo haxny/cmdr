@@ -9,15 +9,15 @@
 //! path".
 
 use super::super::super::event_sinks::CollectorEventSink;
-use super::super::super::state::{register_operation_status, unregister_operation_status};
 use super::super::super::types::WriteOperationType;
-use super::test_support::{install_state, make_state, unique_op_id};
-use crate::file_system::write_operations::installed;
+use super::test_support::make_state;
+use crate::file_system::write_operations::testing::TestOperations;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn concurrent_per_file_callback_is_cancel_only_not_pause_aware() {
+    let engine = TestOperations::new();
     // The concurrent copy path (`copy_volumes_with_progress` FuturesUnordered)
     // has no between-files boundary, so v1 does NOT gate it for pause: its
     // per-file progress callback breaks on cancel but ignores pause. Pin that so
@@ -27,10 +27,10 @@ async fn concurrent_per_file_callback_is_cancel_only_not_pause_aware() {
     use super::LeafProgressLedger;
     use std::sync::atomic::AtomicUsize;
 
-    let op_id = unique_op_id("concurrent-pause-noop");
-    let state = make_state();
-    let _op_guard = install_state(&op_id, Arc::clone(&state));
-    register_operation_status(&op_id, WriteOperationType::Copy, vec![]);
+    let op_id = "concurrent-pause-noop".to_string();
+    let state = make_state(&engine);
+    engine.register_state(&op_id, Arc::clone(&state));
+    engine.status().register(&op_id, WriteOperationType::Copy, vec![]);
     let sink: Arc<dyn super::super::super::event_sinks::OperationEventSink> = Arc::new(CollectorEventSink::new());
 
     let ledger = LeafProgressLedger::new(
@@ -60,11 +60,10 @@ async fn concurrent_per_file_callback_is_cancel_only_not_pause_aware() {
     );
 
     // Cancelled: it must Break, exactly as before.
-    installed().cancel_write_operation(&op_id, false);
+    engine.cancel_write_operation(&op_id, false);
     assert_eq!(
         leaf.on_chunk(20),
         std::ops::ControlFlow::Break(()),
         "concurrent per-file callback must still break on cancel"
     );
-    unregister_operation_status(&op_id);
 }

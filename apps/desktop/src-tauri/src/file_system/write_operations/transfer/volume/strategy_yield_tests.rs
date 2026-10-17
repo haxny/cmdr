@@ -23,9 +23,7 @@ use super::test_support::{
     YieldingSource, make_state, park_holds_at, rel_expected_bytes,
 };
 use super::*;
-use crate::file_system::write_operations::installed;
 use crate::file_system::write_operations::state::OperationIntent;
-use crate::file_system::write_operations::test_support::TestOperationGuard;
 use crate::file_system::write_operations::transfer::transfer_driver::{LeafProgressLedger, ObservedProgress};
 use crate::test_support::wait_until_async;
 use std::path::Path;
@@ -33,6 +31,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex as StdMutex};
 use std::time::Duration;
 
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::test_support::TestDir;
 use cmdr_fs::volume::{Volume, VolumeError};
 use cmdr_local::LocalPosixVolume;
@@ -40,6 +39,8 @@ use cmdr_local::LocalPosixVolume;
 #[tokio::test(flavor = "current_thread")]
 async fn auto_yield_parks_before_next_window_then_resumes_byte_exact() {
     use std::fs;
+
+    let engine = TestOperations::new();
 
     // Near-zero debounce, tiny floor (one chunk) so the arm fires within the
     // small synthetic file.
@@ -59,7 +60,7 @@ async fn auto_yield_parks_before_next_window_then_resumes_byte_exact() {
         crate::volume_host::host(),
     ));
 
-    let state = make_state();
+    let state = make_state(&engine);
     // Watches the bytes the copy REPORTS, which is the number the transfer
     // dialog shows: the engine owns the per-chunk callback now.
     let progress = ObservedProgress::new(&state, "observed-copy");
@@ -156,6 +157,8 @@ async fn auto_yield_parks_before_next_window_then_resumes_byte_exact() {
 async fn auto_yield_debounces_a_burst_into_one_park() {
     use std::fs;
 
+    let engine = TestOperations::new();
+
     // A real (long) debounce window so a brief gap between two listings is
     // collapsed into ONE park, not two. Floor = one chunk so the arm fires early.
     // The debounce here (120 ms) is wide enough that the second listing lands
@@ -176,7 +179,7 @@ async fn auto_yield_debounces_a_burst_into_one_park() {
         crate::volume_host::host(),
     ));
 
-    let state = make_state();
+    let state = make_state(&engine);
     // Watches the bytes the copy REPORTS, which is the number the transfer
     // dialog shows: the engine owns the per-chunk callback now.
     let progress = ObservedProgress::new(&state, "observed-copy");
@@ -262,6 +265,8 @@ async fn auto_yield_debounces_a_burst_into_one_park() {
 async fn auto_yield_min_progress_floor_prevents_starvation() {
     use std::fs;
 
+    let engine = TestOperations::new();
+
     // Continuous foreground pressure (never drops) with a near-zero debounce.
     // The min-progress floor must still let the copy advance by >= floor between
     // yields, so it makes forward progress instead of starving to zero.
@@ -283,7 +288,7 @@ async fn auto_yield_min_progress_floor_prevents_starvation() {
         crate::volume_host::host(),
     ));
 
-    let state = make_state();
+    let state = make_state(&engine);
     // Watches the bytes the copy REPORTS, which is the number the transfer
     // dialog shows: the engine owns the per-chunk callback now.
     let progress = ObservedProgress::new(&state, "observed-copy");
@@ -358,6 +363,7 @@ async fn auto_yield_min_progress_floor_prevents_starvation() {
 
 #[tokio::test(flavor = "current_thread")]
 async fn auto_yield_cancel_while_yielding_keeps_no_partial() {
+    let engine = TestOperations::new();
     let _tuning = AutoYieldTuningGuard::new(Duration::from_millis(400), REL_CHUNK as u64);
 
     let log = Arc::new(StdMutex::new(RelLog::default()));
@@ -374,7 +380,7 @@ async fn auto_yield_cancel_while_yielding_keeps_no_partial() {
         crate::volume_host::host(),
     ));
 
-    let op = TestOperationGuard::register_state("test-autoyield-cancel", make_state());
+    let op = engine.register_state("test-autoyield-cancel", make_state(&engine));
     let op_id = op.id().to_string();
     let state = Arc::clone(op.state());
     // Watches the bytes the copy REPORTS, which is the number the transfer
@@ -429,7 +435,7 @@ async fn auto_yield_cancel_while_yielding_keeps_no_partial() {
             // promptly (the `select!` races the foreground-idle park against cancel);
             // the next chunk then flows to on_progress, which breaks on cancel and the
             // local sink removes its in-flight temp. The cancel must not hang.
-            installed().cancel_write_operation(&op_id, false);
+            engine.cancel_write_operation(&op_id, false);
 
             let result = tokio::time::timeout(Duration::from_secs(10), op)
                 .await
@@ -449,6 +455,7 @@ async fn auto_yield_cancel_while_yielding_keeps_no_partial() {
 
 #[tokio::test(flavor = "current_thread")]
 async fn non_mtp_source_never_auto_yields_for_foreground() {
+    let engine = TestOperations::new();
     // Regression guard: a source that does NOT support foreground yield
     // (`supports_foreground_yield() == false`, the trait default — local FS and
     // in-memory; MTP and SMB opt in) must never auto-yield, even with a tiny
@@ -476,7 +483,7 @@ async fn non_mtp_source_never_auto_yields_for_foreground() {
         crate::volume_host::host(),
     ));
 
-    let state = make_state();
+    let state = make_state(&engine);
     let bytes = copy_single_path(
         &source,
         Path::new("/movie.bin"),
@@ -502,6 +509,7 @@ async fn non_mtp_source_never_auto_yields_for_foreground() {
 
 #[tokio::test(flavor = "current_thread")]
 async fn yield_capable_source_with_no_foreground_pending_never_self_yields() {
+    let engine = TestOperations::new();
     // A copy from a yield-capable source with NOTHING pending in foreground must
     // run to completion at full speed and NEVER park itself. The tiny floor means
     // the floor gate is satisfied early, so the ONLY thing keeping the arm from
@@ -525,7 +533,7 @@ async fn yield_capable_source_with_no_foreground_pending_never_self_yields() {
         crate::volume_host::host(),
     ));
 
-    let state = make_state();
+    let state = make_state(&engine);
     let local = tokio::task::LocalSet::new();
     local
         .run_until(async {

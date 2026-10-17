@@ -12,6 +12,7 @@ use super::source_sweep::{LandedOriginal, SourceSweep, delete_sources_after_move
 use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::state::ScanResult;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::transfer_sides::{MoveSourceCounts, TransferSide, TransferSides, test_hook};
 use crate::file_system::write_operations::types::TransferRole;
 use crate::test_support::TestDir;
@@ -19,20 +20,22 @@ use cmdr_fs::ignore_poison::IgnorePoison;
 
 /// An operation that knows both its volumes, the way every transfer the dialog
 /// starts does.
-fn state_between(source_root: &Path, dest_root: &Path) -> Arc<WriteOperationState> {
+fn state_between(engine: &TestOperations, source_root: &Path, dest_root: &Path) -> Arc<WriteOperationState> {
     Arc::new(
-        WriteOperationState::new(std::time::Duration::from_millis(200)).with_sides(Some(TransferSides::new(
-            TransferSide::new(
-                "vol-mac".to_string(),
-                "Macintosh HD".to_string(),
-                source_root.to_path_buf(),
-            ),
-            TransferSide::new(
-                "vol-stick".to_string(),
-                "Fältkamera".to_string(),
-                dest_root.to_path_buf(),
-            ),
-        ))),
+        engine
+            .new_operation_state(std::time::Duration::from_millis(200))
+            .with_sides(Some(TransferSides::new(
+                TransferSide::new(
+                    "vol-mac".to_string(),
+                    "Macintosh HD".to_string(),
+                    source_root.to_path_buf(),
+                ),
+                TransferSide::new(
+                    "vol-stick".to_string(),
+                    "Fältkamera".to_string(),
+                    dest_root.to_path_buf(),
+                ),
+            ))),
     )
 }
 
@@ -67,9 +70,10 @@ fn two_file_move(name: &str) -> TwoFileMove {
 /// files that never reached a disk.
 #[test]
 fn a_destination_that_left_before_phase_4_keeps_every_source() {
+    let engine = TestOperations::new();
     let moving = two_file_move("move-vanished-destination");
     let events = Arc::new(CollectorEventSink::new());
-    let state = state_between(&moving.src, &moving.dst);
+    let state = state_between(&engine, &moving.src, &moving.dst);
     let _hook = test_hook::pull(&moving.dst);
 
     let result = move_with_staging(
@@ -107,9 +111,10 @@ fn a_destination_that_left_before_phase_4_keeps_every_source() {
 /// The same move with both drives mounted: the gate is a gate, not a wall.
 #[test]
 fn a_destination_that_stayed_lets_the_move_finish() {
+    let engine = TestOperations::new();
     let moving = two_file_move("move-mounted-destination");
     let events = Arc::new(CollectorEventSink::new());
-    let state = state_between(&moving.src, &moving.dst);
+    let state = state_between(&engine, &moving.src, &moving.dst);
     let _hook = test_hook::answer_each(vec![(moving.src.clone(), Some(true)), (moving.dst.clone(), Some(true))]);
 
     move_with_staging(
@@ -155,12 +160,13 @@ fn sweep_of_one_missing_source(src: &Path) -> (Vec<PathBuf>, SourceSweep) {
 /// they are in fact still on the drive in their hand.
 #[test]
 fn a_sweep_stops_when_the_source_drive_left_rather_than_reading_it_as_done() {
+    let engine = TestOperations::new();
     let dir = TestDir::new("sweep-vanished-source");
     let src = dir.join("src");
     fs::create_dir_all(&src).expect("create src");
     let (sources, sweep) = sweep_of_one_missing_source(&src);
     let events = Arc::new(CollectorEventSink::new());
-    let state = state_between(&src, &dir.join("dst"));
+    let state = state_between(&engine, &src, &dir.join("dst"));
     let _hook = test_hook::pull(&src);
 
     let stopped = delete_sources_after_move(&*events, "op-sweep-vanished", &state, &sources, 1, &sweep)
@@ -183,12 +189,13 @@ fn a_sweep_stops_when_the_source_drive_left_rather_than_reading_it_as_done() {
 /// it and the destination has it, which is the case the sweep was built for.
 #[test]
 fn a_missing_source_on_a_mounted_drive_is_still_counted_done() {
+    let engine = TestOperations::new();
     let dir = TestDir::new("sweep-mounted-source");
     let src = dir.join("src");
     fs::create_dir_all(&src).expect("create src");
     let (sources, sweep) = sweep_of_one_missing_source(&src);
     let events = Arc::new(CollectorEventSink::new());
-    let state = state_between(&src, &dir.join("dst"));
+    let state = state_between(&engine, &src, &dir.join("dst"));
     let _hook = test_hook::answer_each(vec![(src.clone(), Some(true))]);
 
     delete_sources_after_move(&*events, "op-sweep-mounted", &state, &sources, 1, &sweep).expect("the sweep finishes");

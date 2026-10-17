@@ -17,6 +17,7 @@ use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::state::{OperationIntent, WriteOperationState};
 use crate::file_system::write_operations::target_names::TargetNames;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::WriteOperationError;
 use cmdr_fs::volume::InMemoryVolume;
 
@@ -55,8 +56,8 @@ async fn seed_tree(volume: &Arc<InMemoryVolume>, root: &str) {
         .unwrap();
 }
 
-fn state_with(target_names: TargetNames) -> Arc<WriteOperationState> {
-    let state = make_state_with_interval_ms(0);
+fn state_with(engine: &TestOperations, target_names: TargetNames) -> Arc<WriteOperationState> {
+    let state = make_state_with_interval_ms(engine, 0);
     Arc::new(
         Arc::try_unwrap(state)
             .unwrap_or_else(|_| panic!("a fresh state has one owner"))
@@ -93,10 +94,11 @@ async fn run_move(
 /// file arrives, the source goes, and `rename` is never asked.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_folder_that_renames_by_copy_moves_by_copy_then_delete() {
+    let engine = TestOperations::new();
     let volume = store();
     seed_tree(&volume, "/src/tree").await;
     volume.create_directory(Path::new("/dst")).await.unwrap();
-    let state = state_with(TargetNames::default());
+    let state = state_with(&engine, TargetNames::default());
 
     let (result, events) = run_move(&volume, &state, &["/src/tree"], "/dst").await;
 
@@ -112,6 +114,7 @@ async fn a_folder_that_renames_by_copy_moves_by_copy_then_delete() {
 /// level it clears, never a request per file.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn the_source_sweep_deletes_files_in_batches() {
+    let engine = TestOperations::new();
     let volume = store();
     volume.create_directory(Path::new("/src/many")).await.unwrap();
     for n in 0..30 {
@@ -120,7 +123,7 @@ async fn the_source_sweep_deletes_files_in_batches() {
             .await
             .unwrap();
     }
-    let state = state_with(TargetNames::default());
+    let state = state_with(&engine, TargetNames::default());
 
     let (result, _) = run_move(&volume, &state, &["/src/many"], "/dst").await;
 
@@ -132,9 +135,13 @@ async fn the_source_sweep_deletes_files_in_batches() {
 /// F2 on such a folder: a move into its own parent under the new name.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_rename_that_copies_moves_the_folder_to_its_new_name() {
+    let engine = TestOperations::new();
     let volume = store();
     seed_tree(&volume, "/a/foo").await;
-    let state = state_with(TargetNames::new([(PathBuf::from("/a/foo"), "bar".to_string())]).unwrap());
+    let state = state_with(
+        &engine,
+        TargetNames::new([(PathBuf::from("/a/foo"), "bar".to_string())]).unwrap(),
+    );
 
     let (result, _) = run_move(&volume, &state, &["/a/foo"], "/a").await;
 
@@ -148,9 +155,13 @@ async fn a_rename_that_copies_moves_the_folder_to_its_new_name() {
 /// rename-merge path renames straight to the new name.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_target_name_renames_in_one_call_where_the_volume_can() {
+    let engine = TestOperations::new();
     let volume = Arc::new(InMemoryVolume::new("Disk").with_space_info(10_000_000, 10_000_000));
     seed_tree(&volume, "/a/foo").await;
-    let state = state_with(TargetNames::new([(PathBuf::from("/a/foo"), "bar".to_string())]).unwrap());
+    let state = state_with(
+        &engine,
+        TargetNames::new([(PathBuf::from("/a/foo"), "bar".to_string())]).unwrap(),
+    );
 
     let (result, _) = run_move(&volume, &state, &["/a/foo"], "/a").await;
 
@@ -163,9 +174,10 @@ async fn a_target_name_renames_in_one_call_where_the_volume_can() {
 /// before everything copied.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_stopped_move_by_copy_keeps_every_source() {
+    let engine = TestOperations::new();
     let volume = store();
     seed_tree(&volume, "/src/tree").await;
-    let state = state_with(TargetNames::default());
+    let state = state_with(&engine, TargetNames::default());
     state.intent().set_for_test(OperationIntent::Stopped);
 
     let (result, _) = run_move(&volume, &state, &["/src/tree"], "/dst").await;

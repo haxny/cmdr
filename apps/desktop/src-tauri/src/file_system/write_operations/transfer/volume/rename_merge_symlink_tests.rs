@@ -21,6 +21,7 @@ use super::super::conflict_responder_test_support::ConflictResponderSink;
 use super::move_same::move_within_same_volume_with_progress;
 use super::rename_merge_test_support::{exists, local_volume, make_state, mkdir, read, write_file};
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::{ConflictResolution, VolumeCopyConfig};
 use cmdr_fs::volume::Volume;
 use std::path::{Path, PathBuf};
@@ -42,9 +43,14 @@ fn is_link(root: &Path, rel: &str) -> bool {
         .unwrap_or(false)
 }
 
-async fn run_merge(volume: &Arc<dyn Volume>, op_id: &str, resolution: ConflictResolution) -> Arc<CollectorEventSink> {
+async fn run_merge(
+    engine: &TestOperations,
+    volume: &Arc<dyn Volume>,
+    op_id: &str,
+    resolution: ConflictResolution,
+) -> Arc<CollectorEventSink> {
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(engine);
     let config = VolumeCopyConfig {
         conflict_resolution: resolution,
         progress_interval_ms: 0,
@@ -68,8 +74,13 @@ async fn run_merge(volume: &Arc<dyn Volume>, op_id: &str, resolution: ConflictRe
 /// one pair — a person clicking, rather than a policy picked once for the whole
 /// transfer. The two are no longer interchangeable: a blanket Overwrite refuses
 /// a cross-type clash, so this is how the destructive branch gets exercised.
-async fn run_merge_answering(volume: &Arc<dyn Volume>, op_id: &str, resolution: ConflictResolution) {
-    let state = make_state();
+async fn run_merge_answering(
+    engine: &TestOperations,
+    volume: &Arc<dyn Volume>,
+    op_id: &str,
+    resolution: ConflictResolution,
+) {
+    let state = make_state(engine);
     let events = Arc::new(ConflictResponderSink::new(&state, resolution, false));
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Stop,
@@ -92,6 +103,7 @@ async fn run_merge_answering(volume: &Arc<dyn Volume>, op_id: &str, resolution: 
 /// Skip: the link stays in the source and its target keeps every byte.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_dir_link_child_meeting_a_real_dir_is_skipped_not_merged() {
+    let engine = TestOperations::new();
     let (volume, dir) = local_volume();
     let root = dir.path();
     plant_target(root);
@@ -100,7 +112,7 @@ async fn a_dir_link_child_meeting_a_real_dir_is_skipped_not_merged() {
     write_file(root, "src/album/plain.txt", b"PLAIN");
     mkdir(root, "dst/album/link");
 
-    run_merge(&volume, "op-merge-symlink-dir-skip", ConflictResolution::Skip).await;
+    run_merge(&engine, &volume, "op-merge-symlink-dir-skip", ConflictResolution::Skip).await;
 
     assert_eq!(
         read(root, "outside/target/inside.txt"),
@@ -122,6 +134,7 @@ async fn a_dir_link_child_meeting_a_real_dir_is_skipped_not_merged() {
 /// Rename: the link lands beside the destination directory, as a link.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_dir_link_child_meeting_a_real_dir_lands_aside_on_rename() {
+    let engine = TestOperations::new();
     let (volume, dir) = local_volume();
     let root = dir.path();
     plant_target(root);
@@ -129,7 +142,13 @@ async fn a_dir_link_child_meeting_a_real_dir_lands_aside_on_rename() {
     link(root, "src/album/link", "outside/target");
     mkdir(root, "dst/album/link");
 
-    run_merge(&volume, "op-merge-symlink-dir-rename", ConflictResolution::Rename).await;
+    run_merge(
+        &engine,
+        &volume,
+        "op-merge-symlink-dir-rename",
+        ConflictResolution::Rename,
+    )
+    .await;
 
     assert_eq!(
         read(root, "outside/target/inside.txt"),
@@ -157,6 +176,7 @@ async fn a_dir_link_child_meeting_a_real_dir_lands_aside_on_rename() {
 /// user never chose as the destination.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_real_dir_child_meeting_a_dir_link_at_the_destination_is_not_merged() {
+    let engine = TestOperations::new();
     let (volume, dir) = local_volume();
     let root = dir.path();
     plant_target(root);
@@ -164,7 +184,7 @@ async fn a_real_dir_child_meeting_a_dir_link_at_the_destination_is_not_merged() 
     mkdir(root, "dst/album");
     link(root, "dst/album/sub", "outside/target");
 
-    run_merge(&volume, "op-merge-symlink-dest-skip", ConflictResolution::Skip).await;
+    run_merge(&engine, &volume, "op-merge-symlink-dest-skip", ConflictResolution::Skip).await;
 
     assert!(
         !exists(root, "outside/target/mine.txt"),
@@ -189,6 +209,7 @@ async fn a_real_dir_child_meeting_a_dir_link_at_the_destination_is_not_merged() 
 /// would never reach the probe this pins.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_real_dir_child_overwriting_a_dir_link_never_lands_in_the_target() {
+    let engine = TestOperations::new();
     let (volume, dir) = local_volume();
     let root = dir.path();
     plant_target(root);
@@ -197,6 +218,7 @@ async fn a_real_dir_child_overwriting_a_dir_link_never_lands_in_the_target() {
     link(root, "dst/album/sub", "outside/target");
 
     run_merge_answering(
+        &engine,
         &volume,
         "op-merge-symlink-dest-overwrite",
         ConflictResolution::Overwrite,
@@ -225,6 +247,7 @@ async fn a_real_dir_child_overwriting_a_dir_link_never_lands_in_the_target() {
 /// the source subtree — the only copy of it, on a move — stays home.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_blanket_overwrite_leaves_a_dir_link_and_the_source_dir_alone() {
+    let engine = TestOperations::new();
     let (volume, dir) = local_volume();
     let root = dir.path();
     plant_target(root);
@@ -233,6 +256,7 @@ async fn a_blanket_overwrite_leaves_a_dir_link_and_the_source_dir_alone() {
     link(root, "dst/album/sub", "outside/target");
 
     run_merge(
+        &engine,
         &volume,
         "op-merge-symlink-dest-blanket-overwrite",
         ConflictResolution::Overwrite,
@@ -257,6 +281,7 @@ async fn a_blanket_overwrite_leaves_a_dir_link_and_the_source_dir_alone() {
 /// No clash at all: a link to a directory rides across on one rename, as a link.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_dir_link_child_with_no_clash_moves_as_a_link() {
+    let engine = TestOperations::new();
     let (volume, dir) = local_volume();
     let root = dir.path();
     plant_target(root);
@@ -264,7 +289,13 @@ async fn a_dir_link_child_with_no_clash_moves_as_a_link() {
     link(root, "src/album/link", "outside/target");
     mkdir(root, "dst/album");
 
-    run_merge(&volume, "op-merge-symlink-dir-no-clash", ConflictResolution::Skip).await;
+    run_merge(
+        &engine,
+        &volume,
+        "op-merge-symlink-dir-no-clash",
+        ConflictResolution::Skip,
+    )
+    .await;
 
     assert!(
         is_link(root, "dst/album/link"),
@@ -287,6 +318,7 @@ async fn a_dir_link_child_with_no_clash_moves_as_a_link() {
 /// policy leaves both where they are and the target keeps every byte.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_top_level_dir_link_meeting_a_real_dir_is_skipped_not_merged() {
+    let engine = TestOperations::new();
     let (volume, dir) = local_volume();
     let root = dir.path();
     plant_target(root);
@@ -294,7 +326,7 @@ async fn a_top_level_dir_link_meeting_a_real_dir_is_skipped_not_merged() {
     link(root, "src/album", "outside/target");
     mkdir(root, "dst/album");
 
-    run_merge(&volume, "op-top-symlink-dir-skip", ConflictResolution::Skip).await;
+    run_merge(&engine, &volume, "op-top-symlink-dir-skip", ConflictResolution::Skip).await;
 
     assert_eq!(
         read(root, "outside/target/inside.txt"),
@@ -315,6 +347,7 @@ async fn a_top_level_dir_link_meeting_a_real_dir_is_skipped_not_merged() {
 /// Rename: the selected link lands beside the destination folder, as a link.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_top_level_dir_link_meeting_a_real_dir_lands_aside_on_rename() {
+    let engine = TestOperations::new();
     let (volume, dir) = local_volume();
     let root = dir.path();
     plant_target(root);
@@ -322,7 +355,13 @@ async fn a_top_level_dir_link_meeting_a_real_dir_lands_aside_on_rename() {
     link(root, "src/album", "outside/target");
     mkdir(root, "dst/album");
 
-    run_merge(&volume, "op-top-symlink-dir-rename", ConflictResolution::Rename).await;
+    run_merge(
+        &engine,
+        &volume,
+        "op-top-symlink-dir-rename",
+        ConflictResolution::Rename,
+    )
+    .await;
 
     assert_eq!(read(root, "outside/target/inside.txt"), b"OUTSIDE THE SELECTION");
     assert!(
@@ -339,6 +378,7 @@ async fn a_top_level_dir_link_meeting_a_real_dir_lands_aside_on_rename() {
 /// A blanket Overwrite never crosses types, so both sides stay put.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_blanket_overwrite_leaves_a_top_level_dir_link_and_the_dest_dir_alone() {
+    let engine = TestOperations::new();
     let (volume, dir) = local_volume();
     let root = dir.path();
     plant_target(root);
@@ -347,6 +387,7 @@ async fn a_blanket_overwrite_leaves_a_top_level_dir_link_and_the_dest_dir_alone(
     write_file(root, "dst/album/theirs.txt", b"THEIRS");
 
     run_merge(
+        &engine,
         &volume,
         "op-top-symlink-dir-blanket-overwrite",
         ConflictResolution::Overwrite,
@@ -365,6 +406,7 @@ async fn a_blanket_overwrite_leaves_a_top_level_dir_link_and_the_dest_dir_alone(
 /// No clash: the selected link rides across on one rename, as a link.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_top_level_dir_link_with_no_clash_moves_as_a_link() {
+    let engine = TestOperations::new();
     let (volume, dir) = local_volume();
     let root = dir.path();
     plant_target(root);
@@ -372,7 +414,13 @@ async fn a_top_level_dir_link_with_no_clash_moves_as_a_link() {
     link(root, "src/album", "outside/target");
     mkdir(root, "dst");
 
-    run_merge(&volume, "op-top-symlink-dir-no-clash", ConflictResolution::Skip).await;
+    run_merge(
+        &engine,
+        &volume,
+        "op-top-symlink-dir-no-clash",
+        ConflictResolution::Skip,
+    )
+    .await;
 
     assert!(is_link(root, "dst/album"), "the link moves as a link");
     assert!(!is_link(root, "src/album") && !exists(root, "src/album"));
@@ -385,7 +433,9 @@ async fn a_top_level_dir_link_with_no_clash_moves_as_a_link() {
 /// move must still take it for the leaf it is.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_top_level_dir_link_is_not_merged_when_a_preview_scanned_it_as_a_folder() {
-    use super::super::super::scan_cache::{CachedScanResult, insert_scan_result};
+    use super::super::super::scan_cache::CachedScanResult;
+
+    let engine = TestOperations::new();
 
     let (volume, dir) = local_volume();
     let root = dir.path();
@@ -401,7 +451,7 @@ async fn a_top_level_dir_link_is_not_merged_when_a_preview_scanned_it_as_a_folde
         "precondition: the preview's scan follows the link"
     );
     let preview_id = "preview-top-symlink-dir".to_string();
-    insert_scan_result(
+    engine.stores().previews().insert_scan_result(
         preview_id.clone(),
         CachedScanResult::from_volume_batch(
             sources.clone(),
@@ -412,7 +462,7 @@ async fn a_top_level_dir_link_is_not_merged_when_a_preview_scanned_it_as_a_folde
         ),
     );
 
-    let state = make_state();
+    let state = make_state(&engine);
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Skip,
         progress_interval_ms: 0,

@@ -33,6 +33,7 @@ use super::super::transfer_error::PathedVolumeError;
 use super::test_support::make_state;
 use super::*;
 use crate::file_system::write_operations::state::OperationIntent;
+use crate::file_system::write_operations::testing::TestOperations;
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::WriteMode;
 use cmdr_fs::volume::{
@@ -184,6 +185,7 @@ async fn pipe(
 /// Two paths on one server: the server copies, and no byte reaches Cmdr.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_copy_inside_one_volume_lets_the_server_do_it() {
+    let engine = TestOperations::new();
     let volume = ServerCopyVolume::new("nas", true);
     volume
         .inner
@@ -191,7 +193,7 @@ async fn a_copy_inside_one_volume_lets_the_server_do_it() {
         .await
         .unwrap();
     let as_volume: Arc<dyn Volume> = volume.clone();
-    let state = make_state();
+    let state = make_state(&engine);
 
     let bytes = pipe(&as_volume, &as_volume, &state, "holiday.mov", "holiday copy.mov")
         .await
@@ -214,6 +216,7 @@ async fn a_copy_inside_one_volume_lets_the_server_do_it() {
 /// it is the wrong file, copied silently.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_copy_between_two_volumes_never_asks_for_a_server_side_one() {
+    let engine = TestOperations::new();
     let source = ServerCopyVolume::new("nas-a", true);
     let dest = ServerCopyVolume::new("nas-b", true);
     source
@@ -223,7 +226,7 @@ async fn a_copy_between_two_volumes_never_asks_for_a_server_side_one() {
         .unwrap();
     let source_volume: Arc<dyn Volume> = source.clone();
     let dest_volume: Arc<dyn Volume> = dest.clone();
-    let state = make_state();
+    let state = make_state(&engine);
 
     let bytes = pipe(&source_volume, &dest_volume, &state, "report.pdf", "report.pdf")
         .await
@@ -242,10 +245,11 @@ async fn a_copy_between_two_volumes_never_asks_for_a_server_side_one() {
 /// wasted question.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_server_that_cannot_copy_for_itself_falls_back_to_streaming() {
+    let engine = TestOperations::new();
     let volume = ServerCopyVolume::new("old-nas", false);
     volume.inner.create_file(Path::new("notes.txt"), b"kept").await.unwrap();
     let as_volume: Arc<dyn Volume> = volume.clone();
-    let state = make_state();
+    let state = make_state(&engine);
 
     let bytes = pipe(&as_volume, &as_volume, &state, "notes.txt", "notes copy.txt")
         .await
@@ -265,10 +269,11 @@ async fn a_server_that_cannot_copy_for_itself_falls_back_to_streaming() {
 /// on a temp and take the user's filename at the end.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_server_side_copy_lands_on_a_temp_and_leaves_none_behind() {
+    let engine = TestOperations::new();
     let volume = ServerCopyVolume::new("nas", true);
     volume.inner.create_file(Path::new("a.txt"), b"fresh").await.unwrap();
     let as_volume: Arc<dyn Volume> = volume.clone();
-    let state = make_state();
+    let state = make_state(&engine);
 
     pipe(&as_volume, &as_volume, &state, "a.txt", "b.txt").await.unwrap();
 
@@ -285,6 +290,7 @@ async fn a_server_side_copy_lands_on_a_temp_and_leaves_none_behind() {
 /// uses, and the partial goes with it.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_cancelled_server_side_copy_leaves_no_destination_behind() {
+    let engine = TestOperations::new();
     let volume = ServerCopyVolume::new("nas", true);
     volume
         .inner
@@ -292,7 +298,7 @@ async fn a_cancelled_server_side_copy_leaves_no_destination_behind() {
         .await
         .unwrap();
     let as_volume: Arc<dyn Volume> = volume.clone();
-    let state = make_state();
+    let state = make_state(&engine);
     state.intent().set_for_test(OperationIntent::Stopped);
 
     let outcome = stream_pipe_file(
@@ -447,6 +453,7 @@ impl Volume for StorePlace {
 /// identity, so no byte crosses the Mac.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_copy_between_two_places_of_one_account_lets_the_server_do_it() {
+    let engine = TestOperations::new();
     let source = StorePlace::new("photos", "acct-1");
     let dest = StorePlace::new("archive", "acct-1");
     source
@@ -456,7 +463,7 @@ async fn a_copy_between_two_places_of_one_account_lets_the_server_do_it() {
         .unwrap();
     let source_volume: Arc<dyn Volume> = source.clone();
     let dest_volume: Arc<dyn Volume> = dest.clone();
-    let state = make_state();
+    let state = make_state(&engine);
 
     let bytes = pipe(&source_volume, &dest_volume, &state, "a.jpg", "a.jpg")
         .await
@@ -471,12 +478,13 @@ async fn a_copy_between_two_places_of_one_account_lets_the_server_do_it() {
 /// Another account's place is another server's namespace: streamed.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_copy_from_another_account_streams() {
+    let engine = TestOperations::new();
     let source = StorePlace::new("theirs", "acct-1");
     let dest = StorePlace::new("ours", "acct-2");
     source.inner.create_file(Path::new("a.jpg"), b"jpeg").await.unwrap();
     let source_volume: Arc<dyn Volume> = source.clone();
     let dest_volume: Arc<dyn Volume> = dest.clone();
-    let state = make_state();
+    let state = make_state(&engine);
 
     pipe(&source_volume, &dest_volume, &state, "a.jpg", "a.jpg")
         .await
@@ -491,10 +499,11 @@ async fn a_copy_from_another_account_streams() {
 /// rename, which on an object store is a second full copy.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_whole_publishing_destination_copies_straight_to_the_final_name() {
+    let engine = TestOperations::new();
     let place = StorePlace::new("bucket", "acct-1");
     place.inner.create_file(Path::new("a.txt"), b"fresh").await.unwrap();
     let as_volume: Arc<dyn Volume> = place.clone();
-    let state = make_state();
+    let state = make_state(&engine);
 
     pipe(&as_volume, &as_volume, &state, "a.txt", "b.txt").await.unwrap();
 
@@ -509,10 +518,11 @@ async fn a_whole_publishing_destination_copies_straight_to_the_final_name() {
 /// asks before each piece, and the copy goes on once resumed.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_paused_server_side_copy_parks_at_its_checkpoint() {
+    let engine = TestOperations::new();
     let place = StorePlace::new("bucket", "acct-1");
     place.inner.create_file(Path::new("a.bin"), b"0123").await.unwrap();
     let as_volume: Arc<dyn Volume> = place.clone();
-    let state = make_state();
+    let state = make_state(&engine);
     state.pause_gate.pause();
 
     let task = {
@@ -617,12 +627,13 @@ impl Volume for PlainDest {
 /// file. One of those per-file deletes is where a user's move sat for 100 s.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_destination_that_cannot_copy_from_the_source_stages_nothing_for_it() {
+    let engine = TestOperations::new();
     let source = Arc::new(InMemoryVolume::new("nas"));
     source.create_file(Path::new("scan.pdf"), b"pages").await.unwrap();
     let dest = PlainDest::new("mac");
     let source_volume: Arc<dyn Volume> = source;
     let dest_volume: Arc<dyn Volume> = dest.clone();
-    let state = make_state();
+    let state = make_state(&engine);
 
     let bytes = pipe(&source_volume, &dest_volume, &state, "scan.pdf", "scan.pdf")
         .await
@@ -643,12 +654,13 @@ async fn a_destination_that_cannot_copy_from_the_source_stages_nothing_for_it() 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_server_side_copy_names_its_own_phase_in_the_probe() {
     use super::super::super::transfer_probe::{self, TaskRole, TaskRow};
-    use crate::file_system::write_operations::test_support::TestOperationGuard;
+
+    let engine = TestOperations::new();
 
     let place = StorePlace::new("bucket", "acct-1");
     place.inner.create_file(Path::new("a.bin"), b"0123").await.unwrap();
     let as_volume: Arc<dyn Volume> = place.clone();
-    let guard = TestOperationGuard::register_state("server-copy-phase", make_state());
+    let guard = engine.register_state("server-copy-phase", make_state(&engine));
     let state = Arc::clone(guard.state());
     let op_probe = transfer_probe::register_operation(
         guard.id(),

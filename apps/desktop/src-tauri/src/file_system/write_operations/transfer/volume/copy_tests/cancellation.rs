@@ -1,16 +1,18 @@
 //! Cancelling a multi-file copy, before it starts and mid-flight.
 
 use super::*;
+use crate::file_system::write_operations::testing::TestOperations;
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_multi_file_copy_cancel_before_start() {
+    let engine = TestOperations::new();
     let (source, dest) = make_volumes();
 
     source.create_file(Path::new("/a.txt"), b"alpha").await.unwrap();
     source.create_file(Path::new("/b.txt"), b"bravo").await.unwrap();
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     // Set Stopped BEFORE starting
     state.intent().set_for_test(OperationIntent::Stopped);
     let config = VolumeCopyConfig::default();
@@ -41,6 +43,7 @@ async fn test_multi_file_copy_cancel_before_start() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_multi_file_copy_cancel_mid_flight() {
+    let engine = TestOperations::new();
     // Custom event sink that flips intent to Stopped after a handful of
     // `Copying` progress events. Counting EVENTS (which fire per chunk, early in
     // the batch) rather than completed FILES makes the cancel land while tasks
@@ -99,7 +102,7 @@ async fn test_multi_file_copy_cancel_mid_flight() {
             .unwrap();
     }
 
-    let state = make_state();
+    let state = make_state(&engine);
     let events = Arc::new(CancelAfterNSink {
         inner: CollectorEventSink::new(),
         intent: state.intent().clone(),

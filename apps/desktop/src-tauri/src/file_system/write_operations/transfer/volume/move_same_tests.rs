@@ -17,19 +17,21 @@ use super::super::move_same::move_within_same_volume_with_progress;
 use super::test_support::{make_state, make_state_with_interval_ms};
 use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::{ConflictResolution, WriteOperationError};
 use cmdr_fs::volume::{InMemoryVolume, UnwritableReason, WriteAccess};
 
 /// Happy-path same-volume rename: files end up at their new paths via `Volume::rename`.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn same_volume_move_happy_path() {
+    let engine = TestOperations::new();
     let volume: Arc<dyn Volume> = Arc::new(InMemoryVolume::new("V").with_space_info(10_000_000, 10_000_000));
     volume.create_file(Path::new("/a.txt"), b"alpha").await.unwrap();
     volume.create_file(Path::new("/b.txt"), b"bravo").await.unwrap();
     volume.create_directory(Path::new("/dst")).await.unwrap();
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
 
     let result = move_within_same_volume_with_progress(
         events.clone(),
@@ -60,12 +62,13 @@ async fn same_volume_move_happy_path() {
 /// Per-iter skip accounting bumps `files_moved` so the bar shows progress.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn same_volume_move_conflict_skip_preserves_both() {
+    let engine = TestOperations::new();
     let volume: Arc<dyn Volume> = Arc::new(InMemoryVolume::new("V").with_space_info(10_000_000, 10_000_000));
     volume.create_file(Path::new("/src/a.txt"), b"new").await.unwrap();
     volume.create_file(Path::new("/dst/a.txt"), b"old").await.unwrap();
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state_with_interval_ms(0);
+    let state = make_state_with_interval_ms(&engine, 0);
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Skip,
         progress_interval_ms: 0,
@@ -101,12 +104,13 @@ async fn same_volume_move_conflict_skip_preserves_both() {
 /// deletes the dest before rename.)
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn same_volume_move_conflict_overwrite_replaces_dest() {
+    let engine = TestOperations::new();
     let volume: Arc<dyn Volume> = Arc::new(InMemoryVolume::new("V").with_space_info(10_000_000, 10_000_000));
     volume.create_file(Path::new("/src/a.txt"), b"new").await.unwrap();
     volume.create_file(Path::new("/dst/a.txt"), b"old").await.unwrap();
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Overwrite,
         ..VolumeCopyConfig::default()
@@ -134,6 +138,7 @@ async fn same_volume_move_conflict_overwrite_replaces_dest() {
 /// any data they had at dest must still be there.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn same_volume_move_pre_known_conflicts_bulk_skip() {
+    let engine = TestOperations::new();
     let volume: Arc<dyn Volume> = Arc::new(InMemoryVolume::new("V").with_space_info(10_000_000, 10_000_000));
     // Sources in /src/, dests under /dst/. a, c are pre-known conflicts; b is fresh.
     for name in ["a.txt", "b.txt", "c.txt"] {
@@ -150,7 +155,7 @@ async fn same_volume_move_pre_known_conflicts_bulk_skip() {
     }
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state_with_interval_ms(0);
+    let state = make_state_with_interval_ms(&engine, 0);
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Skip,
         progress_interval_ms: 0,
@@ -207,12 +212,13 @@ async fn same_volume_move_pre_known_conflicts_bulk_skip() {
 /// preserved (a create into an existing dest is a no-op).
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn same_volume_move_creates_missing_nested_dest() {
+    let engine = TestOperations::new();
     let volume: Arc<dyn Volume> = Arc::new(InMemoryVolume::new("V").with_space_info(10_000_000, 10_000_000));
     volume.create_file(Path::new("/a.txt"), b"alpha").await.unwrap();
     assert!(!volume.exists(Path::new("/archive")).await);
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
 
     let result = move_within_same_volume_with_progress(
         events.clone(),
@@ -247,6 +253,7 @@ async fn same_volume_move_creates_missing_nested_dest() {
 /// first rename happens to fail with.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_same_volume_move_into_a_folder_that_takes_no_writes_is_refused_before_anything_moves() {
+    let engine = TestOperations::new();
     let volume: Arc<dyn Volume> = Arc::new(
         InMemoryVolume::new("V")
             .with_space_info(10_000_000, 10_000_000)
@@ -262,7 +269,7 @@ async fn a_same_volume_move_into_a_folder_that_takes_no_writes_is_refused_before
     let refusal = move_within_same_volume_with_progress(
         Arc::new(CollectorEventSink::new()),
         "op-same-move-unwritable",
-        &make_state(),
+        &make_state(&engine),
         Arc::clone(&volume),
         &[PathBuf::from("/a.txt")],
         Path::new("/system/New"),

@@ -2,11 +2,13 @@
 use super::test_support::make_state;
 use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::ConflictResolution;
 use crate::test_support::TestDir;
 
 #[test]
 fn named_local_moves_use_the_requested_leaf_and_preserve_skipped_originals() {
+    let engine = TestOperations::new();
     for staged in [false, true] {
         for policy in [ConflictResolution::Skip, ConflictResolution::Overwrite] {
             let tmp = TestDir::new("named_local_move");
@@ -21,7 +23,7 @@ fn named_local_moves_use_the_requested_leaf_and_preserve_skipped_originals() {
                 ..Default::default()
             };
             let events = CollectorEventSink::new();
-            let state = make_state(0);
+            let state = make_state(&engine, 0);
             let sources = std::slice::from_ref(&source);
             if staged {
                 cross_fs::move_with_staging(&events, "named-staged-move", &state, sources, &dest, &config, 0).unwrap();
@@ -39,6 +41,7 @@ fn named_local_moves_use_the_requested_leaf_and_preserve_skipped_originals() {
 
 #[test]
 fn named_local_folder_moves_preserve_children_and_empty_directories() {
+    let engine = TestOperations::new();
     for staged in [false, true] {
         let tmp = TestDir::new("named_local_folder_move");
         let source = tmp.as_ref().join("original");
@@ -51,7 +54,7 @@ fn named_local_folder_moves_preserve_children_and_empty_directories() {
             ..Default::default()
         };
         let events = CollectorEventSink::new();
-        let state = make_state(0);
+        let state = make_state(&engine, 0);
         let sources = std::slice::from_ref(&source);
         if staged {
             cross_fs::move_with_staging(&events, "named-staged-folder", &state, sources, &dest, &config, 0).unwrap();

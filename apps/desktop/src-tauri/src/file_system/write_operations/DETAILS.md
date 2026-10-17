@@ -1485,6 +1485,13 @@ and line are that test's alone, under plain `cargo test` as under nextest:
   `engine.register(id)` / `engine.register_state(id, state)` put one in the registry as a running op's is, returning a
   `RegisteredOperation` (`id()`, `state()`). No guard: the entry dies with the engine. Ids, lanes, and volume names only
   need to be distinct within the test.
+- **The stores an op reads, on the same engine.** Seed a scan preview with `engine.stores().previews()`, photograph a
+  live transfer's in-flight table with `engine.render_live_transfer_dump(id, reason)`, reverse what the engine
+  journaled with `log.writer()`, and drive a reversal with `rollback::Reversal::on(&engine, tag)`. A fixture that
+  cancels from inside a seam (a sink, a volume) holds an `Operations::clone(&engine)`. A state on one engine and a
+  preview, probe, or registration on another is a test of nothing: the op reads its own engine's stores.
+- **A cell that needs the app's registry** (the git portal's routing, `copy_snapshot_out_tests.rs`) builds its own
+  engine over the app's answers with `operations_host::test_engine()`; `FakeVolumes` routes nothing.
 - **Walks and counters are honest.** `engine.cancel_all_write_operations()`, `emit_count()`, `admission_pass_count()`,
   and `busy_emit_count()` see only this test's operations, so an equality assertion on one holds under plain
   `cargo test` (`retained_failure_stays_hidden_until_the_record_settles` once passed only because nextest forks per

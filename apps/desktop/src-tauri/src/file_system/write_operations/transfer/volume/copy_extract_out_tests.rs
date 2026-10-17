@@ -8,7 +8,7 @@
 use super::tests::make_state;
 use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
-use crate::file_system::write_operations::installed;
+use crate::file_system::write_operations::testing::TestOperations;
 use cmdr_fs::volume::InMemoryVolume;
 use cmdr_local::LocalPosixVolume;
 
@@ -54,6 +54,8 @@ async fn extract_out_copies_a_file_and_a_directory_subtree_out_of_a_zip() {
     use cmdr_archive::{ArchiveFormat, ArchiveVolume};
     use cmdr_fs::volume::host::VolumeHost;
 
+    let engine = TestOperations::new();
+
     let (_tmp, zip_path) = build_extract_out_fixture();
 
     // Source = the read-only ArchiveVolume over the zip; dest = in-memory.
@@ -67,7 +69,7 @@ async fn extract_out_copies_a_file_and_a_directory_subtree_out_of_a_zip() {
     let dest: Arc<dyn Volume> = Arc::new(InMemoryVolume::new("Dest").with_space_info(10_000_000, 10_000_000));
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     let config = VolumeCopyConfig {
         progress_interval_ms: 0,
         ..VolumeCopyConfig::default()
@@ -120,6 +122,8 @@ async fn the_executable_bit_survives_an_extract_out_of_a_zip() {
     use cmdr_archive::{ArchiveFormat, ArchiveVolume};
     use cmdr_fs::volume::host::VolumeHost;
 
+    let engine = TestOperations::new();
+
     let tmp = tempfile::tempdir().expect("tempdir");
     let zip_path = tmp.path().join("release.zip");
     std::fs::write(
@@ -150,7 +154,7 @@ async fn the_executable_bit_survives_an_extract_out_of_a_zip() {
     let result = copy_volumes_with_progress(
         Arc::new(CollectorEventSink::new()),
         "extract-out-exec-bit-op",
-        &make_state(),
+        &make_state(&engine),
         Arc::clone(&source),
         &sources,
         Arc::clone(&dest),
@@ -195,6 +199,8 @@ async fn extracting_a_symlink_entry_writes_a_regular_file_never_a_symlink() {
     use cmdr_archive::{ArchiveFormat, ArchiveVolume};
     use cmdr_fs::volume::host::VolumeHost;
 
+    let engine = TestOperations::new();
+
     // Pins that extraction never CREATES a symlink from archive data: a symlink
     // entry's content is its target path, and writing those bytes verbatim as a
     // regular file is what stops Zip Slip through the back door (a symlink entry
@@ -229,7 +235,7 @@ async fn extracting_a_symlink_entry_writes_a_regular_file_never_a_symlink() {
     ));
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     let config = VolumeCopyConfig {
         progress_interval_ms: 0,
         ..VolumeCopyConfig::default()
@@ -382,6 +388,8 @@ mod quarantine {
     async fn extracting_a_quarantined_zip_quarantines_every_file_and_folder() {
         use cmdr_fs::testing::metadata_fixture::{QUARANTINE_VALUE, QUARANTINE_XATTR, set_xattr};
 
+        let engine = TestOperations::new();
+
         let tmp = tempfile::tempdir().expect("tempdir");
         let zip_path = build_quarantine_zip(tmp.path());
         set_xattr(&zip_path, QUARANTINE_XATTR, QUARANTINE_VALUE);
@@ -389,7 +397,7 @@ mod quarantine {
 
         let source = local_archive_volume(&zip_path, cmdr_archive::ArchiveFormat::Zip);
         let sources = [zip_path.join("readme.txt"), zip_path.join("docs")];
-        copy_out(&source, &sources, &local_dest(dest_dir.path()), &make_state()).await;
+        copy_out(&source, &sources, &local_dest(dest_dir.path()), &make_state(&engine)).await;
 
         for landed in [
             "readme.txt",
@@ -417,6 +425,8 @@ mod quarantine {
     async fn a_folder_the_extract_merged_into_stays_unquarantined() {
         use cmdr_fs::testing::metadata_fixture::{QUARANTINE_VALUE, QUARANTINE_XATTR, set_xattr};
 
+        let engine = TestOperations::new();
+
         let tmp = tempfile::tempdir().expect("tempdir");
         let zip_path = build_quarantine_zip(tmp.path());
         set_xattr(&zip_path, QUARANTINE_XATTR, QUARANTINE_VALUE);
@@ -428,7 +438,7 @@ mod quarantine {
             &source,
             &[zip_path.join("docs")],
             &local_dest(dest_dir.path()),
-            &make_state(),
+            &make_state(&engine),
         )
         .await;
 
@@ -449,13 +459,14 @@ mod quarantine {
     /// Nothing to propagate means nothing added.
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn extracting_an_unquarantined_zip_adds_no_quarantine() {
+        let engine = TestOperations::new();
         let tmp = tempfile::tempdir().expect("tempdir");
         let zip_path = build_quarantine_zip(tmp.path());
         let dest_dir = tempfile::tempdir().expect("dest tempdir");
 
         let source = local_archive_volume(&zip_path, cmdr_archive::ArchiveFormat::Zip);
         let sources = [zip_path.join("readme.txt"), zip_path.join("docs")];
-        copy_out(&source, &sources, &local_dest(dest_dir.path()), &make_state()).await;
+        copy_out(&source, &sources, &local_dest(dest_dir.path()), &make_state(&engine)).await;
 
         for landed in [
             "readme.txt",
@@ -479,6 +490,8 @@ mod quarantine {
     async fn extracting_a_quarantined_tar_gz_quarantines_every_file_and_folder() {
         use cmdr_fs::testing::metadata_fixture::{QUARANTINE_VALUE, QUARANTINE_XATTR, set_xattr};
 
+        let engine = TestOperations::new();
+
         let tmp = tempfile::tempdir().expect("tempdir");
         let archive = build_quarantine_targz(
             tmp.path(),
@@ -497,7 +510,7 @@ mod quarantine {
             "the fixture must take the one-pass path"
         );
         let sources = [archive.join("top.txt"), archive.join("docs")];
-        copy_out(&source, &sources, &local_dest(dest_dir.path()), &make_state()).await;
+        copy_out(&source, &sources, &local_dest(dest_dir.path()), &make_state(&engine)).await;
 
         for landed in ["top.txt", "docs", "docs/a.txt", "docs/sub", "docs/sub/b.txt"] {
             assert_eq!(
@@ -560,6 +573,8 @@ mod quarantine {
     async fn a_cancelled_extract_leaves_the_folders_it_made_quarantined() {
         use cmdr_fs::testing::metadata_fixture::{QUARANTINE_VALUE, QUARANTINE_XATTR, set_xattr};
 
+        let engine = TestOperations::new();
+
         let tmp = tempfile::tempdir().expect("tempdir");
         let archive = build_quarantine_targz(
             tmp.path(),
@@ -568,7 +583,7 @@ mod quarantine {
         set_xattr(&archive, QUARANTINE_XATTR, QUARANTINE_VALUE);
         let dest_dir = tempfile::tempdir().expect("dest tempdir");
 
-        let state = make_state();
+        let state = make_state(&engine);
         let dest: Arc<dyn Volume> = Arc::new(StopAfterFirstWrite {
             inner: Arc::new(LocalPosixVolume::local_folder(
                 "Dest",
@@ -615,13 +630,15 @@ mod quarantine {
         use cmdr_fs::ignore_poison::IgnorePoison;
         use cmdr_fs::testing::metadata_fixture::{QUARANTINE_VALUE, QUARANTINE_XATTR, set_xattr};
 
+        let engine = TestOperations::new();
+
         let tmp = tempfile::tempdir().expect("tempdir");
         let zip_path = build_quarantine_zip(tmp.path());
         set_xattr(&zip_path, QUARANTINE_XATTR, QUARANTINE_VALUE);
         let dest_dir = tempfile::tempdir().expect("dest tempdir");
 
         let events = Arc::new(CollectorEventSink::new());
-        installed()
+        engine
             .route_archive_move_out(
                 Arc::clone(&events) as Arc<dyn OperationEventSink>,
                 "root".to_string(),

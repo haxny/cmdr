@@ -5,6 +5,7 @@
 
 use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
+use crate::file_system::write_operations::testing::TestOperations;
 use cmdr_fs::volume::InMemoryVolume;
 use std::sync::Arc;
 
@@ -16,7 +17,10 @@ use std::sync::Arc;
 /// FOLDER under the given blanket policy, and answers what it did to the
 /// destination. The folder holds `precious.txt`, so its survival is the whole
 /// assertion.
-async fn resolve_file_over_folder(policy: ConflictResolution) -> (Arc<InMemoryVolume>, Option<ResolvedConflict>) {
+async fn resolve_file_over_folder(
+    engine: &TestOperations,
+    policy: ConflictResolution,
+) -> (Arc<InMemoryVolume>, Option<ResolvedConflict>) {
     let source = Arc::new(InMemoryVolume::new("source"));
     source
         .create_file(Path::new("/notes"), b"incoming bytes")
@@ -32,7 +36,7 @@ async fn resolve_file_over_folder(policy: ConflictResolution) -> (Arc<InMemoryVo
     let dest_dyn: Arc<dyn Volume> = dest.clone();
 
     let events = CollectorEventSink::new();
-    let state = Arc::new(WriteOperationState::new(std::time::Duration::from_millis(0)));
+    let state = Arc::new(engine.new_operation_state(std::time::Duration::from_millis(0)));
     let config = VolumeCopyConfig {
         conflict_resolution: policy,
         ..VolumeCopyConfig::default()
@@ -63,12 +67,13 @@ async fn resolve_file_over_folder(policy: ConflictResolution) -> (Arc<InMemoryVo
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_blanket_overwrite_never_clears_a_folder_a_file_landed_on() {
+    let engine = TestOperations::new();
     for policy in [
         ConflictResolution::Overwrite,
         ConflictResolution::OverwriteSmaller,
         ConflictResolution::OverwriteOlder,
     ] {
-        let (dest, resolved) = resolve_file_over_folder(policy).await;
+        let (dest, resolved) = resolve_file_over_folder(&engine, policy).await;
         assert!(
             resolved.is_none(),
             "{policy:?} across types must resolve to Skip, got {resolved:?}"
@@ -86,6 +91,7 @@ async fn a_blanket_overwrite_never_clears_a_folder_a_file_landed_on() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_blanket_overwrite_never_deletes_a_file_a_folder_landed_on() {
+    let engine = TestOperations::new();
     for policy in [
         ConflictResolution::Overwrite,
         ConflictResolution::OverwriteSmaller,
@@ -106,7 +112,7 @@ async fn a_blanket_overwrite_never_deletes_a_file_a_folder_landed_on() {
         let dest_dyn: Arc<dyn Volume> = dest.clone();
 
         let events = CollectorEventSink::new();
-        let state = Arc::new(WriteOperationState::new(std::time::Duration::from_millis(0)));
+        let state = Arc::new(engine.new_operation_state(std::time::Duration::from_millis(0)));
         let config = VolumeCopyConfig {
             conflict_resolution: policy,
             ..VolumeCopyConfig::default()
@@ -156,6 +162,7 @@ fn file_over_folder_volumes() -> (Arc<InMemoryVolume>, Arc<InMemoryVolume>) {
 /// answer: nothing here responds to a prompt, so the resolve would park on a
 /// oneshot forever and hang the test binary.
 async fn resolve_file_over_folder_with_latch(
+    engine: &TestOperations,
     op: &str,
     mut apply_to_all: ApplyToAll,
     configured: ConflictResolution,
@@ -170,7 +177,7 @@ async fn resolve_file_over_folder_with_latch(
     let dest_dyn: Arc<dyn Volume> = dest.clone();
 
     let events = CollectorEventSink::new();
-    let state = Arc::new(WriteOperationState::new(std::time::Duration::from_millis(0)));
+    let state = Arc::new(engine.new_operation_state(std::time::Duration::from_millis(0)));
     let config = VolumeCopyConfig {
         conflict_resolution: configured,
         ..VolumeCopyConfig::default()
@@ -201,6 +208,7 @@ async fn resolve_file_over_folder_with_latch(
 /// skip the rest.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_latched_cross_type_overwrite_all_replaces_the_folder_it_was_answered_for() {
+    let engine = TestOperations::new();
     let mut apply_to_all = ApplyToAll::default();
     apply_to_all_record(
         &mut apply_to_all,
@@ -212,7 +220,8 @@ async fn a_latched_cross_type_overwrite_all_replaces_the_folder_it_was_answered_
     // `Stop` is safe here precisely because the latch answers; if the carry
     // were refused this would park on a prompt nothing responds to.
     let (resolved, dest) =
-        resolve_file_over_folder_with_latch("op-latched-cross-type", apply_to_all, ConflictResolution::Stop).await;
+        resolve_file_over_folder_with_latch(&engine, "op-latched-cross-type", apply_to_all, ConflictResolution::Stop)
+            .await;
 
     assert!(
         resolved.is_some(),
@@ -230,6 +239,7 @@ async fn a_latched_cross_type_overwrite_all_replaces_the_folder_it_was_answered_
 /// proves the Overwrite in the same-kind bucket did not leak over.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_latched_same_kind_overwrite_all_never_clears_a_folder_a_file_landed_on() {
+    let engine = TestOperations::new();
     let mut apply_to_all = ApplyToAll::default();
     // A non-latching answer first, so the first-clash spread can't put this
     // Overwrite into the cross-type bucket by the back door.
@@ -247,7 +257,8 @@ async fn a_latched_same_kind_overwrite_all_never_clears_a_folder_a_file_landed_o
     );
 
     let (resolved, dest) =
-        resolve_file_over_folder_with_latch("op-latched-same-kind", apply_to_all, ConflictResolution::Skip).await;
+        resolve_file_over_folder_with_latch(&engine, "op-latched-same-kind", apply_to_all, ConflictResolution::Skip)
+            .await;
 
     assert!(
         resolved.is_none(),

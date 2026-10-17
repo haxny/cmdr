@@ -15,8 +15,8 @@ use crate::file_system::write_operations::Operations;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::host::testing::FakeVolumes;
 use crate::file_system::write_operations::host::{EngineEvents, InstantMutationFact};
-use crate::file_system::write_operations::installed;
-use crate::file_system::write_operations::test_support::{TestOperationGuard, placeholder_conflict};
+use crate::file_system::write_operations::test_support::placeholder_conflict;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::{MoveLeftoversKeptEvent, OperationsChanged};
 use crate::file_system::write_operations::types::{WriteOperationType, WriteProgressEvent};
 use cmdr_fs::volume::{ConnectionLiveness, Volume};
@@ -65,7 +65,8 @@ fn probe_with(id: &str, state: &Arc<WriteOperationState>, ends: TransferEnds) ->
 /// what each task awaits, what the driver was doing, and what the intent was.
 #[test]
 fn dump_names_driver_phase_intent_and_every_parked_task() {
-    let guard = TestOperationGuard::register("probe-dump");
+    let engine = TestOperations::new();
+    let guard = engine.register("probe-dump");
     let state = guard.state();
     let probe = probe_for(guard.id(), state);
 
@@ -103,7 +104,8 @@ fn dump_names_driver_phase_intent_and_every_parked_task() {
 /// looking for a bug that isn't there.
 #[test]
 fn a_walker_row_is_counted_apart_from_the_window() {
-    let guard = TestOperationGuard::register("probe-walker");
+    let engine = TestOperations::new();
+    let guard = engine.register("probe-walker");
     let state = guard.state();
     let probe = probe_for(guard.id(), state);
 
@@ -145,7 +147,8 @@ fn a_walker_row_is_counted_apart_from_the_window() {
 /// several directory sources in flight the same number appeared once per walker.
 #[test]
 fn a_leaf_row_is_numbered_under_the_source_producing_it() {
-    let guard = TestOperationGuard::register("probe-row-numbers");
+    let engine = TestOperations::new();
+    let guard = engine.register("probe-row-numbers");
     let state = guard.state();
     let probe = probe_for(guard.id(), state);
 
@@ -207,7 +210,8 @@ fn every_driver_phase_round_trips_through_the_stored_byte() {
 /// table and make the next dump lie about what is in flight.
 #[test]
 fn dropping_a_task_handle_removes_it_from_the_table() {
-    let guard = TestOperationGuard::register("probe-drop");
+    let engine = TestOperations::new();
+    let guard = engine.register("probe-drop");
     let state = guard.state();
     let probe = probe_for(guard.id(), state);
 
@@ -236,7 +240,8 @@ fn phase_helpers_are_noops_outside_a_copy_task() {
 /// users to ignore the warning.
 #[test]
 fn activity_names_what_the_transfer_is_waiting_on() {
-    let guard = TestOperationGuard::register("probe-activity");
+    let engine = TestOperations::new();
+    let guard = engine.register("probe-activity");
     let state = guard.state();
     let probe = probe_for(guard.id(), state);
     // Stand in for the watchdog having seen 12 s with no byte movement.
@@ -267,7 +272,8 @@ fn activity_names_what_the_transfer_is_waiting_on() {
 /// 2026-07-31. The watchdog has to speak up on the operation's behalf.
 #[test]
 fn a_wedged_transfer_keeps_telling_the_ui_it_is_wedged() {
-    let guard = TestOperationGuard::register("probe-heartbeat");
+    let engine = TestOperations::new();
+    let guard = engine.register("probe-heartbeat");
     let state = guard.state();
     let sink = Arc::new(CollectorEventSink::new());
     let probe = probe_for(guard.id(), state);
@@ -325,7 +331,8 @@ fn a_wedged_transfer_keeps_telling_the_ui_it_is_wedged() {
 /// stopped moving" for its whole run.
 #[test]
 fn a_transfer_publishing_progress_across_file_boundaries_is_never_called_still() {
-    let guard = TestOperationGuard::register("probe-leaf-progress");
+    let engine = TestOperations::new();
+    let guard = engine.register("probe-leaf-progress");
     let state = guard.state();
     let sink = Arc::new(CollectorEventSink::new());
     let probe = probe_for(guard.id(), state);
@@ -378,7 +385,8 @@ fn a_transfer_publishing_progress_across_file_boundaries_is_never_called_still()
 /// emits plenty, and duplicating those would double the FE's event rate.
 #[test]
 fn a_moving_transfer_gets_no_heartbeat() {
-    let guard = TestOperationGuard::register("probe-no-heartbeat");
+    let engine = TestOperations::new();
+    let guard = engine.register("probe-no-heartbeat");
     let state = guard.state();
     let sink = Arc::new(CollectorEventSink::new());
     let probe = probe_for(guard.id(), state);
@@ -411,7 +419,8 @@ fn a_moving_transfer_gets_no_heartbeat() {
 /// as waiting on a device or as stuck.
 #[test]
 fn a_paused_transfer_reports_paused_not_stuck() {
-    let guard = TestOperationGuard::register("probe-paused");
+    let engine = TestOperations::new();
+    let guard = engine.register("probe-paused");
     let state = guard.state();
     let probe = probe_for(guard.id(), state);
     let a = probe.begin_task(TaskRow::source(0), TaskRole::File, "/src/a", "/dst/a");
@@ -430,7 +439,8 @@ fn a_paused_transfer_reports_paused_not_stuck() {
 /// file to overwrite — and heartbeat re-emits piled up behind the prompt.
 #[test]
 fn a_transfer_waiting_on_a_conflict_answer_is_not_stalled() {
-    let guard = TestOperationGuard::register("probe-conflict");
+    let engine = TestOperations::new();
+    let guard = engine.register("probe-conflict");
     let state = guard.state();
     let probe = probe_for(guard.id(), state);
     // A task streaming normally: nothing here says "asking the human".
@@ -457,7 +467,8 @@ fn a_transfer_waiting_on_a_conflict_answer_is_not_stalled() {
 /// The watchdog must not accrue stall time (or heartbeat) behind a prompt.
 #[test]
 fn the_watchdog_does_not_accrue_stall_time_behind_a_conflict_prompt() {
-    let guard = TestOperationGuard::register("probe-conflict-watchdog");
+    let engine = TestOperations::new();
+    let guard = engine.register("probe-conflict-watchdog");
     let state = guard.state();
     let probe = probe_for(guard.id(), state);
     let (tx, _rx) = tokio::sync::oneshot::channel();
@@ -483,7 +494,8 @@ fn the_watchdog_does_not_accrue_stall_time_behind_a_conflict_prompt() {
 /// of the dialog saying "stalled" until the user force-quits.
 #[test]
 fn the_watchdog_ends_the_wait_on_a_task_that_stopped_moving() {
-    let guard = TestOperationGuard::register("probe-abort");
+    let engine = TestOperations::new();
+    let guard = engine.register("probe-abort");
     let state = guard.state();
     let probe = probe_with_abort_window(guard.id(), state, Duration::from_secs(5));
 
@@ -523,7 +535,8 @@ fn the_watchdog_ends_the_wait_on_a_task_that_stopped_moving() {
 /// still moving. ❌ Don't let anyone simplify the gate to trust `Dead` directly.
 #[test]
 fn a_task_that_keeps_moving_is_never_aborted() {
-    let guard = TestOperationGuard::register("probe-abort-moving");
+    let engine = TestOperations::new();
+    let guard = engine.register("probe-abort-moving");
     let state = guard.state();
     let probe = probe_with_abort_window(guard.id(), state, Duration::from_secs(2));
 
@@ -546,6 +559,7 @@ fn a_task_that_keeps_moving_is_never_aborted() {
 /// Aborting one would break something that is working as designed.
 #[test]
 fn a_deliberately_parked_task_is_never_aborted() {
+    let engine = TestOperations::new();
     for phase in [
         TaskPhase::ParkedPause,
         TaskPhase::ParkedSourceYield,
@@ -554,7 +568,7 @@ fn a_deliberately_parked_task_is_never_aborted() {
         TaskPhase::WaitingToRetry,
         TaskPhase::Finalizing,
     ] {
-        let guard = TestOperationGuard::register("probe-abort-parked");
+        let guard = engine.register("probe-abort-parked");
         let state = guard.state();
         let probe = probe_with_abort_window(guard.id(), state, Duration::from_secs(2));
         let task = probe.begin_task(TaskRow::source(0), TaskRole::File, "/src/a", "/dst/a");
@@ -578,7 +592,8 @@ fn a_deliberately_parked_task_is_never_aborted() {
 /// perfectly healthy transfer.
 #[test]
 fn time_spent_paused_does_not_count_toward_the_abort() {
-    let guard = TestOperationGuard::register("probe-abort-paused");
+    let engine = TestOperations::new();
+    let guard = engine.register("probe-abort-paused");
     let state = guard.state();
     let probe = probe_with_abort_window(guard.id(), state, Duration::from_secs(5));
     let task = probe.begin_task(TaskRow::source(0), TaskRole::File, "/src/a", "/dst/a");
@@ -602,13 +617,14 @@ fn time_spent_paused_does_not_count_toward_the_abort() {
 /// reason about, so the watchdog stands down.
 #[test]
 fn the_watchdog_stands_down_once_the_operation_is_cancelling() {
-    let guard = TestOperationGuard::register("probe-abort-cancelling");
+    let engine = TestOperations::new();
+    let guard = engine.register("probe-abort-cancelling");
     let state = guard.state();
     let probe = probe_with_abort_window(guard.id(), state, Duration::from_secs(2));
     let task = probe.begin_task(TaskRow::source(0), TaskRole::File, "/src/a", "/dst/a");
     task.probe().set_phase(TaskPhase::Streaming);
     let signal = task.probe().arm_stall_abort();
-    installed().cancel_write_operation(guard.id(), false);
+    engine.cancel_write_operation(guard.id(), false);
 
     let mut watchdog = WatchdogState::new();
     for tick in 1..=20 {
@@ -623,7 +639,8 @@ fn the_watchdog_stands_down_once_the_operation_is_cancelling() {
 /// first wedge, and the retry budget would be three no-ops.
 #[test]
 fn a_new_attempt_gets_a_fresh_signal_and_a_fresh_budget() {
-    let guard = TestOperationGuard::register("probe-abort-rearm");
+    let engine = TestOperations::new();
+    let guard = engine.register("probe-abort-rearm");
     let state = guard.state();
     let probe = probe_with_abort_window(guard.id(), state, Duration::from_secs(5));
     let task = probe.begin_task(TaskRow::source(0), TaskRole::File, "/src/a", "/dst/a");
@@ -654,7 +671,8 @@ fn a_new_attempt_gets_a_fresh_signal_and_a_fresh_budget() {
 /// got a `begin_task` of its own (`volume/merge.rs`, `volume/move.rs`).
 #[test]
 fn two_rows_keep_their_own_stall_abort_signal_and_byte_count() {
-    let guard = TestOperationGuard::register("probe-two-rows");
+    let engine = TestOperations::new();
+    let guard = engine.register("probe-two-rows");
     let state = guard.state();
     let probe = probe_for(guard.id(), state);
 
@@ -697,7 +715,8 @@ fn two_rows_keep_their_own_stall_abort_signal_and_byte_count() {
 /// timer.
 #[test]
 fn a_connection_with_no_liveness_verdict_is_never_aborted() {
-    let guard = TestOperationGuard::register("probe-abort-no-verdict");
+    let engine = TestOperations::new();
+    let guard = engine.register("probe-abort-no-verdict");
     let state = guard.state();
     let _window = StallAbortGuard::set(Duration::from_secs(1));
     // No volumes ⇒ nobody answers `connection_liveness`, exactly like every
@@ -731,7 +750,8 @@ fn a_connection_with_no_liveness_verdict_is_never_aborted() {
 /// hold the watchdog off for as long as it lasts, far past the stillness window.
 #[test]
 fn a_live_connection_with_a_flat_byte_bar_is_never_aborted() {
-    let guard = TestOperationGuard::register("probe-abort-alive");
+    let engine = TestOperations::new();
+    let guard = engine.register("probe-abort-alive");
     let state = guard.state();
     let _window = StallAbortGuard::set(Duration::from_secs(2));
     let source = ScriptedConnectionVolume::new();
@@ -766,7 +786,8 @@ fn a_live_connection_with_a_flat_byte_bar_is_never_aborted() {
 /// window, probes included.
 #[test]
 fn the_watchdog_acts_once_a_still_task_s_connection_reads_dead() {
-    let guard = TestOperationGuard::register("probe-abort-turns-dead");
+    let engine = TestOperations::new();
+    let guard = engine.register("probe-abort-turns-dead");
     let state = guard.state();
     let _window = StallAbortGuard::set(Duration::from_secs(2));
     let source = ScriptedConnectionVolume::new();
@@ -859,7 +880,8 @@ fn the_stall_report_goes_out_with_the_task_table_unlocked() {
 /// at the instant we sample: some are always between chunks.
 #[test]
 fn a_moving_transfer_reports_moving() {
-    let guard = TestOperationGuard::register("probe-moving");
+    let engine = TestOperations::new();
+    let guard = engine.register("probe-moving");
     let state = guard.state();
     let probe = probe_for(guard.id(), state);
     let a = probe.begin_task(TaskRow::source(0), TaskRole::File, "/src/a", "/dst/a");

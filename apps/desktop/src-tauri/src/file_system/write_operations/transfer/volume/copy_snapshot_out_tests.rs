@@ -7,14 +7,14 @@
 //! the two read-only routed volumes, so a change that breaks one usually breaks
 //! the other.
 //!
-//! Shared fixture `make_state` lives in `volume/copy_tests/mod.rs` (`super::tests`).
+//! Each cell runs on an engine of its own over the APP's answers
+//! (`operations_host::test_engine`): the portal's routing lives in the app's
+//! volume registry, which a test's fake registry doesn't route through.
 
-use super::tests::make_state;
 use super::*;
 use crate::file_system::git;
 use crate::file_system::volume::manager::get_volume_manager;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
-use crate::file_system::write_operations::installed;
 
 use cmdr_fs::volume::InMemoryVolume;
 use cmdr_git::test_fixtures::{EntryKind, Fixture, cleanup, temp_dir};
@@ -78,6 +78,7 @@ async fn read_dest_file(dest: &Arc<dyn Volume>, path: &str) -> Vec<u8> {
 /// transfer dialog sits on "Verifying before copy" until the user gives up.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_copy_out_of_a_snapshot_carries_a_file_and_a_folder_byte_for_byte() {
+    let engine = crate::operations_host::test_engine();
     let dir = repo_registered_as_the_local_drive("file_and_folder");
 
     // What a pane sends: full paths inside the branch snapshot.
@@ -85,7 +86,7 @@ async fn a_copy_out_of_a_snapshot_carries_a_file_and_a_folder_byte_for_byte() {
         dir.join(".git/branches/main/readme.txt"),
         dir.join(".git/branches/main/docs"),
     ];
-    let (source, route) = installed()
+    let (source, route) = engine
         .resolve_source_volume("root", sources.first())
         .await
         .expect("the source volume");
@@ -105,7 +106,7 @@ async fn a_copy_out_of_a_snapshot_carries_a_file_and_a_folder_byte_for_byte() {
     let result = copy_volumes_with_progress(
         events.clone(),
         "snapshot-copy-out-op",
-        &make_state(),
+        &Arc::new(engine.new_operation_state(Duration::from_millis(50))),
         Arc::clone(&source),
         &sources,
         Arc::clone(&dest),
@@ -141,6 +142,7 @@ async fn a_copy_out_of_a_snapshot_carries_a_file_and_a_folder_byte_for_byte() {
 /// (which has the entry already).
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn the_executable_bit_survives_a_copy_out_of_a_snapshot() {
+    let engine = crate::operations_host::test_engine();
     let dir = repo_registered_as_the_local_drive("executable_bit");
     let dest_dir = temp_dir("copy_snapshot_out", "executable_bit_dest");
     std::fs::create_dir_all(&dest_dir).expect("dest dir");
@@ -149,7 +151,7 @@ async fn the_executable_bit_survives_a_copy_out_of_a_snapshot() {
         dir.join(".git/branches/main/run.sh"),
         dir.join(".git/branches/main/scripts"),
     ];
-    let (source, _route) = installed()
+    let (source, _route) = engine
         .resolve_source_volume("root", sources.first())
         .await
         .expect("the source volume");
@@ -162,7 +164,7 @@ async fn the_executable_bit_survives_a_copy_out_of_a_snapshot() {
     let result = copy_volumes_with_progress(
         Arc::new(CollectorEventSink::new()),
         "snapshot-exec-bit-op",
-        &make_state(),
+        &Arc::new(engine.new_operation_state(Duration::from_millis(50))),
         Arc::clone(&source),
         &sources,
         Arc::clone(&dest),
@@ -203,6 +205,8 @@ async fn a_move_out_of_a_snapshot_is_refused_before_a_byte_is_written() {
     use crate::file_system::write_operations::{ReadOnlySide, WriteOperationError};
     use cmdr_operation_log::types::Initiator;
 
+    let engine = crate::operations_host::test_engine();
+
     let dir = repo_registered_as_the_local_drive("move_refused");
     let dest_dir = temp_dir("copy_snapshot_out", "move_refused_dest");
     std::fs::create_dir_all(&dest_dir).expect("dest dir");
@@ -215,7 +219,7 @@ async fn a_move_out_of_a_snapshot_is_refused_before_a_byte_is_written() {
         )),
     );
 
-    let err = installed()
+    let err = engine
         .start_volume_move(
             Arc::new(CollectorEventSink::new()),
             "root".to_string(),
@@ -258,10 +262,12 @@ async fn a_copy_into_a_snapshot_is_refused_up_front() {
     use crate::file_system::write_operations::{ReadOnlySide, WriteOperationError};
     use cmdr_operation_log::types::Initiator;
 
+    let engine = crate::operations_host::test_engine();
+
     let dir = repo_registered_as_the_local_drive("drop_refused");
     std::fs::write(dir.join("dropped.txt"), b"dropped").expect("write the dragged file");
 
-    let err = installed()
+    let err = engine
         .start_volume_copy(
             Arc::new(CollectorEventSink::new()),
             "root".to_string(),

@@ -7,6 +7,7 @@ use super::test_support::make_state;
 use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::ledger::WrittenIdentity;
+use crate::file_system::write_operations::testing::TestOperations;
 
 /// Every child a directory-into-directory merge renames is recorded with the
 /// identity it landed with.
@@ -17,6 +18,7 @@ use crate::file_system::write_operations::ledger::WrittenIdentity;
 /// make a later "leave anything I can't verify" rule reverse nothing at all.
 #[test]
 fn a_merged_move_records_every_child_it_renamed() {
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().unwrap();
     let source_dir = tmp.path().join("from/album");
     let dest_dir = tmp.path().join("into/album");
@@ -30,7 +32,7 @@ fn a_merged_move_records_every_child_it_renamed() {
     fs::write(source_dir.join("fresh/three.txt"), b"third").unwrap();
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state(200);
+    let state = make_state(&engine, 200);
     let config = WriteOperationConfig::default();
     let mut move_tx = MoveTransaction::new();
     let mut files_skipped = 0usize;

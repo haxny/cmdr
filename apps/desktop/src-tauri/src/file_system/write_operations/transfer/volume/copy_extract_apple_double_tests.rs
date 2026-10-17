@@ -7,6 +7,7 @@
 use super::tests::make_state;
 use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
+use crate::file_system::write_operations::testing::TestOperations;
 use cmdr_archive::ArchiveFormat;
 use cmdr_fs::testing::metadata_fixture::{QUARANTINE_VALUE, QUARANTINE_XATTR, TAGS_XATTR, set_xattr};
 use cmdr_fs::volume::InMemoryVolume;
@@ -95,6 +96,7 @@ fn assert_tagged_tree_landed(dest: &Path) {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn extracting_a_finder_made_zip_keeps_tags_on_files_and_folders() {
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     let zip_path = tmp.path().join("tagged.zip");
     std::fs::write(&zip_path, cmdr_archive::test_fixtures::APPLE_DOUBLE_DITTO_ZIP).expect("write the zip");
@@ -102,7 +104,7 @@ async fn extracting_a_finder_made_zip_keeps_tags_on_files_and_folders() {
 
     let source = local_archive_volume(&zip_path, ArchiveFormat::Zip);
     let sources = ["tagged.txt", "plain.txt", "tagged-dir"].map(|name| zip_path.join(name));
-    copy_out(&source, &sources, dest.path(), &make_state()).await;
+    copy_out(&source, &sources, dest.path(), &make_state(&engine)).await;
 
     assert_tagged_tree_landed(dest.path());
 }
@@ -111,6 +113,7 @@ async fn extracting_a_finder_made_zip_keeps_tags_on_files_and_folders() {
 /// prefix-decoding single-entry read for a file selected alone: both carry tags.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn extracting_a_macos_tar_keeps_tags_on_files_and_folders() {
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     let tar_path = tmp.path().join("tagged.tar.gz");
     std::fs::write(&tar_path, cmdr_archive::test_fixtures::APPLE_DOUBLE_BSDTAR_TAR_GZ).expect("write the tar");
@@ -118,7 +121,7 @@ async fn extracting_a_macos_tar_keeps_tags_on_files_and_folders() {
 
     let source = local_archive_volume(&tar_path, ArchiveFormat::Tar(cmdr_archive::TarCodec::Gzip));
     let sources = ["tagged.txt", "plain.txt", "tagged-dir"].map(|name| tar_path.join(name));
-    copy_out(&source, &sources, dest.path(), &make_state()).await;
+    copy_out(&source, &sources, dest.path(), &make_state(&engine)).await;
 
     assert_tagged_tree_landed(dest.path());
 }
@@ -129,6 +132,8 @@ async fn extracting_a_macos_tar_keeps_tags_on_files_and_folders() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_sidecar_quarantine_never_overrides_the_archives_own() {
     use cmdr_archive::test_fixtures::{apple_double_sidecar, build_zip, stored};
+
+    let engine = TestOperations::new();
     const FORGED: &[u8] = b"0043;5f000000;Safari;00000000-0000-0000-0000-000000000000";
     let forged = apple_double_sidecar(&[(QUARANTINE_XATTR, FORGED), (TAGS_XATTR, b"bplist00 tags")]);
 
@@ -147,7 +152,7 @@ async fn a_sidecar_quarantine_never_overrides_the_archives_own() {
     let dest = tempfile::tempdir().expect("dest tempdir");
 
     let source = local_archive_volume(&zip_path, ArchiveFormat::Zip);
-    copy_out(&source, &[zip_path.join("app")], dest.path(), &make_state()).await;
+    copy_out(&source, &[zip_path.join("app")], dest.path(), &make_state(&engine)).await;
 
     for landed in ["app", "app/run.sh"] {
         let path = dest.path().join(landed);

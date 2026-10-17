@@ -11,6 +11,7 @@
 use super::super::super::conflict_responder_test_support::{ConflictResponderSink, file_conflict_count};
 use super::tests::make_state;
 use super::*;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::{ConflictResolution, VolumeCopyConfig, WriteOperationError};
 use cmdr_fs::volume::InMemoryVolume;
 
@@ -65,6 +66,7 @@ fn sorted(names: &[&str]) -> Vec<String> {
 /// Copies `sources` into `dest_dir` under `policy`, answering any prompt with
 /// Skip, and hands back the outcome, the prompts, and the skip counters.
 async fn copy(
+    engine: &TestOperations,
     source: &Arc<InMemoryVolume>,
     sources: &[&str],
     dest: &Arc<InMemoryVolume>,
@@ -75,7 +77,7 @@ async fn copy(
     Arc<ConflictResponderSink>,
     Arc<WriteOperationState>,
 ) {
-    let state = make_state();
+    let state = make_state(engine);
     let events = Arc::new(ConflictResponderSink::new(&state, ConflictResolution::Skip, false));
     let config = VolumeCopyConfig {
         conflict_resolution: policy,
@@ -111,9 +113,10 @@ async fn album_pair() -> (Arc<InMemoryVolume>, Arc<InMemoryVolume>) {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_deep_look_alike_under_skip_leaves_the_users_file_alone() {
+    let engine = TestOperations::new();
     let (source, dest) = album_pair().await;
 
-    let (outcome, _events, state) = copy(&source, &["/album"], &dest, "/", ConflictResolution::Skip).await;
+    let (outcome, _events, state) = copy(&engine, &source, &["/album"], &dest, "/", ConflictResolution::Skip).await;
 
     assert!(outcome.is_ok(), "{outcome:?}");
     assert_eq!(
@@ -131,9 +134,11 @@ async fn a_deep_look_alike_under_skip_leaves_the_users_file_alone() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_deep_look_alike_under_overwrite_is_replaced_in_place() {
+    let engine = TestOperations::new();
     let (source, dest) = album_pair().await;
 
-    let (outcome, _events, _state) = copy(&source, &["/album"], &dest, "/", ConflictResolution::Overwrite).await;
+    let (outcome, _events, _state) =
+        copy(&engine, &source, &["/album"], &dest, "/", ConflictResolution::Overwrite).await;
 
     assert!(outcome.is_ok(), "{outcome:?}");
     assert_eq!(
@@ -147,9 +152,10 @@ async fn a_deep_look_alike_under_overwrite_is_replaced_in_place() {
 /// Under Stop the person is asked, about the entry that's THERE.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_look_alike_prompts_about_the_stored_entry() {
+    let engine = TestOperations::new();
     let (source, dest) = album_pair().await;
 
-    let (outcome, events, _state) = copy(&source, &["/album"], &dest, "/", ConflictResolution::Stop).await;
+    let (outcome, events, _state) = copy(&engine, &source, &["/album"], &dest, "/", ConflictResolution::Stop).await;
 
     assert!(outcome.is_ok(), "{outcome:?}");
     assert_eq!(file_conflict_count(&events.inner), 1, "one prompt, like any clash");
@@ -164,6 +170,7 @@ async fn a_look_alike_prompts_about_the_stored_entry() {
 /// The top-level prompt (the serial driver's pre-check) says so too.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_top_level_look_alike_prompt_says_it_is_one() {
+    let engine = TestOperations::new();
     let source = volume("Source");
     put(&source, &format!("/{CAFE_NFD}"), b"SOURCE").await;
     let dest = volume("Dest");
@@ -171,6 +178,7 @@ async fn a_top_level_look_alike_prompt_says_it_is_one() {
     put(&dest, &format!("/dest/{CAFE_NFC}"), b"THE USER'S FILE").await;
 
     let (outcome, events, _state) = copy(
+        &engine,
         &source,
         &[&format!("/{CAFE_NFD}")],
         &dest,
@@ -189,6 +197,7 @@ async fn a_top_level_look_alike_prompt_says_it_is_one() {
 /// A name spelled the same way on both sides is an ordinary clash.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn an_exact_clash_is_not_called_a_look_alike() {
+    let engine = TestOperations::new();
     let source = volume("Source");
     put(&source, &format!("/{CAFE_NFC}"), b"SOURCE").await;
     let dest = volume("Dest");
@@ -196,6 +205,7 @@ async fn an_exact_clash_is_not_called_a_look_alike() {
     put(&dest, &format!("/dest/{CAFE_NFC}"), b"THE USER'S FILE").await;
 
     let (outcome, events, _state) = copy(
+        &engine,
         &source,
         &[&format!("/{CAFE_NFC}")],
         &dest,
@@ -212,9 +222,10 @@ async fn an_exact_clash_is_not_called_a_look_alike() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_rename_keeps_the_users_file_and_adds_a_numbered_one() {
+    let engine = TestOperations::new();
     let (source, dest) = album_pair().await;
 
-    let (outcome, _events, _state) = copy(&source, &["/album"], &dest, "/", ConflictResolution::Rename).await;
+    let (outcome, _events, _state) = copy(&engine, &source, &["/album"], &dest, "/", ConflictResolution::Rename).await;
 
     assert!(outcome.is_ok(), "{outcome:?}");
     assert_eq!(
@@ -228,6 +239,7 @@ async fn a_rename_keeps_the_users_file_and_adds_a_numbered_one() {
 /// prompt, exactly as an exact name would.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_look_alike_folder_merges_into_the_one_that_is_there() {
+    let engine = TestOperations::new();
     let source = volume("Source");
     mkdir(&source, "/album").await;
     mkdir(&source, &format!("/album/{FOTOK_NFD}")).await;
@@ -237,7 +249,7 @@ async fn a_look_alike_folder_merges_into_the_one_that_is_there() {
     mkdir(&dest, &format!("/album/{FOTOK_NFC}")).await;
     put(&dest, &format!("/album/{FOTOK_NFC}/keep.txt"), b"THE USER'S FILE").await;
 
-    let (outcome, events, _state) = copy(&source, &["/album"], &dest, "/", ConflictResolution::Stop).await;
+    let (outcome, events, _state) = copy(&engine, &source, &["/album"], &dest, "/", ConflictResolution::Stop).await;
 
     assert!(outcome.is_ok(), "{outcome:?}");
     assert_eq!(names_in(&dest, "/album").await, sorted(&[FOTOK_NFC]));
@@ -252,6 +264,7 @@ async fn a_look_alike_folder_merges_into_the_one_that_is_there() {
 /// per-source probe rather than the level listing.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_top_level_look_alike_is_a_conflict_on_the_serial_driver() {
+    let engine = TestOperations::new();
     let source = volume("Source");
     put(&source, &format!("/{CAFE_NFD}"), b"SOURCE").await;
     let dest = volume("Dest");
@@ -259,6 +272,7 @@ async fn a_top_level_look_alike_is_a_conflict_on_the_serial_driver() {
     put(&dest, &format!("/dest/{CAFE_NFC}"), b"THE USER'S FILE").await;
 
     let (outcome, _events, state) = copy(
+        &engine,
         &source,
         &[&format!("/{CAFE_NFD}")],
         &dest,
@@ -275,6 +289,7 @@ async fn a_top_level_look_alike_is_a_conflict_on_the_serial_driver() {
 /// Three or more sources take the CONCURRENT driver.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_top_level_look_alike_is_overwritten_in_place_on_the_concurrent_driver() {
+    let engine = TestOperations::new();
     let source = volume("Source");
     for name in ["a.txt", "b.txt", CAFE_NFD] {
         put(&source, &format!("/{name}"), b"SOURCE").await;
@@ -285,7 +300,15 @@ async fn a_top_level_look_alike_is_overwritten_in_place_on_the_concurrent_driver
 
     let sources = ["/a.txt".to_string(), "/b.txt".to_string(), format!("/{CAFE_NFD}")];
     let sources: Vec<&str> = sources.iter().map(String::as_str).collect();
-    let (outcome, _events, _state) = copy(&source, &sources, &dest, "/dest", ConflictResolution::Overwrite).await;
+    let (outcome, _events, _state) = copy(
+        &engine,
+        &source,
+        &sources,
+        &dest,
+        "/dest",
+        ConflictResolution::Overwrite,
+    )
+    .await;
 
     assert!(outcome.is_ok(), "{outcome:?}");
     assert_eq!(names_in(&dest, "/dest").await, sorted(&["a.txt", "b.txt", CAFE_NFC]));
@@ -296,6 +319,7 @@ async fn a_top_level_look_alike_is_overwritten_in_place_on_the_concurrent_driver
 /// guess, so the copy refuses before writing anything there.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn two_look_alikes_refuse_the_copy_instead_of_guessing() {
+    let engine = TestOperations::new();
     let composed = "\u{e9}l\u{151}.txt";
     let decomposed = "e\u{301}lo\u{30b}.txt";
     let half = "\u{e9}lo\u{30b}.txt";
@@ -307,7 +331,8 @@ async fn two_look_alikes_refuse_the_copy_instead_of_guessing() {
     put(&dest, &format!("/album/{composed}"), b"ONE").await;
     put(&dest, &format!("/album/{decomposed}"), b"TWO").await;
 
-    let (outcome, _events, _state) = copy(&source, &["/album"], &dest, "/", ConflictResolution::Overwrite).await;
+    let (outcome, _events, _state) =
+        copy(&engine, &source, &["/album"], &dest, "/", ConflictResolution::Overwrite).await;
 
     assert!(
         matches!(
@@ -328,6 +353,7 @@ async fn two_look_alikes_refuse_the_copy_instead_of_guessing() {
 /// created.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn new_names_go_out_composed_where_the_destination_asks() {
+    let engine = TestOperations::new();
     let source = volume("Source");
     mkdir(&source, &format!("/{FOTOK_NFD}")).await;
     put(&source, &format!("/{FOTOK_NFD}/{CAFE_NFD}"), b"DEEP").await;
@@ -341,7 +367,7 @@ async fn new_names_go_out_composed_where_the_destination_asks() {
 
     let sources = [format!("/{FOTOK_NFD}"), format!("/{CAFE_NFD}")];
     let sources: Vec<&str> = sources.iter().map(String::as_str).collect();
-    let (outcome, _events, _state) = copy(&source, &sources, &dest, "/dest", ConflictResolution::Stop).await;
+    let (outcome, _events, _state) = copy(&engine, &source, &sources, &dest, "/dest", ConflictResolution::Stop).await;
 
     assert!(outcome.is_ok(), "{outcome:?}");
     assert_eq!(names_in(&dest, "/dest").await, sorted(&[CAFE_NFC, FOTOK_NFC]));
@@ -355,12 +381,14 @@ async fn new_names_go_out_composed_where_the_destination_asks() {
 /// Everywhere else a new name goes out exactly as the source spelled it.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn new_names_go_out_as_given_by_default() {
+    let engine = TestOperations::new();
     let source = volume("Source");
     put(&source, &format!("/{CAFE_NFD}"), b"TOP").await;
     let dest = volume("Dest");
     mkdir(&dest, "/dest").await;
 
     let (outcome, _events, _state) = copy(
+        &engine,
         &source,
         &[&format!("/{CAFE_NFD}")],
         &dest,
@@ -377,6 +405,7 @@ async fn new_names_go_out_as_given_by_default() {
 /// numbered name the folder already holds in another spelling is taken too.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_rename_pick_is_spelled_for_the_destination_and_skips_a_numbered_look_alike() {
+    let engine = TestOperations::new();
     let source = volume("Source");
     mkdir(&source, "/album").await;
     put(&source, &format!("/album/{CAFE_NFD}"), b"SOURCE").await;
@@ -389,7 +418,7 @@ async fn a_rename_pick_is_spelled_for_the_destination_and_skips_a_numbered_look_
     put(&dest, &format!("/album/{CAFE_NFD}"), b"THE USER'S FILE").await;
     put(&dest, "/album/cafe\u{301} (1).txt", b"AN OLDER COPY").await;
 
-    let (outcome, _events, _state) = copy(&source, &["/album"], &dest, "/", ConflictResolution::Rename).await;
+    let (outcome, _events, _state) = copy(&engine, &source, &["/album"], &dest, "/", ConflictResolution::Rename).await;
 
     assert!(outcome.is_ok(), "{outcome:?}");
     assert_eq!(

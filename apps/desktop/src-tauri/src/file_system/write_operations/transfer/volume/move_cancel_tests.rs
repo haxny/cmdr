@@ -17,6 +17,7 @@ use super::test_support::{
 };
 use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::CancelRollbackOutcome;
 use cmdr_fs::volume::InMemoryVolume;
 
@@ -25,13 +26,14 @@ use cmdr_fs::volume::InMemoryVolume;
 /// but never emitted the event, leaving the FE dialog open. Fixed inline.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn cross_volume_move_cancel_between_sources_emits_cancelled_event() {
+    let engine = TestOperations::new();
     let (source, dest) = make_volumes();
     source.create_file(Path::new("/a.txt"), b"alpha").await.unwrap();
     source.create_file(Path::new("/b.txt"), b"bravo").await.unwrap();
     source.create_file(Path::new("/c.txt"), b"charlie").await.unwrap();
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     // Pre-cancel before the loop runs: every iteration sees the cancel at the
     // top check. Uses the existing convention in `volume/copy_tests/` of a
     // direct `set_for_test` for the simulated cancel; the public-path
@@ -88,6 +90,7 @@ async fn cross_volume_move_cancel_between_sources_emits_cancelled_event() {
 /// in-progress source.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn cross_volume_move_cancel_mid_batch_preserves_completed() {
+    let engine = TestOperations::new();
     let (source, dest) = make_volumes();
     for name in ["a", "b", "c", "d", "e"] {
         source
@@ -96,7 +99,7 @@ async fn cross_volume_move_cancel_mid_batch_preserves_completed() {
             .unwrap();
     }
 
-    let state = make_state_with_interval_ms(0);
+    let state = make_state_with_interval_ms(&engine, 0);
     let events = Arc::new(CancelAfterFirstSink {
         inner: CollectorEventSink::new(),
         intent: state.intent().clone(),
@@ -164,13 +167,14 @@ async fn cross_volume_move_cancel_mid_batch_preserves_completed() {
 /// Pins the same latent-bug fix as the cross-volume variant.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn same_volume_move_cancel_emits_cancelled_event() {
+    let engine = TestOperations::new();
     let volume: Arc<dyn Volume> = Arc::new(InMemoryVolume::new("V").with_space_info(10_000_000, 10_000_000));
     volume.create_file(Path::new("/a.txt"), b"alpha").await.unwrap();
     volume.create_file(Path::new("/b.txt"), b"bravo").await.unwrap();
     volume.create_directory(Path::new("/dst")).await.unwrap();
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     state
         .intent()
         .set_for_test(crate::file_system::write_operations::OperationIntent::Stopped); // Stopped
@@ -209,7 +213,8 @@ async fn same_volume_move_cancel_emits_cancelled_event() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn cross_volume_move_cancelled_at_a_conflict_prompt_emits_cancelled_event() {
     use super::super::super::conflict_responder_test_support::ConflictResponderSink;
-    use crate::file_system::write_operations::test_support::TestOperationGuard;
+
+    let engine = TestOperations::new();
 
     let (source, dest) = make_volumes();
     source.create_file(Path::new("/a.txt"), b"incoming").await.unwrap();
@@ -217,8 +222,8 @@ async fn cross_volume_move_cancelled_at_a_conflict_prompt_emits_cancelled_event(
         .await
         .unwrap();
 
-    let op = TestOperationGuard::register_state("move-cancel-at-prompt", make_state());
-    let events = Arc::new(ConflictResponderSink::cancelling(op.state(), op.id()));
+    let op = engine.register_state("move-cancel-at-prompt", make_state(&engine));
+    let events = Arc::new(ConflictResponderSink::cancelling(&engine, op.state(), op.id()));
 
     let result = move_volumes_with_progress(
         events.clone(),
@@ -278,7 +283,8 @@ async fn cross_volume_move_cancelled_at_a_conflict_prompt_emits_cancelled_event(
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn same_volume_move_cancelled_at_a_conflict_prompt_emits_cancelled_event() {
     use super::super::super::conflict_responder_test_support::ConflictResponderSink;
-    use crate::file_system::write_operations::test_support::TestOperationGuard;
+
+    let engine = TestOperations::new();
 
     let volume: Arc<dyn Volume> = Arc::new(InMemoryVolume::new("V").with_space_info(10_000_000, 10_000_000));
     volume.create_file(Path::new("/a.txt"), b"incoming").await.unwrap();
@@ -288,8 +294,8 @@ async fn same_volume_move_cancelled_at_a_conflict_prompt_emits_cancelled_event()
         .await
         .unwrap();
 
-    let op = TestOperationGuard::register_state("same-move-cancel-at-prompt", make_state());
-    let events = Arc::new(ConflictResponderSink::cancelling(op.state(), op.id()));
+    let op = engine.register_state("same-move-cancel-at-prompt", make_state(&engine));
+    let events = Arc::new(ConflictResponderSink::cancelling(&engine, op.state(), op.id()));
 
     let result = move_within_same_volume_with_progress(
         events.clone(),

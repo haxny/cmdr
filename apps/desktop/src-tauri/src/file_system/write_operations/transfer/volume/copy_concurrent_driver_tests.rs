@@ -30,6 +30,7 @@
 use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::ledger::{WrittenFile, WrittenIdentity};
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::transfer::transfer_driver::LeafProgressLedger;
 use crate::file_system::write_operations::types::{ConflictResolution, WriteOperationType};
 use cmdr_fs::staging::STAGING_TEMP_MARKER;
@@ -151,8 +152,8 @@ struct Harness {
 }
 
 impl Harness {
-    fn new(source_paths: &[PathBuf]) -> Self {
-        let state = Arc::new(WriteOperationState::new(Duration::from_millis(50)));
+    fn new(engine: &TestOperations, source_paths: &[PathBuf]) -> Self {
+        let state = Arc::new(engine.new_operation_state(Duration::from_millis(50)));
         let events: Arc<dyn OperationEventSink> = Arc::new(CollectorEventSink::new());
         let files_done = Arc::new(AtomicUsize::new(0));
         Self {
@@ -345,8 +346,9 @@ fn merge_config() -> VolumeCopyConfig {
 /// the concurrent driver reaches it through a different arm.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_completed_directory_source_is_recorded_file_by_file_never_by_its_root() {
+    let engine = TestOperations::new();
     let (source, dest, sources) = merge_batch(3).await;
-    let harness = Harness::new(&sources);
+    let harness = Harness::new(&engine, &sources);
 
     let run = harness.drive(source as Arc<dyn Volume>, Arc::clone(&dest), 4).await;
 
@@ -393,8 +395,9 @@ async fn a_completed_directory_source_is_recorded_file_by_file_never_by_its_root
 /// bare paths would leave the reversal nothing to recognize the file by.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn every_recorded_destination_carries_the_size_it_was_written_with() {
+    let engine = TestOperations::new();
     let (source, dest, sources) = merge_batch(3).await;
-    let harness = Harness::new(&sources);
+    let harness = Harness::new(&engine, &sources);
 
     let run = harness.drive(source as Arc<dyn Volume>, Arc::clone(&dest), 4).await;
 
@@ -419,12 +422,13 @@ async fn every_recorded_destination_carries_the_size_it_was_written_with() {
 /// A genuine transport failure takes the same arm and had nothing watching it.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_failed_directory_source_records_its_files_and_never_its_root_as_a_partial() {
+    let engine = TestOperations::new();
     let (source_inner, dest, sources) = merge_batch(3).await;
     let source: Arc<dyn Volume> = Arc::new(FailReadForPathVolume {
         inner: source_inner,
         fail_for: PathBuf::from("/album/new1.bin"),
     });
-    let harness = Harness::new(&sources);
+    let harness = Harness::new(&engine, &sources);
 
     let run = harness.drive(source, Arc::clone(&dest), 4).await;
 
@@ -469,6 +473,7 @@ async fn a_failed_directory_source_records_its_files_and_never_its_root_as_a_par
 /// the other, so both need something watching them.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_stream_failure_hands_its_staged_partial_back_for_cleanup() {
+    let engine = TestOperations::new();
     let source_inner = Arc::new(InMemoryVolume::new("Source").with_space_info(10_000_000, 10_000_000));
     source_inner.create_file(Path::new("/a.txt"), b"AAA").await.unwrap();
     source_inner.create_file(Path::new("/b.txt"), b"BBB-new").await.unwrap();
@@ -488,7 +493,7 @@ async fn a_stream_failure_hands_its_staged_partial_back_for_cleanup() {
         PathBuf::from("/b.txt"),
         PathBuf::from("/c.txt"),
     ];
-    let harness = Harness::new(&sources);
+    let harness = Harness::new(&engine, &sources);
 
     let run = harness.drive(source, Arc::clone(&dest), 4).await;
 
@@ -529,12 +534,13 @@ async fn a_stream_failure_hands_its_staged_partial_back_for_cleanup() {
 /// operation has.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_pre_skipped_source_is_dropped_without_being_counted_again() {
+    let engine = TestOperations::new();
     let source = Arc::new(InMemoryVolume::new("Source").with_space_info(10_000_000, 10_000_000));
     source.create_file(Path::new("/a.txt"), b"AAA").await.unwrap();
     let dest: Arc<dyn Volume> = Arc::new(InMemoryVolume::new("Dest").with_space_info(10_000_000, 10_000_000));
 
     let sources = vec![PathBuf::from("/a.txt")];
-    let mut harness = Harness::new(&sources);
+    let mut harness = Harness::new(&engine, &sources);
     harness.pre_skip_paths.insert(PathBuf::from("/a.txt"));
 
     let ctx = harness.ctx(source as Arc<dyn Volume>, dest, 4);
@@ -563,6 +569,7 @@ async fn a_pre_skipped_source_is_dropped_without_being_counted_again() {
 /// through their files.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_conflict_resolved_to_skip_credits_both_progress_axes_once() {
+    let engine = TestOperations::new();
     let source = Arc::new(InMemoryVolume::new("Source").with_space_info(10_000_000, 10_000_000));
     source.create_file(Path::new("/a.txt"), b"AAA").await.unwrap();
     let dest: Arc<dyn Volume> = Arc::new(InMemoryVolume::new("Dest").with_space_info(10_000_000, 10_000_000));
@@ -570,7 +577,7 @@ async fn a_conflict_resolved_to_skip_credits_both_progress_axes_once() {
 
     let sources = vec![PathBuf::from("/a.txt")];
     let source: Arc<dyn Volume> = source;
-    let mut harness = Harness::new(&sources);
+    let mut harness = Harness::new(&engine, &sources);
     harness.config.conflict_resolution = ConflictResolution::Skip;
     harness.seed_hints_from_preflight(&source).await;
 
@@ -593,13 +600,14 @@ async fn a_conflict_resolved_to_skip_credits_both_progress_axes_once() {
 /// error can only reach the temp.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_file_overwrite_is_prepared_as_a_staged_write_plus_a_swap() {
+    let engine = TestOperations::new();
     let source = Arc::new(InMemoryVolume::new("Source").with_space_info(10_000_000, 10_000_000));
     source.create_file(Path::new("/a.txt"), b"NEW").await.unwrap();
     let dest: Arc<dyn Volume> = Arc::new(InMemoryVolume::new("Dest").with_space_info(10_000_000, 10_000_000));
     dest.create_file(Path::new("/a.txt"), b"OLD").await.unwrap();
 
     let sources = vec![PathBuf::from("/a.txt")];
-    let harness = Harness::new(&sources);
+    let harness = Harness::new(&engine, &sources);
 
     let ctx = harness.ctx(source as Arc<dyn Volume>, dest, 4);
     let task = ctx
@@ -638,6 +646,7 @@ async fn a_file_overwrite_is_prepared_as_a_staged_write_plus_a_swap() {
 /// which is why the two can't share one rule.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_directory_source_takes_no_slot_from_the_file_window() {
+    let engine = TestOperations::new();
     let source = Arc::new(InMemoryVolume::new("Source").with_space_info(10_000_000, 10_000_000));
     for dir in ["d1", "d2"] {
         source.create_directory(Path::new(&format!("/{dir}"))).await.unwrap();
@@ -655,7 +664,7 @@ async fn a_directory_source_takes_no_slot_from_the_file_window() {
     let dest: Arc<dyn Volume> = Arc::new(InMemoryVolume::new("Dest").with_space_info(10_000_000, 10_000_000));
 
     let sources = vec![PathBuf::from("/d1"), PathBuf::from("/d2"), PathBuf::from("/f.bin")];
-    let harness = Harness::new(&sources);
+    let harness = Harness::new(&engine, &sources);
 
     // A deadlock here would otherwise run until nextest kills the process with
     // nothing to say; the deadline turns it into a readable failure.
@@ -696,6 +705,7 @@ async fn a_directory_source_takes_no_slot_from_the_file_window() {
 /// the second one's probe refuses.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_conflict_resolution_failure_comes_back_in_the_outcome() {
+    let engine = TestOperations::new();
     let source_inner = Arc::new(InMemoryVolume::new("Source").with_space_info(10_000_000, 10_000_000));
     for name in ["a.txt", "b.txt", "c.txt"] {
         source_inner
@@ -714,7 +724,7 @@ async fn a_conflict_resolution_failure_comes_back_in_the_outcome() {
         PathBuf::from("/b.txt"),
         PathBuf::from("/c.txt"),
     ];
-    let harness = Harness::new(&sources);
+    let harness = Harness::new(&engine, &sources);
 
     let run = harness.drive(source, Arc::clone(&dest), 1).await;
 

@@ -29,6 +29,7 @@ mod macos {
     use crate::file_system::write_operations::host::Announced;
     use crate::file_system::write_operations::overwrite::PostLanding;
     use crate::file_system::write_operations::state::WriteOperationState;
+    use crate::file_system::write_operations::testing::TestOperations;
     use crate::file_system::write_operations::transfer::copy::copy_files_with_progress_inner;
     use crate::file_system::write_operations::transfer::copy_strategy::{
         LocalCopyStrategy, StrategyCopyOutcome, copy_file_using, select_local_copy_strategy,
@@ -36,8 +37,8 @@ mod macos {
     use crate::file_system::write_operations::transfer::move_op::test_support::{run_cross_fs_move, run_same_fs_move};
     use crate::file_system::write_operations::types::{ConflictResolution, WriteOperationConfig, WriteOperationError};
 
-    fn state() -> Arc<WriteOperationState> {
-        Arc::new(WriteOperationState::new(Duration::from_millis(50)))
+    fn state(engine: &TestOperations) -> Arc<WriteOperationState> {
+        Arc::new(engine.new_operation_state(Duration::from_millis(50)))
     }
 
     /// `dst/` inside the fixture, so source and destination share one APFS volume.
@@ -48,13 +49,14 @@ mod macos {
     }
 
     fn copy_one(
+        engine: &TestOperations,
         strategy: LocalCopyStrategy,
         source: &Path,
         dest: &Path,
     ) -> Result<StrategyCopyOutcome, WriteOperationError> {
         copy_file_using(
             strategy,
-            &state(),
+            &state(engine),
             source,
             Announced::assumed(dest),
             false,
@@ -86,12 +88,12 @@ mod macos {
             .unwrap_or_default()
     }
 
-    fn copy_tree(sources: &[PathBuf], dst: &Path) {
+    fn copy_tree(engine: &TestOperations, sources: &[PathBuf], dst: &Path) {
         let events = Arc::new(CollectorEventSink::new());
         let result = copy_files_with_progress_inner(
             &*events,
             "op-metadata-matrix",
-            &state(),
+            &state(engine),
             sources,
             dst,
             &WriteOperationConfig::default(),
@@ -106,13 +108,14 @@ mod macos {
     /// file. The clone's birth time survives all three steps.
     #[test]
     fn a_locked_file_cloned_within_one_volume_lands_locked_with_its_birth_time() {
+        let engine = TestOperations::new();
         let fixture = MetadataFixture::new("matrix_clone_locked");
         let source = fixture.locked_file("locked.txt");
         let dst = dst_dir(&fixture);
         let dest = dst.join("locked.txt");
         assert_clone_arm(&source, &dest);
 
-        copy_one(LocalCopyStrategy::AppleClone, &source, &dest).expect("the clone lands");
+        copy_one(&engine, LocalCopyStrategy::AppleClone, &source, &dest).expect("the clone lands");
 
         assert_eq!(flags(&dest) & LOCKED_FLAG, LOCKED_FLAG, "the landed file is Locked");
         assert_eq!(birth_secs(&dest), BIRTH_SECS);
@@ -125,13 +128,14 @@ mod macos {
     /// back on the landed file.
     #[test]
     fn a_deny_delete_file_cloned_within_one_volume_lands_with_its_acl() {
+        let engine = TestOperations::new();
         let fixture = MetadataFixture::new("matrix_clone_acl");
         let source = fixture.deny_delete_file("acl.txt");
         let dst = dst_dir(&fixture);
         let dest = dst.join("acl.txt");
         assert_clone_arm(&source, &dest);
 
-        copy_one(LocalCopyStrategy::AppleClone, &source, &dest).expect("the clone lands");
+        copy_one(&engine, LocalCopyStrategy::AppleClone, &source, &dest).expect("the clone lands");
 
         assert!(has_acl(&dest), "the landed file wears the ACL");
         assert_eq!(birth_secs(&dest), BIRTH_SECS);
@@ -142,6 +146,7 @@ mod macos {
     /// one `copyfile` and one `rename`, and never reaches the metadata helper.
     #[test]
     fn a_plain_file_through_the_clone_arm_never_calls_the_metadata_helper() {
+        let engine = TestOperations::new();
         let fixture = MetadataFixture::new("matrix_clone_plain");
         let source = fixture.rich_file("f.txt");
         let dst = dst_dir(&fixture);
@@ -149,7 +154,7 @@ mod macos {
         assert_clone_arm(&source, &dest);
         let before = cmdr_fs::metadata::helper_calls_on_this_thread();
 
-        copy_one(LocalCopyStrategy::AppleClone, &source, &dest).expect("the clone lands");
+        copy_one(&engine, LocalCopyStrategy::AppleClone, &source, &dest).expect("the clone lands");
 
         assert_eq!(cmdr_fs::metadata::helper_calls_on_this_thread(), before);
     }
@@ -157,13 +162,14 @@ mod macos {
     /// A keep cell: the clone carries every class of a file with no rename-blocker.
     #[test]
     fn a_clone_keeps_every_class_of_a_file_without_a_rename_blocker() {
+        let engine = TestOperations::new();
         let fixture = MetadataFixture::new("matrix_clone_rich");
         let source = fixture.rich_file("f.txt");
         let dst = dst_dir(&fixture);
         let dest = dst.join("f.txt");
         assert_clone_arm(&source, &dest);
 
-        copy_one(LocalCopyStrategy::AppleClone, &source, &dest).expect("the clone lands");
+        copy_one(&engine, LocalCopyStrategy::AppleClone, &source, &dest).expect("the clone lands");
 
         assert_eq!(birth_secs(&dest), BIRTH_SECS);
         assert_eq!(modified_secs(&dest), MODIFIED_SECS);
@@ -178,12 +184,13 @@ mod macos {
     /// ACL on the temp would refuse (`EACCES`).
     #[test]
     fn a_deny_delete_file_copied_chunked_lands_with_its_acl() {
+        let engine = TestOperations::new();
         let fixture = MetadataFixture::new("matrix_chunked_acl");
         let source = fixture.deny_delete_file("acl.txt");
         let dst = dst_dir(&fixture);
         let dest = dst.join("acl.txt");
 
-        copy_one(LocalCopyStrategy::Chunked, &source, &dest).expect("the copy lands");
+        copy_one(&engine, LocalCopyStrategy::Chunked, &source, &dest).expect("the copy lands");
 
         assert!(has_acl(&dest), "the landed file wears the ACL");
         assert_eq!(staging_temps(&dst), Vec::<PathBuf>::new(), "no temp stays behind");
@@ -193,11 +200,12 @@ mod macos {
     /// to the earlier mtime.
     #[test]
     fn a_chunked_copy_keeps_the_files_birth_time() {
+        let engine = TestOperations::new();
         let fixture = MetadataFixture::new("matrix_chunked_birth");
         let source = fixture.rich_file("f.txt");
         let dest = dst_dir(&fixture).join("f.txt");
 
-        copy_one(LocalCopyStrategy::Chunked, &source, &dest).expect("the copy lands");
+        copy_one(&engine, LocalCopyStrategy::Chunked, &source, &dest).expect("the copy lands");
 
         assert_eq!(birth_secs(&dest), BIRTH_SECS);
         assert_eq!(modified_secs(&dest), MODIFIED_SECS);
@@ -207,13 +215,14 @@ mod macos {
     /// that kept its server date) keeps both exactly.
     #[test]
     fn a_chunked_copy_keeps_a_birth_time_later_than_the_mtime() {
+        let engine = TestOperations::new();
         let fixture = MetadataFixture::new("matrix_chunked_birth_after");
         let source = fixture.join("downloaded.txt");
         std::fs::write(&source, b"born after its mtime").expect("write the source");
         set_times(&source, MODIFIED_SECS, BIRTH_SECS, ACCESSED_SECS, Follow::Yes);
         let dest = dst_dir(&fixture).join("downloaded.txt");
 
-        copy_one(LocalCopyStrategy::Chunked, &source, &dest).expect("the copy lands");
+        copy_one(&engine, LocalCopyStrategy::Chunked, &source, &dest).expect("the copy lands");
 
         assert_eq!(birth_secs(&dest), MODIFIED_SECS);
         assert_eq!(modified_secs(&dest), BIRTH_SECS);
@@ -221,11 +230,12 @@ mod macos {
 
     #[test]
     fn a_chunked_copy_keeps_hidden() {
+        let engine = TestOperations::new();
         let fixture = MetadataFixture::new("matrix_chunked_hidden");
         let source = fixture.rich_file("f.txt");
         let dest = dst_dir(&fixture).join("f.txt");
 
-        copy_one(LocalCopyStrategy::Chunked, &source, &dest).expect("the copy lands");
+        copy_one(&engine, LocalCopyStrategy::Chunked, &source, &dest).expect("the copy lands");
 
         assert_eq!(flags(&dest) & HIDDEN_FLAG, HIDDEN_FLAG);
     }
@@ -233,12 +243,13 @@ mod macos {
     /// `uchg` goes on after the landing rename, which it would refuse (`EPERM`).
     #[test]
     fn a_locked_file_copied_chunked_lands_locked() {
+        let engine = TestOperations::new();
         let fixture = MetadataFixture::new("matrix_chunked_locked");
         let source = fixture.locked_file("locked.txt");
         let dst = dst_dir(&fixture);
         let dest = dst.join("locked.txt");
 
-        copy_one(LocalCopyStrategy::Chunked, &source, &dest).expect("the copy lands");
+        copy_one(&engine, LocalCopyStrategy::Chunked, &source, &dest).expect("the copy lands");
 
         assert_eq!(flags(&dest) & LOCKED_FLAG, LOCKED_FLAG, "the landed file is Locked");
         assert_eq!(birth_secs(&dest), BIRTH_SECS);
@@ -251,6 +262,8 @@ mod macos {
     fn a_private_files_temp_is_never_readable_by_others_mid_copy() {
         use crate::file_system::write_operations::transfer::chunked_copy::chunk_park;
 
+        let engine = TestOperations::new();
+
         let fixture = MetadataFixture::new("matrix_chunked_private_temp");
         let source = fixture.join("private.txt");
         std::fs::write(&source, vec![7u8; 4096]).expect("write the source");
@@ -259,10 +272,10 @@ mod macos {
         let dst = dst_dir(&fixture);
         let dest = dst.join("private.txt");
 
-        let park = chunk_park::park_after(0);
+        let park = chunk_park::park_after(&source, 0);
         let copy = std::thread::spawn({
             let (source, dest) = (source.clone(), dest.clone());
-            move || copy_one(LocalCopyStrategy::Chunked, &source, &dest).map(|_| ())
+            move || copy_one(&engine, LocalCopyStrategy::Chunked, &source, &dest).map(|_| ())
         });
         park.wait_until_parked(Duration::from_secs(10))
             .expect("the copy parks mid-file");
@@ -279,11 +292,12 @@ mod macos {
     /// A keep cell: what the chunked arm carries today.
     #[test]
     fn a_chunked_copy_keeps_xattrs_mode_mtime_and_atime() {
+        let engine = TestOperations::new();
         let fixture = MetadataFixture::new("matrix_chunked_keeps");
         let source = fixture.rich_file("f.txt");
         let dest = dst_dir(&fixture).join("f.txt");
 
-        copy_one(LocalCopyStrategy::Chunked, &source, &dest).expect("the copy lands");
+        copy_one(&engine, LocalCopyStrategy::Chunked, &source, &dest).expect("the copy lands");
 
         assert_eq!(xattrs(&dest), xattrs(&source));
         assert_eq!(mode(&dest), 0o750);
@@ -297,12 +311,13 @@ mod macos {
     /// target's stay untouched.
     #[test]
     fn a_copied_symlink_keeps_its_own_dates() {
+        let engine = TestOperations::new();
         let fixture = MetadataFixture::new("matrix_symlink");
         let target = fixture.rich_file("f.txt");
         let link = fixture.symlink("link", &target);
         let dst = dst_dir(&fixture);
 
-        copy_tree(&[link], &dst);
+        copy_tree(&engine, &[link], &dst);
 
         let landed = dst.join("link");
         assert!(std::fs::symlink_metadata(&landed).expect("lstat").is_symlink());
@@ -314,10 +329,10 @@ mod macos {
     // ── Folders (the native folder pass, strategy-independent) ──────────────
 
     /// Copies the fixture's rich folder into `dst/`, answering (source, landed).
-    fn copy_rich_folder(fixture: &MetadataFixture) -> (PathBuf, PathBuf) {
+    fn copy_rich_folder(engine: &TestOperations, fixture: &MetadataFixture) -> (PathBuf, PathBuf) {
         let folder = fixture.rich_folder("dir");
         let dst = dst_dir(fixture);
-        copy_tree(std::slice::from_ref(&folder), &dst);
+        copy_tree(engine, std::slice::from_ref(&folder), &dst);
         let landed = dst.join("dir");
         assert!(landed.join("child.txt").is_file(), "the folder's child lands");
         (folder, landed)
@@ -327,8 +342,9 @@ mod macos {
     /// are in, so neither a child nor APFS's birth quirk moves them.
     #[test]
     fn a_copied_folder_keeps_its_birth_time_and_mtime() {
+        let engine = TestOperations::new();
         let fixture = MetadataFixture::new("matrix_folder_dates");
-        let (_, landed) = copy_rich_folder(&fixture);
+        let (_, landed) = copy_rich_folder(&engine, &fixture);
         assert_eq!(birth_secs(&landed), BIRTH_SECS);
         assert_eq!(modified_secs(&landed), MODIFIED_SECS);
     }
@@ -336,30 +352,34 @@ mod macos {
     /// A `0700` folder stays private (it used to land at the umask default).
     #[test]
     fn a_copied_folder_keeps_its_mode() {
+        let engine = TestOperations::new();
         let fixture = MetadataFixture::new("matrix_folder_mode");
-        let (_, landed) = copy_rich_folder(&fixture);
+        let (_, landed) = copy_rich_folder(&engine, &fixture);
         assert_eq!(mode(&landed), 0o700);
     }
 
     #[test]
     fn a_copied_folder_keeps_its_tags_comment_and_finder_info() {
+        let engine = TestOperations::new();
         let fixture = MetadataFixture::new("matrix_folder_xattrs");
-        let (source, landed) = copy_rich_folder(&fixture);
+        let (source, landed) = copy_rich_folder(&engine, &fixture);
         assert_eq!(xattrs(&landed), xattrs(&source));
     }
 
     #[test]
     fn a_copied_folder_keeps_hidden() {
+        let engine = TestOperations::new();
         let fixture = MetadataFixture::new("matrix_folder_hidden");
-        let (_, landed) = copy_rich_folder(&fixture);
+        let (_, landed) = copy_rich_folder(&engine, &fixture);
         assert_eq!(flags(&landed) & HIDDEN_FLAG, HIDDEN_FLAG);
     }
 
     /// The ACL goes on last, after the folder's children landed.
     #[test]
     fn a_copied_folder_keeps_its_acl() {
+        let engine = TestOperations::new();
         let fixture = MetadataFixture::new("matrix_folder_acl");
-        let (_, landed) = copy_rich_folder(&fixture);
+        let (_, landed) = copy_rich_folder(&engine, &fixture);
         assert!(has_acl(&landed));
     }
 
@@ -367,6 +387,7 @@ mod macos {
     /// an `Icon\r` file inside it whose resource fork holds the image.
     #[test]
     fn a_folder_with_a_custom_icon_lands_with_its_finder_info_and_icon_file() {
+        let engine = TestOperations::new();
         let fixture = MetadataFixture::new("matrix_folder_icon");
         let source = fixture.rich_folder("dir");
         let icon = source.join("Icon\r");
@@ -374,7 +395,7 @@ mod macos {
         set_xattr(&icon, RESOURCE_FORK_XATTR, b"icns bytes");
         let dst = dst_dir(&fixture);
 
-        copy_tree(std::slice::from_ref(&source), &dst);
+        copy_tree(&engine, std::slice::from_ref(&source), &dst);
 
         let landed = dst.join("dir");
         assert!(
@@ -392,11 +413,12 @@ mod macos {
     /// Locked folder refuses new entries.
     #[test]
     fn a_locked_read_only_folder_is_copied_full_and_lands_locked() {
+        let engine = TestOperations::new();
         let fixture = MetadataFixture::new("matrix_folder_locked");
         let source = fixture.locked_read_only_folder("vault");
         let dst = dst_dir(&fixture);
 
-        copy_tree(std::slice::from_ref(&source), &dst);
+        copy_tree(&engine, std::slice::from_ref(&source), &dst);
 
         let landed = dst.join("vault");
         assert!(landed.join("a.txt").is_file() && landed.join("inner/b.txt").is_file());
@@ -408,6 +430,7 @@ mod macos {
     /// A merge adds to the user's folder and leaves it its own metadata.
     #[test]
     fn a_folder_the_copy_merged_into_keeps_its_own_metadata() {
+        let engine = TestOperations::new();
         let fixture = MetadataFixture::new("matrix_folder_merge");
         let source = fixture.rich_folder("dir");
         let dst = dst_dir(&fixture);
@@ -415,7 +438,7 @@ mod macos {
         std::fs::create_dir(&existing).expect("create the user's folder");
         let before = (mode(&existing), flags(&existing), birth_secs(&existing));
 
-        copy_tree(std::slice::from_ref(&source), &dst);
+        copy_tree(&engine, std::slice::from_ref(&source), &dst);
 
         assert!(existing.join("child.txt").is_file());
         assert_eq!((mode(&existing), flags(&existing), birth_secs(&existing)), before);
@@ -428,6 +451,7 @@ mod macos {
     /// as the umask allows for a shared one.
     #[test]
     fn a_failed_copy_leaves_its_folders_undated_and_never_wider_than_their_source() {
+        let engine = TestOperations::new();
         let fixture = MetadataFixture::new("matrix_folder_failed");
         let private = fixture.join("private");
         let shared = fixture.join("shared");
@@ -451,7 +475,7 @@ mod macos {
         let result = copy_files_with_progress_inner(
             &*Arc::new(CollectorEventSink::new()),
             "op-metadata-matrix-failed",
-            &state(),
+            &state(&engine),
             &[private, shared],
             &dst,
             &WriteOperationConfig::default(),
@@ -492,6 +516,7 @@ mod macos {
     /// original kept: nothing is lost, both copies exist.
     #[test]
     fn a_cross_fs_move_of_a_folder_holding_a_locked_and_a_deny_delete_file_lands_both() {
+        let engine = TestOperations::new();
         let fixture = MetadataFixture::new("matrix_move_folder");
         let folder = fixture.join("album");
         std::fs::create_dir(&folder).expect("create the folder");
@@ -500,6 +525,7 @@ mod macos {
         let dst = dst_dir(&fixture);
 
         let result = run_cross_fs_move(
+            &engine,
             std::slice::from_ref(&folder),
             &dst,
             ConflictResolution::Stop,
@@ -529,11 +555,13 @@ mod macos {
     /// (`EPERM`), so the move stops with the original kept.
     #[test]
     fn a_cross_fs_move_of_a_locked_file_lands_locked_and_keeps_the_original() {
+        let engine = TestOperations::new();
         let fixture = MetadataFixture::new("matrix_move_locked");
         let source = fixture.locked_file("locked.txt");
         let dst = dst_dir(&fixture);
 
         let result = run_cross_fs_move(
+            &engine,
             std::slice::from_ref(&source),
             &dst,
             ConflictResolution::Stop,
@@ -563,6 +591,7 @@ mod macos {
     /// on after Phase 3.
     #[test]
     fn a_cross_fs_move_whose_phase_3_fails_leaves_a_removable_staging_tree() {
+        let engine = TestOperations::new();
         let fixture = MetadataFixture::new("matrix_move_phase3");
         let locked = fixture.locked_file("locked.txt");
         let acl = fixture.deny_delete_file("acl.txt");
@@ -571,6 +600,7 @@ mod macos {
         add_acl_entry(&dst, "everyone deny add_file");
 
         let result = run_cross_fs_move(
+            &engine,
             &[locked.clone(), acl.clone()],
             &dst,
             ConflictResolution::Stop,
@@ -610,6 +640,7 @@ mod macos {
     /// flags once Phase 3 has renamed it into place.
     #[test]
     fn a_cross_fs_move_of_a_folder_keeps_its_metadata() {
+        let engine = TestOperations::new();
         let fixture = MetadataFixture::new("matrix_move_folder_metadata");
         let folder = tagged_private_folder(&fixture, "album");
         // Refuses neither Phase 3's rename nor Phase 4's removals.
@@ -617,6 +648,7 @@ mod macos {
         let dst = dst_dir(&fixture);
 
         run_cross_fs_move(
+            &engine,
             std::slice::from_ref(&folder),
             &dst,
             ConflictResolution::Stop,
@@ -640,11 +672,13 @@ mod macos {
     /// Locked original, and the move stops there with it kept.
     #[test]
     fn a_cross_fs_move_of_a_locked_read_only_folder_lands_it_locked_and_full() {
+        let engine = TestOperations::new();
         let fixture = MetadataFixture::new("matrix_move_folder_locked");
         let source = fixture.locked_read_only_folder("vault");
         let dst = dst_dir(&fixture);
 
         let result = run_cross_fs_move(
+            &engine,
             std::slice::from_ref(&source),
             &dst,
             ConflictResolution::Stop,
@@ -674,6 +708,7 @@ mod macos {
     /// it and leaves the folder its own metadata.
     #[test]
     fn a_cross_fs_move_merging_into_a_folder_leaves_it_its_own_metadata() {
+        let engine = TestOperations::new();
         let fixture = MetadataFixture::new("matrix_move_folder_merge");
         let folder = tagged_private_folder(&fixture, "album");
         let dst = dst_dir(&fixture);
@@ -682,6 +717,7 @@ mod macos {
         let before = (mode(&existing), flags(&existing), birth_secs(&existing));
 
         run_cross_fs_move(
+            &engine,
             std::slice::from_ref(&folder),
             &dst,
             ConflictResolution::Stop,
@@ -699,12 +735,14 @@ mod macos {
     /// staging the copy wore neither.
     #[test]
     fn a_cross_fs_move_whose_phase_3_skips_a_folder_discards_its_staged_copy() {
+        let engine = TestOperations::new();
         let fixture = MetadataFixture::new("matrix_move_folder_phase3");
         let source = fixture.locked_read_only_folder("vault");
         let dst = dst_dir(&fixture);
         std::fs::write(dst.join("vault"), b"squatter").expect("squat the folder's name");
 
         let result = run_cross_fs_move(
+            &engine,
             std::slice::from_ref(&source),
             &dst,
             ConflictResolution::Skip,
@@ -727,11 +765,13 @@ mod macos {
     /// <https://github.com/vdavid/cmdr/issues/408>, which flips this pin.
     #[test]
     fn a_same_fs_move_of_a_locked_file_is_refused_today() {
+        let engine = TestOperations::new();
         let fixture = MetadataFixture::new("matrix_same_fs_locked");
         let source = fixture.locked_file("locked.txt");
         let dst = dst_dir(&fixture);
 
         let result = run_same_fs_move(
+            &engine,
             std::slice::from_ref(&source),
             &dst,
             ConflictResolution::Stop,
@@ -783,7 +823,7 @@ mod linux {
     }
 
     fn copy(strategy: LocalCopyStrategy, source: &Path, dest: &Path) {
-        let state = Arc::new(WriteOperationState::new(Duration::from_millis(50)));
+        let state = Arc::new(engine.new_operation_state(Duration::from_millis(50)));
         copy_file_using(
             strategy,
             &state,
@@ -848,6 +888,8 @@ mod linux {
         use crate::file_system::write_operations::transfer::copy::copy_files_with_progress_inner;
         use crate::file_system::write_operations::types::WriteOperationConfig;
 
+        let engine = TestOperations::new();
+
         let dir = TestDir::new("matrix_linux_folder");
         let folder = dir.join("album");
         std::fs::create_dir(&folder).expect("create the folder");
@@ -860,7 +902,7 @@ mod linux {
         let result = copy_files_with_progress_inner(
             &*Arc::new(CollectorEventSink::new()),
             "op-matrix-linux-folder",
-            &Arc::new(WriteOperationState::new(Duration::from_millis(50))),
+            &Arc::new(engine.new_operation_state(Duration::from_millis(50))),
             &[folder],
             &dst,
             &WriteOperationConfig::default(),

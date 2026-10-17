@@ -18,6 +18,7 @@ use super::cross_fs::move_with_staging;
 use super::test_support::{make_state, outcomes_for, removal_flags_for};
 use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::{
     ConflictInfo, DryRunResult, ScanProgressEvent, WriteCancelledEvent, WriteCompleteEvent, WriteConflictResolvedEvent,
     WriteErrorEvent, WriteOperationPhase, WriteProgressEvent, WriteSettledEvent,
@@ -85,13 +86,14 @@ impl OperationEventSink for EditBeforeSweep {
 /// A cross-FS move of `source` into `dst_dir` that runs `before_sweep` between
 /// the copy and the source sweep.
 fn move_editing_before_sweep(
+    engine: &TestOperations,
     source: &Path,
     dst_dir: &Path,
     op_id: &str,
     before_sweep: impl FnOnce() + Send + 'static,
 ) -> EditBeforeSweep {
     let events = EditBeforeSweep::new(before_sweep);
-    let state = make_state(0);
+    let state = make_state(engine, 0);
     let result = move_with_staging(
         &events,
         op_id,
@@ -128,6 +130,7 @@ fn save_over(path: &Path, bytes: &[u8]) {
 /// bytes, so deleting the original throws the save away for good.
 #[test]
 fn an_original_saved_over_after_its_copy_survives_the_sweep() {
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     let src_root = tmp.path().join("src");
     let dst_root = tmp.path().join("dst");
@@ -140,7 +143,7 @@ fn an_original_saved_over_after_its_copy_survives_the_sweep() {
     fs::write(&untouched, b"final report").unwrap();
 
     let edited_in_sink = edited.clone();
-    let events = move_editing_before_sweep(&source, &dst_root, "op-drift-folder", move || {
+    let events = move_editing_before_sweep(&engine, &source, &dst_root, "op-drift-folder", move || {
         // Same length as "first draft", so only the timestamp gives it away.
         save_over(&edited_in_sink, b"final draft");
     });
@@ -183,6 +186,7 @@ fn an_original_saved_over_after_its_copy_survives_the_sweep() {
 /// A single-file source the user saved over mid-move stays, whatever its new size.
 #[test]
 fn a_top_level_file_saved_over_after_its_copy_survives_the_sweep() {
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     let src_root = tmp.path().join("Documents");
     let dst_root = tmp.path().join("dst");
@@ -192,7 +196,7 @@ fn a_top_level_file_saved_over_after_its_copy_survives_the_sweep() {
     fs::write(&source, b"old numbers").unwrap();
 
     let source_in_sink = source.clone();
-    let events = move_editing_before_sweep(&source, &dst_root, "op-drift-file", move || {
+    let events = move_editing_before_sweep(&engine, &source, &dst_root, "op-drift-file", move || {
         save_over(&source_in_sink, b"new numbers, and more of them");
     });
 
@@ -221,6 +225,7 @@ fn a_top_level_file_saved_over_after_its_copy_survives_the_sweep() {
 #[cfg(unix)]
 #[test]
 fn an_original_replaced_by_rename_survives_even_with_the_same_size_and_mtime() {
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     let src_root = tmp.path().join("src");
     let dst_root = tmp.path().join("dst");
@@ -231,7 +236,7 @@ fn an_original_replaced_by_rename_survives_even_with_the_same_size_and_mtime() {
     fs::write(&edited, b"version one").unwrap();
 
     let edited_in_sink = edited.clone();
-    move_editing_before_sweep(&source, &dst_root, "op-drift-rename", move || {
+    move_editing_before_sweep(&engine, &source, &dst_root, "op-drift-rename", move || {
         let mtime = fs::metadata(&edited_in_sink).unwrap().modified().unwrap();
         let temp = edited_in_sink.with_file_name(".notes.txt.swp");
         fs::write(&temp, b"version two").unwrap();

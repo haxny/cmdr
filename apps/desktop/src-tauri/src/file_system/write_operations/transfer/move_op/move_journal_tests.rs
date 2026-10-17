@@ -21,40 +21,33 @@ use super::move_files_with_progress_inner;
 use crate::file_system::VolumeManager;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::rollback::Reversal;
-use crate::file_system::write_operations::state::WriteOperationState;
+use crate::file_system::write_operations::testing::{TestOperationLog, TestOperations};
 use crate::file_system::write_operations::types::{ConflictResolution, WriteOperationConfig};
 use crate::file_system::write_operations::{journal, journal_search};
-use crate::operation_log_host::TestJournalGuard;
 use cmdr_fs::volume::Volume;
 use cmdr_local::LocalPosixVolume;
-use cmdr_operation_log::capture::WriterJournal;
 use cmdr_operation_log::query::{OperationItemView, get_operation};
 use cmdr_operation_log::rollback::{RollbackRefusal, RollbackReport, execute_rollback, rollback_operation};
-use cmdr_operation_log::store::{OperationRow, open_read_connection, operation_log_db_path, read_operation};
+use cmdr_operation_log::store::{OperationRow, open_read_connection, read_operation};
 use cmdr_operation_log::types::{
     EntryType, ExecutionStatus, Initiator, NotRollbackableReason, OpKind, RollbackState, RowRole, SearchCoverage,
 };
-use cmdr_operation_log::writer::OperationLogWriter;
 
 /// A real move, journaled to a real DB, reversible through the real gate.
 struct MoveLoop {
-    _journal: TestJournalGuard,
-    writer_journal: Arc<WriterJournal>,
+    /// The engine the move runs on, journaling into `log`.
+    engine: TestOperations,
+    log: TestOperationLog,
     vm: VolumeManager,
     /// The work tree the move runs in. Held so it outlives the run.
     work: tempfile::TempDir,
-    /// The journal DB's own directory, held for the same reason: dropping it
-    /// would delete `operation-log.db` out from under the writer thread.
-    _journal_dir: tempfile::TempDir,
     op_id: String,
 }
 
 impl MoveLoop {
     fn new(op_id: &str) -> Self {
-        let journal_dir = tempfile::tempdir().expect("journal dir");
-        let writer = OperationLogWriter::spawn(&operation_log_db_path(journal_dir.path())).expect("spawn writer");
-        let writer_journal = Arc::new(WriterJournal::new(writer));
-        let journal = TestJournalGuard::install(writer_journal.clone());
+        let log = TestOperationLog::new("move-journal");
+        let engine = TestOperations::journaling_into(&log);
 
         let vm = VolumeManager::new();
         // Rooted at `/` so the fixture's absolute paths resolve, matching how the
@@ -69,11 +62,10 @@ impl MoveLoop {
         );
 
         MoveLoop {
-            _journal: journal,
-            writer_journal,
+            engine,
+            log,
             vm,
             work: tempfile::tempdir().expect("work dir"),
-            _journal_dir: journal_dir,
             op_id: op_id.to_string(),
         }
     }
@@ -116,7 +108,7 @@ impl MoveLoop {
     /// Run a same-FS move, bracketed by the journal open/finalize the managed
     /// driver arranges.
     fn move_same_fs(&self, sources: &[PathBuf], destination: &Path, config: &WriteOperationConfig) {
-        let state = Arc::new(WriteOperationState::new(Duration::from_millis(0)));
+        let state = Arc::new(self.engine.new_operation_state(Duration::from_millis(0)));
         journal::open_local_op(
             state.scope(),
             &self.op_id,
@@ -139,7 +131,7 @@ impl MoveLoop {
     /// available in a unit test, so this calls the path the dispatcher would pick
     /// for them — the same trick `move_op_tests.rs` uses.
     fn move_cross_fs(&self, sources: &[PathBuf], destination: &Path, config: &WriteOperationConfig) {
-        let state = Arc::new(WriteOperationState::new(Duration::from_millis(0)));
+        let state = Arc::new(self.engine.new_operation_state(Duration::from_millis(0)));
         journal::open_local_op(
             state.scope(),
             &self.op_id,
@@ -159,7 +151,7 @@ impl MoveLoop {
     }
 
     fn op_row(&self) -> OperationRow {
-        let conn = open_read_connection(self.writer_journal.writer().db_path()).expect("read conn");
+        let conn = open_read_connection(self.log.db()).expect("read conn");
         read_operation(&conn, &self.op_id)
             .expect("read op")
             .expect("the move is journaled")
@@ -168,7 +160,7 @@ impl MoveLoop {
     /// The op's item rows as the history dialog sees them: interned dirs resolved
     /// to full paths.
     fn items(&self) -> Vec<OperationItemView> {
-        let conn = open_read_connection(self.writer_journal.writer().db_path()).expect("read conn");
+        let conn = open_read_connection(self.log.db()).expect("read conn");
         get_operation(&conn, &self.op_id, 1_000, 0)
             .expect("read op detail")
             .expect("the move is journaled")
@@ -179,9 +171,9 @@ impl MoveLoop {
     /// and only an accepted request reaches the engine. A refused one leaves the
     /// files alone, which is exactly what these tests check.
     async fn attempt_rollback(&self) -> Result<RollbackReport, RollbackRefusal> {
-        let writer = self.writer_journal.writer();
+        let writer = self.log.writer();
         let plan = rollback_operation(&self.vm, writer, &self.op_id, |_plan| Ok(()))?;
-        let reversal = Reversal::new("move-journal-test");
+        let reversal = Reversal::on(&self.engine, "move-journal-test");
         Ok(execute_rollback(
             &self.vm,
             writer,

@@ -24,16 +24,16 @@
 //!   to completion, and a cancel while paused unblocks and ends as Cancelled.
 
 use super::super::super::event_sinks::CollectorEventSink;
-use super::super::super::state::{OperationIntent, register_operation_status, unregister_operation_status};
+use super::super::super::state::OperationIntent;
 use super::super::super::test_support::park_holds_at;
 use super::super::super::types::{WriteOperationError, WriteOperationType};
 use super::super::staged_write::Replaces;
-use super::test_support::{CallLog, copy_config, install_state, make_state, paths, unique_op_id};
+use super::test_support::{CallLog, copy_config, make_state, paths};
 use super::{
     ConflictDecision, ConflictDecisionInput, NameAtDest, PostLoopIntent, TransferContext, TransferOutcome,
     drive_transfer_serial_async,
 };
-use crate::file_system::write_operations::installed;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::test_support::wait_until_async;
 use std::collections::HashSet;
 use std::future::Future;
@@ -91,10 +91,11 @@ type TransferFut<'a> = Pin<Box<dyn Future<Output = Result<TransferOutcome, Write
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn async_driver_does_not_invoke_closure_for_pre_skipped_sources() {
-    let op_id = unique_op_id("async-pre-skip-no-closure");
-    let state = make_state();
-    let _op_guard = install_state(&op_id, Arc::clone(&state));
-    register_operation_status(&op_id, WriteOperationType::Copy, vec![]);
+    let engine = TestOperations::new();
+    let op_id = "async-pre-skip-no-closure".to_string();
+    let state = make_state(&engine);
+    engine.register_state(&op_id, Arc::clone(&state));
+    engine.status().register(&op_id, WriteOperationType::Copy, vec![]);
     let sink = CollectorEventSink::new();
     let log = CallLog::new();
     let log_clone = Arc::clone(&log);
@@ -137,15 +138,15 @@ async fn async_driver_does_not_invoke_closure_for_pre_skipped_sources() {
         vec![PathBuf::from("/b.txt")],
         "closure must NEVER fire for pre-skipped /a.txt"
     );
-    unregister_operation_status(&op_id);
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn async_driver_does_not_invoke_closure_when_conflict_resolved_as_skip() {
-    let op_id = unique_op_id("async-conflict-skip-no-closure");
-    let state = make_state();
-    let _op_guard = install_state(&op_id, Arc::clone(&state));
-    register_operation_status(&op_id, WriteOperationType::Copy, vec![]);
+    let engine = TestOperations::new();
+    let op_id = "async-conflict-skip-no-closure".to_string();
+    let state = make_state(&engine);
+    engine.register_state(&op_id, Arc::clone(&state));
+    engine.status().register(&op_id, WriteOperationType::Copy, vec![]);
     let sink = CollectorEventSink::new();
     let log = CallLog::new();
     let log_clone = Arc::clone(&log);
@@ -193,16 +194,16 @@ async fn async_driver_does_not_invoke_closure_when_conflict_resolved_as_skip() {
         vec![PathBuf::from("/b.txt")],
         "closure must NEVER fire when resolver returned Skip"
     );
-    unregister_operation_status(&op_id);
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn async_driver_pre_cancel_does_not_invoke_closure_or_resolver() {
-    let op_id = unique_op_id("async-pre-cancel");
-    let state = make_state();
+    let engine = TestOperations::new();
+    let op_id = "async-pre-cancel".to_string();
+    let state = make_state(&engine);
     state.intent().set_for_test(OperationIntent::Stopped);
-    let _op_guard = install_state(&op_id, Arc::clone(&state));
-    register_operation_status(&op_id, WriteOperationType::Copy, vec![]);
+    engine.register_state(&op_id, Arc::clone(&state));
+    engine.status().register(&op_id, WriteOperationType::Copy, vec![]);
     let sink = CollectorEventSink::new();
     let log = CallLog::new();
     let log_clone = Arc::clone(&log);
@@ -237,15 +238,15 @@ async fn async_driver_pre_cancel_does_not_invoke_closure_or_resolver() {
 
     assert!(matches!(outcome.intent, PostLoopIntent::Cancelled));
     assert!(log.sources().is_empty());
-    unregister_operation_status(&op_id);
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn async_driver_cancel_after_first_blocks_second() {
-    let op_id = unique_op_id("async-mid-cancel");
-    let state = make_state();
-    let _op_guard = install_state(&op_id, Arc::clone(&state));
-    register_operation_status(&op_id, WriteOperationType::Copy, vec![]);
+    let engine = TestOperations::new();
+    let op_id = "async-mid-cancel".to_string();
+    let state = make_state(&engine);
+    engine.register_state(&op_id, Arc::clone(&state));
+    engine.status().register(&op_id, WriteOperationType::Copy, vec![]);
     let sink = CollectorEventSink::new();
     let log = CallLog::new();
     let log_clone = Arc::clone(&log);
@@ -281,18 +282,18 @@ async fn async_driver_cancel_after_first_blocks_second() {
 
     assert!(matches!(outcome.intent, PostLoopIntent::Cancelled));
     assert_eq!(log.sources(), vec![PathBuf::from("/a")]);
-    unregister_operation_status(&op_id);
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn async_driver_post_loop_intent_catches_late_cancel_race() {
+    let engine = TestOperations::new();
     // Cancel AFTER the closure for the only source has completed but BEFORE
     // the driver returns. The post-loop intent check should observe this and
     // return Cancelled instead of Completed.
-    let op_id = unique_op_id("async-late-cancel-race");
-    let state = make_state();
-    let _op_guard = install_state(&op_id, Arc::clone(&state));
-    register_operation_status(&op_id, WriteOperationType::Copy, vec![]);
+    let op_id = "async-late-cancel-race".to_string();
+    let state = make_state(&engine);
+    engine.register_state(&op_id, Arc::clone(&state));
+    engine.status().register(&op_id, WriteOperationType::Copy, vec![]);
     let sink = CollectorEventSink::new();
     let state_for_closure = Arc::clone(&state);
 
@@ -327,7 +328,6 @@ async fn async_driver_post_loop_intent_catches_late_cancel_race() {
         "late cancel after the only iteration must be observed by the post-loop check; \
          this is the `1de4255d`-class race"
     );
-    unregister_operation_status(&op_id);
 }
 
 // ===========================================================================
@@ -336,10 +336,11 @@ async fn async_driver_post_loop_intent_catches_late_cancel_race() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn async_driver_proceed_with_rewritten_dest_reaches_closure() {
-    let op_id = unique_op_id("async-conflict-rename");
-    let state = make_state();
-    let _op_guard = install_state(&op_id, Arc::clone(&state));
-    register_operation_status(&op_id, WriteOperationType::Copy, vec![]);
+    let engine = TestOperations::new();
+    let op_id = "async-conflict-rename".to_string();
+    let state = make_state(&engine);
+    engine.register_state(&op_id, Arc::clone(&state));
+    engine.status().register(&op_id, WriteOperationType::Copy, vec![]);
     let sink = CollectorEventSink::new();
     let log = CallLog::new();
     let log_clone = Arc::clone(&log);
@@ -381,15 +382,15 @@ async fn async_driver_proceed_with_rewritten_dest_reaches_closure() {
         vec![Some(PathBuf::from("/dest/a (1).txt"))],
         "rewritten dest must be threaded through TransferContext.dest_path"
     );
-    unregister_operation_status(&op_id);
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn async_driver_resolver_error_propagates_as_failed_intent() {
-    let op_id = unique_op_id("async-resolver-err");
-    let state = make_state();
-    let _op_guard = install_state(&op_id, Arc::clone(&state));
-    register_operation_status(&op_id, WriteOperationType::Copy, vec![]);
+    let engine = TestOperations::new();
+    let op_id = "async-resolver-err".to_string();
+    let state = make_state(&engine);
+    engine.register_state(&op_id, Arc::clone(&state));
+    engine.status().register(&op_id, WriteOperationType::Copy, vec![]);
     let sink = CollectorEventSink::new();
 
     let outcome = drive_transfer_serial_async(
@@ -423,7 +424,6 @@ async fn async_driver_resolver_error_propagates_as_failed_intent() {
         outcome.intent,
         PostLoopIntent::Failed(WriteOperationError::IoError { .. })
     ));
-    unregister_operation_status(&op_id);
 }
 
 /// A cancel pressed while a clash is on screen drops the conflict slot's sender,
@@ -433,10 +433,11 @@ async fn async_driver_resolver_error_propagates_as_failed_intent() {
 /// on a stale prompt with no terminal event ever coming.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn async_driver_resolver_cancel_ends_the_loop_as_cancelled() {
-    let op_id = unique_op_id("async-resolver-cancel");
-    let state = make_state();
-    let _op_guard = install_state(&op_id, Arc::clone(&state));
-    register_operation_status(&op_id, WriteOperationType::Copy, vec![]);
+    let engine = TestOperations::new();
+    let op_id = "async-resolver-cancel".to_string();
+    let state = make_state(&engine);
+    engine.register_state(&op_id, Arc::clone(&state));
+    engine.status().register(&op_id, WriteOperationType::Copy, vec![]);
     let sink = CollectorEventSink::new();
 
     let outcome = drive_transfer_serial_async(
@@ -471,15 +472,15 @@ async fn async_driver_resolver_cancel_ends_the_loop_as_cancelled() {
         outcome.intent
     );
     assert_eq!(outcome.files_done, 0, "nothing after the cancelled clash is touched");
-    unregister_operation_status(&op_id);
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn async_driver_no_conflict_skips_resolver_entirely() {
-    let op_id = unique_op_id("async-no-conflict-no-resolver");
-    let state = make_state();
-    let _op_guard = install_state(&op_id, Arc::clone(&state));
-    register_operation_status(&op_id, WriteOperationType::Copy, vec![]);
+    let engine = TestOperations::new();
+    let op_id = "async-no-conflict-no-resolver".to_string();
+    let state = make_state(&engine);
+    engine.register_state(&op_id, Arc::clone(&state));
+    engine.status().register(&op_id, WriteOperationType::Copy, vec![]);
     let sink = CollectorEventSink::new();
     let resolver_count: Arc<AtomicUsize> = Arc::new(AtomicUsize::new(0));
     let r = Arc::clone(&resolver_count);
@@ -514,20 +515,20 @@ async fn async_driver_no_conflict_skips_resolver_entirely() {
     .await;
 
     assert_eq!(resolver_count.load(Ordering::SeqCst), 0);
-    unregister_operation_status(&op_id);
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn async_driver_apply_to_all_resolver_decision_persists_across_sources() {
+    let engine = TestOperations::new();
     // The driver passes through `&mut apply_to_all_resolution` via the
     // resolver closure's own captures (the resolver IS the
     // resolve_volume_conflict caller). The driver itself doesn't latch the
     // resolution — but the resolver can. Exercise that the resolver runs
     // for every conflict source and CAN latch behaviour across iterations.
-    let op_id = unique_op_id("async-apply-to-all-resolver");
-    let state = make_state();
-    let _op_guard = install_state(&op_id, Arc::clone(&state));
-    register_operation_status(&op_id, WriteOperationType::Copy, vec![]);
+    let op_id = "async-apply-to-all-resolver".to_string();
+    let state = make_state(&engine);
+    engine.register_state(&op_id, Arc::clone(&state));
+    engine.status().register(&op_id, WriteOperationType::Copy, vec![]);
     let sink = CollectorEventSink::new();
     let log = CallLog::new();
     let log_clone = Arc::clone(&log);
@@ -580,7 +581,6 @@ async fn async_driver_apply_to_all_resolver_decision_persists_across_sources() {
     assert_eq!(resolver_calls.load(Ordering::SeqCst), 3);
     assert!(log.sources().is_empty(), "closure must NEVER fire under all-Skip");
     assert_eq!(outcome.files_done, 3);
-    unregister_operation_status(&op_id);
 }
 
 // ===========================================================================
@@ -589,11 +589,12 @@ async fn async_driver_apply_to_all_resolver_decision_persists_across_sources() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn async_driver_progress_accounting_sums_correctly() {
+    let engine = TestOperations::new();
     // 2 bulk-skip + 1 per-iter Skip + 1 Transferred = 4 files_done.
-    let op_id = unique_op_id("async-progress-sum");
-    let state = make_state();
-    let _op_guard = install_state(&op_id, Arc::clone(&state));
-    register_operation_status(&op_id, WriteOperationType::Copy, vec![]);
+    let op_id = "async-progress-sum".to_string();
+    let state = make_state(&engine);
+    engine.register_state(&op_id, Arc::clone(&state));
+    engine.status().register(&op_id, WriteOperationType::Copy, vec![]);
     let sink = CollectorEventSink::new();
 
     let mut pre_skip = HashSet::new();
@@ -633,17 +634,17 @@ async fn async_driver_progress_accounting_sums_correctly() {
     );
     assert_eq!(outcome.files_skipped, 3, "2 bulk + 1 conflict-skip");
     assert_eq!(outcome.bytes_skipped, 250, "200 bulk + 50 conflict-skip");
-    unregister_operation_status(&op_id);
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn async_driver_skip_counters_zero_when_nothing_skipped() {
+    let engine = TestOperations::new();
     // No conflicts, no bulk-skip: skip counters stay at zero so the
     // `volume::copy` completion log keeps its terse form.
-    let op_id = unique_op_id("async-skip-counters-zero");
-    let state = make_state();
-    let _op_guard = install_state(&op_id, Arc::clone(&state));
-    register_operation_status(&op_id, WriteOperationType::Copy, vec![]);
+    let op_id = "async-skip-counters-zero".to_string();
+    let state = make_state(&engine);
+    engine.register_state(&op_id, Arc::clone(&state));
+    engine.status().register(&op_id, WriteOperationType::Copy, vec![]);
     let sink = CollectorEventSink::new();
 
     let outcome = drive_transfer_serial_async(
@@ -678,15 +679,15 @@ async fn async_driver_skip_counters_zero_when_nothing_skipped() {
     assert_eq!(outcome.bytes_done, 200);
     assert_eq!(outcome.files_skipped, 0);
     assert_eq!(outcome.bytes_skipped, 0);
-    unregister_operation_status(&op_id);
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn async_driver_status_cache_matches_emitted_progress() {
-    let op_id = unique_op_id("async-status-cache");
-    let state = make_state();
-    let _op_guard = install_state(&op_id, Arc::clone(&state));
-    register_operation_status(&op_id, WriteOperationType::Copy, vec![]);
+    let engine = TestOperations::new();
+    let op_id = "async-status-cache".to_string();
+    let state = make_state(&engine);
+    engine.register_state(&op_id, Arc::clone(&state));
+    engine.status().register(&op_id, WriteOperationType::Copy, vec![]);
     let sink = CollectorEventSink::new();
 
     let outcome = drive_transfer_serial_async(
@@ -712,22 +713,22 @@ async fn async_driver_status_cache_matches_emitted_progress() {
     .await;
 
     assert!(matches!(outcome.intent, PostLoopIntent::Completed));
-    let status = installed().get_operation_status(&op_id).expect("status entry present");
+    let status = engine.get_operation_status(&op_id).expect("status entry present");
     // The per-iter Skip emit pairs with `update_operation_status` so the cache
     // must mirror the same numbers.
     assert_eq!(status.files_done, 1);
     assert_eq!(status.bytes_done, 0);
-    unregister_operation_status(&op_id);
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn async_driver_emitted_bytes_equal_sum_of_transferred() {
+    let engine = TestOperations::new();
     // No conflicts, no skips, three pure transfers: outcome.bytes_done must
     // equal the sum.
-    let op_id = unique_op_id("async-bytes-sum");
-    let state = make_state();
-    let _op_guard = install_state(&op_id, Arc::clone(&state));
-    register_operation_status(&op_id, WriteOperationType::Copy, vec![]);
+    let op_id = "async-bytes-sum".to_string();
+    let state = make_state(&engine);
+    engine.register_state(&op_id, Arc::clone(&state));
+    engine.status().register(&op_id, WriteOperationType::Copy, vec![]);
     let sink = CollectorEventSink::new();
 
     let bytes_seq = Arc::new(Mutex::new(vec![10u64, 20, 30].into_iter()));
@@ -759,15 +760,15 @@ async fn async_driver_emitted_bytes_equal_sum_of_transferred() {
 
     assert!(matches!(outcome.intent, PostLoopIntent::Completed));
     assert_eq!(outcome.bytes_done, 60);
-    unregister_operation_status(&op_id);
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn async_driver_threads_running_totals_through_context() {
-    let op_id = unique_op_id("async-totals-context");
-    let state = make_state();
-    let _op_guard = install_state(&op_id, Arc::clone(&state));
-    register_operation_status(&op_id, WriteOperationType::Copy, vec![]);
+    let engine = TestOperations::new();
+    let op_id = "async-totals-context".to_string();
+    let state = make_state(&engine);
+    engine.register_state(&op_id, Arc::clone(&state));
+    engine.status().register(&op_id, WriteOperationType::Copy, vec![]);
     let sink = CollectorEventSink::new();
     let seen: Arc<Mutex<Vec<(usize, u64)>>> = Arc::new(Mutex::new(Vec::new()));
     let s = Arc::clone(&seen);
@@ -798,7 +799,6 @@ async fn async_driver_threads_running_totals_through_context() {
 
     let seen = seen.lock().unwrap();
     assert_eq!(seen.as_slice(), &[(0, 0), (1, 100), (2, 200)]);
-    unregister_operation_status(&op_id);
 }
 
 // ===========================================================================
@@ -807,10 +807,11 @@ async fn async_driver_threads_running_totals_through_context() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn async_driver_default_dest_joins_source_basename() {
-    let op_id = unique_op_id("async-default-dest");
-    let state = make_state();
-    let _op_guard = install_state(&op_id, Arc::clone(&state));
-    register_operation_status(&op_id, WriteOperationType::Copy, vec![]);
+    let engine = TestOperations::new();
+    let op_id = "async-default-dest".to_string();
+    let state = make_state(&engine);
+    engine.register_state(&op_id, Arc::clone(&state));
+    engine.status().register(&op_id, WriteOperationType::Copy, vec![]);
     let sink = CollectorEventSink::new();
     let log = CallLog::new();
     let log_clone = Arc::clone(&log);
@@ -844,18 +845,18 @@ async fn async_driver_default_dest_joins_source_basename() {
         vec![Some(PathBuf::from("/dest/root/bar.txt"))],
         "default dest is dest_root.join(source.file_name())"
     );
-    unregister_operation_status(&op_id);
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn async_driver_dest_meta_fetcher_polled_exactly_once_per_non_skipped_source() {
+    let engine = TestOperations::new();
     // The fetcher is the cross-volume `dest.get_metadata` stat. It MUST run
     // for every non-pre-skipped source, and it must NOT run for pre-skipped
     // ones (those are the bulk-skip-data-safety guarantee).
-    let op_id = unique_op_id("async-fetcher-cardinality");
-    let state = make_state();
-    let _op_guard = install_state(&op_id, Arc::clone(&state));
-    register_operation_status(&op_id, WriteOperationType::Copy, vec![]);
+    let op_id = "async-fetcher-cardinality".to_string();
+    let state = make_state(&engine);
+    engine.register_state(&op_id, Arc::clone(&state));
+    engine.status().register(&op_id, WriteOperationType::Copy, vec![]);
     let sink = CollectorEventSink::new();
 
     let probed: Arc<Mutex<Vec<PathBuf>>> = Arc::new(Mutex::new(Vec::new()));
@@ -897,7 +898,6 @@ async fn async_driver_dest_meta_fetcher_polled_exactly_once_per_non_skipped_sour
         &[PathBuf::from("/dest/a"), PathBuf::from("/dest/b")],
         "fetcher must skip pre-skipped sources and run exactly once for each remaining one"
     );
-    unregister_operation_status(&op_id);
 }
 
 // ===========================================================================
@@ -906,15 +906,16 @@ async fn async_driver_dest_meta_fetcher_polled_exactly_once_per_non_skipped_sour
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn async_driver_cancel_check_precedes_pre_skip_check_precedes_conflict_resolve() {
+    let engine = TestOperations::new();
     // If cancellation is observed, NEITHER the pre-skip check matters NOR
     // does the resolver run. Verify by cancelling on iter-start for a source
     // that's BOTH pre-skipped AND would have conflicted — resolver must not
     // be called, fetcher must not be called.
-    let op_id = unique_op_id("async-ordering");
-    let state = make_state();
+    let op_id = "async-ordering".to_string();
+    let state = make_state(&engine);
     state.intent().set_for_test(OperationIntent::Stopped);
-    let _op_guard = install_state(&op_id, Arc::clone(&state));
-    register_operation_status(&op_id, WriteOperationType::Copy, vec![]);
+    engine.register_state(&op_id, Arc::clone(&state));
+    engine.status().register(&op_id, WriteOperationType::Copy, vec![]);
     let sink = CollectorEventSink::new();
 
     let mut pre_skip = HashSet::new();
@@ -945,7 +946,6 @@ async fn async_driver_cancel_check_precedes_pre_skip_check_precedes_conflict_res
     .await;
 
     assert!(matches!(outcome.intent, PostLoopIntent::Cancelled));
-    unregister_operation_status(&op_id);
 }
 
 // ===========================================================================
@@ -965,10 +965,11 @@ async fn async_driver_cancel_check_precedes_pre_skip_check_precedes_conflict_res
 /// `'a` (rust-lang/rust#100013-class).
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn driver_future_is_send_across_spawn() {
-    let op_id = unique_op_id("async-send-across-spawn");
-    let state = make_state();
-    let _op_guard = install_state(&op_id, Arc::clone(&state));
-    register_operation_status(&op_id, WriteOperationType::Copy, vec![]);
+    let engine = TestOperations::new();
+    let op_id = "async-send-across-spawn".to_string();
+    let state = make_state(&engine);
+    engine.register_state(&op_id, Arc::clone(&state));
+    engine.status().register(&op_id, WriteOperationType::Copy, vec![]);
 
     let op_id_clone = op_id.clone();
     let state_clone = Arc::clone(&state);
@@ -1013,7 +1014,6 @@ async fn driver_future_is_send_across_spawn() {
 
     let outcome = task.await.expect("driver future must be Send");
     assert!(matches!(outcome.intent, PostLoopIntent::Completed));
-    unregister_operation_status(&op_id);
 }
 
 // ===========================================================================
@@ -1034,10 +1034,11 @@ async fn driver_future_is_send_across_spawn() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn async_driver_parks_while_paused_then_resumes_to_completion() {
-    let op_id = unique_op_id("async-pause-resume");
-    let state = make_state();
-    let _op_guard = install_state(&op_id, Arc::clone(&state));
-    register_operation_status(&op_id, WriteOperationType::Copy, vec![]);
+    let engine = TestOperations::new();
+    let op_id = "async-pause-resume".to_string();
+    let state = make_state(&engine);
+    engine.register_state(&op_id, Arc::clone(&state));
+    engine.status().register(&op_id, WriteOperationType::Copy, vec![]);
 
     let sources = paths(&["/a", "/b", "/c", "/d"]);
     let transferred = Arc::new(AtomicUsize::new(0));
@@ -1127,15 +1128,15 @@ async fn async_driver_parks_while_paused_then_resumes_to_completion() {
         4,
         "all sources transfer after resume"
     );
-    unregister_operation_status(&op_id);
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn async_driver_cancel_while_paused_unblocks_and_cancels() {
-    let op_id = unique_op_id("async-pause-cancel");
-    let state = make_state();
-    let _op_guard = install_state(&op_id, Arc::clone(&state));
-    register_operation_status(&op_id, WriteOperationType::Copy, vec![]);
+    let engine = TestOperations::new();
+    let op_id = "async-pause-cancel".to_string();
+    let state = make_state(&engine);
+    engine.register_state(&op_id, Arc::clone(&state));
+    engine.status().register(&op_id, WriteOperationType::Copy, vec![]);
 
     let sources = paths(&["/a", "/b", "/c", "/d"]);
     let transferred = Arc::new(AtomicUsize::new(0));
@@ -1204,7 +1205,7 @@ async fn async_driver_cancel_while_paused_unblocks_and_cancels() {
 
     // Cancel while paused: the production cancel path flips intent AND wakes the
     // gate. Drive it through the public cancel API (never store intent directly).
-    installed().cancel_write_operation(&op_id, false);
+    engine.cancel_write_operation(&op_id, false);
 
     let outcome = tokio::time::timeout(Duration::from_secs(5), driver)
         .await
@@ -1227,7 +1228,6 @@ async fn async_driver_cancel_while_paused_unblocks_and_cancels() {
         OperationIntent::Stopped,
         "keep-partials cancel lands on Stopped"
     );
-    unregister_operation_status(&op_id);
 }
 
 /// A destination that won't say whether a name is taken stops the item at the
@@ -1239,10 +1239,11 @@ async fn async_driver_cancel_while_paused_unblocks_and_cancels() {
 /// that promised not to touch what's there.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn async_driver_fails_the_item_whose_destination_probe_refuses() {
-    let op_id = unique_op_id("async-probe-refuses");
-    let state = make_state();
-    let _op_guard = install_state(&op_id, Arc::clone(&state));
-    register_operation_status(&op_id, WriteOperationType::Copy, vec![]);
+    let engine = TestOperations::new();
+    let op_id = "async-probe-refuses".to_string();
+    let state = make_state(&engine);
+    engine.register_state(&op_id, Arc::clone(&state));
+    engine.status().register(&op_id, WriteOperationType::Copy, vec![]);
     let sink = CollectorEventSink::new();
 
     let outcome = drive_transfer_serial_async(
@@ -1282,5 +1283,4 @@ async fn async_driver_fails_the_item_whose_destination_probe_refuses() {
         outcome.intent
     );
     assert_eq!(outcome.files_done, 0, "and nothing counted as done");
-    unregister_operation_status(&op_id);
 }

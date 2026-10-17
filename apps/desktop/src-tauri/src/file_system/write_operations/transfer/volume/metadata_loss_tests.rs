@@ -18,7 +18,7 @@ use cmdr_fs::metadata::{CarriedMetadata, MetadataCaps, MetadataClasses, UserFlag
 
 use super::copy_volumes_with_progress;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
-use crate::file_system::write_operations::state::WriteOperationState;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::{
     LostMetadata, LostMetadataClass, MetadataLeftBehind, VolumeCopyConfig, WriteCompleteEvent,
 };
@@ -125,6 +125,7 @@ async fn seed(source: &InMemoryVolume, caps: MetadataCaps) {
 }
 
 async fn copy(
+    engine: &TestOperations,
     source: Arc<dyn Volume>,
     paths: &[PathBuf],
     dest: Arc<dyn Volume>,
@@ -134,7 +135,7 @@ async fn copy(
     copy_volumes_with_progress(
         Arc::clone(&events) as _,
         "op-metadata-loss",
-        &Arc::new(WriteOperationState::new(Duration::from_millis(50))),
+        &Arc::new(engine.new_operation_state(Duration::from_millis(50))),
         source,
         paths,
         dest,
@@ -188,6 +189,7 @@ fn expected_losses(source: MetadataCaps, dest: MetadataCaps) -> Option<MetadataL
 /// else is.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn every_pair_keeps_or_reports_each_class_its_source_had() {
+    let engine = TestOperations::new();
     for (source_name, source_caps) in sources() {
         for (dest_name, dest_caps) in destinations() {
             let pair = format!("{source_name} → {dest_name}");
@@ -197,6 +199,7 @@ async fn every_pair_keeps_or_reports_each_class_its_source_had() {
             dest.create_directory(Path::new("/to")).await.unwrap();
 
             let complete = copy(
+                &engine,
                 source,
                 &[PathBuf::from("/file.bin"), PathBuf::from("/album")],
                 Arc::clone(&dest) as _,
@@ -232,6 +235,7 @@ async fn every_pair_keeps_or_reports_each_class_its_source_had() {
 /// worth keeping beyond its bytes and its mtime.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_plain_file_reports_nothing_anywhere() {
+    let engine = TestOperations::new();
     for (dest_name, dest_caps) in destinations() {
         let source = Arc::new(InMemoryVolume::new("Source"));
         let plain = Path::new("/plain.txt");
@@ -248,7 +252,7 @@ async fn a_plain_file_reports_nothing_anywhere() {
         let dest = Arc::new(InMemoryVolume::new("Dest").with_metadata_caps(dest_caps));
         dest.create_directory(Path::new("/to")).await.unwrap();
 
-        let complete = copy(source, &[plain.to_path_buf()], dest, Path::new("/to")).await;
+        let complete = copy(&engine, source, &[plain.to_path_buf()], dest, Path::new("/to")).await;
 
         assert_eq!(complete.metadata_left_behind, None, "a plain file onto {dest_name}");
     }
@@ -259,6 +263,7 @@ async fn a_plain_file_reports_nothing_anywhere() {
 /// nothing there.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_tagged_local_file_copied_to_sftp_reports_its_tags_and_an_untagged_one_nothing() {
+    let engine = TestOperations::new();
     let dir = TestDir::new("metadata_loss_local_to_sftp");
     let tagged = dir.join("tagged.txt");
     let plain = dir.join("plain.txt");
@@ -278,13 +283,14 @@ async fn a_tagged_local_file_copied_to_sftp_reports_its_tags_and_an_untagged_one
     let sftp = || Arc::new(InMemoryVolume::new("SFTP").with_metadata_caps(cmdr_sftp::SftpVolume::METADATA_CAPS));
 
     let tagged_copy = copy(
+        &engine,
         Arc::clone(&source),
         &[PathBuf::from("tagged.txt")],
         sftp(),
         Path::new("/"),
     )
     .await;
-    let plain_copy = copy(source, &[PathBuf::from("plain.txt")], sftp(), Path::new("/")).await;
+    let plain_copy = copy(&engine, source, &[PathBuf::from("plain.txt")], sftp(), Path::new("/")).await;
 
     assert_eq!(
         tagged_copy.metadata_left_behind,
@@ -303,6 +309,7 @@ async fn a_tagged_local_file_copied_to_sftp_reports_its_tags_and_an_untagged_one
 /// (invariant 10's "worth keeping").
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_folder_with_only_a_quarantine_reports_nothing() {
+    let engine = TestOperations::new();
     let source = Arc::new(InMemoryVolume::new("Source"));
     let folder = Path::new("/downloaded");
     source.create_directory(folder).await.unwrap();
@@ -319,7 +326,7 @@ async fn a_folder_with_only_a_quarantine_reports_nothing() {
     let dest = Arc::new(InMemoryVolume::new("Dest").with_metadata_caps(cmdr_sftp::SftpVolume::METADATA_CAPS));
     dest.create_directory(Path::new("/to")).await.unwrap();
 
-    let complete = copy(source, &[folder.to_path_buf()], dest, Path::new("/to")).await;
+    let complete = copy(&engine, source, &[folder.to_path_buf()], dest, Path::new("/to")).await;
 
     assert_eq!(complete.metadata_left_behind, None);
 }
@@ -328,6 +335,7 @@ async fn a_folder_with_only_a_quarantine_reports_nothing() {
 /// a tagged one puts its tags on the note, an untagged one puts nothing there.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_tagged_local_folder_copied_to_sftp_reports_its_tags_and_an_untagged_one_nothing() {
+    let engine = TestOperations::new();
     let dir = TestDir::new("metadata_loss_local_folder_to_sftp");
     for name in ["tagged", "plain"] {
         std::fs::create_dir(dir.join(name)).unwrap();
@@ -340,8 +348,15 @@ async fn a_tagged_local_folder_copied_to_sftp_reports_its_tags_and_an_untagged_o
     ));
     let sftp = || Arc::new(InMemoryVolume::new("SFTP").with_metadata_caps(cmdr_sftp::SftpVolume::METADATA_CAPS));
 
-    let tagged_copy = copy(Arc::clone(&source), &[PathBuf::from("tagged")], sftp(), Path::new("/")).await;
-    let plain_copy = copy(source, &[PathBuf::from("plain")], sftp(), Path::new("/")).await;
+    let tagged_copy = copy(
+        &engine,
+        Arc::clone(&source),
+        &[PathBuf::from("tagged")],
+        sftp(),
+        Path::new("/"),
+    )
+    .await;
+    let plain_copy = copy(&engine, source, &[PathBuf::from("plain")], sftp(), Path::new("/")).await;
 
     assert_eq!(
         tagged_copy.metadata_left_behind,
@@ -360,6 +375,7 @@ async fn a_tagged_local_folder_copied_to_sftp_reports_its_tags_and_an_untagged_o
 /// it, so only the write's own report can tell.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_class_the_destination_refuses_at_runtime_is_on_the_note() {
+    let engine = TestOperations::new();
     let source = Arc::new(InMemoryVolume::new("Source"));
     seed(&source, InMemoryVolume::REFERENCE_CAPS).await;
     // The double's own caps keep every class on every OS, so the runtime refusal
@@ -367,7 +383,7 @@ async fn a_class_the_destination_refuses_at_runtime_is_on_the_note() {
     let dest = Arc::new(InMemoryVolume::new("NAS").with_write_refusing(MetadataClasses::CREATED));
     dest.create_directory(Path::new("/to")).await.unwrap();
 
-    let complete = copy(source, &[PathBuf::from("/file.bin")], dest, Path::new("/to")).await;
+    let complete = copy(&engine, source, &[PathBuf::from("/file.bin")], dest, Path::new("/to")).await;
 
     assert_eq!(
         complete.metadata_left_behind,
@@ -386,6 +402,7 @@ async fn a_class_the_destination_refuses_at_runtime_is_on_the_note() {
 /// whether the double's default file mode counts as worth keeping.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_runtime_refusal_of_nothing_worth_keeping_is_not_on_the_note() {
+    let engine = TestOperations::new();
     let source = Arc::new(InMemoryVolume::new("Source"));
     let plain = Path::new("/plain.txt");
     source.create_file(plain, b"plain").await.unwrap();
@@ -400,7 +417,7 @@ async fn a_runtime_refusal_of_nothing_worth_keeping_is_not_on_the_note() {
     let dest = Arc::new(InMemoryVolume::new("NAS").with_write_refusing(MetadataClasses::CREATED));
     dest.create_directory(Path::new("/to")).await.unwrap();
 
-    let complete = copy(source, &[plain.to_path_buf()], dest, Path::new("/to")).await;
+    let complete = copy(&engine, source, &[plain.to_path_buf()], dest, Path::new("/to")).await;
 
     assert_eq!(complete.metadata_left_behind, None);
 }
@@ -409,6 +426,7 @@ async fn a_runtime_refusal_of_nothing_worth_keeping_is_not_on_the_note() {
 /// its write's report refuses nothing and the note stays silent.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_local_to_local_volume_copy_reports_nothing() {
+    let engine = TestOperations::new();
     let dir = TestDir::new("metadata_loss_local_to_local");
     let from = dir.join("from");
     let to = dir.join("to");
@@ -431,7 +449,7 @@ async fn a_local_to_local_volume_copy_reports_nothing() {
     ));
     let dest: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder("To", &*to, crate::volume_host::host()));
 
-    let complete = copy(source, &[PathBuf::from("tagged.sh")], dest, Path::new("")).await;
+    let complete = copy(&engine, source, &[PathBuf::from("tagged.sh")], dest, Path::new("")).await;
 
     assert_eq!(complete.metadata_left_behind, None);
     assert_eq!(

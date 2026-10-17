@@ -14,7 +14,7 @@
 use super::tests::make_state;
 use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
-use crate::file_system::write_operations::installed;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::ConflictResolution;
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::{InMemoryVolume, VolumeError, VolumeReadStream};
@@ -78,6 +78,7 @@ fn names_in_album(root: &Path) -> Vec<String> {
 /// (their write path is tracked as an in-flight partial).
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_merge_child_that_never_lands_takes_its_rename_placeholder_back() {
+    let engine = TestOperations::new();
     let dest_dir = tempfile::tempdir().expect("tempdir");
     let root = dest_dir.path().to_path_buf();
     std::fs::create_dir(root.join("album")).unwrap();
@@ -104,7 +105,7 @@ async fn a_merge_child_that_never_lands_takes_its_rename_placeholder_back() {
     });
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     let config = VolumeCopyConfig {
         // Rename is what reserves the ` (N)` placeholder.
         conflict_resolution: ConflictResolution::Rename,
@@ -141,6 +142,7 @@ async fn a_merge_child_that_never_lands_takes_its_rename_placeholder_back() {
 /// DOES land keeps its ` (N)` name and its bytes.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_merge_child_that_lands_keeps_its_rename_name() {
+    let engine = TestOperations::new();
     let dest_dir = tempfile::tempdir().expect("tempdir");
     let root = dest_dir.path().to_path_buf();
     std::fs::create_dir(root.join("album")).unwrap();
@@ -159,7 +161,7 @@ async fn a_merge_child_that_lands_keeps_its_rename_name() {
         .unwrap();
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Rename,
         progress_interval_ms: 0,
@@ -196,6 +198,7 @@ async fn a_merge_child_that_lands_keeps_its_rename_name() {
 /// for the move it is the only copy there is.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn an_empty_file_that_lands_on_its_reservation_is_kept() {
+    let engine = TestOperations::new();
     for moving in [false, true] {
         let dest_dir = tempfile::tempdir().expect("tempdir");
         let root = dest_dir.path().to_path_buf();
@@ -227,7 +230,7 @@ async fn an_empty_file_that_lands_on_its_reservation_is_kept() {
             super::super::move_cross::move_volumes_with_progress(
                 Arc::new(CollectorEventSink::new()),
                 "op-empty-rename-lands-move",
-                &make_state(),
+                &make_state(&engine),
                 Arc::clone(&source),
                 &sources,
                 Arc::clone(&dest),
@@ -239,7 +242,7 @@ async fn an_empty_file_that_lands_on_its_reservation_is_kept() {
             copy_volumes_with_progress(
                 Arc::new(CollectorEventSink::new()),
                 "op-empty-rename-lands-copy",
-                &make_state(),
+                &make_state(&engine),
                 Arc::clone(&source),
                 &sources,
                 Arc::clone(&dest),
@@ -274,8 +277,9 @@ type ListingRow = FileEntry;
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_merge_child_abandoned_at_the_drain_deadline_takes_its_rename_placeholder_back() {
     use super::wedge_test_support::{CHUNK, CancelDrainGuard, WAIT, gated_source};
-    use crate::file_system::write_operations::test_support::TestOperationGuard;
     use std::sync::atomic::Ordering;
+
+    let engine = TestOperations::new();
 
     let _drain = CancelDrainGuard::set(Duration::from_millis(150));
     let dest_dir = tempfile::tempdir().expect("tempdir");
@@ -304,7 +308,7 @@ async fn a_merge_child_abandoned_at_the_drain_deadline_takes_its_rename_placehol
     ];
 
     let events = Arc::new(CollectorEventSink::new());
-    let op = TestOperationGuard::register_state("merge-placeholder-abandoned", make_state());
+    let op = engine.register_state("merge-placeholder-abandoned", make_state(&engine));
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Rename,
         progress_interval_ms: 0,
@@ -334,7 +338,7 @@ async fn a_merge_child_abandoned_at_the_drain_deadline_takes_its_rename_placehol
         "precondition: the Rename reserved its name before the leaf wedged"
     );
 
-    installed().cancel_write_operation(op.id(), false);
+    engine.cancel_write_operation(op.id(), false);
     tokio::time::timeout(Duration::from_secs(5), &mut copy)
         .await
         .expect("the driver must abandon the wedged tasks")

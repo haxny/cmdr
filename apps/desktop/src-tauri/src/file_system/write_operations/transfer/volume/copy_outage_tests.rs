@@ -8,9 +8,8 @@
 
 use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
-use crate::file_system::write_operations::installed;
 use crate::file_system::write_operations::outage_slot::OutagePolicy;
-use crate::file_system::write_operations::test_support::TestOperationGuard;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::transfer::outage_volume_test_support::{OutageVolume, RenameDrop};
 use crate::file_system::write_operations::types::{ConflictResolution, WriteOperationError};
 use crate::test_support::wait_until_async;
@@ -19,14 +18,16 @@ use cmdr_fs::volume::{InMemoryVolume, Volume};
 const WAIT: Duration = Duration::from_secs(10);
 const CADENCE: &[Duration] = &[Duration::from_millis(10), Duration::from_millis(20)];
 
-fn outage_state(budget: Duration) -> Arc<WriteOperationState> {
+fn outage_state(engine: &TestOperations, budget: Duration) -> Arc<WriteOperationState> {
     Arc::new(
-        WriteOperationState::new(Duration::from_millis(50)).with_outage_policy(OutagePolicy {
-            budget,
-            cadence: CADENCE,
-            poll_every: Duration::from_millis(5),
-            attempt_timeout: Duration::from_secs(1),
-        }),
+        engine
+            .new_operation_state(Duration::from_millis(50))
+            .with_outage_policy(OutagePolicy {
+                budget,
+                cadence: CADENCE,
+                poll_every: Duration::from_millis(5),
+                attempt_timeout: Duration::from_secs(1),
+            }),
     )
 }
 
@@ -86,11 +87,12 @@ async fn landed(inner: &Arc<InMemoryVolume>, path: &str) -> bool {
 /// walk. The share drops as the second file starts.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_folder_copy_waits_out_a_dropped_share_and_finishes() {
+    let engine = TestOperations::new();
     let source = source_with(4).await;
     let (inner, nas, dest) = nas("outage-copy-folder");
     nas.drop_at_write(1);
-    let state = outage_state(Duration::from_secs(30));
-    let op = TestOperationGuard::register_state("outage-copy-folder", Arc::clone(&state));
+    let state = outage_state(&engine, Duration::from_secs(30));
+    let op = engine.register_state("outage-copy-folder", Arc::clone(&state));
     come_back_when_waited_for(&state, &nas);
 
     copy_volumes_with_progress(
@@ -116,11 +118,12 @@ async fn a_folder_copy_waits_out_a_dropped_share_and_finishes() {
 /// meets the outage at once and each waits on the same share.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_multi_file_copy_waits_out_a_dropped_share_and_finishes() {
+    let engine = TestOperations::new();
     let source = source_with(5).await;
     let (inner, nas, dest) = nas("outage-copy-window");
     nas.drop_at_write(2);
-    let state = outage_state(Duration::from_secs(30));
-    let op = TestOperationGuard::register_state("outage-copy-window", Arc::clone(&state));
+    let state = outage_state(&engine, Duration::from_secs(30));
+    let op = engine.register_state("outage-copy-window", Arc::clone(&state));
     come_back_when_waited_for(&state, &nas);
 
     let sources: Vec<PathBuf> = (0..5).map(|n| PathBuf::from(format!("/f{n}.txt"))).collect();
@@ -146,11 +149,12 @@ async fn a_multi_file_copy_waits_out_a_dropped_share_and_finishes() {
 /// did before it knew how to wait, with what landed still there.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_copy_gives_up_like_before_when_the_share_stays_gone() {
+    let engine = TestOperations::new();
     let source = source_with(4).await;
     let (inner, nas, dest) = nas("outage-copy-gone");
     nas.drop_at_write(1);
-    let state = outage_state(Duration::from_millis(300));
-    let op = TestOperationGuard::register_state("outage-copy-gone", Arc::clone(&state));
+    let state = outage_state(&engine, Duration::from_millis(300));
+    let op = engine.register_state("outage-copy-gone", Arc::clone(&state));
 
     let failure = copy_volumes_with_progress(
         Arc::new(CollectorEventSink::new()),
@@ -190,11 +194,12 @@ async fn a_copy_gives_up_like_before_when_the_share_stays_gone() {
 /// Cancel during the wait ends the copy at once, as a cancel.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_cancel_during_the_wait_cancels_the_copy() {
+    let engine = TestOperations::new();
     let source = source_with(4).await;
     let (_inner, nas, dest) = nas("outage-copy-cancel");
     nas.drop_at_write(1);
-    let state = outage_state(Duration::from_secs(60));
-    let op = TestOperationGuard::register_state("outage-copy-cancel", Arc::clone(&state));
+    let state = outage_state(&engine, Duration::from_secs(60));
+    let op = engine.register_state("outage-copy-cancel", Arc::clone(&state));
     let watched = Arc::clone(&state);
     let op_id = op.id().to_owned();
     tokio::spawn(async move {
@@ -202,7 +207,7 @@ async fn a_cancel_during_the_wait_cancels_the_copy() {
             watched.outage.waiting_for().is_some()
         })
         .await;
-        installed().cancel_write_operation(&op_id, false);
+        engine.cancel_write_operation(&op_id, false);
     });
 
     let started = Instant::now();
@@ -235,11 +240,12 @@ async fn a_cancel_during_the_wait_cancels_the_copy() {
 /// than failing on it at once.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_copy_that_starts_while_the_share_is_gone_waits_for_it() {
+    let engine = TestOperations::new();
     let source = source_with(2).await;
     let (inner, nas, dest) = nas("outage-copy-start");
     nas.go_away();
-    let state = outage_state(Duration::from_secs(30));
-    let op = TestOperationGuard::register_state("outage-copy-start", Arc::clone(&state));
+    let state = outage_state(&engine, Duration::from_secs(30));
+    let op = engine.register_state("outage-copy-start", Arc::clone(&state));
     let events = Arc::new(CollectorEventSink::new());
     come_back_when_waited_for(&state, &nas);
 
@@ -271,6 +277,7 @@ async fn a_copy_that_starts_while_the_share_is_gone_waits_for_it() {
 /// rename of the second file, and hands back the outcome. With `theirs`, someone
 /// else saves that file's name with those bytes while the share is gone.
 async fn copy_through_a_drop_at_landing(
+    engine: &TestOperations,
     lane: &str,
     side: RenameDrop,
     theirs: Option<&'static [u8]>,
@@ -278,8 +285,8 @@ async fn copy_through_a_drop_at_landing(
     let source = source_with(4).await;
     let (inner, nas, dest) = nas(lane);
     nas.drop_at_rename(1, side);
-    let state = outage_state(Duration::from_secs(30));
-    let op = TestOperationGuard::register_state(lane, Arc::clone(&state));
+    let state = outage_state(engine, Duration::from_secs(30));
+    let op = engine.register_state(lane, Arc::clone(&state));
     let watched = Arc::clone(&state);
     let behind_the_share = Arc::clone(&inner);
     let share = Arc::clone(&nas);
@@ -350,8 +357,14 @@ async fn content_of(inner: &Arc<InMemoryVolume>, path: &str) -> Vec<u8> {
 /// `smb_outage_test::smb_integration_a_copy_waits_out_a_dropped_network_and_finishes`).
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_landing_the_drop_swallowed_counts_as_landed() {
-    let (inner, outcome) =
-        copy_through_a_drop_at_landing("outage-landed-unanswered", RenameDrop::AfterTheServerPerformsIt, None).await;
+    let engine = TestOperations::new();
+    let (inner, outcome) = copy_through_a_drop_at_landing(
+        &engine,
+        "outage-landed-unanswered",
+        RenameDrop::AfterTheServerPerformsIt,
+        None,
+    )
+    .await;
 
     outcome.expect("a landing the server performed is the copy's own file, not a conflict");
     for n in 0..4 {
@@ -372,8 +385,14 @@ async fn a_landing_the_drop_swallowed_counts_as_landed() {
 /// file runs again and lands.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_landing_the_drop_stopped_runs_the_file_again() {
-    let (inner, outcome) =
-        copy_through_a_drop_at_landing("outage-landing-unsent", RenameDrop::BeforeTheServerSeesIt, None).await;
+    let engine = TestOperations::new();
+    let (inner, outcome) = copy_through_a_drop_at_landing(
+        &engine,
+        "outage-landing-unsent",
+        RenameDrop::BeforeTheServerSeesIt,
+        None,
+    )
+    .await;
 
     outcome.expect("a landing that never happened runs again once the share is back");
     assert_eq!(content_of(&inner, "/batch/f1.txt").await, b"file 1".to_vec());
@@ -390,8 +409,10 @@ async fn a_landing_the_drop_stopped_runs_the_file_again() {
 /// leaves their file alone.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_name_someone_else_took_during_the_outage_stays_a_conflict() {
+    let engine = TestOperations::new();
     const THEIRS: &[u8] = b"someone else's file, saved while the share was away";
     let (inner, outcome) = copy_through_a_drop_at_landing(
+        &engine,
         "outage-landed-then-taken",
         RenameDrop::AfterTheServerPerformsIt,
         Some(THEIRS),
@@ -415,6 +436,7 @@ async fn a_name_someone_else_took_during_the_outage_stays_a_conflict() {
 /// completed the second file's write, before its reply arrived. With `theirs`,
 /// someone else saves that name while the share is gone.
 async fn copy_through_a_swallowed_single_shot_write(
+    engine: &TestOperations,
     lane: &str,
     theirs: Option<&'static [u8]>,
 ) -> (Arc<InMemoryVolume>, Result<(), WriteOperationError>) {
@@ -422,8 +444,8 @@ async fn copy_through_a_swallowed_single_shot_write(
     let (inner, nas, dest) = nas(lane);
     nas.write_single_shot();
     nas.drop_after_write(1);
-    let state = outage_state(Duration::from_secs(30));
-    let op = TestOperationGuard::register_state(lane, Arc::clone(&state));
+    let state = outage_state(engine, Duration::from_secs(30));
+    let op = engine.register_state(lane, Arc::clone(&state));
     let watched = Arc::clone(&state);
     let behind_the_share = Arc::clone(&inner);
     let share = Arc::clone(&nas);
@@ -471,7 +493,9 @@ async fn copy_through_a_swallowed_single_shot_write(
 /// live-SMB cell's actual failure).
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_single_shot_write_the_drop_swallowed_counts_as_landed() {
-    let (inner, outcome) = copy_through_a_swallowed_single_shot_write("outage-single-shot-unanswered", None).await;
+    let engine = TestOperations::new();
+    let (inner, outcome) =
+        copy_through_a_swallowed_single_shot_write(&engine, "outage-single-shot-unanswered", None).await;
 
     outcome.expect("a write the server completed is the copy's own file, not a conflict");
     for n in 0..4 {
@@ -488,8 +512,10 @@ async fn a_single_shot_write_the_drop_swallowed_counts_as_landed() {
 /// conflict and stays theirs.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_single_shot_name_someone_else_took_during_the_outage_stays_a_conflict() {
+    let engine = TestOperations::new();
     const THEIRS: &[u8] = b"theirs!"; // one byte longer than "file 1"
-    let (inner, outcome) = copy_through_a_swallowed_single_shot_write("outage-single-shot-taken", Some(THEIRS)).await;
+    let (inner, outcome) =
+        copy_through_a_swallowed_single_shot_write(&engine, "outage-single-shot-taken", Some(THEIRS)).await;
 
     let error = outcome.expect_err("a file the copy can't prove its own is never claimed");
     assert!(
@@ -506,9 +532,10 @@ async fn a_single_shot_name_someone_else_took_during_the_outage_stays_a_conflict
 /// Same size, different bytes: size alone never proves a temp-less write ours.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_single_shot_name_taken_with_the_same_size_stays_a_conflict() {
+    let engine = TestOperations::new();
     const THEIRS: &[u8] = b"theirs"; // exactly as long as "file 1"
     let (inner, outcome) =
-        copy_through_a_swallowed_single_shot_write("outage-single-shot-same-size", Some(THEIRS)).await;
+        copy_through_a_swallowed_single_shot_write(&engine, "outage-single-shot-same-size", Some(THEIRS)).await;
 
     let error = outcome.expect_err("a same-size file with other bytes is never claimed");
     assert!(

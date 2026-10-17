@@ -3,6 +3,7 @@
 //! the source.
 
 use super::*;
+use crate::file_system::write_operations::testing::TestOperations;
 
 // ========================================================================
 // Volume-aware destination auto-create (recursive `create_directory_all`).
@@ -14,6 +15,7 @@ use super::*;
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn cross_volume_copy_creates_missing_nested_dest() {
+    let engine = TestOperations::new();
     let (source, dest) = make_volumes();
     source.create_file(Path::new("/a.txt"), b"alpha").await.unwrap();
     source.create_file(Path::new("/b.txt"), b"bravo").await.unwrap();
@@ -22,7 +24,7 @@ async fn cross_volume_copy_creates_missing_nested_dest() {
     assert!(!dest.exists(Path::new("/incoming")).await);
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     let config = VolumeCopyConfig::default();
 
     let result = copy_volumes_with_progress(
@@ -70,6 +72,7 @@ async fn cross_volume_copy_creates_missing_nested_dest() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn cross_volume_copy_into_existing_dest_is_a_no_op_create() {
+    let engine = TestOperations::new();
     // Re-running into an already-existing dest must not fail the create gate
     // (a merge into an existing folder is a no-op create).
     let (source, dest) = make_volumes();
@@ -80,7 +83,7 @@ async fn cross_volume_copy_into_existing_dest_is_a_no_op_create() {
         .unwrap();
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     let config = VolumeCopyConfig::default();
 
     let result = copy_volumes_with_progress(
@@ -111,6 +114,7 @@ async fn cross_volume_copy_into_existing_dest_is_a_no_op_create() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_destination_that_cannot_be_addressed_is_never_reported_as_a_missing_source() {
+    let engine = TestOperations::new();
     // The destination volume answers `NotFound` for the folder the copy is
     // asked to create — the shape a share produces for a path it can't address.
     // The user's source file is sitting right there, so telling them it "no
@@ -130,7 +134,7 @@ async fn a_destination_that_cannot_be_addressed_is_never_reported_as_a_missing_s
     let failure = copy_volumes_with_progress(
         Arc::new(CollectorEventSink::new()),
         "test-op-dest-not-found",
-        &make_state(),
+        &make_state(&engine),
         Arc::clone(&source),
         &[PathBuf::from("/report.pdf")],
         Arc::clone(&dest),
@@ -152,6 +156,7 @@ async fn a_destination_that_cannot_be_addressed_is_never_reported_as_a_missing_s
 
 #[tokio::test]
 async fn an_explicit_volume_copy_name_uses_the_requested_leaf_and_conflict_policy() {
+    let engine = TestOperations::new();
     let (source, dest) = make_volumes();
     source
         .create_file(Path::new("/original.txt"), b"new bytes")
@@ -167,7 +172,7 @@ async fn an_explicit_volume_copy_name_uses_the_requested_leaf_and_conflict_polic
         let result = copy_volumes_with_progress(
             Arc::new(CollectorEventSink::new()),
             "named-volume-copy",
-            &make_state(),
+            &make_state(&engine),
             Arc::clone(&source),
             &[PathBuf::from("/original.txt")],
             Arc::clone(&dest),
@@ -190,6 +195,7 @@ async fn an_explicit_volume_copy_name_uses_the_requested_leaf_and_conflict_polic
 
 #[tokio::test]
 async fn an_explicit_volume_copy_folder_name_preserves_children_and_empty_folders() {
+    let engine = TestOperations::new();
     let (source, dest) = make_volumes();
     source.create_directory_all(Path::new("/original/empty")).await.unwrap();
     source
@@ -203,7 +209,7 @@ async fn an_explicit_volume_copy_folder_name_preserves_children_and_empty_folder
     let result = copy_volumes_with_progress(
         Arc::new(CollectorEventSink::new()),
         "named-volume-folder-copy",
-        &make_state(),
+        &make_state(&engine),
         Arc::clone(&source),
         &[PathBuf::from("/original")],
         Arc::clone(&dest),
@@ -219,6 +225,7 @@ async fn an_explicit_volume_copy_folder_name_preserves_children_and_empty_folder
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_file_where_the_destination_folder_should_be_is_named_and_nothing_is_written() {
+    let engine = TestOperations::new();
     // `/photos/2026` is a FILE, and the copy is told to land in it and then in
     // a folder below it. Both used to go wrong quietly: the first read the file
     // as "the folder is already there" and failed per item afterwards, the
@@ -234,7 +241,7 @@ async fn a_file_where_the_destination_folder_should_be_is_named_and_nothing_is_w
         let failure = copy_volumes_with_progress(
             Arc::new(CollectorEventSink::new()),
             "test-op-dest-file-in-the-way",
-            &make_state(),
+            &make_state(&engine),
             Arc::clone(&source),
             &[PathBuf::from("/report.pdf")],
             Arc::clone(&dest),

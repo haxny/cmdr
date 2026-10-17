@@ -163,7 +163,7 @@ pub(super) async fn wait_before_retry(state: &Arc<WriteOperationState>, failed_a
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::file_system::write_operations::test_support::TestOperationGuard;
+    use crate::file_system::write_operations::testing::TestOperations;
 
     /// The transport blips a retry exists for. Each one means "this connection is
     /// dead but the write itself was never refused".
@@ -227,7 +227,8 @@ mod tests {
     /// the last one, however retryable its error was.
     #[test]
     fn the_attempt_cap_terminates_the_loop() {
-        let guard = TestOperationGuard::register("retry-cap");
+        let engine = TestOperations::new();
+        let guard = engine.register("retry-cap");
         let err = VolumeError::ConnectionTimeout("send timed out".into());
         assert!(should_retry(&err, 1, guard.state()));
         assert!(should_retry(&err, 2, guard.state()));
@@ -241,10 +242,11 @@ mod tests {
     /// not being run again.
     #[test]
     fn a_cancelled_operation_schedules_no_further_attempt() {
-        let guard = TestOperationGuard::register("retry-cancelled");
+        let engine = TestOperations::new();
+        let guard = engine.register("retry-cancelled");
         let err = VolumeError::ConnectionTimeout("send timed out".into());
         assert!(should_retry(&err, 1, guard.state()));
-        crate::file_system::write_operations::installed().cancel_write_operation(guard.id(), false);
+        engine.cancel_write_operation(guard.id(), false);
         assert!(!should_retry(&err, 1, guard.state()));
     }
 
@@ -269,7 +271,8 @@ mod tests {
     /// asked for.
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn a_cancel_ends_the_backoff_immediately() {
-        let guard = TestOperationGuard::register("retry-backoff-cancel");
+        let engine = TestOperations::new();
+        let guard = engine.register("retry-backoff-cancel");
         let state = Arc::clone(guard.state());
         let op_id = guard.id().to_owned();
         tokio::spawn(async move {
@@ -277,7 +280,7 @@ mod tests {
             // INSIDE the running 250 ms backoff, and there is no condition to wait on
             // (a backoff in progress publishes nothing).
             tokio::time::sleep(Duration::from_millis(20)).await;
-            crate::file_system::write_operations::installed().cancel_write_operation(&op_id, false);
+            engine.cancel_write_operation(&op_id, false);
         });
         let started = tokio::time::Instant::now();
         let go_on = wait_before_retry(&state, 1).await;
@@ -292,7 +295,8 @@ mod tests {
     /// An uncancelled wait runs its course and says "go on".
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn an_uncancelled_backoff_lets_the_next_attempt_run() {
-        let guard = TestOperationGuard::register("retry-backoff-ok");
+        let engine = TestOperations::new();
+        let guard = engine.register("retry-backoff-ok");
         assert!(wait_before_retry(guard.state(), 1).await);
     }
 }

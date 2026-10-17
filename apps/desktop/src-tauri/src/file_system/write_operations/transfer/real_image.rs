@@ -73,17 +73,18 @@ fn state_onto(
     )
 }
 
-/// Runs `engine` on its own thread, force-detaches the image once the copy has
-/// parked mid-file, and answers what the engine ended with.
+/// Runs `engine` on its own thread, force-detaches the image once its copy of
+/// `source` has parked mid-file, and answers what the engine ended with.
 fn detach_mid_transfer(
     image: &DiskImage,
+    source: &std::path::Path,
     events: Arc<CollectorEventSink>,
     state: Arc<WriteOperationState>,
     engine: impl FnOnce(Arc<CollectorEventSink>, Arc<WriteOperationState>) -> Result<(), WriteOperationError>
     + Send
     + 'static,
 ) -> Result<(), WriteOperationError> {
-    let park = chunk_park::park_after(PARK_AFTER);
+    let park = chunk_park::park_after(source, PARK_AFTER);
     let worker = std::thread::spawn(move || engine(events, state));
 
     let written = park
@@ -111,7 +112,7 @@ fn copy_until_the_drive_is_pulled(
     register_operation_status(op_id, WriteOperationType::Copy, Vec::new());
     let sources = vec![source.to_path_buf()];
     let destination = volume.mount_point.clone();
-    detach_mid_transfer(image, Arc::clone(events), state, move |events, state| {
+    detach_mid_transfer(image, source, Arc::clone(events), state, move |events, state| {
         copy_files_with_progress_inner(
             &*events,
             op_id,
@@ -387,16 +388,22 @@ async fn a_move_onto_a_drive_that_is_pulled_mid_file_keeps_every_mac_source() {
 
     let sources = vec![source.clone()];
     let destination = volume.mount_point.clone();
-    let result = detach_mid_transfer(&image, Arc::clone(&events), Arc::clone(&state), move |events, state| {
-        move_files_with_progress_inner(
-            &*events,
-            op_id,
-            &state,
-            &sources,
-            &destination,
-            &WriteOperationConfig::default(),
-        )
-    });
+    let result = detach_mid_transfer(
+        &image,
+        &source,
+        Arc::clone(&events),
+        Arc::clone(&state),
+        move |events, state| {
+            move_files_with_progress_inner(
+                &*events,
+                op_id,
+                &state,
+                &sources,
+                &destination,
+                &WriteOperationConfig::default(),
+            )
+        },
+    );
 
     assert!(result.is_err(), "a move onto a pulled drive can't succeed");
     assert!(

@@ -14,25 +14,14 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use super::super::event_sinks::CollectorEventSink;
-use super::super::state::WriteOperationState;
-use super::super::test_support::TestOperationGuard;
 use super::super::types::WriteOperationConfig;
 use super::copy::copy_files_with_progress_inner;
 use super::move_op::move_files_with_progress_inner;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::test_support::TestDir;
 
 fn create_temp_dir(name: &str) -> TestDir {
     TestDir::new(&format!("hardlink_xfer_{name}"))
-}
-
-fn unique_op_id(name: &str) -> String {
-    format!(
-        "test-hardlink-{name}-{}",
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_nanos()
-    )
 }
 
 /// Build a tree under `root` containing one inode shared by three hardlinks
@@ -49,13 +38,6 @@ fn build_hardlink_tree(root: &Path, subdir: &str) -> PathBuf {
     fs::hard_link(&original, src.join("hardlink_b")).unwrap();
     fs::write(src.join("standalone"), vec![0u8; 4096]).unwrap();
     src
-}
-
-/// Registers a fresh state under `op_id`. Bind the returned guard for the whole
-/// test: it unregisters on drop, unwind included.
-#[must_use = "bind the guard; dropping it immediately unregisters the state"]
-fn install_state(op_id: &str) -> TestOperationGuard {
-    TestOperationGuard::register_as(op_id, Arc::new(WriteOperationState::new(Duration::from_millis(10))))
 }
 
 fn copying_phase_bytes_total(sink: &CollectorEventSink) -> u64 {
@@ -88,13 +70,14 @@ fn assert_no_mid_flight_overshoot(sink: &CollectorEventSink) {
 /// (3 × 1024 hardlinks + 4096 standalone), NOT the dedup'd 5120.
 #[test]
 fn copy_counts_write_footprint_for_hardlinks() {
+    let engine = TestOperations::new();
     let root = create_temp_dir("copy_hardlinks");
     let src = build_hardlink_tree(&root, "src");
     let dest = root.join("dest");
     fs::create_dir_all(&dest).unwrap();
 
-    let op_id = unique_op_id("copy");
-    let op = install_state(&op_id);
+    let op_id = "copy".to_string();
+    let op = engine.register_state(&op_id, Arc::new(engine.new_operation_state(Duration::from_millis(10))));
     let sink = CollectorEventSink::new();
     let sources = vec![src.clone()];
     let config = WriteOperationConfig::default();
@@ -130,13 +113,14 @@ fn copy_counts_write_footprint_for_hardlinks() {
 /// move's terminal `bytes_processed` doesn't exceed `bytes_total`.
 #[test]
 fn move_hardlinked_files_does_not_overshoot_progress() {
+    let engine = TestOperations::new();
     let root = create_temp_dir("move_hardlinks");
     let src = build_hardlink_tree(&root, "src");
     let dest = root.join("dest");
     fs::create_dir_all(&dest).unwrap();
 
-    let op_id = unique_op_id("move");
-    let op = install_state(&op_id);
+    let op_id = "move".to_string();
+    let op = engine.register_state(&op_id, Arc::new(engine.new_operation_state(Duration::from_millis(10))));
     let sink = CollectorEventSink::new();
     let sources = vec![src.clone()];
     let config = WriteOperationConfig::default();

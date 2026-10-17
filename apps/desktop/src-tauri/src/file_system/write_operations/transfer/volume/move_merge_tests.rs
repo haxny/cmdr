@@ -20,6 +20,7 @@ use super::super::safety_oracle::{SafetySpec, assert_operation_was_safe};
 use super::test_support::{make_state_with_interval_ms, make_volumes};
 use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::ConflictResolution;
 use cmdr_fs::volume::InMemoryVolume;
 
@@ -33,6 +34,7 @@ use cmdr_fs::volume::InMemoryVolume;
 /// (`cross_volume_move_conflict_skip_preserves_source_and_dest`).
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn cross_volume_move_folder_merge_keeps_the_source_of_a_skipped_deep_child() {
+    let engine = TestOperations::new();
     let (source, dest) = make_volumes();
 
     source.create_directory(Path::new("/album")).await.unwrap();
@@ -50,7 +52,7 @@ async fn cross_volume_move_folder_merge_keeps_the_source_of_a_skipped_deep_child
         .unwrap();
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state_with_interval_ms(0);
+    let state = make_state_with_interval_ms(&engine, 0);
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Skip,
         progress_interval_ms: 0,
@@ -211,9 +213,10 @@ fn move_merge_spec<'a>(dest_root: &'a str, label: &'a str) -> SafetySpec<'a> {
 /// source-sweep hole survived.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn move_folder_merge_never_loses_a_byte_under_every_policy() {
+    let engine = TestOperations::new();
     for (policy, scripted) in MOVE_MERGE_POLICIES {
         let (source, dest) = make_move_merge_fixture().await;
-        let state = make_state_with_interval_ms(0);
+        let state = make_state_with_interval_ms(&engine, 0);
         let events = Arc::new(ConflictResponderSink::new(
             &state,
             scripted.unwrap_or(ConflictResolution::Skip),
@@ -260,6 +263,7 @@ async fn move_folder_merge_never_loses_a_byte_under_every_policy() {
 /// (`volume/rename_merge.rs`) with the same promises to keep.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn same_volume_move_folder_merge_never_loses_a_byte_under_every_policy() {
+    let engine = TestOperations::new();
     for (policy, scripted) in MOVE_MERGE_POLICIES {
         // One volume holding both trees: `/album` merges onto `/dest/album`.
         let volume: Arc<dyn Volume> = Arc::new(InMemoryVolume::new("One").with_space_info(10_000_000, 10_000_000));
@@ -267,7 +271,7 @@ async fn same_volume_move_folder_merge_never_loses_a_byte_under_every_policy() {
         volume.create_directory(Path::new("/dest")).await.unwrap();
         build_merge_dest_tree(&volume, "/dest/album").await;
 
-        let state = make_state_with_interval_ms(0);
+        let state = make_state_with_interval_ms(&engine, 0);
         let events = Arc::new(ConflictResponderSink::new(
             &state,
             scripted.unwrap_or(ConflictResolution::Skip),

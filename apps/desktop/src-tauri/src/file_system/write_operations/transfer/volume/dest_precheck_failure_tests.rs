@@ -27,11 +27,12 @@ use super::faulty_volume::{FaultyOp, FaultyVolume};
 use super::{copy_volumes_with_progress, move_volumes_with_progress, move_within_same_volume_with_progress};
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::state::WriteOperationState;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::{ConflictResolution, VolumeCopyConfig, WriteOperationError};
 use cmdr_fs::volume::{InMemoryVolume, Volume, VolumeError};
 
-fn make_state() -> Arc<WriteOperationState> {
-    Arc::new(WriteOperationState::new(Duration::from_millis(50)))
+fn make_state(engine: &TestOperations) -> Arc<WriteOperationState> {
+    Arc::new(engine.new_operation_state(Duration::from_millis(50)))
 }
 
 const THE_USERS_BYTES: &[u8] = b"the user's own copy";
@@ -84,12 +85,13 @@ async fn bytes_at(volume: &Arc<InMemoryVolume>, path: &str) -> Option<Vec<u8>> {
 /// that can't answer must not turn that into an overwrite.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_serial_copy_fails_the_item_whose_destination_stat_times_out() {
+    let engine = TestOperations::new();
     let (source, paths) = seeded_source(&["doc.txt"]).await;
     let dest_inner = seeded_dest(&["doc.txt"]).await;
     let dest = flaky_dest(Arc::clone(&dest_inner), 1);
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Skip,
         ..VolumeCopyConfig::default()
@@ -130,6 +132,7 @@ async fn a_serial_copy_fails_the_item_whose_destination_stat_times_out() {
 /// or no index).
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_concurrent_copy_fails_the_item_whose_destination_stat_times_out() {
+    let engine = TestOperations::new();
     let (source, paths) = seeded_source(&["doc-0.txt", "doc-1.txt", "doc-2.txt"]).await;
     let dest_inner = seeded_dest(&["doc-0.txt"]).await;
     let dest = FaultyVolume::wrapping(Arc::clone(&dest_inner))
@@ -140,7 +143,7 @@ async fn a_concurrent_copy_fails_the_item_whose_destination_stat_times_out() {
         .arc();
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Skip,
         ..VolumeCopyConfig::default()
@@ -178,12 +181,13 @@ async fn a_concurrent_copy_fails_the_item_whose_destination_stat_times_out() {
 /// fetcher (`move_cross.rs`).
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_cross_volume_move_fails_the_item_whose_destination_stat_times_out() {
+    let engine = TestOperations::new();
     let (source, paths) = seeded_source(&["doc.txt"]).await;
     let dest_inner = seeded_dest(&["doc.txt"]).await;
     let dest = flaky_dest(Arc::clone(&dest_inner), 1);
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Skip,
         ..VolumeCopyConfig::default()
@@ -225,6 +229,7 @@ async fn a_cross_volume_move_fails_the_item_whose_destination_stat_times_out() {
 /// (`move_same.rs`).
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_same_volume_move_fails_the_item_whose_destination_stat_times_out() {
+    let engine = TestOperations::new();
     let inner = Arc::new(InMemoryVolume::new("One").with_space_info(10_000_000, 10_000_000));
     inner.create_directory(Path::new("/inbox")).await.unwrap();
     inner
@@ -238,7 +243,7 @@ async fn a_same_volume_move_fails_the_item_whose_destination_stat_times_out() {
     let volume = flaky_dest(Arc::clone(&inner), 1);
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Skip,
         ..VolumeCopyConfig::default()

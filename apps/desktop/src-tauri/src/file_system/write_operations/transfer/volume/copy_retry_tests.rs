@@ -9,7 +9,7 @@
 use super::tests::make_state;
 use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
-use crate::file_system::write_operations::test_support::TestOperationGuard;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::ConflictResolution;
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::{
@@ -223,9 +223,10 @@ async fn read_all(vol: &Arc<InMemoryVolume>, path: &str) -> Option<Vec<u8>> {
 /// LEVEL is re-walked, re-created, or re-deleted.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_retried_merge_child_still_leaves_dest_only_files_alone() {
+    let engine = TestOperations::new();
     let (source, dest_inner) = merge_fixture().await;
-    let state = make_state();
-    let op = TestOperationGuard::register_state("retry-merge", Arc::clone(&state));
+    let state = make_state(&engine);
+    let op = engine.register_state("retry-merge", Arc::clone(&state));
     // Only the source-only file blips, and only once.
     let flaky = FlakyMergeDest::wrap(
         Arc::clone(&dest_inner),
@@ -286,9 +287,10 @@ async fn a_retried_merge_child_still_leaves_dest_only_files_alone() {
 /// surprising behavior, not the safe one.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_retried_file_never_re_asks_the_conflict_the_user_already_answered() {
+    let engine = TestOperations::new();
     let (source, dest_inner) = merge_fixture().await;
-    let state = make_state();
-    let op = TestOperationGuard::register_state("retry-no-reprompt", Arc::clone(&state));
+    let state = make_state(&engine);
+    let op = engine.register_state("retry-no-reprompt", Arc::clone(&state));
     // The CLASHING file blips, so the retry happens after its prompt was answered.
     let flaky = FlakyMergeDest::wrap(
         Arc::clone(&dest_inner),

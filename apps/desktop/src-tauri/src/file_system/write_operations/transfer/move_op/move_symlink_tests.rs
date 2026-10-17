@@ -14,6 +14,7 @@
 
 use super::test_support::{run_cross_fs_move, run_same_fs_move};
 use super::*;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::ConflictResolution;
 use std::os::unix::fs::symlink;
 
@@ -73,6 +74,7 @@ fn is_link(path: &Path) -> bool {
 /// Skip: the link stays in the source, both directories are untouched.
 #[test]
 fn a_dir_link_child_meeting_a_real_dir_is_skipped_not_merged() {
+    let engine = TestOperations::new();
     let fx = link_fixture();
     let src_dir = fx.src_root.join("d");
     fs::create_dir_all(&src_dir).unwrap();
@@ -83,6 +85,7 @@ fn a_dir_link_child_meeting_a_real_dir_is_skipped_not_merged() {
     fs::create_dir_all(dst_dir.join("link")).unwrap();
 
     let result = run_same_fs_move(
+        &engine,
         std::slice::from_ref(&src_dir),
         &fx.dst_root,
         ConflictResolution::Skip,
@@ -110,6 +113,7 @@ fn a_dir_link_child_meeting_a_real_dir_is_skipped_not_merged() {
 /// directory it clashed with is left alone.
 #[test]
 fn a_dir_link_child_meeting_a_real_dir_lands_aside_on_rename() {
+    let engine = TestOperations::new();
     let fx = link_fixture();
     let src_dir = fx.src_root.join("d");
     fs::create_dir_all(&src_dir).unwrap();
@@ -119,6 +123,7 @@ fn a_dir_link_child_meeting_a_real_dir_lands_aside_on_rename() {
     fs::create_dir_all(dst_dir.join("link")).unwrap();
 
     let result = run_same_fs_move(
+        &engine,
         std::slice::from_ref(&src_dir),
         &fx.dst_root,
         ConflictResolution::Rename,
@@ -144,6 +149,7 @@ fn a_dir_link_child_meeting_a_real_dir_lands_aside_on_rename() {
 /// No clash at all: the link rides across as a link, never dereferenced.
 #[test]
 fn a_dir_link_child_with_no_clash_moves_as_a_link() {
+    let engine = TestOperations::new();
     let fx = link_fixture();
     let src_dir = fx.src_root.join("d");
     fs::create_dir_all(&src_dir).unwrap();
@@ -151,6 +157,7 @@ fn a_dir_link_child_with_no_clash_moves_as_a_link() {
     fs::create_dir_all(fx.dst_root.join("d")).unwrap();
 
     let result = run_same_fs_move(
+        &engine,
         std::slice::from_ref(&src_dir),
         &fx.dst_root,
         ConflictResolution::Skip,
@@ -172,6 +179,7 @@ fn a_dir_link_child_with_no_clash_moves_as_a_link() {
 /// a folder the user never chose as the destination.
 #[test]
 fn a_real_dir_child_meeting_a_dir_link_at_the_destination_is_not_merged() {
+    let engine = TestOperations::new();
     let fx = link_fixture();
     let src_dir = fx.src_root.join("d");
     fs::create_dir_all(src_dir.join("sub")).unwrap();
@@ -182,6 +190,7 @@ fn a_real_dir_child_meeting_a_dir_link_at_the_destination_is_not_merged() {
     symlink(&fx.target, dst_dir.join("sub")).unwrap();
 
     let result = run_same_fs_move(
+        &engine,
         std::slice::from_ref(&src_dir),
         &fx.dst_root,
         ConflictResolution::Skip,
@@ -205,6 +214,7 @@ fn a_real_dir_child_meeting_a_dir_link_at_the_destination_is_not_merged() {
 /// either way, so this is the same type mismatch and the same refusal.
 #[test]
 fn a_file_link_child_meeting_a_real_dir_is_skipped() {
+    let engine = TestOperations::new();
     let fx = link_fixture();
     let file_target = fx.tmp.path().join("outside").join("note.txt");
     fs::write(&file_target, b"A REAL FILE").unwrap();
@@ -218,6 +228,7 @@ fn a_file_link_child_meeting_a_real_dir_is_skipped() {
     fs::write(dst_dir.join("link").join("theirs.txt"), b"THEIRS").unwrap();
 
     let result = run_same_fs_move(
+        &engine,
         std::slice::from_ref(&src_dir),
         &fx.dst_root,
         ConflictResolution::Skip,
@@ -242,12 +253,14 @@ fn a_file_link_child_meeting_a_real_dir_is_skipped() {
 /// the destination. `same_fs.rs`'s own dir-vs-dir test, not the merge helper's.
 #[test]
 fn a_top_level_dir_link_meeting_a_real_dir_is_skipped_not_merged() {
+    let engine = TestOperations::new();
     let fx = link_fixture();
     let source = fx.src_root.join("link");
     symlink(&fx.target, &source).unwrap();
     fs::create_dir_all(fx.dst_root.join("link")).unwrap();
 
     let result = run_same_fs_move(
+        &engine,
         std::slice::from_ref(&source),
         &fx.dst_root,
         ConflictResolution::Skip,
@@ -268,12 +281,14 @@ fn a_top_level_dir_link_meeting_a_real_dir_is_skipped_not_merged() {
 /// against the STAGED tree, and a staged link is still a link.
 #[test]
 fn a_staged_dir_link_meeting_a_real_dir_is_skipped_not_merged() {
+    let engine = TestOperations::new();
     let fx = link_fixture();
     let source = fx.src_root.join("link");
     symlink(&fx.target, &source).unwrap();
     fs::create_dir_all(fx.dst_root.join("link")).unwrap();
 
     let result = run_cross_fs_move(
+        &engine,
         std::slice::from_ref(&source),
         &fx.dst_root,
         ConflictResolution::Skip,
