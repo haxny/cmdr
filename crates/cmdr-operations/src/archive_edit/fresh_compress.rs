@@ -2,7 +2,6 @@
 //! producer into a tracked destination stage, validate it, then publish it.
 
 use std::future::Future;
-use std::ops::ControlFlow;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use std::sync::Arc;
@@ -21,7 +20,7 @@ use super::super::transfer_tree::{TreeLanding, TreeOrder, from_archive_plan};
 use super::super::types::{ConflictResolution, WriteOperationError, WriteOperationStartResult, WriteOperationType};
 use super::edit_error::EditError;
 use super::engine::{MutatorHooks, emit_archive_terminal};
-use super::fresh_pipeline::produce_into;
+use super::fresh_pipeline::{continue_unless, produce_into};
 use super::fresh_plan::{FreshPlan, PlanProgress, plan_sources, validate_aliases};
 use super::fresh_rows::CompressRows;
 use super::fresh_validate::{ExpectedIndex, check_entry_names, validate_stage};
@@ -630,17 +629,6 @@ async fn publish_stage(
             .map_err(EditError::Op)?;
     }
     Ok(())
-}
-
-/// Breaks a destination write at its next acknowledgement once the pipeline's
-/// one cancellation source fires; that callback is how SFTP, SMB, and ADB hear a
-/// cancel mid-write.
-pub(super) fn continue_unless(cancellation: &FreshZipCancellation) -> ControlFlow<()> {
-    if cancellation.is_requested() {
-        ControlFlow::Break(())
-    } else {
-        ControlFlow::Continue(())
-    }
 }
 
 /// Whether a PERSON (or the quit gate) stopped this op, as opposed to the

@@ -1,5 +1,7 @@
 //! Fresh compression coordinator shutdown and stage-validation tests.
 
+use std::ops::ControlFlow;
+
 use super::*;
 use crate::archive_edit::fresh_plan::FreshPlan;
 use crate::archive_edit::fresh_zip::{FreshZipEntry, FreshZipSource};

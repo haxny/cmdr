@@ -2,10 +2,10 @@
 //! destination write, the remote feed beside them, and the join that names how
 //! each participant ended.
 
+use std::ops::ControlFlow;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use super::fresh_compress::continue_unless;
 use super::fresh_plan::{FreshPlan, RemoteFeed};
 use super::fresh_zip::{FreshZipCancellation, FreshZipError, FreshZipProgressObserver, spawn_fresh_zip_with_progress};
 use cmdr_fs::volume::{StreamLength, StreamWriteProgress, Volume, VolumeError, WriteMode};
@@ -56,6 +56,17 @@ pub(super) async fn produce_into(
         (Err(error), _) | (_, Err(error)) => Err(error),
     };
     (written, produced)
+}
+
+/// Breaks a destination write at its next acknowledgement once the pipeline's
+/// one cancellation source fires; that callback is how SFTP, SMB, and ADB hear a
+/// cancel mid-write.
+pub(super) fn continue_unless(cancellation: &FreshZipCancellation) -> ControlFlow<()> {
+    if cancellation.is_requested() {
+        ControlFlow::Break(())
+    } else {
+        ControlFlow::Continue(())
+    }
 }
 
 /// Feeds each remote entry's bytes through its bridge, one entry at a time.
