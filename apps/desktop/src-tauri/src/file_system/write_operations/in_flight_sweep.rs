@@ -52,9 +52,6 @@ use crate::file_system::write_operations::unique_name::{NameCandidates, RESCUE_N
 use cmdr_fs::volume::{Volume, VolumeError};
 use cmdr_local::rename_local_exclusive;
 
-#[cfg(test)]
-use cmdr_fs::ignore_poison::IgnorePoison;
-
 /// Settles the records an earlier run left that the local filesystem can answer
 /// for on its own, then takes whatever pending volume is already reachable.
 ///
@@ -691,27 +688,7 @@ fn announce_leftovers_kept(host: &EngineHost, drive_name: Option<&str>, path: &P
         volume_name: volume_name.to_string(),
         folder_name,
     };
-    // Recorded here, before the host hears it: tests have no frontend.
-    #[cfg(test)]
-    KEPT_NOTICES
-        .lock_ignore_poison()
-        .push((path.to_path_buf(), notice.clone()));
     host.events().staging_leftovers_kept(notice);
-}
-
-/// Test-only: every staging-folder notice raised, with the folder it named, so a
-/// test reads back only the notices for its own folder.
-#[cfg(test)]
-static KEPT_NOTICES: std::sync::Mutex<Vec<(PathBuf, MoveLeftoversKeptEvent)>> = std::sync::Mutex::new(Vec::new());
-
-#[cfg(test)]
-fn kept_notices_for(path: &Path) -> Vec<MoveLeftoversKeptEvent> {
-    KEPT_NOTICES
-        .lock_ignore_poison()
-        .iter()
-        .filter(|(at, _)| at == path)
-        .map(|(_, notice)| notice.clone())
-        .collect()
 }
 
 /// Says what the sweep did, so a leftover that survives leaves a trail.

@@ -23,7 +23,6 @@ use super::move_op::move_files_with_progress_inner;
 use crate::file_system::volume::manager::test_support::TestVolumeRegistration;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::in_flight_temps::Ledger;
-use crate::file_system::write_operations::overwrite::aside_park;
 use crate::file_system::write_operations::state::{
     WriteOperationState, register_operation_status, unregister_operation_status,
 };
@@ -287,7 +286,7 @@ async fn an_original_set_aside_when_the_drive_was_pulled_is_still_there_when_it_
     let op_id = "op-real-image-aside";
     register_operation_status(op_id, WriteOperationType::Copy, Vec::new());
 
-    let park = aside_park::park_next_overwrite();
+    let park = state.scope().aside_park().park_next_overwrite();
     let sources = vec![source.clone()];
     let destination = volume.mount_point.clone();
     let worker = {

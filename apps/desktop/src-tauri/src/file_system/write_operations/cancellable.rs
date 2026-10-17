@@ -19,9 +19,19 @@ use super::types::WriteOperationError;
 // Background cleanup (detached, best-effort)
 // ============================================================================
 
+/// Starts `work` on its own thread named `name`. The same panic a bare
+/// `thread::spawn` raises when the OS refuses a thread; the name is what tells
+/// the threads apart in a sample or a hang dump.
+fn spawn_named<T: Send + 'static>(name: &str, work: impl FnOnce() -> T + Send + 'static) -> std::thread::JoinHandle<T> {
+    std::thread::Builder::new()
+        .name(name.to_string())
+        .spawn(work)
+        .expect("the OS starts a write operation's worker thread")
+}
+
 /// Deletes a file on a detached thread. Returns immediately. Best-effort.
 pub(super) fn remove_file_in_background(path: PathBuf) {
-    std::thread::spawn(move || {
+    spawn_named("cmdr-cleanup", move || {
         if let Err(e) = fs::remove_file(&path) {
             log::warn!("background cleanup: failed to remove {}: {}", path.display(), e);
         }
@@ -37,7 +47,7 @@ pub(super) fn remove_file_in_background(path: PathBuf) {
 /// (`cmdr_fs::metadata::remove_tree_clearing_blockers`). A plain tree costs one
 /// `remove_dir_all`.
 pub(super) fn remove_staging_tree_in_background(path: PathBuf) {
-    std::thread::spawn(move || {
+    spawn_named("cmdr-cleanup", move || {
         if let Err(e) = cmdr_fs::metadata::remove_tree_clearing_blockers(&path) {
             log::warn!("background cleanup: failed to remove {}: {}", path.display(), e);
         }
@@ -67,7 +77,7 @@ where
 {
     let (tx, rx) = mpsc::channel();
 
-    std::thread::spawn(move || {
+    spawn_named("cmdr-cancellable-work", move || {
         let _ = tx.send(work());
     });
 
@@ -94,9 +104,13 @@ where
     let (tx, rx) = mpsc::channel();
 
     std::thread::scope(|scope| {
-        scope.spawn(move || {
-            let _ = tx.send(work());
-        });
+        // The same panic `scope.spawn` raises when the OS refuses a thread.
+        std::thread::Builder::new()
+            .name("cmdr-cancellable-work".to_string())
+            .spawn_scoped(scope, move || {
+                let _ = tx.send(work());
+            })
+            .expect("the OS starts a write operation's worker thread");
 
         await_worker_result(&rx, state, context, operation_id)
     })

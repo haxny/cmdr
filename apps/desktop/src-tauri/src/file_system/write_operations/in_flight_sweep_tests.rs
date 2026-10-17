@@ -6,10 +6,33 @@
 //! defers, what a producer records) lives in `in_flight_temps_tests.rs`.
 
 use super::*;
-use crate::file_system::volume::manager::test_support::TestVolumeRegistration;
+use crate::file_system::write_operations::host::testing::{FakeVolumes, RecordingEngineEvents};
 use crate::file_system::write_operations::transfer_sides::test_hook;
 use crate::test_support::TestDir;
+use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_local::LocalPosixVolume;
+
+/// The host a cell's sweep runs on: a registry holding only the drives the
+/// cell registers, and the engine-wide facts the sweep reports, read back.
+struct SweepHost {
+    volumes: Arc<FakeVolumes>,
+    events: Arc<RecordingEngineEvents>,
+    host: EngineHost,
+}
+
+fn sweep_host() -> SweepHost {
+    let volumes = Arc::new(FakeVolumes::default());
+    let events = Arc::new(RecordingEngineEvents::default());
+    let host = EngineHost::new(crate::volume_host::host(), volumes.clone(), events.clone());
+    SweepHost { volumes, events, host }
+}
+
+impl SweepHost {
+    /// Every staging-folder notice the sweep raised, with the folder it named.
+    fn kept_notices(&self) -> Vec<MoveLeftoversKeptEvent> {
+        self.events.staging_leftovers_kept.lock_ignore_poison().clone()
+    }
+}
 
 /// The aside a safe-overwrite would have left, with the destination it came
 /// from, so each cell states its fixture in the same two lines.
@@ -34,7 +57,7 @@ fn displaced(name: &str, original: &[u8]) -> Displaced {
 
 async fn settle_aside(kind: ItemKind, fixture: &Displaced) -> Outcome {
     settle_kind(
-        crate::file_system::write_operations::installed().host(),
+        &sweep_host().host,
         &Surface::Local,
         &kind,
         &fixture.aside,
@@ -142,7 +165,7 @@ async fn a_folder_set_aside_for_a_file_is_never_removed_recursively() {
     let expected_size = std::fs::metadata(&destination).expect("stat").len();
 
     let outcome = settle_kind(
-        crate::file_system::write_operations::installed().host(),
+        &sweep_host().host,
         &Surface::Local,
         &ItemKind::FileAside {
             destination: destination.clone(),
@@ -222,7 +245,7 @@ async fn a_staging_folder_with_files_in_it_is_never_removed() {
     std::fs::write(staging.join("footage.mov"), b"a whole staged file").expect("stage a file");
 
     let outcome = settle_kind(
-        crate::file_system::write_operations::installed().host(),
+        &sweep_host().host,
         &Surface::Local,
         &ItemKind::StagingDir,
         &staging,
@@ -247,7 +270,7 @@ async fn an_empty_staging_folder_is_removed() {
     std::fs::create_dir(&staging).expect("create the staging folder");
 
     let outcome = settle_kind(
-        crate::file_system::write_operations::installed().host(),
+        &sweep_host().host,
         &Surface::Local,
         &ItemKind::StagingDir,
         &staging,
@@ -265,7 +288,8 @@ async fn an_empty_staging_folder_is_removed() {
 /// it's back.
 struct ReturnedDrive {
     _dir: TestDir,
-    _registration: TestVolumeRegistration,
+    /// The host the drive is registered on, and that hears the sweep.
+    sweep: SweepHost,
     _hook: test_hook::MountTableHook,
     volume_id: String,
     staging_name: String,
@@ -287,8 +311,10 @@ fn returned_drive(name: &str, volume_id: &str, staged: Option<&[u8]>) -> Returne
         &root,
         crate::volume_host::host(),
     )) as Arc<dyn Volume>;
+    let sweep = sweep_host();
+    sweep.volumes.register(volume_id, volume);
     ReturnedDrive {
-        _registration: TestVolumeRegistration::install(volume_id, volume),
+        sweep,
         _hook: test_hook::answer_each(vec![(root, Some(true))]),
         volume_id: volume_id.to_string(),
         staging_name,
@@ -320,11 +346,7 @@ async fn a_staging_folder_on_a_drive_that_comes_back_keeps_what_is_inside_it() {
         Some(b"the whole staged file"),
     );
 
-    let outcome = settle(
-        crate::file_system::write_operations::installed().host(),
-        &staging_record(&drive),
-    )
-    .await;
+    let outcome = settle(&drive.sweep.host, &staging_record(&drive)).await;
 
     assert_eq!(outcome, Outcome::LeftAlone);
     assert_eq!(
@@ -339,16 +361,12 @@ async fn a_staging_folder_on_a_drive_that_comes_back_keeps_what_is_inside_it() {
 async fn an_empty_staging_folder_on_a_drive_that_comes_back_is_removed() {
     let drive = returned_drive("sweep-arrival-staging-empty", "in-flight-sweep-test-stick-empty", None);
 
-    let outcome = settle(
-        crate::file_system::write_operations::installed().host(),
-        &staging_record(&drive),
-    )
-    .await;
+    let outcome = settle(&drive.sweep.host, &staging_record(&drive)).await;
 
     assert_eq!(outcome, Outcome::Swept);
     assert!(!drive.staging.exists());
     assert!(
-        kept_notices_for(&drive.staging).is_empty(),
+        drive.sweep.kept_notices().is_empty(),
         "nothing was kept, so nothing to say"
     );
 }
@@ -365,15 +383,11 @@ async fn a_staging_folder_kept_on_a_drive_raises_the_notice() {
     );
 
     assert_eq!(
-        settle(
-            crate::file_system::write_operations::installed().host(),
-            &staging_record(&drive)
-        )
-        .await,
+        settle(&drive.sweep.host, &staging_record(&drive)).await,
         Outcome::LeftAlone
     );
 
-    let notices = kept_notices_for(&drive.staging);
+    let notices = drive.sweep.kept_notices();
     assert_eq!(notices.len(), 1, "one notice for the one kept folder");
     assert_eq!(notices[0].volume_name, "Fältkamera");
     assert_eq!(notices[0].folder_name, drive.staging_name);
@@ -394,15 +408,10 @@ async fn a_staging_folder_kept_on_the_mac_only_warns() {
         path: staging.clone(),
     });
 
-    assert_eq!(
-        settle(crate::file_system::write_operations::installed().host(), &record).await,
-        Outcome::LeftAlone
-    );
+    let sweep = sweep_host();
+    assert_eq!(settle(&sweep.host, &record).await, Outcome::LeftAlone);
     assert!(staging.join("footage.mov").exists(), "the staged file stays");
-    assert!(
-        kept_notices_for(&staging).is_empty(),
-        "no notice for a Mac-internal folder"
-    );
+    assert!(sweep.kept_notices().is_empty(), "no notice for a Mac-internal folder");
 }
 
 /// A record whose drive isn't registered decides nothing at all. ❗ It must not
@@ -418,10 +427,7 @@ async fn a_record_whose_drive_isnt_here_decides_nothing() {
         path: PathBuf::from(".cmdr-staging-2a6f1f1e-0000-7000-8000-000000000000"),
     });
 
-    assert_eq!(
-        settle(crate::file_system::write_operations::installed().host(), &record).await,
-        Outcome::Deferred
-    );
+    assert_eq!(settle(&sweep_host().host, &record).await, Outcome::Deferred);
 }
 
 /// The name gate, which is the whole defense against a corrupted or hand-edited
@@ -484,15 +490,7 @@ async fn a_locked_or_deny_delete_temp_is_cleared_and_swept() {
     add_deny_delete_acl(&acl);
 
     for temp in [&locked, &acl] {
-        let outcome = settle_kind(
-            crate::file_system::write_operations::installed().host(),
-            &Surface::Local,
-            &ItemKind::Temp,
-            temp,
-            None,
-            None,
-        )
-        .await;
+        let outcome = settle_kind(&sweep_host().host, &Surface::Local, &ItemKind::Temp, temp, None, None).await;
         assert_eq!(outcome, Outcome::Swept, "{}", temp.display());
         assert!(!temp.exists());
     }

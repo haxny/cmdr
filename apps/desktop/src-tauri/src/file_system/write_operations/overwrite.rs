@@ -203,7 +203,7 @@ where
     // No-op in production, which installs no park.
     #[cfg(test)]
     if aside.is_some() {
-        aside_park::park_if_armed();
+        state.scope().aside_park().park_if_armed();
     }
 
     // Step 3: give the bytes their real name.

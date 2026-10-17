@@ -30,6 +30,10 @@ pub(crate) struct OpScope {
     /// operation that never opened one (a queued op cancelled before it ran, a
     /// direct-call test), whose record points then journal nothing.
     journal: OnceLock<OpJournal>,
+    /// Holds this operation's next safe-overwrite between its two renames,
+    /// once its test arms it.
+    #[cfg(test)]
+    aside_park: super::overwrite::aside_park::AsideParkSlot,
 }
 
 impl OpScope {
@@ -45,6 +49,8 @@ impl OpScope {
             stores,
             operation_log,
             journal: OnceLock::new(),
+            #[cfg(test)]
+            aside_park: Default::default(),
         }
     }
 
@@ -85,5 +91,12 @@ impl OpScope {
     /// This operation's journal, once it opened one.
     pub(super) fn journal(&self) -> Option<&OpJournal> {
         self.journal.get()
+    }
+
+    /// The test seam that parks this operation's next safe-overwrite with the
+    /// original set aside.
+    #[cfg(test)]
+    pub(crate) fn aside_park(&self) -> &super::overwrite::aside_park::AsideParkSlot {
+        &self.aside_park
     }
 }
