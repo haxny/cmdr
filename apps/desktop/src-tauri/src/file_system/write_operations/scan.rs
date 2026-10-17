@@ -89,7 +89,9 @@ pub(super) async fn scan_subtree_with_oracle(
     }
 
     // Load entries from oracle or the volume itself.
-    let entries: Vec<FileEntry> = match host::installed().listings().authoritative_listing(volume_id, path) {
+    let entries: Vec<FileEntry> = match host::installed_for("a scan's fresh-listing oracle")
+        .and_then(|host| host.listings().authoritative_listing(volume_id, path))
+    {
         Some(e) => e,
         None => volume.list_directory(path, on_progress).await?,
     };

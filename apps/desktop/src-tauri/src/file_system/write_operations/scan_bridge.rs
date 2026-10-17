@@ -32,11 +32,9 @@ use std::sync::{Arc, OnceLock};
 
 use super::Operations;
 use super::event_sinks::OperationEventSink;
-use super::host;
-use super::manager;
 use super::scan_cache::{PREVIEW_SETTLED, ScanOutcome, ScanPreviewState, abandon_claim, finish_claim, poll_claim};
 use super::scan_watchdog::ScanWatchdog;
-use super::state::{WriteOperationState, is_cancelled, operation_states};
+use super::state::{WriteOperationState, is_cancelled};
 use super::types::{
     CancelRollback, WriteCancelledEvent, WriteErrorEvent, WriteOperationPhase, WriteOperationType, WriteProgressEvent,
 };
@@ -221,7 +219,9 @@ impl ScanPause {
         let Some(operation_id) = super::scan_cache::claimed_operation(&claim.preview_id) else {
             return;
         };
-        let Some(state) = operation_states().get(&operation_id) else {
+        let Some(state) =
+            super::installed_for("a scan preview's owner").and_then(|engine| engine.registry().get(&operation_id))
+        else {
             return;
         };
         let _ = self.owner.set(state);
@@ -361,14 +361,17 @@ pub(super) struct ScanCounts {
 /// knows emits nothing, which is how a walk that outlives its cancelled owner
 /// goes quiet.
 pub(super) fn emit_scan_progress(operation_id: &str, counts: ScanCounts) {
-    let Some(operation_type) = manager::manager().operation_type_of(operation_id) else {
+    let Some(engine) = super::installed_for("a scan-wait tick") else {
+        return;
+    };
+    let Some(operation_type) = engine.manager().operation_type_of(operation_id) else {
         return;
     };
     // A tick that raced the end of the wait would drag the frontend's phase back
     // to `scanning` after the write had already started, and the readout would
     // jump with it. Both emit paths are scan-phase-only, so one guard covers the
     // opening tick and every forwarded preview tick.
-    if !manager::manager().is_in_scan_wait(operation_id) {
+    if !engine.manager().is_in_scan_wait(operation_id) {
         return;
     }
     let event = WriteProgressEvent {
@@ -393,7 +396,7 @@ pub(super) fn emit_scan_progress(operation_id: &str, counts: ScanCounts) {
     };
     #[cfg(test)]
     record_tick_for_test(&event);
-    host::installed().events().scan_wait_progress(event);
+    engine.host().events().scan_wait_progress(event);
 }
 
 /// Emits the one synthetic tick that turns a scanning row from blank into live.
@@ -436,7 +439,7 @@ fn record_tick_for_test(event: &WriteProgressEvent) {
         operation_id: event.operation_id.clone(),
         files_done: event.files_done,
         bytes_done: event.bytes_done,
-        emits_before: manager::manager().emit_count(),
+        emits_before: super::manager::manager().emit_count(),
     });
 }
 

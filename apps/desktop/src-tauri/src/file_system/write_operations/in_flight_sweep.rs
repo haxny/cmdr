@@ -62,7 +62,11 @@ use cmdr_fs::ignore_poison::IgnorePoison;
 pub(super) fn persisted_orphans(ledger: &Ledger, locals: &[Record]) -> SweepTally {
     // Legal here and only here: this is the sweep's own thread, never a runtime
     // worker, so `block_on` parks nothing the app shares.
-    let runtime = host::installed().runtime();
+    // Before `install` nothing is settled: every record stays for the next run.
+    let Some(host) = host::installed_for("the leftover sweep") else {
+        return SweepTally::default();
+    };
+    let runtime = host.runtime();
     let mut tally = SweepTally::default();
     for record in locals {
         runtime.block_on(settle_and_record(ledger, record, &mut tally));
@@ -73,7 +77,7 @@ pub(super) fn persisted_orphans(ledger: &Ledger, locals: &[Record]) -> SweepTall
     // arrival. Asking the registry whether an ID is present is a lock and a hash
     // lookup, so a dead NAS costs nothing and blocks nobody.
     for volume_id in ledger.pending_volume_ids() {
-        if host::installed().volumes().get(&volume_id).is_none() {
+        if host.volumes().get(&volume_id).is_none() {
             continue;
         }
         let claimed = ledger.claim_pending(&volume_id);
@@ -104,13 +108,17 @@ pub(super) fn persisted_orphans(ledger: &Ledger, locals: &[Record]) -> SweepTall
 /// shares. "It's only a handful of records" is today's shape, not a property: a
 /// drive back from a long trip can carry many.
 pub(super) fn on_volume_arrival(ledger: &Ledger, volume_id: &str) {
+    // Asked before the claim, so a call before `install` leaves the records pending.
+    let Some(host) = host::installed_for("the leftover sweep on a volume's arrival") else {
+        return;
+    };
     let claimed = ledger.claim_pending(volume_id);
     if claimed.is_empty() {
         return;
     }
     let volume_id = volume_id.to_string();
     let ledger = ledger.clone();
-    let runtime = host::installed().runtime();
+    let runtime = host.runtime();
     runtime.clone().spawn_blocking(move || {
         // The same shape the launch sweep runs in: a blocking context that
         // `block_on`s the volume-backed rules. One shape for both entry points
@@ -217,7 +225,10 @@ async fn settle_legacy(temp: &RecordedTemp) -> Outcome {
             // `resolve`, not `get`: the site is passing a path, and a read-only
             // routed volume (an archive, a git snapshot) is one this sweep must
             // never delete through.
-            let resolved = host::installed().volumes().resolve(&temp.volume_id, &temp.path).await;
+            let Some(host) = host::installed_for("the leftover sweep") else {
+                return Outcome::Deferred;
+            };
+            let resolved = host.volumes().resolve(&temp.volume_id, &temp.path).await;
             let is_routed = resolved.is_routed();
             let Some(volume) = resolved.volume.filter(|_| !is_routed) else {
                 return Outcome::Deferred;
@@ -299,7 +310,8 @@ async fn locate(item: &TrackedItem) -> Located {
         },
         ItemHome::Mount { volume_id } => {
             // Plain `get`: only the mount's root is read; the item is reached at `root.join(path)`.
-            let Some(volume) = host::installed().volumes().get(volume_id) else {
+            let Some(volume) = host::installed_for("the leftover sweep").and_then(|host| host.volumes().get(volume_id))
+            else {
                 return Located::Unreachable;
             };
             let root = volume.root().to_path_buf();
@@ -320,7 +332,10 @@ async fn locate(item: &TrackedItem) -> Located {
             }
         }
         ItemHome::VolumeSpace { volume_id } => {
-            let resolved = host::installed().volumes().resolve(volume_id, &item.path).await;
+            let Some(host) = host::installed_for("the leftover sweep") else {
+                return Located::Unreachable;
+            };
+            let resolved = host.volumes().resolve(volume_id, &item.path).await;
             let is_routed = resolved.is_routed();
             let Some(volume) = resolved.volume.filter(|_| !is_routed) else {
                 return Located::Unreachable;
@@ -692,7 +707,9 @@ fn announce_leftovers_kept(drive_name: Option<&str>, path: &Path) {
     KEPT_NOTICES
         .lock_ignore_poison()
         .push((path.to_path_buf(), notice.clone()));
-    host::installed().events().staging_leftovers_kept(notice);
+    if let Some(host) = host::installed_for("the staging-leftovers notice") {
+        host.events().staging_leftovers_kept(notice);
+    }
 }
 
 /// Test-only: every staging-folder notice raised, with the folder it named, so a

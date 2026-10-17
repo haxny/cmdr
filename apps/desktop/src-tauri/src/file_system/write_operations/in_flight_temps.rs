@@ -227,15 +227,18 @@ impl Ledger {
     /// a test's ledger that's gone stops answering rather than living on in the
     /// registry.
     fn ensure_arrival_listener(&self) {
+        // Asked before the `Once`, so a call before `install` leaves it unarmed
+        // for the next one rather than spent.
+        let Some(host) = host::installed_for("the in-flight ledger's arrival listener") else {
+            return;
+        };
         self.0.arrival_listener.call_once(|| {
             let ledger = Arc::downgrade(&self.0);
-            host::installed()
-                .volumes()
-                .on_volume_arrival(Box::new(move |volume_id: &str| {
-                    if let Some(inner) = ledger.upgrade() {
-                        sweep::on_volume_arrival(&Ledger(inner), volume_id);
-                    }
-                }));
+            host.volumes().on_volume_arrival(Box::new(move |volume_id: &str| {
+                if let Some(inner) = ledger.upgrade() {
+                    sweep::on_volume_arrival(&Ledger(inner), volume_id);
+                }
+            }));
         });
     }
 }

@@ -19,7 +19,6 @@ use uuid::Uuid;
 
 use super::delete::delete_files_with_progress_inner;
 use super::event_sinks::{OperationEventSink, ScanPreviewEventSink};
-use super::host;
 use super::journal;
 use super::scan_cache::{ScanPreviewState, take_cached_scan_result};
 use super::scan_preview::run_scan_preview;
@@ -110,7 +109,7 @@ pub fn local_volume(root: impl Into<PathBuf>) -> Arc<dyn Volume> {
     Arc::new(LocalPosixVolume::local_folder(
         "Transfer bench",
         root,
-        host::installed().volume_host().clone(),
+        super::installed().host().volume_host().clone(),
     ))
 }
 

@@ -614,13 +614,13 @@ impl OperationProbe {
             if still_for_ms < abort_after_ms || !proven_dead {
                 continue;
             }
-            host::installed()
-                .events()
-                .error_report(OperationErrorReport::StalledTaskAbandoned {
+            if let Some(host) = host::installed_for("the probe watchdog's stall report") {
+                host.events().error_report(OperationErrorReport::StalledTaskAbandoned {
                     operation_id: self.operation_id.clone(),
                     still_for_secs: still_for_ms / 1_000,
                     task: task.render(),
                 });
+            }
             task.trip_stall_abort();
         }
     }
@@ -1032,7 +1032,10 @@ impl WatchdogState {
 }
 
 fn spawn_watchdog(operation_id: String) {
-    host::installed().runtime().spawn(async move {
+    let Some(host) = host::installed_for("the probe watchdog") else {
+        return;
+    };
+    host.runtime().spawn(async move {
         let mut watchdog = WatchdogState::new();
         let started = Instant::now();
         loop {

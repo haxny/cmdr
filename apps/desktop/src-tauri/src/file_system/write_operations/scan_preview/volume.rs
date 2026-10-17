@@ -65,7 +65,9 @@ pub(in crate::file_system::write_operations) async fn run_volume_scan_preview(
     watchdog: Arc<ScanWatchdog>,
 ) {
     // E2E only; see the local walk's matching delay.
-    if let Some(delay) = host::installed().pacing().scan_preview_delay() {
+    if let Some(delay) =
+        host::installed_for("a scan preview's pacing").and_then(|host| host.pacing().scan_preview_delay())
+    {
         tokio::time::sleep(delay).await;
     }
 
@@ -136,7 +138,9 @@ pub(in crate::file_system::write_operations) async fn run_volume_scan_preview(
 
     // A transfer's walk also records every entry for the operation's live tree.
     let recorder = (purpose == ScanPreviewPurpose::Transfer)
-        .then(|| Arc::new(TreeRecorder::new(&sources, TreeOrder::active(host::installed()))));
+        .then(|| host::installed_for("a scan preview's tree"))
+        .flatten()
+        .map(|host| Arc::new(TreeRecorder::new(&sources, TreeOrder::active(host))));
 
     let result: Result<BatchScanResult, WriteOperationError> = async {
         if state.cancelled.load(Ordering::Relaxed) {
@@ -306,7 +310,9 @@ pub(in crate::file_system::write_operations) async fn run_oracle_aware_batch_sca
             .get(parent)
             .expect("group_order tracks every parent inserted into groups");
 
-        if let Some(cached_entries) = host::installed().listings().authoritative_listing(volume_id, parent) {
+        if let Some(cached_entries) = host::installed_for("a scan preview's fresh-listing oracle")
+            .and_then(|host| host.listings().authoritative_listing(volume_id, parent))
+        {
             files = None;
             log::debug!(
                 "scan-preview: oracle hit for parent {} ({} cached entries, {} selected children)",

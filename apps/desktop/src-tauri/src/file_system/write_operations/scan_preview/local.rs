@@ -50,7 +50,9 @@ pub(in crate::file_system::write_operations) fn run_scan_preview(
 
     // E2E only: a deterministic scanning window for the specs that have to act
     // while a transfer is still counting. Unset in production.
-    if let Some(delay) = host::installed().pacing().scan_preview_delay() {
+    if let Some(delay) =
+        host::installed_for("a scan preview's pacing").and_then(|host| host.pacing().scan_preview_delay())
+    {
         std::thread::sleep(delay);
     }
 
@@ -70,7 +72,8 @@ pub(in crate::file_system::write_operations) fn run_scan_preview(
     // Index-derived expected totals: lets the UI render a real progress bar
     // from the first scan event instead of an indeterminate spinner. `None`
     // when any source isn't covered by the index.
-    let expected = host::installed().index().expected_totals(&sources);
+    let expected =
+        host::installed_for("a scan preview's expected totals").and_then(|host| host.index().expected_totals(&sources));
 
     // Online-only tally, armed only when the sources reach into a cloud drive we
     // know by name. A selected FOLDER can't carry `SF_DATALESS` itself, so this
@@ -237,11 +240,12 @@ pub(in crate::file_system::write_operations) fn run_scan_preview(
             // A tree bug builds none, and the operation builds its own (or none) later.
             let built = (purpose == ScanPreviewPurpose::Transfer)
                 .then(|| {
+                    let order = TreeOrder::active(host::installed_for("a scan preview's tree")?);
                     from_local_scan(
                         &sources,
                         &dirs,
                         files.iter().map(|file| (file.path.as_path(), file.size)),
-                        &TreeOrder::active(host::installed()),
+                        &order,
                     )
                 })
                 .flatten();

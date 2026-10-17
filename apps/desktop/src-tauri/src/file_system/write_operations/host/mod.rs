@@ -206,8 +206,10 @@ impl EngineHost {
     }
 }
 
-/// The installed engine's host.
-// shim: removed in M6a
-pub(crate) fn installed() -> &'static EngineHost {
-    super::installed().host()
+/// The installed engine's host, for the code that `asked` and still finds its
+/// engine through the slot (the scan previews, the leftover sweep, the probe
+/// watchdog): `None` before `install`, which each answers as "nothing to ask".
+// shim: removed in M6b
+pub(crate) fn installed_for(asked: &'static str) -> Option<&'static EngineHost> {
+    super::installed_for(asked).map(super::Operations::host)
 }

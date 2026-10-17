@@ -753,6 +753,7 @@ pub(super) use registry::WriteOperationRegistry;
 #[cfg(test)]
 pub(super) use registry::forget_operation;
 pub use registry::latest_operation_progress;
+#[cfg(test)]
 pub(super) use registry::operation_states;
 
 #[cfg(test)]

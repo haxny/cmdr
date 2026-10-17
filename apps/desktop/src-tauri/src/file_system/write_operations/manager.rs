@@ -292,10 +292,9 @@ pub(crate) struct OperationManager {
     emits: AtomicU64,
 }
 
-/// The installed engine's manager, for the scan-wait ticks a preview forwards
-/// (`scan_bridge::emit_scan_progress`), which reach an operation by id until a
-/// preview carries its engine, and for the suites that share the test engine.
-// shim: removed in M6b (production) and M7b–M7e (tests)
+/// The installed engine's manager, for the suites that share the test engine.
+// shim: removed in M7b–M7e
+#[cfg(test)]
 pub(crate) fn manager() -> &'static Arc<OperationManager> {
     super::installed().manager()
 }

@@ -365,11 +365,13 @@ fn installed_slot() -> Option<&'static Operations> {
     }
 }
 
-/// The engine the host installed, for engine code that hasn't been handed its
-/// own yet.
-// shim: removed in M6a
+/// The engine the suites and the bench share, which always exists there (see
+/// [`installed_slot`]). ❌ Production code has no such accessor: it goes through
+/// [`installed_for`] and answers `None`.
+// shim: removed in M7b–M7e
+#[cfg(any(test, feature = "transfer-bench"))]
 pub(crate) fn installed() -> &'static Operations {
-    installed_slot().expect("operations_host::install runs at the top of setup(), before anything can reach the engine")
+    installed_slot().expect("a test or bench binary builds its engine on first read")
 }
 
 // ============================================================================
