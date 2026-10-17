@@ -1,9 +1,9 @@
 # Admin endpoints
 
-Read-only aggregations the private analytics dashboard calls, all behind `ADMIN_API_TOKEN`. `admin.ts` holds the
-per-metric endpoints (`/admin/stats`, `/admin/downloads`, `/admin/active-users`, `/admin/update-activity`,
-`/admin/crashes`, `/admin/heartbeat-dau`, `/admin/config-shape`, `/admin/feedback`, `/admin/error-reports`); `funnel.ts`
-holds `/admin/funnel`, the one-call per-UTC-day acquisition funnel.
+Aggregations the private analytics dashboard calls, all behind `ADMIN_API_TOKEN`. `admin.ts` holds the per-metric
+endpoints (`/admin/stats`, `/admin/downloads`, `/admin/active-users`, `/admin/update-activity`, `/admin/crashes`,
+`/admin/heartbeat-dau`, `/admin/config-shape`, `/admin/feedback`, `/admin/error-reports`) plus the one write,
+`PUT /admin/feedback/:id/answered`; `funnel.ts` holds `/admin/funnel`, the one-call per-UTC-day acquisition funnel.
 
 ## Must-knows
 

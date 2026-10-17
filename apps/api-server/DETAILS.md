@@ -76,46 +76,47 @@ Read this before any non-trivial work here: editing, planning, reorganizing, or 
 
 ## Routes
 
-| Method  | Path                       | Auth          | Purpose                                                                                            |
-| ------- | -------------------------- | ------------- | -------------------------------------------------------------------------------------------------- |
-| GET     | `/`                        | none          | Health check                                                                                       |
-| POST    | `/webhook/paddle`          | HMAC sig      | Purchase completed → generate & email key(s); full refund or chargeback → revoke them              |
-| POST    | `/activate`                | none          | Exchange short code → full cryptographic key                                                       |
-| POST    | `/validate`                | none          | Check subscription status via Paddle API                                                           |
-| POST    | `/admin/generate`          | Bearer token  | Mint a hand-issued license (evaluation, partner, thank-you, support recovery); writes the ledger   |
-| POST    | `/admin/revoke`            | Bearer token  | Kill a hand-issued license by short code or manual transaction id                                  |
-| GET     | `/admin/licenses`          | Bearer token  | Every license in the ledger with a computed state, plus KV codes no row explains (and the reverse) |
-| PUT     | `/admin/licenses/:id/note` | Bearer token  | Rewrite one row's note, either source. A hand-issued license can't be left without one             |
-| GET     | `/admin/stats`             | Bearer token  | Activation count + device count (for analytics dashboard)                                          |
-| GET     | `/admin/downloads`         | Bearer token  | Aggregated downloads by day/version/arch/country/source, with raw `count` + deduped `uniqueCount`  |
-| GET     | `/admin/active-users`      | Bearer token  | Aggregated daily active users by version/arch                                                      |
-| GET     | `/admin/update-activity`   | Bearer token  | Per-day distinct update-enabled installs by version (retained aggregate ∪ today's raw)             |
-| GET     | `/admin/crashes`           | Bearer token  | Aggregated crash data by day/crash site/signal                                                     |
-| GET     | `/admin/heartbeat-dau`     | Bearer token  | Per-day DAU (distinct `anal_id`) + app hours (`uptime_seconds`, an hour per legacy beat)           |
-| GET     | `/admin/funnel`            | Bearer token  | Per-UTC-day acquisition funnel for the last N days (downloads, installs, DAU, D7, signups)         |
-| GET     | `/admin/feedback`          | Bearer token  | In-app feedback rows from D1 (full text + reply-to email), newest first                            |
-| GET     | `/admin/error-reports`     | Bearer token  | Per-bundle error-report metadata from the R2 prod prefix (`list` + custom metadata), newest first  |
-| GET     | `/download/:version/:arch` | none          | Log download to D1 (bots skipped, source + `ref` tagged), 302 → GitHub; `:version` takes `latest`  |
-| POST    | `/crash-report`            | IP rate-limit | Ingest crash report to D1                                                                          |
-| POST    | `/heartbeat`               | IP rate-limit | Usage heartbeat + relayed feature events (anonymous `anal_id`) to D1                               |
-| POST    | `/error-report`            | IP rate-limit | Multipart upload (zip + meta) → R2 + an outbox row. Also gated by the global intake budget         |
-| POST    | `/error-report/:id/amend`  | amend key     | Add a note or reply-to address to a report already in R2 (`.amend.json` sidecar + email)           |
-| POST    | `/beta-signup`             | IP rate-limit | Subscribe a contact email to the Listmonk beta list (NO install id)                                |
-| POST    | `/newsletter-signup`       | IP rate-limit | getcmdr.com's newsletter form → the Listmonk newsletter list (CORS: getcmdr.com)                   |
-| POST    | `/feedback`                | IP rate-limit | Ingest in-app feedback to D1 (the outbox row)                                                      |
-| GET     | `/update-check/:version`   | none          | Log update check to D1 (deduped), 302 → latest.json                                                |
-| GET     | `/likes/:slug`             | none          | Blog-post like count + whether this caller already liked it                                        |
-| POST    | `/likes/:slug`             | IP rate-limit | Like a blog post (idempotent per caller pseudonym)                                                 |
-| DELETE  | `/likes/:slug`             | IP rate-limit | Unlike a blog post                                                                                 |
-| OPTIONS | `/likes/:slug`             | none          | CORS preflight (204), getcmdr.com origins only                                                     |
-| POST    | `/csp-report`              | IP rate-limit | getcmdr.com CSP violation reports; our own breakage raises an ops alert once a day per origin      |
-| OPTIONS | `/csp-report`              | none          | CORS preflight (204) for Reporting API batches, getcmdr.com origins only                           |
-| GET     | `/r-codes.json`            | none          | Public `?r=<code>` → UTM map (note stripped), edge-cached 5 min, `Access-Control-Allow-Origin: *`  |
-| OPTIONS | `/r-codes.json`            | none          | CORS preflight (204)                                                                               |
-| GET     | `/s3-prices/v1`            | none          | The app's S3 list-price table (JSON), `max-age=3600` + `ETag`; byte-identical to the crate's copy  |
-| GET     | `/admin/r-codes`           | Bearer token  | Full code map including admin `note`                                                               |
-| PUT     | `/admin/r-codes/:code`     | Bearer token  | Upsert a code: `{ utm_source, utm_medium?, note? }` (utm values sanitized; code charset validated) |
-| DELETE  | `/admin/r-codes/:code`     | Bearer token  | Remove a code from the map                                                                         |
+| Method  | Path                           | Auth          | Purpose                                                                                            |
+| ------- | ------------------------------ | ------------- | -------------------------------------------------------------------------------------------------- |
+| GET     | `/`                            | none          | Health check                                                                                       |
+| POST    | `/webhook/paddle`              | HMAC sig      | Purchase completed → generate & email key(s); full refund or chargeback → revoke them              |
+| POST    | `/activate`                    | none          | Exchange short code → full cryptographic key                                                       |
+| POST    | `/validate`                    | none          | Check subscription status via Paddle API                                                           |
+| POST    | `/admin/generate`              | Bearer token  | Mint a hand-issued license (evaluation, partner, thank-you, support recovery); writes the ledger   |
+| POST    | `/admin/revoke`                | Bearer token  | Kill a hand-issued license by short code or manual transaction id                                  |
+| GET     | `/admin/licenses`              | Bearer token  | Every license in the ledger with a computed state, plus KV codes no row explains (and the reverse) |
+| PUT     | `/admin/licenses/:id/note`     | Bearer token  | Rewrite one row's note, either source. A hand-issued license can't be left without one             |
+| GET     | `/admin/stats`                 | Bearer token  | Activation count + device count (for analytics dashboard)                                          |
+| GET     | `/admin/downloads`             | Bearer token  | Aggregated downloads by day/version/arch/country/source, with raw `count` + deduped `uniqueCount`  |
+| GET     | `/admin/active-users`          | Bearer token  | Aggregated daily active users by version/arch                                                      |
+| GET     | `/admin/update-activity`       | Bearer token  | Per-day distinct update-enabled installs by version (retained aggregate ∪ today's raw)             |
+| GET     | `/admin/crashes`               | Bearer token  | Aggregated crash data by day/crash site/signal                                                     |
+| GET     | `/admin/heartbeat-dau`         | Bearer token  | Per-day DAU (distinct `anal_id`) + app hours (`uptime_seconds`, an hour per legacy beat)           |
+| GET     | `/admin/funnel`                | Bearer token  | Per-UTC-day acquisition funnel for the last N days (downloads, installs, DAU, D7, signups)         |
+| GET     | `/admin/feedback`              | Bearer token  | In-app feedback rows from D1 (full text, reply-to email, `answeredAt`), newest first               |
+| PUT     | `/admin/feedback/:id/answered` | Bearer token  | Mark one feedback row answered (`{ answered: true }`) or back to awaiting a reply (`false`)        |
+| GET     | `/admin/error-reports`         | Bearer token  | Per-bundle error-report metadata from the R2 prod prefix (`list` + custom metadata), newest first  |
+| GET     | `/download/:version/:arch`     | none          | Log download to D1 (bots skipped, source + `ref` tagged), 302 → GitHub; `:version` takes `latest`  |
+| POST    | `/crash-report`                | IP rate-limit | Ingest crash report to D1                                                                          |
+| POST    | `/heartbeat`                   | IP rate-limit | Usage heartbeat + relayed feature events (anonymous `anal_id`) to D1                               |
+| POST    | `/error-report`                | IP rate-limit | Multipart upload (zip + meta) → R2 + an outbox row. Also gated by the global intake budget         |
+| POST    | `/error-report/:id/amend`      | amend key     | Add a note or reply-to address to a report already in R2 (`.amend.json` sidecar + email)           |
+| POST    | `/beta-signup`                 | IP rate-limit | Subscribe a contact email to the Listmonk beta list (NO install id)                                |
+| POST    | `/newsletter-signup`           | IP rate-limit | getcmdr.com's newsletter form → the Listmonk newsletter list (CORS: getcmdr.com)                   |
+| POST    | `/feedback`                    | IP rate-limit | Ingest in-app feedback to D1 (the outbox row)                                                      |
+| GET     | `/update-check/:version`       | none          | Log update check to D1 (deduped), 302 → latest.json                                                |
+| GET     | `/likes/:slug`                 | none          | Blog-post like count + whether this caller already liked it                                        |
+| POST    | `/likes/:slug`                 | IP rate-limit | Like a blog post (idempotent per caller pseudonym)                                                 |
+| DELETE  | `/likes/:slug`                 | IP rate-limit | Unlike a blog post                                                                                 |
+| OPTIONS | `/likes/:slug`                 | none          | CORS preflight (204), getcmdr.com origins only                                                     |
+| POST    | `/csp-report`                  | IP rate-limit | getcmdr.com CSP violation reports; our own breakage raises an ops alert once a day per origin      |
+| OPTIONS | `/csp-report`                  | none          | CORS preflight (204) for Reporting API batches, getcmdr.com origins only                           |
+| GET     | `/r-codes.json`                | none          | Public `?r=<code>` → UTM map (note stripped), edge-cached 5 min, `Access-Control-Allow-Origin: *`  |
+| OPTIONS | `/r-codes.json`                | none          | CORS preflight (204)                                                                               |
+| GET     | `/s3-prices/v1`                | none          | The app's S3 list-price table (JSON), `max-age=3600` + `ETag`; byte-identical to the crate's copy  |
+| GET     | `/admin/r-codes`               | Bearer token  | Full code map including admin `note`                                                               |
+| PUT     | `/admin/r-codes/:code`         | Bearer token  | Upsert a code: `{ utm_source, utm_medium?, note? }` (utm values sanitized; code charset validated) |
+| DELETE  | `/admin/r-codes/:code`         | Bearer token  | Remove a code from the map                                                                         |
 
 ## Environments
 

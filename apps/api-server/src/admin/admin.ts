@@ -346,7 +346,8 @@ admin.get('/admin/feedback', async (c) => {
 
   const { results } = await c.env.TELEMETRY_DB.prepare(
     `SELECT id, created_at AS createdAt, feedback, email,
-                app_version AS appVersion, os_version AS osVersion, build_mode AS buildMode
+                app_version AS appVersion, os_version AS osVersion, build_mode AS buildMode,
+                answered_at AS answeredAt
          FROM feedback ${whereClause}
          ORDER BY created_at DESC
          LIMIT 1000`,
@@ -358,9 +359,39 @@ admin.get('/admin/feedback', async (c) => {
     appVersion: string
     osVersion: string
     buildMode: string | null
+    answeredAt: string | null
   }>()
 
   return c.json(results)
+})
+
+// Admin feedback toggle: mark one message answered (`{ answered: true }`) or back to awaiting a reply
+// (`false`). David replies from his own mailbox, which this Worker never sees, so this is how the
+// dashboard's "Awaiting reply" count learns a reply went out. Marking twice keeps the first time.
+admin.put('/admin/feedback/:id/answered', async (c) => {
+  const authError = await verifyAdminAuth(c)
+  if (authError) return authError
+
+  const id = Number(c.req.param('id'))
+  if (!Number.isSafeInteger(id) || id <= 0) {
+    return c.json({ error: 'Invalid feedback id' }, 400)
+  }
+  const body: { answered?: unknown } = await c.req.json<{ answered?: unknown }>().catch(() => ({}))
+  if (typeof body.answered !== 'boolean') {
+    return c.json({ error: 'Body must be { "answered": true | false }' }, 400)
+  }
+
+  const row = await c.env.TELEMETRY_DB.prepare(
+    `UPDATE feedback
+         SET answered_at = CASE WHEN ?1 THEN COALESCE(answered_at, datetime('now')) ELSE NULL END
+         WHERE id = ?2
+         RETURNING id, answered_at AS answeredAt`,
+  )
+    .bind(body.answered ? 1 : 0, id)
+    .first<{ id: number; answeredAt: string | null }>()
+
+  if (!row) return c.json({ error: 'No feedback has that id' }, 404)
+  return c.json(row)
 })
 
 // Admin error reports: per-bundle metadata for real-user error reports, newest first. Lists the R2
