@@ -1477,9 +1477,10 @@ and line are that test's alone, under plain `cargo test` as under nextest:
 - **Getting one.** `TestOperations::new()` journals nothing;
   `TestOperations::journaling_into(&TestOperationLog::new(label))` journals into a scratch database the test reads rows
   back from (`log.db()`); `TestOperations::with(|builder| …)` replaces any other seam (a volume host, pacing).
-  `TestOperations::seeing_app_listings()` is one whose host sees the app's pane listings, for a cell that seeds the
-  fresh-listing oracle (on `new()`'s detached host every oracle question misses). It derefs to the engine, so a test
-  calls `engine.manager()`, `engine.cancel_write_operation(…)`, or `engine.status()` directly.
+  `TestOperations::seeing(&panes)` is one whose host sees `host::testing::PaneListings`, panes over a listing engine
+  of the test's own, for a cell that seeds the fresh-listing oracle (on `new()`'s detached host every oracle question
+  misses). It derefs to the engine, so a test calls `engine.manager()`, `engine.cancel_write_operation(…)`, or
+  `engine.status()` directly.
 - **Reading back.** `engine.events()` (`RecordingEngineEvents`: the busy set, the transfer pair, `operations-changed`,
   error reports), `engine.volumes()` (`FakeVolumes`, which the test fills before an op names a volume id;
   `engine.register_local_root()` puts the local `root` volume there), and `engine.own_writes()` (`RecordingOwnWrites`).
@@ -1493,21 +1494,27 @@ and line are that test's alone, under plain `cargo test` as under nextest:
   journaled with `log.writer()`, and drive a reversal with `rollback::Reversal::on(&engine, tag)`. A fixture that
   cancels from inside a seam (a sink, a volume) holds an `Operations::clone(&engine)`. A state on one engine and a
   preview, probe, or registration on another is a test of nothing: the op reads its own engine's stores.
-- **A cell that needs the app's registry** (the git portal's routing, `copy_snapshot_out_tests.rs`; an archive inside a
-  remote parent, `archive_edit/routing_tests.rs`; the in-archive rename route; the in-flight sweep's deferred records,
-  `Ledger::launch_in`) builds its own engine over the app's answers with `operations_host::test_engine()`;
-  `FakeVolumes` routes nothing. The listing engine keeps its own registry too: an oracle cell keeps its volume in
-  `get_volume_manager()` as well, since that's where the listing engine asks about watch coverage.
-- **A walk that never touches an engine** (a `WalkContext`, `run_oracle_aware_batch_scan`) takes `&AppListings`
-  directly: the app's listings and name order, with no engine to build.
+- **No engine test names the app.** A backend a test builds (a `LocalPosixVolume`, an archive volume) takes
+  `host::testing::pane_order_host()`: no panes, but the panes' name order, which the local reader sorts a listing by
+  and the walkers take as is (`operations_host::name_order`'s tests pin it against the app's). An oracle cell opens its
+  panes with `PaneListings::new()`, inserts a pane's listing with `TestListing::insert(panes.panes(), …)`, and shows
+  the panes its volume with `panes.show_volume(…)`, since the listing engine asks the volume about watch coverage.
+  `FakeVolumes` announces each registration to the engine's arrival listeners, as the app's registry does, so the
+  in-flight sweep's deferred records wake on `engine.volumes().register(…)`.
+- **A walk that never touches an engine** (a `WalkContext`, `run_oracle_aware_batch_scan`) takes
+  `&host::testing::PANE_ORDER_LISTINGS`, or a `PaneListings` when it reads the oracle.
+- **What `FakeVolumes` can't route stays app-side**: the cells that need the app's registry (an archive or the git
+  portal inside a parent, an id nothing knows) live in
+  `apps/desktop/src-tauri/src/operations_host/registry_routing_tests.rs` and
+  `apps/desktop/src-tauri/src/operations_host/copy_snapshot_out_tests.rs`, and the report redactor's cell in
+  `apps/desktop/src-tauri/src/operations_host/log_redaction_tests.rs`.
 - **Walks and counters are honest.** `engine.cancel_all_write_operations()`, `emit_count()`, `admission_pass_count()`,
   and `busy_emit_count()` see only this test's operations, so an equality assertion on one holds under plain
   `cargo test` (`retained_failure_stays_hidden_until_the_record_settles` once passed only because nextest forks per
   test). A synthetic op's deferred start settles on the engine it's handed (`manager::tests::gated_deferred`).
 
 **App-side cells share the app's one engine** (`operations_host::app_engine()`, the engine `operations()` hands out
-in a test binary): an IPC-level entry point, the MCP `queue` tool, the backend suites, and `transfer/real_image.rs`
-reach it the way the app does, so each such cell keeps its operation ids, lanes, and volume names unique
+in a test binary): an IPC-level entry point, the MCP `queue` tool, and the backend suites reach it the way the app does, so each such cell keeps its operation ids, lanes, and volume names unique
 (`QueuedOperationFixture::park_on(app_engine(), tag)` mints them). A cell that only needs a registered state or a
 probe table builds an engine of its own instead, and a cell that reads its journal back builds a log of its own and an
 engine journaling into it (`operations_host::test_engine_journaling_into`). ❌ Never drive a walk-everything mutator

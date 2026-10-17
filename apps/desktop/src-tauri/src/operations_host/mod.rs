@@ -38,6 +38,12 @@ pub(crate) mod terminal_effects;
 mod volumes;
 // Which app side effects each terminal event fires, and in what order around its emit.
 #[cfg(test)]
+mod copy_snapshot_out_tests;
+#[cfg(test)]
+mod log_redaction_tests;
+#[cfg(test)]
+mod registry_routing_tests;
+#[cfg(test)]
 mod terminal_effects_tests;
 pub(crate) mod wire;
 

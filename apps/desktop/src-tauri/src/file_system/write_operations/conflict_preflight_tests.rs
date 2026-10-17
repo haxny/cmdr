@@ -2,10 +2,10 @@
 //! module itself stays readable. `super::` here is `conflict_preflight`.
 
 use super::{Deadline, SourceItemInput, VolumeScanError, merge_source_types_from_stats};
-use crate::file_system::volume::manager::test_support::TestVolumeRegistration;
+use crate::file_system::write_operations::host::testing::PaneListings;
 use crate::file_system::write_operations::testing::TestOperations;
-use crate::test_support::WedgedVolume;
 use cmdr_fs::entry::FileEntry;
+use cmdr_fs::testing::WedgedVolume;
 use cmdr_fs::volume::Volume;
 use cmdr_fs::volume::WatchCoverage;
 use cmdr_fs::volume::{InMemoryVolume, SourceItemInfo};
@@ -91,7 +91,7 @@ async fn a_source_that_never_answers_still_lets_the_destination_answer() {
         Arc::new(LocalPosixVolume::local_folder(
             "Dest",
             dest_dir.path(),
-            crate::volume_host::host(),
+            crate::file_system::write_operations::host::testing::pane_order_host(),
         )) as Arc<dyn Volume>,
     );
 
@@ -134,7 +134,7 @@ async fn a_same_folder_copy_finds_no_conflicts() {
         Arc::new(LocalPosixVolume::local_folder(
             "Duplicates",
             dir.path(),
-            crate::volume_host::host(),
+            crate::file_system::write_operations::host::testing::pane_order_host(),
         )) as Arc<dyn Volume>,
     );
 
@@ -173,7 +173,7 @@ async fn a_different_file_of_the_same_name_is_still_a_conflict() {
         Arc::new(LocalPosixVolume::local_folder(
             "Source",
             source_dir.path(),
-            crate::volume_host::host(),
+            crate::file_system::write_operations::host::testing::pane_order_host(),
         )) as Arc<dyn Volume>,
     );
     engine.volumes().register(
@@ -181,7 +181,7 @@ async fn a_different_file_of_the_same_name_is_still_a_conflict() {
         Arc::new(LocalPosixVolume::local_folder(
             "Dest",
             dest_dir.path(),
-            crate::volume_host::host(),
+            crate::file_system::write_operations::host::testing::pane_order_host(),
         )) as Arc<dyn Volume>,
     );
 
@@ -219,7 +219,7 @@ async fn a_source_reached_through_a_symlinked_parent_finds_no_conflicts() {
         Arc::new(LocalPosixVolume::local_folder(
             "Duplicates",
             dir.path(),
-            crate::volume_host::host(),
+            crate::file_system::write_operations::host::testing::pane_order_host(),
         )) as Arc<dyn Volume>,
     );
 
@@ -356,14 +356,15 @@ async fn the_same_path_on_two_volumes_is_still_a_conflict() {
 /// selection came from already holds every answer the merge needs.
 #[tokio::test]
 async fn source_stats_come_from_the_watched_pane_they_were_picked_in() {
-    // The engine asks the app's pane listings; the listing engine asks the app's
-    // registry about the source's watch coverage, so it's registered there too.
-    let engine = TestOperations::seeing_app_listings();
+    // The engine asks the panes; the panes' listing engine asks the source's
+    // watch coverage, so the panes are shown the source too.
+    let panes = PaneListings::new();
+    let engine = TestOperations::seeing(&panes);
     let source = Arc::new(WatchCoverageVolume::new("PaneSource", WatchCoverage::EveryWriter));
     engine
         .volumes()
         .register("pane-stat-source", Arc::clone(&source) as Arc<dyn Volume>);
-    let _source = TestVolumeRegistration::install("pane-stat-source", Arc::clone(&source) as Arc<dyn Volume>);
+    panes.show_volume("pane-stat-source", Arc::clone(&source) as Arc<dyn Volume>);
     let dest = Arc::new(InMemoryVolume::new("Dest")) as Arc<dyn Volume>;
     dest.create_directory(Path::new("/Burst"))
         .await
@@ -378,7 +379,7 @@ async fn source_stats_come_from_the_watched_pane_they_were_picked_in() {
             FileEntry::new("a.jpg".to_string(), format!("{dir}/a.jpg"), false, false),
             FileEntry::new("Burst".to_string(), format!("{dir}/Burst"), true, false),
         ])
-        .insert(crate::listing_host::listings(), "pane-stat-source");
+        .insert(panes.panes(), "pane-stat-source");
 
     // The caller's placeholder says `Burst` is a file; only a stat can correct it.
     let conflicts = engine

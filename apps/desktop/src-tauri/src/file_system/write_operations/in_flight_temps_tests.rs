@@ -3,14 +3,11 @@
 //!
 //! Every cell records into a [`Ledger`] of its own, so its log and its tally
 //! hold its own records and nothing else. A crash is the recording ledger being
-//! dropped, and the next launch is a fresh ledger replaying the same data dir.
-//! Volume-borne cells still use a unique volume ID: the volume registry is one
-//! per process, and a shared ID would let one cell's registration wake another
-//! cell's arrival listener.
+//! dropped, and the next launch is a fresh ledger replaying the same data dir,
+//! on an engine of the cell's own whose registry holds the cell's volumes, so a
+//! registration wakes only that engine's arrival listener.
 
 use super::*;
-use crate::file_system::volume::manager::get_volume_manager;
-use crate::file_system::volume::manager::test_support::TestVolumeRegistration;
 use crate::file_system::write_operations::testing::TestOperations;
 use cmdr_fs::staging::StagingTemp;
 use cmdr_fs::testing::TestDir;
@@ -71,7 +68,7 @@ fn a_recorded_orphan_is_swept_at_startup_however_fresh_it_is() {
     // thread (a partial can live on a dead mount), and a deadline racing it
     // would fail on load rather than on a real break.
     let next_run = Ledger::for_test();
-    let next_app = crate::operations_host::test_engine();
+    let next_app = TestOperations::new();
     let tally = next_run.launch_in(&data_dir, &next_app).wait();
 
     assert!(
@@ -105,14 +102,16 @@ async fn a_recorded_partial_on_a_volume_is_swept_through_that_volume() {
     let volume = Arc::new(InMemoryVolume::new("nas"));
     let orphan = PathBuf::from("/photos/holiday.raw.cmdr-tmp-4242");
     volume.create_file(&orphan, b"half a photo").await.unwrap();
-    let _registration = TestVolumeRegistration::install(volume_id, Arc::clone(&volume) as Arc<dyn Volume>);
+    let next_app = TestOperations::new();
+    next_app
+        .volumes()
+        .register(volume_id, Arc::clone(&volume) as Arc<dyn Volume>);
 
     let state = state_writing_to(&previous_run, volume_id);
     register(&state, &orphan, Some(TempHome::Volume(volume_id)));
     previous_run.die();
 
     let next_run = Ledger::for_test();
-    let next_app = crate::operations_host::test_engine();
     let tally = next_run.launch_in(&data_dir, &next_app).wait();
 
     assert!(
@@ -140,7 +139,7 @@ fn a_record_whose_volume_isnt_reachable_survives_for_the_next_launch() {
     previous_run.die();
 
     let next_run = Ledger::for_test();
-    let next_app = crate::operations_host::test_engine();
+    let next_app = TestOperations::new();
     let tally = next_run.launch_in(&data_dir, &next_app).wait();
 
     assert_eq!(
@@ -180,14 +179,16 @@ async fn a_deferred_record_is_swept_the_moment_its_volume_arrives() {
 
     // Launch with the share still away: the record is held, not acted on.
     let next_run = Ledger::for_test();
-    let next_app = crate::operations_host::test_engine();
+    let next_app = TestOperations::new();
     let tally = next_run.launch_in(&data_dir, &next_app).wait();
     assert_eq!(tally.deferred, 1, "the fixture must actually defer: {tally:?}");
 
     // The user connects it.
     let volume = Arc::new(InMemoryVolume::new("nas"));
     volume.create_file(&orphan, b"half a photo").await.unwrap();
-    let _registration = TestVolumeRegistration::install(volume_id, Arc::clone(&volume) as Arc<dyn Volume>);
+    next_app
+        .volumes()
+        .register(volume_id, Arc::clone(&volume) as Arc<dyn Volume>);
 
     wait_until_async(ARRIVAL_WAIT, "the arrived volume's partial to be swept", || {
         !next_run.live_paths().contains(&orphan)
@@ -213,14 +214,16 @@ async fn a_delete_the_volume_refuses_leaves_the_record_to_retry() {
     let orphan = PathBuf::from("/photos/holiday.raw.cmdr-tmp-9999");
     let volume = Arc::new(InMemoryVolume::new("nas").with_delete_failing());
     volume.create_file(&orphan, b"half a photo").await.unwrap();
-    let _registration = TestVolumeRegistration::install(volume_id, Arc::clone(&volume) as Arc<dyn Volume>);
+    let next_app = TestOperations::new();
+    next_app
+        .volumes()
+        .register(volume_id, Arc::clone(&volume) as Arc<dyn Volume>);
 
     let state = state_writing_to(&previous_run, volume_id);
     register(&state, &orphan, Some(TempHome::Volume(volume_id)));
     previous_run.die();
 
     let next_run = Ledger::for_test();
-    let next_app = crate::operations_host::test_engine();
     let tally = next_run.launch_in(&data_dir, &next_app).wait();
 
     assert_eq!(tally.swept, 0, "nothing was removed: {tally:?}");
@@ -253,7 +256,7 @@ fn a_bare_path_line_from_an_older_build_still_sweeps_the_local_file() {
     )
     .unwrap();
     let next_run = Ledger::for_test();
-    let next_app = crate::operations_host::test_engine();
+    let next_app = TestOperations::new();
 
     let tally = next_run.launch_in(&data_dir, &next_app).wait();
 
@@ -402,7 +405,7 @@ fn compaction_keeps_the_records_waiting_for_a_volume() {
     );
     previous_run.die();
     let next_run = Ledger::for_test();
-    let next_app = crate::operations_host::test_engine();
+    let next_app = TestOperations::new();
     next_run.launch_in(&data_dir, &next_app).wait();
 
     // A local copy in the new session churns the log past compaction.
@@ -454,7 +457,7 @@ fn a_recorded_path_that_is_already_gone_is_counted_not_swallowed() {
     )
     .unwrap();
     let next_run = Ledger::for_test();
-    let next_app = crate::operations_host::test_engine();
+    let next_app = TestOperations::new();
 
     // Joining also keeps the sweep from outliving `dir`, which would leave
     // it walking a directory `TestDir` is deleting.
@@ -486,7 +489,10 @@ async fn a_volume_path_that_is_already_gone_is_counted_not_swallowed() {
     let volume_id = "in-flight-temps-test-nas-landed";
     let volume = Arc::new(InMemoryVolume::new("nas"));
     let landed = PathBuf::from("/photos/holiday.raw.cmdr-tmp-6666");
-    let _registration = TestVolumeRegistration::install(volume_id, Arc::clone(&volume) as Arc<dyn Volume>);
+    let next_app = TestOperations::new();
+    next_app
+        .volumes()
+        .register(volume_id, Arc::clone(&volume) as Arc<dyn Volume>);
 
     // Recorded, then it landed under its real name: the file was never there
     // by the time the next launch looked.
@@ -498,7 +504,6 @@ async fn a_volume_path_that_is_already_gone_is_counted_not_swallowed() {
     previous_run.die();
 
     let next_run = Ledger::for_test();
-    let next_app = crate::operations_host::test_engine();
     let tally = next_run.launch_in(&data_dir, &next_app).wait();
 
     assert_eq!(
@@ -538,7 +543,7 @@ fn the_sweep_refuses_a_recorded_path_that_isnt_one_of_our_scratch_files() {
     )
     .unwrap();
     let next_run = Ledger::for_test();
-    let next_app = crate::operations_host::test_engine();
+    let next_app = TestOperations::new();
 
     let tally = next_run.launch_in(&data_dir, &next_app).wait();
 
@@ -582,7 +587,10 @@ async fn the_sweep_refuses_a_volume_path_that_isnt_one_of_our_scratch_files() {
     let volume = Arc::new(InMemoryVolume::new("nas"));
     let precious = PathBuf::from("/papers/taxes.pdf");
     volume.create_file(&precious, b"the user's own file").await.unwrap();
-    let _registration = TestVolumeRegistration::install(volume_id, Arc::clone(&volume) as Arc<dyn Volume>);
+    let next_app = TestOperations::new();
+    next_app
+        .volumes()
+        .register(volume_id, Arc::clone(&volume) as Arc<dyn Volume>);
 
     register(
         &state_writing_to(&previous_run, volume_id),
@@ -592,7 +600,6 @@ async fn the_sweep_refuses_a_volume_path_that_isnt_one_of_our_scratch_files() {
     previous_run.die();
 
     let next_run = Ledger::for_test();
-    let next_app = crate::operations_host::test_engine();
     let tally = next_run.launch_in(&data_dir, &next_app).wait();
 
     assert!(
@@ -726,7 +733,7 @@ fn a_leftover_on_a_removable_drive_waits_for_that_drive_rather_than_being_forgot
 
     // The drive isn't plugged in, so nothing is registered for it.
     let next_run = Ledger::for_test();
-    let next_app = crate::operations_host::test_engine();
+    let next_app = TestOperations::new();
     let tally = next_run.launch_in(&data_dir, &next_app).wait();
 
     assert_eq!(
@@ -774,39 +781,6 @@ fn a_leftover_on_the_mac_stays_local_homed() {
     };
     assert_eq!(recorded.path(), temp, "under its whole path");
     assert_eq!(recorded.volume_id(), None, "nothing to wait for");
-}
-
-/// The registry's arrival announcement is what makes a deferred record
-/// terminate, so it has to actually fire for every way a volume gets in.
-#[test]
-fn every_registration_path_announces_the_volume() {
-    let heard = Arc::new(Mutex::new(Vec::<String>::new()));
-    let recorder = Arc::clone(&heard);
-    get_volume_manager().on_volume_arrival(move |id| {
-        if id.starts_with("in-flight-temps-arrival-probe") {
-            recorder.lock_ignore_poison().push(id.to_string());
-        }
-    });
-
-    let manager = get_volume_manager();
-    let registered = manager.register_if_absent(
-        "in-flight-temps-arrival-probe-absent",
-        Arc::new(InMemoryVolume::new("probe")) as Arc<dyn Volume>,
-    );
-    assert!(registered, "the fixture id must be free");
-    manager.register(
-        "in-flight-temps-arrival-probe-register",
-        Arc::new(InMemoryVolume::new("probe")) as Arc<dyn Volume>,
-    );
-    manager.unregister("in-flight-temps-arrival-probe-absent");
-    manager.unregister("in-flight-temps-arrival-probe-register");
-
-    let heard = heard.lock_ignore_poison().clone();
-    assert!(
-        heard.contains(&"in-flight-temps-arrival-probe-absent".to_string())
-            && heard.contains(&"in-flight-temps-arrival-probe-register".to_string()),
-        "both registration paths must announce; heard {heard:?}"
-    );
 }
 
 /// ❗ The ordering the ledger keeps now that its lines are written off the

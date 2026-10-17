@@ -11,8 +11,8 @@ use super::super::scan_source_tracker::{build_source_file_counts, top_level_sour
 use super::super::scan_walker::{WalkContext, walk_sources_with_per_path};
 use super::super::state::FileInfo;
 use super::*;
+use crate::file_system::write_operations::host::testing::PANE_ORDER_LISTINGS;
 use crate::file_system::write_operations::testing::TestOperations;
-use crate::listing_host::backends::AppListings;
 use std::fs;
 
 fn make_file_info(path: &str, source_root: &str) -> FileInfo {
@@ -30,7 +30,7 @@ fn make_file_info(path: &str, source_root: &str) -> FileInfo {
 /// per-source accounting is what's under test, not the callbacks.
 fn plain_walk_context<'a>() -> WalkContext<'a, String> {
     WalkContext {
-        listings: &AppListings,
+        listings: &PANE_ORDER_LISTINGS,
         // Nothing owns these walks, so there is nothing to park on.
         park_while_paused: &|| {},
         progress_interval: Duration::from_secs(3600),
@@ -200,7 +200,7 @@ fn run_walker_with_sources(sources: &[PathBuf]) -> WalkOutcome {
     let mut seen_inodes = HashSet::new();
     let captured = std::cell::RefCell::new(Vec::new());
     let ctx = WalkContext::<'_, String> {
-        listings: &AppListings,
+        listings: &PANE_ORDER_LISTINGS,
         park_while_paused: &|| {},
         progress_interval: Duration::from_millis(0),
         is_cancelled: &|| false,
@@ -490,7 +490,7 @@ mod online_only_tally {
             seen: &seen,
         };
         let ctx = WalkContext {
-            listings: &AppListings,
+            listings: &PANE_ORDER_LISTINGS,
             online_only: Some(&watch),
             ..plain_walk_context()
         };

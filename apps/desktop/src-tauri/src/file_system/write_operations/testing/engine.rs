@@ -17,7 +17,9 @@ use cmdr_operation_log::capture::WriterJournal;
 use cmdr_operation_log::store::operation_log_db_path;
 use cmdr_operation_log::writer::OperationLogWriter;
 
-use super::super::host::testing::{FakeVolumes, RecordingEngineEvents, RecordingOwnWrites};
+use super::super::host::testing::{
+    FakeVolumes, PaneListings, RecordingEngineEvents, RecordingOwnWrites, pane_order_host,
+};
 use super::super::state::WriteOperationState;
 use super::super::{Operations, OperationsBuilder};
 use cmdr_fs::testing::TestDir;
@@ -54,11 +56,12 @@ impl TestOperations {
         Self::with(|builder| builder.operation_log(log))
     }
 
-    /// An engine whose host sees the app's pane listings, for a test that
-    /// seeds the fresh-listing oracle (`TestListing::insert(listing_host::listings(), …)`).
-    /// On [`Self::new`]'s detached host every oracle question misses.
-    pub(crate) fn seeing_app_listings() -> Self {
-        Self::with(|builder| builder.volume_host(crate::volume_host::host()))
+    /// An engine whose host sees `panes`, for a test that seeds the
+    /// fresh-listing oracle (`TestListing::insert(panes.panes(), …)`). On
+    /// [`Self::new`]'s detached host every oracle question misses.
+    pub(crate) fn seeing(panes: &Arc<PaneListings>) -> Self {
+        let host = panes.host();
+        Self::with(|builder| builder.volume_host(host))
     }
 
     /// An engine over fresh fakes, with `customize` replacing any other seam
@@ -93,11 +96,7 @@ impl TestOperations {
     /// names (and a `None` volume id means), so it takes the timed `Volume`
     /// path production takes.
     pub(crate) fn register_local_root(&self) {
-        let root = cmdr_local::LocalPosixVolume::local_folder(
-            "Test root",
-            "/",
-            crate::file_system::write_operations::host::testing::pane_order_host(),
-        );
+        let root = cmdr_local::LocalPosixVolume::local_folder("Test root", "/", pane_order_host());
         self.volumes.register("root", Arc::new(root));
     }
 

@@ -24,6 +24,9 @@
 //! [`tcp_proxy`] is the fourth: a proxy a network backend's test puts between
 //! its client and a shared Docker fixture, so it can cut the connection (closed
 //! or silent) without touching a container other runs are using.
+//!
+//! [`WedgedVolume`] is a volume that never answers: the fixture for every bound
+//! that exists to survive a wedged mount.
 
 #[cfg(target_os = "macos")]
 pub mod disk_images;
@@ -31,6 +34,9 @@ pub mod disk_images;
 pub mod metadata_fixture;
 pub mod scan_recording;
 pub mod tcp_proxy;
+mod wedged_volume;
+
+pub use wedged_volume::WedgedVolume;
 
 use std::future::Future;
 use std::panic::Location;

@@ -838,7 +838,7 @@ still tells the archive compress planner whether a listed mode is real.
 that removes its contents. The native engine carries folder modes (`../copy/`).
 
 Pinned by `crates/cmdr-fs/src/metadata/mode_tests.rs` (the fold, per umask and source shape), `copy_metadata_tests.rs::
-a_routed_mode_lands_folded_with_no_source_stat`, `copy_snapshot_out_tests.rs` and `copy_extract_out_tests.rs` (both
+a_routed_mode_lands_folded_with_no_source_stat`, `operations_host/copy_snapshot_out_tests.rs` and `copy_extract_out_tests.rs` (both
 routed volumes, alone and inside a folder), `operations_host/backend_suites/adb_transfer_test.rs::a_file_copied_off_a_phone_keeps_its_mode`,
 `move_tests.rs::a_cross_volume_move_carries_the_executable_bit`, and
 `strategy_sequential_tests.rs::a_sequential_extract_carries_the_executable_bit`.

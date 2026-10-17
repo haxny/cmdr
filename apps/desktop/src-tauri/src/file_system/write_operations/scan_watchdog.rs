@@ -59,14 +59,14 @@ pub(super) struct ScanTally {
 
 /// What a preview walks: the phrase its log lines carry, and the path a timeout
 /// names to the operation waiting on it.
-pub(super) struct ScanTarget {
+pub(crate) struct ScanTarget {
     /// Human-readable "what is being scanned", for the timeout message the user
     /// reads. See [`ScanTarget::of`].
-    pub(super) label: String,
+    pub(crate) label: String,
     /// The same, with the first source as a quoted `path=` field, for the log
     /// lines. Bare, a report's redactor can't tell a lowercase last word of the
     /// folder (`Summer trip`) from the ` on volume …` after it, and ships it.
-    pub(super) log_label: String,
+    pub(crate) log_label: String,
     /// The first source, which is what a timed-out operation names: a failure
     /// with an empty path reads as "Path: ;" and tells the user nothing.
     pub(super) first_source: String,
@@ -76,7 +76,7 @@ impl ScanTarget {
     /// The label is how many sources, the first one, and the volume they live
     /// on: enough to tell two concurrent previews apart and to know which share
     /// went quiet, without printing a whole selection.
-    pub(super) fn of(sources: &[PathBuf], volume_id: &str) -> Self {
+    pub(crate) fn of(sources: &[PathBuf], volume_id: &str) -> Self {
         let first_source = sources.first().map(|p| p.display().to_string()).unwrap_or_default();
         let (first, first_logged) = if first_source.is_empty() {
             (String::from("nothing"), String::from("nothing"))

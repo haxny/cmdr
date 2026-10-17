@@ -10,7 +10,6 @@ use std::pin::Pin;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use crate::file_system::volume::manager::get_volume_manager;
 use crate::file_system::write_operations::Operations;
 use crate::file_system::write_operations::testing::{TestOperationLog, TestOperations};
 use cmdr_fs::entry::FileEntry;
@@ -269,61 +268,6 @@ async fn rename_managed_marks_nonroot_volume_busy_during_op() {
         !engine.busy_volume_ids().contains(&volume_id),
         "the volume must be freed once the rename finishes"
     );
-}
-
-#[tokio::test]
-async fn rename_managed_routes_an_in_archive_rename_to_the_edit_driver() {
-    // Routing detection is parent-aware (`VolumeManager::path_is_inside_archive`),
-    // so it needs a registered local `"root"` volume to confirm the boundary — as
-    // production always has. (nextest isolates the global per test process.)
-    get_volume_manager().register_if_absent(
-        "root",
-        Arc::new(cmdr_local::LocalPosixVolume::local_folder(
-            "Test root",
-            "/",
-            crate::volume_host::host(),
-        )),
-    );
-
-    // An engine over the app's own answers: the boundary check asks the app's
-    // registry, which `FakeVolumes` doesn't route through.
-    let engine = crate::operations_host::test_engine();
-    let tmp = create_test_dir("archive_rename");
-    let zip = tmp.join("bundle.zip");
-    fs::write(&zip, b"PK\x03\x04not-a-real-body").expect("write zip magic");
-
-    // A rename INSIDE the archive routes to the managed edit driver. With no
-    // host installed in the unit test, `host_operation_sink()` is absent, so routing
-    // surfaces the "app isn't ready" signal — which proves the ROUTING fork fired
-    // rather than the old flat "isn't available yet" refusal or an instant rename.
-    let from = zip.join("old.txt");
-    let to = zip.join("new.txt");
-    let err = engine
-        .rename_managed(from, to, false, "root".to_string(), Initiator::User)
-        .await
-        .expect_err("routing needs an app handle the unit test doesn't wire");
-    // The archive-specific variant is how we tell the routing fork fired from a
-    // natural rename failure.
-    assert!(
-        matches!(
-            err,
-            MutationError::ArchiveNotEditable | MutationError::ArchiveEditNotReady
-        ),
-        "expected the archive-routing signal, got: {err:?}"
-    );
-
-    // A cross-boundary rename (OUT of the archive) is refused as a move, a
-    // deterministic routing decision that needs no app handle.
-    let outside = tmp.join("out.txt");
-    let cross = engine
-        .rename_managed(zip.join("old.txt"), outside, false, "root".to_string(), Initiator::User)
-        .await
-        .expect_err("a cross-boundary rename is refused");
-    assert!(
-        matches!(cross, MutationError::RenameOutOfArchive),
-        "a cross-boundary rename should suggest a move instead, got: {cross:?}"
-    );
-    let _ = fs::remove_dir_all(&tmp);
 }
 
 /// Builds a real, parseable zip with the given entries.

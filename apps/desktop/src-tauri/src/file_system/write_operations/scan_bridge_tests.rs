@@ -675,7 +675,7 @@ async fn a_compress_confirmed_mid_scan_awaits_its_preview() {
     let source_volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "src",
         src_root.clone(),
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
     let dest = dir.join("bundle.zip");
 
@@ -798,7 +798,9 @@ async fn cancelling_a_queued_operation_frees_the_preview_it_claimed() {
 /// ⌘Q during a scan holds, where today it walks straight past. A scan-waiting
 /// transfer is an ordinary `Running` `Copy` row, which is exactly why reusing
 /// `Running` (rather than minting a status of its own) makes the quit gate
-/// correct with no edit at all.
+/// correct with no edit at all. The gate reads exactly those two fields, and
+/// `quit::tests::a_running_copy_holds_the_quit_and_announces_it` pins that a
+/// `Running` `Copy` holds it.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_scanning_transfer_holds_a_quit() {
     let engine = TestOperations::new();
@@ -807,8 +809,11 @@ async fn a_scanning_transfer_holds_a_quit() {
     let snapshot = engine.list_operations();
     let row = snapshot.iter().find(|op| op.operation_id == op_id).expect("the row");
     assert!(
-        crate::quit::blocks_quit(row),
-        "confirmed work a user is watching must hold a quit, even while it is only counting"
+        row.status == LifecycleStatus::Running && row.operation_type == WriteOperationType::Copy,
+        "confirmed work a user is watching must hold a quit, even while it is only counting: \
+         the gate holds for a Running Copy, got {:?} {:?}",
+        row.status,
+        row.operation_type
     );
 
     let src = dir.join("src");

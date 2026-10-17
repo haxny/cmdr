@@ -10,9 +10,9 @@
 //! `transfer_sides_tests.rs`); these prove the same gates against a real detach,
 //! where the kernel picks the errno and the mount table really loses an entry.
 //!
-//! App-side cells (they move to the app with the disk-images lane): each runs on
-//! the app's one engine (`operations_host::app_engine()`) under an operation id
-//! no other cell uses.
+//! Each cell runs on an engine of its own (`testing::TestOperations`), whose
+//! registry the drive coming back registers on, which is what wakes the ledger
+//! waiting for it.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -24,15 +24,15 @@ use cmdr_fs::testing::wait_until_async;
 use super::chunked_copy::chunk_park;
 use super::copy::copy_files_with_progress_inner;
 use super::move_op::move_files_with_progress_inner;
-use crate::file_system::volume::manager::test_support::TestVolumeRegistration;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
+use crate::file_system::write_operations::host::testing::pane_order_host;
 use crate::file_system::write_operations::in_flight_temps::Ledger;
 use crate::file_system::write_operations::state::WriteOperationState;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::transfer_sides::{TransferSide, TransferSides};
 use crate::file_system::write_operations::types::{
     ConflictResolution, TransferRole, WriteOperationConfig, WriteOperationError, WriteOperationType,
 };
-use crate::operations_host::app_engine;
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::testing::TestDir;
 use cmdr_fs::volume::Volume;
@@ -57,13 +57,14 @@ fn mac_source(name: &str) -> (TestDir, std::path::PathBuf) {
 }
 
 fn state_onto(
+    engine: &TestOperations,
     ledger: &Ledger,
     image_root: &std::path::Path,
     image_name: &str,
     mac_root: &std::path::Path,
 ) -> Arc<WriteOperationState> {
     Arc::new(
-        app_engine()
+        engine
             .new_operation_state(Duration::from_millis(50))
             .with_sides(Some(TransferSides::new(
                 TransferSide::new("root".to_string(), "Macintosh HD".to_string(), mac_root.to_path_buf()),
@@ -105,6 +106,7 @@ fn detach_mid_transfer(
 /// Copies `source` onto the image's volume, parks mid-file, pulls the drive, and
 /// answers what the engine ended with: the opening move of every copy cell here.
 fn copy_until_the_drive_is_pulled(
+    engine: &TestOperations,
     ledger: &Ledger,
     image: &DiskImage,
     volume: &MountedVolume,
@@ -112,10 +114,14 @@ fn copy_until_the_drive_is_pulled(
     source: &std::path::Path,
     events: &Arc<CollectorEventSink>,
 ) -> Result<(), WriteOperationError> {
-    let state = state_onto(ledger, &volume.mount_point, &volume.name, std::path::Path::new("/"));
-    app_engine()
-        .status()
-        .register(op_id, WriteOperationType::Copy, Vec::new());
+    let state = state_onto(
+        engine,
+        ledger,
+        &volume.mount_point,
+        &volume.name,
+        std::path::Path::new("/"),
+    );
+    engine.status().register(op_id, WriteOperationType::Copy, Vec::new());
     let sources = vec![source.to_path_buf()];
     let destination = volume.mount_point.clone();
     detach_mid_transfer(image, source, Arc::clone(events), state, move |events, state| {
@@ -135,6 +141,7 @@ fn copy_until_the_drive_is_pulled(
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 #[ignore = "attaches a real HFS+ disk image via hdiutil; run with --run-ignored"]
 async fn a_copy_onto_a_drive_that_is_pulled_mid_file_names_the_drive_and_keeps_the_original() {
+    let engine = TestOperations::new();
     let session = DiskImageSession::acquire();
     let image = DiskImage::attach(&session, ImageSpec::Hfs).expect("attach an HFS+ image");
     let volume = image.volumes()[0].clone();
@@ -142,7 +149,7 @@ async fn a_copy_onto_a_drive_that_is_pulled_mid_file_names_the_drive_and_keeps_t
 
     let events = Arc::new(CollectorEventSink::new());
     let op_id = "op-real-image-copy";
-    let result = copy_until_the_drive_is_pulled(&Ledger::for_test(), &image, &volume, op_id, &source, &events);
+    let result = copy_until_the_drive_is_pulled(&engine, &Ledger::for_test(), &image, &volume, op_id, &source, &events);
 
     match &result {
         Err(WriteOperationError::DeviceDisconnected { side, .. }) => {
@@ -167,7 +174,7 @@ async fn a_copy_onto_a_drive_that_is_pulled_mid_file_names_the_drive_and_keeps_t
         "nothing on the Mac side may be touched by a copy"
     );
     drop(mac_dir);
-    app_engine().status().unregister(op_id);
+    engine.status().unregister(op_id);
 }
 
 /// Every `.cmdr-` scratch name sitting in `dir`, so a cell can say what the
@@ -204,13 +211,13 @@ fn aside_records(ledger: &Ledger) -> Vec<std::path::PathBuf> {
 /// Stands in for the drive coming back: the volume registry takes the image's
 /// new mount point under the id the transfer was started with, which is what
 /// announces the arrival the ledger has been waiting on.
-fn drive_is_back(volume: &MountedVolume) -> TestVolumeRegistration {
-    TestVolumeRegistration::install(
+fn drive_is_back(engine: &TestOperations, volume: &MountedVolume) {
+    engine.volumes().register(
         "vol-image",
         Arc::new(LocalPosixVolume::local_folder(
             volume.name.clone(),
             &volume.mount_point,
-            crate::volume_host::host(),
+            pane_order_host(),
         )) as Arc<dyn Volume>,
     )
 }
@@ -226,6 +233,7 @@ fn drive_is_back(volume: &MountedVolume) -> TestVolumeRegistration {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 #[ignore = "attaches a real HFS+ disk image via hdiutil; run with --run-ignored"]
 async fn a_partial_left_on_a_pulled_drive_is_settled_when_that_drive_comes_back() {
+    let engine = TestOperations::new();
     let session = DiskImageSession::acquire();
     let mut image = DiskImage::attach(&session, ImageSpec::Hfs).expect("attach an HFS+ image");
     let volume = image.volumes()[0].clone();
@@ -235,7 +243,7 @@ async fn a_partial_left_on_a_pulled_drive_is_settled_when_that_drive_comes_back(
 
     let events = Arc::new(CollectorEventSink::new());
     let op_id = "op-real-image-arrival";
-    let result = copy_until_the_drive_is_pulled(&ledger, &image, &volume, op_id, &source, &events);
+    let result = copy_until_the_drive_is_pulled(&engine, &ledger, &image, &volume, op_id, &source, &events);
     assert!(result.is_err(), "a copy onto a pulled drive can't succeed");
 
     // The engine has unwound. Its partial could not be removed — the drive was
@@ -251,7 +259,7 @@ async fn a_partial_left_on_a_pulled_drive_is_settled_when_that_drive_comes_back(
 
     image.reattach().expect("the drive is plugged back in");
     let back = image.volumes()[0].clone();
-    let _registration = drive_is_back(&back);
+    drive_is_back(&engine, &back);
 
     wait_until_async(
         Duration::from_secs(20),
@@ -267,7 +275,7 @@ async fn a_partial_left_on_a_pulled_drive_is_settled_when_that_drive_comes_back(
     );
     drop(ledger);
     drop(mac_dir);
-    app_engine().status().unregister(op_id);
+    engine.status().unregister(op_id);
 }
 
 /// The window the whole milestone exists for, against a real detach: the user's
@@ -277,6 +285,7 @@ async fn a_partial_left_on_a_pulled_drive_is_settled_when_that_drive_comes_back(
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 #[ignore = "attaches a real HFS+ disk image via hdiutil; run with --run-ignored"]
 async fn an_original_set_aside_when_the_drive_was_pulled_is_still_there_when_it_comes_back() {
+    let engine = TestOperations::new();
     let session = DiskImageSession::acquire();
     let mut image = DiskImage::attach(&session, ImageSpec::Hfs).expect("attach an HFS+ image");
     let volume = image.volumes()[0].clone();
@@ -289,11 +298,15 @@ async fn an_original_set_aside_when_the_drive_was_pulled_is_still_there_when_it_
     std::fs::write(&original, ORIGINAL_BYTES).expect("the user's file is on the drive");
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = state_onto(&ledger, &volume.mount_point, &volume.name, std::path::Path::new("/"));
+    let state = state_onto(
+        &engine,
+        &ledger,
+        &volume.mount_point,
+        &volume.name,
+        std::path::Path::new("/"),
+    );
     let op_id = "op-real-image-aside";
-    app_engine()
-        .status()
-        .register(op_id, WriteOperationType::Copy, Vec::new());
+    engine.status().register(op_id, WriteOperationType::Copy, Vec::new());
 
     let park = state.scope().aside_park().park_next_overwrite();
     let sources = vec![source.clone()];
@@ -336,7 +349,7 @@ async fn an_original_set_aside_when_the_drive_was_pulled_is_still_there_when_it_
 
     image.reattach().expect("the drive is plugged back in");
     let back = image.volumes()[0].clone();
-    let _registration = drive_is_back(&back);
+    drive_is_back(&engine, &back);
 
     // ❗ Waits on the RECORD, ❌ not on the drive looking clean. A force-detach
     // can roll the aside rename back in the HFS+ journal, and then the bytes sit
@@ -371,7 +384,7 @@ async fn an_original_set_aside_when_the_drive_was_pulled_is_still_there_when_it_
     );
     drop(ledger);
     drop(mac_dir);
-    app_engine().status().unregister(op_id);
+    engine.status().unregister(op_id);
 }
 
 /// The same pull during a move. The originals are the only other copy of the
@@ -379,6 +392,7 @@ async fn an_original_set_aside_when_the_drive_was_pulled_is_still_there_when_it_
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 #[ignore = "attaches a real HFS+ disk image via hdiutil; run with --run-ignored"]
 async fn a_move_onto_a_drive_that_is_pulled_mid_file_keeps_every_mac_source() {
+    let engine = TestOperations::new();
     let session = DiskImageSession::acquire();
     let image = DiskImage::attach(&session, ImageSpec::Hfs).expect("attach an HFS+ image");
     let volume = image.volumes()[0].clone();
@@ -386,15 +400,14 @@ async fn a_move_onto_a_drive_that_is_pulled_mid_file_keeps_every_mac_source() {
 
     let events = Arc::new(CollectorEventSink::new());
     let state = state_onto(
+        &engine,
         &Ledger::for_test(),
         &volume.mount_point,
         &volume.name,
         std::path::Path::new("/"),
     );
     let op_id = "op-real-image-move";
-    app_engine()
-        .status()
-        .register(op_id, WriteOperationType::Move, Vec::new());
+    engine.status().register(op_id, WriteOperationType::Move, Vec::new());
 
     let sources = vec![source.clone()];
     let destination = volume.mount_point.clone();
@@ -426,7 +439,7 @@ async fn a_move_onto_a_drive_that_is_pulled_mid_file_keeps_every_mac_source() {
         "and keeps all of its bytes"
     );
     drop(mac_dir);
-    app_engine().status().unregister(op_id);
+    engine.status().unregister(op_id);
 }
 
 /// A copy onto another volume takes the chunked arm, which sets birth and mtime in
@@ -437,6 +450,7 @@ async fn a_move_onto_a_drive_that_is_pulled_mid_file_keeps_every_mac_source() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 #[ignore = "attaches a real HFS+ disk image via hdiutil; run with --run-ignored"]
 async fn a_copy_onto_another_volume_keeps_birth_time_and_locked() {
+    let engine = TestOperations::new();
     use cmdr_fs::testing::metadata_fixture::{
         BIRTH_SECS, LOCKED_FLAG, MODIFIED_SECS, MetadataFixture, birth_secs, flags, modified_secs,
     };
@@ -449,7 +463,7 @@ async fn a_copy_onto_another_volume_keeps_birth_time_and_locked() {
     let locked = fixture.locked_file("locked.txt");
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = Arc::new(app_engine().new_operation_state(Duration::from_millis(50)));
+    let state = Arc::new(engine.new_operation_state(Duration::from_millis(50)));
     let result = copy_files_with_progress_inner(
         &*events,
         "op-real-image-birth",

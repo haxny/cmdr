@@ -8,7 +8,7 @@
 use std::path::Path;
 use std::sync::Arc;
 
-use crate::file_system::VolumeManager;
+use crate::file_system::write_operations::host::testing::FakeVolumes;
 use crate::file_system::write_operations::host::testing::SettablePacing;
 use crate::file_system::write_operations::rollback::Reversal;
 use crate::file_system::write_operations::testing::TestOperations;
@@ -37,7 +37,7 @@ pub(super) struct Rig {
     /// The engine's rollback pace, which a test sets to hold a reversal open.
     pub(super) pacing: Arc<SettablePacing>,
     pub(super) writer: OperationLogWriter,
-    pub(super) vm: VolumeManager,
+    pub(super) vm: FakeVolumes,
     _dir: tempfile::TempDir,
 }
 
@@ -52,7 +52,7 @@ impl Rig {
             engine: TestOperations::with(|builder| builder.pacing(engine_pacing)),
             pacing,
             writer,
-            vm: VolumeManager::new(),
+            vm: FakeVolumes::default(),
             _dir: dir,
         }
     }

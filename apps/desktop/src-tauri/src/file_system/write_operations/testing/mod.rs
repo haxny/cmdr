@@ -58,8 +58,18 @@ pub(crate) use super::transfer::volume::{
 // edit's remote steps, and an outage policy.
 pub(crate) use super::archive_edit::{EditError, pull_apply_upload_swap};
 pub(crate) use super::create::create_directory_core_on;
+
+// The cells that drive the engine over the app's registry
+// (`operations_host/registry_routing_tests.rs`): a zip edit's request, and the
+// duplicate pre-check inside an archive.
+pub(crate) use super::archive_edit::{ArchiveEditRequest, archive_inner_exists};
+pub(crate) use super::manager::OperationSummaryText;
+
+// The scan preview's log label, which the app's report redactor must clean
+// (`operations_host/log_redaction_tests.rs`).
 pub(crate) use super::delete::delete_volume_files_for_test;
 pub(crate) use super::outage_slot::OutagePolicy;
+pub(crate) use super::scan_watchdog::ScanTarget;
 
 /// Seeds `engine`'s previews with an entry that fails the coherence canary, for a
 /// backend cell pinning what an operation does when a half-empty preview reaches

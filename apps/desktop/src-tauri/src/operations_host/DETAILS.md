@@ -136,7 +136,9 @@ variable can't slow a real build. Pinned by `pacing::tests::the_rollback_pace_fo
 
 `AppNameOrder` answers `NameOrder` with `listing_host::listings().collator()`, asked per call: the reading language can
 change between two transfers, and the listing engine already keeps one collator per language, so a transfer's tree and
-the panes rank names identically. Pinned by `name_order::tests::the_engine_sorts_with_the_panes_collator`.
+the panes rank names identically. Pinned by `name_order::tests::the_engine_sorts_with_the_panes_collator`. The
+engine's own tests build their local volumes on `host::testing::pane_order_host()`, whose listings sort like
+`AppListings` does in English; `the_engine_test_host_lists_in_the_order_the_apps_host_does` pins the two together.
 
 ## A test binary
 
@@ -149,6 +151,12 @@ operation log, the same optional seams as the app (own writes reach the download
 factory. The cells sharing it keep their ids, lanes, and volume names unique. A cell that needs
 the app's answers on an engine of its own builds `test_engine()` itself, or `test_engine_journaling_into(&log)` to read
 its journal back.
+
+The engine's tests never name the app, so the few cells that need the app's answers live here:
+`registry_routing_tests.rs` (an archive or the git portal inside a parent drive, an id nothing knows, a pane open
+inside a zip the edit rewrote), `copy_snapshot_out_tests.rs` (copying out of the git portal end to end), and
+`log_redaction_tests.rs` (an engine log label through the report redactor). Each reaches the engine through its public
+list plus `write_operations::testing`.
 
 ## Backend suites (`backend_suites/`)
 

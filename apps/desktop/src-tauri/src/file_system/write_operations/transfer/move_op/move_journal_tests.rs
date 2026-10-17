@@ -18,8 +18,8 @@ use std::time::Duration;
 use super::cross_fs::move_with_staging;
 use super::move_files_with_progress_inner;
 
-use crate::file_system::VolumeManager;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
+use crate::file_system::write_operations::host::testing::FakeVolumes;
 use crate::file_system::write_operations::rollback::Reversal;
 use crate::file_system::write_operations::testing::{TestOperationLog, TestOperations};
 use crate::file_system::write_operations::types::{ConflictResolution, WriteOperationConfig};
@@ -38,7 +38,7 @@ struct MoveLoop {
     /// The engine the move runs on, journaling into `log`.
     engine: TestOperations,
     log: TestOperationLog,
-    vm: VolumeManager,
+    vm: FakeVolumes,
     /// The work tree the move runs in. Held so it outlives the run.
     work: tempfile::TempDir,
     op_id: String,
@@ -49,7 +49,7 @@ impl MoveLoop {
         let log = TestOperationLog::new("move-journal");
         let engine = TestOperations::journaling_into(&log);
 
-        let vm = VolumeManager::new();
+        let vm = FakeVolumes::default();
         // Rooted at `/` so the fixture's absolute paths resolve, matching how the
         // real `root` volume is registered.
         vm.register(
@@ -57,7 +57,7 @@ impl MoveLoop {
             Arc::new(LocalPosixVolume::local_folder(
                 "Test root",
                 "/",
-                crate::volume_host::host(),
+                crate::file_system::write_operations::host::testing::pane_order_host(),
             )) as Arc<dyn Volume>,
         );
 

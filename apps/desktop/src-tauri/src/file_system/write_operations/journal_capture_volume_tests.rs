@@ -326,7 +326,7 @@ async fn volume_delete_journals_per_leaf_under_the_real_volume_id() {
 // plausible-looking one; it's the reversal acting on the rows that shows the gap.
 
 use super::event_sinks::OperationEventSink;
-use crate::file_system::VolumeManager;
+use crate::file_system::write_operations::host::testing::FakeVolumes;
 use crate::file_system::write_operations::rollback::Reversal;
 use cmdr_operation_log::rollback::{RollbackReport, execute_rollback, rollback_operation};
 use cmdr_operation_log::types::ItemOutcome;
@@ -336,7 +336,7 @@ struct VolumeLoop {
     /// The engine the copy runs on, journaling into `log`.
     engine: TestOperations,
     log: TestOperationLog,
-    vm: VolumeManager,
+    vm: FakeVolumes,
     source: Arc<InMemoryVolume>,
     dest: Arc<InMemoryVolume>,
     op_id: String,
@@ -348,7 +348,7 @@ impl VolumeLoop {
 
         let source = in_memory("Src");
         let dest = in_memory("Dst");
-        let vm = VolumeManager::new();
+        let vm = FakeVolumes::default();
         vm.register("smb-src", Arc::clone(&source) as Arc<dyn Volume>);
         vm.register("smb-dst", Arc::clone(&dest) as Arc<dyn Volume>);
 

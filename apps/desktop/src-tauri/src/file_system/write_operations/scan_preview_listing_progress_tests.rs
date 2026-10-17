@@ -25,8 +25,7 @@ use std::sync::Mutex;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use super::scan_preview::run_oracle_aware_batch_scan;
-use crate::file_system::volume::manager::get_volume_manager;
-use crate::listing_host::backends::AppListings;
+use crate::file_system::write_operations::host::testing::PaneListings;
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::{
     BatchScanResult, CopyScanResult, InMemoryVolume, ListingProgress, Volume, VolumeError, WatchCoverage,
@@ -196,6 +195,7 @@ impl Recorder {
 ///    `dirs` / `bytes` would drop to 0 and the assertion fails.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn run_oracle_aware_batch_scan_forwards_dirs_and_bytes_from_backend() {
+    let panes = PaneListings::new();
     let vid = unique("forwards_dirs_bytes");
     let emit = ListingProgress {
         files: 5,
@@ -203,7 +203,7 @@ async fn run_oracle_aware_batch_scan_forwards_dirs_and_bytes_from_backend() {
         bytes: 1234,
     };
     let vol = Arc::new(ProgressEmittingVolume::new("emit-vol", emit));
-    get_volume_manager().register(&vid, vol.clone() as Arc<dyn Volume>);
+    panes.show_volume(&vid, vol.clone() as Arc<dyn Volume>);
 
     let sources = vec![PathBuf::from("/anywhere/a"), PathBuf::from("/anywhere/b")];
     let is_cancelled = || false;
@@ -211,7 +211,7 @@ async fn run_oracle_aware_batch_scan_forwards_dirs_and_bytes_from_backend() {
     let on_progress = |p: ListingProgress| recorder.record(p);
 
     let _ = run_oracle_aware_batch_scan(
-        &AppListings,
+        panes.as_ref(),
         vol.as_ref(),
         &vid,
         &sources,
@@ -240,8 +240,6 @@ async fn run_oracle_aware_batch_scan_forwards_dirs_and_bytes_from_backend() {
         "expected at least one progress emit with bytes > 0; recorded={:?}",
         recorded
     );
-
-    get_volume_manager().unregister(&vid);
 }
 
 /// Regression: the file-count baseline shift from Q3 (commit `a5dde3e3`)
@@ -256,6 +254,7 @@ async fn run_oracle_aware_batch_scan_forwards_dirs_and_bytes_from_backend() {
 /// dirs ≥ 2 and bytes ≥ 200 (the accumulated baseline across both groups).
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn dirs_and_bytes_baseline_shifts_across_parent_groups() {
+    let panes = PaneListings::new();
     let vid = unique("baseline_shift");
     let emit = ListingProgress {
         files: 2,
@@ -263,7 +262,7 @@ async fn dirs_and_bytes_baseline_shifts_across_parent_groups() {
         bytes: 100,
     };
     let vol = Arc::new(ProgressEmittingVolume::new("baseline-vol", emit));
-    get_volume_manager().register(&vid, vol.clone() as Arc<dyn Volume>);
+    panes.show_volume(&vid, vol.clone() as Arc<dyn Volume>);
 
     // Two sources, two different parent directories → two groups, two scan calls.
     let sources = vec![PathBuf::from("/parent_one/a"), PathBuf::from("/parent_two/b")];
@@ -272,7 +271,7 @@ async fn dirs_and_bytes_baseline_shifts_across_parent_groups() {
     let on_progress = |p: ListingProgress| recorder.record(p);
 
     let _ = run_oracle_aware_batch_scan(
-        &AppListings,
+        panes.as_ref(),
         vol.as_ref(),
         &vid,
         &sources,
@@ -297,6 +296,4 @@ async fn dirs_and_bytes_baseline_shifts_across_parent_groups() {
         "expected bytes to accumulate across groups (>=200), got max={max_bytes}; recorded={:?}",
         recorded
     );
-
-    get_volume_manager().unregister(&vid);
 }

@@ -12,8 +12,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 
 use super::scan_preview::run_oracle_aware_batch_scan;
-use crate::file_system::volume::manager::get_volume_manager;
-use crate::listing_host::backends::AppListings;
+use crate::file_system::write_operations::host::testing::PaneListings;
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::{BatchScanResult, CopyScanResult, InMemoryVolume, Volume, VolumeError, WatchCoverage};
 use cmdr_listing::testing::{TestListing, TestListingGuard};
@@ -22,9 +21,8 @@ use cmdr_listing::testing::{TestListing, TestListingGuard};
 /// assert that the oracle short-circuited or fell through.
 ///
 /// `watched` is the test-only `listing_watch_coverage` override. Each test flips
-/// it independently — the oracle picker reads it via the `Volume` trait
-/// dispatch through `get_volume_manager()`, so we need the wrapper registered
-/// in the manager.
+/// it independently — the panes' oracle reads it through the `Volume` trait, so
+/// each test shows the panes the wrapper (`PaneListings::show_volume`).
 struct CountingWatchedVolume {
     inner: InMemoryVolume,
     watched: AtomicBool,
@@ -177,23 +175,30 @@ fn make_symlinked_dir_entry(name: &str, parent: &str) -> FileEntry {
     }
 }
 
-/// Inserts a CachedListing directly into the installed engine's cache. Returns the listing_id.
+/// Inserts a CachedListing directly into the panes' listing engine. Returns the listing_id.
 /// A cached pane listing owned by the caller: the guard removes it from the
-/// process-global the listing cache on drop, unwind included.
+/// panes' listing cache on drop, unwind included.
 #[must_use = "bind the guard; dropping it immediately removes the listing"]
-fn insert_listing(tag: &str, volume_id: &str, path: &str, entries: Vec<FileEntry>) -> TestListingGuard {
+fn insert_listing(
+    panes: &PaneListings,
+    tag: &str,
+    volume_id: &str,
+    path: &str,
+    entries: Vec<FileEntry>,
+) -> TestListingGuard {
     TestListing::new()
         .volume(volume_id)
         .path(path)
         .entries(entries)
         .sequence(1)
-        .insert(crate::listing_host::listings(), tag)
+        .insert(panes.panes(), tag)
 }
 
 /// Test 1: when the parent listing is watcher-backed, scan-preview reads sizes
 /// from the cache and never calls `list_directory` on the volume.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn scan_preview_uses_authoritative_listing_for_top_level_files() {
+    let panes = PaneListings::new();
     let vid = unique("uses_watched");
 
     // Pre-populate the InMemoryVolume so the wrapper's `list_directory` would
@@ -201,14 +206,14 @@ async fn scan_preview_uses_authoritative_listing_for_top_level_files() {
     let vol = Arc::new(CountingWatchedVolume::new("watched-vol", true));
     // Note: we do NOT also seed entries via `create_file`. The whole point is
     // that the oracle reads from the cached listing rather than the backend.
-    get_volume_manager().register(&vid, vol.clone() as Arc<dyn Volume>);
+    panes.show_volume(&vid, vol.clone() as Arc<dyn Volume>);
 
     let cached = vec![
         make_file_entry("a.jpg", "/dcim", 1000),
         make_file_entry("b.jpg", "/dcim", 2000),
         make_file_entry("c.jpg", "/dcim", 3000),
     ];
-    let _listing = insert_listing("listing", &vid, "/dcim", cached);
+    let _listing = insert_listing(&panes, "listing", &vid, "/dcim", cached);
 
     let sources = vec![
         PathBuf::from("/dcim/a.jpg"),
@@ -218,7 +223,7 @@ async fn scan_preview_uses_authoritative_listing_for_top_level_files() {
     let is_cancelled = || false;
     let on_progress = |_: cmdr_fs::volume::ListingProgress| {};
     let result = run_oracle_aware_batch_scan(
-        &AppListings,
+        panes.as_ref(),
         vol.as_ref(),
         &vid,
         &sources,
@@ -242,8 +247,6 @@ async fn scan_preview_uses_authoritative_listing_for_top_level_files() {
     assert_eq!(result.per_path[0].0, PathBuf::from("/dcim/a.jpg"));
     assert_eq!(result.per_path[1].0, PathBuf::from("/dcim/b.jpg"));
     assert_eq!(result.per_path[2].0, PathBuf::from("/dcim/c.jpg"));
-
-    get_volume_manager().unregister(&vid);
 }
 
 /// Test 2: when `listing_watch_coverage` returns false (watcher dead), the oracle
@@ -253,6 +256,7 @@ async fn scan_preview_uses_authoritative_listing_for_top_level_files() {
 /// (so the per-path data still comes from the volume backend, not the cache).
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn scan_preview_falls_through_when_watcher_dead() {
+    let panes = PaneListings::new();
     let vid = unique("dead_watcher");
 
     let vol = Arc::new(CountingWatchedVolume::new("dead-watcher-vol", false));
@@ -261,19 +265,19 @@ async fn scan_preview_falls_through_when_watcher_dead() {
         .create_file(Path::new("/cold/a.jpg"), b"hello-12byte")
         .await
         .unwrap();
-    get_volume_manager().register(&vid, vol.clone() as Arc<dyn Volume>);
+    panes.show_volume(&vid, vol.clone() as Arc<dyn Volume>);
 
     // Cached entries with a clearly-bogus size: if the oracle were used despite
     // the watcher being dead, the result would carry this size instead of the
     // backend's real 12 bytes.
     let cached = vec![make_file_entry("a.jpg", "/cold", 99999)];
-    let _listing = insert_listing("listing", &vid, "/cold", cached);
+    let _listing = insert_listing(&panes, "listing", &vid, "/cold", cached);
 
     let sources = vec![PathBuf::from("/cold/a.jpg")];
     let is_cancelled = || false;
     let on_progress = |_: cmdr_fs::volume::ListingProgress| {};
     let result = run_oracle_aware_batch_scan(
-        &AppListings,
+        panes.as_ref(),
         vol.as_ref(),
         &vid,
         &sources,
@@ -291,8 +295,6 @@ async fn scan_preview_falls_through_when_watcher_dead() {
         result.aggregate.total_bytes, 12,
         "watcher-dead path must NOT consume the cached size"
     );
-
-    get_volume_manager().unregister(&vid);
 }
 
 /// Test 3: when a subfolder of the scanned dir is open in another pane (a
@@ -300,14 +302,15 @@ async fn scan_preview_falls_through_when_watcher_dead() {
 /// subfolder's listing and never lists it via the volume.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn scan_preview_uses_cached_subfolder_listing_when_other_pane_has_it() {
+    let panes = PaneListings::new();
     let vid = unique("subfolder_pane");
 
     let vol = Arc::new(CountingWatchedVolume::new("subfolder-vol", true));
-    get_volume_manager().register(&vid, vol.clone() as Arc<dyn Volume>);
+    panes.show_volume(&vid, vol.clone() as Arc<dyn Volume>);
 
     // Parent pane lists `/a` with one entry: subfolder `sub` (a directory).
     let parent_cached = vec![make_dir_entry("sub", "/a")];
-    let _parent_listing = insert_listing("listing", &vid, "/a", parent_cached);
+    let _parent_listing = insert_listing(&panes, "listing", &vid, "/a", parent_cached);
 
     // Other pane lists `/a/sub` with two cached files. Both panes share the
     // same volume; `listing_watch_coverage` returns true volume-wide so the oracle
@@ -316,14 +319,14 @@ async fn scan_preview_uses_cached_subfolder_listing_when_other_pane_has_it() {
         make_file_entry("x.txt", "/a/sub", 100),
         make_file_entry("y.txt", "/a/sub", 200),
     ];
-    let _sub_listing = insert_listing("listing", &vid, "/a/sub", sub_cached);
+    let _sub_listing = insert_listing(&panes, "listing", &vid, "/a/sub", sub_cached);
 
     // Scanning a copy of `/a` (selecting the subfolder).
     let sources = vec![PathBuf::from("/a/sub")];
     let is_cancelled = || false;
     let on_progress = |_: cmdr_fs::volume::ListingProgress| {};
     let result = run_oracle_aware_batch_scan(
-        &AppListings,
+        panes.as_ref(),
         vol.as_ref(),
         &vid,
         &sources,
@@ -347,33 +350,39 @@ async fn scan_preview_uses_cached_subfolder_listing_when_other_pane_has_it() {
     // `Volume::scan_for_copy_batch`'s default impl.)
     assert_eq!(result.aggregate.dir_count, 0);
     assert_eq!(result.aggregate.total_bytes, 300);
-
-    get_volume_manager().unregister(&vid);
 }
 
 /// A transfer's live tree hears every entry the oracle walk serves from cached
 /// listings, top-level files and walked subfolders alike, with no volume I/O.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn scan_preview_records_what_the_oracle_serves() {
+    let panes = PaneListings::new();
     use cmdr_fs::testing::scan_recording::{Recorded, ScanRecording};
 
     let vid = unique("oracle_records");
     let vol = Arc::new(CountingWatchedVolume::new("records-vol", true));
-    get_volume_manager().register(&vid, vol.clone() as Arc<dyn Volume>);
+    panes.show_volume(&vid, vol.clone() as Arc<dyn Volume>);
     let _parent = insert_listing(
+        &panes,
         "listing",
         &vid,
         "/a",
         vec![make_dir_entry("sub", "/a"), make_file_entry("top.txt", "/a", 7)],
     );
-    let _sub = insert_listing("listing", &vid, "/a/sub", vec![make_file_entry("x.txt", "/a/sub", 100)]);
+    let _sub = insert_listing(
+        &panes,
+        "listing",
+        &vid,
+        "/a/sub",
+        vec![make_file_entry("x.txt", "/a/sub", 100)],
+    );
     let recording = Arc::new(ScanRecording::default());
 
     let sources = vec![PathBuf::from("/a/sub"), PathBuf::from("/a/top.txt")];
     let is_cancelled = || false;
     let on_progress = |_: cmdr_fs::volume::ListingProgress| {};
     run_oracle_aware_batch_scan(
-        &AppListings,
+        panes.as_ref(),
         vol.as_ref(),
         &vid,
         &sources,
@@ -394,22 +403,21 @@ async fn scan_preview_records_what_the_oracle_serves() {
             Recorded::File("/a/top.txt".into(), 7),
         ]
     );
-
-    get_volume_manager().unregister(&vid);
 }
 
 /// Test 4: a cached entry with `is_symlink == true` and `is_directory == true`
 /// is counted as one file-shaped entry. The walker must NOT recurse into it.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn scan_preview_preserves_symlink_semantics() {
+    let panes = PaneListings::new();
     let vid = unique("symlink");
 
     let vol = Arc::new(CountingWatchedVolume::new("symlink-vol", true));
-    get_volume_manager().register(&vid, vol.clone() as Arc<dyn Volume>);
+    panes.show_volume(&vid, vol.clone() as Arc<dyn Volume>);
 
     // /a is open, has one entry: `link-to-elsewhere`, a symlinked directory.
     let parent_cached = vec![make_symlinked_dir_entry("link-to-elsewhere", "/a")];
-    let _parent_listing = insert_listing("listing", &vid, "/a", parent_cached);
+    let _parent_listing = insert_listing(&panes, "listing", &vid, "/a", parent_cached);
 
     // We do NOT cache anything for /a/link-to-elsewhere. If the walker were
     // to recurse into a symlinked directory, the oracle would miss for that
@@ -419,7 +427,7 @@ async fn scan_preview_preserves_symlink_semantics() {
     let is_cancelled = || false;
     let on_progress = |_: cmdr_fs::volume::ListingProgress| {};
     let result = run_oracle_aware_batch_scan(
-        &AppListings,
+        panes.as_ref(),
         vol.as_ref(),
         &vid,
         &sources,
@@ -440,8 +448,6 @@ async fn scan_preview_preserves_symlink_semantics() {
     // FileEntry; the walker just records what the cache holds).
     assert_eq!(result.aggregate.file_count, 1);
     assert_eq!(result.aggregate.dir_count, 0);
-
-    get_volume_manager().unregister(&vid);
 }
 
 /// Test 5: if the user closes pane B (where `/a/sub` was open) right before
@@ -450,6 +456,7 @@ async fn scan_preview_preserves_symlink_semantics() {
 /// result is still correct.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn scan_preview_handles_listing_closed_mid_walk() {
+    let panes = PaneListings::new();
     let vid = unique("mid_walk_close");
 
     let vol = Arc::new(CountingWatchedVolume::new("mid-walk-vol", true));
@@ -459,15 +466,15 @@ async fn scan_preview_handles_listing_closed_mid_walk() {
         .create_file(Path::new("/a/sub/real.bin"), b"abcdef")
         .await
         .unwrap();
-    get_volume_manager().register(&vid, vol.clone() as Arc<dyn Volume>);
+    panes.show_volume(&vid, vol.clone() as Arc<dyn Volume>);
 
     // Parent pane lists `/a` with one entry: subfolder `sub`.
     let parent_cached = vec![make_dir_entry("sub", "/a")];
-    let _parent_listing = insert_listing("listing", &vid, "/a", parent_cached);
+    let _parent_listing = insert_listing(&panes, "listing", &vid, "/a", parent_cached);
 
     // Pane B has `/a/sub` cached too, but we close it BEFORE running the scan.
     let sub_entries = vec![make_file_entry("phantom.bin", "/a/sub", 12345)];
-    let sub_listing = insert_listing("listing", &vid, "/a/sub", sub_entries);
+    let sub_listing = insert_listing(&panes, "listing", &vid, "/a/sub", sub_entries);
     // Simulate pane B closing: remove the listing right before the scan.
     drop(sub_listing);
 
@@ -475,7 +482,7 @@ async fn scan_preview_handles_listing_closed_mid_walk() {
     let is_cancelled = || false;
     let on_progress = |_: cmdr_fs::volume::ListingProgress| {};
     let result = run_oracle_aware_batch_scan(
-        &AppListings,
+        panes.as_ref(),
         vol.as_ref(),
         &vid,
         &sources,
@@ -501,6 +508,4 @@ async fn scan_preview_handles_listing_closed_mid_walk() {
         result.aggregate.total_bytes, 6,
         "should reflect real file size, not the stale cache"
     );
-
-    get_volume_manager().unregister(&vid);
 }

@@ -15,11 +15,11 @@ use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 use std::time::Duration;
 
 use super::super::event_sinks::CollectorEventSink;
+use super::super::host::testing::PaneListings;
 use super::super::state::{CachedScanResult, OperationIntent, WriteOperationState};
 use super::super::testing::TestOperations;
 use super::super::types::{CancelRollbackOutcome, WriteOperationConfig, WriteOperationError};
 use super::walker::delete_volume_files_with_progress_inner;
-use crate::file_system::volume::manager::get_volume_manager;
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::{BatchScanResult, CopyScanResult, InMemoryVolume, Volume, VolumeError, WatchCoverage};
 use cmdr_listing::testing::{TestListing, TestListingGuard};
@@ -167,15 +167,21 @@ fn make_file_entry(name: &str, parent: &str, size: u64, is_dir: bool) -> FileEnt
 }
 
 /// A cached pane listing owned by the caller: the guard removes it from the
-/// process-global the listing cache on drop, unwind included.
+/// panes' listing cache on drop, unwind included.
 #[must_use = "bind the guard; dropping it immediately removes the listing"]
-fn insert_listing(tag: &str, volume_id: &str, path: &str, entries: Vec<FileEntry>) -> TestListingGuard {
+fn insert_listing(
+    panes: &PaneListings,
+    tag: &str,
+    volume_id: &str,
+    path: &str,
+    entries: Vec<FileEntry>,
+) -> TestListingGuard {
     TestListing::new()
         .volume(volume_id)
         .path(path)
         .entries(entries)
         .sequence(1)
-        .insert(crate::listing_host::listings(), tag)
+        .insert(panes.panes(), tag)
 }
 
 fn make_state(engine: &TestOperations) -> Arc<WriteOperationState> {
@@ -319,6 +325,7 @@ async fn delete_without_preview_id_still_walks() {
 /// `is_directory` call count stays at zero.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn delete_top_level_files_no_is_directory_probes() {
+    let panes = PaneListings::new();
     let vid = unique("oracle_top_level");
 
     let vol = Arc::new(CountingVolume::new("oracle-top-level-vol", true));
@@ -327,17 +334,17 @@ async fn delete_top_level_files_no_is_directory_probes() {
         .create_file(Path::new("/dcim/b.jpg"), b"betabb")
         .await
         .unwrap();
-    let engine = TestOperations::seeing_app_listings();
+    let engine = TestOperations::seeing(&panes);
     engine.volumes().register(&vid, vol.clone() as Arc<dyn Volume>);
-    // The listing oracle asks the app's registry how far the volume's watch sees.
-    get_volume_manager().register(&vid, vol.clone() as Arc<dyn Volume>);
+    // The panes' listing oracle asks the volume how far its watch sees.
+    panes.show_volume(&vid, vol.clone() as Arc<dyn Volume>);
 
     // Pane has /dcim open with entries for a.jpg and b.jpg. Both are files.
     let cached = vec![
         make_file_entry("a.jpg", "/dcim", 5, false),
         make_file_entry("b.jpg", "/dcim", 6, false),
     ];
-    let _parent_listing = insert_listing("listing", &vid, "/dcim", cached);
+    let _parent_listing = insert_listing(&panes, "listing", &vid, "/dcim", cached);
 
     let events = Arc::new(CollectorEventSink::new());
     let state = make_state(&engine);
@@ -366,8 +373,6 @@ async fn delete_top_level_files_no_is_directory_probes() {
         "watched parent listing must replace the list_directory call"
     );
     assert_eq!(vol.delete_count(), 2);
-
-    get_volume_manager().unregister(&vid);
 }
 
 /// Test 4: a subfolder of the delete source is open in pane B. We start the
@@ -377,6 +382,7 @@ async fn delete_top_level_files_no_is_directory_probes() {
 /// and produce a correct delete.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn delete_mid_scan_listing_close() {
+    let panes = PaneListings::new();
     let vid = unique("mid_scan_close");
 
     let vol = Arc::new(CountingVolume::new("mid-scan-vol", true));
@@ -386,19 +392,19 @@ async fn delete_mid_scan_listing_close() {
         .create_file(Path::new("/root/sub/real.bin"), b"abcdef")
         .await
         .unwrap();
-    let engine = TestOperations::seeing_app_listings();
+    let engine = TestOperations::seeing(&panes);
     engine.volumes().register(&vid, vol.clone() as Arc<dyn Volume>);
-    // The listing oracle asks the app's registry how far the volume's watch sees.
-    get_volume_manager().register(&vid, vol.clone() as Arc<dyn Volume>);
+    // The panes' listing oracle asks the volume how far its watch sees.
+    panes.show_volume(&vid, vol.clone() as Arc<dyn Volume>);
 
     // Pane A has /root open: one subfolder `sub`.
     let parent_cached = vec![make_file_entry("sub", "/root", 0, true)];
-    let _parent_listing = insert_listing("listing", &vid, "/root", parent_cached);
+    let _parent_listing = insert_listing(&panes, "listing", &vid, "/root", parent_cached);
 
     // Pane B has /root/sub open, but we close it BEFORE the delete starts —
     // mirroring the "user closes pane mid-recursion" scenario.
     let sub_entries = vec![make_file_entry("phantom.bin", "/root/sub", 12345, false)];
-    let sub_listing = insert_listing("listing", &vid, "/root/sub", sub_entries);
+    let sub_listing = insert_listing(&panes, "listing", &vid, "/root/sub", sub_entries);
     drop(sub_listing);
 
     let events = Arc::new(CollectorEventSink::new());
@@ -434,8 +440,6 @@ async fn delete_mid_scan_listing_close() {
         vol.delete_count() >= 1,
         "at least the real file should be deleted; dir cleanup is best-effort"
     );
-
-    get_volume_manager().unregister(&vid);
 }
 
 /// Regression test: cancel landing during the scan phase of a volume delete

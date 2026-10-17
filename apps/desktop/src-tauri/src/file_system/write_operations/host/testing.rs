@@ -9,6 +9,8 @@
 //! - [`SettablePacing`]: a rollback pace the test sets on its engine alone.
 //! - [`pane_order_host`]: a volume host for a backend a test builds, with no
 //!   panes but the panes' name order.
+//! - [`PaneListings`]: panes a test opens, over a listing engine of its own,
+//!   for the cells that seed the fresh-listing oracle.
 
 use std::collections::HashMap;
 use std::future::Future;
@@ -24,6 +26,7 @@ use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::volume::host::VolumeHost;
 use cmdr_fs::volume::host::listings::ListingHost;
 use cmdr_fs::volume::{DirectoryChange, ResolvedVolume, Volume};
+use cmdr_listing::testing::TestEngine;
 use cmdr_listing::{DirectorySortMode, SortColumn, SortOrder, sort_entries};
 use cmdr_operation_log::rollback::VolumeLookup;
 
@@ -74,18 +77,28 @@ impl EngineEvents for RecordingEngineEvents {
     }
 }
 
+/// What [`FakeVolumes`] calls with each id it registers.
+type ArrivalListener = Arc<dyn Fn(&str) + Send + Sync>;
+
 /// A volume registry the test fills: nothing routes, nothing is an archive, and
-/// an id it doesn't hold is gone.
+/// an id it doesn't hold is gone. A registration announces the id to every
+/// arrival listener, inside the call, as the app's registry does.
 // DEFAULT-OK: a registry the test hasn't filled holds no volume, which is what it says.
 #[derive(Default)]
 pub(crate) struct FakeVolumes {
     volumes: Mutex<HashMap<String, Arc<dyn Volume>>>,
+    arrival_listeners: Mutex<Vec<ArrivalListener>>,
 }
 
 impl FakeVolumes {
-    /// Registers `volume` under `volume_id`.
+    /// Registers `volume` under `volume_id`, then tells every arrival listener.
     pub(crate) fn register(&self, volume_id: &str, volume: Arc<dyn Volume>) {
         self.volumes.lock_ignore_poison().insert(volume_id.to_string(), volume);
+        // Outside both locks, so a listener may ask this registry back.
+        let listeners = self.arrival_listeners.lock_ignore_poison().clone();
+        for listener in listeners {
+            listener(volume_id);
+        }
     }
 }
 
@@ -117,7 +130,9 @@ impl OperationVolumes for FakeVolumes {
             .map(|(id, volume)| (id.clone(), Arc::clone(volume)))
     }
     fn forget_archive_index(&self, _archive_path: &Path) {}
-    fn on_volume_arrival(&self, _listener: Box<dyn Fn(&str) + Send + Sync>) {}
+    fn on_volume_arrival(&self, listener: Box<dyn Fn(&str) + Send + Sync>) {
+        self.arrival_listeners.lock_ignore_poison().push(Arc::from(listener));
+    }
     fn unregistered<'a>(&'a self, _volume_id: &'a str) -> VolumeAnswer<'a, UnregisteredVolume> {
         Box::pin(async { UnregisteredVolume::Gone })
     }
@@ -194,17 +209,28 @@ impl Pacing for SettablePacing {
 /// scenario keeps running in the order it was written against.
 pub(crate) fn pane_order_host() -> VolumeHost {
     VolumeHost::builder()
-        .listings(Arc::new(PaneOrderListings::default()))
+        .listings(Arc::new(PaneOrderListings::new()))
         .build()
 }
+
+/// [`pane_order_host`]'s listings, for a walk a test hands listings directly
+/// (`WalkContext::listings`).
+pub(crate) static PANE_ORDER_LISTINGS: PaneOrderListings = PaneOrderListings::new();
 
 /// [`pane_order_host`]'s listings: the app's `sort_listing` over English
 /// collation (what `EnglishNameOrder` gives a host with no panes), and nothing
 /// else.
-// DEFAULT-OK: a collator nobody asked for yet is built on first use.
-#[derive(Default)]
-struct PaneOrderListings {
+pub(crate) struct PaneOrderListings {
     collator: OnceLock<Arc<NameCollator>>,
+}
+
+impl PaneOrderListings {
+    /// No panes; the collator is built on first use.
+    const fn new() -> Self {
+        Self {
+            collator: OnceLock::new(),
+        }
+    }
 }
 
 impl ListingHost for PaneOrderListings {
@@ -230,6 +256,80 @@ impl ListingHost for PaneOrderListings {
         let collator = self.collator.get_or_init(|| Arc::new(NameCollator::new("en")));
         sort_entries(
             collator,
+            entries,
+            SortColumn::Name,
+            SortOrder::Ascending,
+            DirectorySortMode::LikeFiles,
+        );
+    }
+}
+
+/// The panes a test shows, answered the way the app answers them
+/// (`listing_host::backends::AppListings`): by a real listing engine, here one
+/// of the test's own. The fresh-listing oracle is the engine's, so it answers
+/// only for a listing the test inserted ([`Self::panes`] with
+/// `TestListing::insert`) on a volume the test showed it ([`Self::show_volume`])
+/// whose watch covers every writer.
+///
+/// What the app's adds and this leaves out: a change also reaching the drive
+/// index and the cloud badges, and the FSEvents watch behind a local pane's
+/// coverage (no test arms one, so the app answers `None` there too).
+pub(crate) struct PaneListings {
+    panes: TestEngine,
+}
+
+impl PaneListings {
+    /// No pane open yet.
+    pub(crate) fn new() -> Arc<Self> {
+        Arc::new(Self {
+            panes: TestEngine::new(),
+        })
+    }
+
+    /// The listing engine behind the panes: insert a pane's listing here.
+    pub(crate) fn panes(&self) -> &TestEngine {
+        &self.panes
+    }
+
+    /// Lets the panes ask `volume` how far its watch reaches, as the app's
+    /// registry lets the app's listing engine: the oracle declines for a volume
+    /// it can't ask.
+    pub(crate) fn show_volume(&self, volume_id: &str, volume: Arc<dyn Volume>) {
+        self.panes.volumes.register(volume_id, volume);
+    }
+
+    /// A volume host over these panes, for a backend or an engine a test builds.
+    pub(crate) fn host(self: &Arc<Self>) -> VolumeHost {
+        VolumeHost::builder()
+            .listings(Arc::clone(self) as Arc<dyn ListingHost>)
+            .build()
+    }
+}
+
+impl ListingHost for PaneListings {
+    fn directory_changed(&self, volume_id: &str, parent_path: &Path, change: DirectoryChange) {
+        self.panes.directory_changed(volume_id, parent_path, change);
+    }
+
+    fn authoritative_listing(&self, volume_id: &str, path: &Path) -> Option<Vec<FileEntry>> {
+        self.panes.authoritative_listing(volume_id, path)
+    }
+
+    fn volumes_with_open_listings(&self, volume_id_prefix: &str) -> Vec<String> {
+        self.panes.volume_ids_with_listings(volume_id_prefix)
+    }
+
+    fn refresh_archive_listings<'a>(
+        &'a self,
+        volume_id: &'a str,
+        archive_path: &'a Path,
+    ) -> Pin<Box<dyn Future<Output = ()> + Send + 'a>> {
+        Box::pin(async move { self.panes.refresh_archive_listings(volume_id, archive_path).await })
+    }
+
+    fn sort_listing(&self, entries: &mut [FileEntry]) {
+        sort_entries(
+            &self.panes.collator(),
             entries,
             SortColumn::Name,
             SortOrder::Ascending,

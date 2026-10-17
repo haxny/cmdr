@@ -7,8 +7,8 @@
 //! `cmdr_fs::apple_double`, tested there. The last cell runs a whole copy on
 //! APFS with the REAL probe, where a `._` file is the person's own.
 
+use crate::file_system::write_operations::host::testing::PANE_ORDER_LISTINGS;
 use crate::file_system::write_operations::testing::TestOperations;
-use crate::listing_host::backends::AppListings;
 use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -33,7 +33,7 @@ struct Walked {
 
 fn walk(sources: &[PathBuf], sidecars: &SidecarRule) -> Walked {
     let ctx = WalkContext::<'_, String> {
-        listings: &AppListings,
+        listings: &PANE_ORDER_LISTINGS,
         park_while_paused: &|| {},
         progress_interval: Duration::from_secs(3600),
         is_cancelled: &|| false,

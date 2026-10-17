@@ -21,7 +21,6 @@ pub(super) use super::super::types::{
     WriteCompleteEvent, WriteConflictResolvedEvent, WriteErrorEvent, WriteOperationError, WriteOperationPhase,
     WriteOperationType, WriteProgressEvent, WriteSettledEvent, WriteSourceItemDoneEvent,
 };
-pub(super) use crate::file_system::volume::manager::get_volume_manager;
 pub(super) use cmdr_archive::mutator::Changeset;
 pub(super) use cmdr_fs::ignore_poison::IgnorePoison;
 pub(super) use cmdr_fs::testing::wait_until_async;
@@ -210,8 +209,7 @@ pub(super) async fn register_remote_zip(
     (id, parent)
 }
 
-/// [`register_remote_zip`]'s volume and id, registered nowhere: for a cell whose
-/// routing asks the app's registry.
+/// [`register_remote_zip`]'s volume and id, before it registers them.
 pub(super) async fn remote_zip(
     archive_path: &Path,
     entries: &[(&str, &[u8])],

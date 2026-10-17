@@ -6,29 +6,6 @@ use super::test_support::*;
 use super::*;
 use crate::file_system::write_operations::types::ReadOnlySide;
 
-#[tokio::test]
-async fn archive_inner_exists_detects_a_duplicate_in_a_remote_archive() {
-    // The mkdir/mkfile duplicate pre-check must see entries inside a REMOTE archive
-    // (through the parent volume), not fail open by attempting a local file open.
-    let archive_path = PathBuf::from("/device/bundle.zip");
-    let (parent_id, parent) = remote_zip(&archive_path, &[("existing.txt", b"x")]).await;
-    // An engine over the app's own answers: the archive inside the parent routes
-    // through the app's registry, which `FakeVolumes` doesn't route through.
-    get_volume_manager().register(&parent_id, parent);
-    let engine = crate::operations_host::test_engine();
-
-    assert!(
-        archive_inner_exists(engine.host(), &parent_id, &archive_path, "existing.txt").await,
-        "a duplicate inside a remote archive must be detected"
-    );
-    assert!(
-        !archive_inner_exists(engine.host(), &parent_id, &archive_path, "not_there.txt").await,
-        "a non-existent inner path reports absent"
-    );
-
-    get_volume_manager().unregister(&parent_id);
-}
-
 /// The guard carries the caller's side through, because a tar has the same two
 /// directions a `.git` snapshot does: you can copy OUT of one but not move out
 /// (the source can't delete the original), and you can't write INTO one at all.

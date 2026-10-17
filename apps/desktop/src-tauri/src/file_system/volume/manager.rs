@@ -772,3 +772,7 @@ mod tests {
         assert_eq!(manager.count(), 0);
     }
 }
+
+#[cfg(test)]
+#[path = "manager/arrival_tests.rs"]
+mod arrival_tests;

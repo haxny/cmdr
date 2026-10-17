@@ -109,7 +109,7 @@ struct UndoLoop {
     engine: TestOperations,
     /// The journal `engine` writes, and the rollback engine reads back.
     log: TestOperationLog,
-    vm: crate::file_system::VolumeManager,
+    vm: crate::file_system::write_operations::host::testing::FakeVolumes,
     /// Owns the scratch directory: holding the guard (rather than a bare path
     /// copied out of it) is what keeps the directory alive for the fixture's
     /// lifetime and removes it afterwards.
@@ -128,7 +128,7 @@ impl UndoLoop {
         let log = TestOperationLog::new(&format!("bulk_rename_test_{name}_journal"));
         let engine = TestOperations::journaling_into(&log);
 
-        let vm = crate::file_system::VolumeManager::new();
+        let vm = crate::file_system::write_operations::host::testing::FakeVolumes::default();
         // Rooted at `/` so the fixture's absolute paths resolve, matching how the
         // real `root` volume is registered.
         vm.register(
@@ -136,7 +136,7 @@ impl UndoLoop {
             Arc::new(LocalPosixVolume::local_folder(
                 "Test root",
                 "/",
-                crate::volume_host::host(),
+                crate::file_system::write_operations::host::testing::pane_order_host(),
             )) as Arc<dyn Volume>,
         );
         UndoLoop {

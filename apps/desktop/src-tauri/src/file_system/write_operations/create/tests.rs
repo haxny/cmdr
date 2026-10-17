@@ -5,6 +5,7 @@
 //! test pins the busy-set wiring (root → nothing busy, non-root → the volume).
 
 use super::*;
+use crate::file_system::write_operations::host::testing::PaneListings;
 use crate::file_system::write_operations::testing::{TestOperationLog, TestOperations};
 use std::fs;
 use std::future::Future;
@@ -520,21 +521,22 @@ async fn route_archive_create_on_an_existing_inner_name_errors_without_building_
 /// pane on a different volume picks the entry up from its own watch instead.
 #[test]
 fn synthetic_entry_diff_lands_only_in_listings_on_the_creates_volume() {
+    let panes = PaneListings::new();
     use cmdr_listing::testing::TestListing;
 
-    let engine = TestOperations::seeing_app_listings();
+    let engine = TestOperations::seeing(&panes);
     let tmp = create_test_dir("synthetic_diff_volume");
     let new_path = tmp.path().join("made");
     fs::create_dir(&new_path).expect("create the new folder on disk");
 
     let on_root = TestListing::new()
         .path(tmp.path())
-        .insert(crate::listing_host::listings(), "synthetic-diff-root");
+        .insert(panes.panes(), "synthetic-diff-root");
     let other_volume_id = unique("synthetic-diff-remote");
     let on_other = TestListing::new()
         .volume(&other_volume_id)
         .path(tmp.path())
-        .insert(crate::listing_host::listings(), "synthetic-diff-remote");
+        .insert(panes.panes(), "synthetic-diff-remote");
 
     // `None` is the local filesystem, `root`.
     patch_listings_after_create(engine.host(), None, &new_path, tmp.path());
@@ -557,12 +559,13 @@ fn synthetic_entry_diff_lands_only_in_listings_on_the_creates_volume() {
 /// taken name, paste retries `pasted (N)`), so the row at that path is this file.
 #[test]
 fn synthetic_entry_diff_refreshes_a_row_the_listing_already_holds() {
+    let panes = PaneListings::new();
     use cmdr_listing::DiffChangeType;
     use cmdr_listing::testing::TestListing;
     use cmdr_listing::testing::{hold_diffs, pending_changes};
     use cmdr_local::reading::get_single_entry;
 
-    let engine = TestOperations::seeing_app_listings();
+    let engine = TestOperations::seeing(&panes);
     let tmp = create_test_dir("synthetic_diff_duplicate");
     let new_path = tmp.path().join("made.txt");
     fs::write(&new_path, b"fresh contents").expect("write the new file on disk");
@@ -571,7 +574,7 @@ fn synthetic_entry_diff_refreshes_a_row_the_listing_already_holds() {
     let listing = TestListing::new()
         .path(tmp.path())
         .entries(vec![stale])
-        .insert(crate::listing_host::listings(), "synthetic-diff-duplicate");
+        .insert(panes.panes(), "synthetic-diff-duplicate");
     hold_diffs(listing.engine(), listing.id());
 
     patch_listings_after_create(engine.host(), None, &new_path, tmp.path());

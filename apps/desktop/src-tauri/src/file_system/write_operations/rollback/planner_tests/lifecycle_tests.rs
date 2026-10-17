@@ -10,7 +10,7 @@
 use std::sync::Arc;
 
 use super::test_support::*;
-use crate::file_system::VolumeManager;
+use crate::file_system::write_operations::host::testing::FakeVolumes;
 use cmdr_fs::volume::{InMemoryVolume, Volume};
 use cmdr_operation_log::rollback::*;
 use cmdr_operation_log::store::{OperationRow, open_read_connection, read_operation, read_operation_items};
@@ -24,7 +24,7 @@ use cmdr_operation_log::writer::{JournalItem, OpenOperation};
 
 #[test]
 fn check_rollbackable_gates_state_and_connectivity() {
-    let vm = VolumeManager::new();
+    let vm = FakeVolumes::default();
     vm.register("src", Arc::new(InMemoryVolume::new("Src")) as Arc<dyn Volume>);
     vm.register("dst", Arc::new(InMemoryVolume::new("Dst")) as Arc<dyn Volume>);
 

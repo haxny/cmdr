@@ -3,7 +3,7 @@
 //! cross-volume engine reads every byte through `open_read_stream`, and a folder
 //! comes out as a folder.
 //!
-//! The zip twin is `copy_extract_out_tests.rs`; the two run the same engine over
+//! The zip twin is the engine's `transfer/volume/copy_extract_out_tests.rs`; the two run the same engine over
 //! the two read-only routed volumes, so a change that breaks one usually breaks
 //! the other.
 //!
@@ -11,12 +11,18 @@
 //! (`operations_host::test_engine`): the portal's routing lives in the app's
 //! volume registry, which a test's fake registry doesn't route through.
 
-use super::*;
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
+use std::time::Duration;
+
 use crate::file_system::git;
 use crate::file_system::volume::manager::get_volume_manager;
-use crate::file_system::write_operations::event_sinks::CollectorEventSink;
+use crate::file_system::write_operations::VolumeCopyConfig;
+use crate::file_system::write_operations::testing::{
+    CollectorEventSink, copy_volumes_with_progress, new_operation_state,
+};
 
-use cmdr_fs::volume::InMemoryVolume;
+use cmdr_fs::volume::{InMemoryVolume, Volume};
 use cmdr_git::test_fixtures::{EntryKind, Fixture, cleanup, temp_dir};
 use cmdr_local::LocalPosixVolume;
 
@@ -78,7 +84,7 @@ async fn read_dest_file(dest: &Arc<dyn Volume>, path: &str) -> Vec<u8> {
 /// transfer dialog sits on "Verifying before copy" until the user gives up.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_copy_out_of_a_snapshot_carries_a_file_and_a_folder_byte_for_byte() {
-    let engine = crate::operations_host::test_engine();
+    let engine = super::test_engine();
     let dir = repo_registered_as_the_local_drive("file_and_folder");
 
     // What a pane sends: full paths inside the branch snapshot.
@@ -106,7 +112,7 @@ async fn a_copy_out_of_a_snapshot_carries_a_file_and_a_folder_byte_for_byte() {
     let result = copy_volumes_with_progress(
         events.clone(),
         "snapshot-copy-out-op",
-        &Arc::new(engine.new_operation_state(Duration::from_millis(50))),
+        &Arc::new(new_operation_state(&engine, Duration::from_millis(50))),
         Arc::clone(&source),
         &sources,
         Arc::clone(&dest),
@@ -142,7 +148,7 @@ async fn a_copy_out_of_a_snapshot_carries_a_file_and_a_folder_byte_for_byte() {
 /// (which has the entry already).
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn the_executable_bit_survives_a_copy_out_of_a_snapshot() {
-    let engine = crate::operations_host::test_engine();
+    let engine = super::test_engine();
     let dir = repo_registered_as_the_local_drive("executable_bit");
     let dest_dir = temp_dir("copy_snapshot_out", "executable_bit_dest");
     std::fs::create_dir_all(&dest_dir).expect("dest dir");
@@ -164,7 +170,7 @@ async fn the_executable_bit_survives_a_copy_out_of_a_snapshot() {
     let result = copy_volumes_with_progress(
         Arc::new(CollectorEventSink::new()),
         "snapshot-exec-bit-op",
-        &Arc::new(engine.new_operation_state(Duration::from_millis(50))),
+        &Arc::new(new_operation_state(&engine, Duration::from_millis(50))),
         Arc::clone(&source),
         &sources,
         Arc::clone(&dest),
@@ -205,7 +211,7 @@ async fn a_move_out_of_a_snapshot_is_refused_before_a_byte_is_written() {
     use crate::file_system::write_operations::{ReadOnlySide, WriteOperationError};
     use cmdr_operation_log::types::Initiator;
 
-    let engine = crate::operations_host::test_engine();
+    let engine = super::test_engine();
 
     let dir = repo_registered_as_the_local_drive("move_refused");
     let dest_dir = temp_dir("copy_snapshot_out", "move_refused_dest");
@@ -262,7 +268,7 @@ async fn a_copy_into_a_snapshot_is_refused_up_front() {
     use crate::file_system::write_operations::{ReadOnlySide, WriteOperationError};
     use cmdr_operation_log::types::Initiator;
 
-    let engine = crate::operations_host::test_engine();
+    let engine = super::test_engine();
 
     let dir = repo_registered_as_the_local_drive("drop_refused");
     std::fs::write(dir.join("dropped.txt"), b"dropped").expect("write the dragged file");

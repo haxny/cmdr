@@ -11,7 +11,6 @@
 //! (`operations_host::test_engine`).
 
 use super::resolve_dest_path;
-use cmdr_fs::volume::RoutedKind;
 use cmdr_fs::volume::{InMemoryVolume, Volume};
 use std::path::Path;
 use std::sync::Arc;
@@ -57,108 +56,13 @@ fn a_local_destination_still_expands_the_home_shortcut() {
     let volume: Arc<dyn Volume> = Arc::new(cmdr_local::LocalPosixVolume::local_folder(
         "Root",
         "/",
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
     let home = std::env::var("HOME").expect("HOME");
     assert_eq!(
         resolve_dest_path(&volume, "~/Downloads".to_string()),
         Path::new(&home).join("Downloads")
     );
-}
-
-#[tokio::test]
-async fn resolve_source_treats_the_zip_file_itself_as_a_plain_file() {
-    use crate::file_system::volume::manager::test_support::TestVolumeRegistration;
-    use cmdr_local::LocalPosixVolume;
-
-    let engine = crate::operations_host::test_engine();
-
-    let dir = tempfile::tempdir().expect("tempdir");
-    let zip = dir.path().join("bundle.zip");
-    std::fs::write(&zip, b"PK\x03\x04rest").expect("write zip magic");
-    // The parent drive holds the `.zip`, under an id of this cell's own in the
-    // app's registry, where the archive routing looks.
-    let parent_id = cmdr_fs::testing::unique_test_id("routing-zip-parent");
-    let _parent = TestVolumeRegistration::install(
-        &parent_id,
-        Arc::new(LocalPosixVolume::local_folder(
-            "Root",
-            dir.path().to_str().unwrap(),
-            crate::volume_host::host(),
-        )),
-    );
-
-    // The `.zip` FILE itself is copied as a plain file: routed to the PARENT
-    // volume, `is_inside = false` (NOT the ArchiveVolume, which would scan its
-    // contents instead of copying the file).
-    let (vol, route) = engine
-        .resolve_source_volume(&parent_id, Some(&zip))
-        .await
-        .expect("source volume");
-    assert_eq!(route, None, "the .zip file itself is not archive-inner");
-    assert_eq!(vol.name(), "Root", "routed to the parent volume, not the archive");
-
-    // A path INSIDE the archive routes to the ArchiveVolume. This is what makes
-    // an EXTRACT reachable as an ordinary copy.
-    let (inner_vol, inner_route) = engine
-        .resolve_source_volume(&parent_id, Some(&zip.join("entry.txt")))
-        .await
-        .expect("inner volume");
-    assert_eq!(inner_route, Some(RoutedKind::Archive), "an inner path is archive-inner");
-    assert_eq!(inner_vol.root(), zip, "the archive volume's root is the .zip");
-}
-
-/// A snapshot path is the portal's, so the copy engine reads it with
-/// `open_read_stream` and walks it with `scan_for_copy`. Left on the parent
-/// volume it would take the local-to-local fast path against a path with no
-/// inode: the transfer dialog then sits on "Verifying before copy" forever and
-/// ends in "Couldn't finish copying".
-#[tokio::test]
-async fn resolve_source_routes_a_snapshot_path_to_the_git_portal() {
-    use crate::file_system::git;
-    use crate::file_system::volume::manager::test_support::TestVolumeRegistration;
-    use cmdr_git::test_fixtures::{Fixture, cleanup, temp_dir};
-    use cmdr_local::LocalPosixVolume;
-
-    let engine = crate::operations_host::test_engine();
-    let dir = temp_dir("write_routing", "copy_out");
-    let mut fixture = Fixture::init(dir.clone());
-    fixture.commit_file("README.md", b"hello\n", "initial");
-    // The repo's drive, under an id of this cell's own in the app's registry,
-    // where the portal routing looks.
-    let parent_id = cmdr_fs::testing::unique_test_id("routing-repo-parent");
-    let _parent = TestVolumeRegistration::install(
-        &parent_id,
-        Arc::new(LocalPosixVolume::local_folder(
-            "Root",
-            dir.to_str().unwrap(),
-            crate::volume_host::host(),
-        )),
-    );
-    git::wiring::set_virtual_portal_enabled(true);
-
-    let (volume, route) = engine
-        .resolve_source_volume(&parent_id, Some(&dir.join(".git/branches/main/README.md")))
-        .await
-        .expect("source volume");
-    assert_eq!(route, Some(RoutedKind::GitPortal));
-    assert_eq!(volume.name(), ".git", "the portal serves it, not the parent drive");
-    assert_eq!(
-        volume.local_path(),
-        None,
-        "no local path, so the copy takes the cross-volume engine"
-    );
-
-    // `.git/` itself and the real files under it are the parent's, so editing
-    // and deleting them keeps working.
-    let (parent, real_route) = engine
-        .resolve_source_volume(&parent_id, Some(&dir.join(".git/config")))
-        .await
-        .expect("source volume");
-    assert_eq!(real_route, None);
-    assert_eq!(parent.name(), "Root");
-
-    cleanup(&dir);
 }
 
 /// A `NotConnected` a backend answers mid-transfer names the half that asked, the
@@ -179,80 +83,4 @@ fn a_volume_that_isnt_connected_yet_maps_to_the_side_that_asked() {
         map_volume_error("adb://R58M/sdcard", PathRole::Source, not_connected()),
         WriteOperationError::SourceNotConnected { .. }
     ));
-}
-
-/// An id no provider lists and no saved server names keeps reading as a volume
-/// that's gone (an unmount race), ❌ never "not connected yet": there's nothing to
-/// open, so that advice would send the user looking for a row that isn't there.
-#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn a_copy_onto_an_id_nothing_knows_still_reads_as_a_missing_volume() {
-    use crate::file_system::volume::manager::get_volume_manager;
-    use crate::file_system::write_operations::event_sinks::CollectorEventSink;
-    use crate::file_system::write_operations::{VolumeCopyConfig, WriteOperationError};
-    use cmdr_operation_log::types::Initiator;
-
-    let engine = crate::operations_host::test_engine();
-    let source_id = format!("routing-source-{}", uuid::Uuid::new_v4());
-    let source = InMemoryVolume::new("Source");
-    source
-        .create_file(Path::new("/a.txt"), b"a")
-        .await
-        .expect("the source file");
-    get_volume_manager().register(&source_id, Arc::new(source));
-
-    let refused = engine
-        .start_volume_copy(
-            Arc::new(CollectorEventSink::new()),
-            source_id.clone(),
-            vec![Path::new("/a.txt").to_path_buf()],
-            "no-provider-or-saved-server-knows-this".to_string(),
-            "/photos".to_string(),
-            VolumeCopyConfig::default(),
-            Initiator::User,
-            None,
-        )
-        .await
-        .expect_err("a copy onto an unknown volume is refused");
-    get_volume_manager().unregister(&source_id);
-
-    assert!(
-        matches!(refused, WriteOperationError::IoError { .. }),
-        "an unknown id is a missing volume; got {refused:?}"
-    );
-}
-
-/// A copy FROM an id that left the registry and nothing lists any more (a phone
-/// unplugged under a search-results pane) says the source isn't connected any
-/// more, ❌ never "not connected yet" (there's no row to open) and ❌ never a bare
-/// "volume not found" naming an internal id.
-#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn a_copy_from_an_id_nothing_knows_reads_as_a_source_no_longer_connected() {
-    use crate::file_system::volume::manager::get_volume_manager;
-    use crate::file_system::write_operations::event_sinks::CollectorEventSink;
-    use crate::file_system::write_operations::{VolumeCopyConfig, WriteOperationError};
-    use cmdr_operation_log::types::Initiator;
-
-    let engine = crate::operations_host::test_engine();
-    let dest_id = format!("routing-dest-{}", uuid::Uuid::new_v4());
-    get_volume_manager().register(&dest_id, Arc::new(InMemoryVolume::new("Dest")));
-
-    let refused = engine
-        .start_volume_copy(
-            Arc::new(CollectorEventSink::new()),
-            "an-unplugged-phone-nothing-lists".to_string(),
-            vec![Path::new("/sdcard/DCIM/a.jpg").to_path_buf()],
-            dest_id.clone(),
-            "/".to_string(),
-            VolumeCopyConfig::default(),
-            Initiator::User,
-            None,
-        )
-        .await
-        .expect_err("a copy from an unknown volume is refused");
-    get_volume_manager().unregister(&dest_id);
-
-    assert!(
-        matches!(&refused, WriteOperationError::SourceNoLongerConnected { path } if path == "/sdcard/DCIM/a.jpg"),
-        "an unknown source id is a source no longer connected; got {refused:?}"
-    );
 }

@@ -4,11 +4,10 @@ use std::path::Path;
 use std::sync::Arc;
 
 use super::*;
-use crate::file_system::volume::manager::get_volume_manager;
 use crate::file_system::write_operations::create::create_directory_core_on;
+use crate::file_system::write_operations::host::testing::PaneListings;
 use crate::file_system::write_operations::mutation_error::MutationError;
 use crate::file_system::write_operations::testing::TestOperations;
-use crate::listing_host::backends::AppListings;
 use cmdr_fs::testing::unique_test_id;
 use cmdr_fs::volume::{InMemoryVolume, WatchCoverage};
 use cmdr_listing::testing::{TestListing, TestListingGuard, WatchCoverageVolume};
@@ -72,6 +71,7 @@ async fn a_folder_that_is_not_there_holds_no_look_alike() {
 /// `/dir`, plus a pane's listing of `/dir` holding `pane_holds`. The volume
 /// itself holds nothing, so an answer naming `pane_holds` came from the pane.
 async fn share_with_pane_listing(
+    panes: &PaneListings,
     tag: &str,
     coverage: WatchCoverage,
     pane_holds: &str,
@@ -82,12 +82,12 @@ async fn share_with_pane_listing(
         .create_directory(Path::new("/dir"))
         .await
         .expect("the fixture folder");
-    get_volume_manager().register(&id, Arc::clone(&volume) as Arc<dyn Volume>);
+    panes.show_volume(&id, Arc::clone(&volume) as Arc<dyn Volume>);
     let listing = TestListing::new()
         .volume(&id)
         .path("/dir")
         .entries(vec![entry(pane_holds)])
-        .insert(crate::listing_host::listings(), tag);
+        .insert(panes.panes(), tag);
     (id, volume, listing)
 }
 
@@ -96,9 +96,11 @@ async fn share_with_pane_listing(
 /// (ERR-AREUV: seconds per new folder in a 3,340-entry share folder).
 #[tokio::test]
 async fn a_folder_a_watched_pane_shows_is_answered_from_its_listing() {
-    let (id, volume, _listing) = share_with_pane_listing("pane-hit", WatchCoverage::EveryWriter, CAFE_NFC).await;
+    let panes = PaneListings::new();
+    let (id, volume, _listing) =
+        share_with_pane_listing(&panes, "pane-hit", WatchCoverage::EveryWriter, CAFE_NFC).await;
 
-    let answer = ListedFolders::with_pane_listings(&AppListings, volume.as_ref(), &id)
+    let answer = ListedFolders::with_pane_listings(panes.as_ref(), volume.as_ref(), &id)
         .look_alike_in(Path::new("/dir"), CAFE_NFD)
         .await;
 
@@ -107,7 +109,6 @@ async fn a_folder_a_watched_pane_shows_is_answered_from_its_listing() {
         other => panic!("expected the pane's composed entry, got {other:?}"),
     }
     assert_eq!(volume.list_calls(), 0, "listed a folder the pane already holds");
-    get_volume_manager().unregister(&id);
 }
 
 /// A watch blind to other writers (an OS-mounted share) can miss the very entry
@@ -115,21 +116,24 @@ async fn a_folder_a_watched_pane_shows_is_answered_from_its_listing() {
 /// read.
 #[tokio::test]
 async fn a_pane_listing_only_this_machine_keeps_current_is_read_past() {
-    let (id, volume, _listing) = share_with_pane_listing("pane-blind", WatchCoverage::ThisMachineOnly, CAFE_NFC).await;
+    let panes = PaneListings::new();
+    let (id, volume, _listing) =
+        share_with_pane_listing(&panes, "pane-blind", WatchCoverage::ThisMachineOnly, CAFE_NFC).await;
 
-    let answer = ListedFolders::with_pane_listings(&AppListings, volume.as_ref(), &id)
+    let answer = ListedFolders::with_pane_listings(panes.as_ref(), volume.as_ref(), &id)
         .look_alike_in(Path::new("/dir"), CAFE_NFD)
         .await;
 
     assert!(matches!(answer, Ok(LookAlike::None)), "{answer:?}");
     assert_eq!(volume.list_calls(), 1);
-    get_volume_manager().unregister(&id);
 }
 
 /// A caller that didn't name the volume lists, pane or no pane.
 #[tokio::test]
 async fn without_a_volume_id_the_folder_is_listed() {
-    let (id, volume, _listing) = share_with_pane_listing("pane-unnamed", WatchCoverage::EveryWriter, CAFE_NFC).await;
+    let panes = PaneListings::new();
+    let (_id, volume, _listing) =
+        share_with_pane_listing(&panes, "pane-unnamed", WatchCoverage::EveryWriter, CAFE_NFC).await;
 
     let answer = ListedFolders::new(volume.as_ref())
         .look_alike_in(Path::new("/dir"), CAFE_NFD)
@@ -137,16 +141,17 @@ async fn without_a_volume_id_the_folder_is_listed() {
 
     assert!(matches!(answer, Ok(LookAlike::None)), "{answer:?}");
     assert_eq!(volume.list_calls(), 1);
-    get_volume_manager().unregister(&id);
 }
 
 /// End to end: New folder beside a watched pane refuses the look-alike the pane
 /// shows, creates a free name, and never lists the folder.
 #[tokio::test]
 async fn a_new_folder_beside_a_watched_pane_is_placed_without_a_listing() {
-    let (id, volume, _listing) = share_with_pane_listing("pane-create", WatchCoverage::EveryWriter, CAFE_NFC).await;
-    // The engine sees the app's pane listings and knows the share by the same id.
-    let engine = TestOperations::seeing_app_listings();
+    let panes = PaneListings::new();
+    let (id, volume, _listing) =
+        share_with_pane_listing(&panes, "pane-create", WatchCoverage::EveryWriter, CAFE_NFC).await;
+    // The engine sees the same panes and knows the share by the same id.
+    let engine = TestOperations::seeing(&panes);
     engine.volumes().register(&id, Arc::clone(&volume) as Arc<dyn Volume>);
 
     let refused = create_directory_core_on(engine.host(), Some(id.clone()), "/dir", CAFE_NFD).await;
@@ -158,5 +163,4 @@ async fn a_new_folder_beside_a_watched_pane_is_placed_without_a_listing() {
     );
     assert!(created.is_ok(), "{created:?}");
     assert_eq!(volume.list_calls(), 0);
-    get_volume_manager().unregister(&id);
 }
