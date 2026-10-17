@@ -15,7 +15,7 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use super::state::{WriteOperationState, get_operation_status};
+use super::state::WriteOperationState;
 use super::types::{
     DisconnectedSide, ProgressAtStop, TransferRole, WriteErrorEvent, WriteOperationError, WriteOperationType,
 };
@@ -157,8 +157,11 @@ pub(in crate::file_system::write_operations) fn transfer_stop_event(
     let error = name_the_vanished_drive(error, state.sides.as_ref());
     // The row the failure names shows it, while the error is on screen.
     state.transfer_tree.note_failure(&error);
-    WriteErrorEvent::new(operation_id.to_string(), operation_type, error)
-        .with_progress_at_stop(progress_at_stop(operation_id, sources))
+    WriteErrorEvent::new(operation_id.to_string(), operation_type, error).with_progress_at_stop(progress_at_stop(
+        state,
+        operation_id,
+        sources,
+    ))
 }
 
 /// Rewrites what a transfer answered into `DeviceDisconnected` when one of its
@@ -213,11 +216,16 @@ fn failing_path(error: &WriteOperationError) -> Option<&str> {
     error.item_path()
 }
 
-/// How far the operation had got, from its live status row. A move's source
+/// How far the operation had got, from its live status row in its own engine's
+/// status cache. A move's source
 /// tally rides along when the sweep is what stopped, and answers even for an
 /// operation with no status row (every engine test drives the engine directly).
-fn progress_at_stop(operation_id: &str, sources: Option<MoveSourceCounts>) -> Option<ProgressAtStop> {
-    let status = get_operation_status(operation_id);
+fn progress_at_stop(
+    state: &WriteOperationState,
+    operation_id: &str,
+    sources: Option<MoveSourceCounts>,
+) -> Option<ProgressAtStop> {
+    let status = state.scope().status().snapshot(operation_id, None);
     if status.is_none() && sources.is_none() {
         return None;
     }
