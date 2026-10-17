@@ -90,7 +90,7 @@ fn journal_inverse_of(writer: &OperationLogWriter, inverse_op_id: &str, original
             dest_volume_id: None,
             item_count: 0,
             started_at,
-            rolls_back_op_id: Some(original.to_string()).map(Into::into),
+            rolls_back_op_id: Some(Into::into(original.to_string())),
             execution_status: ExecutionStatus::Running,
         })
         .expect("open the inverse");

@@ -228,7 +228,7 @@ fn seed_rolling_back(rig: &Rig, op_id: &str, inverse: Option<(&str, &[ItemOutcom
                 dest_volume_id: None,
                 item_count: outcomes.len() as u64,
                 started_at: 2,
-                rolls_back_op_id: Some(op_id.to_string()).map(Into::into),
+                rolls_back_op_id: Some(Into::into(op_id.to_string())),
                 execution_status: ExecutionStatus::Running,
             })
             .expect("open inverse");
