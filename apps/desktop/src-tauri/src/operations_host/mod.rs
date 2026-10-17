@@ -66,8 +66,7 @@ pub(crate) struct NotInstalled;
 /// an operation. A second call keeps the first engine.
 pub fn install(app: &AppHandle, operation_log: OperationLog) {
     let sink_app = app.clone();
-    let engine = app_answers(Some(app.clone()))
-        .operation_log(operation_log)
+    let engine = app_answers(Some(app.clone()), operation_log)
         .operation_sinks(Box::new(move || {
             Arc::new(TauriEventSink::new(sink_app.clone())) as Arc<dyn OperationEventSink>
         }))
@@ -124,21 +123,79 @@ pub(crate) fn refuse_not_installed(_: NotInstalled) -> write_operations::WriteOp
 /// no sink factory.
 #[cfg(test)]
 pub(crate) fn test_engine() -> Operations {
-    app_answers(None)
-        .operation_log(crate::operation_log_host::operation_log().clone())
-        .build()
+    app_answers(None, crate::operation_log_host::operation_log().clone()).build()
 }
 
 /// Every seam the app answers the same with or without a frontend; `app` is
-/// where the engine-wide events go out, if anywhere.
-fn app_answers(app: Option<AppHandle>) -> OperationsBuilder {
+/// where the engine-wide events go out, if anywhere, and `operation_log` the
+/// journal it records into.
+fn app_answers(app: Option<AppHandle>, operation_log: OperationLog) -> OperationsBuilder {
     Operations::builder(
         Arc::new(volumes::AppOperationVolumes),
         Arc::new(events::TauriEngineEvents::new(app)),
     )
     .volume_host(crate::volume_host::host())
+    .operation_log(operation_log)
     .own_writes(Arc::new(own_writes::AppOwnWrites))
     .index(Arc::new(index::AppOperationIndex))
     .pacing(Arc::new(pacing::AppPacing))
     .name_order(Arc::new(name_order::AppNameOrder))
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+
+    use cmdr_fs::ignore_poison::IgnorePoison;
+    use cmdr_operation_log::OperationLog;
+    use cmdr_operation_log::capture::CapturingJournal;
+    use cmdr_operation_log::types::{ExecutionStatus, Initiator, OpKind};
+    use cmdr_operation_log::writer::OpenOperation;
+
+    use crate::file_system::write_operations::Operations;
+
+    fn header(op_id: &str) -> OpenOperation {
+        OpenOperation {
+            op_id: op_id.to_string(),
+            kind: OpKind::Copy,
+            initiator: Initiator::User,
+            source_volume_id: None,
+            dest_volume_id: None,
+            item_count: 1,
+            started_at: 0,
+            rolls_back_op_id: None,
+            execution_status: ExecutionStatus::Running,
+        }
+    }
+
+    /// Whether `engine` journals into `log`: an operation opened on the engine is
+    /// heard by a journal installed on `log`, so the two are one handle.
+    fn journals_into(engine: &Operations, log: &OperationLog) -> bool {
+        let journal = Arc::new(CapturingJournal::new());
+        log.set_journal(Some(journal.clone()));
+        drop(engine.operation_log().journal_open(header("same-log-probe")));
+        let heard = journal.opens.lock_ignore_poison().len() == 1;
+        log.set_journal(None);
+        heard
+    }
+
+    /// The engine `install` builds journals into the very handle
+    /// `operation_log_host::install` returned, never a second one.
+    #[test]
+    fn the_installed_engine_journals_into_the_log_it_was_handed() {
+        let log = OperationLog::detached();
+        let engine = super::app_answers(None, log.clone()).build();
+        assert!(journals_into(&engine, &log));
+    }
+
+    /// The test binary's shared engine journals into `operation_log()`, which is
+    /// what `TestJournalGuard` fills.
+    #[test]
+    fn the_shared_test_engine_journals_into_operation_log() {
+        let journal = Arc::new(CapturingJournal::new());
+        let _guard = crate::operation_log_host::TestJournalGuard::install(journal.clone());
+        let engine = super::operations().expect("a test binary always has its engine");
+        drop(engine.operation_log().journal_open(header("shared-log-probe")));
+        assert_eq!(journal.opens.lock_ignore_poison().len(), 1);
+    }
 }

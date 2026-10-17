@@ -38,6 +38,9 @@ mod operation_sink;
 mod own_writes;
 mod pacing;
 mod scan_preview_sink;
+// Fakes for the seams a test reads back.
+#[cfg(test)]
+pub(crate) mod testing;
 mod volumes;
 
 use std::sync::Arc;

@@ -452,7 +452,7 @@ impl OperationJournal for WriterJournal {
 
 /// A test journal that records every call for assertions, with no DB. Lets a
 /// pipeline test install a journal without a sink or a store.
-#[cfg(test)]
+#[cfg(any(test, feature = "testing"))]
 #[derive(Default)]
 pub struct CapturingJournal {
     /// Every operation opened, in order.
@@ -467,7 +467,7 @@ pub struct CapturingJournal {
     pub not_rollbackable_notes: Mutex<Vec<(String, NotRollbackableReason)>>,
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "testing"))]
 impl CapturingJournal {
     /// A journal that has captured nothing yet.
     pub fn new() -> Self {
@@ -475,7 +475,7 @@ impl CapturingJournal {
     }
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "testing"))]
 impl OperationJournal for CapturingJournal {
     fn open(&self, open: OpenOperation) {
         self.opens.lock_ignore_poison().push(open);

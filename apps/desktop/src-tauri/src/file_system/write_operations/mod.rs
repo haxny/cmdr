@@ -30,6 +30,9 @@ mod event_sinks;
 mod free_space;
 mod handle;
 pub(crate) use handle::OperationsBuilder;
+// Two engines share nothing.
+#[cfg(test)]
+mod handle_tests;
 pub(crate) mod host;
 mod human_wait;
 mod in_flight_temps;
