@@ -33,7 +33,7 @@ impl WriteOperationState {
         operation_id: &str,
         sending: Option<&WriteProgressEvent>,
     ) -> Option<TransferActivity> {
-        if let Some(activity) = super::super::transfer::transfer_probe::activity_for(operation_id, sending) {
+        if let Some(activity) = self.scope().stores().probes().activity_for(operation_id, sending) {
             return Some(activity);
         }
         self.decision_wait().map(|waiting_on| TransferActivity {

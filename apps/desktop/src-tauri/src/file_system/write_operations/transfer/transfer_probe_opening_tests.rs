@@ -241,9 +241,7 @@ fn an_event_that_moved_the_counters_goes_out_as_moving() {
     let guard = TestOperationGuard::register("event-moved");
     let state = guard.state();
     let probe = probe_over(guard.id(), state, TransferEnds::none());
-    REGISTRY
-        .lock_ignore_poison()
-        .insert(guard.id().to_owned(), Arc::clone(&probe));
+    state.scope().stores().probes().insert(guard.id(), Arc::clone(&probe));
     publish(state, guard.id(), 0, 0);
     let task = probe.begin_task(TaskRow::source(0), TaskRole::File, "/naspi/a.png", "/tmp/a.png");
     task.probe().set_phase(TaskPhase::OpeningSource);
@@ -251,7 +249,7 @@ fn an_event_that_moved_the_counters_goes_out_as_moving() {
     probe.publish_inbound_rate(Some(19_000));
 
     let landed = publish(state, guard.id(), 1, 377_436);
-    REGISTRY.lock_ignore_poison().remove(guard.id());
+    state.scope().stores().probes().remove(guard.id());
 
     let activity = landed.activity.expect("a probed operation always classifies");
     assert_eq!(activity.still_for_seconds, 0);

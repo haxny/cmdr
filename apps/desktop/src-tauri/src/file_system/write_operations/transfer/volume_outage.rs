@@ -38,8 +38,9 @@
 //!   the NAS was back (`#406`).
 //! - **Pausable.** A Pause parks the wait on the pause gate and stops dialing.
 //!   A Resume is a person's action, so the wait gets a fresh budget from there.
-//! - **Shared per volume.** An outage record per lane ([`OUTAGES`]) gives every
-//!   waiter on that share the same deadline, so a concurrent window's eight
+//! - **Shared per volume.** An outage record per lane ([`Outages`], one per
+//!   engine, reached through the operation's scope) gives every waiter on that
+//!   share the same deadline, so a concurrent window's eight
 //!   tasks give up together, and a job queued behind one that gave up doesn't
 //!   start a second fifteen-minute wait for the same outage. A job CREATED after
 //!   the give-up (a Retry, a new copy) is a fresh question and gets a fresh wait.
@@ -49,7 +50,8 @@
 
 use std::collections::HashMap;
 use std::future::Future;
-use std::sync::{Arc, LazyLock, Mutex};
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use tokio::time::Instant;
@@ -214,7 +216,8 @@ async fn wait_for_volume(
     let policy = state.outage_policy;
     let lane = volume.lane_key();
     let name = volume.name().to_owned();
-    let (mut deadline, _membership) = match OUTAGES.join(&lane, state.born, policy.budget) {
+    let outages = state.scope().stores().outages();
+    let (mut deadline, _membership) = match Outages::join(outages, &lane, state.born, policy.budget) {
         Joined::Waiting { deadline, membership } => (deadline, membership),
         Joined::AlreadyGaveUp => {
             // This outage was waited out already, by work queued before it gave
@@ -226,7 +229,7 @@ async fn wait_for_volume(
             );
             return match attempt_once(state, volume, None).await {
                 Attempt::Reconnected => {
-                    OUTAGES.back(&lane);
+                    outages.back(&lane);
                     OutageEnd::Back
                 }
                 Attempt::Cancelled => OutageEnd::Cancelled,
@@ -264,7 +267,7 @@ async fn wait_for_volume(
             continue;
         }
         match volume.connection_state() {
-            Some(live) if live.is_live() => return came_back(&lane, &name, started),
+            Some(live) if live.is_live() => return came_back(outages, &lane, &name, started),
             Some(ConnectionState::Disconnected) => {}
             // A sign-in, a host key, or no session at all: not something time
             // fixes. The pane offers the sign-in; the transfer fails as before.
@@ -272,7 +275,7 @@ async fn wait_for_volume(
         }
         let now = Instant::now();
         if now >= deadline {
-            OUTAGES.gave_up(&lane);
+            outages.gave_up(&lane);
             log::warn!(
                 target: "copy",
                 "volume outage: {name} didn't come back within {:?}; giving up",
@@ -282,7 +285,7 @@ async fn wait_for_volume(
         }
         if now >= next_attempt {
             match attempt_once(state, volume, Some(deadline)).await {
-                Attempt::Reconnected => return came_back(&lane, &name, started),
+                Attempt::Reconnected => return came_back(outages, &lane, &name, started),
                 Attempt::Cancelled => return OutageEnd::Cancelled,
                 Attempt::Hopeless => return OutageEnd::NotWaitable,
                 Attempt::Failed => {
@@ -325,8 +328,8 @@ impl Drop for TaskPhaseGuard {
     }
 }
 
-fn came_back(lane: &LaneKey, name: &str, started: Instant) -> OutageEnd {
-    OUTAGES.back(lane);
+fn came_back(outages: &Outages, lane: &LaneKey, name: &str, started: Instant) -> OutageEnd {
+    outages.back(lane);
     log::info!(
         target: "copy",
         "volume outage: {name} is back after {:?}; carrying on",
@@ -419,14 +422,12 @@ fn announce_wait(state: &Arc<WriteOperationState>, announce: &OutageAnnounce<'_>
 // ============================================================================
 
 /// One outage per lane (`Volume::lane_key`, the physical resource: one share,
-/// one server, one device), shared by every operation waiting on it.
-static OUTAGES: LazyLock<Outages> = LazyLock::new(Outages::default);
-
-// DEFAULT-OK: an empty map is "no lane is in an outage", which is true until a
-// waiter starts one.
-#[derive(Default)]
-struct Outages {
+/// one server, one device), shared by every operation on one engine waiting
+/// on it.
+pub(in crate::file_system::write_operations) struct Outages {
     records: Mutex<HashMap<LaneKey, Outage>>,
+    /// The next outage's id.
+    next_id: AtomicU64,
 }
 
 struct Outage {
@@ -443,9 +444,15 @@ enum Joined {
     AlreadyGaveUp,
 }
 
-static NEXT_OUTAGE_ID: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
-
 impl Outages {
+    /// No lane is in an outage, which is true until a waiter starts one.
+    pub(in crate::file_system::write_operations) fn new() -> Self {
+        Self {
+            records: Mutex::new(HashMap::new()),
+            next_id: AtomicU64::new(1),
+        }
+    }
+
     /// Join the lane's current outage, or start one.
     ///
     /// - None running: start one now, with the full budget.
@@ -456,8 +463,11 @@ impl Outages {
     ///   waited out once.
     /// - One that gave up, for an operation created after it (a Retry, a new
     ///   copy) or long after: a fresh outage, because that's a fresh question.
-    fn join(&self, lane: &LaneKey, born: std::time::Instant, budget: Duration) -> Joined {
-        let mut records = self.records.lock_ignore_poison();
+    ///
+    /// The membership holds the record table until it leaves, so it outlives
+    /// nothing but its own wait.
+    fn join(outages: &Arc<Self>, lane: &LaneKey, born: std::time::Instant, budget: Duration) -> Joined {
+        let mut records = outages.records.lock_ignore_poison();
         let now = Instant::now();
         if let Some(outage) = records.get_mut(lane) {
             match outage.gave_up_at {
@@ -466,6 +476,7 @@ impl Outages {
                     return Joined::Waiting {
                         deadline: outage.started + budget,
                         membership: Membership {
+                            outages: Arc::clone(outages),
                             lane: lane.clone(),
                             id: outage.id,
                         },
@@ -477,7 +488,7 @@ impl Outages {
                 Some(_) => {}
             }
         }
-        let id = NEXT_OUTAGE_ID.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        let id = outages.next_id.fetch_add(1, Ordering::Relaxed);
         records.insert(
             lane.clone(),
             Outage {
@@ -489,7 +500,11 @@ impl Outages {
         );
         Joined::Waiting {
             deadline: now + budget,
-            membership: Membership { lane: lane.clone(), id },
+            membership: Membership {
+                outages: Arc::clone(outages),
+                lane: lane.clone(),
+                id,
+            },
         }
     }
 
@@ -527,13 +542,14 @@ impl Outages {
 /// A waiter's place in its lane's outage; leaving drops it, whichever way the
 /// wait ended.
 struct Membership {
+    outages: Arc<Outages>,
     lane: LaneKey,
     id: u64,
 }
 
 impl Drop for Membership {
     fn drop(&mut self) {
-        OUTAGES.leave(self);
+        self.outages.leave(self);
     }
 }
 

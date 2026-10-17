@@ -330,6 +330,11 @@ pub(in crate::file_system::write_operations) struct EngineStores {
     ledger: in_flight_temps::Ledger,
     /// Set by the claim, once ever (`Operations::claim_ledger`).
     ledger_claimed: std::sync::atomic::AtomicBool,
+    /// One outage record per lane, shared by every transfer waiting on it.
+    outages: Arc<transfer::volume_outage::Outages>,
+    /// Every live transfer's in-flight table, for its stall watchdog and the
+    /// activity each progress event carries.
+    probes: Arc<transfer::transfer_probe::Probes>,
 }
 
 impl EngineStores {
@@ -338,7 +343,21 @@ impl EngineStores {
             previews: Arc::new(scan_cache::ScanPreviews::new()),
             ledger: in_flight_temps::Ledger::new(),
             ledger_claimed: std::sync::atomic::AtomicBool::new(false),
+            outages: Arc::new(transfer::volume_outage::Outages::new()),
+            probes: Arc::new(transfer::transfer_probe::Probes::new()),
         }
+    }
+
+    /// Every live transfer's probe, shared, since a registration's guard holds
+    /// the table until it deregisters.
+    pub(in crate::file_system::write_operations) fn probes(&self) -> &Arc<transfer::transfer_probe::Probes> {
+        &self.probes
+    }
+
+    /// The lanes' outage records, shared, since a waiter's membership holds
+    /// them until it leaves.
+    pub(in crate::file_system::write_operations) fn outages(&self) -> &Arc<transfer::volume_outage::Outages> {
+        &self.outages
     }
 
     /// The in-flight ledger every operation on this engine records into.

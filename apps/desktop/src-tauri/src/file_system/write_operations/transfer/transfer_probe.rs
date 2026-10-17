@@ -21,9 +21,8 @@
 //! misses and every call is a no-op, which is what the unit tests and the
 //! local-FS path rely on.
 
-use std::collections::HashMap;
 use std::sync::atomic::{AtomicU8, AtomicU64, Ordering};
-use std::sync::{Arc, LazyLock, Mutex};
+use std::sync::{Arc, Mutex, Weak};
 use std::time::{Duration, Instant};
 
 use tokio_util::sync::CancellationToken;
@@ -31,7 +30,7 @@ use tokio_util::sync::CancellationToken;
 use cmdr_fs::ignore_poison::IgnorePoison;
 
 use super::super::event_sinks::OperationEventSink;
-use super::super::host::{self, OperationErrorReport};
+use super::super::host::OperationErrorReport;
 use super::super::state::{OperationIntent, WriteOperationState, load_intent};
 use super::super::types::{TransferActivity, TransferWaitReason, WriteOperationPhase, WriteProgressEvent};
 
@@ -614,13 +613,15 @@ impl OperationProbe {
             if still_for_ms < abort_after_ms || !proven_dead {
                 continue;
             }
-            if let Some(host) = host::installed_for("the probe watchdog's stall report") {
-                host.events().error_report(OperationErrorReport::StalledTaskAbandoned {
+            self.state
+                .scope()
+                .host()
+                .events()
+                .error_report(OperationErrorReport::StalledTaskAbandoned {
                     operation_id: self.operation_id.clone(),
                     still_for_secs: still_for_ms / 1_000,
                     task: task.render(),
                 });
-            }
             task.trip_stall_abort();
         }
     }
@@ -895,111 +896,6 @@ pub(super) fn arm_current_task_stall_abort() -> Option<CancellationToken> {
     CURRENT_TASK_PROBE.try_with(|probe| probe.arm_stall_abort()).ok()
 }
 
-/// Live operations, so a watchdog tick (and any future debug command) can see
-/// every transfer at once.
-static REGISTRY: LazyLock<Mutex<HashMap<String, Arc<OperationProbe>>>> = LazyLock::new(|| Mutex::new(HashMap::new()));
-
-/// Register an operation and start its stall watchdog.
-///
-/// The returned guard deregisters on drop, which also stops the watchdog on its
-/// next tick.
-pub(super) fn register_operation(
-    operation_id: &str,
-    concurrency: usize,
-    total_files: usize,
-    // Source and destination, held only so the watchdog can ask their
-    // connections whether either is proven dead before it acts on a stall, and
-    // how fast the source is receiving while nothing lands.
-    ends: TransferEnds,
-    state: Arc<WriteOperationState>,
-    sink: Arc<dyn OperationEventSink>,
-) -> OperationProbeGuard {
-    let probe = Arc::new(OperationProbe {
-        operation_id: operation_id.to_owned(),
-        concurrency,
-        total_files,
-        driver_phase: AtomicU8::new(DriverPhase::Starting as u8),
-        driver_detail: Mutex::new(String::new()),
-        tasks: Mutex::new(Vec::new()),
-        sink: Mutex::new(Some(sink)),
-        still_for_seconds: AtomicU64::new(0),
-        stall_abort_after: stall_abort_after(),
-        ends,
-        source_inbound_rate: AtomicU64::new(NO_INBOUND_RATE),
-        state,
-        started: Instant::now(),
-    });
-    REGISTRY
-        .lock_ignore_poison()
-        .insert(operation_id.to_owned(), Arc::clone(&probe));
-    spawn_watchdog(operation_id.to_owned());
-    OperationProbeGuard {
-        operation_id: operation_id.to_owned(),
-        probe,
-    }
-}
-
-/// The live activity for an operation, if it keeps an in-flight table.
-///
-/// `None` for operations with no probe (local copy, delete, trash, and the
-/// pre-registration window), where the UI simply shows nothing extra. Called
-/// from `WriteOperationState::enrich_progress`, so every progress event from
-/// every emit site carries it without a single caller having to remember.
-///
-/// `sending` is the progress event this activity will ride, when there is one:
-/// an event that moved the counters reads as moving, whatever the watchdog saw
-/// on its last tick ([`OperationProbe::activity_for_event`]). `None` for a
-/// snapshot with no event behind it (`cmdr://state`).
-pub(in crate::file_system::write_operations) fn activity_for(
-    operation_id: &str,
-    sending: Option<&WriteProgressEvent>,
-) -> Option<TransferActivity> {
-    let probe = REGISTRY.lock_ignore_poison().get(operation_id).cloned()?;
-    Some(match sending {
-        Some(event) => probe.activity_for_event(event),
-        None => probe.activity(),
-    })
-}
-
-/// The in-flight table of a still-running operation, rendered.
-///
-/// The watchdog logs the same text once an operation has been still for
-/// `STALL_AFTER`, which is right for a user's session and useless to a test: a
-/// test that bounds its own wait needs the table AT the moment its deadline
-/// expires, in its panic message, where a human will actually read it. The SMB
-/// full-concurrency suite calls this before it abandons a copy that overran, so
-/// a red run names the phase every task was parked in instead of only saying
-/// "timed out".
-///
-/// `None` once the operation has settled (its guard deregistered it), so the
-/// caller must keep the copy alive — awaiting a `JoinHandle`, not the copy
-/// future itself, which would drop the guard before the dump could be taken.
-#[cfg(test)]
-pub(crate) fn render_live_dump(operation_id: &str, reason: &str) -> Option<String> {
-    REGISTRY
-        .lock_ignore_poison()
-        .get(operation_id)
-        .map(|probe| probe.render_dump(reason))
-}
-
-/// Deregisters its operation on drop.
-pub(super) struct OperationProbeGuard {
-    operation_id: String,
-    probe: Arc<OperationProbe>,
-}
-
-impl OperationProbeGuard {
-    pub(super) fn probe(&self) -> Arc<OperationProbe> {
-        Arc::clone(&self.probe)
-    }
-}
-
-impl Drop for OperationProbeGuard {
-    fn drop(&mut self) {
-        REGISTRY.lock_ignore_poison().remove(&self.operation_id);
-    }
-}
-
 /// Watches one operation's aggregate byte counter and logs the in-flight table
 /// when it stops moving.
 ///
@@ -1031,22 +927,29 @@ impl WatchdogState {
     }
 }
 
-fn spawn_watchdog(operation_id: String) {
-    let Some(host) = host::installed_for("the probe watchdog") else {
-        return;
-    };
-    host.runtime().spawn(async move {
+/// Spawns the watchdog on the operation's runtime. It holds the probe table
+/// weakly, a background loop that must not keep a dropped engine alive, and
+/// ends at the first tick after the operation's guard removed it.
+fn spawn_watchdog(runtime: &tokio::runtime::Handle, probes: Weak<Probes>, operation_id: String) {
+    runtime.spawn(async move {
         let mut watchdog = WatchdogState::new();
         let started = Instant::now();
         loop {
             tokio::time::sleep(STALL_TICK).await;
-            let Some(probe) = REGISTRY.lock_ignore_poison().get(&operation_id).cloned() else {
-                return; // operation finished; guard removed it
+            let Some(probe) = probes.upgrade().and_then(|probes| probes.get(&operation_id)) else {
+                return; // operation finished (its guard removed it), or its engine is gone
             };
             probe.watchdog_step(&mut watchdog, started.elapsed());
         }
     });
 }
+
+#[path = "transfer_probe_registry.rs"]
+mod registry;
+pub(in crate::file_system::write_operations) use registry::Probes;
+#[cfg(test)]
+pub(crate) use registry::render_live_dump;
+pub(super) use registry::{OperationProbeGuard, register_operation};
 
 #[cfg(test)]
 #[path = "transfer_probe_tests.rs"]
