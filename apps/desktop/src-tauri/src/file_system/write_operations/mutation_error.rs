@@ -149,8 +149,12 @@ impl From<VolumeError> for MutationError {
 /// `NotConnected`, which the frontend's volume factory already words; any other
 /// id is `VolumeGone` (an unmount race). `path` is what the mutation targeted.
 /// The classification: `OperationVolumes::unregistered`.
-pub(crate) async fn unregistered_volume_refusal(volume_id: String, path: &std::path::Path) -> MutationError {
-    match host::installed().volumes().unregistered(&volume_id).await {
+pub(crate) async fn unregistered_volume_refusal(
+    volumes: &dyn host::OperationVolumes,
+    volume_id: String,
+    path: &std::path::Path,
+) -> MutationError {
+    match volumes.unregistered(&volume_id).await {
         UnregisteredVolume::NotConnected => MutationError::Volume {
             error: VolumeError::NotConnected(path.display().to_string()),
         },

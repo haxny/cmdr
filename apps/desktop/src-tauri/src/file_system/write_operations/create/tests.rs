@@ -280,7 +280,7 @@ async fn create_directory_managed_creates_folder_and_cleans_up_record() {
     assert!(Path::new(&path).is_dir());
     // The instant op's record is cleaned up once the create finishes.
     assert!(
-        manager::manager()
+        crate::file_system::write_operations::manager::manager()
             .list()
             .iter()
             .all(|o| o.operation_type != WriteOperationType::CreateFolder),
@@ -528,7 +528,12 @@ fn synthetic_entry_diff_lands_only_in_listings_on_the_creates_volume() {
         .insert(crate::listing_host::listings(), "synthetic-diff-remote");
 
     // `None` is the local filesystem, `root`.
-    patch_listings_after_create(None, &new_path, tmp.path());
+    patch_listings_after_create(
+        crate::file_system::write_operations::installed().host(),
+        None,
+        &new_path,
+        tmp.path(),
+    );
 
     assert_eq!(
         on_root.entry_names(),
@@ -564,7 +569,12 @@ fn synthetic_entry_diff_refreshes_a_row_the_listing_already_holds() {
         .insert(crate::listing_host::listings(), "synthetic-diff-duplicate");
     hold_diffs(listing.engine(), listing.id());
 
-    patch_listings_after_create(None, &new_path, tmp.path());
+    patch_listings_after_create(
+        crate::file_system::write_operations::installed().host(),
+        None,
+        &new_path,
+        tmp.path(),
+    );
 
     let entries = listing.entries();
     assert_eq!(entries.len(), 1, "the create upserts; it never adds a second row");

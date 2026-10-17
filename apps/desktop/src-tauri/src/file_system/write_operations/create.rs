@@ -22,10 +22,11 @@
 
 use std::path::{Path, PathBuf};
 
+use super::Operations;
 use super::archive_edit::{self, ArchiveEditRequest};
-use super::host::{self, InstantMutationFact, InstantOp, InstantTarget};
+use super::host::{EngineHost, InstantMutationFact, InstantOp, InstantTarget};
 use super::look_alike::{NewEntry, place_new_entry};
-use super::manager::{self, OperationDescriptor, OperationSummaryText};
+use super::manager::{OperationDescriptor, OperationSummaryText};
 use super::mutation_error::MutationError;
 use super::types::{ReadOnlySide, WriteOperationType};
 use cmdr_archive::mutator::{AddEntry, AddSource, Changeset};
@@ -42,9 +43,8 @@ enum ArchiveEntryKind {
 /// volume means the local `"root"` drive. Uses `path_crosses` (not
 /// `path_is_inside`) because the parent can BE the `.zip` file itself (creating an
 /// entry at the archive root).
-async fn parent_crosses_archive_boundary(volume_id: Option<&str>, parent_path: &str) -> bool {
-    host::installed()
-        .volumes()
+async fn parent_crosses_archive_boundary(host: &EngineHost, volume_id: Option<&str>, parent_path: &str) -> bool {
+    host.volumes()
         .path_crosses_archive_boundary(volume_id.unwrap_or("root"), Path::new(parent_path))
         .await
 }
@@ -61,18 +61,52 @@ pub(crate) async fn create_directory_managed(
     name: String,
     initiator: cmdr_operation_log::types::Initiator,
 ) -> Result<String, MutationError> {
-    // Wrapped, not emitted per branch: the archive route is an early return and
-    // the instant path has three `?`s after it, so any in-body emit would count a
-    // biased subset. See `rename_managed`, which is wrapped for the same reason.
-    let (result, target) = create_directory_managed_inner(volume_id, parent_path, name, initiator).await;
-    let fact = InstantMutationFact::of(InstantOp::CreateFolder, initiator, target, &result);
-    host::installed().events().instant_mutation_settled(fact);
-    result
+    // shim: removed in M7a
+    super::installed()
+        .create_directory_managed(volume_id, parent_path, name, initiator)
+        .await
+}
+
+impl Operations {
+    /// See the free [`create_directory_managed`]: the same, on this engine.
+    pub(crate) async fn create_directory_managed(
+        &self,
+        volume_id: Option<String>,
+        parent_path: String,
+        name: String,
+        initiator: cmdr_operation_log::types::Initiator,
+    ) -> Result<String, MutationError> {
+        // Wrapped, not emitted per branch: the archive route is an early return and
+        // the instant path has three `?`s after it, so any in-body emit would count a
+        // biased subset. See `rename_managed`, which is wrapped for the same reason.
+        let (result, target) = create_directory_managed_inner(self, volume_id, parent_path, name, initiator).await;
+        let fact = InstantMutationFact::of(InstantOp::CreateFolder, initiator, target, &result);
+        self.host().events().instant_mutation_settled(fact);
+        result
+    }
+
+    /// See the free [`create_file_managed`]: the same, on this engine.
+    pub(crate) async fn create_file_managed(
+        &self,
+        volume_id: Option<String>,
+        parent_path: String,
+        name: String,
+        initiator: cmdr_operation_log::types::Initiator,
+    ) -> Result<String, MutationError> {
+        // Wrapped, not emitted per branch: the archive route is an early return and
+        // the instant path has three `?`s after it, so any in-body emit would count a
+        // biased subset. See `rename_managed`, which is wrapped for the same reason.
+        let (result, target) = create_file_managed_inner(self, volume_id, parent_path, name, initiator).await;
+        let fact = InstantMutationFact::of(InstantOp::CreateFile, initiator, target, &result);
+        self.host().events().instant_mutation_settled(fact);
+        result
+    }
 }
 
 /// The create itself. Returns where the new entry landed alongside its result, so
 /// the wrapper above can label the event without re-deriving the route.
 async fn create_directory_managed_inner(
+    engine: &Operations,
     volume_id: Option<String>,
     parent_path: String,
     name: String,
@@ -84,7 +118,7 @@ async fn create_directory_managed_inner(
     // (the FE queue window shows it), not a filesystem path. Parent-aware detection
     // (not the `std::fs`-only sync predicate) so creating inside a REMOTE zip
     // (direct SMB / MTP) routes too.
-    if parent_crosses_archive_boundary(volume_id.as_deref(), &parent_path).await {
+    if parent_crosses_archive_boundary(engine.host(), volume_id.as_deref(), &parent_path).await {
         return (
             route_archive_create(&parent_path, &name, ArchiveEntryKind::Dir, volume_id).await,
             InstantTarget::Archive,
@@ -102,7 +136,7 @@ async fn create_directory_managed_inner(
     let op_id = descriptor.operation_id.clone();
     // The op's own scope on the engine, which journals it: an instant op has no
     // state to carry one.
-    let scope = super::installed().op_scope();
+    let scope = engine.op_scope();
     super::journal::open_volume_op(
         &scope,
         &op_id,
@@ -113,8 +147,12 @@ async fn create_directory_managed_inner(
         1,
     );
 
-    let result = manager::manager()
-        .run_instant(descriptor, create_directory_core(volume_id, &parent_path, &name))
+    let result = engine
+        .manager()
+        .run_instant(
+            descriptor,
+            create_directory_core_on(engine.host(), volume_id, &parent_path, &name),
+        )
         .await;
     super::journal::journal_instant_create(
         &scope,
@@ -132,8 +170,13 @@ async fn create_directory_managed_inner(
 
     // Synthetic diff only works for volumes backed by the local filesystem.
     // Protocol-only volumes (MTP) handle UI updates through their own event systems.
-    if should_emit_synthetic_diff(volume_id_for_diff.as_deref()) {
-        patch_listings_after_create(volume_id_for_diff.as_deref(), &new_path, &PathBuf::from(&expanded_path));
+    if should_emit_synthetic_diff(engine.host(), volume_id_for_diff.as_deref()) {
+        patch_listings_after_create(
+            engine.host(),
+            volume_id_for_diff.as_deref(),
+            &new_path,
+            &PathBuf::from(&expanded_path),
+        );
     }
     (Ok(new_path.to_string_lossy().to_string()), InstantTarget::Volume)
 }
@@ -146,18 +189,16 @@ pub(crate) async fn create_file_managed(
     name: String,
     initiator: cmdr_operation_log::types::Initiator,
 ) -> Result<String, MutationError> {
-    // Wrapped, not emitted per branch: the archive route is an early return and
-    // the instant path has three `?`s after it, so any in-body emit would count a
-    // biased subset. See `rename_managed`, which is wrapped for the same reason.
-    let (result, target) = create_file_managed_inner(volume_id, parent_path, name, initiator).await;
-    let fact = InstantMutationFact::of(InstantOp::CreateFile, initiator, target, &result);
-    host::installed().events().instant_mutation_settled(fact);
-    result
+    // shim: removed in M7a
+    super::installed()
+        .create_file_managed(volume_id, parent_path, name, initiator)
+        .await
 }
 
 /// The create itself. Returns where the new entry landed alongside its result, so
 /// the wrapper above can label the event without re-deriving the route.
 async fn create_file_managed_inner(
+    engine: &Operations,
     volume_id: Option<String>,
     parent_path: String,
     name: String,
@@ -166,7 +207,7 @@ async fn create_file_managed_inner(
     // See `create_directory_managed`: a `.zip`-crossing parent routes the new
     // (empty) file into the archive via the managed edit driver (parent-aware, so
     // a REMOTE zip routes too).
-    if parent_crosses_archive_boundary(volume_id.as_deref(), &parent_path).await {
+    if parent_crosses_archive_boundary(engine.host(), volume_id.as_deref(), &parent_path).await {
         return (
             route_archive_create(&parent_path, &name, ArchiveEntryKind::File, volume_id).await,
             InstantTarget::Archive,
@@ -182,7 +223,7 @@ async fn create_file_managed_inner(
     let op_id = descriptor.operation_id.clone();
     // The op's own scope on the engine, which journals it: an instant op has no
     // state to carry one.
-    let scope = super::installed().op_scope();
+    let scope = engine.op_scope();
     super::journal::open_volume_op(
         &scope,
         &op_id,
@@ -193,8 +234,12 @@ async fn create_file_managed_inner(
         1,
     );
 
-    let result = manager::manager()
-        .run_instant(descriptor, create_file_core(volume_id, &parent_path, &name))
+    let result = engine
+        .manager()
+        .run_instant(
+            descriptor,
+            create_file_core_on(engine.host(), volume_id, &parent_path, &name),
+        )
         .await;
     super::journal::journal_instant_create(
         &scope,
@@ -208,8 +253,13 @@ async fn create_file_managed_inner(
         Err(e) => return (Err(e), InstantTarget::Volume),
     };
 
-    if should_emit_synthetic_diff(volume_id_for_diff.as_deref()) {
-        patch_listings_after_create(volume_id_for_diff.as_deref(), &new_path, &PathBuf::from(&expanded_path));
+    if should_emit_synthetic_diff(engine.host(), volume_id_for_diff.as_deref()) {
+        patch_listings_after_create(
+            engine.host(),
+            volume_id_for_diff.as_deref(),
+            &new_path,
+            &PathBuf::from(&expanded_path),
+        );
     }
     (Ok(new_path.to_string_lossy().to_string()), InstantTarget::Volume)
 }
@@ -323,7 +373,18 @@ pub(super) fn instant_descriptor(
 /// `(new_path, parent_path)` (the parent is the already-expanded path passed in).
 /// Kept separate from the managed wrapper so it's testable without the operation
 /// manager. `parent_path` must already be tilde-expanded by the caller.
+#[cfg(test)]
 pub(crate) async fn create_directory_core(
+    volume_id: Option<String>,
+    parent_path: &str,
+    name: &str,
+) -> Result<(PathBuf, String), MutationError> {
+    create_directory_core_on(super::installed().host(), volume_id, parent_path, name).await
+}
+
+/// [`create_directory_core`] against `host`'s volumes and own-write seam.
+pub(crate) async fn create_directory_core_on(
+    host: &EngineHost,
     volume_id: Option<String>,
     parent_path: &str,
     name: &str,
@@ -351,12 +412,12 @@ pub(crate) async fn create_directory_core(
 
     // Try to use Volume abstraction. Plain `get`: the archive gates above sent an
     // in-zip parent to the archive-edit driver.
-    if let Some(volume) = host::installed().volumes().get(&volume_id) {
+    if let Some(volume) = host.volumes().get(&volume_id) {
         let new_path = new_entry_path(volume.as_ref(), &volume_id, &expanded_path, name).await?;
 
         // Register the new directory path with the downloads watcher's
         // ignore set; no-ops for paths outside ~/Downloads.
-        host::installed().own_writes().announce(&new_path);
+        host.own_writes().announce(&new_path);
 
         volume
             .create_directory(&new_path)
@@ -372,7 +433,7 @@ pub(crate) async fn create_directory_core(
     // of falling back to an untimed synchronous `std::fs::create_dir` on the async
     // executor, which would violate this module's "every FS-touching command is
     // timed" contract on a hung mount.
-    Err(super::mutation_error::unregistered_volume_refusal(volume_id, Path::new(parent_path)).await)
+    Err(super::mutation_error::unregistered_volume_refusal(host.volumes(), volume_id, Path::new(parent_path)).await)
 }
 
 /// Where the new folder or file `name` goes in `parent`: spelled the way the
@@ -408,7 +469,18 @@ fn named_conflict_or_volume(e: cmdr_fs::volume::VolumeError, name: &str) -> Muta
 }
 
 /// Core file-creation logic. Same shape as [`create_directory_core`].
+#[cfg(test)]
 pub(crate) async fn create_file_core(
+    volume_id: Option<String>,
+    parent_path: &str,
+    name: &str,
+) -> Result<(PathBuf, String), MutationError> {
+    create_file_core_on(super::installed().host(), volume_id, parent_path, name).await
+}
+
+/// [`create_file_core`] against `host`'s volumes and own-write seam.
+pub(crate) async fn create_file_core_on(
+    host: &EngineHost,
     volume_id: Option<String>,
     parent_path: &str,
     name: &str,
@@ -434,12 +506,12 @@ pub(crate) async fn create_file_core(
 
     // Try to use Volume abstraction. Plain `get`: the archive gates above sent an
     // in-zip parent to the archive-edit driver.
-    if let Some(volume) = host::installed().volumes().get(&volume_id) {
+    if let Some(volume) = host.volumes().get(&volume_id) {
         let new_path = new_entry_path(volume.as_ref(), &volume_id, &expanded_path, name).await?;
 
         // Register the new file path with the downloads watcher's ignore
         // set; no-ops for paths outside ~/Downloads.
-        host::installed().own_writes().announce(&new_path);
+        host.own_writes().announce(&new_path);
 
         volume
             .create_file(&new_path, b"")
@@ -452,7 +524,7 @@ pub(crate) async fn create_file_core(
     // See `create_directory_core`: an unregistered volume is one nobody connected
     // or an unmount race; error out instead of an untimed
     // `std::fs::File::create_new` fallback.
-    Err(super::mutation_error::unregistered_volume_refusal(volume_id, Path::new(parent_path)).await)
+    Err(super::mutation_error::unregistered_volume_refusal(host.volumes(), volume_id, Path::new(parent_path)).await)
 }
 
 /// Returns true if a synthetic entry diff should be emitted for this volume.
@@ -461,13 +533,10 @@ pub(crate) async fn create_file_core(
 ///
 /// `pub(super)` so the sibling numbered create (`create_numbered.rs`) reuses the same
 /// listing-cache update the create op emits (cursor-land parity with mkfile).
-pub(super) fn should_emit_synthetic_diff(volume_id: Option<&str>) -> bool {
+pub(super) fn should_emit_synthetic_diff(host: &EngineHost, volume_id: Option<&str>) -> bool {
     match volume_id {
         None => true, // No volume_id means local filesystem
-        Some(id) => host::installed()
-            .volumes()
-            .get(id)
-            .is_none_or(|v| v.supports_local_fs_access()),
+        Some(id) => host.volumes().get(id).is_none_or(|v| v.supports_local_fs_access()),
     }
 }
 
@@ -483,13 +552,18 @@ pub(super) fn should_emit_synthetic_diff(volume_id: Option<&str>) -> bool {
 ///
 /// `pub(super)` so the sibling numbered create (`create_numbered.rs`) reuses it (see
 /// `should_emit_synthetic_diff`).
-pub(super) fn patch_listings_after_create(volume_id: Option<&str>, new_path: &Path, parent_path: &Path) {
+pub(super) fn patch_listings_after_create(
+    host: &EngineHost,
+    volume_id: Option<&str>,
+    new_path: &Path,
+    parent_path: &Path,
+) {
     let Some(name) = new_path.file_name() else {
         log::warn!("Created entry has no file name: {}", new_path.display());
         return;
     };
     cmdr_local::mutation::patch_listing_after_local_mutation(
-        host::installed().listings(),
+        host.listings(),
         volume_id.unwrap_or(cmdr_fs::volume::DEFAULT_VOLUME_ID),
         parent_path,
         MutationEvent::Created(name.to_string_lossy().into_owned()),

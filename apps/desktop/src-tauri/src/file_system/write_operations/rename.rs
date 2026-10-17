@@ -22,7 +22,7 @@ use std::path::{Path, PathBuf};
 use super::archive_edit::{self, ArchiveEditRequest};
 use super::host::{self, InstantMutationFact, InstantOp, InstantTarget};
 use super::look_alike::{NewEntry, place_new_entry};
-use super::manager::{self, OperationDescriptor, OperationSummaryText};
+use super::manager::{OperationDescriptor, OperationSummaryText};
 use super::mutation_error::MutationError;
 use super::types::{ReadOnlySide, WriteOperationType};
 use cmdr_archive::mutator::Changeset;
@@ -59,21 +59,38 @@ pub(crate) async fn rename_managed(
     volume_id: String,
     initiator: Initiator,
 ) -> Result<(), MutationError> {
-    // Kept for the refusal line below: `rename_managed_inner` consumes both, and a
-    // refusal nobody can place is a refusal nobody can diagnose.
-    let attempted = from.clone();
-    let attempted_volume = volume_id.clone();
+    // shim: removed in M7a
+    super::installed()
+        .rename_managed(from, to, force, volume_id, initiator)
+        .await
+}
 
-    // The emit wraps the whole driver rather than sitting at its ends: the archive
-    // route is an early return, so a per-branch emit would count the filesystem
-    // renames and quietly miss every in-zip one.
-    let (result, target) = rename_managed_inner(from, to, force, volume_id, initiator).await;
-    if let Err(error) = &result {
-        log_rename_refusal(RenameStage::Rename, &attempted, &attempted_volume, error);
+impl super::Operations {
+    /// See the free [`rename_managed`]: the same, on this engine.
+    pub(crate) async fn rename_managed(
+        &self,
+        from: PathBuf,
+        to: PathBuf,
+        force: bool,
+        volume_id: String,
+        initiator: Initiator,
+    ) -> Result<(), MutationError> {
+        // Kept for the refusal line below: `rename_managed_inner` consumes both, and a
+        // refusal nobody can place is a refusal nobody can diagnose.
+        let attempted = from.clone();
+        let attempted_volume = volume_id.clone();
+
+        // The emit wraps the whole driver rather than sitting at its ends: the archive
+        // route is an early return, so a per-branch emit would count the filesystem
+        // renames and quietly miss every in-zip one.
+        let (result, target) = rename_managed_inner(self, from, to, force, volume_id, initiator).await;
+        if let Err(error) = &result {
+            log_rename_refusal(RenameStage::Rename, &attempted, &attempted_volume, error);
+        }
+        let fact = InstantMutationFact::of(InstantOp::Rename, initiator, target, &result);
+        self.host().events().instant_mutation_settled(fact);
+        result
     }
-    let fact = InstantMutationFact::of(InstantOp::Rename, initiator, target, &result);
-    host::installed().events().instant_mutation_settled(fact);
-    result
 }
 
 /// Which of the two points a rename can be refused at.
@@ -128,6 +145,7 @@ fn log_rename_refusal(stage: RenameStage, from: &Path, volume_id: &str, error: &
 /// The rename itself. Returns where it landed alongside its result so the wrapper
 /// above can label the event without re-deriving the route.
 async fn rename_managed_inner(
+    engine: &super::Operations,
     from: PathBuf,
     to: PathBuf,
     force: bool,
@@ -141,7 +159,8 @@ async fn rename_managed_inner(
     // so a rename inside a REMOTE zip (direct SMB / MTP) routes too. Every
     // `manager.get` below passes `from`: plain `get`, as this gate sent an in-zip
     // rename away.
-    let manager = host::installed().volumes();
+    let host = engine.host();
+    let manager = host.volumes();
     if manager.path_is_inside_archive(&volume_id, &from).await || manager.path_is_inside_archive(&volume_id, &to).await
     {
         return (
@@ -216,23 +235,29 @@ async fn rename_managed_inner(
     };
     // The op's own scope on the engine, which journals it: an instant op has no
     // state to carry one.
-    let scope = super::installed().op_scope();
+    let scope = engine.op_scope();
     super::journal::open_volume_op(&scope, &op_id, OpKind::Rename, initiator, &journal_volume_id, None, 1);
     let journal_snapshot = Some((from.clone(), to.clone(), local_meta, volume_is_dir));
 
-    let result = manager::manager()
+    let result = engine
+        .manager()
         .run_instant(descriptor, async move {
             // Register both halves of the rename with the downloads watcher's
             // ignore set BEFORE the syscall (no-ops outside ~/Downloads).
-            host::installed().own_writes().announce(&from);
-            host::installed().own_writes().announce(&to);
+            host.own_writes().announce(&from);
+            host.own_writes().announce(&to);
 
             if !is_root {
                 // Volume-aware rename (MTP, SMB, and other non-local volumes).
                 // The volume's `rename` calls `notify_mutation` internally, so
                 // the listing cache updates automatically.
-                let Some(volume) = host::installed().volumes().get(&volume_id) else {
-                    return Err(super::mutation_error::unregistered_volume_refusal(volume_id.clone(), &from).await);
+                let Some(volume) = host.volumes().get(&volume_id) else {
+                    return Err(super::mutation_error::unregistered_volume_refusal(
+                        host.volumes(),
+                        volume_id.clone(),
+                        &from,
+                    )
+                    .await);
                 };
                 // A taken name is reported by the NAME, matching the local branch and
                 // the live validation the user just saw; everything else rides as the
@@ -287,7 +312,7 @@ async fn rename_managed_inner(
                 // Notify the listing cache about the rename (the volume path does
                 // this itself via `notify_mutation`; the local path must do it
                 // explicitly).
-                notify_rename_in_listing(&volume_id, &from, &to).await;
+                notify_rename_in_listing(host, &volume_id, &from, &to).await;
                 Ok(())
             }
         })
@@ -502,13 +527,13 @@ fn rename_descriptor(from: &Path, to: &Path, volume_id: &str) -> OperationDescri
 }
 
 /// Notifies the listing cache about a rename via the volume's `notify_mutation`.
-async fn notify_rename_in_listing(volume_id: &str, from: &Path, to: &Path) {
+async fn notify_rename_in_listing(host: &host::EngineHost, volume_id: &str, from: &Path, to: &Path) {
     use cmdr_fs::volume::MutationEvent;
 
     // Plain `get`, not `resolve`: a rename INSIDE an archive is rejected upstream,
     // so this only ever runs for a normal file (incl. the `.zip` file itself),
     // which must notify through its own volume — never route to the ArchiveVolume.
-    let volume = match host::installed().volumes().get(volume_id) {
+    let volume = match host.volumes().get(volume_id) {
         Some(v) => v,
         None => return,
     };

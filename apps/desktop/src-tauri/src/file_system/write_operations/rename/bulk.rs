@@ -193,7 +193,13 @@ pub(crate) fn start_bulk_rename(
                 if uses_local_paths {
                     for (row, outcome) in rows_for_task.iter().zip(run.outcomes.iter()) {
                         if *outcome == BulkRenameOutcome::Done && row.source != row.destination {
-                            super::notify_rename_in_listing(&volume_id_for_task, &row.source, &row.destination).await;
+                            super::notify_rename_in_listing(
+                                ops.host(),
+                                &volume_id_for_task,
+                                &row.source,
+                                &row.destination,
+                            )
+                            .await;
                         }
                     }
                 }
