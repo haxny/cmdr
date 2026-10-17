@@ -1,7 +1,8 @@
 # Write operations details
 
-Pull-tier docs for `src-tauri/src/file_system/write_operations/`: architecture, flows, and decision rationale. Must-know
-invariants and gotchas live in `CLAUDE.md`.
+Pull-tier docs for the `cmdr-operations` crate: architecture, flows, and decision rationale. Read this before any
+non-trivial work here: editing, planning, reorganizing, or advising. Must-knows live in `CLAUDE.md`; the seams and the
+runtime in `src/host/DETAILS.md`; the app's answers to them in `apps/desktop/src-tauri/src/operations_host/DETAILS.md`.
 
 Frontend counterpart: `apps/desktop/src/lib/file-operations/CLAUDE.md` (umbrella) plus colocated child docs for
 `apps/desktop/src/lib/file-operations/transfer/CLAUDE.md`, `apps/desktop/src/lib/file-operations/delete/CLAUDE.md`,
@@ -9,15 +10,19 @@ Frontend counterpart: `apps/desktop/src/lib/file-operations/CLAUDE.md` (umbrella
 
 Subdirs:
 
-- `transfer/CLAUDE.md` — copy + move (local FS, cross-volume, MTP, SMB), conflict resolution, the shared transfer
+- `src/host/CLAUDE.md` — the seams the host answers, the runtime the engine spawns on, and the cycle rules for both.
+- `src/transfer/CLAUDE.md` — copy + move (local FS, cross-volume, MTP, SMB), conflict resolution, the shared transfer
   driver, platform-specific copy backends.
-- `delete/CLAUDE.md` — delete walker (local + volume-aware), trash, the oracle-aware delete fast path.
+- `src/delete/CLAUDE.md` — delete walker (local + volume-aware), trash, the oracle-aware delete fast path.
+- `src/archive_edit/CLAUDE.md` — zip edits and fresh compression; `src/transfer_tree/CLAUDE.md` — the live tree a
+  transfer shows.
 
 ## Purpose
 
-Implements the four destructive file operations as background tasks that stream Tauri events to the frontend. Every
+Implements the destructive file operations as background tasks that report to the host through event sinks. Every
 operation is cancellable, reports byte-level progress, and handles edge cases: symlink loops, same-inode overwrites,
-network mounts, cross-filesystem moves, and name/path length limits.
+network mounts, cross-filesystem moves, and name/path length limits. The crate names no `tauri` (`index-crate-isolation`
+enforces it): the engine reports facts, and the host decides what a person sees.
 
 Ask Cmdr bulk renames use the same managed-operation lifecycle. `LocalPosixVolume` makes every non-forced local rename
 atomic-no-overwrite, including attached disks and cloud folders registered under non-root volume IDs: macOS uses
@@ -29,30 +34,109 @@ Pre-flight scans reuse cached listings when the source volume reports `WatchCove
 `apps/desktop/src-tauri/src/file_system/volume/CLAUDE.md` and
 `crates/cmdr-listing/src/authoritative.rs::try_get_authoritative_listing`.
 
+## Must-knows, in full
+
+`CLAUDE.md` keeps each of these as one line; this is the full text, with the why each line compresses.
+
+- **`spawn_managed` for copy/move/delete/trash, `run_instant` for rename/mkdir/mkfile**; blocking work runs in
+  `spawn_blocking`, so a starter returns an id before I/O.
+- **An instant op emits no `WriteCompleteEvent`** (analytics WRAPS its driver): ❌ never emit inside one, or the
+  in-archive early return drops in-zip ops. It refuses with a typed `MutationError`, ❌ never a sentence.
+- **A spawned op reserves every lane it touches or waits Queued**; the next admits on `on_settled`, ❌ never `Drop`.
+- **The intent's writers are `IntentCell`'s** (`operation_intent.rs`). Cancel keeps copied files; Rollback removes what
+  it still recognizes, VERIFYING before each destructive act (❌ never a batch or a fork; only the `Drop` net is
+  unconditional). Pause is orthogonal, cancel wins. A wind-down reversal sees its op only as a `WindDown`.
+- **A loop parks where it checks cancel**, via `state.stop_or_park_sync()` / `_async()`, ❌ never hand-rolled; a SCAN's
+  own is `ScanPause`, owing `note_parked`. **Parking on a PERSON owes both edges**, the `human_wait.rs` clock AND
+  `announce_human_wait(sink)`, or the ETA lies. Clicks stop via `backend_cancel`; `backend_abort` /
+  `cancel_all_write_operations` are the quit deadline's.
+- **`write-conflict` takes an `ArmedConflict`** (`conflict_slot.rs`), so the slot is armed first; ❌ the dispatch mutex
+  never spans a write. An answer NAMES its clash (`ConflictId`): ❌ never fuse `AlreadyResolved`, `StaleAnswer`, or
+  `NoPendingConflict`, nor leave a settled prompt up.
+- **Crossing types takes a person's consent, per SHAPE** (`conflict::resolution_for_clash`, ALL THREE engines): only a
+  plain Overwrite answered for that `ClashKind` replaces, ITS "* all" carry included; the config policy, same-kind
+  carries, and `OverwriteSmaller`/`Older` `Skip`. ❌ Never reduce a conditional before it. What ARRIVES is the caller's
+  word (`IncomingItem`).
+- **Emit through `OperationEventSink`, ❌ never `AppHandle`** (spawns: `src/host/`); `write-settled` fires once, AFTER
+  the terminal event. A cross-FS move speaks TWICE per source on `write-source-item-done`, so the LAST wins.
+- **EVERY local write lands via `overwrite::stage_and_land_file`** (temp+rename, rename-aside when replacing); announce
+  each destination BEFORE the syscall: the writers take it as `host::Announced` (a rename's SOURCE too, by hand).
+  Leftovers carry a KIND (❌ only a `temp` goes on sight); ❌ only the installed engine's `claim_ledger` opens the
+  ledger. § "What the sweep does with each kind".
+- **Every mutation journals through its `OpScope`**; a VOLUME op passes its REAL volume id. Bulk rename journals each
+  hop as it lands: ❌ never batch to the end, nor put a rotation temp in `in_flight_temps` (its sweep DELETES it).
+- **A transfer carries both volumes as typed sides** (`transfer_sides.rs`), captured at start: a vanished drive can't be
+  named later. A drive that LEFT is the mount table's answer, ❌ never an errno.
+- **Free space: `free_space.rs`**, `statvfs` first, slow NSURL only on a shortfall; a shortfall is the person's call
+  (`SpaceShortfall`). Copy reserves `total_bytes`, ❌ never the dedup'd `dedup_bytes` (delete's).
+- **❌ The `types` vocabulary floor `use`s no sibling**, `types/events.rs` included. It holds `LifecycleStatus`, the ONE
+  lifecycle answer: ❌ never re-derive it from a presence test, no new variant.
+- **Every preview runs under a `ScanWatchdog`**, bounded by INACTIVITY: feed the progress callback, and whoever settles
+  it CLAIMS the outcome.
+- **A FAILED op is retained out-of-band**, the one exception to removal; `retain_failure` emits only after the record is
+  GONE. **A test owns its engine** (`testing::TestOperations`), ❌ never a `static`.
+
+## Driving the engine without Cmdr
+
+A host hands over the two seams nothing works without (an engine with no volumes writes nothing; one with no events
+leaves every dialog on "Copying…") and takes the do-nothing answer for the rest:
+
+```rust
+let engine = Operations::builder(Arc::new(MyVolumes), Arc::new(MyEvents))
+    .volume_host(my_volume_host)        // optional: its runtime runs every op, else cmdr-fs's fallback runtime
+    .operation_log(operation_log)       // optional: else a detached log, which journals nothing
+    .own_writes(Arc::new(MyOwnWrites))  // optional, like index / pacing / name_order / operation_sinks
+    .build();
+// Once, on the engine that is the host's only one, and only then: replays and sweeps
+// the last run's leftovers. `None` runs unpersisted and raises `LedgerUnpersisted`.
+let _sweep = engine.claim_ledger(Some(data_dir))?;
+let started = engine
+    .start_volume_copy(
+        Arc::new(MySink),               // this operation's `OperationEventSink`
+        "root".into(),
+        vec!["/tmp/a.txt".into()],
+        "root".into(),
+        "/tmp/out".into(),
+        VolumeCopyConfig::default(),
+        Initiator::User,                // `cmdr_operation_log::types::Initiator`
+        None,                           // no source binding
+    )
+    .await?;
+// `MySink` hears progress, then exactly one terminal event, then `emit_settled`.
+engine.cancel_write_operation(&started.operation_id, false);
+```
+
+`MyVolumes` answers `OperationVolumes` (and its supertrait, the rollback planner's `VolumeLookup`): the volume behind an
+id, path routing, and arrivals. `MyEvents` answers `EngineEvents`: the queue snapshot, the busy-volume set, the transfer
+pair, error reports. Everything the builder doesn't name defaults to a no-op answer (`src/host/DETAILS.md` § "Optional
+seams default to doing nothing"). The crate's own tests build a `testing::TestOperations` instead (§ "Test isolation: an
+engine of the test's own"), and the Criterion bench (`benches/transfer_benchmarks.rs`) a detached engine through
+`testing::bench`.
+
 ## Files (top level)
 
 Where a symbol lives and who calls it: `codegraph_search` / `codegraph_explore`. The spine: `CLAUDE.md` § Module map.
 The full top-level inventory is here:
 
-- `mod.rs` (the `Operations` handle and its `Inner`, and the public list: the `pub use` lines, everything outside the
-  engine may name; every submodule but `host` is private), `testing/` (`cfg(test)`: `TestOperations`, an engine a test
-  owns, in `engine.rs`, and what test cells outside the engine reach beyond that list, sized for the crate's `testing`
-  feature), `local_start.rs` (the local copy, move, delete, and trash starters and the `start_write_operation` lifecycle
-  they share), `handle.rs` (building an `Operations` and reaching its parts), `scope.rs` (`OpScope`, what one operation
-  reaches its engine through), `host/` (what the engine needs from the app: the runtime, the volumes, the engine-wide
-  events, and the optional seams, § "The engine's host"), `manager.rs` (registry + lane admission; what the queue window
-  asks in `manager/queue_api.rs`, its request answers in `manager/wire.rs`, reordering the line in `manager/reorder.rs`,
-  and a retained failure's way to start again in `manager/retry.rs`, § "Retained failures"), `state.rs`
-  (`WriteOperationState`, the settle guard, plus `state/registry.rs`: `WriteOperationRegistry` and its walks, and
-  `state/controls.rs`: the by-id cancel / abort / pause / resume / conflict-answer entry points, re-exported through
-  `state`, and `state/activity.rs`: the one wait classifier, § "Naming a wait"), `outage_slot.rs` (which volume the
-  operation waits on to come back, and how patiently: `transfer/DETAILS.md` § "Waiting out a volume that went away"),
-  `status_cache.rs` (the status cache, the busy-volumes set it derives, the external drag-out seam, and
-  `get_operation_status`), `summary.rs` (what the queue row says an operation acts on, § "What a row says it acts on"),
-  `operation_intent.rs` (`OperationIntent`, `PauseGate`), `human_wait.rs` (how long a person, or a volume that left, has
-  kept the operation waiting), `metadata_losses.rs` (per-class counts of the metadata a destination couldn't keep, for
-  the completion's note: `transfer/volume/DETAILS.md` § "Copies keep the source's metadata"), `archive_edit/` (the
-  zip-edit driver).
+- `lib.rs` (the `Operations` handle and its `Inner`, and the public list: the `pub use` lines, everything outside the
+  crate may name; every submodule but `host` is private), `testing/` (`any(test, feature = "testing")`:
+  `TestOperations`, an engine a test owns, in `engine.rs`; the Criterion bench's door in `bench.rs`; and what test cells
+  outside the crate reach beyond the public list), `local_start.rs` (the local copy, move, delete, and trash starters
+  and the `start_write_operation` lifecycle they share), `handle.rs` (building an `Operations` and reaching its parts),
+  `scope.rs` (`OpScope`, what one operation reaches its engine through), `host/` (what the engine needs from the app:
+  the runtime, the volumes, the engine-wide events, and the optional seams, § "The engine's host"), `manager.rs`
+  (registry + lane admission; what the queue window asks in `manager/queue_api.rs`, its request answers in
+  `manager/wire.rs`, reordering the line in `manager/reorder.rs`, and a retained failure's way to start again in
+  `manager/retry.rs`, § "Retained failures"), `state.rs` (`WriteOperationState`, the settle guard, plus
+  `state/registry.rs`: `WriteOperationRegistry` and its walks, and `state/controls.rs`: the by-id cancel / abort / pause
+  / resume / conflict-answer entry points, re-exported through `state`, and `state/activity.rs`: the one wait
+  classifier, § "Naming a wait"), `outage_slot.rs` (which volume the operation waits on to come back, and how patiently:
+  `src/transfer/DETAILS.md` § "Waiting out a volume that went away"), `status_cache.rs` (the status cache, the
+  busy-volumes set it derives, the external drag-out seam, and `get_operation_status`), `summary.rs` (what the queue row
+  says an operation acts on, § "What a row says it acts on"), `operation_intent.rs` (`OperationIntent`, `PauseGate`),
+  `human_wait.rs` (how long a person, or a volume that left, has kept the operation waiting), `metadata_losses.rs`
+  (per-class counts of the metadata a destination couldn't keep, for the completion's note:
+  `src/transfer/volume/DETAILS.md` § "Copies keep the source's metadata"), `archive_edit/` (the zip-edit driver).
 - The in-flight ledgers and what reverses them: `ledger.rs` (`CopyTransaction` and `WrittenFile`, the vocabulary of what
   an operation currently has at the destination, plus the `Drop` panic net) and `reversal.rs` (the policy over it: the
   recheck before each destructive act, and `ReversalTally`), plus `unblocked_removal.rs` (the one removal every reversal
@@ -65,13 +149,13 @@ The full top-level inventory is here:
   `in_flight_claim.rs` (the engine's one claim: the only code that opens, replays, and truncates a ledger file),
   `in_flight_log_writer.rs` (the thread that writes the log, so no record is file I/O on an async worker), and
   `in_flight_sweep.rs` (what a launch and a returning drive DO with one). § "What the sweep does with each kind" and §
-  "Who claims the ledger" below hold the rules; `transfer/DETAILS.md` § "Which path space a recorded partial lives in"
-  holds the path-space decisions, and § "Testing the in-flight temp ledger" below the rules it imposes on tests.
+  "Who claims the ledger" below hold the rules; `src/transfer/DETAILS.md` § "Which path space a recorded partial lives
+  in" holds the path-space decisions, and § "Testing the in-flight temp ledger" below the rules it imposes on tests.
 - **`tests.rs` is the SHARED-vocabulary suite only**: the intent machine, the config the frontend sends, the `io::Error`
-  conversion, and `no_global_sync_or_spawn_async_sync_in_write_operations` — a whole-tree scanner that excludes itself
-  by the filename `tests.rs`, so ❗ moving it to another file silently makes it fail on its own prose. Anything with a
-  subject of its own lives next to that subject (`overwrite_tests.rs`, `ledger_tests.rs`,
-  `delete/delete_cancel_tests.rs`).
+  conversion, and `no_spawn_async_sync_in_the_engine` — a fail-closed whole-tree scanner (the root must exist and at
+  least 300 files must be scanned) that excludes itself by the filename `tests.rs`, so ❗ moving it to another file
+  silently makes it fail on its own prose. The `sync(2)` half is clippy's (`clippy.toml`). Anything with a subject of
+  its own lives next to that subject (`overwrite_tests.rs`, `ledger_tests.rs`, `delete/delete_cancel_tests.rs`).
 - **The scan is four files, and only one of them knows what a write operation is.** `scan_walker.rs` holds the shared
   local-FS recursion (`WalkContext`, `walk_dir_recursive`, `walk_sources_with_per_path`, and the hardlink dedup): one
   descent, parameterized by callbacks, so the copy scan, the delete scan, and the dry run share a symlink stance, cancel
@@ -80,14 +164,14 @@ The full top-level inventory is here:
   flat result (`SourceItemTracker`, `FileVerdict`, `top_level_source_path`), which is what makes
   `write-source-item-done` fire once per source rather than once per file. `scan_dry_run.rs` is the preview that writes
   nothing. They're flat siblings rather than a `scan/` directory, matching `scan_preview.rs` / `scan_cache.rs` /
-  `scan_bridge.rs` / `scan_watchdog.rs` — and because `pub(super)` here means "visible to `write_operations`", which a
+  `scan_bridge.rs` / `scan_watchdog.rs` — and because `pub(super)` here means "visible to `cmdr-operations`", which a
   directory would silently narrow.
 
   The one thing the walk carries for a caller that isn't a write operation: `WalkContext::online_only`, an
   `OnlineOnlyWatch` the delete confirmation's preview arms when its sources reach into a cloud drive. It answers whether
   trashing a selected folder would pull evicted files back down from the provider, and publishes `online_only_found` on
   the scan events. Armed nowhere else, so every ordinary walk is unchanged; the rule and its rationale live in
-  `delete/DETAILS.md` § "A trash of online-only cloud content becomes a delete".
+  `src/delete/DETAILS.md` § "A trash of online-only cloud content becomes a delete".
 
   Every walk also leaves out AppleDouble sidecars (`WalkContext::sidecars`, a `cmdr_fs::apple_double::SidecarRule`): on
   a volume with no native xattrs (FAT, exFAT, an SMB share without streams) the kernel keeps `name`'s xattrs in `._name`
@@ -97,8 +181,8 @@ The full top-level inventory is here:
   preview, and the copy agree. `scan_dry_run.rs` applies the same rule, and the cross-FS move's sweep doesn't count a
   kept item's sidecar as an arrival. Deleting the owner removes its sidecar in the kernel, so the sweep never touches
   one. The volume engine does the same for a local source through `Volume::list_directory_as_source`
-  (`transfer/volume/DETAILS.md` § "A source is listed as a source", which also notes the same-FS merge-move edge). The
-  rule, the kernel sources it mirrors, and why APFS and Linux never skip: `crates/cmdr-fs/src/apple_double.rs`.
+  (`src/transfer/volume/DETAILS.md` § "A source is listed as a source", which also notes the same-FS merge-move edge).
+  The rule, the kernel sources it mirrors, and why APFS and Linux never skip: `crates/cmdr-fs/src/apple_double.rs`.
 
 - Scan and preview: `scan.rs`, `scan_preview.rs` (the lifecycle API, with its two workers in `scan_preview/local.rs` and
   `scan_preview/volume.rs`), `scan_cache.rs` (the carriers a walk produces; the engine's preview store is its child
@@ -145,11 +229,11 @@ and the compressed-size estimate in § "Key patterns and gotchas"; durability an
 decisions"; the estimator in § "ETA + throughput"; `WriteSettledGuard` in § "Settle contract"; journaling in
 `crates/cmdr-operation-log/DETAILS.md` § Capture. Only the layout facts that none of those carry live here:
 
-- **Two re-export facades are deliberate, not collapsible** (§ "Key decisions" has the why): `mod.rs` re-exports
-  `transfer::*` + `delete::*` so callers keep their `crate::file_system::write_operations::<symbol>` paths, and
-  `state.rs` re-exports the `operation_intent` + `scan_cache` + `status_cache` names. `types.rs` has none: it is the
+- **Two re-export facades are deliberate, not collapsible** (§ "Key decisions" has the why): `lib.rs` names the transfer
+  and delete entry points its siblings reach at the crate root (private `use` lines, so nothing outside the crate can),
+  and `state.rs` re-exports the `operation_intent` + `scan_cache` + `status_cache` names. `types.rs` has none: it is the
   vocabulary floor (§ "Why `types` imports nothing"), so a sink, a classifier, or a lifecycle name is imported from the
-  module that DEFINES it. `OperationEventSink` and `ScanPreviewEventSink` are re-exported at the `write_operations`
+  module that DEFINES it. `OperationEventSink` and `ScanPreviewEventSink` are re-exported at the `cmdr-operations`
   module root for the IPC edge, which builds the app's sinks from `operations_host`.
 - **Event structs and their builders live apart on purpose**: the struct definitions in `types/events.rs`, the
   `WriteProgressEvent` (`new` / `with_scan_meta`) and `WriteErrorEvent` (`new`) impls in `event_sinks.rs` beside the
@@ -160,8 +244,8 @@ decisions"; the estimator in § "ETA + throughput"; `WriteSettledGuard` in § "S
   AND so does `OperationStatus`, a snapshot nobody emits.
 - **`types/errors.rs` splits the same way**: `WriteOperationError` and the types that exist only as one of its variants'
   payloads (`ReadOnlySide`, `TransferRole`, `DisconnectedSide`, `TrashRefusalKind`, `RecoveredOriginal`,
-  `OversizedFile`). ❗ `RecoveredOriginal::new` is `pub(in …write_operations)` rather than `pub(super)`: `super` is
-  `types` from down here, and its callers are the transfer engines a level up.
+  `OversizedFile`). `RecoveredOriginal` itself sits in `types.rs`, and its `new` is `pub(crate)`: its callers are the
+  transfer engines.
 - **`error_classification.rs` classifies from `errno` / `ErrorKind` only, never the message**. The native copy calls on
   both platforms (`macos_copy`, `linux_copy`) share `classify_copy_io_error`, which also picks the path: a refused write
   names the destination, anything else the source. One table, so the platforms can't drift apart again.
@@ -228,8 +312,8 @@ decisions"; the estimator in § "ETA + throughput"; `WriteSettledGuard` in § "S
   probes (`path_exists_or_is_symlink`, so a dangling symlink counts as taken) and creates nothing;
   `transfer/volume/naming.rs::find_unique_volume_name` reserves only when the destination volume is local-FS-backed AND
   the item is a FILE (`local_path().filter(|_| !is_directory)`), and probes otherwise — a directory takes the probe on
-  every backend, for a reason `transfer/volume/DETAILS.md` states as load-bearing (a placeholder FILE where the copy is
-  about to create a directory makes the merge walker merge into it, and leaves rollback nothing to remove). That
+  every backend, for a reason `src/transfer/volume/DETAILS.md` states as load-bearing (a placeholder FILE where the copy
+  is about to create a directory makes the merge walker merge into it, and leaves rollback nothing to remove). That
   difference is exactly why there's no shared search loop to layer them on as "search, then reserve". `attempts()` (not
   the counter's absolute value) is what a search bounds its own effort by, since a name ending in a high ` (N)` starts
   the sequence there.
@@ -244,7 +328,7 @@ decisions"; the estimator in § "ETA + throughput"; `WriteSettledGuard` in § "S
   `state::WriteOperationState`, so the ledger's lifetime is the operation's and both engines read the same one;
   interior-mutable because the volume engine's concurrent driver resolves several top-level sources at once. It also
   holds which of those picks left a zero-byte `O_EXCL` placeholder on disk and no write has filled yet, for the volume
-  engine's post-loop to take back (`transfer/DETAILS.md`, the volume-side Rename reservation).
+  engine's post-loop to take back (`src/transfer/DETAILS.md`, the volume-side Rename reservation).
 - **`create.rs` co-locates the instant listing update** (`should_emit_synthetic_diff` / `patch_listings_after_create`,
   both `pub(super)`) that lands a brand-new entry in the pane on local-FS-backed volumes, through the local backend's
   mutation patch (`MutationEvent::Created`, so the composer's index apply and badge invalidation run too).
@@ -283,11 +367,11 @@ decisions"; the estimator in § "ETA + throughput"; `WriteSettledGuard` in § "S
 `types.rs` is the vocabulary floor: every other module here speaks its enums, event structs, error types, and
 configuration, and it speaks nobody else's. Nothing in it may `use` a sibling (the `CLAUDE.md` rule), and that covers
 `types/events.rs` and `types/errors.rs` too: a child of the floor is still the floor, so it imports from `super` and
-from outside `write_operations`, never sideways.
+from outside `cmdr-operations`, never sideways.
 
-**Why the rule is absolute.** The dependency graph under `write_operations` is a fan-in: 30-odd modules point at
-`types`, and `types` is the sink. A single upward import from the sink closes a circle through everything that fans in
-behind it — not a local mistake, a subsystem-wide one. Three such lines (`event_sinks::OperationEventSink`,
+**Why the rule is absolute.** The dependency graph under `cmdr-operations` is a fan-in: 30-odd modules point at `types`,
+and `types` is the sink. A single upward import from the sink closes a circle through everything that fans in behind it
+— not a local mistake, a subsystem-wide one. Three such lines (`event_sinks::OperationEventSink`,
 `error_classification::IoResultExt`, and `manager::LifecycleStatus`) once welded eleven modules — `analytics`,
 `conflict_slot`, `error_classification`, `eta`, `event_sinks`, `manager`, `state`, `status_cache`, `types`,
 `unique_name`, `validation` — into one strongly-connected component where nothing could be read, tested, or moved alone,
@@ -302,14 +386,14 @@ either is a `use` of a sibling, so the floor rule already forbids it). `Lifecycl
 crosses the wire to the frontend as a serde/specta enum. `manager` imports it like everyone else.
 
 **How it stays cut.** `module-cycles` re-measures this home on every slow run and in CI, and its allowlist for
-`cmdr::file_system::write_operations` holds no tangle at all, so any new circle here fails it. A new upward import from
-`types` brings the whole eleven back. `scripts/check/checks/DETAILS.md` § "Rust module cycles" documents how to read its
-output, including the ways `cargo-modules` misattributes an edge.
+`cmdr-operations` holds no tangle at all, so any new circle here fails it. A new upward import from `types` brings the
+whole eleven back. `scripts/check/checks/DETAILS.md` § "Rust module cycles" documents how to read its output, including
+the ways `cargo-modules` misattributes an edge.
 
 **Two smaller cuts keep it at zero.** Both point a lower module at what it really needs, never at a module above it. The
 in-flight sweep calls `volume::rename_local_exclusive`, the primitive behind `overwrite::rename_no_replace` (§ "What the
 sweep does with each kind"). Archive edits share one `EditError` leaf, where twin enums bridged by `From` impls once sat
-(`archive_edit/DETAILS.md` § "Local vs remote: one closure, one dispatcher").
+(`src/archive_edit/DETAILS.md` § "Local vs remote: one closure, one dispatcher").
 
 ## Architecture / data flow
 
@@ -387,7 +471,7 @@ bars render. A skipped file is done and both bars have to reach their totals, bu
 to the EWMA reads as an instantaneous burst — and a merge declining thousands of children back to back would make that
 burst the whole reported speed. Remaining work is identical either way (`done` and `total` lose the same term), so this
 changes the rate and never the ETA's numerator. Every skip site calls `state.note_skipped(files, bytes)`; the list and
-the throttling that goes with it: `transfer/DETAILS.md` § "Skipped work moves the bars, and stays out of the rate".
+the throttling that goes with it: `src/transfer/DETAILS.md` § "Skipped work moves the bars, and stays out of the rate".
 
 **The bottleneck axis:** `EtaStats::bottleneck` (and `WriteProgressEvent::bottleneck`) names the axis whose ETA decides,
 with hysteresis: the other axis takes over only after its ETA has led by more than 10% (`AXIS_LEAD`) for 3 s of working
@@ -400,10 +484,11 @@ goes inside the hold would redraw them all. Pinned in `eta_tests.rs` (`the_file_
 copying both restart from 0) would feed a negative delta into the EWMA. Rollback is treated as a forward phase toward
 target `(0, 0)`: the estimator subtracts the new counters from the previous ones and ETA = current value / decay rate.
 
-**Wiring:** every `write-progress` emit site calls `state.emit_progress_via_sink(events, event)`. Production wraps a
-Tauri AppHandle in `TauriEventSink`; tests use `CollectorEventSink`. `emit_progress_via_sink` calls `enrich_progress`
-internally, so no caller has to remember. The `bytes_per_second: None, files_per_second: None, eta_seconds: None`
-placeholders in the struct literals get overwritten before the event reaches the FE.
+**Wiring:** every `write-progress` emit site calls `state.emit_progress_via_sink(events, event)`. Production's sink is
+the app's `TauriEventSink` (`apps/desktop/src-tauri/src/operations_host/sinks.rs`); tests use `CollectorEventSink`.
+`emit_progress_via_sink` calls `enrich_progress` internally, so no caller has to remember. The
+`bytes_per_second: None, files_per_second: None, eta_seconds: None` placeholders in the struct literals get overwritten
+before the event reaches the FE.
 
 **Frontend display:** every surface reads the three numbers off the operation's SESSION, which owns the one ETA smoother
 that operation has in that window (a 25% gap-closure per tick, re-warmed on a phase change) and decides when there is an
@@ -454,10 +539,10 @@ same park agent-answerable without the operation changing at all, and a name wri
 wrong the day that landed. The rule lives on the enum itself (`types.rs`), where somebody adding a variant will read it.
 
 **`Reconnecting` names the one device wait that has a reason of its own**: a volume the transfer runs on went away, and
-the operation is waiting for it to come back (`transfer/DETAILS.md` § "Waiting out a volume that went away"). It's the
-only variant that carries a name, `TransferActivity::reconnecting_volume`, set exactly when the reason is `Reconnecting`
-(`state/activity.rs::reconnecting_volume`), because the queue window knows an operation's paths, not its volumes. It
-ranks under a pause and a prompt (both deliberate, both named elsewhere) and above every device wait.
+the operation is waiting for it to come back (`src/transfer/DETAILS.md` § "Waiting out a volume that went away"). It's
+the only variant that carries a name, `TransferActivity::reconnecting_volume`, set exactly when the reason is
+`Reconnecting` (`state/activity.rs::reconnecting_volume`), because the queue window knows an operation's paths, not its
+volumes. It ranks under a pause and a prompt (both deliberate, both named elsewhere) and above every device wait.
 
 **One classifier, two readers.** `WriteOperationState::activity(operation_id)` is the only place a wait is decided.
 `enrich_progress` puts it on every `write-progress` event; `status_cache::get_operation_status` puts it on every
@@ -497,8 +582,8 @@ single atomic-backed enum, held in an `IntentCell`: `Running → RollingBack` (u
   half-written file is corrupted data, not useful to keep). Reports `rollback.outcome: notRolledBack`.
 - **Rollback (`RollingBack`)**: Stop copying, then reverse what this operation wrote, newest first, with progress events
   (`phase: RollingBack`). Each entry is rechecked before it goes, and one something else changed since is left alone and
-  reported (`transfer/DETAILS.md` § "What a reversal does with that identity"). The progress bars drain, and reach zero
-  whatever the reversal managed. The user can cancel the rollback (→ `Stopped`), which keeps whatever hasn't been
+  reported (`src/transfer/DETAILS.md` § "What a reversal does with that identity"). The progress bars drain, and reach
+  zero whatever the reversal managed. The user can cancel the rollback (→ `Stopped`), which keeps whatever hasn't been
   reversed yet. Reports `rolledBack` or `partiallyRolledBack`.
 - Both are triggered from the same `cancel_write_operation` IPC call, distinguished by the `rollback` parameter.
 
@@ -516,8 +601,8 @@ only `ArmedConflict`, the one thing `OperationEventSink::emit_conflict` accepts.
 `ConflictId`, which is why every emit site arms before it builds the event: the id rides out on it. Frontend calls
 `resolve_write_conflict(operation_id, conflict_id, resolution, apply_to_all)`, which answers through the slot.
 `cancel_write_operation` calls `conflict_slot.abandon()`, dropping the sender so the receiver returns `Err` (interpreted
-as cancellation, and carried to the loop's CANCELLED ending, never a failure: `transfer/transfer_driver/DETAILS.md` § "A
-`Cancelled` from any closure is a cancel, ❌ never a failure"). No polling, no safety timeout, immediate unblock on
+as cancellation, and carried to the loop's CANCELLED ending, never a failure: `src/transfer/transfer_driver/DETAILS.md`
+§ "A `Cancelled` from any closure is a cancel, ❌ never a failure"). No polling, no safety timeout, immediate unblock on
 cancel. Pinned by `conflict_stop_tests.rs` (local) and the `ConflictResponderSink` suites (volume).
 
 **Answering a conflict is arbitrated, the answer NAMES the conflict it is for, and the arbitration is REPORTED.**
@@ -530,7 +615,7 @@ operation.
 **The armed state holds the QUESTION, and `arm` builds it.** `arm(tx, |id| event)` mints the id, calls the builder with
 it, stores the event, and hands it back for the caller to emit, so the id on the wire, the id the slot is armed with,
 and the id `answer` requires back are one value by construction. That question is then readable through `pending()` /
-`write_operations::pending_write_conflict(op_id)` for anyone who arrives after the broadcast: `write-conflict` only ever
+`cmdr_operations::pending_write_conflict(op_id)` for anyone who arrives after the broadcast: `write-conflict` only ever
 reaches whoever was listening when it went out, so `cmdr://state`'s `pendingConflict:` block (the surface an AGENT
 answers from) has no other way to know what is being asked. ❌ Don't add a second way to arm that skips the question: an
 operation parked on something nobody can read back is answerable only by a surface that happened to be listening.
@@ -641,11 +726,11 @@ in `transfer/copy/copy_tests.rs` and `transfer/move_op/move_op_tests.rs`.
 `CopyScanResult` per top-level source: its type, file/dir counts, and byte totals. That map is the ONLY thing that tells
 a cross-volume copy whether each selected item is a file or a folder without paying a stat probe per source, and it's
 what a volume delete's fast path reads for top-level file sizes. Downstream code treats a source that isn't in the map
-as **unknown** and probes (`transfer/volume/DETAILS.md` § "A missing source hint means unknown"); ❌ don't add a preview
-path that completes without filling it — an empty map costs one round trip per source on SMB/MTP, and any consumer that
-guesses instead of probing is a data-safety bug waiting to happen. Per-source accounting is a before/after snapshot of
-the shared walk counters, so hardlink dedup still spans all sources (a later source's `dedup_bytes` share can read low;
-informational only). Pinned by `scan.rs::tests::walk_reports_type_and_totals_per_top_level_source`.
+as **unknown** and probes (`src/transfer/volume/DETAILS.md` § "A missing source hint means unknown"); ❌ don't add a
+preview path that completes without filling it — an empty map costs one round trip per source on SMB/MTP, and any
+consumer that guesses instead of probing is a data-safety bug waiting to happen. Per-source accounting is a before/after
+snapshot of the shared walk counters, so hardlink dedup still spans all sources (a later source's `dedup_bytes` share
+can read low; informational only). Pinned by `scan.rs::tests::walk_reports_type_and_totals_per_top_level_source`.
 
 **Decision**: `scan_sources_internal` does NOT collect `per_path`, and `ScanResult` / `CachedScanResult` stay two
 structs. **Why**: `scan_sources_internal`'s result goes straight back to its caller and never enters the preview cache,
@@ -704,12 +789,12 @@ source file lands at the original path). A folder→file overwrite has two shape
 new content is complete: `safe_overwrite_dir` where the closure finishes the job (the symlink branch, the move engines),
 and `displace_with_directory` where it doesn't — the copy's parent-creation site, whose subtree lands leaf by leaf,
 hands the aside to the `CopyTransaction` and lets commit, a reversal, or a failure answer for it (a failure keeps it as
-a ` (recovered)` sibling, since the half-filled folder keeps the name). `transfer/DETAILS.md` § "Cross-type overwrites"
-holds the why.
+a ` (recovered)` sibling, since the half-filled folder keeps the name). `src/transfer/DETAILS.md` § "Cross-type
+overwrites" holds the why.
 
 The four copy mechanisms (`copy_strategy::LocalCopyStrategy`) each hand `stage_and_land_file` a closure that puts bytes
 at a path, so the landing is written once rather than once per branch. ❌ Don't add a mechanism that writes straight to
-`dest`. Details and the no-clobber rule: `transfer/DETAILS.md` § "Local copies stage".
+`dest`. Details and the no-clobber rule: `src/transfer/DETAILS.md` § "Local copies stage".
 
 **Conditional conflict policies (`OverwriteSmaller` / `OverwriteOlder`)** reduce per-file. The user picks "Overwrite all
 smaller" / "Overwrite all older" either upfront (TransferDialog radios) or via the per-file conflict dialog's
@@ -778,9 +863,9 @@ progress dialog and offer cancel, even if a network mount is stalled.
 
 **A volume-aware op never turns its own `Cancelled` into a `write-error`.** The inner handler already emitted
 `write-cancelled` on that path, so the outer arm passes `WriteOperationError::Cancelled` through silently
-(`transfer/volume/copy.rs`, `mod.rs`'s safety net, and the archive-edit driver all order it this way). Re-emitting would
-show the user a failure for something they asked for, and the retained-failure list would have to filter it back out (§
-"Retained failures" excludes `Cancelled` by typed variant for exactly this reason).
+(`transfer/volume/copy.rs`, `local_start.rs`'s safety net, and the archive-edit driver all order it this way).
+Re-emitting would show the user a failure for something they asked for, and the retained-failure list would have to
+filter it back out (§ "Retained failures" excludes `Cancelled` by typed variant for exactly this reason).
 
 **`cancel_all_write_operations` is the quit teardown's first move, and its ONLY caller is the quit gate.** ❌ A window
 going away is not a reason to stop work: an operation outlives the view watching it, so nothing in the frontend may
@@ -791,9 +876,9 @@ operations to answer, and only then escalates. `crate::quit::DETAILS.md` § "The
 on top of a cooperative cancel, which makes the cross-volume streaming path stop WAITING for a backend rather than
 asking it to stop — buying a bounded wind-down at the cost of the backend's own partial cleanup. That is a trade only a
 deadline holder may make, so the caller is the quit gate and nothing else; a teardown that can still afford to wait
-stays on `cancel_all_write_operations`. Mechanism, cost, and the invariant it must not break: `transfer/DETAILS.md` §
-"Two tiers of cancel". The per-operation `abort_write_operation` is `#[cfg(test)]`: a deadline always aborts everything,
-so production has no use for the narrower form.
+stays on `cancel_all_write_operations`. Mechanism, cost, and the invariant it must not break: `src/transfer/DETAILS.md`
+§ "Two tiers of cancel". The per-operation `abort_write_operation` is `#[cfg(test)]`: a deadline always aborts
+everything, so production has no use for the narrower form.
 
 **A local blocking read or write cannot be given a timeout, which is why there is no tier 2 for the local path.** The
 chunked engine checks the cancel before each 1 MiB read (`transfer/chunked_copy.rs`), which is near-instant on a
@@ -875,7 +960,7 @@ S3 folder, or an object past the 64 MiB part floor) is never handed to `rename`:
 new NAME (`target_names.rs`) through `routing::start_rename_by_move`. **Why**: each caller assumed one cheap call (F2
 waits 5 s on an instant op; a bulk rename hops name by name), while on an object store a folder rename is one copy and
 one delete per object, which needs a scan, byte progress, pause, cancel, conflicts, and journaling. The engine side:
-`transfer/volume/DETAILS.md` § "A same-volume move whose renames copy".
+`src/transfer/volume/DETAILS.md` § "A same-volume move whose renames copy".
 
 - **F2** (`rename_managed`): an entry that copies starts the background move and answers `Ok` once it has started, the
   way an in-zip rename answers once its edit driver is running; the sink is the global one the archive route uses. The
@@ -959,7 +1044,7 @@ identical-looking twin beside the user's entry.
   (`apps/desktop/src-tauri/src/commands/file_system/path_checks.rs::destination_exists`) is the look-alike-aware twin of
   `path_exists`, which stays byte-exact for the panes (a remembered path and the eviction poll then LIST the path, and a
   "yes" for a look-alike would send them to a miss).
-- The transfers apply the same rule through `transfer/volume/landing.rs`: `transfer/volume/DETAILS.md` § "Look-alike
+- The transfers apply the same rule through `transfer/volume/landing.rs`: `src/transfer/volume/DETAILS.md` § "Look-alike
   names and new-name spelling". Extract lands through the same merge levels. Instant-op cells:
   `look_alike_instant_tests.rs`; Docker: `smb_look_alike_test.rs`, `sftp_look_alike_test.rs`, and
   `webdav_look_alike_test.rs`.
@@ -1075,134 +1160,84 @@ there. That the app's answer reaches the downloads hook is pinned beside it, in 
 
 ## The engine's host
 
-`host/` is what the engine needs from the app around it, as named seams instead of stashed `AppHandle`s and the Tauri
-runtime. The engine is a handle, `Operations` (`mod.rs`, built in `handle.rs`): an `Arc<Inner>` holding the seams as one
-`EngineHost`, the operation log it journals into, the manager, the registry of live states, and the status cache, so two
-engines share nothing. The app's answer is `apps/desktop/src-tauri/src/operations_host/`, which builds the app's one
-engine in `setup()` with `Operations::builder` (after `volume_host::install` and `operation_log_host::install`, before
-the leftover sweep, which it claims through `operations_host::claim_ledger`). Every caller outside the engine reaches it
-through `operations_host::operations()` and calls a method; the engine keeps no slot of its own, and nothing inside it
-names the app's accessor.
-
-- **The runtime is the `VolumeHost`'s.** One handle for the engine and the backends it drives, so the two can't
-  disagree. Everything the engine spawns goes there: the admission pass (§ "The admission pass spawns admitted ops on
-  the APP runtime"), every handler's and instant op's `spawn_blocking`, the scan preview's worker and watchdog, the
-  stall watchdog, the arrival sweep's `spawn_blocking`, and the sweep's `block_on`s. The crate `clippy.toml` refuses
-  `tokio::spawn`, `tokio::task::spawn{,_blocking}`, and `std::thread::spawn` (a thread the engine owns is a named
-  `std::thread::Builder` one). A helper with no engine in reach takes the `Handle` as a parameter, and a test calling
-  one directly passes its own (`Handle::current()`).
-- **One documented exception: `mutation_reply.rs`'s late-settle continuation stays ambient.** `reply_or_hand_off` is a
-  free function the app's IPC commands call with no engine, and it waits out `cmdr_fs::deadline::race_detached`'s own
-  ambient spawn (that crate's documented exception), so the work and the task waiting it out share the caller's runtime;
-  in production that's the app runtime either way. Moving only the continuation would split the pair for nothing, and
-  would put the five paused-clock cells' continuation on a clock they don't drive. The site carries the reasoned
-  `#[allow(clippy::disallowed_methods)]`.
-- **The same `VolumeHost` answers the panes' questions and backs every volume the engine mints.** The fresh-listing
-  oracle (`authoritative_listing`), the archive pane refresh, and the pane patch after a local create go through the
-  op's `scope.host().listings()`; a spool, an upload reader, or a pull's scratch folder is a `LocalPosixVolume` over
-  `scope.host().volume_host()`.
-- **An operation reaches its engine through its `OpScope`** (`scope.rs`): the host's seams, the status cache, the
-  engine's `EngineStores` (the scan previews, the in-flight ledger, the lanes' outage records, the transfer probes), and
-  the op's `OpJournal` once it opens, built by the engine that runs it. `EngineStores` is defined at the hub beside
-  `Inner`: each store's module also works on op states, so the scope naming those modules would circle back through
-  `state`. A managed op's rides on its `WriteOperationState` (`state.scope()`); an instant op builds one beside
-  `run_instant`. A scope holds parts of the engine, never the engine (the registry holds the states, so that would be a
-  cycle), and ❌ a missing scope never falls back to another log. Entry points (starters, routing, the queue and by-id
-  controls, pre-flight checks, rollback) are `Operations` methods or take the engine as a parameter; a deferred start
-  uses the engine admission hands it. A scan preview's walk holds its engine (`run_scan_preview(&engine, …)`); the
-  leftover sweep runs on the host its claim hands it; the probe watchdog and the preview watchdog hold their stores
-  weakly, so a dropped engine stops them.
-- **Which volume serves an id or a path goes through `OperationVolumes`** (`host/volumes.rs`): the registry's `get`,
-  `resolve`, the archive-boundary questions, `find_by_root`, `forget_archive_index`, `on_volume_arrival`, and
-  `unregistered` (why an id has no volume, as an `UnregisteredVolume`). Its supertrait is the rollback planner's
-  `VolumeLookup`, so one answer serves both. The app answers it with `operations_host/volumes.rs`, which asks
-  `get_volume_manager()` per call. ❗ A site passing a path calls `resolve`; each that stays on `get` says why in one
-  line (the `.zip` file itself is a plain file on its parent; a lane key or a capability flag is a question about the
-  drive, not the path; an archive gate upstream already routed the in-zip case).
-- **Engine-wide facts go through `EngineEvents`**: operations changed, busy volumes changed, a transfer started /
-  finished on volumes (indexing priority), staging leftovers kept, an instant mutation settled (analytics, as an
-  `InstantMutationFact` of categories only), an error report, and the scan bridge's scanning-phase `write-progress` (one
-  op's event, but the preview's worker that produces it holds no op's sink). Per-op events stay on `OperationEventSink`.
-  Every method is required, is called with no engine lock held, and returns at once.
-- **Error reports are typed facts** (`host/error_report.rs`): the engine never calls `log_error!` (the app's macro, at
-  its crate root), it names what happened as an `OperationErrorReport`, grouped by what it means for the person: an op
-  failed, a displaced original is stranded under its aside name, a transfer is stuck on a silent backend, or a contained
-  bug. The app re-raises each through `log_error!` with the message and target (the engine's module path) it always had,
-  so bundles, greps, and dispatch filters see no change.
-- **"Cmdr is about to write here" goes through `OwnWrites`** (`host/own_writes.rs`), once per path BEFORE the syscall
-  that lands it (§ "Cmdr-own-write hook (downloads watcher)"). The one per-file seam the dispatch rule sanctions: a
-  landing already costs syscalls, so one `dyn` call beside it is noise.
-- **What the drive index knows goes through `OperationIndex`** (`host/index.rs`): a selection's expected totals (the
-  scan's progress bar), a folder's recursive size (a conflict prompt's folder sizes), and a subtree's search leaves
-  (`journal_search.rs`, which keeps `SEARCH_LEAF_CAP`, the before-the-mutation and after-success rules, and the test
-  hook; the index gates and their downgrade reasons are the app's read, `operations_host/index.rs`). Value types
-  (`ExpectedTotals`, `BufferedLeaves`, `Leaf`) are the engine's own: it names no `cmdr_index` type.
-- **Deliberate slowness for automated runs goes through `Pacing`** (`host/pacing.rs`): the per-step throttle of the copy
-  loop (`copy_throttle_for`, which also carries the dialog gallery's per-folder pace), the volume delete batches and the
-  archive rewrite's entries (`copy_throttle`), the scan preview's held start, and the rollback runner's
-  `pace_between_items`. `None` or non-zero, read per call (a spec changes it mid-run); every real build answers `None`.
-  Asked per file in the copy loop: the dispatch rule allows it beside a file's I/O, and the Criterion copy cases showed
-  no change against the pre-seam baseline (`docs/notes/transfer-extraction-baseline.md`'s method, 2026-10-17).
-- **The collator the panes sort with comes from `NameOrder`** (`host/name_order.rs`), asked once per walk by
-  `TreeOrder::active(host)`, which also carries the engine's events, so a tree a bug turned off reports to the engine
-  that built it. The engine names `cmdr_collation::NameCollator` directly, never through `cmdr-listing`. Default:
-  English, built on first use and kept on the answer itself.
-- **Optional seams default to doing nothing.** `EngineHost::new` takes only the runtime's `VolumeHost`, the volumes, and
-  the events (nothing works without those); every other seam starts as a no-op answer that `with_*` replaces. The app
-  wires them all in `operations_host::app_answers`.
-- **The app decides what each fact becomes**: a Tauri event, a `priority::transfers` call, a PostHog capture under a
-  literal event name (`analytics-event-catalog` reads `capture("…")`), or an error report. The test-only counters a pin
-  reads (`emit_count`, `busy_emit_count`, the scan bridge's tick recorder) count on the engine side, before the seam.
-- **The per-op sinks are the app's too.** `TauriEventSink` and `TauriScanPreviewSink` live in
-  `apps/desktop/src-tauri/src/operations_host/sinks.rs`, built at the IPC edge and injected; a terminal emit runs its
-  app side effects (completion analytics, the MCP ring, the failure `warn!`, `OperationManager::retain_failure`, the
-  free-space hint) in the order `apps/desktop/src-tauri/src/operations_host/terminal_effects.rs` pins. An op the ENGINE
-  starts on its own behalf (an instant op routed into a zip becomes a managed archive edit) gets its sink from the
-  host's `OperationSinkFactory` (`engine.host().operation_sink()`); so does the MCP rollback tool, which is generic over
-  the Tauri runtime.
-- **Event payloads are plain `serde` + `specta::Type` types**; the Tauri event and its wire name are the app's
-  (`apps/desktop/src-tauri/src/operations_host/wire.rs` wraps each). ❗ A payload's doc comments and `#[serde]`
-  attributes still reach `bindings.ts`, so they're wire: reword one and `desktop-bindings-fresh` fails.
-- **Before `install`, the answer depends on the binary.** In the app, `operations_host::operations()` is
-  `Err(NotInstalled)` plus an error report, and each caller refuses with a variant it already handles (a start's
-  `IoError`, an instant op's `ArchiveEditNotReady`, `UnknownOperation`) or answers what an engine with nothing running
-  would (an empty list, no-op cancels, no busy volume, a scan preview that tells its dialog it couldn't start); nothing
-  can reach the engine before `setup()` anyway, and ❌ nothing panics for want of one. The engine itself knows nothing
-  about installs. In a test binary, `operations()` builds `operations_host::test_engine()` on first read (the app's own
-  answers minus the frontend channel: the real indexing gauge, analytics client, and error reporter, and `cmdr-fs`'s
-  shared fallback runtime) and hands that one out to every app-side cell; an engine test builds
-  `testing::TestOperations` instead (§ "Test isolation: an engine of the test's own"). No sink factory, so
-  `operation_sink()` stays `None` and an archive-target instant op refuses plainly. The bench builds detached engines of
-  its own (`testing::bench::BenchEngine`, `BenchJournal`).
-- **A seam trait and its value types live in `host/` or `types/`**, never in a module that calls the seam, or the two
-  weld into a cycle. That's why `OperationsChanged` and `OperationSnapshot` are `types` vocabulary, and why
-  `OperationEventSink` and `ScanPreviewEventSink` are defined in `host/` (`event_sinks` re-exports them): with the trait
-  in `event_sinks`, `state` (which takes a sink) → `event_sinks` → `manager` (the Tauri sink retained failures there) →
-  `state` was a cycle `module-cycles` reports.
+What the engine needs from the app around it (the runtime, the volumes, the engine-wide events, the per-op sinks, and
+the optional seams), what each seam's contract is, and where Cmdr answers it: `src/host/DETAILS.md`.
 
 ## The public surface is capped
 
-`index-crate-isolation` holds the surface to exactly what the crate exposes, with no headroom (82 root promises, 58
-handle methods, 1 public module, 25 items in it). By group:
+`index-crate-isolation` holds this crate to 82 root promises, 58 `Operations` methods, one public module (`host`), and
+25 public items inside it (`scripts/check/checks/index-crate-isolation-ceilings.go`). The numbers are exactly what the
+crate exposes, measured with no headroom, so an addition has to be argued for. Everything counted exists for a named
+caller.
 
-- **Root**: `Operations` (the handle), its `OperationsBuilder`, `AlreadyClaimed`, and the re-export list in `lib.rs`:
-  the event sinks and `ArmedConflict`; the queue's snapshot and control answers; instant mutations (`MutationError`,
-  `MutationReply`, `MutationSettled`, `Replied`, `reply_within`, `reply_or_hand_off`, `MUTATION_REPLY_DEADLINE`) and
-  rename's batch and validity vocabulary; pre-flight (`SourceItemInput`, `VolumeScanError`, `CONFLICT_CHECK_BUDGET`,
-  `ScanCostFacts`) and the source binding; the transfer tree's window; `UndoReport`; the engine-free helpers the IPC
-  edge asks (trash routing, the trash dir, the look-alike check, `same_local_file`, `resolve_dest_path`); and the wire
-  vocabulary from `types`.
-- **Handle methods**: the verbs the app's IPC commands, MCP tools, quit gate, and drag-out call one-to-one (starts,
-  instant mutations, previews and pre-flight, the queue, lifecycle), plus the builder, `claim_ledger`, and `host` (the
-  MCP rollback takes its sink factory). An entry point production reaches only from inside the engine (a routed start
-  like `archive_edit_start` or `copy_between_volumes`, the raw pause gate) stays `pub(crate)`; an app-side cell drives
-  it through a `testing` function that forwards to it.
-- **`host`**: the seam traits the app answers (`OperationVolumes`, `EngineEvents`, `OwnWrites`, `OperationIndex`,
-  `Pacing`, `NameOrder`, the two event sinks), their value types (`OperationErrorReport` and its parts,
-  `InstantMutationFact` and its tokens, `ExpectedTotals`, `BufferedLeaves`, `Leaf`, `Announced`, `UnregisteredVolume`,
-  `VolumeAnswer`), `OperationSinkFactory`, and `EngineHost`, which `host` hands out.
-- **`testing`** (gated, counted apart): an engine of a cell's own, the fakes it reads back, and the internals the app's
-  backend suites and routing cells drive, plus the Criterion bench's door (`testing::bench`).
+Root promises (82), by who needs them:
+
+- **The handle** (3): `Operations`, `OperationsBuilder` (from `Operations::builder`), and `AlreadyClaimed` (a second
+  `claim_ledger`'s refusal).
+- **The event sinks** (3): `OperationEventSink` and `ScanPreviewEventSink`, which the app's Tauri sinks implement
+  (`operations_host/sinks.rs`), and `ArmedConflict`, the only thing `emit_conflict` takes.
+- **The queue** (6): `OperationSnapshot` and `OperationsChanged` (`operations-changed`'s payload, which the app wraps
+  for the wire and the MCP state resource reads), and `PauseOutcome`, `PauseAllOutcome`, `QueueMoveDirection`, and
+  `QueueMoveOutcome`, the queue controls' typed answers the IPC commands and the MCP `queue` tool return.
+- **The transfer tree's window** (6): `TransferTreeView`, `TransferTreeViewRequest`, `TransferTreeRow`, `TreeRowKind`,
+  `TreeRowState`, and `TransferTreeViewError`, for `get_transfer_tree_view` and `cmdr://state`.
+- **Instant mutations** (11): `MutationError` (the typed refusal every instant command returns), the
+  reply-within-a-deadline contract the IPC commands answer through (`reply_within`, `reply_or_hand_off`,
+  `MUTATION_REPLY_DEADLINE`, `Replied`, `MutationReply`, `MutationSettled`), and rename's batch and validity vocabulary
+  (`BulkRenameRow`, `RenameStartError`, `RenameValidityResult`, `RenamesStarted`), which `commands/rename.rs`,
+  `multi_rename`, and the agent's suggested renames speak.
+- **Pre-flight and undo** (9): `SourceItemInput`, `VolumeScanError`, and `CONFLICT_CHECK_BUDGET` (the transfer dialog's
+  conflict check), `ScanCostFacts` (the S3 estimate prices a preview's counts), the source binding a reviewed batch
+  supplies (`ExpectedSources`, `LocalContent`, `RemoteContent`, `SourceFingerprint`, for the agent's approved ops), and
+  `UndoReport` (`undo_operations`' answer).
+- **Engine-free helpers the IPC edge asks** (6): `trash_routing_for_selection` and its `TrashRoutingAnswer` (F8's
+  trash-or-delete question), `trash_dir_for_path`, `held_in_another_spelling` (`destination_exists`'s look-alike half),
+  `same_local_file` (rename's case-only check), and `resolve_dest_path` (anchoring a volume-relative destination).
+- **The wire vocabulary** (37): the payloads, configs, and typed outcomes from `types` that cross IPC unchanged
+  (`WriteOperationConfig`, `VolumeCopyConfig`, `WriteOperationError`, the `Write*Event` and `ScanPreview*Event`
+  payloads, `ConflictResolution`, `LifecycleStatus`, `OperationStatus`, …). `ipc.rs` registers them; `bindings.ts` is
+  generated from them, so none can go private without the frontend losing a type.
+- **`host`** (1): the public module below.
+
+`Operations` methods (58), grouped by caller. Each IPC command, MCP tool, and quit step is a one-line pass-through, so
+the verbs read one-to-one:
+
+- **Building and lifecycle**: `builder`, `host` (the MCP rollback takes its sink factory), `operation_log` (the startup
+  pin proves the engine journals into the app's log), `claim_ledger`, and the quit gate's `cancel_all_write_operations`,
+  `abort_all_write_operations`, and `flush_in_flight_temps`.
+- **Starting an operation**: `move_files_start`, `delete_files_start`, `trash_files_start`, `start_volume_copy`,
+  `start_volume_move`, `start_volume_compress`, `start_rename_by_move`, `start_renames`, `dispatch_rollback`,
+  `undo_operations`, and `trash_single_journaled` (the single-item trash command in `commands/rename.rs`).
+- **Instant mutations**: `create_directory_managed`, `create_file_managed`, `create_numbered_file` (macOS paste as
+  file), `rename_managed`, `check_rename_validity_impl` (priced app-side into the wire answer), and
+  `check_rename_permission_for_volume`.
+- **Previews and pre-flight**: `start_scan_preview`, `cancel_scan_preview`, `get_scan_preview_totals`,
+  `cached_cost_facts`, `scan_volume_for_conflicts_within`, and the agent bridge's `resolve_source_volume` and
+  `unregistered_source_error`.
+- **The queue and one operation's controls**: `list_operations`, `latest_operation_progress`, `get_operation_status`,
+  `operations_need_volume`, `cancel_operation`, `cancel_operations`, `cancel_write_operation`, `pause_operation`,
+  `resume_operation`, `pause_all`, `resume_all`, `move_queued_operation`, `place_queued_operation`,
+  `retry_failed_operation`, `dismiss_failed_operation`, `dismiss_all_failed_operations`, `resolve_write_conflict`,
+  `pending_write_conflict`, `continue_without_gone_sources`, `pending_sources_gone`, `transfer_tree_view`, and
+  `render_live_transfer_dump`.
+- **Busy volumes and the sink adapter**: `busy_volume_ids` (Eject's guard), `register_external_volume_op` /
+  `release_external_volume_op` (drag-out's busy volume, macOS), and `retain_failure` (the app's sink adapter keeps a
+  failed op on the queue).
+
+An entry point production reaches only from inside the engine (a routed start like `archive_edit_start` or
+`copy_between_volumes`, the raw pause gate) stays `pub(crate)`; an app-side cell drives it through a `testing` function
+that forwards to it (`route_archive_copy_into` is one).
+
+`host` (25 items): the seam traits the app answers (`OperationVolumes`, `EngineEvents`, `OwnWrites`, `OperationIndex`,
+`Pacing`, `NameOrder`, and the two event sinks, re-exported there too), their value types (`OperationErrorReport`,
+`AsideAttempt`, `TreeFailure`, `InstantMutationFact` and its `InstantOp` / `InstantOutcome` / `InstantTarget` tokens,
+`ExpectedTotals`, `BufferedLeaves`, `Leaf`, `Announced`, `UnregisteredVolume`, `VolumeAnswer`), `OperationSinkFactory`,
+and `EngineHost` with the methods a caller reads it through. The seam files are private; a host names a seam only as
+`cmdr_operations::host::X`.
+
+`testing` is gated behind the `testing` feature and counts apart: an engine of a cell's own, the fakes it reads back,
+the internals the app's backend suites and routing cells drive, and the Criterion bench's door (`testing::bench`). It's
+the host's test surface, never a promise to a shipped build.
 
 ## Events emitted
 
@@ -1210,8 +1245,8 @@ handle methods, 1 public module, 25 items in it). By group:
 - **`write-conflict`**: Stop mode hit a conflicting destination file
 - **`write-complete`**: Operation finished successfully. A cross-volume copy or move also carries `metadata_left_behind`
   when the destination couldn't keep something a source item had (`metadata_losses.rs`), and a local copy carries
-  `durability_unconfirmed` when its closing flush couldn't confirm the files are on the disk (`transfer/DETAILS.md` §
-  "Durability").
+  `durability_unconfirmed` when its closing flush couldn't confirm the files are on the disk (`src/transfer/DETAILS.md`
+  § "Durability").
 - **`write-cancelled`**: Operation cancelled. Carries `rollback: CancelRollback` — the three-state outcome
   (`notRolledBack` / `rolledBack` / `partiallyRolledBack`), how many items the reversal undid, and what it left behind
   grouped by `SkipReason`.
@@ -1254,7 +1289,7 @@ plus **lane-based admission** that can serialize ops which would thrash a shared
 
 ### Lanes and `Volume::lane_key()`
 
-Each op touches the [`LaneKey`](../../../apps/desktop/src-tauri/src/file_system/volume/CLAUDE.md)s of its source and
+Each op touches the [`LaneKey`](../../apps/desktop/src-tauri/src/file_system/volume/CLAUDE.md)s of its source and
 destination volumes (same-volume ops touch one). Lane keys come from `Volume::lane_key()` (in `volume/mod.rs`), NEVER
 from parsing a `volume_id` string. Per backend: `LocalPosixVolume` → the volume root (the trait default; each local
 mount is its own `LocalPosixVolume`, so the root IS the mount root); `MtpVolume` → `device_id` (one USB pipe per device,
@@ -1456,7 +1491,7 @@ at `FAILURE_CAPACITY = 20`, oldest evicted first — and `snapshot()` appends th
   `ArchiveNeedsPassword` (a recoverable prompt the frontend answers and retries) are excluded by TYPED variant match,
   never by message text.
 - **First error per id wins.** `write-error` can fire twice for one op — an inner handler emits and returns `Err`, then
-  `mod.rs`'s safety net emits again — and the first one is what actually stopped it.
+  `local_start.rs`'s safety net emits again — and the first one is what actually stopped it.
 - **A retained row reports `supports_rollback: false`** and reuses the live record's source/destination summary, so it
   reads like the running row it replaces. If the record is already gone, it falls back to the event's own
   `operation_type` and no summary.
@@ -1595,10 +1630,10 @@ mid-`Copying`).
 - **Gate placement: exactly where the loop already observes cancel, and only there** ([The park](#the-park) has the
   reasoning). Every serial loop that can spend real time asks: both transfer drivers' per-source loop tops
   (`transfer_driver/{sync,async}_driver.rs`), both delete walkers' delete-phase file and dir loops (`delete/walker.rs`),
-  trash's per-item loop (`delete/trash.rs`), all of `move_op/`'s per-item loops (`transfer/DETAILS.md` § "Pause in the
-  local move engine"), the copy's scanned-dirs pass (`transfer/copy/scanned_dirs.rs`), the two cross-volume merge walks
-  and the sequential extractor's member loop (`transfer/volume/DETAILS.md` § "Pause in the volume walks"), the archive
-  mutator through `MutationHooks::wait_if_paused`, and every SCAN boundary that already observes cancel. The
+  trash's per-item loop (`delete/trash.rs`), all of `move_op/`'s per-item loops (`src/transfer/DETAILS.md` § "Pause in
+  the local move engine"), the copy's scanned-dirs pass (`transfer/copy/scanned_dirs.rs`), the two cross-volume merge
+  walks and the sequential extractor's member loop (`src/transfer/volume/DETAILS.md` § "Pause in the volume walks"), the
+  archive mutator through `MutationHooks::wait_if_paused`, and every SCAN boundary that already observes cancel. The
   cross-volume streaming copy path ALSO parks BETWEEN CHUNKS via the `CheckpointStream` wrapper in
   `transfer/volume/stream_pipe.rs` (the sync per-chunk `on_progress` callback can't `.await`, so the async stream
   decorator owns mid-file parking + a `yield_now`), so a paused single large file (e.g. MTP→local) stops mid-stream
@@ -1606,7 +1641,8 @@ mid-`Copying`).
   stream to park between chunks and nothing freed by parking: the local-FS sync chunk loop (`chunked_copy.rs`, which
   receives the cancel atom, not the `PauseGate`) and a server-side copy made in one call, such as SFTP's `copy_within`
   (`transfer/volume/server_side_copy.rs`'s `try_server_side_copy`); one made in pieces (S3's parts) parks between them,
-  at `ServerCopyProgress::checkpoint`. Full rationale + scope: `transfer/DETAILS.md` § "Pause reaches between chunks".
+  at `ServerCopyProgress::checkpoint`. Full rationale + scope: `src/transfer/DETAILS.md` § "Pause reaches between
+  chunks".
 - **Cancellation always wins over pause.** `cancel_write_operation` / `cancel_all_write_operations` flip the intent AND
   call `pause_gate.wake()`, so a paused, parked op unblocks, observes the non-`Running` intent, and bails through the
   existing keep-partials path (keeping already-copied files, deleting only the last partial). Without that wake a paused
@@ -1635,7 +1671,7 @@ mid-`Copying`).
   through the shared `stream_pipe_file`, so each parks between chunks via `CheckpointStream` when paused; the admission
   loop adds no new files while everyone is parked, so the batch effectively halts. Serial paths (local copy/move,
   cross-volume serial, delete) honor pause between files; the cross-volume paths additionally park between chunks. See
-  `transfer/volume/DETAILS.md` § "Pause and the concurrent copy path".
+  `src/transfer/volume/DETAILS.md` § "Pause and the concurrent copy path".
 - **Accepted resource asymmetry** (principle 5): `wait_while_paused_sync` parks the op's `spawn_blocking` pool thread
   for the whole pause — the same thing the deferred-start design avoids for _queued_ ops. A paused Running op
   legitimately holds its lane and is rarer than queued ops, so v1 accepts this; many simultaneously-paused local ops
@@ -1929,7 +1965,7 @@ silent merges; back-compatible when the caller omits the source volume.
 **`drop_self_collisions` removes the collisions naming a source itself**, so a same-folder paste (a duplicate, which
 both engines auto-rename silently instead of asking about) doesn't announce every item as its own conflict. It answers
 with `transfer_would_land_on_its_source`, the engines' own predicate, which is what keeps the dialog and the write
-agreeing about which clashes are real (canonical: `transfer/DETAILS.md` § "Self-collision (duplicating in place)").
+agreeing about which clashes are real (canonical: `src/transfer/DETAILS.md` § "Self-collision (duplicating in place)").
 
 ## Routing a transfer
 
@@ -2159,7 +2195,7 @@ names the `agent` module at all. The crate boundary holds it: `cmdr-operations` 
 ## Archive edits
 
 Editing a `.zip` (mkdir/mkfile/rename/delete inside, or copy/move INTO one) is an O(archive) temp+rename rewrite that
-runs as a managed op, driven by the `archive_edit/` module: `archive_edit/CLAUDE.md` and its `DETAILS.md`.
+runs as a managed op, driven by the `archive_edit/` module: `src/archive_edit/CLAUDE.md` and its `DETAILS.md`.
 
 ## Busy-volumes set
 
@@ -2202,10 +2238,10 @@ indexing, and the panic-safe unregister paths below cover both signals. Don't ad
 - **External (non-write-op) seam**: the drag-out file-promise fulfillment service (`native_drag::fulfillment`) marks the
   source volume busy while it streams a promise to a Finder destination, but it isn't a real write op (no registered
   state, no progress events, no settle). The `pub(crate)` `register_external_volume_op(op_id, volume_ids)` /
-  `release_external_volume_op(op_id)` pair (in `status_cache.rs`, surfaced through `state::` and re-exported from
-  `mod.rs`) is the seam: it touches only the status-cache half the busy set is derived from, registering under
-  `WriteOperationType::Copy` (the type only affects `get_operation_status` diagnostics; the busy set is type-agnostic).
-  The fulfillment side wraps it in an RAII guard so release fires on every exit path.
+  `release_external_volume_op(op_id)` pair (in `status_cache.rs`, `Operations` methods) is the seam: it touches only the
+  status-cache half the busy set is derived from, registering under `WriteOperationType::Copy` (the type only affects
+  `get_operation_status` diagnostics; the busy set is type-agnostic). The fulfillment side wraps it in an RAII guard so
+  release fires on every exit path.
 
 ## Settle contract
 
@@ -2253,17 +2289,17 @@ pin the integration shape against the volume-delete handler.
 
 **Decision**: Copy and cross-FS move pre-flight a destination per-file-size limit (FAT32's 4 GiB cap) right after the
 scan, before the first byte. `validation::validate_file_sizes_for_filesystem` classifies the destination via
-`crate::file_system::filesystem_kind` (macOS `statfs.f_fstypename` / Linux `/proc/mounts` → `FilesystemKind` →
-`MaxFileSize`) and, only when the cap is `Limited`, fails the whole operation with
-`WriteOperationError::FilesTooLargeForFilesystem` (up to 10 offenders, largest first, plus the true count). **Why**: A
-FAT32 USB stick silently failed a 5 GB copy ~4 GB in. The gate is all-or-nothing and runs alongside the free-space check
-(`copy/mod.rs`, `transfer/move_op/cross_fs.rs`). It blocks **only** when certain: `Unlimited` (APFS/exFAT/NTFS/ext4/MTP)
-and `Unknown` (OS-mounted SMB, unrecognized) never block, so a false positive — worse than the mid-copy failure because
-it stops a copy that would have succeeded — can't happen. **exFAT must stay `Unlimited`** (it's the common big-USB
-format with no 4 GiB cap); only FAT32 (`msdos`/`vfat`) is `Limited`. Same-FS moves rename in place and never reach the
-gate. The kind → cap map in `filesystem_kind::FilesystemKind::max_file_size` is the single source of truth (the write
-guard, the error prose, and any future volume-picker display all read it). SMB FileSystemName detection (a `smb2`-crate
-`FileFsAttributeInformation` query) and the volume-picker filesystem display are scoped follow-ups.
+`cmdr_local::filesystem_kind` (macOS `statfs.f_fstypename` / Linux `/proc/mounts` → `FilesystemKind` → `MaxFileSize`)
+and, only when the cap is `Limited`, fails the whole operation with `WriteOperationError::FilesTooLargeForFilesystem`
+(up to 10 offenders, largest first, plus the true count). **Why**: A FAT32 USB stick silently failed a 5 GB copy ~4 GB
+in. The gate is all-or-nothing and runs alongside the free-space check (`copy/mod.rs`, `transfer/move_op/cross_fs.rs`).
+It blocks **only** when certain: `Unlimited` (APFS/exFAT/NTFS/ext4/MTP) and `Unknown` (OS-mounted SMB, unrecognized)
+never block, so a false positive — worse than the mid-copy failure because it stops a copy that would have succeeded —
+can't happen. **exFAT must stay `Unlimited`** (it's the common big-USB format with no 4 GiB cap); only FAT32
+(`msdos`/`vfat`) is `Limited`. Same-FS moves rename in place and never reach the gate. The kind → cap map in
+`filesystem_kind::FilesystemKind::max_file_size` is the single source of truth (the write guard, the error prose, and
+any future volume-picker display all read it). SMB FileSystemName detection (a `smb2`-crate `FileFsAttributeInformation`
+query) and the volume-picker filesystem display are scoped follow-ups.
 
 **Decision**: Every scan reports **two** byte totals — `total_bytes` (write footprint, un-dedup'd) and `dedup_bytes`
 (`du`-equivalent, each inode once). Delete consumes `dedup_bytes`; copy/move consume `total_bytes`; the Copy dialog
@@ -2343,8 +2379,8 @@ the cross-FS move gates its source delete on it, and the copy completes with `du
 hears it. Same-FS move (pure rename) writes no data at all, so it takes the sibling pass `flush_touched_directories`:
 one `fsync` per DIRECTORY the renames touched, and none on the moved files, which would cost an `F_FULLFSYNC` device
 barrier each for bytes nothing wrote. The rules (which errnos count as "not supported", the staged-to-landed path
-mapping, what a failure keeps) and the measurements live in `transfer/DETAILS.md` § "Durability (flush before reporting
-complete)". Pinned by `transfer/copy_tests.rs::local_copy_emits_flushing_phase_before_complete` and
+mapping, what a failure keeps) and the measurements live in `src/transfer/DETAILS.md` § "Durability (flush before
+reporting complete)". Pinned by `transfer/copy_tests.rs::local_copy_emits_flushing_phase_before_complete` and
 `transfer/move_op/move_progress_tests.rs::cross_fs_local_move_emits_flushing_phase_before_complete`; FE label by
 `TransferProgressDialog.flushing.test.ts`. **Cross-volume copy/move landing on a local disk** (MTP → Local, SMB → Local,
 USB import) doesn't go through this local-FS engine — it flows through `LocalPosixVolume::write_from_stream`, which
@@ -2367,19 +2403,19 @@ bundle. It logs `{:?}` of the variant rather than a hand-written sentence, becau
 and the message in named fields and Debug can't drift from them. The frontend side of the same lesson is
 `cmdr/no-unrendered-log-fields` (`src/lib/logging/DETAILS.md`).
 
-**Decision**: `types.rs` is the floor of `write_operations` and imports no sibling. `state.rs` keeps its
-`operation_intent` + `scan_cache` + `status_cache` re-export facade, and `mod.rs` keeps its `transfer::*` + `delete::*`
-one. **Why**: See § "Why `types` imports nothing" for the floor. The two surviving facades sit ABOVE the floor and point
-down, so neither can close a circle: `state` and `mod.rs` already depend on everything they re-export. Both front a
-broad name surface (`operation_intent` at ~35 sites across ~20 files, every cancellation check; the `scan_cache` types
-across `scan.rs`, `scan_preview.rs`, `validation.rs`, and two test files), which is a legitimate shape for a facade that
-costs nothing structurally.
+**Decision**: `types.rs` is the floor of `cmdr-operations` and imports no sibling. `state.rs` keeps its
+`operation_intent` + `scan_cache` + `status_cache` re-export facade, and `lib.rs` keeps its private root `use`s of the
+transfer and delete entry points. **Why**: See § "Why `types` imports nothing" for the floor. The two surviving facades
+sit ABOVE the floor and point down, so neither can close a circle: `state` and `lib.rs` already depend on everything
+they re-export. Both front a broad name surface (`operation_intent` at ~35 sites across ~20 files, every cancellation
+check; the `scan_cache` types across `scan.rs`, `scan_preview.rs`, `validation.rs`, and two test files), which is a
+legitimate shape for a facade that costs nothing structurally.
 
 ## The free-space pre-flight
 
 A copy checks the destination's room after its scan and before anything is written:
 `free_space.rs::check_local_copy_space` for a local copy, `transfer/volume/copy.rs` Phase 2 for the volume engine
-(`transfer/volume/DETAILS.md` § "The destination free-space pre-flight"). A local-FS move has no space check.
+(`src/transfer/volume/DETAILS.md` § "The destination free-space pre-flight"). A local-FS move has no space check.
 
 - **What the destination has**: `statvfs` first, the purgeable-aware NSURL figure only on a shortfall, the larger of the
   two winning (§ "Shared gotchas" has why). No figure at all lets the copy go ahead.
@@ -2444,16 +2480,28 @@ where to look.
 
 ## Dependencies
 
-- `crate::file_system::volume`: `Volume` trait, `SpaceInfo`, `ScanConflict` (used by `transfer/volume/copy.rs`)
-- `crate::ignore_poison`: `IgnorePoison` extension for `RwLock`/`Mutex` to not panic on poisoned locks
-- External: `tauri` (emit, AppHandle), `uuid` (operation IDs, temp names), `libc` (access, statvfs), `xattr`, `exacl`,
-  `filetime` (metadata preservation in `transfer/chunked_copy.rs`)
+Each with its reason in `Cargo.toml`. The workspace crates:
+
+- `cmdr-fs`: the `Volume` trait every operation goes through, `FileEntry`, the host seams (`VolumeHost`, `ListingHost`),
+  staging names, `ignore_poison`, and `deadline`.
+- `cmdr-local`: the `LocalPosixVolume` the engine mints for local operations and pull scratch, its reader, and
+  `rename_local_exclusive`, the one no-replace rename.
+- `cmdr-operation-log`: the journal every mutation records into, `OperationId`, and the rollback planner an undo runs
+  through (the engine is its `RollbackRunner`).
+- `cmdr-archive`: the zip mutator, the archive volume a fresh zip is parsed through before it publishes, and the
+  formats.
+- `cmdr-collation`: `NameCollator`, the panes' order the transfer tree sorts with, named here so the engine never
+  depends on the listing engine. `cmdr-listing` is a `testing`-only dependency, for `host::testing::PaneListings`.
+
+No `tauri`, `tauri-specta`, `cmdr-index`, or app crate, which `index-crate-isolation` enforces. `specta` is pinned to
+the app's exact version, because the wire types' `Type` impls must be the ones `tauri-specta` collects. `tokio` comes
+without `rt-multi-thread`: the engine builds no runtime of its own and spawns on its host's.
 
 ## Testing bar
 
-This module's state machine (`state.rs`) is the spine of the cancel UX. Past investigations found one real production
-bug here ([commit `1de4255d`](../../../../../../docs/notes/speed-up-e2e-tests.md), lost-rollback on `Ok(())` arm) plus
-30+ mutation-testing gaps that have since been pinned. New transitions or new cancel paths must:
+This crate's state machine (`state.rs`) is the spine of the cancel UX. Past investigations found one real production bug
+here ([commit `1de4255d`](../../docs/notes/speed-up-e2e-tests.md), lost-rollback on `Ok(())` arm) plus 30+
+mutation-testing gaps that have since been pinned. New transitions or new cancel paths must:
 
 1. **Drive the state machine through the public interface in tests.** A direct `state.intent().set_for_test(...)`
    bypasses the validation guard and effectively dead-tests it. Pattern to copy:
@@ -2462,8 +2510,8 @@ bug here ([commit `1de4255d`](../../../../../../docs/notes/speed-up-e2e-tests.md
    specifically the `Ok(())` arm of the loop not re-checking intent.
 3. **Add at least one E2E test** for user-visible flows (transfer dialogs, conflict policies); use `dispatchMenuCommand`
    for keyboard-shortcut triggers, see `docs/testing.md` § "❌ Synthesized F-key dispatches".
-4. **Run `cargo mutants --file src/file_system/write_operations/<file>.rs`** after substantial changes; this module has
-   ~85-90% mutation score per file and shouldn't regress. See `docs/testing.md` § "Process".
+4. **Run `cargo mutants -p cmdr-operations --file crates/cmdr-operations/src/<file>.rs`** after substantial changes; the
+   engine has ~85-90% mutation score per file and shouldn't regress. See `docs/testing.md` § "Process".
 
 ### Test isolation: an engine of the test's own
 
@@ -2672,12 +2720,12 @@ plugged back in, on a live HFS+ image.
 
 **A `Mount`-homed cell needs the mount table answered.** `transfer_sides::test_hook` is THREAD-LOCAL, and the launch
 sweep runs on its own thread, so a cell that wants a fixture directory to read as a mounted drive calls `settle` (or
-`settle_kind`) on its own thread rather than going through a launch. `TestVolumeRegistration::install` stands in for the
-arrival: `force_register` announces, which is what wakes the ledger's listener.
+`settle_kind`) on its own thread rather than going through a launch. `engine.volumes().register(…)` stands in for the
+arrival: `FakeVolumes` announces each registration, which is what wakes the ledger's listener.
 
-The copy configs carry an optional explicit leaf name; its validation and landing contract live in `transfer/DETAILS.md`
-§ "Named destinations".
+The copy configs carry an optional explicit leaf name; its validation and landing contract live in
+`src/transfer/DETAILS.md` § "Named destinations".
 
 For a single named transfer, `conflict_preflight::merge_source_types_from_stats` binds the destination-name hint to the
 explicit original source path. Its type and size come from that source's stat; batch hints continue matching by
-basename. The destination leaf contract lives in `transfer/DETAILS.md` § "Named destinations".
+basename. The destination leaf contract lives in `src/transfer/DETAILS.md` § "Named destinations".

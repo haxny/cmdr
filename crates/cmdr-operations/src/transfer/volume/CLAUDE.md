@@ -14,7 +14,7 @@ Copy and move across backends (Local ↔ MTP ↔ SMB ↔ archive). File map: `DE
   `Volume::entry_kind` (a path), ❌ never `is_directory` (it follows links). `transfer/DETAILS.md` § "Symlinks are
   opaque to a move".
 - **Overwrite merges dirs and replaces files**, enforced at `apply_volume_conflict_resolution`, ❌ not `Volume::delete`;
-  NOT reversible. A BLANKET one ❌ never crosses types (`../../CLAUDE.md`); an answered one sets the dest ASIDE.
+  NOT reversible. A BLANKET one ❌ never crosses types (`../../../CLAUDE.md`); an answered one sets the dest ASIDE.
 - **A MOVE's source sweep deletes the walk's LEDGER, ❌ never the tree** (`source_sweep.rs`): Skips, newcomers, and
   changed files stay.
 - **❌ Never fabricate a destination size for the conflict dialog**: `None` (a fake `0` makes "Overwrite all smaller"

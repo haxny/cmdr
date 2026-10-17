@@ -1,12 +1,12 @@
 # Transfer (copy + move) details
 
-Pull-tier docs for `src-tauri/src/file_system/write_operations/transfer/`: architecture, flows, and decision rationale.
-Must-know invariants and gotchas live in `CLAUDE.md`.
+Pull-tier docs for `crates/cmdr-operations/src/transfer/`: architecture, flows, and decision rationale. Must-know
+invariants and gotchas live in `CLAUDE.md`.
 
 All transfer flows go through the shared driver in `transfer_driver/` and emit progress via `OperationEventSink`.
 
-See `../CLAUDE.md` for the shared `WriteOperationState`, `OperationIntent` state machine, cancel/rollback contract, ETA
-estimator, and settle contract. `../delete/CLAUDE.md` is the parallel doc for delete + trash.
+See `../../CLAUDE.md` for the shared `WriteOperationState`, `OperationIntent` state machine, cancel/rollback contract,
+ETA estimator, and settle contract. `../delete/CLAUDE.md` is the parallel doc for delete + trash.
 
 Frontend counterpart: `apps/desktop/src/lib/file-operations/transfer/CLAUDE.md` for the dialog flow, progress UI,
 conflict-policy radios, and the cancel/settle close contract.
@@ -381,8 +381,9 @@ down over a clash it has already settled (pinned by
 `cross_type_policy_tests.rs::a_skipped_folder_with_subfolders_finishes_and_leaves_the_file`). Under a LINK,
 `create_dir_all` would succeed and make the directory inside the link's target (pinned by
 `copy/copy_dest_link_tests.rs::an_empty_incoming_folder_creates_nothing_through_a_deep_dest_link`). The pass parks per
-directory like every other loop (`../DETAILS.md` § "Pause / resume"), which matters because it starts AFTER the per-file
-loop: "Paused" is already on screen by then, so an ungated pass kept building the destination skeleton. Pinned by
+directory like every other loop (`../../DETAILS.md` § "Pause / resume"), which matters because it starts AFTER the
+per-file loop: "Paused" is already on screen by then, so an ungated pass kept building the destination skeleton. Pinned
+by
 `copy_tests.rs::{copy_creates_empty_directory_at_destination, copy_creates_nested_empty_directories, copy_empty_directory_does_not_clobber_same_named_dest_file, a_paused_copy_stops_landing_scanned_dirs_until_it_resumes}`
 and `move_op_tests.rs::cross_fs_move_preserves_empty_directories`. The volume (MTP/SMB) pipeline doesn't share the hole
 — `copy_directory_streaming` creates each dir before walking its children. Right after this pass,
@@ -454,7 +455,7 @@ incoming bytes.)
   records `blocking` in `skipped_subtrees`, and every later child under it is skipped at the top of `copy_single_item`
   without a second prompt (pinned by `cross_type_policy_tests.rs::one_skip_answers_for_the_whole_incoming_folder`). The
   prompt names the source FOLDER that maps onto `blocking`, never the child that reached it first
-  (`incoming_folder_for`; `../DETAILS.md` § "Replacing one kind of entry with another needs a person's consent, per
+  (`incoming_folder_for`; `../../DETAILS.md` § "Replacing one kind of entry with another needs a person's consent, per
   SHAPE").
 - **Local move `move_resolved_into_place` (shared by `move_with_rename`, `merge_move_directory`, and the cross-FS
   staging Phase-3 loop):** same path-based Overwrite-vs-Rename split. Rename `fs::rename`s the source onto the reserved
@@ -465,14 +466,14 @@ incoming bytes.)
 
 **Volume-side Rename reserves the name on local-FS dests (TOCTOU guard).** `volume/naming.rs::find_unique_volume_name`
 is the volume sibling of `conflict::find_unique_name`. The candidates it walks come from `conflict::NameCandidates` (see
-`../DETAILS.md`), the same sequence the local-FS namer walks, so a volume dest numbers identically and `photo (1).jpg`
-continues to `photo (2).jpg`; this function owns only the reservation. When the destination volume is local-FS-backed
-(`dest_volume.local_path().is_some()`), it reserves the chosen `name (N)` with an `O_CREAT|O_EXCL` placeholder at the
-resolved local path (via `resolve_local_path`, which mirrors `LocalPosixVolume::resolve`) and escalates on
-`AlreadyExists`. The streaming writer (`LocalPosixVolume::write_from_stream` → `std::fs::File::create`) truncates the
-placeholder, so the new bytes land on it cleanly — there's no `COPYFILE_EXCL` in the volume copy path to refuse the
-overwrite. For backends without exclusive-create semantics (MTP / SMB / InMemory, `local_path()` is `None`) it falls
-back to the non-atomic `exists()` probe, with a documented narrow residual window. Pinned by
+`../../DETAILS.md`), the same sequence the local-FS namer walks, so a volume dest numbers identically and
+`photo (1).jpg` continues to `photo (2).jpg`; this function owns only the reservation. When the destination volume is
+local-FS-backed (`dest_volume.local_path().is_some()`), it reserves the chosen `name (N)` with an `O_CREAT|O_EXCL`
+placeholder at the resolved local path (via `resolve_local_path`, which mirrors `LocalPosixVolume::resolve`) and
+escalates on `AlreadyExists`. The streaming writer (`LocalPosixVolume::write_from_stream` → `std::fs::File::create`)
+truncates the placeholder, so the new bytes land on it cleanly — there's no `COPYFILE_EXCL` in the volume copy path to
+refuse the overwrite. For backends without exclusive-create semantics (MTP / SMB / InMemory, `local_path()` is `None`)
+it falls back to the non-atomic `exists()` probe, with a documented narrow residual window. Pinned by
 `volume/naming_tests.rs::{local_fs_rename_reserves_the_chosen_name_on_disk, local_fs_rename_keeps_extension_in_the_right_place, non_local_dest_does_not_reserve_a_placeholder}`.
 **The reservation is the CALLER's to take back.** `find_unique_volume_name` answers a `ClaimedName` that says whether it
 put a file on disk, because on disk that zero-byte placeholder is indistinguishable from an empty file the copy
@@ -495,7 +496,7 @@ Pinned by `volume/merge_placeholder_tests.rs` (including `an_empty_file_that_lan
 `volume/strategy_sequential_tests.rs::a_failed_sequential_extract_takes_back_every_unfilled_reservation`.
 
 **Cross-type overwrites (file↔folder).** Reachable only from a plain Overwrite a person answered on a Stop prompt for
-that SHAPE, its "* all" carry included; a policy nobody was asked about refuses across types (`../DETAILS.md` §
+that SHAPE, its "* all" carry included; a policy nobody was asked about refuses across types (`../../DETAILS.md` §
 "Replacing one kind of entry with another needs a person's consent, per SHAPE"). Move and the copy's symlink branch
 route it through `overwrite::safe_overwrite_dir`; the copy's folder→file case has its own shape, below:
 
@@ -528,7 +529,7 @@ route it through `overwrite::safe_overwrite_dir`; the copy's folder→file case 
   the same way. Only `blocking` itself is created here, so any deeper level stays with the ordinary create-and-record
   walk and reaches the ledger too. A restore is deliberately not tallied: the person counted the items they asked to
   copy, and one of their own files returning isn't one. Pinned by `folder_over_file_rollback_tests.rs` and
-  `write_operations/tests.rs::{displace_with_directory_keeps_the_file_until_the_transaction_answers, a_committed_transaction_drops_what_it_displaced}`.
+  `crates/cmdr-operations/src/tests.rs::{displace_with_directory_keeps_the_file_until_the_transaction_answers, a_committed_transaction_drops_what_it_displaced}`.
 - The symlink branch's file→folder overwrite goes through `safe_overwrite_dir`, correctly: a symlink is complete the
   moment its closure creates it.
 - Local move `move_with_rename` / `merge_move_directory`: when `resolve_conflict` returns Overwrite for a
@@ -585,7 +586,7 @@ journal suite, `volume/named_move_tests.rs`, and archive `copy_into_tests.rs`.
 **Decision.** A top-level source that would land on ITSELF is a request to duplicate, never a conflict. Copy redirects
 it to a free ` (N)` name and proceeds; move writes nothing and counts the item done. Neither consults the user's
 conflict policy, and neither prompts. Why the suffix is ` (N)` rather than Finder's localized `copy` word:
-`../DETAILS.md`, the `unique_name.rs::numbered_name` bullets.
+`../../DETAILS.md`, the `unique_name.rs::numbered_name` bullets.
 
 **A duplicate is same-volume by definition**, so on APFS it takes `LocalCopyStrategy::AppleClone` (§ "Copy strategy
 selection") and a 10 GB video duplicates instantly, at no extra space. Worth not losing: anything that routes a
@@ -906,7 +907,7 @@ own, on both engines.
 ## What a transfer says about each top-level source
 
 Every engine, local and volume, emits `write-source-item-done` per top-level source, carrying an outcome as well as
-`source_removed` (`../DETAILS.md` § "Per-source outcomes", which also says which volume code reports which verdict).
+`source_removed` (`../../DETAILS.md` § "Per-source outcomes", which also says which volume code reports which verdict).
 Three of the local engine's four emit points are non-obvious:
 
 - **A copy bulk-skipped by a pre-known conflict** emits `Skipped` from the bulk-skip prelude, before `SourceItemTracker`
@@ -1170,7 +1171,7 @@ wired, and the consequence is survivable rather than permanent: the startup orph
 space a recorded partial lives in"), so a refused temp is removed on a later launch, and the leftover toast is what
 tells the user in the meantime.
 
-Registration goes through `write_operations::in_flight_temps`, which keeps the operation's in-memory list AND a
+Registration goes through `cmdr_operations::in_flight_temps`, which keeps the operation's in-memory list AND a
 process-wide log in the app data dir. Local copies register there too (`overwrite::stage_and_land_file`), so
 `in_flight_temps` is no longer cross-volume-only — though only the cross-volume drivers run
 `clean_abandoned_staged_writes`, since a local op's temps are registered and deregistered synchronously and anything
@@ -1224,8 +1225,8 @@ Two vocabularies, because the ledger carries both shapes. The cross-volume `stag
 record, naming its volume from `WriteOperationState::dest_volume_id()` (the destination half of `journal_volumes`). The
 local `overwrite.rs` and `move_op/cross_fs.rs` write KINDED records, whose home comes from `in_flight_temps::home_for` —
 the operation's typed destination side (`transfer_sides.rs`), ❌ never a prefix match against the mount table. The three
-homes and why the local-mount / volume-namespace split can't be derived: `crates/cmdr-operations/src/DETAILS.md` § "What
-the sweep does with each kind".
+homes and why the local-mount / volume-namespace split can't be derived: `crates/cmdr-operations/DETAILS.md` § "What the
+sweep does with each kind".
 
 **A path on a removable drive is NOT local-homed**, even though it's an ordinary local path. A drive can be unplugged at
 the next launch, and a record resolved against its mount point then reads as already gone, so the ledger forgets the
@@ -1259,10 +1260,10 @@ quietly did nothing" regression visible instead of inferred.
 `Running`). Five loops, because a local move can spend all its time in any one of them: `same_fs.rs`'s top-level rename
 loop, `mod.rs`'s `merge_move_directory` child loop (a folder-into-folder move does ALL its renaming there, so the
 top-level gate never sees it), and `cross_fs.rs`'s Phase-2 staging copy, Phase-3 rename-into-place, and Phase-4 source
-delete. Three of them ask `state.stop_or_park_sync()`, the one boundary question (`../DETAILS.md` § "Pause / resume").
-The Phase-2 and Phase-3 loops call `pause_gate.wait_while_paused_sync` on its own, because their cancel checks live one
-level down inside `copy_single_item` / the merge, so there is no cancel arm at the boundary to fold the park into.
-Phase-2 is the one a user who hits Pause usually means: it's the phase that moves bytes.
+delete. Three of them ask `state.stop_or_park_sync()`, the one boundary question (`../../DETAILS.md` § "Pause /
+resume"). The Phase-2 and Phase-3 loops call `pause_gate.wait_while_paused_sync` on its own, because their cancel checks
+live one level down inside `copy_single_item` / the merge, so there is no cancel arm at the boundary to fold the park
+into. Phase-2 is the one a user who hits Pause usually means: it's the phase that moves bytes.
 
 A rename is a single syscall, so the item boundary is the only place a rename engine CAN park — there's no equivalent of
 the streaming path's between-chunks checkpoint below.

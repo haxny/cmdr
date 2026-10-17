@@ -26,7 +26,7 @@ the per-source outcomes only IT decides: `Skipped` for a bulk pre-skip, a top-le
 (nothing was decided) and neither does `SourceNotRemoved` (the move's copy landed and its closure already said `Done`).
 The closure reports `Done`, because only it knows whether anything landed and whether the source is gone. The same
 driver marks a whole skipped source's rows in the transfer tree (`skip_whole`), whatever the flag says. Contract:
-`../../DETAILS.md` § "Per-source outcomes".
+`../../../DETAILS.md` § "Per-source outcomes".
 
 ## A leaf's handle is its tree row
 

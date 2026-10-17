@@ -36,7 +36,7 @@ nested inside a closure inside a starter inside the module facade, and the shape
 `transfer/volume/copy.rs` already carry, so a second literal copy of it is duplication a checker can see. Keep it named.
 
 Per-source outcomes reach the sink from here too: the binding's pre-flight (`../source_binding.rs`) announces every
-source it drops. `../DETAILS.md` § "Per-source outcomes".
+source it drops. `../../DETAILS.md` § "Per-source outcomes".
 
 ## What each branch does with a missing or wrong fact
 
@@ -44,7 +44,7 @@ Delete is the operation with no rollback, so every branch here has to have an an
 wrong". The audit, top to bottom:
 
 - **Which selection the cached preview describes.** Bound at the cache, not here: `take_cached_scan_result` compares the
-  entry's `sources` against the operation's and treats a mismatch as a miss (`../DETAILS.md` § "The cache is bound to
+  entry's `sources` against the operation's and treats a mismatch as a miss (`../../DETAILS.md` § "The cache is bound to
   its request"). Both walkers then fall through to a fresh scan. Before that binding, the LOCAL walker was the sharpest
   edge in the app: it takes the cached result wholesale and iterates `scan_result.files` without ever re-reading its own
   `sources`, so a `preview_id` pointing at another tree deleted that tree. Pinned by `preview_binding_tests.rs`.
@@ -96,15 +96,15 @@ dirs) isn't worth the cost. The old code fired a detached whole-machine `sync(2)
 box, stalling unrelated apps (against AGENTS.md principle #5, "be respectful to the user's resources"), and as
 fire-and-forget it didn't even make "complete" mean "durable." Copy and move are the data-loss-class operations (a move
 can leave bytes nowhere durable), so they get the real targeted flush; see `../transfer/DETAILS.md` § "Durability" and
-`../DETAILS.md` § "Key decisions (shared)". Pinned by
-`tests.rs::no_global_sync_or_spawn_async_sync_in_write_operations`, which fails the suite if `spawn_async_sync` or a raw
-`libc::sync()` reappears in `write_operations/`.
+`../../DETAILS.md` § "Key decisions (shared)". Enforced by the crate's `clippy.toml` (`libc::sync` is a disallowed
+method) and by `tests.rs::no_spawn_async_sync_in_the_engine`, which fails the suite if the `spawn_async_sync` helper
+reappears in `crates/cmdr-operations/src/`.
 
 ## Where each of the three loops parks
 
 All three destructive loops in this directory ask `state.stop_or_park_sync()` / `_async()` where they already observed
-cancel (`../DETAILS.md` § "Pause / resume" owns the primitive): the local walker's delete-phase file and dir loops, the
-volume walker's two, and trash's per-item loop. **The SCAN recursion is deliberately NOT gated** — pausing mid-scan
+cancel (`../../DETAILS.md` § "Pause / resume" owns the primitive): the local walker's delete-phase file and dir loops,
+the volume walker's two, and trash's per-item loop. **The SCAN recursion is deliberately NOT gated** — pausing mid-scan
 would freeze a half-counted "Scanning…" for no benefit, since nothing has been destroyed yet.
 
 Trash's boundary is the ITEM, and that's all it can ever be: `trashItemAtURL` hands a whole top-level tree to the OS in

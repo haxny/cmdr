@@ -1,7 +1,7 @@
 # Archive edits
 
 The driver for writes inside a `.zip`: mkdir, mkfile, rename, delete, transfer, and compress. Existing-archive writes
-are O(archive) temp+rename rewrites. Up: `../CLAUDE.md`; mutation: `crates/cmdr-archive/src/mutation/DETAILS.md`.
+are O(archive) temp+rename rewrites. Up: `../../CLAUDE.md`; mutation: `crates/cmdr-archive/src/mutation/DETAILS.md`.
 
 ## Module map
 

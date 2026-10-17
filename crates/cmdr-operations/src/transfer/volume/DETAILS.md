@@ -353,7 +353,7 @@ there" is an answer and may stay one; "I couldn't find out" fails the item.
 reintroduce a probe on the hinted path: it was removed because 15k MTP sources meant 15k parent listings, roughly two
 minutes of frozen dialog. Pinned by `copy_source_hint_tests.rs` (serial and concurrent × copies-the-subtree and
 spares-the-dest-folder, all against an EMPTY `per_path`). The root fix that keeps the map full lives in
-`../../DETAILS.md` § "A completed preview always carries `per_path`".
+`../../../DETAILS.md` § "A completed preview always carries `per_path`".
 
 **The destination free-space pre-flight compares only where a CEILING exists.** Two different silences reach it and both
 mean "go ahead", which is why `copy.rs::room_to_check` collapses them into one `Option<u64>`. The first is a backend
@@ -376,7 +376,7 @@ real ceiling being the one that stops the tolerance growing into ignoring a genu
 `operations_host/backend_suites/sftp_transfer_integration_test.rs`. A real ceiling that refuses is still a question for
 the person: the refusal is `InsufficientSpace`, and "Copy anyway" re-runs the copy with `SpaceShortfall::Proceed`, which
 skips the Phase 2 comparison. Unlike the local engine, this one never looks at what's already at the destination
-(`../../DETAILS.md` § "The free-space pre-flight").
+(`../../../DETAILS.md` § "The free-space pre-flight").
 
 **A destination folder that takes no writes is refused BEFORE its space is measured.** `copy.rs::destination_refusal`
 asks `Volume::write_access_at(dest_path)` first: in `copy_volumes_with_progress` (Phase 0.4, before Phase 0.5 creates
@@ -835,7 +835,7 @@ because the resolver is handed the entry's own path, an Overwrite's safe-replace
   Retry that would ask again).
 - **A free name takes the destination's spelling; an existing one never does.** `NewName::Respell` asks
   `Volume::spell_new_name` for a copy's new entries (SMB, SFTP, and WebDAV compose, so a new name lands NFC;
-  `../../DETAILS.md` § "Look-alike names" has why); `NewName::Keep` is the same-volume move, which keeps the entry it
+  `../../../DETAILS.md` § "Look-alike names" has why); `NewName::Keep` is the same-volume move, which keeps the entry it
   moves. A Rename's ` (N)` pick is new too, so `naming.rs` respells it and skips a numbered name the folder holds in
   another spelling.
 - The pre-flight's dialog radios hear about a look-alike through `cmdr_fs::volume::scan_walk::conflicts_against`, named
@@ -906,7 +906,7 @@ throws the file away. So `resolve_volume_conflict` turns any of the three into `
 apply-to-all carry. A plain `Overwrite` answered on a prompt for that shape replaces, carry included, at both sites (the
 up-front lookup and the Stop arm's under-the-lock re-check). A skipped item reports as skipped, and a MOVE's source
 sweep spares it like any other skip. The rule itself is `../../conflict.rs::resolution_for_clash`, shared with the
-local-FS and in-archive engines so all three answer the same, and the full consent table lives at `../../DETAILS.md`.
+local-FS and in-archive engines so all three answer the same, and the full consent table lives at `../../../DETAILS.md`.
 Pinned by `conflict_cross_type_tests.rs`.
 
 **Overwrite means merge for dirs, replace for files, enforced architecturally, not by trait contract.**
@@ -1073,7 +1073,7 @@ Pinned by `copy_tree_order_tests.rs` (a reversed-listing source: the merge, both
 ## What the drivers report while they run
 
 Every driver reports each file's transfer-tree row and each top-level source's verdict on `write-source-item-done`, both
-observation only. Who reports what: `../../transfer_tree/DETAILS.md` § "How drivers report" and `../../DETAILS.md` §
+observation only. Who reports what: `../../transfer_tree/DETAILS.md` § "How drivers report" and `../../../DETAILS.md` §
 "Per-source outcomes". Pinned by `copy_tree_rows_tests.rs` (several files in flight across folders under the concurrent
 driver, skip-all, a mid-walk skip, a failure naming its file, a cancel leaving rows waiting, and each driver's
 verdicts).
@@ -1203,7 +1203,7 @@ carries the new NAME per source on `WriteOperationState::target_names` (`../../t
 reads where every volume engine builds a top-level destination path. Both engines honor it: the rename-merge renames
 straight to the new name, and the copy engine copies to it. A name is one plain component, refused otherwise, so a
 source can't land outside the folder it was given; ❌ the local and cross-volume engines take none
-(`move_between_volumes` refuses a map there). Who starts these: `../../DETAILS.md` § "Renames that run as moves".
+(`move_between_volumes` refuses a map there). Who starts these: `../../../DETAILS.md` § "Renames that run as moves".
 
 Cells: `move_by_copy_tests.rs` (routing, batched sweep, a rename to a new name on both kinds of volume, a stop keeping
 every source) with `InMemoryVolume::with_renames_by_copy`, which refuses `rename` outright so a move that forgot to
@@ -1725,7 +1725,7 @@ Pinned end to end by `copy_outage_tests.rs`, over `../outage_volume_test_support
 ## Pause in the volume walks
 
 Three loops in this directory are a WALK rather than a byte pump, and each parks at its own per-entry boundary by asking
-`state.stop_or_park_async()` exactly where it already observed cancel (`../../DETAILS.md` § "Pause / resume" owns the
+`state.stop_or_park_async()` exactly where it already observed cancel (`../../../DETAILS.md` § "Pause / resume" owns the
 primitive and the ordering):
 
 - **`merge.rs`'s `merge_level`**, per entry. None of what a walk does — a listing per level, destination creation, a

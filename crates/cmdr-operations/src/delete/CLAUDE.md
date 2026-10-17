@@ -2,7 +2,7 @@
 
 A local-FS walker (`walkdir` + `fs::remove_file`), a volume-aware walker (MTP, SMB, oracle-aware), and OS-native trash.
 
-`../CLAUDE.md` holds the shared `WriteOperationState`, `OperationIntent`, cancel, ETA, and settle contracts;
+`../../CLAUDE.md` holds the shared `WriteOperationState`, `OperationIntent`, cancel, ETA, and settle contracts;
 `../transfer/CLAUDE.md` is the copy + move parallel. Frontend counterpart:
 `apps/desktop/src/lib/file-operations/delete/CLAUDE.md`.
 
@@ -46,8 +46,8 @@ A local-FS walker (`walkdir` + `fs::remove_file`), a volume-aware walker (MTP, S
   (`error-string-match` forbids it). A failed batch is `WriteOperationError::TrashRefused`, ❌ not an `IoError` (one
   flattened sentence leaves the dialog only "try again"), reporting `strongest_refusal`, ❌ not the most common one.
 - **Delete and trash don't `fsync`, and ❌ never a global `sync(2)`**: a non-durable delete is annoyance-class, and that
-  `sync` stalled every other app without making "complete" durable. Pinned by
-  `tests.rs::no_global_sync_or_spawn_async_sync_in_write_operations`.
+  `sync` stalled every other app without making "complete" durable. `libc::sync` is a disallowed method in
+  `crates/cmdr-operations/clippy.toml`.
 - **A recursive scan that bails with `Err(Cancelled)` must NOT emit `write-cancelled`; its top-level caller does**, via
   `emit_cancelled_if_aborted`. `scan_volume_recursive` checks cancel per level, so emitting at the bail site fires the
   terminal event once per stacked frame. Pinned by `delete_cancel_during_scan_emits_write_cancelled`.

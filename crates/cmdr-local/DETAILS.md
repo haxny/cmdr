@@ -64,9 +64,9 @@ shape of everything below. The `testing` feature (the app turns it on through a 
 app's test build needs, each with `any(test, feature = "testing")`:
 
 - `space::get_volume_space` answers from `statvfs` (§ "Local volume space"): without it, the #357 stall comes back in
-  the app's transfer, archive move-out, and ADB suites.
+  the write engine's transfer and archive move-out suites and the app's ADB suites.
 - `PROGRESS_SAMPLE_INTERVAL` is 1 ms (§ "The local reader").
-- `LocalPosixVolume::with_sidecar_probe`, which the app's `copy_sidecar_tests.rs` plays a FAT folder with.
+- `LocalPosixVolume::with_sidecar_probe`, which the write engine's `copy_sidecar_tests.rs` plays a FAT folder with.
 - `reading::list_directory`, which only the app's test-only `RealFileSystemProvider` calls.
 
 The first two are `cfg!` branches rather than `#[cfg]` items, so both arms compile in every build and neither leaves
@@ -168,10 +168,10 @@ at `statfs` cost:
 registered with non-root volume IDs. Forced renames retain normal POSIX replacement semantics because the caller
 explicitly authorized replacement.
 
-**There is exactly one implementation of it**, and the app's `write_operations::overwrite::rename_no_replace` is a
-one-line delegation to it, as is the in-flight sweep's local landing. Both names have to stay one function: while they
-were two, only the copy side degraded on a filesystem lacking the kernel flag, so the pane's own renames failed on every
-mounted SMB share while a copy landing in the same folder succeeded (ERR-8RFN4, app 0.45.1).
+**There is exactly one implementation of it**, and the write engine's `overwrite::rename_no_replace` (`cmdr-operations`)
+is a one-line delegation to it, as is the in-flight sweep's local landing. Both names have to stay one function: while
+they were two, only the copy side degraded on a filesystem lacking the kernel flag, so the pane's own renames failed on
+every mounted SMB share while a copy landing in the same folder succeeded (ERR-8RFN4, app 0.45.1).
 
 **The kernel flag is not universal.** `renamex_np(RENAME_EXCL)` and `renameat2(RENAME_NOREPLACE)` are APFS, HFS+, and
 ext4; macOS's smbfs answers `ENOTSUP` (errno 45, verified twice against Synology SMB mounts: macOS 26.6.2 from the

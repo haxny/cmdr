@@ -1,6 +1,6 @@
 # Transfer (copy + move)
 
-Local and cross-volume copy/move (`transfer_driver/`, `OperationEventSink`). Shared operation state: `../CLAUDE.md`.
+Local and cross-volume copy/move (`transfer_driver/`, `OperationEventSink`). Shared operation state: `../../CLAUDE.md`.
 Frontend: `apps/desktop/src/lib/file-operations/transfer/CLAUDE.md`.
 
 Local: `copy/`, `move_op/`, `copy_strategy.rs`. Cross-volume facade: `transfer::volume::<item>` (`volume/CLAUDE.md`).

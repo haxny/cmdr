@@ -1,8 +1,8 @@
 # Archive edits: details
 
 Read this before any non-trivial work here: editing, planning, reorganizing, or advising. The must-knows are in
-`CLAUDE.md`; the surrounding managed-op machinery (lanes, admission, conflicts, the settle contract) is `../DETAILS.md`,
-and the mutation mechanism itself is `crates/cmdr-archive/src/mutation/DETAILS.md`.
+`CLAUDE.md`; the surrounding managed-op machinery (lanes, admission, conflicts, the settle contract) is
+`../../DETAILS.md`, and the mutation mechanism itself is `crates/cmdr-archive/src/mutation/DETAILS.md`.
 
 Editing a `.zip` (mkdir/mkfile/rename/delete inside, or copy/move INTO one) is an O(archive) temp+rename rewrite, not a
 metadata syscall, so it runs as a managed op through `spawn_managed`, NOT `run_instant`. The `archive_edit/` module is

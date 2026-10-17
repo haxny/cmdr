@@ -1,8 +1,49 @@
 # Operation log — details
 
-Depth for the operation-log subsystem. Must-knows and the module map: `CLAUDE.md`. This doc captures what shipped and
-the durable rationale a future agent needs on hand, including every decision behind it. App paths named here
-(`commands/`, `mcp/`, `file_system/write_operations/`, `operation_log_host/`) are under `apps/desktop/src-tauri/src/`.
+Depth for the `cmdr-operation-log` crate. Read this before any non-trivial work here: editing, planning, reorganizing,
+or advising. Must-knows and the module map: `CLAUDE.md`. This doc captures what shipped and the durable rationale a
+future agent needs on hand, including every decision behind it. App paths named here (`commands/`, `mcp/`,
+`operation_log_host/`) are under `apps/desktop/src-tauri/src/`; the write engine that journals into the log is
+`crates/cmdr-operations/`.
+
+## Must-knows, in full
+
+`CLAUDE.md` keeps each of these as one line; this is the full text, with the why each line compresses.
+
+- **The log never names its host**: values or traits come in. Planner end-to-end cells:
+  `crates/cmdr-operations/src/rollback/planner_tests/`. § "The crate boundary".
+- **DURABLE and MIGRATES; never delete-and-recreate on a version bump.** The ladder (`store/migrations.rs`) is the
+  template future durable DBs follow: append a `Migration`, NEVER edit or renumber a shipped step. A downgrade is
+  refused; only an unparseable file is rebuilt (typed sqlite code, ❌ not a string).
+- **NO `platform_case` collation.** A precomputed `name_folded` column (Unicode-lowercase + NFC) plus plain b-tree
+  equality keeps the file `sqlite3`-openable.
+- **One writer thread, one cross-volume DB, NO per-volume registry.** `record_items` BLOCKS under backpressure
+  (lossless); a DB error drops that ONE row, and the completeness check degrades the op rather than under-reversing it.
+- **Classification is typed end to end**: every `kind`, `initiator`, status, `row_role`, `outcome`, and
+  `rollback_skip_reason` is a `types.rs` enum with a stable token, mapped ONLY there. Renaming a token is a schema
+  change; renaming a variant is free.
+- **The writer stores terminal state; it does NOT compute eligibility.** That reasoning lives in `capture.rs`. A driver
+  may also NOTE a reason the rows can't express (`note_not_rollbackable`, say a directory merge), and a note beats the
+  per-kind rule.
+- **Capture is the operation's `OpJournal`, fixed at `journal_open` and carried in the write engine's op scope** (❌
+  never extend `OperationEventSink`).
+- **Recording on/off is decided ONCE per op, at open** (`recording.rs`); ❌ never mid-op (half-journaled lies).
+- **A multi-operation undo reverses NEWEST FIRST** (`undo_order`): a later rename batch can take a name an earlier one
+  freed. Callers pass ids in APPLY order.
+- **Rollback FAILS SAFE** (data-safety-critical): recheck each item against its snapshot AND its restore target; drift,
+  unverifiable, or occupied target ⇒ SKIP (→ `partially_rolled_back`), never operate, and a restore-move never
+  overwrites. `verify_snapshot` + `SkipReason` + `SkipTally` are SHARED with the in-flight reversals
+  (`crates/cmdr-operations/src/reversal.rs`): ❌ don't fork them. `rolling_back` guards double-rollback and the
+  retention race.
+- **The engine PLANS; an injected `RollbackRunner` acts** (this crate can't reach the executor). Pause parks BEFORE the
+  item is verified (a stale verification must never authorize a destructive act), and a reversal's "should I stop?" is
+  NOT `is_cancelled` (`StopMeans`). § "Planner here, executor injected".
+- **Op ids are UUIDv7 (`new_operation_id`), never v4**: same-second ops order by `op_id`, and only v7 sorts by time.
+- **The journal records what SURVIVES an operation, whatever its terminal state**: a canceled copy's files AND the dirs
+  it created, never the mid-write partial (both terminal paths remove it).
+- **Search spans every `row_role`; retention prunes whole ops only.** Name search matches `source_name_folded` across
+  `rollback_unit` AND `search_only` rows, so a leaf hits inside a trashed folder. Retention never prunes a
+  `rolling_back` op or its target.
 
 ## What this is
 
@@ -169,9 +210,8 @@ it in the operation's scope (`OpScope`, `crates/cmdr-operations/src/scope.rs`) f
   constraint holds: the sink stays a sink, and nothing here extends `OperationEventSink`.
 - **Testability holds.** Every test builds its own handle, so none needs a lock. A test of the operation log builds an
   `OperationLog` directly; a write-pipeline test builds an engine journaling into a temp-DB log of its own
-  (`write_operations::testing::TestOperationLog`, `crates/cmdr-operations/src/DETAILS.md` § "Test isolation: an engine
-  of the test's own"). A test that drives an engine function directly opens the journal on the same state's scope it
-  passes in.
+  (`cmdr_operations::testing::TestOperationLog`, `crates/cmdr-operations/DETAILS.md` § "Test isolation: an engine of the
+  test's own"). A test that drives an engine function directly opens the journal on the same state's scope it passes in.
 - **Lifecycle.** `journal_open` is called when the op actually STARTS (inside the manager's deferred), not at
   registration, so a queued op that's canceled before admission never journals and leaks no accumulator. The finalize
   removes the per-op accumulator.
@@ -431,7 +471,7 @@ Per-leaf delete/copy rows are the search requirement, so there is **no row cap**
 `rollback.rs` is the data-safety-critical engine that undoes a journaled operation. It never runs a bespoke reversal:
 each item's inverse is applied through the `Volume` trait (so local and remote reverse uniformly), and the whole inverse
 is itself a journaled operation linked back via `rolls_back_op_id`. The write-pipeline glue that spawns it as a
-cancelable managed op is `file_system/write_operations/rollback.rs::dispatch_rollback`.
+cancelable managed op is `crates/cmdr-operations/src/rollback.rs::dispatch_rollback`.
 
 ### Planner here, executor injected
 
@@ -439,7 +479,7 @@ cancelable managed op is `file_system/write_operations/rollback.rs::dispatch_rol
 typed skip reason, and keeps the books. It performs nothing. It looks volumes up through an injected `VolumeLookup`
 (`rollback/runner.rs`), which the app answers with its volume registry
 (`apps/desktop/src-tauri/src/operation_log_host/volumes.rs`). Each decided act goes to an injected `RollbackRunner`
-(`rollback/runner.rs`), whose production implementation is `write_operations::rollback::ReversalRunner`. An act that
+(`rollback/runner.rs`), whose production implementation is `cmdr_operations::rollback::ReversalRunner`. An act that
 didn't happen comes back as an `ActRefusal`: the volume's raw `VolumeError`, which the planner maps to a skip, or
 `Locked`, which `ReversalRunner` answers for a verified LOCAL item whose removal was refused and whose lock it can't
 clear (`schg`). Before that answer it clears the item's Locked flag and ACL and retries the delete once, since a copy
@@ -449,12 +489,12 @@ the runner, ❌ never in the volume, whose delete is also F8's (`crates/cmdr-ope
 a reversal does with that identity").
 
 Why the seam is here: the act a cross-volume restore needs is the staged, retrying, stall-detecting per-file transfer,
-and that machinery is `pub(in write_operations)` behind the `transfer::volume` facade — unreachable from
-`operation_log`, and it must stay that way (this subsystem holds no file-moving code). Injection buys the reach without
-the dependency, the same move the `spawn` hook in `rollback_operation` makes. The loop stays here; its end-to-end cells
-drive it with the real executor, so they and their rig live beside that executor
-(`apps/desktop/src-tauri/src/file_system/write_operations/rollback/planner_tests/`), and only the pure decision helpers
-are tested here (`src/rollback/decision_tests.rs`).
+and that machinery is private to `cmdr-operations`, behind its `transfer::volume` facade — unreachable from this crate,
+and it must stay that way (this subsystem holds no file-moving code). Injection buys the reach without the dependency,
+the same move the `spawn` hook in `rollback_operation` makes. The loop stays here; its end-to-end cells drive it with
+the real executor, so they and their rig live beside that executor
+(`crates/cmdr-operations/src/rollback/planner_tests/`), and only the pure decision helpers are tested here
+(`src/rollback/decision_tests.rs`).
 
 The runner carries the loop's three live answers as well as its hands:
 
@@ -607,7 +647,7 @@ each other and the one measuring a window fails for a reason nothing inside it p
 
 ### Undoing a job: several operations, newest first
 
-`write_operations/rollback.rs::undo_operations` is the frontend-facing entry (IPC:
+`crates/cmdr-operations/src/rollback.rs::undo_operations` is the frontend-facing entry (IPC:
 `commands/operation_log.rs::undo_operations`; the MCP `operations_rollback` tool still dispatches ONE op and polls). It
 exists for the Ask Cmdr rename rail, where one run can approve several batches.
 
@@ -839,7 +879,9 @@ volumes up in (`VolumeLookup`).
 
 ### The public surface is capped
 
-`index-crate-isolation` holds the surface to what it was at the extraction, with no headroom. By module:
+`index-crate-isolation` holds the surface to 11 root promises, 6 `OperationLog` methods, seven public modules, and 76
+items in them, with no headroom: measured at the extraction and re-measured once, when the journal API took
+`OperationId` (`scripts/check/checks/index-crate-isolation-ceilings.go`). By module:
 
 - **Root**: `OperationLog` (the handle), `OpJournal`, `OpenError`, `new_operation_id`, and the seven modules below. The
   handle's methods are `detached`, `open`, `set_recording`, `writer`, `spawn_retention`, and `journal_open`; an
