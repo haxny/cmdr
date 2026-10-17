@@ -298,8 +298,8 @@ fn fsync_dir(dir: &Path) -> io::Result<()> {
 /// path, indexer not yet initialised). The BE intentionally never *walks*
 /// the tree to compute this — `(unknown)` on the FE is the legitimate
 /// fallback when the cached value isn't available.
-pub(super) fn lookup_indexed_size(path: &Path) -> Option<u64> {
-    super::host::installed().index().recursive_size(path)
+pub(super) fn lookup_indexed_size(host: &super::host::EngineHost, path: &Path) -> Option<u64> {
+    host.index().recursive_size(path)
 }
 
 /// Test seam: records every directory `fsync_dir` is asked to sync on this

@@ -343,7 +343,7 @@ pub(super) fn resolve_conflict(
                 meta: source_meta.as_ref(),
                 is_directory: source_is_directory,
                 size_for_dir: if source_is_directory {
-                    lookup_indexed_size(source)
+                    lookup_indexed_size(state.scope().host(), source)
                 } else {
                     None
                 },
@@ -353,7 +353,7 @@ pub(super) fn resolve_conflict(
                 meta: dest_meta.as_ref(),
                 is_directory: destination_is_directory,
                 size_for_dir: if destination_is_directory {
-                    lookup_indexed_size(dest_path)
+                    lookup_indexed_size(state.scope().host(), dest_path)
                 } else {
                     None
                 },

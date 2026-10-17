@@ -166,8 +166,8 @@ pub(super) async fn extract_sequential_subtree(
         let staged = StagedWrite::begin(state, &planned.dest_path, staging);
         // Register the destination before the write, exactly as `stream_pipe_file`
         // does (covers a Downloads-landing local dest; a no-op for MTP/SMB).
-        note_pending_for_local_dest(dest_volume, &planned.dest_path);
-        note_pending_for_local_dest(dest_volume, staged.target());
+        note_pending_for_local_dest(state.scope().host(), dest_volume, &planned.dest_path);
+        note_pending_for_local_dest(state.scope().host(), dest_volume, staged.target());
         // The member reports its own mode off the archive's index; an extract
         // adds the archive's quarantine to its xattrs (`extract_quarantine.rs`).
         // A member that fails to decode comes back as the WRITE's error; the

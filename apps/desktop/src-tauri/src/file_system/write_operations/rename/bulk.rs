@@ -373,7 +373,7 @@ fn rename_local_direct(row: &BulkRenameRow, outcome: &mut BulkRenameOutcome, rec
     if !SourceFingerprint::capture_local(&row.source).is_some_and(|actual| actual == row.expected_fingerprint) {
         return;
     }
-    note_rename_write(&row.source, &row.destination);
+    recorder.note_write(&row.source, &row.destination);
     *outcome = match rename_local_exclusive(&row.source, &row.destination) {
         Ok(()) => {
             recorder.record_hop(row, &row.source, &row.destination);
@@ -392,20 +392,20 @@ fn rename_local_case_only(row: &BulkRenameRow, outcome: &mut BulkRenameOutcome, 
         *outcome = BulkRenameOutcome::Failed;
         return;
     };
-    note_rename_write(&row.source, &temporary);
+    recorder.note_write(&row.source, &temporary);
     if rename_local_exclusive(&row.source, &temporary).is_err() {
         *outcome = BulkRenameOutcome::Failed;
         return;
     }
     recorder.record_hop(row, &row.source, &temporary);
-    note_rename_write(&temporary, &row.destination);
+    recorder.note_write(&temporary, &row.destination);
     *outcome = match rename_local_exclusive(&temporary, &row.destination) {
         Ok(()) => {
             recorder.record_hop(row, &temporary, &row.destination);
             BulkRenameOutcome::Done
         }
         Err(error) => {
-            note_rename_write(&temporary, &row.source);
+            recorder.note_write(&temporary, &row.source);
             if rename_local_exclusive(&temporary, &row.source).is_ok() {
                 recorder.record_hop(row, &temporary, &row.source);
             }
@@ -438,7 +438,7 @@ fn rename_local_cycle(
         outcomes[first] = BulkRenameOutcome::Failed;
         return;
     };
-    note_rename_write(&rows[first].source, &temporary);
+    recorder.note_write(&rows[first].source, &temporary);
     if rename_local_exclusive(&rows[first].source, &temporary).is_err() {
         outcomes[first] = BulkRenameOutcome::Failed;
         return;
@@ -448,7 +448,7 @@ fn rename_local_cycle(
     let mut moved = Vec::with_capacity(indices.len() - 1);
     for index in indices.iter().skip(1).rev().copied() {
         let row = &rows[index];
-        note_rename_write(&row.source, &row.destination);
+        recorder.note_write(&row.source, &row.destination);
         if rename_local_exclusive(&row.source, &row.destination).is_err() {
             restore_local_cycle(rows, first, &temporary, &moved, recorder);
             outcomes[index] = BulkRenameOutcome::Failed;
@@ -457,7 +457,7 @@ fn rename_local_cycle(
         recorder.record_hop(row, &row.source, &row.destination);
         moved.push(index);
     }
-    note_rename_write(&temporary, &rows[first].destination);
+    recorder.note_write(&temporary, &rows[first].destination);
     if rename_local_exclusive(&temporary, &rows[first].destination).is_err() {
         restore_local_cycle(rows, first, &temporary, &moved, recorder);
         outcomes[first] = BulkRenameOutcome::Failed;
@@ -481,12 +481,12 @@ fn restore_local_cycle(
     recorder: &BulkRenameRecorder,
 ) {
     for index in moved.iter().rev().copied() {
-        note_rename_write(&rows[index].destination, &rows[index].source);
+        recorder.note_write(&rows[index].destination, &rows[index].source);
         if rename_local_exclusive(&rows[index].destination, &rows[index].source).is_ok() {
             recorder.record_hop(&rows[index], &rows[index].destination, &rows[index].source);
         }
     }
-    note_rename_write(temporary, &rows[first].source);
+    recorder.note_write(temporary, &rows[first].source);
     if rename_local_exclusive(temporary, &rows[first].source).is_ok() {
         recorder.record_hop(&rows[first], temporary, &rows[first].source);
     }
@@ -501,7 +501,7 @@ async fn rename_remote_direct(
     if !remote_fingerprint_matches(volume, &row.source, &row.expected_fingerprint).await {
         return;
     }
-    note_rename_write(&row.source, &row.destination);
+    recorder.note_write(&row.source, &row.destination);
     *outcome = if volume.rename(&row.source, &row.destination, false).await.is_ok() {
         recorder.record_hop(row, &row.source, &row.destination);
         BulkRenameOutcome::Done
@@ -525,18 +525,18 @@ async fn rename_remote_case_only(
         *outcome = BulkRenameOutcome::Failed;
         return;
     };
-    note_rename_write(&row.source, &temporary);
+    recorder.note_write(&row.source, &temporary);
     if volume.rename(&row.source, &temporary, false).await.is_err() {
         *outcome = BulkRenameOutcome::Failed;
         return;
     }
     recorder.record_hop(row, &row.source, &temporary);
-    note_rename_write(&temporary, &row.destination);
+    recorder.note_write(&temporary, &row.destination);
     if volume.rename(&temporary, &row.destination, false).await.is_ok() {
         recorder.record_hop(row, &temporary, &row.destination);
         *outcome = BulkRenameOutcome::Done;
     } else {
-        note_rename_write(&temporary, &row.source);
+        recorder.note_write(&temporary, &row.source);
         let destination_exists = volume.get_metadata(&row.destination).await.is_ok();
         if volume.rename(&temporary, &row.source, false).await.is_ok() {
             recorder.record_hop(row, &temporary, &row.source);
@@ -566,7 +566,7 @@ async fn rename_remote_cycle(
         outcomes[first] = BulkRenameOutcome::Failed;
         return;
     };
-    note_rename_write(&rows[first].source, &temporary);
+    recorder.note_write(&rows[first].source, &temporary);
     if volume.rename(&rows[first].source, &temporary, false).await.is_err() {
         outcomes[first] = BulkRenameOutcome::Failed;
         return;
@@ -575,7 +575,7 @@ async fn rename_remote_cycle(
     let mut moved = Vec::with_capacity(indices.len() - 1);
     for index in indices.iter().skip(1).rev().copied() {
         let row = &rows[index];
-        note_rename_write(&row.source, &row.destination);
+        recorder.note_write(&row.source, &row.destination);
         if volume.rename(&row.source, &row.destination, false).await.is_err() {
             restore_remote_cycle(volume, rows, first, &temporary, &moved, recorder).await;
             outcomes[index] = BulkRenameOutcome::Failed;
@@ -584,7 +584,7 @@ async fn rename_remote_cycle(
         recorder.record_hop(row, &row.source, &row.destination);
         moved.push(index);
     }
-    note_rename_write(&temporary, &rows[first].destination);
+    recorder.note_write(&temporary, &rows[first].destination);
     if volume
         .rename(&temporary, &rows[first].destination, false)
         .await
@@ -609,7 +609,7 @@ async fn restore_remote_cycle(
     recorder: &BulkRenameRecorder,
 ) {
     for index in moved.iter().rev().copied() {
-        note_rename_write(&rows[index].destination, &rows[index].source);
+        recorder.note_write(&rows[index].destination, &rows[index].source);
         if volume
             .rename(&rows[index].destination, &rows[index].source, false)
             .await
@@ -618,7 +618,7 @@ async fn restore_remote_cycle(
             recorder.record_hop(&rows[index], &rows[index].destination, &rows[index].source);
         }
     }
-    note_rename_write(temporary, &rows[first].source);
+    recorder.note_write(temporary, &rows[first].source);
     if volume.rename(temporary, &rows[first].source, false).await.is_ok() {
         recorder.record_hop(&rows[first], temporary, &rows[first].source);
     }
@@ -646,11 +646,6 @@ async fn unique_remote_temporary_path(volume: &dyn Volume, source: &Path, row_id
     None
 }
 
-fn note_rename_write(from: &Path, to: &Path) {
-    host::installed().own_writes().announce(from);
-    host::installed().own_writes().announce(to);
-}
-
 /// Whether the row's source on `volume` is still the file the preflight recorded.
 /// The recorded normalized path is part of the fingerprint, so a row pointing at a
 /// different path than the one it was accepted for can never match.
@@ -675,6 +670,12 @@ struct BulkRenameRecorder {
 impl BulkRenameRecorder {
     fn new(scope: Arc<crate::file_system::write_operations::scope::OpScope>, volume_id: String) -> Self {
         Self { scope, volume_id }
+    }
+
+    /// Announces both ends of a hop before the rename that makes it.
+    fn note_write(&self, from: &Path, to: &Path) {
+        self.scope.host().own_writes().announce(from);
+        self.scope.host().own_writes().announce(to);
     }
 
     /// One completed filesystem hop, recorded the moment it lands.

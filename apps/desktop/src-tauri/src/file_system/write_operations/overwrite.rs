@@ -30,7 +30,7 @@ use uuid::Uuid;
 use cmdr_fs::metadata::{LandedMetadata, Unblock, apply_landed, clear_blockers};
 
 use super::error_classification::classify_io_error;
-use super::host::{self, AsideAttempt, OperationErrorReport};
+use super::host::{AsideAttempt, OperationErrorReport};
 use super::in_flight_temps::{self, ItemKind, TrackedRecord};
 use super::state::WriteOperationState;
 use super::types::{RecoveredOriginal, WriteOperationError};
@@ -475,7 +475,9 @@ impl DisplacedEntry {
         match rename_no_replace(aside, &self.original) {
             Ok(()) => in_flight_temps::retire(&self.state, &self.record),
             Err(e) => {
-                host::installed()
+                self.state
+                    .scope()
+                    .host()
                     .events()
                     .error_report(OperationErrorReport::AsideStranded {
                         attempt: AsideAttempt::DisplacedRestore {
@@ -519,7 +521,9 @@ impl DisplacedEntry {
                 }
                 Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => {}
                 Err(e) => {
-                    host::installed()
+                    self.state
+                        .scope()
+                        .host()
                         .events()
                         .error_report(OperationErrorReport::AsideStranded {
                             attempt: AsideAttempt::RecoveredName,

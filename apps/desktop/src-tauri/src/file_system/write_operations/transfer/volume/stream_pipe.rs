@@ -135,7 +135,7 @@ pub(super) async fn stream_pipe_file(
     // ignore set when the destination is local-FS-backed (the only case where
     // the watcher could otherwise fire). Covers MTP→Local and SMB→Local imports
     // that land in ~/Downloads.
-    note_pending_for_local_dest(dest_volume, dest_path);
+    note_pending_for_local_dest(state.scope().host(), dest_volume, dest_path);
 
     // A destination that can't rename can't stage. No production backend is in
     // that position (Local, SMB, and MTP all rename), but a minimal `Volume`
@@ -251,7 +251,7 @@ pub(super) async fn stream_pipe_file(
         // the stall watchdog below keep reading the single-shot answer alone.
         let resolved_staging = resolve_staging(staging, write_is_single_shot || dest_volume.publishes_writes_whole());
         let staged = StagedWrite::begin(state, dest_path, resolved_staging);
-        note_pending_for_local_dest(dest_volume, staged.target());
+        note_pending_for_local_dest(state.scope().host(), dest_volume, staged.target());
         // Wrap so a paused op parks (and a long copy yields to foreground)
         // between bounded windows. `size` is read off the raw stream first — the
         // wrapper forwards `total_size()` unchanged, so the destination still sees

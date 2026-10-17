@@ -22,7 +22,7 @@ use std::time::Duration;
 
 use super::super::super::conflict::ApplyToAll;
 use super::super::super::event_sinks::OperationEventSink;
-use super::super::super::host;
+use super::super::super::host::EngineHost;
 use super::super::super::journal;
 use super::super::super::manager;
 use super::super::super::state::WriteOperationState;
@@ -67,12 +67,12 @@ fn landed_whole(
 /// Resolve `path` against `volume.local_path()` and register it with the
 /// downloads watcher's ignore set. Skips silently when `volume` isn't
 /// local-FS-backed: those paths can't trigger the watcher anyway.
-fn note_pending_for_local_volume(volume: &Arc<dyn Volume>, path: &Path) {
+fn note_pending_for_local_volume(host: &EngineHost, volume: &Arc<dyn Volume>, path: &Path) {
     let Some(root) = volume.local_path() else {
         return;
     };
     let absolute = cmdr_fs::volume::root_anchored(&root, path);
-    host::installed().own_writes().announce(&absolute);
+    host.own_writes().announce(&absolute);
 }
 
 /// Moves files within the same volume using native `Volume::rename`.
@@ -776,8 +776,8 @@ pub(crate) async fn move_within_same_volume_with_progress(
                         // the downloads watcher's ignore set. No-ops on
                         // non-local volumes.
                         let note = |from: &Path, to: &Path| {
-                            note_pending_for_local_volume(&volume, from);
-                            note_pending_for_local_volume(&volume, to);
+                            note_pending_for_local_volume(state.scope().host(), &volume, from);
+                            note_pending_for_local_volume(state.scope().host(), &volume, to);
                         };
                         rename_merge_directory(&merge_ctx, &source_path, &dest_item_path, &note).await?;
                         // The row below names the PRE-EXISTING destination folder,
@@ -819,8 +819,8 @@ pub(crate) async fn move_within_same_volume_with_progress(
                     // ignore set when the volume is local-FS-backed.
                     // No-ops otherwise. Same rationale as `commands/rename.rs`:
                     // suppress both the arrival and the move-out.
-                    note_pending_for_local_volume(&volume, &source_path);
-                    note_pending_for_local_volume(&volume, &dest_item_path);
+                    note_pending_for_local_volume(state.scope().host(), &volume, &source_path);
+                    note_pending_for_local_volume(state.scope().host(), &volume, &dest_item_path);
 
                     // The file this rename is replacing, if any, is sitting
                     // under its `.cmdr-temp-<uuid>` aside waiting to hear whether

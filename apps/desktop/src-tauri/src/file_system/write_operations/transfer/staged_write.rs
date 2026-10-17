@@ -42,7 +42,7 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use super::super::host;
+use super::super::host::EngineHost;
 use super::super::in_flight_temps::TempHome;
 use super::super::state::WriteOperationState;
 use super::recovered_name::{
@@ -721,14 +721,14 @@ pub(super) fn resolve_staging(requested: WriteStaging, lands_whole: bool) -> Wri
 /// `dest_volume` isn't local-FS-backed (MTP, SMB, in-memory): those paths
 /// would never trigger the watcher anyway, and synthesizing a non-local
 /// path into the ignore set would just churn the map for no benefit.
-pub(super) fn note_pending_for_local_dest(dest_volume: &Arc<dyn Volume>, dest_path: &Path) {
+pub(super) fn note_pending_for_local_dest(host: &EngineHost, dest_volume: &Arc<dyn Volume>, dest_path: &Path) {
     let Some(root) = dest_volume.local_path() else {
         return;
     };
     // The same anchoring `LocalPosixVolume::resolve` applies, so the path we
     // register matches the one `write_from_stream` will hit.
     let absolute = cmdr_fs::volume::root_anchored(&root, dest_path);
-    host::installed().own_writes().announce(&absolute);
+    host.own_writes().announce(&absolute);
 }
 
 #[cfg(test)]

@@ -77,7 +77,7 @@ pub(super) async fn try_server_side_copy(
     // ❌ Never the single-shot answer: only whole-publish holds for a copy.
     let staging = resolve_staging(staging, dest_volume.publishes_writes_whole());
     let staged = StagedWrite::begin(state, dest_path, staging);
-    note_pending_for_local_dest(dest_volume, staged.target());
+    note_pending_for_local_dest(state.scope().host(), dest_volume, staged.target());
     log::debug!(
         target: "copy",
         "try_server_side_copy: asking {} to copy {} on the server, into {}",

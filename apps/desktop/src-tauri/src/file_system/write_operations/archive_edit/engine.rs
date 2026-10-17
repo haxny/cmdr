@@ -11,7 +11,7 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use super::super::OperationEventSink;
-use super::super::host;
+use super::super::host::EngineHost;
 use super::super::operation_intent::is_cancelled;
 use super::super::state::WriteOperationState;
 use super::super::types::{
@@ -51,6 +51,7 @@ where
     F: FnOnce(&Path) -> Result<T, EditError> + Send + 'static,
     T: Send + 'static,
 {
+    let scope = state.shared_scope();
     let result = apply_local_or_remote(
         parent_volume_id,
         archive_path.clone(),
@@ -60,7 +61,7 @@ where
     )
     .await;
     if result.is_ok() {
-        show_the_edit(parent_volume_id, &archive_path).await;
+        show_the_edit(scope.host(), parent_volume_id, &archive_path).await;
     }
     result
 }
@@ -74,10 +75,9 @@ where
 /// app's own swap many seconds late or not at all (a pane stayed stale until
 /// re-entered, vdavid/cmdr-reports#55), and a remote parent has no watch at all.
 /// The parsed index goes first, since the cache key can miss the change.
-async fn show_the_edit(parent_volume_id: &str, archive_path: &Path) {
-    host::installed().volumes().forget_archive_index(archive_path);
-    host::installed()
-        .listings()
+async fn show_the_edit(host: &EngineHost, parent_volume_id: &str, archive_path: &Path) {
+    host.volumes().forget_archive_index(archive_path);
+    host.listings()
         .refresh_archive_listings(parent_volume_id, archive_path)
         .await;
 }
@@ -435,7 +435,7 @@ impl MutatorHooks {
     /// every entry, so a click during the sleep always stops the rewrite, whereas
     /// after the last entry the commit follows with no check left to honor it.
     fn pace_entry_for_e2e(&self, progress: MutationProgress) {
-        let Some(pause) = host::installed().pacing().copy_throttle() else {
+        let Some(pause) = self.state.scope().host().pacing().copy_throttle() else {
             return;
         };
         if progress.entries_done >= progress.entries_total
@@ -466,7 +466,7 @@ impl MutationHooks for MutatorHooks {
     }
 
     fn note_pending(&self, path: &Path) {
-        host::installed().own_writes().announce(path);
+        self.state.scope().host().own_writes().announce(path);
     }
 }
 
