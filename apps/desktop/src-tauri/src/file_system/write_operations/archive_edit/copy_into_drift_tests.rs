@@ -16,7 +16,6 @@ use std::sync::Mutex;
 use futures_util::FutureExt;
 
 use super::test_support::*;
-use crate::file_system::write_operations::route_archive_copy_into;
 use crate::file_system::write_operations::types::{
     ConflictInfo, DryRunResult, ScanProgressEvent, WriteCancelledEvent, WriteCompleteEvent, WriteConflictResolvedEvent,
     WriteErrorEvent, WriteProgressEvent, WriteSettledEvent, WriteSourceItemDoneEvent,
@@ -76,28 +75,30 @@ impl OperationEventSink for EditOnFirstProgress {
     }
 }
 
-/// Moves `source_rel` from `source_volume` into `archive` and waits for the
-/// completion event.
+/// Moves `source_rel` from `source_volume` into `archive` on `engine` and waits
+/// for the completion event.
 async fn move_into(
+    engine: &TestOperations,
     events: &Arc<EditOnFirstProgress>,
     source_volume: Arc<dyn Volume>,
     source_rel: &str,
     archive: &Path,
 ) -> WriteCompleteEvent {
-    route_archive_copy_into(
-        Arc::clone(events) as Arc<dyn OperationEventSink>,
-        source_volume,
-        vec![PathBuf::from(source_rel)],
-        archive.to_path_buf(),
-        unique_lane_id(),
-        ConflictResolution::Overwrite,
-        0,
-        true,
-        None,
-        None,
-    )
-    .await
-    .expect("start the move into the zip");
+    engine
+        .route_archive_copy_into(
+            Arc::clone(events) as Arc<dyn OperationEventSink>,
+            source_volume,
+            vec![PathBuf::from(source_rel)],
+            archive.to_path_buf(),
+            unique_lane_id(),
+            ConflictResolution::Overwrite,
+            0,
+            true,
+            None,
+            None,
+        )
+        .await
+        .expect("start the move into the zip");
     wait_until_async(Duration::from_secs(5), "a terminal event", || {
         !events.inner.complete.lock_ignore_poison().is_empty() || !events.inner.errors.lock_ignore_poison().is_empty()
     })
@@ -118,12 +119,13 @@ async fn move_into(
 /// an untouched original still goes.
 #[tokio::test]
 async fn a_remote_source_keeps_what_changed_or_appeared_during_a_move_into_a_zip() {
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     let archive = tmp.path().join("a.zip");
     write_multi_zip(&archive, &[("placeholder.txt", b"x")]);
     let (source_id, source) =
-        register_remote_source(&[("d/draft.txt", b"first draft"), ("d/report.txt", b"report")]).await;
-    let source_volume: Arc<dyn Volume> = get_volume_manager().get(&source_id).expect("source volume");
+        register_remote_source(&engine, &[("d/draft.txt", b"first draft"), ("d/report.txt", b"report")]).await;
+    let source_volume: Arc<dyn Volume> = engine.volumes().get(&source_id).expect("source volume");
 
     let edited = Arc::clone(&source);
     let events = EditOnFirstProgress::new(move || {
@@ -149,7 +151,7 @@ async fn a_remote_source_keeps_what_changed_or_appeared_during_a_move_into_a_zip
             .unwrap();
     });
 
-    let complete = move_into(&events, source_volume, "d", &archive).await;
+    let complete = move_into(&engine, &events, source_volume, "d", &archive).await;
 
     assert_eq!(
         read_entry(&archive, "d/draft.txt").as_deref(),
@@ -167,8 +169,6 @@ async fn a_remote_source_keeps_what_changed_or_appeared_during_a_move_into_a_zip
     let left = complete.appeared_during_move.expect("what stayed is news");
     assert_eq!((left.item_count, left.changed_count), (1, 1));
     assert_eq!(left.folder_name, "d");
-
-    get_volume_manager().unregister(&source_id);
 }
 
 /// The same for a local source, which the move used to remove with
@@ -177,6 +177,7 @@ async fn a_remote_source_keeps_what_changed_or_appeared_during_a_move_into_a_zip
 async fn a_local_source_keeps_what_changed_or_appeared_during_a_move_into_a_zip() {
     use cmdr_local::LocalPosixVolume;
 
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     let archive = tmp.path().join("a.zip");
     write_multi_zip(&archive, &[("placeholder.txt", b"x")]);
@@ -198,7 +199,7 @@ async fn a_local_source_keeps_what_changed_or_appeared_during_a_move_into_a_zip(
         crate::volume_host::host(),
     ));
 
-    let complete = move_into(&events, source_volume, "d", &archive).await;
+    let complete = move_into(&engine, &events, source_volume, "d", &archive).await;
 
     assert_eq!(std::fs::read(&draft).expect("kept"), b"final draft, longer");
     assert_eq!(std::fs::read(&newcomer).expect("kept"), b"arrived mid-move");

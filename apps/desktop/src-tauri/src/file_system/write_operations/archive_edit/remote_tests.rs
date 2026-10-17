@@ -17,6 +17,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use super::super::super::state::{OperationIntent, WriteOperationState};
+use super::super::super::testing::TestOperations;
 use super::pull_apply_upload_swap;
 use cmdr_archive::mutator::{self, AddEntry, AddSource, Changeset, MutationHooks};
 use cmdr_fs::volume::{InMemoryVolume, Volume};
@@ -98,8 +99,9 @@ async fn remote_parent_with_zip(archive_path: &Path, zip_bytes: &[u8]) -> Arc<In
     Arc::new(parent)
 }
 
+/// A running state on an engine of its own.
 fn running_state() -> Arc<WriteOperationState> {
-    Arc::new(WriteOperationState::new(Duration::from_millis(50)))
+    Arc::new(TestOperations::new().new_operation_state(Duration::from_millis(50)))
 }
 
 /// Unix-seconds "now", for aging a seeded temp relative to the reaper threshold.

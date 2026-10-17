@@ -1,6 +1,7 @@
 //! A compress's rows follow its producer's ticks, entry by entry.
 
 use super::*;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::transfer_tree::test_support::{node_at, row_states};
 use crate::file_system::write_operations::transfer_tree::{
     TransferTreeSlot, TreeLanding, TreeOrder, from_archive_plan,
@@ -12,17 +13,15 @@ use crate::file_system::write_operations::transfer_tree::{
 /// the file being read shows the bytes read since the entry before it ended.
 #[test]
 fn compress_rows_follow_the_producers_ticks_entry_by_entry() {
+    let engine = TestOperations::new();
     let plan = [
         ("top/", true, 0),
         ("top/a.txt", false, 10),
         ("top/empty.txt", false, 0),
         ("top/z.txt", false, 30),
     ];
-    let (model, entry_rows) = from_archive_plan(
-        plan.iter().copied(),
-        &TreeOrder::active(crate::file_system::write_operations::installed().host()),
-    )
-    .expect("the tree builds");
+    let (model, entry_rows) =
+        from_archive_plan(plan.iter().copied(), &TreeOrder::active(engine.host())).expect("the tree builds");
     let slot = TransferTreeSlot::default();
     slot.install(Some(model), TreeLanding::nowhere());
     let rows = CompressRows::new(

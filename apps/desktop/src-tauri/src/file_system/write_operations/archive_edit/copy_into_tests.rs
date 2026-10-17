@@ -4,13 +4,12 @@
 //! (symlinks / special files), and the remote-parent copy-into path.
 
 use super::test_support::*;
-use crate::file_system::write_operations::installed;
 
 #[tokio::test]
 async fn copy_into_adds_a_local_directory_tree_and_skips_conflicts() {
-    use crate::file_system::write_operations::route_archive_copy_into;
     use cmdr_local::LocalPosixVolume;
 
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     // The archive already holds `payload/existing.txt`, so a Skip-policy copy of a
     // colliding file leaves it untouched while adding the new ones.
@@ -42,20 +41,21 @@ async fn copy_into_adds_a_local_directory_tree_and_skips_conflicts() {
     let events = Arc::new(CollectorEventSink::new());
     // Destination is the archive ROOT, so the source dir `payload` lands as `payload/`.
     let dest = archive.clone();
-    route_archive_copy_into(
-        Arc::clone(&events) as Arc<dyn OperationEventSink>,
-        source_volume,
-        vec![PathBuf::from("payload")],
-        dest,
-        unique_lane_id(),
-        ConflictResolution::Skip,
-        0,
-        false,
-        None,
-        None,
-    )
-    .await
-    .expect("start copy-into");
+    engine
+        .route_archive_copy_into(
+            Arc::clone(&events) as Arc<dyn OperationEventSink>,
+            source_volume,
+            vec![PathBuf::from("payload")],
+            dest,
+            unique_lane_id(),
+            ConflictResolution::Skip,
+            0,
+            false,
+            None,
+            None,
+        )
+        .await
+        .expect("start copy-into");
 
     wait_until_async(Duration::from_secs(5), "the write-complete event", || {
         !events.complete.lock_ignore_poison().is_empty()
@@ -81,13 +81,13 @@ async fn copy_into_adds_a_local_directory_tree_and_skips_conflicts() {
 /// Runs a non-interactive copy/move INTO `archive` of local dir `src_rel` under a
 /// pre-resolved `policy`, landing at the archive root. Returns the collector.
 async fn run_policy_copy_into(
+    engine: &TestOperations,
     archive: &Path,
     src_root: &Path,
     src_rel: &str,
     policy: ConflictResolution,
     is_move: bool,
 ) -> Arc<CollectorEventSink> {
-    use crate::file_system::write_operations::route_archive_copy_into;
     use cmdr_local::LocalPosixVolume;
 
     let source_volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
@@ -96,25 +96,27 @@ async fn run_policy_copy_into(
         crate::volume_host::host(),
     ));
     let events = Arc::new(CollectorEventSink::new());
-    route_archive_copy_into(
-        Arc::clone(&events) as Arc<dyn OperationEventSink>,
-        source_volume,
-        vec![PathBuf::from(src_rel)],
-        archive.to_path_buf(),
-        unique_lane_id(),
-        policy,
-        0,
-        is_move,
-        None,
-        None,
-    )
-    .await
-    .expect("start policy copy-into");
+    engine
+        .route_archive_copy_into(
+            Arc::clone(&events) as Arc<dyn OperationEventSink>,
+            source_volume,
+            vec![PathBuf::from(src_rel)],
+            archive.to_path_buf(),
+            unique_lane_id(),
+            policy,
+            0,
+            is_move,
+            None,
+            None,
+        )
+        .await
+        .expect("start policy copy-into");
     events
 }
 
 #[tokio::test]
 async fn rename_policy_picks_the_next_free_numbered_name() {
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     let archive = tmp.path().join("a.zip");
     // Both `existing.txt` AND `existing (1).txt` are taken, so Rename must land on
@@ -136,7 +138,7 @@ async fn rename_policy_picks_the_next_free_numbered_name() {
     // ` (1).env`. Pins the extension-placement guard.
     std::fs::write(src_root.join("d/.env"), b"ENV").expect("w2");
 
-    let events = run_policy_copy_into(&archive, &src_root, "d", ConflictResolution::Rename, false).await;
+    let events = run_policy_copy_into(&engine, &archive, &src_root, "d", ConflictResolution::Rename, false).await;
 
     wait_until_async(Duration::from_secs(5), "the write-complete event", || {
         !events.complete.lock_ignore_poison().is_empty()
@@ -171,6 +173,7 @@ async fn rename_policy_picks_the_next_free_numbered_name() {
 
 #[tokio::test]
 async fn overwrite_smaller_overwrites_only_a_strictly_smaller_entry() {
+    let engine = TestOperations::new();
     // Case A: the archive entry is LARGER than the source → skip (kept).
     let tmp = tempfile::tempdir().expect("tempdir");
     let archive_a = tmp.path().join("a.zip");
@@ -178,7 +181,15 @@ async fn overwrite_smaller_overwrites_only_a_strictly_smaller_entry() {
     let src_a = tmp.path().join("srca");
     std::fs::create_dir_all(src_a.join("d")).expect("mkdir");
     std::fs::write(src_a.join("d/f.txt"), b"hi").expect("w"); // 2 bytes
-    let events_a = run_policy_copy_into(&archive_a, &src_a, "d", ConflictResolution::OverwriteSmaller, false).await;
+    let events_a = run_policy_copy_into(
+        &engine,
+        &archive_a,
+        &src_a,
+        "d",
+        ConflictResolution::OverwriteSmaller,
+        false,
+    )
+    .await;
     wait_until_async(Duration::from_secs(5), "the write-complete event", || {
         !events_a.complete.lock_ignore_poison().is_empty()
     })
@@ -195,7 +206,15 @@ async fn overwrite_smaller_overwrites_only_a_strictly_smaller_entry() {
     let src_b = tmp.path().join("srcb");
     std::fs::create_dir_all(src_b.join("d")).expect("mkdir");
     std::fs::write(src_b.join("d/f.txt"), b"BIGDATA").expect("w"); // 7 bytes
-    let events_b = run_policy_copy_into(&archive_b, &src_b, "d", ConflictResolution::OverwriteSmaller, false).await;
+    let events_b = run_policy_copy_into(
+        &engine,
+        &archive_b,
+        &src_b,
+        "d",
+        ConflictResolution::OverwriteSmaller,
+        false,
+    )
+    .await;
     wait_until_async(Duration::from_secs(5), "the write-complete event", || {
         !events_b.complete.lock_ignore_poison().is_empty()
     })
@@ -212,7 +231,15 @@ async fn overwrite_smaller_overwrites_only_a_strictly_smaller_entry() {
     let src_c = tmp.path().join("srcc");
     std::fs::create_dir_all(src_c.join("d")).expect("mkdir");
     std::fs::write(src_c.join("d/f.txt"), b"XY").expect("w"); // 2 bytes, equal
-    let events_c = run_policy_copy_into(&archive_c, &src_c, "d", ConflictResolution::OverwriteSmaller, false).await;
+    let events_c = run_policy_copy_into(
+        &engine,
+        &archive_c,
+        &src_c,
+        "d",
+        ConflictResolution::OverwriteSmaller,
+        false,
+    )
+    .await;
     wait_until_async(Duration::from_secs(5), "the write-complete event", || {
         !events_c.complete.lock_ignore_poison().is_empty()
     })
@@ -229,6 +256,7 @@ async fn overwrite_older_overwrites_only_a_strictly_older_entry() {
     use zip::DateTime;
     use zip::write::SimpleFileOptions;
 
+    let engine = TestOperations::new();
     // Build a zip whose single entry carries a controlled modification date.
     fn write_zip_with_mtime(path: &Path, name: &str, content: &[u8], dt: DateTime) {
         let file = std::fs::File::create(path).expect("create zip");
@@ -253,7 +281,15 @@ async fn overwrite_older_overwrites_only_a_strictly_older_entry() {
     std::fs::create_dir_all(src_a.join("d")).expect("mkdir");
     std::fs::write(src_a.join("d/f.txt"), b"INCOMING").expect("w");
     filetime::set_file_mtime(src_a.join("d/f.txt"), src_2020).expect("mtime");
-    let events_a = run_policy_copy_into(&archive_a, &src_a, "d", ConflictResolution::OverwriteOlder, false).await;
+    let events_a = run_policy_copy_into(
+        &engine,
+        &archive_a,
+        &src_a,
+        "d",
+        ConflictResolution::OverwriteOlder,
+        false,
+    )
+    .await;
     wait_until_async(Duration::from_secs(5), "the write-complete event", || {
         !events_a.complete.lock_ignore_poison().is_empty()
     })
@@ -271,7 +307,15 @@ async fn overwrite_older_overwrites_only_a_strictly_older_entry() {
     std::fs::create_dir_all(src_b.join("d")).expect("mkdir");
     std::fs::write(src_b.join("d/f.txt"), b"INCOMING").expect("w");
     filetime::set_file_mtime(src_b.join("d/f.txt"), src_2024).expect("mtime");
-    let events_b = run_policy_copy_into(&archive_b, &src_b, "d", ConflictResolution::OverwriteOlder, false).await;
+    let events_b = run_policy_copy_into(
+        &engine,
+        &archive_b,
+        &src_b,
+        "d",
+        ConflictResolution::OverwriteOlder,
+        false,
+    )
+    .await;
     wait_until_async(Duration::from_secs(5), "the write-complete event", || {
         !events_b.complete.lock_ignore_poison().is_empty()
     })
@@ -301,7 +345,15 @@ async fn overwrite_older_overwrites_only_a_strictly_older_entry() {
         filetime::FileTime::from_unix_time(parsed_mtime, 0),
     )
     .expect("mtime");
-    let events_c = run_policy_copy_into(&archive_c, &src_c, "d", ConflictResolution::OverwriteOlder, false).await;
+    let events_c = run_policy_copy_into(
+        &engine,
+        &archive_c,
+        &src_c,
+        "d",
+        ConflictResolution::OverwriteOlder,
+        false,
+    )
+    .await;
     wait_until_async(Duration::from_secs(5), "the write-complete event", || {
         !events_c.complete.lock_ignore_poison().is_empty()
     })
@@ -315,6 +367,7 @@ async fn overwrite_older_overwrites_only_a_strictly_older_entry() {
 
 #[tokio::test]
 async fn move_into_deletes_the_source_only_on_a_clean_transfer() {
+    let engine = TestOperations::new();
     // Clean move (no collision) → the top-level source is deleted after commit.
     let tmp = tempfile::tempdir().expect("tempdir");
     let archive = tmp.path().join("a.zip");
@@ -323,7 +376,7 @@ async fn move_into_deletes_the_source_only_on_a_clean_transfer() {
     std::fs::create_dir_all(src_root.join("d")).expect("mkdir");
     std::fs::write(src_root.join("d/a.txt"), b"aaa").expect("w");
 
-    let events = run_policy_copy_into(&archive, &src_root, "d", ConflictResolution::Overwrite, true).await;
+    let events = run_policy_copy_into(&engine, &archive, &src_root, "d", ConflictResolution::Overwrite, true).await;
     wait_until_async(Duration::from_secs(5), "the write-complete event", || {
         !events.complete.lock_ignore_poison().is_empty()
     })
@@ -339,6 +392,7 @@ async fn move_into_deletes_the_source_only_on_a_clean_transfer() {
 
 #[tokio::test]
 async fn move_into_with_a_skipped_collision_keeps_the_source() {
+    let engine = TestOperations::new();
     // A move where a collision is Skipped must NOT delete the source (its bytes
     // didn't fully land) — the move invariant. Pins `is_move && !any_skipped`.
     let tmp = tempfile::tempdir().expect("tempdir");
@@ -349,7 +403,7 @@ async fn move_into_with_a_skipped_collision_keeps_the_source() {
     std::fs::write(src_root.join("d/a.txt"), b"NEW").expect("w1"); // collides → Skip
     std::fs::write(src_root.join("d/b.txt"), b"bbb").expect("w2"); // lands
 
-    let events = run_policy_copy_into(&archive, &src_root, "d", ConflictResolution::Skip, true).await;
+    let events = run_policy_copy_into(&engine, &archive, &src_root, "d", ConflictResolution::Skip, true).await;
     wait_until_async(Duration::from_secs(5), "the write-complete event", || {
         !events.complete.lock_ignore_poison().is_empty()
     })
@@ -366,6 +420,7 @@ async fn move_into_with_a_skipped_collision_keeps_the_source() {
 
 #[tokio::test]
 async fn copy_into_preserves_an_empty_source_directory() {
+    let engine = TestOperations::new();
     // An empty source subdir must materialize as an explicit archive dir entry —
     // pins the `!index.exists(&inner) && planned.insert(...)` mkdir guard.
     let tmp = tempfile::tempdir().expect("tempdir");
@@ -375,7 +430,7 @@ async fn copy_into_preserves_an_empty_source_directory() {
     std::fs::create_dir_all(src_root.join("d/empty_sub")).expect("mkdir empty subdir");
     std::fs::write(src_root.join("d/f.txt"), b"f").expect("w");
 
-    let events = run_policy_copy_into(&archive, &src_root, "d", ConflictResolution::Skip, false).await;
+    let events = run_policy_copy_into(&engine, &archive, &src_root, "d", ConflictResolution::Skip, false).await;
     wait_until_async(Duration::from_secs(5), "the write-complete event", || {
         !events.complete.lock_ignore_poison().is_empty()
     })
@@ -401,9 +456,9 @@ async fn copy_into_preserves_an_empty_source_directory() {
 #[cfg(unix)]
 #[tokio::test]
 async fn move_into_a_top_level_symlink_preserves_the_source_and_surfaces_the_skip() {
-    use crate::file_system::write_operations::route_archive_copy_into;
     use cmdr_local::LocalPosixVolume;
 
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     let archive = tmp.path().join("a.zip");
     write_multi_zip(&archive, &[("placeholder.txt", b"x")]);
@@ -419,20 +474,21 @@ async fn move_into_a_top_level_symlink_preserves_the_source_and_surfaces_the_ski
         crate::volume_host::host(),
     ));
     let events = Arc::new(CollectorEventSink::new());
-    route_archive_copy_into(
-        Arc::clone(&events) as Arc<dyn OperationEventSink>,
-        source_volume,
-        vec![PathBuf::from("link")],
-        archive.clone(),
-        unique_lane_id(),
-        ConflictResolution::Overwrite,
-        0,
-        true, // is_move
-        None,
-        None,
-    )
-    .await
-    .expect("start move-into");
+    engine
+        .route_archive_copy_into(
+            Arc::clone(&events) as Arc<dyn OperationEventSink>,
+            source_volume,
+            vec![PathBuf::from("link")],
+            archive.clone(),
+            unique_lane_id(),
+            ConflictResolution::Overwrite,
+            0,
+            true, // is_move
+            None,
+            None,
+        )
+        .await
+        .expect("start move-into");
 
     wait_until_async(Duration::from_secs(5), "the write-complete event", || {
         !events.complete.lock_ignore_poison().is_empty()
@@ -459,9 +515,9 @@ async fn move_into_a_top_level_symlink_preserves_the_source_and_surfaces_the_ski
 #[cfg(unix)]
 #[tokio::test]
 async fn move_into_a_dir_containing_a_symlink_preserves_the_whole_source_tree() {
-    use crate::file_system::write_operations::route_archive_copy_into;
     use cmdr_local::LocalPosixVolume;
 
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     let archive = tmp.path().join("a.zip");
     write_multi_zip(&archive, &[("placeholder.txt", b"x")]);
@@ -479,20 +535,21 @@ async fn move_into_a_dir_containing_a_symlink_preserves_the_whole_source_tree() 
         crate::volume_host::host(),
     ));
     let events = Arc::new(CollectorEventSink::new());
-    route_archive_copy_into(
-        Arc::clone(&events) as Arc<dyn OperationEventSink>,
-        source_volume,
-        vec![PathBuf::from("d")],
-        archive.clone(),
-        unique_lane_id(),
-        ConflictResolution::Overwrite,
-        0,
-        true, // is_move
-        None,
-        None,
-    )
-    .await
-    .expect("start move-into");
+    engine
+        .route_archive_copy_into(
+            Arc::clone(&events) as Arc<dyn OperationEventSink>,
+            source_volume,
+            vec![PathBuf::from("d")],
+            archive.clone(),
+            unique_lane_id(),
+            ConflictResolution::Overwrite,
+            0,
+            true, // is_move
+            None,
+            None,
+        )
+        .await
+        .expect("start move-into");
 
     wait_until_async(Duration::from_secs(5), "the write-complete event", || {
         !events.complete.lock_ignore_poison().is_empty()
@@ -526,9 +583,9 @@ async fn move_into_a_dir_containing_a_symlink_preserves_the_whole_source_tree() 
 #[cfg(unix)]
 #[tokio::test]
 async fn move_into_a_broken_symlink_preserves_the_source() {
-    use crate::file_system::write_operations::route_archive_copy_into;
     use cmdr_local::LocalPosixVolume;
 
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     let archive = tmp.path().join("a.zip");
     write_multi_zip(&archive, &[("placeholder.txt", b"x")]);
@@ -545,20 +602,21 @@ async fn move_into_a_broken_symlink_preserves_the_source() {
         crate::volume_host::host(),
     ));
     let events = Arc::new(CollectorEventSink::new());
-    route_archive_copy_into(
-        Arc::clone(&events) as Arc<dyn OperationEventSink>,
-        source_volume,
-        vec![PathBuf::from("broken")],
-        archive.clone(),
-        unique_lane_id(),
-        ConflictResolution::Overwrite,
-        0,
-        true, // is_move
-        None,
-        None,
-    )
-    .await
-    .expect("start move-into");
+    engine
+        .route_archive_copy_into(
+            Arc::clone(&events) as Arc<dyn OperationEventSink>,
+            source_volume,
+            vec![PathBuf::from("broken")],
+            archive.clone(),
+            unique_lane_id(),
+            ConflictResolution::Overwrite,
+            0,
+            true, // is_move
+            None,
+            None,
+        )
+        .await
+        .expect("start move-into");
 
     wait_until_async(Duration::from_secs(5), "the write-complete event", || {
         !events.complete.lock_ignore_poison().is_empty()
@@ -585,9 +643,9 @@ async fn move_into_a_broken_symlink_preserves_the_source() {
 
 #[tokio::test]
 async fn copy_into_a_remote_archive_lands_the_file_via_the_pulled_local_copy() {
-    use crate::file_system::write_operations::route_archive_copy_into;
     use cmdr_local::LocalPosixVolume;
 
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     // A local source file to copy INTO the remote archive.
     let src_root = tmp.path().join("src");
@@ -602,22 +660,23 @@ async fn copy_into_a_remote_archive_lands_the_file_via_the_pulled_local_copy() {
     // The archive lives on a NON-local parent — `/device/bundle.zip` is not a real
     // local file, so planning MUST run against the pulled-local working copy.
     let archive_path = PathBuf::from("/device/bundle.zip");
-    let (parent_id, parent) = register_remote_zip(&archive_path, &[("keep.txt", b"keep")]).await;
+    let (parent_id, parent) = register_remote_zip(&engine, &archive_path, &[("keep.txt", b"keep")]).await;
 
     let events = Arc::new(CollectorEventSink::new());
-    let result = route_archive_copy_into(
-        Arc::clone(&events) as Arc<dyn OperationEventSink>,
-        source_volume,
-        vec![PathBuf::from("new.txt")],
-        archive_path.clone(), // dest is the archive root
-        parent_id.clone(),
-        ConflictResolution::Overwrite,
-        0,
-        false,
-        None,
-        None,
-    )
-    .await;
+    let result = engine
+        .route_archive_copy_into(
+            Arc::clone(&events) as Arc<dyn OperationEventSink>,
+            source_volume,
+            vec![PathBuf::from("new.txt")],
+            archive_path.clone(), // dest is the archive root
+            parent_id.clone(),
+            ConflictResolution::Overwrite,
+            0,
+            false,
+            None,
+            None,
+        )
+        .await;
     assert!(
         result.is_ok(),
         "a non-interactive copy INTO a remote archive must start (plan against the pulled copy), got {result:?}"
@@ -643,8 +702,6 @@ async fn copy_into_a_remote_archive_lands_the_file_via_the_pulled_local_copy() {
         "the copied file must land in the remote archive"
     );
     assert_upload_reported_honestly(&events, parent.as_ref(), &archive_path).await;
-
-    get_volume_manager().unregister(&parent_id);
 }
 
 /// A blanket policy never replaces one KIND of entry with another, in a zip as
@@ -657,6 +714,7 @@ async fn copy_into_a_remote_archive_lands_the_file_via_the_pulled_local_copy() {
 /// size/mtime question of a directory node that has neither.
 #[tokio::test]
 async fn a_blanket_overwrite_never_replaces_an_archive_directory_with_a_file() {
+    let engine = TestOperations::new();
     for policy in [
         ConflictResolution::Overwrite,
         ConflictResolution::OverwriteSmaller,
@@ -673,7 +731,7 @@ async fn a_blanket_overwrite_never_replaces_an_archive_directory_with_a_file() {
         std::fs::create_dir_all(src_root.join("d")).expect("mkdir src");
         std::fs::write(src_root.join("d/notes"), vec![b'x'; 10_000]).expect("write source file");
 
-        let events = run_policy_copy_into(&archive, &src_root, "d", policy, false).await;
+        let events = run_policy_copy_into(&engine, &archive, &src_root, "d", policy, false).await;
         wait_until_async(Duration::from_secs(5), "the write-complete event", || {
             !events.complete.lock_ignore_poison().is_empty()
         })
@@ -694,6 +752,7 @@ async fn a_blanket_overwrite_never_replaces_an_archive_directory_with_a_file() {
 
 #[tokio::test]
 async fn a_named_copy_into_zip_uses_the_requested_leaf_and_preserves_existing_entries() {
+    let engine = TestOperations::new();
     use cmdr_local::LocalPosixVolume;
     let tmp = tempfile::tempdir().unwrap();
     let archive = tmp.path().join("target.zip");
@@ -712,7 +771,7 @@ async fn a_named_copy_into_zip_uses_the_requested_leaf_and_preserves_existing_en
             crate::volume_host::host(),
         ));
         let events = Arc::new(CollectorEventSink::new());
-        installed()
+        engine
             .route_archive_copy_into_with_provenance(
                 events.clone(),
                 source,
@@ -749,6 +808,7 @@ async fn a_named_copy_into_zip_uses_the_requested_leaf_and_preserves_existing_en
 
 #[tokio::test]
 async fn a_named_move_into_zip_deletes_only_the_source_that_landed() {
+    let engine = TestOperations::new();
     use cmdr_local::LocalPosixVolume;
     for policy in [ConflictResolution::Skip, ConflictResolution::Overwrite] {
         let tmp = tempfile::tempdir().unwrap();
@@ -767,7 +827,7 @@ async fn a_named_move_into_zip_deletes_only_the_source_that_landed() {
             crate::volume_host::host(),
         ));
         let events = Arc::new(CollectorEventSink::new());
-        installed()
+        engine
             .route_archive_copy_into_with_provenance(
                 events.clone(),
                 source,
@@ -810,6 +870,7 @@ async fn a_named_move_into_zip_deletes_only_the_source_that_landed() {
 async fn copy_into_carries_tags_as_sidecars_and_skips_a_macosx_source() {
     use cmdr_fs::testing::metadata_fixture::TAGS_XATTR;
 
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     let archive = tmp.path().join("a.zip");
     write_simple_zip(&archive, "keep.txt", b"k");
@@ -823,7 +884,15 @@ async fn copy_into_carries_tags_as_sidecars_and_skips_a_macosx_source() {
     std::fs::create_dir_all(src_root.join("__MACOSX")).expect("mkdir");
     std::fs::write(src_root.join("__MACOSX/._x"), b"x").expect("write");
 
-    let events = run_policy_copy_into(&archive, &src_root, "tagged-dir", ConflictResolution::Skip, false).await;
+    let events = run_policy_copy_into(
+        &engine,
+        &archive,
+        &src_root,
+        "tagged-dir",
+        ConflictResolution::Skip,
+        false,
+    )
+    .await;
     wait_until_async(Duration::from_secs(5), "the write-complete event", || {
         !events.complete.lock_ignore_poison().is_empty()
     })
@@ -841,7 +910,15 @@ async fn copy_into_carries_tags_as_sidecars_and_skips_a_macosx_source() {
         "a plain file has none"
     );
 
-    let events = run_policy_copy_into(&archive, &src_root, "__MACOSX", ConflictResolution::Skip, false).await;
+    let events = run_policy_copy_into(
+        &engine,
+        &archive,
+        &src_root,
+        "__MACOSX",
+        ConflictResolution::Skip,
+        false,
+    )
+    .await;
     wait_until_async(Duration::from_secs(5), "the write-complete event", || {
         !events.complete.lock_ignore_poison().is_empty()
     })

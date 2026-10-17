@@ -5,7 +5,6 @@
 
 use super::test_support::*;
 use crate::file_system::write_operations::WriteOperationPhase;
-use crate::file_system::write_operations::installed;
 use cmdr_fs::volume::InMemoryVolume;
 use uuid::Uuid;
 
@@ -13,8 +12,8 @@ use uuid::Uuid;
 /// created but NO target zip — compress must create it. `mtp_style` allows same-name
 /// siblings (`create_directory_errors_on_existing_dir() == false`), so the swap
 /// takes MTP's delete-then-rename path instead of SMB's atomic rename-replace.
-/// Unregister with `get_volume_manager().unregister(&id)` when done.
-async fn register_remote_parent(dir: &Path, mtp_style: bool) -> (String, Arc<InMemoryVolume>) {
+/// Registered on `engine`.
+async fn register_remote_parent(engine: &TestOperations, dir: &Path, mtp_style: bool) -> (String, Arc<InMemoryVolume>) {
     let id = format!("remote-parent-{}", Uuid::new_v4());
     let mut vol = InMemoryVolume::new("Remote").with_lane_key(id.clone());
     if mtp_style {
@@ -22,7 +21,7 @@ async fn register_remote_parent(dir: &Path, mtp_style: bool) -> (String, Arc<InM
     }
     vol.create_directory(dir).await.expect("seed parent dir");
     let vol = Arc::new(vol);
-    get_volume_manager().register(&id, Arc::clone(&vol) as Arc<dyn Volume>);
+    engine.volumes().register(&id, Arc::clone(&vol) as Arc<dyn Volume>);
     (id, vol)
 }
 
@@ -57,13 +56,14 @@ async fn sibling_names(parent: &dyn Volume, archive_path: &Path) -> Vec<String> 
 
 #[tokio::test]
 async fn compress_onto_a_remote_parent_spools_then_packs_local_files() {
+    let engine = TestOperations::new();
     let payload = vec![b'z'; 128 * 1024];
     let (_src_tmp, source_volume) = local_source_with(&[("one.txt", &payload), ("two.txt", b"second")]);
     let archive_path = PathBuf::from("/share/bundle.zip");
-    let (parent_id, parent) = register_remote_parent(Path::new("/share"), false).await;
+    let (parent_id, parent) = register_remote_parent(&engine, Path::new("/share"), false).await;
 
     let events = PhaseGateSink::new(WriteOperationPhase::FinishingTransfer);
-    let start = installed()
+    let start = engine
         .compress_start(
             Arc::clone(&events) as Arc<dyn OperationEventSink>,
             source_volume,
@@ -174,21 +174,20 @@ async fn compress_onto_a_remote_parent_spools_then_packs_local_files() {
         };
         assert_eq!(event.step, expected, "{:?} numbers its step", event.phase);
     }
-
-    get_volume_manager().unregister(&parent_id);
 }
 
 #[tokio::test]
 async fn cancel_during_remote_close_does_not_publish_or_complete() {
+    let engine = TestOperations::new();
     let (_src_tmp, source_volume) = local_source_with(&[("one.txt", &[b'x'; 4096])]);
     let archive_path = PathBuf::from("/share/cancelled.zip");
-    let (parent_id, parent) = register_remote_parent(Path::new("/share"), false).await;
+    let (parent_id, parent) = register_remote_parent(&engine, Path::new("/share"), false).await;
 
     // The first finishing event replaces the final 100% transfer tick; the
     // second starts after `write_from_stream` has closed successfully.
     // Cancellation at that gate must leave the completed stage unpublished.
     let events = PhaseGateSink::new_nth(WriteOperationPhase::FinishingTransfer, 2);
-    let start = installed()
+    let start = engine
         .compress_start(
             Arc::clone(&events) as Arc<dyn OperationEventSink>,
             source_volume,
@@ -210,7 +209,7 @@ async fn cancel_during_remote_close_does_not_publish_or_complete() {
         || events.entered(),
     )
     .await;
-    installed().cancel_operation(&start.operation_id);
+    engine.cancel_operation(&start.operation_id);
     events.release();
 
     wait_until_async(Duration::from_secs(5), "cancelled terminal event", || {
@@ -235,21 +234,20 @@ async fn cancel_during_remote_close_does_not_publish_or_complete() {
         !names.iter().any(|name| name.contains(".cmdr-tmp-")),
         "cancellation must remove the unpublished remote temp, got: {names:?}"
     );
-
-    get_volume_manager().unregister(&parent_id);
 }
 
 #[tokio::test]
 async fn compress_onto_a_remote_parent_overwrites_an_existing_zip_with_a_fresh_archive() {
+    let engine = TestOperations::new();
     // The target already holds a zip on the remote. Compress-overwrite REPLACES it
     // with a fresh archive of just the sources — it never merges into the old one
     // because the dedicated producer contains only the selected sources.
     let (_src_tmp, source_volume) = local_source_with(&[("new.txt", b"brand new")]);
     let archive_path = PathBuf::from("/share/existing.zip");
-    let (parent_id, parent) = register_remote_zip(&archive_path, &[("stale.txt", b"old content")]).await;
+    let (parent_id, parent) = register_remote_zip(&engine, &archive_path, &[("stale.txt", b"old content")]).await;
 
     let events = Arc::new(CollectorEventSink::new());
-    installed()
+    engine
         .compress_start(
             Arc::clone(&events) as Arc<dyn OperationEventSink>,
             source_volume,
@@ -288,19 +286,18 @@ async fn compress_onto_a_remote_parent_overwrites_an_existing_zip_with_a_fresh_a
             .is_none(),
         "the pre-existing entry must be gone — compress-overwrite creates a fresh zip, not a merge"
     );
-
-    get_volume_manager().unregister(&parent_id);
 }
 
 #[tokio::test]
 async fn a_publication_refusal_recovers_and_names_the_displaced_original() {
+    let engine = TestOperations::new();
     let (_src_tmp, source_volume) = local_source_with(&[("new.txt", b"brand new")]);
     let archive_path = PathBuf::from("/share/existing.zip");
-    let (parent_id, parent) = register_remote_zip(&archive_path, &[("old.txt", b"only old copy")]).await;
+    let (parent_id, parent) = register_remote_zip(&engine, &archive_path, &[("old.txt", b"only old copy")]).await;
     parent.set_rename_to_failing(&archive_path);
     let events = Arc::new(CollectorEventSink::new());
 
-    installed()
+    engine
         .compress_start(
             Arc::clone(&events) as Arc<dyn OperationEventSink>,
             source_volume,
@@ -344,20 +341,20 @@ async fn a_publication_refusal_recovers_and_names_the_displaced_original() {
             .all(|name| !name.contains(".cmdr-tmp-") && !name.contains(".cmdr-aside-")),
         "the only surviving original must have a stable, non-reapable name"
     );
-    get_volume_manager().unregister(&parent_id);
 }
 
 #[tokio::test]
 async fn compress_onto_an_mtp_style_remote_parent_spools_and_packs() {
+    let engine = TestOperations::new();
     // An MTP-shaped parent allows same-name siblings, so its swap is
     // delete-then-rename, not atomic rename-replace. Publication over a brand-new
     // target must tolerate there being no original to displace.
     let (_src_tmp, source_volume) = local_source_with(&[("photo.raw", b"pixels")]);
     let archive_path = PathBuf::from("/device/DCIM/album.zip");
-    let (parent_id, parent) = register_remote_parent(Path::new("/device/DCIM"), true).await;
+    let (parent_id, parent) = register_remote_parent(&engine, Path::new("/device/DCIM"), true).await;
 
     let events = Arc::new(CollectorEventSink::new());
-    installed()
+    engine
         .compress_start(
             Arc::clone(&events) as Arc<dyn OperationEventSink>,
             source_volume,
@@ -394,18 +391,17 @@ async fn compress_onto_an_mtp_style_remote_parent_spools_and_packs() {
         !names.iter().any(|n| n.contains(".cmdr-tmp-")),
         "no upload temp should remain after the delete-then-rename swap, got: {names:?}"
     );
-
-    get_volume_manager().unregister(&parent_id);
 }
 
 #[tokio::test]
 async fn a_remote_source_streams_into_a_direct_local_archive() {
-    let (source_id, source) = register_remote_source(&[("folder/remote.bin", &[b'r'; 192 * 1024])]).await;
+    let engine = TestOperations::new();
+    let (_, source) = register_remote_source(&engine, &[("folder/remote.bin", &[b'r'; 192 * 1024])]).await;
     let tmp = tempfile::tempdir().expect("tempdir");
     let dest = tmp.path().join("remote-source.zip");
     let events = Arc::new(CollectorEventSink::new());
 
-    installed()
+    engine
         .compress_start(
             Arc::clone(&events) as Arc<dyn OperationEventSink>,
             source as Arc<dyn Volume>,
@@ -429,13 +425,13 @@ async fn a_remote_source_streams_into_a_direct_local_archive() {
         read_entry(&dest, "folder/remote.bin").as_deref(),
         Some([b'r'; 192 * 1024].as_slice())
     );
-    get_volume_manager().unregister(&source_id);
 }
 
 #[tokio::test]
 async fn same_device_mtp_source_finishes_spooling_before_the_upload_path() {
     use cmdr_fs::volume::BackendKind;
 
+    let engine = TestOperations::new();
     let id = format!("mtp-same-device-{}", Uuid::new_v4());
     let volume = Arc::new(
         InMemoryVolume::new("Phone")
@@ -448,11 +444,11 @@ async fn same_device_mtp_source_finishes_spooling_before_the_upload_path() {
         .create_file(Path::new("/DCIM/photo.raw"), &[b'p'; 192 * 1024])
         .await
         .expect("create source");
-    get_volume_manager().register(&id, Arc::clone(&volume) as Arc<dyn Volume>);
+    engine.volumes().register(&id, Arc::clone(&volume) as Arc<dyn Volume>);
     let events = Arc::new(CollectorEventSink::new());
     let archive = PathBuf::from("/DCIM/photos.zip");
 
-    installed()
+    engine
         .compress_start(
             Arc::clone(&events) as Arc<dyn OperationEventSink>,
             Arc::clone(&volume) as Arc<dyn Volume>,
@@ -482,15 +478,14 @@ async fn same_device_mtp_source_finishes_spooling_before_the_upload_path() {
             .as_deref(),
         Some([b'p'; 192 * 1024].as_slice())
     );
-    get_volume_manager().unregister(&id);
 }
 
 const CAFE_ZIP_NFC: &str = "caf\u{e9}.zip";
 const CAFE_ZIP_NFD: &str = "cafe\u{301}.zip";
 
-/// A registered SMB-shaped parent: byte-exact, composing new names, holding
+/// An SMB-shaped parent registered on `engine`: byte-exact, composing new names, holding
 /// `/share` and, when `existing` names one, a zip with one `stale.txt` entry.
-async fn register_share(existing: Option<&str>) -> (String, Arc<InMemoryVolume>) {
+async fn register_share(engine: &TestOperations, existing: Option<&str>) -> (String, Arc<InMemoryVolume>) {
     let id = format!("remote-share-{}", Uuid::new_v4());
     let vol = InMemoryVolume::new("Share")
         .with_lane_key(id.clone())
@@ -504,16 +499,16 @@ async fn register_share(existing: Option<&str>) -> (String, Arc<InMemoryVolume>)
             .expect("seed existing zip");
     }
     let vol = Arc::new(vol);
-    get_volume_manager().register(&id, Arc::clone(&vol) as Arc<dyn Volume>);
+    engine.volumes().register(&id, Arc::clone(&vol) as Arc<dyn Volume>);
     (id, vol)
 }
 
 /// Starts a compress of one local `new.txt` into `/share/<name>` and, when it
 /// starts, waits for it to complete.
-async fn compress_to_share(parent_id: &str, name: &str) -> Result<(), WriteOperationError> {
+async fn compress_to_share(engine: &TestOperations, parent_id: &str, name: &str) -> Result<(), WriteOperationError> {
     let (_src_tmp, source_volume) = local_source_with(&[("new.txt", b"brand new")]);
     let events = Arc::new(CollectorEventSink::new());
-    installed()
+    engine
         .compress_start(
             Arc::clone(&events) as Arc<dyn OperationEventSink>,
             source_volume,
@@ -547,9 +542,10 @@ async fn names_in_share(parent: &dyn Volume) -> Vec<String> {
 
 #[tokio::test]
 async fn a_new_archive_on_a_share_is_named_composed() {
-    let (parent_id, parent) = register_share(None).await;
+    let engine = TestOperations::new();
+    let (parent_id, parent) = register_share(&engine, None).await;
 
-    compress_to_share(&parent_id, CAFE_ZIP_NFD)
+    compress_to_share(&engine, &parent_id, CAFE_ZIP_NFD)
         .await
         .expect("start compress");
 
@@ -559,7 +555,6 @@ async fn a_new_archive_on_a_share_is_named_composed() {
         read_remote_entry(parent.as_ref(), &archive, "new.txt").await.as_deref(),
         Some(b"brand new".as_slice())
     );
-    get_volume_manager().unregister(&parent_id);
 }
 
 /// A target the share holds in another spelling is the archive the dialog warned
@@ -567,9 +562,10 @@ async fn a_new_archive_on_a_share_is_named_composed() {
 /// one archive, under the share's own spelling, ❌ never a twin beside it.
 #[tokio::test]
 async fn a_compress_onto_a_look_alike_of_an_existing_archive_replaces_it_in_place() {
-    let (parent_id, parent) = register_share(Some(CAFE_ZIP_NFD)).await;
+    let engine = TestOperations::new();
+    let (parent_id, parent) = register_share(&engine, Some(CAFE_ZIP_NFD)).await;
 
-    compress_to_share(&parent_id, CAFE_ZIP_NFC)
+    compress_to_share(&engine, &parent_id, CAFE_ZIP_NFC)
         .await
         .expect("start compress");
 
@@ -584,16 +580,16 @@ async fn a_compress_onto_a_look_alike_of_an_existing_archive_replaces_it_in_plac
         None,
         "a fresh archive, never a merge into the old one"
     );
-    get_volume_manager().unregister(&parent_id);
 }
 
 /// The mirror case: the target composes onto a name the share holds exactly.
 /// Same entry, same answer: replaced in place, still one archive.
 #[tokio::test]
 async fn a_compress_whose_composed_name_the_share_holds_replaces_that_archive() {
-    let (parent_id, parent) = register_share(Some(CAFE_ZIP_NFC)).await;
+    let engine = TestOperations::new();
+    let (parent_id, parent) = register_share(&engine, Some(CAFE_ZIP_NFC)).await;
 
-    compress_to_share(&parent_id, CAFE_ZIP_NFD)
+    compress_to_share(&engine, &parent_id, CAFE_ZIP_NFD)
         .await
         .expect("start compress");
 
@@ -603,16 +599,16 @@ async fn a_compress_whose_composed_name_the_share_holds_replaces_that_archive() 
         read_remote_entry(parent.as_ref(), &archive, "new.txt").await.as_deref(),
         Some(b"brand new".as_slice())
     );
-    get_volume_manager().unregister(&parent_id);
 }
 
 /// Two archives fit the target and neither is spelled as asked: which one to
 /// replace is a guess, so compression refuses before writing.
 #[tokio::test]
 async fn a_compress_two_stored_archives_fit_is_refused_and_leaves_both_alone() {
+    let engine = TestOperations::new();
     let composed = "\u{e9}l\u{151}.zip";
     let decomposed = "e\u{301}lo\u{30b}.zip";
-    let (parent_id, parent) = register_share(Some(composed)).await;
+    let (parent_id, parent) = register_share(&engine, Some(composed)).await;
     parent
         .create_file(
             &Path::new("/share").join(decomposed),
@@ -621,7 +617,7 @@ async fn a_compress_two_stored_archives_fit_is_refused_and_leaves_both_alone() {
         .await
         .expect("seed the second archive");
 
-    let refused = compress_to_share(&parent_id, "\u{e9}lo\u{30b}.zip").await;
+    let refused = compress_to_share(&engine, &parent_id, "\u{e9}lo\u{30b}.zip").await;
 
     assert!(
         matches!(refused, Err(WriteOperationError::DestinationExists { .. })),
@@ -639,16 +635,16 @@ async fn a_compress_two_stored_archives_fit_is_refused_and_leaves_both_alone() {
             "{name:?} keeps its bytes"
         );
     }
-    get_volume_manager().unregister(&parent_id);
 }
 
 /// The exact stored spelling is the name the dialog warned about: it's replaced
 /// in place, under its own bytes, as it always was.
 #[tokio::test]
 async fn a_compress_onto_the_exact_stored_spelling_still_replaces_it_in_place() {
-    let (parent_id, parent) = register_share(Some(CAFE_ZIP_NFD)).await;
+    let engine = TestOperations::new();
+    let (parent_id, parent) = register_share(&engine, Some(CAFE_ZIP_NFD)).await;
 
-    compress_to_share(&parent_id, CAFE_ZIP_NFD)
+    compress_to_share(&engine, &parent_id, CAFE_ZIP_NFD)
         .await
         .expect("start compress");
 
@@ -658,5 +654,4 @@ async fn a_compress_onto_the_exact_stored_spelling_still_replaces_it_in_place() 
         read_remote_entry(parent.as_ref(), &archive, "new.txt").await.as_deref(),
         Some(b"brand new".as_slice())
     );
-    get_volume_manager().unregister(&parent_id);
 }

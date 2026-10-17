@@ -473,6 +473,7 @@ impl MutationHooks for MutatorHooks {
 mod tests {
     use super::*;
     use crate::file_system::write_operations::event_sinks::CollectorEventSink;
+    use crate::file_system::write_operations::testing::TestOperations;
 
     #[test]
     fn paced_sleep_gives_way_to_a_cancel_within_a_slice() {
@@ -495,10 +496,8 @@ mod tests {
     }
 
     /// What a query API (the MCP `cmdr://state` resource) reads for this op.
-    fn cached(id: &str) -> (WriteOperationPhase, usize, usize, u64, u64) {
-        let status = crate::file_system::write_operations::installed()
-            .get_operation_status(id)
-            .expect("the op is registered");
+    fn cached(engine: &TestOperations, id: &str) -> (WriteOperationPhase, usize, usize, u64, u64) {
+        let status = engine.get_operation_status(id).expect("the op is registered");
         (
             status.phase,
             status.files_done,
@@ -510,12 +509,11 @@ mod tests {
 
     #[test]
     fn every_emitted_phase_of_a_compress_reaches_the_status_cache() {
-        use super::super::super::state::{register_operation_status, unregister_operation_status};
-
+        let engine = TestOperations::new();
         let id = "compress-status-mirror";
-        register_operation_status(id, WriteOperationType::Compress, vec![]);
+        engine.status().register(id, WriteOperationType::Compress, vec![]);
         let hooks = MutatorHooks::new(
-            Arc::new(WriteOperationState::new(Duration::ZERO)),
+            Arc::new(engine.new_operation_state(Duration::ZERO)),
             Arc::new(CollectorEventSink::new()) as Arc<dyn OperationEventSink>,
             id.to_string(),
             WriteOperationType::Compress,
@@ -532,7 +530,7 @@ mod tests {
             None,
             true,
         );
-        assert_eq!(cached(id), (WriteOperationPhase::Scanning, 2, 0, 100, 0));
+        assert_eq!(cached(&engine, id), (WriteOperationPhase::Scanning, 2, 0, 100, 0));
 
         // Pre-fix the cache stayed at `Scanning` from here to the terminal event.
         let tick = |entries_done, bytes_done| MutationProgress {
@@ -543,27 +541,33 @@ mod tests {
             bytes_total: 100,
         };
         MutationHooks::on_progress(&hooks, tick(1, 40));
-        assert_eq!(cached(id), (WriteOperationPhase::Compressing, 1, 3, 40, 100));
+        assert_eq!(cached(&engine, id), (WriteOperationPhase::Compressing, 1, 3, 40, 100));
 
         MutationHooks::on_progress(&hooks, tick(3, 100));
-        assert_eq!(cached(id), (WriteOperationPhase::FinishingCompression, 0, 0, 0, 0));
+        assert_eq!(
+            cached(&engine, id),
+            (WriteOperationPhase::FinishingCompression, 0, 0, 0, 0)
+        );
 
         hooks.emit_remote_progress(RemoteCommitProgress::Transferring {
             bytes_done: 0,
             bytes_total: 60,
         });
-        assert_eq!(cached(id), (WriteOperationPhase::Transferring, 0, 0, 0, 60));
+        assert_eq!(cached(&engine, id), (WriteOperationPhase::Transferring, 0, 0, 0, 60));
 
         hooks.emit_remote_progress(RemoteCommitProgress::Finishing);
-        assert_eq!(cached(id), (WriteOperationPhase::FinishingTransfer, 0, 0, 0, 0));
-        unregister_operation_status(id);
+        assert_eq!(
+            cached(&engine, id),
+            (WriteOperationPhase::FinishingTransfer, 0, 0, 0, 0)
+        );
     }
 
     #[test]
     fn remote_transfer_ticks_keep_the_configured_cadence_but_phase_boundaries_emit() {
+        let engine = TestOperations::new();
         let events = Arc::new(CollectorEventSink::new());
         let hooks = MutatorHooks::new(
-            Arc::new(WriteOperationState::new(Duration::from_secs(60))),
+            Arc::new(engine.new_operation_state(Duration::from_secs(60))),
             Arc::clone(&events) as Arc<dyn OperationEventSink>,
             "compress-cadence".to_string(),
             WriteOperationType::Compress,

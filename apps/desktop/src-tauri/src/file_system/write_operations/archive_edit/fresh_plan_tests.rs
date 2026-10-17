@@ -4,6 +4,7 @@
 use std::future::Future;
 
 use super::*;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::transfer::volume::forward_volume_methods;
 use cmdr_fs::volume::InMemoryVolume;
 use cmdr_local::LocalPosixVolume;
@@ -55,6 +56,7 @@ impl Volume for CountingStats {
 
 #[tokio::test]
 async fn planning_a_remote_tree_stats_only_the_selected_items() {
+    let engine = TestOperations::new();
     let inner = InMemoryVolume::new("remote");
     inner.create_directory(Path::new("/tree")).await.expect("mkdir");
     inner.create_directory(Path::new("/tree/sub")).await.expect("mkdir sub");
@@ -69,7 +71,7 @@ async fn planning_a_remote_tree_stats_only_the_selected_items() {
         stats: Default::default(),
     });
     let as_volume: Arc<dyn Volume> = Arc::clone(&source) as Arc<dyn Volume>;
-    let state = Arc::new(WriteOperationState::new(Duration::ZERO));
+    let state = Arc::new(engine.new_operation_state(Duration::ZERO));
 
     let plan = plan_sources_with_context(
         &as_volume,
@@ -147,6 +149,7 @@ impl Volume for LinkFollowingStat {
 
 #[tokio::test]
 async fn a_selected_symlink_is_skipped_even_where_stat_follows_links() {
+    let engine = TestOperations::new();
     // A link inside a selected folder is skipped off its listing entry; a
     // selected link has to be skipped too, or SFTP (whose `stat` follows)
     // packs the target that the same link would never pack one level down.
@@ -157,7 +160,7 @@ async fn a_selected_symlink_is_skipped_even_where_stat_follows_links() {
         .await
         .expect("seed");
     let source: Arc<dyn Volume> = Arc::new(LinkFollowingStat { inner });
-    let state = Arc::new(WriteOperationState::new(Duration::ZERO));
+    let state = Arc::new(engine.new_operation_state(Duration::ZERO));
 
     let plan = plan_sources_with_context(
         &source,
@@ -177,6 +180,7 @@ async fn a_selected_symlink_is_skipped_even_where_stat_follows_links() {
 #[cfg(unix)]
 #[tokio::test]
 async fn planning_skips_local_symlinks_and_special_files_without_a_stat_each() {
+    let engine = TestOperations::new();
     let temp = tempfile::tempdir().expect("tempdir");
     std::fs::create_dir_all(temp.path().join("tree")).expect("mkdir");
     std::fs::write(temp.path().join("tree/real.txt"), b"real").expect("write");
@@ -187,7 +191,7 @@ async fn planning_skips_local_symlinks_and_special_files_without_a_stat_each() {
         temp.path().to_path_buf(),
         crate::volume_host::host(),
     ));
-    let state = Arc::new(WriteOperationState::new(Duration::ZERO));
+    let state = Arc::new(engine.new_operation_state(Duration::ZERO));
 
     let plan = plan_sources_with_context(
         &source,
@@ -209,6 +213,7 @@ async fn planning_skips_local_symlinks_and_special_files_without_a_stat_each() {
 
 #[tokio::test]
 async fn duplicate_top_names_honor_rename_and_skip_policies() {
+    let engine = TestOperations::new();
     let temp = tempfile::tempdir().expect("tempdir");
     std::fs::create_dir_all(temp.path().join("a")).expect("create a");
     std::fs::create_dir_all(temp.path().join("b")).expect("create b");
@@ -220,7 +225,7 @@ async fn duplicate_top_names_honor_rename_and_skip_policies() {
         crate::volume_host::host(),
     ));
     let paths = [PathBuf::from("a/report.txt"), PathBuf::from("b/report.txt")];
-    let state = Arc::new(WriteOperationState::new(Duration::ZERO));
+    let state = Arc::new(engine.new_operation_state(Duration::ZERO));
 
     let renamed = plan_sources_with_context(&source, &paths, ConflictResolution::Rename, &state, None, None)
         .await
@@ -248,6 +253,7 @@ async fn duplicate_top_names_honor_rename_and_skip_policies() {
 /// read-back). A local folder entry carries its path, for its sidecar.
 #[tokio::test]
 async fn a_selected_macosx_folder_is_skipped_and_a_local_folder_is_its_own_source() {
+    let engine = TestOperations::new();
     let temp = tempfile::tempdir().expect("tempdir");
     std::fs::create_dir_all(temp.path().join("__MACOSX")).expect("mkdir");
     std::fs::write(temp.path().join("__MACOSX/._a"), b"x").expect("write");
@@ -257,7 +263,7 @@ async fn a_selected_macosx_folder_is_skipped_and_a_local_folder_is_its_own_sourc
         temp.path().to_path_buf(),
         crate::volume_host::host(),
     ));
-    let state = Arc::new(WriteOperationState::new(Duration::ZERO));
+    let state = Arc::new(engine.new_operation_state(Duration::ZERO));
 
     let plan = plan_sources_with_context(
         &source,
@@ -310,6 +316,7 @@ impl Volume for ReversedListing {
 /// depth first, and the selection the same way whatever order it came in.
 #[tokio::test]
 async fn the_plan_lists_the_selection_in_tree_order() {
+    let engine = TestOperations::new();
     let inner = InMemoryVolume::new("remote");
     for dir in ["/src", "/src/a", "/src/a/sub", "/src/b"] {
         inner.create_directory(Path::new(dir)).await.expect("mkdir");
@@ -324,7 +331,7 @@ async fn the_plan_lists_the_selection_in_tree_order() {
         inner.create_file(Path::new(file), b"x").await.expect("seed");
     }
     let source: Arc<dyn Volume> = Arc::new(ReversedListing { inner });
-    let state = Arc::new(WriteOperationState::new(Duration::ZERO));
+    let state = Arc::new(engine.new_operation_state(Duration::ZERO));
     let selection = ["/src/z.txt", "/src/b", "/src/Y.txt", "/src/a"].map(PathBuf::from);
 
     let plan = plan_sources_with_context(&source, &selection, ConflictResolution::Stop, &state, None, None)

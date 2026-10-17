@@ -173,8 +173,6 @@ use transfer::volume::copy_volumes_with_progress;
 use manager::OperationDescriptor;
 
 #[cfg(test)]
-use archive_edit::route_archive_copy_into;
-#[cfg(test)]
 use event_sinks::CollectorEventSink;
 #[cfg(test)]
 use state::OperationIntent;

@@ -34,31 +34,11 @@ use cmdr_fs::volume::{LaneKey, Volume, VolumeError};
 use cmdr_local::LocalPosixVolume;
 use cmdr_operation_log::types::{ArchiveSubkind, ExecutionStatus};
 
-/// Routes a copy/move INTO a zip (a source dropped onto an archive destination)
-/// to the managed edit driver as a SINGLE `{ add + mkdir }` changeset — the whole
-/// transfer becomes one archive rewrite, not one per file.
-///
-/// The SOURCE may be LOCAL or REMOTE. A local-FS source gives real filesystem
-/// paths the changeset walks directly. A REMOTE source (MTP / SMB) has no local
-/// path, so its subtree is streamed into a scratch dir inside the op first, and
-/// the ordinary local ingest then runs against the pulled bytes (see
-/// [`materialize_sources`]). The archive PARENT is a separate axis: local or
-/// remote, `run_managed_edit` handles it independently, so all four
-/// source×parent combinations work.
-///
-/// Conflicts (an added inner path that already exists) are resolved
-/// non-interactively from `conflict` against the archive's index (Skip drops the
-/// add; Overwrite deletes the existing entry then adds; Rename picks a unique
-/// name; Stop fails with `DestinationExists`; the conditional policies compare
-/// size/mtime). `source_paths` are relative to the source volume root, as
-/// `copy_between_volumes` passes them. For a MOVE, the top-level sources are
-/// deleted after the commit — but only when nothing was skipped, so a partial
-/// (conflict-skipped) move never deletes a source whose bytes didn't land.
+/// [`Operations::route_archive_copy_into`](crate::file_system::write_operations::Operations::route_archive_copy_into)
+/// on the engine every test shares, for the backend suites.
+// shim: removed in M7b–M7e
 #[cfg(test)]
-#[allow(
-    clippy::too_many_arguments,
-    reason = "the cross-volume→archive seam threads the source handle, paths, dest, parent id, and policy; a struct would just shuffle them"
-)]
+#[allow(clippy::too_many_arguments, reason = "same seam as the method it delegates to")]
 pub(crate) async fn route_archive_copy_into(
     events: Arc<dyn OperationEventSink>,
     source_volume: Arc<dyn Volume>,
@@ -71,12 +51,66 @@ pub(crate) async fn route_archive_copy_into(
     compression_level: Option<i64>,
     preview_id: Option<String>,
 ) -> Result<WriteOperationStartResult, WriteOperationError> {
-    // A copy/move INTO an existing archive is a user-initiated zip-inner edit —
-    // journaled but not rollbackable in v1. An MCP-initiated into-archive edit
-    // supplies its own provenance via [`route_archive_copy_into_with_provenance`]
-    // (as compress does); this convenience wrapper defaults to `user`.
     crate::file_system::write_operations::installed()
-        .route_archive_copy_into_with_provenance(
+        .route_archive_copy_into(
+            events,
+            source_volume,
+            source_paths,
+            dest_full_path,
+            parent_volume_id,
+            conflict,
+            progress_interval_ms,
+            is_move,
+            compression_level,
+            preview_id,
+        )
+        .await
+}
+
+impl crate::file_system::write_operations::Operations {
+    /// Routes a copy/move INTO a zip (a source dropped onto an archive destination)
+    /// to the managed edit driver as a SINGLE `{ add + mkdir }` changeset — the whole
+    /// transfer becomes one archive rewrite, not one per file.
+    ///
+    /// The SOURCE may be LOCAL or REMOTE. A local-FS source gives real filesystem
+    /// paths the changeset walks directly. A REMOTE source (MTP / SMB) has no local
+    /// path, so its subtree is streamed into a scratch dir inside the op first, and
+    /// the ordinary local ingest then runs against the pulled bytes (see
+    /// [`materialize_sources`]). The archive PARENT is a separate axis: local or
+    /// remote, `run_managed_edit` handles it independently, so all four
+    /// source×parent combinations work.
+    ///
+    /// Conflicts (an added inner path that already exists) are resolved
+    /// non-interactively from `conflict` against the archive's index (Skip drops the
+    /// add; Overwrite deletes the existing entry then adds; Rename picks a unique
+    /// name; Stop fails with `DestinationExists`; the conditional policies compare
+    /// size/mtime). `source_paths` are relative to the source volume root, as
+    /// `copy_between_volumes` passes them. For a MOVE, the top-level sources are
+    /// deleted after the commit — but only when nothing was skipped, so a partial
+    /// (conflict-skipped) move never deletes a source whose bytes didn't land.
+    #[cfg(test)]
+    #[allow(
+        clippy::too_many_arguments,
+        reason = "the cross-volume→archive seam threads the source handle, paths, dest, parent id, and policy; a struct would just shuffle them"
+    )]
+    pub(crate) async fn route_archive_copy_into(
+        &self,
+        events: Arc<dyn OperationEventSink>,
+        source_volume: Arc<dyn Volume>,
+        source_paths: Vec<PathBuf>,
+        dest_full_path: PathBuf,
+        parent_volume_id: String,
+        conflict: ConflictResolution,
+        progress_interval_ms: u64,
+        is_move: bool,
+        compression_level: Option<i64>,
+        preview_id: Option<String>,
+    ) -> Result<WriteOperationStartResult, WriteOperationError> {
+        // A copy/move INTO an existing archive is a user-initiated zip-inner edit —
+        // journaled but not rollbackable in v1. An MCP-initiated into-archive edit
+        // supplies its own provenance via [`Self::route_archive_copy_into_with_provenance`]
+        // (as compress does); this convenience wrapper defaults to `user`.
+        self.route_archive_copy_into_with_provenance(
             events,
             source_volume,
             source_paths,
@@ -91,9 +125,8 @@ pub(crate) async fn route_archive_copy_into(
             None,
         )
         .await
-}
+    }
 
-impl crate::file_system::write_operations::Operations {
     /// Routes a transfer into an archive with explicit [`ArchiveProvenance`](super::super::journal::ArchiveProvenance), so
     /// the compress driver can supply `subkind = compress` + the net-new flag the
     /// journal can't derive.

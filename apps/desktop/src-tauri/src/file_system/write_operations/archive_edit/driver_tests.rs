@@ -5,11 +5,11 @@
 
 use super::test_support::*;
 use super::*;
-use crate::file_system::write_operations::installed;
 use cmdr_archive::mutator::{AddEntry, AddSource};
 
 #[tokio::test]
 async fn a_successful_edit_rewrites_the_archive_and_emits_complete_then_settled() {
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     let path = tmp.path().join("a.zip");
     write_simple_zip(&path, "keep.txt", b"keep");
@@ -35,7 +35,7 @@ async fn a_successful_edit_rewrites_the_archive_and_emits_complete_then_settled(
         preview_id: None,
     };
 
-    let start = installed()
+    let start = engine
         .archive_edit_start(Arc::clone(&events) as Arc<dyn OperationEventSink>, request, 0)
         .await
         .expect("start archive edit");
@@ -72,6 +72,7 @@ async fn a_successful_edit_rewrites_the_archive_and_emits_complete_then_settled(
 
 #[tokio::test]
 async fn route_archive_delete_removes_entries_and_completes() {
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     let path = tmp.path().join("a.zip");
     {
@@ -88,7 +89,7 @@ async fn route_archive_delete_removes_entries_and_completes() {
     // The FE sends full paths inside the archive.
     let sources = vec![path.join("drop.txt")];
     let parent = unique_lane_id();
-    installed()
+    engine
         .route_archive_delete(
             Arc::clone(&events) as Arc<dyn OperationEventSink>,
             &sources,
@@ -109,11 +110,13 @@ async fn route_archive_delete_removes_entries_and_completes() {
 
 #[tokio::test]
 async fn deleting_inside_a_remote_archive_reports_its_upload() {
+    let engine = TestOperations::new();
     let archive_path = PathBuf::from("/device/bundle.zip");
-    let (parent_id, parent) = register_remote_zip(&archive_path, &[("keep.txt", b"keep"), ("drop.txt", b"drop")]).await;
+    let (parent_id, parent) =
+        register_remote_zip(&engine, &archive_path, &[("keep.txt", b"keep"), ("drop.txt", b"drop")]).await;
 
     let events = Arc::new(CollectorEventSink::new());
-    installed()
+    engine
         .route_archive_delete(
             Arc::clone(&events) as Arc<dyn OperationEventSink>,
             &[archive_path.join("drop.txt")],
@@ -134,11 +137,11 @@ async fn deleting_inside_a_remote_archive_reports_its_upload() {
             .is_none()
     );
     assert_upload_reported_honestly(&events, parent.as_ref(), &archive_path).await;
-    get_volume_manager().unregister(&parent_id);
 }
 
 #[tokio::test]
 async fn route_archive_delete_reports_the_deleted_count_not_the_retained_count() {
+    let engine = TestOperations::new();
     // Deleting ONE entry from a 3-entry zip must report `files_processed == 1`
     // (the number DELETED), not the retained-entry count (2). Pins the archive
     // edit's `files_processed` semantics against the "Delete complete: 2 files" bug.
@@ -151,7 +154,7 @@ async fn route_archive_delete_reports_the_deleted_count_not_the_retained_count()
 
     let events = Arc::new(CollectorEventSink::new());
     let parent = unique_lane_id();
-    installed()
+    engine
         .route_archive_delete(
             Arc::clone(&events) as Arc<dyn OperationEventSink>,
             &[path.join("drop.txt")],
@@ -176,6 +179,7 @@ async fn route_archive_delete_reports_the_deleted_count_not_the_retained_count()
 
 #[tokio::test]
 async fn a_missing_archive_emits_a_write_error_not_a_panic() {
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     let path = tmp.path().join("ghost.zip"); // never created
 
@@ -192,7 +196,7 @@ async fn a_missing_archive_emits_a_write_error_not_a_panic() {
         preview_id: None,
     };
 
-    installed()
+    engine
         .archive_edit_start(Arc::clone(&events) as Arc<dyn OperationEventSink>, request, 0)
         .await
         .expect("start archive edit");
@@ -223,8 +227,8 @@ mod an_open_listing_inside_the_zip {
     use cmdr_fs::volume::InMemoryVolume;
     use cmdr_listing::testing::TestListing;
 
-    /// Registers a local parent drive, writes the zip on it, and opens a listing
-    /// at the zip's root showing `entries`.
+    /// Registers a local parent drive on `engine` and the app, writes the zip on
+    /// it, and opens a listing at the zip's root showing `entries`.
     struct OpenZip {
         _tmp: tempfile::TempDir,
         path: PathBuf,
@@ -233,12 +237,15 @@ mod an_open_listing_inside_the_zip {
     }
 
     impl OpenZip {
-        async fn new(tag: &str, entries: &[(&str, &[u8])]) -> Self {
+        async fn new(engine: &TestOperations, tag: &str, entries: &[(&str, &[u8])]) -> Self {
             let tmp = tempfile::tempdir().expect("tempdir");
             let path = tmp.path().join("a.zip");
             write_multi_zip(&path, entries);
             let parent = unique_lane_id();
-            get_volume_manager().register(&parent, Arc::new(InMemoryVolume::new("parent").with_local_fs_access()));
+            let volume: Arc<dyn Volume> = Arc::new(InMemoryVolume::new("parent").with_local_fs_access());
+            engine.volumes().register(&parent, Arc::clone(&volume));
+            // The listing engine resolves the pane's archive path through the app's registry.
+            get_volume_manager().register(&parent, volume);
             assert!(get_volume_manager().resolve(&parent, &path).await.is_routed());
             let names: Vec<_> = entries
                 .iter()
@@ -286,7 +293,8 @@ mod an_open_listing_inside_the_zip {
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn shows_a_file_copied_in() {
-        let zip = OpenZip::new("archive-edit-refresh-add", &[("keep.txt", b"keep")]).await;
+        let engine = TestOperations::seeing_app_listings();
+        let zip = OpenZip::new(&engine, "archive-edit-refresh-add", &[("keep.txt", b"keep")]).await;
         let events = Arc::new(CollectorEventSink::new());
         let request = ArchiveEditRequest {
             archive_path: zip.path.clone(),
@@ -303,7 +311,7 @@ mod an_open_listing_inside_the_zip {
             preview_id: None,
         };
 
-        installed()
+        engine
             .archive_edit_start(Arc::clone(&events) as Arc<dyn OperationEventSink>, request, 0)
             .await
             .expect("start archive edit");
@@ -314,14 +322,16 @@ mod an_open_listing_inside_the_zip {
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn drops_a_file_deleted_inside_it() {
+        let engine = TestOperations::seeing_app_listings();
         let zip = OpenZip::new(
+            &engine,
             "archive-edit-refresh-delete",
             &[("keep.txt", b"keep"), ("drop.txt", b"drop")],
         )
         .await;
         let events = Arc::new(CollectorEventSink::new());
 
-        installed()
+        engine
             .route_archive_delete(
                 Arc::clone(&events) as Arc<dyn OperationEventSink>,
                 &[zip.path.join("drop.txt")],

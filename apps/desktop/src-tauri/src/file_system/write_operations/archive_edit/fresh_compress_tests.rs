@@ -1,11 +1,10 @@
 //! Fresh compression coordinator shutdown and stage-validation tests.
 
 use super::*;
-use crate::file_system::volume::manager::get_volume_manager;
 use crate::file_system::write_operations::archive_edit::fresh_plan::FreshPlan;
 use crate::file_system::write_operations::archive_edit::fresh_zip::{FreshZipEntry, FreshZipSource};
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
-use crate::file_system::write_operations::installed;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::{ArchiveNameRefusal, WriteOperationPhase};
 use crate::test_support::wait_until_async;
 use cmdr_fs::ignore_poison::IgnorePoison;
@@ -84,7 +83,8 @@ impl Volume for RefuseAfterProducerProgress {
 
 #[tokio::test]
 async fn backend_refusal_unblocks_a_producer_parked_by_pause() {
-    let state = Arc::new(WriteOperationState::new(Duration::ZERO));
+    let engine = TestOperations::new();
+    let state = Arc::new(engine.new_operation_state(Duration::ZERO));
     state.pause_gate.pause();
     let producer_progressed = Arc::new(tokio::sync::Notify::new());
     let progress_signal = Arc::clone(&producer_progressed);
@@ -423,11 +423,10 @@ async fn wait_for_terminal(events: &CollectorEventSink) {
 
 const ORIGINAL_ARCHIVE: &[u8] = b"the original archive bytes";
 
-/// A registered SMB-shaped share holding `/share/archive.zip` (placeholder
+/// An SMB-shaped share, registered on the engine, holding `/share/archive.zip` (placeholder
 /// bytes the compress must never touch unless it publishes) behind a
 /// [`GatedDestination`], plus a started compress of one 3 MiB local file onto it.
 struct GatedRun {
-    id: String,
     destination: Arc<GatedDestination>,
     open_gate: tokio::sync::watch::Sender<bool>,
     events: Arc<CollectorEventSink>,
@@ -436,7 +435,7 @@ struct GatedRun {
 }
 
 impl GatedRun {
-    async fn start(direct: bool, script: AfterFirstChunk) -> Self {
+    async fn start(engine: &TestOperations, direct: bool, script: AfterFirstChunk) -> Self {
         let source_dir = tempfile::tempdir().expect("tempdir");
         std::fs::write(source_dir.path().join("big.bin"), incompressible(3 * 1024 * 1024)).expect("write source");
         let source: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
@@ -455,9 +454,11 @@ impl GatedRun {
             .expect("seed original");
         let (open_gate, gate) = tokio::sync::watch::channel(false);
         let destination = Arc::new(GatedDestination::new(inner, gate, direct, script));
-        get_volume_manager().register(&id, Arc::clone(&destination) as Arc<dyn Volume>);
+        engine
+            .volumes()
+            .register(&id, Arc::clone(&destination) as Arc<dyn Volume>);
         let events = Arc::new(CollectorEventSink::new());
-        let start = installed()
+        let start = engine
             .compress_start(
                 Arc::clone(&events) as Arc<dyn OperationEventSink>,
                 source,
@@ -473,7 +474,6 @@ impl GatedRun {
             .await
             .expect("start gated compress");
         Self {
-            id,
             destination,
             open_gate,
             events,
@@ -493,7 +493,7 @@ impl GatedRun {
         let _ = self.open_gate.send(true);
     }
 
-    /// The original stays byte-exact and no stage survives, then unregisters.
+    /// The original stays byte-exact and no stage survives.
     async fn assert_destination_untouched_and_finish(self) {
         assert_eq!(
             read_remote_file(&self.destination.inner, Path::new("/share/archive.zip")).await,
@@ -507,16 +507,17 @@ impl GatedRun {
             .await
             .expect("list share");
         assert!(sibling_temps(&listing).is_empty(), "the stage is removed: {listing:?}");
-        get_volume_manager().unregister(&self.id);
     }
 }
 
 #[tokio::test]
 async fn cancel_reaches_a_direct_write_held_by_a_gated_destination() {
     use std::sync::atomic::Ordering;
-    let run = GatedRun::start(true, AfterFirstChunk::HoldThenReport).await;
+
+    let engine = TestOperations::new();
+    let run = GatedRun::start(&engine, true, AfterFirstChunk::HoldThenReport).await;
     run.wait_at_gate().await;
-    installed().cancel_operation(&run.operation_id);
+    engine.cancel_operation(&run.operation_id);
     run.open_gate();
     wait_for_terminal(&run.events).await;
 
@@ -539,7 +540,8 @@ async fn cancel_reaches_a_direct_write_held_by_a_gated_destination() {
 
 #[tokio::test]
 async fn a_destination_that_stops_reading_early_is_a_write_error_not_a_cancel() {
-    let run = GatedRun::start(true, AfterFirstChunk::ClaimSuccess).await;
+    let engine = TestOperations::new();
+    let run = GatedRun::start(&engine, true, AfterFirstChunk::ClaimSuccess).await;
     wait_for_terminal(&run.events).await;
 
     assert!(
@@ -553,12 +555,13 @@ async fn a_destination_that_stops_reading_early_is_a_write_error_not_a_cancel() 
 
 #[tokio::test]
 async fn an_upload_failure_while_paused_reports_without_waiting_for_resume() {
-    let run = GatedRun::start(false, AfterFirstChunk::HoldThenFail).await;
+    let engine = TestOperations::new();
+    let run = GatedRun::start(&engine, false, AfterFirstChunk::HoldThenFail).await;
     run.wait_at_gate().await;
-    let _ = installed().pause_operation(&run.operation_id);
+    let _ = engine.pause_operation(&run.operation_id);
     run.open_gate();
     wait_for_terminal(&run.events).await;
-    let _ = installed().resume_operation(&run.operation_id);
+    let _ = engine.resume_operation(&run.operation_id);
 
     assert_eq!(
         run.events.errors.lock_ignore_poison().len(),
@@ -572,6 +575,8 @@ async fn an_upload_failure_while_paused_reports_without_waiting_for_resume() {
 #[tokio::test]
 async fn cancel_reaches_a_producer_waiting_on_a_hung_remote_source() {
     use std::sync::atomic::Ordering;
+
+    let engine = TestOperations::new();
     let lane = format!("hung-source-{}", uuid::Uuid::new_v4());
     let inner = InMemoryVolume::new("HungSource").with_lane_key(lane);
     inner
@@ -589,7 +594,7 @@ async fn cancel_reaches_a_producer_waiting_on_a_hung_remote_source() {
     std::fs::write(&archive, &original).expect("seed original");
     let events = Arc::new(CollectorEventSink::new());
 
-    let start = installed()
+    let start = engine
         .compress_start(
             Arc::clone(&events) as Arc<dyn OperationEventSink>,
             source,
@@ -608,7 +613,7 @@ async fn cancel_reaches_a_producer_waiting_on_a_hung_remote_source() {
         reading.load(Ordering::SeqCst)
     })
     .await;
-    installed().cancel_operation(&start.operation_id);
+    engine.cancel_operation(&start.operation_id);
     wait_for_terminal(&events).await;
 
     assert_eq!(events.cancelled.lock_ignore_poison().len(), 1, "the op ends cancelled");
@@ -634,6 +639,7 @@ async fn read_remote_file(volume: &dyn Volume, path: &Path) -> Vec<u8> {
 
 #[tokio::test]
 async fn a_file_whose_name_holds_a_backslash_compresses_and_validates() {
+    let engine = TestOperations::new();
     // `\` is an ordinary filename byte on macOS, but the archive reader treats it
     // as a separator, so `a\b.txt` reads back as `a/` + `b.txt`.
     let source_dir = tempfile::tempdir().expect("tempdir");
@@ -647,7 +653,7 @@ async fn a_file_whose_name_holds_a_backslash_compresses_and_validates() {
     let archive = dest_dir.path().join("odd.zip");
     let events = Arc::new(CollectorEventSink::new());
 
-    installed()
+    engine
         .compress_start(
             Arc::clone(&events) as Arc<dyn OperationEventSink>,
             source,
@@ -675,9 +681,10 @@ async fn a_file_whose_name_holds_a_backslash_compresses_and_validates() {
     );
 }
 
-/// Compresses `selected` (relative to `source_dir`) into a new local archive and
-/// waits for the terminal event.
+/// Compresses `selected` (relative to `source_dir`) into a new local archive on
+/// `engine` and waits for the terminal event.
 async fn compress_local_selection(
+    engine: &TestOperations,
     source_dir: &Path,
     selected: &[&str],
 ) -> (Arc<CollectorEventSink>, tempfile::TempDir, PathBuf) {
@@ -689,7 +696,7 @@ async fn compress_local_selection(
     let dest_dir = tempfile::tempdir().expect("tempdir");
     let archive = dest_dir.path().join("out.zip");
     let events = Arc::new(CollectorEventSink::new());
-    installed()
+    engine
         .compress_start(
             Arc::clone(&events) as Arc<dyn OperationEventSink>,
             source,
@@ -731,7 +738,8 @@ async fn a_name_the_archive_reader_would_hide_fails_before_compressing() {
     let source_dir = tempfile::tempdir().expect("tempdir");
     std::fs::write(source_dir.path().join("..\\evil.txt"), b"x").expect("write source");
 
-    let (events, dest_dir, _archive) = compress_local_selection(source_dir.path(), &["..\\evil.txt"]).await;
+    let engine = TestOperations::new();
+    let (events, dest_dir, _archive) = compress_local_selection(&engine, source_dir.path(), &["..\\evil.txt"]).await;
 
     assert_refused_before_producing(&events, dest_dir.path());
     assert!(matches!(
@@ -752,7 +760,8 @@ async fn two_entries_that_read_back_as_one_path_fail_before_compressing() {
     std::fs::create_dir(source_dir.path().join("a")).expect("mkdir");
     std::fs::write(source_dir.path().join("a/b.txt"), b"real").expect("write the real one");
 
-    let (events, dest_dir, _archive) = compress_local_selection(source_dir.path(), &["a\\b.txt", "a"]).await;
+    let engine = TestOperations::new();
+    let (events, dest_dir, _archive) = compress_local_selection(&engine, source_dir.path(), &["a\\b.txt", "a"]).await;
 
     assert_refused_before_producing(&events, dest_dir.path());
     assert!(matches!(

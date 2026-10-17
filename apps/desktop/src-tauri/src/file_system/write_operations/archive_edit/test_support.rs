@@ -15,6 +15,7 @@ pub(super) use std::time::Duration;
 pub(super) use super::super::OperationEventSink;
 pub(super) use super::super::event_sinks::CollectorEventSink;
 pub(super) use super::super::manager::OperationSummaryText;
+pub(super) use super::super::testing::{TestOperationLog, TestOperations};
 pub(super) use super::super::types::{
     ConflictId, ConflictInfo, ConflictResolution, DryRunResult, ScanProgressEvent, WriteCancelledEvent,
     WriteCompleteEvent, WriteConflictResolvedEvent, WriteErrorEvent, WriteOperationError, WriteOperationPhase,
@@ -25,6 +26,7 @@ pub(super) use crate::test_support::wait_until_async;
 pub(super) use cmdr_archive::mutator::Changeset;
 pub(super) use cmdr_fs::ignore_poison::IgnorePoison;
 pub(super) use cmdr_fs::volume::Volume;
+pub(super) use cmdr_operation_log::rollback::VolumeLookup;
 pub(super) use zip::write::SimpleFileOptions;
 pub(super) use zip::{ZipArchive, ZipWriter};
 
@@ -196,10 +198,21 @@ pub(super) fn zip_bytes(entries: &[(&str, &[u8])]) -> Vec<u8> {
     cursor.into_inner()
 }
 
-/// Registers a NON-local `InMemoryVolume` (the remote-parent stand-in) holding a
-/// zip at `archive_path`, under a unique volume id. Unregister with
-/// `get_volume_manager().unregister(&id)` when done.
+/// A NON-local `InMemoryVolume` (the remote-parent stand-in) holding a zip at
+/// `archive_path`, under a unique volume id, registered on `engine`.
 pub(super) async fn register_remote_zip(
+    engine: &TestOperations,
+    archive_path: &Path,
+    entries: &[(&str, &[u8])],
+) -> (String, Arc<cmdr_fs::volume::InMemoryVolume>) {
+    let (id, parent) = remote_zip(archive_path, entries).await;
+    engine.volumes().register(&id, Arc::clone(&parent) as Arc<dyn Volume>);
+    (id, parent)
+}
+
+/// [`register_remote_zip`]'s volume and id, registered nowhere: for a cell whose
+/// routing asks the app's registry.
+pub(super) async fn remote_zip(
     archive_path: &Path,
     entries: &[(&str, &[u8])],
 ) -> (String, Arc<cmdr_fs::volume::InMemoryVolume>) {
@@ -218,16 +231,17 @@ pub(super) async fn register_remote_zip(
         .create_file(archive_path, &zip_bytes(entries))
         .await
         .expect("seed remote zip");
-    let parent = Arc::new(parent);
-    get_volume_manager().register(&id, Arc::clone(&parent) as Arc<dyn Volume>);
-    (id, parent)
+    (id, Arc::new(parent))
 }
 
 /// Registers a NON-local `InMemoryVolume` (a remote SOURCE stand-in — MTP / SMB)
 /// pre-populated with `files` (each `(relative_path, bytes)`), creating every
-/// parent directory the paths imply. Returns the volume id and the handle;
-/// unregister with `get_volume_manager().unregister(&id)` when done.
-pub(super) async fn register_remote_source(files: &[(&str, &[u8])]) -> (String, Arc<cmdr_fs::volume::InMemoryVolume>) {
+/// parent directory the paths imply, registered on `engine`. Returns the volume
+/// id and the handle.
+pub(super) async fn register_remote_source(
+    engine: &TestOperations,
+    files: &[(&str, &[u8])],
+) -> (String, Arc<cmdr_fs::volume::InMemoryVolume>) {
     use cmdr_fs::volume::InMemoryVolume;
     let source = InMemoryVolume::new("RemoteSource");
     for (rel, bytes) in files {
@@ -244,7 +258,7 @@ pub(super) async fn register_remote_source(files: &[(&str, &[u8])]) -> (String, 
     }
     let source = Arc::new(source);
     let id = format!("remote-source-{}", Uuid::new_v4());
-    get_volume_manager().register(&id, Arc::clone(&source) as Arc<dyn Volume>);
+    engine.volumes().register(&id, Arc::clone(&source) as Arc<dyn Volume>);
     (id, source)
 }
 

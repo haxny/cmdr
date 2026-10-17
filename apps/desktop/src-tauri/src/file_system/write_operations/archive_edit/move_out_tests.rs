@@ -3,7 +3,6 @@
 //! clean extract. The data-safety core: a dest failure, a skipped collision, or a
 //! cancel must delete NOTHING from the archive.
 
-use crate::file_system::write_operations::installed;
 use std::future::Future;
 use std::pin::Pin;
 
@@ -108,6 +107,7 @@ fn move_out_config() -> crate::file_system::write_operations::VolumeCopyConfig {
 async fn move_out_lands_files_at_dest_deletes_entries_and_keeps_the_remainder() {
     use cmdr_local::LocalPosixVolume;
 
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     let archive = tmp.path().join("a.zip");
     write_multi_zip(&archive, &[("keep.txt", b"keep"), ("move_me.txt", b"payload")]);
@@ -123,7 +123,7 @@ async fn move_out_lands_files_at_dest_deletes_entries_and_keeps_the_remainder() 
     ));
 
     let events = Arc::new(CollectorEventSink::new());
-    installed()
+    engine
         .route_archive_move_out(
             Arc::clone(&events) as Arc<dyn OperationEventSink>,
             "root".to_string(),
@@ -177,6 +177,7 @@ async fn move_out_lands_files_at_dest_deletes_entries_and_keeps_the_remainder() 
 async fn move_out_dest_failure_deletes_nothing_and_leaves_the_archive_readable() {
     use cmdr_fs::volume::InMemoryVolume;
 
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     let archive = tmp.path().join("a.zip");
     write_multi_zip(&archive, &[("keep.txt", b"keep"), ("move_me.txt", b"payload")]);
@@ -187,7 +188,7 @@ async fn move_out_dest_failure_deletes_nothing_and_leaves_the_archive_readable()
     });
 
     let events = Arc::new(CollectorEventSink::new());
-    installed()
+    engine
         .route_archive_move_out(
             Arc::clone(&events) as Arc<dyn OperationEventSink>,
             "root".to_string(),
@@ -222,6 +223,7 @@ async fn move_out_dest_failure_deletes_nothing_and_leaves_the_archive_readable()
 async fn move_out_a_lone_skipped_source_stays_in_the_archive() {
     use cmdr_local::LocalPosixVolume;
 
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     let archive = tmp.path().join("a.zip");
     write_multi_zip(&archive, &[("keep.txt", b"keep"), ("move_me.txt", b"payload")]);
@@ -246,7 +248,7 @@ async fn move_out_a_lone_skipped_source_stays_in_the_archive() {
         conflict_resolution: ConflictResolution::Skip,
         ..Default::default()
     };
-    installed()
+    engine
         .route_archive_move_out(
             Arc::clone(&events) as Arc<dyn OperationEventSink>,
             "root".to_string(),
@@ -283,6 +285,7 @@ async fn move_out_a_lone_skipped_source_stays_in_the_archive() {
 async fn move_out_cancel_leaves_the_archive_untouched() {
     use cmdr_local::LocalPosixVolume;
 
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     let archive = tmp.path().join("a.zip");
     write_multi_zip(&archive, &[("keep.txt", b"keep"), ("move_me.txt", b"payload")]);
@@ -298,7 +301,7 @@ async fn move_out_cancel_leaves_the_archive_untouched() {
     ));
 
     let events = Arc::new(CollectorEventSink::new());
-    let start = installed()
+    let start = engine
         .route_archive_move_out(
             Arc::clone(&events) as Arc<dyn OperationEventSink>,
             "root".to_string(),
@@ -315,7 +318,7 @@ async fn move_out_cancel_leaves_the_archive_untouched() {
     // Cancel synchronously before yielding, so the extract observes Stopped at
     // its first cancellation check (the deferred can't run until this task
     // awaits). `false` = keep already-copied files, no rollback.
-    installed().cancel_write_operation(&start.operation_id, false);
+    engine.cancel_write_operation(&start.operation_id, false);
 
     wait_until_async(
         Duration::from_secs(5),
@@ -340,6 +343,7 @@ async fn move_out_cancel_leaves_the_archive_untouched() {
 async fn move_out_dir_with_a_deep_skipped_child_keeps_that_child_in_the_archive() {
     use cmdr_local::LocalPosixVolume;
 
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     let archive = tmp.path().join("a.zip");
     // A directory source with two children; one will collide at the destination.
@@ -367,7 +371,7 @@ async fn move_out_dir_with_a_deep_skipped_child_keeps_that_child_in_the_archive(
         conflict_resolution: ConflictResolution::Skip,
         ..Default::default()
     };
-    installed()
+    engine
         .route_archive_move_out(
             Arc::clone(&events) as Arc<dyn OperationEventSink>,
             "root".to_string(),
@@ -496,6 +500,7 @@ impl Volume for FailOnNameVolume {
 async fn move_out_partial_skip_converges_deletes_landed_keeps_skipped() {
     use cmdr_local::LocalPosixVolume;
 
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     let archive = tmp.path().join("a.zip");
     write_multi_zip(&archive, &[("a.txt", b"AAA"), ("b.txt", b"BBB")]);
@@ -519,7 +524,7 @@ async fn move_out_partial_skip_converges_deletes_landed_keeps_skipped() {
         conflict_resolution: ConflictResolution::Skip,
         ..Default::default()
     };
-    installed()
+    engine
         .route_archive_move_out(
             Arc::clone(&events) as Arc<dyn OperationEventSink>,
             "root".to_string(),
@@ -562,6 +567,7 @@ async fn move_out_partial_skip_converges_deletes_landed_keeps_skipped() {
 async fn move_out_error_mid_tree_deletes_only_the_durable_prefix() {
     use cmdr_fs::volume::InMemoryVolume;
 
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     let archive = tmp.path().join("a.zip");
     write_multi_zip(&archive, &[("a.txt", b"AAA"), ("b.txt", b"BBB")]);
@@ -581,7 +587,7 @@ async fn move_out_error_mid_tree_deletes_only_the_durable_prefix() {
     let source_volume = archive_source_volume(&archive);
 
     let events = Arc::new(CollectorEventSink::new());
-    installed()
+    engine
         .route_archive_move_out(
             Arc::clone(&events) as Arc<dyn OperationEventSink>,
             "root".to_string(),
@@ -620,6 +626,7 @@ async fn move_out_error_mid_tree_deletes_only_the_durable_prefix() {
 async fn move_out_rollback_deletes_nothing_from_the_archive() {
     use cmdr_local::LocalPosixVolume;
 
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     let archive = tmp.path().join("a.zip");
     write_multi_zip(&archive, &[("keep.txt", b"keep"), ("move_me.txt", b"payload")]);
@@ -635,7 +642,7 @@ async fn move_out_rollback_deletes_nothing_from_the_archive() {
     ));
 
     let events = Arc::new(CollectorEventSink::new());
-    let start = installed()
+    let start = engine
         .route_archive_move_out(
             Arc::clone(&events) as Arc<dyn OperationEventSink>,
             "root".to_string(),
@@ -651,7 +658,7 @@ async fn move_out_rollback_deletes_nothing_from_the_archive() {
 
     // `true` = rollback (delete already-copied files). The archive must stay intact
     // regardless: a rolled-back extraction leaves nothing durable to move out.
-    installed().cancel_write_operation(&start.operation_id, true);
+    engine.cancel_write_operation(&start.operation_id, true);
 
     wait_until_async(
         Duration::from_secs(5),
@@ -676,6 +683,7 @@ async fn move_out_lands_tags_and_leaves_no_orphan_sidecar() {
     use cmdr_fs::testing::metadata_fixture::TAGS_XATTR;
     use cmdr_local::LocalPosixVolume;
 
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     let archive = tmp.path().join("tagged.zip");
     std::fs::write(&archive, cmdr_archive::test_fixtures::APPLE_DOUBLE_DITTO_ZIP).expect("write the zip");
@@ -688,7 +696,7 @@ async fn move_out_lands_tags_and_leaves_no_orphan_sidecar() {
     ));
 
     let events = Arc::new(CollectorEventSink::new());
-    installed()
+    engine
         .route_archive_move_out(
             Arc::clone(&events) as Arc<dyn OperationEventSink>,
             "root".to_string(),

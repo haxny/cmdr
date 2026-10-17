@@ -2,13 +2,13 @@
 
 use super::test_support::*;
 use crate::file_system::write_operations::WriteOperationPhase;
-use crate::file_system::write_operations::installed;
 
 /// End-to-end: compress two local files into a new ZIP and read both entries back.
 #[tokio::test]
 async fn compress_start_packs_local_files_into_a_new_zip() {
     use cmdr_local::LocalPosixVolume;
 
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
 
     // A local source volume holding two files at its root. Repetition makes the
@@ -33,7 +33,7 @@ async fn compress_start_packs_local_files_into_a_new_zip() {
     assert!(!dest.exists(), "the target must not exist before compress");
 
     let events = PhaseGateSink::new(WriteOperationPhase::FinishingCompression);
-    let start = installed()
+    let start = engine
         .compress_start(
             Arc::clone(&events) as Arc<dyn OperationEventSink>,
             source_volume,
@@ -144,6 +144,7 @@ async fn compress_start_packs_local_files_into_a_new_zip() {
 async fn a_name_taken_after_start_is_not_replaced_or_reported_complete() {
     use cmdr_local::LocalPosixVolume;
 
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     let src_root = tmp.path().join("src");
     std::fs::create_dir_all(&src_root).expect("mkdir src");
@@ -157,7 +158,7 @@ async fn a_name_taken_after_start_is_not_replaced_or_reported_complete() {
     let raced_bytes = b"a file created after the compression was approved";
     let events = PhaseGateSink::new(WriteOperationPhase::FinishingCompression);
 
-    installed()
+    engine
         .compress_start(
             Arc::clone(&events) as Arc<dyn OperationEventSink>,
             source_volume,
@@ -192,6 +193,7 @@ async fn a_name_taken_after_start_is_not_replaced_or_reported_complete() {
 async fn stop_policy_prompts_for_duplicate_source_names_and_honors_overwrite() {
     use cmdr_local::LocalPosixVolume;
 
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     let src_root = tmp.path().join("src");
     std::fs::create_dir_all(src_root.join("first")).expect("mkdir first");
@@ -206,7 +208,7 @@ async fn stop_policy_prompts_for_duplicate_source_names_and_honors_overwrite() {
     let dest = tmp.path().join("bundle.zip");
     let events = Arc::new(CollectorEventSink::new());
 
-    let started = installed()
+    let started = engine
         .compress_start(
             Arc::clone(&events) as Arc<dyn OperationEventSink>,
             source_volume,
@@ -228,7 +230,7 @@ async fn stop_policy_prompts_for_duplicate_source_names_and_honors_overwrite() {
     .await;
     assert!(events.errors.lock_ignore_poison().is_empty());
     let clash = events.conflicts.lock_ignore_poison()[0].conflict_id;
-    installed().resolve_write_conflict(&started.operation_id, clash, ConflictResolution::Overwrite, false);
+    engine.resolve_write_conflict(&started.operation_id, clash, ConflictResolution::Overwrite, false);
     wait_until_async(Duration::from_secs(5), "duplicate-name compress completion", || {
         !events.complete.lock_ignore_poison().is_empty()
     })
@@ -241,6 +243,7 @@ async fn stop_policy_prompts_for_duplicate_source_names_and_honors_overwrite() {
 async fn an_existing_local_archive_stays_byte_exact_until_publication() {
     use cmdr_local::LocalPosixVolume;
 
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     let src_root = tmp.path().join("src");
     std::fs::create_dir_all(&src_root).expect("mkdir src");
@@ -255,7 +258,7 @@ async fn an_existing_local_archive_stays_byte_exact_until_publication() {
     std::fs::write(&dest, &original).expect("write original archive");
 
     let events = PhaseGateSink::new(WriteOperationPhase::FinishingCompression);
-    installed()
+    engine
         .compress_start(
             Arc::clone(&events) as Arc<dyn OperationEventSink>,
             source_volume,
@@ -289,6 +292,7 @@ async fn an_existing_local_archive_stays_byte_exact_until_publication() {
 async fn local_alias_and_destination_inside_source_are_refused_before_registration() {
     use cmdr_local::LocalPosixVolume;
 
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     let source_dir = tmp.path().join("source");
     std::fs::create_dir_all(&source_dir).expect("mkdir source");
@@ -300,7 +304,7 @@ async fn local_alias_and_destination_inside_source_are_refused_before_registrati
         Arc::new(LocalPosixVolume::local_folder("src", "/", crate::volume_host::host()));
     let events = Arc::new(CollectorEventSink::new());
 
-    let alias_result = installed()
+    let alias_result = engine
         .compress_start(
             Arc::clone(&events) as Arc<dyn OperationEventSink>,
             Arc::clone(&source_volume),
@@ -319,7 +323,7 @@ async fn local_alias_and_destination_inside_source_are_refused_before_registrati
         Err(WriteOperationError::DestinationInsideSource { .. })
     ));
 
-    let inside_result = installed()
+    let inside_result = engine
         .compress_start(
             events,
             source_volume,
@@ -348,6 +352,7 @@ async fn local_alias_and_destination_inside_source_are_refused_before_registrati
 async fn compress_refuses_a_read_only_destination_without_touching_its_bytes() {
     use cmdr_local::LocalPosixVolume;
 
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     let src_root = tmp.path().join("src");
     std::fs::create_dir_all(&src_root).expect("mkdir src");
@@ -367,7 +372,7 @@ async fn compress_refuses_a_read_only_destination_without_touching_its_bytes() {
             crate::volume_host::host(),
         ));
         let events = Arc::new(CollectorEventSink::new());
-        let result = installed()
+        let result = engine
             .compress_start(
                 Arc::clone(&events) as Arc<dyn OperationEventSink>,
                 source_volume,
@@ -410,21 +415,13 @@ async fn compress_refuses_a_read_only_destination_without_touching_its_bytes() {
 /// the driver, not the op type.
 #[tokio::test]
 async fn compress_journals_subkind_and_net_new_from_the_driver() {
-    use crate::operation_log_host::TestJournalGuard;
     use cmdr_local::LocalPosixVolume;
-    use cmdr_operation_log::capture::WriterJournal;
-    use cmdr_operation_log::store::{
-        open_read_connection, operation_log_db_path, read_operation, read_operation_items,
-    };
+    use cmdr_operation_log::store::{open_read_connection, read_operation, read_operation_items};
     use cmdr_operation_log::types::{ArchiveSubkind, ExecutionStatus, Initiator, OpKind, RollbackState, RowRole};
-    use cmdr_operation_log::writer::OperationLogWriter;
 
-    let jdir = tempfile::tempdir().expect("jdir");
-    let jdb = operation_log_db_path(jdir.path());
-    // Serializes journal-slot tests under plain `cargo test`; clears on drop.
-    let _journal = TestJournalGuard::install(Arc::new(WriterJournal::new(
-        OperationLogWriter::spawn(&jdb).expect("spawn writer"),
-    )));
+    let log = TestOperationLog::new("compress_journals_subkind_and_net_new_from_the_driver");
+    let jdb = log.db().to_path_buf();
+    let engine = TestOperations::journaling_into(&log);
 
     let tmp = tempfile::tempdir().expect("tempdir");
     let src_root = tmp.path().join("src");
@@ -440,7 +437,7 @@ async fn compress_journals_subkind_and_net_new_from_the_driver() {
     assert!(!dest.exists(), "the target must be net-new");
 
     let events = Arc::new(CollectorEventSink::new());
-    let start = installed()
+    let start = engine
         .compress_start(
             Arc::clone(&events) as Arc<dyn OperationEventSink>,
             source_volume,
@@ -500,18 +497,13 @@ async fn compress_journals_subkind_and_net_new_from_the_driver() {
 /// so a Mac-to-phone compress read as a phone-to-phone one that packed nothing.
 #[tokio::test]
 async fn compress_journals_the_source_volume_and_what_it_packed() {
-    use crate::operation_log_host::TestJournalGuard;
     use cmdr_local::LocalPosixVolume;
-    use cmdr_operation_log::capture::WriterJournal;
-    use cmdr_operation_log::store::{open_read_connection, operation_log_db_path, read_operation};
+    use cmdr_operation_log::store::{open_read_connection, read_operation};
     use cmdr_operation_log::types::{ExecutionStatus, Initiator};
-    use cmdr_operation_log::writer::OperationLogWriter;
 
-    let jdir = tempfile::tempdir().expect("jdir");
-    let jdb = operation_log_db_path(jdir.path());
-    let _journal = TestJournalGuard::install(Arc::new(WriterJournal::new(
-        OperationLogWriter::spawn(&jdb).expect("spawn writer"),
-    )));
+    let log = TestOperationLog::new("compress_journals_the_source_volume_and_what_it_packed");
+    let jdb = log.db().to_path_buf();
+    let engine = TestOperations::journaling_into(&log);
 
     let tmp = tempfile::tempdir().expect("tempdir");
     let src_root = tmp.path().join("src");
@@ -524,10 +516,10 @@ async fn compress_journals_the_source_volume_and_what_it_packed() {
         crate::volume_host::host(),
     ));
     let source_id = unique_lane_id();
-    get_volume_manager().register(&source_id, Arc::clone(&source_volume));
+    engine.volumes().register(&source_id, Arc::clone(&source_volume));
     let parent_id = unique_lane_id();
 
-    let start = installed()
+    let start = engine
         .compress_start(
             Arc::new(CollectorEventSink::new()) as Arc<dyn OperationEventSink>,
             source_volume,
@@ -556,7 +548,6 @@ async fn compress_journals_the_source_volume_and_what_it_packed() {
         },
     )
     .await;
-    get_volume_manager().unregister(&source_id);
 
     let conn = open_read_connection(&jdb).expect("read conn");
     let row = read_operation(&conn, &start.operation_id).expect("read").expect("row");
@@ -573,6 +564,7 @@ async fn compress_journals_the_source_volume_and_what_it_packed() {
 async fn compress_start_packs_a_directory_subtree() {
     use cmdr_local::LocalPosixVolume;
 
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     let src_root = tmp.path().join("src");
     std::fs::create_dir_all(src_root.join("project/sub")).expect("mkdir");
@@ -586,7 +578,7 @@ async fn compress_start_packs_a_directory_subtree() {
 
     let dest = tmp.path().join("project.zip");
     let events = Arc::new(CollectorEventSink::new());
-    installed()
+    engine
         .compress_start(
             Arc::clone(&events) as Arc<dyn OperationEventSink>,
             source_volume,
@@ -637,9 +629,15 @@ fn entry_compressed_size(path: &Path, name: &str) -> u64 {
     archive.by_name(name).expect("entry present").compressed_size()
 }
 
-/// Compresses one file holding `payload` at `level` into a fresh zip and returns
-/// its path. The entry lands at the archive root as `data.txt`.
-async fn compress_payload_at(dir: &Path, tag: &str, level: Option<i64>, payload: &[u8]) -> PathBuf {
+/// Compresses one file holding `payload` at `level` into a fresh zip on `engine`
+/// and returns its path. The entry lands at the archive root as `data.txt`.
+async fn compress_payload_at(
+    engine: &TestOperations,
+    dir: &Path,
+    tag: &str,
+    level: Option<i64>,
+    payload: &[u8],
+) -> PathBuf {
     use cmdr_local::LocalPosixVolume;
 
     let src_root = dir.join(format!("src-{tag}"));
@@ -653,7 +651,7 @@ async fn compress_payload_at(dir: &Path, tag: &str, level: Option<i64>, payload:
 
     let dest = dir.join(format!("out-{tag}.zip"));
     let events = Arc::new(CollectorEventSink::new());
-    installed()
+    engine
         .compress_start(
             Arc::clone(&events) as Arc<dyn OperationEventSink>,
             source_volume,
@@ -688,11 +686,12 @@ async fn compress_payload_at(dir: &Path, tag: &str, level: Option<i64>, payload:
 /// fixed payload, so `<` is not flaky.
 #[tokio::test]
 async fn compress_level_9_is_smaller_than_level_1() {
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     let payload = compressible_payload();
 
-    let at_1 = compress_payload_at(tmp.path(), "l1", Some(1), &payload).await;
-    let at_9 = compress_payload_at(tmp.path(), "l9", Some(9), &payload).await;
+    let at_1 = compress_payload_at(&engine, tmp.path(), "l1", Some(1), &payload).await;
+    let at_9 = compress_payload_at(&engine, tmp.path(), "l9", Some(9), &payload).await;
 
     let size_1 = entry_compressed_size(&at_1, "data.txt");
     let size_9 = entry_compressed_size(&at_9, "data.txt");
@@ -706,11 +705,12 @@ async fn compress_level_9_is_smaller_than_level_1() {
 /// default level 6, so an unset level and an explicit 6 produce the same stored size.
 #[tokio::test]
 async fn compress_default_none_matches_explicit_level_6() {
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     let payload = compressible_payload();
 
-    let default = compress_payload_at(tmp.path(), "def", None, &payload).await;
-    let explicit_6 = compress_payload_at(tmp.path(), "six", Some(6), &payload).await;
+    let default = compress_payload_at(&engine, tmp.path(), "def", None, &payload).await;
+    let explicit_6 = compress_payload_at(&engine, tmp.path(), "six", Some(6), &payload).await;
 
     assert_eq!(
         entry_compressed_size(&default, "data.txt"),
@@ -725,13 +725,14 @@ async fn compress_default_none_matches_explicit_level_6() {
 /// produces a valid archive, sized as the nearest in-range level.
 #[tokio::test]
 async fn compress_out_of_range_level_clamps_instead_of_failing() {
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     let payload = compressible_payload();
 
-    let too_low = compress_payload_at(tmp.path(), "low", Some(0), &payload).await;
-    let too_high = compress_payload_at(tmp.path(), "high", Some(42), &payload).await;
-    let at_1 = compress_payload_at(tmp.path(), "one", Some(1), &payload).await;
-    let at_9 = compress_payload_at(tmp.path(), "nine", Some(9), &payload).await;
+    let too_low = compress_payload_at(&engine, tmp.path(), "low", Some(0), &payload).await;
+    let too_high = compress_payload_at(&engine, tmp.path(), "high", Some(42), &payload).await;
+    let at_1 = compress_payload_at(&engine, tmp.path(), "one", Some(1), &payload).await;
+    let at_9 = compress_payload_at(&engine, tmp.path(), "nine", Some(9), &payload).await;
 
     // Clamped to the boundary levels: 0 -> 1, 42 -> 9.
     assert_eq!(
@@ -752,6 +753,7 @@ async fn a_tree_that_fails_to_build_leaves_the_compress_as_it_would_run_without_
     use crate::file_system::write_operations::transfer_tree::test_support::TREE_BUG_NAME;
     use cmdr_local::LocalPosixVolume;
 
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     let src_root = tmp.path().join("src");
     std::fs::create_dir_all(src_root.join("project")).expect("mkdir");
@@ -765,7 +767,7 @@ async fn a_tree_that_fails_to_build_leaves_the_compress_as_it_would_run_without_
 
     let dest = tmp.path().join("project.zip");
     let events = Arc::new(CollectorEventSink::new());
-    installed()
+    engine
         .compress_start(
             Arc::clone(&events) as Arc<dyn OperationEventSink>,
             source_volume,

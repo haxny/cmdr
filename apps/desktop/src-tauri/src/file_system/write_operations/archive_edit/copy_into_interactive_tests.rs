@@ -4,7 +4,6 @@
 //! dir-vs-dir merges without prompting.
 
 use super::test_support::*;
-use crate::file_system::write_operations::installed;
 
 /// The clash the operation is parked on, read off the `write-conflict` event a
 /// surface just observed. Answering names it, exactly as the frontend does.
@@ -21,11 +20,11 @@ fn pending_clash(events: &CollectorEventSink) -> ConflictId {
 /// (relative to `src_root`), landing at the archive root. Returns the collector +
 /// the operation id (for `resolve_write_conflict`).
 async fn start_interactive_copy_into(
+    engine: &TestOperations,
     archive: &Path,
     src_root: &Path,
     src_rel: &str,
 ) -> (Arc<CollectorEventSink>, String) {
-    use crate::file_system::write_operations::route_archive_copy_into;
     use cmdr_local::LocalPosixVolume;
 
     let source_volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
@@ -34,25 +33,27 @@ async fn start_interactive_copy_into(
         crate::volume_host::host(),
     ));
     let events = Arc::new(CollectorEventSink::new());
-    let start = route_archive_copy_into(
-        Arc::clone(&events) as Arc<dyn OperationEventSink>,
-        source_volume,
-        vec![PathBuf::from(src_rel)],
-        archive.to_path_buf(),
-        unique_lane_id(),
-        ConflictResolution::Stop,
-        0,
-        false,
-        None,
-        None,
-    )
-    .await
-    .expect("start interactive copy-into");
+    let start = engine
+        .route_archive_copy_into(
+            Arc::clone(&events) as Arc<dyn OperationEventSink>,
+            source_volume,
+            vec![PathBuf::from(src_rel)],
+            archive.to_path_buf(),
+            unique_lane_id(),
+            ConflictResolution::Stop,
+            0,
+            false,
+            None,
+            None,
+        )
+        .await
+        .expect("start interactive copy-into");
     (events, start.operation_id)
 }
 
 #[tokio::test]
 async fn interactive_copy_into_prompts_on_a_file_collision_and_overwrite_replaces() {
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     let archive = tmp.path().join("a.zip");
     write_multi_zip(&archive, &[("d/existing.txt", b"OLD")]);
@@ -62,14 +63,14 @@ async fn interactive_copy_into_prompts_on_a_file_collision_and_overwrite_replace
     std::fs::write(src_root.join("d/existing.txt"), b"NEW").expect("w1");
     std::fs::write(src_root.join("d/fresh.txt"), b"fresh").expect("w2");
 
-    let (events, op_id) = start_interactive_copy_into(&archive, &src_root, "d").await;
+    let (events, op_id) = start_interactive_copy_into(&engine, &archive, &src_root, "d").await;
 
     // The collision fires a prompt; answer Overwrite.
     wait_until_async(Duration::from_secs(5), "the write-conflict event", || {
         !events.conflicts.lock_ignore_poison().is_empty()
     })
     .await;
-    installed().resolve_write_conflict(&op_id, pending_clash(&events), ConflictResolution::Overwrite, false);
+    engine.resolve_write_conflict(&op_id, pending_clash(&events), ConflictResolution::Overwrite, false);
 
     wait_until_async(Duration::from_secs(5), "the write-complete event", || {
         !events.complete.lock_ignore_poison().is_empty()
@@ -100,6 +101,7 @@ async fn interactive_copy_into_prompts_on_a_file_collision_and_overwrite_replace
 
 #[tokio::test]
 async fn interactive_copy_into_skip_keeps_the_existing_entry() {
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     let archive = tmp.path().join("a.zip");
     write_multi_zip(&archive, &[("d/existing.txt", b"OLD")]);
@@ -108,13 +110,13 @@ async fn interactive_copy_into_skip_keeps_the_existing_entry() {
     std::fs::create_dir_all(src_root.join("d")).expect("mkdir src");
     std::fs::write(src_root.join("d/existing.txt"), b"NEW").expect("w1");
 
-    let (events, op_id) = start_interactive_copy_into(&archive, &src_root, "d").await;
+    let (events, op_id) = start_interactive_copy_into(&engine, &archive, &src_root, "d").await;
 
     wait_until_async(Duration::from_secs(5), "the write-conflict event", || {
         !events.conflicts.lock_ignore_poison().is_empty()
     })
     .await;
-    installed().resolve_write_conflict(&op_id, pending_clash(&events), ConflictResolution::Skip, false);
+    engine.resolve_write_conflict(&op_id, pending_clash(&events), ConflictResolution::Skip, false);
 
     wait_until_async(Duration::from_secs(5), "the write-complete event", || {
         !events.complete.lock_ignore_poison().is_empty()
@@ -129,6 +131,7 @@ async fn interactive_copy_into_skip_keeps_the_existing_entry() {
 
 #[tokio::test]
 async fn interactive_apply_to_all_latches_and_stops_prompting() {
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     let archive = tmp.path().join("a.zip");
     write_multi_zip(&archive, &[("d/one.txt", b"OLD1"), ("d/two.txt", b"OLD2")]);
@@ -138,7 +141,7 @@ async fn interactive_apply_to_all_latches_and_stops_prompting() {
     std::fs::write(src_root.join("d/one.txt"), b"NEW1").expect("w1");
     std::fs::write(src_root.join("d/two.txt"), b"NEW2").expect("w2");
 
-    let (events, op_id) = start_interactive_copy_into(&archive, &src_root, "d").await;
+    let (events, op_id) = start_interactive_copy_into(&engine, &archive, &src_root, "d").await;
 
     // Answer the FIRST prompt with Skip + apply-to-all; the second collision must
     // be resolved from the latch WITHOUT a second prompt.
@@ -146,7 +149,7 @@ async fn interactive_apply_to_all_latches_and_stops_prompting() {
         !events.conflicts.lock_ignore_poison().is_empty()
     })
     .await;
-    installed().resolve_write_conflict(&op_id, pending_clash(&events), ConflictResolution::Skip, true);
+    engine.resolve_write_conflict(&op_id, pending_clash(&events), ConflictResolution::Skip, true);
 
     wait_until_async(Duration::from_secs(5), "the write-complete event", || {
         !events.complete.lock_ignore_poison().is_empty()
@@ -164,6 +167,7 @@ async fn interactive_apply_to_all_latches_and_stops_prompting() {
 
 #[tokio::test]
 async fn interactive_cancel_during_a_prompt_leaves_the_archive_intact() {
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     let archive = tmp.path().join("a.zip");
     write_multi_zip(&archive, &[("d/existing.txt", b"OLD")]);
@@ -173,7 +177,7 @@ async fn interactive_cancel_during_a_prompt_leaves_the_archive_intact() {
     std::fs::write(src_root.join("d/existing.txt"), b"NEW").expect("w1");
     std::fs::write(src_root.join("d/fresh.txt"), b"fresh").expect("w2");
 
-    let (events, op_id) = start_interactive_copy_into(&archive, &src_root, "d").await;
+    let (events, op_id) = start_interactive_copy_into(&engine, &archive, &src_root, "d").await;
 
     wait_until_async(Duration::from_secs(5), "the write-conflict event", || {
         !events.conflicts.lock_ignore_poison().is_empty()
@@ -181,7 +185,7 @@ async fn interactive_cancel_during_a_prompt_leaves_the_archive_intact() {
     .await;
     // Cancel while the prompt is pending: the planner's recv unblocks with an
     // error, the mutator never runs, and the archive is untouched.
-    installed().cancel_write_operation(&op_id, false);
+    engine.cancel_write_operation(&op_id, false);
 
     wait_until_async(Duration::from_secs(5), "the write-cancelled event", || {
         !events.cancelled.lock_ignore_poison().is_empty()
@@ -204,6 +208,7 @@ async fn interactive_cancel_during_a_prompt_leaves_the_archive_intact() {
 
 #[tokio::test]
 async fn interactive_conflict_event_carries_both_sides_metadata() {
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     let archive = tmp.path().join("a.zip");
     write_multi_zip(&archive, &[("d/existing.txt", b"OLDDD")]); // 5 bytes
@@ -212,7 +217,7 @@ async fn interactive_conflict_event_carries_both_sides_metadata() {
     std::fs::create_dir_all(src_root.join("d")).expect("mkdir src");
     std::fs::write(src_root.join("d/existing.txt"), b"NN").expect("w1"); // 2 bytes
 
-    let (events, op_id) = start_interactive_copy_into(&archive, &src_root, "d").await;
+    let (events, op_id) = start_interactive_copy_into(&engine, &archive, &src_root, "d").await;
 
     wait_until_async(Duration::from_secs(5), "the write-conflict event", || {
         !events.conflicts.lock_ignore_poison().is_empty()
@@ -230,7 +235,7 @@ async fn interactive_conflict_event_carries_both_sides_metadata() {
             "the colliding archive entry is a file, not a folder"
         );
     }
-    installed().resolve_write_conflict(&op_id, pending_clash(&events), ConflictResolution::Skip, false);
+    engine.resolve_write_conflict(&op_id, pending_clash(&events), ConflictResolution::Skip, false);
     wait_until_async(Duration::from_secs(5), "the write-complete event", || {
         !events.complete.lock_ignore_poison().is_empty()
     })
@@ -239,9 +244,9 @@ async fn interactive_conflict_event_carries_both_sides_metadata() {
 
 #[tokio::test]
 async fn interactive_move_into_with_a_skipped_collision_keeps_the_source() {
-    use crate::file_system::write_operations::route_archive_copy_into;
     use cmdr_local::LocalPosixVolume;
 
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     let archive = tmp.path().join("a.zip");
     write_multi_zip(&archive, &[("d/a.txt", b"OLD")]);
@@ -256,26 +261,27 @@ async fn interactive_move_into_with_a_skipped_collision_keeps_the_source() {
         crate::volume_host::host(),
     ));
     let events = Arc::new(CollectorEventSink::new());
-    let start = route_archive_copy_into(
-        Arc::clone(&events) as Arc<dyn OperationEventSink>,
-        source_volume,
-        vec![PathBuf::from("d")],
-        archive.clone(),
-        unique_lane_id(),
-        ConflictResolution::Stop,
-        0,
-        true, // is_move
-        None,
-        None,
-    )
-    .await
-    .expect("start interactive move-into");
+    let start = engine
+        .route_archive_copy_into(
+            Arc::clone(&events) as Arc<dyn OperationEventSink>,
+            source_volume,
+            vec![PathBuf::from("d")],
+            archive.clone(),
+            unique_lane_id(),
+            ConflictResolution::Stop,
+            0,
+            true, // is_move
+            None,
+            None,
+        )
+        .await
+        .expect("start interactive move-into");
 
     wait_until_async(Duration::from_secs(5), "the write-conflict event", || {
         !events.conflicts.lock_ignore_poison().is_empty()
     })
     .await;
-    installed().resolve_write_conflict(
+    engine.resolve_write_conflict(
         &start.operation_id,
         pending_clash(&events),
         ConflictResolution::Skip,
@@ -295,6 +301,7 @@ async fn interactive_move_into_with_a_skipped_collision_keeps_the_source() {
 
 #[tokio::test]
 async fn interactive_dir_vs_dir_merges_without_prompting() {
+    let engine = TestOperations::new();
     let tmp = tempfile::tempdir().expect("tempdir");
     let archive = tmp.path().join("a.zip");
     // The archive already holds directory `d` (implied by `d/keep.txt`).
@@ -304,7 +311,7 @@ async fn interactive_dir_vs_dir_merges_without_prompting() {
     std::fs::create_dir_all(src_root.join("d")).expect("mkdir src");
     std::fs::write(src_root.join("d/new.txt"), b"new").expect("w1");
 
-    let (events, _op_id) = start_interactive_copy_into(&archive, &src_root, "d").await;
+    let (events, _op_id) = start_interactive_copy_into(&engine, &archive, &src_root, "d").await;
 
     wait_until_async(Duration::from_secs(5), "the write-complete event", || {
         !events.complete.lock_ignore_poison().is_empty()
