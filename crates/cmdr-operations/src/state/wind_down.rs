@@ -3,6 +3,8 @@
 use std::sync::Arc;
 use std::time::Duration;
 
+use tokio::runtime::Handle;
+
 use super::super::event_sinks::OperationEventSink;
 use super::super::types::{WriteOperationPhase, WriteProgressEvent};
 use super::{StopMeans, WriteOperationState};
@@ -38,6 +40,11 @@ impl WindDown {
     /// How often a progress frame may go out.
     pub(crate) fn progress_interval(&self) -> Duration {
         self.state.progress_interval
+    }
+
+    /// The engine's runtime, whose blocking pool a removal's syscalls run on.
+    pub(crate) fn runtime(&self) -> Handle {
+        self.state.scope().host().runtime()
     }
 
     /// Emits one reverse-progress frame and keeps the status cache in step with

@@ -98,17 +98,18 @@ pub async fn archive_inner_exists(
 
     let archive_path = archive_path.to_path_buf();
     let inner_path = inner_path.to_string();
-    tokio::task::spawn_blocking(move || {
-        let Ok(source) = LocalFileSource::open(&archive_path) else {
-            return false;
-        };
-        // Mutation is zip-only, so the oracle always parses as zip (no password:
-        // a zip's central directory is plaintext even when its entries aren't).
-        let Ok(index) = ArchiveIndex::parse(Arc::new(source), ArchiveFormat::Zip, None) else {
-            return false;
-        };
-        index.exists(&inner_path)
-    })
-    .await
-    .unwrap_or(false)
+    host.runtime()
+        .spawn_blocking(move || {
+            let Ok(source) = LocalFileSource::open(&archive_path) else {
+                return false;
+            };
+            // Mutation is zip-only, so the oracle always parses as zip (no password:
+            // a zip's central directory is plaintext even when its entries aren't).
+            let Ok(index) = ArchiveIndex::parse(Arc::new(source), ArchiveFormat::Zip, None) else {
+                return false;
+            };
+            index.exists(&inner_path)
+        })
+        .await
+        .unwrap_or(false)
 }

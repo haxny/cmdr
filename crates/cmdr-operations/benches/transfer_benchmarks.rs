@@ -305,12 +305,6 @@ fn bench_delete_walk(c: &mut Criterion) {
 
 fn bench_scan_preview(c: &mut Criterion) {
     let engine = BenchEngine::new();
-    // The preview's watchdog spawns its heartbeat on the ambient runtime.
-    let runtime = tokio::runtime::Builder::new_multi_thread()
-        .enable_all()
-        .build()
-        .expect("build the bench runtime");
-    let _context = runtime.enter();
     let dir = temp_dir("cmdr-transfer-bench-scan-");
     let sources = vec![build_tree(dir.path(), SCAN_DIRS, SCAN_FILES_PER_DIR, 0)];
 

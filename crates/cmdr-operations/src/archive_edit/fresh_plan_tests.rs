@@ -21,6 +21,7 @@ async fn distinct_handles_for_one_remote_resource_still_reject_containment() {
 
     assert!(matches!(
         validate_aliases(
+            &Handle::current(),
             &source,
             &[PathBuf::from("/folder")],
             &destination,

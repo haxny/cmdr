@@ -161,10 +161,9 @@ impl BenchEngine {
     /// The local scan-preview worker over `sources`, run inline on the calling
     /// thread the way its spawned thread runs it, then the cached result consumed
     /// the way a confirmed operation consumes it. Returns the file count the walk
-    /// cached, or `None` when it settled without a result.
-    ///
-    /// Call it inside a Tokio runtime context: the preview's watchdog spawns its
-    /// heartbeat there.
+    /// cached, or `None` when it settled without a result. The preview's
+    /// watchdog spawns its heartbeat on the engine's runtime, so no runtime
+    /// needs to be entered.
     pub fn scan_preview_local(&self, sources: Vec<PathBuf>) -> Option<usize> {
         let engine = &self.engine;
         let preview_id = Uuid::new_v4().to_string();
@@ -174,7 +173,7 @@ impl BenchEngine {
         });
         let events: Arc<dyn ScanPreviewEventSink> = Arc::new(DiscardPreviewEvents);
         let watchdog = ScanWatchdog::start(
-            engine.stores().previews_arc(),
+            engine,
             preview_id.clone(),
             ScanTarget::of(&sources, DEFAULT_VOLUME_ID),
             SCAN_INACTIVITY_LIMIT,

@@ -194,7 +194,11 @@ impl crate::Operations {
                 let run = if uses_local_paths {
                     let rows = rows_for_task.clone();
                     let intent = state_for_task.intent().clone();
-                    match tokio::task::spawn_blocking(move || bulk_rename_local(&rows, &intent, &recorder)).await {
+                    let renaming = ops
+                        .host()
+                        .runtime()
+                        .spawn_blocking(move || bulk_rename_local(&rows, &intent, &recorder));
+                    match renaming.await {
                         Ok(result) => result,
                         Err(join_error) => BulkRenameRun::failed(rows_for_task.len(), join_error.to_string()),
                     }

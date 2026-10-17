@@ -33,6 +33,7 @@ use std::pin::Pin;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
+use tokio::runtime::Handle;
 use tokio::sync::oneshot;
 
 use cmdr_fs::ignore_poison::IgnorePoison;
@@ -166,7 +167,7 @@ impl RollbackRunner for ReversalRunner {
                 // go: a file verified unchanged, a directory verified empty. Neither
                 // recurses.
                 InverseAct::RemoveFile { volume, path } | InverseAct::RemoveDir { volume, path } => {
-                    delete_clearing_blockers(volume, path).await
+                    delete_clearing_blockers(&self.state.scope().host().runtime(), volume, path).await
                 }
                 InverseAct::Restore {
                     from,
@@ -260,8 +261,8 @@ impl RollbackRunner for ReversalRunner {
 /// The planner verified the item as this operation's own right before this
 /// act, so what the removal clears is what the copy carried over
 /// (`unblocked_removal.rs`).
-async fn delete_clearing_blockers(volume: &Arc<dyn Volume>, path: &Path) -> Result<(), ActRefusal> {
-    super::unblocked_removal::delete_clearing_blockers(volume, path)
+async fn delete_clearing_blockers(runtime: &Handle, volume: &Arc<dyn Volume>, path: &Path) -> Result<(), ActRefusal> {
+    super::unblocked_removal::delete_clearing_blockers(runtime, volume, path)
         .await
         .map_err(|refused| match refused {
             RemovalRefused::Volume(e) => ActRefusal::Volume(e),

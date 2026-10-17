@@ -121,6 +121,7 @@ async fn backend_refusal_unblocks_a_producer_parked_by_pause() {
     let outcome = tokio::time::timeout(
         Duration::from_millis(250),
         produce_into(
+            &state.scope().host().runtime(),
             plan,
             destination,
             PathBuf::from("archive.zip"),

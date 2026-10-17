@@ -49,6 +49,7 @@ mod driver;
 mod edit_error;
 mod engine;
 mod fresh_compress;
+mod fresh_pipeline;
 mod fresh_plan;
 mod fresh_rows;
 mod fresh_validate;

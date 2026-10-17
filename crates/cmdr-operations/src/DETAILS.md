@@ -318,8 +318,8 @@ Frontend
   → WriteOperationState created (`IntentCell` intent, oneshot channel for Stop conflicts)
   → stored in the engine's registry + status cache (the state carries the op's `OpScope`)
   → operationId returned to frontend immediately (dialog opens, cancel is possible)
-  → tokio::spawn (async wrapper)
-      → tokio::task::spawn_blocking (local I/O) or direct async (volume ops)
+  → host.runtime().spawn (async wrapper, from the admission pass)
+      → host.runtime().spawn_blocking (local I/O) or direct async (volume ops)
           → validate (sources exist, dest writable, dest not inside source)
           → scan phase: walk_dir_recursive, emit scan-progress events
               (delete on a volume also: `take_cached_scan_result(preview_id)` first;
@@ -1086,7 +1086,17 @@ names the app's accessor.
 
 - **The runtime is the `VolumeHost`'s.** One handle for the engine and the backends it drives, so the two can't
   disagree. Everything the engine spawns goes there: the admission pass (§ "The admission pass spawns admitted ops on
-  the APP runtime"), the stall watchdog, the arrival sweep's `spawn_blocking`, and the sweep's `block_on`s.
+  the APP runtime"), every handler's and instant op's `spawn_blocking`, the scan preview's worker and watchdog, the
+  stall watchdog, the arrival sweep's `spawn_blocking`, and the sweep's `block_on`s. The crate `clippy.toml` refuses
+  `tokio::spawn`, `tokio::task::spawn{,_blocking}`, and `std::thread::spawn` (a thread the engine owns is a named
+  `std::thread::Builder` one). A helper with no engine in reach takes the `Handle` as a parameter, and a test calling
+  one directly passes its own (`Handle::current()`).
+- **One documented exception: `mutation_reply.rs`'s late-settle continuation stays ambient.** `reply_or_hand_off` is a
+  free function the app's IPC commands call with no engine, and it waits out `cmdr_fs::deadline::race_detached`'s own
+  ambient spawn (that crate's documented exception), so the work and the task waiting it out share the caller's runtime;
+  in production that's the app runtime either way. Moving only the continuation would split the pair for nothing, and
+  would put the five paused-clock cells' continuation on a clock they don't drive. The site carries the reasoned
+  `#[allow(clippy::disallowed_methods)]`.
 - **The same `VolumeHost` answers the panes' questions and backs every volume the engine mints.** The fresh-listing
   oracle (`authoritative_listing`), the archive pane refresh, and the pane patch after a local create go through the
   op's `scope.host().listings()`; a spool, an upload reader, or a pull's scratch folder is a `LocalPosixVolume` over

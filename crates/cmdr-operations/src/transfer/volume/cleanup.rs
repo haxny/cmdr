@@ -26,6 +26,7 @@ use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::volume::{EntryKind, Volume, VolumeError};
 use cmdr_operation_log::rollback::ItemResult;
 use cmdr_operation_log::types::SkipReason;
+use tokio::runtime::Handle;
 
 use cmdr_fs::staging::STAGING_TEMP_MARKER as TEMP_INFIX;
 
@@ -77,6 +78,7 @@ pub(super) async fn volume_rollback_with_progress(
     bytes_total: u64,
 ) -> ReversalTally {
     let paths_to_process = copied_paths.len();
+    let runtime = wind_down.runtime();
     let mut tally = ReversalTally::default();
     let mut last_progress_time = Instant::now();
 
@@ -117,7 +119,7 @@ pub(super) async fn volume_rollback_with_progress(
         };
         // Rechecked here, one item before the act — ❌ never in a batch, where a
         // verification would age while other items were processed.
-        let result = reverse_written_file(volume, &entry).await;
+        let result = reverse_written_file(&runtime, volume, &entry).await;
         tally.record(result, &entry.path);
 
         // Throttled progress events with decreasing values. The counters advance
@@ -143,7 +145,7 @@ pub(super) async fn volume_rollback_with_progress(
             tally.mark_canceled();
             return tally;
         }
-        tally.record(prune_created_dir_if_empty(volume, dir).await, dir);
+        tally.record(prune_created_dir_if_empty(&runtime, volume, dir).await, dir);
     }
 
     // The frame that lands on zero, so a run whose last items fell inside the
@@ -158,7 +160,7 @@ pub(super) async fn volume_rollback_with_progress(
 /// A partial goes without asking: it has no complete file to recognize, and
 /// leaving one behind is the failure cancelling mid-file exists to prevent
 /// ([`super::super::super::ledger::WrittenIdentity::OwnPartial`]).
-async fn reverse_written_file(volume: &Arc<dyn Volume>, entry: &WrittenFile) -> ItemResult {
+async fn reverse_written_file(runtime: &Handle, volume: &Arc<dyn Volume>, entry: &WrittenFile) -> ItemResult {
     if !matches!(entry.identity, WrittenIdentity::OwnPartial) {
         let live_size = match volume.get_metadata(&entry.path).await {
             Ok(live) => live.size,
@@ -185,7 +187,10 @@ async fn reverse_written_file(volume: &Arc<dyn Volume>, entry: &WrittenFile) -> 
     }
     // One node each: these are the FILES this operation wrote, verified just
     // above, so a Locked one is ours to unlock (invariant 9).
-    removal_result(&entry.path, delete_clearing_blockers(volume, &entry.path).await)
+    removal_result(
+        &entry.path,
+        delete_clearing_blockers(runtime, volume, &entry.path).await,
+    )
 }
 
 /// What one verified removal came to, as a rollback item.
@@ -429,10 +434,10 @@ async fn delete_written_file(volume: &Arc<dyn Volume>, path: &Path) -> Result<()
 ///
 /// Best-effort and quiet — a directory kept because it still holds something is
 /// the normal outcome, not a failure.
-async fn prune_created_dir_if_empty(volume: &Arc<dyn Volume>, dir: &Path) -> ItemResult {
+async fn prune_created_dir_if_empty(runtime: &Handle, volume: &Arc<dyn Volume>, dir: &Path) -> ItemResult {
     match volume.list_directory(dir, None).await {
         // Verified empty and ours, so a Locked one is ours to unlock (invariant 9).
-        Ok(entries) if entries.is_empty() => match delete_clearing_blockers(volume, dir).await {
+        Ok(entries) if entries.is_empty() => match delete_clearing_blockers(runtime, volume, dir).await {
             Ok(()) => ItemResult::Reversed,
             Err(RemovalRefused::Volume(VolumeError::NotFound(_))) => ItemResult::Skipped(SkipReason::AlreadyGone),
             Err(RemovalRefused::Locked) => ItemResult::Skipped(SkipReason::Locked),

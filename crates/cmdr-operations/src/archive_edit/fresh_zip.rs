@@ -14,6 +14,7 @@ use std::path::PathBuf;
 use std::pin::Pin;
 use std::sync::Arc;
 
+use tokio::runtime::Handle;
 use tokio::sync::{mpsc, oneshot};
 use tokio_util::sync::CancellationToken;
 use zip::write::SimpleFileOptions;
@@ -215,8 +216,8 @@ impl FreshZipOutput {
     /// Waits for the explicit producer outcome and joins its blocking worker.
     /// A closed terminal channel is a producer failure, never successful EOF.
     #[cfg(test)]
-    pub(super) async fn finish(self) -> Result<u64, FreshZipError> {
-        self.completion.finish().await
+    pub(super) async fn finish(self, runtime: &Handle) -> Result<u64, FreshZipError> {
+        self.completion.finish(runtime).await
     }
 
     /// Separates the destination-consumed stream from the producer's explicit
@@ -287,10 +288,11 @@ impl Drop for FreshZipStream {
 }
 
 impl FreshZipCompletion {
-    pub(super) async fn finish(mut self) -> Result<u64, FreshZipError> {
+    pub(super) async fn finish(mut self, runtime: &Handle) -> Result<u64, FreshZipError> {
         let terminal = (&mut self.terminal).await;
         let joined = match self.join.take() {
-            Some(join) => tokio::task::spawn_blocking(move || join.join())
+            Some(join) => runtime
+                .spawn_blocking(move || join.join())
                 .await
                 .map_err(|_| FreshZipError::ProducerPanicked)
                 .and_then(|outcome| outcome.map_err(|_| FreshZipError::ProducerPanicked)),
@@ -303,10 +305,10 @@ impl FreshZipCompletion {
     /// Cancels a producer whose destination stopped consuming, closes that
     /// endpoint first so a full bounded queue wakes, then joins off the runtime.
     #[cfg(test)]
-    pub(super) async fn shutdown(self, stream: FreshZipStream) -> Result<u64, FreshZipError> {
+    pub(super) async fn shutdown(self, runtime: &Handle, stream: FreshZipStream) -> Result<u64, FreshZipError> {
         self.cancellation.request();
         drop(stream);
-        self.finish().await
+        self.finish(runtime).await
     }
 }
 

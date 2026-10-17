@@ -17,6 +17,7 @@ use std::sync::Arc;
 use cmdr_fs::metadata::{ParentOpening, Unblock, open_parent_folder};
 
 use cmdr_fs::volume::{Volume, VolumeError};
+use tokio::runtime::Handle;
 
 /// Why [`delete_clearing_blockers`] left the item where it is.
 #[derive(Debug)]
@@ -43,8 +44,13 @@ impl From<VolumeError> for RemovalRefused {
 /// it again right after.
 ///
 /// A plain item costs exactly its delete: everything past it runs only after a
-/// refusal. Call it only on an item the caller verified as its own.
-pub(super) async fn delete_clearing_blockers(volume: &Arc<dyn Volume>, path: &Path) -> Result<(), RemovalRefused> {
+/// refusal. Call it only on an item the caller verified as its own. The folder
+/// opening's syscalls run on `runtime`'s blocking pool (the engine's).
+pub(super) async fn delete_clearing_blockers(
+    runtime: &Handle,
+    volume: &Arc<dyn Volume>,
+    path: &Path,
+) -> Result<(), RemovalRefused> {
     let refused = match volume.delete(path).await {
         Err(e @ VolumeError::PermissionDenied { .. }) => e,
         other => return Ok(other?),
@@ -62,11 +68,11 @@ pub(super) async fn delete_clearing_blockers(volume: &Arc<dyn Volume>, path: &Pa
     };
     let local = cmdr_fs::volume::root_anchored(&root, path);
     // A few syscalls, but on a mounted share each one can block: off the runtime.
-    match tokio::task::spawn_blocking(move || open_parent_folder(&local)).await {
+    match runtime.spawn_blocking(move || open_parent_folder(&local)).await {
         Ok(ParentOpening::Opened(folder)) => {
             let deleted = volume.delete(path).await;
             // Dropping it closes it too, so even a failed join puts it back.
-            if let Ok(report) = tokio::task::spawn_blocking(move || folder.close()).await
+            if let Ok(report) = runtime.spawn_blocking(move || folder.close()).await
                 && report.any_refused()
             {
                 log::warn!(target: "rollback", "a folder opened for a removal didn't get all its metadata back: {report:?}");

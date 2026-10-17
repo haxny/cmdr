@@ -21,10 +21,11 @@ use super::super::transfer_tree::{TreeLanding, TreeOrder, from_archive_plan};
 use super::super::types::{ConflictResolution, WriteOperationError, WriteOperationStartResult, WriteOperationType};
 use super::edit_error::EditError;
 use super::engine::{MutatorHooks, emit_archive_terminal};
-use super::fresh_plan::{FreshPlan, PlanProgress, RemoteFeed, plan_sources, validate_aliases};
+use super::fresh_pipeline::produce_into;
+use super::fresh_plan::{FreshPlan, PlanProgress, plan_sources, validate_aliases};
 use super::fresh_rows::CompressRows;
 use super::fresh_validate::{ExpectedIndex, check_entry_names, validate_stage};
-use super::fresh_zip::{FreshZipCancellation, FreshZipError, FreshZipProgressObserver, spawn_fresh_zip_with_progress};
+use super::fresh_zip::{FreshZipCancellation, FreshZipError, FreshZipProgressObserver};
 use cmdr_fs::volume::{
     BackendKind, LaneKey, MutationEvent, StreamLength, StreamWriteProgress, Volume, VolumeError, VolumeReadStream,
     WriteMode,
@@ -111,7 +112,14 @@ pub(super) async fn start(
             side: super::super::types::ReadOnlySide::Destination,
         });
     }
-    validate_aliases(&source_volume, &source_paths, &dest_volume, &archive_path).await?;
+    validate_aliases(
+        &engine.host().runtime(),
+        &source_volume,
+        &source_paths,
+        &dest_volume,
+        &archive_path,
+    )
+    .await?;
 
     let operation_id = cmdr_operation_log::new_operation_id();
     let registered_source = engine
@@ -445,6 +453,7 @@ async fn produce_direct(
     let stage = begin_stage(&state, dest_volume.as_ref(), &archive_path, replace_existing);
     let stage_path = stage.target().to_path_buf();
     let (written, produced) = produce_into(
+        &state.scope().host().runtime(),
         plan,
         Arc::clone(&dest_volume),
         stage_path.clone(),
@@ -502,6 +511,7 @@ async fn produce_via_spool(
         state.scope().host().volume_host().clone(),
     ));
     let (written, produced) = produce_into(
+        &state.scope().host().runtime(),
         plan,
         Arc::clone(&spool_volume),
         spool_path.clone(),
@@ -625,7 +635,7 @@ async fn publish_stage(
 /// Breaks a destination write at its next acknowledgement once the pipeline's
 /// one cancellation source fires; that callback is how SFTP, SMB, and ADB hear a
 /// cancel mid-write.
-fn continue_unless(cancellation: &FreshZipCancellation) -> ControlFlow<()> {
+pub(super) fn continue_unless(cancellation: &FreshZipCancellation) -> ControlFlow<()> {
     if cancellation.is_requested() {
         ControlFlow::Break(())
     } else {
@@ -637,103 +647,6 @@ fn continue_unless(cancellation: &FreshZipCancellation) -> ControlFlow<()> {
 /// pipeline stopping itself. Only this makes a failure read as a cancel.
 fn operation_cancelled(state: &WriteOperationState) -> bool {
     state.intent().is_cancelled()
-}
-
-/// Runs one producer into one unknown-length destination write and joins every
-/// participant: the writer, the producer thread, and the remote feed task.
-async fn produce_into(
-    plan: FreshPlan,
-    dest_volume: Arc<dyn Volume>,
-    dest_path: PathBuf,
-    level: Option<i64>,
-    progress: FreshZipProgressObserver,
-    cancellation: FreshZipCancellation,
-) -> (Result<u64, VolumeError>, Result<u64, FreshZipError>) {
-    let source_volume = Arc::clone(&plan.source_volume);
-    let output = match spawn_fresh_zip_with_progress(plan.entries, level, Some(progress), cancellation.clone()) {
-        Ok(output) => output,
-        Err(error) => return (Err(VolumeError::NotSupported), Err(error)),
-    };
-    let (stream, completion) = output.into_parts();
-    let feed_task = tokio::spawn(feed_remote(plan.remote_feeds, source_volume, cancellation.clone()));
-    let callback = |_tick: StreamWriteProgress| continue_unless(&cancellation);
-    let written = dest_volume
-        .write_from_stream(
-            &dest_path,
-            WriteMode::CreateNew,
-            StreamLength::Unknown,
-            Box::new(stream),
-            &callback,
-        )
-        .await
-        .map(|written| written.bytes);
-    let produced = completion.finish().await;
-    if produced.is_err() {
-        // A producer that ended early leaves the feed nothing to feed; stop a
-        // source read that may never answer instead of awaiting it.
-        cancellation.request();
-    }
-    let feed_result = feed_task
-        .await
-        .map_err(|_| FreshZipError::ProducerPanicked)
-        .and_then(|result| result);
-    let produced = match (produced, feed_result) {
-        (Ok(bytes), Ok(())) => Ok(bytes),
-        (Err(error), _) | (_, Err(error)) => Err(error),
-    };
-    (written, produced)
-}
-
-/// Feeds each remote entry's bytes through its bridge, one entry at a time.
-///
-/// Every source read races the pipeline's cancellation: a `ChannelReadStream`
-/// read is a queue wait, and dropping the stream is the backend's documented
-/// stop. Opening a stream is one protocol round trip and is allowed to finish,
-/// as the copy engine does. Returning drops every remaining feeder, which is
-/// what wakes a producer parked on the bridge.
-async fn feed_remote(
-    feeds: Vec<RemoteFeed>,
-    source_volume: Arc<dyn Volume>,
-    cancellation: FreshZipCancellation,
-) -> Result<(), FreshZipError> {
-    for feed in feeds {
-        if cancellation.is_requested() {
-            return Err(FreshZipError::Cancelled);
-        }
-        let mut stream = match source_volume.open_read_stream(&feed.path).await {
-            Ok(stream) => stream,
-            Err(error) => {
-                let source_error = FreshZipError::Source {
-                    entry: feed.entry_name.clone(),
-                    message: error.to_string(),
-                };
-                feed.feeder.send(Err(source_error.clone()), &cancellation).await?;
-                return Err(source_error);
-            }
-        };
-        loop {
-            let chunk = tokio::select! {
-                biased;
-                () = cancellation.cancelled() => return Err(FreshZipError::Cancelled),
-                chunk = stream.next_chunk() => chunk,
-            };
-            let Some(chunk) = chunk else { break };
-            let bytes = match chunk {
-                Ok(bytes) => bytes,
-                Err(error) => {
-                    let source_error = FreshZipError::Source {
-                        entry: feed.entry_name.clone(),
-                        message: error.to_string(),
-                    };
-                    feed.feeder.send(Err(source_error.clone()), &cancellation).await?;
-                    return Err(source_error);
-                }
-            };
-            feed.feeder.send(Ok(bytes), &cancellation).await?;
-        }
-        feed.feeder.finish(&cancellation).await?;
-    }
-    Ok(())
 }
 
 /// Names the CAUSAL failure of a pipeline that didn't finish. A genuine producer

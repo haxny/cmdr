@@ -28,7 +28,7 @@ fn fresh_state() -> Arc<ScanPreviewState> {
 
 fn watchdog(engine: &TestOperations, preview_id: &str, sources: &[PathBuf]) -> Arc<ScanWatchdog> {
     ScanWatchdog::start(
-        engine.stores().previews_arc(),
+        engine,
         preview_id.to_string(),
         ScanTarget::of(sources, "test"),
         Duration::from_secs(600),

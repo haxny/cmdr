@@ -25,6 +25,7 @@ use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 use std::sync::{Arc, Weak};
 use std::time::{Duration, Instant};
 
+use super::Operations;
 use super::event_sinks::ScanPreviewEventSink;
 use super::scan_cache::{ScanOutcome, ScanPreviewState, ScanPreviews};
 use super::types::{ScanPreviewErrorEvent, WriteOperationError};
@@ -141,10 +142,11 @@ pub(super) enum Beat {
 }
 
 impl ScanWatchdog {
-    /// Starts the clock and spawns the heartbeat, logging the one line that says
-    /// this scan began at all. A timeout settles the preview in `previews`.
+    /// Starts the clock and spawns the heartbeat on `engine`'s runtime, logging
+    /// the one line that says this scan began at all. A timeout settles the
+    /// preview in `engine`'s previews.
     pub(super) fn start(
-        previews: &Arc<ScanPreviews>,
+        engine: &Operations,
         preview_id: String,
         target: ScanTarget,
         inactivity_limit: Duration,
@@ -152,7 +154,7 @@ impl ScanWatchdog {
         events: Arc<dyn ScanPreviewEventSink>,
     ) -> Arc<Self> {
         let watchdog = Arc::new(Self {
-            previews: Arc::downgrade(previews),
+            previews: Arc::downgrade(engine.stores().previews_arc()),
             preview_id,
             target: target.label,
             log_target: target.log_label,
@@ -173,7 +175,10 @@ impl ScanWatchdog {
             watchdog.log_target
         );
         let ticking = Arc::clone(&watchdog);
-        tokio::spawn(async move { ticking.run(state, events).await });
+        engine
+            .host()
+            .runtime()
+            .spawn(async move { ticking.run(state, events).await });
         watchdog
     }
 

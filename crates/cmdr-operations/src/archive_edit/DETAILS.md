@@ -219,9 +219,9 @@ other-archive ignored, delete-failure doesn't fail the edit).
   closes a failed ZIP as a finished file. A source that GREW since planning (a live log) fails as `CountMismatch` one
   byte past its planned size, never at EOF: local reads run through `take(size + 1)` and remote chunks are counted as
   they arrive, so the producer never compresses bytes the plan didn't promise or waits for an end that may not come.
-  Coordinator shutdown closes the output endpoint before joining on Tokio's blocking pool; `Drop` only signals
-  cancellation (and only for an unfinished pipeline) and never blocks an async thread. Thread-spawn failure is typed
-  too.
+  Coordinator shutdown closes the output endpoint before joining on the engine runtime's blocking pool; `Drop` only
+  signals cancellation (and only for an unfinished pipeline) and never blocks an async thread. Thread-spawn failure is
+  typed too.
 
   **One cancellation source.** `FreshZipCancellation` is a child of the op's tier-1 `backend_cancel`, so a user's Cancel
   and every internal stop (the destination dropping its stream, a producer failure, coordinator shutdown) land on one

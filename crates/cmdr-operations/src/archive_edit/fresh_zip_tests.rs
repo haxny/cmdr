@@ -7,7 +7,7 @@ async fn collect(mut output: FreshZipOutput) -> Result<Vec<u8>, FreshZipError> {
     while let Some(chunk) = output.next_chunk().await {
         bytes.extend(chunk);
     }
-    output.finish().await?;
+    output.finish(&Handle::current()).await?;
     Ok(bytes)
 }
 
@@ -305,9 +305,12 @@ async fn dropping_destination_cancels_a_backpressured_producer() {
     )
     .expect("spawn producer");
     let (stream, completion) = output.into_parts();
-    let outcome = tokio::time::timeout(std::time::Duration::from_secs(1), completion.shutdown(stream))
-        .await
-        .expect("shutdown must unblock a producer whose output queue is full");
+    let outcome = tokio::time::timeout(
+        std::time::Duration::from_secs(1),
+        completion.shutdown(&Handle::current(), stream),
+    )
+    .await
+    .expect("shutdown must unblock a producer whose output queue is full");
     assert!(matches!(
         outcome,
         Err(FreshZipError::Cancelled | FreshZipError::OutputClosed)
@@ -320,9 +323,12 @@ async fn a_feeder_closed_by_cancellation_reads_as_cancelled_not_channel_loss() {
     let (stream, completion) = output.into_parts();
     cancellation.request();
     drop(feeder); // what the coordinator's feed task does when cancellation lands
-    let outcome = tokio::time::timeout(std::time::Duration::from_secs(1), completion.shutdown(stream))
-        .await
-        .expect("a closed bridge must wake a producer waiting for remote source bytes");
+    let outcome = tokio::time::timeout(
+        std::time::Duration::from_secs(1),
+        completion.shutdown(&Handle::current(), stream),
+    )
+    .await
+    .expect("a closed bridge must wake a producer waiting for remote source bytes");
     assert!(matches!(outcome, Err(FreshZipError::Cancelled)));
 }
 
@@ -368,7 +374,7 @@ async fn a_destination_never_sees_eof_for_a_failed_zip() {
     );
     drop(stream);
     assert!(matches!(
-        completion.finish().await,
+        completion.finish(&Handle::current()).await,
         Err(FreshZipError::CountMismatch { .. })
     ));
 }
@@ -414,7 +420,7 @@ async fn destination_refusal_drops_its_stream_before_joining_the_producer() {
     .expect("spawn producer");
     let (stream, completion) = output.into_parts();
     drop(stream); // the backend returned early without consuming the source
-    let outcome = tokio::time::timeout(std::time::Duration::from_secs(1), completion.finish())
+    let outcome = tokio::time::timeout(std::time::Duration::from_secs(1), completion.finish(&Handle::current()))
         .await
         .expect("joining after backend refusal must not block the runtime");
     assert!(matches!(

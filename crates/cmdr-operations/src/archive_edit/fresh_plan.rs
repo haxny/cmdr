@@ -13,6 +13,7 @@ use super::edit_error::EditError;
 use super::fresh_zip::{FreshZipEntry, FreshZipSource, RemoteZipFeeder, remote_source_bridge};
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::{EntryKind, Volume, VolumeError};
+use tokio::runtime::Handle;
 
 pub(super) struct RemoteFeed {
     pub(super) path: PathBuf,
@@ -421,6 +422,7 @@ fn unique_top_name(name: &str, planned: &HashMap<String, PathBuf>) -> String {
 }
 
 pub(super) async fn validate_aliases(
+    runtime: &Handle,
     source: &Arc<dyn Volume>,
     source_paths: &[PathBuf],
     dest: &Arc<dyn Volume>,
@@ -444,23 +446,24 @@ pub(super) async fn validate_aliases(
         } else {
             dest_root.join(archive_path)
         };
-        return tokio::task::spawn_blocking(move || {
-            super::super::validation::validate_destination_not_inside_source(&absolute_sources, &absolute_dest)?;
-            for source_path in &absolute_sources {
-                if super::super::validation::is_same_file(source_path, &absolute_dest) {
-                    return Err(WriteOperationError::DestinationInsideSource {
-                        source: source_path.display().to_string(),
-                        destination: absolute_dest.display().to_string(),
-                    });
+        return runtime
+            .spawn_blocking(move || {
+                super::super::validation::validate_destination_not_inside_source(&absolute_sources, &absolute_dest)?;
+                for source_path in &absolute_sources {
+                    if super::super::validation::is_same_file(source_path, &absolute_dest) {
+                        return Err(WriteOperationError::DestinationInsideSource {
+                            source: source_path.display().to_string(),
+                            destination: absolute_dest.display().to_string(),
+                        });
+                    }
                 }
-            }
-            Ok(())
-        })
-        .await
-        .map_err(|error| WriteOperationError::IoError {
-            path: archive_path.display().to_string(),
-            message: error.to_string(),
-        })?;
+                Ok(())
+            })
+            .await
+            .map_err(|error| WriteOperationError::IoError {
+                path: archive_path.display().to_string(),
+                message: error.to_string(),
+            })?;
     } else if Arc::ptr_eq(source, dest) || source.lane_key() == dest.lane_key() {
         let archive_path = cmdr_fs::volume::remote_paths::normalize_remote_path(archive_path);
         for source_path in source_paths {

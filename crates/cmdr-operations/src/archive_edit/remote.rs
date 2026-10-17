@@ -117,7 +117,12 @@ where
     //    the edit onto `working`; a cancel/fault leaves `working` as the pulled
     //    original (its own temp abandoned) — nothing remote has changed yet.
     let working_for_blocking = working.clone();
-    let value = match tokio::task::spawn_blocking(move || plan_and_apply(&working_for_blocking)).await {
+    let applying = state
+        .scope()
+        .host()
+        .runtime()
+        .spawn_blocking(move || plan_and_apply(&working_for_blocking));
+    let value = match applying.await {
         Ok(result) => result?,
         Err(join) => return Err(io_op(&working.display().to_string(), &join.to_string())),
     };

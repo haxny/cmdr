@@ -179,7 +179,7 @@ async fn start_copy_with_a_real_scan(engine: &TestOperations, label: &str) -> Ru
     let sink = Arc::new(PauseOnFirstTick::new(Operations::clone(engine), operation_id.clone()));
     let events: Arc<dyn ScanPreviewEventSink> = Arc::clone(&sink) as Arc<dyn ScanPreviewEventSink>;
     let watchdog = ScanWatchdog::start(
-        engine.stores().previews_arc(),
+        engine,
         preview_id.clone(),
         ScanTarget::of(std::slice::from_ref(&src), "root"),
         SCAN_INACTIVITY_LIMIT,

@@ -108,7 +108,7 @@ fn start_watchdog(
     limit: Duration,
 ) -> Arc<ScanWatchdog> {
     ScanWatchdog::start(
-        engine.stores().previews_arc(),
+        engine,
         preview_id.to_string(),
         ScanTarget::of(sources, "test"),
         limit,
@@ -204,7 +204,7 @@ async fn a_walk_that_stops_answering_names_what_it_was_walking() {
     let state = fresh_state();
     let sink: Arc<dyn ScanPreviewEventSink> = Arc::new(CollectorScanPreviewSink::new());
     let watchdog = ScanWatchdog::start(
-        engine.stores().previews_arc(),
+        &engine,
         preview_id.clone(),
         ScanTarget::of(&sources, "wedged"),
         Duration::from_millis(200),

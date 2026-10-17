@@ -101,7 +101,12 @@ where
     if !is_remote {
         // LOCAL: run plan+apply on the real archive file (mutator temp+rename).
         let path = archive_path.clone();
-        return match tokio::task::spawn_blocking(move || plan_and_apply(&path)).await {
+        let applying = state
+            .scope()
+            .host()
+            .runtime()
+            .spawn_blocking(move || plan_and_apply(&path));
+        return match applying.await {
             Ok(result) => result,
             Err(join) => Err(EditError::Op(WriteOperationError::IoError {
                 path: archive_path.display().to_string(),

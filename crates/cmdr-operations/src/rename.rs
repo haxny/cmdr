@@ -256,42 +256,43 @@ async fn rename_managed_inner(
                 // Local filesystem rename on the blocking pool.
                 let from_syscall = from.clone();
                 let to_syscall = to.clone();
-                tokio::task::spawn_blocking(move || {
-                    // The kernel decides whether the name is free, in the same
-                    // syscall that takes it. A stat first and a plain
-                    // `std::fs::rename` after are two operations, and POSIX
-                    // rename replaces its target without a word: a file created
-                    // in between would be destroyed with no prompt and no way
-                    // back. `rename_no_replace` refuses instead.
-                    //
-                    // `force` is the caller saying "replace what's there", and a
-                    // self-rename (a case-only change on a case-insensitive
-                    // filesystem folds onto one entry) has to be allowed to land
-                    // on its own target.
-                    let renamed = if force || from_syscall == to_syscall {
-                        std::fs::rename(&from_syscall, &to_syscall)
-                    } else {
-                        super::overwrite::rename_no_replace(&from_syscall, &to_syscall)
-                    };
-                    // The two paths mean different things: `ENOENT` is the source
-                    // that's gone, `EEXIST` the destination that isn't free. A
-                    // taken name is reported BY NAME (the frontend words it in
-                    // ten locales), matching the volume branch above.
-                    renamed.map_err(|e| {
-                        if e.kind() == std::io::ErrorKind::AlreadyExists {
-                            return MutationError::AlreadyExists {
-                                name: name_of(&to_syscall),
-                            };
-                        }
-                        MutationError::Volume {
-                            error: cmdr_local::rename_volume_error(&e, &from_syscall, &to_syscall),
-                        }
+                host.runtime()
+                    .spawn_blocking(move || {
+                        // The kernel decides whether the name is free, in the same
+                        // syscall that takes it. A stat first and a plain
+                        // `std::fs::rename` after are two operations, and POSIX
+                        // rename replaces its target without a word: a file created
+                        // in between would be destroyed with no prompt and no way
+                        // back. `rename_no_replace` refuses instead.
+                        //
+                        // `force` is the caller saying "replace what's there", and a
+                        // self-rename (a case-only change on a case-insensitive
+                        // filesystem folds onto one entry) has to be allowed to land
+                        // on its own target.
+                        let renamed = if force || from_syscall == to_syscall {
+                            std::fs::rename(&from_syscall, &to_syscall)
+                        } else {
+                            super::overwrite::rename_no_replace(&from_syscall, &to_syscall)
+                        };
+                        // The two paths mean different things: `ENOENT` is the source
+                        // that's gone, `EEXIST` the destination that isn't free. A
+                        // taken name is reported BY NAME (the frontend words it in
+                        // ten locales), matching the volume branch above.
+                        renamed.map_err(|e| {
+                            if e.kind() == std::io::ErrorKind::AlreadyExists {
+                                return MutationError::AlreadyExists {
+                                    name: name_of(&to_syscall),
+                                };
+                            }
+                            MutationError::Volume {
+                                error: cmdr_local::rename_volume_error(&e, &from_syscall, &to_syscall),
+                            }
+                        })
                     })
-                })
-                .await
-                .map_err(|e| MutationError::Unexpected {
-                    detail: format!("the rename task didn't finish: {e}"),
-                })??;
+                    .await
+                    .map_err(|e| MutationError::Unexpected {
+                        detail: format!("the rename task didn't finish: {e}"),
+                    })??;
 
                 // Notify the listing cache about the rename (the volume path does
                 // this itself via `notify_mutation`; the local path must do it
@@ -605,7 +606,11 @@ impl crate::Operations {
         }
 
         let attempted = path.clone();
-        let result = match tokio::task::spawn_blocking(move || check_rename_permission_sync(&path)).await {
+        let checked = self
+            .host()
+            .runtime()
+            .spawn_blocking(move || check_rename_permission_sync(&path));
+        let result = match checked.await {
             Ok(result) => result,
             Err(join_err) => Err(MutationError::Unexpected {
                 detail: format!("the permission check didn't finish: {join_err}"),

@@ -2153,7 +2153,7 @@ anything.
 
 **Decision**: `drive_transfer_serial_async` bounds its closures as
 `for<'a> FnMut(...) -> Pin<Box<dyn Future<...> + Send + 'a>>`, not `AsyncFnMut(...) -> T`. **Why**: Production callers
-live inside `tokio::spawn(async move { ... })` (see `volume::copy::copy_between_volumes`), so the driver's returned
+live inside a spawned task (`host.runtime().spawn`, see `volume::copy::copy_between_volumes`), so the driver's returned
 future must be `Send`. `AsyncFnMut`'s HRTB-bound `CallRefFuture<'a>` is not provably `Send` for all `'a` when the
 closure body captures `&Arc<...>` or similar refs — the compiler emits "implementation of Send is not general enough"
 because it can't discharge `for<'a> CallRefFuture<'a>: Send` (rust-lang/rust#100013-class). The explicit boxed-future

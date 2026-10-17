@@ -12,10 +12,19 @@ cognitive-complexity-threshold = 15
 # `#[cfg(test)] mod`s aren't covered, so those use the sanctioned `.expect("…")` form.
 allow-unwrap-in-tests = true
 
+# An ambient spawn runs on whichever runtime the calling thread happens to have; the engine spawns
+# on its host's (`host.runtime()`, the app's in production), so the one pool everything shares is
+# the host's decision. A dedicated, NAMED `std::thread::Builder` thread stays fine.
+#
 # A global `sync(2)` flushes every dirty page on every mounted volume, so one wedged network mount
 # stalls the whole operation behind it, and a copy has no business flushing anyone else's writes.
-# Durability is per file (`durability.rs`: `fsync` the file and its directory). `lib.rs` lifts this
-# under `cfg(test)`, where nothing calls it anyway.
+# Durability is per file (`durability.rs`: `fsync` the file and its directory).
+#
+# `lib.rs` lifts these under `cfg(test)`: a test drives the engine from threads and tasks of its own.
 disallowed-methods = [
+  { path = "tokio::spawn", reason = "spawn on the engine's runtime (`host.runtime().spawn`), never whichever one is ambient" },
+  { path = "tokio::task::spawn", reason = "spawn on the engine's runtime (`host.runtime().spawn`), never whichever one is ambient" },
+  { path = "tokio::task::spawn_blocking", reason = "use the engine's blocking pool (`host.runtime().spawn_blocking`), never whichever one is ambient" },
+  { path = "std::thread::spawn", reason = "a thread the engine owns is a NAMED `std::thread::Builder` one; blocking work goes to the host runtime's blocking pool" },
   { path = "libc::sync", reason = "flush the files this operation wrote (`durability.rs`), never every mounted volume" },
 ]

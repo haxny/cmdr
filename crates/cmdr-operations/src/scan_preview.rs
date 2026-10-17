@@ -104,7 +104,7 @@ impl Operations {
         // before either worker spawns, so a walk that wedges on its very first
         // syscall is still bounded — the workers only feed it.
         let watchdog = ScanWatchdog::start(
-            self.stores().previews_arc(),
+            self,
             preview_id.clone(),
             ScanTarget::of(&sources, &source_volume_id),
             SCAN_INACTIVITY_LIMIT,
@@ -113,12 +113,11 @@ impl Operations {
         );
 
         // Spawn background task. The walk holds the engine until it settles.
-        // Volume scans need a Tokio runtime context (MtpVolume uses Handle::block_on),
-        // so we capture the runtime handle and enter it on the spawned thread.
-        // Local scans use std::thread directly (no runtime needed).
+        // A volume scan is async, so it runs on the engine's runtime; a local
+        // scan walks `std::fs` on a thread of its own (no runtime needed).
         let engine = self.clone();
         if let Some(volume) = source_volume {
-            tokio::spawn(async move {
+            self.host().runtime().spawn(async move {
                 run_volume_scan_preview(
                     engine,
                     events,

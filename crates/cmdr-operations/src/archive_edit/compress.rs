@@ -65,7 +65,10 @@ impl crate::Operations {
             }
             None => {
                 let probe_path = dest_zip_full_path.clone();
-                let existed = tokio::task::spawn_blocking(move || std::fs::symlink_metadata(probe_path).is_ok())
+                let existed = self
+                    .host()
+                    .runtime()
+                    .spawn_blocking(move || std::fs::symlink_metadata(probe_path).is_ok())
                     .await
                     .map_err(|error| WriteOperationError::IoError {
                         path: dest_zip_full_path.display().to_string(),

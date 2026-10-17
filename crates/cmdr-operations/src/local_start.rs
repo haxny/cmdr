@@ -140,8 +140,11 @@ impl Operations {
                 // error without emitting one itself gets the vanished drive named
                 // here, the same way the engines do.
                 let state_for_net = Arc::clone(&state);
-                let result =
-                    tokio::task::spawn_blocking(move || handler(events_for_handler, op_id_for_blocking, state)).await;
+                let result = ops
+                    .host()
+                    .runtime()
+                    .spawn_blocking(move || handler(events_for_handler, op_id_for_blocking, state))
+                    .await;
 
                 // Journal the terminal state BEFORE cache cleanup (finalize computes
                 // eligibility + the completeness downgrade from what actually
