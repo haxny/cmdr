@@ -165,46 +165,76 @@ impl ConflictSlot {
     /// conflict reaches the operation, and an answer for any other conflict
     /// reaches nothing at all.
     pub fn answer(&self, conflict: ConflictId, response: ConflictResolutionResponse) -> ConflictResolutionOutcome {
-        let mut inner = self.inner.lock_ignore_poison();
-        let outcome = match std::mem::replace(&mut inner.state, SlotState::Idle) {
-            SlotState::Awaiting { id, tx, .. } if id == conflict => {
-                if tx.send(response).is_err() {
-                    // The waiting task went away without disarming the slot, so
-                    // this answer reached nothing and resolved nothing. Leaves
-                    // the slot Idle: there's no conflict here any more.
-                    log::warn!("A conflict answer arrived after its operation stopped listening; nothing to resolve");
-                    ConflictResolutionOutcome::NoPendingConflict
-                } else {
+        let (outcome, refused) = {
+            let mut inner = self.inner.lock_ignore_poison();
+            let decided = match std::mem::replace(&mut inner.state, SlotState::Idle) {
+                SlotState::Awaiting { id, tx, .. } if id == conflict => {
+                    if tx.send(response).is_err() {
+                        // The waiting task went away without disarming the slot, so
+                        // this answer reached nothing and resolved nothing. Leaves
+                        // the slot Idle: there's no conflict here any more.
+                        (
+                            ConflictResolutionOutcome::NoPendingConflict,
+                            Some(Refused::NobodyListening),
+                        )
+                    } else {
+                        inner.state = SlotState::Answered { id };
+                        (ConflictResolutionOutcome::Resolved, None)
+                    }
+                }
+                // A different question is on screen. Put it back untouched: this
+                // answer was never about it, and the person it IS on screen for
+                // hasn't clicked yet.
+                SlotState::Awaiting { id, tx, prompt } => {
+                    inner.state = SlotState::Awaiting { id, tx, prompt };
+                    (ConflictResolutionOutcome::StaleAnswer, Some(Refused::ParkedOn(id)))
+                }
+                SlotState::Answered { id } => {
                     inner.state = SlotState::Answered { id };
-                    ConflictResolutionOutcome::Resolved
+                    if id == conflict {
+                        (ConflictResolutionOutcome::AlreadyResolved, None)
+                    } else {
+                        (
+                            ConflictResolutionOutcome::StaleAnswer,
+                            Some(Refused::AfterAnswering(id)),
+                        )
+                    }
                 }
-            }
-            // A different question is on screen. Put it back untouched: this
-            // answer was never about it, and the person it IS on screen for
-            // hasn't clicked yet.
-            SlotState::Awaiting { id, tx, prompt } => {
-                inner.state = SlotState::Awaiting { id, tx, prompt };
-                log::info!(
-                    "A conflict answer for {conflict:?} arrived while the operation is parked on {id:?}; refusing it"
-                );
-                ConflictResolutionOutcome::StaleAnswer
-            }
-            SlotState::Answered { id } => {
-                inner.state = SlotState::Answered { id };
-                if id == conflict {
-                    ConflictResolutionOutcome::AlreadyResolved
-                } else {
-                    log::info!("A conflict answer for {conflict:?} arrived after {id:?} was answered; refusing it");
-                    ConflictResolutionOutcome::StaleAnswer
-                }
-            }
-            SlotState::Idle => ConflictResolutionOutcome::NoPendingConflict,
+                SlotState::Idle => (ConflictResolutionOutcome::NoPendingConflict, None),
+            };
+            // Whatever just happened, the clock follows the slot: an answered or
+            // refused clash stops charging the person, a still-parked one keeps on.
+            self.sync_human_wait(&inner);
+            decided
         };
-        // Whatever just happened, the clock follows the slot: an answered or
-        // refused clash stops charging the person, a still-parked one keeps on.
-        self.sync_human_wait(&inner);
+        // Logged with the slot released, so a parked operation's next
+        // transition never waits on the logger.
+        match refused {
+            Some(Refused::NobodyListening) => {
+                log::warn!("A conflict answer arrived after its operation stopped listening; nothing to resolve");
+            }
+            Some(Refused::ParkedOn(id)) => log::info!(
+                "A conflict answer for {conflict:?} arrived while the operation is parked on {id:?}; refusing it"
+            ),
+            Some(Refused::AfterAnswering(id)) => {
+                log::info!("A conflict answer for {conflict:?} arrived after {id:?} was answered; refusing it");
+            }
+            None => {}
+        }
         outcome
     }
+}
+
+/// Why [`ConflictSlot::answer`] turned an answer away, for the log line it
+/// writes once the slot is released.
+enum Refused {
+    /// The answer named the clash on screen, but its operation stopped
+    /// listening.
+    NobodyListening,
+    /// A different clash is on screen.
+    ParkedOn(ConflictId),
+    /// A different clash was already answered.
+    AfterAnswering(ConflictId),
 }
 
 #[cfg(test)]
