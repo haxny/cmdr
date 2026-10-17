@@ -70,10 +70,6 @@ pub(crate) struct FakeVolumes {
 
 impl FakeVolumes {
     /// Registers `volume` under `volume_id`.
-    #[expect(
-        dead_code,
-        reason = "the engine tests register here once their write paths ask their scope for volumes"
-    )]
     pub(crate) fn register(&self, volume_id: &str, volume: Arc<dyn Volume>) {
         self.volumes.lock_ignore_poison().insert(volume_id.to_string(), volume);
     }
@@ -113,18 +109,28 @@ impl OperationVolumes for FakeVolumes {
     }
 }
 
-/// Records every path the engine announced, in order.
-#[expect(
-    dead_code,
-    reason = "the own-write pins move onto it once every landing announces through its scope"
-)]
+/// Records every path the engine announced, in order, with whether anything
+/// (file, folder, or symlink) sat there at that moment: an announce that came
+/// after its syscall shows as a creation that already existed.
 #[derive(Default)]
 pub(crate) struct RecordingOwnWrites {
-    pub announced: Mutex<Vec<PathBuf>>,
+    pub announced: Mutex<Vec<(PathBuf, bool)>>,
+}
+
+impl RecordingOwnWrites {
+    /// Every announce under `root`, its path relative to `root`, in call order.
+    pub(crate) fn announced_under(&self, root: &Path) -> Vec<(PathBuf, bool)> {
+        self.announced
+            .lock_ignore_poison()
+            .iter()
+            .filter_map(|(path, existed)| Some((path.strip_prefix(root).ok()?.to_path_buf(), *existed)))
+            .collect()
+    }
 }
 
 impl OwnWrites for RecordingOwnWrites {
     fn announce(&self, path: &Path) {
-        self.announced.lock_ignore_poison().push(path.to_path_buf());
+        let existed = path.symlink_metadata().is_ok();
+        self.announced.lock_ignore_poison().push((path.to_path_buf(), existed));
     }
 }

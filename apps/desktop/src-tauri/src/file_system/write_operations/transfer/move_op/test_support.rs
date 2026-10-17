@@ -41,13 +41,23 @@ pub(in crate::file_system::write_operations) fn run_cross_fs_move(
     resolution: ConflictResolution,
     op_id: &str,
 ) -> Result<Arc<CollectorEventSink>, WriteOperationError> {
+    run_cross_fs_move_on(&make_state(200), sources, dst_dir, resolution, op_id)
+}
+
+/// [`run_cross_fs_move`] under a state the caller built (on an engine of its own).
+pub(in crate::file_system::write_operations) fn run_cross_fs_move_on(
+    state: &Arc<WriteOperationState>,
+    sources: &[PathBuf],
+    dst_dir: &Path,
+    resolution: ConflictResolution,
+    op_id: &str,
+) -> Result<Arc<CollectorEventSink>, WriteOperationError> {
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state(200);
     let config = WriteOperationConfig {
         conflict_resolution: resolution,
         ..WriteOperationConfig::default()
     };
-    move_with_staging(&*events, op_id, &state, sources, dst_dir, &config, 0)?;
+    move_with_staging(&*events, op_id, state, sources, dst_dir, &config, 0)?;
     Ok(events)
 }
 

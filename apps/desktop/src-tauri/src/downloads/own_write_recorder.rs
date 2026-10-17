@@ -1,7 +1,8 @@
 //! Test-only recorder behind the Cmdr-own-write hook: every
 //! [`super::note_pending_write_for_cmdr`] call, with whether its path existed
-//! yet, so a test can pin that a write path announces each destination BEFORE
-//! the syscall that makes it (`write_operations/own_write_announce_tests.rs`).
+//! yet, so a test can pin what reaches the hook (the app's `OwnWrites` answer,
+//! `operations_host/own_writes.rs`). The engine's own announce order is pinned
+//! against its seam (`write_operations/own_write_announce_tests.rs`).
 //!
 //! One process-wide registry keyed by path prefix, never per thread: managed
 //! ops and the volume engine's writers run on the blocking pool, so a
@@ -29,7 +30,6 @@ static RECORDINGS: Mutex<Vec<(PathBuf, Log)>> = Mutex::new(Vec::new());
 
 /// Records every announce under `root` until dropped.
 pub(crate) struct OwnWriteRecording {
-    root: PathBuf,
     log: Log,
 }
 
@@ -39,27 +39,13 @@ pub(crate) fn record_under(root: &Path) -> OwnWriteRecording {
     RECORDINGS
         .lock_ignore_poison()
         .push((root.to_path_buf(), Arc::clone(&log)));
-    OwnWriteRecording {
-        root: root.to_path_buf(),
-        log,
-    }
+    OwnWriteRecording { log }
 }
 
 impl OwnWriteRecording {
     /// Every announce under the root so far, in call order.
     pub(crate) fn announced(&self) -> Vec<Announced> {
         self.log.lock_ignore_poison().clone()
-    }
-
-    /// Every announce, with its path made relative to the root.
-    pub(crate) fn announced_relative(&self) -> Vec<Announced> {
-        self.announced()
-            .into_iter()
-            .map(|a| Announced {
-                path: a.path.strip_prefix(&self.root).map(Path::to_path_buf).unwrap_or(a.path),
-                existed: a.existed,
-            })
-            .collect()
     }
 }
 
