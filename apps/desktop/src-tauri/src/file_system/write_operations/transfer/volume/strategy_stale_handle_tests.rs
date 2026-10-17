@@ -32,7 +32,7 @@ async fn stream_pipe_file_retries_once_on_stale_destination_handle() {
     let source: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "Source",
         src_dir.to_str().unwrap(),
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
     let dest: Arc<dyn Volume> = Arc::new(FailOnceStaleDest {
         calls: AtomicUsize::new(0),

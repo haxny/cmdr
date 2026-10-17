@@ -72,7 +72,7 @@ fn boot_volume() -> Arc<dyn Volume> {
     Arc::new(LocalPosixVolume::local_folder(
         "Macintosh HD",
         PathBuf::from("/"),
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ))
 }
 

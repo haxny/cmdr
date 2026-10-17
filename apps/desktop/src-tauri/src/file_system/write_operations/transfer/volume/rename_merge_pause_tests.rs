@@ -116,7 +116,7 @@ async fn a_paused_rename_merge_stops_moving_children_until_it_resumes() {
         inner: Arc::new(LocalPosixVolume::local_folder(
             "V",
             root.to_path_buf(),
-            crate::volume_host::host(),
+            crate::file_system::write_operations::host::testing::pane_order_host(),
         )),
         state: Arc::clone(op.state()),
         renames: AtomicUsize::new(0),

@@ -441,7 +441,7 @@ impl GatedRun {
         let source: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
             "src",
             source_dir.path().to_path_buf(),
-            crate::volume_host::host(),
+            crate::file_system::write_operations::host::testing::pane_order_host(),
         ));
         let id = format!("gated-share-{}", uuid::Uuid::new_v4());
         let inner = InMemoryVolume::new("Share")
@@ -647,7 +647,7 @@ async fn a_file_whose_name_holds_a_backslash_compresses_and_validates() {
     let source: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "src",
         source_dir.path().to_path_buf(),
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
     let dest_dir = tempfile::tempdir().expect("tempdir");
     let archive = dest_dir.path().join("odd.zip");
@@ -691,7 +691,7 @@ async fn compress_local_selection(
     let source: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "src",
         source_dir.to_path_buf(),
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
     let dest_dir = tempfile::tempdir().expect("tempdir");
     let archive = dest_dir.path().join("out.zip");

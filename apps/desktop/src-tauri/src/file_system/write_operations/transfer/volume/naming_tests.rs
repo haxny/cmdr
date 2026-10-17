@@ -28,7 +28,7 @@ async fn local_fs_rename_reserves_the_chosen_name_on_disk() {
     let vol: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "dst",
         temp.path().to_path_buf(),
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
 
     let claimed = find_unique_volume_name(&vol, &target, false, &ClaimedNames::default()).await;
@@ -63,7 +63,7 @@ async fn local_fs_rename_keeps_extension_in_the_right_place() {
     let vol: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "dst",
         temp.path().to_path_buf(),
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
     let unique = find_unique_volume_name(&vol, &target, false, &ClaimedNames::default())
         .await
@@ -108,7 +108,7 @@ async fn local_fs_rename_continues_a_trailing_sequence() {
     let vol: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "dst",
         temp.path().to_path_buf(),
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
 
     let unique = find_unique_volume_name(&vol, &target, false, &ClaimedNames::default())
@@ -145,7 +145,7 @@ async fn a_directory_name_is_never_reserved_with_a_file_placeholder() {
     let vol: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "dst",
         temp.path().to_path_buf(),
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
 
     let unique = find_unique_volume_name(&vol, &target, true, &ClaimedNames::default())

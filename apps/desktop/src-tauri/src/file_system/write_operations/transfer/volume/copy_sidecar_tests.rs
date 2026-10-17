@@ -26,7 +26,14 @@ fn fat_source(scratch: &Path) -> Arc<LocalPosixVolume> {
     fs::write(folder.join("._sub"), [0u8; 4096]).expect("the subfolder's sidecar");
     fs::write(folder.join("._orphan.txt"), b"orphan").expect("an orphan");
     fs::write(folder.join("sub/inner.txt"), b"inner").expect("a nested file");
-    Arc::new(LocalPosixVolume::local_folder("FAT", scratch, crate::volume_host::host()).with_sidecar_probe(|_| true))
+    Arc::new(
+        LocalPosixVolume::local_folder(
+            "FAT",
+            scratch,
+            crate::file_system::write_operations::host::testing::pane_order_host(),
+        )
+        .with_sidecar_probe(|_| true),
+    )
 }
 
 async fn names_in(volume: &dyn Volume, dir: &str) -> Vec<String> {
@@ -90,8 +97,12 @@ async fn a_selected_sidecar_and_a_native_volume_keep_everything() {
         .expect("scan");
     assert_eq!((selected.file_count, selected.total_bytes), (1, 4096));
 
-    let native =
-        LocalPosixVolume::local_folder("APFS", &*scratch, crate::volume_host::host()).with_sidecar_probe(|_| false);
+    let native = LocalPosixVolume::local_folder(
+        "APFS",
+        &*scratch,
+        crate::file_system::write_operations::host::testing::pane_order_host(),
+    )
+    .with_sidecar_probe(|_| false);
     let listed = native
         .list_directory_as_source(Path::new("folder"))
         .await

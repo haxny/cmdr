@@ -189,7 +189,7 @@ async fn planning_skips_local_symlinks_and_special_files_without_a_stat_each() {
     let source: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "source",
         temp.path().to_path_buf(),
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
     let state = Arc::new(engine.new_operation_state(Duration::ZERO));
 
@@ -222,7 +222,7 @@ async fn duplicate_top_names_honor_rename_and_skip_policies() {
     let source: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "source",
         temp.path().to_path_buf(),
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
     let paths = [PathBuf::from("a/report.txt"), PathBuf::from("b/report.txt")];
     let state = Arc::new(engine.new_operation_state(Duration::ZERO));
@@ -261,7 +261,7 @@ async fn a_selected_macosx_folder_is_skipped_and_a_local_folder_is_its_own_sourc
     let source: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "source",
         temp.path().to_path_buf(),
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
     let state = Arc::new(engine.new_operation_state(Duration::ZERO));
 

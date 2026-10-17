@@ -343,7 +343,7 @@ async fn a_folder_replacing_a_dir_link_drops_the_link_and_never_its_target() {
     let dest: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "Dest",
         root.clone(),
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
 
     let source = in_memory_source();

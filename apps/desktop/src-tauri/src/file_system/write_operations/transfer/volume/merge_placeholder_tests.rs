@@ -86,7 +86,7 @@ async fn a_merge_child_that_never_lands_takes_its_rename_placeholder_back() {
     let dest: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "Dest",
         root.clone(),
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
 
     let source_inner = Arc::new(InMemoryVolume::new("Source").with_space_info(10_000_000, 10_000_000));
@@ -150,7 +150,7 @@ async fn a_merge_child_that_lands_keeps_its_rename_name() {
     let dest: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "Dest",
         root.clone(),
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
 
     let source: Arc<dyn Volume> = Arc::new(InMemoryVolume::new("Source").with_space_info(10_000_000, 10_000_000));
@@ -208,7 +208,7 @@ async fn an_empty_file_that_lands_on_its_reservation_is_kept() {
         let dest: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
             "Dest",
             root.clone(),
-            crate::volume_host::host(),
+            crate::file_system::write_operations::host::testing::pane_order_host(),
         ));
 
         let source_inner = Arc::new(InMemoryVolume::new("Source").with_space_info(10_000_000, 10_000_000));
@@ -289,7 +289,7 @@ async fn a_merge_child_abandoned_at_the_drain_deadline_takes_its_rename_placehol
     let dest: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "Dest",
         root.clone(),
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
 
     let gated = gated_source(CHUNK as u64 * 4);

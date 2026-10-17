@@ -147,7 +147,7 @@ async fn the_executable_bit_survives_an_extract_out_of_a_zip() {
     let dest: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "Dest",
         dest_dir.path().to_str().expect("dest path"),
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
 
     let sources = vec![zip_path.join("run.sh"), zip_path.join("scripts")];
@@ -231,7 +231,7 @@ async fn extracting_a_symlink_entry_writes_a_regular_file_never_a_symlink() {
     let dest: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "Dest",
         dst_dir.path().to_str().unwrap(),
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
 
     let events = Arc::new(CollectorEventSink::new());
@@ -377,7 +377,7 @@ mod quarantine {
         Arc::new(LocalPosixVolume::local_folder(
             "Dest",
             dir.to_str().expect("dest path"),
-            crate::volume_host::host(),
+            crate::file_system::write_operations::host::testing::pane_order_host(),
         ))
     }
 
@@ -588,7 +588,7 @@ mod quarantine {
             inner: Arc::new(LocalPosixVolume::local_folder(
                 "Dest",
                 dest_dir.path().to_str().expect("dest path"),
-                crate::volume_host::host(),
+                crate::file_system::write_operations::host::testing::pane_order_host(),
             )),
             state: Arc::clone(&state),
             writes: AtomicUsize::new(0),

@@ -143,7 +143,7 @@ async fn case_folded_file_collision_prompts_exactly_once() {
         inner: Arc::new(LocalPosixVolume::local_folder(
             "V",
             root.to_path_buf(),
-            crate::volume_host::host(),
+            crate::file_system::write_operations::host::testing::pane_order_host(),
         )),
     });
 
@@ -195,7 +195,7 @@ async fn case_folded_overwrite_does_not_prompt_twice() {
         inner: Arc::new(LocalPosixVolume::local_folder(
             "V",
             root.to_path_buf(),
-            crate::volume_host::host(),
+            crate::file_system::write_operations::host::testing::pane_order_host(),
         )),
     });
 

@@ -600,7 +600,7 @@ async fn a_rollback_removes_a_locked_copy_and_a_locked_folder_it_made() {
     let volume: Arc<dyn Volume> = Arc::new(cmdr_local::LocalPosixVolume::local_folder(
         "Local",
         &*fixture,
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
 
     roll_back(

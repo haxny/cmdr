@@ -32,12 +32,12 @@ async fn test_copy_single_path_local_to_local() {
     let source: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "Source",
         src_dir.to_str().unwrap(),
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
     let dest: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "Dest",
         dst_dir.to_str().unwrap(),
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
 
     let state = Arc::new(engine.new_operation_state(Duration::from_millis(200)));
@@ -76,12 +76,12 @@ async fn test_copy_single_path_cancelled() {
     let source: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "Source",
         src_dir.to_str().unwrap(),
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
     let dest: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "Dest",
         dst_dir.to_str().unwrap(),
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
 
     let state = Arc::new(engine.new_operation_state(Duration::from_millis(200)));

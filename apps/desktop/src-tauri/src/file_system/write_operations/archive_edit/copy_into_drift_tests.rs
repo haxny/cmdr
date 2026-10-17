@@ -196,7 +196,7 @@ async fn a_local_source_keeps_what_changed_or_appeared_during_a_move_into_a_zip(
     let source_volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "src",
         src_root.clone(),
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
 
     let complete = move_into(&engine, &events, source_volume, "d", &archive).await;

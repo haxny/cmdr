@@ -57,7 +57,7 @@ async fn auto_yield_parks_before_next_window_then_resumes_byte_exact() {
     let dest: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "Dest",
         dst_dir.to_str().unwrap(),
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
 
     let state = make_state(&engine);
@@ -176,7 +176,7 @@ async fn auto_yield_debounces_a_burst_into_one_park() {
     let dest: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "Dest",
         dst_dir.to_str().unwrap(),
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
 
     let state = make_state(&engine);
@@ -285,7 +285,7 @@ async fn auto_yield_min_progress_floor_prevents_starvation() {
     let dest: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "Dest",
         dst_dir.to_str().unwrap(),
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
 
     let state = make_state(&engine);
@@ -377,7 +377,7 @@ async fn auto_yield_cancel_while_yielding_keeps_no_partial() {
     let dest: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "Dest",
         dst_dir.to_str().unwrap(),
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
 
     let op = engine.register_state("test-autoyield-cancel", make_state(&engine));
@@ -480,7 +480,7 @@ async fn non_mtp_source_never_auto_yields_for_foreground() {
     let dest: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "Dest",
         dst_dir.to_str().unwrap(),
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
 
     let state = make_state(&engine);
@@ -530,7 +530,7 @@ async fn yield_capable_source_with_no_foreground_pending_never_self_yields() {
     let dest: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "Dest",
         dst_dir.to_str().unwrap(),
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
 
     let state = make_state(&engine);

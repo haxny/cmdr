@@ -119,7 +119,7 @@ async fn move_out_lands_files_at_dest_deletes_entries_and_keeps_the_remainder() 
     let dest_volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "dest",
         dest_dir.clone(),
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
 
     let events = Arc::new(CollectorEventSink::new());
@@ -239,7 +239,7 @@ async fn move_out_a_lone_skipped_source_stays_in_the_archive() {
     let dest_volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "dest",
         dest_dir.clone(),
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
 
     let events = Arc::new(CollectorEventSink::new());
@@ -297,7 +297,7 @@ async fn move_out_cancel_leaves_the_archive_untouched() {
     let dest_volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "dest",
         dest_dir.clone(),
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
 
     let events = Arc::new(CollectorEventSink::new());
@@ -362,7 +362,7 @@ async fn move_out_dir_with_a_deep_skipped_child_keeps_that_child_in_the_archive(
     let dest_volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "dest",
         dest_dir.clone(),
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
 
     let events = Arc::new(CollectorEventSink::new());
@@ -515,7 +515,7 @@ async fn move_out_partial_skip_converges_deletes_landed_keeps_skipped() {
     let dest_volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "dest",
         dest_dir.clone(),
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
 
     let events = Arc::new(CollectorEventSink::new());
@@ -638,7 +638,7 @@ async fn move_out_rollback_deletes_nothing_from_the_archive() {
     let dest_volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "dest",
         dest_dir.clone(),
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
 
     let events = Arc::new(CollectorEventSink::new());
@@ -692,7 +692,7 @@ async fn move_out_lands_tags_and_leaves_no_orphan_sidecar() {
     let dest_volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "dest",
         dest_dir.clone(),
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
 
     let events = Arc::new(CollectorEventSink::new());

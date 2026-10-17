@@ -52,7 +52,7 @@ async fn volume_delete_hardlinked_files_reports_dedup_d_bytes() {
     let volume = Arc::new(LocalPosixVolume::local_folder(
         "HardlinkVol",
         root.to_str().expect("temp dir is utf8"),
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
     let engine = TestOperations::new();
     engine

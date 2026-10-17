@@ -35,7 +35,7 @@ async fn copy_out(source: &Arc<dyn Volume>, sources: &[PathBuf], dest_dir: &Path
     let dest: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "Dest",
         dest_dir.to_str().expect("dest path"),
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
     let result = copy_volumes_with_progress(
         Arc::new(CollectorEventSink::new()),

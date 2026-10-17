@@ -122,7 +122,7 @@ async fn rename_merge_cancel_keeps_moved_children_and_preserves_source() {
         inner: Arc::new(LocalPosixVolume::local_folder(
             "V",
             root.to_path_buf(),
-            crate::volume_host::host(),
+            crate::file_system::write_operations::host::testing::pane_order_host(),
         )),
         operation_id: op.id().to_string(),
         renames: AtomicUsize::new(0),

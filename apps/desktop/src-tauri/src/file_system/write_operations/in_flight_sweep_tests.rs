@@ -23,7 +23,11 @@ struct SweepHost {
 fn sweep_host() -> SweepHost {
     let volumes = Arc::new(FakeVolumes::default());
     let events = Arc::new(RecordingEngineEvents::default());
-    let host = EngineHost::new(crate::volume_host::host(), volumes.clone(), events.clone());
+    let host = EngineHost::new(
+        crate::file_system::write_operations::host::testing::pane_order_host(),
+        volumes.clone(),
+        events.clone(),
+    );
     SweepHost { volumes, events, host }
 }
 
@@ -309,7 +313,7 @@ fn returned_drive(name: &str, volume_id: &str, staged: Option<&[u8]>) -> Returne
     let volume = Arc::new(LocalPosixVolume::local_folder(
         "Fältkamera",
         &root,
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     )) as Arc<dyn Volume>;
     let sweep = sweep_host();
     sweep.volumes.register(volume_id, volume);

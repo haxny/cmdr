@@ -35,7 +35,7 @@ async fn copy_into_adds_a_local_directory_tree_and_skips_conflicts() {
     let source_volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "src",
         src_root.clone(),
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
 
     let events = Arc::new(CollectorEventSink::new());
@@ -93,7 +93,7 @@ async fn run_policy_copy_into(
     let source_volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "src",
         src_root.to_path_buf(),
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
     let events = Arc::new(CollectorEventSink::new());
     engine
@@ -471,7 +471,7 @@ async fn move_into_a_top_level_symlink_preserves_the_source_and_surfaces_the_ski
     let source_volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "src",
         src_root.clone(),
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
     let events = Arc::new(CollectorEventSink::new());
     engine
@@ -532,7 +532,7 @@ async fn move_into_a_dir_containing_a_symlink_preserves_the_whole_source_tree() 
     let source_volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "src",
         src_root.clone(),
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
     let events = Arc::new(CollectorEventSink::new());
     engine
@@ -599,7 +599,7 @@ async fn move_into_a_broken_symlink_preserves_the_source() {
     let source_volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "src",
         src_root.clone(),
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
     let events = Arc::new(CollectorEventSink::new());
     engine
@@ -654,7 +654,7 @@ async fn copy_into_a_remote_archive_lands_the_file_via_the_pulled_local_copy() {
     let source_volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "src",
         src_root.clone(),
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
 
     // The archive lives on a NON-local parent — `/device/bundle.zip` is not a real
@@ -768,7 +768,7 @@ async fn a_named_copy_into_zip_uses_the_requested_leaf_and_preserves_existing_en
         let source: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
             "src",
             tmp.path().to_path_buf(),
-            crate::volume_host::host(),
+            crate::file_system::write_operations::host::testing::pane_order_host(),
         ));
         let events = Arc::new(CollectorEventSink::new());
         engine
@@ -824,7 +824,7 @@ async fn a_named_move_into_zip_deletes_only_the_source_that_landed() {
         let source: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
             "src",
             tmp.path().to_path_buf(),
-            crate::volume_host::host(),
+            crate::file_system::write_operations::host::testing::pane_order_host(),
         ));
         let events = Arc::new(CollectorEventSink::new());
         engine

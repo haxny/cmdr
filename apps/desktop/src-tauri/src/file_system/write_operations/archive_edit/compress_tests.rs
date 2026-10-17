@@ -25,7 +25,7 @@ async fn compress_start_packs_local_files_into_a_new_zip() {
     let source_volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "src",
         src_root.clone(),
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
 
     // The target ZIP doesn't exist yet; it must remain absent until publication.
@@ -152,7 +152,7 @@ async fn a_name_taken_after_start_is_not_replaced_or_reported_complete() {
     let source_volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "src",
         src_root,
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
     let dest = tmp.path().join("bundle.zip");
     let raced_bytes = b"a file created after the compression was approved";
@@ -203,7 +203,7 @@ async fn stop_policy_prompts_for_duplicate_source_names_and_honors_overwrite() {
     let source_volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "src",
         src_root,
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
     let dest = tmp.path().join("bundle.zip");
     let events = Arc::new(CollectorEventSink::new());
@@ -251,7 +251,7 @@ async fn an_existing_local_archive_stays_byte_exact_until_publication() {
     let source_volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "src",
         src_root,
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
     let dest = tmp.path().join("bundle.zip");
     let original = zip_bytes(&[("old.txt", b"original bytes")]);
@@ -300,8 +300,11 @@ async fn local_alias_and_destination_inside_source_are_refused_before_registrati
     std::fs::write(&source_archive, b"source").expect("write source");
     let alias = tmp.path().join("alias.zip");
     std::fs::hard_link(&source_archive, &alias).expect("hard link alias");
-    let source_volume: Arc<dyn Volume> =
-        Arc::new(LocalPosixVolume::local_folder("src", "/", crate::volume_host::host()));
+    let source_volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
+        "src",
+        "/",
+        crate::file_system::write_operations::host::testing::pane_order_host(),
+    ));
     let events = Arc::new(CollectorEventSink::new());
 
     let alias_result = engine
@@ -369,7 +372,7 @@ async fn compress_refuses_a_read_only_destination_without_touching_its_bytes() {
         let source_volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
             "src",
             src_root.clone(),
-            crate::volume_host::host(),
+            crate::file_system::write_operations::host::testing::pane_order_host(),
         ));
         let events = Arc::new(CollectorEventSink::new());
         let result = engine
@@ -430,7 +433,7 @@ async fn compress_journals_subkind_and_net_new_from_the_driver() {
     let source_volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "src",
         src_root.clone(),
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
 
     let dest = tmp.path().join("bundle.zip");
@@ -513,7 +516,7 @@ async fn compress_journals_the_source_volume_and_what_it_packed() {
     let source_volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "src",
         src_root.clone(),
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
     let source_id = unique_lane_id();
     engine.volumes().register(&source_id, Arc::clone(&source_volume));
@@ -573,7 +576,7 @@ async fn compress_start_packs_a_directory_subtree() {
     let source_volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "src",
         src_root.clone(),
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
 
     let dest = tmp.path().join("project.zip");
@@ -646,7 +649,7 @@ async fn compress_payload_at(
     let source_volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "src",
         src_root.clone(),
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
 
     let dest = dir.join(format!("out-{tag}.zip"));
@@ -762,7 +765,7 @@ async fn a_tree_that_fails_to_build_leaves_the_compress_as_it_would_run_without_
     let source_volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "src",
         src_root.clone(),
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
 
     let dest = tmp.path().join("project.zip");

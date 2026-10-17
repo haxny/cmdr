@@ -22,7 +22,7 @@ fn register_root(rig: &Rig) {
         Arc::new(LocalPosixVolume::local_folder(
             "Test root",
             "/",
-            crate::volume_host::host(),
+            crate::file_system::write_operations::host::testing::pane_order_host(),
         )) as Arc<dyn Volume>,
     );
 }

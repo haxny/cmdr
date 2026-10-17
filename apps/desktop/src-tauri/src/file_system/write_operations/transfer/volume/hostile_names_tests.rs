@@ -86,7 +86,7 @@ async fn a_copy_refuses_a_listed_name_that_isnt_one_plain_component() {
         let dest: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
             "Dest",
             dest_dir.path().to_path_buf(),
-            crate::volume_host::host(),
+            crate::file_system::write_operations::host::testing::pane_order_host(),
         ));
 
         let result = copy_volumes_with_progress(
@@ -134,7 +134,7 @@ async fn a_copy_refuses_a_folder_listed_under_a_parent_name() {
     let dest: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "Dest",
         dest_dir.path().to_path_buf(),
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
 
     let result = copy_volumes_with_progress(
@@ -186,7 +186,7 @@ async fn a_copy_never_merges_through_a_destination_link() {
         let dest: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
             "Dest",
             dest_dir.path().to_path_buf(),
-            crate::volume_host::host(),
+            crate::file_system::write_operations::host::testing::pane_order_host(),
         ));
 
         let _ = copy_volumes_with_progress(
@@ -231,7 +231,7 @@ async fn a_copy_with_a_file_and_folder_listed_under_one_name_stays_inside() {
     let dest: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "Dest",
         dest_dir.path().to_path_buf(),
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
 
     let _ = copy_volumes_with_progress(
@@ -296,7 +296,11 @@ async fn a_rename_merge_refuses_a_listed_name_that_isnt_one_plain_component() {
         write_file(root, "src/album/evil.txt", b"EVIL");
         write_file(root, "dst/album/keep.txt", b"KEEP");
         let volume: Arc<dyn Volume> = Arc::new(RenamingListings {
-            inner: LocalPosixVolume::local_folder("V", root.to_path_buf(), crate::volume_host::host()),
+            inner: LocalPosixVolume::local_folder(
+                "V",
+                root.to_path_buf(),
+                crate::file_system::write_operations::host::testing::pane_order_host(),
+            ),
             real: "evil.txt".to_string(),
             reported: name.to_string(),
         });

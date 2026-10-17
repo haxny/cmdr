@@ -77,7 +77,7 @@ impl Rig {
             Arc::new(cmdr_local::LocalPosixVolume::local_folder(
                 "Test root",
                 "/",
-                crate::volume_host::host(),
+                crate::file_system::write_operations::host::testing::pane_order_host(),
             )),
         );
         self
@@ -397,7 +397,7 @@ async fn a_fresh_compress_announces_its_zip_and_temp_before_they_exist() {
     let source: Arc<dyn Volume> = Arc::new(cmdr_local::LocalPosixVolume::local_folder(
         "Source",
         rig.join("src"),
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
 
     let events = Arc::new(CollectorEventSink::new());
@@ -437,7 +437,7 @@ async fn a_volume_copy_onto_a_local_disk_announces_its_destination_and_temp() {
     let dest: Arc<dyn Volume> = Arc::new(cmdr_local::LocalPosixVolume::local_folder(
         "Dest",
         rig.join("dst"),
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
 
     copy_volumes_with_progress(
@@ -471,7 +471,7 @@ async fn a_same_volume_move_on_a_local_disk_announces_both_ends() {
     let volume: Arc<dyn Volume> = Arc::new(cmdr_local::LocalPosixVolume::local_folder(
         "Local",
         rig.dir.to_path_buf(),
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
 
     move_within_same_volume_with_progress(

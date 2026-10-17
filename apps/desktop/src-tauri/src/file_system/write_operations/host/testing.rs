@@ -7,16 +7,24 @@
 //!   questions from it alone.
 //! - [`RecordingOwnWrites`]: every path the engine announced before writing it.
 //! - [`SettablePacing`]: a rollback pace the test sets on its engine alone.
+//! - [`pane_order_host`]: a volume host for a backend a test builds, with no
+//!   panes but the panes' name order.
 
 use std::collections::HashMap;
+use std::future::Future;
 use std::path::{Path, PathBuf};
+use std::pin::Pin;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, OnceLock};
 use std::time::Duration;
 
+use cmdr_collation::NameCollator;
+use cmdr_fs::entry::FileEntry;
 use cmdr_fs::ignore_poison::IgnorePoison;
-use cmdr_fs::volume::ResolvedVolume;
-use cmdr_fs::volume::Volume;
+use cmdr_fs::volume::host::VolumeHost;
+use cmdr_fs::volume::host::listings::ListingHost;
+use cmdr_fs::volume::{DirectoryChange, ResolvedVolume, Volume};
+use cmdr_listing::{DirectorySortMode, SortColumn, SortOrder, sort_entries};
 use cmdr_operation_log::rollback::VolumeLookup;
 
 use super::super::types::{MoveLeftoversKeptEvent, OperationsChanged, WriteProgressEvent};
@@ -176,5 +184,56 @@ impl Pacing for SettablePacing {
             0 => None,
             millis => Some(Duration::from_millis(millis)),
         }
+    }
+}
+
+/// A volume host for a backend a test builds (a `LocalPosixVolume`, an archive
+/// volume): no panes, so every change goes nowhere and every oracle question
+/// misses, but a local listing comes back in the panes' name order, as under
+/// the app's host. The engine's walkers take a listing's order as is, so a
+/// scenario keeps running in the order it was written against.
+pub(crate) fn pane_order_host() -> VolumeHost {
+    VolumeHost::builder()
+        .listings(Arc::new(PaneOrderListings::default()))
+        .build()
+}
+
+/// [`pane_order_host`]'s listings: the app's `sort_listing` over English
+/// collation (what `EnglishNameOrder` gives a host with no panes), and nothing
+/// else.
+// DEFAULT-OK: a collator nobody asked for yet is built on first use.
+#[derive(Default)]
+struct PaneOrderListings {
+    collator: OnceLock<Arc<NameCollator>>,
+}
+
+impl ListingHost for PaneOrderListings {
+    fn directory_changed(&self, _volume_id: &str, _parent_path: &Path, _change: DirectoryChange) {}
+
+    fn authoritative_listing(&self, _volume_id: &str, _path: &Path) -> Option<Vec<FileEntry>> {
+        None
+    }
+
+    fn volumes_with_open_listings(&self, _volume_id_prefix: &str) -> Vec<String> {
+        Vec::new()
+    }
+
+    fn refresh_archive_listings<'a>(
+        &'a self,
+        _volume_id: &'a str,
+        _archive_path: &'a Path,
+    ) -> Pin<Box<dyn Future<Output = ()> + Send + 'a>> {
+        Box::pin(async {})
+    }
+
+    fn sort_listing(&self, entries: &mut [FileEntry]) {
+        let collator = self.collator.get_or_init(|| Arc::new(NameCollator::new("en")));
+        sort_entries(
+            collator,
+            entries,
+            SortColumn::Name,
+            SortOrder::Ascending,
+            DirectorySortMode::LikeFiles,
+        );
     }
 }

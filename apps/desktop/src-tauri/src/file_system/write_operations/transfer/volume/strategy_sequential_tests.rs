@@ -168,7 +168,7 @@ async fn a_sequential_extract_carries_the_executable_bit() {
     let dest: Arc<dyn Volume> = Arc::new(cmdr_local::LocalPosixVolume::local_folder(
         "Dest",
         dest_dir.to_str().expect("dest path"),
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
 
     let state = make_state(&engine);
@@ -585,7 +585,7 @@ async fn a_failed_sequential_extract_takes_back_every_unfilled_reservation() {
     let dest = FaultyVolume::wrapping(Arc::new(LocalPosixVolume::local_folder(
         "Dest",
         dest_dir.to_str().expect("dest path"),
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     )))
     .failing_call(
         FaultyOp::WriteFromStream,

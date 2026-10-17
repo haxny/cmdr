@@ -38,7 +38,7 @@ impl CountingVolume {
             inner: Arc::new(LocalPosixVolume::local_folder(
                 "V",
                 root.to_path_buf(),
-                crate::volume_host::host(),
+                crate::file_system::write_operations::host::testing::pane_order_host(),
             )),
             listed: Arc::new(std::sync::Mutex::new(Vec::new())),
             stat_calls: Arc::new(AtomicUsize::new(0)),

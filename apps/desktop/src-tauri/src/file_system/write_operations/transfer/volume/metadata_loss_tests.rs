@@ -278,7 +278,7 @@ async fn a_tagged_local_file_copied_to_sftp_reports_its_tags_and_an_untagged_one
     let source: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "Local",
         &*dir,
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
     let sftp = || Arc::new(InMemoryVolume::new("SFTP").with_metadata_caps(cmdr_sftp::SftpVolume::METADATA_CAPS));
 
@@ -344,7 +344,7 @@ async fn a_tagged_local_folder_copied_to_sftp_reports_its_tags_and_an_untagged_o
     let source: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "Local",
         &*dir,
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
     let sftp = || Arc::new(InMemoryVolume::new("SFTP").with_metadata_caps(cmdr_sftp::SftpVolume::METADATA_CAPS));
 
@@ -445,9 +445,13 @@ async fn a_local_to_local_volume_copy_reports_nothing() {
     let source: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "From",
         &*from,
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
-    let dest: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder("To", &*to, crate::volume_host::host()));
+    let dest: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
+        "To",
+        &*to,
+        crate::file_system::write_operations::host::testing::pane_order_host(),
+    ));
 
     let complete = copy(&engine, source, &[PathBuf::from("tagged.sh")], dest, Path::new("")).await;
 

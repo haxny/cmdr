@@ -30,4 +30,45 @@ mod tests {
         let panes = crate::listing_host::listings().collator();
         assert!(Arc::ptr_eq(&AppNameOrder.collator(), &panes));
     }
+
+    /// The engine's own tests build their local volumes on
+    /// `host::testing::pane_order_host`, and its walkers take a listing's order
+    /// as is, so that host must list a directory in the order the app's host
+    /// does, or a test's scenario would quietly run in another order than
+    /// production's.
+    #[test]
+    fn the_engine_test_host_lists_in_the_order_the_apps_host_does() {
+        use cmdr_fs::entry::FileEntry;
+        use cmdr_fs::volume::host::listings::ListingHost;
+
+        let _lock = crate::intl::native_strings::lock_active_locale_for_tests();
+        let _ = crate::intl::set_language_preference(Some("en".to_string()));
+
+        let names = [
+            ("file10.txt", false),
+            ("File2.txt", false),
+            ("beta", true),
+            ("Alpha", true),
+            ("äpple.txt", false),
+            ("zeta", false),
+            (".hidden", false),
+            ("a b", true),
+            ("a-b", false),
+        ];
+        let entries: Vec<FileEntry> = names
+            .iter()
+            .map(|(name, is_dir)| FileEntry::new(name.to_string(), format!("/x/{name}"), *is_dir, false))
+            .collect();
+
+        let mut by_app = entries.clone();
+        crate::listing_host::backends::AppListings.sort_listing(&mut by_app);
+        let mut by_test_host = entries;
+        crate::file_system::write_operations::host::testing::pane_order_host()
+            .listings()
+            .sort_listing(&mut by_test_host);
+
+        let _ = crate::intl::set_language_preference(None);
+        let order = |entries: &[FileEntry]| entries.iter().map(|e| e.name.clone()).collect::<Vec<_>>();
+        assert_eq!(order(&by_test_host), order(&by_app));
+    }
 }

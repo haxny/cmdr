@@ -30,7 +30,7 @@ async fn start_interactive_copy_into(
     let source_volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "src",
         src_root.to_path_buf(),
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
     let events = Arc::new(CollectorEventSink::new());
     let start = engine
@@ -258,7 +258,7 @@ async fn interactive_move_into_with_a_skipped_collision_keeps_the_source() {
     let source_volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "src",
         src_root.to_path_buf(),
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
     let events = Arc::new(CollectorEventSink::new());
     let start = engine

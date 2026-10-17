@@ -36,7 +36,7 @@ fn local_source_with(files: &[(&str, &[u8])]) -> (tempfile::TempDir, Arc<dyn Vol
     let vol: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "src",
         tmp.path().to_path_buf(),
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
     (tmp, vol)
 }

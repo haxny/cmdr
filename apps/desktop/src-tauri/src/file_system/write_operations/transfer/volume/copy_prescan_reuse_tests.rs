@@ -571,12 +571,12 @@ async fn test_pre_known_conflicts_bulk_skip_on_real_local_volumes() {
     let source: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "Source",
         src_dir.to_str().unwrap(),
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
     let dest: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "Dest",
         dst_dir.to_str().unwrap(),
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
 
     let events = Arc::new(CollectorEventSink::new());

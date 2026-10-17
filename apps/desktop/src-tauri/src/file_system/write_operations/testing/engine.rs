@@ -93,7 +93,11 @@ impl TestOperations {
     /// names (and a `None` volume id means), so it takes the timed `Volume`
     /// path production takes.
     pub(crate) fn register_local_root(&self) {
-        let root = cmdr_local::LocalPosixVolume::local_folder("Test root", "/", crate::volume_host::host());
+        let root = cmdr_local::LocalPosixVolume::local_folder(
+            "Test root",
+            "/",
+            crate::file_system::write_operations::host::testing::pane_order_host(),
+        );
         self.volumes.register("root", Arc::new(root));
     }
 

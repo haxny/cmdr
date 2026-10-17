@@ -142,7 +142,7 @@ async fn streaming_copy_cancel_while_paused_mid_file_unblocks() {
     let dest: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "Dest",
         dst_dir.to_str().unwrap(),
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
 
     // Install into the global state cache so the production cancel API reaches it.
@@ -239,7 +239,7 @@ async fn paused_mtp_copy_parks_in_place_then_resumes_byte_exact() {
     let dest: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "Dest",
         dst_dir.to_str().unwrap(),
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
 
     let state = make_state(&engine);
@@ -343,7 +343,7 @@ async fn paused_mtp_copy_cancel_while_paused_keeps_no_partial() {
     let dest: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "Dest",
         dst_dir.to_str().unwrap(),
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
 
     let op = engine.register_state("test-relpause-cancel", make_state(&engine));
@@ -438,7 +438,7 @@ async fn unpaused_mtp_copy_streams_straight_through() {
     let dest: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "Dest",
         dst_dir.to_str().unwrap(),
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
 
     let state = make_state(&engine);

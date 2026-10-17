@@ -32,7 +32,7 @@ async fn copy_onto_local(
     let dest: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "Local",
         dest_dir,
-        crate::volume_host::host(),
+        crate::file_system::write_operations::host::testing::pane_order_host(),
     ));
     copy_volumes_with_progress(
         Arc::new(CollectorEventSink::new()),

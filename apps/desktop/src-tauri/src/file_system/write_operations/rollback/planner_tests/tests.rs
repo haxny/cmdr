@@ -772,7 +772,7 @@ async fn a_restore_recreates_the_folder_the_move_emptied() {
         Arc::new(cmdr_local::LocalPosixVolume::local_folder(
             "Test root",
             "/",
-            crate::volume_host::host(),
+            crate::file_system::write_operations::host::testing::pane_order_host(),
         )) as Arc<dyn Volume>,
     );
     rig.seed(
