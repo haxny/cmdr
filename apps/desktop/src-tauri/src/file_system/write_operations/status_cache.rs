@@ -14,7 +14,7 @@
 //!
 //! Callers reach all of this through `state::` — see the re-export there.
 
-use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::ignore_poison::{IgnorePoison, RwLockIgnorePoison};
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, RwLock};
 
@@ -48,7 +48,10 @@ struct OperationStatusInternal {
 
 /// One engine's status cache and the busy-volume set it drives.
 pub(crate) struct StatusCache {
-    /// Every registered operation's status, by operation id.
+    /// Every registered operation's status, by operation id. A value store:
+    /// each update replaces one entry's fields, so a poisoned lock is
+    /// recovered, never skipped (skipping dropped a busy volume, and Eject then
+    /// went ahead mid-transfer).
     entries: RwLock<HashMap<String, OperationStatusInternal>>,
     /// Last busy set reported, so a progress update that doesn't change
     /// membership reports nothing (the cache changes on every progress tick,
@@ -86,9 +89,7 @@ impl StatusCache {
         bytes_done: u64,
         bytes_total: u64,
     ) {
-        if let Ok(mut cache) = self.entries.write()
-            && let Some(status) = cache.get_mut(operation_id)
-        {
+        if let Some(status) = self.entries.write_ignore_poison().get_mut(operation_id) {
             status.phase = phase;
             status.current_file = current_file;
             status.files_done = files_done;
@@ -116,32 +117,30 @@ impl StatusCache {
         // eject's guard can't drift apart. The finish fires from the same
         // panic-safe cleanup paths that unregister.
         self.events.transfer_started(&volume_ids);
-        if let Ok(mut cache) = self.entries.write() {
-            cache.insert(
-                operation_id.to_string(),
-                OperationStatusInternal {
-                    operation_type,
-                    phase: WriteOperationPhase::Scanning,
-                    current_file: None,
-                    files_done: 0,
-                    files_total: 0,
-                    bytes_done: 0,
-                    bytes_total: 0,
-                    started_at: now,
-                    volume_ids,
-                },
-            );
-        }
+        self.entries.write_ignore_poison().insert(
+            operation_id.to_string(),
+            OperationStatusInternal {
+                operation_type,
+                phase: WriteOperationPhase::Scanning,
+                current_file: None,
+                files_done: 0,
+                files_total: 0,
+                bytes_done: 0,
+                bytes_total: 0,
+                started_at: now,
+                volume_ids,
+            },
+        );
         self.recompute_and_report_busy_volumes();
     }
 
     /// Removes an operation from the status cache.
     pub(super) fn unregister(&self, operation_id: &str) {
-        let removed_volume_ids = if let Ok(mut cache) = self.entries.write() {
-            cache.remove(operation_id).map(|status| status.volume_ids)
-        } else {
-            None
-        };
+        let removed_volume_ids = self
+            .entries
+            .write_ignore_poison()
+            .remove(operation_id)
+            .map(|status| status.volume_ids);
         // Finish the transfer with the SAME ids the register started it with (they
         // ride the cache entry, so the pair can't drift). A double unregister
         // removed nothing and finishes nothing.
@@ -155,10 +154,8 @@ impl StatusCache {
     /// operation's touched volumes, minus the default `root` volume (never
     /// ejectable, so marking it busy is pointless noise).
     fn compute_busy_volume_ids(&self) -> HashSet<String> {
-        let Ok(cache) = self.entries.read() else {
-            return HashSet::new();
-        };
-        cache
+        self.entries
+            .read_ignore_poison()
             .values()
             .flat_map(|status| status.volume_ids.iter())
             .filter(|id| id.as_str() != cmdr_fs::volume::DEFAULT_VOLUME_ID)
@@ -206,7 +203,7 @@ impl StatusCache {
     /// `operation_id`'s cached status, with `lifecycle` as the manager answered
     /// it and no activity (the caller classifies the wait outside this lock).
     pub(super) fn snapshot(&self, operation_id: &str, lifecycle: Option<LifecycleStatus>) -> Option<OperationStatus> {
-        let cache = self.entries.read().ok()?;
+        let cache = self.entries.read_ignore_poison();
         let status = cache.get(operation_id)?;
         Some(OperationStatus {
             operation_id: operation_id.to_string(),

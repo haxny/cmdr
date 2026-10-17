@@ -420,3 +420,32 @@ async fn a_panicking_op_task_finishes_its_transfer_start_exactly_once() {
     })
     .await;
 }
+
+/// A cache a panic poisoned still marks a transfer's volume busy, so Eject
+/// stays refused mid-transfer. Each entry is a plain value: a panic can lose at
+/// most the one update it interrupted, never tear the map.
+#[test]
+fn a_poisoned_cache_still_marks_a_running_transfers_volume_busy() {
+    let cache = StatusCache::new(Arc::new(super::super::host::testing::RecordingEngineEvents::default()));
+    let poisoned = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let _held = cache.entries.write_ignore_poison();
+        panic!("a status update panicked, on purpose");
+    }));
+    assert!(poisoned.is_err() && cache.entries.is_poisoned());
+
+    cache.register("poisoned-op", WriteOperationType::Copy, vec!["usb-stick".to_string()]);
+    assert_eq!(
+        cache.busy_volume_ids(),
+        vec!["usb-stick".to_string()],
+        "the volume a transfer touches is busy, poison or not"
+    );
+    cache.update("poisoned-op", WriteOperationPhase::Copying, None, 1, 2, 10, 20);
+    assert_eq!(
+        cache.snapshot("poisoned-op", None).map(|status| status.files_done),
+        Some(1),
+        "and its status still reads"
+    );
+
+    cache.unregister("poisoned-op");
+    assert!(cache.busy_volume_ids().is_empty(), "until it's done");
+}
