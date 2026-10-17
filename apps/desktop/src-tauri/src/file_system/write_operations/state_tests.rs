@@ -89,6 +89,29 @@ fn an_operation_with_nothing_to_say_reports_no_activity() {
     assert!(event.activity.is_none());
 }
 
+/// A panic that poisoned the ETA estimator costs one sample at most: the next
+/// event still carries a rate and is still kept as the newest tick, which the
+/// stall watchdog judges movement by.
+#[test]
+fn a_poisoned_estimator_still_rates_and_keeps_the_event() {
+    let op = install_state("poisoned-estimator", OperationIntent::Running);
+    let poisoned = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let _held = op.state().estimator.lock_ignore_poison();
+        panic!("an estimator update panicked, on purpose");
+    }));
+    assert!(poisoned.is_err() && op.state().estimator.is_poisoned());
+    let mut event = copying_event(op.id());
+
+    op.state().enrich_progress(&mut event);
+
+    assert!(event.bytes_per_second.is_some(), "the event still gets a rate");
+    assert_eq!(
+        op.state().last_progress_bytes(),
+        Some(event.bytes_done),
+        "and is kept as the newest tick"
+    );
+}
+
 // ---- cancel_write_operation state-machine transitions ----
 //
 // Helper: install a fresh state into the global cache under a unique op id,

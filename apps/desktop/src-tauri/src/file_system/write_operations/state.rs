@@ -550,23 +550,21 @@ impl WriteOperationState {
         // remaining work is identical either way (both sides lose the same
         // term), so this changes the RATE, never the ETA's numerator.
         let (skipped_files, skipped_bytes) = self.skipped_totals();
-        let stats = match self.estimator.lock() {
-            Ok(mut est) => est.update(EtaSample {
-                now,
-                // The seconds a person spent deciding are not the transfer's,
-                // so the rate window doesn't get to count them.
-                human_wait_total: self.human_wait.total_at(now),
-                phase: event.phase,
-                reversal_bar: self.reversal_bar(),
-                bytes_done: event.bytes_done.saturating_sub(skipped_bytes),
-                bytes_total: event.bytes_total.saturating_sub(skipped_bytes),
-                files_done: event.files_done.saturating_sub(skipped_files),
-                files_total: event.files_total.saturating_sub(skipped_files),
-            }),
-            // Poisoned mutex (another thread panicked). Skip the enrichment
-            // rather than propagating the panic; progress events are advisory.
-            Err(_) => return,
-        };
+        // Recovered on poison: the estimate is advisory, so a panic mid-update
+        // costs at most a skewed rate, while skipping would also drop the event
+        // from `last_progress` and read to the stall watchdog as no movement.
+        let stats = self.estimator.lock_ignore_poison().update(EtaSample {
+            now,
+            // The seconds a person spent deciding are not the transfer's,
+            // so the rate window doesn't get to count them.
+            human_wait_total: self.human_wait.total_at(now),
+            phase: event.phase,
+            reversal_bar: self.reversal_bar(),
+            bytes_done: event.bytes_done.saturating_sub(skipped_bytes),
+            bytes_total: event.bytes_total.saturating_sub(skipped_bytes),
+            files_done: event.files_done.saturating_sub(skipped_files),
+            files_total: event.files_total.saturating_sub(skipped_files),
+        });
         event.bytes_per_second = Some(stats.bytes_per_second);
         event.files_per_second = Some(stats.files_per_second);
         event.eta_seconds = stats.eta_seconds;
