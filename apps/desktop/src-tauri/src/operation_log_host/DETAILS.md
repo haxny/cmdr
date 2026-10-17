@@ -24,7 +24,7 @@ nothing about Tauri, settings, or the data dir; this module supplies them.
 
 `install` returns the handle, and `operations_host::install` hands that same handle to the write engine, which journals
 into it (`Operations::operation_log`) and never reads `operation_log()`. The test binary's shared engine is built over
-the shared handle too, so `TestJournalGuard` reaches what the write pipeline journals into.
+the shared handle too, as the app's engine is over the installed one.
 
 ## Answers passed in
 
@@ -40,7 +40,8 @@ the shared handle too, so `TestJournalGuard` reaches what the write pipeline jou
 
 ## Tests
 
-`TestJournalGuard` holds the shared handle's journal slot for one test under a process-wide lock, and resets the slot
-and the recording switch on both ends. It exists for the write-pipeline tests, which reach the shared handle by
-`op_id`; nextest isolates each test in a process, and the lock covers plain `cargo test`. Its rules (one per test, not
-reentrant) are on the type.
+Tests leave the shared handle's journal slot alone (one cell,
+`operations_host::tests::the_shared_test_engine_journals_into_operation_log`, probes its wiring): a write-pipeline test
+builds a log of its own
+(`write_operations::testing::TestOperationLog`) and an engine journaling into it, app-side through
+`operations_host::test_engine_journaling_into`, so plain `cargo test` needs no lock around the slot.

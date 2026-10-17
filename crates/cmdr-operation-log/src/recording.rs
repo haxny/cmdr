@@ -45,14 +45,6 @@ impl Recording {
     pub(super) fn is_enabled(&self) -> bool {
         self.enabled.load(Ordering::SeqCst)
     }
-
-    /// Back to the default (on). The app's shared-handle test guard calls this
-    /// on both ends, so a test that switches recording off can't leak it into the
-    /// next.
-    #[cfg(any(test, feature = "testing"))]
-    pub(super) fn reset(&self) {
-        self.set_enabled(true);
-    }
 }
 
 #[cfg(test)]

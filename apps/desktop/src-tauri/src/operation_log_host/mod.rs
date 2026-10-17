@@ -7,8 +7,6 @@
 //! switch and the retention limits from settings, the app's runtime, and the
 //! volume registry the rollback planner looks volumes up in (`volumes.rs`).
 
-#[cfg(test)]
-mod test_journal;
 // The planner cells pass a private registry; the engine's own lookups go
 // through `operations_host::volumes`.
 #[cfg(test)]
@@ -23,9 +21,6 @@ use cmdr_operation_log::OpenError;
 use cmdr_operation_log::OperationLog;
 use cmdr_operation_log::retention::{RetentionLimits, RetentionLimitsSource};
 use cmdr_operation_log::store::operation_log_db_path;
-
-#[cfg(test)]
-pub(crate) use test_journal::TestJournalGuard;
 
 /// The app's operation log, once [`install`] built it.
 static LOG: OnceLock<OperationLog> = OnceLock::new();

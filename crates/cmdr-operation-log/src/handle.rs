@@ -158,12 +158,6 @@ impl OperationLog {
     pub fn set_journal(&self, journal: Option<Arc<dyn OperationJournal>>) {
         *self.inner.slot.write_ignore_poison() = journal.map(|journal| Published { journal, writer: None });
     }
-
-    /// Recording back on: a shared handle's test teardown.
-    #[cfg(any(test, feature = "testing"))]
-    pub fn reset_recording(&self) {
-        self.inner.recording.reset();
-    }
 }
 
 /// What a finalize wrote when nothing was journaled.

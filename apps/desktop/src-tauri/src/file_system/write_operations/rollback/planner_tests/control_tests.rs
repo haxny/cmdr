@@ -11,9 +11,9 @@
 //! in-memory volumes is over inside one poll, so a test about a reversal IN
 //! PROGRESS would be racing it. Two hooks open a real window: `InMemoryVolume`'s
 //! `with_read_chunk_delay` (each read chunk takes time, so a restore spends
-//! measurable time INSIDE one file), and `test_mode::pace_rollback_for_test` (the
-//! E2E per-item throttle, for a reversal whose items are deletes and stream
-//! nothing). The waits are still on STATE (a frame that arrived, bytes that
+//! measurable time INSIDE one file), and the rig's rollback pace
+//! (`rig.pacing`, the per-item pause the E2E throttle rides, for a reversal
+//! whose items are deletes and stream nothing). The waits are still on STATE (a frame that arrived, bytes that
 //! moved), never on a clock.
 //!
 //! **Cancel and pause go through the public calls**, never the intent atom:
@@ -25,7 +25,6 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Duration;
 
 use super::test_support::*;
-use crate::file_system::write_operations::rollback::Reversal;
 use crate::test_support::wait_until_async;
 use cmdr_fs::volume::{InMemoryVolume, Volume, VolumeError};
 use cmdr_operation_log::rollback::{
@@ -129,7 +128,7 @@ async fn progress_runs_forward_from_the_journal_totals_and_reaches_them() {
     // that's a different bar, and it stays as it is.)
     let count = 4;
     let (rig, src, _dst) = moved_across(count, Duration::ZERO).await;
-    let reversal = Reversal::new("rollback-progress");
+    let reversal = rig.reversal("rollback-progress");
 
     let report = rig.rollback_driven_by("op", "inv-1", &reversal).await;
     assert_eq!(report.reversed, count as u64);
@@ -167,8 +166,8 @@ async fn a_paused_reversal_stops_advancing_and_resumes_where_it_left_off() {
     // gate would run straight through.
     let count = 6;
     let (rig, dst) = copied_onto(count).await;
-    let _pacing = crate::test_mode::pace_rollback_for_test(ITEM_PACE_MS).await;
-    let reversal = Reversal::new("rollback-pause");
+    rig.pacing.set_rollback_pace(Some(Duration::from_millis(ITEM_PACE_MS)));
+    let reversal = rig.reversal("rollback-pause");
 
     let (report, ()) = tokio::join!(rig.rollback_driven_by("op", "inv-1", &reversal), async {
         // Wait for the reversal to be genuinely under way, so the pause lands in
@@ -217,8 +216,8 @@ async fn a_reversal_stopped_after_it_removed_something_lands_partly_rolled_back(
     // reaches it and persists it.
     let count = 6;
     let (rig, dst) = copied_onto(count).await;
-    let _pacing = crate::test_mode::pace_rollback_for_test(ITEM_PACE_MS).await;
-    let reversal = Reversal::new("rollback-stop-midway");
+    rig.pacing.set_rollback_pace(Some(Duration::from_millis(ITEM_PACE_MS)));
+    let reversal = rig.reversal("rollback-stop-midway");
 
     let (report, ()) = tokio::join!(rig.rollback_driven_by("op", "inv-1", &reversal), async {
         wait_until_async(PATIENCE, "the reversal to remove its first copy", || {
@@ -260,7 +259,7 @@ async fn stopping_inside_one_large_file_leaves_no_partial_and_loses_nothing() {
         RollbackState::Rollbackable,
         vec![file_unit(0, "src", "/big.dat", "dst", "/big.dat", bytes.len() as i64)],
     );
-    let reversal = Reversal::new("rollback-midfile-stop");
+    let reversal = rig.reversal("rollback-midfile-stop");
 
     let (report, ()) = tokio::join!(rig.rollback_driven_by("op", "inv-1", &reversal), async {
         // INSIDE the file: some of its bytes have moved and not all of them.

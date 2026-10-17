@@ -93,6 +93,14 @@ pub(crate) fn operations() -> Result<&'static Operations, NotInstalled> {
     operations_in(&OPERATIONS)
 }
 
+/// The app's one engine in a test binary, which an app-side cell drives the
+/// way the app's own callers reach it through [`operations`]. Every such cell
+/// shares it, so each keeps its operation ids, lanes, and volume names unique.
+#[cfg(test)]
+pub(crate) fn app_engine() -> &'static Operations {
+    operations().expect("a test binary always has its engine")
+}
+
 /// [`operations`] over a given slot, so a test can hand an empty one in.
 pub(crate) fn operations_in(slot: &'static OnceLock<Operations>) -> Result<&'static Operations, NotInstalled> {
     if let Some(engine) = slot.get() {
@@ -171,10 +179,18 @@ pub(crate) fn refuse_scan_preview_not_installed(
 /// The engine a test binary shares, since nothing there calls [`install`]: the
 /// app's answers with no frontend behind them (the real indexing gauge,
 /// analytics client, and error reporter), the test binary's shared operation
-/// log (what `TestJournalGuard` fills), and no sink factory.
+/// log, and no sink factory. A cell that needs the app's registry on an engine
+/// of its own builds one per cell, too.
 #[cfg(test)]
 pub(crate) fn test_engine() -> Operations {
     app_answers(None, crate::operation_log_host::operation_log().clone()).build()
+}
+
+/// [`test_engine`], journaling into `log`: an app-side cell that reads back
+/// what its operations recorded runs them on an engine of its own.
+#[cfg(test)]
+pub(crate) fn test_engine_journaling_into(log: &write_operations::testing::TestOperationLog) -> Operations {
+    app_answers(None, log.log().clone()).build()
 }
 
 /// Every seam the app answers the same with or without a frontend; `app` is
@@ -272,14 +288,24 @@ mod tests {
         );
     }
 
-    /// The test binary's shared engine journals into `operation_log()`, which is
-    /// what `TestJournalGuard` fills.
+    /// The app's engine paces each rollback item by `test_mode`'s throttle: the
+    /// window an E2E spec presses Cancel in. The engine's half (the item loop
+    /// asks its host's `Pacing`) is
+    /// `rollback::planner_tests::tests::the_e2e_throttle_hook_paces_the_item_loop`.
+    #[tokio::test]
+    async fn the_app_engine_paces_rollbacks_from_test_mode() {
+        let _pacing = crate::test_mode::pace_rollback_for_test(25).await;
+        assert_eq!(
+            super::test_engine().host().pacing().rollback_pace(),
+            Some(std::time::Duration::from_millis(25))
+        );
+    }
+
+    /// The test binary's shared engine journals into `operation_log()`, the app's
+    /// one log, as the installed engine journals into the one `install` handed it.
     #[test]
     fn the_shared_test_engine_journals_into_operation_log() {
-        let journal = Arc::new(CapturingJournal::new());
-        let _guard = crate::operation_log_host::TestJournalGuard::install(journal.clone());
         let engine = super::operations().expect("a test binary always has its engine");
-        drop(engine.operation_log().journal_open(header("shared-log-probe")));
-        assert_eq!(journal.opens.lock_ignore_poison().len(), 1);
+        assert!(journals_into(engine, crate::operation_log_host::operation_log()));
     }
 }

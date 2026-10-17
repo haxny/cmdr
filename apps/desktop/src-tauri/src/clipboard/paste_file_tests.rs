@@ -7,7 +7,7 @@
 //! `numbered_name` convention), byte-verbatim writes for the passthrough flavors,
 //! the `Nothing` → `Ok(None)` no-op, and a read-only dir failing closed.
 
-use super::{write_payload_replying, write_payload_to_dir};
+use super::{write_content_on, write_payload_replying, write_payload_to_dir};
 use crate::clipboard::{ClipboardPasteOutcome, ClipboardPayload, PasteClipboardReply, PastedKind};
 
 use std::fs;
@@ -82,26 +82,25 @@ async fn png_payload_writes_pasted_png_verbatim() {
 /// `done` and `rollbackable` (a net-new file).
 #[tokio::test]
 async fn paste_journals_a_create_file_operation() {
-    use crate::operation_log_host::TestJournalGuard;
-    use cmdr_operation_log::capture::WriterJournal;
-    use cmdr_operation_log::store::{open_read_connection, operation_log_db_path, recent_operations};
+    use crate::clipboard::payload_to_content;
+    use crate::file_system::write_operations::testing::TestOperationLog;
+    use cmdr_operation_log::store::{open_read_connection, recent_operations};
     use cmdr_operation_log::types::{ExecutionStatus, OpKind, RollbackState};
-    use cmdr_operation_log::writer::OperationLogWriter;
-    use std::sync::Arc;
 
     ensure_root_volume();
-    let jdir = TempDir::new().unwrap();
-    let jdb = operation_log_db_path(jdir.path());
-    // Serializes journal-slot tests under plain `cargo test`; clears on drop.
-    let _journal = TestJournalGuard::install(Arc::new(WriterJournal::new(
-        OperationLogWriter::spawn(&jdb).expect("spawn writer"),
-    )));
+    // The app's answers on an engine of this cell's own, journaling into a log
+    // it reads back.
+    let log = TestOperationLog::new("paste-journal");
+    let engine = crate::operations_host::test_engine_journaling_into(&log);
 
     let tmp = TempDir::new().unwrap();
-    let file = write_text(tmp.path(), "journaled paste").await.expect("Some file");
+    let content = payload_to_content(ClipboardPayload::Text("journaled paste".to_string())).expect("text pastes");
+    let file = write_content_on(&engine, None, tmp.path(), content)
+        .await
+        .expect("write should succeed");
     assert_eq!(file.name, "pasted.txt");
 
-    let conn = open_read_connection(&jdb).expect("read conn");
+    let conn = open_read_connection(log.db()).expect("read conn");
     let ops = recent_operations(&conn, 10).expect("recent ops");
     let create = ops
         .iter()

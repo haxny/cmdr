@@ -15,8 +15,6 @@ use std::path::Path;
 use std::sync::Arc;
 
 use super::test_support::*;
-use crate::file_system::write_operations::installed;
-use crate::file_system::write_operations::rollback::Reversal;
 use cmdr_fs::volume::{InMemoryVolume, Volume};
 use cmdr_operation_log::rollback::*;
 use cmdr_operation_log::store::{open_read_connection, read_inverse_op, read_operation_items};
@@ -635,8 +633,8 @@ async fn cancel_stops_and_keeps_what_was_reversed() {
             .collect(),
     );
     // Stop it before it starts, the way the queue window would.
-    let reversal = Reversal::new("cancel-before-any-item");
-    installed().cancel_write_operation(reversal.op_id(), false);
+    let reversal = rig.reversal("cancel-before-any-item");
+    rig.engine.cancel_write_operation(reversal.op_id(), false);
     let report = rig.rollback_driven_by("op", "inv-1", &reversal).await;
     assert!(report.canceled);
     assert_eq!(report.reversed, 0, "canceled before any item ran");
@@ -654,13 +652,15 @@ async fn cancel_stops_and_keeps_what_was_reversed() {
 /// Pinned here rather than only in `test_mode`, because the helper existing proves
 /// nothing: the value of the hook is that a Playwright spec gets a real window in
 /// which to press Cancel on a running reversal, and that window exists only if the
-/// loop asks its runner and the engine's runner answers from `test_mode`. Deleting
-/// either end would leave every `test_mode` assertion green and every rollback E2E
-/// racing the engine.
+/// loop asks its runner and the runner answers from its engine's `Pacing`. This is
+/// that half; the app's engine answering from `test_mode` is
+/// `operations_host::tests::the_app_engine_paces_rollbacks_from_test_mode`.
+/// Deleting either end would leave every `test_mode` assertion green and every
+/// rollback E2E racing the engine.
 ///
 /// A lower bound on elapsed time, never an upper one: a sleep can overshoot under
-/// load but never returns early, so this can't flake. The throttle is process-wide,
-/// so the window it's held open for is deliberately short (three items at 20 ms).
+/// load but never returns early, so this can't flake. The window is deliberately
+/// short (three items at 20 ms).
 #[tokio::test]
 async fn the_e2e_throttle_hook_paces_the_item_loop() {
     let rig = Rig::new();
@@ -681,11 +681,11 @@ async fn the_e2e_throttle_hook_paces_the_item_loop() {
             .collect(),
     );
 
-    crate::test_mode::set_rollback_throttle_override(Some(20));
+    rig.pacing.set_rollback_pace(Some(std::time::Duration::from_millis(20)));
     let started = std::time::Instant::now();
     let report = rig.rollback("op").await;
     let elapsed = started.elapsed();
-    crate::test_mode::set_rollback_throttle_override(None);
+    rig.pacing.set_rollback_pace(None);
 
     assert!(
         elapsed >= std::time::Duration::from_millis(40),

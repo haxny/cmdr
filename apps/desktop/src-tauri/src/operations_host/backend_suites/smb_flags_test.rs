@@ -13,17 +13,14 @@
 use cmdr_fs::metadata::{CarriedMetadata, MetadataClasses, UserFlags};
 use cmdr_fs::testing::metadata_fixture::{HIDDEN_FLAG, LOCKED_FLAG, MetadataFixture, flags, set_flags};
 
-use super::network_transfer_test_support::{clean_deep, run_copy, self_describing_bytes};
+use super::network_transfer_test_support::{clean_deep, run_copy, run_copy_on, self_describing_bytes};
 use super::smb_test_support::*;
 use crate::file_system::VolumeManager;
-use crate::file_system::write_operations::testing::Reversal;
-use crate::operation_log_host::TestJournalGuard;
+use crate::file_system::write_operations::Operations;
+use crate::file_system::write_operations::testing::{Reversal, TestOperationLog};
 use cmdr_local::LocalPosixVolume;
-use cmdr_operation_log::capture::WriterJournal;
 use cmdr_operation_log::rollback::{execute_rollback, rollback_operation};
-use cmdr_operation_log::store::operation_log_db_path;
 use cmdr_operation_log::types::Initiator;
-use cmdr_operation_log::writer::OperationLogWriter;
 
 /// Big enough for the streaming writer, not the one-frame write.
 const STREAMED_BYTES: usize = 10 * 1024 * 1024;
@@ -185,23 +182,11 @@ async fn smb_integration_a_copy_off_a_share_keeps_hidden_and_locked() {
     unlock_and_clean(remote.as_ref(), &dir).await;
 }
 
-/// The journal a rollback reads, installed as the process's own for the
-/// cell's lifetime.
-struct Journal {
-    _guard: TestJournalGuard,
-    writer: Arc<WriterJournal>,
-    _dir: tempfile::TempDir,
-}
-
-fn install_journal() -> Journal {
-    let dir = tempfile::tempdir().expect("a journal dir");
-    let writer = OperationLogWriter::spawn(&operation_log_db_path(dir.path())).expect("the journal writer spawns");
-    let writer = Arc::new(WriterJournal::new(writer));
-    Journal {
-        _guard: TestJournalGuard::install(writer.clone()),
-        writer,
-        _dir: dir,
-    }
+/// The journal a rollback reads, and an engine of the cell's own (the app's
+/// answers) journaling into it.
+fn journaled() -> (Operations, TestOperationLog) {
+    let log = TestOperationLog::new("smb-flags-rollback-journal");
+    (crate::operations_host::test_engine_journaling_into(&log), log)
 }
 
 /// Invariant 9 on a share: a finished copy's rollback takes back its Locked copies
@@ -211,7 +196,7 @@ fn install_journal() -> Journal {
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 #[ignore = "Requires Docker SMB containers (./apps/desktop/test/smb-servers/start.sh)"]
 async fn smb_integration_a_rollback_removes_a_locked_copy_on_the_share() {
-    let journal = install_journal();
+    let (engine, journal) = journaled();
     let (remote, dir) = fixture().await;
     // The journal records what it's handed, and a rollback resolves it against
     // the volume's root: the path the transfer dialog would hand in.
@@ -226,7 +211,8 @@ async fn smb_integration_a_rollback_removes_a_locked_copy_on_the_share() {
     vm.register("smb-flags-rollback-source", Arc::clone(&local));
     vm.register("smb-flags-rollback-dest", Arc::clone(&remote));
 
-    let running = run_copy(
+    let running = run_copy_on(
+        &engine,
         "smb-flags-rollback",
         local,
         COPIED.iter().map(PathBuf::from).collect(),
@@ -242,11 +228,11 @@ async fn smb_integration_a_rollback_removes_a_locked_copy_on_the_share() {
         "fixture precondition: the share refuses a plain delete of the Locked copy"
     );
 
-    let writer = journal.writer.writer();
+    let writer = journal.writer();
     writer.flush_blocking().expect("the journal flushes");
     let plan = rollback_operation(&vm, writer, &running.operation_id, |_plan| Ok(()))
         .unwrap_or_else(|refusal| panic!("the finished copy must be reversible, got {refusal:?}"));
-    let reversal = Reversal::new("smb-flags-rollback");
+    let reversal = Reversal::on(&engine, "smb-flags-rollback");
     let report = execute_rollback(
         &vm,
         writer,

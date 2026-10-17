@@ -145,7 +145,7 @@ Nothing installs in a test binary, and some engine pins read the app's real answ
 `operations()` hands out that same engine: `TauriEngineEvents` with no app handle (events go nowhere; the gauge, the
 analytics client, and the error reporter work as in the app), the real `AppOperationVolumes` (cells register their
 volumes in the real registry) over `volume_host::host()`, whose runtime is `cmdr-fs`'s shared fallback, the test
-binary's shared operation log (what `TestJournalGuard` fills), the same optional seams as the app (own writes reach the
+binary's shared operation log, the same optional seams as the app (own writes reach the
 downloads hook and its recorder), and no sink factory.
 
 ## Backend suites (`backend_suites/`)

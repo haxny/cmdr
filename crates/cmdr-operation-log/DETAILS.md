@@ -168,11 +168,11 @@ record, note, and the finalize.
 - **Why it rides the operation's scope, not the sink.** The write engine already carries one `OpScope` per operation
   (its seams and status cache), so the journal joins it there and reaches every record point the state reaches. The hard
   constraint holds: the sink stays a sink, and nothing here extends `OperationEventSink`.
-- **Testability holds.** A test of the operation log builds its own handle, so it needs no lock. A write-pipeline test
-  runs on the app's shared test engine, whose log is the shared handle, so it holds
-  `operation_log_host::TestJournalGuard`, which puts a `CapturingJournal` or a temp-DB `WriterJournal` in the shared
-  slot under a lock (`file_system/write_operations/DETAILS.md` § the test-isolation guards). A test that drives an
-  engine function directly opens the journal on the same state's scope it passes in.
+- **Testability holds.** Every test builds its own handle, so none needs a lock. A test of the operation log builds an
+  `OperationLog` directly; a write-pipeline test builds an engine journaling into a temp-DB log of its own
+  (`write_operations::testing::TestOperationLog`, `file_system/write_operations/DETAILS.md` § "Test isolation: an engine
+  of the test's own"). A test that drives an engine function directly opens the journal on the same state's scope it
+  passes in.
 - **Lifecycle.** `journal_open` is called when the op actually STARTS (inside the manager's deferred), not at
   registration, so a queued op that's canceled before admission never journals and leaks no accumulator. The finalize
   removes the per-op accumulator.
@@ -834,9 +834,9 @@ volumes up in (`VolumeLookup`).
   (`OperationRow`, `OperationDetail`, `OperationItemView`, `RollbackRefusal`, `RollbackDispatch`, `SkipBreakdown`, the
   `token_enum!` enums) cross into `bindings.ts`, where every `///` lands as JSDoc. They carry `#[allow(missing_docs)]`
   with that reason, so `#![deny(missing_docs)]` holds for everything else without moving the bindings.
-- **The `testing` feature** widens exactly what the app's cells reach: `OperationLog::set_journal` and `reset_recording`
-  (`TestJournalGuard`, and the transfer bench through the app's `transfer-bench` feature) and `WriterJournal::writer`.
-  The crate's own recording fake and its dropped-row hook stay `cfg(test)`.
+- **The `testing` feature** widens exactly what the app's cells reach: `OperationLog::set_journal` (`TestOperationLog`,
+  and the transfer bench through the app's `transfer-bench` feature) and `WriterJournal::writer`. The crate's own
+  recording fake and its dropped-row hook stay `cfg(test)`.
 
 ### The public surface is capped
 

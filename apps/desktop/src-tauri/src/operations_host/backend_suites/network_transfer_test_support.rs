@@ -26,9 +26,11 @@ use cmdr_fs::volume::Volume;
 use sha2::{Digest, Sha256};
 
 use super::network_gated_source_test_support::{CANCEL_PAYLOAD_BYTES, gated_upload};
-use crate::file_system::write_operations::testing::{CollectorEventSink, installed};
+use crate::file_system::write_operations::Operations;
+use crate::file_system::write_operations::testing::CollectorEventSink;
 use crate::file_system::write_operations::{ConflictResolution, ConflictResolutionOutcome, VolumeCopyConfig};
 use crate::file_system::write_operations::{OperationEventSink, WriteConflictEvent};
+use crate::operations_host::app_engine;
 use crate::test_support::TestDir;
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_local::LocalPosixVolume;
@@ -187,6 +189,8 @@ pub(super) async fn assert_no_staging_litter(volume: &dyn Volume, dir: &Path, wh
 
 /// One `copy_between_volumes` in flight, with the sink it reports through.
 pub(super) struct RunningCopy {
+    /// The engine the copy runs on, which its controls ask.
+    pub(super) engine: Operations,
     pub(super) events: Arc<CollectorEventSink>,
     pub(super) operation_id: String,
     label: String,
@@ -246,7 +250,9 @@ impl RunningCopy {
     /// Answers that clash the way a person clicking the dialog would, and
     /// insists the answer actually reached the parked operation.
     fn answer(&self, conflict: &WriteConflictEvent, resolution: ConflictResolution) {
-        let outcome = installed().resolve_write_conflict(&self.operation_id, conflict.conflict_id, resolution, false);
+        let outcome = self
+            .engine
+            .resolve_write_conflict(&self.operation_id, conflict.conflict_id, resolution, false);
         assert_eq!(
             outcome,
             ConflictResolutionOutcome::Resolved,
@@ -265,10 +271,24 @@ pub(super) async fn start_copy(
     dest_path: PathBuf,
     config: VolumeCopyConfig,
 ) -> RunningCopy {
+    start_copy_on(app_engine(), label, source, source_paths, dest, dest_path, config).await
+}
+
+/// [`start_copy`] on `engine`, for a cell that runs its copy on an engine of
+/// its own (one journaling into a log it reads back).
+pub(super) async fn start_copy_on(
+    engine: &Operations,
+    label: &str,
+    source: Arc<dyn Volume>,
+    source_paths: Vec<PathBuf>,
+    dest: Arc<dyn Volume>,
+    dest_path: PathBuf,
+    config: VolumeCopyConfig,
+) -> RunningCopy {
     let collector = Arc::new(CollectorEventSink::new());
     let events: Arc<dyn OperationEventSink> = collector.clone();
 
-    let started = installed()
+    let started = engine
         .copy_between_volumes(
             events,
             format!("{label}-source"),
@@ -285,6 +305,7 @@ pub(super) async fn start_copy(
         .unwrap_or_else(|e| panic!("{label}: the copy must START; it was refused with {e:?}"));
 
     RunningCopy {
+        engine: Operations::clone(engine),
         events: collector,
         operation_id: started.operation_id,
         label: label.to_string(),
@@ -305,7 +326,7 @@ pub(super) async fn start_copy_by_id(
     let collector = Arc::new(CollectorEventSink::new());
     let events: Arc<dyn OperationEventSink> = collector.clone();
 
-    let started = installed()
+    let started = app_engine()
         .start_volume_copy(
             events,
             source_volume_id,
@@ -320,6 +341,7 @@ pub(super) async fn start_copy_by_id(
         .unwrap_or_else(|e| panic!("{label}: the copy must START; it was refused with {e:?}"));
 
     RunningCopy {
+        engine: app_engine().clone(),
         events: collector,
         operation_id: started.operation_id,
         label: label.to_string(),
@@ -334,7 +356,20 @@ pub(super) async fn run_copy(
     dest: Arc<dyn Volume>,
     dest_path: PathBuf,
 ) -> RunningCopy {
-    let running = start_copy(
+    run_copy_on(app_engine(), label, source, source_paths, dest, dest_path).await
+}
+
+/// [`run_copy`] on `engine`; see [`start_copy_on`].
+pub(super) async fn run_copy_on(
+    engine: &Operations,
+    label: &str,
+    source: Arc<dyn Volume>,
+    source_paths: Vec<PathBuf>,
+    dest: Arc<dyn Volume>,
+    dest_path: PathBuf,
+) -> RunningCopy {
+    let running = start_copy_on(
+        engine,
         label,
         source,
         source_paths,
@@ -542,7 +577,7 @@ pub(super) async fn a_cancelled_upload_leaves_nothing_behind(remote: Arc<dyn Vol
         || source.handed_out.load(std::sync::atomic::Ordering::SeqCst) >= 2,
     )
     .await;
-    installed().cancel_write_operation(&running.operation_id, false);
+    running.engine.cancel_write_operation(&running.operation_id, false);
     // Let the source answer again, so a backend that only notices the cancel on
     // its next chunk isn't left parked on a permit that never comes.
     source.gate.add_permits(1_000);

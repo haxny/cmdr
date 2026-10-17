@@ -1508,9 +1508,8 @@ and line are that test's alone, under plain `cargo test` as under nextest:
 first read, `test_support::shared_engine`) and keep its registry honest with `test_support::TestOperationGuard`: a
 process-unique id per entry (`register(tag)` / `register_state(tag, state)`, or `register_as(op_id, state)` for an id
 the suite threads through), removed from `Drop` on unwind too (pinned by
-`state::tests::guard_unregisters_its_state_even_when_the_test_body_panics`). Their journals serialize on
-`operation_log_host::TestJournalGuard` (one per test, never nested; see its doc), and their journal assertions stay
-scoped to the test's own `op_id`. ❌ Never drive a walk-everything mutator (`cancel_all_write_operations`) on the shared
+`state::tests::guard_unregisters_its_state_even_when_the_test_body_panics`). A cell that reads its journal back builds a
+log of its own and an engine journaling into it, app-side through `operations_host::test_engine_journaling_into`. ❌ Never drive a walk-everything mutator (`cancel_all_write_operations`) on the shared
 engine: it stops whatever the tests beside it have in flight, and the failure lands in the victim, reading exactly like
 environment flake (mis-blamed on load starvation once and on a dependency upgrade once). The fix is always a scope the
 test owns, never a mutex around the suites, an `#[ignore]`, or a looser assertion.

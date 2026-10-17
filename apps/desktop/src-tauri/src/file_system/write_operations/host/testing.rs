@@ -6,10 +6,13 @@
 //! - [`FakeVolumes`]: a registry the test fills, answering the engine's volume
 //!   questions from it alone.
 //! - [`RecordingOwnWrites`]: every path the engine announced before writing it.
+//! - [`SettablePacing`]: a rollback pace the test sets on its engine alone.
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::volume::ResolvedVolume;
@@ -18,7 +21,7 @@ use cmdr_operation_log::rollback::VolumeLookup;
 
 use super::super::types::{MoveLeftoversKeptEvent, OperationsChanged, WriteProgressEvent};
 use super::{
-    EngineEvents, InstantMutationFact, OperationErrorReport, OperationVolumes, OwnWrites, UnregisteredVolume,
+    EngineEvents, InstantMutationFact, OperationErrorReport, OperationVolumes, OwnWrites, Pacing, UnregisteredVolume,
     VolumeAnswer,
 };
 
@@ -136,5 +139,42 @@ impl OwnWrites for RecordingOwnWrites {
     fn announce(&self, path: &Path) {
         let existed = path.symlink_metadata().is_ok();
         self.announced.lock_ignore_poison().push((path.to_path_buf(), existed));
+    }
+}
+
+/// Paces each rollback item by what the test set, and nothing else: one
+/// engine's pace, where the app's (`test_mode`'s throttle) is the process's.
+// DEFAULT-OK: a pace nobody set is no pause, which is every real build's answer.
+#[derive(Default)]
+pub(crate) struct SettablePacing {
+    rollback_millis: AtomicU64,
+}
+
+impl SettablePacing {
+    /// Paces each rollback item by `pace` from now on; `None` stops pacing.
+    pub(crate) fn set_rollback_pace(&self, pace: Option<Duration>) {
+        let millis = pace.map_or(0, |pace| u64::try_from(pace.as_millis()).unwrap_or(u64::MAX));
+        self.rollback_millis.store(millis, Ordering::SeqCst);
+    }
+}
+
+impl Pacing for SettablePacing {
+    fn copy_throttle(&self) -> Option<Duration> {
+        None
+    }
+
+    fn copy_throttle_for(&self, _source: &Path) -> Option<Duration> {
+        None
+    }
+
+    fn scan_preview_delay(&self) -> Option<Duration> {
+        None
+    }
+
+    fn rollback_pace(&self) -> Option<Duration> {
+        match self.rollback_millis.load(Ordering::SeqCst) {
+            0 => None,
+            millis => Some(Duration::from_millis(millis)),
+        }
     }
 }

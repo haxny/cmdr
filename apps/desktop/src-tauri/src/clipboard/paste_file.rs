@@ -12,10 +12,13 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::file_system::write_operations::{MUTATION_REPLY_DEADLINE, MutationError, Replied, reply_or_hand_off};
+use crate::file_system::write_operations::{
+    MUTATION_REPLY_DEADLINE, MutationError, Operations, Replied, reply_or_hand_off,
+};
 use crate::operations_host::{operations, refuse_instant_not_installed};
 use cmdr_operation_log::types::Initiator;
 
+use super::payload::PastedContent;
 use super::{
     ClipboardPasteOutcome, ClipboardPasteSettled, ClipboardPayload, PasteClipboardReply, PastedClipboardFile,
     payload_to_content,
@@ -61,14 +64,25 @@ pub(crate) async fn write_payload_to_dir(
     let Some(content) = payload_to_content(payload) else {
         return Ok(None);
     };
-    let name = operations()
-        .map_err(refuse_instant_not_installed)?
+    let engine = operations().map_err(refuse_instant_not_installed)?;
+    write_content_on(engine, volume_id, dir, content).await.map(Some)
+}
+
+/// Writes already-picked `content` into `dir` on `engine`: [`write_payload_to_dir`]
+/// past its pick, on the engine the caller names.
+pub(crate) async fn write_content_on(
+    engine: &Operations,
+    volume_id: Option<String>,
+    dir: &Path,
+    content: PastedContent,
+) -> Result<PastedClipboardFile, MutationError> {
+    let name = engine
         .create_numbered_file(volume_id, dir, "pasted", content.ext, &content.bytes, Initiator::User)
         .await?;
-    Ok(Some(PastedClipboardFile {
+    Ok(PastedClipboardFile {
         name,
         kind: content.kind,
-    }))
+    })
 }
 
 #[cfg(test)]

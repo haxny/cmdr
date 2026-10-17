@@ -21,33 +21,27 @@ use super::journal;
 use super::state::WriteOperationState;
 use super::types::{VolumeCopyConfig, WriteOperationConfig};
 use super::{copy_volumes_with_progress, move_volumes_with_progress};
+use crate::file_system::write_operations::testing::{TestOperationLog, TestOperations};
 
-use crate::operation_log_host::TestJournalGuard;
 use cmdr_fs::volume::{InMemoryVolume, Volume};
-use cmdr_operation_log::capture::WriterJournal;
-use cmdr_operation_log::store::{open_read_connection, operation_log_db_path, read_operation, read_operation_items};
+use cmdr_operation_log::store::{open_read_connection, read_operation, read_operation_items};
 use cmdr_operation_log::types::{EntryType, ExecutionStatus, Initiator, OpKind, RollbackState, RowRole};
-use cmdr_operation_log::writer::OperationLogWriter;
 
-/// Install a fresh temp-DB journal as the process-global one; see the twin in
+/// An engine journaling into a fresh temp-DB log, and the log; see the twin in
 /// `journal_capture_tests.rs`.
-fn install_journal() -> (TestJournalGuard, tempfile::TempDir, std::path::PathBuf) {
-    let dir = tempfile::tempdir().expect("tempdir");
-    let db = operation_log_db_path(dir.path());
-    let writer = OperationLogWriter::spawn(&db).expect("spawn writer");
-    let guard = TestJournalGuard::install(Arc::new(WriterJournal::new(writer)));
-    (guard, dir, db)
+fn journaled() -> (TestOperations, TestOperationLog) {
+    let log = TestOperationLog::new("journal-capture-volume");
+    (TestOperations::journaling_into(&log), log)
 }
 
-fn state() -> Arc<WriteOperationState> {
-    Arc::new(WriteOperationState::new(Duration::from_millis(0)))
+/// A state on `engine` that reports every progress frame.
+fn state(engine: &TestOperations) -> Arc<WriteOperationState> {
+    Arc::new(engine.new_operation_state(Duration::ZERO))
 }
 
 /// Every distinct `volume_id` among the dirs referenced by `op_id`'s item rows.
-/// Scoped to the op rather than the whole `dirs` table: under plain `cargo test`
-/// a concurrent NON-journal write-op test can journal its own rows into the
-/// installed DB (only journal-installing tests serialize on `TestJournalGuard`),
-/// and a whole-table read would pick up its `root`-interned dirs.
+/// Scoped to the op rather than the whole `dirs` table, so the claim is about
+/// this operation's rows alone.
 fn dir_volume_ids(conn: &rusqlite::Connection, op_id: &str) -> Vec<String> {
     let mut stmt = conn
         .prepare(
@@ -71,7 +65,8 @@ fn in_memory(name: &str) -> Arc<InMemoryVolume> {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn volume_copy_journals_under_the_real_volume_ids_not_root() {
-    let (_journal, _jdir, jdb) = install_journal();
+    let (engine, log) = journaled();
+    let jdb = log.db();
     let source = in_memory("Src");
     source
         .create_file(std::path::Path::new("/a.txt"), b"aaa")
@@ -85,7 +80,9 @@ async fn volume_copy_journals_under_the_real_volume_ids_not_root() {
 
     let op_id = "op-vol-copy";
     let state = Arc::new(
-        WriteOperationState::new(Duration::from_millis(0)).with_journal_volumes("smb-src".into(), "smb-dst".into()),
+        engine
+            .new_operation_state(Duration::ZERO)
+            .with_journal_volumes("smb-src".into(), "smb-dst".into()),
     );
     journal::open_volume_op(
         state.scope(),
@@ -110,7 +107,7 @@ async fn volume_copy_journals_under_the_real_volume_ids_not_root() {
     .expect("volume copy");
     journal::finalize_op(state.scope(), OpKind::Copy, ExecutionStatus::Done);
 
-    let conn = open_read_connection(&jdb).expect("read conn");
+    let conn = open_read_connection(jdb).expect("read conn");
     let row = read_operation(&conn, op_id).expect("read").expect("op row");
     // The operation header carries the REAL volume ids + the AI-client provenance.
     assert_eq!(row.source_volume_id.as_deref(), Some("smb-src"));
@@ -139,7 +136,8 @@ async fn volume_copy_journals_under_the_real_volume_ids_not_root() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn overwriting_volume_copy_finalizes_not_rollbackable() {
-    let (_journal, _jdir, jdb) = install_journal();
+    let (engine, log) = journaled();
+    let jdb = log.db();
     let source = in_memory("Src");
     source
         .create_file(std::path::Path::new("/dup.txt"), b"new")
@@ -157,7 +155,9 @@ async fn overwriting_volume_copy_finalizes_not_rollbackable() {
         ..Default::default()
     };
     let state = Arc::new(
-        WriteOperationState::new(Duration::from_millis(0)).with_journal_volumes("smb-src".into(), "smb-dst".into()),
+        engine
+            .new_operation_state(Duration::ZERO)
+            .with_journal_volumes("smb-src".into(), "smb-dst".into()),
     );
     journal::open_volume_op(
         state.scope(),
@@ -182,7 +182,7 @@ async fn overwriting_volume_copy_finalizes_not_rollbackable() {
     .expect("volume copy");
     journal::finalize_op(state.scope(), OpKind::Copy, ExecutionStatus::Done);
 
-    let conn = open_read_connection(&jdb).expect("read conn");
+    let conn = open_read_connection(jdb).expect("read conn");
     let row = read_operation(&conn, op_id).expect("read").expect("op row");
     // Overwriting an existing dest ⇒ not rollbackable (the original is gone).
     assert_eq!(row.rollback_state, RollbackState::NotRollbackable);
@@ -195,7 +195,8 @@ async fn overwriting_volume_copy_finalizes_not_rollbackable() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn cross_volume_move_journals_per_leaf_move_rows() {
-    let (_journal, _jdir, jdb) = install_journal();
+    let (engine, log) = journaled();
+    let jdb = log.db();
     let source = in_memory("Src");
     source
         .create_file(std::path::Path::new("/one.txt"), b"1")
@@ -209,7 +210,9 @@ async fn cross_volume_move_journals_per_leaf_move_rows() {
 
     let op_id = "op-vol-move";
     let state = Arc::new(
-        WriteOperationState::new(Duration::from_millis(0)).with_journal_volumes("smb-src".into(), "smb-dst".into()),
+        engine
+            .new_operation_state(Duration::ZERO)
+            .with_journal_volumes("smb-src".into(), "smb-dst".into()),
     );
     journal::open_volume_op(
         state.scope(),
@@ -237,7 +240,7 @@ async fn cross_volume_move_journals_per_leaf_move_rows() {
     .expect("volume move");
     journal::finalize_op(state.scope(), OpKind::Move, ExecutionStatus::Done);
 
-    let conn = open_read_connection(&jdb).expect("read conn");
+    let conn = open_read_connection(jdb).expect("read conn");
     let row = read_operation(&conn, op_id).expect("read").expect("op row");
     assert_eq!(row.kind, OpKind::Move);
     // A cross-volume move is journaled per leaf: no overwrite ⇒ rollbackable.
@@ -259,7 +262,8 @@ async fn cross_volume_move_journals_per_leaf_move_rows() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn volume_delete_journals_per_leaf_under_the_real_volume_id() {
-    let (_journal, _jdir, jdb) = install_journal();
+    let (engine, log) = journaled();
+    let jdb = log.db();
     let volume = in_memory("Src");
     volume
         .create_file(std::path::Path::new("/gone1.txt"), b"x")
@@ -271,7 +275,7 @@ async fn volume_delete_journals_per_leaf_under_the_real_volume_id() {
         .expect("g2");
 
     let op_id = "op-vol-delete";
-    let state = state();
+    let state = state(&engine);
     journal::open_volume_op(
         state.scope(),
         op_id,
@@ -297,7 +301,7 @@ async fn volume_delete_journals_per_leaf_under_the_real_volume_id() {
     .expect("volume delete");
     journal::finalize_op(state.scope(), OpKind::Delete, ExecutionStatus::Done);
 
-    let conn = open_read_connection(&jdb).expect("read conn");
+    let conn = open_read_connection(jdb).expect("read conn");
     let row = read_operation(&conn, op_id).expect("read").expect("op row");
     assert_eq!(row.kind, OpKind::Delete);
     // Delete is never rollbackable.
@@ -329,9 +333,9 @@ use cmdr_operation_log::types::ItemOutcome;
 
 /// A real volume copy, journaled to a real DB, reversible through the real gate.
 struct VolumeLoop {
-    _journal: TestJournalGuard,
-    writer_journal: Arc<WriterJournal>,
-    _journal_dir: tempfile::TempDir,
+    /// The engine the copy runs on, journaling into `log`.
+    engine: TestOperations,
+    log: TestOperationLog,
     vm: VolumeManager,
     source: Arc<InMemoryVolume>,
     dest: Arc<InMemoryVolume>,
@@ -340,10 +344,7 @@ struct VolumeLoop {
 
 impl VolumeLoop {
     fn new(op_id: &str) -> Self {
-        let journal_dir = tempfile::tempdir().expect("journal dir");
-        let writer = OperationLogWriter::spawn(&operation_log_db_path(journal_dir.path())).expect("spawn writer");
-        let writer_journal = Arc::new(WriterJournal::new(writer));
-        let journal = TestJournalGuard::install(writer_journal.clone());
+        let (engine, log) = journaled();
 
         let source = in_memory("Src");
         let dest = in_memory("Dst");
@@ -352,9 +353,8 @@ impl VolumeLoop {
         vm.register("smb-dst", Arc::clone(&dest) as Arc<dyn Volume>);
 
         VolumeLoop {
-            _journal: journal,
-            writer_journal,
-            _journal_dir: journal_dir,
+            engine,
+            log,
             vm,
             source,
             dest,
@@ -414,7 +414,9 @@ impl VolumeLoop {
         F: FnOnce(crate::file_system::write_operations::state::IntentCell) -> Arc<dyn OperationEventSink>,
     {
         let state = Arc::new(
-            WriteOperationState::new(Duration::from_millis(0)).with_journal_volumes("smb-src".into(), "smb-dst".into()),
+            self.engine
+                .new_operation_state(Duration::ZERO)
+                .with_journal_volumes("smb-src".into(), "smb-dst".into()),
         );
         let events = make_events(state.intent().clone());
         journal::open_volume_op(
@@ -449,13 +451,13 @@ impl VolumeLoop {
     }
 
     fn items(&self) -> Vec<cmdr_operation_log::store::OperationItemRow> {
-        let conn = open_read_connection(self.writer_journal.writer().db_path()).expect("read conn");
+        let conn = open_read_connection(self.log.db()).expect("read conn");
         read_operation_items(&conn, &self.op_id, 1_000).expect("items")
     }
 
     /// The dest paths this operation journaled, by entry type.
     fn journaled_dests(&self, entry_type: EntryType) -> Vec<String> {
-        let conn = open_read_connection(self.writer_journal.writer().db_path()).expect("read conn");
+        let conn = open_read_connection(self.log.db()).expect("read conn");
         let detail = cmdr_operation_log::query::get_operation(&conn, &self.op_id, 1_000, 0)
             .expect("read detail")
             .expect("the copy is journaled");
@@ -471,9 +473,9 @@ impl VolumeLoop {
 
     /// Ask for the reversal the way the app does: the gate decides, then the engine runs.
     async fn rollback(&self) -> RollbackReport {
-        let writer = self.writer_journal.writer();
+        let writer = self.log.writer();
         let plan = rollback_operation(&self.vm, writer, &self.op_id, |_plan| Ok(())).expect("the copy is reversible");
-        let reversal = Reversal::new("volume-journal-test");
+        let reversal = Reversal::on(&self.engine, "volume-journal-test");
         execute_rollback(
             &self.vm,
             writer,

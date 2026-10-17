@@ -1,5 +1,5 @@
 //! Integration tests for capture at the chokepoint (the capture layer): drive a real local-FS
-//! op through the pipeline with a temp-DB journal installed globally, then read
+//! op through the pipeline on an engine journaling into a temp DB, then read
 //! back the journaled operation + item rows.
 //!
 //! These exercise the record points (`single_item.rs`, `walker.rs`,
@@ -12,41 +12,36 @@ use std::time::Duration;
 use super::delete::delete_files_with_progress_inner;
 use super::event_sinks::CollectorEventSink;
 use super::journal;
-use super::state::{WriteOperationState, register_operation_status, unregister_operation_status};
+use super::state::WriteOperationState;
 use super::transfer::copy::copy_files_with_progress_inner;
 use super::transfer::move_op::move_files_with_progress_inner;
 use super::types::{WriteOperationConfig, WriteOperationType};
 
-use crate::file_system::write_operations::installed;
-use crate::operation_log_host::TestJournalGuard;
-use cmdr_operation_log::capture::WriterJournal;
+use crate::file_system::write_operations::testing::{TestOperationLog, TestOperations};
 use cmdr_operation_log::store::{open_read_connection, operation_log_db_path, read_operation, read_operation_items};
 use cmdr_operation_log::types::{EntryType, ExecutionStatus, Initiator, OpKind, RollbackState, RowRole};
 use cmdr_operation_log::writer::OperationLogWriter;
 
-/// Install a fresh temp-DB journal as the process-global one and hand back the
-/// [`TestJournalGuard`] (teardown + serialization), the temp dir (kept alive by
-/// the caller), and the DB path. nextest isolates each test in its own process;
-/// under plain `cargo test` the guard's lock is what keeps parallel journal
-/// tests from clobbering each other's slot mid-operation. Reads after
+/// An engine journaling into a fresh temp-DB log, and the log (kept alive by
+/// the caller, `log.db()` to read rows back). Reads after
 /// `journal::finalize_op` don't need an explicit clear first: finalize is a
 /// synchronous round-trip through the writer thread, so every prior row is
 /// committed by the time it returns.
-fn install_journal() -> (TestJournalGuard, tempfile::TempDir, std::path::PathBuf) {
-    let dir = tempfile::tempdir().expect("tempdir");
-    let db = operation_log_db_path(dir.path());
-    let writer = OperationLogWriter::spawn(&db).expect("spawn writer");
-    let guard = TestJournalGuard::install(Arc::new(WriterJournal::new(writer)));
-    (guard, dir, db)
+fn journaled() -> (TestOperations, TestOperationLog) {
+    let log = TestOperationLog::new("journal-capture");
+    (TestOperations::journaling_into(&log), log)
 }
 
-fn state() -> Arc<WriteOperationState> {
-    Arc::new(WriteOperationState::new(Duration::from_millis(0)))
+/// A state on `engine` that reports every progress frame, so the status cache
+/// the header refines from sees the final counts.
+fn state(engine: &TestOperations) -> Arc<WriteOperationState> {
+    Arc::new(engine.new_operation_state(Duration::ZERO))
 }
 
 #[test]
 fn grouped_copy_journals_leaf_files_and_created_dir_rows() {
-    let (_journal, _jdir, jdb) = install_journal();
+    let (engine, log) = journaled();
+    let jdb = log.db();
     let work = tempfile::tempdir().expect("work");
     // A source tree: src/a.txt and src/sub/b.txt.
     let src = work.path().join("src");
@@ -57,14 +52,14 @@ fn grouped_copy_journals_leaf_files_and_created_dir_rows() {
     std::fs::create_dir_all(&dst).expect("mk dst");
 
     let op_id = "op-copy-smoke";
-    let st = state();
+    let st = state(&engine);
     journal::open_local_op(st.scope(), op_id, OpKind::Copy, Initiator::User, 0, Some("root"));
     let events = CollectorEventSink::new();
     let cfg = WriteOperationConfig::default();
     copy_files_with_progress_inner(&events, op_id, &st, std::slice::from_ref(&src), &dst, &cfg).expect("copy");
     journal::finalize_op(st.scope(), OpKind::Copy, ExecutionStatus::Done);
 
-    let conn = open_read_connection(&jdb).expect("read conn");
+    let conn = open_read_connection(jdb).expect("read conn");
     let row = read_operation(&conn, op_id).expect("read op").expect("op row");
     assert_eq!(row.kind, OpKind::Copy);
     assert_eq!(row.execution_status, ExecutionStatus::Done);
@@ -98,7 +93,8 @@ fn grouped_copy_journals_leaf_files_and_created_dir_rows() {
 /// inverse operation's own header with a zero.
 #[test]
 fn a_finished_same_fs_move_reports_the_items_it_moved() {
-    let (_journal, _jdir, jdb) = install_journal();
+    let (engine, log) = journaled();
+    let jdb = log.db();
     let work = tempfile::tempdir().expect("work");
     let src = work.path().join("src");
     std::fs::create_dir_all(&src).expect("mk src");
@@ -107,16 +103,16 @@ fn a_finished_same_fs_move_reports_the_items_it_moved() {
     std::fs::create_dir_all(&dst).expect("mk dst");
 
     let op_id = "op-move-header";
-    register_operation_status(op_id, WriteOperationType::Move, vec![]);
-    let st = state();
+    engine.status().register(op_id, WriteOperationType::Move, vec![]);
+    let st = state(&engine);
     journal::open_local_op(st.scope(), op_id, OpKind::Move, Initiator::User, 1, Some("root"));
     let events = CollectorEventSink::new();
     let cfg = WriteOperationConfig::default();
     move_files_with_progress_inner(&events, op_id, &st, std::slice::from_ref(&src), &dst, &cfg).expect("move");
     journal::finalize_op(st.scope(), OpKind::Move, ExecutionStatus::Done);
-    unregister_operation_status(op_id);
+    engine.status().unregister(op_id);
 
-    let conn = open_read_connection(&jdb).expect("read conn");
+    let conn = open_read_connection(jdb).expect("read conn");
     let row = read_operation(&conn, op_id).expect("read op").expect("op row");
     assert_eq!(row.item_count, 1, "one top-level item was moved");
     assert_eq!(
@@ -133,7 +129,8 @@ fn a_finished_same_fs_move_reports_the_items_it_moved() {
 /// zero here would show "Copy 0 items".
 #[test]
 fn local_copy_header_carries_planned_count_items_done_and_dest_volume() {
-    let (_journal, _jdir, jdb) = install_journal();
+    let (engine, log) = journaled();
+    let jdb = log.db();
     let work = tempfile::tempdir().expect("work");
     // One top-level source directory holding three files, so the scanned leaf
     // total (3) differs from the provisional top-level count (1) the open uses —
@@ -150,20 +147,18 @@ fn local_copy_header_carries_planned_count_items_done_and_dest_volume() {
     // The status cache must exist for the copy's progress updates to land and for
     // finalize to read the terminal totals (the real pipeline registers this; the
     // direct-call tests above don't, so their headers stay at the open value).
-    register_operation_status(op_id, WriteOperationType::Copy, vec![]);
+    engine.status().register(op_id, WriteOperationType::Copy, vec![]);
     // Open with the provisional top-level count (1 source dir), dest on "root".
-    let st = state();
+    let st = state(&engine);
     journal::open_local_op(st.scope(), op_id, OpKind::Copy, Initiator::User, 1, Some("root"));
     let events = CollectorEventSink::new();
     let cfg = WriteOperationConfig::default();
     copy_files_with_progress_inner(&events, op_id, &st, std::slice::from_ref(&src), &dst, &cfg).expect("copy");
-    let status = installed()
-        .get_operation_status(op_id)
-        .expect("status present after copy");
+    let status = engine.get_operation_status(op_id).expect("status present after copy");
     journal::finalize_op(st.scope(), OpKind::Copy, ExecutionStatus::Done);
-    unregister_operation_status(op_id);
+    engine.status().unregister(op_id);
 
-    let conn = open_read_connection(&jdb).expect("read conn");
+    let conn = open_read_connection(jdb).expect("read conn");
     let row = read_operation(&conn, op_id).expect("read op").expect("op row");
     assert_eq!(
         row.item_count, status.files_total as u64,
@@ -191,7 +186,8 @@ fn local_copy_header_carries_planned_count_items_done_and_dest_volume() {
 
 #[test]
 fn overwriting_copy_finalizes_not_rollbackable() {
-    let (_journal, _jdir, jdb) = install_journal();
+    let (engine, log) = journaled();
+    let jdb = log.db();
     let work = tempfile::tempdir().expect("work");
     let src = work.path().join("src");
     std::fs::create_dir_all(&src).expect("mk src");
@@ -202,7 +198,7 @@ fn overwriting_copy_finalizes_not_rollbackable() {
     std::fs::write(dst.join("src").join("a.txt"), b"old").expect("old");
 
     let op_id = "op-copy-overwrite";
-    let st = state();
+    let st = state(&engine);
     journal::open_local_op(st.scope(), op_id, OpKind::Copy, Initiator::User, 0, Some("root"));
     let events = CollectorEventSink::new();
     let cfg = WriteOperationConfig {
@@ -212,7 +208,7 @@ fn overwriting_copy_finalizes_not_rollbackable() {
     copy_files_with_progress_inner(&events, op_id, &st, std::slice::from_ref(&src), &dst, &cfg).expect("copy");
     journal::finalize_op(st.scope(), OpKind::Copy, ExecutionStatus::Done);
 
-    let conn = open_read_connection(&jdb).expect("read conn");
+    let conn = open_read_connection(jdb).expect("read conn");
     let row = read_operation(&conn, op_id).expect("read op").expect("op row");
     assert_eq!(
         row.rollback_state,
@@ -223,7 +219,8 @@ fn overwriting_copy_finalizes_not_rollbackable() {
 
 #[test]
 fn same_fs_move_journals_the_top_level_item_as_rollback_unit() {
-    let (_journal, _jdir, jdb) = install_journal();
+    let (engine, log) = journaled();
+    let jdb = log.db();
     let work = tempfile::tempdir().expect("work");
     // Source and dest in the same tempdir ⇒ same filesystem ⇒ rename path.
     let src = work.path().join("photos");
@@ -233,14 +230,14 @@ fn same_fs_move_journals_the_top_level_item_as_rollback_unit() {
     std::fs::create_dir_all(&dst).expect("mk dst");
 
     let op_id = "op-move-smoke";
-    let st = state();
+    let st = state(&engine);
     journal::open_local_op(st.scope(), op_id, OpKind::Move, Initiator::User, 0, Some("root"));
     let events = CollectorEventSink::new();
     let cfg = WriteOperationConfig::default();
     move_files_with_progress_inner(&events, op_id, &st, std::slice::from_ref(&src), &dst, &cfg).expect("move");
     journal::finalize_op(st.scope(), OpKind::Move, ExecutionStatus::Done);
 
-    let conn = open_read_connection(&jdb).expect("read conn");
+    let conn = open_read_connection(jdb).expect("read conn");
     let row = read_operation(&conn, op_id).expect("read op").expect("op row");
     assert_eq!(row.kind, OpKind::Move);
     assert_eq!(row.rollback_state, RollbackState::Rollbackable);
@@ -259,7 +256,8 @@ fn initiator_threads_from_the_op_into_the_journal_row() {
     // An AI-client-initiated copy records `ai_client`; the default path records
     // `user`. Provenance crosses as a typed enum, not a string.
     for initiator in [Initiator::User, Initiator::AiClient] {
-        let (journal, jdir, jdb) = install_journal();
+        let (engine, log) = journaled();
+        let jdb = log.db();
         let work = tempfile::tempdir().expect("work");
         let src = work.path().join("src");
         std::fs::create_dir_all(&src).expect("mk src");
@@ -268,27 +266,23 @@ fn initiator_threads_from_the_op_into_the_journal_row() {
         std::fs::create_dir_all(&dst).expect("mk dst");
 
         let op_id = "op-initiator";
-        let st = state();
+        let st = state(&engine);
         journal::open_local_op(st.scope(), op_id, OpKind::Copy, initiator, 0, Some("root"));
         let events = CollectorEventSink::new();
         copy_files_with_progress_inner(&events, op_id, &st, &[src], &dst, &WriteOperationConfig::default())
             .expect("copy");
         journal::finalize_op(st.scope(), OpKind::Copy, ExecutionStatus::Done);
 
-        let conn = open_read_connection(&jdb).expect("read conn");
+        let conn = open_read_connection(jdb).expect("read conn");
         let row = read_operation(&conn, op_id).expect("read").expect("row");
         assert_eq!(row.initiator, initiator);
-        // Shut the journal's writer down before its temp dir goes away, then
-        // release the lock so the next iteration can re-install.
-        journal.clear();
-        drop(journal);
-        drop(jdir);
     }
 }
 
 #[test]
 fn delete_journals_search_leaves_and_stays_not_rollbackable() {
-    let (_journal, _jdir, jdb) = install_journal();
+    let (engine, log) = journaled();
+    let jdb = log.db();
     let work = tempfile::tempdir().expect("work");
     let a = work.path().join("dog.jpg");
     let b = work.path().join("cat.jpg");
@@ -296,14 +290,14 @@ fn delete_journals_search_leaves_and_stays_not_rollbackable() {
     std::fs::write(&b, b"cat").expect("b");
 
     let op_id = "op-delete-smoke";
-    let st = state();
+    let st = state(&engine);
     journal::open_local_op(st.scope(), op_id, OpKind::Delete, Initiator::User, 0, None);
     let events = CollectorEventSink::new();
     let cfg = WriteOperationConfig::default();
     delete_files_with_progress_inner(&events, op_id, &st, &[a.clone(), b.clone()], &cfg).expect("delete");
     journal::finalize_op(st.scope(), OpKind::Delete, ExecutionStatus::Done);
 
-    let conn = open_read_connection(&jdb).expect("read conn");
+    let conn = open_read_connection(jdb).expect("read conn");
     let row = read_operation(&conn, op_id).expect("read op").expect("op row");
     // Delete is never rollbackable.
     assert_eq!(row.rollback_state, RollbackState::NotRollbackable);
@@ -346,9 +340,9 @@ fn install_canned_leaves(coverage: SearchCoverage, reason: Option<SearchCoverage
 }
 
 #[cfg(target_os = "macos")]
-fn trash(op_id: &str, sources: &[std::path::PathBuf]) {
+fn trash(engine: &TestOperations, op_id: &str, sources: &[std::path::PathBuf]) {
     use super::delete::trash::trash_files_with_progress;
-    let st = state();
+    let st = state(engine);
     journal::open_local_op(st.scope(), op_id, OpKind::Trash, Initiator::User, 0, None);
     let events = CollectorEventSink::new();
     // A missing source in the batch is a per-item failure, not a whole-op failure.
@@ -363,7 +357,8 @@ fn trash(op_id: &str, sources: &[std::path::PathBuf]) {
 #[cfg(target_os = "macos")]
 #[test]
 fn trashed_dir_records_search_leaves_and_stays_full() {
-    let (_journal, _jdir, jdb) = install_journal();
+    let (engine, log) = journaled();
+    let jdb = log.db();
     let work = tempfile::tempdir().expect("work");
     let dir = work.path().join("photos");
     std::fs::create_dir_all(dir.join("sub")).expect("mk");
@@ -371,9 +366,9 @@ fn trashed_dir_records_search_leaves_and_stays_full() {
     std::fs::write(dir.join("sub").join("b.jpg"), b"b").expect("b");
 
     install_canned_leaves(SearchCoverage::Full, None, &["a.jpg", "sub/b.jpg"]);
-    trash("op-trash-leaves", std::slice::from_ref(&dir));
+    trash(&engine, "op-trash-leaves", std::slice::from_ref(&dir));
 
-    let conn = open_read_connection(&jdb).expect("read conn");
+    let conn = open_read_connection(jdb).expect("read conn");
     let row = read_operation(&conn, "op-trash-leaves").expect("read").expect("row");
     assert_eq!(row.kind, OpKind::Trash);
     assert_eq!(row.rollback_state, RollbackState::Rollbackable);
@@ -397,7 +392,8 @@ fn trashed_dir_records_search_leaves_and_stays_full() {
 #[cfg(target_os = "macos")]
 #[test]
 fn failed_trash_item_records_no_search_leaves_but_a_sibling_keeps_its_own() {
-    let (_journal, _jdir, jdb) = install_journal();
+    let (engine, log) = journaled();
+    let jdb = log.db();
     let work = tempfile::tempdir().expect("work");
     let good = work.path().join("good");
     std::fs::create_dir_all(&good).expect("mk good");
@@ -406,9 +402,9 @@ fn failed_trash_item_records_no_search_leaves_but_a_sibling_keeps_its_own() {
     let missing = work.path().join("gone");
 
     install_canned_leaves(SearchCoverage::Full, None, &["keep.jpg"]);
-    trash("op-trash-partial", &[good.clone(), missing.clone()]);
+    trash(&engine, "op-trash-partial", &[good.clone(), missing.clone()]);
 
-    let conn = open_read_connection(&jdb).expect("read conn");
+    let conn = open_read_connection(jdb).expect("read conn");
     let items = read_operation_items(&conn, "op-trash-partial", 1000).expect("items");
     // The succeeded item: its top-level row + its one search leaf.
     assert!(
@@ -444,8 +440,8 @@ fn make_files(n: usize) -> (tempfile::TempDir, Vec<std::path::PathBuf>) {
 }
 
 /// Time a delete of `paths` with the op id already opened/finalized around it.
-fn time_delete(op_id: &str, paths: &[std::path::PathBuf]) -> Duration {
-    let st = state();
+fn time_delete(engine: &TestOperations, op_id: &str, paths: &[std::path::PathBuf]) -> Duration {
+    let st = state(engine);
     journal::open_local_op(st.scope(), op_id, OpKind::Delete, Initiator::User, 0, None);
     let events = CollectorEventSink::new();
     let t = std::time::Instant::now();
@@ -474,38 +470,37 @@ fn time_delete(op_id: &str, paths: &[std::path::PathBuf]) -> Duration {
 fn capture_stays_off_the_hot_path_under_writer_load() {
     const N: usize = 1_500;
 
-    // One guard across all three arms (`install_journal` would deadlock on the
-    // already-held lock): arm (a) runs journal-less under the lock so no parallel
-    // test's journal can capture the baseline, then (b)/(c) swap journals in.
-    let journal = TestJournalGuard::hold_empty();
+    // Each arm runs on an engine of its own: (a) journals nothing, (b) and (c)
+    // journal into a log of their own.
 
     // Arm (a): no journal — the baseline op cost (pure file I/O).
     let (_da, pa) = make_files(N);
     let events = CollectorEventSink::new();
+    let unjournaled = TestOperations::new();
     let t = std::time::Instant::now();
-    delete_files_with_progress_inner(&events, "perf-a", &state(), &pa, &WriteOperationConfig::default())
-        .expect("delete a");
+    delete_files_with_progress_inner(
+        &events,
+        "perf-a",
+        &state(&unjournaled),
+        &pa,
+        &WriteOperationConfig::default(),
+    )
+    .expect("delete a");
     let base = t.elapsed();
 
     // Arm (b): a keeping-up journal.
-    let _jb = tempfile::tempdir().expect("jb tempdir");
-    let jdb = operation_log_db_path(_jb.path());
-    journal.set(Arc::new(WriterJournal::new(
-        OperationLogWriter::spawn(&jdb).expect("spawn writer"),
-    )));
+    let (kept_up_engine, kept_up_log) = journaled();
     let (_db, pb) = make_files(N);
-    let kept_up = time_delete("perf-b", &pb);
+    let kept_up = time_delete(&kept_up_engine, "perf-b", &pb);
     {
-        let conn = open_read_connection(&jdb).expect("read");
+        let conn = open_read_connection(kept_up_log.db()).expect("read");
         let items = read_operation_items(&conn, "perf-b", 100_000).expect("items");
         assert_eq!(items.len(), N, "every deleted leaf journaled under normal load");
     }
-    journal.clear();
 
     // Arm (c): a journal whose writer is under concurrent prune + vacuum load.
-    let cdir = tempfile::tempdir().expect("cdir");
-    let cdb = operation_log_db_path(cdir.path());
-    let writer = OperationLogWriter::spawn(&cdb).expect("spawn writer");
+    let (loaded_engine, loaded_log) = journaled();
+    let writer = loaded_log.writer().clone();
     // Seed churn so the freelist has pages for `incremental_vacuum` to reclaim.
     for i in 0..40 {
         let id = format!("seed-{i}");
@@ -524,7 +519,6 @@ fn capture_stays_off_the_hot_path_under_writer_load() {
             .expect("seed open");
     }
     writer.flush_blocking().expect("flush seed");
-    journal.set(Arc::new(WriterJournal::new(writer.clone())));
 
     let stop = Arc::new(std::sync::atomic::AtomicBool::new(false));
     let pruner = {
@@ -543,10 +537,9 @@ fn capture_stays_off_the_hot_path_under_writer_load() {
     };
 
     let (_dc, pc) = make_files(N);
-    let stalled = time_delete("perf-c", &pc);
+    let stalled = time_delete(&loaded_engine, "perf-c", &pc);
     stop.store(true, std::sync::atomic::Ordering::Relaxed);
     pruner.join().expect("join pruner");
-    journal.clear();
 
     // Generous budget: journaling must not MULTIPLY op time. A synchronous capture
     // would make (b)/(c) an order of magnitude over the baseline; a bounded-channel
@@ -626,13 +619,12 @@ fn bench_persist_throughput() {
 fn bench_same_fs_move_latency_delta() {
     const K: usize = 200;
 
-    // One guard across both arms (`install_journal` would deadlock on the
-    // already-held lock): the OFF arm runs journal-less under the lock, then the
-    // ON arm swaps a journal in.
-    let journal = TestJournalGuard::hold_empty();
+    // Each arm runs on an engine of its own: OFF journals nothing, ON journals
+    // into a log of its own.
 
     // OFF: no journal — the baseline rename cost.
     let off = {
+        let engine = TestOperations::new();
         let work = tempfile::tempdir().expect("work");
         let dst = work.path().join("dst");
         std::fs::create_dir_all(&dst).expect("dst");
@@ -650,7 +642,7 @@ fn bench_same_fs_move_latency_delta() {
             move_files_with_progress_inner(
                 &events,
                 &format!("off-{i}"),
-                &state(),
+                &state(&engine),
                 std::slice::from_ref(s),
                 &dst,
                 &WriteOperationConfig::default(),
@@ -662,10 +654,7 @@ fn bench_same_fs_move_latency_delta() {
 
     // ON: journal installed (no drive index registered, so each move records one
     // top-level row + a fast VolumeNotLive enumerate).
-    let _jdir = tempfile::tempdir().expect("jdir");
-    journal.set(Arc::new(WriterJournal::new(
-        OperationLogWriter::spawn(&operation_log_db_path(_jdir.path())).expect("spawn writer"),
-    )));
+    let (engine, _log) = journaled();
     let on = {
         let work = tempfile::tempdir().expect("work");
         let dst = work.path().join("dst");
@@ -682,7 +671,7 @@ fn bench_same_fs_move_latency_delta() {
         let t = std::time::Instant::now();
         for (i, s) in srcs.iter().enumerate() {
             let id = format!("on-{i}");
-            let st = state();
+            let st = state(&engine);
             journal::open_local_op(st.scope(), &id, OpKind::Move, Initiator::User, 0, Some("root"));
             move_files_with_progress_inner(
                 &events,
@@ -710,7 +699,8 @@ fn bench_same_fs_move_latency_delta() {
 #[test]
 fn same_fs_move_dir_records_search_leaves() {
     use super::transfer::move_op::move_files_with_progress_inner;
-    let (_journal, _jdir, jdb) = install_journal();
+    let (engine, log) = journaled();
+    let jdb = log.db();
     let work = tempfile::tempdir().expect("work");
     let src = work.path().join("photos");
     std::fs::create_dir_all(&src).expect("mk src");
@@ -720,7 +710,7 @@ fn same_fs_move_dir_records_search_leaves() {
 
     install_canned_leaves(SearchCoverage::Full, None, &["p.jpg"]);
     let op_id = "op-move-leaves";
-    let st = state();
+    let st = state(&engine);
     journal::open_local_op(st.scope(), op_id, OpKind::Move, Initiator::User, 0, Some("root"));
     let events = CollectorEventSink::new();
     move_files_with_progress_inner(
@@ -735,7 +725,7 @@ fn same_fs_move_dir_records_search_leaves() {
     journal::finalize_op(st.scope(), OpKind::Move, ExecutionStatus::Done);
     super::journal_search::test_hook::clear();
 
-    let conn = open_read_connection(&jdb).expect("read conn");
+    let conn = open_read_connection(jdb).expect("read conn");
     let items = read_operation_items(&conn, op_id, 1000).expect("items");
     let units: Vec<_> = items.iter().filter(|i| i.row_role == RowRole::RollbackUnit).collect();
     let leaves: Vec<_> = items.iter().filter(|i| i.row_role == RowRole::SearchOnly).collect();
@@ -750,16 +740,17 @@ fn same_fs_move_dir_records_search_leaves() {
 #[cfg(target_os = "macos")]
 #[test]
 fn over_cap_trash_is_top_level_only_capped_but_still_rollbackable() {
-    let (_journal, _jdir, jdb) = install_journal();
+    let (engine, log) = journaled();
+    let jdb = log.db();
     let work = tempfile::tempdir().expect("work");
     let dir = work.path().join("huge");
     std::fs::create_dir_all(&dir).expect("mk");
     std::fs::write(dir.join("x.bin"), b"x").expect("x");
 
     install_canned_leaves(SearchCoverage::TopLevelOnly, Some(SearchCoverageReason::Capped), &[]);
-    trash("op-trash-capped", std::slice::from_ref(&dir));
+    trash(&engine, "op-trash-capped", std::slice::from_ref(&dir));
 
-    let conn = open_read_connection(&jdb).expect("read conn");
+    let conn = open_read_connection(jdb).expect("read conn");
     let row = read_operation(&conn, "op-trash-capped").expect("read").expect("row");
     assert_eq!(row.search_coverage, SearchCoverage::TopLevelOnly);
     assert_eq!(row.search_coverage_reason, Some(SearchCoverageReason::Capped));

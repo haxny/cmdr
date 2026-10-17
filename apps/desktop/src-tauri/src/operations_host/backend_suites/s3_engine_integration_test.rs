@@ -21,25 +21,22 @@ use cmdr_s3::volume::testing::{
 };
 
 use super::network_gated_source_test_support::{gated_files, gated_upload};
-use super::network_transfer_test_support::{budget, read_all, run_copy, sha256, start_copy};
+use super::network_transfer_test_support::{budget, read_all, run_copy, run_copy_on, sha256, start_copy};
 use crate::file_system::VolumeManager;
 use crate::file_system::volume::manager::get_volume_manager;
-use crate::file_system::write_operations::testing::{CollectorEventSink, Reversal, installed};
+use crate::file_system::write_operations::testing::{CollectorEventSink, Reversal, TestOperationLog};
 use crate::file_system::write_operations::{
-    ConflictResolution, OperationEventSink, ScanCostFacts, VolumeCopyConfig, WriteOperationConfig,
+    ConflictResolution, OperationEventSink, Operations, ScanCostFacts, VolumeCopyConfig, WriteOperationConfig,
 };
+use crate::operations_host::app_engine;
 
-use crate::operation_log_host::TestJournalGuard;
 use crate::s3_costs::{CostedOperation, planned_workloads};
 use crate::test_support::TestDir;
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::volume::ScannedFile;
 use cmdr_local::LocalPosixVolume;
-use cmdr_operation_log::capture::WriterJournal;
 use cmdr_operation_log::rollback::{execute_rollback, rollback_operation};
-use cmdr_operation_log::store::operation_log_db_path;
 use cmdr_operation_log::types::Initiator;
-use cmdr_operation_log::writer::OperationLogWriter;
 
 const MIB: usize = 1024 * 1024;
 
@@ -108,7 +105,7 @@ pub(super) async fn a_cancel_mid_multipart_leaves_no_object_and_no_upload(target
         },
     )
     .await;
-    installed().cancel_write_operation(&running.operation_id, false);
+    app_engine().cancel_write_operation(&running.operation_id, false);
     source.gate.add_permits(100_000);
     running.settle().await;
 
@@ -165,7 +162,7 @@ pub(super) async fn a_cancelled_overwrite_keeps_the_original(target: &S3Target) 
         || source.handed_out.load(std::sync::atomic::Ordering::SeqCst) >= 4,
     )
     .await;
-    installed().cancel_write_operation(&running.operation_id, false);
+    app_engine().cancel_write_operation(&running.operation_id, false);
     source.gate.add_permits(100_000);
     running.settle().await;
 
@@ -206,7 +203,7 @@ pub(super) async fn a_paused_upload_resumes_and_lands(target: &S3Target) {
     })
     .await;
     assert!(
-        installed().pause_write_operation(&running.operation_id),
+        app_engine().pause_write_operation(&running.operation_id),
         "the upload is parked on the gate, so it's still running to pause"
     );
     source.gate.add_permits(100_000);
@@ -214,7 +211,7 @@ pub(super) async fn a_paused_upload_resumes_and_lands(target: &S3Target) {
         running.events.complete.lock_ignore_poison().is_empty(),
         "a paused upload doesn't finish"
     );
-    assert!(installed().resume_write_operation(&running.operation_id));
+    assert!(app_engine().resume_write_operation(&running.operation_id));
     running.settle().await;
     running.assert_no_errors();
 
@@ -227,23 +224,11 @@ pub(super) async fn a_paused_upload_resumes_and_lands(target: &S3Target) {
 
 // ── Rollback ─────────────────────────────────────────────────────────
 
-/// The journal a rollback reads, installed as the process's own for the
-/// cell's lifetime.
-struct Journal {
-    _guard: TestJournalGuard,
-    writer: Arc<WriterJournal>,
-    _dir: tempfile::TempDir,
-}
-
-fn install_journal() -> Journal {
-    let dir = tempfile::tempdir().expect("a journal dir");
-    let writer = OperationLogWriter::spawn(&operation_log_db_path(dir.path())).expect("the journal writer spawns");
-    let writer = Arc::new(WriterJournal::new(writer));
-    Journal {
-        _guard: TestJournalGuard::install(writer.clone()),
-        writer,
-        _dir: dir,
-    }
+/// The journal a rollback reads, and an engine of the cell's own (the app's
+/// answers) journaling into it.
+fn journaled() -> (Operations, TestOperationLog) {
+    let log = TestOperationLog::new("s3-rollback-journal");
+    (crate::operations_host::test_engine_journaling_into(&log), log)
 }
 
 /// A local folder `tree/` of three files, as a volume.
@@ -279,7 +264,7 @@ fn local_tree(label: &str) -> LocalTree {
 /// reversal verifies each object it wrote and deletes it, leaving the prefix
 /// as it found it.
 pub(super) async fn a_finished_copy_onto_a_bucket_rolls_back(target: &S3Target) {
-    let journal = install_journal();
+    let (engine, journal) = journaled();
     let (volume, prefix, dir) = small_parts(target, "rollback-finished").await;
     let tree = local_tree("s3_rollback_finished");
     let (local, files) = (Arc::clone(&tree.volume), &tree.files);
@@ -288,7 +273,8 @@ pub(super) async fn a_finished_copy_onto_a_bucket_rolls_back(target: &S3Target) 
     vm.register(&format!("{label}-source"), Arc::clone(&local));
     vm.register(&format!("{label}-dest"), Arc::clone(&volume) as Arc<dyn Volume>);
 
-    let running = run_copy(
+    let running = run_copy_on(
+        &engine,
         &label,
         Arc::clone(&local),
         vec![PathBuf::from("tree")],
@@ -303,11 +289,11 @@ pub(super) async fn a_finished_copy_onto_a_bucket_rolls_back(target: &S3Target) 
         );
     }
 
-    let writer = journal.writer.writer();
+    let writer = journal.writer();
     writer.flush_blocking().expect("the journal flushes");
     let plan = rollback_operation(&vm, writer, &running.operation_id, |_plan| Ok(()))
         .unwrap_or_else(|refusal| panic!("the finished copy must be reversible, got {refusal:?}"));
-    let reversal = Reversal::new("s3-rollback-finished");
+    let reversal = Reversal::on(&engine, "s3-rollback-finished");
     let report = execute_rollback(
         &vm,
         writer,
@@ -372,7 +358,7 @@ pub(super) async fn a_cancel_with_rollback_takes_back_what_landed(target: &S3Tar
         },
     )
     .await;
-    installed().cancel_write_operation(&running.operation_id, true);
+    app_engine().cancel_write_operation(&running.operation_id, true);
     source.gate.add_permits(100_000);
     running.settle().await;
 
@@ -406,7 +392,7 @@ pub(super) async fn a_folder_of_1005_objects_deletes(target: &S3Target) {
     take_sent_requests(&volume).await;
 
     let events = Arc::new(CollectorEventSink::new());
-    installed()
+    app_engine()
         .delete_files_start(
             events.clone() as Arc<dyn OperationEventSink>,
             vec![dir.join("folder")],
@@ -625,7 +611,7 @@ pub(super) async fn requests_sent_against_the_estimate(target: &S3Target) -> Vec
     });
 
     let events = Arc::new(CollectorEventSink::new());
-    installed()
+    app_engine()
         .start_volume_move(
             events.clone() as Arc<dyn OperationEventSink>,
             volume_id.clone(),
@@ -646,7 +632,7 @@ pub(super) async fn requests_sent_against_the_estimate(target: &S3Target) -> Vec
     });
 
     let events = Arc::new(CollectorEventSink::new());
-    installed()
+    app_engine()
         .start_rename_by_move(
             events.clone() as Arc<dyn OperationEventSink>,
             volume_id.clone(),
@@ -674,7 +660,7 @@ pub(super) async fn requests_sent_against_the_estimate(target: &S3Target) -> Vec
     let off_id = format!("cost-off-{}-{}", target.name(), std::process::id());
     get_volume_manager().register(&off_id, Arc::clone(&off));
     let events = Arc::new(CollectorEventSink::new());
-    installed()
+    app_engine()
         .start_volume_move(
             events.clone() as Arc<dyn OperationEventSink>,
             volume_id.clone(),
@@ -695,7 +681,7 @@ pub(super) async fn requests_sent_against_the_estimate(target: &S3Target) -> Vec
     });
 
     let events = Arc::new(CollectorEventSink::new());
-    installed()
+    app_engine()
         .delete_files_start(
             events.clone() as Arc<dyn OperationEventSink>,
             vec![dir.join("batch")],
@@ -743,7 +729,7 @@ pub(super) async fn requests_sent_against_the_estimate(target: &S3Target) -> Vec
     });
 
     let events = Arc::new(CollectorEventSink::new());
-    installed()
+    app_engine()
         .delete_files_start(
             events.clone() as Arc<dyn OperationEventSink>,
             vec![dir.join("files/t0.bin"), dir.join("files/t1.bin")],

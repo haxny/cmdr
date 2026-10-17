@@ -14,13 +14,13 @@ This app as the operation log's host: `install` builds the app's one `OperationL
   read of `operation_log()` from engine code.
 - **An app answer goes in as a value or a trait** (`VolumeLookup` over the engine's volumes, the retention-limits
   closure over settings, the app's runtime): `cmdr-operation-log` has no `tauri` and never names settings or this module.
-- **A write-pipeline test that wants journaling holds `TestJournalGuard`** (one per test); a test of the log itself
-  builds its own `OperationLog` and needs none. The guard reaches the crate's `testing` gate (`set_journal`,
-  `reset_recording`), which the app's dev-dependency turns on.
+- **A test that wants journaling builds its own log** (`write_operations::testing::TestOperationLog`) and runs its
+  operations on an engine journaling into it (app-side: `operations_host::test_engine_journaling_into`), ❌ never
+  on the shared `operation_log()`. A test of the log itself builds an `OperationLog`.
 
 ## Module map
 
 - `mod.rs`: `install`, `operation_log()`, `start`, the retention limits, the unreadable-DB set-aside.
-  `volumes.rs` (test-only): `VolumeLookup` for a `VolumeManager`. `test_journal.rs`: `TestJournalGuard`.
+  `volumes.rs` (test-only): `VolumeLookup` for a `VolumeManager`.
 
 Startup order and why each answer is passed rather than reached: `DETAILS.md`.

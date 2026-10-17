@@ -596,9 +596,6 @@ pub(crate) struct Reversal {
     /// The engine its state is registered in, which the controls ask.
     engine: super::Operations,
     operation_id: String,
-    /// Unregisters a reversal on the shared engine when it drops; one on a
-    /// test's own engine goes with that engine.
-    _guard: Option<super::test_support::TestOperationGuard>,
     events: Arc<super::CollectorEventSink>,
     runner: ReversalRunner,
 }
@@ -611,35 +608,21 @@ impl Reversal {
     /// The unthrottled interval is deliberate: a test that has to CATCH a reversal
     /// mid-file needs to see the bytes move, and an in-memory volume finishes a
     /// megabyte inside any real interval. The throttle itself is pinned separately.
-    pub(crate) fn new(tag: &str) -> Self {
-        Self::emitting_every(tag, Duration::ZERO)
+    ///
+    /// Registered under `tag` on `engine`, the engine the operation it reverses
+    /// ran on; the registration lives as long as that engine does.
+    pub(crate) fn on(engine: &super::Operations, tag: &str) -> Self {
+        Self::emitting_every(engine, tag, Duration::ZERO)
     }
 
-    /// [`Self::new`] with an explicit progress interval.
-    pub(crate) fn emitting_every(tag: &str, progress_interval: Duration) -> Self {
-        let state = Arc::new(WriteOperationState::new(progress_interval));
-        let guard = super::test_support::TestOperationGuard::register_state(tag, Arc::clone(&state));
-        let operation_id = guard.id().to_string();
-        Self::running(super::installed().clone(), operation_id, state, Some(guard))
+    /// [`Self::on`] with an explicit progress interval.
+    pub(crate) fn emitting_every(engine: &super::Operations, tag: &str, progress_interval: Duration) -> Self {
+        let state = Arc::new(engine.new_operation_state(progress_interval));
+        engine.registry().insert(tag.to_string(), Arc::clone(&state));
+        Self::running(super::Operations::clone(engine), tag.to_string(), state)
     }
 
-    /// [`Self::new`], registered under `tag` on a test's own `engine`.
-    pub(crate) fn on(engine: &super::testing::TestOperations, tag: &str) -> Self {
-        let op = engine.register_state(tag, Arc::new(engine.new_operation_state(Duration::ZERO)));
-        Self::running(
-            super::Operations::clone(engine),
-            op.id().to_string(),
-            Arc::clone(op.state()),
-            None,
-        )
-    }
-
-    fn running(
-        engine: super::Operations,
-        operation_id: String,
-        state: Arc<WriteOperationState>,
-        guard: Option<super::test_support::TestOperationGuard>,
-    ) -> Self {
+    fn running(engine: super::Operations, operation_id: String, state: Arc<WriteOperationState>) -> Self {
         let events = Arc::new(super::CollectorEventSink::new());
         let runner = ReversalRunner::new(
             operation_id.clone(),
@@ -650,7 +633,6 @@ impl Reversal {
         Reversal {
             engine,
             operation_id,
-            _guard: guard,
             events,
             runner,
         }
@@ -699,6 +681,7 @@ impl Reversal {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::file_system::write_operations::testing::TestOperations;
 
     /// Two rules govern which frames go out, and both matter: the throttle keeps a
     /// million-item reversal from emitting an event per item, and the "landed on
@@ -706,7 +689,8 @@ mod tests {
     /// says 1 of 3.
     #[test]
     fn the_throttle_holds_frames_back_but_never_the_one_that_lands_on_the_total() {
-        let reversal = Reversal::emitting_every("progress-throttle", Duration::from_secs(600));
+        let engine = TestOperations::new();
+        let reversal = Reversal::emitting_every(&engine, "progress-throttle", Duration::from_secs(600));
         let runner = reversal.runner();
         let report = |files_done: u64| RollbackProgress {
             files_done,
@@ -751,7 +735,8 @@ mod tests {
             .create_file(Path::new("/moved/big.mov"), b"frames")
             .await
             .unwrap();
-        let reversal = Reversal::new("restore-by-copy");
+        let engine = TestOperations::new();
+        let reversal = Reversal::on(&engine, "restore-by-copy");
 
         reversal
             .runner()

@@ -381,7 +381,7 @@ var surfaceGuardedCrates = []struct {
 		// verdicts the engine's in-flight reversals share), and `retention`.
 		// `HandleMethods` counts `detached`, `open`, `set_recording`, `writer`,
 		// `spawn_retention`, and `journal_open`; the `testing`-gated `set_journal`
-		// and `reset_recording` count apart. Item-by-item:
+		// counts apart. Item-by-item:
 		// `crates/cmdr-operation-log/DETAILS.md` § "The public surface is capped".
 		Name:       "cmdr-operation-log",
 		HandleType: "OperationLog",

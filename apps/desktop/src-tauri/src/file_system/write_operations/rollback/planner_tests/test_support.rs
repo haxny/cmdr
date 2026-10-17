@@ -9,7 +9,9 @@ use std::path::Path;
 use std::sync::Arc;
 
 use crate::file_system::VolumeManager;
+use crate::file_system::write_operations::host::testing::SettablePacing;
 use crate::file_system::write_operations::rollback::Reversal;
+use crate::file_system::write_operations::testing::TestOperations;
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::{InMemoryVolume, Volume, VolumeError};
 use cmdr_operation_log::rollback::*;
@@ -30,6 +32,10 @@ pub(super) const MT: u64 = 1_700_000_000;
 /// A test rig: a writer over a temp-DB journal + a volume registry the engine
 /// resolves item volumes through. The temp dir is returned so it outlives the run.
 pub(super) struct Rig {
+    /// The engine a reversal registers on and its controls ask.
+    pub(super) engine: TestOperations,
+    /// The engine's rollback pace, which a test sets to hold a reversal open.
+    pub(super) pacing: Arc<SettablePacing>,
     pub(super) writer: OperationLogWriter,
     pub(super) vm: VolumeManager,
     _dir: tempfile::TempDir,
@@ -40,11 +46,20 @@ impl Rig {
         let dir = tempfile::tempdir().expect("tempdir");
         let db = operation_log_db_path(dir.path());
         let writer = OperationLogWriter::spawn(&db).expect("spawn writer");
+        let pacing = Arc::new(SettablePacing::default());
+        let engine_pacing = Arc::clone(&pacing);
         Rig {
+            engine: TestOperations::with(|builder| builder.pacing(engine_pacing)),
+            pacing,
             writer,
             vm: VolumeManager::new(),
             _dir: dir,
         }
+    }
+
+    /// A reversal registered under `tag` on this rig's engine.
+    pub(super) fn reversal(&self, tag: &str) -> Reversal {
+        Reversal::on(&self.engine, tag)
     }
 
     pub(super) fn register(&self, id: &str, vol: Arc<InMemoryVolume>) {
@@ -133,7 +148,7 @@ impl Rig {
     /// [`Self::rollback`] with an explicit inverse op id, so one rig can reverse
     /// several operations in a chosen order (the multi-batch cases).
     pub(super) async fn rollback_as(&self, op_id: &str, inverse_op_id: &str) -> RollbackReport {
-        self.rollback_driven_by(op_id, inverse_op_id, &Reversal::new("rollback"))
+        self.rollback_driven_by(op_id, inverse_op_id, &self.reversal("rollback"))
             .await
     }
 
