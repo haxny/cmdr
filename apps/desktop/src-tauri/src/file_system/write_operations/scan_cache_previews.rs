@@ -352,6 +352,9 @@ impl ScanPreviews {
             }
             return None;
         };
+        // Released before the warn below: a log line is file I/O, and every
+        // claim, poll, and settle waits on this lock.
+        drop(previews);
         let cached = *cached;
         if !same_path_set(&cached.sources, requested_sources) {
             log::warn!(
