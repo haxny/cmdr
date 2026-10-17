@@ -112,6 +112,43 @@ fn a_refused_entry_is_dropped_rather_than_left_for_the_next_caller() {
     );
 }
 
+/// A panic that interrupted an in-place edit leaves an entry nobody can trust,
+/// and `take_cached_scan_result` is what binds a delete's path set. So a
+/// poisoned store forgets everything: the next delete rescans its sources
+/// rather than deleting the files a torn entry still lists.
+#[test]
+fn after_a_panic_mid_edit_the_next_delete_rescans_its_sources() {
+    let previews = previews::ScanPreviews::new();
+    previews.insert_scan_result("torn".to_string(), cached_for(&["/a"]));
+    previews.tear_mid_mutation_for_test("torn", paths(&["/b"]));
+
+    assert!(
+        previews.take_cached_scan_result("torn", &paths(&["/b"])).is_none(),
+        "an entry a panic interrupted must never bind a delete"
+    );
+    assert!(
+        previews.take_cached_scan_result("torn", &paths(&["/a"])).is_none(),
+        "nor under the sources it walked"
+    );
+}
+
+/// The other half of forgetting on poison: the store recovers, so a preview
+/// the person confirms after the panic still spares its operation a second
+/// walk.
+#[test]
+fn a_preview_settled_after_a_panic_mid_edit_is_still_a_cache_hit() {
+    let previews = previews::ScanPreviews::new();
+    previews.insert_scan_result("torn".to_string(), cached_for(&["/a"]));
+    previews.tear_mid_mutation_for_test("torn", paths(&["/b"]));
+
+    previews.insert_scan_result("after".to_string(), cached_for(&["/c"]));
+
+    assert!(
+        previews.take_cached_scan_result("after", &paths(&["/c"])).is_some(),
+        "a poisoned store must recover, not skip every preview for the rest of the session"
+    );
+}
+
 /// The canary: a completed walk that counted files but recorded no per-source
 /// result is the exact shape the copy pipeline read as `is_directory: false`.
 /// `debug_assert!` compiles in for `pnpm check rust-tests` (a debug build), so

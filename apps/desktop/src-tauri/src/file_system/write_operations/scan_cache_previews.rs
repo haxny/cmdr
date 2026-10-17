@@ -9,7 +9,7 @@
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::time::{Duration, Instant};
 
 use tokio::sync::Notify;
@@ -124,6 +124,40 @@ impl ScanPreviews {
     pub(in crate::file_system::write_operations) fn settled(&self) -> &Notify {
         &self.settled
     }
+
+    /// The map, for writing. On poison it recovers AND FORGETS every preview,
+    /// ❌ never keeps one: a panic may have left an entry half-edited, and
+    /// `take_cached_scan_result` is what binds a delete's path set.
+    /// A forgotten preview is a miss, and a miss rescans, which is the
+    /// fail-closed answer (`delete/CLAUDE.md`). An operation waiting on a
+    /// forgotten walk reads it as `Cancelled`, as `poll_claim` documents.
+    fn write(&self) -> RwLockWriteGuard<'_, HashMap<String, PreviewEntry>> {
+        let mut previews = self.entries.write_ignore_poison();
+        if !self.entries.is_poisoned() {
+            return previews;
+        }
+        previews.clear();
+        self.entries.clear_poison();
+        drop(previews);
+        log::warn!(
+            target: "cmdr_lib::write_operations",
+            "a panic poisoned the scan preview store; every preview is forgotten, so each operation scans its own sources"
+        );
+        self.write()
+    }
+
+    /// The map, for reading, forgotten first if a panic poisoned it (see
+    /// [`write`](Self::write)). Only a writer can poison it, and none runs
+    /// while this guard is held, so a clean check here stays clean.
+    fn read(&self) -> RwLockReadGuard<'_, HashMap<String, PreviewEntry>> {
+        let previews = self.entries.read_ignore_poison();
+        if !self.entries.is_poisoned() {
+            return previews;
+        }
+        drop(previews);
+        drop(self.write());
+        self.read()
+    }
 }
 
 impl ScanPreviews {
@@ -135,15 +169,13 @@ impl ScanPreviews {
         preview_id: String,
         state: Arc<ScanPreviewState>,
     ) {
-        if let Ok(mut previews) = self.entries.write() {
-            previews.insert(
-                preview_id,
-                PreviewEntry {
-                    phase: PreviewPhase::InFlight(state),
-                    claim: None,
-                },
-            );
-        }
+        self.write().insert(
+            preview_id,
+            PreviewEntry {
+                phase: PreviewPhase::InFlight(state),
+                claim: None,
+            },
+        );
     }
 
     /// The in-flight state for `preview_id` (its cancel flag and progress
@@ -152,7 +184,7 @@ impl ScanPreviews {
         &self,
         preview_id: &str,
     ) -> Option<Arc<ScanPreviewState>> {
-        let previews = self.entries.read().ok()?;
+        let previews = self.read();
         match &previews.get(preview_id)?.phase {
             PreviewPhase::InFlight(state) => Some(Arc::clone(state)),
             PreviewPhase::Settled { .. } => None,
@@ -195,7 +227,8 @@ impl ScanPreviews {
                 "a completed walk with file_count > 0 must carry per_path entries (preview {preview_id})"
             );
         }
-        if let Ok(mut previews) = self.entries.write() {
+        {
+            let mut previews = self.write();
             prune_expired(&mut previews);
             let claim = previews.remove(preview_id).and_then(|entry| entry.claim);
             previews.insert(
@@ -250,9 +283,7 @@ impl ScanPreviews {
         preview_id: &str,
         operation_id: &str,
     ) -> PreviewClaim {
-        let Ok(mut previews) = self.entries.write() else {
-            return PreviewClaim::Unknown;
-        };
+        let mut previews = self.write();
         let Some(entry) = previews.get_mut(preview_id) else {
             return PreviewClaim::Unknown;
         };
@@ -271,10 +302,7 @@ impl ScanPreviews {
     /// to remove one are an explicit release and the TTL sweep, and neither leaves
     /// a result to consume.
     pub(in crate::file_system::write_operations) fn poll_claim(&self, preview_id: &str) -> Option<ScanOutcome> {
-        let Ok(previews) = self.entries.read() else {
-            return Some(ScanOutcome::Cancelled);
-        };
-        match previews.get(preview_id) {
+        match self.read().get(preview_id) {
             None => Some(ScanOutcome::Cancelled),
             Some(entry) => match &entry.phase {
                 PreviewPhase::InFlight(_) => None,
@@ -286,16 +314,14 @@ impl ScanPreviews {
     /// The operation that owns `preview_id`, if any. The progress bridge reads it
     /// to decide whether a walk's counts also belong under an operation's id.
     pub(in crate::file_system::write_operations) fn claimed_operation(&self, preview_id: &str) -> Option<String> {
-        self.entries.read().ok()?.get(preview_id)?.claim.clone()
+        self.read().get(preview_id)?.claim.clone()
     }
 
     /// Ends a claim without touching the result: the owner is done waiting and is
     /// about to consume it. Re-arms the TTL, which is right — from here the entry
     /// is an ordinary unconsumed result.
     pub(in crate::file_system::write_operations) fn finish_claim(&self, preview_id: &str) {
-        if let Ok(mut previews) = self.entries.write()
-            && let Some(entry) = previews.get_mut(preview_id)
-        {
+        if let Some(entry) = self.write().get_mut(preview_id) {
             entry.claim = None;
         }
     }
@@ -306,9 +332,7 @@ impl ScanPreviews {
     /// admission, the panic net). Idempotent, and a no-op for a preview nobody
     /// claimed.
     pub(in crate::file_system::write_operations) fn abandon_claim(&self, preview_id: &str) {
-        let Ok(mut previews) = self.entries.write() else {
-            return;
-        };
+        let mut previews = self.write();
         let Some(entry) = previews.get(preview_id) else {
             return;
         };
@@ -336,9 +360,7 @@ impl ScanPreviews {
         preview_id: &str,
         requested_sources: &[PathBuf],
     ) -> Option<ScanResult> {
-        let Ok(mut previews) = self.entries.write() else {
-            return None;
-        };
+        let mut previews = self.write();
         let entry = previews.remove(preview_id)?;
         let PreviewPhase::Settled {
             result: Some(cached), ..
@@ -392,7 +414,7 @@ impl ScanPreviews {
         &self,
         preview_id: &str,
     ) -> Option<ScanCostFacts> {
-        let previews = self.entries.read_ignore_poison();
+        let previews = self.read();
         let PreviewPhase::Settled {
             result: Some(cached), ..
         } = &previews.get(preview_id)?.phase
@@ -439,7 +461,7 @@ impl ScanPreviews {
         &self,
         preview_id: &str,
     ) -> Option<super::super::types::ScanPreviewTotals> {
-        let previews = self.entries.read().ok()?;
+        let previews = self.read();
         let PreviewPhase::Settled {
             result: Some(cached), ..
         } = &previews.get(preview_id)?.phase
@@ -482,19 +504,17 @@ impl ScanPreviews {
             scanned_files: None,
             tree: None,
         };
-        if let Ok(mut previews) = self.entries.write() {
-            previews.insert(
-                preview_id,
-                PreviewEntry {
-                    phase: PreviewPhase::Settled {
-                        outcome: ScanOutcome::Complete,
-                        result: Some(Box::new(result)),
-                        settled_at: Instant::now(),
-                    },
-                    claim: None,
+        self.write().insert(
+            preview_id,
+            PreviewEntry {
+                phase: PreviewPhase::Settled {
+                    outcome: ScanOutcome::Complete,
+                    result: Some(Box::new(result)),
+                    settled_at: Instant::now(),
                 },
-            );
-        }
+                claim: None,
+            },
+        );
     }
 
     /// Test-only: backdates a settled entry so the next sweep sees it as stale.
@@ -502,12 +522,37 @@ impl ScanPreviews {
     /// and without making `SCAN_RESULT_TTL` injectable everywhere it's read.
     #[cfg(test)]
     pub(in crate::file_system::write_operations) fn age_settled_entry_for_test(&self, preview_id: &str, by: Duration) {
-        if let Ok(mut previews) = self.entries.write()
-            && let Some(entry) = previews.get_mut(preview_id)
+        if let Some(entry) = self.write().get_mut(preview_id)
             && let PreviewPhase::Settled { settled_at, .. } = &mut entry.phase
         {
             *settled_at -= by;
         }
+    }
+
+    /// Test-only: a panic in the middle of mutating `preview_id`'s settled
+    /// result in place, the shape a bug in any in-place edit leaves behind. The
+    /// entry now claims `torn_sources` while still holding the files it walked
+    /// for its old ones, and the store's lock is poisoned.
+    #[cfg(test)]
+    pub(in crate::file_system::write_operations) fn tear_mid_mutation_for_test(
+        &self,
+        preview_id: &str,
+        torn_sources: Vec<PathBuf>,
+    ) {
+        let torn = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            let mut previews = self.entries.write_ignore_poison();
+            if let Some(PreviewEntry {
+                phase: PreviewPhase::Settled {
+                    result: Some(cached), ..
+                },
+                ..
+            }) = previews.get_mut(preview_id)
+            {
+                cached.sources = torn_sources;
+            }
+            panic!("a preview edit panicked halfway, on purpose");
+        }));
+        assert!(torn.is_err() && self.entries.is_poisoned());
     }
 
     /// Test-only: publish a completed preview in one call, the shape
@@ -526,9 +571,7 @@ impl ScanPreviews {
     /// (`cancel_scan_preview`) so a result that finished scanning but was never
     /// consumed by a started op doesn't linger until quit.
     pub(in crate::file_system::write_operations) fn release_preview(&self, preview_id: &str) {
-        if let Ok(mut previews) = self.entries.write() {
-            previews.remove(preview_id);
-        }
+        self.write().remove(preview_id);
     }
 }
 
