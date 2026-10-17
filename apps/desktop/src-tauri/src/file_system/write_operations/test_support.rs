@@ -11,7 +11,7 @@ use std::time::Duration;
 
 use tokio::sync::oneshot;
 
-use super::manager::{OperationDescriptor, OperationSummaryText, manager};
+use super::manager::{OperationDescriptor, OperationManager, OperationSummaryText, manager};
 use super::state::{WriteOperationState, operation_states};
 use super::types::{ConflictId, LifecycleStatus, WriteConflictEvent, WriteOperationType};
 use cmdr_fs::volume::LaneKey;
@@ -178,6 +178,7 @@ fn unique_op_id(tag: &str) -> String {
 /// Sibling of [`TestOperationGuard`], which covers the state map rather than the
 /// manager.
 pub(crate) struct QueuedOperationFixture {
+    holder_id: String,
     queued_id: String,
     /// Releases, holder first. `Drop` sends both so each operation settles and
     /// the lane frees for the rest of the process.
@@ -200,6 +201,16 @@ impl QueuedOperationFixture {
     /// destination: `holder` for the running one, `queued` for the one waiting.
     /// How a suite outside this module holds a transfer on a place.
     pub(crate) fn park_naming(tag: &str, holder: Vec<String>, queued: Vec<String>) -> Self {
+        Self::park_naming_on(manager(), tag, holder, queued)
+    }
+
+    /// [`Self::park`] on `engine` rather than the shared one, so a test that
+    /// owns its engine can hold a live operation on it.
+    pub(crate) fn park_on(engine: &crate::file_system::write_operations::Operations, tag: &str) -> Self {
+        Self::park_naming_on(engine.manager(), tag, Vec::new(), Vec::new())
+    }
+
+    fn park_naming_on(manager: &Arc<OperationManager>, tag: &str, holder: Vec<String>, queued: Vec<String>) -> Self {
         let lane = LaneKey::new(unique_op_id(&format!("{tag}-lane")));
         let holder_id = unique_op_id(&format!("{tag}-holder"));
         let queued_id = unique_op_id(&format!("{tag}-queued"));
@@ -209,7 +220,7 @@ impl QueuedOperationFixture {
             let (release_tx, release_rx) = oneshot::channel();
             releases.push(release_tx);
             let settle_id = id.clone();
-            manager().spawn_managed(
+            manager.spawn_managed(
                 OperationDescriptor {
                     operation_id: id.clone(),
                     operation_type: WriteOperationType::Copy,
@@ -231,17 +242,26 @@ impl QueuedOperationFixture {
         }
 
         assert_eq!(
-            manager().lifecycle_status(&holder_id),
+            manager.lifecycle_status(&holder_id),
             Some(LifecycleStatus::Running),
             "the holder takes its own fresh lane, so admission runs it immediately"
         );
         assert_eq!(
-            manager().lifecycle_status(&queued_id),
+            manager.lifecycle_status(&queued_id),
             Some(LifecycleStatus::Queued),
             "the second operation shares the lane, so it waits"
         );
 
-        Self { queued_id, releases }
+        Self {
+            holder_id,
+            queued_id,
+            releases,
+        }
+    }
+
+    /// The id of the operation holding the lane, `Running` until this drops.
+    pub(crate) fn holder_id(&self) -> &str {
+        &self.holder_id
     }
 
     /// The id of the operation sitting `Queued`.

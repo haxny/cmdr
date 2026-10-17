@@ -258,7 +258,7 @@ impl StagedWrite {
     /// destination's own create has to, atomically (SMB's `FileCreate`). A
     /// replacing write there reported success with the other writer's file
     /// gone. Pinned on a live share by
-    /// `backend_suites/smb_transfer_safety_test.rs::smb_integration_a_single_shot_upload_never_replaces_a_name_taken_mid_upload`.
+    /// `operations_host/backend_suites/smb_transfer_safety_test.rs::smb_integration_a_single_shot_upload_never_replaces_a_name_taken_mid_upload`.
     ///
     /// Everything else may replace: our own freshly minted `.cmdr-tmp-*` (a
     /// retried attempt writes over its predecessor), the caller's safe-replace

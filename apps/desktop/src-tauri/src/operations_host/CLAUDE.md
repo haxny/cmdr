@@ -32,6 +32,7 @@ engine-wide facts, the per-op sinks, and what a terminal event does besides reac
   the terminal side effects in order. `analytics.rs`: the completion analytics they fire. `wire.rs`: the payloads as
   Tauri events. `volumes.rs`: `AppOperationVolumes`, the volume registry asked per call. `own_writes.rs`: `AppOwnWrites`, the downloads
   watcher's ignore set. `index.rs`: `AppOperationIndex`, the drive index's counts and search leaves. `pacing.rs`: `AppPacing`, `test_mode`'s
-  E2E throttles. `name_order.rs`: `AppNameOrder`, the panes' collator.
+  E2E throttles. `name_order.rs`: `AppNameOrder`, the panes' collator. `backend_suites/` (tests): every backend's cells through the
+  app's engine, over its public list plus `write_operations::testing` only, ❌ never an engine module by path.
 
-Startup order, the sinks, the wire, and the fallback's reasoning: `DETAILS.md`.
+Startup order, the sinks, the wire, the fallback's reasoning, and the backend suites: `DETAILS.md`.

@@ -1272,17 +1272,11 @@ pub(crate) async fn copy_volumes_with_progress(
 // `copy_tests/` child named after its subject. Every sibling shares
 // `make_state` / `make_volumes` from `tests` (`super::tests`). Tests for a
 // symbol another module owns go to THAT module's suite. What each file holds:
-// `volume/DETAILS.md` § Files. The bench suites are `#[ignore]`d and
-// network-gated.
-#[cfg(test)]
-#[path = "copy_bench.rs"]
-mod bench;
+// `volume/DETAILS.md` § Files. The network-gated benches live with the app's
+// SMB suites (`operations_host/backend_suites/`).
 #[cfg(test)]
 #[path = "copy_cancel_tests.rs"]
 mod cancel_tests;
-#[cfg(test)]
-#[path = "copy_concurrency_bench.rs"]
-mod concurrency_bench;
 #[cfg(test)]
 #[path = "copy_concurrent_tests.rs"]
 mod concurrent_tests;

@@ -306,7 +306,7 @@ metadata"; this is how SFTP keeps it.
 - **Pinned by** `conformance_test::a_copy_keeps_the_source_date` (both halves against stock OpenSSH),
   `copy_test::sftp_integration_a_server_side_copy_keeps_the_source_date`, and the two
   `sftp_integration_*_keeps_the_source_date` engine cells in
-  `apps/desktop/src-tauri/src/file_system/write_operations/backend_suites/sftp_transfer_integration_test.rs`.
+  `apps/desktop/src-tauri/src/operations_host/backend_suites/sftp_transfer_integration_test.rs`.
 
 ## Mode on copies
 
@@ -875,8 +875,8 @@ the trash to the boot disk. It is also the convention the app already has for `m
 `get_metadata` produces (`mapping.rs`), and `display_path_for`, which is what the listing-cache patcher spells a
 mutation with. A bare server path anywhere in that set would come back through `cmdr_fs::volume::root_anchored` — five
 app sites run one — joined ONTO the root, and strip back to a real, wrong server path.
-`apps/desktop/src-tauri/src/file_system/write_operations/backend_suites/sftp_transfer_semantics_test.rs` is the cell
-that would catch it.
+`apps/desktop/src-tauri/src/operations_host/backend_suites/sftp_transfer_semantics_test.rs` is the cell that would catch
+it.
 
 **`FileEntry.permissions` carries the file-type bits AND the permission bits** (`mapping.rs`). The type is what lets a
 walker (the fresh-ZIP planner) skip a FIFO, socket, or device without opening it: a read of a FIFO blocks the
@@ -912,7 +912,7 @@ Why: OpenSSH on Linux stores a name's bytes as sent, and web servers, PHP, and s
 decomposed `café.jpg` from macOS looks right and breaks every link to it. The decision, its reasoning, and which other
 tools do the same: `apps/desktop/src-tauri/src/file_system/write_operations/DETAILS.md` § "Look-alike names". Unit
 cells: `src/volume/paths_test.rs`; Docker cells:
-`apps/desktop/src-tauri/src/file_system/write_operations/backend_suites/sftp_look_alike_test.rs`.
+`apps/desktop/src-tauri/src/operations_host/backend_suites/sftp_look_alike_test.rs`.
 
 ## The `Volume` answers, and why
 
@@ -1243,11 +1243,11 @@ A cell lives with whatever it **asserts**, never with whatever it connects to.
   crate's public surface to keep a test on that side; move the test instead. ❗ **A green suite here is not evidence
   that a copy works.** Two blockers shipped with every cell in this crate passing, because neither lived here:
   `supports_export` is a declaration the copy ENGINE reads, and the free-space pre-flight is the engine's own. The cells
-  that would have caught them are `write_operations/backend_suites/sftp_transfer_integration_test.rs`, which drives
+  that would have caught them are `operations_host/backend_suites/sftp_transfer_integration_test.rs`, which drives
   `copy_between_volumes` in both directions against `sftp-fixture-openssh` and checksums both ends. Anything touching
   this backend's capability answers or its error payloads owes a check on that side too. The rest of the app-side
   coverage (merges, policies, moves, safety, look-alikes, archives) sits beside it, listed in
-  `apps/desktop/src-tauri/src/file_system/write_operations/DETAILS.md` § "The network transfer suites".
+  `apps/desktop/src-tauri/src/operations_host/DETAILS.md` § "The network transfer suites".
 
 The suites' prelude is `volume/test_support.rs`, ❌ not a `use super::*` glob out of `mod.rs`: what a glob pulls in
 isn't determinable without building, which is what made the SMB extraction's suites impossible to size in advance. Its

@@ -19,7 +19,7 @@ pause and Cancel point between chunks; everyone else gets one `delete_with_cance
 `delete_files` contract. Every file a batch removed is journaled and counted even when another in it failed; the first
 failure ends the delete, reported against its own path (S3 reads each key's failure out of the answer body). A throttled
 or cut-off batch is the backend's to send again (`cmdr-s3`'s `batch.rs`). Pinned by
-`backend_suites/s3_engine_integration_test.rs::a_folder_of_1005_objects_deletes` (two `DeleteObjects`, no per-object
+`operations_host/backend_suites/s3_engine_integration_test.rs::a_folder_of_1005_objects_deletes` (two `DeleteObjects`, no per-object
 request).
 
 ## The volume delete's own lifecycle

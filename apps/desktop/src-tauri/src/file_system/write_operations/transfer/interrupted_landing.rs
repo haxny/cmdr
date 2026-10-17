@@ -8,7 +8,7 @@
 //! refuses that as a clash nobody resolved (`staged_write.rs::land`): a copy that
 //! waited out the outage then failed with `DestinationExists` over the file it
 //! had just written. The live-SMB cell
-//! `backend_suites/smb_outage_test.rs::smb_integration_a_copy_waits_out_a_dropped_network_and_finishes`
+//! `operations_host/backend_suites/smb_outage_test.rs::smb_integration_a_copy_waits_out_a_dropped_network_and_finishes`
 //! hit it whenever the cut fell inside a landing.
 //!
 //! **The proof it was ours.** The temp is a `.cmdr-tmp-<uuid>` name this

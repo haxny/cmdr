@@ -11,7 +11,7 @@
 //! file. Under ordinary staging our bytes never touch the final name, so there
 //! is nothing of ours there to clean.
 //!
-//! The live-server twins are `backend_suites/network_safety_test_support.rs`'s
+//! The live-server twins are `operations_host/backend_suites/network_safety_test_support.rs`'s
 //! `a_name_taken_mid_upload_is_never_replaced`, which found this on WebDAV.
 
 use std::path::{Path, PathBuf};

@@ -1,21 +1,22 @@
 //! The terminal side-effect matrix: per outcome, which app side effects fire and
 //! in what order relative to the emit (`terminal_effects.rs`), which the sink
-//! adapter (`sinks.rs`) runs.
-//!
-//! The retained-failure half through the production effects lives with the
-//! other retained-failure pins (`manager/tests/failures.rs`), which own a
-//! private manager.
+//! adapter (`sinks.rs`) runs, and the retained failure those effects land on an
+//! engine of the test's own. The engine's half of that contract, on its bare
+//! manager, is `manager/tests/failures.rs`.
 
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 use super::analytics::{CompletionCategory, completion_category};
 use super::terminal_effects::{self, AppTerminalEffects, TerminalEffects};
-use crate::file_system::write_operations::testing::CancelRollback;
+use crate::file_system::write_operations::host::testing::{FakeVolumes, RecordingEngineEvents};
+use crate::file_system::write_operations::testing::{CancelRollback, QueuedOperationFixture};
 use crate::file_system::write_operations::{
-    WriteCancelledEvent, WriteCompleteEvent, WriteErrorEvent, WriteOperationError, WriteOperationType,
-    WriteSettledEvent,
+    LifecycleStatus, OperationSnapshot, Operations, WriteCancelledEvent, WriteCompleteEvent, WriteErrorEvent,
+    WriteOperationError, WriteOperationType, WriteSettledEvent,
 };
 use crate::mcp::terminal_ops::{self, TerminalStatus};
+use crate::test_support::wait_until_async;
 use cmdr_fs::ignore_poison::IgnorePoison;
 
 /// One thing a terminal event did, as the recorder saw it.
@@ -201,4 +202,74 @@ fn the_production_ring_already_holds_the_outcome_when_the_emit_runs() {
         seen = terminal_ops::lookup(&event.operation_id).map(|op| op.status);
     });
     assert_eq!(seen, Some(TerminalStatus::Cancelled));
+}
+
+/// The rows of `engine`'s snapshot carrying `operation_id`.
+fn rows_for(engine: &Operations, operation_id: &str) -> Vec<OperationSnapshot> {
+    engine
+        .list_operations()
+        .into_iter()
+        .filter(|row| row.operation_id == operation_id)
+        .collect()
+}
+
+/// A failure reached the way production reaches it, through the sink's
+/// `write-error` effects fired from inside the live op: retained, hidden behind
+/// the live record without a broadcast, and surfacing once the record settles.
+///
+/// On an engine of the test's own: the broadcast assertion is an equality on
+/// every `operations-changed` that engine sent, so each one is this test's.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_failure_through_the_production_sink_effects_is_retained_and_surfaces_after_its_record() {
+    let events = Arc::new(RecordingEngineEvents::default());
+    let engine = Operations::builder(Arc::new(FakeVolumes::default()), events.clone()).build();
+    let parked = QueuedOperationFixture::park_on(&engine, "fail-through-sink");
+    let op = parked.holder_id().to_string();
+    let broadcasts = || events.operations_changed.lock_ignore_poison().len();
+
+    let broadcasts_before = broadcasts();
+    let mut rows_at_emit = Vec::new();
+    terminal_effects::error(
+        &AppTerminalEffects {
+            operations: Some(&engine),
+        },
+        WriteErrorEvent::new(
+            op.clone(),
+            WriteOperationType::Copy,
+            WriteOperationError::IoError {
+                path: "/Users/me/a.raw".to_string(),
+                message: "disk went away".to_string(),
+            },
+        ),
+        |_| rows_at_emit = rows_for(&engine, &op),
+    );
+    assert_eq!(rows_at_emit.len(), 1, "one row while the record is live");
+    assert_eq!(rows_at_emit[0].status, LifecycleStatus::Running);
+    assert!(
+        rows_at_emit[0].error.is_none(),
+        "the failure stays hidden behind the live record"
+    );
+    assert_eq!(
+        broadcasts(),
+        broadcasts_before,
+        "nothing broadcasts while the record is live"
+    );
+
+    // Releasing the holder settles it, which removes its record.
+    drop(parked);
+    wait_until_async(
+        Duration::from_secs(5),
+        "the failed op to settle and surface its retained row",
+        || {
+            rows_for(&engine, &op)
+                .iter()
+                .any(|row| row.status == LifecycleStatus::Failed)
+        },
+    )
+    .await;
+    // A live record would still hide the failure behind a `Running` row, so one
+    // `Failed` row is the record gone and the retained failure in its place.
+    let retained = rows_for(&engine, &op);
+    assert_eq!(retained.len(), 1, "the record is gone");
+    assert!(matches!(retained[0].error, Some(WriteOperationError::IoError { .. })));
 }

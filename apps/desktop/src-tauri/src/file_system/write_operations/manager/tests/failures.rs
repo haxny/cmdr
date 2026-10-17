@@ -100,61 +100,6 @@ async fn retained_failure_stays_hidden_until_the_record_settles() {
     // manager, where no sibling can ever see it.
 }
 
-#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn a_failure_through_the_production_sink_effects_is_retained_and_surfaces_after_its_record() {
-    // The same contract as above, reached the way production reaches it: the
-    // sink's `write-error` side effects (`terminal_effects::error` over
-    // `AppTerminalEffects`), fired from inside the live op.
-    use crate::file_system::write_operations::types::WriteErrorEvent;
-    use crate::operations_host::terminal_effects::{self, AppTerminalEffects};
-
-    let engine = crate::file_system::write_operations::Operations::detached();
-    let mgr = Arc::clone(engine.manager());
-    let op = unique("fail-through-sink");
-    let lane = unique("lane");
-    let (started_tx, started_rx) = oneshot::channel();
-    let (rel_tx, rel_rx) = oneshot::channel();
-    mgr.spawn_managed(
-        descriptor(&op, vec![&lane]),
-        fresh_state(),
-        gated_deferred_on(&mgr, op.clone(), started_tx, rel_rx),
-    );
-    started_rx.await.expect("started");
-
-    let emits_before = mgr.emit_count();
-    let mut rows_at_emit = Vec::new();
-    terminal_effects::error(
-        &AppTerminalEffects {
-            operations: Some(&engine),
-        },
-        WriteErrorEvent::new(op.clone(), WriteOperationType::Copy, io_error("/Users/me/a.raw")),
-        |_| rows_at_emit = rows_for(&mgr, &op),
-    );
-    assert_eq!(rows_at_emit.len(), 1, "one row while the record is live");
-    assert_eq!(rows_at_emit[0].status, LifecycleStatus::Running);
-    assert!(
-        rows_at_emit[0].error.is_none(),
-        "the failure stays hidden behind the live record"
-    );
-    assert_eq!(
-        mgr.emit_count(),
-        emits_before,
-        "nothing broadcasts while the record is live"
-    );
-
-    let _ = rel_tx.send(());
-    wait_until_async(WAIT, "the failed op to settle and surface its retained row", || {
-        rows_for(&mgr, &op)
-            .iter()
-            .any(|row| row.status == LifecycleStatus::Failed)
-    })
-    .await;
-    assert_eq!(mgr.lifecycle_status(&op), None, "the record is gone");
-    let retained = rows_for(&mgr, &op);
-    assert_eq!(retained.len(), 1);
-    assert!(matches!(retained[0].error, Some(WriteOperationError::IoError { .. })));
-}
-
 #[test]
 fn a_second_failure_for_one_operation_keeps_the_first_error() {
     // `emit_error` can fire twice for one op (an inner handler emits and returns

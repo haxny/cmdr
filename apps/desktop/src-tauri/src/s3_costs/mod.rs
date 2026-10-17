@@ -92,7 +92,7 @@ fn sides_of(source: Option<&S3Volume>, destination: Option<&S3Volume>) -> Sides 
 
 /// The billed work [`estimate`] prices for `operation` between these ends, for
 /// a cell comparing it with the requests the engine actually sent
-/// (`backend_suites/s3_engine_integration_test.rs`).
+/// (`operations_host/backend_suites/s3_engine_integration_test.rs`).
 #[cfg(test)]
 pub(crate) fn planned_workloads(
     operation: CostedOperation,

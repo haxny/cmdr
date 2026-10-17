@@ -19,7 +19,7 @@ The planner counts every request the engine sends, LISTs and HEADs included, one
 (`crates/cmdr-s3/DETAILS.md` § "Cost estimates"). It needs the shape of the selection, not only its totals, so
 `ScanCostFacts` carries `selected_folders` and `selected_file_sizes` beside the files: each selected item is stat'd
 and its name probed at the destination, and only what lands inside a folder the operation makes skips the
-no-overwrite check. Pinned request for request by `backend_suites/s3_engine_integration_test.rs::
+no-overwrite check. Pinned request for request by `operations_host/backend_suites/s3_engine_integration_test.rs::
 the_engine_sends_what_the_estimate_counts` on both fixtures.
 
 - **The source side** (copy or move off S3): `stat_selection` per selected item, and `list_folder` twice per listing

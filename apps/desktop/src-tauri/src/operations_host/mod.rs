@@ -24,6 +24,10 @@
 //!   travels as
 
 mod analytics;
+// Every backend's cells through the app's real engine, and the scenarios they
+// share: the Docker fixtures, virtual MTP, and the ADB fake need the app.
+#[cfg(test)]
+pub(crate) mod backend_suites;
 mod events;
 mod index;
 mod name_order;

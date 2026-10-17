@@ -10,7 +10,7 @@
 //!
 //! The fixture is `cmdr_fs::testing::metadata_fixture` (macOS). Elsewhere: the
 //! extract cell in `volume/copy_extract_out_tests.rs`, the APFS → HFS+ cell in
-//! `real_image.rs`, and the SMB cells in `backend_suites/network_dates_test_support.rs`.
+//! `real_image.rs`, and the SMB cells in `operations_host/backend_suites/network_dates_test_support.rs`.
 
 #[cfg(target_os = "macos")]
 mod macos {

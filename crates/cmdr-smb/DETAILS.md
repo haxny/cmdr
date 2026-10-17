@@ -424,7 +424,7 @@ case, so a look-alike twin is rare but not impossible.
 - **A name the share holds in another spelling is taken, never free**: a write that asked in the wrong spelling would
   stand a second, identical-looking entry beside it. The app's write layer finds it with one listing after a byte-exact
   miss (`apps/desktop/src-tauri/src/file_system/write_operations/DETAILS.md` § "Look-alike names"). Docker-pinned by
-  `write_operations/backend_suites/smb_look_alike_test.rs`.
+  `operations_host/backend_suites/smb_look_alike_test.rs`.
 
 ### Resolving a foreign path
 
@@ -660,8 +660,8 @@ source's metadata". Finder's Locked is the DOS `READONLY` attribute, its Hidden 
 - **Evidence** (verified on the Docker guest share, Samba 4.20.6, default `map readonly = no` and
   `store dos attributes = yes`, 2026-10-12): `attributes_integration_test.rs`, which pins Hidden on the write (one-frame
   and streamed), Read-only after it, the rename and the refused delete, the unlock, and the dotfile rule. Through the
-  app's pipeline: `apps/desktop/src-tauri/src/file_system/write_operations/backend_suites/smb_flags_test.rs` (onto and
-  off the share, and a rollback of Locked copies). The QNAP answer is unverified.
+  app's pipeline: `apps/desktop/src-tauri/src/operations_host/backend_suites/smb_flags_test.rs` (onto and off the share,
+  and a rollback of Locked copies). The QNAP answer is unverified.
 
 ## Finder tags and other xattrs on copies (open gap)
 

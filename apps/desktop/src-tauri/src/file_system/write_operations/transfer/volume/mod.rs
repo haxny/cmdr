@@ -173,8 +173,6 @@ mod rename_merge_cancel_tests;
 #[cfg(test)]
 mod rename_merge_case_fold_tests;
 #[cfg(test)]
-mod rename_merge_mtp_tests;
-#[cfg(test)]
 mod rename_merge_pause_tests;
 #[cfg(test)]
 mod rename_merge_stat_tests;

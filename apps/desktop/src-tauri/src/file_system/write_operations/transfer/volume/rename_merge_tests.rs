@@ -16,7 +16,7 @@
 //! `rename_merge_case_fold_tests.rs` (case-insensitive backends and the
 //! late-detected collision), `rename_merge_walk_tests.rs` (the no-subtree-walk
 //! perf pin), `rename_merge_stat_tests.rs` (a stat that refuses to answer), and
-//! `rename_merge_mtp_tests.rs` (the whole path against a virtual MTP device).
+//! `operations_host/backend_suites/rename_merge_mtp_tests.rs` (the whole path against a virtual MTP device).
 
 use super::super::conflict_responder_test_support::{
     ConflictResponderSink, file_conflict_count, folder_conflict_count_any_dir,

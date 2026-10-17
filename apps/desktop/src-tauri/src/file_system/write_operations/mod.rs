@@ -160,7 +160,7 @@ pub use types::{
 pub(crate) mod testing;
 
 // ============================================================================
-// Reach for the engine's own modules: siblings and the suites below name these
+// Reach for the engine's own modules: siblings and the tests below name these
 // at the root. Private, so nothing outside the engine can.
 // ============================================================================
 
@@ -173,17 +173,11 @@ use transfer::volume::copy_volumes_with_progress;
 use manager::OperationDescriptor;
 
 #[cfg(test)]
-use archive_edit::{EditError, pull_apply_upload_swap, route_archive_copy_into};
-#[cfg(test)]
-use delete::delete_volume_files_for_test;
+use archive_edit::route_archive_copy_into;
 #[cfg(test)]
 use event_sinks::CollectorEventSink;
 #[cfg(test)]
-use scan_cache::seed_incoherent_scan_result_for_test;
-#[cfg(test)]
 use state::{OperationIntent, WriteOperationState};
-#[cfg(test)]
-use transfer::transfer_probe::render_live_dump as render_live_transfer_dump;
 #[cfg(test)]
 use transfer::volume::{move_volumes_with_progress, move_within_same_volume_with_progress};
 #[cfg(test)]
@@ -314,11 +308,8 @@ pub(crate) fn installed() -> &'static Operations {
     }
 }
 
-// Every backend's cells through this pipeline, and the scenarios they share.
 #[cfg(test)]
 mod approved_op_parity_tests;
-#[cfg(test)]
-pub(crate) mod backend_suites;
 #[cfg(test)]
 mod journal_capture_tests;
 #[cfg(test)]

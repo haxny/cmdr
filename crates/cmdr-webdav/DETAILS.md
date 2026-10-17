@@ -143,7 +143,7 @@ Why: a WebDAV server on Linux stores the bytes the URL spelled, where web server
 decomposed `café.jpg` from macOS looks right and breaks every link to it. The decision and which other tools do the
 same: `apps/desktop/src-tauri/src/file_system/write_operations/DETAILS.md` § "Look-alike names". Unit cells:
 `src/volume/paths_test.rs`; Docker cells:
-`apps/desktop/src-tauri/src/file_system/write_operations/backend_suites/webdav_look_alike_test.rs`.
+`apps/desktop/src-tauri/src/operations_host/backend_suites/webdav_look_alike_test.rs`.
 
 ## Write staging
 
@@ -158,11 +158,10 @@ IS its `.cmdr-tmp-*` temp, and its landing MOVE (`rename(force = false)`, `Overw
 user's name and refuses a taken one. A second staging layer under that temp buys nothing and costs a second MOVE per
 file plus a second temp in the user's folder (measured on the stock Apache fixture, 2026-09-23: 1 PUT + 2 MOVEs per new
 file with it, 1 PUT + 1 MOVE without; pinned by
-`apps/desktop/src-tauri/src/file_system/write_operations/backend_suites/webdav_wire_cost_test.rs`). ❌ **Rejected: a
-capability saying "my write is already staged" so the engine skips its own.** The backend's temp would sit outside
-everything the engine's staging carries: the in-flight ledger and its crash sweep, the pane hiding by ownership, the
-`LandingName` refusal, the ` (recovered)` rescue, and the discard of an unplaced temp. One owner keeps one source of
-truth.
+`apps/desktop/src-tauri/src/operations_host/backend_suites/webdav_wire_cost_test.rs`). ❌ **Rejected: a capability
+saying "my write is already staged" so the engine skips its own.** The backend's temp would sit outside everything the
+engine's staging carries: the in-flight ledger and its crash sweep, the pane hiding by ownership, the `LandingName`
+refusal, the ` (recovered)` rescue, and the discard of an unplaced temp. One owner keeps one source of truth.
 
 **`CreateNew` still stages here**: a PUT to `<dest>.cmdr-tmp-<uuid>` (`cmdr_fs::staging::temp_sibling_name`, shortened
 to fit the server's name limit), then a MOVE onto `dest` with `Overwrite: F`, which Apache `mod_dav` and sabre/dav both

@@ -39,7 +39,7 @@
 //! `cmdr_fs::volume::conformance::assert_delete_leaves_a_non_empty_dir_intact`,
 //! which every backend's suite runs. Pinned by
 //! `move_merge_tests.rs::same_volume_move_folder_merge_never_loses_a_byte_under_every_policy`
-//! and, end to end on a virtual device, `rename_merge_mtp_tests.rs`.
+//! and, end to end on a virtual device, `operations_host/backend_suites/rename_merge_mtp_tests.rs`.
 //!
 //! ## Case-insensitive backends and TOCTOU
 //!

@@ -275,9 +275,9 @@ way, is [the crate's](../../../../../crates/cmdr-mtp/DETAILS.md#which-side-a-tes
   registry, and that the attach runs inline on the connecting thread.
 - `file_system/volume/mtp_scan_oracle_tests.rs` — the app's fresh-listing oracle, asserted with
   `cmdr_mtp::volume::testing`'s `list_directory` counter (an oracle hit issues zero calls).
-- `file_system/write_operations/backend_suites/mtp_archive_test.rs` — archive browsing and remote editing over a device. The routing is
+- `operations_host/backend_suites/mtp_archive_test.rs` — archive browsing and remote editing over a device. The routing is
   the app's; `cmdr-mtp` knows nothing about zips.
-- `file_system/write_operations/transfer/volume/rename_merge_mtp_tests.rs` and `.../delete/volume_cancel_tests.rs` — the
+- `operations_host/backend_suites/rename_merge_mtp_tests.rs` and `.../delete/volume_cancel_tests.rs` — the
   transfer and delete pipelines.
 
 `test_support.rs` is how all of them reach a device: it shadows each `cmdr_mtp::testing` entry point with a no-argument

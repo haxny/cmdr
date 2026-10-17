@@ -88,7 +88,7 @@ pub(super) struct Sides {
 /// workload. `overwrites` are the destination files the copy writes over.
 ///
 /// ❗ Counted request for request the way the engine sends them, LISTs and
-/// HEADs included (`backend_suites/s3_engine_integration_test.rs` pins the
+/// HEADs included (`operations_host/backend_suites/s3_engine_integration_test.rs` pins the
 /// totals against the requests a fixture saw): the scan stats each selected
 /// item and lists each folder, the copy lists each source folder again as it
 /// walks, the destination is readied and each selected name probed, every

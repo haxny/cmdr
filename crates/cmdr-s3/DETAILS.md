@@ -160,15 +160,15 @@ BOTH fixtures, because they disagree on a wrong secret and on preconditions; `co
 `cmdr_fs::volume::conformance` assertion that applies (all but the unknown-length refusal, which is for backends that
 can't take one, and the link one: S3 has no links), on the check-then-write path on both servers; `write_test.rs` also
 proves the header path against VersityGW (`S3Volume::trust_conditional_writes`, testing only); the app's
-`file_system/write_operations/backend_suites/s3_transfer_integration_test.rs` copies onto, off, and between buckets
-through the transfer engine, byte for byte, plus the shared network scenarios (cancel, an answered Overwrite in place,
-awkward names); `connection_drop_test.rs` cuts a `TcpProxy` in front of VersityGW, ❌ never the container. Seeding goes
-through `volume::testing::seed`, this crate's own builders, so a cell about the write path never seeds through the code
-it tests. `copy_test.rs` covers server-side copy (whole and in parts, the date kept, across buckets and refused where
-the profile forbids it, cancel, pause between parts, no-overwrite) and `batch_test.rs` the batch delete past 1,000 keys,
-the capped tally, and `rename_work`, both on both fixtures; the app's `backend_suites/s3_rename_integration_test.rs`
-drives renames that run as moves end to end. Multipart cells cut 5 MiB parts (`S3Volume::set_part_floor`, testing only)
-except one per fixture at the production 64 MiB. **Live cells** (`live_protocol_test.rs`, `live_flow_test.rs`,
+`operations_host/backend_suites/s3_transfer_integration_test.rs` copies onto, off, and between buckets through the
+transfer engine, byte for byte, plus the shared network scenarios (cancel, an answered Overwrite in place, awkward
+names); `connection_drop_test.rs` cuts a `TcpProxy` in front of VersityGW, ❌ never the container. Seeding goes through
+`volume::testing::seed`, this crate's own builders, so a cell about the write path never seeds through the code it
+tests. `copy_test.rs` covers server-side copy (whole and in parts, the date kept, across buckets and refused where the
+profile forbids it, cancel, pause between parts, no-overwrite) and `batch_test.rs` the batch delete past 1,000 keys, the
+capped tally, and `rename_work`, both on both fixtures; the app's `backend_suites/s3_rename_integration_test.rs` drives
+renames that run as moves end to end. Multipart cells cut 5 MiB parts (`S3Volume::set_part_floor`, testing only) except
+one per fixture at the production 64 MiB. **Live cells** (`live_protocol_test.rs`, `live_flow_test.rs`,
 `live_connect_test.rs`, over `live_support.rs`) run the same questions against real accounts on all seven named presets,
 only through `apps/desktop/test/s3-servers/live.sh` (`CMDR_S3_LIVE=1` plus each account's variables; without them every
 cell skips silently, so the lanes never reach an account). Each protocol cell also asserts the profile against what it

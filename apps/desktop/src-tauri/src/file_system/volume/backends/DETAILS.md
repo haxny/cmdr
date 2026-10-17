@@ -115,7 +115,7 @@ The failure this prevents: two "Connect directly" clicks nine seconds apart repl
 decisions — is `crates/cmdr-smb/DETAILS.md`. What stays on this side is the auto-upgrade lifecycle above (it is
 `network/`'s, not the backend's). The app-side suites sit with the app code they assert on; the map is
 `crates/cmdr-smb/DETAILS.md` § "Which side a test lives on", and what they pin is
-`file_system/write_operations/DETAILS.md` § "The SMB app-side suites".
+`operations_host/DETAILS.md` § "The SMB app-side suites".
 
 
 ## Per-backend decisions
@@ -192,7 +192,7 @@ Resolving the id instead would answer with the SUCCESSOR after a swap and mark a
   `LocalPosixVolume`'s in `crates/cmdr-local/DETAILS.md` § "Testing"). For an app-side cell, which side of the
   crate boundary one belongs on is decided by what it asserts, not by what it connects to (`crates/cmdr-smb/DETAILS.md` § "Which side a test lives on"), and the app-side ones then
   sit beside the app code they assert on. What they pin, the Docker fixture ports, and the soak and wedge harnesses:
-  `file_system/write_operations/DETAILS.md` § "The SMB app-side suites".
+  `operations_host/DETAILS.md` § "The SMB app-side suites".
 
 ## Where the shared conformance assertions live
 

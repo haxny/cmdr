@@ -147,3 +147,162 @@ analytics client, and the error reporter work as in the app), the real `AppOpera
 volumes in the real registry) over `volume_host::host()`, whose runtime is `cmdr-fs`'s shared fallback, the test
 binary's shared operation log (what `TestJournalGuard` fills), the same optional seams as the app (own writes reach the
 downloads hook and its recorder), and no sink factory.
+
+## Backend suites (`backend_suites/`)
+
+Every backend's cells through the app's real engine, and the backend-blind scenarios they share. They sit here, beside
+the host, because each needs the app around the engine: a Docker fixture, the real volume registry over
+`volume_host::host()`, virtual MTP, or the ADB fake with the downloads watcher. They drive the engine through its
+public list plus `write_operations::testing` (the shared engine, the volume drivers they run with a state and sink of
+their own, the fault injector, the safety oracle), ❌ never an engine module by path, so the engine can leave the app
+crate without them.
+
+### The network transfer suites
+
+`webdav_transfer_integration_test.rs` and `sftp_transfer_integration_test.rs` copy real bytes between local disk and a
+live fixture server through `copy_between_volumes`, which is the seam neither backend crate can reach: both directions
+of an actual copy were once broken in the app while `cmdr-sftp`'s own Docker suite was fully green (a `supports_export`
+predicate the crate never states, and a free-space pre-flight reading `NotSupported` as "no room").
+
+- **The scenarios are backend-blind and live in `network_*_test_support.rs`.** Everything they touch is `dyn Volume`,
+  taken as `(remote: Arc<dyn Volume>, dir: PathBuf)` (a live volume plus a scratch dir it owns and removes), so a claim
+  proved against one backend is proved in the same words against the others and the suites can't drift. Each backend
+  file connects its own fixture (`sftp_test_support::fixture`, `smb_test_support::fixture`, `webdav_test_support::fixture`) and
+  delegates. Six files, by what they prove:
+  - `network_transfer_test_support.rs`: the byte path (below).
+  - `network_semantics_test_support.rs`: merges under Skip / Overwrite / Rename / OverwriteSmaller, a move-merge that
+    spares what it skipped, whole-folder moves both ways, same-server move-merge, move, and copy, a missing nested
+    destination, a 6 MiB odd-length round trip, and 40 files at full concurrency. Every merge asserts through
+    `testing::assert_operation_was_safe`. Also the shared seeding and driving helpers (`seed`, `transfer`).
+  - `network_safety_test_support.rs`: a failed merge copy or move onto the user's folder, a delete bound to a
+    local-shaped preview, a recursive delete that takes exactly the selection, an unanswerable source-type probe, a
+    download cancelled mid-file, and a name another writer takes mid-upload (never replaced, never deleted by the
+    failed copy's cleanup; SMB's single-shot size is a known red gap, `../file_system/write_operations/transfer/volume/DETAILS.md` § "The single-shot
+    exemption"). Faults go on the LOCAL side (`FaultyVolume`); the server is what users run.
+    `Registered` puts a volume in the registry for the ops that look it up, and cleans BEFORE unregistering, because
+    unregistering retires the volume and a retired network volume drops its session.
+  - `network_look_alike_test_support.rs`: an NFD name onto its NFC twin (Skip, Overwrite, folder merge, same-server
+    move, bulk rename), new names landing composed, an existing decomposed entry read, downloaded, overwritten, and deleted under its own bytes, and an inline rename that never
+    lands on a taken name or its other spelling.
+  - `network_archive_test_support.rs`: a zip on the server browsed and extracted through the copy engine, the routing
+    predicate, a remote edit and its cancel before the swap, files copied into a remote zip, a compress, and a
+    compress onto a look-alike name.
+  - `network_move_drift_test_support.rs`: a folder moved off the server while a file in it is saved over or a new one
+    appears (#139). A local destination that edits the server as the first file lands opens the window; the edit
+    stays with its new bytes, the rest goes, and `AppearedDuringMove` counts it. The saved-over file changes SIZE,
+    since a server's whole-second mtime can't tell a same-size save apart.
+- **Which backend drives what.** SFTP, SMB, and WebDAV drive all six; ADB drives `network_transfer_test_support.rs`.
+  S3 drives the transfer, semantics, safety, and move-drift scenarios (`s3_transfer_*`), minus the name-taken-mid-upload
+  cell, whose guard is a staged landing S3 never makes. Its scenarios take a `cmdr_s3::volume::testing::S3Target`, so
+  `s3_live_engine_test.rs` runs the same bodies against real accounts by hand (`live-engine.sh`; each scenario's waits
+  stretch to ten minutes under `CMDR_S3_LIVE=1`, `network_transfer_test_support::budget`).
+  SFTP also points the same-server move and copy, the inline rename, and the remote zip edit at
+  `sftp-fixture-noposixrename`, where the server can't copy for itself and a rename has no atomic replace. WebDAV points
+  the zip browse at `webdav-fixture-norange`, whose whole-file answer to every ranged GET is what a zip reader's many
+  small windows have to be cut out of locally. SFTP alone holds a link, so its cell for a moved folder holding a link
+  to a folder outside the selection (#140) is its own, made through the test-only `SftpVolume::create_symlink`. It pins
+  that the target keeps its files; the move itself fails on the link today (SFTP lists a link with lstat attributes,
+  so the walk streams a folder link as a file). The dialog-addressed destination cells are SFTP's and SMB's own: the
+  WebDAV fixture's remote root is `/`, where a volume-relative and a server-absolute path are spelled alike, so a
+  doubled root can't be told from a right one there (`cmdr-webdav`'s `paths_test.rs` pins the refusal instead).
+- **A server that says no mid-operation: `webdav_refusal_test.rs`.** 507 on an upload (answered after the body, and
+  before it with the body unread, the way a quota'd Nextcloud answers), 403 on the upload and on the DELETE a
+  safe-replace needs, and refusals of the server's own `COPY` and `MOVE`. Each arrives typed (`DestinationFull`,
+  `PermissionDenied`), loses nothing, and ❗ leaves the volume connected, since a refusal is an answer. The refusal
+  comes from `webdav_refusing_proxy_test_support.rs`, an HTTP proxy in front of the real Apache that answers one
+  request itself; ❌ never reconfigure the shared container for a cell. A refused `COPY` falls back to streaming by
+  design (`file_system/write_operations/transfer/volume/server_side_copy.rs::try_server_side_copy`).
+- **`adb_transfer_test.rs` runs the same scenarios against a phone on `cmdr-adb`'s in-process fake server**, so it
+  needs no Docker, runs in the unit lane, and has no name prefix to keep. Its own cells start a copy from two registered
+  ids (`start_copy_by_id`, through `start_volume_copy`), check that a copy onto the phone lands through the writer's own
+  staging `mv`, and read the pane patch a mkdir, a move, and a delete each owe from a `RecordingListings` host.
+  ❗ A transfer onto a phone runs at width 1 (the `"adb"` row in `MAX_CONCURRENT_OPERATIONS_SOURCES`), so the serial
+  driver runs it: the pre-existing-folder scenario there holds the per-name probe (`landing::top_level_precheck`),
+  never the concurrent driver's skip on a `Created` answer.
+- **❗ The cells themselves must stay in the backend files, on the `webdav_integration_` / `sftp_integration_` / `smb_integration_` name
+  prefix.** The integration lane selects the app crate's Docker cells by NAME (`scripts/check/checks/fixture-lane-coverage.go`,
+  enforced by `desktop-fixture-lane-coverage`), so a scenario promoted to a `#[tokio::test]` in the shared file would
+  compile, look like coverage, and never run anywhere.
+- **What the shared scenarios pin**: a nested directory tree lands intact in both directions (structure and bytes, as
+  one `tree_fingerprint` comparison); a copy cancelled mid-upload leaves neither the user's filename nor a
+  `.cmdr-tmp-*` sibling; an Overwrite answer travels out as a `write-conflict` and back through
+  `resolve_write_conflict` and lands the source bytes; a PRE-EXISTING destination folder still probes each name under
+  the concurrent driver (what a wrongly-`Created` `DirectoryCreation` would turn into a silent overwrite of every
+  clashing file); and awkward names (`&`, `+`, `%`, `#`, non-ASCII) plus a zero-byte file survive a full round trip.
+- **Nothing here waits on a stopwatch to decide a verdict.** The fixture stack is machine-wide and shared with every
+  sibling worktree, so a wait that expires says "the containers were busy" at least as loudly as it says "the code is
+  wrong". Two consequences to keep: a wait for a clash also ends when the operation SETTLES, so a destination probe that
+  never happened fails as a sentence rather than as a timeout; and the cancel cell's premise is a chunk COUNT, not a
+  duration.
+- **The cancel cell holds the source at a chunk boundary rather than racing a timer.** Its `GatedUploadSource`
+  (`network_gated_source_test_support.rs`, split out so neither file crosses the `file-length` warn threshold) hands
+  out one chunk per semaphore permit, so the destination provably holds an open, incomplete staging sibling when the
+  cancel lands; it then insists a `write-cancelled` was emitted and no `write-complete` was, so neither a copy that
+  finished nor a run the host starved can satisfy the later claims for the wrong reason. It waits for TWO chunks, not
+  one: the stream is polled again only once the destination has taken the previous chunk, so the second hand-out is what
+  proves the first reached the server. That also keeps the cell inside the workspace-wide 8 s nextest cap,
+  which a payload big enough to outrun a stopwatch would not. The download twin gates a LIVE server's own read stream
+  (`gated_reads`, a `forward_volume_methods!` double), with a payload over two of SMB's 8 MiB read chunks.
+- **❗ The SFTP cells share one stock server, one SSH session per cell** (nextest runs each test in its own process).
+  That server gets two CPUs where the others get half of one; at half, two concurrent lanes pushed every SFTP cell past
+  the 8 s cap. `apps/desktop/test/sftp-servers/README.md`.
+
+### The SMB app-side suites
+
+Every SMB cell whose other half is this app rather than the protocol lives here: `smb_transfer_semantics_test.rs`,
+`smb_transfer_safety_test.rs`, `smb_full_concurrency_test.rs`, `smb_stress_test.rs`, `smb_soak_test.rs`,
+`smb_archive_integration_test.rs` (remote-backed zips: browse, extract-out, and the pull-apply-upload-swap edit), and
+`smb_stream_write_integration_test.rs` (a `LocalPosixVolume` source streaming onto the share). They connect through
+`cmdr_smb::volume::testing`, wrapped by `smb_test_support.rs` so the volume they get carries the app's real
+`VolumeHost` and the listing cache, index, and activity tracker see what the share reports. Two cells that assert on
+other modules reach `smb_test_support` from there: `listing_host/tests/smb_pane_close_watch_integration_test.rs` and
+`file_system/volume/smb_media_fetch_integration_test.rs`.
+
+- **The semantics, safety, look-alike, and archive cells delegate** to the shared `network_*_test_support.rs`
+  scenarios through `smb_test_support::fixture`; only the dialog-addressed move and the replaced-volume copy in
+  `smb_transfer_semantics_test.rs` are SMB's own bodies.
+- **Docker SMB integration tests**: `#[ignore]` tests that require Docker SMB containers (start with
+  `apps/desktop/test/smb-servers/start.sh`). Run with `cargo nextest run smb_integration --run-ignored all`. Connect via
+  `smb2::testing::guest_port()` (10480, guest/no-auth), `auth_port()` (10481, `testuser`/`testpass`), `readonly_port()`
+  (10488), `slow_port()` (10493, 200ms latency). See `apps/desktop/test/smb-servers/README.md` for the full container
+  list and env var overrides.
+- **❗ A cell must carry the `smb_integration_` name prefix**, the same rule the WebDAV and SFTP suites above follow:
+  the integration lane selects the app crate's Docker cells by NAME
+  (`scripts/check/checks/fixture-lane-coverage.go`, enforced by `desktop-fixture-lane-coverage`), so anything else
+  compiles, reviews clean, and runs nowhere.
+- **Full-concurrency copy** (`smb_full_concurrency_test.rs`): the automated net under the 2026-07-31 transfer wedge
+  (`docs/notes/incidents/2026-07-31-transfer-wedge/README.md`). 400 local sources onto the share through
+  `copy_volumes_with_progress` at the driver's own concurrency, with sizes on BOTH SMB write paths: the large ones are
+  sized off the session's negotiated `max_write` at runtime, not hardcoded, so they always land on the staged streaming
+  writer. Beyond byte-exactness it asserts three things a content check alone would miss: the concurrency window really
+  filled (peak `TransferActivity::in_flight` off the progress events, against a floor rather than the driver's own
+  formula, so a change to it can't fail this suite for the wrong reason), a `.cmdr-tmp-*` really appeared during the
+  copy (else the "no leftovers" check passes vacuously), and none survived it.
+
+  Both tests there bound their own wait and, on expiry, panic with `transfer_probe`'s LIVE in-flight table via
+  `render_live_transfer_dump` — a `#[cfg(test)]` accessor over the probe registry. They time out on the copy's
+  `JoinHandle`, never on the copy future: timing out the future DROPS it, which drops the probe guard and empties the
+  registry before there is anything to dump. `smb_integration_a_wedged_copy_is_caught_and_names_its_phase` is the test
+  of that mechanism — it parks a copy on the pause gate and asserts the bound fires with a dump naming the operation,
+  the driver phase, the window fill, and `parked(pause)`. Without it the deadline and the dump are untested
+  scaffolding, and a suite meant to catch a hang becomes one. The wedge is staged through the pause gate rather than a
+  silenced server because what is under test is the harness at expiry, and a pause reaches that state deterministically
+  without holding the shared Docker stack hostage. `.config/nextest.toml` grants the big test a 75 s cap so its own 45 s
+  deadline stays authoritative; a cap kill would leave no diagnostic.
+- **A dropped network, end to end** (`smb_outage_test.rs`): a folder copy through `outage_proxy_test_support.rs`'s
+  `OutageProxy` (a TCP proxy of the test's own between the share and the fixture) pauses part-way, the proxy cuts every
+  connection and refuses new ones, the copy resumes into the outage and must WAIT (named, not failed), then the proxy
+  restores and every file must land byte-exact with no `.cmdr-tmp-*` left. ❌ Never stage an outage by stopping a
+  fixture container: the stacks are leased machine-wide, so that fails every other worktree's running suite.
+- **The stress test's hung-run diagnostic gates on the log TARGET** (`MutexCaptureLogger::enabled` in
+  `smb_stress_test.rs`): `cmdr_smb::*` for the `client-mutex:` records and `smb2::*` for `recv:`. Without that gate the
+  whole process-wide trace stream flows through `log()` and gets `format!`-ed per record, which pushed
+  `smb_integration_concurrent_streaming_writes_no_deadlock` past its own deadline. ❗ The target is the EMITTING crate's
+  module path, so moving where the SMB client lives silently empties the capture rather than failing anything.
+- **SMB soak test** (`smb_soak_copy_loop` in `smb_soak_test.rs`): repeats the SMB→Local copy pipeline for hundreds to
+  thousands of iterations and watches RSS, open FDs, SMB credits, and per-iteration wall-clock drift. Catches
+  accumulating bugs the single-shot integration tests can't see (credit leak, FD leak, memory growth, slowdown).
+  Default mode: `CMDR_SOAK_ITERATIONS=100` (≈5 s against Docker). Long mode: `CMDR_SOAK_DURATION_SECS=1800` (30 min,
+  via `./scripts/soak-smb.sh`). CI has a `workflow_dispatch`-only job in `slow-checks.yml`. It is deliberately outside
+  the gating lane, so it carries no `smb_integration_` prefix.
+

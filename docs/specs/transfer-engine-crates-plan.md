@@ -1653,6 +1653,32 @@ virtual-MTP cell (`mtp_archive_test.rs`) needs `cmdr/virtual-mtp`, which `HostCa
 `desktop-fixture-lane-coverage`, and `desktop-rust-integration-tests` once (slow, needed: these are the Docker suites,
 and this milestone moves them).
 
+**What landed differently** (recorded at execution):
+
+- **Three more app-dependent cells joined the suites**: `transfer/volume/rename_merge_mtp_tests.rs` (virtual MTP) and
+  the two network benches `copy_bench.rs` and `copy_concurrency_bench.rs` (`volume_host::host()`, live SMB, the app's
+  `set_smb_concurrency`), so M8a's `git mv` drags none of them. `transfer/real_image.rs` stays for M8b (its lane's atoms
+  name its module path).
+- **The production-effects retained-failure pin moved app-side** (`manager/tests/failures.rs` →
+  `operations_host/terminal_effects_tests.rs`), on an engine of its own built with `RecordingEngineEvents`; the
+  broadcast equality reads that recorder instead of the manager's private `emit_count()`, and "the record is gone" is
+  the single `Failed` row (a live record would still hide it behind `Running`). `QueuedOperationFixture` gained
+  `park_on(engine, tag)` and `holder_id()` for it.
+- **`testing` grew from 14 to 36 items**, all reached by the suites: the volume drivers (`copy_volumes_with_progress`,
+  `move_volumes_with_progress`, `move_within_same_volume_with_progress`), the fault injector and safety oracle
+  (`FaultyOp`, `FaultyVolume`, `forward_volume_methods`, `SafetySpec`, `assert_operation_was_safe`), the direct drivers
+  (`create_directory_core`, `delete_volume_files_for_test`, `EditError`, `pull_apply_upload_swap`,
+  `route_archive_copy_into`, `seed_incoherent_scan_result_for_test`, `OutagePolicy`, `Reversal`, `OperationIntent`,
+  `render_live_transfer_dump`), `TestOperationGuard`, and four wire types assertions match (`AppearedDuringMove`,
+  `LostMetadata`, `LostMetadataClass`, `MetadataLeftBehind`). `smb_test_support` left the list: it's app code now,
+  reached at `operations_host::backend_suites::smb_test_support`.
+- **The suites' docs moved with them**: `write_operations/DETAILS.md` § "The network transfer suites" and § "The SMB
+  app-side suites" are now under `operations_host/DETAILS.md` § "Backend suites".
+- **Selection unchanged**: the 311 suite cells keep their leaf names and lanes (44 in the unit lane, 266 in the
+  integration lane: SMB 60, SFTP 58, WebDAV 56, S3 92; one opt-in by hand), and the three that joined keep theirs (the
+  MTP cell in the unit lane, the two benches by hand); the app crate's lane totals stay 7,578 unit, 307 integration,
+  7,966 overall.
+
 ### M7b–M7e: Tests own their engine
 
 **Scope.** A `testing` module: `TestOperations` (an `Operations` over one fake per seam it reads back) and
