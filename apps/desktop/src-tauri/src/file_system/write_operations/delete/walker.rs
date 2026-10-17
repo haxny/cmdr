@@ -15,6 +15,7 @@ use super::super::types::{
     CancelRollback, DryRunResult, WriteCancelledEvent, WriteCompleteEvent, WriteOperationConfig, WriteOperationError,
     WriteOperationPhase, WriteOperationType, WriteProgressEvent, WriteSourceItemDoneEvent,
 };
+use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::volume::{Volume, VolumeError};
 
 // ============================================================================
@@ -290,9 +291,8 @@ impl VolumeScanTracker {
     /// Returns true if enough time has passed since the last emit AND atomically
     /// resets the timer. Single-call gate so callers don't accidentally double-emit.
     fn should_emit(&self) -> bool {
-        let Ok(mut last) = self.last_emit.lock() else {
-            return false;
-        };
+        // A throttle timestamp: a poisoned one is still a timestamp.
+        let mut last = self.last_emit.lock_ignore_poison();
         if last.elapsed() < self.progress_interval {
             return false;
         }
@@ -999,3 +999,7 @@ pub(in crate::file_system::write_operations) async fn delete_volume_files_with_p
 
     Ok(())
 }
+
+#[cfg(test)]
+#[path = "walker_tests.rs"]
+mod tests;
