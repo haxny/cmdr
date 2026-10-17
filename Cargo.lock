@@ -1470,7 +1470,6 @@ dependencies = [
  "tokio",
  "tokio-util",
  "tower-http 0.7.1",
- "trash",
  "unicode-normalization",
  "url",
  "urlencoding",

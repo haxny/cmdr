@@ -222,7 +222,7 @@ walkdir = "2"
 # Drive indexing: SQLite store and macOS FSEvents watcher (the parallel directory
 # walker is now the in-tree `indexing::scanner::walker`, not a dependency)
 rusqlite = { version = "0.40", features = ["bundled", "collation", "fallible_uint"] }
-# For chunked copy metadata preservation (network filesystems)
+# Extended attributes: Finder tags, per-path icons, and Google Drive's item ids.
 xattr = "1"
 sysinfo = { version = "0.39.0", default-features = false, features = ["system"] }
 time = { version = "0.3", features = ["parsing", "macros", "formatting"] }
@@ -262,7 +262,6 @@ specta = { version = "=2.0.0-rc.24", features = ["derive", "serde_json"] }
 libc = "0.2"
 
 [target.'cfg(target_os = "linux")'.dependencies]
-trash = "5.2"
 # Credential storage via Linux secret service (GNOME Keyring / KDE Wallet).
 # `keyring` 4.0 was a full architectural rewrite; the cross-platform API moved to
 # `keyring-core` and each backend (Secret Service, etc.) is a separate crate. Picking
@@ -336,9 +335,6 @@ objc2-foundation = { version = "0.3", features = [
     "NSLocale",
     # `NSPredicate`: evaluating File Provider actions' activation rules (`file_system/file_provider_actions/`).
     "NSOperation", "NSPredicate", "NSProcessInfo",
-    # `NSSearchPathDirectory::TrashDirectory`, how `trash_dir_for_path` asks Cocoa which
-    # trash a given volume uses instead of reconstructing it from `statfs` + `getuid`.
-    "NSPathUtilities",
     # `NSSetUncaughtExceptionHandler`: the crash report's uncaught Objective-C exception reason
     # (`crash_reporter/objc_exception.rs`).
     "NSException",
