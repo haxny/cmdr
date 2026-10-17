@@ -16,7 +16,8 @@
 //!   into a zip becomes a managed archive edit) gets its sink from the host's
 //!   [`OperationSinkFactory`].
 //! - **"Cmdr is about to write here"** goes through [`OwnWrites`]
-//!   (`own_writes.rs`), before every syscall that lands a path.
+//!   (`own_writes.rs`), before every syscall that lands a path, by
+//!   [`EngineHost::announce`], whose [`Announced`] the writers require.
 //! - **What the drive index knows** goes through [`OperationIndex`]
 //!   (`index.rs`).
 //! - **Deliberate slowness for automated runs** goes through [`Pacing`]
@@ -43,8 +44,10 @@ mod scan_preview_sink;
 pub(crate) mod testing;
 mod volumes;
 
+use std::path::Path;
 use std::sync::Arc;
 
+use cmdr_fs::volume::Volume;
 use cmdr_fs::volume::host::VolumeHost;
 use cmdr_fs::volume::host::listings::ListingHost;
 use tokio::runtime::Handle;
@@ -59,7 +62,7 @@ use name_order::EnglishNameOrder;
 pub(crate) use name_order::NameOrder;
 pub use operation_sink::OperationEventSink;
 use own_writes::NoOwnWrites;
-pub(crate) use own_writes::OwnWrites;
+pub(crate) use own_writes::{Announced, OwnWrites};
 use pacing::NoPacing;
 pub(crate) use pacing::Pacing;
 pub use scan_preview_sink::ScanPreviewEventSink;
@@ -178,9 +181,26 @@ impl EngineHost {
         &self.events
     }
 
-    /// Where the engine announces a path before it writes there.
-    pub(crate) fn own_writes(&self) -> &dyn OwnWrites {
-        &*self.own_writes
+    /// Tells the host the engine is about to create, replace, rename, or remove
+    /// `path` (a local path), and returns the [`Announced`] the writers take.
+    /// The one way engine code reaches [`OwnWrites`].
+    pub(crate) fn announce<'a>(&self, path: &'a Path) -> Announced<'a> {
+        self.own_writes.announce(path);
+        Announced::new(path)
+    }
+
+    /// [`Self::announce`] for `path` on `volume`: the host hears its local twin
+    /// when the volume is local-FS-backed, and nothing otherwise (MTP, SMB, and
+    /// in-memory paths never reach a local watcher, and a made-up local path
+    /// would only churn the ignore set). Either way the answer vouches for
+    /// `path`.
+    pub(crate) fn announce_on<'a>(&self, volume: &dyn Volume, path: &'a Path) -> Announced<'a> {
+        if let Some(root) = volume.local_path() {
+            // The same anchoring `LocalPosixVolume::resolve` applies, so the
+            // path announced is the one the write hits.
+            self.own_writes.announce(&cmdr_fs::volume::root_anchored(&root, path));
+        }
+        Announced::new(path)
     }
 
     /// What the drive index knows.

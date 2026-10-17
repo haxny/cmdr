@@ -42,7 +42,7 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use super::super::host::EngineHost;
+use super::super::host::Announced;
 use super::super::in_flight_temps::TempHome;
 use super::super::state::WriteOperationState;
 use super::recovered_name::{
@@ -176,12 +176,28 @@ impl StagedWrite {
         } else {
             WriteStaging::Stage
         };
-        Self::begin(state, final_path, staging)
+        Self::begin_unannounced(state, final_path, staging)
     }
 
     /// Picks the staging path and, when we own it, records it as an in-flight
     /// partial on the operation so an abandoned task's litter can be found.
-    pub(super) fn begin(state: &Arc<WriteOperationState>, final_path: &Path, staging: WriteStaging) -> Self {
+    ///
+    /// The final name comes in announced ([`Announced`]); the write's own
+    /// target (the temp, or the final name itself when single-shot) is announced
+    /// here on `dest_volume`, before the write that creates it.
+    pub(super) fn begin(
+        state: &Arc<WriteOperationState>,
+        dest_volume: &dyn Volume,
+        final_path: Announced<'_>,
+        staging: WriteStaging,
+    ) -> Self {
+        let staged = Self::begin_unannounced(state, final_path.path(), staging);
+        state.scope().host().announce_on(dest_volume, staged.target());
+        staged
+    }
+
+    /// [`Self::begin`] with nothing announced.
+    fn begin_unannounced(state: &Arc<WriteOperationState>, final_path: &Path, staging: WriteStaging) -> Self {
         let mut temp = None;
         let mut caller_temp = None;
         match staging {
@@ -714,21 +730,6 @@ pub(super) fn resolve_staging(requested: WriteStaging, lands_whole: bool) -> Wri
         WriteStaging::StageOntoClaimedName if lands_whole => WriteStaging::SingleShot(LandingName::ClaimedByTheCaller),
         other => other,
     }
-}
-
-/// Resolve `dest_path` against `dest_volume.local_path()` and register it
-/// with the downloads watcher's ignore set. Skips silently when
-/// `dest_volume` isn't local-FS-backed (MTP, SMB, in-memory): those paths
-/// would never trigger the watcher anyway, and synthesizing a non-local
-/// path into the ignore set would just churn the map for no benefit.
-pub(super) fn note_pending_for_local_dest(host: &EngineHost, dest_volume: &Arc<dyn Volume>, dest_path: &Path) {
-    let Some(root) = dest_volume.local_path() else {
-        return;
-    };
-    // The same anchoring `LocalPosixVolume::resolve` applies, so the path we
-    // register matches the one `write_from_stream` will hit.
-    let absolute = cmdr_fs::volume::root_anchored(&root, dest_path);
-    host.own_writes().announce(&absolute);
 }
 
 #[cfg(test)]

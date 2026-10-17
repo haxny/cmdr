@@ -17,7 +17,7 @@ use super::super::interrupted_landing::{
 };
 use super::super::recovered_name::FinalizeFailure;
 use super::super::retry;
-use super::super::staged_write::{StagedWrite, WriteStaging, note_pending_for_local_dest, resolve_staging};
+use super::super::staged_write::{StagedWrite, WriteStaging, resolve_staging};
 use super::super::transfer_probe::{
     TaskPhase, arm_current_task_stall_abort, note_task_retry, set_task_bytes, set_task_phase,
 };
@@ -135,7 +135,7 @@ pub(super) async fn stream_pipe_file(
     // ignore set when the destination is local-FS-backed (the only case where
     // the watcher could otherwise fire). Covers MTP→Local and SMB→Local imports
     // that land in ~/Downloads.
-    note_pending_for_local_dest(state.scope().host(), dest_volume, dest_path);
+    let announced_dest = state.scope().host().announce_on(&**dest_volume, dest_path);
 
     // A destination that can't rename can't stage. No production backend is in
     // that position (Local, SMB, and MTP all rename), but a minimal `Volume`
@@ -148,7 +148,7 @@ pub(super) async fn stream_pipe_file(
         source_volume,
         source_path,
         dest_volume,
-        dest_path,
+        announced_dest,
         state,
         on_file_progress,
         staging,
@@ -250,8 +250,7 @@ pub(super) async fn stream_pipe_file(
         // either, though it makes no single-shot promise: the yield floor and
         // the stall watchdog below keep reading the single-shot answer alone.
         let resolved_staging = resolve_staging(staging, write_is_single_shot || dest_volume.publishes_writes_whole());
-        let staged = StagedWrite::begin(state, dest_path, resolved_staging);
-        note_pending_for_local_dest(state.scope().host(), dest_volume, staged.target());
+        let staged = StagedWrite::begin(state, &**dest_volume, announced_dest, resolved_staging);
         // Wrap so a paused op parks (and a long copy yields to foreground)
         // between bounded windows. `size` is read off the raw stream first — the
         // wrapper forwards `total_size()` unchanged, so the destination still sees

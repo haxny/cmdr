@@ -20,6 +20,7 @@ use std::sync::Arc;
 use super::super::conflict::{ApplyToAll, IncomingItem, resolve_conflict};
 use super::super::error_classification::IoResultExt;
 use super::super::event_sinks::OperationEventSink;
+use super::super::host::Announced;
 use super::super::ledger::{WrittenFile, WrittenIdentity};
 use super::super::overwrite::{rename_no_replace, safe_overwrite_dir};
 use super::super::reversal::{Recheck, ReversalTally, recheck_local};
@@ -297,8 +298,8 @@ fn occupant_is_the_item_itself(item: &MovedItem, occupant: &fs::Metadata) -> boo
 ///
 /// The three no-conflict landings (`same_fs`'s top level, `merge_move_directory`
 /// per child, `cross_fs`'s staging-to-final) all come through here.
-fn rename_onto_free_name(source: &Path, dest: &Path) -> std::io::Result<()> {
-    rename_no_replace(source, dest)
+fn rename_onto_free_name(source: &Path, dest: Announced<'_>) -> std::io::Result<()> {
+    rename_no_replace(source, dest.path())
 }
 
 /// Lands a move source at the path a `resolve_conflict` result chose, honoring
@@ -321,40 +322,43 @@ fn move_resolved_into_place(
     state: &Arc<WriteOperationState>,
     source: &Path,
     dest_path: &Path,
-    resolved: &super::super::overwrite::ResolvedDestination,
+    // Where `resolve_conflict` chose to land it: `dest_path` to overwrite, a
+    // reserved fresh name to keep both.
+    landing: Announced<'_>,
     // The source's own metadata, stat'd before the rename. The rename carries the
     // node id across, so this IS the landed item's identity; `None` (the stat
     // failed) leaves the ledger entry unverifiable.
     source_stat: Option<&fs::Metadata>,
     move_tx: &mut MoveTransaction,
 ) -> Result<(), WriteOperationError> {
+    let landing = landing.path();
     // A symlink counts as a leaf on both sides, whatever it points at: it lands
     // by one rename, and a link facing a real directory is the type mismatch the
     // `safe_overwrite_dir` branch below is for.
     let source_is_dir = is_real_directory(source);
-    let is_rename = resolved.path != dest_path;
+    let is_rename = landing != dest_path;
 
     if is_rename {
         // Rename: keep the existing dest, land the source at the reserved name.
         if source_is_dir {
             // A directory can't `rename` over the reserved placeholder file;
             // remove it first. The name stays reserved logically.
-            let _ = fs::remove_file(&resolved.path);
+            let _ = fs::remove_file(landing);
         }
-        fs::rename(source, &resolved.path).with_path(source)?;
+        fs::rename(source, landing).with_path(source)?;
         move_tx.record(
             source.to_path_buf(),
-            WrittenFile::local_stat(resolved.path.clone(), source_stat),
+            WrittenFile::local_stat(landing.to_path_buf(), source_stat),
         );
         return Ok(());
     }
 
-    // Overwrite (`resolved.path == dest_path`).
-    let dest_is_dir = is_real_directory(&resolved.path);
+    // Overwrite (`landing == dest_path`).
+    let dest_is_dir = is_real_directory(landing);
     if source_is_dir != dest_is_dir {
         // Type-mismatch overwrite: set the dest aside, move the source in.
         let source_path = source.to_path_buf();
-        safe_overwrite_dir(state, &resolved.path, |target| {
+        safe_overwrite_dir(state, landing, |target| {
             fs::rename(&source_path, target).map_err(|e| WriteOperationError::IoError {
                 path: source_path.display().to_string(),
                 message: format!("Failed to rename across types: {}", e),
@@ -362,13 +366,13 @@ fn move_resolved_into_place(
         })?;
         move_tx.record(
             source.to_path_buf(),
-            WrittenFile::local_stat(resolved.path.clone(), source_stat),
+            WrittenFile::local_stat(landing.to_path_buf(), source_stat),
         );
     } else {
-        fs::rename(source, &resolved.path).with_path(source)?;
+        fs::rename(source, landing).with_path(source)?;
         move_tx.record(
             source.to_path_buf(),
-            WrittenFile::local_stat(resolved.path.clone(), source_stat),
+            WrittenFile::local_stat(landing.to_path_buf(), source_stat),
         );
     }
     Ok(())
@@ -565,16 +569,9 @@ fn merge_move_directory(
                 Some(resolved) => {
                     // Hook the downloads watcher's ignore set for both
                     // halves of the rename; no-ops outside ~/Downloads.
-                    state.scope().host().own_writes().announce(&source_child);
-                    state.scope().host().own_writes().announce(&resolved.path);
-                    move_resolved_into_place(
-                        state,
-                        &source_child,
-                        &dest_child,
-                        &resolved,
-                        child_stat.as_ref(),
-                        move_tx,
-                    )?;
+                    state.scope().host().announce(&source_child);
+                    let landing = state.scope().host().announce(&resolved.path);
+                    move_resolved_into_place(state, &source_child, &dest_child, landing, child_stat.as_ref(), move_tx)?;
                 }
                 None => {
                     // Skip: source file stays in place. Record it so a cross-FS
@@ -588,9 +585,9 @@ fn merge_move_directory(
             }
         } else {
             // No conflict, just rename
-            state.scope().host().own_writes().announce(&source_child);
-            state.scope().host().own_writes().announce(&dest_child);
-            rename_onto_free_name(&source_child, &dest_child).with_path(&source_child)?;
+            state.scope().host().announce(&source_child);
+            let landing = state.scope().host().announce(&dest_child);
+            rename_onto_free_name(&source_child, landing).with_path(&source_child)?;
             move_tx.record(source_child, WrittenFile::local_stat(dest_child, child_stat.as_ref()));
         }
     }

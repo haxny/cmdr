@@ -34,16 +34,22 @@ fn safe_overwrite_file(source: &Path, dest: &Path) -> Result<u64, WriteOperation
 }
 
 fn copy_through_staging(source: &Path, dest: &Path, replacing: bool) -> Result<u64, WriteOperationError> {
-    stage_and_land_file(&overwrite_state(), dest, replacing, PostLanding::Apply, |target| {
-        #[cfg(target_os = "macos")]
-        let bytes = super::super::transfer::macos_copy::copy_single_file_native(source, target, false, None);
-        #[cfg(not(target_os = "macos"))]
-        let bytes = {
-            use super::super::error_classification::IoResultExt;
-            fs::copy(source, target).with_path(source)
-        };
-        bytes.map(Staged::bytes)
-    })
+    stage_and_land_file(
+        &overwrite_state(),
+        Announced::assumed(dest),
+        replacing,
+        PostLanding::Apply,
+        |target| {
+            #[cfg(target_os = "macos")]
+            let bytes = super::super::transfer::macos_copy::copy_single_file_native(source, target, false, None);
+            #[cfg(not(target_os = "macos"))]
+            let bytes = {
+                use super::super::error_classification::IoResultExt;
+                fs::copy(source, target).with_path(source)
+            };
+            bytes.map(Staged::bytes)
+        },
+    )
     .map(|landed| landed.bytes)
 }
 

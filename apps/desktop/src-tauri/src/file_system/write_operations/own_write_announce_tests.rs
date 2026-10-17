@@ -387,7 +387,7 @@ async fn an_archive_edit_announces_its_temp_then_the_archive_it_replaces() {
     );
 }
 
-/// The volume engine landing on a local disk (`staged_write::note_pending_for_local_dest`).
+/// The volume engine landing on a local disk (`StagedWrite::begin` over `EngineHost::announce_on`).
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_volume_copy_onto_a_local_disk_announces_its_destination_and_temp() {
     let rig = Rig::new("announce_volume_copy");
@@ -422,7 +422,7 @@ async fn a_volume_copy_onto_a_local_disk_announces_its_destination_and_temp() {
 }
 
 /// The volume engine's same-volume move on a local disk
-/// (`move_same::note_pending_for_local_volume`).
+/// (`EngineHost::announce_on`).
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_same_volume_move_on_a_local_disk_announces_both_ends() {
     let rig = Rig::new("announce_volume_move");

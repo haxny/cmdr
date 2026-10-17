@@ -27,7 +27,7 @@ use super::super::transfer_driver::SourceProgress;
 use super::folder_metadata::{FolderMetadata, SourceFolderDates};
 use super::merge::copy_directory_streaming;
 use super::merge_ctx::{CreatedPaths, MergeCtx};
-use super::strategy::{LandingName, Replaces, note_pending_for_local_dest, resolve_staging, staging_for};
+use super::strategy::{LandingName, Replaces, resolve_staging, staging_for};
 use super::transfer_error::{AtPath, PathedVolumeError};
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::volume::{Volume, VolumeError};
@@ -163,11 +163,10 @@ pub(super) async fn extract_sequential_subtree(
         let length = cmdr_fs::volume::StreamLength::Known(file.size);
         let lands_whole = dest_volume.write_is_single_shot(length).await || dest_volume.publishes_writes_whole();
         let staging = resolve_staging(staging_for(&planned.replaces, planned.landing), lands_whole);
-        let staged = StagedWrite::begin(state, &planned.dest_path, staging);
         // Register the destination before the write, exactly as `stream_pipe_file`
         // does (covers a Downloads-landing local dest; a no-op for MTP/SMB).
-        note_pending_for_local_dest(state.scope().host(), dest_volume, &planned.dest_path);
-        note_pending_for_local_dest(state.scope().host(), dest_volume, staged.target());
+        let announced_dest = state.scope().host().announce_on(&**dest_volume, &planned.dest_path);
+        let staged = StagedWrite::begin(state, &**dest_volume, announced_dest, staging);
         // The member reports its own mode off the archive's index; an extract
         // adds the archive's quarantine to its xattrs (`extract_quarantine.rs`).
         // A member that fails to decode comes back as the WRITE's error; the

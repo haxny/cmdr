@@ -41,6 +41,7 @@ use super::macos_copy::{CopyProgressContext, copy_single_file_native};
 use super::super::error_classification::IoResultExt;
 use cmdr_fs::metadata::LandedMetadata;
 
+use super::super::host::Announced;
 use super::super::overwrite::{PostLanding, Staged, stage_and_land_file};
 use super::super::state::WriteOperationState;
 use super::super::types::WriteOperationError;
@@ -197,16 +198,16 @@ pub(super) fn select_local_copy_strategy(source: &Path, dest: &Path) -> LocalCop
 pub(super) fn copy_file_with_strategy(
     state: &Arc<WriteOperationState>,
     source: &Path,
-    dest: &Path,
+    dest: Announced<'_>,
     needs_safe_overwrite: bool,
     post_landing: PostLanding,
     progress_callback: Option<ChunkedCopyProgressFn>,
 ) -> Result<StrategyCopyOutcome, WriteOperationError> {
-    let strategy = select_local_copy_strategy(source, dest);
+    let strategy = select_local_copy_strategy(source, dest.path());
     log::debug!(
         "copy_file_with_strategy: {strategy:?} (src={}, dest={})",
         source.display(),
-        dest.display()
+        dest.path().display()
     );
     copy_file_using(
         strategy,
@@ -229,7 +230,7 @@ pub(super) fn copy_file_using(
     strategy: LocalCopyStrategy,
     state: &Arc<WriteOperationState>,
     source: &Path,
-    dest: &Path,
+    dest: Announced<'_>,
     needs_safe_overwrite: bool,
     post_landing: PostLanding,
     progress_callback: Option<ChunkedCopyProgressFn>,
@@ -324,7 +325,14 @@ mod tests {
 
         fs::write(&src, "Hello, copy strategy!").unwrap();
 
-        let result = copy_file_with_strategy(&running_state(), &src, &dst, false, PostLanding::Apply, None);
+        let result = copy_file_with_strategy(
+            &running_state(),
+            &src,
+            Announced::assumed(&dst),
+            false,
+            PostLanding::Apply,
+            None,
+        );
 
         assert!(result.is_ok());
         assert_eq!(result.unwrap().bytes, 21);
@@ -341,7 +349,14 @@ mod tests {
         fs::write(&src, "New content").unwrap();
         fs::write(&dst, "Old content").unwrap();
 
-        let result = copy_file_with_strategy(&running_state(), &src, &dst, true, PostLanding::Apply, None);
+        let result = copy_file_with_strategy(
+            &running_state(),
+            &src,
+            Announced::assumed(&dst),
+            true,
+            PostLanding::Apply,
+            None,
+        );
 
         assert!(result.is_ok());
         assert!(dst.exists());
@@ -359,7 +374,14 @@ mod tests {
         fs::write(&src, "#!/bin/bash").unwrap();
         fs::set_permissions(&src, fs::Permissions::from_mode(0o755)).unwrap();
 
-        let result = copy_file_with_strategy(&running_state(), &src, &dst, false, PostLanding::Apply, None);
+        let result = copy_file_with_strategy(
+            &running_state(),
+            &src,
+            Announced::assumed(&dst),
+            false,
+            PostLanding::Apply,
+            None,
+        );
 
         assert!(result.is_ok());
         let dst_perms = fs::metadata(&dst).unwrap().permissions().mode();
@@ -443,7 +465,14 @@ mod tests {
 
         fs::write(&src, "").unwrap();
 
-        let result = copy_file_with_strategy(&running_state(), &src, &dst, false, PostLanding::Apply, None);
+        let result = copy_file_with_strategy(
+            &running_state(),
+            &src,
+            Announced::assumed(&dst),
+            false,
+            PostLanding::Apply,
+            None,
+        );
 
         assert!(result.is_ok());
         assert_eq!(result.unwrap().bytes, 0);

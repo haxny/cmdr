@@ -23,7 +23,7 @@ fn state() -> Arc<WriteOperationState> {
 #[test]
 fn staging_writes_to_a_recognizable_temp_sibling() {
     let state = state();
-    let staged = StagedWrite::begin(&state, Path::new("/dir/notes.txt"), WriteStaging::Stage);
+    let staged = StagedWrite::begin_unannounced(&state, Path::new("/dir/notes.txt"), WriteStaging::Stage);
     assert_ne!(staged.target(), Path::new("/dir/notes.txt"));
     assert_eq!(staged.target().parent(), Some(Path::new("/dir")));
     assert!(
@@ -44,7 +44,7 @@ fn staging_writes_to_a_recognizable_temp_sibling() {
 fn a_caller_staged_write_is_not_staged_again() {
     let state = state();
     let caller_temp = Path::new("/dir/notes.txt.cmdr-tmp-abc");
-    let staged = StagedWrite::begin(&state, caller_temp, WriteStaging::AlreadyStaged);
+    let staged = StagedWrite::begin_unannounced(&state, caller_temp, WriteStaging::AlreadyStaged);
     assert_eq!(staged.target(), caller_temp);
     assert!(state.in_flight_temps.lock_ignore_poison().is_empty());
 }
@@ -58,7 +58,7 @@ async fn a_single_shot_write_targets_the_final_name_and_needs_no_landing() {
     let inner = Arc::new(InMemoryVolume::new("dest"));
     let dest: Arc<dyn Volume> = Arc::clone(&inner) as Arc<dyn Volume>;
 
-    let staged = StagedWrite::begin(
+    let staged = StagedWrite::begin_unannounced(
         &state,
         Path::new("/notes.txt"),
         WriteStaging::SingleShot(LandingName::ExpectedFree),
@@ -81,7 +81,8 @@ async fn a_single_shot_write_targets_the_final_name_and_needs_no_landing() {
 fn only_a_single_shot_write_onto_a_name_expected_free_must_create_new() {
     let state = state();
     let mode_for = |requested: WriteStaging, single_shot: bool| {
-        StagedWrite::begin(&state, Path::new("/notes.txt"), resolve_staging(requested, single_shot)).write_mode()
+        StagedWrite::begin_unannounced(&state, Path::new("/notes.txt"), resolve_staging(requested, single_shot))
+            .write_mode()
     };
 
     assert_eq!(mode_for(WriteStaging::Stage, true), WriteMode::CreateNew);
@@ -122,7 +123,7 @@ async fn commit_lands_the_bytes_and_stops_tracking_them() {
     let inner = Arc::new(InMemoryVolume::new("dest"));
     let dest: Arc<dyn Volume> = Arc::clone(&inner) as Arc<dyn Volume>;
 
-    let staged = StagedWrite::begin(&state, Path::new("/notes.txt"), WriteStaging::Stage);
+    let staged = StagedWrite::begin_unannounced(&state, Path::new("/notes.txt"), WriteStaging::Stage);
     let temp = staged.target().to_path_buf();
     inner.create_file(&temp, b"NEW").await.unwrap();
 
@@ -333,7 +334,7 @@ async fn abandon_removes_the_partial() {
     let inner = Arc::new(InMemoryVolume::new("dest"));
     let dest: Arc<dyn Volume> = Arc::clone(&inner) as Arc<dyn Volume>;
 
-    let staged = StagedWrite::begin(&state, Path::new("/notes.txt"), WriteStaging::Stage);
+    let staged = StagedWrite::begin_unannounced(&state, Path::new("/notes.txt"), WriteStaging::Stage);
     let temp = staged.target().to_path_buf();
     inner.create_file(&temp, b"half").await.unwrap();
 
@@ -356,7 +357,7 @@ async fn a_refused_landing_takes_its_temp_away_and_stops_tracking_it() {
         .await
         .unwrap();
 
-    let staged = StagedWrite::begin(&state, Path::new("/notes.txt"), WriteStaging::Stage);
+    let staged = StagedWrite::begin_unannounced(&state, Path::new("/notes.txt"), WriteStaging::Stage);
     let temp = staged.target().to_path_buf();
     inner.create_file(&temp, b"NEW").await.unwrap();
 
@@ -442,7 +443,7 @@ async fn a_landing_dropped_midway_leaves_its_temp_to_the_abandoned_write_sweep()
         inner: Arc::clone(&inner),
     });
 
-    let staged = StagedWrite::begin(&state, Path::new("/notes.txt"), WriteStaging::Stage);
+    let staged = StagedWrite::begin_unannounced(&state, Path::new("/notes.txt"), WriteStaging::Stage);
     let temp = staged.target().to_path_buf();
     inner.create_file(&temp, b"NEW").await.unwrap();
 

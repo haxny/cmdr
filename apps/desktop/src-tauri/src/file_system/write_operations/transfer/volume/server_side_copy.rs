@@ -9,9 +9,10 @@ use std::pin::Pin;
 use std::sync::Arc;
 use std::time::Instant;
 
+use super::super::super::host::Announced;
 use super::super::super::state::WriteOperationState;
 use super::super::recovered_name::FinalizeFailure;
-use super::super::staged_write::{StagedWrite, WriteStaging, note_pending_for_local_dest, resolve_staging};
+use super::super::staged_write::{StagedWrite, WriteStaging, resolve_staging};
 use super::super::transfer_probe::{TaskPhase, set_task_bytes, set_task_phase};
 use super::transfer_error::hard_abort_error;
 use cmdr_fs::volume::{ServerCopyProgress, Volume, VolumeError};
@@ -61,11 +62,12 @@ pub(super) async fn try_server_side_copy(
     source_volume: &Arc<dyn Volume>,
     source_path: &Path,
     dest_volume: &Arc<dyn Volume>,
-    dest_path: &Path,
+    announced_dest: Announced<'_>,
     state: &Arc<WriteOperationState>,
     on_file_progress: &(dyn Fn(u64, u64) -> ControlFlow<()> + Sync),
     staging: WriteStaging,
 ) -> Result<Option<u64>, FinalizeFailure> {
+    let dest_path = announced_dest.path();
     if !dest_volume.may_copy_on_server_from(source_volume.as_ref()) {
         return Ok(None);
     }
@@ -76,8 +78,7 @@ pub(super) async fn try_server_side_copy(
     let started = Instant::now();
     // ❌ Never the single-shot answer: only whole-publish holds for a copy.
     let staging = resolve_staging(staging, dest_volume.publishes_writes_whole());
-    let staged = StagedWrite::begin(state, dest_path, staging);
-    note_pending_for_local_dest(state.scope().host(), dest_volume, staged.target());
+    let staged = StagedWrite::begin(state, &**dest_volume, announced_dest, staging);
     log::debug!(
         target: "copy",
         "try_server_side_copy: asking {} to copy {} on the server, into {}",

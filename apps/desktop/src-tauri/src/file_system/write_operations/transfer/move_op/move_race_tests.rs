@@ -25,7 +25,7 @@ fn a_landing_on_a_free_name_refuses_a_file_that_appeared_in_the_window() {
     // Stands in for the file created after the engine found this name free.
     fs::write(&dest, b"somebody else got here first").unwrap();
 
-    let result = rename_onto_free_name(&source, &dest);
+    let result = rename_onto_free_name(&source, Announced::assumed(&dest));
 
     assert!(
         matches!(&result, Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists),
@@ -47,7 +47,7 @@ fn a_landing_on_a_free_name_lands_when_the_name_really_is_free() {
     let dest = tmp.path().join("landed.txt");
     fs::write(&source, b"the file being moved").unwrap();
 
-    rename_onto_free_name(&source, &dest).expect("a free name accepts the item");
+    rename_onto_free_name(&source, Announced::assumed(&dest)).expect("a free name accepts the item");
 
     assert_eq!(fs::read(&dest).unwrap(), b"the file being moved");
     assert!(!source.exists());
@@ -65,7 +65,7 @@ fn a_landing_on_a_free_name_refuses_a_dangling_symlink_too() {
     fs::write(&source, b"the file being moved").unwrap();
     std::os::unix::fs::symlink(tmp.path().join("nothing-here"), &dest).unwrap();
 
-    let result = rename_onto_free_name(&source, &dest);
+    let result = rename_onto_free_name(&source, Announced::assumed(&dest));
 
     assert!(
         matches!(&result, Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists),

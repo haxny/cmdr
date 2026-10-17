@@ -465,7 +465,7 @@ impl MutationHooks for MutatorHooks {
     }
 
     fn note_pending(&self, path: &Path) {
-        self.state.scope().host().own_writes().announce(path);
+        self.state.scope().host().announce(path);
     }
 }
 

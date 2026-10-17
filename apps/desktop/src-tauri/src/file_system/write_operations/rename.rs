@@ -245,8 +245,8 @@ async fn rename_managed_inner(
         .run_instant(descriptor, async move {
             // Register both halves of the rename with the downloads watcher's
             // ignore set BEFORE the syscall (no-ops outside ~/Downloads).
-            host.own_writes().announce(&from);
-            host.own_writes().announce(&to);
+            host.announce(&from);
+            host.announce(&to);
 
             if !is_root {
                 // Volume-aware rename (MTP, SMB, and other non-local volumes).

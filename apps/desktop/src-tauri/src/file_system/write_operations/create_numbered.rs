@@ -83,7 +83,7 @@ impl super::Operations {
                 let path = dir.join(&name);
                 // Register the destination with the downloads watcher's ignore set
                 // before the syscall (no-op outside ~/Downloads).
-                self.host().own_writes().announce(&path);
+                self.host().announce(&path);
                 match volume.create_file(&path, bytes).await {
                     Ok(()) => break Ok::<(PathBuf, String), MutationError>((path, name)),
                     Err(VolumeError::AlreadyExists(_)) => {

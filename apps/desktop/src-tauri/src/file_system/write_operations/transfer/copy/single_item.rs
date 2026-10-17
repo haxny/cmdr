@@ -475,7 +475,7 @@ pub(in crate::file_system::write_operations::transfer) fn copy_single_item(
         let create_symlink = |target: &Path| -> Result<(), WriteOperationError> {
             // Register the symlink destination with the downloads watcher's
             // ignore set before issuing the syscall; no-ops outside ~/Downloads.
-            state.scope().host().own_writes().announce(target);
+            state.scope().host().announce(target);
             #[cfg(target_os = "macos")]
             {
                 copy_symlink(&source_for_symlink, target)?;
@@ -604,7 +604,7 @@ pub(in crate::file_system::write_operations::transfer) fn copy_single_item(
         // watcher keys on exact paths). Re-registering is a no-op bump, and
         // keeping the call here means the habit survives a strategy that
         // someday doesn't stage.
-        state.scope().host().own_writes().announce(&actual_dest);
+        let announced_dest = state.scope().host().announce(&actual_dest);
 
         // Copy file using appropriate strategy (network, safe overwrite, or native)
         // Create progress callback for intra-file progress reporting on network filesystems
@@ -662,7 +662,7 @@ pub(in crate::file_system::write_operations::transfer) fn copy_single_item(
         let outcome = copy_file_with_strategy(
             state,
             source,
-            &actual_dest,
+            announced_dest,
             needs_safe_overwrite,
             post_landing,
             Some(progress_cb),

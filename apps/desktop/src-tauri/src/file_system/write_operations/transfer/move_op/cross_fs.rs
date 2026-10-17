@@ -416,7 +416,7 @@ pub(super) fn move_with_staging(
                         // Cross-FS move: stage→final lands the file at its
                         // final visible name. Register so the watcher
                         // suppresses; no-ops outside ~/Downloads.
-                        state.scope().host().own_writes().announce(&resolved.path);
+                        let landing = state.scope().host().announce(&resolved.path);
                         // Reuse the same Rename / Overwrite / type-mismatch logic the
                         // same-FS path uses, operating on the staged copy. The staged
                         // item mirrors the source's type, so `staged_path` drives the
@@ -437,7 +437,7 @@ pub(super) fn move_with_staging(
                                 cmdr_operation_log::types::NotRollbackableReason::StagedConflictResolved
                             },
                         );
-                        move_resolved_into_place(state, &staged_path, &final_path, &resolved, None, &mut throwaway_tx)?;
+                        move_resolved_into_place(state, &staged_path, &final_path, landing, None, &mut throwaway_tx)?;
                         landings.insert(staged_path.clone(), resolved.path);
                     }
                     None => {
@@ -464,8 +464,8 @@ pub(super) fn move_with_staging(
                 }
             } else {
                 // No conflict, just rename from staging to final
-                state.scope().host().own_writes().announce(&final_path);
-                rename_onto_free_name(&staged_path, &final_path).map_err(|e| WriteOperationError::IoError {
+                let landing = state.scope().host().announce(&final_path);
+                rename_onto_free_name(&staged_path, landing).map_err(|e| WriteOperationError::IoError {
                     path: staged_path.display().to_string(),
                     message: format!("Failed to move from staging: {}", e),
                 })?;

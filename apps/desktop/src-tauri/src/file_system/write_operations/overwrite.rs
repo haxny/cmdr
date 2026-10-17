@@ -30,7 +30,7 @@ use uuid::Uuid;
 use cmdr_fs::metadata::{LandedMetadata, Unblock, apply_landed, clear_blockers};
 
 use super::error_classification::classify_io_error;
-use super::host::{AsideAttempt, OperationErrorReport};
+use super::host::{Announced, AsideAttempt, OperationErrorReport};
 use super::in_flight_temps::{self, ItemKind, TrackedRecord};
 use super::state::WriteOperationState;
 use super::types::{RecoveredOriginal, WriteOperationError};
@@ -126,7 +126,7 @@ pub(super) struct Landed {
 /// a user can recognize and restore from.
 pub(super) fn stage_and_land_file<F>(
     state: &Arc<WriteOperationState>,
-    dest: &Path,
+    dest: Announced<'_>,
     replacing: bool,
     post_landing: PostLanding,
     write_bytes: F,
@@ -134,6 +134,7 @@ pub(super) fn stage_and_land_file<F>(
 where
     F: FnOnce(&Path) -> Result<Staged, WriteOperationError>,
 {
+    let dest = dest.path();
     // The temp's guard lives to the end of this function (and the aside's too,
     // when there is one), keeping the scratch out of the pane for as long as
     // it's on disk. One uuid covers both, so a crash leftover reads as two
@@ -147,8 +148,10 @@ where
     // CREATE lands on the temp and the RENAME carries it to the final name, and
     // the watcher keys on exact paths. Registering only the final name would let
     // a copy into ~/Downloads toast its own `.cmdr-tmp-*`. No-ops elsewhere.
-    state.scope().host().own_writes().announce(temp_path);
-    state.scope().host().own_writes().announce(dest);
+    // The caller announced `dest` already (it's an `Announced`); the second
+    // announce, right beside the landing, is a no-op bump.
+    state.scope().host().announce(temp_path);
+    state.scope().host().announce(dest);
 
     // Findable from the moment the file can exist until the moment it can't:
     // unlike the async cross-volume path (`transfer/staged_write.rs`), landing

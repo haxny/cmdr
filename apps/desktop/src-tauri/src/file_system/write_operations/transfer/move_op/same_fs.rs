@@ -176,8 +176,8 @@ pub(super) fn move_with_rename(
                         // ignore set: destination so rename-arrival is
                         // suppressed, source so a Cmdr move OUT of Downloads
                         // is also suppressed. No-ops outside ~/Downloads.
-                        state.scope().host().own_writes().announce(source);
-                        state.scope().host().own_writes().announce(&resolved.path);
+                        state.scope().host().announce(source);
+                        let landing = state.scope().host().announce(&resolved.path);
                         // Landing on the original dest name replaced a pre-existing
                         // file; a rename-aside (different name) did not.
                         item_overwrote = resolved.path == dest_path;
@@ -186,7 +186,7 @@ pub(super) fn move_with_rename(
                             state,
                             source,
                             &dest_path,
-                            &resolved,
+                            landing,
                             source_meta.as_ref(),
                             &mut move_tx,
                         )?;
@@ -205,10 +205,10 @@ pub(super) fn move_with_rename(
                 }
             } else {
                 // No conflict, so just rename
-                state.scope().host().own_writes().announce(source);
-                state.scope().host().own_writes().announce(&dest_path);
+                state.scope().host().announce(source);
+                let landing = state.scope().host().announce(&dest_path);
                 // A locked source is the one refusal `rename(2)`'s errno can't side on its own.
-                rename_onto_free_name(source, &dest_path)
+                rename_onto_free_name(source, landing)
                     .with_path(source)
                     .map_err(|e| e.sided_by_locked_source(source))?;
                 move_tx.record(

@@ -697,7 +697,7 @@ errno and no folder, since nothing there proved one.
 
 Every write-op driver MUST announce its destination BEFORE issuing the syscall. The host's answer registers it with the downloads watcher's ignore set (`operations_host/own_writes.rs` → `downloads::note_pending_write_for_cmdr`), which is what makes the watcher silently suppress events Cmdr itself caused, so the user doesn't see a "Downloaded foo.bin" toast when they just used Cmdr to copy 100 files into `~/Downloads`.
 
-**Contract:** call `state.scope().host().own_writes().announce(&dest_path)` (the `OwnWrites` seam through the op's scope, `host/own_writes.rs`) immediately before the write syscall (or the volume-trait equivalent: `Volume::write_from_stream`, `Volume::create_file`, `Volume::create_directory`, `Volume::rename`, `Volume::delete`). Once per path per file landing, never per chunk: the seam's `dyn` call sits beside a syscall, which the dispatch rule allows.
+**Contract:** call `state.scope().host().announce(&dest_path)` (`EngineHost::announce`, the one way engine code reaches the `OwnWrites` seam, `host/own_writes.rs`) immediately before the write syscall (or the volume-trait equivalent: `Volume::write_from_stream`, `Volume::create_file`, `Volume::create_directory`, `Volume::rename`, `Volume::delete`). Once per path per file landing, never per chunk: the seam's `dyn` call sits beside a syscall, which the dispatch rule allows. The writers that create or rename onto a path take that destination as the returned `Announced` (`overwrite::stage_and_land_file` and the copy strategies above it, the local move's `rename_onto_free_name` and `move_resolved_into_place`, and the volume engine's `StagedWrite::begin`, which announces its own temp), so calling one unannounced doesn't compile. Removals, creates through `Volume::create_*`, the archive mutator's `note_pending` hook, and rename SOURCES still announce by hand.
 
 **Locked-in scoping:** the prefix check lives INSIDE the downloads helper (and the underlying `IgnoreSet::note_pending`). Call sites invoke unconditionally; paths outside the resolved Downloads root silently no-op. **Don't add `if path.starts_with(downloads_dir)` guards at call sites**: centralizing the scope in the helper keeps it from drifting across call sites (the downloads watcher's ignore-set design lives in the `downloads` module docs).
 
@@ -705,14 +705,14 @@ Every write-op driver MUST announce its destination BEFORE issuing the syscall. 
 
 **Renames register both halves.** A rename moves a file out of one location into another. The Cmdr-own-write contract requires registering both the source path (so a rename-OUT-of-Downloads is also suppressed via the watcher's rename-from-ignored-source branch) and the destination path (so the rename-arrival event is suppressed). See `commands/rename.rs::rename_file` and `transfer/move_op/` for the pattern.
 
-**Cross-volume writes that land on a local FS** (MTP→Local, SMB→Local) hook via `transfer/staged_write.rs::note_pending_for_local_dest` and `transfer/volume/move_same.rs::note_pending_for_local_volume`, which take the operation's `EngineHost`. They check `dest_volume.local_path()` first and skip when the destination isn't a local-FS-backed volume (MTP/SMB/InMemory) — those paths can't trigger the watcher anyway.
+**Cross-volume writes that land on a local FS** (MTP→Local, SMB→Local) announce via `EngineHost::announce_on(volume, path)`, which anchors the path on `volume.local_path()` and skips when the destination isn't a local-FS-backed volume (MTP/SMB/InMemory) — those paths can't trigger the watcher anyway.
 
 Example placement:
 
 ```rust
 // In `copy_single_item` (transfer/copy/single_item.rs), just before `copy_file_with_strategy`:
-state.scope().host().own_writes().announce(&actual_dest);
-let bytes = copy_file_with_strategy(source, &actual_dest, ..)?;
+let announced_dest = state.scope().host().announce(&actual_dest);
+let outcome = copy_file_with_strategy(state, source, announced_dest, ..)?;
 ```
 
 See also: `apps/desktop/src-tauri/src/downloads/CLAUDE.md` for the watcher architecture, ignore-set internals, and the FDA-gated lifecycle. End-to-end safety net for the contract lives in `downloads::runtime::tests::note_pending_write_for_cmdr_suppresses_watcher_event_end_to_end`. Each write path's exact announce sequence (which paths, in what order, and whether each existed yet) is pinned in `own_write_announce_tests.rs`, each cell on an engine of its own whose `OwnWrites` is `host::testing::RecordingOwnWrites`; a new write path gets a cell there. That the app's answer reaches the downloads hook is pinned beside it, in `operations_host/own_writes.rs`.

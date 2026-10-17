@@ -46,7 +46,7 @@ use super::naming::take_back_reservation;
 use super::preflight::SourceFileFacts;
 use super::rename_merge::merges_as_a_directory;
 use super::strategy::Replaces;
-use super::strategy::{LandingName, WriteStaging, note_pending_for_local_dest, staging_for};
+use super::strategy::{LandingName, WriteStaging, staging_for};
 use super::stream_pipe::stream_pipe_file;
 use super::transfer_error::{AtPath, PathRole, PathedVolumeError};
 use cmdr_fs::entry::FileEntry;
@@ -440,7 +440,7 @@ async fn merge_level<'a>(
     // `None`, or what the tree makes of a child, changes nothing below.
     folder: Option<NodeId>,
 ) -> Result<DirectoryCreation, PathedVolumeError> {
-    note_pending_for_local_dest(state.scope().host(), dest_volume, dest_path);
+    state.scope().host().announce_on(&**dest_volume, dest_path);
     // Say what this task is doing before the first `.await` of the level. A
     // walk parks on listings, so a stack sample sees nothing and the dump would
     // otherwise still read `spawned` however long the tree takes. Each leaf

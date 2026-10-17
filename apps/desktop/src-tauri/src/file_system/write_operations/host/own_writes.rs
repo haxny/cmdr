@@ -24,3 +24,33 @@ pub(super) struct NoOwnWrites;
 impl OwnWrites for NoOwnWrites {
     fn announce(&self, _path: &Path) {}
 }
+
+/// A path the host heard about before the engine writes there.
+///
+/// Only [`EngineHost::announce`](super::EngineHost::announce) and
+/// [`EngineHost::announce_on`](super::EngineHost::announce_on) make one, and the
+/// writers that create or rename onto a path take that destination as an
+/// `Announced`: `overwrite::stage_and_land_file` (and the copy strategies above
+/// it), the local move's `rename_onto_free_name` and `move_resolved_into_place`,
+/// and the volume engine's `StagedWrite::begin`. Calling one without announcing
+/// first doesn't compile.
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct Announced<'a>(&'a Path);
+
+impl<'a> Announced<'a> {
+    pub(super) fn new(path: &'a Path) -> Self {
+        Self(path)
+    }
+
+    /// `path`, for a test that drives a writer directly and so stands in for
+    /// the caller that would have announced it.
+    #[cfg(test)]
+    pub(crate) fn assumed(path: &'a Path) -> Self {
+        Self(path)
+    }
+
+    /// The announced path.
+    pub(crate) fn path(self) -> &'a Path {
+        self.0
+    }
+}

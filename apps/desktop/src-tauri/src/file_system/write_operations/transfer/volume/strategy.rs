@@ -14,8 +14,7 @@ use super::super::super::state::WriteOperationState;
 // Re-exported so the sibling test modules (and any future caller reached through
 // this module's API) name the staging choice without a second import path.
 pub(super) use super::super::staged_write::{
-    LandingName, Replaces, WriteStaging, failed_write_leaves_ours_at, note_pending_for_local_dest, resolve_staging,
-    staging_for,
+    LandingName, Replaces, WriteStaging, failed_write_leaves_ours_at, resolve_staging, staging_for,
 };
 use super::super::transfer_driver::{LeafProgressLedger, SourceProgress};
 use super::merge::copy_directory_streaming;

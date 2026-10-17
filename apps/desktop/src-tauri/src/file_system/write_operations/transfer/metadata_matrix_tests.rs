@@ -26,6 +26,7 @@ mod macos {
     };
 
     use crate::file_system::write_operations::event_sinks::CollectorEventSink;
+    use crate::file_system::write_operations::host::Announced;
     use crate::file_system::write_operations::overwrite::PostLanding;
     use crate::file_system::write_operations::state::WriteOperationState;
     use crate::file_system::write_operations::transfer::copy::copy_files_with_progress_inner;
@@ -51,7 +52,15 @@ mod macos {
         source: &Path,
         dest: &Path,
     ) -> Result<StrategyCopyOutcome, WriteOperationError> {
-        copy_file_using(strategy, &state(), source, dest, false, PostLanding::Apply, None)
+        copy_file_using(
+            strategy,
+            &state(),
+            source,
+            Announced::assumed(dest),
+            false,
+            PostLanding::Apply,
+            None,
+        )
     }
 
     /// Asserts the pair takes the clone arm on this machine, so a clone cell can't
@@ -775,7 +784,16 @@ mod linux {
 
     fn copy(strategy: LocalCopyStrategy, source: &Path, dest: &Path) {
         let state = Arc::new(WriteOperationState::new(Duration::from_millis(50)));
-        copy_file_using(strategy, &state, source, dest, false, PostLanding::Apply, None).expect("the copy lands");
+        copy_file_using(
+            strategy,
+            &state,
+            source,
+            Announced::assumed(dest),
+            false,
+            PostLanding::Apply,
+            None,
+        )
+        .expect("the copy lands");
     }
 
     fn mode(path: &Path) -> u32 {

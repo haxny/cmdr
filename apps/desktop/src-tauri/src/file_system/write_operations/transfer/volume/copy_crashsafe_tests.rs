@@ -551,6 +551,7 @@ async fn cross_volume_overwrite_concurrent_preserves_new_data_on_finalize_failur
 // the 4 GB-copy-then-quit scenario describes.
 
 mod local_staging {
+    use crate::file_system::write_operations::host::Announced;
     use crate::file_system::write_operations::overwrite::PostLanding;
     use crate::file_system::write_operations::state::{OperationIntent, WriteOperationState};
     use crate::file_system::write_operations::transfer::copy_strategy::{LocalCopyStrategy, copy_file_using};
@@ -617,7 +618,7 @@ mod local_staging {
             LocalCopyStrategy::Chunked,
             &state,
             &src,
-            &dest,
+            Announced::assumed(&dest),
             false,
             PostLanding::Apply,
             Some(&observe),
@@ -674,7 +675,7 @@ mod local_staging {
             LocalCopyStrategy::Chunked,
             &state,
             &src,
-            &dest,
+            Announced::assumed(&dest),
             false,
             PostLanding::Apply,
             Some(&cancel_after_first_chunk),
@@ -714,7 +715,7 @@ mod local_staging {
             LocalCopyStrategy::Chunked,
             &running_state(),
             &src,
-            &dest,
+            Announced::assumed(&dest),
             // Not an overwrite: nobody resolved a conflict for this path.
             false,
             PostLanding::Apply,
@@ -750,7 +751,7 @@ mod local_staging {
             LocalCopyStrategy::Chunked,
             &running_state(),
             &src,
-            &dest,
+            Announced::assumed(&dest),
             true,
             PostLanding::Apply,
             None,

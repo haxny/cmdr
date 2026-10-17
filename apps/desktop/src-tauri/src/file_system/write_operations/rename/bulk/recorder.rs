@@ -29,8 +29,8 @@ impl BulkRenameRecorder {
 
     /// Announces both ends of a hop before the rename that makes it.
     pub(super) fn note_write(&self, from: &Path, to: &Path) {
-        self.scope.host().own_writes().announce(from);
-        self.scope.host().own_writes().announce(to);
+        self.scope.host().announce(from);
+        self.scope.host().announce(to);
     }
 
     /// One completed filesystem hop, recorded the moment it lands.

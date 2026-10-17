@@ -32,8 +32,8 @@ Copy, move, delete, trash, and zip edits as managed background ops.
 - **Emit through `OperationEventSink`, ❌ never `AppHandle`** (spawns: `host/`); `write-settled` fires once, AFTER the terminal event. A
   cross-FS move speaks TWICE per source on `write-source-item-done`, so the LAST wins.
 - **EVERY local write lands via `overwrite::stage_and_land_file`** (temp+rename, rename-aside when replacing); announce
-  each destination BEFORE the syscall (`host::OwnWrites`; renames: both ends). Leftovers carry
-  a KIND (❌ only a `temp` goes on sight); ❌ only the installed engine's `claim_ledger` opens the ledger. DETAILS §
+  each destination BEFORE the syscall: the writers take it as `host::Announced` (a rename's SOURCE too, by hand).
+  Leftovers carry a KIND (❌ only a `temp` goes on sight); ❌ only the installed engine's `claim_ledger` opens the ledger. DETAILS §
   "What the sweep does with each kind".
 - **Every mutation journals through its `OpScope`**; a VOLUME op passes its REAL volume id. Bulk rename journals each hop
   as it lands: ❌ never batch to the end, nor put a rotation temp in `in_flight_temps` (its sweep DELETES it).
