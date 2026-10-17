@@ -177,7 +177,12 @@ where
     // original wearing a scratch name with nothing that knows what it is. A
     // record for a rename that then fails is retired a line later, and would
     // have cost one `already gone` either way.
+    // The aside is a third name this landing creates (the rename below), so the
+    // host hears it first, same as the temp.
     let aside = replacing.then(|| StagingTemp::mint_aside(dest, uuid, owner));
+    if let Some(aside) = &aside {
+        state.scope().host().announce(aside.path());
+    }
     let aside_record = aside.as_ref().map(|aside| {
         in_flight_temps::track(
             state,

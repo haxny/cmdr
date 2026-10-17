@@ -161,6 +161,51 @@ async fn a_local_copy_announces_its_destination_and_temp_before_landing() {
     );
 }
 
+/// Copies `src/a.txt` onto an existing `dst/a.txt` under `resolution`.
+async fn copy_onto_existing(rig: &Rig, resolution: ConflictResolution) {
+    fs::write(rig.join("src/a.txt"), b"new").expect("source");
+    fs::write(rig.join("dst/a.txt"), b"old").expect("existing");
+
+    let events = Arc::new(CollectorEventSink::new());
+    rig.engine
+        .copy_files_start(
+            Arc::clone(&events) as Arc<dyn OperationEventSink>,
+            vec![rig.join("src/a.txt")],
+            rig.join("dst"),
+            WriteOperationConfig {
+                conflict_resolution: resolution,
+                ..WriteOperationConfig::default()
+            },
+            vec![],
+            None,
+            Initiator::User,
+            None,
+            None,
+        )
+        .await
+        .expect("start copy");
+    wait_settled(&events).await;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn an_overwriting_copy_announces_its_aside_before_moving_the_original_there() {
+    let rig = Rig::new("announce_copy_overwrite");
+    copy_onto_existing(&rig, ConflictResolution::Overwrite).await;
+
+    assert_eq!(fs::read(rig.join("dst/a.txt")).expect("replaced"), b"new");
+    // The original steps aside under a scratch name before the landing rename,
+    // so that name is announced before the original is renamed onto it.
+    assert_eq!(
+        rig.shape(),
+        announced(&[
+            ("dst/a.txt", true),
+            ("dst/a.txt.cmdr-tmp-*", false),
+            ("dst/a.txt", true),
+            ("dst/a.txt.cmdr-temp-*", false),
+        ])
+    );
+}
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_same_fs_move_announces_both_ends_before_the_rename() {
     let rig = Rig::new("announce_same_fs_move");
