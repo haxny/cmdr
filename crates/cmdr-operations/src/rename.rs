@@ -235,6 +235,9 @@ async fn rename_managed_inner(
                 // Volume-aware rename (MTP, SMB, and other non-local volumes).
                 // The volume's `rename` calls `notify_mutation` internally, so
                 // the listing cache updates automatically.
+                // Plain `get`, not `resolve`: a rename INSIDE an archive is rejected
+                // upstream, so this is a normal file (incl. the `.zip` itself), which
+                // renames through its own volume, never the ArchiveVolume.
                 let Some(volume) = host.volumes().get(&volume_id) else {
                     return Err(super::mutation_error::unregistered_volume_refusal(
                         host.volumes(),

@@ -29,6 +29,8 @@ use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use std::sync::Arc;
 use std::time::Duration;
+// An ambient `spawn_blocking`, not the host's runtime: a `Volume` method runs on its
+// caller's. `DETAILS.md` § "Decisions".
 use tokio::task::spawn_blocking;
 
 /// How often a local listing samples its running tally and reports progress.

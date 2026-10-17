@@ -1,6 +1,6 @@
-//! The rollback planner's volume lookup over a `VolumeManager`, for the planner
-//! cells that build a private registry. The write engine answers the same
-//! question for production through `operations_host::volumes`.
+//! The rollback planner's volume lookup over a `VolumeManager`, for the backend
+//! suites' rollback cells that build a private registry. The write engine answers
+//! the same question for production through `operations_host::volumes`.
 
 use std::sync::Arc;
 

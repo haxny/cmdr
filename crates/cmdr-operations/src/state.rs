@@ -133,8 +133,8 @@ pub struct WriteOperationState {
     /// outage record); one created after (a Retry) does.
     pub(crate) born: Instant,
     /// Cooperative cancel flag for in-flight backend I/O. Flipped whenever the
-    /// op transitions out of `Running` (via `cancel_write_operation`,
-    /// `cancel_all_write_operations`, or `cancel_all_write_operations_with_rollback`).
+    /// op transitions out of `Running` (via `cancel_write_operation` or
+    /// `cancel_all_write_operations`).
     /// MTP volume ops thread this into `list_objects_with_cancel` /
     /// `delete_with_cancel` so an in-flight `GetObjectInfo` loop bails at the
     /// next per-handle USB boundary (≈one roundtrip) instead of running the

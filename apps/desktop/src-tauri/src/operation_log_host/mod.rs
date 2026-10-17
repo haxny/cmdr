@@ -7,8 +7,9 @@
 //! switch and the retention limits from settings, the app's runtime, and the
 //! volume registry the rollback planner looks volumes up in (`volumes.rs`).
 
-// The planner cells pass a private registry; the engine's own lookups go
-// through `operations_host::volumes`.
+// The backend suites' rollback cells (`operations_host::backend_suites`) pass a
+// private registry; the engine's own lookups go through
+// `operations_host::volumes`.
 #[cfg(test)]
 mod volumes;
 
