@@ -651,7 +651,15 @@ Each lands as its own commit with a red test first, and the commit body names it
    engine reports `OperationErrorReport::LedgerUnpersisted` once, which the app re-raises through `log_error!`. This is
    the degrade rule's "unpersisted with an `error_report`" half (§ "Seam design", "The ledger"). Pinned by
    `in_flight_temps_claim_tests.rs::a_claim_with_no_data_dir_runs_unpersisted_and_raises_one_error_report`.
-6. **Nothing else.** In particular: terminal-outcome recording stays in the app's sink adapter, the admitted-op spawn
+6. **An overwrite announces the aside it moves the original to (final pass, landed in `2d3b3ad7e`).** Before,
+   `overwrite::stage_and_land_file` announced its temp and destination but renamed the user's original onto
+   `<name>.cmdr-temp-<uuid>` unannounced. Red test first:
+   `own_write_announce_tests.rs::an_overwriting_copy_announces_its_aside_before_moving_the_original_there`.
+7. **A Keep-both rename announces its numbered placeholder before creating it (final pass, landed in `6ee404d6a`).**
+   Before, `unique_name::find_unique_name` created its `O_CREAT|O_EXCL` placeholder unannounced; it now takes the
+   `EngineHost` and announces each candidate first. Red test first:
+   `own_write_announce_tests.rs::a_copy_kept_as_a_numbered_name_announces_its_placeholder_before_creating_it`.
+8. **Nothing else.** In particular: terminal-outcome recording stays in the app's sink adapter, the admitted-op spawn
    stays on the APP runtime (the `VolumeHost`'s, which IS the app runtime), and an engine event before `install` is
    dropped by the default seam exactly as today's unset `AppHandle` statics drop it. The intent race is fixed before the
    effort (§ "Precondition"). A pre-install refusal is not a change: today no op can start before setup, and the refusal
