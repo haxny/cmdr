@@ -36,6 +36,33 @@ id = "RUSTSEC-2026-0195"
 reason = "quick-xml 0.39 (NsReader allocation): same Linux build-time-only path as RUSTSEC-2026-0194; our runtime copy is 0.41, which has the fix."
 
 [[IgnoredVulns]]
+id = "RUSTSEC-2026-0370"
+reason = "zvariant is unmaintained (notice only, no known vulnerability): Linux-only D-Bus plumbing under zbus (our Linux secret-service store, Tauri's notification and opener plugins). Not in the macOS graph (`cargo tree -i zvariant@5.15.0 --target aarch64-apple-darwin` prints nothing, 2026-10-17)."
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0371"
+reason = "zbus_names is unmaintained (notice only): same Linux-only zbus path as RUSTSEC-2026-0370."
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0372"
+reason = "zvariant_derive is unmaintained (notice only): a proc macro on the same Linux-only zbus path as RUSTSEC-2026-0370."
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0367"
+ignoreUntil = 2027-01-17
+reason = "zip 4.6.1 (SUID/SGID bits kept on extraction): reaches us only through tauri-plugin-updater, and only for the Windows target, which Cmdr doesn't ship (`cargo tree -i zip@4.6.1 --target x86_64-pc-windows-msvc`; nothing for aarch64-apple-darwin or x86_64-unknown-linux-gnu, 2026-10-17). Our own archive code uses zip 9. Expires so it can't outlive the upstream fix (upstream already moved the plugin to zip 9 in tauri-apps/plugins-workspace#3698; it ships in tauri-plugin-updater 2.14.1 via release PR #3712, and Renovate picks it up; #464)."
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0368"
+ignoreUntil = 2027-01-17
+reason = "zip 4.6.1 (extract creates symlinks outside the destination): same Windows-only tauri-plugin-updater path as RUSTSEC-2026-0367 (#464)."
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0369"
+ignoreUntil = 2027-01-17
+reason = "zip 4.6.1 (permissions applied through symlinks): same Windows-only tauri-plugin-updater path as RUSTSEC-2026-0367 (#464)."
+
+[[IgnoredVulns]]
 id = "RUSTSEC-2025-0052"
 reason = "async-std is discontinued: a dev-dependency of the vendored cmdr-fsevent-stream fork, used by its tests only. Same entry in deny.toml."
 
