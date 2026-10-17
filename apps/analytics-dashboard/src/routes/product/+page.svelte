@@ -10,7 +10,7 @@
     import RetentionSection from '#lib/components/sections/RetentionSection.svelte'
     import FeedbackErrorsSection from '#lib/components/sections/FeedbackErrorsSection.svelte'
 
-    const { data }: PageProps = $props()
+    const { data, form }: PageProps = $props()
 </script>
 
 <div class="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
@@ -18,5 +18,9 @@
     <SettingsAdoptionSection settingsAdoption={data.settingsAdoption} selection={data.selection} />
     <PaymentSection paddle={data.paddle} selection={data.selection} />
     <RetentionSection paddle={data.paddle} selection={data.selection} />
-    <FeedbackErrorsSection feedbackAndErrors={data.feedbackAndErrors} selection={data.selection} />
+    <FeedbackErrorsSection
+        feedbackAndErrors={data.feedbackAndErrors}
+        selection={data.selection}
+        answerError={form && 'error' in form ? form.error : null}
+    />
 </div>

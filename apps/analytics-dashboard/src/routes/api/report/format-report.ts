@@ -24,7 +24,7 @@ import type { SettingAdoption, SettingsAdoption } from '../../../lib/server/sett
 import type { FeedbackAndErrorsData } from '../../../lib/server/sources/feedback-and-errors.js'
 import type { FeedbackRow, ErrorReportRow } from '../../../lib/feedback-and-errors.js'
 import {
-  countFeedbackWithReplyTo,
+  countFeedbackAwaitingReply,
   tallyErrorReportsByField,
   errorReportsByDay,
 } from '../../../lib/feedback-and-errors.js'
@@ -667,7 +667,8 @@ function writeErrorReportBreakdowns(w: ReportWriter, errorReports: ErrorReportRo
 
 function writeRecentFeedback(w: ReportWriter, feedback: FeedbackRow[]): void {
   writeList(w, 'Recent feedback:', feedback, 30, (msg) => {
-    const replyTo = msg.email ? ` [reply-to: ${msg.email}]` : ''
+    const answered = msg.answeredAt ? `, answered ${msg.answeredAt.split(' ')[0]}` : ''
+    const replyTo = msg.email ? ` [reply-to: ${msg.email}${answered}]` : ''
     const text = msg.feedback.replace(/\s+/g, ' ').slice(0, 280)
     return `  ${msg.createdAt.split(' ')[0]} (v${msg.appVersion})${replyTo}: ${text}`
   })
@@ -681,7 +682,9 @@ function writeFeedbackSection(w: ReportWriter, feedbackAndErrors: SourceResult<F
   }
   const fe = feedbackAndErrors.data
   w.line(`- Feedback messages: ${num(fe.feedback.length)}`)
-  w.line(`- Awaiting reply (have a reply-to email): ${num(countFeedbackWithReplyTo(fe.feedback))}`)
+  w.line(
+    `- Awaiting reply (have a reply-to email, not marked answered): ${num(countFeedbackAwaitingReply(fe.feedback))}`,
+  )
   w.line(`- Error reports: ${num(fe.errorReports.length)}`)
   writeErrorReportBreakdowns(w, fe.errorReports)
   writeRecentFeedback(w, fe.feedback)

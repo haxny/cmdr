@@ -1,11 +1,13 @@
 <!--
   Product § Feedback & errors: in-app feedback messages and error-report bundle metadata. Shows error
-  reports per day, by kind, and by version, plus recent feedback and a recent-error-reports table.
+  reports per day, by kind, and by version, plus recent feedback and a recent-error-reports table. Each
+  feedback message with a reply-to email has a mark-answered toggle (the `setAnswered` action on `/product`).
 -->
 <script lang="ts">
     import type { SourceResult, DashboardSelection } from '#lib/server/types.js'
     import type { FeedbackAndErrorsData } from '#lib/server/sources/feedback-and-errors.js'
-    import { countFeedbackWithReplyTo, tallyErrorReportsByField, errorReportsByDay } from '#lib/feedback-and-errors.js'
+    import { enhance } from '$app/forms'
+    import { countFeedbackAwaitingReply, tallyErrorReportsByField, errorReportsByDay } from '#lib/feedback-and-errors.js'
     import { formatNumber } from '#lib/format.js'
     import { COLOR_GOLD } from '#lib/colors.js'
     import Chart from '#lib/components/Chart.svelte'
@@ -19,9 +21,12 @@
     const {
         feedbackAndErrors,
         selection,
+        answerError = null,
     }: {
         feedbackAndErrors: SourceResult<FeedbackAndErrorsData>
         selection: DashboardSelection
+        /** The mark-answered action's failure message, if the last toggle didn't save. */
+        answerError?: string | null
     } = $props()
 </script>
 
@@ -39,7 +44,7 @@
 
     {#if feedbackAndErrors.ok}
         {@const fe = feedbackAndErrors.data}
-        {@const awaitingReply = countFeedbackWithReplyTo(fe.feedback)}
+        {@const awaitingReply = countFeedbackAwaitingReply(fe.feedback)}
         {@const errorsPerDay = errorReportsByDay(fe.errorReports)}
         {@const errorsByKind = tallyErrorReportsByField(fe.errorReports, 'kind')}
         {@const errorsByVersion = tallyErrorReportsByField(fe.errorReports, 'appVersion')}
@@ -88,6 +93,9 @@
         {#if fe.feedback.length > 0}
             <div class="mt-4">
                 <h3 class="mb-2 text-sm font-medium text-text-secondary">Recent feedback</h3>
+                {#if answerError}
+                    <p class="mb-2 text-sm text-danger">{answerError}</p>
+                {/if}
                 <div class="space-y-2">
                     {#each fe.feedback.slice(0, 15) as msg (msg.id)}
                         <div class="rounded-lg border border-border-subtle bg-surface-elevated px-3 py-2">
@@ -103,6 +111,28 @@
                                     >
                                         Reply to {msg.email}
                                     </a>
+                                    {#if msg.answeredAt}
+                                        <span class="text-text-secondary">
+                                            Answered <span class="tabular-nums">{msg.answeredAt.split(' ')[0]}</span>
+                                        </span>
+                                    {/if}
+                                    <form
+                                        method="POST"
+                                        action="?/setAnswered"
+                                        use:enhance={() =>
+                                            ({ update }) =>
+                                                update({ reset: false })}
+                                    >
+                                        <input type="hidden" name="id" value={msg.id} />
+                                        <input type="hidden" name="answered" value={msg.answeredAt ? 'false' : 'true'} />
+                                        <button
+                                            type="submit"
+                                            class="rounded-md border border-border px-2 py-0.5 text-xs text-text-secondary
+                                                transition-colors hover:text-text-primary"
+                                        >
+                                            {msg.answeredAt ? 'Mark as awaiting reply' : 'Mark answered'}
+                                        </button>
+                                    </form>
                                 {/if}
                             </div>
                         </div>

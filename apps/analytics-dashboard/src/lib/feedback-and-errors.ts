@@ -4,7 +4,11 @@
  * the server-only fetching lives in `#lib/server/sources/feedback-and-errors.ts`.
  */
 
-/** One in-app "Send feedback" submission. `email` is the optional reply-to the sender attached. */
+/**
+ * One in-app "Send feedback" submission. `email` is the optional reply-to the sender attached.
+ * `answeredAt` is when David marked it answered by hand (replies go out from his mailbox, which the
+ * api-server never sees), or null while it still needs one.
+ */
 export interface FeedbackRow {
   id: number
   createdAt: string
@@ -13,6 +17,7 @@ export interface FeedbackRow {
   appVersion: string
   osVersion: string
   buildMode: string | null
+  answeredAt: string | null
 }
 
 /** One error-report bundle's metadata (the zip itself stays in R2). `kind` is "auto" or "user". */
@@ -26,9 +31,14 @@ export interface ErrorReportRow {
   generatedAt: string
 }
 
-/** Number of feedback messages that carry a reply-to email (people awaiting a response). */
-export function countFeedbackWithReplyTo(rows: FeedbackRow[]): number {
-  return rows.filter((row) => row.email != null && row.email !== '').length
+/** Whether a message still owes its sender a reply: it carries a reply-to email and isn't marked answered. */
+function isAwaitingReply(row: FeedbackRow): boolean {
+  return row.email != null && row.email !== '' && row.answeredAt == null
+}
+
+/** Number of feedback messages still awaiting a reply (see `isAwaitingReply`). */
+export function countFeedbackAwaitingReply(rows: FeedbackRow[]): number {
+  return rows.filter(isAwaitingReply).length
 }
 
 /** Tallies error reports by a field (kind/version/arch), highest count first. */

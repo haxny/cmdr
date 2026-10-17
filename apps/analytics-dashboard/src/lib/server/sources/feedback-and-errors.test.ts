@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { fetchFeedbackAndErrorsData } from './feedback-and-errors.js'
+import { fetchFeedbackAndErrorsData, setFeedbackAnswered } from './feedback-and-errors.js'
 import {
-  countFeedbackWithReplyTo,
+  countFeedbackAwaitingReply,
   tallyErrorReportsByField,
   errorReportsByDay,
   type FeedbackRow,
@@ -20,6 +20,7 @@ const sampleFeedback: FeedbackRow[] = [
     appVersion: '0.22.0',
     osVersion: 'macOS 15.5',
     buildMode: 'release',
+    answeredAt: null,
   },
   {
     id: 1,
@@ -29,6 +30,7 @@ const sampleFeedback: FeedbackRow[] = [
     appVersion: '0.22.0',
     osVersion: 'macOS 14.0',
     buildMode: 'release',
+    answeredAt: null,
   },
 ]
 
@@ -62,11 +64,17 @@ const sampleErrors: ErrorReportRow[] = [
   },
 ]
 
-describe('countFeedbackWithReplyTo', () => {
+describe('countFeedbackAwaitingReply', () => {
   it('counts only rows with a non-empty email', () => {
-    expect(countFeedbackWithReplyTo(sampleFeedback)).toBe(1)
-    expect(countFeedbackWithReplyTo([{ ...sampleFeedback[0], email: '' }])).toBe(0)
-    expect(countFeedbackWithReplyTo([])).toBe(0)
+    expect(countFeedbackAwaitingReply(sampleFeedback)).toBe(1)
+    expect(countFeedbackAwaitingReply([{ ...sampleFeedback[0], email: '' }])).toBe(0)
+    expect(countFeedbackAwaitingReply([])).toBe(0)
+  })
+
+  it('leaves out messages marked answered', () => {
+    const answered = { ...sampleFeedback[0], id: 3, answeredAt: '2026-10-14 21:12:00' }
+    expect(countFeedbackAwaitingReply([...sampleFeedback, answered])).toBe(1)
+    expect(countFeedbackAwaitingReply([answered])).toBe(0)
   })
 })
 
@@ -131,6 +139,17 @@ describe('fetchFeedbackAndErrorsData', () => {
     expect(fetchMock.mock.calls[0][1]?.headers).toEqual({ Authorization: 'Bearer test-admin-token' })
   })
 
+  it('re-reads feedback on every load but serves error reports from the cache', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve([]) })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await fetchFeedbackAndErrorsData(mockEnv, { range: '7d', day: null })
+    await fetchFeedbackAndErrorsData(mockEnv, { range: '7d', day: null })
+    const urls = fetchMock.mock.calls.map((c) => String(c[0]))
+    expect(urls.filter((u) => u.includes('/admin/feedback')).length).toBe(2)
+    expect(urls.filter((u) => u.includes('/admin/error-reports')).length).toBe(1)
+  })
+
   it('maps the 24h range up to the worker 7d window', async () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve([]) })
     vi.stubGlobal('fetch', fetchMock)
@@ -168,5 +187,40 @@ describe('fetchFeedbackAndErrorsData', () => {
     expect(result.ok).toBe(false)
     if (result.ok) return
     expect(result.error).toContain('DNS resolution failed')
+  })
+})
+
+describe('setFeedbackAnswered', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('PUTs the flag with the admin token and returns the stored timestamp', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      text: () => Promise.resolve(JSON.stringify({ id: 7, answeredAt: '2026-10-14 21:12:00' })),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const result = await setFeedbackAnswered(mockEnv, { id: 7, answered: true })
+    expect(result).toEqual({ ok: true, data: '2026-10-14 21:12:00' })
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(url).toBe('https://api.getcmdr.com/admin/feedback/7/answered')
+    expect(init.method).toBe('PUT')
+    expect(init.body).toBe(JSON.stringify({ answered: true }))
+    expect(init.headers).toMatchObject({ Authorization: 'Bearer test-admin-token' })
+  })
+
+  it("surfaces the worker's error message", async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 404,
+        text: () => Promise.resolve(JSON.stringify({ error: 'No feedback has that id' })),
+      }),
+    )
+    const result = await setFeedbackAnswered(mockEnv, { id: 99, answered: true })
+    expect(result).toEqual({ ok: false, error: 'No feedback has that id' })
   })
 })

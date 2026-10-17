@@ -266,6 +266,7 @@ const richData: DashboardData = {
           appVersion: '1.10.0',
           osVersion: '15.5',
           buildMode: 'release',
+          answeredAt: null,
         },
         {
           id: 2,
@@ -276,6 +277,17 @@ const richData: DashboardData = {
           appVersion: '1.2.0',
           osVersion: '14.7',
           buildMode: null,
+          answeredAt: null,
+        },
+        {
+          id: 3,
+          createdAt: '2026-07-30 10:00:00',
+          feedback: 'Already got a reply.',
+          email: 'answered@example.com',
+          appVersion: '1.2.0',
+          osVersion: '14.7',
+          buildMode: 'release',
+          answeredAt: '2026-07-30 18:45:00',
         },
       ],
       errorReports: [
@@ -560,8 +572,8 @@ Subscriptions by status:
 
 ## Feedback & errors: what are users telling us?
 
-- Feedback messages: 2
-- Awaiting reply (have a reply-to email): 1
+- Feedback messages: 3
+- Awaiting reply (have a reply-to email, not marked answered): 1
 - Error reports: 3
 
 Error reports by kind:
@@ -578,7 +590,8 @@ Error reports by day:
 
 Recent feedback:
   2026-08-01 (v1.10.0) [reply-to: someone@example.com]: Love it, especially the preview pane.
-  2026-07-31 (v1.2.0): ${'x'.repeat(280)}`
+  2026-07-31 (v1.2.0): ${'x'.repeat(280)}
+  2026-07-30 (v1.2.0) [reply-to: answered@example.com, answered 2026-07-30]: Already got a reply.`
 
 const allFailedReport = `# Cmdr analytics report (7d)
 
@@ -677,7 +690,7 @@ GitHub stars: 0 total
 ## Feedback & errors: what are users telling us?
 
 - Feedback messages: 0
-- Awaiting reply (have a reply-to email): 0
+- Awaiting reply (have a reply-to email, not marked answered): 0
 - Error reports: 0`
 
 // The doubled blank line under Interest and Download is the current shape: the section heading already
@@ -739,7 +752,7 @@ Subscriptions by status:
 ## Feedback & errors: what are users telling us?
 
 - Feedback messages: 0
-- Awaiting reply (have a reply-to email): 0
+- Awaiting reply (have a reply-to email, not marked answered): 0
 - Error reports: 3
 
 Error reports by kind:

@@ -61,7 +61,9 @@ the fact that it's excluded from the "which sources does this page load" contrac
 
 The 20s cap is load-bearing, not belt-and-braces: Workers `fetch` has no built-in timeout, so without it a single hung
 upstream stalls the whole `Promise.all` until Cloudflare gives up with a 524 at 100 seconds, taking the entire page down
-over one slow third party. Results cache via `cache.ts`: 5 minutes for the 24h and 7d ranges, 1 hour for 30d.
+over one slow third party. Results cache via `cache.ts`: 5 minutes for the 24h and 7d ranges, 1 hour for 30d. One
+exception: in "Feedback & errors", only the error-report listing caches. Feedback is read live so a message marked
+answered leaves "Awaiting reply" on the very next load (see the "Awaiting reply" bullet under Key decisions).
 
 ### The Cloudflare source is shared by both pages
 
@@ -484,6 +486,12 @@ have a happy-path test carrying the real `type: 'app'` stamp, so the discriminat
   `#lib/feedback-and-errors.ts` (client-safe) so the page, the report endpoint, and tests share one copy. The
   agent-facing local digest (`/feedback-and-error-digest-from-app`) reads the same stores; see
   `docs/tooling/feedback-and-error-digest.md`.
+- **"Awaiting reply" means a reply-to email AND not marked answered** (`countFeedbackAwaitingReply`). David replies from
+  his own mailbox, which nothing here can see, so the only signal is the manual toggle: each feedback card with a
+  reply-to has a "Mark answered" / "Mark as awaiting reply" button, the `setAnswered` form action in
+  `routes/product/+page.server.ts`, which proxies to the api-server's `PUT /admin/feedback/:id/answered` (stores
+  `feedback.answered_at`). The `/api/report` text shows the same count and tags answered rows `answered YYYY-MM-DD`.
+  Feedback skips the cache for this reason; the error-report half still caches.
 - **PostHog uses the HogQL query API** (`/api/projects/{id}/query/`), not the legacy Trends API (`/insights/trend/`),
   which returns "Legacy insight endpoints are not available" for newer accounts.
 - **Umami metrics use `type=path`** (not `type=url`): `url` and `page` return 400, but `path`, `referrer`, `event`, and
