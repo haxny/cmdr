@@ -1910,7 +1910,7 @@ crate's homes are new and must show no tangle).
   the scan shrank to `no_spawn_async_sync_in_the_engine`), but 18 production sites still spawn ambiently (`tokio::spawn`
   ×5, `tokio::task::spawn_blocking` ×13: `local_start.rs:144` for every managed op, the rename and archive-edit blocking
   calls, the watchdog, the preview, the retry, the fresh-compress feed). M5a moved only `tauri::async_runtime` onto the
-  host runtime; moving these changes which runtime runs them, so it's its own slice.
+  host runtime; moving these changes which runtime runs them, so it's its own slice: M8c.
 - **Surface:** 83 root promises, 65 `Operations` methods, 2 public modules (`host`, the `transfer-bench` door), 37
   items, measured with no headroom. Eight handle methods are app-TEST reaches that production also runs inside the
   engine (`host`, `archive_edit_start`, `compress_start`, `copy_between_volumes`, `route_archive_delete`,
@@ -1954,6 +1954,48 @@ crate's homes are new and must show no tangle).
 `file-length`, `desktop-rust-jscpd`, plus three slow ones, each needed here: `desktop-rust-cargo-udeps` (dependency
 pruning is the change), `desktop-rust-disk-images` (its atoms change), and `desktop-svelte-e2e-linux` once (copy, move,
 delete, conflict, and undo flows end to end after the move).
+
+### M8c: Every spawn goes through the host runtime
+
+**Scope.** The 18 production sites that still spawn on whatever runtime the calling thread has move onto the engine's
+runtime (`host.runtime()`, the `VolumeHost`'s), and then the crate `clippy.toml` gains the ban § "Loud rules" names:
+`tokio::spawn`, `tokio::task::spawn`, `tokio::task::spawn_blocking`, and `std::thread::spawn`, lifted under `cfg(test)`
+the way `cmdr-listing/src/lib.rs` does. M5a moved only `tauri::async_runtime` onto the host runtime; M8a shipped
+`libc::sync` alone. The sites (lines at `8cb668572`):
+
+- `tokio::spawn` (5): `scan_watchdog.rs:176` (the watchdog's ticker), `scan_preview.rs:121` (the preview worker),
+  `transfer/retry.rs:278`, `archive_edit/fresh_compress.rs:658` (the remote feed), and `mutation_reply.rs:139` (the
+  reply-or-hand-off continuation).
+- `tokio::task::spawn_blocking` (13): `local_start.rs:144` (every managed op's handler), `rename.rs:259,608`,
+  `rename/bulk.rs:197`, `unblocked_removal.rs:65,69`, and
+  `archive_edit/{engine.rs:104, fresh_zip.rs:293, remote.rs:120, fresh_plan.rs:447, routing.rs:101, compress.rs:68}`.
+
+**Intentions.** The engine never inherits a runtime: in production every admitted op already runs on the app runtime
+(the host's), so the change is invisible there, and the type of the runtime handle the engine holds becomes the only way
+work leaves the calling task.
+
+**Landmines.**
+
+- **Tests change runtime.** A cell's own `#[tokio::test]` runtime is not the host's: `TestOperations` defaults to
+  `VolumeHost::detached()`, whose runtime is `cmdr-fs`'s shared fallback. Today a spawned task joins the cell's runtime;
+  after the move it lands on the fallback, so a cell that awaits it, cancels it, or relies on its runtime shutting down
+  with the test sees different timing. Every cell over a converted site runs under plain threaded `cargo test` AND
+  nextest before the commit lands; a cell that needs its own runtime builds its engine with a host over
+  `Handle::current()` deliberately (a test's choice, never a production default).
+- **The `start_paused` cells** (`mutation_reply_tests.rs`, five; `transfer/volume/strategy_yield_tests.rs`, three) drive
+  paused time on the CELL's runtime. A continuation moved to the fallback runtime doesn't see that clock, so these
+  either give their engine a host over the paused runtime or the site stays ambient by an explicit decision.
+- **`mutation_reply.rs` is re-decided here, not grandfathered.** M4 decided its continuation stays ambient (it continues
+  `cmdr_fs::deadline::race_detached`'s own ambient spawn). Decide again with the ban in view: convert it, or keep it
+  with a reasoned `#[allow(clippy::disallowed_methods)]` at the site and a line in the crate `DETAILS.md`. Same for any
+  other site that turns out to need the caller's runtime: each exception is named and reasoned where it lives.
+- `spawn_blocking` callers that already run on a blocking-pool thread of the host runtime keep doing so; the dedicated,
+  NAMED `std::thread::Builder` threads (§ "Loud rules") stay.
+
+**DONE.** The ban is ON in `crates/cmdr-operations/clippy.toml` only once all 18 sites are converted or carry their
+reasoned exception; `rg -n 'tokio::spawn\(|tokio::task::spawn_blocking\(' crates/cmdr-operations/src -g '!*test*'` names
+only the documented exceptions; lanes: `desktop-rust-tests`, `desktop-rust-clippy`, `desktop-rust-test-sleep`, and a
+plain threaded `cargo test -p cmdr-operations`.
 
 ### M9: Docs, the "after" numbers, and close-out
 
