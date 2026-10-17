@@ -5,6 +5,64 @@ This file holds all notable changes to Cmdr over time.
 The format is based on [keep a changelog](https://keepachangelog.com/en/1.1.0/), and we use
 [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html).
 
+## [0.54.0] - 2026-10-18
+
+Smaller things this time:
+
+- CLI: Type `cmdr .` in a terminal to open that folder in Cmdr. Automatically installed if you have Cmdr from Homebrew,
+  otherwise enable it in the top menu: `Cmdr` > `Install “cmdr” command`.
+- Safety work for the EU Cyber Resilience Act: a local security event log, flagging suspicious stuff, and a "delete all
+  data" feature.
+- Drag waiting operations in the queue to reorder them.
+
+Also a few big refactors in the background that you shouldn't notice 😅 and a bunch of fixes!
+
+### Added
+
+- Type `cmdr <path>` in a terminal to show it in Cmdr, with flags for the pane and a new tab (2a5911f8b)
+- Install or uninstall the `cmdr` command from the app menu, or get it with the Homebrew cask (61bb889ad, 1986b75a4,
+  b905b4451)
+- Drag a waiting operation in the queue to change its place in line (67edbd06a, 968e0001c, bfb64e134)
+- Add "Delete all Cmdr data" to Settings › Updates & privacy: it removes everything Cmdr keeps on this Mac, then quits
+  (141d9e990, 644287bfe, 72a18ef9b, 261f1dc09)
+- Keep a local security event log, with an off switch in Settings (902b23869, f8390495d, 562e4c4f5)
+- Tell you right away when Cmdr turns away a web page at its MCP server, an unsigned server reply, or a fake update
+  (99e40c758, 2721e28f2, fb272d469, 7940f8b92)
+- Say in the restart toast and in What's new when an update fixes a security issue, with a link to the advisory
+  (ed6b98a7b, 89992ad56, af0e3463a, f2d030ffb)
+- Turn the operation log off in Settings: undo then says it can't undo new operations (b63b2d76e, bb670c551)
+- Keep a copy of a damaged settings or history file, start fresh, and tell you once (fe247993b, 5efce6b53)
+- Warn when a copy finishes but Cmdr can't confirm the files reached the disk (aadf2cd5b)
+
+### Fixed
+
+- Fix a crash or full disk mid-save truncating your settings, shortcuts, or license file (71df13836, 993eeca6c,
+  8747836bf)
+- Fix a server refusing a write during a move blaming your local source folder (433708e55)
+- Fix the file list going blank after the quick filter narrows it and clears (38fc7a307)
+- Fix copying, overwriting, or compressing into Downloads raising a "new download" notification for Cmdr's own files
+  (07f149d5d, 6ee404d6a, 2d3b3ad7e)
+- Fix Rollback racing a quit or Cancel and deleting partial files those meant to keep (a5b218a63)
+- Fix Eject being offered on a drive a transfer just started on (ba73c537e, aaaa185ee)
+- Fix progress and scan counts freezing after an internal error mid-transfer (9dc1a0674, 748d89bf6, 1b92667e6)
+- Fix the Homebrew install command failing on Homebrew before 5.1: it's one command now (8f61ebf9c)
+
+### Security
+
+- Move the license key from a plain-text file into the Keychain (e206f58ce)
+- Keep usage stats and crash reports off when a damaged settings file resets (fe247993b)
+- Keep folder names like "12. Summer trip" fully out of error reports (7ca001e58, 373bcda98, 2499a8875)
+
+### Non-app
+
+- Move the copy and move engine, the operation log, the local disk backend, and file-name order into four Tauri-free
+  crates, with app and build timings flat (f263a8a9a, 96b81d034, 116306a79, 026f55bab, b76fcb473, e2fe3aef6)
+- Fail the check on any new or grown Rust module cycle, and untangle seven (2d31da5f7, 75d56d40b, bf3fe2de0)
+- Rate-limit admin routes and report rejected admin and webhook requests in the ops digest (9dfee8ced)
+- Declare a five-year security support period, publish fixed vulnerabilities, and expand /trust for the EU Cyber
+  Resilience Act (245ff60a3, a75ba627d, 7066fd0cb, 316aed5b3, c7d61c6ab)
+- Keep each release's Cyber Resilience Act evidence for 10 years (b483b85f6, 22ff858d5)
+
 ## [0.53.0] - 2026-10-15
 
 The main things:

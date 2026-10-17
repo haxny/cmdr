@@ -666,7 +666,7 @@ export const roadmapSections: RoadmapSection[] = [
           {
             date: '(Oct 2)',
             title: 'Russian',
-            description: 'A community translation. With es-419 recently added, 15 languages now.',
+            description: 'A community translation. With es-419 also recently added, 15 languages now.',
             done: true,
           },
           {
@@ -709,13 +709,19 @@ export const roadmapSections: RoadmapSection[] = [
           {
             date: '(Oct 15)',
             title: 'Accessibility',
-            description: 'Support for VoiceOver, "Increase contrast", "Show borders", and full keyboard navi.',
+            description: 'Support for VoiceOver, "Increase contrast" & co., and full keyboard navigation.',
             done: true,
           },
           {
             date: '(Oct 16)',
-            title: '"cmdr" in your terminal',
-            description: 'Type "cmdr ." to open the folder you\'re in. Pick a pane or a new tab with a flag.',
+            title: 'cmdr CLI',
+            description: "Type `cmdr .` to open the folder you're in. Flags for left/right pane, etc.",
+            done: true,
+          },
+          {
+            date: '(Oct 16)',
+            title: 'Local security log',
+            description: 'With alerts on any monkey business recognized, and one-click data wipe.',
             done: true,
           },
         ],

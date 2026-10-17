@@ -35,7 +35,7 @@
       "id": "operation-log",
       "name": "Operation log",
       "status": "alpha",
-      "note": "A durable history of every copy, move, delete, and rename, with a Roll back button on every reversible row and a plain reason on the rows that can't be reversed."
+      "note": "A durable history of every copy, move, delete, and rename, with a Roll back button on every reversible row and a plain reason on the rows that can't be reversed. Can be turned off in Settings."
     },
     {
       "id": "multi-rename",
@@ -120,7 +120,7 @@
       "id": "file-operations",
       "name": "File operations",
       "status": "stable",
-      "note": "Copy, move, delete, rename, and new folders with a live file tree of progress, conflict handling, rollback, a keyboard-driven background queue, and parallel processing when possible. A drive pulled mid-transfer keeps every original, a NAS that drops off gets waited for, and copies keep dates, tags, and permissions wherever the destination can store them. The most-tested code in the app."
+      "note": "Copy, move, delete, rename, and new folders with a live file tree of progress, conflict handling, rollback, a background queue that works with mouse+keyboard, and parallel processing when possible. A drive pulled mid-transfer keeps every original, a NAS that drops off gets waited for, and copies keep dates, tags, and permissions wherever the destination can store them. The most-tested code in the app."
     },
     {
       "id": "file-viewer",
