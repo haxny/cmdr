@@ -48,12 +48,14 @@ The full top-level inventory is here:
   reversal of a copy goes through: a Locked, `deny delete`, or Read-only copy of the operation's own is cleared through
   `Volume::clear_blockers` after its plain removal is refused, never by a volume's own `delete`, which is also F8's). That recheck shares `verify_snapshot` + `SkipReason` with
   the operation-log history engine — ❌ never a batch or a fork of either, so one reversal can't quietly grow a laxer
-  rule than the other; only the `Drop` net is unconditional. The persisted leftover ledger is three files:
+  rule than the other; only the `Drop` net is unconditional. The persisted leftover ledger is five files:
   `in_flight_records.rs` (what a record IS: its kind, its path space, and what that kind needs),
-  `in_flight_temps.rs` (the log and the store), `in_flight_log_writer.rs` (the thread that writes the log, so no
-  record is file I/O on an async worker), and `in_flight_sweep.rs` (what a launch and a returning drive DO with one). § "What the sweep does with each kind" below holds the rules; `transfer/DETAILS.md` § "Which path space a
-  recorded partial lives in" holds the path-space decisions, and § "Testing the in-flight temp ledger" below the rules
-  its process-wide singleton imposes on tests.
+  `in_flight_temps.rs` (the log and the store, and what an operation records), `in_flight_claim.rs` (the engine's one
+  claim: the only code that opens, replays, and truncates a ledger file), `in_flight_log_writer.rs` (the thread that
+  writes the log, so no record is file I/O on an async worker), and `in_flight_sweep.rs` (what a launch and a returning
+  drive DO with one). § "What the sweep does with each kind" and § "Who claims the ledger" below hold the rules;
+  `transfer/DETAILS.md` § "Which path space a recorded partial lives in" holds the path-space decisions, and § "Testing
+  the in-flight temp ledger" below the rules it imposes on tests.
 - **`tests.rs` is the SHARED-vocabulary suite only**: the intent machine, the config the frontend sends, the
   `io::Error` conversion, and `no_global_sync_or_spawn_async_sync_in_write_operations` — a whole-tree scanner that
   excludes itself by the filename `tests.rs`, so ❗ moving it to another file silently makes it fail on its own prose.
@@ -87,7 +89,8 @@ The full top-level inventory is here:
   (`transfer/volume/DETAILS.md` § "A source is listed as a source", which also notes the same-FS merge-move edge). The
   rule, the kernel sources it mirrors, and why APFS and Linux never skip: `crates/cmdr-fs/src/apple_double.rs`.
 - Scan and preview: `scan.rs`, `scan_preview.rs` (the lifecycle API, with its two workers in `scan_preview/local.rs`
-  and `scan_preview/volume.rs`), `scan_cache.rs`, `scan_bridge.rs` (the scan-progress seam the drivers
+  and `scan_preview/volume.rs`), `scan_cache.rs` (the carriers a walk produces; the engine's preview store is its child
+  `scan_cache_previews.rs`), `scan_bridge.rs` (the scan-progress seam the drivers
   feed, and `ScanPause`, the park that lets a walk honor its owner's Pause), `scan_watchdog.rs` (the inactivity bound on
   a preview), `compress_estimate.rs`. A preview walks for a `ScanPreviewPurpose`: a `Transfer` walk also builds the
   operation's live tree and `CachedScanResult` carries it to the operation the way it carries `per_path`, a `Compress`
@@ -415,16 +418,16 @@ The state machine exists so the take, the id, and the "was it answered?" bookkee
 
 **`cancel_write_operation` does state transitions.** `rollback=true` → `Running → RollingBack`, `rollback=false` → `Running → Stopped` or `RollingBack → Stopped`. First caller's decision wins; subsequent calls with different intent are no-ops (unless transitioning from `RollingBack → Stopped`). `cancel_all_write_operations` always transitions to `Stopped` (teardown should never silently roll back without visual feedback). Both go through `WriteOperationState::transition_intent`, one `fetch_update` that checks `OperationIntent::may_become` (the whole table) against the value AT THE WRITE. A load-validate-`store` let a Rollback click that read `Running` overwrite quit's `Stopped` landing in its gap, deleting the partials quit meant to keep; the `intent_write_gap` test seam parks a writer there (`state_tests.rs` § "two stops racing on one intent").
 
-**Scan preview state.** `start_scan_preview` registers one `PREVIEWS` entry in `scan_cache.rs` and spawns a walk. The entry is either in flight or settled, and a settled one carries WHY: complete (with its `CachedScanResult`), errored (with its message), or cancelled. `copy_files_start` / `delete_files_start` consume a completed result via `preview_id` in `WriteOperationConfig`, skipping a redundant scan. An entry is freed by three paths: (1) `take_cached_scan_result(preview_id, sources)` at op start (the consume path), (2) `cancel_scan_preview(preview_id)` on dialog teardown — it sets the in-flight cancel flag AND drops the entry, so a dialog dismissed after the scan completed doesn't leak the result — and (3) a TTL safety net: `settle_preview` first evicts settled, UNCLAIMED entries older than `SCAN_RESULT_TTL` (5 min). The TTL is a backstop for a caller that forgets both (1) and (2); the pure `expired_scan_result_ids` helper is unit-tested. A `CachedScanResult` can hold tens of thousands of `FileInfo`, so none of these paths is optional.
+**Scan preview state.** `Operations::start_scan_preview` registers one entry in its engine's `ScanPreviews` (`scan_cache_previews.rs`, a child of `scan_cache.rs`) and spawns a walk that holds the engine until it settles. The entry is either in flight or settled, and a settled one carries WHY: complete (with its `CachedScanResult`), errored (with its message), or cancelled. `copy_files_start` / `delete_files_start` consume a completed result via `preview_id` in `WriteOperationConfig`, skipping a redundant scan. An entry is freed by three paths: (1) `take_cached_scan_result(preview_id, sources)` at op start (the consume path), (2) `cancel_scan_preview(preview_id)` on dialog teardown — it sets the in-flight cancel flag AND drops the entry, so a dialog dismissed after the scan completed doesn't leak the result — and (3) a TTL safety net: `settle_preview` first evicts settled, UNCLAIMED entries older than `SCAN_RESULT_TTL` (5 min). The TTL is a backstop for a caller that forgets both (1) and (2); the pure `expired_scan_result_ids` helper is unit-tested. A `CachedScanResult` can hold tens of thousands of `FileInfo`, so none of these paths is optional.
 
 **The cache is bound to its request, and says so when it's incoherent.** A `preview_id` proves the frontend once asked for a scan. It proves nothing about WHICH scan, and three of the six consumers act on the cached file list without ever re-reading their own `sources` again, so an id pointing at a preview of a different selection makes each of them fail differently: the LOCAL delete walker (`delete/walker.rs`) deletes the previewed tree instead of the requested one, with no rollback and no progress line naming it; the LOCAL copy (`transfer/copy/mod.rs`) writes the previewed tree to the destination while its bulk-skip set still reads the requested one; the LOCAL move (`transfer/move_op/cross_fs.rs`) stages the previewed tree and then fails in Phase 3 looking for the requested name in staging, a half-staged move. The VOLUME delete and both `transfer/volume/preflight.rs` sites were already source-bound (they iterate `sources` and fall through per-source on a miss), so they degrade to a rescan rather than acting wrong.
 
-Two mechanisms close it at the choke point, and both live in `scan_cache.rs`:
+Two mechanisms close it at the choke point, and both live in the preview store (`scan_cache_previews.rs`):
 
 - `CachedScanResult::sources` records what the preview was asked to walk, and `take_cached_scan_result(preview_id, requested_sources)` compares it SET-wise against the operation's own list. A mismatch is a cache miss: the entry is dropped, a warn names both lists, and the caller takes the fresh-scan fallback it already had. The comparison normalizes nothing on purpose. A path that differs only by a trailing separator is an IPC-edge bug; a lenient comparison here would just be another belief.
-- `insert_scan_result` carries a coherence canary: a completed walk with `file_count > 0` and an empty `per_path` warns and trips a `debug_assert!`. That's the shape that let a LOCAL preview hand the copy drivers an empty `source_hints` map, which they read as a confident `is_directory: false`. It's one-directional (a volume batch legitimately caches empty `files` with a populated `per_path`), and it's a `debug_assert!`, so a release build still admits the entry and the drivers still have to survive it (`transfer/volume/copy_source_hint_tests.rs` is that defense's proof, seeding past the canary via `seed_incoherent_scan_result_for_test`).
+- `settle_preview` carries a coherence canary: a completed walk with `file_count > 0` and an empty `per_path` warns and trips a `debug_assert!`. That's the shape that let a LOCAL preview hand the copy drivers an empty `source_hints` map, which they read as a confident `is_directory: false`. It's one-directional (a volume batch legitimately caches empty `files` with a populated `per_path`), and it's a `debug_assert!`, so a release build still admits the entry and the drivers still have to survive it (`transfer/volume/copy_source_hint_tests.rs` is that defense's proof, seeding past the canary via `seed_incoherent_scan_result_for_test`).
 
-`SCAN_PREVIEW_RESULTS` is private to `scan_cache.rs` so neither can be walked around: `insert_scan_result`, `take_cached_scan_result`, `cached_scan_totals`, and `release_scan_result` are the whole surface, and `state.rs` re-exports the types but not the map. A `pub(super)` static is a choke point in name only. Pinned by `scan_cache_tests.rs` (both mechanisms), `delete/preview_binding_tests.rs` (the destructive one, plus a volume-side regression fence), and one binding test each in `transfer/copy/copy_tests.rs` and `transfer/move_op/move_op_tests.rs`.
+The map is a private field of `ScanPreviews` so neither can be walked around: its methods (`settle_preview`, `take_cached_scan_result`, the claims, the read-only totals and cost facts, `release_preview`) are the whole surface, and the store reads `CachedScanResult`'s private fields only because it's `scan_cache`'s child. A reachable map is a choke point in name only. Pinned by `scan_cache_tests.rs` (both mechanisms), `delete/preview_binding_tests.rs` (the destructive one, plus a volume-side regression fence), and one binding test each in `transfer/copy/copy_tests.rs` and `transfer/move_op/move_op_tests.rs`.
 
 **A completed preview always carries `per_path`, whichever walk produced it.** Both `run_scan_preview` (the LOCAL `std::fs` walk, via `scan.rs::walk_sources_with_per_path`) and `run_volume_scan_preview` (SMB / MTP) cache one `CopyScanResult` per top-level source: its type, file/dir counts, and byte totals. That map is the ONLY thing that tells a cross-volume copy whether each selected item is a file or a folder without paying a stat probe per source, and it's what a volume delete's fast path reads for top-level file sizes. Downstream code treats a source that isn't in the map as **unknown** and probes (`transfer/volume/DETAILS.md` § "A missing source hint means unknown"); ❌ don't add a preview path that completes without filling it — an empty map costs one round trip per source on SMB/MTP, and any consumer that guesses instead of probing is a data-safety bug waiting to happen. Per-source accounting is a before/after snapshot of the shared walk counters, so hardlink dedup still spans all sources (a later source's `dedup_bytes` share can read low; informational only). Pinned by `scan.rs::tests::walk_reports_type_and_totals_per_top_level_source`.
 
@@ -721,8 +724,9 @@ runtime. The engine is a handle, `Operations` (`mod.rs`, built in `handle.rs`): 
 `EngineHost`, the operation log it journals into, the manager, the registry of live states, and the status cache, so two
 engines share nothing. The app's answer is `apps/desktop/src-tauri/src/operations_host/`, which builds the app's one
 engine in `setup()` with `Operations::builder` (after `volume_host::install` and `operation_log_host::install`, before
-the leftover sweep). Free functions callers outside the engine still use reach that engine through the engine's own
-slot (`write_operations::installed_for(asked)`), until they call `operations_host::operations()` themselves.
+the leftover sweep, which it claims through `operations_host::claim_ledger`). Free functions callers outside the
+engine still use reach that engine through the engine's own slot (`write_operations::installed_for(asked)`), until they
+call `operations_host::operations()` themselves; nothing inside the engine does.
 
 - **The runtime is the `VolumeHost`'s.** One handle for the engine and the backends it drives, so the two can't
   disagree. Everything the engine spawns goes there: the admission pass (§ "The admission pass spawns admitted ops on
@@ -731,15 +735,19 @@ slot (`write_operations::installed_for(asked)`), until they call `operations_hos
   oracle (`authoritative_listing`), the archive pane refresh, and the pane patch after a local create go through
   the op's `scope.host().listings()`; a spool, an upload reader, or a pull's scratch folder is a `LocalPosixVolume` over
   `scope.host().volume_host()`.
-- **An operation reaches its engine through its `OpScope`** (`scope.rs`): the host's seams, the status cache, and the
-  op's `OpJournal` once it opens, built by the engine that runs it. A managed op's rides on its `WriteOperationState`
+- **An operation reaches its engine through its `OpScope`** (`scope.rs`): the host's seams, the status cache, the
+  engine's `EngineStores` (the scan previews, the in-flight ledger, the lanes' outage records, the transfer probes), and
+  the op's `OpJournal` once it opens, built by the engine that runs it. `EngineStores` is defined at the hub beside
+  `Inner`: each store's module also works on op states, so the scope naming those modules would circle back through
+  `state`. A managed op's rides on its `WriteOperationState`
   (`state.scope()`); an instant op builds one beside `run_instant`. A scope holds parts of the engine, never the engine
   (the registry holds the states, so that would be a cycle), and ❌ a missing scope never falls back to another log.
   Entry points (starters, routing, the queue and by-id controls, pre-flight checks, rollback) are `Operations`
   methods or take the engine as a parameter; a deferred start uses the engine admission hands it. The free functions
   callers outside the engine use are shims over the installed engine until they call `operations_host::operations()`
-  themselves. ❗ The scan previews, the leftover sweep, and the probe watchdog still find their engine through the slot
-  (`host::installed_for`), until a preview and the ledger carry theirs.
+  themselves. A scan preview's walk holds its engine (`run_scan_preview(&engine, …)`); the leftover sweep runs on the
+  host its claim hands it; the probe watchdog and the preview watchdog hold their stores weakly, so a dropped engine
+  stops them.
 - **Which volume serves an id or a path goes through `OperationVolumes`** (`host/volumes.rs`): the registry's `get`,
   `resolve`, the archive-boundary questions, `find_by_root`, `forget_archive_index`, `on_volume_arrival`, and
   `unregistered` (why an id has no volume, as an `UnregisteredVolume`). Its supertrait is the rollback planner's
@@ -780,8 +788,8 @@ slot (`write_operations::installed_for(asked)`), until they call `operations_hos
   app wires them all in `operations_host::app_answers`.
 - **The app decides what each fact becomes**: a Tauri event, a `priority::transfers` call, a PostHog capture under a
   literal event name (`analytics-event-catalog` reads `capture("…")`), or an error report. The test-only counters a
-  pin reads (`emit_count`, `busy_emit_count`, `KEPT_NOTICES`, the scan bridge's tick recorder) count on the engine side,
-  before the seam.
+  pin reads (`emit_count`, `busy_emit_count`, the scan bridge's tick recorder) count on the engine side, before the
+  seam.
 - **The per-op sinks are the app's too.** `TauriEventSink` and `TauriScanPreviewSink` live in
   `apps/desktop/src-tauri/src/operations_host/sinks.rs`, built at the IPC edge and injected; a terminal emit runs its app side effects (completion
   analytics, the MCP ring, the failure `warn!`, `OperationManager::retain_failure`, the free-space hint) in the order
@@ -796,8 +804,8 @@ slot (`write_operations::installed_for(asked)`), until they call `operations_hos
   the engine before `setup()`. ❌ Still, nothing panics for want of one: `installed_for` answers `None` and logs it, and
   each shim refuses with a variant its caller already handles (`not_installed`, `instant_not_installed`,
   `UnknownOperation`) or answers what an engine with nothing running would (an empty list, no-op cancels, no busy
-  volume); the slot-bound code above answers "nothing to ask" (no oracle, no pacing, no tree, a sweep that settles
-  nothing and leaves every record for the next run). The panicking `installed()` exists only in the test and bench
+  volume, a scan preview that tells its dialog it couldn't start). The panicking `installed()` exists only in the test
+  and bench
   binaries. A test binary never installs, so its first read builds the engine every test shares (`test_support::shared_engine`, the
   app's own answers minus the frontend channel): the real indexing gauge, analytics client, and error reporter, which
   `status_cache_tests`' gauge pins read, and `cmdr-fs`'s shared fallback runtime. No sink factory, so
@@ -1709,7 +1717,8 @@ defensive rather than reachable. Pinned by
 ## What the sweep does with each kind
 
 The persisted ledger records three shapes of thing, and exactly one of them is disposable. The rules run from two
-places — `init_and_sweep` at launch, and the volume registry's arrival announcement — and ❗ they must stay ONE set: a
+places — the engine's ledger claim at launch, and the volume registry's arrival announcement — on the claiming engine's
+host, and ❗ they must stay ONE set: a
 leftover on a USB stick meets whichever happens first, so rules that drifted apart would make its fate depend on
 whether the drive was plugged in at launch.
 
@@ -1761,13 +1770,34 @@ aside it must never touch. `is_one_of_ours` stopped accepting `.cmdr-temp-` for 
 **The notice.** A kept staging folder raises `move-leftovers-kept` (drive name + folder name) as an engine-wide fact
 (`EngineEvents::staging_leftovers_kept`); the sweep belongs to no operation and has no event sink. A Mac-internal one
 gets the `warn` alone — the copy names a drive, and the boot disk never goes away, so it meets the rule again next
-launch. Tests have no frontend, so under `cfg(test)` every notice is also recorded by folder (`KEPT_NOTICES`);
-`in_flight_sweep_tests.rs` pins both halves.
+launch. `in_flight_sweep_tests.rs` pins both halves, each cell's sweep on a host of its own (`FakeVolumes` holding the
+drive, `RecordingEngineEvents` hearing the notice).
+
+## Who claims the ledger
+
+The ledger is what lets a crashed copy's temps be found and removed, and a second ledger on one data dir would replay
+the first one's LIVE records and delete its temps mid-copy. So exactly one claim, on exactly one engine, ever touches a
+ledger file:
+
+- **Every engine has a `Ledger`** (its `EngineStores`), which its ops record into through their scope. An engine that
+  never claims (a test's, a detached one, a duplicate that lost the install) records into memory only and never reads,
+  truncates, or sweeps a file.
+- **`Operations::claim_ledger(data_dir)`** (`in_flight_claim.rs`) is the one path to a file: it opens and truncates
+  `data_dir`'s log, replays it, and starts the sweep. It consumes the engine's one claim; a second is
+  `Err(AlreadyClaimed)` and leaves the file alone. ❌ Never call it from `build()`.
+- **The app claims through `operations_host::claim_ledger`**, which goes through `operations()`, so only the `OnceLock`
+  winner can be claimed. It runs where the launch sweep always ran: after the instance lock (`instance_lock.rs` keeps a
+  second process off the data dir whenever its lock can be taken), before `init_volume_manager`, unconditionally.
+- **No data dir, no file**: the claim runs unpersisted and raises `OperationErrorReport::LedgerUnpersisted`. That is
+  the only unpersisted production path.
+
+Pinned by `in_flight_temps_claim_tests.rs` (a second claim, an unclaimed engine beside another run's ledger, no data
+dir) and `operations_host::tests::the_app_claims_the_installed_engines_ledger_once`.
 
 ## Testing the in-flight temp ledger
 
-**Every test that records or sweeps owns its ledger.** `in_flight_temps::Ledger` is a handle; the app has one
-(`Ledger::process()`, which a `WriteOperationState` records into unless it carries another), and a test builds its own
+**Every test that records or sweeps owns its ledger.** `in_flight_temps::Ledger` is a handle; each engine has one
+(which a `WriteOperationState` records into, through its scope, unless it carries another), and a test builds its own
 and hands it to the states it drives with `WriteOperationState::with_in_flight_ledger`. The state holds only that
 `Option<Ledger>` and `Ledger::of` resolves it, so `state` never calls into `in_flight_temps`: that call closed a
 `state` → `in_flight_temps` → `sweep` → `transfer_sides` → `state` module cycle. `Ledger::recording_in(data_dir)` records into a
@@ -1775,18 +1805,18 @@ fresh log there; `die()` is the crash (it waits for the writer thread, then stop
 clone can't add to the log the next run replays); a cell that reads the log while its ledger lives calls `flush_log()`
 first, since lines reach the file from the writer thread; `hold_writer()` parks that thread, which is how the ordering
 cell proves a temp only queues while an aside waits to be on disk (seams: `in_flight_temps_test_support.rs`); `Ledger::for_test().launch_in(data_dir)` is the next launch, replaying that
-log; `live_paths()` is what that ledger alone believes is on disk. So a cell's log, tally, and live set hold its own
+log, its sweep on the shared engine's host; `live_paths()` is what that ledger alone believes is on disk. So a cell's log, tally, and live set hold its own
 records and nothing else, and it can assert on all of them whole.
 
 - ❌ **Don't reintroduce a singleton that tests install a log into.** That's how a sweep cell replayed the records of
   every transfer test running beside it and deleted their live temps mid-copy under plain `cargo test` (#162; the
-  check runner's one-process-per-test runner hid it). A test whose states use the default process ledger records
-  only in memory, since nothing opens that ledger's log under test.
+  check runner's one-process-per-test runner hid it). A test whose states use their engine's ledger records only in
+  memory, since nothing claims a test engine's ledger.
 - **A volume-borne cell picks a volume ID nothing else uses.** The volume registry is still one per process, and each
   ledger's arrival listener hears every registration, so a shared ID lets one cell's registration claim another's
   pending records.
 
-**The sweep signals completion, so no test needs a deadline.** `init_and_sweep` returns a `SweepHandle`; the launch path
+**The sweep signals completion, so no test needs a deadline.** A claim (and `launch_in`) returns a `SweepHandle`; the launch path
 drops it (waiting there would block on a dead mount for minutes), and a test calls `.wait()` to join the sweep thread,
 which also answers a `SweepTally`: assert on that rather than on a log line. Joining keeps the sweep from outliving the
 `TestDir` it is walking. The volume-arrival half runs on a task instead, so a cell waits for it with
@@ -1799,8 +1829,8 @@ module's own `tests` so they reach the private record types. The real-detach hal
 
 **A `Mount`-homed cell needs the mount table answered.** `transfer_sides::test_hook` is THREAD-LOCAL, and the launch
 sweep runs on its own thread, so a cell that wants a fixture directory to read as a mounted drive calls `settle` (or
-`settle_kind`) on its own thread rather than going through `init_and_sweep`. `TestVolumeRegistration::install` stands
-in for the arrival: `force_register` announces, which is what wakes the ledger's listener.
+`settle_kind`) on its own thread rather than going through a launch. `TestVolumeRegistration::install` stands in for
+the arrival: `force_register` announces, which is what wakes the ledger's listener.
 
 
 The copy configs carry an optional explicit leaf name; its validation and landing contract live in

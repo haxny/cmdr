@@ -1442,6 +1442,54 @@ finds only the § "Statics" allowed list: the task-local, the `cfg(test)` thread
 named there (removed in M7b–M7e), and `TransferTreeSlot`'s field-level `OnceLock`. Lanes: `desktop-rust-tests`,
 `desktop-rust-clippy`.
 
+**What landed differently** (recorded at execution):
+
+- **The stores sit in one `EngineStores` at the hub** (`mod.rs`, beside `Inner`), which `Inner` and every `OpScope`
+  share as an `Arc`: `ScanPreviews`, the `Ledger` and its one-claim flag, `Outages`, and `Probes`. Each store's module
+  also works on op states, so a scope naming those modules directly would circle `scope → store → state → scope`; naming
+  the hub type is the parent-child shape `module-cycles` collapses. Deep code reads `state.scope().stores().<store>()`.
+- **The preview walks take their engine** (`run_scan_preview(&engine, …)`, `ScanPause::for_preview(engine, …)`), rather
+  than `ScanPreviewState` carrying it: the state sits in the preview map inside the engine, so an engine there would be
+  an `Arc` cycle until settle. The walk holds a clone until it ends; the preview watchdog holds the store weakly. The
+  fresh-listing oracle is a parameter (`WalkContext::listings`, `scan_subtree_with_oracle(listings, …)`). The store
+  moved to `scan_cache_previews.rs`, `scan_cache`'s child (it still reads `CachedScanResult`'s private fields), which
+  took `scan_cache.rs` off the length allowlist.
+- **The claim.** `Operations::claim_ledger(Option<&Path>) -> Result<SweepHandle, AlreadyClaimed>` lives in
+  `in_flight_claim.rs` with `init_and_sweep`, `defer`, and `read_recorded` (the only code that reads a ledger file). The
+  app claims through `operations_host::claim_ledger(data_dir)` at the old sweep's spot in `setup()`, after the instance
+  lock, unconditionally, going through `operations()` so only the `OnceLock` winner is ever claimed; `install` itself
+  claims nothing (it runs before the instance lock). No data dir raises the new
+  `OperationErrorReport::LedgerUnpersisted`: before, a data-dir failure skipped the sweep silently, so that one error
+  report is new (the plan's degrade rule).
+- **The sweep gets its host from the claim** and the arrival listener holds the ledger and the host weakly. The sweep
+  cells run on a host of their own (`FakeVolumes`, `RecordingEngineEvents`), which retired the M3 `cfg(test)`
+  `KEPT_NOTICES` static; same assertions.
+- **The probe table** is `Probes` in `transfer_probe_registry.rs` (with `register_operation` and its guard). A
+  registered probe holds its op's state, whose scope holds the table: an `Arc` cycle that lasts exactly while the
+  transfer runs, broken by the guard's drop. The watchdog holds the table weakly.
+- **The aside park was already `cfg(test)`-only** (§ "Statics" called it production-compiled): its three atomics became
+  an `AsideParkSlot` on each `OpScope` under `cfg(test)`.
+- **Named threads**: the scan preview walk (`cmdr-scan-preview`), the compress estimator (`cmdr-compress-estimate`), and
+  `cancellable.rs`'s workers and cleanups (`cmdr-cancellable-work`, `cmdr-cleanup`); each panics as a bare `spawn` would
+  if the OS refuses.
+- **Test reach**: by-id preview helpers (`register_preview`, `settle_preview`, `take_cached_scan_result`, …) and
+  `render_live_dump` stay as `cfg(test)` shims over the shared engine (`// shim: removed in M7b–M7e`); direct worker and
+  walker calls in suites pass `installed()`. `Ledger::launch_in` sweeps on the shared engine's host.
+- The DONE grep also finds, beyond the allowed list: `INSTALLED` (`mod.rs`, the free shims' slot,
+  `// shim: removed in M7a`), `copy_concurrency_bench.rs`'s `cfg(test)` `COUNTER` (a network-gated bench file, one of
+  the "more in test files"), and five field-level `OnceLock`s (`OpScope::journal`, `ScanPause::owner`,
+  `EnglishNameOrder::collator`, `WriteOperationState::extract_quarantine`, and the `TransferTreeSlot` one), which are
+  fields, not statics.
+- Lanes at the end: `desktop-rust-tests`, `desktop-rust-clippy`, `desktop-rust-module-cycles` green; the bench
+  `cargo check` green.
+
+**M6b: what's left:** nothing. Handed on:
+
+1. **M6c:** `Probes` and `Outages` take their own locks; the stall report still goes out while `OperationProbe::tasks`
+   is held (unchanged here). `ScanPreviews` keeps the 13 poison-skipping sites for behavior change 1.
+2. **M7b–M7e:** the shims above, and the `TestVolumeRegistration` + shared-host pattern in `in_flight_temps_tests.rs` (a
+   volume-borne cell still registers in the real registry).
+
 ### M6c: The lock audit and the poison change
 
 **Scope.** Audit every `Inner` and scope lock: no sink, observer, or seam call while held, and no I/O under a lock the

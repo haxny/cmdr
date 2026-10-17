@@ -10,7 +10,7 @@ Copy, move, delete, trash, and zip edits as managed background ops.
 
 ## Must-knows
 
-- **`spawn_managed` for copy/move/delete/trash, `run_instant` for rename/mkdir/mkfile**; blocking work goes inside
+- **`spawn_managed` for copy/move/delete/trash, `run_instant` for rename/mkdir/mkfile**; blocking work runs in
   `spawn_blocking`, so a starter returns an id before I/O.
 - **An instant op emits no `WriteCompleteEvent`** (analytics WRAPS its driver): ❌ never emit inside one, or the
   in-archive early return drops in-zip ops. It refuses with a typed `MutationError`, ❌ never a sentence.
@@ -32,8 +32,9 @@ Copy, move, delete, trash, and zip edits as managed background ops.
 - **Emit through `OperationEventSink`, ❌ never `AppHandle`** (spawns: `host/`); `write-settled` fires once, AFTER the terminal event. A
   cross-FS move speaks TWICE per source on `write-source-item-done`, so the LAST wins.
 - **EVERY local write lands via `overwrite::stage_and_land_file`** (temp+rename, rename-aside when replacing); announce
-  a destination via `host::OwnWrites::announce` BEFORE the syscall (renames: both ends). What it leaves
-  carries a KIND: ❌ only a `temp` is removable on sight. DETAILS § "What the sweep does with each kind".
+  each destination BEFORE the syscall (`host::OwnWrites`; renames: both ends). Leftovers carry
+  a KIND (❌ only a `temp` goes on sight); ❌ only the installed engine's `claim_ledger` opens the ledger. DETAILS §
+  "What the sweep does with each kind".
 - **Every mutation journals through its `OpScope`**; a VOLUME op passes its REAL volume id. Bulk rename journals each hop
   as it lands: ❌ never batch to the end, nor put a rotation temp in `in_flight_temps` (its sweep DELETES it).
 - **A transfer carries both volumes as typed sides** (`transfer_sides.rs`), captured at start: a vanished drive can't be
@@ -44,9 +45,8 @@ Copy, move, delete, trash, and zip edits as managed background ops.
   lifecycle answer: ❌ never re-derive it from a presence test, no new variant.
 - **Every preview runs under a `ScanWatchdog`**, bounded by INACTIVITY: feed the progress callback, and whoever settles
   it CLAIMS the outcome.
-- **A FAILED op is retained out-of-band**, the one exception to removal-on-terminal; `retain_failure` emits only after
+- **A FAILED op is retained out-of-band**, the one exception to removal; `retain_failure` emits only after
   the record is GONE. **Test op state hangs off a guard**, ❌ never a `static`, ❌ never
   `cancel_all_write_operations()`.
 
-Architecture, flows, and decisions: `DETAILS.md`. Read it before any non-trivial work here: editing, planning,
-reorganizing, or advising.
+Architecture, flows, and decisions: `DETAILS.md`; read it before any non-trivial work here.

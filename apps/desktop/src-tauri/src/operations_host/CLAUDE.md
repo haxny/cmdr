@@ -7,7 +7,8 @@ engine-wide facts, the per-op sinks, and what a terminal event does besides reac
 ## Must-knows
 
 - **`install` runs after `volume_host::install` and `operation_log_host::install` (whose handle it takes), before the
-  leftover sweep, unconditionally.** The engine's runtime is `volume_host::host()`'s, which is the APP runtime: ❌ never
+  ledger claim, unconditionally.** `claim_ledger` claims the installed engine's leftover ledger, after the instance lock;
+  ❌ never another engine's. The engine's runtime is `volume_host::host()`'s, which is the APP runtime: ❌ never
   build one from `Handle::current()` in `setup()`, or an admitted operation can land on a runtime that dies under it.
 - **Before `install`, `operations()` is `Err(NotInstalled)`**: a start refuses through `refuse_not_installed`, ❌ never
   runs on a detached engine.
@@ -26,7 +27,7 @@ engine-wide facts, the per-op sinks, and what a terminal event does besides reac
 
 ## Module map
 
-- `mod.rs`: `install`, `operations()`, `refuse_not_installed`, `test_engine`. `events.rs`: `TauriEngineEvents`, the instant-op analytics props, and the
+- `mod.rs`: `install`, `claim_ledger`, `operations()`, `refuse_not_installed`, `test_engine`. `events.rs`: `TauriEngineEvents`, the instant-op analytics props, and the
   error-report re-raise. `sinks.rs`: `TauriEventSink`, `TauriScanPreviewSink`. `terminal_effects.rs` (+ `_tests.rs`):
   the terminal side effects in order. `analytics.rs`: the completion analytics they fire. `wire.rs`: the payloads as
   Tauri events. `volumes.rs`: `AppOperationVolumes`, the volume registry asked per call. `own_writes.rs`: `AppOwnWrites`, the downloads

@@ -67,6 +67,9 @@ facts that none of those carry live here:
   source and destination, held only for their connections' liveness and the source's received-byte count) and
   `InboundWindow` (the receive rate across the last few ticks, pure and tested on its own). `transfer_probe_opening_tests.rs`
   pins what a transfer says before its first byte and while a response is still arriving.
+- **`transfer_probe_registry.rs` is the engine's table of live transfers**, a third `#[path]` child: `Probes` (one per
+  engine, in its `EngineStores`, reached through the op's scope), `register_operation`, and the guard that leaves the
+  table. The watchdog holds the table weakly and ends at the first tick after the guard removes its probe.
 - **`metadata_matrix_tests.rs` pins what a LOCAL copy or move keeps of each metadata class** (birth, flags, ACL,
   xattrs, mode, symlink dates, folders), one cell per path and class, over `cmdr_fs::testing::metadata_fixture`. A cell
   still pinning a bug or a loss carries a `// FLIPS` comment saying what would turn it; it reaches the move engines through `move_op/test_support.rs`. The folder pass it pins is
@@ -990,7 +993,7 @@ with no session to lose (a local disk, an OS-mounted share, MTP) answers `None` 
   reconnect is single-flight and rebuilds from scratch.
 - **Pausable.** A pause parks the wait on the pause gate and dials nothing; a Resume is a person's action, so the wait
   gets a fresh budget from there.
-- **One outage per lane**, shared by every waiter on it (`OUTAGES`): the concurrent window's tasks all meet the drop at
+- **One outage per lane**, shared by every waiter on it (`Outages`, one per engine, reached through the op's scope): the concurrent window's tasks all meet the drop at
   once, and they share ONE deadline. A job queued BEFORE an outage gave up looks once (the volume may be back, with
   nothing else dialing it) and then fails promptly, so a queue behind a NAS that's really gone doesn't add fifteen minutes
   per job. A job created AFTER the give-up (a Retry, a new copy) is a fresh question and gets a fresh wait. A give-up is

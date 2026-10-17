@@ -11,9 +11,14 @@ The app side of the write engine's seams. The engine declares what it needs in `
 `operation_log_host::install` returned (passed by value, so the engine's log IS `operation_log()`), the app's answer
 to every optional seam (`app_answers`, shared with the test binary's `test_engine`), and a sink factory that builds a
 `TauriEventSink`, and keeps it behind `operations()`. That's before anything can start an operation, before the
-in-flight sweep (whose staging-leftovers notice goes through it), and before `init_volume_manager`. It also fills the
-engine's own slot (`write_operations::install`), which the free functions app callers still use read until they call
-`operations()` directly.
+ledger claim, and before `init_volume_manager`. It also fills the engine's own slot (`write_operations::install`),
+which the free functions app callers still use read until they call `operations()` directly.
+
+`claim_ledger(data_dir)` runs later in `setup()`, where the leftover sweep always ran: after the instance lock (no other
+process holds this data dir) and before `init_volume_manager`, unconditionally. It claims the installed engine's
+in-flight ledger through `operations()`, so a duplicate that lost the install is never the one claimed; a second claim
+is refused and logged. With no data dir the engine runs the ledger unpersisted and reports it
+(`write_operations/DETAILS.md` § "Who claims the ledger").
 
 - **Decision: a start before `install` is refused, never run detached.** `operations()` answers `Err(NotInstalled)`,
   and the IPC start commands map it through `refuse_not_installed` to the frontend's generic `IoError` (its dialog
