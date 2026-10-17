@@ -1,6 +1,8 @@
 //! A transfer's scan preview builds the operation's live tree and hands it on
 //! in the cached result, and only a transfer's does.
 
+use crate::file_system::write_operations::Operations;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::transfer_tree::TreeOrder;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -9,7 +11,7 @@ use std::sync::atomic::AtomicBool;
 use std::time::Duration;
 
 use super::event_sinks::{CollectorScanPreviewSink, ScanPreviewEventSink};
-use super::scan_cache::{ScanPreviewState, ScanResult, take_cached_scan_result};
+use super::scan_cache::{ScanPreviewState, ScanResult};
 use super::scan_preview::{run_scan_preview, run_volume_scan_preview};
 use super::scan_watchdog::{ScanTarget, ScanWatchdog};
 use super::transfer_tree::test_support::outline;
@@ -24,11 +26,9 @@ fn fresh_state() -> Arc<ScanPreviewState> {
     })
 }
 
-fn watchdog(preview_id: &str, sources: &[PathBuf]) -> Arc<ScanWatchdog> {
+fn watchdog(engine: &TestOperations, preview_id: &str, sources: &[PathBuf]) -> Arc<ScanWatchdog> {
     ScanWatchdog::start(
-        crate::file_system::write_operations::installed()
-            .stores()
-            .previews_arc(),
+        engine.stores().previews_arc(),
         preview_id.to_string(),
         ScanTarget::of(sources, "test"),
         Duration::from_secs(600),
@@ -47,14 +47,20 @@ fn seed(dir: &TestDir) -> Vec<PathBuf> {
     vec![src.join("photos"), src.join("notes.txt")]
 }
 
-async fn local_preview(tag: &str, sources: &[PathBuf], purpose: ScanPreviewPurpose) -> ScanResult {
+async fn local_preview(
+    engine: &TestOperations,
+    tag: &str,
+    sources: &[PathBuf],
+    purpose: ScanPreviewPurpose,
+) -> ScanResult {
     let preview_id = format!("tree-{tag}-{}", std::process::id());
     let walk_id = preview_id.clone();
     let walk_sources = sources.to_vec();
-    let watchdog = watchdog(&preview_id, sources);
+    let watchdog = watchdog(engine, &preview_id, sources);
+    let walker = Operations::clone(engine);
     tokio::task::spawn_blocking(move || {
         run_scan_preview(
-            crate::file_system::write_operations::installed(),
+            &walker,
             Arc::new(CollectorScanPreviewSink::new()),
             walk_id,
             walk_sources,
@@ -65,7 +71,11 @@ async fn local_preview(tag: &str, sources: &[PathBuf], purpose: ScanPreviewPurpo
     })
     .await
     .expect("the walk thread joins");
-    take_cached_scan_result(&preview_id, sources).expect("the walk completed")
+    engine
+        .stores()
+        .previews()
+        .take_cached_scan_result(&preview_id, sources)
+        .expect("the walk completed")
 }
 
 const EXPECTED: [&str; 5] = [
@@ -90,14 +100,15 @@ fn file_order(result: &ScanResult, dir: &TestDir) -> Vec<String> {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_transfer_preview_of_a_local_selection_carries_its_tree_and_each_files_node() {
+    let engine = TestOperations::new();
     let dir = TestDir::new("preview_tree_local");
     let sources = seed(&dir);
 
-    let mut result = local_preview("local", &sources, ScanPreviewPurpose::Transfer).await;
+    let mut result = local_preview(&engine, "local", &sources, ScanPreviewPurpose::Transfer).await;
     assert!(result.tree.is_some(), "a transfer's preview builds the tree");
 
     let tree = result
-        .order_by_transfer_tree(&sources, &TreeOrder::active(super::installed().host()))
+        .order_by_transfer_tree(&sources, &TreeOrder::active(engine.host()))
         .expect("the tree builds");
     assert_eq!(outline(&tree), EXPECTED);
     assert_eq!(file_order(&result, &dir), TREE_ORDER);
@@ -110,6 +121,7 @@ async fn a_transfer_preview_of_a_local_selection_carries_its_tree_and_each_files
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_delete_or_compress_preview_builds_no_tree() {
+    let engine = TestOperations::new();
     let dir = TestDir::new("preview_tree_none");
     let sources = seed(&dir);
 
@@ -117,7 +129,7 @@ async fn a_delete_or_compress_preview_builds_no_tree() {
         ("delete", ScanPreviewPurpose::Delete),
         ("compress", ScanPreviewPurpose::Compress),
     ] {
-        let result = local_preview(tag, &sources, purpose).await;
+        let result = local_preview(&engine, tag, &sources, purpose).await;
         assert!(result.tree.is_none(), "{purpose:?}");
         assert!(result.files.iter().all(|file| file.tree_node.is_none()), "{purpose:?}");
     }
@@ -125,12 +137,13 @@ async fn a_delete_or_compress_preview_builds_no_tree() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn an_operation_without_a_preview_tree_builds_one_from_the_walk() {
+    let engine = TestOperations::new();
     let dir = TestDir::new("preview_tree_fallback");
     let sources = seed(&dir);
-    let mut result = local_preview("fallback", &sources, ScanPreviewPurpose::Delete).await;
+    let mut result = local_preview(&engine, "fallback", &sources, ScanPreviewPurpose::Delete).await;
 
     let tree = result
-        .order_by_transfer_tree(&sources, &TreeOrder::active(super::installed().host()))
+        .order_by_transfer_tree(&sources, &TreeOrder::active(engine.host()))
         .expect("the tree builds");
 
     assert_eq!(outline(&tree), EXPECTED);
@@ -140,6 +153,7 @@ async fn an_operation_without_a_preview_tree_builds_one_from_the_walk() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_transfer_preview_of_a_volume_records_its_tree() {
+    let engine = TestOperations::new();
     let volume = InMemoryVolume::new("Source");
     volume.create_directory(Path::new("/src/photos/2024")).await.unwrap();
     volume
@@ -155,7 +169,7 @@ async fn a_transfer_preview_of_a_volume_records_its_tree() {
     let preview_id = format!("tree-volume-{}", std::process::id());
 
     run_volume_scan_preview(
-        crate::file_system::write_operations::installed().clone(),
+        engine.clone(),
         Arc::new(CollectorScanPreviewSink::new()),
         preview_id.clone(),
         sources.clone(),
@@ -163,11 +177,15 @@ async fn a_transfer_preview_of_a_volume_records_its_tree() {
         String::from("tree-volume"),
         fresh_state(),
         ScanPreviewPurpose::Transfer,
-        watchdog(&preview_id, &sources),
+        watchdog(&engine, &preview_id, &sources),
     )
     .await;
 
-    let result = take_cached_scan_result(&preview_id, &sources).expect("the walk completed");
+    let result = engine
+        .stores()
+        .previews()
+        .take_cached_scan_result(&preview_id, &sources)
+        .expect("the walk completed");
     assert_eq!(
         outline(&result.tree.expect("a transfer's preview builds the tree")),
         EXPECTED
@@ -178,6 +196,7 @@ async fn a_transfer_preview_of_a_volume_records_its_tree() {
 async fn a_tree_that_fails_to_build_leaves_the_preview_and_its_walk_order_as_they_were() {
     use super::transfer_tree::test_support::TREE_BUG_NAME;
 
+    let engine = TestOperations::new();
     let dir = TestDir::new("preview_tree_bug");
     let src = dir.join("src");
     fs::create_dir_all(src.join("b")).unwrap();
@@ -185,13 +204,13 @@ async fn a_tree_that_fails_to_build_leaves_the_preview_and_its_walk_order_as_the
     fs::write(src.join("b").join(TREE_BUG_NAME), b"2").unwrap();
     let sources = vec![src.join("z.txt"), src.join("b")];
 
-    let mut result = local_preview("bug", &sources, ScanPreviewPurpose::Transfer).await;
+    let mut result = local_preview(&engine, "bug", &sources, ScanPreviewPurpose::Transfer).await;
     assert!(result.tree.is_none(), "the preview completes, without a tree");
     let walk_order = file_order(&result, &dir);
 
     assert!(
         result
-            .order_by_transfer_tree(&sources, &TreeOrder::active(super::installed().host()))
+            .order_by_transfer_tree(&sources, &TreeOrder::active(engine.host()))
             .is_none()
     );
     assert_eq!(file_order(&result, &dir), walk_order, "the files keep the walk's order");

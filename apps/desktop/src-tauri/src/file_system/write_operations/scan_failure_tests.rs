@@ -7,6 +7,8 @@
 //! `IoError` with an empty path around it. These drive the real preview workers
 //! into the real scan-wait, so the whole hand-off is what's under test.
 
+use crate::file_system::write_operations::Operations;
+use crate::file_system::write_operations::testing::TestOperations;
 use cmdr_fs::entry::FileEntry;
 use std::future::Future;
 use std::path::{Path, PathBuf};
@@ -99,11 +101,14 @@ fn fresh_state() -> Arc<ScanPreviewState> {
     })
 }
 
-fn start_watchdog(preview_id: &str, sources: &[PathBuf], limit: Duration) -> Arc<ScanWatchdog> {
+fn start_watchdog(
+    engine: &TestOperations,
+    preview_id: &str,
+    sources: &[PathBuf],
+    limit: Duration,
+) -> Arc<ScanWatchdog> {
     ScanWatchdog::start(
-        crate::file_system::write_operations::installed()
-            .stores()
-            .previews_arc(),
+        engine.stores().previews_arc(),
         preview_id.to_string(),
         ScanTarget::of(sources, "test"),
         limit,
@@ -127,15 +132,17 @@ async fn the_operations_error(events: &CollectorEventSink) -> WriteOperationErro
 /// find" copy with the file named, not a bare errno sentence.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_local_walk_that_finds_its_source_gone_names_it() {
-    let (events, _op_id, preview_id, dir) = start_copy_awaiting_preview("scanfail-local").await;
+    let engine = TestOperations::new();
+    let (events, _op_id, preview_id, dir) = start_copy_awaiting_preview(&engine, "scanfail-local").await;
     let missing = dir.join("src").join("gone.jpg");
     let sources = vec![missing.clone()];
-    let watchdog = start_watchdog(&preview_id, &sources, Duration::from_secs(600));
+    let watchdog = start_watchdog(&engine, &preview_id, &sources, Duration::from_secs(600));
 
     let walk_id = preview_id.clone();
+    let walker = Operations::clone(&engine);
     tokio::task::spawn_blocking(move || {
         run_scan_preview(
-            crate::file_system::write_operations::installed(),
+            &walker,
             Arc::new(CollectorScanPreviewSink::new()),
             walk_id,
             sources,
@@ -158,13 +165,14 @@ async fn a_local_walk_that_finds_its_source_gone_names_it() {
 /// the path the backend named, rather than being flattened into a string.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_volume_walk_that_finds_its_source_gone_names_it() {
-    let (events, _op_id, preview_id, _dir) = start_copy_awaiting_preview("scanfail-volume").await;
+    let engine = TestOperations::new();
+    let (events, _op_id, preview_id, _dir) = start_copy_awaiting_preview(&engine, "scanfail-volume").await;
     let missing = PathBuf::from("/share/fotók/retusált.jpg");
     let sources = vec![missing.clone()];
-    let watchdog = start_watchdog(&preview_id, &sources, Duration::from_secs(600));
+    let watchdog = start_watchdog(&engine, &preview_id, &sources, Duration::from_secs(600));
 
     run_volume_scan_preview(
-        crate::file_system::write_operations::installed().clone(),
+        engine.clone(),
         Arc::new(CollectorScanPreviewSink::new()),
         preview_id,
         sources,
@@ -189,15 +197,14 @@ async fn a_volume_walk_that_finds_its_source_gone_names_it() {
 /// failure says where the volume stopped answering.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_walk_that_stops_answering_names_what_it_was_walking() {
-    let (events, _op_id, preview_id, _dir) = start_copy_awaiting_preview("scanfail-wedged").await;
+    let engine = TestOperations::new();
+    let (events, _op_id, preview_id, _dir) = start_copy_awaiting_preview(&engine, "scanfail-wedged").await;
     let source = PathBuf::from("/share/folder");
     let sources = vec![source.clone()];
     let state = fresh_state();
     let sink: Arc<dyn ScanPreviewEventSink> = Arc::new(CollectorScanPreviewSink::new());
     let watchdog = ScanWatchdog::start(
-        crate::file_system::write_operations::installed()
-            .stores()
-            .previews_arc(),
+        engine.stores().previews_arc(),
         preview_id.clone(),
         ScanTarget::of(&sources, "wedged"),
         Duration::from_millis(200),
@@ -205,7 +212,7 @@ async fn a_walk_that_stops_answering_names_what_it_was_walking() {
         Arc::clone(&sink),
     );
     let walk = tokio::spawn(run_volume_scan_preview(
-        crate::file_system::write_operations::installed().clone(),
+        engine.clone(),
         sink,
         preview_id,
         sources,

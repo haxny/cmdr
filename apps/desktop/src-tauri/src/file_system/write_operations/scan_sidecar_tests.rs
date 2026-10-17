@@ -7,6 +7,8 @@
 //! `cmdr_fs::apple_double`, tested there. The last cell runs a whole copy on
 //! APFS with the REAL probe, where a `._` file is the person's own.
 
+use crate::file_system::write_operations::testing::TestOperations;
+use crate::listing_host::backends::AppListings;
 use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -18,7 +20,6 @@ use cmdr_fs::apple_double::SidecarRule;
 use super::super::scan_walker::{WalkContext, walk_sources_with_per_path};
 use super::tests::NO_SIDECARS;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
-use crate::file_system::write_operations::state::WriteOperationState;
 use crate::file_system::write_operations::transfer::copy::copy_files_with_progress_inner;
 use crate::file_system::write_operations::types::WriteOperationConfig;
 use crate::test_support::TestDir;
@@ -32,7 +33,7 @@ struct Walked {
 
 fn walk(sources: &[PathBuf], sidecars: &SidecarRule) -> Walked {
     let ctx = WalkContext::<'_, String> {
-        listings: crate::file_system::write_operations::installed().host().listings(),
+        listings: &AppListings,
         park_while_paused: &|| {},
         progress_interval: Duration::from_secs(3600),
         is_cancelled: &|| false,
@@ -153,6 +154,7 @@ fn a_selected_sidecar_still_goes() {
 
 #[test]
 fn a_copy_on_apfs_keeps_dot_underbar_files_with_and_without_a_sibling() {
+    let engine = TestOperations::new();
     let tmp = TestDir::new("sidecar_copy_apfs");
     let folder = tmp.join("src/folder");
     let dst = tmp.join("dst");
@@ -163,7 +165,7 @@ fn a_copy_on_apfs_keeps_dot_underbar_files_with_and_without_a_sibling() {
     fs::write(folder.join("._alone"), b"no sibling").expect("an unpaired one");
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = Arc::new(WriteOperationState::new(Duration::from_millis(50)));
+    let state = Arc::new(engine.new_operation_state(Duration::from_millis(50)));
     copy_files_with_progress_inner(
         &*events,
         "op-apfs-dot-underbar",

@@ -12,22 +12,22 @@
 //! operation claiming the preview, because the join between the two (the claim,
 //! the gate, the walk's cancel flag) is the whole subject.
 
+use crate::file_system::write_operations::testing::TestOperations;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::time::Duration;
 
-use super::OperationEventSink;
 use super::event_sinks::{CollectorEventSink, ScanPreviewEventSink};
-use super::manager::{PauseOutcome, manager};
-use super::scan_cache::{ScanPreviewState, register_preview, release_preview};
+use super::manager::PauseOutcome;
+use super::scan_cache::ScanPreviewState;
 use super::scan_preview::run_scan_preview;
 use super::scan_watchdog::{SCAN_INACTIVITY_LIMIT, ScanTarget, ScanWatchdog};
 use super::types::{
     LifecycleStatus, ScanPreviewCancelledEvent, ScanPreviewCompleteEvent, ScanPreviewErrorEvent,
     ScanPreviewProgressEvent, WriteOperationConfig, WriteOperationType,
 };
-use crate::file_system::write_operations::installed;
+use super::{OperationEventSink, Operations};
 use crate::test_support::{TestDir, wait_until_async};
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_operation_log::types::Initiator;
@@ -55,6 +55,8 @@ fn unique(label: &str) -> String {
 /// which is exactly where a person's click lands, and the walk's very next
 /// entry is the one that has to park.
 struct PauseOnFirstTick {
+    /// The engine the operation runs on, which the pause goes to.
+    engine: Operations,
     operation_id: String,
     fired: AtomicBool,
     progress: std::sync::Mutex<Vec<ScanPreviewProgressEvent>>,
@@ -63,8 +65,9 @@ struct PauseOnFirstTick {
 }
 
 impl PauseOnFirstTick {
-    fn new(operation_id: String) -> Self {
+    fn new(engine: Operations, operation_id: String) -> Self {
         Self {
+            engine,
             operation_id,
             fired: AtomicBool::new(false),
             progress: std::sync::Mutex::new(Vec::new()),
@@ -93,7 +96,7 @@ impl ScanPreviewEventSink for PauseOnFirstTick {
         self.progress.lock_ignore_poison().push(event);
         if !self.fired.swap(true, Ordering::SeqCst) {
             assert_eq!(
-                installed().pause_operation(&self.operation_id),
+                self.engine.pause_operation(&self.operation_id),
                 PauseOutcome::Applied,
                 "an operation whose scan can park is an ordinary pause, not a special case"
             );
@@ -133,7 +136,7 @@ struct RunningScan {
     _dir: TestDir,
 }
 
-async fn start_copy_with_a_real_scan(label: &str) -> RunningScan {
+async fn start_copy_with_a_real_scan(engine: &TestOperations, label: &str) -> RunningScan {
     let dir = TestDir::new(label);
     let src = dir.join("src");
     let dst = dir.join("dst");
@@ -148,10 +151,13 @@ async fn start_copy_with_a_real_scan(label: &str) -> RunningScan {
         // 200 ms sample of it.
         progress_interval: Duration::ZERO,
     });
-    register_preview(preview_id.clone(), Arc::clone(&state));
+    engine
+        .stores()
+        .previews()
+        .register_preview(preview_id.clone(), Arc::clone(&state));
 
     let op_events = Arc::new(CollectorEventSink::new());
-    let start = installed()
+    let start = engine
         .copy_files_start(
             Arc::clone(&op_events) as Arc<dyn OperationEventSink>,
             vec![src.clone()],
@@ -170,10 +176,10 @@ async fn start_copy_with_a_real_scan(label: &str) -> RunningScan {
         .expect("copy starts");
     let operation_id = start.operation_id.clone();
 
-    let sink = Arc::new(PauseOnFirstTick::new(operation_id.clone()));
+    let sink = Arc::new(PauseOnFirstTick::new(Operations::clone(engine), operation_id.clone()));
     let events: Arc<dyn ScanPreviewEventSink> = Arc::clone(&sink) as Arc<dyn ScanPreviewEventSink>;
     let watchdog = ScanWatchdog::start(
-        installed().stores().previews_arc(),
+        engine.stores().previews_arc(),
         preview_id.clone(),
         ScanTarget::of(std::slice::from_ref(&src), "root"),
         SCAN_INACTIVITY_LIMIT,
@@ -182,9 +188,10 @@ async fn start_copy_with_a_real_scan(label: &str) -> RunningScan {
     );
 
     let walk_preview_id = preview_id.clone();
+    let walker = Operations::clone(engine);
     let walk = std::thread::spawn(move || {
         run_scan_preview(
-            installed(),
+            &walker,
             events,
             walk_preview_id,
             vec![src],
@@ -228,7 +235,8 @@ async fn wait_until_parked(sink: &PauseOnFirstTick) -> usize {
 /// walk has to park where it stands.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_paused_scan_stops_counting() {
-    let scan = start_copy_with_a_real_scan("scanpause-stops").await;
+    let engine = TestOperations::new();
+    let scan = start_copy_with_a_real_scan(&engine, "scanpause-stops").await;
 
     let parked_at = wait_until_parked(&scan.sink).await;
     assert!(
@@ -240,18 +248,18 @@ async fn a_paused_scan_stops_counting() {
         "a parked walk has not finished, so no preview result may be published"
     );
     assert_eq!(
-        manager().lifecycle_status(&scan.operation_id),
+        engine.manager().lifecycle_status(&scan.operation_id),
         Some(LifecycleStatus::Paused),
         "and the record says Paused, because now it truly is"
     );
 
-    installed().resume_operation(&scan.operation_id);
+    engine.resume_operation(&scan.operation_id);
     wait_until_async(WAIT, "the resumed scan to finish", || scan.sink.is_complete()).await;
     scan.walk.join().expect("the walk thread ends");
-    release_preview(&scan.preview_id);
-    installed().cancel_operation(&scan.operation_id);
+    engine.stores().previews().release_preview(&scan.preview_id);
+    engine.cancel_operation(&scan.operation_id);
     wait_until_async(WAIT, "the operation to settle", || {
-        manager().lifecycle_status(&scan.operation_id).is_none()
+        engine.manager().lifecycle_status(&scan.operation_id).is_none()
     })
     .await;
     drop(scan.op_events);
@@ -263,10 +271,11 @@ async fn a_paused_scan_stops_counting() {
 /// dropped back toward zero.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_resumed_scan_carries_on_instead_of_starting_over() {
-    let scan = start_copy_with_a_real_scan("scanpause-resumes").await;
+    let engine = TestOperations::new();
+    let scan = start_copy_with_a_real_scan(&engine, "scanpause-resumes").await;
     let parked_at = wait_until_parked(&scan.sink).await;
 
-    installed().resume_operation(&scan.operation_id);
+    engine.resume_operation(&scan.operation_id);
     wait_until_async(WAIT, "the resumed scan to finish", || scan.sink.is_complete()).await;
     scan.walk.join().expect("the walk thread ends");
 
@@ -291,10 +300,10 @@ async fn a_resumed_scan_carries_on_instead_of_starting_over() {
         "the pause has to have interrupted real work for this to mean anything"
     );
 
-    release_preview(&scan.preview_id);
-    installed().cancel_operation(&scan.operation_id);
+    engine.stores().previews().release_preview(&scan.preview_id);
+    engine.cancel_operation(&scan.operation_id);
     wait_until_async(WAIT, "the operation to settle", || {
-        manager().lifecycle_status(&scan.operation_id).is_none()
+        engine.manager().lifecycle_status(&scan.operation_id).is_none()
     })
     .await;
     drop(scan.op_events);
@@ -306,10 +315,11 @@ async fn a_resumed_scan_carries_on_instead_of_starting_over() {
 /// has to end and the walk thread has to come back.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_cancel_reaches_a_scan_parked_on_the_pause_gate() {
-    let scan = start_copy_with_a_real_scan("scanpause-cancel").await;
+    let engine = TestOperations::new();
+    let scan = start_copy_with_a_real_scan(&engine, "scanpause-cancel").await;
     wait_until_parked(&scan.sink).await;
 
-    installed().cancel_operation(&scan.operation_id);
+    engine.cancel_operation(&scan.operation_id);
 
     wait_until_async(WAIT, "the cancelled operation to settle", || {
         !scan.op_events.cancelled.lock_ignore_poison().is_empty()
@@ -330,7 +340,7 @@ async fn a_cancel_reaches_a_scan_parked_on_the_pause_gate() {
         !scan.sink.is_complete(),
         "a cancelled walk publishes no result for an operation that is already over"
     );
-    release_preview(&scan.preview_id);
+    engine.stores().previews().release_preview(&scan.preview_id);
 }
 
 /// An operation event sink that pauses the operation the first time it reports
@@ -346,14 +356,17 @@ async fn a_cancel_reaches_a_scan_parked_on_the_pause_gate() {
 /// outside to one whose scan parked. The scanning-phase counts are what tell
 /// them apart.
 struct PauseOnFirstScanTick {
+    /// The engine the operation runs on, which the pause goes to.
+    engine: Operations,
     fired: AtomicBool,
     scanned: std::sync::Mutex<Vec<usize>>,
     complete: AtomicBool,
 }
 
 impl PauseOnFirstScanTick {
-    fn new() -> Self {
+    fn new(engine: Operations) -> Self {
         Self {
+            engine,
             fired: AtomicBool::new(false),
             scanned: std::sync::Mutex::new(Vec::new()),
             complete: AtomicBool::new(false),
@@ -372,7 +385,7 @@ impl OperationEventSink for PauseOnFirstScanTick {
         }
         self.scanned.lock_ignore_poison().push(event.files_done);
         if !self.fired.swap(true, Ordering::SeqCst) {
-            assert_eq!(installed().pause_operation(&event.operation_id), PauseOutcome::Applied);
+            assert_eq!(self.engine.pause_operation(&event.operation_id), PauseOutcome::Applied);
         }
     }
     fn emit_complete(&self, _event: super::types::WriteCompleteEvent) {
@@ -396,14 +409,15 @@ impl OperationEventSink for PauseOnFirstScanTick {
 /// a different place.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn an_operations_own_scan_parks_too() {
+    let engine = TestOperations::new();
     let dir = TestDir::new("scanpause-ownscan");
     let src = dir.join("src");
     let dst = dir.join("dst");
     build_tree(&src);
     std::fs::create_dir_all(&dst).expect("create dst");
 
-    let sink = Arc::new(PauseOnFirstScanTick::new());
-    let start = installed()
+    let sink = Arc::new(PauseOnFirstScanTick::new(Operations::clone(&engine)));
+    let start = engine
         .copy_files_start(
             Arc::clone(&sink) as Arc<dyn OperationEventSink>,
             vec![src.clone()],
@@ -445,7 +459,7 @@ async fn an_operations_own_scan_parks_too() {
     );
     assert!(!sink.complete.load(Ordering::SeqCst));
 
-    installed().resume_operation(&op_id);
+    engine.resume_operation(&op_id);
     wait_until_async(WAIT, "the resumed copy to finish", || {
         sink.complete.load(Ordering::SeqCst)
     })

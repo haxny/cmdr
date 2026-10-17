@@ -26,6 +26,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use super::scan_preview::run_oracle_aware_batch_scan;
 use crate::file_system::volume::manager::get_volume_manager;
+use crate::listing_host::backends::AppListings;
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::{
     BatchScanResult, CopyScanResult, InMemoryVolume, ListingProgress, Volume, VolumeError, WatchCoverage,
@@ -210,7 +211,7 @@ async fn run_oracle_aware_batch_scan_forwards_dirs_and_bytes_from_backend() {
     let on_progress = |p: ListingProgress| recorder.record(p);
 
     let _ = run_oracle_aware_batch_scan(
-        crate::file_system::write_operations::installed().host().listings(),
+        &AppListings,
         vol.as_ref(),
         &vid,
         &sources,
@@ -271,7 +272,7 @@ async fn dirs_and_bytes_baseline_shifts_across_parent_groups() {
     let on_progress = |p: ListingProgress| recorder.record(p);
 
     let _ = run_oracle_aware_batch_scan(
-        crate::file_system::write_operations::installed().host().listings(),
+        &AppListings,
         vol.as_ref(),
         &vid,
         &sources,

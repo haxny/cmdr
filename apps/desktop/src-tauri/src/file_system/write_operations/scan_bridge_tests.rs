@@ -7,20 +7,17 @@
 //! and the operation task agree on. The manager is a process-global singleton,
 //! so ids and lane keys are unique per test.
 
+use crate::file_system::write_operations::testing::TestOperations;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
 use super::OperationEventSink;
 use super::event_sinks::CollectorEventSink;
-use super::manager::{PauseOutcome, manager};
+use super::manager::PauseOutcome;
 use super::scan_bridge::observed_scan_ticks;
-use super::scan_cache::{
-    CachedScanResult, ScanOutcome, ScanPreviewState, claim_preview, register_preview, settle_preview,
-    take_cached_scan_result,
-};
+use super::scan_cache::{CachedScanResult, ScanOutcome, ScanPreviewState};
 use super::types::{LifecycleStatus, WriteOperationConfig, WriteOperationError, WriteOperationType};
-use crate::file_system::write_operations::installed;
 use crate::test_support::{TestDir, wait_until_async};
 use cmdr_fs::volume::CopyScanResult;
 use cmdr_operation_log::types::Initiator;
@@ -36,10 +33,10 @@ fn unique(label: &str) -> String {
     format!("scanwait-{label}-{n}-{:?}", std::thread::current().id())
 }
 
-/// Registers a preview that is still walking, the state a `TransferDialog`
-/// leaves behind when the user confirms early.
-fn register_in_flight(preview_id: &str) {
-    register_preview(
+/// Registers a preview on `engine` that is still walking, the state a
+/// `TransferDialog` leaves behind when the user confirms early.
+fn register_in_flight(engine: &TestOperations, preview_id: &str) {
+    engine.stores().previews().register_preview(
         preview_id.to_string(),
         Arc::new(ScanPreviewState {
             cancelled: std::sync::atomic::AtomicBool::new(false),
@@ -92,6 +89,7 @@ fn completed_result(sources: Vec<PathBuf>, files: &[PathBuf], source_root: &std:
 /// Pause, no Background, and ⌘Q walks straight past it.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_transfer_confirmed_mid_scan_is_registered_before_its_preview_settles() {
+    let engine = TestOperations::new();
     let dir = TestDir::new("scanwait-registers");
     let src = dir.join("src");
     let dst = dir.join("dst");
@@ -101,10 +99,10 @@ async fn a_transfer_confirmed_mid_scan_is_registered_before_its_preview_settles(
     std::fs::write(&file, b"a").expect("write a");
 
     let preview_id = unique("preview");
-    register_in_flight(&preview_id);
+    register_in_flight(&engine, &preview_id);
 
     let events = Arc::new(CollectorEventSink::new());
-    let start = installed()
+    let start = engine
         .copy_files_start(
             Arc::clone(&events) as Arc<dyn OperationEventSink>,
             vec![file.clone()],
@@ -123,7 +121,7 @@ async fn a_transfer_confirmed_mid_scan_is_registered_before_its_preview_settles(
         .expect("copy starts");
 
     let op_id = start.operation_id.clone();
-    let snapshot = installed().list_operations();
+    let snapshot = engine.list_operations();
     let row = snapshot
         .iter()
         .find(|op| op.operation_id == op_id)
@@ -134,12 +132,12 @@ async fn a_transfer_confirmed_mid_scan_is_registered_before_its_preview_settles(
         "a scanning transfer reuses Running; a status of its own would degrade silently everywhere"
     );
     assert!(
-        manager().is_in_scan_wait(&op_id),
+        engine.manager().is_in_scan_wait(&op_id),
         "the record must know it is parked on its preview"
     );
 
     // Let it finish so the lane frees for the rest of the suite.
-    settle_preview(
+    engine.stores().previews().settle_preview(
         &preview_id,
         ScanOutcome::Complete,
         Some(completed_result(vec![file.clone()], &[file], &src)),
@@ -159,6 +157,7 @@ async fn a_transfer_confirmed_mid_scan_is_registered_before_its_preview_settles(
 /// file; re-walking copies both.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn an_operation_consumes_its_previews_result_rather_than_re_walking() {
+    let engine = TestOperations::new();
     let dir = TestDir::new("scanwait-consumes");
     let src = dir.join("src");
     let dst = dir.join("dst");
@@ -170,10 +169,10 @@ async fn an_operation_consumes_its_previews_result_rather_than_re_walking() {
     std::fs::write(&extra, b"extra").expect("write extra");
 
     let preview_id = unique("preview");
-    register_in_flight(&preview_id);
+    register_in_flight(&engine, &preview_id);
 
     let events = Arc::new(CollectorEventSink::new());
-    let start = installed()
+    let start = engine
         .copy_files_start(
             Arc::clone(&events) as Arc<dyn OperationEventSink>,
             vec![src.clone()],
@@ -195,11 +194,11 @@ async fn an_operation_consumes_its_previews_result_rather_than_re_walking() {
     // The operation is parked: nothing copied yet, because nothing has told it
     // what to copy.
     assert!(
-        manager().is_in_scan_wait(&op_id),
+        engine.manager().is_in_scan_wait(&op_id),
         "the operation must be waiting, not walking"
     );
 
-    settle_preview(
+    engine.stores().previews().settle_preview(
         &preview_id,
         ScanOutcome::Complete,
         Some(completed_result(vec![src.clone()], std::slice::from_ref(&named), &dir)),
@@ -229,9 +228,10 @@ async fn an_operation_consumes_its_previews_result_rather_than_re_walking() {
 /// which is how this pins the outcome contract rather than a completion signal.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_failed_preview_fails_its_operation() {
-    let (events, op_id, preview_id, _dir) = start_copy_awaiting_preview("scanwait-error").await;
+    let engine = TestOperations::new();
+    let (events, op_id, preview_id, _dir) = start_copy_awaiting_preview(&engine, "scanwait-error").await;
 
-    settle_preview(
+    engine.stores().previews().settle_preview(
         &preview_id,
         ScanOutcome::Error(WriteOperationError::IoError {
             path: "/src/locked.bin".to_string(),
@@ -265,9 +265,13 @@ async fn a_failed_preview_fails_its_operation() {
 /// message.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_cancelled_preview_cancels_its_operation_rather_than_failing_it() {
-    let (events, op_id, preview_id, _dir) = start_copy_awaiting_preview("scanwait-cancel").await;
+    let engine = TestOperations::new();
+    let (events, op_id, preview_id, _dir) = start_copy_awaiting_preview(&engine, "scanwait-cancel").await;
 
-    settle_preview(&preview_id, ScanOutcome::Cancelled, None);
+    engine
+        .stores()
+        .previews()
+        .settle_preview(&preview_id, ScanOutcome::Cancelled, None);
 
     wait_until_async(WAIT, "the write-cancelled event", || {
         !events.cancelled.lock().expect("collector mutex").is_empty()
@@ -292,6 +296,7 @@ async fn a_cancelled_preview_cancels_its_operation_rather_than_failing_it() {
 /// falls through to the operation's own walk. Never a hang.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn an_unknown_preview_id_falls_back_to_the_operations_own_walk() {
+    let engine = TestOperations::new();
     let dir = TestDir::new("scanwait-unknown");
     let src = dir.join("src");
     let dst = dir.join("dst");
@@ -300,7 +305,7 @@ async fn an_unknown_preview_id_falls_back_to_the_operations_own_walk() {
     std::fs::write(src.join("a.bin"), b"a").expect("write a");
 
     let events = Arc::new(CollectorEventSink::new());
-    let start = installed()
+    let start = engine
         .copy_files_start(
             Arc::clone(&events) as Arc<dyn OperationEventSink>,
             vec![src.clone()],
@@ -319,7 +324,7 @@ async fn an_unknown_preview_id_falls_back_to_the_operations_own_walk() {
         .expect("copy starts");
 
     assert!(
-        !manager().is_in_scan_wait(&start.operation_id),
+        !engine.manager().is_in_scan_wait(&start.operation_id),
         "there is nothing to wait for"
     );
     wait_until_async(WAIT, "the copy to complete on its own walk", || {
@@ -336,27 +341,28 @@ async fn an_unknown_preview_id_falls_back_to_the_operations_own_walk() {
 /// sources, so this is a real path.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_second_operation_naming_a_claimed_preview_is_refused() {
+    let engine = TestOperations::new();
     let preview_id = unique("shared-preview");
-    register_in_flight(&preview_id);
+    register_in_flight(&engine, &preview_id);
 
     let first = unique("owner");
     let second = unique("interloper");
     assert!(
         matches!(
-            claim_preview(&preview_id, &first),
+            engine.stores().previews().claim_preview(&preview_id, &first),
             super::scan_cache::PreviewClaim::Waiting
         ),
         "the first claimant owns it"
     );
     assert!(
         matches!(
-            claim_preview(&preview_id, &second),
+            engine.stores().previews().claim_preview(&preview_id, &second),
             super::scan_cache::PreviewClaim::Refused
         ),
         "a second operation must be refused, never share"
     );
 
-    super::scan_cache::abandon_claim(&preview_id);
+    engine.stores().previews().abandon_claim(&preview_id);
 }
 
 /// A claimed result survives a TTL sweep triggered by a later settle. With
@@ -365,6 +371,7 @@ async fn a_second_operation_naming_a_claimed_preview_is_refused() {
 /// to a re-walk.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_claimed_result_survives_a_ttl_sweep() {
+    let engine = TestOperations::new();
     let dir = TestDir::new("scanwait-ttl");
     let src = dir.join("src");
     std::fs::create_dir_all(&src).expect("create src");
@@ -373,9 +380,9 @@ async fn a_claimed_result_survives_a_ttl_sweep() {
 
     let claimed = unique("claimed");
     let owner = unique("owner");
-    register_in_flight(&claimed);
-    claim_preview(&claimed, &owner);
-    settle_preview(
+    register_in_flight(&engine, &claimed);
+    engine.stores().previews().claim_preview(&claimed, &owner);
+    engine.stores().previews().settle_preview(
         &claimed,
         ScanOutcome::Complete,
         Some(completed_result(vec![src.clone()], std::slice::from_ref(&file), &src)),
@@ -384,16 +391,23 @@ async fn a_claimed_result_survives_a_ttl_sweep() {
     // Age it past the TTL, then trigger a sweep by settling an unrelated
     // preview. `SCAN_RESULT_TTL` is measured from the settle, so the sweep is
     // driven by a stub whose age the test controls.
-    super::scan_cache::age_settled_entry_for_test(
-        &claimed,
-        super::scan_cache::SCAN_RESULT_TTL + Duration::from_secs(1),
-    );
+    engine
+        .stores()
+        .previews()
+        .age_settled_entry_for_test(&claimed, super::scan_cache::SCAN_RESULT_TTL + Duration::from_secs(1));
     let other = unique("other");
-    register_in_flight(&other);
-    settle_preview(&other, ScanOutcome::Cancelled, None);
+    register_in_flight(&engine, &other);
+    engine
+        .stores()
+        .previews()
+        .settle_preview(&other, ScanOutcome::Cancelled, None);
 
     assert!(
-        take_cached_scan_result(&claimed, &[src]).is_some(),
+        engine
+            .stores()
+            .previews()
+            .take_cached_scan_result(&claimed, &[src])
+            .is_some(),
         "a claimed result must outlive the sweep: its owner may still be waiting on a lane"
     );
 }
@@ -414,8 +428,9 @@ async fn a_claimed_result_survives_a_ttl_sweep() {
 /// the broadcast counter, not on the tick's mere existence.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn the_bridge_ticks_after_the_snapshot_that_first_carries_the_row() {
-    let emits_before_registration = manager().emit_count();
-    let (events, op_id, preview_id, dir) = start_copy_awaiting_preview("scanwait-bridge").await;
+    let engine = TestOperations::new();
+    let emits_before_registration = engine.manager().emit_count();
+    let (events, op_id, preview_id, dir) = start_copy_awaiting_preview(&engine, "scanwait-bridge").await;
 
     let ticks = observed_scan_ticks(&op_id);
     let first = ticks.first().expect("the row must get its opening tick");
@@ -429,7 +444,7 @@ async fn the_bridge_ticks_after_the_snapshot_that_first_carries_the_row() {
 
     // A live preview tick reaches the operation too.
     super::scan_bridge::forward_scan_progress(
-        installed(),
+        &engine,
         &preview_id,
         super::scan_bridge::ScanCounts {
             files_found: 12,
@@ -447,7 +462,7 @@ async fn the_bridge_ticks_after_the_snapshot_that_first_carries_the_row() {
 
     let src = dir.join("src");
     let file = src.join("a.bin");
-    settle_preview(
+    engine.stores().previews().settle_preview(
         &preview_id,
         ScanOutcome::Complete,
         Some(completed_result(vec![src.clone()], &[file], &src)),
@@ -460,7 +475,7 @@ async fn the_bridge_ticks_after_the_snapshot_that_first_carries_the_row() {
     // The claim is gone, so the bridge has nothing to forward to.
     let before = observed_scan_ticks(&op_id).len();
     super::scan_bridge::forward_scan_progress(
-        installed(),
+        &engine,
         &preview_id,
         super::scan_bridge::ScanCounts {
             files_found: 99,
@@ -485,30 +500,31 @@ async fn the_bridge_ticks_after_the_snapshot_that_first_carries_the_row() {
 /// let an 80,000-file move run to completion.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn pause_applies_during_the_scan_wait() {
-    let (events, op_id, preview_id, dir) = start_copy_awaiting_preview("scanwait-pause").await;
+    let engine = TestOperations::new();
+    let (events, op_id, preview_id, dir) = start_copy_awaiting_preview(&engine, "scanwait-pause").await;
 
     assert_eq!(
-        installed().pause_operation(&op_id),
+        engine.pause_operation(&op_id),
         PauseOutcome::Applied,
         "a scan-waiting op parks, so its pause is an ordinary one"
     );
 
     assert_eq!(
-        manager().lifecycle_status(&op_id),
+        engine.manager().lifecycle_status(&op_id),
         Some(LifecycleStatus::Paused),
         "and the record says so"
     );
 
-    installed().resume_operation(&op_id);
+    engine.resume_operation(&op_id);
     assert_eq!(
-        manager().lifecycle_status(&op_id),
+        engine.manager().lifecycle_status(&op_id),
         Some(LifecycleStatus::Running),
         "resume puts it back, with no latch left behind to fire later"
     );
 
     let src = dir.join("src");
     let file = src.join("a.bin");
-    settle_preview(
+    engine.stores().previews().settle_preview(
         &preview_id,
         ScanOutcome::Complete,
         Some(completed_result(vec![src.clone()], &[file], &src)),
@@ -535,19 +551,20 @@ async fn pause_applies_during_the_scan_wait() {
 /// without reaching across the suite.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_pause_during_a_scan_wait_still_holds_when_the_scan_ends() {
-    let (events, op_id, preview_id, dir) = start_copy_awaiting_preview("scanwait-pauselatch").await;
+    let engine = TestOperations::new();
+    let (events, op_id, preview_id, dir) = start_copy_awaiting_preview(&engine, "scanwait-pauselatch").await;
 
     assert!(
-        manager().running_ids().contains(&op_id),
+        engine.manager().running_ids().contains(&op_id),
         "`pause_all` walks the running set, so a scan-waiting op has to be in it"
     );
 
     // The ask `pause_all` makes, per id.
-    assert_eq!(installed().pause_operation(&op_id), PauseOutcome::Applied);
+    assert_eq!(engine.pause_operation(&op_id), PauseOutcome::Applied);
 
     let src = dir.join("src");
     let file = src.join("a.bin");
-    settle_preview(
+    engine.stores().previews().settle_preview(
         &preview_id,
         ScanOutcome::Complete,
         Some(completed_result(vec![src.clone()], &[file], &src)),
@@ -561,13 +578,13 @@ async fn a_pause_during_a_scan_wait_still_holds_when_the_scan_ends() {
         "a paused operation must not copy anything once its scan lands"
     );
     assert_eq!(
-        manager().lifecycle_status(&op_id),
+        engine.manager().lifecycle_status(&op_id),
         Some(LifecycleStatus::Paused),
         "and it is still parked, not quietly running again"
     );
 
     // Release it so the lane frees for the rest of the suite.
-    installed().resume_operation(&op_id);
+    engine.resume_operation(&op_id);
     wait_until_async(WAIT, "the copy to settle", || {
         !events.complete.lock().expect("collector mutex").is_empty()
     })
@@ -590,14 +607,15 @@ async fn a_pause_during_a_scan_wait_still_holds_when_the_scan_ends() {
 /// (`docs/testing.md` § "The host machine is not a fixture").
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_trash_frees_its_preview_instead_of_waiting_on_it() {
+    let engine = TestOperations::new();
     let dir = TestDir::new("scanwait-trash");
     let never_created = dir.join("never-created.bin");
 
     let preview_id = unique("preview");
-    register_in_flight(&preview_id);
+    register_in_flight(&engine, &preview_id);
 
     let events = Arc::new(CollectorEventSink::new());
-    let start = installed()
+    let start = engine
         .trash_files_start(
             Arc::clone(&events) as Arc<dyn OperationEventSink>,
             vec![never_created],
@@ -613,12 +631,12 @@ async fn a_trash_frees_its_preview_instead_of_waiting_on_it() {
         .expect("trash starts");
 
     assert!(
-        !manager().is_in_scan_wait(&start.operation_id),
+        !engine.manager().is_in_scan_wait(&start.operation_id),
         "a trash must not park on a scan it will never read"
     );
     assert!(
         matches!(
-            claim_preview(&preview_id, &unique("anyone")),
+            engine.stores().previews().claim_preview(&preview_id, &unique("anyone")),
             super::scan_cache::PreviewClaim::Unknown
         ),
         "the preview must be freed, not left walking for an operation that ignores it"
@@ -649,6 +667,7 @@ async fn a_compress_confirmed_mid_scan_awaits_its_preview() {
     use cmdr_fs::volume::Volume;
     use cmdr_local::LocalPosixVolume;
 
+    let engine = TestOperations::new();
     let dir = TestDir::new("scanwait-compress");
     let src_root = dir.join("src");
     std::fs::create_dir_all(&src_root).expect("mkdir src");
@@ -661,10 +680,10 @@ async fn a_compress_confirmed_mid_scan_awaits_its_preview() {
     let dest = dir.join("bundle.zip");
 
     let preview_id = unique("preview");
-    register_in_flight(&preview_id);
+    register_in_flight(&engine, &preview_id);
 
     let events = Arc::new(CollectorEventSink::new());
-    let start = installed()
+    let start = engine
         .compress_start(
             Arc::clone(&events) as Arc<dyn OperationEventSink>,
             source_volume,
@@ -681,11 +700,14 @@ async fn a_compress_confirmed_mid_scan_awaits_its_preview() {
         .expect("start compress");
 
     assert!(
-        manager().is_in_scan_wait(&start.operation_id),
+        engine.manager().is_in_scan_wait(&start.operation_id),
         "the compress must be parked on its preview, not planning its changeset alongside it"
     );
 
-    settle_preview(&preview_id, ScanOutcome::Complete, None);
+    engine
+        .stores()
+        .previews()
+        .settle_preview(&preview_id, ScanOutcome::Complete, None);
     wait_until_async(WAIT, "the compress to complete", || {
         !events.complete.lock().expect("collector mutex").is_empty()
     })
@@ -705,18 +727,19 @@ async fn a_compress_confirmed_mid_scan_awaits_its_preview() {
 /// TTL sweep. On a busy lane, cancelling a queued op is the ordinary case.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn cancelling_a_queued_operation_frees_the_preview_it_claimed() {
+    let engine = TestOperations::new();
     let lane = unique("busy-lane");
     let preview_id = unique("preview");
-    register_in_flight(&preview_id);
+    register_in_flight(&engine, &preview_id);
 
     // Occupy the lane so the op under test is admitted as Queued and its
     // deferred start never runs.
     let (blocker_started, blocker_started_rx) = tokio::sync::oneshot::channel();
     let (release, release_rx) = tokio::sync::oneshot::channel();
     let blocker_id = unique("blocker");
-    manager().spawn_managed(
+    engine.manager().spawn_managed(
         descriptor_on_lane(&blocker_id, &lane, None),
-        Arc::new(super::state::WriteOperationState::new(Duration::from_millis(10))),
+        Arc::new(engine.new_operation_state(Duration::from_millis(10))),
         Box::new({
             let blocker_id = blocker_id.clone();
             move |ops: crate::file_system::write_operations::Operations| {
@@ -733,29 +756,29 @@ async fn cancelling_a_queued_operation_frees_the_preview_it_claimed() {
     blocker_started_rx.await.expect("the blocker holds the lane");
 
     let queued_id = unique("queued");
-    manager().spawn_managed(
+    engine.manager().spawn_managed(
         descriptor_on_lane(&queued_id, &lane, Some(preview_id.clone())),
-        Arc::new(super::state::WriteOperationState::new(Duration::from_millis(10))),
+        Arc::new(engine.new_operation_state(Duration::from_millis(10))),
         Box::new(|_: crate::file_system::write_operations::Operations| Box::pin(async {})),
     );
     assert_eq!(
-        manager().lifecycle_status(&queued_id),
+        engine.manager().lifecycle_status(&queued_id),
         Some(LifecycleStatus::Queued),
         "the second op must be waiting on the busy lane"
     );
     assert!(
         matches!(
-            claim_preview(&preview_id, "someone-else"),
+            engine.stores().previews().claim_preview(&preview_id, "someone-else"),
             super::scan_cache::PreviewClaim::Refused
         ),
         "the queued op owns the preview while it waits"
     );
 
-    installed().cancel_operation(&queued_id);
+    engine.cancel_operation(&queued_id);
 
     assert!(
         matches!(
-            claim_preview(&preview_id, "someone-else"),
+            engine.stores().previews().claim_preview(&preview_id, "someone-else"),
             super::scan_cache::PreviewClaim::Unknown
         ),
         "cancelling a queued op must free its preview, not leave the walk running for nobody"
@@ -763,10 +786,7 @@ async fn cancelling_a_queued_operation_frees_the_preview_it_claimed() {
 
     let _ = release.send(());
     wait_until_async(WAIT, "the blocker to settle", || {
-        installed()
-            .list_operations()
-            .iter()
-            .all(|op| op.operation_id != blocker_id)
+        engine.list_operations().iter().all(|op| op.operation_id != blocker_id)
     })
     .await;
 }
@@ -781,9 +801,10 @@ async fn cancelling_a_queued_operation_frees_the_preview_it_claimed() {
 /// correct with no edit at all.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_scanning_transfer_holds_a_quit() {
-    let (events, op_id, preview_id, dir) = start_copy_awaiting_preview("scanwait-quit").await;
+    let engine = TestOperations::new();
+    let (events, op_id, preview_id, dir) = start_copy_awaiting_preview(&engine, "scanwait-quit").await;
 
-    let snapshot = installed().list_operations();
+    let snapshot = engine.list_operations();
     let row = snapshot.iter().find(|op| op.operation_id == op_id).expect("the row");
     assert!(
         crate::quit::blocks_quit(row),
@@ -792,7 +813,7 @@ async fn a_scanning_transfer_holds_a_quit() {
 
     let src = dir.join("src");
     let file = src.join("a.bin");
-    settle_preview(
+    engine.stores().previews().settle_preview(
         &preview_id,
         ScanOutcome::Complete,
         Some(completed_result(vec![src.clone()], &[file], &src)),
@@ -822,9 +843,12 @@ fn descriptor_on_lane(op_id: &str, lane: &str, preview_id: Option<String>) -> su
     }
 }
 
-/// Starts a copy that is parked on an in-flight preview, returning its sink,
-/// id, preview id, and the fixture dir (which must outlive the operation).
-pub(super) async fn start_copy_awaiting_preview(label: &str) -> (Arc<CollectorEventSink>, String, String, TestDir) {
+/// Starts a copy on `engine` that is parked on an in-flight preview, returning
+/// its sink, id, preview id, and the fixture dir (which must outlive the operation).
+pub(super) async fn start_copy_awaiting_preview(
+    engine: &TestOperations,
+    label: &str,
+) -> (Arc<CollectorEventSink>, String, String, TestDir) {
     let dir = TestDir::new(label);
     let src = dir.join("src");
     let dst = dir.join("dst");
@@ -833,10 +857,10 @@ pub(super) async fn start_copy_awaiting_preview(label: &str) -> (Arc<CollectorEv
     std::fs::write(src.join("a.bin"), b"a").expect("write a");
 
     let preview_id = unique("preview");
-    register_in_flight(&preview_id);
+    register_in_flight(&engine, &preview_id);
 
     let events = Arc::new(CollectorEventSink::new());
-    let start = installed()
+    let start = engine
         .copy_files_start(
             Arc::clone(&events) as Arc<dyn OperationEventSink>,
             vec![src.clone()],
@@ -856,6 +880,9 @@ pub(super) async fn start_copy_awaiting_preview(label: &str) -> (Arc<CollectorEv
 
     let op_id = start.operation_id.clone();
     assert_eq!(start.operation_type, WriteOperationType::Copy);
-    assert!(manager().is_in_scan_wait(&op_id), "the copy must be parked on its scan");
+    assert!(
+        engine.manager().is_in_scan_wait(&op_id),
+        "the copy must be parked on its scan"
+    );
     (events, op_id, preview_id, dir)
 }

@@ -1,11 +1,10 @@
 //! The scan preview lifecycle API: what `get_scan_preview_totals` answers.
 
-use crate::file_system::write_operations::installed;
+use crate::file_system::write_operations::testing::TestOperations;
 use std::path::PathBuf;
 
 use uuid::Uuid;
 
-use super::scan_cache::{insert_scan_result, release_preview};
 use super::state::{CachedScanResult, FileInfo};
 use cmdr_fs::volume::CopyScanResult;
 
@@ -16,6 +15,7 @@ use cmdr_fs::volume::CopyScanResult;
 /// M2a's watcher-backed oracle made scans nearly instant).
 #[test]
 fn get_scan_preview_totals_returns_cached_counts_after_complete() {
+    let engine = TestOperations::new();
     let preview_id = format!("test-{}", Uuid::new_v4());
     let source = PathBuf::from("/src");
     // A real local-walk shape: seven files, two directories, and one
@@ -32,7 +32,7 @@ fn get_scan_preview_totals_returns_cached_counts_after_complete() {
             tree_node: None,
         })
         .collect();
-    insert_scan_result(
+    engine.stores().previews().insert_scan_result(
         preview_id.clone(),
         CachedScanResult::from_local_walk(
             vec![source.clone()],
@@ -56,20 +56,21 @@ fn get_scan_preview_totals_returns_cached_counts_after_complete() {
         ),
     );
 
-    let totals = installed()
+    let totals = engine
         .get_scan_preview_totals(&preview_id)
         .expect("totals should be present");
     assert_eq!(totals.files_total, 7);
     assert_eq!(totals.dirs_total, 2);
     assert_eq!(totals.bytes_total, 12_345);
 
-    release_preview(&preview_id);
+    engine.stores().previews().release_preview(&preview_id);
 }
 
 /// `get_scan_preview_totals` returns `None` while the scan is still
 /// running (the cache is keyed by preview_id; absence == not complete).
 #[test]
 fn get_scan_preview_totals_returns_none_for_unknown_preview() {
+    let engine = TestOperations::new();
     let unknown = format!("nonexistent-{}", Uuid::new_v4());
-    assert!(installed().get_scan_preview_totals(&unknown).is_none());
+    assert!(engine.get_scan_preview_totals(&unknown).is_none());
 }

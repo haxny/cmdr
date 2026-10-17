@@ -13,6 +13,7 @@ use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 
 use super::scan_preview::run_oracle_aware_batch_scan;
 use crate::file_system::volume::manager::get_volume_manager;
+use crate::listing_host::backends::AppListings;
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::{BatchScanResult, CopyScanResult, InMemoryVolume, Volume, VolumeError, WatchCoverage};
 use cmdr_listing::testing::{TestListing, TestListingGuard};
@@ -217,7 +218,7 @@ async fn scan_preview_uses_authoritative_listing_for_top_level_files() {
     let is_cancelled = || false;
     let on_progress = |_: cmdr_fs::volume::ListingProgress| {};
     let result = run_oracle_aware_batch_scan(
-        crate::file_system::write_operations::installed().host().listings(),
+        &AppListings,
         vol.as_ref(),
         &vid,
         &sources,
@@ -272,7 +273,7 @@ async fn scan_preview_falls_through_when_watcher_dead() {
     let is_cancelled = || false;
     let on_progress = |_: cmdr_fs::volume::ListingProgress| {};
     let result = run_oracle_aware_batch_scan(
-        crate::file_system::write_operations::installed().host().listings(),
+        &AppListings,
         vol.as_ref(),
         &vid,
         &sources,
@@ -322,7 +323,7 @@ async fn scan_preview_uses_cached_subfolder_listing_when_other_pane_has_it() {
     let is_cancelled = || false;
     let on_progress = |_: cmdr_fs::volume::ListingProgress| {};
     let result = run_oracle_aware_batch_scan(
-        crate::file_system::write_operations::installed().host().listings(),
+        &AppListings,
         vol.as_ref(),
         &vid,
         &sources,
@@ -372,7 +373,7 @@ async fn scan_preview_records_what_the_oracle_serves() {
     let is_cancelled = || false;
     let on_progress = |_: cmdr_fs::volume::ListingProgress| {};
     run_oracle_aware_batch_scan(
-        crate::file_system::write_operations::installed().host().listings(),
+        &AppListings,
         vol.as_ref(),
         &vid,
         &sources,
@@ -418,7 +419,7 @@ async fn scan_preview_preserves_symlink_semantics() {
     let is_cancelled = || false;
     let on_progress = |_: cmdr_fs::volume::ListingProgress| {};
     let result = run_oracle_aware_batch_scan(
-        crate::file_system::write_operations::installed().host().listings(),
+        &AppListings,
         vol.as_ref(),
         &vid,
         &sources,
@@ -474,7 +475,7 @@ async fn scan_preview_handles_listing_closed_mid_walk() {
     let is_cancelled = || false;
     let on_progress = |_: cmdr_fs::volume::ListingProgress| {};
     let result = run_oracle_aware_batch_scan(
-        crate::file_system::write_operations::installed().host().listings(),
+        &AppListings,
         vol.as_ref(),
         &vid,
         &sources,

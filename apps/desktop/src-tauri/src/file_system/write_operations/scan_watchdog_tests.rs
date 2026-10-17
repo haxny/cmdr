@@ -5,6 +5,8 @@
 //! return. Reproducing it with a real network drop isn't repeatable; a volume
 //! that never answers is exactly repeatable and hits the same code.
 
+use crate::file_system::write_operations::Operations;
+use crate::file_system::write_operations::testing::TestOperations;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
@@ -13,7 +15,7 @@ use std::time::Duration;
 use uuid::Uuid;
 
 use super::event_sinks::{CollectorScanPreviewSink, ScanPreviewEventSink};
-use super::scan_cache::{ScanOutcome, ScanPreviewState, poll_claim, register_preview, release_preview};
+use super::scan_cache::{ScanOutcome, ScanPreviewState};
 use super::scan_preview::{run_scan_preview, run_volume_scan_preview};
 use super::scan_watchdog::{ScanTally, ScanTarget, ScanWatchdog};
 use crate::test_support::{TestDir, WedgedVolume, wait_until_async};
@@ -28,14 +30,17 @@ const WAIT: Duration = Duration::from_secs(5);
 /// and long enough that a stalled CI thread can't fake a timeout.
 const TEST_LIMIT: Duration = Duration::from_millis(200);
 
-/// A preview registered in flight, with its cancel flag and progress interval.
-fn in_flight_preview() -> (String, Arc<ScanPreviewState>) {
+/// A preview registered in flight on `engine`, with its cancel flag and progress interval.
+fn in_flight_preview(engine: &TestOperations) -> (String, Arc<ScanPreviewState>) {
     let preview_id = format!("watchdog-{}", Uuid::new_v4());
     let state = Arc::new(ScanPreviewState {
         cancelled: AtomicBool::new(false),
         progress_interval: Duration::from_millis(50),
     });
-    register_preview(preview_id.clone(), Arc::clone(&state));
+    engine
+        .stores()
+        .previews()
+        .register_preview(preview_id.clone(), Arc::clone(&state));
     (preview_id, state)
 }
 
@@ -74,14 +79,13 @@ fn the_log_label_keys_the_source_so_a_report_redacts_it_whole() {
 /// waited with it.
 #[tokio::test]
 async fn a_volume_that_never_answers_still_settles_its_preview() {
-    let (preview_id, state) = in_flight_preview();
+    let engine = TestOperations::new();
+    let (preview_id, state) = in_flight_preview(&engine);
     let sources = vec![PathBuf::from("/share/folder")];
     let events = Arc::new(CollectorScanPreviewSink::new());
     let sink: Arc<dyn ScanPreviewEventSink> = Arc::clone(&events) as Arc<dyn ScanPreviewEventSink>;
     let watchdog = ScanWatchdog::start(
-        crate::file_system::write_operations::installed()
-            .stores()
-            .previews_arc(),
+        engine.stores().previews_arc(),
         preview_id.clone(),
         ScanTarget::of(&sources, "wedged"),
         TEST_LIMIT,
@@ -90,7 +94,7 @@ async fn a_volume_that_never_answers_still_settles_its_preview() {
     );
 
     let walk = tokio::spawn(run_volume_scan_preview(
-        crate::file_system::write_operations::installed().clone(),
+        engine.clone(),
         sink,
         preview_id.clone(),
         sources,
@@ -102,8 +106,8 @@ async fn a_volume_that_never_answers_still_settles_its_preview() {
     ));
 
     let id = preview_id.clone();
-    wait_until_async(WAIT, "the preview to settle", move || {
-        matches!(poll_claim(&id), Some(ScanOutcome::Error(_)))
+    wait_until_async(WAIT, "the preview to settle", || {
+        matches!(engine.stores().previews().poll_claim(&id), Some(ScanOutcome::Error(_)))
     })
     .await;
 
@@ -115,7 +119,7 @@ async fn a_volume_that_never_answers_still_settles_its_preview() {
     );
 
     walk.abort();
-    release_preview(&preview_id);
+    engine.stores().previews().release_preview(&preview_id);
 }
 
 /// A slow-but-alive walk must NOT be killed: as long as entries keep landing,
@@ -123,12 +127,11 @@ async fn a_volume_that_never_answers_still_settles_its_preview() {
 /// SMB tree into a false timeout.
 #[tokio::test]
 async fn a_walk_that_keeps_counting_is_left_alone() {
-    let (preview_id, state) = in_flight_preview();
+    let engine = TestOperations::new();
+    let (preview_id, state) = in_flight_preview(&engine);
     let events = Arc::new(CollectorScanPreviewSink::new());
     let watchdog = ScanWatchdog::start(
-        crate::file_system::write_operations::installed()
-            .stores()
-            .previews_arc(),
+        engine.stores().previews_arc(),
         preview_id.clone(),
         ScanTarget::of(&[PathBuf::from("/Volumes/a slow share")], "test"),
         TEST_LIMIT,
@@ -146,7 +149,7 @@ async fn a_walk_that_keeps_counting_is_left_alone() {
     }
 
     assert!(
-        poll_claim(&preview_id).is_none(),
+        engine.stores().previews().poll_claim(&preview_id).is_none(),
         "a walk that is still counting has not settled"
     );
     assert!(
@@ -154,7 +157,7 @@ async fn a_walk_that_keeps_counting_is_left_alone() {
         "and the dialog was told nothing"
     );
 
-    release_preview(&preview_id);
+    engine.stores().previews().release_preview(&preview_id);
 }
 
 /// A PAUSED walk counts nothing, which looks exactly like a volume that stopped
@@ -163,12 +166,11 @@ async fn a_walk_that_keeps_counting_is_left_alone() {
 /// back to them as a dead share.
 #[tokio::test]
 async fn a_walk_parked_on_a_pause_is_never_called_unresponsive() {
-    let (preview_id, state) = in_flight_preview();
+    let engine = TestOperations::new();
+    let (preview_id, state) = in_flight_preview(&engine);
     let events = Arc::new(CollectorScanPreviewSink::new());
     let watchdog = ScanWatchdog::start(
-        crate::file_system::write_operations::installed()
-            .stores()
-            .previews_arc(),
+        engine.stores().previews_arc(),
         preview_id.clone(),
         ScanTarget::of(&[PathBuf::from("/Volumes/a share someone paused")], "test"),
         TEST_LIMIT,
@@ -184,7 +186,7 @@ async fn a_walk_parked_on_a_pause_is_never_called_unresponsive() {
     tokio::time::sleep(TEST_LIMIT * 5).await;
 
     assert!(
-        poll_claim(&preview_id).is_none(),
+        engine.stores().previews().poll_claim(&preview_id).is_none(),
         "a parked walk has not settled: the person is still deciding"
     );
     assert!(
@@ -199,7 +201,7 @@ async fn a_walk_parked_on_a_pause_is_never_called_unresponsive() {
     tokio::time::sleep(TEST_LIMIT / 2).await;
     assert!(events.errors.lock_ignore_poison().is_empty());
 
-    release_preview(&preview_id);
+    engine.stores().previews().release_preview(&preview_id);
 }
 
 /// The race: a walk that finishes at the same moment the watchdog gives up. One
@@ -207,12 +209,11 @@ async fn a_walk_parked_on_a_pause_is_never_called_unresponsive() {
 /// may reach the dialog afterwards.
 #[tokio::test]
 async fn a_worker_that_claims_first_keeps_the_watchdog_quiet() {
-    let (preview_id, state) = in_flight_preview();
+    let engine = TestOperations::new();
+    let (preview_id, state) = in_flight_preview(&engine);
     let events = Arc::new(CollectorScanPreviewSink::new());
     let watchdog = ScanWatchdog::start(
-        crate::file_system::write_operations::installed()
-            .stores()
-            .previews_arc(),
+        engine.stores().previews_arc(),
         preview_id.clone(),
         ScanTarget::of(&[PathBuf::from("/Volumes/a share that answered just in time")], "test"),
         TEST_LIMIT,
@@ -236,7 +237,7 @@ async fn a_worker_that_claims_first_keeps_the_watchdog_quiet() {
         "and the claim is one-shot, so nothing else can publish either"
     );
 
-    release_preview(&preview_id);
+    engine.stores().previews().release_preview(&preview_id);
 }
 
 /// The settle line is the first thing anyone reads when triaging a scan, and it
@@ -249,6 +250,7 @@ async fn a_worker_that_claims_first_keeps_the_watchdog_quiet() {
 /// every scan preview in production logged, three-file folders included.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_preview_that_finishes_before_its_first_tick_still_reports_what_it_walked() {
+    let engine = TestOperations::new();
     let dir = TestDir::new("watchdog_settle_counts");
     let tree = dir.join("tree");
     std::fs::create_dir(&tree).expect("the scratch tree");
@@ -263,14 +265,15 @@ async fn a_preview_that_finishes_before_its_first_tick_still_reports_what_it_wal
         // shape this covers.
         progress_interval: Duration::from_secs(600),
     });
-    register_preview(preview_id.clone(), Arc::clone(&state));
+    engine
+        .stores()
+        .previews()
+        .register_preview(preview_id.clone(), Arc::clone(&state));
 
     let sources = vec![tree.clone()];
     let events = Arc::new(CollectorScanPreviewSink::new());
     let watchdog = ScanWatchdog::start(
-        crate::file_system::write_operations::installed()
-            .stores()
-            .previews_arc(),
+        engine.stores().previews_arc(),
         preview_id.clone(),
         ScanTarget::of(&sources, "root"),
         // Generous: this walk is meant to complete, not to be given up on.
@@ -282,9 +285,10 @@ async fn a_preview_that_finishes_before_its_first_tick_still_reports_what_it_wal
     let walk_watchdog = Arc::clone(&watchdog);
     let walk_events: Arc<dyn ScanPreviewEventSink> = Arc::clone(&events) as Arc<dyn ScanPreviewEventSink>;
     let walk_id = preview_id.clone();
+    let walker = Operations::clone(&engine);
     tokio::task::spawn_blocking(move || {
         run_scan_preview(
-            crate::file_system::write_operations::installed(),
+            &walker,
             walk_events,
             walk_id,
             sources,
@@ -312,5 +316,5 @@ async fn a_preview_that_finishes_before_its_first_tick_still_reports_what_it_wal
     );
 
     drop(complete);
-    release_preview(&preview_id);
+    engine.stores().previews().release_preview(&preview_id);
 }

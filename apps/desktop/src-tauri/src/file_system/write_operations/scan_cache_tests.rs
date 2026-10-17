@@ -8,7 +8,7 @@
 //! reach; that's deliberate, so these tests can pin the module wall itself.
 
 use super::*;
-use crate::file_system::write_operations::installed;
+use crate::file_system::write_operations::testing::TestOperations;
 
 /// A per-source result shaped like a top-level file, so the entries these tests
 /// build are coherent by the canary's rule.
@@ -46,69 +46,118 @@ fn unique_preview(tag: &str) -> String {
 
 #[test]
 fn cache_hit_when_the_operation_asks_for_exactly_the_previewed_sources() {
+    let engine = TestOperations::new();
     let preview_id = unique_preview("exact");
-    insert_scan_result(preview_id.clone(), cached_for(&["/a", "/b"]));
+    engine
+        .stores()
+        .previews()
+        .insert_scan_result(preview_id.clone(), cached_for(&["/a", "/b"]));
 
-    let hit = take_cached_scan_result(&preview_id, &paths(&["/a", "/b"]));
+    let hit = engine
+        .stores()
+        .previews()
+        .take_cached_scan_result(&preview_id, &paths(&["/a", "/b"]));
 
     assert!(hit.is_some(), "the same selection must be a cache hit");
 }
 
 #[test]
 fn cache_hit_ignores_the_order_the_frontend_happened_to_send() {
+    let engine = TestOperations::new();
     // Order is a frontend detail (pane sort), and `per_path` is order-rebuilt
     // downstream anyway, so the comparison is set-wise.
     let preview_id = unique_preview("order");
-    insert_scan_result(preview_id.clone(), cached_for(&["/a", "/b", "/c"]));
+    engine
+        .stores()
+        .previews()
+        .insert_scan_result(preview_id.clone(), cached_for(&["/a", "/b", "/c"]));
 
-    let hit = take_cached_scan_result(&preview_id, &paths(&["/c", "/a", "/b"]));
+    let hit = engine
+        .stores()
+        .previews()
+        .take_cached_scan_result(&preview_id, &paths(&["/c", "/a", "/b"]));
 
     assert!(hit.is_some(), "a reordered selection is the same selection");
 }
 
 #[test]
 fn a_preview_of_a_different_selection_is_a_cache_miss() {
+    let engine = TestOperations::new();
     let preview_id = unique_preview("foreign");
-    insert_scan_result(preview_id.clone(), cached_for(&["/a"]));
+    engine
+        .stores()
+        .previews()
+        .insert_scan_result(preview_id.clone(), cached_for(&["/a"]));
 
-    let hit = take_cached_scan_result(&preview_id, &paths(&["/b"]));
+    let hit = engine
+        .stores()
+        .previews()
+        .take_cached_scan_result(&preview_id, &paths(&["/b"]));
 
     assert!(hit.is_none(), "a preview of /a must not authorize acting on /b");
 }
 
 #[test]
 fn an_operation_asking_for_more_than_the_preview_walked_is_a_cache_miss() {
+    let engine = TestOperations::new();
     let preview_id = unique_preview("extra");
-    insert_scan_result(preview_id.clone(), cached_for(&["/a"]));
+    engine
+        .stores()
+        .previews()
+        .insert_scan_result(preview_id.clone(), cached_for(&["/a"]));
 
-    let hit = take_cached_scan_result(&preview_id, &paths(&["/a", "/b"]));
+    let hit = engine
+        .stores()
+        .previews()
+        .take_cached_scan_result(&preview_id, &paths(&["/a", "/b"]));
 
     assert!(hit.is_none(), "an unwalked extra source must not ride a stale preview");
 }
 
 #[test]
 fn an_operation_asking_for_less_than_the_preview_walked_is_a_cache_miss() {
+    let engine = TestOperations::new();
     // The dangerous direction: the cached file list is a superset, so believing
     // it would act on paths the user didn't select.
     let preview_id = unique_preview("missing");
-    insert_scan_result(preview_id.clone(), cached_for(&["/a", "/b"]));
+    engine
+        .stores()
+        .previews()
+        .insert_scan_result(preview_id.clone(), cached_for(&["/a", "/b"]));
 
-    let hit = take_cached_scan_result(&preview_id, &paths(&["/a"]));
+    let hit = engine
+        .stores()
+        .previews()
+        .take_cached_scan_result(&preview_id, &paths(&["/a"]));
 
     assert!(hit.is_none(), "a preview covering more than was asked for is not a hit");
 }
 
 #[test]
 fn a_refused_entry_is_dropped_rather_than_left_for_the_next_caller() {
+    let engine = TestOperations::new();
     // The refusal path still consumes the entry: leaving it behind would let a
     // second operation with the matching selection pick up a preview the first
     // already invalidated by acting.
     let preview_id = unique_preview("dropped");
-    insert_scan_result(preview_id.clone(), cached_for(&["/a"]));
+    engine
+        .stores()
+        .previews()
+        .insert_scan_result(preview_id.clone(), cached_for(&["/a"]));
 
-    assert!(take_cached_scan_result(&preview_id, &paths(&["/b"])).is_none());
     assert!(
-        take_cached_scan_result(&preview_id, &paths(&["/a"])).is_none(),
+        engine
+            .stores()
+            .previews()
+            .take_cached_scan_result(&preview_id, &paths(&["/b"]))
+            .is_none()
+    );
+    assert!(
+        engine
+            .stores()
+            .previews()
+            .take_cached_scan_result(&preview_id, &paths(&["/a"]))
+            .is_none(),
         "the refused entry must not still be sitting in the cache"
     );
 }
@@ -159,8 +208,9 @@ fn a_preview_settled_after_a_panic_mid_edit_is_still_a_cache_hit() {
 #[should_panic(expected = "must carry per_path entries")]
 #[cfg(debug_assertions)]
 fn inserting_a_completed_walk_with_no_per_source_results_trips_the_canary() {
+    let engine = TestOperations::new();
     let preview_id = unique_preview("canary");
-    insert_scan_result(
+    engine.stores().previews().insert_scan_result(
         preview_id,
         CachedScanResult::from_volume_batch(paths(&["/a"]), 3, 30, 30, Vec::new()),
     );
@@ -171,12 +221,22 @@ fn inserting_a_completed_walk_with_no_per_source_results_trips_the_canary() {
 /// legitimately has neither.
 #[test]
 fn the_canary_leaves_the_legitimate_shapes_alone() {
+    let engine = TestOperations::new();
     let volume_batch = unique_preview("volume-batch");
-    insert_scan_result(volume_batch.clone(), cached_for(&["/a"]));
-    assert!(take_cached_scan_result(&volume_batch, &paths(&["/a"])).is_some());
+    engine
+        .stores()
+        .previews()
+        .insert_scan_result(volume_batch.clone(), cached_for(&["/a"]));
+    assert!(
+        engine
+            .stores()
+            .previews()
+            .take_cached_scan_result(&volume_batch, &paths(&["/a"]))
+            .is_some()
+    );
 
     let nothing_found = unique_preview("empty");
-    insert_scan_result(
+    engine.stores().previews().insert_scan_result(
         nothing_found.clone(),
         CachedScanResult::from_local_walk(
             paths(&["/empty-dir"]),
@@ -188,7 +248,13 @@ fn the_canary_leaves_the_legitimate_shapes_alone() {
             None,
         ),
     );
-    assert!(take_cached_scan_result(&nothing_found, &paths(&["/empty-dir"])).is_some());
+    assert!(
+        engine
+            .stores()
+            .previews()
+            .take_cached_scan_result(&nothing_found, &paths(&["/empty-dir"]))
+            .is_some()
+    );
 }
 
 // ---- the two named constructors ----
@@ -269,6 +335,7 @@ fn folder(files: usize, dirs: usize, bytes: u64) -> CopyScanResult {
 
 #[test]
 fn cost_facts_carry_a_volume_scans_kept_files_and_its_folder_count() {
+    let engine = TestOperations::new();
     let preview_id = unique_preview("cost-volume");
     let kept = vec![
         ScannedFile {
@@ -283,9 +350,12 @@ fn cost_facts_carry_a_volume_scans_kept_files_and_its_folder_count() {
     let cached =
         CachedScanResult::from_volume_batch(paths(&["/a"]), 2, 40, 40, vec![(PathBuf::from("/a"), folder(2, 3, 40))])
             .keeping_files(Some(kept.clone()));
-    insert_scan_result(preview_id.clone(), cached);
+    engine
+        .stores()
+        .previews()
+        .insert_scan_result(preview_id.clone(), cached);
 
-    let facts = installed().cached_cost_facts(&preview_id).expect("a settled preview");
+    let facts = engine.cached_cost_facts(&preview_id).expect("a settled preview");
 
     assert_eq!(facts.files, 2);
     assert_eq!(facts.dirs, 3);
@@ -295,10 +365,14 @@ fn cost_facts_carry_a_volume_scans_kept_files_and_its_folder_count() {
 
 #[test]
 fn cost_facts_of_a_volume_scan_that_kept_nothing_have_no_per_file_list() {
+    let engine = TestOperations::new();
     let preview_id = unique_preview("cost-volume-bare");
-    insert_scan_result(preview_id.clone(), cached_for(&["/a"]));
+    engine
+        .stores()
+        .previews()
+        .insert_scan_result(preview_id.clone(), cached_for(&["/a"]));
 
-    let facts = installed().cached_cost_facts(&preview_id).expect("a settled preview");
+    let facts = engine.cached_cost_facts(&preview_id).expect("a settled preview");
 
     assert_eq!(facts.files, 1);
     assert_eq!(facts.per_file, None);
@@ -306,6 +380,7 @@ fn cost_facts_of_a_volume_scan_that_kept_nothing_have_no_per_file_list() {
 
 #[test]
 fn cost_facts_of_a_local_walk_list_every_files_size_undated() {
+    let engine = TestOperations::new();
     let preview_id = unique_preview("cost-local");
     let file = |size: u64| FileInfo {
         path: PathBuf::from(format!("/src/{size}.bin")),
@@ -324,9 +399,12 @@ fn cost_facts_of_a_local_walk_list_every_files_size_undated() {
         vec![(PathBuf::from("/src"), folder(2, 1, 12))],
         None,
     );
-    insert_scan_result(preview_id.clone(), cached);
+    engine
+        .stores()
+        .previews()
+        .insert_scan_result(preview_id.clone(), cached);
 
-    let facts = installed().cached_cost_facts(&preview_id).expect("a settled preview");
+    let facts = engine.cached_cost_facts(&preview_id).expect("a settled preview");
 
     let undated = |size: u64| ScannedFile {
         size,
@@ -338,5 +416,6 @@ fn cost_facts_of_a_local_walk_list_every_files_size_undated() {
 
 #[test]
 fn cost_facts_of_an_unknown_preview_are_none() {
-    assert!(installed().cached_cost_facts("no-such-preview").is_none());
+    let engine = TestOperations::new();
+    assert!(engine.cached_cost_facts("no-such-preview").is_none());
 }

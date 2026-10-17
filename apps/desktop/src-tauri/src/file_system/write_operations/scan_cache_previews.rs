@@ -576,54 +576,13 @@ impl ScanPreviews {
 }
 
 // ============================================================================
-// The suites' reach into the shared engine's previews
+// The backend suites' reach into the shared engine's previews
 // ============================================================================
 
-// The suites seed, settle, and read previews by id on the engine every test
-// shares, whose operations read the same store through their scope.
+/// [`ScanPreviews::seed_incoherent_scan_result_for_test`] on the engine every test
+/// shares, for the backend suites, whose operations read the same store through
+/// their scope.
 // shim: removed in M7b–M7e
-#[cfg(test)]
-fn shared() -> &'static ScanPreviews {
-    super::super::installed().stores().previews()
-}
-
-#[cfg(test)]
-pub(in crate::file_system::write_operations) fn register_preview(preview_id: String, state: Arc<ScanPreviewState>) {
-    shared().register_preview(preview_id, state);
-}
-
-#[cfg(test)]
-pub(in crate::file_system::write_operations) fn settle_preview(
-    preview_id: &str,
-    outcome: ScanOutcome,
-    result: Option<CachedScanResult>,
-) {
-    shared().settle_preview(preview_id, outcome, result);
-}
-
-#[cfg(test)]
-pub(in crate::file_system::write_operations) fn claim_preview(preview_id: &str, operation_id: &str) -> PreviewClaim {
-    shared().claim_preview(preview_id, operation_id)
-}
-
-#[cfg(test)]
-pub(in crate::file_system::write_operations) fn poll_claim(preview_id: &str) -> Option<ScanOutcome> {
-    shared().poll_claim(preview_id)
-}
-
-#[cfg(test)]
-pub(in crate::file_system::write_operations) fn abandon_claim(preview_id: &str) {
-    shared().abandon_claim(preview_id);
-}
-
-#[cfg(test)]
-pub(in crate::file_system::write_operations) fn take_cached_scan_result(
-    preview_id: &str,
-    requested_sources: &[PathBuf],
-) -> Option<ScanResult> {
-    shared().take_cached_scan_result(preview_id, requested_sources)
-}
-
 #[cfg(test)]
 pub(crate) fn seed_incoherent_scan_result_for_test(
     preview_id: String,
@@ -631,20 +590,8 @@ pub(crate) fn seed_incoherent_scan_result_for_test(
     file_count: usize,
     total_bytes: u64,
 ) {
-    shared().seed_incoherent_scan_result_for_test(preview_id, sources, file_count, total_bytes);
-}
-
-#[cfg(test)]
-pub(in crate::file_system::write_operations) fn age_settled_entry_for_test(preview_id: &str, by: Duration) {
-    shared().age_settled_entry_for_test(preview_id, by);
-}
-
-#[cfg(test)]
-pub(in crate::file_system::write_operations) fn insert_scan_result(preview_id: String, result: CachedScanResult) {
-    shared().insert_scan_result(preview_id, result);
-}
-
-#[cfg(test)]
-pub(in crate::file_system::write_operations) fn release_preview(preview_id: &str) {
-    shared().release_preview(preview_id);
+    super::super::installed()
+        .stores()
+        .previews()
+        .seed_incoherent_scan_result_for_test(preview_id, sources, file_count, total_bytes);
 }

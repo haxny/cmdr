@@ -11,6 +11,8 @@ use super::super::scan_source_tracker::{build_source_file_counts, top_level_sour
 use super::super::scan_walker::{WalkContext, walk_sources_with_per_path};
 use super::super::state::FileInfo;
 use super::*;
+use crate::file_system::write_operations::testing::TestOperations;
+use crate::listing_host::backends::AppListings;
 use std::fs;
 
 fn make_file_info(path: &str, source_root: &str) -> FileInfo {
@@ -28,7 +30,7 @@ fn make_file_info(path: &str, source_root: &str) -> FileInfo {
 /// per-source accounting is what's under test, not the callbacks.
 fn plain_walk_context<'a>() -> WalkContext<'a, String> {
     WalkContext {
-        listings: crate::file_system::write_operations::installed().host().listings(),
+        listings: &AppListings,
         // Nothing owns these walks, so there is nothing to park on.
         park_while_paused: &|| {},
         progress_interval: Duration::from_secs(3600),
@@ -198,7 +200,7 @@ fn run_walker_with_sources(sources: &[PathBuf]) -> WalkOutcome {
     let mut seen_inodes = HashSet::new();
     let captured = std::cell::RefCell::new(Vec::new());
     let ctx = WalkContext::<'_, String> {
-        listings: crate::file_system::write_operations::installed().host().listings(),
+        listings: &AppListings,
         park_while_paused: &|| {},
         progress_interval: Duration::from_millis(0),
         is_cancelled: &|| false,
@@ -413,13 +415,14 @@ fn with_scan_meta_handles_missing_expected_totals() {
 /// one conflict per file describes an operation that never happens.
 #[test]
 fn a_dry_run_of_a_same_folder_copy_reports_no_conflicts() {
+    let engine = TestOperations::new();
     let dir = tempfile::tempdir().expect("temp dir");
     fs::write(dir.path().join("photo.jpg"), b"pixels").expect("write file");
     fs::create_dir(dir.path().join("docs")).expect("create dir");
     fs::write(dir.path().join("docs/a.txt"), b"notes").expect("write nested file");
 
     let events = crate::file_system::write_operations::event_sinks::CollectorEventSink::new();
-    let state = Arc::new(WriteOperationState::new(Duration::from_millis(0)));
+    let state = Arc::new(engine.new_operation_state(Duration::from_millis(0)));
     let result = dry_run_scan(
         &[dir.path().join("photo.jpg"), dir.path().join("docs")],
         dir.path(),
@@ -442,13 +445,14 @@ fn a_dry_run_of_a_same_folder_copy_reports_no_conflicts() {
 /// The other half: a genuine clash at a different destination is still reported.
 #[test]
 fn a_dry_run_of_a_copy_onto_a_different_file_still_reports_the_conflict() {
+    let engine = TestOperations::new();
     let source_dir = tempfile::tempdir().expect("source dir");
     let dest_dir = tempfile::tempdir().expect("dest dir");
     fs::write(source_dir.path().join("photo.jpg"), b"mine").expect("write source");
     fs::write(dest_dir.path().join("photo.jpg"), b"theirs").expect("write dest");
 
     let events = crate::file_system::write_operations::event_sinks::CollectorEventSink::new();
-    let state = Arc::new(WriteOperationState::new(Duration::from_millis(0)));
+    let state = Arc::new(engine.new_operation_state(Duration::from_millis(0)));
     let result = dry_run_scan(
         &[source_dir.path().join("photo.jpg")],
         dest_dir.path(),
@@ -486,7 +490,7 @@ mod online_only_tally {
             seen: &seen,
         };
         let ctx = WalkContext {
-            listings: crate::file_system::write_operations::installed().host().listings(),
+            listings: &AppListings,
             online_only: Some(&watch),
             ..plain_walk_context()
         };

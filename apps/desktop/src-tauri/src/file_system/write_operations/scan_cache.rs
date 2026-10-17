@@ -40,10 +40,7 @@ mod previews;
 pub(crate) use previews::seed_incoherent_scan_result_for_test;
 pub(super) use previews::{PreviewClaim, ScanOutcome, ScanPreviewState, ScanPreviews};
 #[cfg(test)]
-pub(super) use previews::{
-    SCAN_RESULT_TTL, abandon_claim, age_settled_entry_for_test, claim_preview, expired_scan_result_ids,
-    insert_scan_result, poll_claim, register_preview, release_preview, settle_preview, take_cached_scan_result,
-};
+pub(super) use previews::{SCAN_RESULT_TTL, expired_scan_result_ids};
 
 /// Cached result from a completed scan preview.
 ///
