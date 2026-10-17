@@ -28,6 +28,7 @@ fn make_file_info(path: &str, source_root: &str) -> FileInfo {
 /// per-source accounting is what's under test, not the callbacks.
 fn plain_walk_context<'a>() -> WalkContext<'a, String> {
     WalkContext {
+        listings: crate::file_system::write_operations::installed().host().listings(),
         // Nothing owns these walks, so there is nothing to park on.
         park_while_paused: &|| {},
         progress_interval: Duration::from_secs(3600),
@@ -197,6 +198,7 @@ fn run_walker_with_sources(sources: &[PathBuf]) -> WalkOutcome {
     let mut seen_inodes = HashSet::new();
     let captured = std::cell::RefCell::new(Vec::new());
     let ctx = WalkContext::<'_, String> {
+        listings: crate::file_system::write_operations::installed().host().listings(),
         park_while_paused: &|| {},
         progress_interval: Duration::from_millis(0),
         is_cancelled: &|| false,
@@ -484,6 +486,7 @@ mod online_only_tally {
             seen: &seen,
         };
         let ctx = WalkContext {
+            listings: crate::file_system::write_operations::installed().host().listings(),
             online_only: Some(&watch),
             ..plain_walk_context()
         };

@@ -425,6 +425,7 @@ async fn the_bridge_ticks_after_the_snapshot_that_first_carries_the_row() {
 
     // A live preview tick reaches the operation too.
     super::scan_bridge::forward_scan_progress(
+        crate::file_system::write_operations::installed(),
         &preview_id,
         super::scan_bridge::ScanCounts {
             files_found: 12,
@@ -455,6 +456,7 @@ async fn the_bridge_ticks_after_the_snapshot_that_first_carries_the_row() {
     // The claim is gone, so the bridge has nothing to forward to.
     let before = observed_scan_ticks(&op_id).len();
     super::scan_bridge::forward_scan_progress(
+        crate::file_system::write_operations::installed(),
         &preview_id,
         super::scan_bridge::ScanCounts {
             files_found: 99,

@@ -17,11 +17,11 @@ use std::time::{Duration, Instant};
 
 use cmdr_fs::apple_double::SidecarRule;
 
-use super::host;
 use super::state::FileInfo;
 use super::validation::is_symlink_loop;
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::CopyScanResult;
+use cmdr_fs::volume::host::listings::ListingHost;
 /// Per-regular-file hook fired by the walk, receiving the file path and size (the `WalkContext::on_file` field).
 type OnFileHook<'a> = &'a dyn Fn(&Path, u64);
 
@@ -94,6 +94,10 @@ pub(super) struct WalkContext<'a, E> {
     /// a selected source, so a `._` file the person picked still goes. Tests
     /// inject the volume probe to play a FAT volume on APFS.
     pub(super) sidecars: &'a SidecarRule,
+    /// The fresh-listing oracle: a directory an open pane keeps watcher-fresh
+    /// is walked from its listing instead of the disk. Asked only for a walk
+    /// that names its volume.
+    pub(super) listings: &'a dyn ListingHost,
 }
 
 /// Walks every top-level source in turn, accumulating the shared tallies AND
@@ -282,8 +286,7 @@ pub(super) fn walk_dir_recursive<E>(
         // step below still goes through `walk_dir_recursive`, which re-applies
         // the oracle at each level.
         if let Some(vid) = volume_id
-            && let Some(cached_entries) = host::installed_for("a scan walk's fresh-listing oracle")
-                .and_then(|host| host.listings().authoritative_listing(vid, path))
+            && let Some(cached_entries) = ctx.listings.authoritative_listing(vid, path)
         {
             walk_cached_entries(
                 path,

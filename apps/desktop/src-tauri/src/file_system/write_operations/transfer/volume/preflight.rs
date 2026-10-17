@@ -31,7 +31,7 @@ use std::sync::Mutex;
 use std::time::Instant;
 
 use super::super::super::event_sinks::OperationEventSink;
-use super::super::super::scan_cache::take_cached_scan_result;
+use super::super::super::scan_cache::ScanPreviews;
 use super::super::super::state::{ScanResult, WriteOperationState, is_cancelled};
 use super::super::super::transfer_tree::{TreeModel, TreeOrder, TreeRecorder, from_per_path, sort_sources};
 use super::super::super::types::{
@@ -245,7 +245,8 @@ pub(super) async fn scan_volume_sources(
     if let Some(mut cached) = config
         .preview_id
         .as_deref()
-        .and_then(|preview_id| take_cached_scan_result(preview_id, source_paths))
+        .and_then(|preview_id| state.scope().stores().previews().take_cached_scan_result(preview_id, source_paths))
+
         .filter(|cached| {
             let describes_another_transfer = counted_a_selected_link_as_a_link(cached, source_paths);
             if describes_another_transfer {
@@ -471,6 +472,7 @@ impl TopLevelMoveHints {
 /// SMB, one parent listing on MTP). Cost is O(distinct parents), never
 /// O(subtree).
 pub(super) async fn top_level_move_hints(
+    previews: &ScanPreviews,
     volume: &Arc<dyn Volume>,
     source_paths: &[PathBuf],
     config: &VolumeCopyConfig,
@@ -480,7 +482,7 @@ pub(super) async fn top_level_move_hints(
     if let Some(cached) = config
         .preview_id
         .as_deref()
-        .and_then(|preview_id| take_cached_scan_result(preview_id, source_paths))
+        .and_then(|preview_id| previews.take_cached_scan_result(preview_id, source_paths))
     {
         for (path, scan) in cached.per_path {
             if !scan.top_level_is_directory {

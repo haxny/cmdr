@@ -37,7 +37,6 @@ use crate::file_system::write_operations::in_flight_temps::{self, ItemKind};
 use crate::file_system::write_operations::journal;
 use crate::file_system::write_operations::ledger::CopyTransaction;
 use crate::file_system::write_operations::scan::scan_sources;
-use crate::file_system::write_operations::scan_cache::take_cached_scan_result;
 use crate::file_system::write_operations::scan_source_tracker::SourceItemTracker;
 use crate::file_system::write_operations::state::WriteOperationState;
 use crate::file_system::write_operations::transfer_sides::transfer_stop_event;
@@ -73,7 +72,11 @@ pub(super) fn move_with_staging(
         // Volume scans cache aggregate stats with an empty `files` list; the
         // per-file move loop needs the file list, so treat an empty-files
         // cache hit the same as a miss and fall through to a fresh local scan.
-        if let Some(cached) = take_cached_scan_result(preview_id, sources).filter(|c| !c.files.is_empty()) {
+        let previews = state.scope().stores().previews();
+        if let Some(cached) = previews
+            .take_cached_scan_result(preview_id, sources)
+            .filter(|c| !c.files.is_empty())
+        {
             log::debug!(
                 "move_with_staging: reusing cached scan for operation_id={}, preview_id={}, files={}, bytes={}",
                 operation_id,

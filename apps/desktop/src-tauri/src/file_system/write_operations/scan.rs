@@ -16,10 +16,10 @@ use std::time::{Duration, Instant};
 
 use super::cancellable::run_cancellable_scoped;
 use super::event_sinks::OperationEventSink;
-use super::host;
 use super::scan_walker::{WalkContext, walk_dir_recursive};
 use super::state::{ScanResult, WriteOperationState};
 use super::types::{WriteOperationError, WriteOperationPhase, WriteOperationType, WriteProgressEvent};
+use cmdr_fs::volume::host::listings::ListingHost;
 use cmdr_fs::volume::{CopyScanResult, ScanRecorder, Volume, VolumeError};
 
 /// Totals returned by `scan_subtree_with_oracle`.
@@ -61,11 +61,15 @@ pub(super) struct SubtreeTotals {
 ///
 /// `recorder` gets `path` and every entry below it, for a transfer's live tree
 /// (`super::transfer_tree`), named the way the listing names them.
+///
+/// `listings` is the oracle: the engine host's view of what the open panes keep
+/// fresh.
 #[allow(
     clippy::too_many_arguments,
     reason = "one recursion's inputs: where to walk, what stops it, and who hears about it"
 )]
 pub(super) async fn scan_subtree_with_oracle(
+    listings: &dyn ListingHost,
     volume: &dyn Volume,
     volume_id: &str,
     path: &Path,
@@ -89,9 +93,7 @@ pub(super) async fn scan_subtree_with_oracle(
     }
 
     // Load entries from oracle or the volume itself.
-    let entries: Vec<FileEntry> = match host::installed_for("a scan's fresh-listing oracle")
-        .and_then(|host| host.listings().authoritative_listing(volume_id, path))
-    {
+    let entries: Vec<FileEntry> = match listings.authoritative_listing(volume_id, path) {
         Some(e) => e,
         None => volume.list_directory(path, on_progress).await?,
     };
@@ -129,6 +131,7 @@ pub(super) async fn scan_subtree_with_oracle(
                         })
                     };
                     Box::pin(scan_subtree_with_oracle(
+                        listings,
                         volume,
                         volume_id,
                         &child_path,
@@ -142,6 +145,7 @@ pub(super) async fn scan_subtree_with_oracle(
                 }
                 None => {
                     Box::pin(scan_subtree_with_oracle(
+                        listings,
                         volume,
                         volume_id,
                         &child_path,
@@ -343,6 +347,7 @@ fn scan_sources_internal(
         // The online-only tally belongs to the confirmation dialog's PREVIEW: by
         // the time this walk runs the routing is already decided.
         online_only: None,
+        listings: state.scope().host().listings(),
     };
 
     // Local FS scan goes through `LocalPosixVolume`, which is always registered as

@@ -171,6 +171,9 @@ async fn start_copy_with_a_real_scan(label: &str) -> RunningScan {
     let sink = Arc::new(PauseOnFirstTick::new(operation_id.clone()));
     let events: Arc<dyn ScanPreviewEventSink> = Arc::clone(&sink) as Arc<dyn ScanPreviewEventSink>;
     let watchdog = ScanWatchdog::start(
+        crate::file_system::write_operations::installed()
+            .stores()
+            .previews_arc(),
         preview_id.clone(),
         ScanTarget::of(std::slice::from_ref(&src), "root"),
         SCAN_INACTIVITY_LIMIT,
@@ -181,6 +184,7 @@ async fn start_copy_with_a_real_scan(label: &str) -> RunningScan {
     let walk_preview_id = preview_id.clone();
     let walk = std::thread::spawn(move || {
         run_scan_preview(
+            crate::file_system::write_operations::installed(),
             events,
             walk_preview_id,
             vec![src],

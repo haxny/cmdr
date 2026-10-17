@@ -26,6 +26,9 @@ fn fresh_state() -> Arc<ScanPreviewState> {
 
 fn watchdog(preview_id: &str, sources: &[PathBuf]) -> Arc<ScanWatchdog> {
     ScanWatchdog::start(
+        crate::file_system::write_operations::installed()
+            .stores()
+            .previews_arc(),
         preview_id.to_string(),
         ScanTarget::of(sources, "test"),
         Duration::from_secs(600),
@@ -51,6 +54,7 @@ async fn local_preview(tag: &str, sources: &[PathBuf], purpose: ScanPreviewPurpo
     let watchdog = watchdog(&preview_id, sources);
     tokio::task::spawn_blocking(move || {
         run_scan_preview(
+            crate::file_system::write_operations::installed(),
             Arc::new(CollectorScanPreviewSink::new()),
             walk_id,
             walk_sources,
@@ -151,6 +155,7 @@ async fn a_transfer_preview_of_a_volume_records_its_tree() {
     let preview_id = format!("tree-volume-{}", std::process::id());
 
     run_volume_scan_preview(
+        crate::file_system::write_operations::installed().clone(),
         Arc::new(CollectorScanPreviewSink::new()),
         preview_id.clone(),
         sources.clone(),

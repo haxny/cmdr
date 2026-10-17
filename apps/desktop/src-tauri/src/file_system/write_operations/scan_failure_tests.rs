@@ -101,6 +101,9 @@ fn fresh_state() -> Arc<ScanPreviewState> {
 
 fn start_watchdog(preview_id: &str, sources: &[PathBuf], limit: Duration) -> Arc<ScanWatchdog> {
     ScanWatchdog::start(
+        crate::file_system::write_operations::installed()
+            .stores()
+            .previews_arc(),
         preview_id.to_string(),
         ScanTarget::of(sources, "test"),
         limit,
@@ -132,6 +135,7 @@ async fn a_local_walk_that_finds_its_source_gone_names_it() {
     let walk_id = preview_id.clone();
     tokio::task::spawn_blocking(move || {
         run_scan_preview(
+            crate::file_system::write_operations::installed(),
             Arc::new(CollectorScanPreviewSink::new()),
             walk_id,
             sources,
@@ -160,6 +164,7 @@ async fn a_volume_walk_that_finds_its_source_gone_names_it() {
     let watchdog = start_watchdog(&preview_id, &sources, Duration::from_secs(600));
 
     run_volume_scan_preview(
+        crate::file_system::write_operations::installed().clone(),
         Arc::new(CollectorScanPreviewSink::new()),
         preview_id,
         sources,
@@ -190,6 +195,9 @@ async fn a_walk_that_stops_answering_names_what_it_was_walking() {
     let state = fresh_state();
     let sink: Arc<dyn ScanPreviewEventSink> = Arc::new(CollectorScanPreviewSink::new());
     let watchdog = ScanWatchdog::start(
+        crate::file_system::write_operations::installed()
+            .stores()
+            .previews_arc(),
         preview_id.clone(),
         ScanTarget::of(&sources, "wedged"),
         Duration::from_millis(200),
@@ -197,6 +205,7 @@ async fn a_walk_that_stops_answering_names_what_it_was_walking() {
         Arc::clone(&sink),
     );
     let walk = tokio::spawn(run_volume_scan_preview(
+        crate::file_system::write_operations::installed().clone(),
         sink,
         preview_id,
         sources,

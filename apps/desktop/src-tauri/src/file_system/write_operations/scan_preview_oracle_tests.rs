@@ -216,9 +216,18 @@ async fn scan_preview_uses_authoritative_listing_for_top_level_files() {
     ];
     let is_cancelled = || false;
     let on_progress = |_: cmdr_fs::volume::ListingProgress| {};
-    let result = run_oracle_aware_batch_scan(vol.as_ref(), &vid, &sources, &is_cancelled, None, &on_progress, None)
-        .await
-        .expect("oracle-aware batch scan should succeed");
+    let result = run_oracle_aware_batch_scan(
+        crate::file_system::write_operations::installed().host().listings(),
+        vol.as_ref(),
+        &vid,
+        &sources,
+        &is_cancelled,
+        None,
+        &on_progress,
+        None,
+    )
+    .await
+    .expect("oracle-aware batch scan should succeed");
 
     assert_eq!(
         vol.list_dir_count(),
@@ -262,9 +271,18 @@ async fn scan_preview_falls_through_when_watcher_dead() {
     let sources = vec![PathBuf::from("/cold/a.jpg")];
     let is_cancelled = || false;
     let on_progress = |_: cmdr_fs::volume::ListingProgress| {};
-    let result = run_oracle_aware_batch_scan(vol.as_ref(), &vid, &sources, &is_cancelled, None, &on_progress, None)
-        .await
-        .expect("scan should succeed via fallthrough");
+    let result = run_oracle_aware_batch_scan(
+        crate::file_system::write_operations::installed().host().listings(),
+        vol.as_ref(),
+        &vid,
+        &sources,
+        &is_cancelled,
+        None,
+        &on_progress,
+        None,
+    )
+    .await
+    .expect("scan should succeed via fallthrough");
 
     assert_eq!(result.aggregate.file_count, 1);
     // Real backend size (12 bytes "hello-12byte"), NOT the cached 99999.
@@ -303,9 +321,18 @@ async fn scan_preview_uses_cached_subfolder_listing_when_other_pane_has_it() {
     let sources = vec![PathBuf::from("/a/sub")];
     let is_cancelled = || false;
     let on_progress = |_: cmdr_fs::volume::ListingProgress| {};
-    let result = run_oracle_aware_batch_scan(vol.as_ref(), &vid, &sources, &is_cancelled, None, &on_progress, None)
-        .await
-        .expect("scan should succeed");
+    let result = run_oracle_aware_batch_scan(
+        crate::file_system::write_operations::installed().host().listings(),
+        vol.as_ref(),
+        &vid,
+        &sources,
+        &is_cancelled,
+        None,
+        &on_progress,
+        None,
+    )
+    .await
+    .expect("scan should succeed");
 
     assert_eq!(
         vol.list_dir_count(),
@@ -345,6 +372,7 @@ async fn scan_preview_records_what_the_oracle_serves() {
     let is_cancelled = || false;
     let on_progress = |_: cmdr_fs::volume::ListingProgress| {};
     run_oracle_aware_batch_scan(
+        crate::file_system::write_operations::installed().host().listings(),
         vol.as_ref(),
         &vid,
         &sources,
@@ -389,9 +417,18 @@ async fn scan_preview_preserves_symlink_semantics() {
     let sources = vec![PathBuf::from("/a/link-to-elsewhere")];
     let is_cancelled = || false;
     let on_progress = |_: cmdr_fs::volume::ListingProgress| {};
-    let result = run_oracle_aware_batch_scan(vol.as_ref(), &vid, &sources, &is_cancelled, None, &on_progress, None)
-        .await
-        .expect("symlink scan should succeed");
+    let result = run_oracle_aware_batch_scan(
+        crate::file_system::write_operations::installed().host().listings(),
+        vol.as_ref(),
+        &vid,
+        &sources,
+        &is_cancelled,
+        None,
+        &on_progress,
+        None,
+    )
+    .await
+    .expect("symlink scan should succeed");
 
     assert_eq!(
         vol.list_dir_count(),
@@ -436,9 +473,18 @@ async fn scan_preview_handles_listing_closed_mid_walk() {
     let sources = vec![PathBuf::from("/a/sub")];
     let is_cancelled = || false;
     let on_progress = |_: cmdr_fs::volume::ListingProgress| {};
-    let result = run_oracle_aware_batch_scan(vol.as_ref(), &vid, &sources, &is_cancelled, None, &on_progress, None)
-        .await
-        .expect("mid-walk close scan should succeed");
+    let result = run_oracle_aware_batch_scan(
+        crate::file_system::write_operations::installed().host().listings(),
+        vol.as_ref(),
+        &vid,
+        &sources,
+        &is_cancelled,
+        None,
+        &on_progress,
+        None,
+    )
+    .await
+    .expect("mid-walk close scan should succeed");
 
     // /a is still oracle-hit (it's the parent of the input source). The
     // recursion into /a/sub goes through `scan_subtree_with_oracle` which

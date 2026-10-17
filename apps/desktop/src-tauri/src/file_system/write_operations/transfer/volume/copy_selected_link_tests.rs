@@ -32,6 +32,7 @@ use std::sync::Arc;
 fn publish_local_preview(preview_id: &str, sources: &[PathBuf]) {
     let sidecars = cmdr_fs::apple_double::SidecarRule::new();
     let ctx: WalkContext<'_, String> = WalkContext {
+        listings: crate::file_system::write_operations::installed().host().listings(),
         park_while_paused: &|| {},
         progress_interval: Duration::from_secs(3600),
         is_cancelled: &|| false,

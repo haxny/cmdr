@@ -209,9 +209,18 @@ async fn run_oracle_aware_batch_scan_forwards_dirs_and_bytes_from_backend() {
     let recorder = Recorder::default();
     let on_progress = |p: ListingProgress| recorder.record(p);
 
-    let _ = run_oracle_aware_batch_scan(vol.as_ref(), &vid, &sources, &is_cancelled, None, &on_progress, None)
-        .await
-        .expect("oracle-aware batch scan should succeed");
+    let _ = run_oracle_aware_batch_scan(
+        crate::file_system::write_operations::installed().host().listings(),
+        vol.as_ref(),
+        &vid,
+        &sources,
+        &is_cancelled,
+        None,
+        &on_progress,
+        None,
+    )
+    .await
+    .expect("oracle-aware batch scan should succeed");
 
     let recorded = recorder.snapshot();
     assert!(
@@ -261,9 +270,18 @@ async fn dirs_and_bytes_baseline_shifts_across_parent_groups() {
     let recorder = Recorder::default();
     let on_progress = |p: ListingProgress| recorder.record(p);
 
-    let _ = run_oracle_aware_batch_scan(vol.as_ref(), &vid, &sources, &is_cancelled, None, &on_progress, None)
-        .await
-        .expect("oracle-aware batch scan should succeed");
+    let _ = run_oracle_aware_batch_scan(
+        crate::file_system::write_operations::installed().host().listings(),
+        vol.as_ref(),
+        &vid,
+        &sources,
+        &is_cancelled,
+        None,
+        &on_progress,
+        None,
+    )
+    .await
+    .expect("oracle-aware batch scan should succeed");
 
     let recorded = recorder.snapshot();
     let max_dirs = recorded.iter().map(|p| p.dirs).max().unwrap_or(0);

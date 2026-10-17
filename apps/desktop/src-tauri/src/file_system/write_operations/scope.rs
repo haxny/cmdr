@@ -15,14 +15,16 @@ use std::sync::{Arc, OnceLock};
 use cmdr_operation_log::writer::OpenOperation;
 use cmdr_operation_log::{OpJournal, OperationLog};
 
+use super::EngineStores;
 use super::host::EngineHost;
 use super::status_cache::StatusCache;
 
 /// One operation's handle on its engine: the host's seams, the status cache,
-/// and the operation's journal once it opened.
+/// the engine's stores, and the operation's journal once it opened.
 pub(crate) struct OpScope {
     host: Arc<EngineHost>,
     status: Arc<StatusCache>,
+    stores: Arc<EngineStores>,
     operation_log: OperationLog,
     /// Set once, when the operation opens its journal row. Unset for an
     /// operation that never opened one (a queued op cancelled before it ran, a
@@ -31,10 +33,16 @@ pub(crate) struct OpScope {
 }
 
 impl OpScope {
-    pub(super) fn new(host: Arc<EngineHost>, status: Arc<StatusCache>, operation_log: OperationLog) -> Self {
+    pub(super) fn new(
+        host: Arc<EngineHost>,
+        status: Arc<StatusCache>,
+        stores: Arc<EngineStores>,
+        operation_log: OperationLog,
+    ) -> Self {
         Self {
             host,
             status,
+            stores,
             operation_log,
             journal: OnceLock::new(),
         }
@@ -48,6 +56,11 @@ impl OpScope {
     /// The engine's status cache.
     pub(super) fn status(&self) -> &StatusCache {
         &self.status
+    }
+
+    /// The engine's stores: previews, the in-flight ledger, outages, probes.
+    pub(super) fn stores(&self) -> &EngineStores {
+        &self.stores
     }
 
     /// Opens this operation's journal row, deciding once whether it's journaled.

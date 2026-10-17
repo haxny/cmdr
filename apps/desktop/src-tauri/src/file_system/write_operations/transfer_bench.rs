@@ -20,7 +20,7 @@ use uuid::Uuid;
 use super::delete::delete_files_with_progress_inner;
 use super::event_sinks::{OperationEventSink, ScanPreviewEventSink};
 use super::journal;
-use super::scan_cache::{ScanPreviewState, take_cached_scan_result};
+use super::scan_cache::ScanPreviewState;
 use super::scan_preview::run_scan_preview;
 use super::scan_watchdog::{SCAN_INACTIVITY_LIMIT, ScanTarget, ScanWatchdog};
 use super::state::WriteOperationState;
@@ -145,6 +145,7 @@ pub async fn copy_volumes(
 /// Call it inside a Tokio runtime context: the preview's watchdog spawns its
 /// heartbeat there.
 pub fn scan_preview_local(sources: Vec<PathBuf>) -> Option<usize> {
+    let engine = super::installed();
     let preview_id = Uuid::new_v4().to_string();
     let state = Arc::new(ScanPreviewState {
         cancelled: AtomicBool::new(false),
@@ -152,6 +153,7 @@ pub fn scan_preview_local(sources: Vec<PathBuf>) -> Option<usize> {
     });
     let events: Arc<dyn ScanPreviewEventSink> = Arc::new(DiscardPreviewEvents);
     let watchdog = ScanWatchdog::start(
+        engine.stores().previews_arc(),
         preview_id.clone(),
         ScanTarget::of(&sources, DEFAULT_VOLUME_ID),
         SCAN_INACTIVITY_LIMIT,
@@ -159,6 +161,7 @@ pub fn scan_preview_local(sources: Vec<PathBuf>) -> Option<usize> {
         Arc::clone(&events),
     );
     run_scan_preview(
+        engine,
         events,
         preview_id.clone(),
         sources.clone(),
@@ -166,7 +169,11 @@ pub fn scan_preview_local(sources: Vec<PathBuf>) -> Option<usize> {
         ScanPreviewPurpose::Transfer,
         watchdog,
     );
-    take_cached_scan_result(&preview_id, &sources).map(|result| result.file_count)
+    engine
+        .stores()
+        .previews()
+        .take_cached_scan_result(&preview_id, &sources)
+        .map(|result| result.file_count)
 }
 
 /// A temp-DB operation log installed as THE process-global journal, so a local

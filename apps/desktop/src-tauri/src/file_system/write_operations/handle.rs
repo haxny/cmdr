@@ -20,7 +20,7 @@ use super::state::WriteOperationRegistry;
 use super::state::WriteOperationState;
 use super::status_cache::StatusCache;
 use super::types::OperationStatus;
-use super::{Inner, Operations};
+use super::{EngineStores, Inner, Operations};
 
 /// The seams an [`Operations`] is built with. From [`Operations::builder`].
 pub(crate) struct OperationsBuilder {
@@ -133,18 +133,21 @@ impl Operations {
         let host = Arc::new(host);
         let registry = Arc::new(WriteOperationRegistry::new());
         let status = Arc::new(StatusCache::new(Arc::clone(host.events_arc())));
+        let stores = Arc::new(EngineStores::new());
         Self {
             inner: Arc::new_cyclic(|engine| Inner {
                 manager: Arc::new(OperationManager::new(
                     Arc::clone(&host),
                     Arc::clone(&registry),
                     Arc::clone(&status),
+                    Arc::clone(stores.previews_arc()),
                     engine.clone(),
                 )),
                 host,
                 operation_log,
                 registry,
                 status,
+                stores,
             }),
         }
     }
@@ -174,12 +177,19 @@ impl Operations {
         &self.inner.status
     }
 
-    /// A scope for one new operation on this engine: its seams, its status cache,
-    /// and a journal it opens later.
+    /// The stores each operation's scope shares: previews, the in-flight
+    /// ledger, outages, and probes.
+    pub(super) fn stores(&self) -> &EngineStores {
+        &self.inner.stores
+    }
+
+    /// A scope for one new operation on this engine: its seams, its status
+    /// cache, the engine's stores, and a journal it opens later.
     pub(super) fn op_scope(&self) -> OpScope {
         OpScope::new(
             Arc::clone(&self.inner.host),
             Arc::clone(&self.inner.status),
+            Arc::clone(&self.inner.stores),
             self.inner.operation_log.clone(),
         )
     }

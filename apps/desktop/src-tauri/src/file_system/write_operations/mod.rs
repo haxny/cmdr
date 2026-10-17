@@ -311,6 +311,39 @@ pub(crate) struct Inner {
     registry: Arc<state::WriteOperationRegistry>,
     /// Every registered operation's status, and the busy-volume set.
     status: Arc<status_cache::StatusCache>,
+    /// The stores each operation's scope shares.
+    stores: Arc<EngineStores>,
+}
+
+/// What the engine keeps between two calls that its operations reach through
+/// their scope: the scan previews, the in-flight ledger, the lanes' outage
+/// records, and the transfer probes.
+///
+/// Here at the hub, beside [`Inner`], for the same reason `Inner` is: the
+/// modules that own each store also work on operation states, so a scope
+/// naming those modules would circle back through `state`. The scope names
+/// this type instead.
+pub(in crate::file_system::write_operations) struct EngineStores {
+    previews: Arc<scan_cache::ScanPreviews>,
+}
+
+impl EngineStores {
+    fn new() -> Self {
+        Self {
+            previews: Arc::new(scan_cache::ScanPreviews::new()),
+        }
+    }
+
+    /// Every scan preview this engine knows about, in flight or settled.
+    pub(in crate::file_system::write_operations) fn previews(&self) -> &scan_cache::ScanPreviews {
+        &self.previews
+    }
+
+    /// The same, shared, for a part of the engine that keeps its own handle on
+    /// it (the manager).
+    pub(in crate::file_system::write_operations) fn previews_arc(&self) -> &Arc<scan_cache::ScanPreviews> {
+        &self.previews
+    }
 }
 
 /// The engine the host installed, for the free functions callers outside the

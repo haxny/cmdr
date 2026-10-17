@@ -7,11 +7,11 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Instant;
 
+use super::super::Operations;
 use super::super::error_classification::classify_io_error;
 use super::super::event_sinks::ScanPreviewEventSink;
-use super::super::host;
 use super::super::scan_bridge::{ScanCounts, ScanPause, forward_scan_progress};
-use super::super::scan_cache::{ScanOutcome, settle_preview};
+use super::super::scan_cache::ScanOutcome;
 use super::super::scan_walker::{OnlineOnlyWatch, WalkContext, walk_sources_with_per_path};
 use super::super::scan_watchdog::{ScanTally, ScanWatchdog};
 use super::super::state::{CachedScanResult, FileInfo, ScanPreviewState};
@@ -37,6 +37,7 @@ use cmdr_fs::volume::CopyScanResult;
 /// already done, since it ran concurrently) and cancels with the scan; a
 /// sampling failure degrades to "no estimate" and never affects the scan.
 pub(in crate::file_system::write_operations) fn run_scan_preview(
+    engine: &Operations,
     events: Arc<dyn ScanPreviewEventSink>,
     preview_id: String,
     sources: Vec<PathBuf>,
@@ -47,12 +48,12 @@ pub(in crate::file_system::write_operations) fn run_scan_preview(
     use super::super::compress_estimate::CompressEstimator;
 
     let sample_for_estimate = purpose == ScanPreviewPurpose::Compress;
+    let host = engine.host();
+    let previews = engine.stores().previews();
 
     // E2E only: a deterministic scanning window for the specs that have to act
     // while a transfer is still counting. Unset in production.
-    if let Some(delay) =
-        host::installed_for("a scan preview's pacing").and_then(|host| host.pacing().scan_preview_delay())
-    {
+    if let Some(delay) = host.pacing().scan_preview_delay() {
         std::thread::sleep(delay);
     }
 
@@ -72,8 +73,7 @@ pub(in crate::file_system::write_operations) fn run_scan_preview(
     // Index-derived expected totals: lets the UI render a real progress bar
     // from the first scan event instead of an indeterminate spinner. `None`
     // when any source isn't covered by the index.
-    let expected =
-        host::installed_for("a scan preview's expected totals").and_then(|host| host.index().expected_totals(&sources));
+    let expected = host.index().expected_totals(&sources);
 
     // Online-only tally, armed only when the sources reach into a cloud drive we
     // know by name. A selected FOLDER can't carry `SF_DATALESS` itself, so this
@@ -93,16 +93,21 @@ pub(in crate::file_system::write_operations) fn run_scan_preview(
     let (estimate_tx, estimate_worker) = if sample_for_estimate {
         let (tx, rx) = std::sync::mpsc::channel::<(PathBuf, u64)>();
         let cancel = Arc::clone(&state);
-        let handle = std::thread::spawn(move || {
-            let mut estimator = CompressEstimator::new();
-            while let Ok((path, size)) = rx.recv() {
-                if cancel.cancelled.load(Ordering::Relaxed) {
-                    break;
+        // The same panic a bare `thread::spawn` raises when the OS refuses a
+        // thread; the name is what's new.
+        let handle = std::thread::Builder::new()
+            .name("cmdr-compress-estimate".to_string())
+            .spawn(move || {
+                let mut estimator = CompressEstimator::new();
+                while let Ok((path, size)) = rx.recv() {
+                    if cancel.cancelled.load(Ordering::Relaxed) {
+                        break;
+                    }
+                    estimator.observe(&path, size);
                 }
-                estimator.observe(&path, size);
-            }
-            estimator.finish()
-        });
+                estimator.finish()
+            })
+            .expect("the OS starts the compress estimate's thread");
         (Some(tx), Some(handle))
     } else {
         (None, None)
@@ -110,7 +115,12 @@ pub(in crate::file_system::write_operations) fn run_scan_preview(
 
     // The gate this walk parks on, once an operation claims the preview. Its
     // owner is looked up at the progress tick below, never per entry.
-    let pause = ScanPause::for_preview(preview_id.clone(), Arc::clone(&state), Arc::clone(&watchdog));
+    let pause = ScanPause::for_preview(
+        engine.clone(),
+        preview_id.clone(),
+        Arc::clone(&state),
+        Arc::clone(&watchdog),
+    );
 
     // One `CopyScanResult` per top-level source, filled by the walk below. The
     // copy engine reads it back as its `source_hints`, so a source that isn't in
@@ -179,6 +189,7 @@ pub(in crate::file_system::write_operations) fn run_scan_preview(
                 // transfer's queue row, chip, and dialog stay live through the
                 // walk instead of sitting at zero.
                 forward_scan_progress(
+                    engine,
                     &preview_id,
                     ScanCounts {
                         files_found,
@@ -193,6 +204,7 @@ pub(in crate::file_system::write_operations) fn run_scan_preview(
             },
             on_file: sample_for_estimate.then_some(&send_sample as &dyn Fn(&Path, u64)),
             online_only: watch_online_only.then_some(&online_only_watch),
+            listings: host.listings(),
         };
         // Local FS scan preview uses the "root" volume ID. The oracle short-circuits
         // any subtree currently open in a pane with a live FSEvents watcher.
@@ -233,14 +245,14 @@ pub(in crate::file_system::write_operations) fn run_scan_preview(
     match result {
         _ if cancelled => {
             watchdog.note_settled("cancelled");
-            settle_preview(&preview_id, ScanOutcome::Cancelled, None);
+            previews.settle_preview(&preview_id, ScanOutcome::Cancelled, None);
             events.emit_cancelled(ScanPreviewCancelledEvent { preview_id });
         }
         Ok(()) => {
             // A tree bug builds none, and the operation builds its own (or none) later.
             let built = (purpose == ScanPreviewPurpose::Transfer)
                 .then(|| {
-                    let order = TreeOrder::active(host::installed_for("a scan preview's tree")?);
+                    let order = TreeOrder::active(host);
                     from_local_scan(
                         &sources,
                         &dirs,
@@ -264,7 +276,7 @@ pub(in crate::file_system::write_operations) fn run_scan_preview(
                 dirs: dirs_count,
                 bytes: total_bytes,
             });
-            settle_preview(
+            previews.settle_preview(
                 &preview_id,
                 ScanOutcome::Complete,
                 Some(
@@ -292,6 +304,6 @@ pub(in crate::file_system::write_operations) fn run_scan_preview(
                 online_only_found: online_only_seen.load(Ordering::Relaxed),
             });
         }
-        Err(error) => settle_failed_preview(&*events, &watchdog, preview_id, error),
+        Err(error) => settle_failed_preview(previews, &*events, &watchdog, preview_id, error),
     }
 }

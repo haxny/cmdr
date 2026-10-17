@@ -71,7 +71,7 @@ use cmdr_fs::volume::LaneKey;
 use cmdr_operation_log::types::OpKind;
 
 use super::host::{EngineHost, OperationErrorReport};
-use super::scan_cache;
+use super::scan_cache::{self, ScanPreviews};
 use super::state::{WriteOperationRegistry, WriteOperationState};
 use super::status_cache::StatusCache;
 use super::types::{LifecycleStatus, WriteOperationError, WriteOperationType};
@@ -275,6 +275,9 @@ pub(crate) struct OperationManager {
     registry: Arc<WriteOperationRegistry>,
     /// The engine's status cache, where an admitted op's volumes turn busy.
     status: Arc<StatusCache>,
+    /// The engine's scan previews, which an op claims when it registers and
+    /// abandons when it leaves without consuming.
+    previews: Arc<ScanPreviews>,
     /// The engine this manager belongs to, handed to each start it admits.
     /// Weak: the engine owns the manager.
     engine: Weak<super::Inner>,
@@ -306,6 +309,7 @@ impl OperationManager {
         host: Arc<EngineHost>,
         registry: Arc<WriteOperationRegistry>,
         status: Arc<StatusCache>,
+        previews: Arc<ScanPreviews>,
         engine: Weak<super::Inner>,
     ) -> Self {
         Self {
@@ -318,6 +322,7 @@ impl OperationManager {
             host,
             registry,
             status,
+            previews,
             engine,
             admission_passes: AtomicU64::new(0),
             emits: AtomicU64::new(0),
@@ -348,7 +353,7 @@ impl OperationManager {
         // no claim and falls back to its own walk.
         let (claimed_preview, in_scan_wait) = match &descriptor.preview_id {
             None => (None, false),
-            Some(preview_id) => match scan_cache::claim_preview(preview_id, &operation_id) {
+            Some(preview_id) => match self.previews.claim_preview(preview_id, &operation_id) {
                 scan_cache::PreviewClaim::Waiting => (Some(preview_id.clone()), true),
                 // Already settled: the claim still holds (it exempts the result
                 // from TTL eviction until this op consumes it), but there is
@@ -387,7 +392,7 @@ impl OperationManager {
         // AFTER `emit_changed`, on purpose: the frontend store drops progress
         // for an id it has no snapshot row for yet. See `emit_initial_scan_tick`.
         if in_scan_wait {
-            super::scan_bridge::emit_initial_scan_tick(&operation_id);
+            super::scan_bridge::emit_initial_scan_tick(self, &operation_id);
         }
     }
 
@@ -597,7 +602,7 @@ impl OperationManager {
             // `FileInfo` for the TTL sweep. A wait that ended normally already
             // cleared the claim, so this is a no-op on the happy path.
             if let Some(preview_id) = claimed_preview {
-                scan_cache::abandon_claim(&preview_id);
+                self.previews.abandon_claim(&preview_id);
             }
             self.registry.forget(operation_id);
             self.status.unregister(operation_id);
@@ -627,7 +632,7 @@ impl OperationManager {
             // and its result would sit until a TTL sweep. Cancelling a queued
             // op on a busy lane is the ordinary case, not an exotic one.
             if let Some(preview_id) = claimed_preview {
-                scan_cache::abandon_claim(&preview_id);
+                self.previews.abandon_claim(&preview_id);
             }
             // A queued op never reserved lanes nor registered busy status, so
             // only its registry entry needs clearing.
@@ -703,6 +708,12 @@ impl OperationManager {
             rec.in_scan_wait = false;
             rec.claimed_preview = None;
         }
+    }
+
+    /// The host this manager's engine reaches the app through, for the scan
+    /// bridge's ticks, which speak for an op the manager knows.
+    pub(super) fn host(&self) -> &EngineHost {
+        &self.host
     }
 
     /// The preview this op claimed, if it still holds one.

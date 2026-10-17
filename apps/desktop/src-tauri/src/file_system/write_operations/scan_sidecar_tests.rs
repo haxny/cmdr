@@ -32,6 +32,7 @@ struct Walked {
 
 fn walk(sources: &[PathBuf], sidecars: &SidecarRule) -> Walked {
     let ctx = WalkContext::<'_, String> {
+        listings: crate::file_system::write_operations::installed().host().listings(),
         park_while_paused: &|| {},
         progress_interval: Duration::from_secs(3600),
         is_cancelled: &|| false,

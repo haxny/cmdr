@@ -46,14 +46,14 @@ use std::time::Duration;
 
 use uuid::Uuid;
 
+use super::Operations;
 use super::event_sinks::ScanPreviewEventSink;
-use super::scan_cache::{
-    ScanOutcome, cached_scan_totals, claimed_operation, in_flight_state, register_preview, release_preview,
-    settle_preview,
-};
+use super::scan_cache::{ScanOutcome, ScanPreviews};
 use super::scan_watchdog::{SCAN_INACTIVITY_LIMIT, ScanTarget, ScanWatchdog};
 use super::state::ScanPreviewState;
-use super::types::{ScanPreviewErrorEvent, ScanPreviewPurpose, ScanPreviewStartResult, WriteOperationError};
+use super::types::{
+    ScanPreviewErrorEvent, ScanPreviewPurpose, ScanPreviewStartResult, ScanPreviewTotals, WriteOperationError,
+};
 use cmdr_fs::volume::Volume;
 
 mod local;
@@ -64,20 +64,138 @@ pub(super) use local::run_scan_preview;
 pub(super) use volume::run_oracle_aware_batch_scan;
 pub(super) use volume::run_volume_scan_preview;
 
-/// Starts a scan preview for the Copy dialog, reporting through `events`.
-/// Returns a preview_id that can be used to cancel or to pass to copy_files.
-///
-/// When `source_volume` is provided, uses `Volume::scan_for_copy()` instead of `std::fs`,
-/// enabling MTP and other non-local volumes to produce scan previews.
-///
-/// `source_volume_id` identifies the volume the sources live on. It's used by the
-/// fresh-listing oracle (`Listings::authoritative_listing`) to short-circuit re-reading
-/// directories that an open pane is already keeping in sync. Pass `"root"` for
-/// local-FS scans.
-/// `purpose` says which dialog the walk serves. A transfer's walk also builds
-/// the operation's live tree (`super::transfer_tree`), carried to the
-/// operation in the cached result. A compress's LOCAL walk samples a
-/// compressed-size estimate (`compress_estimate`); a volume walk never samples.
+impl Operations {
+    /// Starts a scan preview for the Copy dialog, reporting through `events`.
+    /// Returns a preview_id that can be used to cancel or to pass to copy_files.
+    ///
+    /// When `source_volume` is provided, uses `Volume::scan_for_copy()` instead of `std::fs`,
+    /// enabling MTP and other non-local volumes to produce scan previews.
+    ///
+    /// `source_volume_id` identifies the volume the sources live on. It's used by the
+    /// fresh-listing oracle (`Listings::authoritative_listing`) to short-circuit re-reading
+    /// directories that an open pane is already keeping in sync. Pass `"root"` for
+    /// local-FS scans.
+    /// `purpose` says which dialog the walk serves. A transfer's walk also builds
+    /// the operation's live tree (`super::transfer_tree`), carried to the
+    /// operation in the cached result. A compress's LOCAL walk samples a
+    /// compressed-size estimate (`compress_estimate`); a volume walk never samples.
+    pub(crate) fn start_scan_preview(
+        &self,
+        events: Arc<dyn ScanPreviewEventSink>,
+        sources: Vec<PathBuf>,
+        source_volume: Option<Arc<dyn Volume>>,
+        source_volume_id: String,
+        progress_interval_ms: u64,
+        purpose: ScanPreviewPurpose,
+    ) -> ScanPreviewStartResult {
+        let preview_id = Uuid::new_v4().to_string();
+        let preview_id_clone = preview_id.clone();
+
+        let state = Arc::new(ScanPreviewState {
+            cancelled: AtomicBool::new(false),
+            progress_interval: Duration::from_millis(progress_interval_ms),
+        });
+
+        self.stores()
+            .previews()
+            .register_preview(preview_id.clone(), Arc::clone(&state));
+
+        // Bounds the walk by INACTIVITY and narrates it in the log. Started here,
+        // before either worker spawns, so a walk that wedges on its very first
+        // syscall is still bounded — the workers only feed it.
+        let watchdog = ScanWatchdog::start(
+            self.stores().previews_arc(),
+            preview_id.clone(),
+            ScanTarget::of(&sources, &source_volume_id),
+            SCAN_INACTIVITY_LIMIT,
+            Arc::clone(&state),
+            Arc::clone(&events),
+        );
+
+        // Spawn background task. The walk holds the engine until it settles.
+        // Volume scans need a Tokio runtime context (MtpVolume uses Handle::block_on),
+        // so we capture the runtime handle and enter it on the spawned thread.
+        // Local scans use std::thread directly (no runtime needed).
+        let engine = self.clone();
+        if let Some(volume) = source_volume {
+            tokio::spawn(async move {
+                run_volume_scan_preview(
+                    engine,
+                    events,
+                    preview_id_clone,
+                    sources,
+                    volume,
+                    source_volume_id,
+                    state,
+                    purpose,
+                    watchdog,
+                )
+                .await;
+            });
+        } else {
+            // The same panic a bare `thread::spawn` raises when the OS refuses a
+            // thread; the name is what's new.
+            std::thread::Builder::new()
+                .name("cmdr-scan-preview".to_string())
+                .spawn(move || {
+                    run_scan_preview(&engine, events, preview_id_clone, sources, state, purpose, watchdog);
+                })
+                .expect("the OS starts the scan preview's thread");
+        }
+
+        ScanPreviewStartResult { preview_id }
+    }
+
+    /// Returns the cached totals from a completed scan preview, or `None` if the
+    /// scan is still running, was cancelled, or errored. The FE uses this both to
+    /// know whether the scan is done AND to recover its display state when the
+    /// scan-preview events fired before listeners were attached (a real race
+    /// surfaced by the watcher-backed oracle, which can complete a scan in
+    /// ~5 ms — faster than the FE's `await startScanPreview()` IPC round-trip).
+    pub(crate) fn get_scan_preview_totals(&self, preview_id: &str) -> Option<ScanPreviewTotals> {
+        self.stores().previews().cached_scan_totals(preview_id)
+    }
+
+    /// Cancels a running scan preview AND frees any cached result.
+    ///
+    /// Cancelling sets the in-flight cancel flag (a still-running scan exits
+    /// promptly). Freeing the cached result covers the dialog-dismissed-after-scan-
+    /// completed case: the FE calls this on every dialog teardown, regardless of
+    /// whether the scan was still running, so a completed-but-unconsumed
+    /// `CachedScanResult` (tens of thousands of `FileInfo`) doesn't linger until
+    /// quit. Consuming the result for a started op goes through
+    /// `take_cached_scan_result` instead, which already removes it.
+    ///
+    /// ⚠️ A preview an OPERATION has claimed is left alone. Its owner decides when
+    /// it ends (`cancel_operation` reaches it through the operation's own cancel
+    /// token), and freeing it from a dialog teardown would pull the result out from
+    /// under a transfer that is waiting on it.
+    pub(crate) fn cancel_scan_preview(&self, preview_id: &str) {
+        let previews = self.stores().previews();
+        if let Some(owner) = previews.claimed_operation(preview_id) {
+            log::debug!(
+                target: "cmdr_lib::write_operations",
+                "scan preview {preview_id} is owned by operation {owner}; leaving it to its operation"
+            );
+            return;
+        }
+        if let Some(state) = previews.in_flight_state(preview_id) {
+            state.cancelled.store(true, Ordering::Relaxed);
+        }
+        previews.release_preview(preview_id);
+    }
+
+    /// The cost facts of a settled preview, without consuming it. See
+    /// [`ScanPreviews::cached_cost_facts`].
+    pub(crate) fn cached_cost_facts(&self, preview_id: &str) -> Option<super::ScanCostFacts> {
+        self.stores().previews().cached_cost_facts(preview_id)
+    }
+}
+
+/// [`Operations::start_scan_preview`] on the installed engine. Before
+/// `install` there is no walk: the dialog hears an error at once, the answer
+/// an engine gives a walk that couldn't start, so it never spins.
+// shim: removed in M7a
 pub fn start_scan_preview(
     events: Arc<dyn ScanPreviewEventSink>,
     sources: Vec<PathBuf>,
@@ -86,96 +204,46 @@ pub fn start_scan_preview(
     progress_interval_ms: u64,
     purpose: ScanPreviewPurpose,
 ) -> ScanPreviewStartResult {
-    let preview_id = Uuid::new_v4().to_string();
-    let preview_id_clone = preview_id.clone();
-
-    let state = Arc::new(ScanPreviewState {
-        cancelled: AtomicBool::new(false),
-        progress_interval: Duration::from_millis(progress_interval_ms),
-    });
-
-    register_preview(preview_id.clone(), Arc::clone(&state));
-
-    // Bounds the walk by INACTIVITY and narrates it in the log. Started here,
-    // before either worker spawns, so a walk that wedges on its very first
-    // syscall is still bounded — the workers only feed it.
-    let watchdog = ScanWatchdog::start(
-        preview_id.clone(),
-        ScanTarget::of(&sources, &source_volume_id),
-        SCAN_INACTIVITY_LIMIT,
-        Arc::clone(&state),
-        Arc::clone(&events),
-    );
-
-    // Spawn background task.
-    // Volume scans need a Tokio runtime context (MtpVolume uses Handle::block_on),
-    // so we capture the runtime handle and enter it on the spawned thread.
-    // Local scans use std::thread directly (no runtime needed).
-    if let Some(volume) = source_volume {
-        tokio::spawn(async move {
-            run_volume_scan_preview(
-                events,
-                preview_id_clone,
-                sources,
-                volume,
-                source_volume_id,
-                state,
-                purpose,
-                watchdog,
-            )
-            .await;
+    let Some(engine) = super::installed_for("start_scan_preview") else {
+        let preview_id = Uuid::new_v4().to_string();
+        events.emit_error(ScanPreviewErrorEvent {
+            preview_id: preview_id.clone(),
+            message: "the write engine isn't ready yet".to_string(),
+            timed_out: false,
         });
-    } else {
-        std::thread::spawn(move || {
-            run_scan_preview(events, preview_id_clone, sources, state, purpose, watchdog);
-        });
-    }
-
-    ScanPreviewStartResult { preview_id }
+        return ScanPreviewStartResult { preview_id };
+    };
+    engine.start_scan_preview(
+        events,
+        sources,
+        source_volume,
+        source_volume_id,
+        progress_interval_ms,
+        purpose,
+    )
 }
 
-/// Returns the cached totals from a completed scan preview, or `None` if the
-/// scan is still running, was cancelled, or errored. The FE uses this both to
-/// know whether the scan is done AND to recover its display state when the
-/// scan-preview events fired before listeners were attached (a real race
-/// surfaced by M2a's watcher-backed oracle, which can complete a scan in
-/// ~5 ms — faster than the FE's `await startScanPreview()` IPC round-trip).
-pub fn get_scan_preview_totals(preview_id: &str) -> Option<super::types::ScanPreviewTotals> {
-    cached_scan_totals(preview_id)
+/// [`Operations::get_scan_preview_totals`] on the installed engine; `None`
+/// before `install`, as for any preview the engine doesn't know.
+// shim: removed in M7a
+pub fn get_scan_preview_totals(preview_id: &str) -> Option<ScanPreviewTotals> {
+    super::installed_for("get_scan_preview_totals")?.get_scan_preview_totals(preview_id)
 }
 
-/// Cancels a running scan preview AND frees any cached result.
-///
-/// Cancelling sets the in-flight cancel flag (a still-running scan exits
-/// promptly). Freeing the cached result covers the dialog-dismissed-after-scan-
-/// completed case: the FE calls this on every dialog teardown, regardless of
-/// whether the scan was still running, so a completed-but-unconsumed
-/// `CachedScanResult` (tens of thousands of `FileInfo`) doesn't linger until
-/// quit. Consuming the result for a started op goes through
-/// `take_cached_scan_result` instead, which already removes it.
-///
-/// ⚠️ A preview an OPERATION has claimed is left alone. Its owner decides when
-/// it ends (`cancel_operation` reaches it through the operation's own cancel
-/// token), and freeing it from a dialog teardown would pull the result out from
-/// under a transfer that is waiting on it.
+/// [`Operations::cancel_scan_preview`] on the installed engine; nothing to
+/// cancel before `install`.
+// shim: removed in M7a
 pub fn cancel_scan_preview(preview_id: &str) {
-    if let Some(owner) = claimed_operation(preview_id) {
-        log::debug!(
-            target: "cmdr_lib::write_operations",
-            "scan preview {preview_id} is owned by operation {owner}; leaving it to its operation"
-        );
-        return;
+    if let Some(engine) = super::installed_for("cancel_scan_preview") {
+        engine.cancel_scan_preview(preview_id);
     }
-    if let Some(state) = in_flight_state(preview_id) {
-        state.cancelled.store(true, Ordering::Relaxed);
-    }
-    release_preview(preview_id);
 }
 
 /// Publishes a walk that stopped on an error: the typed failure for a waiting
 /// operation, and the dialog's notice. The dialog reads only `timed_out` off its
 /// event, so the message there is the failure's technical form, for the log.
 fn settle_failed_preview(
+    previews: &ScanPreviews,
     events: &dyn ScanPreviewEventSink,
     watchdog: &ScanWatchdog,
     preview_id: String,
@@ -183,7 +251,7 @@ fn settle_failed_preview(
 ) {
     watchdog.note_settled("stopped");
     let message = format!("{error:?}");
-    settle_preview(&preview_id, ScanOutcome::Error(error), None);
+    previews.settle_preview(&preview_id, ScanOutcome::Error(error), None);
     events.emit_error(ScanPreviewErrorEvent {
         preview_id,
         message,

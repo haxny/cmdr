@@ -21,12 +21,12 @@
 //! the user has already been shown.
 
 use std::path::PathBuf;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
+use std::sync::{Arc, Weak};
 use std::time::{Duration, Instant};
 
 use super::event_sinks::ScanPreviewEventSink;
-use super::scan_cache::{ScanOutcome, ScanPreviewState, settle_preview};
+use super::scan_cache::{ScanOutcome, ScanPreviewState, ScanPreviews};
 use super::types::{ScanPreviewErrorEvent, WriteOperationError};
 
 /// How long a preview may count NOTHING before we call the volume unresponsive.
@@ -98,6 +98,10 @@ impl ScanTarget {
 /// One preview's clock: what it's walking, how much it has counted, and when it
 /// last counted anything.
 pub(super) struct ScanWatchdog {
+    /// The engine's previews, where a timeout settles this one. Weak: the
+    /// heartbeat is a background loop, and an engine that's gone has no
+    /// preview left to settle.
+    previews: Weak<ScanPreviews>,
     preview_id: String,
     /// Human-readable "what is being scanned", for the timeout message.
     target: String,
@@ -138,8 +142,9 @@ pub(super) enum Beat {
 
 impl ScanWatchdog {
     /// Starts the clock and spawns the heartbeat, logging the one line that says
-    /// this scan began at all.
+    /// this scan began at all. A timeout settles the preview in `previews`.
     pub(super) fn start(
+        previews: &Arc<ScanPreviews>,
         preview_id: String,
         target: ScanTarget,
         inactivity_limit: Duration,
@@ -147,6 +152,7 @@ impl ScanWatchdog {
         events: Arc<dyn ScanPreviewEventSink>,
     ) -> Arc<Self> {
         let watchdog = Arc::new(Self {
+            previews: Arc::downgrade(previews),
             preview_id,
             target: target.label,
             log_target: target.log_label,
@@ -344,7 +350,10 @@ impl ScanWatchdog {
             path: self.first_source.clone(),
             message: message.clone(),
         };
-        settle_preview(&self.preview_id, ScanOutcome::Error(failure), None);
+        if let Some(previews) = self.previews.upgrade() {
+            previews.settle_preview(&self.preview_id, ScanOutcome::Error(failure), None);
+        }
+
         events.emit_error(ScanPreviewErrorEvent {
             preview_id: self.preview_id.clone(),
             message,

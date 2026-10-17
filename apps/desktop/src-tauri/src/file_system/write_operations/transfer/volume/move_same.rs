@@ -446,7 +446,7 @@ pub(crate) async fn move_within_same_volume_with_progress(
     // (SMB pipelines the stats; MTP groups by parent). `files_total` is the
     // count of selected top-level items (each counts 1 when its rename / merge
     // completes); `bytes_total` is 0.
-    let top_level = top_level_move_hints(&volume, source_paths, config).await?;
+    let top_level = top_level_move_hints(state.scope().stores().previews(), &volume, source_paths, config).await?;
     // Dropped items wrote nothing, but the person asked for them, so they belong
     // in what the dialog counts down.
     let total_files = source_paths.len() + already_in_place;

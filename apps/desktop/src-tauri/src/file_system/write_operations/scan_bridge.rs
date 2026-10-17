@@ -32,7 +32,8 @@ use std::sync::{Arc, OnceLock};
 
 use super::Operations;
 use super::event_sinks::OperationEventSink;
-use super::scan_cache::{PREVIEW_SETTLED, ScanOutcome, ScanPreviewState, abandon_claim, finish_claim, poll_claim};
+use super::manager::OperationManager;
+use super::scan_cache::{ScanOutcome, ScanPreviewState, ScanPreviews};
 use super::scan_watchdog::ScanWatchdog;
 use super::state::{WriteOperationState, is_cancelled};
 use super::types::{
@@ -85,24 +86,25 @@ pub(super) async fn await_claimed_preview(
     let Some(preview_id) = engine.manager().claimed_preview_of(operation_id) else {
         return ScanWait::Proceed;
     };
+    let previews = engine.stores().previews();
 
     let outcome = tokio::select! {
         // A cancel while the operation waits: stop the walk it was waiting on
         // rather than letting it finish for nobody.
         () = state.backend_cancel.cancelled() => ScanOutcome::Cancelled,
-        outcome = settled_outcome(&preview_id) => outcome,
+        outcome = settled_outcome(previews, &preview_id) => outcome,
     };
 
     match outcome {
         ScanOutcome::Complete => {
             // The claim ends here, and deliberately without freeing anything:
             // the result is what the operation is about to consume.
-            finish_claim(&preview_id);
+            previews.finish_claim(&preview_id);
             engine.manager().end_scan_wait(operation_id);
             ScanWait::Proceed
         }
         ScanOutcome::Cancelled => {
-            abandon_claim(&preview_id);
+            previews.abandon_claim(&preview_id);
             engine.manager().end_scan_wait(operation_id);
             events.emit_cancelled(WriteCancelledEvent {
                 operation_id: operation_id.to_string(),
@@ -113,7 +115,7 @@ pub(super) async fn await_claimed_preview(
             ScanWait::Stopped
         }
         ScanOutcome::Error(error) => {
-            abandon_claim(&preview_id);
+            previews.abandon_claim(&preview_id);
             engine.manager().end_scan_wait(operation_id);
             events.emit_error(WriteErrorEvent::new(operation_id.to_string(), operation_type, error));
             ScanWait::Stopped
@@ -123,15 +125,15 @@ pub(super) async fn await_claimed_preview(
 
 /// Resolves once `preview_id` has settled. Re-reads the map after arming the
 /// wakeup, so a settle landing between the two can't be missed.
-async fn settled_outcome(preview_id: &str) -> ScanOutcome {
+async fn settled_outcome(previews: &ScanPreviews, preview_id: &str) -> ScanOutcome {
     loop {
-        let notified = PREVIEW_SETTLED.notified();
+        let notified = previews.settled().notified();
         tokio::pin!(notified);
         // Registers this waiter BEFORE the poll below. Without it a settle
         // between the poll and the await would wake nobody and the operation
         // would park until the next unrelated settle.
         notified.as_mut().enable();
-        if let Some(outcome) = poll_claim(preview_id) {
+        if let Some(outcome) = previews.poll_claim(preview_id) {
             return outcome;
         }
         notified.await;
@@ -181,15 +183,27 @@ pub(super) struct ScanPause {
 /// What a preview walk needs to find its owner and to know when it must stop
 /// regardless.
 struct PreviewClaimant {
+    /// The engine the preview runs on, whose claim names the owner and whose
+    /// registry holds its state. Held for the walk, which ends.
+    engine: Operations,
     preview_id: String,
     state: Arc<ScanPreviewState>,
 }
 
 impl ScanPause {
-    /// For a preview worker, which learns its owner from the claim.
-    pub(super) fn for_preview(preview_id: String, state: Arc<ScanPreviewState>, watchdog: Arc<ScanWatchdog>) -> Self {
+    /// For a preview worker on `engine`, which learns its owner from the claim.
+    pub(super) fn for_preview(
+        engine: Operations,
+        preview_id: String,
+        state: Arc<ScanPreviewState>,
+        watchdog: Arc<ScanWatchdog>,
+    ) -> Self {
         Self {
-            claim: Some(PreviewClaimant { preview_id, state }),
+            claim: Some(PreviewClaimant {
+                engine,
+                preview_id,
+                state,
+            }),
             owner: OnceLock::new(),
             watchdog: Some(watchdog),
         }
@@ -216,12 +230,10 @@ impl ScanPause {
             return;
         }
         let Some(claim) = &self.claim else { return };
-        let Some(operation_id) = super::scan_cache::claimed_operation(&claim.preview_id) else {
+        let Some(operation_id) = claim.engine.stores().previews().claimed_operation(&claim.preview_id) else {
             return;
         };
-        let Some(state) =
-            super::installed_for("a scan preview's owner").and_then(|engine| engine.registry().get(&operation_id))
-        else {
+        let Some(state) = claim.engine.registry().get(&operation_id) else {
             return;
         };
         let _ = self.owner.set(state);
@@ -331,11 +343,11 @@ impl cmdr_fs::volume::ScanStopSignal for ScanPause {
 /// the real numbers land. The index-derived expectation rides
 /// `expected_files_total` / `expected_bytes_total` instead, which is what every
 /// surface already treats as a hint.
-pub(super) fn forward_scan_progress(preview_id: &str, counts: ScanCounts) {
-    let Some(operation_id) = super::scan_cache::claimed_operation(preview_id) else {
+pub(super) fn forward_scan_progress(engine: &Operations, preview_id: &str, counts: ScanCounts) {
+    let Some(operation_id) = engine.stores().previews().claimed_operation(preview_id) else {
         return;
     };
-    emit_scan_progress(&operation_id, counts);
+    emit_scan_progress(engine.manager(), &operation_id, counts);
 }
 
 /// A scan tick, in the shape both preview workers can produce.
@@ -360,18 +372,15 @@ pub(super) struct ScanCounts {
 /// progress event picks the wrong noun in the UI. An id the manager no longer
 /// knows emits nothing, which is how a walk that outlives its cancelled owner
 /// goes quiet.
-pub(super) fn emit_scan_progress(operation_id: &str, counts: ScanCounts) {
-    let Some(engine) = super::installed_for("a scan-wait tick") else {
-        return;
-    };
-    let Some(operation_type) = engine.manager().operation_type_of(operation_id) else {
+pub(super) fn emit_scan_progress(manager: &OperationManager, operation_id: &str, counts: ScanCounts) {
+    let Some(operation_type) = manager.operation_type_of(operation_id) else {
         return;
     };
     // A tick that raced the end of the wait would drag the frontend's phase back
     // to `scanning` after the write had already started, and the readout would
     // jump with it. Both emit paths are scan-phase-only, so one guard covers the
     // opening tick and every forwarded preview tick.
-    if !engine.manager().is_in_scan_wait(operation_id) {
+    if !manager.is_in_scan_wait(operation_id) {
         return;
     }
     let event = WriteProgressEvent {
@@ -395,8 +404,8 @@ pub(super) fn emit_scan_progress(operation_id: &str, counts: ScanCounts) {
         step: None,
     };
     #[cfg(test)]
-    record_tick_for_test(&event);
-    engine.host().events().scan_wait_progress(event);
+    record_tick_for_test(&event, manager.emit_count());
+    manager.host().events().scan_wait_progress(event);
 }
 
 /// Emits the one synthetic tick that turns a scanning row from blank into live.
@@ -406,8 +415,8 @@ pub(super) fn emit_scan_progress(operation_id: &str, counts: ScanCounts) {
 /// snapshot yet, so a tick that beats its own snapshot is dropped and the row
 /// stays blank until the next real preview event — which on a preview near its
 /// end may never come, and that is precisely the case this tick exists for.
-pub(super) fn emit_initial_scan_tick(operation_id: &str) {
-    emit_scan_progress(operation_id, ScanCounts::default());
+pub(super) fn emit_initial_scan_tick(manager: &OperationManager, operation_id: &str) {
+    emit_scan_progress(manager, operation_id, ScanCounts::default());
 }
 
 // ============================================================================
@@ -433,13 +442,13 @@ static OBSERVED_TICKS: std::sync::LazyLock<std::sync::Mutex<Vec<ObservedScanTick
     std::sync::LazyLock::new(|| std::sync::Mutex::new(Vec::new()));
 
 #[cfg(test)]
-fn record_tick_for_test(event: &WriteProgressEvent) {
+fn record_tick_for_test(event: &WriteProgressEvent, emits_before: u64) {
     use cmdr_fs::ignore_poison::IgnorePoison;
     OBSERVED_TICKS.lock_ignore_poison().push(ObservedScanTick {
         operation_id: event.operation_id.clone(),
         files_done: event.files_done,
         bytes_done: event.bytes_done,
-        emits_before: super::manager::manager().emit_count(),
+        emits_before,
     });
 }
 

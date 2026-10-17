@@ -21,7 +21,6 @@ use super::super::free_space::check_local_copy_space;
 use super::super::host::OperationErrorReport;
 use super::super::ledger::CopyTransaction;
 use super::super::scan::scan_sources;
-use super::super::scan_cache::take_cached_scan_result;
 use super::super::scan_dry_run::handle_dry_run;
 use super::super::scan_source_tracker::{FileVerdict, SourceItemTracker, top_level_source_path};
 use super::super::state::{OperationIntent, WriteOperationState, load_intent};
@@ -196,7 +195,11 @@ pub(in crate::file_system::write_operations) fn copy_files_with_progress_inner(
         // Volume scans (MTP, etc.) cache aggregate stats only (empty `files` list).
         // This per-file copy path needs the file list, so treat an empty-files cache
         // hit the same as a miss and fall through to a fresh local scan.
-        if let Some(cached) = take_cached_scan_result(preview_id, sources).filter(|c| !c.files.is_empty()) {
+        let previews = state.scope().stores().previews();
+        if let Some(cached) = previews
+            .take_cached_scan_result(preview_id, sources)
+            .filter(|c| !c.files.is_empty())
+        {
             log::debug!(
                 "copy_files_with_progress: reusing cached scan for operation_id={}, preview_id={}, files={}, bytes={}",
                 operation_id,

@@ -8,11 +8,11 @@ use std::sync::Arc;
 use std::sync::atomic::Ordering;
 use std::time::{Duration, Instant};
 
+use super::super::Operations;
 use super::super::event_sinks::ScanPreviewEventSink;
-use super::super::host;
 use super::super::scan::{SubtreeTotals, scan_subtree_with_oracle};
 use super::super::scan_bridge::{ScanCounts, ScanPause, forward_scan_progress};
-use super::super::scan_cache::{ScanOutcome, settle_preview};
+use super::super::scan_cache::ScanOutcome;
 use super::super::scan_watchdog::{ScanTally, ScanWatchdog};
 use super::super::state::{CachedScanResult, ScanPreviewState};
 use super::super::transfer::volume::{PathRole, map_volume_error};
@@ -23,6 +23,7 @@ use super::super::types::{
 };
 use super::settle_failed_preview;
 use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::volume::host::listings::ListingHost;
 use cmdr_fs::volume::{BatchScanResult, CopyScanResult, ScanRecorder, Volume};
 
 /// The path a volume scan's failure names when the backend's error carries none
@@ -55,6 +56,7 @@ fn scan_context_path(sources: &[PathBuf]) -> String {
     reason = "One worker's inputs: what to walk, where, what it's for, where to publish, and what bounds it"
 )]
 pub(in crate::file_system::write_operations) async fn run_volume_scan_preview(
+    engine: Operations,
     events: Arc<dyn ScanPreviewEventSink>,
     preview_id: String,
     sources: Vec<PathBuf>,
@@ -64,10 +66,9 @@ pub(in crate::file_system::write_operations) async fn run_volume_scan_preview(
     purpose: ScanPreviewPurpose,
     watchdog: Arc<ScanWatchdog>,
 ) {
+    let host = engine.host();
     // E2E only; see the local walk's matching delay.
-    if let Some(delay) =
-        host::installed_for("a scan preview's pacing").and_then(|host| host.pacing().scan_preview_delay())
-    {
+    if let Some(delay) = host.pacing().scan_preview_delay() {
         tokio::time::sleep(delay).await;
     }
 
@@ -78,6 +79,7 @@ pub(in crate::file_system::write_operations) async fn run_volume_scan_preview(
     // each Volume impl so different backends share the same rate-limit policy.
     // The gate this walk parks on, at the same seams `is_cancelled` is polled.
     let pause = Arc::new(ScanPause::for_preview(
+        engine.clone(),
         preview_id.clone(),
         Arc::clone(&state),
         Arc::clone(&watchdog),
@@ -89,6 +91,7 @@ pub(in crate::file_system::write_operations) async fn run_volume_scan_preview(
     let events_for_cb = Arc::clone(&events);
     let watchdog_for_cb = Arc::clone(&watchdog);
     let preview_id_for_cb = preview_id.clone();
+    let engine_for_cb = engine.clone();
     let on_progress = move |p: cmdr_fs::volume::ListingProgress| {
         if state_for_cb.cancelled.load(Ordering::Relaxed) {
             return;
@@ -122,6 +125,7 @@ pub(in crate::file_system::write_operations) async fn run_volume_scan_preview(
         // Same counts under the owning operation's id; see the local walk's
         // matching forward.
         forward_scan_progress(
+            &engine_for_cb,
             &preview_id_for_cb,
             ScanCounts {
                 files_found: p.files,
@@ -138,9 +142,7 @@ pub(in crate::file_system::write_operations) async fn run_volume_scan_preview(
 
     // A transfer's walk also records every entry for the operation's live tree.
     let recorder = (purpose == ScanPreviewPurpose::Transfer)
-        .then(|| host::installed_for("a scan preview's tree"))
-        .flatten()
-        .map(|host| Arc::new(TreeRecorder::new(&sources, TreeOrder::active(host))));
+        .then(|| Arc::new(TreeRecorder::new(&sources, TreeOrder::active(host))));
 
     let result: Result<BatchScanResult, WriteOperationError> = async {
         if state.cancelled.load(Ordering::Relaxed) {
@@ -150,6 +152,7 @@ pub(in crate::file_system::write_operations) async fn run_volume_scan_preview(
         }
 
         run_oracle_aware_batch_scan(
+            host.listings(),
             volume.as_ref(),
             &source_volume_id,
             &sources,
@@ -192,7 +195,10 @@ pub(in crate::file_system::write_operations) async fn run_volume_scan_preview(
     match result {
         _ if cancelled => {
             watchdog.note_settled("cancelled");
-            settle_preview(&preview_id, ScanOutcome::Cancelled, None);
+            engine
+                .stores()
+                .previews()
+                .settle_preview(&preview_id, ScanOutcome::Cancelled, None);
             events.emit_cancelled(ScanPreviewCancelledEvent { preview_id });
         }
         Ok(batch) => {
@@ -207,7 +213,7 @@ pub(in crate::file_system::write_operations) async fn run_volume_scan_preview(
             // the cache stores aggregate stats AND per-path scan results so
             // copy_between_volumes can reuse both without re-statting.
             let tree = recorder.and_then(|recorder| recorder.finish());
-            settle_preview(
+            engine.stores().previews().settle_preview(
                 &preview_id,
                 ScanOutcome::Complete,
                 Some(
@@ -230,7 +236,7 @@ pub(in crate::file_system::write_operations) async fn run_volume_scan_preview(
                 online_only_found: false,
             });
         }
-        Err(error) => settle_failed_preview(&*events, &watchdog, preview_id, error),
+        Err(error) => settle_failed_preview(engine.stores().previews(), &*events, &watchdog, preview_id, error),
     }
 }
 
@@ -242,7 +248,12 @@ pub(in crate::file_system::write_operations) async fn run_volume_scan_preview(
 /// `recorder` hears every entry either branch walks, for a transfer's live
 /// tree. A cached top-level child the listing doesn't know reaches it as a
 /// subtree with totals only, since that branch never walks it.
+#[allow(
+    clippy::too_many_arguments,
+    reason = "One batch's inputs: the listings that vouch for a folder, what to scan and where, and who hears it"
+)]
 pub(in crate::file_system::write_operations) async fn run_oracle_aware_batch_scan(
+    listings: &dyn ListingHost,
     volume: &dyn Volume,
     volume_id: &str,
     sources: &[PathBuf],
@@ -310,9 +321,7 @@ pub(in crate::file_system::write_operations) async fn run_oracle_aware_batch_sca
             .get(parent)
             .expect("group_order tracks every parent inserted into groups");
 
-        if let Some(cached_entries) = host::installed_for("a scan preview's fresh-listing oracle")
-            .and_then(|host| host.listings().authoritative_listing(volume_id, parent))
-        {
+        if let Some(cached_entries) = listings.authoritative_listing(volume_id, parent) {
             files = None;
             log::debug!(
                 "scan-preview: oracle hit for parent {} ({} cached entries, {} selected children)",
@@ -380,6 +389,7 @@ pub(in crate::file_system::write_operations) async fn run_oracle_aware_batch_sca
                         })
                     };
                     let subtree: SubtreeTotals = scan_subtree_with_oracle(
+                        listings,
                         volume,
                         volume_id,
                         source,
