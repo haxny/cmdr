@@ -2010,9 +2010,10 @@ doubles as production code.
   `cmdr-git` — reaches `tauri`, `tauri-specta`, or `cmdr` anywhere in its `cargo metadata` tree, plus a per-bucket
   public-surface ceiling on all of them except `cmdr-fs`, which is permanently uncapped: it's shared vocabulary whose
   job is to be named from everywhere. An item whose attributes gate it on `cfg(test)` or the `testing`, `tooling`, or
-  `fuzzing` feature (`isGated`) counts as a gated door, never as public API, so a fuzz entry point doesn't eat a crate's
-  ceiling. See `crates/cmdr-index/src/indexing/handle/DETAILS.md` for what each index number means, the crate's own
-  entry in `index-crate-isolation.go` for the backend ones, and why raising any of them needs David's say-so),
+  `fuzzing` feature (`isGated`; a gate on the enclosing `impl` block, and one above a wrapped multi-line attribute,
+  count too) counts as a gated door, never as public API, so a fuzz entry point doesn't eat a crate's ceiling. See
+  `crates/cmdr-index/src/indexing/handle/DETAILS.md` for what each index number means, the crate's own entry in
+  `index-crate-isolation.go` for the backend ones, and why raising any of them needs David's say-so),
   nextest-filter-coverage (every `test(...)` atom in `.config/nextest.toml` still selects a live test, so a per-test cap
   or `test-group` can't be silently detached by a module move; it lists the workspace's tests with
   `cargo nextest list --run-ignored all` and names where a stale atom's leaf went. It judges the HOST platform, so a

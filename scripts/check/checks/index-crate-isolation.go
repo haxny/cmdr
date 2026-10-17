@@ -493,15 +493,15 @@ func countInherentMethods(source string, publicTypes map[string]bool, handleType
 
 // countMethodsOn counts the public associated items in `impl <typeName>` blocks in
 // one file. Block extent comes from column-0 `impl` … column-0 `}`, which holds
-// because the tree is rustfmt-normalized.
+// because the tree is rustfmt-normalized. A gated block's items are all gated.
 func countMethodsOn(source, typeName string) int {
 	lines := strings.Split(source, "\n")
 	count := 0
-	inBlock := false
+	inBlock, blockGated := false, false
 	for i, line := range lines {
 		if !inBlock {
 			if isInherentImplOf(line, typeName) {
-				inBlock = true
+				inBlock, blockGated = true, isGated(lines, i)
 			}
 			continue
 		}
@@ -510,7 +510,7 @@ func countMethodsOn(source, typeName string) int {
 			continue
 		}
 		trimmed := strings.TrimSpace(line)
-		if !strings.HasPrefix(line, "    ") {
+		if blockGated || !strings.HasPrefix(line, "    ") {
 			continue
 		}
 		if hasAnyPrefix(trimmed, []string{"pub fn ", "pub async fn ", "pub unsafe fn ", "pub const fn ", "pub const "}) &&
@@ -563,10 +563,11 @@ trimmed:
 }
 
 // isGated reports whether the item at `index` sits under a `testing` / `tooling` /
-// `fuzzing` feature gate (none ships in a production build) or a `cfg(test)`, walking back over the contiguous attribute and doc
-// lines above it.
+// `fuzzing` feature gate (none ships in a production build) or a `cfg(test)`, walking
+// back over the contiguous attribute and doc lines above it. A rustfmt-wrapped
+// attribute (`#[allow(` … `)]`) is read whole, from its closing line up to its `#[`.
 func isGated(lines []string, index int) bool {
-	indent := len(lines[index]) - len(strings.TrimLeft(lines[index], " "))
+	indent := indentOf(lines[index])
 	for i := index - 1; i >= 0; i-- {
 		trimmed := strings.TrimSpace(lines[i])
 		if trimmed == "" {
@@ -575,20 +576,52 @@ func isGated(lines []string, index int) bool {
 		if strings.HasPrefix(trimmed, "///") || strings.HasPrefix(trimmed, "//") {
 			continue
 		}
-		if !strings.HasPrefix(trimmed, "#[") && !strings.HasPrefix(trimmed, "#!") {
+		if indentOf(lines[i]) != indent {
 			return false
 		}
-		if len(lines[i])-len(strings.TrimLeft(lines[i], " ")) != indent {
+		var attribute string
+		attribute, i = attributeEndingAt(lines, i, indent)
+		if !strings.HasPrefix(attribute, "#[") && !strings.HasPrefix(attribute, "#!") {
 			return false
 		}
-		if strings.Contains(trimmed, `feature = "testing"`) ||
-			strings.Contains(trimmed, `feature = "tooling"`) ||
-			strings.Contains(trimmed, `feature = "fuzzing"`) ||
-			strings.Contains(trimmed, "cfg(test)") {
+		if isGateAttribute(attribute) {
 			return true
 		}
 	}
 	return false
+}
+
+// attributeEndingAt returns the attribute whose last line is `lines[end]`, joined
+// into one line, and the index of its first line. A one-line attribute is itself;
+// a rustfmt-wrapped one closes on a `)]`-shaped line, and its opener is the nearest
+// line above at the same indent.
+func attributeEndingAt(lines []string, end, indent int) (string, int) {
+	attribute := strings.TrimSpace(lines[end])
+	if !strings.HasPrefix(attribute, ")") || !strings.HasSuffix(attribute, "]") {
+		return attribute, end
+	}
+	start := end - 1
+	for ; start >= 0 && indentOf(lines[start]) != indent; start-- {
+		attribute = strings.TrimSpace(lines[start]) + " " + attribute
+	}
+	if start < 0 {
+		return attribute, 0
+	}
+	return strings.TrimSpace(lines[start]) + attribute, start
+}
+
+// isGateAttribute reports whether an attribute compiles its item only for tests,
+// tooling, or fuzzing.
+func isGateAttribute(attribute string) bool {
+	return strings.Contains(attribute, `feature = "testing"`) ||
+		strings.Contains(attribute, `feature = "tooling"`) ||
+		strings.Contains(attribute, `feature = "fuzzing"`) ||
+		strings.Contains(attribute, "cfg(test)")
+}
+
+// indentOf counts a line's leading spaces.
+func indentOf(line string) int {
+	return len(line) - len(strings.TrimLeft(line, " "))
 }
 
 // readCrateSources loads every `.rs` file under a crate's `src/`, keyed by its path

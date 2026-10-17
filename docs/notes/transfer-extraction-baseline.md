@@ -401,8 +401,8 @@ times, so it's a like-for-like count, not a census.
 
 **The enforced ceilings** (`index-crate-isolation-ceilings.go`, set to exactly what each crate exposes):
 
-- **`cmdr-operations`**: 82 root promises, 58 handle methods on `Operations`, 1 public module (`host`), 25 subsystem
+- **`cmdr-operations`**: 82 root promises, 56 handle methods on `Operations`, 1 public module (`host`), 25 subsystem
   items
-- **`cmdr-operation-log`**: 11 root promises, 6 handle methods on `OperationLog`, 7 public modules, 76 subsystem items
+- **`cmdr-operation-log`**: 11 root promises, 6 handle methods on `OperationLog`, 7 public modules, 75 subsystem items
 - **`cmdr-local`**: 12 root promises, 9 public modules, 39 subsystem items
 - **`cmdr-collation`**: 2 root promises, no public modules, 4 subsystem items

@@ -1165,7 +1165,7 @@ the optional seams), what each seam's contract is, and where Cmdr answers it: `s
 
 ## The public surface is capped
 
-`index-crate-isolation` holds this crate to 82 root promises, 58 `Operations` methods, one public module (`host`), and
+`index-crate-isolation` holds this crate to 82 root promises, 56 `Operations` methods, one public module (`host`), and
 25 public items inside it (`scripts/check/checks/index-crate-isolation-ceilings.go`). The numbers are exactly what the
 crate exposes, measured with no headroom, so an addition has to be argued for. Everything counted exists for a named
 caller.
@@ -1199,10 +1199,9 @@ Root promises (82), by who needs them:
   generated from them, so none can go private without the frontend losing a type.
 - **`host`** (1): the public module below.
 
-`Operations` methods (58): the 56 a shipped build has, grouped by caller below, plus two `testing`-gated ones the
-source-level counter can't see as gated (`render_live_transfer_dump` sits in a gated `impl` block, and
-`route_archive_copy_into`'s gate sits above a multi-line attribute). Each IPC command, MCP tool, and quit step is a
-one-line pass-through, so the verbs read one-to-one:
+`Operations` methods (56), grouped by caller below. The two `testing`-gated ones (`render_live_transfer_dump` and
+`route_archive_copy_into`) count apart. Each IPC command, MCP tool, and quit step is a one-line pass-through, so the
+verbs read one-to-one:
 
 - **Building and lifecycle**: `builder`, `host` (the MCP rollback takes its sink factory), `operation_log` (the startup
   pin proves the engine journals into the app's log), `claim_ledger`, and the quit gate's `cancel_all_write_operations`,

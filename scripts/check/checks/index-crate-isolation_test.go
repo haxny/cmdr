@@ -256,3 +256,55 @@ impl ArchiveVolume {
 		t.Fatalf("a crate with no handle type must never report a handle breach, got %v", problems)
 	}
 }
+
+// Two gate shapes the walk back from an item must see through: a gate on the
+// `impl` block (every method inside is gated), and a multi-line attribute
+// (`#[allow(` … `)]`) between the gate and the item.
+func TestCeilingSeesImplGatesAndGatesAboveMultiLineAttributes(t *testing.T) {
+	source := map[string]string{
+		"lib.rs": `
+pub mod handle;
+`,
+		"handle.rs": `
+pub struct Operations {}
+
+impl Operations {
+    pub fn copy(&self) {}
+}
+
+#[cfg(any(test, feature = "testing"))]
+impl Operations {
+    pub fn park_for_tests(&self) {}
+    /// Docs.
+    pub fn arm_for_tests(&self) {}
+}
+
+#[cfg(any(test, feature = "testing"))]
+#[allow(
+    dead_code,
+    reason = "a fixture"
+)]
+pub struct Recorder {}
+
+impl Operations {
+    #[cfg(any(test, feature = "testing"))]
+    #[allow(
+        clippy::too_many_arguments,
+        reason = "a seam"
+    )]
+    pub fn seam_for_tests(&self) {}
+}
+`,
+	}
+	counts := countSurface(source, "lib.rs", "Operations")
+	if counts.HandleMethods != 1 {
+		t.Fatalf("handle methods: want 1 (copy), got %d", counts.HandleMethods)
+	}
+	// The `Operations` struct only; `Recorder` is gated.
+	if counts.SubsystemItems != 1 {
+		t.Fatalf("subsystem items: want 1 (Operations), got %d", counts.SubsystemItems)
+	}
+	if counts.Gated != 1 {
+		t.Fatalf("the gated struct is counted apart: want 1 (Recorder), got %d", counts.Gated)
+	}
+}

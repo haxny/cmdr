@@ -885,7 +885,7 @@ the write engine, whose `OperationVolumes` is its supertrait.
 
 ### The public surface is capped
 
-`index-crate-isolation` holds the surface to 11 root promises, 6 `OperationLog` methods, seven public modules, and 76
+`index-crate-isolation` holds the surface to 11 root promises, 6 `OperationLog` methods, seven public modules, and 75
 items in them, with no headroom: measured at the extraction and re-measured once, when the journal API took
 `OperationId` (`scripts/check/checks/index-crate-isolation-ceilings.go`). By module:
 

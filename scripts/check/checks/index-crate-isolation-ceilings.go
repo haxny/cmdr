@@ -266,7 +266,7 @@ var surfaceGuardedCrates = []struct {
 		// modules is the whole tree a host can name a path into: `volume` (for
 		// `MtpVolume`) and `virtual_device`.
 		//
-		// 11 of the 13 subsystem items are `virtual_device`'s, which reads oddly for a
+		// 10 of the 12 subsystem items are `virtual_device`'s, which reads oddly for a
 		// fixture and is deliberate: the fake phone sits behind `virtual-device` rather
 		// than `testing`, so the E2E build ships it and the counter measures it.
 		//
@@ -276,7 +276,7 @@ var surfaceGuardedCrates = []struct {
 		Ceilings: surfaceCeilings{
 			RootPromises:   20,
 			PublicModules:  2,
-			SubsystemItems: 13,
+			SubsystemItems: 12,
 		},
 	},
 	{
@@ -389,7 +389,7 @@ var surfaceGuardedCrates = []struct {
 			RootPromises:   11,
 			HandleMethods:  6,
 			PublicModules:  7,
-			SubsystemItems: 76,
+			SubsystemItems: 75,
 		},
 	},
 	{
@@ -415,7 +415,7 @@ var surfaceGuardedCrates = []struct {
 		HandleType: "Operations",
 		Ceilings: surfaceCeilings{
 			RootPromises:   82,
-			HandleMethods:  58,
+			HandleMethods:  56,
 			PublicModules:  1,
 			SubsystemItems: 25,
 		},
