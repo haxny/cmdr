@@ -436,7 +436,7 @@ async fn sequential_extract_cancels_between_members() {
         on_first: {
             let state = Arc::clone(&state);
             Arc::new(move || {
-                state.intent.store(OperationIntent::Stopped as u8, Ordering::Relaxed);
+                state.intent().set_for_test(OperationIntent::Stopped);
             })
         },
     });

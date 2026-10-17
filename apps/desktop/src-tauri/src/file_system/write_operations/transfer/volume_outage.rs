@@ -57,7 +57,7 @@ use std::time::Duration;
 use tokio::time::Instant;
 
 use super::super::event_sinks::OperationEventSink;
-use super::super::state::{WriteOperationState, is_cancelled};
+use super::super::state::WriteOperationState;
 use super::super::types::{WriteOperationPhase, WriteOperationType, WriteProgressEvent};
 use super::retry;
 use super::transfer_probe::{TaskPhase, current_task_phase, set_task_phase};
@@ -190,7 +190,7 @@ pub(crate) async fn wait_after_failure(
     volumes: &[&Arc<dyn Volume>],
     outages: &mut u32,
 ) -> OutageEnd {
-    if *outages >= MAX_OUTAGES_PER_ITEM || !retry::is_retryable(error) || is_cancelled(&state.intent) {
+    if *outages >= MAX_OUTAGES_PER_ITEM || !retry::is_retryable(error) || state.intent().is_cancelled() {
         return OutageEnd::NotWaitable;
     }
     let ended = wait_while_out(state, volumes, None).await;
@@ -253,7 +253,7 @@ async fn wait_for_volume(
     let mut failed_attempts = 0;
     let mut next_attempt = Instant::now();
     loop {
-        if is_cancelled(&state.intent) {
+        if state.intent().is_cancelled() {
             return OutageEnd::Cancelled;
         }
         if state.pause_gate.is_paused() {

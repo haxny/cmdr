@@ -715,7 +715,7 @@ pub(super) async fn drive_transfer_serial(ctx: SerialCopy<'_>) -> SerialOutcome 
     match outcome.intent {
         PostLoopIntent::Completed | PostLoopIntent::Cancelled => {
             // Both drop into the post-loop branch below, which keys off
-            // `load_intent(&state.intent)` for rollback vs cancel cleanup
+            // `state.intent().load()` for rollback vs cancel cleanup
             // and off `copy_error.is_none()` for the success arm.
         }
         PostLoopIntent::Failed(err) => {

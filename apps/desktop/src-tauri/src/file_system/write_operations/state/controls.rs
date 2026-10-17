@@ -13,7 +13,7 @@
 use super::super::Operations;
 use super::{
     ConflictId, ConflictResolution, ConflictResolutionOutcome, ConflictResolutionResponse, OperationIntent,
-    WriteConflictEvent,
+    StopRequest, WriteConflictEvent,
 };
 
 impl Operations {
@@ -36,14 +36,14 @@ impl Operations {
             log::warn!("cancel_write_operation: op={operation_id} rollback={rollback}: no such operation, ignoring");
             return;
         };
-        let target = if rollback {
-            OperationIntent::RollingBack
+        let (request, target) = if rollback {
+            (StopRequest::RollBack, OperationIntent::RollingBack)
         } else {
-            OperationIntent::Stopped
+            (StopRequest::KeepPartials, OperationIntent::Stopped)
         };
         // Atomic against a concurrent stop (quit's walk, another window's click), so
         // a terminal `Stopped` can't be overwritten by a Rollback that read `Running`.
-        let current = match state.transition_intent(target) {
+        let current = match state.request_stop(request) {
             Ok(previous) => previous,
             Err(current) => {
                 log::info!(

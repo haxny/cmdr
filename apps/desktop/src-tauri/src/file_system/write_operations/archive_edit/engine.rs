@@ -12,7 +12,6 @@ use std::time::{Duration, Instant};
 
 use super::super::OperationEventSink;
 use super::super::host::EngineHost;
-use super::super::operation_intent::is_cancelled;
 use super::super::state::WriteOperationState;
 use super::super::types::{
     AppearedDuringMove, CancelRollback, ProgressStep, WriteCancelledEvent, WriteCompleteEvent, WriteErrorEvent,
@@ -443,20 +442,20 @@ impl MutatorHooks {
         {
             return;
         }
-        sleep_unless_cancelled(pause, || is_cancelled(&self.state.intent));
+        sleep_unless_cancelled(pause, || self.state.intent().is_cancelled());
     }
 }
 
 impl MutationHooks for MutatorHooks {
     fn is_cancelled(&self) -> bool {
-        is_cancelled(&self.state.intent)
+        self.state.intent().is_cancelled()
     }
 
     fn wait_if_paused(&self) {
         // Sync park — the mutator runs on the blocking pool, so parking its
         // thread is the correct shape (matches the local-FS drivers). Cancel
         // wins: the gate returns the instant the op leaves `Running`.
-        self.state.pause_gate.wait_while_paused_sync(&self.state.intent);
+        self.state.pause_gate.wait_while_paused_sync(self.state.intent());
     }
 
     fn on_progress(&self, progress: MutationProgress) {

@@ -15,7 +15,6 @@ use crate::file_system::write_operations::types::{
     ConflictResolution, WriteConflictEvent, WriteConflictResolvedEvent, WriteErrorEvent, WriteSourceItemDoneEvent,
 };
 use cmdr_fs::volume::InMemoryVolume;
-use std::sync::atomic::AtomicU8;
 
 /// Sink that flips the operation's intent to `RollingBack` once it sees a
 /// `Copying`-phase progress event reporting at least one fully-copied file.
@@ -24,7 +23,7 @@ use std::sync::atomic::AtomicU8;
 /// user-initiated Rollback AFTER the merge completed — the finding's scenario.
 struct RollbackAfterFirstFileSink {
     inner: CollectorEventSink,
-    intent: Arc<AtomicU8>,
+    intent: crate::file_system::write_operations::state::IntentCell,
 }
 
 impl OperationEventSink for RollbackAfterFirstFileSink {
@@ -34,7 +33,7 @@ impl OperationEventSink for RollbackAfterFirstFileSink {
     fn emit_progress(&self, event: WriteProgressEvent) {
         if event.phase == WriteOperationPhase::Copying && event.files_done >= 1 {
             // RollingBack = 1
-            self.intent.store(1, Ordering::Relaxed);
+            self.intent.set_for_test(OperationIntent::RollingBack);
         }
         self.inner.emit_progress(event);
     }
@@ -93,7 +92,7 @@ async fn rollback_of_merged_directory_preserves_preexisting_dest_files() {
     let state = make_state();
     let events = Arc::new(RollbackAfterFirstFileSink {
         inner: CollectorEventSink::new(),
-        intent: Arc::clone(&state.intent),
+        intent: state.intent().clone(),
     });
     // Overwrite ⇒ dir-vs-dir merges into the existing dest directory.
     let config = VolumeCopyConfig {
@@ -228,9 +227,9 @@ async fn same_volume_copy_into_sibling_dir_is_allowed() {
 /// exercises both Cancel (`Stopped`) and Rollback (`RollingBack`).
 struct TripIntentOnFirstByteSink {
     inner: CollectorEventSink,
-    intent: Arc<AtomicU8>,
+    intent: crate::file_system::write_operations::state::IntentCell,
     /// `OperationIntent` discriminant to store: `1` = RollingBack, `2` = Stopped.
-    target_intent: u8,
+    target_intent: OperationIntent,
 }
 
 impl OperationEventSink for TripIntentOnFirstByteSink {
@@ -239,7 +238,7 @@ impl OperationEventSink for TripIntentOnFirstByteSink {
     }
     fn emit_progress(&self, event: WriteProgressEvent) {
         if event.phase == WriteOperationPhase::Copying && event.bytes_done > 0 {
-            self.intent.store(self.target_intent, Ordering::Relaxed);
+            self.intent.set_for_test(self.target_intent);
         }
         self.inner.emit_progress(event);
     }
@@ -303,8 +302,8 @@ async fn cancel_mid_merge_stream_preserves_preexisting_dest_file() {
     let state = make_state();
     let events = Arc::new(TripIntentOnFirstByteSink {
         inner: CollectorEventSink::new(),
-        intent: Arc::clone(&state.intent),
-        target_intent: 2, // Stopped
+        intent: state.intent().clone(),
+        target_intent: OperationIntent::Stopped,
     });
     // Overwrite ⇒ dir-vs-dir merges into the existing dest directory.
     let config = VolumeCopyConfig {
@@ -345,8 +344,8 @@ async fn rollback_mid_merge_stream_preserves_preexisting_dest_file() {
     let state = make_state();
     let events = Arc::new(TripIntentOnFirstByteSink {
         inner: CollectorEventSink::new(),
-        intent: Arc::clone(&state.intent),
-        target_intent: 1, // RollingBack
+        intent: state.intent().clone(),
+        target_intent: OperationIntent::RollingBack,
     });
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Overwrite,
@@ -411,8 +410,8 @@ async fn cancel_mid_merge_stream_concurrent_preserves_preexisting_dest_file() {
     let state = make_state();
     let events = Arc::new(TripIntentOnFirstByteSink {
         inner: CollectorEventSink::new(),
-        intent: Arc::clone(&state.intent),
-        target_intent: 2, // Stopped
+        intent: state.intent().clone(),
+        target_intent: OperationIntent::Stopped,
     });
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Overwrite,
@@ -452,9 +451,9 @@ async fn cancel_mid_merge_stream_concurrent_preserves_preexisting_dest_file() {
 /// a known set of completed files.
 struct TripIntentAtFilesDoneSink {
     inner: CollectorEventSink,
-    intent: Arc<AtomicU8>,
+    intent: crate::file_system::write_operations::state::IntentCell,
     trip_at_files_done: usize,
-    target_intent: u8,
+    target_intent: OperationIntent,
 }
 
 impl OperationEventSink for TripIntentAtFilesDoneSink {
@@ -463,7 +462,7 @@ impl OperationEventSink for TripIntentAtFilesDoneSink {
     }
     fn emit_progress(&self, event: WriteProgressEvent) {
         if event.phase == WriteOperationPhase::Copying && event.files_done >= self.trip_at_files_done {
-            self.intent.store(self.target_intent, Ordering::Relaxed);
+            self.intent.set_for_test(self.target_intent);
         }
         self.inner.emit_progress(event);
     }
@@ -515,9 +514,9 @@ async fn rollback_after_rename_keeps_preexisting_dest_file() {
     // pass deletes what the op created in reverse.
     let events = Arc::new(TripIntentAtFilesDoneSink {
         inner: CollectorEventSink::new(),
-        intent: Arc::clone(&state.intent),
+        intent: state.intent().clone(),
         trip_at_files_done: 2,
-        target_intent: 1, // RollingBack
+        target_intent: OperationIntent::RollingBack,
     });
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Rename,
@@ -605,9 +604,9 @@ async fn rollback_of_a_concurrently_merged_directory_preserves_preexisting_dest_
     // before the user's Rollback, so the post-loop rolls back a COMPLETED merge.
     let events = Arc::new(TripIntentAtFilesDoneSink {
         inner: CollectorEventSink::new(),
-        intent: Arc::clone(&state.intent),
+        intent: state.intent().clone(),
         trip_at_files_done: 5,
-        target_intent: 1, // RollingBack
+        target_intent: OperationIntent::RollingBack,
     });
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Overwrite,

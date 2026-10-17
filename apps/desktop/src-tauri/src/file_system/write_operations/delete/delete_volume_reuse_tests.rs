@@ -440,7 +440,7 @@ async fn delete_mid_scan_listing_close() {
 /// passed it through silently — the FE never saw the terminal cancel event.
 ///
 /// The pattern: pre-set `state.intent` to `Stopped` so the recursion's cancel
-/// check fires on first entry. Direct `intent.store(...)` is acceptable here
+/// check fires on first entry. Direct `set_for_test(...)` is acceptable here
 /// because we're testing the emit behaviour on Cancelled return, not the
 /// state-machine transition itself.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -457,7 +457,7 @@ async fn delete_cancel_during_scan_emits_write_cancelled() {
     // Pre-cancel: the very first cancel check inside `scan_volume_recursive`
     // will fire and return `Cancelled`. Without the fix, no `write-cancelled`
     // event would be emitted before the `?` propagates the error.
-    state.intent.store(OperationIntent::Stopped as u8, Ordering::Relaxed);
+    state.intent().set_for_test(OperationIntent::Stopped);
 
     let config = WriteOperationConfig::default(); // preview_id: None
 

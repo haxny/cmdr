@@ -15,7 +15,7 @@ Copy, move, delete, trash, and zip edits as managed background ops.
 - **An instant op emits no `WriteCompleteEvent`** (analytics WRAPS its driver): ❌ never emit inside one, or the
   in-archive early return drops in-zip ops. It refuses with a typed `MutationError`, ❌ never a sentence.
 - **A spawned op reserves every lane it touches or waits Queued**; the next admits on `on_settled`, ❌ never `Drop`.
-- **`OperationIntent` is one `AtomicU8`**, written ONLY via `transition_intent` (atomic, table-checked); ❌ never `store(...)` it. Cancel keeps copied files; Rollback removes what it
+- **The intent's writers are `IntentCell`'s** (`operation_intent.rs`). Cancel keeps copied files; Rollback removes what it
   still recognizes, VERIFYING before each destructive act (❌ never a batch or a fork; only the `Drop` net is
   unconditional). Pause is orthogonal, cancel wins. ❌ A reversal never asks `is_cancelled`; it reads `StopMeans`.
 - **A loop parks where it checks cancel**, via `state.stop_or_park_sync()` / `_async()`, ❌ never hand-rolled; a SCAN's

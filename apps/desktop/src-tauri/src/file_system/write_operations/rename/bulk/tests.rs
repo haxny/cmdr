@@ -1,9 +1,9 @@
 use super::*;
 use crate::file_system::write_operations::scope::OpScope;
+use crate::file_system::write_operations::state::IntentCell;
 use cmdr_operation_log::types::ItemOutcome;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::AtomicU8;
 use uuid::Uuid;
 
 use super::super::super::operation_intent::OperationIntent;
@@ -181,7 +181,7 @@ impl UndoLoop {
         );
         let run = bulk_rename_local(
             std::slice::from_ref(&row),
-            &AtomicU8::new(OperationIntent::Running as u8),
+            &IntentCell::reading(OperationIntent::Running),
             &BulkRenameRecorder::new(Arc::clone(&scope), "root".to_string()),
         );
         assert_eq!(
@@ -364,7 +364,7 @@ fn bulk_local_rename_preserves_chains_and_cycles() {
         local_row("cycle-c", cycle_c.clone(), cycle_a.clone()),
     ];
 
-    let run = bulk_rename_local(&rows, &AtomicU8::new(OperationIntent::Running as u8), &test_recorder());
+    let run = bulk_rename_local(&rows, &IntentCell::reading(OperationIntent::Running), &test_recorder());
 
     assert_eq!(fs::read_to_string(&chain_b).expect("read chain b"), "chain a");
     assert_eq!(fs::read_to_string(&chain_c).expect("read chain c"), "chain b");
@@ -397,7 +397,7 @@ fn bulk_local_rename_preserves_swaps_and_case_only_names() {
         local_row("case", case_source.clone(), tmp.join("Screenshot.png")),
     ];
 
-    let run = bulk_rename_local(&rows, &AtomicU8::new(OperationIntent::Running as u8), &test_recorder());
+    let run = bulk_rename_local(&rows, &IntentCell::reading(OperationIntent::Running), &test_recorder());
 
     assert_eq!(fs::read_to_string(&first).expect("read swapped first"), "second");
     assert_eq!(fs::read_to_string(&second).expect("read swapped second"), "first");
@@ -423,7 +423,7 @@ fn bulk_local_rename_skips_a_source_that_changed_after_preflight() {
     let row = local_row("changed", source.clone(), destination.clone());
     fs::write(&source, "changed after review").expect("change fixture after fingerprint");
 
-    let run = bulk_rename_local(&[row], &AtomicU8::new(OperationIntent::Running as u8), &test_recorder());
+    let run = bulk_rename_local(&[row], &IntentCell::reading(OperationIntent::Running), &test_recorder());
 
     assert_eq!(run.outcomes, vec![BulkRenameOutcome::Skipped]);
     assert_eq!(
@@ -443,7 +443,7 @@ fn bulk_local_rename_honours_cancel_before_staging() {
     fs::write(&source, "reviewed").expect("write fixture");
     let row = local_row("cancelled", source.clone(), destination.clone());
 
-    let run = bulk_rename_local(&[row], &AtomicU8::new(OperationIntent::Stopped as u8), &test_recorder());
+    let run = bulk_rename_local(&[row], &IntentCell::reading(OperationIntent::Stopped), &test_recorder());
 
     assert!(run.cancelled, "cancel must stop the batch driver");
     assert_eq!(run.outcomes, vec![BulkRenameOutcome::Skipped]);
@@ -514,7 +514,7 @@ fn bulk_local_rename_preserves_a_destination_created_after_review() {
     let row = local_row("late-conflict", source.clone(), destination.clone());
     fs::write(&destination, "appeared after review").expect("write late destination");
 
-    let run = bulk_rename_local(&[row], &AtomicU8::new(OperationIntent::Running as u8), &test_recorder());
+    let run = bulk_rename_local(&[row], &IntentCell::reading(OperationIntent::Running), &test_recorder());
 
     assert_ne!(run.outcomes, vec![BulkRenameOutcome::Done]);
     assert_eq!(fs::read_to_string(&source).expect("read preserved source"), "reviewed");
@@ -587,7 +587,7 @@ fn a_landed_rename_is_journaled_by_the_run_itself_not_by_a_later_pass() {
 
     let run = bulk_rename_local(
         std::slice::from_ref(&row),
-        &AtomicU8::new(OperationIntent::Running as u8),
+        &IntentCell::reading(OperationIntent::Running),
         &bed.recorder(),
     );
     assert_eq!(run.outcomes, vec![BulkRenameOutcome::Done]);
@@ -612,7 +612,7 @@ fn a_skipped_row_reaches_the_journal_instead_of_vanishing() {
 
     let run = bulk_rename_local(
         std::slice::from_ref(&row),
-        &AtomicU8::new(OperationIntent::Running as u8),
+        &IntentCell::reading(OperationIntent::Running),
         &bed.recorder(),
     );
     assert_eq!(run.outcomes, vec![BulkRenameOutcome::Skipped]);
@@ -644,7 +644,7 @@ fn a_case_only_rename_journals_its_temp_hop_so_a_crash_leaves_it_findable() {
 
     let run = bulk_rename_local(
         std::slice::from_ref(&row),
-        &AtomicU8::new(OperationIntent::Running as u8),
+        &IntentCell::reading(OperationIntent::Running),
         &bed.recorder(),
     );
     assert_eq!(run.outcomes, vec![BulkRenameOutcome::Done]);
@@ -681,7 +681,7 @@ fn a_name_swap_journals_every_hop_of_its_rotation() {
 
     let run = bulk_rename_local(
         &rows_in,
-        &AtomicU8::new(OperationIntent::Running as u8),
+        &IntentCell::reading(OperationIntent::Running),
         &bed.recorder(),
     );
     assert_eq!(
@@ -726,7 +726,7 @@ fn a_skipped_row_is_logged_but_never_offered_to_undo_as_a_rollback_unit() {
 
     let run = bulk_rename_local(
         &rows_in,
-        &AtomicU8::new(OperationIntent::Running as u8),
+        &IntentCell::reading(OperationIntent::Running),
         &bed.recorder(),
     );
     assert_eq!(

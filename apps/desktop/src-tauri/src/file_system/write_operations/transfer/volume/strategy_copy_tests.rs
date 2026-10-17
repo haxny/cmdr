@@ -81,7 +81,7 @@ async fn test_copy_single_path_cancelled() {
     ));
 
     let state = Arc::new(WriteOperationState::new(Duration::from_millis(200)));
-    state.intent.store(OperationIntent::Stopped as u8, Ordering::Relaxed);
+    state.intent().set_for_test(OperationIntent::Stopped);
 
     let result = copy_single_path(
         &source,

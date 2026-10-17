@@ -21,7 +21,7 @@ use crate::file_system::write_operations::conflict::{ApplyToAll, IncomingItem, r
 use crate::file_system::write_operations::durability::flush_touched_directories;
 use crate::file_system::write_operations::error_classification::IoResultExt;
 use crate::file_system::write_operations::event_sinks::OperationEventSink;
-use crate::file_system::write_operations::state::{OperationIntent, WriteOperationState, load_intent};
+use crate::file_system::write_operations::state::{OperationIntent, WriteOperationState};
 use crate::file_system::write_operations::transfer_tree::{TreeLanding, TreeOrder, from_sources};
 use crate::file_system::write_operations::types::{
     CancelRollback, SourceItemOutcome, TopLevelSkipped, WriteCancelledEvent, WriteCompleteEvent, WriteOperationConfig,
@@ -280,7 +280,7 @@ pub(super) fn move_with_rename(
     // The outer start_write_operation wrapper treats Cancelled as "already handled",
     // so we must emit the event here.
     if let Err(WriteOperationError::Cancelled { .. }) = &result {
-        let rollback = match load_intent(&state.intent) {
+        let rollback = match state.intent().load() {
             OperationIntent::RollingBack => move_tx.rollback().into_cancel_rollback(),
             _ => CancelRollback::none(),
         };
@@ -305,7 +305,7 @@ pub(super) fn move_with_rename(
     // instead. `copy/mod.rs`'s `PostLoopIntent::Completed` arm is the same guard
     // on the copy side; the reversal itself is `MoveTransaction::rollback`,
     // which rechecks each item and never overwrites an occupied source.
-    if load_intent(&state.intent) == OperationIntent::RollingBack {
+    if state.intent().load() == OperationIntent::RollingBack {
         log::info!(
             "move_with_rename: rollback requested after loop completion op={}, {} items",
             operation_id,

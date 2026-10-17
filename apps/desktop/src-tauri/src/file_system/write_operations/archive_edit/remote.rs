@@ -40,7 +40,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::io::AsyncWriteExt;
 
 use super::super::scratch_dir::ScratchDir;
-use super::super::state::{WriteOperationState, is_cancelled};
+use super::super::state::WriteOperationState;
 use super::super::types::WriteOperationError;
 use super::edit_error::EditError;
 use cmdr_fs::volume::{Volume, VolumeError, WriteMode};
@@ -95,7 +95,7 @@ where
     F: FnOnce(&Path) -> Result<T, EditError> + Send + 'static,
     T: Send + 'static,
 {
-    if is_cancelled(&state.intent) {
+    if state.intent().is_cancelled() {
         return Err(EditError::Cancelled);
     }
 
@@ -122,7 +122,7 @@ where
         Err(join) => return Err(io_op(&working.display().to_string(), &join.to_string())),
     };
 
-    if is_cancelled(&state.intent) {
+    if state.intent().is_cancelled() {
         return Err(EditError::Cancelled);
     }
 
@@ -153,7 +153,7 @@ pub(super) async fn place_local_file(
     // its final progress callback but before publication. The temp is ours;
     // remove it and leave the target untouched instead of turning that cancel
     // into a successful swap.
-    if is_cancelled(&state.intent) {
+    if state.intent().is_cancelled() {
         let _ = parent.delete(&remote_temp).await;
         return Err(EditError::Cancelled);
     }
@@ -179,7 +179,7 @@ async fn pull_archive(
         .map_err(|e| io_op(&local_working.display().to_string(), &e.to_string()))?;
 
     while let Some(chunk) = stream.next_chunk().await {
-        if is_cancelled(&state.intent) {
+        if state.intent().is_cancelled() {
             return Err(EditError::Cancelled);
         }
         let chunk = chunk.map_err(vol_op(remote_path))?;
@@ -237,7 +237,7 @@ async fn upload_archive(
                 });
             }
         }
-        if is_cancelled(&state.intent) {
+        if state.intent().is_cancelled() {
             ControlFlow::Break(())
         } else {
             ControlFlow::Continue(())
@@ -265,7 +265,7 @@ async fn upload_archive(
             // Remove the partial upload so the user's remote dir isn't left with a
             // stray `.cmdr-tmp-*` (harmless — the original is intact — but tidy).
             let _ = parent.delete(remote_temp).await;
-            if is_cancelled(&state.intent) {
+            if state.intent().is_cancelled() {
                 Err(EditError::Cancelled)
             } else {
                 Err(EditError::Op(to_write_error(remote_temp, &err)))

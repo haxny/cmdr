@@ -14,7 +14,6 @@ use std::collections::HashMap;
 use std::io::{Cursor, Write};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use std::sync::atomic::Ordering;
 use std::time::Duration;
 
 use super::super::super::state::{OperationIntent, WriteOperationState};
@@ -301,9 +300,7 @@ async fn remote_edit_cancel_before_swap_leaves_the_original_intact() {
                 ..Default::default()
             };
             mutator::apply(working, &changeset, &NoHooks).expect("local mutator apply");
-            state_for_closure
-                .intent
-                .store(OperationIntent::Stopped as u8, Ordering::Relaxed);
+            state_for_closure.intent().set_for_test(OperationIntent::Stopped);
             Ok(())
         },
     )

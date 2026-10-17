@@ -17,7 +17,6 @@ use crate::file_system::write_operations::types::{
 };
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::{CopyScanResult, InMemoryVolume, ListingProgress, SpaceInfo, VolumeReadStream};
-use std::sync::atomic::AtomicU8;
 
 // ── Phase 4.2 concurrency tests ──────────────────────────────────
 //
@@ -216,7 +215,7 @@ async fn test_concurrent_copy_cancellation_mid_batch() {
     // progress events land. Deterministic: doesn't rely on timing.
     struct CancelOnProgressSink {
         inner: CollectorEventSink,
-        intent: Arc<AtomicU8>,
+        intent: crate::file_system::write_operations::state::IntentCell,
         cancel_after_events: usize,
         events_seen: AtomicUsize,
     }
@@ -228,7 +227,7 @@ async fn test_concurrent_copy_cancellation_mid_batch() {
             if event.phase == WriteOperationPhase::Copying
                 && self.events_seen.fetch_add(1, Ordering::Relaxed) >= self.cancel_after_events
             {
-                self.intent.store(2, Ordering::Relaxed);
+                self.intent.set_for_test(OperationIntent::Stopped);
             }
             self.inner.emit_progress(event);
         }
@@ -267,7 +266,7 @@ async fn test_concurrent_copy_cancellation_mid_batch() {
     let state = make_state();
     let events = Arc::new(CancelOnProgressSink {
         inner: CollectorEventSink::new(),
-        intent: Arc::clone(&state.intent),
+        intent: state.intent().clone(),
         cancel_after_events: 2,
         events_seen: AtomicUsize::new(0),
     });
@@ -308,7 +307,7 @@ async fn test_concurrent_copy_cancellation_mid_batch() {
     );
 
     // Intent was flipped to Stopped by the sink; confirm we observed it.
-    assert_eq!(load_intent(&state.intent), OperationIntent::Stopped);
+    assert_eq!(state.intent().load(), OperationIntent::Stopped);
 
     // Less than all 20 landed (cancellation worked somewhere).
     let mut total = 0;

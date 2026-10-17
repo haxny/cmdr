@@ -8,7 +8,7 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use crate::file_system::write_operations::event_sinks::OperationEventSink;
-use crate::file_system::write_operations::state::{OperationIntent, WriteOperationState, load_intent};
+use crate::file_system::write_operations::state::{OperationIntent, WriteOperationState};
 use crate::file_system::write_operations::types::{SourceItemOutcome, WriteOperationError};
 
 use super::{
@@ -352,7 +352,7 @@ where
     // Today's `copy_files_with_progress_inner` post-loop intent check exists
     // exactly for this race (commit `1de4255d`). We mirror it here so a
     // future caller doesn't have to remember.
-    if load_intent(&state.intent) != OperationIntent::Running {
+    if state.intent().load() != OperationIntent::Running {
         return TransferLoopOutcome {
             files_done,
             bytes_done,

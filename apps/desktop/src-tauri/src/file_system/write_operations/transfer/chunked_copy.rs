@@ -5,11 +5,10 @@
 //! alternative that checks cancellation between chunks, allowing immediate response
 //! to user cancellation requests.
 
+use super::super::state::IntentCell;
 use std::io::{Read, Write};
 use std::os::unix::fs::OpenOptionsExt as _;
 use std::path::Path;
-use std::sync::Arc;
-use std::sync::atomic::AtomicU8;
 #[cfg(test)]
 use std::sync::atomic::Ordering;
 
@@ -72,7 +71,7 @@ pub fn is_network_filesystem(path: &Path) -> bool {
 pub fn chunked_copy_with_metadata(
     source: &Path,
     dest: &Path,
-    cancelled: &Arc<AtomicU8>,
+    cancelled: &IntentCell,
     progress_callback: Option<ChunkedCopyProgressFn>,
 ) -> Result<Staged, WriteOperationError> {
     log::debug!(
@@ -253,7 +252,7 @@ fn copy_data_chunked(
     dst_file: &mut std::fs::File,
     source: &Path,
     dest: &Path,
-    cancelled: &Arc<AtomicU8>,
+    cancelled: &IntentCell,
     source_size: u64,
     progress_callback: Option<ChunkedCopyProgressFn>,
 ) -> Result<u64, WriteOperationError> {
@@ -262,7 +261,7 @@ fn copy_data_chunked(
 
     loop {
         // Check cancellation BEFORE each read
-        if super::super::state::is_cancelled(cancelled) {
+        if cancelled.is_cancelled() {
             log::debug!(
                 "chunked_copy: cancellation detected after {} bytes, cleaning up",
                 total_bytes
@@ -315,6 +314,7 @@ mod tests {
     use super::*;
     use crate::test_support::TestDir;
     use std::fs;
+    use std::sync::Arc;
 
     fn create_temp_dir(name: &str) -> TestDir {
         TestDir::new(&format!("chunked_copy_test_{}", name))
@@ -328,7 +328,7 @@ mod tests {
 
         fs::write(&src, "Hello, chunked copy!").unwrap();
 
-        let cancelled = Arc::new(AtomicU8::new(0));
+        let cancelled = IntentCell::running();
         let result = chunked_copy_with_metadata(&src, &dst, &cancelled, None);
 
         assert!(result.is_ok());
@@ -348,7 +348,7 @@ mod tests {
         fs::write(&src, &large_content).unwrap();
 
         // Pre-cancelled
-        let cancelled = Arc::new(AtomicU8::new(2));
+        let cancelled = IntentCell::reading(crate::file_system::write_operations::OperationIntent::Stopped);
         let result = chunked_copy_with_metadata(&src, &dst, &cancelled, None);
 
         assert!(matches!(result, Err(WriteOperationError::Cancelled { .. })));
@@ -367,7 +367,7 @@ mod tests {
         fs::write(&src, "#!/bin/bash").unwrap();
         fs::set_permissions(&src, fs::Permissions::from_mode(0o755)).unwrap();
 
-        let cancelled = Arc::new(AtomicU8::new(0));
+        let cancelled = IntentCell::running();
         let result = chunked_copy_with_metadata(&src, &dst, &cancelled, None);
 
         assert!(result.is_ok());
@@ -383,7 +383,7 @@ mod tests {
 
         fs::write(&src, "").unwrap();
 
-        let cancelled = Arc::new(AtomicU8::new(0));
+        let cancelled = IntentCell::running();
         let result = chunked_copy_with_metadata(&src, &dst, &cancelled, None);
 
         assert!(result.is_ok());
@@ -414,7 +414,7 @@ mod tests {
         let target_mtime = filetime::FileTime::from_unix_time(1_600_000_000, 0); // 2020-09-13
         filetime::set_file_mtime(&src, target_mtime).unwrap();
 
-        let cancelled = Arc::new(AtomicU8::new(0));
+        let cancelled = IntentCell::running();
         chunked_copy_with_metadata(&src, &dst, &cancelled, None).unwrap();
 
         let dst_meta = fs::metadata(&dst).unwrap();
@@ -446,7 +446,7 @@ mod tests {
             return;
         }
 
-        let cancelled = Arc::new(AtomicU8::new(0));
+        let cancelled = IntentCell::running();
         chunked_copy_with_metadata(&src, &dst, &cancelled, None).unwrap();
 
         let roundtripped = xattr::get(&dst, key).unwrap();
@@ -475,7 +475,7 @@ mod tests {
         let expected = payload.len() as u64;
         fs::write(&src, &payload).unwrap();
 
-        let cancelled = Arc::new(AtomicU8::new(0));
+        let cancelled = IntentCell::running();
         let result = chunked_copy_with_metadata(&src, &dst, &cancelled, None).unwrap();
         assert_eq!(
             result.bytes, expected,
@@ -497,7 +497,7 @@ mod tests {
         let expected_size = large_content.len() as u64;
         fs::write(&src, &large_content).unwrap();
 
-        let cancelled = Arc::new(AtomicU8::new(0));
+        let cancelled = IntentCell::running();
         let callback_count = Arc::new(AtomicU64::new(0));
         let last_bytes = Arc::new(AtomicU64::new(0));
 

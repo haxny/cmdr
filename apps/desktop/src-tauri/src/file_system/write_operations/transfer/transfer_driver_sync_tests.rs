@@ -85,7 +85,7 @@ fn sync_driver_honors_cancellation_at_start_of_iteration() {
     // Pre-cancel the state. The driver must NOT invoke the closure even once.
     let op_id = unique_op_id("sync-pre-cancel");
     let state = make_state();
-    state.intent.store(OperationIntent::Stopped as u8, Ordering::Relaxed);
+    state.intent().set_for_test(OperationIntent::Stopped);
     let _op_guard = install_state(&op_id, Arc::clone(&state));
     register_operation_status(&op_id, WriteOperationType::Copy, vec![]);
     let sink = CollectorEventSink::new();
@@ -141,9 +141,7 @@ fn sync_driver_stops_invoking_closure_after_mid_loop_cancel() {
         |ctx| {
             log_clone.record(ctx.source_path, ctx.dest_path);
             // Cancel after we've recorded /a.
-            state_clone
-                .intent
-                .store(OperationIntent::Stopped as u8, Ordering::Relaxed);
+            state_clone.intent().set_for_test(OperationIntent::Stopped);
             Ok(TransferOutcome::Transferred { bytes: 50 })
         },
     );
@@ -669,9 +667,6 @@ async fn sync_driver_cancel_while_paused_unblocks_and_cancels() {
         .expect("cancel-while-paused unblocks the condvar")
         .expect("spawn_blocking joins");
     assert!(matches!(outcome.intent, PostLoopIntent::Cancelled));
-    assert_eq!(
-        super::super::super::state::load_intent(&state.intent),
-        OperationIntent::Stopped
-    );
+    assert_eq!(state.intent().load(), OperationIntent::Stopped);
     unregister_operation_status(&op_id);
 }

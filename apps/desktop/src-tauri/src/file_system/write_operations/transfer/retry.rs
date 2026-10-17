@@ -31,7 +31,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use super::super::state::{WriteOperationState, is_cancelled};
+use super::super::state::WriteOperationState;
 use cmdr_fs::volume::VolumeError;
 
 /// How many times one file's write may run in total, the first try included.
@@ -141,7 +141,7 @@ pub(super) fn backoff_after(failed_attempt: u32) -> Duration {
 /// Three independent gates, and a cancel beats all of them: a cancelled operation
 /// never starts another attempt, however retryable the error looked.
 pub(super) fn should_retry(err: &VolumeError, failed_attempt: u32, state: &Arc<WriteOperationState>) -> bool {
-    !is_cancelled(&state.intent) && failed_attempt < MAX_ATTEMPTS && is_retryable(err)
+    !state.intent().is_cancelled() && failed_attempt < MAX_ATTEMPTS && is_retryable(err)
 }
 
 /// Waits out the backoff for `failed_attempt`, returning `false` the moment the
@@ -150,13 +150,13 @@ pub(super) fn should_retry(err: &VolumeError, failed_attempt: u32, state: &Arc<W
 /// ❌ Not a plain `sleep`: a cancel must win instantly, and a retry that outlives
 /// a cancel is the hang this whole effort exists to remove, wearing a new hat.
 pub(super) async fn wait_before_retry(state: &Arc<WriteOperationState>, failed_attempt: u32) -> bool {
-    if is_cancelled(&state.intent) {
+    if state.intent().is_cancelled() {
         return false;
     }
     tokio::select! {
         biased;
         () = state.backend_cancel.cancelled() => false,
-        () = tokio::time::sleep(backoff_after(failed_attempt)) => !is_cancelled(&state.intent),
+        () = tokio::time::sleep(backoff_after(failed_attempt)) => !state.intent().is_cancelled(),
     }
 }
 

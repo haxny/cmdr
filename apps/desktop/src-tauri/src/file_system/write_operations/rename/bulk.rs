@@ -5,12 +5,12 @@
 //! case-only rename uses one same-directory temporary name. Which rows run and in
 //! what order (spelling, conflicts, look-alikes, the step plan) is `bulk/plan.rs`.
 
+use super::super::state::IntentCell;
 use std::future::Future;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use std::sync::Arc;
-use std::sync::atomic::AtomicU8;
 use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
@@ -20,7 +20,7 @@ use super::super::event_sinks::OperationEventSink;
 use super::super::host::EngineHost;
 use super::super::manager::{self, OperationDescriptor, OperationSummaryText};
 use super::super::source_binding::SourceFingerprint;
-use super::super::state::{WriteOperationState, WriteSettledGuard, is_cancelled};
+use super::super::state::{WriteOperationState, WriteSettledGuard};
 use super::super::types::{
     CancelRollback, SourceItemOutcome, WriteCancelledEvent, WriteCompleteEvent, WriteOperationError,
     WriteOperationStartResult, WriteOperationType, WriteProgressEvent, WriteSourceItemDoneEvent,
@@ -186,7 +186,7 @@ impl crate::file_system::write_operations::Operations {
                     let recorder = BulkRenameRecorder::new(state_for_task.shared_scope(), volume_id_for_task.clone());
                     let run = if uses_local_paths {
                         let rows = rows_for_task.clone();
-                        let intent = Arc::clone(&state_for_task.intent);
+                        let intent = state_for_task.intent().clone();
                         match tokio::task::spawn_blocking(move || bulk_rename_local(&rows, &intent, &recorder)).await {
                             Ok(result) => result,
                             Err(join_error) => BulkRenameRun::failed(rows_for_task.len(), join_error.to_string()),
@@ -196,7 +196,7 @@ impl crate::file_system::write_operations::Operations {
                             ops.host(),
                             &rows_for_task,
                             &volume_id_for_task,
-                            &state_for_task.intent,
+                            state_for_task.intent(),
                             &recorder,
                         )
                         .await
@@ -324,7 +324,7 @@ impl BulkRenameRun {
 
 /// Local batch engine used on the blocking pool. Acyclic rows move directly in
 /// dependency order. Only cycles and case-only changes use a sibling temporary.
-fn bulk_rename_local(rows: &[BulkRenameRow], intent: &AtomicU8, recorder: &BulkRenameRecorder) -> BulkRenameRun {
+fn bulk_rename_local(rows: &[BulkRenameRow], intent: &IntentCell, recorder: &BulkRenameRecorder) -> BulkRenameRun {
     let mut outcomes = vec![BulkRenameOutcome::Skipped; rows.len()];
     let mut active: Vec<bool> = rows
         .iter()
@@ -335,7 +335,7 @@ fn bulk_rename_local(rows: &[BulkRenameRow], intent: &AtomicU8, recorder: &BulkR
     settle_local_conflicts(rows, &mut active);
     complete_noop_rows(rows, &active, &mut outcomes, recorder);
     for step in build_execution_plan(rows, &active) {
-        if is_cancelled(intent) {
+        if intent.is_cancelled() {
             return BulkRenameRun::settled(rows, outcomes, true, recorder);
         }
         match step {
@@ -351,7 +351,7 @@ async fn bulk_rename_remote(
     host: &EngineHost,
     rows: &[BulkRenameRow],
     volume_id: &str,
-    intent: &AtomicU8,
+    intent: &IntentCell,
     recorder: &BulkRenameRecorder,
 ) -> BulkRenameRun {
     // Plain `get`: a bulk rename acts on the drive itself; it has no archive or `.git` routing.
@@ -374,7 +374,7 @@ async fn bulk_rename_remote(
     .await;
     complete_noop_rows(rows, &active, &mut outcomes, recorder);
     for step in build_execution_plan(rows, &active) {
-        if is_cancelled(intent) {
+        if intent.is_cancelled() {
             return BulkRenameRun::settled(rows, outcomes, true, recorder);
         }
         match step {

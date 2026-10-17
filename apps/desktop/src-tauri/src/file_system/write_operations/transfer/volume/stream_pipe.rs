@@ -410,7 +410,7 @@ pub(super) async fn stream_pipe_file(
             // report it as one: the post-loop keys `write-cancelled` off a
             // `Cancelled`-shaped error, and a transport error in its place would
             // log the user's own click as a failed transfer.
-            Err(e) if retry::is_retryable(&e) && super::super::super::state::is_cancelled(&state.intent) => {
+            Err(e) if retry::is_retryable(&e) && state.intent().is_cancelled() => {
                 staged.abandon(dest_volume).await;
                 remove_unstaged_partial(writing_at_the_final_name, dest_volume, dest_path).await;
                 return Err(VolumeError::Cancelled("Operation cancelled by user".to_string()))

@@ -214,7 +214,7 @@ async fn merge_never_deletes_unshadowed_dest_files_under_every_policy() {
 }
 
 /// Cancel-mid-merge variant of the invariant: flip intent partway through (via
-/// the public cancel path, never `state.intent.store` directly), and the
+/// the public cancel path, never `state.intent().set_for_test` directly), and the
 /// dest-only sentinel must still survive.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn merge_cancel_mid_stream_preserves_unshadowed_dest_files() {

@@ -336,7 +336,7 @@ async fn scan_volume_recursive(
 ) -> Result<(), WriteOperationError> {
     use std::sync::atomic::Ordering;
 
-    if super::super::state::is_cancelled(&state.intent) {
+    if state.intent().is_cancelled() {
         return Err(WriteOperationError::Cancelled {
             message: "Operation cancelled by user".to_string(),
         });
@@ -615,7 +615,7 @@ pub(in crate::file_system::write_operations) async fn delete_volume_files_with_p
             scan.per_path.iter().map(|(p, r)| (p.clone(), r)).collect();
 
         for source in sources {
-            if super::super::state::is_cancelled(&state.intent) {
+            if state.intent().is_cancelled() {
                 events.emit_cancelled(WriteCancelledEvent {
                     operation_id: operation_id.to_string(),
                     operation_type: WriteOperationType::Delete,

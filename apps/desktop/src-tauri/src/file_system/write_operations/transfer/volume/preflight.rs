@@ -32,7 +32,7 @@ use std::time::Instant;
 
 use super::super::super::event_sinks::OperationEventSink;
 use super::super::super::scan_cache::ScanPreviews;
-use super::super::super::state::{ScanResult, WriteOperationState, is_cancelled};
+use super::super::super::state::{ScanResult, WriteOperationState};
 use super::super::super::transfer_tree::{TreeModel, TreeOrder, TreeRecorder, from_per_path, sort_sources};
 use super::super::super::types::{
     CancelRollback, VolumeCopyConfig, WriteCancelledEvent, WriteOperationError, WriteOperationPhase,
@@ -235,7 +235,7 @@ pub(super) async fn scan_volume_sources(
         ),
     );
 
-    if is_cancelled(&state.intent) {
+    if state.intent().is_cancelled() {
         return Err(cancelled_failure(events, operation_id, operation_type));
     }
 

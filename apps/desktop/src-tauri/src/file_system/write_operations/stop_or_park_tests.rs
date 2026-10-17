@@ -33,7 +33,7 @@ fn stop_or_park_lets_a_live_operation_carry_on() {
 fn stop_or_park_says_stop_without_parking_a_cancelled_op() {
     let state = WriteOperationState::new(Duration::from_millis(0));
     state.pause_gate.pause();
-    state.intent.store(OperationIntent::Stopped as u8, Ordering::Relaxed);
+    state.intent().set_for_test(OperationIntent::Stopped);
 
     assert!(
         state.stop_or_park_sync(),
@@ -82,7 +82,7 @@ fn stop_or_park_says_stop_when_cancel_lands_while_parked() {
     // allowed-test-sleep: let the worker reach the park before the cancel lands.
     std::thread::sleep(Duration::from_millis(50));
     // Exactly what `cancel_write_operation` does: flip the intent, then wake.
-    state.intent.store(OperationIntent::Stopped as u8, Ordering::Relaxed);
+    state.intent().set_for_test(OperationIntent::Stopped);
     state.pause_gate.wake();
 
     assert!(
@@ -103,7 +103,7 @@ async fn stop_or_park_async_says_stop_when_cancel_lands_while_parked() {
 
     // allowed-test-sleep: let the task reach the park before the cancel lands.
     tokio::time::sleep(Duration::from_millis(50)).await;
-    state.intent.store(OperationIntent::Stopped as u8, Ordering::Relaxed);
+    state.intent().set_for_test(OperationIntent::Stopped);
     state.pause_gate.wake();
 
     let stop = tokio::time::timeout(Duration::from_secs(5), worker)

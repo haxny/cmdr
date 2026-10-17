@@ -6,8 +6,9 @@
 
 use std::ffi::{CString, c_int, c_void};
 use std::path::Path;
-use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
+use std::sync::atomic::{AtomicBool, Ordering};
+
+use crate::file_system::write_operations::state::IntentCell;
 
 use crate::file_system::write_operations::WriteOperationError;
 use crate::file_system::write_operations::error_classification::{IoResultExt, classify_copy_io_error};
@@ -88,7 +89,7 @@ type CopyfileCallback = extern "C" fn(
 /// Context passed to the progress callback.
 pub struct CopyProgressContext {
     /// Cancellation flag - checked during copy
-    pub cancelled: Arc<AtomicU8>,
+    pub cancelled: IntentCell,
     /// Whether we've already logged the cancellation (avoids log spam from repeated callbacks)
     cancel_logged: AtomicBool,
     /// Callback to report progress (bytes_copied for current file)
@@ -102,7 +103,7 @@ pub struct CopyProgressContext {
 impl Default for CopyProgressContext {
     fn default() -> Self {
         Self {
-            cancelled: Arc::new(AtomicU8::new(0)),
+            cancelled: IntentCell::running(),
             cancel_logged: AtomicBool::new(false),
             on_progress: None,
             on_file_start: None,
@@ -113,7 +114,7 @@ impl Default for CopyProgressContext {
 
 impl CopyProgressContext {
     /// Creates a context with only cancellation support (no callbacks).
-    pub fn with_cancellation(cancelled: Arc<AtomicU8>) -> Self {
+    pub fn with_cancellation(cancelled: IntentCell) -> Self {
         Self {
             cancelled,
             cancel_logged: AtomicBool::new(false),
@@ -150,7 +151,7 @@ extern "C" fn copy_progress_callback(
 
     // Check cancellation (log only once to avoid spam: macOS may call this hundreds of times
     // after COPYFILE_QUIT while draining buffers)
-    if super::super::state::is_cancelled(&context.cancelled) {
+    if context.cancelled.is_cancelled() {
         if !context.cancel_logged.swap(true, Ordering::Relaxed) {
             log::debug!("copyfile callback: cancellation detected, returning COPYFILE_QUIT");
         }
@@ -368,7 +369,7 @@ pub fn copy_file_native(
     // even after the callback returned COPYFILE_QUIT, because it may continue draining
     // buffered I/O (especially common when the source is on a network mount).
     if let Some(ctx) = context
-        && super::super::state::is_cancelled(&ctx.cancelled)
+        && ctx.cancelled.is_cancelled()
     {
         let _ = std::fs::remove_file(destination);
         return Err(WriteOperationError::Cancelled {
@@ -648,7 +649,8 @@ mod tests {
 
         fs::write(&src, "content").unwrap();
 
-        let context = CopyProgressContext::with_cancellation(Arc::new(AtomicU8::new(1))); // Pre-cancelled
+        let cancelled = IntentCell::reading(crate::file_system::write_operations::OperationIntent::RollingBack); // Pre-cancelled
+        let context = CopyProgressContext::with_cancellation(cancelled);
 
         let _result = copy_single_file_native(&src, &dst, false, Some(&context));
         // Note: cancellation is checked in the callback, so for small files it may complete

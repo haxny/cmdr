@@ -35,7 +35,6 @@ use crate::file_system::write_operations::types::{
 use cmdr_fs::volume::InMemoryVolume;
 use cmdr_fs::volume::WriteMode;
 use cmdr_fs::volume::{StreamLength, StreamWriteProgress, StreamWritten};
-use std::sync::atomic::AtomicU8;
 
 /// How long a leaf lingers inside `write_from_stream` waiting for siblings to
 /// join it. Long enough that a real window fills, short enough that a serial walk
@@ -465,7 +464,7 @@ async fn a_cancel_mid_subtree_leaves_no_leaf_still_writing() {
 async fn a_rolled_back_wide_window_copy_leaves_no_directory_it_created() {
     struct RollbackOnceCopying {
         inner: CollectorEventSink,
-        intent: Arc<AtomicU8>,
+        intent: crate::file_system::write_operations::state::IntentCell,
         seen: AtomicUsize,
     }
     impl OperationEventSink for RollbackOnceCopying {
@@ -476,7 +475,7 @@ async fn a_rolled_back_wide_window_copy_leaves_no_directory_it_created() {
             // Late enough that several leaves are in flight at several depths.
             if event.phase == WriteOperationPhase::Copying && self.seen.fetch_add(1, Ordering::Relaxed) >= 6 {
                 // RollingBack = 1
-                self.intent.store(1, Ordering::Relaxed);
+                self.intent.set_for_test(OperationIntent::RollingBack);
             }
             self.inner.emit_progress(event);
         }
@@ -519,7 +518,7 @@ async fn a_rolled_back_wide_window_copy_leaves_no_directory_it_created() {
     let state = make_state();
     let events = Arc::new(RollbackOnceCopying {
         inner: CollectorEventSink::new(),
-        intent: Arc::clone(&state.intent),
+        intent: state.intent().clone(),
         seen: AtomicUsize::new(0),
     });
     let config = VolumeCopyConfig {

@@ -61,7 +61,7 @@ use std::sync::Mutex;
 
 use super::super::super::conflict::ApplyToAll;
 use super::super::super::event_sinks::OperationEventSink;
-use super::super::super::state::{WriteOperationState, is_cancelled};
+use super::super::super::state::WriteOperationState;
 use super::super::super::types::{RecoveredOriginal, VolumeCopyConfig, WriteOperationError};
 use super::super::dest_name_index::{DestLookup, DestNameIndex};
 use super::conflict::{ResolvedConflict, resolve_volume_conflict};
@@ -141,7 +141,7 @@ pub(super) async fn rename_merge_directory(
     dest_dir: &Path,
     note_both_halves: &(dyn Fn(&Path, &Path) + Sync),
 ) -> Result<(), WriteOperationError> {
-    if is_cancelled(&ctx.state.intent) {
+    if ctx.state.intent().is_cancelled() {
         return Err(WriteOperationError::Cancelled {
             message: "Operation cancelled by user".to_string(),
         });

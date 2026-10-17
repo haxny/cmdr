@@ -42,7 +42,7 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use crate::file_system::write_operations::event_sinks::OperationEventSink;
-use crate::file_system::write_operations::state::{WriteOperationState, is_cancelled};
+use crate::file_system::write_operations::state::WriteOperationState;
 use crate::file_system::write_operations::transfer_tree::{NodeId, TreeLeaf, TreeReporter};
 use crate::file_system::write_operations::types::{WriteOperationPhase, WriteOperationType};
 use cmdr_fs::ignore_poison::IgnorePoison;
@@ -330,7 +330,7 @@ impl LeafProgress {
     /// (0 → leaf size). Throttled; returns `Break` to abort the write on cancel.
     pub(in crate::file_system::write_operations::transfer) fn on_chunk(&self, file_bytes_done: u64) -> ControlFlow<()> {
         let ledger = &self.source.ledger;
-        if is_cancelled(&ledger.state.intent) {
+        if ledger.state.intent().is_cancelled() {
             return ControlFlow::Break(());
         }
         let reported = {

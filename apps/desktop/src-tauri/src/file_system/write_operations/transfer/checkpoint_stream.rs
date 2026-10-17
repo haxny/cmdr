@@ -14,7 +14,7 @@ use std::pin::Pin;
 use std::sync::Arc;
 use std::time::Duration;
 
-use super::super::state::WriteOperationState;
+use super::super::state::{IntentCell, WriteOperationState};
 use super::transfer_probe::{TaskPhase, set_task_bytes, set_task_phase};
 use cmdr_fs::volume::{ScanStop, ScanStopSignal, Volume, VolumeError, VolumeReadStream};
 
@@ -241,7 +241,7 @@ impl CheckpointStream {
         if self.state.pause_gate.is_paused() {
             set_task_phase(TaskPhase::ParkedPause);
         }
-        self.state.pause_gate.wait_while_paused_async(&self.state.intent).await;
+        self.state.pause_gate.wait_while_paused_async(self.state.intent()).await;
 
         // Foreground auto-yield: when a foreground op (listing / nav on the phone)
         // is pending on the source device, don't start the next window until it
@@ -274,7 +274,7 @@ impl CheckpointStream {
         if !self.source_volume.supports_foreground_yield() {
             return;
         }
-        if super::super::state::is_cancelled(&self.state.intent) {
+        if self.state.intent().is_cancelled() {
             return; // cancel owns teardown; never start a yield while cancelled
         }
         // At EOF there's nothing left to yield for; let the copy finish.
@@ -313,7 +313,7 @@ impl CheckpointStream {
         // whole loop is cancel-aware (a cancel breaks out promptly and lets the
         // backend's `on_progress` own cleanup).
         loop {
-            if super::super::state::is_cancelled(&self.state.intent) {
+            if self.state.intent().is_cancelled() {
                 break;
             }
             // Park until the device is clear of foreground work, but RACE it
@@ -323,14 +323,14 @@ impl CheckpointStream {
             // (unrelated) foreground op happens to finish.
             tokio::select! {
                 () = source_volume.wait_until_foreground_idle() => {}
-                () = poll_until_cancelled(&self.state.intent) => break,
+                () = poll_until_cancelled(self.state.intent()) => break,
             }
-            if super::super::state::is_cancelled(&self.state.intent) {
+            if self.state.intent().is_cancelled() {
                 break;
             }
             // Stay parked for the quiet window. If foreground becomes pending
             // again before it elapses (a burst), loop and re-drain.
-            if sleep_cancel_aware(&self.state.intent, self.foreground_debounce).await {
+            if sleep_cancel_aware(self.state.intent(), self.foreground_debounce).await {
                 break; // cancelled during the wait
             }
             if !source_volume.foreground_pending().await {
@@ -366,7 +366,7 @@ impl CheckpointStream {
         if !self.dest_volume.supports_foreground_yield_as_destination() {
             return;
         }
-        if super::super::state::is_cancelled(&self.state.intent) {
+        if self.state.intent().is_cancelled() {
             return; // cancel owns teardown; never start a yield while cancelled
         }
         // At EOF there's nothing left to write; let the copy finalize (the
@@ -429,7 +429,7 @@ impl CheckpointStream {
         tokio::select! {
             () = dest_volume.wait_until_foreground_idle() => {}
             () = tokio::time::sleep(self.dest_yield_hard_cap) => {}
-            () = poll_until_cancelled(&self.state.intent) => {}
+            () = poll_until_cancelled(self.state.intent()) => {}
         }
         // Resuming: restart the min-progress floor so the next yield can only fire
         // after another `min_progress_floor` bytes.
@@ -450,11 +450,11 @@ impl CheckpointStream {
 /// `&CheckpointStream`: a `&self` held across an `.await` would force the
 /// wrapper's `next_chunk` future to require `CheckpointStream: Sync`, which it
 /// isn't (it holds a non-`Sync` `dyn VolumeReadStream`).
-async fn sleep_cancel_aware(intent: &std::sync::atomic::AtomicU8, dur: Duration) -> bool {
+async fn sleep_cancel_aware(intent: &IntentCell, dur: Duration) -> bool {
     const SLICE: Duration = Duration::from_millis(20);
     let mut remaining = dur;
     loop {
-        if super::super::state::is_cancelled(intent) {
+        if intent.is_cancelled() {
             return true;
         }
         if remaining.is_zero() {
@@ -472,9 +472,9 @@ async fn sleep_cancel_aware(intent: &std::sync::atomic::AtomicU8, dur: Duration)
 /// the foreground signal, so a cancel-while-parked needs a separate waker. We
 /// poll the intent (a cheap relaxed atomic load) on a short tick rather than
 /// reach into the gate's internals; the latency is bounded by the tick.
-async fn poll_until_cancelled(intent: &std::sync::atomic::AtomicU8) {
+async fn poll_until_cancelled(intent: &IntentCell) {
     const TICK: Duration = Duration::from_millis(20);
-    while !super::super::state::is_cancelled(intent) {
+    while !intent.is_cancelled() {
         tokio::time::sleep(TICK).await;
     }
 }

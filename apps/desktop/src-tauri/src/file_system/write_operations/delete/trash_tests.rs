@@ -182,7 +182,9 @@ fn trash_empty_sources_emits_complete_via_sink() {
 fn trash_pre_cancel_emits_cancelled_via_sink() {
     let events = Arc::new(CollectorEventSink::new());
     let state = Arc::new(WriteOperationState::new(Duration::from_millis(0)));
-    state.intent.store(2u8, std::sync::atomic::Ordering::Relaxed); // Stopped
+    state
+        .intent()
+        .set_for_test(crate::file_system::write_operations::OperationIntent::Stopped); // Stopped
 
     let sources = [PathBuf::from("/nonexistent_trash_test_12345/file.txt")];
     let result = trash_files_with_progress(&*events, "op-trash-cancel", &state, &sources, None);
@@ -471,7 +473,9 @@ fn a_batch_ranks_the_item_level_refusals_between_permission_and_no_trash() {
 fn test_cancellation_flag_checked_by_state() {
     let state = Arc::new(WriteOperationState::new(Duration::from_millis(200)));
 
-    assert!(!crate::file_system::write_operations::is_cancelled(&state.intent));
-    state.intent.store(2u8, std::sync::atomic::Ordering::Relaxed);
-    assert!(crate::file_system::write_operations::is_cancelled(&state.intent));
+    assert!(!state.intent().is_cancelled());
+    state
+        .intent()
+        .set_for_test(crate::file_system::write_operations::OperationIntent::Stopped);
+    assert!(state.intent().is_cancelled());
 }

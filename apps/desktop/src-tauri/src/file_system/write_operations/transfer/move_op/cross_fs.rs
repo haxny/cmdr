@@ -195,7 +195,7 @@ pub(super) fn move_with_staging(
             // moves bytes, so it's the one a user who hits Pause means: the
             // per-file cancel checks live inside `copy_single_item`, and this
             // park returns immediately once one of them is due to fire.
-            state.pause_gate.wait_while_paused_sync(&state.intent);
+            state.pause_gate.wait_while_paused_sync(state.intent());
 
             log::debug!(
                 "move_with_staging: copying file {} ({} bytes) to staging",
@@ -343,7 +343,7 @@ pub(super) fn move_with_staging(
         for source in sources {
             // Pause gate at the item boundary, so every loop in the engine parks
             // on the same promise. The recursive merge below carries its own.
-            state.pause_gate.wait_while_paused_sync(&state.intent);
+            state.pause_gate.wait_while_paused_sync(state.intent());
 
             let file_name = source.file_name().ok_or_else(|| WriteOperationError::IoError {
                 path: source.display().to_string(),

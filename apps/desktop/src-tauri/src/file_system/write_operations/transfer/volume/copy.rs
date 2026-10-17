@@ -31,7 +31,7 @@ use super::super::super::host::OperationErrorReport;
 use super::super::super::journal;
 use super::super::super::manager;
 use super::super::super::source_binding::{ExpectedSources, retain_bound_sources_on};
-use super::super::super::state::{OperationIntent, WriteOperationState, is_cancelled, load_intent};
+use super::super::super::state::{OperationIntent, WriteOperationState};
 use super::super::super::transfer_tree::{TreeLanding, TreeOrder};
 use super::super::super::types::{
     CancelRollback, SpaceShortfall, VolumeCopyConfig, WriteCancelledEvent, WriteCompleteEvent, WriteOperationConfig,
@@ -1152,7 +1152,7 @@ pub(crate) async fn copy_volumes_with_progress(
     super::naming::take_back_unfilled_reservations(&dest_volume, &state.claimed_names).await;
 
     // Post-loop: handle success, cancellation, or error
-    let intent = load_intent(&state.intent);
+    let intent = state.intent().load();
 
     // A `VolumeError::Cancelled` from a per-task stream (the concurrent path's
     // `Err((dest, e))` arm) maps to `WriteOperationError::Cancelled` and ends up
@@ -1161,7 +1161,7 @@ pub(crate) async fn copy_volumes_with_progress(
     // response to the user's cancel click. Reclassify it as cancellation so
     // the gate below emits `write-cancelled` instead of dropping the terminal
     // event entirely and wedging the FE dialog.
-    if is_cancelled(&state.intent)
+    if state.intent().is_cancelled()
         && matches!(
             copy_error.as_ref().map(|f| &f.error),
             Some(WriteOperationError::Cancelled { .. }),
@@ -1170,7 +1170,7 @@ pub(crate) async fn copy_volumes_with_progress(
         copy_error = None;
     }
 
-    if copy_error.is_none() && !is_cancelled(&state.intent) {
+    if copy_error.is_none() && !state.intent().is_cancelled() {
         // All files copied successfully
         log::info!(
             "copy_volumes_with_progress: completed op={} files={} bytes={}{}",

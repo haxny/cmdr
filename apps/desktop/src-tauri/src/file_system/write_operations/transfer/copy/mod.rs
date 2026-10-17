@@ -23,7 +23,7 @@ use super::super::ledger::CopyTransaction;
 use super::super::scan::scan_sources;
 use super::super::scan_dry_run::handle_dry_run;
 use super::super::scan_source_tracker::{FileVerdict, SourceItemTracker, top_level_source_path};
-use super::super::state::{OperationIntent, WriteOperationState, load_intent};
+use super::super::state::{OperationIntent, WriteOperationState};
 use super::super::transfer_sides::transfer_stop_event;
 use super::super::transfer_tree::{TreeLanding, TreeOrder};
 use super::super::types::{
@@ -577,7 +577,7 @@ pub(in crate::file_system::write_operations) fn copy_files_with_progress_inner(
             // loop completes but before this match arm runs). Honor the rollback intent
             // before emitting write-complete: if we don't, the user explicitly requested
             // "delete what was copied" and got "everything's still there" instead.
-            if load_intent(&state.intent) == OperationIntent::RollingBack {
+            if state.intent().load() == OperationIntent::RollingBack {
                 log::info!(
                     "copy_files_with_progress: rollback requested after loop completion op={}, {} files",
                     operation_id,
@@ -702,7 +702,7 @@ pub(in crate::file_system::write_operations) fn copy_files_with_progress_inner(
             let cancellation = WriteOperationError::Cancelled {
                 message: "Operation cancelled by user".to_string(),
             };
-            match load_intent(&state.intent) {
+            match state.intent().load() {
                 OperationIntent::RollingBack => {
                     // User requested rollback: tracked rollback with progress events.
                     // Pass the progress state at cancellation so the frontend sees

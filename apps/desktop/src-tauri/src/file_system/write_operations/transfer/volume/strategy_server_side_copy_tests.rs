@@ -293,7 +293,7 @@ async fn a_cancelled_server_side_copy_leaves_no_destination_behind() {
         .unwrap();
     let as_volume: Arc<dyn Volume> = volume.clone();
     let state = make_state();
-    state.intent.store(OperationIntent::Stopped as u8, Ordering::SeqCst);
+    state.intent().set_for_test(OperationIntent::Stopped);
 
     let outcome = stream_pipe_file(
         &as_volume,

@@ -29,7 +29,7 @@ fn unique_id(label: &str) -> String {
 /// so a failing assertion can't leak it into another test.
 fn install_state(label: &str, initial: OperationIntent) -> TestOperationGuard {
     let op = TestOperationGuard::register(label);
-    op.state().intent.store(initial as u8, Ordering::Relaxed);
+    op.state().intent().set_for_test(initial);
     op
 }
 

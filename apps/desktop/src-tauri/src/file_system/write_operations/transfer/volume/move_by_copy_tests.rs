@@ -166,7 +166,7 @@ async fn a_stopped_move_by_copy_keeps_every_source() {
     let volume = store();
     seed_tree(&volume, "/src/tree").await;
     let state = state_with(TargetNames::default());
-    state.intent.store(OperationIntent::Stopped as u8, Ordering::SeqCst);
+    state.intent().set_for_test(OperationIntent::Stopped);
 
     let (result, _) = run_move(&volume, &state, &["/src/tree"], "/dst").await;
 

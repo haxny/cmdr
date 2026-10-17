@@ -16,7 +16,7 @@ use std::path::{Path, PathBuf};
 
 use cmdr_fs::metadata::{CarriedMetadata, LandedMetadata, StagedItem, StagedTimes, apply_landed, apply_staged};
 
-use crate::file_system::write_operations::state::{WriteOperationState, is_cancelled};
+use crate::file_system::write_operations::state::WriteOperationState;
 
 /// Owner read, write, and search: what a folder needs while the copy fills it,
 /// and what a staged folder needs for Phase 3 to rename it and its children.
@@ -120,7 +120,7 @@ pub(in crate::file_system::write_operations::transfer) fn apply_created_dirs_met
 ) {
     let created: HashSet<&Path> = created_dirs.iter().map(PathBuf::as_path).collect();
     for dir in scanned_dirs {
-        if is_cancelled(&state.intent) {
+        if state.intent().is_cancelled() {
             return;
         }
         let Some(dest) = dir_dest_path(dir, sources, destination) else {

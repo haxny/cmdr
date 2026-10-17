@@ -101,10 +101,9 @@ macro_rules! forward_to_inner {
 impl OperationEventSink for RollBackOnFirstItem {
     fn emit_source_item_done(&self, event: WriteSourceItemDoneEvent) {
         self.inner.emit_source_item_done(event);
-        self.state.intent.store(
-            super::super::state::OperationIntent::RollingBack as u8,
-            std::sync::atomic::Ordering::Relaxed,
-        );
+        self.state
+            .intent()
+            .set_for_test(super::super::state::OperationIntent::RollingBack);
     }
 
     forward_to_inner!(

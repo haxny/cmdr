@@ -23,7 +23,7 @@ use super::test_support::{
     YieldingSource, make_state, park_holds_at, rel_expected_bytes,
 };
 use super::*;
-use crate::file_system::write_operations::state::{OperationIntent, cancel_write_operation, load_intent};
+use crate::file_system::write_operations::state::{OperationIntent, cancel_write_operation};
 use crate::file_system::write_operations::test_support::TestOperationGuard;
 use crate::file_system::write_operations::transfer::transfer_driver::{LeafProgressLedger, ObservedProgress};
 use crate::test_support::wait_until_async;
@@ -120,7 +120,7 @@ async fn auto_yield_parks_before_next_window_then_resumes_byte_exact() {
                 "the copy must still be yielding while foreground is held"
             );
             assert_eq!(
-                load_intent(&state.intent),
+                state.intent().load(),
                 OperationIntent::Running,
                 "an auto-yield must NOT touch OperationIntent — the op stays Running"
             );

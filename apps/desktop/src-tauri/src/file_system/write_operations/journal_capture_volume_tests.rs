@@ -411,12 +411,12 @@ impl VolumeLoop {
     /// intent, run the copy, finalize.
     async fn run_copy<F>(&self, sources: &[&str], make_events: F)
     where
-        F: FnOnce(Arc<std::sync::atomic::AtomicU8>) -> Arc<dyn OperationEventSink>,
+        F: FnOnce(crate::file_system::write_operations::state::IntentCell) -> Arc<dyn OperationEventSink>,
     {
         let state = Arc::new(
             WriteOperationState::new(Duration::from_millis(0)).with_journal_volumes("smb-src".into(), "smb-dst".into()),
         );
-        let events = make_events(Arc::clone(&state.intent));
+        let events = make_events(state.intent().clone());
         journal::open_volume_op(
             state.scope(),
             &self.op_id,
@@ -515,7 +515,7 @@ impl VolumeLoop {
 /// a directory source is interrupted with some children already fully written.
 struct StopAfterBytesSink {
     inner: CollectorEventSink,
-    intent: Arc<std::sync::atomic::AtomicU8>,
+    intent: crate::file_system::write_operations::state::IntentCell,
     after_bytes: u64,
     /// How many CHILDREN must have landed before the stop fires, on top of the
     /// byte threshold.
@@ -536,7 +536,8 @@ impl OperationEventSink for StopAfterBytesSink {
             && event.files_done >= self.after_files
         {
             // `OperationIntent::Stopped` = 2: keep what's copied, clean the partial.
-            self.intent.store(2, std::sync::atomic::Ordering::Relaxed);
+            self.intent
+                .set_for_test(crate::file_system::write_operations::OperationIntent::Stopped);
         }
         self.inner.emit_progress(event);
     }

@@ -20,7 +20,6 @@ use crate::file_system::write_operations::types::{
 };
 use cmdr_fs::volume::WriteMode;
 use cmdr_fs::volume::{InMemoryVolume, StreamLength, StreamWriteProgress, StreamWritten, VolumeError};
-use std::sync::atomic::{AtomicU8, Ordering};
 
 pub(super) fn make_state() -> Arc<WriteOperationState> {
     Arc::new(WriteOperationState::new(Duration::from_millis(50)))
@@ -49,7 +48,7 @@ pub(super) fn config_default() -> VolumeCopyConfig {
 /// Watches `emit_progress` events with `files_done >= 1`.
 pub(super) struct CancelAfterFirstSink {
     pub(super) inner: CollectorEventSink,
-    pub(super) intent: Arc<AtomicU8>,
+    pub(super) intent: crate::file_system::write_operations::state::IntentCell,
 }
 impl OperationEventSink for CancelAfterFirstSink {
     fn emit_settled(&self, e: crate::file_system::write_operations::types::WriteSettledEvent) {
@@ -57,7 +56,8 @@ impl OperationEventSink for CancelAfterFirstSink {
     }
     fn emit_progress(&self, event: WriteProgressEvent) {
         if event.phase == WriteOperationPhase::Copying && event.files_done >= 1 {
-            self.intent.store(2, Ordering::Relaxed); // Stopped
+            self.intent
+                .set_for_test(crate::file_system::write_operations::OperationIntent::Stopped); // Stopped
         }
         self.inner.emit_progress(event);
     }

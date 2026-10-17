@@ -34,7 +34,7 @@ use tokio::sync::oneshot;
 
 use super::Operations;
 use super::event_sinks::OperationEventSink;
-use super::state::{WriteOperationState, is_cancelled};
+use super::state::WriteOperationState;
 use super::types::{
     CancelRollback, SourceItemOutcome, SourcesGoneAnswerOutcome, SourcesGoneNext, WriteCancelledEvent,
     WriteCompleteEvent, WriteOperationType, WriteSourceItemDoneEvent, WriteSourcesGoneEvent,
@@ -204,7 +204,7 @@ fn plan(
     // A cancel that landed before the arm abandoned an empty slot, so look
     // again now that the question is in place; one landing after it drops the
     // sender itself.
-    if is_cancelled(&state.intent) {
+    if state.intent().is_cancelled() {
         state.sources_gone.abandon();
     }
     events.emit_sources_gone(asked);

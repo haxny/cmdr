@@ -287,7 +287,7 @@ pub(super) enum PostLoopIntent {
     /// All sources processed (closure returned `Ok` for every non-skipped one).
     Completed,
     /// Cancellation was observed mid-loop. The caller inspects
-    /// `load_intent(&state.intent)` to distinguish `Stopped` vs `RollingBack`.
+    /// `state.intent().load()` to distinguish `Stopped` vs `RollingBack`.
     Cancelled,
     /// The closure returned an error for a source. The driver short-circuits;
     /// the caller decides whether to rollback.

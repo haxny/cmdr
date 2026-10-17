@@ -543,9 +543,7 @@ mod quarantine {
                     .write_from_stream(dest, mode, length, stream, on_progress)
                     .await?;
                 if self.writes.fetch_add(1, Ordering::SeqCst) == 0 {
-                    self.state
-                        .intent
-                        .store(OperationIntent::Stopped as u8, Ordering::SeqCst);
+                    self.state.intent().set_for_test(OperationIntent::Stopped);
                 }
                 Ok(written)
             })

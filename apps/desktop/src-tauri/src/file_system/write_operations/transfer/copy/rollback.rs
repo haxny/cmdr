@@ -8,7 +8,7 @@ use crate::file_system::write_operations::ledger::CopyTransaction;
 use crate::file_system::write_operations::reversal::{
     ReversalTally, drained, remove_local_dir_if_empty, remove_local_file,
 };
-use crate::file_system::write_operations::state::{OperationIntent, WriteOperationState, load_intent};
+use crate::file_system::write_operations::state::{OperationIntent, WriteOperationState};
 use crate::file_system::write_operations::types::{WriteOperationPhase, WriteOperationType, WriteProgressEvent};
 
 /// Rolls back created files with progress events, checking for cancellation between deletions.
@@ -80,7 +80,7 @@ pub(super) fn rollback_with_progress(
     // claims any more.
     loop {
         // Check if user cancelled the rollback (RollingBack → Stopped)
-        if load_intent(&state.intent) == OperationIntent::Stopped {
+        if state.intent().load() == OperationIntent::Stopped {
             log::info!(
                 "rollback_with_progress: rollback cancelled at {}/{} files, keeping remaining",
                 tally.processed(),

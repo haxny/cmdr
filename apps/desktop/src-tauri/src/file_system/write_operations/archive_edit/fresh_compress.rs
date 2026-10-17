@@ -624,7 +624,7 @@ fn continue_unless(cancellation: &FreshZipCancellation) -> ControlFlow<()> {
 /// Whether a PERSON (or the quit gate) stopped this op, as opposed to the
 /// pipeline stopping itself. Only this makes a failure read as a cancel.
 fn operation_cancelled(state: &WriteOperationState) -> bool {
-    super::super::state::is_cancelled(&state.intent)
+    state.intent().is_cancelled()
 }
 
 /// Runs one producer into one unknown-length destination write and joins every

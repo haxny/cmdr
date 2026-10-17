@@ -199,7 +199,7 @@ async fn async_driver_does_not_invoke_closure_when_conflict_resolved_as_skip() {
 async fn async_driver_pre_cancel_does_not_invoke_closure_or_resolver() {
     let op_id = unique_op_id("async-pre-cancel");
     let state = make_state();
-    state.intent.store(OperationIntent::Stopped as u8, Ordering::Relaxed);
+    state.intent().set_for_test(OperationIntent::Stopped);
     let _op_guard = install_state(&op_id, Arc::clone(&state));
     register_operation_status(&op_id, WriteOperationType::Copy, vec![]);
     let sink = CollectorEventSink::new();
@@ -271,9 +271,7 @@ async fn async_driver_cancel_after_first_blocks_second() {
             let state_for_closure = Arc::clone(&state_for_closure);
             Box::pin(async move {
                 log_clone.record(ctx.source_path, ctx.dest_path);
-                state_for_closure
-                    .intent
-                    .store(OperationIntent::Stopped as u8, Ordering::Relaxed);
+                state_for_closure.intent().set_for_test(OperationIntent::Stopped);
                 Ok(TransferOutcome::Transferred { bytes: 50 })
             })
         },
@@ -316,9 +314,7 @@ async fn async_driver_post_loop_intent_catches_late_cancel_race() {
             Box::pin(async move {
                 // Closure finishes successfully, then user clicks Rollback.
                 let bytes = 100;
-                state_for_closure
-                    .intent
-                    .store(OperationIntent::RollingBack as u8, Ordering::Relaxed);
+                state_for_closure.intent().set_for_test(OperationIntent::RollingBack);
                 Ok(TransferOutcome::Transferred { bytes })
             })
         },
@@ -915,7 +911,7 @@ async fn async_driver_cancel_check_precedes_pre_skip_check_precedes_conflict_res
     // be called, fetcher must not be called.
     let op_id = unique_op_id("async-ordering");
     let state = make_state();
-    state.intent.store(OperationIntent::Stopped as u8, Ordering::Relaxed);
+    state.intent().set_for_test(OperationIntent::Stopped);
     let _op_guard = install_state(&op_id, Arc::clone(&state));
     register_operation_status(&op_id, WriteOperationType::Copy, vec![]);
     let sink = CollectorEventSink::new();
@@ -1113,7 +1109,7 @@ async fn async_driver_parks_while_paused_then_resumes_to_completion() {
     assert!(!driver.is_finished(), "the driver must still be parked while paused");
     // Pause is orthogonal to OperationIntent.
     assert_eq!(
-        super::super::super::state::load_intent(&state.intent),
+        state.intent().load(),
         OperationIntent::Running,
         "pause must not touch OperationIntent"
     );
@@ -1226,7 +1222,7 @@ async fn async_driver_cancel_while_paused_unblocks_and_cancels() {
         "a cancel that lands while parked bails at that boundary, transferring nothing more"
     );
     assert_eq!(
-        super::super::super::state::load_intent(&state.intent),
+        state.intent().load(),
         OperationIntent::Stopped,
         "keep-partials cancel lands on Stopped"
     );

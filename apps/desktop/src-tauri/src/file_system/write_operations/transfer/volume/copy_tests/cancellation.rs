@@ -12,7 +12,7 @@ async fn test_multi_file_copy_cancel_before_start() {
     let events = Arc::new(CollectorEventSink::new());
     let state = make_state();
     // Set Stopped BEFORE starting
-    state.intent.store(2, Ordering::Relaxed);
+    state.intent().set_for_test(OperationIntent::Stopped);
     let config = VolumeCopyConfig::default();
 
     let result = copy_volumes_with_progress(
@@ -49,7 +49,7 @@ async fn test_multi_file_copy_cancel_mid_flight() {
     // tasks break at their next checkpoint and not all sources finish.
     struct CancelAfterNSink {
         inner: CollectorEventSink,
-        intent: Arc<AtomicU8>,
+        intent: crate::file_system::write_operations::state::IntentCell,
         cancel_after_events: usize,
         events_seen: AtomicUsize,
     }
@@ -62,7 +62,7 @@ async fn test_multi_file_copy_cancel_mid_flight() {
             if event.phase == WriteOperationPhase::Copying
                 && self.events_seen.fetch_add(1, Ordering::Relaxed) >= self.cancel_after_events
             {
-                self.intent.store(2, Ordering::Relaxed);
+                self.intent.set_for_test(OperationIntent::Stopped);
             }
             self.inner.emit_progress(event);
         }
@@ -102,7 +102,7 @@ async fn test_multi_file_copy_cancel_mid_flight() {
     let state = make_state();
     let events = Arc::new(CancelAfterNSink {
         inner: CollectorEventSink::new(),
-        intent: Arc::clone(&state.intent),
+        intent: state.intent().clone(),
         cancel_after_events: 3,
         events_seen: AtomicUsize::new(0),
     });

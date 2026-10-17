@@ -6,7 +6,7 @@ use cmdr_fs::ignore_poison::IgnorePoison;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, AtomicU8, AtomicU64, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 use std::time::{Duration, Instant};
 use tokio_util::sync::CancellationToken;
 
@@ -35,7 +35,7 @@ pub use super::conflict_slot::{ConflictResolutionResponse, ConflictSlot};
 // caller can seed or read an entry that skipped the coherence canary and the
 // request binding.
 pub use super::operation_intent::PauseGate;
-pub(crate) use super::operation_intent::{OperationIntent, StopMeans, is_cancelled, load_intent};
+pub(crate) use super::operation_intent::{IntentCell, OperationIntent, StopMeans, StopRequest};
 #[cfg(test)]
 pub(super) use super::scan_cache::insert_scan_result;
 pub(super) use super::scan_cache::{CachedScanResult, FileInfo, ScanPreviewState, ScanResult};
@@ -49,9 +49,10 @@ pub struct WriteOperationState {
     /// What this operation reaches its engine through: the host's seams, the
     /// status cache, and its journal. Fixed when the engine built the state.
     scope: Arc<OpScope>,
-    /// Shared with native copy operations for cancellation checks.
-    /// Encodes `OperationIntent` as a `u8`. Use `is_cancelled()` / `load_intent()` to read.
-    pub intent: Arc<AtomicU8>,
+    /// Where this operation is headed: running, rolling back, or stopped.
+    /// Private, so [`Self::request_stop`] and [`Self::stop_for_teardown`] are
+    /// its only writers; readers get the cell through [`Self::intent`].
+    intent: IntentCell,
     pub progress_interval: Duration,
     /// Where this operation's Stop-mode conflict stands: armed with the sender
     /// the parked operation is listening on, answered, or neither. Armed on
@@ -293,7 +294,7 @@ impl WriteOperationState {
         let tree_events = Arc::clone(scope.host().events_arc());
         Self {
             scope,
-            intent: Arc::new(AtomicU8::new(OperationIntent::Running as u8)),
+            intent: IntentCell::running(),
             progress_interval,
             conflict_slot: ConflictSlot::new(Arc::clone(&human_wait)),
             conflict_dispatch_lock: tokio::sync::Mutex::new(()),
@@ -386,28 +387,28 @@ impl WriteOperationState {
     /// preview) drives [`PauseGate`]'s `*_until` helpers directly and names its
     /// own predicate.
     pub fn stop_or_park_sync(&self) -> bool {
-        if is_cancelled(&self.intent) {
+        if self.intent.is_cancelled() {
             return true;
         }
         self.pause_gate.wait_while_paused_sync(&self.intent);
-        is_cancelled(&self.intent)
+        self.intent.is_cancelled()
     }
 
     /// Async sibling of [`stop_or_park_sync`](Self::stop_or_park_sync): same
     /// answer, parking the calling task instead of an executor thread.
     pub async fn stop_or_park_async(&self) -> bool {
-        if is_cancelled(&self.intent) {
+        if self.intent.is_cancelled() {
             return true;
         }
         self.pause_gate.wait_while_paused_async(&self.intent).await;
-        is_cancelled(&self.intent)
+        self.intent.is_cancelled()
     }
 
     /// The cheap half of the boundary: `true` when there is anything to ask
     /// about. Two atomic loads, which is what lets a copy SCAN put the boundary
     /// on its per-entry path (`cmdr_fs::volume::ScanStopSignal`).
     pub fn is_stopping_or_paused(&self) -> bool {
-        is_cancelled(&self.intent) || self.pause_gate.is_paused()
+        self.intent.is_cancelled() || self.pause_gate.is_paused()
     }
 
     /// A handle to this operation's [`liveness`](Self::liveness), for tagging
@@ -456,12 +457,25 @@ impl WriteOperationState {
         self
     }
 
-    /// Moves this operation's intent to `next` if the transition table allows it,
-    /// atomically: the one writer every stop goes through. Returns the intent it
-    /// moved from, or the one that refused. See
-    /// [`transition_intent`](super::operation_intent::transition_intent).
-    pub(super) fn transition_intent(&self, next: OperationIntent) -> Result<OperationIntent, OperationIntent> {
-        super::operation_intent::transition_intent(&self.intent, next, || {
+    /// This operation's intent, for reading (and for handing to a native copy
+    /// callback that checks it between chunks).
+    pub(crate) fn intent(&self) -> &IntentCell {
+        &self.intent
+    }
+
+    /// A person's Stop or Rollback, atomically against any other stop. Returns
+    /// the intent it moved from, or the one that refused. See [`IntentCell`].
+    pub(super) fn request_stop(&self, request: StopRequest) -> Result<OperationIntent, OperationIntent> {
+        self.intent.request_stop(request, || {
+            #[cfg(test)]
+            self.pass_intent_write_gap();
+        })
+    }
+
+    /// A teardown's stop: `Stopped`, keeping partials. Returns the intent it
+    /// moved from, or `Stopped` when the operation already was.
+    pub(super) fn stop_for_teardown(&self) -> Result<OperationIntent, OperationIntent> {
+        self.intent.stop_for_teardown(|| {
             #[cfg(test)]
             self.pass_intent_write_gap();
         })

@@ -127,7 +127,7 @@ fn await_worker_result<T>(
     operation_id: &str,
 ) -> Result<T, WriteOperationError> {
     loop {
-        if super::state::is_cancelled(&state.intent) {
+        if state.intent().is_cancelled() {
             log::debug!("{context}: cancellation detected during polling op={operation_id}");
             return Err(WriteOperationError::Cancelled {
                 message: "Operation cancelled by user".to_string(),

@@ -53,7 +53,7 @@ impl OperationEventSink for AnswerThenRollBack {
         // its own progress with a rising `files_done`, and flipping there would
         // cancel the operation before it ever reached the clash.
         if e.phase == WriteOperationPhase::Copying && e.files_done >= 1 && !self.asked.swap(true, Ordering::SeqCst) {
-            self.state.intent.store(self.then as u8, Ordering::SeqCst);
+            self.state.intent().set_for_test(self.then);
         }
         self.inner.emit_progress(e);
     }

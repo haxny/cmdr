@@ -41,7 +41,7 @@ use super::super::super::event_sinks::OperationEventSink;
 use super::super::super::host::OperationErrorReport;
 use super::super::super::journal;
 use super::super::super::ledger::WrittenFile;
-use super::super::super::state::{WriteOperationState, is_cancelled, load_intent};
+use super::super::super::state::WriteOperationState;
 use super::super::super::types::{
     SourceItemOutcome, VolumeCopyConfig, WriteOperationPhase, WriteOperationType, WriteProgressEvent,
 };
@@ -254,7 +254,7 @@ impl<'a> ConcurrentDriver<'a> {
     /// folder they are still being asked about.
     async fn spawn_ready_tasks(&mut self) -> Result<(), WriteFailure> {
         while self.in_flight.len() < self.ctx.concurrency {
-            if is_cancelled(&self.ctx.state.intent) {
+            if self.ctx.state.intent().is_cancelled() {
                 break;
             }
             let Some((source_index, source_path)) = self.sources.next() else {
@@ -346,7 +346,7 @@ impl<'a> ConcurrentDriver<'a> {
                             "copy_volumes_with_progress: op={} observed {:?} while awaiting {} in-flight task(s); \
                              winding them down (up to {window:?})",
                             operation_id,
-                            load_intent(&self.ctx.state.intent),
+                            self.ctx.state.intent().load(),
                             self.in_flight.len(),
                         );
                         self.drain_deadline = Some(tokio::time::Instant::now() + window);

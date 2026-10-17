@@ -95,7 +95,7 @@ pub(super) async fn copy_single_path(
     staging: WriteStaging,
 ) -> Result<u64, PathedVolumeError> {
     // Check cancellation up front.
-    if super::super::super::state::is_cancelled(&state.intent) {
+    if state.intent().is_cancelled() {
         return Err(VolumeError::Cancelled("Operation cancelled by user".to_string())).at_source(source_path);
     }
 

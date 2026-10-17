@@ -30,7 +30,7 @@ use std::time::{Duration, UNIX_EPOCH};
 use cmdr_fs::metadata::{CarriedMetadata, ClassOutcome, MetadataClasses};
 
 use super::super::super::metadata_losses::FolderLosses;
-use super::super::super::state::{WriteOperationState, is_cancelled};
+use super::super::super::state::WriteOperationState;
 use cmdr_fs::volume::Volume;
 
 /// A source folder's own dates (Unix seconds), as the listing entry or the
@@ -94,7 +94,7 @@ impl FolderMetadata {
     ) {
         let mut asking = true;
         for folder in self.folders {
-            if is_cancelled(&state.intent) {
+            if state.intent().is_cancelled() {
                 return;
             }
             let carried = source_set(source_volume, dest_volume, &folder, state).await;

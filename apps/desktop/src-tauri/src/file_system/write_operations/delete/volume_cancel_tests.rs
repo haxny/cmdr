@@ -20,7 +20,7 @@ use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 use std::time::{Duration, Instant};
 
 use super::super::event_sinks::CollectorEventSink;
-use super::super::state::{OperationIntent, WriteOperationState, cancel_write_operation, load_intent};
+use super::super::state::{OperationIntent, WriteOperationState, cancel_write_operation};
 use super::super::test_support::TestOperationGuard;
 use super::super::types::WriteOperationConfig;
 use super::walker::delete_volume_files_with_progress_inner;
@@ -286,7 +286,7 @@ async fn mtp_listing_cancels_promptly_when_intent_flips() {
     );
 
     // Intent and backend_cancel must both be flipped.
-    assert_eq!(load_intent(&state.intent), OperationIntent::Stopped);
+    assert_eq!(state.intent().load(), OperationIntent::Stopped);
     assert!(
         state.backend_cancel.is_cancelled(),
         "backend_cancel must be flipped so an MTP-style backend bails the in-flight USB loop"

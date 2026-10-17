@@ -234,7 +234,7 @@ pub(super) fn copy_file_using(
     post_landing: PostLanding,
     progress_callback: Option<ChunkedCopyProgressFn>,
 ) -> Result<StrategyCopyOutcome, WriteOperationError> {
-    let cancelled = &state.intent;
+    let cancelled = state.intent();
     // Every arm below writes through `stage_and_land_file`: the bytes go to a
     // `.cmdr-tmp-*` sibling and take the real name by one same-directory rename.
     // ❌ Don't add an arm that writes straight to `dest` — that is the whole
@@ -242,7 +242,7 @@ pub(super) fn copy_file_using(
     match strategy {
         #[cfg(target_os = "macos")]
         LocalCopyStrategy::AppleClone => {
-            let context = CopyProgressContext::with_cancellation(Arc::clone(cancelled));
+            let context = CopyProgressContext::with_cancellation(cancelled.clone());
             let landed = stage_and_land_file(state, dest, needs_safe_overwrite, post_landing, |target| {
                 copy_single_file_native(source, target, false, Some(&context)).map(Staged::bytes)
             })?;

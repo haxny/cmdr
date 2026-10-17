@@ -13,7 +13,6 @@ use std::time::Duration;
 
 use super::super::OperationEventSink;
 use super::super::manager::{ManagedTaskGuard, OperationDescriptor, OperationSummaryText};
-use super::super::operation_intent::is_cancelled;
 use super::super::state::WriteSettledGuard;
 use super::super::summary::volume_items;
 use super::super::types::ReadOnlySide;
@@ -198,7 +197,7 @@ impl crate::file_system::write_operations::Operations {
                     // (rollback) its own destination copies. A cancel can land mid-extract
                     // (the extract returns `Cancelled`) or in the window after a clean
                     // extract (`is_cancelled` true, extract `Ok`); both route here.
-                    let cancelled = is_cancelled(&state.intent)
+                    let cancelled = state.intent().is_cancelled()
                         || matches!(&extract, Err(f) if matches!(f.error, WriteOperationError::Cancelled { .. }));
                     if cancelled {
                         events.emit_cancelled(WriteCancelledEvent {

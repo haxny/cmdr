@@ -124,7 +124,7 @@ impl Volume for BoundaryWalkingVolume {
                 if self.walked.fetch_add(1, Ordering::AcqRel) + 1 == TRIP_AT {
                     match self.action {
                         // The real path, so the gate is woken the way a click
-                        // wakes it. ❌ Never a bare `intent.store`.
+                        // wakes it. ❌ Never a bare `set_for_test`.
                         TripAction::Cancel => cancel_write_operation(&self.operation_id, false),
                         TripAction::Pause => self.state.pause_gate.pause(),
                     }

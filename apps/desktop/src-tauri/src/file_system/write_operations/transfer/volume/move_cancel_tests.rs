@@ -34,10 +34,12 @@ async fn cross_volume_move_cancel_between_sources_emits_cancelled_event() {
     let state = make_state();
     // Pre-cancel before the loop runs: every iteration sees the cancel at the
     // top check. Uses the existing convention in `volume/copy_tests/` of a
-    // direct `intent.store` for the simulated cancel; the public-path
+    // direct `set_for_test` for the simulated cancel; the public-path
     // `cancel_write_operation` requires the state to be in the cache, which
     // the outer wrapper (not under test here) is responsible for.
-    state.intent.store(2, Ordering::Relaxed); // Stopped
+    state
+        .intent()
+        .set_for_test(crate::file_system::write_operations::OperationIntent::Stopped); // Stopped
 
     let result = move_volumes_with_progress(
         events.clone(),
@@ -97,7 +99,7 @@ async fn cross_volume_move_cancel_mid_batch_preserves_completed() {
     let state = make_state_with_interval_ms(0);
     let events = Arc::new(CancelAfterFirstSink {
         inner: CollectorEventSink::new(),
-        intent: Arc::clone(&state.intent),
+        intent: state.intent().clone(),
     });
     let config = VolumeCopyConfig {
         progress_interval_ms: 0,
@@ -169,7 +171,9 @@ async fn same_volume_move_cancel_emits_cancelled_event() {
 
     let events = Arc::new(CollectorEventSink::new());
     let state = make_state();
-    state.intent.store(2, Ordering::Relaxed); // Stopped
+    state
+        .intent()
+        .set_for_test(crate::file_system::write_operations::OperationIntent::Stopped); // Stopped
 
     let result = move_within_same_volume_with_progress(
         events.clone(),

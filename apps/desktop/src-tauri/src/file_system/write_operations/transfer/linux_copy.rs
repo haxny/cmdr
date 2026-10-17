@@ -5,12 +5,12 @@
 //! APFS clonefile on macOS. On other filesystems it falls back to an
 //! in-kernel data copy, still faster than userspace read/write.
 
+use super::super::state::IntentCell;
 use std::fs;
 use std::os::unix::fs::OpenOptionsExt as _;
 use std::os::unix::io::AsRawFd;
 use std::path::Path;
 use std::sync::Arc;
-use std::sync::atomic::AtomicU8;
 
 use cmdr_fs::metadata::{CarriedMetadata, StagedItem, StagedTimes, apply_staged};
 
@@ -37,7 +37,7 @@ pub fn copy_single_file_linux(
     source: &Path,
     destination: &Path,
     overwrite: bool,
-    cancelled: &Arc<AtomicU8>,
+    cancelled: &IntentCell,
     progress_callback: Option<&dyn Fn(u64, u64)>,
 ) -> Result<u64, WriteOperationError> {
     let src_file = fs::File::open(source).map_err(|e| classify_copy_io_error(&e, source, destination))?;
@@ -78,7 +78,7 @@ pub fn copy_single_file_linux(
 
     while bytes_copied < total_size {
         // Check cancellation before each chunk
-        if super::super::state::is_cancelled(cancelled) {
+        if cancelled.is_cancelled() {
             log::debug!("linux_copy: cancelled after {} bytes, cleaning up", bytes_copied);
             drop(dst_file);
             let _ = fs::remove_file(destination);
@@ -169,7 +169,7 @@ mod tests {
         let dst = dir.join("dest.txt");
 
         fs::write(&src, "Hello, Linux!").unwrap();
-        let cancelled = Arc::new(AtomicU8::new(0));
+        let cancelled = IntentCell::running();
 
         let result = copy_single_file_linux(&src, &dst, false, &cancelled, None);
         assert!(result.is_ok());
@@ -187,7 +187,7 @@ mod tests {
 
         fs::write(&src, "#!/bin/bash\necho hi").unwrap();
         fs::set_permissions(&src, fs::Permissions::from_mode(0o755)).unwrap();
-        let cancelled = Arc::new(AtomicU8::new(0));
+        let cancelled = IntentCell::running();
 
         let result = copy_single_file_linux(&src, &dst, false, &cancelled, None);
         assert!(result.is_ok());
@@ -203,7 +203,7 @@ mod tests {
         let dst = dir.join("dest.txt");
 
         fs::write(&src, "").unwrap();
-        let cancelled = Arc::new(AtomicU8::new(0));
+        let cancelled = IntentCell::running();
 
         let result = copy_single_file_linux(&src, &dst, false, &cancelled, None);
         assert!(result.is_ok());
@@ -221,7 +221,7 @@ mod tests {
         fs::write(&src, "content").unwrap();
 
         // Pre-cancelled
-        let cancelled = Arc::new(AtomicU8::new(2));
+        let cancelled = IntentCell::reading(crate::file_system::write_operations::OperationIntent::Stopped);
         let result = copy_single_file_linux(&src, &dst, false, &cancelled, None);
 
         assert!(matches!(result, Err(WriteOperationError::Cancelled { .. })));
@@ -237,7 +237,7 @@ mod tests {
         fs::write(&src, "source").unwrap();
         fs::write(&dst, "existing").unwrap();
 
-        let cancelled = Arc::new(AtomicU8::new(0));
+        let cancelled = IntentCell::running();
         let result = copy_single_file_linux(&src, &dst, false, &cancelled, None);
         assert!(result.is_err());
         assert_eq!(fs::read_to_string(&dst).unwrap(), "existing");
@@ -252,7 +252,7 @@ mod tests {
         fs::write(&src, "new content").unwrap();
         fs::write(&dst, "old content").unwrap();
 
-        let cancelled = Arc::new(AtomicU8::new(0));
+        let cancelled = IntentCell::running();
         let result = copy_single_file_linux(&src, &dst, true, &cancelled, None);
         assert!(result.is_ok());
         assert_eq!(fs::read_to_string(&dst).unwrap(), "new content");
@@ -269,7 +269,7 @@ mod tests {
         let content = "x".repeat(1000);
         fs::write(&src, &content).unwrap();
 
-        let cancelled = Arc::new(AtomicU8::new(0));
+        let cancelled = IntentCell::running();
         let last_bytes = Arc::new(AtomicU64::new(0));
         let last_bytes_clone = Arc::clone(&last_bytes);
 

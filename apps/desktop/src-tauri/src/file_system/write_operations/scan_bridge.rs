@@ -35,7 +35,7 @@ use super::event_sinks::OperationEventSink;
 use super::manager::OperationManager;
 use super::scan_cache::{ScanOutcome, ScanPreviewState, ScanPreviews};
 use super::scan_watchdog::ScanWatchdog;
-use super::state::{WriteOperationState, is_cancelled};
+use super::state::WriteOperationState;
 use super::types::{
     CancelRollback, WriteCancelledEvent, WriteErrorEvent, WriteOperationPhase, WriteOperationType, WriteProgressEvent,
 };
@@ -289,7 +289,7 @@ impl ScanPause {
     /// exist yet has nothing to cancel.
     fn told_to_stop(&self) -> bool {
         if let Some(owner) = self.owner.get()
-            && is_cancelled(&owner.intent)
+            && owner.intent().is_cancelled()
         {
             return true;
         }

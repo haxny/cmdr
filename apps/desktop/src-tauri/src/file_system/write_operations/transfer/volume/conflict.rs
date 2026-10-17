@@ -194,7 +194,7 @@ pub(super) async fn resolve_volume_conflict(
             // the dispatch mutex would otherwise acquire it next and emit a fresh
             // `write-conflict` that no one will ever answer (the dialog is tearing
             // down) — a hang. Bail with `Cancelled` before emitting anything.
-            if super::super::super::state::is_cancelled(&state.intent) {
+            if state.intent().is_cancelled() {
                 return Err(WriteOperationError::Cancelled {
                     message: "Operation cancelled by user".to_string(),
                 });

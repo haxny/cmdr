@@ -15,7 +15,6 @@ use crate::test_support::TestDir;
 use std::fs;
 use std::path::Path;
 use std::sync::Arc;
-use std::sync::atomic::Ordering;
 use std::time::Duration;
 
 /// Creates a temporary test directory with a unique name.
@@ -31,12 +30,12 @@ fn create_temp_dir(name: &str) -> TestDir {
 fn test_cancel_sets_intent() {
     let state = Arc::new(WriteOperationState::new(Duration::from_millis(200)));
 
-    assert!(!is_cancelled(&state.intent));
-    assert_eq!(load_intent(&state.intent), OperationIntent::Running);
+    assert!(!state.intent().is_cancelled());
+    assert_eq!(state.intent().load(), OperationIntent::Running);
 
-    state.intent.store(OperationIntent::Stopped as u8, Ordering::Relaxed);
-    assert!(is_cancelled(&state.intent));
-    assert_eq!(load_intent(&state.intent), OperationIntent::Stopped);
+    state.intent().set_for_test(OperationIntent::Stopped);
+    assert!(state.intent().is_cancelled());
+    assert_eq!(state.intent().load(), OperationIntent::Stopped);
 }
 
 // ============================================================================
@@ -144,22 +143,20 @@ fn test_operation_intent_transitions() {
     let state = Arc::new(WriteOperationState::new(Duration::from_millis(200)));
 
     // Running → RollingBack
-    assert_eq!(load_intent(&state.intent), OperationIntent::Running);
-    state
-        .intent
-        .store(OperationIntent::RollingBack as u8, Ordering::Relaxed);
-    assert_eq!(load_intent(&state.intent), OperationIntent::RollingBack);
-    assert!(is_cancelled(&state.intent), "RollingBack should count as cancelled");
+    assert_eq!(state.intent().load(), OperationIntent::Running);
+    state.intent().set_for_test(OperationIntent::RollingBack);
+    assert_eq!(state.intent().load(), OperationIntent::RollingBack);
+    assert!(state.intent().is_cancelled(), "RollingBack should count as cancelled");
 
     // RollingBack → Stopped
-    state.intent.store(OperationIntent::Stopped as u8, Ordering::Relaxed);
-    assert_eq!(load_intent(&state.intent), OperationIntent::Stopped);
-    assert!(is_cancelled(&state.intent), "Stopped should count as cancelled");
+    state.intent().set_for_test(OperationIntent::Stopped);
+    assert_eq!(state.intent().load(), OperationIntent::Stopped);
+    assert!(state.intent().is_cancelled(), "Stopped should count as cancelled");
 
     // Running → Stopped (direct, no rollback)
-    state.intent.store(OperationIntent::Running as u8, Ordering::Relaxed);
-    state.intent.store(OperationIntent::Stopped as u8, Ordering::Relaxed);
-    assert_eq!(load_intent(&state.intent), OperationIntent::Stopped);
+    state.intent().set_for_test(OperationIntent::Running);
+    state.intent().set_for_test(OperationIntent::Stopped);
+    assert_eq!(state.intent().load(), OperationIntent::Stopped);
 }
 
 // ============================================================================

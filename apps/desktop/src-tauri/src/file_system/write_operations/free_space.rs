@@ -22,7 +22,7 @@ use std::sync::Arc;
 
 use super::cancellable::run_cancellable;
 use super::scan_cache::{FileInfo, ScanResult};
-use super::state::{WriteOperationState, is_cancelled};
+use super::state::WriteOperationState;
 use super::types::{ConflictResolution, SpaceShortfall, WriteOperationConfig, WriteOperationError};
 use super::validation::is_same_file;
 
@@ -55,7 +55,7 @@ pub(super) fn check_local_copy_space(
         if cmdr_local::filesystem_kind::path_is_on_network_mount(destination) {
             return Ok(None);
         }
-        let cancelled = || is_cancelled(&state.intent);
+        let cancelled = || state.intent().is_cancelled();
         match local_copy_need(
             destination,
             sources,

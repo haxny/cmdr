@@ -222,7 +222,7 @@ impl RollbackRunner for ReversalRunner {
     }
 
     fn should_stop(&self) -> bool {
-        self.stop.requested(&self.state.intent)
+        self.stop.requested(self.state.intent())
     }
 
     fn pace_between_items(&self) -> Option<Duration> {

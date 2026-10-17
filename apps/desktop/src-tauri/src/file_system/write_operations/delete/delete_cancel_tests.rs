@@ -8,12 +8,11 @@
 //! A `#[path]` child of `delete/mod.rs`, so `super::` here is `delete` and
 //! `super::super::` is `write_operations`.
 
-use super::super::state::{OperationIntent, WriteOperationState, is_cancelled};
+use super::super::state::{OperationIntent, WriteOperationState};
 use super::super::types::{CancelRollback, CancelRollbackOutcome, WriteCancelledEvent, WriteOperationType};
 use crate::test_support::TestDir;
 use std::fs;
 use std::sync::Arc;
-use std::sync::atomic::Ordering;
 use std::time::Duration;
 
 /// Creates a temporary test directory with a unique name.
@@ -38,7 +37,7 @@ fn test_cancel_flag_stops_delete_loop() {
     // Simulate the delete loop from delete.rs, setting cancelled after 2 files
     let mut files_done = 0;
     for file in &files {
-        if is_cancelled(&state.intent) {
+        if state.intent().is_cancelled() {
             break;
         }
 
@@ -47,7 +46,7 @@ fn test_cancel_flag_stops_delete_loop() {
 
         // Cancel after deleting 2 files
         if files_done == 2 {
-            state.intent.store(OperationIntent::Stopped as u8, Ordering::Relaxed);
+            state.intent().set_for_test(OperationIntent::Stopped);
         }
     }
 
@@ -65,11 +64,11 @@ fn test_cancel_during_directory_deletion_phase() {
     let state = Arc::new(WriteOperationState::new(Duration::from_millis(200)));
 
     // Set cancellation before directory phase
-    state.intent.store(OperationIntent::Stopped as u8, Ordering::Relaxed);
+    state.intent().set_for_test(OperationIntent::Stopped);
 
     // Verify that the intent is detectable (matches the check in delete.rs)
     assert!(
-        is_cancelled(&state.intent),
+        state.intent().is_cancelled(),
         "intent should indicate cancellation before directory deletion phase"
     );
 }

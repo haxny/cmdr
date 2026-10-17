@@ -16,7 +16,6 @@ use std::collections::HashMap;
 use std::io::{Read as _, Write as _};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use std::sync::atomic::Ordering;
 use std::time::Duration;
 
 use cmdr_archive::mutator::{self, Changeset, MutationHooks};
@@ -226,7 +225,7 @@ pub(super) async fn a_cancel_before_the_swap_keeps_the_original_zip(remote: Arc<
             mutator::apply(working, &changeset, &NoHooks).expect("local mutator apply");
             // `store` is the test's own lever: the orchestrator's pre-upload check
             // is what this cell is about, and no stop request path reaches it here.
-            cancel.intent.store(OperationIntent::Stopped as u8, Ordering::Relaxed);
+            cancel.intent().set_for_test(OperationIntent::Stopped);
             Ok::<(), EditError>(())
         },
     )

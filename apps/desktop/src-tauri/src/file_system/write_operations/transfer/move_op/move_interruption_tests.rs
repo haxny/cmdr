@@ -40,9 +40,7 @@ fn a_rollback_clicked_as_the_last_item_lands_puts_the_move_back() {
 
     impl OperationEventSink for RollBackWhenTheItemLands {
         fn emit_source_item_done(&self, _event: WriteSourceItemDoneEvent) {
-            self.state
-                .intent
-                .store(OperationIntent::RollingBack as u8, Ordering::SeqCst);
+            self.state.intent().set_for_test(OperationIntent::RollingBack);
         }
         fn emit_cancelled(&self, event: WriteCancelledEvent) {
             self.cancelled.lock_ignore_poison().push(event);
@@ -293,7 +291,6 @@ fn a_cancelled_cross_fs_move_takes_its_staging_folder_with_it() {
         ConflictInfo, DryRunResult, ScanProgressEvent, WriteCancelledEvent, WriteCompleteEvent, WriteConflictEvent,
         WriteErrorEvent, WriteSourceItemDoneEvent,
     };
-    use std::sync::atomic::Ordering;
 
     /// Cancels the instant the flush announces itself — the last thing that
     /// happens before Phase 4 starts deleting the originals.
@@ -304,9 +301,7 @@ fn a_cancelled_cross_fs_move_takes_its_staging_folder_with_it() {
     impl OperationEventSink for CancelAtTheFlush {
         fn emit_progress(&self, event: WriteProgressEvent) {
             if event.phase == WriteOperationPhase::Flushing {
-                self.state
-                    .intent
-                    .store(OperationIntent::Stopped as u8, Ordering::SeqCst);
+                self.state.intent().set_for_test(OperationIntent::Stopped);
             }
         }
         fn emit_settled(&self, _event: crate::file_system::write_operations::types::WriteSettledEvent) {}
@@ -397,9 +392,7 @@ fn a_rollback_during_the_source_sweep_reports_the_originals_it_did_not_reach() {
     impl OperationEventSink for RollBackMidSweep {
         fn emit_source_item_done(&self, event: WriteSourceItemDoneEvent) {
             if event.source_removed && self.removed.fetch_add(1, Ordering::SeqCst) + 1 == self.after {
-                self.state
-                    .intent
-                    .store(OperationIntent::RollingBack as u8, Ordering::SeqCst);
+                self.state.intent().set_for_test(OperationIntent::RollingBack);
             }
         }
         fn emit_cancelled(&self, event: WriteCancelledEvent) {
@@ -502,7 +495,6 @@ fn a_rollback_before_the_sweep_starts_reports_every_original_still_in_place() {
         WriteErrorEvent, WriteSourceItemDoneEvent,
     };
     use std::sync::Mutex;
-    use std::sync::atomic::Ordering;
 
     /// Presses Rollback the instant the flush announces itself, the last thing
     /// that happens before the sweep starts deleting the originals.
@@ -514,9 +506,7 @@ fn a_rollback_before_the_sweep_starts_reports_every_original_still_in_place() {
     impl OperationEventSink for RollBackAtTheFlush {
         fn emit_progress(&self, event: WriteProgressEvent) {
             if event.phase == WriteOperationPhase::Flushing {
-                self.state
-                    .intent
-                    .store(OperationIntent::RollingBack as u8, Ordering::SeqCst);
+                self.state.intent().set_for_test(OperationIntent::RollingBack);
             }
         }
         fn emit_cancelled(&self, event: WriteCancelledEvent) {
@@ -596,7 +586,6 @@ fn the_sweeps_account_counts_a_skipped_source_as_still_in_place() {
         WriteConflictEvent, WriteErrorEvent, WriteSourceItemDoneEvent,
     };
     use std::sync::Mutex;
-    use std::sync::atomic::Ordering;
 
     /// Presses Rollback once the sweep reports its first REMOVAL. With the
     /// Skipped source ordered first, that lands the cancel with one source
@@ -609,9 +598,7 @@ fn the_sweeps_account_counts_a_skipped_source_as_still_in_place() {
     impl OperationEventSink for RollBackAfterTheFirstRemoval {
         fn emit_source_item_done(&self, event: WriteSourceItemDoneEvent) {
             if event.source_removed {
-                self.state
-                    .intent
-                    .store(OperationIntent::RollingBack as u8, Ordering::SeqCst);
+                self.state.intent().set_for_test(OperationIntent::RollingBack);
             }
         }
         fn emit_cancelled(&self, event: WriteCancelledEvent) {

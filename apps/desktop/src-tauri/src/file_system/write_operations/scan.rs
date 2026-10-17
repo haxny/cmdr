@@ -298,7 +298,7 @@ fn scan_sources_internal(
     let ctx = WalkContext {
         sidecars: &sidecars,
         progress_interval,
-        is_cancelled: &|| super::state::is_cancelled(&state.intent),
+        is_cancelled: &|| state.intent().is_cancelled(),
         park_while_paused: &|| pause.park_while_paused(),
         on_io_error: &|path, e| WriteOperationError::IoError {
             path: path.display().to_string(),

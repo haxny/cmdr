@@ -9,7 +9,7 @@ use std::pin::Pin;
 use std::sync::Arc;
 use std::time::Instant;
 
-use super::super::super::state::{WriteOperationState, is_cancelled};
+use super::super::super::state::WriteOperationState;
 use super::super::recovered_name::FinalizeFailure;
 use super::super::staged_write::{StagedWrite, WriteStaging, note_pending_for_local_dest, resolve_staging};
 use super::super::transfer_probe::{TaskPhase, set_task_bytes, set_task_phase};
@@ -125,7 +125,7 @@ pub(super) async fn try_server_side_copy(
         // ❌ A cancel is never retried more slowly. The intent is consulted as
         // well as the variant, so a backend that labels its own stop something
         // else can't turn a Cancel click into a second, full-speed attempt.
-        Err(e) if matches!(e, VolumeError::Cancelled(_)) || is_cancelled(&state.intent) => {
+        Err(e) if matches!(e, VolumeError::Cancelled(_)) || state.intent().is_cancelled() => {
             staged.abandon(dest_volume).await;
             Err(e.into())
         }

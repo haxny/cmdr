@@ -9,7 +9,6 @@ use crate::file_system::write_operations::types::{
     ConflictResolution, WriteConflictEvent, WriteConflictResolvedEvent, WriteErrorEvent, WriteSourceItemDoneEvent,
 };
 use cmdr_fs::volume::{InMemoryVolume, ListingProgress};
-use std::sync::atomic::AtomicU8;
 
 // `pub(super)` so the sibling `volume_copy_crashsafe_tests` and
 // `volume_copy_rollback_tests` modules can share these fixtures without

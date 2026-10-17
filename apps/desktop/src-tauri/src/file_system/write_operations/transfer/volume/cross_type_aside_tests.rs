@@ -41,7 +41,7 @@ impl OperationEventSink for OverwriteThenMaybeRollback {
     fn emit_progress(&self, event: WriteProgressEvent) {
         if self.rollback_after_first && event.phase == WriteOperationPhase::Copying && event.files_done >= 1 {
             // RollingBack = 1
-            self.state.intent.store(1, Ordering::Relaxed);
+            self.state.intent().set_for_test(OperationIntent::RollingBack);
         }
         self.inner.emit_progress(event);
     }

@@ -22,7 +22,7 @@ use super::test_support::{
     park_holds_at, rel_expected_bytes,
 };
 use super::*;
-use crate::file_system::write_operations::state::{OperationIntent, cancel_write_operation, load_intent};
+use crate::file_system::write_operations::state::{OperationIntent, cancel_write_operation};
 use crate::file_system::write_operations::test_support::TestOperationGuard;
 use crate::file_system::write_operations::transfer::transfer_driver::{LeafProgressLedger, ObservedProgress};
 use crate::test_support::wait_until_async;
@@ -107,7 +107,7 @@ async fn streaming_copy_parks_mid_file_while_paused_then_resumes() {
     assert!(frozen > 0, "at least one chunk should have streamed before the pause");
     assert!(!op.is_finished(), "the copy task must still be parked while paused");
     assert_eq!(
-        load_intent(&state.intent),
+        state.intent().load(),
         OperationIntent::Running,
         "pause must not touch OperationIntent"
     );
@@ -206,7 +206,7 @@ async fn streaming_copy_cancel_while_paused_mid_file_unblocks() {
         "cancel wins over pause: the copy ends Cancelled, got {result:?}"
     );
     assert_eq!(
-        load_intent(&state.intent),
+        state.intent().load(),
         OperationIntent::Stopped,
         "keep-partials cancel lands on Stopped"
     );

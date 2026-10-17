@@ -6,7 +6,7 @@
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
-use super::{OperationIntent, WriteOperationState, WriteProgressEvent};
+use super::{WriteOperationState, WriteProgressEvent};
 use cmdr_fs::ignore_poison::RwLockIgnorePoison;
 
 /// The live [`WriteOperationState`] of every registered operation, keyed by
@@ -107,7 +107,7 @@ impl WriteOperationRegistry {
         for (id, state) in self.snapshot() {
             // Atomic, like every intent write: an already-`Stopped` op refuses
             // and is left alone.
-            if state.transition_intent(OperationIntent::Stopped).is_ok() {
+            if state.stop_for_teardown().is_ok() {
                 log::info!("cancel_all_write_operations: stopping op={id}");
                 state.backend_cancel.cancel();
                 // Drop the conflict resolution sender to unblock any waiting receiver

@@ -120,7 +120,7 @@ fn a_poisoned_estimator_still_rates_and_keeps_the_event() {
 
 fn install_state(label: &str, initial: OperationIntent) -> TestOperationGuard {
     let op = TestOperationGuard::register(label);
-    op.state().intent.store(initial as u8, Ordering::Relaxed);
+    op.state().intent().set_for_test(initial);
     op
 }
 
@@ -128,14 +128,14 @@ fn install_state(label: &str, initial: OperationIntent) -> TestOperationGuard {
 fn cancel_running_with_rollback_goes_to_rolling_back() {
     let op = install_state("cancel-running-rollback", OperationIntent::Running);
     cancel_write_operation(op.id(), true);
-    assert_eq!(load_intent(&op.state().intent), OperationIntent::RollingBack);
+    assert_eq!(op.state().intent().load(), OperationIntent::RollingBack);
 }
 
 #[test]
 fn cancel_running_without_rollback_goes_to_stopped() {
     let op = install_state("cancel-running-stop", OperationIntent::Running);
     cancel_write_operation(op.id(), false);
-    assert_eq!(load_intent(&op.state().intent), OperationIntent::Stopped);
+    assert_eq!(op.state().intent().load(), OperationIntent::Stopped);
 }
 
 #[test]
@@ -144,7 +144,7 @@ fn cancel_rolling_back_with_rollback_is_a_noop() {
     let op = install_state("cancel-rb-rb", OperationIntent::RollingBack);
     cancel_write_operation(op.id(), true);
     assert_eq!(
-        load_intent(&op.state().intent),
+        op.state().intent().load(),
         OperationIntent::RollingBack,
         "RollingBack → RollingBack is not a valid transition; intent must not change"
     );
@@ -154,7 +154,7 @@ fn cancel_rolling_back_with_rollback_is_a_noop() {
 fn cancel_rolling_back_without_rollback_goes_to_stopped() {
     let op = install_state("cancel-rb-stop", OperationIntent::RollingBack);
     cancel_write_operation(op.id(), false);
-    assert_eq!(load_intent(&op.state().intent), OperationIntent::Stopped);
+    assert_eq!(op.state().intent().load(), OperationIntent::Stopped);
 }
 
 #[test]
@@ -162,9 +162,9 @@ fn cancel_stopped_is_terminal_for_any_target() {
     // Stopped is terminal; no transition is valid from it.
     let op = install_state("cancel-stopped", OperationIntent::Stopped);
     cancel_write_operation(op.id(), true);
-    assert_eq!(load_intent(&op.state().intent), OperationIntent::Stopped);
+    assert_eq!(op.state().intent().load(), OperationIntent::Stopped);
     cancel_write_operation(op.id(), false);
-    assert_eq!(load_intent(&op.state().intent), OperationIntent::Stopped);
+    assert_eq!(op.state().intent().load(), OperationIntent::Stopped);
 }
 
 #[test]
@@ -281,7 +281,7 @@ fn a_rollback_click_racing_quit_keeps_the_partial_files_quit_meant_to_keep() {
     rollback.join().expect("the Rollback returns");
 
     assert_eq!(
-        load_intent(&op.state().intent),
+        op.state().intent().load(),
         OperationIntent::Stopped,
         "quit stopped the op to keep its partials; a Rollback that read `Running` before quit landed must not turn that into a delete"
     );
@@ -297,7 +297,7 @@ fn a_rollback_click_racing_a_cancel_click_leaves_the_cancel_standing() {
     rollback.join().expect("the Rollback returns");
 
     assert_eq!(
-        load_intent(&op.state().intent),
+        op.state().intent().load(),
         OperationIntent::Stopped,
         "`Stopped` is terminal, whichever stop got there first"
     );
@@ -323,7 +323,7 @@ fn cancel_unknown_operation_is_a_silent_noop() {
 /// inspection. The registry owns the entry, so there's nothing to clean up.
 fn registered_in(registry: &WriteOperationRegistry, label: &str, initial: OperationIntent) -> Arc<WriteOperationState> {
     let state = Arc::new(WriteOperationState::new(Duration::from_millis(50)));
-    state.intent.store(initial as u8, Ordering::Relaxed);
+    state.intent().set_for_test(initial);
     registry.insert(unique_id(label), Arc::clone(&state));
     state
 }
@@ -340,10 +340,10 @@ fn cancel_all_stops_running_but_does_not_re_stop_already_stopped() {
 
     registry.cancel_all();
 
-    assert_eq!(load_intent(&running.intent), OperationIntent::Stopped);
-    assert_eq!(load_intent(&stopped.intent), OperationIntent::Stopped);
+    assert_eq!(running.intent().load(), OperationIntent::Stopped);
+    assert_eq!(stopped.intent().load(), OperationIntent::Stopped);
     assert_eq!(
-        load_intent(&rb.intent),
+        rb.intent().load(),
         OperationIntent::Stopped,
         "RollingBack should also be force-stopped on teardown"
     );
@@ -397,7 +397,7 @@ fn cancel_all_wakes_a_paused_parked_op() {
     let state_t = Arc::clone(&state);
     let woke_t = Arc::clone(&woke);
     let handle = std::thread::spawn(move || {
-        state_t.pause_gate.wait_while_paused_sync(&state_t.intent);
+        state_t.pause_gate.wait_while_paused_sync(state_t.intent());
         woke_t.store(true, Ordering::SeqCst);
     });
 
@@ -438,7 +438,7 @@ fn cancel_all_write_operations_walks_the_global_registry() {
     cancel_all_write_operations();
 
     assert_eq!(
-        load_intent(&op.state().intent),
+        op.state().intent().load(),
         OperationIntent::Stopped,
         "the public teardown entry point must reach ops in the global registry"
     );
@@ -502,7 +502,7 @@ fn abort_write_operation_fires_both_tiers() {
 
     abort_write_operation(op.id());
 
-    assert_eq!(load_intent(&op.state().intent), OperationIntent::Stopped);
+    assert_eq!(op.state().intent().load(), OperationIntent::Stopped);
     assert!(op.state().backend_cancel.is_cancelled(), "tier 1 first");
     assert!(op.state().backend_abort.is_cancelled(), "then tier 2");
 }

@@ -26,7 +26,7 @@ use crate::file_system::write_operations::event_sinks::OperationEventSink;
 use crate::file_system::write_operations::ledger::{CopyTransaction, WrittenFile};
 use crate::file_system::write_operations::overwrite::{PostLanding, displace_with_directory, safe_overwrite_dir};
 use crate::file_system::write_operations::scan_source_tracker::FileVerdict;
-use crate::file_system::write_operations::state::{WriteOperationState, is_cancelled};
+use crate::file_system::write_operations::state::WriteOperationState;
 use crate::file_system::write_operations::transfer_tree::TreeLeaf;
 use crate::file_system::write_operations::types::{
     WriteOperationConfig, WriteOperationError, WriteOperationPhase, WriteOperationType, WriteProgressEvent,
@@ -243,7 +243,7 @@ pub(in crate::file_system::write_operations::transfer) fn copy_single_item(
     };
 
     // Check cancellation
-    if is_cancelled(&state.intent) {
+    if state.intent().is_cancelled() {
         log::debug!(
             "copy: cancellation detected op={} files_done={}",
             operation_id,
@@ -587,7 +587,7 @@ pub(in crate::file_system::write_operations::transfer) fn copy_single_item(
         }
 
         // Check cancellation before copy
-        if is_cancelled(&state.intent) {
+        if state.intent().is_cancelled() {
             return Err(WriteOperationError::Cancelled {
                 message: "Operation cancelled by user".to_string(),
             });

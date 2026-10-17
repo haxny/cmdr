@@ -4,8 +4,7 @@
 //! RollingBack/Stopped`, `Stopped` terminal); [`PauseGate`] is the orthogonal
 //! pause/resume machine. Both are owned by `WriteOperationState` (in `lifecycle/state.rs`)
 //! and re-exported from there, so existing `state::OperationIntent` /
-//! `state::PauseGate` / `state::is_cancelled` / `state::load_intent` paths keep
-//! resolving.
+//! `state::PauseGate` / `state::IntentCell` paths keep resolving.
 
 use cmdr_fs::ignore_poison::IgnorePoison;
 use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
@@ -53,6 +52,80 @@ impl OperationIntent {
     }
 }
 
+/// One operation's [`OperationIntent`], shared with every reader (the drivers,
+/// the native copy callbacks, the reversal) as one atomic.
+///
+/// The cell is the type that holds the intent rule: there is no raw `store`.
+/// Its only writers are [`Self::request_stop`] (a person's Stop or Rollback)
+/// and [`Self::stop_for_teardown`] (quit's walk, which can only produce
+/// `Stopped`), and both go through [`transition_intent`]'s one atomic,
+/// table-checked read-modify-write. Cloning shares the same atomic.
+#[derive(Clone)]
+pub(crate) struct IntentCell(Arc<AtomicU8>);
+
+/// What a person asked a running operation to do when they stopped it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum StopRequest {
+    /// Stop and keep what was copied: `Stopped`.
+    KeepPartials,
+    /// Stop and remove what it created: `RollingBack`.
+    RollBack,
+}
+
+impl IntentCell {
+    /// A cell reading `Running`.
+    pub(crate) fn running() -> Self {
+        Self(Arc::new(AtomicU8::new(OperationIntent::Running as u8)))
+    }
+
+    /// The current intent.
+    pub(crate) fn load(&self) -> OperationIntent {
+        OperationIntent::from_u8(self.0.load(Ordering::Relaxed))
+    }
+
+    /// `true` once the operation should stop (the intent isn't `Running`). The
+    /// common check in copy, delete, and move loops; a reversal reads
+    /// [`StopMeans`] instead.
+    pub(crate) fn is_cancelled(&self) -> bool {
+        self.load() != OperationIntent::Running
+    }
+
+    /// Moves `Running` to `Stopped` or `RollingBack`, or a rollback to
+    /// `Stopped`. Returns the intent it moved from, or the one that refused it.
+    /// `in_gap` is [`transition_intent`]'s test seam.
+    pub(super) fn request_stop(
+        &self,
+        request: StopRequest,
+        in_gap: impl FnMut(),
+    ) -> Result<OperationIntent, OperationIntent> {
+        let next = match request {
+            StopRequest::KeepPartials => OperationIntent::Stopped,
+            StopRequest::RollBack => OperationIntent::RollingBack,
+        };
+        transition_intent(&self.0, next, in_gap)
+    }
+
+    /// Stops for a teardown: `Stopped`, never `RollingBack`, because a teardown
+    /// must never delete files with no visual feedback. An already-`Stopped`
+    /// operation refuses.
+    pub(super) fn stop_for_teardown(&self, in_gap: impl FnMut()) -> Result<OperationIntent, OperationIntent> {
+        transition_intent(&self.0, OperationIntent::Stopped, in_gap)
+    }
+
+    /// A cell already reading `intent`, for a test.
+    #[cfg(test)]
+    pub(crate) fn reading(intent: OperationIntent) -> Self {
+        Self(Arc::new(AtomicU8::new(intent as u8)))
+    }
+
+    /// Writes `intent` with no table check, for a test that simulates a stop
+    /// without the stop path.
+    #[cfg(test)]
+    pub(crate) fn set_for_test(&self, intent: OperationIntent) {
+        self.0.store(intent as u8, Ordering::Relaxed);
+    }
+}
+
 /// Moves `intent` to `next` if the table allows it from the value that's there
 /// AT THE WRITE, and returns the intent it moved from; a refusal returns the
 /// intent that refused it.
@@ -65,7 +138,7 @@ impl OperationIntent {
 ///
 /// `in_gap` runs between each read and its write. Production passes a no-op; it's
 /// the seam the race tests park a writer on.
-pub(super) fn transition_intent(
+fn transition_intent(
     intent: &AtomicU8,
     next: OperationIntent,
     mut in_gap: impl FnMut(),
@@ -82,21 +155,10 @@ pub(super) fn transition_intent(
         .map_err(OperationIntent::from_u8)
 }
 
-/// Loads the current intent from an `AtomicU8`.
-pub(crate) fn load_intent(intent: &AtomicU8) -> OperationIntent {
-    OperationIntent::from_u8(intent.load(Ordering::Relaxed))
-}
-
-/// Returns true if the operation should stop (intent is not `Running`).
-/// Use this for the common cancellation check in copy/delete/move loops.
-pub(crate) fn is_cancelled(intent: &AtomicU8) -> bool {
-    intent.load(Ordering::Relaxed) != OperationIntent::Running as u8
-}
-
 /// Whose stop a REVERSAL watches — and therefore what a non-`Running` intent
 /// means to it.
 ///
-/// [`is_cancelled`] answers "the intent isn't `Running`", and `RollingBack` is one
+/// [`IntentCell::is_cancelled`] answers "the intent isn't `Running`", and `RollingBack` is one
 /// of the values it calls cancelled. That's right for a forward transfer, which
 /// must stop and undo itself. It is WRONG for a reversal running under an
 /// operation that is itself rolling back: there the same value is the instruction
@@ -117,10 +179,10 @@ pub(crate) enum StopMeans {
 }
 
 impl StopMeans {
-    pub(crate) fn requested(self, intent: &AtomicU8) -> bool {
+    pub(crate) fn requested(self, intent: &IntentCell) -> bool {
         match self {
-            StopMeans::IntentLeavesRunning => is_cancelled(intent),
-            StopMeans::IntentReachesStopped => load_intent(intent) == OperationIntent::Stopped,
+            StopMeans::IntentLeavesRunning => intent.is_cancelled(),
+            StopMeans::IntentReachesStopped => intent.load() == OperationIntent::Stopped,
         }
     }
 }
@@ -242,8 +304,8 @@ impl PauseGate {
     /// a cancel that lands during a pause unblocks the thread and the existing
     /// cancel path takes over. Call from the sync driver, AFTER its
     /// `is_cancelled` loop-top check.
-    pub fn wait_while_paused_sync(&self, intent: &AtomicU8) {
-        self.wait_while_paused_sync_until(&|| is_cancelled(intent));
+    pub(crate) fn wait_while_paused_sync(&self, intent: &IntentCell) {
+        self.wait_while_paused_sync_until(&|| intent.is_cancelled());
     }
 
     /// [`wait_while_paused_sync`](Self::wait_while_paused_sync) with the
@@ -269,14 +331,14 @@ impl PauseGate {
     /// (without blocking an executor thread) while paused, returning as soon as
     /// the op resumes OR cancellation is observed. Call from the async volume
     /// drivers, AFTER their `is_cancelled` loop-top check.
-    pub async fn wait_while_paused_async(&self, intent: &AtomicU8) {
-        self.wait_while_paused_until(&|| is_cancelled(intent)).await;
+    pub(crate) async fn wait_while_paused_async(&self, intent: &IntentCell) {
+        self.wait_while_paused_until(&|| intent.is_cancelled()).await;
     }
 
     /// [`wait_while_paused_async`](Self::wait_while_paused_async) with the
     /// caller's own reading of "stop".
     ///
-    /// A forward transfer's reading is [`is_cancelled`] — intent isn't `Running`
+    /// A forward transfer's reading is [`IntentCell::is_cancelled`] — intent isn't `Running`
     /// — and that's what the sibling passes. An operation-log REVERSAL running
     /// under an op whose intent already says `RollingBack` needs a different one,
     /// or its park would return instantly and a pause would hold nothing. Whoever
@@ -320,29 +382,78 @@ mod tests {
         assert_eq!(OperationIntent::from_u8(255), OperationIntent::Running);
     }
 
-    // ---- load_intent / is_cancelled ----
+    fn cell(intent: OperationIntent) -> IntentCell {
+        IntentCell::reading(intent)
+    }
+
+    /// The intent a raw atom holds, for the `transition_intent` cells.
+    fn load_intent(atom: &AtomicU8) -> OperationIntent {
+        OperationIntent::from_u8(atom.load(Ordering::Relaxed))
+    }
+
+    // ---- IntentCell::load / is_cancelled ----
 
     #[test]
     fn load_intent_reflects_atomic_value() {
-        let atom = AtomicU8::new(OperationIntent::RollingBack as u8);
-        assert_eq!(load_intent(&atom), OperationIntent::RollingBack);
-        atom.store(OperationIntent::Stopped as u8, Ordering::Relaxed);
-        assert_eq!(load_intent(&atom), OperationIntent::Stopped);
-        atom.store(OperationIntent::Running as u8, Ordering::Relaxed);
-        assert_eq!(load_intent(&atom), OperationIntent::Running);
+        let intent = cell(OperationIntent::RollingBack);
+        assert_eq!(intent.load(), OperationIntent::RollingBack);
+        intent.set_for_test(OperationIntent::Stopped);
+        assert_eq!(intent.load(), OperationIntent::Stopped);
+        intent.set_for_test(OperationIntent::Running);
+        assert_eq!(intent.load(), OperationIntent::Running);
     }
 
     #[test]
     fn is_cancelled_is_true_for_any_non_running_value() {
         // Kills: replace is_cancelled → true / → false, replace != with ==.
-        let running = AtomicU8::new(OperationIntent::Running as u8);
-        assert!(!is_cancelled(&running), "Running must not be reported as cancelled");
+        let running = cell(OperationIntent::Running);
+        assert!(!running.is_cancelled(), "Running must not be reported as cancelled");
 
-        let rolling = AtomicU8::new(OperationIntent::RollingBack as u8);
-        assert!(is_cancelled(&rolling), "RollingBack must be reported as cancelled");
+        let rolling = cell(OperationIntent::RollingBack);
+        assert!(rolling.is_cancelled(), "RollingBack must be reported as cancelled");
 
-        let stopped = AtomicU8::new(OperationIntent::Stopped as u8);
-        assert!(is_cancelled(&stopped), "Stopped must be reported as cancelled");
+        let stopped = cell(OperationIntent::Stopped);
+        assert!(stopped.is_cancelled(), "Stopped must be reported as cancelled");
+    }
+
+    #[test]
+    fn teardown_can_only_stop() {
+        let running = IntentCell::running();
+        assert_eq!(running.stop_for_teardown(|| {}), Ok(OperationIntent::Running));
+        assert_eq!(running.load(), OperationIntent::Stopped);
+
+        let rolling = cell(OperationIntent::RollingBack);
+        assert_eq!(rolling.stop_for_teardown(|| {}), Ok(OperationIntent::RollingBack));
+        assert_eq!(
+            rolling.load(),
+            OperationIntent::Stopped,
+            "a teardown ends a rollback too"
+        );
+
+        let stopped = cell(OperationIntent::Stopped);
+        assert_eq!(stopped.stop_for_teardown(|| {}), Err(OperationIntent::Stopped));
+    }
+
+    #[test]
+    fn a_stop_request_names_the_intent_it_moves_to() {
+        let keep = IntentCell::running();
+        assert_eq!(
+            keep.request_stop(StopRequest::KeepPartials, || {}),
+            Ok(OperationIntent::Running)
+        );
+        assert_eq!(keep.load(), OperationIntent::Stopped);
+
+        let roll_back = IntentCell::running();
+        assert_eq!(
+            roll_back.request_stop(StopRequest::RollBack, || {}),
+            Ok(OperationIntent::Running)
+        );
+        assert_eq!(roll_back.load(), OperationIntent::RollingBack);
+        assert_eq!(
+            keep.request_stop(StopRequest::RollBack, || {}),
+            Err(OperationIntent::Stopped),
+            "a stopped operation never starts deleting"
+        );
     }
 
     // ---- transition_intent ----
@@ -387,7 +498,7 @@ mod tests {
     /// readings means a caller gets a named choice rather than a silent one.
     #[test]
     fn the_two_readings_of_a_rolling_back_intent_disagree_on_purpose() {
-        let rolling_back = AtomicU8::new(OperationIntent::RollingBack as u8);
+        let rolling_back = cell(OperationIntent::RollingBack);
         assert!(
             StopMeans::IntentLeavesRunning.requested(&rolling_back),
             "a reversal that is its own operation never sees RollingBack; anything but Running stops it"
@@ -397,14 +508,14 @@ mod tests {
             "a reversal running UNDER a rolling-back operation reads that value as its instruction, not as a stop"
         );
 
-        let stopped = AtomicU8::new(OperationIntent::Stopped as u8);
+        let stopped = cell(OperationIntent::Stopped);
         assert!(StopMeans::IntentLeavesRunning.requested(&stopped));
         assert!(
             StopMeans::IntentReachesStopped.requested(&stopped),
             "Stopped stops either way"
         );
 
-        let running = AtomicU8::new(OperationIntent::Running as u8);
+        let running = cell(OperationIntent::Running);
         assert!(!StopMeans::IntentLeavesRunning.requested(&running));
         assert!(!StopMeans::IntentReachesStopped.requested(&running));
     }
@@ -478,7 +589,7 @@ mod tests {
     fn wait_while_paused_sync_returns_immediately_when_not_paused() {
         // Not paused → the wait must be a no-op (no deadlock, no condvar park).
         let gate = PauseGate::new(HumanWaitClock::shared());
-        let intent = AtomicU8::new(OperationIntent::Running as u8);
+        let intent = IntentCell::running();
         gate.wait_while_paused_sync(&intent); // returns instantly or the test hangs
     }
 
@@ -487,7 +598,7 @@ mod tests {
     /// can resume or cancel and watch the wake.
     fn park_worker_on_gate(
         gate: &Arc<PauseGate>,
-        intent: &Arc<AtomicU8>,
+        intent: &Arc<IntentCell>,
     ) -> (std::thread::JoinHandle<()>, Arc<AtomicBool>) {
         let woke = Arc::new(AtomicBool::new(false));
         let gate_t = Arc::clone(gate);
@@ -512,7 +623,7 @@ mod tests {
         // thread. The worker must wake. Without a working condvar notify it
         // would hang and the test would time out.
         let gate = Arc::new(PauseGate::new(HumanWaitClock::shared()));
-        let intent = Arc::new(AtomicU8::new(OperationIntent::Running as u8));
+        let intent = Arc::new(IntentCell::running());
         gate.pause();
         let (handle, woke) = park_worker_on_gate(&gate, &intent);
         gate.resume();
@@ -525,13 +636,13 @@ mod tests {
         // Cancellation must win over pause: a paused, parked thread wakes when
         // the intent flips to a non-Running state, WITHOUT a resume.
         let gate = Arc::new(PauseGate::new(HumanWaitClock::shared()));
-        let intent = Arc::new(AtomicU8::new(OperationIntent::Running as u8));
+        let intent = Arc::new(IntentCell::running());
         gate.pause();
         let (handle, woke) = park_worker_on_gate(&gate, &intent);
         // Mirror the production cancel path: flip intent to a non-Running state,
         // then `wake()` (NOT `resume()`) so the paused flag stays set. The
         // parked thread must still wake — cancellation wins over pause.
-        intent.store(OperationIntent::Stopped as u8, Ordering::Relaxed);
+        intent.set_for_test(OperationIntent::Stopped);
         gate.wake();
         handle.join().expect("worker joins");
         assert!(woke.load(Ordering::SeqCst), "cancel must unblock a paused wait");
@@ -544,7 +655,7 @@ mod tests {
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn wait_while_paused_async_returns_immediately_when_not_paused() {
         let gate = PauseGate::new(HumanWaitClock::shared());
-        let intent = AtomicU8::new(OperationIntent::Running as u8);
+        let intent = IntentCell::running();
         // Must not hang.
         tokio::time::timeout(Duration::from_secs(1), gate.wait_while_paused_async(&intent))
             .await
@@ -554,7 +665,7 @@ mod tests {
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn wait_while_paused_async_unblocks_on_resume() {
         let gate = Arc::new(PauseGate::new(HumanWaitClock::shared()));
-        let intent = Arc::new(AtomicU8::new(OperationIntent::Running as u8));
+        let intent = Arc::new(IntentCell::running());
         gate.pause();
 
         let gate_t = Arc::clone(&gate);
@@ -579,7 +690,7 @@ mod tests {
     async fn wait_while_paused_async_unblocks_on_cancel() {
         // Cancellation wins over pause for the async path too.
         let gate = Arc::new(PauseGate::new(HumanWaitClock::shared()));
-        let intent = Arc::new(AtomicU8::new(OperationIntent::Running as u8));
+        let intent = Arc::new(IntentCell::running());
         gate.pause();
 
         let gate_t = Arc::clone(&gate);
@@ -596,7 +707,7 @@ mod tests {
         // Mirror the production cancel path: flip intent, then `wake()` (NOT
         // `resume()`) — paused stays set. The waiter must observe cancel and
         // return anyway.
-        intent.store(OperationIntent::Stopped as u8, Ordering::Relaxed);
+        intent.set_for_test(OperationIntent::Stopped);
         gate.wake();
         tokio::time::timeout(Duration::from_secs(1), task)
             .await

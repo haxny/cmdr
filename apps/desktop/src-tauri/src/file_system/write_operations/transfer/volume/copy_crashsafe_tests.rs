@@ -562,7 +562,6 @@ mod local_staging {
     use std::fs;
     use std::path::{Path, PathBuf};
     use std::sync::Arc;
-    use std::sync::atomic::Ordering;
     use std::time::Duration;
 
     /// 3.5 chunks of the chunked copier's 1 MiB window, so the progress
@@ -668,7 +667,7 @@ mod local_staging {
             if dest.exists() {
                 saw_real_name.set(true);
             }
-            state.intent.store(OperationIntent::Stopped as u8, Ordering::SeqCst);
+            state.intent().set_for_test(OperationIntent::Stopped);
         };
 
         let result = copy_file_using(

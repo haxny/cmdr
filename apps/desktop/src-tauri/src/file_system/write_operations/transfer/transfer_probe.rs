@@ -31,7 +31,7 @@ use cmdr_fs::ignore_poison::IgnorePoison;
 
 use super::super::event_sinks::OperationEventSink;
 use super::super::host::OperationErrorReport;
-use super::super::state::{OperationIntent, WriteOperationState, load_intent};
+use super::super::state::{OperationIntent, WriteOperationState};
 use super::super::types::{TransferActivity, TransferWaitReason, WriteOperationPhase, WriteProgressEvent};
 
 /// How often the watchdog samples an operation, and how long a transfer may
@@ -570,7 +570,7 @@ impl OperationProbe {
     ///   make the wind-down harder to reason about.
     fn track_and_abort_wedged_tasks(&self, now: Duration) {
         let now_ms = u64::try_from(now.as_millis()).unwrap_or(u64::MAX);
-        let cancelling = !matches!(load_intent(&self.state.intent), OperationIntent::Running);
+        let cancelling = !matches!(self.state.intent().load(), OperationIntent::Running);
         // ❌ NEVER collapse this conjunction to "trust the liveness verdict".
         //
         // The verdict it reads is a keepalive result, and a keepalive
@@ -794,7 +794,7 @@ impl OperationProbe {
     pub(super) fn render_dump(&self, reason: &str) -> String {
         let tasks = self.tasks.lock_ignore_poison();
         let driver = DriverPhase::from_u8(self.driver_phase.load(Ordering::Relaxed));
-        let intent = match load_intent(&self.state.intent) {
+        let intent = match self.state.intent().load() {
             OperationIntent::Running => "running",
             OperationIntent::RollingBack => "rolling-back",
             OperationIntent::Stopped => "stopped",
