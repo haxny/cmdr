@@ -17,8 +17,8 @@ pub(super) use super::super::event_sinks::CollectorEventSink;
 pub(super) use super::super::manager::OperationSummaryText;
 pub(super) use super::super::types::{
     ConflictId, ConflictInfo, ConflictResolution, DryRunResult, ScanProgressEvent, WriteCancelledEvent,
-    WriteCompleteEvent, WriteConflictEvent, WriteConflictResolvedEvent, WriteErrorEvent, WriteOperationError,
-    WriteOperationPhase, WriteOperationType, WriteProgressEvent, WriteSettledEvent, WriteSourceItemDoneEvent,
+    WriteCompleteEvent, WriteConflictResolvedEvent, WriteErrorEvent, WriteOperationError, WriteOperationPhase,
+    WriteOperationType, WriteProgressEvent, WriteSettledEvent, WriteSourceItemDoneEvent,
 };
 pub(super) use crate::file_system::volume::manager::get_volume_manager;
 pub(super) use crate::test_support::wait_until_async;
@@ -103,7 +103,7 @@ impl OperationEventSink for PhaseGateSink {
         self.inner.emit_error(event);
     }
 
-    fn emit_conflict(&self, event: WriteConflictEvent) {
+    fn emit_conflict(&self, event: crate::file_system::write_operations::ArmedConflict) {
         self.inner.emit_conflict(event);
     }
 

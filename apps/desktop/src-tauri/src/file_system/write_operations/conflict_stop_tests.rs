@@ -17,8 +17,8 @@ use crate::file_system::write_operations::event_sinks::{CollectorEventSink, Oper
 use crate::file_system::write_operations::state::{ConflictResolutionResponse, WriteOperationState};
 use crate::file_system::write_operations::types::{
     ConflictInfo, ConflictResolution, DryRunResult, ScanProgressEvent, TransferWaitReason, WriteCancelledEvent,
-    WriteCompleteEvent, WriteConflictEvent, WriteErrorEvent, WriteOperationConfig, WriteOperationPhase,
-    WriteOperationType, WriteProgressEvent, WriteSourceItemDoneEvent,
+    WriteCompleteEvent, WriteErrorEvent, WriteOperationConfig, WriteOperationPhase, WriteOperationType,
+    WriteProgressEvent, WriteSourceItemDoneEvent,
 };
 use cmdr_fs::ignore_poison::IgnorePoison;
 use std::sync::Arc;
@@ -47,7 +47,7 @@ impl OperationEventSink for AnswerOnConflictSink {
     fn emit_settled(&self, e: crate::file_system::write_operations::types::WriteSettledEvent) {
         self.inner.emit_settled(e);
     }
-    fn emit_conflict(&self, e: WriteConflictEvent) {
+    fn emit_conflict(&self, e: crate::file_system::write_operations::ArmedConflict) {
         // Answer the clash this event names, exactly as a surface would.
         let clash = e.conflict_id;
         self.inner.emit_conflict(e);

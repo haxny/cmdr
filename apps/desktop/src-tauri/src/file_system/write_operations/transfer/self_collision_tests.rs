@@ -21,8 +21,8 @@ use std::time::Duration;
 use super::super::event_sinks::{CollectorEventSink, OperationEventSink};
 use super::super::state::WriteOperationState;
 use super::super::types::{
-    ConflictInfo, DryRunResult, ScanProgressEvent, WriteCancelledEvent, WriteCompleteEvent, WriteConflictEvent,
-    WriteConflictResolvedEvent, WriteErrorEvent, WriteProgressEvent, WriteSettledEvent,
+    ConflictInfo, DryRunResult, ScanProgressEvent, WriteCancelledEvent, WriteCompleteEvent, WriteConflictResolvedEvent,
+    WriteErrorEvent, WriteProgressEvent, WriteSettledEvent,
 };
 use super::super::types::{ConflictResolution, SourceItemOutcome, WriteOperationConfig, WriteSourceItemDoneEvent};
 use super::conflict_responder_test_support::ConflictResponderSink;
@@ -111,7 +111,7 @@ impl OperationEventSink for RollBackOnFirstItem {
         emit_complete(WriteCompleteEvent),
         emit_cancelled(WriteCancelledEvent),
         emit_error(WriteErrorEvent),
-        emit_conflict(WriteConflictEvent),
+        emit_conflict(crate::file_system::write_operations::ArmedConflict),
         emit_conflict_resolved(WriteConflictResolvedEvent),
         emit_scan_progress(ScanProgressEvent),
         emit_scan_conflict(ConflictInfo),

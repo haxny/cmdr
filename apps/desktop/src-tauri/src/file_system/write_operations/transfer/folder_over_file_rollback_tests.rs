@@ -19,8 +19,8 @@ use super::super::event_sinks::{CollectorEventSink, OperationEventSink};
 use super::super::state::{ConflictResolutionResponse, OperationIntent, WriteOperationState};
 use super::super::types::{
     ConflictInfo, ConflictResolution, DryRunResult, ScanProgressEvent, WriteCancelledEvent, WriteCompleteEvent,
-    WriteConflictEvent, WriteConflictResolvedEvent, WriteErrorEvent, WriteOperationConfig, WriteOperationPhase,
-    WriteProgressEvent, WriteSettledEvent, WriteSourceItemDoneEvent,
+    WriteConflictResolvedEvent, WriteErrorEvent, WriteOperationConfig, WriteOperationPhase, WriteProgressEvent,
+    WriteSettledEvent, WriteSourceItemDoneEvent,
 };
 use super::copy::copy_files_with_progress_inner;
 use crate::test_support::TestDir;
@@ -37,7 +37,7 @@ struct AnswerThenRollBack {
 }
 
 impl OperationEventSink for AnswerThenRollBack {
-    fn emit_conflict(&self, e: WriteConflictEvent) {
+    fn emit_conflict(&self, e: crate::file_system::write_operations::ArmedConflict) {
         let clash = e.conflict_id;
         self.inner.emit_conflict(e);
         let _ = self.state.conflict_slot.answer(

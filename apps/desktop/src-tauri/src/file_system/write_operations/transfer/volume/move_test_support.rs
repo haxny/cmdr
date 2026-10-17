@@ -16,7 +16,7 @@ use std::time::Duration;
 
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::types::{
-    WriteConflictEvent, WriteConflictResolvedEvent, WriteErrorEvent, WriteProgressEvent, WriteSourceItemDoneEvent,
+    WriteConflictResolvedEvent, WriteErrorEvent, WriteProgressEvent, WriteSourceItemDoneEvent,
 };
 use cmdr_fs::volume::WriteMode;
 use cmdr_fs::volume::{InMemoryVolume, StreamLength, StreamWriteProgress, StreamWritten, VolumeError};
@@ -70,7 +70,7 @@ impl OperationEventSink for CancelAfterFirstSink {
     fn emit_error(&self, e: WriteErrorEvent) {
         self.inner.emit_error(e);
     }
-    fn emit_conflict(&self, e: WriteConflictEvent) {
+    fn emit_conflict(&self, e: crate::file_system::write_operations::ArmedConflict) {
         self.inner.emit_conflict(e);
     }
     fn emit_conflict_resolved(&self, e: WriteConflictResolvedEvent) {
@@ -139,7 +139,7 @@ impl OperationEventSink for SampleInFlightTableSink {
     fn emit_error(&self, e: WriteErrorEvent) {
         self.inner.emit_error(e);
     }
-    fn emit_conflict(&self, e: WriteConflictEvent) {
+    fn emit_conflict(&self, e: crate::file_system::write_operations::ArmedConflict) {
         self.inner.emit_conflict(e);
     }
     fn emit_conflict_resolved(&self, e: WriteConflictResolvedEvent) {

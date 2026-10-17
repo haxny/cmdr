@@ -13,8 +13,8 @@ use super::trash::trash_files_with_progress;
 use crate::file_system::write_operations::event_sinks::OperationEventSink;
 use crate::file_system::write_operations::state::WriteOperationState;
 use crate::file_system::write_operations::types::{
-    ConflictInfo, DryRunResult, ScanProgressEvent, WriteCancelledEvent, WriteCompleteEvent, WriteConflictEvent,
-    WriteConflictResolvedEvent, WriteErrorEvent, WriteProgressEvent, WriteSettledEvent, WriteSourceItemDoneEvent,
+    ConflictInfo, DryRunResult, ScanProgressEvent, WriteCancelledEvent, WriteCompleteEvent, WriteConflictResolvedEvent,
+    WriteErrorEvent, WriteProgressEvent, WriteSettledEvent, WriteSourceItemDoneEvent,
 };
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -39,7 +39,7 @@ impl OperationEventSink for PauseAfterTheFirstItem {
     fn emit_complete(&self, _event: WriteCompleteEvent) {}
     fn emit_cancelled(&self, _event: WriteCancelledEvent) {}
     fn emit_error(&self, _event: WriteErrorEvent) {}
-    fn emit_conflict(&self, _event: WriteConflictEvent) {}
+    fn emit_conflict(&self, _event: crate::file_system::write_operations::ArmedConflict) {}
     fn emit_conflict_resolved(&self, _event: WriteConflictResolvedEvent) {}
     fn emit_settled(&self, _event: WriteSettledEvent) {}
     fn emit_scan_progress(&self, _event: ScanProgressEvent) {}

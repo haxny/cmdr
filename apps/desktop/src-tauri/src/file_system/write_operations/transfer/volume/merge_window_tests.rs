@@ -29,8 +29,8 @@ use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::state::cancel_write_operation;
 use crate::file_system::write_operations::test_support::TestOperationGuard;
 use crate::file_system::write_operations::types::{
-    ConflictResolution, ScanProgressEvent, WriteCancelledEvent, WriteCompleteEvent, WriteConflictEvent,
-    WriteConflictResolvedEvent, WriteErrorEvent, WriteSettledEvent, WriteSourceItemDoneEvent,
+    ConflictResolution, ScanProgressEvent, WriteCancelledEvent, WriteCompleteEvent, WriteConflictResolvedEvent,
+    WriteErrorEvent, WriteSettledEvent, WriteSourceItemDoneEvent,
 };
 use cmdr_fs::volume::InMemoryVolume;
 use cmdr_fs::volume::WriteMode;
@@ -488,7 +488,7 @@ async fn a_rolled_back_wide_window_copy_leaves_no_directory_it_created() {
         fn emit_error(&self, e: WriteErrorEvent) {
             self.inner.emit_error(e);
         }
-        fn emit_conflict(&self, e: WriteConflictEvent) {
+        fn emit_conflict(&self, e: crate::file_system::write_operations::ArmedConflict) {
             self.inner.emit_conflict(e);
         }
         fn emit_conflict_resolved(&self, e: WriteConflictResolvedEvent) {

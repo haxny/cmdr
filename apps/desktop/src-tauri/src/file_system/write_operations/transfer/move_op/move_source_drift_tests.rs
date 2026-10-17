@@ -19,8 +19,8 @@ use super::test_support::{make_state, outcomes_for, removal_flags_for};
 use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::types::{
-    ConflictInfo, DryRunResult, ScanProgressEvent, WriteCancelledEvent, WriteCompleteEvent, WriteConflictEvent,
-    WriteConflictResolvedEvent, WriteErrorEvent, WriteOperationPhase, WriteProgressEvent, WriteSettledEvent,
+    ConflictInfo, DryRunResult, ScanProgressEvent, WriteCancelledEvent, WriteCompleteEvent, WriteConflictResolvedEvent,
+    WriteErrorEvent, WriteOperationPhase, WriteProgressEvent, WriteSettledEvent,
 };
 use cmdr_fs::ignore_poison::IgnorePoison;
 
@@ -59,7 +59,7 @@ impl OperationEventSink for EditBeforeSweep {
     fn emit_error(&self, event: WriteErrorEvent) {
         self.inner.emit_error(event);
     }
-    fn emit_conflict(&self, event: WriteConflictEvent) {
+    fn emit_conflict(&self, event: crate::file_system::write_operations::ArmedConflict) {
         self.inner.emit_conflict(event);
     }
     fn emit_conflict_resolved(&self, event: WriteConflictResolvedEvent) {

@@ -74,7 +74,7 @@ impl OperationEventSink for Bridge {
         self.probe(Moment::Error, &e.operation_id);
         self.inner.emit_error(e);
     }
-    fn emit_conflict(&self, e: super::types::WriteConflictEvent) {
+    fn emit_conflict(&self, e: crate::file_system::write_operations::ArmedConflict) {
         self.inner.emit_conflict(e);
     }
     fn emit_conflict_resolved(&self, e: super::types::WriteConflictResolvedEvent) {

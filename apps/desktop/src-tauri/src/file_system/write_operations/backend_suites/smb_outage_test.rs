@@ -21,9 +21,8 @@ use crate::file_system::write_operations::outage_slot::OutagePolicy;
 use crate::file_system::write_operations::test_support::TestOperationGuard;
 use crate::file_system::write_operations::{
     CollectorEventSink, ConflictInfo, DryRunResult, OperationEventSink, ScanProgressEvent, VolumeCopyConfig,
-    WriteCancelledEvent, WriteCompleteEvent, WriteConflictEvent, WriteConflictResolvedEvent, WriteErrorEvent,
-    WriteOperationPhase, WriteOperationState, WriteProgressEvent, WriteSettledEvent, WriteSourceItemDoneEvent,
-    copy_volumes_with_progress,
+    WriteCancelledEvent, WriteCompleteEvent, WriteConflictResolvedEvent, WriteErrorEvent, WriteOperationPhase,
+    WriteOperationState, WriteProgressEvent, WriteSettledEvent, WriteSourceItemDoneEvent, copy_volumes_with_progress,
 };
 use crate::test_support::wait_until_async;
 
@@ -86,7 +85,7 @@ impl OperationEventSink for PauseAfterFiles {
     fn emit_error(&self, event: WriteErrorEvent) {
         self.inner.emit_error(event);
     }
-    fn emit_conflict(&self, event: WriteConflictEvent) {
+    fn emit_conflict(&self, event: crate::file_system::write_operations::ArmedConflict) {
         self.inner.emit_conflict(event);
     }
     fn emit_conflict_resolved(&self, event: WriteConflictResolvedEvent) {

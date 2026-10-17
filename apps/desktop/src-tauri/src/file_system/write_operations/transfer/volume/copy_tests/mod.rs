@@ -6,7 +6,7 @@
 use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::types::{
-    ConflictResolution, WriteConflictEvent, WriteConflictResolvedEvent, WriteErrorEvent, WriteSourceItemDoneEvent,
+    ConflictResolution, WriteConflictResolvedEvent, WriteErrorEvent, WriteSourceItemDoneEvent,
 };
 use cmdr_fs::volume::{InMemoryVolume, ListingProgress};
 

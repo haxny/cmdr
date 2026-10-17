@@ -112,6 +112,7 @@ use std::sync::Arc;
 // The two event sink seams. The app builds its Tauri-backed answers
 // (`operations_host::sinks`) at the IPC edge and injects them into the managed
 // pipeline; the pipeline itself never constructs a sink.
+pub use conflict_slot::ArmedConflict;
 pub use event_sinks::{OperationEventSink, ScanPreviewEventSink};
 
 // Re-export public types

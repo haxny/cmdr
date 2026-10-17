@@ -353,7 +353,7 @@ async fn volume_cancel_emits_write_settled_event() {
             self.events.lock().unwrap().push("error");
             self.inner_collector.emit_error(e);
         }
-        fn emit_conflict(&self, e: super::super::types::WriteConflictEvent) {
+        fn emit_conflict(&self, e: crate::file_system::write_operations::ArmedConflict) {
             self.inner_collector.emit_conflict(e);
         }
         fn emit_conflict_resolved(&self, _e: super::super::types::WriteConflictResolvedEvent) {}

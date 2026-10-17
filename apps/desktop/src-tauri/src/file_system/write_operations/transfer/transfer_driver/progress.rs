@@ -465,7 +465,7 @@ impl OperationEventSink for ByteWatchSink {
     fn emit_complete(&self, event: crate::file_system::write_operations::types::WriteCompleteEvent) {}
     fn emit_cancelled(&self, event: crate::file_system::write_operations::types::WriteCancelledEvent) {}
     fn emit_error(&self, event: crate::file_system::write_operations::types::WriteErrorEvent) {}
-    fn emit_conflict(&self, event: crate::file_system::write_operations::types::WriteConflictEvent) {}
+    fn emit_conflict(&self, event: crate::file_system::write_operations::ArmedConflict) {}
     fn emit_conflict_resolved(&self, event: crate::file_system::write_operations::types::WriteConflictResolvedEvent) {}
     fn emit_source_item_done(&self, event: crate::file_system::write_operations::types::WriteSourceItemDoneEvent) {}
     fn emit_scan_progress(&self, event: crate::file_system::write_operations::types::ScanProgressEvent) {}

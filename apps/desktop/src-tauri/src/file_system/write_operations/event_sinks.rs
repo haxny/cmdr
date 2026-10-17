@@ -206,8 +206,8 @@ impl OperationEventSink for CollectorEventSink {
     fn emit_error(&self, event: WriteErrorEvent) {
         self.errors.lock_ignore_poison().push(event);
     }
-    fn emit_conflict(&self, event: WriteConflictEvent) {
-        self.conflicts.lock_ignore_poison().push(event);
+    fn emit_conflict(&self, event: super::conflict_slot::ArmedConflict) {
+        self.conflicts.lock_ignore_poison().push(event.into_event());
     }
     fn emit_conflict_resolved(&self, event: WriteConflictResolvedEvent) {
         self.conflicts_resolved.lock_ignore_poison().push(event);

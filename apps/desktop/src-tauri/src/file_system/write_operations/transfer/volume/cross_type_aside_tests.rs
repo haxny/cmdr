@@ -13,8 +13,7 @@ use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::state::ConflictResolutionResponse;
 use crate::file_system::write_operations::types::{
-    ConflictResolution, WriteConflictEvent, WriteConflictResolvedEvent, WriteErrorEvent, WriteOperationError,
-    WriteSourceItemDoneEvent,
+    ConflictResolution, WriteConflictResolvedEvent, WriteErrorEvent, WriteOperationError, WriteSourceItemDoneEvent,
 };
 use cmdr_fs::volume::InMemoryVolume;
 
@@ -54,7 +53,7 @@ impl OperationEventSink for OverwriteThenMaybeRollback {
     fn emit_error(&self, e: WriteErrorEvent) {
         self.inner.emit_error(e);
     }
-    fn emit_conflict(&self, e: WriteConflictEvent) {
+    fn emit_conflict(&self, e: crate::file_system::write_operations::ArmedConflict) {
         let clash = e.conflict_id;
         self.inner.emit_conflict(e);
         let _ = self.state.conflict_slot.answer(

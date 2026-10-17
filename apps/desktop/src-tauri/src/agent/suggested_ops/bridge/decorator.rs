@@ -20,8 +20,8 @@ use crate::agent::memory::MemoryStore;
 use crate::agent::store::proposals::{mark_group_completed, record_op_outcome};
 use crate::agent::types::OpStatus;
 use crate::file_system::write_operations::{
-    ConflictInfo, DryRunResult, OperationEventSink, ScanProgressEvent, SourceItemOutcome, WriteCancelledEvent,
-    WriteCompleteEvent, WriteConflictEvent, WriteConflictResolvedEvent, WriteErrorEvent, WriteProgressEvent,
+    ArmedConflict, ConflictInfo, DryRunResult, OperationEventSink, ScanProgressEvent, SourceItemOutcome,
+    WriteCancelledEvent, WriteCompleteEvent, WriteConflictResolvedEvent, WriteErrorEvent, WriteProgressEvent,
     WriteSettledEvent, WriteSourceItemDoneEvent, WriteSourcesGoneEvent,
 };
 use crate::ignore_poison::IgnorePoison;
@@ -151,7 +151,7 @@ impl OperationEventSink for ProposalReportingSink {
     fn emit_error(&self, event: WriteErrorEvent) {
         self.inner.emit_error(event);
     }
-    fn emit_conflict(&self, event: WriteConflictEvent) {
+    fn emit_conflict(&self, event: ArmedConflict) {
         self.inner.emit_conflict(event);
     }
     fn emit_conflict_resolved(&self, event: WriteConflictResolvedEvent) {

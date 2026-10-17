@@ -13,7 +13,7 @@ use crate::file_system::write_operations::state::{
     CachedScanResult, ConflictResolutionResponse, FileInfo, insert_scan_result,
 };
 use crate::file_system::write_operations::types::{
-    ConflictInfo, DryRunResult, ScanProgressEvent, WriteConflictEvent, WriteConflictResolvedEvent, WriteSettledEvent,
+    ConflictInfo, DryRunResult, ScanProgressEvent, WriteConflictResolvedEvent, WriteSettledEvent,
 };
 use cmdr_fs::volume::CopyScanResult;
 
@@ -31,7 +31,7 @@ struct AnswerOverwrite {
 }
 
 impl OperationEventSink for AnswerOverwrite {
-    fn emit_conflict(&self, e: WriteConflictEvent) {
+    fn emit_conflict(&self, e: crate::file_system::write_operations::ArmedConflict) {
         let clash = e.conflict_id;
         self.inner.emit_conflict(e);
         if !self.answered.swap(true, Ordering::SeqCst) {

@@ -380,7 +380,7 @@ impl OperationEventSink for PauseOnFirstScanTick {
     }
     fn emit_cancelled(&self, _event: super::types::WriteCancelledEvent) {}
     fn emit_error(&self, _event: super::types::WriteErrorEvent) {}
-    fn emit_conflict(&self, _event: super::types::WriteConflictEvent) {}
+    fn emit_conflict(&self, _event: crate::file_system::write_operations::ArmedConflict) {}
     fn emit_conflict_resolved(&self, _event: super::types::WriteConflictResolvedEvent) {}
     fn emit_source_item_done(&self, _event: super::types::WriteSourceItemDoneEvent) {}
     fn emit_scan_progress(&self, _event: super::types::ScanProgressEvent) {}

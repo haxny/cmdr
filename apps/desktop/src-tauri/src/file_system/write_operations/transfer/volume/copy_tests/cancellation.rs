@@ -75,7 +75,7 @@ async fn test_multi_file_copy_cancel_mid_flight() {
         fn emit_error(&self, e: WriteErrorEvent) {
             self.inner.emit_error(e);
         }
-        fn emit_conflict(&self, e: WriteConflictEvent) {
+        fn emit_conflict(&self, e: crate::file_system::write_operations::ArmedConflict) {
             self.inner.emit_conflict(e);
         }
         fn emit_conflict_resolved(&self, e: WriteConflictResolvedEvent) {

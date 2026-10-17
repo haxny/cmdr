@@ -12,7 +12,7 @@ use super::tests::{make_state, make_volumes};
 use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::types::{
-    ConflictResolution, WriteConflictEvent, WriteConflictResolvedEvent, WriteErrorEvent, WriteSourceItemDoneEvent,
+    ConflictResolution, WriteConflictResolvedEvent, WriteErrorEvent, WriteSourceItemDoneEvent,
 };
 use cmdr_fs::volume::InMemoryVolume;
 
@@ -46,7 +46,7 @@ impl OperationEventSink for RollbackAfterFirstFileSink {
     fn emit_error(&self, e: WriteErrorEvent) {
         self.inner.emit_error(e);
     }
-    fn emit_conflict(&self, e: WriteConflictEvent) {
+    fn emit_conflict(&self, e: crate::file_system::write_operations::ArmedConflict) {
         self.inner.emit_conflict(e);
     }
     fn emit_conflict_resolved(&self, e: WriteConflictResolvedEvent) {
@@ -251,7 +251,7 @@ impl OperationEventSink for TripIntentOnFirstByteSink {
     fn emit_error(&self, e: WriteErrorEvent) {
         self.inner.emit_error(e);
     }
-    fn emit_conflict(&self, e: WriteConflictEvent) {
+    fn emit_conflict(&self, e: crate::file_system::write_operations::ArmedConflict) {
         self.inner.emit_conflict(e);
     }
     fn emit_conflict_resolved(&self, e: WriteConflictResolvedEvent) {
@@ -475,7 +475,7 @@ impl OperationEventSink for TripIntentAtFilesDoneSink {
     fn emit_error(&self, e: WriteErrorEvent) {
         self.inner.emit_error(e);
     }
-    fn emit_conflict(&self, e: WriteConflictEvent) {
+    fn emit_conflict(&self, e: crate::file_system::write_operations::ArmedConflict) {
         self.inner.emit_conflict(e);
     }
     fn emit_conflict_resolved(&self, e: WriteConflictResolvedEvent) {

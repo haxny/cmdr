@@ -26,8 +26,8 @@ use super::super::event_sinks::{CollectorEventSink, OperationEventSink};
 use super::super::state::{ConflictResolutionResponse, WriteOperationState};
 use super::super::types::{
     ConflictId, ConflictInfo, ConflictResolution, DryRunResult, ScanProgressEvent, WriteCancelledEvent,
-    WriteCompleteEvent, WriteConflictEvent, WriteConflictResolvedEvent, WriteErrorEvent, WriteProgressEvent,
-    WriteSettledEvent, WriteSourceItemDoneEvent,
+    WriteCompleteEvent, WriteConflictResolvedEvent, WriteErrorEvent, WriteProgressEvent, WriteSettledEvent,
+    WriteSourceItemDoneEvent,
 };
 use cmdr_fs::ignore_poison::IgnorePoison;
 
@@ -110,7 +110,7 @@ impl OperationEventSink for ConflictResponderSink {
     fn emit_error(&self, e: WriteErrorEvent) {
         self.inner.emit_error(e);
     }
-    fn emit_conflict(&self, e: WriteConflictEvent) {
+    fn emit_conflict(&self, e: crate::file_system::write_operations::ArmedConflict) {
         // Record the prompt first (so the count is authoritative even if the
         // send below races teardown), then answer it. The answer names the
         // clash this event carries, exactly as a real surface would.

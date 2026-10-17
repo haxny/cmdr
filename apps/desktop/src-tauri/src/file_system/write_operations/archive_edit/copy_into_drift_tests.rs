@@ -18,8 +18,8 @@ use futures_util::FutureExt;
 use super::test_support::*;
 use crate::file_system::write_operations::route_archive_copy_into;
 use crate::file_system::write_operations::types::{
-    ConflictInfo, DryRunResult, ScanProgressEvent, WriteCancelledEvent, WriteCompleteEvent, WriteConflictEvent,
-    WriteConflictResolvedEvent, WriteErrorEvent, WriteProgressEvent, WriteSettledEvent, WriteSourceItemDoneEvent,
+    ConflictInfo, DryRunResult, ScanProgressEvent, WriteCancelledEvent, WriteCompleteEvent, WriteConflictResolvedEvent,
+    WriteErrorEvent, WriteProgressEvent, WriteSettledEvent, WriteSourceItemDoneEvent,
 };
 
 /// Collects every event, and runs `edit` once, on the first progress tick.
@@ -53,7 +53,7 @@ impl OperationEventSink for EditOnFirstProgress {
     fn emit_error(&self, event: WriteErrorEvent) {
         self.inner.emit_error(event);
     }
-    fn emit_conflict(&self, event: WriteConflictEvent) {
+    fn emit_conflict(&self, event: crate::file_system::write_operations::ArmedConflict) {
         self.inner.emit_conflict(event);
     }
     fn emit_conflict_resolved(&self, event: WriteConflictResolvedEvent) {

@@ -1,9 +1,9 @@
 //! The per-operation seam: what one operation reports while it runs.
 
+use super::super::conflict_slot::ArmedConflict;
 use super::super::types::{
-    ConflictInfo, DryRunResult, ScanProgressEvent, WriteCancelledEvent, WriteCompleteEvent, WriteConflictEvent,
-    WriteConflictResolvedEvent, WriteErrorEvent, WriteProgressEvent, WriteSettledEvent, WriteSourceItemDoneEvent,
-    WriteSourcesGoneEvent,
+    ConflictInfo, DryRunResult, ScanProgressEvent, WriteCancelledEvent, WriteCompleteEvent, WriteConflictResolvedEvent,
+    WriteErrorEvent, WriteProgressEvent, WriteSettledEvent, WriteSourceItemDoneEvent, WriteSourcesGoneEvent,
 };
 
 /// Abstraction for emitting write operation events.
@@ -16,7 +16,9 @@ pub trait OperationEventSink: Send + Sync {
     fn emit_complete(&self, event: WriteCompleteEvent);
     fn emit_cancelled(&self, event: WriteCancelledEvent);
     fn emit_error(&self, event: WriteErrorEvent);
-    fn emit_conflict(&self, event: WriteConflictEvent);
+    /// A Stop-mode clash is on screen. Only an [`ArmedConflict`] goes out: the
+    /// slot that answers it is armed before anyone can see it.
+    fn emit_conflict(&self, event: ArmedConflict);
     /// The clash named by this event is over and the operation has carried on.
     /// Every surface showing it takes it down, including the ones that answered
     /// nothing (an agent over MCP answered, or another window won the race).

@@ -11,10 +11,10 @@ use tauri_specta::Event;
 use super::terminal_effects::{self, AppTerminalEffects};
 use super::wire;
 use crate::file_system::write_operations::{
-    ConflictInfo, DryRunResult, OperationEventSink, ScanPreviewCancelledEvent, ScanPreviewCompleteEvent,
+    ArmedConflict, ConflictInfo, DryRunResult, OperationEventSink, ScanPreviewCancelledEvent, ScanPreviewCompleteEvent,
     ScanPreviewErrorEvent, ScanPreviewEventSink, ScanPreviewProgressEvent, ScanProgressEvent, WriteCancelledEvent,
-    WriteCompleteEvent, WriteConflictEvent, WriteConflictResolvedEvent, WriteErrorEvent, WriteProgressEvent,
-    WriteSettledEvent, WriteSourceItemDoneEvent, WriteSourcesGoneEvent,
+    WriteCompleteEvent, WriteConflictResolvedEvent, WriteErrorEvent, WriteProgressEvent, WriteSettledEvent,
+    WriteSourceItemDoneEvent, WriteSourcesGoneEvent,
 };
 
 /// Tauri-backed event sink: calls `app.emit()` for each event.
@@ -54,8 +54,8 @@ impl OperationEventSink for TauriEventSink {
             let _ = wire::WriteError(event).emit(&self.app);
         });
     }
-    fn emit_conflict(&self, event: WriteConflictEvent) {
-        let _ = wire::WriteConflict(event).emit(&self.app);
+    fn emit_conflict(&self, event: ArmedConflict) {
+        let _ = wire::WriteConflict(event.into_event()).emit(&self.app);
     }
     fn emit_conflict_resolved(&self, event: WriteConflictResolvedEvent) {
         let _ = wire::WriteConflictResolved(event).emit(&self.app);

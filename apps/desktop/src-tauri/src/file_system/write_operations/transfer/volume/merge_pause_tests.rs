@@ -17,7 +17,7 @@ use super::*;
 use crate::file_system::write_operations::event_sinks::OperationEventSink;
 use crate::file_system::write_operations::types::{
     ConflictInfo, ConflictResolution, DryRunResult, ScanProgressEvent, WriteCancelledEvent, WriteCompleteEvent,
-    WriteConflictEvent, WriteConflictResolvedEvent, WriteErrorEvent, WriteSettledEvent, WriteSourceItemDoneEvent,
+    WriteConflictResolvedEvent, WriteErrorEvent, WriteSettledEvent, WriteSourceItemDoneEvent,
 };
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Duration;
@@ -36,7 +36,7 @@ struct PauseAfterTheFirstPrompt {
 }
 
 impl OperationEventSink for PauseAfterTheFirstPrompt {
-    fn emit_conflict(&self, event: WriteConflictEvent) {
+    fn emit_conflict(&self, event: crate::file_system::write_operations::ArmedConflict) {
         if self.prompts.fetch_add(1, Ordering::SeqCst) == 0 {
             self.state.pause_gate.pause();
         }

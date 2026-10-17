@@ -13,7 +13,7 @@ use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::state::ConflictResolutionResponse;
 use crate::file_system::write_operations::types::{
-    ConflictResolution, WriteConflictEvent, WriteConflictResolvedEvent, WriteErrorEvent, WriteSourceItemDoneEvent,
+    ConflictResolution, WriteConflictResolvedEvent, WriteErrorEvent, WriteSourceItemDoneEvent,
 };
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::{CopyScanResult, InMemoryVolume, ListingProgress, SpaceInfo, VolumeReadStream};
@@ -240,7 +240,7 @@ async fn test_concurrent_copy_cancellation_mid_batch() {
         fn emit_error(&self, e: WriteErrorEvent) {
             self.inner.emit_error(e);
         }
-        fn emit_conflict(&self, e: WriteConflictEvent) {
+        fn emit_conflict(&self, e: crate::file_system::write_operations::ArmedConflict) {
             self.inner.emit_conflict(e);
         }
         fn emit_conflict_resolved(&self, e: WriteConflictResolvedEvent) {

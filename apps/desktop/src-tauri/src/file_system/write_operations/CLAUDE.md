@@ -15,15 +15,15 @@ Copy, move, delete, trash, and zip edits as managed background ops.
 - **An instant op emits no `WriteCompleteEvent`** (analytics WRAPS its driver): ❌ never emit inside one, or the
   in-archive early return drops in-zip ops. It refuses with a typed `MutationError`, ❌ never a sentence.
 - **A spawned op reserves every lane it touches or waits Queued**; the next admits on `on_settled`, ❌ never `Drop`.
-- **The intent's writers are `IntentCell`'s** (`operation_intent.rs`). Cancel keeps copied files; Rollback removes what it
-  still recognizes, VERIFYING before each destructive act (❌ never a batch or a fork; only the `Drop` net is
+- **The intent's writers are `IntentCell`'s** (`operation_intent.rs`). Cancel keeps copied files; Rollback removes
+  what it still recognizes, VERIFYING before each destructive act (❌ never a batch or a fork; only the `Drop` net is
   unconditional). Pause is orthogonal, cancel wins. ❌ A reversal never asks `is_cancelled`; it reads `StopMeans`.
 - **A loop parks where it checks cancel**, via `state.stop_or_park_sync()` / `_async()`, ❌ never hand-rolled; a SCAN's
   own is `ScanPause`, owing `note_parked`. **Parking on a PERSON owes both edges**, the `human_wait.rs` clock AND
   `announce_human_wait(sink)`, or the ETA lies. Clicks stop via `backend_cancel`; `backend_abort` /
   `cancel_all_write_operations` are the quit deadline's.
-- **Arm `state.conflict_slot` with the QUESTION before emitting `write-conflict`** (emit-first hangs the recv); ❌ the
-  dispatch mutex never spans a write. An answer NAMES its clash (`ConflictId`): ❌ never fuse `AlreadyResolved`,
+- **`write-conflict` takes an `ArmedConflict`** (`conflict_slot.rs`), so the slot is armed first; ❌ the dispatch
+  mutex never spans a write. An answer NAMES its clash (`ConflictId`): ❌ never fuse `AlreadyResolved`,
   `StaleAnswer`, or `NoPendingConflict`, nor leave a settled prompt up.
 - **Crossing types takes a person's consent, per SHAPE** (`conflict::resolution_for_clash`, ALL THREE engines): only a
   plain Overwrite answered for that `ClashKind` replaces, ITS "* all" carry included; the config policy, same-kind

@@ -31,8 +31,8 @@ use std::sync::atomic::AtomicBool;
 use crate::file_system::write_operations::test_support::TestOperationGuard;
 use crate::file_system::write_operations::{
     CollectorEventSink, ConflictInfo, DryRunResult, ScanProgressEvent, VolumeCopyConfig, WriteCancelledEvent,
-    WriteCompleteEvent, WriteConflictEvent, WriteConflictResolvedEvent, WriteErrorEvent, WriteOperationPhase,
-    WriteOperationState, WriteProgressEvent, WriteSettledEvent, WriteSourceItemDoneEvent, copy_volumes_with_progress,
+    WriteCompleteEvent, WriteConflictResolvedEvent, WriteErrorEvent, WriteOperationPhase, WriteOperationState,
+    WriteProgressEvent, WriteSettledEvent, WriteSourceItemDoneEvent, copy_volumes_with_progress,
     render_live_transfer_dump,
 };
 use cmdr_fs::ignore_poison::IgnorePoison;
@@ -181,7 +181,7 @@ impl crate::file_system::OperationEventSink for PauseOnFirstCopyFrame {
     fn emit_error(&self, event: WriteErrorEvent) {
         self.inner.emit_error(event);
     }
-    fn emit_conflict(&self, event: WriteConflictEvent) {
+    fn emit_conflict(&self, event: crate::file_system::write_operations::ArmedConflict) {
         self.inner.emit_conflict(event);
     }
     fn emit_conflict_resolved(&self, event: WriteConflictResolvedEvent) {

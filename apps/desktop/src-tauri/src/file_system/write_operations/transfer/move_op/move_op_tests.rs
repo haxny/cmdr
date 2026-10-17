@@ -26,8 +26,8 @@ use crate::file_system::write_operations::types::{ConflictResolution, WriteOpera
 #[test]
 fn cross_fs_local_move_flushes_final_dests_before_deleting_sources() {
     use crate::file_system::write_operations::types::{
-        ConflictInfo, DryRunResult, ScanProgressEvent, WriteCancelledEvent, WriteCompleteEvent, WriteConflictEvent,
-        WriteErrorEvent, WriteSourceItemDoneEvent,
+        ConflictInfo, DryRunResult, ScanProgressEvent, WriteCancelledEvent, WriteCompleteEvent, WriteErrorEvent,
+        WriteSourceItemDoneEvent,
     };
     use std::sync::atomic::{AtomicBool, Ordering};
 
@@ -50,7 +50,7 @@ fn cross_fs_local_move_flushes_final_dests_before_deleting_sources() {
         fn emit_complete(&self, _event: WriteCompleteEvent) {}
         fn emit_cancelled(&self, _event: WriteCancelledEvent) {}
         fn emit_error(&self, _event: WriteErrorEvent) {}
-        fn emit_conflict(&self, _event: WriteConflictEvent) {}
+        fn emit_conflict(&self, _event: crate::file_system::write_operations::ArmedConflict) {}
         fn emit_conflict_resolved(
             &self,
             _event: crate::file_system::write_operations::types::WriteConflictResolvedEvent,

@@ -17,6 +17,7 @@ use std::time::Duration;
 
 use uuid::Uuid;
 
+use super::conflict_slot::ArmedConflict;
 use super::delete::delete_files_with_progress_inner;
 use super::event_sinks::{OperationEventSink, ScanPreviewEventSink};
 use super::journal;
@@ -29,8 +30,8 @@ use super::transfer::volume::copy_volumes_with_progress;
 use super::types::{
     ConflictInfo, DryRunResult, ScanPreviewCancelledEvent, ScanPreviewCompleteEvent, ScanPreviewErrorEvent,
     ScanPreviewProgressEvent, ScanPreviewPurpose, ScanProgressEvent, VolumeCopyConfig, WriteCancelledEvent,
-    WriteCompleteEvent, WriteConflictEvent, WriteConflictResolvedEvent, WriteErrorEvent, WriteOperationConfig,
-    WriteProgressEvent, WriteSettledEvent, WriteSourceItemDoneEvent,
+    WriteCompleteEvent, WriteConflictResolvedEvent, WriteErrorEvent, WriteOperationConfig, WriteProgressEvent,
+    WriteSettledEvent, WriteSourceItemDoneEvent,
 };
 use cmdr_fs::volume::{DEFAULT_VOLUME_ID, Volume};
 use cmdr_local::LocalPosixVolume;
@@ -50,7 +51,7 @@ impl OperationEventSink for DiscardEvents {
     fn emit_complete(&self, _event: WriteCompleteEvent) {}
     fn emit_cancelled(&self, _event: WriteCancelledEvent) {}
     fn emit_error(&self, _event: WriteErrorEvent) {}
-    fn emit_conflict(&self, _event: WriteConflictEvent) {}
+    fn emit_conflict(&self, _event: ArmedConflict) {}
     fn emit_conflict_resolved(&self, _event: WriteConflictResolvedEvent) {}
     fn emit_source_item_done(&self, _event: WriteSourceItemDoneEvent) {}
     fn emit_scan_progress(&self, _event: ScanProgressEvent) {}

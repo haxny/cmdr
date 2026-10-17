@@ -82,9 +82,8 @@ use crate::file_system::write_operations::state::{
 };
 use crate::file_system::write_operations::test_support::TestOperationGuard;
 use crate::file_system::write_operations::types::{
-    ConflictResolution, VolumeCopyConfig, WriteCancelledEvent, WriteCompleteEvent, WriteConflictEvent,
-    WriteConflictResolvedEvent, WriteErrorEvent, WriteOperationConfig, WriteOperationPhase, WriteProgressEvent,
-    WriteSourceItemDoneEvent,
+    ConflictResolution, VolumeCopyConfig, WriteCancelledEvent, WriteCompleteEvent, WriteConflictResolvedEvent,
+    WriteErrorEvent, WriteOperationConfig, WriteOperationPhase, WriteProgressEvent, WriteSourceItemDoneEvent,
 };
 use cmdr_fs::volume::{CopyScanResult, InMemoryVolume, Volume, VolumeError};
 
@@ -265,7 +264,7 @@ impl OperationEventSink for CancelOnFirstProgressSink {
     fn emit_error(&self, e: WriteErrorEvent) {
         self.inner.emit_error(e);
     }
-    fn emit_conflict(&self, e: WriteConflictEvent) {
+    fn emit_conflict(&self, e: crate::file_system::write_operations::ArmedConflict) {
         self.inner.emit_conflict(e);
     }
     fn emit_conflict_resolved(&self, e: WriteConflictResolvedEvent) {

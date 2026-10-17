@@ -11,15 +11,15 @@ use std::pin::Pin;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use super::super::OperationEventSink;
 use super::super::manager::{ManagedTaskGuard, OperationDescriptor, OperationSummaryText};
 use super::super::state::WriteSettledGuard;
 use super::super::summary::volume_items;
 use super::super::types::ReadOnlySide;
 use super::super::types::{
-    CancelRollback, VolumeCopyConfig, WriteCancelledEvent, WriteCompleteEvent, WriteConflictEvent, WriteErrorEvent,
-    WriteOperationError, WriteOperationStartResult, WriteOperationType, WriteProgressEvent,
+    CancelRollback, VolumeCopyConfig, WriteCancelledEvent, WriteCompleteEvent, WriteErrorEvent, WriteOperationError,
+    WriteOperationStartResult, WriteOperationType, WriteProgressEvent,
 };
+use super::super::{ArmedConflict, OperationEventSink};
 use super::edit_error::EditError;
 use super::engine::{MutatorHooks, run_managed_edit, to_write_error};
 use super::routing::{ensure_zip_writable, normalize_inner_path, read_only_error};
@@ -376,7 +376,7 @@ impl OperationEventSink for SuppressTerminalsSink {
     }
     fn emit_cancelled(&self, _event: WriteCancelledEvent) {}
     fn emit_error(&self, _event: WriteErrorEvent) {}
-    fn emit_conflict(&self, event: WriteConflictEvent) {
+    fn emit_conflict(&self, event: ArmedConflict) {
         self.inner.emit_conflict(event);
     }
     fn emit_conflict_resolved(&self, event: super::super::types::WriteConflictResolvedEvent) {

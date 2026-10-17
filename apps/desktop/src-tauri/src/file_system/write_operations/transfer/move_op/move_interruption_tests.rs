@@ -25,7 +25,7 @@ fn a_rollback_clicked_as_the_last_item_lands_puts_the_move_back() {
     use crate::file_system::write_operations::state::OperationIntent;
     use crate::file_system::write_operations::types::{
         CancelRollbackOutcome, ConflictInfo, DryRunResult, ScanProgressEvent, WriteCancelledEvent, WriteCompleteEvent,
-        WriteConflictEvent, WriteErrorEvent, WriteSourceItemDoneEvent,
+        WriteErrorEvent, WriteSourceItemDoneEvent,
     };
     use std::sync::Mutex;
     use std::sync::atomic::{AtomicUsize, Ordering};
@@ -51,7 +51,7 @@ fn a_rollback_clicked_as_the_last_item_lands_puts_the_move_back() {
         fn emit_settled(&self, _event: crate::file_system::write_operations::types::WriteSettledEvent) {}
         fn emit_progress(&self, _event: WriteProgressEvent) {}
         fn emit_error(&self, _event: WriteErrorEvent) {}
-        fn emit_conflict(&self, _event: WriteConflictEvent) {}
+        fn emit_conflict(&self, _event: crate::file_system::write_operations::ArmedConflict) {}
         fn emit_conflict_resolved(
             &self,
             _event: crate::file_system::write_operations::types::WriteConflictResolvedEvent,
@@ -121,8 +121,8 @@ fn a_rollback_clicked_as_the_last_item_lands_puts_the_move_back() {
 #[test]
 fn a_paused_move_stops_renaming_until_it_resumes() {
     use crate::file_system::write_operations::types::{
-        ConflictInfo, DryRunResult, ScanProgressEvent, WriteCancelledEvent, WriteCompleteEvent, WriteConflictEvent,
-        WriteErrorEvent, WriteSourceItemDoneEvent,
+        ConflictInfo, DryRunResult, ScanProgressEvent, WriteCancelledEvent, WriteCompleteEvent, WriteErrorEvent,
+        WriteSourceItemDoneEvent,
     };
     use std::sync::atomic::{AtomicUsize, Ordering};
     use std::time::Duration;
@@ -145,7 +145,7 @@ fn a_paused_move_stops_renaming_until_it_resumes() {
         fn emit_complete(&self, _event: WriteCompleteEvent) {}
         fn emit_cancelled(&self, _event: WriteCancelledEvent) {}
         fn emit_error(&self, _event: WriteErrorEvent) {}
-        fn emit_conflict(&self, _event: WriteConflictEvent) {}
+        fn emit_conflict(&self, _event: crate::file_system::write_operations::ArmedConflict) {}
         fn emit_conflict_resolved(
             &self,
             _event: crate::file_system::write_operations::types::WriteConflictResolvedEvent,
@@ -288,8 +288,8 @@ fn a_paused_folder_merge_stops_renaming_its_children() {
 fn a_cancelled_cross_fs_move_takes_its_staging_folder_with_it() {
     use crate::file_system::write_operations::state::OperationIntent;
     use crate::file_system::write_operations::types::{
-        ConflictInfo, DryRunResult, ScanProgressEvent, WriteCancelledEvent, WriteCompleteEvent, WriteConflictEvent,
-        WriteErrorEvent, WriteSourceItemDoneEvent,
+        ConflictInfo, DryRunResult, ScanProgressEvent, WriteCancelledEvent, WriteCompleteEvent, WriteErrorEvent,
+        WriteSourceItemDoneEvent,
     };
 
     /// Cancels the instant the flush announces itself — the last thing that
@@ -308,7 +308,7 @@ fn a_cancelled_cross_fs_move_takes_its_staging_folder_with_it() {
         fn emit_complete(&self, _event: WriteCompleteEvent) {}
         fn emit_cancelled(&self, _event: WriteCancelledEvent) {}
         fn emit_error(&self, _event: WriteErrorEvent) {}
-        fn emit_conflict(&self, _event: WriteConflictEvent) {}
+        fn emit_conflict(&self, _event: crate::file_system::write_operations::ArmedConflict) {}
         fn emit_conflict_resolved(
             &self,
             _event: crate::file_system::write_operations::types::WriteConflictResolvedEvent,
@@ -375,7 +375,7 @@ fn a_rollback_during_the_source_sweep_reports_the_originals_it_did_not_reach() {
     use crate::file_system::write_operations::state::OperationIntent;
     use crate::file_system::write_operations::types::{
         CancelRollbackOutcome, ConflictInfo, DryRunResult, ScanProgressEvent, WriteCancelledEvent, WriteCompleteEvent,
-        WriteConflictEvent, WriteErrorEvent, WriteSourceItemDoneEvent,
+        WriteErrorEvent, WriteSourceItemDoneEvent,
     };
     use std::sync::Mutex;
     use std::sync::atomic::{AtomicUsize, Ordering};
@@ -402,7 +402,7 @@ fn a_rollback_during_the_source_sweep_reports_the_originals_it_did_not_reach() {
         fn emit_complete(&self, _event: WriteCompleteEvent) {}
         fn emit_progress(&self, _event: WriteProgressEvent) {}
         fn emit_error(&self, _event: WriteErrorEvent) {}
-        fn emit_conflict(&self, _event: WriteConflictEvent) {}
+        fn emit_conflict(&self, _event: crate::file_system::write_operations::ArmedConflict) {}
         fn emit_conflict_resolved(
             &self,
             _event: crate::file_system::write_operations::types::WriteConflictResolvedEvent,
@@ -491,8 +491,8 @@ fn a_rollback_during_the_source_sweep_reports_the_originals_it_did_not_reach() {
 fn a_rollback_before_the_sweep_starts_reports_every_original_still_in_place() {
     use crate::file_system::write_operations::state::OperationIntent;
     use crate::file_system::write_operations::types::{
-        ConflictInfo, DryRunResult, ScanProgressEvent, WriteCancelledEvent, WriteCompleteEvent, WriteConflictEvent,
-        WriteErrorEvent, WriteSourceItemDoneEvent,
+        ConflictInfo, DryRunResult, ScanProgressEvent, WriteCancelledEvent, WriteCompleteEvent, WriteErrorEvent,
+        WriteSourceItemDoneEvent,
     };
     use std::sync::Mutex;
 
@@ -515,7 +515,7 @@ fn a_rollback_before_the_sweep_starts_reports_every_original_still_in_place() {
         fn emit_settled(&self, _event: crate::file_system::write_operations::types::WriteSettledEvent) {}
         fn emit_complete(&self, _event: WriteCompleteEvent) {}
         fn emit_error(&self, _event: WriteErrorEvent) {}
-        fn emit_conflict(&self, _event: WriteConflictEvent) {}
+        fn emit_conflict(&self, _event: crate::file_system::write_operations::ArmedConflict) {}
         fn emit_conflict_resolved(
             &self,
             _event: crate::file_system::write_operations::types::WriteConflictResolvedEvent,
@@ -583,7 +583,7 @@ fn the_sweeps_account_counts_a_skipped_source_as_still_in_place() {
     use crate::file_system::write_operations::state::OperationIntent;
     use crate::file_system::write_operations::types::{
         ConflictInfo, ConflictResolution, DryRunResult, ScanProgressEvent, WriteCancelledEvent, WriteCompleteEvent,
-        WriteConflictEvent, WriteErrorEvent, WriteSourceItemDoneEvent,
+        WriteErrorEvent, WriteSourceItemDoneEvent,
     };
     use std::sync::Mutex;
 
@@ -608,7 +608,7 @@ fn the_sweeps_account_counts_a_skipped_source_as_still_in_place() {
         fn emit_complete(&self, _event: WriteCompleteEvent) {}
         fn emit_progress(&self, _event: WriteProgressEvent) {}
         fn emit_error(&self, _event: WriteErrorEvent) {}
-        fn emit_conflict(&self, _event: WriteConflictEvent) {}
+        fn emit_conflict(&self, _event: crate::file_system::write_operations::ArmedConflict) {}
         fn emit_conflict_resolved(
             &self,
             _event: crate::file_system::write_operations::types::WriteConflictResolvedEvent,

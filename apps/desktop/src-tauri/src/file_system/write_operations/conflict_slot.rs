@@ -43,6 +43,31 @@ pub struct ConflictResolutionResponse {
     pub apply_to_all: bool,
 }
 
+/// A `write-conflict` question whose operation's slot is already armed with it.
+///
+/// Only [`ConflictSlot::arm`] builds one, and
+/// [`OperationEventSink::emit_conflict`](super::OperationEventSink::emit_conflict)
+/// takes nothing else, so a question can't go out before the slot that answers
+/// it is armed (emit-first lets an answer land on nothing and leaves the
+/// operation parked forever). Reads as the event it wraps.
+#[derive(Debug, Clone)]
+pub struct ArmedConflict(WriteConflictEvent);
+
+impl ArmedConflict {
+    /// The event, for a sink putting it on the wire or recording it.
+    pub fn into_event(self) -> WriteConflictEvent {
+        self.0
+    }
+}
+
+impl std::ops::Deref for ArmedConflict {
+    type Target = WriteConflictEvent;
+
+    fn deref(&self) -> &WriteConflictEvent {
+        &self.0
+    }
+}
+
 /// Where this operation's conflict stands.
 enum SlotState {
     /// Nothing is being asked: no conflict has been raised yet, or a cancel
@@ -107,9 +132,8 @@ impl ConflictSlot {
     }
 
     /// Arms the slot with the sender the waiting operation listens on, and
-    /// returns the `write-conflict` event to emit for it. Call this BEFORE
-    /// emitting: a responder can only answer a conflict it has observed, and an
-    /// answer arriving at an unarmed slot leaves the operation parked forever.
+    /// returns the `write-conflict` question to emit for it, as the
+    /// [`ArmedConflict`] the sink requires.
     ///
     /// `prompt` builds the event from the id this call mints, so the id on the
     /// wire, the id the slot is armed with, and the id
@@ -120,7 +144,7 @@ impl ConflictSlot {
         &self,
         tx: oneshot::Sender<ConflictResolutionResponse>,
         prompt: impl FnOnce(ConflictId) -> WriteConflictEvent,
-    ) -> WriteConflictEvent {
+    ) -> ArmedConflict {
         let mut inner = self.inner.lock_ignore_poison();
         inner.raised = inner.raised.saturating_add(1);
         let id = ConflictId(inner.raised);
@@ -131,7 +155,7 @@ impl ConflictSlot {
             prompt: Box::new(event.clone()),
         };
         self.sync_human_wait(&inner);
-        event
+        ArmedConflict(event)
     }
 
     /// Whether a conflict is waiting for an answer right now, i.e. whether the
