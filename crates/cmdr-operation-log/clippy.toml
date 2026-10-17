@@ -1,0 +1,27 @@
+# Clippy reads the FIRST `clippy.toml` it finds walking up from this package's
+# manifest directory, and never merges, so this file replaces the workspace root's
+# for `cmdr-operation-log`. It carries the root's general settings below; the root's
+# `disallowed-methods` / `disallowed-types` name `tauri`, `objc2_app_kit`, and
+# `reqwest`, none of which this crate can reach (`index-crate-isolation`), so they
+# have nothing to guard here.
+
+# Complexity threshold of 15 matches ESLint's complexity rule for consistency across Rust and TypeScript
+cognitive-complexity-threshold = 15
+
+# Tests legitimately `.unwrap()` everywhere; this exempts unwraps inside `#[test]` fns. Helper fns in
+# `#[cfg(test)] mod`s aren't covered, so those use the sanctioned `.expect("…")` form.
+allow-unwrap-in-tests = true
+
+# An ambient spawn runs on whichever runtime the calling thread happens to have; the log spawns
+# only on the handle its host passes in (retention's `Handle`, the injected rollback spawn), so the
+# one pool everything shares is the host's decision. The writer is a dedicated, NAMED
+# `std::thread::Builder` thread, which stays fine.
+#
+# `cmdr-operations` also bans `libc::sync`; this crate has no `libc` dependency, so it can't call
+# it, and a path that doesn't resolve has nothing to guard.
+disallowed-methods = [
+  { path = "tokio::spawn", reason = "spawn on the handle the host passed in, never whichever runtime is ambient" },
+  { path = "tokio::task::spawn", reason = "spawn on the handle the host passed in, never whichever runtime is ambient" },
+  { path = "tokio::task::spawn_blocking", reason = "use the blocking pool of the handle the host passed in, never whichever runtime is ambient" },
+  { path = "std::thread::spawn", reason = "a thread the log owns is a NAMED `std::thread::Builder` one" },
+]
