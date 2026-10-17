@@ -485,16 +485,18 @@ column exists to explain, and an unrecorded item is one an idempotent retry simp
 
 ### What stops a reversal
 
-`write_operations::state::is_cancelled` answers "the intent isn't `Running`", and `RollingBack` is one of the values it
-calls cancelled. That's right for a forward transfer. It is wrong for a reversal running under an operation that is
-itself rolling back, where the same value is the instruction to reverse: a reversal inheriting that reading would bail
-on its first item, return instantly from its pause gate, and report a clean stop having reversed nothing.
+`IntentCell::is_cancelled` (`write_operations/operation_intent.rs`) answers "the intent isn't `Running`", and
+`RollingBack` is one of the values it calls cancelled. That's right for a forward transfer. It is wrong for a reversal
+running under an operation that is itself rolling back, where the same value is the instruction to reverse: a reversal
+inheriting that reading would bail on its first item, return instantly from its pause gate, and report a clean stop
+having reversed nothing.
 
 So a reversal names its reading — `StopMeans::IntentLeavesRunning` or `IntentReachesStopped`
 (`write_operations/operation_intent.rs`), which `PauseGate::wait_while_paused_until` also takes. Today's journal-driven
-rollback is dispatched as its OWN managed operation, opened `Running`, so it uses the first; the in-flight volume
-rollback (`transfer/volume/cleanup.rs`) runs under a `RollingBack` operation and uses the second. A later change that
-runs this engine against the original operation gets a named choice rather than a silent bail.
+rollback is dispatched as its OWN managed operation, opened `Running`, so its runner (`ReversalRunner`) always uses the
+first. A cancelled transfer's own wind-down (`transfer/copy/rollback.rs`, `transfer/volume/cleanup.rs`) runs under a
+`RollingBack` operation and takes a `WindDown` (`write_operations/state/wind_down.rs`), which reads the second and hands
+out no intent, so `is_cancelled` is out of its reach.
 
 **Known boundary**: the mid-file layer inside `stream_pipe_file` (retry classification, the between-chunks park) still
 reads the transfer's meaning off `state.intent` directly. That's correct for every reversal dispatched today, and it's

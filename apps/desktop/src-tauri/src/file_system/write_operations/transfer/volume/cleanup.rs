@@ -17,7 +17,7 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use super::super::super::event_sinks::OperationEventSink;
 use super::super::super::ledger::{WrittenFile, WrittenIdentity};
 use super::super::super::reversal::{PresentRecheck, ReversalTally, drained, recheck_volume};
-use super::super::super::state::{StopMeans, WriteOperationState};
+use super::super::super::state::{WindDown, WriteOperationState};
 use super::super::super::types::{WriteOperationPhase, WriteOperationType, WriteProgressEvent};
 use super::super::super::unblocked_removal::{RemovalRefused, delete_clearing_blockers};
 use super::transfer_error::{AtPath, PathRole, PathedVolumeError};
@@ -70,7 +70,7 @@ pub(super) async fn volume_rollback_with_progress(
     created_dirs: &[PathBuf],
     events: &dyn OperationEventSink,
     operation_id: &str,
-    state: &Arc<WriteOperationState>,
+    wind_down: &WindDown,
     files_at_cancel: usize,
     bytes_at_cancel: u64,
     files_total: usize,
@@ -80,32 +80,19 @@ pub(super) async fn volume_rollback_with_progress(
     let mut tally = ReversalTally::default();
     let mut last_progress_time = Instant::now();
 
-    // The bar drains from here, so tell the estimator which way it runs before
-    // the first frame.
-    state.reversal_drains_the_bar();
-
     let emit = |current_file: Option<String>, files_left: usize, bytes_left: u64| {
-        state.emit_progress_via_sink(
+        wind_down.report(
             events,
             WriteProgressEvent::new(
                 operation_id.to_string(),
                 WriteOperationType::Copy,
                 WriteOperationPhase::RollingBack,
-                current_file.clone(),
+                current_file,
                 files_left,
                 files_total,
                 bytes_left,
                 bytes_total,
             ),
-        );
-        state.scope().status().update(
-            operation_id,
-            WriteOperationPhase::RollingBack,
-            current_file,
-            files_left,
-            files_total,
-            bytes_left,
-            bytes_total,
         );
     };
     emit(None, files_at_cancel, bytes_at_cancel);
@@ -114,10 +101,8 @@ pub(super) async fn volume_rollback_with_progress(
     // BEFORE the pop: an entry taken off the ledger and then left standing would
     // be a file on the volume nothing claims any more.
     loop {
-        // Check if the user cancelled the rollback itself. This runs UNDER an
-        // operation whose intent already reads `RollingBack`, so only `Stopped`
-        // means stop (see `StopMeans`).
-        if StopMeans::IntentReachesStopped.requested(state.intent()) {
+        // Check if the user cancelled the rollback itself (see `WindDown`).
+        if wind_down.stop_requested() {
             log::info!(
                 "volume_rollback_with_progress: rollback cancelled at {}/{} paths, keeping remaining",
                 tally.processed(),
@@ -137,7 +122,7 @@ pub(super) async fn volume_rollback_with_progress(
 
         // Throttled progress events with decreasing values. The counters advance
         // for every entry the reversal walked past, removed or not.
-        if last_progress_time.elapsed() >= state.progress_interval {
+        if last_progress_time.elapsed() >= wind_down.progress_interval() {
             let (files_left, bytes_left) =
                 drained(files_at_cancel, bytes_at_cancel, tally.processed(), paths_to_process);
             let current_file_name = entry
@@ -154,7 +139,7 @@ pub(super) async fn volume_rollback_with_progress(
     // `created_dirs` is in creation order (shallowest first), so iterating in
     // reverse empties leaves before their parents are tried.
     for dir in created_dirs.iter().rev() {
-        if StopMeans::IntentReachesStopped.requested(state.intent()) {
+        if wind_down.stop_requested() {
             tally.mark_canceled();
             return tally;
         }

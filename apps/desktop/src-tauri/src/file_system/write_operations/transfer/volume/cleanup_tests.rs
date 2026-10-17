@@ -40,7 +40,7 @@ async fn roll_back(volume: &Arc<dyn Volume>, copied_paths: &[PathBuf], created_d
         created_dirs,
         &events,
         "cleanup-tests-op",
-        &state,
+        &WindDown::of(&state),
         1,
         1,
         1,
@@ -169,7 +169,7 @@ async fn rollback_leaves_a_file_the_backend_now_reports_at_another_size() {
         &[],
         &events,
         "cleanup-tests-op",
-        &state,
+        &WindDown::of(&state),
         2,
         30,
         2,
@@ -222,7 +222,7 @@ async fn a_partial_still_goes_while_a_changed_file_stays() {
         &[],
         &events,
         "cleanup-tests-op",
-        &state,
+        &WindDown::of(&state),
         2,
         30,
         2,
@@ -364,9 +364,20 @@ async fn a_stopped_volume_reversal_leaves_the_ledger_claiming_what_is_still_ther
     cancel_write_operation(guard.id(), true);
     cancel_write_operation(guard.id(), false);
     let events = CollectorEventSink::new();
-    let report = volume_rollback_with_progress(&volume, &mut ledger, &[], &events, guard.id(), &state, 4, 28, 4, 28)
-        .await
-        .into_cancel_rollback();
+    let report = volume_rollback_with_progress(
+        &volume,
+        &mut ledger,
+        &[],
+        &events,
+        guard.id(),
+        &WindDown::of(&state),
+        4,
+        28,
+        4,
+        28,
+    )
+    .await
+    .into_cancel_rollback();
 
     assert_eq!(
         report.outcome,

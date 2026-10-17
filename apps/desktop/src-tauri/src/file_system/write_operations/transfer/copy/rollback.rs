@@ -1,6 +1,5 @@
 //! Tracked rollback: removes the files a copy created, emitting reverse progress.
 
-use std::sync::Arc;
 use std::time::Instant;
 
 use crate::file_system::write_operations::event_sinks::OperationEventSink;
@@ -8,7 +7,7 @@ use crate::file_system::write_operations::ledger::CopyTransaction;
 use crate::file_system::write_operations::reversal::{
     ReversalTally, drained, remove_local_dir_if_empty, remove_local_file,
 };
-use crate::file_system::write_operations::state::{OperationIntent, WriteOperationState};
+use crate::file_system::write_operations::state::WindDown;
 use crate::file_system::write_operations::types::{WriteOperationPhase, WriteOperationType, WriteProgressEvent};
 
 /// Rolls back created files with progress events, checking for cancellation between deletions.
@@ -32,7 +31,7 @@ pub(super) fn rollback_with_progress(
     transaction: &mut CopyTransaction,
     events: &dyn OperationEventSink,
     operation_id: &str,
-    state: &Arc<WriteOperationState>,
+    wind_down: &WindDown,
     operation_type: WriteOperationType,
     files_at_cancel: usize,
     bytes_at_cancel: u64,
@@ -43,33 +42,20 @@ pub(super) fn rollback_with_progress(
     let mut tally = ReversalTally::default();
     let mut last_progress_time = Instant::now();
 
-    // The bar drains from here, so tell the estimator which way it runs before
-    // the first frame.
-    state.reversal_drains_the_bar();
-
     // Emit initial rollback phase event (same values as cancellation point)
     let emit = |current_file: Option<String>, files_left: usize, bytes_left: u64| {
-        state.emit_progress_via_sink(
+        wind_down.report(
             events,
             WriteProgressEvent::new(
                 operation_id.to_string(),
                 operation_type,
                 WriteOperationPhase::RollingBack,
-                current_file.clone(),
+                current_file,
                 files_left,
                 files_total,
                 bytes_left,
                 bytes_total,
             ),
-        );
-        state.scope().status().update(
-            operation_id,
-            WriteOperationPhase::RollingBack,
-            current_file,
-            files_left,
-            files_total,
-            bytes_left,
-            bytes_total,
         );
     };
     emit(None, files_at_cancel, bytes_at_cancel);
@@ -80,7 +66,7 @@ pub(super) fn rollback_with_progress(
     // claims any more.
     loop {
         // Check if user cancelled the rollback (RollingBack → Stopped)
-        if state.intent().load() == OperationIntent::Stopped {
+        if wind_down.stop_requested() {
             log::info!(
                 "rollback_with_progress: rollback cancelled at {}/{} files, keeping remaining",
                 tally.processed(),
@@ -99,7 +85,7 @@ pub(super) fn rollback_with_progress(
 
         // Throttled progress events with decreasing values. The counters advance
         // for every entry the reversal walked past, removed or not.
-        if last_progress_time.elapsed() >= state.progress_interval {
+        if last_progress_time.elapsed() >= wind_down.progress_interval() {
             let (files_left, bytes_left) =
                 drained(files_at_cancel, bytes_at_cancel, tally.processed(), files_to_process);
             let current_file_name = entry

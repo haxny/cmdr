@@ -82,12 +82,17 @@ struct FrameStand {
 /// The rollback engine's executor: performs each decided act with the volume
 /// primitives, answers "should I stop?" off the managed op's intent, parks on its
 /// pause gate, and turns the engine's per-item position into `write-progress`.
+///
+/// The reversal is its OWN managed operation, opened `Running`, so any move off
+/// `Running` is somebody stopping it ([`StopMeans::IntentLeavesRunning`]). That
+/// reading is also a forward transfer's, which is what lets it hand its state to
+/// the staged per-file move. A cancelled transfer's own wind-down reads
+/// differently, and goes through `WindDown`.
 pub(crate) struct ReversalRunner {
     operation_id: String,
     operation_type: WriteOperationType,
     state: Arc<WriteOperationState>,
     events: Arc<dyn OperationEventSink>,
-    stop: StopMeans,
     stand: std::sync::Mutex<FrameStand>,
 }
 
@@ -97,14 +102,12 @@ impl ReversalRunner {
         operation_type: WriteOperationType,
         state: Arc<WriteOperationState>,
         events: Arc<dyn OperationEventSink>,
-        stop: StopMeans,
     ) -> Self {
         ReversalRunner {
             operation_id,
             operation_type,
             state,
             events,
-            stop,
             stand: std::sync::Mutex::new(FrameStand {
                 files_done: 0,
                 files_total: 0,
@@ -222,7 +225,7 @@ impl RollbackRunner for ReversalRunner {
     }
 
     fn should_stop(&self) -> bool {
-        self.stop.requested(self.state.intent())
+        StopMeans::IntentLeavesRunning.requested(self.state.intent())
     }
 
     fn pace_between_items(&self) -> Option<Duration> {
@@ -407,13 +410,7 @@ impl crate::file_system::write_operations::Operations {
                     // The engine's hands and its three live answers. The reversal is its OWN
                     // managed operation, opened `Running`, so any move off `Running` is
                     // somebody stopping the reversal itself.
-                    let runner = ReversalRunner::new(
-                        inverse_op_id.clone(),
-                        op_type,
-                        state_for_op,
-                        events,
-                        StopMeans::IntentLeavesRunning,
-                    );
+                    let runner = ReversalRunner::new(inverse_op_id.clone(), op_type, state_for_op, events);
                     let vm = ops.host().volumes();
                     let outcome = execute_rollback(vm, &writer, &original, &inverse_op_id, initiator, &runner).await;
                     // Hand the tally to a caller awaiting it (a multi-operation undo). A
@@ -633,11 +630,11 @@ impl Reversal {
     /// mid-file needs to see the bytes move, and an in-memory volume finishes a
     /// megabyte inside any real interval. The throttle itself is pinned separately.
     pub(crate) fn new(tag: &str) -> Self {
-        Self::emitting_every(tag, Duration::ZERO, StopMeans::IntentLeavesRunning)
+        Self::emitting_every(tag, Duration::ZERO)
     }
 
-    /// [`Self::new`] with an explicit progress interval and reading of "stop".
-    pub(crate) fn emitting_every(tag: &str, progress_interval: Duration, stop: StopMeans) -> Self {
+    /// [`Self::new`] with an explicit progress interval.
+    pub(crate) fn emitting_every(tag: &str, progress_interval: Duration) -> Self {
         let state = Arc::new(WriteOperationState::new(progress_interval));
         let guard = super::test_support::TestOperationGuard::register_state(tag, Arc::clone(&state));
         let events = Arc::new(super::CollectorEventSink::new());
@@ -646,7 +643,6 @@ impl Reversal {
             WriteOperationType::Move,
             state,
             Arc::clone(&events) as Arc<dyn OperationEventSink>,
-            stop,
         );
         Reversal { guard, events, runner }
     }
@@ -701,11 +697,7 @@ mod tests {
     /// says 1 of 3.
     #[test]
     fn the_throttle_holds_frames_back_but_never_the_one_that_lands_on_the_total() {
-        let reversal = Reversal::emitting_every(
-            "progress-throttle",
-            Duration::from_secs(600),
-            StopMeans::IntentLeavesRunning,
-        );
+        let reversal = Reversal::emitting_every("progress-throttle", Duration::from_secs(600));
         let runner = reversal.runner();
         let report = |files_done: u64| RollbackProgress {
             files_done,

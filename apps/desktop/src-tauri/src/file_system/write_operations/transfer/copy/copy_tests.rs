@@ -672,7 +672,7 @@ fn a_stopped_reversal_leaves_the_ledger_claiming_what_is_still_on_disk() {
         &mut transaction,
         &events,
         guard.id(),
-        &state,
+        &WindDown::of(&state),
         WriteOperationType::Copy,
         files.len(),
         0,

@@ -4,12 +4,14 @@
 use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::ledger::WrittenFile;
+use crate::file_system::write_operations::state::WriteOperationState;
 use crate::file_system::write_operations::test_support::TestOperationGuard;
 use crate::file_system::write_operations::types::{CancelRollback, CancelRollbackOutcome};
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_operation_log::types::SkipReason;
 use std::fs;
 use std::path::Path;
+use std::sync::Arc;
 use std::time::Duration;
 
 /// Drive a reversal over an already-recorded ledger, plus the one directory the
@@ -32,7 +34,7 @@ fn reverse(created_dir: &Path, recorded: Vec<WrittenFile>) -> (Vec<WriteProgress
         &mut transaction,
         &*events,
         _guard.id(),
-        &state,
+        &WindDown::of(&state),
         WriteOperationType::Copy,
         files,
         1_000,

@@ -23,7 +23,7 @@ use super::super::ledger::CopyTransaction;
 use super::super::scan::scan_sources;
 use super::super::scan_dry_run::handle_dry_run;
 use super::super::scan_source_tracker::{FileVerdict, SourceItemTracker, top_level_source_path};
-use super::super::state::{OperationIntent, WriteOperationState};
+use super::super::state::{OperationIntent, WindDown, WriteOperationState};
 use super::super::transfer_sides::transfer_stop_event;
 use super::super::transfer_tree::{TreeLanding, TreeOrder};
 use super::super::types::{
@@ -587,7 +587,7 @@ pub(in crate::file_system::write_operations) fn copy_files_with_progress_inner(
                     &mut transaction,
                     events,
                     operation_id,
-                    state,
+                    &WindDown::of(state),
                     WriteOperationType::Copy,
                     files_done,
                     bytes_done,
@@ -716,7 +716,7 @@ pub(in crate::file_system::write_operations) fn copy_files_with_progress_inner(
                         &mut transaction,
                         events,
                         operation_id,
-                        state,
+                        &WindDown::of(state),
                         WriteOperationType::Copy,
                         files_done,
                         bytes_done,

@@ -753,6 +753,8 @@ mod activity;
 mod controls;
 // The registry every by-id lookup goes through, and its walks over all of them.
 mod registry;
+// What a Rollback-cancelled transfer's own reversal sees of it.
+mod wind_down;
 #[cfg(test)]
 pub use controls::abort_write_operation;
 pub use controls::{
@@ -767,6 +769,7 @@ pub(super) use registry::forget_operation;
 pub use registry::latest_operation_progress;
 #[cfg(test)]
 pub(super) use registry::operation_states;
+pub(crate) use wind_down::WindDown;
 
 #[cfg(test)]
 #[path = "state_tests.rs"]
