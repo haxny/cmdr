@@ -137,7 +137,8 @@ warm up before timing either. After the move:
 ## Criterion (row 8)
 
 The harness is `apps/desktop/src-tauri/benches/transfer_benchmarks.rs` (the case list and what each one guards are in
-the plan's bench milestone and `docs/tooling/testing.md` § "`criterion` (benchmarks)"). Two consecutive runs of
+the bench's module doc, now `crates/cmdr-operations/benches/transfer_benchmarks.rs`, and `docs/tooling/testing.md` §
+"`criterion` (benchmarks)"). Two consecutive runs of
 
 ```sh
 cargo bench -p cmdr --bench transfer_benchmarks --features cmdr/transfer-bench,cmdr/virtual-mtp -- --save-baseline before
@@ -173,7 +174,7 @@ cargo bench -p cmdr-operations --bench transfer_benchmarks --features cmdr-opera
 
 ## Complexity (row 9)
 
-Run from `apps/desktop/src-tauri/src`. "Production" uses the plan's survey filter, written once:
+Run from `apps/desktop/src-tauri/src`. "Production" uses this survey filter, written once:
 
 ```sh
 PROD=(--glob '!*test*' --glob '!**/tests/**' --glob '!**/copy_tests/**')
@@ -183,8 +184,11 @@ ENGINE=(file_system/write_operations operation_log)
 - **Statics: 53 total, 21 compiled into production.** All: `rg -n '^\s*(pub(\([^)]*\))?\s+)?static\s' "${ENGINE[@]}"`
   (53; the survey counted 52 the same day). Production: top-level ones in production files,
   `rg -n '^(pub(\([^)]*\))?\s+)?static\s' "${ENGINE[@]}" "${PROD[@]}"` (21), minus the one `#[cfg(test)]` among them
-  (`scan_bridge.rs:434` `OBSERVED_TICKS`), plus the `CURRENT_TASK_PROBE` task-local (`transfer_probe.rs:859`) = 21. The
-  named list is the plan's § "Statics".
+  (`scan_bridge.rs:434` `OBSERVED_TICKS`), plus the `CURRENT_TASK_PROBE` task-local (`transfer_probe.rs:859`) = 21. By
+  name: `WRITE_OPERATION_STATE`, `MANAGER`, `OPERATION_STATUS_CACHE`, `LAST_EMITTED_BUSY`, `PREVIEWS`,
+  `PREVIEW_SETTLED`, `PROCESS_LEDGER`, `OUTAGES`, `NEXT_OUTAGE_ID`, `REGISTRY` (the probes), `OPERATIONS_APP`,
+  `BUSY_APP`, `APP_HANDLE`, the operation log's `JOURNAL`, `ENABLED`, `UNRECORDED`, and `UNRECORDED_LEN`, the overwrite
+  aside park's `ARMED`, `IS_PARKED`, and `RELEASED`, and `CURRENT_TASK_PROBE`.
 - **`crate::` reach-ins (production), counted per mention, doc comments included:**
   - From the engine, not into itself or the operation log: **340**.
     `rg -o --no-filename 'crate::[A-Za-z_]+(::[A-Za-z_]+)*' file_system/write_operations "${PROD[@]}" | rg -v '^crate::file_system::write_operations' | rg -vc '^crate::operation_log'`

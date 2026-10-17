@@ -82,7 +82,11 @@ every emit site writes `wire::WriteProgress(event).emit(&app)`. A payload emitte
   one, even with `#[specta(transparent)]`, exports `type WriteProgress = WriteProgressEvent` and renames the events
   object's generic, so `bindings.ts` changes. The hand-written one keeps it byte-identical, and a command returning the
   payload (`latest_operation_progress`) still names the payload itself.
-- **Wire names live only here now**, one literal per wrapper. The payload's doc comments and `#[serde]` attributes still
+- **A bad wrapper fails loudly**: `register_event` panics on a type whose definition isn't a reference, at
+  `ipc::builder()`, which the bindings regen calls, so `desktop-bindings-fresh` goes red. The wrappers derive only
+  `Serialize` + `Clone`, since nothing in Rust listens to an engine payload; one that ever does adds `Deserialize` to
+  the macro.
+- **Wire names live only here**, one literal per wrapper. The payload's doc comments and `#[serde]` attributes still
   reach `bindings.ts` from the engine, so they stay part of the wire.
 - A settle callback the engine hands back (`MutationSettled`) goes out through `commands/settled.rs::broadcast_settled`,
   which takes the wrapper constructor (`wire::MutationSettled`) as its `wire` argument.
@@ -172,7 +176,8 @@ the host, because each needs the app around the engine: a Docker fixture, the re
 `volume_host::host()`, virtual MTP, or the ADB fake with the downloads watcher. They drive the engine through its
 public list plus `cmdr_operations::testing` (the volume drivers they run with a state and sink of
 their own, the fault injector, the safety oracle), ❌ never an engine module by path, so they compile against the crate's promised surface
-and nothing else.
+and nothing else. Moving the pure network suites into `cmdr-operations`, so an engine edit tests them without building
+the app, is #468.
 
 ### The network transfer suites
 
@@ -236,7 +241,8 @@ room").
   staging `mv`, and read the pane patch a mkdir, a move, and a delete each owe from a `RecordingListings` host.
   ❗ A transfer onto a phone runs at width 1 (the `"adb"` row in `MAX_CONCURRENT_OPERATIONS_SOURCES`), so the serial
   driver runs it: the pre-existing-folder scenario there holds the per-name probe (`landing::top_level_precheck`),
-  never the concurrent driver's skip on a `Created` answer.
+  never the concurrent driver's skip on a `Created` answer. The ADB cells need nextest's process per test: the device
+  list they register phones in is process-wide (`adb/device_provider.rs`), so plain threaded `cargo test` fails them.
 - **❗ The cells themselves must stay in the backend files, on the `webdav_integration_` / `sftp_integration_` / `smb_integration_` name
   prefix.** The integration lane selects the app crate's Docker cells by NAME (`scripts/check/checks/fixture-lane-coverage.go`,
   enforced by `desktop-fixture-lane-coverage`), so a scenario promoted to a `#[tokio::test]` in the shared file would

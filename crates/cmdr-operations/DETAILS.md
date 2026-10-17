@@ -24,6 +24,11 @@ operation is cancellable, reports byte-level progress, and handles edge cases: s
 network mounts, cross-filesystem moves, and name/path length limits. The crate names no `tauri` (`index-crate-isolation`
 enforces it): the engine reports facts, and the host decides what a person sees.
 
+**Decision: the crate and its handle are named for what the UI says.** "Operations" is the app's word already (the
+operation queue, `operations-changed`, `src/lib/file-operations/`), it covers everything the crate holds (copy, move,
+delete, trash, rename, create, zip edits), and it avoids a `cmdr_transfer::transfer::` stutter. The engine-wide seam is
+`EngineEvents`, so it never reads as the per-op `OperationEventSink`.
+
 Ask Cmdr bulk renames use the same managed-operation lifecycle. Every non-forced local rename is atomic-no-overwrite
 through `cmdr_local::rename_local_exclusive` (`crates/cmdr-local/DETAILS.md` § "Local renames are atomic-exclusive"),
 and root bulk-renames share that primitive directly. The dialog's target-exists preflight improves review UX, but only
@@ -1125,6 +1130,11 @@ allows. The writers that create or rename onto a path take that destination as t
 unannounced doesn't compile. Removals, creates through `Volume::create_*`, the archive mutator's `note_pending` hook,
 and rename SOURCES still announce by hand.
 
+Three writes that are easy to miss announce too, each pinned in `own_write_announce_tests.rs`: an overwrite announces
+the aside (`<dest>.cmdr-temp-<uuid>`) before renaming the person's original onto it, a Keep-both copy announces each
+numbered placeholder before its `O_CREAT|O_EXCL` create (`unique_name::find_unique_name` takes the host for it), and a
+fresh compress announces its zip and temp (`StagedWrite::begin_generated` takes the zip as an `Announced`).
+
 **Locked-in scoping:** the prefix check lives INSIDE the downloads helper (and the underlying
 `IgnoreSet::note_pending`). Call sites invoke unconditionally; paths outside the resolved Downloads root silently no-op.
 **Don't add `if path.starts_with(downloads_dir)` guards at call sites**: centralizing the scope in the helper keeps it
@@ -1227,6 +1237,9 @@ verbs read one-to-one:
 An entry point production reaches only from inside the engine (a routed start like `archive_edit_start` or
 `copy_between_volumes`, the raw pause gate) stays `pub(crate)`; an app-side cell drives it through a `testing`-gated
 door that forwards to it (`testing::copy_between_volumes`, or the gated `Operations::route_archive_copy_into`).
+
+An operation id is a bare `&str` on the public verbs. `OperationId` types it on the journal API, in
+`OperationErrorReport`, and on the external-op pair; typing the rest is #470.
 
 `host` (25 items): the seam traits the app answers (`OperationVolumes`, `EngineEvents`, `OwnWrites`, `OperationIndex`,
 `Pacing`, `NameOrder`, and the two event sinks, re-exported there too), their value types (`OperationErrorReport`,
@@ -2230,10 +2243,11 @@ indexing, and the panic-safe unregister paths below cover both signals. Don't ad
   ejectable volume is involved.
 - **Consumers**: `busy_volume_ids()` backs the `get_busy_volume_ids` bootstrap command, the `eject_volume` server-side
   guard (refuses a busy volume — the real safety net, since the picker's disable is only UX), and the native
-  breadcrumb-menu builder (renders the Eject item disabled with a ` (busy)` suffix). The frontend
-  `volume-busy-store.svelte.ts` subscribes to `volumes-busy-changed` and exposes `isVolumeBusy(id)` to disable the
-  picker's eject controls. The engine reports each change through `EngineEvents::volumes_busy_changed`; the app emits
-  it.
+  breadcrumb-menu builder (renders the Eject item disabled with a ` (busy)` suffix). A poisoned status cache recovers
+  (`*_ignore_poison`), because skipping the update on poison would drop a busy entry and let Eject run mid-transfer. The
+  frontend `volume-busy-store.svelte.ts` subscribes to `volumes-busy-changed` and exposes `isVolumeBusy(id)` to disable
+  the picker's eject controls. The engine reports each change through `EngineEvents::volumes_busy_changed`; the app
+  emits it.
 - **A wider question, `operations_need_volume(id)`** (`manager.rs`): every op the manager HOLDS (Queued too) plus the
   busy set. A queued op hasn't touched the device, so Eject ignores it, but it names the volume and will set out for it,
   so retiring a volume id for good (a saved server moving to a new address, `server_move.rs`) waits for it too.
@@ -2498,6 +2512,11 @@ Each with its reason in `Cargo.toml`. The workspace crates:
 No `tauri`, `tauri-specta`, `cmdr-index`, or app crate, which `index-crate-isolation` enforces. `specta` is pinned to
 the app's exact version, because the wire types' `Type` impls must be the ones `tauri-specta` collects. `tokio` comes
 without `rt-multi-thread`: the engine builds no runtime of its own and spawns on its host's.
+
+**Decision: `cmdr-listing` stays off the normal dependency path.** With it there, every listing edit would recompile the
+engine, and the build's long pole would become `cmdr-fs → cmdr-listing → cmdr-operations → cmdr`; the one type the
+engine needed from it, the collator, sits in `cmdr-collation` instead. `cmdr-index` stays out the same way: the engine
+asks the index through `OperationIndex`.
 
 ## Testing bar
 

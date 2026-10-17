@@ -67,22 +67,30 @@ inside it names the app's accessor.
   `run_instant`. A scope holds parts of the engine, never the engine (the registry holds the states, so that would be a
   cycle), and ❌ a missing scope never falls back to another log. Entry points (starters, routing, the queue and by-id
   controls, pre-flight checks, rollback) are `Operations` methods or take the engine as a parameter; a deferred start
-  uses the engine admission hands it. A scan preview's walk holds its engine (`run_scan_preview(&engine, …)`); the
-  leftover sweep runs on the host its claim hands it; the probe watchdog and the preview watchdog hold their stores
-  weakly, so a dropped engine stops them.
+  uses the engine admission hands it. A scan preview's walk holds its engine (`run_scan_preview(&engine, …)`) until it
+  ends, rather than the preview's state carrying it: that state sits in the preview map inside the engine, so it would
+  be an `Arc` cycle until settle. A registered transfer probe holds its op's state, whose scope holds the probe table: a
+  cycle that lasts exactly while the transfer runs, broken by the registration guard's drop. The leftover sweep runs on
+  the host its claim hands it; the probe watchdog and the preview watchdog hold their stores weakly, so a dropped engine
+  stops them.
 - **Which volume serves an id or a path goes through `OperationVolumes`** (`host/volumes.rs`): the registry's `get`,
   `resolve`, the archive-boundary questions, `find_by_root`, `forget_archive_index`, `on_volume_arrival`, and
   `unregistered` (why an id has no volume, as an `UnregisteredVolume`). Its supertrait is the rollback planner's
   `VolumeLookup`, so one answer serves both. The app answers it with `operations_host/volumes.rs`, which asks
   `get_volume_manager()` per call. ❗ A site passing a path calls `resolve`; each that stays on `get` says why in one
   line (the `.zip` file itself is a plain file on its parent; a lane key or a capability flag is a question about the
-  drive, not the path; an archive gate upstream already routed the in-zip case).
+  drive, not the path; an archive gate upstream already routed the in-zip case). Bulk rename, the numbered create, and
+  rename-as-move have no route of their own, so an in-zip or `.git/<category>/` path there would act on the drive; they
+  trust the frontend's refusal to write in a routed pane, and a backend gate is #463.
 - **Engine-wide facts go through `EngineEvents`**: operations changed, busy volumes changed, a transfer started /
   finished on volumes (indexing priority), staging leftovers kept, an instant mutation settled (analytics, as an
   `InstantMutationFact` of categories only), an error report, and the scan bridge's scanning-phase `write-progress` (one
   op's event, but the preview's worker that produces it holds no op's sink). Per-op events stay on `OperationEventSink`.
   Every method is required and returns at once, and is called with no engine lock held, with one exception: the busy set
-  reports under its dedupe lock, so a stale set can never land last (`host/events.rs`).
+  reports under its dedupe lock, so a stale set can never land last (`host/events.rs`). **Decision: one seam for every
+  engine-wide fact**, as `cmdr-index` routes its own through one `EventSink`. The instant-op analytics go here too, not
+  through `VolumeHost::analytics()`: that seam's `&[(&str, &str)]` pairs are for backend counters, and the count bucket
+  and property types are app policy.
 - **Error reports are typed facts** (`host/error_report.rs`): the engine never calls `log_error!` (the app's macro, at
   its crate root), it names what happened as an `OperationErrorReport`, grouped by what it means for the person: an op
   failed, a displaced original is stranded under its aside name, a transfer is stuck on a silent backend, or a contained
