@@ -23,12 +23,12 @@ engine-wide facts, the per-op sinks, and what a terminal event does besides reac
 - **An engine error report keeps its message and target word for word** (`events.rs::raise`), including the engine's
   module path as a literal target where it had none: dispatch filters and log greps key off them.
 - **A test binary never installs**, so its first read builds `test_engine()`: these same answers with no app handle and
-  no sink factory. An engine suite on an engine of its own builds `testing::TestOperations` instead, so `events.rs`
-  pins the transfer pair's `priority::transfers` wiring itself.
+  no sink factory. Every app-side cell shares it (`app_engine()`) and keeps its ids unique; an engine suite builds
+  `testing::TestOperations`, so `events.rs` pins the transfer pair's `priority::transfers` wiring itself.
 
 ## Module map
 
-- `mod.rs`: `install`, `claim_ledger`, `operations()`, the `refuse_*_not_installed` answers, `test_engine`. `events.rs`: `TauriEngineEvents`, the instant-op analytics props, and the
+- `mod.rs`: `install`, `claim_ledger`, `operations()`, the `refuse_*_not_installed` answers, `test_engine` (+ `_journaling_into`), `app_engine`. `events.rs`: `TauriEngineEvents`, the instant-op analytics props, and the
   error-report re-raise. `sinks.rs`: `TauriEventSink`, `TauriScanPreviewSink`. `terminal_effects.rs` (+ `_tests.rs`):
   the terminal side effects in order. `analytics.rs`: the completion analytics they fire. `wire.rs`: the payloads as
   Tauri events. `volumes.rs`: `AppOperationVolumes`, the volume registry asked per call. `own_writes.rs`: `AppOwnWrites`, the downloads

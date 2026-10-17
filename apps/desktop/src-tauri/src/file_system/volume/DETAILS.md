@@ -1138,8 +1138,7 @@ Under plain `cargo test` a crate's tests share one process, so those tests are a
   outlives its test, `ensure_root_volume`'s `register_if_absent` then silently no-ops, and every later real-FS
   create/paste assertion fails against an in-memory volume with no hint of who swapped it.
 
-Same guard family as `cmdr_listing::testing::TestListingGuard` (over the listing cache),
-`write_operations::test_support::TestOperationGuard` (over the shared engine's registry), and
+Same guard family as `cmdr_listing::testing::TestListingGuard` (over the listing cache) and
 `indexing::tests::stress_test_helpers::TestInstanceGuard` (over `INDEX_REGISTRY`).
 
 ## Mutation notification

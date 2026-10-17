@@ -23,10 +23,10 @@ use super::adb_transfer_test::{dialed_phone_with, registered_local};
 use super::network_transfer_test_support::start_copy_by_id;
 use crate::adb::device_provider::apply_device_list;
 use crate::file_system::index_provider::AppVolumeProvider;
-use crate::file_system::write_operations::testing::{
-    CollectorEventSink, WriteOperationState, delete_volume_files_for_test,
-};
+use crate::file_system::write_operations::testing::new_operation_state;
+use crate::file_system::write_operations::testing::{CollectorEventSink, delete_volume_files_for_test};
 use crate::file_system::write_operations::{VolumeCopyConfig, WriteOperationConfig};
+use crate::operations_host::app_engine;
 use crate::test_support::wait_until_async;
 
 /// A backstop for a whole walk of the fake phone, far above the fraction of a
@@ -194,7 +194,7 @@ async fn a_cmdr_copy_onto_a_phone_and_a_delete_on_it_patch_its_index() {
     .await;
 
     let events = CollectorEventSink::new();
-    let state = Arc::new(WriteOperationState::new(Duration::from_millis(0)));
+    let state = Arc::new(new_operation_state(app_engine(), Duration::from_millis(0)));
     delete_volume_files_for_test(
         Arc::clone(&phone.volume),
         &phone.volume_id,

@@ -274,14 +274,6 @@ pub struct WriteOperationState {
 }
 
 impl WriteOperationState {
-    /// A fresh state on the shared test engine (the bench's detached one), for a
-    /// test that drives an engine function directly. Production states come from
-    /// the engine that runs them (`Operations::new_operation_state`).
-    #[cfg(any(test, feature = "transfer-bench"))]
-    pub fn new(progress_interval: Duration) -> Self {
-        super::installed().new_operation_state(progress_interval)
-    }
-
     /// A fresh state for a new operation that reaches its engine through
     /// `scope`. Keeps the field list out of every call site so adding new state
     /// members (like the estimator) is one-line.
@@ -731,12 +723,6 @@ impl Drop for WriteSettledGuard {
     }
 }
 
-// The operation status cache, the busy-volume set it drives, and the queries
-// over it live in `status_cache`. The suites' by-id helpers are re-exported
-// here, the same way `operation_intent` and `scan_cache` are surfaced above.
-#[cfg(test)]
-pub(super) use super::status_cache::{register_operation_status, unregister_operation_status};
-
 // The by-id controls (cancel / abort / pause / resume / conflict answer) live in
 // `state/controls.rs`: each is a registry lookup plus one flag flip, and keeping
 // them together is what makes the two stopping tiers legible side by side.
@@ -747,10 +733,6 @@ mod registry;
 // What a Rollback-cancelled transfer's own reversal sees of it.
 mod wind_down;
 pub(super) use registry::WriteOperationRegistry;
-#[cfg(test)]
-pub(super) use registry::forget_operation;
-#[cfg(test)]
-pub(super) use registry::operation_states;
 pub(crate) use wind_down::WindDown;
 
 #[cfg(test)]

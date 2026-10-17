@@ -187,7 +187,7 @@ fn settle_fires_the_space_hint_then_the_emit() {
 #[test]
 fn the_production_ring_already_holds_the_outcome_when_the_emit_runs() {
     let fx = AppTerminalEffects {
-        operations: Some(crate::file_system::write_operations::testing::installed()),
+        operations: Some(crate::operations_host::app_engine()),
     };
     let complete_id = format!("terminal-ring-complete-{}", uuid::Uuid::new_v4());
     let mut seen = None;

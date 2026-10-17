@@ -88,7 +88,7 @@ pub fn install(app: &AppHandle, operation_log: OperationLog) {
 /// or answers what an engine with nothing running would (no operations, nothing
 /// busy, an unknown id). It never falls back to a detached engine, which would
 /// write with nobody hearing. In a test binary nothing installs, so the first
-/// read shares the engine the engine's own tests use.
+/// read builds [`test_engine`], which every app-side cell then shares.
 pub(crate) fn operations() -> Result<&'static Operations, NotInstalled> {
     operations_in(&OPERATIONS)
 }
@@ -108,7 +108,7 @@ pub(crate) fn operations_in(slot: &'static OnceLock<Operations>) -> Result<&'sta
     }
     #[cfg(test)]
     if std::ptr::eq(slot, &OPERATIONS) {
-        return Ok(OPERATIONS.get_or_init(|| write_operations::testing::installed().clone()));
+        return Ok(OPERATIONS.get_or_init(test_engine));
     }
     crate::log_error!(target: "op_manager", "the write engine was reached before it was installed; refused");
     Err(NotInstalled)

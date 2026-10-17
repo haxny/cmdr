@@ -17,7 +17,7 @@
 //!
 //! ## How the table is photographed
 //!
-//! [`TablePhotographingDest`] calls `render_live_dump` from INSIDE
+//! [`TablePhotographingDest`] calls `render_live_transfer_dump` from INSIDE
 //! `write_from_stream`, after lingering until `rendezvous` writes are open at the
 //! same moment. An in-memory write finishes in microseconds, so without the
 //! linger two genuinely concurrent leaves are never open at the same instant and

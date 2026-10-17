@@ -2,7 +2,7 @@
 
 use super::*;
 use crate::file_system::volume::{InMemoryVolume, ListingProgress};
-use crate::file_system::write_operations::testing::installed;
+use crate::operations_host::app_engine;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
@@ -314,7 +314,7 @@ async fn source_volume_is_busy_during_fulfillment_and_released_after() {
     // Wait until the fulfillment is mid-stream, then assert the source is busy.
     reached.notified().await;
     assert!(
-        installed().busy_volume_ids().contains(&volume_id),
+        app_engine().busy_volume_ids().contains(&volume_id),
         "the source volume must be busy while the promise is streaming (eject guard)"
     );
 
@@ -323,7 +323,7 @@ async fn source_volume_is_busy_during_fulfillment_and_released_after() {
     handle.await.unwrap().expect("fulfillment should succeed");
 
     assert!(
-        !installed().busy_volume_ids().contains(&volume_id),
+        !app_engine().busy_volume_ids().contains(&volume_id),
         "the source volume must clear from the busy set once the fulfillment finishes"
     );
     assert!(dest.exists());

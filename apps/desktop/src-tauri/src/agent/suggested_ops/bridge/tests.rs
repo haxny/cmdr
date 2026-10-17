@@ -21,6 +21,7 @@ use crate::file_system::write_operations::{
     OperationEventSink, SourceItemOutcome, WriteOperationType, WriteSettledEvent, WriteSourceItemDoneEvent,
 };
 use crate::ignore_poison::IgnorePoison;
+use crate::operations_host::app_engine;
 use crate::test_support::TestDir;
 
 /// A trash group over two sources on a real file DB, plus a second connection for the
@@ -251,7 +252,7 @@ async fn the_binding_holds_what_preflight_saw_not_what_the_agent_saw() {
         &sink,
         "op-1",
         WriteOperationType::Trash,
-        &crate::file_system::write_operations::testing::WriteOperationState::new(std::time::Duration::ZERO),
+        &crate::file_system::write_operations::testing::new_operation_state(app_engine(), std::time::Duration::ZERO),
         Some(&expected),
         sources,
     );
@@ -276,7 +277,7 @@ async fn an_untouched_source_survives_its_own_binding() {
         &sink,
         "op-1",
         WriteOperationType::Trash,
-        &crate::file_system::write_operations::testing::WriteOperationState::new(std::time::Duration::ZERO),
+        &crate::file_system::write_operations::testing::new_operation_state(app_engine(), std::time::Duration::ZERO),
         Some(&expected),
         sources.clone(),
     );
@@ -300,7 +301,7 @@ async fn a_source_that_vanished_before_preflight_is_left_out_of_the_binding() {
         &sink,
         "op-1",
         WriteOperationType::Trash,
-        &crate::file_system::write_operations::testing::WriteOperationState::new(std::time::Duration::ZERO),
+        &crate::file_system::write_operations::testing::new_operation_state(app_engine(), std::time::Duration::ZERO),
         Some(&expected),
         vec![gone],
     );

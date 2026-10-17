@@ -101,7 +101,7 @@ pub(crate) struct OperationDescriptor {
     /// and destination volume lanes.
     pub lanes: Vec<LaneKey>,
     /// Volume IDs to mark busy while the op runs (eject guard). Empty for pure
-    /// same-`root` local ops. Mirrors the old `register_operation_status` arg.
+    /// same-`root` local ops. What `StatusCache::register` marks busy.
     pub volume_ids: Vec<String>,
     /// Short source→dest summary for the queue window. Best-effort.
     pub summary: OperationSummaryText,
@@ -287,13 +287,6 @@ pub(crate) struct OperationManager {
     /// it's what lets a test assert that a mutation told the windows about
     /// itself (or, for `retain_failure`, deliberately didn't).
     emits: AtomicU64,
-}
-
-/// The installed engine's manager, for the suites that share the test engine.
-// shim: removed in M7b–M7e
-#[cfg(test)]
-pub(crate) fn manager() -> &'static Arc<OperationManager> {
-    super::installed().manager()
 }
 
 impl OperationManager {
@@ -502,7 +495,7 @@ impl OperationManager {
     ///
     /// Registers a `Running` record (so it shows in the queue snapshot and gets
     /// an id), marks its volumes busy (the eject guard, via
-    /// `register_operation_status`), awaits `op` inline, then frees. It does NOT
+    /// `StatusCache::register`), awaits `op` inline, then frees. It does NOT
     /// reserve a lane and does NOT go through admission: a metadata syscall must
     /// never queue behind a multi-minute transfer (an inline rename that hangs
     /// until its IPC timeout is worse than useless, and the MTP/SMB connection
@@ -915,14 +908,6 @@ impl OperationManager {
     #[cfg(test)]
     pub(crate) fn admission_pass_count(&self) -> u64 {
         self.admission_passes.load(Ordering::SeqCst)
-    }
-
-    /// Runs an admission pass inline, returning once it has completed. For the
-    /// paths production never runs one on: pause admits nobody, so a test proving
-    /// "not even a pass would admit this queued op" has to run one itself.
-    #[cfg(test)]
-    pub(crate) fn force_admission_pass(self: &Arc<Self>) {
-        self.run_admission_pass();
     }
 
     /// The lifecycle status of a LIVE record, or `None` once the op has settled

@@ -34,39 +34,6 @@ use cmdr_fs::volume::{LaneKey, Volume, VolumeError};
 use cmdr_local::LocalPosixVolume;
 use cmdr_operation_log::types::{ArchiveSubkind, ExecutionStatus};
 
-/// [`Operations::route_archive_copy_into`](crate::file_system::write_operations::Operations::route_archive_copy_into)
-/// on the engine every test shares, for the backend suites.
-// shim: removed in M7b–M7e
-#[cfg(test)]
-#[allow(clippy::too_many_arguments, reason = "same seam as the method it delegates to")]
-pub(crate) async fn route_archive_copy_into(
-    events: Arc<dyn OperationEventSink>,
-    source_volume: Arc<dyn Volume>,
-    source_paths: Vec<PathBuf>,
-    dest_full_path: PathBuf,
-    parent_volume_id: String,
-    conflict: ConflictResolution,
-    progress_interval_ms: u64,
-    is_move: bool,
-    compression_level: Option<i64>,
-    preview_id: Option<String>,
-) -> Result<WriteOperationStartResult, WriteOperationError> {
-    crate::file_system::write_operations::installed()
-        .route_archive_copy_into(
-            events,
-            source_volume,
-            source_paths,
-            dest_full_path,
-            parent_volume_id,
-            conflict,
-            progress_interval_ms,
-            is_move,
-            compression_level,
-            preview_id,
-        )
-        .await
-}
-
 impl crate::file_system::write_operations::Operations {
     /// Routes a copy/move INTO a zip (a source dropped onto an archive destination)
     /// to the managed edit driver as a SINGLE `{ add + mkdir }` changeset — the whole

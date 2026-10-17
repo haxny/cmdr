@@ -304,8 +304,9 @@ fn is_controllable(operations: &[OperationSnapshot], operation_id: &str) -> bool
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::file_system::write_operations::testing::{QueuedOperationFixture, installed, retain_failure};
+    use crate::file_system::write_operations::testing::QueuedOperationFixture;
     use crate::file_system::write_operations::{WriteOperationError, WriteOperationType};
+    use crate::operations_host::app_engine;
 
     fn row(operation_id: &str, status: LifecycleStatus) -> OperationSnapshot {
         OperationSnapshot {
@@ -322,14 +323,14 @@ mod tests {
         }
     }
 
-    /// A retained failure parked in the PROCESS-GLOBAL manager, dropped again on
-    /// `Drop` so a failing assertion can't leave it behind for a sibling test
-    /// (the reasoning behind `write_operations::testing::TestOperationGuard`).
+    /// A retained failure parked in the app's engine (the one the `queue` tool asks,
+    /// which every app-side cell shares), dropped again on `Drop` so a failing
+    /// assertion can't leave it behind for a sibling test.
     struct RetainedFailureGuard(String);
 
     impl RetainedFailureGuard {
         fn record(operation_id: &str) -> Self {
-            retain_failure(
+            app_engine().retain_failure(
                 operation_id,
                 WriteOperationType::Copy,
                 &WriteOperationError::IoError {
@@ -343,7 +344,7 @@ mod tests {
 
     impl Drop for RetainedFailureGuard {
         fn drop(&mut self) {
-            installed().dismiss_failed_operation(&self.0);
+            app_engine().dismiss_failed_operation(&self.0);
         }
     }
 
@@ -351,7 +352,7 @@ mod tests {
     /// asking one is refused, ❌ never an `OK` an agent would act on.
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn continuing_an_operation_that_is_not_asking_is_refused() {
-        let fixture = QueuedOperationFixture::park("mcp-queue-continue");
+        let fixture = QueuedOperationFixture::park_on(app_engine(), "mcp-queue-continue");
         let result = execute_queue(&json!({
             "action": "continue_without_gone",
             "operationId": fixture.queued_id(),
@@ -386,7 +387,7 @@ mod tests {
     /// that never stopped.
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn pausing_a_queued_operation_is_never_reported_as_paused() {
-        let fixture = QueuedOperationFixture::park("mcp-queue-pause");
+        let fixture = QueuedOperationFixture::park_on(app_engine(), "mcp-queue-pause");
         let result = execute_queue(&json!({ "action": "pause", "operationId": fixture.queued_id() })).await;
 
         assert!(
@@ -534,7 +535,7 @@ mod tests {
         // would wave it through and the tool would answer "OK: Cancelled …" for an
         // operation that ended minutes ago.
         assert!(
-            installed().list_operations().iter().any(|op| op.operation_id == id),
+            app_engine().list_operations().iter().any(|op| op.operation_id == id),
             "the retained failure should be on the snapshot"
         );
         assert!(require_operation_exists(&id).is_err(), "the guard must refuse it");

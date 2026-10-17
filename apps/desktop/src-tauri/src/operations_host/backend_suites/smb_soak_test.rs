@@ -13,6 +13,8 @@
 //! but a load that grows over the soak's lifetime can.
 
 use super::smb_test_support::*;
+use crate::file_system::write_operations::testing::new_operation_state;
+use crate::operations_host::app_engine;
 use cmdr_fs::volume::smb_volume_id;
 use cmdr_smb::volume::*;
 
@@ -120,9 +122,7 @@ async fn make_docker_auth_volume() -> SmbVolume {
 #[ignore = "Soak test: requires Docker SMB containers. Run with CMDR_SOAK_ITERATIONS or CMDR_SOAK_DURATION_SECS."]
 async fn smb_soak_copy_loop() {
     use crate::file_system::write_operations::VolumeCopyConfig;
-    use crate::file_system::write_operations::testing::{
-        CollectorEventSink, WriteOperationState, copy_volumes_with_progress,
-    };
+    use crate::file_system::write_operations::testing::{CollectorEventSink, copy_volumes_with_progress};
     use std::time::{Duration, Instant};
 
     let _ = env_logger::try_init();
@@ -235,7 +235,7 @@ async fn smb_soak_copy_loop() {
             local_dir.path().to_path_buf(),
             crate::volume_host::host(),
         ));
-        let state = Arc::new(WriteOperationState::new(Duration::from_millis(200)));
+        let state = Arc::new(new_operation_state(app_engine(), Duration::from_millis(200)));
         let events = Arc::new(CollectorEventSink::new());
         let config = VolumeCopyConfig::default();
 

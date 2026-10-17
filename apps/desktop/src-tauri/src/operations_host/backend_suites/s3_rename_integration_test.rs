@@ -26,8 +26,9 @@ use cmdr_s3::volume::testing::{
 
 use super::network_transfer_test_support::{budget, read_all, run_copy, sha256};
 use crate::file_system::volume::manager::get_volume_manager;
-use crate::file_system::write_operations::testing::{CollectorEventSink, installed};
+use crate::file_system::write_operations::testing::CollectorEventSink;
 use crate::file_system::write_operations::{VolumeCopyConfig, WriteOperationType};
+use crate::operations_host::app_engine;
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_operation_log::types::Initiator;
 
@@ -60,7 +61,7 @@ fn at(volume: &S3Volume, key: &str) -> PathBuf {
 async fn start(volume_id: &str, from: PathBuf, new_name: &str) -> (Arc<CollectorEventSink>, String) {
     let events = Arc::new(CollectorEventSink::new());
     let parent = from.parent().expect("a parent").display().to_string();
-    let started = installed()
+    let started = app_engine()
         .start_rename_by_move(
             events.clone(),
             volume_id.to_string(),
@@ -179,8 +180,8 @@ pub(super) async fn a_paused_then_cancelled_rename_keeps_the_source_whole(target
     target.seed(target.bucket(), &[object(&from_key, &bytes)]).await;
 
     let (events, operation_id) = start(&volume_id, at(&volume, &from_key), "gone.bin").await;
-    assert!(installed().pause_write_operation(&operation_id) || !events.settled.lock_ignore_poison().is_empty());
-    installed().cancel_write_operation(&operation_id, false);
+    assert!(app_engine().pause_write_operation(&operation_id) || !events.settled.lock_ignore_poison().is_empty());
+    app_engine().cancel_write_operation(&operation_id, false);
     crate::test_support::wait_until_async(budget(SETTLE_BUDGET), "the cancelled rename to settle", || {
         !events.settled.lock_ignore_poison().is_empty()
     })
@@ -211,11 +212,11 @@ pub(super) async fn a_paused_rename_resumes_and_lands(target: &S3Target) {
 
     let (events, operation_id) = start(&volume_id, at(&volume, &from_key), "b.bin").await;
     assert!(
-        installed().pause_write_operation(&operation_id),
+        app_engine().pause_write_operation(&operation_id),
         "the rename should still be running to pause"
     );
     assert!(
-        installed().resume_write_operation(&operation_id),
+        app_engine().resume_write_operation(&operation_id),
         "the paused rename should resume"
     );
     settle(&events, "the resumed rename to settle").await;
@@ -253,7 +254,7 @@ pub(super) async fn a_batch_with_a_folder_renames_as_one_move(target: &S3Target)
     }
     let events = Arc::new(CollectorEventSink::new());
 
-    let started = installed()
+    let started = app_engine()
         .start_renames(events.clone(), volume_id, rows, Initiator::Agent)
         .await
         .expect("the batch starts");

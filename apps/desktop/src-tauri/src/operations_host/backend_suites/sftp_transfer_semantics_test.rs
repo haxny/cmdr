@@ -43,9 +43,9 @@ use super::network_semantics_test_support::{
 use super::network_transfer_test_support::clean_deep;
 use super::sftp_test_support::{SftpFixture, connect, fixture, fixture_on};
 use crate::file_system::write_operations::VolumeCopyConfig;
-use crate::file_system::write_operations::testing::{
-    CollectorEventSink, WriteOperationState, move_volumes_with_progress,
-};
+use crate::file_system::write_operations::testing::new_operation_state;
+use crate::file_system::write_operations::testing::{CollectorEventSink, move_volumes_with_progress};
+use crate::operations_host::app_engine;
 use crate::test_support::TestDir;
 use cmdr_local::LocalPosixVolume;
 
@@ -148,7 +148,7 @@ async fn sftp_integration_a_link_in_a_folder_moved_off_the_server_leaves_its_tar
     let outcome = move_volumes_with_progress(
         Arc::new(CollectorEventSink::new()),
         "move-off-link",
-        &Arc::new(WriteOperationState::new(Duration::from_millis(200))),
+        &Arc::new(new_operation_state(app_engine(), Duration::from_millis(200))),
         Arc::clone(&remote),
         &[dir.join("tree")],
         local,
@@ -267,7 +267,7 @@ async fn sftp_integration_a_move_into_a_dialog_addressed_subfolder_lands_where_t
          is a real path on a real server and quietly the wrong one"
     );
 
-    let state = Arc::new(WriteOperationState::new(Duration::from_millis(200)));
+    let state = Arc::new(new_operation_state(app_engine(), Duration::from_millis(200)));
     let events = Arc::new(CollectorEventSink::new());
     let result = move_volumes_with_progress(
         events,
@@ -334,7 +334,7 @@ async fn sftp_integration_a_bare_server_path_destination_is_refused_before_anyth
     // with no prefix on it.
     let bare = PathBuf::from(format!("{FIXTURE_ROOT}/{}", photos.display()));
 
-    let state = Arc::new(WriteOperationState::new(Duration::from_millis(200)));
+    let state = Arc::new(new_operation_state(app_engine(), Duration::from_millis(200)));
     let events = Arc::new(CollectorEventSink::new());
     let result = move_volumes_with_progress(
         events,

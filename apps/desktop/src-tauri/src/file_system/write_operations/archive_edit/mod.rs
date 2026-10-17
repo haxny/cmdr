@@ -59,9 +59,6 @@ mod routing;
 
 pub(crate) use driver::ArchiveEditRequest;
 pub(crate) use routing::{archive_inner_exists, ensure_zip_writable, join_inner_path, normalize_inner_path};
-// The installed engine's copy into an archive, for the suites that drive it directly.
-#[cfg(test)]
-pub(crate) use copy_into::route_archive_copy_into;
 // The remote edit, exposed for the live-SMB / MTP integration suites one level up.
 #[cfg(test)]
 pub(crate) use {edit_error::EditError, remote::pull_apply_upload_swap};

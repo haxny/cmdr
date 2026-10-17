@@ -28,11 +28,12 @@ use super::network_safety_test_support::Registered;
 use super::network_semantics_test_support::{Transfer, local_volume, names_in, seed, transfer, try_read};
 use super::network_transfer_test_support::{assert_no_staging_litter, clean_deep, read_all};
 use crate::file_system::volume::manager::get_volume_manager;
+use crate::file_system::write_operations::testing::new_operation_state;
 use crate::file_system::write_operations::testing::{
-    CollectorEventSink, EditError, OperationIntent, WriteOperationState, installed, pull_apply_upload_swap,
-    route_archive_copy_into,
+    CollectorEventSink, EditError, OperationIntent, pull_apply_upload_swap,
 };
 use crate::file_system::write_operations::{ConflictResolution, OperationEventSink, WriteOperationPhase};
+use crate::operations_host::app_engine;
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_operation_log::types::Initiator;
 
@@ -182,7 +183,7 @@ pub(super) async fn a_zip_inner_path_on_the_server_routes_as_inside_the_archive(
 pub(super) async fn a_remote_zip_edit_deletes_an_entry_on_the_server(remote: Arc<dyn Volume>, dir: PathBuf) {
     let zip_path = seed_zip(remote.as_ref(), &dir).await;
 
-    let state = Arc::new(WriteOperationState::new(Duration::from_millis(50)));
+    let state = Arc::new(new_operation_state(app_engine(), Duration::from_millis(50)));
     let result = pull_apply_upload_swap(Arc::clone(&remote), zip_path.clone(), state, None, |working: &Path| {
         let changeset = Changeset {
             deletes: vec!["dir/drop.txt".to_string()],
@@ -211,7 +212,7 @@ pub(super) async fn a_remote_zip_edit_deletes_an_entry_on_the_server(remote: Arc
 pub(super) async fn a_cancel_before_the_swap_keeps_the_original_zip(remote: Arc<dyn Volume>, dir: PathBuf) {
     let zip_path = seed_zip(remote.as_ref(), &dir).await;
 
-    let state = Arc::new(WriteOperationState::new(Duration::from_millis(50)));
+    let state = Arc::new(new_operation_state(app_engine(), Duration::from_millis(50)));
     let cancel = Arc::clone(&state);
     let result = pull_apply_upload_swap(
         Arc::clone(&remote),
@@ -260,20 +261,21 @@ pub(super) async fn local_files_copied_into_a_zip_on_the_server_join_it(remote: 
     .await;
 
     let events = Arc::new(CollectorEventSink::new());
-    route_archive_copy_into(
-        Arc::clone(&events) as Arc<dyn OperationEventSink>,
-        local,
-        vec![PathBuf::from("new.txt"), PathBuf::from("folder")],
-        zip_path.clone(),
-        registered.id.clone(),
-        ConflictResolution::Stop,
-        0,
-        false,
-        None,
-        None,
-    )
-    .await
-    .expect("start the copy into the remote zip");
+    app_engine()
+        .route_archive_copy_into(
+            Arc::clone(&events) as Arc<dyn OperationEventSink>,
+            local,
+            vec![PathBuf::from("new.txt"), PathBuf::from("folder")],
+            zip_path.clone(),
+            registered.id.clone(),
+            ConflictResolution::Stop,
+            0,
+            false,
+            None,
+            None,
+        )
+        .await
+        .expect("start the copy into the remote zip");
     await_archive_op(&events, "the copy into the remote zip").await;
 
     let back = read_server_zip(remote.as_ref(), &zip_path).await;
@@ -303,7 +305,7 @@ async fn compress_onto(
     parent_id: &str,
 ) -> Arc<CollectorEventSink> {
     let events = Arc::new(CollectorEventSink::new());
-    installed()
+    app_engine()
         .compress_start(
             Arc::clone(&events) as Arc<dyn OperationEventSink>,
             Arc::clone(source),

@@ -1,6 +1,6 @@
-//! Cross-cutting write-operation test fixtures: the engine the test binary
-//! shares, isolation for its operation registry, the one sanctioned "a park is
-//! holding" wait, and a real queued operation for suites outside this module.
+//! Cross-cutting write-operation test fixtures: a placeholder conflict, the one
+//! sanctioned "a park is holding" wait, and a real queued operation for suites
+//! outside this module.
 //!
 //! Per-driver fixtures (fake volumes, gated sources, collector sinks) stay in
 //! their own module's `test_support`, like `transfer/test_support.rs`.
@@ -11,17 +11,10 @@ use std::time::Duration;
 
 use tokio::sync::oneshot;
 
-use super::manager::{OperationDescriptor, OperationManager, OperationSummaryText, manager};
-use super::state::{WriteOperationState, operation_states};
+use super::Operations;
+use super::manager::{OperationDescriptor, OperationSummaryText};
 use super::types::{ConflictId, LifecycleStatus, WriteConflictEvent, WriteOperationType};
 use cmdr_fs::volume::LaneKey;
-
-/// The engine every test shares when it reaches the engine's free functions,
-/// since nothing in a test binary installs one: the app's own answers with no
-/// frontend behind them.
-pub(crate) fn shared_engine() -> super::Operations {
-    crate::operations_host::test_engine()
-}
 
 /// A stand-in `write-conflict` event for a test that arms the conflict slot only
 /// to park an operation, and never reads the question back.
@@ -45,67 +38,6 @@ pub(crate) fn placeholder_conflict(conflict_id: ConflictId) -> WriteConflictEven
         source_is_directory: false,
         destination_is_directory: false,
         destination_is_look_alike: false,
-    }
-}
-
-/// An entry in the shared engine's registry under a unique-per-test operation
-/// id, removed on drop.
-///
-/// **Why this exists.** `cargo test` runs a crate's tests as threads in ONE
-/// process, so the shared engine's registry is shared by every write-op test at once.
-/// A hardcoded op id (`"op-merge-cancel"`) collides with any sibling test using
-/// the same literal, and a manual `remove` placed after the assertions leaks the
-/// entry whenever an assertion fails first: the next test's
-/// `cancel_all_write_operations` then walks a corpse, and `get_operation_status`
-/// still answers for it. A UNIQUE id plus removal from `Drop` fixes both — `Drop` runs on
-/// unwind, so a panicking test cleans up too.
-///
-/// Mirrors `indexing::tests::stress_test_helpers::TestInstanceGuard`, the same
-/// pattern over `INDEX_REGISTRY`. Keep the guard on the stack: a `std::mem::forget`
-/// or an `Arc` that outlives the test defeats the whole thing.
-pub(crate) struct TestOperationGuard {
-    op_id: String,
-    state: Arc<WriteOperationState>,
-}
-
-impl TestOperationGuard {
-    /// Registers a fresh `WriteOperationState` (50 ms progress interval) under a
-    /// unique id derived from `tag`.
-    pub(crate) fn register(tag: &str) -> Self {
-        Self::register_state(tag, Arc::new(WriteOperationState::new(Duration::from_millis(50))))
-    }
-
-    /// Registers a caller-built state (the drivers' `make_state()` fixtures) under
-    /// a unique id derived from `tag`.
-    pub(crate) fn register_state(tag: &str, state: Arc<WriteOperationState>) -> Self {
-        Self::register_as(unique_op_id(tag), state)
-    }
-
-    /// Registers `state` under an operation id the caller already generated. For
-    /// suites with their own id generator (`transfer_driver`'s `unique_op_id`),
-    /// where the id threads through the call under test and its assertions.
-    pub(crate) fn register_as(op_id: impl Into<String>, state: Arc<WriteOperationState>) -> Self {
-        let op_id = op_id.into();
-        operation_states().insert(op_id.clone(), Arc::clone(&state));
-        Self { op_id, state }
-    }
-
-    /// The unique operation id this state is registered under. Pass it wherever a
-    /// test would have used a literal.
-    pub(crate) fn id(&self) -> &str {
-        &self.op_id
-    }
-
-    /// The registered state, for tests that read `intent` / `backend_cancel` /
-    /// `pause_gate` directly.
-    pub(crate) fn state(&self) -> &Arc<WriteOperationState> {
-        &self.state
-    }
-}
-
-impl Drop for TestOperationGuard {
-    fn drop(&mut self) {
-        super::state::forget_operation(&self.op_id);
     }
 }
 
@@ -138,7 +70,8 @@ pub(crate) async fn park_holds_at(progress: impl Fn() -> u64, what: &str) -> u64
     frozen
 }
 
-/// A process-unique operation id. The counter alone would collide across
+/// A process-unique operation id, since a fixture on the app's one engine shares
+/// it with every app-side cell. The counter alone would collide across
 /// concurrently-running test binaries, so the pid goes in too.
 fn unique_op_id(tag: &str) -> String {
     static N: AtomicU64 = AtomicU64::new(0);
@@ -158,8 +91,6 @@ fn unique_op_id(tag: &str) -> String {
 /// tool answered "OK: Paused …" for a queued operation that pause is documented
 /// to leave alone. Two synthetic operations on one private lane reproduce the
 /// state exactly, with no I/O and no reach into another test's operations.
-/// Sibling of [`TestOperationGuard`], which covers the state map rather than the
-/// manager.
 pub(crate) struct QueuedOperationFixture {
     holder_id: String,
     queued_id: String,
@@ -176,24 +107,18 @@ impl QueuedOperationFixture {
     /// settled when this returns; it asserts them rather than waiting, which
     /// makes a manager change that breaks the premise fail here instead of
     /// silently weakening whatever test uses the fixture.
-    pub(crate) fn park(tag: &str) -> Self {
-        Self::park_naming(tag, Vec::new(), Vec::new())
+    ///
+    /// On `engine`: a test's own, or the app's (`operations_host::app_engine()`)
+    /// for a cell whose subject reaches the app's engine itself.
+    pub(crate) fn park_on(engine: &Operations, tag: &str) -> Self {
+        Self::park_naming_on(engine, tag, Vec::new(), Vec::new())
     }
 
-    /// [`Self::park`], with each operation naming volumes as its source or
+    /// [`Self::park_on`], with each operation naming volumes as its source or
     /// destination: `holder` for the running one, `queued` for the one waiting.
     /// How a suite outside this module holds a transfer on a place.
-    pub(crate) fn park_naming(tag: &str, holder: Vec<String>, queued: Vec<String>) -> Self {
-        Self::park_naming_on(manager(), tag, holder, queued)
-    }
-
-    /// [`Self::park`] on `engine` rather than the shared one, so a test that
-    /// owns its engine can hold a live operation on it.
-    pub(crate) fn park_on(engine: &crate::file_system::write_operations::Operations, tag: &str) -> Self {
-        Self::park_naming_on(engine.manager(), tag, Vec::new(), Vec::new())
-    }
-
-    fn park_naming_on(manager: &Arc<OperationManager>, tag: &str, holder: Vec<String>, queued: Vec<String>) -> Self {
+    pub(crate) fn park_naming_on(engine: &Operations, tag: &str, holder: Vec<String>, queued: Vec<String>) -> Self {
+        let manager = engine.manager();
         let lane = LaneKey::new(unique_op_id(&format!("{tag}-lane")));
         let holder_id = unique_op_id(&format!("{tag}-holder"));
         let queued_id = unique_op_id(&format!("{tag}-queued"));
@@ -214,8 +139,8 @@ impl QueuedOperationFixture {
                     preview_id: None,
                     reverses: None,
                 },
-                Arc::new(WriteOperationState::new(Duration::from_millis(50))),
-                Box::new(move |ops: crate::file_system::write_operations::Operations| {
+                Arc::new(engine.new_operation_state(Duration::from_millis(50))),
+                Box::new(move |ops: Operations| {
                     Box::pin(async move {
                         let _ = release_rx.await;
                         ops.manager().on_settled(&settle_id);

@@ -11,6 +11,7 @@ use super::*;
 use crate::favorites::store as favorites;
 use crate::file_system::write_operations::testing::QueuedOperationFixture;
 use crate::network::known_shares::{AuthOptions, ConnectionMode};
+use crate::operations_host::app_engine;
 
 /// A share Cmdr mounted from `address:port`, filed under its discovery name.
 fn mounted_row(address: &str, port: u16, share: &str, volume_id: &str) -> KnownNetworkShare {
@@ -190,7 +191,8 @@ async fn a_share_still_mounted_from_the_old_address_refuses_the_move() {
 async fn an_operation_on_a_share_refuses_the_move() {
     let id = "smb-198-18-0-50-busy";
     let host = saved_host(mounted_row("198.18.0.50", 445, "busy-test", id));
-    let _copy = QueuedOperationFixture::park_naming("smb-move-running", vec![id.to_string()], Vec::new());
+    let _copy =
+        QueuedOperationFixture::park_naming_on(app_engine(), "smb-move-running", vec![id.to_string()], Vec::new());
 
     let outcome = move_host(host, SmbServer::new("198.18.0.51", 445), &[], no_manual_entry).await;
 
@@ -334,7 +336,12 @@ async fn eject_and_save_refuses_a_taken_address_before_touching_a_mount() {
 async fn eject_and_save_refuses_a_running_operation_before_touching_a_mount() {
     let ids = ["smb-198-18-0-72-first", "smb-198-18-0-72-second"];
     let host = host_with_two_mounted_shares("198.18.0.72", ids);
-    let _copy = QueuedOperationFixture::park_naming("smb-eject-and-save-running", vec![ids[0].to_string()], Vec::new());
+    let _copy = QueuedOperationFixture::park_naming_on(
+        app_engine(),
+        "smb-eject-and-save-running",
+        vec![ids[0].to_string()],
+        Vec::new(),
+    );
 
     let (outcome, asked) = eject_and_move_answering(
         host,

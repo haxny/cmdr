@@ -27,7 +27,7 @@ use super::network_look_alike_test_support::{
     overwriting_a_composed_twin_leaves_one_entry,
 };
 use super::smb_test_support::fixture;
-use crate::file_system::write_operations::testing::installed;
+use crate::operations_host::app_engine;
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 #[ignore = "Requires Docker SMB containers (./apps/desktop/test/smb-servers/start.sh)"]
@@ -108,7 +108,7 @@ async fn smb_integration_a_case_only_rename_asks_nothing_and_lands() {
     seed(remote.as_ref(), &dir, &[("c.txt", b"abcd")]).await;
     let registered = Registered::new(&remote, "case-only");
 
-    let check = installed()
+    let check = app_engine()
         .check_rename_validity_impl(
             dir.to_string_lossy().into_owned(),
             "c.txt".into(),
@@ -122,7 +122,7 @@ async fn smb_integration_a_case_only_rename_asks_nothing_and_lands() {
         "the share's only `C.txt` is `c.txt` itself, so F2 asks nothing: {check:?}"
     );
 
-    installed()
+    app_engine()
         .rename_managed(
             dir.join("c.txt"),
             dir.join("C.txt"),

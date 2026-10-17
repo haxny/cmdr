@@ -40,7 +40,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use cmdr_fs::volume::{InMemoryVolume, Volume};
-use cmdr_lib::transfer_bench::{self, BenchJournal};
+use cmdr_lib::transfer_bench::{BenchEngine, BenchJournal};
 use criterion::measurement::WallTime;
 use criterion::{
     BatchSize, BenchmarkGroup, BenchmarkId, Criterion, SamplingMode, Throughput, criterion_group, criterion_main,
@@ -149,11 +149,12 @@ impl SmallFiles {
 }
 
 fn bench_local_copy_small_files(c: &mut Criterion) {
+    let engine = BenchEngine::new();
     let fixture = SmallFiles::build();
     let sources = vec![fixture.source.clone()];
 
     let probe = SmallFiles::destination();
-    transfer_bench::copy_local(&sources, probe.path()).expect("the probe copy");
+    engine.copy_local(&sources, probe.path()).expect("the probe copy");
     fixture.assert_landed(probe.path());
     drop(probe);
 
@@ -163,7 +164,9 @@ fn bench_local_copy_small_files(c: &mut Criterion) {
         b.iter_batched(
             SmallFiles::destination,
             |destination| {
-                transfer_bench::copy_local(&sources, destination.path()).expect("copy the small files");
+                engine
+                    .copy_local(&sources, destination.path())
+                    .expect("copy the small files");
                 destination
             },
             BatchSize::PerIteration,
@@ -176,8 +179,8 @@ fn bench_local_copy_small_files_journaled(c: &mut Criterion) {
     let fixture = SmallFiles::build();
     let sources = vec![fixture.source.clone()];
     let journal_dir = temp_dir("cmdr-transfer-bench-journal-");
-    // Dropped at the end of this function, which uninstalls the journal again.
-    let journal = BenchJournal::install(&journal_dir.path().join("operation-log.db")).expect("install the journal");
+    // An engine of the case's own, journaling into a temp-DB log.
+    let journal = BenchJournal::open(&journal_dir.path().join("operation-log.db")).expect("open the journal");
 
     let probe = SmallFiles::destination();
     let op_id = journal.copy_local(&sources, probe.path()).expect("the probe copy");
@@ -207,6 +210,7 @@ fn bench_local_copy_small_files_journaled(c: &mut Criterion) {
 }
 
 fn bench_stream_large_file(c: &mut Criterion) {
+    let engine = BenchEngine::new();
     // Multi-threaded, like the app's: the local volume runs its syscalls on the
     // blocking pool.
     let runtime = tokio::runtime::Builder::new_multi_thread()
@@ -226,17 +230,12 @@ fn bench_stream_large_file(c: &mut Criterion) {
     // untimed.
     let destination = || {
         let dir = temp_dir("cmdr-transfer-bench-stream-");
-        let volume = transfer_bench::local_volume(dir.path());
+        let volume = engine.local_volume(dir.path());
         (dir, volume)
     };
     let copy = |dir: &TempDir, volume: &Arc<dyn Volume>| {
         runtime
-            .block_on(transfer_bench::copy_volumes(
-                Arc::clone(&source),
-                &sources,
-                Arc::clone(volume),
-                dir.path(),
-            ))
+            .block_on(engine.copy_volumes(Arc::clone(&source), &sources, Arc::clone(volume), dir.path()))
             .expect("stream the large file");
     };
 
@@ -267,6 +266,7 @@ fn bench_stream_large_file(c: &mut Criterion) {
 }
 
 fn bench_delete_walk(c: &mut Criterion) {
+    let engine = BenchEngine::new();
     // Each iteration deletes a tree of its own, built untimed. Empty files: the
     // walk's cost is per entry, and a byte in each only slows the setup.
     let tree = || {
@@ -277,7 +277,9 @@ fn bench_delete_walk(c: &mut Criterion) {
 
     let (probe_dir, probe_source) = tree();
     assert_eq!(count_files(&probe_source), DELETE_FILE_COUNT, "the delete fixture");
-    transfer_bench::delete_local(std::slice::from_ref(&probe_source)).expect("the probe delete");
+    engine
+        .delete_local(std::slice::from_ref(&probe_source))
+        .expect("the probe delete");
     assert!(
         !probe_source.exists(),
         "the probe delete left {} behind",
@@ -291,7 +293,9 @@ fn bench_delete_walk(c: &mut Criterion) {
         b.iter_batched(
             tree,
             |(dir, source)| {
-                transfer_bench::delete_local(std::slice::from_ref(&source)).expect("delete the tree");
+                engine
+                    .delete_local(std::slice::from_ref(&source))
+                    .expect("delete the tree");
                 dir
             },
             BatchSize::PerIteration,
@@ -301,6 +305,7 @@ fn bench_delete_walk(c: &mut Criterion) {
 }
 
 fn bench_scan_preview(c: &mut Criterion) {
+    let engine = BenchEngine::new();
     // The preview's watchdog spawns its heartbeat on the ambient runtime.
     let runtime = tokio::runtime::Builder::new_multi_thread()
         .enable_all()
@@ -310,7 +315,7 @@ fn bench_scan_preview(c: &mut Criterion) {
     let dir = temp_dir("cmdr-transfer-bench-scan-");
     let sources = vec![build_tree(dir.path(), SCAN_DIRS, SCAN_FILES_PER_DIR, 0)];
 
-    let found = transfer_bench::scan_preview_local(sources.clone());
+    let found = engine.scan_preview_local(sources.clone());
     assert_eq!(
         found,
         Some(SCAN_FILE_COUNT),
@@ -328,7 +333,7 @@ fn bench_scan_preview(c: &mut Criterion) {
         // The worker owns its sources, so each iteration gets a copy, untimed.
         b.iter_batched(
             || sources.clone(),
-            transfer_bench::scan_preview_local,
+            |sources| engine.scan_preview_local(sources),
             BatchSize::SmallInput,
         );
     });

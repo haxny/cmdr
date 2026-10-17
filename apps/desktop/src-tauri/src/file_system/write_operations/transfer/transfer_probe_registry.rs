@@ -135,14 +135,6 @@ impl super::super::super::Operations {
     }
 }
 
-/// [`Operations::render_live_transfer_dump`](super::super::super::Operations::render_live_transfer_dump),
-/// asked of the engine every test shares.
-// shim: removed in M7b–M7e
-#[cfg(test)]
-pub(crate) fn render_live_dump(operation_id: &str, reason: &str) -> Option<String> {
-    super::super::super::installed().render_live_transfer_dump(operation_id, reason)
-}
-
 /// Deregisters its operation on drop.
 pub(in crate::file_system::write_operations::transfer) struct OperationProbeGuard {
     operation_id: String,

@@ -17,8 +17,9 @@
 use super::outage_proxy_test_support::OutageProxy;
 use super::smb_test_support::*;
 
+use crate::file_system::write_operations::testing::new_operation_state;
 use crate::file_system::write_operations::testing::{
-    CollectorEventSink, OutagePolicy, TestOperationGuard, WriteOperationState, copy_volumes_with_progress,
+    CollectorEventSink, OutagePolicy, TestOperations, WriteOperationState, copy_volumes_with_progress,
 };
 use crate::file_system::write_operations::{
     ConflictInfo, DryRunResult, OperationEventSink, ScanProgressEvent, VolumeCopyConfig, WriteCancelledEvent,
@@ -140,8 +141,10 @@ async fn smb_integration_a_copy_waits_out_a_dropped_network_and_finishes() {
         crate::volume_host::host(),
     ));
 
+    // An engine of the cell's own: the copy runs on a state registered there.
+    let engine = TestOperations::new();
     let state = Arc::new(
-        WriteOperationState::new(Duration::from_millis(50)).with_outage_policy(OutagePolicy {
+        new_operation_state(&engine, Duration::from_millis(50)).with_outage_policy(OutagePolicy {
             budget: Duration::from_secs(60),
             cadence: CADENCE,
             poll_every: Duration::from_millis(20),
@@ -150,7 +153,7 @@ async fn smb_integration_a_copy_waits_out_a_dropped_network_and_finishes() {
             attempt_timeout: Duration::from_secs(5),
         }),
     );
-    let op = TestOperationGuard::register_state("smb-outage", Arc::clone(&state));
+    let op = engine.register_state("smb-outage", Arc::clone(&state));
     let events = Arc::new(CollectorEventSink::new());
     let sink: Arc<dyn OperationEventSink> = Arc::new(PauseAfterFiles {
         inner: Arc::clone(&events),

@@ -574,24 +574,3 @@ impl ScanPreviews {
         self.write().remove(preview_id);
     }
 }
-
-// ============================================================================
-// The backend suites' reach into the shared engine's previews
-// ============================================================================
-
-/// [`ScanPreviews::seed_incoherent_scan_result_for_test`] on the engine every test
-/// shares, for the backend suites, whose operations read the same store through
-/// their scope.
-// shim: removed in M7b–M7e
-#[cfg(test)]
-pub(crate) fn seed_incoherent_scan_result_for_test(
-    preview_id: String,
-    sources: Vec<PathBuf>,
-    file_count: usize,
-    total_bytes: u64,
-) {
-    super::super::installed()
-        .stores()
-        .previews()
-        .seed_incoherent_scan_result_for_test(preview_id, sources, file_count, total_bytes);
-}

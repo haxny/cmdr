@@ -137,24 +137,10 @@ impl WriteOperationRegistry {
     }
 }
 
-/// The installed engine's registry, for the suites that share the test engine.
-// shim: removed in M7b–M7e
-#[cfg(test)]
-pub(in crate::file_system::write_operations) fn operation_states() -> &'static WriteOperationRegistry {
-    super::super::installed().registry()
-}
-
 impl super::super::Operations {
     /// The newest progress tick of every live operation that has emitted one. See
     /// [`WriteOperationRegistry::latest_progress`].
     pub(crate) fn latest_operation_progress(&self) -> Vec<WriteProgressEvent> {
         self.registry().latest_progress()
     }
-}
-
-/// Drops `operation_id`'s state, ending its liveness first. See
-/// [`WriteOperationRegistry::forget`].
-#[cfg(test)]
-pub(in crate::file_system::write_operations) fn forget_operation(operation_id: &str) {
-    operation_states().forget(operation_id);
 }

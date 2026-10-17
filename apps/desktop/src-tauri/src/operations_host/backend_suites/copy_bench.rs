@@ -8,8 +8,10 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use crate::file_system::write_operations::testing::{WriteOperationState, copy_volumes_with_progress};
+use crate::file_system::write_operations::testing::copy_volumes_with_progress;
+use crate::file_system::write_operations::testing::new_operation_state;
 use crate::file_system::write_operations::{ConflictResolution, VolumeCopyConfig};
+use crate::operations_host::app_engine;
 use cmdr_fs::volume::Volume;
 
 // ── Phase 4 baseline bench (real QNAP NAS) ────────────────────────
@@ -81,7 +83,7 @@ async fn phase4_bench_baseline_smb_to_local_100_tiny_files() {
         .collect();
 
     // ── Run the copy through the real pipeline ────────────────────
-    let state = Arc::new(WriteOperationState::new(Duration::from_millis(200)));
+    let state = Arc::new(new_operation_state(app_engine(), Duration::from_millis(200)));
     let events = Arc::new(CollectorEventSink::new());
     let config = VolumeCopyConfig {
         progress_interval_ms: 200,

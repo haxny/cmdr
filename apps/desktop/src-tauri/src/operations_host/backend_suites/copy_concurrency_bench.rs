@@ -78,9 +78,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::{Duration, Instant};
 
-use crate::file_system::write_operations::testing::{
-    CollectorEventSink, TestOperationGuard, copy_volumes_with_progress, render_live_transfer_dump,
-};
+use crate::file_system::write_operations::testing::{CollectorEventSink, TestOperations, copy_volumes_with_progress};
 use crate::file_system::write_operations::{ConflictResolution, OperationEventSink, VolumeCopyConfig};
 use crate::file_system::{set_smb_concurrency, smb_concurrency};
 use cmdr_fs::entry::FileEntry;
@@ -443,9 +441,12 @@ async fn timed_copy(corpus: &Corpus, dest: &Arc<dyn Volume>, dir: &str, window: 
             .expect("create the destination directory");
     }
 
-    let guard = TestOperationGuard::register("m43-concurrency-bench");
-    let operation_id = guard.id().to_owned();
-    let state = Arc::clone(guard.state());
+    // An engine of the run's own: the copy runs on a state registered there,
+    // and its probe table is the one a hung copy dumps.
+    let engine = TestOperations::new();
+    let op = engine.register("concurrency-bench");
+    let operation_id = op.id().to_owned();
+    let state = Arc::clone(op.state());
     let events = Arc::new(CollectorEventSink::new());
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Overwrite,
@@ -480,7 +481,8 @@ async fn timed_copy(corpus: &Corpus, dest: &Arc<dyn Volume>, dir: &str, window: 
     let outcome = match tokio::time::timeout(COPY_DEADLINE, &mut copy).await {
         Ok(joined) => joined.expect("the copy task must not panic"),
         Err(_) => {
-            let dump = render_live_transfer_dump(&operation_id, "bench deadline expired with the copy still running")
+            let dump = engine
+                .render_live_transfer_dump(&operation_id, "bench deadline expired with the copy still running")
                 .unwrap_or_else(|| "no live probe: the operation had already deregistered".to_owned());
             copy.abort();
             panic!("a bench copy at window={window} did not finish within {COPY_DEADLINE:?}:\n{dump}");

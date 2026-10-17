@@ -1,12 +1,12 @@
 //! Which server a remote path belongs to, and the one thing asking must never
 //! do: connect.
 
-use crate::file_system::write_operations::testing::installed;
 use std::time::Duration;
 
 use super::*;
 use crate::network::sftp_known_servers::KnownSftpServer;
 use crate::network::webdav_known_servers::KnownWebdavServer;
+use crate::operations_host::app_engine;
 use cmdr_fs::volume::BackendKind;
 
 /// A host nobody else's cell will use, so this suite can share the
@@ -198,7 +198,7 @@ async fn a_copy_onto_a_saved_server_nobody_connected_is_refused_as_not_connected
         )),
     );
 
-    let refused = installed()
+    let refused = app_engine()
         .start_volume_copy(
             std::sync::Arc::new(CollectorEventSink::new()),
             source_id.clone(),

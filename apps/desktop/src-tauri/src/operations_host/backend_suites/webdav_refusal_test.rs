@@ -29,10 +29,12 @@ use super::network_semantics_test_support::{local_volume, names_in, seed, try_re
 use super::network_transfer_test_support::{assert_no_staging_litter, clean_deep, self_describing_bytes};
 use super::webdav_refusing_proxy_test_support::{Answer, PathRule, Refusal, RefusingProxy, through_a_refusing_proxy};
 use super::webdav_test_support::{WebdavFixture, connect};
+use crate::file_system::write_operations::testing::new_operation_state;
 use crate::file_system::write_operations::testing::{
-    CollectorEventSink, WriteOperationState, copy_volumes_with_progress, move_within_same_volume_with_progress,
+    CollectorEventSink, copy_volumes_with_progress, move_within_same_volume_with_progress,
 };
 use crate::file_system::write_operations::{ConflictResolution, VolumeCopyConfig, WriteOperationError};
+use crate::operations_host::app_engine;
 
 /// The user's folder on the server: a file nothing may touch.
 const USERS_FILE: (&str, &[u8]) = ("keep.txt", b"DEST-keep");
@@ -94,7 +96,7 @@ async fn copy_album_onto_the_server(
     let (_local_dir, local) = local_volume(label);
     seed(local.as_ref(), Path::new("album"), files).await;
 
-    let state = Arc::new(WriteOperationState::new(Duration::from_millis(200)));
+    let state = Arc::new(new_operation_state(app_engine(), Duration::from_millis(200)));
     let result = copy_volumes_with_progress(
         Arc::new(CollectorEventSink::new()),
         label,
@@ -211,7 +213,7 @@ async fn webdav_integration_a_refused_replace_keeps_the_users_file() {
     )
     .await;
 
-    let state = Arc::new(WriteOperationState::new(Duration::from_millis(200)));
+    let state = Arc::new(new_operation_state(app_engine(), Duration::from_millis(200)));
     let result = copy_volumes_with_progress(
         Arc::new(CollectorEventSink::new()),
         "refused-replace",
@@ -270,7 +272,7 @@ async fn webdav_integration_a_refused_upload_over_the_users_file_keeps_it() {
     )
     .await;
 
-    let state = Arc::new(WriteOperationState::new(Duration::from_millis(200)));
+    let state = Arc::new(new_operation_state(app_engine(), Duration::from_millis(200)));
     let result = copy_volumes_with_progress(
         Arc::new(CollectorEventSink::new()),
         "refused-upload",
@@ -325,7 +327,7 @@ async fn webdav_integration_a_refused_server_side_copy_falls_back_to_streaming_a
     seed(remote.as_ref(), &dir.join("from"), &[("photo.jpg", b"SRC-photo")]).await;
     seed(remote.as_ref(), &dir.join("to"), &[USERS_FILE]).await;
 
-    let state = Arc::new(WriteOperationState::new(Duration::from_millis(200)));
+    let state = Arc::new(new_operation_state(app_engine(), Duration::from_millis(200)));
     let result = copy_volumes_with_progress(
         Arc::new(CollectorEventSink::new()),
         "server-copy-refused",
@@ -382,7 +384,7 @@ async fn webdav_integration_a_refused_server_side_move_leaves_both_ends_as_they_
     seed(remote.as_ref(), &dir.join("from"), &[("photo.jpg", b"SRC-photo")]).await;
     seed(remote.as_ref(), &dir.join("to"), &[USERS_FILE]).await;
 
-    let state = Arc::new(WriteOperationState::new(Duration::from_millis(200)));
+    let state = Arc::new(new_operation_state(app_engine(), Duration::from_millis(200)));
     let result = move_within_same_volume_with_progress(
         Arc::new(CollectorEventSink::new()),
         "server-move-refused",

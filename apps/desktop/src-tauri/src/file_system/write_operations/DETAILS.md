@@ -116,10 +116,10 @@ The full top-level inventory is here:
   `start_volume_{copy,move,compress}`, plus `start_rename_by_move`; `routing/retry.rs` is the Retry recipe a copy or move
   leaves with the manager). `source_binding.rs` is the optional set of sources an op may touch. `queued_sources.rs` is the check an op that waited in the queue runs on its sources when admitted, parking on `sources_gone_slot.rs` (a leaf the state owns, like `outage_slot.rs`). Layering, so the three stay out of a cycle: `source_binding` → `queued_sources` → `state` → `sources_gone_slot`, and the empty batch's terminal shape is `WriteCompleteEvent::all_skipped` in `types`. Fixtures:
   `testing/` (an engine a test owns, and what test cells outside the engine reach beyond its public list) and
-  `test_support.rs` (the shared engine's guards and fixtures). Every backend's
+  `test_support.rs` (the placeholder conflict, the park-window wait, and the queued-operation fixture). Every backend's
   cells through this pipeline live app-side, in `operations_host/backend_suites/`, because they need the app around the
   engine (`../../operations_host/DETAILS.md` § "Backend suites"). `transfer_bench.rs` (feature `transfer-bench` only) is the Criterion bench's door in:
-  thin wrappers over five entry points, each with a no-op sink and an unregistered state
+  thin wrappers over five entry points, each with a no-op sink and an unregistered state on an engine the bench owns
   (`apps/desktop/src-tauri/benches/transfer_benchmarks.rs`; `docs/tooling/testing.md` § `criterion`).
 
 What the mechanisms DO is in the sections below: the registry, lanes, and `run_instant` in § "Operation manager";
@@ -801,12 +801,12 @@ names the app's accessor.
   `IoError`, an instant op's `ArchiveEditNotReady`, `UnknownOperation`) or answers what an engine with nothing running
   would (an empty list, no-op cancels, no busy volume, a scan preview that tells its dialog it couldn't start); nothing
   can reach the engine before `setup()` anyway, and ❌ nothing panics for want of one. The engine itself knows nothing
-  about installs. The test and bench binaries share one engine through `installed()` (it exists only there): a test
-  binary's is built on first read (`test_support::shared_engine`, the app's own answers minus the frontend channel:
-  the real indexing gauge, analytics client, and error reporter, and `cmdr-fs`'s shared fallback runtime), and
-  `operations()` hands out the same one there. A test on an engine of its own builds `testing::TestOperations`
-  instead (§ "Test isolation: an engine of the test's own"). No sink factory, so
-  `operation_sink()` stays `None` and an archive-target instant op refuses plainly. The bench's is detached.
+  about installs. In a test binary, `operations()` builds
+  `operations_host::test_engine()` on first read (the app's own answers minus the frontend channel: the real indexing
+  gauge, analytics client, and error reporter, and `cmdr-fs`'s shared fallback runtime) and hands that one out to every
+  app-side cell; an engine test builds `testing::TestOperations` instead (§ "Test isolation: an engine of the test's
+  own"). No sink factory, so `operation_sink()` stays `None` and an archive-target instant op refuses plainly. The
+  bench builds detached engines of its own (`transfer_bench::BenchEngine`, `BenchJournal`).
 - **A seam trait and its value types live in `host/` or `types/`**, never in a module that calls the seam, or the two
   weld into a cycle. That's why `OperationsChanged` and `OperationSnapshot` are `types` vocabulary, and why
   `OperationEventSink` and `ScanPreviewEventSink` are defined in `host/` (`event_sinks` re-exports them): with the
@@ -879,7 +879,7 @@ Admission is otherwise invisible from outside: a pass that walks the queue and a
 
 `Notify` would be wrong here and `watch` is second-best: the settle path runs the pass BEFORE a test could await, so `notified()` created afterwards is a guaranteed lost wakeup. Prefer a monotonic counter for any future "background work reached a point" signal.
 
-`force_admission_pass()` (test-only) runs a pass inline and returns when it's done, for the paths production never runs one on: `set_paused` admits nobody, so `paused_running_op_does_not_admit_a_queued_same_lane_op` runs its own pass and asserts B is STILL Queued. Admission flips a record to Running before it spawns, so a Queued status after a completed pass also proves the deferred start never ran. The waits themselves use `crate::test_support::wait_until_async` (`docs/testing.md`).
+A test in `manager::tests` calls the private `run_admission_pass()` inline (it returns when the pass is done) for the paths production never runs one on: `set_paused` admits nobody, so `paused_running_op_does_not_admit_a_queued_same_lane_op` runs its own pass and asserts B is STILL Queued. Admission flips a record to Running before it spawns, so a Queued status after a completed pass also proves the deferred start never ran. The waits themselves use `crate::test_support::wait_until_async` (`docs/testing.md`).
 
 ### The admission pass spawns admitted ops on the APP runtime, not the caller's
 
@@ -1011,7 +1011,7 @@ Rename, make-folder, and make-file (`WriteOperationType::Rename` / `CreateFolder
 
 - **No lane, no admission queue — deliberate.** `run_instant` registers a `Running` record and marks its volumes busy, but reserves NO lane and runs NO admission pass. Lanes exist to stop two big *transfers* thrashing one device; a metadata syscall must never queue behind a multi-minute copy. An inline rename that hangs until its IPC timeout is worse than useless, and the MTP/SMB connection layer already serializes physical device access. It even ignores any lanes in its own descriptor (pinned by `manager::tests::run_instant_does_not_reserve_a_lane`). **Don't "clean this up" into `spawn_managed`** — that silently reintroduces lane-queuing for metadata syscalls, the regression this design forbids.
 - **Runs inline and returns the op's result.** Unlike the fire-and-forget spawn path, `run_instant` awaits `op` inline and returns its `T` to the caller. The inline-rename editor and the new-file/new-folder dialogs need the result synchronously (new path for cursor placement / editor-open; conflict/timeout/success for the rename flow). The command layer wraps `run_instant` in its own IPC timeout; nothing inside spawns. Instant ops emit no `write-progress` / `write-complete` / `write-error` (the command return is the result channel) and no completion analytics (explicit no-op arms in `analytics::emit_completion_analytics`).
-- **RAII cleanup on drop/panic is mandatory, not happy-path only.** The command wraps `run_instant` in a `tokio::time::timeout`, so a slow op that exceeds it makes the timeout **drop the `run_instant` future mid-`op.await`**; the async volume path can also panic. Either exit MUST still free the record AND unregister the busy status — else the eject guard sticks ON forever (the volume can never be ejected again) and a phantom `Running` row lingers. An `InstantTaskGuard` held across the `op.await` guarantees this: its `Drop` calls `free_and_remove` (record removal + `unregister_operation_status` → `recompute_and_emit_busy_volumes`) and re-emits `operations-changed`. The happy path calls `free_and_remove` + `emit_changed` explicitly, then `guard.disarm()`s so the Drop is a no-op. No admission pass on completion (instant ops reserve no lanes, so nothing waits on them). Pinned by `manager::tests::run_instant_releases_busy_and_record_when_{dropped_midflight,op_panics}`.
+- **RAII cleanup on drop/panic is mandatory, not happy-path only.** The command wraps `run_instant` in a `tokio::time::timeout`, so a slow op that exceeds it makes the timeout **drop the `run_instant` future mid-`op.await`**; the async volume path can also panic. Either exit MUST still free the record AND unregister the busy status — else the eject guard sticks ON forever (the volume can never be ejected again) and a phantom `Running` row lingers. An `InstantTaskGuard` held across the `op.await` guarantees this: its `Drop` calls `free_and_remove` (record removal + `StatusCache::unregister` → `recompute_and_emit_busy_volumes`) and re-emits `operations-changed`. The happy path calls `free_and_remove` + `emit_changed` explicitly, then `guard.disarm()`s so the Drop is a no-op. No admission pass on completion (instant ops reserve no lanes, so nothing waits on them). Pinned by `manager::tests::run_instant_releases_busy_and_record_when_{dropped_midflight,op_panics}`.
 - **No `WriteOperationState`.** Instant ops have no intent/pause/conflict oneshot, so `run_instant` inserts none. Consequence: `cancel_operation` on an instant op is a safe no-op — `cancel_if_queued` is false for a Running op, then `cancel_write_operation` finds no state. Acceptable: instant ops finish before a human can cancel.
 - **Queue surfacing.** They appear as a `Running` snapshot row that goes away almost immediately (the store prunes terminal/removed rows). A ~50 ms local rename may never render before it's pruned; a slow MTP rename shows a label + spinner with no progress bar (`fraction` is null). Local `root` ops cause NO busy-set churn (`root` is excluded), so inline-renaming local files won't flicker the eject menu; only volume ops mark busy.
 
@@ -1362,7 +1362,7 @@ transfers trump indexing). ONE lifecycle choke point on purpose: a new op kind t
 guards eject automatically also outranks indexing, and the panic-safe unregister paths below cover both signals. Don't
 add a second feed site (see `../../priority/CLAUDE.md`).
 
-- The manager registers an op's volume IDs busy (`register_operation_status(op_id, type, volume_ids)`) **only when it admits the op (Running)** — a Queued op isn't touching the device, so it marks nothing busy. Source **and** destination go in (a download from a phone is as corruptible as an upload to it). The manager's `on_settled` / `ManagedTaskGuard` Drop unregisters on every exit (including panic), so a finished or panicking op can't leave a volume stuck busy.
+- The manager registers an op's volume IDs busy (`StatusCache::register(op_id, type, volume_ids)`) **only when it admits the op (Running)** — a Queued op isn't touching the device, so it marks nothing busy. Source **and** destination go in (a download from a phone is as corruptible as an upload to it). The manager's `on_settled` / `ManagedTaskGuard` Drop unregisters on every exit (including panic), so a finished or panicking op can't leave a volume stuck busy.
 - The busy set is the union of every Running op's `volume_ids` **∪ external registrations**, minus `root` (never ejectable). `recompute_and_emit_busy_volumes` fires `volumes-busy-changed` only when membership changes — progress ticks don't churn it (the cache's last-reported set; pinned through a `cfg(test)` emit counter by `status_cache_tests::volumes_busy_changed_fires_once_per_distinct_change`, on an engine of its own). Every transfer-gauge start has exactly one finish on success, cancel, error, a panicking handler, and the panic net (`status_cache_tests::every_transfer_start_has_exactly_one_finish_however_the_op_ends`). Membership-by-union means two concurrent transfers to one device keep it busy until both finish, with no manual refcount.
 - **Where `volume_ids` come from**: the `OperationDescriptor` each spawn site hands the manager. The cross-volume entry points (`copy_between_volumes`, `move_between_volumes`, `move_within_same_volume`) and the volume-aware delete carry the IDs; the both-local branch of `copy_between_volumes` (a local→USB / DMG copy) passes both IDs through `copy_files_start` / `move_files_start` so the ejectable destination is still marked. The plain `move_files` / `trash` commands pass an empty list — the unified transfer dialog only routes through them for same-`root` ops, where no ejectable volume is involved.
 - **Consumers**: `busy_volume_ids()` backs the `get_busy_volume_ids` bootstrap command, the `eject_volume` server-side guard (refuses a busy volume — the real safety net, since the picker's disable is only UX), and the native breadcrumb-menu builder (renders the Eject item disabled with a ` (busy)` suffix). The frontend `volume-busy-store.svelte.ts` subscribes to `volumes-busy-changed` and exposes `isVolumeBusy(id)` to disable the picker's eject controls. The engine reports each change through `EngineEvents::volumes_busy_changed`; the app emits it.
@@ -1483,7 +1483,8 @@ and line are that test's alone, under plain `cargo test` as under nextest:
 - **Reading back.** `engine.events()` (`RecordingEngineEvents`: the busy set, the transfer pair, `operations-changed`,
   error reports), `engine.volumes()` (`FakeVolumes`, which the test fills before an op names a volume id;
   `engine.register_local_root()` puts the local `root` volume there), and `engine.own_writes()` (`RecordingOwnWrites`).
-- **States.** `engine.new_state()` builds a state on THIS engine (`WriteOperationState::new` is the shared engine's);
+- **States.** `engine.new_state()` builds a state on THIS engine (`engine.new_operation_state(interval)` for another
+  interval; `testing::new_operation_state(engine, interval)` from outside the engine);
   `engine.register(id)` / `engine.register_state(id, state)` put one in the registry as a running op's is, returning a
   `RegisteredOperation` (`id()`, `state()`). No guard: the entry dies with the engine. Ids, lanes, and volume names only
   need to be distinct within the test.
@@ -1504,23 +1505,21 @@ and line are that test's alone, under plain `cargo test` as under nextest:
   `cargo test` (`retained_failure_stays_hidden_until_the_record_settles` once passed only because nextest forks per
   test). A synthetic op's deferred start settles on the engine it's handed (`manager::tests::gated_deferred`).
 
-**The shared engine, until every suite owns its engine.** The suites not yet converted reach `installed()` (built on
-first read, `test_support::shared_engine`) and keep its registry honest with `test_support::TestOperationGuard`: a
-process-unique id per entry (`register(tag)` / `register_state(tag, state)`, or `register_as(op_id, state)` for an id
-the suite threads through), removed from `Drop` on unwind too (pinned by
-`state::tests::guard_unregisters_its_state_even_when_the_test_body_panics`). A cell that reads its journal back builds a
-log of its own and an engine journaling into it, app-side through `operations_host::test_engine_journaling_into`. ❌ Never drive a walk-everything mutator (`cancel_all_write_operations`) on the shared
-engine: it stops whatever the tests beside it have in flight, and the failure lands in the victim, reading exactly like
-environment flake (mis-blamed on load starvation once and on a dependency upgrade once). The fix is always a scope the
-test owns, never a mutex around the suites, an `#[ignore]`, or a looser assertion.
+**App-side cells share the app's one engine** (`operations_host::app_engine()`, the engine `operations()` hands out
+in a test binary): an IPC-level entry point, the MCP `queue` tool, the backend suites, and `transfer/real_image.rs`
+reach it the way the app does, so each such cell keeps its operation ids, lanes, and volume names unique
+(`QueuedOperationFixture::park_on(app_engine(), tag)` mints them). A cell that only needs a registered state or a
+probe table builds an engine of its own instead, and a cell that reads its journal back builds a log of its own and an
+engine journaling into it (`operations_host::test_engine_journaling_into`). ❌ Never drive a walk-everything mutator
+(`cancel_all_write_operations`) on the app's engine: it stops whatever the cells beside it have in flight, and the
+failure lands in the victim, reading exactly like environment flake (mis-blamed on load starvation once and on a
+dependency upgrade once). The fix is always a scope the test owns, never a mutex around the suites, an `#[ignore]`, or
+a looser assertion.
 
-Same guard family as `cmdr_listing::testing::TestListingGuard` (over the listing cache) and
-`indexing::tests::stress_test_helpers::TestInstanceGuard` (over `INDEX_REGISTRY`); `watcher_test.rs`'s
-`handle_directory_change` tests insert into the listing cache by hand with a tail `remove`, harmless only because their
-uuid keys are unique.
-
-**New subsystem state hangs off a struct, not a `static`.** The guards are the retrofit cost of a process-global; a
-handle threaded through its callers needs none of it.
+**New subsystem state hangs off a struct, not a `static`.** A handle threaded through its callers gives every test its
+own with no guard; the guards elsewhere (`cmdr_listing::testing::TestListingGuard` over the listing cache,
+`indexing::tests::stress_test_helpers::TestInstanceGuard` over `INDEX_REGISTRY`) are the retrofit cost of a
+process-global.
 
 See also: `docs/testing.md` for the project-wide testing playbook.
 

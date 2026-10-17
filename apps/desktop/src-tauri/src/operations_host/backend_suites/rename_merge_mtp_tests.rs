@@ -17,11 +17,11 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
 
-use crate::file_system::write_operations::testing::{
-    CollectorEventSink, WriteOperationState, move_within_same_volume_with_progress,
-};
+use crate::file_system::write_operations::testing::new_operation_state;
+use crate::file_system::write_operations::testing::{CollectorEventSink, move_within_same_volume_with_progress};
 use crate::file_system::write_operations::{ConflictResolution, VolumeCopyConfig};
 use crate::mtp::test_support::{self, ConnectedDevice, device_lock};
+use crate::operations_host::app_engine;
 use cmdr_fs::volume::Volume;
 use cmdr_mtp::virtual_device::setup_virtual_mtp_device;
 
@@ -95,7 +95,7 @@ async fn same_volume_merge_move_keeps_a_skipped_child_on_mtp() {
     prime_path_handles(&volume, &["/", "/src", "/src/album", "/dst", "/dst/album"]).await;
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = Arc::new(WriteOperationState::new(Duration::from_millis(0)));
+    let state = Arc::new(new_operation_state(app_engine(), Duration::from_millis(0)));
     // Skip resolves every clash without a dialog: `resolve_child` returns
     // `Ok(None)` straight from the policy.
     let config = VolumeCopyConfig {

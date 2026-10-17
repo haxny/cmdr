@@ -6,8 +6,8 @@
 //! a progress bar, so indexing on the same volume stands aside while one runs.
 //!
 //! Fed from the ONE write-operation lifecycle choke point
-//! (`write_operations::state::register_operation_status` /
-//! `unregister_operation_status`) — the same two functions that maintain the
+//! (the engine's `StatusCache::register` / `unregister`, heard here through
+//! `EngineEvents::transfer_started` / `transfer_finished`) — the same two calls that maintain the
 //! eject-guard busy set, so every op kind that guards eject (copy, move, delete,
 //! trash, drag-out promises) also raises this gauge, and the unregister fires from
 //! the manager's panic-safe guard. A gauge (count), not a flag: overlapping

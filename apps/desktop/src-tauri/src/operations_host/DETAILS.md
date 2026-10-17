@@ -140,20 +140,22 @@ the panes rank names identically. Pinned by `name_order::tests::the_engine_sorts
 
 ## A test binary
 
-Nothing installs in a test binary, and some engine pins read the app's real answers: the transfer-gauge cells in
-`status_cache_tests` assert on `priority::transfers`. So the first read of the engine's slot builds `test_engine()`, and
-`operations()` hands out that same engine: `TauriEngineEvents` with no app handle (events go nowhere; the gauge, the
-analytics client, and the error reporter work as in the app), the real `AppOperationVolumes` (cells register their
-volumes in the real registry) over `volume_host::host()`, whose runtime is `cmdr-fs`'s shared fallback, the test
-binary's shared operation log, the same optional seams as the app (own writes reach the
-downloads hook and its recorder), and no sink factory.
+Nothing installs in a test binary, and app-side cells reach the engine the way the app does. So the first read of the
+engine's slot builds `test_engine()`, and `operations()` (and `app_engine()`, its test-only unwrap) hands out that same
+engine to every app-side cell: `TauriEngineEvents` with no app handle (events go nowhere; the gauge, the analytics
+client, and the error reporter work as in the app), the real `AppOperationVolumes` (cells register their volumes in the
+real registry) over `volume_host::host()`, whose runtime is `cmdr-fs`'s shared fallback, the test binary's shared
+operation log, the same optional seams as the app (own writes reach the downloads hook and its recorder), and no sink
+factory. The cells sharing it keep their ids, lanes, and volume names unique. A cell that needs
+the app's answers on an engine of its own builds `test_engine()` itself, or `test_engine_journaling_into(&log)` to read
+its journal back.
 
 ## Backend suites (`backend_suites/`)
 
 Every backend's cells through the app's real engine, and the backend-blind scenarios they share. They sit here, beside
 the host, because each needs the app around the engine: a Docker fixture, the real volume registry over
 `volume_host::host()`, virtual MTP, or the ADB fake with the downloads watcher. They drive the engine through its
-public list plus `write_operations::testing` (the shared engine, the volume drivers they run with a state and sink of
+public list plus `write_operations::testing` (the volume drivers they run with a state and sink of
 their own, the fault injector, the safety oracle), ❌ never an engine module by path, so the engine can leave the app
 crate without them.
 

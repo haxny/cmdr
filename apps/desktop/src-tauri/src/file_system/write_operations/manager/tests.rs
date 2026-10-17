@@ -492,7 +492,7 @@ async fn paused_running_op_does_not_admit_a_queued_same_lane_op() {
     // to Running BEFORE it spawns, so a still-Queued B after a completed pass is
     // proof its deferred never ran.
     assert_eq!(engine.manager().set_paused(&op_a, true), PauseOutcome::Applied);
-    engine.manager().force_admission_pass();
+    engine.manager().run_admission_pass();
     assert_eq!(
         engine.manager().lifecycle_status(&op_b),
         Some(LifecycleStatus::Queued),

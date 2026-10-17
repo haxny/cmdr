@@ -287,25 +287,6 @@ impl EngineStores {
     }
 }
 
-/// The engine the suites and the bench share, built on first read: in a test
-/// binary the app's answers with no frontend (`test_support::shared_engine`,
-/// which `operations_host::operations()` hands out there too), in the bench a
-/// detached one. ❌ Production code has no such accessor: the host holds its
-/// engine and passes it in.
-// shim: removed in M7b–M7e
-#[cfg(any(test, feature = "transfer-bench"))]
-pub(crate) fn installed() -> &'static Operations {
-    static SHARED: std::sync::OnceLock<Operations> = std::sync::OnceLock::new();
-    #[cfg(test)]
-    {
-        SHARED.get_or_init(test_support::shared_engine)
-    }
-    #[cfg(not(test))]
-    {
-        SHARED.get_or_init(Operations::detached)
-    }
-}
-
 #[cfg(test)]
 mod approved_op_parity_tests;
 #[cfg(test)]

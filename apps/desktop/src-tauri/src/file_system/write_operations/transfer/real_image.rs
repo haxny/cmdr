@@ -9,6 +9,10 @@
 //! The unit tests answer the mount table from a hook (`move_vanished_tests.rs`,
 //! `transfer_sides_tests.rs`); these prove the same gates against a real detach,
 //! where the kernel picks the errno and the mount table really loses an entry.
+//!
+//! App-side cells (they move to the app with the disk-images lane): each runs on
+//! the app's one engine (`operations_host::app_engine()`) under an operation id
+//! no other cell uses.
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -23,13 +27,12 @@ use super::move_op::move_files_with_progress_inner;
 use crate::file_system::volume::manager::test_support::TestVolumeRegistration;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::in_flight_temps::Ledger;
-use crate::file_system::write_operations::state::{
-    WriteOperationState, register_operation_status, unregister_operation_status,
-};
+use crate::file_system::write_operations::state::WriteOperationState;
 use crate::file_system::write_operations::transfer_sides::{TransferSide, TransferSides};
 use crate::file_system::write_operations::types::{
     ConflictResolution, TransferRole, WriteOperationConfig, WriteOperationError, WriteOperationType,
 };
+use crate::operations_host::app_engine;
 use crate::test_support::TestDir;
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::volume::Volume;
@@ -60,7 +63,8 @@ fn state_onto(
     mac_root: &std::path::Path,
 ) -> Arc<WriteOperationState> {
     Arc::new(
-        WriteOperationState::new(Duration::from_millis(50))
+        app_engine()
+            .new_operation_state(Duration::from_millis(50))
             .with_sides(Some(TransferSides::new(
                 TransferSide::new("root".to_string(), "Macintosh HD".to_string(), mac_root.to_path_buf()),
                 TransferSide::new(
@@ -109,7 +113,9 @@ fn copy_until_the_drive_is_pulled(
     events: &Arc<CollectorEventSink>,
 ) -> Result<(), WriteOperationError> {
     let state = state_onto(ledger, &volume.mount_point, &volume.name, std::path::Path::new("/"));
-    register_operation_status(op_id, WriteOperationType::Copy, Vec::new());
+    app_engine()
+        .status()
+        .register(op_id, WriteOperationType::Copy, Vec::new());
     let sources = vec![source.to_path_buf()];
     let destination = volume.mount_point.clone();
     detach_mid_transfer(image, source, Arc::clone(events), state, move |events, state| {
@@ -161,7 +167,7 @@ async fn a_copy_onto_a_drive_that_is_pulled_mid_file_names_the_drive_and_keeps_t
         "nothing on the Mac side may be touched by a copy"
     );
     drop(mac_dir);
-    unregister_operation_status(op_id);
+    app_engine().status().unregister(op_id);
 }
 
 /// Every `.cmdr-` scratch name sitting in `dir`, so a cell can say what the
@@ -261,7 +267,7 @@ async fn a_partial_left_on_a_pulled_drive_is_settled_when_that_drive_comes_back(
     );
     drop(ledger);
     drop(mac_dir);
-    unregister_operation_status(op_id);
+    app_engine().status().unregister(op_id);
 }
 
 /// The window the whole milestone exists for, against a real detach: the user's
@@ -285,7 +291,9 @@ async fn an_original_set_aside_when_the_drive_was_pulled_is_still_there_when_it_
     let events = Arc::new(CollectorEventSink::new());
     let state = state_onto(&ledger, &volume.mount_point, &volume.name, std::path::Path::new("/"));
     let op_id = "op-real-image-aside";
-    register_operation_status(op_id, WriteOperationType::Copy, Vec::new());
+    app_engine()
+        .status()
+        .register(op_id, WriteOperationType::Copy, Vec::new());
 
     let park = state.scope().aside_park().park_next_overwrite();
     let sources = vec![source.clone()];
@@ -363,7 +371,7 @@ async fn an_original_set_aside_when_the_drive_was_pulled_is_still_there_when_it_
     );
     drop(ledger);
     drop(mac_dir);
-    unregister_operation_status(op_id);
+    app_engine().status().unregister(op_id);
 }
 
 /// The same pull during a move. The originals are the only other copy of the
@@ -384,7 +392,9 @@ async fn a_move_onto_a_drive_that_is_pulled_mid_file_keeps_every_mac_source() {
         std::path::Path::new("/"),
     );
     let op_id = "op-real-image-move";
-    register_operation_status(op_id, WriteOperationType::Move, Vec::new());
+    app_engine()
+        .status()
+        .register(op_id, WriteOperationType::Move, Vec::new());
 
     let sources = vec![source.clone()];
     let destination = volume.mount_point.clone();
@@ -416,7 +426,7 @@ async fn a_move_onto_a_drive_that_is_pulled_mid_file_keeps_every_mac_source() {
         "and keeps all of its bytes"
     );
     drop(mac_dir);
-    unregister_operation_status(op_id);
+    app_engine().status().unregister(op_id);
 }
 
 /// A copy onto another volume takes the chunked arm, which sets birth and mtime in
@@ -439,7 +449,7 @@ async fn a_copy_onto_another_volume_keeps_birth_time_and_locked() {
     let locked = fixture.locked_file("locked.txt");
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = Arc::new(WriteOperationState::new(Duration::from_millis(50)));
+    let state = Arc::new(app_engine().new_operation_state(Duration::from_millis(50)));
     let result = copy_files_with_progress_inner(
         &*events,
         "op-real-image-birth",

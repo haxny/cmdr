@@ -951,8 +951,6 @@ fn spawn_watchdog(runtime: &tokio::runtime::Handle, probes: Weak<Probes>, operat
 #[path = "transfer_probe_registry.rs"]
 mod registry;
 pub(in crate::file_system::write_operations) use registry::Probes;
-#[cfg(test)]
-pub(crate) use registry::render_live_dump;
 pub(super) use registry::{OperationProbeGuard, register_operation};
 
 #[cfg(test)]

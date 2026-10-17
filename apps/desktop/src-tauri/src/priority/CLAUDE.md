@@ -19,9 +19,8 @@ take. This module owns the SIGNALS and pure decisions; consumers compose them at
 
 ## Must-knows
 
-- **Feed the transfer gauge ONLY from `write_operations::state::register_operation_status` /
-  `unregister_operation_status`** (the one lifecycle choke point, shared with the eject busy set). A second feed site
-  desyncs the count.
+- **Feed the transfer gauge ONLY through `EngineEvents::transfer_started` / `transfer_finished`** (raised by
+  `StatusCache::register` / `unregister`, the choke point the eject busy set shares). A second feed desyncs the count.
 - **A foreground timestamp of `None` means "never browsed" = idle.** ❌ Don't collapse it to `0`, a real clock point:
   every background user would stall for the app's first threshold. An ENTRY says nothing; subscribing creates one.
 - **The foreground signal is a LEASE plus a timestamp, composed only by

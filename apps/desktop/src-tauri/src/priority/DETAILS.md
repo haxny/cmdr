@@ -63,8 +63,8 @@ through it, so they cannot drift on what "the user is waiting on this volume" me
 `idle_for_volume` alone would silently lose the whole point: the operation stops counting while the user is still
 waiting on it.
 - **`transfers`** — a per-volume COUNT of in-flight user-initiated write operations. Fed from the one write-op
-  lifecycle choke point (`write_operations::state::register_operation_status` / `unregister_operation_status`, the
-  same pair that maintains the eject busy set, so the two can't drift and the finish rides the manager's panic-safe
+  lifecycle choke point (the engine's `StatusCache::register` / `unregister`, heard through
+  `EngineEvents::transfer_started` / `transfer_finished`; the same pair that maintains the eject busy set, so the two can't drift and the finish rides the manager's panic-safe
   guard). A count, not a flag: overlapping ops keep the volume busy until the LAST ends. Deletes, trash, and drag-out
   promises count too — they all contend on the same device connection a copy does.
 

@@ -15,7 +15,9 @@ use std::path::Path;
 use cmdr_fs::volume::Volume;
 use cmdr_mtp::MtpVolume;
 
+use crate::file_system::write_operations::testing::new_operation_state;
 use crate::mtp::test_support::{ConnectedDevice, connect_fixture, device_lock, teardown, volume_for};
+use crate::operations_host::app_engine;
 
 /// Builds a small zip: one STORED root entry, one DEFLATED entry in a subdir.
 fn archive_test_zip() -> Vec<u8> {
@@ -123,7 +125,7 @@ async fn virtual_mtp_archive_browses_and_extracts_via_read_range() {
 /// the delete-then-rename swap, re-verified by re-reading the zip off the device.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn virtual_mtp_remote_zip_edit_deletes_an_entry_through_the_device() {
-    use crate::file_system::write_operations::testing::{EditError, WriteOperationState, pull_apply_upload_swap};
+    use crate::file_system::write_operations::testing::{EditError, pull_apply_upload_swap};
     use cmdr_archive::mutator::{self, Changeset, MutationHooks};
     use std::sync::Arc;
     use std::time::Duration;
@@ -141,7 +143,7 @@ async fn virtual_mtp_remote_zip_edit_deletes_an_entry_through_the_device() {
     );
 
     let archive_path = std::path::PathBuf::from("/bundle.zip");
-    let state = Arc::new(WriteOperationState::new(Duration::from_millis(50)));
+    let state = Arc::new(new_operation_state(app_engine(), Duration::from_millis(50)));
     let result = pull_apply_upload_swap(
         Arc::clone(&vol) as Arc<dyn Volume>,
         archive_path.clone(),

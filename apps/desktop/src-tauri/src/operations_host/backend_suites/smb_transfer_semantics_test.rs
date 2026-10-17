@@ -30,6 +30,8 @@ use super::network_semantics_test_support::{
     overwrite_smaller_replaces_only_the_smaller_destination,
 };
 use super::smb_test_support::*;
+use crate::file_system::write_operations::testing::new_operation_state;
+use crate::operations_host::app_engine;
 use cmdr_smb::volume::*;
 use std::sync::atomic::AtomicUsize;
 
@@ -153,9 +155,7 @@ async fn smb_integration_many_files_at_full_concurrency_round_trip_intact() {
 #[ignore = "Requires Docker SMB containers (./apps/desktop/test/smb-servers/start.sh)"]
 async fn smb_integration_move_into_a_subfolder_addressed_the_way_the_dialog_addresses_it() {
     use crate::file_system::write_operations::VolumeCopyConfig;
-    use crate::file_system::write_operations::testing::{
-        CollectorEventSink, WriteOperationState, move_volumes_with_progress,
-    };
+    use crate::file_system::write_operations::testing::{CollectorEventSink, move_volumes_with_progress};
     use std::time::Duration;
 
     let smb_vol = Arc::new(make_docker_volume().await);
@@ -187,7 +187,7 @@ async fn smb_integration_move_into_a_subfolder_addressed_the_way_the_dialog_addr
         "anchoring puts the mount root in front of the dialog's volume-relative path"
     );
 
-    let state = Arc::new(WriteOperationState::new(Duration::from_millis(200)));
+    let state = Arc::new(new_operation_state(app_engine(), Duration::from_millis(200)));
     let events = Arc::new(CollectorEventSink::new());
     let result = move_volumes_with_progress(
         events.clone(),
@@ -242,9 +242,7 @@ async fn smb_integration_move_into_a_subfolder_addressed_the_way_the_dialog_addr
 #[ignore = "Requires Docker SMB containers (./apps/desktop/test/smb-servers/start.sh)"]
 async fn smb_integration_a_running_copy_survives_the_volume_being_replaced() {
     use crate::file_system::write_operations::VolumeCopyConfig;
-    use crate::file_system::write_operations::testing::{
-        CollectorEventSink, WriteOperationState, copy_volumes_with_progress,
-    };
+    use crate::file_system::write_operations::testing::{CollectorEventSink, copy_volumes_with_progress};
     use crate::test_support::wait_until_async;
     use std::time::Duration;
 
@@ -281,7 +279,7 @@ async fn smb_integration_a_running_copy_survives_the_volume_being_replaced() {
     let manager = crate::file_system::volume::manager::get_volume_manager();
     manager.register(&volume_id, Arc::clone(&dest_vol));
 
-    let state = Arc::new(WriteOperationState::new(Duration::from_millis(200)));
+    let state = Arc::new(new_operation_state(app_engine(), Duration::from_millis(200)));
     let events = Arc::new(CollectorEventSink::new());
     let config = VolumeCopyConfig::default();
     let dest = base.clone();

@@ -10,6 +10,8 @@
 //! This pairs with `smb_soak_test.rs`.
 
 use super::smb_test_support::*;
+use crate::file_system::write_operations::testing::new_operation_state;
+use crate::operations_host::app_engine;
 use cmdr_fs::volume::smb_volume_id;
 use cmdr_fs::volume::{StreamLength, WriteMode};
 use cmdr_smb::volume::*;
@@ -36,9 +38,7 @@ use std::sync::OnceLock;
 #[ignore = "Requires Docker SMB containers (./apps/desktop/test/smb-servers/start.sh)"]
 async fn smb_integration_copy_100_unique_files_no_cross_contamination() {
     use crate::file_system::write_operations::VolumeCopyConfig;
-    use crate::file_system::write_operations::testing::{
-        CollectorEventSink, WriteOperationState, copy_volumes_with_progress,
-    };
+    use crate::file_system::write_operations::testing::{CollectorEventSink, copy_volumes_with_progress};
     use std::time::{Duration, Instant};
 
     // Content scheme: `blake3(b"cmdr-fix8-" || index_le) .as_bytes() repeated 320 times`
@@ -101,7 +101,7 @@ async fn smb_integration_copy_100_unique_files_no_cross_contamination() {
         crate::volume_host::host(),
     ));
 
-    let state = Arc::new(WriteOperationState::new(Duration::from_millis(200)));
+    let state = Arc::new(new_operation_state(app_engine(), Duration::from_millis(200)));
     let events = Arc::new(CollectorEventSink::new());
     let config = VolumeCopyConfig::default();
 
@@ -321,9 +321,7 @@ async fn run_concurrent_write_pass(
     timeout_secs: u64,
 ) -> Duration {
     use crate::file_system::write_operations::VolumeCopyConfig;
-    use crate::file_system::write_operations::testing::{
-        CollectorEventSink, WriteOperationState, copy_volumes_with_progress,
-    };
+    use crate::file_system::write_operations::testing::{CollectorEventSink, copy_volumes_with_progress};
 
     assert!(n_conflicts <= n_files);
 
@@ -392,7 +390,7 @@ async fn run_concurrent_write_pass(
     let dst_vol: Arc<dyn Volume> = vol.clone() as Arc<dyn Volume>;
     let source_rel_paths: Vec<PathBuf> = (0..n_files).map(|i| PathBuf::from(format!("f_{i:04}.bin"))).collect();
 
-    let state = Arc::new(WriteOperationState::new(Duration::from_millis(200)));
+    let state = Arc::new(new_operation_state(app_engine(), Duration::from_millis(200)));
     let events = Arc::new(CollectorEventSink::new());
     let config = VolumeCopyConfig {
         conflict_resolution: crate::file_system::write_operations::ConflictResolution::OverwriteSmaller,

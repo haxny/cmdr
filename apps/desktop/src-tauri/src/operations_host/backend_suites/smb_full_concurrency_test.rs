@@ -28,9 +28,9 @@ use cmdr_fs::volume::StreamLength;
 use cmdr_smb::volume::*;
 use std::sync::atomic::AtomicBool;
 
-use crate::file_system::write_operations::testing::TestOperationGuard;
+use crate::file_system::write_operations::Operations;
 use crate::file_system::write_operations::testing::{
-    CollectorEventSink, WriteOperationState, copy_volumes_with_progress, render_live_transfer_dump,
+    CollectorEventSink, TestOperations, WriteOperationState, copy_volumes_with_progress,
 };
 use crate::file_system::write_operations::{
     ConflictInfo, DryRunResult, ScanProgressEvent, VolumeCopyConfig, WriteCancelledEvent, WriteCompleteEvent,
@@ -134,6 +134,7 @@ fn expected_content(index: usize, len: usize) -> Vec<u8> {
 /// Generic over the driver's result type only because `WriteFailure` is private
 /// to `write_operations`; there is one caller shape.
 async fn await_copy_or_probe_dump<T>(
+    engine: &Operations,
     copy: &mut tokio::task::JoinHandle<T>,
     operation_id: &str,
     deadline: Duration,
@@ -142,9 +143,11 @@ async fn await_copy_or_probe_dump<T>(
         Ok(joined) => Ok(joined.expect("the copy task itself must not panic")),
         Err(_) => {
             let reason = format!("test deadline of {deadline:?} expired with the copy still running");
-            let dump = render_live_transfer_dump(operation_id, &reason).unwrap_or_else(|| {
-                format!("transfer probe ({reason}): no live probe — the operation had already deregistered")
-            });
+            let dump = engine
+                .render_live_transfer_dump(operation_id, &reason)
+                .unwrap_or_else(|| {
+                    format!("transfer probe ({reason}): no live probe — the operation had already deregistered")
+                });
             copy.abort();
             Err(dump)
         }
@@ -331,9 +334,12 @@ async fn smb_integration_many_files_at_full_concurrency_land_intact() {
         dest_vol.max_concurrent_ops(),
     );
 
-    let guard = TestOperationGuard::register("smb-full-concurrency");
-    let operation_id = guard.id().to_owned();
-    let state = Arc::clone(guard.state());
+    // An engine of the cell's own: the copy runs on a state registered there,
+    // and its probe table is the one a hung copy dumps.
+    let engine = TestOperations::new();
+    let op = engine.register("smb-full-concurrency");
+    let operation_id = op.id().to_owned();
+    let state = Arc::clone(op.state());
     let events = Arc::new(CollectorEventSink::new());
 
     let staging_seen = Arc::new(AtomicBool::new(false));
@@ -361,7 +367,7 @@ async fn smb_integration_many_files_at_full_concurrency_land_intact() {
         }
     });
 
-    let outcome = await_copy_or_probe_dump(&mut copy, &operation_id, COPY_DEADLINE).await;
+    let outcome = await_copy_or_probe_dump(&engine, &mut copy, &operation_id, COPY_DEADLINE).await;
     let elapsed = started.elapsed();
     staging_probe.abort();
 
@@ -510,9 +516,12 @@ async fn smb_integration_a_wedged_copy_is_caught_and_names_its_phase() {
         crate::volume_host::host(),
     ));
 
-    let guard = TestOperationGuard::register("smb-wedged-copy");
-    let operation_id = guard.id().to_owned();
-    let state = Arc::clone(guard.state());
+    // An engine of the cell's own: the copy runs on a state registered there,
+    // and its probe table is the one the wedge dumps.
+    let engine = TestOperations::new();
+    let op = engine.register("smb-wedged-copy");
+    let operation_id = op.id().to_owned();
+    let state = Arc::clone(op.state());
     let events = Arc::new(CollectorEventSink::new());
 
     // ❗ Parked at the first COPYING frame, ❌ not before the operation starts. A
@@ -548,7 +557,7 @@ async fn smb_integration_a_wedged_copy_is_caught_and_names_its_phase() {
         }
     });
 
-    let outcome = await_copy_or_probe_dump(&mut copy, &operation_id, WEDGE_DEADLINE).await;
+    let outcome = await_copy_or_probe_dump(&engine, &mut copy, &operation_id, WEDGE_DEADLINE).await;
 
     // Let the abandoned tasks wind down before the share is cleaned up.
     state.pause_gate.resume();

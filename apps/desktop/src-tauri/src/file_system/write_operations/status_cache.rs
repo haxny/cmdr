@@ -228,31 +228,6 @@ impl StatusCache {
     }
 }
 
-// ============================================================================
-// The shared test engine's cache, by free function, for the suites still on it
-// ============================================================================
-//
-// Engine code reaches the cache through its operation's scope or `self`; a
-// test on an engine of its own, through `engine.status()`.
-
-/// Registers a new operation in the status cache. See [`StatusCache::register`].
-#[cfg(test)]
-pub(super) fn register_operation_status(
-    operation_id: &str,
-    operation_type: WriteOperationType,
-    volume_ids: Vec<String>,
-) {
-    super::installed()
-        .status()
-        .register(operation_id, operation_type, volume_ids);
-}
-
-/// Removes an operation from the status cache.
-#[cfg(test)]
-pub(super) fn unregister_operation_status(operation_id: &str) {
-    super::installed().status().unregister(operation_id);
-}
-
 impl Operations {
     // ========================================================================
     // External busy-volume seam (drag-out file promises)

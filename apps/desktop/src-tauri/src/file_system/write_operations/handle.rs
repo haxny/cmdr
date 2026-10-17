@@ -126,7 +126,14 @@ impl Operations {
     /// journal, and `cmdr-fs`'s shared fallback runtime. For tools and benches.
     #[cfg(any(test, feature = "transfer-bench"))]
     pub(crate) fn detached() -> Self {
-        Self::from_host(EngineHost::detached(), OperationLog::detached())
+        Self::detached_journaling_into(OperationLog::detached())
+    }
+
+    /// [`Self::detached`], journaling into `operation_log`: a bench that puts the
+    /// journal on its measured path.
+    #[cfg(any(test, feature = "transfer-bench"))]
+    pub(crate) fn detached_journaling_into(operation_log: OperationLog) -> Self {
+        Self::from_host(EngineHost::detached(), operation_log)
     }
 
     fn from_host(host: EngineHost, operation_log: OperationLog) -> Self {

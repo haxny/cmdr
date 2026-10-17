@@ -5,8 +5,9 @@
 //! the one door, behind the `transfer-bench` feature (re-exported at the crate
 //! root as `cmdr_lib::transfer_bench`), and every function in it is a thin
 //! wrapper over a real entry point: the same calls a started operation makes,
-//! with a no-op sink and a fresh, UNREGISTERED `WriteOperationState`, so a
-//! bench never depends on the process-global operation registry.
+//! with a no-op sink and a fresh, UNREGISTERED `WriteOperationState` on an
+//! engine the bench owns ([`BenchEngine`], or [`BenchJournal`] for the journaled
+//! case), so nothing one case does reaches another.
 //!
 //! Why the feature and not a self dev-dependency: `Cargo.toml` § `[features]`.
 
@@ -17,6 +18,7 @@ use std::time::Duration;
 
 use uuid::Uuid;
 
+use super::Operations;
 use super::conflict_slot::ArmedConflict;
 use super::delete::delete_files_with_progress_inner;
 use super::event_sinks::{OperationEventSink, ScanPreviewEventSink};
@@ -35,6 +37,7 @@ use super::types::{
 };
 use cmdr_fs::volume::{DEFAULT_VOLUME_ID, Volume};
 use cmdr_local::LocalPosixVolume;
+use cmdr_operation_log::OperationLog;
 use cmdr_operation_log::capture::WriterJournal;
 use cmdr_operation_log::store::{OperationLogStoreError, open_read_connection, read_operation_items};
 use cmdr_operation_log::types::{EntryType, ExecutionStatus, Initiator, OpKind};
@@ -70,138 +73,161 @@ impl ScanPreviewEventSink for DiscardPreviewEvents {
     fn emit_cancelled(&self, _event: ScanPreviewCancelledEvent) {}
 }
 
-/// An operation's state the way `start_write_operation` builds it, minus the
-/// registration: the progress interval the frontend sends by default.
-fn fresh_state() -> Arc<WriteOperationState> {
-    Arc::new(WriteOperationState::new(Duration::from_millis(
+/// An operation's state the way `start_write_operation` builds it on `engine`,
+/// minus the registration: the progress interval the frontend sends by default.
+fn fresh_state(engine: &Operations) -> Arc<WriteOperationState> {
+    Arc::new(engine.new_operation_state(Duration::from_millis(
         WriteOperationConfig::default().progress_interval_ms,
     )))
 }
 
-/// A local same-volume copy of `sources` into `destination`, through
-/// `copy_files_with_progress_inner` with no journal.
-pub fn copy_local(sources: &[PathBuf], destination: &Path) -> Result<(), WriteOperationError> {
-    let op_id = cmdr_operation_log::new_operation_id();
-    copy_files_with_progress_inner(
-        &DiscardEvents,
-        &op_id,
-        &fresh_state(),
-        sources,
-        destination,
-        &WriteOperationConfig::default(),
-    )
+/// The engine a bench drives: one of its own, with every seam answering
+/// nothing and no journal. Build it once per case, untimed.
+pub struct BenchEngine {
+    engine: Operations,
 }
 
-/// A local delete of `sources`, through `delete_files_with_progress_inner`.
-pub fn delete_local(sources: &[PathBuf]) -> Result<(), WriteOperationError> {
-    let op_id = cmdr_operation_log::new_operation_id();
-    delete_files_with_progress_inner(
-        &DiscardEvents,
-        &op_id,
-        &fresh_state(),
-        sources,
-        &WriteOperationConfig::default(),
-    )
+impl Default for BenchEngine {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
-/// A local volume over `root`, the destination a cross-volume copy streams into,
-/// on the host the engine itself runs on.
-pub fn local_volume(root: impl Into<PathBuf>) -> Arc<dyn Volume> {
-    Arc::new(LocalPosixVolume::local_folder(
-        "Transfer bench",
-        root,
-        super::installed().host().volume_host().clone(),
-    ))
+impl BenchEngine {
+    pub fn new() -> Self {
+        Self {
+            engine: Operations::detached(),
+        }
+    }
+
+    /// A local same-volume copy of `sources` into `destination`, through
+    /// `copy_files_with_progress_inner` with no journal.
+    pub fn copy_local(&self, sources: &[PathBuf], destination: &Path) -> Result<(), WriteOperationError> {
+        let op_id = cmdr_operation_log::new_operation_id();
+        copy_files_with_progress_inner(
+            &DiscardEvents,
+            &op_id,
+            &fresh_state(&self.engine),
+            sources,
+            destination,
+            &WriteOperationConfig::default(),
+        )
+    }
+
+    /// A local delete of `sources`, through `delete_files_with_progress_inner`.
+    pub fn delete_local(&self, sources: &[PathBuf]) -> Result<(), WriteOperationError> {
+        let op_id = cmdr_operation_log::new_operation_id();
+        delete_files_with_progress_inner(
+            &DiscardEvents,
+            &op_id,
+            &fresh_state(&self.engine),
+            sources,
+            &WriteOperationConfig::default(),
+        )
+    }
+
+    /// A local volume over `root`, the destination a cross-volume copy streams
+    /// into, on the host the engine itself runs on.
+    pub fn local_volume(&self, root: impl Into<PathBuf>) -> Arc<dyn Volume> {
+        Arc::new(LocalPosixVolume::local_folder(
+            "Transfer bench",
+            root,
+            self.engine.host().volume_host().clone(),
+        ))
+    }
+
+    /// A cross-volume copy through `copy_volumes_with_progress`: the chunked
+    /// `open_read_stream` → `write_from_stream` path. Needs a multi-threaded
+    /// Tokio runtime, like every volume backend.
+    pub async fn copy_volumes(
+        &self,
+        source_volume: Arc<dyn Volume>,
+        sources: &[PathBuf],
+        dest_volume: Arc<dyn Volume>,
+        dest_path: &Path,
+    ) -> Result<(), WriteOperationError> {
+        let op_id = cmdr_operation_log::new_operation_id();
+        copy_volumes_with_progress(
+            Arc::new(DiscardEvents),
+            &op_id,
+            &fresh_state(&self.engine),
+            source_volume,
+            sources,
+            dest_volume,
+            dest_path,
+            &VolumeCopyConfig::default(),
+        )
+        .await
+        .map_err(|failure| failure.error)
+    }
+
+    /// The local scan-preview worker over `sources`, run inline on the calling
+    /// thread the way its spawned thread runs it, then the cached result consumed
+    /// the way a confirmed operation consumes it. Returns the file count the walk
+    /// cached, or `None` when it settled without a result.
+    ///
+    /// Call it inside a Tokio runtime context: the preview's watchdog spawns its
+    /// heartbeat there.
+    pub fn scan_preview_local(&self, sources: Vec<PathBuf>) -> Option<usize> {
+        let engine = &self.engine;
+        let preview_id = Uuid::new_v4().to_string();
+        let state = Arc::new(ScanPreviewState {
+            cancelled: AtomicBool::new(false),
+            progress_interval: Duration::from_millis(WriteOperationConfig::default().progress_interval_ms),
+        });
+        let events: Arc<dyn ScanPreviewEventSink> = Arc::new(DiscardPreviewEvents);
+        let watchdog = ScanWatchdog::start(
+            engine.stores().previews_arc(),
+            preview_id.clone(),
+            ScanTarget::of(&sources, DEFAULT_VOLUME_ID),
+            SCAN_INACTIVITY_LIMIT,
+            Arc::clone(&state),
+            Arc::clone(&events),
+        );
+        run_scan_preview(
+            engine,
+            events,
+            preview_id.clone(),
+            sources.clone(),
+            state,
+            ScanPreviewPurpose::Transfer,
+            watchdog,
+        );
+        engine
+            .stores()
+            .previews()
+            .take_cached_scan_result(&preview_id, &sources)
+            .map(|result| result.file_count)
+    }
 }
 
-/// A cross-volume copy through `copy_volumes_with_progress`: the chunked
-/// `open_read_stream` → `write_from_stream` path. Needs a multi-threaded Tokio
-/// runtime, like every volume backend.
-pub async fn copy_volumes(
-    source_volume: Arc<dyn Volume>,
-    sources: &[PathBuf],
-    dest_volume: Arc<dyn Volume>,
-    dest_path: &Path,
-) -> Result<(), WriteOperationError> {
-    let op_id = cmdr_operation_log::new_operation_id();
-    copy_volumes_with_progress(
-        Arc::new(DiscardEvents),
-        &op_id,
-        &fresh_state(),
-        source_volume,
-        sources,
-        dest_volume,
-        dest_path,
-        &VolumeCopyConfig::default(),
-    )
-    .await
-    .map_err(|failure| failure.error)
-}
-
-/// The local scan-preview worker over `sources`, run inline on the calling
-/// thread the way its spawned thread runs it, then the cached result consumed
-/// the way a confirmed operation consumes it. Returns the file count the walk
-/// cached, or `None` when it settled without a result.
-///
-/// Call it inside a Tokio runtime context: the preview's watchdog spawns its
-/// heartbeat there.
-pub fn scan_preview_local(sources: Vec<PathBuf>) -> Option<usize> {
-    let engine = super::installed();
-    let preview_id = Uuid::new_v4().to_string();
-    let state = Arc::new(ScanPreviewState {
-        cancelled: AtomicBool::new(false),
-        progress_interval: Duration::from_millis(WriteOperationConfig::default().progress_interval_ms),
-    });
-    let events: Arc<dyn ScanPreviewEventSink> = Arc::new(DiscardPreviewEvents);
-    let watchdog = ScanWatchdog::start(
-        engine.stores().previews_arc(),
-        preview_id.clone(),
-        ScanTarget::of(&sources, DEFAULT_VOLUME_ID),
-        SCAN_INACTIVITY_LIMIT,
-        Arc::clone(&state),
-        Arc::clone(&events),
-    );
-    run_scan_preview(
-        engine,
-        events,
-        preview_id.clone(),
-        sources.clone(),
-        state,
-        ScanPreviewPurpose::Transfer,
-        watchdog,
-    );
-    engine
-        .stores()
-        .previews()
-        .take_cached_scan_result(&preview_id, &sources)
-        .map(|result| result.file_count)
-}
-
-/// A temp-DB operation log installed as THE process-global journal, so a local
-/// copy journals the way a started one does. Dropping it uninstalls the
-/// journal, so the unjournaled cases measured after it stay unjournaled.
+/// An engine of the bench's own journaling into a temp-DB operation log, so a
+/// local copy journals the way a started one does. The journal lives and dies
+/// with it, so the unjournaled cases never see it.
 pub struct BenchJournal {
+    engine: Operations,
     db_path: PathBuf,
 }
 
 impl BenchJournal {
-    /// Spawns the writer over `db_path` (created if missing) and installs it.
-    pub fn install(db_path: &Path) -> Result<Self, OperationLogStoreError> {
+    /// Spawns the writer over `db_path` (created if missing) and builds an
+    /// engine journaling into it.
+    pub fn open(db_path: &Path) -> Result<Self, OperationLogStoreError> {
         let writer = OperationLogWriter::spawn(db_path)?;
-        super::installed()
-            .operation_log()
-            .set_journal(Some(Arc::new(WriterJournal::new(writer))));
+        let log = OperationLog::detached();
+        log.set_journal(Some(Arc::new(WriterJournal::new(writer))));
         Ok(Self {
+            engine: Operations::detached_journaling_into(log),
             db_path: db_path.to_path_buf(),
         })
     }
 
-    /// [`copy_local`], bracketed by the journal's open and finalize exactly as
-    /// `start_write_operation` brackets it. Returns the operation's id, for
-    /// [`Self::journaled_files`].
+    /// [`BenchEngine::copy_local`], bracketed by the journal's open and finalize
+    /// exactly as `start_write_operation` brackets it. Returns the operation's
+    /// id, for [`Self::journaled_files`].
     pub fn copy_local(&self, sources: &[PathBuf], destination: &Path) -> Result<String, WriteOperationError> {
         let op_id = cmdr_operation_log::new_operation_id();
-        let state = fresh_state();
+        let state = fresh_state(&self.engine);
         journal::open_local_op(
             state.scope(),
             &op_id,
@@ -233,11 +259,5 @@ impl BenchJournal {
         let conn = open_read_connection(&self.db_path)?;
         let items = read_operation_items(&conn, op_id, u32::MAX)?;
         Ok(items.iter().filter(|item| item.entry_type == EntryType::File).count())
-    }
-}
-
-impl Drop for BenchJournal {
-    fn drop(&mut self) {
-        super::installed().operation_log().set_journal(None);
     }
 }

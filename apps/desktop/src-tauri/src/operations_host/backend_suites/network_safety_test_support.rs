@@ -28,11 +28,13 @@ use super::network_transfer_test_support::{
     assert_no_staging_litter, budget, clean_deep, self_describing_bytes, sha256, start_copy,
 };
 use crate::file_system::volume::manager::get_volume_manager;
+use crate::file_system::write_operations::testing::new_operation_state;
 use crate::file_system::write_operations::testing::{
-    CollectorEventSink, FaultyOp, FaultyVolume, WriteOperationState, copy_volumes_with_progress,
-    delete_volume_files_for_test, installed, move_volumes_with_progress, seed_incoherent_scan_result_for_test,
+    CollectorEventSink, FaultyOp, FaultyVolume, copy_volumes_with_progress, delete_volume_files_for_test,
+    move_volumes_with_progress, seed_incoherent_scan_result,
 };
 use crate::file_system::write_operations::{ConflictResolution, VolumeCopyConfig, WriteOperationConfig};
+use crate::operations_host::app_engine;
 use crate::test_support::TestDir;
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_local::LocalPosixVolume;
@@ -72,7 +74,7 @@ async fn failing_album(label: &str) -> (TestDir, Arc<LocalPosixVolume>, Arc<dyn 
         .arc();
 
     let preview_id = format!("{label}-{}", uuid::Uuid::new_v4());
-    seed_incoherent_scan_result_for_test(preview_id.clone(), vec![PathBuf::from("album")], 3, 23);
+    seed_incoherent_scan_result(app_engine(), preview_id.clone(), vec![PathBuf::from("album")], 3, 23);
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Overwrite,
         preview_id: Some(preview_id),
@@ -103,7 +105,7 @@ pub(super) async fn a_failed_folder_copy_onto_a_users_folder_keeps_their_files(r
     let result = copy_volumes_with_progress(
         Arc::new(CollectorEventSink::new()),
         "failed-merge-copy",
-        &Arc::new(WriteOperationState::new(Duration::from_millis(0))),
+        &Arc::new(new_operation_state(app_engine(), Duration::from_millis(0))),
         source,
         &[PathBuf::from("album")],
         Arc::clone(&remote),
@@ -136,7 +138,7 @@ pub(super) async fn a_failed_folder_move_onto_a_users_folder_loses_no_byte(remot
     let result = move_volumes_with_progress(
         Arc::new(CollectorEventSink::new()),
         "failed-merge-move",
-        &Arc::new(WriteOperationState::new(Duration::from_millis(0))),
+        &Arc::new(new_operation_state(app_engine(), Duration::from_millis(0))),
         source,
         &[PathBuf::from("album")],
         Arc::clone(&remote),
@@ -197,7 +199,7 @@ pub(super) async fn delete_on(
         volume_id,
         &CollectorEventSink::new(),
         label,
-        &Arc::new(WriteOperationState::new(Duration::from_millis(0))),
+        &Arc::new(new_operation_state(app_engine(), Duration::from_millis(0))),
         sources,
         &config,
     )
@@ -229,7 +231,7 @@ pub(super) async fn a_delete_with_a_local_shaped_preview_removes_only_the_reques
     let registered = Registered::new(&remote, "delete-preview");
 
     let preview_id = format!("delete-preview-{}", uuid::Uuid::new_v4());
-    seed_incoherent_scan_result_for_test(preview_id.clone(), vec![requested.clone()], 4, 4);
+    seed_incoherent_scan_result(app_engine(), preview_id.clone(), vec![requested.clone()], 4, 4);
     let result = delete_on(
         &remote,
         &registered.id,
@@ -329,7 +331,7 @@ pub(super) async fn an_unknown_source_type_never_clears_a_server_folder(remote: 
     // a real scan the preflight hands the resolver a confident answer and the
     // armed fault never fires, so this would assert the UNFAULTED behavior.
     let preview_id = format!("unknown-type-{}", uuid::Uuid::new_v4());
-    seed_incoherent_scan_result_for_test(preview_id.clone(), vec![PathBuf::from("swap")], 1, 13);
+    seed_incoherent_scan_result(app_engine(), preview_id.clone(), vec![PathBuf::from("swap")], 1, 13);
     let config = VolumeCopyConfig {
         conflict_resolution: ConflictResolution::Overwrite,
         preview_id: Some(preview_id),
@@ -339,7 +341,7 @@ pub(super) async fn an_unknown_source_type_never_clears_a_server_folder(remote: 
     let _ = copy_volumes_with_progress(
         Arc::new(CollectorEventSink::new()),
         "unknown-source-type",
-        &Arc::new(WriteOperationState::new(Duration::from_millis(0))),
+        &Arc::new(new_operation_state(app_engine(), Duration::from_millis(0))),
         Arc::clone(&faulty) as Arc<dyn Volume>,
         &[PathBuf::from("swap")],
         Arc::clone(&remote),
@@ -405,7 +407,7 @@ pub(super) async fn a_cancelled_download_leaves_nothing_behind(remote: Arc<dyn V
         source.handed_out.load(std::sync::atomic::Ordering::SeqCst) >= 2
     })
     .await;
-    installed().cancel_write_operation(&running.operation_id, false);
+    app_engine().cancel_write_operation(&running.operation_id, false);
     source.gate.add_permits(10_000);
     running.settle().await;
 

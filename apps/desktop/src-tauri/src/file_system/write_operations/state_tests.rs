@@ -8,7 +8,7 @@
 //! own (`TestOperations`), so a walk over all operations meets only its own.
 use super::*;
 use crate::file_system::write_operations::Operations;
-use crate::file_system::write_operations::test_support::{TestOperationGuard, placeholder_conflict};
+use crate::file_system::write_operations::test_support::placeholder_conflict;
 use crate::file_system::write_operations::testing::{RegisteredOperation, TestOperations};
 use crate::file_system::write_operations::types::{
     ConflictId, ConflictResolution, ConflictResolutionOutcome, TransferActivity, TransferWaitReason,
@@ -818,35 +818,6 @@ fn pause_resume_unknown_operation_returns_false() {
     let engine = TestOperations::new();
     assert!(!engine.pause_write_operation("does-not-exist-pause"));
     assert!(!engine.resume_write_operation("does-not-exist-pause"));
-}
-
-// ---- TestOperationGuard's own contract -----------------------------------
-
-#[test]
-fn guard_unregisters_its_state_even_when_the_test_body_panics() {
-    // Pins the panic-safety the guard exists for: a hand-rolled `remove` placed
-    // after the assertions leaked the entry whenever an assertion failed first,
-    // and the corpse then showed up in the next test's
-    // `cancel_all_write_operations` / `get_operation_status`.
-    let payload = std::panic::catch_unwind(|| {
-        let op = TestOperationGuard::register("guard-panic-safety");
-        let id = op.id().to_string();
-        assert!(operation_states().contains(&id));
-        panic!("simulated assertion failure while the state is registered: {id}");
-    })
-    .expect_err("the closure should have panicked");
-    let id = payload
-        .downcast_ref::<String>()
-        .expect("panic payload is the formatted message")
-        .rsplit(": ")
-        .next()
-        .expect("message ends with the operation id")
-        .to_string();
-
-    assert!(
-        !operation_states().contains(&id),
-        "Drop must unregister on unwind, not only on the happy path"
-    );
 }
 
 // ---- the newest tick, for a window that opens late -------------------------

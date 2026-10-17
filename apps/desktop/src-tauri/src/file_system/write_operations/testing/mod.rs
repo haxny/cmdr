@@ -1,26 +1,26 @@
 //! An engine of a test's own ([`TestOperations`], `engine.rs`), and what test
 //! cells outside the engine reach beyond its public list: the internals they
-//! drive directly, the fixtures they park operations with, and the shared
-//! engine the suites not yet on an engine of their own run on.
+//! drive directly and the fixture they park operations with. A cell outside the
+//! engine names the engine it drives, its own or the app's
+//! (`operations_host::app_engine()`).
 //!
 //! Sized for the crate's `testing` feature: when the engine becomes a crate,
 //! exactly this list widens from `cfg(test)` to `any(test, feature = "testing")`.
 //! Gated items count apart from the public surface's ceilings, so this list is
 //! the place a test-only reach goes, ❌ never the public list above it.
 
+use std::path::PathBuf;
 use std::time::Duration;
 
-use super::{Operations, WriteOperationError, WriteOperationType};
+use super::Operations;
 
 // An engine a test builds for itself, over fakes it reads back, and a journal
 // it reads rows back from.
 mod engine;
 pub(crate) use engine::{RegisteredOperation, TestOperationLog, TestOperations};
 
-// The engine every test shares, and the fixtures that park or register an
-// operation on it.
-pub(crate) use super::installed;
-pub(crate) use super::test_support::{QueuedOperationFixture, TestOperationGuard};
+// A real queued operation, parked on the engine a cell names.
+pub(crate) use super::test_support::QueuedOperationFixture;
 
 // Driving one operation's state and sink by hand.
 pub(crate) use super::event_sinks::CollectorEventSink;
@@ -48,31 +48,35 @@ pub(crate) use super::types::{
 
 // The backend suites (`operations_host/backend_suites/`): the volume engine's
 // drivers a cell runs on a live server's volume with its own state and sink,
-// the fault injector and safety oracle its scenarios wrap around them, and the
-// stall dump a hung cell prints.
-pub(crate) use super::transfer::transfer_probe::render_live_dump as render_live_transfer_dump;
+// and the fault injector and safety oracle its scenarios wrap around them.
 pub(crate) use super::transfer::volume::{
     FaultyOp, FaultyVolume, SafetySpec, assert_operation_was_safe, copy_volumes_with_progress, forward_volume_methods,
     move_volumes_with_progress, move_within_same_volume_with_progress,
 };
 
 // The same suites' other direct drivers: a volume delete, a mkdir, a zip
-// edit through the archive routing, an outage policy, and a preview seeded
-// into the state a racing writer leaves.
-pub(crate) use super::archive_edit::{EditError, pull_apply_upload_swap, route_archive_copy_into};
+// edit's remote steps, and an outage policy.
+pub(crate) use super::archive_edit::{EditError, pull_apply_upload_swap};
 pub(crate) use super::create::create_directory_core_on;
 pub(crate) use super::delete::delete_volume_files_for_test;
 pub(crate) use super::outage_slot::OutagePolicy;
-pub(crate) use super::scan_cache::seed_incoherent_scan_result_for_test;
+
+/// Seeds `engine`'s previews with an entry that fails the coherence canary, for a
+/// backend cell pinning what an operation does when a half-empty preview reaches
+/// it anyway. See `ScanPreviews::seed_incoherent_scan_result_for_test`.
+pub(crate) fn seed_incoherent_scan_result(
+    engine: &Operations,
+    preview_id: String,
+    sources: Vec<PathBuf>,
+    file_count: usize,
+    total_bytes: u64,
+) {
+    engine
+        .stores()
+        .previews()
+        .seed_incoherent_scan_result_for_test(preview_id, sources, file_count, total_bytes);
+}
 
 // An undo's executor input, which the rollback cells build from a journaled
 // operation.
 pub(crate) use super::rollback::Reversal;
-
-/// Retains a failure straight in the shared engine's manager, so a suite
-/// outside the engine can exercise a CONSUMER of `list_operations` (the MCP
-/// `queue` guard) against a failed row without spawning a real operation. Drop
-/// it again with the ordinary `Operations::dismiss_failed_operation`.
-pub(crate) fn retain_failure(operation_id: &str, operation_type: WriteOperationType, error: &WriteOperationError) {
-    installed().retain_failure(operation_id, operation_type, error);
-}

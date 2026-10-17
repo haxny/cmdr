@@ -14,6 +14,7 @@ use crate::file_system::write_operations::testing::QueuedOperationFixture;
 use crate::network::s3_known_places::{KnownS3Place, S3ProviderChoice};
 use crate::network::sftp_known_servers::KnownSftpServer;
 use crate::network::webdav_known_servers::KnownWebdavServer;
+use crate::operations_host::app_engine;
 
 fn sftp_entry(host: &str, port: u16) -> KnownSftpServer {
     KnownSftpServer {
@@ -171,7 +172,12 @@ async fn moving_a_server_while_a_copy_runs_on_it_is_refused_and_moves_nothing() 
     save_sftp_credentials(old_host.to_string(), 22, "ada".to_string(), "pa55".to_string())
         .await
         .expect("the test store always accepts");
-    let _copy = QueuedOperationFixture::park_naming("server-move-running", vec![sftp_id(old_host, 22)], Vec::new());
+    let _copy = QueuedOperationFixture::park_naming_on(
+        app_engine(),
+        "server-move-running",
+        vec![sftp_id(old_host, 22)],
+        Vec::new(),
+    );
 
     let outcome = update_saved_server(sftp_target(new_host, 22, "ada"), Some(sftp_id(old_host, 22))).await;
 
@@ -196,7 +202,12 @@ async fn moving_a_server_a_queued_copy_waits_on_is_refused() {
     let _secrets = crate::test_support::isolate_secrets();
     let (old_host, new_host) = ("203.0.113.110", "203.0.113.111");
     sftp_known_servers::remember(sftp_entry(old_host, 22));
-    let _copy = QueuedOperationFixture::park_naming("server-move-queued", Vec::new(), vec![sftp_id(old_host, 22)]);
+    let _copy = QueuedOperationFixture::park_naming_on(
+        app_engine(),
+        "server-move-queued",
+        Vec::new(),
+        vec![sftp_id(old_host, 22)],
+    );
 
     let outcome = update_saved_server(sftp_target(new_host, 22, "ada"), Some(sftp_id(old_host, 22))).await;
 
@@ -234,7 +245,12 @@ async fn a_dial_to_the_old_address_that_was_out_during_the_move_is_called_off_an
 async fn an_in_place_edit_saves_while_a_copy_runs() {
     let host = "203.0.113.120";
     sftp_known_servers::remember(sftp_entry(host, 22));
-    let _copy = QueuedOperationFixture::park_naming("server-edit-running", vec![sftp_id(host, 22)], Vec::new());
+    let _copy = QueuedOperationFixture::park_naming_on(
+        app_engine(),
+        "server-edit-running",
+        vec![sftp_id(host, 22)],
+        Vec::new(),
+    );
     let renamed = ServerTarget::Sftp {
         display_name: "Renamed".to_string(),
         host: host.to_string(),
@@ -440,7 +456,8 @@ async fn moving_an_s3_account_while_a_copy_runs_on_one_of_its_buckets_is_refused
     let photos = s3_place_at(old.clone(), "AKIABUSY", Some("photos"));
     s3_known_places::remember(photos.clone());
     let account = s3_id(&s3_place_at(old, "AKIABUSY", None));
-    let _copy = QueuedOperationFixture::park_naming("s3-move-running", vec![s3_id(&photos)], Vec::new());
+    let _copy =
+        QueuedOperationFixture::park_naming_on(app_engine(), "s3-move-running", vec![s3_id(&photos)], Vec::new());
 
     let outcome = update_saved_s3_account(account, String::new(), Some(new)).await;
 
