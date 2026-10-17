@@ -22,13 +22,13 @@ fn reserves_the_chosen_name_on_disk() {
     let target = temp.path().join("notes.txt");
     fs::write(&target, b"original").unwrap();
 
-    let unique = find_unique_name(&target);
+    let unique = find_unique_name(&target, &EngineHost::detached());
 
     assert_eq!(unique.file_name().unwrap().to_string_lossy(), "notes (1).txt");
     // O_EXCL placeholder must already exist after the call.
     assert!(unique.exists(), "reservation must create the placeholder");
     // Second call goes to (2), proving the first reservation persisted.
-    let next = find_unique_name(&target);
+    let next = find_unique_name(&target, &EngineHost::detached());
     assert_eq!(next.file_name().unwrap().to_string_lossy(), "notes (2).txt");
 }
 
@@ -37,7 +37,7 @@ fn keeps_extension_in_the_right_place() {
     let temp = TempDir::new().unwrap();
     let target = temp.path().join("report.pdf");
     fs::write(&target, b"x").unwrap();
-    let unique = find_unique_name(&target);
+    let unique = find_unique_name(&target, &EngineHost::detached());
     assert_eq!(unique.file_name().unwrap().to_string_lossy(), "report (1).pdf");
 }
 
@@ -46,7 +46,7 @@ fn handles_extensionless_filenames() {
     let temp = TempDir::new().unwrap();
     let target = temp.path().join("README");
     fs::write(&target, b"x").unwrap();
-    let unique = find_unique_name(&target);
+    let unique = find_unique_name(&target, &EngineHost::detached());
     assert_eq!(unique.file_name().unwrap().to_string_lossy(), "README (1)");
 }
 
@@ -55,7 +55,7 @@ fn continues_a_trailing_sequence_instead_of_nesting() {
     let temp = TempDir::new().unwrap();
     let target = temp.path().join("photo (1).jpg");
     fs::write(&target, b"x").unwrap();
-    let unique = find_unique_name(&target);
+    let unique = find_unique_name(&target, &EngineHost::detached());
     assert_eq!(unique.file_name().unwrap().to_string_lossy(), "photo (2).jpg");
 }
 
@@ -66,7 +66,7 @@ fn a_sequence_skips_past_every_taken_number() {
     fs::write(&target, b"x").unwrap();
     fs::write(temp.path().join("photo (2).jpg"), b"x").unwrap();
     fs::write(temp.path().join("photo (3).jpg"), b"x").unwrap();
-    let unique = find_unique_name(&target);
+    let unique = find_unique_name(&target, &EngineHost::detached());
     assert_eq!(unique.file_name().unwrap().to_string_lossy(), "photo (4).jpg");
 }
 
@@ -75,7 +75,7 @@ fn a_non_numeric_parenthetical_is_not_a_sequence() {
     let temp = TempDir::new().unwrap();
     let target = temp.path().join("Report (final).pdf");
     fs::write(&target, b"x").unwrap();
-    let unique = find_unique_name(&target);
+    let unique = find_unique_name(&target, &EngineHost::detached());
     assert_eq!(unique.file_name().unwrap().to_string_lossy(), "Report (final) (1).pdf");
 }
 
@@ -84,7 +84,7 @@ fn a_number_too_big_for_u32_is_literal_text() {
     let temp = TempDir::new().unwrap();
     let target = temp.path().join("photo (99999999999).jpg");
     fs::write(&target, b"x").unwrap();
-    let unique = find_unique_name(&target);
+    let unique = find_unique_name(&target, &EngineHost::detached());
     assert_eq!(
         unique.file_name().unwrap().to_string_lossy(),
         "photo (99999999999) (1).jpg"
@@ -96,7 +96,7 @@ fn zero_padding_is_not_preserved() {
     let temp = TempDir::new().unwrap();
     let target = temp.path().join("photo (007).jpg");
     fs::write(&target, b"x").unwrap();
-    let unique = find_unique_name(&target);
+    let unique = find_unique_name(&target, &EngineHost::detached());
     assert_eq!(unique.file_name().unwrap().to_string_lossy(), "photo (8).jpg");
 }
 
@@ -105,7 +105,7 @@ fn a_zero_sequence_advances_to_one() {
     let temp = TempDir::new().unwrap();
     let target = temp.path().join("photo (0).jpg");
     fs::write(&target, b"x").unwrap();
-    let unique = find_unique_name(&target);
+    let unique = find_unique_name(&target, &EngineHost::detached());
     assert_eq!(unique.file_name().unwrap().to_string_lossy(), "photo (1).jpg");
 }
 

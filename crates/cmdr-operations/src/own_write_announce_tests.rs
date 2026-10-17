@@ -188,6 +188,27 @@ async fn copy_onto_existing(rig: &Rig, resolution: ConflictResolution) {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_copy_kept_as_a_numbered_name_announces_its_placeholder_before_creating_it() {
+    let rig = Rig::new("announce_copy_rename");
+    copy_onto_existing(&rig, ConflictResolution::Rename).await;
+
+    assert_eq!(fs::read(rig.join("dst/a (1).txt")).expect("kept copy"), b"new");
+    // `find_unique_name` reserves the numbered name with a 0-byte placeholder,
+    // so that name is announced before the placeholder exists; the landing then
+    // announces it again (now taken by the placeholder) like any overwrite.
+    assert_eq!(
+        rig.shape(),
+        announced(&[
+            ("dst/a (1).txt", false),
+            ("dst/a (1).txt", true),
+            ("dst/a (1).txt.cmdr-tmp-*", false),
+            ("dst/a (1).txt", true),
+            ("dst/a (1).txt.cmdr-temp-*", false),
+        ])
+    );
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn an_overwriting_copy_announces_its_aside_before_moving_the_original_there() {
     let rig = Rig::new("announce_copy_overwrite");
     copy_onto_existing(&rig, ConflictResolution::Overwrite).await;

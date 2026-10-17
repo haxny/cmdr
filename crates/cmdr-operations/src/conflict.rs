@@ -14,6 +14,7 @@ use std::sync::Arc;
 
 use super::durability::lookup_indexed_size;
 use super::event_sinks::OperationEventSink;
+use super::host::EngineHost;
 use super::look_alike::is_look_alike_clash;
 use super::overwrite::ResolvedDestination;
 use super::state::WriteOperationState;
@@ -427,7 +428,7 @@ pub(super) fn resolve_conflict(
                     // against this file's already-fetched metadata, and apply.
                     let answered = answered_resolution_for_clash(response.resolution, kind, &dest_path.display());
                     let effective = reduce_conditional_resolution(answered, source_meta.as_ref(), dest_meta.as_ref());
-                    apply_resolution(effective, dest_path)
+                    apply_resolution(effective, dest_path, state.scope().host())
                 }
                 Err(_) => {
                     // Sender dropped = operation cancelled
@@ -438,11 +439,13 @@ pub(super) fn resolve_conflict(
             }
         }
         ConflictResolution::Skip => Ok(None),
-        ConflictResolution::Overwrite => apply_resolution(ConflictResolution::Overwrite, dest_path),
-        ConflictResolution::Rename => apply_resolution(ConflictResolution::Rename, dest_path),
+        ConflictResolution::Overwrite => {
+            apply_resolution(ConflictResolution::Overwrite, dest_path, state.scope().host())
+        }
+        ConflictResolution::Rename => apply_resolution(ConflictResolution::Rename, dest_path, state.scope().host()),
         ConflictResolution::OverwriteSmaller | ConflictResolution::OverwriteOlder => {
             let effective = reduce_conditional_resolution(resolution, source_meta.as_ref(), dest_meta.as_ref());
-            apply_resolution(effective, dest_path)
+            apply_resolution(effective, dest_path, state.scope().host())
         }
     }
 }
@@ -518,6 +521,7 @@ fn reduce_conditional_resolution(
 fn apply_resolution(
     resolution: ConflictResolution,
     dest_path: &Path,
+    host: &EngineHost,
 ) -> Result<Option<ResolvedDestination>, WriteOperationError> {
     match resolution {
         ConflictResolution::Stop => {
@@ -544,7 +548,7 @@ fn apply_resolution(
             // existing placeholder and fails with `DestinationExists`, losing the
             // incoming bytes. The overwrite path consumes the placeholder cleanly
             // and the reservation still closes the race window.
-            let unique_path = find_unique_name(dest_path);
+            let unique_path = find_unique_name(dest_path, host);
             Ok(Some(ResolvedDestination {
                 path: unique_path,
                 needs_safe_overwrite: true,

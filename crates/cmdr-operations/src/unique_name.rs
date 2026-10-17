@@ -20,6 +20,7 @@ use std::sync::Mutex;
 
 use cmdr_fs::ignore_poison::IgnorePoison;
 
+use super::host::EngineHost;
 use super::validation::path_exists_or_is_symlink;
 
 /// The destination names ONE operation has already handed out but whose bytes
@@ -208,12 +209,16 @@ impl<'a> NameCandidates<'a> {
 /// On the rare loss-of-the-placeholder edge case (a third party deletes our
 /// empty file before the caller writes), the caller's write still succeeds
 /// (creating fresh).
-pub(super) fn find_unique_name(path: &Path) -> PathBuf {
+///
+/// The placeholder is an own write like any other, so each candidate is
+/// announced through `host` before the create that may claim it.
+pub(super) fn find_unique_name(path: &Path, host: &EngineHost) -> PathBuf {
     let mut candidates = NameCandidates::for_file(path);
 
     loop {
         let new_path = candidates.current();
 
+        host.announce(&new_path);
         match fs::OpenOptions::new().write(true).create_new(true).open(&new_path) {
             Ok(_) => return new_path,
             Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => {

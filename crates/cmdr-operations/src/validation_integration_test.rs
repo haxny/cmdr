@@ -4,6 +4,7 @@ use std::fs;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 
+use super::host::EngineHost;
 use super::unique_name::find_unique_name;
 use super::*;
 use cmdr_fs::testing::TestDir;
@@ -30,7 +31,7 @@ fn test_find_unique_name() {
     fs::write(temp_dir.join("file (2).txt"), "").unwrap();
 
     let path = temp_dir.join("file.txt");
-    let unique = find_unique_name(&path);
+    let unique = find_unique_name(&path, &EngineHost::detached());
     assert_eq!(unique.file_name().unwrap().to_str().unwrap(), "file (3).txt");
     // The name is RESERVED, not merely picked: a 0-byte placeholder sits there.
     assert!(unique.exists(), "the chosen name must be reserved on disk");
@@ -44,7 +45,7 @@ fn test_find_unique_name_no_extension() {
     fs::write(temp_dir.join("file (1)"), "").unwrap();
 
     let path = temp_dir.join("file");
-    let unique = find_unique_name(&path);
+    let unique = find_unique_name(&path, &EngineHost::detached());
     assert_eq!(unique.file_name().unwrap().to_str().unwrap(), "file (2)");
 }
 
@@ -58,7 +59,7 @@ fn test_conflict_rename_generates_unique_names() {
     fs::write(temp_dir.join("file (2).txt"), "second copy").unwrap();
 
     let path = temp_dir.join("file.txt");
-    let unique = find_unique_name(&path);
+    let unique = find_unique_name(&path, &EngineHost::detached());
     assert_eq!(unique.file_name().unwrap().to_str().unwrap(), "file (3).txt");
 
     // Nothing that was already there is disturbed by picking a name.
@@ -77,7 +78,7 @@ fn test_find_unique_name_continues_a_trailing_sequence() {
     fs::write(temp_dir.join("file (2).txt"), "").unwrap();
 
     let path = temp_dir.join("file (2).txt");
-    let unique = find_unique_name(&path);
+    let unique = find_unique_name(&path, &EngineHost::detached());
     assert_eq!(unique.file_name().unwrap().to_str().unwrap(), "file (3).txt");
 }
 

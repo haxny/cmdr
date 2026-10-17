@@ -439,11 +439,11 @@ Cross-references are in the doc comments of both functions.
 
 **Cross-type Rename (file↔folder).** Rename on a type-mismatch clash follows the same cmdr Rename semantics as
 file→file: the **existing** dest item stays untouched at its name; the **incoming** item lands under a fresh `name (1)`
-with its full content. `conflict::apply_resolution`'s Rename arm calls `find_unique_name`, which atomically reserves the
-chosen name by creating a 0-byte placeholder file (TOCTOU guard), then returns `needs_safe_overwrite: true` so the
-caller's copy/rename lands _on_ that placeholder rather than failing against it. (Pre-fix it returned `false`, and the
-same-APFS-volume copy path — `copyfile(3)` with `COPYFILE_EXCL` — refused to overwrite the placeholder and lost the
-incoming bytes.)
+with its full content. `conflict::apply_resolution`'s Rename arm calls `find_unique_name`, which announces each
+candidate through the host and atomically reserves the chosen name by creating a 0-byte placeholder file (TOCTOU guard),
+then returns `needs_safe_overwrite: true` so the caller's copy/rename lands _on_ that placeholder rather than failing
+against it. (Pre-fix it returned `false`, and the same-APFS-volume copy path — `copyfile(3)` with `COPYFILE_EXCL` —
+refused to overwrite the placeholder and lost the incoming bytes.)
 
 - **Local copy `copy_single_item`:** the regular-file / symlink branches consume the placeholder via the overwrite path
   (`safe_overwrite_file` / `remove_file` + recreate). The folder→file case surfaces at the parent-creation site, where
