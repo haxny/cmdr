@@ -217,6 +217,7 @@ fn no_global_sync_or_spawn_async_sync_in_write_operations() {
     walk(&root, &mut hits, &mut scanned);
     assert!(
         scanned > 300,
+        // allowed-pluralize-noun: the assert above it only fires past 300, so the count is never one.
         "scanned only {scanned} files under {}; the engine has hundreds",
         root.display()
     );

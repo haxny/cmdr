@@ -31,6 +31,7 @@ fn spawn_named<T: Send + 'static>(name: &str, work: impl FnOnce() -> T + Send + 
 
 /// Deletes a file on a detached thread. Returns immediately. Best-effort.
 pub(super) fn remove_file_in_background(path: PathBuf) {
+    // allowed-discarded-outcome: a detached best-effort cleanup; nothing waits on it, and it logs its own failure.
     spawn_named("cmdr-cleanup", move || {
         if let Err(e) = fs::remove_file(&path) {
             log::warn!("background cleanup: failed to remove {}: {}", path.display(), e);
@@ -47,6 +48,7 @@ pub(super) fn remove_file_in_background(path: PathBuf) {
 /// (`cmdr_fs::metadata::remove_tree_clearing_blockers`). A plain tree costs one
 /// `remove_dir_all`.
 pub(super) fn remove_staging_tree_in_background(path: PathBuf) {
+    // allowed-discarded-outcome: a detached best-effort cleanup; nothing waits on it, and it logs its own failure.
     spawn_named("cmdr-cleanup", move || {
         if let Err(e) = cmdr_fs::metadata::remove_tree_clearing_blockers(&path) {
             log::warn!("background cleanup: failed to remove {}: {}", path.display(), e);

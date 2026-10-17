@@ -42,7 +42,7 @@ pub(super) fn note_coverage(scope: &OpScope, coverage: SearchCoverage, reason: O
 /// where they're produced, so nothing here reads them.
 fn journal_finalize(scope: &OpScope, inputs: FinalizeInputs) {
     if let Some(journal) = scope.journal() {
-        // allowed-discarded-outcome: the row counts feed the completeness check inside `capture::finalize`; these wrappers only pick the kind.
+        // The row counts feed the completeness check inside `capture::finalize`; these wrappers only pick the kind.
         let _ = journal.clone().finalize(inputs);
     }
 }

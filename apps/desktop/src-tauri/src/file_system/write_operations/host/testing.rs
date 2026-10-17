@@ -22,6 +22,7 @@ use super::{
 };
 
 /// Records every engine-wide fact it hears.
+// DEFAULT-OK: a recorder that has heard nothing yet is exactly empty lists.
 #[derive(Default)]
 pub(crate) struct RecordingEngineEvents {
     pub operations_changed: Mutex<Vec<OperationsChanged>>,
@@ -63,6 +64,7 @@ impl EngineEvents for RecordingEngineEvents {
 
 /// A volume registry the test fills: nothing routes, nothing is an archive, and
 /// an id it doesn't hold is gone.
+// DEFAULT-OK: a registry the test hasn't filled holds no volume, which is what it says.
 #[derive(Default)]
 pub(crate) struct FakeVolumes {
     volumes: Mutex<HashMap<String, Arc<dyn Volume>>>,
@@ -112,6 +114,7 @@ impl OperationVolumes for FakeVolumes {
 /// Records every path the engine announced, in order, with whether anything
 /// (file, folder, or symlink) sat there at that moment: an announce that came
 /// after its syscall shows as a creation that already existed.
+// DEFAULT-OK: a recorder that has heard no announce yet is exactly an empty list.
 #[derive(Default)]
 pub(crate) struct RecordingOwnWrites {
     pub announced: Mutex<Vec<(PathBuf, bool)>>,
