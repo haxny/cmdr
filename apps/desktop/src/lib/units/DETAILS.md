@@ -64,7 +64,7 @@ So: one implementation per quantity, and a lint that keeps it that way.
   `Mo`.
 - **Every size-unit surface goes through here**: the file list, `<Size>`, tooltips (including the "(1,234 bytes)" line),
   the Size filter popover and chips, the Settings unit tiles, and the operation-log size options. The Rust side writes
-  its own model- and log-facing sizes with `search::query::format_size` (base 1024, IEC symbols).
+  its own model- and log-facing sizes with `cmdr_fs::byte_size::format_size` (base 1024, IEC symbols).
 - **Time units need no catalog.** CLDR's narrow units are what `formatDuration` already speaks, and `formatMilliseconds`
   uses the same style through `formatNarrowMeasure` (`#lib/intl/duration-format`): unit from the UI language, digits
   from the formatting locale ("1,4 Sek." in German, "1.4 s" for French on a US-formatted Mac).

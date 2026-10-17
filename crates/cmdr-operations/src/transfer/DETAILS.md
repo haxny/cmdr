@@ -1171,23 +1171,23 @@ wired, and the consequence is survivable rather than permanent: the startup orph
 space a recorded partial lives in"), so a refused temp is removed on a later launch, and the leftover toast is what
 tells the user in the meantime.
 
-Registration goes through `cmdr_operations::in_flight_temps`, which keeps the operation's in-memory list AND a
-process-wide log in the app data dir. Local copies register there too (`overwrite::stage_and_land_file`), so
-`in_flight_temps` is no longer cross-volume-only — though only the cross-volume drivers run
-`clean_abandoned_staged_writes`, since a local op's temps are registered and deregistered synchronously and anything
-left is a thread that never came back.
+Registration goes through `cmdr_operations::in_flight_temps`, which keeps the operation's in-memory list AND a persisted
+log in the app data dir once the engine claims it. Local copies register there too (`overwrite::stage_and_land_file`),
+but only the cross-volume drivers run `clean_abandoned_staged_writes`, since a local op's temps are registered and
+deregistered synchronously and anything left is a thread that never came back.
 
 **Crash recovery, two sweeps.**
 
-- **The recorded ones, at startup, with NO age gate.** `in_flight_temps::init_and_sweep` (called from `lib.rs` before
-  any copy can start) replays the persisted log and removes what an earlier run left in flight. The age gate below
-  exists to protect a temp a CONCURRENT Cmdr is streaming into; a path this app recorded when it minted the UUID in it
-  needs no such protection, and the instance lock already keeps two processes off one data dir. It only ever removes
-  paths carrying the scratch marker, so a corrupted log can't become a delete-anything primitive. The deletes run on
-  their own thread, ❌ never inline in `setup`: a recorded partial can sit on a Finder-mounted NAS that stopped
-  answering, and an `unlink` there blocks for a minute or two, which on the startup thread reads as an app that won't
-  launch. Granularity and why there is no fsync: `in_flight_temps.rs` module docs. Each record names the path space it
-  lives in, and a volume's may be deferred; see § "Which path space a recorded partial lives in" below.
+- **The recorded ones, at startup, with NO age gate.** The engine's ledger claim (`Operations::claim_ledger`,
+  `crates/cmdr-operations/DETAILS.md` § "Who claims the ledger"), made before any copy can start, replays the persisted
+  log and removes what an earlier run left in flight. The age gate below exists to protect a temp a CONCURRENT Cmdr is
+  streaming into; a path this app recorded when it minted the UUID in it needs no such protection, and the instance lock
+  already keeps two processes off one data dir. It only ever removes paths carrying the scratch marker, so a corrupted
+  log can't become a delete-anything primitive. The deletes run on their own thread, ❌ never inline in `setup`: a
+  recorded partial can sit on a Finder-mounted NAS that stopped answering, and an `unlink` there blocks for a minute or
+  two, which on the startup thread reads as an app that won't launch. Granularity and why there is no fsync:
+  `in_flight_temps.rs` module docs. Each record names the path space it lives in, and a volume's may be deferred; see §
+  "Which path space a recorded partial lives in" below.
 - **The rest, on a later transfer into that directory.** `volume::cleanup::reap_stale_transfer_temps` runs once at the
   start of each cross-volume copy AND each cross-volume move, over the destination directory only: one `list_directory`,
   then a `delete` for each `.cmdr-tmp-*` FILE whose mtime is at least `STALE_TEMP_MIN_AGE` (1 hour) old. The age gate is
@@ -1237,7 +1237,7 @@ its path relative to the root, since a returning drive can mount somewhere else.
 a root doesn't: macOS remounts the same share at `/Volumes/naspi-1` after a wedge. A volume ID is identity by
 construction (`cmdr_fs::volume::ids`) and is what the index DB and `lastUsedPaths` already key on.
 
-**Decision: an unreachable volume keeps its record; the sweep never goes looking.** `init_and_sweep` runs before
+**Decision: an unreachable volume keeps its record; the sweep never goes looking.** The ledger claim runs before
 `init_volume_manager`, and a NAS registers later still, so a volume-borne record is normally re-recorded and held
 pending. ❌ The sweep must not mount, dial, reconnect, or authenticate to reach one: a launch that blocks on a dead
 mount, or that pops a password box, is worse than the leftover it was chasing. Dropping the record instead would forget
@@ -2013,8 +2013,8 @@ what's left).
 
 **What tier 2 costs, and where the cleanup goes instead.** The backend runs none of its own cleanup, and ❌ nothing may
 go back through that connection to tidy up: the delete would hold the very deadline the tier exists to keep, a second
-time. So the staged `.cmdr-tmp-*` stays registered in both `in_flight_temps` ledgers and
-`in_flight_temps::init_and_sweep` removes it at the next launch, with no age gate, off the launch thread.
+time. So the staged `.cmdr-tmp-*` stays registered in both `in_flight_temps` ledgers and the next launch's ledger claim
+(`Operations::claim_ledger`) removes it, with no age gate, off the launch thread.
 `volume::cleanup::clean_abandoned_staged_writes` stands down for the same reason. Nothing is ever left at a real name,
 because the write was staged — which is what Q1 bought.
 

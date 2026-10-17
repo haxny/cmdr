@@ -8,17 +8,18 @@ A local-FS walker (`walkdir` + `fs::remove_file`), a volume-aware walker (MTP, S
 
 ## Files
 
-- **`walker.rs`**: local and volume delete, both taking `&dyn OperationEventSink`; `delete_files_start` routes by
+- **`walker.rs`**: local and volume delete, both taking `&dyn OperationEventSink`; `../local_start.rs` routes by
   `volume_id`. The volume walker asks `Listings::authoritative_listing` before every `list_directory`, so a subtree open
   in another pane is cache-fed; files batch per `Volume::delete_batch_size`. DETAILS § "Volume-delete internals".
-- **`trash.rs`**: `move_to_trash_sync()` (macOS `trashItemAtURL`; Linux `trash` crate; reused by `commands/rename.rs`),
-  `trash_files_with_progress()` (batch, per-item progress, cancel), and `trash_dir_for_path()` (❌ keep its ancestor
-  walk, DETAILS § Where a trash is). Refusals are a typed `MutationError`, ❌ never a sentence; every item it can't take
-  emits its own `Failed` source-item event. Existence checks use `symlink_metadata()`.
+- **`trash.rs`**: `move_to_trash_sync()` (macOS `trashItemAtURL`; Linux `trash` crate; reused by
+  `trash_single_journaled`), `trash_files_with_progress()` (batch, per-item progress, cancel), and
+  `trash_dir_for_path()` (❌ keep its ancestor walk, DETAILS § Where a trash is). Refusals are a typed `MutationError`,
+  ❌ never a sentence; every item it can't take emits its own `Failed` source-item event. Existence checks use
+  `symlink_metadata()`.
 - **`cloud_trash.rs`**: `routing_for_selection()` behind the `trash_routing_for_paths` command, plus `is_online_only`
   (the one `SF_DATALESS` read). DETAILS § "A trash of online-only cloud content becomes a delete".
-- **`volume_start.rs`**: a volume delete's managed lifecycle (here, not `../lib.rs`, because its body is `async`).
-  DETAILS § "The volume delete's own lifecycle".
+- **`volume_start.rs`**: a volume delete's managed lifecycle (here, not `../local_start.rs`, because its body is
+  `async`). DETAILS § "The volume delete's own lifecycle".
 
 ## Must-knows
 

@@ -113,5 +113,5 @@ sink, pause gate, cancel intent via the `MutationHooks` seam, and the remote pul
 cancel-midway-leaves-the-original-intact-with-no-temp, a leftover temp reaped on the next edit, the merge invariant (a
 delete keeps siblings' raw compressed bytes byte-identical), metadata (mode/mtime/xattr) survival,
 pause-parks-mid-add-then-completes-on-resume, and the encrypted-entry refusal.
-`crates/cmdr-operations/src/archive_edit_tests.rs::ensure_zip_writable_allows_zip_and_refuses_read_only_formats` pins
-the non-zip-refuses-typed matrix.
+`crates/cmdr-operations/src/archive_edit/routing_tests.rs::ensure_zip_writable_allows_zip_and_refuses_read_only_formats`
+pins the non-zip-refuses-typed matrix.

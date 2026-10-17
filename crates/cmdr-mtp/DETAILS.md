@@ -213,8 +213,8 @@ test lives on" states in full. Both sides drive the same virtual device through 
 asserts on rather than beside the backend: `mtp/volume_wiring_test.rs` (that `volume_wiring` really registers, and that
 the attach runs inline on the connecting thread), `file_system/volume/mtp_scan_oracle_tests.rs` (the app's fresh-listing
 oracle), `operations_host/backend_suites/mtp_archive_test.rs` (archive routing, which this crate knows nothing about),
-and `operations_host/backend_suites/rename_merge_mtp_tests.rs` plus `delete/volume_cancel_tests.rs` (the transfer and
-delete pipelines).
+and `operations_host/backend_suites/rename_merge_mtp_tests.rs` (the transfer pipeline). The delete pipeline's MTP cells
+are the engine's own, in `crates/cmdr-operations/src/delete/volume_cancel_tests.rs`.
 
 Two consequences that bit during the extraction:
 

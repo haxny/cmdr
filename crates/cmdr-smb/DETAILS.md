@@ -168,11 +168,11 @@ The suites split by what a cell ASSERTS, never by what it connects to. Both side
   shared conformance promises, the retirement wiring, the watcher's archive-refresh routing, and every session-free unit
   case. § "The suites" below has the file-by-file map.
 - **In the app**, if the assertion is about what the APP does with a share, and the cell sits beside the app code it
-  asserts on rather than beside the backend. `crates/cmdr-operations/src/` holds the transfer suites
-  (`smb_transfer_safety_test.rs`, `smb_transfer_semantics_test.rs`, `smb_full_concurrency_test.rs`,
+  asserts on rather than beside the backend. `apps/desktop/src-tauri/src/operations_host/backend_suites/` holds the
+  transfer suites (`smb_transfer_safety_test.rs`, `smb_transfer_semantics_test.rs`, `smb_full_concurrency_test.rs`,
   `smb_stress_test.rs`, `smb_soak_test.rs`), the remote-archive cells (`smb_archive_integration_test.rs`), the
   local-source stream write (`smb_stream_write_integration_test.rs`), and the fixture wiring they share
-  (`smb_test_support.rs`). `crates/cmdr-listing/` holds the pane-close watcher regression
+  (`smb_test_support.rs`). `listing_host/tests/` holds the pane-close watcher regression
   (`smb_pane_close_watch_integration_test.rs`), and `file_system/volume/` holds the two cells where the index crate
   meets a real share (`smb_index_scan_test.rs`, `smb_media_fetch_integration_test.rs`).
 

@@ -178,9 +178,10 @@ David approved the effort; the lead decided the rest. Approving this plan approv
    `Event` derive; the app's `operations_host/events.rs` gives each a one-line `wire_event!` newtype with a hand-written
    `specta::Type`, which leaves `bindings.ts` byte-identical. Rejected: the listing's app-side envelopes (22 mirror
    structs plus conversions, and the collector sink asserting on a second shape).
-9. **`OperationId` newtype at the public API and in every seam trait**, wrapping at the IPC boundary so `bindings.ts`
-   doesn't change. Internals adopt it where a milestone already touches the signature; a full internal sweep is a
-   follow-up issue.
+9. **`OperationId` newtype on the journal API and in every seam trait**, wrapping at the IPC boundary so `bindings.ts`
+   doesn't change. Internals adopt it where a milestone already touches the signature. Landed at M6d (`343e2d87d`) on
+   the journal API, `OperationErrorReport`, and `register_external_volume_op` / `release_external_volume_op`; the public
+   `Operations` verbs still take `&str`, and their sweep plus the internal one is #470.
 10. **What stays app-side:** `paste_clipboard.rs` (it composes `clipboard` payload types with the engine's instant-op
     API), `mutation_reply::broadcast_settled` (a Tauri emitter factory), `routing.rs`'s `expand_tilde` call (an IPC-edge
     concern), the S3 rename-cost policy (as a fact the engine returns, § "Seam design"), every wire envelope, the Tauri
@@ -1045,9 +1046,10 @@ Pins (pin REALITY, not this plan; verify each new timing- or order-sensitive pin
   `expect_space_change` fired, in what order relative to the emit.
 - **Retained failures**: a failed op through the production sink path is retained, and the failure is recorded only
   after the record is gone.
-- **The full settle order**: journal finalize → terminal event (or the safety net's) → `on_settled` (cache removal,
-  lanes freed, next admitted) → `write-settled` (`mod.rs:417-463`; `settle_event_tests.rs:133` pins part of it). New
-  cell: an undo queued behind an op, when admitted, reads that op's row already finalized and eligibility-computed.
+- **The full settle order**: a handler's terminal event → journal finalize → the safety net's error (if any) →
+  `on_settled` (cache removal, lanes freed, next admitted) → `write-settled` (`mod.rs:417-463`;
+  `settle_event_tests.rs:133` pins part of it). New cell: an undo queued behind an op, when admitted, reads that op's
+  row already finalized and eligibility-computed.
 - **Instant ops journal and record through the real stores**: a rename journals its row and records its aside in the
   persisted ledger (the cell M6a's "no detached fallback" rule keeps green).
 - **Busy volumes**: `volumes-busy-changed` fires once per distinct change (the `LAST_EMITTED_BUSY` dedupe), and every
@@ -1333,9 +1335,9 @@ about.
 - **`spawn_managed` takes `&'static self` today** because an admitted op's task outlives every borrow; the admission
   pass now hands the start the engine (or the start upgrades a `Weak`). No `Box::leak` survives in production, and a
   queued op never keeps a dropped engine alive.
-- **Settle order is a contract**: journal finalize → terminal event → `on_settled` → `write-settled` via the guard's
-  `Drop`. Threading the journal through the scope is exactly where finalize could slide into the guard's `Drop`; M3's
-  undo-behind cell is the referee.
+- **Settle order is a contract**: a handler's terminal event → journal finalize → the safety net's error → `on_settled`
+  → `write-settled` via the guard's `Drop`. Threading the journal through the scope is exactly where finalize could
+  slide into the guard's `Drop`; M3's undo-behind cell is the referee.
 - Code inside the engine uses `self` / its scope, never `operations_host::operations()`: a method reaching for the app
   accessor would work in the app and break for every other consumer.
 - Install order: `operation_log_host::install` → `operations_host::install` → the in-flight sweep (today
@@ -2069,8 +2071,9 @@ noted):
    names its clash (`ConflictId`), and `AlreadyResolved` / `StaleAnswer` / `NoPendingConflict` stay distinct.
 7. Crossing types needs a person's per-shape consent (`resolution_for_clash`, all three engines); a conditional is never
    reduced before it.
-8. Events go through `OperationEventSink`; the settle order is journal finalize → terminal event → `on_settled` →
-   `write-settled` (exactly once); a cross-FS move's last `write-source-item-done` wins.
+8. Events go through `OperationEventSink`; the settle order is a handler's terminal event → journal finalize → the
+   safety net's `write-error` (if any) → `on_settled` → `write-settled` (exactly once); a cross-FS move's last
+   `write-source-item-done` wins.
 9. Every local write lands through `overwrite::stage_and_land_file` (temp + rename, rename-aside when replacing); a
    non-overwrite landing refuses an occupied destination; every destination is announced to `OwnWrites` before the
    syscall (`Announced`), renames at both ends; only a `temp` is removable on sight.
@@ -2121,17 +2124,19 @@ Added by this refactor:
 
 26. `cmdr-collation`, `cmdr-local`, `cmdr-operation-log`, and `cmdr-operations` have no `tauri`, `tauri-specta`, or
     `cmdr` in their trees, and each public surface is capped (`index-crate-isolation`).
-27. Every app concern arrives through a seam or a value the host passes in; every seam degrades to a no-op and has a
-    `testing` fake; an adapter resolves its subsystem per call; seam value types live in `host/` or `types/`, and
-    `state.rs` never calls a store.
+27. Every app concern arrives through a seam or a value the host passes in; every seam degrades to a no-op, and all but
+    `OperationIndex` and `NameOrder` have a `testing` fake; an adapter resolves its subsystem per call; seam value types
+    live in `host/` or `types/`, and `state.rs` never calls a store.
 28. A seam is called per operation, per directory, or per file landing, never per chunk or per listing entry; the
     Criterion benches stay within their recorded spread of M0b or the delta is explained.
-29. No seam, sink, or observer runs under an engine lock.
+29. No seam, sink, or observer runs under an engine lock, except the busy set, which reports under its dedupe lock so a
+    stale set can never land last (`status_cache.rs`, `host/CLAUDE.md`).
 30. Engine state lives on the handle; the only statics are the § "Statics" allowed list; background loops and deferred
     starts hold the engine weakly or not at all.
-31. Everything in `cmdr-operations` and `cmdr-operation-log` spawns on the `VolumeHost`'s runtime (clippy), admitted ops
-    run on the app's runtime, and the documented ambient exceptions (`cmdr_fs::deadline`, `cmdr-local`'s `Volume`-method
-    `spawn_blocking`, and `mutation_reply` if M4 chose so) say why where they live.
+31. Everything in `cmdr-operations` spawns on the `VolumeHost`'s runtime and `cmdr-operation-log` only on the handles
+    its host passes in (each crate's `clippy.toml`), admitted ops run on the app's runtime, and the documented ambient
+    exceptions (`cmdr_fs::deadline`, `cmdr-local`'s `Volume`-method `spawn_blocking`, and `mutation_reply` if M4 chose
+    so) say why where they live.
 32. A write engine never runs detached in production: before `install`, the IPC layer refuses every start with an
     existing wire variant. The in-flight ledger is claimed once (`claim_ledger`), by the installed engine only; it is
     persisted whenever a data dir resolves, otherwise unpersisted with an `error_report`, and that's the only
@@ -2143,7 +2148,8 @@ Added by this refactor:
     app's sink adapter; `retain_failure` is the engine's.
 35. Test scaffolding an app-side cell reaches is `cfg(test)` while app-side and `any(test, feature = "testing")` once in
     a crate; every test owns its engine.
-36. An op id is an `OperationId` at the public API and in every seam; only IPC sees a `String`.
+36. An op id is an `OperationId` on the journal API, in every seam, and on the external-op pair; the public `Operations`
+    verbs still take `&str` (§ "Decided", item 9; the sweep is #470).
 37. `module-cycles` shows no tangle in any of the four crates, and the app's allowlist didn't grow.
 
 ## Frozen must-knows
@@ -2429,6 +2435,10 @@ Round 2 (adversarial, executor). Every finding not listed here was folded in abo
 - Round 3 (cold read): all five findings folded in (the per-folder own-writes recorder with non-zero counts, `-t rust`
   on the DONE greps, the after-bench feature and the bench entry points in M7a's list, `instance_lock.rs`'s
   unlocked-on-I/O behavior stated as-is, and the precondition marked met at `a5b218a63`). Nothing rejected.
+- **Close-out conformance audit** (one medium, 11 low, no data-safety finding): item 9 and register 8, 27, 29, 31, and
+  36 amended to what landed; #470 files the `OperationId` sweep. Behavior changes 2 and 3 didn't land as their own
+  commits (2 rode in the refactor `e6ceee6f8`, 3 in the move `96b81d034`); both are tested, so it's a process deviation
+  only.
 - **The lead's lanes ruling** replaced every mid-effort `--include-slow` and full `pnpm check`. Slow lanes now appear
   only where named with a reason (§ "Loud rules"). Dropped: `desktop-rust-tests-linux` from M1b, M6a, and M6b, and
   `desktop-rust-module-cycles` from M1a, M4, M5b–M5e, M6b–M6d (all covered by M9's run).

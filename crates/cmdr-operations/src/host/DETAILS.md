@@ -38,9 +38,9 @@ The engine needs these from its host as named seams. The engine is a handle, `Op
 `handle.rs`): an `Arc<Inner>` holding the seams as one `EngineHost`, the operation log it journals into, the manager,
 the registry of live states, and the status cache, so two engines share nothing. The app's answer is
 `apps/desktop/src-tauri/src/operations_host/`, which builds the app's one engine in `setup()` with `Operations::builder`
-(after `volume_host::install` and `operation_log_host::install`, before the leftover sweep, which it claims through
-`operations_host::claim_ledger`). Every caller outside the engine reaches it through `operations_host::operations()` and
-calls a method; the engine keeps no slot of its own, and nothing inside it names the app's accessor.
+(the startup order: `apps/desktop/src-tauri/src/operations_host/DETAILS.md` § Startup). Every caller outside the engine
+reaches it through `operations_host::operations()` and calls a method; the engine keeps no slot of its own, and nothing
+inside it names the app's accessor.
 
 - **The runtime is the `VolumeHost`'s.** One handle for the engine and the backends it drives, so the two can't
   disagree. Everything the engine spawns goes there: the admission pass (`crates/cmdr-operations/DETAILS.md` § "The
@@ -81,7 +81,8 @@ calls a method; the engine keeps no slot of its own, and nothing inside it names
   finished on volumes (indexing priority), staging leftovers kept, an instant mutation settled (analytics, as an
   `InstantMutationFact` of categories only), an error report, and the scan bridge's scanning-phase `write-progress` (one
   op's event, but the preview's worker that produces it holds no op's sink). Per-op events stay on `OperationEventSink`.
-  Every method is required, is called with no engine lock held, and returns at once.
+  Every method is required and returns at once, and is called with no engine lock held, with one exception: the busy set
+  reports under its dedupe lock, so a stale set can never land last (`host/events.rs`).
 - **Error reports are typed facts** (`host/error_report.rs`): the engine never calls `log_error!` (the app's macro, at
   its crate root), it names what happened as an `OperationErrorReport`, grouped by what it means for the person: an op
   failed, a displaced original is stranded under its aside name, a transfer is stuck on a silent backend, or a contained
@@ -112,26 +113,18 @@ calls a method; the engine keeps no slot of its own, and nothing inside it names
   literal event name (`analytics-event-catalog` reads `capture("…")`), or an error report. The test-only counters a pin
   reads (`emit_count`, `busy_emit_count`, the scan bridge's tick recorder) count on the engine side, before the seam.
 - **The per-op sinks are the app's too.** `TauriEventSink` and `TauriScanPreviewSink` live in
-  `apps/desktop/src-tauri/src/operations_host/sinks.rs`, built at the IPC edge and injected; a terminal emit runs its
-  app side effects (completion analytics, the MCP ring, the failure `warn!`, `OperationManager::retain_failure`, the
-  free-space hint) in the order `apps/desktop/src-tauri/src/operations_host/terminal_effects.rs` pins. An op the ENGINE
-  starts on its own behalf (an instant op routed into a zip becomes a managed archive edit) gets its sink from the
-  host's `OperationSinkFactory` (`engine.host().operation_sink()`); so does the MCP rollback tool, which is generic over
-  the Tauri runtime.
+  `apps/desktop/src-tauri/src/operations_host/sinks.rs`, built at the IPC edge and injected; a terminal emit's app side
+  effects and their order: `apps/desktop/src-tauri/src/operations_host/DETAILS.md` § "The per-op sinks". An op the
+  ENGINE starts on its own behalf (an instant op routed into a zip becomes a managed archive edit) gets its sink from
+  the host's `OperationSinkFactory` (`engine.host().operation_sink()`); so does the MCP rollback tool, which is generic
+  over the Tauri runtime.
 - **Event payloads are plain `serde` + `specta::Type` types**; the Tauri event and its wire name are the app's
   (`apps/desktop/src-tauri/src/operations_host/wire.rs` wraps each). ❗ A payload's doc comments and `#[serde]`
   attributes still reach `bindings.ts`, so they're wire: reword one and `desktop-bindings-fresh` fails.
-- **Before `install`, the answer depends on the binary.** In the app, `operations_host::operations()` is
-  `Err(NotInstalled)` plus an error report, and each caller refuses with a variant it already handles (a start's
-  `IoError`, an instant op's `ArchiveEditNotReady`, `UnknownOperation`) or answers what an engine with nothing running
-  would (an empty list, no-op cancels, no busy volume, a scan preview that tells its dialog it couldn't start); nothing
-  can reach the engine before `setup()` anyway, and ❌ nothing panics for want of one. The engine itself knows nothing
-  about installs. In a test binary, `operations()` builds `operations_host::test_engine()` on first read (the app's own
-  answers minus the frontend channel: the real indexing gauge, analytics client, and error reporter, and `cmdr-fs`'s
-  shared fallback runtime) and hands that one out to every app-side cell; an engine test builds
-  `testing::TestOperations` instead (`crates/cmdr-operations/DETAILS.md` § "Test isolation: an engine of the test's
-  own"). No sink factory, so `operation_sink()` stays `None` and an archive-target instant op refuses plainly. The bench
-  builds detached engines of its own (`testing::bench::BenchEngine`, `BenchJournal`).
+- **The engine knows nothing about installs.** What the app answers before `install` and what a test binary's engine is
+  made of: `apps/desktop/src-tauri/src/operations_host/DETAILS.md` § Startup and § "A test binary". An engine test
+  builds `testing::TestOperations` instead (`crates/cmdr-operations/DETAILS.md` § "Test isolation: an engine of the
+  test's own"); the bench builds detached engines of its own (`testing::bench::BenchEngine`, `BenchJournal`).
 - **A seam trait and its value types live in `host/` or `types/`**, never in a module that calls the seam, or the two
   weld into a cycle. That's why `OperationsChanged` and `OperationSnapshot` are `types` vocabulary, and why
   `OperationEventSink` and `ScanPreviewEventSink` are defined in `host/` (`event_sinks` re-exports them): with the trait

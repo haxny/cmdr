@@ -16,7 +16,8 @@ Some notes here are load-bearing rather than historical. Those are grouped below
   on. **Its numbers are provisional**: the machine was contended and the volume near-full throughout, so most readings
   are withdrawn and the note carries the procedure for re-taking them.
 - `transfer-extraction-baseline.md` — the write engine, operation log, and `LocalPosixVolume` leaving the app crate
-  (#415). Before half only; its driver script and committed Criterion baseline sit beside it.
+  (#415). Before half only; its committed Criterion baseline sits beside it, and its driver is
+  `scripts/transfer-baseline/`.
 
 **QA handoffs**, deleted once QA'd:
 

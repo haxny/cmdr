@@ -31,7 +31,9 @@ the shared handle too, as the app's engine is over the installed one.
 
 - **Volumes**: the planner's `VolumeLookup` is the write engine's `OperationVolumes` (its supertrait), so a rollback
   gate and each reversed item look volumes up through the engine's host, which is the real registry in the app.
-  `volumes.rs` implements it for a bare `VolumeManager`, test-only, so a planner cell passes a registry of its own.
+  `volumes.rs` implements it for a bare `VolumeManager`, test-only, for the backend suites' rollback cells
+  (`operations_host/backend_suites/s3_engine_integration_test.rs`, `smb_flags_test.rs`), which reverse an op against the
+  real registry with no engine in hand.
 - **Retention limits**: a closure over `settings::load_operation_log_retention_limits`, read on every tick so a
   settings change applies on the next one.
 - **Recording**: seeded here at `start`; live changes arrive through `commands/settings.rs::set_operation_log_enabled`,

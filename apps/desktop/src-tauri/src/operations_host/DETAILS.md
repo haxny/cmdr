@@ -53,7 +53,7 @@ The four terminal emits carry app side effects in a pinned order (`terminal_effe
 - `write-cancelled`: the ring, then the emit.
 - `write-error`: the ring, the failure `warn!` (target `write_operations`, the one place the technical reason is
   written down; `crates/cmdr-operations/DETAILS.md` has the WARN-not-error decision), the engine's
-  `OperationManager::retain_failure`, then the emit.
+  `Operations::retain_failure`, then the emit.
 - `write-settled`: the free-space hint (`cmdr_local::live_space::expect_space_change`, macOS), then the emit.
 
 - **Decision: the terminal side effects live in this sink, not behind an engine-level "operation ended" observer.** Why:
@@ -126,11 +126,11 @@ announce reaches the hook. The engine's own announce order is pinned against its
 
 `AppOperationIndex` answers `OperationIndex` from `index_host::index()`, reached per call (the index is built in
 `setup()`, and an adapter that captured it could win its slot with an unconfigured one). `expected_totals` maps the
-index's count onto the engine's own `ExpectedTotals`; `recursive_size` is `dir_stats`' `recursive_size`;
-`search_leaves` is the honest-coverage read behind the operation log's search leaves (`cmdr-operation-log/DETAILS.md` §
-"Search-leaf enumeration"): the Live gate, path resolution, the epoch gate (`enumerate_from_id`), and the cap, each
-miss a typed downgrade. Its cells (the coverage honesty, the cap's edges, an ignored latency bench) run against a
-hand-built index DB; `an_unindexed_volume_answers_uncovered` pins the adapter itself.
+index's count onto the engine's own `ExpectedTotals`; `recursive_size` is `dir_stats`' `recursive_size`; `search_leaves`
+is the honest-coverage read behind the operation log's search leaves (`crates/cmdr-operation-log/DETAILS.md` §
+"Search-leaf enumeration"): the Live gate, path resolution, the epoch gate (`enumerate_from_id`), and the cap, each miss
+a typed downgrade. Its cells (the coverage honesty, the cap's edges, an ignored latency bench) run against a hand-built
+index DB; `an_unindexed_volume_answers_uncovered` pins the adapter itself.
 
 ## E2E pacing (`pacing.rs`)
 
@@ -177,9 +177,10 @@ and nothing else.
 ### The network transfer suites
 
 `webdav_transfer_integration_test.rs` and `sftp_transfer_integration_test.rs` copy real bytes between local disk and a
-live fixture server through `copy_between_volumes`, which is the seam neither backend crate can reach: both directions
-of an actual copy were once broken in the app while `cmdr-sftp`'s own Docker suite was fully green (a `supports_export`
-predicate the crate never states, and a free-space pre-flight reading `NotSupported` as "no room").
+live fixture server through `cmdr_operations::testing::copy_between_volumes`, which is the seam neither backend crate
+can reach: both directions of an actual copy were once broken in the app while `cmdr-sftp`'s own Docker suite was fully
+green (a `supports_export` predicate the crate never states, and a free-space pre-flight reading `NotSupported` as "no
+room").
 
 - **The scenarios are backend-blind and live in `network_*_test_support.rs`.** Everything they touch is `dyn Volume`,
   taken as `(remote: Arc<dyn Volume>, dir: PathBuf)` (a live volume plus a scratch dir it owns and removes), so a claim
@@ -297,11 +298,11 @@ other modules reach `smb_test_support` from there: `listing_host/tests/smb_pane_
   copy (else the "no leftovers" check passes vacuously), and none survived it.
 
   Both tests there bound their own wait and, on expiry, panic with `transfer_probe`'s LIVE in-flight table via
-  `render_live_transfer_dump` — a `#[cfg(test)]` accessor over the probe registry. They time out on the copy's
-  `JoinHandle`, never on the copy future: timing out the future DROPS it, which drops the probe guard and empties the
-  registry before there is anything to dump. `smb_integration_a_wedged_copy_is_caught_and_names_its_phase` is the test
-  of that mechanism — it parks a copy on the pause gate and asserts the bound fires with a dump naming the operation,
-  the driver phase, the window fill, and `parked(pause)`. Without it the deadline and the dump are untested
+  `render_live_transfer_dump` — a `testing`-gated `Operations` method over the probe registry. They time out on the
+  copy's `JoinHandle`, never on the copy future: timing out the future DROPS it, which drops the probe guard and empties
+  the registry before there is anything to dump. `smb_integration_a_wedged_copy_is_caught_and_names_its_phase` is the
+  test of that mechanism — it parks a copy on the pause gate and asserts the bound fires with a dump naming the
+  operation, the driver phase, the window fill, and `parked(pause)`. Without it the deadline and the dump are untested
   scaffolding, and a suite meant to catch a hang becomes one. The wedge is staged through the pause gate rather than a
   silenced server because what is under test is the harness at expiry, and a pause reaches that state deterministically
   without holding the shared Docker stack hostage. `.config/nextest.toml` grants the big test a 75 s cap so its own 45 s

@@ -791,8 +791,8 @@ entry needs a real "we can't make this faster" justification, not convenience.
 
 These modules have invested test infrastructure. New code here must keep that bar:
 
-- **`crates/cmdr-operations/src/`**: state.rs has 30+ tests pinning every state-machine transition. Pattern:
-  `cancel_write_operation` through the public interface, never via direct atomic mutation. See state.rs `mod tests`.
+- **`crates/cmdr-operations/src/`**: `state_tests.rs` has 30+ tests pinning every state-machine transition. Pattern:
+  `cancel_write_operation` through the public interface, never via direct atomic mutation.
 - **`crates/cmdr-index/src/indexing/`**: `IndexPhase` lifecycle tests in indexing/mod.rs require a real `IndexStore`
   (use `tempdir`-backed) and a dedicated test mutex (INDEXING is global).
 - **`apps/desktop/src-tauri/src/file_viewer/`**: `SearchStatus` transitions through `search_cancel` are subtle (the
@@ -862,9 +862,8 @@ E2E test hooks split along two axes:
   changing it needs a relaunch, not just a new export. The `set_test_rollback_throttle` IPC override below carries no
   E2E-mode gate and no caching, so it's the one to reach for when driving a running app by hand. It sits ABOVE the
   loop's stop and pause gates, so a click landing inside the window is honored for THAT item. The deferred-directory
-  phase is deliberately NOT paced: it removes empty leftovers, so slowing it buys dead time rather than a window. A RUST
-  test takes the pacing through `test_mode::pace_rollback_for_test`, which serializes the tests that use it — the
-  override is one process-wide value, and two tests setting it at once un-pace each other.
+  phase is deliberately NOT paced: it removes empty leftovers, so slowing it buys dead time rather than a window. How a
+  RUST test paces a reversal: `crates/cmdr-operation-log/DETAILS.md` § "The E2E pacing hook in the item loop".
 - **`CMDR_E2E_SCAN_PREVIEW_DELAY_MS`** (**needs `CMDR_E2E_MODE=1` too**, and so does its IPC override, unlike the
   rollback throttle's): Holds every scan-preview worker at its starting line before it walks, so a spec can act while a
   transfer is still counting (`background-while-scanning.spec.ts`). Fixture trees are tiny and `data-scan-state` signals

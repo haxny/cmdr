@@ -5,7 +5,7 @@ are O(archive) temp+rename rewrites. Up: `../../CLAUDE.md`; mutation: `crates/cm
 
 ## Module map
 
-- `routing.rs`: inner-path helpers, the tar/7z write guard, duplicate pre-check, and instant-op sink builder.
+- `routing.rs`: inner-path helpers, the tar/7z write guard, and duplicate pre-check.
 - `driver.rs`: managed lifecycle and delete routing. `engine.rs`: local/remote dispatch; `remote.rs`: pull, apply,
   upload, swap. `edit_error.rs`: shared error leaf. `conflicts.rs`: archive-index resolution.
 - Per-shape routes: `copy_into.rs` (transfer routing, plus the remote-source pull), `move_out.rs`, and `compress.rs`.

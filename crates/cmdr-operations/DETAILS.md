@@ -24,10 +24,10 @@ operation is cancellable, reports byte-level progress, and handles edge cases: s
 network mounts, cross-filesystem moves, and name/path length limits. The crate names no `tauri` (`index-crate-isolation`
 enforces it): the engine reports facts, and the host decides what a person sees.
 
-Ask Cmdr bulk renames use the same managed-operation lifecycle. `LocalPosixVolume` makes every non-forced local rename
-atomic-no-overwrite, including attached disks and cloud folders registered under non-root volume IDs: macOS uses
-`renamex_np(RENAME_EXCL)` and Linux uses `renameat2(RENAME_NOREPLACE)`. Root bulk-renames share that primitive directly.
-The dialog's target-exists preflight improves review UX, but only the kernel operation closes the check-to-rename race.
+Ask Cmdr bulk renames use the same managed-operation lifecycle. Every non-forced local rename is atomic-no-overwrite
+through `cmdr_local::rename_local_exclusive` (`crates/cmdr-local/DETAILS.md` § "Local renames are atomic-exclusive"),
+and root bulk-renames share that primitive directly. The dialog's target-exists preflight improves review UX, but only
+the kernel operation closes the check-to-rename race.
 
 Pre-flight scans reuse cached listings when the source volume reports `WatchCoverage::EveryWriter`, avoiding redundant
 `list_directory` calls. The freshness contract and per-backend debounce windows are documented in
@@ -39,7 +39,7 @@ Pre-flight scans reuse cached listings when the source volume reports `WatchCove
 `CLAUDE.md` keeps each of these as one line; this is the full text, with the why each line compresses.
 
 - **`spawn_managed` for copy/move/delete/trash, `run_instant` for rename/mkdir/mkfile**; blocking work runs in
-  `spawn_blocking`, so a starter returns an id before I/O.
+  `host.runtime().spawn_blocking`, so a starter returns an id before I/O.
 - **An instant op emits no `WriteCompleteEvent`** (analytics WRAPS its driver): ❌ never emit inside one, or the
   in-archive early return drops in-zip ops. It refuses with a typed `MutationError`, ❌ never a sentence.
 - **A spawned op reserves every lane it touches or waits Queued**; the next admits on `on_settled`, ❌ never `Drop`.
@@ -57,8 +57,8 @@ Pre-flight scans reuse cached listings when the source volume reports `WatchCove
   plain Overwrite answered for that `ClashKind` replaces, ITS "* all" carry included; the config policy, same-kind
   carries, and `OverwriteSmaller`/`Older` `Skip`. ❌ Never reduce a conditional before it. What ARRIVES is the caller's
   word (`IncomingItem`).
-- **Emit through `OperationEventSink`, ❌ never `AppHandle`** (spawns: `src/host/`); `write-settled` fires once, AFTER
-  the terminal event. A cross-FS move speaks TWICE per source on `write-source-item-done`, so the LAST wins.
+- **Emit through `OperationEventSink`** (spawns: `src/host/`); `write-settled` fires once, AFTER the terminal event. A
+  cross-FS move speaks TWICE per source on `write-source-item-done`, so the LAST wins.
 - **EVERY local write lands via `overwrite::stage_and_land_file`** (temp+rename, rename-aside when replacing); announce
   each destination BEFORE the syscall: the writers take it as `host::Announced` (a rename's SOURCE too, by hand).
   Leftovers carry a KIND (❌ only a `temp` goes on sight); ❌ only the installed engine's `claim_ledger` opens the
@@ -376,8 +376,8 @@ and `types` is the sink. A single upward import from the sink closes a circle th
 `conflict_slot`, `error_classification`, `eta`, `event_sinks`, `manager`, `state`, `status_cache`, `types`,
 `unique_name`, `validation` — into one strongly-connected component where nothing could be read, tested, or moved alone,
 and it was the app crate's largest tangle. Three lines bought all of that, which is why the rule allows no exception.
-Cutting them took the crate from 121 modules in some cycle to 110 and its largest raw component from 11 to 10, changing
-nothing else in the graph (cargo-modules 0.27.0, `pnpm check module-cycles`, 2026-08-23).
+Cutting them took the app crate from 121 modules in some cycle to 110 and its largest raw component from 11 to 10,
+changing nothing else in the graph (cargo-modules 0.27.0, `pnpm check module-cycles`, 2026-08-23).
 
 **Where the three names live instead.** `OperationEventSink` comes from `event_sinks` and `IoResultExt` from
 `error_classification` — the modules that define them, which is where a reader looks anyway (and a `types::` alias for
@@ -391,9 +391,9 @@ whole eleven back. `scripts/check/checks/DETAILS.md` § "Rust module cycles" doc
 the ways `cargo-modules` misattributes an edge.
 
 **Two smaller cuts keep it at zero.** Both point a lower module at what it really needs, never at a module above it. The
-in-flight sweep calls `volume::rename_local_exclusive`, the primitive behind `overwrite::rename_no_replace` (§ "What the
-sweep does with each kind"). Archive edits share one `EditError` leaf, where twin enums bridged by `From` impls once sat
-(`src/archive_edit/DETAILS.md` § "Local vs remote: one closure, one dispatcher").
+in-flight sweep calls `cmdr_local::rename_local_exclusive`, the primitive behind `overwrite::rename_no_replace` (§ "What
+the sweep does with each kind"). Archive edits share one `EditError` leaf, where twin enums bridged by `From` impls once
+sat (`src/archive_edit/DETAILS.md` § "Local vs remote: one closure, one dispatcher").
 
 ## Architecture / data flow
 
@@ -1199,8 +1199,10 @@ Root promises (82), by who needs them:
   generated from them, so none can go private without the frontend losing a type.
 - **`host`** (1): the public module below.
 
-`Operations` methods (58), grouped by caller. Each IPC command, MCP tool, and quit step is a one-line pass-through, so
-the verbs read one-to-one:
+`Operations` methods (58): the 56 a shipped build has, grouped by caller below, plus two `testing`-gated ones the
+source-level counter can't see as gated (`render_live_transfer_dump` sits in a gated `impl` block, and
+`route_archive_copy_into`'s gate sits above a multi-line attribute). Each IPC command, MCP tool, and quit step is a
+one-line pass-through, so the verbs read one-to-one:
 
 - **Building and lifecycle**: `builder`, `host` (the MCP rollback takes its sink factory), `operation_log` (the startup
   pin proves the engine journals into the app's log), `claim_ledger`, and the quit gate's `cancel_all_write_operations`,
@@ -1218,15 +1220,14 @@ the verbs read one-to-one:
   `operations_need_volume`, `cancel_operation`, `cancel_operations`, `cancel_write_operation`, `pause_operation`,
   `resume_operation`, `pause_all`, `resume_all`, `move_queued_operation`, `place_queued_operation`,
   `retry_failed_operation`, `dismiss_failed_operation`, `dismiss_all_failed_operations`, `resolve_write_conflict`,
-  `pending_write_conflict`, `continue_without_gone_sources`, `pending_sources_gone`, `transfer_tree_view`, and
-  `render_live_transfer_dump`.
+  `pending_write_conflict`, `continue_without_gone_sources`, `pending_sources_gone`, and `transfer_tree_view`.
 - **Busy volumes and the sink adapter**: `busy_volume_ids` (Eject's guard), `register_external_volume_op` /
   `release_external_volume_op` (drag-out's busy volume, macOS), and `retain_failure` (the app's sink adapter keeps a
   failed op on the queue).
 
 An entry point production reaches only from inside the engine (a routed start like `archive_edit_start` or
-`copy_between_volumes`, the raw pause gate) stays `pub(crate)`; an app-side cell drives it through a `testing` function
-that forwards to it (`route_archive_copy_into` is one).
+`copy_between_volumes`, the raw pause gate) stays `pub(crate)`; an app-side cell drives it through a `testing`-gated
+door that forwards to it (`testing::copy_between_volumes`, or the gated `Operations::route_archive_copy_into`).
 
 `host` (25 items): the seam traits the app answers (`OperationVolumes`, `EngineEvents`, `OwnWrites`, `OperationIndex`,
 `Pacing`, `NameOrder`, and the two event sinks, re-exported there too), their value types (`OperationErrorReport`,
@@ -1960,7 +1961,9 @@ folder ate the entire 30 s check budget, `ERR-AYVM4`). This leg runs on `deadlin
 the destination scan after it is not: sharing one deadline would let a wedged source spend everything, so the
 destination scan then fails instantly and the user reads a timeout blamed on a device the check never asked.
 `merge_source_types_from_stats` folds the stats over the name-only placeholders so dir-vs-dir collisions classify as
-silent merges; back-compatible when the caller omits the source volume.
+silent merges; back-compatible when the caller omits the source volume. For a single named transfer it binds the
+destination-name hint to the explicit original source path, taking type and size from that source's stat; batch hints
+match by basename. The destination leaf contract: `src/transfer/DETAILS.md` § "Named destinations".
 
 **`drop_self_collisions` removes the collisions naming a source itself**, so a same-folder paste (a duplicate, which
 both engines auto-rename silently instead of asking about) doesn't announce every item as its own conflict. It answers
@@ -2380,7 +2383,7 @@ hears it. Same-FS move (pure rename) writes no data at all, so it takes the sibl
 one `fsync` per DIRECTORY the renames touched, and none on the moved files, which would cost an `F_FULLFSYNC` device
 barrier each for bytes nothing wrote. The rules (which errnos count as "not supported", the staged-to-landed path
 mapping, what a failure keeps) and the measurements live in `src/transfer/DETAILS.md` § "Durability (flush before
-reporting complete)". Pinned by `transfer/copy_tests.rs::local_copy_emits_flushing_phase_before_complete` and
+reporting complete)". Pinned by `transfer/copy/copy_tests.rs::local_copy_emits_flushing_phase_before_complete` and
 `transfer/move_op/move_progress_tests.rs::cross_fs_local_move_emits_flushing_phase_before_complete`; FE label by
 `TransferProgressDialog.flushing.test.ts`. **Cross-volume copy/move landing on a local disk** (MTP → Local, SMB → Local,
 USB import) doesn't go through this local-FS engine — it flows through `LocalPosixVolume::write_from_stream`, which
@@ -2420,13 +2423,13 @@ A copy checks the destination's room after its scan and before anything is writt
 - **What the destination has**: `statvfs` first, the purgeable-aware NSURL figure only on a shortfall, the larger of the
   two winning (§ "Shared gotchas" has why). No figure at all lets the copy go ahead.
 - **What the copy can need**: the full write footprint (`total_bytes`), unless that doesn't fit AND the destination is a
-  local disk (`index_provider::path_is_on_network_mount` says no). Then `local_copy_need` stats each source file at its
-  destination name, and a file landing on an existing file counts per policy: `Skip` nothing, the three overwrite
-  policies `max(0, size - existing)` plus headroom for the largest `min(size, existing)` (the new bytes stage beside the
-  old ones before the rename), and `Rename` / `Stop` the whole file (both copies can stay). That bound stays above the
-  real peak whatever the order (proof on `SpaceNeed`). A source already AT the destination is a duplicate, counted in
-  full. ❌ Never run that probe against a network destination: it's a round trip per file, so a share keeps the full
-  count and relies on the next point.
+  local disk (`cmdr_local::filesystem_kind::path_is_on_network_mount` says no). Then `local_copy_need` stats each source
+  file at its destination name, and a file landing on an existing file counts per policy: `Skip` nothing, the three
+  overwrite policies `max(0, size - existing)` plus headroom for the largest `min(size, existing)` (the new bytes stage
+  beside the old ones before the rename), and `Rename` / `Stop` the whole file (both copies can stay). That bound stays
+  above the real peak whatever the order (proof on `SpaceNeed`). A source already AT the destination is a duplicate,
+  counted in full. ❌ Never run that probe against a network destination: it's a round trip per file, so a share keeps
+  the full count and relies on the next point.
 - **A shortfall is the person's call.** The figure is an upper bound (it can't see clashes on a network share or inside
   the volume engine), so `InsufficientSpace` is a question: the error dialog offers "Copy anyway", which starts the same
   copy again with `SpaceShortfall::Proceed` (`apps/desktop/src/lib/file-operations/transfer/DETAILS.md` § "Copy
@@ -2647,7 +2650,7 @@ is stated by the producer and ❌ never re-derived: a direct SMB session roots a
 from the path would point `std::fs::remove_file` at the user's Mac.
 
 **The ledger sits BELOW `overwrite`.** `overwrite` tracks every temp and aside through `in_flight_temps`, so the ledger
-and its sweep ❌ never `use` `overwrite`: the sweep's local no-clobber rename calls `volume::rename_local_exclusive`
+and its sweep ❌ never `use` `overwrite`: the sweep's local no-clobber rename calls `cmdr_local::rename_local_exclusive`
 directly, the one primitive `overwrite::rename_no_replace` delegates to. Reaching up for the alias welds the two modules
 into a cycle `module-cycles` reports.
 
@@ -2695,17 +2698,16 @@ clone can't add to the log the next run replays); a cell that reads the log whil
 first, since lines reach the file from the writer thread; `hold_writer()` parks that thread, which is how the ordering
 cell proves a temp only queues while an aside waits to be on disk (seams: `in_flight_temps_test_support.rs`);
 `Ledger::for_test().launch_in(data_dir, &engine)` is the next launch, replaying that log, its sweep on the host of the
-engine it's handed (one over the app's answers, held while the cell waits on an arrival); `live_paths()` is what that
-ledger alone believes is on disk. So a cell's log, tally, and live set hold its own records and nothing else, and it can
-assert on all of them whole.
+engine it's handed (each launch on an engine of its own, whose `FakeVolumes` holds the cell's volume); `live_paths()` is
+what that ledger alone believes is on disk. So a cell's log, tally, and live set hold its own records and nothing else,
+and it can assert on all of them whole.
 
 - ❌ **Don't reintroduce a singleton that tests install a log into.** That's how a sweep cell replayed the records of
   every transfer test running beside it and deleted their live temps mid-copy under plain `cargo test` (#162; the check
   runner's one-process-per-test runner hid it). A test whose states use their engine's ledger records only in memory,
   since nothing claims a test engine's ledger.
-- **A volume-borne cell picks a volume ID nothing else uses.** The volume registry is still one per process, and each
-  ledger's arrival listener hears every registration, so a shared ID lets one cell's registration claim another's
-  pending records.
+- **A volume-borne cell's arrival is `engine.volumes().register(…)` on its own engine.** Each engine's `FakeVolumes` is
+  its own registry, so one cell's registration never reaches another's ledger.
 
 **The sweep signals completion, so no test needs a deadline.** A claim (and `launch_in`) returns a `SweepHandle`; the
 launch path drops it (waiting there would block on a dead mount for minutes), and a test calls `.wait()` to join the
@@ -2722,10 +2724,3 @@ plugged back in, on a live HFS+ image.
 sweep runs on its own thread, so a cell that wants a fixture directory to read as a mounted drive calls `settle` (or
 `settle_kind`) on its own thread rather than going through a launch. `engine.volumes().register(…)` stands in for the
 arrival: `FakeVolumes` announces each registration, which is what wakes the ledger's listener.
-
-The copy configs carry an optional explicit leaf name; its validation and landing contract live in
-`src/transfer/DETAILS.md` § "Named destinations".
-
-For a single named transfer, `conflict_preflight::merge_source_types_from_stats` binds the destination-name hint to the
-explicit original source path. Its type and size come from that source's stat; batch hints continue matching by
-basename. The destination leaf contract lives in `src/transfer/DETAILS.md` § "Named destinations".

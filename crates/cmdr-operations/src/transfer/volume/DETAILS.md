@@ -1774,14 +1774,15 @@ that can fail the operation — or fill the drive — exactly when the user is t
 can't undo an overwrite" to be the lesser surprise than "Overwrite filled my disk," so we accept the current behavior
 until users actually ask for reversible overwrites. The mechanics today: `safe_overwrite_file` uses
 temp+rename-aside+rename (the original is intact until the new content is fully in place), then **deletes** the aside in
-step 4 rather than retaining it. `CopyTransaction::rollback` and `MoveTransaction::rollback` therefore only un-create
-new files / reverse new renames.
+step 4 rather than retaining it. `reversal::reverse_copy_transaction` and `MoveTransaction::rollback` therefore only
+un-create new files / reverse new renames.
 
-**If you revisit this**: the three sites that would need backups are `overwrite::safe_overwrite_file` (step 4, the aside
-deletion), `state::CopyTransaction::rollback`, and `transfer/move_op.rs::MoveTransaction::rollback`. Each carries a
-pointer comment back here. Any future "retain backup" design must bound the extra disk footprint (for example, a size
-cap that falls back to no-backup, or an explicit pre-flight space check that reserves 2× the overwrite footprint) —
-don't reintroduce the unbounded-backup footgun this decision exists to avoid.
+**If you revisit this**: the three sites that would need backups are `overwrite::stage_and_land_file` (step 4, the aside
+deletion), `reversal::reverse_copy_transaction` (over `ledger::CopyTransaction`), and
+`transfer/move_op/mod.rs::MoveTransaction::rollback`. Each carries a pointer comment back here. Any future "retain
+backup" design must bound the extra disk footprint (for example, a size cap that falls back to no-backup, or an explicit
+pre-flight space check that reserves 2× the overwrite footprint) — don't reintroduce the unbounded-backup footgun this
+decision exists to avoid.
 
 ## Naming the item that failed
 

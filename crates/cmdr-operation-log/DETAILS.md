@@ -640,10 +640,11 @@ throttle, because a spec has to stage a fast copy and then reverse it slowly. Pi
 `planner_tests/tests.rs::the_e2e_throttle_hook_paces_the_item_loop`, which measures elapsed time rather than trusting
 the helper to exist: whoever moves this loop must carry the three lines across, or every rollback E2E goes back to
 racing the engine. The deferred-directory phase is deliberately NOT paced (it removes empty leftovers, so a window there
-is dead time for a spec). The override is one process-wide value, so a Rust test takes it through
-`test_mode::pace_rollback_for_test`, which serializes the tests that pace a reversal — without it two of them un-pace
-each other and the one measuring a window fails for a reason nothing inside it points at. Hook conventions:
-`docs/testing.md` § "E2E env-var hooks".
+is dead time for a spec). A Rust test paces a reversal on its own engine: a planner cell in `cmdr-operations` sets the
+pace with `host::testing::SettablePacing`, so two paced cells never share a value. The app's `test_mode` answer is one
+process-wide value, so the two app-side pins that read it (`operations_host/pacing.rs`, `operations_host/mod.rs`) take
+it through `test_mode::pace_rollback_for_test`, which serializes them. Hook conventions: `docs/testing.md` § "E2E
+env-var hooks".
 
 ### Undoing a job: several operations, newest first
 
@@ -866,8 +867,13 @@ the oldest whole ops until the DB fits the budget) → **dir GC** → **reclaim*
 The log is its own crate, with no `tauri` in its tree (`index-crate-isolation` guards it), so
 `cargo check -p cmdr-operation-log` verifies it without building the app. Its host is the app's `operation_log_host/`,
 which builds the one `OperationLog`, opens it, and passes in everything the log can't know: the data dir, the recording
-switch and retention limits from settings, the runtime retention runs on, and the volume registry the planner looks
-volumes up in (`VolumeLookup`).
+switch and retention limits from settings, and the runtime retention runs on. The planner's `VolumeLookup` comes from
+the write engine, whose `OperationVolumes` is its supertrait.
+
+- **Decision: the log spawns only on what its host passes in.** Retention runs on the `Handle` its host passes in
+  (`retention.rs`), the rollback planner's spawn is injected, and the writer is a named `std::thread::Builder` thread.
+  Why: the one pool everything shares is the host's call, as in the engine. The crate's `clippy.toml` refuses the
+  ambient spawns.
 
 - **Decision: wire types document themselves at the type, not per field.** Why: the `serde` + `specta` types
   (`OperationRow`, `OperationDetail`, `OperationItemView`, `RollbackRefusal`, `RollbackDispatch`, `SkipBreakdown`, the

@@ -23,6 +23,13 @@ copy. The git portal is ❌ not a coupling: it reaches a repo's virtual trees th
 `local_posix.rs` names git nowhere (`apps/desktop/src-tauri/src/file_system/git/DETAILS.md` § "Two seams, no hooks").
 Seam rationale: `crates/cmdr-fs/src/volume/host/DETAILS.md`.
 
+**Decision**: a `Volume` method's blocking work goes to an ambient `tokio::task::spawn_blocking`, not to
+`self.host.runtime()` **Why**: a `Volume` method runs on its CALLER's runtime, as every backend's does (SMB, SFTP,
+WebDAV, and archive spawn the same way): the trait is runtime-agnostic, and the caller (the write engine, a pane
+listing) already chose which runtime polls the future. Routing only the blocking half to the host's would split one call
+across two pools for nothing; in production both are the app runtime. The write engine's own spawn rule
+(`crates/cmdr-operations/src/host/CLAUDE.md`) covers the engine, not the backends it drives.
+
 **Decision**: the mount probes the engine and `volumes*/` ask live here, and their callers name this crate **Why**:
 they're the same OS-probe code the backend's own answers need (the `getfsstat` snapshot in `mount_table.rs`, `statfs` in
 `statfs.rs`, `/proc/mounts` in `linux_mounts.rs`, the filesystem behind a path and whether it's a network one in

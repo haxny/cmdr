@@ -433,8 +433,8 @@ they leave by"), and the three stores' schema-mismatch wipes call it too.
 - **`VolumeManager`** — the process-wide registry. The index reaches it through an injected provider, not by importing
   it.
 - **`cmdr_local::mutation::patch_listing_after_local_mutation`** — see cut 1.
-- **`detect_filesystem_for_path`** — see cut 3. The kind → network mapping over it stayed app-side too
-  (`file_system::index_provider::path_is_on_network_mount`), which is why `WatchCoverage::ThisMachineOnly` is a variant
+- **`detect_filesystem_for_path`** — see cut 3. The kind → network mapping over it lives in `cmdr-local` too
+  (`cmdr_local::filesystem_kind::path_is_on_network_mount`), which is why `WatchCoverage::ThisMachineOnly` is a variant
   this crate can NAME but never decide: the vocabulary is portable, the mount probe isn't. A backend here answers
   `Volume::listing_watch_coverage` from what it knows; the app answers for OS-mounted shares. Capability model and the
   per-backend answers: `apps/desktop/src-tauri/src/file_system/volume/DETAILS.md`.

@@ -218,5 +218,5 @@ perl -0ne 'while (/pub(?:\(crate\))? use write_operations::(\{[^}]*\}|[A-Za-z_]+
 
 The union of the two lists, deduped, is 115: 81 named directly (59 `write_operations::…`, 22 `operation_log::…`) plus
 the `file_system/mod.rs` facade's 42 re-exports, eight of which the first list also names. After the move, run the same
-`rg` over `cmdr_operations::` / `cmdr_operation_log::`. `index-crate-isolation` enforces nothing for these crates yet,
-so there's no enforced count to put beside it; the after half reports both.
+`rg` over `cmdr_operations::` / `cmdr_operation_log::`. `index-crate-isolation` now caps these crates' surfaces
+(`scripts/check/checks/index-crate-isolation-ceilings.go`), so the after half quotes those counts beside it.
