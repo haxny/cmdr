@@ -117,7 +117,7 @@ impl Operations {
                 // Wait out the confirming dialog's scan before any journal row or
                 // any I/O: an op that never got past its scan wrote nothing, so
                 // there's nothing to journal and its terminal event is already out.
-                if scan_bridge::await_claimed_preview(&*events, &op_id, operation_type, &state)
+                if scan_bridge::await_claimed_preview(&ops, &*events, &op_id, operation_type, &state)
                     .await
                     .stopped()
                 {

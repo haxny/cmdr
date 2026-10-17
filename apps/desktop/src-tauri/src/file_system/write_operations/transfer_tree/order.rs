@@ -8,23 +8,29 @@
 use std::cmp::Ordering;
 use std::sync::Arc;
 
-use super::super::host;
+use super::super::host::{EngineEvents, EngineHost, OperationErrorReport, TreeFailure};
 use cmdr_collation::NameCollator;
 
-/// Ranks sibling entries in tree order.
+/// Ranks sibling entries in tree order, and says where a tree bug goes: the
+/// two things a tree asks its engine's host.
+#[derive(Clone)]
 pub(crate) struct TreeOrder {
     /// `None` ranks names by raw bytes, which only the budget cells ask for
     /// (`bytewise`): a million collation keys in an unoptimized build is the
     /// whole test budget, and the arena's size doesn't depend on the order.
     collator: Option<Arc<NameCollator>>,
+    /// Where a tree that a bug turned off is reported (`built`). `None` only
+    /// for a test's order, whose trees answer to nobody.
+    events: Option<Arc<dyn EngineEvents>>,
 }
 
 impl TreeOrder {
     /// Tree order for the language the user reads now, the same collator the
-    /// panes sort with.
-    pub(crate) fn active() -> Self {
+    /// panes sort with, reporting a tree bug to `host`'s engine-wide events.
+    pub(crate) fn active(host: &EngineHost) -> Self {
         Self {
-            collator: Some(host::installed().name_order().collator()),
+            collator: Some(host.name_order().collator()),
+            events: Some(Arc::clone(host.events_arc())),
         }
     }
 
@@ -33,6 +39,7 @@ impl TreeOrder {
     pub(crate) fn with_collator(collator: Arc<NameCollator>) -> Self {
         Self {
             collator: Some(collator),
+            events: None,
         }
     }
 
@@ -40,7 +47,17 @@ impl TreeOrder {
     /// its cost, for the size and speed budgets.
     #[cfg(test)]
     pub(crate) fn bytewise() -> Self {
-        Self { collator: None }
+        Self {
+            collator: None,
+            events: None,
+        }
+    }
+
+    /// Reports a tree a bug turned off, to the engine this order came from.
+    pub(super) fn report_abandoned(&self, cause: TreeFailure) {
+        if let Some(events) = &self.events {
+            events.error_report(OperationErrorReport::TreeAbandoned { cause });
+        }
     }
 
     /// Ranks two siblings: a folder before any file, then by name, with the

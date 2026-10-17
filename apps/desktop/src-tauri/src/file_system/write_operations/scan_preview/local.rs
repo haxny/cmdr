@@ -241,7 +241,7 @@ pub(in crate::file_system::write_operations) fn run_scan_preview(
                         &sources,
                         &dirs,
                         files.iter().map(|file| (file.path.as_path(), file.size)),
-                        &TreeOrder::active(),
+                        &TreeOrder::active(host::installed()),
                     )
                 })
                 .flatten();

@@ -32,7 +32,7 @@ use super::super::super::journal;
 use super::super::super::manager;
 use super::super::super::source_binding::{ExpectedSources, retain_bound_sources_on};
 use super::super::super::state::{OperationIntent, WriteOperationState, is_cancelled, load_intent};
-use super::super::super::transfer_tree::TreeLanding;
+use super::super::super::transfer_tree::{TreeLanding, TreeOrder};
 use super::super::super::types::{
     CancelRollback, SpaceShortfall, VolumeCopyConfig, WriteCancelledEvent, WriteCompleteEvent, WriteOperationConfig,
     WriteOperationError, WriteOperationPhase, WriteOperationStartResult, WriteOperationType, WriteProgressEvent,
@@ -291,6 +291,7 @@ impl crate::file_system::write_operations::Operations {
                     // Wait out the confirming dialog's scan before journaling or
                     // touching either device; see `write_operations::start_write_operation`.
                     if crate::file_system::write_operations::scan_bridge::await_claimed_preview(
+                        &ops,
                         &*events,
                         &op_id,
                         WriteOperationType::Copy,
@@ -764,7 +765,11 @@ pub(crate) async fn copy_volumes_with_progress(
     let known_directory_paths = preflight.known_directory_paths();
     // Both drivers take sources in the order given, so this is what makes them
     // start in tree order.
-    let ordered_sources = sources_in_tree_order(source_paths, &preflight.source_hints);
+    let ordered_sources = sources_in_tree_order(
+        source_paths,
+        &preflight.source_hints,
+        &TreeOrder::active(state.scope().host()),
+    );
     let source_paths = ordered_sources.as_slice();
     let mut source_hints = preflight.source_hints;
 

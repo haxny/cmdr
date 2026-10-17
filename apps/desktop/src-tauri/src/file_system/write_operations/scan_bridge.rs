@@ -30,6 +30,7 @@
 use std::sync::atomic::Ordering;
 use std::sync::{Arc, OnceLock};
 
+use super::Operations;
 use super::event_sinks::OperationEventSink;
 use super::host;
 use super::manager;
@@ -77,12 +78,13 @@ impl ScanWait {
 /// preview, or a cancel issued against the OPERATION while it waits, cancels
 /// the operation. And a preview nobody knows about is simply not waited on.
 pub(super) async fn await_claimed_preview(
+    engine: &Operations,
     events: &dyn OperationEventSink,
     operation_id: &str,
     operation_type: WriteOperationType,
     state: &WriteOperationState,
 ) -> ScanWait {
-    let Some(preview_id) = manager::manager().claimed_preview_of(operation_id) else {
+    let Some(preview_id) = engine.manager().claimed_preview_of(operation_id) else {
         return ScanWait::Proceed;
     };
 
@@ -98,12 +100,12 @@ pub(super) async fn await_claimed_preview(
             // The claim ends here, and deliberately without freeing anything:
             // the result is what the operation is about to consume.
             finish_claim(&preview_id);
-            manager::manager().end_scan_wait(operation_id);
+            engine.manager().end_scan_wait(operation_id);
             ScanWait::Proceed
         }
         ScanOutcome::Cancelled => {
             abandon_claim(&preview_id);
-            manager::manager().end_scan_wait(operation_id);
+            engine.manager().end_scan_wait(operation_id);
             events.emit_cancelled(WriteCancelledEvent {
                 operation_id: operation_id.to_string(),
                 operation_type,
@@ -114,7 +116,7 @@ pub(super) async fn await_claimed_preview(
         }
         ScanOutcome::Error(error) => {
             abandon_claim(&preview_id);
-            manager::manager().end_scan_wait(operation_id);
+            engine.manager().end_scan_wait(operation_id);
             events.emit_error(WriteErrorEvent::new(operation_id.to_string(), operation_type, error));
             ScanWait::Stopped
         }

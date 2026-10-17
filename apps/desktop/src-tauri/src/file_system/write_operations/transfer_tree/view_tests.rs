@@ -15,7 +15,7 @@ use crate::file_system::write_operations::types::{ProgressAxis, WriteOperationEr
 
 /// `folders` top-level folders, each holding `files` files, plus `loose` top-level files.
 fn grid(folders: usize, files: usize, loose: usize) -> TreeModel {
-    let recorder = TreeRecorder::new(&sources(folders, loose));
+    let recorder = TreeRecorder::new(&sources(folders, loose), english());
     for folder in 0..folders {
         let dir = PathBuf::from(format!("/src/folder_{folder}"));
         recorder.dir(&dir);
@@ -26,7 +26,7 @@ fn grid(folders: usize, files: usize, loose: usize) -> TreeModel {
     for file in 0..loose {
         recorder.file(&PathBuf::from(format!("/src/loose_{file:05}")), 10);
     }
-    recorder.finish(&english()).expect("the tree builds")
+    recorder.finish().expect("the tree builds")
 }
 
 fn sources(folders: usize, loose: usize) -> Vec<PathBuf> {
@@ -171,14 +171,14 @@ fn a_hand_collapse_beats_the_work_and_a_hand_expand_adds_to_it() {
 
 #[test]
 fn a_single_child_folder_chain_is_one_row_keyed_by_its_deepest_folder() {
-    let recorder = TreeRecorder::new(&[PathBuf::from("/src/a"), PathBuf::from("/src/z.txt")]);
+    let recorder = TreeRecorder::new(&[PathBuf::from("/src/a"), PathBuf::from("/src/z.txt")], english());
     for dir in ["/src/a", "/src/a/b", "/src/a/b/c"] {
         recorder.dir(Path::new(dir));
     }
     recorder.file(Path::new("/src/a/b/c/1"), 1);
     recorder.file(Path::new("/src/a/b/c/2"), 1);
     recorder.file(Path::new("/src/z.txt"), 1);
-    let mut model = recorder.finish(&english()).expect("the tree builds");
+    let mut model = recorder.finish().expect("the tree builds");
     let c = node_at(&model, &["a", "b", "c"]);
 
     let window = flatten(&model, &at(0, 10));
@@ -203,7 +203,7 @@ fn a_single_child_folder_chain_is_one_row_keyed_by_its_deepest_folder() {
 
 #[test]
 fn a_window_names_the_open_rows_above_its_first_row() {
-    let recorder = TreeRecorder::new(&[PathBuf::from("/src/a"), PathBuf::from("/src/z.txt")]);
+    let recorder = TreeRecorder::new(&[PathBuf::from("/src/a"), PathBuf::from("/src/z.txt")], english());
     for dir in ["/src/a", "/src/a/b", "/src/a/b/c", "/src/a/b/c/d"] {
         recorder.dir(Path::new(dir));
     }
@@ -212,7 +212,7 @@ fn a_window_names_the_open_rows_above_its_first_row() {
         recorder.file(&PathBuf::from(format!("/src/a/b/c/d/f_{file:02}")), 1);
     }
     recorder.file(Path::new("/src/z.txt"), 1);
-    let model = recorder.finish(&english()).expect("the tree builds");
+    let model = recorder.finish().expect("the tree builds");
     let c = node_at(&model, &["a", "b", "c"]);
     let d = node_at(&model, &["a", "b", "c", "d"]);
     let mut open = at(0, 3);
@@ -253,10 +253,10 @@ fn a_window_names_the_open_rows_above_its_first_row() {
 
 #[test]
 fn a_file_never_compacts_into_its_folder() {
-    let recorder = TreeRecorder::new(&[PathBuf::from("/src/a")]);
+    let recorder = TreeRecorder::new(&[PathBuf::from("/src/a")], english());
     recorder.dir(Path::new("/src/a"));
     recorder.file(Path::new("/src/a/only.txt"), 1);
-    let model = recorder.finish(&english()).expect("the tree builds");
+    let model = recorder.finish().expect("the tree builds");
     let mut open = at(0, 10);
     open.expanded = vec![node_at(&model, &["a"]).get()];
 
@@ -329,9 +329,9 @@ fn settled_rows_say_how_they_ended() {
 
 #[test]
 fn an_empty_folder_is_done_once_created() {
-    let recorder = TreeRecorder::new(&[PathBuf::from("/src/empty")]);
+    let recorder = TreeRecorder::new(&[PathBuf::from("/src/empty")], english());
     recorder.dir(Path::new("/src/empty"));
-    let mut model = recorder.finish(&english()).expect("the tree builds");
+    let mut model = recorder.finish().expect("the tree builds");
     let empty = node_at(&model, &["empty"]);
     assert_eq!(flatten(&model, &at(0, 1)).rows[0].state, TreeRowState::Waiting);
 
@@ -368,7 +368,10 @@ fn the_limit_and_the_toggle_lists_are_capped() {
 
 #[test]
 fn every_mutation_bumps_the_revision_a_view_reports() {
-    let tree = TransferTree::new(grid(1, 2, 0));
+    let tree = TransferTree::new(
+        grid(1, 2, 0),
+        Arc::new(crate::file_system::write_operations::host::testing::RecordingEngineEvents::default()),
+    );
     let view = |tree: &TransferTree| tree.view(&at(0, 5), ProgressAxis::Files).expect("the tree is on");
     let before = view(&tree).revision;
     let file = tree

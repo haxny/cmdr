@@ -19,10 +19,11 @@ use tokio::time::Duration;
 
 use cmdr_fs::deadline::{Deadline, timeout_detached_within};
 use cmdr_fs::entry::FileEntry;
+use cmdr_fs::volume::host::listings::ListingHost;
 use cmdr_fs::volume::{ScanConflict, Volume, VolumeError};
 
-use super::host::{self, UnregisteredVolume};
-use super::routing::{resolve_dest_path, resolve_source_volume, transfer_would_land_on_its_source};
+use super::host::{EngineHost, UnregisteredVolume};
+use super::routing::{resolve_dest_path, transfer_would_land_on_its_source};
 
 /// Why a pre-flight scan or a conflict check couldn't answer.
 ///
@@ -61,8 +62,8 @@ pub enum VolumeScanError {
 impl VolumeScanError {
     /// The refusal for a destination id the registry had nothing for: not
     /// connected yet, or gone (`OperationVolumes::unregistered`).
-    pub(crate) async fn destination_missing(volume_id: String) -> Self {
-        match host::installed().volumes().unregistered(&volume_id).await {
+    pub(crate) async fn destination_missing(host: &EngineHost, volume_id: String) -> Self {
+        match host.volumes().unregistered(&volume_id).await {
             UnregisteredVolume::NotConnected => Self::DestinationVolumeNotConnected { volume_id },
             UnregisteredVolume::Gone => Self::DestinationVolumeNotFound { volume_id },
         }
@@ -88,17 +89,177 @@ impl std::fmt::Display for VolumeScanError {
 
 impl std::error::Error for VolumeScanError {}
 
-/// The whole conflict check, under ONE wall-clock budget.
-///
-/// The dialog says "Checking for conflicts…" while this runs, so what it owes
-/// the user is a knowable wait: an answer, or an honest "couldn't check", within
-/// `deadline`. Every leg below can reach a device that has stopped answering —
-/// two volume resolves (a `.zip`-crossing path probes the network), the source
-/// batch stat, and the destination listing — and each takes what's LEFT rather
-/// than a fresh 30 s, because four legs with their own timeouts add up to a
-/// two-minute promise nobody ever wrote down.
-///
-/// Split out from the command so a test can hand it a budget it can wait out.
+impl crate::file_system::write_operations::Operations {
+    /// The whole conflict check, under ONE wall-clock budget.
+    ///
+    /// The dialog says "Checking for conflicts…" while this runs, so what it owes
+    /// the user is a knowable wait: an answer, or an honest "couldn't check", within
+    /// `deadline`. Every leg below can reach a device that has stopped answering —
+    /// two volume resolves (a `.zip`-crossing path probes the network), the source
+    /// batch stat, and the destination listing — and each takes what's LEFT rather
+    /// than a fresh 30 s, because four legs with their own timeouts add up to a
+    /// two-minute promise nobody ever wrote down.
+    ///
+    /// Split out from the command so a test can hand it a budget it can wait out.
+    pub(crate) async fn scan_volume_for_conflicts_within(
+        &self,
+        deadline: Deadline,
+        volume_id: String,
+        source_items: Vec<SourceItemInput>,
+        dest_path: String,
+        source_volume_id: Option<String>,
+        source_paths: Option<Vec<String>>,
+    ) -> Result<Vec<ScanConflict>, VolumeScanError> {
+        let dest_path = PathBuf::from(dest_path);
+        log::debug!(
+            target: CONFLICT_LOG_TARGET,
+            // Keyed so the redactor can find it: for a network volume this is a
+            // volume-relative path, which no mount-prefix pattern recognizes.
+            "checking {} item(s) against path={:?} on volume {}",
+            source_items.len(),
+            dest_path,
+            volume_id
+        );
+
+        // Resolve the destination so a conflict scan against an archive-inner dest
+        // routes to its ArchiveVolume (consistent with the copy op's routing).
+        let engine = self.clone();
+        let resolve_id = volume_id.clone();
+        let resolve_path = dest_path.clone();
+        let volume = timeout_detached_within(
+            &deadline,
+            || VolumeScanError::TimedOut,
+            |detail| VolumeScanError::Unexpected { detail },
+            async move {
+                Ok::<_, VolumeScanError>(engine.host().volumes().resolve(&resolve_id, &resolve_path).await.volume)
+            },
+        )
+        .await
+        .inspect_err(|e| log_conflict_outcome(&deadline, "couldn't reach the destination volume", e))?;
+        let Some(volume) = volume else {
+            return Err(VolumeScanError::destination_missing(self.host(), volume_id).await);
+        };
+
+        // Same anchoring the copy op applies: the dialog's box is volume-relative,
+        // so without it the scan asks a share for a path outside its mount and
+        // reports "no conflicts" for a folder full of them.
+        let dest_path = resolve_dest_path(&volume, dest_path.to_string_lossy().into_owned());
+
+        let mut source_items: Vec<cmdr_fs::volume::SourceItemInfo> = source_items
+            .into_iter()
+            .map(|item| cmdr_fs::volume::SourceItemInfo {
+                name: item.name,
+                size: item.size,
+                modified: item.modified,
+                is_directory: item.is_directory,
+            })
+            .collect();
+
+        // The source side of the self-collision filter below. Both halves come from
+        // the same resolve the batch stat pays for, and it stays `None` when the
+        // caller sent no source volume: the filter is then inert and the scan keeps
+        // its name-only behavior.
+        let mut resolved_source: Option<(Arc<dyn Volume>, Vec<PathBuf>)> = None;
+
+        // Resolve real per-item types and sizes from the source volume when the
+        // caller supplied it. One `get_metadata` per top-level path, O(top-level
+        // items) and never recursive. `resolve_source` routes an archive-inner
+        // source through its ArchiveVolume.
+        if let (Some(src_volume_id), Some(src_paths)) = (source_volume_id, source_paths) {
+            let paths: Vec<PathBuf> = src_paths.iter().map(PathBuf::from).collect();
+            let first = paths.first().cloned();
+            // The listing cache keys a pane by the caller's volume id, which the
+            // resolve below moves; the stat leg asks the cache with it.
+            let stat_volume_id = src_volume_id.clone();
+            let resolving = self.clone();
+            let resolved = timeout_detached_within(
+                &deadline,
+                || VolumeScanError::TimedOut,
+                |detail| VolumeScanError::Unexpected { detail },
+                async move {
+                    Ok::<_, VolumeScanError>(resolving.resolve_source_volume(&src_volume_id, first.as_ref()).await)
+                },
+            )
+            .await;
+            if let Ok(Some((src_volume, _))) = resolved {
+                resolved_source = Some((Arc::clone(&src_volume), paths.clone()));
+                // A sub-budget, because this leg is OPTIONAL (see the fallback
+                // below) and the destination scan after it is not. Detached (see
+                // `timeout_detached`): the stats reach the source device, so the
+                // deadline must not drop them mid-request.
+                let single_source = (paths.len() == 1).then(|| paths[0].clone());
+                let stat_deadline = deadline.fraction(SOURCE_STAT_BUDGET_DIVISOR);
+                let stating = self.clone();
+                let stats = timeout_detached_within(
+                    &stat_deadline,
+                    || VolumeScanError::TimedOut,
+                    |detail| VolumeScanError::Unexpected { detail },
+                    async move {
+                        Ok::<_, VolumeScanError>(
+                            stat_source_paths(stating.host().listings(), &src_volume, &stat_volume_id, &paths).await,
+                        )
+                    },
+                )
+                .await;
+                match stats {
+                    Ok(stats) => merge_source_types_from_stats(&mut source_items, &stats, single_source.as_deref()),
+                    // A source-side stat that doesn't come back is non-fatal: fall
+                    // back to the name-only items the caller sent. Conflict
+                    // detection still works by name; only the dir/size hints
+                    // degrade, so the check can still answer.
+                    Err(e) => {
+                        log::debug!(
+                            target: CONFLICT_LOG_TARGET,
+                            "source stats unavailable after {:.1}s of their {:.1}s share, using name-only items: {}",
+                            stat_deadline.elapsed().as_secs_f64(),
+                            stat_deadline.total().as_secs_f64(),
+                            e
+                        );
+                    }
+                }
+            }
+        }
+
+        // Run conflict scan (now async), detached so the destination device isn't
+        // left mid-transaction if the scan overruns.
+        let dest_volume = Arc::clone(&volume);
+        let found = timeout_detached_within(
+            &deadline,
+            || VolumeScanError::TimedOut,
+            |detail| VolumeScanError::Unexpected { detail },
+            async move {
+                volume
+                    .scan_for_conflicts(&source_items, &dest_path)
+                    .await
+                    .map_err(|error| VolumeScanError::Volume { error })
+            },
+        )
+        .await;
+        match found {
+            Ok(conflicts) => {
+                let total = conflicts.len();
+                let conflicts = drop_self_collisions(conflicts, resolved_source.as_ref(), &dest_volume);
+                log::debug!(
+                    target: CONFLICT_LOG_TARGET,
+                    "found {} collision(s) in {:.1}s, {} of them the sources themselves",
+                    total,
+                    deadline.elapsed().as_secs_f64(),
+                    total - conflicts.len()
+                );
+                Ok(conflicts)
+            }
+            Err(e) => {
+                log_conflict_outcome(&deadline, "couldn't read the destination", &e);
+                Err(e)
+            }
+        }
+    }
+}
+
+/// [`Operations::scan_volume_for_conflicts_within`](super::Operations::scan_volume_for_conflicts_within)
+/// on the installed engine. Before `install` no volume is registered, so the
+/// destination isn't found.
+// shim: removed in M7a
 pub(crate) async fn scan_volume_for_conflicts_within(
     deadline: Deadline,
     volume_id: String,
@@ -107,146 +268,19 @@ pub(crate) async fn scan_volume_for_conflicts_within(
     source_volume_id: Option<String>,
     source_paths: Option<Vec<String>>,
 ) -> Result<Vec<ScanConflict>, VolumeScanError> {
-    let dest_path = PathBuf::from(dest_path);
-    log::debug!(
-        target: CONFLICT_LOG_TARGET,
-        // Keyed so the redactor can find it: for a network volume this is a
-        // volume-relative path, which no mount-prefix pattern recognizes.
-        "checking {} item(s) against path={:?} on volume {}",
-        source_items.len(),
-        dest_path,
-        volume_id
-    );
-
-    // Resolve the destination so a conflict scan against an archive-inner dest
-    // routes to its ArchiveVolume (consistent with the copy op's routing).
-    let resolve_id = volume_id.clone();
-    let resolve_path = dest_path.clone();
-    let volume = timeout_detached_within(
-        &deadline,
-        || VolumeScanError::TimedOut,
-        |detail| VolumeScanError::Unexpected { detail },
-        async move {
-            Ok::<_, VolumeScanError>(
-                host::installed()
-                    .volumes()
-                    .resolve(&resolve_id, &resolve_path)
-                    .await
-                    .volume,
-            )
-        },
-    )
-    .await
-    .inspect_err(|e| log_conflict_outcome(&deadline, "couldn't reach the destination volume", e))?;
-    let Some(volume) = volume else {
-        return Err(VolumeScanError::destination_missing(volume_id).await);
+    let Some(engine) = super::installed_for("scan_volume_for_conflicts_within") else {
+        return Err(VolumeScanError::DestinationVolumeNotFound { volume_id });
     };
-
-    // Same anchoring the copy op applies: the dialog's box is volume-relative,
-    // so without it the scan asks a share for a path outside its mount and
-    // reports "no conflicts" for a folder full of them.
-    let dest_path = resolve_dest_path(&volume, dest_path.to_string_lossy().into_owned());
-
-    let mut source_items: Vec<cmdr_fs::volume::SourceItemInfo> = source_items
-        .into_iter()
-        .map(|item| cmdr_fs::volume::SourceItemInfo {
-            name: item.name,
-            size: item.size,
-            modified: item.modified,
-            is_directory: item.is_directory,
-        })
-        .collect();
-
-    // The source side of the self-collision filter below. Both halves come from
-    // the same resolve the batch stat pays for, and it stays `None` when the
-    // caller sent no source volume: the filter is then inert and the scan keeps
-    // its name-only behavior.
-    let mut resolved_source: Option<(Arc<dyn Volume>, Vec<PathBuf>)> = None;
-
-    // Resolve real per-item types and sizes from the source volume when the
-    // caller supplied it. One `get_metadata` per top-level path, O(top-level
-    // items) and never recursive. `resolve_source` routes an archive-inner
-    // source through its ArchiveVolume.
-    if let (Some(src_volume_id), Some(src_paths)) = (source_volume_id, source_paths) {
-        let paths: Vec<PathBuf> = src_paths.iter().map(PathBuf::from).collect();
-        let first = paths.first().cloned();
-        // The listing cache keys a pane by the caller's volume id, which the
-        // resolve below moves; the stat leg asks the cache with it.
-        let stat_volume_id = src_volume_id.clone();
-        let resolved = timeout_detached_within(
-            &deadline,
-            || VolumeScanError::TimedOut,
-            |detail| VolumeScanError::Unexpected { detail },
-            async move { Ok::<_, VolumeScanError>(resolve_source_volume(&src_volume_id, first.as_ref()).await) },
+    engine
+        .scan_volume_for_conflicts_within(
+            deadline,
+            volume_id,
+            source_items,
+            dest_path,
+            source_volume_id,
+            source_paths,
         )
-        .await;
-        if let Ok(Some((src_volume, _))) = resolved {
-            resolved_source = Some((Arc::clone(&src_volume), paths.clone()));
-            // A sub-budget, because this leg is OPTIONAL (see the fallback
-            // below) and the destination scan after it is not. Detached (see
-            // `timeout_detached`): the stats reach the source device, so the
-            // deadline must not drop them mid-request.
-            let single_source = (paths.len() == 1).then(|| paths[0].clone());
-            let stat_deadline = deadline.fraction(SOURCE_STAT_BUDGET_DIVISOR);
-            let stats = timeout_detached_within(
-                &stat_deadline,
-                || VolumeScanError::TimedOut,
-                |detail| VolumeScanError::Unexpected { detail },
-                async move { Ok::<_, VolumeScanError>(stat_source_paths(&src_volume, &stat_volume_id, &paths).await) },
-            )
-            .await;
-            match stats {
-                Ok(stats) => merge_source_types_from_stats(&mut source_items, &stats, single_source.as_deref()),
-                // A source-side stat that doesn't come back is non-fatal: fall
-                // back to the name-only items the caller sent. Conflict
-                // detection still works by name; only the dir/size hints
-                // degrade, so the check can still answer.
-                Err(e) => {
-                    log::debug!(
-                        target: CONFLICT_LOG_TARGET,
-                        "source stats unavailable after {:.1}s of their {:.1}s share, using name-only items: {}",
-                        stat_deadline.elapsed().as_secs_f64(),
-                        stat_deadline.total().as_secs_f64(),
-                        e
-                    );
-                }
-            }
-        }
-    }
-
-    // Run conflict scan (now async), detached so the destination device isn't
-    // left mid-transaction if the scan overruns.
-    let dest_volume = Arc::clone(&volume);
-    let found = timeout_detached_within(
-        &deadline,
-        || VolumeScanError::TimedOut,
-        |detail| VolumeScanError::Unexpected { detail },
-        async move {
-            volume
-                .scan_for_conflicts(&source_items, &dest_path)
-                .await
-                .map_err(|error| VolumeScanError::Volume { error })
-        },
-    )
-    .await;
-    match found {
-        Ok(conflicts) => {
-            let total = conflicts.len();
-            let conflicts = drop_self_collisions(conflicts, resolved_source.as_ref(), &dest_volume);
-            log::debug!(
-                target: CONFLICT_LOG_TARGET,
-                "found {} collision(s) in {:.1}s, {} of them the sources themselves",
-                total,
-                deadline.elapsed().as_secs_f64(),
-                total - conflicts.len()
-            );
-            Ok(conflicts)
-        }
-        Err(e) => {
-            log_conflict_outcome(&deadline, "couldn't read the destination", &e);
-            Err(e)
-        }
-    }
+        .await
 }
 
 /// Drops the collisions that name a source itself, which the engines duplicate
@@ -316,13 +350,14 @@ fn log_conflict_outcome(deadline: &Deadline, what: &str, e: &VolumeScanError) {
 /// A path the source can't stat is simply absent from the result; the merge
 /// leaves the caller's values in place for it.
 async fn stat_source_paths(
+    listings: &dyn ListingHost,
     source_volume: &Arc<dyn Volume>,
     source_volume_id: &str,
     paths: &[PathBuf],
 ) -> Vec<(PathBuf, FileEntry)> {
     use futures_util::stream::{self, StreamExt};
 
-    let (mut stats, unanswered) = stats_from_watched_panes(source_volume_id, paths);
+    let (mut stats, unanswered) = stats_from_watched_panes(listings, source_volume_id, paths);
     let stated: Vec<(PathBuf, FileEntry)> = stream::iter(unanswered)
         .map(|path| async move {
             let entry = source_volume.get_metadata(&path).await.ok()?;
@@ -342,7 +377,11 @@ async fn stat_source_paths(
 ///
 /// Only a listing a live watch keeps fresh answers (`Listings::authoritative_listing`),
 /// the same bar the delete walker and the copy scan hold a cached entry to.
-fn stats_from_watched_panes(source_volume_id: &str, paths: &[PathBuf]) -> (Vec<(PathBuf, FileEntry)>, Vec<PathBuf>) {
+fn stats_from_watched_panes(
+    listings: &dyn ListingHost,
+    source_volume_id: &str,
+    paths: &[PathBuf],
+) -> (Vec<(PathBuf, FileEntry)>, Vec<PathBuf>) {
     use std::collections::HashMap;
 
     let mut by_parent: HashMap<&Path, Vec<&PathBuf>> = HashMap::new();
@@ -356,9 +395,7 @@ fn stats_from_watched_panes(source_volume_id: &str, paths: &[PathBuf]) -> (Vec<(
     let mut answered = Vec::new();
     let mut unanswered = Vec::new();
     for (parent, children) in by_parent {
-        let listing = host::installed()
-            .listings()
-            .authoritative_listing(source_volume_id, parent);
+        let listing = listings.authoritative_listing(source_volume_id, parent);
         let by_name: HashMap<&str, &FileEntry> = listing
             .iter()
             .flatten()

@@ -315,7 +315,7 @@ fn source_label<'a>(root: &Path, source: &'a Path) -> std::borrow::Cow<'a, str> 
 /// it shows as. Sources with one label keep their given order, and all of them
 /// do if ranking them panics.
 pub(crate) fn sort_sources(sources: &mut [PathBuf], is_folder: impl Fn(&Path) -> bool, order: &TreeOrder) {
-    let ranked = built("ranking the selection", || {
+    let ranked = built(order, "ranking the selection", || {
         let root = common_ancestor(sources);
         let mut ranked: Vec<(bool, String, PathBuf)> = sources
             .iter()
@@ -371,14 +371,17 @@ fn file_name(path: &Path) -> std::borrow::Cow<'_, str> {
 /// [`finish`](Self::finish) builds no tree.
 pub(crate) struct TreeRecorder {
     tree: Mutex<PathTree>,
+    /// The order the finished tree ranks in, and where a tree bug is reported.
+    order: TreeOrder,
     /// An entry panicked: record nothing more, build nothing.
     broken: AtomicBool,
 }
 
 impl TreeRecorder {
-    pub(crate) fn new(sources: &[PathBuf]) -> Self {
-        let tree = built("placing the selection", || PathTree::new(sources));
+    pub(crate) fn new(sources: &[PathBuf], order: TreeOrder) -> Self {
+        let tree = built(&order, "placing the selection", || PathTree::new(sources));
         Self {
+            order,
             broken: AtomicBool::new(tree.is_none()),
             // An empty tree places nothing, so it can't panic.
             tree: Mutex::new(tree.unwrap_or_else(|| PathTree::new(&[]))),
@@ -388,12 +391,12 @@ impl TreeRecorder {
     /// The tree of everything recorded so far, or `None` after a tree bug.
     /// Takes it: the recorder is empty afterwards, so call it once the scan
     /// has returned.
-    pub(crate) fn finish(&self, order: &TreeOrder) -> Option<TreeModel> {
+    pub(crate) fn finish(&self) -> Option<TreeModel> {
         if self.broken.load(Ordering::Relaxed) {
             return None;
         }
         let tree = std::mem::replace(&mut *self.tree.lock_ignore_poison(), PathTree::new(&[]));
-        built("finishing a scan's tree", || tree.finish(order).0)
+        built(&self.order, "finishing a scan's tree", || tree.finish(&self.order).0)
     }
 
     /// Records one entry, unless an earlier one broke the recorder.
@@ -401,7 +404,7 @@ impl TreeRecorder {
         if self.broken.load(Ordering::Relaxed) {
             return;
         }
-        if built("recording a scanned entry", || {
+        if built(&self.order, "recording a scanned entry", || {
             entry(&mut self.tree.lock_ignore_poison())
         })
         .is_none()
@@ -449,11 +452,11 @@ pub(crate) fn from_per_path(
     per_path: &[(PathBuf, CopyScanResult)],
     order: &TreeOrder,
 ) -> Option<TreeModel> {
-    let recorder = TreeRecorder::new(sources);
+    let recorder = TreeRecorder::new(sources, order.clone());
     for (path, scan) in per_path {
         recorder.subtree(path, scan);
     }
-    recorder.finish(order)
+    recorder.finish()
 }
 
 /// A rename move's tree: one row per selected item, and nothing below a
@@ -465,7 +468,7 @@ pub(crate) fn from_sources(
     is_folder: impl Fn(&Path) -> bool,
     order: &TreeOrder,
 ) -> Option<TreeModel> {
-    built("a rename move's items", || {
+    built(order, "a rename move's items", || {
         let mut tree = PathTree::new(sources);
         for source in sources.iter().filter(|source| is_folder(source)) {
             tree.dir(source);
@@ -484,7 +487,7 @@ pub(crate) fn from_local_scan<'a>(
     files: impl IntoIterator<Item = (&'a Path, u64)>,
     order: &TreeOrder,
 ) -> Option<(TreeModel, Vec<Option<NodeId>>)> {
-    built("a local walk", || {
+    built(order, "a local walk", || {
         let mut tree = PathTree::new(sources);
         for dir in dirs {
             tree.dir(dir);
@@ -505,7 +508,7 @@ pub(crate) fn from_archive_plan<'a>(
     entries: impl IntoIterator<Item = (&'a str, bool, u64)>,
     order: &TreeOrder,
 ) -> Option<(TreeModel, Vec<NodeId>)> {
-    built("a compress plan", || {
+    built(order, "a compress plan", || {
         let mut builder = TreeBuilder::new();
         let mut folders: HashMap<&'a str, BuilderId> = HashMap::new();
         let mut entry_ids = Vec::new();

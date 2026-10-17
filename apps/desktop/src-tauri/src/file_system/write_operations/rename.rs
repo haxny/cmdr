@@ -179,7 +179,7 @@ async fn rename_managed_inner(
         to
     } else {
         match manager.get(&volume_id) {
-            Some(volume) => match rename_target(volume.as_ref(), &volume_id, &from, to, force).await {
+            Some(volume) => match rename_target(host, volume.as_ref(), &volume_id, &from, to, force).await {
                 Ok(target) => target,
                 Err(refusal) => return (Err(refusal), InstantTarget::Volume),
             },
@@ -406,13 +406,14 @@ async fn start_rename_as_move(
 /// spelling, so the folder ends with one entry. `from` itself as the look-alike
 /// is a respell, which is free.
 async fn rename_target(
+    host: &host::EngineHost,
     volume: &dyn Volume,
     volume_id: &str,
     from: &Path,
     to: PathBuf,
     force: bool,
 ) -> Result<PathBuf, MutationError> {
-    match place_new_entry(volume, volume_id, &to, Some(from)).await {
+    match place_new_entry(host.listings(), volume, volume_id, &to, Some(from)).await {
         Ok(NewEntry::Free(target)) => Ok(target),
         Ok(NewEntry::Taken(entry)) if force => Ok(to.with_file_name(&entry.name)),
         Ok(NewEntry::Taken(_) | NewEntry::Ambiguous) => Err(MutationError::AlreadyExists { name: name_of(&to) }),

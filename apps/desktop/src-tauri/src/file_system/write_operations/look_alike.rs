@@ -19,7 +19,7 @@ use cmdr_fs::name_fold::differ_only_in_form;
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::{Volume, VolumeError};
 
-use super::host;
+use cmdr_fs::volume::host::listings::ListingHost;
 
 /// What a folder holds under another spelling of one name.
 #[derive(Debug)]
@@ -125,12 +125,13 @@ pub(crate) enum NewEntry {
 /// `volume_id` names `volume` in the registry, so a folder a pane shows is
 /// answered from that pane's listing ([`ListedFolders::with_pane_listings`]).
 pub(crate) async fn place_new_entry(
+    listings: &dyn ListingHost,
     volume: &dyn Volume,
     volume_id: &str,
     path: &Path,
     renaming: Option<&Path>,
 ) -> Result<NewEntry, VolumeError> {
-    ListedFolders::with_pane_listings(volume, volume_id)
+    ListedFolders::with_pane_listings(listings, volume, volume_id)
         .place_new_entry(path, renaming)
         .await
 }
@@ -150,9 +151,10 @@ pub(crate) fn spelled_new_path(volume: &dyn Volume, path: &Path) -> PathBuf {
 /// still while it asks, like a bulk rename settling its plan before it writes.
 pub(crate) struct ListedFolders<'v> {
     volume: &'v dyn Volume,
-    /// `volume`'s registry id, when the caller trusts a pane's listing over a
-    /// read. See [`Self::with_pane_listings`].
-    pane_listings_of: Option<&'v str>,
+    /// Where the panes' listings are, and `volume`'s registry id there, when
+    /// the caller trusts a pane's listing over a read. See
+    /// [`Self::with_pane_listings`].
+    pane_listings_of: Option<(&'v dyn ListingHost, &'v str)>,
     listed: HashMap<PathBuf, Vec<FileEntry>>,
 }
 
@@ -171,9 +173,13 @@ impl<'v> ListedFolders<'v> {
     /// (`Listings::authoritative_listing`); lists the rest. For
     /// a person waiting on a new name: re-reading a 3,000-entry share folder the
     /// pane already holds costs a second or more on a busy NAS.
-    pub(crate) fn with_pane_listings(volume: &'v dyn Volume, volume_id: &'v str) -> Self {
+    pub(crate) fn with_pane_listings(
+        listings: &'v dyn ListingHost,
+        volume: &'v dyn Volume,
+        volume_id: &'v str,
+    ) -> Self {
         Self {
-            pane_listings_of: Some(volume_id),
+            pane_listings_of: Some((listings, volume_id)),
             ..Self::new(volume)
         }
     }
@@ -206,9 +212,8 @@ impl<'v> ListedFolders<'v> {
     /// risks only a missed twin: a second, look-alike entry, never an
     /// overwrite, since the volume holds the two spellings as two names.
     fn pane_listing(&self, dir: &Path) -> Option<Vec<FileEntry>> {
-        let entries = host::installed()
-            .listings()
-            .authoritative_listing(self.pane_listings_of?, dir)?;
+        let (listings, volume_id) = self.pane_listings_of?;
+        let entries = listings.authoritative_listing(volume_id, dir)?;
         log::debug!(
             target: "look_alike",
             "answered from a pane's listing of {} ({} entries)",

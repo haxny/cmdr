@@ -571,7 +571,7 @@ async fn merge_level<'a>(
     // Tree order, whatever order the backend listed in (SMB and MTP don't
     // sort): the walker starts files, asks conflicts, and creates folders in
     // the order the progress tree shows. `DETAILS.md` § "Processing order".
-    TreeOrder::active().sort(&mut entries, |entry| {
+    TreeOrder::active(state.scope().host()).sort(&mut entries, |entry| {
         (merges_as_a_directory(entry), entry.name.as_str())
     });
     // A move sweeps exactly the folders this walk listed; anything else it

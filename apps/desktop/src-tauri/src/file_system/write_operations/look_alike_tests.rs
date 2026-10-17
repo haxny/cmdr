@@ -96,9 +96,13 @@ async fn share_with_pane_listing(
 async fn a_folder_a_watched_pane_shows_is_answered_from_its_listing() {
     let (id, volume, _listing) = share_with_pane_listing("pane-hit", WatchCoverage::EveryWriter, CAFE_NFC).await;
 
-    let answer = ListedFolders::with_pane_listings(volume.as_ref(), &id)
-        .look_alike_in(Path::new("/dir"), CAFE_NFD)
-        .await;
+    let answer = ListedFolders::with_pane_listings(
+        crate::file_system::write_operations::installed().host().listings(),
+        volume.as_ref(),
+        &id,
+    )
+    .look_alike_in(Path::new("/dir"), CAFE_NFD)
+    .await;
 
     match answer {
         Ok(LookAlike::One(found)) => assert_eq!(found.name, CAFE_NFC),
@@ -115,9 +119,13 @@ async fn a_folder_a_watched_pane_shows_is_answered_from_its_listing() {
 async fn a_pane_listing_only_this_machine_keeps_current_is_read_past() {
     let (id, volume, _listing) = share_with_pane_listing("pane-blind", WatchCoverage::ThisMachineOnly, CAFE_NFC).await;
 
-    let answer = ListedFolders::with_pane_listings(volume.as_ref(), &id)
-        .look_alike_in(Path::new("/dir"), CAFE_NFD)
-        .await;
+    let answer = ListedFolders::with_pane_listings(
+        crate::file_system::write_operations::installed().host().listings(),
+        volume.as_ref(),
+        &id,
+    )
+    .look_alike_in(Path::new("/dir"), CAFE_NFD)
+    .await;
 
     assert!(matches!(answer, Ok(LookAlike::None)), "{answer:?}");
     assert_eq!(volume.list_calls(), 1);

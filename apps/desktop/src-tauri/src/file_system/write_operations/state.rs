@@ -290,6 +290,7 @@ impl WriteOperationState {
         // One clock, two owners: whichever of them parks the operation, the
         // estimator reads the union.
         let human_wait = HumanWaitClock::shared();
+        let tree_events = Arc::clone(scope.host().events_arc());
         Self {
             scope,
             intent: Arc::new(AtomicU8::new(OperationIntent::Running as u8)),
@@ -321,7 +322,7 @@ impl WriteOperationState {
             flags_after_landing: std::sync::Mutex::new(HashMap::new()),
             #[cfg(target_os = "macos")]
             extract_quarantine: std::sync::OnceLock::new(),
-            transfer_tree: super::transfer_tree::TransferTreeSlot::default(),
+            transfer_tree: super::transfer_tree::TransferTreeSlot::new(tree_events),
             #[cfg(test)]
             intent_write_gap: std::sync::Mutex::new(None),
         }

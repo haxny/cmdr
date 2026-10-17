@@ -13,13 +13,13 @@ use crate::file_system::write_operations::types::WriteOperationError;
 
 /// `top/{a.bin 10 B, b.bin 20 B, sub/c.bin 30 B}`.
 fn small() -> TreeModel {
-    let recorder = TreeRecorder::new(&[PathBuf::from("/src/top")]);
+    let recorder = TreeRecorder::new(&[PathBuf::from("/src/top")], english());
     recorder.dir(Path::new("/src/top"));
     recorder.file(Path::new("/src/top/a.bin"), 10);
     recorder.file(Path::new("/src/top/b.bin"), 20);
     recorder.dir(Path::new("/src/top/sub"));
     recorder.file(Path::new("/src/top/sub/c.bin"), 30);
-    recorder.finish(&english()).expect("the tree builds")
+    recorder.finish().expect("the tree builds")
 }
 
 fn live() -> Arc<AtomicU64> {
@@ -134,7 +134,7 @@ fn a_file_found_after_the_scan_joins_its_folders_totals() {
 
 #[test]
 fn an_opaque_folders_contents_add_up_below_it_and_never_above() {
-    let recorder = TreeRecorder::new(&[PathBuf::from("/src/opaque")]);
+    let recorder = TreeRecorder::new(&[PathBuf::from("/src/opaque")], english());
     recorder.subtree(
         Path::new("/src/opaque"),
         &CopyScanResult {
@@ -147,7 +147,7 @@ fn an_opaque_folders_contents_add_up_below_it_and_never_above() {
             top_level_created_at: None,
         },
     );
-    let mut model = recorder.finish(&english()).expect("the tree builds");
+    let mut model = recorder.finish().expect("the tree builds");
     let opaque = node_at(&model, &["opaque"]);
 
     let inner = model.discover(opaque, "inner", NodeKind::Folder, 0);
@@ -168,9 +168,9 @@ fn an_opaque_folders_contents_add_up_below_it_and_never_above() {
 
 #[test]
 fn an_empty_folder_waits_until_the_driver_creates_it() {
-    let recorder = TreeRecorder::new(&[PathBuf::from("/src/empty")]);
+    let recorder = TreeRecorder::new(&[PathBuf::from("/src/empty")], english());
     recorder.dir(Path::new("/src/empty"));
-    let mut model = recorder.finish(&english()).expect("the tree builds");
+    let mut model = recorder.finish().expect("the tree builds");
     let empty = node_at(&model, &["empty"]);
     assert_eq!(model.folder_state(empty, false), TreeRowState::Waiting);
 
@@ -229,7 +229,7 @@ fn skipping_a_folder_settles_every_file_below_it_once() {
 
 #[test]
 fn a_whole_subtree_landing_at_once_counts_an_opaque_folders_unwalked_files() {
-    let recorder = TreeRecorder::new(&[PathBuf::from("/src/opaque"), PathBuf::from("/src/empty")]);
+    let recorder = TreeRecorder::new(&[PathBuf::from("/src/opaque"), PathBuf::from("/src/empty")], english());
     recorder.subtree(
         Path::new("/src/opaque"),
         &CopyScanResult {
@@ -243,7 +243,7 @@ fn a_whole_subtree_landing_at_once_counts_an_opaque_folders_unwalked_files() {
         },
     );
     recorder.dir(Path::new("/src/empty"));
-    let mut model = recorder.finish(&english()).expect("the tree builds");
+    let mut model = recorder.finish().expect("the tree builds");
     let opaque = node_at(&model, &["opaque"]);
     let found = model.discover(opaque, "found.bin", NodeKind::File, 30);
     model.complete(found);
@@ -283,11 +283,11 @@ fn a_folder_that_failed_is_failed_and_so_is_everything_above_it() {
 
 #[test]
 fn empty_folders_finish_together_and_folders_with_files_keep_their_counts() {
-    let recorder = TreeRecorder::new(&[PathBuf::from("/src/top")]);
+    let recorder = TreeRecorder::new(&[PathBuf::from("/src/top")], english());
     recorder.dir(Path::new("/src/top"));
     recorder.dir(Path::new("/src/top/empty"));
     recorder.file(Path::new("/src/top/a.bin"), 10);
-    let mut model = recorder.finish(&english()).expect("the tree builds");
+    let mut model = recorder.finish().expect("the tree builds");
 
     model.empty_folders_created();
 
@@ -320,7 +320,7 @@ fn a_level_names_its_children_and_a_newcomer_joins_it() {
 /// flight, and the folder must not read done before that lands.
 #[test]
 fn a_folder_with_work_in_flight_below_is_never_done() {
-    let recorder = TreeRecorder::new(&[PathBuf::from("/src/opaque")]);
+    let recorder = TreeRecorder::new(&[PathBuf::from("/src/opaque")], english());
     recorder.subtree(
         Path::new("/src/opaque"),
         &CopyScanResult {
@@ -333,7 +333,7 @@ fn a_folder_with_work_in_flight_below_is_never_done() {
             top_level_created_at: None,
         },
     );
-    let mut model = recorder.finish(&english()).expect("the tree builds");
+    let mut model = recorder.finish().expect("the tree builds");
     let opaque = node_at(&model, &["opaque"]);
     let counted = model.discover(opaque, "a.bin", NodeKind::File, 10);
     let arrived = model.discover(opaque, "b.bin", NodeKind::File, 10);

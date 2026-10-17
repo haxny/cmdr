@@ -737,17 +737,17 @@ impl ScanResult {
     /// in the walk's order with no nodes: the copy a tree-less transfer makes.
     /// Nothing is reordered until every rank is known, so a panic midway can't
     /// leave the list half sorted.
-    pub(super) fn order_by_transfer_tree(&mut self, sources: &[PathBuf]) -> Option<TreeModel> {
+    pub(super) fn order_by_transfer_tree(&mut self, sources: &[PathBuf], order: &TreeOrder) -> Option<TreeModel> {
         let preview_tree = self.tree.take();
         let (files, dirs) = (&self.files, &self.dirs);
-        let ordered = built("ordering a local walk", || {
+        let ordered = built(order, "ordering a local walk", || {
             let (tree, nodes): (TreeModel, Vec<Option<NodeId>>) = match preview_tree {
                 Some(tree) => (tree, files.iter().map(|file| file.tree_node).collect()),
                 None => from_local_scan(
                     sources,
                     dirs,
                     files.iter().map(|file| (file.path.as_path(), file.size)),
-                    &TreeOrder::active(),
+                    order,
                 )?,
             };
             let ranks = tree.tree_order_ranks();

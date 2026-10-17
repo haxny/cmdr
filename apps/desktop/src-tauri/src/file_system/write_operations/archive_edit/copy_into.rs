@@ -697,6 +697,7 @@ impl crate::file_system::write_operations::Operations {
                     // reuse: without it, ⌥F5's sampling preview and this walk would run
                     // down the same tree at once, which is what costs on MTP and SMB.
                     if crate::file_system::write_operations::scan_bridge::await_claimed_preview(
+                        &ops,
                         &*events,
                         &op_id,
                         operation_type,

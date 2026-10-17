@@ -179,9 +179,15 @@ pub(super) async fn start(
                 settle_volume,
             );
 
-            if super::super::scan_bridge::await_claimed_preview(&*events, &op_id, WriteOperationType::Compress, &state)
-                .await
-                .stopped()
+            if super::super::scan_bridge::await_claimed_preview(
+                &ops,
+                &*events,
+                &op_id,
+                WriteOperationType::Compress,
+                &state,
+            )
+            .await
+            .stopped()
             {
                 task_guard.disarm();
                 ops.manager().on_settled(&op_id);
@@ -321,7 +327,7 @@ async fn run(
         plan.entries
             .iter()
             .map(|entry| (entry.name.as_str(), entry.is_directory, entry.size)),
-        &TreeOrder::active(),
+        &TreeOrder::active(state.scope().host()),
     )
     .unzip();
     state.transfer_tree.install(tree, TreeLanding::nowhere());

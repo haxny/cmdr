@@ -10,6 +10,7 @@ use super::super::super::look_alike::{ListedFolders, NewEntry, spelled_new_path}
 use super::super::super::source_binding::normalized_path;
 use super::super::same_local_file;
 use super::{BulkRenameOutcome, BulkRenameRow};
+use cmdr_fs::volume::host::listings::ListingHost;
 use cmdr_fs::volume::{Volume, VolumeError};
 
 /// Every destination is a NEW name: spelled the way `volume` wants new names
@@ -135,10 +136,11 @@ pub(super) async fn settle_remote_conflicts(
     rows: &[BulkRenameRow],
     active: &mut [bool],
     outcomes: &mut [BulkRenameOutcome],
+    listings: &dyn ListingHost,
     volume: &dyn Volume,
     volume_id: &str,
 ) {
-    let mut folders = ListedFolders::with_pane_listings(volume, volume_id);
+    let mut folders = ListedFolders::with_pane_listings(listings, volume, volume_id);
     loop {
         let mut changed = false;
         for index in rows_with_unclaimed_destination(rows, active) {

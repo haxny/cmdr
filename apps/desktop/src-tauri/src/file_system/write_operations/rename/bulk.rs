@@ -363,7 +363,15 @@ async fn bulk_rename_remote(
     for row in rows {
         active.push(remote_fingerprint_matches(volume.as_ref(), &row.source, &row.expected_fingerprint).await);
     }
-    settle_remote_conflicts(rows, &mut active, &mut outcomes, volume.as_ref(), volume_id).await;
+    settle_remote_conflicts(
+        rows,
+        &mut active,
+        &mut outcomes,
+        host.listings(),
+        volume.as_ref(),
+        volume_id,
+    )
+    .await;
     complete_noop_rows(rows, &active, &mut outcomes, recorder);
     for step in build_execution_plan(rows, &active) {
         if is_cancelled(intent) {

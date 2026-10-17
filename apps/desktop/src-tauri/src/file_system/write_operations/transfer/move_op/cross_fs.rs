@@ -41,7 +41,7 @@ use crate::file_system::write_operations::scan_cache::take_cached_scan_result;
 use crate::file_system::write_operations::scan_source_tracker::SourceItemTracker;
 use crate::file_system::write_operations::state::WriteOperationState;
 use crate::file_system::write_operations::transfer_sides::transfer_stop_event;
-use crate::file_system::write_operations::transfer_tree::TreeLanding;
+use crate::file_system::write_operations::transfer_tree::{TreeLanding, TreeOrder};
 use crate::file_system::write_operations::types::{
     WriteCompleteEvent, WriteOperationConfig, WriteOperationError, WriteOperationPhase, WriteOperationType,
     WriteProgressEvent, WriteSourceItemDoneEvent,
@@ -97,7 +97,7 @@ pub(super) fn move_with_staging(
     // Where the copy phase stages everything before Phase 3 renames it out.
     let staging_dir = destination.join(format!("{}{}", cmdr_fs::staging::STAGING_DIR_PREFIX, operation_id));
     state.transfer_tree.install(
-        scan_result.order_by_transfer_tree(sources),
+        scan_result.order_by_transfer_tree(sources, &TreeOrder::active(state.scope().host())),
         TreeLanding::under(destination, config.destination_name.as_deref()).and_first_under(staging_dir.clone()),
     );
     let tree = state.transfer_tree.reporter();

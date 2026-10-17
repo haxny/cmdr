@@ -81,12 +81,16 @@ pub(super) struct SourceHint {
 /// (`DETAILS.md` § "Processing order"). A source without a hint ranks as a
 /// file: that's an ORDER only, the row the tree shows for it, ❌ never an
 /// answer to "is it a directory?".
-pub(super) fn sources_in_tree_order(sources: &[PathBuf], hints: &HashMap<PathBuf, SourceHint>) -> Vec<PathBuf> {
+pub(super) fn sources_in_tree_order(
+    sources: &[PathBuf],
+    hints: &HashMap<PathBuf, SourceHint>,
+    order: &TreeOrder,
+) -> Vec<PathBuf> {
     let mut ordered = sources.to_vec();
     sort_sources(
         &mut ordered,
         |source| hints.get(source).is_some_and(|hint| hint.is_directory),
-        &TreeOrder::active(),
+        order,
     );
     ordered
 }
@@ -266,7 +270,7 @@ pub(super) async fn scan_volume_sources(
         let tree = cached
             .tree
             .take()
-            .or_else(|| from_per_path(source_paths, &cached.per_path, &TreeOrder::active()));
+            .or_else(|| from_per_path(source_paths, &cached.per_path, &TreeOrder::active(state.scope().host())));
         let mut source_hints = HashMap::with_capacity(cached.per_path.len());
         for (path, scan) in cached.per_path {
             let size = if scan.top_level_is_directory {
@@ -348,7 +352,7 @@ pub(super) async fn scan_volume_sources(
     // `spawn_blocking` (the local one) can carry it across the closure.
     let stop = ScanStop::new(Arc::clone(state) as Arc<dyn ScanStopSignal>);
     // Every entry the scan counts also lands in the transfer's tree.
-    let recorder = Arc::new(TreeRecorder::new(source_paths));
+    let recorder = Arc::new(TreeRecorder::new(source_paths, TreeOrder::active(state.scope().host())));
     let boundary = ScanBoundary::new(Some(&scan_progress))
         .stopping_at(stop)
         .recording_to(Arc::clone(&recorder) as Arc<dyn ScanRecorder>);
@@ -385,7 +389,7 @@ pub(super) async fn scan_volume_sources(
         ),
     );
 
-    let tree = recorder.finish(&TreeOrder::active());
+    let tree = recorder.finish();
 
     let mut source_hints = HashMap::with_capacity(batch.per_path.len());
     for (source_path, scan) in &batch.per_path {

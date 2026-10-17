@@ -15,7 +15,7 @@ fn paths(raw: &[&str]) -> Vec<PathBuf> {
 
 #[test]
 fn a_recorded_scan_builds_the_selection_in_tree_order_with_folder_totals() {
-    let recorder = TreeRecorder::new(&paths(&["/src/photos", "/src/notes.txt"]));
+    let recorder = TreeRecorder::new(&paths(&["/src/photos", "/src/notes.txt"]), english());
     recorder.dir(Path::new("/src/photos"));
     recorder.file(Path::new("/src/photos/b.jpg"), 20);
     recorder.dir(Path::new("/src/photos/2024"));
@@ -24,7 +24,7 @@ fn a_recorded_scan_builds_the_selection_in_tree_order_with_folder_totals() {
     recorder.file(Path::new("/src/photos/a.jpg"), 10);
     recorder.file(Path::new("/src/notes.txt"), 3);
 
-    let model = recorder.finish(&english()).expect("the tree builds");
+    let model = recorder.finish().expect("the tree builds");
 
     assert_eq!(
         outline(&model),
@@ -44,13 +44,13 @@ fn a_recorded_scan_builds_the_selection_in_tree_order_with_folder_totals() {
 
 #[test]
 fn children_are_one_contiguous_id_range_in_tree_order() {
-    let recorder = TreeRecorder::new(&paths(&["/src/top"]));
+    let recorder = TreeRecorder::new(&paths(&["/src/top"]), english());
     recorder.dir(Path::new("/src/top"));
     for name in ["c", "a", "b"] {
         recorder.file(&Path::new("/src/top").join(name), 1);
     }
 
-    let model = recorder.finish(&english()).expect("the tree builds");
+    let model = recorder.finish().expect("the tree builds");
 
     let top = node_at(&model, &["top"]);
     let ids: Vec<u32> = (0..3).map(|index| model.child_at(top, index).get()).collect();
@@ -63,13 +63,13 @@ fn children_are_one_contiguous_id_range_in_tree_order() {
 
 #[test]
 fn entries_arriving_before_their_folder_still_land_under_it() {
-    let recorder = TreeRecorder::new(&paths(&["/src/top"]));
+    let recorder = TreeRecorder::new(&paths(&["/src/top"]), english());
     recorder.file(Path::new("/src/top/deep/er/x.bin"), 7);
     recorder.dir(Path::new("/src/top/deep"));
     recorder.dir(Path::new("/src/top"));
     recorder.dir(Path::new("/src/top/deep/er"));
 
-    let model = recorder.finish(&english()).expect("the tree builds");
+    let model = recorder.finish().expect("the tree builds");
 
     assert_eq!(
         outline(&model),
@@ -84,12 +84,12 @@ fn entries_arriving_before_their_folder_still_land_under_it() {
 
 #[test]
 fn sources_under_different_parents_hang_off_their_common_ancestor_as_relative_labels() {
-    let recorder = TreeRecorder::new(&paths(&["/a/x/one.txt", "/a/y/z/two"]));
+    let recorder = TreeRecorder::new(&paths(&["/a/x/one.txt", "/a/y/z/two"]), english());
     recorder.file(Path::new("/a/x/one.txt"), 1);
     recorder.dir(Path::new("/a/y/z/two"));
     recorder.file(Path::new("/a/y/z/two/inner.txt"), 2);
 
-    let model = recorder.finish(&english()).expect("the tree builds");
+    let model = recorder.finish().expect("the tree builds");
 
     assert_eq!(
         outline(&model),
@@ -117,7 +117,7 @@ fn sources_sort_into_the_order_their_rows_list_in() {
 
 #[test]
 fn a_subtree_counted_without_a_walk_is_an_opaque_folder_with_its_totals() {
-    let recorder = TreeRecorder::new(&paths(&["/src/opaque", "/src/single"]));
+    let recorder = TreeRecorder::new(&paths(&["/src/opaque", "/src/single"]), english());
     let folder = CopyScanResult {
         file_count: 12,
         dir_count: 3,
@@ -139,7 +139,7 @@ fn a_subtree_counted_without_a_walk_is_an_opaque_folder_with_its_totals() {
     recorder.subtree(Path::new("/src/opaque"), &folder);
     recorder.subtree(Path::new("/src/single"), &file);
 
-    let model = recorder.finish(&english()).expect("the tree builds");
+    let model = recorder.finish().expect("the tree builds");
 
     assert_eq!(outline(&model), vec!["opaque/? 12 files 1200 B", "single 9 B"]);
     assert_eq!(model.kind(node_at(&model, &["opaque"])), NodeKind::Opaque);
@@ -147,12 +147,12 @@ fn a_subtree_counted_without_a_walk_is_an_opaque_folder_with_its_totals() {
 
 #[test]
 fn an_entry_outside_every_source_is_dropped() {
-    let recorder = TreeRecorder::new(&paths(&["/src/top"]));
+    let recorder = TreeRecorder::new(&paths(&["/src/top"]), english());
     recorder.dir(Path::new("/src/top"));
     recorder.file(Path::new("/elsewhere/stray.txt"), 5);
     recorder.file(Path::new("/src/sibling.txt"), 5);
 
-    let model = recorder.finish(&english()).expect("the tree builds");
+    let model = recorder.finish().expect("the tree builds");
 
     assert_eq!(outline(&model), vec!["top/ 0 files 0 B"]);
 }
@@ -229,12 +229,12 @@ fn a_compress_plan_builds_from_its_root_relative_entry_names() {
 fn a_recorder_that_hits_a_bug_records_nothing_more_and_builds_no_tree() {
     use super::super::test_support::TREE_BUG_NAME;
 
-    let recorder = TreeRecorder::new(&paths(&["/src/top"]));
+    let recorder = TreeRecorder::new(&paths(&["/src/top"]), english());
     recorder.dir(Path::new("/src/top"));
     recorder.file(&Path::new("/src/top").join(TREE_BUG_NAME), 1);
     recorder.file(Path::new("/src/top/after.txt"), 1);
 
-    assert!(recorder.finish(&english()).is_none());
+    assert!(recorder.finish().is_none());
 }
 
 #[test]

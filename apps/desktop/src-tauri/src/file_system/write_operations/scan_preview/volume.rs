@@ -135,7 +135,8 @@ pub(in crate::file_system::write_operations) async fn run_volume_scan_preview(
     let is_cancelled = move || state_for_cancel.cancelled.load(Ordering::Relaxed);
 
     // A transfer's walk also records every entry for the operation's live tree.
-    let recorder = (purpose == ScanPreviewPurpose::Transfer).then(|| Arc::new(TreeRecorder::new(&sources)));
+    let recorder = (purpose == ScanPreviewPurpose::Transfer)
+        .then(|| Arc::new(TreeRecorder::new(&sources, TreeOrder::active(host::installed()))));
 
     let result: Result<BatchScanResult, WriteOperationError> = async {
         if state.cancelled.load(Ordering::Relaxed) {
@@ -201,7 +202,7 @@ pub(in crate::file_system::write_operations) async fn run_volume_scan_preview(
             // Cache results: volume scans don't produce per-file FileInfo, but
             // the cache stores aggregate stats AND per-path scan results so
             // copy_between_volumes can reuse both without re-statting.
-            let tree = recorder.and_then(|recorder| recorder.finish(&TreeOrder::active()));
+            let tree = recorder.and_then(|recorder| recorder.finish());
             settle_preview(
                 &preview_id,
                 ScanOutcome::Complete,

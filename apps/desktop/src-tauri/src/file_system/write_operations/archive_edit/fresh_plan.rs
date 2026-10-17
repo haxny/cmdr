@@ -106,7 +106,7 @@ async fn plan_sources_with_context(
     // Found-so-far tallies for the scan readout only.
     let (mut files, mut dirs) = (0usize, 0usize);
     let local_root = source.supports_local_fs_access().then(|| source.local_path()).flatten();
-    let order = TreeOrder::active();
+    let order = TreeOrder::active(state.scope().host());
 
     for (top, top_name, top_meta) in tops {
         let mut stack = vec![(top, top_name, top_meta)];
@@ -294,7 +294,7 @@ async fn settle_tops(
             .map_err(|error| volume_read_error(top, error))?;
         tops.push((top.clone(), top_name, top_meta));
     }
-    TreeOrder::active().sort(&mut tops, |(_, name, meta)| (meta.is_directory, name.as_str()));
+    TreeOrder::active(state.scope().host()).sort(&mut tops, |(_, name, meta)| (meta.is_directory, name.as_str()));
     Ok((tops, skipped))
 }
 

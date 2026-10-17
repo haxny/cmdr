@@ -34,7 +34,7 @@ pub(crate) use report::{TreeLeaf, TreeReporter};
 pub(crate) use view::TransferTreeAncestor;
 pub(crate) use view::{TransferTreeRow, TransferTreeView, TransferTreeViewRequest, TreeRowKind};
 
-use super::host::{self, OperationErrorReport, TreeFailure};
+use super::host::{EngineEvents, OperationErrorReport, TreeFailure};
 use super::types::{ProgressAxis, WriteOperationError};
 
 /// One operation's tree, shared by its drivers (which report into it) and every
@@ -55,14 +55,17 @@ pub(crate) struct TransferTree {
     /// A report or a view panicked. Nothing reads or writes the model after
     /// that: its counts may be half-applied, and a view says "no tree".
     broken: AtomicBool,
+    /// Where a report or a view that panicked is reported.
+    events: Arc<dyn EngineEvents>,
 }
 
 impl TransferTree {
-    pub(crate) fn new(model: TreeModel) -> Self {
+    pub(crate) fn new(model: TreeModel, events: Arc<dyn EngineEvents>) -> Self {
         Self {
             model: Mutex::new(model),
             revision: AtomicU64::new(0),
             broken: AtomicBool::new(false),
+            events,
         }
     }
 
@@ -98,11 +101,9 @@ impl TransferTree {
             Ok(result) => Some(result),
             Err(_) => {
                 self.broken.store(true, Ordering::Relaxed);
-                host::installed()
-                    .events()
-                    .error_report(OperationErrorReport::TreeAbandoned {
-                        cause: TreeFailure::ReportPanicked,
-                    });
+                self.events.error_report(OperationErrorReport::TreeAbandoned {
+                    cause: TreeFailure::ReportPanicked,
+                });
                 None
             }
         }
@@ -123,15 +124,11 @@ impl TransferTree {
 /// through here, so a tree bug costs the tree, never the transfer. The panic
 /// still reaches the crash reporter's hook (it's a bug); the caller carries on
 /// exactly as it would with no tree.
-pub(super) fn built<R>(what: &'static str, build: impl FnOnce() -> R) -> Option<R> {
+pub(super) fn built<R>(order: &TreeOrder, what: &'static str, build: impl FnOnce() -> R) -> Option<R> {
     match catch_unwind(AssertUnwindSafe(build)) {
         Ok(result) => Some(result),
         Err(_) => {
-            host::installed()
-                .events()
-                .error_report(OperationErrorReport::TreeAbandoned {
-                    cause: TreeFailure::BuildPanicked { step: what },
-                });
+            order.report_abandoned(TreeFailure::BuildPanicked { step: what });
             None
         }
     }
@@ -139,11 +136,29 @@ pub(super) fn built<R>(what: &'static str, build: impl FnOnce() -> R) -> Option<
 
 /// Where an operation keeps its tree (`WriteOperationState::transfer_tree`):
 /// empty while the scan runs, set once after.
-// DEFAULT-OK: an empty slot is exactly "this operation has no tree yet".
-#[derive(Default)]
-pub(crate) struct TransferTreeSlot(OnceLock<Arc<TransferTree>>);
+pub(crate) struct TransferTreeSlot {
+    tree: OnceLock<Arc<TransferTree>>,
+    /// The operation's engine-wide events, which its tree reports a panic to.
+    events: Arc<dyn EngineEvents>,
+}
+
+/// A slot whose tree reports a panic to nobody, for a test that builds one alone.
+#[cfg(test)]
+impl Default for TransferTreeSlot {
+    fn default() -> Self {
+        Self::new(Arc::new(super::host::testing::RecordingEngineEvents::default()))
+    }
+}
 
 impl TransferTreeSlot {
+    /// An empty slot whose tree will report to `events`.
+    pub(crate) fn new(events: Arc<dyn EngineEvents>) -> Self {
+        Self {
+            tree: OnceLock::new(),
+            events,
+        }
+    }
+
     /// Hands the operation the tree its scan built, and where its sources
     /// land (for a failure that names a destination path). Once: a later call
     /// (no operation scans twice today) keeps the first tree, whose ids views
@@ -155,7 +170,11 @@ impl TransferTreeSlot {
         model.set_landing(landing);
         let nodes = model.len();
         let kib = model.heap_bytes() / 1024;
-        if self.0.set(Arc::new(TransferTree::new(model))).is_ok() {
+        if self
+            .tree
+            .set(Arc::new(TransferTree::new(model, Arc::clone(&self.events))))
+            .is_ok()
+        {
             // allowed-pluralize-noun: a debug log line, never shown to anyone
             log::debug!(target: "cmdr_lib::write_operations", "transfer tree: {nodes} nodes in {kib} KiB");
         }
@@ -165,12 +184,12 @@ impl TransferTreeSlot {
     /// [`reporter`](Self::reporter) and views through [`view`](Self::view).
     #[cfg(test)]
     pub(crate) fn get(&self) -> Option<&Arc<TransferTree>> {
-        self.0.get()
+        self.tree.get()
     }
 
     /// What a driver reports through: the tree, or nothing to report to.
     pub(crate) fn reporter(&self) -> TreeReporter {
-        TreeReporter::new(self.0.get().cloned())
+        TreeReporter::new(self.tree.get().cloned())
     }
 
     /// Marks the row a failure names, from the typed path on the error
@@ -184,7 +203,7 @@ impl TransferTreeSlot {
     /// The window a view asked for. `ready: false` while the scan runs, and
     /// for a tree a bug turned off.
     pub(crate) fn view(&self, request: &TransferTreeViewRequest, axis: ProgressAxis) -> TransferTreeView {
-        self.0
+        self.tree
             .get()
             .and_then(|tree| tree.view(request, axis))
             .unwrap_or_else(|| TransferTreeView::not_ready(axis))

@@ -169,6 +169,7 @@ impl crate::file_system::write_operations::Operations {
                     // Wait out the confirming dialog's scan; see
                     // `write_operations::start_write_operation`.
                     if crate::file_system::write_operations::scan_bridge::await_claimed_preview(
+                        &ops,
                         &*events,
                         &op_id,
                         WriteOperationType::ArchiveEdit,

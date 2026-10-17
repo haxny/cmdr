@@ -11,7 +11,7 @@
 use std::path::{Path, PathBuf};
 
 use super::super::ScanCostFacts;
-use super::super::host;
+use super::super::host::EngineHost;
 use cmdr_fs::name_fold::fold_name;
 
 use super::super::look_alike::{ListedFolders, NewEntry, place_new_entry};
@@ -129,81 +129,111 @@ pub(crate) struct ConflictFileInfo {
     pub is_directory: bool,
 }
 
-/// Validates a new filename and checks for conflicts in the same directory.
-/// Uses inode comparison to detect case-only renames (valid on case-insensitive
-/// APFS). When `volume_id` is not `"root"`, uses the Volume trait for conflict
-/// detection, and the folder's listing for a case-only rename on a volume that
-/// folds case ([`found_the_source_itself`]). A rename that runs as a move comes
-/// back with what it carries, for the caller to price
-/// ([`RenameValidityCheck::priced`]).
+impl crate::file_system::write_operations::Operations {
+    /// Validates a new filename and checks for conflicts in the same directory.
+    /// Uses inode comparison to detect case-only renames (valid on case-insensitive
+    /// APFS). When `volume_id` is not `"root"`, uses the Volume trait for conflict
+    /// detection, and the folder's listing for a case-only rename on a volume that
+    /// folds case ([`found_the_source_itself`]). A rename that runs as a move comes
+    /// back with what it carries, for the caller to price
+    /// ([`RenameValidityCheck::priced`]).
+    pub(crate) async fn check_rename_validity_impl(
+        &self,
+        dir: String,
+        old_name: String,
+        new_name: String,
+        volume_id: String,
+    ) -> RenameValidityCheck {
+        use cmdr_fs::validation::{validate_filename, validate_path_length};
+
+        let trimmed = new_name.trim();
+
+        // Validate filename
+        if let Err(error) = validate_filename(trimmed) {
+            return RenameValidityCheck::unpriced(RenameValidityResult {
+                valid: false,
+                error: Some(error),
+                has_conflict: false,
+                is_case_only_rename: false,
+                conflict: None,
+                by_move: None,
+            });
+        }
+
+        // Validate resulting path length
+        let new_path = PathBuf::from(&dir).join(trimmed);
+        if let Err(error) = validate_path_length(&new_path) {
+            return RenameValidityCheck::unpriced(RenameValidityResult {
+                valid: false,
+                error: Some(error),
+                has_conflict: false,
+                is_case_only_rename: false,
+                conflict: None,
+                by_move: None,
+            });
+        }
+
+        // Check for conflict: does a sibling with this name already exist?
+        let old_path = PathBuf::from(&dir).join(&old_name);
+
+        if volume_id != "root" {
+            // Non-local volume: use Volume trait for conflict detection
+            let conflict_info = check_sibling_conflict_via_volume(self.host(), &volume_id, &old_path, &new_path).await;
+            let (by_move, move_to_price) = match rename_by_move(self.host(), &volume_id, &old_path).await {
+                Some((by_move, facts)) => (Some(by_move), facts),
+                None => (None, None),
+            };
+            RenameValidityCheck {
+                result: RenameValidityResult {
+                    valid: true,
+                    error: None,
+                    has_conflict: conflict_info.0,
+                    is_case_only_rename: conflict_info.1,
+                    conflict: conflict_info.2,
+                    by_move,
+                },
+                move_to_price,
+            }
+        } else {
+            // Local filesystem: use symlink_metadata with inode comparison
+            let conflict_info = check_sibling_conflict(&old_path, &new_path);
+            RenameValidityCheck::unpriced(RenameValidityResult {
+                valid: true,
+                error: None,
+                has_conflict: conflict_info.0,
+                is_case_only_rename: conflict_info.1,
+                conflict: conflict_info.2,
+                // The local disk renames everything in one call.
+                by_move: None,
+            })
+        }
+    }
+}
+
+/// [`Operations::check_rename_validity_impl`](super::super::Operations::check_rename_validity_impl) on
+/// the installed engine. Before `install` nothing can be renamed, so the name is refused, with
+/// no validation error to show (the rename itself says why).
+// shim: removed in M7a
 pub(crate) async fn check_rename_validity_impl(
     dir: String,
     old_name: String,
     new_name: String,
     volume_id: String,
 ) -> RenameValidityCheck {
-    use cmdr_fs::validation::{validate_filename, validate_path_length};
-
-    let trimmed = new_name.trim();
-
-    // Validate filename
-    if let Err(error) = validate_filename(trimmed) {
-        return RenameValidityCheck::unpriced(RenameValidityResult {
-            valid: false,
-            error: Some(error),
-            has_conflict: false,
-            is_case_only_rename: false,
-            conflict: None,
-            by_move: None,
-        });
-    }
-
-    // Validate resulting path length
-    let new_path = PathBuf::from(&dir).join(trimmed);
-    if let Err(error) = validate_path_length(&new_path) {
-        return RenameValidityCheck::unpriced(RenameValidityResult {
-            valid: false,
-            error: Some(error),
-            has_conflict: false,
-            is_case_only_rename: false,
-            conflict: None,
-            by_move: None,
-        });
-    }
-
-    // Check for conflict: does a sibling with this name already exist?
-    let old_path = PathBuf::from(&dir).join(&old_name);
-
-    if volume_id != "root" {
-        // Non-local volume: use Volume trait for conflict detection
-        let conflict_info = check_sibling_conflict_via_volume(&volume_id, &old_path, &new_path).await;
-        let (by_move, move_to_price) = match rename_by_move(&volume_id, &old_path).await {
-            Some((by_move, facts)) => (Some(by_move), facts),
-            None => (None, None),
-        };
-        RenameValidityCheck {
-            result: RenameValidityResult {
-                valid: true,
-                error: None,
-                has_conflict: conflict_info.0,
-                is_case_only_rename: conflict_info.1,
-                conflict: conflict_info.2,
-                by_move,
-            },
-            move_to_price,
+    match super::super::installed_for("check_rename_validity_impl") {
+        Some(engine) => {
+            engine
+                .check_rename_validity_impl(dir, old_name, new_name, volume_id)
+                .await
         }
-    } else {
-        // Local filesystem: use symlink_metadata with inode comparison
-        let conflict_info = check_sibling_conflict(&old_path, &new_path);
-        RenameValidityCheck::unpriced(RenameValidityResult {
-            valid: true,
+        None => RenameValidityCheck::unpriced(RenameValidityResult {
+            valid: false,
             error: None,
-            has_conflict: conflict_info.0,
-            is_case_only_rename: conflict_info.1,
-            conflict: conflict_info.2,
-            // The local disk renames everything in one call.
+            has_conflict: false,
+            is_case_only_rename: false,
+            conflict: None,
             by_move: None,
-        })
+        }),
     }
 }
 
@@ -214,9 +244,13 @@ pub(crate) async fn check_rename_validity_impl(
 /// as the facts a cost estimate prices (no request is sent for the estimate
 /// itself); until the caller prices them ([`RenameValidityCheck::priced`]), the
 /// verdict asks first only for size or an unfinished count.
-async fn rename_by_move(volume_id: &str, old_path: &Path) -> Option<(RenameByMove, Option<ScanCostFacts>)> {
+async fn rename_by_move(
+    host: &EngineHost,
+    volume_id: &str,
+    old_path: &Path,
+) -> Option<(RenameByMove, Option<ScanCostFacts>)> {
     // Plain `get`: the drive's own rename cost (an in-zip rename is an archive edit).
-    let volume = host::installed().volumes().get(volume_id)?;
+    let volume = host.volumes().get(volume_id)?;
     match volume.rename_work(old_path).await {
         Ok(RenameWork::CopyThenDelete) => {}
         Ok(RenameWork::OneCall) | Err(_) => return None,
@@ -300,6 +334,7 @@ pub(crate) fn same_local_file(_left: &std::fs::Metadata, _right: &std::fs::Metad
 ///
 /// Answers `(has_conflict, is_case_only_rename, conflict)`, like [`check_sibling_conflict`].
 async fn check_sibling_conflict_via_volume(
+    host: &EngineHost,
     volume_id: &str,
     old_path: &Path,
     new_path: &Path,
@@ -307,7 +342,7 @@ async fn check_sibling_conflict_via_volume(
     // Plain `get`, not `resolve`: renaming INTO an archive is rejected upstream, so
     // the target is always a normal sibling (incl. a `.zip` file), checked on its
     // own volume — routing to the ArchiveVolume would mis-consult the zip's index.
-    let volume = match host::installed().volumes().get(volume_id) {
+    let volume = match host.volumes().get(volume_id) {
         Some(v) => v,
         None => return (false, false, None),
     };
@@ -315,7 +350,7 @@ async fn check_sibling_conflict_via_volume(
     let entry = match volume.get_metadata(new_path).await {
         Ok(e) => e,
         Err(cmdr_fs::volume::VolumeError::NotFound(_)) => {
-            match place_new_entry(volume.as_ref(), volume_id, new_path, Some(old_path)).await {
+            match place_new_entry(host.listings(), volume.as_ref(), volume_id, new_path, Some(old_path)).await {
                 Ok(NewEntry::Taken(look_alike)) => *look_alike,
                 // Respelled onto a name the folder holds exactly, which the rename
                 // itself refuses (or, confirmed, replaces).
@@ -333,7 +368,7 @@ async fn check_sibling_conflict_via_volume(
         Err(_) => return (false, false, None), // Couldn't tell; the rename answers for itself
     };
 
-    let is_case_only_rename = found_the_source_itself(volume.as_ref(), volume_id, old_path, new_path).await;
+    let is_case_only_rename = found_the_source_itself(host, volume.as_ref(), volume_id, old_path, new_path).await;
 
     let conflict = ConflictFileInfo {
         name: entry.name,
@@ -357,7 +392,13 @@ async fn check_sibling_conflict_via_volume(
 /// Only for names that fold to one key (`fold_name`), so a plain conflict costs
 /// no listing. One that can't be read answers "a conflict", which the dialog
 /// shows rather than renaming over a file nobody looked at.
-async fn found_the_source_itself(volume: &dyn Volume, volume_id: &str, old_path: &Path, new_path: &Path) -> bool {
+async fn found_the_source_itself(
+    host: &EngineHost,
+    volume: &dyn Volume,
+    volume_id: &str,
+    old_path: &Path,
+    new_path: &Path,
+) -> bool {
     let (Some(dir), Some(old_name), Some(new_name)) = (
         new_path.parent(),
         old_path.file_name().and_then(|n| n.to_str()),
@@ -368,7 +409,7 @@ async fn found_the_source_itself(volume: &dyn Volume, volume_id: &str, old_path:
     if old_path.parent() != Some(dir) || old_name == new_name || fold_name(old_name) != fold_name(new_name) {
         return false;
     }
-    match ListedFolders::with_pane_listings(volume, volume_id)
+    match ListedFolders::with_pane_listings(host.listings(), volume, volume_id)
         .entries_in(dir)
         .await
     {

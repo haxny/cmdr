@@ -20,13 +20,13 @@ fn installed() -> TransferTreeSlot {
 }
 
 fn installed_landing(landing: TreeLanding) -> TransferTreeSlot {
-    let recorder = TreeRecorder::new(&[PathBuf::from("/src/top")]);
+    let recorder = TreeRecorder::new(&[PathBuf::from("/src/top")], english());
     recorder.dir(Path::new("/src/top"));
     recorder.file(Path::new("/src/top/a.bin"), 10);
     recorder.dir(Path::new("/src/top/sub"));
     recorder.file(Path::new("/src/top/sub/c.bin"), 30);
     let slot = TransferTreeSlot::default();
-    slot.install(recorder.finish(&english()), landing);
+    slot.install(recorder.finish(), landing);
     slot
 }
 
@@ -241,13 +241,13 @@ fn tree_boundary_cost_bench() {
     const ROUNDS: usize = 5;
     let mut nanos_per_file = Vec::with_capacity(ROUNDS);
     for _ in 0..ROUNDS {
-        let recorder = TreeRecorder::new(&[PathBuf::from("/src/top")]);
+        let recorder = TreeRecorder::new(&[PathBuf::from("/src/top")], english());
         recorder.dir(Path::new("/src/top"));
         for file in 0..FILES {
             recorder.file(&PathBuf::from(format!("/src/top/sub/f_{file:05}.bin")), 4_096);
         }
         let slot = TransferTreeSlot::default();
-        slot.install(recorder.finish(&english()), TreeLanding::nowhere());
+        slot.install(recorder.finish(), TreeLanding::nowhere());
         let reporter = slot.reporter();
         let mut level = reporter.level(reporter.source(Path::new("/src/top")), []);
         let sub = level.child("sub", true, 0);

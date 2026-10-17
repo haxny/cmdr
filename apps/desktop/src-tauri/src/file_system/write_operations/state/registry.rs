@@ -135,8 +135,10 @@ impl WriteOperationRegistry {
     }
 }
 
-/// The installed engine's registry.
-// shim: removed in M6a
+/// The installed engine's registry, for a preview resolving its owner by id
+/// (`scan_bridge`) until it carries its engine, and for the suites that share the
+/// test engine.
+// shim: removed in M6b (production) and M7b–M7e (tests)
 pub(in crate::file_system::write_operations) fn operation_states() -> &'static WriteOperationRegistry {
     super::super::installed().registry()
 }

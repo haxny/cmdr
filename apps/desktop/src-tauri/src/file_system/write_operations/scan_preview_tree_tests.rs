@@ -1,6 +1,7 @@
 //! A transfer's scan preview builds the operation's live tree and hands it on
 //! in the cached result, and only a transfer's does.
 
+use crate::file_system::write_operations::transfer_tree::TreeOrder;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -91,7 +92,9 @@ async fn a_transfer_preview_of_a_local_selection_carries_its_tree_and_each_files
     let mut result = local_preview("local", &sources, ScanPreviewPurpose::Transfer).await;
     assert!(result.tree.is_some(), "a transfer's preview builds the tree");
 
-    let tree = result.order_by_transfer_tree(&sources).expect("the tree builds");
+    let tree = result
+        .order_by_transfer_tree(&sources, &TreeOrder::active(super::installed().host()))
+        .expect("the tree builds");
     assert_eq!(outline(&tree), EXPECTED);
     assert_eq!(file_order(&result, &dir), TREE_ORDER);
     for file in &result.files {
@@ -122,7 +125,9 @@ async fn an_operation_without_a_preview_tree_builds_one_from_the_walk() {
     let sources = seed(&dir);
     let mut result = local_preview("fallback", &sources, ScanPreviewPurpose::Delete).await;
 
-    let tree = result.order_by_transfer_tree(&sources).expect("the tree builds");
+    let tree = result
+        .order_by_transfer_tree(&sources, &TreeOrder::active(super::installed().host()))
+        .expect("the tree builds");
 
     assert_eq!(outline(&tree), EXPECTED);
     assert!(result.files.iter().all(|file| file.tree_node.is_some()));
@@ -179,7 +184,11 @@ async fn a_tree_that_fails_to_build_leaves_the_preview_and_its_walk_order_as_the
     assert!(result.tree.is_none(), "the preview completes, without a tree");
     let walk_order = file_order(&result, &dir);
 
-    assert!(result.order_by_transfer_tree(&sources).is_none());
+    assert!(
+        result
+            .order_by_transfer_tree(&sources, &TreeOrder::active(super::installed().host()))
+            .is_none()
+    );
     assert_eq!(file_order(&result, &dir), walk_order, "the files keep the walk's order");
     assert!(result.files.iter().all(|file| file.tree_node.is_none()));
 }

@@ -23,7 +23,7 @@ use super::super::super::conflict::ApplyToAll;
 use super::super::super::event_sinks::OperationEventSink;
 use super::super::super::journal;
 use super::super::super::state::WriteOperationState;
-use super::super::super::transfer_tree::TreeLanding;
+use super::super::super::transfer_tree::{TreeLanding, TreeOrder};
 use super::super::super::types::{
     CancelRollback, SourceItemOutcome, VolumeCopyConfig, WriteCancelledEvent, WriteCompleteEvent, WriteOperationError,
     WriteOperationPhase, WriteOperationType,
@@ -133,7 +133,11 @@ pub(crate) async fn move_volumes_with_progress(
     let known_directory_paths = preflight.known_directory_paths();
     // The driver takes sources in the order given, so this is what makes it
     // start in tree order.
-    let ordered_sources = sources_in_tree_order(source_paths, &preflight.source_hints);
+    let ordered_sources = sources_in_tree_order(
+        source_paths,
+        &preflight.source_hints,
+        &TreeOrder::active(state.scope().host()),
+    );
     let source_paths = ordered_sources.as_slice();
     let source_hints: Arc<HashMap<PathBuf, SourceHint>> = Arc::new(preflight.source_hints);
 

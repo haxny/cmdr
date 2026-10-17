@@ -164,6 +164,7 @@ impl crate::file_system::write_operations::Operations {
                     // Wait out the confirming dialog's scan before journaling or
                     // touching either device; see `write_operations::start_write_operation`.
                     if crate::file_system::write_operations::scan_bridge::await_claimed_preview(
+                        &ops,
                         &*events,
                         &op_id,
                         WriteOperationType::Move,
@@ -451,7 +452,11 @@ pub(crate) async fn move_within_same_volume_with_progress(
     let total_files = source_paths.len() + already_in_place;
     let total_bytes = 0u64;
     let known_directory_paths = top_level.known_directory_paths();
-    let ordered_sources = sources_in_tree_order(source_paths, &top_level.source_hints);
+    let ordered_sources = sources_in_tree_order(
+        source_paths,
+        &top_level.source_hints,
+        &TreeOrder::active(state.scope().host()),
+    );
     let source_paths = ordered_sources.as_slice();
     let source_hints: Arc<HashMap<PathBuf, SourceHint>> = Arc::new(top_level.source_hints);
     // A rename takes each item whole and walks nothing, so the tree is the
@@ -460,7 +465,7 @@ pub(crate) async fn move_within_same_volume_with_progress(
         from_sources(
             source_paths,
             |source| source_hints.get(source).is_some_and(|hint| hint.is_directory),
-            &TreeOrder::active(),
+            &TreeOrder::active(state.scope().host()),
         ),
         TreeLanding::under(dest_path, config.destination_name.as_deref()),
     );
