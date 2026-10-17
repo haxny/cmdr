@@ -18,7 +18,8 @@ use super::super::safety_oracle::{SafetySpec, assert_operation_was_safe};
 use super::tests::{make_state, make_volumes};
 use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
-use crate::file_system::write_operations::state::cancel_write_operation;
+use crate::file_system::write_operations::installed;
+
 use crate::file_system::write_operations::test_support::TestOperationGuard;
 use crate::file_system::write_operations::types::{
     ConflictResolution, WriteCancelledEvent, WriteCompleteEvent, WriteConflictResolvedEvent, WriteErrorEvent,
@@ -243,7 +244,7 @@ async fn merge_cancel_mid_stream_preserves_unshadowed_dest_files() {
                 && self.fired.swap(1, Ordering::Relaxed) == 0
             {
                 // Public cancel path (Stopped, keep partials).
-                cancel_write_operation(&self.op_id, false);
+                installed().cancel_write_operation(&self.op_id, false);
             }
             self.inner.emit_progress(event);
         }

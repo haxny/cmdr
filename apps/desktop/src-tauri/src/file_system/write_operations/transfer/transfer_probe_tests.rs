@@ -15,6 +15,7 @@ use crate::file_system::write_operations::Operations;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::host::testing::FakeVolumes;
 use crate::file_system::write_operations::host::{EngineEvents, InstantMutationFact};
+use crate::file_system::write_operations::installed;
 use crate::file_system::write_operations::test_support::{TestOperationGuard, placeholder_conflict};
 use crate::file_system::write_operations::types::{MoveLeftoversKeptEvent, OperationsChanged};
 use crate::file_system::write_operations::types::{WriteOperationType, WriteProgressEvent};
@@ -607,7 +608,7 @@ fn the_watchdog_stands_down_once_the_operation_is_cancelling() {
     let task = probe.begin_task(TaskRow::source(0), TaskRole::File, "/src/a", "/dst/a");
     task.probe().set_phase(TaskPhase::Streaming);
     let signal = task.probe().arm_stall_abort();
-    crate::file_system::write_operations::state::cancel_write_operation(guard.id(), false);
+    installed().cancel_write_operation(guard.id(), false);
 
     let mut watchdog = WatchdogState::new();
     for tick in 1..=20 {

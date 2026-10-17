@@ -33,6 +33,7 @@ use super::{
     ConflictDecision, ConflictDecisionInput, NameAtDest, PostLoopIntent, TransferContext, TransferOutcome,
     drive_transfer_serial_async,
 };
+use crate::file_system::write_operations::installed;
 use crate::test_support::wait_until_async;
 use std::collections::HashSet;
 use std::future::Future;
@@ -711,7 +712,7 @@ async fn async_driver_status_cache_matches_emitted_progress() {
     .await;
 
     assert!(matches!(outcome.intent, PostLoopIntent::Completed));
-    let status = super::super::super::state::get_operation_status(&op_id).expect("status entry present");
+    let status = installed().get_operation_status(&op_id).expect("status entry present");
     // The per-iter Skip emit pairs with `update_operation_status` so the cache
     // must mirror the same numbers.
     assert_eq!(status.files_done, 1);
@@ -1203,7 +1204,7 @@ async fn async_driver_cancel_while_paused_unblocks_and_cancels() {
 
     // Cancel while paused: the production cancel path flips intent AND wakes the
     // gate. Drive it through the public cancel API (never store intent directly).
-    super::super::super::state::cancel_write_operation(&op_id, false);
+    installed().cancel_write_operation(&op_id, false);
 
     let outcome = tokio::time::timeout(Duration::from_secs(5), driver)
         .await

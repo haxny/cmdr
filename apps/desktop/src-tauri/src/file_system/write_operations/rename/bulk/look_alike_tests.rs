@@ -16,8 +16,9 @@ use std::time::Duration;
 
 use super::super::super::event_sinks::{CollectorEventSink, OperationEventSink};
 use super::super::super::source_binding::SourceFingerprint;
-use super::{BulkRenameRow, start_bulk_rename};
+use super::BulkRenameRow;
 use crate::file_system::volume::manager::get_volume_manager;
+use crate::file_system::write_operations::installed;
 use crate::test_support::wait_until_async;
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::volume::InMemoryVolume;
@@ -71,13 +72,14 @@ async fn row(volume: &InMemoryVolume, source: &str, destination: &str) -> BulkRe
 /// Runs the batch to its end and answers how many rows it skipped.
 async fn run(id: &str, rows: Vec<BulkRenameRow>) -> usize {
     let sink = Arc::new(CollectorEventSink::new());
-    start_bulk_rename(
-        Arc::clone(&sink) as Arc<dyn OperationEventSink>,
-        id.to_string(),
-        rows,
-        Initiator::Agent,
-    )
-    .expect("start bulk rename");
+    installed()
+        .start_bulk_rename(
+            Arc::clone(&sink) as Arc<dyn OperationEventSink>,
+            id.to_string(),
+            rows,
+            Initiator::Agent,
+        )
+        .expect("start bulk rename");
     wait_until_async(Duration::from_secs(5), "the batch settles", || {
         !sink.settled.lock_ignore_poison().is_empty()
     })

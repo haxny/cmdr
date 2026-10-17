@@ -32,7 +32,7 @@ impl super::super::Operations {
     /// report: the only unpersisted production path.
     ///
     /// Only the data-dir work happens inline. **The disk work goes to its own
-    /// thread** (see [`SweepHandle`](super::SweepHandle) for why nothing on the
+    /// thread** (see [`SweepHandle`] for why nothing on the
     /// launch path waits on it): the records it acts on were already retired
     /// from the log by the truncate, so a new copy can start underneath it
     /// safely. A record naming
@@ -51,8 +51,16 @@ impl super::super::Operations {
         Ok(self.stores().ledger().init_and_sweep(data_dir, self.host_arc()))
     }
 
-    /// Waits, at most [`FLUSH_WAIT`](super::FLUSH_WAIT), for every record this
-    /// engine's ledger queued to reach the kernel. See [`flush`](super::flush).
+    /// Waits for every record this engine's ledger queued to reach the kernel,
+    /// so the next launch's sweep can see it. The quit teardown's last act
+    /// before the process ends.
+    ///
+    /// Records are written by the ledger's own thread a moment after they're
+    /// queued, so without this a quit could end the process with the last few
+    /// still in the queue. Bounded by [`FLUSH_WAIT`](super::FLUSH_WAIT): a wedged
+    /// disk costs those records, never the quit. Deliberately NOT an `fsync`;
+    /// see the `in_flight_temps` module docs on why a power loss is the
+    /// directory scan's problem, not this ledger's.
     pub(crate) fn flush_in_flight_temps(&self) {
         self.stores().ledger().flush_log();
     }

@@ -10,8 +10,8 @@
 
 use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
+use crate::file_system::write_operations::installed;
 use crate::file_system::write_operations::ledger::WrittenIdentity;
-use crate::file_system::write_operations::state::cancel_write_operation;
 use crate::file_system::write_operations::test_support::TestOperationGuard;
 use crate::file_system::write_operations::types::{CancelRollback, CancelRollbackOutcome};
 use cmdr_fs::volume::InMemoryVolume;
@@ -361,8 +361,8 @@ async fn a_stopped_volume_reversal_leaves_the_ledger_claiming_what_is_still_ther
     let state = make_state();
     let guard = TestOperationGuard::register_state("volume-ledger-stop", Arc::clone(&state));
     // Rolling back, and the user stops the reversal before it starts deleting.
-    cancel_write_operation(guard.id(), true);
-    cancel_write_operation(guard.id(), false);
+    installed().cancel_write_operation(guard.id(), true);
+    installed().cancel_write_operation(guard.id(), false);
     let events = CollectorEventSink::new();
     let report = volume_rollback_with_progress(
         &volume,

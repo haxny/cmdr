@@ -18,12 +18,11 @@ use tokio::time::Duration;
 use super::file_system::expand_tilde;
 use super::settled::broadcast_settled;
 use crate::file_system::volume::io_budget_for_volume;
-use crate::file_system::write_operations::trash::{trash_dir_for_path, trash_single_journaled};
 use crate::file_system::write_operations::{
-    MUTATION_REPLY_DEADLINE, MutationError, MutationReply, MutationSettled, RenameValidityResult,
-    check_rename_permission_for_volume, check_rename_validity_impl, rename_managed, reply_within,
+    MUTATION_REPLY_DEADLINE, MutationError, MutationReply, MutationSettled, RenameValidityResult, reply_within,
+    trash_dir_for_path,
 };
-use crate::operations_host::wire;
+use crate::operations_host::{operations, refuse_instant_not_installed, wire};
 use crate::s3_costs;
 use cmdr_fs::deadline::timeout_detached_typed;
 
@@ -35,6 +34,7 @@ use cmdr_fs::deadline::timeout_detached_typed;
 #[tauri::command]
 #[specta::specta]
 pub async fn move_to_trash(path: String) -> Result<(), MutationError> {
+    let engine = operations().map_err(refuse_instant_not_installed)?;
     let expanded = expand_tilde(&path);
     let path_buf = PathBuf::from(&expanded);
 
@@ -48,7 +48,7 @@ pub async fn move_to_trash(path: String) -> Result<(), MutationError> {
     match tokio::time::timeout(
         Duration::from_secs(15),
         tokio::task::spawn_blocking(move || {
-            trash_single_journaled(&path_buf, cmdr_operation_log::types::Initiator::User)
+            engine.trash_single_journaled(&path_buf, cmdr_operation_log::types::Initiator::User)
         }),
     )
     .await
@@ -93,9 +93,14 @@ pub async fn get_trash_dir(path: String) -> Result<Option<String>, MutationError
 /// Local-only by nature, so `volume_id` decides whether it runs at all: a volume
 /// serving its own I/O answers `Ok` untouched. See
 /// [`check_rename_permission_for_volume`].
+#[allow(
+    rustdoc::broken_intra_doc_links,
+    reason = "the doc text reaches bindings.ts; the link names what is now `Operations::check_rename_permission_for_volume`, reworded with the other comment-only wire fixes"
+)]
 #[tauri::command]
 #[specta::specta]
 pub async fn check_rename_permission(path: String, volume_id: Option<String>) -> Result<(), MutationError> {
+    let engine = operations().map_err(refuse_instant_not_installed)?;
     let volume_id_str = volume_id.unwrap_or_else(|| "root".to_string());
 
     // Non-local volume paths are volume-relative; never tilde-expand them.
@@ -109,7 +114,7 @@ pub async fn check_rename_permission(path: String, volume_id: Option<String>) ->
         Duration::from_secs(2),
         || MutationError::TimedOut,
         |detail| MutationError::Unexpected { detail },
-        check_rename_permission_for_volume(path_buf, volume_id_str),
+        engine.check_rename_permission_for_volume(path_buf, volume_id_str),
     )
     .await
 }
@@ -140,6 +145,18 @@ async fn check_rename_validity_with(
     volume_id: Option<String>,
     data_dir: Option<PathBuf>,
 ) -> Result<RenameValidityResult, MutationError> {
+    // Before `install` nothing can be renamed, so the name is refused, with no
+    // validation error to show (the rename itself says why).
+    let Ok(engine) = operations() else {
+        return Ok(RenameValidityResult {
+            valid: false,
+            error: None,
+            has_conflict: false,
+            is_case_only_rename: false,
+            conflict: None,
+            by_move: None,
+        });
+    };
     let expanded_dir = expand_tilde(&dir);
     let volume_id_str = volume_id.unwrap_or_else(|| "root".to_string());
 
@@ -153,7 +170,9 @@ async fn check_rename_validity_with(
         |detail| MutationError::Unexpected { detail },
         async move {
             // Priced inside the budget, as before: the estimate reads the cached price table.
-            let check = check_rename_validity_impl(expanded_dir, old_name, new_name, volume_id_str.clone()).await;
+            let check = engine
+                .check_rename_validity_impl(expanded_dir, old_name, new_name, volume_id_str.clone())
+                .await;
             Ok(check.priced(|facts| {
                 !s3_costs::rounds_to_zero(&s3_costs::estimate_rename(&volume_id_str, facts, data_dir.as_deref()))
             }))
@@ -200,6 +219,7 @@ pub(crate) async fn rename_file_replying(
     initiator: Option<cmdr_operation_log::types::Initiator>,
     on_settled: impl FnOnce(MutationSettled) + Send + 'static,
 ) -> Result<MutationReply, MutationError> {
+    let engine = operations().map_err(refuse_instant_not_installed)?;
     let volume_id_str = volume_id.unwrap_or_else(|| "root".to_string());
 
     let (from_path, to_path) = if volume_id_str != "root" {
@@ -214,7 +234,7 @@ pub(crate) async fn rename_file_replying(
     // wedges the phone.
     reply_within(
         MUTATION_REPLY_DEADLINE,
-        rename_managed(
+        engine.rename_managed(
             from_path,
             to_path,
             force,
@@ -435,7 +455,7 @@ mod tests {
     async fn a_slow_rename_replies_still_running_then_settles_landed() {
         use crate::file_system::volume::manager::get_volume_manager;
         use crate::file_system::volume::{ConnectionState, InMemoryVolume, Volume};
-        use crate::file_system::write_operations::MutationSettledOutcome;
+        use crate::file_system::write_operations::testing::MutationSettledOutcome;
         use crate::test_support::SlowVolume;
         use std::path::Path;
         use std::sync::Arc;

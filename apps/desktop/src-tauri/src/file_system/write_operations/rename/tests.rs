@@ -11,7 +11,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::file_system::volume::manager::get_volume_manager;
-use crate::file_system::write_operations::busy_volume_ids;
+use crate::file_system::write_operations::installed;
 use crate::test_support::TestDir;
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::{LaneKey, ListingProgress};
@@ -75,15 +75,16 @@ async fn an_instant_rename_journals_its_row_through_the_real_store() {
     let old_name = format!("{}.txt", unique("journaled-old"));
     fs::write(tmp.join(&old_name), "content").expect("source");
 
-    rename_managed(
-        tmp.join(&old_name),
-        tmp.join("new.txt"),
-        false,
-        "root".to_string(),
-        Initiator::User,
-    )
-    .await
-    .expect("rename");
+    installed()
+        .rename_managed(
+            tmp.join(&old_name),
+            tmp.join("new.txt"),
+            false,
+            "root".to_string(),
+            Initiator::User,
+        )
+        .await
+        .expect("rename");
 
     let conn = open_read_connection(&db).expect("read conn");
     let (op, items) = recent_operations(&conn, 50)
@@ -108,7 +109,9 @@ async fn rename_managed_local_success() {
     let old = tmp.join("old.txt");
     let new = tmp.join("new.txt");
     fs::write(&old, "content").unwrap();
-    let result = rename_managed(old.clone(), new.clone(), false, "root".to_string(), Initiator::User).await;
+    let result = installed()
+        .rename_managed(old.clone(), new.clone(), false, "root".to_string(), Initiator::User)
+        .await;
     assert!(result.is_ok());
     assert!(!old.exists());
     assert_eq!(fs::read_to_string(&new).unwrap(), "content");
@@ -123,7 +126,9 @@ async fn rename_managed_renames_a_zip_file_itself() {
     let old = tmp.join("bundle.zip");
     let new = tmp.join("renamed.zip");
     fs::write(&old, b"PK\x03\x04rest").unwrap();
-    let result = rename_managed(old.clone(), new.clone(), false, "root".to_string(), Initiator::User).await;
+    let result = installed()
+        .rename_managed(old.clone(), new.clone(), false, "root".to_string(), Initiator::User)
+        .await;
     assert!(result.is_ok(), "renaming the .zip file itself must succeed: {result:?}");
     assert!(!old.exists());
     assert!(new.exists());
@@ -137,7 +142,9 @@ async fn rename_managed_local_conflict_without_force_is_transparent() {
     let new = tmp.join("new.txt");
     fs::write(&old, "old").unwrap();
     fs::write(&new, "new").unwrap();
-    let result = rename_managed(old.clone(), new.clone(), false, "root".to_string(), Initiator::User).await;
+    let result = installed()
+        .rename_managed(old.clone(), new.clone(), false, "root".to_string(), Initiator::User)
+        .await;
     assert!(result.is_err());
     assert!(matches!(result.unwrap_err(), MutationError::AlreadyExists { .. }));
     assert!(old.exists() && new.exists(), "both intact on conflict");
@@ -151,7 +158,9 @@ async fn rename_managed_local_force_overwrites() {
     let new = tmp.join("new.txt");
     fs::write(&old, "new content").unwrap();
     fs::write(&new, "old content").unwrap();
-    let result = rename_managed(old.clone(), new.clone(), true, "root".to_string(), Initiator::User).await;
+    let result = installed()
+        .rename_managed(old.clone(), new.clone(), true, "root".to_string(), Initiator::User)
+        .await;
     assert!(result.is_ok());
     assert!(!old.exists());
     assert_eq!(fs::read_to_string(&new).unwrap(), "new content");
@@ -235,20 +244,21 @@ async fn rename_managed_marks_nonroot_volume_busy_during_op() {
 
     let vid = volume_id.clone();
     let handle = tokio::spawn(async move {
-        rename_managed(
-            PathBuf::from("/old"),
-            PathBuf::from("/new"),
-            false,
-            vid,
-            Initiator::User,
-        )
-        .await
+        installed()
+            .rename_managed(
+                PathBuf::from("/old"),
+                PathBuf::from("/new"),
+                false,
+                vid,
+                Initiator::User,
+            )
+            .await
     });
 
     // Wait until the volume's rename is parked mid-flight.
     started.notified().await;
     assert!(
-        busy_volume_ids().contains(&volume_id),
+        installed().busy_volume_ids().contains(&volume_id),
         "a non-root volume must be busy while its rename runs"
     );
 
@@ -257,7 +267,7 @@ async fn rename_managed_marks_nonroot_volume_busy_during_op() {
     let result = handle.await.expect("task joins");
     assert!(result.is_ok(), "the managed rename returns success");
     assert!(
-        !busy_volume_ids().contains(&volume_id),
+        !installed().busy_volume_ids().contains(&volume_id),
         "the volume must be freed once the rename finishes"
     );
 }
@@ -286,7 +296,8 @@ async fn rename_managed_routes_an_in_archive_rename_to_the_edit_driver() {
     // rather than the old flat "isn't available yet" refusal or an instant rename.
     let from = zip.join("old.txt");
     let to = zip.join("new.txt");
-    let err = rename_managed(from, to, false, "root".to_string(), Initiator::User)
+    let err = installed()
+        .rename_managed(from, to, false, "root".to_string(), Initiator::User)
         .await
         .expect_err("routing needs an app handle the unit test doesn't wire");
     // The archive-specific variant is how we tell the routing fork fired from a
@@ -302,7 +313,8 @@ async fn rename_managed_routes_an_in_archive_rename_to_the_edit_driver() {
     // A cross-boundary rename (OUT of the archive) is refused as a move, a
     // deterministic routing decision that needs no app handle.
     let outside = tmp.join("out.txt");
-    let cross = rename_managed(zip.join("old.txt"), outside, false, "root".to_string(), Initiator::User)
+    let cross = installed()
+        .rename_managed(zip.join("old.txt"), outside, false, "root".to_string(), Initiator::User)
         .await
         .expect_err("a cross-boundary rename is refused");
     assert!(
@@ -338,7 +350,7 @@ async fn route_archive_rename_onto_an_existing_name_errors_without_building_a_te
 
     let from = zip.join("old.txt");
     let to = zip.join("taken.txt");
-    let err = route_archive_rename(crate::file_system::write_operations::installed(), &from, &to, "root")
+    let err = route_archive_rename(installed(), &from, &to, "root")
         .await
         .expect_err("renaming onto an existing name must be refused");
     assert!(
@@ -391,14 +403,15 @@ async fn copying_store(label: &str, files: usize) -> (String, Arc<cmdr_fs::volum
 async fn a_rename_that_copies_starts_a_move_instead_of_calling_rename() {
     let (volume_id, volume) = copying_store("copy-rename", 2).await;
 
-    let result = rename_managed(
-        PathBuf::from("/a/foo"),
-        PathBuf::from("/a/bar"),
-        false,
-        volume_id,
-        Initiator::User,
-    )
-    .await;
+    let result = installed()
+        .rename_managed(
+            PathBuf::from("/a/foo"),
+            PathBuf::from("/a/bar"),
+            false,
+            volume_id,
+            Initiator::User,
+        )
+        .await;
 
     assert!(
         matches!(result, Err(MutationError::Unexpected { .. })),
@@ -411,7 +424,8 @@ async fn a_rename_that_copies_starts_a_move_instead_of_calling_rename() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn the_validity_check_reports_the_move_a_copying_rename_runs_as() {
     let (small_id, _small) = copying_store("copy-validity-small", 3).await;
-    let small = check_rename_validity_impl("/a".into(), "foo".into(), "bar".into(), small_id)
+    let small = installed()
+        .check_rename_validity_impl("/a".into(), "foo".into(), "bar".into(), small_id)
         .await
         .priced(|_| false);
     assert_eq!(
@@ -425,7 +439,8 @@ async fn the_validity_check_reports_the_move_a_copying_rename_runs_as() {
     );
 
     let (big_id, _big) = copying_store("copy-validity-big", 101).await;
-    let big = check_rename_validity_impl("/a".into(), "foo".into(), "bar".into(), big_id)
+    let big = installed()
+        .check_rename_validity_impl("/a".into(), "foo".into(), "bar".into(), big_id)
         .await
         .priced(|_| false);
     let by_move = big.by_move.expect("a copying rename reports its move");
@@ -436,7 +451,8 @@ async fn the_validity_check_reports_the_move_a_copying_rename_runs_as() {
     let plain = Arc::new(cmdr_fs::volume::InMemoryVolume::new(&plain_id));
     plain.create_directory(Path::new("/a/foo")).await.unwrap();
     get_volume_manager().register(&plain_id, plain as Arc<dyn Volume>);
-    let one_call = check_rename_validity_impl("/a".into(), "foo".into(), "bar".into(), plain_id)
+    let one_call = installed()
+        .check_rename_validity_impl("/a".into(), "foo".into(), "bar".into(), plain_id)
         .await
         .priced(|_| false);
     assert_eq!(one_call.by_move, None, "a one-call rename carries nothing");
@@ -449,7 +465,8 @@ async fn the_validity_check_reports_the_move_a_copying_rename_runs_as() {
 async fn the_host_prices_what_a_counted_copying_rename_carries() {
     let (small_id, _small) = copying_store("copy-validity-priced", 3).await;
     let mut priced = None;
-    let small = check_rename_validity_impl("/a".into(), "foo".into(), "bar".into(), small_id)
+    let small = installed()
+        .check_rename_validity_impl("/a".into(), "foo".into(), "bar".into(), small_id)
         .await
         .priced(|facts| {
             priced = Some((facts.files, facts.bytes, facts.selected_folders));
@@ -459,7 +476,8 @@ async fn the_host_prices_what_a_counted_copying_rename_carries() {
     assert!(small.by_move.expect("a copying rename reports its move").confirm_first);
 
     let (big_id, _big) = copying_store("copy-validity-unpriced", 101).await;
-    let big = check_rename_validity_impl("/a".into(), "foo".into(), "bar".into(), big_id)
+    let big = installed()
+        .check_rename_validity_impl("/a".into(), "foo".into(), "bar".into(), big_id)
         .await
         .priced(|_| panic!("an unfinished count isn't priced"));
     assert!(big.by_move.expect("a copying rename reports its move").confirm_first);
@@ -505,7 +523,8 @@ async fn a_batch_where_a_rename_copies_runs_as_one_move() {
     }
     let events = Arc::new(CollectorEventSink::new());
 
-    let started = start_renames(events.clone(), volume_id, rows, Initiator::Agent)
+    let started = installed()
+        .start_renames(events.clone(), volume_id, rows, Initiator::Agent)
         .await
         .expect("the batch starts");
 
@@ -558,7 +577,8 @@ async fn a_batch_as_a_move_reports_the_swaps_it_left_out() {
         });
     }
 
-    let started = start_renames(Arc::new(CollectorEventSink::new()), volume_id, rows, Initiator::Agent)
+    let started = installed()
+        .start_renames(Arc::new(CollectorEventSink::new()), volume_id, rows, Initiator::Agent)
         .await
         .expect("the batch starts");
 
@@ -584,14 +604,15 @@ async fn a_batch_the_executor_runs_leaves_no_swap_out() {
         });
     }
 
-    let started = start_renames(
-        Arc::new(CollectorEventSink::new()),
-        "root".to_string(),
-        rows,
-        Initiator::Agent,
-    )
-    .await
-    .expect("the batch starts");
+    let started = installed()
+        .start_renames(
+            Arc::new(CollectorEventSink::new()),
+            "root".to_string(),
+            rows,
+            Initiator::Agent,
+        )
+        .await
+        .expect("the batch starts");
 
     assert_eq!(started.swaps_left_out, 0, "the executor swaps through a temporary name");
 }
@@ -661,7 +682,8 @@ async fn a_case_only_rename_on_a_case_insensitive_volume_is_not_a_conflict() {
     inner.create_file(Path::new("/share/c.txt"), b"abcd").await.unwrap();
     get_volume_manager().register(&volume_id, Arc::new(CaseFoldingVolume { inner }) as Arc<dyn Volume>);
 
-    let check = check_rename_validity_impl("/share".into(), "c.txt".into(), "C.txt".into(), volume_id)
+    let check = installed()
+        .check_rename_validity_impl("/share".into(), "c.txt".into(), "C.txt".into(), volume_id)
         .await
         .priced(|_| false);
 
@@ -683,7 +705,8 @@ async fn a_case_only_rename_onto_a_real_sibling_is_still_a_conflict() {
     volume.create_file(Path::new("/share/C.txt"), b"other!").await.unwrap();
     get_volume_manager().register(&volume_id, volume as Arc<dyn Volume>);
 
-    let check = check_rename_validity_impl("/share".into(), "c.txt".into(), "C.txt".into(), volume_id)
+    let check = installed()
+        .check_rename_validity_impl("/share".into(), "c.txt".into(), "C.txt".into(), volume_id)
         .await
         .priced(|_| false);
 

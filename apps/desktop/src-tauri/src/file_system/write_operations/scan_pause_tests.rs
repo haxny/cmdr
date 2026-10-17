@@ -17,8 +17,9 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::time::Duration;
 
+use super::OperationEventSink;
 use super::event_sinks::{CollectorEventSink, ScanPreviewEventSink};
-use super::manager::{PauseOutcome, cancel_operation, manager, pause_operation, resume_operation};
+use super::manager::{PauseOutcome, manager};
 use super::scan_cache::{ScanPreviewState, register_preview, release_preview};
 use super::scan_preview::run_scan_preview;
 use super::scan_watchdog::{SCAN_INACTIVITY_LIMIT, ScanTarget, ScanWatchdog};
@@ -26,7 +27,7 @@ use super::types::{
     LifecycleStatus, ScanPreviewCancelledEvent, ScanPreviewCompleteEvent, ScanPreviewErrorEvent,
     ScanPreviewProgressEvent, WriteOperationConfig, WriteOperationType,
 };
-use super::{OperationEventSink, copy_files_start};
+use crate::file_system::write_operations::installed;
 use crate::test_support::{TestDir, wait_until_async};
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_operation_log::types::Initiator;
@@ -92,7 +93,7 @@ impl ScanPreviewEventSink for PauseOnFirstTick {
         self.progress.lock_ignore_poison().push(event);
         if !self.fired.swap(true, Ordering::SeqCst) {
             assert_eq!(
-                pause_operation(&self.operation_id),
+                installed().pause_operation(&self.operation_id),
                 PauseOutcome::Applied,
                 "an operation whose scan can park is an ordinary pause, not a special case"
             );
@@ -150,30 +151,29 @@ async fn start_copy_with_a_real_scan(label: &str) -> RunningScan {
     register_preview(preview_id.clone(), Arc::clone(&state));
 
     let op_events = Arc::new(CollectorEventSink::new());
-    let start = copy_files_start(
-        Arc::clone(&op_events) as Arc<dyn OperationEventSink>,
-        vec![src.clone()],
-        dst,
-        WriteOperationConfig {
-            preview_id: Some(preview_id.clone()),
-            ..WriteOperationConfig::default()
-        },
-        vec![unique("vol")],
-        None,
-        Initiator::User,
-        None,
-        None,
-    )
-    .await
-    .expect("copy starts");
+    let start = installed()
+        .copy_files_start(
+            Arc::clone(&op_events) as Arc<dyn OperationEventSink>,
+            vec![src.clone()],
+            dst,
+            WriteOperationConfig {
+                preview_id: Some(preview_id.clone()),
+                ..WriteOperationConfig::default()
+            },
+            vec![unique("vol")],
+            None,
+            Initiator::User,
+            None,
+            None,
+        )
+        .await
+        .expect("copy starts");
     let operation_id = start.operation_id.clone();
 
     let sink = Arc::new(PauseOnFirstTick::new(operation_id.clone()));
     let events: Arc<dyn ScanPreviewEventSink> = Arc::clone(&sink) as Arc<dyn ScanPreviewEventSink>;
     let watchdog = ScanWatchdog::start(
-        crate::file_system::write_operations::installed()
-            .stores()
-            .previews_arc(),
+        installed().stores().previews_arc(),
         preview_id.clone(),
         ScanTarget::of(std::slice::from_ref(&src), "root"),
         SCAN_INACTIVITY_LIMIT,
@@ -184,7 +184,7 @@ async fn start_copy_with_a_real_scan(label: &str) -> RunningScan {
     let walk_preview_id = preview_id.clone();
     let walk = std::thread::spawn(move || {
         run_scan_preview(
-            crate::file_system::write_operations::installed(),
+            installed(),
             events,
             walk_preview_id,
             vec![src],
@@ -245,11 +245,11 @@ async fn a_paused_scan_stops_counting() {
         "and the record says Paused, because now it truly is"
     );
 
-    resume_operation(&scan.operation_id);
+    installed().resume_operation(&scan.operation_id);
     wait_until_async(WAIT, "the resumed scan to finish", || scan.sink.is_complete()).await;
     scan.walk.join().expect("the walk thread ends");
     release_preview(&scan.preview_id);
-    cancel_operation(&scan.operation_id);
+    installed().cancel_operation(&scan.operation_id);
     wait_until_async(WAIT, "the operation to settle", || {
         manager().lifecycle_status(&scan.operation_id).is_none()
     })
@@ -266,7 +266,7 @@ async fn a_resumed_scan_carries_on_instead_of_starting_over() {
     let scan = start_copy_with_a_real_scan("scanpause-resumes").await;
     let parked_at = wait_until_parked(&scan.sink).await;
 
-    resume_operation(&scan.operation_id);
+    installed().resume_operation(&scan.operation_id);
     wait_until_async(WAIT, "the resumed scan to finish", || scan.sink.is_complete()).await;
     scan.walk.join().expect("the walk thread ends");
 
@@ -292,7 +292,7 @@ async fn a_resumed_scan_carries_on_instead_of_starting_over() {
     );
 
     release_preview(&scan.preview_id);
-    cancel_operation(&scan.operation_id);
+    installed().cancel_operation(&scan.operation_id);
     wait_until_async(WAIT, "the operation to settle", || {
         manager().lifecycle_status(&scan.operation_id).is_none()
     })
@@ -309,7 +309,7 @@ async fn a_cancel_reaches_a_scan_parked_on_the_pause_gate() {
     let scan = start_copy_with_a_real_scan("scanpause-cancel").await;
     wait_until_parked(&scan.sink).await;
 
-    cancel_operation(&scan.operation_id);
+    installed().cancel_operation(&scan.operation_id);
 
     wait_until_async(WAIT, "the cancelled operation to settle", || {
         !scan.op_events.cancelled.lock_ignore_poison().is_empty()
@@ -372,7 +372,7 @@ impl OperationEventSink for PauseOnFirstScanTick {
         }
         self.scanned.lock_ignore_poison().push(event.files_done);
         if !self.fired.swap(true, Ordering::SeqCst) {
-            assert_eq!(pause_operation(&event.operation_id), PauseOutcome::Applied);
+            assert_eq!(installed().pause_operation(&event.operation_id), PauseOutcome::Applied);
         }
     }
     fn emit_complete(&self, _event: super::types::WriteCompleteEvent) {
@@ -403,24 +403,25 @@ async fn an_operations_own_scan_parks_too() {
     std::fs::create_dir_all(&dst).expect("create dst");
 
     let sink = Arc::new(PauseOnFirstScanTick::new());
-    let start = copy_files_start(
-        Arc::clone(&sink) as Arc<dyn OperationEventSink>,
-        vec![src.clone()],
-        dst,
-        WriteOperationConfig {
-            // No preview: the operation does its own walk. Every entry ticks,
-            // so the pause lands between two entries of that walk.
-            progress_interval_ms: 0,
-            ..WriteOperationConfig::default()
-        },
-        vec![unique("vol")],
-        None,
-        Initiator::User,
-        None,
-        None,
-    )
-    .await
-    .expect("copy starts");
+    let start = installed()
+        .copy_files_start(
+            Arc::clone(&sink) as Arc<dyn OperationEventSink>,
+            vec![src.clone()],
+            dst,
+            WriteOperationConfig {
+                // No preview: the operation does its own walk. Every entry ticks,
+                // so the pause lands between two entries of that walk.
+                progress_interval_ms: 0,
+                ..WriteOperationConfig::default()
+            },
+            vec![unique("vol")],
+            None,
+            Initiator::User,
+            None,
+            None,
+        )
+        .await
+        .expect("copy starts");
     let op_id = start.operation_id.clone();
 
     // The walk stops climbing: two reads of the same count with a beat between
@@ -444,7 +445,7 @@ async fn an_operations_own_scan_parks_too() {
     );
     assert!(!sink.complete.load(Ordering::SeqCst));
 
-    resume_operation(&op_id);
+    installed().resume_operation(&op_id);
     wait_until_async(WAIT, "the resumed copy to finish", || {
         sink.complete.load(Ordering::SeqCst)
     })

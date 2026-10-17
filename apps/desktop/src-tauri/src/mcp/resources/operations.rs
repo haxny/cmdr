@@ -36,7 +36,6 @@
 use crate::file_system::write_operations::{
     LifecycleStatus, OperationSnapshot, OperationStatus, TransferActivity, TransferTreeRow, TransferTreeView,
     TransferTreeViewRequest, TreeRowKind, TreeRowState, WriteConflictEvent, WriteSourcesGoneEvent,
-    get_operation_status, list_operations, pending_sources_gone, pending_write_conflict, transfer_tree_view,
 };
 use crate::pluralize::pluralize;
 use crate::search::query::format_size;
@@ -59,18 +58,25 @@ pub(crate) struct OperationRow {
 /// registry membership with the live progress cache by id, plus any Stop-mode
 /// clash the operation is parked on.
 pub(crate) fn snapshot_operations() -> Vec<OperationRow> {
-    list_operations()
+    // Before `install` nothing is registered.
+    let Ok(engine) = crate::operations_host::operations() else {
+        return Vec::new();
+    };
+    engine
+        .list_operations()
         .into_iter()
         .map(|snapshot| {
-            let progress = get_operation_status(&snapshot.operation_id);
-            let pending_conflict = pending_write_conflict(&snapshot.operation_id);
-            let pending_sources_gone = pending_sources_gone(&snapshot.operation_id);
+            let progress = engine.get_operation_status(&snapshot.operation_id);
+            let pending_conflict = engine.pending_write_conflict(&snapshot.operation_id);
+            let pending_sources_gone = engine.pending_sources_gone(&snapshot.operation_id);
             // Only while it runs or is paused: a queued or failed op has no tree to
             // show, and asking would take a lock for nothing.
             let tree = progress
                 .is_some()
                 .then(|| {
-                    transfer_tree_view(&snapshot.operation_id, &TransferTreeViewRequest::following_the_work()).ok()
+                    engine
+                        .transfer_tree_view(&snapshot.operation_id, &TransferTreeViewRequest::following_the_work())
+                        .ok()
                 })
                 .flatten();
             OperationRow {

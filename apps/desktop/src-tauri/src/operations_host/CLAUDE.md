@@ -10,7 +10,7 @@ engine-wide facts, the per-op sinks, and what a terminal event does besides reac
   ledger claim, unconditionally.** `claim_ledger` claims the installed engine's leftover ledger, after the instance lock;
   ❌ never another engine's. The engine's runtime is `volume_host::host()`'s, which is the APP runtime: ❌ never
   build one from `Handle::current()` in `setup()`, or an admitted operation can land on a runtime that dies under it.
-- **Before `install`, `operations()` is `Err(NotInstalled)`**: a start refuses through `refuse_not_installed`, ❌ never
+- **Before `install`, `operations()` is `Err(NotInstalled)`**: a caller refuses through a `refuse_*_not_installed` answer, ❌ never
   runs on a detached engine.
 - **The engine says WHAT, this module says what the user sees.** Which fact becomes a Tauri event, a
   `priority::transfers` call, a PostHog capture, or an error report lives here. An analytics event name stays a LITERAL
@@ -27,7 +27,7 @@ engine-wide facts, the per-op sinks, and what a terminal event does besides reac
 
 ## Module map
 
-- `mod.rs`: `install`, `claim_ledger`, `operations()`, `refuse_not_installed`, `test_engine`. `events.rs`: `TauriEngineEvents`, the instant-op analytics props, and the
+- `mod.rs`: `install`, `claim_ledger`, `operations()`, the `refuse_*_not_installed` answers, `test_engine`. `events.rs`: `TauriEngineEvents`, the instant-op analytics props, and the
   error-report re-raise. `sinks.rs`: `TauriEventSink`, `TauriScanPreviewSink`. `terminal_effects.rs` (+ `_tests.rs`):
   the terminal side effects in order. `analytics.rs`: the completion analytics they fire. `wire.rs`: the payloads as
   Tauri events. `volumes.rs`: `AppOperationVolumes`, the volume registry asked per call. `own_writes.rs`: `AppOwnWrites`, the downloads

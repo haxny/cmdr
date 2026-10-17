@@ -5,11 +5,10 @@
 //! and destination-path resolution and the archive forks. That split is what lets
 //! a backend caller start the same transfer with its own injected sink.
 
-use crate::file_system::write_operations::Operations;
-use crate::file_system::{
-    CONFLICT_CHECK_BUDGET, OperationEventSink, ScanConflict, SourceItemInput, VolumeCopyConfig, VolumeScanError,
-    WriteOperationError, WriteOperationStartResult, resolve_dest_path, scan_volume_for_conflicts_within,
-    start_rename_by_move, start_volume_compress, start_volume_copy, start_volume_move,
+use crate::file_system::ScanConflict;
+use crate::file_system::write_operations::{
+    CONFLICT_CHECK_BUDGET, OperationEventSink, Operations, SourceItemInput, VolumeCopyConfig, VolumeScanError,
+    WriteOperationError, WriteOperationStartResult, resolve_dest_path,
 };
 use crate::operations_host::TauriEventSink;
 use crate::operations_host::{NotInstalled, operations, refuse_not_installed};
@@ -64,19 +63,20 @@ async fn copy_between_volumes_on(
     initiator: Option<Initiator>,
 ) -> Result<WriteOperationStartResult, WriteOperationError> {
     // Before `install` there is no engine to start on: refuse, never write.
-    let _engine = engine.map_err(refuse_not_installed)?;
-    start_volume_copy(
-        events,
-        source_volume_id,
-        source_paths.iter().map(PathBuf::from).collect(),
-        dest_volume_id,
-        dest_path,
-        config.unwrap_or_default(),
-        initiator.unwrap_or(Initiator::User),
-        // No source binding: the user picked these in the pane they are looking at.
-        None,
-    )
-    .await
+    let engine = engine.map_err(refuse_not_installed)?;
+    engine
+        .start_volume_copy(
+            events,
+            source_volume_id,
+            source_paths.iter().map(PathBuf::from).collect(),
+            dest_volume_id,
+            dest_path,
+            config.unwrap_or_default(),
+            initiator.unwrap_or(Initiator::User),
+            // No source binding: the user picked these in the pane they are looking at.
+            None,
+        )
+        .await
 }
 
 /// Unified move across volume types. Handles same-volume (native rename/move),
@@ -94,20 +94,21 @@ pub async fn move_between_volumes(
     initiator: Option<Initiator>,
 ) -> Result<WriteOperationStartResult, WriteOperationError> {
     // Before `install` there is no engine to start on: refuse, never write.
-    operations().map_err(refuse_not_installed)?;
+    let engine = operations().map_err(refuse_not_installed)?;
     let events: Arc<dyn OperationEventSink> = Arc::new(TauriEventSink::new(app));
-    start_volume_move(
-        events,
-        source_volume_id,
-        source_paths.iter().map(PathBuf::from).collect(),
-        dest_volume_id,
-        dest_path,
-        config.unwrap_or_default(),
-        initiator.unwrap_or(Initiator::User),
-        // No source binding: the user picked these in the pane they are looking at.
-        None,
-    )
-    .await
+    engine
+        .start_volume_move(
+            events,
+            source_volume_id,
+            source_paths.iter().map(PathBuf::from).collect(),
+            dest_volume_id,
+            dest_path,
+            config.unwrap_or_default(),
+            initiator.unwrap_or(Initiator::User),
+            // No source binding: the user picked these in the pane they are looking at.
+            None,
+        )
+        .await
 }
 
 /// A rename that runs as a move on one volume: `source_path` moves into
@@ -126,19 +127,20 @@ pub async fn rename_by_move(
     initiator: Option<Initiator>,
 ) -> Result<WriteOperationStartResult, WriteOperationError> {
     // Before `install` there is no engine to start on: refuse, never write.
-    operations().map_err(refuse_not_installed)?;
+    let engine = operations().map_err(refuse_not_installed)?;
     let events: Arc<dyn OperationEventSink> = Arc::new(TauriEventSink::new(app));
-    start_rename_by_move(
-        events,
-        volume_id,
-        vec![(PathBuf::from(source_path), new_name)],
-        dest_path,
-        config.unwrap_or_default(),
-        initiator.unwrap_or(Initiator::User),
-        // No source binding: the user picked it in the pane they are looking at.
-        None,
-    )
-    .await
+    engine
+        .start_rename_by_move(
+            events,
+            volume_id,
+            vec![(PathBuf::from(source_path), new_name)],
+            dest_path,
+            config.unwrap_or_default(),
+            initiator.unwrap_or(Initiator::User),
+            // No source binding: the user picked it in the pane they are looking at.
+            None,
+        )
+        .await
 }
 
 /// Compresses `source_paths` into a NEW zip at `dest_zip_path` on `dest_volume_id`.
@@ -156,18 +158,19 @@ pub async fn compress_files(
     initiator: Option<Initiator>,
 ) -> Result<WriteOperationStartResult, WriteOperationError> {
     // Before `install` there is no engine to start on: refuse, never write.
-    operations().map_err(refuse_not_installed)?;
+    let engine = operations().map_err(refuse_not_installed)?;
     let events: Arc<dyn OperationEventSink> = Arc::new(TauriEventSink::new(app));
-    start_volume_compress(
-        events,
-        source_volume_id,
-        source_paths.iter().map(PathBuf::from).collect(),
-        dest_volume_id,
-        dest_zip_path,
-        config.unwrap_or_default(),
-        initiator.unwrap_or(Initiator::User),
-    )
-    .await
+    engine
+        .start_volume_compress(
+            events,
+            source_volume_id,
+            source_paths.iter().map(PathBuf::from).collect(),
+            dest_volume_id,
+            dest_zip_path,
+            config.unwrap_or_default(),
+            initiator.unwrap_or(Initiator::User),
+        )
+        .await
 }
 
 /// Whether the transfer dialog's destination folder takes writes, for the notice
@@ -256,15 +259,20 @@ pub async fn scan_volume_for_conflicts(
     source_volume_id: Option<String>,
     source_paths: Option<Vec<String>>,
 ) -> Result<Vec<ScanConflict>, VolumeScanError> {
-    scan_volume_for_conflicts_within(
-        Deadline::new(CONFLICT_CHECK_BUDGET),
-        volume_id,
-        source_items,
-        dest_path,
-        source_volume_id,
-        source_paths,
-    )
-    .await
+    // Before `install` no volume is registered, so the destination isn't found.
+    let Ok(engine) = operations() else {
+        return Err(VolumeScanError::DestinationVolumeNotFound { volume_id });
+    };
+    engine
+        .scan_volume_for_conflicts_within(
+            Deadline::new(CONFLICT_CHECK_BUDGET),
+            volume_id,
+            source_items,
+            dest_path,
+            source_volume_id,
+            source_paths,
+        )
+        .await
 }
 
 #[cfg(test)]
@@ -275,9 +283,8 @@ mod destination_root_echo_test;
 mod tests {
     use std::sync::{Arc, OnceLock};
 
-    use crate::file_system::write_operations::{
-        CollectorEventSink, OperationEventSink, Operations, WriteOperationError,
-    };
+    use crate::file_system::write_operations::testing::CollectorEventSink;
+    use crate::file_system::write_operations::{OperationEventSink, Operations, WriteOperationError};
     use crate::test_support::TestDir;
 
     /// A copy started before the engine is installed is refused with the

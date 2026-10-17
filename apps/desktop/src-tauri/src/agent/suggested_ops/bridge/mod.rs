@@ -38,11 +38,10 @@ use super::super::store::proposals::{
 use super::super::types::{OpStatus, ProposalVerb};
 use crate::file_system::volume::Volume;
 use crate::file_system::write_operations::{
-    BulkRenameRow, ExpectedSources, OperationEventSink, RenameStartError, RenamesStarted, SourceFingerprint,
-    VolumeCopyConfig, WriteOperationConfig, WriteOperationError, WriteOperationStartResult, delete_files_start,
-    resolve_source_volume, start_renames, start_volume_compress, start_volume_copy, start_volume_move,
-    trash_files_start, unregistered_source_error,
+    BulkRenameRow, ExpectedSources, OperationEventSink, Operations, RenameStartError, RenamesStarted,
+    SourceFingerprint, VolumeCopyConfig, WriteOperationConfig, WriteOperationError, WriteOperationStartResult,
 };
+use crate::operations_host::{operations, refuse_not_installed};
 use cmdr_operation_log::types::Initiator;
 
 /// A group whose operation is running, and the operation it became.
@@ -127,12 +126,20 @@ pub async fn approve_and_execute(
     let sources: Vec<PathBuf> = ops.iter().map(|op| PathBuf::from(&op.source_path)).collect();
 
     let volume_id = source_volume_of(conn, group_id)?;
-    let Some((source_volume, _)) = resolve_source_volume(&volume_id, sources.first()).await else {
+    // Before `install` no source volume resolves, and the start refusal says why.
+    let engine = match operations() {
+        Ok(engine) => engine,
+        Err(not_installed) => {
+            let refusal = refuse_not_installed(not_installed);
+            return Ok(ApprovalOutcome::Refused(ApprovalRefusal::SourceUnavailable(refusal)));
+        }
+    };
+    let Some((source_volume, _)) = engine.resolve_source_volume(&volume_id, sources.first()).await else {
         let first = sources
             .first()
             .map(|path| path.display().to_string())
             .unwrap_or_default();
-        let refusal = unregistered_source_error(&volume_id, &first).await;
+        let refusal = engine.unregistered_source_error(&volume_id, &first).await;
         return Ok(ApprovalOutcome::Refused(ApprovalRefusal::SourceUnavailable(refusal)));
     };
     let expected = capture_expected_sources(source_volume.as_ref(), &sources).await;
@@ -152,7 +159,7 @@ pub async fn approve_and_execute(
         memory,
     ));
 
-    match start_for(&claimed.group, sources, &ops, expected, sink).await {
+    match start_for(engine, &claimed.group, sources, &ops, expected, sink).await {
         Ok(operation) => {
             super::started(&claimed);
             // The thread says "running" now, and the decorator's settle rewrites that line.
@@ -204,7 +211,13 @@ pub(crate) async fn start_reviewed_renames(
         reporting_conn,
         memory,
     ));
-    match start_renames(sink, volume_id, rows, initiator).await {
+    let started = match operations() {
+        Ok(engine) => engine.start_renames(sink, volume_id, rows, initiator).await,
+        Err(not_installed) => Err(RenameStartError::Engine {
+            error: refuse_not_installed(not_installed),
+        }),
+    };
+    match started {
         Ok(started) => {
             super::started(&claimed);
             crate::agent::outcomes::record_running(&conn, group_id, now);
@@ -283,6 +296,7 @@ fn live_ops(conn: &Connection, group_id: i64) -> Result<Vec<ProposalOp>, AgentSt
 /// `ArchiveVolume` inside that routing, which is the whole reason extract has no operation
 /// type.
 async fn start_for(
+    engine: &Operations,
     group: &ProposalGroup,
     sources: Vec<PathBuf>,
     ops: &[ProposalOp],
@@ -292,68 +306,73 @@ async fn start_for(
     match group.verb {
         ProposalVerb::Move => {
             let (path, volume) = target_of(group)?;
-            start_volume_move(
-                events,
-                group.source_volume_id.clone(),
-                sources,
-                volume,
-                path,
-                VolumeCopyConfig::default(),
-                Initiator::Agent,
-                Some(expected),
-            )
-            .await
-            .map_err(ApprovalRefusal::Engine)
+            engine
+                .start_volume_move(
+                    events,
+                    group.source_volume_id.clone(),
+                    sources,
+                    volume,
+                    path,
+                    VolumeCopyConfig::default(),
+                    Initiator::Agent,
+                    Some(expected),
+                )
+                .await
+                .map_err(ApprovalRefusal::Engine)
         }
         ProposalVerb::Copy | ProposalVerb::Extract => {
             let (path, volume) = target_of(group)?;
-            start_volume_copy(
+            engine
+                .start_volume_copy(
+                    events,
+                    group.source_volume_id.clone(),
+                    sources,
+                    volume,
+                    path,
+                    VolumeCopyConfig::default(),
+                    Initiator::Agent,
+                    Some(expected),
+                )
+                .await
+                .map_err(ApprovalRefusal::Engine)
+        }
+        ProposalVerb::Compress => {
+            let (path, volume) = target_of(group)?;
+            engine
+                .start_volume_compress(
+                    events,
+                    group.source_volume_id.clone(),
+                    sources,
+                    volume,
+                    path,
+                    VolumeCopyConfig::default(),
+                    Initiator::Agent,
+                )
+                .await
+                .map_err(ApprovalRefusal::Engine)
+        }
+        ProposalVerb::Trash => engine
+            .trash_files_start(
                 events,
-                group.source_volume_id.clone(),
                 sources,
-                volume,
-                path,
-                VolumeCopyConfig::default(),
+                None,
+                WriteOperationConfig::default(),
                 Initiator::Agent,
                 Some(expected),
             )
             .await
-            .map_err(ApprovalRefusal::Engine)
-        }
-        ProposalVerb::Compress => {
-            let (path, volume) = target_of(group)?;
-            start_volume_compress(
+            .map_err(ApprovalRefusal::Engine),
+        ProposalVerb::Delete => engine
+            .delete_files_start(
                 events,
-                group.source_volume_id.clone(),
                 sources,
-                volume,
-                path,
-                VolumeCopyConfig::default(),
+                WriteOperationConfig::default(),
+                Some(group.source_volume_id.clone()),
                 Initiator::Agent,
+                Some(expected),
             )
             .await
-            .map_err(ApprovalRefusal::Engine)
-        }
-        ProposalVerb::Trash => trash_files_start(
-            events,
-            sources,
-            None,
-            WriteOperationConfig::default(),
-            Initiator::Agent,
-            Some(expected),
-        )
-        .await
-        .map_err(ApprovalRefusal::Engine),
-        ProposalVerb::Delete => delete_files_start(
-            events,
-            sources,
-            WriteOperationConfig::default(),
-            Some(group.source_volume_id.clone()),
-            Initiator::Agent,
-            Some(expected),
-        )
-        .await
-        .map_err(ApprovalRefusal::Engine),
+            .map_err(ApprovalRefusal::Engine),
         // Rename is the one verb whose executor takes per-row destinations and a fingerprint
         // per row, which is exactly what the live preflight capture produces. The group binds
         // the shared PARENT, and each op carries the NAME it becomes.
@@ -366,7 +385,8 @@ async fn start_for(
                 .ok_or(ApprovalRefusal::TargetMissing { verb: group.verb })?;
             let rows = rename_rows(&parent, ops, &expected)?;
             // Routed: where a rename copies (an S3 folder), the batch runs as one move.
-            start_renames(events, group.source_volume_id.clone(), rows, Initiator::Agent)
+            engine
+                .start_renames(events, group.source_volume_id.clone(), rows, Initiator::Agent)
                 .await
                 .map(|started| started.operation)
                 .map_err(ApprovalRefusal::Rename)

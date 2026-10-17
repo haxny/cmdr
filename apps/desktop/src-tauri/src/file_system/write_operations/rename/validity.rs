@@ -210,33 +210,6 @@ impl crate::file_system::write_operations::Operations {
     }
 }
 
-/// [`Operations::check_rename_validity_impl`](super::super::Operations::check_rename_validity_impl) on
-/// the installed engine. Before `install` nothing can be renamed, so the name is refused, with
-/// no validation error to show (the rename itself says why).
-// shim: removed in M7a
-pub(crate) async fn check_rename_validity_impl(
-    dir: String,
-    old_name: String,
-    new_name: String,
-    volume_id: String,
-) -> RenameValidityCheck {
-    match super::super::installed_for("check_rename_validity_impl") {
-        Some(engine) => {
-            engine
-                .check_rename_validity_impl(dir, old_name, new_name, volume_id)
-                .await
-        }
-        None => RenameValidityCheck::unpriced(RenameValidityResult {
-            valid: false,
-            error: None,
-            has_conflict: false,
-            is_case_only_rename: false,
-            conflict: None,
-            by_move: None,
-        }),
-    }
-}
-
 /// What renaming `old_path` would carry when it runs as a move, `None` when
 /// it's one call (or the volume is gone, which the rename itself reports).
 /// The count is bounded ([`SMALL_RENAME_FILES`] plus one), so F2 on a huge

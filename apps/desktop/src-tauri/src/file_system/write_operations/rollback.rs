@@ -10,11 +10,11 @@
 //!
 //! Two entry points, for two different callers:
 //!
-//! - [`dispatch_rollback`] returns after DISPATCH, not after the reversal finishes:
+//! - [`Operations::dispatch_rollback`](super::Operations::dispatch_rollback) returns after DISPATCH, not after the reversal finishes:
 //!   the inverse is an async managed op, so the caller polls the original op's
 //!   `rollback_state` until it leaves `rolling_back` to observe the terminal result
 //!   (the "dispatch then poll" contract). The MCP `operations_rollback` tool uses it.
-//! - [`undo_operations`] reverses SEVERAL operations as one action, **newest first**,
+//! - [`Operations::undo_operations`](super::Operations::undo_operations) reverses SEVERAL operations as one action, **newest first**,
 //!   awaiting each before dispatching the next, and resolves with the whole tally. The
 //!   frontend's undo (`commands::operation_log::undo_operations`) uses it: a user-facing
 //!   Undo has to report what actually came back, which a dispatch can't say yet.
@@ -288,11 +288,11 @@ impl crate::file_system::write_operations::Operations {
         self.dispatch_inverse(op_id, initiator, events, None)
     }
 
-    /// [`dispatch_rollback`] plus a channel that resolves with the inverse's
+    /// [`Self::dispatch_rollback`] plus a channel that resolves with the inverse's
     /// [`RollbackReport`] once the reversal finishes.
     ///
     /// This is what lets a caller reverse several operations IN ORDER (see
-    /// [`undo_operations`]) and report a complete tally, rather than dispatching them
+    /// [`Self::undo_operations`]) and report a complete tally, rather than dispatching them
     /// all and hoping the queue reverses them in the right sequence. The reversal is
     /// still a normal managed op — queued, lane-serialized, and cancelable — so
     /// awaiting it also waits out anything already holding the lane.
@@ -465,6 +465,18 @@ pub struct UndoReport {
     pub skipped: u64,
 }
 
+impl UndoReport {
+    /// Every one of `operation_ids` refused for `refusal`, nothing reversed: what
+    /// a host with no engine to undo on answers.
+    pub(crate) fn all_refused(operation_ids: &[String], refusal: RollbackRefusal) -> Self {
+        Self {
+            operations: operation_ids.iter().map(|id| refused(id, refusal.clone())).collect(),
+            restored: 0,
+            skipped: 0,
+        }
+    }
+}
+
 impl crate::file_system::write_operations::Operations {
     /// Undo a job's operations — a multi-batch rename run, most importantly — as one
     /// action.
@@ -567,41 +579,6 @@ impl crate::file_system::write_operations::Operations {
     }
 }
 
-// The installed engine's, by free function, for callers outside the engine.
-// Before `install` there's no journal, so every operation is unknown, the
-// same answer an engine whose journal never opened gives.
-// shim: removed in M7a
-
-/// [`Operations::dispatch_rollback`](super::Operations::dispatch_rollback) on the installed engine.
-pub fn dispatch_rollback(
-    op_id: &str,
-    initiator: Initiator,
-    events: Arc<dyn OperationEventSink>,
-) -> Result<RollbackDispatch, RollbackRefusal> {
-    super::installed_for("dispatch_rollback")
-        .ok_or(RollbackRefusal::UnknownOperation)?
-        .dispatch_rollback(op_id, initiator, events)
-}
-
-/// [`Operations::undo_operations`](super::Operations::undo_operations) on the installed engine.
-pub async fn undo_operations(
-    operation_ids: &[String],
-    initiator: Initiator,
-    events: Arc<dyn OperationEventSink>,
-) -> UndoReport {
-    match super::installed_for("undo_operations") {
-        Some(engine) => engine.undo_operations(operation_ids, initiator, events).await,
-        None => UndoReport {
-            operations: operation_ids
-                .iter()
-                .map(|id| refused(id, RollbackRefusal::UnknownOperation))
-                .collect(),
-            restored: 0,
-            skipped: 0,
-        },
-    }
-}
-
 // ── The test fixture for a live reversal ─────────────────────────────────────
 
 /// A reversal a test can watch, stop, and park.
@@ -666,14 +643,14 @@ impl Reversal {
 
     /// Stop the reversal, through the call the queue window's Cancel makes.
     pub(crate) fn stop(&self) {
-        super::state::cancel_write_operation(self.op_id(), false);
+        crate::file_system::write_operations::installed().cancel_write_operation(self.op_id(), false);
     }
 
     /// Park the reversal, through the call `pause_operation` makes on the live
     /// state (the manager half of that pair only flips the row's status).
     pub(crate) fn pause(&self) {
         assert!(
-            super::state::pause_write_operation(self.op_id()),
+            crate::file_system::write_operations::installed().pause_write_operation(self.op_id()),
             "the reversal's state must be registered for a pause to reach it"
         );
     }
@@ -681,7 +658,7 @@ impl Reversal {
     /// Let it go again, through `resume_operation`'s half of the same pair.
     pub(crate) fn resume(&self) {
         assert!(
-            super::state::resume_write_operation(self.op_id()),
+            crate::file_system::write_operations::installed().resume_write_operation(self.op_id()),
             "the reversal's state must be registered for a resume to reach it"
         );
     }

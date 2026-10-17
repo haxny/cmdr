@@ -1,37 +1,18 @@
 //! Tauri commands for write operations (create, copy, move, delete, trash) and scan preview.
 
 use crate::commands::settled::broadcast_settled;
-use crate::file_system::write_operations::RetryOutcome;
-use crate::file_system::write_operations::TrashRoutingAnswer;
 use crate::file_system::write_operations::{
     ConflictId, ConflictResolution, ConflictResolutionOutcome, MUTATION_REPLY_DEADLINE, MutationError, MutationReply,
-    MutationSettled, ScanPreviewPurpose, ScanPreviewRefusal, ScanPreviewStartResult, SourcesGoneAnswerOutcome,
-    cancel_scan_preview as ops_cancel_scan_preview, continue_without_gone_sources as ops_continue_without_gone_sources,
-    create_directory_managed as ops_create_directory_managed, create_file_managed as ops_create_file_managed,
-    get_scan_preview_totals as ops_get_scan_preview_totals, reply_within,
-    resolve_write_conflict as ops_resolve_write_conflict, start_scan_preview as ops_start_scan_preview,
-    trash_routing_for_selection as ops_trash_routing_for_selection,
+    MutationSettled, OperationEventSink, OperationSnapshot, Operations, PauseAllOutcome, PauseOutcome,
+    QueueMoveDirection, QueueMoveOutcome, ReadOnlySide, RetryOutcome, ScanPreviewPurpose, ScanPreviewRefusal,
+    ScanPreviewStartResult, ScanPreviewTotals, SourcesGoneAnswerOutcome, TransferTreeView, TransferTreeViewError,
+    TransferTreeViewRequest, TrashRoutingAnswer, WriteOperationConfig, WriteOperationError, WriteOperationStartResult,
+    WriteProgressEvent, reply_within, trash_routing_for_selection,
 };
-use crate::file_system::write_operations::{
-    TransferTreeView, TransferTreeViewError, TransferTreeViewRequest, WriteProgressEvent,
-    transfer_tree_view as ops_transfer_tree_view,
+use crate::operations_host::{
+    TauriEventSink, TauriScanPreviewSink, operations, refuse_instant_not_installed, refuse_not_installed,
+    refuse_scan_preview_not_installed, wire,
 };
-use crate::file_system::{
-    OperationEventSink, OperationSnapshot, PauseAllOutcome, PauseOutcome, QueueMoveDirection, QueueMoveOutcome,
-    ReadOnlySide, WriteOperationConfig, WriteOperationError, WriteOperationStartResult,
-    cancel_operation as ops_cancel_operation, cancel_operations as ops_cancel_operations,
-    cancel_write_operation as ops_cancel_write_operation, delete_files_start as ops_delete_files_start,
-    dismiss_all_failed_operations as ops_dismiss_all_failed_operations,
-    dismiss_failed_operation as ops_dismiss_failed_operation,
-    latest_operation_progress as ops_latest_operation_progress, list_operations as ops_list_operations,
-    move_files_start as ops_move_files_start, move_queued_operation as ops_move_queued_operation,
-    pause_all as ops_pause_all, pause_operation as ops_pause_operation,
-    place_queued_operation as ops_place_queued_operation, resume_all as ops_resume_all,
-    resume_operation as ops_resume_operation, retry_failed_operation as ops_retry_failed_operation,
-    trash_files_start as ops_trash_files_start,
-};
-use crate::operations_host::{TauriEventSink, TauriScanPreviewSink, wire};
-use crate::operations_host::{operations, refuse_not_installed};
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::time::Duration;
@@ -176,10 +157,11 @@ async fn create_directory_replying(
     initiator: Option<Initiator>,
     on_settled: impl FnOnce(MutationSettled) + Send + 'static,
 ) -> Result<MutationReply, MutationError> {
+    let engine = operations().map_err(refuse_instant_not_installed)?;
     let expanded_parent = expand_parent(volume_id.as_deref(), &parent_path);
     reply_within(
         MUTATION_REPLY_DEADLINE,
-        ops_create_directory_managed(volume_id, expanded_parent, name, initiator.unwrap_or(Initiator::User)),
+        engine.create_directory_managed(volume_id, expanded_parent, name, initiator.unwrap_or(Initiator::User)),
         on_settled,
     )
     .await
@@ -213,10 +195,11 @@ async fn create_file_replying(
     initiator: Option<Initiator>,
     on_settled: impl FnOnce(MutationSettled) + Send + 'static,
 ) -> Result<MutationReply, MutationError> {
+    let engine = operations().map_err(refuse_instant_not_installed)?;
     let expanded_parent = expand_parent(volume_id.as_deref(), &parent_path);
     reply_within(
         MUTATION_REPLY_DEADLINE,
-        ops_create_file_managed(volume_id, expanded_parent, name, initiator.unwrap_or(Initiator::User)),
+        engine.create_file_managed(volume_id, expanded_parent, name, initiator.unwrap_or(Initiator::User)),
         on_settled,
     )
     .await
@@ -267,27 +250,28 @@ pub async fn move_files(
     initiator: Option<Initiator>,
 ) -> Result<WriteOperationStartResult, WriteOperationError> {
     // Before `install` there is no engine to start on: refuse, never write.
-    operations().map_err(refuse_not_installed)?;
+    let engine = operations().map_err(refuse_not_installed)?;
     let (sources, destination, config) = local_transfer_request(&sources, &destination, config)?;
 
     // Same-`root` local move (the FE uses `move_between_volumes` whenever the
     // source and destination volumes differ), so no ejectable volume here.
     let events: Arc<dyn OperationEventSink> = Arc::new(TauriEventSink::new(app));
-    ops_move_files_start(
-        events,
-        sources,
-        destination,
-        config,
-        vec![],
-        None,
-        initiator.unwrap_or(Initiator::User),
-        // No source binding: the user picked these in the pane they are looking at.
-        None,
-        // No typed sides: this is the same-`root` path, where both ends are the
-        // boot volume and no drive can leave under it.
-        None,
-    )
-    .await
+    engine
+        .move_files_start(
+            events,
+            sources,
+            destination,
+            config,
+            vec![],
+            None,
+            initiator.unwrap_or(Initiator::User),
+            // No source binding: the user picked these in the pane they are looking at.
+            None,
+            // No typed sides: this is the same-`root` path, where both ends are the
+            // boot volume and no drive can leave under it.
+            None,
+        )
+        .await
 }
 
 /// Recursively deletes files and directories. Same events as `move_files`.
@@ -302,7 +286,7 @@ pub async fn delete_files(
     initiator: Option<Initiator>,
 ) -> Result<WriteOperationStartResult, WriteOperationError> {
     // Before `install` there is no engine to start on: refuse, never write.
-    operations().map_err(refuse_not_installed)?;
+    let engine = operations().map_err(refuse_not_installed)?;
     let is_local = volume_id.as_deref().unwrap_or("root") == "root";
     let sources: Vec<PathBuf> = if is_local {
         sources.iter().map(|s| PathBuf::from(expand_tilde(s))).collect()
@@ -315,15 +299,16 @@ pub async fn delete_files(
     // driver inside `delete_files_start` (a `{ delete }` changeset), so no
     // rejection here. The `.zip` file itself deletes on the normal path.
     let events: Arc<dyn OperationEventSink> = Arc::new(TauriEventSink::new(app));
-    ops_delete_files_start(
-        events,
-        sources,
-        config,
-        volume_id,
-        initiator.unwrap_or(Initiator::User),
-        None,
-    )
-    .await
+    engine
+        .delete_files_start(
+            events,
+            sources,
+            config,
+            volume_id,
+            initiator.unwrap_or(Initiator::User),
+            None,
+        )
+        .await
 }
 
 /// Moves files to macOS Trash. Same events as `move_files` but with `operationType: trash`.
@@ -337,7 +322,7 @@ pub async fn trash_files(
     initiator: Option<Initiator>,
 ) -> Result<WriteOperationStartResult, WriteOperationError> {
     // Before `install` there is no engine to start on: refuse, never write.
-    operations().map_err(refuse_not_installed)?;
+    let engine = operations().map_err(refuse_not_installed)?;
     let sources: Vec<PathBuf> = sources.iter().map(|s| PathBuf::from(expand_tilde(s))).collect();
     let config = config.unwrap_or_default();
 
@@ -346,16 +331,17 @@ pub async fn trash_files(
     reject_if_routed_over_a_parent(sources.iter(), ReadOnlySide::Source)?;
 
     let events: Arc<dyn OperationEventSink> = Arc::new(TauriEventSink::new(app));
-    ops_trash_files_start(
-        events,
-        sources,
-        item_sizes,
-        config,
-        initiator.unwrap_or(Initiator::User),
-        // No source binding: the user picked these in the pane they are looking at.
-        None,
-    )
-    .await
+    engine
+        .trash_files_start(
+            events,
+            sources,
+            item_sizes,
+            config,
+            initiator.unwrap_or(Initiator::User),
+            // No source binding: the user picked these in the pane they are looking at.
+            None,
+        )
+        .await
 }
 
 /// Paths come from the pane the user is looking at, so this is a read-tier
@@ -377,7 +363,7 @@ const TRASH_ROUTING_TIMEOUT: Duration = Duration::from_secs(2);
 pub async fn trash_routing_for_paths(sources: Vec<String>) -> TrashRoutingAnswer {
     let sources: Vec<PathBuf> = sources.iter().map(|s| PathBuf::from(expand_tilde(s))).collect();
     blocking_with_timeout(TRASH_ROUTING_TIMEOUT, TrashRoutingAnswer::TRASH, move || {
-        ops_trash_routing_for_selection(&sources)
+        trash_routing_for_selection(&sources)
     })
     .await
 }
@@ -385,7 +371,10 @@ pub async fn trash_routing_for_paths(sources: Vec<String>) -> TrashRoutingAnswer
 #[tauri::command]
 #[specta::specta]
 pub fn cancel_write_operation(operation_id: String, rollback: bool) {
-    ops_cancel_write_operation(&operation_id, rollback);
+    // Before `install` nothing is registered to cancel.
+    if let Ok(engine) = operations() {
+        engine.cancel_write_operation(&operation_id, rollback);
+    }
 }
 
 // ============================================================================
@@ -421,20 +410,20 @@ pub async fn start_scan_preview(
     let source_volume = scan_preview_source_volume(&volume_id, sources.first()).await?;
 
     let progress_interval = progress_interval_ms.unwrap_or(500);
-    Ok(ops_start_scan_preview(
-        Arc::new(TauriScanPreviewSink::new(app)),
-        sources,
-        source_volume,
-        volume_id,
-        progress_interval,
-        purpose,
-    ))
+    let events = Arc::new(TauriScanPreviewSink::new(app));
+    let Ok(engine) = operations() else {
+        return Ok(refuse_scan_preview_not_installed(&*events));
+    };
+    Ok(engine.start_scan_preview(events, sources, source_volume, volume_id, progress_interval, purpose))
 }
 
 #[tauri::command]
 #[specta::specta]
 pub fn cancel_scan_preview(preview_id: String) {
-    ops_cancel_scan_preview(&preview_id);
+    // Before `install` there's no walk to cancel.
+    if let Ok(engine) = operations() {
+        engine.cancel_scan_preview(&preview_id);
+    }
 }
 
 /// Returns the cached totals from a completed scan preview, or `null` while the
@@ -444,10 +433,8 @@ pub fn cancel_scan_preview(preview_id: String) {
 /// FE finishes the `startScanPreview()` IPC round-trip).
 #[tauri::command]
 #[specta::specta]
-pub fn check_scan_preview_status(
-    preview_id: String,
-) -> Option<crate::file_system::write_operations::ScanPreviewTotals> {
-    ops_get_scan_preview_totals(&preview_id)
+pub fn check_scan_preview_status(preview_id: String) -> Option<ScanPreviewTotals> {
+    operations().ok()?.get_scan_preview_totals(&preview_id)
 }
 
 /// In Stop mode, the operation pauses on conflict and waits for this call to
@@ -467,7 +454,9 @@ pub fn resolve_write_conflict(
     resolution: ConflictResolution,
     apply_to_all: bool,
 ) -> ConflictResolutionOutcome {
-    ops_resolve_write_conflict(&operation_id, conflict_id, resolution, apply_to_all)
+    operations().map_or(ConflictResolutionOutcome::UnknownOperation, |engine| {
+        engine.resolve_write_conflict(&operation_id, conflict_id, resolution, apply_to_all)
+    })
 }
 
 /// Carries a queued operation on without the sources that left while it waited
@@ -477,7 +466,9 @@ pub fn resolve_write_conflict(
 #[tauri::command]
 #[specta::specta]
 pub fn continue_without_gone_sources(operation_id: String) -> SourcesGoneAnswerOutcome {
-    ops_continue_without_gone_sources(&operation_id)
+    operations().map_or(SourcesGoneAnswerOutcome::UnknownOperation, |engine| {
+        engine.continue_without_gone_sources(&operation_id)
+    })
 }
 
 // ============================================================================
@@ -490,7 +481,7 @@ pub fn continue_without_gone_sources(operation_id: String) -> SourcesGoneAnswerO
 #[tauri::command]
 #[specta::specta]
 pub fn list_operations() -> Vec<OperationSnapshot> {
-    ops_list_operations()
+    operations().map(Operations::list_operations).unwrap_or_default()
 }
 
 /// The newest `write-progress` tick of every live operation that has emitted
@@ -502,7 +493,9 @@ pub fn list_operations() -> Vec<OperationSnapshot> {
 #[tauri::command]
 #[specta::specta]
 pub async fn latest_operation_progress() -> Vec<WriteProgressEvent> {
-    ops_latest_operation_progress()
+    operations()
+        .map(Operations::latest_operation_progress)
+        .unwrap_or_default()
 }
 
 /// One window of an operation's live transfer tree, for the progress dialog and
@@ -519,7 +512,9 @@ pub async fn get_transfer_tree_view(
     operation_id: String,
     request: TransferTreeViewRequest,
 ) -> Result<TransferTreeView, TransferTreeViewError> {
-    ops_transfer_tree_view(&operation_id, &request)
+    operations()
+        .map_err(|_| TransferTreeViewError::UnknownOperation)?
+        .transfer_tree_view(&operation_id, &request)
 }
 
 /// Cancels one operation, keeping already-copied files. A Queued op is dropped
@@ -528,7 +523,9 @@ pub async fn get_transfer_tree_view(
 #[tauri::command]
 #[specta::specta]
 pub fn cancel_operation(operation_id: String) {
-    ops_cancel_operation(&operation_id);
+    if let Ok(engine) = operations() {
+        engine.cancel_operation(&operation_id);
+    }
 }
 
 /// Cancels several operations (keep-partials each). Backs the queue window's
@@ -536,7 +533,9 @@ pub fn cancel_operation(operation_id: String) {
 #[tauri::command]
 #[specta::specta]
 pub fn cancel_operations(operation_ids: Vec<String>) {
-    ops_cancel_operations(&operation_ids);
+    if let Ok(engine) = operations() {
+        engine.cancel_operations(&operation_ids);
+    }
 }
 
 /// Pauses one Running operation. It parks at the next between-files boundary and
@@ -547,7 +546,9 @@ pub fn cancel_operations(operation_ids: Vec<String>) {
 #[tauri::command]
 #[specta::specta]
 pub fn pause_operation(operation_id: String) -> PauseOutcome {
-    ops_pause_operation(&operation_id)
+    operations().map_or(PauseOutcome::NotApplicable, |engine| {
+        engine.pause_operation(&operation_id)
+    })
 }
 
 /// Resumes one paused operation: it continues from where it parked and its
@@ -557,7 +558,9 @@ pub fn pause_operation(operation_id: String) -> PauseOutcome {
 #[tauri::command]
 #[specta::specta]
 pub fn resume_operation(operation_id: String) -> PauseOutcome {
-    ops_resume_operation(&operation_id)
+    operations().map_or(PauseOutcome::NotApplicable, |engine| {
+        engine.resume_operation(&operation_id)
+    })
 }
 
 /// Pauses every currently-running operation. Backs the queue window's global
@@ -569,7 +572,7 @@ pub fn resume_operation(operation_id: String) -> PauseOutcome {
 #[tauri::command]
 #[specta::specta]
 pub fn pause_all() -> PauseAllOutcome {
-    ops_pause_all()
+    operations().map(Operations::pause_all).unwrap_or_default()
 }
 
 /// Resumes every currently-paused operation. Backs "Resume all".
@@ -578,7 +581,7 @@ pub fn pause_all() -> PauseAllOutcome {
 #[tauri::command]
 #[specta::specta]
 pub fn resume_all() -> PauseAllOutcome {
-    ops_resume_all()
+    operations().map(Operations::resume_all).unwrap_or_default()
 }
 
 /// Moves a waiting operation one place earlier or later in line (the queue
@@ -590,7 +593,9 @@ pub fn resume_all() -> PauseAllOutcome {
 #[tauri::command]
 #[specta::specta]
 pub fn move_queued_operation(operation_id: String, direction: QueueMoveDirection) -> QueueMoveOutcome {
-    ops_move_queued_operation(&operation_id, direction)
+    operations().map_or(QueueMoveOutcome::NotQueued, |engine| {
+        engine.move_queued_operation(&operation_id, direction)
+    })
 }
 
 /// Puts a waiting operation at `position` in line (1-based, counting waiting
@@ -602,7 +607,9 @@ pub fn move_queued_operation(operation_id: String, direction: QueueMoveDirection
 #[tauri::command]
 #[specta::specta]
 pub fn place_queued_operation(operation_id: String, position: u32) -> QueueMoveOutcome {
-    ops_place_queued_operation(&operation_id, position)
+    operations().map_or(QueueMoveOutcome::NotQueued, |engine| {
+        engine.place_queued_operation(&operation_id, position)
+    })
 }
 
 /// Drops one retained failure from the snapshot (the queue row's Dismiss, and
@@ -611,7 +618,9 @@ pub fn place_queued_operation(operation_id: String, position: u32) -> QueueMoveO
 #[tauri::command]
 #[specta::specta]
 pub fn dismiss_failed_operation(operation_id: String) {
-    ops_dismiss_failed_operation(&operation_id);
+    if let Ok(engine) = operations() {
+        engine.dismiss_failed_operation(&operation_id);
+    }
 }
 
 /// Starts a retained failure again as a new operation (the queue row's Retry).
@@ -621,14 +630,20 @@ pub fn dismiss_failed_operation(operation_id: String) {
 #[tauri::command]
 #[specta::specta]
 pub async fn retry_failed_operation(operation_id: String) -> Result<RetryOutcome, WriteOperationError> {
-    ops_retry_failed_operation(&operation_id).await
+    // Before `install` no failure is retained, so there's nothing to retry.
+    match operations() {
+        Ok(engine) => engine.retry_failed_operation(&operation_id).await,
+        Err(_) => Ok(RetryOutcome::NothingToRetry),
+    }
 }
 
 /// Drops every retained failure. Backs the queue window's "Dismiss all".
 #[tauri::command]
 #[specta::specta]
 pub fn dismiss_all_failed_operations() {
-    ops_dismiss_all_failed_operations();
+    if let Ok(engine) = operations() {
+        engine.dismiss_all_failed_operations();
+    }
 }
 
 #[cfg(test)]
@@ -766,7 +781,7 @@ mod tests {
     /// "still running" and the settle says it landed.
     #[tokio::test(start_paused = true)]
     async fn a_slow_new_folder_replies_still_running_then_settles_landed() {
-        use crate::file_system::write_operations::MutationSettledOutcome;
+        use crate::file_system::write_operations::testing::MutationSettledOutcome;
 
         let volume_id = "smb-slow-mkdir-test";
         register_slowly_creating_volume(volume_id, Duration::from_secs(7)).await;
@@ -795,7 +810,7 @@ mod tests {
     /// and the settle carries that refusal typed, as an in-time reply would.
     #[tokio::test(start_paused = true)]
     async fn a_slow_new_file_the_volume_refuses_settles_with_the_typed_reason() {
-        use crate::file_system::write_operations::MutationSettledOutcome;
+        use crate::file_system::write_operations::testing::MutationSettledOutcome;
 
         let volume_id = "smb-slow-mkfile-refused-test";
         register_slowly_creating_volume(volume_id, Duration::from_secs(7)).await;

@@ -86,16 +86,10 @@ pub use wire::{PauseAllOutcome, PauseOutcome, QueueMoveDirection, QueueMoveOutco
 mod retry;
 use retry::RetainedFailure;
 pub(crate) use retry::StartAgain;
-pub use retry::retry_failed_operation;
 
 // What the queue window asks an engine: list, cancel, pause, resume, reorder,
 // dismiss.
 mod queue_api;
-pub use queue_api::{
-    cancel_operation, cancel_operations, dismiss_all_failed_operations, dismiss_failed_operation, list_operations,
-    move_queued_operation, operations_need_volume, pause_all, pause_operation, place_queued_operation, resume_all,
-    resume_operation,
-};
 
 /// What the manager needs to know about an op to register, schedule, and
 /// surface it. The deferred start is held separately so the descriptor stays

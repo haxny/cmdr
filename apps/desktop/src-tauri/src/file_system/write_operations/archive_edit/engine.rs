@@ -496,7 +496,9 @@ mod tests {
 
     /// What a query API (the MCP `cmdr://state` resource) reads for this op.
     fn cached(id: &str) -> (WriteOperationPhase, usize, usize, u64, u64) {
-        let status = super::super::super::state::get_operation_status(id).expect("the op is registered");
+        let status = crate::file_system::write_operations::installed()
+            .get_operation_status(id)
+            .expect("the op is registered");
         (
             status.phase,
             status.files_done,

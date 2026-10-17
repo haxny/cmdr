@@ -267,15 +267,12 @@ pub(in crate::file_system::write_operations) async fn unregistered_volume_error(
     }
 }
 
-/// [`unregistered_volume_error`] for a SOURCE, on the installed engine, for a caller outside
-/// the engine that checks the volume before it hands anything over (Ask Cmdr's approval
-/// bridge), so its refusal is worded exactly as a clicked copy's would be. Before `install`,
-/// the start refusal (`not_installed`).
-// shim: removed in M7a
-pub(crate) async fn unregistered_source_error(volume_id: &str, path: &str) -> WriteOperationError {
-    match crate::file_system::write_operations::installed_for("unregistered_source_error") {
-        Some(engine) => unregistered_volume_error(engine.host(), volume_id, path, PathRole::Source).await,
-        None => crate::file_system::write_operations::not_installed(),
+impl crate::file_system::write_operations::Operations {
+    /// [`unregistered_volume_error`] for a SOURCE, for a caller outside the engine that
+    /// checks the volume before it hands anything over (Ask Cmdr's approval bridge), so its
+    /// refusal is worded exactly as a clicked copy's would be.
+    pub(crate) async fn unregistered_source_error(&self, volume_id: &str, path: &str) -> WriteOperationError {
+        unregistered_volume_error(self.host(), volume_id, path, PathRole::Source).await
     }
 }
 

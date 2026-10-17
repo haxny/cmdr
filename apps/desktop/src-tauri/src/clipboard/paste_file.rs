@@ -7,14 +7,13 @@
 //! Tauri runtime or `MainThreadMarker`. The command layer
 //! (`commands/clipboard.rs`) reads the payload on the main thread and calls in.
 //! The write itself is the engine's instant op
-//! (`write_operations::create_numbered_file`): `pasted.<ext>`, `pasted (1).<ext>`,
+//! (`Operations::create_numbered_file`): `pasted.<ext>`, `pasted (1).<ext>`,
 //! … as one managed, journaled create.
 
 use std::path::{Path, PathBuf};
 
-use crate::file_system::write_operations::{
-    MUTATION_REPLY_DEADLINE, MutationError, Replied, create_numbered_file, reply_or_hand_off,
-};
+use crate::file_system::write_operations::{MUTATION_REPLY_DEADLINE, MutationError, Replied, reply_or_hand_off};
+use crate::operations_host::{operations, refuse_instant_not_installed};
 use cmdr_operation_log::types::Initiator;
 
 use super::{
@@ -62,7 +61,10 @@ pub(crate) async fn write_payload_to_dir(
     let Some(content) = payload_to_content(payload) else {
         return Ok(None);
     };
-    let name = create_numbered_file(volume_id, dir, "pasted", content.ext, &content.bytes, Initiator::User).await?;
+    let name = operations()
+        .map_err(refuse_instant_not_installed)?
+        .create_numbered_file(volume_id, dir, "pasted", content.ext, &content.bytes, Initiator::User)
+        .await?;
     Ok(Some(PastedClipboardFile {
         name,
         kind: content.kind,

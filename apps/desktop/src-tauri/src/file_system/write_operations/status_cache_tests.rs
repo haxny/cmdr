@@ -5,6 +5,7 @@
 //! shared engine's status cache.
 
 use super::*;
+use crate::file_system::write_operations::installed;
 use crate::file_system::write_operations::manager::{OperationDescriptor, OperationSummaryText, PauseOutcome, manager};
 use crate::file_system::write_operations::state::{OperationIntent, WriteOperationState, operation_states};
 use crate::file_system::write_operations::test_support::{TestOperationGuard, placeholder_conflict};
@@ -41,7 +42,9 @@ fn register_then_get_status_roundtrip() {
     let id = op.id().to_string();
     register_operation_status(&id, WriteOperationType::Copy, vec![]);
 
-    let status = get_operation_status(&id).expect("operation should be in cache");
+    let status = installed()
+        .get_operation_status(&id)
+        .expect("operation should be in cache");
     assert_eq!(status.operation_id, id);
     assert_eq!(status.operation_type, WriteOperationType::Copy);
     assert_eq!(status.phase, WriteOperationPhase::Scanning);
@@ -56,7 +59,7 @@ fn register_then_get_status_roundtrip() {
 
     drop(op);
     unregister_operation_status(&id);
-    assert!(get_operation_status(&id).is_none());
+    assert!(installed().get_operation_status(&id).is_none());
 }
 
 /// A real managed operation on a lane nothing else touches, so admission runs it
@@ -135,7 +138,9 @@ fn a_paused_operation_reports_paused_not_running() {
 
     assert_eq!(manager().set_paused(&op.id, true), PauseOutcome::Applied);
 
-    let status = get_operation_status(&op.id).expect("a paused operation is still in the status cache");
+    let status = installed()
+        .get_operation_status(&op.id)
+        .expect("a paused operation is still in the status cache");
     assert_eq!(status.lifecycle, Some(LifecycleStatus::Paused));
     // The state-map entry is still there, which is exactly why the old boolean
     // got this backwards.
@@ -153,7 +158,9 @@ fn a_queued_operation_reports_queued() {
     let queued = ManagedOperationFixture::start_on_lane("queued-waiter", holder.lane.clone());
 
     assert_eq!(manager().lifecycle_status(&queued.id), Some(LifecycleStatus::Queued));
-    let status = get_operation_status(&queued.id).expect("a queued operation has a status-cache row");
+    let status = installed()
+        .get_operation_status(&queued.id)
+        .expect("a queued operation has a status-cache row");
     assert_eq!(status.lifecycle, Some(LifecycleStatus::Queued));
     assert!(
         operation_states().contains(&queued.id),
@@ -174,7 +181,7 @@ fn update_operation_status_overwrites_fields() {
         500,
         1000,
     );
-    let status = get_operation_status(&id).unwrap();
+    let status = installed().get_operation_status(&id).unwrap();
     assert_eq!(status.phase, WriteOperationPhase::Copying);
     assert_eq!(status.current_file.as_deref(), Some("a.txt"));
     assert_eq!(status.files_done, 3);
@@ -199,14 +206,15 @@ fn a_parked_operation_names_its_wait_on_a_status_read() {
     // Nobody is being asked anything, and this operation keeps no in-flight
     // table, so it has nothing to claim. Absent, ❌ never a made-up `moving`.
     assert!(
-        get_operation_status(&id).unwrap().activity.is_none(),
+        installed().get_operation_status(&id).unwrap().activity.is_none(),
         "an operation with no probe and nobody being asked reports no activity"
     );
 
     let (tx, _rx) = oneshot::channel();
     op.state().conflict_slot.arm(tx, placeholder_conflict);
 
-    let activity = get_operation_status(&id)
+    let activity = installed()
+        .get_operation_status(&id)
         .unwrap()
         .activity
         .expect("a parked operation answers for its own wait");
@@ -228,7 +236,11 @@ fn a_paused_operation_reads_as_paused_rather_than_stalled() {
 
     op.state().pause_gate.pause();
 
-    let activity = get_operation_status(&id).unwrap().activity.expect("paused is a wait");
+    let activity = installed()
+        .get_operation_status(&id)
+        .unwrap()
+        .activity
+        .expect("paused is a wait");
     assert_eq!(activity.waiting_on, TransferWaitReason::Paused);
 
     unregister_operation_status(&id);
@@ -245,7 +257,9 @@ fn a_settled_operation_reports_no_activity() {
     op.state().conflict_slot.arm(tx, placeholder_conflict);
     drop(op);
 
-    let status = get_operation_status(&id).expect("the cache row outlives the state");
+    let status = installed()
+        .get_operation_status(&id)
+        .expect("the cache row outlives the state");
     assert!(status.activity.is_none(), "a settled operation waits on nothing");
 
     unregister_operation_status(&id);
@@ -267,7 +281,7 @@ fn indeterminate_compress_phases_clear_both_percent_fallback_axes() {
         WriteOperationPhase::FinishingTransfer,
     ] {
         update_operation_status(&id, phase, None, 0, 0, 0, 0);
-        let status = get_operation_status(&id).expect("operation status");
+        let status = installed().get_operation_status(&id).expect("operation status");
         assert_eq!((status.files_done, status.files_total), (0, 0));
         assert_eq!((status.bytes_done, status.bytes_total), (0, 0));
     }
@@ -412,7 +426,7 @@ async fn every_transfer_start_has_exactly_one_finish_however_the_op_ends() {
         let events = Arc::new(CollectorEventSink::new());
         let active_inside = Arc::new(AtomicBool::new(false));
         let (seen, probe) = (Arc::clone(&active_inside), volume.clone());
-        crate::file_system::write_operations::installed()
+        installed()
             .start_write_operation(
                 Arc::clone(&events) as Arc<dyn OperationEventSink>,
                 WriteOperationType::Copy,
@@ -488,7 +502,7 @@ async fn a_panicking_op_task_finishes_its_transfer_start_exactly_once() {
         }),
     );
     crate::test_support::wait_until_async(Duration::from_secs(5), "the panic net to unregister the op", || {
-        manager().lifecycle_status(&op).is_none() && get_operation_status(&op).is_none()
+        manager().lifecycle_status(&op).is_none() && installed().get_operation_status(&op).is_none()
     })
     .await;
 

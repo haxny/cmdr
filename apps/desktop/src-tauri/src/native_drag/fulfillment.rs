@@ -53,6 +53,7 @@ use std::path::{Path, PathBuf};
 use crate::file_system::volume::Volume;
 use crate::file_system::volume::friendly_error::{ErrorCategory, ListingError, listing_error_from_volume_error};
 use crate::file_system::volume::{ChildName, VolumeError, VolumeReadStream, WriteMode};
+use cmdr_operation_log::types::OperationId;
 
 /// A drag-out fulfillment failure, carrying the typed [`ListingError`]
 /// classification so the delegate can surface a title through the promise
@@ -155,20 +156,26 @@ pub async fn fulfill(
 /// so the eject guard clears no matter how the fulfillment exits (success,
 /// error, or a panic unwinding through the `.await`s).
 struct BusyGuard {
-    op_id: String,
+    op_id: OperationId,
 }
 
 impl BusyGuard {
     fn new(volume_id: &str) -> Self {
-        let op_id = format!("drag-out-{}", uuid::Uuid::new_v4());
-        crate::file_system::write_operations::register_external_volume_op(&op_id, vec![volume_id.to_string()]);
+        let op_id = OperationId::from(format!("drag-out-{}", uuid::Uuid::new_v4()));
+        // Before `install` nothing can be ejected mid-transfer either, so there's
+        // nothing to guard.
+        if let Ok(engine) = crate::operations_host::operations() {
+            engine.register_external_volume_op(&op_id, vec![volume_id.to_string()]);
+        }
         Self { op_id }
     }
 }
 
 impl Drop for BusyGuard {
     fn drop(&mut self) {
-        crate::file_system::write_operations::release_external_volume_op(&self.op_id);
+        if let Ok(engine) = crate::operations_host::operations() {
+            engine.release_external_volume_op(&self.op_id);
+        }
     }
 }
 

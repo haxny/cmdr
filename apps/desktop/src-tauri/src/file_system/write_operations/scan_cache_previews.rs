@@ -575,14 +575,6 @@ impl ScanPreviews {
     }
 }
 
-/// The cost facts of a settled preview on the installed engine, for the S3 cost
-/// estimate outside the engine. `None` before `install`, as for any preview
-/// the engine doesn't know.
-// shim: removed in M7a
-pub(crate) fn cached_cost_facts(preview_id: &str) -> Option<ScanCostFacts> {
-    super::super::installed_for("cached_cost_facts")?.cached_cost_facts(preview_id)
-}
-
 // ============================================================================
 // The suites' reach into the shared engine's previews
 // ============================================================================

@@ -8,6 +8,7 @@
 use super::tests::make_state;
 use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
+use crate::file_system::write_operations::installed;
 use cmdr_fs::volume::InMemoryVolume;
 use cmdr_local::LocalPosixVolume;
 
@@ -611,7 +612,6 @@ mod quarantine {
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn moving_out_of_a_quarantined_zip_quarantines_what_lands() {
         use crate::file_system::write_operations::event_sinks::OperationEventSink;
-        use crate::file_system::write_operations::route_archive_move_out;
         use cmdr_fs::ignore_poison::IgnorePoison;
         use cmdr_fs::testing::metadata_fixture::{QUARANTINE_VALUE, QUARANTINE_XATTR, set_xattr};
 
@@ -621,21 +621,22 @@ mod quarantine {
         let dest_dir = tempfile::tempdir().expect("dest tempdir");
 
         let events = Arc::new(CollectorEventSink::new());
-        route_archive_move_out(
-            Arc::clone(&events) as Arc<dyn OperationEventSink>,
-            "root".to_string(),
-            local_archive_volume(&zip_path, cmdr_archive::ArchiveFormat::Zip),
-            vec![zip_path.join("readme.txt"), zip_path.join("docs")],
-            "dest".to_string(),
-            local_dest(dest_dir.path()),
-            dest_dir.path().to_path_buf(),
-            VolumeCopyConfig {
-                progress_interval_ms: 0,
-                ..VolumeCopyConfig::default()
-            },
-        )
-        .await
-        .expect("start the move-out");
+        installed()
+            .route_archive_move_out(
+                Arc::clone(&events) as Arc<dyn OperationEventSink>,
+                "root".to_string(),
+                local_archive_volume(&zip_path, cmdr_archive::ArchiveFormat::Zip),
+                vec![zip_path.join("readme.txt"), zip_path.join("docs")],
+                "dest".to_string(),
+                local_dest(dest_dir.path()),
+                dest_dir.path().to_path_buf(),
+                VolumeCopyConfig {
+                    progress_interval_ms: 0,
+                    ..VolumeCopyConfig::default()
+                },
+            )
+            .await
+            .expect("start the move-out");
         cmdr_fs::testing::wait_until_async(Duration::from_secs(10), "the move-out to complete", || {
             !events.complete.lock_ignore_poison().is_empty()
         })

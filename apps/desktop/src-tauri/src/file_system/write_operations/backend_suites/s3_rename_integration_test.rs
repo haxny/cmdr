@@ -27,10 +27,7 @@ use cmdr_s3::volume::testing::{
 use super::network_transfer_test_support::{budget, read_all, run_copy, sha256};
 use crate::file_system::volume::manager::get_volume_manager;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
-use crate::file_system::write_operations::start_rename_by_move;
-use crate::file_system::write_operations::state::{
-    cancel_write_operation, pause_write_operation, resume_write_operation,
-};
+use crate::file_system::write_operations::installed;
 use crate::file_system::write_operations::types::{VolumeCopyConfig, WriteOperationType};
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_operation_log::types::Initiator;
@@ -64,17 +61,18 @@ fn at(volume: &S3Volume, key: &str) -> PathBuf {
 async fn start(volume_id: &str, from: PathBuf, new_name: &str) -> (Arc<CollectorEventSink>, String) {
     let events = Arc::new(CollectorEventSink::new());
     let parent = from.parent().expect("a parent").display().to_string();
-    let started = start_rename_by_move(
-        events.clone(),
-        volume_id.to_string(),
-        vec![(from, new_name.to_string())],
-        parent,
-        VolumeCopyConfig::default(),
-        Initiator::User,
-        None,
-    )
-    .await
-    .expect("the rename starts");
+    let started = installed()
+        .start_rename_by_move(
+            events.clone(),
+            volume_id.to_string(),
+            vec![(from, new_name.to_string())],
+            parent,
+            VolumeCopyConfig::default(),
+            Initiator::User,
+            None,
+        )
+        .await
+        .expect("the rename starts");
     assert_eq!(started.operation_type, WriteOperationType::Move);
     (events, started.operation_id)
 }
@@ -182,8 +180,8 @@ pub(super) async fn a_paused_then_cancelled_rename_keeps_the_source_whole(target
     target.seed(target.bucket(), &[object(&from_key, &bytes)]).await;
 
     let (events, operation_id) = start(&volume_id, at(&volume, &from_key), "gone.bin").await;
-    assert!(pause_write_operation(&operation_id) || !events.settled.lock_ignore_poison().is_empty());
-    cancel_write_operation(&operation_id, false);
+    assert!(installed().pause_write_operation(&operation_id) || !events.settled.lock_ignore_poison().is_empty());
+    installed().cancel_write_operation(&operation_id, false);
     crate::test_support::wait_until_async(budget(SETTLE_BUDGET), "the cancelled rename to settle", || {
         !events.settled.lock_ignore_poison().is_empty()
     })
@@ -214,10 +212,13 @@ pub(super) async fn a_paused_rename_resumes_and_lands(target: &S3Target) {
 
     let (events, operation_id) = start(&volume_id, at(&volume, &from_key), "b.bin").await;
     assert!(
-        pause_write_operation(&operation_id),
+        installed().pause_write_operation(&operation_id),
         "the rename should still be running to pause"
     );
-    assert!(resume_write_operation(&operation_id), "the paused rename should resume");
+    assert!(
+        installed().resume_write_operation(&operation_id),
+        "the paused rename should resume"
+    );
     settle(&events, "the resumed rename to settle").await;
 
     assert_eq!(
@@ -231,7 +232,7 @@ pub(super) async fn a_paused_rename_resumes_and_lands(target: &S3Target) {
 /// rename both start here) runs as ONE move with the new names, and lands
 /// every one of them.
 pub(super) async fn a_batch_with_a_folder_renames_as_one_move(target: &S3Target) {
-    use crate::file_system::write_operations::{BulkRenameRow, SourceFingerprint, start_renames};
+    use crate::file_system::write_operations::{BulkRenameRow, SourceFingerprint};
 
     let (volume_id, volume, prefix) = registered(target, "rename-batch", None).await;
     let (folder_file, note) = (format!("{prefix}album/a.jpg"), format!("{prefix}note.txt"));
@@ -253,7 +254,8 @@ pub(super) async fn a_batch_with_a_folder_renames_as_one_move(target: &S3Target)
     }
     let events = Arc::new(CollectorEventSink::new());
 
-    let started = start_renames(events.clone(), volume_id, rows, Initiator::Agent)
+    let started = installed()
+        .start_renames(events.clone(), volume_id, rows, Initiator::Agent)
         .await
         .expect("the batch starts");
     assert_eq!(

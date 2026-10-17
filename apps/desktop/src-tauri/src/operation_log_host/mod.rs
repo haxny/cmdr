@@ -5,7 +5,7 @@
 //! later, once the data dir and settings are known, on the SAME handle. The
 //! answers the log needs from the app live here: the data dir, the recording
 //! switch and the retention limits from settings, the app's runtime, and the
-//! volume registry the rollback planner looks volumes up in ([`volumes`]).
+//! volume registry the rollback planner looks volumes up in (`volumes.rs`).
 
 #[cfg(test)]
 mod test_journal;

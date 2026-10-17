@@ -71,24 +71,20 @@ pub fn install(app: &AppHandle, operation_log: OperationLog) {
             Arc::new(TauriEventSink::new(sink_app.clone())) as Arc<dyn OperationEventSink>
         }))
         .build();
-    if OPERATIONS.set(engine.clone()).is_err() {
+    if OPERATIONS.set(engine).is_err() {
         crate::log_error!(target: "op_manager", "the write engine was installed twice; keeping the first");
-        return;
-    }
-    // The engine's own slot, for the free functions the app still calls.
-    // shim: removed in M7a
-    if write_operations::install(engine).is_err() {
-        crate::log_error!(target: "op_manager", "the write engine's shim slot was already filled; keeping the first");
     }
 }
 
-/// The app's write engine.
+/// The app's write engine. Every app caller reaches the engine through this.
 ///
-/// `Err(NotInstalled)` before [`install`]: a caller refuses with a variant the
-/// frontend already handles and raises an error report (see
-/// [`refuse_not_installed`]); it never falls back to a detached engine, which
-/// would write with nobody hearing. In a test binary nothing installs, so the
-/// first read shares the engine the engine's own tests use.
+/// `Err(NotInstalled)` before [`install`], with an error report: the caller
+/// refuses with a variant the frontend already handles (a start through
+/// [`refuse_not_installed`], an instant op through [`refuse_instant_not_installed`])
+/// or answers what an engine with nothing running would (no operations, nothing
+/// busy, an unknown id). It never falls back to a detached engine, which would
+/// write with nobody hearing. In a test binary nothing installs, so the first
+/// read shares the engine the engine's own tests use.
 pub(crate) fn operations() -> Result<&'static Operations, NotInstalled> {
     operations_in(&OPERATIONS)
 }
@@ -100,8 +96,9 @@ pub(crate) fn operations_in(slot: &'static OnceLock<Operations>) -> Result<&'sta
     }
     #[cfg(test)]
     if std::ptr::eq(slot, &OPERATIONS) {
-        return Ok(OPERATIONS.get_or_init(|| write_operations::installed().clone()));
+        return Ok(OPERATIONS.get_or_init(|| write_operations::testing::installed().clone()));
     }
+    crate::log_error!(target: "op_manager", "the write engine was reached before it was installed; refused");
     Err(NotInstalled)
 }
 
@@ -121,8 +118,8 @@ pub fn claim_ledger(data_dir: Option<&std::path::Path>) {
 
 /// [`claim_ledger`] on a given slot, so a test can hand in its own.
 pub(crate) fn claim_ledger_in(slot: &'static OnceLock<Operations>, data_dir: Option<&std::path::Path>) {
+    // Before `install` there's no engine to claim for; `operations_in` reported it.
     let Ok(engine) = operations_in(slot) else {
-        crate::log_error!(target: "op_manager", "the leftover ledger was claimed before the write engine was installed; skipped");
         return;
     };
     match engine.claim_ledger(data_dir) {
@@ -134,14 +131,37 @@ pub(crate) fn claim_ledger_in(slot: &'static OnceLock<Operations>, data_dir: Opt
 }
 
 /// What a start refused before `install` answers: the frontend's generic I/O
-/// failure, which its error dialog renders without naming a file, plus an error
-/// report, since the app can't reach this after `setup()`.
+/// failure, which its error dialog renders without naming a file. The app
+/// can't reach this after `setup()`.
 pub(crate) fn refuse_not_installed(_: NotInstalled) -> write_operations::WriteOperationError {
-    crate::log_error!(target: "op_manager", "an operation was started before the write engine was installed; refused");
     write_operations::WriteOperationError::IoError {
         path: String::new(),
         message: "the write engine isn't ready yet".to_string(),
     }
+}
+
+/// What an instant op (rename, a new folder or file, a single trash, a paste
+/// as a file) refused before `install` answers: "Cmdr is still starting up",
+/// the one existing refusal that says so. Its copy names archive edits, the
+/// only way an instant op met it before; a new variant would change the wire
+/// and owe new copy for a state the app can't reach.
+pub(crate) fn refuse_instant_not_installed(_: NotInstalled) -> write_operations::MutationError {
+    write_operations::MutationError::ArchiveEditNotReady
+}
+
+/// What a scan preview asked for before `install` answers: no walk, and the
+/// dialog hears an error at once (the answer an engine gives a walk that
+/// couldn't start), so it never spins.
+pub(crate) fn refuse_scan_preview_not_installed(
+    events: &dyn write_operations::ScanPreviewEventSink,
+) -> write_operations::ScanPreviewStartResult {
+    let preview_id = uuid::Uuid::new_v4().to_string();
+    events.emit_error(write_operations::ScanPreviewErrorEvent {
+        preview_id: preview_id.clone(),
+        message: "the write engine isn't ready yet".to_string(),
+        timed_out: false,
+    });
+    write_operations::ScanPreviewStartResult { preview_id }
 }
 
 /// The engine a test binary shares, since nothing there calls [`install`]: the

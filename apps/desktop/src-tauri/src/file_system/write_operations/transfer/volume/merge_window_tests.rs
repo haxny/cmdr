@@ -26,7 +26,8 @@ use super::super::faulty_volume::forward_volume_methods;
 use super::tests::{make_state, make_volumes};
 use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
-use crate::file_system::write_operations::state::cancel_write_operation;
+use crate::file_system::write_operations::installed;
+
 use crate::file_system::write_operations::test_support::TestOperationGuard;
 use crate::file_system::write_operations::types::{
     ConflictResolution, ScanProgressEvent, WriteCancelledEvent, WriteCompleteEvent, WriteConflictResolvedEvent,
@@ -438,7 +439,7 @@ async fn a_cancel_mid_subtree_leaves_no_leaf_still_writing() {
     // Let the window fill, then cancel through the real user-facing path.
     // allowed-test-sleep: the canceller's head start IS the subject — the cancel has to land while several leaves are mid-write.
     tokio::time::sleep(Duration::from_millis(60)).await;
-    cancel_write_operation(&operation_id, false);
+    installed().cancel_write_operation(&operation_id, false);
 
     let result = tokio::time::timeout(Duration::from_secs(20), copy)
         .await

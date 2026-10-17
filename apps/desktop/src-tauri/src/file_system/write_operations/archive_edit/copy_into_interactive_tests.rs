@@ -4,6 +4,7 @@
 //! dir-vs-dir merges without prompting.
 
 use super::test_support::*;
+use crate::file_system::write_operations::installed;
 
 /// The clash the operation is parked on, read off the `write-conflict` event a
 /// surface just observed. Answering names it, exactly as the frontend does.
@@ -52,8 +53,6 @@ async fn start_interactive_copy_into(
 
 #[tokio::test]
 async fn interactive_copy_into_prompts_on_a_file_collision_and_overwrite_replaces() {
-    use crate::file_system::write_operations::resolve_write_conflict;
-
     let tmp = tempfile::tempdir().expect("tempdir");
     let archive = tmp.path().join("a.zip");
     write_multi_zip(&archive, &[("d/existing.txt", b"OLD")]);
@@ -70,7 +69,7 @@ async fn interactive_copy_into_prompts_on_a_file_collision_and_overwrite_replace
         !events.conflicts.lock_ignore_poison().is_empty()
     })
     .await;
-    resolve_write_conflict(&op_id, pending_clash(&events), ConflictResolution::Overwrite, false);
+    installed().resolve_write_conflict(&op_id, pending_clash(&events), ConflictResolution::Overwrite, false);
 
     wait_until_async(Duration::from_secs(5), "the write-complete event", || {
         !events.complete.lock_ignore_poison().is_empty()
@@ -101,8 +100,6 @@ async fn interactive_copy_into_prompts_on_a_file_collision_and_overwrite_replace
 
 #[tokio::test]
 async fn interactive_copy_into_skip_keeps_the_existing_entry() {
-    use crate::file_system::write_operations::resolve_write_conflict;
-
     let tmp = tempfile::tempdir().expect("tempdir");
     let archive = tmp.path().join("a.zip");
     write_multi_zip(&archive, &[("d/existing.txt", b"OLD")]);
@@ -117,7 +114,7 @@ async fn interactive_copy_into_skip_keeps_the_existing_entry() {
         !events.conflicts.lock_ignore_poison().is_empty()
     })
     .await;
-    resolve_write_conflict(&op_id, pending_clash(&events), ConflictResolution::Skip, false);
+    installed().resolve_write_conflict(&op_id, pending_clash(&events), ConflictResolution::Skip, false);
 
     wait_until_async(Duration::from_secs(5), "the write-complete event", || {
         !events.complete.lock_ignore_poison().is_empty()
@@ -132,8 +129,6 @@ async fn interactive_copy_into_skip_keeps_the_existing_entry() {
 
 #[tokio::test]
 async fn interactive_apply_to_all_latches_and_stops_prompting() {
-    use crate::file_system::write_operations::resolve_write_conflict;
-
     let tmp = tempfile::tempdir().expect("tempdir");
     let archive = tmp.path().join("a.zip");
     write_multi_zip(&archive, &[("d/one.txt", b"OLD1"), ("d/two.txt", b"OLD2")]);
@@ -151,7 +146,7 @@ async fn interactive_apply_to_all_latches_and_stops_prompting() {
         !events.conflicts.lock_ignore_poison().is_empty()
     })
     .await;
-    resolve_write_conflict(&op_id, pending_clash(&events), ConflictResolution::Skip, true);
+    installed().resolve_write_conflict(&op_id, pending_clash(&events), ConflictResolution::Skip, true);
 
     wait_until_async(Duration::from_secs(5), "the write-complete event", || {
         !events.complete.lock_ignore_poison().is_empty()
@@ -169,8 +164,6 @@ async fn interactive_apply_to_all_latches_and_stops_prompting() {
 
 #[tokio::test]
 async fn interactive_cancel_during_a_prompt_leaves_the_archive_intact() {
-    use crate::file_system::write_operations::cancel_write_operation;
-
     let tmp = tempfile::tempdir().expect("tempdir");
     let archive = tmp.path().join("a.zip");
     write_multi_zip(&archive, &[("d/existing.txt", b"OLD")]);
@@ -188,7 +181,7 @@ async fn interactive_cancel_during_a_prompt_leaves_the_archive_intact() {
     .await;
     // Cancel while the prompt is pending: the planner's recv unblocks with an
     // error, the mutator never runs, and the archive is untouched.
-    cancel_write_operation(&op_id, false);
+    installed().cancel_write_operation(&op_id, false);
 
     wait_until_async(Duration::from_secs(5), "the write-cancelled event", || {
         !events.cancelled.lock_ignore_poison().is_empty()
@@ -211,8 +204,6 @@ async fn interactive_cancel_during_a_prompt_leaves_the_archive_intact() {
 
 #[tokio::test]
 async fn interactive_conflict_event_carries_both_sides_metadata() {
-    use crate::file_system::write_operations::resolve_write_conflict;
-
     let tmp = tempfile::tempdir().expect("tempdir");
     let archive = tmp.path().join("a.zip");
     write_multi_zip(&archive, &[("d/existing.txt", b"OLDDD")]); // 5 bytes
@@ -239,7 +230,7 @@ async fn interactive_conflict_event_carries_both_sides_metadata() {
             "the colliding archive entry is a file, not a folder"
         );
     }
-    resolve_write_conflict(&op_id, pending_clash(&events), ConflictResolution::Skip, false);
+    installed().resolve_write_conflict(&op_id, pending_clash(&events), ConflictResolution::Skip, false);
     wait_until_async(Duration::from_secs(5), "the write-complete event", || {
         !events.complete.lock_ignore_poison().is_empty()
     })
@@ -248,7 +239,7 @@ async fn interactive_conflict_event_carries_both_sides_metadata() {
 
 #[tokio::test]
 async fn interactive_move_into_with_a_skipped_collision_keeps_the_source() {
-    use crate::file_system::write_operations::{resolve_write_conflict, route_archive_copy_into};
+    use crate::file_system::write_operations::route_archive_copy_into;
     use cmdr_local::LocalPosixVolume;
 
     let tmp = tempfile::tempdir().expect("tempdir");
@@ -284,7 +275,7 @@ async fn interactive_move_into_with_a_skipped_collision_keeps_the_source() {
         !events.conflicts.lock_ignore_poison().is_empty()
     })
     .await;
-    resolve_write_conflict(
+    installed().resolve_write_conflict(
         &start.operation_id,
         pending_clash(&events),
         ConflictResolution::Skip,

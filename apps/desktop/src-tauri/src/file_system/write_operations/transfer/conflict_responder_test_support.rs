@@ -20,6 +20,7 @@
 //! file/folder flags too, so assertions derive from the sink, not a side-channel
 //! `AtomicUsize`. See [`file_conflict_count`].
 
+use crate::file_system::write_operations::installed;
 use std::sync::Arc;
 
 use super::super::event_sinks::{CollectorEventSink, OperationEventSink};
@@ -137,7 +138,7 @@ impl OperationEventSink for ConflictResponderSink {
                 );
             }
             Answer::CancelOperation { operation_id } => {
-                super::super::state::cancel_write_operation(operation_id, false);
+                installed().cancel_write_operation(operation_id, false);
             }
         }
     }

@@ -77,7 +77,9 @@ pub(super) async fn eject_disk(
         );
     }
 
-    let busy = crate::file_system::busy_volume_ids();
+    let busy = crate::operations_host::operations()
+        .map(crate::file_system::write_operations::Operations::busy_volume_ids)
+        .unwrap_or_default();
     if let Some(volume_id) = busy_sibling(&ids, &busy) {
         log::info!(target: "eject", "Not ejecting the disk under {mount_path}: a write op is busy on {volume_id}");
         return Err(EjectError::Busy);

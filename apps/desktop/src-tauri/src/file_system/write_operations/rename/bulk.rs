@@ -34,7 +34,7 @@ mod plan;
 mod recorder;
 use recorder::BulkRenameRecorder;
 
-pub(crate) use by_move::{RenamesStarted, start_renames};
+pub(crate) use by_move::RenamesStarted;
 
 use plan::{
     RenamePlanStep, build_execution_plan, settle_local_conflicts, settle_remote_conflicts, spelled_destinations,
@@ -266,19 +266,6 @@ impl crate::file_system::write_operations::Operations {
             operation_type: WriteOperationType::Rename,
         })
     }
-}
-
-/// [`Operations::start_bulk_rename`](crate::file_system::write_operations::Operations::start_bulk_rename) on
-/// the installed engine, for the suites that drive the executor without the routing in front.
-// shim: removed in M7a
-#[cfg(test)]
-pub(crate) fn start_bulk_rename(
-    events: Arc<dyn OperationEventSink>,
-    volume_id: String,
-    rows: Vec<BulkRenameRow>,
-    initiator: Initiator,
-) -> Result<WriteOperationStartResult, RenameStartError> {
-    crate::file_system::write_operations::installed().start_bulk_rename(events, volume_id, rows, initiator)
 }
 
 #[derive(Debug)]

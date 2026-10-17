@@ -2,9 +2,10 @@
 //! folder and file a running transfer is in, read off the transfer tree's
 //! follow-the-work window.
 
+use crate::file_system::write_operations::testing::{ProgressAxis, TransferTreeAncestor};
 use crate::file_system::write_operations::{
-    LifecycleStatus, OperationSnapshot, ProgressAxis, TransferTreeAncestor, TransferTreeRow, TransferTreeView,
-    TreeRowKind, TreeRowState, WriteOperationType,
+    LifecycleStatus, OperationSnapshot, TransferTreeRow, TransferTreeView, TreeRowKind, TreeRowState,
+    WriteOperationType,
 };
 use crate::mcp::resources::operations::{OperationRow, build_operations_yaml};
 

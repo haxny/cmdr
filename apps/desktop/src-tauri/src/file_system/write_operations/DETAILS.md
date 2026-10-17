@@ -29,7 +29,7 @@ Pre-flight scans reuse cached listings when the source volume reports `WatchCove
 Where a symbol lives and who calls it: `codegraph_search` / `codegraph_explore`. The spine: `CLAUDE.md` § Module map.
 The full top-level inventory is here:
 
-- `mod.rs` (the `Operations` handle and its `Inner`, the re-exports, and the installed engine's shim slot), `local_start.rs` (the local copy, move, delete, and trash starters and the `start_write_operation` lifecycle they share), `handle.rs` (building an `Operations` and reaching its parts), `scope.rs` (`OpScope`, what one operation reaches its engine through), `host/` (what the engine needs from the app: the runtime, the volumes, the engine-wide events, and the optional seams, § "The engine's host"), `manager.rs` (registry + lane admission; what the queue window asks in `manager/queue_api.rs`, its request answers in `manager/wire.rs`, reordering the line in `manager/reorder.rs`, and a retained failure's way to start again in `manager/retry.rs`, § "Retained failures"), `state.rs`
+- `mod.rs` (the `Operations` handle and its `Inner`, and the public list: the `pub use` lines, everything outside the engine may name; every submodule but `host` is private), `testing.rs` (`cfg(test)`: what test cells outside the engine reach beyond that list, sized for the crate's `testing` feature), `local_start.rs` (the local copy, move, delete, and trash starters and the `start_write_operation` lifecycle they share), `handle.rs` (building an `Operations` and reaching its parts), `scope.rs` (`OpScope`, what one operation reaches its engine through), `host/` (what the engine needs from the app: the runtime, the volumes, the engine-wide events, and the optional seams, § "The engine's host"), `manager.rs` (registry + lane admission; what the queue window asks in `manager/queue_api.rs`, its request answers in `manager/wire.rs`, reordering the line in `manager/reorder.rs`, and a retained failure's way to start again in `manager/retry.rs`, § "Retained failures"), `state.rs`
   (`WriteOperationState`, the settle guard, plus `state/registry.rs`: `WriteOperationRegistry` and its walks, and
   `state/controls.rs`:
   the by-id cancel / abort / pause / resume / conflict-answer entry points, re-exported through `state`, and
@@ -724,9 +724,9 @@ runtime. The engine is a handle, `Operations` (`mod.rs`, built in `handle.rs`): 
 `EngineHost`, the operation log it journals into, the manager, the registry of live states, and the status cache, so two
 engines share nothing. The app's answer is `apps/desktop/src-tauri/src/operations_host/`, which builds the app's one
 engine in `setup()` with `Operations::builder` (after `volume_host::install` and `operation_log_host::install`, before
-the leftover sweep, which it claims through `operations_host::claim_ledger`). Free functions callers outside the
-engine still use reach that engine through the engine's own slot (`write_operations::installed_for(asked)`), until they
-call `operations_host::operations()` themselves; nothing inside the engine does.
+the leftover sweep, which it claims through `operations_host::claim_ledger`). Every caller outside the engine reaches it
+through `operations_host::operations()` and calls a method; the engine keeps no slot of its own, and nothing inside it
+names the app's accessor.
 
 - **The runtime is the `VolumeHost`'s.** One handle for the engine and the backends it drives, so the two can't
   disagree. Everything the engine spawns goes there: the admission pass (§ "The admission pass spawns admitted ops on
@@ -743,9 +743,7 @@ call `operations_host::operations()` themselves; nothing inside the engine does.
   (`state.scope()`); an instant op builds one beside `run_instant`. A scope holds parts of the engine, never the engine
   (the registry holds the states, so that would be a cycle), and ❌ a missing scope never falls back to another log.
   Entry points (starters, routing, the queue and by-id controls, pre-flight checks, rollback) are `Operations`
-  methods or take the engine as a parameter; a deferred start uses the engine admission hands it. The free functions
-  callers outside the engine use are shims over the installed engine until they call `operations_host::operations()`
-  themselves. A scan preview's walk holds its engine (`run_scan_preview(&engine, …)`); the leftover sweep runs on the
+  methods or take the engine as a parameter; a deferred start uses the engine admission hands it. A scan preview's walk holds its engine (`run_scan_preview(&engine, …)`); the leftover sweep runs on the
   host its claim hands it; the probe watchdog and the preview watchdog hold their stores weakly, so a dropped engine
   stops them.
 - **Which volume serves an id or a path goes through `OperationVolumes`** (`host/volumes.rs`): the registry's `get`,
@@ -799,18 +797,16 @@ call `operations_host::operations()` themselves; nothing inside the engine does.
 - **Event payloads are plain `serde` + `specta::Type` types**; the Tauri event and its wire name are the app's
   (`apps/desktop/src-tauri/src/operations_host/wire.rs` wraps each). ❗ A payload's doc comments and `#[serde]`
   attributes still reach `bindings.ts`, so they're wire: reword one and `desktop-bindings-fresh` fails.
-- **Before `install`, the answer depends on the binary.** In the app the IPC start commands refuse
-  (`operations_host::operations()` is `Err(NotInstalled)`, an `IoError` plus an error report), and nothing else can reach
-  the engine before `setup()`. ❌ Still, nothing panics for want of one: `installed_for` answers `None` and logs it, and
-  each shim refuses with a variant its caller already handles (`not_installed`, `instant_not_installed`,
-  `UnknownOperation`) or answers what an engine with nothing running would (an empty list, no-op cancels, no busy
-  volume, a scan preview that tells its dialog it couldn't start). The panicking `installed()` exists only in the test
-  and bench
-  binaries. A test binary never installs, so its first read builds the engine every test shares (`test_support::shared_engine`, the
-  app's own answers minus the frontend channel): the real indexing gauge, analytics client, and error reporter, which
-  `status_cache_tests`' gauge pins read, and `cmdr-fs`'s shared fallback runtime. No sink factory, so
-  `operation_sink()` stays `None` and an archive-target instant op refuses plainly. The bench builds a detached
-  engine.
+- **Before `install`, the answer depends on the binary.** In the app, `operations_host::operations()` is
+  `Err(NotInstalled)` plus an error report, and each caller refuses with a variant it already handles (a start's
+  `IoError`, an instant op's `ArchiveEditNotReady`, `UnknownOperation`) or answers what an engine with nothing running
+  would (an empty list, no-op cancels, no busy volume, a scan preview that tells its dialog it couldn't start); nothing
+  can reach the engine before `setup()` anyway, and ❌ nothing panics for want of one. The engine itself knows nothing
+  about installs. The test and bench binaries share one engine through `installed()` (it exists only there): a test
+  binary's is built on first read (`test_support::shared_engine`, the app's own answers minus the frontend channel:
+  the real indexing gauge, analytics client, and error reporter, which `status_cache_tests`' gauge pins read, and
+  `cmdr-fs`'s shared fallback runtime), and `operations()` hands out the same one there. No sink factory, so
+  `operation_sink()` stays `None` and an archive-target instant op refuses plainly. The bench's is detached.
 - **A seam trait and its value types live in `host/` or `types/`**, never in a module that calls the seam, or the two
   weld into a cycle. That's why `OperationsChanged` and `OperationSnapshot` are `types` vocabulary, and why
   `OperationEventSink` and `ScanPreviewEventSink` are defined in `host/` (`event_sinks` re-exports them): with the

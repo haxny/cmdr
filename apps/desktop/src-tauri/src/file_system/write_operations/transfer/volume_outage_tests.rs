@@ -4,6 +4,7 @@
 //! `volume/copy_outage_tests.rs`.
 
 use super::*;
+use crate::file_system::write_operations::installed;
 use crate::file_system::write_operations::outage_slot::OutagePolicy;
 use crate::file_system::write_operations::test_support::TestOperationGuard;
 use crate::file_system::write_operations::transfer::outage_volume_test_support::OutageVolume;
@@ -90,7 +91,7 @@ async fn a_cancel_ends_the_wait_at_once() {
     let watched = Arc::clone(op.state());
     tokio::spawn(async move {
         wait_until_async(WAIT, "the wait to start", || watched.outage.waiting_for().is_some()).await;
-        crate::file_system::write_operations::state::cancel_write_operation(&op_id, false);
+        installed().cancel_write_operation(&op_id, false);
     });
 
     let started = std::time::Instant::now();
@@ -164,7 +165,7 @@ async fn a_cancel_drops_a_hung_reconnect_attempt() {
     let control = Arc::clone(&nas);
     tokio::spawn(async move {
         wait_until_async(WAIT, "an attempt to hang", || control.reconnect_attempts() >= 1).await;
-        crate::file_system::write_operations::state::cancel_write_operation(&op_id, false);
+        installed().cancel_write_operation(&op_id, false);
     });
 
     let started = std::time::Instant::now();

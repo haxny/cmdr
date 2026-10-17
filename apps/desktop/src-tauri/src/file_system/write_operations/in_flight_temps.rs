@@ -434,23 +434,6 @@ pub(super) fn keep_for_arrival(state: &WriteOperationState, record: TrackedRecor
     ledger.ensure_arrival_listener(state.scope().host_arc());
 }
 
-/// Waits for every queued record to reach the kernel, so the next launch's
-/// sweep can see it. The quit teardown's last act before the process ends.
-///
-/// Records are written by the ledger's own thread a moment after they're
-/// queued, so without this a quit could end the process with the last few
-/// still in the queue. Bounded by [`FLUSH_WAIT`]: a wedged disk costs those
-/// records, never the quit. Deliberately NOT an `fsync`; see the module docs on
-/// why a power loss is the directory scan's problem, not this ledger's.
-///
-/// The installed engine's ledger; nothing is queued before `install`.
-// shim: removed in M7a
-pub fn flush() {
-    if let Some(engine) = super::installed_for("flush_in_flight_temps") {
-        engine.flush_in_flight_temps();
-    }
-}
-
 /// The background sweep a ledger claim started, and the only way to learn
 /// that it has finished.
 ///

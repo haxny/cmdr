@@ -36,7 +36,8 @@ use super::test_support::{
     AutoYieldTuningGuard, REL_CHUNK, REL_TOTAL, RelLog, ReleasingSource, make_state, park_holds_at, rel_expected_bytes,
 };
 use super::*;
-use crate::file_system::write_operations::state::cancel_write_operation;
+
+use crate::file_system::write_operations::installed;
 use crate::file_system::write_operations::test_support::TestOperationGuard;
 use crate::file_system::write_operations::transfer::transfer_driver::{LeafProgressLedger, ObservedProgress};
 use crate::test_support::wait_until_async;
@@ -607,7 +608,7 @@ async fn dest_yield_cancel_while_parked_returns_cancelled_promptly() {
 
             // Cancel (keep partials) WHILE parked. The cancel-aware park must bail
             // promptly instead of waiting out the cap.
-            cancel_write_operation(&op_id, false);
+            installed().cancel_write_operation(&op_id, false);
 
             let result = tokio::time::timeout(Duration::from_secs(5), op)
                 .await

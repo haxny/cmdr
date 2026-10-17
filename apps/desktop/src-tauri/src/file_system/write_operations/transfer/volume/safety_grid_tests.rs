@@ -76,10 +76,9 @@ use super::{copy_volumes_with_progress, move_volumes_with_progress};
 use crate::file_system::volume::manager::get_volume_manager;
 use crate::file_system::write_operations::delete::delete_volume_files_with_progress_inner;
 use crate::file_system::write_operations::event_sinks::{CollectorEventSink, OperationEventSink};
+use crate::file_system::write_operations::installed;
 use crate::file_system::write_operations::scan_cache::seed_incoherent_scan_result_for_test;
-use crate::file_system::write_operations::state::{
-    CachedScanResult, WriteOperationState, cancel_write_operation, insert_scan_result,
-};
+use crate::file_system::write_operations::state::{CachedScanResult, WriteOperationState, insert_scan_result};
 use crate::file_system::write_operations::test_support::TestOperationGuard;
 use crate::file_system::write_operations::types::{
     ConflictResolution, VolumeCopyConfig, WriteCancelledEvent, WriteCompleteEvent, WriteConflictResolvedEvent,
@@ -251,7 +250,7 @@ impl OperationEventSink for CancelOnFirstProgressSink {
             WriteOperationPhase::Copying | WriteOperationPhase::Deleting
         );
         if working && (event.bytes_done > 0 || event.files_done > 0) && self.fired.swap(1, Ordering::Relaxed) == 0 {
-            cancel_write_operation(&self.op_id, false);
+            installed().cancel_write_operation(&self.op_id, false);
         }
         self.inner.emit_progress(event);
     }

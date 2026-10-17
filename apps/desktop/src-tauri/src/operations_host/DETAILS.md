@@ -11,8 +11,8 @@ The app side of the write engine's seams. The engine declares what it needs in `
 `operation_log_host::install` returned (passed by value, so the engine's log IS `operation_log()`), the app's answer
 to every optional seam (`app_answers`, shared with the test binary's `test_engine`), and a sink factory that builds a
 `TauriEventSink`, and keeps it behind `operations()`. That's before anything can start an operation, before the
-ledger claim, and before `init_volume_manager`. It also fills the engine's own slot (`write_operations::install`),
-which the free functions app callers still use read until they call `operations()` directly.
+ledger claim, and before `init_volume_manager`. Every app caller reaches the engine through `operations()` and calls a
+method on it; the engine's root `pub use` list is all it may name.
 
 `claim_ledger(data_dir)` runs later in `setup()`, where the leftover sweep always ran: after the instance lock (no other
 process holds this data dir) and before `init_volume_manager`, unconditionally. It claims the installed engine's
@@ -20,10 +20,13 @@ in-flight ledger through `operations()`, so a duplicate that lost the install is
 is refused and logged. With no data dir the engine runs the ledger unpersisted and reports it
 (`write_operations/DETAILS.md` § "Who claims the ledger").
 
-- **Decision: a start before `install` is refused, never run detached.** `operations()` answers `Err(NotInstalled)`,
-  and the IPC start commands map it through `refuse_not_installed` to the frontend's generic `IoError` (its dialog
-  renders that without naming a file, and no new variant reaches `bindings.ts`) plus a `log_error!`. Unreachable in the
-  app, which installs at the top of `setup()`; the crate knows nothing about installs.
+- **Decision: a call before `install` is refused, never run detached.** `operations()` answers `Err(NotInstalled)`
+  and raises a `log_error!`. A start maps it through `refuse_not_installed` to the frontend's generic `IoError` (its
+  dialog renders that without naming a file), an instant op through `refuse_instant_not_installed` to
+  `ArchiveEditNotReady` ("Cmdr is still starting up"), a scan preview through `refuse_scan_preview_not_installed` to an
+  immediate error event; a query answers what an engine with nothing running would (an empty list, nothing busy, an
+  unknown id). No new variant reaches `bindings.ts`. Unreachable in the app, which installs at the top of `setup()`;
+  the engine knows nothing about installs.
 
 - **Decision: the runtime comes from the volume host, with no second handle.** Why: the engine and the backends it
   drives then share one pool, and the two can't disagree about which runtime is the app's. The admission pass

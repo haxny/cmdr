@@ -421,42 +421,6 @@ impl crate::file_system::write_operations::Operations {
     }
 }
 
-/// [`Operations::copy_between_volumes`](crate::file_system::write_operations::Operations::copy_between_volumes)
-/// on the installed engine.
-// shim: removed in M7a
-#[cfg(test)]
-#[allow(
-    clippy::too_many_arguments,
-    reason = "each volume travels with its ID (for the busy set) plus its Arc; bundling them would just shuffle the same fields into a struct at every call site"
-)]
-pub(crate) async fn copy_between_volumes(
-    events: Arc<dyn OperationEventSink>,
-    source_volume_id: String,
-    source_volume: Arc<dyn Volume>,
-    source_paths: Vec<PathBuf>,
-    dest_volume_id: String,
-    dest_volume: Arc<dyn Volume>,
-    dest_path: PathBuf,
-    config: VolumeCopyConfig,
-    initiator: cmdr_operation_log::types::Initiator,
-    expected_sources: Option<ExpectedSources>,
-) -> Result<WriteOperationStartResult, WriteOperationError> {
-    crate::file_system::write_operations::installed()
-        .copy_between_volumes(
-            events,
-            source_volume_id,
-            source_volume,
-            source_paths,
-            dest_volume_id,
-            dest_volume,
-            dest_path,
-            config,
-            initiator,
-            expected_sources,
-        )
-        .await
-}
-
 /// How much room the destination folder's filesystem reports, or `None` when the
 /// backend genuinely cannot answer.
 ///

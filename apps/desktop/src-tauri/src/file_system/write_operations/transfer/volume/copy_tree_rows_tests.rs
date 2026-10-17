@@ -15,7 +15,7 @@ use super::tests::{make_state, make_volumes};
 use super::wedge_test_support::*;
 use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
-use crate::file_system::write_operations::state::cancel_write_operation;
+use crate::file_system::write_operations::installed;
 use crate::file_system::write_operations::test_support::TestOperationGuard;
 use crate::file_system::write_operations::transfer_tree::test_support::row_states;
 use crate::file_system::write_operations::types::{ConflictResolution, SourceItemOutcome};
@@ -333,7 +333,7 @@ async fn a_cancel_leaves_the_rows_it_stopped_waiting() {
             fx.opened.load(Ordering::SeqCst) >= 4 && landed()
         }) => {}
     }
-    cancel_write_operation(op.id(), false);
+    installed().cancel_write_operation(op.id(), false);
     let result = tokio::time::timeout(Duration::from_secs(5), running)
         .await
         .expect("a cancelled copy returns");

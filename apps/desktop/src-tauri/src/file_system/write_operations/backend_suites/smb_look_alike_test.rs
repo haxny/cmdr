@@ -27,6 +27,7 @@ use super::network_look_alike_test_support::{
     overwriting_a_composed_twin_leaves_one_entry,
 };
 use super::smb_test_support::fixture;
+use crate::file_system::write_operations::installed;
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 #[ignore = "Requires Docker SMB containers (./apps/desktop/test/smb-servers/start.sh)"]
@@ -98,8 +99,6 @@ async fn smb_integration_a_compress_replaces_a_look_alike_archive_in_place_and_n
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 #[ignore = "Requires Docker SMB containers (./apps/desktop/test/smb-servers/start.sh)"]
 async fn smb_integration_a_case_only_rename_asks_nothing_and_lands() {
-    use super::super::rename::check_rename_validity_impl;
-    use super::super::rename_managed;
     use super::network_safety_test_support::Registered;
     use super::network_semantics_test_support::{names_in, seed, try_read};
     use super::network_transfer_test_support::clean_deep;
@@ -109,28 +108,30 @@ async fn smb_integration_a_case_only_rename_asks_nothing_and_lands() {
     seed(remote.as_ref(), &dir, &[("c.txt", b"abcd")]).await;
     let registered = Registered::new(&remote, "case-only");
 
-    let check = check_rename_validity_impl(
-        dir.to_string_lossy().into_owned(),
-        "c.txt".into(),
-        "C.txt".into(),
-        registered.id.clone(),
-    )
-    .await
-    .priced(|_| false);
+    let check = installed()
+        .check_rename_validity_impl(
+            dir.to_string_lossy().into_owned(),
+            "c.txt".into(),
+            "C.txt".into(),
+            registered.id.clone(),
+        )
+        .await
+        .priced(|_| false);
     assert!(
         !check.has_conflict || check.is_case_only_rename,
         "the share's only `C.txt` is `c.txt` itself, so F2 asks nothing: {check:?}"
     );
 
-    rename_managed(
-        dir.join("c.txt"),
-        dir.join("C.txt"),
-        false,
-        registered.id.clone(),
-        Initiator::User,
-    )
-    .await
-    .expect("the case-only rename lands");
+    installed()
+        .rename_managed(
+            dir.join("c.txt"),
+            dir.join("C.txt"),
+            false,
+            registered.id.clone(),
+            Initiator::User,
+        )
+        .await
+        .expect("the case-only rename lands");
     assert_eq!(names_in(remote.as_ref(), &dir).await, vec!["C.txt".to_string()]);
     assert_eq!(
         try_read(remote.as_ref(), &dir.join("C.txt")).await.as_deref(),

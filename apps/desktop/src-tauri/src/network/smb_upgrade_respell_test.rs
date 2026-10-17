@@ -8,7 +8,7 @@
 //! respell the swap leaves a pane whose every accented entry opens nowhere.
 
 use super::*;
-use crate::file_system::write_operations::backend_suites::smb_test_support::*;
+use crate::file_system::write_operations::testing::smb_test_support::*;
 use cmdr_fs::entry::FileEntry;
 use cmdr_listing::testing::TestListing;
 use cmdr_smb::volume::{MountAnchor, connect_smb_volume};

@@ -1,9 +1,7 @@
 //! What the queue window, the MCP `queue` tool, and the volume guards ask an
 //! engine about its operations: list them, cancel, pause, resume, reorder,
 //! dismiss a failure, and whether any still needs a volume. Each is an
-//! [`Operations`] method over the engine's manager and registry; the free
-//! functions of the same names are the installed engine's, for callers outside
-//! the engine.
+//! [`Operations`] method over the engine's manager and registry.
 
 use super::super::Operations;
 use super::{OperationSnapshot, PauseAllOutcome, PauseOutcome, QueueMoveDirection, QueueMoveOutcome};
@@ -140,89 +138,5 @@ impl Operations {
     /// `dismiss_all_failed_operations` (the queue toolbar's "Dismiss all").
     pub(crate) fn dismiss_all_failed_operations(&self) {
         self.manager().dismiss_all_failures();
-    }
-}
-
-// The installed engine's, by free function, for callers outside the engine.
-// Before `install` each answers what an engine with no operations would.
-// shim: removed in M7a
-
-/// [`Operations::list_operations`](Operations::list_operations) on the installed engine.
-pub fn list_operations() -> Vec<OperationSnapshot> {
-    super::super::installed_for("list_operations")
-        .map(Operations::list_operations)
-        .unwrap_or_default()
-}
-
-/// [`Operations::operations_need_volume`](Operations::operations_need_volume) on the installed engine.
-pub fn operations_need_volume(volume_id: &str) -> bool {
-    super::super::installed_for("operations_need_volume").is_some_and(|ops| ops.operations_need_volume(volume_id))
-}
-
-/// [`Operations::cancel_operation`](Operations::cancel_operation) on the installed engine.
-pub fn cancel_operation(operation_id: &str) {
-    if let Some(ops) = super::super::installed_for("cancel_operation") {
-        ops.cancel_operation(operation_id);
-    }
-}
-
-/// [`Operations::cancel_operations`](Operations::cancel_operations) on the installed engine.
-pub fn cancel_operations(operation_ids: &[String]) {
-    if let Some(ops) = super::super::installed_for("cancel_operations") {
-        ops.cancel_operations(operation_ids);
-    }
-}
-
-/// [`Operations::pause_operation`](Operations::pause_operation) on the installed engine.
-pub fn pause_operation(operation_id: &str) -> PauseOutcome {
-    super::super::installed_for("pause_operation")
-        .map_or(PauseOutcome::NotApplicable, |ops| ops.pause_operation(operation_id))
-}
-
-/// [`Operations::resume_operation`](Operations::resume_operation) on the installed engine.
-pub fn resume_operation(operation_id: &str) -> PauseOutcome {
-    super::super::installed_for("resume_operation")
-        .map_or(PauseOutcome::NotApplicable, |ops| ops.resume_operation(operation_id))
-}
-
-/// [`Operations::pause_all`](Operations::pause_all) on the installed engine.
-pub fn pause_all() -> PauseAllOutcome {
-    super::super::installed_for("pause_all")
-        .map(Operations::pause_all)
-        .unwrap_or_default()
-}
-
-/// [`Operations::resume_all`](Operations::resume_all) on the installed engine.
-pub fn resume_all() -> PauseAllOutcome {
-    super::super::installed_for("resume_all")
-        .map(Operations::resume_all)
-        .unwrap_or_default()
-}
-
-/// [`Operations::move_queued_operation`](Operations::move_queued_operation) on the installed engine.
-pub fn move_queued_operation(operation_id: &str, direction: QueueMoveDirection) -> QueueMoveOutcome {
-    super::super::installed_for("move_queued_operation").map_or(QueueMoveOutcome::NotQueued, |ops| {
-        ops.move_queued_operation(operation_id, direction)
-    })
-}
-
-/// [`Operations::place_queued_operation`](Operations::place_queued_operation) on the installed engine.
-pub fn place_queued_operation(operation_id: &str, position: u32) -> QueueMoveOutcome {
-    super::super::installed_for("place_queued_operation").map_or(QueueMoveOutcome::NotQueued, |ops| {
-        ops.place_queued_operation(operation_id, position)
-    })
-}
-
-/// [`Operations::dismiss_failed_operation`](Operations::dismiss_failed_operation) on the installed engine.
-pub fn dismiss_failed_operation(operation_id: &str) {
-    if let Some(ops) = super::super::installed_for("dismiss_failed_operation") {
-        ops.dismiss_failed_operation(operation_id);
-    }
-}
-
-/// [`Operations::dismiss_all_failed_operations`](Operations::dismiss_all_failed_operations) on the installed engine.
-pub fn dismiss_all_failed_operations() {
-    if let Some(ops) = super::super::installed_for("dismiss_all_failed_operations") {
-        ops.dismiss_all_failed_operations();
     }
 }

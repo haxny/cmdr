@@ -1593,6 +1593,52 @@ record the decision.
 `testing`; lanes: `desktop-rust-tests`, `desktop-rust-clippy`, `desktop-bindings-fresh`,
 `desktop-rust-discarded-outcome`.
 
+**What landed differently** (recorded at execution):
+
+- **First, behavior change 4** (`07f149d5d`, the fresh compress announces its zip and temp; the lead's ruling).
+- **The app's one accessor.** Every app caller does `operations_host::operations()` and calls a method. The engine has
+  no slot (`INSTALLED`, `install`, `installed_for`, `not_installed`, `instant_not_installed` are gone) and knows nothing
+  about installs. Before `install`, `operations()` raises the one `log_error!` and each caller answers what the deleted
+  shim did: `refuse_not_installed` (`IoError`), `refuse_instant_not_installed` (`ArchiveEditNotReady`),
+  `refuse_scan_preview_not_installed` (an immediate error event), `UndoReport::all_refused`, or the "nothing running"
+  answer (empty list, nothing busy, `UnknownOperation`, `NotApplicable`, `NotQueued`, `NothingToRetry`). Quit keeps
+  `cancel_all` → `abort_all` → `flush_in_flight_temps` (`TauriQuitHost`'s three methods, each through `operations()`).
+- **Free functions that were shims became methods**: `unregistered_source_error`, `start_renames` (already one; its shim
+  went), and the `cfg(test)` starters the suites called by name (`compress_start`, `route_archive_*`,
+  `archive_edit_start`, `copy_between_volumes`, `copy_files_start`, `start_bulk_rename`). Suites call
+  `installed().<method>` (the shared engine, `// shim: removed in M7b–M7e`), which now holds its own `cfg(test)` / bench
+  `OnceLock`.
+- **Found while removing them:** `trash_files_start` freed its preview through the INSTALLED engine's
+  `cancel_scan_preview`, not its own; it calls `self.cancel_scan_preview` now (one engine in production, so no change
+  there).
+- **`register_external_volume_op` / `release_external_volume_op` take an `&OperationId`.**
+- **The public list** is the root's `pub use` / `pub(crate) use` block: 82 items (33 of them wire vocabulary from
+  `types`), plus the root-defined `Operations` and the public `host` module; every other submodule is private,
+  `rollback` included (its `UndoReport` is on the list). Six wire types only hand-built test payloads used
+  (`CancelRollback`, `ProgressAxis`, `SourcesGoneNext`, `TransferWaitReason`, …) moved to `testing`. The
+  `file_system/mod.rs` engine facade is gone; `lib.rs` still re-exports the feature-gated `transfer_bench` door, which
+  M8b replaces.
+- **`testing`** (`write_operations/testing.rs`, `cfg(test)`): 14 items, what app-side cells reach (`installed`,
+  `QueuedOperationFixture`, `CollectorEventSink`, `WriteOperationState`, `SEARCH_LEAF_CAP`, `MutationSettledOutcome`,
+  `retain_bound_sources`, `TransferTreeAncestor`, the four wire types above, `smb_test_support`, and `retain_failure`).
+  **Decision on counting:** `index-crate-isolation.go` counts `testing`-gated items apart and reports them as
+  `(+N gated)` with no ceiling, so the list's size is a review question, not a lane's. The bench's five entry points
+  join it at M8b, when the bench moves and actually reaches through it; re-exporting them now would be unused under
+  `cfg(test)`. `backend_suites/` still reach internals through `super::super` (M7f re-points them).
+- **Doc links:** two command doc comments that feed `bindings.ts` still name the old free functions; to keep
+  `bindings.ts` byte-identical, `check_rename_permission` carries a reasoned `#[allow(rustdoc::broken_intra_doc_links)]`
+  and `scan_volume_for_conflicts`' text is unchanged. Both join M9's comment-only wire fixes, with `write_ops.rs`'s
+  `create_directory` doc (`write_operations::create`). `OperationSnapshot`'s field docs link to `OperationDescriptor`
+  through a `#[cfg(doc)]` import at the root, for the same reason.
+- **Lane fixes from the one full `pnpm check`**, none in code this milestone wrote: `cancellable.rs`'s detached cleanups
+  got `allowed-discarded-outcome`, `journal.rs`'s stale opt-out went, `host/testing.rs`'s three fakes got `DEFAULT-OK`,
+  `tests.rs`'s scan-count message got `allowed-pluralize-noun`, and two `jscpd-rust` pairs (`copy_into` ↔ `move_out`,
+  `move` ↔ `move_same`, both the `enter_managed_op` TODO) went up one line each. `osv` reports `zip@4.6.1`
+  (RUSTSEC-2026-0367/0368/0369, fixed in 9.0.0): a dependency bump, not this effort's.
+- Lanes: one plain `pnpm check` (`rust-tests` green, two load-starved cells outside the engine passed alone), then the
+  failed lanes plus `desktop-rust-clippy`, `desktop-bindings-fresh`, and `desktop-rust-module-cycles` green; the bench
+  `cargo check` green.
+
 ### M7f: The backend suites move app-side, over the `testing` list (runs right after M7a)
 
 **Scope.** `git mv` `backend_suites/` to `operations_host/backend_suites/` while the engine is still in the app crate,

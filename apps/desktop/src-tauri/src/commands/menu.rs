@@ -338,9 +338,9 @@ pub fn show_breadcrumb_context_menu<R: Runtime>(
     let app = window.app_handle();
     // Disable the eject item while a write op touches this volume or its eject is
     // still running (the picker's inline eject button is disabled the same way).
-    let eject_busy = eject_volume_id
-        .as_ref()
-        .is_some_and(|id| crate::file_system::busy_volume_ids().contains(id) || is_ejecting(id));
+    let eject_busy = eject_volume_id.as_ref().is_some_and(|id| {
+        crate::operations_host::operations().is_ok_and(|ops| ops.busy_volume_ids().contains(id)) || is_ejecting(id)
+    });
     let detach_word = eject_volume_id
         .as_deref()
         .map_or(DetachWord::Eject, DetachWord::for_volume_id);

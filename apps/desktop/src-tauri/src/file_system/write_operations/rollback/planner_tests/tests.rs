@@ -15,6 +15,7 @@ use std::path::Path;
 use std::sync::Arc;
 
 use super::test_support::*;
+use crate::file_system::write_operations::installed;
 use crate::file_system::write_operations::rollback::Reversal;
 use cmdr_fs::volume::{InMemoryVolume, Volume};
 use cmdr_operation_log::rollback::*;
@@ -635,7 +636,7 @@ async fn cancel_stops_and_keeps_what_was_reversed() {
     );
     // Stop it before it starts, the way the queue window would.
     let reversal = Reversal::new("cancel-before-any-item");
-    crate::file_system::write_operations::cancel_write_operation(reversal.op_id(), false);
+    installed().cancel_write_operation(reversal.op_id(), false);
     let report = rig.rollback_driven_by("op", "inv-1", &reversal).await;
     assert!(report.canceled);
     assert_eq!(report.reversed, 0, "canceled before any item ran");

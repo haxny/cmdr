@@ -51,11 +51,7 @@ mod transfer_error;
 
 // The public surface. Everything else in here is an implementation detail of
 // `volume/`; add a re-export rather than widening a submodule's visibility.
-// The cross-volume starters are `Operations` methods; this one is the installed
-// engine's, for the suites that drive it directly.
-#[cfg(test)]
-pub(crate) use copy::copy_between_volumes;
-
+// The cross-volume starters are `Operations` methods.
 pub(crate) use copy::copy_volumes_with_progress;
 pub(in crate::file_system::write_operations) use displaced_destination::displace_destination;
 /// The cross-volume copy body, reused as the extract phase of an out-of-zip
@@ -69,8 +65,6 @@ pub(in crate::file_system::write_operations) use move_file::move_file_across_vol
 pub(in crate::file_system::write_operations) use source_sweep::{CarriedSource, stamp_source, sweep_carried_source};
 /// Pull a remote path down to a local scratch copy (remote zip edits).
 pub(in crate::file_system::write_operations) use strategy::pull_path_to_local;
-/// The same refusal for a source, reachable from outside the engine.
-pub(crate) use transfer_error::unregistered_source_error;
 /// The refusal for a volume id the registry had nothing for, shared by the
 /// transfer routing and the volume delete so both name an unconnected phone or
 /// server the same way.

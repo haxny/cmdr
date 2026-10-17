@@ -1,10 +1,9 @@
 //! Part of `conflict_preflight.rs`, split out as a `#[path]` child so the
 //! module itself stays readable. `super::` here is `conflict_preflight`.
 
-use super::{
-    Deadline, SourceItemInput, VolumeScanError, merge_source_types_from_stats, scan_volume_for_conflicts_within,
-};
+use super::{Deadline, SourceItemInput, VolumeScanError, merge_source_types_from_stats};
 use crate::file_system::volume::manager::test_support::TestVolumeRegistration;
+use crate::file_system::write_operations::installed;
 use crate::test_support::WedgedVolume;
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::Volume;
@@ -38,7 +37,7 @@ async fn a_check_against_volumes_that_never_answer_gives_up_inside_its_budget() 
     let started = std::time::Instant::now();
     let outcome = tokio::time::timeout(
         Duration::from_secs(5),
-        scan_volume_for_conflicts_within(
+        installed().scan_volume_for_conflicts_within(
             Deadline::new(budget),
             String::from("wedged-dest"),
             vec![SourceItemInput {
@@ -95,16 +94,17 @@ async fn a_source_that_never_answers_still_lets_the_destination_answer() {
     );
 
     let budget = Duration::from_millis(900);
-    let conflicts = scan_volume_for_conflicts_within(
-        Deadline::new(budget),
-        String::from("starving-dest"),
-        vec![input("photo.jpg")],
-        dest_dir.path().to_string_lossy().into_owned(),
-        Some(String::from("starving-source")),
-        Some(vec![String::from("/media/photo.jpg")]),
-    )
-    .await
-    .expect("the destination is fine, so the check answers rather than blaming it");
+    let conflicts = installed()
+        .scan_volume_for_conflicts_within(
+            Deadline::new(budget),
+            String::from("starving-dest"),
+            vec![input("photo.jpg")],
+            dest_dir.path().to_string_lossy().into_owned(),
+            Some(String::from("starving-source")),
+            Some(vec![String::from("/media/photo.jpg")]),
+        )
+        .await
+        .expect("the destination is fine, so the check answers rather than blaming it");
 
     assert_eq!(
         conflicts.len(),
@@ -135,19 +135,20 @@ async fn a_same_folder_copy_finds_no_conflicts() {
         )) as Arc<dyn Volume>,
     );
 
-    let conflicts = scan_volume_for_conflicts_within(
-        Deadline::new(Duration::from_secs(5)),
-        String::from("self-collision-scan"),
-        vec![input("photo.jpg"), input("docs")],
-        dir.path().to_string_lossy().into_owned(),
-        Some(String::from("self-collision-scan")),
-        Some(vec![
-            dir.path().join("photo.jpg").to_string_lossy().into_owned(),
-            dir.path().join("docs").to_string_lossy().into_owned(),
-        ]),
-    )
-    .await
-    .expect("the scan answers");
+    let conflicts = installed()
+        .scan_volume_for_conflicts_within(
+            Deadline::new(Duration::from_secs(5)),
+            String::from("self-collision-scan"),
+            vec![input("photo.jpg"), input("docs")],
+            dir.path().to_string_lossy().into_owned(),
+            Some(String::from("self-collision-scan")),
+            Some(vec![
+                dir.path().join("photo.jpg").to_string_lossy().into_owned(),
+                dir.path().join("docs").to_string_lossy().into_owned(),
+            ]),
+        )
+        .await
+        .expect("the scan answers");
 
     assert!(
         conflicts.is_empty(),
@@ -180,16 +181,17 @@ async fn a_different_file_of_the_same_name_is_still_a_conflict() {
         )) as Arc<dyn Volume>,
     );
 
-    let conflicts = scan_volume_for_conflicts_within(
-        Deadline::new(Duration::from_secs(5)),
-        String::from("self-collision-scan-dest"),
-        vec![input("photo.jpg")],
-        dest_dir.path().to_string_lossy().into_owned(),
-        Some(String::from("self-collision-scan-source")),
-        Some(vec![source_dir.path().join("photo.jpg").to_string_lossy().into_owned()]),
-    )
-    .await
-    .expect("the scan answers");
+    let conflicts = installed()
+        .scan_volume_for_conflicts_within(
+            Deadline::new(Duration::from_secs(5)),
+            String::from("self-collision-scan-dest"),
+            vec![input("photo.jpg")],
+            dest_dir.path().to_string_lossy().into_owned(),
+            Some(String::from("self-collision-scan-source")),
+            Some(vec![source_dir.path().join("photo.jpg").to_string_lossy().into_owned()]),
+        )
+        .await
+        .expect("the scan answers");
 
     assert_eq!(conflicts.len(), 1, "a real clash still reaches the dialog");
     assert_eq!(conflicts[0].source_path, "photo.jpg");
@@ -216,16 +218,17 @@ async fn a_source_reached_through_a_symlinked_parent_finds_no_conflicts() {
         )) as Arc<dyn Volume>,
     );
 
-    let conflicts = scan_volume_for_conflicts_within(
-        Deadline::new(Duration::from_secs(5)),
-        String::from("self-collision-scan-symlink"),
-        vec![input("photo.jpg")],
-        real.to_string_lossy().into_owned(),
-        Some(String::from("self-collision-scan-symlink")),
-        Some(vec![link.join("photo.jpg").to_string_lossy().into_owned()]),
-    )
-    .await
-    .expect("the scan answers");
+    let conflicts = installed()
+        .scan_volume_for_conflicts_within(
+            Deadline::new(Duration::from_secs(5)),
+            String::from("self-collision-scan-symlink"),
+            vec![input("photo.jpg")],
+            real.to_string_lossy().into_owned(),
+            Some(String::from("self-collision-scan-symlink")),
+            Some(vec![link.join("photo.jpg").to_string_lossy().into_owned()]),
+        )
+        .await
+        .expect("the scan answers");
 
     assert!(
         conflicts.is_empty(),
@@ -248,16 +251,17 @@ async fn a_same_folder_copy_on_a_remote_volume_finds_no_conflicts() {
         .expect("create file");
     let _registered = TestVolumeRegistration::install("self-collision-scan-device", Arc::clone(&volume));
 
-    let conflicts = scan_volume_for_conflicts_within(
-        Deadline::new(Duration::from_secs(5)),
-        String::from("self-collision-scan-device"),
-        vec![input("photo.jpg")],
-        String::from("/photos"),
-        Some(String::from("self-collision-scan-device")),
-        Some(vec![String::from("/photos/Photo.JPG")]),
-    )
-    .await
-    .expect("the scan answers");
+    let conflicts = installed()
+        .scan_volume_for_conflicts_within(
+            Deadline::new(Duration::from_secs(5)),
+            String::from("self-collision-scan-device"),
+            vec![input("photo.jpg")],
+            String::from("/photos"),
+            Some(String::from("self-collision-scan-device")),
+            Some(vec![String::from("/photos/Photo.JPG")]),
+        )
+        .await
+        .expect("the scan answers");
 
     assert!(
         conflicts.is_empty(),
@@ -281,16 +285,17 @@ async fn a_source_from_a_case_differing_folder_is_still_a_conflict() {
     }
     let _registered = TestVolumeRegistration::install("self-collision-scan-case-parent", Arc::clone(&volume));
 
-    let conflicts = scan_volume_for_conflicts_within(
-        Deadline::new(Duration::from_secs(5)),
-        String::from("self-collision-scan-case-parent"),
-        vec![input("photo.jpg")],
-        String::from("/photos"),
-        Some(String::from("self-collision-scan-case-parent")),
-        Some(vec![String::from("/PHOTOS/photo.jpg")]),
-    )
-    .await
-    .expect("the scan answers");
+    let conflicts = installed()
+        .scan_volume_for_conflicts_within(
+            Deadline::new(Duration::from_secs(5)),
+            String::from("self-collision-scan-case-parent"),
+            vec![input("photo.jpg")],
+            String::from("/photos"),
+            Some(String::from("self-collision-scan-case-parent")),
+            Some(vec![String::from("/PHOTOS/photo.jpg")]),
+        )
+        .await
+        .expect("the scan answers");
 
     assert_eq!(
         conflicts.len(),
@@ -315,16 +320,17 @@ async fn the_same_path_on_two_volumes_is_still_a_conflict() {
     let _source_reg = TestVolumeRegistration::install("self-collision-scan-two-source", source);
     let _dest_reg = TestVolumeRegistration::install("self-collision-scan-two-dest", dest);
 
-    let conflicts = scan_volume_for_conflicts_within(
-        Deadline::new(Duration::from_secs(5)),
-        String::from("self-collision-scan-two-dest"),
-        vec![input("photo.jpg")],
-        String::from("/photos"),
-        Some(String::from("self-collision-scan-two-source")),
-        Some(vec![String::from("/photos/photo.jpg")]),
-    )
-    .await
-    .expect("the scan answers");
+    let conflicts = installed()
+        .scan_volume_for_conflicts_within(
+            Deadline::new(Duration::from_secs(5)),
+            String::from("self-collision-scan-two-dest"),
+            vec![input("photo.jpg")],
+            String::from("/photos"),
+            Some(String::from("self-collision-scan-two-source")),
+            Some(vec![String::from("/photos/photo.jpg")]),
+        )
+        .await
+        .expect("the scan answers");
 
     assert_eq!(conflicts.len(), 1, "two volumes, two items, one real clash");
 }
@@ -357,16 +363,17 @@ async fn source_stats_come_from_the_watched_pane_they_were_picked_in() {
         .insert(crate::listing_host::listings(), "pane-stat-source");
 
     // The caller's placeholder says `Burst` is a file; only a stat can correct it.
-    let conflicts = scan_volume_for_conflicts_within(
-        Deadline::new(Duration::from_secs(5)),
-        String::from("pane-stat-dest"),
-        vec![input("a.jpg"), input("Burst")],
-        String::from("/"),
-        Some(String::from("pane-stat-source")),
-        Some(vec![format!("{dir}/a.jpg"), format!("{dir}/Burst")]),
-    )
-    .await
-    .expect("the scan answers");
+    let conflicts = installed()
+        .scan_volume_for_conflicts_within(
+            Deadline::new(Duration::from_secs(5)),
+            String::from("pane-stat-dest"),
+            vec![input("a.jpg"), input("Burst")],
+            String::from("/"),
+            Some(String::from("pane-stat-source")),
+            Some(vec![format!("{dir}/a.jpg"), format!("{dir}/Burst")]),
+        )
+        .await
+        .expect("the scan answers");
 
     let burst = conflicts
         .iter()

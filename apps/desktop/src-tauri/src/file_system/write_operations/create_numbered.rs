@@ -18,30 +18,14 @@ use super::mutation_error::MutationError;
 use super::types::WriteOperationType;
 use super::unique_name::numbered_name;
 
-/// Writes `bytes` into `dir` as `<stem>.<ext>` (numbered on collision) and
-/// returns the name it took. `dir` is already tilde-expanded by the caller.
-///
-/// The write loops candidate names from `unique_name::numbered_name`, calling
-/// `Volume::create_file` (atomic O_EXCL create+write) and retrying on the typed
-/// `AlreadyExists`. Emits the create synthetic listing diff on success so the new
-/// file lands in the pane and the cursor-land plumbing works like mkfile.
-pub(crate) async fn create_numbered_file(
-    volume_id: Option<String>,
-    dir: &Path,
-    stem: &str,
-    ext: &str,
-    bytes: &[u8],
-    initiator: Initiator,
-) -> Result<String, MutationError> {
-    // shim: removed in M7a
-    super::installed_for("create_numbered_file")
-        .ok_or_else(super::instant_not_installed)?
-        .create_numbered_file(volume_id, dir, stem, ext, bytes, initiator)
-        .await
-}
-
 impl super::Operations {
-    /// See the free [`create_numbered_file`]: the same, on this engine.
+    /// Writes `bytes` into `dir` as `<stem>.<ext>` (numbered on collision) and
+    /// returns the name it took. `dir` is already tilde-expanded by the caller.
+    ///
+    /// The write loops candidate names from `unique_name::numbered_name`, calling
+    /// `Volume::create_file` (atomic O_EXCL create+write) and retrying on the typed
+    /// `AlreadyExists`. Emits the create synthetic listing diff on success so the
+    /// new file lands in the pane and the cursor-land plumbing works like mkfile.
     pub(crate) async fn create_numbered_file(
         &self,
         volume_id: Option<String>,

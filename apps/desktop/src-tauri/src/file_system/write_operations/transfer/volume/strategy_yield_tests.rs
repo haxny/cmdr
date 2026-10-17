@@ -23,7 +23,8 @@ use super::test_support::{
     YieldingSource, make_state, park_holds_at, rel_expected_bytes,
 };
 use super::*;
-use crate::file_system::write_operations::state::{OperationIntent, cancel_write_operation};
+use crate::file_system::write_operations::installed;
+use crate::file_system::write_operations::state::OperationIntent;
 use crate::file_system::write_operations::test_support::TestOperationGuard;
 use crate::file_system::write_operations::transfer::transfer_driver::{LeafProgressLedger, ObservedProgress};
 use crate::test_support::wait_until_async;
@@ -428,7 +429,7 @@ async fn auto_yield_cancel_while_yielding_keeps_no_partial() {
             // promptly (the `select!` races the foreground-idle park against cancel);
             // the next chunk then flows to on_progress, which breaks on cancel and the
             // local sink removes its in-flight temp. The cancel must not hang.
-            cancel_write_operation(&op_id, false);
+            installed().cancel_write_operation(&op_id, false);
 
             let result = tokio::time::timeout(Duration::from_secs(10), op)
                 .await

@@ -6,7 +6,7 @@
 //! standing on, which is the only way to reach the state a person reaches by
 //! leaving the policy on "Ask for each" and clicking Skip on one file.
 //!
-//! Thin adapter over `write_operations::resolve_write_conflict`, like `queue` is
+//! Thin adapter over `Operations::resolve_write_conflict`, like `queue` is
 //! over the manager: no FE action to dispatch, so no ack to invent. What it adds
 //! is honesty about the ARBITRATION. The backend answers `Resolved` /
 //! `AlreadyResolved` / `StaleAnswer` / `NoPendingConflict` / `UnknownOperation`,
@@ -24,9 +24,7 @@
 use serde_json::{Value, json};
 
 use super::{ToolError, ToolResult};
-use crate::file_system::write_operations::{
-    ConflictId, ConflictResolution, ConflictResolutionOutcome, resolve_write_conflict,
-};
+use crate::file_system::write_operations::{ConflictId, ConflictResolution, ConflictResolutionOutcome};
 
 pub async fn execute_resolve_conflict(params: &Value) -> ToolResult {
     let operation_id = params
@@ -50,7 +48,10 @@ pub async fn execute_resolve_conflict(params: &Value) -> ToolResult {
     let resolution = parse_resolution(params.get("resolution").and_then(|v| v.as_str()))?;
     let apply_to_all = params.get("applyToAll").and_then(Value::as_bool).unwrap_or(false);
 
-    let outcome = resolve_write_conflict(operation_id, conflict_id, resolution, apply_to_all);
+    // Before `install` nothing is registered, so the id is unknown.
+    let outcome = crate::operations_host::operations().map_or(ConflictResolutionOutcome::UnknownOperation, |ops| {
+        ops.resolve_write_conflict(operation_id, conflict_id, resolution, apply_to_all)
+    });
     report(operation_id, conflict_id, outcome)
 }
 

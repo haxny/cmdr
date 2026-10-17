@@ -3,7 +3,7 @@
 //! and — for an into-archive move — deletes the local sources after the commit.
 //! Also the thin in-archive delete route that builds a `{ delete }` changeset and
 //! hands it to that driver. The create/rename instant-op forks and
-//! [`route_archive_delete`] both feed this path.
+//! `Operations::route_archive_delete` both feed this path.
 
 use std::future::Future;
 use std::path::{Path, PathBuf};
@@ -229,35 +229,4 @@ impl crate::file_system::write_operations::Operations {
             operation_type: WriteOperationType::ArchiveEdit,
         })
     }
-}
-
-// The installed engine's, for the suites that drive an archive edit directly.
-// shim: removed in M7a
-
-/// [`Operations::route_archive_delete`](crate::file_system::write_operations::Operations::route_archive_delete)
-/// on the installed engine.
-#[cfg(test)]
-pub(crate) async fn route_archive_delete(
-    events: Arc<dyn OperationEventSink>,
-    sources: &[PathBuf],
-    parent_volume_id: &str,
-    progress_interval_ms: u64,
-    preview_id: Option<String>,
-) -> Result<WriteOperationStartResult, WriteOperationError> {
-    crate::file_system::write_operations::installed()
-        .route_archive_delete(events, sources, parent_volume_id, progress_interval_ms, preview_id)
-        .await
-}
-
-/// [`Operations::archive_edit_start`](crate::file_system::write_operations::Operations::archive_edit_start)
-/// on the installed engine.
-#[cfg(test)]
-pub(crate) async fn archive_edit_start(
-    events: Arc<dyn OperationEventSink>,
-    request: ArchiveEditRequest,
-    progress_interval_ms: u64,
-) -> Result<WriteOperationStartResult, WriteOperationError> {
-    crate::file_system::write_operations::installed()
-        .archive_edit_start(events, request, progress_interval_ms)
-        .await
 }

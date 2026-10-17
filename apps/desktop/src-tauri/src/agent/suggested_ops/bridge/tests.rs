@@ -16,9 +16,9 @@ use crate::agent::store::proposals::{
     GroupIntent, NewGroup, NewOp, NewSweep, ProposalOp, create_group, create_sweep, page_ops,
 };
 use crate::agent::types::{OpStatus, ProposalStatus};
+use crate::file_system::write_operations::testing::CollectorEventSink;
 use crate::file_system::write_operations::{
-    CollectorEventSink, OperationEventSink, SourceItemOutcome, WriteOperationType, WriteSettledEvent,
-    WriteSourceItemDoneEvent,
+    OperationEventSink, SourceItemOutcome, WriteOperationType, WriteSettledEvent, WriteSourceItemDoneEvent,
 };
 use crate::ignore_poison::IgnorePoison;
 use crate::test_support::TestDir;
@@ -247,11 +247,11 @@ async fn the_binding_holds_what_preflight_saw_not_what_the_agent_saw() {
     std::fs::write(&reviewed, b"edited while it waited in the queue").expect("rewrite");
 
     let sink = CollectorEventSink::new();
-    let kept = crate::file_system::write_operations::retain_bound_sources(
+    let kept = crate::file_system::write_operations::testing::retain_bound_sources(
         &sink,
         "op-1",
         WriteOperationType::Trash,
-        &crate::file_system::write_operations::WriteOperationState::new(std::time::Duration::ZERO),
+        &crate::file_system::write_operations::testing::WriteOperationState::new(std::time::Duration::ZERO),
         Some(&expected),
         sources,
     );
@@ -272,11 +272,11 @@ async fn an_untouched_source_survives_its_own_binding() {
     let expected = super::capture_expected_sources(&volume, &sources).await;
 
     let sink = CollectorEventSink::new();
-    let kept = crate::file_system::write_operations::retain_bound_sources(
+    let kept = crate::file_system::write_operations::testing::retain_bound_sources(
         &sink,
         "op-1",
         WriteOperationType::Trash,
-        &crate::file_system::write_operations::WriteOperationState::new(std::time::Duration::ZERO),
+        &crate::file_system::write_operations::testing::WriteOperationState::new(std::time::Duration::ZERO),
         Some(&expected),
         sources.clone(),
     );
@@ -296,11 +296,11 @@ async fn a_source_that_vanished_before_preflight_is_left_out_of_the_binding() {
     let expected = super::capture_expected_sources(&volume, std::slice::from_ref(&gone)).await;
 
     let sink = CollectorEventSink::new();
-    let kept = crate::file_system::write_operations::retain_bound_sources(
+    let kept = crate::file_system::write_operations::testing::retain_bound_sources(
         &sink,
         "op-1",
         WriteOperationType::Trash,
-        &crate::file_system::write_operations::WriteOperationState::new(std::time::Duration::ZERO),
+        &crate::file_system::write_operations::testing::WriteOperationState::new(std::time::Duration::ZERO),
         Some(&expected),
         vec![gone],
     );

@@ -21,6 +21,8 @@ use std::sync::{Arc, RwLock};
 use super::Operations;
 use super::host::EngineEvents;
 use super::types::{LifecycleStatus, OperationStatus, WriteOperationPhase, WriteOperationType};
+#[cfg(target_os = "macos")]
+use cmdr_operation_log::types::OperationId;
 
 #[cfg(test)]
 #[path = "status_cache_tests.rs"]
@@ -308,14 +310,15 @@ impl Operations {
     /// `#[cfg(target_os = "macos")]`. On other targets this would be dead code
     /// under `#![deny(unused)]`.
     #[cfg(target_os = "macos")]
-    pub(crate) fn register_external_volume_op(&self, op_id: &str, volume_ids: Vec<String>) {
-        self.status().register(op_id, WriteOperationType::Copy, volume_ids);
+    pub(crate) fn register_external_volume_op(&self, op_id: &OperationId, volume_ids: Vec<String>) {
+        self.status()
+            .register(op_id.as_str(), WriteOperationType::Copy, volume_ids);
     }
 
     /// Clears the busy mark registered by [`Self::register_external_volume_op`].
     #[cfg(target_os = "macos")]
-    pub(crate) fn release_external_volume_op(&self, op_id: &str) {
-        self.status().unregister(op_id);
+    pub(crate) fn release_external_volume_op(&self, op_id: &OperationId) {
+        self.status().unregister(op_id.as_str());
     }
 
     /// Returns the busy volume IDs (sorted, for a stable payload / bootstrap).
@@ -324,42 +327,4 @@ impl Operations {
     pub(crate) fn busy_volume_ids(&self) -> Vec<String> {
         self.status().busy_volume_ids()
     }
-}
-
-// The installed engine's, by free function, for callers outside the engine.
-// Before `install` nothing is running, so nothing is busy and no operation has
-// a status.
-// shim: removed in M7a
-
-/// [`Operations::register_external_volume_op`] on the installed engine. Before
-/// `install` nothing can be ejected mid-transfer either, so there's nothing to
-/// guard.
-#[cfg(target_os = "macos")]
-pub(crate) fn register_external_volume_op(op_id: &str, volume_ids: Vec<String>) {
-    if let Some(ops) = super::installed_for("register_external_volume_op") {
-        ops.register_external_volume_op(op_id, volume_ids);
-    }
-}
-
-/// [`Operations::release_external_volume_op`] on the installed engine.
-#[cfg(target_os = "macos")]
-pub(crate) fn release_external_volume_op(op_id: &str) {
-    if let Some(ops) = super::installed_for("release_external_volume_op") {
-        ops.release_external_volume_op(op_id);
-    }
-}
-
-/// [`Operations::busy_volume_ids`] on the installed engine.
-pub fn busy_volume_ids() -> Vec<String> {
-    super::installed_for("busy_volume_ids")
-        .map(Operations::busy_volume_ids)
-        .unwrap_or_default()
-}
-
-/// [`Operations::get_operation_status`] on the installed engine.
-///
-/// Returns `None` if the operation is not found (either never existed or
-/// already completed).
-pub fn get_operation_status(operation_id: &str) -> Option<OperationStatus> {
-    super::installed_for("get_operation_status")?.get_operation_status(operation_id)
 }

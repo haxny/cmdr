@@ -22,6 +22,7 @@
 use super::super::super::transfer_probe::TaskRow;
 use super::test_support::{FlakyDest, make_state};
 use super::*;
+use crate::file_system::write_operations::installed;
 use crate::file_system::write_operations::transfer::transfer_driver::LeafProgressLedger;
 use std::path::Path;
 use std::sync::Arc;
@@ -153,7 +154,7 @@ async fn a_cancel_during_the_backoff_ends_the_retries() {
             flaky_for_watcher.write_calls() >= 1
         })
         .await;
-        crate::file_system::write_operations::state::cancel_write_operation(&op_id, false);
+        installed().cancel_write_operation(&op_id, false);
     });
 
     let err = copy_one(&source, &dest, guard.state(), WriteStaging::Stage, "/a.txt")

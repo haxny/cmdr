@@ -14,7 +14,7 @@ estimator and the price table live in `crates/cmdr-s3/src/cost/`; this module wi
 ## Must-knows
 
 - ❗ **No request goes to S3 for an estimate.** The files come from the dialog's settled scan preview
-  (`write_operations::cached_cost_facts`), or F2's bounded tally; both keep every object's size and upload date for
+  (`Operations::cached_cost_facts`), or F2's bounded tally; both keep every object's size and upload date for
   exactly this.
 - ❗ **The fetch never blocks an estimate**: a lookup answers from what's in hand, and a stale table refreshes in the
   background for the next one. Cmdr's own dev, test, and capture runs never fetch (`prod_instance`).

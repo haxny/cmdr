@@ -22,11 +22,11 @@ use cmdr_operation_log::types::{ExecutionStatus, RollbackState};
 use cmdr_operation_log::writer::OperationLogWriter;
 use tokio::sync::oneshot;
 
-use super::copy_files_start;
 use super::event_sinks::{CollectorEventSink, OperationEventSink};
 use super::manager::{ManagedTaskGuard, OperationDescriptor, OperationSummaryText, manager};
 use super::state::{WriteOperationState, WriteSettledGuard};
 use super::types::{CancelRollback, LifecycleStatus, WriteOperationConfig, WriteOperationType, WriteSettledEvent};
+use crate::file_system::write_operations::installed;
 use crate::test_support::TestDir;
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::volume::LaneKey;
@@ -249,19 +249,20 @@ async fn injected_sink_receives_complete_and_settled_for_local_copy() {
     let collector = Arc::new(CollectorEventSink::new());
     let events: Arc<dyn OperationEventSink> = collector.clone();
 
-    let result = copy_files_start(
-        events,
-        vec![src_file.clone()],
-        dst_dir.to_path_buf(),
-        WriteOperationConfig::default(),
-        vec![],
-        None,
-        cmdr_operation_log::types::Initiator::User,
-        None,
-        None,
-    )
-    .await
-    .expect("copy_files_start should return Ok");
+    let result = installed()
+        .copy_files_start(
+            events,
+            vec![src_file.clone()],
+            dst_dir.to_path_buf(),
+            WriteOperationConfig::default(),
+            vec![],
+            None,
+            cmdr_operation_log::types::Initiator::User,
+            None,
+            None,
+        )
+        .await
+        .expect("copy_files_start should return Ok");
 
     // The deferred task runs asynchronously; wait until it settles.
     crate::test_support::wait_until_async(Duration::from_secs(5), "the write-settled event to arrive", || {
@@ -361,20 +362,21 @@ fn unique_lane(label: &str) -> String {
 }
 
 async fn start_copy(events: Arc<dyn OperationEventSink>, source: PathBuf, dst: &Path, lane: &str) -> String {
-    copy_files_start(
-        events,
-        vec![source],
-        dst.to_path_buf(),
-        WriteOperationConfig::default(),
-        vec![],
-        Some(vec![LaneKey::new(lane)]),
-        cmdr_operation_log::types::Initiator::User,
-        None,
-        None,
-    )
-    .await
-    .expect("copy_files_start")
-    .operation_id
+    installed()
+        .copy_files_start(
+            events,
+            vec![source],
+            dst.to_path_buf(),
+            WriteOperationConfig::default(),
+            vec![],
+            Some(vec![LaneKey::new(lane)]),
+            cmdr_operation_log::types::Initiator::User,
+            None,
+            None,
+        )
+        .await
+        .expect("copy_files_start")
+        .operation_id
 }
 
 async fn wait_settled(collector: &CollectorEventSink) {

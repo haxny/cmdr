@@ -120,15 +120,15 @@ pub async fn execute_operations_rollback<R: Runtime>(_app: &AppHandle<R>, params
     // before dispatch reached here.
     // The sink is built at the edge like every other managed op's; this edge is
     // generic over the runtime, so it takes one from the engine host's factory.
-    let events = crate::operations_host::operations()
-        .ok()
-        .and_then(|engine| engine.host().operation_sink())
+    let engine = crate::operations_host::operations()
+        .map_err(|_| ToolError::internal("the app isn't wired up to report operation progress yet"))?;
+    let events = engine
+        .host()
+        .operation_sink()
         .ok_or_else(|| ToolError::internal("the app isn't wired up to report operation progress yet"))?;
-    let outcome = tokio::task::spawn_blocking(move || {
-        crate::file_system::write_operations::rollback::dispatch_rollback(&op_id, Initiator::AiClient, events)
-    })
-    .await
-    .map_err(|e| ToolError::internal(e.to_string()))?;
+    let outcome = tokio::task::spawn_blocking(move || engine.dispatch_rollback(&op_id, Initiator::AiClient, events))
+        .await
+        .map_err(|e| ToolError::internal(e.to_string()))?;
 
     match outcome {
         Ok(dispatch) => Ok(json!({

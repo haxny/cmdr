@@ -24,7 +24,7 @@ use cmdr_fs::volume::{Volume, VolumeError};
 
 use super::super::event_sinks::CollectorEventSink;
 use super::super::seed_incoherent_scan_result_for_test;
-use super::super::state::{WriteOperationState, cancel_write_operation};
+use super::super::state::WriteOperationState;
 use super::super::transfer::volume::{FaultyOp, FaultyVolume, copy_volumes_with_progress, move_volumes_with_progress};
 use super::super::types::{ConflictResolution, VolumeCopyConfig, WriteOperationConfig};
 use super::network_gated_source_test_support::{CANCEL_PAYLOAD_BYTES, gated_reads, gated_upload};
@@ -33,6 +33,7 @@ use super::network_transfer_test_support::{
     assert_no_staging_litter, budget, clean_deep, self_describing_bytes, sha256, start_copy,
 };
 use crate::file_system::volume::manager::get_volume_manager;
+use crate::file_system::write_operations::installed;
 use crate::test_support::TestDir;
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_local::LocalPosixVolume;
@@ -405,7 +406,7 @@ pub(super) async fn a_cancelled_download_leaves_nothing_behind(remote: Arc<dyn V
         source.handed_out.load(std::sync::atomic::Ordering::SeqCst) >= 2
     })
     .await;
-    cancel_write_operation(&running.operation_id, false);
+    installed().cancel_write_operation(&running.operation_id, false);
     source.gate.add_permits(10_000);
     running.settle().await;
 

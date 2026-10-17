@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 use super::*;
 use crate::favorites::store as favorites;
-use crate::file_system::write_operations::test_support::QueuedOperationFixture;
+use crate::file_system::write_operations::testing::QueuedOperationFixture;
 use crate::network::known_shares::{AuthOptions, ConnectionMode};
 
 /// A share Cmdr mounted from `address:port`, filed under its discovery name.

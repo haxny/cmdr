@@ -88,7 +88,7 @@ async fn eject_now(volume_id: String) -> Result<EjectOutcome, EjectError> {
     // here means a race (or an MCP / automation caller); refuse rather than
     // disconnect mid-transfer and risk a truncated file. See the volume picker's
     // `volumes-busy-changed` wiring.
-    if crate::file_system::busy_volume_ids().iter().any(|id| id == volume_id) {
+    if crate::operations_host::operations().is_ok_and(|ops| ops.busy_volume_ids().iter().any(|id| id == volume_id)) {
         return Err(EjectError::Busy);
     }
 

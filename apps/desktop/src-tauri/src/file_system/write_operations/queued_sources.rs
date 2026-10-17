@@ -9,7 +9,7 @@
 //!
 //! - **Some gone**: it emits `write-sources-gone` (`AwaitingAnswer`) and parks on
 //!   `state.sources_gone` (`sources_gone_slot.rs`), holding its lanes the way a conflict prompt does.
-//!   [`continue_without_gone_sources`] carries it on with the rest, each gone
+//!   [`Operations::continue_without_gone_sources`] carries it on with the rest, each gone
 //!   source reported `Skipped` with `source_removed: true`; a cancel ends it
 //!   through the ordinary cancel path, which abandons the slot.
 //! - **All gone**: nothing to ask. It reports each source `Skipped`, emits
@@ -68,21 +68,6 @@ impl Operations {
     pub(crate) fn pending_sources_gone(&self, operation_id: &str) -> Option<WriteSourcesGoneEvent> {
         self.registry().get(operation_id)?.sources_gone.pending()
     }
-}
-
-/// [`Operations::continue_without_gone_sources`] on the installed engine; no
-/// operation is asking before `install`.
-// shim: removed in M7a
-pub fn continue_without_gone_sources(operation_id: &str) -> SourcesGoneAnswerOutcome {
-    super::installed_for("continue_without_gone_sources").map_or(SourcesGoneAnswerOutcome::UnknownOperation, |ops| {
-        ops.continue_without_gone_sources(operation_id)
-    })
-}
-
-/// [`Operations::pending_sources_gone`] on the installed engine.
-// shim: removed in M7a
-pub(crate) fn pending_sources_gone(operation_id: &str) -> Option<WriteSourcesGoneEvent> {
-    super::installed_for("pending_sources_gone")?.pending_sources_gone(operation_id)
 }
 
 /// The positions in `sources` this operation (`state`) may still touch, after

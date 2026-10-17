@@ -17,7 +17,8 @@ use super::tests::make_state;
 use super::wedge_test_support::*;
 use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
-use crate::file_system::write_operations::state::{abort_write_operation, cancel_write_operation};
+use crate::file_system::write_operations::installed;
+
 use crate::file_system::write_operations::test_support::TestOperationGuard;
 use crate::file_system::write_operations::types::CancelRollbackOutcome;
 use cmdr_fs::testing::wait_until_async;
@@ -91,7 +92,7 @@ async fn cancel_reaches_a_driver_parked_on_its_in_flight_tasks() {
     let result = tokio::select! {
         r = &mut copy => panic!("the copy must still be running: {r:?}"),
         () = wait_until_parked(&fx, 3) => {
-            cancel_write_operation(op.id(), false);
+            installed().cancel_write_operation(op.id(), false);
             tokio::time::timeout(RETURN_WITHIN, copy)
                 .await
                 .expect("a cancelled driver must return even while parked on wedged tasks")
@@ -142,7 +143,7 @@ async fn rollback_reaches_a_parked_driver_and_undoes_what_landed() {
         () = wait_until_async(WAIT, "the landed file to arrive at the destination", || {
             fx.written.load(Ordering::SeqCst) == 0 && fx.opened.load(Ordering::SeqCst) >= 4
         }) => {
-            cancel_write_operation(op.id(), true);
+            installed().cancel_write_operation(op.id(), true);
             tokio::time::timeout(RETURN_WITHIN, copy)
                 .await
                 .expect("a rolled-back driver must return even while parked on wedged tasks")
@@ -213,7 +214,7 @@ async fn a_task_that_never_winds_down_is_abandoned_at_the_deadline() {
         }) => {}
     }
 
-    cancel_write_operation(op.id(), false);
+    installed().cancel_write_operation(op.id(), false);
     tokio::time::timeout(RETURN_WITHIN, &mut copy)
         .await
         .expect("the driver must abandon a task that will not wind down")
@@ -283,7 +284,7 @@ async fn an_abort_shortens_the_drain_window_a_cancel_already_armed() {
 
     // The cancel arms the 60 s cooperative window. Nothing about these tasks can
     // end before it.
-    cancel_write_operation(op.id(), false);
+    installed().cancel_write_operation(op.id(), false);
     tokio::select! {
         r = &mut copy => panic!("the cooperative drain must still be running: {r:?}"),
         // allowed-test-sleep: a negative assertion over a window — the 60 s drain
@@ -292,7 +293,7 @@ async fn an_abort_shortens_the_drain_window_a_cancel_already_armed() {
     }
 
     let started = tokio::time::Instant::now();
-    abort_write_operation(op.id());
+    installed().abort_write_operation(op.id());
     tokio::time::timeout(RETURN_WITHIN, copy)
         .await
         .expect("the abort must shorten the drain the cancel armed")
@@ -476,7 +477,7 @@ async fn rollback_undoes_what_an_abandoned_folder_task_already_landed() {
                 && dest_inner.exists(Path::new("/folder/landed.txt")).now_or_never() == Some(true)
         }) => {}
     }
-    cancel_write_operation(op.id(), true);
+    installed().cancel_write_operation(op.id(), true);
     tokio::time::timeout(RETURN_WITHIN, &mut copy)
         .await
         .expect("the driver must abandon the wedged tasks")

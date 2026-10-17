@@ -5,6 +5,7 @@
 
 use super::test_support::*;
 use super::*;
+use crate::file_system::write_operations::installed;
 use cmdr_archive::mutator::{AddEntry, AddSource};
 
 #[tokio::test]
@@ -34,7 +35,8 @@ async fn a_successful_edit_rewrites_the_archive_and_emits_complete_then_settled(
         preview_id: None,
     };
 
-    let start = archive_edit_start(Arc::clone(&events) as Arc<dyn OperationEventSink>, request, 0)
+    let start = installed()
+        .archive_edit_start(Arc::clone(&events) as Arc<dyn OperationEventSink>, request, 0)
         .await
         .expect("start archive edit");
     assert_eq!(start.operation_type, WriteOperationType::ArchiveEdit);
@@ -86,15 +88,16 @@ async fn route_archive_delete_removes_entries_and_completes() {
     // The FE sends full paths inside the archive.
     let sources = vec![path.join("drop.txt")];
     let parent = unique_lane_id();
-    route_archive_delete(
-        Arc::clone(&events) as Arc<dyn OperationEventSink>,
-        &sources,
-        &parent,
-        0,
-        None,
-    )
-    .await
-    .expect("start delete");
+    installed()
+        .route_archive_delete(
+            Arc::clone(&events) as Arc<dyn OperationEventSink>,
+            &sources,
+            &parent,
+            0,
+            None,
+        )
+        .await
+        .expect("start delete");
 
     wait_until_async(Duration::from_secs(5), "the write-complete event", || {
         !events.complete.lock_ignore_poison().is_empty()
@@ -110,15 +113,16 @@ async fn deleting_inside_a_remote_archive_reports_its_upload() {
     let (parent_id, parent) = register_remote_zip(&archive_path, &[("keep.txt", b"keep"), ("drop.txt", b"drop")]).await;
 
     let events = Arc::new(CollectorEventSink::new());
-    route_archive_delete(
-        Arc::clone(&events) as Arc<dyn OperationEventSink>,
-        &[archive_path.join("drop.txt")],
-        &parent_id,
-        0,
-        None,
-    )
-    .await
-    .expect("start delete");
+    installed()
+        .route_archive_delete(
+            Arc::clone(&events) as Arc<dyn OperationEventSink>,
+            &[archive_path.join("drop.txt")],
+            &parent_id,
+            0,
+            None,
+        )
+        .await
+        .expect("start delete");
     wait_until_async(Duration::from_secs(5), "the write-complete event", || {
         !events.complete.lock_ignore_poison().is_empty()
     })
@@ -147,15 +151,16 @@ async fn route_archive_delete_reports_the_deleted_count_not_the_retained_count()
 
     let events = Arc::new(CollectorEventSink::new());
     let parent = unique_lane_id();
-    route_archive_delete(
-        Arc::clone(&events) as Arc<dyn OperationEventSink>,
-        &[path.join("drop.txt")],
-        &parent,
-        0,
-        None,
-    )
-    .await
-    .expect("start delete");
+    installed()
+        .route_archive_delete(
+            Arc::clone(&events) as Arc<dyn OperationEventSink>,
+            &[path.join("drop.txt")],
+            &parent,
+            0,
+            None,
+        )
+        .await
+        .expect("start delete");
 
     wait_until_async(Duration::from_secs(5), "the write-complete event", || {
         !events.complete.lock_ignore_poison().is_empty()
@@ -187,7 +192,8 @@ async fn a_missing_archive_emits_a_write_error_not_a_panic() {
         preview_id: None,
     };
 
-    archive_edit_start(Arc::clone(&events) as Arc<dyn OperationEventSink>, request, 0)
+    installed()
+        .archive_edit_start(Arc::clone(&events) as Arc<dyn OperationEventSink>, request, 0)
         .await
         .expect("start archive edit");
 
@@ -297,7 +303,8 @@ mod an_open_listing_inside_the_zip {
             preview_id: None,
         };
 
-        archive_edit_start(Arc::clone(&events) as Arc<dyn OperationEventSink>, request, 0)
+        installed()
+            .archive_edit_start(Arc::clone(&events) as Arc<dyn OperationEventSink>, request, 0)
             .await
             .expect("start archive edit");
         wait_for_complete(&events).await;
@@ -314,15 +321,16 @@ mod an_open_listing_inside_the_zip {
         .await;
         let events = Arc::new(CollectorEventSink::new());
 
-        route_archive_delete(
-            Arc::clone(&events) as Arc<dyn OperationEventSink>,
-            &[zip.path.join("drop.txt")],
-            &zip.parent,
-            0,
-            None,
-        )
-        .await
-        .expect("start delete");
+        installed()
+            .route_archive_delete(
+                Arc::clone(&events) as Arc<dyn OperationEventSink>,
+                &[zip.path.join("drop.txt")],
+                &zip.parent,
+                0,
+                None,
+            )
+            .await
+            .expect("start delete");
         wait_for_complete(&events).await;
 
         assert_eq!(zip.names(), vec!["keep.txt"]);

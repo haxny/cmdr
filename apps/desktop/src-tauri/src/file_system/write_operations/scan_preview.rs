@@ -6,7 +6,7 @@
 //!
 //! ## What a worker owes its preview
 //!
-//! Each worker ends by publishing a terminal OUTCOME through [`settle_preview`]
+//! Each worker ends by publishing a terminal OUTCOME through `settle_preview`
 //! — complete with its result, errored with the typed failure a waiting
 //! operation reports (`settle_failed_preview`), or cancelled — in the
 //! same write that retires the in-flight state. An operation waiting on the preview may not
@@ -189,53 +189,6 @@ impl Operations {
     /// [`ScanPreviews::cached_cost_facts`].
     pub(crate) fn cached_cost_facts(&self, preview_id: &str) -> Option<super::ScanCostFacts> {
         self.stores().previews().cached_cost_facts(preview_id)
-    }
-}
-
-/// [`Operations::start_scan_preview`] on the installed engine. Before
-/// `install` there is no walk: the dialog hears an error at once, the answer
-/// an engine gives a walk that couldn't start, so it never spins.
-// shim: removed in M7a
-pub fn start_scan_preview(
-    events: Arc<dyn ScanPreviewEventSink>,
-    sources: Vec<PathBuf>,
-    source_volume: Option<Arc<dyn Volume>>,
-    source_volume_id: String,
-    progress_interval_ms: u64,
-    purpose: ScanPreviewPurpose,
-) -> ScanPreviewStartResult {
-    let Some(engine) = super::installed_for("start_scan_preview") else {
-        let preview_id = Uuid::new_v4().to_string();
-        events.emit_error(ScanPreviewErrorEvent {
-            preview_id: preview_id.clone(),
-            message: "the write engine isn't ready yet".to_string(),
-            timed_out: false,
-        });
-        return ScanPreviewStartResult { preview_id };
-    };
-    engine.start_scan_preview(
-        events,
-        sources,
-        source_volume,
-        source_volume_id,
-        progress_interval_ms,
-        purpose,
-    )
-}
-
-/// [`Operations::get_scan_preview_totals`] on the installed engine; `None`
-/// before `install`, as for any preview the engine doesn't know.
-// shim: removed in M7a
-pub fn get_scan_preview_totals(preview_id: &str) -> Option<ScanPreviewTotals> {
-    super::installed_for("get_scan_preview_totals")?.get_scan_preview_totals(preview_id)
-}
-
-/// [`Operations::cancel_scan_preview`] on the installed engine; nothing to
-/// cancel before `install`.
-// shim: removed in M7a
-pub fn cancel_scan_preview(preview_id: &str) {
-    if let Some(engine) = super::installed_for("cancel_scan_preview") {
-        engine.cancel_scan_preview(preview_id);
     }
 }
 

@@ -1,11 +1,11 @@
 //! The scan preview lifecycle API: what `get_scan_preview_totals` answers.
 
+use crate::file_system::write_operations::installed;
 use std::path::PathBuf;
 
 use uuid::Uuid;
 
 use super::scan_cache::{insert_scan_result, release_preview};
-use super::scan_preview::get_scan_preview_totals;
 use super::state::{CachedScanResult, FileInfo};
 use cmdr_fs::volume::CopyScanResult;
 
@@ -56,7 +56,9 @@ fn get_scan_preview_totals_returns_cached_counts_after_complete() {
         ),
     );
 
-    let totals = get_scan_preview_totals(&preview_id).expect("totals should be present");
+    let totals = installed()
+        .get_scan_preview_totals(&preview_id)
+        .expect("totals should be present");
     assert_eq!(totals.files_total, 7);
     assert_eq!(totals.dirs_total, 2);
     assert_eq!(totals.bytes_total, 12_345);
@@ -69,5 +71,5 @@ fn get_scan_preview_totals_returns_cached_counts_after_complete() {
 #[test]
 fn get_scan_preview_totals_returns_none_for_unknown_preview() {
     let unknown = format!("nonexistent-{}", Uuid::new_v4());
-    assert!(get_scan_preview_totals(&unknown).is_none());
+    assert!(installed().get_scan_preview_totals(&unknown).is_none());
 }

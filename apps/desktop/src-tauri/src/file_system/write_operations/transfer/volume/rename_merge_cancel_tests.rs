@@ -10,7 +10,8 @@
 use super::move_same::move_within_same_volume_with_progress;
 use super::rename_merge_test_support::{exists, make_state, mkdir, write_file};
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
-use crate::file_system::write_operations::state::cancel_write_operation;
+use crate::file_system::write_operations::installed;
+
 use crate::file_system::write_operations::test_support::TestOperationGuard;
 use crate::file_system::write_operations::types::{ConflictResolution, VolumeCopyConfig, WriteOperationError};
 use cmdr_fs::entry::FileEntry;
@@ -84,7 +85,7 @@ impl Volume for CancelOnFirstRenameVolume {
             // loop iteration's `is_cancelled` recheck bails with `Cancelled`
             // while children remain — no wall clock, no race.
             if result.is_ok() && self.renames.fetch_add(1, Ordering::SeqCst) == 0 {
-                cancel_write_operation(&self.operation_id, false);
+                installed().cancel_write_operation(&self.operation_id, false);
             }
             result
         })

@@ -5,7 +5,7 @@ use crate::file_system::volume::manager::get_volume_manager;
 use crate::file_system::write_operations::archive_edit::fresh_plan::FreshPlan;
 use crate::file_system::write_operations::archive_edit::fresh_zip::{FreshZipEntry, FreshZipSource};
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
-use crate::file_system::write_operations::manager;
+use crate::file_system::write_operations::installed;
 use crate::file_system::write_operations::types::{ArchiveNameRefusal, WriteOperationPhase};
 use crate::test_support::wait_until_async;
 use cmdr_fs::ignore_poison::IgnorePoison;
@@ -457,20 +457,21 @@ impl GatedRun {
         let destination = Arc::new(GatedDestination::new(inner, gate, direct, script));
         get_volume_manager().register(&id, Arc::clone(&destination) as Arc<dyn Volume>);
         let events = Arc::new(CollectorEventSink::new());
-        let start = super::super::compress::compress_start(
-            Arc::clone(&events) as Arc<dyn OperationEventSink>,
-            source,
-            vec![PathBuf::from("big.bin")],
-            PathBuf::from("/share/archive.zip"),
-            id.clone(),
-            ConflictResolution::Overwrite,
-            0,
-            None,
-            None,
-            Initiator::User,
-        )
-        .await
-        .expect("start gated compress");
+        let start = installed()
+            .compress_start(
+                Arc::clone(&events) as Arc<dyn OperationEventSink>,
+                source,
+                vec![PathBuf::from("big.bin")],
+                PathBuf::from("/share/archive.zip"),
+                id.clone(),
+                ConflictResolution::Overwrite,
+                0,
+                None,
+                None,
+                Initiator::User,
+            )
+            .await
+            .expect("start gated compress");
         Self {
             id,
             destination,
@@ -515,7 +516,7 @@ async fn cancel_reaches_a_direct_write_held_by_a_gated_destination() {
     use std::sync::atomic::Ordering;
     let run = GatedRun::start(true, AfterFirstChunk::HoldThenReport).await;
     run.wait_at_gate().await;
-    manager::cancel_operation(&run.operation_id);
+    installed().cancel_operation(&run.operation_id);
     run.open_gate();
     wait_for_terminal(&run.events).await;
 
@@ -554,10 +555,10 @@ async fn a_destination_that_stops_reading_early_is_a_write_error_not_a_cancel() 
 async fn an_upload_failure_while_paused_reports_without_waiting_for_resume() {
     let run = GatedRun::start(false, AfterFirstChunk::HoldThenFail).await;
     run.wait_at_gate().await;
-    let _ = manager::pause_operation(&run.operation_id);
+    let _ = installed().pause_operation(&run.operation_id);
     run.open_gate();
     wait_for_terminal(&run.events).await;
-    let _ = manager::resume_operation(&run.operation_id);
+    let _ = installed().resume_operation(&run.operation_id);
 
     assert_eq!(
         run.events.errors.lock_ignore_poison().len(),
@@ -588,25 +589,26 @@ async fn cancel_reaches_a_producer_waiting_on_a_hung_remote_source() {
     std::fs::write(&archive, &original).expect("seed original");
     let events = Arc::new(CollectorEventSink::new());
 
-    let start = super::super::compress::compress_start(
-        Arc::clone(&events) as Arc<dyn OperationEventSink>,
-        source,
-        vec![PathBuf::from("/stuck.bin")],
-        archive.clone(),
-        super::super::test_support::unique_lane_id(),
-        ConflictResolution::Overwrite,
-        0,
-        None,
-        None,
-        Initiator::User,
-    )
-    .await
-    .expect("start hung-source compress");
+    let start = installed()
+        .compress_start(
+            Arc::clone(&events) as Arc<dyn OperationEventSink>,
+            source,
+            vec![PathBuf::from("/stuck.bin")],
+            archive.clone(),
+            super::super::test_support::unique_lane_id(),
+            ConflictResolution::Overwrite,
+            0,
+            None,
+            None,
+            Initiator::User,
+        )
+        .await
+        .expect("start hung-source compress");
     wait_until_async(Duration::from_secs(5), "the source read in flight", || {
         reading.load(Ordering::SeqCst)
     })
     .await;
-    manager::cancel_operation(&start.operation_id);
+    installed().cancel_operation(&start.operation_id);
     wait_for_terminal(&events).await;
 
     assert_eq!(events.cancelled.lock_ignore_poison().len(), 1, "the op ends cancelled");
@@ -645,20 +647,21 @@ async fn a_file_whose_name_holds_a_backslash_compresses_and_validates() {
     let archive = dest_dir.path().join("odd.zip");
     let events = Arc::new(CollectorEventSink::new());
 
-    super::super::compress::compress_start(
-        Arc::clone(&events) as Arc<dyn OperationEventSink>,
-        source,
-        vec![PathBuf::from("a\\b.txt")],
-        archive.clone(),
-        super::super::test_support::unique_lane_id(),
-        ConflictResolution::Overwrite,
-        0,
-        None,
-        None,
-        Initiator::User,
-    )
-    .await
-    .expect("start compress");
+    installed()
+        .compress_start(
+            Arc::clone(&events) as Arc<dyn OperationEventSink>,
+            source,
+            vec![PathBuf::from("a\\b.txt")],
+            archive.clone(),
+            super::super::test_support::unique_lane_id(),
+            ConflictResolution::Overwrite,
+            0,
+            None,
+            None,
+            Initiator::User,
+        )
+        .await
+        .expect("start compress");
     wait_for_terminal(&events).await;
 
     assert!(
@@ -686,20 +689,21 @@ async fn compress_local_selection(
     let dest_dir = tempfile::tempdir().expect("tempdir");
     let archive = dest_dir.path().join("out.zip");
     let events = Arc::new(CollectorEventSink::new());
-    super::super::compress::compress_start(
-        Arc::clone(&events) as Arc<dyn OperationEventSink>,
-        source,
-        selected.iter().map(PathBuf::from).collect(),
-        archive.clone(),
-        super::super::test_support::unique_lane_id(),
-        ConflictResolution::Overwrite,
-        0,
-        None,
-        None,
-        Initiator::User,
-    )
-    .await
-    .expect("start compress");
+    installed()
+        .compress_start(
+            Arc::clone(&events) as Arc<dyn OperationEventSink>,
+            source,
+            selected.iter().map(PathBuf::from).collect(),
+            archive.clone(),
+            super::super::test_support::unique_lane_id(),
+            ConflictResolution::Overwrite,
+            0,
+            None,
+            None,
+            Initiator::User,
+        )
+        .await
+        .expect("start compress");
     wait_for_terminal(&events).await;
     (events, dest_dir, archive)
 }

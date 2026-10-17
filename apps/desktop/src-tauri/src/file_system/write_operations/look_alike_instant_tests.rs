@@ -10,8 +10,8 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use super::create::{create_directory_core, create_file_core};
 use super::mutation_error::MutationError;
-use super::rename::{check_rename_validity_impl, rename_managed};
 use crate::file_system::volume::manager::get_volume_manager;
+use crate::file_system::write_operations::installed;
 use cmdr_fs::volume::InMemoryVolume;
 use cmdr_fs::volume::Volume;
 use cmdr_operation_log::types::Initiator;
@@ -85,15 +85,16 @@ async fn a_rename_target_goes_out_composed() {
     let (id, volume) = share("rename-new").await;
     volume.create_file(Path::new("/dir/a.txt"), b"x").await.unwrap();
 
-    rename_managed(
-        "/dir/a.txt".into(),
-        format!("/dir/{CAFE_NFD}").into(),
-        false,
-        id,
-        Initiator::User,
-    )
-    .await
-    .unwrap();
+    installed()
+        .rename_managed(
+            "/dir/a.txt".into(),
+            format!("/dir/{CAFE_NFD}").into(),
+            false,
+            id,
+            Initiator::User,
+        )
+        .await
+        .unwrap();
 
     assert_eq!(names_in(&volume, "/dir").await, vec![CAFE_NFC.to_string()]);
 }
@@ -107,14 +108,15 @@ async fn a_rename_onto_a_look_alike_is_refused_unless_forced_and_then_replaces_i
         .await
         .unwrap();
 
-    let refused = rename_managed(
-        "/dir/a.txt".into(),
-        format!("/dir/{CAFE_NFC}").into(),
-        false,
-        id.clone(),
-        Initiator::User,
-    )
-    .await;
+    let refused = installed()
+        .rename_managed(
+            "/dir/a.txt".into(),
+            format!("/dir/{CAFE_NFC}").into(),
+            false,
+            id.clone(),
+            Initiator::User,
+        )
+        .await;
     assert!(
         matches!(refused, Err(MutationError::AlreadyExists { .. })),
         "{refused:?}"
@@ -123,15 +125,16 @@ async fn a_rename_onto_a_look_alike_is_refused_unless_forced_and_then_replaces_i
     both.sort();
     assert_eq!(names_in(&volume, "/dir").await, both);
 
-    rename_managed(
-        "/dir/a.txt".into(),
-        format!("/dir/{CAFE_NFC}").into(),
-        true,
-        id,
-        Initiator::User,
-    )
-    .await
-    .unwrap();
+    installed()
+        .rename_managed(
+            "/dir/a.txt".into(),
+            format!("/dir/{CAFE_NFC}").into(),
+            true,
+            id,
+            Initiator::User,
+        )
+        .await
+        .unwrap();
     assert_eq!(
         names_in(&volume, "/dir").await,
         vec![CAFE_NFD.to_string()],
@@ -149,20 +152,22 @@ async fn respelling_a_name_is_not_a_clash_with_itself() {
         .await
         .unwrap();
 
-    let validity = check_rename_validity_impl("/dir".into(), CAFE_NFD.into(), CAFE_NFC.into(), id.clone())
+    let validity = installed()
+        .check_rename_validity_impl("/dir".into(), CAFE_NFD.into(), CAFE_NFC.into(), id.clone())
         .await
         .priced(|_| false);
     assert!(!validity.has_conflict, "the only look-alike is the file itself");
 
-    rename_managed(
-        format!("/dir/{CAFE_NFD}").into(),
-        format!("/dir/{CAFE_NFC}").into(),
-        false,
-        id,
-        Initiator::User,
-    )
-    .await
-    .unwrap();
+    installed()
+        .rename_managed(
+            format!("/dir/{CAFE_NFD}").into(),
+            format!("/dir/{CAFE_NFC}").into(),
+            false,
+            id,
+            Initiator::User,
+        )
+        .await
+        .unwrap();
     assert_eq!(names_in(&volume, "/dir").await, vec![CAFE_NFC.to_string()]);
 }
 
@@ -177,7 +182,8 @@ async fn the_live_rename_check_reports_a_look_alike() {
         .await
         .unwrap();
 
-    let validity = check_rename_validity_impl("/dir".into(), "a.txt".into(), CAFE_NFC.into(), id)
+    let validity = installed()
+        .check_rename_validity_impl("/dir".into(), "a.txt".into(), CAFE_NFC.into(), id)
         .await
         .priced(|_| false);
 
@@ -197,7 +203,8 @@ async fn the_live_rename_check_reports_the_name_a_typed_one_composes_onto() {
         .await
         .unwrap();
 
-    let validity = check_rename_validity_impl("/dir".into(), "a.txt".into(), CAFE_NFD.into(), id)
+    let validity = installed()
+        .check_rename_validity_impl("/dir".into(), "a.txt".into(), CAFE_NFD.into(), id)
         .await
         .priced(|_| false);
 

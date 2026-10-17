@@ -21,10 +21,10 @@ Per-file function inventory and decision rationale. `CLAUDE.md` holds the must-k
   `target: "refresh_listing"` on short-circuit.
   `write_ops.rs`: create, copy, move, delete, trash, scan preview, conflict resolution, synthetic diff helpers.
   `volume_copy.rs`: cross-volume copy/move/compress/scan. The three transfer commands are pass-throughs that build the
-  `TauriEventSink` and hand everything to `write_operations::start_volume_{copy, move, compress}`, which own the volume
+  `TauriEventSink` and hand everything to `Operations::start_volume_{copy, move, compress}`, which own the volume
   + destination-path resolution and the archive forks so a backend caller reaches the same routing
   (`../file_system/write_operations/DETAILS.md` § "Routing a transfer"). `scan_volume_for_conflicts` is itself a thin
-  wrapper around `write_operations::conflict_preflight::scan_volume_for_conflicts_within`, which owns the whole
+  wrapper around `Operations::scan_volume_for_conflicts_within` (`conflict_preflight.rs`), which owns the whole
   budgeted pre-flight check (`VolumeScanError`, `SourceItemInput`, the source-stat/self-collision machinery):
   `../file_system/write_operations/DETAILS.md` § "The pre-flight conflict check". `stat.rs`:
   `stat_paths_kinds(paths) -> TimedOut<Vec<Option<bool>>>`, a batched top-level "is this a directory?" probe for the
@@ -221,7 +221,7 @@ Per-file function inventory and decision rationale. `CLAUDE.md` holds the must-k
 - **`logging.rs`**: `batch_fe_logs` (forwards batched frontend log entries into the fern logger) and `set_log_level`.
 - **`icons.rs`**: `get_icons`, `get_custom_folder_icon_ids` (visible-range custom-folder detection),
   `refresh_directory_icons`, cache clear.
-- **`rename.rs`**: `move_to_trash` (delegates to `write_operations::trash::move_to_trash_sync`),
+- **`rename.rs`**: `move_to_trash` (delegates to `Operations::trash_single_journaled`, over `move_to_trash_sync`),
   `check_rename_permission`, `check_rename_validity`, `rename_file`. `rename_file` calls `notify_mutation` after success
   to update the listing cache (both local and volume-aware paths). ❗ `check_rename_validity` and
   `check_rename_permission` stay UNMANAGED: they answer while someone is typing, so they take the snappy read-only path
@@ -432,7 +432,7 @@ Its four pre-turn gates (no agent store, consent not accepted, no resolvable pro
 one-turn floor) are also the ONLY account of the Ask Cmdr funnel's top, because none of them reach `run_turn`. That's
 why `AskCmdrSendRefusal` has two constructors and no struct literal: `of` and `detailed` both report the anonymous
 `ask_cmdr_turn` refusal, and a literal would silently lose the gate. `agent/chat/DETAILS.md` § The turn event. `apply_bulk_rename` consumes an exact accepted preflight then delegates
-the batch to `write_operations::start_bulk_rename`; it never accepts frontend paths or model approval.
+the batch to `Operations::start_renames`; it never accepts frontend paths or model approval.
 
 **One commands file per domain, no business logic in commands.** Tauri command functions are the IPC boundary
 (deserialization, state extraction, error mapping). Mixing business logic here makes it untestable (Tauri commands need

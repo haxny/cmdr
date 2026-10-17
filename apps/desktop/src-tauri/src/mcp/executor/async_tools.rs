@@ -4,7 +4,7 @@ use serde_json::{Value, json};
 use tauri::{AppHandle, Manager, Runtime};
 
 use super::{PaneStateStore, ToolError, ToolResult, mcp_round_trip};
-use crate::file_system::write_operations::{LifecycleStatus, WriteOperationType};
+use crate::file_system::write_operations::{LifecycleStatus, Operations, WriteOperationType};
 use crate::mcp::pane_state::{PaneListing, PaneState};
 use crate::mcp::resources::indexing::freshness_token;
 use crate::mcp::terminal_ops::{self, TerminalStatus};
@@ -325,7 +325,9 @@ async fn await_operation_complete(params: &Value, timeout_s: u64) -> ToolResult 
 
     loop {
         let terminal = terminal_ops::lookup(operation_id);
-        let is_live = crate::file_system::list_operations()
+        let is_live = crate::operations_host::operations()
+            .map(Operations::list_operations)
+            .unwrap_or_default()
             .iter()
             .any(|op| op.operation_id == operation_id);
         match classify_operation_complete(terminal.as_ref().map(|op| op.status), is_live) {
@@ -365,7 +367,9 @@ async fn await_operations_idle(timeout_s: u64) -> ToolResult {
 
     loop {
         polls += 1;
-        let snapshot: Vec<(String, LifecycleStatus)> = crate::file_system::list_operations()
+        let snapshot: Vec<(String, LifecycleStatus)> = crate::operations_host::operations()
+            .map(Operations::list_operations)
+            .unwrap_or_default()
             .iter()
             .map(|op| (op.operation_id.clone(), op.status))
             .collect();

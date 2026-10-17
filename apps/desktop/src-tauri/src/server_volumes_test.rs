@@ -1,6 +1,7 @@
 //! Which server a remote path belongs to, and the one thing asking must never
 //! do: connect.
 
+use crate::file_system::write_operations::testing::installed;
 use std::time::Duration;
 
 use super::*;
@@ -178,8 +179,8 @@ async fn listing_a_saved_server_nobody_connected_says_it_is_not_connected() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_copy_onto_a_saved_server_nobody_connected_is_refused_as_not_connected() {
     use crate::file_system::volume::manager::get_volume_manager;
-    use crate::file_system::write_operations::CollectorEventSink;
-    use crate::file_system::{VolumeCopyConfig, WriteOperationError, start_volume_copy};
+    use crate::file_system::write_operations::testing::CollectorEventSink;
+    use crate::file_system::write_operations::{VolumeCopyConfig, WriteOperationError};
     use cmdr_local::LocalPosixVolume;
     use cmdr_operation_log::types::Initiator;
 
@@ -197,18 +198,19 @@ async fn a_copy_onto_a_saved_server_nobody_connected_is_refused_as_not_connected
         )),
     );
 
-    let refused = start_volume_copy(
-        std::sync::Arc::new(CollectorEventSink::new()),
-        source_id.clone(),
-        vec![std::path::PathBuf::from("notes.txt")],
-        cmdr_fs::volume::sftp_volume_id(host, 2222, "ada"),
-        format!("sftp://ada@{host}:2222/srv/data/photos"),
-        VolumeCopyConfig::default(),
-        Initiator::User,
-        None,
-    )
-    .await
-    .expect_err("a copy onto a saved server nobody connected is refused");
+    let refused = installed()
+        .start_volume_copy(
+            std::sync::Arc::new(CollectorEventSink::new()),
+            source_id.clone(),
+            vec![std::path::PathBuf::from("notes.txt")],
+            cmdr_fs::volume::sftp_volume_id(host, 2222, "ada"),
+            format!("sftp://ada@{host}:2222/srv/data/photos"),
+            VolumeCopyConfig::default(),
+            Initiator::User,
+            None,
+        )
+        .await
+        .expect_err("a copy onto a saved server nobody connected is refused");
     get_volume_manager().unregister(&source_id);
 
     assert!(

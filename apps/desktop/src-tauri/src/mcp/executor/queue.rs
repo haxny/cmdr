@@ -14,12 +14,16 @@
 use serde_json::{Value, json};
 
 use super::{ToolError, ToolResult};
-use crate::file_system::write_operations::{LifecycleStatus, SourcesGoneAnswerOutcome, continue_without_gone_sources};
-use crate::file_system::{
-    OperationSnapshot, PauseAllOutcome, PauseOutcome, cancel_operation, cancel_operations, cancel_write_operation,
-    list_operations, pause_all, pause_operation, resume_all, resume_operation,
+use crate::file_system::write_operations::{
+    LifecycleStatus, OperationSnapshot, Operations, PauseAllOutcome, PauseOutcome, SourcesGoneAnswerOutcome,
 };
 use crate::pluralize::pluralize;
+
+/// The app's engine, or `None` before `install`, where every answer is what an
+/// engine with nothing running gives.
+fn engine() -> Option<&'static Operations> {
+    crate::operations_host::operations().ok()
+}
 
 pub async fn execute_queue(params: &Value) -> ToolResult {
     let action = params
@@ -28,23 +32,38 @@ pub async fn execute_queue(params: &Value) -> ToolResult {
         .ok_or_else(|| ToolError::invalid_params("Missing 'action' parameter"))?;
 
     match action {
-        "pause_all" => Ok(json!(pause_all_reply(pause_all()))),
-        "resume_all" => Ok(json!(resume_all_reply(resume_all()))),
+        "pause_all" => Ok(json!(pause_all_reply(
+            engine().map(Operations::pause_all).unwrap_or_default()
+        ))),
+        "resume_all" => Ok(json!(resume_all_reply(
+            engine().map(Operations::resume_all).unwrap_or_default()
+        ))),
         "pause" => {
             let id = require_operation_id(params)?;
             require_operation_exists(&id)?;
-            pause_reply(&id, pause_operation(&id))
+            pause_reply(
+                &id,
+                engine().map_or(PauseOutcome::NotApplicable, |ops| ops.pause_operation(&id)),
+            )
         }
         "resume" => {
             let id = require_operation_id(params)?;
             require_operation_exists(&id)?;
-            resume_reply(&id, resume_operation(&id))
+            resume_reply(
+                &id,
+                engine().map_or(PauseOutcome::NotApplicable, |ops| ops.resume_operation(&id)),
+            )
         }
         "cancel" => execute_cancel(params),
         "continue_without_gone" => {
             let id = require_operation_id(params)?;
             require_operation_exists(&id)?;
-            continue_reply(&id, continue_without_gone_sources(&id))
+            continue_reply(
+                &id,
+                engine().map_or(SourcesGoneAnswerOutcome::UnknownOperation, |ops| {
+                    ops.continue_without_gone_sources(&id)
+                }),
+            )
         }
         other => Err(ToolError::invalid_params(format!(
             "action must be 'pause', 'resume', 'cancel', 'continue_without_gone', 'pause_all', or 'resume_all' (got '{other}')"
@@ -220,7 +239,9 @@ fn execute_cancel(params: &Value) -> ToolResult {
                 "rollback is only supported for a single operationId, not operationIds",
             ));
         }
-        cancel_operations(&ids);
+        if let Some(ops) = engine() {
+            ops.cancel_operations(&ids);
+        }
         let summary = pluralize(ids.len() as u64, "operation");
         return Ok(json!(format!("OK: Cancelled {summary} (kept already-copied files).")));
     }
@@ -228,12 +249,16 @@ fn execute_cancel(params: &Value) -> ToolResult {
     let id = require_operation_id(params)?;
     require_operation_exists(&id)?;
     if rollback {
-        cancel_write_operation(&id, true);
+        if let Some(ops) = engine() {
+            ops.cancel_write_operation(&id, true);
+        }
         Ok(json!(format!(
             "OK: Cancelled operation {id} and rolled back (deleted already-copied files)."
         )))
     } else {
-        cancel_operation(&id);
+        if let Some(ops) = engine() {
+            ops.cancel_operation(&id);
+        }
         Ok(json!(format!(
             "OK: Cancelled operation {id} (kept already-copied files)."
         )))
@@ -253,7 +278,8 @@ fn require_operation_id(params: &Value) -> Result<String, ToolError> {
 /// Benign race: an op that settles between this check and the call would have
 /// been a no-op anyway.
 fn require_operation_exists(operation_id: &str) -> Result<(), ToolError> {
-    if is_controllable(&list_operations(), operation_id) {
+    let operations = engine().map(Operations::list_operations).unwrap_or_default();
+    if is_controllable(&operations, operation_id) {
         Ok(())
     } else {
         Err(ToolError::invalid_params(format!(
@@ -278,9 +304,8 @@ fn is_controllable(operations: &[OperationSnapshot], operation_id: &str) -> bool
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::file_system::dismiss_failed_operation;
-    use crate::file_system::write_operations::test_support::QueuedOperationFixture;
-    use crate::file_system::write_operations::{WriteOperationError, WriteOperationType, test_retain_failure};
+    use crate::file_system::write_operations::testing::{QueuedOperationFixture, installed, retain_failure};
+    use crate::file_system::write_operations::{WriteOperationError, WriteOperationType};
 
     fn row(operation_id: &str, status: LifecycleStatus) -> OperationSnapshot {
         OperationSnapshot {
@@ -299,12 +324,12 @@ mod tests {
 
     /// A retained failure parked in the PROCESS-GLOBAL manager, dropped again on
     /// `Drop` so a failing assertion can't leave it behind for a sibling test
-    /// (the reasoning behind `write_operations::test_support::TestOperationGuard`).
+    /// (the reasoning behind `write_operations::testing::TestOperationGuard`).
     struct RetainedFailureGuard(String);
 
     impl RetainedFailureGuard {
         fn record(operation_id: &str) -> Self {
-            test_retain_failure(
+            retain_failure(
                 operation_id,
                 WriteOperationType::Copy,
                 &WriteOperationError::IoError {
@@ -318,7 +343,7 @@ mod tests {
 
     impl Drop for RetainedFailureGuard {
         fn drop(&mut self) {
-            dismiss_failed_operation(&self.0);
+            installed().dismiss_failed_operation(&self.0);
         }
     }
 
@@ -509,7 +534,7 @@ mod tests {
         // would wave it through and the tool would answer "OK: Cancelled …" for an
         // operation that ended minutes ago.
         assert!(
-            list_operations().iter().any(|op| op.operation_id == id),
+            installed().list_operations().iter().any(|op| op.operation_id == id),
             "the retained failure should be on the snapshot"
         );
         assert!(require_operation_exists(&id).is_err(), "the guard must refuse it");

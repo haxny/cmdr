@@ -25,7 +25,9 @@ pub async fn eject_volume(volume_id: String) -> Result<EjectOutcome, EjectError>
 #[tauri::command]
 #[specta::specta]
 pub fn get_busy_volume_ids() -> Vec<String> {
-    crate::file_system::busy_volume_ids()
+    crate::operations_host::operations()
+        .map(crate::file_system::write_operations::Operations::busy_volume_ids)
+        .unwrap_or_default()
 }
 
 /// Returns the IDs of volumes whose eject is still running. The volume picker

@@ -7,8 +7,8 @@
 
 use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
+use crate::file_system::write_operations::installed;
 use crate::file_system::write_operations::ledger::{WrittenFile, WrittenIdentity};
-use crate::file_system::write_operations::state::cancel_write_operation;
 use crate::file_system::write_operations::test_support::TestOperationGuard;
 use crate::file_system::write_operations::transfer_tree::TreeLeaf;
 
@@ -663,7 +663,7 @@ fn a_stopped_reversal_leaves_the_ledger_claiming_what_is_still_on_disk() {
         .collect();
 
     // Rolling back, and the user stops the reversal once it reports progress.
-    cancel_write_operation(guard.id(), true);
+    installed().cancel_write_operation(guard.id(), true);
     let events = StopTheReversalSink {
         inner: CollectorEventSink::new(),
         operation_id: guard.id().to_string(),
@@ -724,7 +724,7 @@ impl OperationEventSink for StopTheReversalSink {
     }
     fn emit_progress(&self, event: WriteProgressEvent) {
         if event.phase == WriteOperationPhase::RollingBack && event.current_file.is_some() {
-            cancel_write_operation(&self.operation_id, false);
+            installed().cancel_write_operation(&self.operation_id, false);
         }
         self.inner.emit_progress(event);
     }

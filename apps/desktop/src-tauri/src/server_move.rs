@@ -319,7 +319,7 @@ pub async fn edit_s3_account(account_id: &str, name: &str, endpoint: Option<S3Pr
 fn operations_need_any(places: &[&str]) -> bool {
     places
         .iter()
-        .any(|place| crate::file_system::operations_need_volume(place))
+        .any(|place| crate::operations_host::operations().is_ok_and(|ops| ops.operations_need_volume(place)))
 }
 
 /// Marks `places` as left behind at the old address, once the store holds the

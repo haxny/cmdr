@@ -93,46 +93,6 @@ pub(crate) async fn route_archive_copy_into(
         .await
 }
 
-/// [`Operations::route_archive_copy_into_with_provenance`](crate::file_system::write_operations::Operations::route_archive_copy_into_with_provenance)
-/// on the installed engine, for the suites that drive it directly.
-// shim: removed in M7a
-#[cfg(test)]
-#[allow(
-    clippy::too_many_arguments,
-    reason = "same seam as route_archive_copy_into plus provenance"
-)]
-pub(crate) async fn route_archive_copy_into_with_provenance(
-    events: Arc<dyn OperationEventSink>,
-    source_volume: Arc<dyn Volume>,
-    source_paths: Vec<PathBuf>,
-    dest_full_path: PathBuf,
-    parent_volume_id: String,
-    conflict: ConflictResolution,
-    progress_interval_ms: u64,
-    is_move: bool,
-    compression_level: Option<i64>,
-    preview_id: Option<String>,
-    prov: super::super::journal::ArchiveProvenance,
-    destination_name: Option<String>,
-) -> Result<WriteOperationStartResult, WriteOperationError> {
-    crate::file_system::write_operations::installed()
-        .route_archive_copy_into_with_provenance(
-            events,
-            source_volume,
-            source_paths,
-            dest_full_path,
-            parent_volume_id,
-            conflict,
-            progress_interval_ms,
-            is_move,
-            compression_level,
-            preview_id,
-            prov,
-            destination_name,
-        )
-        .await
-}
-
 impl crate::file_system::write_operations::Operations {
     /// Routes a transfer into an archive with explicit [`ArchiveProvenance`](super::super::journal::ArchiveProvenance), so
     /// the compress driver can supply `subkind = compress` + the net-new flag the

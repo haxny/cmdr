@@ -5,9 +5,7 @@
 //! manifest is assembled. Nothing here writes to logs or disk.
 
 use crate::file_system::volume::friendly_error::{ErrorCategory, ListingErrorReason};
-use crate::file_system::write_operations::{
-    LifecycleStatus, WriteOperationPhase, WriteOperationType, get_operation_status, list_operations,
-};
+use crate::file_system::write_operations::{LifecycleStatus, WriteOperationPhase, WriteOperationType};
 use crate::ignore_poison::IgnorePoison;
 use crate::mcp::PaneStateStore;
 use crate::mcp::listing_errors::RecentListingError;
@@ -257,10 +255,14 @@ fn capture_pane(side: PaneSide, pane: &PaneState) -> RawPaneSnapshot {
 }
 
 fn capture_operations() -> Vec<RawOperationSnapshot> {
-    list_operations()
+    let Ok(engine) = crate::operations_host::operations() else {
+        return Vec::new();
+    };
+    engine
+        .list_operations()
         .into_iter()
         .map(|operation| {
-            let progress = get_operation_status(&operation.operation_id);
+            let progress = engine.get_operation_status(&operation.operation_id);
             RawOperationSnapshot {
                 operation_id: keep_operation_id(&operation.operation_id),
                 operation_type: operation.operation_type,

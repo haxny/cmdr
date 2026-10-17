@@ -23,6 +23,7 @@ use super::super::super::test_support::park_holds_at;
 use super::super::super::types::{WriteOperationError, WriteOperationType};
 use super::test_support::{CallLog, copy_config, install_state, make_state, paths, unique_op_id};
 use super::{PostLoopIntent, TransferContext, TransferOutcome, drive_transfer_serial_sync};
+use crate::file_system::write_operations::installed;
 use crate::test_support::wait_until_async;
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
@@ -494,7 +495,7 @@ fn sync_driver_status_cache_matches_emitted_progress() {
     );
 
     assert!(matches!(outcome.intent, PostLoopIntent::Completed));
-    let status = super::super::super::state::get_operation_status(&op_id).expect("status entry present");
+    let status = installed().get_operation_status(&op_id).expect("status entry present");
     // After bulk-skip /a (1 file, 100 bytes) the cache reflects the bulk-skip
     // emit. The Transferred arm doesn't emit (sync per-file closures —
     // `copy_single_item` in production — own their own per-file milestone),
@@ -660,7 +661,7 @@ async fn sync_driver_cancel_while_paused_unblocks_and_cancels() {
     )
     .await;
 
-    super::super::super::state::cancel_write_operation(&op_id, false);
+    installed().cancel_write_operation(&op_id, false);
 
     let outcome = tokio::time::timeout(Duration::from_secs(5), driver)
         .await

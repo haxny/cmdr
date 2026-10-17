@@ -40,6 +40,7 @@ use crate::adb::device_provider::apply_device_list;
 use crate::adb::test_support::{a_listed_phone, dial, dials_seen, phone, retire_phone};
 use crate::commands::file_system::scan_volume_for_conflicts;
 use crate::file_system::volume::manager::get_volume_manager;
+use crate::file_system::write_operations::installed;
 use crate::test_support::TestDir;
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_local::LocalPosixVolume;
@@ -522,18 +523,19 @@ async fn a_move_on_a_phone_renames_on_the_device_and_patches_both_panes() {
     let album = phone.sdcard.join("album");
 
     let events = Arc::new(CollectorEventSink::new());
-    super::super::start_volume_move(
-        Arc::clone(&events) as Arc<dyn OperationEventSink>,
-        phone.volume_id.clone(),
-        vec![phone.sdcard.join("a.txt")],
-        phone.volume_id.clone(),
-        album.to_string_lossy().into_owned(),
-        VolumeCopyConfig::default(),
-        Initiator::User,
-        None,
-    )
-    .await
-    .expect("the move starts");
+    installed()
+        .start_volume_move(
+            Arc::clone(&events) as Arc<dyn OperationEventSink>,
+            phone.volume_id.clone(),
+            vec![phone.sdcard.join("a.txt")],
+            phone.volume_id.clone(),
+            album.to_string_lossy().into_owned(),
+            VolumeCopyConfig::default(),
+            Initiator::User,
+            None,
+        )
+        .await
+        .expect("the move starts");
     settle(&events, "the move on the phone to settle").await;
 
     assert!(phone.device_node("/sdcard/a.txt").is_none(), "the file left its folder");
@@ -648,18 +650,19 @@ async fn a_copy_onto_a_phone_nobody_dialed_is_refused_as_not_connected() {
     let local = registered_local("adb_copy_onto_undialed_phone");
     std::fs::write(local.dir.join("photo.jpg"), b"a photo's worth of bytes").expect("seeding the local file");
 
-    let refused = super::super::start_volume_copy(
-        Arc::new(CollectorEventSink::new()),
-        local.volume_id.clone(),
-        vec![PathBuf::from("photo.jpg")],
-        phone.volume_id.clone(),
-        phone.sdcard.to_string_lossy().into_owned(),
-        VolumeCopyConfig::default(),
-        Initiator::User,
-        None,
-    )
-    .await
-    .expect_err("a copy onto a phone nobody dialed is refused");
+    let refused = installed()
+        .start_volume_copy(
+            Arc::new(CollectorEventSink::new()),
+            local.volume_id.clone(),
+            vec![PathBuf::from("photo.jpg")],
+            phone.volume_id.clone(),
+            phone.sdcard.to_string_lossy().into_owned(),
+            VolumeCopyConfig::default(),
+            Initiator::User,
+            None,
+        )
+        .await
+        .expect_err("a copy onto a phone nobody dialed is refused");
 
     assert!(
         matches!(refused, WriteOperationError::DestinationNotConnected { .. }),
@@ -678,18 +681,19 @@ async fn a_move_off_a_phone_nobody_dialed_is_refused_as_not_connected() {
     let phone = undialed_phone("R58M-Undialed-Move", tree).await;
     let local = registered_local("adb_move_off_undialed_phone");
 
-    let refused = super::super::start_volume_move(
-        Arc::new(CollectorEventSink::new()),
-        phone.volume_id.clone(),
-        vec![phone.sdcard.join("a.txt")],
-        local.volume_id.clone(),
-        local.dir.to_string_lossy().into_owned(),
-        VolumeCopyConfig::default(),
-        Initiator::User,
-        None,
-    )
-    .await
-    .expect_err("a move off a phone nobody dialed is refused");
+    let refused = installed()
+        .start_volume_move(
+            Arc::new(CollectorEventSink::new()),
+            phone.volume_id.clone(),
+            vec![phone.sdcard.join("a.txt")],
+            local.volume_id.clone(),
+            local.dir.to_string_lossy().into_owned(),
+            VolumeCopyConfig::default(),
+            Initiator::User,
+            None,
+        )
+        .await
+        .expect_err("a move off a phone nobody dialed is refused");
 
     assert!(
         matches!(refused, WriteOperationError::SourceNotConnected { .. }),
@@ -708,16 +712,17 @@ async fn a_delete_on_a_phone_nobody_dialed_is_refused_as_not_connected() {
     let phone = undialed_phone("R58M-Undialed-Delete", tree).await;
 
     let events = Arc::new(CollectorEventSink::new());
-    super::super::delete_files_start(
-        Arc::clone(&events) as Arc<dyn OperationEventSink>,
-        vec![phone.sdcard.join("old.txt")],
-        WriteOperationConfig::default(),
-        Some(phone.volume_id.clone()),
-        Initiator::User,
-        None,
-    )
-    .await
-    .expect("the delete is admitted; its body is what finds the phone unconnected");
+    installed()
+        .delete_files_start(
+            Arc::clone(&events) as Arc<dyn OperationEventSink>,
+            vec![phone.sdcard.join("old.txt")],
+            WriteOperationConfig::default(),
+            Some(phone.volume_id.clone()),
+            Initiator::User,
+            None,
+        )
+        .await
+        .expect("the delete is admitted; its body is what finds the phone unconnected");
     crate::test_support::wait_until_async(SETTLE_BUDGET, "the refused delete to settle", || {
         !events.settled.lock_ignore_poison().is_empty()
     })

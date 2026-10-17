@@ -146,13 +146,3 @@ impl Operations {
         self.manager().retry_failure(self, operation_id).await
     }
 }
-
-/// [`Operations::retry_failed_operation`] on the installed engine; before
-/// `install` no failure is retained, so there is nothing to retry.
-// shim: removed in M7a
-pub async fn retry_failed_operation(operation_id: &str) -> Result<RetryOutcome, WriteOperationError> {
-    match super::super::installed_for("retry_failed_operation") {
-        Some(ops) => ops.retry_failed_operation(operation_id).await,
-        None => Ok(RetryOutcome::NothingToRetry),
-    }
-}

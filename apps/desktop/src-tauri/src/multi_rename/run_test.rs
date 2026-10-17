@@ -9,7 +9,7 @@ use super::plan::{MultiRenameSpec, RowStatus};
 use super::run::apply;
 use super::session::{FIRST_PAGE, PreviewFilter, close, is_open, open, page, preview_session, spec_of};
 use super::transform::CaseChange;
-use crate::file_system::write_operations::CollectorEventSink;
+use crate::file_system::write_operations::testing::CollectorEventSink;
 use crate::ignore_poison::IgnorePoison;
 use crate::test_support::{TestDir, wait_until_async};
 use cmdr_fs::volume::DirectoryChange;

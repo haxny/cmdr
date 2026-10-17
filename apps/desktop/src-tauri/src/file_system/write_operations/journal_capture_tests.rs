@@ -12,11 +12,12 @@ use std::time::Duration;
 use super::delete::delete_files_with_progress_inner;
 use super::event_sinks::CollectorEventSink;
 use super::journal;
-use super::state::{WriteOperationState, get_operation_status, register_operation_status, unregister_operation_status};
+use super::state::{WriteOperationState, register_operation_status, unregister_operation_status};
 use super::transfer::copy::copy_files_with_progress_inner;
 use super::transfer::move_op::move_files_with_progress_inner;
 use super::types::{WriteOperationConfig, WriteOperationType};
 
+use crate::file_system::write_operations::installed;
 use crate::operation_log_host::TestJournalGuard;
 use cmdr_operation_log::capture::WriterJournal;
 use cmdr_operation_log::store::{open_read_connection, operation_log_db_path, read_operation, read_operation_items};
@@ -156,7 +157,9 @@ fn local_copy_header_carries_planned_count_items_done_and_dest_volume() {
     let events = CollectorEventSink::new();
     let cfg = WriteOperationConfig::default();
     copy_files_with_progress_inner(&events, op_id, &st, std::slice::from_ref(&src), &dst, &cfg).expect("copy");
-    let status = get_operation_status(op_id).expect("status present after copy");
+    let status = installed()
+        .get_operation_status(op_id)
+        .expect("status present after copy");
     journal::finalize_op(st.scope(), OpKind::Copy, ExecutionStatus::Done);
     unregister_operation_status(op_id);
 

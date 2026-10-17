@@ -148,7 +148,7 @@ pub struct WriteOperationState {
     /// call.
     pub backend_cancel: CancellationToken,
     /// TIER 2: stop WAITING for in-flight backend I/O, rather than asking it to
-    /// stop. Fired only by `abort_write_operation` / [`abort_all_write_operations`],
+    /// stop. Fired only by `abort_write_operation` / `Operations::abort_all_write_operations`,
     /// which today means the quit deadline and nothing else.
     ///
     /// [`backend_cancel`](Self::backend_cancel) above is tier 1 and stays the
@@ -734,39 +734,23 @@ impl Drop for WriteSettledGuard {
 }
 
 // The operation status cache, the busy-volume set it drives, and the queries
-// over it live in `status_cache`. Re-exported here so the established
-// `state::register_operation_status`, `state::busy_volume_ids`, etc. paths keep
-// resolving for every caller, the same way `operation_intent` and `scan_cache`
-// are surfaced above.
-pub use super::status_cache::{busy_volume_ids, get_operation_status};
-#[cfg(target_os = "macos")]
-pub(crate) use super::status_cache::{register_external_volume_op, release_external_volume_op};
+// over it live in `status_cache`. The suites' by-id helpers are re-exported
+// here, the same way `operation_intent` and `scan_cache` are surfaced above.
 #[cfg(test)]
 pub(super) use super::status_cache::{register_operation_status, unregister_operation_status};
 
 // The by-id controls (cancel / abort / pause / resume / conflict answer) live in
 // `state/controls.rs`: each is a registry lookup plus one flag flip, and keeping
 // them together is what makes the two stopping tiers legible side by side.
-// Re-exported here so the established `state::cancel_write_operation` paths keep
-// resolving for every caller.
 mod activity;
 mod controls;
 // The registry every by-id lookup goes through, and its walks over all of them.
 mod registry;
 // What a Rollback-cancelled transfer's own reversal sees of it.
 mod wind_down;
-#[cfg(test)]
-pub use controls::abort_write_operation;
-pub use controls::{
-    abort_all_write_operations, cancel_all_write_operations, cancel_write_operation, pending_write_conflict,
-    resolve_write_conflict,
-};
-#[cfg(test)]
-pub(super) use controls::{pause_write_operation, resume_write_operation};
 pub(super) use registry::WriteOperationRegistry;
 #[cfg(test)]
 pub(super) use registry::forget_operation;
-pub use registry::latest_operation_progress;
 #[cfg(test)]
 pub(super) use registry::operation_states;
 pub(crate) use wind_down::WindDown;

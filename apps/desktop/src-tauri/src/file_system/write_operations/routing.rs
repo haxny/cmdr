@@ -205,7 +205,7 @@ impl crate::file_system::write_operations::Operations {
     /// **This is also how an EXTRACT runs.** There is no `Extract` in
     /// `WriteOperationType` and there should not be one: pulling entries out of a
     /// `.zip` is a copy whose source volume happens to be an `ArchiveVolume`, which
-    /// [`resolve_source_volume`] arranges. `ArchiveSubkind::Extract` is an
+    /// [`Self::resolve_source_volume`] arranges. `ArchiveSubkind::Extract` is an
     /// operation-log label, not a second execution path.
     #[allow(
         clippy::too_many_arguments,
@@ -398,7 +398,7 @@ impl crate::file_system::write_operations::Operations {
         .await
     }
 
-    /// [`route_volume_copy`], and the started operation keeps a way to start again
+    /// [`Self::route_volume_copy`], and the started operation keeps a way to start again
     /// should it fail: the queue window's Retry on its row (`retry.rs`).
     #[allow(
         clippy::too_many_arguments,
@@ -440,8 +440,8 @@ impl crate::file_system::write_operations::Operations {
         Ok(started)
     }
 
-    /// [`route_volume_move`], and the started operation keeps a way to start again
-    /// should it fail, like [`start_volume_copy`].
+    /// [`Self::route_volume_move`], and the started operation keeps a way to start again
+    /// should it fail, like [`Self::start_volume_copy`].
     #[allow(
         clippy::too_many_arguments,
         reason = "the same request `route_volume_move` takes, passed through whole"
@@ -592,133 +592,6 @@ impl crate::file_system::write_operations::Operations {
         )
         .await
     }
-}
-
-// The installed engine's, by free function, for callers outside the engine.
-// Before `install` a start refuses with `not_installed`, and no volume
-// resolves.
-// shim: removed in M7a
-
-/// [`Operations::resolve_source_volume`](super::Operations::resolve_source_volume) on the installed engine.
-pub(crate) async fn resolve_source_volume(
-    volume_id: &str,
-    first_path: Option<&PathBuf>,
-) -> Option<(Arc<dyn Volume>, Option<RoutedKind>)> {
-    super::installed_for("resolve_source_volume")?
-        .resolve_source_volume(volume_id, first_path)
-        .await
-}
-
-/// [`Operations::start_volume_copy`](super::Operations::start_volume_copy) on the installed engine.
-#[allow(
-    clippy::too_many_arguments,
-    reason = "the same request `route_volume_copy` takes, passed through whole"
-)]
-pub(crate) async fn start_volume_copy(
-    events: Arc<dyn OperationEventSink>,
-    source_volume_id: String,
-    source_paths: Vec<PathBuf>,
-    dest_volume_id: String,
-    dest_path: String,
-    config: VolumeCopyConfig,
-    initiator: Initiator,
-    expected_sources: Option<ExpectedSources>,
-) -> Result<WriteOperationStartResult, WriteOperationError> {
-    super::installed_for("start_volume_copy")
-        .ok_or_else(super::not_installed)?
-        .start_volume_copy(
-            events,
-            source_volume_id,
-            source_paths,
-            dest_volume_id,
-            dest_path,
-            config,
-            initiator,
-            expected_sources,
-        )
-        .await
-}
-
-/// [`Operations::start_volume_move`](super::Operations::start_volume_move) on the installed engine.
-#[allow(
-    clippy::too_many_arguments,
-    reason = "the same request `route_volume_move` takes, passed through whole"
-)]
-pub(crate) async fn start_volume_move(
-    events: Arc<dyn OperationEventSink>,
-    source_volume_id: String,
-    source_paths: Vec<PathBuf>,
-    dest_volume_id: String,
-    dest_path: String,
-    config: VolumeCopyConfig,
-    initiator: Initiator,
-    expected_sources: Option<ExpectedSources>,
-) -> Result<WriteOperationStartResult, WriteOperationError> {
-    super::installed_for("start_volume_move")
-        .ok_or_else(super::not_installed)?
-        .start_volume_move(
-            events,
-            source_volume_id,
-            source_paths,
-            dest_volume_id,
-            dest_path,
-            config,
-            initiator,
-            expected_sources,
-        )
-        .await
-}
-
-/// [`Operations::start_rename_by_move`](super::Operations::start_rename_by_move) on the installed engine.
-#[allow(
-    clippy::too_many_arguments,
-    reason = "the move's whole request: its sink, volume, renames, destination folder, config, initiator, and source binding"
-)]
-pub(crate) async fn start_rename_by_move(
-    events: Arc<dyn OperationEventSink>,
-    volume_id: String,
-    renames: Vec<(PathBuf, String)>,
-    dest_path: String,
-    config: VolumeCopyConfig,
-    initiator: Initiator,
-    expected_sources: Option<ExpectedSources>,
-) -> Result<WriteOperationStartResult, WriteOperationError> {
-    super::installed_for("start_rename_by_move")
-        .ok_or_else(super::not_installed)?
-        .start_rename_by_move(
-            events,
-            volume_id,
-            renames,
-            dest_path,
-            config,
-            initiator,
-            expected_sources,
-        )
-        .await
-}
-
-/// [`Operations::start_volume_compress`](super::Operations::start_volume_compress) on the installed engine.
-pub(crate) async fn start_volume_compress(
-    events: Arc<dyn OperationEventSink>,
-    source_volume_id: String,
-    source_paths: Vec<PathBuf>,
-    dest_volume_id: String,
-    dest_zip_path: String,
-    config: VolumeCopyConfig,
-    initiator: Initiator,
-) -> Result<WriteOperationStartResult, WriteOperationError> {
-    super::installed_for("start_volume_compress")
-        .ok_or_else(super::not_installed)?
-        .start_volume_compress(
-            events,
-            source_volume_id,
-            source_paths,
-            dest_volume_id,
-            dest_zip_path,
-            config,
-            initiator,
-        )
-        .await
 }
 
 mod retry;

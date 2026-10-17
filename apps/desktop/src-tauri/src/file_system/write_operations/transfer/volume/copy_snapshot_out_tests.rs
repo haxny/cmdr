@@ -14,7 +14,8 @@ use super::*;
 use crate::file_system::git;
 use crate::file_system::volume::manager::get_volume_manager;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
-use crate::file_system::write_operations::resolve_source_volume;
+use crate::file_system::write_operations::installed;
+
 use cmdr_fs::volume::InMemoryVolume;
 use cmdr_git::test_fixtures::{EntryKind, Fixture, cleanup, temp_dir};
 use cmdr_local::LocalPosixVolume;
@@ -84,7 +85,8 @@ async fn a_copy_out_of_a_snapshot_carries_a_file_and_a_folder_byte_for_byte() {
         dir.join(".git/branches/main/readme.txt"),
         dir.join(".git/branches/main/docs"),
     ];
-    let (source, route) = resolve_source_volume("root", sources.first())
+    let (source, route) = installed()
+        .resolve_source_volume("root", sources.first())
         .await
         .expect("the source volume");
     assert_eq!(
@@ -147,7 +149,8 @@ async fn the_executable_bit_survives_a_copy_out_of_a_snapshot() {
         dir.join(".git/branches/main/run.sh"),
         dir.join(".git/branches/main/scripts"),
     ];
-    let (source, _route) = resolve_source_volume("root", sources.first())
+    let (source, _route) = installed()
+        .resolve_source_volume("root", sources.first())
         .await
         .expect("the source volume");
     let dest: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
@@ -197,7 +200,7 @@ async fn the_executable_bit_survives_a_copy_out_of_a_snapshot() {
 /// the destination stays untouched rather than holding half a move.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_move_out_of_a_snapshot_is_refused_before_a_byte_is_written() {
-    use crate::file_system::write_operations::{ReadOnlySide, WriteOperationError, start_volume_move};
+    use crate::file_system::write_operations::{ReadOnlySide, WriteOperationError};
     use cmdr_operation_log::types::Initiator;
 
     let dir = repo_registered_as_the_local_drive("move_refused");
@@ -212,18 +215,19 @@ async fn a_move_out_of_a_snapshot_is_refused_before_a_byte_is_written() {
         )),
     );
 
-    let err = start_volume_move(
-        Arc::new(CollectorEventSink::new()),
-        "root".to_string(),
-        vec![dir.join(".git/branches/main/readme.txt")],
-        "dest".to_string(),
-        dest_dir.to_string_lossy().into_owned(),
-        VolumeCopyConfig::default(),
-        Initiator::User,
-        None,
-    )
-    .await
-    .expect_err("a move out of a snapshot must be refused");
+    let err = installed()
+        .start_volume_move(
+            Arc::new(CollectorEventSink::new()),
+            "root".to_string(),
+            vec![dir.join(".git/branches/main/readme.txt")],
+            "dest".to_string(),
+            dest_dir.to_string_lossy().into_owned(),
+            VolumeCopyConfig::default(),
+            Initiator::User,
+            None,
+        )
+        .await
+        .expect_err("a move out of a snapshot must be refused");
 
     // The SIDE is the whole point of the refusal's wording: the destination was
     // fine, and pointing this user at it would send them to fix the wrong half.
@@ -251,24 +255,25 @@ async fn a_move_out_of_a_snapshot_is_refused_before_a_byte_is_written() {
 /// starting and dying on its first write.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_copy_into_a_snapshot_is_refused_up_front() {
-    use crate::file_system::write_operations::{ReadOnlySide, WriteOperationError, start_volume_copy};
+    use crate::file_system::write_operations::{ReadOnlySide, WriteOperationError};
     use cmdr_operation_log::types::Initiator;
 
     let dir = repo_registered_as_the_local_drive("drop_refused");
     std::fs::write(dir.join("dropped.txt"), b"dropped").expect("write the dragged file");
 
-    let err = start_volume_copy(
-        Arc::new(CollectorEventSink::new()),
-        "root".to_string(),
-        vec![dir.join("dropped.txt")],
-        "root".to_string(),
-        dir.join(".git/branches/main/docs").to_string_lossy().into_owned(),
-        VolumeCopyConfig::default(),
-        Initiator::User,
-        None,
-    )
-    .await
-    .expect_err("a drop into a snapshot must be refused");
+    let err = installed()
+        .start_volume_copy(
+            Arc::new(CollectorEventSink::new()),
+            "root".to_string(),
+            vec![dir.join("dropped.txt")],
+            "root".to_string(),
+            dir.join(".git/branches/main/docs").to_string_lossy().into_owned(),
+            VolumeCopyConfig::default(),
+            Initiator::User,
+            None,
+        )
+        .await
+        .expect_err("a drop into a snapshot must be refused");
 
     assert!(
         matches!(

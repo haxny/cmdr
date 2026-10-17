@@ -8,6 +8,7 @@
 //! reach; that's deliberate, so these tests can pin the module wall itself.
 
 use super::*;
+use crate::file_system::write_operations::installed;
 
 /// A per-source result shaped like a top-level file, so the entries these tests
 /// build are coherent by the canary's rule.
@@ -284,7 +285,7 @@ fn cost_facts_carry_a_volume_scans_kept_files_and_its_folder_count() {
             .keeping_files(Some(kept.clone()));
     insert_scan_result(preview_id.clone(), cached);
 
-    let facts = cached_cost_facts(&preview_id).expect("a settled preview");
+    let facts = installed().cached_cost_facts(&preview_id).expect("a settled preview");
 
     assert_eq!(facts.files, 2);
     assert_eq!(facts.dirs, 3);
@@ -297,7 +298,7 @@ fn cost_facts_of_a_volume_scan_that_kept_nothing_have_no_per_file_list() {
     let preview_id = unique_preview("cost-volume-bare");
     insert_scan_result(preview_id.clone(), cached_for(&["/a"]));
 
-    let facts = cached_cost_facts(&preview_id).expect("a settled preview");
+    let facts = installed().cached_cost_facts(&preview_id).expect("a settled preview");
 
     assert_eq!(facts.files, 1);
     assert_eq!(facts.per_file, None);
@@ -325,7 +326,7 @@ fn cost_facts_of_a_local_walk_list_every_files_size_undated() {
     );
     insert_scan_result(preview_id.clone(), cached);
 
-    let facts = cached_cost_facts(&preview_id).expect("a settled preview");
+    let facts = installed().cached_cost_facts(&preview_id).expect("a settled preview");
 
     let undated = |size: u64| ScannedFile {
         size,
@@ -337,5 +338,5 @@ fn cost_facts_of_a_local_walk_list_every_files_size_undated() {
 
 #[test]
 fn cost_facts_of_an_unknown_preview_are_none() {
-    assert!(cached_cost_facts("no-such-preview").is_none());
+    assert!(installed().cached_cost_facts("no-such-preview").is_none());
 }

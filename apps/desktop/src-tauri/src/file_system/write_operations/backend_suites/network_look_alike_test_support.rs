@@ -17,6 +17,7 @@
 //! place, and its cell shouldn't call these. Unit twins:
 //! `transfer/volume/look_alike_tests.rs`, `rename/bulk/look_alike_tests.rs`.
 
+use crate::file_system::write_operations::installed;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
@@ -25,7 +26,7 @@ use cmdr_fs::volume::Volume;
 
 use super::super::event_sinks::CollectorEventSink;
 use super::super::types::ConflictResolution;
-use super::super::{BulkRenameRow, MutationError, SourceFingerprint, rename_managed, start_bulk_rename};
+use super::super::{BulkRenameRow, MutationError, SourceFingerprint};
 use super::network_safety_test_support::{Registered, delete_on};
 use super::network_semantics_test_support::{Transfer, local_volume, names_in, seed, transfer, try_read};
 use super::network_transfer_test_support::{budget, clean_deep};
@@ -355,7 +356,7 @@ pub(super) async fn a_rename_never_lands_on_a_taken_name(remote: Arc<dyn Volume>
     .await;
     let registered = Registered::new(&remote, "rename");
     let rename = |from: &str, to: &str| {
-        rename_managed(
+        installed().rename_managed(
             dir.join(from),
             dir.join(to),
             false,
@@ -427,13 +428,14 @@ pub(super) async fn a_bulk_rename_skips_a_look_alike(remote: Arc<dyn Volume>, di
         });
     }
     let events = Arc::new(CollectorEventSink::new());
-    start_bulk_rename(
-        events.clone() as Arc<dyn crate::file_system::OperationEventSink>,
-        registered.id.clone(),
-        rows,
-        Initiator::Agent,
-    )
-    .expect("start bulk rename");
+    installed()
+        .start_bulk_rename(
+            events.clone() as Arc<dyn crate::file_system::write_operations::OperationEventSink>,
+            registered.id.clone(),
+            rows,
+            Initiator::Agent,
+        )
+        .expect("start bulk rename");
     crate::test_support::wait_until_async(budget(Duration::from_secs(6)), "the bulk rename to settle", || {
         !events.settled.lock_ignore_poison().is_empty()
     })

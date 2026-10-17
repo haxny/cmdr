@@ -4,6 +4,7 @@
 //! (symlinks / special files), and the remote-parent copy-into path.
 
 use super::test_support::*;
+use crate::file_system::write_operations::installed;
 
 #[tokio::test]
 async fn copy_into_adds_a_local_directory_tree_and_skips_conflicts() {
@@ -693,7 +694,6 @@ async fn a_blanket_overwrite_never_replaces_an_archive_directory_with_a_file() {
 
 #[tokio::test]
 async fn a_named_copy_into_zip_uses_the_requested_leaf_and_preserves_existing_entries() {
-    use super::copy_into::route_archive_copy_into_with_provenance;
     use cmdr_local::LocalPosixVolume;
     let tmp = tempfile::tempdir().unwrap();
     let archive = tmp.path().join("target.zip");
@@ -712,22 +712,23 @@ async fn a_named_copy_into_zip_uses_the_requested_leaf_and_preserves_existing_en
             crate::volume_host::host(),
         ));
         let events = Arc::new(CollectorEventSink::new());
-        route_archive_copy_into_with_provenance(
-            events.clone(),
-            source,
-            vec![PathBuf::from("original.txt")],
-            archive.join("folder"),
-            unique_lane_id(),
-            policy,
-            0,
-            false,
-            None,
-            None,
-            super::super::journal::ArchiveProvenance::edit(cmdr_operation_log::types::Initiator::User),
-            Some("renamed.txt".into()),
-        )
-        .await
-        .unwrap();
+        installed()
+            .route_archive_copy_into_with_provenance(
+                events.clone(),
+                source,
+                vec![PathBuf::from("original.txt")],
+                archive.join("folder"),
+                unique_lane_id(),
+                policy,
+                0,
+                false,
+                None,
+                None,
+                super::super::journal::ArchiveProvenance::edit(cmdr_operation_log::types::Initiator::User),
+                Some("renamed.txt".into()),
+            )
+            .await
+            .unwrap();
         wait_until_async(Duration::from_secs(5), "named ZIP copy completion", || {
             !events.complete.lock_ignore_poison().is_empty()
         })
@@ -748,7 +749,6 @@ async fn a_named_copy_into_zip_uses_the_requested_leaf_and_preserves_existing_en
 
 #[tokio::test]
 async fn a_named_move_into_zip_deletes_only_the_source_that_landed() {
-    use super::copy_into::route_archive_copy_into_with_provenance;
     use cmdr_local::LocalPosixVolume;
     for policy in [ConflictResolution::Skip, ConflictResolution::Overwrite] {
         let tmp = tempfile::tempdir().unwrap();
@@ -767,22 +767,23 @@ async fn a_named_move_into_zip_deletes_only_the_source_that_landed() {
             crate::volume_host::host(),
         ));
         let events = Arc::new(CollectorEventSink::new());
-        route_archive_copy_into_with_provenance(
-            events.clone(),
-            source,
-            vec![PathBuf::from("original.txt")],
-            archive.clone(),
-            unique_lane_id(),
-            policy,
-            0,
-            true,
-            None,
-            None,
-            super::super::journal::ArchiveProvenance::edit(cmdr_operation_log::types::Initiator::User),
-            Some("renamed.txt".into()),
-        )
-        .await
-        .unwrap();
+        installed()
+            .route_archive_copy_into_with_provenance(
+                events.clone(),
+                source,
+                vec![PathBuf::from("original.txt")],
+                archive.clone(),
+                unique_lane_id(),
+                policy,
+                0,
+                true,
+                None,
+                None,
+                super::super::journal::ArchiveProvenance::edit(cmdr_operation_log::types::Initiator::User),
+                Some("renamed.txt".into()),
+            )
+            .await
+            .unwrap();
         wait_until_async(Duration::from_secs(5), "named ZIP move completion", || {
             !events.complete.lock_ignore_poison().is_empty()
         })

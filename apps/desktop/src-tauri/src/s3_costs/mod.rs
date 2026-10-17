@@ -19,7 +19,7 @@ pub use plan::{ClashPlan, CostedOperation};
 use plan::{Overwrite, Sides, overwritten, plan};
 
 use crate::file_system::volume::manager::get_volume_manager;
-use crate::file_system::write_operations::{ScanCostFacts, cached_cost_facts};
+use crate::file_system::write_operations::ScanCostFacts;
 
 /// What a dialog asks about, once its scan preview has settled.
 #[derive(Debug, Clone, Deserialize, specta::Type)]
@@ -64,7 +64,11 @@ pub fn estimate(request: &CostEstimateRequest, data_dir: Option<&Path>) -> Vec<C
     if source_s3.is_none() && destination_s3.is_none() {
         return Vec::new();
     }
-    let Some(facts) = cached_cost_facts(&request.preview_id) else {
+    // Before `install` the engine knows no preview.
+    let Some(facts) = crate::operations_host::operations()
+        .ok()
+        .and_then(|engine| engine.cached_cost_facts(&request.preview_id))
+    else {
         return Vec::new();
     };
     let overwrites = request.clashes.as_ref().map(overwritten).unwrap_or_default();

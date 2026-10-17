@@ -11,14 +11,14 @@ use tokio::sync::oneshot;
 
 use super::super::event_sinks::{CollectorEventSink, OperationEventSink};
 use super::super::manager::{OperationDescriptor, OperationSummaryText, manager};
-use super::super::move_files_start;
 use super::super::state::WriteOperationState;
 use super::super::test_support::TestOperationGuard;
 use super::super::types::{
     LifecycleStatus, SourceItemOutcome, SourcesGoneAnswerOutcome, SourcesGoneNext, WriteOperationConfig,
     WriteOperationError, WriteOperationType,
 };
-use super::{continue_without_gone_sources, kept_after_queue_on, pending_sources_gone};
+use super::kept_after_queue_on;
+use crate::file_system::write_operations::installed;
 use crate::test_support::{TestDir, wait_until_async};
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::volume::{InMemoryVolume, LaneKey, Volume};
@@ -107,20 +107,21 @@ fn fixture(tag: &str, names: &[&str]) -> Fixture {
 /// Starts a move of every fixture source on `lane`, returning its id.
 async fn start_move(collector: &Arc<CollectorEventSink>, fx: &Fixture, lane: &LaneKey) -> String {
     let events: Arc<dyn OperationEventSink> = collector.clone();
-    move_files_start(
-        events,
-        fx.sources.clone(),
-        fx.dst.to_path_buf(),
-        WriteOperationConfig::default(),
-        vec![],
-        Some(vec![lane.clone()]),
-        Initiator::User,
-        None,
-        None,
-    )
-    .await
-    .expect("the move registers")
-    .operation_id
+    installed()
+        .move_files_start(
+            events,
+            fx.sources.clone(),
+            fx.dst.to_path_buf(),
+            WriteOperationConfig::default(),
+            vec![],
+            Some(vec![lane.clone()]),
+            Initiator::User,
+            None,
+            None,
+        )
+        .await
+        .expect("the move registers")
+        .operation_id
 }
 
 async fn settled(collector: &CollectorEventSink) {
@@ -154,10 +155,10 @@ async fn a_queued_move_whose_sources_partly_left_asks_then_moves_the_rest() {
     holder.release();
 
     wait_until_async(WAIT, "the move to ask about its sources", || {
-        pending_sources_gone(&op_id).is_some()
+        installed().pending_sources_gone(&op_id).is_some()
     })
     .await;
-    let asked = pending_sources_gone(&op_id).expect("it is asking");
+    let asked = installed().pending_sources_gone(&op_id).expect("it is asking");
     assert_eq!(asked.next, SourcesGoneNext::AwaitingAnswer);
     assert_eq!((asked.gone_count, asked.total_count), (1, 3), "an honest count: 1 of 3");
     assert_eq!(asked.gone_sample, vec![fx.sources[1].display().to_string()]);
@@ -169,7 +170,7 @@ async fn a_queued_move_whose_sources_partly_left_asks_then_moves_the_rest() {
     assert!(names_in(&fx.dst).is_empty(), "nothing moves before the answer");
 
     assert_eq!(
-        continue_without_gone_sources(&op_id),
+        installed().continue_without_gone_sources(&op_id),
         SourcesGoneAnswerOutcome::Continued
     );
     settled(&collector).await;
@@ -202,9 +203,12 @@ async fn cancelling_a_queued_move_while_it_asks_ends_it_as_cancelled() {
 
     std::fs::remove_file(&fx.sources[0]).expect("move a away");
     holder.release();
-    wait_until_async(WAIT, "the move to ask", || pending_sources_gone(&op_id).is_some()).await;
+    wait_until_async(WAIT, "the move to ask", || {
+        installed().pending_sources_gone(&op_id).is_some()
+    })
+    .await;
 
-    super::super::cancel_operation(&op_id);
+    installed().cancel_operation(&op_id);
     settled(&collector).await;
 
     assert_eq!(
@@ -217,7 +221,7 @@ async fn cancelling_a_queued_move_while_it_asks_ends_it_as_cancelled() {
     assert!(names_in(&fx.dst).is_empty(), "nothing moved");
     assert!(fx.sources[1].exists(), "the source still there stays put");
     assert_eq!(
-        continue_without_gone_sources(&op_id),
+        installed().continue_without_gone_sources(&op_id),
         SourcesGoneAnswerOutcome::UnknownOperation,
         "a late answer finds nothing to carry on"
     );
@@ -248,7 +252,11 @@ async fn a_queued_move_whose_sources_all_left_completes_and_says_why() {
     let complete = collector.complete.lock_ignore_poison();
     assert_eq!(complete.len(), 1, "it completes with nothing to do");
     assert_eq!((complete[0].files_processed, complete[0].files_skipped), (0, 2));
-    assert_eq!(pending_sources_gone(&op_id), None, "and asks nobody anything");
+    assert_eq!(
+        installed().pending_sources_gone(&op_id),
+        None,
+        "and asks nobody anything"
+    );
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -278,11 +286,11 @@ async fn a_move_admitted_at_once_is_not_checked() {
 fn an_answer_to_an_operation_that_is_not_asking_changes_nothing() {
     let guard = TestOperationGuard::register("not-asking");
     assert_eq!(
-        continue_without_gone_sources(guard.id()),
+        installed().continue_without_gone_sources(guard.id()),
         SourcesGoneAnswerOutcome::NotAsking
     );
     assert_eq!(
-        continue_without_gone_sources(&unique("never-registered")),
+        installed().continue_without_gone_sources(&unique("never-registered")),
         SourcesGoneAnswerOutcome::UnknownOperation
     );
 }
@@ -316,11 +324,14 @@ async fn on_a_volume_only_a_source_that_is_really_missing_counts_as_gone() {
         &sources,
     );
     let answer = async {
-        wait_until_async(WAIT, "the copy to ask", || pending_sources_gone(&op_id).is_some()).await;
-        let asked = pending_sources_gone(&op_id).expect("asking");
+        wait_until_async(WAIT, "the copy to ask", || {
+            installed().pending_sources_gone(&op_id).is_some()
+        })
+        .await;
+        let asked = installed().pending_sources_gone(&op_id).expect("asking");
         assert_eq!((asked.gone_count, asked.total_count), (1, 3));
         assert_eq!(
-            continue_without_gone_sources(&op_id),
+            installed().continue_without_gone_sources(&op_id),
             SourcesGoneAnswerOutcome::Continued
         );
     };

@@ -8,6 +8,7 @@
 
 use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
+use crate::file_system::write_operations::installed;
 use crate::file_system::write_operations::outage_slot::OutagePolicy;
 use crate::file_system::write_operations::test_support::TestOperationGuard;
 use crate::file_system::write_operations::transfer::outage_volume_test_support::{OutageVolume, RenameDrop};
@@ -201,7 +202,7 @@ async fn a_cancel_during_the_wait_cancels_the_copy() {
             watched.outage.waiting_for().is_some()
         })
         .await;
-        crate::file_system::write_operations::state::cancel_write_operation(&op_id, false);
+        installed().cancel_write_operation(&op_id, false);
     });
 
     let started = Instant::now();

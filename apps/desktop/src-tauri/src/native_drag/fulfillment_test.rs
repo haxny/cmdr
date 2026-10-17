@@ -2,6 +2,7 @@
 
 use super::*;
 use crate::file_system::volume::{InMemoryVolume, ListingProgress};
+use crate::file_system::write_operations::testing::installed;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
@@ -286,8 +287,6 @@ impl Volume for BlockingVolume {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn source_volume_is_busy_during_fulfillment_and_released_after() {
-    use crate::file_system::write_operations::busy_volume_ids;
-
     let inner = InMemoryVolume::new("Phone");
     add_file(&inner, "/clip.mov", b"video bytes").await;
     let gate = Arc::new(tokio::sync::Notify::new());
@@ -315,7 +314,7 @@ async fn source_volume_is_busy_during_fulfillment_and_released_after() {
     // Wait until the fulfillment is mid-stream, then assert the source is busy.
     reached.notified().await;
     assert!(
-        busy_volume_ids().contains(&volume_id),
+        installed().busy_volume_ids().contains(&volume_id),
         "the source volume must be busy while the promise is streaming (eject guard)"
     );
 
@@ -324,7 +323,7 @@ async fn source_volume_is_busy_during_fulfillment_and_released_after() {
     handle.await.unwrap().expect("fulfillment should succeed");
 
     assert!(
-        !busy_volume_ids().contains(&volume_id),
+        !installed().busy_volume_ids().contains(&volume_id),
         "the source volume must clear from the busy set once the fulfillment finishes"
     );
     assert!(dest.exists());

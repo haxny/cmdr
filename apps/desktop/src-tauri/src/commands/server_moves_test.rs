@@ -10,7 +10,7 @@ use super::*;
 use crate::commands::sftp::{has_sftp_credentials, save_sftp_credentials};
 use crate::commands::webdav::{has_webdav_credentials, save_webdav_credentials};
 use crate::favorites::store::{self as favorites, FavoriteVolume};
-use crate::file_system::write_operations::test_support::QueuedOperationFixture;
+use crate::file_system::write_operations::testing::QueuedOperationFixture;
 use crate::network::s3_known_places::{KnownS3Place, S3ProviderChoice};
 use crate::network::sftp_known_servers::KnownSftpServer;
 use crate::network::webdav_known_servers::KnownWebdavServer;

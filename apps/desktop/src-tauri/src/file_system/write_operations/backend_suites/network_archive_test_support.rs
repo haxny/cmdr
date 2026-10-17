@@ -26,12 +26,13 @@ use cmdr_fs::volume::host::VolumeHost;
 use super::super::event_sinks::{CollectorEventSink, OperationEventSink};
 use super::super::state::WriteOperationState;
 use super::super::types::{ConflictResolution, WriteOperationPhase};
-use super::super::{EditError, OperationIntent, compress_start, pull_apply_upload_swap, route_archive_copy_into};
+use super::super::{EditError, OperationIntent, pull_apply_upload_swap, route_archive_copy_into};
 use super::network_look_alike_test_support::{CAFE_NFC, CAFE_NFD, RESUME_NFC, RESUME_NFD, assert_composes_new_names};
 use super::network_safety_test_support::Registered;
 use super::network_semantics_test_support::{Transfer, local_volume, names_in, seed, transfer, try_read};
 use super::network_transfer_test_support::{assert_no_staging_litter, clean_deep, read_all};
 use crate::file_system::volume::manager::get_volume_manager;
+use crate::file_system::write_operations::installed;
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_operation_log::types::Initiator;
 
@@ -302,20 +303,21 @@ async fn compress_onto(
     parent_id: &str,
 ) -> Arc<CollectorEventSink> {
     let events = Arc::new(CollectorEventSink::new());
-    compress_start(
-        Arc::clone(&events) as Arc<dyn OperationEventSink>,
-        Arc::clone(source),
-        sources.iter().map(PathBuf::from).collect(),
-        dest_zip,
-        parent_id.to_string(),
-        ConflictResolution::Overwrite,
-        100,
-        None,
-        None,
-        Initiator::User,
-    )
-    .await
-    .expect("start the compress");
+    installed()
+        .compress_start(
+            Arc::clone(&events) as Arc<dyn OperationEventSink>,
+            Arc::clone(source),
+            sources.iter().map(PathBuf::from).collect(),
+            dest_zip,
+            parent_id.to_string(),
+            ConflictResolution::Overwrite,
+            100,
+            None,
+            None,
+            Initiator::User,
+        )
+        .await
+        .expect("start the compress");
     await_archive_op(&events, "the compress onto the server").await;
     events
 }

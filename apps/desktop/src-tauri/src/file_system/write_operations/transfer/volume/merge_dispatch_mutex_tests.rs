@@ -15,7 +15,8 @@ use super::super::super::conflict_responder_test_support::{ConflictResponderSink
 use super::tests::{make_state, make_volumes};
 use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
-use crate::file_system::write_operations::state::cancel_write_operation;
+use crate::file_system::write_operations::installed;
+
 use crate::file_system::write_operations::test_support::TestOperationGuard;
 use crate::file_system::write_operations::types::ConflictResolution;
 use cmdr_fs::volume::Volume;
@@ -205,7 +206,7 @@ async fn cancel_while_queued_unblocks_both_no_hang() {
         // point is the cancel landing WHILE B is queued, so we give B a beat to reach the mutex.
         // allowed-test-sleep: no signal for "B is queued on the dispatch mutex"; the window creates the race.
         tokio::time::sleep(Duration::from_millis(20)).await;
-        cancel_write_operation(&op_id_for_cancel, false);
+        installed().cancel_write_operation(&op_id_for_cancel, false);
     });
 
     let events = Arc::new(CollectorEventSink::new());

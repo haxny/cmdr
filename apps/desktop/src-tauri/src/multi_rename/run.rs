@@ -13,7 +13,7 @@ use tokio::time::Duration;
 
 use crate::file_system::volume::Volume;
 use crate::file_system::volume::io_budget_for_volume;
-use crate::file_system::write_operations::{BulkRenameRow, SourceFingerprint, start_renames};
+use crate::file_system::write_operations::{BulkRenameRow, RenameStartError, SourceFingerprint};
 use cmdr_fs::deadline::{Deadline, blocking_typed_result_with_timeout, timeout_detached_within};
 use cmdr_operation_log::types::Initiator;
 
@@ -138,7 +138,13 @@ pub(crate) async fn apply(
         return Err(MultiRenameError::NothingToRename);
     }
     let rows = bulk.len();
-    let started = start_renames(events, volume_id, bulk, Initiator::User)
+    let engine = crate::operations_host::operations().map_err(|not_installed| MultiRenameError::CouldntStart {
+        reason: RenameStartError::Engine {
+            error: crate::operations_host::refuse_not_installed(not_installed),
+        },
+    })?;
+    let started = engine
+        .start_renames(events, volume_id, bulk, Initiator::User)
         .await
         .map_err(|reason| MultiRenameError::CouldntStart { reason })?;
     Ok(MultiRenameStarted {

@@ -3,6 +3,7 @@
 //! clean extract. The data-safety core: a dest failure, a skipped collision, or a
 //! cancel must delete NOTHING from the archive.
 
+use crate::file_system::write_operations::installed;
 use std::future::Future;
 use std::pin::Pin;
 
@@ -96,8 +97,8 @@ fn archive_source_volume(archive_path: &Path) -> Arc<dyn Volume> {
     ))
 }
 
-fn move_out_config() -> crate::file_system::VolumeCopyConfig {
-    crate::file_system::VolumeCopyConfig {
+fn move_out_config() -> crate::file_system::write_operations::VolumeCopyConfig {
+    crate::file_system::write_operations::VolumeCopyConfig {
         progress_interval_ms: 0,
         ..Default::default()
     }
@@ -105,7 +106,6 @@ fn move_out_config() -> crate::file_system::VolumeCopyConfig {
 
 #[tokio::test]
 async fn move_out_lands_files_at_dest_deletes_entries_and_keeps_the_remainder() {
-    use crate::file_system::write_operations::route_archive_move_out;
     use cmdr_local::LocalPosixVolume;
 
     let tmp = tempfile::tempdir().expect("tempdir");
@@ -123,18 +123,19 @@ async fn move_out_lands_files_at_dest_deletes_entries_and_keeps_the_remainder() 
     ));
 
     let events = Arc::new(CollectorEventSink::new());
-    route_archive_move_out(
-        Arc::clone(&events) as Arc<dyn OperationEventSink>,
-        "root".to_string(),
-        source_volume,
-        vec![archive.join("move_me.txt")],
-        "dest".to_string(),
-        dest_volume,
-        dest_dir.clone(),
-        move_out_config(),
-    )
-    .await
-    .expect("start move-out");
+    installed()
+        .route_archive_move_out(
+            Arc::clone(&events) as Arc<dyn OperationEventSink>,
+            "root".to_string(),
+            source_volume,
+            vec![archive.join("move_me.txt")],
+            "dest".to_string(),
+            dest_volume,
+            dest_dir.clone(),
+            move_out_config(),
+        )
+        .await
+        .expect("start move-out");
 
     wait_until_async(Duration::from_secs(5), "the write-complete event", || {
         !events.complete.lock_ignore_poison().is_empty()
@@ -174,7 +175,6 @@ async fn move_out_lands_files_at_dest_deletes_entries_and_keeps_the_remainder() 
 
 #[tokio::test]
 async fn move_out_dest_failure_deletes_nothing_and_leaves_the_archive_readable() {
-    use crate::file_system::write_operations::route_archive_move_out;
     use cmdr_fs::volume::InMemoryVolume;
 
     let tmp = tempfile::tempdir().expect("tempdir");
@@ -187,18 +187,19 @@ async fn move_out_dest_failure_deletes_nothing_and_leaves_the_archive_readable()
     });
 
     let events = Arc::new(CollectorEventSink::new());
-    route_archive_move_out(
-        Arc::clone(&events) as Arc<dyn OperationEventSink>,
-        "root".to_string(),
-        source_volume,
-        vec![archive.join("move_me.txt")],
-        "dest".to_string(),
-        dest_volume,
-        PathBuf::from("/out"),
-        move_out_config(),
-    )
-    .await
-    .expect("start move-out");
+    installed()
+        .route_archive_move_out(
+            Arc::clone(&events) as Arc<dyn OperationEventSink>,
+            "root".to_string(),
+            source_volume,
+            vec![archive.join("move_me.txt")],
+            "dest".to_string(),
+            dest_volume,
+            PathBuf::from("/out"),
+            move_out_config(),
+        )
+        .await
+        .expect("start move-out");
 
     wait_until_async(Duration::from_secs(5), "the write-error event", || {
         !events.errors.lock_ignore_poison().is_empty()
@@ -219,7 +220,6 @@ async fn move_out_dest_failure_deletes_nothing_and_leaves_the_archive_readable()
 
 #[tokio::test]
 async fn move_out_a_lone_skipped_source_stays_in_the_archive() {
-    use crate::file_system::write_operations::route_archive_move_out;
     use cmdr_local::LocalPosixVolume;
 
     let tmp = tempfile::tempdir().expect("tempdir");
@@ -241,23 +241,24 @@ async fn move_out_a_lone_skipped_source_stays_in_the_archive() {
     ));
 
     let events = Arc::new(CollectorEventSink::new());
-    let config = crate::file_system::VolumeCopyConfig {
+    let config = crate::file_system::write_operations::VolumeCopyConfig {
         progress_interval_ms: 0,
         conflict_resolution: ConflictResolution::Skip,
         ..Default::default()
     };
-    route_archive_move_out(
-        Arc::clone(&events) as Arc<dyn OperationEventSink>,
-        "root".to_string(),
-        source_volume,
-        vec![archive.join("move_me.txt")],
-        "dest".to_string(),
-        dest_volume,
-        dest_dir.clone(),
-        config,
-    )
-    .await
-    .expect("start move-out");
+    installed()
+        .route_archive_move_out(
+            Arc::clone(&events) as Arc<dyn OperationEventSink>,
+            "root".to_string(),
+            source_volume,
+            vec![archive.join("move_me.txt")],
+            "dest".to_string(),
+            dest_volume,
+            dest_dir.clone(),
+            config,
+        )
+        .await
+        .expect("start move-out");
 
     wait_until_async(Duration::from_secs(5), "the write-complete event", || {
         !events.complete.lock_ignore_poison().is_empty()
@@ -280,7 +281,6 @@ async fn move_out_a_lone_skipped_source_stays_in_the_archive() {
 
 #[tokio::test]
 async fn move_out_cancel_leaves_the_archive_untouched() {
-    use crate::file_system::write_operations::{cancel_write_operation, route_archive_move_out};
     use cmdr_local::LocalPosixVolume;
 
     let tmp = tempfile::tempdir().expect("tempdir");
@@ -298,23 +298,24 @@ async fn move_out_cancel_leaves_the_archive_untouched() {
     ));
 
     let events = Arc::new(CollectorEventSink::new());
-    let start = route_archive_move_out(
-        Arc::clone(&events) as Arc<dyn OperationEventSink>,
-        "root".to_string(),
-        source_volume,
-        vec![archive.join("move_me.txt")],
-        "dest".to_string(),
-        dest_volume,
-        dest_dir.clone(),
-        move_out_config(),
-    )
-    .await
-    .expect("start move-out");
+    let start = installed()
+        .route_archive_move_out(
+            Arc::clone(&events) as Arc<dyn OperationEventSink>,
+            "root".to_string(),
+            source_volume,
+            vec![archive.join("move_me.txt")],
+            "dest".to_string(),
+            dest_volume,
+            dest_dir.clone(),
+            move_out_config(),
+        )
+        .await
+        .expect("start move-out");
 
     // Cancel synchronously before yielding, so the extract observes Stopped at
     // its first cancellation check (the deferred can't run until this task
     // awaits). `false` = keep already-copied files, no rollback.
-    cancel_write_operation(&start.operation_id, false);
+    installed().cancel_write_operation(&start.operation_id, false);
 
     wait_until_async(
         Duration::from_secs(5),
@@ -337,7 +338,6 @@ async fn move_out_cancel_leaves_the_archive_untouched() {
 
 #[tokio::test]
 async fn move_out_dir_with_a_deep_skipped_child_keeps_that_child_in_the_archive() {
-    use crate::file_system::write_operations::route_archive_move_out;
     use cmdr_local::LocalPosixVolume;
 
     let tmp = tempfile::tempdir().expect("tempdir");
@@ -362,23 +362,24 @@ async fn move_out_dir_with_a_deep_skipped_child_keeps_that_child_in_the_archive(
     ));
 
     let events = Arc::new(CollectorEventSink::new());
-    let config = crate::file_system::VolumeCopyConfig {
+    let config = crate::file_system::write_operations::VolumeCopyConfig {
         progress_interval_ms: 0,
         conflict_resolution: ConflictResolution::Skip,
         ..Default::default()
     };
-    route_archive_move_out(
-        Arc::clone(&events) as Arc<dyn OperationEventSink>,
-        "root".to_string(),
-        source_volume,
-        vec![archive.join("dir")],
-        "dest".to_string(),
-        dest_volume,
-        dest_dir.clone(),
-        config,
-    )
-    .await
-    .expect("start move-out");
+    installed()
+        .route_archive_move_out(
+            Arc::clone(&events) as Arc<dyn OperationEventSink>,
+            "root".to_string(),
+            source_volume,
+            vec![archive.join("dir")],
+            "dest".to_string(),
+            dest_volume,
+            dest_dir.clone(),
+            config,
+        )
+        .await
+        .expect("start move-out");
 
     wait_until_async(Duration::from_secs(5), "the write-complete event", || {
         !events.complete.lock_ignore_poison().is_empty()
@@ -493,7 +494,6 @@ impl Volume for FailOnNameVolume {
 
 #[tokio::test]
 async fn move_out_partial_skip_converges_deletes_landed_keeps_skipped() {
-    use crate::file_system::write_operations::route_archive_move_out;
     use cmdr_local::LocalPosixVolume;
 
     let tmp = tempfile::tempdir().expect("tempdir");
@@ -514,23 +514,24 @@ async fn move_out_partial_skip_converges_deletes_landed_keeps_skipped() {
     ));
 
     let events = Arc::new(CollectorEventSink::new());
-    let config = crate::file_system::VolumeCopyConfig {
+    let config = crate::file_system::write_operations::VolumeCopyConfig {
         progress_interval_ms: 0,
         conflict_resolution: ConflictResolution::Skip,
         ..Default::default()
     };
-    route_archive_move_out(
-        Arc::clone(&events) as Arc<dyn OperationEventSink>,
-        "root".to_string(),
-        source_volume,
-        vec![archive.join("a.txt"), archive.join("b.txt")],
-        "dest".to_string(),
-        dest_volume,
-        dest_dir.clone(),
-        config,
-    )
-    .await
-    .expect("start move-out");
+    installed()
+        .route_archive_move_out(
+            Arc::clone(&events) as Arc<dyn OperationEventSink>,
+            "root".to_string(),
+            source_volume,
+            vec![archive.join("a.txt"), archive.join("b.txt")],
+            "dest".to_string(),
+            dest_volume,
+            dest_dir.clone(),
+            config,
+        )
+        .await
+        .expect("start move-out");
 
     wait_until_async(Duration::from_secs(5), "the write-complete event", || {
         !events.complete.lock_ignore_poison().is_empty()
@@ -559,7 +560,6 @@ async fn move_out_partial_skip_converges_deletes_landed_keeps_skipped() {
 
 #[tokio::test]
 async fn move_out_error_mid_tree_deletes_only_the_durable_prefix() {
-    use crate::file_system::write_operations::route_archive_move_out;
     use cmdr_fs::volume::InMemoryVolume;
 
     let tmp = tempfile::tempdir().expect("tempdir");
@@ -581,18 +581,19 @@ async fn move_out_error_mid_tree_deletes_only_the_durable_prefix() {
     let source_volume = archive_source_volume(&archive);
 
     let events = Arc::new(CollectorEventSink::new());
-    route_archive_move_out(
-        Arc::clone(&events) as Arc<dyn OperationEventSink>,
-        "root".to_string(),
-        source_volume,
-        vec![archive.join("a.txt"), archive.join("b.txt")],
-        "dest".to_string(),
-        dest_volume,
-        PathBuf::from("/out"),
-        move_out_config(),
-    )
-    .await
-    .expect("start move-out");
+    installed()
+        .route_archive_move_out(
+            Arc::clone(&events) as Arc<dyn OperationEventSink>,
+            "root".to_string(),
+            source_volume,
+            vec![archive.join("a.txt"), archive.join("b.txt")],
+            "dest".to_string(),
+            dest_volume,
+            PathBuf::from("/out"),
+            move_out_config(),
+        )
+        .await
+        .expect("start move-out");
 
     wait_until_async(Duration::from_secs(5), "the write-error event", || {
         !events.errors.lock_ignore_poison().is_empty()
@@ -617,7 +618,6 @@ async fn move_out_error_mid_tree_deletes_only_the_durable_prefix() {
 
 #[tokio::test]
 async fn move_out_rollback_deletes_nothing_from_the_archive() {
-    use crate::file_system::write_operations::{cancel_write_operation, route_archive_move_out};
     use cmdr_local::LocalPosixVolume;
 
     let tmp = tempfile::tempdir().expect("tempdir");
@@ -635,22 +635,23 @@ async fn move_out_rollback_deletes_nothing_from_the_archive() {
     ));
 
     let events = Arc::new(CollectorEventSink::new());
-    let start = route_archive_move_out(
-        Arc::clone(&events) as Arc<dyn OperationEventSink>,
-        "root".to_string(),
-        source_volume,
-        vec![archive.join("move_me.txt")],
-        "dest".to_string(),
-        dest_volume,
-        dest_dir.clone(),
-        move_out_config(),
-    )
-    .await
-    .expect("start move-out");
+    let start = installed()
+        .route_archive_move_out(
+            Arc::clone(&events) as Arc<dyn OperationEventSink>,
+            "root".to_string(),
+            source_volume,
+            vec![archive.join("move_me.txt")],
+            "dest".to_string(),
+            dest_volume,
+            dest_dir.clone(),
+            move_out_config(),
+        )
+        .await
+        .expect("start move-out");
 
     // `true` = rollback (delete already-copied files). The archive must stay intact
     // regardless: a rolled-back extraction leaves nothing durable to move out.
-    cancel_write_operation(&start.operation_id, true);
+    installed().cancel_write_operation(&start.operation_id, true);
 
     wait_until_async(
         Duration::from_secs(5),
@@ -672,7 +673,6 @@ async fn move_out_rollback_deletes_nothing_from_the_archive() {
 #[cfg(target_os = "macos")]
 #[tokio::test]
 async fn move_out_lands_tags_and_leaves_no_orphan_sidecar() {
-    use crate::file_system::write_operations::route_archive_move_out;
     use cmdr_fs::testing::metadata_fixture::TAGS_XATTR;
     use cmdr_local::LocalPosixVolume;
 
@@ -688,18 +688,19 @@ async fn move_out_lands_tags_and_leaves_no_orphan_sidecar() {
     ));
 
     let events = Arc::new(CollectorEventSink::new());
-    route_archive_move_out(
-        Arc::clone(&events) as Arc<dyn OperationEventSink>,
-        "root".to_string(),
-        archive_source_volume(&archive),
-        vec![archive.join("tagged.txt"), archive.join("tagged-dir")],
-        "dest".to_string(),
-        dest_volume,
-        dest_dir.clone(),
-        move_out_config(),
-    )
-    .await
-    .expect("start move-out");
+    installed()
+        .route_archive_move_out(
+            Arc::clone(&events) as Arc<dyn OperationEventSink>,
+            "root".to_string(),
+            archive_source_volume(&archive),
+            vec![archive.join("tagged.txt"), archive.join("tagged-dir")],
+            "dest".to_string(),
+            dest_volume,
+            dest_dir.clone(),
+            move_out_config(),
+        )
+        .await
+        .expect("start move-out");
     wait_until_async(Duration::from_secs(5), "the write-complete event", || {
         !events.complete.lock_ignore_poison().is_empty()
     })

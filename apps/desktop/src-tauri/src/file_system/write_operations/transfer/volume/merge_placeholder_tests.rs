@@ -14,6 +14,7 @@
 use super::tests::make_state;
 use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
+use crate::file_system::write_operations::installed;
 use crate::file_system::write_operations::types::ConflictResolution;
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::{InMemoryVolume, VolumeError, VolumeReadStream};
@@ -273,7 +274,6 @@ type ListingRow = FileEntry;
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_merge_child_abandoned_at_the_drain_deadline_takes_its_rename_placeholder_back() {
     use super::wedge_test_support::{CHUNK, CancelDrainGuard, WAIT, gated_source};
-    use crate::file_system::write_operations::state::cancel_write_operation;
     use crate::file_system::write_operations::test_support::TestOperationGuard;
     use std::sync::atomic::Ordering;
 
@@ -334,7 +334,7 @@ async fn a_merge_child_abandoned_at_the_drain_deadline_takes_its_rename_placehol
         "precondition: the Rename reserved its name before the leaf wedged"
     );
 
-    cancel_write_operation(op.id(), false);
+    installed().cancel_write_operation(op.id(), false);
     tokio::time::timeout(Duration::from_secs(5), &mut copy)
         .await
         .expect("the driver must abandon the wedged tasks")

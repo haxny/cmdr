@@ -11,15 +11,16 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
+use super::OperationEventSink;
 use super::event_sinks::CollectorEventSink;
-use super::manager::{PauseOutcome, list_operations, manager, pause_operation, resume_operation};
+use super::manager::{PauseOutcome, manager};
 use super::scan_bridge::observed_scan_ticks;
 use super::scan_cache::{
     CachedScanResult, ScanOutcome, ScanPreviewState, claim_preview, register_preview, settle_preview,
     take_cached_scan_result,
 };
 use super::types::{LifecycleStatus, WriteOperationConfig, WriteOperationError, WriteOperationType};
-use super::{OperationEventSink, copy_files_start};
+use crate::file_system::write_operations::installed;
 use crate::test_support::{TestDir, wait_until_async};
 use cmdr_fs::volume::CopyScanResult;
 use cmdr_operation_log::types::Initiator;
@@ -103,25 +104,26 @@ async fn a_transfer_confirmed_mid_scan_is_registered_before_its_preview_settles(
     register_in_flight(&preview_id);
 
     let events = Arc::new(CollectorEventSink::new());
-    let start = copy_files_start(
-        Arc::clone(&events) as Arc<dyn OperationEventSink>,
-        vec![file.clone()],
-        dst.clone(),
-        WriteOperationConfig {
-            preview_id: Some(preview_id.clone()),
-            ..WriteOperationConfig::default()
-        },
-        vec![unique("vol")],
-        None,
-        Initiator::User,
-        None,
-        None,
-    )
-    .await
-    .expect("copy starts");
+    let start = installed()
+        .copy_files_start(
+            Arc::clone(&events) as Arc<dyn OperationEventSink>,
+            vec![file.clone()],
+            dst.clone(),
+            WriteOperationConfig {
+                preview_id: Some(preview_id.clone()),
+                ..WriteOperationConfig::default()
+            },
+            vec![unique("vol")],
+            None,
+            Initiator::User,
+            None,
+            None,
+        )
+        .await
+        .expect("copy starts");
 
     let op_id = start.operation_id.clone();
-    let snapshot = list_operations();
+    let snapshot = installed().list_operations();
     let row = snapshot
         .iter()
         .find(|op| op.operation_id == op_id)
@@ -171,22 +173,23 @@ async fn an_operation_consumes_its_previews_result_rather_than_re_walking() {
     register_in_flight(&preview_id);
 
     let events = Arc::new(CollectorEventSink::new());
-    let start = copy_files_start(
-        Arc::clone(&events) as Arc<dyn OperationEventSink>,
-        vec![src.clone()],
-        dst.clone(),
-        WriteOperationConfig {
-            preview_id: Some(preview_id.clone()),
-            ..WriteOperationConfig::default()
-        },
-        vec![unique("vol")],
-        None,
-        Initiator::User,
-        None,
-        None,
-    )
-    .await
-    .expect("copy starts");
+    let start = installed()
+        .copy_files_start(
+            Arc::clone(&events) as Arc<dyn OperationEventSink>,
+            vec![src.clone()],
+            dst.clone(),
+            WriteOperationConfig {
+                preview_id: Some(preview_id.clone()),
+                ..WriteOperationConfig::default()
+            },
+            vec![unique("vol")],
+            None,
+            Initiator::User,
+            None,
+            None,
+        )
+        .await
+        .expect("copy starts");
     let op_id = start.operation_id.clone();
 
     // The operation is parked: nothing copied yet, because nothing has told it
@@ -297,22 +300,23 @@ async fn an_unknown_preview_id_falls_back_to_the_operations_own_walk() {
     std::fs::write(src.join("a.bin"), b"a").expect("write a");
 
     let events = Arc::new(CollectorEventSink::new());
-    let start = copy_files_start(
-        Arc::clone(&events) as Arc<dyn OperationEventSink>,
-        vec![src.clone()],
-        dst.clone(),
-        WriteOperationConfig {
-            preview_id: Some(unique("never-existed")),
-            ..WriteOperationConfig::default()
-        },
-        vec![unique("vol")],
-        None,
-        Initiator::User,
-        None,
-        None,
-    )
-    .await
-    .expect("copy starts");
+    let start = installed()
+        .copy_files_start(
+            Arc::clone(&events) as Arc<dyn OperationEventSink>,
+            vec![src.clone()],
+            dst.clone(),
+            WriteOperationConfig {
+                preview_id: Some(unique("never-existed")),
+                ..WriteOperationConfig::default()
+            },
+            vec![unique("vol")],
+            None,
+            Initiator::User,
+            None,
+            None,
+        )
+        .await
+        .expect("copy starts");
 
     assert!(
         !manager().is_in_scan_wait(&start.operation_id),
@@ -425,7 +429,7 @@ async fn the_bridge_ticks_after_the_snapshot_that_first_carries_the_row() {
 
     // A live preview tick reaches the operation too.
     super::scan_bridge::forward_scan_progress(
-        crate::file_system::write_operations::installed(),
+        installed(),
         &preview_id,
         super::scan_bridge::ScanCounts {
             files_found: 12,
@@ -456,7 +460,7 @@ async fn the_bridge_ticks_after_the_snapshot_that_first_carries_the_row() {
     // The claim is gone, so the bridge has nothing to forward to.
     let before = observed_scan_ticks(&op_id).len();
     super::scan_bridge::forward_scan_progress(
-        crate::file_system::write_operations::installed(),
+        installed(),
         &preview_id,
         super::scan_bridge::ScanCounts {
             files_found: 99,
@@ -484,7 +488,7 @@ async fn pause_applies_during_the_scan_wait() {
     let (events, op_id, preview_id, dir) = start_copy_awaiting_preview("scanwait-pause").await;
 
     assert_eq!(
-        pause_operation(&op_id),
+        installed().pause_operation(&op_id),
         PauseOutcome::Applied,
         "a scan-waiting op parks, so its pause is an ordinary one"
     );
@@ -495,7 +499,7 @@ async fn pause_applies_during_the_scan_wait() {
         "and the record says so"
     );
 
-    resume_operation(&op_id);
+    installed().resume_operation(&op_id);
     assert_eq!(
         manager().lifecycle_status(&op_id),
         Some(LifecycleStatus::Running),
@@ -539,7 +543,7 @@ async fn a_pause_during_a_scan_wait_still_holds_when_the_scan_ends() {
     );
 
     // The ask `pause_all` makes, per id.
-    assert_eq!(pause_operation(&op_id), PauseOutcome::Applied);
+    assert_eq!(installed().pause_operation(&op_id), PauseOutcome::Applied);
 
     let src = dir.join("src");
     let file = src.join("a.bin");
@@ -563,7 +567,7 @@ async fn a_pause_during_a_scan_wait_still_holds_when_the_scan_ends() {
     );
 
     // Release it so the lane frees for the rest of the suite.
-    resume_operation(&op_id);
+    installed().resume_operation(&op_id);
     wait_until_async(WAIT, "the copy to settle", || {
         !events.complete.lock().expect("collector mutex").is_empty()
     })
@@ -586,8 +590,6 @@ async fn a_pause_during_a_scan_wait_still_holds_when_the_scan_ends() {
 /// (`docs/testing.md` § "The host machine is not a fixture").
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_trash_frees_its_preview_instead_of_waiting_on_it() {
-    use super::trash_files_start;
-
     let dir = TestDir::new("scanwait-trash");
     let never_created = dir.join("never-created.bin");
 
@@ -595,19 +597,20 @@ async fn a_trash_frees_its_preview_instead_of_waiting_on_it() {
     register_in_flight(&preview_id);
 
     let events = Arc::new(CollectorEventSink::new());
-    let start = trash_files_start(
-        Arc::clone(&events) as Arc<dyn OperationEventSink>,
-        vec![never_created],
-        None,
-        WriteOperationConfig {
-            preview_id: Some(preview_id.clone()),
-            ..WriteOperationConfig::default()
-        },
-        Initiator::User,
-        None,
-    )
-    .await
-    .expect("trash starts");
+    let start = installed()
+        .trash_files_start(
+            Arc::clone(&events) as Arc<dyn OperationEventSink>,
+            vec![never_created],
+            None,
+            WriteOperationConfig {
+                preview_id: Some(preview_id.clone()),
+                ..WriteOperationConfig::default()
+            },
+            Initiator::User,
+            None,
+        )
+        .await
+        .expect("trash starts");
 
     assert!(
         !manager().is_in_scan_wait(&start.operation_id),
@@ -643,7 +646,6 @@ async fn a_trash_frees_its_preview_instead_of_waiting_on_it() {
 /// pass without the threading, so this is the one that catches it.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_compress_confirmed_mid_scan_awaits_its_preview() {
-    use super::archive_edit::compress_start;
     use cmdr_fs::volume::Volume;
     use cmdr_local::LocalPosixVolume;
 
@@ -662,20 +664,21 @@ async fn a_compress_confirmed_mid_scan_awaits_its_preview() {
     register_in_flight(&preview_id);
 
     let events = Arc::new(CollectorEventSink::new());
-    let start = compress_start(
-        Arc::clone(&events) as Arc<dyn OperationEventSink>,
-        source_volume,
-        vec![PathBuf::from("one.txt")],
-        dest.clone(),
-        unique("lane"),
-        super::types::ConflictResolution::Overwrite,
-        0,
-        None,
-        Some(preview_id.clone()),
-        Initiator::User,
-    )
-    .await
-    .expect("start compress");
+    let start = installed()
+        .compress_start(
+            Arc::clone(&events) as Arc<dyn OperationEventSink>,
+            source_volume,
+            vec![PathBuf::from("one.txt")],
+            dest.clone(),
+            unique("lane"),
+            super::types::ConflictResolution::Overwrite,
+            0,
+            None,
+            Some(preview_id.clone()),
+            Initiator::User,
+        )
+        .await
+        .expect("start compress");
 
     assert!(
         manager().is_in_scan_wait(&start.operation_id),
@@ -702,8 +705,6 @@ async fn a_compress_confirmed_mid_scan_awaits_its_preview() {
 /// TTL sweep. On a busy lane, cancelling a queued op is the ordinary case.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn cancelling_a_queued_operation_frees_the_preview_it_claimed() {
-    use super::manager::cancel_operation;
-
     let lane = unique("busy-lane");
     let preview_id = unique("preview");
     register_in_flight(&preview_id);
@@ -750,7 +751,7 @@ async fn cancelling_a_queued_operation_frees_the_preview_it_claimed() {
         "the queued op owns the preview while it waits"
     );
 
-    cancel_operation(&queued_id);
+    installed().cancel_operation(&queued_id);
 
     assert!(
         matches!(
@@ -762,7 +763,10 @@ async fn cancelling_a_queued_operation_frees_the_preview_it_claimed() {
 
     let _ = release.send(());
     wait_until_async(WAIT, "the blocker to settle", || {
-        list_operations().iter().all(|op| op.operation_id != blocker_id)
+        installed()
+            .list_operations()
+            .iter()
+            .all(|op| op.operation_id != blocker_id)
     })
     .await;
 }
@@ -779,7 +783,7 @@ async fn cancelling_a_queued_operation_frees_the_preview_it_claimed() {
 async fn a_scanning_transfer_holds_a_quit() {
     let (events, op_id, preview_id, dir) = start_copy_awaiting_preview("scanwait-quit").await;
 
-    let snapshot = list_operations();
+    let snapshot = installed().list_operations();
     let row = snapshot.iter().find(|op| op.operation_id == op_id).expect("the row");
     assert!(
         crate::quit::blocks_quit(row),
@@ -832,22 +836,23 @@ pub(super) async fn start_copy_awaiting_preview(label: &str) -> (Arc<CollectorEv
     register_in_flight(&preview_id);
 
     let events = Arc::new(CollectorEventSink::new());
-    let start = copy_files_start(
-        Arc::clone(&events) as Arc<dyn OperationEventSink>,
-        vec![src.clone()],
-        dst,
-        WriteOperationConfig {
-            preview_id: Some(preview_id.clone()),
-            ..WriteOperationConfig::default()
-        },
-        vec![unique("vol")],
-        None,
-        Initiator::User,
-        None,
-        None,
-    )
-    .await
-    .expect("copy starts");
+    let start = installed()
+        .copy_files_start(
+            Arc::clone(&events) as Arc<dyn OperationEventSink>,
+            vec![src.clone()],
+            dst,
+            WriteOperationConfig {
+                preview_id: Some(preview_id.clone()),
+                ..WriteOperationConfig::default()
+            },
+            vec![unique("vol")],
+            None,
+            Initiator::User,
+            None,
+            None,
+        )
+        .await
+        .expect("copy starts");
 
     let op_id = start.operation_id.clone();
     assert_eq!(start.operation_type, WriteOperationType::Copy);

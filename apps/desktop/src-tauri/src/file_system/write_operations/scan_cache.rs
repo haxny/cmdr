@@ -36,7 +36,6 @@ use cmdr_fs::volume::{CopyScanResult, ScannedFile};
 
 #[path = "scan_cache_previews.rs"]
 mod previews;
-pub(crate) use previews::cached_cost_facts;
 #[cfg(test)]
 pub(crate) use previews::seed_incoherent_scan_result_for_test;
 pub(super) use previews::{PreviewClaim, ScanOutcome, ScanPreviewState, ScanPreviews};

@@ -54,18 +54,6 @@ impl Operations {
     }
 }
 
-/// [`Operations::transfer_tree_view`] on the installed engine; no operation
-/// before `install`.
-// shim: removed in M7a
-pub(crate) fn transfer_tree_view(
-    operation_id: &str,
-    request: &TransferTreeViewRequest,
-) -> Result<TransferTreeView, TransferTreeViewError> {
-    super::installed_for("transfer_tree_view")
-        .ok_or(TransferTreeViewError::UnknownOperation)?
-        .transfer_tree_view(operation_id, request)
-}
-
 /// Copy, move, and compress build one; nothing else does.
 fn builds_a_tree(operation_type: WriteOperationType) -> bool {
     matches!(

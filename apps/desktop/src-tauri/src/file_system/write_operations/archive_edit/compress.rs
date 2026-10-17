@@ -91,39 +91,3 @@ impl crate::file_system::write_operations::Operations {
         .await
     }
 }
-
-/// [`Operations::compress_start`](crate::file_system::write_operations::Operations::compress_start) on the
-/// installed engine, for the suites that drive it directly.
-// shim: removed in M7a
-#[cfg(test)]
-#[allow(
-    clippy::too_many_arguments,
-    reason = "command seam carries both endpoints, operation settings, preview ownership, and provenance"
-)]
-pub(crate) async fn compress_start(
-    events: Arc<dyn OperationEventSink>,
-    source_volume: Arc<dyn Volume>,
-    source_paths: Vec<PathBuf>,
-    dest_zip_full_path: PathBuf,
-    parent_volume_id: String,
-    conflict: ConflictResolution,
-    progress_interval_ms: u64,
-    compression_level: Option<i64>,
-    preview_id: Option<String>,
-    initiator: cmdr_operation_log::types::Initiator,
-) -> Result<WriteOperationStartResult, WriteOperationError> {
-    crate::file_system::write_operations::installed()
-        .compress_start(
-            events,
-            source_volume,
-            source_paths,
-            dest_zip_full_path,
-            parent_volume_id,
-            conflict,
-            progress_interval_ms,
-            compression_level,
-            preview_id,
-            initiator,
-        )
-        .await
-}

@@ -157,26 +157,16 @@ pub fn move_to_trash_sync(_path: &Path) -> Result<Option<PathBuf>, MutationError
     Err(MutationError::TrashNotSupported)
 }
 
-/// Trash ONE item and journal it as a one-item trash operation — the single-trash
-/// path (`commands/rename.rs::move_to_trash`), which bypasses the batch trash and
-/// its manager op. Mirrors the batch path's capture: enumerate the subtree's
-/// `search_only` leaves from the drive index BEFORE the OS move (the reconciler
-/// prunes on the FSEvent), record the top-level `rollback_unit` row with the
-/// in-trash dest, persist the leaves only on success, and finalize. Returns
-/// the in-trash location like [`move_to_trash_sync`]. Runs on a `spawn_blocking`
-/// thread (sync index reads + journal sends are fine there).
-pub fn trash_single_journaled(
-    source: &Path,
-    initiator: cmdr_operation_log::types::Initiator,
-) -> Result<Option<PathBuf>, MutationError> {
-    // shim: removed in M7a
-    super::super::installed_for("trash_single_journaled")
-        .ok_or_else(super::super::instant_not_installed)?
-        .trash_single_journaled(source, initiator)
-}
-
 impl super::super::Operations {
-    /// See the free [`trash_single_journaled`]: the same, on this engine.
+    /// Trash ONE item and journal it as a one-item trash operation — the
+    /// single-trash path (`commands/rename.rs::move_to_trash`), which bypasses the
+    /// batch trash and its manager op. Mirrors the batch path's capture: enumerate
+    /// the subtree's `search_only` leaves from the drive index BEFORE the OS move
+    /// (the reconciler prunes on the FSEvent), record the top-level
+    /// `rollback_unit` row with the in-trash dest, persist the leaves only on
+    /// success, and finalize. Returns the in-trash location like
+    /// [`move_to_trash_sync`]. Runs on a `spawn_blocking` thread (sync index reads
+    /// + journal sends are fine there).
     pub(crate) fn trash_single_journaled(
         &self,
         source: &Path,

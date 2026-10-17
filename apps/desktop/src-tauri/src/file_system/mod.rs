@@ -55,33 +55,6 @@ pub use volume::{
 #[cfg(feature = "playwright-e2e")]
 pub use watcher::flush_all_watchers;
 pub use watcher::{init_watcher_manager, update_debounce_ms};
-// Re-export write operation types
-pub use write_operations::{
-    OperationEventSink, ReadOnlySide, WriteOperationConfig, WriteOperationError, WriteOperationStartResult,
-    busy_volume_ids, cancel_write_operation, delete_files_start, move_files_start, trash_files_start,
-};
-// Re-export the operation manager surface (queue + lifecycle). `LifecycleStatus`
-// and `OperationsChanged` are reached directly via `write_operations::` (the IPC
-// event registration and snapshot field), so they don't need a re-export here.
-pub use write_operations::{
-    OperationSnapshot, PauseAllOutcome, PauseOutcome, QueueMoveDirection, QueueMoveOutcome, cancel_operation,
-    cancel_operations, dismiss_all_failed_operations, dismiss_failed_operation, latest_operation_progress,
-    list_operations, move_queued_operation, operations_need_volume, pause_all, pause_operation, place_queued_operation,
-    resume_all, resume_operation, retry_failed_operation,
-};
-// Cross-volume transfers. The three `start_volume_*` entry points own the volume
-// and destination-path resolution and every archive fork (extract out, copy/move
-// into a zip); the IPC commands and any backend caller both go through them, so
-// there is one routing to keep right. `write_operations/routing.rs`.
-pub use write_operations::VolumeCopyConfig;
-pub(crate) use write_operations::{
-    resolve_dest_path, start_rename_by_move, start_volume_compress, start_volume_copy, start_volume_move,
-};
-// The transfer dialog's pre-flight conflict check (`write_operations::
-// conflict_preflight`), reached by the thin `#[tauri::command]` wrapper in
-// `commands/file_system/volume_copy.rs`.
-pub(crate) use write_operations::{CONFLICT_CHECK_BUDGET, scan_volume_for_conflicts_within};
-pub use write_operations::{SourceItemInput, VolumeScanError};
 
 /// Whether to auto-upgrade SMB mounts to direct smb2 connections.
 /// Set from the `network.directSmbConnection` setting at startup.

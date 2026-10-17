@@ -122,7 +122,7 @@ fn enumerate_from_id(conn: &Connection, root_id: i64, cap: usize) -> BufferedLea
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::file_system::write_operations::SEARCH_LEAF_CAP;
+    use crate::file_system::write_operations::testing::SEARCH_LEAF_CAP;
     use cmdr_index::store::{IndexStore, ROOT_ID};
     use cmdr_operation_log::types::SearchCoverage;
 

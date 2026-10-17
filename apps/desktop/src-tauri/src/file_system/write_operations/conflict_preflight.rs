@@ -9,7 +9,7 @@
 //! file totals) rather than check for name collisions.
 //!
 //! `commands/file_system/volume_copy.rs::scan_volume_for_conflicts` is the thin
-//! `#[tauri::command]` wrapper that calls [`scan_volume_for_conflicts_within`]
+//! `#[tauri::command]` wrapper that calls `Operations::scan_volume_for_conflicts_within`
 //! with the production budget.
 
 use std::path::{Path, PathBuf};
@@ -254,33 +254,6 @@ impl crate::file_system::write_operations::Operations {
             }
         }
     }
-}
-
-/// [`Operations::scan_volume_for_conflicts_within`](super::Operations::scan_volume_for_conflicts_within)
-/// on the installed engine. Before `install` no volume is registered, so the
-/// destination isn't found.
-// shim: removed in M7a
-pub(crate) async fn scan_volume_for_conflicts_within(
-    deadline: Deadline,
-    volume_id: String,
-    source_items: Vec<SourceItemInput>,
-    dest_path: String,
-    source_volume_id: Option<String>,
-    source_paths: Option<Vec<String>>,
-) -> Result<Vec<ScanConflict>, VolumeScanError> {
-    let Some(engine) = super::installed_for("scan_volume_for_conflicts_within") else {
-        return Err(VolumeScanError::DestinationVolumeNotFound { volume_id });
-    };
-    engine
-        .scan_volume_for_conflicts_within(
-            deadline,
-            volume_id,
-            source_items,
-            dest_path,
-            source_volume_id,
-            source_paths,
-        )
-        .await
 }
 
 /// Drops the collisions that name a source itself, which the engines duplicate

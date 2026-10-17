@@ -1,7 +1,6 @@
 //! Starting a copy, move, delete, or trash on the local filesystem: the four
 //! starters and the managed spawn they share (`start_write_operation`). Each is
-//! an [`Operations`] method; the free functions of the same names are the
-//! installed engine's, for callers outside the engine.
+//! an [`Operations`] method.
 
 use std::future::Future;
 use std::path::PathBuf;
@@ -13,12 +12,12 @@ use cmdr_fs::volume::LaneKey;
 use cmdr_operation_log::types::Initiator;
 
 use super::delete::delete_files_with_progress_inner;
+use super::delete::trash::trash_files_with_progress;
 use super::manager::{self, OperationDescriptor, OperationSummaryText};
 use super::source_binding::{ExpectedSources, retain_bound_sources, retain_bound_sources_with_sizes};
 use super::state::{WriteOperationState, WriteSettledGuard};
 use super::transfer::copy::copy_files_with_progress_inner;
 use super::transfer::move_op::move_files_with_progress_inner;
-use super::trash::trash_files_with_progress;
 use super::types::{
     WriteErrorEvent, WriteOperationConfig, WriteOperationError, WriteOperationStartResult, WriteOperationType,
 };
@@ -26,10 +25,7 @@ use super::validation::{
     ensure_destination_dir, validate_destination_not_inside_source, validate_destination_writable,
     validate_source_names_are_distinct, validate_sources,
 };
-use super::{
-    OperationEventSink, Operations, cancel_scan_preview, installed_for, journal, not_installed, path_summary,
-    scan_bridge, transfer_sides,
-};
+use super::{OperationEventSink, Operations, journal, path_summary, scan_bridge, transfer_sides};
 
 // ============================================================================
 // The starters
@@ -468,7 +464,7 @@ impl Operations {
         // can't free it: it sets `confirmed` and deliberately skips its own
         // cleanup, because on the DELETE path the operation does consume it.)
         if let Some(preview_id) = &config.preview_id {
-            cancel_scan_preview(preview_id);
+            self.cancel_scan_preview(preview_id);
         }
 
         // Trash always targets the local macOS Trash; no ejectable volume involved.
@@ -518,103 +514,4 @@ fn local_lanes(volume_ids: &[String]) -> Vec<LaneKey> {
     } else {
         volume_ids.iter().cloned().map(LaneKey::new).collect()
     }
-}
-
-// The installed engine's starters, by free function, for callers outside the
-// engine. Before `install` each refuses with [`not_installed`].
-// shim: removed in M7a
-
-/// [`Operations::copy_files_start`] on the installed engine.
-#[cfg(test)]
-#[allow(
-    clippy::too_many_arguments,
-    reason = "the manager's context alongside the op's own inputs"
-)]
-pub async fn copy_files_start(
-    events: Arc<dyn OperationEventSink>,
-    sources: Vec<PathBuf>,
-    destination: PathBuf,
-    config: WriteOperationConfig,
-    volume_ids: Vec<String>,
-    lanes: Option<Vec<LaneKey>>,
-    initiator: Initiator,
-    expected_sources: Option<ExpectedSources>,
-    sides: Option<transfer_sides::TransferSides>,
-) -> Result<WriteOperationStartResult, WriteOperationError> {
-    installed_for("copy_files_start")
-        .ok_or_else(not_installed)?
-        .copy_files_start(
-            events,
-            sources,
-            destination,
-            config,
-            volume_ids,
-            lanes,
-            initiator,
-            expected_sources,
-            sides,
-        )
-        .await
-}
-
-/// [`Operations::move_files_start`] on the installed engine.
-#[allow(
-    clippy::too_many_arguments,
-    reason = "the manager's context alongside the op's own inputs"
-)]
-pub async fn move_files_start(
-    events: Arc<dyn OperationEventSink>,
-    sources: Vec<PathBuf>,
-    destination: PathBuf,
-    config: WriteOperationConfig,
-    volume_ids: Vec<String>,
-    lanes: Option<Vec<LaneKey>>,
-    initiator: Initiator,
-    expected_sources: Option<ExpectedSources>,
-    sides: Option<transfer_sides::TransferSides>,
-) -> Result<WriteOperationStartResult, WriteOperationError> {
-    installed_for("move_files_start")
-        .ok_or_else(not_installed)?
-        .move_files_start(
-            events,
-            sources,
-            destination,
-            config,
-            volume_ids,
-            lanes,
-            initiator,
-            expected_sources,
-            sides,
-        )
-        .await
-}
-
-/// [`Operations::delete_files_start`] on the installed engine.
-pub async fn delete_files_start(
-    events: Arc<dyn OperationEventSink>,
-    sources: Vec<PathBuf>,
-    config: WriteOperationConfig,
-    volume_id: Option<String>,
-    initiator: Initiator,
-    expected_sources: Option<ExpectedSources>,
-) -> Result<WriteOperationStartResult, WriteOperationError> {
-    installed_for("delete_files_start")
-        .ok_or_else(not_installed)?
-        .delete_files_start(events, sources, config, volume_id, initiator, expected_sources)
-        .await
-}
-
-/// [`Operations::trash_files_start`] on the installed engine.
-pub async fn trash_files_start(
-    events: Arc<dyn OperationEventSink>,
-    sources: Vec<PathBuf>,
-    item_sizes: Option<Vec<u64>>,
-    config: WriteOperationConfig,
-    initiator: Initiator,
-    expected_sources: Option<ExpectedSources>,
-) -> Result<WriteOperationStartResult, WriteOperationError> {
-    installed_for("trash_files_start")
-        .ok_or_else(not_installed)?
-        .trash_files_start(events, sources, item_sizes, config, initiator, expected_sources)
-        .await
 }

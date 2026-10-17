@@ -20,11 +20,12 @@ use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 use std::time::{Duration, Instant};
 
 use super::super::event_sinks::CollectorEventSink;
-use super::super::state::{OperationIntent, WriteOperationState, cancel_write_operation};
+use super::super::state::{OperationIntent, WriteOperationState};
 use super::super::test_support::TestOperationGuard;
 use super::super::types::WriteOperationConfig;
 use super::walker::delete_volume_files_with_progress_inner;
 use crate::file_system::volume::manager::get_volume_manager;
+use crate::file_system::write_operations::installed;
 use crate::test_support::wait_until_async;
 use cmdr_fs::volume::{InMemoryVolume, Volume, VolumeError};
 use tokio_util::sync::CancellationToken;
@@ -256,7 +257,7 @@ async fn mtp_listing_cancels_promptly_when_intent_flips() {
             || vol_for_cancel.fetched_live.load(Ordering::Acquire) >= 5,
         )
         .await;
-        cancel_write_operation(&op_id_for_cancel, false);
+        installed().cancel_write_operation(&op_id_for_cancel, false);
     });
 
     let sink = CollectorEventSink::new();
@@ -407,7 +408,7 @@ async fn volume_cancel_emits_write_settled_event() {
             || vol_for_cancel.fetched_live.load(Ordering::Acquire) >= 5,
         )
         .await;
-        cancel_write_operation(&op_id_for_cancel, false);
+        installed().cancel_write_operation(&op_id_for_cancel, false);
     });
 
     let sources = vec![PathBuf::from("/dir")];
@@ -655,7 +656,7 @@ fn cancel_flag_adapter_links_intent_to_backend_cancel() {
 
     assert!(!state.backend_cancel.is_cancelled(), "backend_cancel must start unset");
 
-    cancel_write_operation(&op_id, false);
+    installed().cancel_write_operation(&op_id, false);
 
     assert!(
         state.backend_cancel.is_cancelled(),

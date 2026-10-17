@@ -24,7 +24,7 @@ use std::time::Duration;
 use super::event_sinks::{CollectorEventSink, OperationEventSink};
 use super::source_binding::{ExpectedSources, SourceFingerprint};
 use super::types::{ConflictResolution, WriteOperationConfig, WriteOperationType};
-use super::{copy_files_start, move_files_start};
+use crate::file_system::write_operations::installed;
 use crate::test_support::TestDir;
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_operation_log::types::Initiator;
@@ -127,19 +127,20 @@ async fn run_copy(seed: impl Fn(&Path, &Path), config: WriteOperationConfig, bin
     // "does the engine create a missing destination folder?" is a real question
     // for every case here.
     let destination = dst_root.join("incoming");
-    copy_files_start(
-        events,
-        sources,
-        destination.clone(),
-        config,
-        vec![],
-        None,
-        Initiator::User,
-        expected,
-        None,
-    )
-    .await
-    .expect("the copy starts");
+    installed()
+        .copy_files_start(
+            events,
+            sources,
+            destination.clone(),
+            config,
+            vec![],
+            None,
+            Initiator::User,
+            expected,
+            None,
+        )
+        .await
+        .expect("the copy starts");
 
     collect(&collector, &destination, &src_root).await
 }
@@ -260,19 +261,20 @@ async fn an_approved_move_takes_the_source_exactly_as_a_user_started_one_does() 
         let collector = Arc::new(CollectorEventSink::new());
         let events: Arc<dyn OperationEventSink> = collector.clone();
         let destination = dst_root.join("incoming");
-        move_files_start(
-            events,
-            sources,
-            destination.clone(),
-            WriteOperationConfig::default(),
-            vec![],
-            None,
-            Initiator::User,
-            expected,
-            None,
-        )
-        .await
-        .expect("the move starts");
+        installed()
+            .move_files_start(
+                events,
+                sources,
+                destination.clone(),
+                WriteOperationConfig::default(),
+                vec![],
+                None,
+                Initiator::User,
+                expected,
+                None,
+            )
+            .await
+            .expect("the move starts");
 
         let outcome = collect(&collector, &destination, &src_root).await;
         (outcome, source.exists())
@@ -314,19 +316,20 @@ async fn only_a_source_that_changed_is_treated_differently() {
     let collector = Arc::new(CollectorEventSink::new());
     let events: Arc<dyn OperationEventSink> = collector.clone();
     let destination = dst_root.join("incoming");
-    copy_files_start(
-        events,
-        sources,
-        destination.clone(),
-        WriteOperationConfig::default(),
-        vec![],
-        None,
-        Initiator::User,
-        Some(expected),
-        None,
-    )
-    .await
-    .expect("the copy starts");
+    installed()
+        .copy_files_start(
+            events,
+            sources,
+            destination.clone(),
+            WriteOperationConfig::default(),
+            vec![],
+            None,
+            Initiator::User,
+            Some(expected),
+            None,
+        )
+        .await
+        .expect("the copy starts");
 
     let outcome = collect(&collector, &destination, &src_root).await;
 
@@ -364,19 +367,20 @@ async fn an_approved_copy_settles_as_an_ordinary_copy() {
 
     let collector = Arc::new(CollectorEventSink::new());
     let events: Arc<dyn OperationEventSink> = collector.clone();
-    copy_files_start(
-        events,
-        sources.clone(),
-        dst_root.join("incoming"),
-        WriteOperationConfig::default(),
-        vec![],
-        None,
-        Initiator::User,
-        Some(bind_all(&sources)),
-        None,
-    )
-    .await
-    .expect("the copy starts");
+    installed()
+        .copy_files_start(
+            events,
+            sources.clone(),
+            dst_root.join("incoming"),
+            WriteOperationConfig::default(),
+            vec![],
+            None,
+            Initiator::User,
+            Some(bind_all(&sources)),
+            None,
+        )
+        .await
+        .expect("the copy starts");
 
     crate::test_support::wait_until_async(Duration::from_secs(10), "the operation to settle", || {
         !collector.settled.lock_ignore_poison().is_empty()
@@ -469,20 +473,21 @@ async fn a_bound_cross_volume_copy_skips_the_source_that_changed_while_it_waited
 
     let collector = Arc::new(CollectorEventSink::new());
     let events: Arc<dyn OperationEventSink> = collector.clone();
-    super::transfer::volume::copy_between_volumes(
-        events,
-        "share".to_string(),
-        Arc::clone(&source),
-        vec![reviewed.clone(), stale.clone()],
-        "phone".to_string(),
-        Arc::clone(&dest),
-        PathBuf::from("/incoming"),
-        super::types::VolumeCopyConfig::default(),
-        Initiator::Agent,
-        Some(expected),
-    )
-    .await
-    .expect("the copy starts");
+    installed()
+        .copy_between_volumes(
+            events,
+            "share".to_string(),
+            Arc::clone(&source),
+            vec![reviewed.clone(), stale.clone()],
+            "phone".to_string(),
+            Arc::clone(&dest),
+            PathBuf::from("/incoming"),
+            super::types::VolumeCopyConfig::default(),
+            Initiator::Agent,
+            Some(expected),
+        )
+        .await
+        .expect("the copy starts");
 
     crate::test_support::wait_until_async(Duration::from_secs(10), "the bound copy to settle", || {
         !collector.settled.lock_ignore_poison().is_empty()

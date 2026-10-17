@@ -5,7 +5,8 @@
 //! `.zip` FILE routed to its own `ArchiveVolume` would scan the archive's contents
 //! instead of copying the file.
 
-use super::{resolve_dest_path, resolve_source_volume};
+use super::resolve_dest_path;
+use crate::file_system::write_operations::installed;
 use cmdr_fs::volume::RoutedKind;
 use cmdr_fs::volume::{InMemoryVolume, Volume};
 use std::path::Path;
@@ -82,13 +83,17 @@ async fn resolve_source_treats_the_zip_file_itself_as_a_plain_file() {
     // The `.zip` FILE itself is copied as a plain file: routed to the PARENT
     // volume, `is_inside = false` (NOT the ArchiveVolume, which would scan its
     // contents instead of copying the file).
-    let (vol, route) = resolve_source_volume("root", Some(&zip)).await.expect("source volume");
+    let (vol, route) = installed()
+        .resolve_source_volume("root", Some(&zip))
+        .await
+        .expect("source volume");
     assert_eq!(route, None, "the .zip file itself is not archive-inner");
     assert_eq!(vol.name(), "Root", "routed to the parent volume, not the archive");
 
     // A path INSIDE the archive routes to the ArchiveVolume. This is what makes
     // an EXTRACT reachable as an ordinary copy.
-    let (inner_vol, inner_route) = resolve_source_volume("root", Some(&zip.join("entry.txt")))
+    let (inner_vol, inner_route) = installed()
+        .resolve_source_volume("root", Some(&zip.join("entry.txt")))
         .await
         .expect("inner volume");
     assert_eq!(inner_route, Some(RoutedKind::Archive), "an inner path is archive-inner");
@@ -120,7 +125,8 @@ async fn resolve_source_routes_a_snapshot_path_to_the_git_portal() {
     );
     git::wiring::set_virtual_portal_enabled(true);
 
-    let (volume, route) = resolve_source_volume("root", Some(&dir.join(".git/branches/main/README.md")))
+    let (volume, route) = installed()
+        .resolve_source_volume("root", Some(&dir.join(".git/branches/main/README.md")))
         .await
         .expect("source volume");
     assert_eq!(route, Some(RoutedKind::GitPortal));
@@ -133,7 +139,8 @@ async fn resolve_source_routes_a_snapshot_path_to_the_git_portal() {
 
     // `.git/` itself and the real files under it are the parent's, so editing
     // and deleting them keeps working.
-    let (parent, real_route) = resolve_source_volume("root", Some(&dir.join(".git/config")))
+    let (parent, real_route) = installed()
+        .resolve_source_volume("root", Some(&dir.join(".git/config")))
         .await
         .expect("source volume");
     assert_eq!(real_route, None);
@@ -169,7 +176,7 @@ fn a_volume_that_isnt_connected_yet_maps_to_the_side_that_asked() {
 async fn a_copy_onto_an_id_nothing_knows_still_reads_as_a_missing_volume() {
     use crate::file_system::volume::manager::get_volume_manager;
     use crate::file_system::write_operations::event_sinks::CollectorEventSink;
-    use crate::file_system::write_operations::{VolumeCopyConfig, WriteOperationError, start_volume_copy};
+    use crate::file_system::write_operations::{VolumeCopyConfig, WriteOperationError};
     use cmdr_operation_log::types::Initiator;
 
     let source_id = format!("routing-source-{}", uuid::Uuid::new_v4());
@@ -180,18 +187,19 @@ async fn a_copy_onto_an_id_nothing_knows_still_reads_as_a_missing_volume() {
         .expect("the source file");
     get_volume_manager().register(&source_id, Arc::new(source));
 
-    let refused = start_volume_copy(
-        Arc::new(CollectorEventSink::new()),
-        source_id.clone(),
-        vec![Path::new("/a.txt").to_path_buf()],
-        "no-provider-or-saved-server-knows-this".to_string(),
-        "/photos".to_string(),
-        VolumeCopyConfig::default(),
-        Initiator::User,
-        None,
-    )
-    .await
-    .expect_err("a copy onto an unknown volume is refused");
+    let refused = installed()
+        .start_volume_copy(
+            Arc::new(CollectorEventSink::new()),
+            source_id.clone(),
+            vec![Path::new("/a.txt").to_path_buf()],
+            "no-provider-or-saved-server-knows-this".to_string(),
+            "/photos".to_string(),
+            VolumeCopyConfig::default(),
+            Initiator::User,
+            None,
+        )
+        .await
+        .expect_err("a copy onto an unknown volume is refused");
     get_volume_manager().unregister(&source_id);
 
     assert!(
@@ -208,24 +216,25 @@ async fn a_copy_onto_an_id_nothing_knows_still_reads_as_a_missing_volume() {
 async fn a_copy_from_an_id_nothing_knows_reads_as_a_source_no_longer_connected() {
     use crate::file_system::volume::manager::get_volume_manager;
     use crate::file_system::write_operations::event_sinks::CollectorEventSink;
-    use crate::file_system::write_operations::{VolumeCopyConfig, WriteOperationError, start_volume_copy};
+    use crate::file_system::write_operations::{VolumeCopyConfig, WriteOperationError};
     use cmdr_operation_log::types::Initiator;
 
     let dest_id = format!("routing-dest-{}", uuid::Uuid::new_v4());
     get_volume_manager().register(&dest_id, Arc::new(InMemoryVolume::new("Dest")));
 
-    let refused = start_volume_copy(
-        Arc::new(CollectorEventSink::new()),
-        "an-unplugged-phone-nothing-lists".to_string(),
-        vec![Path::new("/sdcard/DCIM/a.jpg").to_path_buf()],
-        dest_id.clone(),
-        "/".to_string(),
-        VolumeCopyConfig::default(),
-        Initiator::User,
-        None,
-    )
-    .await
-    .expect_err("a copy from an unknown volume is refused");
+    let refused = installed()
+        .start_volume_copy(
+            Arc::new(CollectorEventSink::new()),
+            "an-unplugged-phone-nothing-lists".to_string(),
+            vec![Path::new("/sdcard/DCIM/a.jpg").to_path_buf()],
+            dest_id.clone(),
+            "/".to_string(),
+            VolumeCopyConfig::default(),
+            Initiator::User,
+            None,
+        )
+        .await
+        .expect_err("a copy from an unknown volume is refused");
     get_volume_manager().unregister(&dest_id);
 
     assert!(

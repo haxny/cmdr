@@ -244,7 +244,7 @@ mod tests {
         let guard = TestOperationGuard::register("retry-cancelled");
         let err = VolumeError::ConnectionTimeout("send timed out".into());
         assert!(should_retry(&err, 1, guard.state()));
-        super::super::super::state::cancel_write_operation(guard.id(), false);
+        crate::file_system::write_operations::installed().cancel_write_operation(guard.id(), false);
         assert!(!should_retry(&err, 1, guard.state()));
     }
 
@@ -277,7 +277,7 @@ mod tests {
             // INSIDE the running 250 ms backoff, and there is no condition to wait on
             // (a backoff in progress publishes nothing).
             tokio::time::sleep(Duration::from_millis(20)).await;
-            super::super::super::state::cancel_write_operation(&op_id, false);
+            crate::file_system::write_operations::installed().cancel_write_operation(&op_id, false);
         });
         let started = tokio::time::Instant::now();
         let go_on = wait_before_retry(&state, 1).await;

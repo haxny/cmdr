@@ -22,7 +22,8 @@ use super::test_support::{
     park_holds_at, rel_expected_bytes,
 };
 use super::*;
-use crate::file_system::write_operations::state::{OperationIntent, cancel_write_operation};
+use crate::file_system::write_operations::installed;
+use crate::file_system::write_operations::state::OperationIntent;
 use crate::file_system::write_operations::test_support::TestOperationGuard;
 use crate::file_system::write_operations::transfer::transfer_driver::{LeafProgressLedger, ObservedProgress};
 use crate::test_support::wait_until_async;
@@ -189,7 +190,7 @@ async fn streaming_copy_cancel_while_paused_mid_file_unblocks() {
     // Cancel (keep partials) while paused: the production cancel path flips
     // intent AND wakes the gate, so the parked stream unblocks and the backend's
     // on_progress cancel check breaks + cleans up the partial.
-    cancel_write_operation(&op_id, false);
+    installed().cancel_write_operation(&op_id, false);
 
     let result = tokio::time::timeout(Duration::from_secs(10), op)
         .await
@@ -393,7 +394,7 @@ async fn paused_mtp_copy_cancel_while_paused_keeps_no_partial() {
     // Cancel (keep partials) while paused. The parked stream unblocks and the
     // next chunk flows through to on_progress, which breaks on cancel and the
     // local sink removes its in-flight temp.
-    cancel_write_operation(&op_id, false);
+    installed().cancel_write_operation(&op_id, false);
 
     let result = tokio::time::timeout(Duration::from_secs(10), op)
         .await

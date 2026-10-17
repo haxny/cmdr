@@ -1,8 +1,8 @@
 //! Fresh compression lifecycle, output, progress, metadata, and journaling.
 
-use super::compress::compress_start;
 use super::test_support::*;
 use crate::file_system::write_operations::WriteOperationPhase;
+use crate::file_system::write_operations::installed;
 
 /// End-to-end: compress two local files into a new ZIP and read both entries back.
 #[tokio::test]
@@ -33,20 +33,21 @@ async fn compress_start_packs_local_files_into_a_new_zip() {
     assert!(!dest.exists(), "the target must not exist before compress");
 
     let events = PhaseGateSink::new(WriteOperationPhase::FinishingCompression);
-    let start = compress_start(
-        Arc::clone(&events) as Arc<dyn OperationEventSink>,
-        source_volume,
-        vec![PathBuf::from("one.txt"), PathBuf::from("two.txt")],
-        dest.clone(),
-        unique_lane_id(),
-        ConflictResolution::Overwrite,
-        0,
-        None,
-        None,
-        cmdr_operation_log::types::Initiator::User,
-    )
-    .await
-    .expect("start compress");
+    let start = installed()
+        .compress_start(
+            Arc::clone(&events) as Arc<dyn OperationEventSink>,
+            source_volume,
+            vec![PathBuf::from("one.txt"), PathBuf::from("two.txt")],
+            dest.clone(),
+            unique_lane_id(),
+            ConflictResolution::Overwrite,
+            0,
+            None,
+            None,
+            cmdr_operation_log::types::Initiator::User,
+        )
+        .await
+        .expect("start compress");
     assert_eq!(start.operation_type, WriteOperationType::Compress);
 
     wait_until_async(Duration::from_secs(5), "finishing-compression phase gate", || {
@@ -156,20 +157,21 @@ async fn a_name_taken_after_start_is_not_replaced_or_reported_complete() {
     let raced_bytes = b"a file created after the compression was approved";
     let events = PhaseGateSink::new(WriteOperationPhase::FinishingCompression);
 
-    compress_start(
-        Arc::clone(&events) as Arc<dyn OperationEventSink>,
-        source_volume,
-        vec![PathBuf::from("new.txt")],
-        dest.clone(),
-        unique_lane_id(),
-        ConflictResolution::Overwrite,
-        0,
-        None,
-        None,
-        cmdr_operation_log::types::Initiator::User,
-    )
-    .await
-    .expect("start net-new compress");
+    installed()
+        .compress_start(
+            Arc::clone(&events) as Arc<dyn OperationEventSink>,
+            source_volume,
+            vec![PathBuf::from("new.txt")],
+            dest.clone(),
+            unique_lane_id(),
+            ConflictResolution::Overwrite,
+            0,
+            None,
+            None,
+            cmdr_operation_log::types::Initiator::User,
+        )
+        .await
+        .expect("start net-new compress");
     wait_until_async(Duration::from_secs(5), "finishing-compression phase gate", || {
         events.entered()
     })
@@ -188,7 +190,6 @@ async fn a_name_taken_after_start_is_not_replaced_or_reported_complete() {
 
 #[tokio::test]
 async fn stop_policy_prompts_for_duplicate_source_names_and_honors_overwrite() {
-    use crate::file_system::write_operations::resolve_write_conflict;
     use cmdr_local::LocalPosixVolume;
 
     let tmp = tempfile::tempdir().expect("tempdir");
@@ -205,20 +206,21 @@ async fn stop_policy_prompts_for_duplicate_source_names_and_honors_overwrite() {
     let dest = tmp.path().join("bundle.zip");
     let events = Arc::new(CollectorEventSink::new());
 
-    let started = compress_start(
-        Arc::clone(&events) as Arc<dyn OperationEventSink>,
-        source_volume,
-        vec![PathBuf::from("first/report.txt"), PathBuf::from("second/report.txt")],
-        dest.clone(),
-        unique_lane_id(),
-        ConflictResolution::Stop,
-        0,
-        None,
-        None,
-        cmdr_operation_log::types::Initiator::User,
-    )
-    .await
-    .expect("start duplicate-name compress");
+    let started = installed()
+        .compress_start(
+            Arc::clone(&events) as Arc<dyn OperationEventSink>,
+            source_volume,
+            vec![PathBuf::from("first/report.txt"), PathBuf::from("second/report.txt")],
+            dest.clone(),
+            unique_lane_id(),
+            ConflictResolution::Stop,
+            0,
+            None,
+            None,
+            cmdr_operation_log::types::Initiator::User,
+        )
+        .await
+        .expect("start duplicate-name compress");
 
     wait_until_async(Duration::from_secs(5), "duplicate-name conflict", || {
         !events.conflicts.lock_ignore_poison().is_empty() || !events.errors.lock_ignore_poison().is_empty()
@@ -226,7 +228,7 @@ async fn stop_policy_prompts_for_duplicate_source_names_and_honors_overwrite() {
     .await;
     assert!(events.errors.lock_ignore_poison().is_empty());
     let clash = events.conflicts.lock_ignore_poison()[0].conflict_id;
-    resolve_write_conflict(&started.operation_id, clash, ConflictResolution::Overwrite, false);
+    installed().resolve_write_conflict(&started.operation_id, clash, ConflictResolution::Overwrite, false);
     wait_until_async(Duration::from_secs(5), "duplicate-name compress completion", || {
         !events.complete.lock_ignore_poison().is_empty()
     })
@@ -253,20 +255,21 @@ async fn an_existing_local_archive_stays_byte_exact_until_publication() {
     std::fs::write(&dest, &original).expect("write original archive");
 
     let events = PhaseGateSink::new(WriteOperationPhase::FinishingCompression);
-    compress_start(
-        Arc::clone(&events) as Arc<dyn OperationEventSink>,
-        source_volume,
-        vec![PathBuf::from("new.txt")],
-        dest.clone(),
-        unique_lane_id(),
-        ConflictResolution::Overwrite,
-        0,
-        None,
-        None,
-        cmdr_operation_log::types::Initiator::User,
-    )
-    .await
-    .expect("start replacement compress");
+    installed()
+        .compress_start(
+            Arc::clone(&events) as Arc<dyn OperationEventSink>,
+            source_volume,
+            vec![PathBuf::from("new.txt")],
+            dest.clone(),
+            unique_lane_id(),
+            ConflictResolution::Overwrite,
+            0,
+            None,
+            None,
+            cmdr_operation_log::types::Initiator::User,
+        )
+        .await
+        .expect("start replacement compress");
 
     wait_until_async(Duration::from_secs(5), "finishing-compression phase gate", || {
         events.entered()
@@ -297,37 +300,39 @@ async fn local_alias_and_destination_inside_source_are_refused_before_registrati
         Arc::new(LocalPosixVolume::local_folder("src", "/", crate::volume_host::host()));
     let events = Arc::new(CollectorEventSink::new());
 
-    let alias_result = compress_start(
-        Arc::clone(&events) as Arc<dyn OperationEventSink>,
-        Arc::clone(&source_volume),
-        vec![source_archive],
-        alias,
-        unique_lane_id(),
-        ConflictResolution::Overwrite,
-        0,
-        None,
-        None,
-        cmdr_operation_log::types::Initiator::User,
-    )
-    .await;
+    let alias_result = installed()
+        .compress_start(
+            Arc::clone(&events) as Arc<dyn OperationEventSink>,
+            Arc::clone(&source_volume),
+            vec![source_archive],
+            alias,
+            unique_lane_id(),
+            ConflictResolution::Overwrite,
+            0,
+            None,
+            None,
+            cmdr_operation_log::types::Initiator::User,
+        )
+        .await;
     assert!(matches!(
         alias_result,
         Err(WriteOperationError::DestinationInsideSource { .. })
     ));
 
-    let inside_result = compress_start(
-        events,
-        source_volume,
-        vec![source_dir.clone()],
-        source_dir.join("nested.zip"),
-        unique_lane_id(),
-        ConflictResolution::Overwrite,
-        0,
-        None,
-        None,
-        cmdr_operation_log::types::Initiator::User,
-    )
-    .await;
+    let inside_result = installed()
+        .compress_start(
+            events,
+            source_volume,
+            vec![source_dir.clone()],
+            source_dir.join("nested.zip"),
+            unique_lane_id(),
+            ConflictResolution::Overwrite,
+            0,
+            None,
+            None,
+            cmdr_operation_log::types::Initiator::User,
+        )
+        .await;
     assert!(matches!(
         inside_result,
         Err(WriteOperationError::DestinationInsideSource { .. })
@@ -362,19 +367,20 @@ async fn compress_refuses_a_read_only_destination_without_touching_its_bytes() {
             crate::volume_host::host(),
         ));
         let events = Arc::new(CollectorEventSink::new());
-        let result = compress_start(
-            Arc::clone(&events) as Arc<dyn OperationEventSink>,
-            source_volume,
-            vec![PathBuf::from("one.txt")],
-            dest.clone(),
-            unique_lane_id(),
-            ConflictResolution::Overwrite,
-            0,
-            None,
-            None,
-            cmdr_operation_log::types::Initiator::User,
-        )
-        .await;
+        let result = installed()
+            .compress_start(
+                Arc::clone(&events) as Arc<dyn OperationEventSink>,
+                source_volume,
+                vec![PathBuf::from("one.txt")],
+                dest.clone(),
+                unique_lane_id(),
+                ConflictResolution::Overwrite,
+                0,
+                None,
+                None,
+                cmdr_operation_log::types::Initiator::User,
+            )
+            .await;
 
         // Refused, and typed — the same `ReadOnlyDevice` every other archive-edit
         // route answers with.
@@ -434,20 +440,21 @@ async fn compress_journals_subkind_and_net_new_from_the_driver() {
     assert!(!dest.exists(), "the target must be net-new");
 
     let events = Arc::new(CollectorEventSink::new());
-    let start = compress_start(
-        Arc::clone(&events) as Arc<dyn OperationEventSink>,
-        source_volume,
-        vec![PathBuf::from("one.txt")],
-        dest.clone(),
-        unique_lane_id(),
-        ConflictResolution::Overwrite,
-        0,
-        None,
-        None,
-        Initiator::User,
-    )
-    .await
-    .expect("start compress");
+    let start = installed()
+        .compress_start(
+            Arc::clone(&events) as Arc<dyn OperationEventSink>,
+            source_volume,
+            vec![PathBuf::from("one.txt")],
+            dest.clone(),
+            unique_lane_id(),
+            ConflictResolution::Overwrite,
+            0,
+            None,
+            None,
+            Initiator::User,
+        )
+        .await
+        .expect("start compress");
 
     // Poll the journal itself so this cell asserts the persisted status and not
     // only the terminal event's in-memory observation.
@@ -520,20 +527,21 @@ async fn compress_journals_the_source_volume_and_what_it_packed() {
     get_volume_manager().register(&source_id, Arc::clone(&source_volume));
     let parent_id = unique_lane_id();
 
-    let start = compress_start(
-        Arc::new(CollectorEventSink::new()) as Arc<dyn OperationEventSink>,
-        source_volume,
-        vec![PathBuf::from("one.txt"), PathBuf::from("album")],
-        tmp.path().join("bundle.zip"),
-        parent_id.clone(),
-        ConflictResolution::Overwrite,
-        0,
-        None,
-        None,
-        Initiator::User,
-    )
-    .await
-    .expect("start compress");
+    let start = installed()
+        .compress_start(
+            Arc::new(CollectorEventSink::new()) as Arc<dyn OperationEventSink>,
+            source_volume,
+            vec![PathBuf::from("one.txt"), PathBuf::from("album")],
+            tmp.path().join("bundle.zip"),
+            parent_id.clone(),
+            ConflictResolution::Overwrite,
+            0,
+            None,
+            None,
+            Initiator::User,
+        )
+        .await
+        .expect("start compress");
 
     let op_id = start.operation_id.clone();
     let jdb_poll = jdb.clone();
@@ -578,20 +586,21 @@ async fn compress_start_packs_a_directory_subtree() {
 
     let dest = tmp.path().join("project.zip");
     let events = Arc::new(CollectorEventSink::new());
-    compress_start(
-        Arc::clone(&events) as Arc<dyn OperationEventSink>,
-        source_volume,
-        vec![PathBuf::from("project")],
-        dest.clone(),
-        unique_lane_id(),
-        ConflictResolution::Overwrite,
-        0,
-        None,
-        None,
-        cmdr_operation_log::types::Initiator::User,
-    )
-    .await
-    .expect("start compress");
+    installed()
+        .compress_start(
+            Arc::clone(&events) as Arc<dyn OperationEventSink>,
+            source_volume,
+            vec![PathBuf::from("project")],
+            dest.clone(),
+            unique_lane_id(),
+            ConflictResolution::Overwrite,
+            0,
+            None,
+            None,
+            cmdr_operation_log::types::Initiator::User,
+        )
+        .await
+        .expect("start compress");
 
     wait_until_async(Duration::from_secs(5), "the write-complete event", || {
         !events.complete.lock_ignore_poison().is_empty()
@@ -644,20 +653,21 @@ async fn compress_payload_at(dir: &Path, tag: &str, level: Option<i64>, payload:
 
     let dest = dir.join(format!("out-{tag}.zip"));
     let events = Arc::new(CollectorEventSink::new());
-    compress_start(
-        Arc::clone(&events) as Arc<dyn OperationEventSink>,
-        source_volume,
-        vec![PathBuf::from("data.txt")],
-        dest.clone(),
-        unique_lane_id(),
-        ConflictResolution::Overwrite,
-        0,
-        level,
-        None,
-        cmdr_operation_log::types::Initiator::User,
-    )
-    .await
-    .expect("start compress");
+    installed()
+        .compress_start(
+            Arc::clone(&events) as Arc<dyn OperationEventSink>,
+            source_volume,
+            vec![PathBuf::from("data.txt")],
+            dest.clone(),
+            unique_lane_id(),
+            ConflictResolution::Overwrite,
+            0,
+            level,
+            None,
+            cmdr_operation_log::types::Initiator::User,
+        )
+        .await
+        .expect("start compress");
     wait_until_async(Duration::from_secs(5), "the write-complete event", || {
         !events.complete.lock_ignore_poison().is_empty()
     })
@@ -755,20 +765,21 @@ async fn a_tree_that_fails_to_build_leaves_the_compress_as_it_would_run_without_
 
     let dest = tmp.path().join("project.zip");
     let events = Arc::new(CollectorEventSink::new());
-    compress_start(
-        Arc::clone(&events) as Arc<dyn OperationEventSink>,
-        source_volume,
-        vec![PathBuf::from("project")],
-        dest.clone(),
-        unique_lane_id(),
-        ConflictResolution::Overwrite,
-        0,
-        None,
-        None,
-        cmdr_operation_log::types::Initiator::User,
-    )
-    .await
-    .expect("start compress");
+    installed()
+        .compress_start(
+            Arc::clone(&events) as Arc<dyn OperationEventSink>,
+            source_volume,
+            vec![PathBuf::from("project")],
+            dest.clone(),
+            unique_lane_id(),
+            ConflictResolution::Overwrite,
+            0,
+            None,
+            None,
+            cmdr_operation_log::types::Initiator::User,
+        )
+        .await
+        .expect("start compress");
 
     wait_until_async(Duration::from_secs(5), "the write-complete event", || {
         !events.complete.lock_ignore_poison().is_empty()

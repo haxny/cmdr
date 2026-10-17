@@ -21,7 +21,7 @@ use std::sync::mpsc::{self, RecvTimeoutError};
 use std::sync::{Arc, LazyLock, Mutex};
 use std::time::{Duration, Instant};
 
-use crate::file_system::write_operations::{LifecycleStatus, OperationSnapshot, WriteOperationType};
+use crate::file_system::write_operations::{LifecycleStatus, OperationSnapshot, Operations, WriteOperationType};
 use crate::ignore_poison::IgnorePoison;
 
 /// How long the dialog counts down before the gate quits on its own.
@@ -424,7 +424,9 @@ impl<R: tauri::Runtime> TauriQuitHost<R> {
 
 impl<R: tauri::Runtime> QuitHost for TauriQuitHost<R> {
     fn operations(&self) -> Vec<OperationSnapshot> {
-        crate::file_system::write_operations::list_operations()
+        crate::operations_host::operations()
+            .map(Operations::list_operations)
+            .unwrap_or_default()
     }
 
     fn announce(&self, event: QuitRequested) {
@@ -443,16 +445,24 @@ impl<R: tauri::Runtime> QuitHost for TauriQuitHost<R> {
         }
     }
 
+    // Before `install` nothing runs and nothing is recorded, so each of these
+    // three has nothing to do.
     fn cancel_all(&self) {
-        crate::file_system::write_operations::cancel_all_write_operations();
+        if let Ok(engine) = crate::operations_host::operations() {
+            engine.cancel_all_write_operations();
+        }
     }
 
     fn abort_all(&self) {
-        crate::file_system::write_operations::abort_all_write_operations();
+        if let Ok(engine) = crate::operations_host::operations() {
+            engine.abort_all_write_operations();
+        }
     }
 
     fn flush_temp_ledger(&self) {
-        crate::file_system::write_operations::flush_in_flight_temps();
+        if let Ok(engine) = crate::operations_host::operations() {
+            engine.flush_in_flight_temps();
+        }
     }
 
     fn exit(&self) {

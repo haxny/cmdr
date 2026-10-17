@@ -32,42 +32,25 @@ use cmdr_operation_log::types::{Initiator, OpKind};
 mod bulk;
 mod validity;
 
-#[cfg(test)]
-pub(crate) use bulk::start_bulk_rename;
-pub(crate) use bulk::{BulkRenameRow, RenameStartError, RenamesStarted, start_renames};
+pub(crate) use bulk::{BulkRenameRow, RenameStartError, RenamesStarted};
 #[cfg(test)]
 pub(crate) use validity::RenameByMove;
-pub(crate) use validity::{RenameValidityResult, check_rename_validity_impl, same_local_file};
-
-/// Renames a file or directory as a managed instant op. When `force` is true,
-/// proceeds even if the destination exists.
-///
-/// Runs inside `manager::run_instant`, so the volume is marked busy for the
-/// mutation's (sub-second) duration and the op shows briefly in the queue, while
-/// the rename still runs inline and its `Result` is returned to the caller. The
-/// closure registers BOTH halves of the rename with the downloads watcher's
-/// ignore set (a must-know invariant: `to` so the rename-arrival event is
-/// suppressed, `from` so a Cmdr-initiated move OUT of Downloads is also
-/// suppressed) BEFORE the syscall, then notifies the listing cache.
-///
-/// `from`/`to` are already tilde-expanded (root) or volume-relative (non-root)
-/// by the command layer. `volume_id` is `"root"` for the local filesystem.
-pub(crate) async fn rename_managed(
-    from: PathBuf,
-    to: PathBuf,
-    force: bool,
-    volume_id: String,
-    initiator: Initiator,
-) -> Result<(), MutationError> {
-    // shim: removed in M7a
-    super::installed_for("rename_managed")
-        .ok_or_else(super::instant_not_installed)?
-        .rename_managed(from, to, force, volume_id, initiator)
-        .await
-}
+pub(crate) use validity::{RenameValidityResult, same_local_file};
 
 impl super::Operations {
-    /// See the free [`rename_managed`]: the same, on this engine.
+    /// Renames a file or directory as a managed instant op. When `force` is true,
+    /// proceeds even if the destination exists.
+    ///
+    /// Runs inside `manager::run_instant`, so the volume is marked busy for the
+    /// mutation's (sub-second) duration and the op shows briefly in the queue, while
+    /// the rename still runs inline and its `Result` is returned to the caller. The
+    /// closure announces BOTH halves of the rename as own writes (a must-know
+    /// invariant: `to` so the rename-arrival event is suppressed, `from` so a
+    /// Cmdr-initiated move OUT of Downloads is also suppressed) BEFORE the syscall,
+    /// then notifies the listing cache.
+    ///
+    /// `from`/`to` are already tilde-expanded (root) or volume-relative (non-root)
+    /// by the command layer. `volume_id` is `"root"` for the local filesystem.
     pub(crate) async fn rename_managed(
         &self,
         from: PathBuf,
@@ -635,16 +618,6 @@ impl crate::file_system::write_operations::Operations {
     }
 }
 
-/// [`Operations::check_rename_permission_for_volume`](super::Operations::check_rename_permission_for_volume)
-/// on the installed engine.
-// shim: removed in M7a
-pub(crate) async fn check_rename_permission_for_volume(path: PathBuf, volume_id: String) -> Result<(), MutationError> {
-    super::installed_for("check_rename_permission_for_volume")
-        .ok_or_else(super::instant_not_installed)?
-        .check_rename_permission_for_volume(path, volume_id)
-        .await
-}
-
 /// Whether a local `lstat` / `access` can answer for a path on this volume.
 fn preflight_reaches(host: &host::EngineHost, volume_id: &str) -> bool {
     if volume_id == "root" {
@@ -657,8 +630,8 @@ fn preflight_reaches(host: &host::EngineHost, volume_id: &str) -> bool {
 
 /// Synchronous permission check: file exists, parent writable, and (macOS) not
 /// immutable / SIP-protected. Runs on the blocking pool, behind the volume gate
-/// in [`check_rename_permission_for_volume`] — ❌ never on a path off a volume
-/// that serves its own I/O.
+/// in `Operations::check_rename_permission_for_volume` — ❌ never on a path off
+/// a volume that serves its own I/O.
 fn check_rename_permission_sync(path: &Path) -> Result<(), MutationError> {
     // Check that the file itself exists
     if std::fs::symlink_metadata(path).is_err() {

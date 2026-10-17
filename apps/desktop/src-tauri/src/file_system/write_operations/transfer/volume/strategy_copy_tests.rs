@@ -5,7 +5,8 @@
 
 use super::test_support::{SLOW_CHUNK_COUNT, SlowSource, make_state};
 use super::*;
-use crate::file_system::write_operations::state::{OperationIntent, cancel_write_operation};
+use crate::file_system::write_operations::installed;
+use crate::file_system::write_operations::state::OperationIntent;
 use crate::file_system::write_operations::test_support::TestOperationGuard;
 use crate::file_system::write_operations::transfer::transfer_driver::{LeafProgressLedger, ObservedProgress};
 use crate::test_support::wait_until_async;
@@ -233,7 +234,7 @@ async fn test_streaming_copy_cancel_mid_file() {
         }) => {}
     }
 
-    cancel_write_operation(op.id(), false);
+    installed().cancel_write_operation(op.id(), false);
     gate.add_permits(SLOW_CHUNK_COUNT);
     let result = copy.await;
 

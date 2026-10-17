@@ -7,8 +7,8 @@
 //! unique operation ids + lane keys to stay correct under nextest's in-process
 //! parallelism.
 
-use super::super::state::busy_volume_ids;
 use super::*;
+use crate::file_system::write_operations::installed;
 use crate::file_system::write_operations::types::WriteOperationError;
 use crate::test_support::wait_until_async;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -589,7 +589,7 @@ async fn set_paused_is_noop_for_queued_or_absent_ops() {
 }
 
 /// The sweep's answer is a FOLD of the per-operation outcomes, so it can be
-/// checked without running `pause_all()` — which, against a process-global
+/// checked without running `installed().pause_all()` — which, against a process-global
 /// manager, would park a sibling test's operation.
 #[test]
 fn a_sweep_counts_every_outcome_it_collected() {
@@ -751,7 +751,7 @@ async fn run_instant_marks_volume_busy_and_registers_record_for_op_duration() {
     // Wait until the op has started (registered + busy-marked + reached op.await).
     started.notified().await;
     assert!(
-        busy_volume_ids().contains(&vol),
+        installed().busy_volume_ids().contains(&vol),
         "volume must be busy while the instant op runs"
     );
     assert!(
@@ -768,7 +768,7 @@ async fn run_instant_marks_volume_busy_and_registers_record_for_op_duration() {
     assert_eq!(result, 7, "run_instant returns the op's own result");
 
     assert!(
-        !busy_volume_ids().contains(&vol),
+        !installed().busy_volume_ids().contains(&vol),
         "volume must no longer be busy after the op finishes"
     );
     assert!(
@@ -799,12 +799,12 @@ async fn run_instant_marks_only_nonroot_volumes_busy() {
     });
     started.notified().await;
     assert!(
-        busy_volume_ids().contains(&vol),
+        installed().busy_volume_ids().contains(&vol),
         "a non-root volume must be marked busy"
     );
     release.notify_one();
     h.await.expect("joins");
-    assert!(!busy_volume_ids().contains(&vol));
+    assert!(!installed().busy_volume_ids().contains(&vol));
 
     // Root volume → never in the busy set (root is excluded from the busy set).
     let op_root = unique("inst-root-op");
@@ -826,7 +826,7 @@ async fn run_instant_marks_only_nonroot_volumes_busy() {
     });
     started2.notified().await;
     assert!(
-        !busy_volume_ids().iter().any(|id| id == DEFAULT_VOLUME_ID),
+        !installed().busy_volume_ids().iter().any(|id| id == DEFAULT_VOLUME_ID),
         "the root volume must be excluded from the busy set even for an instant op"
     );
     assert!(
@@ -917,7 +917,10 @@ async fn run_instant_releases_busy_and_record_when_dropped_midflight() {
         _ = &mut fut => panic!("a parked instant op must not complete"),
         _ = started.notified() => {}
     }
-    assert!(busy_volume_ids().contains(&vol), "volume busy while the op runs");
+    assert!(
+        installed().busy_volume_ids().contains(&vol),
+        "volume busy while the op runs"
+    );
     assert!(
         manager().list().iter().any(|o| o.operation_id == op),
         "record present while running"
@@ -927,7 +930,7 @@ async fn run_instant_releases_busy_and_record_when_dropped_midflight() {
     drop(fut);
 
     assert!(
-        !busy_volume_ids().contains(&vol),
+        !installed().busy_volume_ids().contains(&vol),
         "B1: a mid-flight drop must release the busy status (else eject stays disabled forever)"
     );
     assert!(
@@ -952,7 +955,7 @@ async fn run_instant_releases_busy_and_record_when_op_panics() {
     assert!(handle.await.is_err(), "the panic propagates out of the awaited op");
 
     assert!(
-        !busy_volume_ids().contains(&vol),
+        !installed().busy_volume_ids().contains(&vol),
         "B1: a panicking instant op must release the busy status on unwind"
     );
     assert!(

@@ -264,7 +264,9 @@ impl Host for AppHost {
     }
 
     fn busy_volume_ids(&self) -> Vec<String> {
-        crate::file_system::busy_volume_ids()
+        crate::operations_host::operations()
+            .map(crate::file_system::write_operations::Operations::busy_volume_ids)
+            .unwrap_or_default()
     }
 
     fn is_ejecting(&self, volume_id: &str) -> bool {

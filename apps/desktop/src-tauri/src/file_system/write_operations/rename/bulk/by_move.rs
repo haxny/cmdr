@@ -80,23 +80,6 @@ impl crate::file_system::write_operations::Operations {
     }
 }
 
-/// [`Operations::start_renames`](crate::file_system::write_operations::Operations::start_renames) on the
-/// installed engine.
-// shim: removed in M7a
-pub(crate) async fn start_renames(
-    events: Arc<dyn OperationEventSink>,
-    volume_id: String,
-    rows: Vec<BulkRenameRow>,
-    initiator: Initiator,
-) -> Result<RenamesStarted, RenameStartError> {
-    let Some(engine) = crate::file_system::write_operations::installed_for("start_renames") else {
-        return Err(RenameStartError::Engine {
-            error: crate::file_system::write_operations::not_installed(),
-        });
-    };
-    engine.start_renames(events, volume_id, rows, initiator).await
-}
-
 /// Whether any row's rename copies on `volume`. A volume that renames
 /// everything in one call answers with no I/O; an entry that can't be asked
 /// about is left to the executor, which refuses it on its own terms.

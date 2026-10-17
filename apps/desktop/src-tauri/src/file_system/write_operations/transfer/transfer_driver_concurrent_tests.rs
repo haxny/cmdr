@@ -12,6 +12,7 @@ use super::super::super::event_sinks::CollectorEventSink;
 use super::super::super::state::{register_operation_status, unregister_operation_status};
 use super::super::super::types::WriteOperationType;
 use super::test_support::{install_state, make_state, unique_op_id};
+use crate::file_system::write_operations::installed;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -59,7 +60,7 @@ async fn concurrent_per_file_callback_is_cancel_only_not_pause_aware() {
     );
 
     // Cancelled: it must Break, exactly as before.
-    super::super::super::state::cancel_write_operation(&op_id, false);
+    installed().cancel_write_operation(&op_id, false);
     assert_eq!(
         leaf.on_chunk(20),
         std::ops::ControlFlow::Break(()),

@@ -3,9 +3,9 @@
 //! upload, fresh replacement rather than mutation, backend-specific publication,
 //! and cleanup of unpublished stages.
 
-use super::compress::compress_start;
 use super::test_support::*;
 use crate::file_system::write_operations::WriteOperationPhase;
+use crate::file_system::write_operations::installed;
 use cmdr_fs::volume::InMemoryVolume;
 use uuid::Uuid;
 
@@ -63,20 +63,21 @@ async fn compress_onto_a_remote_parent_spools_then_packs_local_files() {
     let (parent_id, parent) = register_remote_parent(Path::new("/share"), false).await;
 
     let events = PhaseGateSink::new(WriteOperationPhase::FinishingTransfer);
-    let start = compress_start(
-        Arc::clone(&events) as Arc<dyn OperationEventSink>,
-        source_volume,
-        vec![PathBuf::from("one.txt"), PathBuf::from("two.txt")],
-        archive_path.clone(),
-        parent_id.clone(),
-        ConflictResolution::Overwrite,
-        0,
-        None,
-        None,
-        cmdr_operation_log::types::Initiator::User,
-    )
-    .await
-    .expect("start remote compress");
+    let start = installed()
+        .compress_start(
+            Arc::clone(&events) as Arc<dyn OperationEventSink>,
+            source_volume,
+            vec![PathBuf::from("one.txt"), PathBuf::from("two.txt")],
+            archive_path.clone(),
+            parent_id.clone(),
+            ConflictResolution::Overwrite,
+            0,
+            None,
+            None,
+            cmdr_operation_log::types::Initiator::User,
+        )
+        .await
+        .expect("start remote compress");
     assert_eq!(start.operation_type, WriteOperationType::Compress);
 
     wait_until_async(Duration::from_secs(5), "finishing-transfer phase gate", || {
@@ -187,20 +188,21 @@ async fn cancel_during_remote_close_does_not_publish_or_complete() {
     // second starts after `write_from_stream` has closed successfully.
     // Cancellation at that gate must leave the completed stage unpublished.
     let events = PhaseGateSink::new_nth(WriteOperationPhase::FinishingTransfer, 2);
-    let start = compress_start(
-        Arc::clone(&events) as Arc<dyn OperationEventSink>,
-        source_volume,
-        vec![PathBuf::from("one.txt")],
-        archive_path.clone(),
-        parent_id.clone(),
-        ConflictResolution::Overwrite,
-        0,
-        None,
-        None,
-        cmdr_operation_log::types::Initiator::User,
-    )
-    .await
-    .expect("start remote compress for close-boundary cancellation");
+    let start = installed()
+        .compress_start(
+            Arc::clone(&events) as Arc<dyn OperationEventSink>,
+            source_volume,
+            vec![PathBuf::from("one.txt")],
+            archive_path.clone(),
+            parent_id.clone(),
+            ConflictResolution::Overwrite,
+            0,
+            None,
+            None,
+            cmdr_operation_log::types::Initiator::User,
+        )
+        .await
+        .expect("start remote compress for close-boundary cancellation");
 
     wait_until_async(
         Duration::from_secs(5),
@@ -208,7 +210,7 @@ async fn cancel_during_remote_close_does_not_publish_or_complete() {
         || events.entered(),
     )
     .await;
-    crate::file_system::write_operations::manager::cancel_operation(&start.operation_id);
+    installed().cancel_operation(&start.operation_id);
     events.release();
 
     wait_until_async(Duration::from_secs(5), "cancelled terminal event", || {
@@ -247,20 +249,21 @@ async fn compress_onto_a_remote_parent_overwrites_an_existing_zip_with_a_fresh_a
     let (parent_id, parent) = register_remote_zip(&archive_path, &[("stale.txt", b"old content")]).await;
 
     let events = Arc::new(CollectorEventSink::new());
-    compress_start(
-        Arc::clone(&events) as Arc<dyn OperationEventSink>,
-        source_volume,
-        vec![PathBuf::from("new.txt")],
-        archive_path.clone(),
-        parent_id.clone(),
-        ConflictResolution::Overwrite,
-        0,
-        None,
-        None,
-        cmdr_operation_log::types::Initiator::User,
-    )
-    .await
-    .expect("start remote compress over existing");
+    installed()
+        .compress_start(
+            Arc::clone(&events) as Arc<dyn OperationEventSink>,
+            source_volume,
+            vec![PathBuf::from("new.txt")],
+            archive_path.clone(),
+            parent_id.clone(),
+            ConflictResolution::Overwrite,
+            0,
+            None,
+            None,
+            cmdr_operation_log::types::Initiator::User,
+        )
+        .await
+        .expect("start remote compress over existing");
 
     wait_until_async(Duration::from_secs(5), "a terminal event (complete or error)", || {
         !events.complete.lock_ignore_poison().is_empty() || !events.errors.lock_ignore_poison().is_empty()
@@ -297,20 +300,21 @@ async fn a_publication_refusal_recovers_and_names_the_displaced_original() {
     parent.set_rename_to_failing(&archive_path);
     let events = Arc::new(CollectorEventSink::new());
 
-    compress_start(
-        Arc::clone(&events) as Arc<dyn OperationEventSink>,
-        source_volume,
-        vec![PathBuf::from("new.txt")],
-        archive_path.clone(),
-        parent_id.clone(),
-        ConflictResolution::Overwrite,
-        0,
-        None,
-        None,
-        cmdr_operation_log::types::Initiator::User,
-    )
-    .await
-    .expect("start publication-failure compress");
+    installed()
+        .compress_start(
+            Arc::clone(&events) as Arc<dyn OperationEventSink>,
+            source_volume,
+            vec![PathBuf::from("new.txt")],
+            archive_path.clone(),
+            parent_id.clone(),
+            ConflictResolution::Overwrite,
+            0,
+            None,
+            None,
+            cmdr_operation_log::types::Initiator::User,
+        )
+        .await
+        .expect("start publication-failure compress");
     wait_until_async(Duration::from_secs(5), "publication failure", || {
         !events.errors.lock_ignore_poison().is_empty()
     })
@@ -353,20 +357,21 @@ async fn compress_onto_an_mtp_style_remote_parent_spools_and_packs() {
     let (parent_id, parent) = register_remote_parent(Path::new("/device/DCIM"), true).await;
 
     let events = Arc::new(CollectorEventSink::new());
-    compress_start(
-        Arc::clone(&events) as Arc<dyn OperationEventSink>,
-        source_volume,
-        vec![PathBuf::from("photo.raw")],
-        archive_path.clone(),
-        parent_id.clone(),
-        ConflictResolution::Overwrite,
-        0,
-        None,
-        None,
-        cmdr_operation_log::types::Initiator::User,
-    )
-    .await
-    .expect("start mtp-style remote compress");
+    installed()
+        .compress_start(
+            Arc::clone(&events) as Arc<dyn OperationEventSink>,
+            source_volume,
+            vec![PathBuf::from("photo.raw")],
+            archive_path.clone(),
+            parent_id.clone(),
+            ConflictResolution::Overwrite,
+            0,
+            None,
+            None,
+            cmdr_operation_log::types::Initiator::User,
+        )
+        .await
+        .expect("start mtp-style remote compress");
 
     wait_until_async(Duration::from_secs(5), "a terminal event (complete or error)", || {
         !events.complete.lock_ignore_poison().is_empty() || !events.errors.lock_ignore_poison().is_empty()
@@ -400,20 +405,21 @@ async fn a_remote_source_streams_into_a_direct_local_archive() {
     let dest = tmp.path().join("remote-source.zip");
     let events = Arc::new(CollectorEventSink::new());
 
-    compress_start(
-        Arc::clone(&events) as Arc<dyn OperationEventSink>,
-        source as Arc<dyn Volume>,
-        vec![PathBuf::from("/folder")],
-        dest.clone(),
-        unique_lane_id(),
-        ConflictResolution::Overwrite,
-        0,
-        None,
-        None,
-        cmdr_operation_log::types::Initiator::User,
-    )
-    .await
-    .expect("start remote-source compress");
+    installed()
+        .compress_start(
+            Arc::clone(&events) as Arc<dyn OperationEventSink>,
+            source as Arc<dyn Volume>,
+            vec![PathBuf::from("/folder")],
+            dest.clone(),
+            unique_lane_id(),
+            ConflictResolution::Overwrite,
+            0,
+            None,
+            None,
+            cmdr_operation_log::types::Initiator::User,
+        )
+        .await
+        .expect("start remote-source compress");
     wait_until_async(Duration::from_secs(5), "remote-source compress terminal", || {
         !events.complete.lock_ignore_poison().is_empty() || !events.errors.lock_ignore_poison().is_empty()
     })
@@ -446,20 +452,21 @@ async fn same_device_mtp_source_finishes_spooling_before_the_upload_path() {
     let events = Arc::new(CollectorEventSink::new());
     let archive = PathBuf::from("/DCIM/photos.zip");
 
-    compress_start(
-        Arc::clone(&events) as Arc<dyn OperationEventSink>,
-        Arc::clone(&volume) as Arc<dyn Volume>,
-        vec![PathBuf::from("/DCIM/photo.raw")],
-        archive.clone(),
-        id.clone(),
-        ConflictResolution::Overwrite,
-        0,
-        None,
-        None,
-        cmdr_operation_log::types::Initiator::User,
-    )
-    .await
-    .expect("start same-device MTP compress");
+    installed()
+        .compress_start(
+            Arc::clone(&events) as Arc<dyn OperationEventSink>,
+            Arc::clone(&volume) as Arc<dyn Volume>,
+            vec![PathBuf::from("/DCIM/photo.raw")],
+            archive.clone(),
+            id.clone(),
+            ConflictResolution::Overwrite,
+            0,
+            None,
+            None,
+            cmdr_operation_log::types::Initiator::User,
+        )
+        .await
+        .expect("start same-device MTP compress");
     wait_until_async(Duration::from_secs(5), "same-device MTP terminal", || {
         !events.complete.lock_ignore_poison().is_empty() || !events.errors.lock_ignore_poison().is_empty()
     })
@@ -506,19 +513,20 @@ async fn register_share(existing: Option<&str>) -> (String, Arc<InMemoryVolume>)
 async fn compress_to_share(parent_id: &str, name: &str) -> Result<(), WriteOperationError> {
     let (_src_tmp, source_volume) = local_source_with(&[("new.txt", b"brand new")]);
     let events = Arc::new(CollectorEventSink::new());
-    compress_start(
-        Arc::clone(&events) as Arc<dyn OperationEventSink>,
-        source_volume,
-        vec![PathBuf::from("new.txt")],
-        Path::new("/share").join(name),
-        parent_id.to_string(),
-        ConflictResolution::Overwrite,
-        0,
-        None,
-        None,
-        cmdr_operation_log::types::Initiator::User,
-    )
-    .await?;
+    installed()
+        .compress_start(
+            Arc::clone(&events) as Arc<dyn OperationEventSink>,
+            source_volume,
+            vec![PathBuf::from("new.txt")],
+            Path::new("/share").join(name),
+            parent_id.to_string(),
+            ConflictResolution::Overwrite,
+            0,
+            None,
+            None,
+            cmdr_operation_log::types::Initiator::User,
+        )
+        .await?;
     wait_until_async(Duration::from_secs(5), "a terminal event (complete or error)", || {
         !events.complete.lock_ignore_poison().is_empty() || !events.errors.lock_ignore_poison().is_empty()
     })

@@ -28,7 +28,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
-use crate::file_system::write_operations::state::{abort_write_operation, cancel_write_operation};
+use crate::file_system::write_operations::installed;
 use crate::file_system::write_operations::test_support::TestOperationGuard;
 use crate::file_system::write_operations::transfer::transfer_driver::{
     LeafProgressLedger, ObservedProgress, SourceProgress,
@@ -112,7 +112,7 @@ async fn a_hard_abort_ends_a_wedged_write_instead_of_waiting_for_the_backend() {
     }
 
     let started = tokio::time::Instant::now();
-    abort_write_operation(op.id());
+    installed().abort_write_operation(op.id());
     let err = tokio::time::timeout(ABORT_WITHIN, copy)
         .await
         .expect("tier 2 must end the wait; without it this write never returns")
@@ -155,7 +155,7 @@ async fn a_hard_abort_ends_a_wedged_source_open() {
         () = wait_until_async(WAIT, "the source open to wedge", || opening.load(Ordering::SeqCst)) => {}
     }
 
-    abort_write_operation(op.id());
+    installed().abort_write_operation(op.id());
     let err = tokio::time::timeout(ABORT_WITHIN, copy)
         .await
         .expect("tier 2 must end the wait on a source open too")
@@ -184,7 +184,7 @@ async fn a_hard_abort_leaves_the_partial_for_the_sweep_rather_than_deleting_it_t
         () = wait_until_async(WAIT, "the destination write to wedge", || is_wedged.load(Ordering::SeqCst)) => {}
     }
 
-    abort_write_operation(op.id());
+    installed().abort_write_operation(op.id());
     tokio::time::timeout(ABORT_WITHIN, copy)
         .await
         .expect("tier 2 must end the wait")
@@ -243,7 +243,7 @@ async fn an_ordinary_cancel_still_routes_through_tier_one_and_the_backend_delete
         () = wait_until_async(WAIT, "the first chunk to reach the destination", || written.load(Ordering::SeqCst) > 0) => {}
     }
 
-    cancel_write_operation(op.id(), false);
+    installed().cancel_write_operation(op.id(), false);
     // Let the next chunk flow so the destination's loop reaches its `on_progress`
     // check — which is exactly the cooperative path under test.
     gate.add_permits(1);

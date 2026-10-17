@@ -26,9 +26,9 @@ use cmdr_fs::volume::Volume;
 use sha2::{Digest, Sha256};
 
 use super::super::event_sinks::{CollectorEventSink, OperationEventSink};
-use super::super::state::{cancel_write_operation, resolve_write_conflict};
 use super::super::types::{ConflictResolution, ConflictResolutionOutcome, VolumeCopyConfig};
 use super::network_gated_source_test_support::{CANCEL_PAYLOAD_BYTES, gated_upload};
+use crate::file_system::write_operations::installed;
 use crate::test_support::TestDir;
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_local::LocalPosixVolume;
@@ -246,7 +246,7 @@ impl RunningCopy {
     /// Answers that clash the way a person clicking the dialog would, and
     /// insists the answer actually reached the parked operation.
     fn answer(&self, conflict: &super::super::types::WriteConflictEvent, resolution: ConflictResolution) {
-        let outcome = resolve_write_conflict(&self.operation_id, conflict.conflict_id, resolution, false);
+        let outcome = installed().resolve_write_conflict(&self.operation_id, conflict.conflict_id, resolution, false);
         assert_eq!(
             outcome,
             ConflictResolutionOutcome::Resolved,
@@ -268,20 +268,21 @@ pub(super) async fn start_copy(
     let collector = Arc::new(CollectorEventSink::new());
     let events: Arc<dyn OperationEventSink> = collector.clone();
 
-    let started = super::super::transfer::volume::copy_between_volumes(
-        events,
-        format!("{label}-source"),
-        source,
-        source_paths,
-        format!("{label}-dest"),
-        dest,
-        dest_path,
-        config,
-        Initiator::User,
-        None,
-    )
-    .await
-    .unwrap_or_else(|e| panic!("{label}: the copy must START; it was refused with {e:?}"));
+    let started = installed()
+        .copy_between_volumes(
+            events,
+            format!("{label}-source"),
+            source,
+            source_paths,
+            format!("{label}-dest"),
+            dest,
+            dest_path,
+            config,
+            Initiator::User,
+            None,
+        )
+        .await
+        .unwrap_or_else(|e| panic!("{label}: the copy must START; it was refused with {e:?}"));
 
     RunningCopy {
         events: collector,
@@ -304,18 +305,19 @@ pub(super) async fn start_copy_by_id(
     let collector = Arc::new(CollectorEventSink::new());
     let events: Arc<dyn OperationEventSink> = collector.clone();
 
-    let started = super::super::start_volume_copy(
-        events,
-        source_volume_id,
-        source_paths,
-        dest_volume_id,
-        dest_path,
-        config,
-        Initiator::User,
-        None,
-    )
-    .await
-    .unwrap_or_else(|e| panic!("{label}: the copy must START; it was refused with {e:?}"));
+    let started = installed()
+        .start_volume_copy(
+            events,
+            source_volume_id,
+            source_paths,
+            dest_volume_id,
+            dest_path,
+            config,
+            Initiator::User,
+            None,
+        )
+        .await
+        .unwrap_or_else(|e| panic!("{label}: the copy must START; it was refused with {e:?}"));
 
     RunningCopy {
         events: collector,
@@ -540,7 +542,7 @@ pub(super) async fn a_cancelled_upload_leaves_nothing_behind(remote: Arc<dyn Vol
         || source.handed_out.load(std::sync::atomic::Ordering::SeqCst) >= 2,
     )
     .await;
-    cancel_write_operation(&running.operation_id, false);
+    installed().cancel_write_operation(&running.operation_id, false);
     // Let the source answer again, so a backend that only notices the cancel on
     // its next chunk isn't left parked on a permit that never comes.
     source.gate.add_permits(1_000);

@@ -49,27 +49,13 @@ async fn parent_crosses_archive_boundary(host: &EngineHost, volume_id: Option<&s
         .await
 }
 
-/// Creates a folder as a managed instant op and returns its new path. `parent_path`
-/// is already tilde-expanded by the command layer.
-///
-/// Wraps `create_directory_core` in `manager::run_instant` (busy-marking the
-/// volume + registering a brief `Running` record) and emits the synthetic listing
-/// diff on success for local-FS-backed volumes.
-pub(crate) async fn create_directory_managed(
-    volume_id: Option<String>,
-    parent_path: String,
-    name: String,
-    initiator: cmdr_operation_log::types::Initiator,
-) -> Result<String, MutationError> {
-    // shim: removed in M7a
-    super::installed_for("create_directory_managed")
-        .ok_or_else(super::instant_not_installed)?
-        .create_directory_managed(volume_id, parent_path, name, initiator)
-        .await
-}
-
 impl Operations {
-    /// See the free [`create_directory_managed`]: the same, on this engine.
+    /// Creates a folder as a managed instant op and returns its new path.
+    /// `parent_path` is already tilde-expanded by the command layer.
+    ///
+    /// Wraps `create_directory_core` in `manager::run_instant` (busy-marking the
+    /// volume + registering a brief `Running` record) and emits the synthetic
+    /// listing diff on success for local-FS-backed volumes.
     pub(crate) async fn create_directory_managed(
         &self,
         volume_id: Option<String>,
@@ -86,7 +72,8 @@ impl Operations {
         result
     }
 
-    /// See the free [`create_file_managed`]: the same, on this engine.
+    /// Creates an empty file as a managed instant op and returns its new path.
+    /// Same shape as [`Self::create_directory_managed`].
     pub(crate) async fn create_file_managed(
         &self,
         volume_id: Option<String>,
@@ -180,21 +167,6 @@ async fn create_directory_managed_inner(
         );
     }
     (Ok(new_path.to_string_lossy().to_string()), InstantTarget::Volume)
-}
-
-/// Creates an empty file as a managed instant op and returns its new path.
-/// Same shape as [`create_directory_managed`].
-pub(crate) async fn create_file_managed(
-    volume_id: Option<String>,
-    parent_path: String,
-    name: String,
-    initiator: cmdr_operation_log::types::Initiator,
-) -> Result<String, MutationError> {
-    // shim: removed in M7a
-    super::installed_for("create_file_managed")
-        .ok_or_else(super::instant_not_installed)?
-        .create_file_managed(volume_id, parent_path, name, initiator)
-        .await
 }
 
 /// The create itself. Returns where the new entry landed alongside its result, so
@@ -390,7 +362,7 @@ pub(crate) async fn create_directory_core(
     create_directory_core_on(super::installed().host(), volume_id, parent_path, name).await
 }
 
-/// [`create_directory_core`] against `host`'s volumes and own-write seam.
+/// `create_directory_core` against `host`'s volumes and own-write seam.
 pub(crate) async fn create_directory_core_on(
     host: &EngineHost,
     volume_id: Option<String>,
@@ -485,7 +457,7 @@ fn named_conflict_or_volume(e: cmdr_fs::volume::VolumeError, name: &str) -> Muta
     }
 }
 
-/// Core file-creation logic. Same shape as [`create_directory_core`].
+/// Core file-creation logic. Same shape as `create_directory_core`.
 #[cfg(test)]
 pub(crate) async fn create_file_core(
     volume_id: Option<String>,
@@ -495,7 +467,7 @@ pub(crate) async fn create_file_core(
     create_file_core_on(super::installed().host(), volume_id, parent_path, name).await
 }
 
-/// [`create_file_core`] against `host`'s volumes and own-write seam.
+/// `create_file_core` against `host`'s volumes and own-write seam.
 pub(crate) async fn create_file_core_on(
     host: &EngineHost,
     volume_id: Option<String>,

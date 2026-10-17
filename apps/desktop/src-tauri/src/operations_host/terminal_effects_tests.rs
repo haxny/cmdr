@@ -10,8 +10,9 @@ use std::sync::Mutex;
 
 use super::analytics::{CompletionCategory, completion_category};
 use super::terminal_effects::{self, AppTerminalEffects, TerminalEffects};
+use crate::file_system::write_operations::testing::CancelRollback;
 use crate::file_system::write_operations::{
-    CancelRollback, WriteCancelledEvent, WriteCompleteEvent, WriteErrorEvent, WriteOperationError, WriteOperationType,
+    WriteCancelledEvent, WriteCompleteEvent, WriteErrorEvent, WriteOperationError, WriteOperationType,
     WriteSettledEvent,
 };
 use crate::mcp::terminal_ops::{self, TerminalStatus};
@@ -185,7 +186,7 @@ fn settle_fires_the_space_hint_then_the_emit() {
 #[test]
 fn the_production_ring_already_holds_the_outcome_when_the_emit_runs() {
     let fx = AppTerminalEffects {
-        operations: Some(crate::file_system::write_operations::installed()),
+        operations: Some(crate::file_system::write_operations::testing::installed()),
     };
     let complete_id = format!("terminal-ring-complete-{}", uuid::Uuid::new_v4());
     let mut seen = None;

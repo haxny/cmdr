@@ -25,12 +25,11 @@ use super::network_transfer_test_support::{budget, read_all, run_copy, sha256, s
 use crate::file_system::VolumeManager;
 use crate::file_system::volume::manager::get_volume_manager;
 use crate::file_system::write_operations::event_sinks::{CollectorEventSink, OperationEventSink};
+use crate::file_system::write_operations::installed;
 use crate::file_system::write_operations::rollback::Reversal;
-use crate::file_system::write_operations::state::{
-    cancel_write_operation, pause_write_operation, resume_write_operation,
-};
+
+use crate::file_system::write_operations::ScanCostFacts;
 use crate::file_system::write_operations::types::{ConflictResolution, VolumeCopyConfig, WriteOperationConfig};
-use crate::file_system::write_operations::{ScanCostFacts, delete_files_start};
 use crate::operation_log_host::TestJournalGuard;
 use crate::s3_costs::{CostedOperation, planned_workloads};
 use crate::test_support::TestDir;
@@ -110,7 +109,7 @@ pub(super) async fn a_cancel_mid_multipart_leaves_no_object_and_no_upload(target
         },
     )
     .await;
-    cancel_write_operation(&running.operation_id, false);
+    installed().cancel_write_operation(&running.operation_id, false);
     source.gate.add_permits(100_000);
     running.settle().await;
 
@@ -167,7 +166,7 @@ pub(super) async fn a_cancelled_overwrite_keeps_the_original(target: &S3Target) 
         || source.handed_out.load(std::sync::atomic::Ordering::SeqCst) >= 4,
     )
     .await;
-    cancel_write_operation(&running.operation_id, false);
+    installed().cancel_write_operation(&running.operation_id, false);
     source.gate.add_permits(100_000);
     running.settle().await;
 
@@ -208,7 +207,7 @@ pub(super) async fn a_paused_upload_resumes_and_lands(target: &S3Target) {
     })
     .await;
     assert!(
-        pause_write_operation(&running.operation_id),
+        installed().pause_write_operation(&running.operation_id),
         "the upload is parked on the gate, so it's still running to pause"
     );
     source.gate.add_permits(100_000);
@@ -216,7 +215,7 @@ pub(super) async fn a_paused_upload_resumes_and_lands(target: &S3Target) {
         running.events.complete.lock_ignore_poison().is_empty(),
         "a paused upload doesn't finish"
     );
-    assert!(resume_write_operation(&running.operation_id));
+    assert!(installed().resume_write_operation(&running.operation_id));
     running.settle().await;
     running.assert_no_errors();
 
@@ -374,7 +373,7 @@ pub(super) async fn a_cancel_with_rollback_takes_back_what_landed(target: &S3Tar
         },
     )
     .await;
-    cancel_write_operation(&running.operation_id, true);
+    installed().cancel_write_operation(&running.operation_id, true);
     source.gate.add_permits(100_000);
     running.settle().await;
 
@@ -408,16 +407,17 @@ pub(super) async fn a_folder_of_1005_objects_deletes(target: &S3Target) {
     take_sent_requests(&volume).await;
 
     let events = Arc::new(CollectorEventSink::new());
-    delete_files_start(
-        events.clone() as Arc<dyn OperationEventSink>,
-        vec![dir.join("folder")],
-        WriteOperationConfig::default(),
-        Some(volume_id),
-        Initiator::User,
-        None,
-    )
-    .await
-    .expect("the delete starts");
+    installed()
+        .delete_files_start(
+            events.clone() as Arc<dyn OperationEventSink>,
+            vec![dir.join("folder")],
+            WriteOperationConfig::default(),
+            Some(volume_id),
+            Initiator::User,
+            None,
+        )
+        .await
+        .expect("the delete starts");
     crate::test_support::wait_until_async(budget(Duration::from_secs(60)), "the delete to settle", || {
         !events.settled.lock_ignore_poison().is_empty()
     })
@@ -531,8 +531,6 @@ async fn settled(events: &CollectorEventSink, what: &str) {
 /// The caller decides what to assert: the fixture cells pin every count, the
 /// live run reports them.
 pub(super) async fn requests_sent_against_the_estimate(target: &S3Target) -> Vec<RequestComparison> {
-    use crate::file_system::write_operations::{start_rename_by_move, start_volume_move};
-
     let volume = Arc::new(target.connect(Some(target.bucket())).await);
     let prefix = target.prefix("cost");
     let dir = volume.root().join(prefix.trim_end_matches('/'));
@@ -628,18 +626,19 @@ pub(super) async fn requests_sent_against_the_estimate(target: &S3Target) -> Vec
     });
 
     let events = Arc::new(CollectorEventSink::new());
-    start_volume_move(
-        events.clone() as Arc<dyn OperationEventSink>,
-        volume_id.clone(),
-        vec![dir.join("copied/batch")],
-        volume_id.clone(),
-        dir.join("moved").display().to_string(),
-        VolumeCopyConfig::default(),
-        Initiator::User,
-        None,
-    )
-    .await
-    .expect("the move starts");
+    installed()
+        .start_volume_move(
+            events.clone() as Arc<dyn OperationEventSink>,
+            volume_id.clone(),
+            vec![dir.join("copied/batch")],
+            volume_id.clone(),
+            dir.join("moved").display().to_string(),
+            VolumeCopyConfig::default(),
+            Initiator::User,
+            None,
+        )
+        .await
+        .expect("the move starts");
     settled(&events, "the move within the bucket").await;
     out.push(RequestComparison {
         operation: "move a folder within the bucket",
@@ -648,17 +647,18 @@ pub(super) async fn requests_sent_against_the_estimate(target: &S3Target) -> Vec
     });
 
     let events = Arc::new(CollectorEventSink::new());
-    start_rename_by_move(
-        events.clone() as Arc<dyn OperationEventSink>,
-        volume_id.clone(),
-        vec![(dir.join("moved/batch"), "renamed".to_string())],
-        dir.join("moved").display().to_string(),
-        VolumeCopyConfig::default(),
-        Initiator::User,
-        None,
-    )
-    .await
-    .expect("the rename starts");
+    installed()
+        .start_rename_by_move(
+            events.clone() as Arc<dyn OperationEventSink>,
+            volume_id.clone(),
+            vec![(dir.join("moved/batch"), "renamed".to_string())],
+            dir.join("moved").display().to_string(),
+            VolumeCopyConfig::default(),
+            Initiator::User,
+            None,
+        )
+        .await
+        .expect("the rename starts");
     settled(&events, "the rename").await;
     out.push(RequestComparison {
         operation: "rename a folder",
@@ -675,18 +675,19 @@ pub(super) async fn requests_sent_against_the_estimate(target: &S3Target) -> Vec
     let off_id = format!("cost-off-{}-{}", target.name(), std::process::id());
     get_volume_manager().register(&off_id, Arc::clone(&off));
     let events = Arc::new(CollectorEventSink::new());
-    start_volume_move(
-        events.clone() as Arc<dyn OperationEventSink>,
-        volume_id.clone(),
-        vec![dir.join("moved/renamed")],
-        off_id,
-        off_dir.display().to_string(),
-        VolumeCopyConfig::default(),
-        Initiator::User,
-        None,
-    )
-    .await
-    .expect("the move off starts");
+    installed()
+        .start_volume_move(
+            events.clone() as Arc<dyn OperationEventSink>,
+            volume_id.clone(),
+            vec![dir.join("moved/renamed")],
+            off_id,
+            off_dir.display().to_string(),
+            VolumeCopyConfig::default(),
+            Initiator::User,
+            None,
+        )
+        .await
+        .expect("the move off starts");
     settled(&events, "the move off the bucket").await;
     out.push(RequestComparison {
         operation: "move a folder off the bucket",
@@ -695,16 +696,17 @@ pub(super) async fn requests_sent_against_the_estimate(target: &S3Target) -> Vec
     });
 
     let events = Arc::new(CollectorEventSink::new());
-    delete_files_start(
-        events.clone() as Arc<dyn OperationEventSink>,
-        vec![dir.join("batch")],
-        WriteOperationConfig::default(),
-        Some(volume_id.clone()),
-        Initiator::User,
-        None,
-    )
-    .await
-    .expect("the delete starts");
+    installed()
+        .delete_files_start(
+            events.clone() as Arc<dyn OperationEventSink>,
+            vec![dir.join("batch")],
+            WriteOperationConfig::default(),
+            Some(volume_id.clone()),
+            Initiator::User,
+            None,
+        )
+        .await
+        .expect("the delete starts");
     settled(&events, "the delete").await;
     out.push(RequestComparison {
         operation: "delete a folder",
@@ -742,16 +744,17 @@ pub(super) async fn requests_sent_against_the_estimate(target: &S3Target) -> Vec
     });
 
     let events = Arc::new(CollectorEventSink::new());
-    delete_files_start(
-        events.clone() as Arc<dyn OperationEventSink>,
-        vec![dir.join("files/t0.bin"), dir.join("files/t1.bin")],
-        WriteOperationConfig::default(),
-        Some(volume_id),
-        Initiator::User,
-        None,
-    )
-    .await
-    .expect("the delete starts");
+    installed()
+        .delete_files_start(
+            events.clone() as Arc<dyn OperationEventSink>,
+            vec![dir.join("files/t0.bin"), dir.join("files/t1.bin")],
+            WriteOperationConfig::default(),
+            Some(volume_id),
+            Initiator::User,
+            None,
+        )
+        .await
+        .expect("the delete starts");
     settled(&events, "the delete of two files").await;
     out.push(RequestComparison {
         operation: "delete two files",

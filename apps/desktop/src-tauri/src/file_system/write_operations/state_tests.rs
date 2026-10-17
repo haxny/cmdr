@@ -9,6 +9,7 @@
 //! collide with concurrent test runs in the same process. registry
 //! entries go through `TestOperationGuard`, which also removes them on unwind.
 use super::*;
+use crate::file_system::write_operations::installed;
 use crate::file_system::write_operations::test_support::{TestOperationGuard, placeholder_conflict};
 use crate::file_system::write_operations::types::{
     ConflictId, ConflictResolution, ConflictResolutionOutcome, TransferActivity, TransferWaitReason,
@@ -127,14 +128,14 @@ fn install_state(label: &str, initial: OperationIntent) -> TestOperationGuard {
 #[test]
 fn cancel_running_with_rollback_goes_to_rolling_back() {
     let op = install_state("cancel-running-rollback", OperationIntent::Running);
-    cancel_write_operation(op.id(), true);
+    installed().cancel_write_operation(op.id(), true);
     assert_eq!(op.state().intent().load(), OperationIntent::RollingBack);
 }
 
 #[test]
 fn cancel_running_without_rollback_goes_to_stopped() {
     let op = install_state("cancel-running-stop", OperationIntent::Running);
-    cancel_write_operation(op.id(), false);
+    installed().cancel_write_operation(op.id(), false);
     assert_eq!(op.state().intent().load(), OperationIntent::Stopped);
 }
 
@@ -142,7 +143,7 @@ fn cancel_running_without_rollback_goes_to_stopped() {
 fn cancel_rolling_back_with_rollback_is_a_noop() {
     // Only RollingBack → Stopped is valid; RollingBack → RollingBack is a no-op.
     let op = install_state("cancel-rb-rb", OperationIntent::RollingBack);
-    cancel_write_operation(op.id(), true);
+    installed().cancel_write_operation(op.id(), true);
     assert_eq!(
         op.state().intent().load(),
         OperationIntent::RollingBack,
@@ -153,7 +154,7 @@ fn cancel_rolling_back_with_rollback_is_a_noop() {
 #[test]
 fn cancel_rolling_back_without_rollback_goes_to_stopped() {
     let op = install_state("cancel-rb-stop", OperationIntent::RollingBack);
-    cancel_write_operation(op.id(), false);
+    installed().cancel_write_operation(op.id(), false);
     assert_eq!(op.state().intent().load(), OperationIntent::Stopped);
 }
 
@@ -161,9 +162,9 @@ fn cancel_rolling_back_without_rollback_goes_to_stopped() {
 fn cancel_stopped_is_terminal_for_any_target() {
     // Stopped is terminal; no transition is valid from it.
     let op = install_state("cancel-stopped", OperationIntent::Stopped);
-    cancel_write_operation(op.id(), true);
+    installed().cancel_write_operation(op.id(), true);
     assert_eq!(op.state().intent().load(), OperationIntent::Stopped);
-    cancel_write_operation(op.id(), false);
+    installed().cancel_write_operation(op.id(), false);
     assert_eq!(op.state().intent().load(), OperationIntent::Stopped);
 }
 
@@ -173,7 +174,7 @@ fn cancel_drops_the_conflict_resolution_sender() {
     let op = install_state("cancel-drops-tx", OperationIntent::Running);
     let (tx, mut rx) = tokio::sync::oneshot::channel::<ConflictResolutionResponse>();
     op.state().conflict_slot.arm(tx, placeholder_conflict);
-    cancel_write_operation(op.id(), false);
+    installed().cancel_write_operation(op.id(), false);
     // The receiver should now be closed (sender dropped).
     match rx.try_recv() {
         Err(tokio::sync::oneshot::error::TryRecvError::Closed) => {} // good
@@ -193,7 +194,7 @@ fn backend_cancel_starts_unset_on_fresh_state() {
 fn cancel_write_operation_flips_backend_cancel_to_stopped() {
     let op = install_state("cancel-flips-backend-stopped", OperationIntent::Running);
     assert!(!op.state().backend_cancel.is_cancelled());
-    cancel_write_operation(op.id(), false);
+    installed().cancel_write_operation(op.id(), false);
     assert!(
         op.state().backend_cancel.is_cancelled(),
         "cancel → Stopped must also flip backend_cancel so in-flight USB ops bail"
@@ -203,7 +204,7 @@ fn cancel_write_operation_flips_backend_cancel_to_stopped() {
 #[test]
 fn cancel_write_operation_flips_backend_cancel_to_rolling_back() {
     let op = install_state("cancel-flips-backend-rb", OperationIntent::Running);
-    cancel_write_operation(op.id(), true);
+    installed().cancel_write_operation(op.id(), true);
     assert!(
         op.state().backend_cancel.is_cancelled(),
         "cancel → RollingBack must also flip backend_cancel — the user wants the wire activity stopped, even though we're going to delete created files"
@@ -217,7 +218,7 @@ fn cancel_stopped_is_noop_for_backend_cancel_too() {
     // token gets cancelled before the validity check. A freshly registered
     // op starts with an un-cancelled token, so this observes the flip alone.
     let op = install_state("cancel-stopped-noop", OperationIntent::Stopped);
-    cancel_write_operation(op.id(), true);
+    installed().cancel_write_operation(op.id(), true);
     assert!(
         !op.state().backend_cancel.is_cancelled(),
         "Stopped is terminal: invalid transition must not flip backend_cancel"
@@ -262,7 +263,7 @@ fn rollback_parked_in_the_gap(
     parked: &std::sync::mpsc::Receiver<()>,
 ) -> std::thread::JoinHandle<()> {
     let id = op.id().to_owned();
-    let rollback = std::thread::spawn(move || cancel_write_operation(&id, true));
+    let rollback = std::thread::spawn(move || installed().cancel_write_operation(&id, true));
     parked
         .recv_timeout(Duration::from_secs(5))
         .expect("the Rollback reaches the gap between its read and its write");
@@ -292,7 +293,7 @@ fn a_rollback_click_racing_a_cancel_click_leaves_the_cancel_standing() {
     let (op, parked, release) = op_with_a_parked_intent_writer("race-rollback-vs-cancel");
 
     let rollback = rollback_parked_in_the_gap(&op, &parked);
-    cancel_write_operation(op.id(), false);
+    installed().cancel_write_operation(op.id(), false);
     release.send(()).expect("the Rollback is still parked");
     rollback.join().expect("the Rollback returns");
 
@@ -306,14 +307,14 @@ fn a_rollback_click_racing_a_cancel_click_leaves_the_cancel_standing() {
 #[test]
 fn cancel_unknown_operation_is_a_silent_noop() {
     // No installed state; must not panic, must not affect anything.
-    cancel_write_operation("does-not-exist-xyzzy", true);
-    cancel_write_operation("does-not-exist-xyzzy", false);
+    installed().cancel_write_operation("does-not-exist-xyzzy", true);
+    installed().cancel_write_operation("does-not-exist-xyzzy", false);
 }
 
 // ---- cancel_all: the frontend-teardown safety net -------------------------
 //
 // `cancel_all` is a WALK, so these drive a `WriteOperationRegistry` the test
-// OWNS. Calling the global `cancel_all_write_operations()` here would stop
+// OWNS. Calling the global `installed().cancel_all_write_operations()` here would stop
 // every operation every OTHER concurrently-running test has in flight — the
 // defect these tests used to be. The code under test is the same either way:
 // the public function is a one-line delegation to this method, pinned by
@@ -435,7 +436,7 @@ fn cancel_all_write_operations_walks_the_global_registry() {
     }
     let op = install_state("cancel-all-global-wiring", OperationIntent::Running);
 
-    cancel_all_write_operations();
+    installed().cancel_all_write_operations();
 
     assert_eq!(
         op.state().intent().load(),
@@ -464,14 +465,14 @@ fn backend_abort_starts_unset_on_fresh_state() {
 #[test]
 fn an_ordinary_cancel_never_fires_the_hard_abort() {
     let op = install_state("cancel-never-aborts", OperationIntent::Running);
-    cancel_write_operation(op.id(), false);
+    installed().cancel_write_operation(op.id(), false);
     assert!(
         !op.state().backend_abort.is_cancelled(),
         "a user's Cancel must stay in tier 1: the backend deletes its own partial"
     );
 
     let rb = install_state("rollback-never-aborts", OperationIntent::Running);
-    cancel_write_operation(rb.id(), true);
+    installed().cancel_write_operation(rb.id(), true);
     assert!(
         !rb.state().backend_abort.is_cancelled(),
         "a Rollback is a user decision too, and stays in tier 1"
@@ -500,7 +501,7 @@ fn cancel_all_never_fires_the_hard_abort() {
 fn abort_write_operation_fires_both_tiers() {
     let op = install_state("abort-one", OperationIntent::Running);
 
-    abort_write_operation(op.id());
+    installed().abort_write_operation(op.id());
 
     assert_eq!(op.state().intent().load(), OperationIntent::Stopped);
     assert!(op.state().backend_cancel.is_cancelled(), "tier 1 first");
@@ -514,9 +515,9 @@ fn abort_write_operation_fires_both_tiers() {
 #[test]
 fn abort_reaches_an_operation_that_was_already_cancelled() {
     let op = install_state("abort-after-cancel", OperationIntent::Running);
-    cancel_write_operation(op.id(), false);
+    installed().cancel_write_operation(op.id(), false);
 
-    abort_write_operation(op.id());
+    installed().abort_write_operation(op.id());
 
     assert!(
         op.state().backend_abort.is_cancelled(),
@@ -526,7 +527,7 @@ fn abort_reaches_an_operation_that_was_already_cancelled() {
 
 #[test]
 fn abort_unknown_operation_is_a_silent_noop() {
-    abort_write_operation("does-not-exist-xyzzy");
+    installed().abort_write_operation("does-not-exist-xyzzy");
 }
 
 #[test]
@@ -539,7 +540,7 @@ fn abort_all_write_operations_walks_the_global_registry() {
     }
     let op = install_state("abort-all-global-wiring", OperationIntent::Running);
 
-    abort_all_write_operations();
+    installed().abort_all_write_operations();
 
     assert!(
         op.state().backend_abort.is_cancelled(),
@@ -578,7 +579,7 @@ async fn resolve_write_conflict_delivers_response_to_waiter() {
     let clash = op.state().conflict_slot.arm(tx, placeholder_conflict).conflict_id;
 
     assert_eq!(
-        resolve_write_conflict(op.id(), clash, ConflictResolution::Overwrite, true),
+        installed().resolve_write_conflict(op.id(), clash, ConflictResolution::Overwrite, true),
         ConflictResolutionOutcome::Resolved
     );
 
@@ -597,11 +598,11 @@ async fn a_second_answer_to_one_conflict_is_reported_as_already_resolved() {
     let clash = op.state().conflict_slot.arm(tx, placeholder_conflict).conflict_id;
 
     assert_eq!(
-        resolve_write_conflict(op.id(), clash, ConflictResolution::Overwrite, false),
+        installed().resolve_write_conflict(op.id(), clash, ConflictResolution::Overwrite, false),
         ConflictResolutionOutcome::Resolved
     );
     assert_eq!(
-        resolve_write_conflict(op.id(), clash, ConflictResolution::Skip, true),
+        installed().resolve_write_conflict(op.id(), clash, ConflictResolution::Skip, true),
         ConflictResolutionOutcome::AlreadyResolved
     );
 
@@ -625,7 +626,7 @@ async fn an_answer_for_a_retired_conflict_is_refused_and_reported_as_stale() {
     let (first_tx, first_rx) = tokio::sync::oneshot::channel::<ConflictResolutionResponse>();
     let first = op.state().conflict_slot.arm(first_tx, placeholder_conflict).conflict_id;
     assert_eq!(
-        resolve_write_conflict(op.id(), first, ConflictResolution::Overwrite, false),
+        installed().resolve_write_conflict(op.id(), first, ConflictResolution::Overwrite, false),
         ConflictResolutionOutcome::Resolved
     );
     first_rx.await.expect("the first clash gets its own answer");
@@ -635,7 +636,7 @@ async fn an_answer_for_a_retired_conflict_is_refused_and_reported_as_stale() {
     op.state().conflict_slot.arm(second_tx, placeholder_conflict);
 
     assert_eq!(
-        resolve_write_conflict(op.id(), first, ConflictResolution::Skip, true),
+        installed().resolve_write_conflict(op.id(), first, ConflictResolution::Skip, true),
         ConflictResolutionOutcome::StaleAnswer,
         "an answer naming the retired clash must not be reported as resolving anything"
     );
@@ -651,7 +652,7 @@ fn resolve_write_conflict_on_an_operation_with_no_conflict_says_so() {
     let op = install_state("resolve-no-conflict", OperationIntent::Running);
     // The operation is live but has never raised a conflict.
     assert_eq!(
-        resolve_write_conflict(op.id(), ConflictId(1), ConflictResolution::Skip, false),
+        installed().resolve_write_conflict(op.id(), ConflictId(1), ConflictResolution::Skip, false),
         ConflictResolutionOutcome::NoPendingConflict
     );
 }
@@ -661,7 +662,7 @@ fn resolve_write_conflict_on_an_unknown_operation_says_so() {
     // Nothing registered under this id: it settled, or it never existed. Not the
     // same thing as a live operation that isn't asking anything.
     assert_eq!(
-        resolve_write_conflict(
+        installed().resolve_write_conflict(
             &unique_id("resolve-gone"),
             ConflictId(1),
             ConflictResolution::Skip,
@@ -677,11 +678,11 @@ fn cancelling_takes_the_pending_conflict_away() {
     let (tx, _rx) = tokio::sync::oneshot::channel::<ConflictResolutionResponse>();
     let clash = op.state().conflict_slot.arm(tx, placeholder_conflict).conflict_id;
 
-    cancel_write_operation(op.id(), false);
+    installed().cancel_write_operation(op.id(), false);
 
     assert!(!op.state().conflict_slot.is_awaiting());
     assert_eq!(
-        resolve_write_conflict(op.id(), clash, ConflictResolution::Skip, false),
+        installed().resolve_write_conflict(op.id(), clash, ConflictResolution::Skip, false),
         ConflictResolutionOutcome::NoPendingConflict
     );
 }
@@ -698,12 +699,12 @@ fn busy_volume_ids_reflects_registered_volumes() {
     let mtp = unique_id("mtp");
 
     register_operation_status(&op, WriteOperationType::Copy, vec![usb.clone(), mtp.clone()]);
-    let busy = busy_volume_ids();
+    let busy = installed().busy_volume_ids();
     assert!(busy.contains(&usb), "source volume should be busy");
     assert!(busy.contains(&mtp), "dest volume should be busy");
 
     unregister_operation_status(&op);
-    let after = busy_volume_ids();
+    let after = installed().busy_volume_ids();
     assert!(!after.contains(&usb), "volume should clear once the op finishes");
     assert!(!after.contains(&mtp), "volume should clear once the op finishes");
 }
@@ -715,7 +716,7 @@ fn busy_volume_ids_excludes_root() {
 
     let root = cmdr_fs::volume::DEFAULT_VOLUME_ID.to_string();
     register_operation_status(&op, WriteOperationType::Move, vec![root.clone(), usb.clone()]);
-    let busy = busy_volume_ids();
+    let busy = installed().busy_volume_ids();
     assert!(busy.contains(&usb), "the ejectable volume should be busy");
     assert!(
         !busy.contains(&root),
@@ -735,14 +736,17 @@ fn busy_volume_ids_stays_busy_until_all_overlapping_ops_finish() {
 
     register_operation_status(&op_a, WriteOperationType::Copy, vec![dev.clone()]);
     register_operation_status(&op_b, WriteOperationType::Copy, vec![dev.clone()]);
-    assert!(busy_volume_ids().contains(&dev));
+    assert!(installed().busy_volume_ids().contains(&dev));
 
     unregister_operation_status(&op_a);
-    assert!(busy_volume_ids().contains(&dev), "still busy while the second op runs");
+    assert!(
+        installed().busy_volume_ids().contains(&dev),
+        "still busy while the second op runs"
+    );
 
     unregister_operation_status(&op_b);
     assert!(
-        !busy_volume_ids().contains(&dev),
+        !installed().busy_volume_ids().contains(&dev),
         "clears only after the last op finishes"
     );
 }
@@ -773,7 +777,7 @@ fn busy_volume_ids_clears_on_panic_unwind_via_unregister() {
     assert!(handle.join().is_err(), "thread should have panicked");
 
     assert!(
-        !busy_volume_ids().contains(&dev),
+        !installed().busy_volume_ids().contains(&dev),
         "unregister on unwind must clear the busy mark"
     );
 }
@@ -788,17 +792,20 @@ fn pause_resume_write_operation_flip_the_live_gate() {
     let op = install_state("pause-live", OperationIntent::Running);
     assert!(!op.state().pause_gate.is_paused());
 
-    assert!(pause_write_operation(op.id()), "should find the live state");
+    assert!(installed().pause_write_operation(op.id()), "should find the live state");
     assert!(op.state().pause_gate.is_paused(), "pause must set the gate flag");
 
-    assert!(resume_write_operation(op.id()), "should find the live state");
+    assert!(
+        installed().resume_write_operation(op.id()),
+        "should find the live state"
+    );
     assert!(!op.state().pause_gate.is_paused(), "resume must clear the gate flag");
 }
 
 #[test]
 fn pause_resume_unknown_operation_returns_false() {
-    assert!(!pause_write_operation("does-not-exist-pause"));
-    assert!(!resume_write_operation("does-not-exist-pause"));
+    assert!(!installed().pause_write_operation("does-not-exist-pause"));
+    assert!(!installed().resume_write_operation("does-not-exist-pause"));
 }
 
 // ---- TestOperationGuard's own contract -----------------------------------

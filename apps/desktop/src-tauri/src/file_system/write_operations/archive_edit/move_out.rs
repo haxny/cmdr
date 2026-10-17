@@ -406,35 +406,3 @@ impl OperationEventSink for SuppressTerminalsSink {
         self.landed_clean.lock_ignore_poison().push(source.to_path_buf());
     }
 }
-
-/// [`Operations::route_archive_move_out`](crate::file_system::write_operations::Operations::route_archive_move_out)
-/// on the installed engine, for the suites that drive it directly.
-// shim: removed in M7a
-#[cfg(test)]
-#[allow(
-    clippy::too_many_arguments,
-    reason = "the archive-source→dest move threads both volumes with their ids plus the resolved dest path and config; a struct would just shuffle the same fields"
-)]
-pub(crate) async fn route_archive_move_out(
-    events: Arc<dyn OperationEventSink>,
-    source_volume_id: String,
-    source_volume: Arc<dyn Volume>,
-    source_paths: Vec<PathBuf>,
-    dest_volume_id: String,
-    dest_volume: Arc<dyn Volume>,
-    dest_path: PathBuf,
-    config: VolumeCopyConfig,
-) -> Result<WriteOperationStartResult, WriteOperationError> {
-    crate::file_system::write_operations::installed()
-        .route_archive_move_out(
-            events,
-            source_volume_id,
-            source_volume,
-            source_paths,
-            dest_volume_id,
-            dest_volume,
-            dest_path,
-            config,
-        )
-        .await
-}

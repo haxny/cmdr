@@ -6,6 +6,7 @@
 
 use super::*;
 use crate::file_system::volume::manager::get_volume_manager;
+use crate::file_system::write_operations::installed;
 use std::fs;
 use std::future::Future;
 use std::path::{Path, PathBuf};
@@ -100,14 +101,15 @@ async fn create_directory_managed_journals_a_create_folder_op() {
 
     let tmp = create_test_dir("managed_journal");
     let parent = tmp.path().to_string_lossy().to_string();
-    let created = create_directory_managed(
-        None,
-        parent,
-        "made-folder".to_string(),
-        cmdr_operation_log::types::Initiator::User,
-    )
-    .await
-    .expect("mkdir");
+    let created = installed()
+        .create_directory_managed(
+            None,
+            parent,
+            "made-folder".to_string(),
+            cmdr_operation_log::types::Initiator::User,
+        )
+        .await
+        .expect("mkdir");
 
     let conn = open_read_connection(&jdb).expect("read conn");
     // Exactly one CreateFolder op, rollbackable (net-new), with one Dir item row.
@@ -267,13 +269,14 @@ async fn create_directory_managed_creates_folder_and_cleans_up_record() {
     ensure_root_volume();
     let tmp = create_test_dir("create_managed_ok");
     let parent = tmp.path().to_string_lossy().to_string();
-    let result = create_directory_managed(
-        None,
-        parent,
-        "made".to_string(),
-        cmdr_operation_log::types::Initiator::User,
-    )
-    .await;
+    let result = installed()
+        .create_directory_managed(
+            None,
+            parent,
+            "made".to_string(),
+            cmdr_operation_log::types::Initiator::User,
+        )
+        .await;
     assert!(result.is_ok(), "managed create returns the new path");
     let path = result.unwrap();
     assert!(path.ends_with("made"));
@@ -472,15 +475,9 @@ async fn route_archive_create_on_an_existing_inner_name_errors_without_building_
 
     // mkfile onto an existing name at the archive root.
     let root_parent = zip.to_string_lossy().to_string();
-    let err_file = route_archive_create(
-        crate::file_system::write_operations::installed(),
-        &root_parent,
-        "existing.txt",
-        ArchiveEntryKind::File,
-        None,
-    )
-    .await
-    .expect_err("mkfile onto an existing inner name must be refused");
+    let err_file = route_archive_create(installed(), &root_parent, "existing.txt", ArchiveEntryKind::File, None)
+        .await
+        .expect_err("mkfile onto an existing inner name must be refused");
     assert!(
         matches!(&err_file, MutationError::AlreadyExists { name } if name == "existing.txt"),
         "got: {err_file:?}",
@@ -488,15 +485,9 @@ async fn route_archive_create_on_an_existing_inner_name_errors_without_building_
 
     // mkdir onto an existing name inside a subdirectory.
     let sub_parent = zip.join("sub").to_string_lossy().to_string();
-    let err_dir = route_archive_create(
-        crate::file_system::write_operations::installed(),
-        &sub_parent,
-        "existing.txt",
-        ArchiveEntryKind::Dir,
-        None,
-    )
-    .await
-    .expect_err("mkdir onto an existing inner name must be refused");
+    let err_dir = route_archive_create(installed(), &sub_parent, "existing.txt", ArchiveEntryKind::Dir, None)
+        .await
+        .expect_err("mkdir onto an existing inner name must be refused");
     assert!(
         matches!(&err_dir, MutationError::AlreadyExists { name } if name == "existing.txt"),
         "got: {err_dir:?}",
@@ -540,12 +531,7 @@ fn synthetic_entry_diff_lands_only_in_listings_on_the_creates_volume() {
         .insert(crate::listing_host::listings(), "synthetic-diff-remote");
 
     // `None` is the local filesystem, `root`.
-    patch_listings_after_create(
-        crate::file_system::write_operations::installed().host(),
-        None,
-        &new_path,
-        tmp.path(),
-    );
+    patch_listings_after_create(installed().host(), None, &new_path, tmp.path());
 
     assert_eq!(
         on_root.entry_names(),
@@ -581,12 +567,7 @@ fn synthetic_entry_diff_refreshes_a_row_the_listing_already_holds() {
         .insert(crate::listing_host::listings(), "synthetic-diff-duplicate");
     hold_diffs(listing.engine(), listing.id());
 
-    patch_listings_after_create(
-        crate::file_system::write_operations::installed().host(),
-        None,
-        &new_path,
-        tmp.path(),
-    );
+    patch_listings_after_create(installed().host(), None, &new_path, tmp.path());
 
     let entries = listing.entries();
     assert_eq!(entries.len(), 1, "the create upserts; it never adds a second row");

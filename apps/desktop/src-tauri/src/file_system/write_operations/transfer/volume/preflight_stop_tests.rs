@@ -15,7 +15,8 @@
 use super::preflight::scan_volume_sources;
 use super::rename_merge_test_support::make_state;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
-use crate::file_system::write_operations::state::{WriteOperationState, cancel_write_operation};
+use crate::file_system::write_operations::installed;
+use crate::file_system::write_operations::state::WriteOperationState;
 use crate::file_system::write_operations::test_support::TestOperationGuard;
 use crate::file_system::write_operations::types::{
     ConflictResolution, VolumeCopyConfig, WriteOperationError, WriteOperationType,
@@ -125,7 +126,7 @@ impl Volume for BoundaryWalkingVolume {
                     match self.action {
                         // The real path, so the gate is woken the way a click
                         // wakes it. ❌ Never a bare `set_for_test`.
-                        TripAction::Cancel => cancel_write_operation(&self.operation_id, false),
+                        TripAction::Cancel => installed().cancel_write_operation(&self.operation_id, false),
                         TripAction::Pause => self.state.pause_gate.pause(),
                     }
                 }

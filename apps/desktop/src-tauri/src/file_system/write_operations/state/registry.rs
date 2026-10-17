@@ -120,7 +120,8 @@ impl WriteOperationRegistry {
     }
 
     /// Stops every registered operation and stops WAITING for the ones that
-    /// don't answer. See [`abort_all_write_operations`](super::abort_all_write_operations).
+    /// don't answer. See
+    /// [`Operations::abort_all_write_operations`](super::super::Operations::abort_all_write_operations).
     pub(in crate::file_system::write_operations) fn abort_all(&self) {
         // Tier 1 first, and unconditionally: an abort is a cancel that ran out
         // of patience, so an operation must never observe tier 2 without the
@@ -149,15 +150,6 @@ impl super::super::Operations {
     pub(crate) fn latest_operation_progress(&self) -> Vec<WriteProgressEvent> {
         self.registry().latest_progress()
     }
-}
-
-/// [`Operations::latest_operation_progress`](super::super::Operations::latest_operation_progress)
-/// on the installed engine; nothing before `install`.
-// shim: removed in M7a
-pub fn latest_operation_progress() -> Vec<WriteProgressEvent> {
-    super::super::installed_for("latest_operation_progress")
-        .map(super::super::Operations::latest_operation_progress)
-        .unwrap_or_default()
 }
 
 /// Drops `operation_id`'s state, ending its liveness first. See
