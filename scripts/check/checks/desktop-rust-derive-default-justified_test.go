@@ -286,3 +286,31 @@ func seedCmdrLocalFixtureWorkspace(t *testing.T, root string) {
 	mustWrite(t, filepath.Join(root, "crates", "cmdr-local", "Cargo.toml"),
 		"[package]\nname = \"cmdr-local\"\nversion = \"0.0.0\"\n")
 }
+
+// All of `cmdr-operations` is in scope: the write engine's types carry facts about
+// the files it writes end to end, and it has no `file_system/` subdir to narrow to.
+func TestDeriveDefault_CoversTheWholeCmdrOperationsTree(t *testing.T) {
+	root := t.TempDir()
+	seedCmdrOperationsFixtureWorkspace(t, root)
+	writeFixtureFiles(t, filepath.Join(root, "crates", "cmdr-operations", "src"), map[string]string{
+		"scan_cache.rs": `
+#[derive(Debug, Clone, Default)]
+pub struct ScanCostFacts {}
+`,
+	})
+	_, err := RunDeriveDefaultJustified(&CheckContext{RootDir: root})
+	if err == nil {
+		t.Fatal("expected a violation in cmdr-operations, got success")
+	}
+	if !strings.Contains(err.Error(), "scan_cache.rs:2") {
+		t.Errorf("expected scan_cache.rs:2, got: %s", err.Error())
+	}
+}
+
+func seedCmdrOperationsFixtureWorkspace(t *testing.T, root string) {
+	t.Helper()
+	mustWrite(t, filepath.Join(root, "Cargo.toml"),
+		"[workspace]\nmembers = [\"crates/cmdr-operations\"]\nresolver = \"2\"\n")
+	mustWrite(t, filepath.Join(root, "crates", "cmdr-operations", "Cargo.toml"),
+		"[package]\nname = \"cmdr-operations\"\nversion = \"0.0.0\"\n")
+}

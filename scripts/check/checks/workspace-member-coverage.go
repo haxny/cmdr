@@ -46,15 +46,15 @@ var rustScannerJurisdictions = map[string]ScannerJurisdiction{
 	},
 	"desktop-rust-derive-default-justified": {
 		Kinds: []MemberKind{KindApp},
-		Why:   "narrowed further to the filesystem trees (the app's `file_system/`, and all of `cmdr-fs` and `cmdr-local`), where a zero value is a claim about a disk; elsewhere a `Default` carries no filesystem fact and the rule would be churn. Each governed member must scan at least one file, so a tree moving away fails instead of passing on nothing",
+		Why:   "narrowed further to the filesystem trees (the app's `file_system/`, and all of `cmdr-fs`, `cmdr-local`, and `cmdr-operations`), where a zero value is a claim about a disk; elsewhere a `Default` carries no filesystem fact and the rule would be churn. Each governed member must scan at least one file, so a tree moving away fails instead of passing on nothing",
 	},
 	"desktop-rust-probe-unwrap-justified": {
 		Kinds: []MemberKind{KindApp},
-		Why:   "narrowed further to the app's `file_system/` and all of `cmdr-local`, the trees where `Volume::is_directory` is called or answered. Each governed member must scan at least one file, so a tree moving away fails instead of passing on nothing",
+		Why:   "narrowed further to the app's `file_system/` and all of `cmdr-local` and `cmdr-operations`, the trees where `Volume::is_directory` is called or answered. Each governed member must scan at least one file, so a tree moving away fails instead of passing on nothing",
 	},
 	"desktop-rust-discarded-outcome": {
 		AppTreeOnly: true,
-		Why:         "it guards the IPC and MCP surfaces, which only exist in the app tree; a standalone CLI has no surface that could report a success it didn't get",
+		Why:         "it guards the IPC and MCP surfaces, which only exist in the app tree; a standalone CLI has no surface that could report a success it didn't get. The write engine's crate stays out too: the scanner resolves a callee's return type by NAME across everything it scans, so scanning the library crates beside the app reads `tauri::async_runtime::spawn_blocking` as `cmdr-index`'s and flags 28 sites that drop nothing (measured at the move, 2026-10-17)",
 	},
 	"desktop-rust-ipc-enum-camelcase": {Kinds: []MemberKind{KindApp, KindTool}},
 	"desktop-rust-jscpd":              {Kinds: []MemberKind{KindApp, KindTool}},

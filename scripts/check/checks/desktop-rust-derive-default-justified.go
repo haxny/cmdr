@@ -124,8 +124,9 @@ func RunDeriveDefaultJustified(ctx *CheckContext) (CheckResult, error) {
 // deriveDefaultTrees narrows a member's `src/` to the subtrees where a zero
 // value is a claim about a disk, or nil for a member outside the jurisdiction. In
 // the app that's `file_system/` plus the IPC twins of `cmdr-fs` file types; a
-// member whose whole reason to exist is filesystem vocabulary (`cmdr-fs`) or the
-// local disk (`cmdr-local`) is in scope end to end. Everything else in the
+// member whose whole reason to exist is filesystem vocabulary (`cmdr-fs`), the
+// local disk (`cmdr-local`), or writing files (`cmdr-operations`) is in scope end
+// to end. Everything else in the
 // workspace stays out: widening to every member would put ~120 more derives
 // under the rule and buy nothing, since the fault class is specifically "a type
 // that carries a fact about a file".
@@ -148,7 +149,8 @@ func RunDeriveDefaultJustified(ctx *CheckContext) (CheckResult, error) {
 func deriveDefaultTrees(srcDir string) []string {
 	slashed := filepath.ToSlash(srcDir)
 	switch {
-	case strings.HasSuffix(slashed, "crates/cmdr-fs/src"), strings.HasSuffix(slashed, "crates/cmdr-local/src"):
+	case strings.HasSuffix(slashed, "crates/cmdr-fs/src"), strings.HasSuffix(slashed, "crates/cmdr-local/src"),
+		strings.HasSuffix(slashed, "crates/cmdr-operations/src"):
 		return []string{srcDir}
 	case strings.HasSuffix(slashed, appRustSrcSuffix):
 		return []string{

@@ -124,12 +124,13 @@ func RunProbeUnwrapJustified(ctx *CheckContext) (CheckResult, error) {
 
 // probeUnwrapTree narrows a member's `src/` to the tree where a write engine or a
 // backend answers "is this a directory?", or "" for a member outside the
-// jurisdiction: the app's `file_system/`, and all of `cmdr-local`, the local
-// backend that answers the probe itself.
+// jurisdiction: the app's `file_system/`, all of `cmdr-local`, the local backend
+// that answers the probe itself, and all of `cmdr-operations`, the write engine
+// that asks it.
 func probeUnwrapTree(srcDir string) string {
 	slashed := filepath.ToSlash(srcDir)
 	switch {
-	case strings.HasSuffix(slashed, "crates/cmdr-local/src"):
+	case strings.HasSuffix(slashed, "crates/cmdr-local/src"), strings.HasSuffix(slashed, "crates/cmdr-operations/src"):
 		return srcDir
 	case strings.HasSuffix(slashed, appRustSrcSuffix):
 		return filepath.Join(srcDir, "file_system")

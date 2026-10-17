@@ -228,3 +228,20 @@ func TestProbeUnwrap_FailsWhenAGovernedTreeScansNothing(t *testing.T) {
 		t.Errorf("expected the empty tree named, got: %s", err.Error())
 	}
 }
+
+// All of `cmdr-operations` is in scope: the write engine asks `is_directory` on
+// every walk, and has no `file_system/` subdir to narrow to.
+func TestProbeUnwrap_CoversTheWholeCmdrOperationsTree(t *testing.T) {
+	root := t.TempDir()
+	seedCmdrOperationsFixtureWorkspace(t, root)
+	writeFixtureFiles(t, filepath.Join(root, "crates", "cmdr-operations", "src"), map[string]string{
+		"delete/walker.rs": "async fn f() { v.is_directory(p).await.unwrap_or(false); }\n",
+	})
+	_, err := RunProbeUnwrapJustified(&CheckContext{RootDir: root})
+	if err == nil {
+		t.Fatal("expected a violation in cmdr-operations, got success")
+	}
+	if !strings.Contains(err.Error(), "walker.rs:1") {
+		t.Errorf("expected walker.rs:1, got: %s", err.Error())
+	}
+}
