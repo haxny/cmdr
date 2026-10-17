@@ -12,6 +12,7 @@
 use super::trash::trash_files_with_progress;
 use crate::file_system::write_operations::event_sinks::OperationEventSink;
 use crate::file_system::write_operations::state::WriteOperationState;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::{
     ConflictInfo, DryRunResult, ScanProgressEvent, WriteCancelledEvent, WriteCompleteEvent, WriteConflictResolvedEvent,
     WriteErrorEvent, WriteProgressEvent, WriteSettledEvent, WriteSourceItemDoneEvent,
@@ -49,7 +50,8 @@ impl OperationEventSink for PauseAfterTheFirstItem {
 
 #[test]
 fn a_paused_trash_stops_between_items_until_it_resumes() {
-    let state = Arc::new(WriteOperationState::new(Duration::from_millis(0)));
+    let engine = TestOperations::new();
+    let state = Arc::new(engine.new_operation_state(Duration::from_millis(0)));
     let events = Arc::new(PauseAfterTheFirstItem {
         state: Arc::clone(&state),
         verdicts: AtomicUsize::new(0),

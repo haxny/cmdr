@@ -14,8 +14,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use super::super::event_sinks::CollectorEventSink;
-use super::super::state::WriteOperationState;
-use super::super::test_support::TestOperationGuard;
+use super::super::testing::TestOperations;
 use super::super::types::WriteOperationConfig;
 use super::walker::delete_files_with_progress_inner;
 use crate::test_support::TestDir;
@@ -23,16 +22,6 @@ use crate::test_support::TestDir;
 /// Builds a unique-per-test scratch directory under `$TMPDIR`.
 fn create_temp_dir(name: &str) -> TestDir {
     TestDir::new(&format!("hardlink_progress_{name}"))
-}
-
-fn unique_op_id(name: &str) -> String {
-    format!(
-        "test-hardlink-delete-{name}-{}",
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_nanos()
-    )
 }
 
 /// Delete a tree where one file is hardlinked twice. Scan dedupes hardlinks
@@ -54,17 +43,17 @@ fn delete_hardlinked_files_does_not_overshoot_progress() {
     fs::hard_link(&original, dir.join("hardlink_b")).unwrap();
     fs::write(dir.join("standalone"), vec![0u8; 4096]).unwrap();
 
-    let op_id = unique_op_id("overshoot");
-    let op = TestOperationGuard::register_as(
-        op_id.clone(),
-        Arc::new(WriteOperationState::new(Duration::from_millis(10))),
+    let engine = TestOperations::new();
+    let op = engine.register_state(
+        "overshoot",
+        Arc::new(engine.new_operation_state(Duration::from_millis(10))),
     );
 
     let sink = CollectorEventSink::new();
     let sources = vec![dir.to_path_buf()];
     let config = WriteOperationConfig::default();
 
-    let result = delete_files_with_progress_inner(&sink, &op_id, op.state(), &sources, &config);
+    let result = delete_files_with_progress_inner(&sink, op.id(), op.state(), &sources, &config);
 
     assert!(result.is_ok(), "delete must succeed; got {result:?}");
 

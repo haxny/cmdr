@@ -9,6 +9,7 @@ use crate::file_system::write_operations::types::CancelRollbackOutcome;
 use crate::file_system::write_operations::types::TrashRefusedItems;
 // Only the macOS-gated cases below build a real directory.
 #[cfg(target_os = "macos")]
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::test_support::TestDir;
 use std::sync::Arc;
 use std::time::Duration;
@@ -160,7 +161,8 @@ use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 #[test]
 fn trash_empty_sources_emits_complete_via_sink() {
     let events = Arc::new(CollectorEventSink::new());
-    let state = Arc::new(WriteOperationState::new(Duration::from_millis(0)));
+    let engine = TestOperations::new();
+    let state = Arc::new(engine.new_operation_state(Duration::from_millis(0)));
 
     let result = trash_files_with_progress(&*events, "op-trash-empty", &state, &[], None);
     assert!(result.is_ok(), "expected Ok, got {:?}", result);
@@ -181,7 +183,8 @@ fn trash_empty_sources_emits_complete_via_sink() {
 #[test]
 fn trash_pre_cancel_emits_cancelled_via_sink() {
     let events = Arc::new(CollectorEventSink::new());
-    let state = Arc::new(WriteOperationState::new(Duration::from_millis(0)));
+    let engine = TestOperations::new();
+    let state = Arc::new(engine.new_operation_state(Duration::from_millis(0)));
     state
         .intent()
         .set_for_test(crate::file_system::write_operations::OperationIntent::Stopped); // Stopped
@@ -204,7 +207,8 @@ fn trash_pre_cancel_emits_cancelled_via_sink() {
 #[test]
 fn trash_all_sources_missing_emits_error_via_sink() {
     let events = Arc::new(CollectorEventSink::new());
-    let state = Arc::new(WriteOperationState::new(Duration::from_millis(0)));
+    let engine = TestOperations::new();
+    let state = Arc::new(engine.new_operation_state(Duration::from_millis(0)));
 
     let sources = [
         PathBuf::from("/nonexistent_trash_test_aaa/x.txt"),
@@ -234,7 +238,8 @@ fn trash_all_sources_missing_emits_error_via_sink() {
 #[test]
 fn a_source_trash_could_not_take_reports_itself_as_failed() {
     let events = Arc::new(CollectorEventSink::new());
-    let state = Arc::new(WriteOperationState::new(Duration::from_millis(0)));
+    let engine = TestOperations::new();
+    let state = Arc::new(engine.new_operation_state(Duration::from_millis(0)));
     let missing = PathBuf::from("/nonexistent_trash_test_ccc/gone.txt");
 
     let result = trash_files_with_progress(
@@ -272,7 +277,8 @@ fn a_source_trash_could_not_take_reports_itself_as_failed() {
 #[test]
 fn a_partly_refused_batch_reports_what_it_left_behind() {
     let events = Arc::new(CollectorEventSink::new());
-    let state = Arc::new(WriteOperationState::new(Duration::from_millis(0)));
+    let engine = TestOperations::new();
+    let state = Arc::new(engine.new_operation_state(Duration::from_millis(0)));
     let tmp = create_test_dir("trash_partial");
     let taken = tmp.join("taken.txt");
     fs::write(&taken, "content").unwrap();
@@ -312,7 +318,8 @@ fn a_partly_refused_batch_reports_what_it_left_behind() {
 #[test]
 fn a_batch_the_os_took_in_full_reports_nothing_left_behind() {
     let events = Arc::new(CollectorEventSink::new());
-    let state = Arc::new(WriteOperationState::new(Duration::from_millis(0)));
+    let engine = TestOperations::new();
+    let state = Arc::new(engine.new_operation_state(Duration::from_millis(0)));
     let tmp = create_test_dir("trash_all_taken");
     let first = tmp.join("first.txt");
     let second = tmp.join("second.txt");
@@ -471,7 +478,8 @@ fn a_batch_ranks_the_item_level_refusals_between_permission_and_no_trash() {
 
 #[test]
 fn test_cancellation_flag_checked_by_state() {
-    let state = Arc::new(WriteOperationState::new(Duration::from_millis(200)));
+    let engine = TestOperations::new();
+    let state = Arc::new(engine.new_operation_state(Duration::from_millis(200)));
 
     assert!(!state.intent().is_cancelled());
     state

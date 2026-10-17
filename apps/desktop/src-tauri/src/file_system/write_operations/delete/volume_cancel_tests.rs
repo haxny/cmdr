@@ -19,13 +19,12 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 use std::time::{Duration, Instant};
 
+use super::super::Operations;
 use super::super::event_sinks::CollectorEventSink;
-use super::super::state::{OperationIntent, WriteOperationState};
-use super::super::test_support::TestOperationGuard;
+use super::super::state::OperationIntent;
+use super::super::testing::TestOperations;
 use super::super::types::WriteOperationConfig;
 use super::walker::delete_volume_files_with_progress_inner;
-use crate::file_system::volume::manager::get_volume_manager;
-use crate::file_system::write_operations::installed;
 use crate::test_support::wait_until_async;
 use cmdr_fs::volume::{InMemoryVolume, Volume, VolumeError};
 use tokio_util::sync::CancellationToken;
@@ -237,18 +236,17 @@ async fn mtp_listing_cancels_promptly_when_intent_flips() {
 
     let vol_name = unique("listing-cancel");
     let vol = Arc::new(CancellingVolume::new(&vol_name, children));
-    get_volume_manager().register(&vol_name, vol.clone() as Arc<dyn Volume>);
+    let engine = TestOperations::new();
+    engine.volumes().register(&vol_name, vol.clone() as Arc<dyn Volume>);
 
     let op_id = unique("op");
-    let op = TestOperationGuard::register_as(
-        op_id.clone(),
-        Arc::new(WriteOperationState::new(Duration::from_millis(50))),
-    );
+    let op = engine.register_state(&op_id, Arc::new(engine.new_operation_state(Duration::from_millis(50))));
     let state = Arc::clone(op.state());
 
     // Spawn the delete; once the listing is genuinely in-flight (several entries
     // fetched), fire cancel from another task so it lands mid-listing.
     let op_id_for_cancel = op_id.clone();
+    let engine_for_cancel = Operations::clone(&engine);
     let vol_for_cancel = Arc::clone(&vol);
     let canceller = tokio::spawn(async move {
         wait_until_async(
@@ -257,7 +255,7 @@ async fn mtp_listing_cancels_promptly_when_intent_flips() {
             || vol_for_cancel.fetched_live.load(Ordering::Acquire) >= 5,
         )
         .await;
-        installed().cancel_write_operation(&op_id_for_cancel, false);
+        engine_for_cancel.cancel_write_operation(&op_id_for_cancel, false);
     });
 
     let sink = CollectorEventSink::new();
@@ -390,16 +388,15 @@ async fn volume_cancel_emits_write_settled_event() {
         .collect();
     let vol_name = unique("settle-cancel");
     let vol = Arc::new(CancellingVolume::new(&vol_name, children));
-    get_volume_manager().register(&vol_name, vol.clone() as Arc<dyn Volume>);
+    let engine = TestOperations::new();
+    engine.volumes().register(&vol_name, vol.clone() as Arc<dyn Volume>);
 
     let op_id = unique("op");
-    let op = TestOperationGuard::register_as(
-        op_id.clone(),
-        Arc::new(WriteOperationState::new(Duration::from_millis(50))),
-    );
+    let op = engine.register_state(&op_id, Arc::new(engine.new_operation_state(Duration::from_millis(50))));
     let state = Arc::clone(op.state());
 
     let op_id_for_cancel = op_id.clone();
+    let engine_for_cancel = Operations::clone(&engine);
     let vol_for_cancel = Arc::clone(&vol);
     let canceller = tokio::spawn(async move {
         wait_until_async(
@@ -408,7 +405,7 @@ async fn volume_cancel_emits_write_settled_event() {
             || vol_for_cancel.fetched_live.load(Ordering::Acquire) >= 5,
         )
         .await;
-        installed().cancel_write_operation(&op_id_for_cancel, false);
+        engine_for_cancel.cancel_write_operation(&op_id_for_cancel, false);
     });
 
     let sources = vec![PathBuf::from("/dir")];
@@ -480,13 +477,11 @@ async fn volume_complete_emits_write_settled_event() {
         .collect();
     let vol_name = unique("settle-complete");
     let vol = Arc::new(CancellingVolume::new(&vol_name, children));
-    get_volume_manager().register(&vol_name, vol.clone() as Arc<dyn Volume>);
+    let engine = TestOperations::new();
+    engine.volumes().register(&vol_name, vol.clone() as Arc<dyn Volume>);
 
     let op_id = unique("op");
-    let op = TestOperationGuard::register_as(
-        op_id.clone(),
-        Arc::new(WriteOperationState::new(Duration::from_millis(50))),
-    );
+    let op = engine.register_state(&op_id, Arc::new(engine.new_operation_state(Duration::from_millis(50))));
     let state = Arc::clone(op.state());
 
     let sources = vec![PathBuf::from("/dir")];
@@ -600,13 +595,11 @@ async fn volume_error_emits_write_settled_event() {
     let vol = Arc::new(FailingVolume {
         inner: InMemoryVolume::new(&vol_name),
     });
-    get_volume_manager().register(&vol_name, vol.clone() as Arc<dyn Volume>);
+    let engine = TestOperations::new();
+    engine.volumes().register(&vol_name, vol.clone() as Arc<dyn Volume>);
 
     let op_id = unique("op");
-    let op = TestOperationGuard::register_as(
-        op_id.clone(),
-        Arc::new(WriteOperationState::new(Duration::from_millis(50))),
-    );
+    let op = engine.register_state(&op_id, Arc::new(engine.new_operation_state(Duration::from_millis(50))));
     let state = Arc::clone(op.state());
 
     let sources = vec![PathBuf::from("/dir")];
@@ -647,16 +640,14 @@ async fn volume_error_emits_write_settled_event() {
 /// `state.backend_cancel`, which is the handle MTP code consults.
 #[test]
 fn cancel_flag_adapter_links_intent_to_backend_cancel() {
+    let engine = TestOperations::new();
     let op_id = unique("adapter");
-    let op = TestOperationGuard::register_as(
-        op_id.clone(),
-        Arc::new(WriteOperationState::new(Duration::from_millis(50))),
-    );
+    let op = engine.register_state(&op_id, Arc::new(engine.new_operation_state(Duration::from_millis(50))));
     let state = Arc::clone(op.state());
 
     assert!(!state.backend_cancel.is_cancelled(), "backend_cancel must start unset");
 
-    installed().cancel_write_operation(&op_id, false);
+    engine.cancel_write_operation(&op_id, false);
 
     assert!(
         state.backend_cancel.is_cancelled(),

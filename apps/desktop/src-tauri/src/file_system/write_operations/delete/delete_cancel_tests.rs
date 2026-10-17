@@ -8,7 +8,8 @@
 //! A `#[path]` child of `delete/mod.rs`, so `super::` here is `delete` and
 //! `super::super::` is `write_operations`.
 
-use super::super::state::{OperationIntent, WriteOperationState};
+use super::super::state::OperationIntent;
+use super::super::testing::TestOperations;
 use super::super::types::{CancelRollback, CancelRollbackOutcome, WriteCancelledEvent, WriteOperationType};
 use crate::test_support::TestDir;
 use std::fs;
@@ -32,7 +33,8 @@ fn test_cancel_flag_stops_delete_loop() {
         files.push(file);
     }
 
-    let state = Arc::new(WriteOperationState::new(Duration::from_millis(200)));
+    let engine = TestOperations::new();
+    let state = Arc::new(engine.new_operation_state(Duration::from_millis(200)));
 
     // Simulate the delete loop from delete.rs, setting cancelled after 2 files
     let mut files_done = 0;
@@ -61,7 +63,8 @@ fn test_cancel_flag_stops_delete_loop() {
 
 #[test]
 fn test_cancel_during_directory_deletion_phase() {
-    let state = Arc::new(WriteOperationState::new(Duration::from_millis(200)));
+    let engine = TestOperations::new();
+    let state = Arc::new(engine.new_operation_state(Duration::from_millis(200)));
 
     // Set cancellation before directory phase
     state.intent().set_for_test(OperationIntent::Stopped);

@@ -15,7 +15,8 @@ use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 use std::time::Duration;
 
 use super::super::event_sinks::CollectorEventSink;
-use super::super::state::{CachedScanResult, OperationIntent, WriteOperationState, insert_scan_result};
+use super::super::state::{CachedScanResult, OperationIntent, WriteOperationState};
+use super::super::testing::TestOperations;
 use super::super::types::{CancelRollbackOutcome, WriteOperationConfig, WriteOperationError};
 use super::walker::delete_volume_files_with_progress_inner;
 use crate::file_system::volume::manager::get_volume_manager;
@@ -177,8 +178,8 @@ fn insert_listing(tag: &str, volume_id: &str, path: &str, entries: Vec<FileEntry
         .insert(crate::listing_host::listings(), tag)
 }
 
-fn make_state() -> Arc<WriteOperationState> {
-    Arc::new(WriteOperationState::new(Duration::from_millis(50)))
+fn make_state(engine: &TestOperations) -> Arc<WriteOperationState> {
+    Arc::new(engine.new_operation_state(Duration::from_millis(50)))
 }
 
 // ----------------------------------------------------------------------------
@@ -200,12 +201,13 @@ async fn delete_consumes_preview_id_skips_rescan() {
     let vol = Arc::new(CountingVolume::new("preview-vol", false));
     vol.inner.create_file(Path::new("/a.jpg"), b"alpha").await.unwrap();
     vol.inner.create_file(Path::new("/b.jpg"), b"betabb").await.unwrap();
-    get_volume_manager().register(&vid, vol.clone() as Arc<dyn Volume>);
+    let engine = TestOperations::new();
+    engine.volumes().register(&vid, vol.clone() as Arc<dyn Volume>);
 
     // Simulate a completed scan preview: per-path entries for two top-level
     // files. The real `start_scan_preview` path produces this same structure
     // (see `run_volume_scan_preview` → `CachedScanResult`).
-    insert_scan_result(
+    engine.stores().previews().insert_scan_result(
         preview_id.clone(),
         CachedScanResult::from_volume_batch(
             vec![PathBuf::from("/a.jpg"), PathBuf::from("/b.jpg")],
@@ -242,7 +244,7 @@ async fn delete_consumes_preview_id_skips_rescan() {
     );
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     let config = WriteOperationConfig {
         preview_id: Some(preview_id.clone()),
         ..WriteOperationConfig::default()
@@ -271,8 +273,6 @@ async fn delete_consumes_preview_id_skips_rescan() {
         "cached preview path must NOT probe is_directory for top-level files"
     );
     assert_eq!(vol.delete_count(), 2, "both top-level files should be deleted");
-
-    get_volume_manager().unregister(&vid);
 }
 
 /// Test 2: no `preview_id` (MCP path) still produces a correct delete. The
@@ -284,10 +284,11 @@ async fn delete_without_preview_id_still_walks() {
     let vol = Arc::new(CountingVolume::new("no-preview-vol", false));
     vol.inner.create_file(Path::new("/x.txt"), b"x").await.unwrap();
     vol.inner.create_file(Path::new("/y.txt"), b"yy").await.unwrap();
-    get_volume_manager().register(&vid, vol.clone() as Arc<dyn Volume>);
+    let engine = TestOperations::new();
+    engine.volumes().register(&vid, vol.clone() as Arc<dyn Volume>);
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     let config = WriteOperationConfig::default(); // preview_id: None
 
     let result = delete_volume_files_with_progress_inner(
@@ -310,8 +311,6 @@ async fn delete_without_preview_id_still_walks() {
         2,
         "no-preview path must probe is_directory per top-level source on oracle miss"
     );
-
-    get_volume_manager().unregister(&vid);
 }
 
 /// Test 3: no `preview_id`, but the parent listing is watcher-fresh in
@@ -328,6 +327,9 @@ async fn delete_top_level_files_no_is_directory_probes() {
         .create_file(Path::new("/dcim/b.jpg"), b"betabb")
         .await
         .unwrap();
+    let engine = TestOperations::seeing_app_listings();
+    engine.volumes().register(&vid, vol.clone() as Arc<dyn Volume>);
+    // The listing oracle asks the app's registry how far the volume's watch sees.
     get_volume_manager().register(&vid, vol.clone() as Arc<dyn Volume>);
 
     // Pane has /dcim open with entries for a.jpg and b.jpg. Both are files.
@@ -338,7 +340,7 @@ async fn delete_top_level_files_no_is_directory_probes() {
     let _parent_listing = insert_listing("listing", &vid, "/dcim", cached);
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     let config = WriteOperationConfig::default(); // preview_id: None
 
     let result = delete_volume_files_with_progress_inner(
@@ -384,6 +386,9 @@ async fn delete_mid_scan_listing_close() {
         .create_file(Path::new("/root/sub/real.bin"), b"abcdef")
         .await
         .unwrap();
+    let engine = TestOperations::seeing_app_listings();
+    engine.volumes().register(&vid, vol.clone() as Arc<dyn Volume>);
+    // The listing oracle asks the app's registry how far the volume's watch sees.
     get_volume_manager().register(&vid, vol.clone() as Arc<dyn Volume>);
 
     // Pane A has /root open: one subfolder `sub`.
@@ -397,7 +402,7 @@ async fn delete_mid_scan_listing_close() {
     drop(sub_listing);
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     let config = WriteOperationConfig::default();
 
     let result = delete_volume_files_with_progress_inner(
@@ -450,10 +455,11 @@ async fn delete_cancel_during_scan_emits_write_cancelled() {
     let vol = Arc::new(CountingVolume::new("cancel-scan-vol", false));
     vol.inner.create_file(Path::new("/dir/a.jpg"), b"alpha").await.unwrap();
     vol.inner.create_file(Path::new("/dir/b.jpg"), b"betabb").await.unwrap();
-    get_volume_manager().register(&vid, vol.clone() as Arc<dyn Volume>);
+    let engine = TestOperations::new();
+    engine.volumes().register(&vid, vol.clone() as Arc<dyn Volume>);
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     // Pre-cancel: the very first cancel check inside `scan_volume_recursive`
     // will fire and return `Cancelled`. Without the fix, no `write-cancelled`
     // event would be emitted before the `?` propagates the error.
@@ -486,8 +492,6 @@ async fn delete_cancel_during_scan_emits_write_cancelled() {
         cancelled.first().unwrap().rollback.outcome == CancelRollbackOutcome::NotRolledBack,
         "scan-time cancel is a Stopped (not RollingBack) outcome"
     );
-
-    get_volume_manager().unregister(&vid);
 }
 
 // ----------------------------------------------------------------------------
@@ -520,10 +524,11 @@ async fn a_source_whose_stat_fails_surfaces_that_failure_instead_of_being_guesse
         .await
         .expect("seed album child");
     vol.inner.set_stat_failing(Path::new("/album"));
-    get_volume_manager().register(&vid, vol.clone() as Arc<dyn Volume>);
+    let engine = TestOperations::new();
+    engine.volumes().register(&vid, vol.clone() as Arc<dyn Volume>);
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     let config = WriteOperationConfig::default(); // no preview: the walker resolves the type itself
 
     let result = delete_volume_files_with_progress_inner(
@@ -547,8 +552,6 @@ async fn a_source_whose_stat_fails_surfaces_that_failure_instead_of_being_guesse
         0,
         "nothing may be deleted on a fact the walker never established"
     );
-
-    get_volume_manager().unregister(&vid);
 }
 
 /// The production shape the original bug rode in on: a cache hit whose
@@ -574,12 +577,13 @@ async fn a_cache_hit_with_no_per_source_results_still_deletes_the_right_tree() {
         .create_file(Path::new("/album/two.jpg"), b"two")
         .await
         .expect("seed child two");
-    get_volume_manager().register(&vid, vol.clone() as Arc<dyn Volume>);
+    let engine = TestOperations::new();
+    engine.volumes().register(&vid, vol.clone() as Arc<dyn Volume>);
 
     // Seeds past `insert_scan_result`'s canary on purpose: the canary is a
     // `debug_assert!`, so a release build still admits this entry and the walker
     // still has to handle it correctly.
-    crate::file_system::write_operations::scan_cache::seed_incoherent_scan_result_for_test(
+    engine.stores().previews().seed_incoherent_scan_result_for_test(
         preview_id.clone(),
         vec![PathBuf::from("/album")],
         2,
@@ -587,7 +591,7 @@ async fn a_cache_hit_with_no_per_source_results_still_deletes_the_right_tree() {
     );
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     let config = WriteOperationConfig {
         preview_id: Some(preview_id),
         ..WriteOperationConfig::default()
@@ -617,6 +621,4 @@ async fn a_cache_hit_with_no_per_source_results_still_deletes_the_right_tree() {
         !vol.inner.exists(Path::new("/album")).await,
         "the directory itself must be deleted"
     );
-
-    get_volume_manager().unregister(&vid);
 }

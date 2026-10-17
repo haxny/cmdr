@@ -14,11 +14,10 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use super::super::event_sinks::CollectorEventSink;
-use super::super::state::{CachedScanResult, FileInfo, WriteOperationState, insert_scan_result};
-use super::super::test_support::TestOperationGuard;
+use super::super::state::{CachedScanResult, FileInfo, WriteOperationState};
+use super::super::testing::TestOperations;
 use super::super::types::WriteOperationConfig;
 use super::walker::{delete_files_with_progress_inner, delete_volume_files_with_progress_inner};
-use crate::file_system::volume::manager::get_volume_manager;
 use crate::test_support::TestDir;
 use cmdr_fs::volume::{CopyScanResult, InMemoryVolume, Volume};
 
@@ -43,8 +42,8 @@ async fn read_back(volume: &InMemoryVolume, path: &str) -> Option<Vec<u8>> {
     Some(collected)
 }
 
-fn make_state() -> Arc<WriteOperationState> {
-    Arc::new(WriteOperationState::new(Duration::from_millis(10)))
+fn make_state(engine: &TestOperations) -> Arc<WriteOperationState> {
+    Arc::new(engine.new_operation_state(Duration::from_millis(10)))
 }
 
 /// Builds the shape `run_scan_preview` (the LOCAL `std::fs` walk) caches over
@@ -113,8 +112,9 @@ fn a_local_delete_never_acts_on_a_preview_of_a_different_selection() {
 
     // A completed preview of the OTHER folder, exactly as the local scan
     // preview would have cached it if the user had scanned that one.
+    let engine = TestOperations::new();
     let preview_id = unique("stale-preview");
-    insert_scan_result(
+    engine.stores().previews().insert_scan_result(
         preview_id.clone(),
         local_preview_of(
             &root,
@@ -124,7 +124,7 @@ fn a_local_delete_never_acts_on_a_preview_of_a_different_selection() {
     );
 
     let op_id = unique("op");
-    let op = TestOperationGuard::register_as(op_id.clone(), make_state());
+    let op = engine.register_state(&op_id, make_state(&engine));
     let sink = CollectorEventSink::new();
     let config = WriteOperationConfig {
         preview_id: Some(preview_id),
@@ -165,8 +165,9 @@ fn a_local_delete_never_acts_on_a_preview_covering_more_than_was_asked_for() {
     fs::write(&deselected_file, b"deselected").expect("write deselected file");
 
     // The preview walked BOTH folders; the operation asks for one.
+    let engine = TestOperations::new();
     let preview_id = unique("superset-preview");
-    insert_scan_result(
+    engine.stores().previews().insert_scan_result(
         preview_id.clone(),
         local_preview_of(
             &root,
@@ -179,7 +180,7 @@ fn a_local_delete_never_acts_on_a_preview_covering_more_than_was_asked_for() {
     );
 
     let op_id = unique("op-subset");
-    let op = TestOperationGuard::register_as(op_id.clone(), make_state());
+    let op = engine.register_state(&op_id, make_state(&engine));
     let sink = CollectorEventSink::new();
     let config = WriteOperationConfig {
         preview_id: Some(preview_id),
@@ -213,12 +214,13 @@ async fn a_volume_delete_stays_bound_to_its_own_sources() {
         .create_file(std::path::Path::new("/foreign.txt"), b"foreign")
         .await
         .expect("seed foreign file");
-    get_volume_manager().register(&volume_id, volume.clone() as Arc<dyn Volume>);
+    let engine = TestOperations::new();
+    engine.volumes().register(&volume_id, volume.clone() as Arc<dyn Volume>);
 
     // A volume-batch-shaped preview of the file the operation was NOT asked
     // to delete.
     let preview_id = unique("vol-preview");
-    insert_scan_result(
+    engine.stores().previews().insert_scan_result(
         preview_id.clone(),
         CachedScanResult::from_volume_batch(
             vec![PathBuf::from("/foreign.txt")],
@@ -241,7 +243,7 @@ async fn a_volume_delete_stays_bound_to_its_own_sources() {
     );
 
     let events = Arc::new(CollectorEventSink::new());
-    let state = make_state();
+    let state = make_state(&engine);
     let config = WriteOperationConfig {
         preview_id: Some(preview_id),
         ..WriteOperationConfig::default()
@@ -269,6 +271,4 @@ async fn a_volume_delete_stays_bound_to_its_own_sources() {
         None,
         "the requested path must be deleted"
     );
-
-    get_volume_manager().unregister(&volume_id);
 }

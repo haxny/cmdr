@@ -36,8 +36,6 @@ pub use super::conflict_slot::{ConflictResolutionResponse, ConflictSlot};
 // request binding.
 pub use super::operation_intent::PauseGate;
 pub(crate) use super::operation_intent::{IntentCell, OperationIntent, StopMeans, StopRequest};
-#[cfg(test)]
-pub(super) use super::scan_cache::insert_scan_result;
 pub(super) use super::scan_cache::{CachedScanResult, FileInfo, ScanPreviewState, ScanResult};
 
 // ============================================================================

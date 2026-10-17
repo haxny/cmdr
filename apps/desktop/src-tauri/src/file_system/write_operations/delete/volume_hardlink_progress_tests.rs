@@ -17,34 +17,15 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use super::super::event_sinks::CollectorEventSink;
-use super::super::state::WriteOperationState;
-use super::super::test_support::TestOperationGuard;
+use super::super::testing::TestOperations;
 use super::super::types::{WriteOperationConfig, WriteOperationPhase};
 use super::walker::delete_volume_files_with_progress_inner;
-use crate::file_system::volume::manager::get_volume_manager;
 use crate::test_support::TestDir;
 use cmdr_fs::volume::Volume;
 use cmdr_local::LocalPosixVolume;
 
 fn create_temp_root(name: &str) -> TestDir {
     TestDir::new(&format!("volume_hardlink_{name}"))
-}
-
-fn unique_op_id(name: &str) -> String {
-    format!(
-        "test-vol-hardlink-{name}-{}",
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_nanos()
-    )
-}
-
-/// Registers a fresh state under `op_id`. Bind the returned guard for the whole
-/// test: it unregisters on drop, unwind included.
-#[must_use = "bind the guard; dropping it immediately unregisters the state"]
-fn install_state(op_id: &str) -> TestOperationGuard {
-    TestOperationGuard::register_as(op_id, Arc::new(WriteOperationState::new(Duration::from_millis(10))))
 }
 
 /// Build a tree where one inode is shared by three hardlinks plus one
@@ -67,16 +48,18 @@ async fn volume_delete_hardlinked_files_reports_dedup_d_bytes() {
     let root = create_temp_root("delete_dedup");
     let payload_dir = build_hardlink_tree(&root, "to_delete");
 
-    let volume_id = format!("vol-hardlink-delete-{}", unique_op_id("vid"));
+    let volume_id = "vol-hardlink-delete";
     let volume = Arc::new(LocalPosixVolume::local_folder(
         "HardlinkVol",
         root.to_str().expect("temp dir is utf8"),
         crate::volume_host::host(),
     ));
-    get_volume_manager().register(&volume_id, Arc::clone(&volume) as Arc<dyn Volume>);
+    let engine = TestOperations::new();
+    engine
+        .volumes()
+        .register(volume_id, Arc::clone(&volume) as Arc<dyn Volume>);
 
-    let op_id = unique_op_id("op");
-    let op = install_state(&op_id);
+    let op = engine.register_state("op", Arc::new(engine.new_operation_state(Duration::from_millis(10))));
     let sink = CollectorEventSink::new();
     // Volume paths are anchored at the volume root. Source = `/to_delete`.
     let sources = vec![PathBuf::from("/to_delete")];
@@ -84,16 +67,14 @@ async fn volume_delete_hardlinked_files_reports_dedup_d_bytes() {
 
     let result = delete_volume_files_with_progress_inner(
         Arc::clone(&volume) as Arc<dyn Volume>,
-        &volume_id,
+        volume_id,
         &sink,
-        &op_id,
+        op.id(),
         op.state(),
         &sources,
         &config,
     )
     .await;
-
-    get_volume_manager().unregister(&volume_id);
 
     assert!(result.is_ok(), "volume delete must succeed; got {result:?}");
 

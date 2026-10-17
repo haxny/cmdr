@@ -54,6 +54,13 @@ impl TestOperations {
         Self::with(|builder| builder.operation_log(log))
     }
 
+    /// An engine whose host sees the app's pane listings, for a test that
+    /// seeds the fresh-listing oracle (`TestListing::insert(listing_host::listings(), …)`).
+    /// On [`Self::new`]'s detached host every oracle question misses.
+    pub(crate) fn seeing_app_listings() -> Self {
+        Self::with(|builder| builder.volume_host(crate::volume_host::host()))
+    }
+
     /// An engine over fresh fakes, with `customize` replacing any other seam
     /// (a volume host, pacing, an index) on the builder. ❌ Don't replace the
     /// three fakes here: their accessors would then read a recorder the engine
