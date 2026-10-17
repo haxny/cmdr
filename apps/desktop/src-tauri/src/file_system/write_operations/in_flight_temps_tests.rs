@@ -11,6 +11,7 @@
 use super::*;
 use crate::file_system::volume::manager::get_volume_manager;
 use crate::file_system::volume::manager::test_support::TestVolumeRegistration;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::test_support::TestDir;
 use cmdr_fs::staging::StagingTemp;
 use cmdr_fs::testing::wait_until_async;
@@ -23,8 +24,13 @@ use std::time::Duration;
 /// Generous: it's a panic-on-timeout ceiling, not a delay anything pays.
 const ARRIVAL_WAIT: Duration = Duration::from_secs(5);
 
+/// A state on an engine of its own, recording into `ledger`.
 fn state(ledger: &Ledger) -> Arc<WriteOperationState> {
-    Arc::new(WriteOperationState::new(Duration::from_millis(50)).with_in_flight_ledger(ledger.clone()))
+    Arc::new(
+        TestOperations::new()
+            .new_operation_state(Duration::from_millis(50))
+            .with_in_flight_ledger(ledger.clone()),
+    )
 }
 
 /// A state that names `volume_id` as its destination, which is what a real
@@ -32,7 +38,8 @@ fn state(ledger: &Ledger) -> Arc<WriteOperationState> {
 /// lives.
 fn state_writing_to(ledger: &Ledger, volume_id: &str) -> Arc<WriteOperationState> {
     Arc::new(
-        WriteOperationState::new(Duration::from_millis(50))
+        TestOperations::new()
+            .new_operation_state(Duration::from_millis(50))
             .with_journal_volumes("some-source".to_string(), volume_id.to_string())
             .with_in_flight_ledger(ledger.clone()),
     )
@@ -628,7 +635,8 @@ fn deregistering_clears_both_ledgers() {
 fn state_writing_to_drive(ledger: &Ledger, volume_id: &str, root: &Path) -> Arc<WriteOperationState> {
     use crate::file_system::write_operations::transfer_sides::{TransferSide, TransferSides};
     Arc::new(
-        WriteOperationState::new(Duration::from_millis(50))
+        TestOperations::new()
+            .new_operation_state(Duration::from_millis(50))
             .with_sides(Some(TransferSides::new(
                 TransferSide::new("root".to_string(), "Macintosh HD".to_string(), PathBuf::from("/")),
                 TransferSide::new(volume_id.to_string(), "Fältkamera".to_string(), root.to_path_buf()),

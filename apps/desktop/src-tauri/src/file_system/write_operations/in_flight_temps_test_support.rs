@@ -61,10 +61,11 @@ impl Ledger {
         self.store().log = None;
     }
 
-    /// A claim's launch against this ledger, on the shared engine's host: a launch that replays
-    /// `data_dir`'s log.
+    /// A claim's launch against this ledger: a launch that replays `data_dir`'s
+    /// log, on a host over the app's answers, so a deferred record waits on the
+    /// app's volume registry, where the cells register their drives.
     pub(in crate::file_system::write_operations) fn launch_in(&self, data_dir: &Path) -> SweepHandle {
-        self.init_and_sweep(data_dir, super::super::installed().host_arc())
+        self.init_and_sweep(data_dir, crate::operations_host::test_engine().host_arc())
     }
 
     /// The set this ledger currently believes is on disk.
