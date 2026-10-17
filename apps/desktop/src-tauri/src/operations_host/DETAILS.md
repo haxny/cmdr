@@ -103,8 +103,9 @@ even though it's pure string work. Pinned by `volumes::tests::the_adapter_answer
 `AppOwnWrites` answers `OwnWrites::announce` with `downloads::note_pending_write_for_cmdr`, which no-ops while the
 watcher sleeps and for a path outside the Downloads root (`downloads/DETAILS.md` § "Cmdr-own-write hook contract"). It's
 called beside a syscall on every file landing, so it stays one prefix-checked insert. Under `cfg(test)` the hook feeds
-`downloads/own_write_recorder.rs`, which is how `own_write_announce_tests.rs` sees every write path's announces through
-this adapter. Pinned by `own_writes::tests::an_announce_reaches_the_downloads_hook`.
+`downloads/own_write_recorder.rs`, which is how `own_writes::tests::an_announce_reaches_the_downloads_hook` pins that an
+announce reaches the hook. The engine's own announce order is pinned against its seam, in
+`file_system/write_operations/own_write_announce_tests.rs`.
 
 ## The drive index (`index.rs`)
 
