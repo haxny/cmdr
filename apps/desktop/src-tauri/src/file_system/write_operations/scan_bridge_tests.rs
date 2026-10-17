@@ -857,7 +857,7 @@ pub(super) async fn start_copy_awaiting_preview(
     std::fs::write(src.join("a.bin"), b"a").expect("write a");
 
     let preview_id = unique("preview");
-    register_in_flight(&engine, &preview_id);
+    register_in_flight(engine, &preview_id);
 
     let events = Arc::new(CollectorEventSink::new());
     let start = engine

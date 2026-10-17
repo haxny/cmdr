@@ -71,7 +71,8 @@ fn a_recorded_orphan_is_swept_at_startup_however_fresh_it_is() {
     // thread (a partial can live on a dead mount), and a deadline racing it
     // would fail on load rather than on a real break.
     let next_run = Ledger::for_test();
-    let tally = next_run.launch_in(&data_dir).wait();
+    let next_app = crate::operations_host::test_engine();
+    let tally = next_run.launch_in(&data_dir, &next_app).wait();
 
     assert!(
         !orphan.exists(),
@@ -111,7 +112,8 @@ async fn a_recorded_partial_on_a_volume_is_swept_through_that_volume() {
     previous_run.die();
 
     let next_run = Ledger::for_test();
-    let tally = next_run.launch_in(&data_dir).wait();
+    let next_app = crate::operations_host::test_engine();
+    let tally = next_run.launch_in(&data_dir, &next_app).wait();
 
     assert!(
         !volume.exists(&orphan).await,
@@ -138,7 +140,8 @@ fn a_record_whose_volume_isnt_reachable_survives_for_the_next_launch() {
     previous_run.die();
 
     let next_run = Ledger::for_test();
-    let tally = next_run.launch_in(&data_dir).wait();
+    let next_app = crate::operations_host::test_engine();
+    let tally = next_run.launch_in(&data_dir, &next_app).wait();
 
     assert_eq!(
         tally,
@@ -177,7 +180,8 @@ async fn a_deferred_record_is_swept_the_moment_its_volume_arrives() {
 
     // Launch with the share still away: the record is held, not acted on.
     let next_run = Ledger::for_test();
-    let tally = next_run.launch_in(&data_dir).wait();
+    let next_app = crate::operations_host::test_engine();
+    let tally = next_run.launch_in(&data_dir, &next_app).wait();
     assert_eq!(tally.deferred, 1, "the fixture must actually defer: {tally:?}");
 
     // The user connects it.
@@ -216,7 +220,8 @@ async fn a_delete_the_volume_refuses_leaves_the_record_to_retry() {
     previous_run.die();
 
     let next_run = Ledger::for_test();
-    let tally = next_run.launch_in(&data_dir).wait();
+    let next_app = crate::operations_host::test_engine();
+    let tally = next_run.launch_in(&data_dir, &next_app).wait();
 
     assert_eq!(tally.swept, 0, "nothing was removed: {tally:?}");
     assert_eq!(tally.deferred, 1, "so the record has to be waiting again: {tally:?}");
@@ -248,8 +253,9 @@ fn a_bare_path_line_from_an_older_build_still_sweeps_the_local_file() {
     )
     .unwrap();
     let next_run = Ledger::for_test();
+    let next_app = crate::operations_host::test_engine();
 
-    let tally = next_run.launch_in(&data_dir).wait();
+    let tally = next_run.launch_in(&data_dir, &next_app).wait();
 
     assert!(!orphan.exists(), "an old bare-path record must still be swept");
     assert_eq!(tally.swept, 1, "{tally:?}");
@@ -396,7 +402,8 @@ fn compaction_keeps_the_records_waiting_for_a_volume() {
     );
     previous_run.die();
     let next_run = Ledger::for_test();
-    next_run.launch_in(&data_dir).wait();
+    let next_app = crate::operations_host::test_engine();
+    next_run.launch_in(&data_dir, &next_app).wait();
 
     // A local copy in the new session churns the log past compaction.
     let state = state(&next_run);
@@ -447,10 +454,11 @@ fn a_recorded_path_that_is_already_gone_is_counted_not_swallowed() {
     )
     .unwrap();
     let next_run = Ledger::for_test();
+    let next_app = crate::operations_host::test_engine();
 
     // Joining also keeps the sweep from outliving `dir`, which would leave
     // it walking a directory `TestDir` is deleting.
-    let tally = next_run.launch_in(&data_dir).wait();
+    let tally = next_run.launch_in(&data_dir, &next_app).wait();
 
     assert_eq!(
         tally,
@@ -490,7 +498,8 @@ async fn a_volume_path_that_is_already_gone_is_counted_not_swallowed() {
     previous_run.die();
 
     let next_run = Ledger::for_test();
-    let tally = next_run.launch_in(&data_dir).wait();
+    let next_app = crate::operations_host::test_engine();
+    let tally = next_run.launch_in(&data_dir, &next_app).wait();
 
     assert_eq!(
         tally,
@@ -529,8 +538,9 @@ fn the_sweep_refuses_a_recorded_path_that_isnt_one_of_our_scratch_files() {
     )
     .unwrap();
     let next_run = Ledger::for_test();
+    let next_app = crate::operations_host::test_engine();
 
-    let tally = next_run.launch_in(&data_dir).wait();
+    let tally = next_run.launch_in(&data_dir, &next_app).wait();
 
     assert!(
         !real_temp.exists(),
@@ -582,7 +592,8 @@ async fn the_sweep_refuses_a_volume_path_that_isnt_one_of_our_scratch_files() {
     previous_run.die();
 
     let next_run = Ledger::for_test();
-    let tally = next_run.launch_in(&data_dir).wait();
+    let next_app = crate::operations_host::test_engine();
+    let tally = next_run.launch_in(&data_dir, &next_app).wait();
 
     assert!(
         volume.exists(&precious).await,
@@ -715,7 +726,8 @@ fn a_leftover_on_a_removable_drive_waits_for_that_drive_rather_than_being_forgot
 
     // The drive isn't plugged in, so nothing is registered for it.
     let next_run = Ledger::for_test();
-    let tally = next_run.launch_in(&data_dir).wait();
+    let next_app = crate::operations_host::test_engine();
+    let tally = next_run.launch_in(&data_dir, &next_app).wait();
 
     assert_eq!(
         tally,
