@@ -18,7 +18,7 @@ use super::super::conflict::ApplyToAll;
 use super::super::durability::{flush_created_destinations, unconfirmed_copy};
 use super::super::event_sinks::OperationEventSink;
 use super::super::free_space::check_local_copy_space;
-use super::super::host::{self, OperationErrorReport};
+use super::super::host::OperationErrorReport;
 use super::super::ledger::CopyTransaction;
 use super::super::scan::scan_sources;
 use super::super::scan_cache::take_cached_scan_result;
@@ -535,7 +535,7 @@ pub(in crate::file_system::write_operations) fn copy_files_with_progress_inner(
             // added latency). Under E2E it gives the spec a deterministic window to
             // click Cancel/Rollback, and in the dialog gallery it paces the
             // transfer preview's copy.
-            if let Some(pause) = host::installed().pacing().copy_throttle_for(&file_info.path) {
+            if let Some(pause) = state.scope().host().pacing().copy_throttle_for(&file_info.path) {
                 std::thread::sleep(pause);
             }
 
@@ -761,7 +761,9 @@ pub(in crate::file_system::write_operations) fn copy_files_with_progress_inner(
             // on). A folder that replaced one of the user's FILES keeps its name
             // too, so the file it displaced becomes a ` (recovered)` sibling
             // rather than going with the aside.
-            host::installed()
+            state
+                .scope()
+                .host()
                 .events()
                 .error_report(OperationErrorReport::LocalCopyFailed {
                     operation_id: operation_id.to_string(),

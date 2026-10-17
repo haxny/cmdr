@@ -12,7 +12,6 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use super::super::event_sinks::OperationEventSink;
-use super::super::host;
 use super::super::manager::{self, OperationDescriptor};
 use super::super::source_binding::{ExpectedSources, retain_bound_sources_on};
 use super::super::state::{WriteOperationState, WriteSettledGuard};
@@ -49,7 +48,7 @@ pub(in crate::file_system::write_operations) fn start_volume_delete(
 
     // Plain `get`: the drive's lane and how it names the items; `delete_files_start`
     // sent an in-zip batch to the archive-edit driver before this.
-    let volume = host::installed().volumes().get(&volume_id);
+    let volume = state.scope().host().volumes().get(&volume_id);
     let lane = volume
         .as_ref()
         .map(|volume| volume.lane_key())
@@ -193,7 +192,7 @@ async fn run_volume_delete(
     expected_sources: Option<&ExpectedSources>,
 ) -> ExecutionStatus {
     // Plain `get`: `delete_files_start` sent an in-zip batch to the archive-edit driver.
-    let Some(volume) = host::installed().volumes().get(volume_id) else {
+    let Some(volume) = state.scope().host().volumes().get(volume_id) else {
         let first_source = sources
             .first()
             .map_or_else(|| volume_id.to_string(), |p| p.display().to_string());

@@ -491,7 +491,7 @@ async fn produce_via_spool(
     let spool_volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "fresh-zip-spool",
         scratch.path().to_path_buf(),
-        host::installed().volume_host().clone(),
+        state.scope().host().volume_host().clone(),
     ));
     let (written, produced) = produce_into(
         plan,

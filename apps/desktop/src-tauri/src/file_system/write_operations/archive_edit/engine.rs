@@ -96,7 +96,7 @@ where
     T: Send + 'static,
 {
     // Plain `get`: the `.zip` file itself is a plain file on its parent drive.
-    let parent = host::installed().volumes().get(parent_volume_id);
+    let parent = state.scope().host().volumes().get(parent_volume_id);
     let is_remote = parent.as_ref().is_some_and(|p| !p.supports_local_fs_access());
 
     if !is_remote {

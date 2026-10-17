@@ -27,7 +27,7 @@ use std::time::{Duration, Instant};
 
 use super::super::super::conflict::ApplyToAll;
 use super::super::super::event_sinks::OperationEventSink;
-use super::super::super::host::{self, OperationErrorReport};
+use super::super::super::host::OperationErrorReport;
 use super::super::super::journal;
 use super::super::super::manager;
 use super::super::super::source_binding::{ExpectedSources, retain_bound_sources_on};
@@ -386,7 +386,9 @@ pub async fn copy_between_volumes(
                     }
                     Err(failure) => {
                         // Toast-visible failure for cross-volume copy (Local↔SMB↔MTP).
-                        host::installed()
+                        state
+                            .scope()
+                            .host()
                             .events()
                             .error_report(OperationErrorReport::VolumeCopyFailed {
                                 operation_id: op_id.clone(),

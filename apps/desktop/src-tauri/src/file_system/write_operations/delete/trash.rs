@@ -9,7 +9,6 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use super::super::event_sinks::OperationEventSink;
-use super::super::host;
 use super::super::mutation_error::MutationError;
 use super::super::state::{WriteOperationState, update_operation_status};
 use super::super::types::{
@@ -400,7 +399,7 @@ pub(in crate::file_system::write_operations) fn trash_files_with_progress(
         // Defensive: register with the downloads watcher's ignore set so a
         // future "deleted from Downloads" event source wouldn't surprise us.
         // No-ops outside ~/Downloads.
-        host::installed().own_writes().announce(source);
+        state.scope().host().own_writes().announce(source);
 
         // Enumerate the subtree's `search_only` leaves from the drive index BEFORE
         // the OS move — the index reconciler prunes the subtree the instant it sees

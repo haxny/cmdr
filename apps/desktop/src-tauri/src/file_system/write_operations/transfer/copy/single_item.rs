@@ -9,8 +9,6 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-#[cfg(target_os = "macos")]
-use super::super::super::host;
 use super::super::macos_copy::copy_symlink;
 
 use super::super::chunked_copy::ChunkedCopyProgressFn;
@@ -477,7 +475,7 @@ pub(in crate::file_system::write_operations::transfer) fn copy_single_item(
         let create_symlink = |target: &Path| -> Result<(), WriteOperationError> {
             // Register the symlink destination with the downloads watcher's
             // ignore set before issuing the syscall; no-ops outside ~/Downloads.
-            host::installed().own_writes().announce(target);
+            state.scope().host().own_writes().announce(target);
             #[cfg(target_os = "macos")]
             {
                 copy_symlink(&source_for_symlink, target)?;
@@ -606,7 +604,7 @@ pub(in crate::file_system::write_operations::transfer) fn copy_single_item(
         // watcher keys on exact paths). Re-registering is a no-op bump, and
         // keeping the call here means the habit survives a strategy that
         // someday doesn't stage.
-        host::installed().own_writes().announce(&actual_dest);
+        state.scope().host().own_writes().announce(&actual_dest);
 
         // Copy file using appropriate strategy (network, safe overwrite, or native)
         // Create progress callback for intra-file progress reporting on network filesystems

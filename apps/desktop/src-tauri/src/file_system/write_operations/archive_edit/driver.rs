@@ -12,7 +12,6 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use super::super::OperationEventSink;
-use super::super::host;
 use super::super::manager::{self, ManagedTaskGuard, OperationDescriptor, OperationSummaryText};
 use super::super::state::WriteSettledGuard;
 use super::super::types::ReadOnlySide;
@@ -115,7 +114,9 @@ pub(crate) async fn archive_edit_start(
     // Share the parent drive's lane so the op serializes against other work on
     // that device (falls back to the id itself if the volume isn't registered —
     // the mutator's own open will surface a real error on a truly-gone drive).
-    let lane = host::installed()
+    let lane = state
+        .scope()
+        .host()
         .volumes()
         .get(&request.parent_volume_id)
         .map(|v| v.lane_key())

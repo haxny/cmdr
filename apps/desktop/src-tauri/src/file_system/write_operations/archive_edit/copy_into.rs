@@ -16,7 +16,6 @@ use walkdir::WalkDir;
 
 use super::super::OperationEventSink;
 use super::super::conflict::ApplyToAll;
-use super::super::host;
 use super::super::manager::{self, ManagedTaskGuard, OperationDescriptor, OperationSummaryText};
 use super::super::scratch_dir::ScratchDir;
 use super::super::state::{WriteOperationState, WriteSettledGuard};
@@ -260,7 +259,7 @@ async fn materialize_sources(
     let dest_volume: Arc<dyn Volume> = Arc::new(LocalPosixVolume::local_folder(
         "archive-source-pull",
         scratch.path().to_path_buf(),
-        host::installed().volume_host().clone(),
+        state.scope().host().volume_host().clone(),
     ));
 
     let mut absolute = Vec::with_capacity(source_paths.len());
@@ -606,7 +605,9 @@ async fn archive_copy_into_start(
             .new_operation_state(Duration::from_millis(progress_interval_ms)),
     );
 
-    let lane = host::installed()
+    let lane = state
+        .scope()
+        .host()
         .volumes()
         .get(&parent_volume_id)
         .map(|v| v.lane_key())

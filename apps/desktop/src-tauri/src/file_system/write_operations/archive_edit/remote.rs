@@ -39,7 +39,6 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use tokio::io::AsyncWriteExt;
 
-use super::super::host;
 use super::super::scratch_dir::ScratchDir;
 use super::super::state::{WriteOperationState, is_cancelled};
 use super::super::types::WriteOperationError;
@@ -213,7 +212,7 @@ async fn upload_archive(
 
     // A `LocalPosixVolume` gives us a streaming reader over the local working file
     // (the same primitive the cross-volume copy engine uses for a local source).
-    let local = LocalPosixVolume::local_folder("archive-upload", "/", host::installed().volume_host().clone());
+    let local = LocalPosixVolume::local_folder("archive-upload", "/", state.scope().host().volume_host().clone());
     let stream = local
         .open_read_stream(local_working)
         .await

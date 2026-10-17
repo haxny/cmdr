@@ -7,7 +7,6 @@ use std::time::{Duration, Instant};
 
 use super::super::error_classification::IoResultExt;
 use super::super::event_sinks::OperationEventSink;
-use super::super::host;
 use super::super::scan::scan_sources;
 use super::super::scan_cache::take_cached_scan_result;
 use super::super::scan_source_tracker::{FileVerdict, SourceItemTracker};
@@ -135,7 +134,7 @@ pub(in crate::file_system::write_operations) fn delete_files_with_progress_inner
         // Defensive: register with the downloads watcher's ignore set so a
         // future "deleted from Downloads" event source wouldn't surprise us.
         // No-ops outside ~/Downloads.
-        host::installed().own_writes().announce(&file_info.path);
+        state.scope().host().own_writes().announce(&file_info.path);
         fs::remove_file(&file_info.path).with_path(&file_info.path)?;
 
         // Journal the deleted leaf so "when did I delete dog.jpg" is searchable.
@@ -214,7 +213,7 @@ pub(in crate::file_system::write_operations) fn delete_files_with_progress_inner
         }
 
         // Only remove if empty (files should already be deleted)
-        host::installed().own_writes().announce(dir);
+        state.scope().host().own_writes().announce(dir);
         let _ = fs::remove_dir(dir);
     }
 
@@ -406,7 +405,7 @@ async fn scan_volume_recursive(
         // reuse the cached entries and skip the volume round-trip entirely.
         // Falls through to `volume.list_directory` on miss, preserving the
         // per-entry progress callback for slow MTP listings.
-        let children = match host::installed().listings().authoritative_listing(volume_id, path) {
+        let children = match state.scope().host().listings().authoritative_listing(volume_id, path) {
             Some(cached) => {
                 // The cached listing is already complete, so synthesize a
                 // single end-of-listing progress tick (with the tally we'd
@@ -736,7 +735,11 @@ pub(in crate::file_system::write_operations) async fn delete_volume_files_with_p
             // calling `volume.is_directory`, which on MTP lists the parent.
             // Falls through to the trait probe when the oracle can't answer.
             let parent_hint = source.parent().and_then(|parent| {
-                let cached_entries = host::installed().listings().authoritative_listing(volume_id, parent)?;
+                let cached_entries = state
+                    .scope()
+                    .host()
+                    .listings()
+                    .authoritative_listing(volume_id, parent)?;
                 let name = source.file_name()?.to_string_lossy().to_string();
                 cached_entries
                     .iter()
@@ -844,7 +847,7 @@ pub(in crate::file_system::write_operations) async fn delete_volume_files_with_p
         // deterministic window in which to click Cancel before all files are
         // gone. Reuses the copy throttle knob (`set_test_throttle` exposes a
         // generic per-step throttle). Zero-cost outside E2E.
-        if let Some(pause) = host::installed().pacing().copy_throttle() {
+        if let Some(pause) = state.scope().host().pacing().copy_throttle() {
             tokio::time::sleep(pause).await;
         }
 

@@ -38,7 +38,7 @@ use futures_util::stream::FuturesUnordered;
 
 use super::super::super::conflict::ApplyToAll;
 use super::super::super::event_sinks::OperationEventSink;
-use super::super::super::host::{self, OperationErrorReport};
+use super::super::super::host::OperationErrorReport;
 use super::super::super::journal;
 use super::super::super::ledger::WrittenFile;
 use super::super::super::state::{WriteOperationState, is_cancelled, load_intent, update_operation_status};
@@ -317,7 +317,7 @@ impl<'a> ConcurrentDriver<'a> {
                 result = tokio::time::timeout_at(deadline, self.in_flight.next()) => match result {
                     Ok(next) => next,
                     Err(_) => {
-                        host::installed().events().error_report(OperationErrorReport::WindDownAbandoned {
+                        self.ctx.state.scope().host().events().error_report(OperationErrorReport::WindDownAbandoned {
                             operation_id: operation_id.to_string(),
                             tasks: self.in_flight.len(),
                             deadline: drain_deadline_for(self.drain_shortened),
