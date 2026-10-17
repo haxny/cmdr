@@ -225,6 +225,14 @@ compact/comfortable/spacious). The virtual scroll uses an `itemSize` parameter f
 
 **Prefetch buffer**: ~500 items around current position, cached in `cachedEntries`. Reduces IPC calls during scroll.
 
+**Gotcha/Why: the browser moves the scroll offset without telling us.** When the scroll range shrinks (a quick filter
+narrowing the list, a delete, a taller viewport), WebKit clamps the scroller's offset and fires NO `scroll` event. A
+view that learns its offset only from scroll events then keeps the old one, and its window starts past the rows that
+exist: a blank or offset pane until the next real scroll (ERR-YFPVF, 0.53.0). `FullList` re-reads
+`scrollContainer.scrollTop` in an effect on `totalCount` / `rowAreaHeight` / `rowHeight`. `BriefList` heals through its
+keep-cursor-in-view effect (which re-runs on the new column widths and writes `scrollLeft`) and its window math, which
+clamps to the last column. Both pinned by `*.scroll-clamp.svelte.test.ts`.
+
 Native drag auto-scroll uses the same scroll state and fetch path as keyboard/cursor scrolling, but one animation frame
 at a time. `FullList.autoScrollDuringDrag(position, elapsedMs)` scrolls `scrollTop` vertically from top/bottom edge
 bands; `BriefList.autoScrollDuringDrag(position, elapsedMs)` scrolls `scrollLeft` horizontally from left/right edge

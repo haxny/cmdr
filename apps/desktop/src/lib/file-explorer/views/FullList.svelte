@@ -647,6 +647,22 @@
         cache.syncStaticEntries()
     })
 
+    // Re-read the browser's scroll offset whenever the scroll range can shrink. A
+    // shorter spacer (a quick filter narrowing the list, a delete) or a taller
+    // viewport makes WebKit clamp `scrollTop` with NO `scroll` event, so the state
+    // kept the old offset and the window started past the rows that exist: a blank
+    // pane until the next real scroll (ERR-YFPVF). Runs after the DOM update, so the
+    // read sees the clamped value; declared before the refresh effect below so its
+    // fetch already uses the corrected window.
+    $effect(() => {
+        dependOn(totalCount, rowAreaHeight, rowHeight)
+        untrack(() => {
+            if (!scrollContainer || scrollContainer.scrollTop === scrollTop) return
+            scrollTop = scrollContainer.scrollTop
+            fetchVisibleRange()
+        })
+    })
+
     // Hard refresh on cold context changes, soft refresh on diff bursts; the cache
     // owns the decision. Both replace the visible window atomically. A reset also
     // suppresses the grid-template-columns transition for the first paint after a
