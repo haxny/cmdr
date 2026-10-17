@@ -1770,8 +1770,6 @@ nothing" and passes). Anything narrower than every first-party member carries a 
   two checks, further down, carry the full rationale.
 - **`desktop-rust-sqlite-open-direct`** is `app` only. The page-cache slab is process-wide, so a standalone CLI opening
   the first connection in its own process has nothing to protect.
-- **`desktop-rust-write-ops-agent-isolation`** is `AppTreeOnly`. It fences `file_system/write_operations/`, which only
-  exists in the app tree; no other member has a write engine to keep out of the agent module.
 - **`desktop-pluralize-noun`** is `app` only. `pluralize` is a private module of the app crate, so a tool crate can't
   reach the helper the check directs it to. It skips `*.gen.*` files: `native_strings.gen.rs` mirrors catalog data (a
   menu label like "… of {countText} items", whose count is never 1), the i18n checks own catalog plurals, and a
@@ -1952,26 +1950,24 @@ Checks by app and tech:
   `minimumSystemVersion`; § "macOS availability"), macos-framework-floor (no framework in the BUILT binary's load
   commands newer than that same floor, which is the half no runtime gate can save; § "macOS framework floor"),
   sqlite-open-direct (every SQLite connection opens through `crate::sqlite_util`, so the process-wide shared page cache
-  is always installed before SQLite initializes), error-string-match, write-ops-isolation (the write engine may not name
-  the `agent` module: an approved operation is an ordinary operation, and an engine that can see the agent grows a
-  second execution path; per-source outcomes reach a caller through the injected `OperationEventSink` instead),
-  lock-poison (two lanes: an error-level one for an acquisition that records no poison-handling choice, and a warn-only
-  one for a failure that's silently discarded, on a per-file ratchet), test-sleep (flags a fixed `thread::sleep` /
-  `tokio::time::sleep` in test code, where a condition-based `wait_until` belongs; opt out a genuine
-  sleep-is-the-subject site with `// allowed-test-sleep: <reason>`), fixed-temp-dir (flags a test fixture built on
-  `std::env::temp_dir()`, where every process on the machine shares the path and two suite runs delete each other's live
-  fixtures; the sanctioned fixture is `crate::test_support::TestDir`, and a site where the temp root is load bearing
-  opts out with `// allowed-fixed-temp-dir: <reason>`), no-hand-rolled-fixture (bans a struct literal of
-  `CachedScanResult` / `SourceHint` / `VolumePreflight` / `WrittenFile` in test code, so a fixture can only be one of
-  the shapes a named constructor actually builds; it ships with ZERO findings on purpose and is a regression fence
-  rather than a finder — the shapes are already clean, and the point is that the next test author can't undo that by
-  copy-pasting an old literal), derive-default-justified (every `#[derive(..., Default, ...)]` under `file_system/`,
-  `cmdr-fs`, `cmdr-local`, `cmdr-operations`, and the IPC twins of `cmdr-fs` file types listed in `deriveDefaultTrees`
-  carries a `// DEFAULT-OK: <why>` line, because a zero value on a fact-carrying type isn't "no information", it's a
-  claim about the disk that nobody made; it and probe-unwrap fail when a governed member scans no file,
-  `minScannedPerGovernedRoot`, so a tree moving out from under them reads red), probe-unwrap-justified (flags
-  `\.is_directory(…).await.unwrap_or(…)` in production `file_system/`, `cmdr-local`, and `cmdr-operations` code, where a
-  probe that COULDN'T answer gets collapsed into a confident "no" and picks the branch that deletes; opt out with
+  is always installed before SQLite initializes), error-string-match, lock-poison (two lanes: an error-level one for an
+  acquisition that records no poison-handling choice, and a warn-only one for a failure that's silently discarded, on a
+  per-file ratchet), test-sleep (flags a fixed `thread::sleep` / `tokio::time::sleep` in test code, where a
+  condition-based `wait_until` belongs; opt out a genuine sleep-is-the-subject site with
+  `// allowed-test-sleep: <reason>`), fixed-temp-dir (flags a test fixture built on `std::env::temp_dir()`, where every
+  process on the machine shares the path and two suite runs delete each other's live fixtures; the sanctioned fixture is
+  `crate::test_support::TestDir`, and a site where the temp root is load bearing opts out with
+  `// allowed-fixed-temp-dir: <reason>`), no-hand-rolled-fixture (bans a struct literal of `CachedScanResult` /
+  `SourceHint` / `VolumePreflight` / `WrittenFile` in test code, so a fixture can only be one of the shapes a named
+  constructor actually builds; it ships with ZERO findings on purpose and is a regression fence rather than a finder —
+  the shapes are already clean, and the point is that the next test author can't undo that by copy-pasting an old
+  literal), derive-default-justified (every `#[derive(..., Default, ...)]` under `file_system/`, `cmdr-fs`,
+  `cmdr-local`, `cmdr-operations`, and the IPC twins of `cmdr-fs` file types listed in `deriveDefaultTrees` carries a
+  `// DEFAULT-OK: <why>` line, because a zero value on a fact-carrying type isn't "no information", it's a claim about
+  the disk that nobody made; it and probe-unwrap fail when a governed member scans no file, `minScannedPerGovernedRoot`,
+  so a tree moving out from under them reads red), probe-unwrap-justified (flags `\.is_directory(…).await.unwrap_or(…)`
+  in production `file_system/`, `cmdr-local`, and `cmdr-operations` code, where a probe that COULDN'T answer gets
+  collapsed into a confident "no" and picks the branch that deletes; opt out with
   `// allowed-probe-unwrap: <why the guess is truthful>`), discarded-outcome (a function that returns NOTHING while
   dropping a typed answer from the free function it delegates to; three of these shipped before it existed, and each
   ended as an IPC command or MCP tool inventing a success. `Result` and `Option` returns are deliberately out of scope:

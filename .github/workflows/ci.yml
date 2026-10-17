@@ -262,9 +262,6 @@ jobs:
       - name: Check error-string-match
         run: ./scripts/check/check --check desktop-rust-error-string-match --ci
 
-      - name: Check write-ops-isolation
-        run: ./scripts/check/check --check desktop-rust-write-ops-agent-isolation --ci
-
       - name: Check fixture-lane-coverage
         run: ./scripts/check/check --check desktop-fixture-lane-coverage --ci
 

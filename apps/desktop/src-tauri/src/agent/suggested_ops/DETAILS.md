@@ -145,7 +145,7 @@ be approved and then skip every file behind a fingerprint mismatch. An outcome w
 agent the user got something they never got, and the agent would keep proposing it. The tallies the decorator reads are
 the ones it just wrote.
 
-⚠️ **That seam holds a `Connection` and no `AppHandle`**, and `write-ops-isolation` means it never can. The
+⚠️ **That seam holds a `Connection` and no `AppHandle`**, and the engine, a crate with no `cmdr` dependency, never can. The
 `MemoryStore` is resolved by the command layer and MOVED in beside the reporting connection, for the same reason that
 one is: the operation outlives the call that started it. This is the concrete payoff of `MemoryStore` being pure.
 

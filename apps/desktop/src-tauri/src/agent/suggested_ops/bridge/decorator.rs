@@ -1,7 +1,7 @@
 //! The sink decorator: how execution reports back into the proposal spine.
 //!
-//! The write engine knows nothing about the agent, and a check enforces that
-//! (`write-ops-isolation`). So the reporting runs the other way: the bridge wraps the sink it
+//! The write engine knows nothing about the agent: it is its own crate (`cmdr-operations`),
+//! with no way to name this one. So the reporting runs the other way: the bridge wraps the sink it
 //! injects, watches the ordinary per-source stream go past, and writes what it sees into
 //! `proposal_ops.status` and, at the end, `proposals.status`.
 //!
@@ -42,7 +42,7 @@ pub(super) struct ProposalReportingSink {
     /// reason the connection is: the operation outlives the call that started it.
     ///
     /// ⚠️ **This seam is why the store is pure.** The write engine's thread has no `AppHandle`
-    /// and may never name one (`write-ops-isolation`), so a memory store that needed one would
+    /// and can never name one (its crate has no `cmdr` dependency), so a memory store that needed one would
     /// have nowhere to be built here — and this is the only place an approval's REAL outcome
     /// is known.
     memory: Option<MemoryStore>,

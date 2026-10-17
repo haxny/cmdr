@@ -30,8 +30,7 @@ the lifecycle machine, and the claim transaction are `../store/proposals/CLAUDE.
 - **The bridge builds an ORDINARY executor call**, through the same routed entry points a click uses, with the default
   config. Its bookkeeping never reaches the filesystem.
 - **Reporting flows engine → store, never the reverse.** The decorator wraps the injected sink and writes
-  `proposal_ops.status` from the per-source outcomes; `write-ops-isolation` fails the build if `write_operations` ever
-  names `agent::`.
+  `proposal_ops.status` from the per-source outcomes; the engine's crate can't name `agent::`.
 - **The agent hears every answer** (`../outcomes.rs`). A rejection fires in `reject`'s `Rejected` arm, which the
   conditional UPDATE makes once-per-group across restarts; an APPROVAL fires at SETTLE, in the decorator, because
   `approve` is only a claim and a claimed group can still skip every file. ❌ Never move that one, or the approval

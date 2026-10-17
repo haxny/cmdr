@@ -2145,8 +2145,8 @@ instead of a file. Delete passes `CarriedOut` unconditionally: it has no Skip, s
 is unlinked.
 
 The injected sink is the seam: a caller that wants per-source statuses wraps the sink it passes in, and the engine never
-names the `agent` module at all. That boundary is held by the `write-ops-isolation` check rather than by a rule here, so
-it fails a build instead of costing every session a line it might ignore.
+names the `agent` module at all. The crate boundary holds it: `cmdr-operations` has no `cmdr` dependency, so naming
+`agent::` fails to compile instead of costing every session a line it might ignore.
 
 ## Archive edits
 

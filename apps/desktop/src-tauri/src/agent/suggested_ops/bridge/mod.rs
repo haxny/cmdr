@@ -13,8 +13,8 @@
 //! bookkeeping about a proposal, none of it reaches the filesystem.
 //!
 //! The write engine, correspondingly, knows nothing about any of this. It reports per-source
-//! outcomes through the sink every operation already emits through, and `write-ops-isolation`
-//! fails the build if the engine ever names `agent::`.
+//! outcomes through the sink every operation already emits through, and, as a
+//! crate with no `cmdr` dependency, it can't name `agent::`.
 
 mod decorator;
 
