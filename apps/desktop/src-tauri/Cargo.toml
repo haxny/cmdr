@@ -119,7 +119,7 @@ cmdr-listing = { path = "../../../crates/cmdr-listing" }
 # here rather than through `cmdr-listing`'s re-export, so it never needs the
 # listing engine for one type.
 cmdr-collation = { path = "../../../crates/cmdr-collation" }
-tauri ={ version = "2", features = ["macos-private-api"] }
+tauri = { version = "2", features = ["macos-private-api"] }
 tauri-plugin-opener = "2"
 tauri-plugin-mcp-bridge = "0.13"
 tauri-plugin-store = "2"
