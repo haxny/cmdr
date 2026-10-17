@@ -5,8 +5,7 @@
 //! test pins the busy-set wiring (root → nothing busy, non-root → the volume).
 
 use super::*;
-use crate::file_system::volume::manager::get_volume_manager;
-use crate::file_system::write_operations::installed;
+use crate::file_system::write_operations::testing::{TestOperationLog, TestOperations};
 use std::fs;
 use std::future::Future;
 use std::path::{Path, PathBuf};
@@ -41,22 +40,6 @@ fn create_test_dir(label: &str) -> TempDir {
         .expect("Failed to create test directory")
 }
 
-/// Registers a real local-FS "root" volume so `create_*_core` with
-/// `volume_id = None` (→ "root") exercises the timed `Volume` path, the same one
-/// production hits. Idempotent via `register_if_absent`.
-fn ensure_root_volume() {
-    use cmdr_local::LocalPosixVolume;
-    use std::sync::Arc;
-    get_volume_manager().register_if_absent(
-        "root",
-        Arc::new(LocalPosixVolume::local_folder(
-            "Test root",
-            "/",
-            crate::volume_host::host(),
-        )),
-    );
-}
-
 // ============================================================================
 // Descriptor / busy-set wiring
 // ============================================================================
@@ -84,24 +67,16 @@ fn instant_descriptor_marks_only_nonroot_volumes_busy() {
 
 #[tokio::test]
 async fn create_directory_managed_journals_a_create_folder_op() {
-    use cmdr_operation_log::capture::WriterJournal;
-    use cmdr_operation_log::store::{
-        open_read_connection, operation_log_db_path, read_operation, read_operation_items,
-    };
+    use cmdr_operation_log::store::{open_read_connection, read_operation, read_operation_items};
     use cmdr_operation_log::types::{EntryType, OpKind, RollbackState};
-    use cmdr_operation_log::writer::OperationLogWriter;
 
-    ensure_root_volume();
-    let jdir = tempfile::tempdir().expect("jdir");
-    let jdb = operation_log_db_path(jdir.path());
-    // Serializes journal-slot tests under plain `cargo test`; clears on drop.
-    let _journal = crate::operation_log_host::TestJournalGuard::install(Arc::new(WriterJournal::new(
-        OperationLogWriter::spawn(&jdb).expect("writer"),
-    )));
+    let log = TestOperationLog::new("create_managed_journal");
+    let engine = TestOperations::journaling_into(&log);
+    engine.register_local_root();
 
     let tmp = create_test_dir("managed_journal");
     let parent = tmp.path().to_string_lossy().to_string();
-    let created = installed()
+    let created = engine
         .create_directory_managed(
             None,
             parent,
@@ -111,7 +86,7 @@ async fn create_directory_managed_journals_a_create_folder_op() {
         .await
         .expect("mkdir");
 
-    let conn = open_read_connection(&jdb).expect("read conn");
+    let conn = open_read_connection(log.db()).expect("read conn");
     // Exactly one CreateFolder op, rollbackable (net-new), with one Dir item row.
     let ops = cmdr_operation_log::store::recent_operations(&conn, 10).expect("ops");
     let op = ops
@@ -129,10 +104,11 @@ async fn create_directory_managed_journals_a_create_folder_op() {
 
 #[tokio::test]
 async fn create_directory_success() {
-    ensure_root_volume();
+    let engine = TestOperations::new();
+    engine.register_local_root();
     let tmp = create_test_dir("create_success");
     let parent = tmp.path().to_string_lossy().to_string();
-    let result = create_directory_core(None, &parent, "new-folder").await;
+    let result = create_directory_core_on(engine.host(), None, &parent, "new-folder").await;
     assert!(result.is_ok());
     let (created_path, _) = result.unwrap();
     assert!(created_path.is_dir());
@@ -141,41 +117,45 @@ async fn create_directory_success() {
 
 #[tokio::test]
 async fn create_directory_already_exists() {
-    ensure_root_volume();
+    let engine = TestOperations::new();
+    engine.register_local_root();
     let tmp = create_test_dir("create_exists");
     let parent = tmp.path().to_string_lossy().to_string();
     fs::create_dir(tmp.path().join("existing")).unwrap();
-    let result = create_directory_core(None, &parent, "existing").await;
+    let result = create_directory_core_on(engine.host(), None, &parent, "existing").await;
     assert!(result.is_err());
     assert!(matches!(result.unwrap_err(), MutationError::AlreadyExists { .. }));
 }
 
 #[tokio::test]
 async fn create_directory_empty_name() {
+    let engine = TestOperations::new();
     let tmp = create_test_dir("create_empty");
     let parent = tmp.path().to_string_lossy().to_string();
-    let result = create_directory_core(None, &parent, "").await;
+    let result = create_directory_core_on(engine.host(), None, &parent, "").await;
     assert!(result.is_err());
     assert!(matches!(result.unwrap_err(), MutationError::NameEmpty));
 }
 
 #[tokio::test]
 async fn create_directory_invalid_chars() {
+    let engine = TestOperations::new();
     let tmp = create_test_dir("create_invalid");
     let parent = tmp.path().to_string_lossy().to_string();
-    let result = create_directory_core(None, &parent, "foo/bar").await;
+    let result = create_directory_core_on(engine.host(), None, &parent, "foo/bar").await;
     assert!(result.is_err());
     assert!(matches!(result.unwrap_err(), MutationError::NameHasDisallowedCharacter));
 
-    let result = create_directory_core(None, &parent, "foo\0bar").await;
+    let result = create_directory_core_on(engine.host(), None, &parent, "foo\0bar").await;
     assert!(result.is_err());
     assert!(matches!(result.unwrap_err(), MutationError::NameHasDisallowedCharacter));
 }
 
 #[tokio::test]
 async fn create_directory_nonexistent_parent() {
-    ensure_root_volume();
-    let result = create_directory_core(None, "/nonexistent_path_12345", "test").await;
+    let engine = TestOperations::new();
+    engine.register_local_root();
+    let result = create_directory_core_on(engine.host(), None, "/nonexistent_path_12345", "test").await;
     assert!(result.is_err());
 }
 
@@ -184,9 +164,16 @@ async fn create_directory_unregistered_volume_errors_without_fs_write() {
     // An unregistered volume_id used to fall back to an untimed synchronous
     // `std::fs::create_dir` on the async executor. Now it returns a typed
     // "Volume not found" error and writes nothing.
+    let engine = TestOperations::new();
     let tmp = create_test_dir("create_unregistered_vol");
     let parent = tmp.path().to_string_lossy().to_string();
-    let result = create_directory_core(Some("no-such-volume-xyz".to_string()), &parent, "would-be-folder").await;
+    let result = create_directory_core_on(
+        engine.host(),
+        Some("no-such-volume-xyz".to_string()),
+        &parent,
+        "would-be-folder",
+    )
+    .await;
     assert!(result.is_err());
     assert!(matches!(result.unwrap_err(), MutationError::VolumeGone { .. }));
     assert!(
@@ -203,9 +190,16 @@ async fn create_directory_unregistered_volume_errors_without_fs_write() {
 async fn create_file_unregistered_volume_errors_without_fs_write() {
     // Same contract as the directory case: an unregistered volume_id returns
     // a typed error instead of an untimed `std::fs::File::create_new`.
+    let engine = TestOperations::new();
     let tmp = create_test_dir("create_file_unregistered_vol");
     let parent = tmp.path().to_string_lossy().to_string();
-    let result = create_file_core(Some("no-such-volume-xyz".to_string()), &parent, "would-be-file.txt").await;
+    let result = create_file_core_on(
+        engine.host(),
+        Some("no-such-volume-xyz".to_string()),
+        &parent,
+        "would-be-file.txt",
+    )
+    .await;
     assert!(result.is_err());
     assert!(matches!(result.unwrap_err(), MutationError::VolumeGone { .. }));
     assert!(
@@ -216,10 +210,11 @@ async fn create_file_unregistered_volume_errors_without_fs_write() {
 
 #[tokio::test]
 async fn create_file_success() {
-    ensure_root_volume();
+    let engine = TestOperations::new();
+    engine.register_local_root();
     let tmp = create_test_dir("create_file_success");
     let parent = tmp.path().to_string_lossy().to_string();
-    let result = create_file_core(None, &parent, "new-file.txt").await;
+    let result = create_file_core_on(engine.host(), None, &parent, "new-file.txt").await;
     assert!(result.is_ok());
     let (created_path, _) = result.unwrap();
     assert!(created_path.is_file());
@@ -229,33 +224,36 @@ async fn create_file_success() {
 
 #[tokio::test]
 async fn create_file_already_exists() {
-    ensure_root_volume();
+    let engine = TestOperations::new();
+    engine.register_local_root();
     let tmp = create_test_dir("create_file_exists");
     let parent = tmp.path().to_string_lossy().to_string();
     fs::write(tmp.path().join("existing.txt"), b"hello").unwrap();
-    let result = create_file_core(None, &parent, "existing.txt").await;
+    let result = create_file_core_on(engine.host(), None, &parent, "existing.txt").await;
     assert!(result.is_err());
     assert!(matches!(result.unwrap_err(), MutationError::AlreadyExists { .. }));
 }
 
 #[tokio::test]
 async fn create_file_empty_name() {
+    let engine = TestOperations::new();
     let tmp = create_test_dir("create_file_empty");
     let parent = tmp.path().to_string_lossy().to_string();
-    let result = create_file_core(None, &parent, "").await;
+    let result = create_file_core_on(engine.host(), None, &parent, "").await;
     assert!(result.is_err());
     assert!(matches!(result.unwrap_err(), MutationError::NameEmpty));
 }
 
 #[tokio::test]
 async fn create_file_invalid_chars() {
+    let engine = TestOperations::new();
     let tmp = create_test_dir("create_file_invalid");
     let parent = tmp.path().to_string_lossy().to_string();
-    let result = create_file_core(None, &parent, "foo/bar.txt").await;
+    let result = create_file_core_on(engine.host(), None, &parent, "foo/bar.txt").await;
     assert!(result.is_err());
     assert!(matches!(result.unwrap_err(), MutationError::NameHasDisallowedCharacter));
 
-    let result = create_file_core(None, &parent, "foo\0bar.txt").await;
+    let result = create_file_core_on(engine.host(), None, &parent, "foo\0bar.txt").await;
     assert!(result.is_err());
     assert!(matches!(result.unwrap_err(), MutationError::NameHasDisallowedCharacter));
 }
@@ -266,10 +264,11 @@ async fn create_file_invalid_chars() {
 
 #[tokio::test]
 async fn create_directory_managed_creates_folder_and_cleans_up_record() {
-    ensure_root_volume();
+    let engine = TestOperations::new();
+    engine.register_local_root();
     let tmp = create_test_dir("create_managed_ok");
     let parent = tmp.path().to_string_lossy().to_string();
-    let result = installed()
+    let result = engine
         .create_directory_managed(
             None,
             parent,
@@ -283,7 +282,8 @@ async fn create_directory_managed_creates_folder_and_cleans_up_record() {
     assert!(Path::new(&path).is_dir());
     // The instant op's record is cleaned up once the create finishes.
     assert!(
-        crate::file_system::write_operations::manager::manager()
+        engine
+            .manager()
             .list()
             .iter()
             .all(|o| o.operation_type != WriteOperationType::CreateFolder),
@@ -369,14 +369,15 @@ impl Volume for DeniedVolume {
 #[tokio::test]
 async fn create_directory_core_maps_permission_denied_to_friendly_message() {
     let vid = unique("denied-dir");
-    get_volume_manager().register(
+    let engine = TestOperations::new();
+    engine.volumes().register(
         &vid,
         Arc::new(DeniedVolume {
             name: vid.clone(),
             root: PathBuf::from("/"),
         }),
     );
-    let result = create_directory_core(Some(vid), "/somewhere", "folder").await;
+    let result = create_directory_core_on(engine.host(), Some(vid), "/somewhere", "folder").await;
     assert!(result.is_err());
     // The volume's own refusal rides through untouched, path and all, so the
     // frontend words it from the variant instead of parsing a sentence.
@@ -390,14 +391,15 @@ async fn create_directory_core_maps_permission_denied_to_friendly_message() {
 #[tokio::test]
 async fn create_file_core_maps_permission_denied_to_friendly_message() {
     let vid = unique("denied-file");
-    get_volume_manager().register(
+    let engine = TestOperations::new();
+    engine.volumes().register(
         &vid,
         Arc::new(DeniedVolume {
             name: vid.clone(),
             root: PathBuf::from("/"),
         }),
     );
-    let result = create_file_core(Some(vid), "/somewhere", "file.txt").await;
+    let result = create_file_core_on(engine.host(), Some(vid), "/somewhere", "file.txt").await;
     assert!(result.is_err());
     let err = result.unwrap_err();
     assert!(
@@ -414,13 +416,14 @@ fn write_zip_magic(path: &Path) {
 
 #[tokio::test]
 async fn create_directory_core_rejects_a_target_inside_an_archive() {
+    let engine = TestOperations::new();
     let dir = create_test_dir("archive-mkdir");
     let zip = dir.path().join("bundle.zip");
     write_zip_magic(&zip);
 
     // Parent is inside the archive → read-only until zip mutation lands.
     let parent = zip.join("sub");
-    let err = create_directory_core(None, &parent.to_string_lossy(), "newdir")
+    let err = create_directory_core_on(engine.host(), None, &parent.to_string_lossy(), "newdir")
         .await
         .expect_err("creating inside an archive must be refused");
     // The archive-specific variant is the signal that the FORK fired: a natural
@@ -434,12 +437,13 @@ async fn create_directory_core_rejects_a_target_inside_an_archive() {
 
 #[tokio::test]
 async fn create_file_core_rejects_a_target_inside_an_archive() {
+    let engine = TestOperations::new();
     let dir = create_test_dir("archive-mkfile");
     let zip = dir.path().join("bundle.zip");
     write_zip_magic(&zip);
 
     // The archive root itself is also read-only.
-    let err = create_file_core(None, &zip.to_string_lossy(), "new.txt")
+    let err = create_file_core_on(engine.host(), None, &zip.to_string_lossy(), "new.txt")
         .await
         .expect_err("creating inside an archive must be refused");
     // See `create_directory_core_rejects_...`.
@@ -469,13 +473,14 @@ async fn route_archive_create_on_an_existing_inner_name_errors_without_building_
     // standard "already exists" message (matching the real-FS paths), so the FE
     // shows the friendly copy instead of the raw `zip` "Duplicate filename" — and
     // no temp is built for the doomed edit.
+    let engine = TestOperations::new();
     let dir = create_test_dir("archive-dup-create");
     let zip = dir.path().join("bundle.zip");
     write_real_zip(&zip, &[("existing.txt", b"x"), ("sub/existing.txt", b"y")]);
 
     // mkfile onto an existing name at the archive root.
     let root_parent = zip.to_string_lossy().to_string();
-    let err_file = route_archive_create(installed(), &root_parent, "existing.txt", ArchiveEntryKind::File, None)
+    let err_file = route_archive_create(&engine, &root_parent, "existing.txt", ArchiveEntryKind::File, None)
         .await
         .expect_err("mkfile onto an existing inner name must be refused");
     assert!(
@@ -485,7 +490,7 @@ async fn route_archive_create_on_an_existing_inner_name_errors_without_building_
 
     // mkdir onto an existing name inside a subdirectory.
     let sub_parent = zip.join("sub").to_string_lossy().to_string();
-    let err_dir = route_archive_create(installed(), &sub_parent, "existing.txt", ArchiveEntryKind::Dir, None)
+    let err_dir = route_archive_create(&engine, &sub_parent, "existing.txt", ArchiveEntryKind::Dir, None)
         .await
         .expect_err("mkdir onto an existing inner name must be refused");
     assert!(
@@ -517,6 +522,7 @@ async fn route_archive_create_on_an_existing_inner_name_errors_without_building_
 fn synthetic_entry_diff_lands_only_in_listings_on_the_creates_volume() {
     use cmdr_listing::testing::TestListing;
 
+    let engine = TestOperations::seeing_app_listings();
     let tmp = create_test_dir("synthetic_diff_volume");
     let new_path = tmp.path().join("made");
     fs::create_dir(&new_path).expect("create the new folder on disk");
@@ -531,7 +537,7 @@ fn synthetic_entry_diff_lands_only_in_listings_on_the_creates_volume() {
         .insert(crate::listing_host::listings(), "synthetic-diff-remote");
 
     // `None` is the local filesystem, `root`.
-    patch_listings_after_create(installed().host(), None, &new_path, tmp.path());
+    patch_listings_after_create(engine.host(), None, &new_path, tmp.path());
 
     assert_eq!(
         on_root.entry_names(),
@@ -556,6 +562,7 @@ fn synthetic_entry_diff_refreshes_a_row_the_listing_already_holds() {
     use cmdr_listing::testing::{hold_diffs, pending_changes};
     use cmdr_local::reading::get_single_entry;
 
+    let engine = TestOperations::seeing_app_listings();
     let tmp = create_test_dir("synthetic_diff_duplicate");
     let new_path = tmp.path().join("made.txt");
     fs::write(&new_path, b"fresh contents").expect("write the new file on disk");
@@ -567,7 +574,7 @@ fn synthetic_entry_diff_refreshes_a_row_the_listing_already_holds() {
         .insert(crate::listing_host::listings(), "synthetic-diff-duplicate");
     hold_diffs(listing.engine(), listing.id());
 
-    patch_listings_after_create(installed().host(), None, &new_path, tmp.path());
+    patch_listings_after_create(engine.host(), None, &new_path, tmp.path());
 
     let entries = listing.entries();
     assert_eq!(entries.len(), 1, "the create upserts; it never adds a second row");

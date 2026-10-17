@@ -17,8 +17,7 @@ use std::time::Duration;
 use super::super::super::event_sinks::{CollectorEventSink, OperationEventSink};
 use super::super::super::source_binding::SourceFingerprint;
 use super::BulkRenameRow;
-use crate::file_system::volume::manager::get_volume_manager;
-use crate::file_system::write_operations::installed;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::test_support::wait_until_async;
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::volume::InMemoryVolume;
@@ -33,10 +32,10 @@ const EE_NFC: &str = "\u{e9}\u{e9}.txt";
 const EE_NFD: &str = "e\u{301}e\u{301}.txt";
 const EE_MIXED: &str = "\u{e9}e\u{301}.txt";
 
-/// A registered in-memory volume holding `/dir`: byte-exact, composing new
+/// An in-memory volume registered on `engine`, holding `/dir`: byte-exact, composing new
 /// names when `composes` says so (an SMB share), keeping them as given when not
 /// (SFTP, a phone).
-async fn volume(label: &str, composes: bool) -> (String, Arc<InMemoryVolume>) {
+async fn volume(engine: &TestOperations, label: &str, composes: bool) -> (String, Arc<InMemoryVolume>) {
     static N: AtomicU64 = AtomicU64::new(0);
     let id = format!("bulk-look-alike-{label}-{}", N.fetch_add(1, Ordering::Relaxed));
     let mut volume = InMemoryVolume::new(&id).with_lane_key(id.clone());
@@ -45,7 +44,7 @@ async fn volume(label: &str, composes: bool) -> (String, Arc<InMemoryVolume>) {
     }
     let volume = Arc::new(volume);
     volume.create_directory(Path::new("/dir")).await.unwrap();
-    get_volume_manager().register(&id, Arc::clone(&volume) as Arc<dyn Volume>);
+    engine.volumes().register(&id, Arc::clone(&volume) as Arc<dyn Volume>);
     (id, volume)
 }
 
@@ -69,10 +68,10 @@ async fn row(volume: &InMemoryVolume, source: &str, destination: &str) -> BulkRe
     }
 }
 
-/// Runs the batch to its end and answers how many rows it skipped.
-async fn run(id: &str, rows: Vec<BulkRenameRow>) -> usize {
+/// Runs the batch on `engine` to its end and answers how many rows it skipped.
+async fn run(engine: &TestOperations, id: &str, rows: Vec<BulkRenameRow>) -> usize {
     let sink = Arc::new(CollectorEventSink::new());
-    installed()
+    engine
         .start_bulk_rename(
             Arc::clone(&sink) as Arc<dyn OperationEventSink>,
             id.to_string(),
@@ -121,10 +120,11 @@ fn sorted(names: &[&str]) -> Vec<String> {
 
 #[tokio::test]
 async fn a_new_name_goes_out_composed() {
-    let (id, volume) = volume("composed", true).await;
+    let engine = TestOperations::new();
+    let (id, volume) = volume(&engine, "composed", true).await;
     file(&volume, "a.txt", b"A").await;
 
-    let skipped = run(&id, vec![row(&volume, "a.txt", CAFE_NFD).await]).await;
+    let skipped = run(&engine, &id, vec![row(&volume, "a.txt", CAFE_NFD).await]).await;
 
     assert_eq!(skipped, 0);
     assert_eq!(names_in(&volume).await, vec![CAFE_NFC.to_string()]);
@@ -132,11 +132,12 @@ async fn a_new_name_goes_out_composed() {
 
 #[tokio::test]
 async fn a_destination_the_folder_holds_in_another_spelling_is_skipped() {
-    let (id, volume) = volume("taken", true).await;
+    let engine = TestOperations::new();
+    let (id, volume) = volume(&engine, "taken", true).await;
     file(&volume, "a.txt", b"MINE").await;
     file(&volume, CAFE_NFD, b"THEIRS").await;
 
-    let skipped = run(&id, vec![row(&volume, "a.txt", CAFE_NFC).await]).await;
+    let skipped = run(&engine, &id, vec![row(&volume, "a.txt", CAFE_NFC).await]).await;
 
     assert_eq!(skipped, 1, "the look-alike is a clash like an exact one");
     assert_eq!(
@@ -151,11 +152,12 @@ async fn a_destination_the_folder_holds_in_another_spelling_is_skipped() {
 /// so the look-alike is just as taken there.
 #[tokio::test]
 async fn a_look_alike_is_taken_on_a_volume_that_keeps_names_as_given() {
-    let (id, volume) = volume("as-given", false).await;
+    let engine = TestOperations::new();
+    let (id, volume) = volume(&engine, "as-given", false).await;
     file(&volume, "a.txt", b"MINE").await;
     file(&volume, CAFE_NFC, b"THEIRS").await;
 
-    let skipped = run(&id, vec![row(&volume, "a.txt", CAFE_NFD).await]).await;
+    let skipped = run(&engine, &id, vec![row(&volume, "a.txt", CAFE_NFD).await]).await;
 
     assert_eq!(skipped, 1);
     assert_eq!(names_in(&volume).await, sorted(&["a.txt", CAFE_NFC]));
@@ -163,12 +165,13 @@ async fn a_look_alike_is_taken_on_a_volume_that_keeps_names_as_given() {
 
 #[tokio::test]
 async fn a_destination_two_stored_spellings_fit_is_skipped_rather_than_guessed() {
-    let (id, volume) = volume("ambiguous", true).await;
+    let engine = TestOperations::new();
+    let (id, volume) = volume(&engine, "ambiguous", true).await;
     file(&volume, "a.txt", b"MINE").await;
     file(&volume, EE_NFD, b"ONE").await;
     file(&volume, EE_MIXED, b"TWO").await;
 
-    let skipped = run(&id, vec![row(&volume, "a.txt", EE_NFC).await]).await;
+    let skipped = run(&engine, &id, vec![row(&volume, "a.txt", EE_NFC).await]).await;
 
     assert_eq!(skipped, 1);
     assert_eq!(names_in(&volume).await, sorted(&["a.txt", EE_MIXED, EE_NFD]));
@@ -178,10 +181,11 @@ async fn a_destination_two_stored_spellings_fit_is_skipped_rather_than_guessed()
 /// row's own source, so it's a respell, never a clash.
 #[tokio::test]
 async fn renaming_an_entry_to_its_own_other_spelling_lands() {
-    let (id, volume) = volume("respell", true).await;
+    let engine = TestOperations::new();
+    let (id, volume) = volume(&engine, "respell", true).await;
     file(&volume, CAFE_NFD, b"MINE").await;
 
-    let skipped = run(&id, vec![row(&volume, CAFE_NFD, CAFE_NFC).await]).await;
+    let skipped = run(&engine, &id, vec![row(&volume, CAFE_NFD, CAFE_NFC).await]).await;
 
     assert_eq!(skipped, 0);
     assert_eq!(names_in(&volume).await, vec![CAFE_NFC.to_string()]);
@@ -198,7 +202,8 @@ async fn renaming_an_entry_to_its_own_other_spelling_lands() {
 #[cfg(target_os = "macos")]
 #[tokio::test]
 async fn a_look_alike_the_batch_itself_moves_away_is_not_a_clash() {
-    let (id, volume) = volume("swap", true).await;
+    let engine = TestOperations::new();
+    let (id, volume) = volume(&engine, "swap", true).await;
     file(&volume, CAFE_NFD, b"FIRST").await;
     file(&volume, "b.txt", b"SECOND").await;
 
@@ -206,7 +211,7 @@ async fn a_look_alike_the_batch_itself_moves_away_is_not_a_clash() {
         row(&volume, CAFE_NFD, "b.txt").await,
         row(&volume, "b.txt", CAFE_NFC).await,
     ];
-    let skipped = run(&id, rows).await;
+    let skipped = run(&engine, &id, rows).await;
 
     assert_eq!(skipped, 0);
     assert_eq!(names_in(&volume).await, sorted(&["b.txt", CAFE_NFC]));
@@ -219,7 +224,8 @@ async fn a_look_alike_the_batch_itself_moves_away_is_not_a_clash() {
 #[cfg(target_os = "macos")]
 #[tokio::test]
 async fn a_look_alike_the_batch_moves_away_first_frees_the_name_for_a_chain() {
-    let (id, volume) = volume("chain", true).await;
+    let engine = TestOperations::new();
+    let (id, volume) = volume(&engine, "chain", true).await;
     file(&volume, CAFE_NFD, b"FIRST").await;
     file(&volume, "y.txt", b"SECOND").await;
 
@@ -227,7 +233,7 @@ async fn a_look_alike_the_batch_moves_away_first_frees_the_name_for_a_chain() {
         row(&volume, "y.txt", CAFE_NFC).await,
         row(&volume, CAFE_NFD, "x.txt").await,
     ];
-    let skipped = run(&id, rows).await;
+    let skipped = run(&engine, &id, rows).await;
 
     assert_eq!(skipped, 0);
     assert_eq!(names_in(&volume).await, sorted(&["x.txt", CAFE_NFC]));

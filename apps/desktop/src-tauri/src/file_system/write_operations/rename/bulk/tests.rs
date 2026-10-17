@@ -1,6 +1,7 @@
 use super::*;
 use crate::file_system::write_operations::scope::OpScope;
 use crate::file_system::write_operations::state::IntentCell;
+use crate::file_system::write_operations::testing::{TestOperationLog, TestOperations};
 use cmdr_operation_log::types::ItemOutcome;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -34,15 +35,10 @@ fn local_row(row_id: &str, source: PathBuf, destination: PathBuf) -> BulkRenameR
     }
 }
 
-/// A recorder for tests that don't assert on the journal. Journaling no-ops when no
-/// journal is installed, so this is inert unless a `TestJournalGuard` is in scope.
+/// A recorder for tests that don't assert on the journal: its scope is on an
+/// engine of its own that journals nothing.
 fn test_recorder() -> BulkRenameRecorder {
-    BulkRenameRecorder::new(test_scope(), "root".to_string())
-}
-
-/// A scope on the shared test engine, for a recorder whose journal a test opens.
-fn test_scope() -> Arc<OpScope> {
-    Arc::new(crate::file_system::write_operations::installed().op_scope())
+    BulkRenameRecorder::new(Arc::new(TestOperations::new().op_scope()), "root".to_string())
 }
 
 fn assert_no_staging_paths(dir: &Path) {
@@ -75,15 +71,10 @@ fn planning_row(source: &str, destination: &str) -> BulkRenameRow {
 /// replacement file was renamed back in place of the original.
 #[test]
 fn an_applied_bulk_rename_journals_the_mtime_undo_verifies_on() {
-    use crate::operation_log_host::TestJournalGuard;
-    use cmdr_operation_log::capture::WriterJournal;
-    use cmdr_operation_log::store::{open_read_connection, operation_log_db_path, read_operation_items};
-    use cmdr_operation_log::writer::OperationLogWriter;
+    use cmdr_operation_log::store::{open_read_connection, read_operation_items};
 
-    let journal_dir = tempfile::tempdir().expect("journal tempdir");
-    let db = operation_log_db_path(journal_dir.path());
-    let writer = OperationLogWriter::spawn(&db).expect("spawn writer");
-    let _journal = TestJournalGuard::install(Arc::new(WriterJournal::new(writer)));
+    let log = TestOperationLog::new("bulk_rename_mtime_journal");
+    let engine = TestOperations::journaling_into(&log);
 
     let tmp = create_test_dir("journaled_mtime");
     let source = tmp.join("before.txt");
@@ -93,12 +84,12 @@ fn an_applied_bulk_rename_journals_the_mtime_undo_verifies_on() {
     let live = cmdr_local::reading::get_single_entry(&source).expect("read the live entry");
 
     let op_id = "op-bulk-rename-mtime";
-    let scope = test_scope();
+    let scope = Arc::new(engine.op_scope());
     super::super::super::journal::open_local_op(&scope, op_id, OpKind::Rename, Initiator::User, 1, Some("root"));
     BulkRenameRecorder::new(Arc::clone(&scope), "root".to_string()).record_hop(&row, &source, &destination);
     super::super::super::journal::finalize_op(&scope, OpKind::Rename, ExecutionStatus::Done);
 
-    let conn = open_read_connection(&db).expect("read conn");
+    let conn = open_read_connection(log.db()).expect("read conn");
     let items = read_operation_items(&conn, op_id, 10).expect("items");
     assert_eq!(items.len(), 1, "one row per applied rename");
     assert_eq!(
@@ -115,15 +106,14 @@ fn an_applied_bulk_rename_journals_the_mtime_undo_verifies_on() {
 /// capture actually wrote. Hand-seeded journal rows (as `rollback/tests.rs` uses)
 /// can't catch a capture-side snapshot defect, so this bed exists to.
 struct UndoLoop {
-    _journal: crate::operation_log_host::TestJournalGuard,
-    writer_journal: Arc<cmdr_operation_log::capture::WriterJournal>,
+    engine: TestOperations,
+    /// The journal `engine` writes, and the rollback engine reads back.
+    log: TestOperationLog,
     vm: crate::file_system::VolumeManager,
     /// Owns the scratch directory: holding the guard (rather than a bare path
     /// copied out of it) is what keeps the directory alive for the fixture's
-    /// lifetime and removes it afterwards. Same for `_journal_dir`, which holds
-    /// the operation-log database the writer above reads and writes throughout.
+    /// lifetime and removes it afterwards.
     dir: TestDir,
-    _journal_dir: TestDir,
     op_id: String,
 }
 
@@ -131,17 +121,12 @@ impl UndoLoop {
     fn new(name: &str) -> Self {
         use cmdr_fs::volume::Volume;
         use cmdr_local::LocalPosixVolume;
-        use cmdr_operation_log::capture::WriterJournal;
-        use cmdr_operation_log::store::operation_log_db_path;
-        use cmdr_operation_log::writer::OperationLogWriter;
 
         // Held in the struct below, not just here: the writer keeps using this
-        // database for the fixture's whole life, so dropping the handle at the end
+        // database for the fixture's whole life, so dropping the log at the end
         // of `new` would delete `operation-log.db` out from under it.
-        let journal_dir = create_test_dir(&format!("{name}_journal"));
-        let writer = OperationLogWriter::spawn(&operation_log_db_path(&journal_dir)).expect("spawn writer");
-        let writer_journal = Arc::new(WriterJournal::new(writer));
-        let journal = crate::operation_log_host::TestJournalGuard::install(writer_journal.clone());
+        let log = TestOperationLog::new(&format!("bulk_rename_test_{name}_journal"));
+        let engine = TestOperations::journaling_into(&log);
 
         let vm = crate::file_system::VolumeManager::new();
         // Rooted at `/` so the fixture's absolute paths resolve, matching how the
@@ -155,11 +140,10 @@ impl UndoLoop {
             )) as Arc<dyn Volume>,
         );
         UndoLoop {
-            _journal: journal,
-            writer_journal,
+            engine,
+            log,
             vm,
             dir: create_test_dir(name),
-            _journal_dir: journal_dir,
             op_id: format!("op-{name}"),
         }
     }
@@ -170,7 +154,7 @@ impl UndoLoop {
         let row = local_row("undo", source.to_path_buf(), destination.to_path_buf());
         // Open BEFORE the run: the run journals each landing as it happens, so the
         // op has to exist first, exactly as the managed driver arranges it.
-        let scope = test_scope();
+        let scope = Arc::new(self.engine.op_scope());
         super::super::super::journal::open_local_op(
             &scope,
             &self.op_id,
@@ -194,7 +178,7 @@ impl UndoLoop {
 
     async fn undo(&self) -> cmdr_operation_log::rollback::RollbackReport {
         use cmdr_operation_log::store::{open_read_connection, read_operation};
-        let writer = self.writer_journal.writer();
+        let writer = self.log.writer();
         let conn = open_read_connection(writer.db_path()).expect("read conn");
         let original = read_operation(&conn, &self.op_id)
             .expect("read op")
@@ -205,7 +189,7 @@ impl UndoLoop {
             "an applied batch rename must be rollbackable"
         );
         drop(conn);
-        let reversal = crate::file_system::write_operations::rollback::Reversal::new("bulk-rename-undo");
+        let reversal = crate::file_system::write_operations::rollback::Reversal::on(&self.engine, "bulk-rename-undo");
         cmdr_operation_log::rollback::execute_rollback(
             &self.vm,
             writer,
@@ -526,38 +510,23 @@ fn bulk_local_rename_preserves_a_destination_created_after_review() {
     let _ = fs::remove_dir_all(&tmp);
 }
 
-/// A journal bed for the as-it-lands recorder: an installed writer journal, an
+/// A journal bed for the as-it-lands recorder: a scratch journal, an
 /// open op, and a reader for the rows the run wrote. Deliberately does NOT call
 /// `record_bulk_rename_outcomes` — these tests exist to prove the RUN journals,
 /// not a later pass.
 struct LandingJournal {
-    _journal: crate::operation_log_host::TestJournalGuard,
-    _journal_dir: TestDir,
-    db: PathBuf,
+    log: TestOperationLog,
     op_id: String,
     scope: Arc<OpScope>,
 }
 
 impl LandingJournal {
     fn new(name: &str) -> Self {
-        use cmdr_operation_log::capture::WriterJournal;
-        use cmdr_operation_log::store::operation_log_db_path;
-        use cmdr_operation_log::writer::OperationLogWriter;
-
-        let journal_dir = create_test_dir(&format!("{name}_journal"));
-        let db = operation_log_db_path(&journal_dir);
-        let writer = OperationLogWriter::spawn(&db).expect("spawn writer");
-        let journal = crate::operation_log_host::TestJournalGuard::install(Arc::new(WriterJournal::new(writer)));
+        let log = TestOperationLog::new(&format!("bulk_rename_test_{name}_journal"));
         let op_id = format!("op-{name}");
-        let scope = test_scope();
+        let scope = Arc::new(TestOperations::journaling_into(&log).op_scope());
         super::super::super::journal::open_local_op(&scope, &op_id, OpKind::Rename, Initiator::Agent, 1, Some("root"));
-        Self {
-            _journal: journal,
-            _journal_dir: journal_dir,
-            db,
-            op_id,
-            scope,
-        }
+        Self { log, op_id, scope }
     }
 
     fn recorder(&self) -> BulkRenameRecorder {
@@ -568,7 +537,7 @@ impl LandingJournal {
     fn rows(&self) -> Vec<cmdr_operation_log::store::OperationItemRow> {
         use cmdr_operation_log::store::{open_read_connection, read_operation_items};
         super::super::super::journal::finalize_op(&self.scope, OpKind::Rename, ExecutionStatus::Done);
-        let conn = open_read_connection(&self.db).expect("read conn");
+        let conn = open_read_connection(self.log.db()).expect("read conn");
         read_operation_items(&conn, &self.op_id, 100).expect("items")
     }
 }
@@ -738,7 +707,7 @@ fn a_skipped_row_is_logged_but_never_offered_to_undo_as_a_rollback_unit() {
     let rows = bed.rows();
     assert_eq!(rows.len(), 2, "both rows are in the log: {rows:?}");
 
-    let conn = open_read_connection(&bed.db).expect("read conn");
+    let conn = open_read_connection(bed.log.db()).expect("read conn");
     let units = read_rollback_units_page(&conn, &bed.op_id, i64::MAX, 100).expect("rollback units");
     assert_eq!(
         units.len(),

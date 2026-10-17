@@ -89,6 +89,14 @@ impl TestOperations {
         &self.volumes
     }
 
+    /// Registers a local volume over `/` as `root`, the id a local operation
+    /// names (and a `None` volume id means), so it takes the timed `Volume`
+    /// path production takes.
+    pub(crate) fn register_local_root(&self) {
+        let root = cmdr_local::LocalPosixVolume::local_folder("Test root", "/", crate::volume_host::host());
+        self.volumes.register("root", Arc::new(root));
+    }
+
     /// Every path this engine announced before writing it.
     #[expect(
         dead_code,

@@ -11,7 +11,8 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::file_system::volume::manager::get_volume_manager;
-use crate::file_system::write_operations::installed;
+use crate::file_system::write_operations::Operations;
+use crate::file_system::write_operations::testing::{TestOperationLog, TestOperations};
 use crate::test_support::TestDir;
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::{LaneKey, ListingProgress};
@@ -59,23 +60,16 @@ fn rename_descriptor_marks_only_nonroot_volumes_busy() {
 /// op id isn't returned, so the row is found by the test's unique file name.
 #[tokio::test]
 async fn an_instant_rename_journals_its_row_through_the_real_store() {
-    use cmdr_operation_log::capture::WriterJournal;
-    use cmdr_operation_log::store::{
-        open_read_connection, operation_log_db_path, read_operation_items, recent_operations,
-    };
+    use cmdr_operation_log::store::{open_read_connection, read_operation_items, recent_operations};
     use cmdr_operation_log::types::{ExecutionStatus, OpKind, RollbackState};
-    use cmdr_operation_log::writer::OperationLogWriter;
 
-    let journal_dir = create_test_dir("journal_db");
-    let db = operation_log_db_path(&journal_dir);
-    let _journal = crate::operation_log_host::TestJournalGuard::install(Arc::new(WriterJournal::new(
-        OperationLogWriter::spawn(&db).expect("writer"),
-    )));
+    let log = TestOperationLog::new("rename_journal_db");
+    let engine = TestOperations::journaling_into(&log);
     let tmp = create_test_dir("journaled");
     let old_name = format!("{}.txt", unique("journaled-old"));
     fs::write(tmp.join(&old_name), "content").expect("source");
 
-    installed()
+    engine
         .rename_managed(
             tmp.join(&old_name),
             tmp.join("new.txt"),
@@ -86,7 +80,7 @@ async fn an_instant_rename_journals_its_row_through_the_real_store() {
         .await
         .expect("rename");
 
-    let conn = open_read_connection(&db).expect("read conn");
+    let conn = open_read_connection(log.db()).expect("read conn");
     let (op, items) = recent_operations(&conn, 50)
         .expect("ops")
         .into_iter()
@@ -105,11 +99,12 @@ async fn an_instant_rename_journals_its_row_through_the_real_store() {
 
 #[tokio::test]
 async fn rename_managed_local_success() {
+    let engine = TestOperations::new();
     let tmp = create_test_dir("managed_ok");
     let old = tmp.join("old.txt");
     let new = tmp.join("new.txt");
     fs::write(&old, "content").unwrap();
-    let result = installed()
+    let result = engine
         .rename_managed(old.clone(), new.clone(), false, "root".to_string(), Initiator::User)
         .await;
     assert!(result.is_ok());
@@ -122,11 +117,12 @@ async fn rename_managed_local_success() {
 async fn rename_managed_renames_a_zip_file_itself() {
     // The `.zip` file is a regular file: renaming it must work like any other file.
     // Only a rename INSIDE the archive is refused (covered by the reject test).
+    let engine = TestOperations::new();
     let tmp = create_test_dir("managed_zip_rename");
     let old = tmp.join("bundle.zip");
     let new = tmp.join("renamed.zip");
     fs::write(&old, b"PK\x03\x04rest").unwrap();
-    let result = installed()
+    let result = engine
         .rename_managed(old.clone(), new.clone(), false, "root".to_string(), Initiator::User)
         .await;
     assert!(result.is_ok(), "renaming the .zip file itself must succeed: {result:?}");
@@ -137,12 +133,13 @@ async fn rename_managed_renames_a_zip_file_itself() {
 
 #[tokio::test]
 async fn rename_managed_local_conflict_without_force_is_transparent() {
+    let engine = TestOperations::new();
     let tmp = create_test_dir("managed_conflict");
     let old = tmp.join("old.txt");
     let new = tmp.join("new.txt");
     fs::write(&old, "old").unwrap();
     fs::write(&new, "new").unwrap();
-    let result = installed()
+    let result = engine
         .rename_managed(old.clone(), new.clone(), false, "root".to_string(), Initiator::User)
         .await;
     assert!(result.is_err());
@@ -153,12 +150,13 @@ async fn rename_managed_local_conflict_without_force_is_transparent() {
 
 #[tokio::test]
 async fn rename_managed_local_force_overwrites() {
+    let engine = TestOperations::new();
     let tmp = create_test_dir("managed_force");
     let old = tmp.join("old.txt");
     let new = tmp.join("new.txt");
     fs::write(&old, "new content").unwrap();
     fs::write(&new, "old content").unwrap();
-    let result = installed()
+    let result = engine
         .rename_managed(old.clone(), new.clone(), true, "root".to_string(), Initiator::User)
         .await;
     assert!(result.is_ok());
@@ -240,25 +238,26 @@ async fn rename_managed_marks_nonroot_volume_busy_during_op() {
         started: Arc::clone(&started),
         release: Arc::clone(&release),
     });
-    get_volume_manager().register(&volume_id, volume);
+    let engine = TestOperations::new();
+    engine.volumes().register(&volume_id, volume);
 
     let vid = volume_id.clone();
+    let ops = Operations::clone(&engine);
     let handle = tokio::spawn(async move {
-        installed()
-            .rename_managed(
-                PathBuf::from("/old"),
-                PathBuf::from("/new"),
-                false,
-                vid,
-                Initiator::User,
-            )
-            .await
+        ops.rename_managed(
+            PathBuf::from("/old"),
+            PathBuf::from("/new"),
+            false,
+            vid,
+            Initiator::User,
+        )
+        .await
     });
 
     // Wait until the volume's rename is parked mid-flight.
     started.notified().await;
     assert!(
-        installed().busy_volume_ids().contains(&volume_id),
+        engine.busy_volume_ids().contains(&volume_id),
         "a non-root volume must be busy while its rename runs"
     );
 
@@ -267,7 +266,7 @@ async fn rename_managed_marks_nonroot_volume_busy_during_op() {
     let result = handle.await.expect("task joins");
     assert!(result.is_ok(), "the managed rename returns success");
     assert!(
-        !installed().busy_volume_ids().contains(&volume_id),
+        !engine.busy_volume_ids().contains(&volume_id),
         "the volume must be freed once the rename finishes"
     );
 }
@@ -286,6 +285,9 @@ async fn rename_managed_routes_an_in_archive_rename_to_the_edit_driver() {
         )),
     );
 
+    // An engine over the app's own answers: the boundary check asks the app's
+    // registry, which `FakeVolumes` doesn't route through.
+    let engine = crate::operations_host::test_engine();
     let tmp = create_test_dir("archive_rename");
     let zip = tmp.join("bundle.zip");
     fs::write(&zip, b"PK\x03\x04not-a-real-body").expect("write zip magic");
@@ -296,7 +298,7 @@ async fn rename_managed_routes_an_in_archive_rename_to_the_edit_driver() {
     // rather than the old flat "isn't available yet" refusal or an instant rename.
     let from = zip.join("old.txt");
     let to = zip.join("new.txt");
-    let err = installed()
+    let err = engine
         .rename_managed(from, to, false, "root".to_string(), Initiator::User)
         .await
         .expect_err("routing needs an app handle the unit test doesn't wire");
@@ -313,7 +315,7 @@ async fn rename_managed_routes_an_in_archive_rename_to_the_edit_driver() {
     // A cross-boundary rename (OUT of the archive) is refused as a move, a
     // deterministic routing decision that needs no app handle.
     let outside = tmp.join("out.txt");
-    let cross = installed()
+    let cross = engine
         .rename_managed(zip.join("old.txt"), outside, false, "root".to_string(), Initiator::User)
         .await
         .expect_err("a cross-boundary rename is refused");
@@ -344,13 +346,14 @@ async fn route_archive_rename_onto_an_existing_name_errors_without_building_a_te
     // rejected up front with the standard "already exists" message, so the FE
     // shows the friendly copy instead of the raw `zip` "Duplicate filename" — and
     // no temp is built.
+    let engine = TestOperations::new();
     let tmp = create_test_dir("archive_rename_dup");
     let zip = tmp.join("bundle.zip");
     write_real_zip(&zip, &[("old.txt", b"o"), ("taken.txt", b"t")]);
 
     let from = zip.join("old.txt");
     let to = zip.join("taken.txt");
-    let err = route_archive_rename(installed(), &from, &to, "root")
+    let err = route_archive_rename(&engine, &from, &to, "root")
         .await
         .expect_err("renaming onto an existing name must be refused");
     assert!(
@@ -376,7 +379,11 @@ async fn route_archive_rename_onto_an_existing_name_errors_without_building_a_te
 
 /// An object store's double, registered under a fresh id, holding `/a/foo`
 /// with `files` files in it.
-async fn copying_store(label: &str, files: usize) -> (String, Arc<cmdr_fs::volume::InMemoryVolume>) {
+async fn copying_store(
+    engine: &TestOperations,
+    label: &str,
+    files: usize,
+) -> (String, Arc<cmdr_fs::volume::InMemoryVolume>) {
     let volume_id = unique(label);
     let volume = Arc::new(
         cmdr_fs::volume::InMemoryVolume::new(&volume_id)
@@ -392,7 +399,9 @@ async fn copying_store(label: &str, files: usize) -> (String, Arc<cmdr_fs::volum
             .await
             .unwrap();
     }
-    get_volume_manager().register(&volume_id, Arc::clone(&volume) as Arc<dyn Volume>);
+    engine
+        .volumes()
+        .register(&volume_id, Arc::clone(&volume) as Arc<dyn Volume>);
     (volume_id, volume)
 }
 
@@ -401,9 +410,10 @@ async fn copying_store(label: &str, files: usize) -> (String, Arc<cmdr_fs::volum
 /// unit test, with no app to emit through, can't, and says so.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_rename_that_copies_starts_a_move_instead_of_calling_rename() {
-    let (volume_id, volume) = copying_store("copy-rename", 2).await;
+    let engine = TestOperations::new();
+    let (volume_id, volume) = copying_store(&engine, "copy-rename", 2).await;
 
-    let result = installed()
+    let result = engine
         .rename_managed(
             PathBuf::from("/a/foo"),
             PathBuf::from("/a/bar"),
@@ -423,8 +433,9 @@ async fn a_rename_that_copies_starts_a_move_instead_of_calling_rename() {
 /// F2 hears what a copying rename carries, and whether to confirm it first.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn the_validity_check_reports_the_move_a_copying_rename_runs_as() {
-    let (small_id, _small) = copying_store("copy-validity-small", 3).await;
-    let small = installed()
+    let engine = TestOperations::new();
+    let (small_id, _small) = copying_store(&engine, "copy-validity-small", 3).await;
+    let small = engine
         .check_rename_validity_impl("/a".into(), "foo".into(), "bar".into(), small_id)
         .await
         .priced(|_| false);
@@ -438,8 +449,8 @@ async fn the_validity_check_reports_the_move_a_copying_rename_runs_as() {
         })
     );
 
-    let (big_id, _big) = copying_store("copy-validity-big", 101).await;
-    let big = installed()
+    let (big_id, _big) = copying_store(&engine, "copy-validity-big", 101).await;
+    let big = engine
         .check_rename_validity_impl("/a".into(), "foo".into(), "bar".into(), big_id)
         .await
         .priced(|_| false);
@@ -450,8 +461,8 @@ async fn the_validity_check_reports_the_move_a_copying_rename_runs_as() {
     let plain_id = unique("plain-validity");
     let plain = Arc::new(cmdr_fs::volume::InMemoryVolume::new(&plain_id));
     plain.create_directory(Path::new("/a/foo")).await.unwrap();
-    get_volume_manager().register(&plain_id, plain as Arc<dyn Volume>);
-    let one_call = installed()
+    engine.volumes().register(&plain_id, plain as Arc<dyn Volume>);
+    let one_call = engine
         .check_rename_validity_impl("/a".into(), "foo".into(), "bar".into(), plain_id)
         .await
         .priced(|_| false);
@@ -463,9 +474,10 @@ async fn the_validity_check_reports_the_move_a_copying_rename_runs_as() {
 /// never priced: it asks first anyway.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn the_host_prices_what_a_counted_copying_rename_carries() {
-    let (small_id, _small) = copying_store("copy-validity-priced", 3).await;
+    let engine = TestOperations::new();
+    let (small_id, _small) = copying_store(&engine, "copy-validity-priced", 3).await;
     let mut priced = None;
-    let small = installed()
+    let small = engine
         .check_rename_validity_impl("/a".into(), "foo".into(), "bar".into(), small_id)
         .await
         .priced(|facts| {
@@ -475,8 +487,8 @@ async fn the_host_prices_what_a_counted_copying_rename_carries() {
     assert_eq!(priced, Some((3, 6, 1)), "the price sees the counted folder");
     assert!(small.by_move.expect("a copying rename reports its move").confirm_first);
 
-    let (big_id, _big) = copying_store("copy-validity-unpriced", 101).await;
-    let big = installed()
+    let (big_id, _big) = copying_store(&engine, "copy-validity-unpriced", 101).await;
+    let big = engine
         .check_rename_validity_impl("/a".into(), "foo".into(), "bar".into(), big_id)
         .await
         .priced(|_| panic!("an unfinished count isn't priced"));
@@ -505,7 +517,8 @@ async fn a_batch_where_a_rename_copies_runs_as_one_move() {
     use crate::file_system::write_operations::event_sinks::CollectorEventSink;
     use cmdr_fs::ignore_poison::IgnorePoison;
 
-    let (volume_id, volume) = copying_store("copy-batch", 2).await;
+    let engine = TestOperations::new();
+    let (volume_id, volume) = copying_store(&engine, "copy-batch", 2).await;
     volume.create_file(Path::new("/a/note.txt"), b"n").await.unwrap();
     let mut rows = Vec::new();
     for (id, from, to) in [("1", "/a/foo", "/a/bar"), ("2", "/a/note.txt", "/a/memo.txt")] {
@@ -523,7 +536,7 @@ async fn a_batch_where_a_rename_copies_runs_as_one_move() {
     }
     let events = Arc::new(CollectorEventSink::new());
 
-    let started = installed()
+    let started = engine
         .start_renames(events.clone(), volume_id, rows, Initiator::Agent)
         .await
         .expect("the batch starts");
@@ -555,7 +568,8 @@ async fn a_batch_where_a_rename_copies_runs_as_one_move() {
 async fn a_batch_as_a_move_reports_the_swaps_it_left_out() {
     use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 
-    let (volume_id, volume) = copying_store("copy-batch-swap", 1).await;
+    let engine = TestOperations::new();
+    let (volume_id, volume) = copying_store(&engine, "copy-batch-swap", 1).await;
     volume.create_directory(Path::new("/a/bar")).await.unwrap();
     volume.create_file(Path::new("/a/note.txt"), b"n").await.unwrap();
     let mut rows = Vec::new();
@@ -577,7 +591,7 @@ async fn a_batch_as_a_move_reports_the_swaps_it_left_out() {
         });
     }
 
-    let started = installed()
+    let started = engine
         .start_renames(Arc::new(CollectorEventSink::new()), volume_id, rows, Initiator::Agent)
         .await
         .expect("the batch starts");
@@ -589,6 +603,7 @@ async fn a_batch_as_a_move_reports_the_swaps_it_left_out() {
 async fn a_batch_the_executor_runs_leaves_no_swap_out() {
     use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 
+    let engine = TestOperations::new();
     let tmp = TestDir::new("bulk-swap-local");
     fs::write(tmp.join("x.txt"), "x").unwrap();
     fs::write(tmp.join("y.txt"), "y").unwrap();
@@ -604,7 +619,7 @@ async fn a_batch_the_executor_runs_leaves_no_swap_out() {
         });
     }
 
-    let started = installed()
+    let started = engine
         .start_renames(
             Arc::new(CollectorEventSink::new()),
             "root".to_string(),
@@ -680,9 +695,12 @@ async fn a_case_only_rename_on_a_case_insensitive_volume_is_not_a_conflict() {
     let inner = cmdr_fs::volume::InMemoryVolume::new(&volume_id);
     inner.create_directory(Path::new("/share")).await.unwrap();
     inner.create_file(Path::new("/share/c.txt"), b"abcd").await.unwrap();
-    get_volume_manager().register(&volume_id, Arc::new(CaseFoldingVolume { inner }) as Arc<dyn Volume>);
+    let engine = TestOperations::new();
+    engine
+        .volumes()
+        .register(&volume_id, Arc::new(CaseFoldingVolume { inner }) as Arc<dyn Volume>);
 
-    let check = installed()
+    let check = engine
         .check_rename_validity_impl("/share".into(), "c.txt".into(), "C.txt".into(), volume_id)
         .await
         .priced(|_| false);
@@ -703,9 +721,10 @@ async fn a_case_only_rename_onto_a_real_sibling_is_still_a_conflict() {
     volume.create_directory(Path::new("/share")).await.unwrap();
     volume.create_file(Path::new("/share/c.txt"), b"abcd").await.unwrap();
     volume.create_file(Path::new("/share/C.txt"), b"other!").await.unwrap();
-    get_volume_manager().register(&volume_id, volume as Arc<dyn Volume>);
+    let engine = TestOperations::new();
+    engine.volumes().register(&volume_id, volume as Arc<dyn Volume>);
 
-    let check = installed()
+    let check = engine
         .check_rename_validity_impl("/share".into(), "c.txt".into(), "C.txt".into(), volume_id)
         .await
         .priced(|_| false);
