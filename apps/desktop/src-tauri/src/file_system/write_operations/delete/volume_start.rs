@@ -209,6 +209,7 @@ async fn run_volume_delete(
         events,
         op_id,
         WriteOperationType::Delete,
+        state,
         expected_sources,
         sources,
     )

@@ -20,6 +20,7 @@ use std::path::{Path, PathBuf};
 
 use super::event_sinks::OperationEventSink;
 use super::queued_sources::{kept_after_queue_local, kept_after_queue_on, local_source_is_gone};
+use super::state::WriteOperationState;
 use super::types::{SourceItemOutcome, WriteCompleteEvent, WriteOperationType, WriteSourceItemDoneEvent};
 use cmdr_fs::volume::Volume;
 
@@ -319,11 +320,12 @@ pub(crate) fn retain_bound_sources(
     events: &dyn OperationEventSink,
     operation_id: &str,
     operation_type: WriteOperationType,
+    state: &WriteOperationState,
     expected: Option<&ExpectedSources>,
     sources: Vec<PathBuf>,
 ) -> Option<Vec<PathBuf>> {
     let Some(expected) = expected else {
-        let kept = kept_after_queue_local(events, operation_id, operation_type, &sources)?;
+        let kept = kept_after_queue_local(events, operation_id, operation_type, state, &sources)?;
         return Some(select(&sources, &kept));
     };
     let kept = expected.kept_positions_local(events, operation_id, &sources);
@@ -340,11 +342,12 @@ pub(crate) async fn retain_bound_sources_on(
     events: &dyn OperationEventSink,
     operation_id: &str,
     operation_type: WriteOperationType,
+    state: &WriteOperationState,
     expected: Option<&ExpectedSources>,
     sources: Vec<PathBuf>,
 ) -> Option<Vec<PathBuf>> {
     let Some(expected) = expected else {
-        let kept = kept_after_queue_on(volume, events, operation_id, operation_type, &sources).await?;
+        let kept = kept_after_queue_on(volume, events, operation_id, operation_type, state, &sources).await?;
         return Some(select(&sources, &kept));
     };
     let kept = expected.kept_positions_on(volume, events, operation_id, &sources).await;
@@ -359,12 +362,13 @@ pub(crate) fn retain_bound_sources_with_sizes(
     events: &dyn OperationEventSink,
     operation_id: &str,
     operation_type: WriteOperationType,
+    state: &WriteOperationState,
     expected: Option<&ExpectedSources>,
     sources: Vec<PathBuf>,
     item_sizes: Option<Vec<u64>>,
 ) -> Option<(Vec<PathBuf>, Option<Vec<u64>>)> {
     let Some(expected) = expected else {
-        let kept = kept_after_queue_local(events, operation_id, operation_type, &sources)?;
+        let kept = kept_after_queue_local(events, operation_id, operation_type, state, &sources)?;
         return Some((select(&sources, &kept), item_sizes.map(|sizes| select(&sizes, &kept))));
     };
     let kept = expected.kept_positions_local(events, operation_id, &sources);

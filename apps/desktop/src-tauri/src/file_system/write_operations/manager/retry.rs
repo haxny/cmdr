@@ -10,8 +10,9 @@ use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 
+use super::super::Operations;
 use super::super::types::{RetryOutcome, WriteOperationError, WriteOperationStartResult};
-use super::{OperationManager, OperationSnapshot, manager};
+use super::{OperationManager, OperationSnapshot};
 use cmdr_fs::ignore_poison::IgnorePoison;
 
 /// Starts a failed operation again, as a NEW operation. Implemented by the
@@ -127,12 +128,25 @@ impl OperationManager {
     }
 }
 
-/// Starts a failed operation again from its queue row. Backs the
-/// `retry_failed_operation` IPC command.
-///
-/// [`RetryOutcome::NothingToRetry`] for an id with no retained failure, one with
-/// no way to start again, or one already starting; a refused start (a volume
-/// that's gone) comes back as the typed error and leaves the row as it was.
+impl Operations {
+    /// Starts a failed operation again from its queue row. Backs the
+    /// `retry_failed_operation` IPC command.
+    ///
+    /// [`RetryOutcome::NothingToRetry`] for an id with no retained failure, one
+    /// with no way to start again, or one already starting; a refused start (a
+    /// volume that is gone) comes back as the typed error and leaves the row as it
+    /// was.
+    pub(crate) async fn retry_failed_operation(&self, operation_id: &str) -> Result<RetryOutcome, WriteOperationError> {
+        self.manager().retry_failure(operation_id).await
+    }
+}
+
+/// [`Operations::retry_failed_operation`] on the installed engine; before
+/// `install` no failure is retained, so there is nothing to retry.
+// shim: removed in M7a
 pub async fn retry_failed_operation(operation_id: &str) -> Result<RetryOutcome, WriteOperationError> {
-    manager().retry_failure(operation_id).await
+    match super::super::installed_for("retry_failed_operation") {
+        Some(ops) => ops.retry_failed_operation(operation_id).await,
+        None => Ok(RetryOutcome::NothingToRetry),
+    }
 }

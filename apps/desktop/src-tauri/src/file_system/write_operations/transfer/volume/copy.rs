@@ -324,6 +324,7 @@ pub async fn copy_between_volumes(
                     &*events,
                     &op_id,
                     WriteOperationType::Copy,
+                    &state,
                     expected_sources.as_ref(),
                     source_paths,
                 )

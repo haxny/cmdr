@@ -12,6 +12,7 @@ use super::{
     retain_bound_sources_on, retain_bound_sources_with_sizes,
 };
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
+use crate::file_system::write_operations::state::WriteOperationState;
 use crate::file_system::write_operations::types::{SourceItemOutcome, WriteOperationType};
 use crate::test_support::TestDir;
 use cmdr_fs::ignore_poison::IgnorePoison;
@@ -35,7 +36,19 @@ fn expect_current(paths: &[PathBuf]) -> ExpectedSources {
 /// Drives the real local entry point, so every case here exercises what the
 /// starters exercise.
 fn retain(expected: &ExpectedSources, sink: &CollectorEventSink, sources: &[PathBuf]) -> Option<Vec<PathBuf>> {
-    retain_bound_sources(sink, "op", WriteOperationType::Delete, Some(expected), sources.to_vec())
+    retain_bound_sources(
+        sink,
+        "op",
+        WriteOperationType::Delete,
+        &unqueued(),
+        Some(expected),
+        sources.to_vec(),
+    )
+}
+
+/// An operation that never waited in the queue, so only the binding decides.
+fn unqueued() -> WriteOperationState {
+    WriteOperationState::new(std::time::Duration::ZERO)
 }
 
 fn skipped_paths(sink: &CollectorEventSink) -> Vec<String> {
@@ -85,6 +98,7 @@ fn an_unbound_operation_keeps_every_source_and_emits_nothing() {
         &sink,
         "op",
         WriteOperationType::Delete,
+        &unqueued(),
         None,
         vec![file.clone(), ghost.clone()],
     );
@@ -260,6 +274,7 @@ fn a_dropped_source_takes_its_size_with_it() {
         &sink,
         "op",
         WriteOperationType::Trash,
+        &unqueued(),
         Some(&expected),
         vec![first.clone(), stale, third.clone()],
         Some(vec![1, 2, 3]),
@@ -288,6 +303,7 @@ async fn a_remote_source_rewritten_since_review_is_dropped_and_reported() {
         &sink,
         "op",
         WriteOperationType::Delete,
+        &unqueued(),
         Some(&expected),
         vec![path.clone()],
     )
@@ -319,6 +335,7 @@ async fn an_unchanged_remote_source_survives() {
         &sink,
         "op",
         WriteOperationType::Delete,
+        &unqueued(),
         Some(&expected),
         vec![path.clone()],
     )
@@ -347,6 +364,7 @@ async fn a_remote_source_that_vanished_is_reported_as_removed() {
         &sink,
         "op",
         WriteOperationType::Delete,
+        &unqueued(),
         Some(&expected),
         vec![path.clone()],
     )
@@ -382,6 +400,7 @@ async fn a_local_expectation_for_a_path_only_the_volume_has_is_dropped() {
         &sink,
         "op",
         WriteOperationType::Delete,
+        &unqueued(),
         Some(&expected),
         vec![path],
     )
@@ -484,6 +503,7 @@ async fn a_local_expectation_is_honoured_on_a_volume_route() {
         &sink,
         "op",
         WriteOperationType::Copy,
+        &unqueued(),
         Some(&expected),
         vec![file.clone()],
     )
@@ -508,6 +528,7 @@ async fn a_changed_local_source_is_dropped_on_a_volume_route_too() {
         &sink,
         "op",
         WriteOperationType::Copy,
+        &unqueued(),
         Some(&expected),
         vec![file.clone()],
     )

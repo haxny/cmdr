@@ -746,6 +746,7 @@ pub use controls::{
     abort_all_write_operations, cancel_all_write_operations, cancel_write_operation, pending_write_conflict,
     resolve_write_conflict,
 };
+#[cfg(test)]
 pub(super) use controls::{pause_write_operation, resume_write_operation};
 pub(super) use registry::WriteOperationRegistry;
 #[cfg(test)]

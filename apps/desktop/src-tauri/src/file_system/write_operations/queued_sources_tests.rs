@@ -312,6 +312,7 @@ async fn on_a_volume_only_a_source_that_is_really_missing_counts_as_gone() {
         &collector,
         &op_id,
         WriteOperationType::Copy,
+        guard.state(),
         &sources,
     );
     let answer = async {

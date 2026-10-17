@@ -197,6 +197,7 @@ pub(super) async fn move_within_same_volume(
                     &*events,
                     &op_id,
                     WriteOperationType::Move,
+                    &state,
                     expected_sources.as_ref(),
                     source_paths,
                 )

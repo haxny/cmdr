@@ -260,6 +260,7 @@ pub async fn move_between_volumes(
                     &*events,
                     &op_id,
                     WriteOperationType::Move,
+                    &state,
                     expected_sources.as_ref(),
                     source_paths,
                 )

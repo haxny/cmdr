@@ -18,6 +18,7 @@ use cmdr_fs::ignore_poison::IgnorePoison;
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, RwLock};
 
+use super::Operations;
 use super::host::EngineEvents;
 use super::types::{LifecycleStatus, OperationStatus, WriteOperationPhase, WriteOperationType};
 
@@ -224,11 +225,10 @@ impl StatusCache {
 }
 
 // ============================================================================
-// The installed engine's cache, by free function
+// The installed engine's cache, by free function, for the status-cache tests
 // ============================================================================
 //
-// shim: removed in M6a. Each reads the installed engine; engine code moves to
-// its operation's scope or `self`.
+// Engine code reaches the cache through its operation's scope or `self`.
 
 /// Updates the internal status for an operation.
 #[cfg(test)]
@@ -253,7 +253,7 @@ pub(super) fn update_operation_status(
 }
 
 /// Registers a new operation in the status cache. See [`StatusCache::register`].
-#[cfg(any(test, target_os = "macos"))]
+#[cfg(test)]
 pub(super) fn register_operation_status(
     operation_id: &str,
     operation_type: WriteOperationType,
@@ -265,48 +265,9 @@ pub(super) fn register_operation_status(
 }
 
 /// Removes an operation from the status cache.
-#[cfg(any(test, target_os = "macos"))]
+#[cfg(test)]
 pub(super) fn unregister_operation_status(operation_id: &str) {
     super::installed().status().unregister(operation_id);
-}
-
-// ============================================================================
-// External busy-volume seam (drag-out file promises)
-// ============================================================================
-//
-// The drag-out fulfillment service (`crate::native_drag::fulfillment`) lives
-// outside this module but needs the same eject guard: while it streams bytes
-// off an MTP/SMB device into a Finder-chosen destination, the source volume
-// must register as busy so the user can't eject the phone mid-download (the
-// server-side `eject_volume` guard reads `busy_volume_ids()`). It is NOT a real
-// write operation — no registered state, no progress events, no settle — so it
-// can't go through `start_write_operation`. This thin `pub(crate)` pair is the
-// smallest honest seam: it touches only the status-cache half (which is what
-// the busy set is derived from), keeping the busy set and the
-// `volumes-busy-changed` event firing exactly as a real op would.
-
-/// Marks `volume_ids` busy for the duration of an external (non-write-op)
-/// operation, keyed by `op_id`. Used by the drag-out fulfillment service to
-/// guard the source volume against eject while a promise is streaming. Pair
-/// every call with [`release_external_volume_op`] (the fulfillment service uses
-/// an RAII guard so release fires on every exit path).
-///
-/// Registers under `WriteOperationType::Copy` because a drag-out download IS a
-/// copy from the device to local disk — the type only affects diagnostics
-/// (`get_operation_status`), and the busy set itself is type-agnostic.
-///
-/// macOS-only: the sole caller is `native_drag::fulfillment`, which is
-/// `#[cfg(target_os = "macos")]`. On other targets this would be dead code under
-/// `#![deny(unused)]`.
-#[cfg(target_os = "macos")]
-pub(crate) fn register_external_volume_op(op_id: &str, volume_ids: Vec<String>) {
-    register_operation_status(op_id, WriteOperationType::Copy, volume_ids);
-}
-
-/// Clears the busy mark registered by [`register_external_volume_op`].
-#[cfg(target_os = "macos")]
-pub(crate) fn release_external_volume_op(op_id: &str) {
-    unregister_operation_status(op_id);
 }
 
 /// `volumes-busy-changed` reports the installed engine's cache let through.
@@ -315,20 +276,88 @@ fn busy_emit_count() -> u64 {
     super::installed().status().busy_emit_count()
 }
 
-// ============================================================================
-// Public query functions
-// ============================================================================
+impl Operations {
+    // ========================================================================
+    // External busy-volume seam (drag-out file promises)
+    // ========================================================================
+    //
+    // The drag-out fulfillment service (`crate::native_drag::fulfillment`) lives
+    // outside this module but needs the same eject guard: while it streams bytes
+    // off an MTP/SMB device into a Finder-chosen destination, the source volume
+    // must register as busy so the user can't eject the phone mid-download (the
+    // server-side `eject_volume` guard reads `busy_volume_ids()`). It is NOT a
+    // real write operation — no registered state, no progress events, no settle
+    // — so it can't go through `start_write_operation`. This thin `pub(crate)`
+    // pair is the smallest honest seam: it touches only the status-cache half
+    // (which is what the busy set is derived from), keeping the busy set and the
+    // `volumes-busy-changed` event firing exactly as a real op would.
 
-/// Returns the busy volume IDs (sorted, for a stable payload / bootstrap).
-/// Used by the `get_busy_volume_ids` bootstrap command, the `eject_volume`
-/// guard, and the native breadcrumb-menu builder.
-pub fn busy_volume_ids() -> Vec<String> {
-    super::installed().status().busy_volume_ids()
+    /// Marks `volume_ids` busy for the duration of an external (non-write-op)
+    /// operation, keyed by `op_id`. Used by the drag-out fulfillment service to
+    /// guard the source volume against eject while a promise is streaming. Pair
+    /// every call with [`Self::release_external_volume_op`] (the fulfillment
+    /// service uses an RAII guard so release fires on every exit path).
+    ///
+    /// Registers under `WriteOperationType::Copy` because a drag-out download IS
+    /// a copy from the device to local disk — the type only affects diagnostics
+    /// (`get_operation_status`), and the busy set itself is type-agnostic.
+    ///
+    /// macOS-only: the sole caller is `native_drag::fulfillment`, which is
+    /// `#[cfg(target_os = "macos")]`. On other targets this would be dead code
+    /// under `#![deny(unused)]`.
+    #[cfg(target_os = "macos")]
+    pub(crate) fn register_external_volume_op(&self, op_id: &str, volume_ids: Vec<String>) {
+        self.status().register(op_id, WriteOperationType::Copy, volume_ids);
+    }
+
+    /// Clears the busy mark registered by [`Self::register_external_volume_op`].
+    #[cfg(target_os = "macos")]
+    pub(crate) fn release_external_volume_op(&self, op_id: &str) {
+        self.status().unregister(op_id);
+    }
+
+    /// Returns the busy volume IDs (sorted, for a stable payload / bootstrap).
+    /// Used by the `get_busy_volume_ids` bootstrap command, the `eject_volume`
+    /// guard, and the native breadcrumb-menu builder.
+    pub(crate) fn busy_volume_ids(&self) -> Vec<String> {
+        self.status().busy_volume_ids()
+    }
 }
 
-/// Gets the detailed status of a specific operation.
+// The installed engine's, by free function, for callers outside the engine.
+// Before `install` nothing is running, so nothing is busy and no operation has
+// a status.
+// shim: removed in M7a
+
+/// [`Operations::register_external_volume_op`] on the installed engine. Before
+/// `install` nothing can be ejected mid-transfer either, so there's nothing to
+/// guard.
+#[cfg(target_os = "macos")]
+pub(crate) fn register_external_volume_op(op_id: &str, volume_ids: Vec<String>) {
+    if let Some(ops) = super::installed_for("register_external_volume_op") {
+        ops.register_external_volume_op(op_id, volume_ids);
+    }
+}
+
+/// [`Operations::release_external_volume_op`] on the installed engine.
+#[cfg(target_os = "macos")]
+pub(crate) fn release_external_volume_op(op_id: &str) {
+    if let Some(ops) = super::installed_for("release_external_volume_op") {
+        ops.release_external_volume_op(op_id);
+    }
+}
+
+/// [`Operations::busy_volume_ids`] on the installed engine.
+pub fn busy_volume_ids() -> Vec<String> {
+    super::installed_for("busy_volume_ids")
+        .map(Operations::busy_volume_ids)
+        .unwrap_or_default()
+}
+
+/// [`Operations::get_operation_status`] on the installed engine.
 ///
-/// Returns `None` if the operation is not found (either never existed or already completed).
+/// Returns `None` if the operation is not found (either never existed or
+/// already completed).
 pub fn get_operation_status(operation_id: &str) -> Option<OperationStatus> {
-    super::installed().get_operation_status(operation_id)
+    super::installed_for("get_operation_status")?.get_operation_status(operation_id)
 }

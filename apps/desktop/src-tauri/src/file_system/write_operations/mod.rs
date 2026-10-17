@@ -347,29 +347,51 @@ pub(crate) fn install(operations: Operations) -> Result<(), Operations> {
     INSTALLED.set(operations)
 }
 
-/// The engine the host installed.
+/// The engine the host installed, for a free function that `asked`, or `None`
+/// before `install`.
+///
+/// ❌ `None` never panics and never falls back to another engine (a detached
+/// one would write with nobody journaling or hearing it). Each shim refuses
+/// with a variant its caller already handles, or answers "nothing" where that's
+/// the truth (no engine, no operations), and this logs the miss at error level.
+/// The engine names no app reporter, so a log line is all it can raise; the
+/// error report comes from the app's own accessor
+/// (`operations_host::operations`), which the IPC start commands go through.
+/// The app installs at the top of `setup()`, so neither is reachable there.
 ///
 /// A test binary never installs, so its first read builds the engine every
 /// test shares (`test_support::shared_engine`); the bench binary's builds a
-/// detached one. In the app, `operations_host::install` runs at the top of
-/// `setup()`, before any caller can exist, and the IPC start commands refuse
-/// through the app's accessor rather than reach this.
+/// detached one.
 // shim: removed in M7a
-pub(crate) fn installed() -> &'static Operations {
+pub(crate) fn installed_for(asked: &'static str) -> Option<&'static Operations> {
+    let engine = installed_slot();
+    if engine.is_none() {
+        log::error!(target: "op_manager", "{asked} reached the write engine before it was installed; refused");
+    }
+    engine
+}
+
+// shim: removed in M7a
+fn installed_slot() -> Option<&'static Operations> {
     #[cfg(test)]
     {
-        INSTALLED.get_or_init(test_support::shared_engine)
+        Some(INSTALLED.get_or_init(test_support::shared_engine))
     }
     #[cfg(all(not(test), feature = "transfer-bench"))]
     {
-        INSTALLED.get_or_init(Operations::detached)
+        Some(INSTALLED.get_or_init(Operations::detached))
     }
     #[cfg(all(not(test), not(feature = "transfer-bench")))]
     {
-        INSTALLED
-            .get()
-            .expect("operations_host::install runs at the top of setup(), before anything can reach the engine")
+        INSTALLED.get()
     }
+}
+
+/// The engine the host installed, for engine code that hasn't been handed its
+/// own yet.
+// shim: removed in M6a
+pub(crate) fn installed() -> &'static Operations {
+    installed_slot().expect("operations_host::install runs at the top of setup(), before anything can reach the engine")
 }
 
 // ============================================================================
@@ -611,6 +633,7 @@ pub async fn copy_files_start(
                 &*events,
                 &op_id,
                 WriteOperationType::Copy,
+                &state,
                 expected_sources.as_ref(),
                 sources,
             ) else {
@@ -679,6 +702,7 @@ pub async fn move_files_start(
                 &*events,
                 &op_id,
                 WriteOperationType::Move,
+                &state,
                 expected_sources.as_ref(),
                 sources,
             ) else {
@@ -783,6 +807,7 @@ pub async fn delete_files_start(
                     &*events,
                     &op_id,
                     WriteOperationType::Delete,
+                    &state,
                     expected_sources.as_ref(),
                     sources,
                 ) else {
@@ -847,6 +872,7 @@ pub async fn trash_files_start(
                 &*events,
                 &op_id,
                 WriteOperationType::Trash,
+                &state,
                 expected_sources.as_ref(),
                 sources,
                 item_sizes,

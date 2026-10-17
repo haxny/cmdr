@@ -32,8 +32,9 @@ use std::path::{Path, PathBuf};
 
 use tokio::sync::oneshot;
 
+use super::Operations;
 use super::event_sinks::OperationEventSink;
-use super::state::{WriteOperationState, is_cancelled, operation_states};
+use super::state::{WriteOperationState, is_cancelled};
 use super::types::{
     CancelRollback, SourceItemOutcome, SourcesGoneAnswerOutcome, SourcesGoneNext, WriteCancelledEvent,
     WriteCompleteEvent, WriteOperationType, WriteSourceItemDoneEvent, WriteSourcesGoneEvent,
@@ -44,50 +45,65 @@ use cmdr_fs::volume::{Volume, VolumeError};
 /// truth; the names only help the person recognize what moved.
 const GONE_SAMPLE_LEN: usize = 5;
 
-/// Carries a queued operation on with the sources that are still there. The
-/// person's "Move the rest" (or "Copy the rest", …); cancelling is the ordinary
-/// `cancel_operation`.
-pub fn continue_without_gone_sources(operation_id: &str) -> SourcesGoneAnswerOutcome {
-    let Some(state) = operation_states().get(operation_id) else {
-        log::info!(target: "queued_sources", "continue for op={operation_id}: no such operation");
-        return SourcesGoneAnswerOutcome::UnknownOperation;
-    };
-    if state.sources_gone.carry_on() {
-        log::info!(target: "queued_sources", "op={operation_id}: carrying on without the sources that left");
-        SourcesGoneAnswerOutcome::Continued
-    } else {
-        log::info!(target: "queued_sources", "continue for op={operation_id}: it isn't asking");
-        SourcesGoneAnswerOutcome::NotAsking
+impl Operations {
+    /// Carries a queued operation on with the sources that are still there. The
+    /// person's "Move the rest" (or "Copy the rest", …); cancelling is the
+    /// ordinary `cancel_operation`.
+    pub(crate) fn continue_without_gone_sources(&self, operation_id: &str) -> SourcesGoneAnswerOutcome {
+        let Some(state) = self.registry().get(operation_id) else {
+            log::info!(target: "queued_sources", "continue for op={operation_id}: no such operation");
+            return SourcesGoneAnswerOutcome::UnknownOperation;
+        };
+        if state.sources_gone.carry_on() {
+            log::info!(target: "queued_sources", "op={operation_id}: carrying on without the sources that left");
+            SourcesGoneAnswerOutcome::Continued
+        } else {
+            log::info!(target: "queued_sources", "continue for op={operation_id}: it isn't asking");
+            SourcesGoneAnswerOutcome::NotAsking
+        }
+    }
+
+    /// The question `operation_id` is parked on, if any. For a surface that
+    /// arrives after the broadcast.
+    pub(crate) fn pending_sources_gone(&self, operation_id: &str) -> Option<WriteSourcesGoneEvent> {
+        self.registry().get(operation_id)?.sources_gone.pending()
     }
 }
 
-/// The question `operation_id` is parked on, if any. For a surface that arrives
-/// after the broadcast.
-pub(crate) fn pending_sources_gone(operation_id: &str) -> Option<WriteSourcesGoneEvent> {
-    operation_states().get(operation_id)?.sources_gone.pending()
+/// [`Operations::continue_without_gone_sources`] on the installed engine; no
+/// operation is asking before `install`.
+// shim: removed in M7a
+pub fn continue_without_gone_sources(operation_id: &str) -> SourcesGoneAnswerOutcome {
+    super::installed_for("continue_without_gone_sources").map_or(SourcesGoneAnswerOutcome::UnknownOperation, |ops| {
+        ops.continue_without_gone_sources(operation_id)
+    })
 }
 
-/// The positions in `sources` this operation may still touch, after checking
-/// what left while it queued, or `None` when it's over (its terminal event is
-/// already out). Local filesystem; blocks the calling thread while the person
-/// decides, so call it only from the operation's blocking task.
+/// [`Operations::pending_sources_gone`] on the installed engine.
+// shim: removed in M7a
+pub(crate) fn pending_sources_gone(operation_id: &str) -> Option<WriteSourcesGoneEvent> {
+    super::installed_for("pending_sources_gone")?.pending_sources_gone(operation_id)
+}
+
+/// The positions in `sources` this operation (`state`) may still touch, after
+/// checking what left while it queued, or `None` when it's over (its terminal
+/// event is already out). Local filesystem; blocks the calling thread while the
+/// person decides, so call it only from the operation's blocking task.
 ///
 /// Every position comes back untouched for an operation that never waited.
 pub(crate) fn kept_after_queue_local(
     events: &dyn OperationEventSink,
     operation_id: &str,
     operation_type: WriteOperationType,
+    state: &WriteOperationState,
     sources: &[PathBuf],
 ) -> Option<Vec<usize>> {
     let all = || (0..sources.len()).collect();
-    let Some(state) = operation_states().get(operation_id) else {
-        return Some(all());
-    };
     if !state.waited_in_queue() {
         return Some(all());
     }
     let gone: Vec<bool> = sources.iter().map(|source| local_source_is_gone(source)).collect();
-    match plan(events, operation_id, operation_type, sources, &gone, &state) {
+    match plan(events, operation_id, operation_type, sources, &gone, state) {
         Plan::Proceed(kept) => Some(kept),
         Plan::Stopped => None,
         Plan::Ask(answer, kept) => {
@@ -104,12 +120,10 @@ pub(crate) async fn kept_after_queue_on(
     events: &dyn OperationEventSink,
     operation_id: &str,
     operation_type: WriteOperationType,
+    state: &WriteOperationState,
     sources: &[PathBuf],
 ) -> Option<Vec<usize>> {
     let all = || (0..sources.len()).collect();
-    let Some(state) = operation_states().get(operation_id) else {
-        return Some(all());
-    };
     if !state.waited_in_queue() {
         return Some(all());
     }
@@ -117,7 +131,7 @@ pub(crate) async fn kept_after_queue_on(
     for source in sources {
         gone.push(volume_source_is_gone(volume, source).await);
     }
-    match plan(events, operation_id, operation_type, sources, &gone, &state) {
+    match plan(events, operation_id, operation_type, sources, &gone, state) {
         Plan::Proceed(kept) => Some(kept),
         Plan::Stopped => None,
         Plan::Ask(answer, kept) => {

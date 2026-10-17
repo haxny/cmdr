@@ -141,10 +141,21 @@ pub(in crate::file_system::write_operations) fn operation_states() -> &'static W
     super::super::installed().registry()
 }
 
-/// The newest progress tick of every live operation that has emitted one. See
-/// [`WriteOperationRegistry::latest_progress`].
+impl super::super::Operations {
+    /// The newest progress tick of every live operation that has emitted one. See
+    /// [`WriteOperationRegistry::latest_progress`].
+    pub(crate) fn latest_operation_progress(&self) -> Vec<WriteProgressEvent> {
+        self.registry().latest_progress()
+    }
+}
+
+/// [`Operations::latest_operation_progress`](super::super::Operations::latest_operation_progress)
+/// on the installed engine; nothing before `install`.
+// shim: removed in M7a
 pub fn latest_operation_progress() -> Vec<WriteProgressEvent> {
-    operation_states().latest_progress()
+    super::super::installed_for("latest_operation_progress")
+        .map(super::super::Operations::latest_operation_progress)
+        .unwrap_or_default()
 }
 
 /// Drops `operation_id`'s state, ending its liveness first. See

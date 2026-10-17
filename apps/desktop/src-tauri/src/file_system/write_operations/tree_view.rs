@@ -7,8 +7,7 @@
 
 use serde::Serialize;
 
-use super::manager;
-use super::state::operation_states;
+use super::Operations;
 use super::transfer_tree::{TransferTreeView, TransferTreeViewRequest};
 use super::types::{ProgressAxis, WriteOperationType};
 
@@ -24,31 +23,47 @@ pub(crate) enum TransferTreeViewError {
     NotATransfer,
 }
 
-/// The window `request` asks for, of the operation's tree.
-///
-/// `ready: false` while the operation is queued or scanning (no tree yet), so
-/// a view that attaches early gets an answer instead of an error. The axis is
-/// the bottleneck the operation's last `write-progress` carried, `Bytes` before
-/// there was one.
+impl Operations {
+    /// The window `request` asks for, of the operation's tree.
+    ///
+    /// `ready: false` while the operation is queued or scanning (no tree yet), so
+    /// a view that attaches early gets an answer instead of an error. The axis is
+    /// the bottleneck the operation's last `write-progress` carried, `Bytes` before
+    /// there was one.
+    pub(crate) fn transfer_tree_view(
+        &self,
+        operation_id: &str,
+        request: &TransferTreeViewRequest,
+    ) -> Result<TransferTreeView, TransferTreeViewError> {
+        let operation_type = self
+            .manager()
+            .operation_type_of(operation_id)
+            .ok_or(TransferTreeViewError::UnknownOperation)?;
+        if !builds_a_tree(operation_type) {
+            return Err(TransferTreeViewError::NotATransfer);
+        }
+        let Some(state) = self.registry().get(operation_id) else {
+            // Admitted but not yet started: nothing scanned, nothing to show.
+            return Ok(TransferTreeView::not_ready(ProgressAxis::Bytes));
+        };
+        let axis = state
+            .last_progress()
+            .and_then(|event| event.bottleneck)
+            .unwrap_or(ProgressAxis::Bytes);
+        Ok(state.transfer_tree.view(request, axis))
+    }
+}
+
+/// [`Operations::transfer_tree_view`] on the installed engine; no operation
+/// before `install`.
+// shim: removed in M7a
 pub(crate) fn transfer_tree_view(
     operation_id: &str,
     request: &TransferTreeViewRequest,
 ) -> Result<TransferTreeView, TransferTreeViewError> {
-    let operation_type = manager::manager()
-        .operation_type_of(operation_id)
-        .ok_or(TransferTreeViewError::UnknownOperation)?;
-    if !builds_a_tree(operation_type) {
-        return Err(TransferTreeViewError::NotATransfer);
-    }
-    let Some(state) = operation_states().get(operation_id) else {
-        // Admitted but not yet started: nothing scanned, nothing to show.
-        return Ok(TransferTreeView::not_ready(ProgressAxis::Bytes));
-    };
-    let axis = state
-        .last_progress()
-        .and_then(|event| event.bottleneck)
-        .unwrap_or(ProgressAxis::Bytes);
-    Ok(state.transfer_tree.view(request, axis))
+    super::installed_for("transfer_tree_view")
+        .ok_or(TransferTreeViewError::UnknownOperation)?
+        .transfer_tree_view(operation_id, request)
 }
 
 /// Copy, move, and compress build one; nothing else does.
