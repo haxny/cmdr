@@ -1904,6 +1904,31 @@ milestone, because each goes red or silent the moment the directory moves:
 `desktop-rust-lock-poison`, `file-length`, `desktop-rust-jscpd`, and `desktop-rust-module-cycles` (slow, needed: the
 crate's homes are new and must show no tangle).
 
+**What landed differently** (recorded at execution):
+
+- **The spawn ban isn't on.** The crate `clippy.toml` carries the root's settings and `libc::sync` (behavior change 3:
+  the scan shrank to `no_spawn_async_sync_in_the_engine`), but 18 production sites still spawn ambiently (`tokio::spawn`
+  ×5, `tokio::task::spawn_blocking` ×13: `local_start.rs:144` for every managed op, the rename and archive-edit blocking
+  calls, the watchdog, the preview, the retry, the fresh-compress feed). M5a moved only `tauri::async_runtime` onto the
+  host runtime; moving these changes which runtime runs them, so it's its own slice.
+- **Surface:** 83 root promises, 65 `Operations` methods, 2 public modules (`host`, the `transfer-bench` door), 37
+  items, measured with no headroom. Eight handle methods are app-TEST reaches that production also runs inside the
+  engine (`host`, `archive_edit_start`, `compress_start`, `copy_between_volumes`, `route_archive_delete`,
+  `start_bulk_rename`, `pause_write_operation`, `resume_write_operation`): candidates for `testing` wrappers, which
+  would change the cells' calls.
+- **`testing`** also turns on `cmdr-listing/testing` (an optional dependency, off in every shipped build), because
+  `TestOperations::seeing` and `pane_order_host` reach `PaneListings` and the pane sort. `forward_volume_methods` is
+  `#[macro_export]`ed; `IntentCell` joined the list. A crate-root `cfg_attr` lifts `unreachable_pub` without `testing`,
+  where the `testing` re-exports' internals are unreachable by construction.
+- **`discarded-outcome` stays app-tree-only** (its `Why` says so): it resolves callees by name across everything it
+  scans, so scanning the library crates misreads `tauri::async_runtime::spawn_blocking`. The move did surface two real
+  drops it had been missing (`state_recovery/plugin_stores.rs`), now opted out with a reason.
+- **The app lost `flate2` and the `tar` dev-dependency** here, not in M8b: `unused_crate_dependencies` fails the lane
+  the moment the engine leaves.
+- **Disk-image atom:** `transfer::real_image::` (the cells moved with the engine after M7g); the lane ran once, 34
+  passed.
+- Tests: the app's lib 7,968 (7,580 not ignored) → 6,006 + `cmdr-operations` 1,962 (5,629 + 1,951).
+
 ### M8b: After the move
 
 **Scope.**
