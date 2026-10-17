@@ -593,7 +593,11 @@ impl OperationProbe {
         // escalates.
         let proven_dead = self.connection_proven_dead();
         let abort_after_ms = u64::try_from(self.stall_abort_after.as_millis()).unwrap_or(u64::MAX);
-        for task in self.tasks.lock_ignore_poison().iter() {
+        // The table is copied out first, so the report below reaches the host
+        // with no lock held (a slow host would otherwise stall every task
+        // registering or leaving the window).
+        let tasks: Vec<Arc<TaskProbe>> = self.tasks.lock_ignore_poison().clone();
+        for task in &tasks {
             let bytes = task.bytes_done.load(Ordering::Relaxed);
             if task.watchdog_last_bytes.swap(bytes, Ordering::Relaxed) != bytes {
                 task.still_since_ms.store(now_ms, Ordering::Relaxed);

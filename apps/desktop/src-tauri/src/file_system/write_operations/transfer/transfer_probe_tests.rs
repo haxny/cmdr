@@ -11,8 +11,12 @@ use std::sync::atomic::AtomicUsize;
 use super::super::liveness_test_support::ScriptedConnectionVolume;
 use super::super::transfer_driver::LeafProgressLedger;
 use super::*;
+use crate::file_system::write_operations::Operations;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
+use crate::file_system::write_operations::host::testing::FakeVolumes;
+use crate::file_system::write_operations::host::{EngineEvents, InstantMutationFact};
 use crate::file_system::write_operations::test_support::{TestOperationGuard, placeholder_conflict};
+use crate::file_system::write_operations::types::{MoveLeftoversKeptEvent, OperationsChanged};
 use crate::file_system::write_operations::types::{WriteOperationType, WriteProgressEvent};
 use cmdr_fs::volume::{ConnectionLiveness, Volume};
 
@@ -787,6 +791,66 @@ fn the_watchdog_acts_once_a_still_task_s_connection_reads_dead() {
     assert!(
         signal.is_cancelled(),
         "a task that hasn't moved past the window, on a connection proven dead, gets its wait ended"
+    );
+}
+
+/// Engine events that note, at each error report, whether the probe's task
+/// table was locked at that moment.
+#[derive(Default)]
+struct TableWatchingEvents {
+    probe: std::sync::OnceLock<Weak<OperationProbe>>,
+    reports_under_the_table_lock: AtomicUsize,
+    reports: AtomicUsize,
+}
+
+impl EngineEvents for TableWatchingEvents {
+    fn operations_changed(&self, _snapshot: OperationsChanged) {}
+    fn volumes_busy_changed(&self, _volume_ids: Vec<String>) {}
+    fn transfer_started(&self, _volume_ids: &[String]) {}
+    fn transfer_finished(&self, _volume_ids: &[String]) {}
+    fn staging_leftovers_kept(&self, _notice: MoveLeftoversKeptEvent) {}
+    fn instant_mutation_settled(&self, _fact: InstantMutationFact) {}
+    fn error_report(&self, _report: OperationErrorReport) {
+        self.reports.fetch_add(1, Ordering::SeqCst);
+        let probe = self
+            .probe
+            .get()
+            .and_then(Weak::upgrade)
+            .expect("the probe outlives its watchdog");
+        if probe.tasks.try_lock().is_err() {
+            self.reports_under_the_table_lock.fetch_add(1, Ordering::SeqCst);
+        }
+    }
+    fn scan_wait_progress(&self, _event: WriteProgressEvent) {}
+}
+
+/// The stall report reaches the host with the task table unlocked: no engine
+/// lock is held across a seam call, so a host that answers slowly (or asks the
+/// probe for its dump) can't stall every task registering or leaving.
+#[test]
+fn the_stall_report_goes_out_with_the_task_table_unlocked() {
+    let events = Arc::new(TableWatchingEvents::default());
+    let engine = Operations::builder(Arc::new(FakeVolumes::default()), Arc::clone(&events) as _).build();
+    let state = Arc::new(engine.new_operation_state(Duration::from_millis(100)));
+    let probe = probe_with_abort_window("probe-report-unlocked", &state, Duration::from_secs(5));
+    events.probe.set(Arc::downgrade(&probe)).expect("set once");
+
+    let task = probe.begin_task(TaskRow::source(0), TaskRole::File, "/src/a", "/dst/a");
+    task.probe().set_phase(TaskPhase::Streaming);
+    task.probe().set_bytes(4_194_304, 13_421_021);
+    let signal = task.probe().arm_stall_abort();
+
+    let mut watchdog = WatchdogState::new();
+    for tick in 1..=8 {
+        probe.watchdog_step(&mut watchdog, Duration::from_secs(tick));
+    }
+
+    assert!(signal.is_cancelled(), "the wedged task is abandoned");
+    assert_eq!(events.reports.load(Ordering::SeqCst), 1, "and reported once");
+    assert_eq!(
+        events.reports_under_the_table_lock.load(Ordering::SeqCst),
+        0,
+        "the report must not go out while the task table is locked"
     );
 }
 
