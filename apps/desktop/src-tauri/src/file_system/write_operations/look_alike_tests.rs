@@ -5,8 +5,10 @@ use std::sync::Arc;
 
 use super::*;
 use crate::file_system::volume::manager::get_volume_manager;
-use crate::file_system::write_operations::create::create_directory_core;
+use crate::file_system::write_operations::create::create_directory_core_on;
 use crate::file_system::write_operations::mutation_error::MutationError;
+use crate::file_system::write_operations::testing::TestOperations;
+use crate::listing_host::backends::AppListings;
 use cmdr_fs::testing::unique_test_id;
 use cmdr_fs::volume::{InMemoryVolume, WatchCoverage};
 use cmdr_listing::testing::{TestListing, TestListingGuard, WatchCoverageVolume};
@@ -96,13 +98,9 @@ async fn share_with_pane_listing(
 async fn a_folder_a_watched_pane_shows_is_answered_from_its_listing() {
     let (id, volume, _listing) = share_with_pane_listing("pane-hit", WatchCoverage::EveryWriter, CAFE_NFC).await;
 
-    let answer = ListedFolders::with_pane_listings(
-        crate::file_system::write_operations::installed().host().listings(),
-        volume.as_ref(),
-        &id,
-    )
-    .look_alike_in(Path::new("/dir"), CAFE_NFD)
-    .await;
+    let answer = ListedFolders::with_pane_listings(&AppListings, volume.as_ref(), &id)
+        .look_alike_in(Path::new("/dir"), CAFE_NFD)
+        .await;
 
     match answer {
         Ok(LookAlike::One(found)) => assert_eq!(found.name, CAFE_NFC),
@@ -119,13 +117,9 @@ async fn a_folder_a_watched_pane_shows_is_answered_from_its_listing() {
 async fn a_pane_listing_only_this_machine_keeps_current_is_read_past() {
     let (id, volume, _listing) = share_with_pane_listing("pane-blind", WatchCoverage::ThisMachineOnly, CAFE_NFC).await;
 
-    let answer = ListedFolders::with_pane_listings(
-        crate::file_system::write_operations::installed().host().listings(),
-        volume.as_ref(),
-        &id,
-    )
-    .look_alike_in(Path::new("/dir"), CAFE_NFD)
-    .await;
+    let answer = ListedFolders::with_pane_listings(&AppListings, volume.as_ref(), &id)
+        .look_alike_in(Path::new("/dir"), CAFE_NFD)
+        .await;
 
     assert!(matches!(answer, Ok(LookAlike::None)), "{answer:?}");
     assert_eq!(volume.list_calls(), 1);
@@ -151,9 +145,12 @@ async fn without_a_volume_id_the_folder_is_listed() {
 #[tokio::test]
 async fn a_new_folder_beside_a_watched_pane_is_placed_without_a_listing() {
     let (id, volume, _listing) = share_with_pane_listing("pane-create", WatchCoverage::EveryWriter, CAFE_NFC).await;
+    // The engine sees the app's pane listings and knows the share by the same id.
+    let engine = TestOperations::seeing_app_listings();
+    engine.volumes().register(&id, Arc::clone(&volume) as Arc<dyn Volume>);
 
-    let refused = create_directory_core(Some(id.clone()), "/dir", CAFE_NFD).await;
-    let created = create_directory_core(Some(id.clone()), "/dir", "\u{f6}k\u{f6}r").await;
+    let refused = create_directory_core_on(engine.host(), Some(id.clone()), "/dir", CAFE_NFD).await;
+    let created = create_directory_core_on(engine.host(), Some(id.clone()), "/dir", "\u{f6}k\u{f6}r").await;
 
     assert!(
         matches!(refused, Err(MutationError::AlreadyExists { .. })),

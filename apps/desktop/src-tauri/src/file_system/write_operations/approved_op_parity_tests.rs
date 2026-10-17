@@ -24,7 +24,7 @@ use std::time::Duration;
 use super::event_sinks::{CollectorEventSink, OperationEventSink};
 use super::source_binding::{ExpectedSources, SourceFingerprint};
 use super::types::{ConflictResolution, WriteOperationConfig, WriteOperationType};
-use crate::file_system::write_operations::installed;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::test_support::TestDir;
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_operation_log::types::Initiator;
@@ -106,6 +106,14 @@ async fn collect(collector: &Arc<CollectorEventSink>, dest_root: &Path, src_root
     }
 }
 
+/// An engine of the case's own that knows the local `root` volume, as the app's
+/// does, so a local start takes the path production takes.
+fn local_engine() -> TestOperations {
+    let engine = TestOperations::new();
+    engine.register_local_root();
+    engine
+}
+
 /// Seeds one fixture pair and runs a copy over it, with or without a binding.
 async fn run_copy(seed: impl Fn(&Path, &Path), config: WriteOperationConfig, bind: bool, tag: &str) -> RunOutcome {
     let src_root = TestDir::new(&format!("parity_src_{tag}"));
@@ -121,13 +129,14 @@ async fn run_copy(seed: impl Fn(&Path, &Path), config: WriteOperationConfig, bin
         .collect();
     let expected = bind.then(|| bind_all(&sources));
 
+    let engine = local_engine();
     let collector = Arc::new(CollectorEventSink::new());
     let events: Arc<dyn OperationEventSink> = collector.clone();
     // The destination the transfer is aimed at is a CHILD of the fixture root, so
     // "does the engine create a missing destination folder?" is a real question
     // for every case here.
     let destination = dst_root.join("incoming");
-    installed()
+    engine
         .copy_files_start(
             events,
             sources,
@@ -261,7 +270,8 @@ async fn an_approved_move_takes_the_source_exactly_as_a_user_started_one_does() 
         let collector = Arc::new(CollectorEventSink::new());
         let events: Arc<dyn OperationEventSink> = collector.clone();
         let destination = dst_root.join("incoming");
-        installed()
+        let engine = local_engine();
+        engine
             .move_files_start(
                 events,
                 sources,
@@ -315,8 +325,9 @@ async fn only_a_source_that_changed_is_treated_differently() {
 
     let collector = Arc::new(CollectorEventSink::new());
     let events: Arc<dyn OperationEventSink> = collector.clone();
+    let engine = local_engine();
     let destination = dst_root.join("incoming");
-    installed()
+    engine
         .copy_files_start(
             events,
             sources,
@@ -366,8 +377,9 @@ async fn an_approved_copy_settles_as_an_ordinary_copy() {
     let sources = vec![source];
 
     let collector = Arc::new(CollectorEventSink::new());
+    let engine = local_engine();
     let events: Arc<dyn OperationEventSink> = collector.clone();
-    installed()
+    engine
         .copy_files_start(
             events,
             sources.clone(),
@@ -472,8 +484,9 @@ async fn a_bound_cross_volume_copy_skips_the_source_that_changed_while_it_waited
     seed(source.as_ref(), "/invoice.pdf", b"edited while it waited for its lane").await;
 
     let collector = Arc::new(CollectorEventSink::new());
+    let engine = TestOperations::new();
     let events: Arc<dyn OperationEventSink> = collector.clone();
-    installed()
+    engine
         .copy_between_volumes(
             events,
             "share".to_string(),

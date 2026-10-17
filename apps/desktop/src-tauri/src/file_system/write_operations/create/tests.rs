@@ -62,7 +62,7 @@ fn instant_descriptor_marks_only_nonroot_volumes_busy() {
 }
 
 // ============================================================================
-// create_directory_core
+// create_directory_core_on
 // ============================================================================
 
 #[tokio::test]
@@ -183,7 +183,7 @@ async fn create_directory_unregistered_volume_errors_without_fs_write() {
 }
 
 // ============================================================================
-// create_file_core
+// create_file_core_on
 // ============================================================================
 
 #[tokio::test]

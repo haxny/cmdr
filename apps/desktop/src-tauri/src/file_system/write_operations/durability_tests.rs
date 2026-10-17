@@ -15,7 +15,7 @@ use std::time::Duration;
 use super::test_hook;
 use super::{FlushFailure, flush_created_destinations, refuses_directory_fsync};
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
-use crate::file_system::write_operations::state::WriteOperationState;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::WriteOperationType;
 use crate::test_support::TestDir;
 
@@ -56,7 +56,7 @@ fn landed_tree() -> Landed {
 
 fn flush(files: &[PathBuf], dirs: &[PathBuf], already_synced: &HashSet<PathBuf>) -> Result<(), FlushFailure> {
     let events = CollectorEventSink::new();
-    let state = Arc::new(WriteOperationState::new(Duration::from_millis(200)));
+    let state = Arc::new(TestOperations::new().new_operation_state(Duration::from_millis(200)));
     flush_created_destinations(
         &events,
         "op-durability",

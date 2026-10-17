@@ -53,7 +53,7 @@ impl Operations {
     /// Creates a folder as a managed instant op and returns its new path.
     /// `parent_path` is already tilde-expanded by the command layer.
     ///
-    /// Wraps `create_directory_core` in `manager::run_instant` (busy-marking the
+    /// Wraps `create_directory_core_on` in `manager::run_instant` (busy-marking the
     /// volume + registering a brief `Running` record) and emits the synthetic
     /// listing diff on success for local-FS-backed volumes.
     pub(crate) async fn create_directory_managed(
@@ -352,17 +352,8 @@ pub(super) fn instant_descriptor(
 /// downloads-watcher ignore, and issues the `create_directory` syscall. Returns
 /// `(new_path, parent_path)` (the parent is the already-expanded path passed in).
 /// Kept separate from the managed wrapper so it's testable without the operation
-/// manager. `parent_path` must already be tilde-expanded by the caller.
-#[cfg(test)]
-pub(crate) async fn create_directory_core(
-    volume_id: Option<String>,
-    parent_path: &str,
-    name: &str,
-) -> Result<(PathBuf, String), MutationError> {
-    create_directory_core_on(super::installed().host(), volume_id, parent_path, name).await
-}
-
-/// `create_directory_core` against `host`'s volumes and own-write seam.
+/// manager, against `host`'s volumes and own-write seam. `parent_path` must
+/// already be tilde-expanded by the caller.
 pub(crate) async fn create_directory_core_on(
     host: &EngineHost,
     volume_id: Option<String>,
@@ -457,17 +448,8 @@ fn named_conflict_or_volume(e: cmdr_fs::volume::VolumeError, name: &str) -> Muta
     }
 }
 
-/// Core file-creation logic. Same shape as `create_directory_core`.
-#[cfg(test)]
-pub(crate) async fn create_file_core(
-    volume_id: Option<String>,
-    parent_path: &str,
-    name: &str,
-) -> Result<(PathBuf, String), MutationError> {
-    create_file_core_on(super::installed().host(), volume_id, parent_path, name).await
-}
-
-/// `create_file_core` against `host`'s volumes and own-write seam.
+/// Core file-creation logic, against `host`'s volumes and own-write seam. Same
+/// shape as [`create_directory_core_on`].
 pub(crate) async fn create_file_core_on(
     host: &EngineHost,
     volume_id: Option<String>,
@@ -481,7 +463,7 @@ pub(crate) async fn create_file_core_on(
         return Err(MutationError::NameHasDisallowedCharacter);
     }
 
-    // Defensive fallback, same as `create_directory_core`: the managed wrapper
+    // Defensive fallback, same as `create_directory_core_on`: the managed wrapper
     // (`create_file_managed`) routes an archive-crossing parent to
     // `route_archive_create` before reaching core, so this branch is unreachable
     // in production. It guards a direct `*_core` caller (tests) from a bogus
@@ -510,7 +492,7 @@ pub(crate) async fn create_file_core_on(
         return Ok((new_path, expanded_path));
     }
 
-    // See `create_directory_core`: an unregistered volume is one nobody connected
+    // See `create_directory_core_on`: an unregistered volume is one nobody connected
     // or an unmount race; error out instead of an untimed
     // `std::fs::File::create_new` fallback.
     Err(super::mutation_error::unregistered_volume_refusal(host.volumes(), volume_id, Path::new(parent_path)).await)

@@ -6,6 +6,7 @@
 
 use super::super::ledger::CopyTransaction;
 use super::super::state::WriteOperationState;
+use super::super::testing::TestOperations;
 use super::super::types::WriteOperationError;
 use super::*;
 use crate::test_support::TestDir;
@@ -22,9 +23,10 @@ fn create_temp_dir(name: &str) -> TestDir {
 // safe_overwrite_file tests
 // ============================================================================
 
-/// A running operation to land a write under.
+/// A running operation to land a write under, on an engine of its own (the
+/// state's scope holds everything it reaches).
 fn overwrite_state() -> Arc<WriteOperationState> {
-    Arc::new(WriteOperationState::new(Duration::from_millis(50)))
+    Arc::new(TestOperations::new().new_operation_state(Duration::from_millis(50)))
 }
 
 /// `stage_and_land_file` with the platform's default byte-copier, which is what
@@ -258,7 +260,7 @@ fn displace_with_directory_keeps_the_file_until_the_transaction_answers() {
     let temp_dir = create_temp_dir("displace_with_directory");
     let dest = temp_dir.join("thing");
     fs::write(&dest, "the user's only copy").unwrap();
-    let state = Arc::new(WriteOperationState::new(Duration::from_millis(0)));
+    let state = Arc::new(TestOperations::new().new_operation_state(Duration::from_millis(0)));
 
     let displaced = displace_with_directory(&state, &dest).expect("the file should go aside");
 
@@ -297,7 +299,7 @@ fn a_committed_transaction_drops_what_it_displaced() {
     let temp_dir = create_temp_dir("displace_commit");
     let dest = temp_dir.join("thing");
     fs::write(&dest, "replaced").unwrap();
-    let state = Arc::new(WriteOperationState::new(Duration::from_millis(0)));
+    let state = Arc::new(TestOperations::new().new_operation_state(Duration::from_millis(0)));
 
     let mut transaction = CopyTransaction::new();
     transaction.record_displaced(displace_with_directory(&state, &dest).expect("displace"));

@@ -6,12 +6,10 @@
 
 use std::path::Path;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicU64, Ordering};
 
-use super::create::{create_directory_core, create_file_core};
+use super::create::{create_directory_core_on, create_file_core_on};
 use super::mutation_error::MutationError;
-use crate::file_system::volume::manager::get_volume_manager;
-use crate::file_system::write_operations::installed;
+use crate::file_system::write_operations::testing::TestOperations;
 use cmdr_fs::volume::InMemoryVolume;
 use cmdr_fs::volume::Volume;
 use cmdr_operation_log::types::Initiator;
@@ -21,14 +19,13 @@ const CAFE_NFD: &str = "cafe\u{301}.txt";
 const FOTOK_NFC: &str = "fot\u{f3}k";
 const FOTOK_NFD: &str = "foto\u{301}k";
 
-/// A registered in-memory share: byte-exact, composing new names, holding
-/// `/dir`.
-async fn share(label: &str) -> (String, Arc<InMemoryVolume>) {
-    static N: AtomicU64 = AtomicU64::new(0);
-    let id = format!("look-alike-{label}-{}", N.fetch_add(1, Ordering::Relaxed));
+/// An in-memory share registered on `engine`: byte-exact, composing new names,
+/// holding `/dir`.
+async fn share(engine: &TestOperations, label: &str) -> (String, Arc<InMemoryVolume>) {
+    let id = format!("look-alike-{label}");
     let volume = Arc::new(InMemoryVolume::new(&id).with_composed_new_names());
     volume.create_directory(Path::new("/dir")).await.unwrap();
-    get_volume_manager().register(&id, Arc::clone(&volume) as Arc<dyn Volume>);
+    engine.volumes().register(&id, Arc::clone(&volume) as Arc<dyn Volume>);
     (id, volume)
 }
 
@@ -46,12 +43,15 @@ async fn names_in(volume: &InMemoryVolume, dir: &str) -> Vec<String> {
 
 #[tokio::test]
 async fn a_new_folder_and_a_new_file_go_out_composed() {
-    let (id, volume) = share("new").await;
+    let engine = TestOperations::new();
+    let (id, volume) = share(&engine, "new").await;
 
-    create_directory_core(Some(id.clone()), "/dir", FOTOK_NFD)
+    create_directory_core_on(engine.host(), Some(id.clone()), "/dir", FOTOK_NFD)
         .await
         .unwrap();
-    create_file_core(Some(id), "/dir", CAFE_NFD).await.unwrap();
+    create_file_core_on(engine.host(), Some(id), "/dir", CAFE_NFD)
+        .await
+        .unwrap();
 
     let mut expected = vec![CAFE_NFC.to_string(), FOTOK_NFC.to_string()];
     expected.sort();
@@ -60,7 +60,8 @@ async fn a_new_folder_and_a_new_file_go_out_composed() {
 
 #[tokio::test]
 async fn a_new_folder_or_file_is_refused_beside_its_look_alike() {
-    let (id, volume) = share("taken").await;
+    let engine = TestOperations::new();
+    let (id, volume) = share(&engine, "taken").await;
     volume
         .create_file(Path::new(&format!("/dir/{CAFE_NFD}")), b"x")
         .await
@@ -70,8 +71,8 @@ async fn a_new_folder_or_file_is_refused_beside_its_look_alike() {
         .await
         .unwrap();
 
-    let file = create_file_core(Some(id.clone()), "/dir", CAFE_NFC).await;
-    let folder = create_directory_core(Some(id), "/dir", FOTOK_NFC).await;
+    let file = create_file_core_on(engine.host(), Some(id.clone()), "/dir", CAFE_NFC).await;
+    let folder = create_directory_core_on(engine.host(), Some(id), "/dir", FOTOK_NFC).await;
 
     assert!(matches!(file, Err(MutationError::AlreadyExists { .. })), "{file:?}");
     assert!(matches!(folder, Err(MutationError::AlreadyExists { .. })), "{folder:?}");
@@ -82,10 +83,11 @@ async fn a_new_folder_or_file_is_refused_beside_its_look_alike() {
 
 #[tokio::test]
 async fn a_rename_target_goes_out_composed() {
-    let (id, volume) = share("rename-new").await;
+    let engine = TestOperations::new();
+    let (id, volume) = share(&engine, "rename-new").await;
     volume.create_file(Path::new("/dir/a.txt"), b"x").await.unwrap();
 
-    installed()
+    engine
         .rename_managed(
             "/dir/a.txt".into(),
             format!("/dir/{CAFE_NFD}").into(),
@@ -101,14 +103,15 @@ async fn a_rename_target_goes_out_composed() {
 
 #[tokio::test]
 async fn a_rename_onto_a_look_alike_is_refused_unless_forced_and_then_replaces_it() {
-    let (id, volume) = share("rename-taken").await;
+    let engine = TestOperations::new();
+    let (id, volume) = share(&engine, "rename-taken").await;
     volume.create_file(Path::new("/dir/a.txt"), b"NEW").await.unwrap();
     volume
         .create_file(Path::new(&format!("/dir/{CAFE_NFD}")), b"OLD")
         .await
         .unwrap();
 
-    let refused = installed()
+    let refused = engine
         .rename_managed(
             "/dir/a.txt".into(),
             format!("/dir/{CAFE_NFC}").into(),
@@ -125,7 +128,7 @@ async fn a_rename_onto_a_look_alike_is_refused_unless_forced_and_then_replaces_i
     both.sort();
     assert_eq!(names_in(&volume, "/dir").await, both);
 
-    installed()
+    engine
         .rename_managed(
             "/dir/a.txt".into(),
             format!("/dir/{CAFE_NFC}").into(),
@@ -146,19 +149,20 @@ async fn a_rename_onto_a_look_alike_is_refused_unless_forced_and_then_replaces_i
 /// clash with itself: the one way to fix a name Finder can't open.
 #[tokio::test]
 async fn respelling_a_name_is_not_a_clash_with_itself() {
-    let (id, volume) = share("respell").await;
+    let engine = TestOperations::new();
+    let (id, volume) = share(&engine, "respell").await;
     volume
         .create_file(Path::new(&format!("/dir/{CAFE_NFD}")), b"x")
         .await
         .unwrap();
 
-    let validity = installed()
+    let validity = engine
         .check_rename_validity_impl("/dir".into(), CAFE_NFD.into(), CAFE_NFC.into(), id.clone())
         .await
         .priced(|_| false);
     assert!(!validity.has_conflict, "the only look-alike is the file itself");
 
-    installed()
+    engine
         .rename_managed(
             format!("/dir/{CAFE_NFD}").into(),
             format!("/dir/{CAFE_NFC}").into(),
@@ -175,14 +179,15 @@ async fn respelling_a_name_is_not_a_clash_with_itself() {
 /// clash before pressing Enter.
 #[tokio::test]
 async fn the_live_rename_check_reports_a_look_alike() {
-    let (id, volume) = share("validity").await;
+    let engine = TestOperations::new();
+    let (id, volume) = share(&engine, "validity").await;
     volume.create_file(Path::new("/dir/a.txt"), b"x").await.unwrap();
     volume
         .create_file(Path::new(&format!("/dir/{CAFE_NFD}")), b"x")
         .await
         .unwrap();
 
-    let validity = installed()
+    let validity = engine
         .check_rename_validity_impl("/dir".into(), "a.txt".into(), CAFE_NFC.into(), id)
         .await
         .priced(|_| false);
@@ -196,14 +201,15 @@ async fn the_live_rename_check_reports_a_look_alike() {
 /// or the editor promises a name that Enter then refuses.
 #[tokio::test]
 async fn the_live_rename_check_reports_the_name_a_typed_one_composes_onto() {
-    let (id, volume) = share("validity-composed").await;
+    let engine = TestOperations::new();
+    let (id, volume) = share(&engine, "validity-composed").await;
     volume.create_file(Path::new("/dir/a.txt"), b"x").await.unwrap();
     volume
         .create_file(Path::new(&format!("/dir/{CAFE_NFC}")), b"x")
         .await
         .unwrap();
 
-    let validity = installed()
+    let validity = engine
         .check_rename_validity_impl("/dir".into(), "a.txt".into(), CAFE_NFD.into(), id)
         .await
         .priced(|_| false);

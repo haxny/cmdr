@@ -4,9 +4,13 @@
 //! unanchored destination reaches a share as a path outside its mount, and a
 //! `.zip` FILE routed to its own `ArchiveVolume` would scan the archive's contents
 //! instead of copying the file.
+//!
+//! The routing these cells pin is the app registry's (an archive, the git
+//! portal, an id nothing knows), which `FakeVolumes` doesn't route through, so
+//! each cell builds an engine of its own over the app's answers
+//! (`operations_host::test_engine`).
 
 use super::resolve_dest_path;
-use crate::file_system::write_operations::installed;
 use cmdr_fs::volume::RoutedKind;
 use cmdr_fs::volume::{InMemoryVolume, Volume};
 use std::path::Path;
@@ -64,15 +68,19 @@ fn a_local_destination_still_expands_the_home_shortcut() {
 
 #[tokio::test]
 async fn resolve_source_treats_the_zip_file_itself_as_a_plain_file() {
-    use crate::file_system::volume::manager::get_volume_manager;
+    use crate::file_system::volume::manager::test_support::TestVolumeRegistration;
     use cmdr_local::LocalPosixVolume;
+
+    let engine = crate::operations_host::test_engine();
 
     let dir = tempfile::tempdir().expect("tempdir");
     let zip = dir.path().join("bundle.zip");
     std::fs::write(&zip, b"PK\x03\x04rest").expect("write zip magic");
-    // The parent drive holds the `.zip`. (nextest isolates the global per test.)
-    get_volume_manager().register(
-        "root",
+    // The parent drive holds the `.zip`, under an id of this cell's own in the
+    // app's registry, where the archive routing looks.
+    let parent_id = cmdr_fs::testing::unique_test_id("routing-zip-parent");
+    let _parent = TestVolumeRegistration::install(
+        &parent_id,
         Arc::new(LocalPosixVolume::local_folder(
             "Root",
             dir.path().to_str().unwrap(),
@@ -83,8 +91,8 @@ async fn resolve_source_treats_the_zip_file_itself_as_a_plain_file() {
     // The `.zip` FILE itself is copied as a plain file: routed to the PARENT
     // volume, `is_inside = false` (NOT the ArchiveVolume, which would scan its
     // contents instead of copying the file).
-    let (vol, route) = installed()
-        .resolve_source_volume("root", Some(&zip))
+    let (vol, route) = engine
+        .resolve_source_volume(&parent_id, Some(&zip))
         .await
         .expect("source volume");
     assert_eq!(route, None, "the .zip file itself is not archive-inner");
@@ -92,8 +100,8 @@ async fn resolve_source_treats_the_zip_file_itself_as_a_plain_file() {
 
     // A path INSIDE the archive routes to the ArchiveVolume. This is what makes
     // an EXTRACT reachable as an ordinary copy.
-    let (inner_vol, inner_route) = installed()
-        .resolve_source_volume("root", Some(&zip.join("entry.txt")))
+    let (inner_vol, inner_route) = engine
+        .resolve_source_volume(&parent_id, Some(&zip.join("entry.txt")))
         .await
         .expect("inner volume");
     assert_eq!(inner_route, Some(RoutedKind::Archive), "an inner path is archive-inner");
@@ -108,15 +116,19 @@ async fn resolve_source_treats_the_zip_file_itself_as_a_plain_file() {
 #[tokio::test]
 async fn resolve_source_routes_a_snapshot_path_to_the_git_portal() {
     use crate::file_system::git;
-    use crate::file_system::volume::manager::get_volume_manager;
+    use crate::file_system::volume::manager::test_support::TestVolumeRegistration;
     use cmdr_git::test_fixtures::{Fixture, cleanup, temp_dir};
     use cmdr_local::LocalPosixVolume;
 
+    let engine = crate::operations_host::test_engine();
     let dir = temp_dir("write_routing", "copy_out");
     let mut fixture = Fixture::init(dir.clone());
     fixture.commit_file("README.md", b"hello\n", "initial");
-    get_volume_manager().register(
-        "root",
+    // The repo's drive, under an id of this cell's own in the app's registry,
+    // where the portal routing looks.
+    let parent_id = cmdr_fs::testing::unique_test_id("routing-repo-parent");
+    let _parent = TestVolumeRegistration::install(
+        &parent_id,
         Arc::new(LocalPosixVolume::local_folder(
             "Root",
             dir.to_str().unwrap(),
@@ -125,8 +137,8 @@ async fn resolve_source_routes_a_snapshot_path_to_the_git_portal() {
     );
     git::wiring::set_virtual_portal_enabled(true);
 
-    let (volume, route) = installed()
-        .resolve_source_volume("root", Some(&dir.join(".git/branches/main/README.md")))
+    let (volume, route) = engine
+        .resolve_source_volume(&parent_id, Some(&dir.join(".git/branches/main/README.md")))
         .await
         .expect("source volume");
     assert_eq!(route, Some(RoutedKind::GitPortal));
@@ -139,8 +151,8 @@ async fn resolve_source_routes_a_snapshot_path_to_the_git_portal() {
 
     // `.git/` itself and the real files under it are the parent's, so editing
     // and deleting them keeps working.
-    let (parent, real_route) = installed()
-        .resolve_source_volume("root", Some(&dir.join(".git/config")))
+    let (parent, real_route) = engine
+        .resolve_source_volume(&parent_id, Some(&dir.join(".git/config")))
         .await
         .expect("source volume");
     assert_eq!(real_route, None);
@@ -179,6 +191,7 @@ async fn a_copy_onto_an_id_nothing_knows_still_reads_as_a_missing_volume() {
     use crate::file_system::write_operations::{VolumeCopyConfig, WriteOperationError};
     use cmdr_operation_log::types::Initiator;
 
+    let engine = crate::operations_host::test_engine();
     let source_id = format!("routing-source-{}", uuid::Uuid::new_v4());
     let source = InMemoryVolume::new("Source");
     source
@@ -187,7 +200,7 @@ async fn a_copy_onto_an_id_nothing_knows_still_reads_as_a_missing_volume() {
         .expect("the source file");
     get_volume_manager().register(&source_id, Arc::new(source));
 
-    let refused = installed()
+    let refused = engine
         .start_volume_copy(
             Arc::new(CollectorEventSink::new()),
             source_id.clone(),
@@ -219,10 +232,11 @@ async fn a_copy_from_an_id_nothing_knows_reads_as_a_source_no_longer_connected()
     use crate::file_system::write_operations::{VolumeCopyConfig, WriteOperationError};
     use cmdr_operation_log::types::Initiator;
 
+    let engine = crate::operations_host::test_engine();
     let dest_id = format!("routing-dest-{}", uuid::Uuid::new_v4());
     get_volume_manager().register(&dest_id, Arc::new(InMemoryVolume::new("Dest")));
 
-    let refused = installed()
+    let refused = engine
         .start_volume_copy(
             Arc::new(CollectorEventSink::new()),
             "an-unplugged-phone-nothing-lists".to_string(),

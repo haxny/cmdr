@@ -3,7 +3,7 @@
 
 use super::{Deadline, SourceItemInput, VolumeScanError, merge_source_types_from_stats};
 use crate::file_system::volume::manager::test_support::TestVolumeRegistration;
-use crate::file_system::write_operations::installed;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::test_support::WedgedVolume;
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::Volume;
@@ -24,12 +24,13 @@ use std::time::Duration;
 /// leg with no timeout at all (the volume resolves) makes it unbounded.
 #[tokio::test]
 async fn a_check_against_volumes_that_never_answer_gives_up_inside_its_budget() {
+    let engine = TestOperations::new();
     let budget = Duration::from_millis(300);
-    let _source = TestVolumeRegistration::install(
+    engine.volumes().register(
         "wedged-source",
         Arc::new(WedgedVolume::new("WedgedSource")) as Arc<dyn Volume>,
     );
-    let _dest = TestVolumeRegistration::install(
+    engine.volumes().register(
         "wedged-dest",
         Arc::new(WedgedVolume::new("WedgedDest")) as Arc<dyn Volume>,
     );
@@ -37,7 +38,7 @@ async fn a_check_against_volumes_that_never_answer_gives_up_inside_its_budget() 
     let started = std::time::Instant::now();
     let outcome = tokio::time::timeout(
         Duration::from_secs(5),
-        installed().scan_volume_for_conflicts_within(
+        engine.scan_volume_for_conflicts_within(
             Deadline::new(budget),
             String::from("wedged-dest"),
             vec![SourceItemInput {
@@ -78,13 +79,14 @@ async fn a_check_against_volumes_that_never_answer_gives_up_inside_its_budget() 
 /// run could never have finished inside any budget.
 #[tokio::test]
 async fn a_source_that_never_answers_still_lets_the_destination_answer() {
+    let engine = TestOperations::new();
     let dest_dir = tempfile::tempdir().expect("dest dir");
     std::fs::write(dest_dir.path().join("photo.jpg"), b"theirs").expect("write dest");
-    let _source = TestVolumeRegistration::install(
+    engine.volumes().register(
         "starving-source",
         Arc::new(WedgedVolume::new("WedgedSource")) as Arc<dyn Volume>,
     );
-    let _dest = TestVolumeRegistration::install(
+    engine.volumes().register(
         "starving-dest",
         Arc::new(LocalPosixVolume::local_folder(
             "Dest",
@@ -94,7 +96,7 @@ async fn a_source_that_never_answers_still_lets_the_destination_answer() {
     );
 
     let budget = Duration::from_millis(900);
-    let conflicts = installed()
+    let conflicts = engine
         .scan_volume_for_conflicts_within(
             Deadline::new(budget),
             String::from("starving-dest"),
@@ -123,10 +125,11 @@ async fn a_source_that_never_answers_still_lets_the_destination_answer() {
 /// list naming every source.
 #[tokio::test]
 async fn a_same_folder_copy_finds_no_conflicts() {
+    let engine = TestOperations::new();
     let dir = tempfile::tempdir().expect("temp dir");
     std::fs::write(dir.path().join("photo.jpg"), b"bytes").expect("write source");
     std::fs::create_dir(dir.path().join("docs")).expect("create source dir");
-    let _volume = TestVolumeRegistration::install(
+    engine.volumes().register(
         "self-collision-scan",
         Arc::new(LocalPosixVolume::local_folder(
             "Duplicates",
@@ -135,7 +138,7 @@ async fn a_same_folder_copy_finds_no_conflicts() {
         )) as Arc<dyn Volume>,
     );
 
-    let conflicts = installed()
+    let conflicts = engine
         .scan_volume_for_conflicts_within(
             Deadline::new(Duration::from_secs(5)),
             String::from("self-collision-scan"),
@@ -160,11 +163,12 @@ async fn a_same_folder_copy_finds_no_conflicts() {
 /// still in the way, and the dialog still has to say so.
 #[tokio::test]
 async fn a_different_file_of_the_same_name_is_still_a_conflict() {
+    let engine = TestOperations::new();
     let source_dir = tempfile::tempdir().expect("source dir");
     let dest_dir = tempfile::tempdir().expect("dest dir");
     std::fs::write(source_dir.path().join("photo.jpg"), b"mine").expect("write source");
     std::fs::write(dest_dir.path().join("photo.jpg"), b"theirs").expect("write dest");
-    let _source = TestVolumeRegistration::install(
+    engine.volumes().register(
         "self-collision-scan-source",
         Arc::new(LocalPosixVolume::local_folder(
             "Source",
@@ -172,7 +176,7 @@ async fn a_different_file_of_the_same_name_is_still_a_conflict() {
             crate::volume_host::host(),
         )) as Arc<dyn Volume>,
     );
-    let _dest = TestVolumeRegistration::install(
+    engine.volumes().register(
         "self-collision-scan-dest",
         Arc::new(LocalPosixVolume::local_folder(
             "Dest",
@@ -181,7 +185,7 @@ async fn a_different_file_of_the_same_name_is_still_a_conflict() {
         )) as Arc<dyn Volume>,
     );
 
-    let conflicts = installed()
+    let conflicts = engine
         .scan_volume_for_conflicts_within(
             Deadline::new(Duration::from_secs(5)),
             String::from("self-collision-scan-dest"),
@@ -203,13 +207,14 @@ async fn a_different_file_of_the_same_name_is_still_a_conflict() {
 /// invent a conflict the engine then silently duplicates past.
 #[tokio::test]
 async fn a_source_reached_through_a_symlinked_parent_finds_no_conflicts() {
+    let engine = TestOperations::new();
     let dir = tempfile::tempdir().expect("temp dir");
     let real = dir.path().join("real");
     std::fs::create_dir(&real).expect("create real dir");
     std::fs::write(real.join("photo.jpg"), b"bytes").expect("write source");
     let link = dir.path().join("link");
     std::os::unix::fs::symlink(&real, &link).expect("symlink the parent");
-    let _volume = TestVolumeRegistration::install(
+    engine.volumes().register(
         "self-collision-scan-symlink",
         Arc::new(LocalPosixVolume::local_folder(
             "Duplicates",
@@ -218,7 +223,7 @@ async fn a_source_reached_through_a_symlinked_parent_finds_no_conflicts() {
         )) as Arc<dyn Volume>,
     );
 
-    let conflicts = installed()
+    let conflicts = engine
         .scan_volume_for_conflicts_within(
             Deadline::new(Duration::from_secs(5)),
             String::from("self-collision-scan-symlink"),
@@ -243,15 +248,18 @@ async fn a_source_reached_through_a_symlinked_parent_finds_no_conflicts() {
 /// `transfer/volume/item_identity.rs::is_the_same_volume_path`.
 #[tokio::test]
 async fn a_same_folder_copy_on_a_remote_volume_finds_no_conflicts() {
+    let engine = TestOperations::new();
     let volume = Arc::new(InMemoryVolume::new("Device")) as Arc<dyn Volume>;
     volume.create_directory(Path::new("/photos")).await.expect("create dir");
     volume
         .create_file(Path::new("/photos/photo.jpg"), b"pixels")
         .await
         .expect("create file");
-    let _registered = TestVolumeRegistration::install("self-collision-scan-device", Arc::clone(&volume));
+    engine
+        .volumes()
+        .register("self-collision-scan-device", Arc::clone(&volume));
 
-    let conflicts = installed()
+    let conflicts = engine
         .scan_volume_for_conflicts_within(
             Deadline::new(Duration::from_secs(5)),
             String::from("self-collision-scan-device"),
@@ -275,6 +283,7 @@ async fn a_same_folder_copy_on_a_remote_volume_finds_no_conflicts() {
 /// conflicts" for a transfer the engine then prompts about.
 #[tokio::test]
 async fn a_source_from_a_case_differing_folder_is_still_a_conflict() {
+    let engine = TestOperations::new();
     let volume = Arc::new(InMemoryVolume::new("Device")) as Arc<dyn Volume>;
     for dir in ["/photos", "/PHOTOS"] {
         volume.create_directory(Path::new(dir)).await.expect("create dir");
@@ -283,9 +292,11 @@ async fn a_source_from_a_case_differing_folder_is_still_a_conflict() {
             .await
             .expect("create file");
     }
-    let _registered = TestVolumeRegistration::install("self-collision-scan-case-parent", Arc::clone(&volume));
+    engine
+        .volumes()
+        .register("self-collision-scan-case-parent", Arc::clone(&volume));
 
-    let conflicts = installed()
+    let conflicts = engine
         .scan_volume_for_conflicts_within(
             Deadline::new(Duration::from_secs(5)),
             String::from("self-collision-scan-case-parent"),
@@ -308,6 +319,7 @@ async fn a_source_from_a_case_differing_folder_is_still_a_conflict() {
 /// items, so the clash is real and the dialog still has to say so.
 #[tokio::test]
 async fn the_same_path_on_two_volumes_is_still_a_conflict() {
+    let engine = TestOperations::new();
     let source = Arc::new(InMemoryVolume::new("Source")) as Arc<dyn Volume>;
     let dest = Arc::new(InMemoryVolume::new("Dest")) as Arc<dyn Volume>;
     for volume in [&source, &dest] {
@@ -317,10 +329,10 @@ async fn the_same_path_on_two_volumes_is_still_a_conflict() {
             .await
             .expect("create file");
     }
-    let _source_reg = TestVolumeRegistration::install("self-collision-scan-two-source", source);
-    let _dest_reg = TestVolumeRegistration::install("self-collision-scan-two-dest", dest);
+    engine.volumes().register("self-collision-scan-two-source", source);
+    engine.volumes().register("self-collision-scan-two-dest", dest);
 
-    let conflicts = installed()
+    let conflicts = engine
         .scan_volume_for_conflicts_within(
             Deadline::new(Duration::from_secs(5)),
             String::from("self-collision-scan-two-dest"),
@@ -344,13 +356,19 @@ async fn the_same_path_on_two_volumes_is_still_a_conflict() {
 /// selection came from already holds every answer the merge needs.
 #[tokio::test]
 async fn source_stats_come_from_the_watched_pane_they_were_picked_in() {
+    // The engine asks the app's pane listings; the listing engine asks the app's
+    // registry about the source's watch coverage, so it's registered there too.
+    let engine = TestOperations::seeing_app_listings();
     let source = Arc::new(WatchCoverageVolume::new("PaneSource", WatchCoverage::EveryWriter));
+    engine
+        .volumes()
+        .register("pane-stat-source", Arc::clone(&source) as Arc<dyn Volume>);
     let _source = TestVolumeRegistration::install("pane-stat-source", Arc::clone(&source) as Arc<dyn Volume>);
     let dest = Arc::new(InMemoryVolume::new("Dest")) as Arc<dyn Volume>;
     dest.create_directory(Path::new("/Burst"))
         .await
         .expect("seeding the destination folder");
-    let _dest = TestVolumeRegistration::install("pane-stat-dest", Arc::clone(&dest));
+    engine.volumes().register("pane-stat-dest", Arc::clone(&dest));
 
     let dir = "/phone/Camera";
     let _pane = TestListing::new()
@@ -363,7 +381,7 @@ async fn source_stats_come_from_the_watched_pane_they_were_picked_in() {
         .insert(crate::listing_host::listings(), "pane-stat-source");
 
     // The caller's placeholder says `Burst` is a file; only a stat can correct it.
-    let conflicts = installed()
+    let conflicts = engine
         .scan_volume_for_conflicts_within(
             Deadline::new(Duration::from_secs(5)),
             String::from("pane-stat-dest"),

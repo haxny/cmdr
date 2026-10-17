@@ -13,6 +13,7 @@ use super::{
 };
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::state::WriteOperationState;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::{SourceItemOutcome, WriteOperationType};
 use crate::test_support::TestDir;
 use cmdr_fs::ignore_poison::IgnorePoison;
@@ -46,9 +47,10 @@ fn retain(expected: &ExpectedSources, sink: &CollectorEventSink, sources: &[Path
     )
 }
 
-/// An operation that never waited in the queue, so only the binding decides.
+/// An operation that never waited in the queue, so only the binding decides, on an
+/// engine of its own.
 fn unqueued() -> WriteOperationState {
-    WriteOperationState::new(std::time::Duration::ZERO)
+    TestOperations::new().new_operation_state(std::time::Duration::ZERO)
 }
 
 fn skipped_paths(sink: &CollectorEventSink) -> Vec<String> {

@@ -15,6 +15,7 @@
 use super::*;
 use crate::file_system::write_operations::event_sinks::{CollectorEventSink, OperationEventSink};
 use crate::file_system::write_operations::state::{ConflictResolutionResponse, WriteOperationState};
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::{
     ConflictInfo, ConflictResolution, DryRunResult, ScanProgressEvent, TransferWaitReason, WriteCancelledEvent,
     WriteCompleteEvent, WriteErrorEvent, WriteOperationConfig, WriteOperationPhase, WriteOperationType,
@@ -95,7 +96,7 @@ fn stop_clash_answered_from_within_emit_resolves_without_hanging() {
     fs::write(&src, b"SRC").unwrap();
     fs::write(&dst, b"DEST").unwrap();
 
-    let state = Arc::new(WriteOperationState::new(Duration::from_millis(0)));
+    let state = Arc::new(TestOperations::new().new_operation_state(Duration::from_millis(0)));
     let events = AnswerOnConflictSink {
         inner: CollectorEventSink::new(),
         state: Arc::clone(&state),
@@ -146,7 +147,7 @@ fn an_answered_clash_is_announced_as_over_by_id() {
     fs::write(&src, b"SRC").unwrap();
     fs::write(&dst, b"DEST").unwrap();
 
-    let state = Arc::new(WriteOperationState::new(Duration::from_millis(0)));
+    let state = Arc::new(TestOperations::new().new_operation_state(Duration::from_millis(0)));
     let events = AnswerOnConflictSink {
         inner: CollectorEventSink::new(),
         state: Arc::clone(&state),
@@ -189,7 +190,7 @@ fn a_local_clash_announces_the_wait_and_its_end() {
     fs::write(&src, b"SRC").unwrap();
     fs::write(&dst, b"DEST").unwrap();
 
-    let state = Arc::new(WriteOperationState::new(Duration::from_millis(0)));
+    let state = Arc::new(TestOperations::new().new_operation_state(Duration::from_millis(0)));
     let events = AnswerOnConflictSink {
         inner: CollectorEventSink::new(),
         state: Arc::clone(&state),

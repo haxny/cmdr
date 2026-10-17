@@ -8,7 +8,9 @@
 //! Gated items count apart from the public surface's ceilings, so this list is
 //! the place a test-only reach goes, ❌ never the public list above it.
 
-use super::{WriteOperationError, WriteOperationType};
+use std::time::Duration;
+
+use super::{Operations, WriteOperationError, WriteOperationType};
 
 // An engine a test builds for itself, over fakes it reads back, and a journal
 // it reads rows back from.
@@ -23,6 +25,12 @@ pub(crate) use super::test_support::{QueuedOperationFixture, TestOperationGuard}
 // Driving one operation's state and sink by hand.
 pub(crate) use super::event_sinks::CollectorEventSink;
 pub(crate) use super::state::{OperationIntent, WriteOperationState};
+
+/// A fresh state on `engine`, unregistered: what a cell outside the engine drives
+/// a volume driver with directly (a backend suite, on `operations_host::app_engine()`).
+pub(crate) fn new_operation_state(engine: &Operations, progress_interval: Duration) -> WriteOperationState {
+    engine.new_operation_state(progress_interval)
+}
 
 // What a suite asserts on: the settle a mutation reports, the binding a
 // reviewed batch applies, the live tree's ancestry, and the index's leaf cap.
@@ -52,7 +60,7 @@ pub(crate) use super::transfer::volume::{
 // edit through the archive routing, an outage policy, and a preview seeded
 // into the state a racing writer leaves.
 pub(crate) use super::archive_edit::{EditError, pull_apply_upload_swap, route_archive_copy_into};
-pub(crate) use super::create::create_directory_core;
+pub(crate) use super::create::create_directory_core_on;
 pub(crate) use super::delete::delete_volume_files_for_test;
 pub(crate) use super::outage_slot::OutagePolicy;
 pub(crate) use super::scan_cache::seed_incoherent_scan_result_for_test;

@@ -36,11 +36,12 @@ use crate::adb::test_support::{a_listed_phone, dial, dials_seen, phone, retire_p
 use crate::commands::file_system::scan_volume_for_conflicts;
 use crate::file_system::volume::manager::get_volume_manager;
 use crate::file_system::write_operations::testing::{
-    CollectorEventSink, WriteOperationState, create_directory_core, delete_volume_files_for_test, installed,
+    CollectorEventSink, create_directory_core_on, delete_volume_files_for_test, new_operation_state,
 };
 use crate::file_system::write_operations::{
     MutationError, OperationEventSink, VolumeCopyConfig, VolumeScanError, WriteOperationConfig, WriteOperationError,
 };
+use crate::operations_host::app_engine;
 use crate::test_support::TestDir;
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_local::LocalPosixVolume;
@@ -490,7 +491,7 @@ async fn mkdir_on_a_phone_makes_the_folder_and_patches_the_pane_showing_its_pare
     let phone = recorded_phone("R58M-Mkdir", FakeTree::new()).await;
     let parent = phone.sdcard.to_string_lossy().into_owned();
 
-    let (made, _) = create_directory_core(Some(phone.volume_id.clone()), &parent, "album")
+    let (made, _) = create_directory_core_on(app_engine().host(), Some(phone.volume_id.clone()), &parent, "album")
         .await
         .expect("mkdir on the phone");
 
@@ -523,7 +524,7 @@ async fn a_move_on_a_phone_renames_on_the_device_and_patches_both_panes() {
     let album = phone.sdcard.join("album");
 
     let events = Arc::new(CollectorEventSink::new());
-    installed()
+    app_engine()
         .start_volume_move(
             Arc::clone(&events) as Arc<dyn OperationEventSink>,
             phone.volume_id.clone(),
@@ -568,7 +569,7 @@ async fn a_delete_on_a_phone_removes_the_file_and_patches_its_pane() {
     let phone = recorded_phone("R58M-Delete", tree).await;
 
     let events = CollectorEventSink::new();
-    let state = Arc::new(WriteOperationState::new(Duration::from_millis(0)));
+    let state = Arc::new(new_operation_state(app_engine(), Duration::from_millis(0)));
     delete_volume_files_for_test(
         Arc::clone(&phone.volume),
         &phone.volume_id,
@@ -650,7 +651,7 @@ async fn a_copy_onto_a_phone_nobody_dialed_is_refused_as_not_connected() {
     let local = registered_local("adb_copy_onto_undialed_phone");
     std::fs::write(local.dir.join("photo.jpg"), b"a photo's worth of bytes").expect("seeding the local file");
 
-    let refused = installed()
+    let refused = app_engine()
         .start_volume_copy(
             Arc::new(CollectorEventSink::new()),
             local.volume_id.clone(),
@@ -681,7 +682,7 @@ async fn a_move_off_a_phone_nobody_dialed_is_refused_as_not_connected() {
     let phone = undialed_phone("R58M-Undialed-Move", tree).await;
     let local = registered_local("adb_move_off_undialed_phone");
 
-    let refused = installed()
+    let refused = app_engine()
         .start_volume_move(
             Arc::new(CollectorEventSink::new()),
             phone.volume_id.clone(),
@@ -712,7 +713,7 @@ async fn a_delete_on_a_phone_nobody_dialed_is_refused_as_not_connected() {
     let phone = undialed_phone("R58M-Undialed-Delete", tree).await;
 
     let events = Arc::new(CollectorEventSink::new());
-    installed()
+    app_engine()
         .delete_files_start(
             Arc::clone(&events) as Arc<dyn OperationEventSink>,
             vec![phone.sdcard.join("old.txt")],
@@ -748,9 +749,14 @@ async fn a_delete_on_a_phone_nobody_dialed_is_refused_as_not_connected() {
 async fn mkdir_on_a_phone_nobody_dialed_is_refused_as_not_connected() {
     let phone = undialed_phone("R58M-Undialed-Mkdir", FakeTree::new()).await;
 
-    let refused = create_directory_core(Some(phone.volume_id.clone()), &phone.sdcard.to_string_lossy(), "album")
-        .await
-        .expect_err("mkdir on a phone nobody dialed is refused");
+    let refused = create_directory_core_on(
+        app_engine().host(),
+        Some(phone.volume_id.clone()),
+        &phone.sdcard.to_string_lossy(),
+        "album",
+    )
+    .await
+    .expect_err("mkdir on a phone nobody dialed is refused");
 
     assert!(
         matches!(

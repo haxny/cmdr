@@ -10,8 +10,8 @@
 //! `PauseGate`'s own state machine is tested in `operation_intent.rs`; the rest of
 //! `WriteOperationState` in `state_tests.rs`.
 
-use super::state::WriteOperationState;
 use crate::file_system::write_operations::state::OperationIntent;
+use crate::file_system::write_operations::testing::TestOperations;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
@@ -19,7 +19,7 @@ use std::time::Duration;
 /// A live operation is told to carry on, and nothing parks it.
 #[test]
 fn stop_or_park_lets_a_live_operation_carry_on() {
-    let state = WriteOperationState::new(Duration::from_millis(0));
+    let state = TestOperations::new().new_operation_state(Duration::from_millis(0));
     assert!(
         !state.stop_or_park_sync(),
         "a Running, unpaused op carries on — and returns instantly, or this test hangs"
@@ -31,7 +31,7 @@ fn stop_or_park_lets_a_live_operation_carry_on() {
 /// sit on the gate holding a cancel nobody reads.
 #[test]
 fn stop_or_park_says_stop_without_parking_a_cancelled_op() {
-    let state = WriteOperationState::new(Duration::from_millis(0));
+    let state = TestOperations::new().new_operation_state(Duration::from_millis(0));
     state.pause_gate.pause();
     state.intent().set_for_test(OperationIntent::Stopped);
 
@@ -44,7 +44,7 @@ fn stop_or_park_says_stop_without_parking_a_cancelled_op() {
 /// The park itself: a paused loop holds until somebody resumes it, then carries on.
 #[test]
 fn stop_or_park_holds_a_paused_operation_until_it_resumes() {
-    let state = Arc::new(WriteOperationState::new(Duration::from_millis(0)));
+    let state = Arc::new(TestOperations::new().new_operation_state(Duration::from_millis(0)));
     state.pause_gate.pause();
 
     let passed = Arc::new(AtomicBool::new(false));
@@ -73,7 +73,7 @@ fn stop_or_park_holds_a_paused_operation_until_it_resumes() {
 /// is already standing on, rather than one item later.
 #[test]
 fn stop_or_park_says_stop_when_cancel_lands_while_parked() {
-    let state = Arc::new(WriteOperationState::new(Duration::from_millis(0)));
+    let state = Arc::new(TestOperations::new().new_operation_state(Duration::from_millis(0)));
     state.pause_gate.pause();
 
     let state_t = Arc::clone(&state);
@@ -95,7 +95,7 @@ fn stop_or_park_says_stop_when_cancel_lands_while_parked() {
 /// than a blocking-pool thread rely on it.
 #[tokio::test]
 async fn stop_or_park_async_says_stop_when_cancel_lands_while_parked() {
-    let state = Arc::new(WriteOperationState::new(Duration::from_millis(0)));
+    let state = Arc::new(TestOperations::new().new_operation_state(Duration::from_millis(0)));
     state.pause_gate.pause();
 
     let state_t = Arc::clone(&state);
@@ -116,7 +116,7 @@ async fn stop_or_park_async_says_stop_when_cancel_lands_while_parked() {
 /// And it carries on when nothing is asking it to stop.
 #[tokio::test]
 async fn stop_or_park_async_lets_a_live_operation_carry_on() {
-    let state = WriteOperationState::new(Duration::from_millis(0));
+    let state = TestOperations::new().new_operation_state(Duration::from_millis(0));
     let stop = tokio::time::timeout(Duration::from_secs(5), state.stop_or_park_async())
         .await
         .expect("an unpaused op never parks");
