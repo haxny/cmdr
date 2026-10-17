@@ -304,6 +304,87 @@ fn volumes_busy_changed_fires_once_per_distinct_change() {
     assert_eq!(busy_emit_count(), emits + 2, "`root` was never in the set");
 }
 
+/// Reports the busy set like [`RecordingEngineEvents`], but holds the first
+/// report inside the call until the test releases it, so a second update can
+/// race it.
+///
+/// [`RecordingEngineEvents`]: super::super::host::testing::RecordingEngineEvents
+struct GatedBusyEvents {
+    reports: std::sync::Mutex<Vec<Vec<String>>>,
+    first_entered: std::sync::Mutex<Option<std::sync::mpsc::Sender<()>>>,
+    first_release: std::sync::Mutex<Option<std::sync::mpsc::Receiver<()>>>,
+}
+
+impl EngineEvents for GatedBusyEvents {
+    fn volumes_busy_changed(&self, volume_ids: Vec<String>) {
+        let entered = self.first_entered.lock_ignore_poison().take();
+        if let Some(entered) = entered {
+            let release = self
+                .first_release
+                .lock_ignore_poison()
+                .take()
+                .expect("set with the sender");
+            let _ = entered.send(());
+            let _ = release.recv();
+        }
+        self.reports.lock_ignore_poison().push(volume_ids);
+    }
+    fn operations_changed(&self, _snapshot: crate::file_system::write_operations::types::OperationsChanged) {}
+    fn transfer_started(&self, _volume_ids: &[String]) {}
+    fn transfer_finished(&self, _volume_ids: &[String]) {}
+    fn staging_leftovers_kept(&self, _notice: crate::file_system::write_operations::types::MoveLeftoversKeptEvent) {}
+    fn instant_mutation_settled(&self, _fact: super::super::host::InstantMutationFact) {}
+    fn error_report(&self, _report: super::super::host::OperationErrorReport) {}
+    fn scan_wait_progress(&self, _event: crate::file_system::write_operations::types::WriteProgressEvent) {}
+}
+
+/// The last busy set reported is the current one, however two updates race.
+/// Here the first register's report is held mid-call while a second register
+/// runs: if the second could report around it, the first's older set (missing
+/// the second volume) would land last, and the volume picker would offer Eject
+/// on a drive a transfer just started on.
+#[test]
+fn racing_updates_report_the_current_busy_set_last() {
+    let (entered_tx, entered_rx) = std::sync::mpsc::channel();
+    let (release_tx, release_rx) = std::sync::mpsc::channel();
+    let events = Arc::new(GatedBusyEvents {
+        reports: std::sync::Mutex::new(Vec::new()),
+        first_entered: std::sync::Mutex::new(Some(entered_tx)),
+        first_release: std::sync::Mutex::new(Some(release_rx)),
+    });
+    let cache = Arc::new(StatusCache::new(Arc::clone(&events) as Arc<dyn EngineEvents>));
+
+    let first = {
+        let cache = Arc::clone(&cache);
+        std::thread::spawn(move || cache.register("first-op", WriteOperationType::Copy, vec!["usb-a".to_string()]))
+    };
+    entered_rx.recv().expect("the first register reaches its report");
+
+    let (second_done_tx, second_done_rx) = std::sync::mpsc::channel();
+    let second = {
+        let cache = Arc::clone(&cache);
+        std::thread::spawn(move || {
+            cache.register("second-op", WriteOperationType::Copy, vec!["usb-b".to_string()]);
+            let _ = second_done_tx.send(());
+        })
+    };
+    // A racy cache lets the second register finish while the first is held, so
+    // wait for that; an atomic one keeps it waiting behind the first report,
+    // and the timeout only moves the release along. Neither way can it turn a
+    // correct cache red.
+    let _ = second_done_rx.recv_timeout(Duration::from_millis(500));
+    release_tx.send(()).expect("the first report is waiting");
+    first.join().expect("first register");
+    second.join().expect("second register");
+
+    let reports = events.reports.lock_ignore_poison();
+    assert_eq!(
+        reports.last(),
+        Some(&vec!["usb-a".to_string(), "usb-b".to_string()]),
+        "the busy set reported last must be the current one, got {reports:?}"
+    );
+}
+
 /// How a synthetic managed op ends.
 #[derive(Debug, Clone, Copy)]
 enum Ending {

@@ -176,21 +176,26 @@ impl StatusCache {
     /// Called from register/unregister (the only two points where membership
     /// can change), so it's panic-safe: unregister runs from the manager's
     /// `ManagedTaskGuard` / external-seam cleanup that fires even on unwind.
+    ///
+    /// Compute, dedupe, and report run under the dedupe lock, the one engine
+    /// lock a seam is called under: the busy set is a state change and the
+    /// report is its announcement, so they have to be one step. Outside it, two
+    /// racing updates could report an older set last, and the volume picker
+    /// would offer Eject on a drive a transfer just started on (the backend's
+    /// guard reads [`Self::busy_volume_ids`] live, so it would still refuse).
+    /// The host's answer returns at once ([`EngineEvents`]), so the hold is
+    /// short.
     fn recompute_and_report_busy_volumes(&self) {
+        let mut last = self.last_reported_busy.lock_ignore_poison();
         let current = self.compute_busy_volume_ids();
-
-        {
-            let mut last = self.last_reported_busy.lock_ignore_poison();
-            if *last == current {
-                return;
-            }
-            *last = current.clone();
+        if *last == current {
+            return;
         }
+        let mut volume_ids: Vec<String> = current.iter().cloned().collect();
+        volume_ids.sort();
+        *last = current;
         #[cfg(test)]
         self.busy_emits.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-
-        let mut volume_ids: Vec<String> = current.into_iter().collect();
-        volume_ids.sort();
         self.events.volumes_busy_changed(volume_ids);
     }
 

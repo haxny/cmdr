@@ -15,8 +15,10 @@ use super::error_report::OperationErrorReport;
 /// Everything the engine reports that belongs to no single operation.
 ///
 /// Every method is required, so an answer that forgets one doesn't compile.
-/// ❗ Each is called with no engine lock held and returns at once: an answer
-/// that blocks stalls whichever operation reached it.
+/// ❗ Each returns at once: an answer that blocks stalls whichever operation
+/// reached it. Each is called with no engine lock held, except
+/// [`Self::volumes_busy_changed`], which runs under the status cache's dedupe
+/// lock so the set it reports is never older than one already reported.
 pub(crate) trait EngineEvents: Send + Sync {
     /// The registry's membership or lifecycle status changed. `snapshot` is the
     /// whole thin row set at that moment, retained failures included.
