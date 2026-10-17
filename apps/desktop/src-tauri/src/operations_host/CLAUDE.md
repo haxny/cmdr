@@ -23,7 +23,8 @@ engine-wide facts, the per-op sinks, and what a terminal event does besides reac
 - **An engine error report keeps its message and target word for word** (`events.rs::raise`), including the engine's
   module path as a literal target where it had none: dispatch filters and log greps key off them.
 - **A test binary never installs**, so its first read builds `test_engine()`: these same answers with no app handle and
-  no sink factory. The gauge pins in `status_cache_tests` read the real `priority::transfers` through it.
+  no sink factory. An engine suite on an engine of its own builds `testing::TestOperations` instead, so `events.rs`
+  pins the transfer pair's `priority::transfers` wiring itself.
 
 ## Module map
 

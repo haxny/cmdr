@@ -11,6 +11,7 @@
 //! contract with the frontend.
 
 use super::*;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::test_support::TestDir;
 use std::fs;
 use std::path::Path;
@@ -28,7 +29,7 @@ fn create_temp_dir(name: &str) -> TestDir {
 
 #[test]
 fn test_cancel_sets_intent() {
-    let state = Arc::new(WriteOperationState::new(Duration::from_millis(200)));
+    let state = Arc::new(TestOperations::new().new_operation_state(Duration::from_millis(200)));
 
     assert!(!state.intent().is_cancelled());
     assert_eq!(state.intent().load(), OperationIntent::Running);
@@ -140,7 +141,7 @@ fn test_create_and_cleanup_temp_dir() {
 
 #[test]
 fn test_operation_intent_transitions() {
-    let state = Arc::new(WriteOperationState::new(Duration::from_millis(200)));
+    let state = Arc::new(TestOperations::new().new_operation_state(Duration::from_millis(200)));
 
     // Running → RollingBack
     assert_eq!(state.intent().load(), OperationIntent::Running);

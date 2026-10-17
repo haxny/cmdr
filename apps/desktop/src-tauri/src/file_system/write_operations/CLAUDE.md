@@ -46,7 +46,6 @@ Copy, move, delete, trash, and zip edits as managed background ops.
 - **Every preview runs under a `ScanWatchdog`**, bounded by INACTIVITY: feed the progress callback, and whoever settles
   it CLAIMS the outcome.
 - **A FAILED op is retained out-of-band**, the one exception to removal; `retain_failure` emits only after
-  the record is GONE. **Test op state hangs off a guard**, ❌ never a `static`, ❌ never
-  `cancel_all_write_operations()`.
+  the record is GONE. **A test owns its engine** (`testing::TestOperations`), ❌ never a `static`.
 
 Architecture, flows, and decisions: `DETAILS.md`; read it before any non-trivial work here.

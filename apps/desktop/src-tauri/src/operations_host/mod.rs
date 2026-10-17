@@ -170,9 +170,8 @@ pub(crate) fn refuse_scan_preview_not_installed(
 
 /// The engine a test binary shares, since nothing there calls [`install`]: the
 /// app's answers with no frontend behind them (the real indexing gauge,
-/// analytics client, and error reporter, which `status_cache_tests`' gauge pins
-/// read), the test binary's shared operation log (what `TestJournalGuard` fills), and
-/// no sink factory.
+/// analytics client, and error reporter), the test binary's shared operation
+/// log (what `TestJournalGuard` fills), and no sink factory.
 #[cfg(test)]
 pub(crate) fn test_engine() -> Operations {
     app_answers(None, crate::operation_log_host::operation_log().clone()).build()

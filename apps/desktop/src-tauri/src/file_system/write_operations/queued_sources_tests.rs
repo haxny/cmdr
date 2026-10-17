@@ -1,39 +1,27 @@
 //! A queued operation whose sources left while it waited asks before carrying on
-//! (ERR-962JD). Each case queues a real local move behind a private lane holder,
-//! changes the sources while it waits, and lets it in.
+//! (ERR-962JD). Each case queues a real local move behind a lane holder on an
+//! engine of its own, changes the sources while it waits, and lets it in.
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
 use tokio::sync::oneshot;
 
 use super::super::event_sinks::{CollectorEventSink, OperationEventSink};
-use super::super::manager::{OperationDescriptor, OperationSummaryText, manager};
-use super::super::state::WriteOperationState;
-use super::super::test_support::TestOperationGuard;
+use super::super::manager::{OperationDescriptor, OperationSummaryText};
+use super::super::testing::TestOperations;
 use super::super::types::{
     LifecycleStatus, SourceItemOutcome, SourcesGoneAnswerOutcome, SourcesGoneNext, WriteOperationConfig,
     WriteOperationError, WriteOperationType,
 };
 use super::kept_after_queue_on;
-use crate::file_system::write_operations::installed;
 use crate::test_support::{TestDir, wait_until_async};
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::volume::{InMemoryVolume, LaneKey, Volume};
 use cmdr_operation_log::types::Initiator;
 
 const WAIT: Duration = Duration::from_secs(5);
-
-fn unique(tag: &str) -> String {
-    static N: AtomicU64 = AtomicU64::new(0);
-    format!(
-        "queued-sources-{tag}-{}-{}",
-        std::process::id(),
-        N.fetch_add(1, Ordering::Relaxed)
-    )
-}
 
 /// A running operation that owns `lane` until dropped, so whatever registers on
 /// the same lane after it waits `Queued`.
@@ -42,11 +30,11 @@ struct LaneHolder {
 }
 
 impl LaneHolder {
-    fn hold(lane: &LaneKey) -> Self {
-        let id = unique("holder");
+    fn hold(engine: &TestOperations, lane: &LaneKey) -> Self {
+        let id = "holder".to_string();
         let (release, released) = oneshot::channel::<()>();
         let settle_id = id.clone();
-        manager().spawn_managed(
+        engine.manager().spawn_managed(
             OperationDescriptor {
                 operation_id: id.clone(),
                 operation_type: WriteOperationType::Copy,
@@ -57,7 +45,7 @@ impl LaneHolder {
                 preview_id: None,
                 reverses: None,
             },
-            Arc::new(WriteOperationState::new(Duration::from_millis(50))),
+            engine.new_state(),
             Box::new(move |ops: crate::file_system::write_operations::Operations| {
                 Box::pin(async move {
                     let _ = released.await;
@@ -65,7 +53,7 @@ impl LaneHolder {
                 })
             }),
         );
-        assert_eq!(manager().lifecycle_status(&id), Some(LifecycleStatus::Running));
+        assert_eq!(engine.manager().lifecycle_status(&id), Some(LifecycleStatus::Running));
         Self { release: Some(release) }
     }
 
@@ -105,9 +93,14 @@ fn fixture(tag: &str, names: &[&str]) -> Fixture {
 }
 
 /// Starts a move of every fixture source on `lane`, returning its id.
-async fn start_move(collector: &Arc<CollectorEventSink>, fx: &Fixture, lane: &LaneKey) -> String {
+async fn start_move(
+    engine: &TestOperations,
+    collector: &Arc<CollectorEventSink>,
+    fx: &Fixture,
+    lane: &LaneKey,
+) -> String {
     let events: Arc<dyn OperationEventSink> = collector.clone();
-    installed()
+    engine
         .move_files_start(
             events,
             fx.sources.clone(),
@@ -143,22 +136,23 @@ fn names_in(dir: &Path) -> Vec<String> {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_queued_move_whose_sources_partly_left_asks_then_moves_the_rest() {
+    let engine = TestOperations::new();
     let fx = fixture("partly", &["a.mp3", "b.mp3", "c.mp3"]);
-    let lane = LaneKey::new(unique("lane"));
-    let mut holder = LaneHolder::hold(&lane);
+    let lane = LaneKey::new("lane");
+    let mut holder = LaneHolder::hold(&engine, &lane);
     let collector = Arc::new(CollectorEventSink::new());
-    let op_id = start_move(&collector, &fx, &lane).await;
-    assert_eq!(manager().lifecycle_status(&op_id), Some(LifecycleStatus::Queued));
+    let op_id = start_move(&engine, &collector, &fx, &lane).await;
+    assert_eq!(engine.manager().lifecycle_status(&op_id), Some(LifecycleStatus::Queued));
 
     // The person moves one of the files away while the move waits its turn.
     std::fs::remove_file(&fx.sources[1]).expect("move b away");
     holder.release();
 
     wait_until_async(WAIT, "the move to ask about its sources", || {
-        installed().pending_sources_gone(&op_id).is_some()
+        engine.pending_sources_gone(&op_id).is_some()
     })
     .await;
-    let asked = installed().pending_sources_gone(&op_id).expect("it is asking");
+    let asked = engine.pending_sources_gone(&op_id).expect("it is asking");
     assert_eq!(asked.next, SourcesGoneNext::AwaitingAnswer);
     assert_eq!((asked.gone_count, asked.total_count), (1, 3), "an honest count: 1 of 3");
     assert_eq!(asked.gone_sample, vec![fx.sources[1].display().to_string()]);
@@ -170,7 +164,7 @@ async fn a_queued_move_whose_sources_partly_left_asks_then_moves_the_rest() {
     assert!(names_in(&fx.dst).is_empty(), "nothing moves before the answer");
 
     assert_eq!(
-        installed().continue_without_gone_sources(&op_id),
+        engine.continue_without_gone_sources(&op_id),
         SourcesGoneAnswerOutcome::Continued
     );
     settled(&collector).await;
@@ -195,20 +189,21 @@ async fn a_queued_move_whose_sources_partly_left_asks_then_moves_the_rest() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn cancelling_a_queued_move_while_it_asks_ends_it_as_cancelled() {
+    let engine = TestOperations::new();
     let fx = fixture("cancel", &["a.mp3", "b.mp3"]);
-    let lane = LaneKey::new(unique("lane"));
-    let mut holder = LaneHolder::hold(&lane);
+    let lane = LaneKey::new("lane");
+    let mut holder = LaneHolder::hold(&engine, &lane);
     let collector = Arc::new(CollectorEventSink::new());
-    let op_id = start_move(&collector, &fx, &lane).await;
+    let op_id = start_move(&engine, &collector, &fx, &lane).await;
 
     std::fs::remove_file(&fx.sources[0]).expect("move a away");
     holder.release();
     wait_until_async(WAIT, "the move to ask", || {
-        installed().pending_sources_gone(&op_id).is_some()
+        engine.pending_sources_gone(&op_id).is_some()
     })
     .await;
 
-    installed().cancel_operation(&op_id);
+    engine.cancel_operation(&op_id);
     settled(&collector).await;
 
     assert_eq!(
@@ -221,7 +216,7 @@ async fn cancelling_a_queued_move_while_it_asks_ends_it_as_cancelled() {
     assert!(names_in(&fx.dst).is_empty(), "nothing moved");
     assert!(fx.sources[1].exists(), "the source still there stays put");
     assert_eq!(
-        installed().continue_without_gone_sources(&op_id),
+        engine.continue_without_gone_sources(&op_id),
         SourcesGoneAnswerOutcome::UnknownOperation,
         "a late answer finds nothing to carry on"
     );
@@ -229,11 +224,12 @@ async fn cancelling_a_queued_move_while_it_asks_ends_it_as_cancelled() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_queued_move_whose_sources_all_left_completes_and_says_why() {
+    let engine = TestOperations::new();
     let fx = fixture("all", &["a.mp3", "b.mp3"]);
-    let lane = LaneKey::new(unique("lane"));
-    let mut holder = LaneHolder::hold(&lane);
+    let lane = LaneKey::new("lane");
+    let mut holder = LaneHolder::hold(&engine, &lane);
     let collector = Arc::new(CollectorEventSink::new());
-    let op_id = start_move(&collector, &fx, &lane).await;
+    let op_id = start_move(&engine, &collector, &fx, &lane).await;
 
     for source in &fx.sources {
         std::fs::remove_file(source).expect("move it away");
@@ -252,20 +248,17 @@ async fn a_queued_move_whose_sources_all_left_completes_and_says_why() {
     let complete = collector.complete.lock_ignore_poison();
     assert_eq!(complete.len(), 1, "it completes with nothing to do");
     assert_eq!((complete[0].files_processed, complete[0].files_skipped), (0, 2));
-    assert_eq!(
-        installed().pending_sources_gone(&op_id),
-        None,
-        "and asks nobody anything"
-    );
+    assert_eq!(engine.pending_sources_gone(&op_id), None, "and asks nobody anything");
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_move_admitted_at_once_is_not_checked() {
+    let engine = TestOperations::new();
     let fx = fixture("unqueued", &["a.mp3"]);
     std::fs::remove_file(&fx.sources[0]).expect("remove the source before the move starts");
     let collector = Arc::new(CollectorEventSink::new());
     // A fresh lane: nothing ahead, so it never waited.
-    start_move(&collector, &fx, &LaneKey::new(unique("lane"))).await;
+    start_move(&engine, &collector, &fx, &LaneKey::new("lane")).await;
     settled(&collector).await;
 
     assert!(
@@ -284,13 +277,14 @@ async fn a_move_admitted_at_once_is_not_checked() {
 
 #[test]
 fn an_answer_to_an_operation_that_is_not_asking_changes_nothing() {
-    let guard = TestOperationGuard::register("not-asking");
+    let engine = TestOperations::new();
+    let op = engine.register("not-asking");
     assert_eq!(
-        installed().continue_without_gone_sources(guard.id()),
+        engine.continue_without_gone_sources(op.id()),
         SourcesGoneAnswerOutcome::NotAsking
     );
     assert_eq!(
-        installed().continue_without_gone_sources(&unique("never-registered")),
+        engine.continue_without_gone_sources("never-registered"),
         SourcesGoneAnswerOutcome::UnknownOperation
     );
 }
@@ -300,6 +294,7 @@ fn an_answer_to_an_operation_that_is_not_asking_changes_nothing() {
 /// read as "all your files were moved".
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn on_a_volume_only_a_source_that_is_really_missing_counts_as_gone() {
+    let engine = TestOperations::new();
     let volume = InMemoryVolume::new("queued-sources-vol");
     for name in ["/kept.txt", "/unreadable.txt"] {
         volume.create_file(Path::new(name), b"x").await.expect("seed");
@@ -310,28 +305,28 @@ async fn on_a_volume_only_a_source_that_is_really_missing_counts_as_gone() {
         PathBuf::from("/missing.txt"),
         PathBuf::from("/unreadable.txt"),
     ];
-    let guard = TestOperationGuard::register("volume-probe");
-    guard.state().note_waited_in_queue();
+    let op = engine.register("volume-probe");
+    op.state().note_waited_in_queue();
     let collector = CollectorEventSink::new();
 
-    let op_id = guard.id().to_string();
+    let op_id = op.id().to_string();
     let check = kept_after_queue_on(
         &volume as &dyn Volume,
         &collector,
         &op_id,
         WriteOperationType::Copy,
-        guard.state(),
+        op.state(),
         &sources,
     );
     let answer = async {
         wait_until_async(WAIT, "the copy to ask", || {
-            installed().pending_sources_gone(&op_id).is_some()
+            engine.pending_sources_gone(&op_id).is_some()
         })
         .await;
-        let asked = installed().pending_sources_gone(&op_id).expect("asking");
+        let asked = engine.pending_sources_gone(&op_id).expect("asking");
         assert_eq!((asked.gone_count, asked.total_count), (1, 3));
         assert_eq!(
-            installed().continue_without_gone_sources(&op_id),
+            engine.continue_without_gone_sources(&op_id),
             SourcesGoneAnswerOutcome::Continued
         );
     };

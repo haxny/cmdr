@@ -177,7 +177,7 @@ use archive_edit::route_archive_copy_into;
 #[cfg(test)]
 use event_sinks::CollectorEventSink;
 #[cfg(test)]
-use state::{OperationIntent, WriteOperationState};
+use state::OperationIntent;
 #[cfg(test)]
 use transfer::volume::{move_volumes_with_progress, move_within_same_volume_with_progress};
 #[cfg(test)]

@@ -16,17 +16,15 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
 
-use cmdr_operation_log::capture::WriterJournal;
-use cmdr_operation_log::store::{open_read_connection, operation_log_db_path, read_operation};
+use cmdr_operation_log::store::{open_read_connection, read_operation};
 use cmdr_operation_log::types::{ExecutionStatus, RollbackState};
-use cmdr_operation_log::writer::OperationLogWriter;
 use tokio::sync::oneshot;
 
 use super::event_sinks::{CollectorEventSink, OperationEventSink};
-use super::manager::{ManagedTaskGuard, OperationDescriptor, OperationSummaryText, manager};
-use super::state::{WriteOperationState, WriteSettledGuard};
+use super::manager::{ManagedTaskGuard, OperationDescriptor, OperationSummaryText};
+use super::state::WriteSettledGuard;
+use super::testing::{TestOperationLog, TestOperations};
 use super::types::{CancelRollback, LifecycleStatus, WriteOperationConfig, WriteOperationType, WriteSettledEvent};
-use crate::file_system::write_operations::installed;
 use crate::test_support::TestDir;
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::volume::LaneKey;
@@ -249,7 +247,7 @@ async fn injected_sink_receives_complete_and_settled_for_local_copy() {
     let collector = Arc::new(CollectorEventSink::new());
     let events: Arc<dyn OperationEventSink> = collector.clone();
 
-    let result = installed()
+    let result = TestOperations::new()
         .copy_files_start(
             events,
             vec![src_file.clone()],
@@ -304,30 +302,6 @@ struct Seen {
     lane_held: bool,
 }
 
-/// A journal over a scratch DB, installed for the test's duration. The guard
-/// serializes journal tests; other ops still journal into it, so every read is
-/// scoped to the test's own op id.
-struct ScratchJournal {
-    _dir: TestDir,
-    db: PathBuf,
-    _guard: crate::operation_log_host::TestJournalGuard,
-}
-
-impl ScratchJournal {
-    fn install(label: &str) -> Self {
-        let dir = TestDir::new(label);
-        let db = operation_log_db_path(&dir);
-        let guard = crate::operation_log_host::TestJournalGuard::install(Arc::new(WriterJournal::new(
-            OperationLogWriter::spawn(&db).expect("writer"),
-        )));
-        Self {
-            _dir: dir,
-            db,
-            _guard: guard,
-        }
-    }
-}
-
 fn execution_status(db: &Path, op_id: &str) -> Option<ExecutionStatus> {
     let conn = open_read_connection(db).expect("read conn");
     read_operation(&conn, op_id)
@@ -337,32 +311,37 @@ fn execution_status(db: &Path, op_id: &str) -> Option<ExecutionStatus> {
 
 type SeenLog = Arc<std::sync::Mutex<Vec<Seen>>>;
 
-/// A sink whose probe records [`Seen`] at every terminal and settle emit.
+/// A sink whose probe records [`Seen`] at every terminal and settle emit, asking
+/// `engine`'s manager about the record and the lane.
 fn recording_pair(
+    engine: &TestOperations,
     journal_db: PathBuf,
     lane: String,
 ) -> (Arc<dyn OperationEventSink>, Arc<CollectorEventSink>, SeenLog) {
     let seen: SeenLog = Arc::default();
     let log = Arc::clone(&seen);
+    let manager = Arc::clone(engine.manager());
     let probe: Probe = Arc::new(move |moment, op_id| {
         let journal = execution_status(&journal_db, op_id);
         log.lock_ignore_poison().push(Seen {
             moment,
             journal,
-            record_live: manager().lifecycle_status(op_id).is_some(),
-            lane_held: manager().lane_use_snapshot().contains_key(&lane),
+            record_live: manager.lifecycle_status(op_id).is_some(),
+            lane_held: manager.lane_use_snapshot().contains_key(&lane),
         });
     });
     let (sink, collector) = probed_pair(Some(probe));
     (sink, collector, seen)
 }
 
-fn unique_lane(label: &str) -> String {
-    format!("settle-order-{label}-{}", uuid::Uuid::new_v4())
-}
-
-async fn start_copy(events: Arc<dyn OperationEventSink>, source: PathBuf, dst: &Path, lane: &str) -> String {
-    installed()
+async fn start_copy(
+    engine: &TestOperations,
+    events: Arc<dyn OperationEventSink>,
+    source: PathBuf,
+    dst: &Path,
+    lane: &str,
+) -> String {
+    engine
         .copy_files_start(
             events,
             vec![source],
@@ -392,14 +371,15 @@ async fn wait_settled(collector: &CollectorEventSink) {
 /// finalize and after `on_settled` freed both.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_completed_op_emits_complete_then_finalizes_then_frees_then_settles() {
-    let journal = ScratchJournal::install("settle_order_journal");
+    let journal = TestOperationLog::new("settle_order_journal");
+    let engine = TestOperations::journaling_into(&journal);
     let dir = create_temp_dir("settle_order_ok");
     fs::write(dir.join("a.txt"), b"a").expect("source");
     fs::create_dir(dir.join("dst")).expect("dst");
-    let lane = unique_lane("ok");
-    let (sink, collector, seen) = recording_pair(journal.db.clone(), lane.clone());
+    let lane = "settle-order-ok".to_string();
+    let (sink, collector, seen) = recording_pair(&engine, journal.db().to_path_buf(), lane.clone());
 
-    let op_id = start_copy(sink, dir.join("a.txt"), &dir.join("dst"), &lane).await;
+    let op_id = start_copy(&engine, sink, dir.join("a.txt"), &dir.join("dst"), &lane).await;
     wait_settled(&collector).await;
 
     assert_eq!(
@@ -424,7 +404,7 @@ async fn a_completed_op_emits_complete_then_finalizes_then_frees_then_settles() 
         1,
         "write-settled fires once"
     );
-    assert_eq!(execution_status(&journal.db, &op_id), Some(ExecutionStatus::Done));
+    assert_eq!(execution_status(journal.db(), &op_id), Some(ExecutionStatus::Done));
 }
 
 /// A handler that returns an error without emitting one gets the safety net's
@@ -432,14 +412,15 @@ async fn a_completed_op_emits_complete_then_finalizes_then_frees_then_settles() 
 /// still before `on_settled`.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_failed_op_finalizes_then_emits_the_safety_net_error_then_frees_then_settles() {
-    let journal = ScratchJournal::install("settle_order_fail_journal");
+    let journal = TestOperationLog::new("settle_order_fail_journal");
+    let engine = TestOperations::journaling_into(&journal);
     let dir = create_temp_dir("settle_order_fail");
     fs::create_dir(dir.join("dst")).expect("dst");
-    let lane = unique_lane("fail");
-    let (sink, collector, seen) = recording_pair(journal.db.clone(), lane.clone());
+    let lane = "settle-order-fail".to_string();
+    let (sink, collector, seen) = recording_pair(&engine, journal.db().to_path_buf(), lane.clone());
 
     // A missing source fails validation inside the handler, which emits nothing.
-    start_copy(sink, dir.join("missing.txt"), &dir.join("dst"), &lane).await;
+    start_copy(&engine, sink, dir.join("missing.txt"), &dir.join("dst"), &lane).await;
     wait_settled(&collector).await;
 
     assert_eq!(
@@ -471,26 +452,30 @@ async fn a_failed_op_finalizes_then_emits_the_safety_net_error_then_frees_then_s
 /// copy's row already finalized, eligibility computed, when its turn comes.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn an_op_queued_behind_a_copy_reads_its_row_finalized_when_admitted() {
-    let journal = ScratchJournal::install("settle_order_queue_journal");
+    let journal = TestOperationLog::new("settle_order_queue_journal");
+    let engine = TestOperations::journaling_into(&journal);
     let dir = create_temp_dir("settle_order_queue");
     fs::write(dir.join("a.txt"), b"a").expect("source");
     fs::create_dir(dir.join("dst")).expect("dst");
-    let lane = unique_lane("queue");
+    let lane = "settle-order-queue".to_string();
 
     // A blocker holds the lane so the copy queues; the reader queues behind it.
-    let blocker = format!("settle-order-blocker-{}", uuid::Uuid::new_v4());
+    let blocker = "settle-order-blocker".to_string();
     let (release_blocker, blocker_released) = oneshot::channel::<()>();
-    spawn_on_lane(&blocker, &lane, || {}, async move {
+    spawn_on_lane(&engine, &blocker, &lane, || {}, async move {
         let _ = blocker_released.await;
     });
 
     let (sink, collector) = pair();
-    let copy_id = start_copy(sink, dir.join("a.txt"), &dir.join("dst"), &lane).await;
-    assert_eq!(manager().lifecycle_status(&copy_id), Some(LifecycleStatus::Queued));
+    let copy_id = start_copy(&engine, sink, dir.join("a.txt"), &dir.join("dst"), &lane).await;
+    assert_eq!(
+        engine.manager().lifecycle_status(&copy_id),
+        Some(LifecycleStatus::Queued)
+    );
 
-    let reader = format!("settle-order-reader-{}", uuid::Uuid::new_v4());
+    let reader = "settle-order-reader".to_string();
     let (row_tx, row_rx) = oneshot::channel::<Option<(ExecutionStatus, RollbackState)>>();
-    let db = journal.db.clone();
+    let db = journal.db().to_path_buf();
     let read_id = copy_id.clone();
     // Read at the admission instant itself, inside the admission pass, so a
     // finalize that ran after `on_settled` can't win a race to the row.
@@ -499,8 +484,11 @@ async fn an_op_queued_behind_a_copy_reads_its_row_finalized_when_admitted() {
         let row = read_operation(&conn, &read_id).expect("read");
         let _ = row_tx.send(row.map(|r| (r.execution_status, r.rollback_state)));
     };
-    spawn_on_lane(&reader, &lane, at_admission, async {});
-    assert_eq!(manager().lifecycle_status(&reader), Some(LifecycleStatus::Queued));
+    spawn_on_lane(&engine, &reader, &lane, at_admission, async {});
+    assert_eq!(
+        engine.manager().lifecycle_status(&reader),
+        Some(LifecycleStatus::Queued)
+    );
 
     let _ = release_blocker.send(());
     let row = tokio::time::timeout(Duration::from_secs(5), row_rx)
@@ -515,10 +503,11 @@ async fn an_op_queued_behind_a_copy_reads_its_row_finalized_when_admitted() {
     wait_settled(&collector).await;
 }
 
-/// Registers a synthetic op on `lane` whose body is `work`, settling on the
-/// global manager when it ends. `at_admission` runs synchronously inside the
+/// Registers a synthetic op on `engine`'s `lane` whose body is `work`, settling
+/// on that engine when it ends. `at_admission` runs synchronously inside the
 /// admission pass that admits it, where its deferred start is built.
 fn spawn_on_lane(
+    engine: &TestOperations,
     op_id: &str,
     lane: &str,
     at_admission: impl FnOnce() + Send + 'static,
@@ -535,9 +524,9 @@ fn spawn_on_lane(
         reverses: None,
     };
     let id = op_id.to_string();
-    manager().spawn_managed(
+    engine.manager().spawn_managed(
         descriptor,
-        Arc::new(WriteOperationState::new(Duration::from_millis(200))),
+        Arc::new(engine.new_operation_state(Duration::from_millis(200))),
         Box::new(move |ops: crate::file_system::write_operations::Operations| {
             at_admission();
             Box::pin(async move {

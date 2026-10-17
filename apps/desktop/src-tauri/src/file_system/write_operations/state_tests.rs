@@ -4,25 +4,17 @@
 //! `operation_intent.rs`; the `FileInfo` sort-key and scan-result TTL tests
 //! live in `scan_cache.rs`; `CopyTransaction`'s live in `ledger_tests.rs`.
 //!
-//! Tests that touch the shared engine's registry /
-//! status caches key their entries per test, so they don't
-//! collide with concurrent test runs in the same process. registry
-//! entries go through `TestOperationGuard`, which also removes them on unwind.
+//! Every test that touches a registry or a status cache drives an engine of its
+//! own (`TestOperations`), so a walk over all operations meets only its own.
 use super::*;
-use crate::file_system::write_operations::installed;
+use crate::file_system::write_operations::Operations;
 use crate::file_system::write_operations::test_support::{TestOperationGuard, placeholder_conflict};
+use crate::file_system::write_operations::testing::{RegisteredOperation, TestOperations};
 use crate::file_system::write_operations::types::{
     ConflictId, ConflictResolution, ConflictResolutionOutcome, TransferActivity, TransferWaitReason,
     WriteOperationPhase, WriteOperationType, WriteProgressEvent,
 };
 use std::sync::atomic::Ordering;
-
-fn unique_id(label: &str) -> String {
-    use std::sync::atomic::{AtomicU64, Ordering};
-    static N: AtomicU64 = AtomicU64::new(0);
-    let n = N.fetch_add(1, Ordering::Relaxed);
-    format!("test-state-{label}-{n}-{:?}", std::thread::current().id())
-}
 
 // ---- the wait classifier ----
 
@@ -46,7 +38,8 @@ fn enrich_progress_keeps_an_activity_the_caller_already_decided() {
     // one that just decided the transfer is wedged. A second lookup here would
     // cost the re-emitted event the very activity it exists to carry: this
     // operation keeps no in-flight table, so the lookup answers nothing.
-    let op = install_state("keeps-callers-activity", OperationIntent::Running);
+    let engine = TestOperations::new();
+    let op = install_state(&engine, "keeps-callers-activity", OperationIntent::Running);
     let mut event = copying_event(op.id());
     let wedged = TransferActivity {
         in_flight: 3,
@@ -65,7 +58,8 @@ fn enrich_progress_keeps_an_activity_the_caller_already_decided() {
 
 #[test]
 fn enrich_progress_classifies_a_wait_the_caller_left_open() {
-    let op = install_state("classifies-open-wait", OperationIntent::Running);
+    let engine = TestOperations::new();
+    let op = install_state(&engine, "classifies-open-wait", OperationIntent::Running);
     let mut event = copying_event(op.id());
     let (tx, _rx) = tokio::sync::oneshot::channel();
     op.state().conflict_slot.arm(tx, placeholder_conflict);
@@ -82,7 +76,8 @@ fn enrich_progress_classifies_a_wait_the_caller_left_open() {
 fn an_operation_with_nothing_to_say_reports_no_activity() {
     // No in-flight table and nobody parked on a decision. Absent is the honest
     // answer; a stand-in `moving` is an invention a poller would act on.
-    let op = install_state("nothing-to-say", OperationIntent::Running);
+    let engine = TestOperations::new();
+    let op = install_state(&engine, "nothing-to-say", OperationIntent::Running);
     let mut event = copying_event(op.id());
 
     op.state().enrich_progress(&mut event);
@@ -95,7 +90,8 @@ fn an_operation_with_nothing_to_say_reports_no_activity() {
 /// stall watchdog judges movement by.
 #[test]
 fn a_poisoned_estimator_still_rates_and_keeps_the_event() {
-    let op = install_state("poisoned-estimator", OperationIntent::Running);
+    let engine = TestOperations::new();
+    let op = install_state(&engine, "poisoned-estimator", OperationIntent::Running);
     let poisoned = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         let _held = op.state().estimator.lock_ignore_poison();
         panic!("an estimator update panicked, on purpose");
@@ -115,35 +111,37 @@ fn a_poisoned_estimator_still_rates_and_keeps_the_event() {
 
 // ---- cancel_write_operation state-machine transitions ----
 //
-// Helper: install a fresh state into the global cache under a unique op id,
-// run the cancellation, then read back the resulting intent. The guard removes
-// the entry when it drops, so a failing assertion can't leak it.
+// Helper: register a fresh state in the test's engine with the given intent;
+// each test then runs the cancellation and reads back the resulting intent.
 
-fn install_state(label: &str, initial: OperationIntent) -> TestOperationGuard {
-    let op = TestOperationGuard::register(label);
+fn install_state(engine: &TestOperations, label: &str, initial: OperationIntent) -> RegisteredOperation {
+    let op = engine.register(label);
     op.state().intent().set_for_test(initial);
     op
 }
 
 #[test]
 fn cancel_running_with_rollback_goes_to_rolling_back() {
-    let op = install_state("cancel-running-rollback", OperationIntent::Running);
-    installed().cancel_write_operation(op.id(), true);
+    let engine = TestOperations::new();
+    let op = install_state(&engine, "cancel-running-rollback", OperationIntent::Running);
+    engine.cancel_write_operation(op.id(), true);
     assert_eq!(op.state().intent().load(), OperationIntent::RollingBack);
 }
 
 #[test]
 fn cancel_running_without_rollback_goes_to_stopped() {
-    let op = install_state("cancel-running-stop", OperationIntent::Running);
-    installed().cancel_write_operation(op.id(), false);
+    let engine = TestOperations::new();
+    let op = install_state(&engine, "cancel-running-stop", OperationIntent::Running);
+    engine.cancel_write_operation(op.id(), false);
     assert_eq!(op.state().intent().load(), OperationIntent::Stopped);
 }
 
 #[test]
 fn cancel_rolling_back_with_rollback_is_a_noop() {
     // Only RollingBack → Stopped is valid; RollingBack → RollingBack is a no-op.
-    let op = install_state("cancel-rb-rb", OperationIntent::RollingBack);
-    installed().cancel_write_operation(op.id(), true);
+    let engine = TestOperations::new();
+    let op = install_state(&engine, "cancel-rb-rb", OperationIntent::RollingBack);
+    engine.cancel_write_operation(op.id(), true);
     assert_eq!(
         op.state().intent().load(),
         OperationIntent::RollingBack,
@@ -153,28 +151,31 @@ fn cancel_rolling_back_with_rollback_is_a_noop() {
 
 #[test]
 fn cancel_rolling_back_without_rollback_goes_to_stopped() {
-    let op = install_state("cancel-rb-stop", OperationIntent::RollingBack);
-    installed().cancel_write_operation(op.id(), false);
+    let engine = TestOperations::new();
+    let op = install_state(&engine, "cancel-rb-stop", OperationIntent::RollingBack);
+    engine.cancel_write_operation(op.id(), false);
     assert_eq!(op.state().intent().load(), OperationIntent::Stopped);
 }
 
 #[test]
 fn cancel_stopped_is_terminal_for_any_target() {
     // Stopped is terminal; no transition is valid from it.
-    let op = install_state("cancel-stopped", OperationIntent::Stopped);
-    installed().cancel_write_operation(op.id(), true);
+    let engine = TestOperations::new();
+    let op = install_state(&engine, "cancel-stopped", OperationIntent::Stopped);
+    engine.cancel_write_operation(op.id(), true);
     assert_eq!(op.state().intent().load(), OperationIntent::Stopped);
-    installed().cancel_write_operation(op.id(), false);
+    engine.cancel_write_operation(op.id(), false);
     assert_eq!(op.state().intent().load(), OperationIntent::Stopped);
 }
 
 #[test]
 fn cancel_drops_the_conflict_resolution_sender() {
     // After cancel, any pending receiver should observe a closed channel.
-    let op = install_state("cancel-drops-tx", OperationIntent::Running);
+    let engine = TestOperations::new();
+    let op = install_state(&engine, "cancel-drops-tx", OperationIntent::Running);
     let (tx, mut rx) = tokio::sync::oneshot::channel::<ConflictResolutionResponse>();
     op.state().conflict_slot.arm(tx, placeholder_conflict);
-    installed().cancel_write_operation(op.id(), false);
+    engine.cancel_write_operation(op.id(), false);
     // The receiver should now be closed (sender dropped).
     match rx.try_recv() {
         Err(tokio::sync::oneshot::error::TryRecvError::Closed) => {} // good
@@ -186,15 +187,16 @@ fn cancel_drops_the_conflict_resolution_sender() {
 
 #[test]
 fn backend_cancel_starts_unset_on_fresh_state() {
-    let state = WriteOperationState::new(Duration::from_millis(50));
+    let state = TestOperations::new().new_state();
     assert!(!state.backend_cancel.is_cancelled());
 }
 
 #[test]
 fn cancel_write_operation_flips_backend_cancel_to_stopped() {
-    let op = install_state("cancel-flips-backend-stopped", OperationIntent::Running);
+    let engine = TestOperations::new();
+    let op = install_state(&engine, "cancel-flips-backend-stopped", OperationIntent::Running);
     assert!(!op.state().backend_cancel.is_cancelled());
-    installed().cancel_write_operation(op.id(), false);
+    engine.cancel_write_operation(op.id(), false);
     assert!(
         op.state().backend_cancel.is_cancelled(),
         "cancel → Stopped must also flip backend_cancel so in-flight USB ops bail"
@@ -203,8 +205,9 @@ fn cancel_write_operation_flips_backend_cancel_to_stopped() {
 
 #[test]
 fn cancel_write_operation_flips_backend_cancel_to_rolling_back() {
-    let op = install_state("cancel-flips-backend-rb", OperationIntent::Running);
-    installed().cancel_write_operation(op.id(), true);
+    let engine = TestOperations::new();
+    let op = install_state(&engine, "cancel-flips-backend-rb", OperationIntent::Running);
+    engine.cancel_write_operation(op.id(), true);
     assert!(
         op.state().backend_cancel.is_cancelled(),
         "cancel → RollingBack must also flip backend_cancel — the user wants the wire activity stopped, even though we're going to delete created files"
@@ -217,8 +220,9 @@ fn cancel_stopped_is_noop_for_backend_cancel_too() {
     // change either. This guards against a subtle regression where the
     // token gets cancelled before the validity check. A freshly registered
     // op starts with an un-cancelled token, so this observes the flip alone.
-    let op = install_state("cancel-stopped-noop", OperationIntent::Stopped);
-    installed().cancel_write_operation(op.id(), true);
+    let engine = TestOperations::new();
+    let op = install_state(&engine, "cancel-stopped-noop", OperationIntent::Stopped);
+    engine.cancel_write_operation(op.id(), true);
     assert!(
         !op.state().backend_cancel.is_cancelled(),
         "Stopped is terminal: invalid transition must not flip backend_cancel"
@@ -237,33 +241,34 @@ fn cancel_stopped_is_noop_for_backend_cancel_too() {
 /// and returns it with the two edges of the park: `parked` fires once the writer
 /// is in the gap, and sending on the returned sender lets it continue.
 fn op_with_a_parked_intent_writer(
+    engine: &TestOperations,
     label: &str,
 ) -> (
-    TestOperationGuard,
+    RegisteredOperation,
     std::sync::mpsc::Receiver<()>,
     std::sync::mpsc::Sender<()>,
 ) {
     let (parked_tx, parked) = std::sync::mpsc::channel();
     let (release, release_rx) = std::sync::mpsc::channel::<()>();
-    let state = WriteOperationState::new(Duration::from_millis(50)).with_intent_write_gap(move || {
-        parked_tx.send(()).expect("the test waits for the park");
-        release_rx.recv().expect("the test releases the park");
-    });
-    (
-        TestOperationGuard::register_state(label, Arc::new(state)),
-        parked,
-        release,
-    )
+    let state = engine
+        .new_operation_state(Duration::from_millis(50))
+        .with_intent_write_gap(move || {
+            parked_tx.send(()).expect("the test waits for the park");
+            release_rx.recv().expect("the test releases the park");
+        });
+    (engine.register_state(label, Arc::new(state)), parked, release)
 }
 
 /// Starts a Rollback click on its own thread and returns once it's parked in the
 /// gap, having already read `Running`.
 fn rollback_parked_in_the_gap(
-    op: &TestOperationGuard,
+    engine: &Operations,
+    op: &RegisteredOperation,
     parked: &std::sync::mpsc::Receiver<()>,
 ) -> std::thread::JoinHandle<()> {
     let id = op.id().to_owned();
-    let rollback = std::thread::spawn(move || installed().cancel_write_operation(&id, true));
+    let engine = engine.clone();
+    let rollback = std::thread::spawn(move || engine.cancel_write_operation(&id, true));
     parked
         .recv_timeout(Duration::from_secs(5))
         .expect("the Rollback reaches the gap between its read and its write");
@@ -272,11 +277,12 @@ fn rollback_parked_in_the_gap(
 
 #[test]
 fn a_rollback_click_racing_quit_keeps_the_partial_files_quit_meant_to_keep() {
-    let (op, parked, release) = op_with_a_parked_intent_writer("race-rollback-vs-quit");
+    let engine = TestOperations::new();
+    let (op, parked, release) = op_with_a_parked_intent_writer(&engine, "race-rollback-vs-quit");
     let quit_walk = WriteOperationRegistry::new();
     quit_walk.insert(op.id().to_owned(), Arc::clone(op.state()));
 
-    let rollback = rollback_parked_in_the_gap(&op, &parked);
+    let rollback = rollback_parked_in_the_gap(&engine, &op, &parked);
     quit_walk.cancel_all();
     release.send(()).expect("the Rollback is still parked");
     rollback.join().expect("the Rollback returns");
@@ -290,10 +296,11 @@ fn a_rollback_click_racing_quit_keeps_the_partial_files_quit_meant_to_keep() {
 
 #[test]
 fn a_rollback_click_racing_a_cancel_click_leaves_the_cancel_standing() {
-    let (op, parked, release) = op_with_a_parked_intent_writer("race-rollback-vs-cancel");
+    let engine = TestOperations::new();
+    let (op, parked, release) = op_with_a_parked_intent_writer(&engine, "race-rollback-vs-cancel");
 
-    let rollback = rollback_parked_in_the_gap(&op, &parked);
-    installed().cancel_write_operation(op.id(), false);
+    let rollback = rollback_parked_in_the_gap(&engine, &op, &parked);
+    engine.cancel_write_operation(op.id(), false);
     release.send(()).expect("the Rollback is still parked");
     rollback.join().expect("the Rollback returns");
 
@@ -307,26 +314,23 @@ fn a_rollback_click_racing_a_cancel_click_leaves_the_cancel_standing() {
 #[test]
 fn cancel_unknown_operation_is_a_silent_noop() {
     // No installed state; must not panic, must not affect anything.
-    installed().cancel_write_operation("does-not-exist-xyzzy", true);
-    installed().cancel_write_operation("does-not-exist-xyzzy", false);
+    let engine = TestOperations::new();
+    engine.cancel_write_operation("does-not-exist-xyzzy", true);
+    engine.cancel_write_operation("does-not-exist-xyzzy", false);
 }
 
 // ---- cancel_all: the frontend-teardown safety net -------------------------
 //
-// `cancel_all` is a WALK, so these drive a `WriteOperationRegistry` the test
-// OWNS. Calling the global `installed().cancel_all_write_operations()` here would stop
-// every operation every OTHER concurrently-running test has in flight — the
-// defect these tests used to be. The code under test is the same either way:
-// the public function is a one-line delegation to this method, pinned by
-// `cancel_all_write_operations_walks_the_global_registry` below.
+// `cancel_all` is a WALK over every operation in a registry, so these drive the
+// registry of an engine the test OWNS: on a registry other tests share, it
+// would stop whatever they have in flight. The public function is a one-line
+// delegation to this method, pinned by
+// `cancel_all_write_operations_walks_the_engines_registry` below.
 
-/// A state registered in `registry` under a unique id, returned for direct
-/// inspection. The registry owns the entry, so there's nothing to clean up.
-fn registered_in(registry: &WriteOperationRegistry, label: &str, initial: OperationIntent) -> Arc<WriteOperationState> {
-    let state = Arc::new(WriteOperationState::new(Duration::from_millis(50)));
-    state.intent().set_for_test(initial);
-    registry.insert(unique_id(label), Arc::clone(&state));
-    state
+/// A state registered in `engine`, returned for direct inspection. The engine
+/// owns the entry, so there's nothing to clean up.
+fn registered_in(engine: &TestOperations, label: &str, initial: OperationIntent) -> Arc<WriteOperationState> {
+    Arc::clone(install_state(engine, label, initial).state())
 }
 
 #[test]
@@ -334,12 +338,12 @@ fn cancel_all_stops_running_but_does_not_re_stop_already_stopped() {
     // Pins the `current != OperationIntent::Stopped` guard. If the guard
     // flips to `==`, running operations would NOT be stopped; they'd
     // remain running.
-    let registry = WriteOperationRegistry::new();
-    let running = registered_in(&registry, "cancel-all-running", OperationIntent::Running);
-    let stopped = registered_in(&registry, "cancel-all-stopped", OperationIntent::Stopped);
-    let rb = registered_in(&registry, "cancel-all-rb", OperationIntent::RollingBack);
+    let engine = TestOperations::new();
+    let running = registered_in(&engine, "cancel-all-running", OperationIntent::Running);
+    let stopped = registered_in(&engine, "cancel-all-stopped", OperationIntent::Stopped);
+    let rb = registered_in(&engine, "cancel-all-rb", OperationIntent::RollingBack);
 
-    registry.cancel_all();
+    engine.registry().cancel_all();
 
     assert_eq!(running.intent().load(), OperationIntent::Stopped);
     assert_eq!(stopped.intent().load(), OperationIntent::Stopped);
@@ -356,11 +360,11 @@ fn cancel_all_stops_running_but_does_not_re_stop_already_stopped() {
 
 #[test]
 fn cancel_all_flips_backend_cancel() {
-    let registry = WriteOperationRegistry::new();
-    let running = registered_in(&registry, "cancel-all-flips-backend", OperationIntent::Running);
+    let engine = TestOperations::new();
+    let running = registered_in(&engine, "cancel-all-flips-backend", OperationIntent::Running);
     assert!(!running.backend_cancel.is_cancelled());
 
-    registry.cancel_all();
+    engine.registry().cancel_all();
 
     assert!(
         running.backend_cancel.is_cancelled(),
@@ -372,12 +376,12 @@ fn cancel_all_flips_backend_cancel() {
 fn cancel_all_drops_pending_conflict_senders() {
     // Teardown must unblock an op parked on a Stop-mode conflict prompt:
     // nobody is left to answer it.
-    let registry = WriteOperationRegistry::new();
-    let state = registered_in(&registry, "cancel-all-conflict", OperationIntent::Running);
+    let engine = TestOperations::new();
+    let state = registered_in(&engine, "cancel-all-conflict", OperationIntent::Running);
     let (tx, mut rx) = tokio::sync::oneshot::channel::<ConflictResolutionResponse>();
     state.conflict_slot.arm(tx, placeholder_conflict);
 
-    registry.cancel_all();
+    engine.registry().cancel_all();
 
     match rx.try_recv() {
         Err(tokio::sync::oneshot::error::TryRecvError::Closed) => {} // good
@@ -390,8 +394,8 @@ fn cancel_all_wakes_a_paused_parked_op() {
     // Cancellation wins over pause on the teardown path too: without the
     // `wake()`, an op parked on the condvar would sit there forever while the
     // frontend that could resume it is being torn down.
-    let registry = WriteOperationRegistry::new();
-    let state = registered_in(&registry, "cancel-all-paused", OperationIntent::Running);
+    let engine = TestOperations::new();
+    let state = registered_in(&engine, "cancel-all-paused", OperationIntent::Running);
     state.pause_gate.pause();
 
     let woke = Arc::new(AtomicBool::new(false));
@@ -409,7 +413,7 @@ fn cancel_all_wakes_a_paused_parked_op() {
     std::thread::sleep(Duration::from_millis(50));
     assert!(!woke.load(Ordering::SeqCst), "still parked before teardown");
 
-    registry.cancel_all();
+    engine.registry().cancel_all();
 
     crate::test_support::wait_until(
         Duration::from_secs(2),
@@ -424,24 +428,18 @@ fn cancel_all_wakes_a_paused_parked_op() {
 }
 
 #[test]
-fn cancel_all_write_operations_walks_the_global_registry() {
-    // The public function's one job is to point at the process-global
-    // registry; everything it then does is pinned above against a private
-    // one. This is the only write-op test that drives a process-global
-    // mutator, so it runs ONLY when it has the process to itself — under
-    // plain `cargo test` it would stop every other test's operations, which
-    // is the defect this suite was restructured to remove.
-    if !crate::file_system::write_operations::test_support::one_test_per_process() {
-        return;
-    }
-    let op = install_state("cancel-all-global-wiring", OperationIntent::Running);
+fn cancel_all_write_operations_walks_the_engines_registry() {
+    // The public function's one job is to point at the engine's registry;
+    // everything it then does is pinned above against that registry directly.
+    let engine = TestOperations::new();
+    let op = install_state(&engine, "cancel-all-wiring", OperationIntent::Running);
 
-    installed().cancel_all_write_operations();
+    engine.cancel_all_write_operations();
 
     assert_eq!(
         op.state().intent().load(),
         OperationIntent::Stopped,
-        "the public teardown entry point must reach ops in the global registry"
+        "the public teardown entry point must reach ops in the engine's registry"
     );
 }
 
@@ -453,7 +451,7 @@ fn cancel_all_write_operations_walks_the_global_registry() {
 
 #[test]
 fn backend_abort_starts_unset_on_fresh_state() {
-    let state = WriteOperationState::new(Duration::from_millis(50));
+    let state = TestOperations::new().new_state();
     assert!(!state.backend_abort.is_cancelled());
 }
 
@@ -464,15 +462,16 @@ fn backend_abort_starts_unset_on_fresh_state() {
 /// litter on every single cancel.
 #[test]
 fn an_ordinary_cancel_never_fires_the_hard_abort() {
-    let op = install_state("cancel-never-aborts", OperationIntent::Running);
-    installed().cancel_write_operation(op.id(), false);
+    let engine = TestOperations::new();
+    let op = install_state(&engine, "cancel-never-aborts", OperationIntent::Running);
+    engine.cancel_write_operation(op.id(), false);
     assert!(
         !op.state().backend_abort.is_cancelled(),
         "a user's Cancel must stay in tier 1: the backend deletes its own partial"
     );
 
-    let rb = install_state("rollback-never-aborts", OperationIntent::Running);
-    installed().cancel_write_operation(rb.id(), true);
+    let rb = install_state(&engine, "rollback-never-aborts", OperationIntent::Running);
+    engine.cancel_write_operation(rb.id(), true);
     assert!(
         !rb.state().backend_abort.is_cancelled(),
         "a Rollback is a user decision too, and stays in tier 1"
@@ -483,10 +482,10 @@ fn an_ordinary_cancel_never_fires_the_hard_abort() {
 /// would most plausibly route through tier 2 ("we're going away anyway").
 #[test]
 fn cancel_all_never_fires_the_hard_abort() {
-    let registry = WriteOperationRegistry::new();
-    let running = registered_in(&registry, "cancel-all-never-aborts", OperationIntent::Running);
+    let engine = TestOperations::new();
+    let running = registered_in(&engine, "cancel-all-never-aborts", OperationIntent::Running);
 
-    registry.cancel_all();
+    engine.registry().cancel_all();
 
     assert!(running.backend_cancel.is_cancelled(), "tier 1 fires");
     assert!(
@@ -499,9 +498,10 @@ fn cancel_all_never_fires_the_hard_abort() {
 /// patience, so the backend still gets its cooperative signal first.
 #[test]
 fn abort_write_operation_fires_both_tiers() {
-    let op = install_state("abort-one", OperationIntent::Running);
+    let engine = TestOperations::new();
+    let op = install_state(&engine, "abort-one", OperationIntent::Running);
 
-    installed().abort_write_operation(op.id());
+    engine.abort_write_operation(op.id());
 
     assert_eq!(op.state().intent().load(), OperationIntent::Stopped);
     assert!(op.state().backend_cancel.is_cancelled(), "tier 1 first");
@@ -514,10 +514,11 @@ fn abort_write_operation_fires_both_tiers() {
 /// silently do nothing exactly when it is needed.
 #[test]
 fn abort_reaches_an_operation_that_was_already_cancelled() {
-    let op = install_state("abort-after-cancel", OperationIntent::Running);
-    installed().cancel_write_operation(op.id(), false);
+    let engine = TestOperations::new();
+    let op = install_state(&engine, "abort-after-cancel", OperationIntent::Running);
+    engine.cancel_write_operation(op.id(), false);
 
-    installed().abort_write_operation(op.id());
+    engine.abort_write_operation(op.id());
 
     assert!(
         op.state().backend_abort.is_cancelled(),
@@ -527,36 +528,34 @@ fn abort_reaches_an_operation_that_was_already_cancelled() {
 
 #[test]
 fn abort_unknown_operation_is_a_silent_noop() {
-    installed().abort_write_operation("does-not-exist-xyzzy");
+    let engine = TestOperations::new();
+    engine.abort_write_operation("does-not-exist-xyzzy");
 }
 
 #[test]
-fn abort_all_write_operations_walks_the_global_registry() {
-    // Same shape and same reason as `cancel_all_write_operations_walks_the_global_registry`:
-    // the public function's one job is to point at the process-global registry,
-    // so it only runs when it has the process to itself.
-    if !crate::file_system::write_operations::test_support::one_test_per_process() {
-        return;
-    }
-    let op = install_state("abort-all-global-wiring", OperationIntent::Running);
+fn abort_all_write_operations_walks_the_engines_registry() {
+    // Same shape and same reason as `cancel_all_write_operations_walks_the_engines_registry`:
+    // the public function's one job is to point at the engine's registry.
+    let engine = TestOperations::new();
+    let op = install_state(&engine, "abort-all-wiring", OperationIntent::Running);
 
-    installed().abort_all_write_operations();
+    engine.abort_all_write_operations();
 
     assert!(
         op.state().backend_abort.is_cancelled(),
-        "the public quit-deadline entry point must reach ops in the global registry"
+        "the public quit-deadline entry point must reach ops in the engine's registry"
     );
 }
 
 #[test]
 fn abort_all_fires_both_tiers_on_every_live_operation() {
-    let registry = WriteOperationRegistry::new();
-    let running = registered_in(&registry, "abort-all-running", OperationIntent::Running);
+    let engine = TestOperations::new();
+    let running = registered_in(&engine, "abort-all-running", OperationIntent::Running);
     // Already stopped: `cancel_all` skips it, but the deadline still has to stop
     // waiting for whatever it left in flight.
-    let stopped = registered_in(&registry, "abort-all-stopped", OperationIntent::Stopped);
+    let stopped = registered_in(&engine, "abort-all-stopped", OperationIntent::Stopped);
 
-    registry.abort_all();
+    engine.registry().abort_all();
 
     assert!(running.backend_cancel.is_cancelled());
     assert!(running.backend_abort.is_cancelled());
@@ -573,13 +572,14 @@ fn abort_all_fires_both_tiers_on_every_live_operation() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn resolve_write_conflict_delivers_response_to_waiter() {
-    let op = install_state("resolve-conflict", OperationIntent::Running);
+    let engine = TestOperations::new();
+    let op = install_state(&engine, "resolve-conflict", OperationIntent::Running);
 
     let (tx, rx) = tokio::sync::oneshot::channel::<ConflictResolutionResponse>();
     let clash = op.state().conflict_slot.arm(tx, placeholder_conflict).conflict_id;
 
     assert_eq!(
-        installed().resolve_write_conflict(op.id(), clash, ConflictResolution::Overwrite, true),
+        engine.resolve_write_conflict(op.id(), clash, ConflictResolution::Overwrite, true),
         ConflictResolutionOutcome::Resolved
     );
 
@@ -592,17 +592,18 @@ async fn resolve_write_conflict_delivers_response_to_waiter() {
 /// operation acts on; the second is told so, and changes nothing.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_second_answer_to_one_conflict_is_reported_as_already_resolved() {
-    let op = install_state("resolve-conflict-twice", OperationIntent::Running);
+    let engine = TestOperations::new();
+    let op = install_state(&engine, "resolve-conflict-twice", OperationIntent::Running);
 
     let (tx, rx) = tokio::sync::oneshot::channel::<ConflictResolutionResponse>();
     let clash = op.state().conflict_slot.arm(tx, placeholder_conflict).conflict_id;
 
     assert_eq!(
-        installed().resolve_write_conflict(op.id(), clash, ConflictResolution::Overwrite, false),
+        engine.resolve_write_conflict(op.id(), clash, ConflictResolution::Overwrite, false),
         ConflictResolutionOutcome::Resolved
     );
     assert_eq!(
-        installed().resolve_write_conflict(op.id(), clash, ConflictResolution::Skip, true),
+        engine.resolve_write_conflict(op.id(), clash, ConflictResolution::Skip, true),
         ConflictResolutionOutcome::AlreadyResolved
     );
 
@@ -621,12 +622,13 @@ async fn a_second_answer_to_one_conflict_is_reported_as_already_resolved() {
 /// nothing, and the caller is told that rather than being told it won.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn an_answer_for_a_retired_conflict_is_refused_and_reported_as_stale() {
-    let op = install_state("resolve-conflict-stale", OperationIntent::Running);
+    let engine = TestOperations::new();
+    let op = install_state(&engine, "resolve-conflict-stale", OperationIntent::Running);
 
     let (first_tx, first_rx) = tokio::sync::oneshot::channel::<ConflictResolutionResponse>();
     let first = op.state().conflict_slot.arm(first_tx, placeholder_conflict).conflict_id;
     assert_eq!(
-        installed().resolve_write_conflict(op.id(), first, ConflictResolution::Overwrite, false),
+        engine.resolve_write_conflict(op.id(), first, ConflictResolution::Overwrite, false),
         ConflictResolutionOutcome::Resolved
     );
     first_rx.await.expect("the first clash gets its own answer");
@@ -636,7 +638,7 @@ async fn an_answer_for_a_retired_conflict_is_refused_and_reported_as_stale() {
     op.state().conflict_slot.arm(second_tx, placeholder_conflict);
 
     assert_eq!(
-        installed().resolve_write_conflict(op.id(), first, ConflictResolution::Skip, true),
+        engine.resolve_write_conflict(op.id(), first, ConflictResolution::Skip, true),
         ConflictResolutionOutcome::StaleAnswer,
         "an answer naming the retired clash must not be reported as resolving anything"
     );
@@ -649,10 +651,11 @@ async fn an_answer_for_a_retired_conflict_is_refused_and_reported_as_stale() {
 
 #[test]
 fn resolve_write_conflict_on_an_operation_with_no_conflict_says_so() {
-    let op = install_state("resolve-no-conflict", OperationIntent::Running);
+    let engine = TestOperations::new();
+    let op = install_state(&engine, "resolve-no-conflict", OperationIntent::Running);
     // The operation is live but has never raised a conflict.
     assert_eq!(
-        installed().resolve_write_conflict(op.id(), ConflictId(1), ConflictResolution::Skip, false),
+        engine.resolve_write_conflict(op.id(), ConflictId(1), ConflictResolution::Skip, false),
         ConflictResolutionOutcome::NoPendingConflict
     );
 }
@@ -661,92 +664,98 @@ fn resolve_write_conflict_on_an_operation_with_no_conflict_says_so() {
 fn resolve_write_conflict_on_an_unknown_operation_says_so() {
     // Nothing registered under this id: it settled, or it never existed. Not the
     // same thing as a live operation that isn't asking anything.
+    let engine = TestOperations::new();
     assert_eq!(
-        installed().resolve_write_conflict(
-            &unique_id("resolve-gone"),
-            ConflictId(1),
-            ConflictResolution::Skip,
-            false
-        ),
+        engine.resolve_write_conflict("resolve-gone", ConflictId(1), ConflictResolution::Skip, false),
         ConflictResolutionOutcome::UnknownOperation
     );
 }
 
 #[test]
 fn cancelling_takes_the_pending_conflict_away() {
-    let op = install_state("resolve-after-cancel", OperationIntent::Running);
+    let engine = TestOperations::new();
+    let op = install_state(&engine, "resolve-after-cancel", OperationIntent::Running);
     let (tx, _rx) = tokio::sync::oneshot::channel::<ConflictResolutionResponse>();
     let clash = op.state().conflict_slot.arm(tx, placeholder_conflict).conflict_id;
 
-    installed().cancel_write_operation(op.id(), false);
+    engine.cancel_write_operation(op.id(), false);
 
     assert!(!op.state().conflict_slot.is_awaiting());
     assert_eq!(
-        installed().resolve_write_conflict(op.id(), clash, ConflictResolution::Skip, false),
+        engine.resolve_write_conflict(op.id(), clash, ConflictResolution::Skip, false),
         ConflictResolutionOutcome::NoPendingConflict
     );
 }
 
 // ── Busy-volumes set (drives "disable Eject while an op touches a device") ──
-// These assert membership of the test's own unique volume IDs (not the whole
-// set) and clean up, so they stay correct under nextest's in-process
-// parallelism where the shared engine's status cache is shared.
+// Each runs on an engine of its own, so the busy set holds its volumes alone.
 
 #[test]
 fn busy_volume_ids_reflects_registered_volumes() {
-    let op = unique_id("busy-op");
-    let usb = unique_id("usb");
-    let mtp = unique_id("mtp");
+    let engine = TestOperations::new();
+    let op = "busy-op".to_string();
+    let usb = "usb".to_string();
+    let mtp = "mtp".to_string();
 
-    register_operation_status(&op, WriteOperationType::Copy, vec![usb.clone(), mtp.clone()]);
-    let busy = installed().busy_volume_ids();
+    engine
+        .status()
+        .register(&op, WriteOperationType::Copy, vec![usb.clone(), mtp.clone()]);
+    let busy = engine.busy_volume_ids();
     assert!(busy.contains(&usb), "source volume should be busy");
     assert!(busy.contains(&mtp), "dest volume should be busy");
 
-    unregister_operation_status(&op);
-    let after = installed().busy_volume_ids();
+    engine.status().unregister(&op);
+    let after = engine.busy_volume_ids();
     assert!(!after.contains(&usb), "volume should clear once the op finishes");
     assert!(!after.contains(&mtp), "volume should clear once the op finishes");
 }
 
 #[test]
 fn busy_volume_ids_excludes_root() {
-    let op = unique_id("busy-root-op");
-    let usb = unique_id("usb");
+    let engine = TestOperations::new();
+    let op = "busy-root-op".to_string();
+    let usb = "usb".to_string();
 
     let root = cmdr_fs::volume::DEFAULT_VOLUME_ID.to_string();
-    register_operation_status(&op, WriteOperationType::Move, vec![root.clone(), usb.clone()]);
-    let busy = installed().busy_volume_ids();
+    engine
+        .status()
+        .register(&op, WriteOperationType::Move, vec![root.clone(), usb.clone()]);
+    let busy = engine.busy_volume_ids();
     assert!(busy.contains(&usb), "the ejectable volume should be busy");
     assert!(
         !busy.contains(&root),
         "root is never ejectable, so it must not appear in the busy set"
     );
 
-    unregister_operation_status(&op);
+    engine.status().unregister(&op);
 }
 
 #[test]
 fn busy_volume_ids_stays_busy_until_all_overlapping_ops_finish() {
     // Two concurrent transfers touch the same device; it must stay busy
     // until BOTH finish (refcount-by-membership, no manual counter).
-    let op_a = unique_id("overlap-a");
-    let op_b = unique_id("overlap-b");
-    let dev = unique_id("device");
+    let engine = TestOperations::new();
+    let op_a = "overlap-a".to_string();
+    let op_b = "overlap-b".to_string();
+    let dev = "device".to_string();
 
-    register_operation_status(&op_a, WriteOperationType::Copy, vec![dev.clone()]);
-    register_operation_status(&op_b, WriteOperationType::Copy, vec![dev.clone()]);
-    assert!(installed().busy_volume_ids().contains(&dev));
+    engine
+        .status()
+        .register(&op_a, WriteOperationType::Copy, vec![dev.clone()]);
+    engine
+        .status()
+        .register(&op_b, WriteOperationType::Copy, vec![dev.clone()]);
+    assert!(engine.busy_volume_ids().contains(&dev));
 
-    unregister_operation_status(&op_a);
+    engine.status().unregister(&op_a);
     assert!(
-        installed().busy_volume_ids().contains(&dev),
+        engine.busy_volume_ids().contains(&dev),
         "still busy while the second op runs"
     );
 
-    unregister_operation_status(&op_b);
+    engine.status().unregister(&op_b);
     assert!(
-        !installed().busy_volume_ids().contains(&dev),
+        !engine.busy_volume_ids().contains(&dev),
         "clears only after the last op finishes"
     );
 }
@@ -754,30 +763,34 @@ fn busy_volume_ids_stays_busy_until_all_overlapping_ops_finish() {
 #[test]
 fn busy_volume_ids_clears_on_panic_unwind_via_unregister() {
     // A panicking op must not leave its volume stuck "busy" forever. In
-    // production `manager::ManagedTaskGuard` calls `unregister_operation_status`
-    // on unwind; this pins that `unregister_operation_status` itself clears
-    // the busy mark when invoked from a `Drop` during a panic.
-    struct UnregisterOnDrop(String);
+    // production `manager::ManagedTaskGuard` unregisters the op's status on
+    // unwind; this pins that the status cache's `unregister` itself clears the
+    // busy mark when invoked from a `Drop` during a panic.
+    struct UnregisterOnDrop(Operations, String);
     impl Drop for UnregisterOnDrop {
         fn drop(&mut self) {
-            unregister_operation_status(&self.0);
+            self.0.status().unregister(&self.1);
         }
     }
 
-    let op = unique_id("panic-op");
-    let dev = unique_id("panic-device");
+    let engine = TestOperations::new();
+    let op = "panic-op".to_string();
+    let dev = "panic-device".to_string();
     let op_for_thread = op.clone();
     let dev_for_thread = dev.clone();
+    let engine_for_thread = Operations::clone(&engine);
 
     let handle = std::thread::spawn(move || {
-        register_operation_status(&op_for_thread, WriteOperationType::Delete, vec![dev_for_thread]);
-        let _guard = UnregisterOnDrop(op_for_thread.clone());
+        engine_for_thread
+            .status()
+            .register(&op_for_thread, WriteOperationType::Delete, vec![dev_for_thread]);
+        let _guard = UnregisterOnDrop(engine_for_thread, op_for_thread.clone());
         panic!("simulated op panic while the device is busy");
     });
     assert!(handle.join().is_err(), "thread should have panicked");
 
     assert!(
-        !installed().busy_volume_ids().contains(&dev),
+        !engine.busy_volume_ids().contains(&dev),
         "unregister on unwind must clear the busy mark"
     );
 }
@@ -789,23 +802,22 @@ fn busy_volume_ids_clears_on_panic_unwind_via_unregister() {
 
 #[test]
 fn pause_resume_write_operation_flip_the_live_gate() {
-    let op = install_state("pause-live", OperationIntent::Running);
+    let engine = TestOperations::new();
+    let op = install_state(&engine, "pause-live", OperationIntent::Running);
     assert!(!op.state().pause_gate.is_paused());
 
-    assert!(installed().pause_write_operation(op.id()), "should find the live state");
+    assert!(engine.pause_write_operation(op.id()), "should find the live state");
     assert!(op.state().pause_gate.is_paused(), "pause must set the gate flag");
 
-    assert!(
-        installed().resume_write_operation(op.id()),
-        "should find the live state"
-    );
+    assert!(engine.resume_write_operation(op.id()), "should find the live state");
     assert!(!op.state().pause_gate.is_paused(), "resume must clear the gate flag");
 }
 
 #[test]
 fn pause_resume_unknown_operation_returns_false() {
-    assert!(!installed().pause_write_operation("does-not-exist-pause"));
-    assert!(!installed().resume_write_operation("does-not-exist-pause"));
+    let engine = TestOperations::new();
+    assert!(!engine.pause_write_operation("does-not-exist-pause"));
+    assert!(!engine.resume_write_operation("does-not-exist-pause"));
 }
 
 // ---- TestOperationGuard's own contract -----------------------------------
@@ -845,12 +857,13 @@ fn latest_progress_hands_a_late_window_the_tick_a_paused_operation_last_emitted(
     // parked would have no bars and no tree until somebody pressed Resume. This
     // is the one tick that window can start from, with the wait named NOW: the
     // stored tick was measured while the copy was still moving.
-    let op = install_state("latest-progress-paused", OperationIntent::Running);
+    let engine = TestOperations::new();
+    let op = install_state(&engine, "latest-progress-paused", OperationIntent::Running);
     let mut event = copying_event(op.id());
     op.state().enrich_progress(&mut event);
     op.state().pause_gate.pause();
 
-    let latest = operation_states().latest_progress();
+    let latest = engine.registry().latest_progress();
     let tick = latest
         .iter()
         .find(|tick| tick.operation_id == op.id())
@@ -870,9 +883,10 @@ fn latest_progress_hands_a_late_window_the_tick_a_paused_operation_last_emitted(
 
 #[test]
 fn latest_progress_skips_an_operation_that_has_emitted_nothing_yet() {
-    let op = install_state("latest-progress-silent", OperationIntent::Running);
+    let engine = TestOperations::new();
+    let op = install_state(&engine, "latest-progress-silent", OperationIntent::Running);
 
-    let latest = operation_states().latest_progress();
+    let latest = engine.registry().latest_progress();
 
     assert!(
         latest.iter().all(|tick| tick.operation_id != op.id()),

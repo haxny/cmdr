@@ -29,7 +29,7 @@ Pre-flight scans reuse cached listings when the source volume reports `WatchCove
 Where a symbol lives and who calls it: `codegraph_search` / `codegraph_explore`. The spine: `CLAUDE.md` § Module map.
 The full top-level inventory is here:
 
-- `mod.rs` (the `Operations` handle and its `Inner`, and the public list: the `pub use` lines, everything outside the engine may name; every submodule but `host` is private), `testing.rs` (`cfg(test)`: what test cells outside the engine reach beyond that list, sized for the crate's `testing` feature), `local_start.rs` (the local copy, move, delete, and trash starters and the `start_write_operation` lifecycle they share), `handle.rs` (building an `Operations` and reaching its parts), `scope.rs` (`OpScope`, what one operation reaches its engine through), `host/` (what the engine needs from the app: the runtime, the volumes, the engine-wide events, and the optional seams, § "The engine's host"), `manager.rs` (registry + lane admission; what the queue window asks in `manager/queue_api.rs`, its request answers in `manager/wire.rs`, reordering the line in `manager/reorder.rs`, and a retained failure's way to start again in `manager/retry.rs`, § "Retained failures"), `state.rs`
+- `mod.rs` (the `Operations` handle and its `Inner`, and the public list: the `pub use` lines, everything outside the engine may name; every submodule but `host` is private), `testing/` (`cfg(test)`: `TestOperations`, an engine a test owns, in `engine.rs`, and what test cells outside the engine reach beyond that list, sized for the crate's `testing` feature), `local_start.rs` (the local copy, move, delete, and trash starters and the `start_write_operation` lifecycle they share), `handle.rs` (building an `Operations` and reaching its parts), `scope.rs` (`OpScope`, what one operation reaches its engine through), `host/` (what the engine needs from the app: the runtime, the volumes, the engine-wide events, and the optional seams, § "The engine's host"), `manager.rs` (registry + lane admission; what the queue window asks in `manager/queue_api.rs`, its request answers in `manager/wire.rs`, reordering the line in `manager/reorder.rs`, and a retained failure's way to start again in `manager/retry.rs`, § "Retained failures"), `state.rs`
   (`WriteOperationState`, the settle guard, plus `state/registry.rs`: `WriteOperationRegistry` and its walks, and
   `state/controls.rs`:
   the by-id cancel / abort / pause / resume / conflict-answer entry points, re-exported through `state`, and
@@ -115,7 +115,8 @@ The full top-level inventory is here:
   `rename.rs`, `create_numbered.rs` (paste-as-file's numbered create), `routing.rs` (the one routing every cross-volume transfer takes:
   `start_volume_{copy,move,compress}`, plus `start_rename_by_move`; `routing/retry.rs` is the Retry recipe a copy or move
   leaves with the manager). `source_binding.rs` is the optional set of sources an op may touch. `queued_sources.rs` is the check an op that waited in the queue runs on its sources when admitted, parking on `sources_gone_slot.rs` (a leaf the state owns, like `outage_slot.rs`). Layering, so the three stay out of a cycle: `source_binding` → `queued_sources` → `state` → `sources_gone_slot`, and the empty batch's terminal shape is `WriteCompleteEvent::all_skipped` in `types`. Fixtures:
-  `test_support.rs`, and `testing.rs`, what test cells outside the engine reach beyond its public list. Every backend's
+  `testing/` (an engine a test owns, and what test cells outside the engine reach beyond its public list) and
+  `test_support.rs` (the shared engine's guards and fixtures). Every backend's
   cells through this pipeline live app-side, in `operations_host/backend_suites/`, because they need the app around the
   engine (`../../operations_host/DETAILS.md` § "Backend suites"). `transfer_bench.rs` (feature `transfer-bench` only) is the Criterion bench's door in:
   thin wrappers over five entry points, each with a no-op sink and an unregistered state
@@ -802,8 +803,9 @@ names the app's accessor.
   can reach the engine before `setup()` anyway, and ❌ nothing panics for want of one. The engine itself knows nothing
   about installs. The test and bench binaries share one engine through `installed()` (it exists only there): a test
   binary's is built on first read (`test_support::shared_engine`, the app's own answers minus the frontend channel:
-  the real indexing gauge, analytics client, and error reporter, which `status_cache_tests`' gauge pins read, and
-  `cmdr-fs`'s shared fallback runtime), and `operations()` hands out the same one there. No sink factory, so
+  the real indexing gauge, analytics client, and error reporter, and `cmdr-fs`'s shared fallback runtime), and
+  `operations()` hands out the same one there. A test on an engine of its own builds `testing::TestOperations`
+  instead (§ "Test isolation: an engine of the test's own"). No sink factory, so
   `operation_sink()` stays `None` and an archive-target instant op refuses plainly. The bench's is detached.
 - **A seam trait and its value types live in `host/` or `types/`**, never in a module that calls the seam, or the two
   weld into a cycle. That's why `OperationsChanged` and `OperationSnapshot` are `types` vocabulary, and why
@@ -855,7 +857,7 @@ The user can move a WAITING op one place earlier or later (the queue window's �
 - **It answers with the new place** (`QueueMoveOutcome::Moved { position, waiting }`; `AtEdge` for a step off the front or back; `Unchanged` for a placement where it already is), counted among waiting ops, 1-based. The window announces that answer, so a screen reader hears where the op really is. Only `Moved` broadcasts.
 - **No admission pass.** Every pass leaves no admittable waiting op behind, and a reorder frees no lane, so the pass would admit nobody. What a reorder changes is who goes FIRST when a lane frees, which is the whole feature (`manager::tests::reorder::the_op_moved_to_the_front_is_the_one_admitted_next`).
 - **A new way to reorder is a new `Target` in `reorder.rs`**, ❌ not a second ordering mechanism.
-- Tests run on an engine they own (`owned_manager`): "the nearest waiting op" is a question about the WHOLE line, which a sibling test's op would answer on the shared one.
+- Tests run on an engine they own (`TestOperations`): "the nearest waiting op" is a question about the WHOLE line, which only a line no other test queues on answers.
 
 ### Deferred start, not "spawn then block on a semaphore"
 
@@ -1465,65 +1467,46 @@ This module's state machine (`state.rs`) is the spine of the cancel UX. Past inv
 3. **Add at least one E2E test** for user-visible flows (transfer dialogs, conflict policies); use `dispatchMenuCommand` for keyboard-shortcut triggers, see `docs/testing.md` § "❌ Synthesized F-key dispatches".
 4. **Run `cargo mutants --file src/file_system/write_operations/<file>.rs`** after substantial changes; this module has ~85-90% mutation score per file and shouldn't regress. See `docs/testing.md` § "Process".
 
-### Test isolation for the shared engine's registry
+### Test isolation: an engine of the test's own
 
-`cargo test` runs the crate's tests as threads in ONE process, so the shared test engine's state registry is shared by every
-write-op test at once. `test_support::TestOperationGuard` owns one entry per test:
+`cargo test` runs the crate's tests as threads in ONE process, so anything they share is shared by every write-op test at
+once. **A test builds its own engine**: `testing::TestOperations::new()` (`testing/engine.rs`), an `Operations` over
+one fake per seam it reads back. Two engines share nothing, so its registry, status cache, busy set, manager counters,
+and line are that test's alone, under plain `cargo test` as under nextest:
 
-- **Unique key.** `register(tag)` / `register_state(tag, state)` mint a process-unique op id (tag + pid + counter), so a
-  hardcoded literal can't collide with a sibling test. `register_as(op_id, state)` adopts an id the suite already
-  generated (`transfer_driver`'s `unique_op_id`), for tests that thread the id through the call under test.
-- **Panic-safe teardown.** `Drop` removes the entry, so an assertion that fails before a hand-rolled `remove` can't
-  leave a corpse for the next test's `cancel_all_write_operations` to walk or `get_operation_status` to answer for. Pinned
-  by `state::tests::guard_unregisters_its_state_even_when_the_test_body_panics`. Keep the guard on the stack: a
-  `std::mem::forget` or a clone that outlives the test defeats it.
+- **Getting one.** `TestOperations::new()` journals nothing;
+  `TestOperations::journaling_into(&TestOperationLog::new(label))` journals into a scratch database the test reads rows
+  back from (`log.db()`); `TestOperations::with(|builder| …)` replaces any other seam (a volume host, pacing). It derefs
+  to the engine, so a test calls `engine.manager()`, `engine.cancel_write_operation(…)`, or `engine.status()` directly.
+- **Reading back.** `engine.events()` (`RecordingEngineEvents`: the busy set, the transfer pair, `operations-changed`,
+  error reports), `engine.volumes()` (`FakeVolumes`, which the test fills before an op names a volume id), and
+  `engine.own_writes()` (`RecordingOwnWrites`).
+- **States.** `engine.new_state()` builds a state on THIS engine (`WriteOperationState::new` is the shared engine's);
+  `engine.register(id)` / `engine.register_state(id, state)` put one in the registry as a running op's is, returning a
+  `RegisteredOperation` (`id()`, `state()`). No guard: the entry dies with the engine. Ids, lanes, and volume names only
+  need to be distinct within the test.
+- **Walks and counters are honest.** `engine.cancel_all_write_operations()`, `emit_count()`, `admission_pass_count()`,
+  and `busy_emit_count()` see only this test's operations, so an equality assertion on one holds under plain
+  `cargo test` (`retained_failure_stays_hidden_until_the_record_settles` once passed only because nextest forks per
+  test). A synthetic op's deferred start settles on the engine it's handed (`manager::tests::gated_deferred`).
 
-Same shape as `cmdr_listing::testing::TestListingGuard` (over the listing cache) and
-`indexing::tests::stress_test_helpers::TestInstanceGuard` (over `INDEX_REGISTRY`).
+**The shared engine, until every suite owns its engine.** The suites not yet converted reach `installed()` (built on
+first read, `test_support::shared_engine`) and keep its registry honest with `test_support::TestOperationGuard`: a
+process-unique id per entry (`register(tag)` / `register_state(tag, state)`, or `register_as(op_id, state)` for an id
+the suite threads through), removed from `Drop` on unwind too (pinned by
+`state::tests::guard_unregisters_its_state_even_when_the_test_body_panics`). Their journals serialize on
+`operation_log_host::TestJournalGuard` (one per test, never nested; see its doc), and their journal assertions stay
+scoped to the test's own `op_id`. ❌ Never drive a walk-everything mutator (`cancel_all_write_operations`) on the shared
+engine: it stops whatever the tests beside it have in flight, and the failure lands in the victim, reading exactly like
+environment flake (mis-blamed on load starvation once and on a dependency upgrade once). The fix is always a scope the
+test owns, never a mutex around the suites, an `#[ignore]`, or a looser assertion.
 
-The operation-log journal slot is the exception to the unique-key pattern: it's a single value, not a keyed map, so
-tests that install a journal SERIALIZE on `operation_log_host::TestJournalGuard` (one guard per test, lock held for the
-test's duration, slot cleared on drop — see its doc for the multi-arm `hold_empty`/`set` shape and the non-reentrancy
-deadlock warning). Never call `OperationLog::set_journal` on the shared handle directly from a test. Residual under plain `cargo test`: non-journal
-write-op tests still journal their own ops into whatever DB is installed, so journal assertions stay scoped to the
-test's own `op_id` (`journal_capture_tests::dir_volume_ids` joins dirs through the op's item rows for this reason).
+Same guard family as `cmdr_listing::testing::TestListingGuard` (over the listing cache) and
+`indexing::tests::stress_test_helpers::TestInstanceGuard` (over `INDEX_REGISTRY`); `watcher_test.rs`'s
+`handle_directory_change` tests insert into the listing cache by hand with a tail `remove`, harmless only because their
+uuid keys are unique.
 
-#### ❌ Never drive a walk-everything mutator from a test
-
-A unique key isolates a test that touches ONE entry. It does nothing for a function that walks the WHOLE registry:
-`cancel_all_write_operations` stops every registered op, so a test calling it cancels whatever operations the tests
-running beside it have in flight. That failure lands in the victim, not the culprit — a managed-op test seeing
-`write-cancelled` (or a bare 0 events) where it expects `write-complete`, membership shifting run to run with
-co-scheduling. It reads exactly like environment flake, which is how it survived: mis-blamed on load starvation once
-and on a dependency upgrade once.
-
-**The fix is a registry the test owns, not a lock around the tests.** `WriteOperationRegistry` (in `state/registry.rs`) holds the
-map and owns `cancel_all`; each engine owns one, and `cancel_all_write_operations()` is a
-one-line delegation. A test constructs its own `WriteOperationRegistry`, registers states in it, and calls
-`cancel_all()` — the same production code, on a registry nothing else can see. Serializing the two suites behind a
-mutex, `#[ignore]`ing the victim, or loosening its assertion would all have hidden the defect instead.
-
-`state::tests::cancel_all_write_operations_walks_the_global_registry` is the ONE exception, because its subject IS the
-global wiring. It's gated on `test_support::one_test_per_process()` (nextest's `NEXTEST_EXECUTION_MODE`), so it runs in
-the sanctioned lane and skips under plain `cargo test`, where it would be the poisoner. Don't copy the gate to reach for
-a global out of convenience; copy the private-registry pattern.
-
-Lower-severity siblings, both currently harmless: `manager::force_admission_pass()` (test-only) runs a process-wide
-admission pass, safe only because every manager test mints a unique `LaneKey`; and `watcher_test.rs`'s
-`handle_directory_change` tests insert into the listing cache by hand with a tail `remove` instead of `TestListing`, so a
-failing assertion leaks the entry (unique uuid keys keep it from poisoning anyone).
-
-**A manager counter is never scoped by a unique op id.** `emit_count()` and `admission_pass_count()` count a WHOLE
-manager's activity, so a sibling test spawning or settling ANY op moves them; a unique id, which is what keeps the
-record-and-lane assertions honest, buys nothing here. A test asserting on either drives its own manager instead of
-`manager()`: `owned_manager()` (the manager of an engine the test owns, kept alive for it, since admission hands
-starts that engine). Pair it with `tests::gated_deferred_on`, so the synthetic op settles on the same private manager.
-An equality assertion against the global counter passes only because nextest forks per test;
-under plain `cargo test` it fails outright (`retained_failure_stays_hidden_until_the_record_settles` did).
-The two `admission_pass_count()` waits in `tests.rs` stay on the global one: they wait for GROWTH, not an equality, so a
-sibling's pass can only satisfy them early, never fail them.
-
-**New subsystem state hangs off a struct, not a `static`.** These guards are the retrofit cost of a process-global; a
+**New subsystem state hangs off a struct, not a `static`.** The guards are the retrofit cost of a process-global; a
 handle threaded through its callers needs none of it.
 
 See also: `docs/testing.md` for the project-wide testing playbook.

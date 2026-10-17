@@ -1,5 +1,6 @@
 //! Fakes for the seams a test reads back, so a test can build an engine of its
-//! own (`Operations::builder`) and assert on what the engine reported.
+//! own and assert on what the engine reported. `testing::TestOperations` is an
+//! engine over one of each.
 //!
 //! - [`RecordingEngineEvents`]: every engine-wide fact, in order.
 //! - [`FakeVolumes`]: a registry the test fills, answering the engine's volume

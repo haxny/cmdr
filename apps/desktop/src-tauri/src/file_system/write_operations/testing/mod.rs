@@ -1,6 +1,7 @@
-//! What test cells outside the engine reach beyond its public list: the
-//! internals they drive directly, the fixtures they park operations with, and
-//! the shared engine they run on until each test builds its own.
+//! An engine of a test's own ([`TestOperations`], `engine.rs`), and what test
+//! cells outside the engine reach beyond its public list: the internals they
+//! drive directly, the fixtures they park operations with, and the shared
+//! engine the suites not yet on an engine of their own run on.
 //!
 //! Sized for the crate's `testing` feature: when the engine becomes a crate,
 //! exactly this list widens from `cfg(test)` to `any(test, feature = "testing")`.
@@ -8,6 +9,11 @@
 //! the place a test-only reach goes, ❌ never the public list above it.
 
 use super::{WriteOperationError, WriteOperationType};
+
+// An engine a test builds for itself, over fakes it reads back, and a journal
+// it reads rows back from.
+mod engine;
+pub(crate) use engine::{RegisteredOperation, TestOperationLog, TestOperations};
 
 // The engine every test shares, and the fixtures that park or register an
 // operation on it.

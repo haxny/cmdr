@@ -3,15 +3,15 @@
 //! These drive `spawn_managed` with synthetic deferred starts (a oneshot-gated
 //! future, no real I/O) so admission, lane reservation, FIFO ordering, settle
 //! dequeue, queued-cancel, and the panic safety net are all observable and
-//! deterministic. The manager is a process-global singleton, so every test uses
-//! unique operation ids + lane keys to stay correct under nextest's in-process
-//! parallelism.
+//! deterministic. Every test drives a manager of its own (`TestOperations`), so
+//! a whole-manager answer (the line's order, a counter, the lanes in use) is
+//! this test's alone.
 
 use super::*;
-use crate::file_system::write_operations::installed;
+use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::WriteOperationError;
 use crate::test_support::wait_until_async;
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::Ordering;
 use std::time::Duration;
 use tokio::sync::oneshot;
 
@@ -22,12 +22,6 @@ mod reorder;
 /// condition, so a healthy run satisfies it in microseconds and only a genuine
 /// hang burns the budget.
 const WAIT: Duration = Duration::from_secs(5);
-
-fn unique(label: &str) -> String {
-    static N: AtomicU64 = AtomicU64::new(0);
-    let n = N.fetch_add(1, Ordering::Relaxed);
-    format!("mgr-test-{label}-{n}-{:?}", std::thread::current().id())
-}
 
 fn descriptor(op_id: &str, lanes: Vec<&str>) -> OperationDescriptor {
     OperationDescriptor {
@@ -57,80 +51,33 @@ fn instant_descriptor(op_id: &str, op_type: WriteOperationType, volume_ids: Vec<
     }
 }
 
-/// The manager of an engine the test owns, so a test can drive a real
-/// spawn-to-settle lifecycle in isolation. Needed by any assertion on
-/// `emit_count()`, which counts a WHOLE manager's broadcasts: on the shared
-/// one, a sibling test spawning or settling an op moves it underneath the
-/// assertion. Shared by `failures` and `reorder`.
-fn owned_manager() -> OwnedEngine {
-    OwnedEngine(super::super::Operations::detached())
-}
-
-/// An engine a test owns, read as its manager: the manager hands admitted starts
-/// its engine, so the engine has to outlive the test's operations.
-struct OwnedEngine(super::super::Operations);
-
-impl OwnedEngine {
-    /// The engine itself, for a manager call that takes its engine.
-    fn engine(&self) -> &super::super::Operations {
-        &self.0
-    }
-}
-
-impl std::ops::Deref for OwnedEngine {
-    type Target = Arc<OperationManager>;
-
-    fn deref(&self) -> &Arc<OperationManager> {
-        self.0.manager()
-    }
-}
-
-fn fresh_state() -> Arc<WriteOperationState> {
-    Arc::new(WriteOperationState::new(Duration::from_millis(50)))
-}
-
 /// A synthetic deferred start: signals "I started running" on `started`, waits
-/// for `release`, then settles the op (frees lanes + admits next). Lets a test
-/// hold an op "running" while it asserts the state of a second op.
+/// for `release`, then settles the op (frees lanes + admits next) on the engine
+/// that admitted it. Lets a test hold an op "running" while it asserts the
+/// state of a second op.
 fn gated_deferred(op_id: String, started: oneshot::Sender<()>, release: oneshot::Receiver<()>) -> DeferredStart {
-    gated_deferred_on(manager(), op_id, started, release)
-}
-
-/// [`gated_deferred`], settling on a GIVEN manager rather than the global one,
-/// so a test that owns a private manager (`owned_manager`) can drive
-/// a full spawn-to-settle lifecycle on it.
-///
-/// The `ManagedTaskGuard` is still the global one: it's the panic net, and the
-/// happy path disarms it before settling, so it never touches the global
-/// manager here.
-fn gated_deferred_on(
-    mgr: &Arc<OperationManager>,
-    op_id: String,
-    started: oneshot::Sender<()>,
-    release: oneshot::Receiver<()>,
-) -> DeferredStart {
-    let mgr = Arc::clone(mgr);
     Box::new(move |ops: crate::file_system::write_operations::Operations| {
         Box::pin(async move {
             let guard = ManagedTaskGuard::new(ops.manager(), op_id.clone());
             let _ = started.send(());
             let _ = release.await;
             guard.disarm();
-            mgr.on_settled(&op_id);
+            ops.manager().on_settled(&op_id);
         })
     })
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn admits_immediately_when_lanes_free() {
-    let op = unique("admit-free");
-    let lane = unique("lane");
+    let engine = TestOperations::new();
+    let op = "admit-free".to_string();
+    let lane = "lane".to_string();
     let (started_tx, started_rx) = oneshot::channel();
     let (rel_tx, rel_rx) = oneshot::channel();
 
-    manager().spawn_managed(
+    engine.manager().spawn_managed(
         descriptor(&op, vec![&lane]),
-        fresh_state(),
+        engine.new_state(),
         gated_deferred(op.clone(), started_tx, rel_rx),
     );
 
@@ -139,23 +86,24 @@ async fn admits_immediately_when_lanes_free() {
         .await
         .expect("op with a free lane must be admitted immediately")
         .expect("started signal");
-    assert_eq!(manager().lifecycle_status(&op), Some(LifecycleStatus::Running));
+    assert_eq!(engine.manager().lifecycle_status(&op), Some(LifecycleStatus::Running));
 
     let _ = rel_tx.send(());
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn queues_when_a_needed_lane_is_busy() {
-    let lane = unique("lane");
-    let op_a = unique("busy-a");
-    let op_b = unique("busy-b");
+    let engine = TestOperations::new();
+    let lane = "lane".to_string();
+    let op_a = "busy-a".to_string();
+    let op_b = "busy-b".to_string();
     let (a_started_tx, a_started_rx) = oneshot::channel();
     let (a_rel_tx, a_rel_rx) = oneshot::channel();
 
     // A holds the lane.
-    manager().spawn_managed(
+    engine.manager().spawn_managed(
         descriptor(&op_a, vec![&lane]),
-        fresh_state(),
+        engine.new_state(),
         gated_deferred(op_a.clone(), a_started_tx, a_rel_rx),
     );
     a_started_rx.await.expect("A started");
@@ -163,14 +111,14 @@ async fn queues_when_a_needed_lane_is_busy() {
     // B needs the same lane → must stay Queued, never spawn.
     let (b_started_tx, b_started_rx) = oneshot::channel();
     let (_b_rel_tx, b_rel_rx) = oneshot::channel();
-    manager().spawn_managed(
+    engine.manager().spawn_managed(
         descriptor(&op_b, vec![&lane]),
-        fresh_state(),
+        engine.new_state(),
         gated_deferred(op_b.clone(), b_started_tx, b_rel_rx),
     );
 
     assert_eq!(
-        manager().lifecycle_status(&op_b),
+        engine.manager().lifecycle_status(&op_b),
         Some(LifecycleStatus::Queued),
         "second same-lane op must queue while the first holds the lane"
     );
@@ -186,27 +134,28 @@ async fn queues_when_a_needed_lane_is_busy() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn fifo_dequeue_on_settle_serializes_same_lane_ops() {
-    let lane = unique("lane");
-    let op_a = unique("serial-a");
-    let op_b = unique("serial-b");
+    let engine = TestOperations::new();
+    let lane = "lane".to_string();
+    let op_a = "serial-a".to_string();
+    let op_b = "serial-b".to_string();
 
     let (a_started_tx, a_started_rx) = oneshot::channel();
     let (a_rel_tx, a_rel_rx) = oneshot::channel();
-    manager().spawn_managed(
+    engine.manager().spawn_managed(
         descriptor(&op_a, vec![&lane]),
-        fresh_state(),
+        engine.new_state(),
         gated_deferred(op_a.clone(), a_started_tx, a_rel_rx),
     );
     a_started_rx.await.expect("A started");
 
     let (b_started_tx, b_started_rx) = oneshot::channel();
     let (b_rel_tx, b_rel_rx) = oneshot::channel();
-    manager().spawn_managed(
+    engine.manager().spawn_managed(
         descriptor(&op_b, vec![&lane]),
-        fresh_state(),
+        engine.new_state(),
         gated_deferred(op_b.clone(), b_started_tx, b_rel_rx),
     );
-    assert_eq!(manager().lifecycle_status(&op_b), Some(LifecycleStatus::Queued));
+    assert_eq!(engine.manager().lifecycle_status(&op_b), Some(LifecycleStatus::Queued));
 
     // Settle A → B is admitted (FIFO dequeue frees the lane + admits next).
     let _ = a_rel_tx.send(());
@@ -214,32 +163,33 @@ async fn fifo_dequeue_on_settle_serializes_same_lane_ops() {
         .await
         .expect("B must be admitted once A settles and frees the lane")
         .expect("B started");
-    assert_eq!(manager().lifecycle_status(&op_b), Some(LifecycleStatus::Running));
-    assert_eq!(manager().lifecycle_status(&op_a), None, "A is gone after settle");
+    assert_eq!(engine.manager().lifecycle_status(&op_b), Some(LifecycleStatus::Running));
+    assert_eq!(engine.manager().lifecycle_status(&op_a), None, "A is gone after settle");
 
     let _ = b_rel_tx.send(());
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 3)]
 async fn disjoint_lane_ops_both_run_in_parallel() {
-    let lane_a = unique("lane-a");
-    let lane_b = unique("lane-b");
-    let op_a = unique("par-a");
-    let op_b = unique("par-b");
+    let engine = TestOperations::new();
+    let lane_a = "lane-a".to_string();
+    let lane_b = "lane-b".to_string();
+    let op_a = "par-a".to_string();
+    let op_b = "par-b".to_string();
 
     let (a_started_tx, a_started_rx) = oneshot::channel();
     let (a_rel_tx, a_rel_rx) = oneshot::channel();
     let (b_started_tx, b_started_rx) = oneshot::channel();
     let (b_rel_tx, b_rel_rx) = oneshot::channel();
 
-    manager().spawn_managed(
+    engine.manager().spawn_managed(
         descriptor(&op_a, vec![&lane_a]),
-        fresh_state(),
+        engine.new_state(),
         gated_deferred(op_a.clone(), a_started_tx, a_rel_rx),
     );
-    manager().spawn_managed(
+    engine.manager().spawn_managed(
         descriptor(&op_b, vec![&lane_b]),
-        fresh_state(),
+        engine.new_state(),
         gated_deferred(op_b.clone(), b_started_tx, b_rel_rx),
     );
 
@@ -247,8 +197,8 @@ async fn disjoint_lane_ops_both_run_in_parallel() {
     // though neither has been released.
     a_started_rx.await.expect("A started");
     b_started_rx.await.expect("B started");
-    assert_eq!(manager().lifecycle_status(&op_a), Some(LifecycleStatus::Running));
-    assert_eq!(manager().lifecycle_status(&op_b), Some(LifecycleStatus::Running));
+    assert_eq!(engine.manager().lifecycle_status(&op_a), Some(LifecycleStatus::Running));
+    assert_eq!(engine.manager().lifecycle_status(&op_b), Some(LifecycleStatus::Running));
 
     let _ = a_rel_tx.send(());
     let _ = b_rel_tx.send(());
@@ -258,50 +208,51 @@ async fn disjoint_lane_ops_both_run_in_parallel() {
 async fn two_lane_op_waits_until_both_lanes_free_and_does_not_starve() {
     // A holds lane X, C holds lane Y. B needs BOTH X and Y, so it stays queued
     // until BOTH free — even though single-lane ops keep churning on each lane.
-    let lane_x = unique("lane-x");
-    let lane_y = unique("lane-y");
-    let op_a = unique("two-a"); // holds X
-    let op_c = unique("two-c"); // holds Y
-    let op_b = unique("two-b"); // needs X + Y
+    let engine = TestOperations::new();
+    let lane_x = "lane-x".to_string();
+    let lane_y = "lane-y".to_string();
+    let op_a = "two-a".to_string(); // holds X
+    let op_c = "two-c".to_string(); // holds Y
+    let op_b = "two-b".to_string(); // needs X + Y
 
     let (a_started_tx, a_started_rx) = oneshot::channel();
     let (a_rel_tx, a_rel_rx) = oneshot::channel();
-    manager().spawn_managed(
+    engine.manager().spawn_managed(
         descriptor(&op_a, vec![&lane_x]),
-        fresh_state(),
+        engine.new_state(),
         gated_deferred(op_a.clone(), a_started_tx, a_rel_rx),
     );
     a_started_rx.await.expect("A started");
 
     let (c_started_tx, c_started_rx) = oneshot::channel();
     let (c_rel_tx, c_rel_rx) = oneshot::channel();
-    manager().spawn_managed(
+    engine.manager().spawn_managed(
         descriptor(&op_c, vec![&lane_y]),
-        fresh_state(),
+        engine.new_state(),
         gated_deferred(op_c.clone(), c_started_tx, c_rel_rx),
     );
     c_started_rx.await.expect("C started");
 
     let (b_started_tx, b_started_rx) = oneshot::channel();
     let (b_rel_tx, b_rel_rx) = oneshot::channel();
-    manager().spawn_managed(
+    engine.manager().spawn_managed(
         descriptor(&op_b, vec![&lane_x, &lane_y]),
-        fresh_state(),
+        engine.new_state(),
         gated_deferred(op_b.clone(), b_started_tx, b_rel_rx),
     );
-    assert_eq!(manager().lifecycle_status(&op_b), Some(LifecycleStatus::Queued));
+    assert_eq!(engine.manager().lifecycle_status(&op_b), Some(LifecycleStatus::Queued));
 
     // Free only X (settle A). B still can't run, because Y is busy. Waiting for A's
     // settle pass to complete means the pass that could have (wrongly) admitted B
     // provably ran: an admission pass walks the whole queue, so B was considered.
-    let passes = manager().admission_pass_count();
+    let passes = engine.manager().admission_pass_count();
     let _ = a_rel_tx.send(());
     wait_until_async(WAIT, "A to settle and its admission pass to complete", || {
-        manager().lifecycle_status(&op_a).is_none() && manager().admission_pass_count() > passes
+        engine.manager().lifecycle_status(&op_a).is_none() && engine.manager().admission_pass_count() > passes
     })
     .await;
     assert_eq!(
-        manager().lifecycle_status(&op_b),
+        engine.manager().lifecycle_status(&op_b),
         Some(LifecycleStatus::Queued),
         "two-lane op must not start while one of its lanes is still busy"
     );
@@ -320,15 +271,16 @@ async fn two_lane_op_waits_until_both_lanes_free_and_does_not_starve() {
 async fn cancel_queued_op_removes_it_without_spawning() {
     use std::sync::atomic::AtomicBool;
 
-    let lane = unique("lane");
-    let op_a = unique("cancelq-a");
-    let op_b = unique("cancelq-b");
+    let engine = TestOperations::new();
+    let lane = "lane".to_string();
+    let op_a = "cancelq-a".to_string();
+    let op_b = "cancelq-b".to_string();
 
     let (a_started_tx, a_started_rx) = oneshot::channel();
     let (a_rel_tx, a_rel_rx) = oneshot::channel();
-    manager().spawn_managed(
+    engine.manager().spawn_managed(
         descriptor(&op_a, vec![&lane]),
-        fresh_state(),
+        engine.new_state(),
         gated_deferred(op_a.clone(), a_started_tx, a_rel_rx),
     );
     a_started_rx.await.expect("A started");
@@ -347,16 +299,18 @@ async fn cancel_queued_op_removes_it_without_spawning() {
             ops.manager().on_settled(&b_id);
         })
     });
-    manager().spawn_managed(descriptor(&op_b, vec![&lane]), fresh_state(), b_deferred);
-    assert_eq!(manager().lifecycle_status(&op_b), Some(LifecycleStatus::Queued));
+    engine
+        .manager()
+        .spawn_managed(descriptor(&op_b, vec![&lane]), engine.new_state(), b_deferred);
+    assert_eq!(engine.manager().lifecycle_status(&op_b), Some(LifecycleStatus::Queued));
 
     // Cancel the queued op: removed from the registry, its deferred never runs.
     assert!(
-        manager().cancel_if_queued(&op_b),
+        engine.manager().cancel_if_queued(&op_b),
         "should report it cancelled a queued op"
     );
     assert_eq!(
-        manager().lifecycle_status(&op_b),
+        engine.manager().lifecycle_status(&op_b),
         None,
         "queued op removed from registry"
     );
@@ -364,10 +318,10 @@ async fn cancel_queued_op_removes_it_without_spawning() {
     // Settle A (frees the lane + runs an admission pass). That pass is exactly
     // where a still-registered B would have been admitted, so once it has
     // completed, B's deferred has provably had its one chance to run.
-    let passes = manager().admission_pass_count();
+    let passes = engine.manager().admission_pass_count();
     let _ = a_rel_tx.send(());
     wait_until_async(WAIT, "A to settle and its admission pass to complete", || {
-        manager().lifecycle_status(&op_a).is_none() && manager().admission_pass_count() > passes
+        engine.manager().lifecycle_status(&op_a).is_none() && engine.manager().admission_pass_count() > passes
     })
     .await;
     assert!(
@@ -380,22 +334,23 @@ async fn cancel_queued_op_removes_it_without_spawning() {
 async fn cancel_if_queued_returns_false_for_running_op() {
     // A Running op is NOT a queued op: `cancel_if_queued` returns false so the
     // caller routes through the existing intent-based cancel path.
-    let lane = unique("lane");
-    let op = unique("cancel-running");
+    let engine = TestOperations::new();
+    let lane = "lane".to_string();
+    let op = "cancel-running".to_string();
     let (started_tx, started_rx) = oneshot::channel();
     let (rel_tx, rel_rx) = oneshot::channel();
-    manager().spawn_managed(
+    engine.manager().spawn_managed(
         descriptor(&op, vec![&lane]),
-        fresh_state(),
+        engine.new_state(),
         gated_deferred(op.clone(), started_tx, rel_rx),
     );
     started_rx.await.expect("started");
 
     assert!(
-        !manager().cancel_if_queued(&op),
+        !engine.manager().cancel_if_queued(&op),
         "a Running op must not be cancellable via the queued-cancel fast path"
     );
-    assert_eq!(manager().lifecycle_status(&op), Some(LifecycleStatus::Running));
+    assert_eq!(engine.manager().lifecycle_status(&op), Some(LifecycleStatus::Running));
 
     let _ = rel_tx.send(());
 }
@@ -407,9 +362,10 @@ async fn panicking_op_releases_its_lane_without_spawning_next() {
     // because a SUBSEQUENT healthy event runs an admission pass — here we assert
     // the lane is freed (so a later pass CAN admit) and that B did not start as a
     // direct result of the panic.
-    let lane = unique("lane");
-    let op_a = unique("panic-a");
-    let op_b = unique("panic-b");
+    let engine = TestOperations::new();
+    let lane = "lane".to_string();
+    let op_a = "panic-a".to_string();
+    let op_b = "panic-b".to_string();
 
     // A: a deferred that panics WITHOUT calling on_settled (guard armed).
     let a_id = op_a.clone();
@@ -419,16 +375,18 @@ async fn panicking_op_releases_its_lane_without_spawning_next() {
             panic!("simulated op panic");
         })
     });
-    manager().spawn_managed(descriptor(&op_a, vec![&lane]), fresh_state(), panic_deferred);
+    engine
+        .manager()
+        .spawn_managed(descriptor(&op_a, vec![&lane]), engine.new_state(), panic_deferred);
 
     // Let A's task run + panic + unwind. The Drop guard removes the record and
     // releases the lane in ONE locked section, so a gone record means the release
     // has landed too: waiting on the record covers both.
     wait_until_async(WAIT, "the panicking op's Drop guard to remove its record", || {
-        manager().lifecycle_status(&op_a).is_none()
+        engine.manager().lifecycle_status(&op_a).is_none()
     })
     .await;
-    let lane_use = manager().lane_use_snapshot();
+    let lane_use = engine.manager().lane_use_snapshot();
     assert!(
         !lane_use.contains_key(&lane),
         "the Drop safety net must release the panicked op's lane"
@@ -438,9 +396,9 @@ async fn panicking_op_releases_its_lane_without_spawning_next() {
     // the lane really is free, and that Drop didn't itself spawn anything).
     let (b_started_tx, b_started_rx) = oneshot::channel();
     let (b_rel_tx, b_rel_rx) = oneshot::channel();
-    manager().spawn_managed(
+    engine.manager().spawn_managed(
         descriptor(&op_b, vec![&lane]),
-        fresh_state(),
+        engine.new_state(),
         gated_deferred(op_b.clone(), b_started_tx, b_rel_rx),
     );
     tokio::time::timeout(Duration::from_secs(2), b_started_rx)
@@ -456,27 +414,28 @@ async fn set_paused_flips_running_op_to_paused_and_keeps_its_lane() {
     // Pausing a Running op flips its status to Paused but does NOT free its lane
     // slot (a paused Running op still occupies the resource). Resuming flips it
     // back and still holds the lane.
-    let lane = unique("lane");
-    let op = unique("pause-op");
+    let engine = TestOperations::new();
+    let lane = "lane".to_string();
+    let op = "pause-op".to_string();
     let (started_tx, started_rx) = oneshot::channel();
     let (rel_tx, rel_rx) = oneshot::channel();
-    manager().spawn_managed(
+    engine.manager().spawn_managed(
         descriptor(&op, vec![&lane]),
-        fresh_state(),
+        engine.new_state(),
         gated_deferred(op.clone(), started_tx, rel_rx),
     );
     started_rx.await.expect("started");
-    assert_eq!(manager().lifecycle_status(&op), Some(LifecycleStatus::Running));
-    assert_eq!(manager().lane_use_snapshot().get(&lane).copied(), Some(1));
+    assert_eq!(engine.manager().lifecycle_status(&op), Some(LifecycleStatus::Running));
+    assert_eq!(engine.manager().lane_use_snapshot().get(&lane).copied(), Some(1));
 
     assert_eq!(
-        manager().set_paused(&op, true),
+        engine.manager().set_paused(&op, true),
         PauseOutcome::Applied,
         "pausing a Running op flips it"
     );
-    assert_eq!(manager().lifecycle_status(&op), Some(LifecycleStatus::Paused));
+    assert_eq!(engine.manager().lifecycle_status(&op), Some(LifecycleStatus::Paused));
     assert_eq!(
-        manager().lane_use_snapshot().get(&lane).copied(),
+        engine.manager().lane_use_snapshot().get(&lane).copied(),
         Some(1),
         "a paused Running op must keep holding its lane slot"
     );
@@ -484,19 +443,19 @@ async fn set_paused_flips_running_op_to_paused_and_keeps_its_lane() {
     // A repeated request is satisfied, not refused: nothing to flip, but the op
     // IS in the state the caller asked for.
     assert_eq!(
-        manager().set_paused(&op, true),
+        engine.manager().set_paused(&op, true),
         PauseOutcome::AlreadyInState,
         "pausing a Paused op reports its intent as already held"
     );
-    assert_eq!(manager().lifecycle_status(&op), Some(LifecycleStatus::Paused));
+    assert_eq!(engine.manager().lifecycle_status(&op), Some(LifecycleStatus::Paused));
 
     assert_eq!(
-        manager().set_paused(&op, false),
+        engine.manager().set_paused(&op, false),
         PauseOutcome::Applied,
         "resuming a Paused op flips it back"
     );
-    assert_eq!(manager().lifecycle_status(&op), Some(LifecycleStatus::Running));
-    assert_eq!(manager().lane_use_snapshot().get(&lane).copied(), Some(1));
+    assert_eq!(engine.manager().lifecycle_status(&op), Some(LifecycleStatus::Running));
+    assert_eq!(engine.manager().lane_use_snapshot().get(&lane).copied(), Some(1));
 
     let _ = rel_tx.send(());
 }
@@ -505,36 +464,37 @@ async fn set_paused_flips_running_op_to_paused_and_keeps_its_lane() {
 async fn paused_running_op_does_not_admit_a_queued_same_lane_op() {
     // The whole point of keeping the lane while paused: a same-lane queued op
     // must NOT start (it would fight the paused op on resume).
-    let lane = unique("lane");
-    let op_a = unique("paused-holder");
-    let op_b = unique("waiting");
+    let engine = TestOperations::new();
+    let lane = "lane".to_string();
+    let op_a = "paused-holder".to_string();
+    let op_b = "waiting".to_string();
 
     let (a_started_tx, a_started_rx) = oneshot::channel();
     let (a_rel_tx, a_rel_rx) = oneshot::channel();
-    manager().spawn_managed(
+    engine.manager().spawn_managed(
         descriptor(&op_a, vec![&lane]),
-        fresh_state(),
+        engine.new_state(),
         gated_deferred(op_a.clone(), a_started_tx, a_rel_rx),
     );
     a_started_rx.await.expect("A started");
 
     let (b_started_tx, _b_started_rx) = oneshot::channel();
     let (b_rel_tx, b_rel_rx) = oneshot::channel();
-    manager().spawn_managed(
+    engine.manager().spawn_managed(
         descriptor(&op_b, vec![&lane]),
-        fresh_state(),
+        engine.new_state(),
         gated_deferred(op_b.clone(), b_started_tx, b_rel_rx),
     );
-    assert_eq!(manager().lifecycle_status(&op_b), Some(LifecycleStatus::Queued));
+    assert_eq!(engine.manager().lifecycle_status(&op_b), Some(LifecycleStatus::Queued));
 
     // Pause A, then run a pass by hand: pause itself admits nobody, so without
     // forcing one nothing would ever exercise the claim. Admission flips a record
     // to Running BEFORE it spawns, so a still-Queued B after a completed pass is
     // proof its deferred never ran.
-    assert_eq!(manager().set_paused(&op_a, true), PauseOutcome::Applied);
-    manager().force_admission_pass();
+    assert_eq!(engine.manager().set_paused(&op_a, true), PauseOutcome::Applied);
+    engine.manager().force_admission_pass();
     assert_eq!(
-        manager().lifecycle_status(&op_b),
+        engine.manager().lifecycle_status(&op_b),
         Some(LifecycleStatus::Queued),
         "a queued same-lane op must not be admitted while the holder is merely paused"
     );
@@ -548,40 +508,41 @@ async fn set_paused_is_noop_for_queued_or_absent_ops() {
     // A Queued op can't be "paused" in v1; an absent op is a no-op. Both report
     // `NotApplicable` and leave status untouched, which is what every surface
     // above (queue window, IPC, the MCP `queue` tool) turns into an honest answer.
-    let lane = unique("lane");
-    let op_a = unique("holder");
-    let op_b = unique("queued");
+    let engine = TestOperations::new();
+    let lane = "lane".to_string();
+    let op_a = "holder".to_string();
+    let op_b = "queued".to_string();
 
     let (a_started_tx, a_started_rx) = oneshot::channel();
     let (a_rel_tx, a_rel_rx) = oneshot::channel();
-    manager().spawn_managed(
+    engine.manager().spawn_managed(
         descriptor(&op_a, vec![&lane]),
-        fresh_state(),
+        engine.new_state(),
         gated_deferred(op_a.clone(), a_started_tx, a_rel_rx),
     );
     a_started_rx.await.expect("A started");
 
     let (b_started_tx, _b_started_rx) = oneshot::channel();
     let (_b_rel_tx, b_rel_rx) = oneshot::channel();
-    manager().spawn_managed(
+    engine.manager().spawn_managed(
         descriptor(&op_b, vec![&lane]),
-        fresh_state(),
+        engine.new_state(),
         gated_deferred(op_b.clone(), b_started_tx, b_rel_rx),
     );
-    assert_eq!(manager().lifecycle_status(&op_b), Some(LifecycleStatus::Queued));
+    assert_eq!(engine.manager().lifecycle_status(&op_b), Some(LifecycleStatus::Queued));
 
     assert_eq!(
-        manager().set_paused(&op_b, true),
+        engine.manager().set_paused(&op_b, true),
         PauseOutcome::NotApplicable,
         "pausing a Queued op does nothing and remembers nothing"
     );
     assert_eq!(
-        manager().lifecycle_status(&op_b),
+        engine.manager().lifecycle_status(&op_b),
         Some(LifecycleStatus::Queued),
         "a Queued op stays Queued (not Paused)"
     );
     assert_eq!(
-        manager().set_paused("does-not-exist-zzz", true),
+        engine.manager().set_paused("does-not-exist-zzz", true),
         PauseOutcome::NotApplicable
     );
 
@@ -589,8 +550,8 @@ async fn set_paused_is_noop_for_queued_or_absent_ops() {
 }
 
 /// The sweep's answer is a FOLD of the per-operation outcomes, so it can be
-/// checked without running `installed().pause_all()` — which, against a process-global
-/// manager, would park a sibling test's operation.
+/// checked on its own, without running `pause_all()` over an engine's
+/// operations.
 #[test]
 fn a_sweep_counts_every_outcome_it_collected() {
     let totals: PauseAllOutcome = [
@@ -635,13 +596,14 @@ fn a_sweep_over_nothing_is_distinguishable_from_one_that_worked() {
 async fn single_op_with_free_lanes_behaves_like_immediate_spawn() {
     // The common case: nothing else running, the op spawns at once and settles
     // cleanly, leaving the registry empty.
-    let op = unique("solo");
-    let lane = unique("lane");
+    let engine = TestOperations::new();
+    let op = "solo".to_string();
+    let lane = "lane".to_string();
     let (started_tx, started_rx) = oneshot::channel();
     let (rel_tx, rel_rx) = oneshot::channel();
-    manager().spawn_managed(
+    engine.manager().spawn_managed(
         descriptor(&op, vec![&lane]),
-        fresh_state(),
+        engine.new_state(),
         gated_deferred(op.clone(), started_tx, rel_rx),
     );
     started_rx.await.expect("started immediately");
@@ -650,30 +612,33 @@ async fn single_op_with_free_lanes_behaves_like_immediate_spawn() {
     // After settle the op is gone and its lane is free (both land in the same
     // locked section, so the record going away is the signal for both).
     wait_until_async(WAIT, "the op to settle and leave the registry", || {
-        manager().lifecycle_status(&op).is_none()
+        engine.manager().lifecycle_status(&op).is_none()
     })
     .await;
-    assert!(!manager().lane_use_snapshot().contains_key(&lane));
+    assert!(!engine.manager().lane_use_snapshot().contains_key(&lane));
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn admitted_op_runs_even_if_the_admitting_runtime_is_dropped() {
-    // The manager is a process-global singleton, but its admission pass runs on
+    // The manager outlives every caller, but its admission pass runs on
     // whatever runtime triggered it (a `spawn_managed`, or a concurrent op's
     // `on_settled`). If it spawned admitted work onto that caller runtime and the
     // caller runtime went away, the op would be orphaned — it would never run,
     // never settle, and leak its lane forever. The manager instead spawns on the
-    // host's long-lived runtime (`host::installed().runtime()`: the app's, or
-    // `cmdr-fs`'s shared fallback in a test binary), so an op admitted by a
-    // short-lived runtime still runs to completion after that runtime dies.
+    // host's long-lived runtime (the volume host's: the app's, or `cmdr-fs`'s
+    // shared fallback for an engine built without one, like this test's), so an
+    // op admitted by a short-lived runtime still runs to completion after that
+    // runtime dies.
     //
     // Here a throwaway current-thread runtime admits the op and is then dropped
     // WITHOUT ever driving it. With a bare `tokio::spawn` in the admission pass,
     // `ran` would stay false and this test would hang to its deadline.
     use std::sync::atomic::AtomicBool;
 
-    let op = unique("survives-runtime-drop");
-    let lane = unique("lane");
+    let engine = TestOperations::new();
+
+    let op = "survives-runtime-drop".to_string();
+    let lane = "lane".to_string();
     let ran = Arc::new(AtomicBool::new(false));
 
     let ran_in_task = Arc::clone(&ran);
@@ -691,7 +656,8 @@ async fn admitted_op_runs_even_if_the_admitting_runtime_is_dropped() {
     });
 
     let desc = descriptor(&op, vec![&lane]);
-    let state = fresh_state();
+    let state = engine.new_state();
+    let manager = Arc::clone(engine.manager());
     std::thread::spawn(move || {
         let rt = tokio::runtime::Builder::new_current_thread()
             .build()
@@ -699,25 +665,28 @@ async fn admitted_op_runs_even_if_the_admitting_runtime_is_dropped() {
         // `spawn_managed` admits the op (lane free) and spawns its start; the
         // throwaway runtime then drops the instant `block_on` returns.
         rt.block_on(async {
-            manager().spawn_managed(desc, state, deferred);
+            manager.spawn_managed(desc, state, deferred);
         });
     })
     .join()
     .expect("throwaway runtime thread joins");
 
-    // The op runs on the app runtime, not the dropped one, so it completes and
+    // The op runs on the host's runtime, not the dropped one, so it completes and
     // settles (removed from the registry).
     wait_until_async(
         WAIT,
-        "the admitted op to run on the app runtime rather than die with the admitting one",
+        "the admitted op to run on the host's runtime rather than die with the admitting one",
         || ran.load(Ordering::SeqCst),
     )
     .await;
     wait_until_async(WAIT, "the op to settle and be removed", || {
-        manager().lifecycle_status(&op).is_none()
+        engine.manager().lifecycle_status(&op).is_none()
     })
     .await;
-    assert!(!manager().lane_use_snapshot().contains_key(&lane), "its lane is freed");
+    assert!(
+        !engine.manager().lane_use_snapshot().contains_key(&lane),
+        "its lane is freed"
+    );
 }
 
 // ============================================================================
@@ -729,8 +698,9 @@ async fn admitted_op_runs_even_if_the_admitting_runtime_is_dropped() {
 async fn run_instant_marks_volume_busy_and_registers_record_for_op_duration() {
     // (a) The volume is busy and the op shows as a Running record for the op's
     // whole duration, then both clear once it finishes; the result is returned.
-    let vol = unique("inst-vol");
-    let op = unique("inst-busy");
+    let engine = TestOperations::new();
+    let vol = "inst-vol".to_string();
+    let op = "inst-busy".to_string();
     let started = Arc::new(tokio::sync::Notify::new());
     let release = Arc::new(tokio::sync::Notify::new());
     let started_in = Arc::clone(&started);
@@ -738,8 +708,9 @@ async fn run_instant_marks_volume_busy_and_registers_record_for_op_duration() {
 
     let desc = instant_descriptor(&op, WriteOperationType::Rename, vec![vol.clone()]);
     let op_id = op.clone();
+    let manager = Arc::clone(engine.manager());
     let handle = tokio::spawn(async move {
-        manager()
+        manager
             .run_instant(desc, async move {
                 started_in.notify_one();
                 release_in.notified().await;
@@ -751,11 +722,12 @@ async fn run_instant_marks_volume_busy_and_registers_record_for_op_duration() {
     // Wait until the op has started (registered + busy-marked + reached op.await).
     started.notified().await;
     assert!(
-        installed().busy_volume_ids().contains(&vol),
+        engine.busy_volume_ids().contains(&vol),
         "volume must be busy while the instant op runs"
     );
     assert!(
-        manager()
+        engine
+            .manager()
             .list()
             .iter()
             .any(|o| o.operation_id == op_id && o.status == LifecycleStatus::Running),
@@ -768,11 +740,11 @@ async fn run_instant_marks_volume_busy_and_registers_record_for_op_duration() {
     assert_eq!(result, 7, "run_instant returns the op's own result");
 
     assert!(
-        !installed().busy_volume_ids().contains(&vol),
+        !engine.busy_volume_ids().contains(&vol),
         "volume must no longer be busy after the op finishes"
     );
     assert!(
-        !manager().list().iter().any(|o| o.operation_id == op),
+        !engine.manager().list().iter().any(|o| o.operation_id == op),
         "the record must be removed after the op finishes"
     );
 }
@@ -782,15 +754,17 @@ async fn run_instant_marks_only_nonroot_volumes_busy() {
     // (b) A non-root volume is marked busy; the root volume is excluded.
     use cmdr_fs::volume::DEFAULT_VOLUME_ID;
 
+    let engine = TestOperations::new();
     // Non-root volume → busy while running.
-    let vol = unique("inst-nonroot");
-    let op = unique("inst-nonroot-op");
+    let vol = "inst-nonroot".to_string();
+    let op = "inst-nonroot-op".to_string();
     let started = Arc::new(tokio::sync::Notify::new());
     let release = Arc::new(tokio::sync::Notify::new());
     let (s_in, r_in) = (Arc::clone(&started), Arc::clone(&release));
     let desc = instant_descriptor(&op, WriteOperationType::CreateFolder, vec![vol.clone()]);
+    let manager = Arc::clone(engine.manager());
     let h = tokio::spawn(async move {
-        manager()
+        manager
             .run_instant(desc, async move {
                 s_in.notify_one();
                 r_in.notified().await;
@@ -799,15 +773,15 @@ async fn run_instant_marks_only_nonroot_volumes_busy() {
     });
     started.notified().await;
     assert!(
-        installed().busy_volume_ids().contains(&vol),
+        engine.busy_volume_ids().contains(&vol),
         "a non-root volume must be marked busy"
     );
     release.notify_one();
     h.await.expect("joins");
-    assert!(!installed().busy_volume_ids().contains(&vol));
+    assert!(!engine.busy_volume_ids().contains(&vol));
 
     // Root volume → never in the busy set (root is excluded from the busy set).
-    let op_root = unique("inst-root-op");
+    let op_root = "inst-root-op".to_string();
     let started2 = Arc::new(tokio::sync::Notify::new());
     let release2 = Arc::new(tokio::sync::Notify::new());
     let (s2, r2) = (Arc::clone(&started2), Arc::clone(&release2));
@@ -816,8 +790,9 @@ async fn run_instant_marks_only_nonroot_volumes_busy() {
         WriteOperationType::Rename,
         vec![DEFAULT_VOLUME_ID.to_string()],
     );
+    let manager = Arc::clone(engine.manager());
     let h2 = tokio::spawn(async move {
-        manager()
+        manager
             .run_instant(desc_root, async move {
                 s2.notify_one();
                 r2.notified().await;
@@ -826,11 +801,11 @@ async fn run_instant_marks_only_nonroot_volumes_busy() {
     });
     started2.notified().await;
     assert!(
-        !installed().busy_volume_ids().iter().any(|id| id == DEFAULT_VOLUME_ID),
+        !engine.busy_volume_ids().iter().any(|id| id == DEFAULT_VOLUME_ID),
         "the root volume must be excluded from the busy set even for an instant op"
     );
     assert!(
-        manager().list().iter().any(|o| o.operation_id == op_root),
+        engine.manager().list().iter().any(|o| o.operation_id == op_root),
         "the root instant op still registers a Running record"
     );
     release2.notify_one();
@@ -842,9 +817,10 @@ async fn run_instant_does_not_reserve_a_lane() {
     // (c) run_instant reserves no lane even when its descriptor names one, so a
     // real transfer on the SAME lane is admitted concurrently (Running, not
     // Queued).
-    let lane = unique("inst-lane");
-    let inst = unique("inst-op");
-    let xfer = unique("xfer-op");
+    let engine = TestOperations::new();
+    let lane = "inst-lane".to_string();
+    let inst = "inst-op".to_string();
+    let xfer = "xfer-op".to_string();
 
     let started = Arc::new(tokio::sync::Notify::new());
     let release = Arc::new(tokio::sync::Notify::new());
@@ -860,8 +836,9 @@ async fn run_instant_does_not_reserve_a_lane() {
         preview_id: None,
         reverses: None,
     };
+    let manager = Arc::clone(engine.manager());
     let h = tokio::spawn(async move {
-        manager()
+        manager
             .run_instant(desc, async move {
                 s_in.notify_one();
                 r_in.notified().await;
@@ -871,23 +848,23 @@ async fn run_instant_does_not_reserve_a_lane() {
     started.notified().await;
 
     assert!(
-        !manager().lane_use_snapshot().contains_key(&lane),
+        !engine.manager().lane_use_snapshot().contains_key(&lane),
         "run_instant must not reserve its descriptor's lanes"
     );
 
     // A real transfer on the same lane admits immediately (nothing holds it).
     let (x_started_tx, x_started_rx) = oneshot::channel();
     let (x_rel_tx, x_rel_rx) = oneshot::channel();
-    manager().spawn_managed(
+    engine.manager().spawn_managed(
         descriptor(&xfer, vec![&lane]),
-        fresh_state(),
+        engine.new_state(),
         gated_deferred(xfer.clone(), x_started_tx, x_rel_rx),
     );
     tokio::time::timeout(Duration::from_secs(2), x_started_rx)
         .await
         .expect("a transfer on the same lane must admit despite the instant op")
         .expect("transfer started");
-    assert_eq!(manager().lifecycle_status(&xfer), Some(LifecycleStatus::Running));
+    assert_eq!(engine.manager().lifecycle_status(&xfer), Some(LifecycleStatus::Running));
 
     release.notify_one();
     h.await.expect("joins");
@@ -899,14 +876,15 @@ async fn run_instant_releases_busy_and_record_when_dropped_midflight() {
     // (d, B1) Dropping the run_instant future mid-op.await (the command's IPC
     // timeout firing) MUST release the busy status and remove the record — else
     // the eject guard sticks ON forever and a phantom row lingers.
-    let vol = unique("drop-vol");
-    let op = unique("inst-drop");
+    let engine = TestOperations::new();
+    let vol = "drop-vol".to_string();
+    let op = "inst-drop".to_string();
     let started = Arc::new(tokio::sync::Notify::new());
     let parked = Arc::new(tokio::sync::Notify::new()); // never fired → op parks forever
     let (s_in, p_in) = (Arc::clone(&started), Arc::clone(&parked));
     let desc = instant_descriptor(&op, WriteOperationType::Rename, vec![vol.clone()]);
 
-    let mut fut = Box::pin(manager().run_instant(desc, async move {
+    let mut fut = Box::pin(engine.manager().run_instant(desc, async move {
         s_in.notify_one();
         p_in.notified().await;
     }));
@@ -917,12 +895,9 @@ async fn run_instant_releases_busy_and_record_when_dropped_midflight() {
         _ = &mut fut => panic!("a parked instant op must not complete"),
         _ = started.notified() => {}
     }
+    assert!(engine.busy_volume_ids().contains(&vol), "volume busy while the op runs");
     assert!(
-        installed().busy_volume_ids().contains(&vol),
-        "volume busy while the op runs"
-    );
-    assert!(
-        manager().list().iter().any(|o| o.operation_id == op),
+        engine.manager().list().iter().any(|o| o.operation_id == op),
         "record present while running"
     );
 
@@ -930,11 +905,11 @@ async fn run_instant_releases_busy_and_record_when_dropped_midflight() {
     drop(fut);
 
     assert!(
-        !installed().busy_volume_ids().contains(&vol),
+        !engine.busy_volume_ids().contains(&vol),
         "B1: a mid-flight drop must release the busy status (else eject stays disabled forever)"
     );
     assert!(
-        !manager().list().iter().any(|o| o.operation_id == op),
+        !engine.manager().list().iter().any(|o| o.operation_id == op),
         "B1: a mid-flight drop must remove the phantom record"
     );
 }
@@ -943,23 +918,25 @@ async fn run_instant_releases_busy_and_record_when_dropped_midflight() {
 async fn run_instant_releases_busy_and_record_when_op_panics() {
     // (d, B1) A panic inside the awaited op MUST still release the busy status and
     // remove the record on unwind.
-    let vol = unique("panic-vol");
-    let op = unique("inst-panic");
+    let engine = TestOperations::new();
+    let vol = "panic-vol".to_string();
+    let op = "inst-panic".to_string();
     let desc = instant_descriptor(&op, WriteOperationType::CreateFile, vec![vol.clone()]);
 
+    let manager = Arc::clone(engine.manager());
     let handle = tokio::spawn(async move {
-        manager()
+        manager
             .run_instant(desc, async { panic!("simulated instant-op panic") })
             .await
     });
     assert!(handle.await.is_err(), "the panic propagates out of the awaited op");
 
     assert!(
-        !installed().busy_volume_ids().contains(&vol),
+        !engine.busy_volume_ids().contains(&vol),
         "B1: a panicking instant op must release the busy status on unwind"
     );
     assert!(
-        !manager().list().iter().any(|o| o.operation_id == op),
+        !engine.manager().list().iter().any(|o| o.operation_id == op),
         "B1: a panicking instant op must remove its record on unwind"
     );
 }
@@ -968,8 +945,10 @@ async fn run_instant_releases_busy_and_record_when_op_panics() {
 async fn run_instant_returns_the_ops_result_unchanged() {
     // (e) Both Ok and Err propagate to the caller verbatim, and the record is
     // cleaned up either way.
-    let op_ok = unique("inst-ok");
-    let ok: Result<u32, String> = manager()
+    let engine = TestOperations::new();
+    let op_ok = "inst-ok".to_string();
+    let ok: Result<u32, String> = engine
+        .manager()
         .run_instant(
             instant_descriptor(&op_ok, WriteOperationType::CreateFolder, vec![]),
             async { Ok(11) },
@@ -977,19 +956,20 @@ async fn run_instant_returns_the_ops_result_unchanged() {
         .await;
     assert_eq!(ok, Ok(11), "Ok result propagates unchanged");
     assert!(
-        !manager().list().iter().any(|o| o.operation_id == op_ok),
+        !engine.manager().list().iter().any(|o| o.operation_id == op_ok),
         "record removed after a successful instant op"
     );
 
-    let op_err = unique("inst-err");
-    let err: Result<u32, String> = manager()
+    let op_err = "inst-err".to_string();
+    let err: Result<u32, String> = engine
+        .manager()
         .run_instant(instant_descriptor(&op_err, WriteOperationType::Rename, vec![]), async {
             Err("boom".to_string())
         })
         .await;
     assert_eq!(err, Err("boom".to_string()), "Err result propagates unchanged");
     assert!(
-        !manager().list().iter().any(|o| o.operation_id == op_err),
+        !engine.manager().list().iter().any(|o| o.operation_id == op_err),
         "record removed after a failed instant op"
     );
 }
@@ -997,13 +977,14 @@ async fn run_instant_returns_the_ops_result_unchanged() {
 /// `operations-changed` fires on register, admit, and settle, with today's
 /// count per op: one broadcast when a free lane admits at registration, one
 /// when an op queues, one for a settle that also admits the next op, one per
-/// settle, and two per instant op. On a private manager, so every broadcast
-/// counted is this test's own.
+/// settle, and two per instant op. On the test's own engine, so every
+/// broadcast counted is its own.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn operations_changed_fires_on_register_admit_and_settle_with_todays_counts() {
-    let mgr = owned_manager();
-    let lane = unique("lane");
-    let (a, b) = (unique("emits-a"), unique("emits-b"));
+    let engine = TestOperations::new();
+    let mgr = engine.manager();
+    let lane = "lane".to_string();
+    let (a, b) = ("emits-a".to_string(), "emits-b".to_string());
     let (a_started_tx, a_started_rx) = oneshot::channel();
     let (a_release_tx, a_release_rx) = oneshot::channel();
     let (b_started_tx, b_started_rx) = oneshot::channel();
@@ -1012,16 +993,16 @@ async fn operations_changed_fires_on_register_admit_and_settle_with_todays_count
 
     mgr.spawn_managed(
         descriptor(&a, vec![&lane]),
-        fresh_state(),
-        gated_deferred_on(&mgr, a.clone(), a_started_tx, a_release_rx),
+        engine.new_state(),
+        gated_deferred(a.clone(), a_started_tx, a_release_rx),
     );
     assert_eq!(mgr.emit_count(), base + 1, "A registered and admitted in one broadcast");
     a_started_rx.await.expect("A started");
 
     mgr.spawn_managed(
         descriptor(&b, vec![&lane]),
-        fresh_state(),
-        gated_deferred_on(&mgr, b.clone(), b_started_tx, b_release_rx),
+        engine.new_state(),
+        gated_deferred(b.clone(), b_started_tx, b_release_rx),
     );
     assert_eq!(mgr.lifecycle_status(&b), Some(LifecycleStatus::Queued));
     assert_eq!(mgr.emit_count(), base + 2, "B registered and queued");
@@ -1040,7 +1021,7 @@ async fn operations_changed_fires_on_register_admit_and_settle_with_todays_count
     assert_eq!(mgr.lifecycle_status(&b), None);
     assert_eq!(mgr.emit_count(), base + 4, "B's settle");
 
-    let instant = unique("emits-instant");
+    let instant = "emits-instant".to_string();
     mgr.run_instant(
         instant_descriptor(&instant, WriteOperationType::Rename, vec![]),
         async {},

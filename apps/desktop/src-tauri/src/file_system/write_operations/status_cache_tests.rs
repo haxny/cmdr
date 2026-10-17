@@ -1,14 +1,13 @@
 //! Tests for the operation status cache and the busy-volume set it drives.
 //!
-//! Each test keys its cache entries per test (via `unique_id`) so they don't
-//! collide when nextest runs them in one process against the module's
-//! shared engine's status cache.
+//! Each test runs on an engine of its own (`TestOperations`), so the cache,
+//! the busy set, and the events it reports hold that test's operations alone.
 
 use super::*;
-use crate::file_system::write_operations::installed;
-use crate::file_system::write_operations::manager::{OperationDescriptor, OperationSummaryText, PauseOutcome, manager};
-use crate::file_system::write_operations::state::{OperationIntent, WriteOperationState, operation_states};
-use crate::file_system::write_operations::test_support::{TestOperationGuard, placeholder_conflict};
+use crate::file_system::write_operations::manager::{OperationDescriptor, OperationSummaryText, PauseOutcome};
+use crate::file_system::write_operations::state::OperationIntent;
+use crate::file_system::write_operations::test_support::placeholder_conflict;
+use crate::file_system::write_operations::testing::{RegisteredOperation, TestOperations};
 use crate::file_system::write_operations::types::{
     LifecycleStatus, TransferWaitReason, WriteOperationPhase, WriteOperationType,
 };
@@ -18,18 +17,9 @@ use std::sync::atomic::Ordering;
 use std::time::Duration;
 use tokio::sync::oneshot;
 
-/// A cache key nothing else in the suite will collide with.
-fn unique_id(label: &str) -> String {
-    use std::sync::atomic::AtomicU64;
-    static N: AtomicU64 = AtomicU64::new(0);
-    let n = N.fetch_add(1, Ordering::Relaxed);
-    format!("test-status-cache-{label}-{n}-{:?}", std::thread::current().id())
-}
-
-/// Installs a live registry entry. The guard removes it on drop,
-/// so a failing assertion can't leak it into another test.
-fn install_state(label: &str, initial: OperationIntent) -> TestOperationGuard {
-    let op = TestOperationGuard::register(label);
+/// Registers a live state in `engine` with the given intent.
+fn install_state(engine: &TestOperations, label: &str, initial: OperationIntent) -> RegisteredOperation {
+    let op = engine.register(label);
     op.state().intent().set_for_test(initial);
     op
 }
@@ -38,13 +28,12 @@ fn install_state(label: &str, initial: OperationIntent) -> TestOperationGuard {
 
 #[test]
 fn register_then_get_status_roundtrip() {
-    let op = install_state("reg-get", OperationIntent::Running);
+    let engine = TestOperations::new();
+    let op = install_state(&engine, "reg-get", OperationIntent::Running);
     let id = op.id().to_string();
-    register_operation_status(&id, WriteOperationType::Copy, vec![]);
+    engine.status().register(&id, WriteOperationType::Copy, vec![]);
 
-    let status = installed()
-        .get_operation_status(&id)
-        .expect("operation should be in cache");
+    let status = engine.get_operation_status(&id).expect("operation should be in cache");
     assert_eq!(status.operation_id, id);
     assert_eq!(status.operation_type, WriteOperationType::Copy);
     assert_eq!(status.phase, WriteOperationPhase::Scanning);
@@ -57,35 +46,35 @@ fn register_then_get_status_roundtrip() {
     assert_eq!(status.bytes_done, 0);
     assert_eq!(status.bytes_total, 0);
 
-    drop(op);
-    unregister_operation_status(&id);
-    assert!(installed().get_operation_status(&id).is_none());
+    engine.registry().forget(&id);
+    engine.status().unregister(&id);
+    assert!(engine.get_operation_status(&id).is_none());
 }
 
-/// A real managed operation on a lane nothing else touches, so admission runs it
+/// A real managed operation on a lane of its own, so admission runs it
 /// immediately and the manager holds a `Running` record for it. Its status-cache
 /// row is registered too, which is what `get_operation_status` reads.
 ///
-/// Releases on drop so the lane frees for the rest of the process.
+/// Dropping it drops `_release`, which lets the operation settle.
 struct ManagedOperationFixture {
     id: String,
     lane: LaneKey,
-    release: Option<oneshot::Sender<()>>,
+    _release: oneshot::Sender<()>,
 }
 
 impl ManagedOperationFixture {
-    fn start(tag: &str) -> Self {
-        let lane = LaneKey::new(format!("{}-lane", unique_id(tag)));
-        Self::start_on_lane(tag, lane)
+    fn start(engine: &TestOperations, tag: &str) -> Self {
+        let lane = LaneKey::new(format!("{tag}-lane"));
+        Self::start_on_lane(engine, tag, lane)
     }
 
     /// Same, on a caller-supplied lane, so a second operation can be made to
     /// queue behind the first.
-    fn start_on_lane(tag: &str, lane: LaneKey) -> Self {
-        let id = unique_id(tag);
-        let (release_tx, release_rx) = oneshot::channel();
+    fn start_on_lane(engine: &TestOperations, tag: &str, lane: LaneKey) -> Self {
+        let id = tag.to_string();
+        let (release_tx, release_rx) = oneshot::channel::<()>();
         let settle_id = id.clone();
-        manager().spawn_managed(
+        engine.manager().spawn_managed(
             OperationDescriptor {
                 operation_id: id.clone(),
                 operation_type: WriteOperationType::Copy,
@@ -96,7 +85,7 @@ impl ManagedOperationFixture {
                 preview_id: None,
                 reverses: None,
             },
-            Arc::new(WriteOperationState::new(Duration::from_millis(50))),
+            engine.new_state(),
             Box::new(move |ops: Operations| {
                 Box::pin(async move {
                     let _ = release_rx.await;
@@ -104,20 +93,11 @@ impl ManagedOperationFixture {
                 })
             }),
         );
-        register_operation_status(&id, WriteOperationType::Copy, vec![]);
+        engine.status().register(&id, WriteOperationType::Copy, vec![]);
         Self {
             id,
             lane,
-            release: Some(release_tx),
-        }
-    }
-}
-
-impl Drop for ManagedOperationFixture {
-    fn drop(&mut self) {
-        unregister_operation_status(&self.id);
-        if let Some(release) = self.release.take() {
-            let _ = release.send(());
+            _release: release_tx,
         }
     }
 }
@@ -129,22 +109,23 @@ impl Drop for ManagedOperationFixture {
 /// — then tried to pause what was already parked.
 #[test]
 fn a_paused_operation_reports_paused_not_running() {
-    let op = ManagedOperationFixture::start("paused-lifecycle");
+    let engine = TestOperations::new();
+    let op = ManagedOperationFixture::start(&engine, "paused-lifecycle");
     assert_eq!(
-        manager().lifecycle_status(&op.id),
+        engine.manager().lifecycle_status(&op.id),
         Some(LifecycleStatus::Running),
         "precondition: a fresh lane admits the operation immediately"
     );
 
-    assert_eq!(manager().set_paused(&op.id, true), PauseOutcome::Applied);
+    assert_eq!(engine.manager().set_paused(&op.id, true), PauseOutcome::Applied);
 
-    let status = installed()
+    let status = engine
         .get_operation_status(&op.id)
         .expect("a paused operation is still in the status cache");
     assert_eq!(status.lifecycle, Some(LifecycleStatus::Paused));
     // The state-map entry is still there, which is exactly why the old boolean
     // got this backwards.
-    assert!(operation_states().contains(&op.id));
+    assert!(engine.registry().contains(&op.id));
 }
 
 /// The other half of the same bug, and the one that shows how far the boolean
@@ -153,26 +134,31 @@ fn a_paused_operation_reports_paused_not_running() {
 /// may never be admitted — was reported as running too.
 #[test]
 fn a_queued_operation_reports_queued() {
-    let holder = ManagedOperationFixture::start("queued-holder");
+    let engine = TestOperations::new();
+    let holder = ManagedOperationFixture::start(&engine, "queued-holder");
     // A second operation on the SAME lane can't be admitted until the first frees it.
-    let queued = ManagedOperationFixture::start_on_lane("queued-waiter", holder.lane.clone());
+    let queued = ManagedOperationFixture::start_on_lane(&engine, "queued-waiter", holder.lane.clone());
 
-    assert_eq!(manager().lifecycle_status(&queued.id), Some(LifecycleStatus::Queued));
-    let status = installed()
+    assert_eq!(
+        engine.manager().lifecycle_status(&queued.id),
+        Some(LifecycleStatus::Queued)
+    );
+    let status = engine
         .get_operation_status(&queued.id)
         .expect("a queued operation has a status-cache row");
     assert_eq!(status.lifecycle, Some(LifecycleStatus::Queued));
     assert!(
-        operation_states().contains(&queued.id),
+        engine.registry().contains(&queued.id),
         "the state entry lands at spawn, not at admission — which is exactly why a presence test called this one running"
     );
 }
 
 #[test]
 fn update_operation_status_overwrites_fields() {
-    let id = unique_id("update");
-    register_operation_status(&id, WriteOperationType::Move, vec![]);
-    update_operation_status(
+    let engine = TestOperations::new();
+    let id = "update".to_string();
+    engine.status().register(&id, WriteOperationType::Move, vec![]);
+    engine.status().update(
         &id,
         WriteOperationPhase::Copying,
         Some("a.txt".into()),
@@ -181,14 +167,14 @@ fn update_operation_status_overwrites_fields() {
         500,
         1000,
     );
-    let status = installed().get_operation_status(&id).unwrap();
+    let status = engine.get_operation_status(&id).unwrap();
     assert_eq!(status.phase, WriteOperationPhase::Copying);
     assert_eq!(status.current_file.as_deref(), Some("a.txt"));
     assert_eq!(status.files_done, 3);
     assert_eq!(status.files_total, 10);
     assert_eq!(status.bytes_done, 500);
     assert_eq!(status.bytes_total, 1000);
-    unregister_operation_status(&id);
+    engine.status().unregister(&id);
 }
 
 // ---- activity on the snapshot (why isn't this moving?) ----
@@ -199,21 +185,22 @@ fn a_parked_operation_names_its_wait_on_a_status_read() {
     // A poller that missed the transient event — an agent reading `cmdr://state`
     // for the first time — still has to learn that this operation is parked on a
     // clash, and that it is a clash rather than a dead mount.
-    let op = install_state("parked-conflict", OperationIntent::Running);
+    let engine = TestOperations::new();
+    let op = install_state(&engine, "parked-conflict", OperationIntent::Running);
     let id = op.id().to_string();
-    register_operation_status(&id, WriteOperationType::Copy, vec![]);
+    engine.status().register(&id, WriteOperationType::Copy, vec![]);
 
     // Nobody is being asked anything, and this operation keeps no in-flight
     // table, so it has nothing to claim. Absent, ❌ never a made-up `moving`.
     assert!(
-        installed().get_operation_status(&id).unwrap().activity.is_none(),
+        engine.get_operation_status(&id).unwrap().activity.is_none(),
         "an operation with no probe and nobody being asked reports no activity"
     );
 
     let (tx, _rx) = oneshot::channel();
     op.state().conflict_slot.arm(tx, placeholder_conflict);
 
-    let activity = installed()
+    let activity = engine
         .get_operation_status(&id)
         .unwrap()
         .activity
@@ -225,67 +212,73 @@ fn a_parked_operation_names_its_wait_on_a_status_read() {
         "a parked operation has been still for nobody's time but the answerer's"
     );
 
-    unregister_operation_status(&id);
+    engine.status().unregister(&id);
 }
 
 #[test]
 fn a_paused_operation_reads_as_paused_rather_than_stalled() {
-    let op = install_state("parked-pause", OperationIntent::Running);
+    let engine = TestOperations::new();
+    let op = install_state(&engine, "parked-pause", OperationIntent::Running);
     let id = op.id().to_string();
-    register_operation_status(&id, WriteOperationType::Copy, vec![]);
+    engine.status().register(&id, WriteOperationType::Copy, vec![]);
 
     op.state().pause_gate.pause();
 
-    let activity = installed()
+    let activity = engine
         .get_operation_status(&id)
         .unwrap()
         .activity
         .expect("paused is a wait");
     assert_eq!(activity.waiting_on, TransferWaitReason::Paused);
 
-    unregister_operation_status(&id);
+    engine.status().unregister(&id);
 }
 
 #[test]
 fn a_settled_operation_reports_no_activity() {
     // The status cache outlives registry, and once the state entry
     // is gone there is nothing left to classify.
-    let op = install_state("settled", OperationIntent::Running);
+    let engine = TestOperations::new();
+    let op = install_state(&engine, "settled", OperationIntent::Running);
     let id = op.id().to_string();
-    register_operation_status(&id, WriteOperationType::Copy, vec![]);
+    engine.status().register(&id, WriteOperationType::Copy, vec![]);
     let (tx, _rx) = oneshot::channel();
     op.state().conflict_slot.arm(tx, placeholder_conflict);
-    drop(op);
+    engine.registry().forget(&id);
 
-    let status = installed()
+    let status = engine
         .get_operation_status(&id)
         .expect("the cache row outlives the state");
     assert!(status.activity.is_none(), "a settled operation waits on nothing");
 
-    unregister_operation_status(&id);
+    engine.status().unregister(&id);
 }
 
 #[test]
 fn update_unknown_id_is_a_silent_noop() {
     // Pins the `&& get_mut` short-circuit. If `&&` becomes `||`, this would
     // dereference a None and panic.
-    update_operation_status("no-such-op-xyzzy", WriteOperationPhase::Copying, None, 0, 0, 0, 0);
+    let engine = TestOperations::new();
+    engine
+        .status()
+        .update("no-such-op-xyzzy", WriteOperationPhase::Copying, None, 0, 0, 0, 0);
 }
 
 #[test]
 fn indeterminate_compress_phases_clear_both_percent_fallback_axes() {
-    let id = unique_id("compress-finishing");
-    register_operation_status(&id, WriteOperationType::Compress, vec![]);
+    let engine = TestOperations::new();
+    let id = "compress-finishing".to_string();
+    engine.status().register(&id, WriteOperationType::Compress, vec![]);
     for phase in [
         WriteOperationPhase::FinishingCompression,
         WriteOperationPhase::FinishingTransfer,
     ] {
-        update_operation_status(&id, phase, None, 0, 0, 0, 0);
-        let status = installed().get_operation_status(&id).expect("operation status");
+        engine.status().update(&id, phase, None, 0, 0, 0, 0);
+        let status = engine.get_operation_status(&id).expect("operation status");
         assert_eq!((status.files_done, status.files_total), (0, 0));
         assert_eq!((status.bytes_done, status.bytes_total), (0, 0));
     }
-    unregister_operation_status(&id);
+    engine.status().unregister(&id);
 }
 
 // ---- `volumes-busy-changed` and the transfer gauge ----
@@ -294,28 +287,42 @@ fn indeterminate_compress_phases_clear_both_percent_fallback_axes() {
 /// progress update, a second op on an already-busy volume, a `root`-only op,
 /// and releasing one of two holders all leave membership alone and stay quiet.
 ///
-/// Its subject is the process-global dedupe (the busy set's last-reported value), which any
-/// sibling's register moves, so it runs only one-test-per-process.
+/// Its subject is the engine-wide dedupe (the busy set's last-reported value),
+/// so it runs on an engine of its own.
 #[test]
 fn volumes_busy_changed_fires_once_per_distinct_change() {
-    if !crate::file_system::write_operations::test_support::one_test_per_process() {
-        return;
-    }
-    let volume = unique_id("busy-dedupe-volume");
-    let (first, second, local) = (unique_id("busy-1"), unique_id("busy-2"), unique_id("busy-root"));
-    let emits = busy_emit_count();
+    let engine = TestOperations::new();
+    let volume = "busy-dedupe-volume".to_string();
+    let (first, second, local) = ("busy-1".to_string(), "busy-2".to_string(), "busy-root".to_string());
+    let emits = engine.status().busy_emit_count();
 
-    register_operation_status(&first, WriteOperationType::Copy, vec![volume.clone()]);
-    assert_eq!(busy_emit_count(), emits + 1, "the volume became busy");
-    update_operation_status(&first, WriteOperationPhase::Copying, None, 1, 2, 10, 20);
-    register_operation_status(&second, WriteOperationType::Copy, vec![volume.clone()]);
-    register_operation_status(&local, WriteOperationType::Copy, vec!["root".to_string()]);
-    unregister_operation_status(&first);
-    assert_eq!(busy_emit_count(), emits + 1, "nothing changed the set's membership");
-    unregister_operation_status(&second);
-    assert_eq!(busy_emit_count(), emits + 2, "the last holder left");
-    unregister_operation_status(&local);
-    assert_eq!(busy_emit_count(), emits + 2, "`root` was never in the set");
+    engine
+        .status()
+        .register(&first, WriteOperationType::Copy, vec![volume.clone()]);
+    assert_eq!(engine.status().busy_emit_count(), emits + 1, "the volume became busy");
+    engine
+        .status()
+        .update(&first, WriteOperationPhase::Copying, None, 1, 2, 10, 20);
+    engine
+        .status()
+        .register(&second, WriteOperationType::Copy, vec![volume.clone()]);
+    engine
+        .status()
+        .register(&local, WriteOperationType::Copy, vec!["root".to_string()]);
+    engine.status().unregister(&first);
+    assert_eq!(
+        engine.status().busy_emit_count(),
+        emits + 1,
+        "nothing changed the set's membership"
+    );
+    engine.status().unregister(&second);
+    assert_eq!(engine.status().busy_emit_count(), emits + 2, "the last holder left");
+    engine.status().unregister(&local);
+    assert_eq!(
+        engine.status().busy_emit_count(),
+        emits + 2,
+        "`root` was never in the set"
+    );
 }
 
 /// Reports the busy set like [`RecordingEngineEvents`], but holds the first
@@ -408,38 +415,40 @@ enum Ending {
     HandlerPanics,
 }
 
-/// Every transfer-gauge start an op makes has exactly one finish, however the
-/// op ends. A spare start held across the op proves the "exactly": a second
-/// finish would spend it and clear the volume early.
+/// Every transfer start an op reports has exactly one finish, however the op
+/// ends: the engine's events hear one `transfer_started` while the handler
+/// runs, and exactly one `transfer_finished` by the time it settles. (The app
+/// turns the pair into indexing's "a transfer trumps me" gauge;
+/// `operations_host/events.rs` pins that.)
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn every_transfer_start_has_exactly_one_finish_however_the_op_ends() {
     use crate::file_system::write_operations::types::WriteOperationError;
     use crate::file_system::write_operations::{CollectorEventSink, OperationEventSink};
-    use crate::priority::transfers::{note_transfer_finished, note_transfer_started, transfer_active};
     use std::sync::atomic::AtomicBool;
 
     for ending in [Ending::Completes, Ending::Cancels, Ending::Fails, Ending::HandlerPanics] {
-        let volume = unique_id("gauge-volume");
-        let spare = vec![volume.clone()];
-        note_transfer_started(&spare);
+        let engine = TestOperations::new();
+        let volume = vec!["gauge-volume".to_string()];
 
         let events = Arc::new(CollectorEventSink::new());
-        let active_inside = Arc::new(AtomicBool::new(false));
-        let (seen, probe) = (Arc::clone(&active_inside), volume.clone());
-        installed()
+        let started_inside = Arc::new(AtomicBool::new(false));
+        let (seen, recorder, probe) = (Arc::clone(&started_inside), Arc::clone(engine.events()), volume.clone());
+        engine
             .start_write_operation(
                 Arc::clone(&events) as Arc<dyn OperationEventSink>,
                 WriteOperationType::Copy,
                 cmdr_operation_log::types::Initiator::User,
                 200,
-                vec![volume.clone()],
-                vec![LaneKey::new(unique_id("gauge-lane"))],
+                volume.clone(),
+                vec![LaneKey::new("gauge-lane".to_string())],
                 OperationSummaryText::default(),
                 None,
                 1,
                 None,
                 move |_events, _op_id, _state| {
-                    seen.store(transfer_active(&probe), Ordering::SeqCst);
+                    let started = *recorder.transfers_started.lock_ignore_poison() == vec![probe];
+                    let finished = !recorder.transfers_finished.lock_ignore_poison().is_empty();
+                    seen.store(started && !finished, Ordering::SeqCst);
                     match ending {
                         Ending::Completes => Ok(()),
                         Ending::Cancels => Err(WriteOperationError::Cancelled {
@@ -460,40 +469,42 @@ async fn every_transfer_start_has_exactly_one_finish_however_the_op_ends() {
         })
         .await;
 
-        assert!(active_inside.load(Ordering::SeqCst), "{ending:?}: busy while it ran");
-        assert!(
-            transfer_active(&volume),
-            "{ending:?}: the op's finish must not spend the spare start too"
+        assert!(started_inside.load(Ordering::SeqCst), "{ending:?}: busy while it ran");
+        assert_eq!(
+            *engine.events().transfers_started.lock_ignore_poison(),
+            vec![volume.clone()],
+            "{ending:?}: one start"
         );
-        note_transfer_finished(&spare);
-        assert!(!transfer_active(&volume), "{ending:?}: its own start was finished");
+        assert_eq!(
+            *engine.events().transfers_finished.lock_ignore_poison(),
+            vec![volume.clone()],
+            "{ending:?}: its own start was finished, exactly once"
+        );
     }
 }
 
-/// The panic net (`ManagedTaskGuard`, no `on_settled`) finishes the gauge too.
+/// The panic net (`ManagedTaskGuard`, no `on_settled`) finishes the transfer
+/// too, exactly once.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_panicking_op_task_finishes_its_transfer_start_exactly_once() {
     use crate::file_system::write_operations::manager::ManagedTaskGuard;
-    use crate::priority::transfers::{note_transfer_finished, note_transfer_started, transfer_active};
 
-    let volume = unique_id("gauge-panic-volume");
-    let spare = vec![volume.clone()];
-    note_transfer_started(&spare);
-
-    let op = unique_id("gauge-panic-op");
+    let engine = TestOperations::new();
+    let volume = vec!["gauge-panic-volume".to_string()];
+    let op = "gauge-panic-op".to_string();
     let id = op.clone();
-    manager().spawn_managed(
+    engine.manager().spawn_managed(
         OperationDescriptor {
             operation_id: op.clone(),
             operation_type: WriteOperationType::Copy,
-            lanes: vec![LaneKey::new(unique_id("gauge-panic-lane"))],
-            volume_ids: vec![volume.clone()],
+            lanes: vec![LaneKey::new("gauge-panic-lane".to_string())],
+            volume_ids: volume.clone(),
             summary: OperationSummaryText::default(),
             supports_rollback: false,
             preview_id: None,
             reverses: None,
         },
-        Arc::new(WriteOperationState::new(Duration::from_millis(200))),
+        Arc::new(engine.new_operation_state(Duration::from_millis(200))),
         Box::new(move |ops: Operations| {
             Box::pin(async move {
                 let _guard = ManagedTaskGuard::new(ops.manager(), id);
@@ -502,18 +513,25 @@ async fn a_panicking_op_task_finishes_its_transfer_start_exactly_once() {
         }),
     );
     crate::test_support::wait_until_async(Duration::from_secs(5), "the panic net to unregister the op", || {
-        manager().lifecycle_status(&op).is_none() && installed().get_operation_status(&op).is_none()
+        engine.manager().lifecycle_status(&op).is_none() && engine.get_operation_status(&op).is_none()
     })
     .await;
 
-    assert!(transfer_active(&volume), "the net must not spend the spare start too");
-    note_transfer_finished(&spare);
-    // A wait, not an assert: the net lowers the gauge just after it drops the
+    // A wait, not an assert: the net reports the finish just after it drops the
     // status row the wait above watched.
     crate::test_support::wait_until_async(Duration::from_secs(5), "the net to finish the op's own start", || {
-        !transfer_active(&volume)
+        !engine.events().transfers_finished.lock_ignore_poison().is_empty()
     })
     .await;
+    assert_eq!(
+        *engine.events().transfers_started.lock_ignore_poison(),
+        vec![volume.clone()]
+    );
+    assert_eq!(
+        *engine.events().transfers_finished.lock_ignore_poison(),
+        vec![volume],
+        "the net finishes the op's start exactly once"
+    );
 }
 
 /// A cache a panic poisoned still marks a transfer's volume busy, so Eject

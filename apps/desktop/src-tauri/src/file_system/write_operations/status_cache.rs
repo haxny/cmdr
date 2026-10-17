@@ -229,32 +229,11 @@ impl StatusCache {
 }
 
 // ============================================================================
-// The installed engine's cache, by free function, for the status-cache tests
+// The shared test engine's cache, by free function, for the suites still on it
 // ============================================================================
 //
-// Engine code reaches the cache through its operation's scope or `self`.
-
-/// Updates the internal status for an operation.
-#[cfg(test)]
-pub(super) fn update_operation_status(
-    operation_id: &str,
-    phase: WriteOperationPhase,
-    current_file: Option<String>,
-    files_done: usize,
-    files_total: usize,
-    bytes_done: u64,
-    bytes_total: u64,
-) {
-    super::installed().status().update(
-        operation_id,
-        phase,
-        current_file,
-        files_done,
-        files_total,
-        bytes_done,
-        bytes_total,
-    );
-}
+// Engine code reaches the cache through its operation's scope or `self`; a
+// test on an engine of its own, through `engine.status()`.
 
 /// Registers a new operation in the status cache. See [`StatusCache::register`].
 #[cfg(test)]
@@ -272,12 +251,6 @@ pub(super) fn register_operation_status(
 #[cfg(test)]
 pub(super) fn unregister_operation_status(operation_id: &str) {
     super::installed().status().unregister(operation_id);
-}
-
-/// `volumes-busy-changed` reports the installed engine's cache let through.
-#[cfg(test)]
-fn busy_emit_count() -> u64 {
-    super::installed().status().busy_emit_count()
 }
 
 impl Operations {
