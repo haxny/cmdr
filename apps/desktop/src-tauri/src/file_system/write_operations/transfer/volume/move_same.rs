@@ -75,181 +75,183 @@ fn note_pending_for_local_volume(host: &EngineHost, volume: &Arc<dyn Volume>, pa
     host.own_writes().announce(&absolute);
 }
 
-/// Moves files within the same volume using native `Volume::rename`.
-///
-/// For MTP, this uses MTP MoveObject: a single USB command per file.
-/// Runs as a background task with operation registration, progress events, and cancellation.
-#[allow(
-    clippy::too_many_arguments,
-    reason = "both volumes travel with their ids, and the source binding is a separate input from the config on purpose (a bound op and a user-started one must share one config); a bag struct would shuffle the same fields"
-)]
-pub(super) async fn move_within_same_volume(
-    events: Arc<dyn OperationEventSink>,
-    volume_id: String,
-    volume: Arc<dyn Volume>,
-    source_paths: Vec<PathBuf>,
-    dest_path: PathBuf,
-    config: VolumeCopyConfig,
-    target_names: super::super::super::target_names::TargetNames,
-    initiator: cmdr_operation_log::types::Initiator,
-    expected_sources: Option<crate::file_system::write_operations::source_binding::ExpectedSources>,
-) -> Result<WriteOperationStartResult, WriteOperationError> {
-    let operation_id = cmdr_operation_log::new_operation_id();
+impl crate::file_system::write_operations::Operations {
+    /// Moves files within the same volume using native `Volume::rename`.
+    ///
+    /// For MTP, this uses MTP MoveObject: a single USB command per file.
+    /// Runs as a background task with operation registration, progress events, and cancellation.
+    #[allow(
+        clippy::too_many_arguments,
+        reason = "both volumes travel with their ids, and the source binding is a separate input from the config on purpose (a bound op and a user-started one must share one config); a bag struct would shuffle the same fields"
+    )]
+    pub(super) async fn move_within_same_volume(
+        &self,
+        events: Arc<dyn OperationEventSink>,
+        volume_id: String,
+        volume: Arc<dyn Volume>,
+        source_paths: Vec<PathBuf>,
+        dest_path: PathBuf,
+        config: VolumeCopyConfig,
+        target_names: super::super::super::target_names::TargetNames,
+        initiator: cmdr_operation_log::types::Initiator,
+        expected_sources: Option<crate::file_system::write_operations::source_binding::ExpectedSources>,
+    ) -> Result<WriteOperationStartResult, WriteOperationError> {
+        let operation_id = cmdr_operation_log::new_operation_id();
 
-    log::info!(
-        "move_within_same_volume: operation_id={}, volume={}, {} sources, dest={}",
-        operation_id,
-        volume.name(),
-        source_paths.len(),
-        dest_path.display()
-    );
+        log::info!(
+            "move_within_same_volume: operation_id={}, volume={}, {} sources, dest={}",
+            operation_id,
+            volume.name(),
+            source_paths.len(),
+            dest_path.display()
+        );
 
-    let progress_interval_ms = config.progress_interval_ms;
+        let progress_interval_ms = config.progress_interval_ms;
 
-    // A same-volume move journals under the one volume id as both source and dest;
-    // the per-item record point in `_with_progress` reads it off the state.
-    let state = Arc::new(
-        crate::file_system::write_operations::installed()
-            .new_operation_state(Duration::from_millis(progress_interval_ms))
-            .with_journal_volumes(volume_id.clone(), volume_id.clone())
-            .with_target_names(target_names),
-    );
-    let journal_volume_id = volume_id.clone();
+        // A same-volume move journals under the one volume id as both source and dest;
+        // the per-item record point in `_with_progress` reads it off the state.
+        let state = Arc::new(
+            self.new_operation_state(Duration::from_millis(progress_interval_ms))
+                .with_journal_volumes(volume_id.clone(), volume_id.clone())
+                .with_target_names(target_names),
+        );
+        let journal_volume_id = volume_id.clone();
 
-    // Same-volume move: a single lane (the volume's own).
-    let lane = volume.lane_key();
-    let volume_name = volume.name().to_string();
-    let summary = manager::OperationSummaryText {
-        source: Some(volume.name().to_string()),
-        destination: Some(volume.name().to_string()),
-        items: Some(volume_items(
-            &*volume,
-            &source_paths,
-            config.source_kinds,
-            Some((&*volume, &dest_path)),
-        )),
-    };
-    let descriptor = manager::OperationDescriptor {
-        operation_id: operation_id.clone(),
-        operation_type: WriteOperationType::Move,
-        lanes: vec![lane],
-        volume_ids: vec![volume_id],
-        summary,
-        // A same-volume move is a server-side rename-merge with no rollback:
-        // it stops without reversing and reports `rolled_back: false`. The
-        // progress dialog disables Rollback for exactly this case.
-        supports_rollback: false,
-        preview_id: config.preview_id.clone(),
-        reverses: None,
-    };
-
-    let events_for_op = Arc::clone(&events);
-    let op_id_outer = operation_id.clone();
-    let state_for_op = Arc::clone(&state);
-    let deferred =
-        move |ops: crate::file_system::write_operations::Operations| -> Pin<Box<dyn Future<Output = ()> + Send>> {
-            Box::pin(async move {
-                let events = events_for_op;
-                let op_id = op_id_outer;
-                let state = state_for_op;
-                let task_guard = manager::ManagedTaskGuard::new(ops.manager(), op_id.clone());
-                let _settled_guard = crate::file_system::write_operations::state::WriteSettledGuard::new(
-                    Arc::clone(&events),
-                    op_id.clone(),
-                    WriteOperationType::Move,
-                    Some(volume_name),
-                );
-
-                // Wait out the confirming dialog's scan before journaling or
-                // touching either device; see `write_operations::start_write_operation`.
-                if crate::file_system::write_operations::scan_bridge::await_claimed_preview(
-                    &*events,
-                    &op_id,
-                    WriteOperationType::Move,
-                    &state,
-                )
-                .await
-                .stopped()
-                {
-                    task_guard.disarm();
-                    ops.manager().on_settled(&op_id);
-                    return;
-                }
-
-                // Journal the same-volume move under the REAL volume id. The top-level
-                // rename rows + search leaves land inside `_with_progress`.
-                journal::open_volume_op(
-                    state.scope(),
-                    &op_id,
-                    OpKind::Move,
-                    initiator,
-                    &journal_volume_id,
-                    Some(&journal_volume_id),
-                    source_paths.len() as u64,
-                );
-
-                // Hold the operation to what its caller was promised, at the latest
-                // moment there is: an approved operation can sit queued behind a long
-                // transfer, so the check belongs after admission, not at approval.
-                // `../../source_binding.rs`.
-                let bound = crate::file_system::write_operations::source_binding::retain_bound_sources_on(
-                    volume.as_ref(),
-                    &*events,
-                    &op_id,
-                    WriteOperationType::Move,
-                    &state,
-                    expected_sources.as_ref(),
-                    source_paths,
-                )
-                .await;
-
-                // An emptied binding is a finished operation, and takes the Ok arm:
-                // `announce_empty_batch` has already emitted its `write-complete`.
-                let result: Result<(), WriteOperationError> = match bound {
-                    None => Ok(()),
-                    Some(source_paths) => {
-                        move_within_same_volume_with_progress(
-                            Arc::clone(&events),
-                            &op_id,
-                            &state,
-                            volume,
-                            &source_paths,
-                            &dest_path,
-                            &config,
-                        )
-                        .await
-                    }
-                };
-
-                journal::finalize_op(
-                    state.scope(),
-                    OpKind::Move,
-                    journal::execution_status_from_error(result.as_ref().err()),
-                );
-
-                match result {
-                    Ok(()) => {}
-                    Err(ref e) if matches!(e, WriteOperationError::Cancelled { .. }) => {
-                        log::info!("move_within_same_volume: operation {} cancelled", op_id);
-                    }
-                    Err(e) => {
-                        log::warn!(target: "move", "move operation {} failed: {:?}", op_id, e);
-                        state.transfer_tree.note_failure(&e);
-                        events.emit_error(WriteErrorEvent::new(op_id.clone(), WriteOperationType::Move, e));
-                    }
-                }
-
-                task_guard.disarm();
-                ops.manager().on_settled(&op_id);
-            })
+        // Same-volume move: a single lane (the volume's own).
+        let lane = volume.lane_key();
+        let volume_name = volume.name().to_string();
+        let summary = manager::OperationSummaryText {
+            source: Some(volume.name().to_string()),
+            destination: Some(volume.name().to_string()),
+            items: Some(volume_items(
+                &*volume,
+                &source_paths,
+                config.source_kinds,
+                Some((&*volume, &dest_path)),
+            )),
+        };
+        let descriptor = manager::OperationDescriptor {
+            operation_id: operation_id.clone(),
+            operation_type: WriteOperationType::Move,
+            lanes: vec![lane],
+            volume_ids: vec![volume_id],
+            summary,
+            // A same-volume move is a server-side rename-merge with no rollback:
+            // it stops without reversing and reports `rolled_back: false`. The
+            // progress dialog disables Rollback for exactly this case.
+            supports_rollback: false,
+            preview_id: config.preview_id.clone(),
+            reverses: None,
         };
 
-    manager::manager().spawn_managed(descriptor, state, Box::new(deferred));
+        let events_for_op = Arc::clone(&events);
+        let op_id_outer = operation_id.clone();
+        let state_for_op = Arc::clone(&state);
+        let deferred =
+            move |ops: crate::file_system::write_operations::Operations| -> Pin<Box<dyn Future<Output = ()> + Send>> {
+                Box::pin(async move {
+                    let events = events_for_op;
+                    let op_id = op_id_outer;
+                    let state = state_for_op;
+                    let task_guard = manager::ManagedTaskGuard::new(ops.manager(), op_id.clone());
+                    let _settled_guard = crate::file_system::write_operations::state::WriteSettledGuard::new(
+                        Arc::clone(&events),
+                        op_id.clone(),
+                        WriteOperationType::Move,
+                        Some(volume_name),
+                    );
 
-    Ok(WriteOperationStartResult {
-        operation_id,
-        operation_type: WriteOperationType::Move,
-    })
+                    // Wait out the confirming dialog's scan before journaling or
+                    // touching either device; see `write_operations::start_write_operation`.
+                    if crate::file_system::write_operations::scan_bridge::await_claimed_preview(
+                        &*events,
+                        &op_id,
+                        WriteOperationType::Move,
+                        &state,
+                    )
+                    .await
+                    .stopped()
+                    {
+                        task_guard.disarm();
+                        ops.manager().on_settled(&op_id);
+                        return;
+                    }
+
+                    // Journal the same-volume move under the REAL volume id. The top-level
+                    // rename rows + search leaves land inside `_with_progress`.
+                    journal::open_volume_op(
+                        state.scope(),
+                        &op_id,
+                        OpKind::Move,
+                        initiator,
+                        &journal_volume_id,
+                        Some(&journal_volume_id),
+                        source_paths.len() as u64,
+                    );
+
+                    // Hold the operation to what its caller was promised, at the latest
+                    // moment there is: an approved operation can sit queued behind a long
+                    // transfer, so the check belongs after admission, not at approval.
+                    // `../../source_binding.rs`.
+                    let bound = crate::file_system::write_operations::source_binding::retain_bound_sources_on(
+                        volume.as_ref(),
+                        &*events,
+                        &op_id,
+                        WriteOperationType::Move,
+                        &state,
+                        expected_sources.as_ref(),
+                        source_paths,
+                    )
+                    .await;
+
+                    // An emptied binding is a finished operation, and takes the Ok arm:
+                    // `announce_empty_batch` has already emitted its `write-complete`.
+                    let result: Result<(), WriteOperationError> = match bound {
+                        None => Ok(()),
+                        Some(source_paths) => {
+                            move_within_same_volume_with_progress(
+                                Arc::clone(&events),
+                                &op_id,
+                                &state,
+                                volume,
+                                &source_paths,
+                                &dest_path,
+                                &config,
+                            )
+                            .await
+                        }
+                    };
+
+                    journal::finalize_op(
+                        state.scope(),
+                        OpKind::Move,
+                        journal::execution_status_from_error(result.as_ref().err()),
+                    );
+
+                    match result {
+                        Ok(()) => {}
+                        Err(ref e) if matches!(e, WriteOperationError::Cancelled { .. }) => {
+                            log::info!("move_within_same_volume: operation {} cancelled", op_id);
+                        }
+                        Err(e) => {
+                            log::warn!(target: "move", "move operation {} failed: {:?}", op_id, e);
+                            state.transfer_tree.note_failure(&e);
+                            events.emit_error(WriteErrorEvent::new(op_id.clone(), WriteOperationType::Move, e));
+                        }
+                    }
+
+                    task_guard.disarm();
+                    ops.manager().on_settled(&op_id);
+                })
+            };
+
+        self.manager().spawn_managed(descriptor, state, Box::new(deferred));
+
+        Ok(WriteOperationStartResult {
+            operation_id,
+            operation_type: WriteOperationType::Move,
+        })
+    }
 }
 
 /// Whether any of `sources` can't be renamed in one call on `volume`, which

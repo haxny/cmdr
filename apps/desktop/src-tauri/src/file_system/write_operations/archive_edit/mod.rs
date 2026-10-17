@@ -57,14 +57,15 @@ mod move_out;
 mod remote;
 mod routing;
 
-pub(crate) use compress::compress_start;
+pub(crate) use driver::ArchiveEditRequest;
+pub(crate) use routing::{archive_inner_exists, ensure_zip_writable, join_inner_path, normalize_inner_path};
+// The installed engine's archive starters, for the suites that drive them directly.
 #[cfg(test)]
-pub(crate) use copy_into::route_archive_copy_into;
-pub(crate) use copy_into::route_archive_copy_into_with_provenance;
-pub(crate) use driver::{ArchiveEditRequest, archive_edit_start, route_archive_delete};
-pub(crate) use move_out::route_archive_move_out;
-pub(crate) use routing::{
-    archive_inner_exists, ensure_zip_writable, host_operation_sink, join_inner_path, normalize_inner_path,
+pub(crate) use {
+    compress::compress_start,
+    copy_into::route_archive_copy_into,
+    driver::{archive_edit_start, route_archive_delete},
+    move_out::route_archive_move_out,
 };
 // The remote edit, exposed for the live-SMB / MTP integration suites one level up.
 #[cfg(test)]

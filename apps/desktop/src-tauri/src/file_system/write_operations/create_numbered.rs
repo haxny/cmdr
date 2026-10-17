@@ -34,7 +34,8 @@ pub(crate) async fn create_numbered_file(
     initiator: Initiator,
 ) -> Result<String, MutationError> {
     // shim: removed in M7a
-    super::installed()
+    super::installed_for("create_numbered_file")
+        .ok_or_else(super::instant_not_installed)?
         .create_numbered_file(volume_id, dir, stem, ext, bytes, initiator)
         .await
 }

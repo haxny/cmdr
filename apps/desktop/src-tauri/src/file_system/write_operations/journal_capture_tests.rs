@@ -9,12 +9,13 @@
 use std::sync::Arc;
 use std::time::Duration;
 
+use super::delete::delete_files_with_progress_inner;
 use super::event_sinks::CollectorEventSink;
 use super::journal;
 use super::state::{WriteOperationState, get_operation_status, register_operation_status, unregister_operation_status};
+use super::transfer::copy::copy_files_with_progress_inner;
 use super::transfer::move_op::move_files_with_progress_inner;
 use super::types::{WriteOperationConfig, WriteOperationType};
-use super::{copy_files_with_progress_inner, delete_files_with_progress_inner};
 
 use crate::operation_log_host::TestJournalGuard;
 use cmdr_operation_log::capture::WriterJournal;

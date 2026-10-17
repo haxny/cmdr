@@ -16,7 +16,7 @@ use walkdir::WalkDir;
 
 use super::super::OperationEventSink;
 use super::super::conflict::ApplyToAll;
-use super::super::manager::{self, ManagedTaskGuard, OperationDescriptor, OperationSummaryText};
+use super::super::manager::{ManagedTaskGuard, OperationDescriptor, OperationSummaryText};
 use super::super::scratch_dir::ScratchDir;
 use super::super::state::{WriteOperationState, WriteSettledGuard};
 use super::super::transfer::left_in_source::LeftInSource;
@@ -75,26 +75,28 @@ pub(crate) async fn route_archive_copy_into(
     // journaled but not rollbackable in v1. An MCP-initiated into-archive edit
     // supplies its own provenance via [`route_archive_copy_into_with_provenance`]
     // (as compress does); this convenience wrapper defaults to `user`.
-    route_archive_copy_into_with_provenance(
-        events,
-        source_volume,
-        source_paths,
-        dest_full_path,
-        parent_volume_id,
-        conflict,
-        progress_interval_ms,
-        is_move,
-        compression_level,
-        preview_id,
-        super::super::journal::ArchiveProvenance::edit(cmdr_operation_log::types::Initiator::User),
-        None,
-    )
-    .await
+    crate::file_system::write_operations::installed()
+        .route_archive_copy_into_with_provenance(
+            events,
+            source_volume,
+            source_paths,
+            dest_full_path,
+            parent_volume_id,
+            conflict,
+            progress_interval_ms,
+            is_move,
+            compression_level,
+            preview_id,
+            super::super::journal::ArchiveProvenance::edit(cmdr_operation_log::types::Initiator::User),
+            None,
+        )
+        .await
 }
 
-/// Routes a transfer into an archive with explicit [`ArchiveProvenance`](super::super::journal::ArchiveProvenance), so
-/// the compress driver can supply `subkind = compress` + the net-new flag the
-/// journal can't derive.
+/// [`Operations::route_archive_copy_into_with_provenance`](crate::file_system::write_operations::Operations::route_archive_copy_into_with_provenance)
+/// on the installed engine, for the suites that drive it directly.
+// shim: removed in M7a
+#[cfg(test)]
 #[allow(
     clippy::too_many_arguments,
     reason = "same seam as route_archive_copy_into plus provenance"
@@ -113,50 +115,92 @@ pub(crate) async fn route_archive_copy_into_with_provenance(
     prov: super::super::journal::ArchiveProvenance,
     destination_name: Option<String>,
 ) -> Result<WriteOperationStartResult, WriteOperationError> {
-    super::super::validation::validate_transfer_destination_name(
-        &source_paths,
-        &dest_full_path,
-        destination_name.as_deref(),
-    )?;
-    // A LOCAL source volume's root — `Some` skips the pull (the changeset walks
-    // real paths); `None` (a remote source) triggers the in-op pull-to-scratch.
-    let src_local_root = source_volume.local_path();
+    crate::file_system::write_operations::installed()
+        .route_archive_copy_into_with_provenance(
+            events,
+            source_volume,
+            source_paths,
+            dest_full_path,
+            parent_volume_id,
+            conflict,
+            progress_interval_ms,
+            is_move,
+            compression_level,
+            preview_id,
+            prov,
+            destination_name,
+        )
+        .await
+}
 
-    // Confirmation already happened at the routing site (`dest_resolved.is_archive`
-    // from the async, parent-aware `resolve`), so a pure string split is enough
-    // here — and it works for a REMOTE dest zip, where the `std::fs` confirm would
-    // wrongly return `None`.
-    let (archive_path, dest_inner) = cmdr_fs::archive_format::archive_boundary_candidate(&dest_full_path)
-        .ok_or_else(|| read_only_error(&dest_full_path, ReadOnlySide::Destination))?;
-    ensure_zip_writable(&archive_path, ReadOnlySide::Destination)?;
-    let dest_inner = normalize_inner_path(&dest_inner);
+impl crate::file_system::write_operations::Operations {
+    /// Routes a transfer into an archive with explicit [`ArchiveProvenance`](super::super::journal::ArchiveProvenance), so
+    /// the compress driver can supply `subkind = compress` + the net-new flag the
+    /// journal can't derive.
+    #[allow(
+        clippy::too_many_arguments,
+        reason = "same seam as route_archive_copy_into plus provenance"
+    )]
+    pub(crate) async fn route_archive_copy_into_with_provenance(
+        &self,
+        events: Arc<dyn OperationEventSink>,
+        source_volume: Arc<dyn Volume>,
+        source_paths: Vec<PathBuf>,
+        dest_full_path: PathBuf,
+        parent_volume_id: String,
+        conflict: ConflictResolution,
+        progress_interval_ms: u64,
+        is_move: bool,
+        compression_level: Option<i64>,
+        preview_id: Option<String>,
+        prov: super::super::journal::ArchiveProvenance,
+        destination_name: Option<String>,
+    ) -> Result<WriteOperationStartResult, WriteOperationError> {
+        super::super::validation::validate_transfer_destination_name(
+            &source_paths,
+            &dest_full_path,
+            destination_name.as_deref(),
+        )?;
+        // A LOCAL source volume's root — `Some` skips the pull (the changeset walks
+        // real paths); `None` (a remote source) triggers the in-op pull-to-scratch.
+        let src_local_root = source_volume.local_path();
 
-    // Materialize sources AND plan+apply inside the managed op. The pull (remote
-    // source) streams into a scratch dir; then the changeset is planned against
-    // the working copy — the real archive for a LOCAL parent, or the pulled-local
-    // copy for a REMOTE one. Planning must NOT run up front against `archive_path`:
-    // for a REMOTE parent that path has no local file, so `LocalFileSource::open`
-    // fails (MTP) or opens the OS mount the design routes around (direct SMB, hang
-    // risk). A pre-resolved policy resolves non-interactively; Stop prompts per
-    // file (the op is registered, so `resolve_write_conflict(op_id)` reaches the
-    // oneshot).
-    archive_copy_into_start(
-        events,
-        source_volume,
-        source_paths,
-        src_local_root,
-        archive_path,
-        dest_inner,
-        parent_volume_id,
-        conflict,
-        is_move,
-        progress_interval_ms,
-        compression_level,
-        preview_id,
-        prov,
-        destination_name,
-    )
-    .await
+        // Confirmation already happened at the routing site (`dest_resolved.is_archive`
+        // from the async, parent-aware `resolve`), so a pure string split is enough
+        // here — and it works for a REMOTE dest zip, where the `std::fs` confirm would
+        // wrongly return `None`.
+        let (archive_path, dest_inner) = cmdr_fs::archive_format::archive_boundary_candidate(&dest_full_path)
+            .ok_or_else(|| read_only_error(&dest_full_path, ReadOnlySide::Destination))?;
+        ensure_zip_writable(&archive_path, ReadOnlySide::Destination)?;
+        let dest_inner = normalize_inner_path(&dest_inner);
+
+        // Materialize sources AND plan+apply inside the managed op. The pull (remote
+        // source) streams into a scratch dir; then the changeset is planned against
+        // the working copy — the real archive for a LOCAL parent, or the pulled-local
+        // copy for a REMOTE one. Planning must NOT run up front against `archive_path`:
+        // for a REMOTE parent that path has no local file, so `LocalFileSource::open`
+        // fails (MTP) or opens the OS mount the design routes around (direct SMB, hang
+        // risk). A pre-resolved policy resolves non-interactively; Stop prompts per
+        // file (the op is registered, so `resolve_write_conflict(op_id)` reaches the
+        // oneshot).
+        self.archive_copy_into_start(
+            events,
+            source_volume,
+            source_paths,
+            src_local_root,
+            archive_path,
+            dest_inner,
+            parent_volume_id,
+            conflict,
+            is_move,
+            progress_interval_ms,
+            compression_level,
+            preview_id,
+            prov,
+            destination_name,
+        )
+        .await
+    }
 }
 
 /// The sources materialized as LOCAL paths the changeset walk and mutator read
@@ -564,253 +608,253 @@ fn join_inner_str(parent: &str, child: &str) -> String {
     }
 }
 
-/// Starts a copy/move INTO a zip as a managed op. Inside the op's deferred (so
-/// the dialog opened the instant we returned the id), two stages run: (1)
-/// materialize the sources locally — a no-op for a local source, a streamed pull
-/// into a scratch dir for a remote one; (2) plan AND apply the changeset against
-/// the working copy `run_managed_edit` hands the closure — the real archive for a
-/// LOCAL parent, the pulled-local copy for a REMOTE one. Planning inside the op is
-/// what lets a remote edit plan against the pulled bytes (never the unopenable
-/// remote path) and lets a Stop collision emit a `write-conflict` and block on the
-/// op's registered oneshot. A pre-resolved policy resolves each collision without
-/// prompting; Stop prompts per file. Dir-vs-dir collisions merge silently.
-#[allow(
-    clippy::too_many_arguments,
-    reason = "the copy-into seam threads the source volume, paths, locality, dest, parent id, policy, and move flag; a struct would just shuffle them"
-)]
-async fn archive_copy_into_start(
-    events: Arc<dyn OperationEventSink>,
-    source_volume: Arc<dyn Volume>,
-    source_paths: Vec<PathBuf>,
-    src_local_root: Option<PathBuf>,
-    archive_path: PathBuf,
-    dest_inner: String,
-    parent_volume_id: String,
-    conflict: ConflictResolution,
-    is_move: bool,
-    progress_interval_ms: u64,
-    compression_level: Option<i64>,
-    preview_id: Option<String>,
-    prov: super::super::journal::ArchiveProvenance,
-    destination_name: Option<String>,
-) -> Result<WriteOperationStartResult, WriteOperationError> {
-    let operation_id = cmdr_operation_log::new_operation_id();
-    let operation_type = if prov.subkind == ArchiveSubkind::Compress {
-        WriteOperationType::Compress
-    } else {
-        WriteOperationType::ArchiveEdit
-    };
-    let state = Arc::new(
-        crate::file_system::write_operations::installed()
-            .new_operation_state(Duration::from_millis(progress_interval_ms)),
-    );
+impl crate::file_system::write_operations::Operations {
+    /// Starts a copy/move INTO a zip as a managed op. Inside the op's deferred (so
+    /// the dialog opened the instant we returned the id), two stages run: (1)
+    /// materialize the sources locally — a no-op for a local source, a streamed pull
+    /// into a scratch dir for a remote one; (2) plan AND apply the changeset against
+    /// the working copy `run_managed_edit` hands the closure — the real archive for a
+    /// LOCAL parent, the pulled-local copy for a REMOTE one. Planning inside the op is
+    /// what lets a remote edit plan against the pulled bytes (never the unopenable
+    /// remote path) and lets a Stop collision emit a `write-conflict` and block on the
+    /// op's registered oneshot. A pre-resolved policy resolves each collision without
+    /// prompting; Stop prompts per file. Dir-vs-dir collisions merge silently.
+    #[allow(
+        clippy::too_many_arguments,
+        reason = "the copy-into seam threads the source volume, paths, locality, dest, parent id, policy, and move flag; a struct would just shuffle them"
+    )]
+    async fn archive_copy_into_start(
+        &self,
+        events: Arc<dyn OperationEventSink>,
+        source_volume: Arc<dyn Volume>,
+        source_paths: Vec<PathBuf>,
+        src_local_root: Option<PathBuf>,
+        archive_path: PathBuf,
+        dest_inner: String,
+        parent_volume_id: String,
+        conflict: ConflictResolution,
+        is_move: bool,
+        progress_interval_ms: u64,
+        compression_level: Option<i64>,
+        preview_id: Option<String>,
+        prov: super::super::journal::ArchiveProvenance,
+        destination_name: Option<String>,
+    ) -> Result<WriteOperationStartResult, WriteOperationError> {
+        let operation_id = cmdr_operation_log::new_operation_id();
+        let operation_type = if prov.subkind == ArchiveSubkind::Compress {
+            WriteOperationType::Compress
+        } else {
+            WriteOperationType::ArchiveEdit
+        };
+        let state = Arc::new(self.new_operation_state(Duration::from_millis(progress_interval_ms)));
 
-    let lane = state
-        .scope()
-        .host()
-        .volumes()
-        .get(&parent_volume_id)
-        .map(|v| v.lane_key())
-        .unwrap_or_else(|| LaneKey::new(parent_volume_id.clone()));
-    let summary_source = source_paths
-        .first()
-        .and_then(|p| p.file_name())
-        .map(|n| n.to_string_lossy().into_owned());
-    let descriptor = OperationDescriptor {
-        operation_id: operation_id.clone(),
-        operation_type,
-        lanes: vec![lane],
-        volume_ids: vec![parent_volume_id.clone()],
-        summary: OperationSummaryText {
-            source: summary_source,
-            destination: None,
-            items: None,
-        },
-        // A zip edit is a whole-archive temp+rename rewrite: it either lands or
-        // it doesn't, so there's no half-written state to reverse.
-        supports_rollback: false,
-        preview_id,
-        reverses: None,
-    };
-
-    let events_for_op = Arc::clone(&events);
-    let op_id_outer = operation_id.clone();
-    let state_for_op = Arc::clone(&state);
-    let progress_interval = Duration::from_millis(progress_interval_ms);
-
-    let deferred =
-        move |ops: crate::file_system::write_operations::Operations| -> Pin<Box<dyn Future<Output = ()> + Send>> {
-            Box::pin(async move {
-                let events = events_for_op;
-                let op_id = op_id_outer;
-                let state = state_for_op;
-                let task_guard = ManagedTaskGuard::new(ops.manager(), op_id.clone());
-                let settle_volume = (parent_volume_id != "root").then(|| parent_volume_id.clone());
-                let _settled =
-                    WriteSettledGuard::new(Arc::clone(&events), op_id.clone(), operation_type, settle_volume);
-
-                // Wait out the confirming dialog's scan. The changeset planner
-                // walks the sources itself, so this buys serialization rather than
-                // reuse: without it, ⌥F5's sampling preview and this walk would run
-                // down the same tree at once, which is what costs on MTP and SMB.
-                if crate::file_system::write_operations::scan_bridge::await_claimed_preview(
-                    &*events,
-                    &op_id,
-                    operation_type,
-                    &state,
-                )
-                .await
-                .stopped()
-                {
-                    task_guard.disarm();
-                    ops.manager().on_settled(&op_id);
-                    return;
-                }
-
-                // Open the journal row when the op actually starts. Archive edits
-                // spawn directly (not through `start_write_operation`), so this is
-                // their own open/finalize bracket, mirroring the generic one.
-                super::super::journal::open_archive_op(state.scope(), &op_id, prov.initiator, &parent_volume_id);
-
-                let hooks = Arc::new(MutatorHooks::new(
-                    Arc::clone(&state),
-                    Arc::clone(&events),
-                    op_id.clone(),
-                    operation_type,
-                    progress_interval,
-                ));
-
-                // Materialize sources (pull if remote), then plan+apply against the
-                // archive. One `Result<skipped_count, EditError>` funnels into a single
-                // terminal emit below. A cancel/fault in the PULL returns before
-                // `run_managed_edit` ever opens the zip, so the archive stays untouched.
-                let outcome: Result<(usize, LeftInSource), EditError> = async {
-                    let materialized =
-                        materialize_sources(&source_volume, &source_paths, src_local_root, is_move, &state).await?;
-                    let absolute_sources = materialized.absolute.clone();
-
-                    let (should_delete_sources, skipped_count) = run_managed_edit(
-                        &parent_volume_id,
-                        archive_path.clone(),
-                        Arc::clone(&state),
-                        hooks.remote_progress_observer(),
-                        {
-                            let events_for_blocking = Arc::clone(&events);
-                            let state_for_blocking = Arc::clone(&state);
-                            let op_id_for_blocking = op_id.clone();
-                            let hooks_for_blocking = Arc::clone(&hooks);
-                            let dest_inner = dest_inner.clone();
-                            move |working: &Path| -> Result<(bool, usize), EditError> {
-                                // Stop → interactive per-file prompts; any pre-resolved
-                                // policy → non-interactive. Both plan against `working`
-                                // (the pulled-local copy for a remote parent), never the
-                                // raw remote path.
-                                let mut plan = if matches!(conflict, ConflictResolution::Stop) {
-                                    build_copy_into_changeset_interactive(
-                                        working,
-                                        &absolute_sources,
-                                        &dest_inner,
-                                        destination_name.as_deref(),
-                                        &*events_for_blocking,
-                                        &op_id_for_blocking,
-                                        &state_for_blocking,
-                                    )?
-                                } else {
-                                    build_copy_into_changeset(
-                                        working,
-                                        &absolute_sources,
-                                        &dest_inner,
-                                        destination_name.as_deref(),
-                                        conflict,
-                                    )
-                                    .map_err(EditError::Op)?
-                                };
-                                // The user's compression level governs every newly added
-                                // entry in this edit (the mutator clamps it to 1..=9).
-                                plan.changeset.compression_level = compression_level;
-                                let should_delete = is_move && plan.skipped_count == 0;
-                                mutator::apply(working, &plan.changeset, &*hooks_for_blocking).map_err(
-                                    |e| match e {
-                                        MutationError::Cancelled => EditError::Cancelled,
-                                        other => EditError::Op(to_write_error(working, other)),
-                                    },
-                                )?;
-                                Ok((should_delete, plan.skipped_count))
-                            }
-                        },
-                    )
-                    .await?;
-
-                    let left = if should_delete_sources {
-                        materialized.delete_originals().await
-                    } else {
-                        LeftInSource::default()
-                    };
-                    Ok((skipped_count, left))
-                }
-                .await;
-
-                let final_progress = hooks.latest_progress();
-                // Capture the terminal status before the consuming `match outcome`
-                // below (which moves the error out of `outcome`).
-                let execution_status = match &outcome {
-                    Ok(_) => ExecutionStatus::Done,
-                    Err(EditError::Cancelled) => ExecutionStatus::Canceled,
-                    Err(EditError::Op(_)) => ExecutionStatus::Failed,
-                };
-                let (skipped_count, appeared_during_move) = outcome
-                    .as_ref()
-                    .map(|(skipped, left)| (*skipped, left.appeared_during_move()))
-                    .unwrap_or((0, None));
-                emit_archive_terminal(
-                    events.as_ref(),
-                    &op_id,
-                    operation_type,
-                    outcome.map(|_| ()),
-                    skipped_count,
-                    appeared_during_move,
-                    &final_progress,
-                );
-
-                // Finalize the journal row. Compress records the created archive as
-                // its single `rollback_unit` item (the rollback deletes it if still
-                // net-new and unchanged), then finalizes with the driver's subkind +
-                // net-new flag so eligibility is computed from what the driver knows
-                // A plain into-archive edit records no item — it's not
-                // rollbackable in v1 — just the header's terminal state.
-                if prov.subkind == ArchiveSubkind::Compress && execution_status == ExecutionStatus::Done {
-                    // Snapshot the finished archive (size + mtime) for the rollback drift
-                    // recheck; best-effort and local-only (a remote archive snapshots
-                    // as `None`, so its rollback rechecks existence only).
-                    let (size, mtime) = std::fs::symlink_metadata(&archive_path)
-                        .map(|m| (Some(m.len() as i64), super::super::journal::mtime_secs(&m)))
-                        .unwrap_or((None, None));
-                    super::super::journal::record_compress_archive(
-                        state.scope(),
-                        &parent_volume_id,
-                        &archive_path,
-                        size,
-                        mtime,
-                        prov.net_new,
-                    );
-                }
-                super::super::journal::finalize_archive_op(
-                    state.scope(),
-                    prov.subkind,
-                    prov.net_new,
-                    execution_status,
-                    None,
-                );
-
-                task_guard.disarm();
-                ops.manager().on_settled(&op_id);
-            })
+        let lane = state
+            .scope()
+            .host()
+            .volumes()
+            .get(&parent_volume_id)
+            .map(|v| v.lane_key())
+            .unwrap_or_else(|| LaneKey::new(parent_volume_id.clone()));
+        let summary_source = source_paths
+            .first()
+            .and_then(|p| p.file_name())
+            .map(|n| n.to_string_lossy().into_owned());
+        let descriptor = OperationDescriptor {
+            operation_id: operation_id.clone(),
+            operation_type,
+            lanes: vec![lane],
+            volume_ids: vec![parent_volume_id.clone()],
+            summary: OperationSummaryText {
+                source: summary_source,
+                destination: None,
+                items: None,
+            },
+            // A zip edit is a whole-archive temp+rename rewrite: it either lands or
+            // it doesn't, so there's no half-written state to reverse.
+            supports_rollback: false,
+            preview_id,
+            reverses: None,
         };
 
-    manager::manager().spawn_managed(descriptor, state, Box::new(deferred));
+        let events_for_op = Arc::clone(&events);
+        let op_id_outer = operation_id.clone();
+        let state_for_op = Arc::clone(&state);
+        let progress_interval = Duration::from_millis(progress_interval_ms);
 
-    Ok(WriteOperationStartResult {
-        operation_id,
-        operation_type,
-    })
+        let deferred =
+            move |ops: crate::file_system::write_operations::Operations| -> Pin<Box<dyn Future<Output = ()> + Send>> {
+                Box::pin(async move {
+                    let events = events_for_op;
+                    let op_id = op_id_outer;
+                    let state = state_for_op;
+                    let task_guard = ManagedTaskGuard::new(ops.manager(), op_id.clone());
+                    let settle_volume = (parent_volume_id != "root").then(|| parent_volume_id.clone());
+                    let _settled =
+                        WriteSettledGuard::new(Arc::clone(&events), op_id.clone(), operation_type, settle_volume);
+
+                    // Wait out the confirming dialog's scan. The changeset planner
+                    // walks the sources itself, so this buys serialization rather than
+                    // reuse: without it, ⌥F5's sampling preview and this walk would run
+                    // down the same tree at once, which is what costs on MTP and SMB.
+                    if crate::file_system::write_operations::scan_bridge::await_claimed_preview(
+                        &*events,
+                        &op_id,
+                        operation_type,
+                        &state,
+                    )
+                    .await
+                    .stopped()
+                    {
+                        task_guard.disarm();
+                        ops.manager().on_settled(&op_id);
+                        return;
+                    }
+
+                    // Open the journal row when the op actually starts. Archive edits
+                    // spawn directly (not through `start_write_operation`), so this is
+                    // their own open/finalize bracket, mirroring the generic one.
+                    super::super::journal::open_archive_op(state.scope(), &op_id, prov.initiator, &parent_volume_id);
+
+                    let hooks = Arc::new(MutatorHooks::new(
+                        Arc::clone(&state),
+                        Arc::clone(&events),
+                        op_id.clone(),
+                        operation_type,
+                        progress_interval,
+                    ));
+
+                    // Materialize sources (pull if remote), then plan+apply against the
+                    // archive. One `Result<skipped_count, EditError>` funnels into a single
+                    // terminal emit below. A cancel/fault in the PULL returns before
+                    // `run_managed_edit` ever opens the zip, so the archive stays untouched.
+                    let outcome: Result<(usize, LeftInSource), EditError> = async {
+                        let materialized =
+                            materialize_sources(&source_volume, &source_paths, src_local_root, is_move, &state).await?;
+                        let absolute_sources = materialized.absolute.clone();
+
+                        let (should_delete_sources, skipped_count) = run_managed_edit(
+                            &parent_volume_id,
+                            archive_path.clone(),
+                            Arc::clone(&state),
+                            hooks.remote_progress_observer(),
+                            {
+                                let events_for_blocking = Arc::clone(&events);
+                                let state_for_blocking = Arc::clone(&state);
+                                let op_id_for_blocking = op_id.clone();
+                                let hooks_for_blocking = Arc::clone(&hooks);
+                                let dest_inner = dest_inner.clone();
+                                move |working: &Path| -> Result<(bool, usize), EditError> {
+                                    // Stop → interactive per-file prompts; any pre-resolved
+                                    // policy → non-interactive. Both plan against `working`
+                                    // (the pulled-local copy for a remote parent), never the
+                                    // raw remote path.
+                                    let mut plan = if matches!(conflict, ConflictResolution::Stop) {
+                                        build_copy_into_changeset_interactive(
+                                            working,
+                                            &absolute_sources,
+                                            &dest_inner,
+                                            destination_name.as_deref(),
+                                            &*events_for_blocking,
+                                            &op_id_for_blocking,
+                                            &state_for_blocking,
+                                        )?
+                                    } else {
+                                        build_copy_into_changeset(
+                                            working,
+                                            &absolute_sources,
+                                            &dest_inner,
+                                            destination_name.as_deref(),
+                                            conflict,
+                                        )
+                                        .map_err(EditError::Op)?
+                                    };
+                                    // The user's compression level governs every newly added
+                                    // entry in this edit (the mutator clamps it to 1..=9).
+                                    plan.changeset.compression_level = compression_level;
+                                    let should_delete = is_move && plan.skipped_count == 0;
+                                    mutator::apply(working, &plan.changeset, &*hooks_for_blocking).map_err(
+                                        |e| match e {
+                                            MutationError::Cancelled => EditError::Cancelled,
+                                            other => EditError::Op(to_write_error(working, other)),
+                                        },
+                                    )?;
+                                    Ok((should_delete, plan.skipped_count))
+                                }
+                            },
+                        )
+                        .await?;
+
+                        let left = if should_delete_sources {
+                            materialized.delete_originals().await
+                        } else {
+                            LeftInSource::default()
+                        };
+                        Ok((skipped_count, left))
+                    }
+                    .await;
+
+                    let final_progress = hooks.latest_progress();
+                    // Capture the terminal status before the consuming `match outcome`
+                    // below (which moves the error out of `outcome`).
+                    let execution_status = match &outcome {
+                        Ok(_) => ExecutionStatus::Done,
+                        Err(EditError::Cancelled) => ExecutionStatus::Canceled,
+                        Err(EditError::Op(_)) => ExecutionStatus::Failed,
+                    };
+                    let (skipped_count, appeared_during_move) = outcome
+                        .as_ref()
+                        .map(|(skipped, left)| (*skipped, left.appeared_during_move()))
+                        .unwrap_or((0, None));
+                    emit_archive_terminal(
+                        events.as_ref(),
+                        &op_id,
+                        operation_type,
+                        outcome.map(|_| ()),
+                        skipped_count,
+                        appeared_during_move,
+                        &final_progress,
+                    );
+
+                    // Finalize the journal row. Compress records the created archive as
+                    // its single `rollback_unit` item (the rollback deletes it if still
+                    // net-new and unchanged), then finalizes with the driver's subkind +
+                    // net-new flag so eligibility is computed from what the driver knows
+                    // A plain into-archive edit records no item — it's not
+                    // rollbackable in v1 — just the header's terminal state.
+                    if prov.subkind == ArchiveSubkind::Compress && execution_status == ExecutionStatus::Done {
+                        // Snapshot the finished archive (size + mtime) for the rollback drift
+                        // recheck; best-effort and local-only (a remote archive snapshots
+                        // as `None`, so its rollback rechecks existence only).
+                        let (size, mtime) = std::fs::symlink_metadata(&archive_path)
+                            .map(|m| (Some(m.len() as i64), super::super::journal::mtime_secs(&m)))
+                            .unwrap_or((None, None));
+                        super::super::journal::record_compress_archive(
+                            state.scope(),
+                            &parent_volume_id,
+                            &archive_path,
+                            size,
+                            mtime,
+                            prov.net_new,
+                        );
+                    }
+                    super::super::journal::finalize_archive_op(
+                        state.scope(),
+                        prov.subkind,
+                        prov.net_new,
+                        execution_status,
+                        None,
+                    );
+
+                    task_guard.disarm();
+                    ops.manager().on_settled(&op_id);
+                })
+            };
+
+        self.manager().spawn_managed(descriptor, state, Box::new(deferred));
+
+        Ok(WriteOperationStartResult {
+            operation_id,
+            operation_type,
+        })
+    }
 }

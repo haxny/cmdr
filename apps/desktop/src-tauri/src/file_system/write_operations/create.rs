@@ -62,7 +62,8 @@ pub(crate) async fn create_directory_managed(
     initiator: cmdr_operation_log::types::Initiator,
 ) -> Result<String, MutationError> {
     // shim: removed in M7a
-    super::installed()
+    super::installed_for("create_directory_managed")
+        .ok_or_else(super::instant_not_installed)?
         .create_directory_managed(volume_id, parent_path, name, initiator)
         .await
 }
@@ -120,7 +121,7 @@ async fn create_directory_managed_inner(
     // (direct SMB / MTP) routes too.
     if parent_crosses_archive_boundary(engine.host(), volume_id.as_deref(), &parent_path).await {
         return (
-            route_archive_create(&parent_path, &name, ArchiveEntryKind::Dir, volume_id).await,
+            route_archive_create(engine, &parent_path, &name, ArchiveEntryKind::Dir, volume_id).await,
             InstantTarget::Archive,
         );
     }
@@ -190,7 +191,8 @@ pub(crate) async fn create_file_managed(
     initiator: cmdr_operation_log::types::Initiator,
 ) -> Result<String, MutationError> {
     // shim: removed in M7a
-    super::installed()
+    super::installed_for("create_file_managed")
+        .ok_or_else(super::instant_not_installed)?
         .create_file_managed(volume_id, parent_path, name, initiator)
         .await
 }
@@ -209,7 +211,7 @@ async fn create_file_managed_inner(
     // a REMOTE zip routes too).
     if parent_crosses_archive_boundary(engine.host(), volume_id.as_deref(), &parent_path).await {
         return (
-            route_archive_create(&parent_path, &name, ArchiveEntryKind::File, volume_id).await,
+            route_archive_create(engine, &parent_path, &name, ArchiveEntryKind::File, volume_id).await,
             InstantTarget::Archive,
         );
     }
@@ -273,6 +275,7 @@ async fn create_file_managed_inner(
 /// FS path, and the edit is asynchronous). The FE distinguishes archive-target
 /// creates and reads the id as an operation handle, not a cursor target.
 async fn route_archive_create(
+    engine: &Operations,
     parent_path: &str,
     name: &str,
     kind: ArchiveEntryKind,
@@ -293,7 +296,7 @@ async fn route_archive_create(
     // instead of the raw `zip` "Duplicate filename" the mutator would hit at
     // write time — and no temp is built for a doomed edit.
     let parent_volume_id = volume_id.as_deref().unwrap_or("root");
-    if archive_edit::archive_inner_exists(parent_volume_id, &archive_path, &inner_path).await {
+    if archive_edit::archive_inner_exists(engine.host(), parent_volume_id, &archive_path, &inner_path).await {
         return Err(MutationError::AlreadyExists { name: name.to_string() });
     }
 
@@ -311,7 +314,10 @@ async fn route_archive_create(
         },
     };
 
-    let events = archive_edit::host_operation_sink().ok_or(MutationError::ArchiveEditNotReady)?;
+    let events = engine
+        .host()
+        .operation_sink()
+        .ok_or(MutationError::ArchiveEditNotReady)?;
     let request = ArchiveEditRequest {
         archive_path,
         parent_volume_id: volume_id.unwrap_or_else(|| "root".to_string()),
@@ -325,11 +331,13 @@ async fn route_archive_create(
         // No scan preview: nothing walked a tree to plan this edit.
         preview_id: None,
     };
-    let started = archive_edit::archive_edit_start(events, request, 200)
-        .await
-        .map_err(|e| MutationError::ArchiveEditCouldntStart {
-            detail: format!("{e:?}"),
-        })?;
+    let started =
+        engine
+            .archive_edit_start(events, request, 200)
+            .await
+            .map_err(|e| MutationError::ArchiveEditCouldntStart {
+                detail: format!("{e:?}"),
+            })?;
     Ok(started.operation_id)
 }
 

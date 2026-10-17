@@ -472,9 +472,15 @@ async fn route_archive_create_on_an_existing_inner_name_errors_without_building_
 
     // mkfile onto an existing name at the archive root.
     let root_parent = zip.to_string_lossy().to_string();
-    let err_file = route_archive_create(&root_parent, "existing.txt", ArchiveEntryKind::File, None)
-        .await
-        .expect_err("mkfile onto an existing inner name must be refused");
+    let err_file = route_archive_create(
+        crate::file_system::write_operations::installed(),
+        &root_parent,
+        "existing.txt",
+        ArchiveEntryKind::File,
+        None,
+    )
+    .await
+    .expect_err("mkfile onto an existing inner name must be refused");
     assert!(
         matches!(&err_file, MutationError::AlreadyExists { name } if name == "existing.txt"),
         "got: {err_file:?}",
@@ -482,9 +488,15 @@ async fn route_archive_create_on_an_existing_inner_name_errors_without_building_
 
     // mkdir onto an existing name inside a subdirectory.
     let sub_parent = zip.join("sub").to_string_lossy().to_string();
-    let err_dir = route_archive_create(&sub_parent, "existing.txt", ArchiveEntryKind::Dir, None)
-        .await
-        .expect_err("mkdir onto an existing inner name must be refused");
+    let err_dir = route_archive_create(
+        crate::file_system::write_operations::installed(),
+        &sub_parent,
+        "existing.txt",
+        ArchiveEntryKind::Dir,
+        None,
+    )
+    .await
+    .expect_err("mkdir onto an existing inner name must be refused");
     assert!(
         matches!(&err_dir, MutationError::AlreadyExists { name } if name == "existing.txt"),
         "got: {err_dir:?}",

@@ -13,8 +13,6 @@ pub(crate) mod trash;
 mod volume_start;
 mod walker;
 
-pub(in crate::file_system::write_operations) use volume_start::start_volume_delete;
-
 pub(in crate::file_system::write_operations) use walker::{
     delete_files_with_progress_inner, delete_volume_files_with_progress_inner,
 };

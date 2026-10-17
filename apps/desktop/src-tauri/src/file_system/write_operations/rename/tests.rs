@@ -338,7 +338,7 @@ async fn route_archive_rename_onto_an_existing_name_errors_without_building_a_te
 
     let from = zip.join("old.txt");
     let to = zip.join("taken.txt");
-    let err = route_archive_rename(&from, &to, "root")
+    let err = route_archive_rename(crate::file_system::write_operations::installed(), &from, &to, "root")
         .await
         .expect_err("renaming onto an existing name must be refused");
     assert!(

@@ -90,38 +90,345 @@ pub(super) fn drain_deadline(aborting: bool) -> Duration {
     }
 }
 
-/// Starts a copy operation between two volumes.
-///
-/// This is the unified entry point for all copy operations:
-/// - Local → Local
-/// - Local → MTP
-/// - MTP → Local
-///
-/// The function determines the appropriate copy strategy based on volume types
-/// and handles progress reporting, conflict detection, and cancellation.
-///
-/// # Arguments
-///
-/// * `app` - Tauri app handle for event emission
-/// * `source_volume_id` - Source volume ID (recorded in the "busy volumes" set)
-/// * `source_volume` - The source volume to copy from
-/// * `source_paths` - Paths of files/directories to copy (relative to source volume root)
-/// * `dest_volume_id` - Destination volume ID (recorded in the "busy volumes" set)
-/// * `dest_volume` - The destination volume to copy to
-/// * `dest_path` - Destination directory path (relative to dest volume root)
-/// * `config` - Copy operation configuration
-///
-/// # Events emitted
-///
-/// * `write-progress` - Every progress_interval_ms with WriteProgressEvent
-/// * `write-complete` - On success with WriteCompleteEvent
-/// * `write-error` - On error with WriteErrorEvent
-/// * `write-cancelled` - If cancelled with WriteCancelledEvent
+impl crate::file_system::write_operations::Operations {
+    /// Starts a copy operation between two volumes.
+    ///
+    /// This is the unified entry point for all copy operations:
+    /// - Local → Local
+    /// - Local → MTP
+    /// - MTP → Local
+    ///
+    /// The function determines the appropriate copy strategy based on volume types
+    /// and handles progress reporting, conflict detection, and cancellation.
+    ///
+    /// # Arguments
+    ///
+    /// * `app` - Tauri app handle for event emission
+    /// * `source_volume_id` - Source volume ID (recorded in the "busy volumes" set)
+    /// * `source_volume` - The source volume to copy from
+    /// * `source_paths` - Paths of files/directories to copy (relative to source volume root)
+    /// * `dest_volume_id` - Destination volume ID (recorded in the "busy volumes" set)
+    /// * `dest_volume` - The destination volume to copy to
+    /// * `dest_path` - Destination directory path (relative to dest volume root)
+    /// * `config` - Copy operation configuration
+    ///
+    /// # Events emitted
+    ///
+    /// * `write-progress` - Every progress_interval_ms with WriteProgressEvent
+    /// * `write-complete` - On success with WriteCompleteEvent
+    /// * `write-error` - On error with WriteErrorEvent
+    /// * `write-cancelled` - If cancelled with WriteCancelledEvent
+    #[allow(
+        clippy::too_many_arguments,
+        reason = "each volume travels with its ID (for the busy set) plus its Arc; bundling them would just shuffle the same fields into a struct at every call site"
+    )]
+    pub(crate) async fn copy_between_volumes(
+        &self,
+        events: Arc<dyn OperationEventSink>,
+        source_volume_id: String,
+        source_volume: Arc<dyn Volume>,
+        source_paths: Vec<PathBuf>,
+        dest_volume_id: String,
+        dest_volume: Arc<dyn Volume>,
+        dest_path: PathBuf,
+        config: VolumeCopyConfig,
+        initiator: cmdr_operation_log::types::Initiator,
+        expected_sources: Option<ExpectedSources>,
+    ) -> Result<WriteOperationStartResult, WriteOperationError> {
+        super::super::super::validation::validate_transfer_destination_name(
+            &source_paths,
+            &dest_path,
+            config.destination_name.as_deref(),
+        )?;
+
+        // Validate that volumes support the required operations
+        if !source_volume.supports_export() {
+            return Err(WriteOperationError::IoError {
+                path: source_volume.root().display().to_string(),
+                message: format!("Source volume '{}' does not support export", source_volume.name()),
+            });
+        }
+
+        // Optimization: If both volumes are local filesystem paths, use the battle-tested
+        // copy.rs implementation which has proper cancellation support via macOS copyfile API.
+        if let (Some(src_root), Some(dest_root)) = (source_volume.local_path(), dest_volume.local_path()) {
+            log::debug!(
+                "copy_between_volumes: both volumes are local, delegating to native copy (src={}, dest={})",
+                src_root.display(),
+                dest_root.display()
+            );
+
+            // Convert relative paths to absolute paths. The dest is ANCHORED, not
+            // joined: the IPC boundary already anchors what the transfer dialog
+            // sends, and a raw join would re-root an absolute dest under itself
+            // (`/Volumes/USB/sub` → `/Volumes/USB/Volumes/USB/sub`).
+            let absolute_sources: Vec<PathBuf> = source_paths.iter().map(|p| src_root.join(p)).collect();
+            let absolute_dest = cmdr_fs::volume::root_anchored(&dest_root, &dest_path);
+
+            // Convert VolumeCopyConfig to WriteOperationConfig, preserving preview_id
+            // and the pre-flight conflict list so local↔local copies get the same
+            // bulk-skip-under-Skip UX as cross-volume copies.
+            let write_config = WriteOperationConfig {
+                progress_interval_ms: config.progress_interval_ms,
+                conflict_resolution: config.conflict_resolution,
+                max_conflicts_to_show: config.max_conflicts_to_show,
+                preview_id: config.preview_id,
+                pre_known_conflicts: config.pre_known_conflicts,
+                destination_name: config.destination_name,
+                space_shortfall: config.space_shortfall,
+                source_kinds: config.source_kinds,
+                ..Default::default()
+            };
+
+            // Delegate to the existing copy implementation with full cancellation
+            // support. Pass both volume IDs so a local→USB / DMG copy still marks
+            // the ejectable destination busy (this branch handles every both-local
+            // transfer, including ones whose dest is a removable local-FS volume).
+            // Pass the real `Volume::lane_key()`s so the operation manager
+            // serializes against the same mount (two copies to one USB disk wait).
+            let lanes = vec![source_volume.lane_key(), dest_volume.lane_key()];
+            // Both volumes, captured HERE. A drive that vanishes mid-copy is out of
+            // the volume list and the mount table by the time the error is worded,
+            // so this is the one moment its name can still be read
+            // (`write_operations/transfer_sides.rs`).
+            use crate::file_system::write_operations::transfer_sides::{TransferSide, TransferSides};
+            let sides = TransferSides::new(
+                TransferSide::new(
+                    source_volume_id.clone(),
+                    source_volume.name().to_string(),
+                    src_root.clone(),
+                ),
+                TransferSide::new(
+                    dest_volume_id.clone(),
+                    dest_volume.name().to_string(),
+                    dest_root.clone(),
+                ),
+            );
+            return self
+                .copy_files_start(
+                    events,
+                    absolute_sources,
+                    absolute_dest,
+                    write_config,
+                    vec![source_volume_id, dest_volume_id],
+                    Some(lanes),
+                    initiator,
+                    expected_sources,
+                    Some(sides),
+                )
+                .await;
+        }
+
+        let operation_id = cmdr_operation_log::new_operation_id();
+        log::info!(
+            "copy_between_volumes: operation_id={}, source_volume={}, dest_volume={}, {} sources, dest={}",
+            operation_id,
+            source_volume.name(),
+            dest_volume.name(),
+            source_paths.len(),
+            dest_path.display()
+        );
+
+        // The per-leaf record points inside `copy_volumes_with_progress` journal under
+        // these REAL volume ids (carried on the op state so the ~80 test call sites
+        // stay unchanged); the open/finalize bracket below uses them directly.
+        let state = Arc::new(
+            self.new_operation_state(Duration::from_millis(config.progress_interval_ms))
+                .with_journal_volumes(source_volume_id.clone(), dest_volume_id.clone()),
+        );
+        let journal_source_volume_id = source_volume_id.clone();
+        let journal_dest_volume_id = dest_volume_id.clone();
+
+        // The op occupies both volumes' lanes (source AND destination); the manager
+        // serializes it against anything else touching either lane. Both volume IDs
+        // go in `volume_ids` so the picker disables Eject for the source and
+        // destination devices (MTP/SMB/USB) while the copy runs.
+        let lanes = vec![source_volume.lane_key(), dest_volume.lane_key()];
+        let source_volume_name = source_volume.name().to_string();
+        let summary = manager::OperationSummaryText {
+            source: Some(source_volume.name().to_string()),
+            destination: Some(dest_volume.name().to_string()),
+            items: Some(volume_items(
+                &*source_volume,
+                &source_paths,
+                config.source_kinds,
+                Some((&*dest_volume, &dest_path)),
+            )),
+        };
+        let descriptor = manager::OperationDescriptor {
+            operation_id: operation_id.clone(),
+            operation_type: WriteOperationType::Copy,
+            lanes,
+            volume_ids: vec![source_volume_id, dest_volume_id],
+            summary,
+            // Every file this writes is a NEW one at the destination, so cancelling
+            // with rollback can delete them again (`cleanup.rs`).
+            supports_rollback: true,
+            preview_id: config.preview_id.clone(),
+            reverses: None,
+        };
+
+        // Deferred start: the manager spawns this only once both lanes are free.
+        let events_for_op = Arc::clone(&events);
+        let op_id_outer = operation_id.clone();
+        let state_for_op = Arc::clone(&state);
+        let deferred =
+            move |ops: crate::file_system::write_operations::Operations| -> Pin<Box<dyn Future<Output = ()> + Send>> {
+                Box::pin(async move {
+                    let events = events_for_op;
+                    let op_id = op_id_outer;
+                    let state = state_for_op;
+                    let task_guard = manager::ManagedTaskGuard::new(ops.manager(), op_id.clone());
+                    // Settle guard: emits `write-settled` at end of scope, after the
+                    // terminal write-* event and after `on_settled`'s cache cleanup.
+                    let _settled_guard = crate::file_system::write_operations::state::WriteSettledGuard::new(
+                        Arc::clone(&events),
+                        op_id.clone(),
+                        WriteOperationType::Copy,
+                        Some(source_volume_name),
+                    );
+
+                    // Wait out the confirming dialog's scan before journaling or
+                    // touching either device; see `write_operations::start_write_operation`.
+                    if crate::file_system::write_operations::scan_bridge::await_claimed_preview(
+                        &*events,
+                        &op_id,
+                        WriteOperationType::Copy,
+                        &state,
+                    )
+                    .await
+                    .stopped()
+                    {
+                        task_guard.disarm();
+                        ops.manager().on_settled(&op_id);
+                        return;
+                    }
+
+                    // Journal the cross-volume copy under the REAL volume ids (the local
+                    // helpers bake in `"root"`). Per-leaf rows land inside
+                    // `copy_volumes_with_progress`; this brackets the op.
+                    journal::open_volume_op(
+                        state.scope(),
+                        &op_id,
+                        OpKind::Copy,
+                        initiator,
+                        &journal_source_volume_id,
+                        Some(&journal_dest_volume_id),
+                        source_paths.len() as u64,
+                    );
+
+                    // Hold the operation to what its caller was promised, at the latest
+                    // moment there is: an approved operation can sit queued behind a long
+                    // transfer, so the check belongs after admission, not at approval.
+                    // `../../source_binding.rs`.
+                    let bound = retain_bound_sources_on(
+                        source_volume.as_ref(),
+                        &*events,
+                        &op_id,
+                        WriteOperationType::Copy,
+                        &state,
+                        expected_sources.as_ref(),
+                        source_paths,
+                    )
+                    .await;
+
+                    // An emptied binding is a finished operation: `announce_empty_batch`
+                    // has already emitted its `write-complete`, so it takes the Ok arm and
+                    // the journal finalizes Done, exactly as a copy of nothing would.
+                    let result: Result<(), WriteFailure> = match bound {
+                        None => Ok(()),
+                        Some(source_paths) => {
+                            copy_volumes_with_progress(
+                                Arc::clone(&events),
+                                &op_id,
+                                &state,
+                                source_volume,
+                                &source_paths,
+                                dest_volume,
+                                &dest_path,
+                                &config,
+                            )
+                            .await
+                        }
+                    };
+
+                    journal::finalize_op(
+                        state.scope(),
+                        OpKind::Copy,
+                        journal::execution_status_from_error(result.as_ref().err().map(|f| &f.error)),
+                    );
+
+                    match result {
+                        Ok(()) => {
+                            // write-complete already emitted by copy_volumes_with_progress
+                        }
+                        Err(WriteFailure { ref error, .. })
+                            if matches!(error, WriteOperationError::Cancelled { .. }) =>
+                        {
+                            // write-cancelled was already emitted; don't also emit
+                            // write-error (the FE would log a user cancel as an error).
+                            log::info!("copy_between_volumes: operation {} cancelled", op_id);
+                        }
+                        Err(failure) if failure.error.is_expected_recoverable() => {
+                            // Expected, recoverable control flow (an encrypted-archive
+                            // source prompting for a password), NOT a reportable failure:
+                            // log at `warn` so it stays below the error-reporter's
+                            // auto-report threshold. See `WriteOperationError::is_expected_recoverable`.
+                            log::warn!(
+                                target: "copy",
+                                "copy_between_volumes: operation {} needs user input: {:?}",
+                                op_id,
+                                failure.error
+                            );
+                            events.emit_error(write_error_event_from(
+                                &state,
+                                op_id.clone(),
+                                WriteOperationType::Copy,
+                                failure,
+                            ));
+                        }
+                        Err(failure) => {
+                            // Toast-visible failure for cross-volume copy (Local↔SMB↔MTP).
+                            state
+                                .scope()
+                                .host()
+                                .events()
+                                .error_report(OperationErrorReport::VolumeCopyFailed {
+                                    operation_id: op_id.clone(),
+                                    error: failure.error.clone(),
+                                });
+                            events.emit_error(write_error_event_from(
+                                &state,
+                                op_id.clone(),
+                                WriteOperationType::Copy,
+                                failure,
+                            ));
+                        }
+                    }
+
+                    task_guard.disarm();
+                    ops.manager().on_settled(&op_id);
+                })
+            };
+
+        self.manager().spawn_managed(descriptor, state, Box::new(deferred));
+
+        Ok(WriteOperationStartResult {
+            operation_id,
+            operation_type: WriteOperationType::Copy,
+        })
+    }
+}
+
+/// [`Operations::copy_between_volumes`](crate::file_system::write_operations::Operations::copy_between_volumes)
+/// on the installed engine.
+// shim: removed in M7a
+#[cfg(test)]
 #[allow(
     clippy::too_many_arguments,
     reason = "each volume travels with its ID (for the busy set) plus its Arc; bundling them would just shuffle the same fields into a struct at every call site"
 )]
-pub async fn copy_between_volumes(
+pub(crate) async fn copy_between_volumes(
     events: Arc<dyn OperationEventSink>,
     source_volume_id: String,
     source_volume: Arc<dyn Volume>,
@@ -133,286 +440,20 @@ pub async fn copy_between_volumes(
     initiator: cmdr_operation_log::types::Initiator,
     expected_sources: Option<ExpectedSources>,
 ) -> Result<WriteOperationStartResult, WriteOperationError> {
-    super::super::super::validation::validate_transfer_destination_name(
-        &source_paths,
-        &dest_path,
-        config.destination_name.as_deref(),
-    )?;
-
-    // Validate that volumes support the required operations
-    if !source_volume.supports_export() {
-        return Err(WriteOperationError::IoError {
-            path: source_volume.root().display().to_string(),
-            message: format!("Source volume '{}' does not support export", source_volume.name()),
-        });
-    }
-
-    // Optimization: If both volumes are local filesystem paths, use the battle-tested
-    // copy.rs implementation which has proper cancellation support via macOS copyfile API.
-    if let (Some(src_root), Some(dest_root)) = (source_volume.local_path(), dest_volume.local_path()) {
-        log::debug!(
-            "copy_between_volumes: both volumes are local, delegating to native copy (src={}, dest={})",
-            src_root.display(),
-            dest_root.display()
-        );
-
-        // Convert relative paths to absolute paths. The dest is ANCHORED, not
-        // joined: the IPC boundary already anchors what the transfer dialog
-        // sends, and a raw join would re-root an absolute dest under itself
-        // (`/Volumes/USB/sub` → `/Volumes/USB/Volumes/USB/sub`).
-        let absolute_sources: Vec<PathBuf> = source_paths.iter().map(|p| src_root.join(p)).collect();
-        let absolute_dest = cmdr_fs::volume::root_anchored(&dest_root, &dest_path);
-
-        // Convert VolumeCopyConfig to WriteOperationConfig, preserving preview_id
-        // and the pre-flight conflict list so local↔local copies get the same
-        // bulk-skip-under-Skip UX as cross-volume copies.
-        let write_config = WriteOperationConfig {
-            progress_interval_ms: config.progress_interval_ms,
-            conflict_resolution: config.conflict_resolution,
-            max_conflicts_to_show: config.max_conflicts_to_show,
-            preview_id: config.preview_id,
-            pre_known_conflicts: config.pre_known_conflicts,
-            destination_name: config.destination_name,
-            space_shortfall: config.space_shortfall,
-            source_kinds: config.source_kinds,
-            ..Default::default()
-        };
-
-        // Delegate to the existing copy implementation with full cancellation
-        // support. Pass both volume IDs so a local→USB / DMG copy still marks
-        // the ejectable destination busy (this branch handles every both-local
-        // transfer, including ones whose dest is a removable local-FS volume).
-        // Pass the real `Volume::lane_key()`s so the operation manager
-        // serializes against the same mount (two copies to one USB disk wait).
-        let lanes = vec![source_volume.lane_key(), dest_volume.lane_key()];
-        // Both volumes, captured HERE. A drive that vanishes mid-copy is out of
-        // the volume list and the mount table by the time the error is worded,
-        // so this is the one moment its name can still be read
-        // (`write_operations/transfer_sides.rs`).
-        use crate::file_system::write_operations::transfer_sides::{TransferSide, TransferSides};
-        let sides = TransferSides::new(
-            TransferSide::new(
-                source_volume_id.clone(),
-                source_volume.name().to_string(),
-                src_root.clone(),
-            ),
-            TransferSide::new(
-                dest_volume_id.clone(),
-                dest_volume.name().to_string(),
-                dest_root.clone(),
-            ),
-        );
-        return super::super::super::copy_files_start(
+    crate::file_system::write_operations::installed()
+        .copy_between_volumes(
             events,
-            absolute_sources,
-            absolute_dest,
-            write_config,
-            vec![source_volume_id, dest_volume_id],
-            Some(lanes),
+            source_volume_id,
+            source_volume,
+            source_paths,
+            dest_volume_id,
+            dest_volume,
+            dest_path,
+            config,
             initiator,
             expected_sources,
-            Some(sides),
         )
-        .await;
-    }
-
-    let operation_id = cmdr_operation_log::new_operation_id();
-    log::info!(
-        "copy_between_volumes: operation_id={}, source_volume={}, dest_volume={}, {} sources, dest={}",
-        operation_id,
-        source_volume.name(),
-        dest_volume.name(),
-        source_paths.len(),
-        dest_path.display()
-    );
-
-    // The per-leaf record points inside `copy_volumes_with_progress` journal under
-    // these REAL volume ids (carried on the op state so the ~80 test call sites
-    // stay unchanged); the open/finalize bracket below uses them directly.
-    let state = Arc::new(
-        crate::file_system::write_operations::installed()
-            .new_operation_state(Duration::from_millis(config.progress_interval_ms))
-            .with_journal_volumes(source_volume_id.clone(), dest_volume_id.clone()),
-    );
-    let journal_source_volume_id = source_volume_id.clone();
-    let journal_dest_volume_id = dest_volume_id.clone();
-
-    // The op occupies both volumes' lanes (source AND destination); the manager
-    // serializes it against anything else touching either lane. Both volume IDs
-    // go in `volume_ids` so the picker disables Eject for the source and
-    // destination devices (MTP/SMB/USB) while the copy runs.
-    let lanes = vec![source_volume.lane_key(), dest_volume.lane_key()];
-    let source_volume_name = source_volume.name().to_string();
-    let summary = manager::OperationSummaryText {
-        source: Some(source_volume.name().to_string()),
-        destination: Some(dest_volume.name().to_string()),
-        items: Some(volume_items(
-            &*source_volume,
-            &source_paths,
-            config.source_kinds,
-            Some((&*dest_volume, &dest_path)),
-        )),
-    };
-    let descriptor = manager::OperationDescriptor {
-        operation_id: operation_id.clone(),
-        operation_type: WriteOperationType::Copy,
-        lanes,
-        volume_ids: vec![source_volume_id, dest_volume_id],
-        summary,
-        // Every file this writes is a NEW one at the destination, so cancelling
-        // with rollback can delete them again (`cleanup.rs`).
-        supports_rollback: true,
-        preview_id: config.preview_id.clone(),
-        reverses: None,
-    };
-
-    // Deferred start: the manager spawns this only once both lanes are free.
-    let events_for_op = Arc::clone(&events);
-    let op_id_outer = operation_id.clone();
-    let state_for_op = Arc::clone(&state);
-    let deferred =
-        move |ops: crate::file_system::write_operations::Operations| -> Pin<Box<dyn Future<Output = ()> + Send>> {
-            Box::pin(async move {
-                let events = events_for_op;
-                let op_id = op_id_outer;
-                let state = state_for_op;
-                let task_guard = manager::ManagedTaskGuard::new(ops.manager(), op_id.clone());
-                // Settle guard: emits `write-settled` at end of scope, after the
-                // terminal write-* event and after `on_settled`'s cache cleanup.
-                let _settled_guard = crate::file_system::write_operations::state::WriteSettledGuard::new(
-                    Arc::clone(&events),
-                    op_id.clone(),
-                    WriteOperationType::Copy,
-                    Some(source_volume_name),
-                );
-
-                // Wait out the confirming dialog's scan before journaling or
-                // touching either device; see `write_operations::start_write_operation`.
-                if crate::file_system::write_operations::scan_bridge::await_claimed_preview(
-                    &*events,
-                    &op_id,
-                    WriteOperationType::Copy,
-                    &state,
-                )
-                .await
-                .stopped()
-                {
-                    task_guard.disarm();
-                    ops.manager().on_settled(&op_id);
-                    return;
-                }
-
-                // Journal the cross-volume copy under the REAL volume ids (the local
-                // helpers bake in `"root"`). Per-leaf rows land inside
-                // `copy_volumes_with_progress`; this brackets the op.
-                journal::open_volume_op(
-                    state.scope(),
-                    &op_id,
-                    OpKind::Copy,
-                    initiator,
-                    &journal_source_volume_id,
-                    Some(&journal_dest_volume_id),
-                    source_paths.len() as u64,
-                );
-
-                // Hold the operation to what its caller was promised, at the latest
-                // moment there is: an approved operation can sit queued behind a long
-                // transfer, so the check belongs after admission, not at approval.
-                // `../../source_binding.rs`.
-                let bound = retain_bound_sources_on(
-                    source_volume.as_ref(),
-                    &*events,
-                    &op_id,
-                    WriteOperationType::Copy,
-                    &state,
-                    expected_sources.as_ref(),
-                    source_paths,
-                )
-                .await;
-
-                // An emptied binding is a finished operation: `announce_empty_batch`
-                // has already emitted its `write-complete`, so it takes the Ok arm and
-                // the journal finalizes Done, exactly as a copy of nothing would.
-                let result: Result<(), WriteFailure> = match bound {
-                    None => Ok(()),
-                    Some(source_paths) => {
-                        copy_volumes_with_progress(
-                            Arc::clone(&events),
-                            &op_id,
-                            &state,
-                            source_volume,
-                            &source_paths,
-                            dest_volume,
-                            &dest_path,
-                            &config,
-                        )
-                        .await
-                    }
-                };
-
-                journal::finalize_op(
-                    state.scope(),
-                    OpKind::Copy,
-                    journal::execution_status_from_error(result.as_ref().err().map(|f| &f.error)),
-                );
-
-                match result {
-                    Ok(()) => {
-                        // write-complete already emitted by copy_volumes_with_progress
-                    }
-                    Err(WriteFailure { ref error, .. }) if matches!(error, WriteOperationError::Cancelled { .. }) => {
-                        // write-cancelled was already emitted; don't also emit
-                        // write-error (the FE would log a user cancel as an error).
-                        log::info!("copy_between_volumes: operation {} cancelled", op_id);
-                    }
-                    Err(failure) if failure.error.is_expected_recoverable() => {
-                        // Expected, recoverable control flow (an encrypted-archive
-                        // source prompting for a password), NOT a reportable failure:
-                        // log at `warn` so it stays below the error-reporter's
-                        // auto-report threshold. See `WriteOperationError::is_expected_recoverable`.
-                        log::warn!(
-                            target: "copy",
-                            "copy_between_volumes: operation {} needs user input: {:?}",
-                            op_id,
-                            failure.error
-                        );
-                        events.emit_error(write_error_event_from(
-                            &state,
-                            op_id.clone(),
-                            WriteOperationType::Copy,
-                            failure,
-                        ));
-                    }
-                    Err(failure) => {
-                        // Toast-visible failure for cross-volume copy (Local↔SMB↔MTP).
-                        state
-                            .scope()
-                            .host()
-                            .events()
-                            .error_report(OperationErrorReport::VolumeCopyFailed {
-                                operation_id: op_id.clone(),
-                                error: failure.error.clone(),
-                            });
-                        events.emit_error(write_error_event_from(
-                            &state,
-                            op_id.clone(),
-                            WriteOperationType::Copy,
-                            failure,
-                        ));
-                    }
-                }
-
-                task_guard.disarm();
-                ops.manager().on_settled(&op_id);
-            })
-        };
-
-    manager::manager().spawn_managed(descriptor, state, Box::new(deferred));
-
-    Ok(WriteOperationStartResult {
-        operation_id,
-        operation_type: WriteOperationType::Copy,
-    })
+        .await
 }
 
 /// How much room the destination folder's filesystem reports, or `None` when the

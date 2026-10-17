@@ -22,12 +22,11 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use super::archive_edit::{compress_start, route_archive_copy_into_with_provenance};
 use super::event_sinks::OperationEventSink;
 use super::host;
 use super::source_binding::ExpectedSources;
 use super::target_names::{NotAName, TargetNames};
-use super::transfer::volume::{PathRole, copy_between_volumes, move_between_volumes, unregistered_volume_error};
+use super::transfer::volume::{PathRole, unregistered_volume_error};
 use super::types::{ReadOnlySide, VolumeCopyConfig, WriteOperationError, WriteOperationStartResult};
 use cmdr_fs::volume::RoutedKind;
 use cmdr_fs::volume::Volume;
@@ -90,42 +89,45 @@ pub(crate) fn transfer_would_land_on_its_source(
     }
 }
 
-/// Resolves a batch's source volume, routing a source that a ROUTE serves —
-/// inside a `.zip`, or inside a repo's virtual `.git` trees — to that read-only
-/// volume, and saying which route it was.
-///
-/// Reading through the routed volume is what makes an extract-out and a copy out
-/// of a snapshot ordinary cross-volume copies: both read with `open_read_stream`
-/// and walk with `scan_for_copy`, neither has a path `std::fs` could open. A
-/// source left on its parent volume would take the local-to-local fast path
-/// against a path with no inode and stall the transfer on its scan.
-///
-/// One `source_volume_id` per batch means no straddle risk — every path shares
-/// the same archive, the same repo, or none — so the first path decides.
-///
-/// [`RoutedKind`] rather than a bool, because the two routes part ways on a
-/// MOVE: an archive can delete the source entries afterwards, a snapshot can't.
-pub(crate) async fn resolve_source_volume(
-    volume_id: &str,
-    first_path: Option<&PathBuf>,
-) -> Option<(Arc<dyn Volume>, Option<RoutedKind>)> {
-    let manager = host::installed().volumes();
-    let Some(path) = first_path else {
-        return manager.get(volume_id).map(|v| (v, None));
-    };
-    // Pure string gate, so an ordinary local/remote path skips the resolve below.
-    if !manager.routes_over_its_parent(path) {
-        return manager.get(volume_id).map(|v| (v, None));
-    }
-    // Parent-aware resolve (local `std::fs` OR remote via the parent's own I/O)
-    // for the archive half, lexical for the git half. A mislabeled `.zip`, a
-    // `.git` that isn't a repository, or a switched-off portal all degrade to the
-    // parent volume with no route.
-    let resolved = manager.resolve(volume_id, path).await;
-    match resolved.volume {
-        Some(volume) => Some((volume, resolved.routed)),
-        // The volume vanished between the route and the read (an unmount race).
-        None => manager.get(volume_id).map(|v| (v, None)),
+impl crate::file_system::write_operations::Operations {
+    /// Resolves a batch's source volume, routing a source that a ROUTE serves —
+    /// inside a `.zip`, or inside a repo's virtual `.git` trees — to that read-only
+    /// volume, and saying which route it was.
+    ///
+    /// Reading through the routed volume is what makes an extract-out and a copy out
+    /// of a snapshot ordinary cross-volume copies: both read with `open_read_stream`
+    /// and walk with `scan_for_copy`, neither has a path `std::fs` could open. A
+    /// source left on its parent volume would take the local-to-local fast path
+    /// against a path with no inode and stall the transfer on its scan.
+    ///
+    /// One `source_volume_id` per batch means no straddle risk — every path shares
+    /// the same archive, the same repo, or none — so the first path decides.
+    ///
+    /// [`RoutedKind`] rather than a bool, because the two routes part ways on a
+    /// MOVE: an archive can delete the source entries afterwards, a snapshot can't.
+    pub(crate) async fn resolve_source_volume(
+        &self,
+        volume_id: &str,
+        first_path: Option<&PathBuf>,
+    ) -> Option<(Arc<dyn Volume>, Option<RoutedKind>)> {
+        let manager = self.host().volumes();
+        let Some(path) = first_path else {
+            return manager.get(volume_id).map(|v| (v, None));
+        };
+        // Pure string gate, so an ordinary local/remote path skips the resolve below.
+        if !manager.routes_over_its_parent(path) {
+            return manager.get(volume_id).map(|v| (v, None));
+        }
+        // Parent-aware resolve (local `std::fs` OR remote via the parent's own I/O)
+        // for the archive half, lexical for the git half. A mislabeled `.zip`, a
+        // `.git` that isn't a repository, or a switched-off portal all degrade to the
+        // parent volume with no route.
+        let resolved = manager.resolve(volume_id, path).await;
+        match resolved.volume {
+            Some(volume) => Some((volume, resolved.routed)),
+            // The volume vanished between the route and the read (an unmount race).
+            None => manager.get(volume_id).map(|v| (v, None)),
+        }
     }
 }
 
@@ -180,154 +182,96 @@ fn route_cannot_hold_a_binding(route: &str) -> WriteOperationError {
 
 /// The refusal for a batch whose source volume isn't registered, named by its
 /// first source (`unregistered_volume_error`).
-async fn source_volume_missing(volume_id: &str, source_paths: &[PathBuf]) -> WriteOperationError {
+async fn source_volume_missing(
+    host: &host::EngineHost,
+    volume_id: &str,
+    source_paths: &[PathBuf],
+) -> WriteOperationError {
     let path = source_paths
         .first()
         .map_or_else(|| volume_id.to_string(), |p| p.display().to_string());
-    unregistered_volume_error(volume_id, &path, PathRole::Source).await
+    unregistered_volume_error(host, volume_id, &path, PathRole::Source).await
 }
 
 /// The refusal for a destination volume that isn't registered, named by the
 /// destination the caller sent.
-async fn dest_volume_missing(volume_id: &str, dest_path: &str) -> WriteOperationError {
-    unregistered_volume_error(volume_id, dest_path, PathRole::Destination).await
+async fn dest_volume_missing(host: &host::EngineHost, volume_id: &str, dest_path: &str) -> WriteOperationError {
+    unregistered_volume_error(host, volume_id, dest_path, PathRole::Destination).await
 }
 
-/// Starts a copy across volume types, resolving both ends first.
-///
-/// **This is also how an EXTRACT runs.** There is no `Extract` in
-/// `WriteOperationType` and there should not be one: pulling entries out of a
-/// `.zip` is a copy whose source volume happens to be an `ArchiveVolume`, which
-/// [`resolve_source_volume`] arranges. `ArchiveSubkind::Extract` is an
-/// operation-log label, not a second execution path.
-#[allow(
-    clippy::too_many_arguments,
-    reason = "both volumes travel with their ids, and the source binding is a separate input from the config on purpose (a bound op and a user-started one must share one config); a bag struct would shuffle the same fields"
-)]
-async fn route_volume_copy(
-    events: Arc<dyn OperationEventSink>,
-    source_volume_id: String,
-    source_paths: Vec<PathBuf>,
-    dest_volume_id: String,
-    dest_path: String,
-    config: VolumeCopyConfig,
-    initiator: Initiator,
-    expected_sources: Option<ExpectedSources>,
-) -> Result<WriteOperationStartResult, WriteOperationError> {
-    // Route a source a route serves to its read-only volume: an archive-inner
-    // batch to its `ArchiveVolume` (extract-out), a snapshot path to the repo's
-    // `GitPortalVolume` (copy out of `.git/branches/<name>/…`). Both then read
-    // through the cross-volume engine.
-    let Some((source_volume, _source_route)) = resolve_source_volume(&source_volume_id, source_paths.first()).await
-    else {
-        return Err(source_volume_missing(&source_volume_id, &source_paths).await);
-    };
+impl crate::file_system::write_operations::Operations {
+    /// Starts a copy across volume types, resolving both ends first.
+    ///
+    /// **This is also how an EXTRACT runs.** There is no `Extract` in
+    /// `WriteOperationType` and there should not be one: pulling entries out of a
+    /// `.zip` is a copy whose source volume happens to be an `ArchiveVolume`, which
+    /// [`resolve_source_volume`] arranges. `ArchiveSubkind::Extract` is an
+    /// operation-log label, not a second execution path.
+    #[allow(
+        clippy::too_many_arguments,
+        reason = "both volumes travel with their ids, and the source binding is a separate input from the config on purpose (a bound op and a user-started one must share one config); a bag struct would shuffle the same fields"
+    )]
+    async fn route_volume_copy(
+        &self,
+        events: Arc<dyn OperationEventSink>,
+        source_volume_id: String,
+        source_paths: Vec<PathBuf>,
+        dest_volume_id: String,
+        dest_path: String,
+        config: VolumeCopyConfig,
+        initiator: Initiator,
+        expected_sources: Option<ExpectedSources>,
+    ) -> Result<WriteOperationStartResult, WriteOperationError> {
+        // Route a source a route serves to its read-only volume: an archive-inner
+        // batch to its `ArchiveVolume` (extract-out), a snapshot path to the repo's
+        // `GitPortalVolume` (copy out of `.git/branches/<name>/…`). Both then read
+        // through the cross-volume engine.
+        let Some((source_volume, _source_route)) = self
+            .resolve_source_volume(&source_volume_id, source_paths.first())
+            .await
+        else {
+            return Err(source_volume_missing(self.host(), &source_volume_id, &source_paths).await);
+        };
 
-    // Resolve the destination. A `.zip`-crossing dest routes the whole copy to
-    // the managed archive-edit driver (one `{ add }` changeset).
-    let dest_resolved = host::installed()
-        .volumes()
-        .resolve(&dest_volume_id, Path::new(&dest_path))
-        .await;
-    let Some(dest_volume) = dest_resolved.volume else {
-        return Err(dest_volume_missing(&dest_volume_id, &dest_path).await);
-    };
+        // Resolve the destination. A `.zip`-crossing dest routes the whole copy to
+        // the managed archive-edit driver (one `{ add }` changeset).
+        let dest_resolved = self
+            .host()
+            .volumes()
+            .resolve(&dest_volume_id, Path::new(&dest_path))
+            .await;
+        let Some(dest_volume) = dest_resolved.volume else {
+            return Err(dest_volume_missing(self.host(), &dest_volume_id, &dest_path).await);
+        };
 
-    if dest_resolved.routed == Some(RoutedKind::GitPortal) {
-        return Err(destination_takes_no_writes(&dest_volume));
-    }
-
-    if dest_resolved.routed == Some(RoutedKind::Archive) {
-        if expected_sources.is_some() {
-            return Err(route_cannot_hold_a_binding("copy into a zip"));
+        if dest_resolved.routed == Some(RoutedKind::GitPortal) {
+            return Err(destination_takes_no_writes(&dest_volume));
         }
-        return route_archive_copy_into_with_provenance(
-            events,
-            source_volume,
-            source_paths,
-            PathBuf::from(&dest_path),
-            dest_volume_id,
-            config.conflict_resolution,
-            config.progress_interval_ms,
-            false,
-            config.compression_level,
-            config.preview_id.clone(),
-            super::journal::ArchiveProvenance::edit(initiator),
-            config.destination_name.clone(),
-        )
-        .await;
-    }
 
-    let dest_path = resolve_dest_path(&dest_volume, dest_path);
-    copy_between_volumes(
-        events,
-        source_volume_id,
-        source_volume,
-        source_paths,
-        dest_volume_id,
-        dest_volume,
-        dest_path,
-        config,
-        initiator,
-        expected_sources,
-    )
-    .await
-}
-
-/// Starts a move across volume types. Handles same-volume (native rename/move),
-/// both-local (native move), cross-volume (copy + delete), out of a `.zip` (the
-/// compound move-out op), and into one (an archive changeset).
-#[allow(
-    clippy::too_many_arguments,
-    reason = "both volumes travel with their ids, and the source binding is a separate input from the config on purpose (a bound op and a user-started one must share one config); a bag struct would shuffle the same fields"
-)]
-async fn route_volume_move(
-    events: Arc<dyn OperationEventSink>,
-    source_volume_id: String,
-    source_paths: Vec<PathBuf>,
-    dest_volume_id: String,
-    dest_path: String,
-    config: VolumeCopyConfig,
-    initiator: Initiator,
-    expected_sources: Option<ExpectedSources>,
-) -> Result<WriteOperationStartResult, WriteOperationError> {
-    // An archive SOURCE routes to the compound move-out op (extract via the copy
-    // engine, then a batch `{ delete }` archive rewrite once the extract lands).
-    // A git-portal source has no delete to pair with the copy, so it's refused
-    // below rather than routed anywhere.
-    let Some((source_volume, source_route)) = resolve_source_volume(&source_volume_id, source_paths.first()).await
-    else {
-        return Err(source_volume_missing(&source_volume_id, &source_paths).await);
-    };
-
-    // A snapshot can be copied out of, never moved out of: `.git/branches/…` has
-    // no file to remove once the copy lands. Refused before the destination is
-    // even resolved, so nothing is written and nothing is half-done.
-    if source_route == Some(RoutedKind::GitPortal) {
-        return Err(source_cannot_give_up_its_files(&source_volume));
-    }
-
-    let dest_resolved = host::installed()
-        .volumes()
-        .resolve(&dest_volume_id, Path::new(&dest_path))
-        .await;
-    let Some(dest_volume) = dest_resolved.volume else {
-        return Err(dest_volume_missing(&dest_volume_id, &dest_path).await);
-    };
-
-    if dest_resolved.routed == Some(RoutedKind::GitPortal) {
-        return Err(destination_takes_no_writes(&dest_volume));
-    }
-
-    // Move OUT of a zip. Takes precedence over the dest-archive branch: a
-    // zip→zip move extracts out first (the dest-archive case degrades to a copy
-    // failure inside the extract, never data loss).
-    if source_route == Some(RoutedKind::Archive) {
-        if expected_sources.is_some() {
-            return Err(route_cannot_hold_a_binding("move out of a zip"));
+        if dest_resolved.routed == Some(RoutedKind::Archive) {
+            if expected_sources.is_some() {
+                return Err(route_cannot_hold_a_binding("copy into a zip"));
+            }
+            return self
+                .route_archive_copy_into_with_provenance(
+                    events,
+                    source_volume,
+                    source_paths,
+                    PathBuf::from(&dest_path),
+                    dest_volume_id,
+                    config.conflict_resolution,
+                    config.progress_interval_ms,
+                    false,
+                    config.compression_level,
+                    config.preview_id.clone(),
+                    super::journal::ArchiveProvenance::edit(initiator),
+                    config.destination_name.clone(),
+                )
+                .await;
         }
+
         let dest_path = resolve_dest_path(&dest_volume, dest_path);
-        return super::archive_edit::route_archive_move_out(
+        self.copy_between_volumes(
             events,
             source_volume_id,
             source_volume,
@@ -336,52 +280,336 @@ async fn route_volume_move(
             dest_volume,
             dest_path,
             config,
+            initiator,
+            expected_sources,
         )
-        .await;
+        .await
     }
 
-    // A move INTO a zip routes to the managed edit driver as one `{ add }`
-    // changeset; the local sources are deleted after the commit (move invariant).
-    if dest_resolved.routed == Some(RoutedKind::Archive) {
-        if expected_sources.is_some() {
-            return Err(route_cannot_hold_a_binding("move into a zip"));
+    /// Starts a move across volume types. Handles same-volume (native rename/move),
+    /// both-local (native move), cross-volume (copy + delete), out of a `.zip` (the
+    /// compound move-out op), and into one (an archive changeset).
+    #[allow(
+        clippy::too_many_arguments,
+        reason = "both volumes travel with their ids, and the source binding is a separate input from the config on purpose (a bound op and a user-started one must share one config); a bag struct would shuffle the same fields"
+    )]
+    async fn route_volume_move(
+        &self,
+        events: Arc<dyn OperationEventSink>,
+        source_volume_id: String,
+        source_paths: Vec<PathBuf>,
+        dest_volume_id: String,
+        dest_path: String,
+        config: VolumeCopyConfig,
+        initiator: Initiator,
+        expected_sources: Option<ExpectedSources>,
+    ) -> Result<WriteOperationStartResult, WriteOperationError> {
+        // An archive SOURCE routes to the compound move-out op (extract via the copy
+        // engine, then a batch `{ delete }` archive rewrite once the extract lands).
+        // A git-portal source has no delete to pair with the copy, so it's refused
+        // below rather than routed anywhere.
+        let Some((source_volume, source_route)) = self
+            .resolve_source_volume(&source_volume_id, source_paths.first())
+            .await
+        else {
+            return Err(source_volume_missing(self.host(), &source_volume_id, &source_paths).await);
+        };
+
+        // A snapshot can be copied out of, never moved out of: `.git/branches/…` has
+        // no file to remove once the copy lands. Refused before the destination is
+        // even resolved, so nothing is written and nothing is half-done.
+        if source_route == Some(RoutedKind::GitPortal) {
+            return Err(source_cannot_give_up_its_files(&source_volume));
         }
-        return route_archive_copy_into_with_provenance(
+
+        let dest_resolved = self
+            .host()
+            .volumes()
+            .resolve(&dest_volume_id, Path::new(&dest_path))
+            .await;
+        let Some(dest_volume) = dest_resolved.volume else {
+            return Err(dest_volume_missing(self.host(), &dest_volume_id, &dest_path).await);
+        };
+
+        if dest_resolved.routed == Some(RoutedKind::GitPortal) {
+            return Err(destination_takes_no_writes(&dest_volume));
+        }
+
+        // Move OUT of a zip. Takes precedence over the dest-archive branch: a
+        // zip→zip move extracts out first (the dest-archive case degrades to a copy
+        // failure inside the extract, never data loss).
+        if source_route == Some(RoutedKind::Archive) {
+            if expected_sources.is_some() {
+                return Err(route_cannot_hold_a_binding("move out of a zip"));
+            }
+            let dest_path = resolve_dest_path(&dest_volume, dest_path);
+            return self
+                .route_archive_move_out(
+                    events,
+                    source_volume_id,
+                    source_volume,
+                    source_paths,
+                    dest_volume_id,
+                    dest_volume,
+                    dest_path,
+                    config,
+                )
+                .await;
+        }
+
+        // A move INTO a zip routes to the managed edit driver as one `{ add }`
+        // changeset; the local sources are deleted after the commit (move invariant).
+        if dest_resolved.routed == Some(RoutedKind::Archive) {
+            if expected_sources.is_some() {
+                return Err(route_cannot_hold_a_binding("move into a zip"));
+            }
+            return self
+                .route_archive_copy_into_with_provenance(
+                    events,
+                    source_volume,
+                    source_paths,
+                    PathBuf::from(&dest_path),
+                    dest_volume_id,
+                    config.conflict_resolution,
+                    config.progress_interval_ms,
+                    true,
+                    config.compression_level,
+                    config.preview_id.clone(),
+                    super::journal::ArchiveProvenance::edit(initiator),
+                    config.destination_name.clone(),
+                )
+                .await;
+        }
+
+        let dest_path = resolve_dest_path(&dest_volume, dest_path);
+        self.move_between_volumes(
+            events,
+            source_volume_id,
+            source_volume,
+            source_paths,
+            dest_volume_id,
+            dest_volume,
+            dest_path,
+            config,
+            TargetNames::default(),
+            initiator,
+            expected_sources,
+        )
+        .await
+    }
+
+    /// [`route_volume_copy`], and the started operation keeps a way to start again
+    /// should it fail: the queue window's Retry on its row (`retry.rs`).
+    #[allow(
+        clippy::too_many_arguments,
+        reason = "the same request `route_volume_copy` takes, passed through whole"
+    )]
+    pub(crate) async fn start_volume_copy(
+        &self,
+        events: Arc<dyn OperationEventSink>,
+        source_volume_id: String,
+        source_paths: Vec<PathBuf>,
+        dest_volume_id: String,
+        dest_path: String,
+        config: VolumeCopyConfig,
+        initiator: Initiator,
+        expected_sources: Option<ExpectedSources>,
+    ) -> Result<WriteOperationStartResult, WriteOperationError> {
+        let recipe = retry::RetryRecipe {
+            start: retry::RetryStart::Copy,
+            events: Arc::clone(&events),
+            source_volume_id: source_volume_id.clone(),
+            source_paths: source_paths.clone(),
+            dest_volume_id: dest_volume_id.clone(),
+            dest_path: dest_path.clone(),
+            config: config.clone(),
+        };
+        let started = self
+            .route_volume_copy(
+                events,
+                source_volume_id,
+                source_paths,
+                dest_volume_id,
+                dest_path,
+                config,
+                initiator,
+                expected_sources,
+            )
+            .await?;
+        retry::attach(self, &started.operation_id, recipe);
+        Ok(started)
+    }
+
+    /// [`route_volume_move`], and the started operation keeps a way to start again
+    /// should it fail, like [`start_volume_copy`].
+    #[allow(
+        clippy::too_many_arguments,
+        reason = "the same request `route_volume_move` takes, passed through whole"
+    )]
+    pub(crate) async fn start_volume_move(
+        &self,
+        events: Arc<dyn OperationEventSink>,
+        source_volume_id: String,
+        source_paths: Vec<PathBuf>,
+        dest_volume_id: String,
+        dest_path: String,
+        config: VolumeCopyConfig,
+        initiator: Initiator,
+        expected_sources: Option<ExpectedSources>,
+    ) -> Result<WriteOperationStartResult, WriteOperationError> {
+        let recipe = retry::RetryRecipe {
+            start: retry::RetryStart::Move,
+            events: Arc::clone(&events),
+            source_volume_id: source_volume_id.clone(),
+            source_paths: source_paths.clone(),
+            dest_volume_id: dest_volume_id.clone(),
+            dest_path: dest_path.clone(),
+            config: config.clone(),
+        };
+        let started = self
+            .route_volume_move(
+                events,
+                source_volume_id,
+                source_paths,
+                dest_volume_id,
+                dest_path,
+                config,
+                initiator,
+                expected_sources,
+            )
+            .await?;
+        retry::attach(self, &started.operation_id, recipe);
+        Ok(started)
+    }
+
+    /// Starts renames that run as a move on one volume: each source moves into
+    /// `dest_path` under its new NAME. The route for an entry whose rename isn't
+    /// one call (`Volume::rename_work`): F2's background move and its Move dialog,
+    /// the MCP rename, and a bulk rename on an object store all start here, so
+    /// each one gets the transfer engine's progress, pause, cancel, conflicts, and
+    /// journaling.
+    ///
+    /// A name that isn't one plain component is refused before anything starts.
+    #[allow(
+        clippy::too_many_arguments,
+        reason = "the move's whole request: its sink, volume, renames, destination folder, config, initiator, and source binding"
+    )]
+    pub(crate) async fn start_rename_by_move(
+        &self,
+        events: Arc<dyn OperationEventSink>,
+        volume_id: String,
+        renames: Vec<(PathBuf, String)>,
+        dest_path: String,
+        config: VolumeCopyConfig,
+        initiator: Initiator,
+        expected_sources: Option<ExpectedSources>,
+    ) -> Result<WriteOperationStartResult, WriteOperationError> {
+        let target_names =
+            TargetNames::new(renames.iter().cloned()).map_err(|NotAName(name)| WriteOperationError::InvalidName {
+                path: name,
+                message: "a new name is one name, not a path".to_string(),
+            })?;
+        let sources: Vec<PathBuf> = renames.into_iter().map(|(source, _)| source).collect();
+        // Plain `get`: a rename that runs as a move acts on the drive itself; it has no
+        // archive or `.git` routing of its own.
+        let Some(volume) = self.host().volumes().get(&volume_id) else {
+            return Err(source_volume_missing(self.host(), &volume_id, &sources).await);
+        };
+        let dest_path = resolve_dest_path(&volume, dest_path);
+        self.move_between_volumes(
+            events,
+            volume_id.clone(),
+            Arc::clone(&volume),
+            sources,
+            volume_id,
+            volume,
+            dest_path,
+            config,
+            target_names,
+            initiator,
+            expected_sources,
+        )
+        .await
+    }
+
+    /// Compresses `source_paths` into a fresh ZIP at `dest_zip_path` on
+    /// `dest_volume_id`. The destination may be local or remote.
+    ///
+    /// ⚠️ **An existing archive at the target is overwritten, deliberately.** The
+    /// validated fresh ZIP replaces it only at publication. Such a replacement is the
+    /// one transfer this engine can't reverse after completion (the prior bytes aren't
+    /// retained). Disclose that before approval, ❌ never refuse it here: if a
+    /// person can do it from the dialog, an operation they approved does the same
+    /// thing.
+    #[allow(
+        clippy::too_many_arguments,
+        reason = "both endpoints with their ids, the config, and the initiator: the request a compress dialog sends"
+    )]
+    pub(crate) async fn start_volume_compress(
+        &self,
+        events: Arc<dyn OperationEventSink>,
+        source_volume_id: String,
+        source_paths: Vec<PathBuf>,
+        dest_volume_id: String,
+        dest_zip_path: String,
+        config: VolumeCopyConfig,
+        initiator: Initiator,
+    ) -> Result<WriteOperationStartResult, WriteOperationError> {
+        // Route a routed source batch to its read-only volume, so compressing reads
+        // through it: from inside a `.zip`, or from a repo's snapshots.
+        let Some((source_volume, _source_route)) = self
+            .resolve_source_volume(&source_volume_id, source_paths.first())
+            .await
+        else {
+            return Err(source_volume_missing(self.host(), &source_volume_id, &source_paths).await);
+        };
+
+        // A new `.zip` resolves to its PARENT drive (nothing routes through an archive
+        // that does not exist). `compress_start` owns staging and publication there.
+        let Some(dest_volume) = self
+            .host()
+            .volumes()
+            .resolve(&dest_volume_id, Path::new(&dest_zip_path))
+            .await
+            .volume
+        else {
+            return Err(dest_volume_missing(self.host(), &dest_volume_id, &dest_zip_path).await);
+        };
+
+        let dest_zip_path = resolve_dest_path(&dest_volume, dest_zip_path);
+
+        self.compress_start(
             events,
             source_volume,
             source_paths,
-            PathBuf::from(&dest_path),
+            dest_zip_path,
             dest_volume_id,
             config.conflict_resolution,
             config.progress_interval_ms,
-            true,
             config.compression_level,
             config.preview_id.clone(),
-            super::journal::ArchiveProvenance::edit(initiator),
-            config.destination_name.clone(),
+            initiator,
         )
-        .await;
+        .await
     }
-
-    let dest_path = resolve_dest_path(&dest_volume, dest_path);
-    move_between_volumes(
-        events,
-        source_volume_id,
-        source_volume,
-        source_paths,
-        dest_volume_id,
-        dest_volume,
-        dest_path,
-        config,
-        TargetNames::default(),
-        initiator,
-        expected_sources,
-    )
-    .await
 }
 
-/// [`route_volume_copy`], and the started operation keeps a way to start again
-/// should it fail: the queue window's Retry on its row (`retry.rs`).
+// The installed engine's, by free function, for callers outside the engine.
+// Before `install` a start refuses with `not_installed`, and no volume
+// resolves.
+// shim: removed in M7a
+
+/// [`Operations::resolve_source_volume`](super::Operations::resolve_source_volume) on the installed engine.
+pub(crate) async fn resolve_source_volume(
+    volume_id: &str,
+    first_path: Option<&PathBuf>,
+) -> Option<(Arc<dyn Volume>, Option<RoutedKind>)> {
+    super::installed_for("resolve_source_volume")?
+        .resolve_source_volume(volume_id, first_path)
+        .await
+}
+
+/// [`Operations::start_volume_copy`](super::Operations::start_volume_copy) on the installed engine.
 #[allow(
     clippy::too_many_arguments,
     reason = "the same request `route_volume_copy` takes, passed through whole"
@@ -396,32 +624,22 @@ pub(crate) async fn start_volume_copy(
     initiator: Initiator,
     expected_sources: Option<ExpectedSources>,
 ) -> Result<WriteOperationStartResult, WriteOperationError> {
-    let recipe = retry::RetryRecipe {
-        start: retry::RetryStart::Copy,
-        events: Arc::clone(&events),
-        source_volume_id: source_volume_id.clone(),
-        source_paths: source_paths.clone(),
-        dest_volume_id: dest_volume_id.clone(),
-        dest_path: dest_path.clone(),
-        config: config.clone(),
-    };
-    let started = route_volume_copy(
-        events,
-        source_volume_id,
-        source_paths,
-        dest_volume_id,
-        dest_path,
-        config,
-        initiator,
-        expected_sources,
-    )
-    .await?;
-    retry::attach(&started.operation_id, recipe);
-    Ok(started)
+    super::installed_for("start_volume_copy")
+        .ok_or_else(super::not_installed)?
+        .start_volume_copy(
+            events,
+            source_volume_id,
+            source_paths,
+            dest_volume_id,
+            dest_path,
+            config,
+            initiator,
+            expected_sources,
+        )
+        .await
 }
 
-/// [`route_volume_move`], and the started operation keeps a way to start again
-/// should it fail, like [`start_volume_copy`].
+/// [`Operations::start_volume_move`](super::Operations::start_volume_move) on the installed engine.
 #[allow(
     clippy::too_many_arguments,
     reason = "the same request `route_volume_move` takes, passed through whole"
@@ -436,38 +654,22 @@ pub(crate) async fn start_volume_move(
     initiator: Initiator,
     expected_sources: Option<ExpectedSources>,
 ) -> Result<WriteOperationStartResult, WriteOperationError> {
-    let recipe = retry::RetryRecipe {
-        start: retry::RetryStart::Move,
-        events: Arc::clone(&events),
-        source_volume_id: source_volume_id.clone(),
-        source_paths: source_paths.clone(),
-        dest_volume_id: dest_volume_id.clone(),
-        dest_path: dest_path.clone(),
-        config: config.clone(),
-    };
-    let started = route_volume_move(
-        events,
-        source_volume_id,
-        source_paths,
-        dest_volume_id,
-        dest_path,
-        config,
-        initiator,
-        expected_sources,
-    )
-    .await?;
-    retry::attach(&started.operation_id, recipe);
-    Ok(started)
+    super::installed_for("start_volume_move")
+        .ok_or_else(super::not_installed)?
+        .start_volume_move(
+            events,
+            source_volume_id,
+            source_paths,
+            dest_volume_id,
+            dest_path,
+            config,
+            initiator,
+            expected_sources,
+        )
+        .await
 }
 
-/// Starts renames that run as a move on one volume: each source moves into
-/// `dest_path` under its new NAME. The route for an entry whose rename isn't
-/// one call (`Volume::rename_work`): F2's background move and its Move dialog,
-/// the MCP rename, and a bulk rename on an object store all start here, so
-/// each one gets the transfer engine's progress, pause, cancel, conflicts, and
-/// journaling.
-///
-/// A name that isn't one plain component is refused before anything starts.
+/// [`Operations::start_rename_by_move`](super::Operations::start_rename_by_move) on the installed engine.
 #[allow(
     clippy::too_many_arguments,
     reason = "the move's whole request: its sink, volume, renames, destination folder, config, initiator, and source binding"
@@ -481,43 +683,21 @@ pub(crate) async fn start_rename_by_move(
     initiator: Initiator,
     expected_sources: Option<ExpectedSources>,
 ) -> Result<WriteOperationStartResult, WriteOperationError> {
-    let target_names =
-        TargetNames::new(renames.iter().cloned()).map_err(|NotAName(name)| WriteOperationError::InvalidName {
-            path: name,
-            message: "a new name is one name, not a path".to_string(),
-        })?;
-    let sources: Vec<PathBuf> = renames.into_iter().map(|(source, _)| source).collect();
-    // Plain `get`: a rename that runs as a move acts on the drive itself; it has no
-    // archive or `.git` routing of its own.
-    let Some(volume) = host::installed().volumes().get(&volume_id) else {
-        return Err(source_volume_missing(&volume_id, &sources).await);
-    };
-    let dest_path = resolve_dest_path(&volume, dest_path);
-    move_between_volumes(
-        events,
-        volume_id.clone(),
-        Arc::clone(&volume),
-        sources,
-        volume_id,
-        volume,
-        dest_path,
-        config,
-        target_names,
-        initiator,
-        expected_sources,
-    )
-    .await
+    super::installed_for("start_rename_by_move")
+        .ok_or_else(super::not_installed)?
+        .start_rename_by_move(
+            events,
+            volume_id,
+            renames,
+            dest_path,
+            config,
+            initiator,
+            expected_sources,
+        )
+        .await
 }
 
-/// Compresses `source_paths` into a fresh ZIP at `dest_zip_path` on
-/// `dest_volume_id`. The destination may be local or remote.
-///
-/// ⚠️ **An existing archive at the target is overwritten, deliberately.** The
-/// validated fresh ZIP replaces it only at publication. Such a replacement is the
-/// one transfer this engine can't reverse after completion (the prior bytes aren't
-/// retained). Disclose that before approval, ❌ never refuse it here: if a
-/// person can do it from the dialog, an operation they approved does the same
-/// thing.
+/// [`Operations::start_volume_compress`](super::Operations::start_volume_compress) on the installed engine.
 pub(crate) async fn start_volume_compress(
     events: Arc<dyn OperationEventSink>,
     source_volume_id: String,
@@ -527,39 +707,18 @@ pub(crate) async fn start_volume_compress(
     config: VolumeCopyConfig,
     initiator: Initiator,
 ) -> Result<WriteOperationStartResult, WriteOperationError> {
-    // Route a routed source batch to its read-only volume, so compressing reads
-    // through it: from inside a `.zip`, or from a repo's snapshots.
-    let Some((source_volume, _source_route)) = resolve_source_volume(&source_volume_id, source_paths.first()).await
-    else {
-        return Err(source_volume_missing(&source_volume_id, &source_paths).await);
-    };
-
-    // A new `.zip` resolves to its PARENT drive (nothing routes through an archive
-    // that does not exist). `compress_start` owns staging and publication there.
-    let Some(dest_volume) = host::installed()
-        .volumes()
-        .resolve(&dest_volume_id, Path::new(&dest_zip_path))
+    super::installed_for("start_volume_compress")
+        .ok_or_else(super::not_installed)?
+        .start_volume_compress(
+            events,
+            source_volume_id,
+            source_paths,
+            dest_volume_id,
+            dest_zip_path,
+            config,
+            initiator,
+        )
         .await
-        .volume
-    else {
-        return Err(dest_volume_missing(&dest_volume_id, &dest_zip_path).await);
-    };
-
-    let dest_zip_path = resolve_dest_path(&dest_volume, dest_zip_path);
-
-    compress_start(
-        events,
-        source_volume,
-        source_paths,
-        dest_zip_path,
-        dest_volume_id,
-        config.conflict_resolution,
-        config.progress_interval_ms,
-        config.compression_level,
-        config.preview_id.clone(),
-        initiator,
-    )
-    .await
 }
 
 mod retry;

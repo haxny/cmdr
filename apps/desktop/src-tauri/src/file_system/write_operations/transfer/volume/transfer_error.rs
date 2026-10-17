@@ -8,7 +8,7 @@
 
 use std::path::{Path, PathBuf};
 
-use super::super::super::host::{self, UnregisteredVolume};
+use super::super::super::host::{EngineHost, UnregisteredVolume};
 use super::super::super::state::WriteOperationState;
 use super::super::super::types::{
     PermissionSide, ReadOnlySide, WriteErrorEvent, WriteOperationError, WriteOperationType,
@@ -249,11 +249,12 @@ pub(super) fn write_error_event_from(
 /// pane is how a person gets here); as a destination, an unmount race, an
 /// `IoError` naming the id. The classification itself: `OperationVolumes::unregistered`.
 pub(in crate::file_system::write_operations) async fn unregistered_volume_error(
+    host: &EngineHost,
     volume_id: &str,
     path: &str,
     role: PathRole,
 ) -> WriteOperationError {
-    match (host::installed().volumes().unregistered(volume_id).await, role) {
+    match (host.volumes().unregistered(volume_id).await, role) {
         (UnregisteredVolume::NotConnected, role) => not_connected(path, role),
         (UnregisteredVolume::Gone, PathRole::Source) => {
             WriteOperationError::SourceNoLongerConnected { path: path.to_string() }
@@ -266,11 +267,16 @@ pub(in crate::file_system::write_operations) async fn unregistered_volume_error(
     }
 }
 
-/// [`unregistered_volume_error`] for a SOURCE, for a caller outside the engine that checks the
-/// volume before it hands anything over (Ask Cmdr's approval bridge, a reviewed rename batch),
-/// so its refusal is worded exactly as a clicked copy's would be.
+/// [`unregistered_volume_error`] for a SOURCE, on the installed engine, for a caller outside
+/// the engine that checks the volume before it hands anything over (Ask Cmdr's approval
+/// bridge), so its refusal is worded exactly as a clicked copy's would be. Before `install`,
+/// the start refusal (`not_installed`).
+// shim: removed in M7a
 pub(crate) async fn unregistered_source_error(volume_id: &str, path: &str) -> WriteOperationError {
-    unregistered_volume_error(volume_id, path, PathRole::Source).await
+    match crate::file_system::write_operations::installed_for("unregistered_source_error") {
+        Some(engine) => unregistered_volume_error(engine.host(), volume_id, path, PathRole::Source).await,
+        None => crate::file_system::write_operations::not_installed(),
+    }
 }
 
 /// A move whose copy LANDED at `landed_at` but whose source `refused` to go. ❗ Not a failed

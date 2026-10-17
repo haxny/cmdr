@@ -170,7 +170,9 @@ pub fn trash_single_journaled(
     initiator: cmdr_operation_log::types::Initiator,
 ) -> Result<Option<PathBuf>, MutationError> {
     // shim: removed in M7a
-    super::super::installed().trash_single_journaled(source, initiator)
+    super::super::installed_for("trash_single_journaled")
+        .ok_or_else(super::super::instant_not_installed)?
+        .trash_single_journaled(source, initiator)
 }
 
 impl super::super::Operations {

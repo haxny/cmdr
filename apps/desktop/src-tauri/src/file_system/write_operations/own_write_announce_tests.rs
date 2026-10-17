@@ -14,11 +14,12 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use super::archive_edit::{ArchiveEditRequest, archive_edit_start};
+use super::manager::OperationSummaryText;
 use super::state::WriteOperationState;
 use super::transfer::move_op::test_support::run_cross_fs_move;
 use super::types::{ConflictResolution, VolumeCopyConfig, WriteOperationConfig};
 use super::{
-    BulkRenameRow, CollectorEventSink, OperationEventSink, OperationSummaryText, SourceFingerprint, copy_files_start,
+    BulkRenameRow, CollectorEventSink, OperationEventSink, SourceFingerprint, copy_files_start,
     copy_volumes_with_progress, create_directory_managed, create_file_managed, delete_files_start, move_files_start,
     move_within_same_volume_with_progress, rename_managed, start_bulk_rename,
 };

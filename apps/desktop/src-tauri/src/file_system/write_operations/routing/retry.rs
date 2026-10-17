@@ -37,6 +37,7 @@ use std::path::PathBuf;
 use std::pin::Pin;
 use std::sync::Arc;
 
+use super::super::Operations;
 use super::super::event_sinks::OperationEventSink;
 use super::super::manager::StartAgain;
 use super::super::types::{VolumeCopyConfig, WriteOperationError, WriteOperationStartResult};
@@ -86,50 +87,53 @@ impl RetryRecipe {
 
     /// Starts the transfer again as a new operation, through the same routing
     /// the original took.
-    async fn start_routed(&self) -> Result<WriteOperationStartResult, WriteOperationError> {
+    async fn start_routed(&self, engine: &Operations) -> Result<WriteOperationStartResult, WriteOperationError> {
         let events = Arc::clone(&self.events);
         let config = self.retry_config();
         match self.start {
             RetryStart::Copy => {
-                super::start_volume_copy(
-                    events,
-                    self.source_volume_id.clone(),
-                    self.source_paths.clone(),
-                    self.dest_volume_id.clone(),
-                    self.dest_path.clone(),
-                    config,
-                    Initiator::User,
-                    None,
-                )
-                .await
+                engine
+                    .start_volume_copy(
+                        events,
+                        self.source_volume_id.clone(),
+                        self.source_paths.clone(),
+                        self.dest_volume_id.clone(),
+                        self.dest_path.clone(),
+                        config,
+                        Initiator::User,
+                        None,
+                    )
+                    .await
             }
             RetryStart::Move => {
-                super::start_volume_move(
-                    events,
-                    self.source_volume_id.clone(),
-                    self.source_paths.clone(),
-                    self.dest_volume_id.clone(),
-                    self.dest_path.clone(),
-                    config,
-                    Initiator::User,
-                    None,
-                )
-                .await
+                engine
+                    .start_volume_move(
+                        events,
+                        self.source_volume_id.clone(),
+                        self.source_paths.clone(),
+                        self.dest_volume_id.clone(),
+                        self.dest_path.clone(),
+                        config,
+                        Initiator::User,
+                        None,
+                    )
+                    .await
             }
         }
     }
 }
 
-/// Hands `recipe` to the manager as `operation_id`'s way to start again.
-pub(super) fn attach(operation_id: &str, recipe: RetryRecipe) {
-    super::super::manager::manager().attach_retry(operation_id, Arc::new(recipe));
+/// Hands `recipe` to `engine`'s manager as `operation_id`'s way to start again.
+pub(super) fn attach(engine: &Operations, operation_id: &str, recipe: RetryRecipe) {
+    engine.manager().attach_retry(operation_id, Arc::new(recipe));
 }
 
 impl StartAgain for RetryRecipe {
-    fn start_again(
-        &self,
-    ) -> Pin<Box<dyn Future<Output = Result<WriteOperationStartResult, WriteOperationError>> + Send + '_>> {
-        Box::pin(self.start_routed())
+    fn start_again<'a>(
+        &'a self,
+        engine: &'a Operations,
+    ) -> Pin<Box<dyn Future<Output = Result<WriteOperationStartResult, WriteOperationError>> + Send + 'a>> {
+        Box::pin(self.start_routed(engine))
     }
 }
 

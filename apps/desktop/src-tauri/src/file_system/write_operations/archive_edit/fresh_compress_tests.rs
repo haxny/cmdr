@@ -5,6 +5,7 @@ use crate::file_system::volume::manager::get_volume_manager;
 use crate::file_system::write_operations::archive_edit::fresh_plan::FreshPlan;
 use crate::file_system::write_operations::archive_edit::fresh_zip::{FreshZipEntry, FreshZipSource};
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
+use crate::file_system::write_operations::manager;
 use crate::file_system::write_operations::types::{ArchiveNameRefusal, WriteOperationPhase};
 use crate::test_support::wait_until_async;
 use cmdr_fs::ignore_poison::IgnorePoison;

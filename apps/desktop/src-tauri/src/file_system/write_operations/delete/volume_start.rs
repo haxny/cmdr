@@ -32,71 +32,71 @@ use cmdr_operation_log::types::{ExecutionStatus, Initiator, OpKind};
 /// id when the volume isn't registered yet (the not-found surfaces on admission).
 /// The manager owns lifecycle, cache cleanup, and the busy registration; the
 /// deferred owns the op body, its terminal event, and settle.
-pub(in crate::file_system::write_operations) fn start_volume_delete(
-    events: Arc<dyn OperationEventSink>,
-    sources: Vec<std::path::PathBuf>,
-    config: WriteOperationConfig,
-    volume_id: String,
-    initiator: Initiator,
-    expected_sources: Option<ExpectedSources>,
-) -> WriteOperationStartResult {
-    let operation_id = cmdr_operation_log::new_operation_id();
-    let state = Arc::new(
-        crate::file_system::write_operations::installed()
-            .new_operation_state(Duration::from_millis(config.progress_interval_ms)),
-    );
+impl super::super::Operations {
+    pub(in crate::file_system::write_operations) fn start_volume_delete(
+        &self,
+        events: Arc<dyn OperationEventSink>,
+        sources: Vec<std::path::PathBuf>,
+        config: WriteOperationConfig,
+        volume_id: String,
+        initiator: Initiator,
+        expected_sources: Option<ExpectedSources>,
+    ) -> WriteOperationStartResult {
+        let operation_id = cmdr_operation_log::new_operation_id();
+        let state = Arc::new(self.new_operation_state(Duration::from_millis(config.progress_interval_ms)));
 
-    // Plain `get`: the drive's lane and how it names the items; `delete_files_start`
-    // sent an in-zip batch to the archive-edit driver before this.
-    let volume = state.scope().host().volumes().get(&volume_id);
-    let lane = volume
-        .as_ref()
-        .map(|volume| volume.lane_key())
-        .unwrap_or_else(|| LaneKey::new(volume_id.clone()));
-    let mut summary = path_summary(&sources, None, config.source_kinds);
-    // The volume names where the items are, the way a person reads it; an
-    // unregistered one (it surfaces as not-found on admission) keeps the raw path.
-    if let Some(volume) = &volume {
-        summary.items = Some(volume_items(&**volume, &sources, config.source_kinds, None));
-    }
+        // Plain `get`: the drive's lane and how it names the items; `delete_files_start`
+        // sent an in-zip batch to the archive-edit driver before this.
+        let volume = state.scope().host().volumes().get(&volume_id);
+        let lane = volume
+            .as_ref()
+            .map(|volume| volume.lane_key())
+            .unwrap_or_else(|| LaneKey::new(volume_id.clone()));
+        let mut summary = path_summary(&sources, None, config.source_kinds);
+        // The volume names where the items are, the way a person reads it; an
+        // unregistered one (it surfaces as not-found on admission) keeps the raw path.
+        if let Some(volume) = &volume {
+            summary.items = Some(volume_items(&**volume, &sources, config.source_kinds, None));
+        }
 
-    let descriptor = OperationDescriptor {
-        operation_id: operation_id.clone(),
-        operation_type: WriteOperationType::Delete,
-        lanes: vec![lane],
-        volume_ids: vec![volume_id.clone()],
-        summary,
-        // Deleted is deleted; there's nothing for a rollback to put back.
-        supports_rollback: false,
-        preview_id: config.preview_id.clone(),
-        reverses: None,
-    };
-
-    let deferred_state = Arc::clone(&state);
-    let deferred_id = operation_id.clone();
-    // A named future rather than a giant inline `async move` block: the body is
-    // the whole lifecycle, and it reads better next to the walker than nested
-    // four levels deep inside a closure inside a starter.
-    let deferred =
-        move |ops: crate::file_system::write_operations::Operations| -> Pin<Box<dyn Future<Output = ()> + Send>> {
-            Box::pin(drive_volume_delete(DeferredDelete {
-                ops,
-                events,
-                operation_id: deferred_id,
-                state: deferred_state,
-                volume_id,
-                sources,
-                config,
-                initiator,
-                expected_sources,
-            }))
+        let descriptor = OperationDescriptor {
+            operation_id: operation_id.clone(),
+            operation_type: WriteOperationType::Delete,
+            lanes: vec![lane],
+            volume_ids: vec![volume_id.clone()],
+            summary,
+            // Deleted is deleted; there's nothing for a rollback to put back.
+            supports_rollback: false,
+            preview_id: config.preview_id.clone(),
+            reverses: None,
         };
 
-    manager::manager().spawn_managed(descriptor, state, Box::new(deferred));
+        let deferred_state = Arc::clone(&state);
+        let deferred_id = operation_id.clone();
+        // A named future rather than a giant inline `async move` block: the body is
+        // the whole lifecycle, and it reads better next to the walker than nested
+        // four levels deep inside a closure inside a starter.
+        let deferred =
+            move |ops: crate::file_system::write_operations::Operations| -> Pin<Box<dyn Future<Output = ()> + Send>> {
+                Box::pin(drive_volume_delete(DeferredDelete {
+                    ops,
+                    events,
+                    operation_id: deferred_id,
+                    state: deferred_state,
+                    volume_id,
+                    sources,
+                    config,
+                    initiator,
+                    expected_sources,
+                }))
+            };
 
-    WriteOperationStartResult {
-        operation_id,
-        operation_type: WriteOperationType::Delete,
+        self.manager().spawn_managed(descriptor, state, Box::new(deferred));
+
+        WriteOperationStartResult {
+            operation_id,
+            operation_type: WriteOperationType::Delete,
+        }
     }
 }
 
@@ -199,7 +199,7 @@ async fn run_volume_delete(
         events.emit_error(WriteErrorEvent::new(
             op_id.to_string(),
             WriteOperationType::Delete,
-            unregistered_volume_error(volume_id, &first_source, PathRole::Source).await,
+            unregistered_volume_error(state.scope().host(), volume_id, &first_source, PathRole::Source).await,
         ));
         return ExecutionStatus::Failed;
     };

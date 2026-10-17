@@ -14,11 +14,23 @@ async fn archive_inner_exists_detects_a_duplicate_in_a_remote_archive() {
     let (parent_id, _parent) = register_remote_zip(&archive_path, &[("existing.txt", b"x")]).await;
 
     assert!(
-        archive_inner_exists(&parent_id, &archive_path, "existing.txt").await,
+        archive_inner_exists(
+            crate::file_system::write_operations::installed().host(),
+            &parent_id,
+            &archive_path,
+            "existing.txt"
+        )
+        .await,
         "a duplicate inside a remote archive must be detected"
     );
     assert!(
-        !archive_inner_exists(&parent_id, &archive_path, "not_there.txt").await,
+        !archive_inner_exists(
+            crate::file_system::write_operations::installed().host(),
+            &parent_id,
+            &archive_path,
+            "not_there.txt"
+        )
+        .await,
         "a non-existent inner path reports absent"
     );
 

@@ -17,13 +17,11 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use super::super::super::host;
 use super::plan::{RenamePlanStep, build_execution_plan, spelled_destinations};
-use super::{BulkRenameRow, RenameStartError, start_bulk_rename};
+use super::{BulkRenameRow, RenameStartError};
 use crate::file_system::write_operations::event_sinks::OperationEventSink;
-use crate::file_system::write_operations::routing::start_rename_by_move;
 use crate::file_system::write_operations::source_binding::ExpectedSources;
-use crate::file_system::write_operations::transfer::volume::unregistered_source_error;
+use crate::file_system::write_operations::transfer::volume::{PathRole, unregistered_volume_error};
 use crate::file_system::write_operations::types::{ConflictResolution, VolumeCopyConfig, WriteOperationStartResult};
 use cmdr_fs::volume::{RenameWork, Volume};
 use cmdr_operation_log::types::Initiator;
@@ -41,39 +39,62 @@ pub(crate) struct RenamesStarted {
     pub swaps_left_out: usize,
 }
 
-/// Starts a reviewed batch of renames on one volume, routed by what a rename
-/// costs there. Where every row renames in one call, the batch executor
-/// ([`start_bulk_rename`]) runs it; where any row's rename copies (an object
-/// store's folder or big file, `Volume::rename_work`), the whole batch runs as
-/// one background move with the new names. The production entry
-/// for Ask Cmdr's approved renames and the bulk-rename command.
+impl crate::file_system::write_operations::Operations {
+    /// Starts a reviewed batch of renames on one volume, routed by what a rename
+    /// costs there. Where every row renames in one call, the batch executor
+    /// ([`Self::start_bulk_rename`]) runs it; where any row's rename copies (an object
+    /// store's folder or big file, `Volume::rename_work`), the whole batch runs as
+    /// one background move with the new names. The production entry
+    /// for Ask Cmdr's approved renames and the bulk-rename command.
+    pub(crate) async fn start_renames(
+        &self,
+        events: Arc<dyn OperationEventSink>,
+        volume_id: String,
+        rows: Vec<BulkRenameRow>,
+        initiator: Initiator,
+    ) -> Result<RenamesStarted, RenameStartError> {
+        if volume_id != "root" {
+            // Plain `get`: a bulk rename acts on the drive itself; it has no archive or `.git` routing.
+            let Some(volume) = self.host().volumes().get(&volume_id) else {
+                // Asked before anything runs, so a phone or server nobody connected is worded the way
+                // a clicked copy off it would be, ❌ never as a volume that vanished.
+                let first = rows
+                    .first()
+                    .map(|row| row.source.display().to_string())
+                    .unwrap_or_default();
+                return Err(RenameStartError::Engine {
+                    error: unregistered_volume_error(self.host(), &volume_id, &first, PathRole::Source).await,
+                });
+            };
+            if any_rename_copies(volume.as_ref(), &rows).await {
+                return self
+                    .start_batch_as_move(events, volume_id, volume.as_ref(), rows, initiator)
+                    .await;
+            }
+        }
+        self.start_bulk_rename(events, volume_id, rows, initiator)
+            .map(|operation| RenamesStarted {
+                operation,
+                swaps_left_out: 0,
+            })
+    }
+}
+
+/// [`Operations::start_renames`](crate::file_system::write_operations::Operations::start_renames) on the
+/// installed engine.
+// shim: removed in M7a
 pub(crate) async fn start_renames(
     events: Arc<dyn OperationEventSink>,
     volume_id: String,
     rows: Vec<BulkRenameRow>,
     initiator: Initiator,
 ) -> Result<RenamesStarted, RenameStartError> {
-    if volume_id != "root" {
-        // Plain `get`: a bulk rename acts on the drive itself; it has no archive or `.git` routing.
-        let Some(volume) = host::installed().volumes().get(&volume_id) else {
-            // Asked before anything runs, so a phone or server nobody connected is worded the way
-            // a clicked copy off it would be, ❌ never as a volume that vanished.
-            let first = rows
-                .first()
-                .map(|row| row.source.display().to_string())
-                .unwrap_or_default();
-            return Err(RenameStartError::Engine {
-                error: unregistered_source_error(&volume_id, &first).await,
-            });
-        };
-        if any_rename_copies(volume.as_ref(), &rows).await {
-            return start_batch_as_move(events, volume_id, volume.as_ref(), rows, initiator).await;
-        }
-    }
-    start_bulk_rename(events, volume_id, rows, initiator).map(|operation| RenamesStarted {
-        operation,
-        swaps_left_out: 0,
-    })
+    let Some(engine) = crate::file_system::write_operations::installed_for("start_renames") else {
+        return Err(RenameStartError::Engine {
+            error: crate::file_system::write_operations::not_installed(),
+        });
+    };
+    engine.start_renames(events, volume_id, rows, initiator).await
 }
 
 /// Whether any row's rename copies on `volume`. A volume that renames
@@ -92,55 +113,58 @@ async fn any_rename_copies(volume: &dyn Volume, rows: &[BulkRenameRow]) -> bool 
     false
 }
 
-/// The batch as one move with new names, in the executor's dependency order,
-/// conflicts skipped, its sources bound to what preflight saw.
-async fn start_batch_as_move(
-    events: Arc<dyn OperationEventSink>,
-    volume_id: String,
-    volume: &dyn Volume,
-    rows: Vec<BulkRenameRow>,
-    initiator: Initiator,
-) -> Result<RenamesStarted, RenameStartError> {
-    if rows.iter().any(|row| row.source.parent() != row.destination.parent()) {
-        return Err(RenameStartError::NotInOneFolder);
-    }
-    let rows = spelled_destinations(volume, rows);
-    let Some(parent) = rows.first().and_then(|row| row.source.parent()).map(Path::to_path_buf) else {
-        return Err(RenameStartError::NothingToRename);
-    };
-    let (renames, left_out) = move_order(&rows);
-    let swaps_left_out = left_out.len();
-    for index in left_out {
-        log::warn!(
-            target: "volume",
-            "bulk rename on '{volume_id}': {} is part of a swap, which a move can't do without merging; it keeps its name",
-            rows[index].source.display()
+impl crate::file_system::write_operations::Operations {
+    /// The batch as one move with new names, in the executor's dependency order,
+    /// conflicts skipped, its sources bound to what preflight saw.
+    async fn start_batch_as_move(
+        &self,
+        events: Arc<dyn OperationEventSink>,
+        volume_id: String,
+        volume: &dyn Volume,
+        rows: Vec<BulkRenameRow>,
+        initiator: Initiator,
+    ) -> Result<RenamesStarted, RenameStartError> {
+        if rows.iter().any(|row| row.source.parent() != row.destination.parent()) {
+            return Err(RenameStartError::NotInOneFolder);
+        }
+        let rows = spelled_destinations(volume, rows);
+        let Some(parent) = rows.first().and_then(|row| row.source.parent()).map(Path::to_path_buf) else {
+            return Err(RenameStartError::NothingToRename);
+        };
+        let (renames, left_out) = move_order(&rows);
+        let swaps_left_out = left_out.len();
+        for index in left_out {
+            log::warn!(
+                target: "volume",
+                "bulk rename on '{volume_id}': {} is part of a swap, which a move can't do without merging; it keeps its name",
+                rows[index].source.display()
+            );
+        }
+        let expected = ExpectedSources::new(
+            rows.iter()
+                .map(|row| (row.source.clone(), row.expected_fingerprint.clone())),
         );
+        let config = VolumeCopyConfig {
+            // A name something outside the batch holds keeps its owner.
+            conflict_resolution: ConflictResolution::Skip,
+            ..VolumeCopyConfig::default()
+        };
+        self.start_rename_by_move(
+            events,
+            volume_id,
+            renames,
+            parent.display().to_string(),
+            config,
+            initiator,
+            Some(expected),
+        )
+        .await
+        .map(|operation| RenamesStarted {
+            operation,
+            swaps_left_out,
+        })
+        .map_err(|error| RenameStartError::Engine { error })
     }
-    let expected = ExpectedSources::new(
-        rows.iter()
-            .map(|row| (row.source.clone(), row.expected_fingerprint.clone())),
-    );
-    let config = VolumeCopyConfig {
-        // A name something outside the batch holds keeps its owner.
-        conflict_resolution: ConflictResolution::Skip,
-        ..VolumeCopyConfig::default()
-    };
-    start_rename_by_move(
-        events,
-        volume_id,
-        renames,
-        parent.display().to_string(),
-        config,
-        initiator,
-        Some(expected),
-    )
-    .await
-    .map(|operation| RenamesStarted {
-        operation,
-        swaps_left_out,
-    })
-    .map_err(|error| RenameStartError::Engine { error })
 }
 
 /// What a batch moves, in order, as `(source, new name)`, and which rows a

@@ -318,7 +318,6 @@ enum Ending {
 /// finish would spend it and clear the volume early.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn every_transfer_start_has_exactly_one_finish_however_the_op_ends() {
-    use crate::file_system::write_operations::start_write_operation;
     use crate::file_system::write_operations::types::WriteOperationError;
     use crate::file_system::write_operations::{CollectorEventSink, OperationEventSink};
     use crate::priority::transfers::{note_transfer_finished, note_transfer_started, transfer_active};
@@ -332,34 +331,35 @@ async fn every_transfer_start_has_exactly_one_finish_however_the_op_ends() {
         let events = Arc::new(CollectorEventSink::new());
         let active_inside = Arc::new(AtomicBool::new(false));
         let (seen, probe) = (Arc::clone(&active_inside), volume.clone());
-        start_write_operation(
-            Arc::clone(&events) as Arc<dyn OperationEventSink>,
-            WriteOperationType::Copy,
-            cmdr_operation_log::types::Initiator::User,
-            200,
-            vec![volume.clone()],
-            vec![LaneKey::new(unique_id("gauge-lane"))],
-            OperationSummaryText::default(),
-            None,
-            1,
-            None,
-            move |_events, _op_id, _state| {
-                seen.store(transfer_active(&probe), Ordering::SeqCst);
-                match ending {
-                    Ending::Completes => Ok(()),
-                    Ending::Cancels => Err(WriteOperationError::Cancelled {
-                        message: "stopped".to_string(),
-                    }),
-                    Ending::Fails => Err(WriteOperationError::IoError {
-                        path: "/x".to_string(),
-                        message: "gone".to_string(),
-                    }),
-                    Ending::HandlerPanics => panic!("simulated handler panic"),
-                }
-            },
-        )
-        .await
-        .expect("start");
+        crate::file_system::write_operations::installed()
+            .start_write_operation(
+                Arc::clone(&events) as Arc<dyn OperationEventSink>,
+                WriteOperationType::Copy,
+                cmdr_operation_log::types::Initiator::User,
+                200,
+                vec![volume.clone()],
+                vec![LaneKey::new(unique_id("gauge-lane"))],
+                OperationSummaryText::default(),
+                None,
+                1,
+                None,
+                move |_events, _op_id, _state| {
+                    seen.store(transfer_active(&probe), Ordering::SeqCst);
+                    match ending {
+                        Ending::Completes => Ok(()),
+                        Ending::Cancels => Err(WriteOperationError::Cancelled {
+                            message: "stopped".to_string(),
+                        }),
+                        Ending::Fails => Err(WriteOperationError::IoError {
+                            path: "/x".to_string(),
+                            message: "gone".to_string(),
+                        }),
+                        Ending::HandlerPanics => panic!("simulated handler panic"),
+                    }
+                },
+            )
+            .await
+            .expect("start");
         crate::test_support::wait_until_async(Duration::from_secs(5), "the op to settle", || {
             !events.settled.lock_ignore_poison().is_empty()
         })

@@ -1,5 +1,6 @@
 use super::*;
 use crate::file_system::write_operations::scope::OpScope;
+use cmdr_operation_log::types::ItemOutcome;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicU8;

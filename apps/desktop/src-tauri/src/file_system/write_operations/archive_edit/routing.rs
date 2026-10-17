@@ -1,27 +1,16 @@
 //! Shared detection and path primitives every archive-edit route builds on: the
 //! archive-boundary inner-path helpers, the zip-only write guard (the single
-//! write-side chokepoint that refuses tar/7z), the duplicate-existence oracle the
-//! create/rename pre-check consults, and the instant-op event-sink builder. The
-//! per-flow routes (`copy_into`, `move_out`, `driver`) layer their planning and
-//! drivers on top of these.
+//! write-side chokepoint that refuses tar/7z), and the duplicate-existence
+//! oracle the create/rename pre-check consults. The per-flow routes (`copy_into`,
+//! `move_out`, `driver`) layer their planning and drivers on top of these.
 
 use std::path::Path;
 use std::sync::Arc;
 
-use super::super::OperationEventSink;
-use super::super::host;
+use super::super::host::EngineHost;
 use super::super::types::{ReadOnlySide, WriteOperationError};
 use cmdr_archive::{ArchiveFormat, ArchiveIndex, LocalFileSource};
 use cmdr_fs::volume::RoutedKind;
-
-/// A sink from the host's factory, for routing an archive-target instant op
-/// (mkdir / mkfile / rename) to the managed edit driver, and for an edge that is
-/// generic over the Tauri runtime (the MCP tools) and so can't build the app's
-/// concrete sink itself. `None` before the host is installed (unit tests), so
-/// callers fall back to a plain refusal rather than silently dropping the op.
-pub(crate) fn host_operation_sink() -> Option<Arc<dyn OperationEventSink>> {
-    host::installed().operation_sink()
-}
 
 /// Joins an archive-inner parent path and a new child name into a single
 /// `/`-separated inner path (root-relative, no surrounding slashes).
@@ -84,9 +73,14 @@ pub(crate) fn ensure_zip_writable(archive_path: &Path, side: ReadOnlySide) -> Re
 /// An unresolvable or unreadable archive resolves to `false`: it isn't a known
 /// duplicate, so routing proceeds and the managed op surfaces the real fault
 /// through its normal error path rather than being masked here.
-pub(crate) async fn archive_inner_exists(parent_volume_id: &str, archive_path: &Path, inner_path: &str) -> bool {
+pub(crate) async fn archive_inner_exists(
+    host: &EngineHost,
+    parent_volume_id: &str,
+    archive_path: &Path,
+    inner_path: &str,
+) -> bool {
     // Plain `get`: only whether the parent drive is remote; the inner read below resolves.
-    let parent = host::installed().volumes().get(parent_volume_id);
+    let parent = host.volumes().get(parent_volume_id);
     let is_remote = parent.as_ref().is_some_and(|p| !p.supports_local_fs_access());
 
     if is_remote {
@@ -95,7 +89,7 @@ pub(crate) async fn archive_inner_exists(parent_volume_id: &str, archive_path: &
         } else {
             archive_path.join(inner_path)
         };
-        let resolved = host::installed().volumes().resolve(parent_volume_id, &full_path).await;
+        let resolved = host.volumes().resolve(parent_volume_id, &full_path).await;
         return match resolved.volume {
             Some(volume) if resolved.routed == Some(RoutedKind::Archive) => volume.exists(&full_path).await,
             _ => false,

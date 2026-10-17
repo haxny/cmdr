@@ -70,6 +70,13 @@ fn owned_manager() -> OwnedEngine {
 /// its engine, so the engine has to outlive the test's operations.
 struct OwnedEngine(super::super::Operations);
 
+impl OwnedEngine {
+    /// The engine itself, for a manager call that takes its engine.
+    fn engine(&self) -> &super::super::Operations {
+        &self.0
+    }
+}
+
 impl std::ops::Deref for OwnedEngine {
     type Target = Arc<OperationManager>;
 

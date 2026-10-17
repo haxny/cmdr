@@ -11,8 +11,8 @@ use std::time::Duration;
 use cmdr_archive::mutator::{MutationHooks, MutationProgress};
 
 use super::super::OperationEventSink;
-use super::super::host;
-use super::super::manager::{self, ManagedTaskGuard, OperationDescriptor, OperationSummaryText};
+use super::super::Operations;
+use super::super::manager::{ManagedTaskGuard, OperationDescriptor, OperationSummaryText};
 use super::super::scratch_dir::ScratchDir;
 use super::super::state::{WriteOperationState, WriteSettledGuard};
 use super::super::summary::volume_items;
@@ -76,6 +76,7 @@ impl VolumeReadStream for PausableSpoolStream {
     reason = "the managed-operation seam carries both endpoints, lifecycle settings, and journal provenance"
 )]
 pub(super) async fn start(
+    engine: &Operations,
     events: Arc<dyn OperationEventSink>,
     source_volume: Arc<dyn Volume>,
     source_paths: Vec<PathBuf>,
@@ -89,7 +90,7 @@ pub(super) async fn start(
     initiator: Initiator,
 ) -> Result<WriteOperationStartResult, WriteOperationError> {
     // Plain `get`: a new `.zip` lands as a plain file on its parent drive.
-    let (dest_volume, dest_lane) = match host::installed().volumes().get(&parent_volume_id) {
+    let (dest_volume, dest_lane) = match engine.host().volumes().get(&parent_volume_id) {
         Some(volume) => {
             let lane = volume.lane_key();
             (volume, lane)
@@ -98,7 +99,7 @@ pub(super) async fn start(
             Arc::new(LocalPosixVolume::local_folder(
                 "local",
                 PathBuf::from("/"),
-                host::installed().volume_host().clone(),
+                engine.host().volume_host().clone(),
             )) as Arc<dyn Volume>,
             LaneKey::new(parent_volume_id.clone()),
         ),
@@ -113,7 +114,8 @@ pub(super) async fn start(
     validate_aliases(&source_volume, &source_paths, &dest_volume, &archive_path).await?;
 
     let operation_id = cmdr_operation_log::new_operation_id();
-    let registered_source = host::installed()
+    let registered_source = engine
+        .host()
         .volumes()
         .find_by_root(source_volume.root())
         .filter(|(_, registered)| {
@@ -123,7 +125,7 @@ pub(super) async fn start(
         .as_ref()
         .map_or_else(|| source_volume.lane_key().to_string(), |(id, _)| id.clone());
     let state = Arc::new(
-        crate::file_system::write_operations::installed()
+        engine
             .new_operation_state(Duration::from_millis(progress_interval_ms))
             .with_journal_volumes(source_volume_id.clone(), parent_volume_id.clone()),
     );
@@ -163,7 +165,7 @@ pub(super) async fn start(
     let op_id_for_task = operation_id.clone();
     let state_for_task = Arc::clone(&state);
     let events_for_task = Arc::clone(&events);
-    let deferred = move |ops: crate::file_system::write_operations::Operations| {
+    let deferred = move |ops: Operations| {
         Box::pin(async move {
             let op_id = op_id_for_task;
             let state = state_for_task;
@@ -274,7 +276,7 @@ pub(super) async fn start(
             ops.manager().on_settled(&op_id);
         }) as Pin<Box<dyn Future<Output = ()> + Send>>
     };
-    manager::manager().spawn_managed(descriptor, state, Box::new(deferred));
+    engine.manager().spawn_managed(descriptor, state, Box::new(deferred));
     Ok(WriteOperationStartResult {
         operation_id,
         operation_type: WriteOperationType::Compress,

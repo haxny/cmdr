@@ -51,8 +51,10 @@ mod transfer_error;
 
 // The public surface. Everything else in here is an implementation detail of
 // `volume/`; add a re-export rather than widening a submodule's visibility.
-pub use copy::copy_between_volumes;
-pub use r#move::move_between_volumes;
+// The cross-volume starters are `Operations` methods; this one is the installed
+// engine's, for the suites that drive it directly.
+#[cfg(test)]
+pub(crate) use copy::copy_between_volumes;
 
 pub(crate) use copy::copy_volumes_with_progress;
 pub(in crate::file_system::write_operations) use displaced_destination::displace_destination;

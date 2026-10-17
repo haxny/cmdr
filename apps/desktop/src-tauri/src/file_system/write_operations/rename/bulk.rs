@@ -17,7 +17,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use super::super::event_sinks::OperationEventSink;
-use super::super::host;
+use super::super::host::EngineHost;
 use super::super::manager::{self, OperationDescriptor, OperationSummaryText};
 use super::super::source_binding::SourceFingerprint;
 use super::super::state::{WriteOperationState, WriteSettledGuard, is_cancelled};
@@ -27,10 +27,12 @@ use super::super::types::{
 };
 use cmdr_fs::volume::{LaneKey, Volume};
 use cmdr_local::rename_local_exclusive;
-use cmdr_operation_log::types::{EntryType, ExecutionStatus, Initiator, ItemOutcome, OpKind};
+use cmdr_operation_log::types::{ExecutionStatus, Initiator, OpKind};
 
 mod by_move;
 mod plan;
+mod recorder;
+use recorder::BulkRenameRecorder;
 
 pub(crate) use by_move::{RenamesStarted, start_renames};
 
@@ -90,165 +92,193 @@ impl BulkRenameOutcome {
     }
 }
 
-/// Starts one queued, same-volume batch rename. The caller has already resolved
-/// the proposal id and exact accepted-preflight subset; this layer receives only
-/// immutable backend rows, never frontend paths or names.
+impl crate::file_system::write_operations::Operations {
+    /// Starts one queued, same-volume batch rename. The caller has already resolved
+    /// the proposal id and exact accepted-preflight subset; this layer receives only
+    /// immutable backend rows, never frontend paths or names.
+    pub(crate) fn start_bulk_rename(
+        &self,
+        events: Arc<dyn OperationEventSink>,
+        volume_id: String,
+        rows: Vec<BulkRenameRow>,
+        initiator: Initiator,
+    ) -> Result<WriteOperationStartResult, RenameStartError> {
+        if rows.is_empty() {
+            return Err(RenameStartError::NothingToRename);
+        }
+        if rows.iter().any(|row| row.source.parent() != row.destination.parent()) {
+            return Err(RenameStartError::NotInOneFolder);
+        }
+
+        // `root` is the only backend that owns raw local paths here. Every mounted
+        // volume, including a locally mounted removable drive, stays on its Volume
+        // route so its listing and connection semantics remain authoritative.
+        let uses_local_paths = volume_id == "root";
+        let (lanes, volume_ids, settled_volume, rows) = if uses_local_paths {
+            (vec![LaneKey::new("root")], Vec::new(), None, rows)
+        } else {
+            // `start_renames` classified an unregistered id before this; one missing NOW left the
+            // registry in between (an unmount race). Plain `get`: a bulk rename acts on the drive
+            // itself; it has no archive or `.git` routing.
+            let volume = self
+                .host()
+                .volumes()
+                .get(&volume_id)
+                .ok_or_else(|| RenameStartError::Engine {
+                    error: WriteOperationError::SourceNoLongerConnected {
+                        path: rows[0].source.display().to_string(),
+                    },
+                })?;
+            let rows = spelled_destinations(volume.as_ref(), rows);
+            (
+                vec![volume.lane_key()],
+                vec![volume_id.clone()],
+                Some(volume.name().to_string()),
+                rows,
+            )
+        };
+
+        let operation_id = cmdr_operation_log::new_operation_id();
+        let summary = OperationSummaryText {
+            source: Some(format!("{} files", rows.len())),
+            destination: None,
+            items: None,
+        };
+        let descriptor = OperationDescriptor {
+            operation_id: operation_id.clone(),
+            operation_type: WriteOperationType::Rename,
+            lanes,
+            volume_ids,
+            summary,
+            // A rename moves no bytes: cancelling stops before the next name, and
+            // the ones already renamed stay renamed.
+            supports_rollback: false,
+            // No scan preview: nothing walked a tree to plan this op.
+            preview_id: None,
+            reverses: None,
+        };
+        let state = Arc::new(self.new_operation_state(Duration::from_millis(200)));
+        let events_for_task = Arc::clone(&events);
+        let operation_id_for_task = operation_id.clone();
+        let rows_for_task = rows.clone();
+        let volume_id_for_task = volume_id.clone();
+        let state_for_task = Arc::clone(&state);
+        let deferred =
+            move |ops: crate::file_system::write_operations::Operations| -> Pin<Box<dyn Future<Output = ()> + Send>> {
+                Box::pin(async move {
+                    let task_guard = manager::ManagedTaskGuard::new(ops.manager(), operation_id_for_task.clone());
+                    let _settled_guard = WriteSettledGuard::new(
+                        Arc::clone(&events_for_task),
+                        operation_id_for_task.clone(),
+                        WriteOperationType::Rename,
+                        settled_volume,
+                    );
+                    super::super::journal::open_volume_op(
+                        state_for_task.scope(),
+                        &operation_id_for_task,
+                        OpKind::Rename,
+                        initiator,
+                        &volume_id_for_task,
+                        Some(&volume_id_for_task),
+                        rows_for_task.len() as u64,
+                    );
+
+                    let recorder = BulkRenameRecorder::new(state_for_task.shared_scope(), volume_id_for_task.clone());
+                    let run = if uses_local_paths {
+                        let rows = rows_for_task.clone();
+                        let intent = Arc::clone(&state_for_task.intent);
+                        match tokio::task::spawn_blocking(move || bulk_rename_local(&rows, &intent, &recorder)).await {
+                            Ok(result) => result,
+                            Err(join_error) => BulkRenameRun::failed(rows_for_task.len(), join_error.to_string()),
+                        }
+                    } else {
+                        bulk_rename_remote(
+                            ops.host(),
+                            &rows_for_task,
+                            &volume_id_for_task,
+                            &state_for_task.intent,
+                            &recorder,
+                        )
+                        .await
+                    };
+
+                    if uses_local_paths {
+                        for (row, outcome) in rows_for_task.iter().zip(run.outcomes.iter()) {
+                            if *outcome == BulkRenameOutcome::Done && row.source != row.destination {
+                                super::notify_rename_in_listing(
+                                    ops.host(),
+                                    &volume_id_for_task,
+                                    &row.source,
+                                    &row.destination,
+                                )
+                                .await;
+                            }
+                        }
+                    }
+
+                    emit_bulk_rename_progress(
+                        events_for_task.as_ref(),
+                        &state_for_task,
+                        &operation_id_for_task,
+                        &rows_for_task,
+                        &run.outcomes,
+                    );
+                    if run.cancelled {
+                        events_for_task.emit_cancelled(WriteCancelledEvent {
+                            operation_id: operation_id_for_task.clone(),
+                            operation_type: WriteOperationType::Rename,
+                            files_processed: run.processed(),
+                            rollback: CancelRollback::none(),
+                        });
+                        super::super::journal::finalize_op(
+                            state_for_task.scope(),
+                            OpKind::Rename,
+                            ExecutionStatus::Canceled,
+                        );
+                    } else {
+                        events_for_task.emit_complete(WriteCompleteEvent {
+                            operation_id: operation_id_for_task.clone(),
+                            operation_type: WriteOperationType::Rename,
+                            files_processed: rows_for_task.len(),
+                            files_skipped: run.skipped(),
+                            bytes_processed: 0,
+                            appeared_during_move: None,
+                            top_level_skipped: None,
+                            refused: None,
+                            metadata_left_behind: None,
+                            durability_unconfirmed: None,
+                        });
+                        super::super::journal::finalize_op(
+                            state_for_task.scope(),
+                            OpKind::Rename,
+                            ExecutionStatus::Done,
+                        );
+                    }
+
+                    task_guard.disarm();
+                    ops.manager().on_settled(&operation_id_for_task);
+                })
+            };
+
+        self.manager().spawn_managed(descriptor, state, Box::new(deferred));
+        Ok(WriteOperationStartResult {
+            operation_id,
+            operation_type: WriteOperationType::Rename,
+        })
+    }
+}
+
+/// [`Operations::start_bulk_rename`](crate::file_system::write_operations::Operations::start_bulk_rename) on
+/// the installed engine, for the suites that drive the executor without the routing in front.
+// shim: removed in M7a
+#[cfg(test)]
 pub(crate) fn start_bulk_rename(
     events: Arc<dyn OperationEventSink>,
     volume_id: String,
     rows: Vec<BulkRenameRow>,
     initiator: Initiator,
 ) -> Result<WriteOperationStartResult, RenameStartError> {
-    if rows.is_empty() {
-        return Err(RenameStartError::NothingToRename);
-    }
-    if rows.iter().any(|row| row.source.parent() != row.destination.parent()) {
-        return Err(RenameStartError::NotInOneFolder);
-    }
-
-    // `root` is the only backend that owns raw local paths here. Every mounted
-    // volume, including a locally mounted removable drive, stays on its Volume
-    // route so its listing and connection semantics remain authoritative.
-    let uses_local_paths = volume_id == "root";
-    let (lanes, volume_ids, settled_volume, rows) = if uses_local_paths {
-        (vec![LaneKey::new("root")], Vec::new(), None, rows)
-    } else {
-        // `start_renames` classified an unregistered id before this; one missing NOW left the
-        // registry in between (an unmount race). Plain `get`: a bulk rename acts on the drive
-        // itself; it has no archive or `.git` routing.
-        let volume = host::installed()
-            .volumes()
-            .get(&volume_id)
-            .ok_or_else(|| RenameStartError::Engine {
-                error: WriteOperationError::SourceNoLongerConnected {
-                    path: rows[0].source.display().to_string(),
-                },
-            })?;
-        let rows = spelled_destinations(volume.as_ref(), rows);
-        (
-            vec![volume.lane_key()],
-            vec![volume_id.clone()],
-            Some(volume.name().to_string()),
-            rows,
-        )
-    };
-
-    let operation_id = cmdr_operation_log::new_operation_id();
-    let summary = OperationSummaryText {
-        source: Some(format!("{} files", rows.len())),
-        destination: None,
-        items: None,
-    };
-    let descriptor = OperationDescriptor {
-        operation_id: operation_id.clone(),
-        operation_type: WriteOperationType::Rename,
-        lanes,
-        volume_ids,
-        summary,
-        // A rename moves no bytes: cancelling stops before the next name, and
-        // the ones already renamed stay renamed.
-        supports_rollback: false,
-        // No scan preview: nothing walked a tree to plan this op.
-        preview_id: None,
-        reverses: None,
-    };
-    let state = Arc::new(super::super::installed().new_operation_state(Duration::from_millis(200)));
-    let events_for_task = Arc::clone(&events);
-    let operation_id_for_task = operation_id.clone();
-    let rows_for_task = rows.clone();
-    let volume_id_for_task = volume_id.clone();
-    let state_for_task = Arc::clone(&state);
-    let deferred =
-        move |ops: crate::file_system::write_operations::Operations| -> Pin<Box<dyn Future<Output = ()> + Send>> {
-            Box::pin(async move {
-                let task_guard = manager::ManagedTaskGuard::new(ops.manager(), operation_id_for_task.clone());
-                let _settled_guard = WriteSettledGuard::new(
-                    Arc::clone(&events_for_task),
-                    operation_id_for_task.clone(),
-                    WriteOperationType::Rename,
-                    settled_volume,
-                );
-                super::super::journal::open_volume_op(
-                    state_for_task.scope(),
-                    &operation_id_for_task,
-                    OpKind::Rename,
-                    initiator,
-                    &volume_id_for_task,
-                    Some(&volume_id_for_task),
-                    rows_for_task.len() as u64,
-                );
-
-                let recorder = BulkRenameRecorder::new(state_for_task.shared_scope(), volume_id_for_task.clone());
-                let run = if uses_local_paths {
-                    let rows = rows_for_task.clone();
-                    let intent = Arc::clone(&state_for_task.intent);
-                    match tokio::task::spawn_blocking(move || bulk_rename_local(&rows, &intent, &recorder)).await {
-                        Ok(result) => result,
-                        Err(join_error) => BulkRenameRun::failed(rows_for_task.len(), join_error.to_string()),
-                    }
-                } else {
-                    bulk_rename_remote(&rows_for_task, &volume_id_for_task, &state_for_task.intent, &recorder).await
-                };
-
-                if uses_local_paths {
-                    for (row, outcome) in rows_for_task.iter().zip(run.outcomes.iter()) {
-                        if *outcome == BulkRenameOutcome::Done && row.source != row.destination {
-                            super::notify_rename_in_listing(
-                                ops.host(),
-                                &volume_id_for_task,
-                                &row.source,
-                                &row.destination,
-                            )
-                            .await;
-                        }
-                    }
-                }
-
-                emit_bulk_rename_progress(
-                    events_for_task.as_ref(),
-                    &state_for_task,
-                    &operation_id_for_task,
-                    &rows_for_task,
-                    &run.outcomes,
-                );
-                if run.cancelled {
-                    events_for_task.emit_cancelled(WriteCancelledEvent {
-                        operation_id: operation_id_for_task.clone(),
-                        operation_type: WriteOperationType::Rename,
-                        files_processed: run.processed(),
-                        rollback: CancelRollback::none(),
-                    });
-                    super::super::journal::finalize_op(
-                        state_for_task.scope(),
-                        OpKind::Rename,
-                        ExecutionStatus::Canceled,
-                    );
-                } else {
-                    events_for_task.emit_complete(WriteCompleteEvent {
-                        operation_id: operation_id_for_task.clone(),
-                        operation_type: WriteOperationType::Rename,
-                        files_processed: rows_for_task.len(),
-                        files_skipped: run.skipped(),
-                        bytes_processed: 0,
-                        appeared_during_move: None,
-                        top_level_skipped: None,
-                        refused: None,
-                        metadata_left_behind: None,
-                        durability_unconfirmed: None,
-                    });
-                    super::super::journal::finalize_op(state_for_task.scope(), OpKind::Rename, ExecutionStatus::Done);
-                }
-
-                task_guard.disarm();
-                ops.manager().on_settled(&operation_id_for_task);
-            })
-        };
-
-    manager::manager().spawn_managed(descriptor, state, Box::new(deferred));
-    Ok(WriteOperationStartResult {
-        operation_id,
-        operation_type: WriteOperationType::Rename,
-    })
+    crate::file_system::write_operations::installed().start_bulk_rename(events, volume_id, rows, initiator)
 }
 
 #[derive(Debug)]
@@ -318,13 +348,14 @@ fn bulk_rename_local(rows: &[BulkRenameRow], intent: &AtomicU8, recorder: &BulkR
 }
 
 async fn bulk_rename_remote(
+    host: &EngineHost,
     rows: &[BulkRenameRow],
     volume_id: &str,
     intent: &AtomicU8,
     recorder: &BulkRenameRecorder,
 ) -> BulkRenameRun {
     // Plain `get`: a bulk rename acts on the drive itself; it has no archive or `.git` routing.
-    let Some(volume) = host::installed().volumes().get(volume_id) else {
+    let Some(volume) = host.volumes().get(volume_id) else {
         return BulkRenameRun::failed(rows.len(), "volume unavailable".to_string());
     };
     let mut outcomes = vec![BulkRenameOutcome::Skipped; rows.len()];
@@ -651,87 +682,6 @@ async fn unique_remote_temporary_path(volume: &dyn Volume, source: &Path, row_id
 /// different path than the one it was accepted for can never match.
 async fn remote_fingerprint_matches(volume: &dyn Volume, path: &Path, expected: &SourceFingerprint) -> bool {
     SourceFingerprint::capture_remote(volume, path).await.as_ref() == Some(expected)
-}
-
-/// Journals what the batch actually did to the filesystem, as it happens.
-///
-/// **Every hop journals the moment it lands; rows that never moved journal once the
-/// run settles.** A crash or force-quit mid-batch has to leave rollback units for the
-/// renames that already happened, or the files sit under their new names with an empty
-/// journal and nothing for undo to reverse. A row that never moved carries no such
-/// debt: nothing on disk depends on it, so its `Skipped`/`Failed` row can wait for the
-/// end of the run.
-struct BulkRenameRecorder {
-    /// The batch's scope, whose journal every row lands in.
-    scope: Arc<crate::file_system::write_operations::scope::OpScope>,
-    volume_id: String,
-}
-
-impl BulkRenameRecorder {
-    fn new(scope: Arc<crate::file_system::write_operations::scope::OpScope>, volume_id: String) -> Self {
-        Self { scope, volume_id }
-    }
-
-    /// Announces both ends of a hop before the rename that makes it.
-    fn note_write(&self, from: &Path, to: &Path) {
-        self.scope.host().own_writes().announce(from);
-        self.scope.host().own_writes().announce(to);
-    }
-
-    /// One completed filesystem hop, recorded the moment it lands.
-    ///
-    /// A rotation's temp hop is a hop like any other and gets its own row, so a crash
-    /// mid-rotation leaves the file findable by name and reversible in the ordinary
-    /// reverse-order replay. That is why a two-file swap journals three rows.
-    ///
-    /// ❌ Never track a rotation temp in `in_flight_temps` instead. That ledger's
-    /// next-launch sweep DELETES what it holds, which is right for the half-written
-    /// `.cmdr-tmp-*` partials it exists for and catastrophic here: a rotation temp
-    /// holds a COMPLETE user file under a private name, so sweeping it destroys data.
-    fn record_hop(&self, row: &BulkRenameRow, from: &Path, to: &Path) {
-        let (size, mtime) = row.expected_fingerprint.journal_snapshot();
-        super::super::journal::record_volume_leaf(
-            &self.scope,
-            EntryType::File,
-            &self.volume_id,
-            from,
-            Some((&self.volume_id, to)),
-            size,
-            mtime,
-            false,
-            ItemOutcome::Done,
-        );
-    }
-
-    /// The rows that never moved, recorded once the run has settled. Journaling a skip
-    /// is what keeps the operation log honest about the batch the user approved: before
-    /// this, a skipped row was dropped entirely and the log claimed a smaller batch than
-    /// the one that ran.
-    fn record_unmoved(&self, rows: &[BulkRenameRow], outcomes: &[BulkRenameOutcome]) {
-        for (row, outcome) in rows.iter().zip(outcomes.iter().copied()) {
-            let item_outcome = match outcome {
-                // A row that landed already has its own hop row (or three, for a rotation).
-                BulkRenameOutcome::Done => continue,
-                BulkRenameOutcome::Skipped => ItemOutcome::Skipped,
-                BulkRenameOutcome::Failed => ItemOutcome::Failed,
-            };
-            let (size, mtime) = row.expected_fingerprint.journal_snapshot();
-            super::super::journal::record_volume_leaf(
-                &self.scope,
-                EntryType::File,
-                &self.volume_id,
-                &row.source,
-                // The destination it was MEANT to reach, so the log can say what was
-                // skipped. Undo never reverses a non-`Done` row (`restore_move` refuses
-                // one), so naming a destination here can't move anything.
-                Some((&self.volume_id, &row.destination)),
-                size,
-                mtime,
-                false,
-                item_outcome,
-            );
-        }
-    }
 }
 
 fn emit_bulk_rename_progress(

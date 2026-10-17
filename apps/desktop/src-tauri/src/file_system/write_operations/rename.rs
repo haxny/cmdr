@@ -60,7 +60,8 @@ pub(crate) async fn rename_managed(
     initiator: Initiator,
 ) -> Result<(), MutationError> {
     // shim: removed in M7a
-    super::installed()
+    super::installed_for("rename_managed")
+        .ok_or_else(super::instant_not_installed)?
         .rename_managed(from, to, force, volume_id, initiator)
         .await
 }
@@ -164,7 +165,7 @@ async fn rename_managed_inner(
     if manager.path_is_inside_archive(&volume_id, &from).await || manager.path_is_inside_archive(&volume_id, &to).await
     {
         return (
-            route_archive_rename(&from, &to, &volume_id).await,
+            route_archive_rename(engine, &from, &to, &volume_id).await,
             InstantTarget::Archive,
         );
     }
@@ -195,7 +196,7 @@ async fn rename_managed_inner(
             Ok(RenameWork::OneCall) => {}
             Ok(RenameWork::CopyThenDelete) => {
                 return (
-                    start_rename_as_move(&from, &to, force, &volume_id, initiator).await,
+                    start_rename_as_move(engine, &from, &to, force, &volume_id, initiator).await,
                     InstantTarget::Volume,
                 );
             }
@@ -352,15 +353,19 @@ async fn rename_managed_inner(
 /// else asks on a clash, which only a race can bring, since the name was
 /// checked free just above.
 async fn start_rename_as_move(
+    engine: &super::Operations,
     from: &Path,
     to: &Path,
     force: bool,
     volume_id: &str,
     initiator: Initiator,
 ) -> Result<(), MutationError> {
-    let events = archive_edit::host_operation_sink().ok_or_else(|| MutationError::Unexpected {
-        detail: "the operation manager isn't ready to start a move".to_string(),
-    })?;
+    let events = engine
+        .host()
+        .operation_sink()
+        .ok_or_else(|| MutationError::Unexpected {
+            detail: "the operation manager isn't ready to start a move".to_string(),
+        })?;
     let parent = to.parent().ok_or(MutationError::CantRenameVolumeRoot)?;
     let config = super::types::VolumeCopyConfig {
         conflict_resolution: if force {
@@ -370,27 +375,28 @@ async fn start_rename_as_move(
         },
         ..super::types::VolumeCopyConfig::default()
     };
-    super::routing::start_rename_by_move(
-        events,
-        volume_id.to_string(),
-        vec![(from.to_path_buf(), name_of(to))],
-        parent.display().to_string(),
-        config,
-        initiator,
-        None,
-    )
-    .await
-    .map(|started| {
-        log::info!(
-            target: "volume",
-            "rename of {} runs as move {} on '{volume_id}'",
-            from.display(),
-            started.operation_id
-        );
-    })
-    .map_err(|e| MutationError::Unexpected {
-        detail: format!("the move a rename runs as couldn't start: {e:?}"),
-    })
+    engine
+        .start_rename_by_move(
+            events,
+            volume_id.to_string(),
+            vec![(from.to_path_buf(), name_of(to))],
+            parent.display().to_string(),
+            config,
+            initiator,
+            None,
+        )
+        .await
+        .map(|started| {
+            log::info!(
+                target: "volume",
+                "rename of {} runs as move {} on '{volume_id}'",
+                from.display(),
+                started.operation_id
+            );
+        })
+        .map_err(|e| MutationError::Unexpected {
+            detail: format!("the move a rename runs as couldn't start: {e:?}"),
+        })
 }
 
 /// Where a volume rename of `from` to `to` really lands (`look_alike.rs`).
@@ -422,7 +428,12 @@ async fn rename_target(
 /// Returns `Ok(())` once the managed op has STARTED (it runs asynchronously and
 /// emits `write-progress`/`write-complete`), unlike a plain rename which
 /// completes inline. The op id rides on the `operations-changed` queue snapshot.
-async fn route_archive_rename(from: &Path, to: &Path, volume_id: &str) -> Result<(), MutationError> {
+async fn route_archive_rename(
+    engine: &super::Operations,
+    from: &Path,
+    to: &Path,
+    volume_id: &str,
+) -> Result<(), MutationError> {
     // Confirmation happened at the routing site (parent-aware `path_is_inside_archive`),
     // so a pure string split suffices — and it works for a REMOTE zip, where the
     // `std::fs` confirm would wrongly fail. A `to` with no archive component means a
@@ -449,11 +460,16 @@ async fn route_archive_rename(from: &Path, to: &Path, volume_id: &str) -> Result
     // exists" copy instead of the raw `zip` "Duplicate filename" the mutator would
     // hit at write time — and no temp is built. (A no-op rename to the same name
     // is left to proceed; the mutator handles it harmlessly.)
-    if to_inner != from_inner && archive_edit::archive_inner_exists(volume_id, &from_archive, &to_inner).await {
+    if to_inner != from_inner
+        && archive_edit::archive_inner_exists(engine.host(), volume_id, &from_archive, &to_inner).await
+    {
         return Err(MutationError::AlreadyExists { name: leaf(&to_inner) });
     }
 
-    let events = archive_edit::host_operation_sink().ok_or(MutationError::ArchiveEditNotReady)?;
+    let events = engine
+        .host()
+        .operation_sink()
+        .ok_or(MutationError::ArchiveEditNotReady)?;
     let summary = OperationSummaryText {
         source: Some(leaf(&from_inner)),
         destination: Some(leaf(&to_inner)),
@@ -471,7 +487,8 @@ async fn route_archive_rename(from: &Path, to: &Path, volume_id: &str) -> Result
         // No scan preview: nothing walked a tree to plan this edit.
         preview_id: None,
     };
-    archive_edit::archive_edit_start(events, request, 200)
+    engine
+        .archive_edit_start(events, request, 200)
         .await
         .map_err(|e| MutationError::ArchiveEditCouldntStart {
             detail: format!("{e:?}"),
@@ -573,51 +590,66 @@ async fn notify_rename_in_listing(host: &host::EngineHost, volume_id: &str, from
     }
 }
 
-/// The pre-flight the inline editor runs before it opens: may this path be
-/// renamed at all?
-///
-/// **Whether it applies is the VOLUME's answer, ❌ never the id's spelling.**
-/// The check below is `lstat` + `access`, so it means something only for a path
-/// an OS syscall can open by itself. A volume that serves its own I/O spells its
-/// paths with a scheme (`sftp://root@host:22/srv/data/x.xml`), and handing one to
-/// `symlink_metadata` doesn't ask a question, it manufactures a `NotFound`:
-/// ERR-KVERS reached a user as "There's nothing at "sftp://…" any more" on every
-/// F2, because the rename itself was never reached. Skipping is safe on those
-/// volumes — `rename_managed` is the authority, and it refuses with the backend's
-/// own typed answer.
-///
-/// An id that resolves to no volume skips too: it's an unmount race, and the
-/// rename behind it will say so properly.
-pub(crate) async fn check_rename_permission_for_volume(path: PathBuf, volume_id: String) -> Result<(), MutationError> {
-    if !preflight_reaches(&volume_id) {
-        log::debug!(
-            target: "volume",
-            "rename pre-flight skipped on '{volume_id}': the volume serves its own I/O ({})",
-            path.display()
-        );
-        return Ok(());
-    }
+impl crate::file_system::write_operations::Operations {
+    /// The pre-flight the inline editor runs before it opens: may this path be
+    /// renamed at all?
+    ///
+    /// **Whether it applies is the VOLUME's answer, ❌ never the id's spelling.**
+    /// The check below is `lstat` + `access`, so it means something only for a path
+    /// an OS syscall can open by itself. A volume that serves its own I/O spells its
+    /// paths with a scheme (`sftp://root@host:22/srv/data/x.xml`), and handing one to
+    /// `symlink_metadata` doesn't ask a question, it manufactures a `NotFound`:
+    /// ERR-KVERS reached a user as "There's nothing at "sftp://…" any more" on every
+    /// F2, because the rename itself was never reached. Skipping is safe on those
+    /// volumes — `rename_managed` is the authority, and it refuses with the backend's
+    /// own typed answer.
+    ///
+    /// An id that resolves to no volume skips too: it's an unmount race, and the
+    /// rename behind it will say so properly.
+    pub(crate) async fn check_rename_permission_for_volume(
+        &self,
+        path: PathBuf,
+        volume_id: String,
+    ) -> Result<(), MutationError> {
+        if !preflight_reaches(self.host(), &volume_id) {
+            log::debug!(
+                target: "volume",
+                "rename pre-flight skipped on '{volume_id}': the volume serves its own I/O ({})",
+                path.display()
+            );
+            return Ok(());
+        }
 
-    let attempted = path.clone();
-    let result = match tokio::task::spawn_blocking(move || check_rename_permission_sync(&path)).await {
-        Ok(result) => result,
-        Err(join_err) => Err(MutationError::Unexpected {
-            detail: format!("the permission check didn't finish: {join_err}"),
-        }),
-    };
-    if let Err(error) = &result {
-        log_rename_refusal(RenameStage::Preflight, &attempted, &volume_id, error);
+        let attempted = path.clone();
+        let result = match tokio::task::spawn_blocking(move || check_rename_permission_sync(&path)).await {
+            Ok(result) => result,
+            Err(join_err) => Err(MutationError::Unexpected {
+                detail: format!("the permission check didn't finish: {join_err}"),
+            }),
+        };
+        if let Err(error) = &result {
+            log_rename_refusal(RenameStage::Preflight, &attempted, &volume_id, error);
+        }
+        result
     }
-    result
+}
+
+/// [`Operations::check_rename_permission_for_volume`](super::Operations::check_rename_permission_for_volume)
+/// on the installed engine.
+// shim: removed in M7a
+pub(crate) async fn check_rename_permission_for_volume(path: PathBuf, volume_id: String) -> Result<(), MutationError> {
+    super::installed_for("check_rename_permission_for_volume")
+        .ok_or_else(super::instant_not_installed)?
+        .check_rename_permission_for_volume(path, volume_id)
+        .await
 }
 
 /// Whether a local `lstat` / `access` can answer for a path on this volume.
-fn preflight_reaches(volume_id: &str) -> bool {
+fn preflight_reaches(host: &host::EngineHost, volume_id: &str) -> bool {
     if volume_id == "root" {
         return true;
     }
-    host::installed()
-        .volumes()
+    host.volumes()
         .get(volume_id)
         .is_some_and(|volume| volume.supports_local_fs_access())
 }

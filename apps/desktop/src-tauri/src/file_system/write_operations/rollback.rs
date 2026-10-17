@@ -46,8 +46,7 @@ use cmdr_operation_log::types::{Initiator, OpKind, RollbackState};
 use cmdr_operation_log::writer::OperationLogWriter;
 
 use super::event_sinks::OperationEventSink;
-use super::host;
-use super::manager::{ManagedTaskGuard, OperationDescriptor, OperationSummaryText, manager};
+use super::manager::{ManagedTaskGuard, OperationDescriptor, OperationSummaryText};
 use super::state::{StopMeans, WriteOperationState};
 use super::transfer::volume::move_file_across_volumes;
 use super::types::{DEFAULT_PROGRESS_INTERVAL_MS, WriteOperationPhase, WriteOperationType, WriteProgressEvent};
@@ -267,170 +266,170 @@ async fn delete_clearing_blockers(volume: &Arc<dyn Volume>, path: &Path) -> Resu
         })
 }
 
-/// Roll back operation `op_id`: gate it, set it `rolling_back`, and spawn its
-/// inverse as a managed op. Returns the inverse op's id (the reversal runs
-/// asynchronously; poll the original op's `rollback_state` for the terminal
-/// result). A refusal (unknown / already rolling back / not rollbackable / a
-/// volume disconnected) surfaces typed; the entry resets `rolling_back` on a
-/// synchronous spawn failure so a retry isn't wedged.
-///
-/// `events` is built at the IPC/MCP edge like every other managed op's sink: the
-/// pipeline in here never constructs one (see `mod.rs`).
-pub fn dispatch_rollback(
-    op_id: &str,
-    initiator: Initiator,
-    events: Arc<dyn OperationEventSink>,
-) -> Result<RollbackDispatch, RollbackRefusal> {
-    dispatch_inverse(op_id, initiator, events, None)
-}
+impl crate::file_system::write_operations::Operations {
+    /// Roll back operation `op_id`: gate it, set it `rolling_back`, and spawn its
+    /// inverse as a managed op. Returns the inverse op's id (the reversal runs
+    /// asynchronously; poll the original op's `rollback_state` for the terminal
+    /// result). A refusal (unknown / already rolling back / not rollbackable / a
+    /// volume disconnected) surfaces typed; the entry resets `rolling_back` on a
+    /// synchronous spawn failure so a retry isn't wedged.
+    ///
+    /// `events` is built at the IPC/MCP edge like every other managed op's sink: the
+    /// pipeline in here never constructs one (see `mod.rs`).
+    pub(crate) fn dispatch_rollback(
+        &self,
+        op_id: &str,
+        initiator: Initiator,
+        events: Arc<dyn OperationEventSink>,
+    ) -> Result<RollbackDispatch, RollbackRefusal> {
+        self.dispatch_inverse(op_id, initiator, events, None)
+    }
 
-/// [`dispatch_rollback`] plus a channel that resolves with the inverse's
-/// [`RollbackReport`] once the reversal finishes.
-///
-/// This is what lets a caller reverse several operations IN ORDER (see
-/// [`undo_operations`]) and report a complete tally, rather than dispatching them
-/// all and hoping the queue reverses them in the right sequence. The reversal is
-/// still a normal managed op — queued, lane-serialized, and cancelable — so
-/// awaiting it also waits out anything already holding the lane.
-fn dispatch_inverse_reported(
-    op_id: &str,
-    initiator: Initiator,
-    events: Arc<dyn OperationEventSink>,
-) -> Result<oneshot::Receiver<RollbackReport>, RollbackRefusal> {
-    let (report_tx, report_rx) = oneshot::channel();
-    dispatch_inverse(op_id, initiator, events, Some(report_tx))?;
-    Ok(report_rx)
-}
+    /// [`dispatch_rollback`] plus a channel that resolves with the inverse's
+    /// [`RollbackReport`] once the reversal finishes.
+    ///
+    /// This is what lets a caller reverse several operations IN ORDER (see
+    /// [`undo_operations`]) and report a complete tally, rather than dispatching them
+    /// all and hoping the queue reverses them in the right sequence. The reversal is
+    /// still a normal managed op — queued, lane-serialized, and cancelable — so
+    /// awaiting it also waits out anything already holding the lane.
+    fn dispatch_inverse_reported(
+        &self,
+        op_id: &str,
+        initiator: Initiator,
+        events: Arc<dyn OperationEventSink>,
+    ) -> Result<oneshot::Receiver<RollbackReport>, RollbackRefusal> {
+        let (report_tx, report_rx) = oneshot::channel();
+        self.dispatch_inverse(op_id, initiator, events, Some(report_tx))?;
+        Ok(report_rx)
+    }
 
-fn dispatch_inverse(
-    op_id: &str,
-    initiator: Initiator,
-    events: Arc<dyn OperationEventSink>,
-    report: Option<oneshot::Sender<RollbackReport>>,
-) -> Result<RollbackDispatch, RollbackRefusal> {
-    // No writer means the journal never opened, so there's nothing to roll back.
-    let writer = super::installed()
-        .operation_log()
-        .writer()
-        .ok_or(RollbackRefusal::UnknownOperation)?;
-    let vm = host::installed().volumes();
+    fn dispatch_inverse(
+        &self,
+        op_id: &str,
+        initiator: Initiator,
+        events: Arc<dyn OperationEventSink>,
+        report: Option<oneshot::Sender<RollbackReport>>,
+    ) -> Result<RollbackDispatch, RollbackRefusal> {
+        // No writer means the journal never opened, so there's nothing to roll back.
+        let writer = self.operation_log().writer().ok_or(RollbackRefusal::UnknownOperation)?;
+        let vm = self.host().volumes();
 
-    let plan = rollback_operation(vm, &writer, op_id, |plan| {
-        spawn_managed_inverse(&writer, plan, initiator, Arc::clone(&events), report)
-    })?;
-    Ok(RollbackDispatch {
-        inverse_op_id: plan.inverse_op_id,
-    })
-}
+        let plan = rollback_operation(vm, &writer, op_id, |plan| {
+            self.spawn_managed_inverse(&writer, plan, initiator, Arc::clone(&events), report)
+        })?;
+        Ok(RollbackDispatch {
+            inverse_op_id: plan.inverse_op_id,
+        })
+    }
 
-/// Register the inverse operation with the manager. Runs synchronously inside
-/// [`rollback_operation`]'s spawn hook: a volume that dropped between the gate and
-/// here is a synchronous spawn failure — returned typed so the entry
-/// resets `rolling_back`.
-fn spawn_managed_inverse(
-    writer: &OperationLogWriter,
-    plan: &InversePlan,
-    initiator: Initiator,
-    events: Arc<dyn OperationEventSink>,
-    report: Option<oneshot::Sender<RollbackReport>>,
-) -> Result<(), RollbackRefusal> {
-    let vm = host::installed().volumes();
-    let original = plan.original.clone();
-    let inverse_op_id = plan.inverse_op_id.clone();
+    /// Register the inverse operation with the manager. Runs synchronously inside
+    /// [`rollback_operation`]'s spawn hook: a volume that dropped between the gate and
+    /// here is a synchronous spawn failure — returned typed so the entry
+    /// resets `rolling_back`.
+    fn spawn_managed_inverse(
+        &self,
+        writer: &OperationLogWriter,
+        plan: &InversePlan,
+        initiator: Initiator,
+        events: Arc<dyn OperationEventSink>,
+        report: Option<oneshot::Sender<RollbackReport>>,
+    ) -> Result<(), RollbackRefusal> {
+        let vm = self.host().volumes();
+        let original = plan.original.clone();
+        let inverse_op_id = plan.inverse_op_id.clone();
 
-    // Resolve the lanes + ejectable volume ids from the volumes the op touches.
-    // A missing volume here is the sync spawn failure.
-    let mut lanes = Vec::new();
-    let mut volume_ids = Vec::new();
-    for id in [original.source_volume_id.as_deref(), original.dest_volume_id.as_deref()]
-        .into_iter()
-        .flatten()
-    {
-        match vm.get(id) {
-            Some(volume) => {
-                let lane = volume.lane_key();
-                if !lanes.contains(&lane) {
-                    lanes.push(lane);
+        // Resolve the lanes + ejectable volume ids from the volumes the op touches.
+        // A missing volume here is the sync spawn failure.
+        let mut lanes = Vec::new();
+        let mut volume_ids = Vec::new();
+        for id in [original.source_volume_id.as_deref(), original.dest_volume_id.as_deref()]
+            .into_iter()
+            .flatten()
+        {
+            match vm.get(id) {
+                Some(volume) => {
+                    let lane = volume.lane_key();
+                    if !lanes.contains(&lane) {
+                        lanes.push(lane);
+                    }
+                    if id != DEFAULT_VOLUME_ID && !volume_ids.contains(&id.to_string()) {
+                        volume_ids.push(id.to_string());
+                    }
                 }
-                if id != DEFAULT_VOLUME_ID && !volume_ids.contains(&id.to_string()) {
-                    volume_ids.push(id.to_string());
+                None => {
+                    return Err(RollbackRefusal::VolumeUnavailable {
+                        volume_id: id.to_string(),
+                    });
                 }
-            }
-            None => {
-                return Err(RollbackRefusal::VolumeUnavailable {
-                    volume_id: id.to_string(),
-                });
             }
         }
-    }
-    if lanes.is_empty() {
-        lanes.push(cmdr_fs::volume::LaneKey::new(DEFAULT_VOLUME_ID));
-    }
+        if lanes.is_empty() {
+            lanes.push(cmdr_fs::volume::LaneKey::new(DEFAULT_VOLUME_ID));
+        }
 
-    let op_type = write_op_type(inverse_kind(original.kind));
-    let descriptor = OperationDescriptor {
-        operation_id: inverse_op_id.clone(),
-        operation_type: op_type,
-        lanes,
-        volume_ids,
-        // Where the reversal will act, read off the newest journal row at dispatch
-        // (`cmdr_operation_log::rollback::summarize_inverse`), so the queue row isn't
-        // nameless while it works.
-        summary: OperationSummaryText {
-            source: plan.summary.from.clone(),
-            destination: plan.summary.to.clone(),
-            items: None,
-        },
-        // This IS the reversal. Offering to roll back a rollback would ask the
-        // engine to re-apply what the person just chose to undo.
-        supports_rollback: false,
-        // No scan preview: nothing walked a tree to plan this op.
-        preview_id: None,
-        // The ORIGINAL kind, so every surface naming this op words it by what the
-        // reversal will DO ("Putting files back" for a move, not "Moving"). The
-        // inverse kind alone can't say that: `Move` covers undoing a move AND
-        // undoing a trash, and `Delete` covers undoing a copy, a new folder, and
-        // a compress.
-        reverses: Some(original.kind),
-    };
-    // The cadence every other transfer's bar runs at. A zero interval would mean
-    // no throttle at all, and a million-item reversal emitting an event per item.
-    let state = Arc::new(
-        crate::file_system::write_operations::installed()
-            .new_operation_state(Duration::from_millis(DEFAULT_PROGRESS_INTERVAL_MS)),
-    );
-
-    let writer = writer.clone();
-    let state_for_op = Arc::clone(&state);
-    let deferred =
-        move |ops: crate::file_system::write_operations::Operations| -> Pin<Box<dyn Future<Output = ()> + Send>> {
-            Box::pin(async move {
-                let guard = ManagedTaskGuard::new(ops.manager(), inverse_op_id.clone());
-                // The engine's hands and its three live answers. The reversal is its OWN
-                // managed operation, opened `Running`, so any move off `Running` is
-                // somebody stopping the reversal itself.
-                let runner = ReversalRunner::new(
-                    inverse_op_id.clone(),
-                    op_type,
-                    state_for_op,
-                    events,
-                    StopMeans::IntentLeavesRunning,
-                );
-                let vm = ops.host().volumes();
-                let outcome = execute_rollback(vm, &writer, &original, &inverse_op_id, initiator, &runner).await;
-                // Hand the tally to a caller awaiting it (a multi-operation undo). A
-                // dropped receiver (the caller went away) is not a problem: the reversal
-                // already happened and is journaled.
-                if let Some(report) = report {
-                    let _ = report.send(outcome);
-                }
-                guard.disarm();
-                ops.manager().on_settled(&inverse_op_id);
-            })
+        let op_type = write_op_type(inverse_kind(original.kind));
+        let descriptor = OperationDescriptor {
+            operation_id: inverse_op_id.clone(),
+            operation_type: op_type,
+            lanes,
+            volume_ids,
+            // Where the reversal will act, read off the newest journal row at dispatch
+            // (`cmdr_operation_log::rollback::summarize_inverse`), so the queue row isn't
+            // nameless while it works.
+            summary: OperationSummaryText {
+                source: plan.summary.from.clone(),
+                destination: plan.summary.to.clone(),
+                items: None,
+            },
+            // This IS the reversal. Offering to roll back a rollback would ask the
+            // engine to re-apply what the person just chose to undo.
+            supports_rollback: false,
+            // No scan preview: nothing walked a tree to plan this op.
+            preview_id: None,
+            // The ORIGINAL kind, so every surface naming this op words it by what the
+            // reversal will DO ("Putting files back" for a move, not "Moving"). The
+            // inverse kind alone can't say that: `Move` covers undoing a move AND
+            // undoing a trash, and `Delete` covers undoing a copy, a new folder, and
+            // a compress.
+            reverses: Some(original.kind),
         };
+        // The cadence every other transfer's bar runs at. A zero interval would mean
+        // no throttle at all, and a million-item reversal emitting an event per item.
+        let state = Arc::new(self.new_operation_state(Duration::from_millis(DEFAULT_PROGRESS_INTERVAL_MS)));
 
-    manager().spawn_managed(descriptor, state, Box::new(deferred));
-    Ok(())
+        let writer = writer.clone();
+        let state_for_op = Arc::clone(&state);
+        let deferred =
+            move |ops: crate::file_system::write_operations::Operations| -> Pin<Box<dyn Future<Output = ()> + Send>> {
+                Box::pin(async move {
+                    let guard = ManagedTaskGuard::new(ops.manager(), inverse_op_id.clone());
+                    // The engine's hands and its three live answers. The reversal is its OWN
+                    // managed operation, opened `Running`, so any move off `Running` is
+                    // somebody stopping the reversal itself.
+                    let runner = ReversalRunner::new(
+                        inverse_op_id.clone(),
+                        op_type,
+                        state_for_op,
+                        events,
+                        StopMeans::IntentLeavesRunning,
+                    );
+                    let vm = ops.host().volumes();
+                    let outcome = execute_rollback(vm, &writer, &original, &inverse_op_id, initiator, &runner).await;
+                    // Hand the tally to a caller awaiting it (a multi-operation undo). A
+                    // dropped receiver (the caller went away) is not a problem: the reversal
+                    // already happened and is journaled.
+                    if let Some(report) = report {
+                        let _ = report.send(outcome);
+                    }
+                    guard.disarm();
+                    ops.manager().on_settled(&inverse_op_id);
+                })
+            };
+
+        self.manager().spawn_managed(descriptor, state, Box::new(deferred));
+        Ok(())
+    }
 }
 
 // ── Undoing a job: several operations, newest first ───────────────────────────
@@ -469,57 +468,60 @@ pub struct UndoReport {
     pub skipped: u64,
 }
 
-/// Undo a job's operations — a multi-batch rename run, most importantly — as one
-/// action.
-///
-/// **Reverses NEWEST FIRST, one at a time**, per [`undo_order`]: a later batch can
-/// have renamed a file into a name an earlier batch freed, and oldest-first would
-/// then hit an occupied restore target and skip that file silently. Each inverse is
-/// awaited before the next is dispatched, so the order is this function's
-/// guarantee rather than the operation queue's admission order.
-///
-/// `operation_ids` arrives in the order the caller APPLIED the operations (that's
-/// what breaks a same-second tie). An id with no journal row is reported as an
-/// `UnknownOperation` refusal rather than dropped, so the caller's count of
-/// operations always matches what came back (invariant 9).
-pub async fn undo_operations(
-    operation_ids: &[String],
-    initiator: Initiator,
-    events: Arc<dyn OperationEventSink>,
-) -> UndoReport {
-    let mut report = UndoReport {
-        operations: Vec::with_capacity(operation_ids.len()),
-        restored: 0,
-        skipped: 0,
-    };
-    let (rows, mut unknown) = read_undoable_rows(operation_ids);
-
-    for op in undo_order(rows) {
-        let outcome = match dispatch_inverse_reported(&op.op_id, initiator, Arc::clone(&events)) {
-            // A dropped sender means the inverse task died without reporting (a
-            // panic). The reversal's own journaling is authoritative either way, so
-            // report nothing reversed rather than inventing a tally.
-            Ok(report_rx) => match report_rx.await {
-                Ok(run) => OperationUndoOutcome {
-                    operation_id: op.op_id.clone(),
-                    restored: run.reversed,
-                    skipped: run.skipped,
-                    skips: run.skips,
-                    final_state: Some(run.final_state),
-                    refusal: None,
-                },
-                Err(_) => refused(&op.op_id, RollbackRefusal::UnknownOperation),
-            },
-            Err(refusal) => refused(&op.op_id, refusal),
+impl crate::file_system::write_operations::Operations {
+    /// Undo a job's operations — a multi-batch rename run, most importantly — as one
+    /// action.
+    ///
+    /// **Reverses NEWEST FIRST, one at a time**, per [`undo_order`]: a later batch can
+    /// have renamed a file into a name an earlier batch freed, and oldest-first would
+    /// then hit an occupied restore target and skip that file silently. Each inverse is
+    /// awaited before the next is dispatched, so the order is this function's
+    /// guarantee rather than the operation queue's admission order.
+    ///
+    /// `operation_ids` arrives in the order the caller APPLIED the operations (that's
+    /// what breaks a same-second tie). An id with no journal row is reported as an
+    /// `UnknownOperation` refusal rather than dropped, so the caller's count of
+    /// operations always matches what came back (invariant 9).
+    pub(crate) async fn undo_operations(
+        &self,
+        operation_ids: &[String],
+        initiator: Initiator,
+        events: Arc<dyn OperationEventSink>,
+    ) -> UndoReport {
+        let mut report = UndoReport {
+            operations: Vec::with_capacity(operation_ids.len()),
+            restored: 0,
+            skipped: 0,
         };
-        report.restored += outcome.restored;
-        report.skipped += outcome.skipped;
-        report.operations.push(outcome);
+        let (rows, mut unknown) = self.read_undoable_rows(operation_ids);
+
+        for op in undo_order(rows) {
+            let outcome = match self.dispatch_inverse_reported(&op.op_id, initiator, Arc::clone(&events)) {
+                // A dropped sender means the inverse task died without reporting (a
+                // panic). The reversal's own journaling is authoritative either way, so
+                // report nothing reversed rather than inventing a tally.
+                Ok(report_rx) => match report_rx.await {
+                    Ok(run) => OperationUndoOutcome {
+                        operation_id: op.op_id.clone(),
+                        restored: run.reversed,
+                        skipped: run.skipped,
+                        skips: run.skips,
+                        final_state: Some(run.final_state),
+                        refusal: None,
+                    },
+                    Err(_) => refused(&op.op_id, RollbackRefusal::UnknownOperation),
+                },
+                Err(refusal) => refused(&op.op_id, refusal),
+            };
+            report.restored += outcome.restored;
+            report.skipped += outcome.skipped;
+            report.operations.push(outcome);
+        }
+        // Unknown ids carry no start time to order by, so they land last; they reversed
+        // nothing, so their position changes no outcome.
+        report.operations.append(&mut unknown);
+        report
     }
-    // Unknown ids carry no start time to order by, so they land last; they reversed
-    // nothing, so their position changes no outcome.
-    report.operations.append(&mut unknown);
-    report
 }
 
 fn refused(op_id: &str, refusal: RollbackRefusal) -> OperationUndoOutcome {
@@ -535,34 +537,72 @@ fn refused(op_id: &str, refusal: RollbackRefusal) -> OperationUndoOutcome {
     }
 }
 
-/// Read each requested operation's journal row, keeping the caller's order.
-/// Anything unreadable becomes an `UnknownOperation` outcome instead of vanishing.
-fn read_undoable_rows(
-    operation_ids: &[String],
-) -> (Vec<cmdr_operation_log::store::OperationRow>, Vec<OperationUndoOutcome>) {
-    let Some(writer) = super::installed().operation_log().writer() else {
-        let missing = operation_ids
-            .iter()
-            .map(|id| refused(id, RollbackRefusal::UnknownOperation))
-            .collect();
-        return (Vec::new(), missing);
-    };
-    let Ok(conn) = open_read_connection(writer.db_path()) else {
-        let missing = operation_ids
-            .iter()
-            .map(|id| refused(id, RollbackRefusal::UnknownOperation))
-            .collect();
-        return (Vec::new(), missing);
-    };
-    let mut rows = Vec::with_capacity(operation_ids.len());
-    let mut unknown = Vec::new();
-    for op_id in operation_ids {
-        match read_operation(&conn, op_id) {
-            Ok(Some(row)) => rows.push(row),
-            _ => unknown.push(refused(op_id, RollbackRefusal::UnknownOperation)),
+impl crate::file_system::write_operations::Operations {
+    /// Read each requested operation's journal row, keeping the caller's order.
+    /// Anything unreadable becomes an `UnknownOperation` outcome instead of vanishing.
+    fn read_undoable_rows(
+        &self,
+        operation_ids: &[String],
+    ) -> (Vec<cmdr_operation_log::store::OperationRow>, Vec<OperationUndoOutcome>) {
+        let Some(writer) = self.operation_log().writer() else {
+            let missing = operation_ids
+                .iter()
+                .map(|id| refused(id, RollbackRefusal::UnknownOperation))
+                .collect();
+            return (Vec::new(), missing);
+        };
+        let Ok(conn) = open_read_connection(writer.db_path()) else {
+            let missing = operation_ids
+                .iter()
+                .map(|id| refused(id, RollbackRefusal::UnknownOperation))
+                .collect();
+            return (Vec::new(), missing);
+        };
+        let mut rows = Vec::with_capacity(operation_ids.len());
+        let mut unknown = Vec::new();
+        for op_id in operation_ids {
+            match read_operation(&conn, op_id) {
+                Ok(Some(row)) => rows.push(row),
+                _ => unknown.push(refused(op_id, RollbackRefusal::UnknownOperation)),
+            }
         }
+        (rows, unknown)
     }
-    (rows, unknown)
+}
+
+// The installed engine's, by free function, for callers outside the engine.
+// Before `install` there's no journal, so every operation is unknown, the
+// same answer an engine whose journal never opened gives.
+// shim: removed in M7a
+
+/// [`Operations::dispatch_rollback`](super::Operations::dispatch_rollback) on the installed engine.
+pub fn dispatch_rollback(
+    op_id: &str,
+    initiator: Initiator,
+    events: Arc<dyn OperationEventSink>,
+) -> Result<RollbackDispatch, RollbackRefusal> {
+    super::installed_for("dispatch_rollback")
+        .ok_or(RollbackRefusal::UnknownOperation)?
+        .dispatch_rollback(op_id, initiator, events)
+}
+
+/// [`Operations::undo_operations`](super::Operations::undo_operations) on the installed engine.
+pub async fn undo_operations(
+    operation_ids: &[String],
+    initiator: Initiator,
+    events: Arc<dyn OperationEventSink>,
+) -> UndoReport {
+    match super::installed_for("undo_operations") {
+        Some(engine) => engine.undo_operations(operation_ids, initiator, events).await,
+        None => UndoReport {
+            operations: operation_ids
+                .iter()
+                .map(|id| refused(id, RollbackRefusal::UnknownOperation))
+                .collect(),
+            restored: 0,
+            skipped: 0,
+        },
+    }
 }
 
 // ── The test fixture for a live reversal ─────────────────────────────────────

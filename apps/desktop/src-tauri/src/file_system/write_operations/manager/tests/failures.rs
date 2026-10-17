@@ -401,9 +401,10 @@ impl FakeStart {
 }
 
 impl StartAgain for FakeStart {
-    fn start_again(
-        &self,
-    ) -> Pin<Box<dyn Future<Output = Result<WriteOperationStartResult, WriteOperationError>> + Send + '_>> {
+    fn start_again<'a>(
+        &'a self,
+        _engine: &'a crate::file_system::write_operations::Operations,
+    ) -> Pin<Box<dyn Future<Output = Result<WriteOperationStartResult, WriteOperationError>> + Send + 'a>> {
         self.starts.fetch_add(1, Ordering::SeqCst);
         Box::pin(async move {
             self.answer.clone().map(|operation_id| WriteOperationStartResult {
@@ -439,7 +440,10 @@ async fn a_retry_starts_again_and_drops_the_failed_row() {
     mgr.retain_failure(&op, WriteOperationType::Copy, &io_error("/a"));
     mgr.attach_retry(&op, Arc::clone(&start) as Arc<dyn StartAgain>);
 
-    let outcome = mgr.retry_failure(&op).await.expect("the start went through");
+    let outcome = mgr
+        .retry_failure(mgr.engine(), &op)
+        .await
+        .expect("the start went through");
 
     assert_eq!(
         outcome,
@@ -463,7 +467,7 @@ async fn a_refused_retry_keeps_the_row_and_its_retry() {
     mgr.retain_failure(&op, WriteOperationType::Copy, &io_error("/a"));
     mgr.attach_retry(&op, FakeStart::refusing(io_error("/gone")));
 
-    let refused = mgr.retry_failure(&op).await;
+    let refused = mgr.retry_failure(mgr.engine(), &op).await;
 
     assert!(matches!(refused, Err(WriteOperationError::IoError { .. })));
     let row = rows_for(&mgr, &op);
@@ -478,9 +482,12 @@ async fn a_retry_with_nothing_behind_it_says_so() {
     let op = unique("retry-nothing");
     mgr.retain_failure(&op, WriteOperationType::Copy, &io_error("/a"));
 
-    assert!(matches!(mgr.retry_failure(&op).await, Ok(RetryOutcome::NothingToRetry)));
     assert!(matches!(
-        mgr.retry_failure(&unique("retry-unknown")).await,
+        mgr.retry_failure(mgr.engine(), &op).await,
+        Ok(RetryOutcome::NothingToRetry)
+    ));
+    assert!(matches!(
+        mgr.retry_failure(mgr.engine(), &unique("retry-unknown")).await,
         Ok(RetryOutcome::NothingToRetry)
     ));
     assert_eq!(rows_for(&mgr, &op).len(), 1, "and changes nothing");

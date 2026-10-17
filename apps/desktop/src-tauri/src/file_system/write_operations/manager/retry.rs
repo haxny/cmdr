@@ -19,9 +19,11 @@ use cmdr_fs::ignore_poison::IgnorePoison;
 /// routing that started the original (`routing/retry.rs`), which says what
 /// carries over and what resets.
 pub(crate) trait StartAgain: Send + Sync {
-    fn start_again(
-        &self,
-    ) -> Pin<Box<dyn Future<Output = Result<WriteOperationStartResult, WriteOperationError>> + Send + '_>>;
+    /// Starts it on `engine`, the engine whose queue holds the failed row.
+    fn start_again<'a>(
+        &'a self,
+        engine: &'a Operations,
+    ) -> Pin<Box<dyn Future<Output = Result<WriteOperationStartResult, WriteOperationError>> + Send + 'a>>;
 }
 
 /// One retained failure: the row the queue window shows, and how to start the
@@ -85,7 +87,11 @@ impl OperationManager {
     /// Starts a retained failure again. On a start, the failed row is gone (the
     /// new operation's row replaces it); on a refusal, it stays, with its Retry,
     /// and the refusal goes back to the caller.
-    pub(super) async fn retry_failure(&self, operation_id: &str) -> Result<RetryOutcome, WriteOperationError> {
+    pub(super) async fn retry_failure(
+        &self,
+        engine: &Operations,
+        operation_id: &str,
+    ) -> Result<RetryOutcome, WriteOperationError> {
         let retry = {
             let mut inner = self.inner.lock_ignore_poison();
             let Some(failure) = inner
@@ -104,7 +110,7 @@ impl OperationManager {
             }
         };
         log::info!(target: "op_manager", "retry failed op={operation_id}");
-        let started = retry.start_again().await;
+        let started = retry.start_again(engine).await;
         match started {
             Ok(result) => {
                 self.dismiss_failure(operation_id);
@@ -137,7 +143,7 @@ impl Operations {
     /// volume that is gone) comes back as the typed error and leaves the row as it
     /// was.
     pub(crate) async fn retry_failed_operation(&self, operation_id: &str) -> Result<RetryOutcome, WriteOperationError> {
-        self.manager().retry_failure(operation_id).await
+        self.manager().retry_failure(self, operation_id).await
     }
 }
 
