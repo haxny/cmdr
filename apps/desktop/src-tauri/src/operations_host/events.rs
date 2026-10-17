@@ -260,4 +260,21 @@ mod tests {
             json!({ "initiator": Initiator::User.as_token(), "target": "volume", "outcome": "done" })
         );
     }
+
+    /// The engine's transfer pair raises and lowers indexing's "a transfer
+    /// trumps me" gauge for the volumes it names. The engine's half (one finish
+    /// per start, however an operation ends) is `status_cache_tests.rs`'s.
+    #[test]
+    fn the_transfer_pair_raises_and_lowers_the_indexing_gauge() {
+        use crate::priority::transfers::transfer_active;
+
+        // The gauge is process-wide, so the volume is unique to this test.
+        let volume = vec![format!("gauge-adapter-{}", uuid::Uuid::new_v4())];
+        let events = TauriEngineEvents::new(None);
+
+        events.transfer_started(&volume);
+        assert!(transfer_active(&volume[0]), "a started transfer marks its volume");
+        events.transfer_finished(&volume);
+        assert!(!transfer_active(&volume[0]), "its finish clears it");
+    }
 }
