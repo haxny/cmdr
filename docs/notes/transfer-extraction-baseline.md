@@ -51,13 +51,14 @@ and the paired re-run is the comparison.
 
 ## The driver
 
-`docs/notes/transfer-extraction-baseline.sh` times one scenario: before every run (warm-up included) it rewrites a log
-string to `<anchor> [bench <i>]`, runs an optional untimed pre-step, records the load, and times the command; it prints
-median / min / max of wall and CPU seconds, flags any run whose output shows cargo waiting on the build lock, and
-restores the file on exit. It runs from the repo root wherever you call it from.
+`scripts/transfer-baseline/` (a Go program, run with `go -C scripts/transfer-baseline run .`) times one scenario: before
+every run (warm-up included) it rewrites a log string to `<anchor> [bench <i>]`, runs an optional untimed pre-step,
+records the load, and times the command; it prints median / min / max of wall and CPU seconds, flags any run whose
+output shows cargo waiting on the build lock, and restores the file on exit. It runs from the repo root wherever you
+call it from.
 
 ```sh
-B=docs/notes/transfer-extraction-baseline.sh
+B() { go -C "$(git rev-parse --show-toplevel)/scripts/transfer-baseline" run . "$@"; }
 COPY=apps/desktop/src-tauri/src/file_system/write_operations/transfer/copy/mod.rs
 LOG=apps/desktop/src-tauri/src/operation_log/writer.rs
 POSIX=apps/desktop/src-tauri/src/file_system/volume/backends/local_posix.rs
@@ -72,7 +73,7 @@ the file has no log string) in `$APP`.
 
 ### Inner loop: an engine edit, then check or build tests (rows 1 and 3)
 
-`$B --edit <file> <anchor> -- cargo check -p cmdr --lib --features cmdr/virtual-mtp`, and the same with
+`B --edit <file> <anchor> -- cargo check -p cmdr --lib --features cmdr/virtual-mtp`, and the same with
 `cargo test -p cmdr --lib --no-run --features cmdr/virtual-mtp`. After the move, the command targets the crate being
 edited (`-p cmdr-operations`, `-p cmdr-operation-log`, `-p cmdr-local`).
 
@@ -92,7 +93,7 @@ far tighter than the index note's 23–30 s `--no-run` range, so these need no r
   16.31 s, load 5.7–9.9 (the tail of the warm-up build; the spread stayed at 1.3%)
 - **App edit (`$APP`), then the same build**: **13.24 s** (13.16–13.40), CPU 19.67 s, load 3.0–4.5
 - **Clean crate build, deps warm**:
-  `$B -n 3 --no-warmup --pre "cargo clean -p cmdr" -- cargo build -p cmdr --features cmdr/virtual-mtp`: **42.54 s**
+  `B -n 3 --no-warmup --pre "cargo clean -p cmdr" -- cargo build -p cmdr --features cmdr/virtual-mtp`: **42.54 s**
   (42.39–44.05), CPU 72.36 s, load 4.0–5.5. After the move, the pre-step also cleans the four new crates
   (`cargo clean -p cmdr -p cmdr-operations -p cmdr-operation-log -p cmdr-local -p cmdr-collation`).
 
@@ -101,7 +102,7 @@ it re-expands the macro surface the IPC builder is generated from.
 
 ### Release (row 6)
 
-`$B -n 1 --no-warmup --pre "cargo clean --release" -- cargo build --release -p cmdr --features cmdr/virtual-mtp`, twice,
+`B -n 1 --no-warmup --pre "cargo clean --release" -- cargo build --release -p cmdr --features cmdr/virtual-mtp`, twice,
 then `stat -f%z target/release/Cmdr`. `-p cmdr`, not the whole workspace, so `index-query` and `operation-log-dump`
 (whose dependencies change in the move) stay out of it.
 
@@ -128,7 +129,7 @@ spread comes from the lane's own retries, not from the build:
 Compare the median, and expect the retries to recur: they're the lane's existing load sensitivity, not the engine's.
 
 **The engine's own slice**,
-`$B -n 3 -- cargo nextest run -p cmdr --lib --features cmdr/virtual-mtp -E 'test(/file_system::write_operations::|operation_log::|volume::backends::/)'`:
+`B -n 3 -- cargo nextest run -p cmdr --lib --features cmdr/virtual-mtp -E 'test(/file_system::write_operations::|operation_log::|volume::backends::/)'`:
 **10.36 s** (10.09–10.84), CPU 57.90 s, load 4.8–7.5; 2,143 tests (nextest's own summary: 9.25 s). The warm-up rebuilt
 the lib test binary after the lane runs (86.6 s), so the lane and a plain `cargo nextest` don't share every artifact;
 warm up before timing either. After the move:

@@ -686,9 +686,9 @@ warm artifacts. Every edit is a real string change, never a `touch`. Medians of 
 `sysctl -n vm.loadavg`. Don't time a run that waited on the cargo build lock (another session's
 `ResourceCargoBuildDir`).
 
-The driver is a short shell script committed beside the note (`docs/notes/transfer-extraction-baseline.sh`): it
-alternates a named edit, runs a command N times, and prints median / min / max with the load before each run. A script,
-not a new tool: the index note ran the same method by hand.
+The driver is a small Go program, `scripts/transfer-baseline/` (`go -C scripts/transfer-baseline run .`, the same
+arguments and output the shell script M0b used): it alternates a named edit, runs a command N times, and prints median /
+min / max with the load before each run.
 
 What to time, before → after:
 
