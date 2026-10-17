@@ -104,7 +104,7 @@ impl crate::Operations {
     /// Starts one queued, same-volume batch rename. The caller has already resolved
     /// the proposal id and exact accepted-preflight subset; this layer receives only
     /// immutable backend rows, never frontend paths or names.
-    pub fn start_bulk_rename(
+    pub(crate) fn start_bulk_rename(
         &self,
         events: Arc<dyn OperationEventSink>,
         volume_id: String,

@@ -288,21 +288,21 @@ pub(super) async fn start_copy_on(
     let collector = Arc::new(CollectorEventSink::new());
     let events: Arc<dyn OperationEventSink> = collector.clone();
 
-    let started = engine
-        .copy_between_volumes(
-            events,
-            format!("{label}-source"),
-            source,
-            source_paths,
-            format!("{label}-dest"),
-            dest,
-            dest_path,
-            config,
-            Initiator::User,
-            None,
-        )
-        .await
-        .unwrap_or_else(|e| panic!("{label}: the copy must START; it was refused with {e:?}"));
+    let started = cmdr_operations::testing::copy_between_volumes(
+        engine,
+        events,
+        format!("{label}-source"),
+        source,
+        source_paths,
+        format!("{label}-dest"),
+        dest,
+        dest_path,
+        config,
+        Initiator::User,
+        None,
+    )
+    .await
+    .unwrap_or_else(|e| panic!("{label}: the copy must START; it was refused with {e:?}"));
 
     RunningCopy {
         engine: Operations::clone(engine),

@@ -180,7 +180,10 @@ pub(super) async fn a_paused_then_cancelled_rename_keeps_the_source_whole(target
     target.seed(target.bucket(), &[object(&from_key, &bytes)]).await;
 
     let (events, operation_id) = start(&volume_id, at(&volume, &from_key), "gone.bin").await;
-    assert!(app_engine().pause_write_operation(&operation_id) || !events.settled.lock_ignore_poison().is_empty());
+    assert!(
+        cmdr_operations::testing::pause_write_operation(app_engine(), &operation_id)
+            || !events.settled.lock_ignore_poison().is_empty()
+    );
     app_engine().cancel_write_operation(&operation_id, false);
     crate::test_support::wait_until_async(budget(SETTLE_BUDGET), "the cancelled rename to settle", || {
         !events.settled.lock_ignore_poison().is_empty()
@@ -212,11 +215,11 @@ pub(super) async fn a_paused_rename_resumes_and_lands(target: &S3Target) {
 
     let (events, operation_id) = start(&volume_id, at(&volume, &from_key), "b.bin").await;
     assert!(
-        app_engine().pause_write_operation(&operation_id),
+        cmdr_operations::testing::pause_write_operation(app_engine(), &operation_id),
         "the rename should still be running to pause"
     );
     assert!(
-        app_engine().resume_write_operation(&operation_id),
+        cmdr_operations::testing::resume_write_operation(app_engine(), &operation_id),
         "the paused rename should resume"
     );
     settle(&events, "the resumed rename to settle").await;

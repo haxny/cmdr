@@ -122,7 +122,7 @@ impl crate::Operations {
         clippy::too_many_arguments,
         reason = "each volume travels with its ID (for the busy set) plus its Arc; bundling them would just shuffle the same fields into a struct at every call site"
     )]
-    pub async fn copy_between_volumes(
+    pub(crate) async fn copy_between_volumes(
         &self,
         events: Arc<dyn OperationEventSink>,
         source_volume_id: String,

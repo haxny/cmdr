@@ -40,7 +40,7 @@ impl crate::Operations {
         clippy::too_many_arguments,
         reason = "command seam carries both endpoints, operation settings, preview ownership, and provenance"
     )]
-    pub async fn compress_start(
+    pub(crate) async fn compress_start(
         &self,
         events: Arc<dyn OperationEventSink>,
         source_volume: Arc<dyn Volume>,

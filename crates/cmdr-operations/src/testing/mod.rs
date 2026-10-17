@@ -10,9 +10,16 @@
 //! the place a test-only reach goes, ❌ never the public list above it.
 
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::time::Duration;
 
-use super::Operations;
+use cmdr_fs::volume::Volume;
+use cmdr_operation_log::types::Initiator;
+
+use super::{
+    BulkRenameRow, ConflictResolution, ExpectedSources, OperationEventSink, Operations, RenameStartError,
+    VolumeCopyConfig, WriteOperationError, WriteOperationStartResult,
+};
 
 // An engine a test builds for itself, over fakes it reads back, and a journal
 // it reads rows back from.
@@ -91,6 +98,127 @@ pub fn seed_incoherent_scan_result(
 // An undo's executor input, which the rollback cells build from a journaled
 // operation.
 pub use super::rollback::Reversal;
+
+// Entry points production reaches only from inside the engine (a routed start,
+// the queue's pause and resume), which an app-side cell drives directly. Here
+// rather than on the handle, so the public surface promises none of them.
+
+/// Starts `request` as a managed archive edit on `engine`: the driver a routed
+/// create, rename, or transfer into a zip lands in.
+pub async fn archive_edit_start(
+    engine: &Operations,
+    events: Arc<dyn OperationEventSink>,
+    request: ArchiveEditRequest,
+    progress_interval_ms: u64,
+) -> Result<WriteOperationStartResult, WriteOperationError> {
+    engine.archive_edit_start(events, request, progress_interval_ms).await
+}
+
+/// Routes an in-archive delete of `sources` on `engine`, as a routed delete does.
+pub async fn route_archive_delete(
+    engine: &Operations,
+    events: Arc<dyn OperationEventSink>,
+    sources: &[PathBuf],
+    parent_volume_id: &str,
+    progress_interval_ms: u64,
+    preview_id: Option<String>,
+) -> Result<WriteOperationStartResult, WriteOperationError> {
+    engine
+        .route_archive_delete(events, sources, parent_volume_id, progress_interval_ms, preview_id)
+        .await
+}
+
+/// Starts a fresh compression on `engine`, as a routed compress does.
+#[allow(
+    clippy::too_many_arguments,
+    reason = "forwards the start's own parameters one-to-one"
+)]
+pub async fn compress_start(
+    engine: &Operations,
+    events: Arc<dyn OperationEventSink>,
+    source_volume: Arc<dyn Volume>,
+    source_paths: Vec<PathBuf>,
+    dest_zip_full_path: PathBuf,
+    parent_volume_id: String,
+    conflict: ConflictResolution,
+    progress_interval_ms: u64,
+    compression_level: Option<i64>,
+    preview_id: Option<String>,
+    initiator: Initiator,
+) -> Result<WriteOperationStartResult, WriteOperationError> {
+    engine
+        .compress_start(
+            events,
+            source_volume,
+            source_paths,
+            dest_zip_full_path,
+            parent_volume_id,
+            conflict,
+            progress_interval_ms,
+            compression_level,
+            preview_id,
+            initiator,
+        )
+        .await
+}
+
+/// Starts a cross-volume copy on `engine`, as a routed copy does.
+#[allow(
+    clippy::too_many_arguments,
+    reason = "forwards the start's own parameters one-to-one"
+)]
+pub async fn copy_between_volumes(
+    engine: &Operations,
+    events: Arc<dyn OperationEventSink>,
+    source_volume_id: String,
+    source_volume: Arc<dyn Volume>,
+    source_paths: Vec<PathBuf>,
+    dest_volume_id: String,
+    dest_volume: Arc<dyn Volume>,
+    dest_path: PathBuf,
+    config: VolumeCopyConfig,
+    initiator: Initiator,
+    expected_sources: Option<ExpectedSources>,
+) -> Result<WriteOperationStartResult, WriteOperationError> {
+    engine
+        .copy_between_volumes(
+            events,
+            source_volume_id,
+            source_volume,
+            source_paths,
+            dest_volume_id,
+            dest_volume,
+            dest_path,
+            config,
+            initiator,
+            expected_sources,
+        )
+        .await
+}
+
+/// Starts one queued, same-volume batch rename on `engine`, as a reviewed batch
+/// does.
+pub fn start_bulk_rename(
+    engine: &Operations,
+    events: Arc<dyn OperationEventSink>,
+    volume_id: String,
+    rows: Vec<BulkRenameRow>,
+    initiator: Initiator,
+) -> Result<WriteOperationStartResult, RenameStartError> {
+    engine.start_bulk_rename(events, volume_id, rows, initiator)
+}
+
+/// Sets the live pause gate of `operation_id` on `engine`, without the queue's
+/// record flip: `true` when the operation was live.
+pub fn pause_write_operation(engine: &Operations, operation_id: &str) -> bool {
+    engine.pause_write_operation(operation_id)
+}
+
+/// Clears the live pause gate of `operation_id` on `engine`: `true` when the
+/// operation was live.
+pub fn resume_write_operation(engine: &Operations, operation_id: &str) -> bool {
+    engine.resume_write_operation(operation_id)
+}
 
 // The Criterion bench's door: engines of its own, driven through the internal
 // entry points a started operation runs.

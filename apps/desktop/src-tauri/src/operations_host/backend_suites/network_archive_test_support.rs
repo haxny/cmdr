@@ -303,21 +303,21 @@ async fn compress_onto(
     parent_id: &str,
 ) -> Arc<CollectorEventSink> {
     let events = Arc::new(CollectorEventSink::new());
-    app_engine()
-        .compress_start(
-            Arc::clone(&events) as Arc<dyn OperationEventSink>,
-            Arc::clone(source),
-            sources.iter().map(PathBuf::from).collect(),
-            dest_zip,
-            parent_id.to_string(),
-            ConflictResolution::Overwrite,
-            100,
-            None,
-            None,
-            Initiator::User,
-        )
-        .await
-        .expect("start the compress");
+    cmdr_operations::testing::compress_start(
+        app_engine(),
+        Arc::clone(&events) as Arc<dyn OperationEventSink>,
+        Arc::clone(source),
+        sources.iter().map(PathBuf::from).collect(),
+        dest_zip,
+        parent_id.to_string(),
+        ConflictResolution::Overwrite,
+        100,
+        None,
+        None,
+        Initiator::User,
+    )
+    .await
+    .expect("start the compress");
     await_archive_op(&events, "the compress onto the server").await;
     events
 }

@@ -1172,7 +1172,7 @@ names the app's accessor.
 
 ## The public surface is capped
 
-`index-crate-isolation` holds the surface to exactly what the crate exposes, with no headroom (82 root promises, 65
+`index-crate-isolation` holds the surface to exactly what the crate exposes, with no headroom (82 root promises, 58
 handle methods, 1 public module, 25 items in it). By group:
 
 - **Root**: `Operations` (the handle), its `OperationsBuilder`, `AlreadyClaimed`, and the re-export list in `lib.rs`:
@@ -1183,10 +1183,10 @@ handle methods, 1 public module, 25 items in it). By group:
   edge asks (trash routing, the trash dir, the look-alike check, `same_local_file`, `resolve_dest_path`); and the wire
   vocabulary from `types`.
 - **Handle methods**: the verbs the app's IPC commands, MCP tools, quit gate, and drag-out call one-to-one (starts,
-  instant mutations, previews and pre-flight, the queue, lifecycle), plus the builder and `claim_ledger`. Eight are
-  reached by the app's test cells only, though production runs them inside the engine too: `host`, `archive_edit_start`,
-  `compress_start`, `copy_between_volumes`, `route_archive_delete`, `start_bulk_rename`, `pause_write_operation`, and
-  `resume_write_operation`. Each is a candidate for a `testing` wrapper.
+  instant mutations, previews and pre-flight, the queue, lifecycle), plus the builder, `claim_ledger`, and `host` (the
+  MCP rollback takes its sink factory). An entry point production reaches only from inside the engine (a routed start
+  like `archive_edit_start` or `copy_between_volumes`, the raw pause gate) stays `pub(crate)`; an app-side cell drives
+  it through a `testing` function that forwards to it.
 - **`host`**: the seam traits the app answers (`OperationVolumes`, `EngineEvents`, `OwnWrites`, `OperationIndex`,
   `Pacing`, `NameOrder`, the two event sinks), their value types (`OperationErrorReport` and its parts,
   `InstantMutationFact` and its tokens, `ExpectedTotals`, `BufferedLeaves`, `Leaf`, `Announced`, `UnregisteredVolume`,

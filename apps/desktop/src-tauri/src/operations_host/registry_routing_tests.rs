@@ -426,10 +426,14 @@ mod an_open_listing_inside_the_zip {
             preview_id: None,
         };
 
-        engine
-            .archive_edit_start(Arc::clone(&events) as Arc<dyn OperationEventSink>, request, 0)
-            .await
-            .expect("start archive edit");
+        cmdr_operations::testing::archive_edit_start(
+            &engine,
+            Arc::clone(&events) as Arc<dyn OperationEventSink>,
+            request,
+            0,
+        )
+        .await
+        .expect("start archive edit");
         wait_for_complete(&events).await;
 
         assert_eq!(zip.names(), vec!["added.txt", "keep.txt"]);
@@ -446,16 +450,16 @@ mod an_open_listing_inside_the_zip {
         .await;
         let events = Arc::new(CollectorEventSink::new());
 
-        engine
-            .route_archive_delete(
-                Arc::clone(&events) as Arc<dyn OperationEventSink>,
-                &[zip.path.join("drop.txt")],
-                &zip.parent,
-                0,
-                None,
-            )
-            .await
-            .expect("start delete");
+        cmdr_operations::testing::route_archive_delete(
+            &engine,
+            Arc::clone(&events) as Arc<dyn OperationEventSink>,
+            &[zip.path.join("drop.txt")],
+            &zip.parent,
+            0,
+            None,
+        )
+        .await
+        .expect("start delete");
         wait_for_complete(&events).await;
 
         assert_eq!(zip.names(), vec!["keep.txt"]);

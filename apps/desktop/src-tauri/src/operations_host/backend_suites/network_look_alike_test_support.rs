@@ -427,14 +427,14 @@ pub(super) async fn a_bulk_rename_skips_a_look_alike(remote: Arc<dyn Volume>, di
         });
     }
     let events = Arc::new(CollectorEventSink::new());
-    app_engine()
-        .start_bulk_rename(
-            events.clone() as Arc<dyn cmdr_operations::OperationEventSink>,
-            registered.id.clone(),
-            rows,
-            Initiator::Agent,
-        )
-        .expect("start bulk rename");
+    cmdr_operations::testing::start_bulk_rename(
+        app_engine(),
+        events.clone() as Arc<dyn cmdr_operations::OperationEventSink>,
+        registered.id.clone(),
+        rows,
+        Initiator::Agent,
+    )
+    .expect("start bulk rename");
     crate::test_support::wait_until_async(budget(Duration::from_secs(6)), "the bulk rename to settle", || {
         !events.settled.lock_ignore_poison().is_empty()
     })

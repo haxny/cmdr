@@ -131,7 +131,7 @@ impl Operations {
     /// between-files boundary. Cancellation still wins: a paused op that's then
     /// cancelled unblocks immediately. The manager record's `LifecycleStatus` is
     /// flipped separately (see `manager::set_paused`).
-    pub fn pause_write_operation(&self, operation_id: &str) -> bool {
+    pub(crate) fn pause_write_operation(&self, operation_id: &str) -> bool {
         if let Some(state) = self.registry().get(operation_id) {
             state.pause_gate.pause();
             return true;
@@ -142,7 +142,7 @@ impl Operations {
     /// Clears the pause flag on the live state for `operation_id`, waking the gate.
     /// Returns `true` if a state existed. Resuming a not-paused op is a harmless
     /// no-op.
-    pub fn resume_write_operation(&self, operation_id: &str) -> bool {
+    pub(crate) fn resume_write_operation(&self, operation_id: &str) -> bool {
         if let Some(state) = self.registry().get(operation_id) {
             state.pause_gate.resume();
             return true;

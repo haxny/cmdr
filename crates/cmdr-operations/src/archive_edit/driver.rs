@@ -52,7 +52,7 @@ impl crate::Operations {
     /// managed edit driver as a single `{ delete }` changeset. All sources must
     /// resolve to one archive (a multi-select can't span archives in one pane).
     /// `parent_volume_id` is the display drive id (`"root"` for a local zip).
-    pub async fn route_archive_delete(
+    pub(crate) async fn route_archive_delete(
         &self,
         events: Arc<dyn OperationEventSink>,
         sources: &[PathBuf],
@@ -102,7 +102,7 @@ impl crate::Operations {
 
     /// Starts an archive edit as a managed operation, returning its id immediately
     /// (the queue row shows at once; the mutator runs when the parent lane is free).
-    pub async fn archive_edit_start(
+    pub(crate) async fn archive_edit_start(
         &self,
         events: Arc<dyn OperationEventSink>,
         request: ArchiveEditRequest,

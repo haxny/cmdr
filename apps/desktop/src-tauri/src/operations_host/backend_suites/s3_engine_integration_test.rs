@@ -203,7 +203,7 @@ pub(super) async fn a_paused_upload_resumes_and_lands(target: &S3Target) {
     })
     .await;
     assert!(
-        app_engine().pause_write_operation(&running.operation_id),
+        cmdr_operations::testing::pause_write_operation(app_engine(), &running.operation_id),
         "the upload is parked on the gate, so it's still running to pause"
     );
     source.gate.add_permits(100_000);
@@ -211,7 +211,10 @@ pub(super) async fn a_paused_upload_resumes_and_lands(target: &S3Target) {
         running.events.complete.lock_ignore_poison().is_empty(),
         "a paused upload doesn't finish"
     );
-    assert!(app_engine().resume_write_operation(&running.operation_id));
+    assert!(cmdr_operations::testing::resume_write_operation(
+        app_engine(),
+        &running.operation_id
+    ));
     running.settle().await;
     running.assert_no_errors();
 
