@@ -1799,6 +1799,57 @@ per slice: `desktop-rust-tests`, `desktop-rust-clippy`, `desktop-rust-test-sleep
   `cargo test` (the fake phone list is process-global) and pass under nextest; they sit outside the DONE filter.
 - **Deleted cell:** `state::tests::guard_unregisters_its_state_even_when_the_test_body_panics`, with the guard.
 
+### M7g: The engine's tests stop reaching the app
+
+**Why.** A survey before M8a (at `d1f9dd3c9`) found 124 engine files whose code (comments aside) still names an app path
+beyond `crate::file_system::write_operations`, so M8a's `git mv` couldn't be a path rewrite. Keeping them app-side
+doesn't work either: they're child modules reaching private internals through `super::`, so each would need a `testing`
+export. This slice cuts those reaches in place, app-side, so M8a stays mechanical.
+
+**Scope, by what a file reaches** (`#[test]` counts per group):
+
+1. **Only `crate::test_support::{TestDir, wait_until, wait_until_async}`** (61 files, 637 tests), which re-export
+   `cmdr_fs::testing`: point at `cmdr_fs::testing` directly.
+   `transfer/{conflict_responder_test_support, macos_copy, linux_copy, chunked_copy, copy_strategy, copy_integration_test, move_integration_test, transaction_integration_test, self_collision_tests, cross_type_policy_tests, volume_outage_tests, hardlink_progress_tests, folder_over_file_rollback_tests, metadata_matrix_tests, type_mismatch_rename_tests, conflict_prompt_sides_tests, transfer_driver_sync_tests, transfer_driver_async_tests}`,
+   `transfer/copy/{copy_tests, named_copy_tests, copy_dest_link_tests}`,
+   `transfer/move_op/{move_reversal_tests, named_move_tests, move_vanished_tests, move_durability_tests, move_interruption_tests}`,
+   `transfer/volume/{merge_pause_tests, copy_outage_tests, strategy_server_side_copy_tests, strategy_retry_tests, merge_dispatch_mutex_tests, strategy_abort_tests, strategy_dest_yield_tests, copy_crashsafe_tests}`,
+   `delete/{hardlink_progress_tests, trash_pause_tests, cloud_trash, trash_tests, preview_binding_tests, delete_cancel_tests, delete_integration_test, volume_cancel_tests}`,
+   `rollback/planner_tests/control_tests`, `rename/bulk/look_alike_tests`, and at the root `tests`, `overwrite_tests`,
+   `status_cache_tests`, `ledger_tests`, `manager/tests`, `free_space_tests`, `source_binding/tests`, `handle_tests`,
+   `in_flight_temps_claim_tests`, `validation_integration_test`, `scan_pause_tests`, `state_tests`,
+   `scan_preview_tree_tests`, `queued_sources_tests`, `durability_tests`, `approved_op_parity_tests`,
+   `settle_event_tests`.
+2. **Also `crate::volume_host::host()`** (39 files, 281 tests), almost all to build a `LocalPosixVolume` or an archive
+   volume: swap to `VolumeHost::detached()`, or a `RecordingListings` host where a cell reads listings, after checking
+   per file that no assertion depends on the app's host. `testing/engine.rs` (`register_local_root`,
+   `seeing_app_listings`),
+   `archive_edit/{move_out_tests, compress_remote_tests, compress_tests, fresh_compress_tests, copy_into_tests, copy_into_drift_tests, copy_into_interactive_tests, fresh_plan_tests}`,
+   `transfer/volume/{rename_merge_test_support, rename_merge_cancel_tests, rename_merge_pause_tests, rename_merge_walk_tests, rename_merge_case_fold_tests, rename_merge_stat_tests, strategy_stale_handle_tests, move_tests, cleanup_tests, link_following_backend_tests, copy_extract_apple_double_tests, copy_metadata_tests, copy_sidecar_tests, copy_selected_link_tests, merge_placeholder_tests, hostile_names_tests, copy_prescan_reuse_tests, cross_type_aside_tests, strategy_pause_tests, strategy_yield_tests, metadata_loss_tests, naming_tests, strategy_sequential_tests, copy_extract_out_tests, strategy_copy_tests}`,
+   `delete/volume_hardlink_progress_tests`, `rollback/planner_tests/{tests, blocked_items_tests}`,
+   `own_write_announce_tests`, `in_flight_sweep_tests`.
+3. **Real app subsystems** (24 files, 221 tests): the registry (`get_volume_manager`, `TestVolumeRegistration`,
+   `VolumeManager`), the pane listings (`AppListings`, `listing_host::listings()`), `operations_host::test_engine()` /
+   `app_engine()`, `file_system::git`, `WedgedVolume`, `redact::redact_line`, `quit::blocks_quit`. Convert onto
+   `engine.volumes()` and a `RecordingListings` host; `WedgedVolume` moves down.
+   `archive_edit/{test_support, routing_tests, driver_tests}`, `rollback/planner_tests/{test_support, lifecycle_tests}`,
+   `transfer/real_image`, `transfer/move_op/move_journal_tests`, `transfer/volume/copy_snapshot_out_tests`,
+   `rename/{tests, bulk/tests}`, `create/tests`, `delete/delete_volume_reuse_tests`, `routing/tests`,
+   `look_alike_tests`, `conflict_preflight_tests`, `scan_bridge_tests`, `scan_tests`, `scan_sidecar_tests`,
+   `scan_failure_tests`, `scan_watchdog_tests`, `scan_preview_oracle_tests`, `scan_preview_listing_progress_tests`,
+   `in_flight_temps_tests`, `journal_capture_volume_tests`.
+4. **Cells that truly need the app** (the git portal, `real_image`, registry arrivals, the in-archive rename route,
+   `archive_edit/routing_tests`, and any assertion on `quit::blocks_quit` / `redact_line`) move to `operations_host/`
+   over the smallest `testing` addition that works.
+
+**Rules.** As M7b–M7e: never loosen a test; per-file counts before → after in each commit body; a cross-engine or
+host-swap mistake is still caught where it was caught before.
+
+**DONE.** No engine file's code names an app path:
+`rg -n -P 'crate::(?!file_system::write_operations)[a-z_]+' apps/desktop/src-tauri/src/file_system/write_operations -g '*.rs'`
+finds only comments. Lanes per commit: `desktop-rust-tests`, `desktop-rust-clippy`, `desktop-rust-test-sleep`; a plain
+threaded `cargo test` over the engine at the end.
+
 ### M8a: The move
 
 **Scope.** `git mv apps/desktop/src-tauri/src/file_system/write_operations crates/cmdr-operations/src` (minus what stays
