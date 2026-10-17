@@ -118,7 +118,7 @@ fn a_refused_entry_is_dropped_rather_than_left_for_the_next_caller() {
 /// rather than deleting the files a torn entry still lists.
 #[test]
 fn after_a_panic_mid_edit_the_next_delete_rescans_its_sources() {
-    let previews = previews::ScanPreviews::new();
+    let previews = ScanPreviews::new();
     previews.insert_scan_result("torn".to_string(), cached_for(&["/a"]));
     previews.tear_mid_mutation_for_test("torn", paths(&["/b"]));
 
@@ -137,7 +137,7 @@ fn after_a_panic_mid_edit_the_next_delete_rescans_its_sources() {
 /// walk.
 #[test]
 fn a_preview_settled_after_a_panic_mid_edit_is_still_a_cache_hit() {
-    let previews = previews::ScanPreviews::new();
+    let previews = ScanPreviews::new();
     previews.insert_scan_result("torn".to_string(), cached_for(&["/a"]));
     previews.tear_mid_mutation_for_test("torn", paths(&["/b"]));
 
