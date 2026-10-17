@@ -4,8 +4,8 @@
 
 use crate::file_system::volume::friendly_error::ErrorCategory;
 use crate::file_system::volume::{BackendKind, ConnectionState};
-use crate::file_system::write_operations::{LifecycleStatus, WriteOperationPhase, WriteOperationType};
 use crate::mcp::resources::volumes::VolumeKind;
+use cmdr_operations::{LifecycleStatus, WriteOperationPhase, WriteOperationType};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]

@@ -1,0 +1,21 @@
+# Clippy reads the FIRST `clippy.toml` it finds walking up from this package's
+# manifest directory, and never merges, so this file replaces the workspace root's
+# for `cmdr-operations`. It carries the root's general settings below; the root's
+# `disallowed-methods` / `disallowed-types` name `tauri`, `objc2_app_kit`, and
+# `reqwest`, none of which this crate can reach (`index-crate-isolation`), so they
+# have nothing to guard here.
+
+# Complexity threshold of 15 matches ESLint's complexity rule for consistency across Rust and TypeScript
+cognitive-complexity-threshold = 15
+
+# Tests legitimately `.unwrap()` everywhere; this exempts unwraps inside `#[test]` fns. Helper fns in
+# `#[cfg(test)] mod`s aren't covered, so those use the sanctioned `.expect("…")` form.
+allow-unwrap-in-tests = true
+
+# A global `sync(2)` flushes every dirty page on every mounted volume, so one wedged network mount
+# stalls the whole operation behind it, and a copy has no business flushing anyone else's writes.
+# Durability is per file (`durability.rs`: `fsync` the file and its directory). `lib.rs` lifts this
+# under `cfg(test)`, where nothing calls it anyway.
+disallowed-methods = [
+  { path = "libc::sync", reason = "flush the files this operation wrote (`durability.rs`), never every mounted volume" },
+]

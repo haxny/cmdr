@@ -16,11 +16,11 @@ use cmdr_fs::testing::metadata_fixture::{HIDDEN_FLAG, LOCKED_FLAG, MetadataFixtu
 use super::network_transfer_test_support::{clean_deep, run_copy, run_copy_on, self_describing_bytes};
 use super::smb_test_support::*;
 use crate::file_system::VolumeManager;
-use crate::file_system::write_operations::Operations;
-use crate::file_system::write_operations::testing::{Reversal, TestOperationLog};
 use cmdr_local::LocalPosixVolume;
 use cmdr_operation_log::rollback::{execute_rollback, rollback_operation};
 use cmdr_operation_log::types::Initiator;
+use cmdr_operations::Operations;
+use cmdr_operations::testing::{Reversal, TestOperationLog};
 
 /// Big enough for the streaming writer, not the one-frame write.
 const STREAMED_BYTES: usize = 10 * 1024 * 1024;

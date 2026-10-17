@@ -21,9 +21,9 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use cmdr_fs::volume::Volume;
 
-use crate::file_system::write_operations::testing::forward_volume_methods;
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::{CopyScanResult, InMemoryVolume, ListingProgress, VolumeError, VolumeReadStream};
+use cmdr_operations::testing::forward_volume_methods;
 
 /// How big the file a cancel interrupts is, and how much of it one permit buys.
 ///

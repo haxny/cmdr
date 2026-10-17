@@ -1,7 +1,7 @@
 # Operations host: details
 
 The app side of the write engine's seams. The engine declares what it needs in `file_system/write_operations/host/`
-(`write_operations/DETAILS.md` § "The engine's host"); this module answers.
+(`crates/cmdr-operations/src/DETAILS.md` § "The engine's host"); this module answers.
 
 ## Startup
 
@@ -18,7 +18,7 @@ method on it; the engine's root `pub use` list is all it may name.
 process holds this data dir) and before `init_volume_manager`, unconditionally. It claims the installed engine's
 in-flight ledger through `operations()`, so a duplicate that lost the install is never the one claimed; a second claim
 is refused and logged. With no data dir the engine runs the ledger unpersisted and reports it
-(`write_operations/DETAILS.md` § "Who claims the ledger").
+(`crates/cmdr-operations/src/DETAILS.md` § "Who claims the ledger").
 
 - **Decision: a call before `install` is refused, never run detached.** `operations()` answers `Err(NotInstalled)`
   and raises a `log_error!`. A start maps it through `refuse_not_installed` to the frontend's generic `IoError` (its
@@ -30,7 +30,7 @@ is refused and logged. With no data dir the engine runs the ledger unpersisted a
 
 - **Decision: the runtime comes from the volume host, with no second handle.** Why: the engine and the backends it
   drives then share one pool, and the two can't disagree about which runtime is the app's. The admission pass
-  depends on it being the app's (`write_operations/DETAILS.md` § "The admission pass spawns admitted ops on the APP
+  depends on it being the app's (`crates/cmdr-operations/src/DETAILS.md` § "The admission pass spawns admitted ops on the APP
   runtime").
 - **Decision: the sink factory is the engine's only way to a Tauri sink.** Why: an instant op routed into a zip becomes
   a managed archive edit the ENGINE starts, with no caller-built sink to hand it; and the MCP rollback tool is generic
@@ -51,7 +51,7 @@ The four terminal emits carry app side effects in a pinned order (`terminal_effe
 - `write-complete`: completion analytics (`analytics.rs`), then the MCP terminal ring, then the emit.
 - `write-cancelled`: the ring, then the emit.
 - `write-error`: the ring, the failure `warn!` (target `write_operations`, the one place the technical reason is
-  written down; `write_operations/DETAILS.md` has the WARN-not-error decision), the engine's
+  written down; `crates/cmdr-operations/src/DETAILS.md` has the WARN-not-error decision), the engine's
   `OperationManager::retain_failure`, then the emit.
 - `write-settled`: the free-space hint (`cmdr_local::live_space::expect_space_change`, macOS), then the emit.
 
@@ -62,7 +62,7 @@ emits `write-complete` and reports an `InstantMutationFact` instead.
 
 ## The wire (`wire.rs`)
 
-The engine's payloads (`write_operations/types/events.rs`, plus `OperationsChanged` and `MutationSettled`) derive only
+The engine's payloads (`crates/cmdr-operations/src/types/events.rs`, plus `OperationsChanged` and `MutationSettled`) derive only
 `serde` + `specta::Type`; the Tauri event, with its wire name, is the app's. `wire_event!` gives each a newtype that
 derives `tauri_specta::Event` with `#[serde(transparent)]`, `ipc.rs`'s `collect_events!` registers the newtypes, and
 every emit site writes `wire::WriteProgress(event).emit(&app)`. A payload emitted unwrapped doesn't compile.
@@ -92,9 +92,9 @@ every emit site writes `wire::WriteProgress(event).emit(&app)`. A payload emitte
 - `instant_mutation_settled` → `rename_used` / `folder_created` / `file_created`, with the `initiator`, `target`, and
   `outcome` tokens `analytics/DETAILS.md` § "Starter event set" catalogs.
 - `error_report` → `log_error!`, one arm per `OperationErrorReport` variant, each with the message and target the
-  engine's code always raised it with. A report that had no explicit target keeps the engine module's path as a
-  literal (`cmdr_lib::file_system::write_operations::overwrite`, …), so `RUST_LOG` recipes and the report dispatch's
-  per-chain filters keep matching wherever the engine's code lives.
+  engine's code always raised it with. A report that had no explicit target carries the engine module's path as a
+  literal (`cmdr_operations::overwrite`, …), the target the engine's own `log` lines under that module carry, so
+  `RUST_LOG` recipes and the report dispatch's per-chain filters match both.
 - `scan_wait_progress` → `write-progress` (a failed emit `warn!`s under `op_manager`).
 
 ## The volumes (`volumes.rs`)
@@ -113,7 +113,7 @@ watcher sleeps and for a path outside the Downloads root (`downloads/DETAILS.md`
 called beside a syscall on every file landing, so it stays one prefix-checked insert. Under `cfg(test)` the hook feeds
 `downloads/own_write_recorder.rs`, which is how `own_writes::tests::an_announce_reaches_the_downloads_hook` pins that an
 announce reaches the hook. The engine's own announce order is pinned against its seam, in
-`file_system/write_operations/own_write_announce_tests.rs`.
+`crates/cmdr-operations/src/own_write_announce_tests.rs`.
 
 ## The drive index (`index.rs`)
 
@@ -187,7 +187,7 @@ predicate the crate never states, and a free-space pre-flight reading `NotSuppor
   - `network_safety_test_support.rs`: a failed merge copy or move onto the user's folder, a delete bound to a
     local-shaped preview, a recursive delete that takes exactly the selection, an unanswerable source-type probe, a
     download cancelled mid-file, and a name another writer takes mid-upload (never replaced, never deleted by the
-    failed copy's cleanup; SMB's single-shot size is a known red gap, `../file_system/write_operations/transfer/volume/DETAILS.md` § "The single-shot
+    failed copy's cleanup; SMB's single-shot size is a known red gap, `crates/cmdr-operations/src/transfer/volume/DETAILS.md` § "The single-shot
     exemption"). Faults go on the LOCAL side (`FaultyVolume`); the server is what users run.
     `Registered` puts a volume in the registry for the ops that look it up, and cleans BEFORE unregistering, because
     unregistering retires the volume and a retired network volume drops its session.

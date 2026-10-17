@@ -8,7 +8,7 @@ and gotchas live in `CLAUDE.md`.
 `transfer-stall.ts` holds two presentation decisions: how long to wait before calling a transfer stalled
 (`STALL_NOTICE_SECONDS`, 10 s), and what the time line says instead of an ETA while bytes are genuinely on their way
 (`waitLineFor`). Everything else comes from the backend's `TransferActivity`, derived from the live in-flight probe (see
-`apps/desktop/src-tauri/src/file_system/write_operations/transfer/DETAILS.md` § "The stall signal").
+`crates/cmdr-operations/src/transfer/DETAILS.md` § "The stall signal").
 
 **The wait line, before the first byte, while a response arrives, and while a volume comes back.** Three backend
 readings drive it, and the readout's time line shows at most one, below a stall and above an ETA:
@@ -22,12 +22,11 @@ readings drive it, and the readout's time line shows at most one, below a stall 
   exactly this. Past 10 s with nothing arriving, the stall notice takes over and names the source.
 
 - `waitingOn: 'reconnecting'`: "Waiting for Naspolya to come back…", named by `reconnectingVolume`. A share dropped off
-  the network and the backend is reconnecting it for a bounded time
-  (`apps/desktop/src-tauri/src/file_system/write_operations/transfer/DETAILS.md` § "Waiting out a volume that went
-  away"). It outranks the other two (nothing arrives from a volume that's gone), shows from the first second, holds back
-  the stall notice (the wait is named), and wears the stalled tone, since it's the news on the row. It's also the one
-  line `ScanPhaseBody` renders: a Retry while the NAS is still down waits before its first step, while it's still
-  counting.
+  the network and the backend is reconnecting it for a bounded time (`crates/cmdr-operations/src/transfer/DETAILS.md` §
+  "Waiting out a volume that went away"). It outranks the other two (nothing arrives from a volume that's gone), shows
+  from the first second, holds back the stall notice (the wait is named), and wears the stalled tone, since it's the
+  news on the row. It's also the one line `ScanPhaseBody` renders: a Retry while the NAS is still down waits before its
+  first step, while it's still counting.
 
 Both stay silent for `paused` and `conflict`. ERR-CNK7M is the case: a 377 kB file sat 20 s on a silent 0% bar. Pinned
 by `transfer-stall.test.ts` (`waitLineFor`), `TransferProgressReadout.svelte.test.ts`, and
@@ -68,8 +67,7 @@ stalled state, which the tier-3 suite can't reach because it only renders the ju
 would be noise on every copy. It earns its place exactly when it explains something: a stalled counter reading lower
 than what the person can see at the destination, which is the confusion the 2026-07-31 incident produced. The counter
 itself is honest and ❌ must not be "fixed" to close that gap; why, and what the payload can't express, is
-`apps/desktop/src-tauri/src/file_system/write_operations/transfer/transfer_driver/DETAILS.md` § "The file counter counts
-COMPLETED files".
+`crates/cmdr-operations/src/transfer/transfer_driver/DETAILS.md` § "The file counter counts COMPLETED files".
 
 ## File map
 
@@ -129,21 +127,21 @@ prompt in § "Archive-password prompt", the `..` helpers in § "Index conversion
   and stay there", "1 item changed during the move and stays in Work"), off `WriteCompleteEvent.appearedDuringMove` —
   typed data (`itemCount`, `changedCount`, `folderName`, `folderCount`), never prose crossing IPC. It means a
   cross-filesystem move found files the copy phase never carried, or originals saved over after their copy, so the
-  source sweep left them alone (backend: `write_operations/transfer/DETAILS.md` § "deletes a LEDGER"). The move still
-  reads as a success, and the toast stays `success`, not a warning: nothing went wrong, some files simply arrived too
-  late to travel. Absent on every other ending, so the historic wordings render byte-identical.
+  source sweep left them alone (backend: `crates/cmdr-operations/src/transfer/DETAILS.md` § "deletes a LEDGER"). The
+  move still reads as a success, and the toast stays `success`, not a warning: nothing went wrong, some files simply
+  arrived too late to travel. Absent on every other ending, so the historic wordings render byte-identical.
 - **A copy or move whose destination couldn't keep some metadata appends one calm sentence**, LAST, naming the classes
   ("This server can't store creation dates or Finder tags, so those stayed behind."), off
   `WriteCompleteEvent.metadataLeftBehind`: typed classes and counts, never prose. Names only, joined with the UI
   language's "or" (`formatDisjunctionList`); the counts go to the backend's log line. The toast stays `success`: every
   byte landed. ❗ The wording is David's placeholder (the `@key` descriptions say so). There's no queue-row line: the
   queue window hides finished rows (`queue/CLAUDE.md`), so the toast is the one surface. Backend contract:
-  `write_operations/transfer/volume/DETAILS.md` § "Copies keep the source's metadata".
+  `crates/cmdr-operations/src/transfer/volume/DETAILS.md` § "Copies keep the source's metadata".
 - **A copy whose closing flush couldn't confirm its files are on the disk raises a second, persistent `warn` toast**
   (`composeDurabilityUnconfirmedToast`, off `WriteCompleteEvent.durabilityUnconfirmed`, which names only the destination
   volume), and the completion drops to `warn` too, the way a partly refused trash does. Every file landed, so the
   completion sentence stays true; the warning is the part worth reading in full, so it waits to be closed. Backend
-  contract: `write_operations/transfer/DETAILS.md` § "Durability" (#461).
+  contract: `crates/cmdr-operations/src/transfer/DETAILS.md` § "Durability" (#461).
 
 ## Single-item destinations
 
@@ -185,8 +183,8 @@ name but forwards the ORIGINAL source name as a bulk-skip key. Destination edits
 immediately and debounce another check; an old in-flight answer cannot supply skip names to a newer target.
 
 The pane preserves `destinationName` through progress and retry and suppresses the automatic rename editor when the user
-already supplied a name. Backend landing and safety:
-`apps/desktop/src-tauri/src/file_system/write_operations/transfer/DETAILS.md` § "Named destinations".
+already supplied a name. Backend landing and safety: `crates/cmdr-operations/src/transfer/DETAILS.md` § "Named
+destinations".
 
 ## How transfer flows
 
@@ -201,7 +199,7 @@ already supplied a name. Backend landing and safety:
      structure via `validateDirectoryPath()` from `#lib/utils/filename-validation` (empty, absolute, null bytes, length
      limits), then checks logical constraints (a folder into its own subfolder). A destination that IS the source's own
      folder is allowed: it duplicates, and the backend resolves that per item
-     (`src-tauri/src/file_system/write_operations/transfer/DETAILS.md` § "Self-collision (duplicating in place)").
+     (`crates/cmdr-operations/src/transfer/DETAILS.md` § "Self-collision (duplicating in place)").
    - The logical check anchors BOTH sides on their own volumes first (`anchorOnVolume`, the frontend twin of
      `root_anchored`): the box is volume-relative, the sources are the pane's absolute paths. Comparing raw spellings
      never caught a folder copied into itself on a drive under `/Volumes`, and refused cross-volume copies whose paths
@@ -251,15 +249,15 @@ already supplied a name. Backend landing and safety:
      claims that preview in the backend and its own task waits for it, so the dialog is a view over a named operation
      from the first frame. While `phase === 'scanning'` it renders the scan-phase body and disables Rollback (nothing
      written yet); Pause and Background both stay. Pause reaches the WALK — it parks between entries on the operation's
-     own gate (`write_operations/scan_bridge.rs` § `ScanPause`) — so a paused scan is titled "Paused" and drops its
-     spinner and its rates, because it has genuinely stopped.
+     own gate (`crates/cmdr-operations/src/scan_bridge.rs` § `ScanPause`) — so a paused scan is titled "Paused" and
+     drops its spinner and its rates, because it has genuinely stopped.
    - Routes to a backend command through `transfer-dispatch.ts`, then binds the session for the id it gets back.
    - Subscribes to nothing. The window's fan-out holds the seven streams and buffers whatever arrives for an id no
      session has claimed yet, which covers the gap between the start command answering and the binder acquiring. § "The
      dialog is a view".
    - Dual progress bars (size + file count). Speed (both bytes/s and files/s) and ETA come pre-computed from the backend
-     (`write_operations/eta.rs`) on every `WriteProgressEvent`; the dialog renders the numbers and applies a tiny
-     display low-pass to the ETA to prevent flicker. No FE-side math. See BE § "ETA + throughput".
+     (`crates/cmdr-operations/src/eta.rs`) on every `WriteProgressEvent`; the dialog renders the numbers and applies a
+     tiny display low-pass to the ETA to prevent flicker. No FE-side math. See BE § "ETA + throughput".
    - Dynamic stage indicator: "Scanning" → "Copying" → "Writing the last piece..." (+ "Removing the originals..." for a
      cross-disk move, § below).
    - **Flushing phase.** When a `write-progress` event arrives with `phase: 'flushing'`, the dialog title shows
@@ -275,8 +273,8 @@ already supplied a name. Backend landing and safety:
      `titleActive`'s `delete` arm: "Deleting..." over a move the user asked for reads as their files being destroyed. A
      move WITHIN one disk never reaches it (a rename leaves no originals), and a real `delete` operation keeps
      "Deleting...", which is what its `deleting` phase actually is. Why the backend emits it at all, and what the dialog
-     looked like when it didn't: `apps/desktop/src-tauri/src/file_system/write_operations/transfer/DETAILS.md` § "The
-     source sweep reports itself". Pinned by `TransferProgressDialog.flushing.test.ts`.
+     looked like when it didn't: `crates/cmdr-operations/src/transfer/DETAILS.md` § "The source sweep reports itself".
+     Pinned by `TransferProgressDialog.flushing.test.ts`.
    - **Scanning-phase UI** (`phase === 'scanning'`, the one path there is now): rendered via `ScanPhaseBody`. Shows
      source path, running tallies (`bytesFound / filesFound / dirsFound`), FE-computed throughput from `ScanThroughput`
      (`../scan-throughput.ts`), and a spinner. Current directory (`event.currentDir`) renders above the filename so the
@@ -436,8 +434,8 @@ under a free ` (N)` name. Move is already done, so the batch validator rejects i
 `clipboard-operations.ts::pasteWouldMoveNothing` short-circuits a cut-paste whose sources are all already in the
 destination: no dialog or transfer, and the clipboard survives for the next paste. A partial set dispatches normally and
 the backend drops identity moves. The frontend check is lexical; the backend settles filesystem identity
-(`src-tauri/src/file_system/write_operations/transfer/DETAILS.md` § "Self-collision (duplicating in place)"). The
-single-item dialog instead compares complete destinations, as described in § "Single-item destinations".
+(`crates/cmdr-operations/src/transfer/DETAILS.md` § "Self-collision (duplicating in place)"). The single-item dialog
+instead compares complete destinations, as described in § "Single-item destinations".
 
 What the pre-confirm conflict check owes that backend is the SOURCE side of the question:
 `transfer-conflict-check.svelte.ts` forwards `sourceVolumeId` and `sourcePaths` to `scanVolumeForConflicts`, and only
@@ -496,8 +494,8 @@ Parameterizing by `operationType` avoids duplication and guarantees UX consisten
 Compress rides the SAME dialog/progress/state components as copy/move via `operationType: 'compress'`. The backend
 carries `WriteOperationType::Compress` through registration, progress, terminal events, and bindings while mapping it to
 archive-edit journal and analytics semantics. The seed mechanism lives in
-`apps/desktop/src-tauri/src/file_system/write_operations/archive_edit/DETAILS.md` § "The driver, op by op". The
-user-visible differences from copy/move:
+`crates/cmdr-operations/src/archive_edit/DETAILS.md` § "The driver, op by op". The user-visible differences from
+copy/move:
 
 - **The progress title follows the backend phase.** `Compressing` measures uncompressed source bytes; `Transferring`
   measures the completed archive's compressed bytes and starts a new ETA. `FinishingCompression` and `FinishingTransfer`
@@ -529,15 +527,15 @@ user-visible differences from copy/move:
   moving either reflects in the other live. `dispatchTransferOperation` reads the setting once at dispatch and passes
   `compressionLevel` in the op config for compress, copy, AND cross-volume move (one uniform level for every user-driven
   zip write; the backend ignores it for non-archive copies). The level's effect on the archive (added-entries-only,
-  clamped 1..=9, `None` = crate default 6) is single-sourced in
-  `apps/desktop/src-tauri/src/file_system/write_operations/DETAILS.md` § "Archive edits" → the mutation `DETAILS.md`.
+  clamped 1..=9, `None` = crate default 6) is single-sourced in `crates/cmdr-operations/src/DETAILS.md` § "Archive
+  edits" → the mutation `DETAILS.md`.
 - **An explicitly-approximate estimated size shows in compress mode only** (`CompressEstimateLine.svelte`, beside the
   scan tallies). The backend samples it once during the deep scan (local sources only; suppressed for remote) and ships
   per-class level-6 subtotals on `scan-preview-complete`; `transfer-scan-state` exposes them as `estimatedBytes`. The
   line re-scales to the selected level via `compress-estimate-scaling.ts` with no re-scan (it subscribes to the same
   `behavior.archiveCompressionLevel` setting the slider writes), shows a loading affordance while a local scan runs, and
   renders nothing when the estimate is absent. The sampler, budgets, and level curve are single-sourced in
-  `apps/desktop/src-tauri/src/file_system/write_operations/DETAILS.md` § "Compressed-size estimate".
+  `crates/cmdr-operations/src/DETAILS.md` § "Compressed-size estimate".
 - **The Copy / Move / Compress row is the `ui/ToggleGroup` primitive** (`semantics: 'toggles'`, `fullWidth`), wrapped in
   a `.operation-toggle` div that supplies only the side inset. `toggles`, not `tabs`: the row picks a stored value and
   has no tab panels, so AT should hear "toggle button, Compress, pressed" rather than a promised "tab 1 of 3". E2E and
@@ -617,13 +615,13 @@ to the boolean.
 as soon as the preview id is in hand, even with the check still running.
 
 **Why it's safe.** The upfront conflict list is not a correctness input, it's a bulk-skip perf optimization:
-`build_pre_skip_set` (`src-tauri/src/file_system/write_operations/transfer/transfer_driver/mod.rs`) returns an empty set
-unless `config_resolution == Skip`, and the copy pipeline has a second independent `Skip` gate (`transfer/copy/mod.rs`).
+`build_pre_skip_set` (`crates/cmdr-operations/src/transfer/transfer_driver/mod.rs`) returns an empty set unless
+`config_resolution == Skip`, and the copy pipeline has a second independent `Skip` gate (`transfer/copy/mod.rs`).
 `VolumeCopyConfig::pre_known_conflicts` says so in its own doc comment: "Ignored for other resolution modes (Stop still
 prompts; Overwrite still proceeds normally)." Under the default `stop` the backend prompts per clash at runtime with
-apply-to-all latching (`write_operations/conflict.rs`), and a backgrounded operation's conflict still reaches the user
-through `../operation-conflict.svelte.ts`. So dispatching with `conflicts: []` costs pre-flight _information_, never
-safety.
+apply-to-all latching (`crates/cmdr-operations/src/conflict.rs`), and a backgrounded operation's conflict still reaches
+the user through `../operation-conflict.svelte.ts`. So dispatching with `conflicts: []` costs pre-flight _information_,
+never safety.
 
 **Why `skip` is the exception, and why no human waits for it.** Under `Skip all` the names let the backend drop the
 clashing sources upfront instead of discovering each one serially through per-file `get_metadata` stats, so the progress
@@ -637,8 +635,8 @@ with the preview this dialog already started — the exact contention the backen
 MTP and SMB. The orphaned preview would also have no owner and nothing to cancel it, because the `confirmed` guard keeps
 `handleCancel` away from `freeAndCleanup()`, so its result would sit until a TTL sweep. `DeleteDialog` awaits its own
 `scanStarted` for the same three reasons. The IPC only mints a UUID, registers the preview, and spawns the walk on a
-background thread (`write_operations/scan_preview.rs`), so it returns promptly even against a wedged share; it is NOT
-the recursive walk.
+background thread (`crates/cmdr-operations/src/scan_preview.rs`), so it returns promptly even against a wedged share; it
+is NOT the recursive walk.
 
 **The honest pending state.** `confirmPending` (a `$state`, unlike the plain `confirmed`) disables BOTH footer buttons
 and renders a decorative `<Spinner size="sm" />` next to the unchanged `confirmLabel` for however long a path does
@@ -743,7 +741,7 @@ Two niceties on top:
   doubled folder); red errors and the refusal outrank it.
 
 Backend counterpart: every transfer path creates a missing destination (and ancestors) before transferring — the local
-copy/move paths via `ensure_destination_dir` (`write_operations/validation.rs`), and the cross-volume +
+copy/move paths via `ensure_destination_dir` (`crates/cmdr-operations/src/validation.rs`), and the cross-volume +
 same-volume-rename pipelines via `Volume::create_directory_all` (recursive mkdir on the dest volume, works on local,
 SMB, MTP, in-memory). So the warning is honest for EVERY destination type, which is why it's no longer gated to local
 destinations (there's no `isLocalDestination` check — `showTargetWarning` keys only off `targetMissing` + no
@@ -770,9 +768,8 @@ identically.
   `café` composed vs decomposed). A quiet line under the folder (`lookAlikeHint`) explains that the names look the same
   but the server spells them differently and that Overwrite replaces the one that's there. The headline is already the
   stored entry's own spelling, which is the one Overwrite replaces and keeps, so nothing else changes; the incoming
-  spelling prints identically and isn't shown. Backend side:
-  `apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/DETAILS.md` § "Look-alike names and new-name
-  spelling".
+  spelling prints identically and isn't shown. Backend side: `crates/cmdr-operations/src/transfer/volume/DETAILS.md` §
+  "Look-alike names and new-name spelling".
 
 ### The clash prompt and the error dialog answer by letter
 
@@ -863,9 +860,8 @@ enough space" and the error dialog offers **Copy anyway** beside Close. The clic
 `dialog-state.handleTransferErrorCopyAnyway`, which starts the failed copy's birth context again (`retryPropsFrom`,
 fresh preview, same conflict policy) with `spaceShortfall: 'proceed'`, settling the failed one like a close. The field
 rides `TransferProgressPropsData` → `TransferProgressDialog` → `TransferDispatchConfig` → `copyBetweenVolumes`, and the
-backend then skips its free-space check (`SpaceShortfall` in
-`apps/desktop/src-tauri/src/file_system/write_operations/DETAILS.md` § "The free-space pre-flight"). A destination that
-really fills up still stops the copy, as `destination_full`.
+backend then skips its free-space check (`SpaceShortfall` in `crates/cmdr-operations/src/DETAILS.md` § "The free-space
+pre-flight"). A destination that really fills up still stops the copy, as `destination_full`.
 
 Close stays primary, so Enter takes the safe way out. The button appears only for a `copy` with a birth context: an
 adopted operation (queue window) and a retained failure have nothing to start again, and the suggestion text never names
@@ -887,8 +883,7 @@ Pinned by `TransferErrorDialog.typed.test.ts`, `DialogManager.svelte.test.ts`, a
   all (the driver treats `RollingBack` exactly like `Stopped` and reports `rolled_back: false`) and looks, from the
   props, exactly like a perfectly reversible transfer. So both this dialog's footers read `supportsRollback` off the
   registry snapshot, the same flag the queue window reads. The props-only same-volume-move rule stands beside it for the
-  frames before the first snapshot lands. See `src-tauri/src/file_system/write_operations/DETAILS.md` § "Rollback
-  availability".
+  frames before the first snapshot lands. See `crates/cmdr-operations/src/DETAILS.md` § "Rollback availability".
 - **Dry-run conflict sampling.** If >200 conflicts, `DryRunResult.conflicts` contains a random sample. Check
   `conflictsSampled: true` and `conflictsTotal` for the exact count.
 - **Progress dialog edge case.** Same-FS move completes so fast that the complete event may fire before the dialog
@@ -904,8 +899,8 @@ Pinned by `TransferErrorDialog.typed.test.ts`, `DialogManager.svelte.test.ts`, a
   three-state `outcome` (`notRolledBack` / `rolledBack` / `partiallyRolledBack`), how many items came back, and what the
   reversal left behind grouped by reason with one example name each. A reversal leaves things behind on purpose — it
   refuses to delete a destination something else changed since the transfer wrote it (BE doc:
-  `write_operations/transfer/DETAILS.md` § "What a reversal does with that identity"). § "What a cancelled transfer's
-  reversal says afterwards" is what turns it into a sentence.
+  `crates/cmdr-operations/src/transfer/DETAILS.md` § "What a reversal does with that identity"). § "What a cancelled
+  transfer's reversal says afterwards" is what turns it into a sentence.
 - **Cancel close is two-condition: `write-cancelled` + `write-settled`.** When the user clicks Cancel (without
   rollback), `TransferProgressDialog` does NOT close immediately. It keeps the "Canceling…" label up until both events
   have arrived for this `operationId`, then applies the existing `MIN_DISPLAY_MS` floor and closes via
@@ -927,13 +922,13 @@ Pinned by `TransferErrorDialog.typed.test.ts`, `DialogManager.svelte.test.ts`, a
   before the scan finishes, the scan keeps running (`TransferDialog` sets `confirmed = true` and skips cancellation in
   `onDestroy`), and `TransferProgressDialog` dispatches the operation IMMEDIATELY. The wait lives in the backend: the
   operation claims that `previewId` at registration and its own task parks on it before writing anything
-  (`apps/desktop/src-tauri/src/file_system/write_operations/scan_bridge.rs`). That is what gives a still-scanning
-  transfer an `operationId`, a queue row, Background, and a place in the quit gate from the first frame. The dialog
-  renders the scan phase from ordinary `write-progress` in `phase: 'scanning'`, which the backend forwards from the
-  claimed preview under the operation's id, so one branch feeds both the preview and the backend's own foolproof
-  re-scan. ❌ The dialog must never cancel the preview on teardown: the operation owns it, and a viewer detaching is not
-  a cancel. The scan-error and scan-cancelled listeners also flip `started = true` as a terminal signal, so a late
-  `scan-preview-complete` event can't dispatch an operation after we've errored or cancelled.
+  (`crates/cmdr-operations/src/scan_bridge.rs`). That is what gives a still-scanning transfer an `operationId`, a queue
+  row, Background, and a place in the quit gate from the first frame. The dialog renders the scan phase from ordinary
+  `write-progress` in `phase: 'scanning'`, which the backend forwards from the claimed preview under the operation's id,
+  so one branch feeds both the preview and the backend's own foolproof re-scan. ❌ The dialog must never cancel the
+  preview on teardown: the operation owns it, and a viewer detaching is not a cancel. The scan-error and scan-cancelled
+  listeners also flip `started = true` as a terminal signal, so a late `scan-preview-complete` event can't dispatch an
+  operation after we've errored or cancelled.
 - **A `transfer-scan-state` start can be overtaken before it's under way.** An MCP `dialog confirm` unmounts the dialog,
   or the Copy/Move toggle lands on a same-volume move and `cancelPreview()` resets the scan, while the listeners are
   still registering. `startScan` reads its getters before the first await, and each start carries a generation that the
@@ -949,11 +944,11 @@ impure half. `CancelRollbackToastContent.svelte` stacks them: a headline, the ex
 typed reason, then any recovered-original paths and staged scratch.
 
 **Why this exists at all.** The in-flight reversal's bar DRAINS, and every item it walks past advances it, so it always
-lands on zero (BE doc: `write_operations/transfer/DETAILS.md`). Zero therefore means "this reversal is finished", not
-"everything came off the disk" — and without a summary, a bar hitting zero on a reversal that deliberately left four
-files behind is a lie the user has no way to catch. The bar completing and the summary telling the truth are ONE design,
-not two features: a bar stranded at 94% reads as a crash, and a user who thinks the app crashed never reads the line
-that would have explained things.
+lands on zero (BE doc: `crates/cmdr-operations/src/transfer/DETAILS.md`). Zero therefore means "this reversal is
+finished", not "everything came off the disk" — and without a summary, a bar hitting zero on a reversal that
+deliberately left four files behind is a lie the user has no way to catch. The bar completing and the summary telling
+the truth are ONE design, not two features: a bar stranded at 94% reads as a crash, and a user who thinks the app
+crashed never reads the line that would have explained things.
 
 **Raised here, not by the parent.** The completion toast is composed up in `pane/dialog-state.svelte.ts` because it
 needs birth context (the selection's file/folder split) that only the parent holds. This one needs nothing but the
@@ -973,8 +968,8 @@ every file has already arrived) has some of the user's originals gone for good a
 at the destination and staying there, and how many originals are still in the folder the move started from — at `info`,
 because nothing went wrong, and claiming no undo, because none is coming. The removal clause earns its length: without
 it the user has to infer from a bare count that some originals went, which is the one fact they can't check by looking
-at the toast. Why the backend spends a field on this instead of an outcome: `write_operations/transfer/DETAILS.md` § "A
-stop in the source sweep says where the files are".
+at the toast. Why the backend spends a field on this instead of an outcome:
+`crates/cmdr-operations/src/transfer/DETAILS.md` § "A stop in the source sweep says where the files are".
 
 `recovered` breaks both silences too. It names each original that an Overwrite displaced and the exact ` (recovered)`
 path where Cmdr preserved it when its old name stayed occupied. This is data the user can find, not a reversal skip and
@@ -1009,9 +1004,9 @@ dropped off the list.
 
 **Cmdr's OWN leftover gets its own line, outside the reason list.** `rollback.stagedLeftovers` is the `.cmdr-tmp-*`
 scratch a cancelled transfer's sweep asked the destination to remove and didn't get, because an abandoned write task
-still holds the handle (BE doc: `write_operations/transfer/DETAILS.md` § "Naming what a cancel left behind"). Three
-rules the readout enforces, and they exist because the defect being fixed was a toast that said the reversal was clean
-while gigabytes sat on the user's NAS:
+still holds the handle (BE doc: `crates/cmdr-operations/src/transfer/DETAILS.md` § "Naming what a cancel left behind").
+Three rules the readout enforces, and they exist because the defect being fixed was a toast that said the reversal was
+clean while gigabytes sat on the user's NAS:
 
 - **A leftover always speaks**, including through both silences above. `notRolledBack` carrying one raises a toast with
   no headline at all, which is how a plain Stop and a cross-volume move's cancel get to report theirs.

@@ -58,11 +58,10 @@ child `src/volume_streams.rs` (`ArchiveVolumeReadStream`, the sequential extract
 `VolumeByteSource`, none of which touches `ArchiveVolume`'s fields), and its copy scan in `src/volume_scan.rs`: sizes
 from the central directory, plus every entry handed to a transfer tree's recorder from the same index, so a copy out of
 an archive draws a full tree rather than one opaque row per source. Every read stream reports its entry's date from the
-parsed index, so an extract keeps it (contract:
-`apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/DETAILS.md` § "Copies keep the source's
-metadata"). It maps the archive-native core (`ArchiveIndex` / `ArchiveNode` / `ArchiveEntryReader` / `ArchiveError`)
-onto `FileEntry` / `VolumeReadStream` / `VolumeError`, and holds an `Arc<dyn Volume>` **parent** (the volume physically
-storing the `.zip`), the archive path, the display name, and an `Arc<ArchiveIndexCache>`.
+parsed index, so an extract keeps it (contract: `crates/cmdr-operations/src/transfer/volume/DETAILS.md` § "Copies keep
+the source's metadata"). It maps the archive-native core (`ArchiveIndex` / `ArchiveNode` / `ArchiveEntryReader` /
+`ArchiveError`) onto `FileEntry` / `VolumeReadStream` / `VolumeError`, and holds an `Arc<dyn Volume>` **parent** (the
+volume physically storing the `.zip`), the archive path, the display name, and an `Arc<ArchiveIndexCache>`.
 
 **The parent seam.** Two answers a read-only archive can't give itself come from the parent:
 
@@ -121,20 +120,20 @@ be O(n²) if the copy engine read it entry-by-entry (each `open_read_stream` re-
 a one-pass extractor (`Volume::open_sequential_extract` → `ArchiveIndex::open_subtree_extract`) that decodes the stream
 ONCE. The extractor mechanism lives in `src/read/DETAILS.md` § "One-pass subtree extract"; the copy-engine dispatch
 (create dirs from the tree, then a single decode pass for the files) lives in
-`apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/DETAILS.md` § "One-pass sequential extract". A
-plain `.tar` and zip are random-access and keep the per-entry path unchanged.
+`crates/cmdr-operations/src/transfer/volume/DETAILS.md` § "One-pass sequential extract". A plain `.tar` and zip are
+random-access and keep the per-entry path unchanged.
 
 ### Decision: `get_space_info` delegates to the parent volume
 
 **Why**: An archive isn't a disk with its own free space. The pre-copy space check
-(`apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/copy.rs`) blocks a copy when
-`dest.available_bytes < total_bytes`, so reporting zeros (or `available = 0`) would read as "disk full" and block a
-paste with a spurious message instead of the correct read-only / `NotSupported` outcome. Any archive edit (temp+rename)
-is built on the parent drive, so the parent's free space is the honest constraint AND a non-blocking answer. Delegating
-is one line and stays correct when mutation turns on. `get_space_info_at(path)` forwards to the parent with the `.zip`'s
-own path, whatever inner path is asked: a parent can span several filesystems (a phone's shared storage beside its SD
-card), and the transfer pre-flight asks about the destination folder, so a copy into an archive on the card is judged
-against the card. Both are pinned by `get_space_info_delegates_to_the_parent`.
+(`crates/cmdr-operations/src/transfer/volume/copy.rs`) blocks a copy when `dest.available_bytes < total_bytes`, so
+reporting zeros (or `available = 0`) would read as "disk full" and block a paste with a spurious message instead of the
+correct read-only / `NotSupported` outcome. Any archive edit (temp+rename) is built on the parent drive, so the parent's
+free space is the honest constraint AND a non-blocking answer. Delegating is one line and stays correct when mutation
+turns on. `get_space_info_at(path)` forwards to the parent with the `.zip`'s own path, whatever inner path is asked: a
+parent can span several filesystems (a phone's shared storage beside its SD card), and the transfer pre-flight asks
+about the destination folder, so a copy into an archive on the card is judged against the card. Both are pinned by
+`get_space_info_delegates_to_the_parent`.
 
 ### Decision: `max_concurrent_ops = 1` for the read-only phase
 
@@ -170,8 +169,7 @@ omission.
 
 A zip on a direct SMB or MTP volume browses and extracts through the SAME `ArchiveVolume` as a local one — only the byte
 supply differs. The read side is landed for both SMB and MTP; the write (edit) side pulls the archive local, edits, and
-uploads (see `src/mutation/DETAILS.md` and
-`apps/desktop/src-tauri/src/file_system/write_operations/archive_edit/DETAILS.md` § "Remote edit").
+uploads (see `src/mutation/DETAILS.md` and `crates/cmdr-operations/src/archive_edit/DETAILS.md` § "Remote edit").
 
 **Local vs remote is the parent's capability, not the path.** `ArchiveVolume::parent_is_local()` returns
 `parent.supports_local_fs_access()`. A `LocalPosixVolume` parent (a plain drive OR an OS-mounted share) reports `true` ⇒
@@ -244,8 +242,8 @@ password to read its metadata; zip and content-encrypted 7z ignore it at parse).
 
 - The EXTRACT path (a copy whose source is inside the archive) for any encrypted archive — riding
   `WriteOperationError::ArchiveNeedsPassword { path, wrong_attempt }` (mapped in
-  `apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/copy.rs`'s `map_volume_error`), so the
-  frontend dispatches its password dialog and, after `set_archive_password`, retries the copy.
+  `crates/cmdr-operations/src/transfer/volume/copy.rs`'s `map_volume_error`), so the frontend dispatches its password
+  dialog and, after `set_archive_password`, retries the copy.
 - The BROWSE/listing path for a HEADER-encrypted 7z (even listing fails) —
   `crates/cmdr-fs/src/volume/friendly_error/volume_error.rs` maps `NeedsPassword` to
   `ListingErrorReason::ArchiveNeedsPassword { wrong_attempt }` (NOT the unreadable-archive reason), and
@@ -305,8 +303,7 @@ An `ArchiveVolume` is never constructed here directly in production — it's min
   `apps/desktop/src-tauri/src/file_system/volume/manager/`), the async siblings of the `std::fs`-only `src/boundary.rs`
   predicates. Same `supports_local_fs_access()` fork, same `confirm_remote_archive_boundary` for a remote parent.
   Without them a write inside a remote zip falls through to the parent volume and errors; see
-  `apps/desktop/src-tauri/src/file_system/write_operations/DETAILS.md` for the "Reaching the edit driver: parent-aware
-  write-routing" section.
+  `crates/cmdr-operations/src/DETAILS.md` for the "Reaching the edit driver: parent-aware write-routing" section.
 
 **resolve returns the FULL path, unchanged.** The decision (over returning a stripped inner path): `ArchiveVolume`
 already maps a volume-namespace path to its inner key via `inner_path()`, `node_to_entry` builds full paths, and
@@ -359,8 +356,7 @@ Enter still opens the viewer.
 
 A REMOTE source copied INTO a zip (an MTP/SMB file dropped onto an archive) now works: the source subtree is pulled to a
 local scratch dir first, then the ordinary local ingest runs against the pulled bytes (source-side pull in
-`apps/desktop/src-tauri/src/file_system/write_operations/archive_edit/DETAILS.md`). The archive itself may be local or
-remote independently.
+`crates/cmdr-operations/src/archive_edit/DETAILS.md`). The archive itself may be local or remote independently.
 
 ## `is_writable()` answers for the VOLUME, not for the zip
 

@@ -9,15 +9,15 @@ use std::time::Duration;
 
 use super::analytics::{CompletionCategory, completion_category};
 use super::terminal_effects::{self, AppTerminalEffects, TerminalEffects};
-use crate::file_system::write_operations::host::testing::{FakeVolumes, RecordingEngineEvents};
-use crate::file_system::write_operations::testing::{CancelRollback, QueuedOperationFixture};
-use crate::file_system::write_operations::{
-    LifecycleStatus, OperationSnapshot, Operations, WriteCancelledEvent, WriteCompleteEvent, WriteErrorEvent,
-    WriteOperationError, WriteOperationType, WriteSettledEvent,
-};
 use crate::mcp::terminal_ops::{self, TerminalStatus};
 use crate::test_support::wait_until_async;
 use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_operations::host::testing::{FakeVolumes, RecordingEngineEvents};
+use cmdr_operations::testing::{CancelRollback, QueuedOperationFixture};
+use cmdr_operations::{
+    LifecycleStatus, OperationSnapshot, Operations, WriteCancelledEvent, WriteCompleteEvent, WriteErrorEvent,
+    WriteOperationError, WriteOperationType, WriteSettledEvent,
+};
 
 /// One thing a terminal event did, as the recorder saw it.
 #[derive(Debug, Clone, PartialEq, Eq)]

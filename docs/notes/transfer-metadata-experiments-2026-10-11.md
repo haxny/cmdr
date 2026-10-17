@@ -1,10 +1,9 @@
 # Transfer metadata experiments (2026-10-11)
 
-Evidence for the copy-metadata contract
-(`apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/DETAILS.md` § "Copies keep the source's
-metadata", and the helper's `crates/cmdr-fs/DETAILS.md` § "`metadata`: what a copy keeps, and when it goes on"): what
-each macOS copy tool and each Cmdr copy shape keeps, per filesystem, measured rather than recalled. The "Cmdr today"
-rows describe the code as of 2026-10-11, before the work it shaped. Environment for every result here: macOS 27.0
+Evidence for the copy-metadata contract (`crates/cmdr-operations/src/transfer/volume/DETAILS.md` § "Copies keep the
+source's metadata", and the helper's `crates/cmdr-fs/DETAILS.md` § "`metadata`: what a copy keeps, and when it goes
+on"): what each macOS copy tool and each Cmdr copy shape keeps, per filesystem, measured rather than recalled. The "Cmdr
+today" rows describe the code as of 2026-10-11, before the work it shaped. Environment for every result here: macOS 27.0
 (26A428), APFS internal SSD, plus 64 MB `hdiutil` images of APFS, HFS+, exFAT, and FAT32 (the last two served by FSKit),
 Homebrew `rsync` 3.5.1. No Cmdr binary ran: the "Cmdr today" rows replay the exact syscall sequences the code issues
 (cited below), through the C helper at the end.

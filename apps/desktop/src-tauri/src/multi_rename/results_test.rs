@@ -9,7 +9,7 @@ use super::plan::MultiRenameSpec;
 use super::run::apply;
 use super::run_test::{folder, names_on_disk, settled, strip_diacritics};
 use super::session::{clear_names, close, open, preview_session, read_names, write_names};
-use crate::file_system::write_operations::testing::CollectorEventSink;
+use cmdr_operations::testing::CollectorEventSink;
 
 fn keep_names() -> MultiRenameSpec {
     MultiRenameSpec {

@@ -25,12 +25,14 @@ pub fn recover_plugin_stores<R: Runtime>(app: &AppHandle<R>) {
         ("app-status.json", StateFile::AppStatus),
     ] {
         if let Some(path) = frontend_store_path(app, name) {
+            // allowed-discarded-outcome: setup has no surface to report a recovery on; `recover` logs what it did
             recover(&path, file);
         }
     }
     // Rust loads this one by bare name, so it always sits in the plugin's own app data dir.
     match tauri_plugin_store::resolve_store_path(app, "license.json") {
         Ok(path) => {
+            // allowed-discarded-outcome: setup has no surface to report a recovery on; `recover` logs what it did
             recover(&path, StateFile::License);
         }
         Err(e) => log::warn!(target: LOG_TARGET, "Couldn't resolve license.json to check it: {e}"),

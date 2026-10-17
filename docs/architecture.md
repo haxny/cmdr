@@ -60,7 +60,7 @@ All under `apps/desktop/src/lib/`.
   `write-progress`; route at `routes/queue/`. See `apps/desktop/src/lib/file-operations/queue/CLAUDE.md`
 - `file-operations/transfer-tree/`: The live file tree of a copy, move, or compress (per-folder and per-file progress),
   in the progress dialog and inline on running queue rows; the backend's model and view command are
-  `file_system/write_operations/transfer_tree/`. See `apps/desktop/src/lib/file-operations/transfer-tree/CLAUDE.md`
+  `crates/cmdr-operations/src/transfer_tree/`. See `apps/desktop/src/lib/file-operations/transfer-tree/CLAUDE.md`
 - `file-viewer/`: Read-only file viewer (separate window, virtual scrolling)
 - `settings/`: Settings UI + registry-based architecture, reactive state
 - `intl/`: The two locale sources (`getUiLocale` for catalog text, `getFormatLocale` for the OS's number/date
@@ -162,19 +162,20 @@ above is separate: it ships per-character widths to Rust for backend column sizi
 
 All under `apps/desktop/src-tauri/src/`.
 
-- `file_system/write_operations/`: Copy/move/delete with safety patterns (temp+rename, staging, rollback). Umbrella +
-  shared state machine, the operation manager (queue + lane admission), `OperationEventSink` and the per-source outcome
-  it carries, Settle contract, the source-identity binding a reviewed batch may supply (`source_binding.rs`), the
-  cross-volume entry routing every transfer goes through (`routing.rs`), and the scan preview a confirmed transfer waits
-  on inside its own task (`scan_preview.rs` / `scan_cache.rs` / `scan_bridge.rs`)
-- `file_system/write_operations/transfer/`: Copy + move pipelines: conflict resolution, transfer driver, platform copies
+- `crates/cmdr-operations/src/` (the write engine's crate, hosted from `operations_host/`): Copy/move/delete with safety
+  patterns (temp+rename, staging, rollback). Umbrella + shared state machine, the operation manager (queue + lane
+  admission), `OperationEventSink` and the per-source outcome it carries, Settle contract, the source-identity binding a
+  reviewed batch may supply (`source_binding.rs`), the cross-volume entry routing every transfer goes through
+  (`routing.rs`), and the scan preview a confirmed transfer waits on inside its own task (`scan_preview.rs` /
+  `scan_cache.rs` / `scan_bridge.rs`)
+- `crates/cmdr-operations/src/transfer/`: Copy + move pipelines: conflict resolution, transfer driver, platform copies
   (`copyfile(3)` / `copy_file_range(2)` / chunked)
-- `file_system/write_operations/transfer/volume/`: The cross-volume (Local ↔ MTP ↔ SMB ↔ archive) copy/move engine
-  behind a facade module
-- `file_system/write_operations/metadata_losses.rs`: the loss note, per-class counters of what a destination couldn't
+- `crates/cmdr-operations/src/transfer/volume/`: The cross-volume (Local ↔ MTP ↔ SMB ↔ archive) copy/move engine behind
+  a facade module
+- `crates/cmdr-operations/src/metadata_losses.rs`: the loss note, per-class counters of what a destination couldn't
   keep, read off each backend's `MetadataCaps`. The metadata contract every copy path holds, its invariants, and what
-  each pair keeps: `file_system/write_operations/transfer/volume/DETAILS.md` § "Copies keep the source's metadata"
-- `file_system/write_operations/delete/`: Delete walker, trash, oracle-aware delete semantics
+  each pair keeps: `crates/cmdr-operations/src/transfer/volume/DETAILS.md` § "Copies keep the source's metadata"
+- `crates/cmdr-operations/src/delete/`: Delete walker, trash, oracle-aware delete semantics
 - `file_system/volume/`: `VolumeManager` plus the `backends/` umbrella, re-exporting the `Volume` trait and its types
   from `crates/cmdr-fs/`. Checklist + capability matrix for new backends. `drive_release/` is the one gate for every
   index stop of a removable drive and every non-root index start (`file_system/volume/DETAILS.md` § "One release, one
@@ -391,19 +392,19 @@ All under `apps/desktop/src-tauri/src/`.
 
 All under `crates/`, alongside the four apps. `cmdr-fs`, `cmdr-index`, `cmdr-archive`, `cmdr-smb`, `cmdr-sftp`,
 `cmdr-webdav`, `cmdr-s3`, `cmdr-adb`, `cmdr-mtp`, `cmdr-git`, `cmdr-http`, `cmdr-listing`, `cmdr-collation`,
-`cmdr-local`, `cmdr-operation-log`, and `cmdr-update-trust` carry no `tauri` dependency and no reach into the app;
-`index-crate-isolation` enforces that against the `cargo metadata` graph, and caps the public surface of `cmdr-index`,
-`cmdr-archive`, `cmdr-smb`, `cmdr-sftp`, `cmdr-webdav`, `cmdr-s3`, `cmdr-mtp`, `cmdr-git`, `cmdr-listing`,
-`cmdr-collation`, `cmdr-local`, and `cmdr-operation-log` at the numbers their audits landed on. The two dev CLIs and the
-vendored fork are ordinary members.
+`cmdr-local`, `cmdr-operation-log`, `cmdr-operations`, and `cmdr-update-trust` carry no `tauri` dependency and no reach
+into the app; `index-crate-isolation` enforces that against the `cargo metadata` graph, and caps the public surface of
+`cmdr-index`, `cmdr-archive`, `cmdr-smb`, `cmdr-sftp`, `cmdr-webdav`, `cmdr-s3`, `cmdr-mtp`, `cmdr-git`, `cmdr-listing`,
+`cmdr-collation`, `cmdr-local`, `cmdr-operation-log`, and `cmdr-operations` at the numbers their audits landed on. The
+two dev CLIs and the vendored fork are ordinary members.
 
 - `crates/cmdr-fs/`: the filesystem vocabulary and host primitives every layer speaks in — the `Volume` trait and its
   data types, `FileEntry`, typed error classification (`ListingError` / `ListingErrorReason` / `ErrorCategory`, errno →
   reason mapping, provider detection over 18 providers), `InMemoryVolume`, File Provider domain detection (the index
   scanner's "is this a domain root?" and the sync badge's "is any ancestor one?"), thread QoS, process-memory readers,
   poison-free locking, and `ChildName`, the proof that a name a backend listed is one plain path component, which every
-  cross-volume join takes (`apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/DETAILS.md` §
-  "Listed names are untrusted"). The app re-exports all of it from the original paths. See `crates/cmdr-fs/CLAUDE.md`
+  cross-volume join takes (`crates/cmdr-operations/src/transfer/volume/DETAILS.md` § "Listed names are untrusted"). The
+  app re-exports all of it from the original paths. See `crates/cmdr-fs/CLAUDE.md`
   - `src/volume/host/`: the seams a storage backend reaches its host through — pane listings, the runtime handle, typed
     connection events, credentials, index notification, settings, user activity, analytics. What a backend crate is
     written against; the app answers them from `apps/desktop/src-tauri/src/volume_host.rs`. See
@@ -433,6 +434,9 @@ vendored fork are ordinary members.
   forward-migration ladder (not delete-and-recreate) and retention discipline, interned dir prefixes + per-item rows,
   case folding with no collation (stays `sqlite3`-inspectable), and the rollback PLANNER, which acts through an injected
   runner. One `OperationLog` handle; Cmdr's host is `operation_log_host/`. See `crates/cmdr-operation-log/CLAUDE.md`
+- `crates/cmdr-operations/`: the write engine (copy, move, delete, trash, rename, create, zip edits as managed
+  operations), behind one `Operations` handle; Cmdr's host is `operations_host/`. See
+  `crates/cmdr-operations/src/CLAUDE.md`
 - `crates/cmdr-http/`: the one door every HTTP client is built through (`client_builder()`), and the proxy routing
   behind it: loopback and link-local always direct, then the `*_PROXY` variables, then macOS's own verdict per URL
   (manual proxy, bypass list, PAC, WPAD). The app, `cmdr-webdav`, and `cmdr-s3` all build on it, and `clippy.toml`
@@ -471,12 +475,11 @@ vendored fork are ordinary members.
   bucket, or the account root that lists them): connect, list, stat, ranged reads, writes to the final key (one PUT or a
   multipart upload, with the unfinished-upload record under the host's state directory), server-side copy within an
   account, folders, delete (one node or a `DeleteObjects` batch), share links, reconnect. A folder or big object renames
-  by copy (`Volume::rename_work`), which the app runs as a move
-  (`apps/desktop/src-tauri/src/file_system/write_operations/DETAILS.md` § "Renames that run as moves"). The app keeps
-  the place list and the connect wiring (`apps/desktop/src-tauri/src/network/s3_*.rs`), the IPC surface
-  (`commands/s3.rs` plus the S3 arm of `commands/servers.rs`), and `s3://` redaction. Cost estimates: the price table
-  and estimator in `cost/` (its server copy at `apps/api-server/src/s3-prices/`), wired to the dialogs by
-  `apps/desktop/src-tauri/src/s3_costs/CLAUDE.md`. The plan: `docs/specs/s3-support-plan.md`. Decisions:
+  by copy (`Volume::rename_work`), which the app runs as a move (`crates/cmdr-operations/src/DETAILS.md` § "Renames that
+  run as moves"). The app keeps the place list and the connect wiring (`apps/desktop/src-tauri/src/network/s3_*.rs`),
+  the IPC surface (`commands/s3.rs` plus the S3 arm of `commands/servers.rs`), and `s3://` redaction. Cost estimates:
+  the price table and estimator in `cost/` (its server copy at `apps/api-server/src/s3-prices/`), wired to the dialogs
+  by `apps/desktop/src-tauri/src/s3_costs/CLAUDE.md`. The plan: `docs/specs/s3-support-plan.md`. Decisions:
   `crates/cmdr-s3/DETAILS.md`; guardrails: `crates/cmdr-s3/CLAUDE.md`. Its Docker servers:
   `apps/desktop/test/s3-servers/README.md`.
 - `crates/cmdr-adb/`: everything Cmdr says to an Android device over ADB. `AdbVolume` per attached device, rooted at the

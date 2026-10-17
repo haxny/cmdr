@@ -40,8 +40,8 @@ smb-e2e = ["cmdr-smb/testing"]
 # direct `[dev-dependencies]` entries (see there).
 #
 # The one exception, and it isn't test scaffolding: `transfer-bench` exposes
-# `cmdr_lib::transfer_bench`, thin wrappers over the write engine's internal
-# entry points, for `benches/transfer_benchmarks.rs` alone. A bench compiles
+# `cmdr_lib::transfer_bench` (`cmdr_operations::transfer_bench` re-exported),
+# thin wrappers over the write engine's internal entry points, for `benches/transfer_benchmarks.rs` alone. A bench compiles
 # against the app as an external crate and sees no `pub(crate)` item, and the
 # usual fix (a self dev-dependency turning the feature on) would link a second
 # copy of the app, whose Objective-C classes collide (see `[dev-dependencies]`).
@@ -51,7 +51,7 @@ smb-e2e = ["cmdr-smb/testing"]
 #
 # It turns `cmdr-operation-log/testing` on: the bench puts its own journal in the
 # shared log's slot (`OperationLog::set_journal`), which only a test build exposes.
-transfer-bench = ["cmdr-operation-log/testing"]
+transfer-bench = ["cmdr-operation-log/testing", "cmdr-operations/transfer-bench"]
 
 [[bin]]
 name = "Cmdr"
@@ -121,6 +121,11 @@ cmdr-local = { path = "../../../crates/cmdr-local" }
 # (`operation_log_host`). No `tauri` in its tree, so
 # `cargo check -p cmdr-operation-log` verifies it without building the app.
 cmdr-operation-log = { path = "../../../crates/cmdr-operation-log" }
+# The write engine: copy, move, delete, trash, rename, create, and zip edits as
+# managed operations, behind one `Operations` handle the app builds once
+# (`operations_host`) and answers seams for. No `tauri` in its tree, so
+# `cargo check -p cmdr-operations` verifies it without building the app.
+cmdr-operations = { path = "../../../crates/cmdr-operations" }
 # The directory listing engine: every pane's listing, its cache, sort, and diffs,
 # behind one handle (`listing_host::listings()`) the app answers seams for.
 cmdr-listing = { path = "../../../crates/cmdr-listing" }
@@ -245,11 +250,6 @@ tauri-plugin-playwright = { version = "0.4.1", optional = true }
 # `cmdr-archive`; `aes-crypto` is declared there and unifies here, so the feature set is a
 # superset of both. `aes 0.9.1` (stable) unifies with `smb2`'s SMB3 AEAD stack.
 zip = { version = "9.0.1", default-features = false, features = ["deflate", "aes-crypto", "unreserved"] }
-# `write_operations/compress_estimate.rs` sizes a deflate stream with `flate2`. The archive
-# backend declares its own copies (plus the other tar codecs and 7z) in `cmdr-archive`.
-# `tar` is NOT here: its only production caller is the macOS updater, so it's declared
-# per-target below plus as a dev-dependency for the cross-platform test that builds one.
-flate2 = "1"
 # Error reporter: short-ID generation (`ERR-XXXXX`) using rejection sampling.
 rand = "0.10"
 # Multi-provider LLM client. Normalizes OpenAI / OpenAI Responses / Anthropic / Gemini /
@@ -476,10 +476,6 @@ muda = { version = "0.20", default-features = false }
 # Dev-only now: the production upload path moved into `cmdr-mtp`, which declares
 # its own copy.
 bytes = "1"
-# `volume_strategy_sequential_tests.rs` builds a tarball fixture and is NOT
-# platform-gated, so `tar` has to be reachable from tests on every target. The
-# production side lives in `cmdr-update-trust`.
-tar = "0.4"
 # Scratch directories for the lib's unit tests.
 tempfile = "3"
 # The workspace crates below are the same crates as the normal dependencies above,
@@ -509,6 +505,10 @@ cmdr-local = { path = "../../../crates/cmdr-local", features = ["testing"] }
 # recording gate; the write-pipeline cells read the writer behind their
 # `WriterJournal`.
 cmdr-operation-log = { path = "../../../crates/cmdr-operation-log", features = ["testing"] }
+# The write engine's test scaffolding: an engine of a cell's own
+# (`testing::TestOperations`), the fakes it reads back, and the internals the
+# backend suites drive.
+cmdr-operations = { path = "../../../crates/cmdr-operations", features = ["testing"] }
 # `cmdr_smb::volume::testing`, the shared Docker fixtures the app's SMB suites
 # connect through. It also turns `smb2/testing` on for every dev target, which is
 # harmless: `smb-e2e` already does that, and nothing here reads `smb2::testing`.

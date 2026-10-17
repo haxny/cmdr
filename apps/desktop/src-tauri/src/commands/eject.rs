@@ -26,7 +26,7 @@ pub async fn eject_volume(volume_id: String) -> Result<EjectOutcome, EjectError>
 #[specta::specta]
 pub fn get_busy_volume_ids() -> Vec<String> {
     crate::operations_host::operations()
-        .map(crate::file_system::write_operations::Operations::busy_volume_ids)
+        .map(cmdr_operations::Operations::busy_volume_ids)
         .unwrap_or_default()
 }
 

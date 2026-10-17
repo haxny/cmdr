@@ -28,16 +28,16 @@ use super::network_transfer_test_support::{
     assert_no_staging_litter, budget, clean_deep, self_describing_bytes, sha256, start_copy,
 };
 use crate::file_system::volume::manager::get_volume_manager;
-use crate::file_system::write_operations::testing::new_operation_state;
-use crate::file_system::write_operations::testing::{
-    CollectorEventSink, FaultyOp, FaultyVolume, copy_volumes_with_progress, delete_volume_files_for_test,
-    move_volumes_with_progress, seed_incoherent_scan_result,
-};
-use crate::file_system::write_operations::{ConflictResolution, VolumeCopyConfig, WriteOperationConfig};
 use crate::operations_host::app_engine;
 use crate::test_support::TestDir;
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_local::LocalPosixVolume;
+use cmdr_operations::testing::new_operation_state;
+use cmdr_operations::testing::{
+    CollectorEventSink, FaultyOp, FaultyVolume, copy_volumes_with_progress, delete_volume_files_for_test,
+    move_volumes_with_progress, seed_incoherent_scan_result,
+};
+use cmdr_operations::{ConflictResolution, VolumeCopyConfig, WriteOperationConfig};
 
 /// The read failure the mid-operation cells inject into the LOCAL source.
 fn injected_read_failure() -> VolumeError {
@@ -189,7 +189,7 @@ pub(super) async fn delete_on(
     label: &str,
     sources: &[PathBuf],
     preview_id: Option<String>,
-) -> Result<(), crate::file_system::write_operations::WriteOperationError> {
+) -> Result<(), cmdr_operations::WriteOperationError> {
     let config = WriteOperationConfig {
         preview_id,
         ..WriteOperationConfig::default()

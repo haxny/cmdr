@@ -114,7 +114,7 @@ couldn't be classified surfaces as a per-item failure with the folder still stan
 success that quietly took a whole tree. That's the reason not to soften `SingleNode` into a recursive fallback to make
 such a case "just work" (the `CLAUDE.md` guardrail): Cmdr never removes more than it told the user it was removing, and
 a retry after a transient MTP stat failure is cheap. What each delete branch does with a missing or wrong fact is
-`file_system/write_operations/delete/DETAILS.md`.
+`crates/cmdr-operations/src/delete/DETAILS.md`.
 
 ## Architecture / data flow
 
@@ -254,7 +254,7 @@ class-cancel path (see "Transfer cancellation" in `~/projects-git/vdavid/mtp-rs/
 
 Some Android devices (Pixel 6/7-era firmware observed) may still leave the session degraded after a flurry of ops even
 when cancel is clean on our side. This is hardware-side and unfixable in software; the settled-state gate (see
-`file_system/write_operations/DETAILS.md` § "Settle contract") ensures the user doesn't issue the next op until our side
+`crates/cmdr-operations/src/DETAILS.md` § "Settle contract") ensures the user doesn't issue the next op until our side
 is fully quiet, which avoids provoking the bug in practice.
 
 ## Dependencies

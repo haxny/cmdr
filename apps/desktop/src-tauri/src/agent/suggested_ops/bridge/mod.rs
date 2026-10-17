@@ -37,12 +37,12 @@ use super::super::store::proposals::{
 };
 use super::super::types::{OpStatus, ProposalVerb};
 use crate::file_system::volume::Volume;
-use crate::file_system::write_operations::{
+use crate::operations_host::{operations, refuse_not_installed};
+use cmdr_operation_log::types::Initiator;
+use cmdr_operations::{
     BulkRenameRow, ExpectedSources, OperationEventSink, Operations, RenameStartError, RenamesStarted,
     SourceFingerprint, VolumeCopyConfig, WriteOperationConfig, WriteOperationError, WriteOperationStartResult,
 };
-use crate::operations_host::{operations, refuse_not_installed};
-use cmdr_operation_log::types::Initiator;
 
 /// A group whose operation is running, and the operation it became.
 #[derive(Debug, Clone)]

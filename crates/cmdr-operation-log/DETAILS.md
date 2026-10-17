@@ -144,7 +144,7 @@ counts), `Prune` (retention), `Flush` (barrier), `Shutdown`.
 ## Capture — journaling every mutation at the chokepoint
 
 `capture.rs` is the journal half of the pipeline observer seam; the write pipeline's glue lives in
-`file_system/write_operations/journal.rs`. Together they make every managed mutation journal itself with per-item rows,
+`crates/cmdr-operations/src/journal.rs`. Together they make every managed mutation journal itself with per-item rows,
 two-axis status, and computed rollback eligibility — without measurably slowing the op.
 
 ### The seam: an operation's journal, fixed at open
@@ -153,8 +153,7 @@ two-axis status, and computed rollback eligibility — without measurably slowin
 builds ONE (`operation_log_host::install`, first thing in `setup`), hands it to the write engine
 (`operations_host::install`), and opens it late (`OperationLog::open`, from `operation_log_host::start`).
 `OperationLog::journal_open` returns an `OpJournal`, the operation's journal fixed at open, and the write engine keeps
-it in the operation's scope (`OpScope`, `apps/desktop/src-tauri/src/file_system/write_operations/scope.rs`) for every
-record, note, and the finalize.
+it in the operation's scope (`OpScope`, `crates/cmdr-operations/src/scope.rs`) for every record, note, and the finalize.
 
 - **`open` publishes last.** It migrates the store, spawns the writer, reconciles the operations a crash left
   `rolling_back`, and only THEN puts the journal and the writer in the slot, in one write. So nothing can journal, and
@@ -170,7 +169,7 @@ record, note, and the finalize.
   constraint holds: the sink stays a sink, and nothing here extends `OperationEventSink`.
 - **Testability holds.** Every test builds its own handle, so none needs a lock. A test of the operation log builds an
   `OperationLog` directly; a write-pipeline test builds an engine journaling into a temp-DB log of its own
-  (`write_operations::testing::TestOperationLog`, `file_system/write_operations/DETAILS.md` § "Test isolation: an engine
+  (`write_operations::testing::TestOperationLog`, `crates/cmdr-operations/src/DETAILS.md` § "Test isolation: an engine
   of the test's own"). A test that drives an engine function directly opens the journal on the same state's scope it
   passes in.
 - **Lifecycle.** `journal_open` is called when the op actually STARTS (inside the manager's deferred), not at
@@ -268,7 +267,7 @@ Each point is where the op already stats the item, so journaling is near-zero ma
   drift recheck) and finalizes `rollbackable`; an overwrite of a prior archive is `not_rollbackable`; a plain
   into-archive edit journals its header only (not rollbackable in v1).
 
-### Search-leaf enumeration (`file_system/write_operations/journal_search.rs`)
+### Search-leaf enumeration (`crates/cmdr-operations/src/journal_search.rs`)
 
 For same-FS move + trash, the subtree's descendant leaves are read from the DRIVE INDEX (zero extra filesystem I/O,
 through the engine's `OperationIndex::search_leaves`, whose app answer and its gates live in `operations_host/index.rs`)
@@ -446,8 +445,8 @@ didn't happen comes back as an `ActRefusal`: the volume's raw `VolumeError`, whi
 clear (`schg`). Before that answer it clears the item's Locked flag and ACL and retries the delete once, since a copy
 keeps both and either makes `unlink` refuse, then opens the folder holding it (a copied folder's Locked,
 `deny delete_child`, or `0500` refuses it too) for one more retry and puts the folder's metadata back; it does this in
-the runner, ❌ never in the volume, whose delete is also F8's (`file_system/write_operations/transfer/DETAILS.md` §
-"What a reversal does with that identity").
+the runner, ❌ never in the volume, whose delete is also F8's (`crates/cmdr-operations/src/transfer/DETAILS.md` § "What
+a reversal does with that identity").
 
 Why the seam is here: the act a cross-volume restore needs is the staged, retrying, stall-detecting per-file transfer,
 and that machinery is `pub(in write_operations)` behind the `transfer::volume` facade — unreachable from
@@ -485,18 +484,18 @@ column exists to explain, and an unrecorded item is one an idempotent retry simp
 
 ### What stops a reversal
 
-`IntentCell::is_cancelled` (`write_operations/operation_intent.rs`) answers "the intent isn't `Running`", and
+`IntentCell::is_cancelled` (`crates/cmdr-operations/src/operation_intent.rs`) answers "the intent isn't `Running`", and
 `RollingBack` is one of the values it calls cancelled. That's right for a forward transfer. It is wrong for a reversal
 running under an operation that is itself rolling back, where the same value is the instruction to reverse: a reversal
 inheriting that reading would bail on its first item, return instantly from its pause gate, and report a clean stop
 having reversed nothing.
 
 So a reversal names its reading — `StopMeans::IntentLeavesRunning` or `IntentReachesStopped`
-(`write_operations/operation_intent.rs`), which `PauseGate::wait_while_paused_until` also takes. Today's journal-driven
-rollback is dispatched as its OWN managed operation, opened `Running`, so its runner (`ReversalRunner`) always uses the
-first. A cancelled transfer's own wind-down (`transfer/copy/rollback.rs`, `transfer/volume/cleanup.rs`) runs under a
-`RollingBack` operation and takes a `WindDown` (`write_operations/state/wind_down.rs`), which reads the second and hands
-out no intent, so `is_cancelled` is out of its reach.
+(`crates/cmdr-operations/src/operation_intent.rs`), which `PauseGate::wait_while_paused_until` also takes. Today's
+journal-driven rollback is dispatched as its OWN managed operation, opened `Running`, so its runner (`ReversalRunner`)
+always uses the first. A cancelled transfer's own wind-down (`transfer/copy/rollback.rs`, `transfer/volume/cleanup.rs`)
+runs under a `RollingBack` operation and takes a `WindDown` (`crates/cmdr-operations/src/state/wind_down.rs`), which
+reads the second and hands out no intent, so `is_cancelled` is out of its reach.
 
 **Known boundary**: the mid-file layer inside `stream_pipe_file` (retry classification, the between-chunks park) still
 reads the transfer's meaning off `state.intent` directly. That's correct for every reversal dispatched today, and it's
@@ -508,7 +507,7 @@ Every item passes two independent guards before anything is touched; failing eit
 it), feeding a `partially_rolled_back` result.
 
 **Both guards, and this vocabulary, are shared with the IN-FLIGHT reversals** a cancel runs over a transfer's own ledger
-(`file_system/write_operations/reversal.rs`, and `transfer/DETAILS.md` § "What a reversal does with that identity").
+(`crates/cmdr-operations/src/reversal.rs`, and `transfer/DETAILS.md` § "What a reversal does with that identity").
 `verify_snapshot`, `SnapshotVerdict`, `SkipReason`, and `SkipTally` have one definition each: a user shouldn't meet two
 answers to "did this file change". The in-flight side reports its verdicts on the `write-cancelled` event rather than
 storing them, and adds a local-only node-id check that this path has no equivalent for (no `Volume` backend offers one).
@@ -684,7 +683,7 @@ checkpointing for the whole file-I/O duration) — it's the `rolling_back` state
 Every leaf of a volume (SMB/MTP) copy records its **size**, top-level and inner alike, so a cross-volume directory
 rollback reverses the whole tree rather than skipping its contents. The byte count costs nothing extra: `copy_leaf`
 returns what it piped, off a size hint the walker's `list_directory` already paid for, and `CreatedPaths` carries a
-`WrittenFile` per destination (`write_operations/ledger.rs`) so it rides through to the row (`journal.rs`).
+`WrittenFile` per destination (`crates/cmdr-operations/src/ledger.rs`) so it rides through to the row (`journal.rs`).
 
 ❌ **A volume leaf records NO mtime, and adding one would make things worse.** The volume write path doesn't preserve
 the source's, so the live value would differ from anything captured at read time — flipping every leaf from

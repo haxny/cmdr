@@ -141,9 +141,8 @@ server's bytes.
 
 Why: a WebDAV server on Linux stores the bytes the URL spelled, where web servers, PHP, and scripts match bytes, so a
 decomposed `café.jpg` from macOS looks right and breaks every link to it. The decision and which other tools do the
-same: `apps/desktop/src-tauri/src/file_system/write_operations/DETAILS.md` § "Look-alike names". Unit cells:
-`src/volume/paths_test.rs`; Docker cells:
-`apps/desktop/src-tauri/src/operations_host/backend_suites/webdav_look_alike_test.rs`.
+same: `crates/cmdr-operations/src/DETAILS.md` § "Look-alike names". Unit cells: `src/volume/paths_test.rs`; Docker
+cells: `apps/desktop/src-tauri/src/operations_host/backend_suites/webdav_look_alike_test.rs`.
 
 ## Write staging
 
@@ -152,12 +151,11 @@ same: `apps/desktop/src-tauri/src/file_system/write_operations/DETAILS.md` § "L
 every 200 ms from a shared counter, and cancel by poisoning the body stream (the request aborts). Any failure DELETEs
 that path best-effort, the same contract SFTP's truncating open keeps (on a Nextcloud, a big file goes up in chunks
 instead, still onto that one path: § "Chunked uploads (Nextcloud)"). **Why**: the engine stages every write here
-(`write_is_single_shot` keeps its `false` default,
-`apps/desktop/src-tauri/src/file_system/write_operations/transfer/DETAILS.md` § "File writes are staged"), so the path
-IS its `.cmdr-tmp-*` temp, and its landing MOVE (`rename(force = false)`, `Overwrite: F`) is what gives the bytes the
-user's name and refuses a taken one. A second staging layer under that temp buys nothing and costs a second MOVE per
-file plus a second temp in the user's folder (measured on the stock Apache fixture, 2026-09-23: 1 PUT + 2 MOVEs per new
-file with it, 1 PUT + 1 MOVE without; pinned by
+(`write_is_single_shot` keeps its `false` default, `crates/cmdr-operations/src/transfer/DETAILS.md` § "File writes are
+staged"), so the path IS its `.cmdr-tmp-*` temp, and its landing MOVE (`rename(force = false)`, `Overwrite: F`) is what
+gives the bytes the user's name and refuses a taken one. A second staging layer under that temp buys nothing and costs a
+second MOVE per file plus a second temp in the user's folder (measured on the stock Apache fixture, 2026-09-23: 1 PUT +
+2 MOVEs per new file with it, 1 PUT + 1 MOVE without; pinned by
 `apps/desktop/src-tauri/src/operations_host/backend_suites/webdav_wire_cost_test.rs`). ❌ **Rejected: a capability
 saying "my write is already staged" so the engine skips its own.** The backend's temp would sit outside everything the
 engine's staging carries: the in-flight ledger and its crash sweep, the pane hiding by ownership, the `LandingName`
@@ -313,9 +311,8 @@ What the pane does with each shape: `cmdr-fs`'s `SpaceInfo`, and `apps/desktop/s
 ## Dates
 
 Copies off this backend always keep the source's modification date; copies onto it keep it only where the SERVER can
-store one. The cross-backend contract is
-`apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/DETAILS.md` § "Copies keep the source's
-metadata".
+store one. The cross-backend contract is `crates/cmdr-operations/src/transfer/volume/DETAILS.md` § "Copies keep the
+source's metadata".
 
 - **Source**: the read stream reports the GET's `Last-Modified`, the same date a PROPFIND lists as `getlastmodified`
   (whole seconds), so it costs no round trip. Both Apache and Nextcloud send it on 200 and 206 alike.

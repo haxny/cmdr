@@ -1,12 +1,12 @@
 //! Tests for the `cmdr://state` `operations:` section builder (the two-source
 //! join of registry membership/status and the live progress cache).
 
-use crate::file_system::write_operations::testing::{SourcesGoneNext, TransferWaitReason};
-use crate::file_system::write_operations::{
+use crate::mcp::resources::operations::{OperationRow, build_operations_yaml};
+use cmdr_operations::testing::{SourcesGoneNext, TransferWaitReason};
+use cmdr_operations::{
     ConflictId, LifecycleStatus, OperationSnapshot, OperationStatus, TransferActivity, WriteConflictEvent,
     WriteOperationError, WriteOperationPhase, WriteOperationType, WriteSourcesGoneEvent,
 };
-use crate::mcp::resources::operations::{OperationRow, build_operations_yaml};
 
 fn clash(conflict_id: u64, destination_size: Option<u64>) -> WriteConflictEvent {
     WriteConflictEvent {

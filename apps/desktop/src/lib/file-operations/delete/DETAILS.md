@@ -13,7 +13,8 @@ Depth and rationale. `CLAUDE.md` holds the must-knows; the flow and edge-case ca
 5. **Confirm**: `DeleteDialog` passes back the active `isPermanent` (from the switch);
    `dialog-state.svelte.ts::handleDeleteConfirm(previewId, isPermanent)` transitions to `TransferProgressDialog` with
    `operationType: 'trash'` or `'delete'`.
-6. **Backend**: `trash_files_start()` or `delete_files_start()` in `write_operations/mod.rs` runs the operation.
+6. **Backend**: `trash_files_start()` or `delete_files_start()` in `crates/cmdr-operations/src/lib.rs` runs the
+   operation.
 7. **Progress**: `TransferProgressDialog` shows items/bytes progress with cancel support.
 8. **Completion**: toast notification, both panes refreshed, 400 ms minimum display time.
 
@@ -170,8 +171,7 @@ are the user's own top-level items.
 **Gotcha: the resolver answers for a VOLUME, not an item.** `get_trash_dir` asks Cocoa
 (`URLForDirectory:inDomain:appropriateForURL:create:`), which resolves the URL's volume and therefore refuses a path
 that doesn't exist — and the paths asked about are routinely gone (the item was just trashed away). The Rust side walks
-up to the nearest live ancestor for exactly that reason; see
-`src-tauri/src/file_system/write_operations/delete/trash.rs`.
+up to the nearest live ancestor for exactly that reason; see `crates/cmdr-operations/src/delete/trash.rs`.
 
 **Gotcha: revealing a trashed dotfile throws.** `explorer.moveCursor(pane, name)` throws when the name isn't in the
 visible listing, and a dotfile isn't with "show hidden files" off. The navigation has already happened by then, so the
@@ -192,7 +192,7 @@ evicts files it has uploaded, leaving a placeholder macOS marks `SF_DATALESS` (F
 folder on the boot volume, so trashing one of those DOWNLOADS it first. That download is the whole reason this routing
 exists, ❌ not the refusals macOS sometimes gives instead: a 111 kB file cost half a second, a folder holding 50 GB of
 evicted content would cost the lot, to fill a folder the person is about to empty. Rationale and evidence:
-`write_operations/delete/cloud_trash.rs`.
+`crates/cmdr-operations/src/delete/cloud_trash.rs`.
 
 So `openDeleteDialog` (and its search-results twin) asks `trashRoutingForPaths(sourcePaths)` before it opens anything.
 The answer has two fields:
@@ -238,9 +238,9 @@ cancelled, and `ONLINE_ONLY_ANSWER_TIMEOUT_MS` all leave the dialog on today's b
 getting the typed refusal is recoverable while a permanent delete isn't. The timeout is generous on purpose: a real walk
 of a big tree legitimately takes a while, and giving up early runs the download this avoids.
 
-Three things belong to the backend and must not be re-derived here (`write_operations/delete/cloud_trash.rs`, DETAILS §
-"A trash of online-only cloud content becomes a delete"): which locations count, the all-or-nothing rule across a mixed
-selection, and symlink resolution (`~/Dropbox` is a link into the same drive).
+Three things belong to the backend and must not be re-derived here (`crates/cmdr-operations/src/delete/cloud_trash.rs`,
+DETAILS § "A trash of online-only cloud content becomes a delete"): which locations count, the all-or-nothing rule
+across a mixed selection, and symlink resolution (`~/Dropbox` is a link into the same drive).
 
 The question is asked for Shift+F8 too, not only F8: the dialog's own switch could otherwise flip a permanent delete
 back to a trash and walk straight into that download.

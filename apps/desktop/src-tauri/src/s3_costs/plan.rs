@@ -6,7 +6,7 @@ use cmdr_s3::cost::Workload;
 use serde::Deserialize;
 
 use crate::file_system::volume::ScannedFile;
-use crate::file_system::write_operations::{ConflictResolution, ScanCostFacts};
+use cmdr_operations::{ConflictResolution, ScanCostFacts};
 
 /// The operation a dialog is about to start.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, specta::Type)]

@@ -1,7 +1,7 @@
 //! Tauri commands for file rename operations.
 //!
 //! Thin pass-throughs: the rename validation + the managed rename mutation live
-//! in `file_system::write_operations::rename`. These commands expand tilde,
+//! in `cmdr_operations`'s `rename`. These commands expand tilde,
 //! resolve the `volume_id`, apply the IPC timeout tiers (2 s validity/permission,
 //! the validity check stretched on a live session by `deadline::io_budget`; the
 //! rename answers within `MUTATION_REPLY_DEADLINE` or says it's still running),
@@ -18,13 +18,13 @@ use tokio::time::Duration;
 use super::file_system::expand_tilde;
 use super::settled::broadcast_settled;
 use crate::file_system::volume::io_budget_for_volume;
-use crate::file_system::write_operations::{
-    MUTATION_REPLY_DEADLINE, MutationError, MutationReply, MutationSettled, RenameValidityResult, reply_within,
-    trash_dir_for_path,
-};
 use crate::operations_host::{operations, refuse_instant_not_installed, wire};
 use crate::s3_costs;
 use cmdr_fs::deadline::timeout_detached_typed;
+use cmdr_operations::{
+    MUTATION_REPLY_DEADLINE, MutationError, MutationReply, MutationSettled, RenameValidityResult, reply_within,
+    trash_dir_for_path,
+};
 
 // ============================================================================
 // Rename operations
@@ -455,8 +455,8 @@ mod tests {
     async fn a_slow_rename_replies_still_running_then_settles_landed() {
         use crate::file_system::volume::manager::get_volume_manager;
         use crate::file_system::volume::{ConnectionState, InMemoryVolume, Volume};
-        use crate::file_system::write_operations::testing::MutationSettledOutcome;
         use crate::test_support::SlowVolume;
+        use cmdr_operations::testing::MutationSettledOutcome;
         use std::path::Path;
         use std::sync::Arc;
 

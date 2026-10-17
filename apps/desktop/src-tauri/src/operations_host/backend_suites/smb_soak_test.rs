@@ -13,9 +13,9 @@
 //! but a load that grows over the soak's lifetime can.
 
 use super::smb_test_support::*;
-use crate::file_system::write_operations::testing::new_operation_state;
 use crate::operations_host::app_engine;
 use cmdr_fs::volume::smb_volume_id;
+use cmdr_operations::testing::new_operation_state;
 use cmdr_smb::volume::*;
 
 // ── Soak test: repeated SMB→Local copy pipeline ────────────────
@@ -121,8 +121,8 @@ async fn make_docker_auth_volume() -> SmbVolume {
 #[tokio::test]
 #[ignore = "Soak test: requires Docker SMB containers. Run with CMDR_SOAK_ITERATIONS or CMDR_SOAK_DURATION_SECS."]
 async fn smb_soak_copy_loop() {
-    use crate::file_system::write_operations::VolumeCopyConfig;
-    use crate::file_system::write_operations::testing::{CollectorEventSink, copy_volumes_with_progress};
+    use cmdr_operations::VolumeCopyConfig;
+    use cmdr_operations::testing::{CollectorEventSink, copy_volumes_with_progress};
     use std::time::{Duration, Instant};
 
     let _ = env_logger::try_init();

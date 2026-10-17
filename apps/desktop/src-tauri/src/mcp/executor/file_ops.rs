@@ -359,10 +359,8 @@ pub async fn execute_rename<R: Runtime>(app: &AppHandle<R>, params: &Value) -> T
         // an MCP tool error is: a machine-facing report, not user-facing prose.
         .map_err(|e| ToolError::internal(e.to_string()))?;
         match reply {
-            crate::file_system::write_operations::MutationReply::Done => {
-                Ok(json!(format!("OK: Renamed to {new_name}.")))
-            }
-            crate::file_system::write_operations::MutationReply::StillRunning { .. } => Ok(json!(format!(
+            cmdr_operations::MutationReply::Done => Ok(json!(format!("OK: Renamed to {new_name}."))),
+            cmdr_operations::MutationReply::StillRunning { .. } => Ok(json!(format!(
                 "OK: The rename to {new_name} is still running on a slow volume. It may still land, so check the pane's listing before retrying."
             ))),
         }

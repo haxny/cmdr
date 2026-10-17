@@ -6,7 +6,7 @@ use cmdr_s3::cost::{PriceTable, Workload};
 
 use super::{CostEstimate, priced_rename, rounds_to_zero};
 use crate::file_system::volume::ScannedFile;
-use crate::file_system::write_operations::ScanCostFacts;
+use cmdr_operations::ScanCostFacts;
 
 const MIB: u64 = 1024 * 1024;
 const DAY: u64 = 86_400;

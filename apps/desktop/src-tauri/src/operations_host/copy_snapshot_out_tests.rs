@@ -17,10 +17,8 @@ use std::time::Duration;
 
 use crate::file_system::git;
 use crate::file_system::volume::manager::get_volume_manager;
-use crate::file_system::write_operations::VolumeCopyConfig;
-use crate::file_system::write_operations::testing::{
-    CollectorEventSink, copy_volumes_with_progress, new_operation_state,
-};
+use cmdr_operations::VolumeCopyConfig;
+use cmdr_operations::testing::{CollectorEventSink, copy_volumes_with_progress, new_operation_state};
 
 use cmdr_fs::volume::{InMemoryVolume, Volume};
 use cmdr_git::test_fixtures::{EntryKind, Fixture, cleanup, temp_dir};
@@ -208,8 +206,8 @@ async fn the_executable_bit_survives_a_copy_out_of_a_snapshot() {
 /// the destination stays untouched rather than holding half a move.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_move_out_of_a_snapshot_is_refused_before_a_byte_is_written() {
-    use crate::file_system::write_operations::{ReadOnlySide, WriteOperationError};
     use cmdr_operation_log::types::Initiator;
+    use cmdr_operations::{ReadOnlySide, WriteOperationError};
 
     let engine = super::test_engine();
 
@@ -265,8 +263,8 @@ async fn a_move_out_of_a_snapshot_is_refused_before_a_byte_is_written() {
 /// starting and dying on its first write.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_copy_into_a_snapshot_is_refused_up_front() {
-    use crate::file_system::write_operations::{ReadOnlySide, WriteOperationError};
     use cmdr_operation_log::types::Initiator;
+    use cmdr_operations::{ReadOnlySide, WriteOperationError};
 
     let engine = super::test_engine();
 

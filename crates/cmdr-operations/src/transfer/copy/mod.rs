@@ -1,0 +1,802 @@
+//! Copy implementation for write operations.
+//!
+//! `copy_files_with_progress_inner` orchestrates the local-FS copy: scan, disk-
+//! space preflight, the per-file loop (driven through `transfer_driver`), and
+//! post-loop completion / cancel / rollback. The per-file work, empty-dir
+//! landing, and tracked rollback live in the submodules.
+
+use crate::scope::OpScope;
+use std::collections::{HashMap, HashSet};
+use std::fs;
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
+// The sibling test modules reach it through `use super::*`.
+#[cfg(test)]
+use std::time::Duration;
+
+use super::super::conflict::ApplyToAll;
+use super::super::durability::{flush_created_destinations, unconfirmed_copy};
+use super::super::event_sinks::OperationEventSink;
+use super::super::free_space::check_local_copy_space;
+use super::super::host::OperationErrorReport;
+use super::super::ledger::CopyTransaction;
+use super::super::scan::scan_sources;
+use super::super::scan_dry_run::handle_dry_run;
+use super::super::scan_source_tracker::{FileVerdict, SourceItemTracker, top_level_source_path};
+use super::super::state::{OperationIntent, WindDown, WriteOperationState};
+use super::super::transfer_sides::transfer_stop_event;
+use super::super::transfer_tree::{TreeLanding, TreeOrder};
+use super::super::types::{
+    CancelRollback, ConflictResolution, SourceItemOutcome, TopLevelSkipped, WriteCancelledEvent, WriteCompleteEvent,
+    WriteOperationConfig, WriteOperationError, WriteOperationPhase, WriteOperationType, WriteProgressEvent,
+    WriteSourceItemDoneEvent,
+};
+use super::super::unique_name::{create_unique_dir, next_available_name};
+use super::super::validation::{is_same_file, validate_file_sizes_for_filesystem};
+use super::transfer_driver::{DriverConfig, PostLoopIntent, TransferOutcome, drive_transfer_serial_sync};
+
+mod dest_chain;
+mod folder_metadata;
+mod rollback;
+mod scanned_dirs;
+mod single_item;
+
+pub(super) use folder_metadata::apply_created_dirs_metadata;
+use rollback::rollback_with_progress;
+pub(super) use scanned_dirs::create_scanned_dirs_at_destination;
+pub(super) use single_item::{JournalDestUnder, copy_single_item};
+
+/// Rewrites `dest` by replacing the longest ancestor that appears as a key in
+/// `dir_remap` with its mapped value. Used to follow a folder→file Rename
+/// redirect: once the subtree root `<dest>/name` is redirected to
+/// `<dest>/name (1)`, every child path `<dest>/name/child` becomes
+/// `<dest>/name (1)/child`. Returns `dest` unchanged when no ancestor is
+/// remapped (the common case, so the map is almost always empty).
+///
+/// A path that IS a key maps to the mapped value itself, which is how a
+/// self-collision on a plain FILE redirects. `to.join("")` would append a
+/// trailing separator and the copy would then fail to finalize against
+/// `photo (1).jpg/`, so the empty suffix is its own arm.
+pub(super) fn apply_dir_remap(dest: &Path, dir_remap: &HashMap<PathBuf, PathBuf>) -> PathBuf {
+    if dir_remap.is_empty() {
+        return dest.to_path_buf();
+    }
+    // Find the longest mapped ancestor so nested redirects compose correctly.
+    let mut best: Option<(&PathBuf, &PathBuf)> = None;
+    for (from, to) in dir_remap {
+        if dest.starts_with(from) && best.is_none_or(|(b, _)| from.as_os_str().len() > b.as_os_str().len()) {
+            best = Some((from, to));
+        }
+    }
+    match best {
+        Some((from, to)) => {
+            // `strip_prefix` can't fail here: `starts_with(from)` held above.
+            let suffix = dest.strip_prefix(from).unwrap_or(Path::new(""));
+            if suffix.as_os_str().is_empty() {
+                to.clone()
+            } else {
+                to.join(suffix)
+            }
+        }
+        None => dest.to_path_buf(),
+    }
+}
+
+/// Close out the copy's ledger: journal the destination directories it created,
+/// then commit so the `Drop` safety net doesn't remove what the user keeps.
+///
+/// The dir rows land AFTER the leaf files (which recorded themselves as they
+/// landed), so a `seq DESC` reversal removes files before their dirs.
+///
+/// Every terminal path goes through here, not only the successful one: a
+/// canceled copy KEEPS the directories it created, and without their rows a
+/// reversal from history puts every file back and leaves the destination's empty
+/// skeleton standing. An in-flight rollback removes them again, and the reversal
+/// reads those rows as already gone — the same way it already reads the file rows
+/// this copy journaled as they landed.
+fn commit_journaling_created_dirs(transaction: CopyTransaction, scope: &OpScope) {
+    crate::journal::record_created_dirs(scope, &transaction.created_dirs);
+    transaction.commit();
+}
+
+/// The STOPPED terminal path's close-out (a Cancel that keeps what landed): the
+/// same journaling, and the folder→file asides are kept the way a failure keeps
+/// them. A stop halfway through a folder that's replacing one of the user's files
+/// leaves that folder at the name with part of its subtree, so discarding the
+/// aside would delete the user's only copy for a folder they stopped. Returns
+/// each fallback name for the cancellation event the user reads.
+fn stop_keeping_displaced_aside(
+    transaction: CopyTransaction,
+    scope: &OpScope,
+    operation_id: &str,
+) -> Vec<super::super::types::RecoveredOriginal> {
+    crate::journal::record_created_dirs(scope, &transaction.created_dirs);
+    let recovered = transaction.commit_keeping_displaced_aside();
+    for kept in &recovered {
+        log::warn!(
+            "copy_files_with_progress: op={} stopped, so the original at {} is kept at {}",
+            operation_id,
+            kept.path,
+            kept.kept_at
+        );
+    }
+    recovered
+}
+
+/// The FAILING terminal path's close-out: same journaling, but the folder→file
+/// asides are kept for the user instead of discarded, and whatever failed is
+/// re-labelled so the dialog can name where each file went.
+///
+/// A failure keeps every file that landed, which includes a folder that took one
+/// of the user's filenames with only part of its subtree in it
+/// (`ledger::CopyTransaction::commit_keeping_displaced_aside`). Ordinary
+/// failures displace nothing, and those get their own error back untouched.
+fn fail_keeping_displaced_aside(
+    transaction: CopyTransaction,
+    scope: &OpScope,
+    operation_id: &str,
+    error: WriteOperationError,
+) -> WriteOperationError {
+    crate::journal::record_created_dirs(scope, &transaction.created_dirs);
+    let recovered = transaction.commit_keeping_displaced_aside();
+    if recovered.is_empty() {
+        return error;
+    }
+    log::warn!(
+        "copy_files_with_progress: op={} kept {} displaced original(s) under a ` (recovered)` name",
+        operation_id,
+        recovered.len()
+    );
+    WriteOperationError::OriginalsKeptAside {
+        cause: Box::new(error),
+        recovered,
+    }
+}
+
+// ============================================================================
+// Copy implementation
+// ============================================================================
+
+pub(crate) fn copy_files_with_progress_inner(
+    events: &dyn OperationEventSink,
+    operation_id: &str,
+    state: &Arc<WriteOperationState>,
+    sources: &[PathBuf],
+    destination: &Path,
+    config: &WriteOperationConfig,
+) -> Result<(), WriteOperationError> {
+    log::debug!(
+        "copy_files_with_progress: starting operation_id={}, {} sources",
+        operation_id,
+        sources.len()
+    );
+
+    let mut dir_remap =
+        super::named_destination::initial_remap(sources, destination, config.destination_name.as_deref())?;
+
+    // Handle dry-run mode
+    if handle_dry_run(
+        config.dry_run,
+        sources,
+        destination,
+        state,
+        events,
+        operation_id,
+        WriteOperationType::Copy,
+        state.progress_interval,
+        config.max_conflicts_to_show,
+    )? {
+        return Ok(());
+    }
+
+    // Phase 1: Scan (or reuse cached preview results)
+    let mut scan_result = if let Some(preview_id) = &config.preview_id {
+        // Try to reuse cached scan results from preview.
+        // Volume scans (MTP, etc.) cache aggregate stats only (empty `files` list).
+        // This per-file copy path needs the file list, so treat an empty-files cache
+        // hit the same as a miss and fall through to a fresh local scan.
+        let previews = state.scope().stores().previews();
+        if let Some(cached) = previews
+            .take_cached_scan_result(preview_id, sources)
+            .filter(|c| !c.files.is_empty())
+        {
+            log::debug!(
+                "copy_files_with_progress: reusing cached scan for operation_id={}, preview_id={}, files={}, bytes={}",
+                operation_id,
+                preview_id,
+                cached.file_count,
+                cached.total_bytes
+            );
+            cached
+        } else {
+            // Cache miss despite frontend coordination: scan may not have completed yet
+            log::warn!(
+                "preview_id={} cache miss despite frontend coordination, starting fresh scan for operation_id={}",
+                preview_id,
+                operation_id
+            );
+            scan_sources(sources, state, events, operation_id, WriteOperationType::Copy)?
+        }
+    } else {
+        // No preview ID, do normal scan
+        log::debug!(
+            "copy_files_with_progress: starting scan phase for operation_id={}",
+            operation_id
+        );
+        scan_sources(sources, state, events, operation_id, WriteOperationType::Copy)?
+    };
+    log::debug!(
+        "copy_files_with_progress: scan complete for operation_id={}, files={}, bytes={}",
+        operation_id,
+        scan_result.file_count,
+        scan_result.total_bytes
+    );
+    state.transfer_tree.install(
+        scan_result.order_by_transfer_tree(sources, &TreeOrder::active(state.scope().host())),
+        TreeLanding::under(destination, config.destination_name.as_deref()),
+    );
+    let tree = state.transfer_tree.reporter();
+
+    // Pre-flight free-space check, before anything is written.
+    log::debug!(
+        "copy_files_with_progress: starting disk space check for operation_id={}",
+        operation_id
+    );
+    check_local_copy_space(destination, sources, &scan_result, config, state, operation_id)?;
+    log::debug!(
+        "copy_files_with_progress: disk space check complete for operation_id={}",
+        operation_id
+    );
+
+    // Pre-flight filesystem-limit check: block before writing a byte if any file
+    // is too large for the destination filesystem (FAT32's 4 GiB cap). No-op for
+    // filesystems with no known limit.
+    validate_file_sizes_for_filesystem(destination, &scan_result.files)?;
+
+    // Phase 2: Copy files in sorted order with rollback support
+    let mut transaction = CopyTransaction::new();
+    let mut apply_to_all_resolution = ApplyToAll::default();
+    let mut created_dirs: HashSet<PathBuf> = HashSet::new();
+    let mut skipped_subtrees: HashSet<PathBuf> = HashSet::new();
+    // Destinations the copy strategy already flushed (chunked) or for which a
+    // flush is moot (clonefile/reflink); the end-of-op flush pass skips these.
+    let mut already_synced: HashSet<PathBuf> = HashSet::new();
+
+    // A source that already lives at the destination is a request to DUPLICATE
+    // it, not a conflict: redirect its whole subtree to a free ` (N)` name here
+    // and the conflict machinery is never consulted for it. Identity is
+    // `dev+ino` (`is_same_file`), which settles a symlinked parent, a
+    // case-differing path, and NFC/NFD in one comparison.
+    //
+    // Asked per TOP-LEVEL source, once, BEFORE the loop: the loop iterates the
+    // scan's LEAF files, and in a same-folder folder copy every leaf is its own
+    // self-collision, so a per-leaf question would scatter `a (1).txt` through
+    // the original `docs/` instead of producing `docs (1)/`. `dir_remap` carries
+    // the redirect to every per-file destination for free, and the scanned-dirs
+    // pass reads it too, which is what lands an EMPTY folder's duplicate.
+    // `transfer/DETAILS.md` § "Self-collision (duplicating in place)".
+    let mut duplicated_sources: HashSet<PathBuf> = HashSet::new();
+    for source in sources {
+        let Some(file_name) = source.file_name() else { continue };
+        let default_dest = destination.join(file_name);
+        let original_dest = apply_dir_remap(&default_dest, &dir_remap);
+        if !is_same_file(source, &original_dest) {
+            continue;
+        }
+        let unique_dest = if source.is_dir() {
+            // A directory claims its name eagerly, and the `create_dir` loop IS
+            // the reservation. Recorded so rollback owns it.
+            let claimed =
+                create_unique_dir(&original_dest, &state.claimed_names).map_err(|e| WriteOperationError::IoError {
+                    path: original_dest.display().to_string(),
+                    message: format!("Couldn't create the copy's folder: {e}"),
+                })?;
+            folder_metadata::narrow_like_its_source(&claimed, source);
+            transaction.record_dir(claimed.clone());
+            created_dirs.insert(claimed.clone());
+            claimed
+        } else {
+            // A file needs no reservation: nothing sits at the picked name, and
+            // the non-overwrite landing refuses an occupied destination
+            // (`RENAME_EXCL`), so a racing writer produces a loud failure rather
+            // than a clobber. ❌ Not `find_unique_name`: its 0-byte placeholder
+            // would occupy the destination and raise the very conflict prompt
+            // this rule exists to remove. The op's `claimed_names` ledger stands
+            // in for the missing reservation WITHIN the batch: the probe can't
+            // see a name an earlier source in this same loop already took.
+            next_available_name(&original_dest, &state.claimed_names)
+        };
+        log::info!(
+            "copy: {} is already in the destination, duplicating it as {}",
+            source.display(),
+            unique_dest.display()
+        );
+        dir_remap.insert(default_dest, unique_dest);
+        duplicated_sources.insert(source.clone());
+    }
+
+    // Emit initial copying phase event (important when reusing cached scan - no scanning events were
+    // emitted)
+    state.emit_progress_via_sink(
+        events,
+        WriteProgressEvent::new(
+            operation_id.to_string(),
+            WriteOperationType::Copy,
+            WriteOperationPhase::Copying,
+            None,
+            0,
+            scan_result.file_count,
+            0,
+            scan_result.total_bytes,
+        ),
+    );
+    state.scope().status().update(
+        operation_id,
+        WriteOperationPhase::Copying,
+        None,
+        0,
+        scan_result.file_count,
+        0,
+        scan_result.total_bytes,
+    );
+
+    // Bulk-skip pre-known conflicts (Skip mode only). For local↔local, the
+    // per-file `get_metadata` is cheap (microseconds), so the user-facing bug
+    // is much milder than the cross-volume case — but we still want the bar
+    // to reflect the user's "Skip all" decision immediately. The set is keyed
+    // by the absolute top-level source path (matching what
+    // `top_level_source_path(file_info)` returns). We filter `scan_result.files`
+    // pre-loop so the driver iterates only the surviving files; bulk-skip
+    // counters are handed to the driver via `bulk_skip_files` / `bulk_skip_bytes`
+    // and the driver emits the one bulk progress event.
+    //
+    // **Directories never bulk-skip.** A top-level directory's name matching a
+    // pre-known conflict only means SOME of its children collide at dest. The
+    // bulk-skip would drop the whole subtree, including non-conflicting
+    // children. We exclude directories here and fall through to per-iter
+    // conflict resolution inside the copy loop (where each conflicting child
+    // gets skipped individually while non-conflicting ones copy). Symlinks
+    // count as files (they're replaced atomically, not merged), so they stay
+    // in the bulk-skip set.
+    let pre_skip_top_levels: HashSet<PathBuf> =
+        if config.conflict_resolution == ConflictResolution::Skip && !config.pre_known_conflicts.is_empty() {
+            let names: HashSet<&str> = config.pre_known_conflicts.iter().map(String::as_str).collect();
+            sources
+                .iter()
+                .filter(|p| {
+                    // A duplicate is never bulk-skipped. The pre-flight matches
+                    // by NAME, so a same-folder paste lists every one of its own
+                    // sources as conflicting; skipping them would turn the
+                    // duplicate into a silent no-op. The redirect above already
+                    // moved this source out of its own way.
+                    if duplicated_sources.contains(*p) {
+                        return false;
+                    }
+                    let name_matches = p
+                        .file_name()
+                        .and_then(|n| n.to_str())
+                        .map(|n| names.contains(n))
+                        .unwrap_or(false);
+                    if !name_matches {
+                        return false;
+                    }
+                    // Only stat candidates whose filenames match (typically
+                    // few). `symlink_metadata` keeps symlinks classified as
+                    // files. If the stat fails (race / permission denied),
+                    // fall back to NOT bulk-skipping — safer to let the loop
+                    // discover the conflict and resolve it per-iter than to
+                    // wholesale drop a subtree we couldn't classify.
+                    fs::symlink_metadata(p).map(|m| !m.is_dir()).unwrap_or(false)
+                })
+                .cloned()
+                .collect()
+        } else {
+            HashSet::new()
+        };
+
+    let mut bulk_skip_files = 0usize;
+    let mut bulk_skip_bytes = 0u64;
+    if !pre_skip_top_levels.is_empty() {
+        scan_result.files.retain(|fi| {
+            let top = top_level_source_path(fi);
+            if pre_skip_top_levels.contains(&top) {
+                bulk_skip_files += 1;
+                // Full `size` (write footprint) so the bulk-skip seed agrees
+                // with the `total_bytes` denominator copy uses. Copy writes
+                // every hardlink in full, so each counts toward the bar.
+                bulk_skip_bytes += fi.size;
+                false
+            } else {
+                true
+            }
+        });
+        log::info!(
+            "copy_files_with_progress: bulk-skipping {} files ({} bytes) for {} pre-known conflicting top-level sources",
+            bulk_skip_files,
+            bulk_skip_bytes,
+            pre_skip_top_levels.len()
+        );
+        // These sources are gone from the file list before the tracker is even
+        // built, so nothing downstream would ever speak for them. A caller
+        // tracking per-source outcomes has to hear that the user's "Skip all"
+        // covered them, or it waits on a verdict that isn't coming.
+        for source in &pre_skip_top_levels {
+            tree.skip_whole(tree.source(source));
+            events.emit_source_item_done(WriteSourceItemDoneEvent {
+                operation_id: operation_id.to_string(),
+                source_path: source.display().to_string(),
+                // A skipped copy wrote nothing and touched no source.
+                source_removed: false,
+                outcome: SourceItemOutcome::Skipped,
+            });
+        }
+    }
+
+    log::debug!(
+        "copy_files_with_progress: starting copy loop for operation_id={}, {} files",
+        operation_id,
+        scan_result.files.len()
+    );
+
+    let mut tracker = SourceItemTracker::new(&scan_result.files);
+
+    // The sync driver iterates a `&[PathBuf]`; the closure needs the matching
+    // `FileInfo` per iteration (for `dest_path`, `is_symlink`, `size`, and the
+    // tracker key). We pre-collect aligned `paths` and walk `files` via an
+    // iterator the closure owns, advancing it in lock-step with the driver.
+    // Driver `pre_skip_paths` is empty: we already filtered above.
+    let files_for_loop: Vec<_> = scan_result.files.iter().collect();
+    let source_paths: Vec<PathBuf> = files_for_loop.iter().map(|fi| fi.path.clone()).collect();
+    let file_count = scan_result.file_count;
+    let total_bytes = scan_result.total_bytes;
+    let progress_interval = state.progress_interval;
+    let empty_pre_skip: HashSet<PathBuf> = HashSet::new();
+    let driver_config = DriverConfig {
+        operation_type: WriteOperationType::Copy,
+        phase: WriteOperationPhase::Copying,
+        conflict_resolution: config.conflict_resolution,
+        pre_known_conflicts: config.pre_known_conflicts.clone(),
+        // Sync driver ignores these; `copy_single_item` owns its emits and the
+        // closure below every verdict.
+        emit_per_source_milestone: false,
+        report_source_outcomes: false,
+    };
+
+    let mut file_iter = files_for_loop.iter();
+
+    let outcome = drive_transfer_serial_sync(
+        events,
+        state,
+        operation_id,
+        &source_paths,
+        file_count,
+        total_bytes,
+        bulk_skip_files,
+        bulk_skip_bytes,
+        &empty_pre_skip,
+        &driver_config,
+        |ctx| {
+            let file_info = file_iter
+                .next()
+                .expect("file_iter aligned with driver iteration over source_paths");
+            log::debug!(
+                "copy_files_with_progress: copying file {} ({} bytes)",
+                file_info.path.display(),
+                file_info.size
+            );
+            // `copy_single_item` bumps `files_done` / `bytes_done` by reference
+            // and uses them to emit cumulative progress; seed with the
+            // driver-supplied cumulative snapshot so emitted events stay
+            // consistent across iterations.
+            let mut local_files = ctx.files_done_so_far;
+            let mut local_bytes = ctx.bytes_done_so_far;
+            // The file's tree row, active until `copy_single_item` settles it
+            // with its verdict. An `Err` drops it unsettled: back to waiting.
+            let row = tree.leaf(file_info.tree_node);
+            let landed = copy_single_item(
+                &file_info.path,
+                file_info.dest_path(destination),
+                destination,
+                // A plain copy writes where it records.
+                None,
+                file_info.is_symlink,
+                file_info.size,
+                &mut local_files,
+                &mut local_bytes,
+                file_count,
+                total_bytes,
+                state,
+                ctx.events,
+                operation_id,
+                WriteOperationType::Copy,
+                &progress_interval,
+                config,
+                &mut transaction,
+                &mut apply_to_all_resolution,
+                &mut created_dirs,
+                &mut dir_remap,
+                &mut skipped_subtrees,
+                &mut already_synced,
+                // Lands where it stays, so the ACL and flags go on at once.
+                None,
+                &row,
+            )?;
+            let bytes_delta = local_bytes.saturating_sub(ctx.bytes_done_so_far);
+
+            if let Some(finished) = tracker.record(file_info, landed) {
+                ctx.events.emit_source_item_done(WriteSourceItemDoneEvent {
+                    operation_id: operation_id.to_string(),
+                    source_path: finished.source_path.display().to_string(),
+                    // A copy leaves its source exactly where it was.
+                    source_removed: false,
+                    outcome: finished.outcome,
+                });
+            }
+
+            // E2E-only per-file throttle (the host's `Pacing`). In production it
+            // answers None after an atomic load and an empty `OnceLock` read (zero
+            // added latency). Under E2E it gives the spec a deterministic window to
+            // click Cancel/Rollback, and in the dialog gallery it paces the
+            // transfer preview's copy.
+            if let Some(pause) = state.scope().host().pacing().copy_throttle_for(&file_info.path) {
+                std::thread::sleep(pause);
+            }
+
+            // A conflict resolved INSIDE `copy_single_item` is the only skip
+            // the driver's pre-flight pass never saw, so this is where it
+            // learns about one. Reporting `Transferred` for it is what made a
+            // refused cross-type item read as copied in the toast.
+            Ok(match landed {
+                FileVerdict::CarriedOut => TransferOutcome::Transferred { bytes: bytes_delta },
+                FileVerdict::Skipped => TransferOutcome::Skipped {
+                    bytes_accounted: bytes_delta,
+                },
+            })
+        },
+    );
+
+    let files_done = outcome.files_done;
+    let bytes_done = outcome.bytes_done;
+    // What the SUMMARY subtracts from the user's selection counts. The tracker
+    // speaks for the sources it walked; the bulk pre-skip above dropped its own
+    // before the tracker existed, and those are all files (it refuses to
+    // classify, and so never bulk-skips, anything that stats as a directory).
+    let top_level_skipped = {
+        let walked = tracker.skipped_top_level();
+        TopLevelSkipped {
+            files: walked.files + pre_skip_top_levels.len(),
+            folders: walked.folders,
+        }
+    };
+
+    match outcome.intent {
+        PostLoopIntent::Completed => {
+            // The loop succeeded, but the user may have clicked Rollback between the last
+            // file's `is_cancelled` check and the loop's exit (or, with APFS clonefile, the
+            // whole 170 MB / 23 file copy can finish in <100 ms so the click lands after the
+            // loop completes but before this match arm runs). Honor the rollback intent
+            // before emitting write-complete: if we don't, the user explicitly requested
+            // "delete what was copied" and got "everything's still there" instead.
+            if state.intent().load() == OperationIntent::RollingBack {
+                log::info!(
+                    "copy_files_with_progress: rollback requested after loop completion op={}, {} files",
+                    operation_id,
+                    transaction.created_files().len()
+                );
+                let reversal = rollback_with_progress(
+                    &mut transaction,
+                    events,
+                    operation_id,
+                    &WindDown::of(state),
+                    WriteOperationType::Copy,
+                    files_done,
+                    bytes_done,
+                    file_count,
+                    total_bytes,
+                );
+                commit_journaling_created_dirs(transaction, state.scope());
+
+                events.emit_cancelled(WriteCancelledEvent {
+                    operation_id: operation_id.to_string(),
+                    operation_type: WriteOperationType::Copy,
+                    files_processed: files_done,
+                    rollback: reversal.into_cancel_rollback(),
+                });
+                return Ok(());
+            }
+
+            // Land the scanned directories the per-file loop didn't create:
+            // empty dirs (and branches of only empty dirs) have no files, so
+            // without this they'd silently never arrive at the destination.
+            // Outcomes mirror the loop's arms: both a Cancelled and any other
+            // error keep what's copied (commit, so the `Drop` safety net can't
+            // roll it back), the way `PostLoopIntent::Failed` does.
+            if let Err(e) = create_scanned_dirs_at_destination(
+                &scan_result.dirs,
+                sources,
+                destination,
+                state,
+                &mut transaction,
+                &mut created_dirs,
+                &dir_remap,
+            ) {
+                if matches!(e, WriteOperationError::Cancelled { .. }) {
+                    let recovered = stop_keeping_displaced_aside(transaction, state.scope(), operation_id);
+                    events.emit_cancelled(WriteCancelledEvent {
+                        operation_id: operation_id.to_string(),
+                        operation_type: WriteOperationType::Copy,
+                        files_processed: files_done,
+                        rollback: CancelRollback::none().with_recovered(recovered),
+                    });
+                    return Err(e);
+                }
+                // A failure keeps what landed, exactly like the arm below. Every
+                // file in the ledger is complete, and one of them may have
+                // replaced the user's original.
+                let e = fail_keeping_displaced_aside(transaction, state.scope(), operation_id, e);
+                let event = transfer_stop_event(operation_id, WriteOperationType::Copy, state, e, None);
+                let e = event.error.clone();
+                events.emit_error(event);
+                return Err(e);
+            }
+            tree.empty_folders_in_place();
+
+            // Every file and folder has landed, so the folders this copy created
+            // can take their source's metadata without a later write bumping
+            // their dates or their mode refusing a child.
+            apply_created_dirs_metadata(
+                &scan_result.dirs,
+                sources,
+                destination,
+                state,
+                &transaction.created_dirs,
+                &dir_remap,
+                None,
+            );
+
+            // Flush every created file and every directory that gained an entry
+            // before reporting complete, so "complete" means durable. Reuses the
+            // transaction's own ledgers; skips data the strategy already synced.
+            // Emits a `Flushing`-phase event first so the FE shows "Writing the
+            // last piece…" instead of a bar frozen at 100% on slow media.
+            // A copy deletes nothing, so a failure doesn't stop it: it completes
+            // with the typed warning (a move keeps its sources instead).
+            let flushed = flush_created_destinations(
+                events,
+                operation_id,
+                WriteOperationType::Copy,
+                state,
+                files_done,
+                file_count,
+                bytes_done,
+                total_bytes,
+                &transaction.created_file_paths(),
+                &transaction.created_dirs,
+                &already_synced,
+            );
+            let durability_unconfirmed = unconfirmed_copy(flushed, operation_id, state);
+            commit_journaling_created_dirs(transaction, state.scope());
+
+            log::info!(
+                "copy_files_with_progress: completed op={} files={} bytes={}",
+                operation_id,
+                files_done,
+                bytes_done
+            );
+
+            events.emit_complete(WriteCompleteEvent {
+                operation_id: operation_id.to_string(),
+                operation_type: WriteOperationType::Copy,
+                files_processed: files_done,
+                files_skipped: outcome.files_skipped,
+                bytes_processed: bytes_done,
+                appeared_during_move: None,
+                top_level_skipped: Some(top_level_skipped),
+                refused: None,
+                metadata_left_behind: None,
+                durability_unconfirmed,
+            });
+            Ok(())
+        }
+        PostLoopIntent::Cancelled => {
+            let cancellation = WriteOperationError::Cancelled {
+                message: "Operation cancelled by user".to_string(),
+            };
+            match state.intent().load() {
+                OperationIntent::RollingBack => {
+                    // User requested rollback: tracked rollback with progress events.
+                    // Pass the progress state at cancellation so the frontend sees
+                    // the bars counting backwards from where they were.
+                    log::info!(
+                        "copy_files_with_progress: rolling back op={}, {} files",
+                        operation_id,
+                        transaction.created_files().len()
+                    );
+                    let reversal = rollback_with_progress(
+                        &mut transaction,
+                        events,
+                        operation_id,
+                        &WindDown::of(state),
+                        WriteOperationType::Copy,
+                        files_done,
+                        bytes_done,
+                        file_count,
+                        total_bytes,
+                    );
+                    commit_journaling_created_dirs(transaction, state.scope());
+                    events.emit_cancelled(WriteCancelledEvent {
+                        operation_id: operation_id.to_string(),
+                        operation_type: WriteOperationType::Copy,
+                        files_processed: files_done,
+                        rollback: reversal.into_cancel_rollback(),
+                    });
+                }
+                _ => {
+                    // Stopped (or unknown): keep partial files, and every original a
+                    // folder→file Overwrite displaced. Committing prevents the `Drop`
+                    // safety-net from rolling back what the user chose to keep.
+                    log::info!(
+                        "copy_files_with_progress: cancelled op={}, keeping {} partial files",
+                        operation_id,
+                        transaction.created_files().len()
+                    );
+                    let recovered = stop_keeping_displaced_aside(transaction, state.scope(), operation_id);
+                    events.emit_cancelled(WriteCancelledEvent {
+                        operation_id: operation_id.to_string(),
+                        operation_type: WriteOperationType::Copy,
+                        files_processed: files_done,
+                        rollback: CancelRollback::none().with_recovered(recovered),
+                    });
+                }
+            }
+            Err(cancellation)
+        }
+        PostLoopIntent::Failed(e) => {
+            // A failure KEEPS every file that landed and cleans only the partial,
+            // which `overwrite::stage_and_land_file` already did on its way out.
+            // ❌ Never auto-delete them: a file in this ledger may have replaced
+            // the user's original, and that original went the moment the new
+            // bytes took its name — so removing the replacement leaves neither
+            // copy. The user can still roll the operation back from history,
+            // where the same reversal runs with the whole picture in front of
+            // them. Raised as an error report so opt-in users send one (copy
+            // failures are exactly the kind of "this didn't work" we want signal
+            // on). A folder that replaced one of the user's FILES keeps its name
+            // too, so the file it displaced becomes a ` (recovered)` sibling
+            // rather than going with the aside.
+            state
+                .scope()
+                .host()
+                .events()
+                .error_report(OperationErrorReport::LocalCopyFailed {
+                    operation_id: operation_id.into(),
+                    error: e.clone(),
+                    kept_files: transaction.created_files().len(),
+                });
+            let e = fail_keeping_displaced_aside(transaction, state.scope(), operation_id, e);
+            let event = transfer_stop_event(operation_id, WriteOperationType::Copy, state, e, None);
+            let e = event.error.clone();
+            events.emit_error(event);
+            Err(e)
+        }
+    }
+}
+
+#[cfg(test)]
+#[path = "copy_tests.rs"]
+mod tests;
+
+#[cfg(test)]
+#[path = "copy_failure_tests.rs"]
+mod copy_failure_tests;
+
+#[cfg(test)]
+mod named_copy_tests;
+
+#[cfg(test)]
+#[path = "copy_dest_link_tests.rs"]
+mod copy_dest_link_tests;
+
+#[cfg(test)]
+#[path = "folder_dates_tests.rs"]
+mod folder_dates_tests;

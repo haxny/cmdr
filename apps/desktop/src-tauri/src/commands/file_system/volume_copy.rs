@@ -6,12 +6,12 @@
 //! a backend caller start the same transfer with its own injected sink.
 
 use crate::file_system::ScanConflict;
-use crate::file_system::write_operations::{
+use crate::operations_host::TauriEventSink;
+use crate::operations_host::{NotInstalled, operations, refuse_not_installed};
+use cmdr_operations::{
     CONFLICT_CHECK_BUDGET, OperationEventSink, Operations, SourceItemInput, VolumeCopyConfig, VolumeScanError,
     WriteOperationError, WriteOperationStartResult, resolve_dest_path,
 };
-use crate::operations_host::TauriEventSink;
-use crate::operations_host::{NotInstalled, operations, refuse_not_installed};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tokio::time::Duration;
@@ -283,9 +283,9 @@ mod destination_root_echo_test;
 mod tests {
     use std::sync::{Arc, OnceLock};
 
-    use crate::file_system::write_operations::testing::CollectorEventSink;
-    use crate::file_system::write_operations::{OperationEventSink, Operations, WriteOperationError};
     use crate::test_support::TestDir;
+    use cmdr_operations::testing::CollectorEventSink;
+    use cmdr_operations::{OperationEventSink, Operations, WriteOperationError};
 
     /// A copy started before the engine is installed is refused with the
     /// generic I/O failure the frontend already renders, and writes nothing.

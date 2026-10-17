@@ -164,8 +164,8 @@ the same `ReadPool` as enrichment for lock-free reads. Used by `scan_preview.rs`
 **It returns `None` if ANY source isn't covered by the index** — no pool, no entry, no `dir_stats`, no `logical_size`,
 OR (via `per_source_contribution`) a directory whose subtree is incomplete (`min_subtree_epoch == 0`). A partial or
 lower-bound total would let the progress bar overshoot 100%. Destructive ops re-stat live in
-`write_operations/conflict.rs`; the index is never load-bearing there — it's consulted only for non-load-bearing size
-estimates with an explicit "unknown" fallback.
+`crates/cmdr-operations/src/conflict.rs`; the index is never load-bearing there — it's consulted only for
+non-load-bearing size estimates with an explicit "unknown" fallback.
 
 ## The pending-sizes hourglass (`pending_sizes.rs`)
 

@@ -286,8 +286,8 @@ the same volume instance; the app asks it BEFORE reaching for a stream
 ## Dates on copies
 
 Copies onto and off this backend keep the source's modification date. The cross-backend contract is
-`apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/DETAILS.md` § "Copies keep the source's
-metadata"; this is how SFTP keeps it.
+`crates/cmdr-operations/src/transfer/volume/DETAILS.md` § "Copies keep the source's metadata"; this is how SFTP keeps
+it.
 
 - **Source**: the read stream reports the mtime from the `fstat` it already sends alongside the first chunk
   (`streams.rs`'s `RemoteFile::stat`), so the date costs no round trip.
@@ -312,8 +312,7 @@ metadata"; this is how SFTP keeps it.
 
 A file's mode travels both ways (`SftpVolume::METADATA_CAPS` claims `MODE` in `stores` and `reports`), riding attrs a
 copy already exchanges. The cross-backend rules (the fold, never wider, no setuid) are
-`apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/DETAILS.md` § "Copies keep the source's
-metadata".
+`crates/cmdr-operations/src/transfer/volume/DETAILS.md` § "Copies keep the source's metadata".
 
 - **Source**: the read stream reports the permission bits off the same `fstat` that gives it the size and date
   (`streams.rs`), so the mode costs no round trip.
@@ -910,9 +909,8 @@ never this crate, which can't tell a new name from an existing one. Downloads ke
 
 Why: OpenSSH on Linux stores a name's bytes as sent, and web servers, PHP, and scripts there match bytes, so a
 decomposed `café.jpg` from macOS looks right and breaks every link to it. The decision, its reasoning, and which other
-tools do the same: `apps/desktop/src-tauri/src/file_system/write_operations/DETAILS.md` § "Look-alike names". Unit
-cells: `src/volume/paths_test.rs`; Docker cells:
-`apps/desktop/src-tauri/src/operations_host/backend_suites/sftp_look_alike_test.rs`.
+tools do the same: `crates/cmdr-operations/src/DETAILS.md` § "Look-alike names". Unit cells: `src/volume/paths_test.rs`;
+Docker cells: `apps/desktop/src-tauri/src/operations_host/backend_suites/sftp_look_alike_test.rs`.
 
 ## The `Volume` answers, and why
 
@@ -956,8 +954,7 @@ Beyond the four required methods, `volume_impl.rs` states these deliberately:
   skipping the temp's patch entirely, and both need the app's listing-mutation contract read first.
 - **`entry_kind` is overridden with one `lstat` (`symlink_metadata`).** `get_metadata` asks `stat`, which follows a
   link, so the trait default would report a link to a folder as the folder, and a move's source sweep would recurse into
-  the target and delete it (`apps/desktop/src-tauri/src/file_system/write_operations/transfer/DETAILS.md` § "Symlinks
-  are opaque to a move").
+  the target and delete it (`crates/cmdr-operations/src/transfer/DETAILS.md` § "Symlinks are opaque to a move").
 - **`paths_are_os_visible` → false, `local_path` → `None`.** Answering otherwise would let a drag hand Finder a path
   that resolves to nothing, or worse to a local file of the same name.
 - **`scan_for_copy`, `scan_for_copy_batch_with_boundary`, and `scan_for_conflicts` are all answered** (§ "Scanning,

@@ -62,7 +62,7 @@ fn manifest_with_diagnostic_history() -> BundleManifest {
         DiagnosticEntryIdentity, DiagnosticOperationSnapshot, DiagnosticPaneSnapshot, EntryRole, PaneSide,
         PaneSortField, PaneSortOrder, PaneView, ReportBackend, ReportConnectionState,
     };
-    use crate::file_system::write_operations::{LifecycleStatus, WriteOperationPhase, WriteOperationType};
+    use cmdr_operations::{LifecycleStatus, WriteOperationPhase, WriteOperationType};
 
     let mut manifest = sample_manifest();
     manifest.state_history = vec![DiagnosticStateSnapshot {

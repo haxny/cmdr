@@ -29,7 +29,7 @@ use crate::agent::store::proposals::{
 };
 use crate::agent::suggested_ops::bridge::{ApprovalOutcome, ApprovalRefusal};
 use crate::agent::types::{OpStatus, ProposalStatus, ProposalVerb, Reversibility};
-use crate::file_system::write_operations::{RenameStartError, WriteOperationError};
+use cmdr_operations::{RenameStartError, WriteOperationError};
 /// Why a suggested-ops read or answer didn't happen.
 ///
 /// ❌ Not prose: the review dialog shows its own translated notice

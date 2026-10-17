@@ -1543,7 +1543,7 @@ wait helper names the boundary it waits on, and the assertion after it picks whi
 land mid-operation:
 
 - the copy is on disk early, because every write lands by temp+rename and the closing `fdatasync` pass runs AFTER the
-  bytes are in place (`write_operations/durability.rs`; it is the user-visible "Writing the last piece...");
+  bytes are in place (`crates/cmdr-operations/src/durability.rs`; it is the user-visible "Writing the last piece...");
 - the new row is in the pane early too, because the pane gets it from its filesystem watcher, not from the operation.
 
 So a spec that waits for the file, waits for the row, and then allows a toast the three seconds a toast needs is really

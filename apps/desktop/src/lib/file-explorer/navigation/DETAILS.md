@@ -521,7 +521,7 @@ eject button, and the row menu's destructive items (` (busy)` suffix), each surf
 `handleEjectClick` and `runDetach` also early-return on a busy volume. The breadcrumb's native Eject is gated
 backend-side: `show_breadcrumb_context_menu` renders it disabled with the ` (busy)` suffix. The real safety net is the
 `eject_volume` backend guard, which refuses a busy volume even if the UI is stale or an MCP caller bypasses it. See
-`src-tauri/src/file_system/write_operations/CLAUDE.md` § "Busy-volumes set".
+`crates/cmdr-operations/src/DETAILS.md` § "Busy-volumes set".
 
 **An eject in progress.** While a volume's eject runs (one took 10.5 s in a user's log, with nothing on screen to say
 so), its header chip and dropdown-row control render disabled, with a `Spinner` in the glyph's place and an "Ejecting

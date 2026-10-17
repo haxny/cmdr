@@ -12,11 +12,9 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::file_system::write_operations::{
-    MUTATION_REPLY_DEADLINE, MutationError, Operations, Replied, reply_or_hand_off,
-};
 use crate::operations_host::{operations, refuse_instant_not_installed};
 use cmdr_operation_log::types::Initiator;
+use cmdr_operations::{MUTATION_REPLY_DEADLINE, MutationError, Operations, Replied, reply_or_hand_off};
 
 use super::payload::PastedContent;
 use super::{

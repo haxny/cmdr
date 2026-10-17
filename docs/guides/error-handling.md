@@ -107,8 +107,8 @@ The rule that replaced it:
   `apps/desktop/src/lib/file-explorer/pane/DETAILS.md` § The error screen's ways out.
 - **Emitting the event**: `apps/desktop/src-tauri/src/listing_host/events.rs` (`TauriListingEvents`, which classifies
   the engine's `ListingEnd::Failed`).
-- **Mutation refusals**: the enum is `apps/desktop/src-tauri/src/file_system/write_operations/mutation_error.rs`; the
-  words are `apps/desktop/src/lib/file-operations/mutation-error-messages.ts`, and
+- **Mutation refusals**: the enum is `crates/cmdr-operations/src/mutation_error.rs`; the words are
+  `apps/desktop/src/lib/file-operations/mutation-error-messages.ts`, and
   `apps/desktop/src/lib/file-operations/mutation-error.ts` is what keeps the typed value alive across the throw.
 - **Eject and disconnect refusals**: the enum is `apps/desktop/src-tauri/src/file_system/volume/eject/mod.rs`; the words
   are `apps/desktop/src/lib/file-explorer/navigation/eject-error-messages.ts`, and
@@ -145,8 +145,8 @@ These sit between the layers, so neither side's doc owns them alone.
   exhaustive union instead of a typed error plus a stringly-typed timeout beside it. A `MutationError::TimedOut` or an
   `EjectError::TimedOut` also means the work may STILL LAND (the deadline detaches, it doesn't cancel), and the copy
   says so. Where the work's end is worth waiting for (rename, new folder, new file), the deadline answers "still
-  running" instead and the real end follows on an event (`write_operations/DETAILS.md` § "A slow instant mutation says
-  it is still running").
+  running" instead and the real end follows on an event (`crates/cmdr-operations/src/DETAILS.md` § "A slow instant
+  mutation says it is still running").
 - **`category` picks the icon and severity color; it does NOT gate the buttons.** `retryHint` alone decides "Try again",
   and it's deliberately set under all three categories. `actionKind` alone decides "Open System Settings".
 - **Every interpolated runtime value passes through `esc(...)`.** The composed explanation and suggestion are

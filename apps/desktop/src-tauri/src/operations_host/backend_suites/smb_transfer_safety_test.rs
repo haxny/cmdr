@@ -20,7 +20,7 @@ use super::network_safety_test_support::{
     a_name_taken_mid_upload_is_never_replaced, an_unknown_source_type_never_clears_a_server_folder,
 };
 use super::smb_test_support::fixture;
-use crate::file_system::write_operations::ConflictResolution;
+use cmdr_operations::ConflictResolution;
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 #[ignore = "Requires Docker SMB containers (./apps/desktop/test/smb-servers/start.sh)"]

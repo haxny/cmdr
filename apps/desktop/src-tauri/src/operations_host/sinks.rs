@@ -10,7 +10,7 @@ use tauri_specta::Event;
 
 use super::terminal_effects::{self, AppTerminalEffects};
 use super::wire;
-use crate::file_system::write_operations::{
+use cmdr_operations::{
     ArmedConflict, ConflictInfo, DryRunResult, OperationEventSink, ScanPreviewCancelledEvent, ScanPreviewCompleteEvent,
     ScanPreviewErrorEvent, ScanPreviewEventSink, ScanPreviewProgressEvent, ScanProgressEvent, WriteCancelledEvent,
     WriteCompleteEvent, WriteConflictResolvedEvent, WriteErrorEvent, WriteProgressEvent, WriteSettledEvent,

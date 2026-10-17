@@ -45,7 +45,7 @@ target a Finder-renamed root.
 **Listed names are untrusted**: the folder walk joins each listed child name under the destination only as a
 `ChildName`, so a hostile server or device listing `../x` fails the fulfillment (the cleanup contract below removes what
 it created) instead of writing outside the Finder-chosen folder. The mechanism and why:
-`apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/DETAILS.md` § "Listed names are untrusted".
+`crates/cmdr-operations/src/transfer/volume/DETAILS.md` § "Listed names are untrusted".
 Pinned by `folder_with_a_listed_name_that_climbs_out_is_refused`. The tests live in `fulfillment_test.rs`.
 
 **Cleanup contract (load-bearing)**: on ANY `Err`, the destination this fulfillment created is removed before

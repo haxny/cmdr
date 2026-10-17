@@ -1,7 +1,7 @@
 # Delete and trash (frontend)
 
 Permanent delete or macOS Trash, with a confirmation dialog, scan preview, and progress (`TransferProgressDialog`).
-Backend counterpart: `apps/desktop/src-tauri/src/file_system/write_operations/delete/CLAUDE.md`.
+Backend counterpart: `crates/cmdr-operations/src/delete/CLAUDE.md`.
 
 ## Files
 

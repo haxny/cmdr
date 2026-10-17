@@ -125,7 +125,7 @@ exposes both `foreground_pending(device_id) -> bool` (the gate's `foreground_pen
 `background_yield_point(device_id)` for this. Lane budget 1 on the MTP device means the only foreground contender is a
 listing/nav/metadata op, never a second transfer, so there's no transfer-vs-transfer or transfer-vs-scan priority
 inversion — both yield to the same signal. Mechanics + the debounce/min-progress-floor tuning live in
-`write_operations/transfer/DETAILS.md` § "Foreground auto-yield".
+`crates/cmdr-operations/src/transfer/DETAILS.md` § "Foreground auto-yield".
 
 **Gate-before-resolve (`event_loop.rs` + `crates/cmdr-index/src/indexing/transports/mtp/watch.rs`).**
 `feed_index_added_or_changed` now asks `indexing::buffer_mtp_handle_if_scanning(volume_id, storage_id, handle)` FIRST,

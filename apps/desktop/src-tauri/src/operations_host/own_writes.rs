@@ -4,7 +4,7 @@
 
 use std::path::Path;
 
-use crate::file_system::write_operations::host::OwnWrites;
+use cmdr_operations::host::OwnWrites;
 
 /// `downloads::note_pending_write_for_cmdr`, which no-ops while the watcher
 /// sleeps and for a path outside the Downloads root.

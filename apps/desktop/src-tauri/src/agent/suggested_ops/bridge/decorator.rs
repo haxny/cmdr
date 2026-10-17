@@ -19,12 +19,12 @@ use crate::agent::chat::runtime::now_secs;
 use crate::agent::memory::MemoryStore;
 use crate::agent::store::proposals::{mark_group_completed, record_op_outcome};
 use crate::agent::types::OpStatus;
-use crate::file_system::write_operations::{
+use crate::ignore_poison::IgnorePoison;
+use cmdr_operations::{
     ArmedConflict, ConflictInfo, DryRunResult, OperationEventSink, ScanProgressEvent, SourceItemOutcome,
     WriteCancelledEvent, WriteCompleteEvent, WriteConflictResolvedEvent, WriteErrorEvent, WriteProgressEvent,
     WriteSettledEvent, WriteSourceItemDoneEvent, WriteSourcesGoneEvent,
 };
-use crate::ignore_poison::IgnorePoison;
 
 /// Wraps the sink an approved group executes through, recording each source outcome and the
 /// group own end.

@@ -17,9 +17,9 @@
 //! place, and its cell shouldn't call these. Unit twins:
 //! `transfer/volume/look_alike_tests.rs`, `rename/bulk/look_alike_tests.rs`.
 
-use crate::file_system::write_operations::testing::CollectorEventSink;
-use crate::file_system::write_operations::{BulkRenameRow, ConflictResolution, MutationError, SourceFingerprint};
 use crate::operations_host::app_engine;
+use cmdr_operations::testing::CollectorEventSink;
+use cmdr_operations::{BulkRenameRow, ConflictResolution, MutationError, SourceFingerprint};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
@@ -429,7 +429,7 @@ pub(super) async fn a_bulk_rename_skips_a_look_alike(remote: Arc<dyn Volume>, di
     let events = Arc::new(CollectorEventSink::new());
     app_engine()
         .start_bulk_rename(
-            events.clone() as Arc<dyn crate::file_system::write_operations::OperationEventSink>,
+            events.clone() as Arc<dyn cmdr_operations::OperationEventSink>,
             registered.id.clone(),
             rows,
             Initiator::Agent,

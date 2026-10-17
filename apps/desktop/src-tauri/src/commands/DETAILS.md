@@ -23,10 +23,10 @@ Per-file function inventory and decision rationale. `CLAUDE.md` holds the must-k
   `volume_copy.rs`: cross-volume copy/move/compress/scan. The three transfer commands are pass-throughs that build the
   `TauriEventSink` and hand everything to `Operations::start_volume_{copy, move, compress}`, which own the volume
   + destination-path resolution and the archive forks so a backend caller reaches the same routing
-  (`../file_system/write_operations/DETAILS.md` § "Routing a transfer"). `scan_volume_for_conflicts` is itself a thin
+  (`crates/cmdr-operations/src/DETAILS.md` § "Routing a transfer"). `scan_volume_for_conflicts` is itself a thin
   wrapper around `Operations::scan_volume_for_conflicts_within` (`conflict_preflight.rs`), which owns the whole
   budgeted pre-flight check (`VolumeScanError`, `SourceItemInput`, the source-stat/self-collision machinery):
-  `../file_system/write_operations/DETAILS.md` § "The pre-flight conflict check". `stat.rs`:
+  `crates/cmdr-operations/src/DETAILS.md` § "The pre-flight conflict check". `stat.rs`:
   `stat_paths_kinds(paths) -> TimedOut<Vec<Option<bool>>>`, a batched top-level "is this a directory?" probe for the
   drag-and-drop transfer path (`Some(true)` = dir, `Some(false)` = file, `None` = unknown / non-local / vanished). One
   `spawn_blocking` under the read timeout, never a subtree walk; per-item failures map to `None` so a virtual MTP/SMB
@@ -209,7 +209,7 @@ Per-file function inventory and decision rationale. `CLAUDE.md` holds the must-k
   The teardown logic (joining an eject already running, kind dispatch, the pure unit-tested `decide_eject_action`, the
   busy-volume guard, and the `diskutil`/`umount`/MTP shell-out) lives in `file_system::volume::eject`. `EjectError` IS the wire type, so the command returns it unchanged
   and the frontend words each variant from `errors.eject.*`. `get_busy_volume_ids()` bootstraps the picker's busy set (see
-  `write_operations/DETAILS.md` § "Busy-volumes set").
+  `crates/cmdr-operations/src/DETAILS.md` § "Busy-volumes set").
 - **`favorites.rs`**: `add_favorite`, `remove_favorite`, `rename_favorite`, `reorder_favorites`. Pass-throughs over
   `crate::favorites::store`; each persists `favorites.json` (5s write timeout) then re-emits `volumes-changed`. No
   `list_favorites` (listing rides `list_volumes` / `volumes-changed`). Carries one piece of judgment, the add gate
@@ -231,7 +231,7 @@ Per-file function inventory and decision rationale. `CLAUDE.md` holds the must-k
 - **`volume_id` on the write commands.** `create_directory` / `create_file` / `rename_file` only expand tilde (root),
   resolve the `volume_id`, and answer within `MUTATION_REPLY_DEADLINE` (2 s) through `write_operations::reply_within`:
   `Done`, the typed `MutationError`, or `StillRunning { pendingId }` with the real end following on `mutation-settled`
-  (`../file_system/write_operations/mutation_reply.rs`). Each has a `*_replying` twin taking the settle delivery, which the tests and
+  (`crates/cmdr-operations/src/mutation_reply.rs`). Each has a `*_replying` twin taking the settle delivery, which the tests and
   the MCP rename tool call; the logic and the managed instant op live
   in `file_system::write_operations::{create,rename}`. For a non-root `volume_id`, `delete_files` uses the volume-aware
   delete and skips local `validate_sources` (MTP virtual paths fail `symlink_metadata`), and `rename_file` passes the id
@@ -517,7 +517,7 @@ either).
 For a WRITE that detached work will still land, a `TimedOut` answer is a lie the user sees disproven seconds later (a
 new folder that "timed out" and then appeared, ERR-AREUV). Those commands use `deadline::race_detached` through
 `write_operations::reply_within` instead, which keeps the join handle and reports the real end
-(`../file_system/write_operations/mutation_reply.rs`).
+(`crates/cmdr-operations/src/mutation_reply.rs`).
 
 The `blocking_*` helpers already have this property for free: they wrap `spawn_blocking`, so their timeout races a join
 handle too, and the blocking closure is never interrupted.

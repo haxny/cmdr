@@ -10,10 +10,10 @@ use std::path::{Path, PathBuf};
 
 use rusqlite::Connection;
 
-use crate::file_system::write_operations::host::{BufferedLeaves, ExpectedTotals, Leaf, OperationIndex};
 use crate::index_host::index;
 use cmdr_index::store::{IndexStore, resolve_path};
 use cmdr_operation_log::types::{EntryType, SearchCoverageReason};
+use cmdr_operations::host::{BufferedLeaves, ExpectedTotals, Leaf, OperationIndex};
 
 /// The app's drive index, asked per call: it's built in `setup()` and its
 /// volumes come and go, so nothing is captured at construction.
@@ -122,9 +122,9 @@ fn enumerate_from_id(conn: &Connection, root_id: i64, cap: usize) -> BufferedLea
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::file_system::write_operations::testing::SEARCH_LEAF_CAP;
     use cmdr_index::store::{IndexStore, ROOT_ID};
     use cmdr_operation_log::types::SearchCoverage;
+    use cmdr_operations::testing::SEARCH_LEAF_CAP;
 
     /// Build a temp index DB, insert a subtree under root, and stamp epochs. Returns
     /// the read connection for the enumeration core. `stale` makes the subtree's

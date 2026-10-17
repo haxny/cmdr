@@ -5,7 +5,7 @@ here: editing, planning, reorganizing, or advising.
 
 The write side is `Volume`-free and manager-free like the [read core](../read/DETAILS.md). Full driver wiring (event
 sink, pause gate, cancel intent via the `MutationHooks` seam, and the remote pull→edit→upload→swap flow):
-`apps/desktop/src-tauri/src/file_system/write_operations/archive_edit/DETAILS.md`.
+`crates/cmdr-operations/src/archive_edit/DETAILS.md`.
 
 ## Temp+rename safe-overwrite (`mutator.rs`)
 
@@ -44,13 +44,13 @@ sink, pause gate, cancel intent via the `MutationHooks` seam, and the remote pul
   `Changeset::compression_level` on each newly added entry; retained entries are raw-copied and keep their original
   compression untouched. `None` (the default) means the `zip` crate default, level 6 — so an unset level is byte-stable
   with pre-setting behavior. The level is set once per edit, sourced from the user's `behavior.archiveCompressionLevel`
-  setting and threaded in via the operation config (see
-  `apps/desktop/src-tauri/src/file_system/write_operations/archive_edit/DETAILS.md`). The level is **clamped to 1..=9**
-  inside `add_entry_options`: `zip`'s `get_compressor` returns `UnsupportedArchive("Unsupported compression level")` for
-  an out-of-range Deflated level at the FIRST entry write (it does NOT clamp), which would fail the whole edit — so a
-  bad config value or an MCP `set_setting` with a wild number is clamped, never propagated. Pinned by
-  `add_entry_options_applies_and_clamps_the_compression_level` (unit) and the `compress_tests.rs` level cases (level 9
-  beats level 1; default None equals explicit 6; out-of-range clamps instead of failing).
+  setting and threaded in via the operation config (see `crates/cmdr-operations/src/archive_edit/DETAILS.md`). The level
+  is **clamped to 1..=9** inside `add_entry_options`: `zip`'s `get_compressor` returns
+  `UnsupportedArchive("Unsupported compression level")` for an out-of-range Deflated level at the FIRST entry write (it
+  does NOT clamp), which would fail the whole edit — so a bad config value or an MCP `set_setting` with a wild number is
+  clamped, never propagated. Pinned by `add_entry_options_applies_and_clamps_the_compression_level` (unit) and the
+  `compress_tests.rs` level cases (level 9 beats level 1; default None equals explicit 6; out-of-range clamps instead of
+  failing).
 - **Metadata preservation (the archive FILE, not the entries).** A rewrite yields a fresh inode, so the original
   `.zip`'s metadata goes through the shared helper (`crates/cmdr-fs/DETAILS.md` § "`metadata`: what a copy keeps, and
   when it goes on"): the temp's flush first (`cmdr_fs::durable::sync_file_data`), then xattrs, mode, and birth + mtime
@@ -100,9 +100,8 @@ sink, pause gate, cancel intent via the `MutationHooks` seam, and the remote pul
   serialize on the parent lane, so a local leftover is always abandoned). A REMOTE archive edit leaves its leftover on
   the SHARE (a crash after upload, before swap), not on the local scratch copy this `apply` reaps; that leftover is
   reaped by an age-gated mirror of this reap on the REMOTE parent at the next edit of the same archive — see
-  `write_operations/archive_edit/remote.rs` (`reap_remote_temps`) and
-  `apps/desktop/src-tauri/src/file_system/write_operations/archive_edit/DETAILS.md` § "Remote edit" for why the remote
-  side needs the age gate.
+  `crates/cmdr-operations/src/archive_edit/remote.rs` (`reap_remote_temps`) and
+  `crates/cmdr-operations/src/archive_edit/DETAILS.md` § "Remote edit" for why the remote side needs the age gate.
 - **Deletes/renames reshape the retained set.** A delete drops a file or a whole subtree (component-wise match, so `foo`
   never catches `foobar`); a rename rewrites a subtree prefix. Both are computed per original entry in one pass
   (`plan_new_name`); deletes win over renames.

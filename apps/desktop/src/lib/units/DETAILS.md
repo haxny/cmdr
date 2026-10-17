@@ -21,12 +21,11 @@ So: one implementation per quantity, and a lint that keeps it that way.
   from `appearance.fileSizeFormat`. `<Size bytes>` is the same output plus tier colors. A forced unit
   (`'kB'`/`'MB'`/`'GB'`) keeps a directory's sizes comparable; the file list's own unit mode routes through
   `formatSizeForDisplay`.
-- **A speed** is the backend's `write-progress.bytesPerSecond` (`EtaEstimator` in
-  `src-tauri/src/file_system/write_operations/eta.rs`), rendered as a `<Size>` inside the
-  `fileOperations.shared.byteRate` catalog phrasing (`<size></size>/s`). The per-second marker is user-facing copy, so
-  it belongs to the catalog, not to a code-side formatter; this module owns the number. The frontend does not compute a
-  second, instantaneous rate for the active phase. The one frontend-computed rate is `ScanThroughput`, which covers the
-  SCAN phase only, where the backend emits no rate at all.
+- **A speed** is the backend's `write-progress.bytesPerSecond` (`EtaEstimator` in `crates/cmdr-operations/src/eta.rs`),
+  rendered as a `<Size>` inside the `fileOperations.shared.byteRate` catalog phrasing (`<size></size>/s`). The
+  per-second marker is user-facing copy, so it belongs to the catalog, not to a code-side formatter; this module owns
+  the number. The frontend does not compute a second, instantaneous rate for the active phase. The one frontend-computed
+  rate is `ScanThroughput`, which covers the SCAN phase only, where the backend emits no rate at all.
 - **A file rate** is the same split one axis over: `formatFilesPerSecond(rate)` owns the number (one decimal below
   three, a whole number above, `null` once it rounds to nothing so the caller can hide the cell) and hands back both the
   locale-formatted `text` and the `value` the catalog pluralizes on; `fileOperations.shared.fileRate` owns the "file/s"

@@ -22,12 +22,12 @@ use tauri::AppHandle;
 
 use std::sync::Arc;
 
-use crate::file_system::write_operations::{OperationEventSink, UndoReport};
 use crate::operations_host::{TauriEventSink, operations};
 use cmdr_operation_log::query::{self, OperationDetail};
 use cmdr_operation_log::rollback::{RollbackDispatch, RollbackRefusal};
 use cmdr_operation_log::store::{OperationLogStoreError, OperationRow, open_read_connection, operation_log_db_path};
 use cmdr_operation_log::types::Initiator;
+use cmdr_operations::{OperationEventSink, UndoReport};
 
 /// Resolve the `operation-log.db` path and run `read` on a read-only connection,
 /// off the IPC thread. A missing/unopened DB (the journal failed to start) yields

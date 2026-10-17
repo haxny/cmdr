@@ -32,7 +32,6 @@ pub mod terminal;
 pub mod text_editor;
 pub mod volume;
 pub(crate) mod watcher;
-pub(crate) mod write_operations;
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};

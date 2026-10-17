@@ -61,15 +61,15 @@ commands, and notable non-obvious placements.
   `awaitClipboardPaste` (behind `pasteClipboardAsFile`, which also carries the created file). Those commands answer
   `stillRunning` past their deadline, and this waits for the matching `mutation-settled` event, so the promise resolves
   or throws with the real end, and `onStillRunning` tells the caller when to say the volume is slow. It listens BEFORE
-  invoking, since the event can overtake the reply. Backend: `write_operations/DETAILS.md` § "A slow instant mutation
-  says it is still running".
+  invoking, since the event can overtake the reply. Backend: `crates/cmdr-operations/src/DETAILS.md` § "A slow instant
+  mutation says it is still running".
 - **`operations.ts`**: the operation manager (queue window): `listOperations`, `cancelOperation(s)`, `pauseOperation` /
   `resumeOperation`, `pauseAll` / `resumeAll`, `dismissFailedOperation` / `dismissAllFailedOperations`,
   `retryFailedOperation` (a failed row's Retry, rejecting with the typed `WriteOperationError` on a refused start), and
   the `onOperationsChanged` membership/status event. Plus `getTransferTreeView`, one window of a running transfer's live
   tree, which answers its typed refusal (`unknown_operation`, `not_a_transfer`) as a value (`{ refusal }`), ❌ never a
   throw: an operation settling between two ticks is an ordinary answer for a view. Contract:
-  `src-tauri/src/file_system/write_operations/transfer_tree/DETAILS.md` § "The view command".
+  `crates/cmdr-operations/src/transfer_tree/DETAILS.md` § "The view command".
 - **`operation-log.ts`**: the operation journal's read API (`getRecentOperationLogEntries`, `getOperationLogDetail`)
   plus its two write entries. `rollbackOperation` reverses ONE operation and resolves as soon as the inverse is queued,
   throwing a typed `RollbackRefusalFailure` on a refusal; `undoOperations` reverses SEVERAL and resolves only with the

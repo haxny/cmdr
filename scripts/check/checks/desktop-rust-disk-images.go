@@ -35,7 +35,7 @@ var diskImageLaneTestAtoms = []string{
 	"testing::disk_images::real_images::",
 	"file_system::volume::eject::real_image::",
 	"file_system::index_provider::real_image::",
-	"file_system::write_operations::transfer::real_image::",
+	"transfer::real_image::",
 	"indexing::tests::vanish_tests::",
 	"volumes::unmount_approver::real_image::",
 	"volumes::rename_real_image::",

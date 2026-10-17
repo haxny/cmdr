@@ -31,7 +31,7 @@ use std::collections::VecDeque;
 use std::sync::{LazyLock, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::file_system::write_operations::WriteOperationType;
+use cmdr_operations::WriteOperationType;
 
 /// How a write operation ended. Maps one-to-one from the terminal event kind
 /// (`write-complete` → `Completed`, `write-cancelled` → `Cancelled`,

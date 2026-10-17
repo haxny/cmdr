@@ -118,14 +118,14 @@ The volume is device-anchored, the same shape MTP has, and every answer below fo
   first and refuses `adb://<serial>/sdcard/../../etc`. Internally the device path is what the wire, the shell, and an
   error from the device carry; ❗ `probe` and `follow` take it directly, since handing one back through
   `get_metadata_impl` would be a bare path that the translation refuses.
-- **Copies keep the source's date and mode** (the contract:
-  `apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/DETAILS.md` § "Copies keep the source's
-  metadata"). A read stream reports the mtime of the `STAT`/`STA2` its open already does (`SyncStat::modified_at`,
-  `None` before 1970 to match the listing); a push hands the stream's date to `DONE`, which must carry one, so a
-  dateless source lands dated now, as `adb push` does. ❗ `DONE`'s mtime is a u32 on both verb sets (`SND2` only adds
-  flags), so `done_mtime_word` clamps past 2106-02-07 and drops sub-seconds; the staging `mv -f` keeps the date. The
-  same `stat` gives the stream its mode (`VolumeReadStream::metadata`), so a file copied onto local disk lands with it,
-  folded through the umask. Both verb sets have a cell (`a_copy_keeps_the_source_date[_over_the_v1_verbs]`).
+- **Copies keep the source's date and mode** (the contract: `crates/cmdr-operations/src/transfer/volume/DETAILS.md` §
+  "Copies keep the source's metadata"). A read stream reports the mtime of the `STAT`/`STA2` its open already does
+  (`SyncStat::modified_at`, `None` before 1970 to match the listing); a push hands the stream's date to `DONE`, which
+  must carry one, so a dateless source lands dated now, as `adb push` does. ❗ `DONE`'s mtime is a u32 on both verb sets
+  (`SND2` only adds flags), so `done_mtime_word` clamps past 2106-02-07 and drops sub-seconds; the staging `mv -f` keeps
+  the date. The same `stat` gives the stream its mode (`VolumeReadStream::metadata`), so a file copied onto local disk
+  lands with it, folded through the umask. Both verb sets have a cell
+  (`a_copy_keeps_the_source_date[_over_the_v1_verbs]`).
 - **A push sends the source's mode**: `SEND`'s mode word is the stream's mode folded under the user's umask
   (`cmdr_fs::metadata::routed_mode`: never wider, no setuid), or `adb push`'s `0660` for a source that reports none
   (`streams.rs::send_mode`). Zero cost: the word goes out either way. ❗ `/sdcard` ignores it (FUSE over the shared
@@ -213,12 +213,12 @@ The volume is device-anchored, the same shape MTP has, and every answer below fo
   apart (a phone's `/` is both a read-only image and root's), and telling them apart would need the mount flags in
   `/proc/mounts`, which no capture here holds yet. A transport failure or any other exit is `Unknown`. The transfer
   pre-flight asks this before it measures space, so a copy onto `/` is refused as not writable rather than as out of
-  room (`apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/DETAILS.md` § "A destination folder
-  that takes no writes"). `FakeTree::new` and `FakeTree::android_layout` mount `/` read-only (`FakeMount::read_only`),
-  so a write under it answers `EROFS` and `test -w` exits 1 there, as the kernel does under a read-only mount. The mount
-  is matched after following links (`FakeTree::writes_refused_at`), so a write through the layout's `/sdcard` link lands
-  on shared storage rather than under `/`. `test -w /` exiting 1 on a real phone is not yet verified on a device (the
-  Pixel was unplugged); `classify_failed_verb` already relies on the same verb.
+  room (`crates/cmdr-operations/src/transfer/volume/DETAILS.md` § "A destination folder that takes no writes").
+  `FakeTree::new` and `FakeTree::android_layout` mount `/` read-only (`FakeMount::read_only`), so a write under it
+  answers `EROFS` and `test -w` exits 1 there, as the kernel does under a read-only mount. The mount is matched after
+  following links (`FakeTree::writes_refused_at`), so a write through the layout's `/sdcard` link lands on shared
+  storage rather than under `/`. `test -w /` exiting 1 on a real phone is not yet verified on a device (the Pixel was
+  unplugged); `classify_failed_verb` already relies on the same verb.
 
 ## The error policy
 

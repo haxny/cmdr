@@ -16,13 +16,13 @@ use crate::agent::store::proposals::{
     GroupIntent, NewGroup, NewOp, NewSweep, ProposalOp, create_group, create_sweep, page_ops,
 };
 use crate::agent::types::{OpStatus, ProposalStatus};
-use crate::file_system::write_operations::testing::CollectorEventSink;
-use crate::file_system::write_operations::{
-    OperationEventSink, SourceItemOutcome, WriteOperationType, WriteSettledEvent, WriteSourceItemDoneEvent,
-};
 use crate::ignore_poison::IgnorePoison;
 use crate::operations_host::app_engine;
 use crate::test_support::TestDir;
+use cmdr_operations::testing::CollectorEventSink;
+use cmdr_operations::{
+    OperationEventSink, SourceItemOutcome, WriteOperationType, WriteSettledEvent, WriteSourceItemDoneEvent,
+};
 
 /// A trash group over two sources on a real file DB, plus a second connection for the
 /// decorator to own.
@@ -248,11 +248,11 @@ async fn the_binding_holds_what_preflight_saw_not_what_the_agent_saw() {
     std::fs::write(&reviewed, b"edited while it waited in the queue").expect("rewrite");
 
     let sink = CollectorEventSink::new();
-    let kept = crate::file_system::write_operations::testing::retain_bound_sources(
+    let kept = cmdr_operations::testing::retain_bound_sources(
         &sink,
         "op-1",
         WriteOperationType::Trash,
-        &crate::file_system::write_operations::testing::new_operation_state(app_engine(), std::time::Duration::ZERO),
+        &cmdr_operations::testing::new_operation_state(app_engine(), std::time::Duration::ZERO),
         Some(&expected),
         sources,
     );
@@ -273,11 +273,11 @@ async fn an_untouched_source_survives_its_own_binding() {
     let expected = super::capture_expected_sources(&volume, &sources).await;
 
     let sink = CollectorEventSink::new();
-    let kept = crate::file_system::write_operations::testing::retain_bound_sources(
+    let kept = cmdr_operations::testing::retain_bound_sources(
         &sink,
         "op-1",
         WriteOperationType::Trash,
-        &crate::file_system::write_operations::testing::new_operation_state(app_engine(), std::time::Duration::ZERO),
+        &cmdr_operations::testing::new_operation_state(app_engine(), std::time::Duration::ZERO),
         Some(&expected),
         sources.clone(),
     );
@@ -297,11 +297,11 @@ async fn a_source_that_vanished_before_preflight_is_left_out_of_the_binding() {
     let expected = super::capture_expected_sources(&volume, std::slice::from_ref(&gone)).await;
 
     let sink = CollectorEventSink::new();
-    let kept = crate::file_system::write_operations::testing::retain_bound_sources(
+    let kept = cmdr_operations::testing::retain_bound_sources(
         &sink,
         "op-1",
         WriteOperationType::Trash,
-        &crate::file_system::write_operations::testing::new_operation_state(app_engine(), std::time::Duration::ZERO),
+        &cmdr_operations::testing::new_operation_state(app_engine(), std::time::Duration::ZERO),
         Some(&expected),
         vec![gone],
     );
@@ -512,7 +512,7 @@ async fn approving_a_group_on_a_share_nobody_connected_is_refused_as_not_connect
         matches!(
             outcome,
             super::ApprovalOutcome::Refused(super::ApprovalRefusal::SourceUnavailable(
-                crate::file_system::write_operations::WriteOperationError::SourceNotConnected { .. }
+                cmdr_operations::WriteOperationError::SourceNotConnected { .. }
             ))
         ),
         "{outcome:?}"
@@ -532,7 +532,7 @@ async fn approving_a_group_on_a_volume_that_left_is_refused_as_no_longer_connect
         matches!(
             outcome,
             super::ApprovalOutcome::Refused(super::ApprovalRefusal::SourceUnavailable(
-                crate::file_system::write_operations::WriteOperationError::SourceNoLongerConnected { .. }
+                cmdr_operations::WriteOperationError::SourceNoLongerConnected { .. }
             ))
         ),
         "{outcome:?}"

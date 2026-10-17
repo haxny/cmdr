@@ -54,7 +54,7 @@ sections compose).
   `behavior.archiveCompressionLevel` slider (1–9, default 6) with "Faster"/"Smaller" `endLabels`, hand-rendered here
   like the rest. It's the SAME setting the Compress dialog's `CompressLevelControl.svelte` binds by id, and it governs
   every user-driven zip write; the effect on the archive is single-sourced in the backend mutation `DETAILS.md` (via
-  `write_operations/DETAILS.md` § "Archive edits").
+  `crates/cmdr-operations/src/DETAILS.md` § "Archive edits").
 - **`DriveIndexingSection.svelte`**: `Indexing > Drive indexing`: one unlabeled `SectionCard` (the section title already
   reads "Drive indexing") — the `indexing.enabled` toggle + clear-index action, the per-drive first-connect prompt
   toggle (`askForEachDrive`) with its "re-enable notifications" button, and the stale-drive notification toggle

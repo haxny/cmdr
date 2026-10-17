@@ -26,15 +26,15 @@ use cmdr_fs::volume::Volume;
 use sha2::{Digest, Sha256};
 
 use super::network_gated_source_test_support::{CANCEL_PAYLOAD_BYTES, gated_upload};
-use crate::file_system::write_operations::Operations;
-use crate::file_system::write_operations::testing::CollectorEventSink;
-use crate::file_system::write_operations::{ConflictResolution, ConflictResolutionOutcome, VolumeCopyConfig};
-use crate::file_system::write_operations::{OperationEventSink, WriteConflictEvent};
 use crate::operations_host::app_engine;
 use crate::test_support::TestDir;
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_local::LocalPosixVolume;
 use cmdr_operation_log::types::Initiator;
+use cmdr_operations::Operations;
+use cmdr_operations::testing::CollectorEventSink;
+use cmdr_operations::{ConflictResolution, ConflictResolutionOutcome, VolumeCopyConfig};
+use cmdr_operations::{OperationEventSink, WriteConflictEvent};
 
 /// How long a scenario waits for one copy to reach its terminal event.
 ///

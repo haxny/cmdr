@@ -1,0 +1,129 @@
+[package]
+name = "cmdr-operations"
+version = "0.0.0"
+edition = "2024"
+license = "LicenseRef-BSL-1.1"
+publish = false
+
+# The house lint set lives in the workspace root's `[workspace.lints]`, so this
+# crate can't quietly become a lint-free zone. `unused_crate_dependencies` is the
+# one lint that stays at the crate root instead (it's judged per compilation unit).
+[lints]
+workspace = true
+
+[features]
+# "This is a test build." Consumers turn it on through a dev-dependency, which
+# keeps it off in every shipped build. It widens exactly what a host's test cells
+# reach (the `testing` module: an engine of the test's own, the fakes it reads
+# back, and the internals the backend suites drive) from `#[cfg(test)]` to `pub`.
+# `cfg(test)` can't: it's set only while a crate compiles its OWN test target.
+# The panes a test opens (`host::testing::PaneListings`) are a listing engine of
+# the test's own, so this is the one build that reaches `cmdr-listing`.
+testing = [
+  "dep:cmdr-listing",
+  "cmdr-listing/testing",
+  "cmdr-fs/testing",
+  "cmdr-local/testing",
+  "cmdr-operation-log/testing",
+]
+# The app's `benches/transfer_benchmarks.rs` door (`transfer_bench`): thin
+# wrappers over the engine's internal entry points, on engines the bench owns.
+# It turns `cmdr-operation-log/testing` on: the journaled case reads the writer
+# behind its `WriterJournal`.
+transfer-bench = ["cmdr-operation-log/testing"]
+
+[dependencies]
+# Zip edits and fresh compression: the mutator, the archive volume a fresh zip is
+# parsed through before it publishes, and the archive formats.
+cmdr-archive = { path = "../cmdr-archive" }
+# The panes' name order the transfer tree sorts with (`NameCollator`), named here
+# rather than through `cmdr-listing`, so the engine never depends on the listing
+# engine.
+cmdr-collation = { path = "../cmdr-collation" }
+# The `Volume` trait every operation goes through, `FileEntry`, the host seams
+# (`VolumeHost`), staging names, poison-free locking, and the deadline helpers.
+cmdr-fs = { path = "../cmdr-fs" }
+# Test builds only (`testing`): `host::testing::PaneListings`.
+cmdr-listing = { path = "../cmdr-listing", optional = true }
+# The local disk backend the engine mints for local operations, its reader, and
+# `rename_local_exclusive`, the one no-replace rename.
+cmdr-local = { path = "../cmdr-local" }
+# The operation log every mutation journals into, and the rollback planner an
+# undo runs through.
+cmdr-operation-log = { path = "../cmdr-operation-log" }
+# `.tar.gz` previews in the compress estimate.
+flate2 = "1"
+# The `Stream` combinators the cross-volume copy feeds a destination through.
+futures-util = "0.3"
+log = "0.4"
+# Payloads, configs, and typed outcomes derive the IPC wire form; the host decides
+# what crosses to a UI.
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# Type export for the Rust↔TS bindings. Pinned to the EXACT same version the app
+# uses: two `specta` crates in one graph would make these `Type` impls stop
+# satisfying `tauri-specta`, and the app's command signatures collect them
+# transitively.
+specta = { version = "=2.0.0-rc.24", features = ["derive", "serde_json"] }
+# `rt` for the injected `Handle` the engine spawns on (it builds no runtime of its
+# own), `sync` and `time` for its channels and deadlines, `macros` for `select!`,
+# `fs` and `io-util` for a remote zip edit's local working copy.
+tokio = { version = "1", features = ["rt", "sync", "time", "macros", "fs", "io-util"] }
+# `CancellationToken`, one per operation, which every backend call hears.
+tokio-util = { version = "0.7.18", features = ["rt"] }
+# Operation and preview ids.
+uuid = { version = "1.19.0", features = ["v4", "v7"] }
+# The home directory a summary tildifies and a cloud trash lives under.
+dirs = "7"
+# Walking a local tree for the compress estimate.
+walkdir = "2"
+# Extended attributes a local copy carries and a quarantine marks.
+xattr = "1"
+# Fresh compression's writer. The features match the app's copy, so the graph
+# links one `zip`.
+zip = { version = "9.0.1", default-features = false, features = ["deflate", "aes-crypto", "unreserved"] }
+
+[target.'cfg(unix)'.dependencies]
+# `statvfs`, `renameatx_np`, `clonefile`, errnos, and the local copy's syscalls.
+libc = "0.2"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+# Moving to the freedesktop trash.
+trash = "5.2"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+# Moving to the Trash through `NSFileManager`, and asking it which trash a volume
+# uses.
+objc2 = { version = "0.6", features = ["std", "exception"] }
+objc2-foundation = { version = "0.3", features = ["NSURL", "NSString", "NSError", "NSFileManager", "NSPathUtilities"] }
+
+[dev-dependencies]
+# Depending on ourselves turns the `testing` feature on for every DEV target and
+# leaves it off for the lib, so a shipped build carries none of it. No ObjC class
+# is defined in this crate, so the second copy collides with nothing.
+cmdr-operations = { path = ".", features = ["testing"] }
+cmdr-archive = { path = "../cmdr-archive", features = ["testing"] }
+cmdr-fs = { path = "../cmdr-fs", features = ["testing"] }
+cmdr-listing = { path = "../cmdr-listing", features = ["testing"] }
+cmdr-local = { path = "../cmdr-local", features = ["testing"] }
+cmdr-operation-log = { path = "../cmdr-operation-log", features = ["testing"] }
+# The metadata-loss matrix asserts each backend's real metadata capabilities.
+cmdr-adb = { path = "../cmdr-adb" }
+cmdr-s3 = { path = "../cmdr-s3" }
+cmdr-sftp = { path = "../cmdr-sftp" }
+cmdr-smb = { path = "../cmdr-smb" }
+cmdr-webdav = { path = "../cmdr-webdav" }
+# A fresh zip's entry dates, read back in local time.
+chrono = "0.4"
+# Ageing fixture files.
+filetime = "0.2"
+# Reading a journal's rows back.
+rusqlite = { version = "0.40", features = ["bundled", "collation", "fallible_uint"] }
+# Tarball fixtures for the read-only archive cells.
+tar = "0.4"
+# Scratch directories.
+tempfile = "3"
+# Multi-threaded test runtimes, and paused time for the reply-deadline cells.
+tokio = { version = "1", features = ["rt-multi-thread", "test-util"] }
+# Hostile names in their composed and decomposed forms.
+unicode-normalization = "0.1"

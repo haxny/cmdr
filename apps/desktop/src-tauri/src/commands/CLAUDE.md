@@ -18,7 +18,7 @@ themselves; the index subsystems are the reverse, since they can't carry `tauri:
   Tiers: 2 s reads, 5 s writes, 15 s trash, 30 s recursive scans. A person-waited command on a volume with a live
   session takes `deadline::io_budget` instead (at least 10 s): a busy NAS holds one `stat` for seconds while healthy.
   New folder, new file, rename, and paste-as-file answer `StillRunning` at their deadline and settle later, ❌ never `TimedOut`: the
-  work lands after a timeout said it didn't (`../file_system/write_operations/mutation_reply.rs`).
+  work lands after a timeout said it didn't (`crates/cmdr-operations/src/mutation_reply.rs`).
 - **Time out through `cmdr_fs::deadline`, ❌ never a bare `tokio::time::timeout`** (it drops the future and wedges an MTP
   phone mid-transaction). Multi-leg commands share ONE `Deadline`. ❌ Don't wrap `sync_status`: it carries its own.
 - **❌ Every command's `Err` is its own typed enum, never a shared message-carrying struct**, or typed refusals flatten

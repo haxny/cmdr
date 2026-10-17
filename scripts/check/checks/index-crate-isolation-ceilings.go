@@ -392,4 +392,32 @@ var surfaceGuardedCrates = []struct {
 			SubsystemItems: 76,
 		},
 	},
+	{
+		// Measured 2026-10-17, at the extraction, and set to exactly what the crate
+		// exposes, with no headroom (David approved the rule in the #415 plan).
+		//
+		// The 83 root promises are `Operations`, the public list `lib.rs`
+		// re-exports (the queue's answers, the event sinks, instant mutations and
+		// their reply-within-a-deadline contract, pre-flight, the source binding,
+		// the transfer tree's window, the undo report, the engine-free helpers the
+		// IPC edge asks, and the wire vocabulary), and the two public modules:
+		// `host` (the seams the app answers and their value types) and the
+		// `transfer-bench`-gated `transfer_bench` door, which goes when the bench
+		// moves into the crate. `HandleMethods` counts the verbs the app's IPC
+		// commands, MCP tools, quit gate, and drag-out call one-to-one, plus eight
+		// the app's TEST cells reach that production also runs inside the engine
+		// (`host`, `archive_edit_start`, `compress_start`, `copy_between_volumes`,
+		// `route_archive_delete`, `start_bulk_rename`, `pause_write_operation`,
+		// `resume_write_operation`), candidates for `testing` wrappers. The
+		// `testing`-gated module and methods count apart. Item-by-item:
+		// `crates/cmdr-operations/src/DETAILS.md` § "The public surface is capped".
+		Name:       "cmdr-operations",
+		HandleType: "Operations",
+		Ceilings: surfaceCeilings{
+			RootPromises:   83,
+			HandleMethods:  65,
+			PublicModules:  2,
+			SubsystemItems: 37,
+		},
+	},
 }

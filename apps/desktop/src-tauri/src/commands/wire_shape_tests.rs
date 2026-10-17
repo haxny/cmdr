@@ -9,8 +9,8 @@
 //! `cmdr_fs::deadline`.
 
 use crate::file_system::volume::reconnect_error::ReconnectError;
-use crate::file_system::write_operations::VolumeScanError;
 use cmdr_listing::FuzzyJumpError;
+use cmdr_operations::VolumeScanError;
 use serde_json::json;
 
 #[test]

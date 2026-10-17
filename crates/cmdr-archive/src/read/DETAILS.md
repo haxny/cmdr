@@ -74,8 +74,8 @@ map, so it can never be read via `open_read` even though its handle was parsed. 
 
 **The recorded unix mode (`ArchiveNode::mode`), and why it is an `Option`.** A `run.sh` inside a release archive is
 executable, and this module is the only layer that can read what the archive recorded — the copy engine puts it on what
-an extract writes (`write_operations/transfer/volume/DETAILS.md` § "What mode a landed file wears"). Each format reads
-its own carrier and answers `None` where there is nothing to read, ❌ never a plausible `0o644`:
+an extract writes (`crates/cmdr-operations/src/transfer/volume/DETAILS.md` § "What mode a landed file wears"). Each
+format reads its own carrier and answers `None` where there is nothing to read, ❌ never a plausible `0o644`:
 
 - **zip**: rc-zip has already decided whether the external attributes hold a unix mode, reading them as one only for a
   Unix or macOS creator. A Windows/DOS creator's attributes become a `0o666`/`0o777` stand-in that is the DOS read-only
@@ -341,8 +341,8 @@ make it correct and bounded:
   the `SubtreeMember` the producer sends: its tree size, so it matches `scan_for_copy` totals, and its tree date, so an
   extracted file keeps it). Directories — synthetic ones with no archive entry, and empty explicit ones — carry no
   bytes, so the copy engine creates the destination folders from the tree and reserves the one decode pass for
-  byte-carrying entries (see the copy planner in
-  `apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/DETAILS.md` § "One-pass sequential extract").
+  byte-carrying entries (see the copy planner in `crates/cmdr-operations/src/transfer/volume/DETAILS.md` § "One-pass
+  sequential extract").
 - **Early stop.** `stream_subtree` removes each delivered path from `wanted` and returns the moment it empties, so a
   subtree near the front of a large archive doesn't decode the tail. A not-wanted entry is still skipped through the one
   decoder (compressed tar) or read to a sink (7z solid block) — the honest single-pass cost of reaching later members.

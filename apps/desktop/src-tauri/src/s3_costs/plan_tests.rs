@@ -8,7 +8,7 @@ use cmdr_s3::cost::{Estimate, PriceTable, Workload};
 
 use super::plan::{ClashPlan, CostedOperation, KnownClash, Overwrite, Sides, overwritten, plan};
 use crate::file_system::volume::ScannedFile;
-use crate::file_system::write_operations::ScanCostFacts;
+use cmdr_operations::ScanCostFacts;
 
 const MIB: u64 = 1024 * 1024;
 const GIB: u64 = 1024 * MIB;
@@ -271,7 +271,7 @@ fn a_server_copy_overwriting_on_wasabi_bills_only_the_replaced_object() {
 
 #[test]
 fn the_policy_decides_which_known_clashes_are_overwritten() {
-    use crate::file_system::write_operations::ConflictResolution;
+    use cmdr_operations::ConflictResolution;
     let clashes = vec![
         clash(10, 5, Some(200), Some(100)),
         clash(10, 20, Some(100), Some(200)),

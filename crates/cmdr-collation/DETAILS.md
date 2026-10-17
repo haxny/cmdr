@@ -6,8 +6,8 @@ and tertiary strength. Which locale is the caller's question: `cmdr-listing` ask
 measurements: `crates/cmdr-listing/DETAILS.md` § "Collating names".
 
 **Why its own crate.** The listing engine sorts panes with it, and the write engine orders a transfer's tree the same
-way (`TreeOrder`, `apps/desktop/src-tauri/src/file_system/write_operations/transfer_tree/order.rs`). Neither should pull
-in the other for one type, so the collator sits below both and depends on ICU alone.
+way (`TreeOrder`, `crates/cmdr-operations/src/transfer_tree/order.rs`). Neither should pull in the other for one type,
+so the collator sits below both and depends on ICU alone.
 
 ## Why a collator and not code-point order
 

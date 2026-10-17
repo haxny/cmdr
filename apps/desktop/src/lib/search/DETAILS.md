@@ -742,7 +742,7 @@ way to be holding both rows. The boundary is the separator, never a bare `starts
 name prefix of `/a/reports` without being inside it. This leans entirely on `source_removed` being honest about a
 directory, which is why both move sweeps answer it with an `lstat` rather than assuming they took the item: a same-FS
 merge and a cross-FS sweep around a skipped descendant both leave the source standing
-(`src-tauri/src/file_system/write_operations/DETAILS.md` § "Per-source outcomes").
+(`crates/cmdr-operations/src/DETAILS.md` § "Per-source outcomes").
 
 `removeEntryFromAllSnapshots(path)` is the store-side half:
 

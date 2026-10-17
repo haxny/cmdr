@@ -1,8 +1,7 @@
 # Transfer tree (frontend): details
 
-Must-knows: `CLAUDE.md`. The view command's contract:
-`apps/desktop/src-tauri/src/file_system/write_operations/transfer_tree/DETAILS.md` § "The view". Issue:
-[#382](https://github.com/vdavid/cmdr/issues/382).
+Must-knows: `CLAUDE.md`. The view command's contract: `crates/cmdr-operations/src/transfer_tree/DETAILS.md` § "The
+view". Issue: [#382](https://github.com/vdavid/cmdr/issues/382).
 
 ## What it promises
 
@@ -16,8 +15,7 @@ landed. These are the product calls (David, 2026-10-11) the code holds:
 - **Everything stays reachable**: 5,000 top-level files is a 5,000-row virtual list, and a finished row keeps its
   checkmark, ❌ never folded into "N done".
 - **Rows below the work really are next**: every driver starts files in tree order
-  (`apps/desktop/src-tauri/src/file_system/write_operations/transfer/DETAILS.md` § "Processing order"). Parallel drivers
-  show several active rows.
+  (`crates/cmdr-operations/src/transfer/DETAILS.md` § "Processing order"). Parallel drivers show several active rows.
 - **One axis for every folder bar**: the operation's bottleneck (files or bytes), the same one its ETA follows.
 - **Out of scope**, each its own follow-up: skipping the rest of a folder, keeping the tree after the operation ends
   (#261), trees for delete, trash, and edits inside an existing archive, and remembering a resized dialog's height.

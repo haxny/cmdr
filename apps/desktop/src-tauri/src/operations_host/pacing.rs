@@ -5,8 +5,8 @@
 use std::path::Path;
 use std::time::Duration;
 
-use crate::file_system::write_operations::host::Pacing;
 use crate::test_mode;
+use cmdr_operations::host::Pacing;
 
 /// `test_mode`'s throttles, read per call: a spec changes them mid-run.
 pub(super) struct AppPacing;

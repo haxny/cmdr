@@ -13,10 +13,10 @@
 //! side-effect-free.
 
 use super::analytics::emit_completion_analytics;
-use crate::file_system::write_operations::{
+use crate::mcp::terminal_ops::{self, TerminalStatus};
+use cmdr_operations::{
     Operations, WriteCancelledEvent, WriteCompleteEvent, WriteErrorEvent, WriteOperationType, WriteSettledEvent,
 };
-use crate::mcp::terminal_ops::{self, TerminalStatus};
 
 /// The app side effects a terminal event can carry, one method each.
 pub(crate) trait TerminalEffects {

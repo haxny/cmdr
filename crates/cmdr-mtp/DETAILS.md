@@ -129,9 +129,8 @@ guarantee.
 
 ## Dates on copies
 
-Both halves keep the date. (The contract:
-`apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/DETAILS.md` § "Copies keep the source's
-metadata".)
+Both halves keep the date. (The contract: `crates/cmdr-operations/src/transfer/volume/DETAILS.md` § "Copies keep the
+source's metadata".)
 
 - **Upload**: `write_from_stream` passes `stream.modified_at()` to `upload_from_stream`, which sets it as the
   `SendObjectInfo` `DateModified` (`NewObjectInfo::with_modified`), in UTC with a `Z` suffix. Android's MTP server

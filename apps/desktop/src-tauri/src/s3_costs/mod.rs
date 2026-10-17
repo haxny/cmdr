@@ -19,7 +19,7 @@ pub use plan::{ClashPlan, CostedOperation};
 use plan::{Overwrite, Sides, overwritten, plan};
 
 use crate::file_system::volume::manager::get_volume_manager;
-use crate::file_system::write_operations::ScanCostFacts;
+use cmdr_operations::ScanCostFacts;
 
 /// What a dialog asks about, once its scan preview has settled.
 #[derive(Debug, Clone, Deserialize, specta::Type)]

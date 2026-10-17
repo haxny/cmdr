@@ -24,19 +24,19 @@ the next section.
   `Directory` / `Symlink`, the answer `Volume::entry_kind` gives, a link reported as the link, where `is_directory` may
   follow it); `child_name.rs` (`ChildName`, a listed name proven to be one plain path component, the only way a source
   listing's name may join a destination path; a refusal is `VolumeError::InvalidName`. Why and who calls it:
-  `apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/DETAILS.md` § "Listed names are untrusted");
-  `server_side.rs` (`RenameWork`, `SubtreeTally`, `ServerCopyProgress`: work a server does on its own, § "Server-side
-  work"); `routed.rs` (`ResolvedVolume`, `RoutedKind`: what the app's `VolumeManager::resolve` answers, here so the
-  listing engine reads it without the app); `retirement.rs` (how background work learns it stopped being the live
-  volume); `channel_stream.rs` (a network backend's read path, consumer half); `scan_boundary.rs` + `scan_stop.rs` +
-  `scan_recorder.rs` (the one seam a copy scan touches per entry: counts, Cancel, Pause, and the transfer tree's
-  recorder); `scan_walk.rs`, `mkdir_all.rs`, `patching.rs`, and `secret_store.rs` (the bodies a stat-and-listing backend
-  gets for free); `listing_progress.rs` (`report_while`: a long listing's running count sampled on a timer from the
-  async side that owns `on_progress`, which can't ride into the blocking reader); `liveness.rs` (the HTTP backends'
-  silence watch, which tells a server gone silent from one that's only slow: `crates/cmdr-webdav/DETAILS.md` § "Silent
-  or slow") and `tls.rs` (their connect probes' TLS-refusal test, by the typed `io::ErrorKind`); `app_paths.rs` (whether
-  an app path sits under a volume root, segment-wise, and rebasing it onto a moved root); `remote_paths.rs` (a server
-  tree's `<scheme>://user@host:port` app spelling, and the ONE translation); `friendly_error/` (typed, word-free
+  `crates/cmdr-operations/src/transfer/volume/DETAILS.md` § "Listed names are untrusted"); `server_side.rs`
+  (`RenameWork`, `SubtreeTally`, `ServerCopyProgress`: work a server does on its own, § "Server-side work"); `routed.rs`
+  (`ResolvedVolume`, `RoutedKind`: what the app's `VolumeManager::resolve` answers, here so the listing engine reads it
+  without the app); `retirement.rs` (how background work learns it stopped being the live volume); `channel_stream.rs`
+  (a network backend's read path, consumer half); `scan_boundary.rs` + `scan_stop.rs` + `scan_recorder.rs` (the one seam
+  a copy scan touches per entry: counts, Cancel, Pause, and the transfer tree's recorder); `scan_walk.rs`,
+  `mkdir_all.rs`, `patching.rs`, and `secret_store.rs` (the bodies a stat-and-listing backend gets for free);
+  `listing_progress.rs` (`report_while`: a long listing's running count sampled on a timer from the async side that owns
+  `on_progress`, which can't ride into the blocking reader); `liveness.rs` (the HTTP backends' silence watch, which
+  tells a server gone silent from one that's only slow: `crates/cmdr-webdav/DETAILS.md` § "Silent or slow") and `tls.rs`
+  (their connect probes' TLS-refusal test, by the typed `io::ErrorKind`); `app_paths.rs` (whether an app path sits under
+  a volume root, segment-wise, and rebasing it onto a moved root); `remote_paths.rs` (a server tree's
+  `<scheme>://user@host:port` app spelling, and the ONE translation); `friendly_error/` (typed, word-free
   classification); `usb_speed.rs` (❗ its doc comment reaches `bindings.ts`); `in_memory.rs` (the store and its knobs;
   `in_memory/volume_impl.rs` is its `impl Volume`); `conformance.rs` (+ `conformance/directory_creation.rs`, the three
   `create_directory_all` promises, and `conformance/modification_date.rs`, the two date ones); and `host/` (what a
@@ -177,8 +177,7 @@ macOS 27.0, APFS, with a C helper replaying each syscall sequence, 2026-10-11).
   the reversal doesn't remove keeps its own. The journal rollback, which removes through a volume, calls
   `open_parent_folder` itself. `remove_tree_clearing_blockers` walks the tree only after `remove_dir_all` failed, and is
   for a tree Cmdr owns whole (a cross-FS move's staging folder). Who calls them and why:
-  `apps/desktop/src-tauri/src/file_system/write_operations/transfer/DETAILS.md` § "What a reversal does with that
-  identity".
+  `crates/cmdr-operations/src/transfer/DETAILS.md` § "What a reversal does with that identity".
 - **Linux**: a POSIX ACL carries no `deny` entries and blocks no rename; `chattr` flags need `CAP_LINUX_IMMUTABLE`. So
   flags answer `NotApplicable`, nothing ever needs clearing, and a source ACL counts only when it has more than the
   three mode entries every file has (`chmod` carries those).
@@ -189,8 +188,7 @@ macOS 27.0, APFS, with a C helper replaying each syscall sequence, 2026-10-11).
   (`MetadataReport::none_applicable`; `holds_none` tells a caller to stop asking). `Volume::clear_blockers(path)` is
   `clear_blockers` through the trait (local disk's flags and ACL, SMB's Read-only), default `NothingToClear`; only a
   reversal calls it, on an item it verified as its own, never a volume's own `delete` (that's also F8's). The contract,
-  per backend: `apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/DETAILS.md` § "Copies keep the
-  source's metadata".
+  per backend: `crates/cmdr-operations/src/transfer/volume/DETAILS.md` § "Copies keep the source's metadata".
 - **`MetadataCaps` is each backend's claim** (`Volume::metadata_caps`, a predicate like the rest): what a file written
   there keeps, what its streams report, what `apply_metadata` keeps, and `staged_flags`: the user flags a file's write
   keeps on the staged temp itself (SMB's Hidden), because they refuse no rename.
@@ -459,7 +457,7 @@ they leave by"), and the three stores' schema-mismatch wipes call it too.
   (`Volume::composes_new_names`, read through the provided `spell_new_name`;
   `Volume::matches_names_in_any_unicode_form`), `name_fold` holds the two comparisons (`composed`,
   `differ_only_in_form`), and the app decides which writes create a name and which address an existing entry
-  (`apps/desktop/src-tauri/src/file_system/write_operations/DETAILS.md` § "Look-alike names").
+  (`crates/cmdr-operations/src/DETAILS.md` § "Look-alike names").
 - **`icons/per_path.rs`'s custom-folder-icon half**, the NSWorkspace fetch, and the icon disk cache.
 - **The scratch-visibility settings** (`advanced.showStagingTempFiles`, `advanced.showSafeSaveFiles`) and the listing
   read-path filter over them. "Is this ours, and does a live operation own it?" is vocabulary; "does the user see it?"
@@ -487,8 +485,8 @@ remote backend needs exactly that, and two hand-rolled copies would drift on pre
 boundary lives here and every backend counts through it.
 
 ⚠️ The counting exists at all because a recursive scan over a network backend reports nothing until it returns: the
-transfer dialog sits on "0 files" for the length of the walk, and `write_operations/scan_watchdog.rs` — which bounds a
-preview by INACTIVITY — can't tell a slow tree from a server that stopped answering.
+transfer dialog sits on "0 files" for the length of the walk, and `crates/cmdr-operations/src/scan_watchdog.rs` — which
+bounds a preview by INACTIVITY — can't tell a slow tree from a server that stopped answering.
 
 **Reporting and stopping are one call, deliberately.** `boundary.file(path, size).await?` and
 `boundary.dir(path).await?` count the entry AND answer the user's Cancel and Pause, so a backend author reaches the stop
@@ -680,9 +678,8 @@ everywhere, which is the point.
   "a copy keeps the source's date" (`src/volume/conformance/modification_date.rs`). Every copy suite checksums bytes,
   and a destination stamping its own date passes all of them. Run by local, S3, ADB, MTP (on the virtual device), SMB,
   SFTP, and the in-memory double green, WebDAV's both on Nextcloud (Apache stores no date, so it runs the read half),
-  and the read half by archive. The contract:
-  `apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/DETAILS.md` § "Copies keep the source's
-  metadata".
+  and the read half by archive. The contract: `crates/cmdr-operations/src/transfer/volume/DETAILS.md` § "Copies keep the
+  source's metadata".
 
 `InMemoryVolume`, `LocalPosixVolume`, `AdbVolume`, and the Docker-gated `SmbVolume`, `SftpVolume`, and `WebdavVolume`
 run every one (InMemory's writability cell sits in `capabilities_test.rs`, next to the predicate it speaks for).
@@ -709,7 +706,7 @@ never a made-up one; a wrapper stream (`CheckpointStream`) forwards its inner st
 `Volume::publishes_writes_whole` is the third write promise beside single-shot and atomic replacement: the protocol
 publishes every write whole (an object store's PUT). Only the transfer engine's staging decision reads it; the contract
 and what it does NOT promise are on the trait method, the engine side in
-`apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/DETAILS.md` § "Whole-publish destinations".
+`crates/cmdr-operations/src/transfer/volume/DETAILS.md` § "Whole-publish destinations".
 
 Write callbacks receive one `StreamWriteProgress { bytes_written, expected_length }` value. The structured payload keeps
 cumulative progress and its denominator named rather than relying on two confusable positional `u64`s. For a known
@@ -752,8 +749,8 @@ models something a real backend genuinely does:
   that never gives it a turn.
 
 A fault the caller wants to arm on a call COUNT rather than on a path belongs one layer up, in the app's `FaultyVolume`
-wrapper (`file_system/write_operations/transfer/volume/faulty_volume_test_support.rs`): it wraps any volume and fails
-the Nth call to a named operation. ❌ Don't grow this list with fault shapes that aren't about what a real backend does.
+wrapper (`crates/cmdr-operations/src/transfer/volume/faulty_volume_test_support.rs`): it wraps any volume and fails the
+Nth call to a named operation. ❌ Don't grow this list with fault shapes that aren't about what a real backend does.
 
 ## `process_memory`: the allocators, their accountants, and the one reader that spans them
 

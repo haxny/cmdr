@@ -12,7 +12,7 @@
 //! `export type WriteProgress = WriteProgressEvent`. Always referenced as
 //! `wire::<Name>`: several wrappers share their payload's name.
 
-use crate::file_system::write_operations as engine;
+use cmdr_operations as engine;
 
 macro_rules! wire_event {
     ($wrapper:ident($inner:ty) = $name:literal) => {

@@ -10,8 +10,8 @@ Connect, browse, read, write, and server-side copy work: the transport, the conn
 stats, streams, scans for a copy, uploads (one PUT or in parts), copies within the account without the bytes leaving the
 server, makes folders, deletes one node or a batch, and renames one small file. A folder or a big object answers
 `RenameWork::CopyThenDelete`, and the app routes such a rename through its transfer engine as a move
-(`apps/desktop/src-tauri/src/file_system/write_operations/DETAILS.md` § "Renames that run as moves"). `cost/` prices a
-planned operation at list prices (§ "Cost estimates").
+(`crates/cmdr-operations/src/DETAILS.md` § "Renames that run as moves"). `cost/` prices a planned operation at list
+prices (§ "Cost estimates").
 
 Every dependency was already in `Cargo.lock` when the crate was built. Check `cargo tree -d` before adding one.
 
@@ -441,10 +441,10 @@ in two runs. Full per-cell findings: `docs/notes/s3/live-verification-2026-10.md
 **Every write goes to its final key, and the transfer engine stages nothing here.** S3 publishes an object only when its
 PUT or `CompleteMultipartUpload` finishes, and a replaced object stays readable until then, so the volume answers
 `publishes_writes_whole` and the engine writes final keys and takes a file→file Overwrite in place
-(`apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/DETAILS.md` § "Whole-publish destinations").
-Decision/Why: a `.cmdr-tmp-*` temp would cost a landing rename, which on S3 is a server-side copy plus a delete (twice
-the requests, a single copy fails past 5 GB), and buys nothing the protocol doesn't already give. `write_is_single_shot`
-stays `false`: the server holds nothing until the request's last byte, yet a multipart upload spans many requests.
+(`crates/cmdr-operations/src/transfer/volume/DETAILS.md` § "Whole-publish destinations"). Decision/Why: a `.cmdr-tmp-*`
+temp would cost a landing rename, which on S3 is a server-side copy plus a delete (twice the requests, a single copy
+fails past 5 GB), and buys nothing the protocol doesn't already give. `write_is_single_shot` stays `false`: the server
+holds nothing until the request's last byte, yet a multipart upload spans many requests.
 
 - **Shape** (`writes.rs::shape_for`): one PUT when `plan_parts` gives a single part (so up to 69 MiB, a 64 MiB part plus
   a folded tail), a multipart upload otherwise. A stream of unknown length goes in parts of the floor size (64 MiB, so
@@ -522,7 +522,7 @@ never reached the bytes in flight: a 75 MB upload to R2 or GCS paused at 20% ran
 
 Pinned by `pause_test.rs` (a fake S3 reading at a slow rate: parts and a PUT paused before they go out and mid-body,
 resumed whole, and a cancel while paused) and `upload_body_test.rs` (the hold on a paused clock). The engine side:
-`write_operations/transfer/DETAILS.md` § "Pause reaches between chunks".
+`crates/cmdr-operations/src/transfer/DETAILS.md` § "Pause reaches between chunks".
 
 ## Overwrites in parts
 

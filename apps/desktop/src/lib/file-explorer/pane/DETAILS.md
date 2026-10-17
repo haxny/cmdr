@@ -986,9 +986,9 @@ resolves `pressed` / `notStarted` (`ConfirmPress`), and only a press that starte
 
 `handleTransferConfirm` takes no scan flag: the progress dialog doesn't wait for a `TransferDialog` preview, because the
 backend registers the operation at confirm and its own task waits for the preview it claimed
-(`apps/desktop/src-tauri/src/file_system/write_operations/DETAILS.md` § "The scan-wait"). What the handler MUST keep
-threading is `previewId`, and the archive-password retry MUST keep clearing it: that retry is a new operation, a preview
-accepts exactly one claimant, so a carried-over id would silently downgrade to a full re-walk.
+(`crates/cmdr-operations/src/DETAILS.md` § "The scan-wait"). What the handler MUST keep threading is `previewId`, and
+the archive-password retry MUST keep clearing it: that retry is a new operation, a preview accepts exactly one claimant,
+so a carried-over id would silently downgrade to a full re-walk.
 
 ### Skipping a confirmation
 
@@ -1018,8 +1018,7 @@ the folder that pane is already showing, and the backend gives each copy a free 
   `sourcePath` and `destPath` are the same folder. That one substitution is the entire difference from F5.
 - **It skips the confirmation dialog** and calls `dialogs.startTransferProgress` directly, the way paste does: there is
   no destination to pick and no conflict to answer, since a self-collision resolves before the conflict machinery is
-  consulted (`src-tauri/src/file_system/write_operations/transfer/DETAILS.md` § "Self-collision (duplicating in
-  place)").
+  consulted (`crates/cmdr-operations/src/transfer/DETAILS.md` § "Self-collision (duplicating in place)").
 - **It sets `direction` and `sourcePaneSide` to the FOCUSED pane**, not to the props the builders return: those name the
   other pane, which is right for a transfer across the panes and wrong for one that lands where it came from. The
   settled tail then refreshes the pane the copy appeared in and clears the selection it consumed.

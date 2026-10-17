@@ -28,14 +28,12 @@ use super::network_safety_test_support::Registered;
 use super::network_semantics_test_support::{Transfer, local_volume, names_in, seed, transfer, try_read};
 use super::network_transfer_test_support::{assert_no_staging_litter, clean_deep, read_all};
 use crate::file_system::volume::manager::get_volume_manager;
-use crate::file_system::write_operations::testing::new_operation_state;
-use crate::file_system::write_operations::testing::{
-    CollectorEventSink, EditError, OperationIntent, pull_apply_upload_swap,
-};
-use crate::file_system::write_operations::{ConflictResolution, OperationEventSink, WriteOperationPhase};
 use crate::operations_host::app_engine;
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_operation_log::types::Initiator;
+use cmdr_operations::testing::new_operation_state;
+use cmdr_operations::testing::{CollectorEventSink, EditError, OperationIntent, pull_apply_upload_swap};
+use cmdr_operations::{ConflictResolution, OperationEventSink, WriteOperationPhase};
 
 /// How long an archive op gets to reach its terminal event. Under the 8 s
 /// nextest cap, so a hang says what it was waiting for.

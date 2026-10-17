@@ -8,11 +8,11 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use crate::file_system::write_operations::testing::copy_volumes_with_progress;
-use crate::file_system::write_operations::testing::new_operation_state;
-use crate::file_system::write_operations::{ConflictResolution, VolumeCopyConfig};
 use crate::operations_host::app_engine;
 use cmdr_fs::volume::Volume;
+use cmdr_operations::testing::copy_volumes_with_progress;
+use cmdr_operations::testing::new_operation_state;
+use cmdr_operations::{ConflictResolution, VolumeCopyConfig};
 
 // ── Phase 4 baseline bench (real QNAP NAS) ────────────────────────
 //
@@ -38,9 +38,9 @@ use cmdr_fs::volume::Volume;
     reason = "Bench test prints a timing report by design (run with --nocapture); the struct-update is intentional for future-proofing."
 )]
 async fn phase4_bench_baseline_smb_to_local_100_tiny_files() {
-    use crate::file_system::write_operations::testing::CollectorEventSink;
     use cmdr_fs::volume::smb_volume_id;
     use cmdr_local::LocalPosixVolume;
+    use cmdr_operations::testing::CollectorEventSink;
     use cmdr_smb::volume::MountAnchor;
     use cmdr_smb::volume::{SmbConnectionParams, connect_smb_volume};
 

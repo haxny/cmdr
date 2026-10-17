@@ -1,11 +1,12 @@
 # File system details
 
 Depth and rationale. `CLAUDE.md` holds the must-knows; this is everything else. Submodule depth lives in each
-submodule's own `DETAILS.md` (`write_operations/`, `volume/`); the listing engine's is `crates/cmdr-listing/DETAILS.md`.
+submodule's own `DETAILS.md` (`volume/`); the listing engine's is `crates/cmdr-listing/DETAILS.md`, the write engine's
+`crates/cmdr-operations/src/DETAILS.md`.
 
 ## Module map
 
-Three submodules carry their own docs: `write_operations/`, `volume/`, and `sync_status/` (the cloud badges). The leaves beside them:
+Two submodules carry their own docs: `volume/` and `sync_status/` (the cloud badges). The leaves beside them:
 
 - `watcher.rs`: FSEvents-driven listing updates: the OS half (debounce, rebasing, the stat, the full-re-read decision,
   the `std::fs` fallback on `RefreshOutcome::NoVolume`, `directory-deleted`) over the engine's `observe_children` and
@@ -97,7 +98,7 @@ cross-filesystem move's staging DIRECTORY (`.cmdr-staging-<op>`), which sits in 
 the length of the move. `cmdr_fs::staging::is_cmdr_scratch_name` is the union the gate asks, and the directory
 registers through the same `StagingTemp` mint, so it hides and un-hides by ownership like everything else. ❗ The
 union is the LISTING's question only: the sweep that removes one asks the strict per-kind test instead
-(`write_operations/DETAILS.md` § "What the sweep does with each kind"), because a staging directory can hold the user's
+(`crates/cmdr-operations/src/DETAILS.md` § "What the sweep does with each kind"), because a staging directory can hold the user's
 only copy and a look-alike name must never reach a `remove_dir`.
 
 **Which token the app hands it.** An operation's temps carry a `Weak` to `WriteOperationState`'s liveness token, dropped

@@ -25,17 +25,17 @@ use cmdr_fs::volume::Volume;
 use super::network_transfer_test_support::{
     assert_no_staging_litter, clean_deep, read_all, self_describing_bytes, sha256, tree_fingerprint,
 };
-use crate::file_system::write_operations::testing::new_operation_state;
-use crate::file_system::write_operations::testing::{CollectorEventSink, WriteOperationState};
-use crate::file_system::write_operations::testing::{
-    SafetySpec, assert_operation_was_safe, copy_volumes_with_progress, move_volumes_with_progress,
-    move_within_same_volume_with_progress,
-};
-use crate::file_system::write_operations::{ConflictResolution, VolumeCopyConfig};
 use crate::operations_host::app_engine;
 use crate::test_support::TestDir;
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_local::LocalPosixVolume;
+use cmdr_operations::testing::new_operation_state;
+use cmdr_operations::testing::{CollectorEventSink, WriteOperationState};
+use cmdr_operations::testing::{
+    SafetySpec, assert_operation_was_safe, copy_volumes_with_progress, move_volumes_with_progress,
+    move_within_same_volume_with_progress,
+};
+use cmdr_operations::{ConflictResolution, VolumeCopyConfig};
 
 // ── Seeding and reading ──────────────────────────────────────────────
 

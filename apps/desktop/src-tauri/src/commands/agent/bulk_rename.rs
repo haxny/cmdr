@@ -40,7 +40,7 @@ pub enum BulkRenameError {
     CouldntStart {
         /// Why, typed: a volume refusal carries the `WriteOperationError` the transfer
         /// dialogs already word.
-        reason: crate::file_system::write_operations::RenameStartError,
+        reason: cmdr_operations::RenameStartError,
     },
     /// The preflight didn't finish inside the command's wait.
     TimedOut,
@@ -79,7 +79,7 @@ pub struct BulkRenameStarted {
     /// would merge the two.
     pub swaps_left_out: u32,
 }
-use crate::file_system::write_operations::{LocalContent, RemoteContent, SourceFingerprint};
+use cmdr_operations::{LocalContent, RemoteContent, SourceFingerprint};
 
 const BULK_RENAME_PREFLIGHT_TIMEOUT: Duration = Duration::from_secs(5);
 const BULK_RENAME_APPLY_TIMEOUT: Duration = Duration::from_secs(5);
@@ -163,7 +163,7 @@ pub async fn apply_bulk_rename(
             return Err(review_again());
         };
         applied_rows.push(proposal_row);
-        rows.push(crate::file_system::write_operations::BulkRenameRow {
+        rows.push(cmdr_operations::BulkRenameRow {
             row_id: row_id.clone(),
             source: PathBuf::from(&proposal_row.source_path),
             destination: Path::new(&proposal_row.source_path)
@@ -538,7 +538,7 @@ mod wire_tests {
     /// English string here was only ever loggable, never wordable (#184).
     #[test]
     fn a_batch_that_wouldnt_start_carries_a_typed_reason() {
-        use crate::file_system::write_operations::{RenameStartError, WriteOperationError};
+        use cmdr_operations::{RenameStartError, WriteOperationError};
 
         assert_eq!(
             serde_json::to_value(BulkRenameError::CouldntStart {

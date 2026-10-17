@@ -207,8 +207,7 @@ Key files:
     in place. A drop that crosses into the OTHER pane is deliberate by itself and always dispatches, even when both
     panes show the same folder: with no modifier the same-volume rule preselects Move there, which the backend counts as
     done and writes nothing for an item already in its destination. What the backend does with a copy that lands on its
-    own source: `apps/desktop/src-tauri/src/file_system/write_operations/transfer/DETAILS.md` § "Self-collision
-    (duplicating in place)".
+    own source: `crates/cmdr-operations/src/transfer/DETAILS.md` § "Self-collision (duplicating in place)".
   - **Gotcha**: the verdict keys on the FORCED copy (`drop-operation.ts::isForcedCopyDrag`), never on the operation
     `pickDropOperation` resolved. Copy is also that function's fallback when the source path matches no registered
     volume root, so reading the resolved operation as intent would turn a slip into a duplicate.

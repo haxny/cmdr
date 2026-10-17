@@ -21,8 +21,8 @@ use std::sync::mpsc::{self, RecvTimeoutError};
 use std::sync::{Arc, LazyLock, Mutex};
 use std::time::{Duration, Instant};
 
-use crate::file_system::write_operations::{LifecycleStatus, OperationSnapshot, Operations, WriteOperationType};
 use crate::ignore_poison::IgnorePoison;
+use cmdr_operations::{LifecycleStatus, OperationSnapshot, Operations, WriteOperationType};
 
 /// How long the dialog counts down before the gate quits on its own.
 ///

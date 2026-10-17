@@ -666,14 +666,14 @@ without full re-reads. Callers outside the crate reach them through `Listings`' 
   (multiple panes/tabs may show the same directory). `None` matches verbatim across every volume (below).
 - `try_get_authoritative_listing(volume_id, path)` (`authoritative.rs`, public as `Listings::authoritative_listing`):
   the fresh-listing oracle for write-op pre-flight scans and the look-alike check before a new name
-  (`write_operations/look_alike.rs`). Returns `Some(entries)` when a cached listing exists for `(volume_id, path)` and
-  `listing_watch_coverage(path) == WatchCoverage::EveryWriter` (delegated to the backend via the `Volume` trait), else
-  `None`. When multiple listings exist for the same pair (two panes), picks the most-recently-updated one
-  deterministically: highest `sequence` (an `AtomicU64`), ties broken by latest `created_at`. Entries are cloned out
-  under the cache `RwLock`, then the lock is released before the volume call (cheap clone for a flat `Vec<FileEntry>`, <
-  5 ms for 15k entries; matters because otherwise the volume call holds the cache lock across an await and blocks pane
-  navigation). See the freshness-contract section in `volume/CLAUDE.md` for per-backend debounce windows callers must
-  tolerate.
+  (`crates/cmdr-operations/src/look_alike.rs`). Returns `Some(entries)` when a cached listing exists for
+  `(volume_id, path)` and `listing_watch_coverage(path) == WatchCoverage::EveryWriter` (delegated to the backend via the
+  `Volume` trait), else `None`. When multiple listings exist for the same pair (two panes), picks the
+  most-recently-updated one deterministically: highest `sequence` (an `AtomicU64`), ties broken by latest `created_at`.
+  Entries are cloned out under the cache `RwLock`, then the lock is released before the volume call (cheap clone for a
+  flat `Vec<FileEntry>`, < 5 ms for 15k entries; matters because otherwise the volume call holds the cache lock across
+  an await and blocks pane navigation). See the freshness-contract section in `volume/CLAUDE.md` for per-backend
+  debounce windows callers must tolerate.
 - `insert_entry_sorted(listing_id, entry)`: inserts in sorted position, returns the pane rows (`PaneRows`, § "Diffs
   speak the pane's rows"). All four patch helpers here answer in pane rows.
 - `remove_entries_by_paths(listing_id, paths)`: removes by exact file-path match, returning

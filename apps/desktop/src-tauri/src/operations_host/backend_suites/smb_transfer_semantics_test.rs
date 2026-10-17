@@ -30,8 +30,8 @@ use super::network_semantics_test_support::{
     overwrite_smaller_replaces_only_the_smaller_destination,
 };
 use super::smb_test_support::*;
-use crate::file_system::write_operations::testing::new_operation_state;
 use crate::operations_host::app_engine;
+use cmdr_operations::testing::new_operation_state;
 use cmdr_smb::volume::*;
 use std::sync::atomic::AtomicUsize;
 
@@ -154,8 +154,8 @@ async fn smb_integration_many_files_at_full_concurrency_round_trip_intact() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 #[ignore = "Requires Docker SMB containers (./apps/desktop/test/smb-servers/start.sh)"]
 async fn smb_integration_move_into_a_subfolder_addressed_the_way_the_dialog_addresses_it() {
-    use crate::file_system::write_operations::VolumeCopyConfig;
-    use crate::file_system::write_operations::testing::{CollectorEventSink, move_volumes_with_progress};
+    use cmdr_operations::VolumeCopyConfig;
+    use cmdr_operations::testing::{CollectorEventSink, move_volumes_with_progress};
     use std::time::Duration;
 
     let smb_vol = Arc::new(make_docker_volume().await);
@@ -241,9 +241,9 @@ async fn smb_integration_move_into_a_subfolder_addressed_the_way_the_dialog_addr
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 #[ignore = "Requires Docker SMB containers (./apps/desktop/test/smb-servers/start.sh)"]
 async fn smb_integration_a_running_copy_survives_the_volume_being_replaced() {
-    use crate::file_system::write_operations::VolumeCopyConfig;
-    use crate::file_system::write_operations::testing::{CollectorEventSink, copy_volumes_with_progress};
     use crate::test_support::wait_until_async;
+    use cmdr_operations::VolumeCopyConfig;
+    use cmdr_operations::testing::{CollectorEventSink, copy_volumes_with_progress};
     use std::time::Duration;
 
     // Big enough that the copy is still running when the swap lands: the test

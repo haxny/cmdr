@@ -22,7 +22,7 @@ use super::store::{
 };
 use crate::agent::AgentDb;
 use crate::agent::store::proposals::AcceptanceOutcome;
-use crate::file_system::write_operations::same_local_file;
+use cmdr_operations::same_local_file;
 
 /// A row's user-action-time validation result. It deliberately contains no
 /// path or destination authority: the frontend retains only opaque row ids.

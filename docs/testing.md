@@ -211,7 +211,7 @@ Two exceptions stay on a raw OS-temp path deliberately, and both name their reas
 `updater/installer.rs`'s `staging_dir_sits_under_temp_dir` asserts on the path itself, and `cmdr-git`'s
 `test_fixtures::temp_dir` is already process-and-run unique (PID plus a nanosecond stamp) and keeps its directory on
 panic on purpose, for post-mortem inspection. Production code that stages into the OS temp dir (the updater, the icon
-sample files, `smb_smbclient`'s auth file, `write_operations/scratch_dir.rs`) is correct as-is and is not test
+sample files, `smb_smbclient`'s auth file, `crates/cmdr-operations/src/scratch_dir.rs`) is correct as-is and is not test
 scaffolding.
 
 ## Waiting for background work (Rust)
@@ -403,8 +403,7 @@ running beside it own.
 so it reads as environment flake. Fix it by giving the walk a scope the test owns (make the registry a struct, keep the
 global as one instance of it, and let the test build its own), never by serializing the suites behind a mutex,
 `#[ignore]`ing the victim, or loosening the victim's assertion. Worked example, including how the global wiring stays
-covered: `apps/desktop/src-tauri/src/file_system/write_operations/DETAILS.md` § "Test isolation: an engine of the test's
-own".
+covered: `crates/cmdr-operations/src/DETAILS.md` § "Test isolation: an engine of the test's own".
 
 ### ❌ `retries: 1` to mask a race
 
@@ -769,8 +768,8 @@ entry needs a real "we can't make this faster" justification, not convenience.
   than a shape production emits, which is how a suite full of fully-populated `per_path` fixtures certified a data-loss
   bug for three months. `desktop-rust-no-hand-rolled-fixture` enforces it.
 - **A `Volume` double that misbehaves**: reach for `FaultyVolume`
-  (`write_operations/transfer/volume/faulty_volume_test_support.rs`) or one of `InMemoryVolume`'s named lies, ❌ never a
-  fresh 40-method forwarder. The fault the test needs should be the whole diff.
+  (`crates/cmdr-operations/src/transfer/volume/faulty_volume_test_support.rs`) or one of `InMemoryVolume`'s named lies,
+  ❌ never a fresh 40-method forwarder. The fault the test needs should be the whole diff.
 - **A `Volume` double for a seam that decides from CAPABILITY FLAGS alone** (the favorites add gate, drag locality):
   `crate::test_support::CapabilityStub`, which answers `supports_local_fs_access` / `paths_are_os_visible` and makes
   every I/O method `unreachable!`. ❌ Never a per-file copy: two drifted into one jscpd pair. Its sibling for a wedged

@@ -10,10 +10,10 @@
 //! This pairs with `smb_soak_test.rs`.
 
 use super::smb_test_support::*;
-use crate::file_system::write_operations::testing::new_operation_state;
 use crate::operations_host::app_engine;
 use cmdr_fs::volume::smb_volume_id;
 use cmdr_fs::volume::{StreamLength, WriteMode};
+use cmdr_operations::testing::new_operation_state;
 use cmdr_smb::volume::*;
 use std::sync::OnceLock;
 
@@ -37,8 +37,8 @@ use std::sync::OnceLock;
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 #[ignore = "Requires Docker SMB containers (./apps/desktop/test/smb-servers/start.sh)"]
 async fn smb_integration_copy_100_unique_files_no_cross_contamination() {
-    use crate::file_system::write_operations::VolumeCopyConfig;
-    use crate::file_system::write_operations::testing::{CollectorEventSink, copy_volumes_with_progress};
+    use cmdr_operations::VolumeCopyConfig;
+    use cmdr_operations::testing::{CollectorEventSink, copy_volumes_with_progress};
     use std::time::{Duration, Instant};
 
     // Content scheme: `blake3(b"cmdr-fix8-" || index_le) .as_bytes() repeated 320 times`
@@ -320,8 +320,8 @@ async fn run_concurrent_write_pass(
     file_size: usize,
     timeout_secs: u64,
 ) -> Duration {
-    use crate::file_system::write_operations::VolumeCopyConfig;
-    use crate::file_system::write_operations::testing::{CollectorEventSink, copy_volumes_with_progress};
+    use cmdr_operations::VolumeCopyConfig;
+    use cmdr_operations::testing::{CollectorEventSink, copy_volumes_with_progress};
 
     assert!(n_conflicts <= n_files);
 
@@ -393,7 +393,7 @@ async fn run_concurrent_write_pass(
     let state = Arc::new(new_operation_state(app_engine(), Duration::from_millis(200)));
     let events = Arc::new(CollectorEventSink::new());
     let config = VolumeCopyConfig {
-        conflict_resolution: crate::file_system::write_operations::ConflictResolution::OverwriteSmaller,
+        conflict_resolution: cmdr_operations::ConflictResolution::OverwriteSmaller,
         ..VolumeCopyConfig::default()
     };
 

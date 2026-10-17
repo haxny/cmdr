@@ -10,9 +10,9 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::{Duration, Instant};
 
 use super::*;
-use crate::file_system::write_operations::{LifecycleStatus, OperationSnapshot, WriteOperationType};
 use crate::ignore_poison::IgnorePoison;
 use crate::test_support::wait_until;
+use cmdr_operations::{LifecycleStatus, OperationSnapshot, WriteOperationType};
 
 /// One teardown step, recorded in the order the gate asked for it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

@@ -1,17 +1,17 @@
 //! Tauri commands for write operations (create, copy, move, delete, trash) and scan preview.
 
 use crate::commands::settled::broadcast_settled;
-use crate::file_system::write_operations::{
+use crate::operations_host::{
+    TauriEventSink, TauriScanPreviewSink, operations, refuse_instant_not_installed, refuse_not_installed,
+    refuse_scan_preview_not_installed, wire,
+};
+use cmdr_operations::{
     ConflictId, ConflictResolution, ConflictResolutionOutcome, MUTATION_REPLY_DEADLINE, MutationError, MutationReply,
     MutationSettled, OperationEventSink, OperationSnapshot, Operations, PauseAllOutcome, PauseOutcome,
     QueueMoveDirection, QueueMoveOutcome, ReadOnlySide, RetryOutcome, ScanPreviewPurpose, ScanPreviewRefusal,
     ScanPreviewStartResult, ScanPreviewTotals, SourcesGoneAnswerOutcome, TransferTreeView, TransferTreeViewError,
     TransferTreeViewRequest, TrashRoutingAnswer, WriteOperationConfig, WriteOperationError, WriteOperationStartResult,
     WriteProgressEvent, reply_within, trash_routing_for_selection,
-};
-use crate::operations_host::{
-    TauriEventSink, TauriScanPreviewSink, operations, refuse_instant_not_installed, refuse_not_installed,
-    refuse_scan_preview_not_installed, wire,
 };
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -781,7 +781,7 @@ mod tests {
     /// "still running" and the settle says it landed.
     #[tokio::test(start_paused = true)]
     async fn a_slow_new_folder_replies_still_running_then_settles_landed() {
-        use crate::file_system::write_operations::testing::MutationSettledOutcome;
+        use cmdr_operations::testing::MutationSettledOutcome;
 
         let volume_id = "smb-slow-mkdir-test";
         register_slowly_creating_volume(volume_id, Duration::from_secs(7)).await;
@@ -810,7 +810,7 @@ mod tests {
     /// and the settle carries that refusal typed, as an in-time reply would.
     #[tokio::test(start_paused = true)]
     async fn a_slow_new_file_the_volume_refuses_settles_with_the_typed_reason() {
-        use crate::file_system::write_operations::testing::MutationSettledOutcome;
+        use cmdr_operations::testing::MutationSettledOutcome;
 
         let volume_id = "smb-slow-mkfile-refused-test";
         register_slowly_creating_volume(volume_id, Duration::from_secs(7)).await;

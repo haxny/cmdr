@@ -19,8 +19,7 @@ is unchanged. See "How much of the 74% this recovers, and when".
 
 Keep this note as long as the driver has a per-file destination probe at all. It's the before-baseline any
 re-measurement compares against, it records the two shapes' bottlenecks separately (the thing a single throughput number
-hides), and it's the evidence behind two guardrails in
-`apps/desktop/src-tauri/src/file_system/write_operations/transfer/DETAILS.md` § Key decisions.
+hides), and it's the evidence behind two guardrails in `crates/cmdr-operations/src/transfer/DETAILS.md` § Key decisions.
 
 **Everything here sweeps the TOP-LEVEL window only**, because that was the only window there was: every shape below
 hands the copy N loose files as N sources. A DIRECTORY source got no concurrency at all until 2026-08-13 — see
@@ -114,9 +113,9 @@ curve flattens at 12 because that's where the window gets wide enough to finish 
 them out, and the hand-out rate is one round trip per file, serialized.
 
 **The deep-merge path in this same module already avoids exactly this call shape.** Per
-`apps/desktop/src-tauri/src/file_system/write_operations/transfer/DETAILS.md` ("Scan-as-you-merge"), a merge lists the
-destination level ONCE, builds a `name -> FileEntry` map, and does no per-child `get_metadata` probes. The top-level
-spawn loop is the one place still paying N round trips for what one listing answers.
+`crates/cmdr-operations/src/transfer/DETAILS.md` ("Scan-as-you-merge"), a merge lists the destination level ONCE, builds
+a `name -> FileEntry` map, and does no per-child `get_metadata` probes. The top-level spawn loop is the one place still
+paying N round trips for what one listing answers.
 
 ## NAS, few-large: 32 x 8 MiB (256 MiB), 9 reps
 

@@ -231,7 +231,7 @@ The loop, all MCP: `copy` → `dialog confirm transfer-confirmation` with **`onC
 
 **One policy list, three tools, one frontend map.** `executor/mod.rs::CONFLICT_POLICIES` (`stop`, `skip_all`, `overwrite_all`, `rename_all`, `overwrite_smaller_all`, `overwrite_older_all`) is what `copy`, `move`, and `dialog confirm` all validate against, mirrored once in `#lib/file-operations/transfer/conflict-policy.ts`. Before this there were two private frontend maps, and they had drifted: one spelled the conditional policies `overwrite_all_smaller`, the other `overwrite_smaller_all`, and neither spelling was reachable through any tool, so nothing ever surfaced it. The failure mode is silent — an unmapped name falls back to `skip`, turning "ask me about each file" into "skip every file" over the user's data — so the frontend now logs a name it doesn't know instead of quietly defaulting.
 
-**The `conflictId` is required, never defaulted.** An operation raises its clashes one at a time, but an answer's round trip can outlast the clash it belongs to; a tool that answered "whatever is pending" would silently decide a question nobody was shown. The backend arbitrates by id (`write_operations/DETAILS.md` § "Answering a conflict is arbitrated"), and this tool reports that verdict rather than flattening it:
+**The `conflictId` is required, never defaulted.** An operation raises its clashes one at a time, but an answer's round trip can outlast the clash it belongs to; a tool that answered "whatever is pending" would silently decide a question nobody was shown. The backend arbitrates by id (`crates/cmdr-operations/src/DETAILS.md` § "Answering a conflict is arbitrated"), and this tool reports that verdict rather than flattening it:
 
 - `Resolved` → `OK` + `outcome: "resolved"`. This answer is the one the operation carried on with.
 - `AlreadyResolved` → `OK` + `outcome: "already_resolved"`. Somebody answered the SAME clash first; the clash is settled, but with THEIR answer.
@@ -265,7 +265,7 @@ observable that a stored one was just REJECTED is the whole feedback signal.
 the parked copy for them; the agent path settles it instead (`archive-password-flow.svelte.ts::supplyStoredPassword` →
 `settleBirthOperation`, ❌ never `redispatchBirthOperation`). Two reasons it isn't merely conservative: that re-dispatch
 is a genuinely NEW operation — the backend already settled the old one, because `retain_failure` excludes
-`ArchiveNeedsPassword` by typed variant (`write_operations/DETAILS.md` § "Retained failures") — and a new operation
+`ArchiveNeedsPassword` by typed variant (`crates/cmdr-operations/src/DETAILS.md` § "Retained failures") — and a new operation
 started from inside an unlock would be the one write on this surface reaching disk with no confirmation dialog and no
 `autoConfirm` token in front of it. Sending the caller back through `copy` also sidesteps the re-dispatch's known hazard
 (it re-scans against birth context captured before the prompt, so a pane that moved meanwhile aims it at the wrong

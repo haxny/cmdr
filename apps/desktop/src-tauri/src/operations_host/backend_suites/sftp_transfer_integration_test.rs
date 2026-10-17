@@ -223,8 +223,8 @@ async fn sftp_integration_folders_copied_off_a_server_keep_their_dates() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 #[ignore = "needs the SFTP fixture stack: sftp-servers/start.sh (sftp-fixture)"]
 async fn sftp_integration_a_tagged_upload_reports_its_tags_and_an_untagged_one_nothing() {
-    use crate::file_system::write_operations::testing::{LostMetadata, LostMetadataClass, MetadataLeftBehind};
     use cmdr_fs::ignore_poison::IgnorePoison as _;
+    use cmdr_operations::testing::{LostMetadata, LostMetadataClass, MetadataLeftBehind};
 
     let (remote, dir) = fixture("app-metadata-loss").await;
     let local_dir = TestDir::new("sftp_metadata_loss");

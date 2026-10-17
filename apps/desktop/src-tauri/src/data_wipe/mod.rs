@@ -105,7 +105,7 @@ pub fn summary(app: &AppHandle) -> DataWipeSummary {
 /// app afterwards; until then, [`on_exit`] has the plan for one more pass.
 pub fn delete_all<R: Runtime>(app: &AppHandle<R>) -> Result<WipeReport, DataWipeError> {
     let running = crate::operations_host::operations()
-        .map(crate::file_system::write_operations::Operations::list_operations)
+        .map(cmdr_operations::Operations::list_operations)
         .unwrap_or_default()
         .iter()
         .filter(|op| crate::quit::blocks_quit(op))

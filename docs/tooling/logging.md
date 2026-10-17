@@ -194,7 +194,7 @@ Copy-paste commands for common debugging scenarios. All include `info` as the ba
 - **Reconcile, per PATH** (the queued anchors and the dirs that couldn't be read, both Trace):
   `RUST_LOG=cmdr_lib::indexing::reconcile=trace,info pnpm dev`
 - **Per-subtree churn** (needs `CMDR_CHURN_SPIKE`, see below): `RUST_LOG=cmdr_lib::indexing::churn=debug,info pnpm dev`
-- **File operations (copy/move/delete)**: `RUST_LOG=cmdr_lib::file_system::write_operations=debug,info pnpm dev`
+- **File operations (copy/move/delete)**: `RUST_LOG=cmdr_operations=debug,info pnpm dev`
 - **A transfer dialog that sits on 0 bytes, or on "Checking for conflicts..."**:
   `RUST_LOG=scan_preview=debug,conflict_scan=debug,info pnpm dev`. The scan preview logs its start, a 5 s heartbeat with
   running counts, and its outcome; the conflict check logs its start, the collision count, and which leg gave up. The

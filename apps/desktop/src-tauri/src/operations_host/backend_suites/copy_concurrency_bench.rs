@@ -78,8 +78,6 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::{Duration, Instant};
 
-use crate::file_system::write_operations::testing::{CollectorEventSink, TestOperations, copy_volumes_with_progress};
-use crate::file_system::write_operations::{ConflictResolution, OperationEventSink, VolumeCopyConfig};
 use crate::file_system::{set_smb_concurrency, smb_concurrency};
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::ignore_poison::IgnorePoison;
@@ -89,6 +87,8 @@ use cmdr_fs::volume::{
     smb_volume_id,
 };
 use cmdr_local::LocalPosixVolume;
+use cmdr_operations::testing::{CollectorEventSink, TestOperations, copy_volumes_with_progress};
+use cmdr_operations::{ConflictResolution, OperationEventSink, VolumeCopyConfig};
 use cmdr_smb::volume::MountAnchor;
 use cmdr_smb::volume::{SmbConnectionParams, connect_smb_volume};
 use std::future::Future;

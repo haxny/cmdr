@@ -10,11 +10,11 @@ use tauri::AppHandle;
 use tauri_specta::Event as _;
 
 use super::wire;
-use crate::file_system::write_operations::host::{
+use cmdr_operations::host::{
     AsideAttempt, EngineEvents, InstantMutationFact, InstantOp, InstantOutcome, InstantTarget, OperationErrorReport,
     TreeFailure,
 };
-use crate::file_system::write_operations::{MoveLeftoversKeptEvent, OperationsChanged, WriteProgressEvent};
+use cmdr_operations::{MoveLeftoversKeptEvent, OperationsChanged, WriteProgressEvent};
 
 /// Typed `volumes-busy-changed` Tauri event. Wraps the busy volume-ID list in a
 /// struct because `tauri_specta::Event` payloads must be named types (a bare
@@ -108,10 +108,10 @@ impl EngineEvents for TauriEngineEvents {
 /// The engine's module paths, as the targets its reports always carried. The
 /// log format and the report dispatch's per-chain filters key off a target, so
 /// these stay put wherever the code that raises them lives.
-const OVERWRITE_TARGET: &str = "cmdr_lib::file_system::write_operations::overwrite";
-const TRANSFER_TREE_TARGET: &str = "cmdr_lib::file_system::write_operations::transfer_tree";
-const LOCAL_COPY_TARGET: &str = "cmdr_lib::file_system::write_operations::transfer::copy";
-const VOLUME_COPY_TARGET: &str = "cmdr_lib::file_system::write_operations::transfer::volume::copy";
+const OVERWRITE_TARGET: &str = "cmdr_operations::overwrite";
+const TRANSFER_TREE_TARGET: &str = "cmdr_operations::transfer_tree";
+const LOCAL_COPY_TARGET: &str = "cmdr_operations::transfer::copy";
+const VOLUME_COPY_TARGET: &str = "cmdr_operations::transfer::volume::copy";
 
 /// Raises `report` through `log_error!`, in the words error-report bundles and
 /// log greps already know.

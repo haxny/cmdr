@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use cmdr_collation::NameCollator;
 
-use crate::file_system::write_operations::host::NameOrder;
+use cmdr_operations::host::NameOrder;
 
 /// `listings().collator()`, asked per call: the language can change between
 /// two transfers, and the listing engine keeps one collator per language.
@@ -63,7 +63,7 @@ mod tests {
         let mut by_app = entries.clone();
         crate::listing_host::backends::AppListings.sort_listing(&mut by_app);
         let mut by_test_host = entries;
-        crate::file_system::write_operations::host::testing::pane_order_host()
+        cmdr_operations::host::testing::pane_order_host()
             .listings()
             .sort_listing(&mut by_test_host);
 

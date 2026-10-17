@@ -159,7 +159,7 @@ risk.
   - **PDF parsing** in `inspect_file` runs under panic containment with size and time caps (`docs/security.md` § Cloud
     AI egress, the `inspect_file` item).
   - **Copy and delete** don't descend into symlinks, copy a link as a link, and write through temp+rename
-    (`apps/desktop/src-tauri/src/file_system/write_operations/DETAILS.md`).
+    (`crates/cmdr-operations/src/DETAILS.md`).
   - **Git**: read-only by construction. Cmdr never fetches, pushes, or runs hooks, and strips a repo's `filter` config
     before reading status, so a repo's own commands never run (`crates/cmdr-git/CLAUDE.md`).
   - **Size caps before allocating**: the xz dictionary an archive asks for is capped, and a PDF page whose `Parent`
@@ -205,8 +205,7 @@ risk.
     `crates/cmdr-s3/DETAILS.md` § Responses).
   - **A listed name can't escape the destination**: every cross-volume copy, move, and drag-out joins a name only as a
     `ChildName` (one plain path component), whatever the backend
-    (`apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/DETAILS.md` § "Listed names are
-    untrusted").
+    (`crates/cmdr-operations/src/transfer/volume/DETAILS.md` § "Listed names are untrusted").
   - **Typed error policy per backend**, so a server's error text never decides control flow (`AGENTS.md` § Hard rules).
 - **Residual risk**:
   - **Plaintext is the user's call**: WebDAV and custom S3 endpoints accept `http://`, which sends WebDAV's Basic auth

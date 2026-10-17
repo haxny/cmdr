@@ -420,10 +420,10 @@ case, so a look-alike twin is rare but not impossible.
   overwrite, a merge, a same-share move) must keep the stored bytes or it plants a twin. Why composed: a decomposed name
   on a share is one Finder over the kernel mount (composes on lookup), Windows, and Linux clients list and can't open,
   and every name older Cmdr builds wrote to a share is composed. A policy, one override to revert:
-  `apps/desktop/src-tauri/src/file_system/write_operations/DETAILS.md` § "Look-alike names".
+  `crates/cmdr-operations/src/DETAILS.md` § "Look-alike names".
 - **A name the share holds in another spelling is taken, never free**: a write that asked in the wrong spelling would
   stand a second, identical-looking entry beside it. The app's write layer finds it with one listing after a byte-exact
-  miss (`apps/desktop/src-tauri/src/file_system/write_operations/DETAILS.md` § "Look-alike names"). Docker-pinned by
+  miss (`crates/cmdr-operations/src/DETAILS.md` § "Look-alike names"). Docker-pinned by
   `operations_host/backend_suites/smb_look_alike_test.rs`.
 
 ### Resolving a foreign path
@@ -592,8 +592,7 @@ pinned to the old root would keep feeding paths that no longer name anything.
 
 ## Dates on copies
 
-The contract: `apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/DETAILS.md` § "Copies keep the
-source's metadata".
+The contract: `crates/cmdr-operations/src/transfer/volume/DETAILS.md` § "Copies keep the source's metadata".
 
 - **Source half: both foreground read paths report the server's `LastWriteTime` and `CreationTime`** (the streamed
   download and the hinted one-frame compound read), from the read's own CREATE response: `FileDownload::info()` on the
@@ -636,9 +635,9 @@ source's metadata".
 
 ## Hidden and Locked on copies
 
-The contract: `apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/DETAILS.md` § "Copies keep the
-source's metadata". Finder's Locked is the DOS `READONLY` attribute, its Hidden is `HIDDEN` (`mapping.rs`:
-`user_flags_of`, `attributes_of`). Append-only and no-dump have no attribute and drop.
+The contract: `crates/cmdr-operations/src/transfer/volume/DETAILS.md` § "Copies keep the source's metadata". Finder's
+Locked is the DOS `READONLY` attribute, its Hidden is `HIDDEN` (`mapping.rs`: `user_flags_of`, `attributes_of`).
+Append-only and no-dump have no attribute and drop.
 
 - **Reads ride the CREATE response a read already gets**: `FileInfo.attributes` on both read paths (`streams.rs`), so a
   file's flags cost no frame. A folder has no read, so `folder_metadata` spends one `stat` (`attributes.rs`); the app
@@ -678,9 +677,9 @@ behind, and the loss note says so (`METADATA_CAPS` claims no `XATTRS`). Tracked 
 - **Ordering**: written as streams on the staged temp before its landing rename, like any staged xattr; read off the
   CREATE plus a stream enumeration the read can compound.
 - **The Finder-mounted share already keeps them** (the native chunked arm through `smbfs`; on the Docker fixture, which
-  has no `vfs_fruit`, as `._` sidecars, and a resource fork is lost:
-  `apps/desktop/src-tauri/src/file_system/write_operations/transfer/DETAILS.md` § "Local copies stage"). The QNAP-shaped
-  `vfs_fruit` answer is unverified until a `fruit` fixture exists, which comes with smb2#9.
+  has no `vfs_fruit`, as `._` sidecars, and a resource fork is lost: `crates/cmdr-operations/src/transfer/DETAILS.md` §
+  "Local copies stage"). The QNAP-shaped `vfs_fruit` answer is unverified until a `fruit` fixture exists, which comes
+  with smb2#9.
 
 ## Server-side copy (copychunk)
 
@@ -784,8 +783,8 @@ cap stays clear of a healthy session and bites only where it must, on a server w
 the setting asks for. Per-file sizing would be the accurate answer, and it belongs at the read, not here: it would need
 the transfer driver to budget slots by size rather than by count.
 
-Only the transfer driver reads `max_concurrent_ops` (`write_operations/transfer/volume/copy.rs`), so this clamp never
-slows a listing, a stat, or the watcher; those share the same window and are better off for the headroom.
+Only the transfer driver reads `max_concurrent_ops` (`crates/cmdr-operations/src/transfer/volume/copy.rs`), so this
+clamp never slows a listing, a stat, or the watcher; those share the same window and are better off for the headroom.
 
 ## Decisions
 
@@ -915,8 +914,8 @@ for NEGOTIATE and SESSION_SETUP, then restore smb2's 30 s default before TreeCon
 
 `SmbVolume::connection_liveness()` reads the `ServerUnresponsive` verdict as pollable state (`Connection::liveness()`),
 before any request has paid for it, off a handle swapped in lockstep with the client (`src/volume/liveness.rs`, which
-owns the mapping). What the transfer watchdog does with it: `write_operations/transfer/DETAILS.md` § "The watchdog
-ACTS".
+owns the mapping). What the transfer watchdog does with it: `crates/cmdr-operations/src/transfer/DETAILS.md` § "The
+watchdog ACTS".
 
 **The numbers stay as they are, and the case for widening them is closed.** The base deadline no longer has to be sized
 for the slowest healthy case, because the ECHO stretch already covers a connection that is alive but busy; and a breach
@@ -1006,18 +1005,18 @@ compound frame = 1 RTT) and `Tree::write_file_compound` (CREATE+WRITE+FLUSH+CLOS
 `write_file_compound_exclusive` (`FileCreate`) for `WriteMode::CreateNew`, the same pair as `create_file_writer` /
 `create_file_writer_exclusive` on the streaming path, so every branch of `write_from_stream` (the frame, a staging
 temp's streamed fallback, a too-big write) honors the mode (why the mode matters:
-`apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/DETAILS.md` § "The single-shot exemption"). The
-copy pipeline feeds per-file size hints from the pre-copy scan; when the size is known and fits the threshold, we take
-the compound path. The read side stops at what the link moves in 250 ms (smb2's `quick_read_limit`: one 512 KiB chunk
-until a download of two or more chunks has measured the link, then `rate × 250 ms`, capped at `max_read_size`; the rate
-expires after 30 s and a reconnect clears it), because a bigger compound READ carries the whole file with no progress,
-queued ahead of every listing on the connection (cmdr-reports#15: 23 s for 8 MiB at 375 KB/s), while `Tree::download`
-streams it through an adaptive read-ahead. Under the limit, the compound saves the stream's CREATE round trip. The rate
-is the link's capacity (timed from READ answers that queued behind each other), not the last download's pace, so on a
-fast link the limit rises well past what a small window's pace would give; it still errs low. The 250 ms is a fixed
-budget for how long a listing may wait behind one frame, deliberately apart from the read-ahead window's own headroom,
-which smb2 learns per connection (30–500 ms) and which shrinks to tens of milliseconds on a quiet LAN, where a cut-off
-tied to it would stream small files at an extra round trip or two each. The arithmetic stays in smb2. The numbers sit on
+`crates/cmdr-operations/src/transfer/volume/DETAILS.md` § "The single-shot exemption"). The copy pipeline feeds per-file
+size hints from the pre-copy scan; when the size is known and fits the threshold, we take the compound path. The read
+side stops at what the link moves in 250 ms (smb2's `quick_read_limit`: one 512 KiB chunk until a download of two or
+more chunks has measured the link, then `rate × 250 ms`, capped at `max_read_size`; the rate expires after 30 s and a
+reconnect clears it), because a bigger compound READ carries the whole file with no progress, queued ahead of every
+listing on the connection (cmdr-reports#15: 23 s for 8 MiB at 375 KB/s), while `Tree::download` streams it through an
+adaptive read-ahead. Under the limit, the compound saves the stream's CREATE round trip. The rate is the link's capacity
+(timed from READ answers that queued behind each other), not the last download's pace, so on a fast link the limit rises
+well past what a small window's pace would give; it still errs low. The 250 ms is a fixed budget for how long a listing
+may wait behind one frame, deliberately apart from the read-ahead window's own headroom, which smb2 learns per
+connection (30–500 ms) and which shrinks to tens of milliseconds on a quiet LAN, where a cut-off tied to it would stream
+small files at an extra round trip or two each. The arithmetic stays in smb2. The numbers sit on
 `fits_one_compound_read`. The scan pool's prefetch keeps `max_read_size` on purpose (§ "SMB scan-connection pool", the
 reads bullet). Falls back cleanly to the streaming reader/writer when the hint is missing or the file is too big. Small
 compound reads return a `Vec<u8>` wrapped as a single-chunk `InlineReadStream` so the consumer API stays shaped the
@@ -1035,7 +1034,7 @@ limit, the fast path takes the frame for every size such a promise could cover (
 takes today's limit, the real name keeps `max_write`, because the limit moves with every upload and expires after 30 s),
 and the transfer layer skips its `.cmdr-tmp-*` staging on the strength of that answer. What the backend owes in return
 (short sources stay on the compound path, a post-CREATE failure cleans up after itself):
-`write_operations/transfer/DETAILS.md` § "The single-shot exemption".
+`crates/cmdr-operations/src/transfer/volume/DETAILS.md` § "The single-shot exemption".
 
 **Decision**: a streamed read (`open_smb_download_stream`) ends the consumer's stream at its last byte, before the
 CLOSE's answer **Why**: smb2's `FileDownload::next_chunk` puts the CLOSE on the wire before it hands out the last chunk,

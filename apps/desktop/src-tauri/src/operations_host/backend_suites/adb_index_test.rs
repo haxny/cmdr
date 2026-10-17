@@ -23,11 +23,11 @@ use super::adb_transfer_test::{dialed_phone_with, registered_local};
 use super::network_transfer_test_support::start_copy_by_id;
 use crate::adb::device_provider::apply_device_list;
 use crate::file_system::index_provider::AppVolumeProvider;
-use crate::file_system::write_operations::testing::new_operation_state;
-use crate::file_system::write_operations::testing::{CollectorEventSink, delete_volume_files_for_test};
-use crate::file_system::write_operations::{VolumeCopyConfig, WriteOperationConfig};
 use crate::operations_host::app_engine;
 use crate::test_support::wait_until_async;
+use cmdr_operations::testing::new_operation_state;
+use cmdr_operations::testing::{CollectorEventSink, delete_volume_files_for_test};
+use cmdr_operations::{VolumeCopyConfig, WriteOperationConfig};
 
 /// A backstop for a whole walk of the fake phone, far above the fraction of a
 /// second it takes on loopback, and under nextest's slow-test cutoff so a stuck

@@ -24,11 +24,11 @@ use super::network_gated_source_test_support::{gated_files, gated_upload};
 use super::network_transfer_test_support::{budget, read_all, run_copy, run_copy_on, sha256, start_copy};
 use crate::file_system::VolumeManager;
 use crate::file_system::volume::manager::get_volume_manager;
-use crate::file_system::write_operations::testing::{CollectorEventSink, Reversal, TestOperationLog};
-use crate::file_system::write_operations::{
+use crate::operations_host::app_engine;
+use cmdr_operations::testing::{CollectorEventSink, Reversal, TestOperationLog};
+use cmdr_operations::{
     ConflictResolution, OperationEventSink, Operations, ScanCostFacts, VolumeCopyConfig, WriteOperationConfig,
 };
-use crate::operations_host::app_engine;
 
 use crate::s3_costs::{CostedOperation, planned_workloads};
 use crate::test_support::TestDir;

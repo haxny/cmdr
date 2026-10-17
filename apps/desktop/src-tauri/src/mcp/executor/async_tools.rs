@@ -4,11 +4,11 @@ use serde_json::{Value, json};
 use tauri::{AppHandle, Manager, Runtime};
 
 use super::{PaneStateStore, ToolError, ToolResult, mcp_round_trip};
-use crate::file_system::write_operations::{LifecycleStatus, Operations, WriteOperationType};
 use crate::mcp::pane_state::{PaneListing, PaneState};
 use crate::mcp::resources::indexing::freshness_token;
 use crate::mcp::terminal_ops::{self, TerminalStatus};
 use cmdr_index::Freshness;
+use cmdr_operations::{LifecycleStatus, Operations, WriteOperationType};
 
 // ── Await tool ────────────────────────────────────────────────────────
 

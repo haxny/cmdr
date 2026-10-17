@@ -24,31 +24,31 @@
       "lines": 1217,
       "reason": "One test module for the error-report bundle (manifest shape, zip contents, redaction, note and email handling, ids, and capping), sharing one set of manifest and zip-reading fixtures; `privacy_tests` already splits off the privacy cases, and splitting further would scatter those fixtures across siblings without making any test easier to find."
     },
-    "apps/desktop/src-tauri/src/file_system/write_operations/archive_edit/copy_into.rs": {
+    "crates/cmdr-operations/src/archive_edit/copy_into.rs": {
       "lines": 800,
       "reason": "TODO: pulling the sources is its own concern beside the changeset planning. Move `MaterializedSources` (with its impl), `materialize_sources`, and `pull_one_source` into `archive_edit/copy_into_sources.rs`, about 150 lines out. What stays is the two routing entry points, the changeset builders, `plan_file_add`, and `archive_copy_into_start`."
     },
-    "apps/desktop/src-tauri/src/file_system/write_operations/delete/walker.rs": {
+    "crates/cmdr-operations/src/delete/walker.rs": {
       "lines": 942,
       "reason": "TODO: this is two delete engines in one file, sharing imports and nothing else. Split at the banner on line 259: `delete_files_with_progress_inner` (the `walkdir` plus `fs::remove_*` local path, about 230 lines) stays in `walker.rs`, and `VolumeDeleteEntry`, `VolumeScanTracker`, `scan_volume_recursive`, `emit_cancelled_if_aborted`, and `delete_volume_files_with_progress_inner` (about 700 lines) move to `volume_walker.rs`, beside the existing `volume_start.rs` that already holds the volume delete's managed lifecycle for the same reason. `delete/CLAUDE.md` already describes them as parallel paths with `delete_files_start` routing by `volume_id`, and the test siblings are split the same way (`delete_cancel_tests.rs` against the local path, `volume_cancel_tests.rs` and `delete_volume_reuse_tests.rs` against the volume one)."
     },
-    "apps/desktop/src-tauri/src/file_system/write_operations/manager.rs": {
+    "crates/cmdr-operations/src/manager.rs": {
       "lines": 1108,
       "reason": "TODO: the admission state machine is still buried under code that never touches its lock (the wire types already live in `manager/wire.rs`, and reordering in `manager/reorder.rs`). Move the two RAII guards (`ManagedTaskGuard`, `InstantTaskGuard`, about 85 lines), the retained-failure block (`FAILURE_CAPACITY`, `record_failure`, `dismiss_failure`, `dismiss_all_failures`, about 110 lines, whose out-of-band lifetime is the one piece of manager state that outlives a record), and the thin free-function facade at the bottom (`list_operations` through `dismiss_all_failed_operations`, about 95 lines) into children of the existing `manager/` directory. That leaves roughly 750 lines: `ManagerInner`, `OpRecord`, and the `spawn_managed` / `run_admission_pass` / `on_settled` / `free_and_remove` / `cancel_if_queued` machinery that genuinely has to share one `Mutex`."
     },
-    "apps/desktop/src-tauri/src/file_system/write_operations/transfer/copy/mod.rs": {
+    "crates/cmdr-operations/src/transfer/copy/mod.rs": {
       "lines": 802,
       "reason": "TODO: the local copy driver plus the helpers its terminal paths share (committing a transaction with its created dirs journaled, keeping a displaced original on stop or failure). Move `commit_journaling_created_dirs`, `stop_keeping_displaced_aside`, and `fail_keeping_displaced_aside` into `copy/settle.rs`, about 80 lines out."
     },
-    "apps/desktop/src-tauri/src/file_system/write_operations/transfer/transfer_driver_async_tests.rs": {
+    "crates/cmdr-operations/src/transfer/transfer_driver_async_tests.rs": {
       "lines": 1289,
       "reason": "TODO: the pause-gate band is a separate suite wearing the same filename. Its tail (`async_driver_parks_while_paused_then_resumes_to_completion` and `async_driver_cancel_while_paused_unblocks_and_cancels`, plus the 15-line comment explaining their per-file `Semaphore` harness) cover the pause gate rather than the driver's transfer loop, run on a four-worker runtime where every other test runs on two, and account for about 230 lines. Move them to `transfer_driver_async_pause_tests.rs`, which follows the split this directory already uses (`transfer_driver_sync_tests.rs`, `transfer_driver_concurrent_tests.rs`, `transfer_driver_pre_skip_tests.rs`), and lift the three closure-shape aliases (`FetchFut`, `ResolveFut`, `TransferFut`) into `transfer_driver_test_support.rs` so both files share them. That leaves about 990 lines covering data safety, conflict resolution, progress accounting, dest derivation, ordering, and the `Send` guard, with the module doc's coverage map trimmed to match."
     },
-    "apps/desktop/src-tauri/src/file_system/write_operations/transfer/transfer_probe.rs": {
+    "crates/cmdr-operations/src/transfer/transfer_probe.rs": {
       "lines": 983,
       "reason": "TODO: the file holds a recorder and the watchdog that reads it, and they part cleanly. Move the watchdog into a `transfer_probe/watchdog.rs` child (a child module still reaches the parent's private fields, the way `mod vocabulary` already works here): `WatchdogState`, `spawn_watchdog`, the `STALL_TICK` / `STALL_AFTER` / `STALL_ABORT_AFTER` / `HEARTBEAT_AFTER_SECS` constants with `stall_abort_after`, `stall_abort_override`, and `StallAbortGuard`, plus an `impl OperationProbe` block carrying `watchdog_step`, `connection_proven_dead`, `restart_task_stillness`, `track_and_abort_wedged_tasks`, and `emit_heartbeat`. That is about 345 lines, most of the file's heaviest prose (the four-guard rationale, the QNAP keepalive false-positive measurement, the `ERR-AYVM4` note) included. What stays is about 570 lines of `TaskProbe`, `OperationProbe`, `TaskProbeHandle`, the `CURRENT_TASK_PROBE` task-local accessors, and the `render_dump` reporting the incident doc points at; the engine's probe table (`Probes`), `register_operation`, and its guard already live in `transfer_probe_registry.rs`."
     },
-    "apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/copy.rs": {
+    "crates/cmdr-operations/src/transfer/volume/copy.rs": {
       "lines": 1316,
       "reason": "TODO: the managed entry point and the engine are two jobs. Move `copy_between_volumes` (volume-capability validation, the both-local shortcut that converts a `VolumeCopyConfig` and delegates to the local pipeline, and the `spawn_managed` wiring, about 285 lines) and `scan_for_volume_copy` (the dialog's preview scan, about 95 lines) into a `copy_start.rs` sibling, mirroring `delete/volume_start.rs`, which exists for exactly this reason. What remains is about 930 lines including roughly 80 lines of `#[cfg(test)] #[path]` declarations for 24 suites, and it holds together: `copy_volumes_with_progress` is one phase runner from the dest-inside-source guard through Phase 0.5 create, temp reaping, `DestNameIndex` build, preflight scan, space check, bulk skip, driver call, and the rollback-or-cancel tail, threading about 25 locals end to end. Its two drivers already left for `copy_concurrent.rs` and `copy_serial.rs` behind 25-field and 20-field context structs, so carving out the terminal tail as well would mean a third such struct and read worse than what is there."
     },
@@ -60,23 +60,23 @@
       "lines": 823,
       "reason": "This is one `#[ignore]`d measurement harness with a single entry point, `concurrency_bench_sweep_window_against_wall_clock`, and the file-length check gives it the 800-line source budget only because its name ends in `_bench.rs` rather than `_tests.rs`. About 90 lines are the runbook module doc (how to run it against Docker or the NAS, the nine environment knobs, and why the numbers are shaped the way they are), and about 100 more are the `Volume` trait boilerplate for `FixedConcurrencySource`, the wrapper that sweeps the window by reporting a fixed `max_concurrent_ops`. The rest is fixtures nothing else uses (`Corpus`, `build_corpus`, `Shape`, `DestMode`, `bench_content`, `timed_copy`, `connect_target`, `serial_precheck_floor`, `median`), so splitting would scatter them for no reader's benefit."
     },
-    "apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/merge.rs": {
+    "crates/cmdr-operations/src/transfer/volume/merge.rs": {
       "lines": 887,
       "reason": "One merge level's create-list-decide-dispatch loop, kept together because every child decision reads the level's creation fact (fresh vs merged) and the destination index built beside it; the remaining helpers (`backend_create_directory_detects_collisions`, the resolver call) are already out in `landing.rs` and `merge_ctx.rs`."
     },
-    "apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/move_cross.rs": {
+    "crates/cmdr-operations/src/transfer/volume/move_cross.rs": {
       "lines": 816,
       "reason": "One serial driver for the cross-volume move pipeline (staging, journaling, stall registration, source sweep). Its length is load-bearing why-comments on data-safety paths, which a split across files would scatter rather than shorten."
     },
-    "apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/move_same.rs": {
+    "crates/cmdr-operations/src/transfer/volume/move_same.rs": {
       "lines": 846,
       "reason": "TODO: `move_within_same_volume_with_progress` is one function holding two long driver closures. Lift the transfer closure's body (the dir-vs-dir rename-merge branch, the displaced-destination rename, and the journal row) into a `move_same_item.rs` taking a small `SameVolumeItem` context struct, about 180 lines, the way `move_cross.rs` delegates its byte work to `strategy.rs`; what stays is the dispatcher, the guards, the copy-route hand-off (`moves_by_copy`), and the resolver closure."
     },
-    "apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/strategy_test_support.rs": {
+    "crates/cmdr-operations/src/transfer/volume/strategy_test_support.rs": {
       "lines": 1245,
       "reason": "TODO: split it, because it is 13 unrelated `Volume` / `VolumeReadStream` doubles serving nine suites and the seams show in who reads what. `RecursiveDeleteVolume` and `UndeletableSource` (lines 371-502, ~130 lines) have no `strategy_*` consumer at all; their readers are `cleanup_tests.rs`, `conflict_tests.rs`, and `move_failure_tests.rs`, so they belong in a `cleanup_test_support.rs`. The auto-yield cluster `ReleasingStream` + `ReleasingSource` + `AutoYieldTuningGuard` + `YieldingSource` + `NeverPendingYieldSource` (lines 765-1129, ~365 lines) is read only by `strategy_yield_tests.rs`, `strategy_dest_yield_tests.rs`, and `copy_wedge_test_support.rs`, and should join the existing `strategy_dest_yield_test_support.rs` or get its own `strategy_yield_test_support.rs`. `FlakyDest` (~125 lines) pairs with `strategy_retry_tests.rs`. That leaves the abort and stale-handle doubles (`SlowChunkedStream`, `SlowSource`, `FailOnceStaleDest`, `WedgedThenWorkingDest`, `WedgedOpenSource`, `TierOneWitnessDest`) at ~500 lines here. The header comment still claims four suites, so the file has outgrown its own description, and note that a `_test_support.rs` name gets the 800-line budget, not the 1,200-line test one."
     },
-    "apps/desktop/src-tauri/src/file_system/write_operations/types/events.rs": {
+    "crates/cmdr-operations/src/types/events.rs": {
       "lines": 927,
       "reason": "Every payload the backend broadcasts about a write operation, plus the enums only those payloads carry, by the rule in its own header: one place to read the whole wire vocabulary the frontend listens to. Splitting by event would scatter that vocabulary without making any one payload easier to find."
     },

@@ -13,9 +13,9 @@ use tokio::time::Duration;
 
 use crate::file_system::volume::Volume;
 use crate::file_system::volume::io_budget_for_volume;
-use crate::file_system::write_operations::{BulkRenameRow, RenameStartError, SourceFingerprint};
 use cmdr_fs::deadline::{Deadline, blocking_typed_result_with_timeout, timeout_detached_within};
 use cmdr_operation_log::types::Initiator;
+use cmdr_operations::{BulkRenameRow, RenameStartError, SourceFingerprint};
 
 use super::error::MultiRenameError;
 use super::plan::PreviewRow;
@@ -89,7 +89,7 @@ async fn remote_rows(
 /// exactly that. Returns once the operation has started; progress, the queue,
 /// and Undo follow it by its id.
 pub(crate) async fn apply(
-    events: Arc<dyn crate::file_system::write_operations::OperationEventSink>,
+    events: Arc<dyn cmdr_operations::OperationEventSink>,
     session_id: String,
     preview_id: u64,
 ) -> Result<MultiRenameStarted, MultiRenameError> {

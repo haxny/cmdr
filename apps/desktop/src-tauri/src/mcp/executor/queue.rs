@@ -14,10 +14,10 @@
 use serde_json::{Value, json};
 
 use super::{ToolError, ToolResult};
-use crate::file_system::write_operations::{
+use crate::pluralize::pluralize;
+use cmdr_operations::{
     LifecycleStatus, OperationSnapshot, Operations, PauseAllOutcome, PauseOutcome, SourcesGoneAnswerOutcome,
 };
-use crate::pluralize::pluralize;
 
 /// The app's engine, or `None` before `install`, where every answer is what an
 /// engine with nothing running gives.
@@ -304,9 +304,9 @@ fn is_controllable(operations: &[OperationSnapshot], operation_id: &str) -> bool
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::file_system::write_operations::testing::QueuedOperationFixture;
-    use crate::file_system::write_operations::{WriteOperationError, WriteOperationType};
     use crate::operations_host::app_engine;
+    use cmdr_operations::testing::QueuedOperationFixture;
+    use cmdr_operations::{WriteOperationError, WriteOperationType};
 
     fn row(operation_id: &str, status: LifecycleStatus) -> OperationSnapshot {
         OperationSnapshot {

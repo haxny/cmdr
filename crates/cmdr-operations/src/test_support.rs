@@ -1,0 +1,192 @@
+//! Cross-cutting write-operation test fixtures: a placeholder conflict, the one
+//! sanctioned "a park is holding" wait, and a real queued operation for suites
+//! outside this module.
+//!
+//! Per-driver fixtures (fake volumes, gated sources, collector sinks) stay in
+//! their own module's `test_support`, like `transfer/test_support.rs`.
+
+use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::time::Duration;
+
+use tokio::sync::oneshot;
+
+use super::Operations;
+use super::manager::{OperationDescriptor, OperationSummaryText};
+#[cfg(test)]
+use super::types::{ConflictId, WriteConflictEvent};
+use super::types::{LifecycleStatus, WriteOperationType};
+use cmdr_fs::volume::LaneKey;
+
+#[cfg(test)]
+/// A stand-in `write-conflict` event for a test that arms the conflict slot only
+/// to park an operation, and never reads the question back.
+///
+/// Arming takes the question it is arming for, so a test that cares about
+/// nothing but the park still has to supply one. Passing this by name
+/// (`slot.arm(tx, placeholder_conflict)`) says exactly that at the call site,
+/// and keeps a dozen irrelevant fields out of it.
+pub(crate) fn placeholder_conflict(conflict_id: ConflictId) -> WriteConflictEvent {
+    WriteConflictEvent {
+        operation_id: "op-under-test".to_string(),
+        conflict_id,
+        source_path: "/src/placeholder.txt".to_string(),
+        destination_path: "/dst/placeholder.txt".to_string(),
+        source_size: Some(1),
+        destination_size: Some(2),
+        source_modified: None,
+        destination_modified: None,
+        destination_is_newer: false,
+        size_difference: Some(1),
+        source_is_directory: false,
+        destination_is_directory: false,
+        destination_is_look_alike: false,
+    }
+}
+
+#[cfg(test)]
+/// How long a "the op is parked" window runs. Long enough that a running op would
+/// have advanced several units inside it, short enough to keep the suites quick.
+pub(crate) const PARK_WINDOW: Duration = Duration::from_millis(40);
+
+#[cfg(test)]
+/// Asserts a park is HOLDING: waits one [`PARK_WINDOW`] for whatever was already
+/// in flight to drain into the park, samples `progress`, then holds a second
+/// window and asserts the sample never moved. Returns the parked value.
+///
+/// "Nothing happened" has no signal to wait on, so a window is the only evidence
+/// available. Give the op an unlimited budget first (lift the chunk or file gate)
+/// so a frozen count can only mean the park is holding, never a starved source.
+///
+/// Every frozen-progress check in the write-operation suites routes through here,
+/// which is why these are the only two fixed waits left in them: keep it that way
+/// rather than sprinkling `sleep` back into the tests.
+pub(crate) async fn park_holds_at(progress: impl Fn() -> u64, what: &str) -> u64 {
+    // Let whatever was already past its checkpoint finish, so the sample below is the parked
+    // value rather than a mid-flight one. No signal marks "the op reached its park".
+    // allowed-test-sleep: no signal exists for "the op is now parked"; a window is the only evidence.
+    tokio::time::sleep(PARK_WINDOW).await;
+    let frozen = progress();
+    // The negative assertion itself: a running op would advance several units across this window,
+    // so a stable value is what proves the park is holding.
+    // allowed-test-sleep: negative assertion over a window; "nothing advanced" has nothing to await.
+    tokio::time::sleep(PARK_WINDOW).await;
+    assert_eq!(progress(), frozen, "{what}");
+    frozen
+}
+
+/// A process-unique operation id, since a fixture on the app's one engine shares
+/// it with every app-side cell. The counter alone would collide across
+/// concurrently-running test binaries, so the pid goes in too.
+fn unique_op_id(tag: &str) -> String {
+    static N: AtomicU64 = AtomicU64::new(0);
+    format!(
+        "test-{tag}-{}-{}",
+        std::process::id(),
+        N.fetch_add(1, Ordering::Relaxed)
+    )
+}
+
+/// A real `Queued` operation, waiting behind a holder that owns a private lane
+/// until this fixture drops.
+///
+/// **Why this exists.** A suite OUTSIDE this module has no way to produce a
+/// queued row (`manager` is private here, and a real transfer needs a busy
+/// device), yet the consumers that misread one live out there: the MCP `queue`
+/// tool answered "OK: Paused …" for a queued operation that pause is documented
+/// to leave alone. Two synthetic operations on one private lane reproduce the
+/// state exactly, with no I/O and no reach into another test's operations.
+pub struct QueuedOperationFixture {
+    holder_id: String,
+    queued_id: String,
+    /// Releases, holder first. `Drop` sends both so each operation settles and
+    /// the lane frees for the rest of the process.
+    releases: Vec<oneshot::Sender<()>>,
+}
+
+impl QueuedOperationFixture {
+    /// Registers the holder (admitted at once, since its lane is fresh) and then
+    /// the operation that queues behind it.
+    ///
+    /// Admission runs inside `spawn_managed`, so both statuses are already
+    /// settled when this returns; it asserts them rather than waiting, which
+    /// makes a manager change that breaks the premise fail here instead of
+    /// silently weakening whatever test uses the fixture.
+    ///
+    /// On `engine`: a test's own, or the app's (`operations_host::app_engine()`)
+    /// for a cell whose subject reaches the app's engine itself.
+    pub fn park_on(engine: &Operations, tag: &str) -> Self {
+        Self::park_naming_on(engine, tag, Vec::new(), Vec::new())
+    }
+
+    /// [`Self::park_on`], with each operation naming volumes as its source or
+    /// destination: `holder` for the running one, `queued` for the one waiting.
+    /// How a suite outside this module holds a transfer on a place.
+    pub fn park_naming_on(engine: &Operations, tag: &str, holder: Vec<String>, queued: Vec<String>) -> Self {
+        let manager = engine.manager();
+        let lane = LaneKey::new(unique_op_id(&format!("{tag}-lane")));
+        let holder_id = unique_op_id(&format!("{tag}-holder"));
+        let queued_id = unique_op_id(&format!("{tag}-queued"));
+
+        let mut releases = Vec::new();
+        for (id, volume_ids) in [(&holder_id, holder), (&queued_id, queued)] {
+            let (release_tx, release_rx) = oneshot::channel();
+            releases.push(release_tx);
+            let settle_id = id.clone();
+            manager.spawn_managed(
+                OperationDescriptor {
+                    operation_id: id.clone(),
+                    operation_type: WriteOperationType::Copy,
+                    lanes: vec![lane.clone()],
+                    volume_ids,
+                    summary: OperationSummaryText::default(),
+                    supports_rollback: false,
+                    preview_id: None,
+                    reverses: None,
+                },
+                Arc::new(engine.new_operation_state(Duration::from_millis(50))),
+                Box::new(move |ops: Operations| {
+                    Box::pin(async move {
+                        let _ = release_rx.await;
+                        ops.manager().on_settled(&settle_id);
+                    })
+                }),
+            );
+        }
+
+        assert_eq!(
+            manager.lifecycle_status(&holder_id),
+            Some(LifecycleStatus::Running),
+            "the holder takes its own fresh lane, so admission runs it immediately"
+        );
+        assert_eq!(
+            manager.lifecycle_status(&queued_id),
+            Some(LifecycleStatus::Queued),
+            "the second operation shares the lane, so it waits"
+        );
+
+        Self {
+            holder_id,
+            queued_id,
+            releases,
+        }
+    }
+
+    /// The id of the operation holding the lane, `Running` until this drops.
+    pub fn holder_id(&self) -> &str {
+        &self.holder_id
+    }
+
+    /// The id of the operation sitting `Queued`.
+    pub fn queued_id(&self) -> &str {
+        &self.queued_id
+    }
+}
+
+impl Drop for QueuedOperationFixture {
+    fn drop(&mut self) {
+        for release in self.releases.drain(..) {
+            let _ = release.send(());
+        }
+    }
+}

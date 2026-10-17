@@ -113,11 +113,11 @@ the chip swaps its bar for a `<Spinner>` rather than falling back from bytes to 
 dedicated "Scanning…" tooltip. Compression finishing uses the same phase-specific label as the dialog and queue, and its
 spoken label omits percentage text entirely. `progress-readout.ts` owns the shared phase classifier and labels.
 
-A scan can be PAUSED (the walk parks on the operation's own gate — `write_operations/DETAILS.md` § "The park"), and then
-both of those become claims the chip can't make. The spinner goes away entirely: it is the visible assertion that the
-walk is moving, and `chipLabel` already reads "Paused". The tooltip takes the SPOKEN sentence instead of "Scanning…",
-because that one carries `chipLabel` — a bare "Scanning…" hovering over a chip that says "Paused" is the same walk
-described two ways, and only one of them is true.
+A scan can be PAUSED (the walk parks on the operation's own gate — `crates/cmdr-operations/src/DETAILS.md` § "The
+park"), and then both of those become claims the chip can't make. The spinner goes away entirely: it is the visible
+assertion that the walk is moving, and `chipLabel` already reads "Paused". The tooltip takes the SPOKEN sentence instead
+of "Scanning…", because that one carries `chipLabel` — a bare "Scanning…" hovering over a chip that says "Paused" is the
+same walk described two ways, and only one of them is true.
 
 The SPOKEN label is its own key, `queue.chip.scanningAriaLabel` ("{label}, scanning. Open the operation queue."), not
 the tooltip's string. It's `queue.chip.ariaLabel` with the percentage swapped for the state word, so the scan state
@@ -182,7 +182,7 @@ re-trigger itself.
 count and the destination drop out when there's nothing to say (no progress yet, or a delete with no destination), and
 so does the trailing time left while the estimate is warming up. It STAYS through a pause, like every other surface
 showing that operation: the backend keeps the seconds a person spends deciding out of its rate window, so the countdown
-is still what remains once they resume (`write_operations/DETAILS.md` § "ETA + throughput").
+is still what remains once they resume (`crates/cmdr-operations/src/DETAILS.md` § "ETA + throughput").
 
 - **It leads with `chipLabel`, not the verb**, so a chip reading "Paused" can't open a line claiming the copy is running
   right now. English's aspect-free "Copying" hid that; zh's `正在拷贝` states it outright. The cost is that a paused

@@ -66,10 +66,10 @@ use super::s3_transfer_integration_test::{
     copying_between_buckets_lands_every_byte, copying_off_a_bucket_lands_every_byte,
     copying_onto_a_bucket_lands_every_byte_and_the_mtime, scenario,
 };
-use crate::file_system::write_operations::{ConflictResolution, VolumeCopyConfig, WriteOperationError};
 use crate::test_support::TestDir;
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_local::LocalPosixVolume;
+use cmdr_operations::{ConflictResolution, VolumeCopyConfig, WriteOperationError};
 
 const MIB: usize = 1024 * 1024;
 

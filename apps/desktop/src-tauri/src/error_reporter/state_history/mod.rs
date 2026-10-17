@@ -5,7 +5,6 @@
 //! manifest is assembled. Nothing here writes to logs or disk.
 
 use crate::file_system::volume::friendly_error::{ErrorCategory, ListingErrorReason};
-use crate::file_system::write_operations::{LifecycleStatus, WriteOperationPhase, WriteOperationType};
 use crate::ignore_poison::IgnorePoison;
 use crate::mcp::PaneStateStore;
 use crate::mcp::listing_errors::RecentListingError;
@@ -13,6 +12,7 @@ use crate::mcp::pane_state::PaneState;
 use crate::mcp::resources::volumes::VolumeSummary;
 use crate::redact::RedactionContext;
 use chrono::{DateTime, Utc};
+use cmdr_operations::{LifecycleStatus, WriteOperationPhase, WriteOperationType};
 use std::collections::VecDeque;
 use std::sync::{LazyLock, Mutex};
 use std::time::{Duration, Instant};

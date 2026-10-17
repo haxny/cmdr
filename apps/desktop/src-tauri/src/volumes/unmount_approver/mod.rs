@@ -265,7 +265,7 @@ impl Host for AppHost {
 
     fn busy_volume_ids(&self) -> Vec<String> {
         crate::operations_host::operations()
-            .map(crate::file_system::write_operations::Operations::busy_volume_ids)
+            .map(cmdr_operations::Operations::busy_volume_ids)
             .unwrap_or_default()
     }
 

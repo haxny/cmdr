@@ -13,7 +13,7 @@ a disposable cache. A Tauri-free crate hosted by the app's `operation_log_host/`
 - `handle.rs` — `OperationLog` (journal slot, writer, the `recording.rs` gate) and `OpJournal`.
 - `query.rs` — reads; `retention.rs` — prune; IPC in `commands/operation_log.rs`.
 - `rollback.rs` (+ `order.rs`, `skips.rs`, `runner.rs`) — the rollback PLANNER; the executor it's handed, the spawn
-  glue, and the multi-op driver live in `write_operations/rollback.rs`.
+  glue, and the multi-op driver live in `crates/cmdr-operations/src/rollback.rs`.
 
 ## Must-knows
 
@@ -40,7 +40,8 @@ a disposable cache. A Tauri-free crate hosted by the app's `operation_log_host/`
 - **Rollback FAILS SAFE** (data-safety-critical): recheck each item against its snapshot AND its restore target; drift,
   unverifiable, or occupied target ⇒ SKIP (→ `partially_rolled_back`), never operate, and a restore-move never
   overwrites. `verify_snapshot` + `SkipReason` + `SkipTally` are SHARED with the in-flight reversals
-  (`write_operations/reversal.rs`): ❌ don't fork them. `rolling_back` guards double-rollback and the retention race.
+  (`crates/cmdr-operations/src/reversal.rs`): ❌ don't fork them. `rolling_back` guards double-rollback and the
+  retention race.
 - **The engine PLANS; an injected `RollbackRunner` acts** (this crate can't reach the executor). Pause parks BEFORE the
   item is verified (a stale verification must never authorize a destructive act), and a reversal's "should I stop?" is
   NOT `is_cancelled` (`StopMeans`). `DETAILS.md` § "Planner here, executor injected".

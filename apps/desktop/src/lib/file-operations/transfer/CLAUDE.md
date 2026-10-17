@@ -1,7 +1,7 @@
 # Transfer (copy and move)
 
 Copy (F5), move (F6), compress (⌥F5): setup, conflict scan, progress, errors. Delete/trash reuse progress. Backend:
-`apps/desktop/src-tauri/src/file_system/write_operations/CLAUDE.md`.
+`crates/cmdr-operations/src/CLAUDE.md`.
 
 ## Module map
 

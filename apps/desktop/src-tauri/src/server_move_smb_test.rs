@@ -9,9 +9,9 @@ use std::sync::Arc;
 
 use super::*;
 use crate::favorites::store as favorites;
-use crate::file_system::write_operations::testing::QueuedOperationFixture;
 use crate::network::known_shares::{AuthOptions, ConnectionMode};
 use crate::operations_host::app_engine;
+use cmdr_operations::testing::QueuedOperationFixture;
 
 /// A share Cmdr mounted from `address:port`, filed under its discovery name.
 fn mounted_row(address: &str, port: u16, share: &str, volume_id: &str) -> KnownNetworkShare {

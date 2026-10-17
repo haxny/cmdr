@@ -20,8 +20,8 @@
 use serde_json::json;
 use tauri::{AppHandle, Runtime};
 
-use crate::file_system::write_operations::OperationSnapshot;
 use crate::quit::{QuitAnswer, QuitOutcome};
+use cmdr_operations::OperationSnapshot;
 
 use super::{ToolError, ToolResult};
 
@@ -138,7 +138,7 @@ fn no_quit_pending_token() -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::file_system::write_operations::{LifecycleStatus, WriteOperationType};
+    use cmdr_operations::{LifecycleStatus, WriteOperationType};
 
     fn operation(operation_type: WriteOperationType) -> OperationSnapshot {
         OperationSnapshot {

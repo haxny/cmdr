@@ -1,8 +1,8 @@
 //! Ring, throttle, and report-transform tests for the state history.
 use super::*;
-use crate::file_system::write_operations::{LifecycleStatus, WriteOperationPhase, WriteOperationType};
 use crate::redact::RedactionContext;
 use chrono::{TimeZone, Utc};
+use cmdr_operations::{LifecycleStatus, WriteOperationPhase, WriteOperationType};
 use std::time::{Duration, Instant};
 
 const RAW_NAME: &str = "PRIVATE-NAME-ASYMMETRIC";

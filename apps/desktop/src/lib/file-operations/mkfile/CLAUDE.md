@@ -26,5 +26,4 @@ rationale: `DETAILS.md`.
 - **Extension is preserved on pre-fill** (unlike the folder dialog, which strips it): a cursor item `report.pdf` opens
   the dialog with `report.pdf` selected. Directories and `..` pre-fill empty.
 
-Backend counterpart: `create_file` lives directly under
-`apps/desktop/src-tauri/src/file_system/write_operations/CLAUDE.md` (no dedicated subdir).
+Backend counterpart: `create_file` lives directly under `crates/cmdr-operations/src/CLAUDE.md` (no dedicated subdir).

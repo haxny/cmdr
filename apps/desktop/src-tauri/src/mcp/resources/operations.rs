@@ -33,12 +33,12 @@
 //! the files in flight (`activeFolders:`), read off the live transfer tree's
 //! follow-the-work window, the third source of the join.
 
-use crate::file_system::write_operations::{
+use crate::pluralize::pluralize;
+use crate::search::query::format_size;
+use cmdr_operations::{
     LifecycleStatus, OperationSnapshot, OperationStatus, TransferActivity, TransferTreeRow, TransferTreeView,
     TransferTreeViewRequest, TreeRowKind, TreeRowState, WriteConflictEvent, WriteSourcesGoneEvent,
 };
-use crate::pluralize::pluralize;
-use crate::search::query::format_size;
 
 /// One row of the `operations:` section: the registry's membership / status /
 /// summary joined with the status cache's live progress (absent for queued ops)
@@ -421,7 +421,7 @@ fn active_folders_yaml(tree: &TransferTreeView) -> String {
 /// The TAG only, deliberately: the payload's paths already ride the row as
 /// `source:` / `destination:`, and its `message` fields carry raw OS text that
 /// would need its own redaction pass. What an agent decides on is the class.
-fn error_line(error: &crate::file_system::write_operations::WriteOperationError) -> String {
+fn error_line(error: &cmdr_operations::WriteOperationError) -> String {
     serde_json::to_value(error)
         .ok()
         .and_then(|v| v.get("type").and_then(|t| t.as_str()).map(str::to_string))

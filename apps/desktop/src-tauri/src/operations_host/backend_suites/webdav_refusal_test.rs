@@ -29,12 +29,10 @@ use super::network_semantics_test_support::{local_volume, names_in, seed, try_re
 use super::network_transfer_test_support::{assert_no_staging_litter, clean_deep, self_describing_bytes};
 use super::webdav_refusing_proxy_test_support::{Answer, PathRule, Refusal, RefusingProxy, through_a_refusing_proxy};
 use super::webdav_test_support::{WebdavFixture, connect};
-use crate::file_system::write_operations::testing::new_operation_state;
-use crate::file_system::write_operations::testing::{
-    CollectorEventSink, copy_volumes_with_progress, move_within_same_volume_with_progress,
-};
-use crate::file_system::write_operations::{ConflictResolution, VolumeCopyConfig, WriteOperationError};
 use crate::operations_host::app_engine;
+use cmdr_operations::testing::new_operation_state;
+use cmdr_operations::testing::{CollectorEventSink, copy_volumes_with_progress, move_within_same_volume_with_progress};
+use cmdr_operations::{ConflictResolution, VolumeCopyConfig, WriteOperationError};
 
 /// The user's folder on the server: a file nothing may touch.
 const USERS_FILE: (&str, &[u8]) = ("keep.txt", b"DEST-keep");

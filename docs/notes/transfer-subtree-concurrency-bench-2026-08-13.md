@@ -6,8 +6,7 @@ nothing inside it ever overlapped. `network.smbConcurrency` (advertised 1-32, de
 copy there is.
 
 This note is the measurement behind putting one operation-wide window inside that walk
-(`apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/DETAILS.md` § "One window for the whole
-operation").
+(`crates/cmdr-operations/src/transfer/volume/DETAILS.md` § "One window for the whole operation").
 
 ⚠️ **Everything below is Docker Samba on loopback, and loopback systematically understates what this kind of change is
 worth AND overstates how wide the window should be.** That is the standing finding of

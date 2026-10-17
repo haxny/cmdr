@@ -12,15 +12,15 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use crate::file_system::volume::manager::get_volume_manager;
-use crate::file_system::write_operations::testing::{
-    ArchiveEditRequest, CollectorEventSink, OperationSummaryText, TestOperations, archive_inner_exists,
-};
-use crate::file_system::write_operations::{MutationError, OperationEventSink};
 use cmdr_archive::mutator::{AddEntry, AddSource, Changeset};
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::testing::{TestDir, wait_until_async};
 use cmdr_fs::volume::{InMemoryVolume, RoutedKind, Volume};
 use cmdr_operation_log::types::Initiator;
+use cmdr_operations::testing::{
+    ArchiveEditRequest, CollectorEventSink, OperationSummaryText, TestOperations, archive_inner_exists,
+};
+use cmdr_operations::{MutationError, OperationEventSink};
 
 /// A real zip of `entries`, as bytes.
 fn zip_bytes(entries: &[(&str, &[u8])]) -> Vec<u8> {
@@ -168,8 +168,8 @@ async fn resolve_source_routes_a_snapshot_path_to_the_git_portal() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_copy_onto_an_id_nothing_knows_still_reads_as_a_missing_volume() {
     use crate::file_system::volume::manager::get_volume_manager;
-    use crate::file_system::write_operations::{VolumeCopyConfig, WriteOperationError};
     use cmdr_operation_log::types::Initiator;
+    use cmdr_operations::{VolumeCopyConfig, WriteOperationError};
 
     let engine = super::test_engine();
     let source_id = format!("routing-source-{}", uuid::Uuid::new_v4());
@@ -208,8 +208,8 @@ async fn a_copy_onto_an_id_nothing_knows_still_reads_as_a_missing_volume() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_copy_from_an_id_nothing_knows_reads_as_a_source_no_longer_connected() {
     use crate::file_system::volume::manager::get_volume_manager;
-    use crate::file_system::write_operations::{VolumeCopyConfig, WriteOperationError};
     use cmdr_operation_log::types::Initiator;
+    use cmdr_operations::{VolumeCopyConfig, WriteOperationError};
 
     let engine = super::test_engine();
     let dest_id = format!("routing-dest-{}", uuid::Uuid::new_v4());

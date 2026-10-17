@@ -316,8 +316,8 @@ that's free to narrow later.
   the hold releases exactly as if this answer had won, with an info log naming the outcome; the progress dialog's
   `handleConflictResolution` clears its own prompt the same way. ❌ Never treat a non-`resolved` outcome as an error and
   leave the question on screen: nobody can answer it any more. Which outcome means what, and why the backend arbitrates
-  rather than a frontend rule naming who may answer:
-  `apps/desktop/src-tauri/src/file_system/write_operations/DETAILS.md` § "Answering a conflict is arbitrated".
+  rather than a frontend rule naming who may answer: `crates/cmdr-operations/src/DETAILS.md` § "Answering a conflict is
+  arbitrated".
 - **One prompt at a time, in arrival order**, resuming only after the last. The backend serializes prompts within one
   operation (`conflict_dispatch_lock` plus a single conflict slot), so the queue holds at most one entry per operation;
   a second event for one that's already queued replaces it, since the newer clash is the live one. That replacement
@@ -350,8 +350,8 @@ that's free to narrow later.
 
 `sources-gone.svelte.ts` is the main window's host for `write-sources-gone`: an operation that waited in the queue
 found, when its turn came, that some of its top-level sources were moved or deleted meanwhile (ERR-962JD). The backend's
-half (who checks, how, and what the operation does with the answer):
-`apps/desktop/src-tauri/src/file_system/write_operations/DETAILS.md` § "Sources that left while an operation queued".
+half (who checks, how, and what the operation does with the answer): `crates/cmdr-operations/src/DETAILS.md` § "Sources
+that left while an operation queued".
 
 - **Some gone (`awaiting_answer`)**: the host queues the question and shows `SourcesGoneDialog` (mounted by
   `SourcesGonePrompt.svelte` beside the conflict prompt): the honest count ("4 of the 22 items this move was waiting on
@@ -451,12 +451,12 @@ every one of those surfaces, still fires immediately: it keeps what was written.
 
 **Why this one button earns a question.** Rolling back a copy deletes every destination the operation has written, and a
 destination it OVERWROTE is one of those — no copy of the replaced original is kept
-(`apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/DETAILS.md` § "Overwrite isn't reversible").
-So the harm isn't "the copy has to run again": a mis-click on the button beside Cancel can take away a file the user had
-before the operation started, and nothing brings it back. Against that, every other confirmation the app already shows
-(deleting the re-downloadable AI model, copying 10 MB out of the viewer, closing tabs) sits at a far lower bar. The
-question stays in front of the reversals that delete nothing too, because Rollback moves the user's files either way and
-the button reads the same on every surface.
+(`crates/cmdr-operations/src/transfer/volume/DETAILS.md` § "Overwrite isn't reversible"). So the harm isn't "the copy
+has to run again": a mis-click on the button beside Cancel can take away a file the user had before the operation
+started, and nothing brings it back. Against that, every other confirmation the app already shows (deleting the
+re-downloadable AI model, copying 10 MB out of the viewer, closing tabs) sits at a far lower bar. The question stays in
+front of the reversals that delete nothing too, because Rollback moves the user's files either way and the button reads
+the same on every surface.
 
 **What it says depends on what the reversal DOES** (`variant`, in `reversal-wording.ts`):
 
@@ -530,7 +530,7 @@ Because the confirmation body and both progress keys are picked from ONE variant
 copy edit to one of them, which `reversal-wording.test.ts` asserts against per `OpKind`.
 
 **Where the variant comes from at runtime.** `OperationSnapshot.reverses` (`Option<OpKind>` on the wire), set by the
-backend only on an operation that IS the reversal of a finished one (`write_operations/rollback.rs`'s
+backend only on an operation that IS the reversal of a finished one (`crates/cmdr-operations/src/rollback.rs`'s
 `spawn_managed_inverse`). It carries the ORIGINAL kind, not the inverse: `Move` alone can't tell undoing a move from
 undoing a trash, and `Delete` can't tell undoing a copy from undoing a compress. ❌ Never infer a reversal from
 `phase === 'rolling_back'` instead: a CANCELLED copy wears that phase too, and there "Rolling back..." is the honest

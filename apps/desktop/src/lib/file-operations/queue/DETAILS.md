@@ -87,9 +87,8 @@ corner chip, the queue row, and the progress dialog cannot disagree about the sa
 - `operations: OperationRow[]` — reactive; each `OperationRow` is
   `{ snapshot: OperationSnapshot, progress: WriteProgressEvent | null }`. Ordered as the backend emits them.
 - `supportsRollback` on each snapshot — whether cancelling can also undo what the op wrote, decided per spawn path in
-  the backend (`apps/desktop/src-tauri/src/file_system/write_operations/DETAILS.md` § "Rollback availability"). The row
-  shows Rollback on exactly that set, so this window and the progress dialog can't disagree about which operations are
-  reversible.
+  the backend (`crates/cmdr-operations/src/DETAILS.md` § "Rollback availability"). The row shows Rollback on exactly
+  that set, so this window and the progress dialog can't disagree about which operations are reversible.
 - `hasRunning: boolean` — any op with `status === 'running'` (gates "Pause all").
 - `hasPaused: boolean` — any op with `status === 'paused'` (gates "Resume all").
 - `init(): Promise<void>` — subscribes to both streams, then seeds from `list_operations`. Subscribe-before-seed so a
@@ -174,8 +173,8 @@ where it is shown.
 ## A scanning row
 
 An operation is registered the moment the user confirms, which is before its `TransferDialog` scan preview has finished
-walking (`apps/desktop/src-tauri/src/file_system/write_operations/scan_bridge.rs`). So a row can be `running`, or
-`queued` behind a busy lane, while its `progress.phase` is still `scanning`.
+walking (`crates/cmdr-operations/src/scan_bridge.rs`). So a row can be `running`, or `queued` behind a busy lane, while
+its `progress.phase` is still `scanning`.
 
 - **No dual bar.** `filesTotal` and `bytesTotal` mean "what the scan concluded", and during the scan there is no such
   thing: both stay 0, and the index-derived expectation rides `expectedFilesTotal` / `expectedBytesTotal` as the hint it
@@ -189,12 +188,12 @@ walking (`apps/desktop/src-tauri/src/file_system/write_operations/scan_bridge.rs
 - **`queued` rows render it too.** `showReadout` requires `isRunning || isPaused`, so without this an operation admitted
   behind another on the same lane shows "Waiting" over an empty row for its whole scan — on a busy lane the common case,
   and it reads as a hung queue. "Waiting" over a moving file count is exactly what is happening.
-- **Pause yes, Rollback no.** Pause parks the WALK (`write_operations/scan_bridge.rs` § `ScanPause`), so the row offers
-  it during the scan exactly as it does during the write, and offers Resume on a scan paused from "Pause all" — without
-  that, such a row's only way back was Cancel. A scanning operation has written nothing to reverse, so Rollback stays
-  away; `supportsRollback` stays true throughout, since it is a promise about the OPERATION and the phase is what
-  decides which controls make sense now. A PAUSED scanning row drops `ScanPhaseBody`'s spinner and its rates: the
-  spinner is the claim that the walk is moving.
+- **Pause yes, Rollback no.** Pause parks the WALK (`crates/cmdr-operations/src/scan_bridge.rs` § `ScanPause`), so the
+  row offers it during the scan exactly as it does during the write, and offers Resume on a scan paused from "Pause all"
+  — without that, such a row's only way back was Cancel. A scanning operation has written nothing to reverse, so
+  Rollback stays away; `supportsRollback` stays true throughout, since it is a promise about the OPERATION and the phase
+  is what decides which controls make sense now. A PAUSED scanning row drops `ScanPhaseBody`'s spinner and its rates:
+  the spinner is the claim that the walk is moving.
 - **The status column still says "Running"**, and that is deliberate. `queue.row.status` is a `select` over the
   LIFECYCLE status, which genuinely is `running`; the readout names the activity, and the scan-phase line already says
   "Counting…" in the user's language. A "Scanning" arm would mix two axes into one column and would need a `phase` input
@@ -232,9 +231,9 @@ them isn't moving.
 
 **Where it comes from.** `session.awaitingAnswer` — the backend's own classification
 (`activity.waitingOn === 'conflict'`), reaching every operation including a local copy, which keeps no in-flight table
-(`apps/desktop/src-tauri/src/file_system/write_operations/DETAILS.md` § "Parking on a person"). ❌ Never the row's own
-`progress.activity` test and ❌ never `session.conflict`: the first would let two views word the same wait differently,
-and the second is this window's own copy of a prompt it may never have been sent.
+(`crates/cmdr-operations/src/DETAILS.md` § "Parking on a person"). ❌ Never the row's own `progress.activity` test and
+❌ never `session.conflict`: the first would let two views word the same wait differently, and the second is this
+window's own copy of a prompt it may never have been sent.
 
 **The tooltip says where to answer** (`queue.row.awaitingAnswerTooltip`), because the prompt is in the MAIN window and
 this row is in another one, quite possibly on top of it. A pause needs none of this: it changes the lifecycle status, so
@@ -243,9 +242,8 @@ the column already says "Paused" on its own.
 ## Retained failures
 
 The backend keeps a bounded list of failed operations and carries them on the same `operations-changed` snapshot, each
-with its typed `error` (`apps/desktop/src-tauri/src/file_system/write_operations/DETAILS.md` § "Retained failures" owns
-the mechanism). This window is the durable surface for them: it survives a dismissed toast, a closed window, and a
-reopen.
+with its typed `error` (`crates/cmdr-operations/src/DETAILS.md` § "Retained failures" owns the mechanism). This window
+is the durable surface for them: it survives a dismissed toast, a closed window, and a reopen.
 
 - **The row keeps its place, so the SELECTION has to let go of it.** `routes/queue/+page.svelte` prunes `selectedIds`
   against the rows that are still `!isTerminalStatus(...)`, not against mere membership: a failure stays in the list and
@@ -264,7 +262,7 @@ reopen.
   the foreground's `retryPropsFrom` resets, and dismisses this row, so the new one takes its place (in the background:
   this window is no birth context). It sits in the row's ← / → walk like every row button (`tabindex={-1}`, § Keyboard).
   A refused start (the volume is still gone) leaves the row and logs. Why the recipe lives in the backend:
-  `apps/desktop/src-tauri/src/file_system/write_operations/DETAILS.md` § "Retained failures".
+  `crates/cmdr-operations/src/DETAILS.md` § "Retained failures".
 - **Why red here and amber in the corner chip.** Severity follows the THING, not the surface. This row names the
   operation and prints its reason, so it carries the full weight, same as the failure toast. The chip names nothing (a
   count and a glyph), so it stays `--color-warning-text`: a pointer, not a verdict.
@@ -350,7 +348,7 @@ explains itself. Same verdict either way, so the two can't contradict each other
 
 The summary (`QueueRowSummary.svelte`, wording in `row-items.ts`) says what the operation acts on and where it goes:
 "Copying 2 folders and 1 file Dropbox → cmdr-s3-test/target/folder", from the snapshot's `items` (backend
-`write_operations/DETAILS.md` § "What a row says it acts on").
+`crates/cmdr-operations/src/DETAILS.md` § "What a row says it acts on").
 
 - **What it acts on is always on display** (`flex-shrink: 0`), because it's what tells two copies to different places
   apart. "2 folders and 1 file" when the starter said which is which, "3 items" when it didn't (MCP, compress). Its
@@ -494,9 +492,8 @@ The house reorder key (`../../ui/menu-navigation.ts`) and the APG rearrangeable-
 extend. The page sends `moveQueuedOperation(id, direction)` and announces the backend's answer in a polite live region
 (`queue.reorder.*`: the new place among WAITING operations, "already first/last", or "only waiting operations can
 move"). Only a waiting row moves; running and paused ones keep their place. The row itself moves when the next
-`operations-changed` lands, and the cursor (an id) moves with it. Backend:
-`apps/desktop/src-tauri/src/file_system/write_operations/DETAILS.md` § "Reordering the line". The mouse does the same
-with the grip (below).
+`operations-changed` lands, and the cursor (an id) moves with it. Backend: `crates/cmdr-operations/src/DETAILS.md` §
+"Reordering the line". The mouse does the same with the grip (below).
 
 ### Dragging to reorder
 

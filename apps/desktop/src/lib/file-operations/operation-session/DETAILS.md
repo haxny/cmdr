@@ -124,8 +124,8 @@ central buffer keyed by unclaimed ids is therefore unbounded unless it is given 
   retains a `failed` row carrying the error, and a session reads that row as its outcome (`applySnapshot`). A move that
   failed before its start command returned was claimed first by an ambient view and left its progress dialog spinning.
 - Age the rest out at `UNCLAIMED_BUFFER_TTL_MS` (300 s), swept on the next insert. Both the number and the trigger come
-  from the backend's own precedent for scan results (`SCAN_RESULT_TTL` in `write_operations/scan_cache.rs`), and the
-  insert-triggered sweep is what keeps an idle window at zero cost.
+  from the backend's own precedent for scan results (`SCAN_RESULT_TTL` in `crates/cmdr-operations/src/scan_cache.rs`),
+  and the insert-triggered sweep is what keeps an idle window at zero cost.
 
 ### Where a live operation had got to
 
@@ -221,11 +221,11 @@ live-and-counting: `scan` carries the counts, and no ETA is invented from totals
 Absence carries no information about an ENDING, which is why `settled` never reads it: completed, cancelled, and
 never-existed all look the same from outside. But absence does carry one fact, and one surface needs exactly that fact.
 
-The operation-log reversal (`file_system/write_operations/rollback.rs`) is a managed operation that emits
-`write-progress` and no terminal event of its own: no `write-complete`, no `write-cancelled`, no `write-settled`. It
-finishes by calling `manager().on_settled(...)`, which removes its record and broadcasts `operations-changed`. So for
-that operation, leaving the registry is the only word its end ever gets, and a surface offering it Pause and Cancel has
-nothing else to read.
+The operation-log reversal (`crates/cmdr-operations/src/rollback.rs`) is a managed operation that emits `write-progress`
+and no terminal event of its own: no `write-complete`, no `write-cancelled`, no `write-settled`. It finishes by calling
+`manager().on_settled(...)`, which removes its record and broadcasts `operations-changed`. So for that operation,
+leaving the registry is the only word its end ever gets, and a surface offering it Pause and Cancel has nothing else to
+read.
 
 `OperationSession.leftRegistry` is that fact and only that fact: **the registry published a snapshot without this
 operation, having carried it in an earlier one.** The fan-out delivers `{ kind: 'absent' }` to every attached sink a
@@ -255,7 +255,7 @@ alone cannot tell you.
   transfer that has stopped: "1905 files/s" over a frozen copy is a number nobody can stand behind (`AGENTS.md`
   principle 2: honest progress and ETA). The ETA is a different claim and STAYS: "58s left" is what remains once the
   person is done, which is exactly what they want while they decide, and the backend keeps it true by excluding
-  human-wait time from the rate window (`write_operations/human_wait.rs`). Deciding all this here rather than
+  human-wait time from the rate window (`crates/cmdr-operations/src/human_wait.rs`). Deciding all this here rather than
   per-surface is what keeps the dialog, the queue row, and the corner chip saying the same thing: they showed different
   answers to the same paused copy once. Every view renders these three, never `progress.bytesPerSecond` /
   `progress.filesPerSecond` / `progress.etaSeconds`. The ETA smoother resets before consuming the first sample of every
@@ -287,8 +287,8 @@ somebody else answer would hide its speed for the rest of the transfer.
 
 Every path reports the clash wait, including a local copy, which keeps no in-flight table: the backend classifies the
 wait off the operation's own pause gate and conflict slot, and re-sends its last tick on both edges of the wait so a
-parked operation says so even though it emits nothing while parked (`write_operations/DETAILS.md` § "Parking on a
-person"). ❌ So there is nothing here for a frontend to infer: a view that finds no `activity` is being told the
+parked operation says so even though it emits nothing while parked (`crates/cmdr-operations/src/DETAILS.md` § "Parking
+on a person"). ❌ So there is nothing here for a frontend to infer: a view that finds no `activity` is being told the
 operation is moving.
 
 ## The command surface
@@ -325,9 +325,10 @@ may have changed while the answer was in flight.
 
 `write-conflict` reaches every webview, so more than one surface can be showing the same prompt. The backend arbitrates:
 `resolve_write_conflict(operationId, conflictId, resolution, applyToAll)` returns a typed outcome (resolved / already
-resolved / stale answer / no pending conflict / unknown operation) from the slot in `write_operations/conflict_slot.rs`,
-which is where that contract is written down. The session hands that verdict back untouched and lets go of the clash it
-answered on any of them, because that question is over either way. Only a call that never landed keeps the prompt up.
+resolved / stale answer / no pending conflict / unknown operation) from the slot in
+`crates/cmdr-operations/src/conflict_slot.rs`, which is where that contract is written down. The session hands that
+verdict back untouched and lets go of the clash it answered on any of them, because that question is over either way.
+Only a call that never landed keeps the prompt up.
 
 **The answer names its clash, and only that clash is let go of.** `resolveConflict` takes the `conflictId` off the event
 the surface is showing, and clears `conflict` only while the slot still holds that same id. The operation raises its

@@ -22,7 +22,7 @@ use super::network_safety_test_support::{
     a_name_taken_mid_upload_is_never_replaced, an_unknown_source_type_never_clears_a_server_folder,
 };
 use super::webdav_test_support::fixture;
-use crate::file_system::write_operations::ConflictResolution;
+use cmdr_operations::ConflictResolution;
 
 /// The landing is `MOVE` with `Overwrite: F`, so the SERVER refuses the name
 /// another writer took while our bytes were on the wire.

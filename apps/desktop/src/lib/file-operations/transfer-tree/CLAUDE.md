@@ -2,7 +2,7 @@
 
 The live tree of a copy's, move's, or compress's selection: every file and folder with its own progress, as an ARIA tree
 over a virtual window. The progress dialog and the queue window embed `TransferTree.svelte`. Backend contract:
-`apps/desktop/src-tauri/src/file_system/write_operations/transfer_tree/CLAUDE.md`.
+`crates/cmdr-operations/src/transfer_tree/CLAUDE.md`.
 
 ## Module map
 

@@ -47,16 +47,15 @@ keeps `StreamLength::Unknown`, and success includes `sync_data` plus the parent-
 
 **Decision**: `LocalPosixVolume` overrides `is_directory` and `entry_kind` with a bare `lstat` **Why**: `get_metadata`
 also stats a link's target and looks up owner names, none of which answers "what is at this path". Both answers see a
-link as the link, which a move engine depends on
-(`apps/desktop/src-tauri/src/file_system/write_operations/transfer/DETAILS.md` § "Symlinks are opaque to a move"); ❌
-don't route either through `get_metadata`, whose `is_directory` is true for a link to a folder.
+link as the link, which a move engine depends on (`crates/cmdr-operations/src/transfer/DETAILS.md` § "Symlinks are
+opaque to a move"); ❌ don't route either through `get_metadata`, whose `is_directory` is true for a link to a folder.
 
 **Decision**: `LocalPosixVolume` overrides `list_directory_as_source`, and `scan_subtree` filters its walk the same way,
 leaving out the AppleDouble sidecars of a FAT or exFAT folder **Why**: the kernel serves `._name` as `name`'s xattrs
 there, so a cross-volume copy that also streamed it landed a stray hidden file. The pane's `list_directory` still shows
 them, since they're on disk. A level with no `._` name never leaves the async task. `with_sidecar_probe` lets a test
 play a FAT volume on APFS. Rule: `crates/cmdr-fs/src/apple_double.rs`; who lists as a source:
-`apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/DETAILS.md` § "A source is listed as a source".
+`crates/cmdr-operations/src/transfer/volume/DETAILS.md` § "A source is listed as a source".
 
 ## A consumer's test build is a test build here too
 

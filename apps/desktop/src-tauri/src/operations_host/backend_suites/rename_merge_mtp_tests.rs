@@ -17,13 +17,13 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
 
-use crate::file_system::write_operations::testing::new_operation_state;
-use crate::file_system::write_operations::testing::{CollectorEventSink, move_within_same_volume_with_progress};
-use crate::file_system::write_operations::{ConflictResolution, VolumeCopyConfig};
 use crate::mtp::test_support::{self, ConnectedDevice, device_lock};
 use crate::operations_host::app_engine;
 use cmdr_fs::volume::Volume;
 use cmdr_mtp::virtual_device::setup_virtual_mtp_device;
+use cmdr_operations::testing::new_operation_state;
+use cmdr_operations::testing::{CollectorEventSink, move_within_same_volume_with_progress};
+use cmdr_operations::{ConflictResolution, VolumeCopyConfig};
 
 /// Seeds a virtual MTP device's backing dir, connects the app to it, and builds
 /// a volume over its writable storage.

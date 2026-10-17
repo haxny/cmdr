@@ -24,7 +24,7 @@
 use serde_json::{Value, json};
 
 use super::{ToolError, ToolResult};
-use crate::file_system::write_operations::{ConflictId, ConflictResolution, ConflictResolutionOutcome};
+use cmdr_operations::{ConflictId, ConflictResolution, ConflictResolutionOutcome};
 
 pub async fn execute_resolve_conflict(params: &Value) -> ToolResult {
     let operation_id = params

@@ -18,10 +18,10 @@ use cmdr_fs::volume::Volume;
 
 use super::network_semantics_test_support::{Transfer, local_volume, seed, transfer, try_read};
 use super::network_transfer_test_support::clean_deep;
-use crate::file_system::write_operations::ConflictResolution;
-use crate::file_system::write_operations::testing::{AppearedDuringMove, forward_volume_methods};
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::volume::VolumeError;
+use cmdr_operations::ConflictResolution;
+use cmdr_operations::testing::{AppearedDuringMove, forward_volume_methods};
 
 type Edit = Box<dyn FnOnce() -> Pin<Box<dyn Future<Output = ()> + Send>> + Send>;
 

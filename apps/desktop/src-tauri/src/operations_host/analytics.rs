@@ -14,7 +14,7 @@
 //! no names or paths ever cross.
 
 use crate::analytics::item_count_bucket;
-use crate::file_system::write_operations::{WriteCompleteEvent, WriteOperationType};
+use cmdr_operations::{WriteCompleteEvent, WriteOperationType};
 
 /// Emits the PII-free analytics event for a completed write operation. Copy/Move → `file_transfer_completed`
 /// (with `op`, an item-count bucket, and a `had_conflicts` bool); Delete/Trash → `delete_used` (with

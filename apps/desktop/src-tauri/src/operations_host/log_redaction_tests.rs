@@ -4,7 +4,7 @@
 
 use std::path::PathBuf;
 
-use crate::file_system::write_operations::testing::ScanTarget;
+use cmdr_operations::testing::ScanTarget;
 
 /// The log lines name the first source as a quoted `path=` field, so a report redacts a folder
 /// whose last word is lowercase (`Summer trip`) whole. Bare, the redactor read ` trip on volume

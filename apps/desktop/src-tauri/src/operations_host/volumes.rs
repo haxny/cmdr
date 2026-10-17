@@ -12,8 +12,8 @@ use cmdr_fs::volume::{ResolvedVolume, Volume};
 use cmdr_operation_log::rollback::VolumeLookup;
 
 use crate::file_system::volume::manager::{get_volume_manager, path_routes_over_its_parent};
-use crate::file_system::write_operations::host::{OperationVolumes, UnregisteredVolume, VolumeAnswer};
 use crate::unregistered_volumes::{Unregistered, why_unregistered};
+use cmdr_operations::host::{OperationVolumes, UnregisteredVolume, VolumeAnswer};
 
 /// The app's `VolumeManager`, plus `unregistered_volumes` for an id it doesn't
 /// hold.

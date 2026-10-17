@@ -26,11 +26,11 @@ use cmdr_s3::volume::testing::{
 
 use super::network_transfer_test_support::{budget, read_all, run_copy, sha256};
 use crate::file_system::volume::manager::get_volume_manager;
-use crate::file_system::write_operations::testing::CollectorEventSink;
-use crate::file_system::write_operations::{VolumeCopyConfig, WriteOperationType};
 use crate::operations_host::app_engine;
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_operation_log::types::Initiator;
+use cmdr_operations::testing::CollectorEventSink;
+use cmdr_operations::{VolumeCopyConfig, WriteOperationType};
 
 const MIB: usize = 1024 * 1024;
 
@@ -232,7 +232,7 @@ pub(super) async fn a_paused_rename_resumes_and_lands(target: &S3Target) {
 /// rename both start here) runs as ONE move with the new names, and lands
 /// every one of them.
 pub(super) async fn a_batch_with_a_folder_renames_as_one_move(target: &S3Target) {
-    use crate::file_system::write_operations::{BulkRenameRow, SourceFingerprint};
+    use cmdr_operations::{BulkRenameRow, SourceFingerprint};
 
     let (volume_id, volume, prefix) = registered(target, "rename-batch", None).await;
     let (folder_file, note) = (format!("{prefix}album/a.jpg"), format!("{prefix}note.txt"));

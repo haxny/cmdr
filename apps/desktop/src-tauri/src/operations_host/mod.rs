@@ -1,6 +1,6 @@
 //! This app, acting as the write engine's host.
 //!
-//! The mirror of `file_system::write_operations::host`: that module declares
+//! The mirror of `cmdr_operations::host`: that module declares
 //! what the engine needs from the app around it, and this is where the app
 //! answers, once, in `setup()`, by building the app's one engine
 //! ([`operations`]).
@@ -52,7 +52,7 @@ use std::sync::{Arc, OnceLock};
 use cmdr_operation_log::OperationLog;
 use tauri::AppHandle;
 
-use crate::file_system::write_operations::{self, OperationEventSink, Operations, OperationsBuilder};
+use cmdr_operations::{OperationEventSink, Operations, OperationsBuilder};
 pub(crate) use events::VolumesBusyChanged;
 pub use sinks::{TauriEventSink, TauriScanPreviewSink};
 
@@ -94,7 +94,7 @@ pub fn install(app: &AppHandle, operation_log: OperationLog) {
 /// or answers what an engine with nothing running would (no operations, nothing
 /// busy, an unknown id). It never falls back to a detached engine, which would
 /// write with nobody hearing. In a test binary nothing installs, so the first
-/// read builds [`test_engine`], which every app-side cell then shares.
+/// read builds `test_engine`, which every app-side cell then shares.
 pub(crate) fn operations() -> Result<&'static Operations, NotInstalled> {
     operations_in(&OPERATIONS)
 }
@@ -142,7 +142,7 @@ pub(crate) fn claim_ledger_in(slot: &'static OnceLock<Operations>, data_dir: Opt
     };
     match engine.claim_ledger(data_dir) {
         Ok(sweep) => drop(sweep),
-        Err(write_operations::AlreadyClaimed) => {
+        Err(cmdr_operations::AlreadyClaimed) => {
             crate::log_error!(target: "op_manager", "the leftover ledger was claimed twice; keeping the first claim");
         }
     }
@@ -151,8 +151,8 @@ pub(crate) fn claim_ledger_in(slot: &'static OnceLock<Operations>, data_dir: Opt
 /// What a start refused before `install` answers: the frontend's generic I/O
 /// failure, which its error dialog renders without naming a file. The app
 /// can't reach this after `setup()`.
-pub(crate) fn refuse_not_installed(_: NotInstalled) -> write_operations::WriteOperationError {
-    write_operations::WriteOperationError::IoError {
+pub(crate) fn refuse_not_installed(_: NotInstalled) -> cmdr_operations::WriteOperationError {
+    cmdr_operations::WriteOperationError::IoError {
         path: String::new(),
         message: "the write engine isn't ready yet".to_string(),
     }
@@ -163,23 +163,23 @@ pub(crate) fn refuse_not_installed(_: NotInstalled) -> write_operations::WriteOp
 /// the one existing refusal that says so. Its copy names archive edits, the
 /// only way an instant op met it before; a new variant would change the wire
 /// and owe new copy for a state the app can't reach.
-pub(crate) fn refuse_instant_not_installed(_: NotInstalled) -> write_operations::MutationError {
-    write_operations::MutationError::ArchiveEditNotReady
+pub(crate) fn refuse_instant_not_installed(_: NotInstalled) -> cmdr_operations::MutationError {
+    cmdr_operations::MutationError::ArchiveEditNotReady
 }
 
 /// What a scan preview asked for before `install` answers: no walk, and the
 /// dialog hears an error at once (the answer an engine gives a walk that
 /// couldn't start), so it never spins.
 pub(crate) fn refuse_scan_preview_not_installed(
-    events: &dyn write_operations::ScanPreviewEventSink,
-) -> write_operations::ScanPreviewStartResult {
+    events: &dyn cmdr_operations::ScanPreviewEventSink,
+) -> cmdr_operations::ScanPreviewStartResult {
     let preview_id = uuid::Uuid::new_v4().to_string();
-    events.emit_error(write_operations::ScanPreviewErrorEvent {
+    events.emit_error(cmdr_operations::ScanPreviewErrorEvent {
         preview_id: preview_id.clone(),
         message: "the write engine isn't ready yet".to_string(),
         timed_out: false,
     });
-    write_operations::ScanPreviewStartResult { preview_id }
+    cmdr_operations::ScanPreviewStartResult { preview_id }
 }
 
 /// The engine a test binary shares, since nothing there calls [`install`]: the
@@ -195,7 +195,7 @@ pub(crate) fn test_engine() -> Operations {
 /// [`test_engine`], journaling into `log`: an app-side cell that reads back
 /// what its operations recorded runs them on an engine of its own.
 #[cfg(test)]
-pub(crate) fn test_engine_journaling_into(log: &write_operations::testing::TestOperationLog) -> Operations {
+pub(crate) fn test_engine_journaling_into(log: &cmdr_operations::testing::TestOperationLog) -> Operations {
     app_answers(None, log.log().clone()).build()
 }
 
@@ -225,8 +225,8 @@ mod tests {
     use cmdr_operation_log::types::{ExecutionStatus, Initiator, OpKind};
     use cmdr_operation_log::writer::OpenOperation;
 
-    use crate::file_system::write_operations::Operations;
-    use crate::file_system::write_operations::host::testing::{FakeVolumes, RecordingEngineEvents};
+    use cmdr_operations::Operations;
+    use cmdr_operations::host::testing::{FakeVolumes, RecordingEngineEvents};
 
     fn header(op_id: &str) -> OpenOperation {
         OpenOperation {
@@ -289,7 +289,7 @@ mod tests {
         );
         assert_eq!(
             engine.claim_ledger(Some(&*dir)).err(),
-            Some(crate::file_system::write_operations::AlreadyClaimed),
+            Some(cmdr_operations::AlreadyClaimed),
             "the claim was the installed engine's"
         );
     }

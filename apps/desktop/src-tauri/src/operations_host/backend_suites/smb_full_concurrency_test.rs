@@ -28,16 +28,14 @@ use cmdr_fs::volume::StreamLength;
 use cmdr_smb::volume::*;
 use std::sync::atomic::AtomicBool;
 
-use crate::file_system::write_operations::Operations;
-use crate::file_system::write_operations::testing::{
-    CollectorEventSink, TestOperations, WriteOperationState, copy_volumes_with_progress,
-};
-use crate::file_system::write_operations::{
+use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_operations::Operations;
+use cmdr_operations::testing::{CollectorEventSink, TestOperations, WriteOperationState, copy_volumes_with_progress};
+use cmdr_operations::{
     ConflictInfo, DryRunResult, ScanProgressEvent, VolumeCopyConfig, WriteCancelledEvent, WriteCompleteEvent,
     WriteConflictResolvedEvent, WriteErrorEvent, WriteOperationPhase, WriteProgressEvent, WriteSettledEvent,
     WriteSourceItemDoneEvent,
 };
-use cmdr_fs::ignore_poison::IgnorePoison;
 
 /// Sources in the batch. Two things pick this number: it has to be well past the
 /// concurrency window so the window stays FULL for essentially the whole run
@@ -168,7 +166,7 @@ struct PauseOnFirstCopyFrame {
     state: Arc<WriteOperationState>,
 }
 
-impl crate::file_system::write_operations::OperationEventSink for PauseOnFirstCopyFrame {
+impl cmdr_operations::OperationEventSink for PauseOnFirstCopyFrame {
     fn emit_progress(&self, event: WriteProgressEvent) {
         let reached_the_copy = matches!(event.phase, WriteOperationPhase::Copying);
         self.inner.emit_progress(event);
@@ -186,7 +184,7 @@ impl crate::file_system::write_operations::OperationEventSink for PauseOnFirstCo
     fn emit_error(&self, event: WriteErrorEvent) {
         self.inner.emit_error(event);
     }
-    fn emit_conflict(&self, event: crate::file_system::write_operations::ArmedConflict) {
+    fn emit_conflict(&self, event: cmdr_operations::ArmedConflict) {
         self.inner.emit_conflict(event);
     }
     fn emit_conflict_resolved(&self, event: WriteConflictResolvedEvent) {
@@ -347,7 +345,7 @@ async fn smb_integration_many_files_at_full_concurrency_land_intact() {
 
     let started = std::time::Instant::now();
     let mut copy = tokio::spawn({
-        let events = Arc::clone(&events) as Arc<dyn crate::file_system::write_operations::OperationEventSink>;
+        let events = Arc::clone(&events) as Arc<dyn cmdr_operations::OperationEventSink>;
         let operation_id = operation_id.clone();
         let source_vol = Arc::clone(&source_vol);
         let dest_vol = Arc::clone(&dest_vol);
@@ -536,7 +534,7 @@ async fn smb_integration_a_wedged_copy_is_caught_and_names_its_phase() {
     });
 
     let mut copy = tokio::spawn({
-        let events = Arc::clone(&events) as Arc<dyn crate::file_system::write_operations::OperationEventSink>;
+        let events = Arc::clone(&events) as Arc<dyn cmdr_operations::OperationEventSink>;
         let operation_id = operation_id.clone();
         let state = Arc::clone(&state);
         let source_vol = Arc::clone(&source_vol);

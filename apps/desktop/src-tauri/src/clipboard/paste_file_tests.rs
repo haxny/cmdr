@@ -83,9 +83,9 @@ async fn png_payload_writes_pasted_png_verbatim() {
 #[tokio::test]
 async fn paste_journals_a_create_file_operation() {
     use crate::clipboard::payload_to_content;
-    use crate::file_system::write_operations::testing::TestOperationLog;
     use cmdr_operation_log::store::{open_read_connection, recent_operations};
     use cmdr_operation_log::types::{ExecutionStatus, OpKind, RollbackState};
+    use cmdr_operations::testing::TestOperationLog;
 
     ensure_root_volume();
     // The app's answers on an engine of this cell's own, journaling into a log

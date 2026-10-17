@@ -111,7 +111,7 @@ pub enum ClipboardPasteOutcome {
     /// It didn't, for this reason: the same refusal an in-time reply carries.
     Refused {
         /// Why.
-        error: crate::file_system::write_operations::MutationError,
+        error: cmdr_operations::MutationError,
     },
 }
 

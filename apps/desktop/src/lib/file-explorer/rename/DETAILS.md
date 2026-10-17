@@ -77,7 +77,7 @@ volume. Renaming isn't possible here."
 
 **Who it applies to is Rust's call, per volume**, which is why `volumeId` rides along: the check is local, and a volume
 serving its own I/O answers `Ok` untouched. Mechanism, rationale, and the refusal logging:
-`apps/desktop/src-tauri/src/file_system/write_operations/DETAILS.md` § "The rename pre-flight, and who it applies to".
+`crates/cmdr-operations/src/DETAILS.md` § "The rename pre-flight, and who it applies to".
 
 The flow itself skips one thing on its own: an archive-inner path (`pathInsideArchive`, kind-from-path, which no volume
 id can express). ❌ Don't reintroduce a frontend prefix test — `!volumeId.startsWith('mtp-')` was the whole gate once,

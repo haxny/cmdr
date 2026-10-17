@@ -17,16 +17,16 @@
 use super::outage_proxy_test_support::OutageProxy;
 use super::smb_test_support::*;
 
-use crate::file_system::write_operations::testing::new_operation_state;
-use crate::file_system::write_operations::testing::{
+use crate::test_support::wait_until_async;
+use cmdr_operations::testing::new_operation_state;
+use cmdr_operations::testing::{
     CollectorEventSink, OutagePolicy, TestOperations, WriteOperationState, copy_volumes_with_progress,
 };
-use crate::file_system::write_operations::{
+use cmdr_operations::{
     ConflictInfo, DryRunResult, OperationEventSink, ScanProgressEvent, VolumeCopyConfig, WriteCancelledEvent,
     WriteCompleteEvent, WriteConflictResolvedEvent, WriteErrorEvent, WriteOperationPhase, WriteProgressEvent,
     WriteSettledEvent, WriteSourceItemDoneEvent,
 };
-use crate::test_support::wait_until_async;
 
 /// Files in the folder. Enough that the outage lands in the middle, with files
 /// on both sides of it: more than [`PAUSE_AFTER_FILES`] plus a whole concurrent
@@ -87,7 +87,7 @@ impl OperationEventSink for PauseAfterFiles {
     fn emit_error(&self, event: WriteErrorEvent) {
         self.inner.emit_error(event);
     }
-    fn emit_conflict(&self, event: crate::file_system::write_operations::ArmedConflict) {
+    fn emit_conflict(&self, event: cmdr_operations::ArmedConflict) {
         self.inner.emit_conflict(event);
     }
     fn emit_conflict_resolved(&self, event: WriteConflictResolvedEvent) {

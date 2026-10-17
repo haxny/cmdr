@@ -35,17 +35,17 @@ use crate::adb::device_provider::apply_device_list;
 use crate::adb::test_support::{a_listed_phone, dial, dials_seen, phone, retire_phone};
 use crate::commands::file_system::scan_volume_for_conflicts;
 use crate::file_system::volume::manager::get_volume_manager;
-use crate::file_system::write_operations::testing::{
-    CollectorEventSink, create_directory_core_on, delete_volume_files_for_test, new_operation_state,
-};
-use crate::file_system::write_operations::{
-    MutationError, OperationEventSink, VolumeCopyConfig, VolumeScanError, WriteOperationConfig, WriteOperationError,
-};
 use crate::operations_host::app_engine;
 use crate::test_support::TestDir;
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_local::LocalPosixVolume;
 use cmdr_operation_log::types::Initiator;
+use cmdr_operations::testing::{
+    CollectorEventSink, create_directory_core_on, delete_volume_files_for_test, new_operation_state,
+};
+use cmdr_operations::{
+    MutationError, OperationEventSink, VolumeCopyConfig, VolumeScanError, WriteOperationConfig, WriteOperationError,
+};
 
 /// Big enough to cross the sync service's 64 KiB `DATA` frames a few times, so
 /// reassembly is exercised, and small enough to stay quick on a loaded machine.

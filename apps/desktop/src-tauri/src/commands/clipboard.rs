@@ -12,7 +12,7 @@ use objc2::MainThreadMarker;
 use cmdr_listing::{ListingId, ParentRow};
 
 use crate::clipboard;
-use crate::file_system::write_operations::MutationError;
+use cmdr_operations::MutationError;
 
 #[derive(serde::Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
