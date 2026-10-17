@@ -29,8 +29,8 @@ use std::sync::Mutex;
 use cmdr_fs::ignore_poison::IgnorePoison;
 
 use super::types::{
-    ArchiveSubkind, ExecutionStatus, NotRollbackableReason, OpKind, RollbackState, RowRole, SearchCoverage,
-    SearchCoverageReason,
+    ArchiveSubkind, ExecutionStatus, NotRollbackableReason, OpKind, OperationId, RollbackState, RowRole,
+    SearchCoverage, SearchCoverageReason,
 };
 use super::writer::{FinalizeOperation, FinalizeOutcome, JournalItem, OpenOperation, OperationLogWriter};
 
@@ -51,13 +51,13 @@ pub trait OperationJournal: Send + Sync {
 
     /// Record a batch of item rows for an open operation. Accumulates the
     /// issued-count and overwrote signals the finalize decisions need.
-    fn record_items(&self, op_id: &str, items: Vec<JournalItem>);
+    fn record_items(&self, op_id: &OperationId, items: Vec<JournalItem>);
 
     /// Downgrade this op's search coverage (worst-wins, idempotent). The trash /
     /// same-FS-move drivers call this when the `search_only` leaf subtree is
     /// capped / index-absent / stale / not-live. Default `Full`
     /// needs no call.
-    fn note_search_coverage(&self, op_id: &str, coverage: SearchCoverage, reason: Option<SearchCoverageReason>);
+    fn note_search_coverage(&self, op_id: &OperationId, coverage: SearchCoverage, reason: Option<SearchCoverageReason>);
 
     /// Record that this op can't be reversed, for a reason only the DRIVER can
     /// see — the per-kind rule in [`compute_eligibility`] can't derive it from
@@ -65,13 +65,13 @@ pub trait OperationJournal: Send + Sync {
     /// names a destination that also holds files the op never touched, and no
     /// `overwrote` bit says so. First note wins (every note reaches the same
     /// verdict), and a note always beats the computed eligibility.
-    fn note_not_rollbackable(&self, op_id: &str, reason: NotRollbackableReason);
+    fn note_not_rollbackable(&self, op_id: &OperationId, reason: NotRollbackableReason);
 
     /// Finalize the operation: compute eligibility from the accumulated
     /// overwrote flags plus `inputs`, apply the per-`row_role` completeness
     /// downgrade, store the terminal state, and return the durable per-role
     /// counts. Acts as a barrier for this op's prior records.
-    fn finalize(&self, op_id: &str, inputs: FinalizeInputs) -> FinalizeOutcome;
+    fn finalize(&self, op_id: &OperationId, inputs: FinalizeInputs) -> FinalizeOutcome;
 }
 
 /// The terminal inputs the CALLER supplies at finalize — the parts the journal
@@ -267,7 +267,7 @@ impl Default for OpAccum {
 pub struct WriterJournal {
     writer: OperationLogWriter,
     /// Per-open-op accumulators, keyed by `op_id`. Removed at finalize.
-    ops: Mutex<HashMap<String, OpAccum>>,
+    ops: Mutex<HashMap<OperationId, OpAccum>>,
     /// Test-only: when set, the next `rollback_unit` item is counted as issued
     /// but NOT forwarded to the writer, simulating a dropped/errored row so the
     /// completeness path can be exercised end-to-end.
@@ -313,7 +313,7 @@ impl OperationJournal for WriterJournal {
         }
     }
 
-    fn record_items(&self, op_id: &str, items: Vec<JournalItem>) {
+    fn record_items(&self, op_id: &OperationId, items: Vec<JournalItem>) {
         if items.is_empty() {
             return;
         }
@@ -322,7 +322,7 @@ impl OperationJournal for WriterJournal {
         // (a batched writer message instead of one per leaf).
         let batch = {
             let mut ops = self.ops.lock_ignore_poison();
-            let accum = ops.entry(op_id.to_string()).or_default();
+            let accum = ops.entry(op_id.clone()).or_default();
             for mut item in items {
                 // Assign the op-monotonic seq here so record points never track
                 // it; recording order IS the seq order.
@@ -351,39 +351,44 @@ impl OperationJournal for WriterJournal {
         // writer backpressure, and holding the per-op map lock across that would
         // serialize unrelated ops.
         if let Some(batch) = batch
-            && let Err(e) = self.writer.record_items(op_id, batch)
+            && let Err(e) = self.writer.record_items(op_id.as_str(), batch)
         {
             log::warn!(target: "operation_log", "journal record_items failed: {e}");
         }
     }
 
-    fn note_search_coverage(&self, op_id: &str, coverage: SearchCoverage, reason: Option<SearchCoverageReason>) {
+    fn note_search_coverage(
+        &self,
+        op_id: &OperationId,
+        coverage: SearchCoverage,
+        reason: Option<SearchCoverageReason>,
+    ) {
         // Worst-wins: only a downgrade FROM `Full` sticks (there is no coverage
         // state below `TopLevelOnly`, so the first downgrade's reason is kept).
         if coverage == SearchCoverage::Full {
             return;
         }
         let mut ops = self.ops.lock_ignore_poison();
-        let accum = ops.entry(op_id.to_string()).or_default();
+        let accum = ops.entry(op_id.clone()).or_default();
         if accum.coverage == SearchCoverage::Full {
             accum.coverage = coverage;
             accum.coverage_reason = reason;
         }
     }
 
-    fn note_not_rollbackable(&self, op_id: &str, reason: NotRollbackableReason) {
+    fn note_not_rollbackable(&self, op_id: &OperationId, reason: NotRollbackableReason) {
         let mut ops = self.ops.lock_ignore_poison();
-        let accum = ops.entry(op_id.to_string()).or_default();
+        let accum = ops.entry(op_id.clone()).or_default();
         accum.noted_not_rollbackable.get_or_insert(reason);
     }
 
-    fn finalize(&self, op_id: &str, inputs: FinalizeInputs) -> FinalizeOutcome {
+    fn finalize(&self, op_id: &OperationId, inputs: FinalizeInputs) -> FinalizeOutcome {
         let accum = self.ops.lock_ignore_poison().remove(op_id).unwrap_or_default();
 
         // Flush the buffered tail BEFORE finalize so the writer commits every
         // record before it counts rows (messages are processed in FIFO order).
         if !accum.buffer.is_empty()
-            && let Err(e) = self.writer.record_items(op_id, accum.buffer)
+            && let Err(e) = self.writer.record_items(op_id.as_str(), accum.buffer)
         {
             log::warn!(target: "operation_log", "journal finalize flush failed: {e}");
         }
@@ -480,20 +485,25 @@ impl OperationJournal for CapturingJournal {
     fn open(&self, open: OpenOperation) {
         self.opens.lock_ignore_poison().push(open);
     }
-    fn record_items(&self, _op_id: &str, items: Vec<JournalItem>) {
+    fn record_items(&self, _op_id: &OperationId, items: Vec<JournalItem>) {
         self.items.lock_ignore_poison().extend(items);
     }
-    fn note_search_coverage(&self, op_id: &str, coverage: SearchCoverage, reason: Option<SearchCoverageReason>) {
+    fn note_search_coverage(
+        &self,
+        op_id: &OperationId,
+        coverage: SearchCoverage,
+        reason: Option<SearchCoverageReason>,
+    ) {
         self.coverage_notes
             .lock_ignore_poison()
             .push((op_id.to_string(), coverage, reason));
     }
-    fn note_not_rollbackable(&self, op_id: &str, reason: NotRollbackableReason) {
+    fn note_not_rollbackable(&self, op_id: &OperationId, reason: NotRollbackableReason) {
         self.not_rollbackable_notes
             .lock_ignore_poison()
             .push((op_id.to_string(), reason));
     }
-    fn finalize(&self, op_id: &str, inputs: FinalizeInputs) -> FinalizeOutcome {
+    fn finalize(&self, op_id: &OperationId, inputs: FinalizeInputs) -> FinalizeOutcome {
         let counts = {
             let items = self.items.lock_ignore_poison();
             let mut c = IssuedCounts::default();

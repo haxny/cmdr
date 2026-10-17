@@ -483,7 +483,7 @@ impl OperationManager {
                     self.host
                         .events()
                         .error_report(OperationErrorReport::AdmittedWithoutStart {
-                            operation_id: admit_id.clone(),
+                            operation_id: admit_id.clone().into(),
                         });
                     self.on_settled(&admit_id);
                 }

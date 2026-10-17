@@ -10,6 +10,8 @@
 use std::path::PathBuf;
 use std::time::Duration;
 
+use cmdr_operation_log::types::OperationId;
+
 use super::super::types::WriteOperationError;
 
 /// One error-level fact, grouped by what it means for the person.
@@ -19,13 +21,13 @@ pub(crate) enum OperationErrorReport {
     // signal opt-in users send on "this didn't work".
     /// A local copy failed and kept the `kept_files` it had landed.
     LocalCopyFailed {
-        operation_id: String,
+        operation_id: OperationId,
         error: WriteOperationError,
         kept_files: usize,
     },
     /// A copy between volumes (Local, SMB, MTP, …) failed.
     VolumeCopyFailed {
-        operation_id: String,
+        operation_id: OperationId,
         error: WriteOperationError,
     },
 
@@ -43,7 +45,7 @@ pub(crate) enum OperationErrorReport {
     /// The probe gave up on a task that moved no bytes for `still_for_secs`:
     /// the write is abandoned, and the file runs again if it has attempts left.
     StalledTaskAbandoned {
-        operation_id: String,
+        operation_id: OperationId,
         still_for_secs: u64,
         /// The task as the probe renders it.
         task: String,
@@ -51,7 +53,7 @@ pub(crate) enum OperationErrorReport {
     /// A cancelled volume copy left `tasks` in-flight tasks behind that didn't
     /// wind down within `deadline`.
     WindDownAbandoned {
-        operation_id: String,
+        operation_id: OperationId,
         tasks: usize,
         deadline: Duration,
         /// The probe's dump of the wedged tasks, when the op had a probe.
@@ -63,7 +65,7 @@ pub(crate) enum OperationErrorReport {
     TreeAbandoned { cause: TreeFailure },
     /// The admission pass found a queued op with no deferred start, and freed
     /// its lanes.
-    AdmittedWithoutStart { operation_id: String },
+    AdmittedWithoutStart { operation_id: OperationId },
 
     // Startup.
     /// The engine claimed its in-flight ledger with no data dir to keep it in,

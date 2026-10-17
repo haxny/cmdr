@@ -181,7 +181,7 @@ fn temp_writer() -> (tempfile::TempDir, OperationLogWriter, std::path::PathBuf) 
 
 fn open_op(op_id: &str, kind: OpKind) -> OpenOperation {
     OpenOperation {
-        op_id: op_id.to_string(),
+        op_id: op_id.into(),
         kind,
         initiator: Initiator::User,
         source_volume_id: Some("root".to_string()),
@@ -231,8 +231,11 @@ fn writer_journal_round_trips_a_clean_copy() {
     let journal = WriterJournal::new(writer.clone());
 
     journal.open(open_op("op-copy", OpKind::Copy));
-    journal.record_items("op-copy", vec![leaf(0, "a.txt", false), leaf(1, "b.txt", false)]);
-    let outcome = journal.finalize("op-copy", done_inputs(OpKind::Copy));
+    journal.record_items(
+        &"op-copy".into(),
+        vec![leaf(0, "a.txt", false), leaf(1, "b.txt", false)],
+    );
+    let outcome = journal.finalize(&"op-copy".into(), done_inputs(OpKind::Copy));
     writer.flush_blocking().expect("flush");
 
     assert_eq!(outcome.rollback_unit_rows, 2);
@@ -251,8 +254,8 @@ fn writer_journal_overwrite_finalizes_not_rollbackable() {
     let journal = WriterJournal::new(writer.clone());
 
     journal.open(open_op("op-ow", OpKind::Copy));
-    journal.record_items("op-ow", vec![leaf(0, "a.txt", false), leaf(1, "b.txt", true)]);
-    journal.finalize("op-ow", done_inputs(OpKind::Copy));
+    journal.record_items(&"op-ow".into(), vec![leaf(0, "a.txt", false), leaf(1, "b.txt", true)]);
+    journal.finalize(&"op-ow".into(), done_inputs(OpKind::Copy));
     writer.flush_blocking().expect("flush");
 
     let conn = open_read_connection(&path).expect("read conn");
@@ -270,8 +273,11 @@ fn writer_journal_dropped_rollback_row_finalizes_journal_incomplete() {
 
     journal.open(open_op("op-drop", OpKind::Copy));
     journal.arm_drop_next_rollback_row();
-    journal.record_items("op-drop", vec![leaf(0, "a.txt", false), leaf(1, "b.txt", false)]);
-    journal.finalize("op-drop", done_inputs(OpKind::Copy));
+    journal.record_items(
+        &"op-drop".into(),
+        vec![leaf(0, "a.txt", false), leaf(1, "b.txt", false)],
+    );
+    journal.finalize(&"op-drop".into(), done_inputs(OpKind::Copy));
     writer.flush_blocking().expect("flush");
 
     let conn = open_read_connection(&path).expect("read conn");
@@ -295,11 +301,11 @@ fn writer_journal_canceled_op_stays_rollbackable_for_reached_items() {
     open.item_count = 1000; // planned
     journal.open(open);
     let items: Vec<JournalItem> = (0..300).map(|i| leaf(i, &format!("f{i}.txt"), false)).collect();
-    journal.record_items("op-cancel", items);
+    journal.record_items(&"op-cancel".into(), items);
     let mut inputs = done_inputs(OpKind::Copy);
     inputs.execution_status = ExecutionStatus::Canceled;
     inputs.items_done = 300;
-    journal.finalize("op-cancel", inputs);
+    journal.finalize(&"op-cancel".into(), inputs);
     writer.flush_blocking().expect("flush");
 
     let conn = open_read_connection(&path).expect("read conn");
@@ -324,7 +330,7 @@ fn writer_journal_search_leaf_drop_downgrades_coverage_only() {
         entry_type: EntryType::Dir,
         ..leaf(0, "photos", false)
     };
-    journal.record_items("op-trash", vec![top]);
+    journal.record_items(&"op-trash".into(), vec![top]);
     // Three search-only leaves; drop one by recording only two but reporting three
     // issued via a note is not how it works — instead record three and use the
     // FK-drop path. Here we simulate a genuine drop by recording a search_only row
@@ -336,8 +342,8 @@ fn writer_journal_search_leaf_drop_downgrades_coverage_only() {
             ..leaf(i, &format!("p{i}.jpg"), false)
         })
         .collect();
-    journal.record_items("op-trash", leaves);
-    let outcome = journal.finalize("op-trash", done_inputs(OpKind::Trash));
+    journal.record_items(&"op-trash".into(), leaves);
+    let outcome = journal.finalize(&"op-trash".into(), done_inputs(OpKind::Trash));
     writer.flush_blocking().expect("flush");
 
     assert_eq!(outcome.rollback_unit_rows, 1);
@@ -357,18 +363,18 @@ fn writer_journal_note_coverage_downgrade_reaches_finalize() {
 
     journal.open(open_op("op-capped", OpKind::Trash));
     journal.record_items(
-        "op-capped",
+        &"op-capped".into(),
         vec![JournalItem {
             entry_type: EntryType::Dir,
             ..leaf(0, "huge", false)
         }],
     );
     journal.note_search_coverage(
-        "op-capped",
+        &"op-capped".into(),
         SearchCoverage::TopLevelOnly,
         Some(SearchCoverageReason::Capped),
     );
-    journal.finalize("op-capped", done_inputs(OpKind::Trash));
+    journal.finalize(&"op-capped".into(), done_inputs(OpKind::Trash));
     writer.flush_blocking().expect("flush");
 
     let conn = open_read_connection(&path).expect("read conn");

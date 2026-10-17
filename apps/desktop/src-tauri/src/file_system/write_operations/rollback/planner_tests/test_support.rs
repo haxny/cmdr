@@ -92,7 +92,7 @@ impl Rig {
     ) {
         self.writer
             .open_operation(OpenOperation {
-                op_id: op_id.to_string(),
+                op_id: op_id.into(),
                 kind,
                 initiator: Initiator::User,
                 source_volume_id: Some(src_vol.to_string()),

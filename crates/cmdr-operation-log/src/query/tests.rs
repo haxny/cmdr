@@ -43,7 +43,7 @@ fn journal_op(
 ) {
     writer
         .open_operation(OpenOperation {
-            op_id: op_id.to_string(),
+            op_id: op_id.into(),
             kind,
             initiator,
             source_volume_id: Some("vol-1".to_string()),
@@ -83,14 +83,14 @@ fn journal_op(
 fn journal_inverse_of(writer: &OperationLogWriter, inverse_op_id: &str, original: &str, started_at: i64) {
     writer
         .open_operation(OpenOperation {
-            op_id: inverse_op_id.to_string(),
+            op_id: inverse_op_id.into(),
             kind: OpKind::Delete,
             initiator: Initiator::User,
             source_volume_id: Some("vol-1".to_string()),
             dest_volume_id: None,
             item_count: 0,
             started_at,
-            rolls_back_op_id: Some(original.to_string()),
+            rolls_back_op_id: Some(original.to_string()).map(Into::into),
             execution_status: ExecutionStatus::Running,
         })
         .expect("open the inverse");

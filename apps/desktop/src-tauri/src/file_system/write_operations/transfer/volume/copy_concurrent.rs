@@ -318,7 +318,7 @@ impl<'a> ConcurrentDriver<'a> {
                     Ok(next) => next,
                     Err(_) => {
                         self.ctx.state.scope().host().events().error_report(OperationErrorReport::WindDownAbandoned {
-                            operation_id: operation_id.to_string(),
+                            operation_id: operation_id.into(),
                             tasks: self.in_flight.len(),
                             deadline: drain_deadline_for(self.drain_shortened),
                             probe_dump: self

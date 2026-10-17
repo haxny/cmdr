@@ -204,7 +204,7 @@ async fn entry_refuses_unknown_and_not_rollbackable_and_disconnected() {
 fn seed_rolling_back(rig: &Rig, op_id: &str, inverse: Option<(&str, &[ItemOutcome])>) {
     rig.writer
         .open_operation(OpenOperation {
-            op_id: op_id.to_string(),
+            op_id: op_id.into(),
             kind: OpKind::Copy,
             initiator: Initiator::User,
             source_volume_id: Some("src".into()),
@@ -221,14 +221,14 @@ fn seed_rolling_back(rig: &Rig, op_id: &str, inverse: Option<(&str, &[ItemOutcom
     if let Some((inv_id, outcomes)) = inverse {
         rig.writer
             .open_operation(OpenOperation {
-                op_id: inv_id.to_string(),
+                op_id: inv_id.into(),
                 kind: OpKind::Delete,
                 initiator: Initiator::User,
                 source_volume_id: Some("dst".into()),
                 dest_volume_id: None,
                 item_count: outcomes.len() as u64,
                 started_at: 2,
-                rolls_back_op_id: Some(op_id.to_string()),
+                rolls_back_op_id: Some(op_id.to_string()).map(Into::into),
                 execution_status: ExecutionStatus::Running,
             })
             .expect("open inverse");

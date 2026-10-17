@@ -395,7 +395,7 @@ impl crate::file_system::write_operations::Operations {
                                 .host()
                                 .events()
                                 .error_report(OperationErrorReport::VolumeCopyFailed {
-                                    operation_id: op_id.clone(),
+                                    operation_id: op_id.clone().into(),
                                     error: failure.error.clone(),
                                 });
                             events.emit_error(write_error_event_from(

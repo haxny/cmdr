@@ -769,7 +769,7 @@ pub(in crate::file_system::write_operations) fn copy_files_with_progress_inner(
                 .host()
                 .events()
                 .error_report(OperationErrorReport::LocalCopyFailed {
-                    operation_id: operation_id.to_string(),
+                    operation_id: operation_id.into(),
                     error: e.clone(),
                     kept_files: transaction.created_files().len(),
                 });

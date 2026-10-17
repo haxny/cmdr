@@ -49,7 +49,7 @@ fn open_record_finalize_round_trips_one_operation() {
 
     writer
         .open_operation(OpenOperation {
-            op_id: "op-1".to_string(),
+            op_id: "op-1".into(),
             kind: OpKind::Copy,
             initiator: Initiator::User,
             source_volume_id: Some("vol-1".to_string()),
@@ -173,7 +173,7 @@ fn finalize_counts_split_by_row_role() {
     let (_store, writer, _dir) = fresh();
     writer
         .open_operation(OpenOperation {
-            op_id: "op-trash".to_string(),
+            op_id: "op-trash".into(),
             kind: OpKind::Trash,
             initiator: Initiator::User,
             source_volume_id: Some("vol-1".to_string()),
@@ -255,7 +255,7 @@ fn rollback_units_page_streams_reverse_and_excludes_search_leaves() {
     let (store, writer, _dir) = fresh();
     writer
         .open_operation(OpenOperation {
-            op_id: "op".to_string(),
+            op_id: "op".into(),
             kind: OpKind::Move,
             initiator: Initiator::User,
             source_volume_id: Some("vol-1".to_string()),
@@ -333,7 +333,7 @@ fn set_rollback_state_and_item_outcomes_persist() {
     let (store, writer, _dir) = fresh();
     writer
         .open_operation(OpenOperation {
-            op_id: "op".to_string(),
+            op_id: "op".into(),
             kind: OpKind::Copy,
             initiator: Initiator::User,
             source_volume_id: Some("vol-1".to_string()),
@@ -430,14 +430,14 @@ fn set_rollback_state_and_item_outcomes_persist() {
 fn reconcile_reads_find_rolling_back_ops_and_their_inverse() {
     let (store, writer, _dir) = fresh();
     let open = |op_id: &str, rolls_back: Option<String>| OpenOperation {
-        op_id: op_id.to_string(),
+        op_id: op_id.into(),
         kind: OpKind::Copy,
         initiator: Initiator::User,
         source_volume_id: Some("vol-1".to_string()),
         dest_volume_id: Some("vol-1".to_string()),
         item_count: 0,
         started_at: 1,
-        rolls_back_op_id: rolls_back,
+        rolls_back_op_id: rolls_back.map(Into::into),
         execution_status: ExecutionStatus::Running,
     };
     writer.open_operation(open("orig", None)).expect("open orig");

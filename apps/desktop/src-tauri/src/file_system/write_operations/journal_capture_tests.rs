@@ -508,7 +508,7 @@ fn capture_stays_off_the_hot_path_under_writer_load() {
         let id = format!("seed-{i}");
         writer
             .open_operation(cmdr_operation_log::writer::OpenOperation {
-                op_id: id.clone(),
+                op_id: id.clone().into(),
                 kind: OpKind::Delete,
                 initiator: Initiator::User,
                 source_volume_id: Some("root".into()),

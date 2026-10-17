@@ -50,7 +50,7 @@ impl Rig {
 
     fn open(&self, op_id: &str) -> OpJournal {
         self.log.journal_open(OpenOperation {
-            op_id: op_id.to_string(),
+            op_id: op_id.into(),
             kind: OpKind::Copy,
             initiator: Initiator::User,
             source_volume_id: Some("root".to_string()),

@@ -19,7 +19,7 @@ fn journal_bulk_op(writer: &OperationLogWriter, op_index: i64, item_count: i64) 
     let dir = format!("/vol/tree-{op_index}");
     writer
         .open_operation(OpenOperation {
-            op_id: op_id.clone(),
+            op_id: op_id.clone().into(),
             kind: OpKind::Delete,
             initiator: Initiator::User,
             source_volume_id: Some("vol-1".to_string()),
@@ -84,7 +84,7 @@ fn prune_removes_old_operation_and_gcs_its_dirs() {
     ] {
         writer
             .open_operation(OpenOperation {
-                op_id: op_id.to_string(),
+                op_id: op_id.into(),
                 kind: OpKind::Delete,
                 initiator: Initiator::User,
                 source_volume_id: Some("vol-1".to_string()),
@@ -189,14 +189,14 @@ fn prune_nulls_a_survivors_rollback_link_to_a_pruned_op() {
 
     // An old original op, and a recent inverse op that rolled it back.
     let open = |op_id: &str, ended: i64, rolls_back: Option<String>| OpenOperation {
-        op_id: op_id.to_string(),
+        op_id: op_id.into(),
         kind: OpKind::Copy,
         initiator: Initiator::User,
         source_volume_id: Some("vol-1".to_string()),
         dest_volume_id: Some("vol-1".to_string()),
         item_count: 0,
         started_at: ended - 1,
-        rolls_back_op_id: rolls_back,
+        rolls_back_op_id: rolls_back.map(Into::into),
         execution_status: ExecutionStatus::Running,
     };
     let finalize = |op_id: &str, ended: i64| FinalizeOperation {
@@ -371,14 +371,14 @@ fn size_prune_removes_a_rolled_back_pair_together() {
     // Original (oldest), then its inverse (references the original), then a newer
     // unrelated op.
     let open = |op_id: &str, started: i64, rolls_back: Option<String>| OpenOperation {
-        op_id: op_id.to_string(),
+        op_id: op_id.into(),
         kind: OpKind::Copy,
         initiator: Initiator::User,
         source_volume_id: Some("vol-1".to_string()),
         dest_volume_id: Some("vol-1".to_string()),
         item_count: 0,
         started_at: started,
-        rolls_back_op_id: rolls_back,
+        rolls_back_op_id: rolls_back.map(Into::into),
         execution_status: ExecutionStatus::Running,
     };
     let finalize = |op_id: &str, ended: i64, state: RollbackState| FinalizeOperation {

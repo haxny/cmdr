@@ -28,7 +28,7 @@ fn opened(path: &Path) -> OperationLog {
 
 fn header(op_id: &str) -> OpenOperation {
     OpenOperation {
-        op_id: op_id.to_string(),
+        op_id: op_id.into(),
         kind: OpKind::Copy,
         initiator: Initiator::User,
         source_volume_id: Some("root".to_string()),

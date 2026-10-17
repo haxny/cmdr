@@ -18,7 +18,7 @@ use super::recording::Recording;
 use super::retention::{self, RetentionLimitsSource};
 use super::rollback::reconcile_rolling_back_on_open;
 use super::store::{OperationLogStore, OperationLogStoreError};
-use super::types::{NotRollbackableReason, SearchCoverage, SearchCoverageReason};
+use super::types::{NotRollbackableReason, OperationId, SearchCoverage, SearchCoverageReason};
 use super::writer::{FinalizeOutcome, JournalItem, OpenOperation, OperationLogWriter};
 
 /// The operation log: a cheap-to-clone handle, every clone sharing one state.
@@ -179,13 +179,13 @@ const NOTHING_WRITTEN: FinalizeOutcome = FinalizeOutcome {
 /// the operation's scope); a clone is the same operation's journal.
 #[derive(Clone)]
 pub struct OpJournal {
-    op_id: String,
+    op_id: OperationId,
     journal: Option<Arc<dyn OperationJournal>>,
 }
 
 impl OpJournal {
     /// The operation this journal records.
-    pub fn op_id(&self) -> &str {
+    pub fn op_id(&self) -> &OperationId {
         &self.op_id
     }
 

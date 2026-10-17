@@ -253,6 +253,39 @@ token_enum! {
     }
 }
 
+/// One operation's id: the managed operation's UUIDv7
+/// ([`new_operation_id`](crate::new_operation_id)), reused as its journal row's
+/// key. The journal's API takes this, so an id can't be swapped with a volume
+/// id or a path where both are strings; a plain `String` only crosses IPC and
+/// sits in the store's rows.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct OperationId(String);
+
+impl OperationId {
+    /// The id as text, for the store, a log line, or the wire.
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl From<String> for OperationId {
+    fn from(id: String) -> Self {
+        Self(id)
+    }
+}
+
+impl From<&str> for OperationId {
+    fn from(id: &str) -> Self {
+        Self(id.to_string())
+    }
+}
+
+impl std::fmt::Display for OperationId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

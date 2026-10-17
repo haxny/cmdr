@@ -622,7 +622,7 @@ impl OperationProbe {
                 .host()
                 .events()
                 .error_report(OperationErrorReport::StalledTaskAbandoned {
-                    operation_id: self.operation_id.clone(),
+                    operation_id: self.operation_id.as_str().into(),
                     still_for_secs: still_for_ms / 1_000,
                     task: task.render(),
                 });

@@ -367,27 +367,29 @@ var surfaceGuardedCrates = []struct {
 		},
 	},
 	{
-		// Measured 2026-10-16, at the extraction, and set to exactly what the crate
-		// exposes, with no headroom (David approved the rule in the #415 plan).
+		// Measured 2026-10-16, at the extraction, and re-measured 2026-10-17, when
+		// the journal API took `OperationId`; both times set to exactly what the
+		// crate exposes, with no headroom (David approved the rule, and that one
+		// re-measure, in the #415 plan).
 		//
 		// The 11 root promises are `OperationLog`, `OpJournal`, `OpenError`,
 		// `new_operation_id`, and the seven public modules: `store` and `query` (the
 		// read API the IPC commands, the MCP tools, and the dump tool use), `writer`
 		// and `capture` (the write engine journals through them), `types` (the
-		// classification tokens that cross IPC), `rollback` (the planner, its
-		// `RollbackRunner` / `VolumeLookup` traits, and the fail-safe verdicts the
-		// engine's in-flight reversals share), and `retention`. `HandleMethods`
-		// counts `detached` and four by-id journal methods that leave once each
-		// operation carries its `OpJournal`; the `testing`-gated `set_journal` and
-		// `reset_recording` count apart. Item-by-item:
+		// classification tokens that cross IPC, and `OperationId`), `rollback` (the
+		// planner, its `RollbackRunner` / `VolumeLookup` traits, and the fail-safe
+		// verdicts the engine's in-flight reversals share), and `retention`.
+		// `HandleMethods` counts `detached`, `open`, `set_recording`, `writer`,
+		// `spawn_retention`, and `journal_open`; the `testing`-gated `set_journal`
+		// and `reset_recording` count apart. Item-by-item:
 		// `crates/cmdr-operation-log/DETAILS.md` § "The public surface is capped".
 		Name:       "cmdr-operation-log",
 		HandleType: "OperationLog",
 		Ceilings: surfaceCeilings{
 			RootPromises:   11,
-			HandleMethods:  10,
+			HandleMethods:  6,
 			PublicModules:  7,
-			SubsystemItems: 74,
+			SubsystemItems: 76,
 		},
 	},
 }

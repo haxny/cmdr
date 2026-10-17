@@ -124,7 +124,7 @@ pub(super) fn open_local_op(
     dest_volume_id: Option<&str>,
 ) {
     scope.open_journal(OpenOperation {
-        op_id: op_id.to_string(),
+        op_id: op_id.into(),
         kind,
         initiator,
         source_volume_id: Some(DEFAULT_VOLUME_ID.to_string()),
@@ -149,7 +149,7 @@ pub(super) fn open_volume_op(
     item_count: u64,
 ) {
     scope.open_journal(OpenOperation {
-        op_id: op_id.to_string(),
+        op_id: op_id.into(),
         kind,
         initiator,
         source_volume_id: Some(source_volume_id.to_string()),
@@ -427,7 +427,7 @@ pub(super) fn note_not_rollbackable(scope: &OpScope, reason: NotRollbackableReas
 fn header_totals_from_status(scope: &OpScope) -> (Option<u64>, u64, u64) {
     let status = scope
         .journal()
-        .and_then(|journal| scope.status().snapshot(journal.op_id(), None));
+        .and_then(|journal| scope.status().snapshot(journal.op_id().as_str(), None));
     match status {
         Some(status) if status.files_total > 0 => (
             Some(status.files_total as u64),
@@ -558,7 +558,7 @@ fn open_archive_op_between(
     item_count: u64,
 ) {
     scope.open_journal(OpenOperation {
-        op_id: op_id.to_string(),
+        op_id: op_id.into(),
         kind: OpKind::ArchiveEdit,
         initiator,
         source_volume_id: Some(source_volume_id.to_string()),

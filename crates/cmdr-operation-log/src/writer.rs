@@ -38,8 +38,8 @@ use rusqlite::Connection;
 
 use super::store::{OperationLogStoreError, fold_name, intern_dir, open_write_connection};
 use super::types::{
-    ArchiveSubkind, EntryType, ExecutionStatus, Initiator, ItemOutcome, NotRollbackableReason, OpKind, RollbackState,
-    RowRole, SearchCoverage, SearchCoverageReason, SkipReason,
+    ArchiveSubkind, EntryType, ExecutionStatus, Initiator, ItemOutcome, NotRollbackableReason, OpKind, OperationId,
+    RollbackState, RowRole, SearchCoverage, SearchCoverageReason, SkipReason,
 };
 use cmdr_fs::ignore_poison::IgnorePoison;
 
@@ -54,7 +54,7 @@ const CHANNEL_CAPACITY: usize = 1024;
 pub struct OpenOperation {
     /// The pipeline's `operation_id` UUID, reused as the journal PK so the row
     /// correlates 1:1 with the live op.
-    pub op_id: String,
+    pub op_id: OperationId,
     /// What the operation does, in the journal's durable taxonomy.
     pub kind: OpKind,
     /// Who started it: the user, the agent, or both.
@@ -69,7 +69,7 @@ pub struct OpenOperation {
     /// When the op started (opaque epoch integer; the caller owns the clock).
     pub started_at: i64,
     /// Set on a rollback op: the id of the operation it reverses.
-    pub rolls_back_op_id: Option<String>,
+    pub rolls_back_op_id: Option<OperationId>,
     /// Usually `Running`; a queued op may open as `Queued`.
     pub execution_status: ExecutionStatus,
 }
@@ -411,12 +411,12 @@ fn apply_open(conn: &Connection, open: &OpenOperation) -> Result<(), OperationLo
              source_volume_id, dest_volume_id, started_at, item_count, search_coverage)
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
         rusqlite::params![
-            open.op_id,
+            open.op_id.as_str(),
             open.kind.as_token(),
             open.initiator.as_token(),
             open.execution_status.as_token(),
             RollbackState::NotRollbackable.as_token(),
-            open.rolls_back_op_id,
+            open.rolls_back_op_id.as_ref().map(OperationId::as_str),
             open.source_volume_id,
             open.dest_volume_id,
             open.started_at,

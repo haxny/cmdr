@@ -89,7 +89,7 @@ fn each_engine_journals_into_its_own_log() {
     let _b = builder().operation_log(log_b).build();
 
     a.op_scope().open_journal(OpenOperation {
-        op_id: "journaled-in-a".to_string(),
+        op_id: "journaled-in-a".into(),
         kind: OpKind::Copy,
         initiator: Initiator::User,
         source_volume_id: None,

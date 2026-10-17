@@ -376,14 +376,14 @@ pub async fn execute_rollback(
     // Open the inverse op's journal row (Running). It carries the same volumes as
     // the original and links back via `rolls_back_op_id` (drives crash-reconcile).
     if let Err(e) = writer.open_operation(OpenOperation {
-        op_id: inverse_op_id.to_string(),
+        op_id: inverse_op_id.into(),
         kind: inv_kind,
         initiator,
         source_volume_id: original.source_volume_id.clone(),
         dest_volume_id: original.dest_volume_id.clone(),
         item_count: inverse_planned_item_count(original),
         started_at: super::now_secs(),
-        rolls_back_op_id: Some(original.op_id.clone()),
+        rolls_back_op_id: Some(original.op_id.as_str().into()),
         execution_status: ExecutionStatus::Running,
     }) {
         log::warn!(target: "operation_log", "rollback: open inverse op failed: {e}");
