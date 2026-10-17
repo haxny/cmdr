@@ -645,7 +645,12 @@ Each lands as its own commit with a red test first, and the commit body names it
    against "every destination is announced before the syscall". It now takes the archive as an `Announced` and goes
    through `begin`. Red test first:
    `own_write_announce_tests.rs::a_fresh_compress_announces_its_zip_and_temp_before_they_exist` (recorded nothing).
-5. **Nothing else.** In particular: terminal-outcome recording stays in the app's sink adapter, the admitted-op spawn
+5. **A launch with no data dir raises one `LedgerUnpersisted` error report (M6b, landed in `c2d26c7a8`).** Before, a
+   data-dir failure skipped the in-flight sweep silently; now `claim_ledger(None)` runs the ledger unpersisted and the
+   engine reports `OperationErrorReport::LedgerUnpersisted` once, which the app re-raises through `log_error!`. This is
+   the degrade rule's "unpersisted with an `error_report`" half (§ "Seam design", "The ledger"). Pinned by
+   `in_flight_temps_claim_tests.rs::a_claim_with_no_data_dir_runs_unpersisted_and_raises_one_error_report`.
+6. **Nothing else.** In particular: terminal-outcome recording stays in the app's sink adapter, the admitted-op spawn
    stays on the APP runtime (the `VolumeHost`'s, which IS the app runtime), and an engine event before `install` is
    dropped by the default seam exactly as today's unset `AppHandle` statics drop it. The intent race is fixed before the
    effort (§ "Precondition"). A pre-install refusal is not a change: today no op can start before setup, and the refusal
