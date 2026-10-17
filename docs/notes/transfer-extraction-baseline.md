@@ -245,8 +245,8 @@ load, and the rows where the pair disagreed with itself say so.
 - **The `desktop-rust-tests` lane read 48.0 s against 37.5 s on this worktree, and the cause is this worktree's
   `target/`, not the code.** On an equally fresh `target/`, the same tests run in the same time (§ "Test lanes, after").
 - **Criterion shows no change** once the bench's feature drift is neutralized: two paired runs, every case within the
-  day's own run-to-run spread. The drift is real: as built, the bench runs `stream_large_file` 17% faster than
-  production behavior would.
+  day's own run-to-run spread. The drift was real (as built then, the bench ran `stream_large_file` 17% faster than
+  production behavior would), and the bench now builds without it.
 - **Complexity**: production statics 21 → 1, app reach-ins 340 → 0, non-comment `tauri` lines 49 → 0, `lock-poison`
   exceptions 20 → 0, app-named engine items 115 → 55.
 
@@ -340,11 +340,14 @@ the same cell starved and passes it alone.
 ### Criterion, after
 
 **The feature drift, neutralized at the "after" side.** The crate bench builds with `cmdr-local/testing` on (dev
-dependencies), which flips two behaviors the bench reaches: space answered from `statvfs` instead of NSURL (`space.rs`),
-and the 1 ms listing-progress sampler (`local_posix.rs`). The third `testing` behavior gate in the graph, `cmdr-fs`'s
-thread-QoS no-op, never runs here: the engine doesn't call it. For the measured runs, both `cmdr-local` gates were set
-back to `cfg!(test)` in an uncommitted edit, reverted right after, so the bench ran production behavior like
-`4893fa184`'s, whose gates are `cfg(test)` only.
+dependencies). When these runs were taken, that flipped two behaviors the bench reaches: space answered from `statvfs`
+instead of NSURL (`space.rs`), and the 1 ms listing-progress sampler (`local_posix.rs`). The third `testing` behavior
+gate in the graph, `cmdr-fs`'s thread-QoS no-op, never runs here: the engine doesn't call it. For the measured runs,
+both `cmdr-local` gates were set back to `cfg!(test)` in an uncommitted edit, reverted right after, so the bench ran
+production behavior like `4893fa184`'s, whose gates are `cfg(test)` only. Since the final pass, both gates read
+`cmdr-local`'s `TEST_FAST_PATHS`, which also requires `debug_assertions`, so the `bench` profile runs production
+behavior as committed and a re-run needs no edit (`crates/cmdr-local/DETAILS.md` § "A consumer's test build is a test
+build here too").
 
 Medians from `estimates.json`, two pairs, the second in reverse order, after → before:
 
@@ -363,8 +366,8 @@ against it on the same afternoon. Compare paired runs, or the committed baseline
 
 **What the drift is worth**, one as-built run (gates on, load 6.9–12.1): 232.11, 243.30, **38.72**, 167.72, and 33.90
 ms. `stream_large_file` runs 17% faster with the `testing` gates than without (38.7 against 46.5–50.1 ms); the other
-four sit inside the gates-off spread. So `cargo bench -p cmdr-operations … -- --baseline before` as written above
-flatters that one case.
+four sit inside the gates-off spread. So before the fix, `cargo bench -p cmdr-operations … -- --baseline before` as
+written above flattered that one case.
 
 ### Complexity, after
 

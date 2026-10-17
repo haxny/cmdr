@@ -15,10 +15,11 @@ workspace = true
 # "This is a test build." Consumers turn it on through a dev-dependency, which
 # keeps it off in every shipped build. It keeps a consumer's test build behaving
 # the way this crate's own does: space answers from `statvfs` rather than NSURL
-# (#357), a listing samples its progress every millisecond, and
-# `LocalPosixVolume::with_sidecar_probe` and `reading::list_directory` are
-# reachable. `cfg(test)` can't: it's set only while a crate compiles its OWN test
-# target.
+# (#357) and a listing samples its progress every millisecond (both only with
+# `debug_assertions`, so a consumer's bench measures what ships: `TEST_FAST_PATHS`
+# in `lib.rs`), and `LocalPosixVolume::with_sidecar_probe` and
+# `reading::list_directory` are reachable. `cfg(test)` can't: it's set only
+# while a crate compiles its OWN test target.
 testing = ["cmdr-fs/testing"]
 # `Volume::inject_error`, which lets a Playwright spec make the next local
 # `list_directory` fail with a chosen errno. Never enable in a production build;

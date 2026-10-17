@@ -35,9 +35,9 @@ use tokio::task::spawn_blocking;
 ///
 /// Sets the cadence of the pane's "Loaded N files..." readout: fast enough that a
 /// multi-second folder visibly climbs, slow enough that the number stays readable.
-/// Shortened in a test build (this crate's or a consumer's, through `testing`) so
-/// a scratch dir produces ticks without needing to be huge.
-const PROGRESS_SAMPLE_INTERVAL: Duration = if cfg!(any(test, feature = "testing")) {
+/// Shortened in a test build (`crate::TEST_FAST_PATHS`) so a scratch dir
+/// produces ticks without needing to be huge.
+const PROGRESS_SAMPLE_INTERVAL: Duration = if crate::TEST_FAST_PATHS {
     Duration::from_millis(1)
 } else {
     Duration::from_millis(200)

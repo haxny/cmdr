@@ -68,7 +68,8 @@ play a FAT volume on APFS. Rule: `crates/cmdr-fs/src/apple_double.rs`; who lists
 
 `cfg(test)` is set only while this crate compiles its OWN tests, so the app's tests would otherwise run the production
 shape of everything below. The `testing` feature (the app turns it on through a dev-dependency) widens exactly what the
-app's test build needs, each with `any(test, feature = "testing")`:
+app's test build needs, the reach items with `any(test, feature = "testing")` and the behavior gates through
+`TEST_FAST_PATHS` (the decision below):
 
 - `space::get_volume_space` answers from `statvfs` (§ "Local volume space"): without it, the #357 stall comes back in
   the write engine's transfer and archive move-out suites and the app's ADB suites.
@@ -78,6 +79,19 @@ app's test build needs, each with `any(test, feature = "testing")`:
 
 The first two are `cfg!` branches rather than `#[cfg]` items, so both arms compile in every build and neither leaves
 dead code behind in the other.
+
+**Decision: the two behavior gates read `TEST_FAST_PATHS` (`lib.rs`), which also requires `debug_assertions`.** Why:
+Cargo builds a bench target with its package's dev-dependencies, so the engine's Criterion bench
+(`crates/cmdr-operations/benches/transfer_benchmarks.rs`) compiles this crate with `testing` on. Gated on `testing`
+alone, the bench measured the fast paths, and `stream_large_file` ran 17% faster than what ships
+(`docs/notes/transfer-extraction-baseline.md` § "Criterion, after"). A separate cargo feature can't make the cut: the
+engine's own tests need the `statvfs` answer (#357), and one package's tests and benches share one dev-dependency
+feature set. The `bench` profile has no `debug_assertions` and every test profile does, so the cut falls exactly between
+them. The two reach items (`with_sidecar_probe`, `list_directory`) stay on `testing` alone: the bench needs them to
+compile, and they change no behavior. (verified with a temporary
+`const _: () = assert!(cfg!(feature = "testing") && !TEST_FAST_PATHS)`:
+`cargo bench -p cmdr-operations --bench transfer_benchmarks -- --test` built and passed,
+`cargo check -p cmdr-operations --tests` refused it, 2026-10-17)
 
 ## The local reader
 

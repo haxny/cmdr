@@ -31,7 +31,7 @@ rename, local volume space, and the mount probes. Tauri-free; the app builds eve
   async side samples. DETAILS § "The local reader".
 - **A test build answers space from `statvfs`, never NSURL** (#357). Gate test scaffolding on
   `any(test, feature = "testing")`, ❌ never `cfg(test)` alone: the app's tests turn `testing` on and need the same
-  behavior.
+  behavior. A gate that changes BEHAVIOR reads `TEST_FAST_PATHS` instead, so the engine's bench measures what ships.
 
 Decisions, the reader, space, the rename's degradation, the tests, and the capped surface: `DETAILS.md`. Read it before
 any non-trivial work here: editing, planning, reorganizing, or advising.

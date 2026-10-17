@@ -2048,10 +2048,13 @@ anchors cited from elsewhere; `write_operations/DETAILS.md` sections are cited f
 effects live only in `operations_host/DETAILS.md`.
 
 **Bench feature drift.** Cargo builds bench targets with dev-dependencies, so from `cmdr-local` onward every crate's
-`testing` feature is ON in the bench: the NSURL-free space answer (#357's gate) and the 1 ms progress sampler change
-what the "after" bench executes. Before comparing Criterion against M0b, either keep those behavioral gates out of the
-bench build (a separate feature the bench doesn't enable, or a runtime switch) or measure "before" with the same gates
-forced on; never compare across the drift silently. The build-time rows are unaffected.
+`testing` feature is ON in the bench. Resolved in the final pass: `cmdr-local`'s two behavioral gates (the NSURL-free
+space answer, #357's, and the 1 ms progress sampler) read `TEST_FAST_PATHS`, which also requires `debug_assertions`, so
+the `bench` profile runs production behavior while every test build keeps the fast paths. A separate feature couldn't do
+it: the engine's own tests need the `statvfs` answer, and one package's tests and benches share one dev-dependency
+feature set. `crates/cmdr-local/DETAILS.md` § "A consumer's test build is a test build here too". The M9 "after" runs
+predate the fix and neutralized the drift by hand (`docs/notes/transfer-extraction-baseline.md` § "Criterion, after").
+The build-time rows are unaffected.
 
 **DONE.** Lanes: `claude-md-length`, `claude-md-details-sibling`, `docs-reachable`, `docs-dead-links`,
 `docs-section-refs`, `docs-link-text`, `resident-doc-budget`, `claude-md-reminder`, then the effort's ONE full

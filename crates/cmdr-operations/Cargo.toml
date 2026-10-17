@@ -128,6 +128,8 @@ unicode-normalization = "0.1"
 
 # The self dev-dependency above turns `testing` on for this target, so it needs
 # no `required-features` and every `--all-targets` lane builds and lints it.
+# `cmdr-local`'s test fast paths stay off in it all the same (they also need
+# `debug_assertions`, which the `bench` profile lacks), so it measures what ships.
 [[bench]]
 name = "transfer_benchmarks"
 harness = false

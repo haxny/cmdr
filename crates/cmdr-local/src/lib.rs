@@ -41,6 +41,18 @@ use cmdr_local as _;
 #[cfg(all(test, not(target_os = "macos")))]
 use dirs as _;
 
+/// Whether this build takes the test fast paths: space from `statvfs` rather than
+/// NSURL (#357), and a 1 ms listing-progress sampler.
+///
+/// On for this crate's own tests and for a consumer's test build (through
+/// `testing`), but never in an optimized build: Cargo compiles a consumer's
+/// Criterion bench with its dev-dependencies, so `testing` is on there too, and the
+/// `bench` profile (no `debug_assertions`) has to measure what ships. A cargo
+/// feature can't make that cut, since one package's tests and benches share one
+/// dev-dependency feature set. DETAILS § "A consumer's test build is a test build
+/// here too".
+const TEST_FAST_PATHS: bool = cfg!(any(test, all(feature = "testing", debug_assertions)));
+
 pub mod filesystem_kind;
 #[cfg(target_os = "linux")]
 pub mod linux_mounts;
