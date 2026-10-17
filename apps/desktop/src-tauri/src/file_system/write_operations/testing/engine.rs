@@ -20,7 +20,7 @@ use cmdr_operation_log::writer::OperationLogWriter;
 use super::super::host::testing::{FakeVolumes, RecordingEngineEvents, RecordingOwnWrites};
 use super::super::state::WriteOperationState;
 use super::super::{Operations, OperationsBuilder};
-use crate::test_support::TestDir;
+use cmdr_fs::testing::TestDir;
 
 /// The progress interval of a state a test registers by hand: short, since a
 /// synthetic operation never ticks anyway.

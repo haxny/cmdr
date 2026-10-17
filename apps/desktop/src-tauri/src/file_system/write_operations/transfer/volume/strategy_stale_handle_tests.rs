@@ -16,7 +16,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Duration;
 
 use crate::file_system::write_operations::testing::TestOperations;
-use crate::test_support::TestDir;
+use cmdr_fs::testing::TestDir;
 use cmdr_fs::volume::Volume;
 use cmdr_local::LocalPosixVolume;
 

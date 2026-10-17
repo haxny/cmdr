@@ -15,8 +15,8 @@ use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::state::WriteOperationState;
 use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::{SourceItemOutcome, WriteOperationType};
-use crate::test_support::TestDir;
 use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::testing::TestDir;
 use cmdr_fs::volume::{InMemoryVolume, Volume};
 
 fn write_file(dir: &Path, name: &str, contents: &[u8]) -> PathBuf {

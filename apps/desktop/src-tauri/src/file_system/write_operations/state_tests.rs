@@ -415,7 +415,7 @@ fn cancel_all_wakes_a_paused_parked_op() {
 
     engine.registry().cancel_all();
 
-    crate::test_support::wait_until(
+    cmdr_fs::testing::wait_until(
         Duration::from_secs(2),
         "the parked worker to observe the teardown cancel",
         || woke.load(Ordering::SeqCst),

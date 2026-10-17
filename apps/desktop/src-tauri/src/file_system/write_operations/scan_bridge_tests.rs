@@ -18,7 +18,7 @@ use super::manager::PauseOutcome;
 use super::scan_bridge::observed_scan_ticks;
 use super::scan_cache::{CachedScanResult, ScanOutcome, ScanPreviewState};
 use super::types::{LifecycleStatus, WriteOperationConfig, WriteOperationError, WriteOperationType};
-use crate::test_support::{TestDir, wait_until_async};
+use cmdr_fs::testing::{TestDir, wait_until_async};
 use cmdr_fs::volume::CopyScanResult;
 use cmdr_operation_log::types::Initiator;
 

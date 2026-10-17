@@ -200,7 +200,7 @@ async fn cancel_while_queued_unblocks_both_no_hang() {
     let canceller = tokio::spawn(async move {
         // A sender is installed while task A awaits the prompt (task B is then
         // queued behind it on the dispatch mutex).
-        crate::test_support::wait_until_async(Duration::from_secs(5), "the Stop prompt to be installed", || {
+        cmdr_fs::testing::wait_until_async(Duration::from_secs(5), "the Stop prompt to be installed", || {
             state_for_cancel.conflict_slot.is_awaiting()
         })
         .await;

@@ -1,6 +1,6 @@
 //! Integration tests for move operations and cross-filesystem staging.
 
-use crate::test_support::TestDir;
+use cmdr_fs::testing::TestDir;
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
 

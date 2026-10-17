@@ -25,8 +25,8 @@ use super::manager::{ManagedTaskGuard, OperationDescriptor, OperationSummaryText
 use super::state::WriteSettledGuard;
 use super::testing::{TestOperationLog, TestOperations};
 use super::types::{CancelRollback, LifecycleStatus, WriteOperationConfig, WriteOperationType, WriteSettledEvent};
-use crate::test_support::TestDir;
 use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::testing::TestDir;
 use cmdr_fs::volume::LaneKey;
 
 /// Bridge sink that keeps a direct handle to the underlying `CollectorEventSink`
@@ -263,7 +263,7 @@ async fn injected_sink_receives_complete_and_settled_for_local_copy() {
         .expect("copy_files_start should return Ok");
 
     // The deferred task runs asynchronously; wait until it settles.
-    crate::test_support::wait_until_async(Duration::from_secs(5), "the write-settled event to arrive", || {
+    cmdr_fs::testing::wait_until_async(Duration::from_secs(5), "the write-settled event to arrive", || {
         !collector.settled.lock().unwrap().is_empty()
     })
     .await;
@@ -359,7 +359,7 @@ async fn start_copy(
 }
 
 async fn wait_settled(collector: &CollectorEventSink) {
-    crate::test_support::wait_until_async(Duration::from_secs(5), "the write-settled event", || {
+    cmdr_fs::testing::wait_until_async(Duration::from_secs(5), "the write-settled event", || {
         !collector.settled.lock_ignore_poison().is_empty()
     })
     .await;

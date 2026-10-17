@@ -155,7 +155,7 @@ pub fn copy_single_file_linux(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_support::TestDir;
+    use cmdr_fs::testing::TestDir;
     use std::sync::atomic::Ordering;
 
     fn create_temp_dir(name: &str) -> TestDir {

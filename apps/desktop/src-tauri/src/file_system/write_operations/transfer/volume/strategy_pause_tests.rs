@@ -24,7 +24,7 @@ use super::test_support::{
 use super::*;
 use crate::file_system::write_operations::state::OperationIntent;
 use crate::file_system::write_operations::transfer::transfer_driver::{LeafProgressLedger, ObservedProgress};
-use crate::test_support::wait_until_async;
+use cmdr_fs::testing::wait_until_async;
 use std::ops::ControlFlow;
 use std::path::Path;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -33,7 +33,7 @@ use std::time::Duration;
 
 use super::super::faulty_volume::forward_volume_methods;
 use crate::file_system::write_operations::testing::TestOperations;
-use crate::test_support::TestDir;
+use cmdr_fs::testing::TestDir;
 use cmdr_fs::volume::{
     InMemoryVolume, StreamLength, StreamWriteProgress, StreamWritten, Volume, VolumeError, VolumeReadStream, WriteMode,
 };

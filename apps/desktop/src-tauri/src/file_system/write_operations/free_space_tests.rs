@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 use super::free_space::{SpaceNeed, available_space_from, check_copy_space, local_copy_need};
 use super::scan_cache::FileInfo;
 use super::types::{ConflictResolution, SpaceShortfall, WriteOperationError};
-use crate::test_support::TestDir;
+use cmdr_fs::testing::TestDir;
 
 // ============================================================================
 // Which figure: statvfs first, the slow "important usage" figure only when short

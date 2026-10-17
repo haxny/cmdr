@@ -329,7 +329,7 @@ async fn a_merge_child_abandoned_at_the_drain_deadline_takes_its_rename_placehol
     // Every file, the merge child included, has opened its stream and parked.
     tokio::select! {
         r = &mut copy => panic!("the copy must still be running: {r:?}"),
-        () = crate::test_support::wait_until_async(WAIT, "every source to park", || {
+        () = cmdr_fs::testing::wait_until_async(WAIT, "every source to park", || {
             gated.opened.load(Ordering::SeqCst) >= 3
         }) => {}
     }

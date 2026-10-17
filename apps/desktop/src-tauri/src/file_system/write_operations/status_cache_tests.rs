@@ -464,7 +464,7 @@ async fn every_transfer_start_has_exactly_one_finish_however_the_op_ends() {
             )
             .await
             .expect("start");
-        crate::test_support::wait_until_async(Duration::from_secs(5), "the op to settle", || {
+        cmdr_fs::testing::wait_until_async(Duration::from_secs(5), "the op to settle", || {
             !events.settled.lock_ignore_poison().is_empty()
         })
         .await;
@@ -512,14 +512,14 @@ async fn a_panicking_op_task_finishes_its_transfer_start_exactly_once() {
             })
         }),
     );
-    crate::test_support::wait_until_async(Duration::from_secs(5), "the panic net to unregister the op", || {
+    cmdr_fs::testing::wait_until_async(Duration::from_secs(5), "the panic net to unregister the op", || {
         engine.manager().lifecycle_status(&op).is_none() && engine.get_operation_status(&op).is_none()
     })
     .await;
 
     // A wait, not an assert: the net reports the finish just after it drops the
     // status row the wait above watched.
-    crate::test_support::wait_until_async(Duration::from_secs(5), "the net to finish the op's own start", || {
+    cmdr_fs::testing::wait_until_async(Duration::from_secs(5), "the net to finish the op's own start", || {
         !engine.events().transfers_finished.lock_ignore_poison().is_empty()
     })
     .await;

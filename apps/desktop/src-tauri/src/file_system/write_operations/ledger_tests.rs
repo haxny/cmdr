@@ -3,7 +3,7 @@
 
 use super::super::reversal::reverse_copy_transaction;
 use super::*;
-use crate::test_support::TestDir;
+use cmdr_fs::testing::TestDir;
 use std::fs;
 
 /// Creates a temporary test directory with a unique name.

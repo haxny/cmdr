@@ -6,8 +6,8 @@ use crate::file_system::write_operations::archive_edit::fresh_zip::{FreshZipEntr
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::{ArchiveNameRefusal, WriteOperationPhase};
-use crate::test_support::wait_until_async;
 use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::testing::wait_until_async;
 use cmdr_fs::volume::{InMemoryVolume, ListingProgress, SpaceInfo, StreamWritten};
 
 struct RefuseAfterProducerProgress {

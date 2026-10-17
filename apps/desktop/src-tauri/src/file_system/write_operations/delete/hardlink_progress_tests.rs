@@ -17,7 +17,7 @@ use super::super::event_sinks::CollectorEventSink;
 use super::super::testing::TestOperations;
 use super::super::types::WriteOperationConfig;
 use super::walker::delete_files_with_progress_inner;
-use crate::test_support::TestDir;
+use cmdr_fs::testing::TestDir;
 
 /// Builds a unique-per-test scratch directory under `$TMPDIR`.
 fn create_temp_dir(name: &str) -> TestDir {

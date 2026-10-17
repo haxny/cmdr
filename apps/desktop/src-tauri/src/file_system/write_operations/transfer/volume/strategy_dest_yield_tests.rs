@@ -39,7 +39,7 @@ use super::*;
 use crate::file_system::write_operations::testing::TestOperations;
 
 use crate::file_system::write_operations::transfer::transfer_driver::{LeafProgressLedger, ObservedProgress};
-use crate::test_support::wait_until_async;
+use cmdr_fs::testing::wait_until_async;
 use cmdr_fs::volume::StreamLength;
 use std::path::Path;
 use std::sync::atomic::Ordering;

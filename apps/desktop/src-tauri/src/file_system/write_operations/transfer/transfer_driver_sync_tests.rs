@@ -24,7 +24,7 @@ use super::super::super::types::{WriteOperationError, WriteOperationType};
 use super::test_support::{CallLog, copy_config, make_state, paths};
 use super::{PostLoopIntent, TransferContext, TransferOutcome, drive_transfer_serial_sync};
 use crate::file_system::write_operations::testing::TestOperations;
-use crate::test_support::wait_until_async;
+use cmdr_fs::testing::wait_until_async;
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};

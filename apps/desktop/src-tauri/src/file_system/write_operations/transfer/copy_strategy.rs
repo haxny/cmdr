@@ -304,7 +304,7 @@ pub(super) fn copy_file_using(
 mod tests {
     use super::*;
     use crate::file_system::write_operations::testing::TestOperations;
-    use crate::test_support::TestDir;
+    use cmdr_fs::testing::TestDir;
     use std::fs;
     use std::time::Duration;
 

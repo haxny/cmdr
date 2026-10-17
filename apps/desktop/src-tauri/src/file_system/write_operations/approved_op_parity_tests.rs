@@ -25,8 +25,8 @@ use super::event_sinks::{CollectorEventSink, OperationEventSink};
 use super::source_binding::{ExpectedSources, SourceFingerprint};
 use super::types::{ConflictResolution, WriteOperationConfig, WriteOperationType};
 use crate::file_system::write_operations::testing::TestOperations;
-use crate::test_support::TestDir;
 use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::testing::TestDir;
 use cmdr_operation_log::types::Initiator;
 
 /// What one run of a transfer did, in the terms the two runs have to agree on.
@@ -73,7 +73,7 @@ fn read_tree(root: &Path) -> Vec<(PathBuf, Vec<u8>)> {
 }
 
 async fn collect(collector: &Arc<CollectorEventSink>, dest_root: &Path, src_root: &Path) -> RunOutcome {
-    crate::test_support::wait_until_async(Duration::from_secs(10), "the operation to settle", || {
+    cmdr_fs::testing::wait_until_async(Duration::from_secs(10), "the operation to settle", || {
         !collector.settled.lock_ignore_poison().is_empty()
     })
     .await;
@@ -394,7 +394,7 @@ async fn an_approved_copy_settles_as_an_ordinary_copy() {
         .await
         .expect("the copy starts");
 
-    crate::test_support::wait_until_async(Duration::from_secs(10), "the operation to settle", || {
+    cmdr_fs::testing::wait_until_async(Duration::from_secs(10), "the operation to settle", || {
         !collector.settled.lock_ignore_poison().is_empty()
     })
     .await;
@@ -502,7 +502,7 @@ async fn a_bound_cross_volume_copy_skips_the_source_that_changed_while_it_waited
         .await
         .expect("the copy starts");
 
-    crate::test_support::wait_until_async(Duration::from_secs(10), "the bound copy to settle", || {
+    cmdr_fs::testing::wait_until_async(Duration::from_secs(10), "the bound copy to settle", || {
         !collector.settled.lock_ignore_poison().is_empty()
     })
     .await;

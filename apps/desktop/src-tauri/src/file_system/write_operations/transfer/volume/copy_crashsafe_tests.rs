@@ -563,9 +563,9 @@ mod local_staging {
     use crate::file_system::write_operations::testing::TestOperations;
     use crate::file_system::write_operations::transfer::copy_strategy::{LocalCopyStrategy, copy_file_using};
     use crate::file_system::write_operations::types::WriteOperationError;
-    use crate::test_support::TestDir;
     use cmdr_fs::ignore_poison::IgnorePoison;
     use cmdr_fs::staging::STAGING_TEMP_MARKER;
+    use cmdr_fs::testing::TestDir;
     use std::cell::Cell;
     use std::fs;
     use std::path::{Path, PathBuf};

@@ -18,7 +18,7 @@ use super::super::state::{CachedScanResult, FileInfo, WriteOperationState};
 use super::super::testing::TestOperations;
 use super::super::types::WriteOperationConfig;
 use super::walker::{delete_files_with_progress_inner, delete_volume_files_with_progress_inner};
-use crate::test_support::TestDir;
+use cmdr_fs::testing::TestDir;
 use cmdr_fs::volume::{CopyScanResult, InMemoryVolume, Volume};
 
 fn unique(tag: &str) -> String {

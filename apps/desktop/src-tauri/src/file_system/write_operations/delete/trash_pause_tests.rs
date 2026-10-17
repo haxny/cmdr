@@ -67,7 +67,7 @@ fn a_paused_trash_stops_between_items_until_it_resumes() {
         trash_files_with_progress(&*events_for_trash, "op-trash-pause", &state_for_trash, &sources, None)
     });
 
-    crate::test_support::wait_until(Duration::from_secs(5), "the first item's verdict", || {
+    cmdr_fs::testing::wait_until(Duration::from_secs(5), "the first item's verdict", || {
         events.verdicts.load(Ordering::SeqCst) >= 1
     });
 

@@ -8,7 +8,7 @@ use crate::file_system::write_operations::outage_slot::OutagePolicy;
 use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::transfer::outage_volume_test_support::OutageVolume;
 use crate::file_system::write_operations::types::TransferWaitReason;
-use crate::test_support::wait_until_async;
+use cmdr_fs::testing::wait_until_async;
 use cmdr_fs::volume::InMemoryVolume;
 use std::sync::atomic::{AtomicUsize, Ordering};
 

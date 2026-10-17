@@ -18,7 +18,7 @@ use super::super::types::WriteOperationConfig;
 use super::copy::copy_files_with_progress_inner;
 use super::move_op::move_files_with_progress_inner;
 use crate::file_system::write_operations::testing::TestOperations;
-use crate::test_support::TestDir;
+use cmdr_fs::testing::TestDir;
 
 fn create_temp_dir(name: &str) -> TestDir {
     TestDir::new(&format!("hardlink_xfer_{name}"))

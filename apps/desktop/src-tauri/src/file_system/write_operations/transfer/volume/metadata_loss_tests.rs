@@ -22,7 +22,7 @@ use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::{
     LostMetadata, LostMetadataClass, MetadataLeftBehind, VolumeCopyConfig, WriteCompleteEvent,
 };
-use crate::test_support::TestDir;
+use cmdr_fs::testing::TestDir;
 use cmdr_fs::volume::{InMemoryVolume, Volume};
 use cmdr_local::LocalPosixVolume;
 

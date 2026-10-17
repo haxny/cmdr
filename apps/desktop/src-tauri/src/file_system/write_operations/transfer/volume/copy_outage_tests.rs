@@ -12,7 +12,7 @@ use crate::file_system::write_operations::outage_slot::OutagePolicy;
 use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::transfer::outage_volume_test_support::{OutageVolume, RenameDrop};
 use crate::file_system::write_operations::types::{ConflictResolution, WriteOperationError};
-use crate::test_support::wait_until_async;
+use cmdr_fs::testing::wait_until_async;
 use cmdr_fs::volume::{InMemoryVolume, Volume};
 
 const WAIT: Duration = Duration::from_secs(10);

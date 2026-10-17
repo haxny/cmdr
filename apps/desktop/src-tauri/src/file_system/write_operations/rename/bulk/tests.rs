@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 use uuid::Uuid;
 
 use super::super::super::operation_intent::OperationIntent;
-use crate::test_support::TestDir;
+use cmdr_fs::testing::TestDir;
 
 /// A fixture directory in `$TMPDIR`.
 ///

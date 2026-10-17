@@ -12,7 +12,7 @@ use super::Operations;
 use super::host::testing::{FakeVolumes, RecordingEngineEvents};
 use super::manager::{ManagedTaskGuard, OperationDescriptor, OperationSummaryText};
 use super::types::{LifecycleStatus, WriteOperationType};
-use crate::test_support::wait_until_async;
+use cmdr_fs::testing::wait_until_async;
 
 /// An operation registered in one engine is invisible to another: not in its
 /// queue, its registry, its status cache, or its busy set.

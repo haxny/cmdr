@@ -471,7 +471,7 @@ fn path_to_cstring(path: &Path) -> Result<CString, WriteOperationError> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_support::TestDir;
+    use cmdr_fs::testing::TestDir;
     use std::fs;
     use std::os::unix::fs::PermissionsExt;
 

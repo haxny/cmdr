@@ -22,9 +22,9 @@ pub(super) use super::super::types::{
     WriteOperationType, WriteProgressEvent, WriteSettledEvent, WriteSourceItemDoneEvent,
 };
 pub(super) use crate::file_system::volume::manager::get_volume_manager;
-pub(super) use crate::test_support::wait_until_async;
 pub(super) use cmdr_archive::mutator::Changeset;
 pub(super) use cmdr_fs::ignore_poison::IgnorePoison;
+pub(super) use cmdr_fs::testing::wait_until_async;
 pub(super) use cmdr_fs::volume::Volume;
 pub(super) use cmdr_operation_log::rollback::VolumeLookup;
 pub(super) use zip::write::SimpleFileOptions;

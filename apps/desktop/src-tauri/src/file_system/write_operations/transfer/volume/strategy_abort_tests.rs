@@ -32,8 +32,8 @@ use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::transfer::transfer_driver::{
     LeafProgressLedger, ObservedProgress, SourceProgress,
 };
-use crate::test_support::wait_until_async;
 use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::testing::wait_until_async;
 use cmdr_fs::volume::{InMemoryVolume, Volume, VolumeError};
 
 const PAYLOAD: &[u8] = b"the-bytes-that-were-still-in-flight";

@@ -24,9 +24,9 @@ use super::{
     BulkRenameRow, CollectorEventSink, OperationEventSink, Operations, SourceFingerprint, copy_volumes_with_progress,
     move_within_same_volume_with_progress,
 };
-use crate::test_support::{TestDir, wait_until_async};
 use cmdr_archive::mutator::{AddEntry, AddSource, Changeset};
 use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::testing::{TestDir, wait_until_async};
 use cmdr_fs::volume::{InMemoryVolume, Volume};
 use cmdr_operation_log::types::Initiator;
 

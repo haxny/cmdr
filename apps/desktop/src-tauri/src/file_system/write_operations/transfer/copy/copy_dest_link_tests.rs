@@ -17,8 +17,8 @@ use super::super::conflict_responder_test_support::ConflictResponderSink;
 use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::testing::TestOperations;
-use crate::test_support::TestDir;
 use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::testing::TestDir;
 
 const OUTSIDE: &str = "OUTSIDE THE SELECTION";
 

@@ -25,7 +25,7 @@ use super::super::state::OperationIntent;
 use super::super::testing::TestOperations;
 use super::super::types::WriteOperationConfig;
 use super::walker::delete_volume_files_with_progress_inner;
-use crate::test_support::wait_until_async;
+use cmdr_fs::testing::wait_until_async;
 use cmdr_fs::volume::{InMemoryVolume, Volume, VolumeError};
 use tokio_util::sync::CancellationToken;
 

@@ -34,7 +34,7 @@ use super::{
     drive_transfer_serial_async,
 };
 use crate::file_system::write_operations::testing::TestOperations;
-use crate::test_support::wait_until_async;
+use cmdr_fs::testing::wait_until_async;
 use std::collections::HashSet;
 use std::future::Future;
 use std::path::{Path, PathBuf};

@@ -8,8 +8,8 @@
 use super::*;
 use crate::file_system::write_operations::host::testing::{FakeVolumes, RecordingEngineEvents};
 use crate::file_system::write_operations::transfer_sides::test_hook;
-use crate::test_support::TestDir;
 use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::testing::TestDir;
 use cmdr_local::LocalPosixVolume;
 
 /// The host a cell's sweep runs on: a registry holding only the drives the

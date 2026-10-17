@@ -22,7 +22,7 @@ use super::tests::NO_SIDECARS;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::transfer::copy::copy_files_with_progress_inner;
 use crate::file_system::write_operations::types::WriteOperationConfig;
-use crate::test_support::TestDir;
+use cmdr_fs::testing::TestDir;
 
 /// What one walk found: the file names it listed and the bytes it counted.
 struct Walked {

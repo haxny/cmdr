@@ -28,8 +28,8 @@ use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::ConflictResolution;
-use crate::test_support::TestDir;
 use cmdr_fs::entry::FileEntry;
+use cmdr_fs::testing::TestDir;
 use cmdr_fs::volume::{CopyScanResult, InMemoryVolume, ListingProgress};
 use cmdr_local::LocalPosixVolume;
 

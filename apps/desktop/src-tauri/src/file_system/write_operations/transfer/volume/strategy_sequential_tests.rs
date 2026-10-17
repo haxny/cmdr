@@ -30,7 +30,7 @@ use cmdr_fs::volume::{
 
 use crate::file_system::write_operations::state::OperationIntent;
 use crate::file_system::write_operations::testing::TestOperations;
-use crate::test_support::TestDir;
+use cmdr_fs::testing::TestDir;
 use cmdr_fs::volume::WriteMode;
 
 /// A tar entry to build into a fixture.
@@ -532,7 +532,7 @@ async fn sequential_extract_pauses_between_members_and_resumes() {
         .await
     });
 
-    crate::test_support::wait_until_async(Duration::from_secs(5), "the first member to land", || {
+    cmdr_fs::testing::wait_until_async(Duration::from_secs(5), "the first member to land", || {
         completed.load(Ordering::SeqCst) >= 1
     })
     .await;

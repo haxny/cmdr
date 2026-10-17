@@ -530,7 +530,7 @@ async fn a_paused_server_side_copy_parks_at_its_checkpoint() {
         let state = Arc::clone(&state);
         tokio::spawn(async move { pipe(&as_volume, &as_volume, &state, "a.bin", "b.bin").await })
     };
-    crate::test_support::wait_until_async(Duration::from_secs(5), "the copy to reach its checkpoint", || {
+    cmdr_fs::testing::wait_until_async(Duration::from_secs(5), "the copy to reach its checkpoint", || {
         !place.copies().is_empty()
     })
     .await;
@@ -684,7 +684,7 @@ async fn a_server_side_copy_names_its_own_phase_in_the_probe() {
             pipe(&as_volume, &as_volume, &state, "a.bin", "b.bin").await
         }))
     };
-    crate::test_support::wait_until_async(Duration::from_secs(5), "the copy to reach its checkpoint", || {
+    cmdr_fs::testing::wait_until_async(Duration::from_secs(5), "the copy to reach its checkpoint", || {
         !place.copies().is_empty()
     })
     .await;

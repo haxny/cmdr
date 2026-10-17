@@ -307,7 +307,7 @@ fn the_staging_cleanup_removes_locked_and_deny_delete_items() {
 
     remove_staging_tree_in_background(staging.clone());
 
-    crate::test_support::wait_until(std::time::Duration::from_secs(5), "the staging tree's removal", || {
+    cmdr_fs::testing::wait_until(std::time::Duration::from_secs(5), "the staging tree's removal", || {
         !staging.exists()
     });
 }

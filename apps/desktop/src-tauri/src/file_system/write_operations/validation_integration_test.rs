@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 
 use super::unique_name::find_unique_name;
 use super::*;
-use crate::test_support::TestDir;
+use cmdr_fs::testing::TestDir;
 
 // ============================================================================
 // Test utilities

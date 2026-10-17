@@ -166,7 +166,7 @@ impl OperationEventSink for ConflictResponderSink {
 /// before the event is emitted, so an observed event always has a live sender
 /// behind it.
 pub(super) async fn await_prompted_clash(events: &CollectorEventSink) -> ConflictId {
-    crate::test_support::wait_until_async(std::time::Duration::from_secs(5), "the conflict prompt", || {
+    cmdr_fs::testing::wait_until_async(std::time::Duration::from_secs(5), "the conflict prompt", || {
         !events.conflicts.lock_ignore_poison().is_empty()
     })
     .await;

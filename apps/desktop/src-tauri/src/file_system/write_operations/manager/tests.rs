@@ -10,7 +10,7 @@
 use super::*;
 use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::WriteOperationError;
-use crate::test_support::wait_until_async;
+use cmdr_fs::testing::wait_until_async;
 use std::sync::atomic::Ordering;
 use std::time::Duration;
 use tokio::sync::oneshot;

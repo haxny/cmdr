@@ -24,7 +24,7 @@ use super::super::types::{
 };
 use super::copy::copy_files_with_progress_inner;
 use crate::file_system::write_operations::testing::TestOperations;
-use crate::test_support::TestDir;
+use cmdr_fs::testing::TestDir;
 
 /// Answers the folder→file clash with Overwrite (the explicit consent a blanket
 /// policy doesn't have), then asks for `then` as soon as the first leaf has

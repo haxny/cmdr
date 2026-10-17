@@ -4,7 +4,7 @@ use super::*;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::ConflictResolution;
-use crate::test_support::TestDir;
+use cmdr_fs::testing::TestDir;
 
 #[test]
 fn named_local_moves_use_the_requested_leaf_and_preserve_skipped_originals() {

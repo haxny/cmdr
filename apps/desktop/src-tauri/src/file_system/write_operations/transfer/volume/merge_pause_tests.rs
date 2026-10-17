@@ -112,7 +112,7 @@ async fn a_paused_cross_volume_merge_stops_walking_until_it_resumes() {
     });
 
     let prompts = || file_conflict_count(&events.responder.inner);
-    crate::test_support::wait_until_async(Duration::from_secs(5), "the first child's prompt", || prompts() >= 1).await;
+    cmdr_fs::testing::wait_until_async(Duration::from_secs(5), "the first child's prompt", || prompts() >= 1).await;
 
     // Parking has no "parked now" signal, so hold a window open: an ungated walk
     // would have prompted for the remaining children many times over inside it.

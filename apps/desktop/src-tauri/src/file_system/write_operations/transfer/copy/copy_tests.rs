@@ -134,7 +134,7 @@ fn local_copy_fsyncs_its_created_directories_and_completes_unconfirmed_on_a_flus
 
     let engine = TestOperations::new();
 
-    let dir = crate::test_support::TestDir::new("copy-durability");
+    let dir = cmdr_fs::testing::TestDir::new("copy-durability");
     let src = dir.join("src");
     let dst = dir.join("dst");
     fs::create_dir_all(src.join("tree").join("sub")).unwrap();
@@ -175,7 +175,7 @@ fn a_local_copy_whose_flush_holds_completes_with_nothing_unconfirmed() {
 
     let engine = TestOperations::new();
 
-    let dir = crate::test_support::TestDir::new("copy-durability-ok");
+    let dir = cmdr_fs::testing::TestDir::new("copy-durability-ok");
     let src = dir.join("src");
     let dst = dir.join("dst");
     fs::create_dir_all(&src).unwrap();

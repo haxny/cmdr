@@ -617,7 +617,7 @@ mod macos {
             result.err()
         );
         assert!(locked.exists() && acl.exists(), "both originals stay");
-        crate::test_support::wait_until(Duration::from_secs(5), "the staging tree's removal", || {
+        cmdr_fs::testing::wait_until(Duration::from_secs(5), "the staging tree's removal", || {
             std::fs::read_dir(&dst).is_ok_and(|mut entries| entries.next().is_none())
         });
         assert_eq!(rename_blocked_items(&dst), Vec::<PathBuf>::new());
@@ -806,7 +806,7 @@ mod linux {
     use crate::file_system::write_operations::overwrite::PostLanding;
     use crate::file_system::write_operations::state::WriteOperationState;
     use crate::file_system::write_operations::transfer::copy_strategy::{LocalCopyStrategy, copy_file_using};
-    use crate::test_support::TestDir;
+    use cmdr_fs::testing::TestDir;
 
     const XATTR_NAME: &str = "user.app";
     const XATTR_VALUE: &[u8] = b"app value";

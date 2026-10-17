@@ -79,7 +79,7 @@ fn walk_for_test(sources: &[PathBuf]) -> Vec<(PathBuf, CopyScanResult)> {
 /// directory and let a failed copy sweep the destination folder.
 #[test]
 fn walk_reports_type_and_totals_per_top_level_source() {
-    let dir = crate::test_support::TestDir::new("scan-per-path");
+    let dir = cmdr_fs::testing::TestDir::new("scan-per-path");
     let root: &Path = &dir;
     fs::write(root.join("loose.txt"), b"12345").unwrap();
     fs::create_dir(root.join("album")).unwrap();
@@ -114,7 +114,7 @@ fn walk_reports_type_and_totals_per_top_level_source() {
 /// FILE source even when it points at a directory.
 #[test]
 fn walk_reports_a_symlinked_directory_source_as_a_file() {
-    let dir = crate::test_support::TestDir::new("scan-per-path-symlink");
+    let dir = cmdr_fs::testing::TestDir::new("scan-per-path-symlink");
     let root: &Path = &dir;
     fs::create_dir(root.join("real")).unwrap();
     fs::write(root.join("real/inside.txt"), b"xyz").unwrap();
@@ -477,7 +477,7 @@ fn a_dry_run_of_a_copy_onto_a_different_file_still_reports_the_conflict() {
 mod online_only_tally {
     use super::super::super::scan_walker::OnlineOnlyWatch;
     use super::*;
-    use crate::test_support::TestDir;
+    use cmdr_fs::testing::TestDir;
     use std::sync::atomic::{AtomicBool, Ordering};
 
     /// Walks `sources` with the tally armed, treating every entry named `evicted`

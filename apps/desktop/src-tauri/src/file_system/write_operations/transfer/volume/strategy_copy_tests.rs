@@ -7,14 +7,14 @@ use super::test_support::{SLOW_CHUNK_COUNT, SlowSource, make_state};
 use super::*;
 use crate::file_system::write_operations::state::OperationIntent;
 use crate::file_system::write_operations::transfer::transfer_driver::{LeafProgressLedger, ObservedProgress};
-use crate::test_support::wait_until_async;
+use cmdr_fs::testing::wait_until_async;
 use std::path::Path;
 use std::sync::Arc;
 use std::sync::atomic::Ordering;
 use std::time::Duration;
 
 use crate::file_system::write_operations::testing::TestOperations;
-use crate::test_support::TestDir;
+use cmdr_fs::testing::TestDir;
 use cmdr_fs::volume::{InMemoryVolume, Volume, VolumeError};
 use cmdr_local::LocalPosixVolume;
 

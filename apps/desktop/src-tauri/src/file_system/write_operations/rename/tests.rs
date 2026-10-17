@@ -13,8 +13,8 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use crate::file_system::volume::manager::get_volume_manager;
 use crate::file_system::write_operations::Operations;
 use crate::file_system::write_operations::testing::{TestOperationLog, TestOperations};
-use crate::test_support::TestDir;
 use cmdr_fs::entry::FileEntry;
+use cmdr_fs::testing::TestDir;
 use cmdr_fs::volume::{LaneKey, ListingProgress};
 use cmdr_fs::volume::{Volume, VolumeError};
 
@@ -547,7 +547,7 @@ async fn a_batch_where_a_rename_copies_runs_as_one_move() {
         "one move, not a rename batch"
     );
     assert_eq!(started.swaps_left_out, 0);
-    crate::test_support::wait_until_async(std::time::Duration::from_secs(10), "the move to settle", || {
+    cmdr_fs::testing::wait_until_async(std::time::Duration::from_secs(10), "the move to settle", || {
         !events.settled.lock_ignore_poison().is_empty()
     })
     .await;

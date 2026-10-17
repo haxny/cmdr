@@ -333,7 +333,7 @@ fn resolve_through_symlinks(path: &Path) -> Option<PathBuf> {
 #[cfg(all(test, target_os = "macos"))]
 mod tests {
     use super::*;
-    use crate::test_support::TestDir;
+    use cmdr_fs::testing::TestDir;
     use std::collections::HashMap;
     use std::fs;
 

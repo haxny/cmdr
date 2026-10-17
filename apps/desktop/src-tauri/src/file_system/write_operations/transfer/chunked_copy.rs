@@ -334,7 +334,7 @@ fn copy_data_chunked(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_support::TestDir;
+    use cmdr_fs::testing::TestDir;
     use std::fs;
     use std::sync::Arc;
 

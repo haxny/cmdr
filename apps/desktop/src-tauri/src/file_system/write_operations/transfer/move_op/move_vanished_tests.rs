@@ -15,8 +15,8 @@ use crate::file_system::write_operations::state::ScanResult;
 use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::transfer_sides::{MoveSourceCounts, TransferSide, TransferSides, test_hook};
 use crate::file_system::write_operations::types::TransferRole;
-use crate::test_support::TestDir;
 use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::testing::TestDir;
 
 /// An operation that knows both its volumes, the way every transfer the dialog
 /// starts does.

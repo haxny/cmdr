@@ -17,7 +17,7 @@ use super::{FlushFailure, flush_created_destinations, refuses_directory_fsync};
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::WriteOperationType;
-use crate::test_support::TestDir;
+use cmdr_fs::testing::TestDir;
 
 /// A landed tree the way a transfer leaves it: `dest/top.txt`, 20 files in
 /// `dest/tree/sub/`, and `dest/only/inner/`, an empty directory whose parent

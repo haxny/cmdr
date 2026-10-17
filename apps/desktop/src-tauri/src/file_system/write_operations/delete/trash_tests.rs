@@ -10,7 +10,7 @@ use crate::file_system::write_operations::types::TrashRefusedItems;
 // Only the macOS-gated cases below build a real directory.
 #[cfg(target_os = "macos")]
 use crate::file_system::write_operations::testing::TestOperations;
-use crate::test_support::TestDir;
+use cmdr_fs::testing::TestDir;
 use std::sync::Arc;
 use std::time::Duration;
 

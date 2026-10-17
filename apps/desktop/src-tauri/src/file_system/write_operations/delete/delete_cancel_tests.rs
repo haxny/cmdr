@@ -11,7 +11,7 @@
 use super::super::state::OperationIntent;
 use super::super::testing::TestOperations;
 use super::super::types::{CancelRollback, CancelRollbackOutcome, WriteCancelledEvent, WriteOperationType};
-use crate::test_support::TestDir;
+use cmdr_fs::testing::TestDir;
 use std::fs;
 use std::sync::Arc;
 use std::time::Duration;

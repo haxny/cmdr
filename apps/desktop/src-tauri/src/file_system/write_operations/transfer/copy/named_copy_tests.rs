@@ -11,7 +11,7 @@ fn make_state(engine: &TestOperations) -> Arc<WriteOperationState> {
 #[test]
 fn named_copy_lands_beside_source_without_changing_it() {
     let engine = TestOperations::new();
-    let tmp = crate::test_support::TestDir::new("named_copy");
+    let tmp = cmdr_fs::testing::TestDir::new("named_copy");
     let source = tmp.as_ref().join("original.txt");
     fs::write(&source, b"keep the original").unwrap();
     let events = CollectorEventSink::new();
@@ -36,7 +36,7 @@ fn named_copy_lands_beside_source_without_changing_it() {
 #[test]
 fn named_folder_copy_maps_children_and_empty_directories() {
     let engine = TestOperations::new();
-    let tmp = crate::test_support::TestDir::new("named_folder_copy");
+    let tmp = cmdr_fs::testing::TestDir::new("named_folder_copy");
     let source = tmp.as_ref().join("original");
     fs::create_dir_all(source.join("empty/nested")).unwrap();
     fs::write(source.join("notes.txt"), b"notes").unwrap();
@@ -62,7 +62,7 @@ fn named_folder_copy_maps_children_and_empty_directories() {
 fn named_copy_honors_skip_and_overwrite_at_the_requested_name() {
     let engine = TestOperations::new();
     for resolution in [ConflictResolution::Skip, ConflictResolution::Overwrite] {
-        let tmp = crate::test_support::TestDir::new("named_copy_conflict");
+        let tmp = cmdr_fs::testing::TestDir::new("named_copy_conflict");
         let source = tmp.as_ref().join("original.txt");
         let target = tmp.as_ref().join("backup.txt");
         fs::write(&source, b"source").unwrap();
@@ -94,7 +94,7 @@ fn named_copy_honors_skip_and_overwrite_at_the_requested_name() {
 #[test]
 fn named_copy_of_itself_duplicates_instead_of_overwriting() {
     let engine = TestOperations::new();
-    let tmp = crate::test_support::TestDir::new("named_copy_self");
+    let tmp = cmdr_fs::testing::TestDir::new("named_copy_self");
     let source = tmp.as_ref().join("original.txt");
     fs::write(&source, b"source").unwrap();
     let config = WriteOperationConfig {
@@ -118,7 +118,7 @@ fn named_copy_of_itself_duplicates_instead_of_overwriting() {
 #[test]
 fn named_copy_rejects_path_components_and_batches() {
     let engine = TestOperations::new();
-    let tmp = crate::test_support::TestDir::new("named_copy_invalid");
+    let tmp = cmdr_fs::testing::TestDir::new("named_copy_invalid");
     let source = tmp.as_ref().join("original.txt");
     fs::write(&source, b"source").unwrap();
     for name in ["", ".", "..", "../escape.txt", "/absolute", "bad\0name"] {

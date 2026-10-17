@@ -879,7 +879,7 @@ Admission is otherwise invisible from outside: a pass that walks the queue and a
 
 `Notify` would be wrong here and `watch` is second-best: the settle path runs the pass BEFORE a test could await, so `notified()` created afterwards is a guaranteed lost wakeup. Prefer a monotonic counter for any future "background work reached a point" signal.
 
-A test in `manager::tests` calls the private `run_admission_pass()` inline (it returns when the pass is done) for the paths production never runs one on: `set_paused` admits nobody, so `paused_running_op_does_not_admit_a_queued_same_lane_op` runs its own pass and asserts B is STILL Queued. Admission flips a record to Running before it spawns, so a Queued status after a completed pass also proves the deferred start never ran. The waits themselves use `crate::test_support::wait_until_async` (`docs/testing.md`).
+A test in `manager::tests` calls the private `run_admission_pass()` inline (it returns when the pass is done) for the paths production never runs one on: `set_paused` admits nobody, so `paused_running_op_does_not_admit_a_queued_same_lane_op` runs its own pass and asserts B is STILL Queued. Admission flips a record to Running before it spawns, so a Queued status after a completed pass also proves the deferred start never ran. The waits themselves use `cmdr_fs::testing::wait_until_async` (`docs/testing.md`).
 
 ### The admission pass spawns admitted ops on the APP runtime, not the caller's
 

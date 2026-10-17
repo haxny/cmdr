@@ -11,7 +11,7 @@ use cmdr_fs::ignore_poison::IgnorePoison;
 use super::super::host::OperationErrorReport;
 use super::super::testing::TestOperations;
 use super::{AlreadyClaimed, Ledger, STORE_FILENAME, TempHome, register};
-use crate::test_support::TestDir;
+use cmdr_fs::testing::TestDir;
 
 /// A previous run's ledger in `data_dir` holding one live temp at `temp`, the
 /// file still on disk: what a crash mid-copy leaves for the next launch.

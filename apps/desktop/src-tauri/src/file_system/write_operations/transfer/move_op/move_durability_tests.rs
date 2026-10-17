@@ -16,8 +16,8 @@ use crate::file_system::write_operations::durability::test_hook;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::ConflictResolution;
-use crate::test_support::TestDir;
 use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::testing::TestDir;
 
 /// A move of `top.txt`, `tree/` (five files in `tree/sub/`), and `only/` (holding
 /// nothing but the empty `only/inner/`) from `src` into an empty `dst`.

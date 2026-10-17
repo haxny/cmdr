@@ -1,6 +1,6 @@
 //! Integration tests for copy operations.
 
-use crate::test_support::TestDir;
+use cmdr_fs::testing::TestDir;
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
 

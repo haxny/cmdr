@@ -191,7 +191,7 @@ fn a_paused_move_stops_renaming_until_it_resumes() {
         )
     });
 
-    crate::test_support::wait_until(Duration::from_secs(5), "the first item to land", || {
+    cmdr_fs::testing::wait_until(Duration::from_secs(5), "the first item to land", || {
         dst_dir.join("first.txt").exists()
     });
 

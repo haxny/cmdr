@@ -153,7 +153,7 @@ async fn a_cancel_during_the_backoff_ends_the_retries() {
     let flaky_for_watcher = Arc::clone(&flaky);
     tokio::spawn(async move {
         // Cancel as soon as the first attempt has failed and the backoff started.
-        crate::test_support::wait_until_async(Duration::from_secs(5), "the first write attempt to fail", || {
+        cmdr_fs::testing::wait_until_async(Duration::from_secs(5), "the first write attempt to fail", || {
             flaky_for_watcher.write_calls() >= 1
         })
         .await;

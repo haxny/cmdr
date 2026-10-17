@@ -18,7 +18,7 @@ use super::copy_volumes_with_progress;
 use crate::file_system::write_operations::event_sinks::CollectorEventSink;
 use crate::file_system::write_operations::testing::TestOperations;
 use crate::file_system::write_operations::types::VolumeCopyConfig;
-use crate::test_support::TestDir;
+use cmdr_fs::testing::TestDir;
 use cmdr_fs::volume::{InMemoryVolume, Volume};
 use cmdr_local::LocalPosixVolume;
 

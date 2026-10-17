@@ -25,7 +25,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Duration;
 
 use super::test_support::*;
-use crate::test_support::wait_until_async;
+use cmdr_fs::testing::wait_until_async;
 use cmdr_fs::volume::{InMemoryVolume, Volume, VolumeError};
 use cmdr_operation_log::rollback::{
     ActRefusal, InverseAct, RollbackProgress, RollbackRunner, execute_rollback, rollback_operation,

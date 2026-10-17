@@ -12,7 +12,7 @@
 
 use super::*;
 use crate::file_system::write_operations::testing::TestOperations;
-use crate::test_support::TestDir;
+use cmdr_fs::testing::TestDir;
 use std::fs;
 use std::path::Path;
 use std::sync::Arc;
