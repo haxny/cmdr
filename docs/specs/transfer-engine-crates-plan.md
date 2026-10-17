@@ -1706,6 +1706,30 @@ is empty; `cargo test -p cmdr --lib --features cmdr/virtual-mtp -- file_system::
 threaded, filtered so app tests outside the effort that rely on nextest's process-per-test don't count) passes; lanes
 per slice: `desktop-rust-tests`, `desktop-rust-clippy`, `desktop-rust-test-sleep`.
 
+**What landed differently in the first slice** (recorded at execution):
+
+- **The harness** is `write_operations/testing/engine.rs` (`testing.rs` became `testing/mod.rs`):
+  `TestOperations::new()`, `::journaling_into(&TestOperationLog)`, and `::with(|builder| …)` for any other seam; it
+  derefs to the engine and reads back `events()`, `volumes()`, and `own_writes()`. `new_state()` builds a state on that
+  engine, and `register(id)` / `register_state(id, state)` return a guard-free `RegisteredOperation` (`id()`,
+  `state()`), the drop-in for `TestOperationGuard`'s `register` / `register_state` / `register_as`.
+  `TestOperationLog::new(label)` is an `OperationLog` over a scratch DB (`db()` to read rows). `volumes()` and
+  `own_writes()` carry an `#[expect(dead_code)]` the first slice that reads them must remove.
+- **Converted, each test on its own engine:** `manager/tests.rs`, `manager/tests/failures.rs`,
+  `manager/tests/reorder.rs`, `state_tests.rs`, `status_cache_tests.rs`, `queued_sources_tests.rs`, `tests.rs`, and
+  `settle_event_tests.rs` (which dropped its `TestJournalGuard`). Unique-id helpers went with the shared engine;
+  `gated_deferred` settles on the engine it's handed, so `gated_deferred_on`, `owned_manager`, and `OwnedEngine` are
+  gone. The three `one_test_per_process` gates went with their shared-engine subjects (the two "walks the global
+  registry" cells, renamed `…_walks_the_engines_registry`, and the busy-set dedupe), and so did the function.
+- **The transfer-gauge pins** now assert the engine's pair on `RecordingEngineEvents` (exactly one start, exactly one
+  finish, however the op ends); the app's `priority::transfers` wiring got its own cell,
+  `operations_host::events::tests::the_transfer_pair_raises_and_lowers_the_indexing_gauge`.
+- **Left on the shared engine:** `state::tests::guard_unregisters_its_state_even_when_the_test_body_panics`, whose
+  subject is `TestOperationGuard` itself; it goes with the guard. Shims retired: `status_cache`'s free
+  `update_operation_status` and `busy_emit_count`. Still needed by later slices: `installed()`, `manager()`,
+  `operation_states()`, `forget_operation`, `register_operation_status` / `unregister_operation_status`,
+  `WriteOperationState::new`, and `QueuedOperationFixture::park` / `park_naming`.
+
 ### M8a: The move
 
 **Scope.** `git mv apps/desktop/src-tauri/src/file_system/write_operations crates/cmdr-operations/src` (minus what stays
