@@ -1511,9 +1511,8 @@ entry; lanes: `desktop-rust-tests`, `desktop-rust-clippy`, `desktop-rust-lock-po
   after the unwind drops the guard), and every `block_on` (none under a lock). Kept under a lock on purpose: the
   human-wait clock beside the conflict and outage slots (documented at the field), and the arrival listener's seam call
   inside its `Once`. A std lock across an `.await` is clippy's `await_holding_lock`, green.
-- **Seen, not fixed:** `StatusCache::recompute_and_report_busy_volumes` computes the busy set and reports it outside any
-  one lock, so two racing register/unregister calls can report an older set last (a stale Eject guard until the next
-  change). Fixing it means reporting under the dedupe lock, a judgment call left to the lead.
+- **Seen, fixed in M6d:** `StatusCache::recompute_and_report_busy_volumes` computed the busy set and reported it outside
+  any one lock, so two racing register/unregister calls could report an older set last.
 - **The poison change:** the preview map forgets everything on poison (`ScanPreviews::write` / `read`, `1b92667e6`;
   `cached_cost_facts`, which already recovered, now forgets too); `status_cache.rs` (`aaaa185ee`), the estimator in
   `state.rs` (`9dc1a0674`), and `delete/walker.rs` (`748d89bf6`) recover. Each has a red test. Engine entries in
@@ -1535,6 +1534,36 @@ asking `dest_volume.local_path()`: keep that skip. Don't widen `OperationId` pas
 
 **DONE.** The doc lines each type retires are pointers or gone; lanes: `desktop-rust-tests`, `desktop-rust-clippy`,
 `desktop-bindings-fresh`, `index-crate-isolation`.
+
+**What landed differently** (recorded at execution):
+
+- **First, the busy-set race** (`ba73c537e`, red first: `racing_updates_report_the_current_busy_set_last`). It was
+  UI-only: the backend's eject guard (`eject_now`), the disk-flight check, the unmount approver, and the breadcrumb menu
+  read `busy_volume_ids()` live, so a stale report never let an eject through; only the picker's Eject button could show
+  enabled. Compute, dedupe, and report now run under the dedupe lock, the one engine lock a seam is called under
+  (`EngineEvents` says so).
+- **`IntentCell`** (`31c86d643`): the writers are `request_stop(StopRequest)` and `stop_for_teardown()`, ❌ not
+  `request_stop(StopMeans)` (that's a reversal's reading, not a request). Readers ask the cell; the native copy
+  callbacks take it in place of the raw atomic, and the free `is_cancelled` / `load_intent` are gone. Tests that
+  simulate a stop use the `cfg(test)` `set_for_test` / `reading`.
+- **`ArmedConflict`** (`d401ae47b`), as planned; it derefs to the event and leaves through `into_event`.
+- **The reversal type is `WindDown`** (`cc2d22fbd`), on the two wind-down reversals only. The shape check found the
+  history runner needs its whole state (the staged per-file move), and its reading is always `IntentLeavesRunning`,
+  which is also the forward machinery's; so `ReversalRunner` lost its `StopMeans` parameter instead.
+- **`Announced`** (`21a9cbed8`): `EngineHost::announce` / `announce_on` replace the raw `own_writes()` accessor. The
+  typed writers are `stage_and_land_file` (+ `copy_file_with_strategy` / `copy_file_using`), `rename_onto_free_name`,
+  `move_resolved_into_place`, and `StagedWrite::begin` (which announces its own temp). They take the DESTINATION; a
+  rename's source stays a by-hand announce, because the cross-FS staged rename announces none and the pins assert that.
+  Every announce kept its place; the pins pass unchanged. `stage_and_land_file` still re-announces its dest after the
+  temp, as the local-copy pin expects.
+- **`OperationId`** (`343e2d87d`) lives in `cmdr_operation_log::types`, on `OpenOperation`, `OperationJournal`,
+  `OpJournal::op_id`, and the engine's one id-carrying seam, `OperationErrorReport`. The ceiling re-measure:
+  `SubsystemItems` 74 → 76, `HandleMethods` 10 → 6.
+- **Seen, not fixed:** a fresh compress (`archive_edit/fresh_compress.rs`, through `StagedWrite::begin_generated`)
+  announces neither its temp nor its zip, so compressing into `~/Downloads` may toast its own output. Adding the
+  announces is a behavior change for the lead to call.
+- Lanes: `desktop-rust-tests` (one load-starved cell outside the engine passed alone), `desktop-rust-clippy`,
+  `desktop-bindings-fresh`, `index-crate-isolation`, `desktop-rust-module-cycles` green; the bench `cargo check` green.
 
 ### M7a: The app programs against the public API
 
