@@ -166,9 +166,11 @@ pub(in crate::file_system::write_operations) struct StagedWrite {
 impl StagedWrite {
     /// Begins a tracked sibling stage for validated generated output. A target
     /// observed absent stays `ExpectedFree`, so a racing file is never cleared.
+    /// Announces like [`Self::begin`].
     pub(in crate::file_system::write_operations) fn begin_generated(
         state: &Arc<WriteOperationState>,
-        final_path: &Path,
+        dest_volume: &dyn Volume,
+        final_path: Announced<'_>,
         replace_existing: bool,
     ) -> Self {
         let staging = if replace_existing {
@@ -176,7 +178,7 @@ impl StagedWrite {
         } else {
             WriteStaging::Stage
         };
-        Self::begin_unannounced(state, final_path, staging)
+        Self::begin(state, dest_volume, final_path, staging)
     }
 
     /// Picks the staging path and, when we own it, records it as an in-flight

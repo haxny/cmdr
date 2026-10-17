@@ -640,7 +640,12 @@ Each lands as its own commit with a red test first, and the commit body names it
    crate's `clippy.toml`. `spawn_async_sync` is a deleted helper, so clippy can't name it; that half stays as a tiny
    fail-closed test (root exists, ≥300 files scanned). Not a behavior change in the app; listed because a test changes
    shape and its guarantee moves to a lint.
-4. **Nothing else.** In particular: terminal-outcome recording stays in the app's sink adapter, the admitted-op spawn
+4. **A fresh compress announces its zip and temp to `OwnWrites` (lead ruling, landed before M7a).** Before,
+   `StagedWrite::begin_generated` announced neither, so compressing into `~/Downloads` could toast Cmdr's own output,
+   against "every destination is announced before the syscall". It now takes the archive as an `Announced` and goes
+   through `begin`. Red test first:
+   `own_write_announce_tests.rs::a_fresh_compress_announces_its_zip_and_temp_before_they_exist` (recorded nothing).
+5. **Nothing else.** In particular: terminal-outcome recording stays in the app's sink adapter, the admitted-op spawn
    stays on the APP runtime (the `VolumeHost`'s, which IS the app runtime), and an engine event before `install` is
    dropped by the default seam exactly as today's unset `AppHandle` statics drop it. The intent race is fixed before the
    effort (§ "Precondition"). A pre-install refusal is not a change: today no op can start before setup, and the refusal
@@ -1559,9 +1564,8 @@ asking `dest_volume.local_path()`: keep that skip. Don't widen `OperationId` pas
 - **`OperationId`** (`343e2d87d`) lives in `cmdr_operation_log::types`, on `OpenOperation`, `OperationJournal`,
   `OpJournal::op_id`, and the engine's one id-carrying seam, `OperationErrorReport`. The ceiling re-measure:
   `SubsystemItems` 74 → 76, `HandleMethods` 10 → 6.
-- **Seen, not fixed:** a fresh compress (`archive_edit/fresh_compress.rs`, through `StagedWrite::begin_generated`)
-  announces neither its temp nor its zip, so compressing into `~/Downloads` may toast its own output. Adding the
-  announces is a behavior change for the lead to call.
+- **Seen, not fixed here:** a fresh compress (`archive_edit/fresh_compress.rs`, through `StagedWrite::begin_generated`)
+  announced neither its temp nor its zip. The lead ruled it a fix: behavior change 4.
 - Lanes: `desktop-rust-tests` (one load-starved cell outside the engine passed alone), `desktop-rust-clippy`,
   `desktop-bindings-fresh`, `index-crate-isolation`, `desktop-rust-module-cycles` green; the bench `cargo check` green.
 

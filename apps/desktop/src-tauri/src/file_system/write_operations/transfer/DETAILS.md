@@ -479,7 +479,7 @@ that choice through `resolve_staging`, the single place a staged write can becom
 (`staged_write::Replaces::InPlace`, `volume/DETAILS.md` § "Whole-publish destinations").
 
 **Generated validated files reuse the same ownership.** `StagedWrite::begin_generated` always mints and
-records a sibling stage. A publisher whose volume declares `supports_atomic_replace_rename()` lands it with one force
+records a sibling stage, and announces the archive and its temp like `begin` (it takes the archive as an `Announced`). A publisher whose volume declares `supports_atomic_replace_rename()` lands it with one force
 rename. Other publishers call `commit_with_displaced_original`: move the old destination to the existing tracked
 `DisplacedDestination`, land without force, discard the aside on success, or restore it on refusal. If restoration also
 refuses, the shared rescue gives the original a stable ` (recovered)` name and the typed failure names it; the sole good

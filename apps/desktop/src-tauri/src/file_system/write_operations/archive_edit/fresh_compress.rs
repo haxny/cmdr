@@ -442,7 +442,7 @@ async fn produce_direct(
     cancellation: FreshZipCancellation,
 ) -> Result<(), EditError> {
     let expected = ExpectedIndex::of_plan(&plan);
-    let stage = StagedWrite::begin_generated(&state, &archive_path, replace_existing);
+    let stage = begin_stage(&state, dest_volume.as_ref(), &archive_path, replace_existing);
     let stage_path = stage.target().to_path_buf();
     let (written, produced) = produce_into(
         plan,
@@ -523,7 +523,7 @@ async fn produce_via_spool(
     };
     validate_stage(&spool_volume, &spool_path, written, produced, &expected).await?;
 
-    let stage = StagedWrite::begin_generated(&state, &archive_path, replace_existing);
+    let stage = begin_stage(&state, dest_volume.as_ref(), &archive_path, replace_existing);
     let stage_path = stage.target().to_path_buf();
     let stream = spool_volume
         .open_read_stream(&spool_path)
@@ -581,6 +581,18 @@ async fn produce_via_spool(
     }
     publish_stage(stage, &dest_volume, &archive_path, replace_existing).await?;
     Ok(())
+}
+
+/// Stages the archive on its destination, announcing the archive and its temp
+/// before either exists.
+fn begin_stage(
+    state: &Arc<WriteOperationState>,
+    dest_volume: &dyn Volume,
+    archive_path: &Path,
+    replace_existing: bool,
+) -> StagedWrite {
+    let archive = state.scope().host().announce_on(dest_volume, archive_path);
+    StagedWrite::begin_generated(state, dest_volume, archive, replace_existing)
 }
 
 async fn publish_stage(

@@ -32,7 +32,8 @@ impl OwnWrites for NoOwnWrites {
 /// writers that create or rename onto a path take that destination as an
 /// `Announced`: `overwrite::stage_and_land_file` (and the copy strategies above
 /// it), the local move's `rename_onto_free_name` and `move_resolved_into_place`,
-/// and the volume engine's `StagedWrite::begin`. Calling one without announcing
+/// and the volume engine's `StagedWrite::begin` (and fresh compress's
+/// `begin_generated`). Calling one without announcing
 /// first doesn't compile.
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct Announced<'a>(&'a Path);

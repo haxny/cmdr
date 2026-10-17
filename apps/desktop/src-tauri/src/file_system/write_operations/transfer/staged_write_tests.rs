@@ -392,7 +392,7 @@ async fn a_refused_displacement_preserves_the_original_and_cleans_the_generated_
         .create_file(Path::new("/notes.txt"), b"THE USER'S FILE")
         .await
         .unwrap();
-    let staged = StagedWrite::begin_generated(&state, Path::new("/notes.txt"), true);
+    let staged = StagedWrite::begin_generated(&state, dest.as_ref(), Announced::assumed(Path::new("/notes.txt")), true);
     let temp = staged.target().to_path_buf();
     inner.create_file(&temp, b"NEW").await.unwrap();
 

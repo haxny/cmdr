@@ -387,6 +387,47 @@ async fn an_archive_edit_announces_its_temp_then_the_archive_it_replaces() {
     );
 }
 
+/// A fresh compress into a local folder (`StagedWrite::begin_generated`): the
+/// zip it publishes and the temp it streams into, so compressing into
+/// `~/Downloads` never toasts Cmdr's own output.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_fresh_compress_announces_its_zip_and_temp_before_they_exist() {
+    let rig = Rig::new("announce_fresh_compress");
+    fs::write(rig.join("src/a.txt"), b"a").expect("source");
+    let source: Arc<dyn Volume> = Arc::new(cmdr_local::LocalPosixVolume::local_folder(
+        "Source",
+        rig.join("src"),
+        crate::volume_host::host(),
+    ));
+
+    let events = Arc::new(CollectorEventSink::new());
+    rig.engine
+        .compress_start(
+            Arc::clone(&events) as Arc<dyn OperationEventSink>,
+            source,
+            vec![PathBuf::from("a.txt")],
+            rig.join("dst/a.zip"),
+            // A unique parent keeps the op off every shared lane.
+            format!("announce-compress-{}", uuid::Uuid::new_v4()),
+            ConflictResolution::Stop,
+            0,
+            None,
+            None,
+            Initiator::User,
+        )
+        .await
+        .expect("start compress");
+    wait_settled(&events).await;
+
+    assert!(rig.join("dst/a.zip").exists());
+    // The final name, then the temp the zip streams into; the landing rename
+    // carries no third announce.
+    assert_eq!(
+        rig.shape(),
+        announced(&[("dst/a.zip", false), ("dst/a.zip.cmdr-tmp-*", false)])
+    );
+}
+
 /// The volume engine landing on a local disk (`StagedWrite::begin` over `EngineHost::announce_on`).
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_volume_copy_onto_a_local_disk_announces_its_destination_and_temp() {
