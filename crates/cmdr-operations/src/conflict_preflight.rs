@@ -39,7 +39,7 @@ pub enum VolumeScanError {
         volume_id: String,
     },
     /// The destination is a listed phone or a saved server that nothing has
-    /// connected yet (`crate::unregistered_volumes`).
+    /// connected yet (`OperationVolumes::unregistered`).
     DestinationVolumeNotConnected {
         /// The id nothing has connected.
         volume_id: String,

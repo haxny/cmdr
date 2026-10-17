@@ -259,7 +259,7 @@ export type WriteOperationError =
   // `onlineOnly` overrides the reason: an evicted cloud file refuses as 513
   // (`notPermitted`) as readily as 3328, so the reason can't tell the two apart,
   // and the Full Disk Access offer must not attach to one. See
-  // `write_operations/delete/cloud_trash.rs`.
+  // `crates/cmdr-operations/src/delete/cloud_trash.rs`.
   | { type: 'trash_refused'; itemCount: number; reason: TrashRefusalKind; message: string; onlineOnly?: boolean }
   | { type: 'io_error'; path: string; message: string }
   // Extracting from a password-protected archive. `wrongAttempt` is true when the

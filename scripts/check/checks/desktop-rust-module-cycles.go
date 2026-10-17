@@ -252,7 +252,7 @@ func sortTanglesLargestFirst(tangles [][]string) {
 // each other in a circle after the parent-child hubs are folded away.
 type moduleTangle struct {
 	// home is where the tangle lives, in package-qualified form
-	// (`cmdr::file_system::write_operations`): the longest module path all its
+	// (`cmdr-index::indexing::lifecycle`): the longest module path all its
 	// members share. It's the allowlist key, so it has to read like a place rather
 	// than like a list of modules.
 	home string

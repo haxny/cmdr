@@ -509,7 +509,7 @@ pub trait Volume: Send + Sync {
     /// Total, like the host helper it usually wraps: every class reports
     /// `Kept`, `Refused`, `NotApplicable`, or `Absent`, and nothing here fails
     /// a copy. The contract:
-    /// `apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/DETAILS.md`
+    /// `crates/cmdr-operations/src/transfer/volume/DETAILS.md`
     /// § "Copies keep the source's metadata".
     ///
     /// **Shared conformance assertions enforce it**: every backend that
@@ -586,7 +586,7 @@ pub trait Volume: Send + Sync {
     ///
     /// For recursive deletes, callers should walk the tree themselves and call
     /// `delete` per leaf. See `remove_tree` in
-    /// `apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/cleanup.rs`.
+    /// `crates/cmdr-operations/src/transfer/volume/cleanup.rs`.
     ///
     /// Default: `NotSupported`.
     fn delete<'a>(&'a self, path: &'a Path) -> Pin<Box<dyn Future<Output = Result<(), VolumeError>> + Send + 'a>> {
@@ -858,7 +858,7 @@ pub trait Volume: Send + Sync {
     /// WebDAV, S3, and ADB). Three callers dial it: the frontend reconnect
     /// manager (each backoff tick, and "Retry now"), a backend's own background
     /// loop, and a transfer waiting for its volume to come back
-    /// (`write_operations/transfer/volume_outage.rs`), which is why it must stay
+    /// (`crates/cmdr-operations/src/transfer/volume_outage.rs`), which is why it must stay
     /// ONE attempt: the caller owns the patience.
     ///
     /// ❗ An auth refusal comes back as `PermissionDenied` (or `NeedsPassword`)
@@ -1020,7 +1020,7 @@ pub trait Volume: Send + Sync {
     /// doesn't honor fails `conformance::metadata`; reporting a mode without real
     /// bits is worse than reporting nothing, since a non-zero mode is a fact
     /// somebody puts on the user's file. Where each backend stands:
-    /// `apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/DETAILS.md`
+    /// `crates/cmdr-operations/src/transfer/volume/DETAILS.md`
     /// § "Copies keep the source's metadata".
     fn metadata_caps(&self) -> crate::metadata::MetadataCaps {
         crate::metadata::MetadataCaps::NONE
@@ -1104,7 +1104,7 @@ pub trait Volume: Send + Sync {
     /// `std::fs`) and would answer `false` here.
     ///
     /// The transfer driver reads it to size its concurrency window
-    /// (`write_operations/transfer/volume/copy.rs::transfer_concurrency`). A
+    /// (`crates/cmdr-operations/src/transfer/volume/copy.rs::transfer_concurrency`). A
     /// local volume's [`max_concurrent_ops`](Self::max_concurrent_ops) is a
     /// CPU-core heuristic that has nothing to say about how many requests a
     /// network peer should carry, so it isn't allowed to bound one; a remote
@@ -1394,7 +1394,7 @@ pub trait Volume: Send + Sync {
     /// when a directory of the same name already exists at the path.
     ///
     /// The scan-as-you-merge folder-merge walker
-    /// (`write_operations/transfer/volume/strategy.rs`) uses the `AlreadyExists`
+    /// (`crates/cmdr-operations/src/transfer/volume/strategy.rs`) uses the `AlreadyExists`
     /// result as the signal that a destination level PRE-EXISTED and must be
     /// merged into (list it once, resolve clashing children) rather than created
     /// fresh. Default `true` covers LocalPosix (`std::fs::create_dir` →
@@ -1433,7 +1433,7 @@ pub trait Volume: Send + Sync {
     /// asked in, so one folder can never hold two spellings of it.
     ///
     /// A write guard reads it to skip the listing it would otherwise take to find
-    /// a look-alike after a lookup missed (`write_operations/look_alike.rs`): here
+    /// a look-alike after a lookup missed (`crates/cmdr-operations/src/look_alike.rs`): here
     /// the miss already means there's none. `LocalPosixVolume` answers `true` on
     /// macOS (APFS and HFS+ match names normalization-insensitively). Default
     /// `false`, the byte-exact answer (SMB, SFTP, MTP, ADB, an in-memory store),
@@ -1697,7 +1697,7 @@ pub trait Volume: Send + Sync {
     /// client with no keepalive. ❌ Don't answer `Dead` from a missed probe, a
     /// slow response, or elapsed silence: only a reading that already tells slow
     /// from dead qualifies. Full reasoning:
-    /// `write_operations/transfer/DETAILS.md` § "The watchdog ACTS".
+    /// `crates/cmdr-operations/src/transfer/DETAILS.md` § "The watchdog ACTS".
     fn connection_liveness(&self) -> Option<ConnectionLiveness> {
         None
     }
@@ -1716,7 +1716,7 @@ pub trait Volume: Send + Sync {
     /// Only ever compared against an earlier reading of the same volume, and it
     /// can drop: a rebuilt session starts counting from zero. The transfer
     /// watchdog reads a drop as "no rate this tick"
-    /// (`write_operations/transfer/transfer_probe.rs`).
+    /// (`crates/cmdr-operations/src/transfer/transfer_probe.rs`).
     fn connection_bytes_received(&self) -> Option<u64> {
         None
     }
@@ -1765,7 +1765,7 @@ pub trait Volume: Send + Sync {
     /// commit in the one operation. Opening a handle up front and streaming chunks
     /// into it still lands all-or-nothing, and breaks this. The transfer layer's
     /// foreground yield leans on it to let a small upload stand aside mid-drain;
-    /// `write_operations/transfer/volume/DETAILS.md` § "The single-shot exemption".
+    /// `crates/cmdr-operations/src/transfer/volume/DETAILS.md` § "The single-shot exemption".
     ///
     /// ❌ And a THIRD: a single-shot write has no staged landing to refuse a name
     /// someone took mid-upload, so its [`WriteMode::CreateNew`] refusal must be
@@ -1787,7 +1787,7 @@ pub trait Volume: Send + Sync {
     /// The transfer layer then writes straight to the final name, a fresh file
     /// and a file→file Overwrite alike: staging there would buy nothing the
     /// protocol doesn't already give, and its landing rename can cost a full
-    /// server-side copy plus a delete (`write_operations/transfer/volume/DETAILS.md`
+    /// server-side copy plus a delete (`crates/cmdr-operations/src/transfer/volume/DETAILS.md`
     /// § "Whole-publish destinations").
     ///
     /// It promises less than [`write_is_single_shot`](Self::write_is_single_shot),

@@ -140,7 +140,7 @@ export const advisoryFixes: AdvisoryFix[] = [
  * Test and code counts, from `rg -c` over the source (a count of test attributes and test
  * calls, so parameterized cases count once):
  * - Rust tests: `rg -c --type rust '^\s*#\[(tokio::)?test' apps crates`, summed. Write operations:
- *   the same under `apps/desktop/src-tauri/src/file_system/write_operations`.
+ *   the same under `crates/cmdr-operations/src`.
  * - Frontend unit tests: `rg -c -g '*.test.ts' '^\s*it\(' apps/desktop/src`, summed, and the file count.
  * - End-to-end tests: `rg -c -g '*.spec.ts' '^\s*test(\.skip|\.only)?\(' apps/desktop/test/e2e-playwright`.
  * - `unsafe` blocks: `rg -c --type rust 'unsafe \{' apps crates`. The vendored copy is

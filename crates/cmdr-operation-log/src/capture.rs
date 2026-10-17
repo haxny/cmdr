@@ -5,7 +5,7 @@
 //! Capture rides the managed operation pipeline through a per-item observer at
 //! the sink's altitude, NOT by decorating `OperationEventSink`. The write
 //! pipeline bundles this trait with the sink into an `OperationObservers` context
-//! (defined in `write_operations`, which holds the sink) and threads it down the
+//! (defined in `cmdr-operations`, which holds the sink) and threads it down the
 //! same seam. This module owns the journal half: it feeds the
 //! [`writer`](crate::writer) and,
 //! crucially, computes the two data-safety decisions the writer deliberately does

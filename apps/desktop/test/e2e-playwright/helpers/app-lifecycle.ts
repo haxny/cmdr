@@ -349,7 +349,7 @@ export async function ensureAppReady(
  * while the operation is still running:
  *
  * - the copy is on disk well before the operation ends — every write lands by
- *   temp+rename and the closing `fdatasync` pass (`write_operations/durability.rs`,
+ *   temp+rename and the closing `fdatasync` pass (`crates/cmdr-operations/src/durability.rs`,
  *   the user-visible "Writing the last piece…") runs AFTER the bytes are in
  *   place, and on a loaded Linux Docker box that flush has been measured taking
  *   seconds;

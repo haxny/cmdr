@@ -57,7 +57,7 @@ pub struct PastedClipboardFile {
 
 /// What `paste_clipboard_as_file` answers within its reply deadline. A refusal
 /// inside the deadline is the command's `Err(MutationError)`. Same contract as
-/// `MutationReply` (`write_operations/mutation_reply.rs`), with the created
+/// `MutationReply` (`crates/cmdr-operations/src/mutation_reply.rs`), with the created
 /// file riding along.
 #[cfg_attr(
     not(target_os = "macos"),

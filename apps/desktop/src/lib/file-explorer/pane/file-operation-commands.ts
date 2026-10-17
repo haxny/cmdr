@@ -48,7 +48,7 @@ const log = getAppLogger('fileExplorer')
  * makes a trash the wrong thing to run: macOS would download every evicted file
  * just to put it in a folder the person is about to empty.
  *
- * The recognition itself is the backend's (`write_operations/delete/cloud_trash.rs`):
+ * The recognition itself is the backend's (`crates/cmdr-operations/src/delete/cloud_trash.rs`):
  * it's all-or-nothing across the selection, it resolves symlinks first, and it's
  * deliberately narrow. ❌ Don't re-derive any of it here.
  *

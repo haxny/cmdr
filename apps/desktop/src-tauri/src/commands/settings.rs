@@ -129,7 +129,7 @@ pub fn set_show_safe_save_files_cmd(show: bool) {
 /// Show or hide the temporary files Cmdr writes while copying
 /// (`advanced.showStagingTempFiles`). Pushed live from the frontend on change.
 /// Only affects scratch files a RUNNING operation owns: leftovers from an
-/// interrupted transfer stay visible either way (`file_system::staging`).
+/// interrupted transfer stay visible either way (`cmdr_fs::staging`).
 #[tauri::command]
 #[specta::specta]
 pub fn set_show_staging_temp_files_cmd(show: bool) {
@@ -161,7 +161,7 @@ pub fn set_log_llm_calls(enabled: bool) {
 /// Live-applies the operation log's on/off switch (`operationLog.enabled`). Off stops
 /// journaling NEW operations, so they can't be undone; an operation already running
 /// keeps the decision it started with, and existing history stays readable and
-/// prunable (`operation_log/recording.rs`). Runtime-toggleable, no restart.
+/// prunable (`cmdr-operation-log`'s `recording.rs`). Runtime-toggleable, no restart.
 #[tauri::command]
 #[specta::specta]
 pub fn set_operation_log_enabled(enabled: bool) {

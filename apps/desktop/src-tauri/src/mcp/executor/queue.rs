@@ -1,7 +1,7 @@
 //! The `queue` tool: control the operation queue (pause / resume / cancel, and
 //! the global pause-all / resume-all).
 //!
-//! Thin adapter over the typed `write_operations` manager functions (smart
+//! Thin adapter over the typed `cmdr-operations` manager functions (smart
 //! backend / thin frontend). It dispatches no FE action and invents no ack — it
 //! calls the backend directly and returns OK (the `connect_to_server` /
 //! `indexing` precedent, so there is no FE action to ack). These are transient runtime actions on a
@@ -292,7 +292,7 @@ fn require_operation_exists(operation_id: &str) -> Result<(), ToolError> {
 ///
 /// Membership in `list_operations()` isn't the test: the snapshot also carries
 /// RETAINED FAILURES, which the queue window keeps so it can say why an
-/// operation stopped (`write_operations` DETAILS § "Retained failures"). Those
+/// operation stopped (`cmdr-operations` DETAILS § "Retained failures"). Those
 /// ids are long over, so acting on one is precisely the silent no-op this guard
 /// exists to turn into a refusal. Typed status match, never a message test.
 fn is_controllable(operations: &[OperationSnapshot], operation_id: &str) -> bool {
@@ -435,7 +435,7 @@ mod tests {
     // process-global, so a real `pause_all()` here would park a sibling test's
     // operation. What IS testable is everything that decides the answer: the
     // fold from per-operation outcomes into counts (`PauseAllOutcome`, tested in
-    // `write_operations/manager/tests.rs`) and the wording below.
+    // `crates/cmdr-operations/src/manager/tests.rs`) and the wording below.
 
     /// The defect this closes: an empty sweep used to answer "OK: Paused every
     /// running operation", and an agent acting on that believes the device went

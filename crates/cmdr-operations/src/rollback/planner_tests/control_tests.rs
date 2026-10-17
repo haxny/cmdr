@@ -4,7 +4,7 @@
 //! `tests.rs` pins what a reversal decides (the per-kind inverse, the snapshot
 //! recheck, the never-overwrite restore, the typed skip reasons). These pin the
 //! live behavior around those decisions, which is the pair
-//! `execute_rollback` + `write_operations::rollback::ReversalRunner` working
+//! `execute_rollback` + `cmdr_operations::rollback::ReversalRunner` working
 //! together.
 //!
 //! **Timing comes from the machinery, never from a sleep.** A reversal of

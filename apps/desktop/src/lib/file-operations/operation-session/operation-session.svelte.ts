@@ -206,7 +206,7 @@ export function createOperationSession(operationId: string, fanout: OperationEve
    *  sits there describing a transfer that has stopped, and "4.1 MB/s" over a
    *  frozen copy is a number nobody can stand behind. The ETA is a different
    *  claim and stays: the backend excludes human-wait time from the rate window
-   *  (`write_operations/human_wait.rs`), so "58s left" is still what remains
+   *  (`crates/cmdr-operations/src/human_wait.rs`), so "58s left" is still what remains
    *  once the person is done, which is exactly what they want to know while
    *  deciding.
    *

@@ -6,7 +6,7 @@
  * `stillRunning` with a `pendingId`, and a settle event carrying that id says
  * how the work ended (`mutation-settled`, or `clipboard-paste-settled`, which
  * also names the file): it may well land seconds later, so this is never a
- * failure. Backend side: `src-tauri/src/file_system/write_operations/mutation_reply.rs`.
+ * failure. Backend side: `crates/cmdr-operations/src/mutation_reply.rs`.
  */
 
 import type { UnlistenFn } from '@tauri-apps/api/event'

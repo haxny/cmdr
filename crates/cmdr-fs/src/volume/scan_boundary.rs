@@ -4,7 +4,7 @@
 //! ⚠️ A recursive scan over a network backend reports nothing until it returns,
 //! so the transfer dialog sits on `0 bytes / 0 files / 0 dirs` for however long
 //! the walk takes. It also leaves the scan watchdog
-//! (`write_operations/scan_watchdog.rs`) blind: that bounds a preview by
+//! (`crates/cmdr-operations/src/scan_watchdog.rs`) blind: that bounds a preview by
 //! INACTIVITY, and a backend that never reports activity is indistinguishable
 //! from a server that has stopped answering.
 //!

@@ -3,7 +3,7 @@
 //! condition and the `queue` tool.
 //!
 //! **Why a ring at all.** The operation manager removes an op from its registry
-//! the moment it settles (removal-on-terminal, `write_operations/DETAILS.md`),
+//! the moment it settles (removal-on-terminal, `crates/cmdr-operations/DETAILS.md`),
 //! and `operations-changed` fires AFTER that removal — so a completed or
 //! cancelled op leaves the snapshot entirely (`LifecycleStatus` never reaches
 //! `Done`/`Cancelled` at all, on a record or on a snapshot). Their outcome lives
@@ -18,7 +18,7 @@
 //! out-of-band, so `Failed` does reach the snapshot (never a live record) until
 //! the user dismisses it. This ring still records it, because the ring is the
 //! uniform answer for all three outcomes and doesn't depend on the user leaving
-//! a failure undismissed. See `write_operations/DETAILS.md` § "Retained
+//! a failure undismissed. See `crates/cmdr-operations/DETAILS.md` § "Retained
 //! failures".
 //!
 //! Ring-buffered to 20 entries: enough for a slow agent to catch a recent

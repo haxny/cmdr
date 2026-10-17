@@ -130,7 +130,7 @@ fn expected_content(index: usize, len: usize) -> Vec<u8> {
 /// registry before there is anything to dump — the copy has to stay parked while
 /// we read it.
 /// Generic over the driver's result type only because `WriteFailure` is private
-/// to `write_operations`; there is one caller shape.
+/// to `cmdr-operations`; there is one caller shape.
 async fn await_copy_or_probe_dump<T>(
     engine: &Operations,
     copy: &mut tokio::task::JoinHandle<T>,

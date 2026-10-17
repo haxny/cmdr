@@ -2,7 +2,7 @@
  * The words for a typed `MutationError`: what a rename, New Folder, or New File
  * refusal says to the person who asked for it.
  *
- * Classification is the backend's (`write_operations/mutation_error.rs`); the
+ * Classification is the backend's (`crates/cmdr-operations/src/mutation_error.rs`); the
  * words are all here, pulled from the `errors.mutation.*` and `errors.volume.*`
  * catalogs so every locale gets its own. Same split as the listing path
  * (`#lib/error-messages/`) and the transfer path

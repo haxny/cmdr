@@ -7,7 +7,7 @@
 //! its PUT or `CompleteMultipartUpload` finishes, and a replaced object stays
 //! readable until then, so `publishes_writes_whole` answers `true` and the
 //! transfer engine sends no `.cmdr-tmp-*` staging here
-//! (`write_operations/transfer/volume/DETAILS.md` § "Whole-publish
+//! (`crates/cmdr-operations/src/transfer/volume/DETAILS.md` § "Whole-publish
 //! destinations"). A rename to land a temp would be a server-side copy plus a
 //! delete.
 //!

@@ -3,7 +3,7 @@
 //!
 //! The per-kind reversal runs end to end against the write engine's real
 //! executor, so those cells live app-side, beside it
-//! (`apps/desktop/src-tauri/src/file_system/write_operations/rollback/planner_tests/`).
+//! (`crates/cmdr-operations/src/rollback/planner_tests/`).
 
 use std::path::Path;
 

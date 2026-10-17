@@ -369,7 +369,7 @@ export function createTransferProgressState(config: TransferProgressStateConfig)
    *  tearing down USB / network sessions, and dispatching a new op against a
    *  volume in that state is what wedged the device in the original incident.
    *  See the "Settle contract" in
-   *  `src-tauri/src/file_system/write_operations/CLAUDE.md`. */
+   *  `crates/cmdr-operations/CLAUDE.md`. */
   function reportOutcome(settled: OperationOutcome, settleEventReceived: boolean): void {
     switch (settled.kind) {
       case 'complete': {
@@ -756,7 +756,7 @@ export function createTransferProgressState(config: TransferProgressStateConfig)
    *  walking: the backend claims that preview at registration and its own task
    *  waits for it, so the operation has an id, a queue row, Pause, and
    *  Background from the first frame. Pause reaches the walk itself, which
-   *  parks between entries (`write_operations/scan_bridge.rs`). */
+   *  parks between entries (`crates/cmdr-operations/src/scan_bridge.rs`). */
   function start(): void {
     if (adoptedOperationId !== null) {
       adopt(adoptedOperationId)

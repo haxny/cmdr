@@ -9,7 +9,7 @@
 //!
 //! The dispatcher that routes here, and the same-volume rename it routes to
 //! instead, are `volume::r#move` and `volume::move_same`. The three mirror the
-//! local engines' shape in `write_operations/transfer/move_op/`.
+//! local engines' shape in `crates/cmdr-operations/src/transfer/move_op/`.
 //!
 //! Semantics, flows, and decisions: `../DETAILS.md` § "Volume copy + move".
 

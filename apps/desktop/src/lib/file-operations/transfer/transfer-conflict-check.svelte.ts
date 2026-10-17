@@ -16,7 +16,7 @@
  * It matches by NAME, so a copy into the folder the sources already live in
  * would report every one of them as its own conflict. The backend drops those
  * before answering (`commands/file_system/volume_copy.rs`, and
- * `src-tauri/src/file_system/write_operations/transfer/DETAILS.md`
+ * `crates/cmdr-operations/src/transfer/DETAILS.md`
  * § "Self-collision (duplicating in place)"), so a same-folder copy correctly
  * arrives here as zero conflicts. Nothing to do on this side EXCEPT forward what
  * the backend needs to decide it: `sourceVolumeId` and `sourcePaths`. Without

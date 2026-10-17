@@ -1,6 +1,6 @@
 //! Rolling back onto a remote place whose root was narrowed after the operation
 //! ran: what counts as already gone, and what fails instead
-//! (`../DETAILS.md` § "What counts as already gone").
+//! (`crates/cmdr-operation-log/DETAILS.md` § "What counts as already gone").
 //!
 //! `RootFenced` stands in for the narrowed volume: it refuses every path above its
 //! root as `NotFound`, the way `SftpVolume` and `WebdavVolume` do, while the files

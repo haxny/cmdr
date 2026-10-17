@@ -204,7 +204,7 @@ export const commands = {
          *  because their protocols have no inode concept. Consumed by the
          *  volume-aware delete / copy walkers to dedupe hardlinks the same way
          *  the local-FS walker does (see `seen_inodes` in
-         *  `write_operations/scan.rs`). Non-local backends never produce
+         *  `crates/cmdr-operations/src/scan.rs`). Non-local backends never produce
          *  hardlinks, so `None` is the safe default — the dedup loop just treats
          *  every entry as a unique inode.
          */
@@ -366,7 +366,7 @@ export const commands = {
          *  because their protocols have no inode concept. Consumed by the
          *  volume-aware delete / copy walkers to dedupe hardlinks the same way
          *  the local-FS walker does (see `seen_inodes` in
-         *  `write_operations/scan.rs`). Non-local backends never produce
+         *  `crates/cmdr-operations/src/scan.rs`). Non-local backends never produce
          *  hardlinks, so `None` is the safe default — the dedup loop just treats
          *  every entry as a unique inode.
          */
@@ -642,7 +642,7 @@ export const commands = {
   /**
    *  [`path_exists`] for a write's DESTINATION, asked by the transfer and compress
    *  dialogs: a name the volume holds in another Unicode spelling counts as there
-   *  (`write_operations::held_in_another_spelling`), because the write that follows
+   *  (`cmdr_operations::held_in_another_spelling`), because the write that follows
    *  lands on that entry or refuses it. So copy/move don't promise to create a
    *  folder they'll merge into, and compress warns before it overwrites.
    *
@@ -671,11 +671,11 @@ export const commands = {
     __TAURI_INVOKE<TimedOut<string[]>>('stored_spellings', { volumeId, paths }),
   /**
    *  Creates a folder. Thin pass-through to the managed create op
-   *  (`write_operations::create`): expand tilde (root only), answer within
+   *  (`Operations::create_directory_managed`): expand tilde (root only), answer within
    *  `MUTATION_REPLY_DEADLINE`, and ship the typed `MutationError` the frontend
    *  renders its words from. A create still running at the deadline answers
    *  `StillRunning` and reports its end on `mutation-settled`
-   *  (`write_operations/mutation_reply.rs`).
+   *  (`crates/cmdr-operations/src/mutation_reply.rs`).
    */
   createDirectory: (
     volumeId: string | null,
@@ -1261,7 +1261,7 @@ export const commands = {
    *  don't pass the source volume keep the legacy name-only behavior.
    *
    *  A thin wrapper: the budgeted scan itself is
-   *  `write_operations::conflict_preflight::scan_volume_for_conflicts_within`,
+   *  `Operations::scan_volume_for_conflicts_within`,
    *  which is what a test hands a budget it can wait out.
    */
   scanVolumeForConflicts: (
@@ -1407,7 +1407,7 @@ export const commands = {
    *
    *  Local-only by nature, so `volume_id` decides whether it runs at all: a volume
    *  serving its own I/O answers `Ok` untouched. See
-   *  [`check_rename_permission_for_volume`].
+   *  `Operations::check_rename_permission_for_volume`.
    */
   checkRenamePermission: (path: string, volumeId: string | null) =>
     typedError<null, MutationError>(__TAURI_INVOKE('check_rename_permission', { path, volumeId })),
@@ -1429,7 +1429,7 @@ export const commands = {
    *  The mutation runs as a managed instant op (busy-marks the volume, appears
    *  briefly in the queue). A rename still running at `MUTATION_REPLY_DEADLINE`
    *  answers `StillRunning` and reports its end on `mutation-settled`
-   *  (`write_operations/mutation_reply.rs`).
+   *  (`crates/cmdr-operations/src/mutation_reply.rs`).
    */
   renameFile: (
     from: string,
@@ -2492,7 +2492,7 @@ export const commands = {
    *  Show or hide the temporary files Cmdr writes while copying
    *  (`advanced.showStagingTempFiles`). Pushed live from the frontend on change.
    *  Only affects scratch files a RUNNING operation owns: leftovers from an
-   *  interrupted transfer stay visible either way (`file_system::staging`).
+   *  interrupted transfer stay visible either way (`cmdr_fs::staging`).
    */
   setShowStagingTempFilesCmd: (show: boolean) => __TAURI_INVOKE<void>('set_show_staging_temp_files_cmd', { show }),
   /**
@@ -2520,7 +2520,7 @@ export const commands = {
    *  Live-applies the operation log's on/off switch (`operationLog.enabled`). Off stops
    *  journaling NEW operations, so they can't be undone; an operation already running
    *  keeps the decision it started with, and existing history stays readable and
-   *  prunable (`operation_log/recording.rs`). Runtime-toggleable, no restart.
+   *  prunable (`cmdr-operation-log`'s `recording.rs`). Runtime-toggleable, no restart.
    */
   setOperationLogEnabled: (enabled: boolean) => __TAURI_INVOKE<void>('set_operation_log_enabled', { enabled }),
   /**
@@ -3785,7 +3785,7 @@ export const commands = {
    *  Thin edge: reads the RAW pasteboard flavors on the main thread (NSPasteboard is
    *  main-thread-only), then picks the flavor + converts TIFF→PNG OFF the main
    *  thread (that decode can be hundreds of ms — never on the UI thread), and hands
-   *  the result to `write_operations::write_payload_replying`.
+   *  the result to `clipboard::paste_file::write_payload_replying`.
    *  `directory` is tilde-expanded for the local `root` volume only.
    */
   pasteClipboardAsFile: (volumeId: string | null, directory: string) =>
@@ -8492,7 +8492,7 @@ export type FileEntry = {
    *  because their protocols have no inode concept. Consumed by the
    *  volume-aware delete / copy walkers to dedupe hardlinks the same way
    *  the local-FS walker does (see `seen_inodes` in
-   *  `write_operations/scan.rs`). Non-local backends never produce
+   *  `crates/cmdr-operations/src/scan.rs`). Non-local backends never produce
    *  hardlinks, so `None` is the safe default — the dedup loop just treats
    *  every entry as a unique inode.
    */
@@ -11530,7 +11530,7 @@ export type MouseNavDirection = 'back' | 'forward'
  *
  *  ❗ Belongs to NO operation, and carries no id: the move that made the folder
  *  ended in an earlier session, or before the drive was unplugged. It's the
- *  leftover sweep speaking (`write_operations/in_flight_sweep.rs`), which is
+ *  leftover sweep speaking (`crates/cmdr-operations/src/in_flight_sweep.rs`), which is
  *  also why the drive's name rides along rather than being looked up — by the
  *  time anything could look, the operation is long gone.
  *
@@ -12874,7 +12874,7 @@ export type ParsedScope = {
 /**
  *  What `paste_clipboard_as_file` answers within its reply deadline. A refusal
  *  inside the deadline is the command's `Err(MutationError)`. Same contract as
- *  `MutationReply` (`write_operations/mutation_reply.rs`), with the created
+ *  `MutationReply` (`crates/cmdr-operations/src/mutation_reply.rs`), with the created
  *  file riding along.
  */
 export type PasteClipboardReply =
@@ -15973,7 +15973,7 @@ export type SkipBreakdown = {
  *  `operation_items.rollback_skip_reason` column.
  *
  *  It is also the vocabulary the IN-FLIGHT reversals speak — the one a cancel
- *  runs over a transfer's own ledger (`file_system::write_operations::reversal`),
+ *  runs over a transfer's own ledger (`cmdr_operations::reversal`),
  *  which reports its verdicts on the `write-cancelled` event rather than storing
  *  them. ❌ Don't add a parallel enum for those; the two reversals answer the same
  *  question and a user shouldn't meet two vocabularies for it.
@@ -16982,7 +16982,7 @@ export type TransferTreeViewRequest = {
  *  answer it: who can answer is a property of which surfaces exist, and it
  *  changes underneath this enum every time one ships (`resolve_conflict` made
  *  [`Conflict`](Self::Conflict) agent-answerable without the operation changing
- *  at all). `write_operations/DETAILS.md` § "Naming a wait".
+ *  at all). `crates/cmdr-operations/DETAILS.md` § "Naming a wait".
  */
 export type TransferWaitReason =
   // Bytes are moving.
@@ -18327,7 +18327,7 @@ export type VolumeScanError =
     }
   /**
    *  The destination is a listed phone or a saved server that nothing has
-   *  connected yet (`crate::unregistered_volumes`).
+   *  connected yet (`OperationVolumes::unregistered`).
    */
   | {
       type: 'destinationVolumeNotConnected'
@@ -18872,7 +18872,7 @@ export type WriteOperationError =
    *  hand-written pair ships a sentence that contradicts the number under it,
    *  and later stops the elevated-operations engine from recognizing a refusal
    *  root could fix. All four construction sites go through the constructor.
-   *  Full rationale: `write_operations/DETAILS.md` § "Naming the folder that
+   *  Full rationale: `crates/cmdr-operations/DETAILS.md` § "Naming the folder that
    *  refused a write".
    */
   | {

@@ -63,7 +63,7 @@ pub struct VolumeManager {
 /// for it, so it can never act on a volume a racing registration has already
 /// replaced. It also keeps the dependency pointing one way — the registry knows
 /// nothing about who listens, which is what lets the in-flight temp ledger
-/// (`write_operations::in_flight_temps`) subscribe without welding the two
+/// (`cmdr_operations::in_flight_temps`) subscribe without welding the two
 /// subtrees into a cycle.
 type VolumeArrivalListener = Box<dyn Fn(&str) + Send + Sync>;
 

@@ -3,7 +3,7 @@
 //! # What this is
 //!
 //! After commit `32e6de03` (bulk-skip pre-known conflicts), four functions in
-//! `write_operations/` ended up carrying the same scaffolding around different
+//! `crates/cmdr-operations/src/` ended up carrying the same scaffolding around different
 //! transfer cores:
 //!
 //! - `volume/copy.rs::copy_volumes_with_progress` (cross-volume copy, async)
@@ -436,7 +436,7 @@ pub(super) struct DriverConfig {
 }
 
 /// One `write-source-item-done`: how a top-level source ended. The LAST one a
-/// source gets is its verdict (`../../DETAILS.md` § "Per-source outcomes").
+/// source gets is its verdict (`../../../DETAILS.md` § "Per-source outcomes").
 pub(super) fn emit_source_outcome(
     events: &dyn OperationEventSink,
     operation_id: &str,
@@ -500,7 +500,7 @@ pub(super) enum ConflictDecision {
 // The test files stay at the `transfer/` level (one is large and tracked in the
 // file-length allowlist by that path); `../` keeps the path stable. They're
 // still submodules of `transfer_driver` via these declarations, so their
-// `super::super::super::…` paths reach `write_operations` as before.
+// `super::super::super::…` paths reach `cmdr-operations` as before.
 #[cfg(test)]
 #[path = "../transfer_driver_async_tests.rs"]
 mod async_tests;

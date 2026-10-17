@@ -2,7 +2,7 @@
 //! image (macOS).
 //!
 //! `#[ignore]`d: each attaches a real disk image. Hand-run with
-//! `cargo nextest run -p cmdr --run-ignored only -E 'test(file_system::write_operations::transfer::real_image::)'`,
+//! `cargo nextest run -p cmdr --run-ignored only -E 'test(cmdr_operations::transfer::real_image::)'`,
 //! or through `pnpm check disk-images`. Serialized in the `disk-image` nextest
 //! group, and machine-wide by the harness's session lock.
 //!

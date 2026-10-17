@@ -269,7 +269,7 @@ pub fn run() {
             // then this, then the leftover sweep below, then `init_volume_manager`.
             // Its runtime is the volume host's, so after it; unconditional, so a
             // data-dir failure still leaves an app that can copy. Mirror of
-            // `write_operations::host`.
+            // `cmdr_operations::host`.
             operations_host::install(app.handle(), operation_log.clone());
 
             // Mount the typed `tauri-specta` events onto the app. Required before any

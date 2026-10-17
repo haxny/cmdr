@@ -5,7 +5,7 @@
  * that show an operation render it:
  *
  * - **Speed** is the backend's `write-progress.bytesPerSecond` (`EtaEstimator`
- *   in `src-tauri/src/file_system/write_operations/eta.rs`), rendered through
+ *   in `crates/cmdr-operations/src/eta.rs`), rendered through
  *   the `fileOperations.shared.byteRate` catalog phrasing over a `<Size>`
  *   (the per-second marker is user-facing copy, so it lives in the catalog;
  *   `#lib/units` owns the number). The frontend does NOT compute a second,

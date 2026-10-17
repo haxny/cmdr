@@ -7,7 +7,7 @@
 //! counts are exact and never a sample — there's no cut to disclose (invariant 9).
 //!
 //! Both reversal families tally through this: the journal-driven Roll back and the
-//! in-flight one a cancel runs (`file_system::write_operations::reversal`).
+//! in-flight one a cancel runs (`cmdr_operations::reversal`).
 
 use std::path::Path;
 

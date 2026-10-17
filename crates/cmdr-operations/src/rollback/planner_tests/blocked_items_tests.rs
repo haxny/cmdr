@@ -1,7 +1,7 @@
 //! Undoing a copy that carried what refuses an `unlink` onto what it landed: a
 //! Locked file, a `deny delete` ACL, a Locked `0500` folder. Each item is
 //! verified against its snapshot first, then the rollback clears it, or opens the
-//! folder holding it, for the one removal (`write_operations/rollback.rs`,
+//! folder holding it, for the one removal (`crates/cmdr-operations/src/rollback.rs`,
 //! `delete_clearing_blockers`). macOS only: Linux has no flags to carry and no
 //! `deny` ACL entries.
 

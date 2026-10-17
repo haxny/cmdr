@@ -4,7 +4,7 @@
  *
  * macOS keeps one trash per VOLUME, so there is no single directory to open. Both
  * entries below resolve the right one through `getTrashDir`, which asks Cocoa the
- * same question the trash move asked (`write_operations/delete/trash.rs`).
+ * same question the trash move asked (`crates/cmdr-operations/src/delete/trash.rs`).
  *
  * The two entries differ in what they know:
  *

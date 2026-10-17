@@ -11,7 +11,7 @@
  * Cancel propagation into mtp-rs makes teardown fast (~one USB roundtrip); the
  * settle gate makes the FE honest by holding the dialog until the backend
  * confirms it's actually torn down, not just "I told it to stop." See
- * `src-tauri/src/file_system/write_operations/CLAUDE.md` § "Settle contract"
+ * `crates/cmdr-operations/CLAUDE.md` § "Settle contract"
  * and `src-tauri/src/mtp/CLAUDE.md` § "Cancel propagation".
  *
  * Requires `--features playwright-e2e,virtual-mtp`.

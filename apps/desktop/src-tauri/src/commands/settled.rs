@@ -1,5 +1,5 @@
 //! The production `on_settled` for a mutation that answered `StillRunning`: the
-//! engine hands its late end to a callback (`write_operations/mutation_reply.rs`),
+//! engine hands its late end to a callback (`crates/cmdr-operations/src/mutation_reply.rs`),
 //! and the IPC layer turns that into a broadcast event.
 
 use serde::Serialize;

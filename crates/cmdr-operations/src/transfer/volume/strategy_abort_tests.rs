@@ -166,7 +166,7 @@ async fn a_hard_abort_ends_a_wedged_source_open() {
 /// delete would go back through the very connection that just failed to answer,
 /// which is how the quit deadline gets held a second time. So the partial stays
 /// registered as in-flight and the startup sweep removes it
-/// (`write_operations/in_flight_temps.rs`).
+/// (`crates/cmdr-operations/src/in_flight_temps.rs`).
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_hard_abort_leaves_the_partial_for_the_sweep_rather_than_deleting_it_through_the_backend() {
     let engine = TestOperations::new();

@@ -13,7 +13,7 @@
 //! The volumes with an eject in flight are the EJECTING set, pushed to the
 //! frontend as `volumes-ejecting-changed` on every change and bootstrapped through
 //! `get_ejecting_volume_ids`, the same shape as the busy set's
-//! `volumes-busy-changed` (`write_operations/status_cache.rs`).
+//! `volumes-busy-changed` (`crates/cmdr-operations/src/status_cache.rs`).
 
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};

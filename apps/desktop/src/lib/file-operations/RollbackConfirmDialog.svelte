@@ -4,7 +4,7 @@
      *
      * ⚠️ **The body has to match the operation.** Undoing a copy deletes what the copy
      * wrote, and a destination it OVERWROTE is one of those: no backup of the replaced
-     * original is kept (`write_operations/transfer/CLAUDE.md` § "Overwrite isn't
+     * original is kept (`crates/cmdr-operations/src/transfer/CLAUDE.md` § "Overwrite isn't
      * reversible"). Undoing a move deletes NOTHING; the files travel home. Wording every
      * rollback as a delete would scare people off an operation that takes nothing away,
      * and wording every one as a restore would hide a real deletion. Hence `variant`.

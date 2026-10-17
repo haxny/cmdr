@@ -1,7 +1,7 @@
 //! Tauri commands for cross-volume copy/move operations.
 //!
 //! These are pass-throughs: they build the `TauriEventSink` at the edge and hand
-//! the whole routed transfer to `write_operations::routing`, which owns the volume
+//! the whole routed transfer to `cmdr_operations::routing`, which owns the volume
 //! and destination-path resolution and the archive forks. That split is what lets
 //! a backend caller start the same transfer with its own injected sink.
 
@@ -248,7 +248,7 @@ pub async fn destination_root_echo(dest_volume_id: String, dest_path: String) ->
 /// don't pass the source volume keep the legacy name-only behavior.
 ///
 /// A thin wrapper: the budgeted scan itself is
-/// `write_operations::conflict_preflight::scan_volume_for_conflicts_within`,
+/// `Operations::scan_volume_for_conflicts_within`,
 /// which is what a test hands a budget it can wait out.
 #[tauri::command]
 #[specta::specta]

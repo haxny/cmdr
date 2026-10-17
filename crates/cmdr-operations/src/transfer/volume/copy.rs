@@ -190,7 +190,7 @@ impl crate::Operations {
             // Both volumes, captured HERE. A drive that vanishes mid-copy is out of
             // the volume list and the mount table by the time the error is worded,
             // so this is the one moment its name can still be read
-            // (`write_operations/transfer_sides.rs`).
+            // (`crates/cmdr-operations/src/transfer_sides.rs`).
             use crate::transfer_sides::{TransferSide, TransferSides};
             let sides = TransferSides::new(
                 TransferSide::new(
@@ -288,7 +288,7 @@ impl crate::Operations {
                 );
 
                 // Wait out the confirming dialog's scan before journaling or
-                // touching either device; see `write_operations::start_write_operation`.
+                // touching either device; see `cmdr_operations::start_write_operation`.
                 if crate::scan_bridge::await_claimed_preview(&ops, &*events, &op_id, WriteOperationType::Copy, &state)
                     .await
                     .stopped()

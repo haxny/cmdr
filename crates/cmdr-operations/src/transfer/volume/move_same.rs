@@ -149,7 +149,7 @@ impl crate::Operations {
                 );
 
                 // Wait out the confirming dialog's scan before journaling or
-                // touching either device; see `write_operations::start_write_operation`.
+                // touching either device; see `cmdr_operations::start_write_operation`.
                 if crate::scan_bridge::await_claimed_preview(&ops, &*events, &op_id, WriteOperationType::Move, &state)
                     .await
                     .stopped()

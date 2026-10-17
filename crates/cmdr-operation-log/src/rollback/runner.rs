@@ -5,12 +5,12 @@
 //! The engine here is a **planner**: it pages the journal, verifies each item
 //! against its snapshot, decides the inverse act, and keeps the journal's books.
 //! PERFORMING an act needs the cross-volume primitives (staged writes, mid-file
-//! cancel, retry, stall detection), and those live in `write_operations`, which
+//! cancel, retry, stall detection), and those live in `cmdr-operations`, which
 //! `operation_log` must never import. So the whole executor arrives injected —
 //! the same move the `spawn` hook in [`rollback_operation`](super::rollback_operation)
 //! already makes, for the same reason.
 //!
-//! The implementation lives in `write_operations::rollback`.
+//! The implementation lives in `cmdr_operations::rollback`.
 
 use std::future::Future;
 use std::path::Path;
@@ -115,7 +115,7 @@ pub trait RollbackRunner: Sync {
     /// Should the reversal stop where it is?
     ///
     /// **Not the same question as "is this operation cancelled?"**, and the
-    /// difference is a data-safety one. `write_operations::state::is_cancelled`
+    /// difference is a data-safety one. the engine's cancelled reading (`IntentCell`)
     /// answers "intent isn't `Running`", and `RollingBack` is one of the values it
     /// calls cancelled — right for a forward transfer that must stop and undo
     /// itself, wrong for a reversal running UNDER an operation whose intent is
@@ -123,7 +123,7 @@ pub trait RollbackRunner: Sync {
     /// rather than an order to stop. An implementation that conflated the two
     /// would bail on its first item and report a clean stop having reversed
     /// nothing. So the reversal's owner names which reading it means
-    /// (`write_operations::rollback::StopMeans`) instead of inheriting the
+    /// (`StopMeans`, in `cmdr-operations`' `operation_intent.rs`) instead of inheriting the
     /// transfer's.
     fn should_stop(&self) -> bool;
 

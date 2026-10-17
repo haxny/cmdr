@@ -125,11 +125,11 @@ fn reject_if_routed_over_a_parent<'a>(
 }
 
 /// Creates a folder. Thin pass-through to the managed create op
-/// (`write_operations::create`): expand tilde (root only), answer within
+/// (`Operations::create_directory_managed`): expand tilde (root only), answer within
 /// `MUTATION_REPLY_DEADLINE`, and ship the typed `MutationError` the frontend
 /// renders its words from. A create still running at the deadline answers
 /// `StillRunning` and reports its end on `mutation-settled`
-/// (`write_operations/mutation_reply.rs`).
+/// (`crates/cmdr-operations/src/mutation_reply.rs`).
 #[tauri::command]
 #[specta::specta]
 pub async fn create_directory(

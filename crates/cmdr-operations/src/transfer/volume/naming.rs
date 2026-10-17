@@ -1,7 +1,7 @@
 //! Naming a destination on a volume: the ` (N)` pick, and how it gets claimed.
 //!
 //! The candidates and the sequence rule are the shared ones
-//! (`write_operations::unique_name`); what's volume-specific is HOW a pick is
+//! (`cmdr_operations::unique_name`); what's volume-specific is HOW a pick is
 //! held: an `O_CREAT|O_EXCL` placeholder where the destination is local-FS
 //! backed, an `exists()` probe everywhere else, and the operation's
 //! `ClaimedNames` ledger over both. Kept out of `conflict.rs`, which decides

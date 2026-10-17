@@ -32,7 +32,7 @@ export interface TransferVolumeRoots {
  * paths happened to repeat. Trailing slashes are normalized off both sides. No
  * case folding: whether a volume folds case isn't known here, so a spelling that
  * differs only in case is left to the backend's canonicalizing guard
- * (`write_operations/validation.rs::validate_destination_not_inside_source`).
+ * (`crates/cmdr-operations/src/validation.rs::validate_destination_not_inside_source`).
  * Returns the
  * user-facing error string, or `null` when the path is acceptable. The verb
  * ("copy" / "move") comes from the active operation so the message matches what

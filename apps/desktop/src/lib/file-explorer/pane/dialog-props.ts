@@ -306,7 +306,7 @@ export interface DeleteDialogPropsData {
    * is online-only, so trashing it would download it first. The dialog forces
    * permanent mode and explains that the service keeps its own copy, in wording
    * that depends on whether the WHOLE selection is online-only. `null` when none
-   * of it is. Decided in Rust: `write_operations/delete/cloud_trash.rs`.
+   * of it is. Decided in Rust: `crates/cmdr-operations/src/delete/cloud_trash.rs`.
    */
   cloudOnlineOnly?: CloudOnlineOnlyExtent | null
   /**

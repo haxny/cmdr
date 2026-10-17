@@ -9,7 +9,7 @@
 //!
 //! The two dialog-address cells at the bottom are SFTP's own: they pin how
 //! `cmdr_fs::volume::root_anchored` meets this backend's app root, which five app
-//! sites go through (`commands/file_system/path_checks.rs`, `write_operations/routing.rs`
+//! sites go through (`commands/file_system/path_checks.rs`, `crates/cmdr-operations/src/routing.rs`
 //! twice, `transfer/volume/copy.rs`, `transfer/volume/move.rs`).
 //!
 //! ❗ **The dialog cell is the one that would catch the doubling.** `root_anchored`

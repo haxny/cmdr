@@ -410,7 +410,7 @@
     {#if canPauseOrQueue}
         <!-- Offered during the scan as much as during the write: the
              walk parks on the same gate the drivers do
-             (`write_operations/scan_bridge.rs`), and the scan is where
+             (`crates/cmdr-operations/src/scan_bridge.rs`), and the scan is where
              somebody realizes they picked the wrong destination. -->
         <Button
             variant="secondary"

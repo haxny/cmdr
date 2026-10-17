@@ -7,7 +7,7 @@
 //! note (which trusts the caps) can't stay silent about one it drops. The
 //! classes a listing can show (creation date, mode) are asserted here; the flags and the xattrs have no listing field,
 //! so a backend that stores them pins them in its own suite. The contract:
-//! `apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/DETAILS.md`
+//! `crates/cmdr-operations/src/transfer/volume/DETAILS.md`
 //! § "Copies keep the source's metadata".
 
 use std::path::Path;

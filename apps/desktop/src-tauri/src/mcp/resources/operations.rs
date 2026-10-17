@@ -92,7 +92,7 @@ pub(crate) fn snapshot_operations() -> Vec<OperationRow> {
 
 /// The lower-case lifecycle token. `queued` / `running` / `paused` come from a
 /// live record; `failed` comes from a retained failure the user hasn't dismissed
-/// yet (`write_operations/DETAILS.md` § "Retained failures").
+/// yet (`crates/cmdr-operations/DETAILS.md` § "Retained failures").
 fn status_token(status: LifecycleStatus) -> &'static str {
     match status {
         LifecycleStatus::Queued => "queued",

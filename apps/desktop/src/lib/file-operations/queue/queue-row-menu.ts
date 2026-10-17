@@ -114,7 +114,7 @@ export function queueRowMenuKeyAction(action: QueueRowMenuAction): QueueKeyActio
 /**
  * Whether the row `id` can move up or down the line. Only waiting operations trade
  * places, and only with each other: a running or paused one between them keeps its
- * slot (`write_operations/DETAILS.md` § "Reordering the line"). `rows` is in line
+ * slot (`crates/cmdr-operations/DETAILS.md` § "Reordering the line"). `rows` is in line
  * order, which is the snapshot's order.
  */
 export function queuedNeighbors(

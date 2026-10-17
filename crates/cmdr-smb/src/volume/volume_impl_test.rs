@@ -215,7 +215,7 @@ fn supports_foreground_yield_as_destination_is_on() {
 /// `liveness.rs` (pinned there), and a rebuilt session answers for itself
 /// (`session_integration_test::smb_integration_reconnect_repoints_the_liveness_reading`).
 /// ❌ Don't answer `Dead` here from `keepalive_failures`, a slow response, or
-/// `is_disconnected()`; `write_operations/transfer/DETAILS.md` § "The watchdog
+/// `is_disconnected()`; `crates/cmdr-operations/src/transfer/DETAILS.md` § "The watchdog
 /// ACTS" says why.
 #[test]
 fn a_share_without_a_session_gives_no_liveness_reading() {

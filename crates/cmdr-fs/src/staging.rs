@@ -4,14 +4,14 @@
 //! Cmdr never writes a file at its final name until the last byte has arrived.
 //! Every write lands on a sibling carrying one of the markers below and takes
 //! its real name by a rename, so a crash mid-transfer leaves something nobody
-//! mistakes for their data (`write_operations/transfer/staged_write.rs`).
+//! mistakes for their data (`crates/cmdr-operations/src/transfer/staged_write.rs`).
 //!
 //! Two markers, both ours:
 //!
 //! - [`STAGING_TEMP_MARKER`] (`.cmdr-tmp-`) carries the NEW bytes on their way in.
 //! - [`STAGING_ASIDE_MARKER`] (`.cmdr-temp-`) holds the ORIGINAL file a
 //!   safe-overwrite renamed out of the way, so it survives until the replacement
-//!   is complete (`write_operations/overwrite.rs`).
+//!   is complete (`crates/cmdr-operations/src/overwrite.rs`).
 //!
 //! Plus one directory shape, [`STAGING_DIR_PREFIX`] (`.cmdr-staging-<op>`): the
 //! folder a cross-filesystem move stages a whole tree in before renaming it into
@@ -98,7 +98,7 @@ pub const STAGING_TEMP_MARKER: &str = ".cmdr-tmp-";
 pub const STAGING_ASIDE_MARKER: &str = ".cmdr-temp-";
 
 /// Names the DIRECTORY a cross-filesystem move stages a whole tree in, before
-/// renaming it into place (`write_operations/transfer/move_op/cross_fs.rs`).
+/// renaming it into place (`crates/cmdr-operations/src/transfer/move_op/cross_fs.rs`).
 ///
 /// A prefix, not an infix like the two markers above: the folder carries no
 /// user-chosen name to keep legible, only the operation's own id.
@@ -113,7 +113,7 @@ pub const STAGING_DIR_PREFIX: &str = ".cmdr-staging-";
 /// A `true` here says only "Cmdr's naming convention", NOT "safe to delete" and
 /// NOT "hide it". A leftover from an interrupted transfer wears the same name as
 /// a live one, and telling those apart takes the operation state
-/// (`write_operations::is_staging_temp_in_flight`), not the name.
+/// (`is_staging_temp_in_flight`, below), not the name.
 pub fn is_staging_temp_name(name: &str) -> bool {
     name.contains(STAGING_TEMP_MARKER) || name.contains(STAGING_ASIDE_MARKER)
 }
@@ -141,7 +141,7 @@ const UUID_TEXT_LEN: usize = 36;
 ///
 /// The question the listing layer asks. ❌ Never the question a SWEEP asks: a
 /// sweep acts per kind, under that kind's own rules, and needs the strict test
-/// for the kind it holds a record for (`write_operations::in_flight_sweep`).
+/// for the kind it holds a record for (`cmdr_operations::in_flight_sweep`).
 pub fn is_cmdr_scratch_name(name: &str) -> bool {
     is_staging_temp_name(name) || is_staging_dir_name(name)
 }

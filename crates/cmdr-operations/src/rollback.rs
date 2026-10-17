@@ -3,7 +3,7 @@
 //! The rollback ENGINE (what an inverse does, and the data-safety rechecks) lives
 //! in [`cmdr_operation_log::rollback`]; this thin glue is the only piece that
 //! needs the [`OperationManager`](super::manager) (reachable only here, inside
-//! `write_operations`), so it lives here. It spawns the inverse operation as a
+//! `cmdr-operations`), so it lives here. It spawns the inverse operation as a
 //! MANAGED op — cancelable, lane-serialized, and shown in the queue like any
 //! transfer — and bridges the manager's `OperationIntent` cancellation into the
 //! engine's cancel predicate.

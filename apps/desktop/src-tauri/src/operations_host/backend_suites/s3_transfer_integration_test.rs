@@ -8,7 +8,7 @@
 //! and none of those live in the crate. S3 is the first destination that
 //! publishes every write whole, so these cells are also where the engine's
 //! final-name writes and in-place overwrites meet a real server
-//! (`write_operations/transfer/volume/DETAILS.md` § "Whole-publish
+//! (`crates/cmdr-operations/src/transfer/volume/DETAILS.md` § "Whole-publish
 //! destinations").
 //!
 //! Every cell checksums the bytes at BOTH ends. The cells stay named for the

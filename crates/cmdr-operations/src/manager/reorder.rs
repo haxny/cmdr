@@ -1,6 +1,6 @@
 //! Reordering the line: a waiting operation moves among the waiting ones (one
 //! place by key, or straight to a place by a drag), so the next lane to free
-//! admits the one the user put in front. `../DETAILS.md` § "Reordering the line".
+//! admits the one the user put in front. `../../DETAILS.md` § "Reordering the line".
 
 use cmdr_fs::ignore_poison::IgnorePoison;
 

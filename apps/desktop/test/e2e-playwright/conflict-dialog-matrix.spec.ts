@@ -7,7 +7,7 @@
  * carry over between normal clashes and the destructive file→folder clash.
  *
  * Backend contract under test:
- * `src-tauri/src/file_system/write_operations/helpers.rs`
+ * `crates/cmdr-operations/src/helpers.rs`
  *   - `apply_to_all_effective` / `apply_to_all_record` (the bucket rules)
  *   - Skip/Rename carry over normal → file→folder; Overwrite* does NOT.
  *   - A file→folder "* all" picked as the VERY FIRST clash spreads to normal.

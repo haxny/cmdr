@@ -5,7 +5,7 @@
  * **What this suite is for, and what it leaves to other layers.** The engine's
  * semantics (per-kind inverses, the snapshot recheck, the never-overwrite restore,
  * the typed skip reasons) are pinned in Rust against in-memory volumes, in
- * `apps/desktop/src-tauri/src/file_system/write_operations/rollback/planner_tests/tests.rs` — cheaply and exhaustively.
+ * `crates/cmdr-operations/src/rollback/planner_tests/tests.rs` — cheaply and exhaustively.
  * Repeating any of it here would buy nothing for minutes of wall clock. What only an
  * E2E can prove is the WIRING: that pressing a button in a real webview reaches the
  * real engine, that the engine's answer comes back typed and gets worded correctly,
@@ -40,7 +40,7 @@
  *   `rollback/tests.rs::entry_refuses_unknown_and_not_rollbackable_and_disconnected`
  *   already pins and `operation-log-labels.test.ts` already words.
  * - The ENGINE's progress, pause, and stop semantics, which are pinned in Rust
- *   against in-memory volumes (`apps/desktop/src-tauri/src/file_system/write_operations/rollback/planner_tests/control_tests.rs`) with a
+ *   against in-memory volumes (`crates/cmdr-operations/src/rollback/planner_tests/control_tests.rs`) with a
  *   real mid-file window. The three at the bottom here prove the same three reach a
  *   real webview, a real queue row, and real files on a real disk.
  *

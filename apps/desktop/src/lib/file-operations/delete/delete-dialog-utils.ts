@@ -25,7 +25,7 @@ export interface DeleteSourceItem {
  * online-only items, `'all'` can't, because that would leave nothing selected.
  *
  * `null` means no online-only content is in play, and nothing about it is said.
- * Decided in Rust (`write_operations/delete/cloud_trash.rs`'s `TrashRouting`);
+ * Decided in Rust (`crates/cmdr-operations/src/delete/cloud_trash.rs`'s `TrashRouting`);
  * ❌ don't re-derive it here.
  */
 export type CloudOnlineOnlyExtent = 'all' | 'mixed'

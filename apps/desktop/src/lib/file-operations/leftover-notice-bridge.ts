@@ -9,7 +9,7 @@
  * operation. The move that made the folder ended in an earlier session, or
  * before the drive was unplugged, so there is no `operationId` to hang it off
  * and nothing on screen for it to join. The sweep speaks for itself
- * (`write_operations/in_flight_sweep.rs`).
+ * (`crates/cmdr-operations/src/in_flight_sweep.rs`).
  *
  * Keyed per folder, so two folders found on one drive each get their own notice
  * and a re-plug can't stack a second copy of the same one. Mounted from

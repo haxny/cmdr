@@ -111,7 +111,7 @@ impl SmbVolumeInner {
     ///   `volume-connection-changed { state: "connected" }`.
     /// - On failure: state stays `Disconnected`; whoever called decides whether to try again (the FE
     ///   backoff cycle, the watcher-death loop below, or a transfer waiting for this share to come
-    ///   back, `write_operations/transfer/volume_outage.rs` in the app).
+    ///   back, `crates/cmdr-operations/src/transfer/volume_outage.rs` in the app).
     pub(super) async fn do_attempt_reconnect(&self) -> Result<(), VolumeError> {
         // Bail early if `on_unmount` already ran. Doing this before taking the
         // lock means a queued caller doesn't pay the lock-acquisition cost for

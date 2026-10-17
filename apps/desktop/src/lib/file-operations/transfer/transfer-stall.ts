@@ -5,7 +5,7 @@
  * The backend does the detecting. `TransferActivity` on every `write-progress`
  * event carries how long the byte counter has been still and what the transfer
  * is waiting on, derived from the live in-flight table in
- * `src-tauri/src/file_system/write_operations/transfer/transfer_probe.rs`.
+ * `crates/cmdr-operations/src/transfer/transfer_probe.rs`.
  * ❌ Don't add a frontend timer over event arrivals: it can only see "nothing
  * lately", so it would call every deliberate pause and foreground yield a
  * stall, and a warning that cries wolf gets ignored.

@@ -609,7 +609,7 @@ impl CancelRollback {
 ///
 /// ❗ Belongs to NO operation, and carries no id: the move that made the folder
 /// ended in an earlier session, or before the drive was unplugged. It's the
-/// leftover sweep speaking (`write_operations/in_flight_sweep.rs`), which is
+/// leftover sweep speaking (`crates/cmdr-operations/src/in_flight_sweep.rs`), which is
 /// also why the drive's name rides along rather than being looked up — by the
 /// time anything could look, the operation is long gone.
 ///

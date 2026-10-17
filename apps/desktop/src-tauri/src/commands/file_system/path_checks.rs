@@ -43,7 +43,7 @@ pub async fn path_exists(volume_id: Option<String>, path: String) -> TimedOut<bo
 
 /// [`path_exists`] for a write's DESTINATION, asked by the transfer and compress
 /// dialogs: a name the volume holds in another Unicode spelling counts as there
-/// (`write_operations::held_in_another_spelling`), because the write that follows
+/// (`cmdr_operations::held_in_another_spelling`), because the write that follows
 /// lands on that entry or refuses it. So copy/move don't promise to create a
 /// folder they'll merge into, and compress warns before it overwrites.
 ///

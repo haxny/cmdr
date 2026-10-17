@@ -4,7 +4,7 @@
 //!
 //! One level down from `types.rs` and re-exported from it, the way `events.rs`
 //! is, so every caller keeps its `types::WriteOperationError` path. Same floor
-//! rule: ❌ nothing here may `use` a `write_operations` sibling.
+//! rule: ❌ nothing here may `use` a `cmdr-operations` sibling.
 
 use serde::{Deserialize, Serialize};
 
@@ -212,7 +212,7 @@ pub enum WriteOperationError {
     /// hand-written pair ships a sentence that contradicts the number under it,
     /// and later stops the elevated-operations engine from recognizing a refusal
     /// root could fix. All four construction sites go through the constructor.
-    /// Full rationale: `write_operations/DETAILS.md` § "Naming the folder that
+    /// Full rationale: `crates/cmdr-operations/DETAILS.md` § "Naming the folder that
     /// refused a write".
     PermissionDenied {
         /// What was being written when the refusal came back.

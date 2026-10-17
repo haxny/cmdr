@@ -8,7 +8,7 @@
 //!
 //! It sits with the pipeline rather than with the backend because the ROUTING is
 //! the app's: `cmdr-mtp` knows nothing about zips. The whole module requires the
-//! `virtual-mtp` feature, gated on it in `write_operations/mod.rs`.
+//! `virtual-mtp` feature, gated on it in `operations_host/backend_suites/mod.rs`.
 
 use std::path::Path;
 

@@ -40,7 +40,7 @@ pub trait VolumeReadStream: Send {
     /// meaningful date (fresh `create_file` bytes, a generated archive, a git
     /// blob, a test double) returns `None`, which leaves the destination's own
     /// date. ❗ A wrapper stream forwards its inner stream's answer. The contract
-    /// and where each backend stands: `apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/DETAILS.md`
+    /// and where each backend stands: `crates/cmdr-operations/src/transfer/volume/DETAILS.md`
     /// § "Copies keep the source's metadata".
     fn modified_at(&self) -> Option<std::time::SystemTime>;
 
@@ -58,7 +58,7 @@ pub trait VolumeReadStream: Send {
     /// Default: nothing, for a stream with no source item behind it (fresh
     /// `create_file` bytes, a generated archive, a test double). ❗ A wrapper
     /// stream forwards its inner stream's answer. Which backend reports what:
-    /// `apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/DETAILS.md`
+    /// `crates/cmdr-operations/src/transfer/volume/DETAILS.md`
     /// § "Copies keep the source's metadata".
     fn metadata(&self, wanted: MetadataClasses) -> CarriedMetadata {
         let _ = wanted;

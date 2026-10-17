@@ -151,7 +151,7 @@ impl crate::Operations {
                 );
 
                 // Wait out the confirming dialog's scan; see
-                // `write_operations::start_write_operation`.
+                // `cmdr_operations::start_write_operation`.
                 if crate::scan_bridge::await_claimed_preview(&ops, &*events, &op_id, WriteOperationType::Move, &state)
                     .await
                     .stopped()

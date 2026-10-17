@@ -6,7 +6,7 @@
 //! apart from a partial reversal, and that's what these pin.
 //!
 //! A `#[path]` child of `delete/mod.rs`, so `super::` here is `delete` and
-//! `super::super::` is `write_operations`.
+//! `super::super::` is `cmdr-operations`.
 
 use super::super::state::OperationIntent;
 use super::super::testing::TestOperations;

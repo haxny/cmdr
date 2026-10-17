@@ -372,7 +372,7 @@ pub enum Raced<T> {
 ///
 /// For a write that will still LAND. Answering "timed out" there tells the user
 /// it didn't happen, and then it does; the handle lets the caller report the
-/// real outcome once there is one (`write_operations::mutation_reply`).
+/// real outcome once there is one (`cmdr_operations::mutation_reply`).
 pub async fn race_detached<T: Send + 'static>(
     timeout_duration: Duration,
     fut: impl Future<Output = T> + Send + 'static,

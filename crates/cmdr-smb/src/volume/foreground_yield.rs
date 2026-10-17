@@ -42,13 +42,13 @@
 //! guarantee is the per-park hard cap instead: every park ends, and a chunk
 //! moves between two of them. ❌ So don't cite the floor as the reason a copy
 //! can't be starved on the upload path; it isn't the one holding that end up.
-//! `write_operations/transfer/volume/DETAILS.md` § "The single-shot exemption".
+//! `crates/cmdr-operations/src/transfer/volume/DETAILS.md` § "The single-shot exemption".
 //!
 //! Both functions serve BOTH directions: a DOWNLOAD off this share (source arm)
 //! and an UPLOAD to it (destination arm, gated by
 //! `SmbVolume::supports_foreground_yield_as_destination`). The difference is the
 //! BOUND, and it belongs to the caller: an upload holds an open write handle across
-//! the pause, so it caps every park (`write_operations/transfer/checkpoint_stream.rs`)
+//! the pause, so it caps every park (`crates/cmdr-operations/src/transfer/checkpoint_stream.rs`)
 //! where a download parks for as long as the user needs.
 
 use std::time::Duration;

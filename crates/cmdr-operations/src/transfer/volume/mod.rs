@@ -76,17 +76,17 @@ pub(crate) use transfer_error::{PathRole, map_finalize_failure, map_volume_error
 // Driven directly by the SMB/MTP integration suites and the volume-journal
 // capture tests, which bypass the Tauri command layer.
 #[cfg(any(test, feature = "testing"))]
-#[allow(unused_imports, reason = "used by integration suites outside write_operations")]
+#[allow(unused_imports, reason = "used by integration suites outside the crate")]
 pub use r#move::move_volumes_with_progress;
 #[cfg(any(test, feature = "testing"))]
-#[allow(unused_imports, reason = "used by integration suites outside write_operations")]
+#[allow(unused_imports, reason = "used by integration suites outside the crate")]
 pub use move_same::move_within_same_volume_with_progress;
 
 /// The one statement of what a finished operation must have left behind, shared
 /// by the copy matrix, the move matrix, and the coverage grid.
 #[cfg(any(test, feature = "testing"))]
 mod safety_oracle;
-// The network-server scenarios (`write_operations/network_*_test_support.rs`)
+// The network-server scenarios (`crates/cmdr-operations/src/network_*_test_support.rs`)
 // assert through the same oracle, so a live backend is held to the words the
 // in-memory grid is.
 #[cfg(any(test, feature = "testing"))]
@@ -103,7 +103,7 @@ mod faulty_volume;
 #[cfg(test)]
 mod safety_grid_tests;
 
-// The SMB integration suite lives outside `write_operations`, so it reaches the
+// The SMB integration suite lives outside `cmdr-operations`, so it reaches the
 // fault injector through the facade rather than by widening the submodule.
 #[cfg(any(test, feature = "testing"))]
 #[allow(

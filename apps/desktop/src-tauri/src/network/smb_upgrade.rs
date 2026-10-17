@@ -315,7 +315,7 @@ pub(crate) fn shares_to_adopt(
 /// upgrade pass) means a newer instance owns the id, NOT that the device went
 /// away. Anything that grabbed an `Arc` before the swap is still using the old
 /// instance: a running transfer holds `src_vol` / `dst_vol` clones for its whole
-/// duration (`write_operations::transfer::volume::copy`), a viewer holds a read
+/// duration (`cmdr_operations::transfer::volume::copy`), a viewer holds a read
 /// stream, the indexer holds a scan session. `on_unmount` here dropped the smb2
 /// session under all of them and killed a live copy with `DeviceDisconnected` on
 /// a healthy connection. `Volume::on_superseded` retires the id-scoped parts

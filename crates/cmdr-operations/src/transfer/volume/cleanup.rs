@@ -291,7 +291,7 @@ pub(super) async fn clean_partial_writes(volume: &Arc<dyn Volume>, partials: &[P
 /// fired is that the destination stopped answering — so this pass would hold the
 /// quit deadline for a second time, right after the streaming write stopped
 /// holding it. The entries stay in both ledgers instead, and
-/// `write_operations::in_flight_temps`'s startup sweep clears them at the next
+/// `cmdr_operations::in_flight_temps`'s startup sweep clears them at the next
 /// launch, with no age gate, off the launch thread. Nothing is reported in that
 /// case: the app is on its way out and there is no toast left to read it.
 pub(super) async fn clean_abandoned_staged_writes(

@@ -16,11 +16,11 @@ mod walker;
 pub(crate) use walker::{delete_files_with_progress_inner, delete_volume_files_with_progress_inner};
 
 /// The volume delete driver, reachable from the SMB integration suite, which
-/// sits outside `write_operations` and drives the real walker rather than the
+/// sits outside `cmdr-operations` and drives the real walker rather than the
 /// IPC command.
 ///
 /// A thin `pub(crate)` wrapper rather than a re-export: the walker function
-/// itself stays `pub(in write_operations)`, so nothing in production gains a
+/// itself stays `pub(crate)`, so nothing in production gains a
 /// wider path to it.
 #[cfg(any(test, feature = "testing"))]
 pub async fn delete_volume_files_for_test(

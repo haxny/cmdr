@@ -399,7 +399,7 @@ async fn narrow_while_streaming(file: &mut File, remote: &str, mode: u32) {
 /// Best effort: a refusal is logged and reported, and the upload stays a
 /// success, since the bytes are what matter. `None` leaves the server's own
 /// value. The contract:
-/// `apps/desktop/src-tauri/src/file_system/write_operations/transfer/volume/DETAILS.md`
+/// `crates/cmdr-operations/src/transfer/volume/DETAILS.md`
 /// § "Copies keep the source's metadata".
 pub(super) async fn keep_source_attrs(
     session: &crate::transport::SshConnection,

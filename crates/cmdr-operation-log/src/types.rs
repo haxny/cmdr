@@ -208,7 +208,7 @@ token_enum! {
     /// `operation_items.rollback_skip_reason` column.
     ///
     /// It is also the vocabulary the IN-FLIGHT reversals speak — the one a cancel
-    /// runs over a transfer's own ledger (`file_system::write_operations::reversal`),
+    /// runs over a transfer's own ledger (`cmdr_operations::reversal`),
     /// which reports its verdicts on the `write-cancelled` event rather than storing
     /// them. ❌ Don't add a parallel enum for those; the two reversals answer the same
     /// question and a user shouldn't meet two vocabularies for it.

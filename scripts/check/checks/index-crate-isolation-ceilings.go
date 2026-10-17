@@ -410,7 +410,7 @@ var surfaceGuardedCrates = []struct {
 		// The entry points only app-side TEST cells drive from outside (a routed
 		// start, the queue's raw pause gate) are `testing` functions instead. The
 		// `testing`-gated module and methods count apart. Item-by-item:
-		// `crates/cmdr-operations/src/DETAILS.md` § "The public surface is capped".
+		// `crates/cmdr-operations/DETAILS.md` § "The public surface is capped".
 		Name:       "cmdr-operations",
 		HandleType: "Operations",
 		Ceilings: surfaceCeilings{

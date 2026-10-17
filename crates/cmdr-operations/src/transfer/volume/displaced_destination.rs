@@ -8,7 +8,7 @@
 //! the new side the way a file→file one does (`finalize.rs::finalize_safe_replace`),
 //! because a folder lands leaf by leaf over the rest of the operation. Those
 //! asides go to the operation's [`DisplacedLedger`] and settle when it ends.
-//! The local-FS twin is `write_operations/overwrite.rs::DisplacedEntry`.
+//! The local-FS twin is `crates/cmdr-operations/src/overwrite.rs::DisplacedEntry`.
 
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};

@@ -85,7 +85,7 @@ const METADATA_CLASS_KEYS: Record<LostMetadataClass, MessageKey> = {
 
 /**
  * Appends the note about what the destination couldn't store, when it couldn't store something
- * a source item had (`src-tauri/src/file_system/write_operations/transfer/volume/DETAILS.md` §
+ * a source item had (`crates/cmdr-operations/src/transfer/volume/DETAILS.md` §
  * "Copies keep the source's metadata"). Names
  * the classes in the backend's order and never the counts: the log carries those.
  */

@@ -4,7 +4,7 @@
  *
  * The reversal leaves things behind on purpose: it refuses to remove or move
  * back anything it can't match against what the transfer wrote
- * (`src-tauri/src/file_system/write_operations/transfer/DETAILS.md` § "What a
+ * (`crates/cmdr-operations/src/transfer/DETAILS.md` § "What a
  * reversal does with that identity"). The bar drains to zero either way, so
  * zero means "this reversal is finished", never "everything came off the disk" —
  * this readout is what says which of the two happened.

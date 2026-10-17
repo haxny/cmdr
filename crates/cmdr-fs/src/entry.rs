@@ -163,7 +163,7 @@ pub struct FileEntry {
     /// because their protocols have no inode concept. Consumed by the
     /// volume-aware delete / copy walkers to dedupe hardlinks the same way
     /// the local-FS walker does (see `seen_inodes` in
-    /// `write_operations/scan.rs`). Non-local backends never produce
+    /// `crates/cmdr-operations/src/scan.rs`). Non-local backends never produce
     /// hardlinks, so `None` is the safe default — the dedup loop just treats
     /// every entry as a unique inode.
     pub inode: Option<u64>,

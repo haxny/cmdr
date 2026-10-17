@@ -214,7 +214,7 @@ export function createRenameFlow(deps: RenameFlowDeps) {
     //
     // Whether it applies to the VOLUME is Rust's call, not a prefix test here: the
     // check is local, and a volume serving its own I/O answers `Ok` untouched
-    // (`write_operations::rename::check_rename_permission_for_volume`). An
+    // (`Operations::check_rename_permission_for_volume`). An
     // `mtp-`-shaped id was the whole gate once, so every backend that arrived
     // after MTP — SFTP, WebDAV, ADB — refused F2 outright (ERR-KVERS).
     const currentVolumeId = deps.getVolumeId()

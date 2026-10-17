@@ -29,7 +29,7 @@
 //! decided act, answers "should I stop?", parks while paused, and turns the
 //! per-item progress into events. That keeps `operation_log` free of file-moving
 //! code and lets the acting side use the cross-volume primitives that only
-//! `write_operations` can reach. See `rollback/runner.rs`.
+//! `cmdr-operations` can reach. See `rollback/runner.rs`.
 //!
 //! Reversal streams the original op's `rollback_unit` rows `seq DESC` through a
 //! paged cursor (`store::read_rollback_units_page`), so a 1M-item op never
@@ -95,7 +95,7 @@ impl SkipReason {
 }
 
 /// The outcome of reversing one item. Shared with the in-flight reversals
-/// (`file_system::write_operations::reversal`) so both report the same verdicts.
+/// (`cmdr_operations::reversal`) so both report the same verdicts.
 pub enum ItemResult {
     /// Reversed (or already in the desired end state).
     Reversed,
@@ -195,7 +195,7 @@ fn inverse_action(kind: OpKind, entry_type: EntryType) -> Option<InverseAction> 
 
 /// The verdict of rechecking an item against its recorded snapshot.
 ///
-/// Shared with the in-flight reversals in `file_system::write_operations`, so a
+/// Shared with the in-flight reversals in `cmdr_operations::reversal`, so a
 /// cancel-and-roll-back and a Roll back from history agree on what "this file
 /// changed" means. ❌ Don't fork a second definition of that.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -829,7 +829,7 @@ fn summarize_inverse(conn: &rusqlite::Connection, op: &OperationRow) -> InverseS
 /// guard and an immediate retry is accepted. The double-rollback guard is
 /// automatic: a second call reads the op as `rolling_back` and refuses.
 ///
-/// `spawn` is injected so the manager wiring (which lives in `write_operations`,
+/// `spawn` is injected so the manager wiring (which lives in `cmdr-operations`,
 /// where the `OperationManager` is reachable) supplies the real managed-op spawn,
 /// while tests drive the gate/reset logic directly.
 pub fn rollback_operation<F>(
@@ -942,6 +942,6 @@ pub use runner::{ActRefusal, InverseAct, RollbackProgress, RollbackRunner, Volum
 pub use skips::{SkipBreakdown, SkipTally};
 
 // The end-to-end cells drive the write engine's real executor, so they live
-// beside it: `apps/desktop/src-tauri/src/file_system/write_operations/rollback/planner_tests/`.
+// beside it: `crates/cmdr-operations/src/rollback/planner_tests/`.
 #[cfg(test)]
 mod decision_tests;

@@ -343,7 +343,7 @@ impl PauseGate {
     /// under an op whose intent already says `RollingBack` needs a different one,
     /// or its park would return instantly and a pause would hold nothing. Whoever
     /// parks names what stops them
-    /// (`write_operations::rollback::StopMeans`).
+    /// (`StopMeans`, in `cmdr-operations`' `operation_intent.rs`).
     pub async fn wait_while_paused_until(&self, should_stop: &(dyn Fn() -> bool + Sync)) {
         loop {
             // Register interest BEFORE the flag check so a `resume()` /

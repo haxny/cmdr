@@ -46,7 +46,7 @@ const MAX_CONCURRENT_VERIFICATIONS: usize = 2;
 /// tokio runtime catches on panic, so a panic there would otherwise skip the
 /// post-`await` `in_flight.remove` and permanently leak the slot against
 /// `MAX_CONCURRENT_VERIFICATIONS`. Routing the removal through `Drop` frees the
-/// slot on unwind too. Mirrors `write_operations`'s `WriteSettledGuard` pattern.
+/// slot on unwind too. Mirrors `cmdr-operations`'s `WriteSettledGuard` pattern.
 struct InFlightGuard {
     dir_path: String,
 }

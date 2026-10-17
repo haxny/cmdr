@@ -38,7 +38,7 @@ pub(super) mod volume_outage;
 pub(super) use staged_write::StagedWrite;
 
 // Re-export for the nested integration tests below (and to mirror the
-// pre-split `write_operations::CopyTransaction` test path).
+// pre-split `crate::CopyTransaction` test path).
 #[cfg(test)]
 #[allow(unused_imports, reason = "used by transaction_integration_test")]
 pub(crate) use super::ledger::CopyTransaction;

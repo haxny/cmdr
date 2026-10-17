@@ -7,7 +7,7 @@
  * somebody says "do the rest" or cancels; when ALL are gone it has already
  * completed and the event only says why (ERR-962JD, where the queued move just
  * stopped with "no longer exists"). Backend half:
- * `apps/desktop/src-tauri/src/file_system/write_operations/queued_sources.rs`.
+ * `crates/cmdr-operations/src/queued_sources.rs`.
  *
  * What it does:
  *

@@ -170,7 +170,7 @@ pub fn volume_busy_for_user(activity: &dyn UserActivity, volume_id: &str, quiet_
 ///
 /// Cancellation belongs to the caller: this only ever resolves when the volume is
 /// free, so a caller that must also unblock on a cancel or a cap races it in a
-/// `select!` (`write_operations/transfer/checkpoint_stream.rs` does both).
+/// `select!` (`crates/cmdr-operations/src/transfer/checkpoint_stream.rs` does both).
 pub async fn wait_until_volume_free(activity: &dyn UserActivity, volume_id: &str, quiet_window: Duration) {
     loop {
         // Take the watch BEFORE reading the signals. Anything that moves from here

@@ -180,7 +180,7 @@ export async function trashFiles(
 /** What an F8 over these paths should actually run: the OS trash, or the permanent
  *  delete that online-only content in a cloud-storage folder forces. Also says
  *  whether a selected folder could still change that answer once its walk runs.
- *  The backend decides; see `write_operations/delete/cloud_trash.rs`. */
+ *  The backend decides; see `crates/cmdr-operations/src/delete/cloud_trash.rs`. */
 export async function trashRoutingForPaths(sources: string[]): Promise<TrashRoutingAnswer> {
   return await commands.trashRoutingForPaths(sources)
 }

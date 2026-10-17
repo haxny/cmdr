@@ -10,7 +10,7 @@
 //! up an app). [`NoopEventSink`] covers the handle-free callers that have nothing
 //! to emit to.
 //!
-//! Modeled on `file_system/write_operations/event_sinks.rs`, with one difference:
+//! Modeled on `crates/cmdr-operations/src/event_sinks.rs`, with one difference:
 //! that sink has a method per event because its payloads are app types; this one
 //! has a single `emit` because the payload is a crate enum, which is what keeps
 //! the wire format out of here.

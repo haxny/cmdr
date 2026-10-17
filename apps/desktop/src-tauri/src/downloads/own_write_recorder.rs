@@ -2,7 +2,7 @@
 //! [`super::note_pending_write_for_cmdr`] call, with whether its path existed
 //! yet, so a test can pin what reaches the hook (the app's `OwnWrites` answer,
 //! `operations_host/own_writes.rs`). The engine's own announce order is pinned
-//! against its seam (`write_operations/own_write_announce_tests.rs`).
+//! against its seam (`crates/cmdr-operations/src/own_write_announce_tests.rs`).
 //!
 //! One process-wide registry keyed by path prefix, never per thread: managed
 //! ops and the volume engine's writers run on the blocking pool, so a

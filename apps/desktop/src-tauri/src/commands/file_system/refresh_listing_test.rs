@@ -3,7 +3,7 @@
 //!
 //! Split out under the directory's `*_test.rs` convention. The harness is a
 //! counter-wrapping `InMemoryVolume` (adapted from
-//! `write_operations::delete_volume_reuse_tests`) whose `listing_watch_coverage` is
+//! `cmdr_operations::delete_volume_reuse_tests`) whose `listing_watch_coverage` is
 //! flipped per test and whose reads can be stalled on a gate, seeded into
 //! the listing cache and `VolumeManager`. Then we call the command and assert whether
 //! `list_directory` ran, and whether it finished.

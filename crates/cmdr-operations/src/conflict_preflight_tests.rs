@@ -117,7 +117,7 @@ async fn a_source_that_never_answers_still_lets_the_destination_answer() {
 
 /// A source pasted into the folder it already lives in is a request to
 /// DUPLICATE it, and both engines answer it by silently auto-renaming
-/// (`write_operations/transfer/DETAILS.md` § "Self-collision (duplicating in
+/// (`crates/cmdr-operations/src/transfer/DETAILS.md` § "Self-collision (duplicating in
 /// place)"). The pre-flight matches destination entries by NAME, so without
 /// the filter every source of a same-folder copy comes back as its own
 /// conflict, and the dialog announces a conflict count, shows the

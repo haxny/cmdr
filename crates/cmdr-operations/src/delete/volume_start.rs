@@ -139,7 +139,7 @@ async fn drive_volume_delete(op: DeferredDelete) {
     );
 
     // Wait out the confirming dialog's scan before journaling or touching the
-    // device; see `write_operations::start_write_operation`.
+    // device; see `cmdr_operations::start_write_operation`.
     if scan_bridge::await_claimed_preview(&ops, &*events, &operation_id, WriteOperationType::Delete, &state)
         .await
         .stopped()

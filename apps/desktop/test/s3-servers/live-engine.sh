@@ -12,7 +12,7 @@
 #   CMDR_S3_LIVE_FLOWS="pause,1,005" ./live-engine.sh b2 keeps_the_users_data_safe
 #                                             # only the flows whose names hold a piece
 #
-# The cells live in `apps/desktop/src-tauri/src/file_system/write_operations/
+# The cells live in `crates/cmdr-operations/src/
 # backend_suites/s3_live_engine_test.rs` and are named `s3_live_engine_*`.
 # Each prints `LIVE [<account>] <flow>: ok in …` or `FAILED …` per pair, and
 # removes everything it wrote under `cmdr-live/<run>/` after each flow. The

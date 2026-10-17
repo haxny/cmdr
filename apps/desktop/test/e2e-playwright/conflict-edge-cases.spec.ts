@@ -373,7 +373,7 @@ test.describe('Symlink conflicts', () => {
 // A policy picked from the transfer dialog's dropdown is a BLANKET one: nobody
 // was shown either kind of entry, so it may not replace a folder with a file or
 // a file with a folder. Both directions reduce to Skip and both sides survive.
-// The rule is `write_operations/conflict.rs::resolution_for_clash`; the
+// The rule is `crates/cmdr-operations/src/conflict.rs::resolution_for_clash`; the
 // counterweight (a person answering a prompt that NAMED both kinds, whose
 // choice does replace, carry included) is `conflict-dialog-matrix.spec.ts`.
 test.describe('Type mismatch conflicts', () => {

@@ -201,7 +201,7 @@ pub(super) struct FileInfo {
     /// Set per call site: scan sets it from inode tracking; sites that build
     /// `FileInfo` without inode info (the oracle path in `walk_cached_entries`,
     /// MTP synthesis) fall back to `size` and accept the documented
-    /// cross-boundary overshoot (see write_operations CLAUDE.md gotcha).
+    /// cross-boundary overshoot (see `crates/cmdr-operations/DETAILS.md`).
     pub progress_bytes: u64,
     pub is_symlink: bool,
     /// This file's row in the transfer's live tree, set when the tree is built

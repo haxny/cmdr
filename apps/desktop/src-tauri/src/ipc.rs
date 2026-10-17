@@ -1064,16 +1064,16 @@ pub fn builder() -> Builder<tauri::Wry> {
             wire::DryRunComplete,
             wire::WriteSettled,
             // An instant mutation (new folder, new file, rename) that outlived its
-            // reply deadline (write_operations/mutation_reply.rs).
+            // reply deadline (crates/cmdr-operations/src/mutation_reply.rs).
             wire::MutationSettled,
             ClipboardPasteSettled, // clipboard-paste-settled (the same, for paste-as-file)
             // The leftover sweep, which belongs to no operation
-            // (write_operations/in_flight_sweep.rs).
+            // (crates/cmdr-operations/src/in_flight_sweep.rs).
             wire::MoveLeftoversKept,
             // An "Open with" click on a file inside an archive that couldn't be copied
             // out, so no app launched (file_viewer/open_with_extract.rs).
             OpenWithCopyRefused,
-            // Operation manager registry snapshot (write_operations/manager.rs).
+            // Operation manager registry snapshot (crates/cmdr-operations/src/manager.rs).
             wire::OperationsChanged,
             SuggestionsChanged,
             // Every Ask Cmdr turn's progress, keyed by conversation: rail sends and wakes
@@ -1105,13 +1105,13 @@ pub fn builder() -> Builder<tauri::Wry> {
             ListingCancelledEvent,
             // A listing's folder sizes moved in the index (listing_index_sizes/).
             ListingIndexSizesChanged,
-            // Scan-preview (file_system/write_operations/scan_preview.rs).
+            // Scan-preview (crates/cmdr-operations/src/scan_preview.rs).
             wire::ScanPreviewProgress,
             wire::ScanPreviewComplete,
             wire::ScanPreviewError,
             wire::ScanPreviewCancelled,
             // Volumes + disk space (volumes/, volumes_linux/, space_poller/,
-            // write_operations/state.rs busy set, menu eject action).
+            // crates/cmdr-operations/src/state.rs busy set, menu eject action).
             VolumesChanged,
             VolumeMounted,
             VolumeUnmounted,

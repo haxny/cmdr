@@ -350,7 +350,7 @@ pub enum StaleRootOutcome {
 /// Typed errno matching, never message text:
 /// these reach us through `VolumeError::IoError { raw_os_error }`. The set matches
 /// what the transfer layer already treats as a lost connection
-/// (`write_operations/error_classification.rs`), plus `ESTALE`, which is precisely
+/// (`crates/cmdr-operations/src/error_classification.rs`), plus `ESTALE`, which is precisely
 /// "this handle's filesystem moved out from under you".
 #[cfg(unix)]
 pub fn is_stale_mount_errno(errno: i32) -> bool {

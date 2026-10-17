@@ -92,11 +92,7 @@ pub async fn get_trash_dir(path: String) -> Result<Option<String>, MutationError
 ///
 /// Local-only by nature, so `volume_id` decides whether it runs at all: a volume
 /// serving its own I/O answers `Ok` untouched. See
-/// [`check_rename_permission_for_volume`].
-#[allow(
-    rustdoc::broken_intra_doc_links,
-    reason = "the doc text reaches bindings.ts; the link names what is now `Operations::check_rename_permission_for_volume`, reworded with the other comment-only wire fixes"
-)]
+/// `Operations::check_rename_permission_for_volume`.
 #[tauri::command]
 #[specta::specta]
 pub async fn check_rename_permission(path: String, volume_id: Option<String>) -> Result<(), MutationError> {
@@ -188,7 +184,7 @@ async fn check_rename_validity_with(
 /// The mutation runs as a managed instant op (busy-marks the volume, appears
 /// briefly in the queue). A rename still running at `MUTATION_REPLY_DEADLINE`
 /// answers `StillRunning` and reports its end on `mutation-settled`
-/// (`write_operations/mutation_reply.rs`).
+/// (`crates/cmdr-operations/src/mutation_reply.rs`).
 #[tauri::command]
 #[specta::specta]
 pub async fn rename_file(

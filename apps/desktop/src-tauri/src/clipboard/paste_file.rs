@@ -25,7 +25,7 @@ use super::{
 /// [`write_payload_to_dir`] under the instant-mutation reply deadline: the
 /// created file (or `None`) if the write ended in time, else `StillRunning`,
 /// with the real end handed to `on_settled` as a `ClipboardPasteSettled`. The
-/// write is never dropped mid-flight (`write_operations/mutation_reply.rs`).
+/// write is never dropped mid-flight (`crates/cmdr-operations/src/mutation_reply.rs`).
 pub(crate) async fn write_payload_replying(
     volume_id: Option<String>,
     dir: PathBuf,

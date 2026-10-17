@@ -128,7 +128,7 @@ impl crate::Operations {
             // Both volumes, captured HERE. The destination-listed gate that guards
             // the source delete asks the mount table about `dest_root`, and a drive
             // that leaves can't be named afterwards
-            // (`write_operations/transfer_sides.rs`).
+            // (`crates/cmdr-operations/src/transfer_sides.rs`).
             use crate::transfer_sides::{TransferSide, TransferSides};
             let sides = TransferSides::new(
                 TransferSide::new(
@@ -226,7 +226,7 @@ impl crate::Operations {
                 );
 
                 // Wait out the confirming dialog's scan before journaling or
-                // touching either device; see `write_operations::start_write_operation`.
+                // touching either device; see `cmdr_operations::start_write_operation`.
                 if crate::scan_bridge::await_claimed_preview(&ops, &*events, &op_id, WriteOperationType::Move, &state)
                     .await
                     .stopped()

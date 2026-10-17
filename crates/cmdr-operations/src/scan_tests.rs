@@ -1,6 +1,6 @@
 //! Unit tests for the scan family, a `#[path]` child of `scan.rs` so the module
 //! itself stays readable. `super::` here is `scan` and `super::super::` is
-//! `write_operations`.
+//! `cmdr-operations`.
 //!
 //! It reaches across to `scan.rs`'s three siblings by name: the walk itself
 //! (`scan_walker.rs`), the per-source bookkeeping (`scan_source_tracker.rs`),

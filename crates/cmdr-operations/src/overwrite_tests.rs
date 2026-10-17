@@ -2,7 +2,7 @@
 //! what `displace_with_directory` does with the entry it moved aside.
 //!
 //! A `#[path]` child of `overwrite.rs`, so `super::` here is `overwrite` and
-//! `super::super::` is `write_operations`.
+//! `super::super::` is `cmdr-operations`.
 
 use super::super::ledger::CopyTransaction;
 use super::super::state::WriteOperationState;

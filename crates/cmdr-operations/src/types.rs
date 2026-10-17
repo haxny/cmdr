@@ -2,7 +2,7 @@
 //! configuration every other module here speaks in.
 //!
 //! ❌ Nothing in this module may `use` a sibling. It is the floor of
-//! `write_operations`, and a single upward import welds eleven modules into
+//! `cmdr-operations`, and a single upward import welds eleven modules into
 //! one cycle. `DETAILS.md` § "Why `types` imports nothing".
 //!
 //! The event payloads, the error family, and the queue row's summary live one
@@ -308,7 +308,7 @@ pub enum SourcesGoneAnswerOutcome {
 /// answer it: who can answer is a property of which surfaces exist, and it
 /// changes underneath this enum every time one ships (`resolve_conflict` made
 /// [`Conflict`](Self::Conflict) agent-answerable without the operation changing
-/// at all). `write_operations/DETAILS.md` § "Naming a wait".
+/// at all). `crates/cmdr-operations/DETAILS.md` § "Naming a wait".
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub enum TransferWaitReason {

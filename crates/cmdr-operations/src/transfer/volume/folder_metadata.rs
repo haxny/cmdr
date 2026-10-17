@@ -16,7 +16,7 @@
 //!
 //! A folder that arrives without a date its source had (the destination can't
 //! hold it, or refused it) is counted for the loss note
-//! (`write_operations/metadata_losses.rs`).
+//! (`crates/cmdr-operations/src/metadata_losses.rs`).
 //!
 //! ❌ Not the extract quarantine: a folder gets that the moment the walk creates
 //! it (`extract_quarantine.rs`), since this pass skips every folder of a

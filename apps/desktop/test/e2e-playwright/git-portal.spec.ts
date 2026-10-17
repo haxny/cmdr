@@ -27,7 +27,7 @@
  * Executable-bit preservation on that copy lives in the Rust integration test
  * `cmdr_git::volume_tests::a_copy_out_of_a_snapshot_carries_the_bytes_and_the_executable_bit`,
  * and the routing plus engine leg in
- * `file_system::write_operations::transfer::volume::copy::snapshot_out_tests`.
+ * `cmdr_operations::transfer::volume::copy::snapshot_out_tests`.
  *
  * 7. A pane standing inside a branch snapshot refuses the write actions up front:
  *    F7 and F2 surface the read-only-portal alert rather than opening the mkdir
