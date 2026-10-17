@@ -17,8 +17,8 @@ nothing about Tauri, settings, or the data dir; this module supplies them.
   "the handle that opens is the handle everyone reads" true by construction.
 - **Decision: a pre-install read answers from a separate detached handle and is reported**, the listing host's
   pattern (`../listing_host/DETAILS.md`). Why: claiming the slot with an early placeholder would make `install` lose
-  silently, and every later journal call would go nowhere. The test and bench binaries never call `install`, so there
-  the first read builds the shared handle.
+  silently, and every later journal call would go nowhere. The test binary never calls `install`, so there the first
+  read builds the shared handle.
 
 ## The write engine's journal
 

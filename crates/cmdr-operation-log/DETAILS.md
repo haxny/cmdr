@@ -834,8 +834,8 @@ volumes up in (`VolumeLookup`).
   `token_enum!` enums) cross into `bindings.ts`, where every `///` lands as JSDoc. They carry `#[allow(missing_docs)]`
   with that reason, so `#![deny(missing_docs)]` holds for everything else without moving the bindings.
 - **The `testing` feature** widens exactly what the app's cells reach: `OperationLog::set_journal` (`TestOperationLog`,
-  and the transfer bench through the app's `transfer-bench` feature) and `WriterJournal::writer`. The crate's own
-  recording fake and its dropped-row hook stay `cfg(test)`.
+  and the transfer bench through `cmdr-operations`' `testing`) and `WriterJournal::writer`. The crate's own recording
+  fake and its dropped-row hook stay `cfg(test)`.
 
 ### The public surface is capped
 

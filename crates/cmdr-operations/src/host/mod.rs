@@ -53,7 +53,7 @@ use cmdr_fs::volume::host::listings::ListingHost;
 use tokio::runtime::Handle;
 
 pub use error_report::{AsideAttempt, OperationErrorReport, TreeFailure};
-#[cfg(any(test, feature = "transfer-bench"))]
+#[cfg(any(test, feature = "testing"))]
 use events::NoEngineEvents;
 pub use events::{EngineEvents, InstantMutationFact, InstantOp, InstantOutcome, InstantTarget};
 use index::NoOperationIndex;
@@ -66,7 +66,7 @@ pub use own_writes::{Announced, OwnWrites};
 use pacing::NoPacing;
 pub use pacing::Pacing;
 pub use scan_preview_sink::ScanPreviewEventSink;
-#[cfg(any(test, feature = "transfer-bench"))]
+#[cfg(any(test, feature = "testing"))]
 use volumes::NoOperationVolumes;
 pub use volumes::{OperationVolumes, UnregisteredVolume, VolumeAnswer};
 
@@ -140,7 +140,7 @@ impl EngineHost {
     /// A host that answers nothing: no volumes, no events, and `cmdr-fs`'s shared fallback
     /// runtime. ❌ Never a `Handle::current()` captured here: a runtime that is
     /// torn down later would orphan every operation admitted onto it.
-    #[cfg(any(test, feature = "transfer-bench"))]
+    #[cfg(any(test, feature = "testing"))]
     pub(crate) fn detached() -> Self {
         Self::new(
             VolumeHost::detached(),

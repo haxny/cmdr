@@ -75,17 +75,17 @@ pub enum UnregisteredVolume {
 /// The answer for a host with no volumes: a bench, a tool, an engine before the
 /// app wired its own. Nothing is registered, every id is gone, and a listener is
 /// never called.
-#[cfg(any(test, feature = "transfer-bench"))]
+#[cfg(any(test, feature = "testing"))]
 pub(super) struct NoOperationVolumes;
 
-#[cfg(any(test, feature = "transfer-bench"))]
+#[cfg(any(test, feature = "testing"))]
 impl VolumeLookup for NoOperationVolumes {
     fn get(&self, _volume_id: &str) -> Option<Arc<dyn Volume>> {
         None
     }
 }
 
-#[cfg(any(test, feature = "transfer-bench"))]
+#[cfg(any(test, feature = "testing"))]
 impl OperationVolumes for NoOperationVolumes {
     fn resolve<'a>(&'a self, _volume_id: &'a str, path: &'a Path) -> VolumeAnswer<'a, ResolvedVolume> {
         Box::pin(async move { ResolvedVolume::passthrough(None, path) })

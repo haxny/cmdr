@@ -73,10 +73,6 @@ mod favorites;
 mod fda_gate;
 mod feedback;
 mod file_system;
-/// The write engine's hot paths for `benches/transfer_benchmarks.rs`, and nothing
-/// else: thin wrappers over the real entry points. Off in every shipped build.
-#[cfg(feature = "transfer-bench")]
-pub use cmdr_operations::transfer_bench;
 pub mod file_viewer;
 mod font_metrics;
 mod go_to_path;

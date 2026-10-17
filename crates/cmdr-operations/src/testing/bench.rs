@@ -1,15 +1,13 @@
-//! The engine's hot paths, opened to the `transfer_benchmarks` Criterion bench.
+//! The engine's hot paths, opened to the `transfer_benchmarks` Criterion bench
+//! (`benches/transfer_benchmarks.rs`).
 //!
-//! A bench compiles against the app as an EXTERNAL crate, so it sees neither
-//! `#[cfg(test)]` nor `pub(crate)`, and `file_system` is private. This module is
-//! the one door, behind the `transfer-bench` feature (re-exported at the crate
-//! root as `cmdr_lib::transfer_bench`), and every function in it is a thin
-//! wrapper over a real entry point: the same calls a started operation makes,
-//! with a no-op sink and a fresh, UNREGISTERED `WriteOperationState` on an
-//! engine the bench owns ([`BenchEngine`], or [`BenchJournal`] for the journaled
-//! case), so nothing one case does reaches another.
-//!
-//! Why the feature and not a self dev-dependency: `Cargo.toml` § `[features]`.
+//! A bench compiles against the crate as an EXTERNAL crate, so it sees neither
+//! `#[cfg(test)]` nor `pub(crate)`. This module is its door, and every function
+//! in it is a thin wrapper over a real internal entry point: the same calls a
+//! started operation makes, with a no-op sink and a fresh, UNREGISTERED
+//! `WriteOperationState` on an engine the bench owns ([`BenchEngine`], or
+//! [`BenchJournal`] for the journaled case), so nothing one case does reaches
+//! another. The bench gets `testing` through the crate's self dev-dependency.
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -18,22 +16,22 @@ use std::time::Duration;
 
 use uuid::Uuid;
 
-use super::Operations;
-use super::conflict_slot::ArmedConflict;
-use super::delete::delete_files_with_progress_inner;
-use super::event_sinks::{OperationEventSink, ScanPreviewEventSink};
-use super::journal;
-use super::scan_cache::ScanPreviewState;
-use super::scan_preview::run_scan_preview;
-use super::scan_watchdog::{SCAN_INACTIVITY_LIMIT, ScanTarget, ScanWatchdog};
-use super::state::WriteOperationState;
-use super::transfer::copy::copy_files_with_progress_inner;
-use super::transfer::volume::copy_volumes_with_progress;
-use super::types::{
+use crate::Operations;
+use crate::conflict_slot::ArmedConflict;
+use crate::delete::delete_files_with_progress_inner;
+use crate::event_sinks::{OperationEventSink, ScanPreviewEventSink};
+use crate::journal;
+use crate::scan_cache::ScanPreviewState;
+use crate::scan_preview::run_scan_preview;
+use crate::scan_watchdog::{SCAN_INACTIVITY_LIMIT, ScanTarget, ScanWatchdog};
+use crate::state::WriteOperationState;
+use crate::transfer::copy::copy_files_with_progress_inner;
+use crate::transfer::volume::copy_volumes_with_progress;
+use crate::types::{
     ConflictInfo, DryRunResult, ScanPreviewCancelledEvent, ScanPreviewCompleteEvent, ScanPreviewErrorEvent,
     ScanPreviewProgressEvent, ScanPreviewPurpose, ScanProgressEvent, VolumeCopyConfig, WriteCancelledEvent,
-    WriteCompleteEvent, WriteConflictResolvedEvent, WriteErrorEvent, WriteOperationConfig, WriteProgressEvent,
-    WriteSettledEvent, WriteSourceItemDoneEvent,
+    WriteCompleteEvent, WriteConflictResolvedEvent, WriteErrorEvent, WriteOperationConfig, WriteOperationError,
+    WriteProgressEvent, WriteSettledEvent, WriteSourceItemDoneEvent,
 };
 use cmdr_fs::volume::{DEFAULT_VOLUME_ID, Volume};
 use cmdr_local::LocalPosixVolume;
@@ -42,8 +40,6 @@ use cmdr_operation_log::capture::WriterJournal;
 use cmdr_operation_log::store::{OperationLogStoreError, open_read_connection, read_operation_items};
 use cmdr_operation_log::types::{EntryType, ExecutionStatus, Initiator, OpKind};
 use cmdr_operation_log::writer::OperationLogWriter;
-
-pub use super::types::WriteOperationError;
 
 /// A sink that drops every event: the bench measures the engine, not a
 /// collector's `Vec` growing or a webview's IPC.

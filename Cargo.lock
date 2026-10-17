@@ -1728,6 +1728,7 @@ dependencies = [
  "cmdr-sftp",
  "cmdr-smb",
  "cmdr-webdav",
+ "criterion",
  "dirs 7.0.0",
  "filetime",
  "flate2",

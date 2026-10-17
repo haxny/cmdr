@@ -1,15 +1,14 @@
-//! Benchmarks for the write engine's hot paths: the runtime "before" for lifting
-//! it into its own crates, and the referee for any seam that lands per chunk or
-//! per file.
+//! Benchmarks for the write engine's hot paths: the referee for any seam that
+//! lands per chunk or per file, and the runtime rows of
+//! `docs/notes/transfer-extraction-baseline.md`.
 //!
 //! Run with:
-//! `cargo bench -p cmdr --bench transfer_benchmarks --features cmdr/transfer-bench,cmdr/virtual-mtp`.
+//! `cargo bench -p cmdr-operations --bench transfer_benchmarks`.
 //! `-- --test` runs each case once; `-- --save-baseline <name>` / `-- --baseline <name>`
 //! compares two runs. Results land in `target/criterion/`.
 //!
-//! The engine is reached through `cmdr_lib::transfer_bench`, thin wrappers over
-//! the real internal entry points (`Cargo.toml` § `[features]` says why it's a
-//! feature). What's measured and why:
+//! The engine is reached through `cmdr_operations::testing::bench`, thin wrappers
+//! over the real internal entry points. What's measured and why:
 //!
 //! - **`local_copy_small_files`**: 1,000 × 4 KiB files in 10 folders, copied
 //!   through `copy_files_with_progress_inner`. APFS clones small files, so this
@@ -40,7 +39,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use cmdr_fs::volume::{InMemoryVolume, Volume};
-use cmdr_lib::transfer_bench::{BenchEngine, BenchJournal};
+use cmdr_operations::testing::bench::{BenchEngine, BenchJournal};
 use criterion::measurement::WallTime;
 use criterion::{
     BatchSize, BenchmarkGroup, BenchmarkId, Criterion, SamplingMode, Throughput, criterion_group, criterion_main,

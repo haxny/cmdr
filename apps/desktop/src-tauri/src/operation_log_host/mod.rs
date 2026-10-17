@@ -48,7 +48,7 @@ pub fn install() -> OperationLog {
 
 /// The app's operation log.
 ///
-/// In a test or bench binary nothing installs, so the first read builds the
+/// In the test binary nothing installs, so the first read builds the
 /// shared handle and keeps it, quietly. In the app a read before [`install`] is
 /// a bug that loses journal rows, so it's loud, and it answers from a SEPARATE
 /// detached handle: the slot stays free for [`install`], which then reports the
@@ -57,11 +57,11 @@ pub(crate) fn operation_log() -> &'static OperationLog {
     if let Some(log) = LOG.get() {
         return log;
     }
-    #[cfg(any(test, feature = "transfer-bench"))]
+    #[cfg(test)]
     {
         LOG.get_or_init(OperationLog::detached)
     }
-    #[cfg(not(any(test, feature = "transfer-bench")))]
+    #[cfg(not(test))]
     {
         early_reads::note()
     }
@@ -140,7 +140,7 @@ mod tests {
     }
 }
 
-#[cfg(not(any(test, feature = "transfer-bench")))]
+#[cfg(not(test))]
 mod early_reads {
     use std::sync::OnceLock;
     use std::sync::atomic::{AtomicBool, Ordering};
@@ -162,9 +162,9 @@ mod early_reads {
     }
 }
 
-#[cfg(any(test, feature = "transfer-bench"))]
+#[cfg(test)]
 mod early_reads {
-    /// The test and bench binaries build their handle on first read, so there's
+    /// The test binary builds its handle on first read, so there's
     /// never an early read to report.
     pub(super) fn happened() -> bool {
         false

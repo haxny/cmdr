@@ -135,10 +135,9 @@ The full top-level inventory is here:
   the engine reach beyond its public list) and `test_support.rs` (the placeholder conflict, the park-window wait, and
   the queued-operation fixture). Every backend's cells through this pipeline live app-side, in
   `operations_host/backend_suites/`, because they need the app around the engine
-  (`apps/desktop/src-tauri/src/operations_host/DETAILS.md` § "Backend suites"). `transfer_bench.rs` (feature
-  `transfer-bench` only) is the Criterion bench's door in: thin wrappers over five entry points, each with a no-op sink
-  and an unregistered state on an engine the bench owns (`apps/desktop/src-tauri/benches/transfer_benchmarks.rs`;
-  `docs/tooling/testing.md` § `criterion`).
+  (`apps/desktop/src-tauri/src/operations_host/DETAILS.md` § "Backend suites"). `testing/bench.rs` is the Criterion
+  bench's door in: thin wrappers over five entry points, each with a no-op sink and an unregistered state on an engine
+  the bench owns (`crates/cmdr-operations/benches/transfer_benchmarks.rs`; `docs/tooling/testing.md` § `criterion`).
 
 What the mechanisms DO is in the sections below: the registry, lanes, and `run_instant` in § "Operation manager"; the
 zip-edit driver in § "Archive edits"; cancellation, pause, Stop-mode conflicts, safe overwrite, scan-preview caching,
@@ -1164,7 +1163,7 @@ names the app's accessor.
   shared fallback runtime) and hands that one out to every app-side cell; an engine test builds
   `testing::TestOperations` instead (§ "Test isolation: an engine of the test's own"). No sink factory, so
   `operation_sink()` stays `None` and an archive-target instant op refuses plainly. The bench builds detached engines of
-  its own (`transfer_bench::BenchEngine`, `BenchJournal`).
+  its own (`testing::bench::BenchEngine`, `BenchJournal`).
 - **A seam trait and its value types live in `host/` or `types/`**, never in a module that calls the seam, or the two
   weld into a cycle. That's why `OperationsChanged` and `OperationSnapshot` are `types` vocabulary, and why
   `OperationEventSink` and `ScanPreviewEventSink` are defined in `host/` (`event_sinks` re-exports them): with the trait
@@ -1173,8 +1172,8 @@ names the app's accessor.
 
 ## The public surface is capped
 
-`index-crate-isolation` holds the surface to what it was at the extraction, with no headroom (83 root promises, 65
-handle methods, 2 public modules, 37 items in them). By group:
+`index-crate-isolation` holds the surface to exactly what the crate exposes, with no headroom (82 root promises, 65
+handle methods, 1 public module, 25 items in it). By group:
 
 - **Root**: `Operations` (the handle), its `OperationsBuilder`, `AlreadyClaimed`, and the re-export list in `lib.rs`:
   the event sinks and `ArmedConflict`; the queue's snapshot and control answers; instant mutations (`MutationError`,
@@ -1192,9 +1191,8 @@ handle methods, 2 public modules, 37 items in them). By group:
   `Pacing`, `NameOrder`, the two event sinks), their value types (`OperationErrorReport` and its parts,
   `InstantMutationFact` and its tokens, `ExpectedTotals`, `BufferedLeaves`, `Leaf`, `Announced`, `UnregisteredVolume`,
   `VolumeAnswer`), `OperationSinkFactory`, and `EngineHost`, which `host` hands out.
-- **`transfer_bench`** (`transfer-bench` feature): the app bench's door, which goes when the bench moves into the crate.
 - **`testing`** (gated, counted apart): an engine of a cell's own, the fakes it reads back, and the internals the app's
-  backend suites and routing cells drive.
+  backend suites and routing cells drive, plus the Criterion bench's door (`testing::bench`).
 
 ## Events emitted
 

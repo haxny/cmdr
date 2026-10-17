@@ -18,7 +18,8 @@ workspace = true
 # back, and the internals the backend suites drive) from `#[cfg(test)]` to `pub`.
 # `cfg(test)` can't: it's set only while a crate compiles its OWN test target.
 # The panes a test opens (`host::testing::PaneListings`) are a listing engine of
-# the test's own, so this is the one build that reaches `cmdr-listing`.
+# the test's own, so this is the one build that reaches `cmdr-listing`. The
+# Criterion bench's door (`testing::bench`) rides on it too.
 testing = [
   "dep:cmdr-listing",
   "cmdr-listing/testing",
@@ -26,11 +27,6 @@ testing = [
   "cmdr-local/testing",
   "cmdr-operation-log/testing",
 ]
-# The app's `benches/transfer_benchmarks.rs` door (`transfer_bench`): thin
-# wrappers over the engine's internal entry points, on engines the bench owns.
-# It turns `cmdr-operation-log/testing` on: the journaled case reads the writer
-# behind its `WriterJournal`.
-transfer-bench = ["cmdr-operation-log/testing"]
 
 [dependencies]
 # Zip edits and fresh compression: the mutator, the archive volume a fresh zip is
@@ -115,6 +111,8 @@ cmdr-smb = { path = "../cmdr-smb" }
 cmdr-webdav = { path = "../cmdr-webdav" }
 # A fresh zip's entry dates, read back in local time.
 chrono = "0.4"
+# The hot-path bench (`benches/transfer_benchmarks.rs`).
+criterion = { version = "0.8.1", features = ["html_reports"] }
 # Ageing fixture files.
 filetime = "0.2"
 # Reading a journal's rows back.
@@ -127,3 +125,9 @@ tempfile = "3"
 tokio = { version = "1", features = ["rt-multi-thread", "test-util"] }
 # Hostile names in their composed and decomposed forms.
 unicode-normalization = "0.1"
+
+# The self dev-dependency above turns `testing` on for this target, so it needs
+# no `required-features` and every `--all-targets` lane builds and lints it.
+[[bench]]
+name = "transfer_benchmarks"
+harness = false

@@ -9,7 +9,7 @@ This app as the operation log's host: `install` builds the app's one `OperationL
 - **`install` runs early and `start` opens the SAME handle**, passed by value from `install`'s return: ❌ never a
   second `operation_log()` read in `start`, which could pick up an early detached handle.
 - **A read before `install` is loud** (`log_error!`, a separate detached handle), so the slot stays free. Only the test
-  and bench binaries build their handle on first read.
+  binary builds its handle on first read.
 - **The write engine journals into the handle `install` returned**, passed to `operations_host::install`, ❌ never a
   read of `operation_log()` from engine code.
 - **An app answer goes in as a value or a trait** (`VolumeLookup` over the engine's volumes, the retention-limits

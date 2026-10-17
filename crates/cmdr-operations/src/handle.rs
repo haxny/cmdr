@@ -124,14 +124,14 @@ impl Operations {
 
     /// An engine with every seam answering nothing: no volumes, no events, no
     /// journal, and `cmdr-fs`'s shared fallback runtime. For tools and benches.
-    #[cfg(any(test, feature = "transfer-bench"))]
+    #[cfg(any(test, feature = "testing"))]
     pub(crate) fn detached() -> Self {
         Self::detached_journaling_into(OperationLog::detached())
     }
 
     /// [`Self::detached`], journaling into `operation_log`: a bench that puts the
     /// journal on its measured path.
-    #[cfg(any(test, feature = "transfer-bench"))]
+    #[cfg(any(test, feature = "testing"))]
     pub(crate) fn detached_journaling_into(operation_log: OperationLog) -> Self {
         Self::from_host(EngineHost::detached(), operation_log)
     }

@@ -91,3 +91,7 @@ pub fn seed_incoherent_scan_result(
 // An undo's executor input, which the rollback cells build from a journaled
 // operation.
 pub use super::rollback::Reversal;
+
+// The Criterion bench's door: engines of its own, driven through the internal
+// entry points a started operation runs.
+pub mod bench;

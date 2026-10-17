@@ -55,10 +55,10 @@ pub trait EngineEvents: Send + Sync {
 
 /// The answer for a host that wants none of it: a bench, a tool, an engine
 /// before the app wired its own.
-#[cfg(any(test, feature = "transfer-bench"))]
+#[cfg(any(test, feature = "testing"))]
 pub(super) struct NoEngineEvents;
 
-#[cfg(any(test, feature = "transfer-bench"))]
+#[cfg(any(test, feature = "testing"))]
 impl EngineEvents for NoEngineEvents {
     fn operations_changed(&self, _snapshot: OperationsChanged) {}
     fn volumes_busy_changed(&self, _volume_ids: Vec<String>) {}

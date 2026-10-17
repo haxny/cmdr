@@ -47,6 +47,10 @@
 // crate of its own test target, which `unused_crate_dependencies` reports.
 #[cfg(test)]
 use cmdr_operations as _;
+//noinspection RsUnusedImport
+// Used by `benches/`, a separate compilation unit the lint can't see from here.
+#[cfg(test)]
+use criterion as _;
 
 mod archive_edit;
 mod cancellable;
@@ -108,9 +112,6 @@ mod status_cache;
 mod summary;
 mod target_names;
 mod transfer;
-// The Criterion bench's one door into the engine, re-exported at the crate root.
-#[cfg(feature = "transfer-bench")]
-pub mod transfer_bench;
 mod transfer_sides;
 mod transfer_tree;
 mod tree_view;
