@@ -35,7 +35,9 @@
 // `-dry-run` stops after step 6: it uploads, dispatches, and publishes nothing, and works on an
 // already published release or a pipeline test tag's draft (it takes a pre-release version like
 // `0.52.1-pipelinetest.1`). `-signer-workflow` (dry runs only) checks a release from before the
-// reusable workflow, whose provenance `release.yml` signed.
+// reusable workflow, whose provenance `release.yml` signed, or one built before the repo moved
+// (`vdavid/cmdr/.github/workflows/release-pipeline.yml`): the attestation is checked against the
+// signer's repo. The repo itself is whatever GitHub calls it now (`repo.go`).
 //
 // `-backup-key` signs with the offline backup key from the environment instead of the main key
 // from sops: the one release that rotates a leaked main key out.
@@ -59,10 +61,12 @@ import (
 	"time"
 )
 
+// repo is GitHub's current name for this repo (`resolveRepo`), set once in `main` before anything
+// talks to GitHub. Not a constant, so a move to the `getcmdr` org (#476) needs no change here.
+var repo string
+
 const (
-	repo            = "vdavid/cmdr"
 	releaseWorkflow = "release.yml"
-	pipelineSigner  = "vdavid/cmdr/.github/workflows/release-pipeline.yml"
 	keySecret       = "CMDR_TAURI_SIGNING_PRIVATE_KEY"
 	passwordSecret  = "CMDR_TAURI_SIGNING_PRIVATE_KEY_PASSWORD"
 	// Where `-backup-key` reads the offline backup key. Never a sops name: that key stays offline.
@@ -87,7 +91,7 @@ func main() {
 	root := flag.String("root", "", "the repo root (scripts/release-finish.sh sets it)")
 	dryRun := flag.Bool("dry-run", false, "verify and sign into -out, then stop: upload, dispatch, and publish nothing")
 	out := flag.String("out", "", "where to put the downloaded archives and signatures (default: a fresh temp dir)")
-	signer := flag.String("signer-workflow", pipelineSigner, "dry runs only: the workflow whose provenance must cover the archives")
+	signer := flag.String("signer-workflow", "", "dry runs only: the workflow whose provenance must cover the archives (default: this repo's "+pipelineWorkflowPath+")")
 	verifyDir := flag.String("verify-dir", "", "only verify the three archives in DIR against their .sig files and the app's trusted keys (the publish job's gate)")
 	backupKey := flag.Bool("backup-key", false, "sign with the offline backup key from $"+backupKeyEnv+" and $"+backupPasswordEnv+" instead of sops: the key-rotation release only")
 	flag.Usage = func() {
@@ -117,8 +121,19 @@ func main() {
 		}
 		return
 	}
-	if cfg.signerWorkflow != pipelineSigner && !cfg.dryRun {
+	resolved, err := resolveRepo(cfg.root)
+	if err != nil {
+		fail(err)
+	}
+	repo = resolved
+	if cfg.signerWorkflow == "" {
+		cfg.signerWorkflow = pipelineSignerFor(repo)
+	}
+	if cfg.signerWorkflow != pipelineSignerFor(repo) && !cfg.dryRun {
 		fail(errors.New("-signer-workflow is for dry runs only: a real release is signed only on release-pipeline.yml's provenance"))
+	}
+	if _, err := signerRepo(cfg.signerWorkflow); err != nil {
+		fail(err)
 	}
 	if err := run(cfg); err != nil {
 		fail(err)
@@ -270,10 +285,16 @@ func downloadAndVerifyProvenance(cfg config, dir string, names []string, commit 
 		}
 	}
 
+	// The attestation names the repo the release was built in, which is the signer's repo, not
+	// necessarily where the repo lives now: a pre-move release verifies under `vdavid/cmdr`.
+	attestedRepo, err := signerRepo(cfg.signerWorkflow)
+	if err != nil {
+		return err
+	}
 	step("Verifying build provenance (%s at %.9s)", cfg.signerWorkflow, commit)
 	for _, name := range names {
 		if _, err := output(cfg.root, nil, "gh", "attestation", "verify", filepath.Join(dir, name),
-			"--repo", repo,
+			"--repo", attestedRepo,
 			"--signer-workflow", cfg.signerWorkflow,
 			"--signer-digest", commit,
 			"--source-ref", "refs/tags/"+cfg.tag,

@@ -153,7 +153,8 @@ func TestCIVerdict(t *testing.T) {
 func TestLeftoverRuns(t *testing.T) {
 	ours := func(id int64, status string) workflowRun {
 		run := workflowRun{ID: id, Status: status}
-		run.HeadRepository.FullName = repo
+		// The org the repo may move to (#476): the match follows the resolved name, not a pin.
+		run.HeadRepository.FullName = "getcmdr/cmdr"
 		return run
 	}
 	fork := workflowRun{ID: 4, Status: "in_progress"}
@@ -161,7 +162,7 @@ func TestLeftoverRuns(t *testing.T) {
 	runs := []workflowRun{ours(1, "completed"), ours(2, "in_progress"), ours(3, "queued"), fork}
 
 	var got []int64
-	for _, run := range leftoverRuns(runs) {
+	for _, run := range leftoverRuns(runs, "getcmdr/cmdr") {
 		got = append(got, run.ID)
 	}
 	if want := []int64{2, 3}; !slices.Equal(got, want) {

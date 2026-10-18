@@ -44,7 +44,6 @@ import (
 )
 
 const (
-	repo       = "vdavid/cmdr"
 	ciWorkflow = "ci.yml"
 	ciCheck    = "CI OK"
 	// Every PR this script opens is an agent's, and agent-made issues and PRs carry this label.
@@ -94,6 +93,11 @@ func main() {
 		os.Exit(2)
 	}
 	r := runner{dir: *root, cache: responseCache{}}
+	resolved, err := resolveRepo(r)
+	if err != nil {
+		fail(err)
+	}
+	repo = resolved
 	if flag.NArg() > 0 {
 		if flag.Arg(0) != "rulesets" {
 			flag.Usage()
@@ -495,7 +499,7 @@ func stopLeftoverRuns(r runner, branch string) {
 		say("Couldn't list %s's runs to stop the leftovers: %v", branch, err)
 		return
 	}
-	for _, run := range leftoverRuns(runs.WorkflowRuns) {
+	for _, run := range leftoverRuns(runs.WorkflowRuns, repo) {
 		// A run can finish between the list and the cancel, so a refusal is only a note.
 		if _, err := r.gh("api", "-X", "POST", fmt.Sprintf("repos/%s/actions/runs/%d/cancel", repo, run.ID), "--silent"); err != nil {
 			say("Couldn't stop leftover run %d (it may have just finished): %v", run.ID, err)

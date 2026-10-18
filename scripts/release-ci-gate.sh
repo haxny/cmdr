@@ -33,6 +33,8 @@ if [[ "${RELEASE_SKIP_CI_GATE:-}" == "1" ]]; then
 fi
 
 git fetch --quiet origin main
+# GitHub's current name for the repo (it may move to the `getcmdr` org, #476), for the links below.
+REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner)
 SHA=$(git rev-parse HEAD)
 REMOTE_SHA=$(git rev-parse origin/main)
 if [[ "$SHA" != "$REMOTE_SHA" ]]; then
@@ -94,12 +96,12 @@ if [[ -z "$RUN_ID" ]]; then
   done
   if [[ -z "$RUN_ID" ]]; then
     echo "Error: started a CI run, but it didn't show up for ${SHA:0:9} within a minute."
-    echo "Check https://github.com/vdavid/cmdr/actions and re-run this gate."
+    echo "Check https://github.com/$REPO/actions and re-run this gate."
     exit 1
   fi
 fi
 
-URL="https://github.com/vdavid/cmdr/actions/runs/$RUN_ID"
+URL="https://github.com/$REPO/actions/runs/$RUN_ID"
 STATUS=$(gh run view "$RUN_ID" --json status --jq .status)
 if [[ "$STATUS" != "completed" ]]; then
   echo "Waiting for the full CI run on ${SHA:0:9} ($URL)..."

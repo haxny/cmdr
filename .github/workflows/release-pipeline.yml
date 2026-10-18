@@ -873,7 +873,7 @@ jobs:
           # this). Each gets a UUIDv5 of the release and file name, so a re-run writes identical files.
           for f in sbom/*.json; do
               serial="urn:uuid:$(python3 -c 'import sys, uuid; print(uuid.uuid5(uuid.NAMESPACE_URL, sys.argv[1]))' \
-                  "https://github.com/vdavid/cmdr/releases/tag/${TAG}/$(basename "$f")")"
+                  "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/tag/${TAG}/$(basename "$f")")"
               jq --arg serial "$serial" '.serialNumber = $serial' "$f" > "$f.tmp"
               mv "$f.tmp" "$f"
           done

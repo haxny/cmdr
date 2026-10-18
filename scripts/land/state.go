@@ -170,8 +170,9 @@ type workflowRun struct {
 
 // leftoverRuns picks the runs a landed branch leaves behind: unfinished, and on this repo's
 // branch, not a fork's namesake. GitHub keeps them going after the PR merges and the branch is
-// deleted, holding runners (the five macOS ones above all) that nobody waits on anymore.
-func leftoverRuns(runs []workflowRun) []workflowRun {
+// deleted, holding runners (the five macOS ones above all) that nobody waits on anymore. `repo`
+// is this repo's current name (`resolveRepo`).
+func leftoverRuns(runs []workflowRun, repo string) []workflowRun {
 	var out []workflowRun
 	for _, run := range runs {
 		if run.Status != "completed" && run.HeadRepository.FullName == repo {

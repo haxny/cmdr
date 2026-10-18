@@ -223,6 +223,6 @@ echo "Release v$VERSION is on main and tagged."
 echo "To publish, run: git push origin v$VERSION"
 # With RELEASE_UPDATE_SIGNING=local, the tag push only builds a draft; this laptop signs the update
 # archives and has CI publish. See docs/guides/releasing.md § Who signs the update archives.
-if [[ "$(gh variable get RELEASE_UPDATE_SIGNING -R vdavid/cmdr 2>/dev/null || true)" == "local" ]]; then
+if [[ "$(gh variable get RELEASE_UPDATE_SIGNING 2>/dev/null || true)" == "local" ]]; then
   echo "Then sign and publish it from this laptop: ./scripts/release-finish.sh $VERSION"
 fi

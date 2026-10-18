@@ -162,6 +162,11 @@ before the reusable workflow, which `release.yml` signed. (Verified on v0.50.0, 
 verified against the app's pubkey; the default pin refused the same archives; the verifier accepted v0.50.0's CI-made
 signatures and rejected one swapped across arches.)
 
+`release-finish.sh` asks `gh repo view` for the repo's current name instead of pinning it, and verifies an attestation
+against the repo its signer workflow names. So the first release after a move to the `getcmdr` org (#476) needs no code
+change, and a dry run of a pre-move release passes
+`-signer-workflow vdavid/cmdr/.github/workflows/release-pipeline.yml`.
+
 ### What `local` mode protects, and what it doesn't
 
 - **Protects against the key leaking from GitHub**: an exfiltrated secret, a workflow on a branch, or a compromised
