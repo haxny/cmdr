@@ -128,6 +128,13 @@ func (r *testRepo) commitCount() int {
 	return len(strings.Fields(r.git("rev-list", "HEAD")))
 }
 
+// onFeatureBranch checks out `feature`, the kind of branch the push backstops run
+// for (a push to `main` gets none of them).
+func (r *testRepo) onFeatureBranch() {
+	r.t.Helper()
+	r.git("checkout", "-q", "-b", "feature")
+}
+
 // commitUnformatted lands a file in a commit without the pre-commit hook seeing it,
 // which is how unformatted content reaches a branch in practice: a rebase, a
 // conflict resolution, or a `--no-verify` commit.

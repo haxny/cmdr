@@ -9,7 +9,7 @@ import (
 
 // fakeCheckRunner stands in for `scripts/check`: it logs every invocation, rewrites
 // the notices when asked for them, and fails the fast lane while the file named by
-// FAKE_BUDGET_FAIL exists.
+// FAKE_BUDGET_FAIL exists (so a hook that ran it would stop the push).
 const fakeCheckRunner = `#!/bin/sh
 echo "$*" >> "$FAKE_RUNNER_LOG"
 case "$*" in
@@ -50,14 +50,16 @@ func (f fakeRunner) calls(t *testing.T) string {
 	return string(content)
 }
 
-// pushedBase commits the notices and a lockfile and pushes them without the hook,
-// so each test starts from a remote that already has both.
+// pushedBase commits the notices and a lockfile, pushes them without the hook, and
+// checks out `feature` from there, so each test starts from a remote that already
+// has both.
 func pushedBase(r *testRepo) {
 	r.write(noticesFile, "old\n")
 	r.write("Cargo.lock", "v1\n")
 	r.git("add", ".")
 	r.git("commit", "-q", "-m", "base")
-	r.git("push", "-q", "--no-verify", "origin", "main")
+	r.git("push", "-q", "--no-verify", "origin", "main", "main:feature")
+	r.git("checkout", "-q", "-b", "feature", "--track", "origin/feature")
 }
 
 func TestPrePushRegeneratesTheNoticesWhenALockfileMoved(t *testing.T) {
@@ -68,7 +70,7 @@ func TestPrePushRegeneratesTheNoticesWhenALockfileMoved(t *testing.T) {
 	r.git("commit", "-q", "-am", "bump a crate")
 	before := r.commitCount()
 
-	out, err := r.tryGit("push", "origin", "main")
+	out, err := r.tryGit("push", "origin", "feature")
 	if err == nil {
 		t.Fatalf("the push went through with stale notices:\n%s", out)
 	}
@@ -82,8 +84,8 @@ func TestPrePushRegeneratesTheNoticesWhenALockfileMoved(t *testing.T) {
 	assertEqual(t, "committed notices", r.committed("HEAD", noticesFile), "regenerated\n")
 	assertEqual(t, "status", r.status(), "")
 
-	r.git("push", "-q", "origin", "main")
-	assertEqual(t, "pushed notices", r.committed("remote:main", noticesFile), "regenerated\n")
+	r.git("push", "-q", "origin", "feature")
+	assertEqual(t, "pushed notices", r.committed("remote:feature", noticesFile), "regenerated\n")
 	if !strings.Contains(f.calls(t), "--check desktop-third-party-notices") {
 		t.Errorf("the hook never asked the runner for the notices:\n%s", f.calls(t))
 	}
@@ -97,57 +99,36 @@ func TestPrePushLeavesTheNoticesAloneWithoutALockfileChange(t *testing.T) {
 	r.git("add", ".")
 	r.git("commit", "-q", "-m", "unrelated")
 
-	r.git("push", "-q", "origin", "main")
+	r.git("push", "-q", "origin", "feature")
 
 	if strings.Contains(f.calls(t), "third-party-notices") {
 		t.Errorf("the hook regenerated the notices for a push that moved no lockfile:\n%s", f.calls(t))
 	}
-	assertEqual(t, "pushed notices", r.committed("remote:main", noticesFile), "old\n")
+	assertEqual(t, "pushed notices", r.committed("remote:feature", noticesFile), "old\n")
 }
 
-func TestPrePushStopsAPushThatBreaksABudget(t *testing.T) {
+// `land` pushes a lockfile change to `main` only after CI passed it, notices included,
+// and regenerating them there would be a minute of `cargo-about` for nothing.
+func TestPrePushLeavesTheNoticesAloneOnAPushToMain(t *testing.T) {
 	f := useFakeCheckRunner(t)
 	r := newTestRepo(t)
 	pushedBase(r)
-	r.write("other.txt", "x\n")
-	r.git("add", ".")
-	r.git("commit", "-q", "-m", "grow a file")
-	before := r.commitCount()
-	if err := os.WriteFile(f.budgetFail, nil, 0o644); err != nil {
-		t.Fatal(err)
-	}
+	r.write("Cargo.lock", "v2\n")
+	r.git("commit", "-q", "-am", "bump a crate")
 
-	out, err := r.tryGit("push", "origin", "main")
-	if err == nil {
-		t.Fatalf("the push went through over budget:\n%s", out)
-	}
-	if !strings.Contains(out, "over budget") {
-		t.Errorf("the stopped push doesn't show the check's output:\n%s", out)
-	}
-	if r.commitCount() != before {
-		t.Errorf("the hook committed for a budget failure")
-	}
+	r.git("push", "-q", "origin", "HEAD:main")
 
-	if err := os.Remove(f.budgetFail); err != nil {
-		t.Fatal(err)
-	}
-	r.git("push", "-q", "origin", "main")
-	if !strings.Contains(f.calls(t), "--fast --ci") {
-		t.Errorf("the hook didn't run the fast lane in CI mode:\n%s", f.calls(t))
-	}
-	if strings.Contains(out, "uncommitted") {
-		t.Errorf("a clean tree's stop message blames uncommitted changes:\n%s", out)
+	if f.calls(t) != "" {
+		t.Errorf("the hook ran the check runner for a push to main:\n%s", f.calls(t))
 	}
 }
 
-// Agents push from a worktree branch straight to `main`, so the pushed local ref is
-// `HEAD` (or another name for the same commit), never the checked-out branch. The
-// working tree is still exactly what's being pushed.
-func TestPrePushStopsABudgetBreakPushedAsHEAD(t *testing.T) {
+// A pushed branch gets every lane from CI on its PR, which is why agents push between
+// milestones, so the hook leaves the check lanes to CI.
+func TestPrePushLeavesTheFastLaneToCI(t *testing.T) {
 	f := useFakeCheckRunner(t)
 	r := newTestRepo(t)
 	pushedBase(r)
-	r.git("checkout", "-q", "-b", "worktree-x")
 	r.write("other.txt", "x\n")
 	r.git("add", ".")
 	r.git("commit", "-q", "-m", "grow a file")
@@ -155,26 +136,10 @@ func TestPrePushStopsABudgetBreakPushedAsHEAD(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if out, err := r.tryGit("push", "origin", "HEAD:main"); err == nil {
-		t.Fatalf("a HEAD:main push went through over budget:\n%s", out)
-	}
-}
+	r.git("push", "-q", "origin", "feature")
 
-func TestPrePushStopsABudgetBreakPushedUnderAnotherNameForHEAD(t *testing.T) {
-	f := useFakeCheckRunner(t)
-	r := newTestRepo(t)
-	pushedBase(r)
-	r.git("checkout", "-q", "-b", "worktree-x")
-	r.write("other.txt", "x\n")
-	r.git("add", ".")
-	r.git("commit", "-q", "-m", "grow a file")
-	r.git("branch", "push-staging")
-	if err := os.WriteFile(f.budgetFail, nil, 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	if out, err := r.tryGit("push", "origin", "push-staging:main"); err == nil {
-		t.Fatalf("a push-staging:main push went through over budget:\n%s", out)
+	if strings.Contains(f.calls(t), "--fast") {
+		t.Errorf("the hook ran the fast lane for a branch push:\n%s", f.calls(t))
 	}
 }
 
@@ -184,37 +149,32 @@ func TestPrePushRegeneratesTheNoticesForAnotherNameForHEAD(t *testing.T) {
 	useFakeCheckRunner(t)
 	r := newTestRepo(t)
 	pushedBase(r)
-	r.git("checkout", "-q", "-b", "worktree-x")
 	r.write("Cargo.lock", "v2\n")
 	r.git("commit", "-q", "-am", "bump a crate")
 	r.git("branch", "push-staging")
 
-	out, err := r.tryGit("push", "origin", "push-staging:main")
+	out, err := r.tryGit("push", "origin", "push-staging:feature")
 	if err == nil {
 		t.Fatalf("the push went through with stale notices:\n%s", out)
 	}
 	assertEqual(t, "committed notices", r.committed("HEAD", noticesFile), "regenerated\n")
-	if !strings.Contains(out, "git push origin HEAD:main") {
+	if !strings.Contains(out, "git push origin HEAD:feature") {
 		t.Errorf("the stopped push doesn't say to push HEAD:\n%s", out)
 	}
 
-	r.git("push", "-q", "origin", "HEAD:main")
-	assertEqual(t, "pushed notices", r.committed("remote:main", noticesFile), "regenerated\n")
+	r.git("push", "-q", "origin", "HEAD:feature")
+	assertEqual(t, "pushed notices", r.committed("remote:feature", noticesFile), "regenerated\n")
 }
 
 // The working tree doesn't describe another branch's commit, so the checks skip it,
-// and say so: a silent skip is how a broken budget reached `main` before.
+// and say so: a silent skip is how stale notices reached `main` before.
 func TestPrePushSaysItSkippedAPushOfACommitThatIsNotCheckedOut(t *testing.T) {
 	f := useFakeCheckRunner(t)
 	r := newTestRepo(t)
 	pushedBase(r)
-	r.write("other.txt", "x\n")
-	r.git("add", ".")
-	r.git("commit", "-q", "-m", "grow a file")
+	r.write("Cargo.lock", "v2\n")
+	r.git("commit", "-q", "-am", "bump a crate")
 	r.git("branch", "other", "HEAD~1")
-	if err := os.WriteFile(f.budgetFail, nil, 0o644); err != nil {
-		t.Fatal(err)
-	}
 
 	out := r.git("push", "origin", "other")
 
@@ -232,19 +192,19 @@ func TestPrePushReadsANewBranchRangeAgainstTheRemote(t *testing.T) {
 	f := useFakeCheckRunner(t)
 	r := newTestRepo(t)
 	pushedBase(r)
-	r.git("checkout", "-q", "-b", "feature")
+	r.git("checkout", "-q", "-b", "feature-2")
 	r.write("other.txt", "x\n")
 	r.git("add", ".")
 	r.git("commit", "-q", "-m", "unrelated")
 
-	r.git("push", "-q", "origin", "feature")
+	r.git("push", "-q", "origin", "feature-2")
 	if strings.Contains(f.calls(t), "third-party-notices") {
 		t.Errorf("the hook regenerated the notices for a new branch that moved no lockfile:\n%s", f.calls(t))
 	}
 
 	r.write("Cargo.lock", "v2\n")
 	r.git("commit", "-q", "-am", "bump a crate")
-	if out, err := r.tryGit("push", "origin", "HEAD:refs/heads/feature-2"); err == nil {
+	if out, err := r.tryGit("push", "origin", "HEAD:refs/heads/feature-3"); err == nil {
 		t.Fatalf("a new branch with a lockfile change went through with stale notices:\n%s", out)
 	}
 }
@@ -254,9 +214,6 @@ func TestPrePushLeavesADeletionAlone(t *testing.T) {
 	r := newTestRepo(t)
 	pushedBase(r)
 	r.git("push", "-q", "--no-verify", "origin", "HEAD:refs/heads/gone")
-	if err := os.WriteFile(f.budgetFail, nil, 0o644); err != nil {
-		t.Fatal(err)
-	}
 
 	out := r.git("push", "origin", ":gone")
 
@@ -268,46 +225,27 @@ func TestPrePushLeavesADeletionAlone(t *testing.T) {
 	}
 }
 
-// The fast lane reads files on disk, so uncommitted or untracked work stands in for
-// the pushed commit. Skipping it there was a hole, so it runs anyway, and a failure
-// says the uncommitted work may be the cause.
-func TestPrePushRunsTheFastLaneOnADirtyTree(t *testing.T) {
-	f := useFakeCheckRunner(t)
-	r := newTestRepo(t)
-	pushedBase(r)
-	r.write("other.txt", "x\n")
-	r.git("add", ".")
-	r.git("commit", "-q", "-m", "grow a file")
-	r.write("wip.txt", "untracked\n")
-	if err := os.WriteFile(f.budgetFail, nil, 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	out, err := r.tryGit("push", "origin", "main")
-	if err == nil {
-		t.Fatalf("a dirty tree's push went through a failing fast lane:\n%s", out)
-	}
-	if !strings.Contains(out, "uncommitted") {
-		t.Errorf("the stop message doesn't say uncommitted changes may be the cause:\n%s", out)
-	}
-}
-
 // A check runner that doesn't build can't answer, and the hooks never stand in the
-// way when they can't run: the push goes on, saying the lane was skipped.
+// way when they can't run: the push goes on, saying the step was skipped.
 func TestPrePushLetsThePushThroughWhenTheRunnerDoesNotBuild(t *testing.T) {
 	r := newTestRepo(t)
+	pushedBase(r)
 	r.write("scripts/check/go.mod", "module broken\n\ngo 1.22\n")
 	r.write("scripts/check/main.go", "package main\n\nfunc main() { not go }\n")
 	if err := os.MkdirAll(filepath.Join(r.dir, "node_modules"), 0o755); err != nil {
 		t.Fatal(err)
 	}
+	r.write("Cargo.lock", "v2\n")
+	r.git("commit", "-q", "-am", "bump a crate")
 	hookRepo := repo{root: r.dir}
+	pushed := pushedRef{localRef: "refs/heads/feature", localSha: strings.TrimSpace(r.git("rev-parse", "HEAD")),
+		remoteRef: "refs/heads/feature", remoteSha: strings.TrimSpace(r.git("rev-parse", "origin/feature"))}
 	var stderr strings.Builder
-	stop, err := checkFastLane(hookRepo, newCheckRunner(hookRepo), &stderr)
+	stop, err := regenerateNotices(hookRepo, newCheckRunner(hookRepo), pushed, &stderr)
 	if err != nil || stop {
 		t.Fatalf("a runner that doesn't build stopped the push (stop=%v, err=%v):\n%s", stop, err, stderr.String())
 	}
 	if !strings.Contains(stderr.String(), "skipped") {
-		t.Errorf("the hook didn't say it skipped the fast lane:\n%s", stderr.String())
+		t.Errorf("the hook didn't say it skipped the notices:\n%s", stderr.String())
 	}
 }

@@ -90,13 +90,14 @@ func TestCommitAllFormats(t *testing.T) {
 
 func TestPrePushPassesAFormattedBranch(t *testing.T) {
 	r := newTestRepo(t)
+	r.onFeatureBranch()
 	r.write("scripts/a.go", formattedGo)
 	r.git("add", ".")
 	r.git("commit", "-q", "-m", "add a")
 	before := r.commitCount()
-	r.git("push", "-q", "origin", "main")
+	r.git("push", "-q", "origin", "feature")
 
-	assertEqual(t, "pushed content", r.committed("remote:main", "scripts/a.go"), formattedGo)
+	assertEqual(t, "pushed content", r.committed("remote:feature", "scripts/a.go"), formattedGo)
 	if r.commitCount() != before {
 		t.Errorf("the hook added a commit to an already formatted branch")
 	}
@@ -104,10 +105,11 @@ func TestPrePushPassesAFormattedBranch(t *testing.T) {
 
 func TestPrePushCommitsTheFormattingAndStopsThePushOnce(t *testing.T) {
 	r := newTestRepo(t)
+	r.onFeatureBranch()
 	r.commitUnformatted("scripts/a.go", unformattedGo)
 	before := r.commitCount()
 
-	out, err := r.tryGit("push", "origin", "main")
+	out, err := r.tryGit("push", "origin", "feature")
 	if err == nil {
 		t.Fatalf("the first push went through with unformatted content:\n%s", out)
 	}
@@ -121,8 +123,8 @@ func TestPrePushCommitsTheFormattingAndStopsThePushOnce(t *testing.T) {
 	assertEqual(t, "committed content", r.committed("HEAD", "scripts/a.go"), formattedGo)
 	assertEqual(t, "status", r.status(), "")
 
-	r.git("push", "-q", "origin", "main")
-	assertEqual(t, "pushed content", r.committed("remote:main", "scripts/a.go"), formattedGo)
+	r.git("push", "-q", "origin", "feature")
+	assertEqual(t, "pushed content", r.committed("remote:feature", "scripts/a.go"), formattedGo)
 	if got := r.commitCount(); got != before+1 {
 		t.Errorf("the second push added another commit: got %d commits, want %d", got, before+1)
 	}
@@ -130,33 +132,35 @@ func TestPrePushCommitsTheFormattingAndStopsThePushOnce(t *testing.T) {
 
 func TestPrePushHandlesAForcePush(t *testing.T) {
 	r := newTestRepo(t)
+	r.onFeatureBranch()
 	r.write("scripts/a.go", formattedGo)
 	r.git("add", ".")
 	r.git("commit", "-q", "-m", "add a")
-	r.git("push", "-q", "origin", "main")
+	r.git("push", "-q", "origin", "feature")
 
 	// Rewrite the pushed commit with unformatted content.
 	r.write("scripts/a.go", unformattedGo)
 	r.git("commit", "-q", "--no-verify", "--amend", "-am", "add a")
-	if out, err := r.tryGit("push", "--force", "origin", "main"); err == nil {
+	if out, err := r.tryGit("push", "--force", "origin", "feature"); err == nil {
 		t.Fatalf("the force push went through with unformatted content:\n%s", out)
 	}
-	r.git("push", "-q", "--force", "origin", "main")
+	r.git("push", "-q", "--force", "origin", "feature")
 
-	assertEqual(t, "pushed content", r.committed("remote:main", "scripts/a.go"), formattedGo)
+	assertEqual(t, "pushed content", r.committed("remote:feature", "scripts/a.go"), formattedGo)
 }
 
 // An unformatted file with uncommitted edits can't be fixed without sweeping those
 // edits into a commit, so the hook stays out of the way and CI reports it.
 func TestPrePushLeavesFilesWithUncommittedChangesAlone(t *testing.T) {
 	r := newTestRepo(t)
+	r.onFeatureBranch()
 	r.commitUnformatted("scripts/a.go", unformattedGo)
 	before := r.commitCount()
 	wip := unformattedGo + "\nfunc  WIP( ) {}\n"
 	r.write("scripts/a.go", wip)
 	r.write("scripts/untracked.go", unformattedGo)
 
-	r.git("push", "-q", "origin", "main")
+	r.git("push", "-q", "origin", "feature")
 
 	assertEqual(t, "working tree content", r.read("scripts/a.go"), wip)
 	assertEqual(t, "untracked file", r.read("scripts/untracked.go"), unformattedGo)
@@ -167,11 +171,12 @@ func TestPrePushLeavesFilesWithUncommittedChangesAlone(t *testing.T) {
 
 func TestPrePushKeepsStagedWorkOutOfTheFormatCommit(t *testing.T) {
 	r := newTestRepo(t)
+	r.onFeatureBranch()
 	r.commitUnformatted("scripts/a.go", unformattedGo)
 	r.write("scripts/staged.go", formattedGo)
 	r.git("add", "scripts/staged.go")
 
-	if out, err := r.tryGit("push", "origin", "main"); err == nil {
+	if out, err := r.tryGit("push", "origin", "feature"); err == nil {
 		t.Fatalf("the push went through with unformatted content:\n%s", out)
 	}
 
@@ -199,18 +204,42 @@ func TestPrePushIgnoresRefsThatAreNotCheckedOut(t *testing.T) {
 	assertEqual(t, "working tree content", r.read("scripts/a.go"), unformattedGo)
 }
 
+// `main` only takes commits CI already passed (`land` pushes one after its PR's `CI OK`,
+// and ruleset B refuses the rest), so a commit added there would be one CI never saw.
+// The push goes through untouched, whatever the local ref is called, and says why.
+func TestPrePushLeavesAPushToMainToCI(t *testing.T) {
+	for _, push := range [][]string{{"main"}, {"HEAD:main"}} {
+		t.Run(push[0], func(t *testing.T) {
+			r := newTestRepo(t)
+			r.commitUnformatted("scripts/a.go", unformattedGo)
+			before := r.commitCount()
+
+			out := r.git(append([]string{"push", "origin"}, push...)...)
+
+			if r.commitCount() != before {
+				t.Errorf("the hook committed for a push to main")
+			}
+			assertEqual(t, "pushed content", r.committed("remote:main", "scripts/a.go"), unformattedGo)
+			if !strings.Contains(out, "CI already passed") {
+				t.Errorf("the push doesn't say why it skipped the backstops:\n%s", out)
+			}
+		})
+	}
+}
+
 func TestPrePushStaysOutOfAnUnfinishedMerge(t *testing.T) {
 	r := newTestRepo(t)
+	r.onFeatureBranch()
 	r.commitUnformatted("scripts/a.go", unformattedGo)
 	r.git("checkout", "-q", "-b", "side", "HEAD~1")
 	r.write("other.txt", "side\n")
 	r.git("add", ".")
 	r.git("commit", "-q", "-m", "side")
-	r.git("checkout", "-q", "main")
+	r.git("checkout", "-q", "feature")
 	r.git("merge", "-q", "--no-commit", "--no-ff", "side")
 	before := r.commitCount()
 
-	r.git("push", "-q", "origin", "main")
+	r.git("push", "-q", "origin", "feature")
 
 	if r.commitCount() != before {
 		t.Errorf("the hook committed in the middle of a merge")

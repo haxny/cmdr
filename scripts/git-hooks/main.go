@@ -1,8 +1,7 @@
 // Command git-hooks is the logic behind the repo's git hooks (`.githooks/`). It keeps
 // commits formatted the way CI's `oxfmt`, `rustfmt`, and `gofmt` lanes check them, so
 // a forgotten formatter run never reaches `origin`, and at push time it also
-// regenerates stale license notices and runs the `--fast` check lane. Docs:
-// docs/tooling/git-hooks.md.
+// regenerates stale license notices. Docs: docs/tooling/git-hooks.md.
 package main
 
 import (
@@ -19,8 +18,8 @@ func main() {
 //
 // A hook that can't do its job says so and returns 0. Formatting here is a
 // convenience and CI stays the gate, so a hook that trips over itself must never
-// stand between someone and their commit. The deliberate non-zero exits are
-// pre-push stopping a push it added a commit to, and one the fast check lane fails.
+// stand between someone and their commit. The one deliberate non-zero exit is
+// pre-push stopping a push it added a commit to.
 func run(args []string, stdin io.Reader, stderr io.Writer) int {
 	if len(args) != 2 {
 		fmt.Fprintln(stderr, "usage: git-hooks <pre-commit|post-commit|pre-push> <repo-root>")

@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"sync"
 )
 
@@ -54,8 +53,8 @@ func newCheckRunner(r repo) checkRunner {
 
 // builtRunner builds the check runner once, into the worktree's git directory the
 // way `.githooks/run-hook` builds this program, then runs the binary. Building
-// first is what tells "the runner doesn't build" (skip) apart from "a check
-// failed" (stop the push), which `go run` reports with the same exit code.
+// first is what tells "the runner doesn't build" apart from "the check failed" in
+// the skip message, which `go run` reports with the same exit code.
 func builtRunner(r repo, dir string) checkRunner {
 	var once sync.Once
 	var bin, buildOut string
@@ -147,35 +146,4 @@ func touchesNoticesInputs(r repo, pushed pushedRef) bool {
 		}
 	}
 	return false
-}
-
-// checkFastLane runs the whole `--fast` lane (about 6 s), in `--ci` mode so it
-// reports without rewriting files or allowlists. It catches what each commit's
-// own checks can't: two commits that each sit under a limit and cross it together,
-// a doc link a later commit broke, a scoped run that never reached a whole-repo lane.
-// Unlike the steps above there's nothing to commit: a failure stops the push and
-// shows why.
-//
-// It reads the working tree, so uncommitted or untracked work stands in for the
-// pushed commit. It runs anyway (skipping it there let failures through), and a
-// failure on a dirty tree says that work may be the cause.
-func checkFastLane(r repo, check checkRunner, stderr io.Writer) (stopPush bool, err error) {
-	if check == nil {
-		fmt.Fprintln(stderr, "fast-lane hook: skipped, this checkout can't run the check runner (no scripts/check or node_modules). CI still checks.")
-		return false, nil
-	}
-	out, err := check("--fast", "--ci")
-	if errors.Is(err, errRunnerUnavailable) {
-		fmt.Fprintf(stderr, "fast-lane hook: skipped, %v. CI still checks.\n%s", err, out)
-		return false, nil
-	}
-	if err == nil {
-		return false, nil
-	}
-	fmt.Fprintf(stderr, "%s\nThis push would fail CI, so it stopped. Fix what the fast lane reported, then push again.\n", strings.TrimRight(out, "\n"))
-	if dirty, statusErr := r.git("status", "--porcelain"); statusErr == nil && strings.TrimSpace(dirty) != "" {
-		fmt.Fprintln(stderr, "The working tree has uncommitted changes, and the checks read it, so those changes may be the cause.")
-	}
-	fmt.Fprintln(stderr, "`git push --no-verify` sends it anyway.")
-	return true, nil
 }

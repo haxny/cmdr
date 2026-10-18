@@ -692,9 +692,10 @@ so a scoped run can't go green over a dead doc link or an over-budget `CLAUDE.md
 `TestScopedRunLanesAreCheapWholeRepoScanners` keeps the flag on enabled, fast, non-formatter `AppOther` lanes.
 
 The formatters stay out on purpose. A local run REWRITES the tree while CI only CHECKS (`--ci`), and the git hooks own
-formatting: pre-commit formats what's staged, and pre-push formats the whole repo and then runs the whole `--fast` lane
-(`docs/tooling/git-hooks.md`). That closes the old hole, where a 125-character line in `routes/viewer/DETAILS.md`
-survived a green `pnpm check svelte` (2026-09-21).
+formatting: pre-commit formats what's staged, and pre-push formats the whole repo on a branch push
+(`docs/tooling/git-hooks.md`). A doc lane a scoped run skipped is CI's to catch: the PR run covers every lane before
+`main` takes the commit, which closes the old hole where a 125-character line in `routes/viewer/DETAILS.md` survived a
+green `pnpm check svelte` (2026-09-21).
 
 Two runs stay exact: `--ci` (each CI job names its checks, and the doc lanes have a job of their own) and `--exact`,
 which the pre-push hook's notices step uses so a doc-lane failure can't read as "the runner didn't finish".

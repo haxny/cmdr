@@ -19,35 +19,39 @@ pnpm skips lifecycle scripts when an install has nothing to do ("Already up to d
 11.27.1, 2026-09-30), so a clone that was installed before the hooks existed needs `git config core.hooksPath .githooks`
 once. `git config --get core.hooksPath` says whether the hooks are on.
 
-`prepare` skips the setting when `$CI` is set: `release-pipeline.yml` commits and pushes to `main`, and a hook stopping
-that push would break a release.
+`prepare` skips the setting when `$CI` is set: a hook stopping a workflow's own push (the release pipeline's Homebrew
+tap bump) would break a release.
 
 ## What each hook does
 
 - **`pre-commit`** formats the staged files and re-stages them, so the formatting is part of the commit. It prints one
   line when it changed something and nothing otherwise.
-- **`pre-push`** is the backstop for what `pre-commit` never sees: a rebase, a conflict resolution, a `--no-verify`
-  commit, a generated file. It runs the same whole-repo commands as the CI lanes. If they'd fail, it formats those
-  files, commits them as `style: apply formatter output`, stops the push, and asks for a second push. Two more steps
-  follow, both through the check runner (`scripts/git-hooks/prepush_checks.go`):
-  - **License notices.** When the pushed range changes `Cargo.lock`, `pnpm-lock.yaml`, `deny.toml`, or the vendored
-    credits, it runs `desktop-third-party-notices` (`--fresh`, about a minute) and, if that rewrote
-    `THIRD-PARTY-NOTICES.md` or `third-party-packages.gen.json`, commits them as
-    `chore(deps): regenerate third-party notices` and stops the push the same way. Any other push skips it. The range is
-    remote tip..pushed commit; for a new branch, or a remote tip this clone doesn't have, it's what the pushed commit
-    adds over every remote-tracking ref (`git log <sha> --not --remotes`).
-  - **The fast lane.** `pnpm check --fast --ci` (about 6 s) on every push, so a push that breaks a size limit, a doc
-    link, or any other fast-lane check stops with the check's output instead of turning CI red. Nothing to commit there:
-    fix it and push again. It reads the working tree, so it runs on a dirty tree too, and a failure there adds a line
-    saying the uncommitted changes may be the cause (skipping a dirty tree let failures through).
+- **`pre-push`**, on a push to any branch but `main`, is the backstop for what `pre-commit` never sees: a rebase, a
+  conflict resolution, a `--no-verify` commit, a generated file. Two fixers, each committing what it rewrote and then
+  stopping the push with a "push again":
+  - **Formatting.** The same whole-repo commands as the CI lanes. If they'd fail, it formats those files and commits
+    them as `style: apply formatter output`.
+  - **License notices** (`scripts/git-hooks/prepush_checks.go`, through the check runner). When the pushed range changes
+    `Cargo.lock`, `pnpm-lock.yaml`, `deny.toml`, or the vendored credits, it runs `desktop-third-party-notices`
+    (`--fresh`, about a minute) and commits a rewritten `THIRD-PARTY-NOTICES.md` or `third-party-packages.gen.json` as
+    `chore(deps): regenerate third-party notices`. Stale notices turned `main` red 26 times in three months
+    (`docs/notes/ci-health-2026-10.md`). The range is remote tip..pushed commit; for a new branch, or a remote tip this
+    clone doesn't have, it's what the pushed commit adds over every remote-tracking ref
+    (`git log <sha> --not --remotes`).
 
-  Both answer CI failures that kept recurring after the formatters were handled: `docs/notes/ci-health-2026-10.md`.
+  Both run when a pushed commit **is** the checked-out `HEAD` commit, whatever the refs are called, since that's when
+  the working tree is what's being pushed. A worktree branch goes out as `HEAD:<branch>` or `push-staging:<branch>` as
+  often as under its own name; when the hook matched the checked-out branch's name instead, those pushes skipped every
+  step and stale notices reached `main` (2026-10-07/08). A commit the hook adds lands on `HEAD`, so when the pushed ref
+  doesn't follow `HEAD` (`push-staging:<branch>`), the stop message says to push `HEAD` next time.
 
-  All three steps run when a pushed commit **is** the checked-out `HEAD` commit, whatever the refs are called, since
-  that's when the working tree is what's being pushed. Agents push a worktree branch as `git push origin HEAD:main` or
-  `push-staging:main`; when the hook matched the checked-out branch's name instead, those pushes skipped every step and
-  an over-budget `CLAUDE.md` and stale notices reached `main` (2026-10-07/08). A commit the hook adds lands on `HEAD`,
-  so when the pushed ref doesn't follow `HEAD` (`push-staging:main`), the stop message says to push `HEAD` next time.
+  **No check lanes run at push time.** Agents push branches between milestones so CI runs the full suite on the PR while
+  the next milestone develops; a local lane on every push would undo that. `pnpm check --fast` while iterating stays the
+  local loop.
+
+  **A push to `main` gets none of it**, with a one-line notice. `main` only takes commits CI already passed (`land`
+  pushes one after its PR's `CI OK`, and the `main` ruleset refuses the rest), so a fixer commit there would be one CI
+  never saw, and a notices run would be a minute of `cargo-about` for nothing.
 
 - **`post-commit`** repairs the index after `git commit <paths>` (see the gotchas).
 
@@ -66,10 +70,7 @@ that push would break a release.
   staged `.rs` file goes through `rustfmt` on its own.
 - **A hook that can't do its job exits 0.** No Go toolchain, no `node_modules`, a hook program that doesn't build, a
   formatter that errors, a notices run that doesn't finish: the commit or push goes through and CI stays the gate. The
-  non-zero exits are a push that got a format or notices commit, and a push the fast lane fails. The hook builds the
-  check runner into the git directory before running it, like the hook program itself, because `go run` answers a
-  failing check and a runner that won't build with the same exit code; a runner that doesn't build skips the step.
-  `git push --no-verify` gets past any stop.
+  one non-zero exit is a push that got a format or notices commit. `git push --no-verify` gets past it.
 - **Each tool decides its own scope.** `oxfmt` gets every candidate file and applies `.oxfmtrc.json` itself. Rust scope
   and each crate's edition come from `cargo metadata --no-deps`, so only workspace members are formatted and `vendor/`
   stays byte-identical to upstream. The Go directories are the one hand-kept list (`goDirs`), mirroring

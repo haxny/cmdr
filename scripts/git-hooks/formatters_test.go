@@ -54,6 +54,7 @@ func newRustTestRepo(t *testing.T) *testRepo {
 		}
 	}
 	r := newTestRepo(t)
+	r.onFeatureBranch()
 	r.write("Cargo.toml", "[workspace]\nmembers = [\"crates/a\"]\nresolver = \"2\"\n")
 	r.write("rustfmt.toml", "max_width = 120\n")
 	r.write("crates/a/Cargo.toml", "[package]\nname = \"a\"\nversion = \"0.1.0\"\nedition = \"2024\"\n")
@@ -93,11 +94,11 @@ func TestPrePushFormatsRust(t *testing.T) {
 	r := newRustTestRepo(t)
 	r.commitUnformatted("crates/a/src/child.rs", unformattedRust)
 
-	if out, err := r.tryGit("push", "origin", "main"); err == nil {
+	if out, err := r.tryGit("push", "origin", "feature"); err == nil {
 		t.Fatalf("the push went through with unformatted Rust:\n%s", out)
 	}
 	assertEqual(t, "committed content", r.committed("HEAD", "crates/a/src/child.rs"), formattedRust)
-	r.git("push", "-q", "origin", "main")
+	r.git("push", "-q", "origin", "feature")
 }
 
 // oxfmtNodeModules finds the repo's own `node_modules` holding oxfmt by walking up
@@ -130,6 +131,7 @@ func newOxfmtTestRepo(t *testing.T) *testRepo {
 	t.Helper()
 	nodeModules := oxfmtNodeModules(t)
 	r := newTestRepo(t)
+	r.onFeatureBranch()
 	if err := os.Symlink(nodeModules, filepath.Join(r.dir, "node_modules")); err != nil {
 		t.Fatal(err)
 	}
@@ -173,10 +175,10 @@ func TestPrePushFormatsWithOxfmt(t *testing.T) {
 	r.commitUnformatted("pages/[slug]/index.ts", unformattedTS)
 	r.commitUnformatted("vendor/lib.ts", unformattedTS)
 
-	if out, err := r.tryGit("push", "origin", "main"); err == nil {
+	if out, err := r.tryGit("push", "origin", "feature"); err == nil {
 		t.Fatalf("the push went through with unformatted TypeScript:\n%s", out)
 	}
 	assertEqual(t, "committed content", r.committed("HEAD", "pages/[slug]/index.ts"), formattedTS)
 	assertEqual(t, "ignored file", r.committed("HEAD", "vendor/lib.ts"), unformattedTS)
-	r.git("push", "-q", "origin", "main")
+	r.git("push", "-q", "origin", "feature")
 }

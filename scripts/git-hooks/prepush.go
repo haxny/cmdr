@@ -9,13 +9,22 @@ import (
 	"sync"
 )
 
-const formatCommitSubject = "style: apply formatter output"
+const (
+	formatCommitSubject = "style: apply formatter output"
+	mainRef             = "refs/heads/main"
+)
 
 // prePush is the backstop for what pre-commit never sees: a rebase, a conflict
-// resolution, a `--no-verify` commit, a generated file. It runs the same
-// whole-repo checks as CI's formatting lanes, and when they'd fail it formats,
-// commits, and stops the push. Then it does the same for the license notices a
-// dependency push makes stale, and runs the `--fast` check lane (`prepush_checks.go`).
+// resolution, a `--no-verify` commit, a generated file. On a pushed branch it runs
+// the same whole-repo checks as CI's formatting lanes, and when they'd fail it
+// formats, commits, and stops the push. Then it does the same for the license
+// notices a dependency push makes stale (`prepush_checks.go`). Both are fixers that
+// save a red CI round trip; the check lanes themselves are CI's job, run on the
+// branch's PR.
+//
+// A push to `main` gets none of it: `main` only takes a commit CI already passed
+// (`land` pushes it after its PR's `CI OK`), so a commit added here would be one
+// CI never saw.
 //
 // Stopping is not a choice. Git settles which commits a push sends before it runs
 // this hook, so a commit made here can't join the push in flight; letting the push
@@ -25,22 +34,23 @@ func prePush(r repo, fs []formatter, check checkRunner, stdin io.Reader, stderr 
 	if err != nil {
 		return false, err
 	}
-	if len(pushed) == 0 {
+	branches := slices.DeleteFunc(slices.Clone(pushed), func(p pushedRef) bool { return p.remoteRef == mainRef })
+	if len(branches) < len(pushed) {
+		fmt.Fprintln(stderr, "pre-push: left `main` alone, it only takes commits CI already passed.")
+	}
+	if len(branches) == 0 {
 		return false, nil
 	}
-	ref, skipped := describesPush(r, pushed)
+	ref, skipped := describesPush(r, branches)
 	if skipped != "" {
-		fmt.Fprintf(stderr, "pre-push: skipped formatting, license notices, and the fast lane, %s. CI still checks them.\n", skipped)
+		fmt.Fprintf(stderr, "pre-push: skipped formatting and license notices, %s. CI still checks them.\n", skipped)
 		return false, nil
 	}
 
 	if stop, err := commitFormatting(r, fs, ref, stderr); stop || err != nil {
 		return stop, err
 	}
-	if stop, err := regenerateNotices(r, check, ref, stderr); stop || err != nil {
-		return stop, err
-	}
-	return checkFastLane(r, check, stderr)
+	return regenerateNotices(r, check, ref, stderr)
 }
 
 // commitFormatting formats what CI's formatting lanes would flag, commits it, and
@@ -123,9 +133,10 @@ func isZeroSha(sha string) bool {
 
 // describesPush picks the push the working tree is a fair stand-in for, or says
 // why there's none. The checks read files on disk, so their verdict only applies to
-// a pushed commit that IS the checked-out one, whatever the refs are called: agents
-// push a worktree branch as `HEAD:main` or `push-staging:main`, and matching the
-// checked-out branch's name let those reach `main` unchecked. A commit can only be
+// a pushed commit that IS the checked-out one, whatever the refs are called: a
+// worktree branch goes out as `HEAD:<branch>` or `push-staging:<branch>` as often as
+// under its own name, and matching the checked-out branch's name let those through
+// unchecked. A commit can only be
 // added while no merge, rebase, or cherry-pick is underway.
 func describesPush(r repo, pushed []pushedRef) (ref pushedRef, skipped string) {
 	head, err := r.git("rev-parse", "--verify", "--quiet", "HEAD")
