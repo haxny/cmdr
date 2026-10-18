@@ -93,14 +93,13 @@ Cost: one `claude -p` run a day on David's subscription, bounded by the number o
 ## Install
 
 The infra repo's `m1mbp/ansible/roles/report_triage` installs it: it copies `run.sh`, `board.sh`, `fetch-bundle.sh`,
-`prompt.md`, and `settings.json` from the laptop's local cmdr checkout (often ahead of origin) to
-`~/.local/share/report-triage/` on the box, and loads the launchd user agent `com.vdavid.report-triage`, daily at 05:30
-box-local (Europe/Stockholm), logging to `~/report-triage/logs/triage.log`. The files live outside the agent's working
-dir (`~/report-triage`) on purpose: the sandbox can write there, and `fetch-bundle.sh` unzips strangers' bundles into
-it. `run.sh` copies the two scripts in fresh each run (Lockdown layer 5). After editing these files, re-run the playbook
-with `--tags report_triage`. The secrets are in the box's own store (`m1mbp/ansible/secrets.sops.yaml`):
-`TRIAGE_GH_TOKEN`, `TRIAGE_R2_ACCESS_KEY_ID`, `TRIAGE_R2_SECRET_ACCESS_KEY`, plus the existing
-`CLAUDE_CODE_OAUTH_TOKEN`.
+`prompt.md`, and `settings.json` from the laptop's local cmdr checkout to `~/.local/share/report-triage/` on the box,
+and loads the launchd user agent `com.vdavid.report-triage`, daily at 05:30 box-local (Europe/Stockholm), logging to
+`~/report-triage/logs/triage.log`. The files live outside the agent's working dir (`~/report-triage`) on purpose: the
+sandbox can write there, and `fetch-bundle.sh` unzips strangers' bundles into it. `run.sh` copies the two scripts in
+fresh each run (Lockdown layer 5). After editing these files, re-run the playbook with `--tags report_triage`. The
+secrets are in the box's own store (`m1mbp/ansible/secrets.sops.yaml`): `TRIAGE_GH_TOKEN`, `TRIAGE_R2_ACCESS_KEY_ID`,
+`TRIAGE_R2_SECRET_ACCESS_KEY`, plus the existing `CLAUDE_CODE_OAUTH_TOKEN`.
 
 Test with a dummy `unprocessed` card: run `~/.local/share/report-triage/run.sh` over SSH and read its output before
 trusting the schedule.

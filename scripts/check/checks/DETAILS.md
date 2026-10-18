@@ -629,7 +629,7 @@ on, which for a wrapped group is a continuation line, not the entry's first.
 
 **The cache can't see a rebase.** `Inputs` is `CHANGELOG.md` alone, so a rebase that rewrites the cited commits while
 leaving the file untouched gets the previous run's cached OK. `scripts/release.sh` therefore runs it with `--fresh`
-right after its `git pull --rebase`. That pull once rewrote all 62 of 0.45.1's unpushed hashes (origin had gained the
+right after its `git pull`. A rebasing pull once rewrote all 62 of 0.45.1's unpushed hashes (origin had gained the
 workflow's `latest.json` commit), and the script tagged a release commit with every changelog ref stranded; only a
 manual check before the push caught it.
 
@@ -727,11 +727,9 @@ anyway. The repo-root bucket never counts: it collects every file with no nearer
 the `@`-import manifest.
 
 **The window is the change being made now.** `pickBaseRef` bases on LOCAL `main`, and on `main` itself returns "" so
-only the working tree counts. Branches are cut from local `main` and fast-forwarded back, so local `main` is the real
-branch point; `origin/main` is not, because `main` here routinely sits many unpushed commits ahead of the remote. Basing
-on the remote widened the window to "everything not yet pushed", so every source change in that pile re-warned on every
-run until the next push: the fix for the warning became `git push`, which says nothing about documentation. The check
-never runs in CI, so the remote's view of the branch point is never the relevant one.
+only the working tree counts. Branches are cut from local `main`, so it's the real branch point. Basing on a lagging
+`origin/main` once widened the window to "everything not yet pushed", so the fix for the warning became `git push`,
+which says nothing about documentation. The check never runs in CI.
 
 **Any doc tier on the ancestor chain counts** (`docTouchedOnChain`), plus the repo-root `AGENTS.md` (the root
 `CLAUDE.md` is only the `@`-import manifest, so `AGENTS.md` is the doc a root-level change updates). Attribution still

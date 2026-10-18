@@ -11,8 +11,8 @@ Run unattended, start to finish, without asking David anything. He's reading the
    enforced by hand against crates.io), fix the breakage, `pnpm check third-party-notices`, `pnpm check --include-slow`.
 3. **Commit in logical pieces**, not one blob: npm bumps, Cargo bumps, and each non-trivial API fix separately. Lead
    with impact. A crate you had to hold back gets a line in the body saying which and why.
-4. **Merge and tear down.** `ExitWorktree` with `keep`, FF-merge the branch into local `main`, verify `main` moved, then
-   `~/.claude/scripts/remove-worktree.sh weekly-upgrades`. Don't push; David pushes on his own schedule.
+4. **Land and tear down.** `pnpm land` (`scripts/land/CLAUDE.md`), then
+   `~/.claude/scripts/remove-worktree.sh weekly-upgrades`.
 5. **Report** in about ten lines: what moved (counts per ecosystem, and name anything interesting), what broke and how
    you fixed it, what you held back and why, and whether the slow lane went green.
 

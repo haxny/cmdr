@@ -17,8 +17,8 @@ command-handler-record refactor. Use it for any multi-milestone effort in Cmdr.
    milestone BEFORE the rewrite. Pin reality, not the plan's expectations, and verify timing-sensitive pins actually
    bite (red first). This makes a byte-identical refactor provable instead of hoped-for.
 4. **Gates.** The cadence in `AGENTS.md` § "Checker script", plus `desktop-e2e-linux` on a milestone that touches its
-   surface, plus watching CI after a push. Flake policy: isolated-green twice via `e2e-linux.sh --grep` counts as green;
-   a failure in the change's own surface is real.
+   surface, plus green CI on a `pnpm land -no-wait` push. Flake policy: isolated-green twice via `e2e-linux.sh --grep`
+   counts as green; a failure in the change's own surface is real.
 5. **Close out.** An end-of-phase adversarial conformance review agent (against the invariants register) plus a
    docs-audit agent that reads ALL commit bodies and verifies every touched `CLAUDE.md`.
 
@@ -30,7 +30,7 @@ Lead's guardrails, learned the hard way:
 - **Strip milestone tags before merging.** "M1", "Milestone 3", "Phase 2" leak into comments, `reason` strings, test
   helper names, and `CLAUDE.md` text; `rg -n '\b(M[0-9][a-z]?|Milestone\s*[0-9]|Phase\s*[0-9])\b' <touched paths>` finds
   them, and each becomes a descriptive name ("the watcher", "the hook contract"). The plan file keeps its own.
-- **Rebase onto current local `main` right before the fast-forward merge**: it moves mid-effort.
+- **Only the lead lands** (`scripts/land/CLAUDE.md`): a subagent can't wait out CI.
 
 ## Fan-out sweeps (parallel research or generation over a list)
 

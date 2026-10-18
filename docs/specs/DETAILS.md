@@ -50,8 +50,8 @@ The wipe is a one-way door for the working tree, so it runs in this order, one s
 
 1. **Re-derive the status from the code and `git log`, never from the spec's own status line.** Statuses lag in BOTH
    directions: specs have read "SPECCED, not started" with every phase on `main`, and "the tap adapter is not built"
-   after it was. Cited commit hashes are usually dangling, because a branch gets rebased before the FF merge, so verify
-   against `file:line` instead.
+   after it was. Cited commit hashes are usually dangling, because a branch gets rebased or squashed before it lands, so
+   verify against `file:line` instead.
 2. **Move the durable intent into the colocated `CLAUDE.md` / `DETAILS.md` nearest the code**: design decisions and
    their why, guardrails that stop a regression, measured evidence, accepted tradeoffs and lossiness, edge-case
    registers, and gotchas that cost someone time. A recorded "we considered X and said no, because" counts: it stops the

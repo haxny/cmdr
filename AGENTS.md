@@ -139,11 +139,9 @@ Writing them:
 ## Checker script
 
 Always use **`pnpm check`** at the repo root (never raw `cargo` / `vitest` / etc.); it's cache-aware. Cadence: `--fast`
-while iterating, plain `pnpm check` per milestone, `--include-slow` after roughly every second milestone (7-10 min: a
-periodic gate, never a per-wrap ritual). Passing checks collapse to one line, long outputs to an excerpt naming the full
-log; `-v` prints all. You can also scope by name (`pnpm check clippy`), tech (`rust` / `svelte` / `go`), or app
-(`desktop` / `website` / ...). Full docs in `scripts/check/CLAUDE.md`. **Finish every unit of work by running the right
-checks.** Don't even try to tail the checker script.
+while iterating, since CI is the full gate (§ Workflow); `--include-slow` (7-10 min) every second milestone or so. Scope
+by name (`pnpm check clippy`), tech (`rust`), or app (`desktop`). Full docs in `scripts/check/CLAUDE.md`. **Finish every
+unit of work by running the right checks.** Don't even try to tail the checker script.
 
 ## Testing
 
@@ -180,12 +178,13 @@ inventory). Desktop-specific test, MCP, and E2E mechanics live in `apps/desktop/
 - Before doing **legwork**, read the [guide](docs/guides/agent-legwork-guide.md).
 - **TDD where reasonable** (red → green); cover code with tests until confident, not beyond.
 - Step back per milestone: is it solid AND elegant AND documented?
-- An **outside contributor's PR**: land it without asking them for anything, then record the head so GitHub marks it
-  merged. `docs/guides/handling-prs.md`.
-- Commits: changes land on `main` via FF merge from a worktree branch (no PRs, no squashing), so the message explains
-  the change. Conventional-commits style, leading with impact: the title says what the change achieves and why, which
-  feeds our release notes. No title length cap, comprehensive bodies fine, no wraps, entities in backticks. Never
-  `Co-Authored-By`.
+- An **outside contributor's PR**: land it without asking them for anything, and have GitHub mark it merged.
+  `docs/guides/handling-prs.md`.
+- **Landing**: a worktree branch reaches `main` only through `pnpm land`, on green CI; push between milestones with
+  `pnpm land -no-wait`. `scripts/land/CLAUDE.md`.
+- Commits: nobody reads PRs, so the message explains the change. Conventional-commits style, leading with impact: the
+  title says what the change achieves and why, which feeds our release notes. No title length cap, comprehensive bodies
+  fine, no wraps, entities in backticks. Never `Co-Authored-By`.
 - **The delivery pipeline is fully wired; don't re-audit it.** Releases are agent-automated end to end (tag → CI
   build/sign/notarize → `latest.json` → website deploy → FDA-preserving silent update), and the feedback loops are live
   (every crash, error report, and feedback → a card on the private reports board plus one three-hour digest email; usage
