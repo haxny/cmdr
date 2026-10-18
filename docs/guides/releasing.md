@@ -145,8 +145,8 @@ the variable alone.
 4. **The dispatched run** finishes it: `guard` (it also refuses a dispatch on a branch), `vet-update-archives` (§ The
    release gate), then `publish`, which verifies every archive's `.sig` against the app's trusted keys (main or backup),
    publishes the draft, and then runs exactly the `ci` mode steps (`latest.json` from the `.sig` assets, checksums,
-   release notes, the commit to `main`, the website deploy), then `attest` and `bump-tap`. `ci-gate`, `compile`, `sign`,
-   and `sbom` skip.
+   release notes, marking the release Latest, the website deploy), then `attest` and `bump-tap`. `ci-gate`, `compile`,
+   `sign`, and `sbom` skip.
 
 `release-finish.sh` is resumable: re-run it after anything (a closed laptop, a red job). It holds no state of its own
 and reads where the release stands on GitHub. A build still running gets waited for, a draft gets signed (re-signing a
@@ -247,6 +247,9 @@ check.
    - **`local`**: verify the key is readable from sops without printing it:
      `secret CMDR_TAURI_SIGNING_PRIVATE_KEY > /dev/null && secret CMDR_TAURI_SIGNING_PRIVATE_KEY_PASSWORD > /dev/null`.
      If it fails, warn the user and stop.
+   - **CI is enabled**, since the gate and `land` wait on it. David sometimes disables it to save GHA minutes; if
+     `gh workflow list --all` shows `CI` as `disabled_manually`, `gh workflow enable CI`, tell the user, and ask whether
+     to disable it again after the release.
    - **No known exploitable vulnerability ships** (EU Cyber Resilience Act, Annex I Part I (2)(a)). List the open
      security gaps in the private tracker, the ones `docs/threat-model.md` calls "tracked privately":
      `gh issue list -R vdavid/cmdr-reports --label security-gap --state open`. For each, read it and say whether this
@@ -255,12 +258,12 @@ check.
      `projects/Cmdr/business/CRA technical file/Release log.md`: the date, the version (filled in at step 6), the issue
      numbers reviewed, and "none exploitable" or links to the risk decisions. Step 13 adds the evidence under it. ❌ No
      exploit detail in this repo; the line stays in the vault.
-2. **Push `main` and start the CI gate now**: `git pull --rebase origin main && git push origin main`, then run
-   `./scripts/release-ci-gate.sh` in the background. It starts a full (`run_all`) CI run on the pushed commit and waits
-   for it (~25 min), overlapping it with the drafting below; `release.sh` re-runs it before tagging and aborts unless
-   it's green. If it goes red, fix on `main` (a worktree as usual), push, and restart the gate: the new commit needs its
-   own run, and the changelog hashes stay valid since nothing got rebased. Details: § Release gates that abort before
-   tagging.
+2. **Sync `main` and start the CI gate now.** Everything the release ships must be landed already (`pnpm land`,
+   `scripts/land/CLAUDE.md`). In the main clone: `git pull --ff-only origin main`, then run
+   `./scripts/release-ci-gate.sh` in the background. It starts a full (`run_all`) CI run on that commit and waits for it
+   (~25 min), overlapping it with the drafting below; `release.sh` re-runs it before the version bump and aborts unless
+   it's green. If it goes red, fix it in a worktree, land the fix, sync, and restart the gate: the new commit needs its
+   own run. Details: § Release gates that abort before tagging.
 3. **Draft the CHANGELOG** from the git commits since the last release, per § Writing the CHANGELOG, and present the
    draft for review.
    - **Ask David: "Does this release fix a vulnerability users should act on?"** Yes means an entry per fixed
@@ -289,8 +292,14 @@ check.
      7.3.8+ detaches the server whenever it detects an agent's env vars.
 6. **Advise the version** (patch: bug fixes, minor: new features, major: major launches), and give the user the
    `./scripts/release.sh x.x.x` command.
-7. **Offer to run the release script**, and wait for confirmation before running it.
-8. **Push immediately** with `git push origin main --tags` IFF the release script completed cleanly. Else: stop and ask.
+7. **Offer to run the release script**, and wait for confirmation before running it. Run it as a background command:
+   after the bumps it commits on a `release/vX.Y.Z` branch and lands it with `pnpm land -rebase`, which waits for
+   `CI OK` on the release commit (25–35 min), then syncs `main`, re-checks the gate, and makes the signed tag. Re-run it
+   with the same version after any stop (a red or flaky CI run, a closed laptop): it resumes from the release branch or
+   from the landed commit. If `land` rebased onto a `main` that moved, the gate wants a full run on the release commit
+   itself and waits for it.
+8. **Push the tag immediately** with `git push origin vX.Y.Z` IFF the release script completed cleanly. Else: stop and
+   ask.
    - **`local` mode: start `./scripts/release-finish.sh X.Y.Z` right after the push**, as a background command. It waits
      for the build run (about an hour), verifies each update archive's provenance, signs on this laptop, uploads the
      signatures, and dispatches the finishing run that publishes, then waits for that too. It's resumable: if it stops
@@ -305,16 +314,10 @@ check.
     every few minutes in the background and report progress (which jobs are done, which are still running). Report when
     all jobs complete; if one fails, show the failure details and advise how to fix it. Suggest the user also track it
     at https://github.com/vdavid/cmdr/actions.
-11. **Make the standalone `CI` run happen, then watch it.**
-    - **First, check whether CI is disabled.** David sometimes disables it to save GHA minutes; `gh workflow list --all`
-      then shows `CI` as `disabled_manually` (a push to main won't fire it). CI matters for a release: its
-      `deploy-website` job publishes the roadmap, feature-status, and landing-page changes (the release workflow only
-      refreshes `latest.json`), and the full suite gives a quality signal on the release commit. If it's disabled,
-      re-enable and trigger it: `gh workflow enable CI`, then `gh workflow run CI --ref main` (`run_all` defaults to
-      true). Tell the user, and ask whether they want it left enabled or disabled again after the run.
-    - The pre-tag gate already proved every lane green on the commit before the release commit, so a red run here points
-      at the release commit itself (version bumps, CHANGELOG, visual baselines). It doesn't block the shipped release:
-      fix it in the background, and surface the failure when convenient without interrupting build reporting.
+11. **Watch the `main` push run of the release commit.** Landing it started a `CI` run on `main`, whose `deploy-website`
+    job publishes the roadmap, feature-status, and landing-page changes (the release workflow only deploys the new
+    `latest.json`). If it goes red, fix in the background and surface it when convenient; it doesn't block the shipped
+    release.
 12. **After the release run succeeds (in `local` mode: after `release-finish.sh` reports the finishing run green),
     verify the public surface**:
     - `gh release view vX.Y.Z --json assets,tagName,publishedAt`: confirm the three DMGs are attached
@@ -342,7 +345,8 @@ check.
     copy the files below to the company's archive. The release log note names the archive folder and how agents reach
     it. ❌ No archive host, share, or path in this repo.
     - **Find the runs.** `SHA=$(git rev-parse vX.Y.Z^)`: the commit the CI gate passed, the parent of the
-      `chore(release)` commit. Then the full CI run,
+      `chore(release)` commit (or `vX.Y.Z` itself when `land` rebased it, which `release.sh`'s last gate line names).
+      Then the full CI run,
       `gh run list -R vdavid/cmdr --workflow ci.yml --commit "$SHA" --event workflow_dispatch --status success --json databaseId,conclusion`,
       the CodeQL run (`--workflow codeql.yml --commit "$SHA"`), and the release runs,
       `gh run list -R vdavid/cmdr --workflow release.yml --branch vX.Y.Z --json databaseId,event,conclusion` (two in
@@ -419,15 +423,15 @@ updates where that's technically feasible (Annex I Part II (2)). If `main` holds
 (`git log --oneline vX.Y.Z..main`), release from `main` as usual instead.
 
 **What works from any tag, unchanged**: the whole tag-push pipeline (`guard`, `ci-gate`, `compile`, `sign`, the release
-gate, `sbom`, `attest`, `publish`, `bump-tap`) and `release-finish.sh`. They read the tag, and `publish` commits
-`latest.json` to `main` whichever branch the tag sits on. The `ci-gate` job accepts the tagged commit's parent when the
-tagged commit is the `chore(release): vX.Y.Z` commit, on any branch.
+gate, `sbom`, `attest`, `publish`, `bump-tap`) and `release-finish.sh`. They read the tag, and `publish` marks the
+release Latest (which is what the website serves) whichever branch the tag sits on. The `ci-gate` job accepts the tagged
+commit's parent when the tagged commit is the `chore(release): vX.Y.Z` commit, on any branch.
 
 **What assumes `main` HEAD, and how this procedure gets around it:**
 
-- ❌ **Don't run `release.sh`.** It runs `git pull --rebase --autostash origin main`, which would rebase the patch
-  branch onto `main` and ship every unreleased feature. Its gate, `release-ci-gate.sh`, also refuses any HEAD that isn't
-  `origin/main`, and dispatches CI on `main` only. Step 5 does its steps by hand.
+- ❌ **Don't run `release.sh`.** It runs on `main` only, pulls `origin/main`, and lands its release commit there, which
+  would ship every unreleased feature. Its gate, `release-ci-gate.sh`, also refuses any HEAD that isn't `origin/main`,
+  and dispatches CI on `main` only. Step 5 does its steps by hand.
 - **The pipeline runs from the tag's own commit**, so the workflow files, `release-finish.sh`, and
   `.github/release-signers` are the old tag's. Before cutting, run
   `git diff vX.Y.Z main -- .github/workflows/release.yml .github/workflows/release-pipeline.yml scripts/release-finish.sh scripts/release-finish/ .github/release-signers`.
@@ -463,13 +467,13 @@ Steps:
    mode `release-finish.sh`, run from this worktree so it reads the tag's own `tauri.conf.json` pubkey, then the build
    monitoring, step 12's checks, and step 13's evidence. Step 11's standalone `CI` run doesn't apply, since nothing went
    to `main`.
-7. **Merge the patch back into `main`** once it's published. Free `main` first (no other worktree may have it checked
-   out), then in the main clone: `git pull --rebase origin main` (it brings in `publish`'s `latest.json` commit),
-   `git merge --no-ff vX.Y.Z+1`, and `git push origin main`. The merge is what puts the patch's `CHANGELOG.md` section
-   on the website and in the next release's history, makes its hashes reachable for `changelog-links`, and moves
-   `main`'s version up to the live one. Resolve conflicts in favor of the patch for the version files and the
-   settings-defaults stamp, keep both sides in `CHANGELOG.md`, and keep `main`'s copy of a cherry-picked fix. It's the
-   one merge commit in `main`'s history that a fast-forward can't replace, since the two branches have diverged.
+7. **Merge the patch back into `main`** once it's published: in a fresh worktree off `main`,
+   `git merge --no-ff vX.Y.Z+1`, then `pnpm land` (never `-squash` or `-rebase`, which would flatten the merge; if
+   `main` moved, redo the merge on top of it). The merge is what puts the patch's `CHANGELOG.md` section on the website
+   and in the next release's history, makes its hashes reachable for `changelog-links`, and moves `main`'s version up to
+   the live one. Resolve conflicts in favor of the patch for the version files and the settings-defaults stamp, keep
+   both sides in `CHANGELOG.md`, and keep `main`'s copy of a cherry-picked fix. It's the one merge commit in `main`'s
+   history that a fast-forward can't replace, since the two branches have diverged.
 8. **Tear down the worktree**: `~/.claude/scripts/remove-worktree.sh security-vX.Y.Z+1`.
 
 The next regular release drafts its CHANGELOG from `vX.Y.Z+1..main` and doesn't list the fix again.
@@ -478,9 +482,8 @@ The next regular release drafts its CHANGELOG from `vX.Y.Z+1..main` and doesn't 
 
 Mechanics, which the release script and the `changelog-links` check depend on:
 
-- **Run `git pull --rebase origin main` before reading a single hash.** `release.sh` pulls too, and when `origin/main`
-  has moved (the release workflow's `latest.json` commit moves it after every release), that rebase rewrites every
-  unpushed commit's hash, stranding the refs you cite. Pulling first makes the script's pull a no-op.
+- **Draft from a synced `main`** (`git pull --ff-only origin main`, step 2). Cite only landed commits: a hash on an
+  unlanded branch changes if `land` rebases or squashes it, and `changelog-links` refuses any ref not on `main`.
 - **Read every commit's title AND body.** An entry may cite several commits.
 - **Add a `## [Unreleased]` heading** right after the format preamble (before the first versioned section), and put the
   entries under it. The release script replaces it with the versioned heading, so the committed changelog has no
@@ -633,20 +636,21 @@ compile.
 tagged. Beyond the version/CHANGELOG checks and `oxfmt --ci`, four are worth knowing:
 
 - **Only a commit with a fully green CI run ships.** `scripts/release-ci-gate.sh` requires HEAD to be `origin/main` (CI
-  never saw an unpushed commit) and a successful `CI` run on that exact commit, started via `workflow_dispatch` with
-  `run_all`. ❗ A push run doesn't count: CI's change detection skips unchanged lanes, so a docs-only HEAD reads green
-  while the commit before it broke Rust. The gate reuses a full run already on the commit, starts one otherwise, and
-  waits (~25 min), so the release procedure (step 2) pushes and starts it early to overlap it with changelog drafting. A
-  flaky red run: `gh run rerun <id> --failed`, then re-run the release. The release commit itself (version bumps,
-  CHANGELOG) lands after the gate; the `oxfmt --ci` gate and the post-tag CI run cover it.
+  never saw anything else) and a successful `CI` run on that exact commit, started via `workflow_dispatch` with
+  `run_all`. ❗ A push or PR run doesn't count: CI's change detection skips unchanged lanes, so a docs-only HEAD reads
+  green while the commit before it broke Rust. The gate reuses a full run already on the commit, starts one otherwise,
+  and waits (~25 min), so the release procedure (step 2) starts it early to overlap it with changelog drafting. A flaky
+  red run: `gh run rerun <id> --failed`, then re-run the release. The release commit itself (version bumps, CHANGELOG)
+  then gets `CI OK` from its own PR run before `land` puts it on `main`, and after landing the gate runs once more,
+  taking the parent's full run, or starting one on the release commit when `land` rebased it.
   - **How a run proves it was full:** the runs API carries no inputs, so `ci.yml` has a `Full run (run_all)` job that
     runs only with `run_all` on (`if: inputs.run_all`, no needs). Both gates count a run only when that job succeeded,
     so a dispatch with `run_all` off never passes. They match the job by name: renaming it means updating both.
   - **The release workflow enforces it again server-side** (the `ci-gate` job, which `build` and `sbom` wait on), so a
     tag pushed by hand can't skip it. It looks for a successful full run of `ci.yml` on the tagged commit, or on its
-    parent when the tagged commit is the `chore(release): vX.Y.Z` commit `release.sh` makes after the local gate. It
-    doesn't wait: the local gate already did. If it fails because the run was still going, wait for it, then "Re-run
-    failed jobs".
+    parent when the tagged commit is the `chore(release): vX.Y.Z` commit `release.sh` makes after the local gate (the
+    same rule as the local gate's last call). It doesn't wait: the local gate already did. If it fails because the run
+    was still going, wait for it, then "Re-run failed jobs".
   - **CodeQL gates the release too**, in both places: a green `codeql.yml` run on the commit, and no open high or
     critical CodeQL alert on `main` (`scripts/release-codeql-gate.sh`, `docs/tooling/ci.md` § CodeQL). The bypass below
     skips it as well.
@@ -654,11 +658,10 @@ tagged. Beyond the version/CHANGELOG checks and `oxfmt --ci`, four are worth kno
     AND the repository variable `RELEASE_SKIP_CI_GATE_TAG` set to the exact tag (like `v0.51.1`) before pushing it. Same
     shape as `RELEASE_REPUBLISH_TAG`: it unblocks only the tag written in it. Clear it once the run finishes.
 
-- **Changelog refs must survive the script's own rebase.** The script's `git pull --rebase` rewrites every unpushed hash
-  whenever `origin/main` moved, so right after it, `pnpm check changelog-links --fresh` fails the release on any ref no
-  longer reachable from HEAD. Fix: re-derive the stranded refs from the rebased commits, then re-run. § Writing the
-  CHANGELOG pulls before drafting, so this normally stays quiet. Why `--fresh`: `scripts/check/checks/DETAILS.md` §
-  "CHANGELOG commit refs".
+- **Changelog refs must be on `main`.** After its fast-forward pull, the script runs
+  `pnpm check changelog-links --fresh`, which fails the release on any ref not reachable from HEAD (a commit cited from
+  a branch that was rebased or squashed while landing). Fix: re-derive those refs from `main`, then re-run. Why
+  `--fresh`: `scripts/check/checks/DETAILS.md` § "CHANGELOG commit refs".
 - **Visual baselines are auto-refreshed (Docker required).** After the CHANGELOG/roadmap/version are finalized, the
   script runs `apps/website/scripts/update-visual-baselines.sh`, which re-shoots any stale website baseline in a pinned
   Playwright container and folds the result into the release commit. Docker must be running; a stopped Docker aborts the
@@ -818,8 +821,11 @@ One GitHub release per tag, carrying these assets for each of the three arches (
   repo hard-codes.
 - `Cmdr_<version>_<arch>.app.tar.gz` plus its `.sig`: the updater payload and its minisign signature, made in CI or on
   the laptop (§ Who signs the update archives).
-- `latest.json`, whose copy in `apps/website/public/latest.json` (committed by the publish job) is what
-  `getcmdr.com/latest.json` serves.
+- `latest.json`, the update manifest. `getcmdr.com/latest.json` serves the one on the release GitHub marks "Latest":
+  each website deploy fetches it into the Docker build (`apps/website/scripts/fetch-live-manifest.ts`), and `publish`
+  sets that mark only after uploading the manifest, so the mark is the one pointer to the live release and nothing
+  commits to `main`. The copy committed at `apps/website/public/latest.json` is a frozen one that dev and the check
+  lanes build with; ❌ never read the current version from it.
 - `checksums.txt`: one `shasum -a 256` line per DMG (plus the pkg when there is one), the only way a person who
   downloaded from the website (or from an aggregator listing) can check what they got. The Homebrew cask carries its own
   `sha256` and the updater verifies a minisign signature, so this covers the one install route that had nothing. The
@@ -1017,15 +1023,14 @@ Full Disk Access profile.
 
 ## The tag guard, and rolling back
 
-Pushing a `v*` tag runs the whole Release workflow, and `publish` rewrites `latest.json` for whatever tag fired it. It
-has no idea which version that is, so re-pushing an old tag points the entire install base at an old build. The `guard`
-job first verifies the annotated tag's SSH signature against `.github/release-signers`, then requires the tag's version
-to be strictly greater than the version `apps/website/public/latest.json` currently advertises on `main`. ❗ On `main`,
-never in the checkout: the tagged commit always predates its own `publish` commit, so its copy names the previous
-release and lets an old tag through. The release script creates that signed tag with the configured Git signing key. A
-missing key or declined passphrase aborts locally, and an unsigned or differently signed tag aborts in CI. The guard
-runs in seconds and blocks `build`, so a bad push never reaches the three 90-minute macOS jobs and never overwrites
-assets on an old release.
+Pushing a `v*` tag runs the whole Release workflow, and `publish` makes whatever tag fired it the live manifest. It has
+no idea which version that is, so re-pushing an old tag points the entire install base at an old build. The `guard` job
+first verifies the annotated tag's SSH signature against `.github/release-signers`, then requires the tag's version to
+be strictly greater than the live manifest's (the `latest.json` of the release marked "Latest"). ❗ Never the checkout's
+`apps/website/public/latest.json`, a frozen dev copy that would let an old tag through. The release script creates that
+signed tag with the configured Git signing key. A missing key or declined passphrase aborts locally, and an unsigned or
+differently signed tag aborts in CI. The guard runs in seconds and blocks `build`, so a bad push never reaches the three
+90-minute macOS jobs and never overwrites assets on an old release.
 
 The signing key is replaceable. To rotate it, commit the new public key in `.github/release-signers` before cutting the
 first release signed by its private half. An older tag keeps the signer file from its own tagged commit, so replacing
@@ -1036,15 +1041,16 @@ Two consequences worth knowing before they surprise you:
 - **Re-pushing the current version is refused.** That's a rebuild of something users already have. Retrying a _failed_
   build is unaffected: publish never ran, so the manifest still names the previous version and the tag is still ahead of
   it.
-- **A full re-run after publish already committed the manifest is refused too**, because by then the manifest names this
-  very version. Use the override below, or re-run only the failed jobs rather than all of them.
+- **A full re-run after publish already marked the release Latest is refused too**, because by then the manifest names
+  this very version. Use the override below, or re-run only the failed jobs rather than all of them.
 
 **To roll back deliberately** (a shipped release turns out to be bad and you want everyone back on the previous one):
 
 1. Set the repository variable `RELEASE_REPUBLISH_TAG` to the exact tag you're republishing, like `v0.41.0`. It's under
    Settings → Secrets and variables → Actions → Variables. It has to match the tag exactly, so a leftover value can
    never act as a blanket "always allow".
-2. Push or re-run that tag. The guard logs a warning saying the downgrade is deliberate, and the release proceeds.
+2. Push or re-run that tag. The guard logs a warning saying the downgrade is deliberate, and the release proceeds;
+   `publish` marks the old release Latest again and redeploys the website.
 3. **Clear the variable.** Nothing expires it for you.
 
 The variable lives outside git on purpose. A tag push is the mistake this guards against, so no combination of tag
@@ -1054,19 +1060,20 @@ pushes should be able to unlock it.
 
 ### Release build failed, need to retry same version
 
-Delete tag, fix the issue, commit, recreate tag, push:
+Delete the tag, land the fix, then tag the new `main` and push:
 
 ```bash
 git tag -d v0.x.x                      # delete local tag
 git push origin :refs/tags/v0.x.x      # delete remote tag
-# ... fix and commit ...
+# ... fix in a worktree, pnpm land, then in the main clone: git pull --ff-only origin main ...
+./scripts/release-ci-gate.sh           # the fix is the tagged commit now, so it needs its own full run
 git tag -s -m "Cmdr v0.x.x" v0.x.x     # recreate signed tag
-git push origin main --tags            # push again
+git push origin v0.x.x                 # push again
 ```
 
-The `guard` job doesn't get in the way here: the failed run never published, so `latest.json` still names the previous
-version and this tag is still ahead of it. It only refuses once the manifest already advertises this same version, at
-which point the retry would be a rebuild of something users have.
+The `guard` job doesn't get in the way here: the failed run never published, so the live manifest still names the
+previous version and this tag is still ahead of it. It only refuses once the manifest already advertises this same
+version, at which point the retry would be a rebuild of something users have.
 
 ### Draft release left on GitHub after failed build
 
@@ -1092,7 +1099,7 @@ Fix the cause, then run it again; it picks up where the release stands.
   signatures fails there and nothing goes public.
 - **"the finishing run failed again"**: it already re-ran the failed jobs once. Read the run; § Publish job failed but
   builds succeeded applies, as does § The attest or sbom job failed. ❌ Don't dispatch a fresh run by hand once
-  `publish` has committed the manifest: the guard refuses it. Re-run the failed jobs instead.
+  `publish` has marked the release Latest: the guard refuses it. Re-run the failed jobs instead.
 
 ### Apple notarization is slow (the `sign` job times out)
 
@@ -1123,8 +1130,8 @@ done (their `compiled-<arch>` artifacts last seven days).
 
 ### Publish job failed but builds succeeded
 
-The publish job downloads signatures from the release, generates `latest.json`, updates the release body, commits to
-main, and triggers a website deploy. If it fails:
+The publish job downloads signatures from the release, generates and uploads `latest.json`, updates the release body,
+marks the release Latest, and triggers a website deploy. If it fails:
 
 - **Missing signatures**: check that all three `sign` jobs (in `local` mode, `release-finish.sh`) uploaded their `.sig`
   files. The publish job validates this upfront and fails fast with a clear message. It looks for
@@ -1133,11 +1140,9 @@ main, and triggers a website deploy. If it fails:
 - **`latest.json` points at an asset that isn't on the release**: same cause, caught by the assertion the job runs
   before uploading the manifest. Compare `gh release view <tag> --json assets` against the names the workflow builds,
   and fix the workflow rather than the release.
-- **Git push failed**: another commit was pushed to main between checkout and push. Re-run the publish job; it does
-  `git pull --rebase` to handle this, but if the rebase itself conflicts (someone else edited `latest.json`), it needs
-  manual resolution.
-- **Website deploy webhook failed**: re-trigger manually by pushing any commit to main, or SSH into the server and run
-  the deploy script.
+- **Website deploy webhook failed**: re-run the publish job's failed steps, or SSH into the server and run the deploy
+  script (`docs/guides/deploy-website.md` § Manual deploy). A deploy whose manifest fetch fails keeps the old site up;
+  its log is in `/var/log/cmdr/deploy-website.log`.
 
 ### The attest or sbom job failed
 

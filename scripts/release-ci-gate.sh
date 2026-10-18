@@ -11,7 +11,12 @@
 # Idempotent: it reuses a full run that already exists on the commit (finished or still going),
 # starts one if there's none, waits for it, and exits non-zero unless it succeeded. So the release
 # procedure calls it early to overlap the ~25-minute run with changelog drafting, and `release.sh` calls it
-# again before tagging, where it returns at once.
+# again before the version bump, where it returns at once.
+#
+# On a landed `chore(release): vX.Y.Z` commit it takes the parent's full run too, the rule
+# `release-pipeline.yml`'s `ci-gate` job applies to the tag. `release.sh` calls it there once more
+# after landing: a no-op normally, and a full run on the release commit itself when `land` had to
+# rebase it onto a `main` that moved.
 #
 # Emergency bypass (a hotfix while CI is red for a reason outside the repo): RELEASE_SKIP_CI_GATE=1.
 # `release.yml` enforces the same rule server-side (its `ci-gate` job), with its own bypass: the
@@ -32,8 +37,14 @@ SHA=$(git rev-parse HEAD)
 REMOTE_SHA=$(git rev-parse origin/main)
 if [[ "$SHA" != "$REMOTE_SHA" ]]; then
   echo "Error: HEAD ($SHA) isn't origin/main ($REMOTE_SHA)."
-  echo "CI only sees pushed commits, so push main first (git push origin main), then re-run."
+  echo "The release ships what's on main. Land what's missing (pnpm land from its worktree), sync local main"
+  echo "(git pull --ff-only origin main), then re-run."
   exit 1
+fi
+# The commits whose full run counts: HEAD, and its parent when HEAD is the release commit.
+CANDIDATES=("$SHA")
+if [[ "$(git log -1 --format=%s HEAD)" =~ ^chore\(release\):\ v[0-9] ]]; then
+  CANDIDATES+=("$(git rev-parse HEAD^)")
 fi
 
 # The marker job's conclusion in a run: `success` in a full run, `skipped` with run_all off, and
@@ -44,11 +55,11 @@ marker_of() {
     --jq '[.jobs[] | select(.name == "Full run (run_all)")][0].conclusion // ""'
 }
 
-# The newest full run on this exact commit. `--commit` filters on the run's head SHA. The marker
+# The newest full run on the commit given. `--commit` filters on the run's head SHA. The marker
 # needs no other job, so it settles within seconds of a run starting; a just-queued run gets a
 # minute for it.
 find_run() {
-  local id status marker
+  local commit="$1" id status marker
   while read -r id status; do
     for _ in $(seq 1 12); do
       marker=$(marker_of "$id")
@@ -60,18 +71,25 @@ find_run() {
       echo "$id"
       return
     fi
-  done < <(gh run list --workflow "$WORKFLOW" --event workflow_dispatch --commit "$SHA" --limit 10 \
+  done < <(gh run list --workflow "$WORKFLOW" --event workflow_dispatch --commit "$commit" --limit 10 \
     --json databaseId,status --jq '.[] | "\(.databaseId) \(.status)"')
 }
 
-RUN_ID=$(find_run)
+RUN_ID=""
+for c in "${CANDIDATES[@]}"; do
+  RUN_ID=$(find_run "$c")
+  if [[ -n "$RUN_ID" ]]; then
+    SHA="$c"
+    break
+  fi
+done
 if [[ -z "$RUN_ID" ]]; then
   echo "No full CI run on ${SHA:0:9} yet; starting one (run_all)."
   gh workflow run "$WORKFLOW" --ref main -f run_all=true
   # The dispatch returns before the run is listed; give it up to a minute to appear.
   for _ in $(seq 1 12); do
     sleep 5
-    RUN_ID=$(find_run)
+    RUN_ID=$(find_run "$SHA")
     [[ -n "$RUN_ID" ]] && break
   done
   if [[ -z "$RUN_ID" ]]; then
@@ -92,7 +110,7 @@ fi
 CONCLUSION=$(gh run view "$RUN_ID" --json conclusion --jq .conclusion)
 if [[ "$CONCLUSION" != "success" ]]; then
   echo "Error: the full CI run on ${SHA:0:9} ended '$CONCLUSION': $URL"
-  echo "Fix main, push, and re-run. A new commit gets its own run."
+  echo "Fix it on a branch, land it, and re-run. A new commit gets its own run."
   exit 1
 fi
 echo "✅ Full CI run on ${SHA:0:9} is green: $URL"

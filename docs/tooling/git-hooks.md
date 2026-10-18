@@ -85,7 +85,7 @@ tap bump) would break a release.
   it.
 - **A push that doesn't send the checked-out commit**: another branch's commit gets a one-line `pre-push: skipped ...`
   notice, since the working tree doesn't describe it. Tags and deletions put no branch content on the remote and pass
-  silently, so a `--tags` push during a release goes through untouched.
+  silently, so a release's tag push goes through untouched.
 - **A push during a merge, rebase, cherry-pick, or revert**: no commit can be added there (same notice).
 - **Untracked files**: `oxfmt .` sees them, the push doesn't contain them.
 

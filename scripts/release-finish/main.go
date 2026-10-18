@@ -449,7 +449,7 @@ func waitForBuildRun(tag string) error {
 	if len(runs) == 0 {
 		step("Waiting for the %s tag push to start its release run", tag)
 		if err := waitForNewRun(tag, "push", nil); err != nil {
-			return fmt.Errorf("%w. Was the tag pushed (`git push origin main --tags`)?", err)
+			return fmt.Errorf("%w. Was the tag pushed (`git push origin %s`)?", err, tag)
 		}
 		if runs, err = listRuns(tag, "push"); err != nil {
 			return err
