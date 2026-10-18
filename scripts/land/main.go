@@ -106,7 +106,7 @@ func land(r runner, cfg config) error {
 		return err
 	}
 	if cfg.squash && needsSquash(commits, cfg.message) {
-		if commits, err = squash(r, commits, cfg.message); err != nil {
+		if err := squash(r, commits, cfg.message); err != nil {
 			return err
 		}
 	}
@@ -114,7 +114,10 @@ func land(r runner, cfg config) error {
 	if err != nil {
 		return err
 	}
-	if err := pushBranch(r, state.branch, head); err != nil {
+	if head, err = pushBranch(r, state.branch, head); err != nil {
+		return err
+	}
+	if commits, err = r.commits("origin/main..HEAD"); err != nil {
 		return err
 	}
 	pr, err := ensurePR(r, state.branch, commits)
@@ -167,7 +170,9 @@ func readState(r runner) (branchState, error) {
 	if _, err := r.git("fetch", "--quiet", "origin", "main"); err != nil {
 		return branchState{}, err
 	}
-	status, err := r.git("status", "--porcelain")
+	// Untracked files can't change what lands, and the main clone (where `release.sh` lands from)
+	// often has some.
+	status, err := r.git("status", "--porcelain", "--untracked-files=no")
 	if err != nil {
 		return branchState{}, err
 	}
@@ -179,33 +184,44 @@ func readState(r runner) (branchState, error) {
 	}, nil
 }
 
-func squash(r runner, commits []commit, message string) ([]commit, error) {
+func squash(r runner, commits []commit, message string) error {
 	if message == "" {
 		message = squashMessage(commits)
 	}
 	say("Squashing %d %s into one...", len(commits), plural(len(commits), "commit", "commits"))
 	if _, err := r.git("reset", "--soft", "origin/main"); err != nil {
-		return nil, err
+		return err
 	}
 	if err := r.gitStdin(message, "commit", "--quiet", "-F", "-"); err != nil {
-		return nil, fmt.Errorf("the squash commit didn't go through; `git reflog` has the branch as it was\n%w", err)
+		return fmt.Errorf("the squash commit didn't go through; `git reflog` has the branch as it was\n%w", err)
 	}
-	return r.commits("origin/main..HEAD")
+	return nil
 }
 
 // pushBranch pushes HEAD to its feature branch unless origin already has it. The lease names the
 // SHA it just read, so a push from another machine in between is refused instead of overwritten.
-func pushBranch(r runner, branch, head string) error {
+//
+// The pre-push hook may commit a formatting fix and stop the push; then this pushes once more
+// with that commit on top. It returns the SHA that's on origin.
+func pushBranch(r runner, branch, head string) (string, error) {
 	remote, err := r.remoteSHA(branch)
 	if err != nil {
-		return err
+		return "", err
 	}
-	if remote == head {
-		return nil
+	for attempt := 0; remote != head; attempt++ {
+		say("Pushing %s...", branch)
+		_, err = r.git("push", "--quiet", fmt.Sprintf("--force-with-lease=refs/heads/%s:%s", branch, remote), "origin", "HEAD:refs/heads/"+branch)
+		if err == nil {
+			return head, nil
+		}
+		newHead, headErr := r.git("rev-parse", "HEAD")
+		if headErr != nil || newHead == head || attempt > 0 {
+			return "", fmt.Errorf("the branch push didn't go through; fix what it says, then land again: pnpm land\n%w", err)
+		}
+		say("The pre-push hook added a commit, so pushing again with it.")
+		head = newHead
 	}
-	say("Pushing %s...", branch)
-	_, err = r.git("push", "--quiet", fmt.Sprintf("--force-with-lease=refs/heads/%s:%s", branch, remote), "origin", "HEAD:refs/heads/"+branch)
-	return err
+	return head, nil
 }
 
 func ensurePR(r runner, branch string, commits []commit) (pullRequest, error) {

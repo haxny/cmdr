@@ -50,6 +50,13 @@ Each run reads the branch and GitHub and picks up from there (`nextStartStep`, `
 isn't pushed again, an open PR is reused, a `-squash` re-run on one commit is a no-op (a fresh SHA would restart CI),
 and a branch already on `origin/main` skips to syncing `main` and deleting the remote branch. The branch push uses
 `--force-with-lease` with the SHA it just read, so a push from another machine in between is refused, not overwritten.
+The pre-push hook may commit a formatting fix and stop that push; `pushBranch` then pushes once more with the fix on
+top. Untracked files don't count as dirty: they can't change what lands, and the main clone, where `release.sh` lands
+its release commit from, often has some.
+
+`scripts/release.sh` depends on this interface: `pnpm land -rebase` from the main clone, exit 0 only when the SHA is on
+`origin/main`, local `main` synced by `fetch origin main:main`, and any CI run on the SHA counting. Change it with the
+release flow (`docs/guides/releasing.md`).
 
 `ciVerdict` takes the newest CI run on the SHA (a `gh run rerun` reopens it, so an in-flight re-run reads as pending,
 not red) and the newest `CI OK` check run. Only `success` is green: GitHub would accept a skipped check, which a
@@ -57,10 +64,6 @@ finished run should never produce.
 
 ## Open points
 
-- **Release bypass on the CI ruleset**: the release flow pushes to `main` too (the release commit, and `latest.json`
-  from `release-pipeline.yml`). If it needs a bypass, the only workable actor is a `DeployKey`, and it covers every
-  deploy key on the repo. Owned by the release-flow change in #475; `main-ci-required.json` has none until that's
-  decided.
 - **Renovate automerge**: Renovate uses GitHub's native auto-merge (`platformAutomerge`). Whether GitHub honors an app's
   bypass for auto-merge is unverified; if Renovate PRs stall on the approval rule, set `platformAutomerge: false` so
   Renovate merges through the API itself.
