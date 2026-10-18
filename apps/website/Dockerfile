@@ -18,6 +18,12 @@ RUN pnpm install --frozen-lockfile --filter "./apps/website"
 # Copy website source
 COPY apps/website/ ./apps/website/
 
+# The live update manifest, over the committed copy dev and the checks build with. It's the
+# `latest.json` of the release GitHub marks "Latest", which only the release pipeline's `publish` job
+# flips, so every deploy serves the current release. A failed fetch fails the build, and the deploy
+# keeps the old site up. See the script's header.
+RUN node apps/website/scripts/fetch-live-manifest.ts
+
 # Changelog and feature status are in repo root, needed at build time by the
 # changelog page and the feature-status page / badge labels respectively
 COPY CHANGELOG.md feature-status.json ./

@@ -20,9 +20,9 @@ Marketing site and blog for Cmdr. Astro + Tailwind v4 (CSS-first config in `src/
 
 ## Deployment
 
-Auto-deploys on push to `main` touching `apps/website/**` (the `deploy-website` job in `ci.yml`, a signed webhook to the
-Hetzner VPS). This is the ONLY deploy path; `release-pipeline.yml` hits the same hook after a desktop release. Steps,
-fallback, and the build-before-`down` order: `docs/guides/deploy-website.md`.
+Auto-deploys on push to `main` touching `apps/website/**` via `ci.yml`'s `deploy-website` job (signed webhook to
+Hetzner), the only path; releases hit it too. Steps: `docs/guides/deploy-website.md`. `public/latest.json` is a frozen
+dev copy (deploys fetch the live one): ❌ never read the current version from it.
 
 ## Analytics (must-knows)
 

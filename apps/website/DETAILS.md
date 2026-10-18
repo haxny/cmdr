@@ -126,6 +126,12 @@ in `public/fonts/`.
   post from the `[download](cmdr:download)` marker. That plugin must run after `rehype-external-links` (so its GitHub
   links don't get `target="_blank"`) and reads `public/latest.json` directly, mirroring `src/lib/release.ts`'s
   GitHub-fallback URL/size logic.
+- **`public/latest.json` is live only in production.** The committed copy is frozen (dev and the check lanes build with
+  it, so they never touch the network for it). The Docker build overwrites it with the live update manifest, the
+  `latest.json` of the GitHub release marked "Latest" (`scripts/fetch-live-manifest.ts`), and a failed fetch fails the
+  build so the deploy keeps the old site. So every deploy serves, and bakes into the download buttons, whatever release
+  is current; the release pipeline commits nothing here. ❌ Never read the current version from the committed copy. Why:
+  `docs/guides/releasing.md` § What a release publishes.
 - **Security headers**: every `nginx.conf` location that serves content includes `nginx-security-headers.conf` (copied
   to `/etc/nginx/snippets/` by the Dockerfile), because nginx drops server-level `add_header`s in any location that sets
   its own. It carries the only copy of the CSP. `connect-src` has to list every origin the site's JS fetches

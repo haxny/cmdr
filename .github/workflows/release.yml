@@ -25,7 +25,7 @@ jobs:
     uses: ./.github/workflows/release-pipeline.yml
     # The union of what the pipeline's jobs need; each job there narrows it to its own.
     permissions:
-      contents: write # create the release, upload assets, push `latest.json` to main
+      contents: write # create the release, upload assets, mark it Latest
       actions: read # `ci-gate` lists CI runs
       security-events: read # `ci-gate` lists open CodeQL alerts
       id-token: write # `attest` requests the Sigstore signing certificate

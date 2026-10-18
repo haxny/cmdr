@@ -25,12 +25,11 @@ permissions:
 
 jobs:
   # Gates everything below. A `v*` tag push runs this whole workflow, and the `publish` job
-  # rewrites `apps/website/public/latest.json` for whatever tag fired it, with no regard for
-  # which version that is. Every user's updater reads that file, so re-pushing an old tag
-  # points the whole install base at an old build. That has happened: retagging `v0.4.0` onto
-  # its rebased commit rebuilt a January release, re-uploaded its assets, and committed a
-  # manifest naming 0.4.0 over the live 0.41.0. Only the `[skip ci]` on that commit kept it off
-  # the website.
+  # makes whatever tag fired it the live update manifest, with no regard for which version
+  # that is. Every user's updater reads that manifest, so re-pushing an old tag points the
+  # whole install base at an old build. That has happened: retagging `v0.4.0` onto its rebased
+  # commit rebuilt a January release, re-uploaded its assets, and published a manifest naming
+  # 0.4.0 over the live 0.41.0, which only a `[skip ci]` kept off the website.
   #
   # It also verifies that the tag itself was signed by a release key trusted in
   # `.github/release-signers`, so every shipped tag carries independently verifiable provenance
@@ -85,13 +84,13 @@ jobs:
           # allow" — it only ever unblocks the one tag written in it.
           REPUBLISH: ${{ vars.RELEASE_REPUBLISH_TAG }}
         run: |
+          set -euo pipefail
           TAG="${{ github.ref_name }}"
           VERSION="${TAG#v}"
-          # The live manifest is the copy on `main` (what `publish` commits and the website serves).
-          # ❌ Never the checkout's own copy: that's the tagged commit, which always predates its own
-          # `publish` commit, so it names the PREVIOUS release and an old or re-pushed tag sails past.
-          git fetch --quiet --depth=1 origin main
-          CURRENT=$(git show FETCH_HEAD:apps/website/public/latest.json | jq -r .version)
+          # The live manifest is the `latest.json` of the release GitHub marks "Latest": `publish`
+          # flips that mark once the manifest is up, and the website serves that file. ❌ Never the
+          # checkout's `apps/website/public/latest.json`: that's a frozen copy for dev builds.
+          CURRENT=$(curl -fsSL --retry 3 "https://github.com/$GITHUB_REPOSITORY/releases/latest/download/latest.json" | jq -er .version)
 
           if [ "$REPUBLISH" = "$TAG" ]; then
             echo "::warning::RELEASE_REPUBLISH_TAG names $TAG, so publishing $VERSION over $CURRENT is deliberate. Clear that variable once this run finishes."
@@ -627,9 +626,11 @@ jobs:
           FOUND=$(find_release)
           if [ "$MODE" = ci ] && [ -z "$FOUND" ]; then
             # The three arch jobs race to create it; a loser's POST fails, and the list then
-            # shows the winner's release.
+            # shows the winner's release. Not "Latest" yet: that mark is what the website
+            # serves `latest.json` from, so `publish` sets it once the manifest is up.
             gh api -X POST "repos/$GITHUB_REPOSITORY/releases" -f tag_name="$TAG" \
-              -f name="Cmdr $TAG" -f body='See CHANGELOG.md for details.' -F draft=false --silent \
+              -f name="Cmdr $TAG" -f body='See CHANGELOG.md for details.' -F draft=false \
+              -f make_latest=false --silent \
               || echo "Couldn't create the release; another arch job may have. Looking again."
             FOUND=$(find_release)
           fi
@@ -965,7 +966,7 @@ jobs:
         (needs.guard.outputs.update-signing == 'ci' && needs.sign.result == 'success'))
     runs-on: ubuntu-latest
     permissions:
-      contents: write # publish the draft, upload `latest.json` and checksums, push `latest.json` to main
+      contents: write # publish the draft, upload `latest.json` and checksums, mark the release Latest
 
     steps:
       - name: Checkout code
@@ -1026,13 +1027,13 @@ jobs:
 
       # `local` mode's draft goes public here, after the steps above proved all three signatures
       # are on it and before anything reads the release by tag (the tags API can't see a draft).
-      # `--latest` is safe because the guard proved this is the newest version. Idempotent on a
-      # re-run.
+      # Not "Latest" yet: the last step here sets that, once `latest.json` is on the release.
+      # Idempotent on a re-run.
       - name: Publish the draft release
         if: github.event_name == 'workflow_dispatch'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release edit "${{ github.ref_name }}" --draft=false --latest
+        run: gh release edit "${{ github.ref_name }}" --draft=false --latest=false
 
       - name: Generate latest.json
         env:
@@ -1136,21 +1137,15 @@ jobs:
           TAG="${{ github.ref_name }}"
           gh release edit "$TAG" --notes-file /tmp/notes.txt
 
-      - name: Commit latest.json to main
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          # Fetch and checkout main branch
-          git fetch origin main
-          git checkout main
-
-          # Copy the generated file and commit
-          cp /tmp/latest.json apps/website/public/latest.json
-          git add apps/website/public/latest.json
-          git commit -m "chore(release): update latest.json for ${{ github.ref_name }} [skip ci]"
-          git pull --rebase origin main
-          git push origin main
+      # The switch that ships it. The website serves the `latest.json` of the release marked
+      # "Latest" (`apps/website/scripts/fetch-live-manifest.ts`, run by each deploy), and the guard
+      # reads the same file, so this mark is the one pointer to the live release: nothing is
+      # committed to `main`, which only takes commits CI passed. Safe because the guard proved
+      # this is the newest version (or the deliberate rollback `RELEASE_REPUBLISH_TAG` names).
+      - name: Mark the release Latest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release edit "${{ github.ref_name }}" --latest
 
       - name: Trigger website deploy
         run: |

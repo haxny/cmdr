@@ -9,7 +9,8 @@ The website (getcmdr.com) is automatically deployed when changes are pushed to t
 3. If all checks pass, the `deploy-website` job sends a webhook to the server
 4. The server verifies the signature and runs the deploy script:
    - Pulls the latest code
-   - Rebuilds the Docker image
+   - Rebuilds the Docker image, which fetches the live update manifest (`latest.json` of the GitHub release marked
+     "Latest") into the site; a failed fetch fails the build and the old site stays up
    - Restarts the container
 
 ## Server setup (one-time)
