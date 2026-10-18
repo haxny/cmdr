@@ -285,7 +285,7 @@ looks up that SHA's check runs (`checks: read`); a completed, successful `CI OK`
 output, every lane output reads `false`, and `hygiene` skips too. `CI OK` then reports green on the push in about a
 minute, and `deploy-website` runs off the raw `website-changed` filter. A commit that reaches `main` any other way (a
 Renovate merge GitHub rebases into a new SHA, an admin push) has no green `CI OK` and runs in full; so does a failed
-lookup.
+lookup. (Verified on the first real land, run 39137865939, 2026-10-18: every lane skipped.)
 
 - **Dispatches always run in full**, so the release gate's `run_all` run (`scripts/release-ci-gate.sh`) is unaffected:
   the lookup is push-only.
