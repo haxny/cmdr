@@ -181,7 +181,8 @@ BRANCH=$(git branch --show-current)
 SUBJECT=$(git log -1 --format=%s)
 if [[ "$BRANCH" == "$RELEASE_BRANCH" && "$SUBJECT" == "$RELEASE_SUBJECT" ]]; then
   echo "Resuming v$VERSION: the release commit is on $RELEASE_BRANCH; landing it."
-elif [[ "$BRANCH" == main && "$SUBJECT" == "$RELEASE_SUBJECT" ]]; then
+elif [[ "$BRANCH" == main && ("$SUBJECT" == "$RELEASE_SUBJECT" ||
+  "$(git log -1 --format=%s HEAD^ 2>/dev/null)" == "$RELEASE_SUBJECT") ]]; then
   echo "Resuming v$VERSION: the release commit is on main already; tagging it."
 else
   prepare_release_commit
@@ -192,17 +193,21 @@ if [[ "$(git branch --show-current)" == "$RELEASE_BRANCH" ]]; then
   # sync local `main`. `-rebase`: if `main` moved meanwhile, land it on top; the gate below then
   # wants a full run on the rebased release commit itself. A red run stops here: re-run its failed
   # jobs (or fix the commit), then re-run this script.
+  # What lands is this branch's tip, which may sit a pre-push formatting commit past the release
+  # commit (`land` pushes that fix along); it's what gets tagged.
   pnpm land -rebase
+  LANDED=$(git rev-parse HEAD)
   git switch main
-  if [[ "$(git log -1 --format=%s)" != "$RELEASE_SUBJECT" ]]; then
-    echo "Error: main isn't at the landed release commit. Sync it (git pull --ff-only origin main), then re-run."
+  if [[ "$(git rev-parse HEAD)" != "$LANDED" ]]; then
+    echo "Error: main isn't at the landed commit ${LANDED:0:9}. Sync it (git pull --ff-only origin main), then re-run."
     exit 1
   fi
   git branch -d "$RELEASE_BRANCH"
 fi
 
 # Whatever shipped from must have a green full run: the release commit's parent (the run above),
-# or the release commit itself when `land` rebased it. A no-op in the usual case.
+# or the tagged commit itself when `land` rebased it or added a formatting commit. A no-op in the
+# usual case.
 ./scripts/release-ci-gate.sh
 
 # A signed annotated tag proves the release trigger came from the trusted key whose public
