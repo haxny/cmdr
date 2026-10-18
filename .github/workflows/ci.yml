@@ -40,18 +40,51 @@ jobs:
     # that can hang is supposed to notice and say so (the E2E lane's own circuit breaker is
     # `apps/desktop/test/e2e-playwright/app-death.ts`). Raise a cap when the run grows into it.
     timeout-minutes: 5
+    # A job-level block replaces the workflow-level one, so it restates the reads it needs.
+    permissions:
+      contents: read # check out the code
+      checks: read # look up this commit's `CI OK` from its PR run
+    # A landed commit already passed every lane on its PR (`pnpm land` fast-forwards, so the SHA
+    # is the same), so a `main` push that finds a green `CI OK` on its SHA sets `verified` and
+    # every lane output reads `false`: the lanes skip, `CI OK` reports green, and the post-land
+    # jobs still run off the raw `*-changed` filter. `ci-coverage` keeps every lane on this gate.
     outputs:
-      rust: ${{ steps.filter.outputs.rust }}
-      svelte: ${{ steps.filter.outputs.svelte }}
-      desktop: ${{ steps.filter.outputs.desktop }}
-      website: ${{ steps.filter.outputs.website }}
-      api-server: ${{ steps.filter.outputs.api-server }}
-      dashboard: ${{ steps.filter.outputs.dashboard }}
-      scripts: ${{ steps.filter.outputs.scripts }}
+      verified: ${{ steps.verified.outputs.verified }}
+      rust: ${{ steps.verified.outputs.verified != 'true' && steps.filter.outputs.rust || 'false' }}
+      svelte: ${{ steps.verified.outputs.verified != 'true' && steps.filter.outputs.svelte || 'false' }}
+      desktop: ${{ steps.verified.outputs.verified != 'true' && steps.filter.outputs.desktop || 'false' }}
+      website: ${{ steps.verified.outputs.verified != 'true' && steps.filter.outputs.website || 'false' }}
+      api-server: ${{ steps.verified.outputs.verified != 'true' && steps.filter.outputs.api-server || 'false' }}
+      dashboard: ${{ steps.verified.outputs.verified != 'true' && steps.filter.outputs.dashboard || 'false' }}
+      scripts: ${{ steps.verified.outputs.verified != 'true' && steps.filter.outputs.scripts || 'false' }}
+      website-changed: ${{ steps.filter.outputs.website }}
       playwright-image: ${{ steps.playwright-image.outputs.image }}
     steps:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      # Push events only: a dispatch (the release gate's `run_all`) always runs in full. Only a
+      # completed, successful `CI OK` from GitHub Actions counts; this run's own is still pending.
+      # An API hiccup falls back to a full run, never to a skip.
+      - name: Look for a green CI OK on this commit
+        id: verified
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: |
+          if ! count=$(gh api "repos/$REPO/commits/$SHA/check-runs?check_name=CI%20OK&filter=all" \
+            --jq '[.check_runs[] | select(.app.slug == "github-actions" and .conclusion == "success")] | length'); then
+            echo "::warning::Couldn't look up CI OK for $SHA; running every lane."
+            count=0
+          fi
+          if [[ "$count" -gt 0 ]]; then
+            echo "verified=true" >>"$GITHUB_OUTPUT"
+            echo "$SHA already has a green CI OK (its PR run), so the lanes skip."
+          else
+            echo "No green CI OK on $SHA yet; running the lanes."
+          fi
 
       # Filter design rules (the `ci-coverage` check validates the non-glob paths exist):
       # - A filter must cover every path its job's checks read, not just the obvious app dir.
@@ -945,7 +978,7 @@ jobs:
         run: ./scripts/check/check --check dashboard-build --ci
 
   # ===========================================
-  # Repo hygiene (always runs, no change gate)
+  # Repo hygiene (no path gate; skips only on an already-verified `main` push)
   # ===========================================
   # Catches what per-app filters can't: oxfmt formats the whole monorepo (docs,
   # configs, workflows), so a docs-only commit must still run it — otherwise
@@ -956,6 +989,9 @@ jobs:
     name: Repo hygiene
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # Every run but an already-verified `main` push (see `changes`).
+    needs: changes
+    if: needs.changes.outputs.verified != 'true'
 
     steps:
       - name: Checkout code
@@ -1123,8 +1159,14 @@ jobs:
     name: Deploy website
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: website
-    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    # Deploys when the website lane passed in this run, or when it skipped because the landed
+    # commit was already verified on its PR and the push touched the website.
+    needs: [changes, website]
+    if: >-
+      github.ref == 'refs/heads/main' && !cancelled() && (github.event_name == 'push' || github.event_name ==
+      'workflow_dispatch') && needs.changes.result == 'success' && (needs.website.result == 'success' ||
+      (needs.website.result == 'skipped' && needs.changes.outputs.verified == 'true' &&
+      needs.changes.outputs.website-changed == 'true'))
 
     steps:
       - name: Trigger deploy webhook

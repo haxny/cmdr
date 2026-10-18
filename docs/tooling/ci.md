@@ -7,7 +7,7 @@ How the GitHub workflows fit together, and the invariants that keep them honest.
 
 | Workflow                | Trigger                                 | What it does                                                                                         |
 | ----------------------- | --------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `ci.yml`                | PRs, pushes to main, manual             | Main suite. Change detection gates the per-app jobs; `hygiene` always runs; deploys website on green |
+| `ci.yml`                | PRs, pushes to main, manual             | Main suite. Change detection gates the per-app jobs; `hygiene` runs unless verified; deploys website |
 | `slow-checks.yml`       | Every 6 days (3 AM UTC), manual         | osv-scanner, cargo-deny/udeps, govulncheck, type-aware ESLint, website Docker build, 30-min SMB soak |
 | `advisories.yml`        | Daily (4:17 AM UTC), manual             | osv-scanner (every lockfile) and cargo-deny (no compile): new advisories surface in a day            |
 | `deploy-api-server.yml` | Push to main touching `apps/api-server` | Deploys the Cloudflare Worker.                                                                       |
@@ -62,7 +62,7 @@ platform-gated `#[tauri::command]`s mean a Linux runner regenerates a different 
 report "stale" there. It stays a local macOS pre-commit check. The Playwright E2E suite is similar (needs a macOS window
 server).
 
-`ci-coverage` (in the always-on `hygiene` job and the `--fast` lane) enforces:
+`ci-coverage` (in the `hygiene` job and the `--fast` lane) enforces:
 
 1. Every `--check <name>` in any workflow resolves to a registry ID or nickname.
 2. Every registry check is referenced by some workflow, or carries a `NotInCI` reason on its `CheckDefinition` (see
@@ -82,7 +82,8 @@ with a reason.** When you rename one, CI fails until every workflow catches up. 
 
 ## The hygiene job
 
-Always runs (no change gate). Holds the checks whose inputs no per-app filter can cover:
+Runs on every PR and unverified push (no path gate; § Landing doesn't re-run the suite). Holds the checks whose inputs
+no per-app filter can cover:
 
 - `oxfmt` formats the whole monorepo (docs, configs, workflows). Before the hygiene job, a docs-only commit ran zero CI,
   so unformatted markdown could land on main and fail the next unrelated PR's CI. Locally, the git hooks apply all three
@@ -262,17 +263,33 @@ It must report on EVERY run, because GitHub counts a skipped required check as p
 - The `pull_request` trigger takes no `paths` / `paths-ignore`: a docs-only PR still runs `changes`, `hygiene`, and the
   gate. Lanes gate on the `changes` filter instead.
 
-`ci-coverage` rule 5 (`scripts/check/checks/ci-ok-gate.go`) enforces all three; a job that genuinely shouldn't gate goes
-in its `ciOKGateExempt` map with a reason.
+`ci-coverage` rule 5 (`scripts/check/checks/ci-ok-gate.go`) enforces all three, plus the verified-push skip (§ Landing
+doesn't re-run the suite); a job that genuinely shouldn't gate goes in its `ciOKGateExempt` map with a reason.
 
 ## Triggers and concurrency
 
 Feature branches run CI through their PR (the land script opens it on the first push), as `pull_request`; `push` covers
-only `main`, for the post-land deploy and the release gates. So a branch push runs CI once, and landing runs it again on
-`main`. On a PR, `dorny/paths-filter` lists the PR's files through the API (the whole branch delta against the base, no
-history needed; verified in run 38431502003, 2026-10-13: "Fetching list of changed files for PR#402 from GitHub API").
+only `main`, for the post-land deploy and the release gates. So a branch push runs CI once. On a PR,
+`dorny/paths-filter` lists the PR's files through the API (the whole branch delta against the base, no history needed;
+verified in run 38431502003, 2026-10-13: "Fetching list of changed files for PR#402 from GitHub API").
 
 `ci.yml` and `codeql.yml` share one `concurrency` shape: a PR's new push cancels its older run, while `main` pushes and
 dispatches each get their own group (the run ID). A shared group with `cancel-in-progress: false` still isn't safe for
 `main`: GitHub cancels a QUEUED run when a newer one joins the group, which would drop a deploy or leave a release
 commit without its run. `gradle-wrapper.yml` runs on PRs only when they touch the wrapper.
+
+### Landing doesn't re-run the suite
+
+`pnpm land` fast-forwards `main`, so the landed SHA is the one whose PR run already went green. On a `push`, `changes`
+looks up that SHA's check runs (`checks: read`); a completed, successful `CI OK` from GitHub Actions sets its `verified`
+output, every lane output reads `false`, and `hygiene` skips too. `CI OK` then reports green on the push in about a
+minute, and `deploy-website` runs off the raw `website-changed` filter. A commit that reaches `main` any other way (a
+Renovate merge GitHub rebases into a new SHA, an admin push) has no green `CI OK` and runs in full; so does a failed
+lookup.
+
+- **Dispatches always run in full**, so the release gate's `run_all` run (`scripts/release-ci-gate.sh`) is unaffected:
+  the lookup is push-only.
+- **Trust**: it trusts any `CI OK` from GitHub Actions on the SHA, which is exactly what ruleset B trusts when it lets
+  the push land.
+- `ci-coverage` rule 5 keeps it whole: every lane's `if:` reads `needs.changes.outputs`, and every filter-derived
+  `changes` output is gated on `steps.verified` (outputs named `*-changed` are the raw filter, for deploys).

@@ -59,6 +59,8 @@ func validateCIOKGate(ciYml string) []string {
 		}
 	}
 
+	violations = append(violations, validateVerifiedPushSkipsLanes(jobs, jobNeeds(gate))...)
+
 	if cond := jobScalar(gate, "if"); cond != "always()" && cond != "${{ always() }}" {
 		violations = append(violations, fmt.Sprintf(
 			"ci.yml: `%s` must run with `if: always()` (has %q); a skipped required check counts as passing",
@@ -70,6 +72,67 @@ func validateCIOKGate(ciYml string) []string {
 			key))
 	}
 	return violations
+}
+
+// ciOKGateNonLanes are the gated jobs that aren't check lanes: they run on every push,
+// verified or not.
+var ciOKGateNonLanes = map[string]bool{"changes": true, "full-run": true}
+
+// validateVerifiedPushSkipsLanes keeps a land from re-running the suite. A `main` push
+// whose SHA already has a green `CI OK` (its PR run; landing is a fast-forward) sets
+// `changes`'s `verified` output, and every lane must skip on it:
+//   - each lane's `if:` reads `needs.changes.outputs`, and
+//   - each `changes` output taken from the paths filter is gated on `steps.verified`.
+//     Outputs ending in `-changed` are the raw filter, for the post-land deploys.
+func validateVerifiedPushSkipsLanes(jobs map[string][]string, gateNeeds []string) []string {
+	var violations []string
+	for _, id := range gateNeeds {
+		if ciOKGateNonLanes[id] {
+			continue
+		}
+		if !strings.Contains(jobScalar(jobs[id], "if"), "needs.changes.outputs.") {
+			violations = append(violations, fmt.Sprintf(
+				"ci.yml: lane `%s` has no `if:` on `needs.changes.outputs`, so it re-runs on a `main` push whose commit already passed CI OK on its PR",
+				id))
+		}
+	}
+	outputs := jobOutputs(jobs["changes"])
+	var keys []string
+	for k := range outputs {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		v := outputs[k]
+		if strings.Contains(v, "steps.filter.outputs.") && !strings.HasSuffix(k, "-changed") && !strings.Contains(v, "steps.verified.outputs.") {
+			violations = append(violations, fmt.Sprintf(
+				"ci.yml: `changes` output `%s` isn't gated on `steps.verified`, so its lane re-runs on an already-verified `main` push; name it `%s-changed` if it's the raw filter",
+				k, k))
+		}
+	}
+	return violations
+}
+
+// jobOutputs returns a job's `outputs:` map, key to raw value.
+func jobOutputs(body []string) map[string]string {
+	out := map[string]string{}
+	in := false
+	for _, line := range body {
+		if strings.HasPrefix(line, "    outputs:") {
+			in = true
+			continue
+		}
+		if !in {
+			continue
+		}
+		if !strings.HasPrefix(line, "      ") {
+			break
+		}
+		if k, v, ok := strings.Cut(strings.TrimSpace(line), ":"); ok && !strings.HasPrefix(k, "#") {
+			out[k] = strings.TrimSpace(v)
+		}
+	}
+	return out
 }
 
 var (

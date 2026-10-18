@@ -18,6 +18,10 @@ jobs:
   changes:
     name: Detect changes
     runs-on: ubuntu-latest
+    outputs:
+      verified: ${{ steps.verified.outputs.verified }}
+      lint: ${{ steps.verified.outputs.verified != 'true' && steps.filter.outputs.lint || 'false' }}
+      lint-changed: ${{ steps.filter.outputs.lint }}
 
   lint:
     name: Lint
@@ -76,6 +80,26 @@ func TestCIOKGateFlagsAStaleExemption(t *testing.T) {
 	got := validateCIOKGate(yml)
 	if len(got) != 1 || !strings.Contains(got[0], "deploy-website") {
 		t.Errorf("want one violation naming the stale exemption, got:\n%s", strings.Join(got, "\n"))
+	}
+}
+
+// A landed SHA already carries a green `CI OK` from its PR, so the `main` push skips every
+// lane. A lane that doesn't gate on `changes` would re-run the suite on every land.
+func TestCIOKGateFlagsALaneThatIgnoresChangeDetection(t *testing.T) {
+	yml := strings.Replace(ciOKGateFixture, "    if: needs.changes.outputs.lint == 'true'\n", "", 1)
+	got := validateCIOKGate(yml)
+	if len(got) != 1 || !strings.Contains(got[0], "`lint`") {
+		t.Errorf("want one violation naming `lint`, got:\n%s", strings.Join(got, "\n"))
+	}
+}
+
+func TestCIOKGateFlagsAFilterOutputNotGatedOnVerified(t *testing.T) {
+	yml := strings.Replace(ciOKGateFixture,
+		"lint: ${{ steps.verified.outputs.verified != 'true' && steps.filter.outputs.lint || 'false' }}",
+		"lint: ${{ steps.filter.outputs.lint }}", 1)
+	got := validateCIOKGate(yml)
+	if len(got) != 1 || !strings.Contains(got[0], "`lint`") {
+		t.Errorf("want one violation naming output `lint`, got:\n%s", strings.Join(got, "\n"))
 	}
 }
 
