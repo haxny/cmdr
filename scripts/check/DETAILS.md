@@ -52,7 +52,8 @@ naming review (§ "The unrecognized-name log").
   of an excerpt (details below); `--ci` implies it
 - **`--include-slow`**: Include slow checks (excluded by default)
 - **`--only-slow`**: Run only slow checks
-- **`--fast`**: Run only the curated fast pre-commit check set
+- **`--fast`**: Run only the curated fast pre-commit check set. Errors out with `--include-slow` / `--only-slow`; named
+  checks bypass both
 - **`--fresh`**: Bypass the input-fingerprint cache: run everything selected, then refresh it
 - **`--exact`**: Run only the selected checks, without the whole-repo doc lanes a scoped run adds (§ "Scoped runs")
 - **`--fail-fast`**: Stop on first failure
@@ -226,6 +227,7 @@ pnpm check [flags]
   the reader doesn't revert a good change (§ "The inconsistent-`target/` notice")
 - **`rcgu_prune.go`**: Deletes superseded `.rcgu.o` generations from `target/debug/deps` before the cargo lanes (§ "The
   stale-debug-object prune")
+- **`ensure_e2e_binary.go`**: `--ensure-e2e-binary`, the E2E binary the i18n screenshots run against
 - **`colors.go`**: ANSI color constants
 - **`utils.go`**: `findRootDir()` (walks up until `apps/desktop/src-tauri/Cargo.toml` is found)
 - **`stack_orchestrator.go`**: Runner-level Docker fixture lifecycle: acquires a machine-wide lease per stack (via
