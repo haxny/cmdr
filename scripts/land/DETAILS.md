@@ -14,7 +14,9 @@ GitHub by name and leaves every other ruleset alone.
 - `main-ci-required.json` ("main: CI OK required"): the `CI OK` check (job `ci-ok` in `.github/workflows/ci.yml`),
   pinned to the GitHub Actions app (`integration_id` 15368) so no other app can post a passing `CI OK`. `strict` is on
   for Scorecard's "up to date before merge"; it only affects PR merges, since a direct push to `main` must fast-forward
-  and so always contains `main`. **No bypass actors**: nobody lands red.
+  and so always contains `main`. **No bypass actors**: nobody lands red. Releases need none either: the pipeline pushes
+  nothing to `main`, and `release.sh` lands its commit through `pnpm land` (`docs/guides/releasing.md` § What a release
+  publishes).
 - Two older ones stay as they are: "main: no force-push or deletion" and "Release tags (v*)".
 
 Turning off the two `main` rulesets restores direct pushes, and `land` keeps working without them (it pushes a green SHA
