@@ -113,6 +113,9 @@ fn a_downgrade_or_no_change_has_no_window() {
 fn allowed_advisory_links_pass() {
     for url in [
         "https://github.com/vdavid/cmdr/security/advisories/GHSA-aaaa-bbbb-cccc",
+        // The org name the repo may move to (#476). Builds shipped before a move vet links with
+        // their own allowlist, so this one has to be in a release before any advisory uses it.
+        "https://github.com/getcmdr/cmdr/security/advisories/GHSA-aaaa-bbbb-cccc",
         "https://getcmdr.com/changelog",
         "https://getcmdr.com/changelog/",
         "https://getcmdr.com/changelog#v0.54.0",
@@ -140,6 +143,9 @@ fn lookalike_and_trick_links_are_refused() {
         "https://github.com/vdavid/cmdr/issues/1",
         "https://github.com/vdavid/cmdr/security/advisories/",
         "https://github.com/evil/cmdr/security/advisories/GHSA-x",
+        "https://github.com/getcmdr/cmdr/security/advisories/",
+        "https://github.com/getcmdr/evil/security/advisories/GHSA-x",
+        "https://github.com/getcmdr/cmdr/security/advisories/../../../../evil/repo",
         "https://getcmdr.com/changelog-but-not-really",
         "https://getcmdr.com/",
         // A path that only reads right before normalization.

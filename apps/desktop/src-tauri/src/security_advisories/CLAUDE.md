@@ -19,7 +19,7 @@ the What's new popup reads it everywhere; the macOS updater reads a STAGED bundl
 - **Change the schema or the allowlist in three places at once**: `mod.rs`, the Go check
   (`scripts/check/checks/desktop-security-advisories.go`), and the release guide's advisory step. The canary test only
   vets the committed file against the Rust side.
-- **The allowlist is exactly two `https` places**, and the URL must already be canonical (no `..`, no default port, no
+- **The allowlist is exactly two `https` places** (GitHub advisories under either repo name, and the changelog), and the URL must already be canonical (no `..`, no default port, no
   userinfo). ❌ Don't widen it for convenience: a notice is something people act on.
 - **Cumulative, never pruned.** An install jumping from 0.50 to 0.55 learns about a fix shipped in 0.52 only because
   0.55's bundle still carries that entry.

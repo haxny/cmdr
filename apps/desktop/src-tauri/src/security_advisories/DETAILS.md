@@ -61,8 +61,14 @@ current). Both are cumulative over skipped releases.
 
 `is_allowed_advisory_url` admits exactly:
 
-- `https://github.com/vdavid/cmdr/security/advisories/<something>` (an advisory, never the bare index), and
+- `https://github.com/vdavid/cmdr/security/advisories/<something>` (an advisory, never the bare index),
+- the same under `https://github.com/getcmdr/cmdr/`, and
 - `https://getcmdr.com/changelog`, or anything below it, fragment included.
+
+**Decision**: both repo names pass. **Why**: the repo may move to the `getcmdr` org (#476), and the update toast vets a
+staged list's links with the RUNNING app's allowlist, so a build that only knows `vdavid/cmdr` drops a `getcmdr/cmdr`
+link. The org name has to ship in a release before any advisory uses it, and after a move, keep writing `vdavid/cmdr`
+links (they redirect) until the pre-move versions age out.
 
 It refuses any other scheme, userinfo (`https://github.com@evil.example/…`, whose host is `evil.example`), an explicit
 port, a lookalike host, and any URL that isn't already in the `url` crate's canonical form, which is what catches `..`

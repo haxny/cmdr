@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -131,7 +132,7 @@ func securityAdvisoryEntryProblems(entry securityAdvisoryEntry, label string, ap
 		problems = append(problems, fmt.Sprintf("%s: `severity` %q isn't one of low, medium, high, critical", label, severity))
 	}
 	if link := advisoryField(entry.URL); link != "" && !isAllowedAdvisoryURL(link) {
-		problems = append(problems, fmt.Sprintf("%s: `url` %q isn't an allowed advisory link (https://github.com/vdavid/cmdr/security/advisories/<id> or https://getcmdr.com/changelog…)", label, link))
+		problems = append(problems, fmt.Sprintf("%s: `url` %q isn't an allowed advisory link (https://github.com/vdavid/cmdr/security/advisories/<id>, the same under getcmdr/cmdr, or https://getcmdr.com/changelog…)", label, link))
 	}
 	return problems
 }
@@ -142,6 +143,14 @@ func advisoryField(value *string) string {
 		return ""
 	}
 	return *value
+}
+
+// advisoryRepoPrefixes are the GitHub advisory paths a link may sit under: the
+// repo today and the org name it may move to (#476), mirroring the app's
+// `ALLOWED_ADVISORY_PLACES`.
+var advisoryRepoPrefixes = []string{
+	"/vdavid/cmdr/security/advisories/",
+	"/getcmdr/cmdr/security/advisories/",
 }
 
 // isAllowedAdvisoryURL mirrors the app's `is_allowed_advisory_url`: exactly
@@ -162,8 +171,9 @@ func isAllowedAdvisoryURL(raw string) bool {
 	}
 	switch u.Host {
 	case "github.com":
-		const prefix = "/vdavid/cmdr/security/advisories/"
-		return strings.HasPrefix(u.Path, prefix) && len(u.Path) > len(prefix)
+		return slices.ContainsFunc(advisoryRepoPrefixes, func(prefix string) bool {
+			return strings.HasPrefix(u.Path, prefix) && len(u.Path) > len(prefix)
+		})
 	case "getcmdr.com":
 		return u.Path == "/changelog" || strings.HasPrefix(u.Path, "/changelog/")
 	}

@@ -121,8 +121,13 @@ pub fn fixed_between<'a>(advisories: &'a [Advisory], after: &Version, upto: &Ver
 
 /// Where a notice may link: the host, and the path the link must sit under. A GitHub advisory
 /// needs an id after its prefix; the changelog may be the page itself or anything below it.
-const ALLOWED_ADVISORY_PLACES: [(&str, &str, AllowedPath); 2] = [
+///
+/// Both repo names pass: `vdavid/cmdr` today, `getcmdr/cmdr` if the repo moves to the org (#476).
+/// The update toast vets links with the RUNNING app's list, so a name has to ship here before any
+/// advisory uses it.
+const ALLOWED_ADVISORY_PLACES: [(&str, &str, AllowedPath); 3] = [
     ("github.com", "/vdavid/cmdr/security/advisories/", AllowedPath::Below),
+    ("github.com", "/getcmdr/cmdr/security/advisories/", AllowedPath::Below),
     ("getcmdr.com", "/changelog", AllowedPath::ItselfOrBelow),
 ];
 
@@ -146,7 +151,7 @@ impl AllowedPath {
 }
 
 /// Whether `raw` is a link a security notice may open: exactly `https`, no userinfo or port, and
-/// under one of two places, Cmdr's GitHub security advisories or the getcmdr.com changelog. The
+/// under one of the allowed places, Cmdr's GitHub security advisories or the getcmdr.com changelog. The
 /// URL must already be in canonical form, so nothing that only reads right before normalization
 /// (a `..` segment, mixed case, a backslash) passes. The `desktop-security-advisories` check holds
 /// the committed list to the same rule.
