@@ -425,7 +425,8 @@ fn smoke_real_changelog_parses() {
             assert!(DISPLAYABLE_SECTIONS.contains(&section.title.as_str()));
             for entry in &section.entries_html {
                 assert!(
-                    !entry.contains("github.com/vdavid/cmdr/commit/"),
+                    // Owner-agnostic, so it keeps guarding if the repo moves to `getcmdr`.
+                    !entry.contains("/cmdr/commit/"),
                     "commit link leaked into entry: {entry:?}"
                 );
                 assert_eq!(

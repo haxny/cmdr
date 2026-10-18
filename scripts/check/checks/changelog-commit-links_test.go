@@ -235,23 +235,29 @@ func TestRunChangelogCommitLinks_RejectsLinkedForm(t *testing.T) {
 	// The changelog carries bare hashes; the renderers (website, in-app What's new)
 	// linkify them. A hand-written markdown link is the deprecated form and must fail
 	// loudly rather than bloat the file again.
-	tmp := t.TempDir()
-	fullSHA := initTempGitRepo(t, tmp)
-	sha := fullSHA[:9]
+	// Either repo owner: the repo may move to the `getcmdr` org (#476), and the guard
+	// must not go quiet when commit URLs start naming it.
+	for _, owner := range []string{"vdavid", "getcmdr"} {
+		t.Run(owner, func(t *testing.T) {
+			tmp := t.TempDir()
+			fullSHA := initTempGitRepo(t, tmp)
+			sha := fullSHA[:9]
 
-	content := "# Changelog\n\n- Linked ref ([" + sha + "](https://github.com/vdavid/cmdr/commit/" + sha + "))\n"
-	writeChangelog(t, tmp, content)
+			content := "# Changelog\n\n- Linked ref ([" + sha + "](https://github.com/" + owner + "/cmdr/commit/" + sha + "))\n"
+			writeChangelog(t, tmp, content)
 
-	ctx := &CheckContext{RootDir: tmp}
-	_, err := RunChangelogCommitLinks(ctx)
-	if err == nil {
-		t.Fatal("expected failure for a linked commit ref, got success")
-	}
-	if !strings.Contains(err.Error(), "bare hash") {
-		t.Errorf("expected the error to point at the bare-hash form, got: %v", err)
-	}
-	if !strings.Contains(err.Error(), "CHANGELOG.md:3") {
-		t.Errorf("expected error to cite line 3, got: %v", err)
+			ctx := &CheckContext{RootDir: tmp}
+			_, err := RunChangelogCommitLinks(ctx)
+			if err == nil {
+				t.Fatal("expected failure for a linked commit ref, got success")
+			}
+			if !strings.Contains(err.Error(), "bare hash") {
+				t.Errorf("expected the error to point at the bare-hash form, got: %v", err)
+			}
+			if !strings.Contains(err.Error(), "CHANGELOG.md:3") {
+				t.Errorf("expected error to cite line 3, got: %v", err)
+			}
+		})
 	}
 }
 
