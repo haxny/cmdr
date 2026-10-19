@@ -5,7 +5,7 @@
 
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, AtomicU8};
+use std::sync::atomic::AtomicBool;
 
 use cmdr_fs::volume::host::VolumeHost;
 use cmdr_fs::volume::host::listings::RecordingListings;
@@ -41,7 +41,7 @@ pub fn detached_volume() -> AdbVolume {
             serial: FIXTURE_SERIAL.to_string(),
             endpoint: AdbEndpoint::at(std::net::SocketAddr::from(([127, 0, 0, 1], 1))),
             features: DeviceFeatures::all(),
-            state: AtomicU8::new(ConnectionState::Connected as u8),
+            state: cmdr_fs::volume::ConnectionCell::new(ConnectionState::Connected),
             retirement: Retirement::new(),
             unmounted: AtomicBool::new(false),
             reconnect_lock: tokio::sync::Mutex::new(()),

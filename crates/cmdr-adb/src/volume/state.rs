@@ -9,16 +9,24 @@
 //!
 //! ❗ **A retired volume stays silent.** Once a newer instance owns the id, this
 //! one's news would describe a volume that no longer exists under that name.
+//!
+//! ❗ **A failing call marks the device gone only for the generation it started
+//! on.** There is no session here (one socket per operation), so the generation
+//! counts the times a reconnect's hello brought the device BACK
+//! (`cmdr_fs::volume::ConnectionCell::revive`): a late error from an operation that started
+//! before the device came back can't mark it gone again
+//! ([`AdbVolume::note_lost_session`]).
 
 use std::sync::atomic::Ordering;
 
 use cmdr_fs::volume::VolumeError;
 use cmdr_fs::volume::host::events::VolumeConnection;
-use cmdr_fs::volume::{Retirement, Retires};
+use cmdr_fs::volume::{CellState, Retirement, Retires};
 
 use super::{AdbVolume, AdbVolumeInner};
 
-/// How this volume's device stands.
+/// How this volume's device stands, kept in a `ConnectionCell` beside the
+/// generation.
 ///
 /// Two values: there is no credential to ask for on this backend (the device
 /// authorizes the HOST, once, on its own screen), so nothing rests between
@@ -32,9 +40,16 @@ pub enum ConnectionState {
     Disconnected = 1,
 }
 
-impl ConnectionState {
-    fn from_u8(value: u8) -> Self {
-        match value {
+impl CellState for ConnectionState {
+    const LIVE: Self = Self::Connected;
+    const LOST: Self = Self::Disconnected;
+
+    fn to_byte(self) -> u8 {
+        self as u8
+    }
+
+    fn from_byte(byte: u8) -> Self {
+        match byte {
             0 => Self::Connected,
             _ => Self::Disconnected,
         }
@@ -62,7 +77,14 @@ impl Retires for AdbVolumeInner {
 impl AdbVolumeInner {
     /// Where the connection stands right now.
     pub(super) fn connection_state(&self) -> ConnectionState {
-        ConnectionState::from_u8(self.state.load(Ordering::Relaxed))
+        self.state.state()
+    }
+
+    /// How many times a reconnect has brought the device back: what
+    /// `Volume::connection_generation` answers, and what a call reads BEFORE it
+    /// runs to name the generation it ran on (`volume_impl.rs` § noting).
+    pub(super) fn generation(&self) -> u64 {
+        self.state.generation()
     }
 
     /// Records that the device is gone ❗ without reporting it, for the paths
@@ -70,19 +92,25 @@ impl AdbVolumeInner {
     /// `volumes-changed`, and a `disconnected` alongside it would race that into
     /// a banner for a volume no longer in the sidebar.
     pub(super) fn mark_gone_silently(&self) {
-        self.state.store(ConnectionState::Disconnected as u8, Ordering::Relaxed);
+        self.state.set(ConnectionState::Disconnected);
     }
 
-    /// Moves to `next` and reports it, ❗ only if that is a change.
+    /// Moves to `next` and reports it, ❗ only if that is a change. For a
+    /// verdict about the device NOW (a failed hello, the tracker); a failing
+    /// operation goes through [`AdbVolume::note_lost_session`].
     pub(super) fn emit_if_changed(&self, next: ConnectionState) -> bool {
-        let previous = self.state.swap(next as u8, Ordering::Relaxed);
-        if previous == next as u8 {
-            return false;
+        let moved = self.state.set(next);
+        if moved {
+            self.announce(next);
         }
+        moved
+    }
+
+    /// Tells the host about a transition, ❗ unless retired.
+    fn announce(&self, state: ConnectionState) {
         if !self.retirement.is_retired() {
-            self.host.events().connection_changed(&self.volume_id, next.into());
+            self.host.events().connection_changed(&self.volume_id, state.into());
         }
-        true
     }
 
     /// Re-runs the hello, single-flight, and reports the outcome as a
@@ -94,7 +122,11 @@ impl AdbVolumeInner {
         }
         match self.hello().await {
             Ok(()) => {
-                self.emit_if_changed(ConnectionState::Connected);
+                // The next generation only if the device was down: a hello that
+                // finds it already up brought nothing back.
+                if self.state.revive() {
+                    self.announce(ConnectionState::Connected);
+                }
                 Ok(())
             }
             Err(e) => {
@@ -111,13 +143,17 @@ impl AdbVolume {
     ///
     /// Operations ARE the detector on this backend: there is no watcher, so a
     /// device that went away is invisible until something asks it for
-    /// something.
-    pub(super) fn note_lost_session(&self, error: &VolumeError) {
+    /// something. ❗ Only for the generation the operation started on
+    /// (`ran_on`, read before it ran): one that started before a reconnect
+    /// brought the device back is old news, and marking the device gone on it
+    /// would hand every operation since an outage it never had.
+    pub(super) fn note_lost_session(&self, error: &VolumeError, ran_on: u64) {
         if matches!(
             error,
             VolumeError::DeviceDisconnected(_) | VolumeError::ConnectionTimeout(_)
-        ) {
-            self.inner.emit_if_changed(ConnectionState::Disconnected);
+        ) && self.inner.state.lose(ran_on)
+        {
+            self.inner.announce(ConnectionState::Disconnected);
         }
     }
 

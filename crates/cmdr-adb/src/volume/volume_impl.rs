@@ -39,10 +39,17 @@ impl AdbVolume {
     /// ❗ Every delegator below that can reach the wire wraps itself in this:
     /// with no watcher on this backend, a gone device is invisible until an
     /// operation asks it for something, so the operations ARE the detector.
-    async fn noting<T>(&self, work: impl Future<Output = Result<T, VolumeError>> + Send) -> Result<T, VolumeError> {
+    ///
+    /// ❗ The generation is read BEFORE `work` runs, so a failure is pinned to
+    /// the generation the operation started on (`state.rs`).
+    pub(super) async fn noting<T>(
+        &self,
+        work: impl Future<Output = Result<T, VolumeError>> + Send,
+    ) -> Result<T, VolumeError> {
+        let ran_on = self.inner.generation();
         let outcome = work.await;
         if let Err(error) = &outcome {
-            self.note_lost_session(error);
+            self.note_lost_session(error, ran_on);
         }
         outcome
     }
@@ -378,6 +385,13 @@ impl Volume for AdbVolume {
             ConnectionState::Connected => Published::Direct,
             ConnectionState::Disconnected => Published::Disconnected,
         })
+    }
+
+    /// How many times a reconnect's hello brought the device back (`state.rs`).
+    /// There's no session to rebuild (one socket per operation), so this is the
+    /// generation a transfer compares against.
+    fn connection_generation(&self) -> Option<u64> {
+        Some(self.inner.generation())
     }
 
     fn backend_kind(&self) -> cmdr_fs::volume::BackendKind {

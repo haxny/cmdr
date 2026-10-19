@@ -27,13 +27,13 @@
 
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, AtomicU8};
+use std::sync::atomic::AtomicBool;
 use std::time::Duration;
 
 use cmdr_fs::volume::host::VolumeHost;
 use cmdr_fs::volume::host::settings::BackendName;
 use cmdr_fs::volume::remote_paths::RemoteRoot;
-use cmdr_fs::volume::{Retirement, VolumeError, adb_app_root, adb_volume_id};
+use cmdr_fs::volume::{ConnectionCell, Retirement, VolumeError, adb_app_root, adb_volume_id};
 use tokio_util::sync::CancellationToken;
 
 use crate::devices::{AdbDeviceState, list_devices};
@@ -105,8 +105,9 @@ struct AdbVolumeInner {
     /// re-probed at a call site: `adbd` doesn't change under a session.
     features: DeviceFeatures,
     /// The state the host was last told about, so a device that is gone doesn't
-    /// produce one event per failing operation (`state.rs`).
-    state: AtomicU8,
+    /// produce one event per failing operation, packed with the generation a
+    /// call reads to say when it started (`state.rs`).
+    state: ConnectionCell<ConnectionState>,
     /// Whether the registry still serves this volume under its id.
     retirement: Retirement,
     /// Set by `on_unmount`, so a reconnect in flight bails rather than reviving
@@ -241,7 +242,7 @@ pub async fn connect_adb_volume(
         serial: params.serial.clone(),
         endpoint: params.endpoint.clone(),
         features,
-        state: AtomicU8::new(ConnectionState::Connected as u8),
+        state: ConnectionCell::new(ConnectionState::Connected),
         retirement: Retirement::new(),
         unmounted: AtomicBool::new(false),
         reconnect_lock: tokio::sync::Mutex::new(()),
@@ -271,5 +272,7 @@ pub async fn connect_adb_volume(
 
 #[cfg(test)]
 mod conformance_test;
+#[cfg(test)]
+mod reconnect_test;
 #[cfg(test)]
 mod volume_impl_test;
