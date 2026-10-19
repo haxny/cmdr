@@ -304,7 +304,7 @@
   "@viewer.markdown.remoteImages.notice": {
     "description": "Bar above a formatted Markdown document that contains pictures hosted on websites. The viewer doesn't load them by default, for privacy, like an email app holds back remote images. Sits next to the \"Load remote images\" button."
   },
-  "viewer.markdown.remoteImages.load": "Load remote images",
+  "viewer.markdown.remoteImages.load": "Load images from the web",
   "@viewer.markdown.remoteImages.load": {
     "description": "Button in the bar above a formatted Markdown document: loads the document's pictures from the websites they're hosted on, for this window only."
   },
@@ -328,13 +328,13 @@
   "@viewer.markdown.link.folder": {
     "description": "Short notice that pops up briefly when the user clicks a link in a formatted Markdown document that points to a folder rather than a file. The viewer shows files only; the current document stays open."
   },
-  "viewer.markdown.link.blocked": "The viewer doesn’t follow links to absolute paths or other drives.",
+  "viewer.markdown.link.blocked": "The viewer only follows web links and links to files on this drive.",
   "@viewer.markdown.link.blocked": {
     "description": "Short notice that pops up briefly when the user clicks a link in a formatted Markdown document that the viewer won't follow, for safety: a path starting at the drive's root, a file:// address, or another kind of address it doesn't open. Links to web pages, email addresses, and files next to the document do work."
   },
-  "viewer.markdown.link.unreadable": "We couldn’t open the file this link points to.",
+  "viewer.markdown.link.unreadable": "We couldn’t open what this link points to.",
   "@viewer.markdown.link.unreadable": {
-    "description": "Short notice that pops up briefly when the user clicks a link in a formatted Markdown document and the file it points to exists but couldn't be opened, for example because the device it's on stopped responding, or a web link couldn't be handed to the browser. The current document stays open."
+    "description": "Short notice that pops up briefly when the user clicks a link in a formatted Markdown document and its target couldn't be opened: a file that exists but couldn't be read (for example because the device it's on stopped responding), or a web or email link that couldn't be handed to the browser or mail app. Deliberately doesn't name a file, since the target may be a web page. The current document stays open."
   },
   "viewer.toolbar.encoding.placeholder": "Encoding",
   "@viewer.toolbar.encoding.placeholder": {
