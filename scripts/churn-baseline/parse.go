@@ -125,8 +125,10 @@ type RowWrites struct {
 func (r RowWrites) Total() int64 { return r.Added + r.Removed + r.Updated }
 
 var (
-	// `MustScanSubDirs: reconcile complete for <path> (+8 -0 ~0, 0ms)`
-	subtreeRebuild = regexp.MustCompile(`reconcile complete for (.+) \(\+(\d+) -(\d+) ~(\d+), (\d+)ms\)`)
+	// `MustScanSubDirs: reconcile complete for path="<path>" (+8 -0 ~0, 3 unreadable dirs, 0ms, 1ms CPU)`,
+	// the unreadable count and the CPU optional. Older logs print the path bare.
+	subtreeRebuild = regexp.MustCompile(`reconcile complete for (?:path=("(?:[^"\\]|\\.)*")|(.+)) ` +
+		`\(\+(\d+) -(\d+) ~(\d+)(?:, [\d,]+ unreadable dirs?)?, (\d+)ms(?:, [^)]*)?\)`)
 	// `local reconcile: complete for <path>: +8 -0 ~0 (3 dirs re-listed) in 12ms`
 	localRebuild = regexp.MustCompile(`local reconcile: complete for (.+): \+(\d+) -(\d+) ~(\d+) .* in (\d+)ms`)
 )
@@ -142,10 +144,25 @@ type Rebuild struct {
 
 // parseRebuildLine reads a rebuild summary out of a log line.
 func parseRebuildLine(line string) (Rebuild, bool) {
-	m := subtreeRebuild.FindStringSubmatch(line)
-	if m == nil {
-		m = localRebuild.FindStringSubmatch(line)
+	if m := subtreeRebuild.FindStringSubmatch(line); m != nil {
+		path := m[2]
+		if m[1] != "" {
+			// Rust's `{:?}` quoting; Go's unquoting agrees on everything but `\u{…}`.
+			if unquoted, err := strconv.Unquote(m[1]); err == nil {
+				path = unquoted
+			} else {
+				path = m[1][1 : len(m[1])-1]
+			}
+		}
+		return Rebuild{
+			Path:    path,
+			Added:   atoi(m[3]),
+			Removed: atoi(m[4]),
+			Updated: atoi(m[5]),
+			Millis:  atoi(m[6]),
+		}, true
 	}
+	m := localRebuild.FindStringSubmatch(line)
 	if m == nil {
 		return Rebuild{}, false
 	}

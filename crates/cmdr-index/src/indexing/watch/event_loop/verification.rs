@@ -116,7 +116,7 @@ pub(super) async fn run_background_verification(
                 match scanner::scan_subtree(Path::new(dir_path), &space, &scan_writer, &scan_work) {
                     Ok(summary) => {
                         log::debug!(
-                            "Background verification: scanned new dir {dir_path} ({} entries, {}ms)",
+                            "Background verification: scanned new dir path={dir_path:?} ({} entries, {}ms)",
                             summary.total_entries,
                             summary.duration_ms,
                         );

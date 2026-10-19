@@ -28,7 +28,7 @@ fn dirs_that_vanished_mid_walk_are_counted_on_the_summary_line() {
     assert_eq!(level, log::Level::Debug, "a vanishing build dir is not a problem");
     assert_eq!(
         message,
-        "MustScanSubDirs: reconcile complete for /tmp/target (+7 -0 ~0, 143 unreadable dirs, 120ms)"
+        "MustScanSubDirs: reconcile complete for path=\"/tmp/target\" (+7 -0 ~0, 143 unreadable dirs, 120ms)"
     );
 }
 
@@ -54,7 +54,7 @@ fn a_slow_walk_carries_the_unreadable_count_too() {
     assert_eq!(level, log::Level::Warn);
     assert_eq!(
         message,
-        "MustScanSubDirs: reconcile slow for /tmp/deep-tree (+7 -0 ~0, 9 unreadable dirs, 21s)"
+        "MustScanSubDirs: reconcile slow for path=\"/tmp/deep-tree\" (+7 -0 ~0, 9 unreadable dirs, 21s)"
     );
 }
 
@@ -75,7 +75,7 @@ fn a_reconcile_dominated_by_the_writer_wait_says_so_and_stays_quiet() {
     );
     assert_eq!(
         message,
-        "MustScanSubDirs: reconcile waited for /tmp/site-data (+7 -0 ~0, 21s, 19s waiting on the writer)"
+        "MustScanSubDirs: reconcile waited for path=\"/tmp/site-data\" (+7 -0 ~0, 21s, 19s waiting on the writer)"
     );
 }
 
@@ -91,7 +91,7 @@ fn a_slow_walk_that_was_not_waiting_still_warns() {
     assert_eq!(level, log::Level::Warn);
     assert_eq!(
         message,
-        "MustScanSubDirs: reconcile slow for /tmp/deep-tree (+7 -0 ~0, 21s)"
+        "MustScanSubDirs: reconcile slow for path=\"/tmp/deep-tree\" (+7 -0 ~0, 21s)"
     );
 }
 
@@ -109,7 +109,7 @@ fn a_quick_reconcile_stays_out_of_the_way() {
     assert_eq!(level, log::Level::Debug);
     assert_eq!(
         message,
-        "MustScanSubDirs: reconcile complete for /tmp/quick (+7 -0 ~0, 120ms)"
+        "MustScanSubDirs: reconcile complete for path=\"/tmp/quick\" (+7 -0 ~0, 120ms)"
     );
 }
 
@@ -125,7 +125,7 @@ fn the_line_carries_the_walks_cpu() {
     );
     assert_eq!(
         quick,
-        "MustScanSubDirs: reconcile complete for /tmp/quick (+7 -0 ~0, 120ms, 15ms CPU)"
+        "MustScanSubDirs: reconcile complete for path=\"/tmp/quick\" (+7 -0 ~0, 120ms, 15ms CPU)"
     );
 
     let (level, slow) = reconcile_report(
@@ -136,7 +136,7 @@ fn the_line_carries_the_walks_cpu() {
     assert_eq!(level, log::Level::Warn, "the slow verdict stays about wall time");
     assert_eq!(
         slow,
-        "MustScanSubDirs: reconcile slow for /tmp/worktree (+7 -0 ~0, 225s, 4s CPU)"
+        "MustScanSubDirs: reconcile slow for path=\"/tmp/worktree\" (+7 -0 ~0, 225s, 4s CPU)"
     );
 
     let (_, waited) = reconcile_report(
@@ -146,7 +146,7 @@ fn the_line_carries_the_walks_cpu() {
     );
     assert_eq!(
         waited,
-        "MustScanSubDirs: reconcile waited for /tmp/site-data (+7 -0 ~0, 21s, 1s CPU, 19s waiting on the writer)"
+        "MustScanSubDirs: reconcile waited for path=\"/tmp/site-data\" (+7 -0 ~0, 21s, 1s CPU, 19s waiting on the writer)"
     );
 }
 

@@ -513,8 +513,7 @@ async fn verify_and_correct(
             match scanner::scan_subtree(Path::new(new_dir), space, writer, work) {
                 Ok(summary) => {
                     log::debug!(
-                        "Verifier: scanned new dir {} ({} entries, {}ms)",
-                        new_dir,
+                        "Verifier: scanned new dir path={new_dir:?} ({} entries, {}ms)",
                         summary.total_entries,
                         summary.duration_ms,
                     );

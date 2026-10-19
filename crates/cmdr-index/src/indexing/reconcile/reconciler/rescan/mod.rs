@@ -654,6 +654,9 @@ const RECONCILE_SLOW_SECS: u64 = 10;
 /// `cpu` is the walk's own thread CPU, printed beside the wall time because on a
 /// loaded machine the wall time is mostly waiting on the disk. `None` (no
 /// per-thread clock) prints nothing rather than a number that looks measured.
+///
+/// The path is a quoted `path=` field so a report's redactor knows exactly where it
+/// ends; in prose it would take the parenthesized stat with it.
 fn reconcile_report(path: &Path, summary: &ReconcileSummary, cpu: Option<Duration>) -> (log::Level, String) {
     let changes = format!("+{} -{} ~{}", summary.added, summary.removed, summary.updated);
     let cpu = cpu.map_or_else(String::new, |cpu| format!(", {} CPU", churn::format_duration(cpu)));
@@ -672,8 +675,7 @@ fn reconcile_report(path: &Path, summary: &ReconcileSummary, cpu: Option<Duratio
         return (
             log::Level::Debug,
             format!(
-                "MustScanSubDirs: reconcile complete for {} ({changes}{unreadable}, {}ms{cpu})",
-                path.display(),
+                "MustScanSubDirs: reconcile complete for path={path:?} ({changes}{unreadable}, {}ms{cpu})",
                 summary.duration.as_millis(),
             ),
         );
@@ -699,8 +701,7 @@ fn reconcile_report(path: &Path, summary: &ReconcileSummary, cpu: Option<Duratio
     (
         level,
         format!(
-            "MustScanSubDirs: {what} for {} ({changes}{unreadable}, {}s{cpu}{attribution})",
-            path.display(),
+            "MustScanSubDirs: {what} for path={path:?} ({changes}{unreadable}, {}s{cpu}{attribution})",
             summary.duration.as_secs(),
         ),
     )

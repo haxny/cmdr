@@ -115,6 +115,28 @@ func TestParseRebuildLinePathWithSpaces(t *testing.T) {
 	}
 }
 
+// The app logs the path as a quoted `path=` field, and a line may carry the walk's
+// CPU and an unreadable-dir count. Older logs use the bare shape above.
+func TestParseRebuildLineKeyedPathWithExtras(t *testing.T) {
+	for _, line := range []string{
+		`... MustScanSubDirs: reconcile complete for path="/Users/x/Library/Application Support/y" (+3 -1 ~2, 7ms)`,
+		`... MustScanSubDirs: reconcile complete for path="/Users/x/Library/Application Support/y" (+3 -1 ~2, 7ms, 2ms CPU)`,
+		`... MustScanSubDirs: reconcile complete for path="/Users/x/Library/Application Support/y" (+3 -1 ~2, 143 unreadable dirs, 7ms)`,
+	} {
+		b, ok := parseRebuildLine(line)
+		if !ok {
+			t.Errorf("did not match: %s", line)
+			continue
+		}
+		if b.Path != "/Users/x/Library/Application Support/y" {
+			t.Errorf("Path = %q in %s", b.Path, line)
+		}
+		if b.Added != 3 || b.Removed != 1 || b.Updated != 2 || b.Millis != 7 {
+			t.Errorf("got %+v in %s", b, line)
+		}
+	}
+}
+
 func TestUnderAny(t *testing.T) {
 	roots := []string{"/a/target", "/b/.cargo/registry/"}
 	cases := map[string]bool{
