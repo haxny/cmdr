@@ -35,7 +35,7 @@ use std::time::Duration;
 use cmdr_fs::volume::listing_progress::report_while;
 use cmdr_fs::volume::scan_walk::{self, ScanSource, Walking};
 
-use crate::fault_guard::FaultWatch;
+use crate::fault_guard::GuardedRead;
 use crate::path::{self, Cat, VirtualGitPath};
 use crate::portal::GitPortal;
 use crate::repo::RepoHandle;
@@ -96,18 +96,18 @@ impl GitPortalVolume {
     /// stall an async worker.
     ///
     /// Whatever `work` answers is refused as `VolumeGone` when a mapped page went
-    /// away while it ran (`fault_guard.rs`).
+    /// away while it ran, or the repo's volume stopped it because it's about to
+    /// unmount (`fault_guard.rs`). `work` gets the read, for a walk to poll.
     fn blocking<T, F>(&self, work: F) -> Pin<Box<dyn Future<Output = Result<T, VolumeError>> + Send>>
     where
         T: Send + 'static,
-        F: FnOnce() -> Result<T, VolumeError> + Send + 'static,
+        F: FnOnce(&GuardedRead) -> Result<T, VolumeError> + Send + 'static,
     {
-        let dot_git = self.dot_git.clone();
+        let worktree_root = self.dot_git.parent().unwrap_or(&self.dot_git).to_path_buf();
         let guarded = move || {
-            let watch = FaultWatch::start();
-            let answer = work();
-            let worktree_root = dot_git.parent().unwrap_or(&dot_git);
-            match watch.refusal(worktree_root) {
+            let read = GuardedRead::begin(&worktree_root);
+            let answer = work(&read);
+            match read.refusal() {
                 Some(refused) => Err(VolumeError::FriendlyGit(refused)),
                 None => answer,
             }
@@ -155,7 +155,9 @@ impl Volume for GitPortalVolume {
         let portal = Arc::clone(&self.portal);
         let control = Arc::new(log::WalkControl::default());
         let walk_control = Arc::clone(&control);
-        let listing = self.blocking(move || {
+        let listing = self.blocking(move |read| {
+            // A volume about to unmount stops the commit walk the way a pane leaving does.
+            walk_control.stop_when(read.stop_flag());
             let Some((virt, handle, root)) = path::classify_in(portal.repos(), &owned) else {
                 return Err(VolumeError::NotFound(owned.display().to_string()));
             };
@@ -186,7 +188,7 @@ impl Volume for GitPortalVolume {
     ) -> Pin<Box<dyn Future<Output = Result<FileEntry, VolumeError>> + Send + 'a>> {
         let owned = path.to_path_buf();
         let portal = Arc::clone(&self.portal);
-        self.blocking(move || {
+        self.blocking(move |_| {
             let Some((virt, handle, root)) = path::classify_in(portal.repos(), &owned) else {
                 return Err(VolumeError::NotFound(owned.display().to_string()));
             };
@@ -240,7 +242,7 @@ impl Volume for GitPortalVolume {
     ) -> Pin<Box<dyn Future<Output = Result<Box<dyn VolumeReadStream>, VolumeError>> + Send + 'a>> {
         let owned = path.to_path_buf();
         let portal = Arc::clone(&self.portal);
-        self.blocking(move || {
+        self.blocking(move |_| {
             let Some((virt, handle, _root)) = path::classify_in(portal.repos(), &owned) else {
                 return Err(VolumeError::NotFound(owned.display().to_string()));
             };

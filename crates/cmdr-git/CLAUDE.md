@@ -12,7 +12,7 @@ chip, and the read-only `Volume` that turns `.git/branches/`, `tags/`, `commits/
   `portal_route`).
 - `repo.rs` (discovery, `RepoInfo`, `RepoCache`), `status.rs` (the cached status walk), `watcher.rs` (the refcounted
   per-repo registry, plus the backend that arms it: `notify` in production, scripted under `testing`), `state_sink.rs`
-  (where it reports), `fault_guard.rs` (refuses what was read while a disk went away).
+  (where it reports), `fault_guard.rs` + `releasing.rs` (a disk going away or about to).
 - `virtual_listing.rs`, `log.rs`, `stash.rs`, `worktrees.rs`, `submodules.rs`, `tree.rs`, `snapshot_dates.rs`: one
   category each, plus the tree walks. `column_meta.rs` and `read_blob.rs`: the Size/Modified numbers and the blob
   stream. `test_fixtures.rs`: repos to assert against, behind `testing`.
@@ -24,7 +24,7 @@ chip, and the read-only `Volume` that turns `.git/branches/`, `tags/`, `commits/
 - **The public surface is capped** with no headroom: 11 root promises, EVERY module private. A new `pub` needs David's
   say-so. Item by item: `DETAILS.md`.
 - **Everything mutable is a field on `GitPortal`**, ❌ never a static: the repo cache, the watcher registry, the sink.
-  The app parks one and a test builds its own. Two memos stay static and `DETAILS.md` says why they may.
+  The app parks one and a test builds its own. Four statics are exempt and `DETAILS.md` says why.
 - **❌ No English a user reads.** Every Size cell is a typed `GitEntryMeta` the host words from its catalog, and every
   failure is a typed `FriendlyGitError` kind. A sentence in a variant is a bug.
 - **A path that isn't in a snapshot is `NotFound`, ❌ never `CorruptRepo`.** Lookups that can find nothing answer
@@ -34,8 +34,8 @@ chip, and the read-only `Volume` that turns `.git/branches/`, `tags/`, `commits/
 - **A repo's own commands never run**: its `filter.<driver>` sections are stripped on open. ❌ Never call gix's
   `Repository::is_dirty` or open a repo around the cache. `DETAILS.md` § "A repo's own commands never run".
 - **Every `gix` call runs on `VolumeHost::runtime().spawn_blocking`**, ❌ never on the caller's async worker.
-- **A read a mapped-page recovery straddled answers `VolumeGone`.** A new entry point reading through `gix` takes a
-  `FaultWatch`, and ❌ no memo stores what one refused. `DETAILS.md` § "A disk that goes away mid-read".
+- **A new entry point reading through `gix` takes a `GuardedRead`**, so a recovered page or a leaving volume answers
+  `VolumeGone`; ❌ no memo stores what one refused. `DETAILS.md` § "A disk that goes away mid-read".
 - **Anything a CONSUMER's test needs takes `any(test, feature = "testing")`, ❌ never `cfg(test)`**, which is off when
   the app compiles this crate as a dependency. `cfg(test)` alone is for doors only this crate's own cells open
   (`snapshot_dates::clear_cache`).

@@ -13,9 +13,14 @@ use cmdr_fs::mapped_file_faults;
 use cmdr_fs::testing::disk_images::{DiskImage, DiskImageSession, ImageSpec};
 use cmdr_fs::volume::git_error::FriendlyGitErrorKind;
 
+use std::time::{Duration, Instant};
+
+use cmdr_fs::volume::host::VolumeHost;
+
 use crate::fault_guard::FaultWatch;
 use crate::repo::RepoCache;
 use crate::test_fixtures::{Fixture, git_cli};
+use crate::{GitPortal, no_git_state_sink};
 
 /// Big enough that most of the pack isn't resident when the disk goes: 8 MiB of bytes zlib can't
 /// shrink.
@@ -77,6 +82,39 @@ fn reading_a_packed_blob_after_its_disk_was_force_detached_answers_volume_gone()
         "the repo isn't there any more, and the dead handle isn't handed back in its place"
     );
     assert_eq!(cache.len(), 0, "the recovery emptied the cache");
+}
+
+#[test]
+#[ignore = "attaches a real HFS+ disk image via hdiutil; run with --run-ignored"]
+fn an_open_repo_lets_its_volume_unmount_once_released() {
+    let session = DiskImageSession::acquire();
+    let image = DiskImage::attach(&session, ImageSpec::Hfs).expect("attach the image");
+    let mount_point = image.volumes()[0].mount_point.clone();
+    let dir = mount_point.join("repo");
+    std::fs::create_dir(&dir).expect("make the repo dir");
+    let mut fixture = Fixture::init(dir.clone());
+    fixture.commit_file("README.md", b"hello\n", "initial");
+    fixture.commit_file("big.bin", &incompressible(BLOB_BYTES), "the big one");
+    git_cli(&dir, &["repack", "-a", "-d", "-q"]);
+    drop(fixture);
+    let portal = GitPortal::with_scripted_watcher(VolumeHost::detached(), no_git_state_sink());
+    {
+        // Reading HEAD's tree maps the pack; the cached handle keeps it mapped.
+        let (handle, _) = portal.discover(&dir).expect("open the repo on the image");
+        let repo = handle.to_thread_local();
+        let _tree = repo.head_commit().expect("HEAD").tree().expect("its tree");
+    }
+
+    assert!(
+        image.unmount_volume(0).is_err(),
+        "a plain unmount fails while the pack is mapped, which is the eject Cmdr used to block"
+    );
+    let mount_root = mount_point.canonicalize().expect("still mounted");
+    assert!(portal.release_volume(&mount_root, Instant::now() + Duration::from_secs(5)));
+
+    image
+        .unmount_volume(0)
+        .expect("once the repo let go, the same plain unmount goes through");
 }
 
 #[test]

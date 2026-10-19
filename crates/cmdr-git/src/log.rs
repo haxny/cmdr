@@ -36,6 +36,7 @@
 
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::sync::{Arc, OnceLock};
 
 use gix::ObjectId;
 use gix::revision::walk::Sorting;
@@ -65,6 +66,9 @@ pub const SHORT_SHA_LEN: usize = 7;
 pub struct WalkControl {
     listed: AtomicUsize,
     abandoned: AtomicBool,
+    /// A second reason to stop: the repo's volume is about to unmount
+    /// (`releasing.rs`). Set once, by the read the walk runs under.
+    stop: OnceLock<Arc<AtomicBool>>,
 }
 
 impl WalkControl {
@@ -78,8 +82,13 @@ impl WalkControl {
         self.abandoned.store(true, Ordering::Relaxed);
     }
 
+    /// Makes the walk stop at the next commit once `flag` is set, too.
+    pub(crate) fn stop_when(&self, flag: Arc<AtomicBool>) {
+        let _already_set = self.stop.set(flag);
+    }
+
     fn is_abandoned(&self) -> bool {
-        self.abandoned.load(Ordering::Relaxed)
+        self.abandoned.load(Ordering::Relaxed) || self.stop.get().is_some_and(|stop| stop.load(Ordering::Relaxed))
     }
 }
 

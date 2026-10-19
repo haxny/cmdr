@@ -12,11 +12,18 @@
 //! The cost is that an operation on a healthy repo that happened to run while ANOTHER repo's disk
 //! went away is refused once too; the next call answers normally. `DETAILS.md` § "A disk that goes
 //! away mid-read".
+//!
+//! [`GuardedRead`] is what an entry point takes: the watch plus a `ReadLease` (`releasing.rs`), so
+//! a volume about to unmount can stop the read, which then answers `VolumeGone` too.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 
 use cmdr_fs::mapped_file_faults;
 use cmdr_fs::volume::git_error::{FriendlyGitError, FriendlyGitErrorKind};
+
+use crate::releasing::ReadLease;
 
 /// The recovery generation an operation started at.
 #[derive(Debug, Clone, Copy)]
@@ -37,6 +44,7 @@ impl FaultWatch {
     /// [`FriendlyGitErrorKind::VolumeGone`] about `root`, `answer` is dropped, and so is
     /// `root`'s cached status. The open handles go at the cache's next lookup
     /// (`RepoCache::discover`), which needs no root to know they're suspect.
+    #[cfg(test)]
     pub(crate) fn vouch<T>(&self, root: &Path, answer: Result<T, FriendlyGitError>) -> Result<T, FriendlyGitError> {
         match self.refusal(root) {
             Some(refused) => Err(refused),
@@ -52,10 +60,54 @@ impl FaultWatch {
             return None;
         }
         crate::status::invalidate_status_cache(root);
-        Some(FriendlyGitError::new(
-            FriendlyGitErrorKind::VolumeGone,
-            root.display().to_string(),
-        ))
+        Some(volume_gone(root))
+    }
+}
+
+/// What an operation on `root` answers when its volume went away, or is about to.
+pub(crate) fn volume_gone(root: &Path) -> FriendlyGitError {
+    FriendlyGitError::new(FriendlyGitErrorKind::VolumeGone, root.display().to_string())
+}
+
+/// One read through `gix` on the repo at a root: watched for a recovered page, and stoppable by a
+/// volume about to unmount (`releasing.rs`). Either makes it answer `VolumeGone`.
+pub(crate) struct GuardedRead {
+    watch: FaultWatch,
+    lease: ReadLease,
+    root: PathBuf,
+}
+
+impl GuardedRead {
+    /// Starts a read on the repo whose worktree root is `root`. Take it BEFORE the first `gix`
+    /// read, and keep it until the answer is out.
+    pub(crate) fn begin(root: &Path) -> Self {
+        Self {
+            watch: FaultWatch::start(),
+            lease: ReadLease::take(root),
+            root: root.to_path_buf(),
+        }
+    }
+
+    /// The flag a long walk polls; set when the read's volume is about to unmount.
+    pub(crate) fn stop_flag(&self) -> Arc<AtomicBool> {
+        self.lease.stop_flag()
+    }
+
+    /// The `VolumeGone` this read answers instead of its own answer, or `None` when its answer
+    /// can be trusted.
+    pub(crate) fn refusal(&self) -> Option<FriendlyGitError> {
+        if self.lease.stopped() {
+            return Some(volume_gone(&self.root));
+        }
+        self.watch.refusal(&self.root)
+    }
+
+    /// `answer`, unless [`refusal`](Self::refusal) has one.
+    pub(crate) fn vouch<T>(&self, answer: Result<T, FriendlyGitError>) -> Result<T, FriendlyGitError> {
+        match self.refusal() {
+            Some(refused) => Err(refused),
+            None => answer,
+        }
     }
 }
 

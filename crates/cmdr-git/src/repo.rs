@@ -11,16 +11,17 @@
 //! [`GitPortal`]: crate::portal::GitPortal
 
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Arc, OnceLock, RwLock};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::{Arc, Mutex, OnceLock, RwLock, Weak};
+use std::time::Instant;
 
-use cmdr_fs::ignore_poison::RwLockIgnorePoison;
+use cmdr_fs::ignore_poison::{IgnorePoison, RwLockIgnorePoison};
 use cmdr_fs::mapped_file_faults;
 use serde::{Deserialize, Serialize};
 
 use cmdr_fs::volume::git_error::{FriendlyGitError, FriendlyGitErrorKind};
 
-use crate::fault_guard::FaultWatch;
+use crate::fault_guard::{GuardedRead, volume_gone};
 
 /// Snapshot of mutable repo state for the breadcrumb chip.
 ///
@@ -58,14 +59,15 @@ pub type RepoHandle = Arc<gix::ThreadSafeRepository>;
 
 /// Computes branch / detached / dirty / ahead-behind for a discovered repo.
 ///
-/// Answers `VolumeGone` when the repo's disk went away while it was read
+/// Answers `VolumeGone` when the repo's disk went away while it was read, or
+/// its volume stopped the dirty walk because it's about to unmount
 /// (`fault_guard.rs`).
 pub fn repo_info(handle: &RepoHandle, repo_root: &Path) -> Result<RepoInfo, FriendlyGitError> {
-    let watch = FaultWatch::start();
-    watch.vouch(repo_root, read_repo_info(handle, repo_root))
+    let read = GuardedRead::begin(repo_root);
+    read.vouch(read_repo_info(handle, repo_root, &read.stop_flag()))
 }
 
-fn read_repo_info(handle: &RepoHandle, repo_root: &Path) -> Result<RepoInfo, FriendlyGitError> {
+fn read_repo_info(handle: &RepoHandle, repo_root: &Path, stop: &Arc<AtomicBool>) -> Result<RepoInfo, FriendlyGitError> {
     let repo = handle.to_thread_local();
 
     let head = repo.head().map_err(|e| FriendlyGitError::corrupt(repo_root, &e))?;
@@ -112,7 +114,7 @@ fn read_repo_info(handle: &RepoHandle, repo_root: &Path) -> Result<RepoInfo, Fri
         }
     }
 
-    let is_dirty = if unborn { false } else { is_dirty(&repo) };
+    let is_dirty = if unborn { false } else { is_dirty(&repo, stop) };
 
     Ok(RepoInfo {
         repo_root: repo_root.display().to_string(),
@@ -132,12 +134,14 @@ fn read_repo_info(handle: &RepoHandle, repo_root: &Path) -> Result<RepoInfo, Fri
 /// gix's own `Repository::is_dirty` asks submodules for their worktree status
 /// "as configured", which opens each one with its OWN config, filter drivers
 /// included ([`without_filter_drivers`]). This is the same question with
-/// [`submodule_status`] plus [`dirty_submodule_paths`].
-fn is_dirty(repo: &gix::Repository) -> bool {
+/// [`submodule_status`] plus [`dirty_submodule_paths`]. The walk stops when
+/// `stop` is set.
+fn is_dirty(repo: &gix::Repository, stop: &Arc<AtomicBool>) -> bool {
     let Ok(platform) = repo.status(gix::progress::Discard) else {
         return false;
     };
     let Ok(mut items) = platform
+        .should_interrupt_owned(Arc::clone(stop))
         .index_worktree_rewrites(None)
         .index_worktree_submodules(submodule_status(true))
         .index_worktree_options_mut(|opts| opts.dirwalk_options = None)
@@ -145,7 +149,7 @@ fn is_dirty(repo: &gix::Repository) -> bool {
     else {
         return false;
     };
-    items.next().is_some_and(|item| item.is_ok()) || !dirty_submodule_paths(repo).is_empty()
+    items.next().is_some_and(|item| item.is_ok()) || !dirty_submodule_paths(repo, stop).is_empty()
 }
 
 /// The worktree paths (`/`-separated, relative to `repo`'s) of submodules whose
@@ -154,7 +158,8 @@ fn is_dirty(repo: &gix::Repository) -> bool {
 /// Each is opened and then stripped by [`without_filter_drivers`] before its
 /// worktree is walked, which is what gix's built-in submodule status can't do.
 /// A submodule configured `ignore = dirty` or `all` is left out, as git would.
-pub(crate) fn dirty_submodule_paths(repo: &gix::Repository) -> Vec<String> {
+/// Each walk stops when `stop` is set.
+pub(crate) fn dirty_submodule_paths(repo: &gix::Repository, stop: &Arc<AtomicBool>) -> Vec<String> {
     let Ok(Some(modules)) = repo.submodules() else {
         return Vec::new();
     };
@@ -173,7 +178,7 @@ pub(crate) fn dirty_submodule_paths(repo: &gix::Repository) -> Vec<String> {
             // Opening reads config and runs nothing; the walk below is what could.
             let opened = sm.open().ok()??;
             let stripped = without_filter_drivers(opened.into_sync()).ok()?.to_thread_local();
-            is_dirty(&stripped).then_some(path)
+            is_dirty(&stripped, stop).then_some(path)
         })
         .collect()
 }
@@ -330,6 +335,9 @@ pub struct RepoCache {
     /// When it moved, a disk went away under SOME mapping, and every handle may
     /// be holding a dead one, so the whole cache is dropped.
     opened_at_fault_generation: AtomicU64,
+    /// Volumes about to unmount (`let_go_under`), each with when its refusal ends.
+    /// No repo under one is opened or cached meanwhile.
+    leaving: Mutex<Vec<(PathBuf, Instant)>>,
 }
 
 impl RepoCache {
@@ -337,14 +345,19 @@ impl RepoCache {
         Self {
             inner: RwLock::new(std::collections::HashMap::new()),
             opened_at_fault_generation: AtomicU64::new(mapped_file_faults::generation()),
+            leaving: Mutex::new(Vec::new()),
         }
     }
 
     /// Opens (or reuses) the repo containing `path`, returning its handle and
     /// canonical worktree root. Bare repos are refused: without a working tree
-    /// there's nothing for the file manager to anchor on.
+    /// there's nothing for the file manager to anchor on. A repo on a volume
+    /// that's about to unmount is refused as `VolumeGone`.
     pub fn discover(&self, path: &Path) -> Result<(RepoHandle, PathBuf), FriendlyGitError> {
         self.forget_all_after_a_fault();
+        if self.is_leaving(path) {
+            return Err(volume_gone(path));
+        }
         if let Some((handle, root)) = self.lookup_for_path(path) {
             return Ok((handle, root));
         }
@@ -396,9 +409,51 @@ impl RepoCache {
     }
 
     fn insert(&self, root: PathBuf, handle: RepoHandle) {
+        // An open that started before its volume began leaving finishes, but
+        // its handle isn't kept past the read that asked for it.
+        if self.is_leaving(&root) {
+            return;
+        }
         if let Ok(mut inner) = self.inner.write() {
             inner.insert(root, handle);
         }
+    }
+
+    /// Lets go of every repo under `prefix`, a volume that's about to unmount:
+    /// drops their handles, and refuses to open or cache one there until
+    /// `refuse_until`. Answers each dropped repo's object store, which the
+    /// caller watches until the last read holding it is done, since that's
+    /// when its pack mappings close.
+    pub(crate) fn let_go_under(&self, prefix: &Path, refuse_until: Instant) -> Vec<Weak<gix::odb::Store>> {
+        {
+            let mut leaving = self.leaving.lock_ignore_poison();
+            leaving.retain(|(root, _)| root != prefix);
+            leaving.push((prefix.to_path_buf(), refuse_until));
+        }
+        let mut inner = self.inner.write_ignore_poison();
+        let under: Vec<PathBuf> = inner.keys().filter(|root| root.starts_with(prefix)).cloned().collect();
+        under
+            .iter()
+            .filter_map(|root| inner.remove(root))
+            .map(|handle| Arc::downgrade(&handle.objects))
+            .collect()
+    }
+
+    /// Whether `path` is on a volume that's still leaving, spelled as given or
+    /// canonically (a mount root is canonical; a caller's path may run through
+    /// a symlink). The `canonicalize` runs only while some volume is leaving.
+    fn is_leaving(&self, path: &Path) -> bool {
+        let now = Instant::now();
+        let leaving: Vec<PathBuf> = {
+            let mut leaving = self.leaving.lock_ignore_poison();
+            leaving.retain(|(_, until)| now < *until);
+            leaving.iter().map(|(root, _)| root.clone()).collect()
+        };
+        if leaving.is_empty() {
+            return false;
+        }
+        let under = |path: &Path| leaving.iter().any(|root| path.starts_with(root));
+        under(path) || path.canonicalize().is_ok_and(|canonical| under(&canonical))
     }
 
     /// Drops a cached handle. Called when the last `git-state` subscriber for a

@@ -17,13 +17,15 @@
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::sync::{OnceLock, RwLock};
+use std::sync::atomic::AtomicBool;
+use std::sync::{Arc, OnceLock, RwLock};
 use std::time::SystemTime;
 
 use serde::{Deserialize, Serialize};
 
-use crate::fault_guard::FaultWatch;
+use crate::fault_guard::GuardedRead;
 use crate::repo::RepoHandle;
+use cmdr_fs::ignore_poison::RwLockIgnorePoison;
 use cmdr_fs::volume::git_error::{FriendlyGitError, FriendlyGitErrorKind};
 
 /// Single-character status code.
@@ -89,6 +91,14 @@ pub(crate) fn invalidate_status_cache(repo_root: &Path) {
     }
 }
 
+/// Drops every cached snapshot of a repo under `prefix`, a volume about to
+/// unmount. In memory only: ❌ no `canonicalize` on a volume that's leaving.
+pub(crate) fn invalidate_status_cache_under(prefix: &Path) {
+    status_cache()
+        .write_ignore_poison()
+        .retain(|root, _| !root.starts_with(prefix));
+}
+
 /// Test entry point: the cache size.
 #[cfg(test)]
 pub(crate) fn cache_len_for_test() -> usize {
@@ -138,10 +148,10 @@ pub fn list_status(repo: &RepoHandle, dir_in_worktree: &Path) -> Result<Vec<Entr
         return Ok(slice_entries(&cached.entries, &work_dir, dir_in_worktree));
     }
 
-    // Cache miss or stale: run a full-repo walk. A walk a mapped page went away
-    // under is never cached: its entries may come from zeros.
-    let watch = FaultWatch::start();
-    let entries = watch.vouch(&canonical_root, run_full_repo_status(repo))?;
+    // Cache miss or stale: run a full-repo walk. One a mapped page went away
+    // under, or that its leaving volume stopped, is never cached.
+    let read = GuardedRead::begin(&canonical_root);
+    let entries = read.vouch(run_full_repo_status(repo, &read.stop_flag()))?;
     let sliced = slice_entries(&entries, &work_dir, dir_in_worktree);
 
     if let Ok(mut guard) = status_cache().write() {
@@ -166,8 +176,9 @@ pub fn list_status(repo: &RepoHandle, dir_in_worktree: &Path) -> Result<Vec<Entr
 /// by path; staged changes take precedence over worktree changes, matching
 /// git's XY column precedence in `--porcelain=v2` output.
 ///
-/// Error mapping is typed: no string parsing of stderr is performed.
-fn run_full_repo_status(repo: &RepoHandle) -> Result<Vec<EntryStatus>, FriendlyGitError> {
+/// Error mapping is typed: no string parsing of stderr is performed. The walk
+/// stops when `stop` is set.
+fn run_full_repo_status(repo: &RepoHandle, stop: &Arc<AtomicBool>) -> Result<Vec<EntryStatus>, FriendlyGitError> {
     let local = repo.to_thread_local();
     let work_dir = local
         .workdir()
@@ -176,6 +187,7 @@ fn run_full_repo_status(repo: &RepoHandle) -> Result<Vec<EntryStatus>, FriendlyG
     let platform = local
         .status(gix::progress::Discard)
         .map_err(|e| FriendlyGitError::with_source(FriendlyGitErrorKind::CorruptRepo, e.to_string(), e))?
+        .should_interrupt_owned(Arc::clone(stop))
         .untracked_files(gix::status::UntrackedFiles::Files)
         .index_worktree_submodules(crate::repo::submodule_status(false));
 
@@ -209,7 +221,7 @@ fn run_full_repo_status(repo: &RepoHandle) -> Result<Vec<EntryStatus>, FriendlyG
     }
     // gix only compared each submodule's commit (`submodule_status`); its own
     // edits come from a walk with its filter drivers stripped.
-    for path in crate::repo::dirty_submodule_paths(&local) {
+    for path in crate::repo::dirty_submodule_paths(&local, stop) {
         by_path.entry(path).or_insert(EntryStatusCode::Modified);
     }
 
@@ -480,7 +492,7 @@ mod cache_tests {
         let canonical = root.canonicalize().unwrap_or_else(|_| root.clone());
         assert!(status_cache().read().unwrap().contains_key(&canonical));
 
-        let watch = FaultWatch::start();
+        let watch = crate::fault_guard::FaultWatch::start();
         cmdr_fs::mapped_file_faults::simulate_recovery();
         assert!(watch.refusal(&root).is_some());
 

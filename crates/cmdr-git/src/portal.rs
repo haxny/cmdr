@@ -12,11 +12,22 @@
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use cmdr_fs::volume::git_error::FriendlyGitError;
 use cmdr_fs::volume::host::VolumeHost;
 
-use crate::fault_guard::FaultWatch;
+use crate::fault_guard::{FaultWatch, GuardedRead};
+use crate::releasing;
+
+/// How often [`GitPortal::release_volume`] looks again for reads still holding a
+/// repo on the leaving volume.
+const RELEASE_POLL: Duration = Duration::from_millis(5);
+
+/// How long past a [`GitPortal::release_volume`] deadline no repo on that volume
+/// is opened again: long enough to cover the unmount that follows an approval,
+/// short enough that a refused one hands git back within seconds.
+const REOPEN_HOLD: Duration = Duration::from_secs(5);
 use crate::path::{self, Cat, VirtualGitPath};
 use crate::repo::{RepoCache, RepoHandle, RepoInfo};
 use crate::state_sink::GitStateSink;
@@ -133,7 +144,7 @@ impl GitPortal {
     /// reached through a symlink (`/var` → `/private/var` on macOS) would
     /// otherwise cache the child listing under a spelling the watcher can't find.
     pub fn category_rows(&self, worktree_root: &Path) -> Vec<FileEntry> {
-        let watch = FaultWatch::start();
+        let read = GuardedRead::begin(worktree_root);
         let Ok((handle, canonical_root)) = self.discover(worktree_root) else {
             return Vec::new();
         };
@@ -143,7 +154,7 @@ impl GitPortal {
         }
         let rows = virtual_listing::list_categories(&handle, &canonical_root);
         // Counts and dates read while a mapped page went away may be zeros.
-        if watch.tripped() { Vec::new() } else { rows }
+        if read.refusal().is_some() { Vec::new() } else { rows }
     }
 
     /// Adds a subscriber for the repository at `repo_root`, starting its `.git/*`
@@ -172,6 +183,37 @@ impl GitPortal {
     /// what that repository was holding open.
     pub fn unsubscribe_state(&self, repo_root: &Path) {
         self.watchers.unsubscribe(&self.repos, repo_root);
+    }
+
+    /// Lets go of every repository on the volume mounted at `mount_root`, which
+    /// is about to unmount, and answers whether all of them let go by
+    /// `deadline`. A plain unmount fails while a pack file on the volume is
+    /// mapped, and every open repo keeps its packs mapped.
+    ///
+    /// Drops the repos' handles and cached status, stops their status and
+    /// commit walks (each then answers `VolumeGone`), and refuses to open a repo
+    /// there for a few seconds past `deadline`, which covers the unmount that
+    /// follows an approval and hands git back soon after a refused one. Then
+    /// waits for the reads still holding one to finish.
+    ///
+    /// **Blocking**, up to `deadline`. Touches no filesystem.
+    pub fn release_volume(&self, mount_root: &Path, deadline: Instant) -> bool {
+        let stores = self.repos.let_go_under(mount_root, deadline + REOPEN_HOLD);
+        crate::status::invalidate_status_cache_under(mount_root);
+        releasing::stop_reads_under(mount_root);
+        // gix offers no hook on the last handle dropping, so this polls, bounded
+        // by `deadline`; a read stopped above ends within milliseconds.
+        loop {
+            let released =
+                stores.iter().all(|store| store.strong_count() == 0) && releasing::reads_under(mount_root) == 0;
+            if released {
+                return true;
+            }
+            if Instant::now() >= deadline {
+                return false;
+            }
+            std::thread::sleep(RELEASE_POLL);
+        }
     }
 
     /// How many repositories currently have a `.git/*` watcher running.

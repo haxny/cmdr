@@ -70,6 +70,7 @@ mod log;
 mod path;
 mod portal;
 mod read_blob;
+mod releasing;
 mod repo;
 mod snapshot_dates;
 mod stash;
@@ -96,6 +97,8 @@ mod category_tests;
 mod column_meta_tests;
 #[cfg(all(test, target_os = "macos"))]
 mod fault_guard_real_image;
+#[cfg(test)]
+mod releasing_tests;
 #[cfg(test)]
 mod repo_tests;
 #[cfg(test)]

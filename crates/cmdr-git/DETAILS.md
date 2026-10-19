@@ -54,6 +54,9 @@ which:
 - **Filling in commit counts** (`apps/desktop/src-tauri/src/file_system/git/commit_counts.rs`):
   `GitPortal::commit_rows_with_counts` and `GitPortal::COUNT_ALL_LIMIT`, a method and an associated const on the
   browsing type rather than new root exports (approved 2026-10-14), so the count stays 11 while the list names them.
+- **Letting a drive eject** (`apps/desktop/src-tauri/src/volumes/unmount_approver/mod.rs`): `GitPortal::release_volume`,
+  one method on the browsing type for the same reason (added 2026-10-19 for GitHub #488, pending David's say-so; §
+  "Letting go of a volume that's about to unmount").
 
 **A `pub` inside a private module isn't measured either**, which is exactly why one may not sit there waiting for a
 caller: nothing would ever notice. So a helper here earns its place from a caller that exists today, ❌ never from a
@@ -354,9 +357,10 @@ is keyed by `(ObjectId, dir path)`, and `status`'s snapshot is keyed by `(canoni
 content- or mtime-addressed, so a second portal sharing one can only get an answer that was correct for that key, and
 `list_status` stays callable with a repo handle alone — no portal, no host. The `RepoCache` is the opposite: it owns a
 RESOURCE with a lifecycle (an open `gix` repository, evicted when the last subscriber leaves), so a static one would
-mean a test's evictions reaching the app's handles and back. One more static is no memo of an answer at all:
+mean a test's evictions reaching the app's handles and back. Two more statics are no memo of an answer at all:
 `repo::is_on_the_startup_disk`'s device list, read once, is a fact about the machine (§ "A disk that goes away
-mid-read").
+mid-read"), and `releasing.rs`'s registry of reads in flight, where a handle-only walk and a leaving volume meet (§
+"Letting go of a volume that's about to unmount").
 
 ## A repo's own commands never run
 
@@ -384,8 +388,9 @@ without more, the user would read "This repo looks damaged" (`CorruptRepo`) abou
 **`fault_guard.rs` refuses the answer.** A `FaultWatch` reads the recovery's generation before an operation and again
 after; one that moved means some page read in between may have been zeros, so the operation answers
 `FriendlyGitErrorKind::VolumeGone` (the host words it as "the drive with this repo went away") and drops the repo's
-cached status. The watches sit at every entry point a host reaches: `repo_info`, `list_status`'s walk, every
-`GitPortalVolume` call (its `blocking` wrapper), `GitPortal::category_rows`, and `commit_rows_with_counts` (whose rows
+cached status. The watches sit at every entry point a host reaches, inside a `GuardedRead` (which also carries the stop
+flag of § "Letting go of a volume that's about to unmount"): `repo_info`, `list_status`'s walk, every `GitPortalVolume`
+call (its `blocking` wrapper), and `GitPortal::category_rows`; `commit_rows_with_counts` takes a bare watch (its rows
 then stay pending). The watcher's recompute and the chip's handshake go through `repo_info`.
 
 - **No memo stores what a watch refused.** The status cache and the snapshot-dates memo are content- or mtime-keyed and
@@ -411,6 +416,37 @@ then stay pending). The watcher's recompute and the chip's handshake go through 
 - **One allocation from a repo's object data is capped** at `OBJECT_ALLOC_LIMIT` (twice `tree::MAX_BLOB_BYTES`), via
   `gitoxide.objects.allocLimit` on the FULL-trust open options only: a size field decoded from zeros mustn't size an
   allocation, and a reduced-trust repo already gets gix's own 16 MiB cap, which an explicit limit would raise.
+
+## Letting go of a volume that's about to unmount
+
+A plain unmount (Finder's eject, `diskutil unmount`) FAILS while any file on the volume is mapped, and every open repo
+keeps its packs mapped for as long as its handle lives, so an open repo used to block the user's eject (verified with a
+RAM disk on Darwin 27.0.0 arm64, 2026-10-19). The app's DiskArbitration unmount approver asks
+`GitPortal::release_volume(mount_root, deadline)` first (`apps/desktop/src-tauri/src/volumes/DETAILS.md` § "The unmount
+approver"), which:
+
+1. **Refuses to open or cache a repo under the root** (`RepoCache::let_go_under`), as `VolumeGone`, until `REOPEN_HOLD`
+   (5 s) past the deadline: long enough to cover the unmount that follows an approval, short enough that a refused one
+   hands git back soon. Time-bounded on purpose, so a refusal needs no second call to undo, and an open that was already
+   in flight finishes but isn't cached.
+2. **Drops the cached handles** under the root and their cached status, keeping only a `Weak` of each one's object
+   store, which is what owns the pack mappings.
+3. **Stops the long reads**: every `GuardedRead` (status walk, dirty walk, every portal-volume call) holds a `ReadLease`
+   in `releasing.rs`, whose flag `gix`'s status walk polls (`should_interrupt_owned`) and the commit walk's
+   `WalkControl` polls. A stopped read answers `VolumeGone`.
+4. **Waits until every store is dropped and no lease under the root is left**, polling every 5 ms up to the deadline
+   (gix has no drop hook to subscribe to), and answers whether that happened. The approver dissents when it didn't.
+
+- **In memory only**: no `stat`, no `canonicalize`, which the approver's ask path forbids. Matching is by path segment
+  against canonical roots, which a DiskArbitration mount root already is.
+- **Why `releasing.rs` is a static** while everything else mutable is a `GitPortal` field: the status walk is reachable
+  from `list_status` and `repo_info` with a handle alone, so that registry is the one place a walk and `release_volume`
+  can meet. Each entry lives exactly as long as its read.
+- **Residual**: a `discover` already past the leaving check when the release starts opens its repo and uses it once
+  (uncached, and its handle isn't in the waited set), so an unmount racing it by milliseconds can still be refused.
+- **Evidence**: `fault_guard_real_image::an_open_repo_lets_its_volume_unmount_once_released` shows the plain unmount
+  failing with the pack mapped and going through after `release_volume`; the approver's own
+  `real_image::a_repo_open_on_the_drive_lets_go_so_a_plain_unmount_goes_through` drives it through real DiskArbitration.
 
 ## A miss is not a damaged repo
 
