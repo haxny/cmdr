@@ -117,22 +117,22 @@ pub(super) fn redact_typed_path(
         && bytes.get(1) == Some(&b':')
         && path.get(2..).is_some_and(|tail| tail.starts_with(r"\Users\"))
     {
-        return redact_windows_home(path, context, leaf);
+        return redact_windows_home(path, context, preserve_redacted_segments, leaf);
     }
     if path.starts_with("/Users/") || path.starts_with("/home/") {
-        return redact_unix_home(path, context, leaf);
+        return redact_unix_home(path, context, preserve_redacted_segments, leaf);
     }
     if ["/tmp/", "/var/", "/private/", "/opt/"]
         .iter()
         .any(|prefix| path.starts_with(prefix))
     {
-        return redact_unix_system(path, context, leaf);
+        return redact_unix_system(path, context, preserve_redacted_segments, leaf);
     }
     if path.starts_with("/Volumes/") {
-        return redact_volumes(path, context, leaf);
+        return redact_volumes(path, context, preserve_redacted_segments, leaf);
     }
     if path.starts_with("/media/") {
-        return redact_media(path, context, leaf);
+        return redact_media(path, context, preserve_redacted_segments, leaf);
     }
     if is_supported_remote_url(path) {
         return redact_remote_url(path, context, leaf);

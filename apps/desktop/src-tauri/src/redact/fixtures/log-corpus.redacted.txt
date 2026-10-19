@@ -179,3 +179,5 @@
 23:42:00.004 INFO  copy  copy_between_volumes: source_volume=<volume>, dest_volume=<volume>, 2 sources
 23:42:00.005 INFO  smb2::client::tree  tree: connected share=<share>, tree_id=7
 23:42:00.006 DEBUG indexing::verifier  Verifier: scanned new dir path="$HOME/Pictures/<dir>" (5 entries, 0ms)
+23:42:00.007 WARN  copy  copy failed for $HOME/Pictures/<dir>/<file>.jpg: disk full
+23:42:00.008 INFO  write_operations  moving /Volumes/<volume>/<dir> -> /tmp/<dir>

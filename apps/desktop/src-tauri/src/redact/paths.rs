@@ -4,6 +4,7 @@
 use super::RedactionContext;
 use super::SAFE_PARENT_DIR_NAMES;
 use super::context::TokenDomain;
+use super::fields::is_redacted_segment;
 use super::markers::is_placeholder;
 use super::names::{split_cmdr_suffix, unescape_debug};
 
@@ -29,7 +30,12 @@ impl Leaf {
     }
 }
 
-pub(super) fn redact_unix_home(path: &str, context: Option<&RedactionContext>, leaf: Leaf) -> String {
+pub(super) fn redact_unix_home(
+    path: &str,
+    context: Option<&RedactionContext>,
+    preserve_redacted_segments: bool,
+    leaf: Leaf,
+) -> String {
     // path like `/Users/<user>/...` or `/home/<user>/...`
     // Strip the `/Users/<user>` prefix and replace with `$HOME`.
     let rest = match path.split('/').nth(3) {
@@ -50,10 +56,18 @@ pub(super) fn redact_unix_home(path: &str, context: Option<&RedactionContext>, l
         }
         None => "",
     };
-    format!("$HOME{}", redact_home_tail(rest, context, leaf))
+    format!(
+        "$HOME{}",
+        redact_home_tail(rest, context, preserve_redacted_segments, leaf)
+    )
 }
 
-pub(super) fn redact_windows_home(path: &str, context: Option<&RedactionContext>, leaf: Leaf) -> String {
+pub(super) fn redact_windows_home(
+    path: &str,
+    context: Option<&RedactionContext>,
+    preserve_redacted_segments: bool,
+    leaf: Leaf,
+) -> String {
     // `C:\Users\<user>\...` → `$HOME\...` (using backslashes to preserve shape)
     // Skip the first 3 `\` separators: `C:` + `\Users` + `\<user>`.
     let mut backslashes = 0;
@@ -70,7 +84,7 @@ pub(super) fn redact_windows_home(path: &str, context: Option<&RedactionContext>
     let rest = cut.map(|i| &path[i..]).unwrap_or("");
     // Normalize to forward slashes for the tail walker, then convert back.
     let normalized: String = rest.chars().map(|c| if c == '\\' { '/' } else { c }).collect();
-    let redacted_tail = redact_home_tail(&normalized, context, leaf);
+    let redacted_tail = redact_home_tail(&normalized, context, preserve_redacted_segments, leaf);
     format!("$HOME{}", redacted_tail.replace('/', "\\"))
 }
 
@@ -97,19 +111,32 @@ pub(super) fn keeps_parent_name(seg: &str) -> bool {
     is_safe_parent_dir(seg) && !HOME_ROLE_DIRS.contains(&seg)
 }
 
-fn redact_home_tail(tail: &str, context: Option<&RedactionContext>, leaf: Leaf) -> String {
+fn redact_home_tail(
+    tail: &str,
+    context: Option<&RedactionContext>,
+    preserve_redacted_segments: bool,
+    leaf: Leaf,
+) -> String {
     let body = tail.strip_prefix('/').unwrap_or(tail);
     for role in HOME_ROLE_DIRS {
         if let Some(after) = body.strip_prefix(role)
             && (after.is_empty() || after.starts_with('/'))
         {
-            return format!("/{role}{}", redact_path_tail(after, context, leaf));
+            return format!(
+                "/{role}{}",
+                redact_path_tail(after, context, preserve_redacted_segments, leaf)
+            );
         }
     }
-    redact_path_tail(tail, context, leaf)
+    redact_path_tail(tail, context, preserve_redacted_segments, leaf)
 }
 
-pub(super) fn redact_unix_system(path: &str, context: Option<&RedactionContext>, leaf: Leaf) -> String {
+pub(super) fn redact_unix_system(
+    path: &str,
+    context: Option<&RedactionContext>,
+    preserve_redacted_segments: bool,
+    leaf: Leaf,
+) -> String {
     // `/tmp/<rest>`, `/var/<rest>`, `/private/<rest>`, `/opt/<rest>`: keep prefix verbatim,
     // redact everything below it with shape preservation.
     // Find the second `/` (end of the prefix dir), keep `/tmp/` etc., walk the tail.
@@ -130,19 +157,29 @@ pub(super) fn redact_unix_system(path: &str, context: Option<&RedactionContext>,
         return prefix.to_string();
     }
     // tail is one or more segments separated by `/`. Reuse redact_path_tail by prepending `/`.
-    let redacted = redact_path_tail(&format!("/{tail}"), context, leaf);
+    let redacted = redact_path_tail(&format!("/{tail}"), context, preserve_redacted_segments, leaf);
     // strip the leading `/` we added back since `prefix` already ends in `/`
     format!("{}{}", prefix, redacted.strip_prefix('/').unwrap_or(&redacted))
 }
 
-pub(super) fn redact_volumes(path: &str, context: Option<&RedactionContext>, leaf: Leaf) -> String {
+pub(super) fn redact_volumes(
+    path: &str,
+    context: Option<&RedactionContext>,
+    preserve_redacted_segments: bool,
+    leaf: Leaf,
+) -> String {
     // `/Volumes/<label>/<rest>` → `/Volumes/<volume>/<redacted rest>`
-    redact_labeled_mount(path, "/Volumes/", "/Volumes", context, leaf)
+    redact_labeled_mount(path, "/Volumes/", "/Volumes", context, preserve_redacted_segments, leaf)
 }
 
-pub(super) fn redact_media(path: &str, context: Option<&RedactionContext>, leaf: Leaf) -> String {
+pub(super) fn redact_media(
+    path: &str,
+    context: Option<&RedactionContext>,
+    preserve_redacted_segments: bool,
+    leaf: Leaf,
+) -> String {
     // `/media/<label>/<rest>` → `/media/<volume>/<redacted rest>`
-    redact_labeled_mount(path, "/media/", "/media", context, leaf)
+    redact_labeled_mount(path, "/media/", "/media", context, preserve_redacted_segments, leaf)
 }
 
 pub(super) fn redact_labeled_mount(
@@ -150,13 +187,21 @@ pub(super) fn redact_labeled_mount(
     prefix: &str,
     prefix_out: &str,
     context: Option<&RedactionContext>,
+    preserve_redacted_segments: bool,
     leaf: Leaf,
 ) -> String {
     let after = path.strip_prefix(prefix).unwrap_or(path);
     // Label may contain spaces. Find the first `/` to end the label.
     let (label, rest) = after.find('/').map_or((after, ""), |at| (&after[..at], &after[at..]));
-    let volume = token_for("volume", label, context, TokenDomain::Volume);
-    format!("{prefix_out}/{volume}{}", redact_path_tail(rest, context, leaf))
+    let volume = if preserve_redacted_segments && is_redacted_segment(label) {
+        label.to_string()
+    } else {
+        token_for("volume", label, context, TokenDomain::Volume)
+    };
+    format!(
+        "{prefix_out}/{volume}{}",
+        redact_path_tail(rest, context, preserve_redacted_segments, leaf)
+    )
 }
 
 /// Redact the tail of a path (everything after the user/label prefix).
@@ -165,7 +210,16 @@ pub(super) fn redact_labeled_mount(
 /// Shape preservation: keep the filename's extension and the last directory name if it's
 /// in [`SAFE_PARENT_DIR_NAMES`]. Otherwise collapse to `<dir>` / `<file>` (or contextual
 /// equivalents when `context` is `Some`). `leaf` says what the last segment is.
-pub(super) fn redact_path_tail(tail: &str, context: Option<&RedactionContext>, leaf: Leaf) -> String {
+///
+/// `preserve_redacted_segments` keeps a segment that's already a token: only for a line the scanner may
+/// have rewritten before (`redact_relative_path` has the same rule). Raw typed values never trust
+/// token-looking input.
+pub(super) fn redact_path_tail(
+    tail: &str,
+    context: Option<&RedactionContext>,
+    preserve_redacted_segments: bool,
+    leaf: Leaf,
+) -> String {
     if tail.is_empty() {
         return String::new();
     }
@@ -179,6 +233,9 @@ pub(super) fn redact_path_tail(tail: &str, context: Option<&RedactionContext>, l
         // Single segment under the prefix: could be a dir or a file. Unless a producer said
         // which, we guess based on presence of an extension: `.X` suffix files, otherwise dirs.
         let seg = segments[0];
+        if preserve_redacted_segments && is_redacted_segment(seg) {
+            return format!("/{seg}");
+        }
         return format!("/{}", redact_leaf(seg, leaf.is_file(seg), context));
     }
     // Walk segments: all but the last are dirs; the last is guessed via the
@@ -189,7 +246,9 @@ pub(super) fn redact_path_tail(tail: &str, context: Option<&RedactionContext>, l
     let last_idx = segments.len() - 1;
     for (i, seg) in segments.iter().enumerate() {
         out.push('/');
-        if i == last_idx {
+        if preserve_redacted_segments && is_redacted_segment(seg) {
+            out.push_str(seg);
+        } else if i == last_idx {
             out.push_str(&redact_leaf(seg, leaf.is_file(seg), context));
         } else if i == last_idx - 1 {
             // Immediate parent dir of the leaf; allowlist check.

@@ -2,7 +2,7 @@
 //! labels and filenames), and this gives back only what a hard delimiter proves isn't path. `DETAILS.md` §
 //! "Finding the end of a path".
 
-use super::fields::starts_with_field_key;
+use super::fields::{is_redacted_segment, starts_with_field_key};
 use super::names::ends_with_unicode_escape;
 
 /// Split a greedy path capture into (path, trailing_noise). The regex matches spaces inside
@@ -18,19 +18,27 @@ use super::names::ends_with_unicode_escape;
 ///   stopped at before `//`), so the scanner gets to claim that reference.
 /// - `, `, `; `, or ` key=` after the LAST separator. Before it, a deeper segment proves the
 ///   path goes on (`Smith, John/x.pdf`), and cutting there would ship the rest.
-/// - the ` -` of a ` -> ` arrow (the regex stops at `>`).
+/// - a ` -> ` arrow, anywhere (`{from} -> {to}`), and the ` -` the regex stopped at before a
+///   Windows path's `>`.
+/// - a word that's already a token (`…/<dir:…> in 3ms`): this scanner's own output, met again
+///   on a second pass. A segment the token leads ends after it; a token after a name ends the
+///   path before it.
 ///
 /// Then only characters that carry no name go back: `:<digits>` line markers, and trailing
 /// `.` `,` `;` `!` `?` or an UNBALANCED closing bracket (`(under /x/y): …`). `(` and `)` never
 /// end a path.
 pub(super) fn split_trailing_noise(s: &str) -> (&str, &str) {
     let mut end = s.find(": ").unwrap_or(s.len());
+    if let Some(arrow) = s[..end].find(" ->") {
+        end = arrow;
+    }
     end = new_reference_start(s, end);
 
     let floor = s[..end].rfind(separator_of(s)).map_or(0, |i| i + 1);
     if let Some(at) = first_delimiter(&s[floor..end]) {
         end = floor + at;
     }
+    end = end_at_token_word(s, end);
 
     end = trim_line_markers(s, end);
     if s[..end].ends_with(" -") {
@@ -50,6 +58,30 @@ fn first_delimiter(tail: &str) -> Option<usize> {
         .find(|(i, _)| starts_with_field_key(&tail[i + 1..]))
         .map(|(i, _)| i);
     punctuation.into_iter().chain(field).min()
+}
+
+/// Where a token word ends the path: after it when it leads a segment (`<dir:…> in 3ms`,
+/// `<dir:…> $HOME/…`), before its space when it follows a name. Only `<`-led words are looked at,
+/// and only an exact token shape counts, so `Secret <draft> Plans` stays one name.
+fn end_at_token_word(s: &str, end: usize) -> usize {
+    let sep = separator_of(s);
+    let mut seg_start = 0usize;
+    for seg in s[..end].split(sep) {
+        let mut offset = seg_start;
+        for (i, word) in seg.split(' ').enumerate() {
+            if word.starts_with('<') && is_redacted_segment(word) {
+                if i > 0 {
+                    return offset - 1;
+                }
+                if word.len() < seg.len() {
+                    return offset + word.len();
+                }
+            }
+            offset += word.len() + 1;
+        }
+        seg_start += seg.len() + sep.len_utf8();
+    }
+    end
 }
 
 /// The start of the first word after the first that opens a new reference, minus its space:

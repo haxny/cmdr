@@ -279,37 +279,44 @@ fn redactor_regex() -> &'static Regex {
         // name rode out in an uploaded bundle verbatim. Every multi-word filename leaked
         // its tail that way.
         //
-        // Tail chars: anything that isn't whitespace, quotes, backticks, angle brackets,
-        // or the pipe character. Single spaces between tail chunks are allowed.
+        // Tail chars: anything that isn't whitespace, quotes, backticks, or the pipe
+        // character. Single spaces between tail chunks are allowed. ❗ `<` and `>` are tail
+        // chars on the local branches: both are legal in a macOS or Linux name, and a tail that
+        // stopped at one shipped the rest of it (`Secret <draft> Plans/beach.jpg`). Tokens are
+        // therefore path chunks on a second pass, which the rewriters keep, and a token word
+        // ends the path (`split_trailing_noise`). Windows forbids both, so `win_home` stops
+        // there; the remote branches still do too (`DETAILS.md` § "Finding the end of a path").
         //
         // The `(?x)` verbose flag lets us write this readably.
         let pattern = r#"(?x)
             (?P<win_home>         [A-Za-z] : \\ Users \\ [^\\/\s"'<>|`]+
                                   (?: \\ [^\\\s"'<>|`]+ (?: \x20 [^\\\s"'<>|`]+ )* )*
             )
-            | (?P<unix_home>      / (?: Users | home ) / [^/\s"'<>|`]+
-                                  (?: / [^/\s"'<>|`]+ (?: \x20 [^/\s"'<>|`]+ )* )*
+            | (?P<unix_home>      / (?: Users | home ) / [^/\s"'|`]+
+                                  (?: / [^/\s"'|`]+ (?: \x20 [^/\s"'|`]+ )* )*
             )
             | (?P<unix_system>    / (?: tmp | var | private | opt ) /
-                                  [^/\s"'<>|`]+
-                                  (?: / [^/\s"'<>|`]+ (?: \x20 [^/\s"'<>|`]+ )* )*
+                                  [^/\s"'|`]+ (?: \x20 [^/\s"'|`]+ )*
+                                  (?: / [^/\s"'|`]+ (?: \x20 [^/\s"'|`]+ )* )*
             )
-            | (?P<volumes>        / Volumes / [^/\s"'<>|`]+ (?: \x20 [^/\s"'<>|`]+ )*
-                                  (?: / [^/\s"'<>|`]+ (?: \x20 [^/\s"'<>|`]+ )* )*
+            | (?P<volumes>        / Volumes / [^/\s"'|`]+ (?: \x20 [^/\s"'|`]+ )*
+                                  (?: / [^/\s"'|`]+ (?: \x20 [^/\s"'|`]+ )* )*
             )
-            | (?P<media>          / media / [^/\s"'<>|`]+ (?: \x20 [^/\s"'<>|`]+ )*
-                                  (?: / [^/\s"'<>|`]+ (?: \x20 [^/\s"'<>|`]+ )* )*
+            | (?P<media>          / media / [^/\s"'|`]+ (?: \x20 [^/\s"'|`]+ )*
+                                  (?: / [^/\s"'|`]+ (?: \x20 [^/\s"'|`]+ )* )*
             )
             # An absolute path under any other prefix: `/srv/…`, `/mnt/…`, a phone's `/DCIM/…`,
             # `/Applications/…`. Hundreds of sites log `path.display()` in prose, so no prefix
             # list can keep up. `\B` stands in for the missing lookbehind: the slash must not
             # follow a word character, which keeps `MB/s`, `and/or`, `3/4`, and `$HOME/…` out.
             # Two segments at least, so a lone `/` or `/foo` stays prose. A later word may start
-            # with `(` (`…/Summer (Lake House) Trip/…`); only the first segment can't.
+            # with `(` (`…/Summer (Lake House) Trip/…`); only the first segment can't, and it
+            # can't start with `<` or `>` either, which leaves a URL's `//<user>:…@<host>/…` (a
+            # second pass) to the remote branches.
             # A span the span pass already read may start one too: its placeholder, then the
             # unwrapped rest a half-migrated site glued to it (`<dir span>/Secret/x.pdf`).
-            | (?P<abs_path>       (?: \B / [^/\s"'<>|`()]+ | PLACEHOLDER [^/\s"'<>|`]* )
-                                  (?: / [^/\s"'<>|`]+ (?: \x20 [^/\s"'<>|`]+ )* )+
+            | (?P<abs_path>       (?: \B / [^/\s"'<>|`()] [^/\s"'|`()]* | PLACEHOLDER [^/\s"'|`]* )
+                                  (?: / [^/\s"'|`]+ (?: \x20 [^/\s"'|`]+ )* )+
             )
             | (?P<remote_url>     (?i: sftp | ssh | webdav | s3 | http | https | smb ) ://
                                   [^\s"'<>|`]+ (?: \x20 [^\s"'<>|`]+ )*
@@ -491,23 +498,23 @@ fn redactor_regex() -> &'static Regex {
 fn dispatch(caps: &Captures<'_>, context: Option<&RedactionContext>) -> (String, usize) {
     if let Some(m) = caps.name("win_home") {
         let (path, _) = split_trailing_noise(m.as_str());
-        return (redact_windows_home(path, context, Leaf::Guess), path.len());
+        return (redact_windows_home(path, context, true, Leaf::Guess), path.len());
     }
     if let Some(m) = caps.name("unix_home") {
         let (path, _) = split_trailing_noise(m.as_str());
-        return (redact_unix_home(path, context, Leaf::Guess), path.len());
+        return (redact_unix_home(path, context, true, Leaf::Guess), path.len());
     }
     if let Some(m) = caps.name("unix_system") {
         let (path, _) = split_trailing_noise(m.as_str());
-        return (redact_unix_system(path, context, Leaf::Guess), path.len());
+        return (redact_unix_system(path, context, true, Leaf::Guess), path.len());
     }
     if let Some(m) = caps.name("volumes") {
         let (path, _) = split_trailing_noise(m.as_str());
-        return (redact_volumes(path, context, Leaf::Guess), path.len());
+        return (redact_volumes(path, context, true, Leaf::Guess), path.len());
     }
     if let Some(m) = caps.name("media") {
         let (path, _) = split_trailing_noise(m.as_str());
-        return (redact_media(path, context, Leaf::Guess), path.len());
+        return (redact_media(path, context, true, Leaf::Guess), path.len());
     }
     if let Some(m) = caps.name("abs_path") {
         let (path, _) = split_trailing_noise(m.as_str());

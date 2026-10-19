@@ -179,3 +179,5 @@
 23:42:00.004 INFO  copy  copy_between_volumes: source_volume=Macintosh HD, dest_volume=Family Photos, 2 sources
 23:42:00.005 INFO  smb2::client::tree  tree: connected share=Family Photos, tree_id=7
 23:42:00.006 DEBUG indexing::verifier  Verifier: scanned new dir path="/Users/ada/Pictures/Lake House" (5 entries, 0ms)
+23:42:00.007 WARN  copy  copy failed for /Users/ada/Pictures/Lake <draft> House/beach.jpg: disk full
+23:42:00.008 INFO  write_operations  moving /Volumes/Backup/Q3 >final< Plans -> /tmp/Q3 >final< Plans

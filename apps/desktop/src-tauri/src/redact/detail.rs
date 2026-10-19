@@ -226,7 +226,7 @@ fn redact_any_absolute_path(text: &str, context: Option<&RedactionContext>) -> S
         Regex::new(
             r#"(?x)
             (?P<lead> ^ | [\s"'(=:,\[] )
-            (?P<path> / [^/\s"'<>|`()]+ (?: / [^/\s"'<>|`]+ (?: \x20 [^/\s"'<>|`]+ )* )+ )
+            (?P<path> / [^/\s"'<>|`()] [^/\s"'|`()]* (?: / [^/\s"'|`]+ (?: \x20 [^/\s"'|`]+ )* )+ )
             "#,
         )
         .expect("valid absolute-path regex")

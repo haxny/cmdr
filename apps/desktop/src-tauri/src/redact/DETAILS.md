@@ -160,8 +160,8 @@ Typed report structures call `RedactionContext::redact_path`, `redact_name`, `re
 unrecognized or relative path fails closed by tokenizing every non-structural segment. A typed path owns its complete
 value boundary: it dispatches directly to the home, mount, remote-reference, UNC, or relative rewriter and never calls
 the prose scanner or `split_trailing_noise`. Raw typed values treat every token-looking segment as untrusted input and
-tokenize it again. Only a quoted path reached through `RedactionContext::redact_line` preserves existing generated
-tokens, because that scanner can be reprocessing its own output and must remain idempotent. These methods are lexical
+tokenize it again. Only a path the line scanner reached (prose, or a quoted field) preserves existing generated tokens
+(`preserve_redacted_segments`), because that scanner can be reprocessing its own output and must remain idempotent. These methods are lexical
 only: bundle assembly performs no filesystem or network lookup.
 
 ## Decision: path-shape preservation + allowlist
@@ -240,7 +240,19 @@ What ends a prose path now, and nothing else:
    `John/x.pdf` (no `\B/` anchor). A match never holds ` /` (the space before a slash ends it), so every later
    separator belongs to the same path. The separator is `\` for a Windows home or UNC path, `/` otherwise (there a `\`
    is a `{:?}` escape).
-4. **The ` -` of a `{from} -> {to}` arrow** (the regex stops at `>`).
+4. **A ` -> ` arrow, anywhere** (`{from} -> {to}`), and the ` -` a Windows path's match stops at before its `>`.
+5. **A word that's already a token** (`…/<dir:…> in 3ms`, `…/<dir:…> $HOME/…`): this scanner's own output on a second
+   pass. A segment the token leads ends after it; a token after a name ends the path before it. Only an exact token
+   shape counts (`is_redacted_segment`), so `Lake <draft> House` stays one name.
+
+**`<` and `>` are path characters** on the local branches (home, system, mount, `abs_path`, and the walk inside
+external text): both are legal in a macOS or Linux name, and a tail that stopped at one shipped the rest
+(`Lake <draft> House/beach.jpg` lost only `Lake`; pinned by `angle_brackets_inside_a_name_never_end_its_path`). So a
+token is a path chunk on a second pass, which is why the rewriters keep tokens on scanner-owned input and rule 5
+exists. `abs_path`'s first segment still can't start with either, which leaves a URL's `//<user>:…@<host>/…` to the
+remote branches. Windows forbids both, so `win_home` stops there. **Known gap:** the remote branches
+(`remote_url`, `unc`) still stop at `<` / `>`, so `smb://nas/Photos/Lake <draft> House/x.jpg` ships
+` <draft> House/x.jpg`; fixing it needs `references.rs` to keep tokens on a second pass.
 
 After the cut, only characters with no name in them go back: `:<digits>` source locations, trailing `.` `,` `;` `!`
 `?`, and a closing bracket the path didn't open (`(under …/Summer trip): disk full`, the `move` line). A balanced `)`

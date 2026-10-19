@@ -139,3 +139,45 @@ fn prose_redaction_is_idempotent() {
         assert_eq!(r(&bare), bare, "input: {input:?}");
     }
 }
+
+/// The first segment under a system root takes more words like every other segment: it used to
+/// stop at the first space, and the rest of the name shipped (`/tmp/<dir> Plans/beach.jpg`).
+#[test]
+fn a_multi_word_first_segment_under_a_system_root_stays_whole() {
+    assert_eq!(
+        r("scratch at /tmp/Secret Plans/beach.jpg"),
+        "scratch at /tmp/<dir>/<file>.jpg"
+    );
+    assert_eq!(
+        r("cache in /private/Secret Plans: busy"),
+        "cache in /private/<dir>: busy"
+    );
+}
+
+/// `<` and `>` are legal in a macOS or Linux file name, so neither may end a path: a tail that
+/// stopped at one shipped the rest of the name (`Secret <draft> Plans/beach.jpg` lost only
+/// `Secret`). Unmarked prose, keyed fields, quoted and bare, and a name that starts with `<`.
+#[test]
+fn angle_brackets_inside_a_name_never_end_its_path() {
+    let context = context();
+    for input in [
+        "copy failed for /Users/test/Photos/Secret <draft> Plans/beach.jpg",
+        "copy failed for /Users/test/Photos/Secret<draft>Plans/beach.jpg, retrying",
+        "listing /Volumes/Backup/Secret >draft< Plans/beach.jpg took 3ms",
+        "listing /media/usb/Secret <draft> Plans: permission denied",
+        "scratch at /tmp/Secret <draft> Plans/beach.jpg",
+        "walking /srv/share/Secret <draft> Plans/beach.jpg",
+        "skipping /Users/test/Photos/<draft> Secret Plans/beach.jpg",
+        "skipping /srv/share/<draft> Secret Plans/beach.jpg",
+        "listing path=\"/Users/test/Photos/Secret <draft> Plans/beach.jpg\" took 3ms",
+        "listing path=\"Photos/Secret <draft> Plans/beach.jpg\" took 3ms",
+        "tree: renamed from=Photos/Secret <draft> Plans/beach.jpg to=x.jpg",
+        "copying /Users/test/Photos/Secret <draft> Plans -> /Volumes/Backup/Secret <draft> Plans",
+    ] {
+        for out in [r(input), context.redact_line(input).into_owned()] {
+            for word in ["Secret", "draft", "Plans", "beach"] {
+                assert!(!out.contains(word), "{word:?} shipped from {input:?}: {out}");
+            }
+        }
+    }
+}
