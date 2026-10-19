@@ -32,14 +32,14 @@ use super::super::super::event_sinks::OperationEventSink;
 use super::super::super::look_alike::is_look_alike_clash;
 use super::super::super::state::WriteOperationState;
 use super::super::super::types::{
-    ConflictResolution, VolumeCopyConfig, WriteConflictEvent, WriteConflictResolvedEvent, WriteOperationError,
+    ConflictResolution, VolumeCopyConfig, WriteConflictEvent, WriteConflictResolvedEvent,
 };
 use super::super::staged_write::Replaces;
 use super::super::volume_outage::through_outages;
 use super::displaced_destination::{DisplacedDestination, displace_destination};
 use super::item_identity::is_the_same_item;
 use super::naming::find_unique_volume_name;
-use super::transfer_error::{PathRole, map_volume_error};
+use super::transfer_error::{AtPath, PathRole, PathedVolumeError};
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::volume::{EntryKind, Volume, VolumeError};
 
@@ -109,7 +109,7 @@ pub(super) async fn resolve_volume_conflict(
     // acquisition) on the conflict-emit critical path, paid per conflict.
     // `None` falls back to the trait call for callers without the hint.
     source_is_directory_hint: Option<bool>,
-) -> Result<Option<ResolvedConflict>, WriteOperationError> {
+) -> Result<Option<ResolvedConflict>, PathedVolumeError> {
     // Classify the clash up front so the per-shape latch lookup and store stay
     // consistent. ❌ Neither probe may fall back to `false`: `ClashKind::of`
     // below reads both sides, so a guessed `false` on the SOURCE files a folder
@@ -119,10 +119,7 @@ pub(super) async fn resolve_volume_conflict(
     // stat fails the item instead.
     let source_is_directory = match source_is_directory_hint {
         Some(is_dir) => is_dir,
-        None => source_volume
-            .is_directory(source_path)
-            .await
-            .map_err(|e| map_volume_error(&source_path.display().to_string(), PathRole::Source, e))?,
+        None => source_volume.is_directory(source_path).await.at_source(source_path)?,
     };
 
     // A source that would land on ITSELF is a request to DUPLICATE it, never a
@@ -202,9 +199,7 @@ pub(super) async fn resolve_volume_conflict(
             // `write-conflict` that no one will ever answer (the dialog is tearing
             // down) — a hang. Bail with `Cancelled` before emitting anything.
             if state.intent().is_cancelled() {
-                return Err(WriteOperationError::Cancelled {
-                    message: "Operation cancelled by user".to_string(),
-                });
+                return Err(cancelled_at(dest_path));
             }
 
             // Re-check the latch under the lock. While this task waited on the
@@ -367,12 +362,8 @@ pub(super) async fn resolve_volume_conflict(
                     apply_volume_conflict_resolution(effective, dest_volume, dest_path, source_is_directory, state)
                         .await
                 }
-                Err(_) => {
-                    // Sender dropped = operation cancelled
-                    Err(WriteOperationError::Cancelled {
-                        message: "Operation cancelled by user".to_string(),
-                    })
-                }
+                // Sender dropped = operation cancelled
+                Err(_) => Err(cancelled_at(dest_path)),
             }
             // `_dispatch_guard` drops here, releasing the next queued task.
         }
@@ -511,16 +502,34 @@ async fn reduce_volume_conditional_resolution(
 ///
 /// A stat is safe to ask twice, so a destination that drops as it's asked is
 /// waited for (`through_outages`) and asked again, ❌ never answered by guess.
+///
+/// Pathed inside the wait, so a share that stays gone keeps what the wait
+/// learned (`ServerConnectionLost`), ❌ never a bare `VolumeError`, which has
+/// nowhere to keep it.
 async fn resolve_dest_is_directory(
     state: &Arc<WriteOperationState>,
     dest_volume: &Arc<dyn Volume>,
     path: &Path,
-) -> Result<bool, WriteOperationError> {
-    match through_outages(state, &[dest_volume], || dest_volume.entry_kind(path)).await {
+) -> Result<bool, PathedVolumeError> {
+    let asked = through_outages(state, &[dest_volume], || async move {
+        dest_volume.entry_kind(path).await.at_destination(path)
+    })
+    .await;
+    match asked {
         Ok(kind) => Ok(kind == EntryKind::Directory),
-        Err(VolumeError::NotFound(_)) => Ok(false),
-        Err(e) => Err(map_volume_error(&path.display().to_string(), PathRole::Destination, e)),
+        Err(e) if matches!(e.error, VolumeError::NotFound(_)) => Ok(false),
+        Err(e) => Err(e),
     }
+}
+
+/// The cancel that ended a clash, as the walk and the drivers expect it:
+/// `VolumeError::Cancelled`, which the post-loop reclassifies as a cancel.
+fn cancelled_at(dest_path: &Path) -> PathedVolumeError {
+    PathedVolumeError::new(
+        PathRole::Destination,
+        dest_path,
+        VolumeError::Cancelled("Operation cancelled by user".into()),
+    )
 }
 
 /// Applies a specific conflict resolution for volume copy.
@@ -536,14 +545,14 @@ async fn apply_volume_conflict_resolution(
     // `Rename` arm), and the in-flight ledger an aside is recorded in (the
     // cross-type Overwrite arm).
     state: &Arc<WriteOperationState>,
-) -> Result<Option<ResolvedConflict>, WriteOperationError> {
+) -> Result<Option<ResolvedConflict>, PathedVolumeError> {
     match resolution {
-        ConflictResolution::Stop => {
-            // Should not happen - Stop waits for user input
-            Err(WriteOperationError::DestinationExists {
-                path: dest_path.display().to_string(),
-            })
-        }
+        // Should not happen - Stop waits for user input
+        ConflictResolution::Stop => Err(PathedVolumeError::new(
+            PathRole::Destination,
+            dest_path,
+            VolumeError::AlreadyExists(dest_path.display().to_string()),
+        )),
         ConflictResolution::Skip => Ok(None),
         ConflictResolution::Overwrite => {
             // Cmdr's UX promise is "Overwrite means merge for dirs, replace for files":

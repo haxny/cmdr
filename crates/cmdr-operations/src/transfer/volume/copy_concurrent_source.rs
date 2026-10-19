@@ -367,7 +367,7 @@ impl ConcurrentCopy<'_> {
             Some(source_is_dir),
         )
         .await
-        .map_err(WriteFailure::synthetic);
+        .map_err(WriteFailure::from);
         // An aside a cross-type Overwrite made is the OPERATION's to settle, not
         // the task's: the driver can abandon a task at its cancel deadline.
         resolved.map(|resolved| {

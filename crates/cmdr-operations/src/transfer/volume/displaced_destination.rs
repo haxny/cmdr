@@ -15,10 +15,10 @@ use std::sync::{Arc, Mutex};
 
 use super::super::super::in_flight_temps::{self, ItemKind, RecordHome, TrackedRecord};
 use super::super::super::state::WriteOperationState;
-use super::super::super::types::{RecoveredOriginal, WriteOperationError};
+use super::super::super::types::RecoveredOriginal;
 use super::super::recovered_name::rescue_out_of_temp_space;
 use super::cleanup::{TreeRemoval, remove_tree};
-use super::transfer_error::{PathRole, map_volume_error};
+use super::transfer_error::{PathRole, PathedVolumeError};
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::staging::StagingTemp;
 use cmdr_fs::volume::{Volume, VolumeError};
@@ -83,12 +83,14 @@ pub(crate) async fn displace_destination(
     volume: &Arc<dyn Volume>,
     original: &Path,
     is_directory: bool,
-) -> Result<Option<DisplacedDestination>, WriteOperationError> {
+) -> Result<Option<DisplacedDestination>, PathedVolumeError> {
     // A folder aside goes as a tree once its replacement lands
     // ([`DisplacedDestination::discard`]), so one with a drive mounted inside it
     // is refused before it's set aside.
     if is_directory {
-        super::super::super::mount_boundary::refuse_a_volume_mount_inside(&**volume, original, state).await?;
+        super::super::super::mount_boundary::refuse_a_volume_mount_inside(&**volume, original, state)
+            .await
+            .map_err(|refusal| PathedVolumeError::refused(original, refusal))?;
     }
     let aside = StagingTemp::mint_aside(original, uuid::Uuid::new_v4(), state.liveness_token());
     // On disk before the rename below puts the original here (`track_in`). The
@@ -122,11 +124,7 @@ pub(crate) async fn displace_destination(
         }
         Err(e) => {
             retire(state, record.as_ref());
-            Err(map_volume_error(
-                &original.display().to_string(),
-                PathRole::Destination,
-                e,
-            ))
+            Err(PathedVolumeError::new(PathRole::Destination, original, e))
         }
     }
 }

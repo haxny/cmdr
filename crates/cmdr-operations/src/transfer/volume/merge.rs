@@ -33,7 +33,6 @@ use futures_util::stream::FuturesUnordered;
 
 use super::super::super::state::WriteOperationState;
 use super::super::super::transfer_tree::{NodeId, TreeOrder};
-use super::super::super::types::WriteOperationError;
 use super::super::dest_name_index::DestNameIndex;
 use super::super::transfer_driver::SourceProgress;
 use super::super::transfer_probe::{CURRENT_TASK_PROBE, TaskPhase, TaskProbeHandle, TaskRole, set_task_phase};
@@ -687,12 +686,9 @@ async fn merge_level<'a>(
             && let Some(ctx) = merge
         {
             // What a resolution can fail on is the clashing destination entry
-            // (probing it, setting it aside): the source's type and size come
-            // from the listing in hand.
-            match resolve_merge_child(ctx, source_volume, &child_source, entry, dest_volume, &child_dest, hit)
-                .await
-                .at_destination(&child_dest)?
-            {
+            // (probing it, setting it aside), and the resolver names it: the
+            // source's type and size come from the listing in hand.
+            match resolve_merge_child(ctx, source_volume, &child_source, entry, dest_volume, &child_dest, hit).await? {
                 MergeChildDecision::Skip => {
                     // A DEEP skip: record it so the caller knows this subtree did
                     // not extract in full (the move-out op must keep the source in
@@ -858,7 +854,7 @@ async fn resolve_merge_child(
     dest_volume: &Arc<dyn Volume>,
     child_dest: &Path,
     dest_hit: &FileEntry,
-) -> Result<MergeChildDecision, VolumeError> {
+) -> Result<MergeChildDecision, PathedVolumeError> {
     // Deep children aren't top-level sources, so no preflight hint exists for
     // them; the resolver falls back to trait calls. We DO know both sides' type
     // and size from the listing entries already in hand — the source's from this
@@ -890,14 +886,17 @@ async fn resolve_merge_child(
     )
     .await;
 
-    match resolved {
-        Ok(None) => Ok(MergeChildDecision::Skip),
-        Ok(Some(ResolvedConflict {
+    // A failure goes out whole, as the resolver pathed it: a cancel stays
+    // `VolumeError::Cancelled` for the post-loop, and a give-up keeps what its
+    // outage wait learned (`ServerConnectionLost`).
+    match resolved? {
+        None => Ok(MergeChildDecision::Skip),
+        Some(ResolvedConflict {
             write_path,
             replaces,
             reserved_placeholder,
             displaced,
-        })) => {
+        }) => {
             // A cross-type Overwrite's aside is the operation's to settle, once
             // it knows how it ended.
             if let Some(displaced) = displaced {
@@ -909,13 +908,5 @@ async fn resolve_merge_child(
                 reserved_placeholder,
             })
         }
-        // The resolver returns a typed `WriteOperationError`; map cancellation
-        // back to the `VolumeError::Cancelled` this function's callers expect so
-        // the post-loop reclassifies it as a cancel, not a transport error.
-        Err(WriteOperationError::Cancelled { .. }) => Err(VolumeError::Cancelled("Operation cancelled by user".into())),
-        Err(other) => Err(VolumeError::IoError {
-            message: format!("conflict resolution failed: {other:?}"),
-            raw_os_error: None,
-        }),
     }
 }

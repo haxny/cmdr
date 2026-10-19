@@ -345,6 +345,50 @@ async fn a_phone_that_stays_gone_keeps_its_device_wording() {
     assert!(nas.reconnect_attempts() > 1, "it waited for the phone like for a share");
 }
 
+/// A clash deep inside a merged folder that gives up on the share says the
+/// connection is the cause, the same as a clash at the top: the resolver's
+/// typed failure rides the merge walk out whole.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_deep_clash_that_outlasts_its_outage_says_it_lost_the_connection() {
+    let engine = TestOperations::new();
+    let source = source_with(2).await;
+    let (inner, nas, dest) = nas("outage-deep-clash");
+    inner.create_directory(Path::new("/batch")).await.unwrap();
+    for n in 0..2 {
+        inner
+            .create_file(Path::new(&format!("/batch/f{n}.txt")), b"old")
+            .await
+            .unwrap();
+    }
+    // The share drops for good as the resolver asks what the clashing file is.
+    nas.drop_at_stat_of(Path::new("/batch/f1.txt"));
+    let state = outage_state(&engine, Duration::from_millis(300));
+    let op = engine.register_state("outage-deep-clash", Arc::clone(&state));
+
+    let failure = copy_volumes_with_progress(
+        Arc::new(CollectorEventSink::new()),
+        op.id(),
+        &state,
+        source,
+        &[PathBuf::from("/batch")],
+        dest,
+        Path::new("/"),
+        &config(),
+    )
+    .await
+    .expect_err("a share that never comes back fails the copy");
+    let error = write_error_event_from(&state, op.id().to_owned(), WriteOperationType::Copy, failure).error;
+
+    assert!(
+        matches!(
+            &error,
+            WriteOperationError::ServerConnectionLost { path, volume_name, gave_up_after_secs: Some(_) }
+                if path == "/batch/f1.txt" && volume_name == "Naspolya"
+        ),
+        "the connection is the cause, named on the clashing file: {error:?}"
+    );
+}
+
 /// Cancel during the wait ends the copy at once, as a cancel.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_cancel_during_the_wait_cancels_the_copy() {

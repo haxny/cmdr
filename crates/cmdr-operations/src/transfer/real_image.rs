@@ -548,6 +548,10 @@ async fn a_volume_overwrite_of_a_folder_that_holds_a_mounted_drive_refuses_and_r
 
     let result = displace_destination(&state, &volume, std::path::Path::new("folder"), true).await;
 
-    assert_refused_at_the_mount(result.map(|displaced| displaced.is_some()));
+    assert_refused_at_the_mount(
+        result
+            .map(|displaced| displaced.is_some())
+            .map_err(WriteOperationError::from),
+    );
     nested.assert_untouched();
 }

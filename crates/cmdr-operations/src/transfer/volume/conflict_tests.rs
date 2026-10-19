@@ -13,6 +13,7 @@ use super::super::super::staged_write::Replaces;
 use super::*;
 use crate::event_sinks::CollectorEventSink;
 use crate::testing::TestOperations;
+use crate::types::WriteOperationError;
 use cmdr_fs::volume::InMemoryVolume;
 use std::sync::Arc;
 
@@ -136,7 +137,7 @@ async fn a_source_whose_type_cannot_be_established_never_clears_the_destination_
         dest.exists(Path::new("/album")).await,
         "the destination folder must survive"
     );
-    let err = result.expect_err("the item must fail rather than resolve on a guess");
+    let err = WriteOperationError::from(result.expect_err("the item must fail rather than resolve on a guess"));
     assert!(
         matches!(&err, WriteOperationError::IoError { path, .. } if path == "/album"),
         "the failure must name the source whose stat failed; got {err:?}"
@@ -187,7 +188,7 @@ async fn a_destination_whose_type_cannot_be_established_is_left_alone() {
         dest.exists(Path::new("/notes.txt")).await,
         "an unanswerable destination stat must never authorize deleting it"
     );
-    let err = result.expect_err("the item must fail rather than resolve on a guess");
+    let err = WriteOperationError::from(result.expect_err("the item must fail rather than resolve on a guess"));
     assert!(
         matches!(&err, WriteOperationError::IoError { path, .. } if path == "/notes.txt"),
         "the failure must name the destination whose stat failed; got {err:?}"
@@ -290,7 +291,7 @@ async fn a_share_that_drops_as_the_destination_is_probed_is_waited_for() {
         conflict_resolution: ConflictResolution::Overwrite,
         ..VolumeCopyConfig::default()
     };
-    let mut apply_to_all = ApplyToAll::default();
+    let apply_to_all = std::sync::Mutex::new(ApplyToAll::default());
     let events = CollectorEventSink::new();
 
     let resolved = tokio::time::timeout(
@@ -304,7 +305,7 @@ async fn a_share_that_drops_as_the_destination_is_probed_is_waited_for() {
             &events,
             "op-probe-outage",
             &state,
-            &mut apply_to_all,
+            &apply_to_all,
             None,
             None,
             Some(false),
@@ -320,6 +321,76 @@ async fn a_share_that_drops_as_the_destination_is_probed_is_waited_for() {
     assert!(nas.reconnect_attempts() > 0, "the share dropped");
     assert_eq!(resolved.replaces, Replaces::Swap);
     assert_eq!(resolved.write_path, PathBuf::from("/notes.txt"));
+    assert_eq!(
+        dest.get_metadata(Path::new("/notes.txt")).await.unwrap().size,
+        Some(3),
+        "the original is untouched"
+    );
+}
+
+/// The share drops as the resolver asks what the destination is, and stays
+/// gone: the clash fails as the lost connection, named on the clashing file,
+/// because the probe keeps what its wait learned.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_share_that_stays_gone_as_the_destination_is_probed_says_it_lost_the_connection() {
+    use crate::outage_slot::OutagePolicy;
+    use crate::transfer::outage_volume_test_support::OutageVolume;
+    use std::time::Duration;
+
+    let engine = TestOperations::new();
+    let source = Arc::new(InMemoryVolume::new("source"));
+    source.create_file(Path::new("/notes.txt"), b"new").await.unwrap();
+    let source_dyn: Arc<dyn Volume> = source.clone();
+
+    let dest = Arc::new(InMemoryVolume::new("Naspolya"));
+    dest.create_file(Path::new("/notes.txt"), b"old").await.unwrap();
+    let nas = OutageVolume::wrap(Arc::clone(&dest), "conflict-probe-gone");
+    nas.drop_at_stat_of(Path::new("/notes.txt"));
+    let dest_dyn: Arc<dyn Volume> = nas.clone();
+
+    let state = Arc::new(
+        engine
+            .new_operation_state(Duration::from_millis(0))
+            .with_outage_policy(OutagePolicy {
+                budget: Duration::from_millis(200),
+                cadence: PROBE_OUTAGE_CADENCE,
+                poll_every: Duration::from_millis(5),
+                attempt_timeout: Duration::from_secs(1),
+            }),
+    );
+    let config = VolumeCopyConfig {
+        conflict_resolution: ConflictResolution::Overwrite,
+        ..VolumeCopyConfig::default()
+    };
+    let apply_to_all = std::sync::Mutex::new(ApplyToAll::default());
+    let events = CollectorEventSink::new();
+
+    let failure = resolve_volume_conflict(
+        &source_dyn,
+        Path::new("/notes.txt"),
+        &dest_dyn,
+        Path::new("/notes.txt"),
+        &config,
+        &events,
+        "op-probe-gone",
+        &state,
+        &apply_to_all,
+        None,
+        None,
+        Some(false),
+    )
+    .await
+    .expect_err("a share that never comes back fails the clash");
+
+    let error = WriteOperationError::from(failure);
+    assert!(
+        matches!(
+            &error,
+            WriteOperationError::ServerConnectionLost { path, volume_name, gave_up_after_secs: Some(_) }
+                if path == "/notes.txt" && volume_name == "Naspolya"
+        ),
+        "the connection is the cause: {error:?}"
+    );
     assert_eq!(
         dest.get_metadata(Path::new("/notes.txt")).await.unwrap().size,
         Some(3),

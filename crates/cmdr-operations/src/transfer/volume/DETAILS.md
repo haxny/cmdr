@@ -1893,6 +1893,16 @@ long copies, a short move).
 with `write_path`, which under a safe-replace IS the original (the swap is the write's own landing), so the
 `.cmdr-tmp-*` name, which means nothing to the user, never reaches them.
 
+**The conflict resolver fails pathed, ❌ never pre-mapped.** `conflict.rs::resolve_volume_conflict` (and
+`displaced_destination.rs::displace_destination`) answer a `PathedVolumeError`: the probe it failed on, its side, and
+what an outage wait learned. A deep clash's failure leaves the merge walk whole that way, so a share that stays gone
+under a deep clash still reads as `ServerConnectionLost`, the same as one at the top; flattening it into an `IoError` at
+the walker lost the type (pinned by
+`copy_outage_tests.rs::a_deep_clash_that_outlasts_its_outage_says_it_lost_the_connection` and
+`conflict_tests.rs::a_share_that_stays_gone_as_the_destination_is_probed_says_it_lost_the_connection`). A caller that
+speaks `WriteOperationError` (a driver's resolve closure, the rename merge) maps it with `?` through
+`From<PathedVolumeError> for WriteOperationError`, the same one mapping `WriteFailure` does.
+
 **A `FinalizeFailure` becomes a pathed one through `PathedVolumeError::from_landing`, which is inherent to
 `PathedVolumeError` rather than a method on `FinalizeFailure`.** It is always the destination's, and it keeps
 `new_data_at`, which turns the mapping into `NewDataKeptAt`. `cargo-modules` attributes an `impl` to the module defining

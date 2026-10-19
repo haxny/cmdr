@@ -408,3 +408,19 @@ fn where_the_new_data_is_outranks_a_lost_connection() {
         matches!(&WriteFailure::from(error).error, WriteOperationError::NewDataKeptAt { kept_at, .. } if kept_at == "/smb/share/a (recovered).jpg"),
     );
 }
+
+/// A refusal made before any volume call (a drive mounted inside a folder an
+/// Overwrite would set aside) reaches the dialog as itself, never as the
+/// I/O failure its `VolumeError` stand-in would map to.
+#[test]
+fn a_refusal_before_any_volume_call_reaches_the_dialog_as_itself() {
+    let refusal = WriteOperationError::MountedVolumeInside {
+        mount_point: "/Volumes/folder/Backup".to_string(),
+    };
+
+    let error = PathedVolumeError::refused(Path::new("/Volumes/folder"), refusal);
+
+    assert!(
+        matches!(&WriteFailure::from(error).error, WriteOperationError::MountedVolumeInside { mount_point } if mount_point == "/Volumes/folder/Backup"),
+    );
+}

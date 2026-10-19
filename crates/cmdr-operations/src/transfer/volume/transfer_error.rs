@@ -122,6 +122,12 @@ pub(crate) struct PathedVolumeError {
     /// and only the wait knows it. Boxed: it's rare, and every transfer
     /// `Result` carries this type by value.
     pub lost_connection: Option<Box<LostConnection>>,
+    /// Set only by a refusal made before any volume call failed (a drive
+    /// mounted inside a folder an Overwrite would set aside,
+    /// `PathedVolumeError::refused`): it already is the user's answer, and it
+    /// outranks everything else here. Boxed for the same reason as
+    /// `lost_connection`.
+    pub refusal: Option<Box<WriteOperationError>>,
 }
 
 /// Maps with the side the failure carries. Both directions have cost a user a
@@ -132,9 +138,13 @@ pub(crate) struct PathedVolumeError {
 /// ended up rather than which errno the rename answered. `lost_connection`
 /// turns it into `ServerConnectionLost`: the server's connection is the cause,
 /// and the errno says nothing a person can act on. Where the new file is
-/// outranks both.
+/// outranks both, and a `refusal` (made before any volume call) outranks
+/// everything: it already is the answer.
 impl From<PathedVolumeError> for WriteFailure {
     fn from(e: PathedVolumeError) -> Self {
+        if let Some(refusal) = e.refusal {
+            return Self { error: *refusal };
+        }
         let path = e.path.display().to_string();
         let error = match (e.new_data_at, e.lost_connection) {
             (Some(kept_at), _) => WriteOperationError::NewDataKeptAt {
@@ -156,6 +166,15 @@ impl From<PathedVolumeError> for WriteFailure {
             (None, None) => map_volume_error(&path, e.role, e.error),
         };
         Self { error }
+    }
+}
+
+/// For a caller that speaks `WriteOperationError` (a driver's resolve
+/// closure, the rename merge), so a pathed failure reaches it mapped the one
+/// way, with its side and what an outage wait learned.
+impl From<PathedVolumeError> for WriteOperationError {
+    fn from(e: PathedVolumeError) -> Self {
+        WriteFailure::from(e).error
     }
 }
 
@@ -195,6 +214,7 @@ impl PathedVolumeError {
             error,
             new_data_at: None,
             lost_connection: None,
+            refusal: None,
         }
     }
 
@@ -209,6 +229,24 @@ impl PathedVolumeError {
             error: failure.error,
             new_data_at: failure.new_data_at,
             lost_connection: None,
+            refusal: None,
+        }
+    }
+
+    /// A refusal made before any volume call, at `path` on the destination.
+    /// `error` is what a walker that inspects it sees: a plain I/O failure,
+    /// neither a cancel nor an outage, so nothing retries or waits on it.
+    pub(super) fn refused(path: &Path, refusal: WriteOperationError) -> Self {
+        Self {
+            path: path.to_path_buf(),
+            role: PathRole::Destination,
+            error: VolumeError::IoError {
+                message: format!("{refusal:?}"),
+                raw_os_error: None,
+            },
+            new_data_at: None,
+            lost_connection: None,
+            refusal: Some(Box::new(refusal)),
         }
     }
 }
