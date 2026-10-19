@@ -1,13 +1,11 @@
-//! Tests for file system watcher
-
-// Note: The watcher tests require async handling and app context
-// which makes them difficult to unit test. Key functionality is tested via:
-// 1. `compute_diff` tests in `listing/diff_test.rs` (unit tests for diff logic)
-// 2. Manual testing of file watching in the actual app
-// 3. Integration tests with the full Tauri app
-
-// The start_watching/stop_watching functions require a running app context
-// to emit events, so proper testing requires integration tests.
+//! Tests for the listing watcher: event-path rebasing, the batch handler
+//! (`handle_directory_change*` with hand-built events), and arming
+//! (`start_watching`, the detached arm, the reconcile on arm).
+//!
+//! A test build arms no OS stream (`file_system/DETAILS.md` § "Tests arm no OS
+//! stream"), so arming cells run in milliseconds. The one cell that needs real
+//! FSEvents delivery opts in with `watch_for_real`. The diff logic itself is
+//! `listing/diff_test.rs`.
 
 use super::volume::Volume;
 use super::watcher::{event_targets_watch_root, rebase_event_path};
