@@ -700,6 +700,38 @@ during cleanup → temps gone after restore.
 **DONE**: `transfer/DETAILS.md` § "File writes are staged" (Finding the litter, What that sweep can't remove) describes
 the wait and the reconnect sweep.
 
+**Status: done.** As built (for the milestones after it):
+
+- The background pass is `transfer/leftover_cleanup.rs` (one per stopped op, on the engine's runtime, tracked in
+  `EngineStores::leftover_cleanups` so a test can `Operations::leftover_cleanups_settled()`). Its timings are
+  `CleanupPolicy { inline_budget: 5 s, wait: 20 s, retry_after: 3 s }` on the state (`with_cleanup_policy` in tests).
+  The inline deletes are capped IN ALL by `inline_budget` too, for a destination that reads live and dies under them.
+- "Ended only by tier 2 and the app quitting": tier 2 is the op's own `backend_abort`; the quit is
+  `LeftoverCleanups::stop`, fired by `abort_all_write_operations`, because a pass outlives its op's registration and
+  can't hear `abort_all`'s per-op token. A stopped pass leaves its records registered (not pending) for the startup
+  sweep.
+- The "already gave up" look is `Outages::gave_up_on` (the same test `join` makes): one reconnect attempt, no wait.
+- The reconnect hook is app-side, ❌ no engine seam: `file_system/volume/manager/reconnects.rs::ArrivalOnReconnect`
+  wraps every backend's event sink (`volume_host.rs`, test binaries included) and calls
+  `VolumeManager::announce_reconnected` on a registered volume's `Connected` transition. `FakeVolumes::reconnected` is
+  the engine fake.
+- **Found while building it**: `StagedWrite::abandon` retired its temp BEFORE the delete, so a task that stopped on a
+  share that was out forgot its temp there (no ledger, no in-memory entry, only the hour reap). It retires only after
+  the delete went through now, and a refused one stays listed for the post-loop cleanup.
+- `staged_leftovers` is `Vec<StagedLeftovers { fate, count, example_name, volume_name }>`, `StagedLeftoverFate` =
+  `Refused` / `RemovedWhenBack` / `LandsWhenBack`. A landing a stop left recorded is collected through
+  `state.kept_landings` (pushed by `Landing::keep_landing`), named by its FINAL name. Only `write-cancelled` carries
+  them: a failed op's `write-error` doesn't (its pass still runs), which milestone 10's terminal errors may want.
+- The size-mismatched `Landing`: the sweep rescues it to a ` (recovered)` name (record retired) and raises a notice. The
+  notice folded the existing `MoveLeftoversKeptEvent` into one `LeftoversKeptEvent { volume_name, kept: KeptLeftover }`
+  (`StagingFolder` / `UnfinishedLanding`), wire `leftovers-kept`, rather than add a seam method.
+- The reconnect-sweep cell lives in `in_flight_temps_tests.rs` (where the arrival flow's cells are), not
+  `in_flight_sweep_tests.rs`. Live:
+  `smb_outage_test.rs::smb_integration_a_cancel_while_the_share_is_out_reports_at_once_and_removes_the_temp_once_it_is_back`.
+- Copy (DRAFT, English only, for David): `fileOperations.cancelRollback.stagedLeftover.{named,counted}` reworded to
+  "Cmdr tries again the next time it connects there", new `.waiting.*` and `.landing.*`, and
+  `fileOperations.leftovers.unfinishedLandingKept`.
+
 ### 10. The remaining steps wait through outages (three milestones, one agent each)
 
 Shared by 10a–10c. **Intentions**: every place a managed op meets a session volume waits like a copy does; together they

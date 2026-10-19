@@ -2195,8 +2195,9 @@ what's left).
 go back through that connection to tidy up: the delete would hold the very deadline the tier exists to keep, a second
 time. So the staged `.cmdr-tmp-*` stays registered in both `in_flight_temps` ledgers and the next launch's ledger claim
 (`Operations::claim_ledger`) removes it, with no age gate, off the launch thread.
-`volume::cleanup::clean_abandoned_staged_writes` stands down for the same reason. Nothing is ever left at a real name,
-because the write was staged — which is what Q1 bought.
+`volume::cleanup::clean_abandoned_staged_writes` stands down for the same reason, and so does a background cleanup pass
+already running (`leftover_cleanup.rs`, stopped by the quit too). Nothing is ever left at a real name, because the write
+was staged — which is what Q1 bought.
 
 **Why the two phases it races are the source open and the write, and no others.** They are `TaskPhase::OpeningSource`
 and `Streaming`, the same two the stall watchdog considers abortable, and for the same reason: every other await on the
@@ -2276,7 +2277,8 @@ are spawned into a `JoinSet`) and waits up to `ABORTED_TASKS_GRACE` (1 s) for th
 backend writer's abort, its probe row) runs before the post-loop sweeps what it left; a result that raced the abort is
 recorded like any other, since it carries the only copy of its ledger. A task stuck INSIDE a poll can't be stopped by
 anything, and the driver lets go of it after the grace rather than freeze with it. The staged partials are removed by
-`clean_abandoned_staged_writes` in the post-loop.
+`clean_abandoned_staged_writes` in the post-loop, or by its background pass when the destination can't take them right
+then (§ "File writes are staged").
 
 **Decision/Why abandon rather than hold**: an abandoned task can leave an open SMB write handle behind. Servers reap
 idle handles on their own, and the alternative is the incident's outcome — the user's only way out being a force-quit,
