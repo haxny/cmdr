@@ -41,8 +41,8 @@ recipe for adding one is § "Adding a new check". Only the layout rules live her
   out-of-line `#[cfg(test)] mod tests;` gates nothing in this file, so it yields no region). `tracked-files.go` is the
   shared "what does git know about, and how do you read one" vocabulary (`repoFiles`, `gitTrackedFiles`,
   `readTrackedFile`) that every whole-tree scanner enumerates and reads through. `corpus.go` is the run's one read of
-  the tree and `literal-gate.go` the cheap pre-check in front of a per-line regex, both shared by the source scanners
-  (§ "The shared source corpus"). None appears in `AllChecks`.
+  the tree and `literal-gate.go` the cheap pre-check in front of a per-line regex, both shared by the source scanners (§
+  "The shared source corpus"). None appears in `AllChecks`.
 - **`changelog-commit-links.go` resolves every commit hash in `CHANGELOG.md` through ONE `git cat-file --batch-check`
   process**, not a process per reference. The recognition rule is § "CHANGELOG commit refs" below.
 
