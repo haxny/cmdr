@@ -5,11 +5,12 @@
 
 use super::context::TokenDomain;
 use super::fields::{end_of_bare_value, identity_field_token, is_redacted_segment, redact_typed_path};
+use super::markers::Spans;
 use super::names::unescape_debug;
-use super::paths::{has_extension_like_suffix, redact_leaf};
+use super::paths::{Leaf, has_extension_like_suffix, redact_leaf};
 use super::{
-    REPORT_DETAIL_MAX_CHARS, RedactionContext, dispatch, identity_token, redact_with, redactor_regex,
-    split_trailing_noise, whole_len,
+    REPORT_DETAIL_MAX_CHARS, RedactionContext, dispatch, identity_token, redactor_regex, scan, split_trailing_noise,
+    whole_len,
 };
 use regex::{Captures, Regex};
 use std::borrow::Cow;
@@ -20,12 +21,26 @@ use std::sync::OnceLock;
 const MIN_ECHOED_IDENTITY_CHARS: usize = 3;
 
 /// A raw identity the line names, paired with the token it gets there.
+#[derive(Clone)]
 pub(super) struct EchoedIdentity {
     raw: String,
     token: String,
     /// A path's last segment: the one kind of identity scrubbed from plain prose too
     /// ([`scrub_leaf_echoes`]), since macOS repeats a file's name in its own error text.
     is_leaf: bool,
+}
+
+impl EchoedIdentity {
+    /// An identity worth scrubbing by its spelling, or `None` for one that isn't: `None`, too
+    /// short to tell from part of a word, already a token, or holding a char a line can only
+    /// carry as a marker.
+    pub(super) fn new(raw: String, token: String, is_leaf: bool) -> Option<Self> {
+        let scrubbable = raw != "None"
+            && raw.chars().count() >= MIN_ECHOED_IDENTITY_CHARS
+            && !is_redacted_segment(&raw)
+            && !raw.chars().any(cmdr_fs::log_private::is_reserved);
+        scrubbable.then_some(Self { raw, token, is_leaf })
+    }
 }
 
 /// Path branches whose leaf is collected for the echo scrub: the local and absolute ones.
@@ -39,9 +54,7 @@ pub(super) fn echoed_identities(line: &str, context: Option<&RedactionContext>) 
     let mut found = Vec::new();
     for caps in redactor_regex().captures_iter(line) {
         if let Some(branch) = ECHO_PATH_BRANCHES.iter().find_map(|g| caps.name(g)) {
-            if let Some(identity) = path_leaf_identity(branch.as_str(), &caps, context) {
-                found.push(identity);
-            }
+            found.extend(path_leaf_identity(branch.as_str(), &caps, context));
             continue;
         }
         let (raw, token) = if caps.name("identity_field").is_some() {
@@ -74,14 +87,15 @@ pub(super) fn echoed_identities(line: &str, context: Option<&RedactionContext>) 
         } else {
             continue;
         };
-        if raw != "None" && raw.chars().count() >= MIN_ECHOED_IDENTITY_CHARS {
-            let is_leaf = caps.name("path_field").is_some();
-            found.push(EchoedIdentity { raw, token, is_leaf });
-        }
+        found.extend(EchoedIdentity::new(raw, token, caps.name("path_field").is_some()));
     }
-    // Longest first, so a share named `Plans` can't split `Client Plans` before it's seen.
-    found.sort_by_key(|identity| std::cmp::Reverse(identity.raw.len()));
+    sort_longest_first(&mut found);
     found
+}
+
+/// Longest first, so a share named `Plans` can't split `Client Plans` before it's seen.
+pub(super) fn sort_longest_first(identities: &mut [EchoedIdentity]) {
+    identities.sort_by_key(|identity| std::cmp::Reverse(identity.raw.len()));
 }
 
 /// The leaf of a prose path match, with the exact token the path's own rewrite gave it. A leaf
@@ -96,12 +110,14 @@ fn path_leaf_identity(
     let raw = path.rsplit(['/', '\\']).find(|seg| !seg.is_empty())?;
     let (redacted, _) = dispatch(caps, context);
     let token = redacted.rsplit(['/', '\\']).find(|seg| !seg.is_empty())?;
-    let is_name_token = token.starts_with("<file") || token.starts_with("<dir");
-    (is_name_token && raw.chars().count() >= MIN_ECHOED_IDENTITY_CHARS).then(|| EchoedIdentity {
-        raw: raw.to_string(),
-        token: token.to_string(),
-        is_leaf: true,
-    })
+    is_name_token(token)
+        .then(|| EchoedIdentity::new(raw.to_string(), token.to_string(), true))
+        .flatten()
+}
+
+/// Whether `token` names a file or a folder, the one kind of leaf worth scrubbing from prose.
+pub(super) fn is_name_token(token: &str) -> bool {
+    token.starts_with("<file") || token.starts_with("<dir")
 }
 
 /// Scrub whole-word repeats of the line's path leaves from a stretch of plain prose between
@@ -125,7 +141,7 @@ fn is_prose_glue(neighbor: Option<char>, beyond: Option<char>) -> bool {
 }
 
 /// Strip `Some("…")` or `"…"` wrappers; anything else is returned as is.
-fn quoted_value(raw: &str) -> &str {
+pub(super) fn quoted_value(raw: &str) -> &str {
     raw.strip_prefix("Some(\"")
         .and_then(|rest| rest.strip_suffix("\")"))
         .or_else(|| raw.strip_prefix('"').and_then(|rest| rest.strip_suffix('"')))
@@ -142,6 +158,7 @@ pub(super) fn redact_detail_field(
     caps: &Captures<'_>,
     context: Option<&RedactionContext>,
     echoed: &[EchoedIdentity],
+    spans: &Spans,
 ) -> (String, usize) {
     let key = caps.name("df_key").map_or("", |m| m.as_str());
     let raw = caps.name("df_value").map_or("", |m| m.as_str());
@@ -153,12 +170,16 @@ pub(super) fn redact_detail_field(
     let text = redact_any_absolute_path(&text, context);
     let mut redacted = String::with_capacity(text.len());
     for line in text.split_inclusive('\n') {
-        redacted.push_str(&redact_with(line, context));
+        redacted.push_str(&scan(line, context, &Spans::NONE));
     }
     for identity in echoed {
         redacted = replace_whole_word(&redacted, &identity.raw, &identity.token);
     }
-    (format!("{key}={:?}", cap_chars(&redacted)), whole_len(caps))
+    // Span tokens go in before the cap, so it counts what ships.
+    (
+        format!("{key}={:?}", cap_chars(&spans.fill(&redacted))),
+        whole_len(caps),
+    )
 }
 
 /// Tokenize the values of identity-keyed JSON pairs (`"server":"NASPOLYA"`): the frontend logs
@@ -183,7 +204,7 @@ fn redact_json_identity_pairs(text: &str, context: Option<&RedactionContext>) ->
             "server" | "host" | "hostname" => identity_field_token("host", value, context),
             "share" => identity_field_token("share", value, context),
             "user" | "username" => identity_token("user", TokenDomain::Userinfo, value, context),
-            "path" => redact_typed_path(value, context, true),
+            "path" => redact_typed_path(value, context, true, Leaf::Guess),
             "name" => redact_leaf(value, has_extension_like_suffix(value), context),
             _ => identity_field_token(key, value, context),
         };
@@ -223,7 +244,7 @@ fn redact_any_absolute_path(text: &str, context: Option<&RedactionContext>) -> S
             continue;
         }
         out.push_str(&text[pos..lead.end()]);
-        out.push_str(&redact_typed_path(path_text, context, true));
+        out.push_str(&redact_typed_path(path_text, context, true, Leaf::Guess));
         pos = path.start() + path_text.len();
     }
     out.push_str(&text[pos.min(text.len())..]);

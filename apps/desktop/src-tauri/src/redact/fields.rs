@@ -6,8 +6,8 @@ use super::context::TokenDomain;
 use super::identity_token;
 use super::names::{split_cmdr_suffix, unescape_debug};
 use super::paths::{
-    dir_token, has_extension_like_suffix, home_role_len, keeps_parent_name, redact_leaf, redact_media,
-    redact_unix_home, redact_unix_system, redact_volumes, redact_windows_home,
+    Leaf, dir_token, home_role_len, keeps_parent_name, redact_leaf, redact_media, redact_unix_home, redact_unix_system,
+    redact_volumes, redact_windows_home,
 };
 use super::references::{redact_host, redact_remote_unc, redact_remote_url, redact_scheme_less};
 use super::whole_len;
@@ -79,7 +79,7 @@ pub(super) fn redact_path_field(caps: &Captures<'_>, context: Option<&RedactionC
     if quoted {
         // This value came from a line the scanner may already have transformed. Preserve
         // generated tokens so line redaction remains idempotent.
-        let redacted = redact_typed_path(&unescape_debug(value), context, true);
+        let redacted = redact_typed_path(&unescape_debug(value), context, true, Leaf::Guess);
         return (format!("{head}{redacted}{quote}"), whole_len(caps));
     }
     if claimed_by_path_branch(value) {
@@ -88,14 +88,14 @@ pub(super) fn redact_path_field(caps: &Captures<'_>, context: Option<&RedactionC
         let (path, _) = split_trailing_noise(value);
         let path = super::references::trim_reference_end(path);
         if !path.is_empty() {
-            let redacted = redact_typed_path(path, context, true);
+            let redacted = redact_typed_path(path, context, true, Leaf::Guess);
             return (format!("{head}{redacted}"), head.len() + path.len());
         }
         return (head.clone(), head.len());
     }
 
     let unescaped = if quoted { unescape_debug(value) } else { value.into() };
-    let redacted = redact_relative_path(&unescaped, context, true);
+    let redacted = redact_relative_path(&unescaped, context, true, Leaf::Guess);
     let consumed = head.len() + value.len() + quote.len();
     (format!("{head}{redacted}{quote}"), consumed)
 }
@@ -104,39 +104,41 @@ pub(super) fn redact_path_field(caps: &Captures<'_>, context: Option<&RedactionC
 /// supplied value boundary and therefore never calls `split_trailing_noise` or trims URL
 /// punctuation. Extensionless multiword leaves remain one segment all the way to tokenization.
 /// `preserve_redacted_segments` is only for values reached through an already-transformed
-/// line; raw typed callers must not trust token-looking input.
+/// line; raw typed callers must not trust token-looking input. `leaf` is what the last segment
+/// is, when a producer said.
 pub(super) fn redact_typed_path(
     path: &str,
     context: Option<&RedactionContext>,
     preserve_redacted_segments: bool,
+    leaf: Leaf,
 ) -> String {
     let bytes = path.as_bytes();
     if bytes.first().is_some_and(u8::is_ascii_alphabetic)
         && bytes.get(1) == Some(&b':')
         && path.get(2..).is_some_and(|tail| tail.starts_with(r"\Users\"))
     {
-        return redact_windows_home(path, context);
+        return redact_windows_home(path, context, leaf);
     }
     if path.starts_with("/Users/") || path.starts_with("/home/") {
-        return redact_unix_home(path, context);
+        return redact_unix_home(path, context, leaf);
     }
     if ["/tmp/", "/var/", "/private/", "/opt/"]
         .iter()
         .any(|prefix| path.starts_with(prefix))
     {
-        return redact_unix_system(path, context);
+        return redact_unix_system(path, context, leaf);
     }
     if path.starts_with("/Volumes/") {
-        return redact_volumes(path, context);
+        return redact_volumes(path, context, leaf);
     }
     if path.starts_with("/media/") {
-        return redact_media(path, context);
+        return redact_media(path, context, leaf);
     }
     if is_supported_remote_url(path) {
-        return redact_remote_url(path, context);
+        return redact_remote_url(path, context, leaf);
     }
     if path.starts_with(r"\\") {
-        return redact_remote_unc(path, context);
+        return redact_remote_unc(path, context, leaf);
     }
     if path.strip_prefix("//").is_some_and(|remainder| {
         remainder
@@ -144,9 +146,9 @@ pub(super) fn redact_typed_path(
             .next()
             .is_some_and(|authority| authority.contains('@'))
     }) {
-        return redact_scheme_less(path, context);
+        return redact_scheme_less(path, context, leaf);
     }
-    redact_relative_path(path, context, preserve_redacted_segments)
+    redact_relative_path(path, context, preserve_redacted_segments, leaf)
 }
 
 fn is_supported_remote_url(path: &str) -> bool {
@@ -178,7 +180,13 @@ pub(super) fn redact_identity_field(caps: &Captures<'_>, context: Option<&Redact
     } else {
         ("\"", &raw[1..raw.len() - 1], "\"")
     };
-    let token = identity_field_token(key, &unescape_debug(value), context);
+    let value = unescape_debug(value);
+    // A second pass meets its own token here; it stays, which keeps this idempotent.
+    let token = if is_redacted_segment(&value) {
+        value.into_owned()
+    } else {
+        identity_field_token(key, &value, context)
+    };
     (format!("{key}={prefix}{token}{suffix}"), whole_len(caps))
 }
 
@@ -189,7 +197,7 @@ pub(super) fn redact_label_field(caps: &Captures<'_>, context: Option<&Redaction
     let key = caps.name("lf_key").map_or("", |m| m.as_str());
     let value = end_of_bare_value(caps.name("lf_value").map_or("", |m| m.as_str()));
     let consumed = key.len() + 1 + value.len();
-    if value.is_empty() || value == "None" {
+    if value.is_empty() || value == "None" || is_redacted_segment(value) {
         return (format!("{key}={value}"), consumed);
     }
     (format!("{key}={}", identity_field_token(key, value, context)), consumed)
@@ -262,6 +270,7 @@ pub(super) fn redact_relative_path(
     value: &str,
     context: Option<&RedactionContext>,
     preserve_redacted_segments: bool,
+    leaf: Leaf,
 ) -> String {
     let sep = if value.contains('/') || !value.contains('\\') {
         '/'
@@ -291,7 +300,7 @@ pub(super) fn redact_relative_path(
         if keep {
             out.push_str(seg);
         } else if i == leaf_idx {
-            out.push_str(&redact_leaf(seg, has_extension_like_suffix(seg), context));
+            out.push_str(&redact_leaf(seg, leaf.is_file(seg), context));
         } else if i + 1 == leaf_idx && keeps_parent_name(seg) {
             out.push_str(seg);
         } else {
@@ -304,6 +313,7 @@ pub(super) fn redact_relative_path(
 /// The hash-free placeholders unsalted redaction writes (`<dir>`, `<file>.pdf`, …): every
 /// kind `identity_token` is called with, plus `<email>`.
 const BARE_PLACEHOLDERS: &[&str] = &[
+    "redacted",
     "dir",
     "file",
     "volume",

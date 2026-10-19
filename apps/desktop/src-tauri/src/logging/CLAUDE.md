@@ -31,6 +31,9 @@ Dispatch-tree shape, why fern, timestamp formats, each file's depth, and decisio
   because error-report bundles need debug context; only `mdns_sd` is held at Info there (its dumps were most of it).
 - **The file tags OUR lines (`·` before the target), from `record.module_path()`, ❌ never the target.** Error reports
   ship DEBUG/TRACE only from tagged lines, so an untagged line fails closed. DETAILS § "Line provenance".
+- **The terminal hides log markers; the file keeps them.** `write_terminal_line` shows each marked value as itself
+  (`crate::redact::display_line`), and so does Help > View debug log; the error reporter reads the markers from the
+  file, so ❌ never strip them in the file chain. `../redact/DETAILS.md` § "Marked spans".
 - **The verbose toggle is an AtomicU8 read per record, NOT a dispatch rebuild** (a rebuild drops records mid-swap). It
   gates the terminal chain only; `RUST_LOG` sets the startup threshold.
 - **The file chain's ISO timestamp is prepended by `CoalescingWriter`, NOT the fern `.format()` closure.** ❌ Don't move

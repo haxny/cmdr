@@ -6,10 +6,10 @@
 use super::RedactionContext;
 use super::context::TokenDomain;
 use super::identity_token;
-use super::paths::{has_extension_like_suffix, redact_leaf};
+use super::paths::{Leaf, redact_leaf};
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
-pub(super) fn redact_remote_url(reference: &str, context: Option<&RedactionContext>) -> String {
+pub(super) fn redact_remote_url(reference: &str, context: Option<&RedactionContext>, leaf: Leaf) -> String {
     if is_svelte_error_url(reference) {
         return reference.to_string();
     }
@@ -36,6 +36,7 @@ pub(super) fn redact_remote_url(reference: &str, context: Option<&RedactionConte
         suffix,
         scheme.eq_ignore_ascii_case("smb"),
         context,
+        leaf,
     ));
     out
 }
@@ -53,7 +54,7 @@ fn is_svelte_error_url(reference: &str) -> bool {
     })
 }
 
-pub(super) fn redact_scheme_less(reference: &str, context: Option<&RedactionContext>) -> String {
+pub(super) fn redact_scheme_less(reference: &str, context: Option<&RedactionContext>, leaf: Leaf) -> String {
     let Some(remainder) = reference.strip_prefix("//") else {
         return reference.to_string();
     };
@@ -70,11 +71,11 @@ pub(super) fn redact_scheme_less(reference: &str, context: Option<&RedactionCont
         out.push('@');
     }
     out.push_str(&redact_host_port(host_port, None, context));
-    out.push_str(&redact_remote_suffix(suffix, true, context));
+    out.push_str(&redact_remote_suffix(suffix, true, context, leaf));
     out
 }
 
-pub(super) fn redact_remote_unc(reference: &str, context: Option<&RedactionContext>) -> String {
+pub(super) fn redact_remote_unc(reference: &str, context: Option<&RedactionContext>, leaf: Leaf) -> String {
     let Some(remainder) = reference.strip_prefix(r"\\") else {
         return reference.to_string();
     };
@@ -93,7 +94,7 @@ pub(super) fn redact_remote_unc(reference: &str, context: Option<&RedactionConte
     let tail: Vec<&str> = parts.collect();
     if !tail.is_empty() {
         out.push('\\');
-        out.push_str(&redact_segments(&tail, '\\', context));
+        out.push_str(&redact_segments(&tail, '\\', context, leaf));
     }
     out
 }
@@ -289,14 +290,14 @@ fn ipv6_kind(address: Ipv6Addr) -> &'static str {
     }
 }
 
-fn redact_remote_suffix(suffix: &str, smb: bool, context: Option<&RedactionContext>) -> String {
+fn redact_remote_suffix(suffix: &str, smb: bool, context: Option<&RedactionContext>, leaf: Leaf) -> String {
     let (before_fragment, fragment) = suffix
         .split_once('#')
         .map_or((suffix, None), |(left, right)| (left, Some(right)));
     let (path, query) = before_fragment
         .split_once('?')
         .map_or((before_fragment, None), |(left, right)| (left, Some(right)));
-    let mut out = redact_remote_path(path, smb, context);
+    let mut out = redact_remote_path(path, smb, context, leaf);
     if let Some(query) = query {
         out.push('?');
         out.push_str(&redact_query(query, context));
@@ -313,7 +314,7 @@ fn redact_remote_suffix(suffix: &str, smb: bool, context: Option<&RedactionConte
     out
 }
 
-fn redact_remote_path(path: &str, smb: bool, context: Option<&RedactionContext>) -> String {
+fn redact_remote_path(path: &str, smb: bool, context: Option<&RedactionContext>, leaf: Leaf) -> String {
     if path.is_empty() {
         return String::new();
     }
@@ -330,10 +331,10 @@ fn redact_remote_path(path: &str, smb: bool, context: Option<&RedactionContext>)
         ));
         if segments.len() > 1 {
             out.push('/');
-            out.push_str(&redact_segments(&segments[1..], '/', context));
+            out.push_str(&redact_segments(&segments[1..], '/', context, leaf));
         }
     } else {
-        out.push_str(&redact_segments(&segments, '/', context));
+        out.push_str(&redact_segments(&segments, '/', context, leaf));
     }
     if trailing {
         out.push('/');
@@ -341,14 +342,14 @@ fn redact_remote_path(path: &str, smb: bool, context: Option<&RedactionContext>)
     out
 }
 
-fn redact_segments(segments: &[&str], separator: char, context: Option<&RedactionContext>) -> String {
+fn redact_segments(segments: &[&str], separator: char, context: Option<&RedactionContext>, leaf: Leaf) -> String {
     let mut out = String::new();
     for (index, segment) in segments.iter().enumerate() {
         if index > 0 {
             out.push(separator);
         }
         let decoded = decode_identity(segment);
-        if index + 1 == segments.len() && has_extension_like_suffix(&decoded) {
+        if index + 1 == segments.len() && leaf.is_file(&decoded) {
             out.push_str(&redact_leaf(&decoded, true, context));
         } else {
             out.push_str(&identity_token("dir", TokenDomain::Path, &decoded, context));

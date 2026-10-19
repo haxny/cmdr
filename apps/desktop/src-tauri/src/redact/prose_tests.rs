@@ -87,6 +87,21 @@ fn a_leaf_named_before_its_path_is_scrubbed_too() {
     );
 }
 
+/// The log header names nobody: a folder called `2026` or `INFO` leaves the timestamp and the
+/// level as they are.
+#[test]
+fn the_leaf_scrub_leaves_the_log_header_alone() {
+    let header = "2026-10-19T10:00:00.000+02:00 INFO  ·listing  ";
+    assert_eq!(
+        r(&format!("{header}listing /Users/me/Trips/2026, 2026 entries")),
+        format!("{header}listing $HOME/<dir>/<dir>, <dir> entries")
+    );
+    assert_eq!(
+        r(&format!("{header}listing /srv/x/INFO, 3 entries")),
+        format!("{header}listing /<dir>/<dir>/<dir>, 3 entries")
+    );
+}
+
 /// Only whole-word repeats go, and only of names long enough not to be part of prose.
 #[test]
 fn the_leaf_scrub_leaves_other_words_alone() {

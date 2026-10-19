@@ -53,6 +53,69 @@ they carry no one's data, and a walk that tripped on one is a triage clue. Exact
   `smbutil` / Linux `smbclient` fallbacks) avoids grabbing the `//user@host` tail inside a scheme'd `http://user@host`
   (handled by the earlier URL branches). Don't drop the lead capture.
 
+## Marked spans
+
+A producer that knows what a value is wraps it between its kind's opener and the closer, Unicode noncharacters from
+U+FDD0–U+FDEF defined once in `crates/cmdr-fs/src/log_private.rs` (`LogKind`, `CLOSER`, `RESERVED`; nothing here lists
+a code point). `markers.rs` reads them first, on every line, in the shared `redact_with`, so both `redact_line`s run it.
+
+**The content encoding.** A span's value is always written as the BODY of `{:?}` (what `<str as Debug>` writes between
+its quotes), raw markers around it, in a `{}` site and a `{:?}` site alike (the latter inside quotes). Every `{:?}` the
+marked text goes through afterwards (a keyed field, `LogDetail`, a derived `Debug`) escapes the markers too: a
+noncharacter prints as `\u{fdd1}` (verified on rustc 1.99.0, `debug_formatting_escapes_every_reserved_char_in_lowercase_hex`,
+2026-10-19). So a span at depth d holds its value escaped d+1 times, and the pass unescapes it d+1 times before hashing.
+One value tokenizes the same in every spelling, and control, bidi, and reserved chars inside a value are always escaped
+text, one depth deeper than the span's own closer.
+
+**Decision: depth comes from the backslash run's trailing zeros, not its length.** A raw marker is depth 0. An escaped
+one behind a MAXIMAL run of r backslashes is depth `1 + r.trailing_zeros()`: at depth d the marker's own escape is
+2^(d-1) backslashes, and every literal backslash in front of it arrives as a multiple of 2^d, so r = 2^(d-1) × odd.
+Counting the length instead reads a value ending in `\` (run 5 at depth 1, 10 at depth 2) or foreign text ending in `\`
+before an opener (run 3) as another depth, and the span never closes. The lexer accepts any escape `unescape_debug`
+would decode to a reserved char (any case, 1–6 hex digits), and the fast path skips a line with neither the reserved
+chars' UTF-8 lead bytes (`EF B7`) nor a `u{`.
+
+**Why a span closes only at its own depth:** a literal `\u{fdd1}` at depth n spells exactly like a real closer at
+depth n+1 (`format!("{:?}", "\\u{fdd1}")` prints the same bytes as a Debug of a Debug of the marker). Matching depth
+makes every literal inert by construction.
+
+The parser rules, each pinned in `markers_tests.rs`:
+
+1. A balanced span (an opener, then the next closer at its depth) is hashed by kind through the same typed calls typed
+   report values use: `redact_typed_path` with the leaf kind threaded through every path branch (`paths::Leaf`), so a
+   file path keeps its extension and a dir path never gets one (`com.example.app` reads `<dir>`); `redact_leaf` for
+   names; the volume domain for volumes (shared with `share=`); `redact_host`; the userinfo domain for users, so a user
+   span correlates with a `user=` field. Junk names and the allowlists behave as for any typed value.
+2. **An opener with no closer** redacts to the end of the line, a trailing `\n` / `\r` kept, or to the closing quote of
+   the `key="…"` field it sits in, so a cut `detail="…"` stays one field: still capped, still echo-scrubbed. The closer
+   search is bounded the same way: a legit span's body is escaped, so it never holds the field's closing quote.
+3. **A closer with no opener** redacts back to the previous span's end, or to the message start (after `<ts> LEVEL
+   target  `; the header the bundle filters read never goes), and on through the name glued after it, to where the
+   greedy prose boundary ends a path (`evil<closer>rest/child.pdf`: no regex would claim `rest/child.pdf`).
+4. **An opener inside an open span** widens it to the next same-depth closer: one value. A closer left over is stray.
+5. Span leaves (and volume, host, and user values) feed the echo scrub like a path leaf or a keyed identity.
+6. **A path keeps its path context across a span.** The regex reads a placeholder per span (`READER_SCRATCH` chars,
+   which the path tails take as ordinary path chars), and `Spans::fill` puts the tokens in afterwards. So a hostile
+   balanced pair inside an unmarked path (`/Users/me/Photos/My <pair> rest/child dir/x.pdf`), a bare label, or a quoted
+   Bonjour instance still goes whole, and `abs_path` may start at a placeholder, for a wrapped dir glued to an unwrapped
+   name. A segment, field value, or identity that IS one placeholder stays for `fill` (`token_for`, `identity_token`);
+   one holding more text is a name and is hashed whole.
+
+**Decision: placeholders, never tokens, during the regex.** Writing the tokens into the line first let the fallback
+re-read the span's own output: `listed /Volumes/<volume:…>/<dir:…> in 3ms` matched `volumes` again once tokens were
+path chunks, and the greedy boundary ate ` in 3ms` and rehashed the token. A placeholder can't be re-read, and only the
+span pass writes reader-scratch chars: it consumes every reserved char in the line (each one is a marker), and typed
+values and span values reach the walkers with reserved chars replaced by U+FFFD (`without_reserved`), so nothing else
+can spell one. The output carries no reserved char, so a second pass is the plain regex over tokens (idempotent, except
+for a path span whose every segment survives, like `/Library/Application Support`, which a second pass's greedy
+boundary may extend into the prose after it: no leak).
+
+Broken spans become `<redacted:T>` (bare `<redacted>`). Inside a detail field, `fill` runs before the 200-char cap.
+
+**The display sinks** (the terminal, Help > View debug log) read the same markers through `display_line`: markers gone,
+raw or escaped, and each balanced span's value decoded to itself (`Café`, not `Cafe\u{301}`), with only control and
+bidi-format chars escaped so a name can't split or reorder the line. The log file keeps everything.
+
 ## Decision: remote structure survives, remote identities do not
 
 Report delivery treats the complete URL/UNC reference as one privacy unit. The rewriter keeps the protocol, explicit port, separators,
@@ -274,7 +337,8 @@ keys: `host`, `server`, `share`, `volumeId`, `volumeName`, `serverId`, and `devi
 volume domain with `share`; the frontend log bridge emits it). Values may use `Some("…")`. Near matches,
 generic `name=` / `id=`, and unquoted legacy fields are excluded so ordinary diagnostics do not disappear. Producers
 that own an identity must emit its Rust debug form under one of those keys (`host={host:?}`), never put literal quotes
-around Display output. The same escape-aware quoted grammar applies to `user` / `username`. Arbitrary external prose
+around Display output. A value that's already a token (a second pass over a report line) stays, quoted or bare, `user=`
+included. The same escape-aware quoted grammar applies to `user` / `username`. Arbitrary external prose
 goes in an external-text field (next section), never in a free-form log message.
 
 ## External-text fields

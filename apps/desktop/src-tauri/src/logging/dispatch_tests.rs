@@ -177,6 +177,28 @@ fn buf_to_string(buf: &Mutex<Vec<u8>>) -> String {
     String::from_utf8_lossy(&guard).into_owned()
 }
 
+/// The terminal shows a marked value as itself, markers gone, raw or escaped; the file keeps the
+/// line exactly as written, since error reports read the markers from it.
+#[test]
+fn the_terminal_strips_markers_and_the_file_keeps_them() {
+    use cmdr_fs::log_private::{CLOSER, LogKind};
+    let _g = test_lock();
+    let d = build_dispatch_for_test(None, true, false);
+    let opener = LogKind::FilePath.opener();
+    let raw = format!("opened {opener}/Users/me/Cafe\\u{{301}} \\\"x\\\".pdf{CLOSER} in 3ms");
+    let detail = format!("failed detail={:?}", format!("can't read {opener}/tmp/a b{CLOSER}"));
+    dispatch(&*d.logger, log::Level::Info, "cmdr_lib::test", &raw);
+    dispatch(&*d.logger, log::Level::Info, "cmdr_lib::test", &detail);
+
+    let s = buf_to_string(&d.stdout);
+    assert!(s.contains("opened /Users/me/Cafe\u{301} \"x\".pdf in 3ms"), "{s:?}");
+    assert!(s.contains("failed detail=\"can't read /tmp/a b\""), "{s:?}");
+    assert!(!s.chars().any(cmdr_fs::log_private::is_reserved), "{s:?}");
+    assert!(!s.contains("u{fd"), "{s:?}");
+    let f = buf_to_string(&d.file);
+    assert!(f.contains(&raw) && f.contains(&detail), "{f:?}");
+}
+
 /// The headline: a Debug record reaches the file chain but is dropped from stdout
 /// when stdout is at its Info default. Per-output filtering: the whole point of
 /// this rewrite.

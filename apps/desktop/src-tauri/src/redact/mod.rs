@@ -45,6 +45,9 @@ mod detail;
 #[cfg(test)]
 mod detail_tests;
 mod fields;
+mod markers;
+#[cfg(test)]
+mod markers_tests;
 mod names;
 mod path_end;
 mod paths;
@@ -58,8 +61,12 @@ mod tests;
 
 pub use context::RedactionContext;
 use context::TokenDomain;
-use detail::{EchoedIdentity, echoed_identities, redact_detail_field, scrub_leaf_echoes};
+use detail::{
+    EchoedIdentity, echoed_identities, quoted_value, redact_detail_field, scrub_leaf_echoes, sort_longest_first,
+};
 use fields::*;
+pub(crate) use markers::display_line;
+use markers::{Spans, is_placeholder, without_reserved};
 use names::*;
 use path_end::*;
 use paths::*;
@@ -108,17 +115,17 @@ impl RedactionContext {
     /// The caller supplies the value boundary, so this path never applies prose-boundary
     /// heuristics or returns a suffix unredacted.
     pub fn redact_path(&self, path: &str) -> String {
-        redact_typed_path(path, Some(self), false)
+        redact_typed_path(&without_reserved(path), Some(self), false, Leaf::Guess)
     }
 
     /// Redact a typed file or folder name with this report's correlation key.
     pub fn redact_name(&self, name: &str, is_dir: bool) -> String {
-        redact_leaf(name, !is_dir, Some(self))
+        redact_leaf(&without_reserved(name), !is_dir, Some(self))
     }
 
     /// Redact a volume's display name with the domain used for mount and share identities.
     pub fn redact_volume_name(&self, name: &str) -> String {
-        identity_token("volume", TokenDomain::Volume, name, Some(self))
+        identity_token("volume", TokenDomain::Volume, &without_reserved(name), Some(self))
     }
 
     /// Redact a name-derived volume ID. The synthetic local-root ID carries no identity.
@@ -126,7 +133,7 @@ impl RedactionContext {
         if id == "root" {
             id.to_string()
         } else {
-            identity_token("volume-id", TokenDomain::VolumeId, id, Some(self))
+            identity_token("volume-id", TokenDomain::VolumeId, &without_reserved(id), Some(self))
         }
     }
 }
@@ -140,29 +147,48 @@ impl RedactionContext {
 /// `smb:` into the volume match, gave it back as text, and left `//host/share/x.txt` with no
 /// pattern willing to claim it: the share and the filename shipped verbatim. Resuming at
 /// `match.start() + consumed` puts the tail back in front of the scanner, where it belongs.
+///
+/// The span pass runs first (`markers.rs`): marked values are hashed by the kind their producer
+/// gave them, and the regex then reads the line with a placeholder where each span was.
 fn redact_with<'a>(line: &'a str, context: Option<&RedactionContext>) -> Cow<'a, str> {
+    let Some(spans) = markers::read_spans(line, context) else {
+        return scan(line, context, &Spans::NONE);
+    };
+    let scanned = scan(&spans.line, context, &spans);
+    Cow::Owned(spans.fill(&scanned).into_owned())
+}
+
+/// The regex pass over one line, `spans` being what the span pass already read from it.
+fn scan<'a>(line: &'a str, context: Option<&RedactionContext>, spans: &Spans) -> Cow<'a, str> {
     let re = redactor_regex();
     let mut out: Option<String> = None;
     let mut pos = 0usize;
     // Collected on the first match: the identities and path leaves the whole line names,
     // which its external-text fields and (for leaves) its plain prose may repeat bare. A line
-    // with no match names nothing, so it never pays for this.
-    let mut echoed: Option<Vec<EchoedIdentity>> = None;
+    // with no match names nothing, so it never pays for this, unless its spans named something.
+    let collect = || {
+        let mut found = echoed_identities(line, context);
+        found.extend(spans.echoes().iter().cloned());
+        sort_longest_first(&mut found);
+        found
+    };
+    let mut echoed: Option<Vec<EchoedIdentity>> = (!spans.echoes().is_empty()).then(collect);
+    let header_end = markers::message_start(line);
 
     while pos <= line.len() {
         // `captures_at` keeps the whole line as context, so `^` in `bare_lead` still means
         // "start of line" rather than "start of the remaining slice".
         let Some(caps) = re.captures_at(line, pos) else { break };
         let Some(whole) = caps.get(0) else { break };
-        let echoed = echoed.get_or_insert_with(|| echoed_identities(line, context));
+        let echoed = echoed.get_or_insert_with(collect);
         let (replacement, consumed) = if caps.name("detail_field").is_some() {
-            redact_detail_field(&caps, context, echoed)
+            redact_detail_field(&caps, context, echoed, spans)
         } else {
             dispatch(&caps, context)
         };
 
         let buf = out.get_or_insert_with(|| String::with_capacity(line.len()));
-        buf.push_str(&scrub_leaf_echoes(&line[pos..whole.start()], echoed));
+        buf.push_str(&scrub_prose(line, pos..whole.start(), header_end, echoed));
         buf.push_str(&replacement);
 
         // A rewriter that consumed nothing would spin forever on the same offset; fall
@@ -177,13 +203,34 @@ fn redact_with<'a>(line: &'a str, context: Option<&RedactionContext>) -> Cow<'a,
 
     match out {
         Some(mut buf) => {
-            buf.push_str(&scrub_leaf_echoes(
-                &line[pos.min(line.len())..],
+            let rest = pos.min(line.len())..line.len();
+            buf.push_str(&scrub_prose(
+                line,
+                rest,
+                header_end,
                 echoed.as_deref().unwrap_or_default(),
             ));
             Cow::Owned(buf)
         }
-        None => Cow::Borrowed(line),
+        None => match echoed {
+            Some(echoed) => scrub_prose(line, 0..line.len(), header_end, &echoed),
+            None => Cow::Borrowed(line),
+        },
+    }
+}
+
+/// The prose `line[range]` with the line's path leaves scrubbed (`scrub_leaf_echoes`), except
+/// the part of it that's the log header before `header_end`, which names nobody.
+fn scrub_prose<'a>(
+    line: &'a str,
+    range: std::ops::Range<usize>,
+    header_end: usize,
+    echoed: &[EchoedIdentity],
+) -> Cow<'a, str> {
+    let split = header_end.clamp(range.start, range.end);
+    match scrub_leaf_echoes(&line[split..range.end], echoed) {
+        Cow::Borrowed(_) => Cow::Borrowed(&line[range]),
+        Cow::Owned(scrubbed) => Cow::Owned(format!("{}{scrubbed}", &line[range.start..split])),
     }
 }
 
@@ -236,8 +283,7 @@ fn redactor_regex() -> &'static Regex {
         // or the pipe character. Single spaces between tail chunks are allowed.
         //
         // The `(?x)` verbose flag lets us write this readably.
-        Regex::new(
-            r#"(?x)
+        let pattern = r#"(?x)
             (?P<win_home>         [A-Za-z] : \\ Users \\ [^\\/\s"'<>|`]+
                                   (?: \\ [^\\\s"'<>|`]+ (?: \x20 [^\\\s"'<>|`]+ )* )*
             )
@@ -260,7 +306,9 @@ fn redactor_regex() -> &'static Regex {
             # follow a word character, which keeps `MB/s`, `and/or`, `3/4`, and `$HOME/…` out.
             # Two segments at least, so a lone `/` or `/foo` stays prose. A later word may start
             # with `(` (`…/Summer (Lake House) Trip/…`); only the first segment can't.
-            | (?P<abs_path>       \B / [^/\s"'<>|`()]+
+            # A span the span pass already read may start one too: its placeholder, then the
+            # unwrapped rest a half-migrated site glued to it (`<dir span>/Secret/x.pdf`).
+            | (?P<abs_path>       (?: \B / [^/\s"'<>|`()]+ | PLACEHOLDER [^/\s"'<>|`]* )
                                   (?: / [^/\s"'<>|`]+ (?: \x20 [^/\s"'<>|`]+ )* )+
             )
             | (?P<remote_url>     (?i: sftp | ssh | webdav | s3 | http | https | smb ) ://
@@ -429,9 +477,9 @@ fn redactor_regex() -> &'static Regex {
                 (?: \x20+ (?: Pro | Plus | Ultra | Max | Mini | SE | XL ) )?
                 \b
             )
-            "#,
-        )
-        .expect("valid redactor regex")
+            "#
+        .replace("PLACEHOLDER", &markers::placeholder_pattern());
+        Regex::new(&pattern).expect("valid redactor regex")
     })
 }
 
@@ -443,23 +491,23 @@ fn redactor_regex() -> &'static Regex {
 fn dispatch(caps: &Captures<'_>, context: Option<&RedactionContext>) -> (String, usize) {
     if let Some(m) = caps.name("win_home") {
         let (path, _) = split_trailing_noise(m.as_str());
-        return (redact_windows_home(path, context), path.len());
+        return (redact_windows_home(path, context, Leaf::Guess), path.len());
     }
     if let Some(m) = caps.name("unix_home") {
         let (path, _) = split_trailing_noise(m.as_str());
-        return (redact_unix_home(path, context), path.len());
+        return (redact_unix_home(path, context, Leaf::Guess), path.len());
     }
     if let Some(m) = caps.name("unix_system") {
         let (path, _) = split_trailing_noise(m.as_str());
-        return (redact_unix_system(path, context), path.len());
+        return (redact_unix_system(path, context, Leaf::Guess), path.len());
     }
     if let Some(m) = caps.name("volumes") {
         let (path, _) = split_trailing_noise(m.as_str());
-        return (redact_volumes(path, context), path.len());
+        return (redact_volumes(path, context, Leaf::Guess), path.len());
     }
     if let Some(m) = caps.name("media") {
         let (path, _) = split_trailing_noise(m.as_str());
-        return (redact_media(path, context), path.len());
+        return (redact_media(path, context, Leaf::Guess), path.len());
     }
     if let Some(m) = caps.name("abs_path") {
         let (path, _) = split_trailing_noise(m.as_str());
@@ -470,32 +518,32 @@ fn dispatch(caps: &Captures<'_>, context: Option<&RedactionContext>) -> (String,
         }
         // A leading `/` makes the relative walker keep a system root (`/Applications`) and
         // tokenize everything else; existing tokens stay, so a second pass is a no-op.
-        return (redact_relative_path(path, context, true), path.len());
+        return (redact_relative_path(path, context, true, Leaf::Guess), path.len());
     }
     if let Some(m) = caps.name("remote_url") {
         let (path, _) = split_trailing_noise(m.as_str());
         let reference = trim_reference_end(path);
-        return (redact_remote_url(reference, context), reference.len());
+        return (redact_remote_url(reference, context, Leaf::Guess), reference.len());
     }
     if let Some(m) = caps.name("unc") {
         let (path, _) = split_trailing_noise(m.as_str());
-        return (redact_remote_unc(path, context), path.len());
+        return (redact_remote_unc(path, context, Leaf::Guess), path.len());
     }
     if caps.name("url_userinfo").is_some() {
         let reference = caps.get(0).map_or("", |m| m.as_str());
-        return (redact_remote_url(reference, context), whole_len(caps));
+        return (redact_remote_url(reference, context, Leaf::Guess), whole_len(caps));
     }
     if let Some(m) = caps.name("bare_userinfo") {
         let lead = caps.name("bare_lead").map(|m| m.as_str()).unwrap_or("");
         return (
-            format!("{lead}{}", redact_scheme_less(m.as_str(), context)),
+            format!("{lead}{}", redact_scheme_less(m.as_str(), context, Leaf::Guess)),
             whole_len(caps),
         );
     }
     if caps.name("detail_field").is_some() {
         // Unreachable from `redact_with`, which owns this branch because it needs the whole
         // line's identities. Anything else gets the field without the echo scrub.
-        return redact_detail_field(caps, context, &[]);
+        return redact_detail_field(caps, context, &[], &Spans::NONE);
     }
     if caps.name("path_field").is_some() {
         return redact_path_field(caps, context);
@@ -567,7 +615,12 @@ fn whole_len(caps: &Captures<'_>) -> usize {
     caps.get(0).map_or(0, |m| m.len())
 }
 
+/// The token for one identity, or the span pass's placeholder back unchanged so the span's own
+/// token lands there (`markers.rs`).
 fn identity_token(kind: &str, domain: TokenDomain, value: &str, context: Option<&RedactionContext>) -> String {
+    if is_placeholder(value) {
+        return value.to_string();
+    }
     context.map_or_else(
         || format!("<{kind}>"),
         |context| format!("<{kind}:{}>", context.token(domain, value)),
@@ -581,7 +634,8 @@ fn identity_token(kind: &str, domain: TokenDomain, value: &str, context: Option<
 /// or the Keychain?"). `None` is not a name and passes through verbatim, which is the whole
 /// reason this can't be a blanket `user=\S+` → `<user>` rewrite.
 fn redact_account(key: &str, separator: &str, value: &str, whole: &str, context: Option<&RedactionContext>) -> String {
-    if value == "None" {
+    // `None` isn't a name, and a token is this scanner's own output on a second pass.
+    if value == "None" || is_redacted_segment(quoted_value(value)) {
         return whole.to_string();
     }
     if value.starts_with("Some(\"") && value.ends_with("\")") {

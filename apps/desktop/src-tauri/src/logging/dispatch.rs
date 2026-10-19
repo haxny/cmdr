@@ -262,6 +262,13 @@ fn write_terminal_line(
         ""
     };
     let ram = super::ram_gauge::tag();
+    // A marked value reads as itself here, markers gone (`redact::display_line`); the file
+    // keeps them for the error reporter.
+    let text = message.as_str().map_or_else(
+        || std::borrow::Cow::Owned(message.to_string()),
+        std::borrow::Cow::Borrowed,
+    );
+    let message = crate::redact::display_line(&text);
     out.finish(format_args!(
         "{ts} {level_color}{level:<5}{reset} {ram}{head_color}{head:<width$}{tail_color}{tail}{reset}  {message}",
         width = super::target_style::HEAD_WIDTH,
