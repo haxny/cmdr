@@ -251,8 +251,8 @@ export async function startWindowServices(ctx: WindowServicesContext): Promise<v
   // once-per-server signal into a persistent toast with a "Try connecting directly" button,
   // retired when the share goes direct, goes away, or has its direct connection switched off.
   unlistenFns.push(await startOsMountNoticeBridge())
-  // Kept-leftovers notice: one `move-leftovers-kept` listener turning the leftover sweep's
-  // "a drive came back holding an unfinished move's working folder, and every file in it stays"
+  // Kept-leftovers notice: one `leftovers-kept` listener turning the leftover sweep's
+  // "a drive came back holding something an unfinished transfer left, and Cmdr kept it"
   // into an info toast. Belongs to no operation, so it has no transfer toast to join.
   unlistenFns.push(await startLeftoverNoticeBridge())
   // "Open with" refusal notice: one `open-with-copy-refused` listener turning a file inside an

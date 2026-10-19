@@ -54,7 +54,7 @@
       "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
     },
     "crates/cmdr-operations/src/in_flight_sweep.rs": {
-      "count": 14,
+      "count": 13,
       "reason": "Unmarked log values from before the marker convention (#491); this tree migrates once the transfer-outages effort (#489, #490), which is rewriting it, has landed"
     },
     "crates/cmdr-operations/src/in_flight_sweep_surface.rs": {

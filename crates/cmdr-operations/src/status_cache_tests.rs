@@ -351,7 +351,7 @@ impl EngineEvents for GatedBusyEvents {
     fn operations_changed(&self, _snapshot: crate::types::OperationsChanged) {}
     fn transfer_started(&self, _volume_ids: &[String]) {}
     fn transfer_finished(&self, _volume_ids: &[String]) {}
-    fn staging_leftovers_kept(&self, _notice: crate::types::MoveLeftoversKeptEvent) {}
+    fn leftovers_kept(&self, _notice: crate::types::LeftoversKeptEvent) {}
     fn instant_mutation_settled(&self, _fact: super::super::host::InstantMutationFact) {}
     fn error_report(&self, _report: super::super::host::OperationErrorReport) {}
     fn scan_wait_progress(&self, _event: crate::types::WriteProgressEvent) {}

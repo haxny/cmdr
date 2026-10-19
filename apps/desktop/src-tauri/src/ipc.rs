@@ -1071,7 +1071,7 @@ pub fn builder() -> Builder<tauri::Wry> {
             ClipboardPasteSettled, // clipboard-paste-settled (the same, for paste-as-file)
             // The leftover sweep, which belongs to no operation
             // (crates/cmdr-operations/src/in_flight_sweep.rs).
-            wire::MoveLeftoversKept,
+            wire::LeftoversKept,
             // An "Open with" click on a file inside an archive that couldn't be copied
             // out, so no app launched (file_viewer/open_with_extract.rs).
             OpenWithCopyRefused,

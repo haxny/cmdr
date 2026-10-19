@@ -48,7 +48,7 @@ wire_event!(WriteSettled(engine::WriteSettledEvent) = "write-settled");
 wire_event!(MutationSettled(engine::MutationSettled) = "mutation-settled");
 
 // Engine-wide facts (`events.rs`'s `TauriEngineEvents`).
-wire_event!(MoveLeftoversKept(engine::MoveLeftoversKeptEvent) = "move-leftovers-kept");
+wire_event!(LeftoversKept(engine::LeftoversKeptEvent) = "leftovers-kept");
 wire_event!(OperationsChanged(engine::OperationsChanged) = "operations-changed");
 
 // One scan preview's events (`sinks.rs`'s `TauriScanPreviewSink`).

@@ -1917,6 +1917,16 @@
     }
   },
 
+  "fileOperations.leftovers.unfinishedLandingKept": "Cmdr found an unfinished copy of {fileName} on {volumeName} that isn’t the size it should be, so it kept it as {keptName} rather than finishing it.",
+  "@fileOperations.leftovers.unfinishedLandingKept": {
+    "description": "Info toast shown when a drive or server is reconnected (or Cmdr starts up) and Cmdr finds a file a copy or move was in the middle of giving its final name, but the file isn’t the size Cmdr wrote, so Cmdr can’t tell whether it’s complete. Cmdr never deletes it (it may hold the person’s data) and never gives it the real name; it renames it to {keptName} beside where it belongs, so the person can look at it and decide. Nothing is asked of the person and nothing of theirs was lost. Matter-of-fact and reassuring; never use the words \"error\" or \"failed\". Sentence case.",
+    "placeholders": {
+      "fileName": "the name the file was on its way to, e.g. notes.txt. Uncontrolled text, never translate it.",
+      "volumeName": "the drive or server as it names itself, e.g. Naspolya. Uncontrolled text, never translate it.",
+      "keptName": "the name Cmdr kept the file under, e.g. notes (recovered).txt. Uncontrolled text, never translate it."
+    }
+  },
+
   "fileOperations.leftovers.stagingFolderKept": "Cmdr found files from an unfinished move on {volumeName} and left them in place, in a hidden folder named {folderName}.",
   "@fileOperations.leftovers.stagingFolderKept": {
     "description": "Info toast shown when a drive is reconnected (or Cmdr starts up) and Cmdr finds the working folder of a move that never finished, with files still inside it. Cmdr deliberately leaves every one of them where it is, because they can be the person’s only copy: the move may already have removed the originals. Nothing is asked of the person and nothing is at risk — this exists so files they might be missing have a findable home. {folderName} is a hidden folder, so say so: they need to turn on hidden files to see it. Never suggest deleting it. Reassuring and matter-of-fact; never use the words \"error\" or \"failed\". Sentence case; the apostrophe is doubled for ICU and renders as one.",

@@ -1958,6 +1958,7 @@ export type MessageKey =
   | 'fileOperations.errorDialog.technicalDetailsAria'
   | 'fileOperations.errorDialog.tooLargeAndMore'
   | 'fileOperations.leftovers.stagingFolderKept'
+  | 'fileOperations.leftovers.unfinishedLandingKept'
   | 'fileOperations.lockedSources.heldToast'
   | 'fileOperations.lockedSources.message'
   | 'fileOperations.lockedSources.moreItems'

@@ -688,27 +688,49 @@ impl CancelRollback {
     }
 }
 
-/// A drive came back carrying a staging folder from a move that never finished,
-/// and Cmdr left every file in it exactly where it was.
+/// A drive or server came back carrying something an unfinished transfer left,
+/// and Cmdr kept it rather than finish or remove it ([`KeptLeftover`] says
+/// what, and where).
 ///
-/// ❗ Belongs to NO operation, and carries no id: the move that made the folder
+/// ❗ Belongs to NO operation, and carries no id: the transfer that left it
 /// ended in an earlier session, or before the drive was unplugged. It's the
 /// leftover sweep speaking (`crates/cmdr-operations/src/in_flight_sweep.rs`), which is
 /// also why the drive's name rides along rather than being looked up — by the
 /// time anything could look, the operation is long gone.
 ///
 /// Nothing is asked of the person and nothing of theirs is at risk; this exists
-/// so files they might be missing from the source have a findable home. Fires
-/// once per folder the sweep meets, never per launch: the record retires the
-/// moment the folder does.
+/// so what was kept has a findable home. Fires once per thing the sweep keeps,
+/// never per launch: the record retires the moment it's settled.
 #[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
-pub struct MoveLeftoversKeptEvent {
-    /// The drive's display name, as the registry has it right now.
+pub struct LeftoversKeptEvent {
+    /// The drive's or server's display name, as the registry has it right now.
     pub volume_name: String,
-    /// The staging folder's own name (`.cmdr-staging-<op>`), which is what the
-    /// person would look for with hidden files shown.
-    pub folder_name: String,
+    /// What was kept.
+    pub kept: KeptLeftover,
+}
+
+/// What a [`LeftoversKeptEvent`] kept.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
+#[serde(tag = "kind", rename_all = "camelCase", rename_all_fields = "camelCase")]
+pub enum KeptLeftover {
+    /// A move's staging folder with files still in it, left exactly where it
+    /// is: they can be the only copy, the move may already have removed the
+    /// originals.
+    StagingFolder {
+        /// The folder's own name (`.cmdr-staging-<op>`), which is what the
+        /// person would look for with hidden files shown.
+        folder_name: String,
+    },
+    /// A landing whose temp isn't the size it was recorded at, so nothing
+    /// proves it holds the file it was on its way to be: kept under a
+    /// ` (recovered)` name beside where it belongs, ❌ never landed or removed.
+    UnfinishedLanding {
+        /// The name the file was on its way to (`notes.txt`).
+        file_name: String,
+        /// The name it's kept under now (`notes (recovered).txt`).
+        kept_name: String,
+    },
 }
 
 /// Typed `operations-changed` Tauri event carrying the thin registry snapshot

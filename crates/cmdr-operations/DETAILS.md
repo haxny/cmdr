@@ -2740,14 +2740,17 @@ would make its fate depend on whether the drive was plugged in at launch.
   its name may have been cleared (`transfer/staged_write.rs::land`), so it can be the destination's only copy. ❌ Never
   removed. The temp is read FIRST: gone means the landing rename went through (a crash before its record retired), so
   the record retires rather than deferring forever. A temp of exactly `expected_size` takes its name when that's free
-  (finishing the landing), or a ` (recovered)` name beside whatever holds it; any other size stays where it is. The kind
-  change writes the landing BEFORE it retires the temp record (`in_flight_temps::hold_for_landing`), so a crash between
-  leaves both, and the sweep settles that path by the landing (`without_superseded_temps`); the other order would leave
-  a moment where only the record the sweep deletes is on disk. ❗ The hold answers whether the landing's line really
-  reached the log (`OnDisk`: the writer reports each confirmed line back, `in_flight_log_writer.rs::append_then`), and a
-  ledger that keeps a log but lost the line (its writer gone, the write refused, no path space to state it in) answers
-  `NotOnDisk`, so the landing refuses to clear the way (`transfer/DETAILS.md` § "File writes are staged"). A ledger no
-  claim set out to keep on disk (a test's engine) answers `NotKept`, and the landing goes ahead in memory.
+  (finishing the landing), or a ` (recovered)` name beside whatever holds it. Any other size isn't provably the file, so
+  it never takes the name: it gets a ` (recovered)` name too, and raises `leftovers-kept`
+  (`KeptLeftover::UnfinishedLanding`) naming where. Left on its scratch name, it would be retried forever while recorded
+  and reaped by name and age once not. The kind change writes the landing BEFORE it retires the temp record
+  (`in_flight_temps::hold_for_landing`), so a crash between leaves both, and the sweep settles that path by the landing
+  (`without_superseded_temps`); the other order would leave a moment where only the record the sweep deletes is on disk.
+  ❗ The hold answers whether the landing's line really reached the log (`OnDisk`: the writer reports each confirmed
+  line back, `in_flight_log_writer.rs::append_then`), and a ledger that keeps a log but lost the line (its writer gone,
+  the write refused, no path space to state it in) answers `NotOnDisk`, so the landing refuses to clear the way
+  (`transfer/DETAILS.md` § "File writes are staged"). A ledger no claim set out to keep on disk (a test's engine)
+  answers `NotKept`, and the landing goes ahead in memory.
 - **An aside** (`.cmdr-temp-*`) holds bytes that were ALREADY the user's, renamed out of the way so a replacement could
   take their name. It goes back to its own name when that name is free; it is removed ONLY when the replacement is
   provably complete, which for `FileAside` means a regular file of exactly the recorded size; in every other case its
@@ -2756,7 +2759,7 @@ would make its fate depend on whether the drive was plugged in at launch.
 - **A staging directory** (`.cmdr-staging-<op>`) is a cross-filesystem move's half-built tree. ❌ Only ever
   `remove_dir`, never recursively: a destination that left the mount table returns before Phase 5, and if it left before
   Phase 3 that folder holds the whole staged tree on a drive that comes back later, with the originals possibly already
-  gone. A non-empty one stays, warns, and raises `move-leftovers-kept`.
+  gone. A non-empty one stays, warns, and raises `leftovers-kept`.
 
 ❌ **Nothing removes something it hasn't looked at.** Every removal is gated on a presence read, and a read that FAILS
 is never treated as "nothing there" (`Standing::Unknown` defers). Same rule one level up: `discard_temp` retires a
@@ -2789,11 +2792,11 @@ skips an op byte it doesn't know and truncates the log at launch, so a rollback 
 would have been read by that build as a temp, and a temp is the one kind it removes on sight — which is exactly the
 aside it must never touch. `is_one_of_ours` stopped accepting `.cmdr-temp-` for a plain removal for the same reason.
 
-**The notice.** A kept staging folder raises `move-leftovers-kept` (drive name + folder name) as an engine-wide fact
-(`EngineEvents::staging_leftovers_kept`); the sweep belongs to no operation and has no event sink. A Mac-internal one
-gets the `warn` alone — the copy names a drive, and the boot disk never goes away, so it meets the rule again next
-launch. `in_flight_sweep_tests.rs` pins both halves, each cell's sweep on a host of its own (`FakeVolumes` holding the
-drive, `RecordingEngineEvents` hearing the notice).
+**The notice.** A kept staging folder raises `leftovers-kept` (drive name + `KeptLeftover::StagingFolder`) as an
+engine-wide fact (`EngineEvents::leftovers_kept`); the sweep belongs to no operation and has no event sink. A
+Mac-internal one gets the `warn` alone — the copy names a drive, and the boot disk never goes away, so it meets the rule
+again next launch. `in_flight_sweep_tests.rs` pins both halves, each cell's sweep on a host of its own (`FakeVolumes`
+holding the drive, `RecordingEngineEvents` hearing the notice).
 
 ## Who claims the ledger
 

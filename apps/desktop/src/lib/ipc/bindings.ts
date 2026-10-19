@@ -5229,6 +5229,7 @@ export const events = {
   indexScanComplete: makeEvent<IndexScanCompleteEvent>('index-scan-complete'),
   indexScanProgress: makeEvent<IndexScanProgressEvent>('index-scan-progress'),
   indexScanStarted: makeEvent<IndexScanStartedEvent>('index-scan-started'),
+  leftoversKept: makeEvent<LeftoversKeptEvent>('leftovers-kept'),
   listingCancelled: makeEvent<ListingCancelledEvent>('listing-cancelled'),
   listingComplete: makeEvent<ListingCompleteEvent>('listing-complete'),
   listingError: makeEvent<ListingErrorEvent>('listing-error'),
@@ -5248,7 +5249,6 @@ export const events = {
   menuBarRebuilt: makeEvent<MenuBarRebuilt>('menu-bar-rebuilt'),
   menuSort: makeEvent<MenuSort>('menu-sort'),
   mouseNav: makeEvent<MouseNav>('mouse-nav'),
-  moveLeftoversKept: makeEvent<MoveLeftoversKeptEvent>('move-leftovers-kept'),
   mtpDeviceConnected: makeEvent<MtpDeviceConnected>('mtp-device-connected'),
   mtpDeviceDisconnected: makeEvent<MtpDeviceDisconnected>('mtp-device-disconnected'),
   mtpExclusiveAccessError: makeEvent<MtpExclusiveAccessError>('mtp-exclusive-access-error'),
@@ -9759,6 +9759,34 @@ export type ItemKinds = {
  */
 export type ItemOutcome = 'done' | 'skipped' | 'failed' | 'rolledBack'
 
+// What a [`LeftoversKeptEvent`] kept.
+export type KeptLeftover =
+  /**
+   *  A move's staging folder with files still in it, left exactly where it
+   *  is: they can be the only copy, the move may already have removed the
+   *  originals.
+   */
+  | {
+      kind: 'stagingFolder'
+      /**
+       *  The folder's own name (`.cmdr-staging-<op>`), which is what the
+       *  person would look for with hidden files shown.
+       */
+      folderName: string
+    }
+  /**
+   *  A landing whose temp isn't the size it was recorded at, so nothing
+   *  proves it holds the file it was on its way to be: kept under a
+   *  ` (recovered)` name beside where it belongs, ❌ never landed or removed.
+   */
+  | {
+      kind: 'unfinishedLanding'
+      // The name the file was on its way to (`notes.txt`).
+      fileName: string
+      // The name it's kept under now (`notes (recovered).txt`).
+      keptName: string
+    }
+
 // Error types for Keychain operations.
 export type KeychainError =
   // Credentials not found
@@ -10017,6 +10045,28 @@ export type LatestDownload = {
   path: string
   parentDir: string
   fileName: string
+}
+
+/**
+ *  A drive or server came back carrying something an unfinished transfer left,
+ *  and Cmdr kept it rather than finish or remove it ([`KeptLeftover`] says
+ *  what, and where).
+ *
+ *  ❗ Belongs to NO operation, and carries no id: the transfer that left it
+ *  ended in an earlier session, or before the drive was unplugged. It's the
+ *  leftover sweep speaking (`crates/cmdr-operations/src/in_flight_sweep.rs`), which is
+ *  also why the drive's name rides along rather than being looked up — by the
+ *  time anything could look, the operation is long gone.
+ *
+ *  Nothing is asked of the person and nothing of theirs is at risk; this exists
+ *  so what was kept has a findable home. Fires once per thing the sweep keeps,
+ *  never per launch: the record retires the moment it's settled.
+ */
+export type LeftoversKeptEvent = {
+  // The drive's or server's display name, as the registry has it right now.
+  volumeName: string
+  // What was kept.
+  kept: KeptLeftover
 }
 
 // What the legacy Ask Cmdr opt-in says, for the one-time `askCmdr.enabled` mapping.
@@ -11594,31 +11644,6 @@ export type MouseNav = {
  *  from it, and reading either shape is `mouse_nav.rs`'s job alone.
  */
 export type MouseNavDirection = 'back' | 'forward'
-
-/**
- *  A drive came back carrying a staging folder from a move that never finished,
- *  and Cmdr left every file in it exactly where it was.
- *
- *  ❗ Belongs to NO operation, and carries no id: the move that made the folder
- *  ended in an earlier session, or before the drive was unplugged. It's the
- *  leftover sweep speaking (`crates/cmdr-operations/src/in_flight_sweep.rs`), which is
- *  also why the drive's name rides along rather than being looked up — by the
- *  time anything could look, the operation is long gone.
- *
- *  Nothing is asked of the person and nothing of theirs is at risk; this exists
- *  so files they might be missing from the source have a findable home. Fires
- *  once per folder the sweep meets, never per launch: the record retires the
- *  moment the folder does.
- */
-export type MoveLeftoversKeptEvent = {
-  // The drive's display name, as the registry has it right now.
-  volumeName: string
-  /**
-   *  The staging folder's own name (`.cmdr-staging-<op>`), which is what the
-   *  person would look for with hidden files shown.
-   */
-  folderName: string
-}
 
 // One place of a [`ServerPlaceMoved`].
 export type MovedPlace = {

@@ -17,7 +17,7 @@ use crate::host::testing::FakeVolumes;
 use crate::host::{EngineEvents, InstantMutationFact};
 use crate::test_support::placeholder_conflict;
 use crate::testing::TestOperations;
-use crate::types::{MoveLeftoversKeptEvent, OperationsChanged};
+use crate::types::{LeftoversKeptEvent, OperationsChanged};
 use crate::types::{WriteOperationType, WriteProgressEvent};
 use cmdr_fs::volume::{ConnectionLiveness, Volume};
 
@@ -830,7 +830,7 @@ impl EngineEvents for TableWatchingEvents {
     fn volumes_busy_changed(&self, _volume_ids: Vec<String>) {}
     fn transfer_started(&self, _volume_ids: &[String]) {}
     fn transfer_finished(&self, _volume_ids: &[String]) {}
-    fn staging_leftovers_kept(&self, _notice: MoveLeftoversKeptEvent) {}
+    fn leftovers_kept(&self, _notice: LeftoversKeptEvent) {}
     fn instant_mutation_settled(&self, _fact: InstantMutationFact) {}
     fn error_report(&self, _report: OperationErrorReport) {
         self.reports.fetch_add(1, Ordering::SeqCst);

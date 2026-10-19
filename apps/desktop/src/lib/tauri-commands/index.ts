@@ -337,7 +337,7 @@ export {
   onWriteConflict,
   onWriteConflictResolved,
   onWriteSourceItemDone,
-  onMoveLeftoversKept,
+  onLeftoversKept,
 } from './write-operations'
 export type { Event, UnlistenFn } from './write-operations'
 

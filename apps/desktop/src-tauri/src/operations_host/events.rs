@@ -14,7 +14,7 @@ use cmdr_operations::host::{
     AsideAttempt, EngineEvents, InstantMutationFact, InstantOp, InstantOutcome, InstantTarget, OperationErrorReport,
     TreeFailure,
 };
-use cmdr_operations::{MoveLeftoversKeptEvent, OperationsChanged, WriteProgressEvent};
+use cmdr_operations::{LeftoversKeptEvent, OperationsChanged, WriteProgressEvent};
 
 /// Typed `volumes-busy-changed` Tauri event. Wraps the busy volume-ID list in a
 /// struct because `tauri_specta::Event` payloads must be named types (a bare
@@ -66,12 +66,12 @@ impl EngineEvents for TauriEngineEvents {
         crate::priority::transfers::note_transfer_finished(volume_ids);
     }
 
-    fn staging_leftovers_kept(&self, notice: MoveLeftoversKeptEvent) {
+    fn leftovers_kept(&self, notice: LeftoversKeptEvent) {
         let Some(app) = &self.app else {
             return;
         };
-        if let Err(e) = wire::MoveLeftoversKept(notice).emit(app) {
-            log::warn!(target: "copy", "couldn't tell the frontend about the kept staging folder: {e}");
+        if let Err(e) = wire::LeftoversKept(notice).emit(app) {
+            log::warn!(target: "copy", "couldn't tell the frontend about the kept leftovers: {e}");
         }
     }
 

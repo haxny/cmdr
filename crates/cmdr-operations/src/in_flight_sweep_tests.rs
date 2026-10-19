@@ -30,8 +30,8 @@ fn sweep_host() -> SweepHost {
 
 impl SweepHost {
     /// Every staging-folder notice the sweep raised, with the folder it named.
-    fn kept_notices(&self) -> Vec<MoveLeftoversKeptEvent> {
-        self.events.staging_leftovers_kept.lock_ignore_poison().clone()
+    fn kept_notices(&self) -> Vec<LeftoversKeptEvent> {
+        self.events.leftovers_kept.lock_ignore_poison().clone()
     }
 }
 
@@ -372,7 +372,7 @@ async fn an_empty_staging_folder_on_a_drive_that_comes_back_is_removed() {
     );
 }
 
-/// A kept, non-empty staging folder on a drive raises the `move-leftovers-kept`
+/// A kept, non-empty staging folder on a drive raises the `leftovers-kept`
 /// notice, naming the drive and the folder, so the files inside have a findable
 /// home.
 #[tokio::test]
@@ -391,7 +391,12 @@ async fn a_staging_folder_kept_on_a_drive_raises_the_notice() {
     let notices = drive.sweep.kept_notices();
     assert_eq!(notices.len(), 1, "one notice for the one kept folder");
     assert_eq!(notices[0].volume_name, "Fältkamera");
-    assert_eq!(notices[0].folder_name, drive.staging_name);
+    assert_eq!(
+        notices[0].kept,
+        KeptLeftover::StagingFolder {
+            folder_name: drive.staging_name.clone()
+        }
+    );
 }
 
 /// A Mac-internal staging folder (a move onto the boot volume) is kept just the
@@ -574,18 +579,57 @@ async fn a_landing_whose_destination_is_occupied_is_kept_under_a_recovered_name(
 }
 
 /// A temp that isn't the size the landing recorded isn't provably the bytes we
-/// wrote, so the sweep doesn't move it anywhere, and ❌ doesn't delete it.
+/// wrote, so the sweep doesn't land it, and ❌ doesn't delete it. It doesn't
+/// stay on its scratch name either: unrecorded, the name+age reap would take
+/// it, and recorded, it would be retried forever. It gets a ` (recovered)`
+/// name beside where it belongs, and the record retires.
 #[tokio::test]
-async fn a_landing_whose_temp_changed_size_is_left_alone() {
+async fn a_landing_whose_temp_changed_size_is_kept_under_a_recovered_name() {
     let fixture = landing("sweep-landing-resized", b"the new notes");
     std::fs::write(&fixture.temp, b"something else entirely").expect("the temp changed under us");
 
-    assert_eq!(settle_landing(&fixture).await, Outcome::LeftAlone);
+    assert_eq!(settle_landing(&fixture).await, Outcome::Recovered);
     assert_eq!(
-        std::fs::read(&fixture.temp).expect("the temp is still there"),
+        std::fs::read(fixture.destination.with_file_name("notes (recovered).txt"))
+            .expect("the bytes are kept under a real name"),
         b"something else entirely"
     );
+    assert!(!fixture.temp.exists(), "nothing is left wearing a scratch name");
     assert!(!fixture.destination.exists(), "and nothing was put at the name");
+}
+
+/// The same landing on a drive tells the person, by name, where the kept file
+/// is: it's a file they didn't make, beside one they may be looking for.
+#[tokio::test]
+async fn a_landing_kept_aside_on_a_drive_raises_the_notice() {
+    let drive = returned_drive("sweep-landing-notice", "in-flight-sweep-test-stick-landing", None);
+    let root = drive.staging.parent().expect("the drive root").to_path_buf();
+    let temp_name = format!("notes.txt.cmdr-tmp-{}", uuid::Uuid::new_v4());
+    std::fs::write(root.join(&temp_name), b"a short temp").expect("write the temp");
+    let record = Record::Tracked(TrackedItem {
+        kind: ItemKind::Landing {
+            destination: PathBuf::from("notes.txt"),
+            expected_size: 4096,
+        },
+        home: ItemHome::Mount {
+            volume_id: drive.volume_id.clone(),
+        },
+        path: PathBuf::from(&temp_name),
+    });
+
+    assert_eq!(settle(&drive.sweep.host, &record).await, Outcome::Recovered);
+
+    let notices = drive.sweep.kept_notices();
+    assert_eq!(notices.len(), 1, "one notice for the one kept landing");
+    assert_eq!(notices[0].volume_name, "Fältkamera");
+    assert_eq!(
+        notices[0].kept,
+        KeptLeftover::UnfinishedLanding {
+            file_name: "notes.txt".to_string(),
+            kept_name: "notes (recovered).txt".to_string(),
+        }
+    );
+    assert!(root.join("notes (recovered).txt").exists());
 }
 
 /// The temp is gone: a crash after the landing rename went through but before

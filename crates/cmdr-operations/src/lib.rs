@@ -185,9 +185,9 @@ pub use routing::resolve_dest_path;
 
 // The wire vocabulary: payloads, configs, and typed outcomes.
 pub use types::{
-    ConflictId, ConflictInfo, ConflictResolution, ConflictResolutionOutcome, DryRunResult, LifecycleStatus,
-    LockedSourcesAnswer, LockedSourcesAnswerOutcome, MoveLeftoversKeptEvent, OperationStatus, ReadOnlySide,
-    RetryOutcome, ScanPreviewCancelledEvent, ScanPreviewCompleteEvent, ScanPreviewErrorEvent, ScanPreviewProgressEvent,
+    ConflictId, ConflictInfo, ConflictResolution, ConflictResolutionOutcome, DryRunResult, LeftoversKeptEvent,
+    LifecycleStatus, LockedSourcesAnswer, LockedSourcesAnswerOutcome, OperationStatus, ReadOnlySide, RetryOutcome,
+    ScanPreviewCancelledEvent, ScanPreviewCompleteEvent, ScanPreviewErrorEvent, ScanPreviewProgressEvent,
     ScanPreviewPurpose, ScanPreviewRefusal, ScanPreviewStartResult, ScanPreviewTotals, ScanProgressEvent,
     SourceItemOutcome, SourcesGoneAnswerOutcome, TransferActivity, VolumeCopyConfig, WriteCancelledEvent,
     WriteCompleteEvent, WriteConflictEvent, WriteConflictResolvedEvent, WriteErrorEvent, WriteLockedSourcesEvent,

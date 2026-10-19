@@ -14,9 +14,11 @@
 //!   cleared, so it can be the only copy. ❌ Never removed: its temp is read
 //!   first (gone means the landing went through, and the record retires), then
 //!   a whole one takes its free name, or a ` (recovered)` one beside whatever
-//!   holds it; one at any other size stays exactly where it is. A path recorded
-//!   as both a temp and a landing (a crash inside the kind change) settles as
-//!   the landing.
+//!   holds it. One at any other size isn't provably the file, so it never takes
+//!   the name: it gets a ` (recovered)` name too, with a notice saying where
+//!   (left on its scratch name, the name+age reap would take it once the record
+//!   retired). A path recorded as both a temp and a landing (a crash inside the
+//!   kind change) settles as the landing.
 //! - An **aside** holds bytes that were already the user's. It goes back to its
 //!   own name when that name is free; it is removed ONLY when the replacement
 //!   that displaced it is provably complete, which for a file means a regular
@@ -52,8 +54,9 @@ use std::sync::Arc;
 use super::{ItemHome, ItemKind, Ledger, Record, RecordedTemp, SweepTally, TrackedItem};
 use crate::host::EngineHost;
 use crate::transfer_sides::root_is_listed;
-use crate::types::MoveLeftoversKeptEvent;
+use crate::types::{KeptLeftover, LeftoversKeptEvent};
 use crate::unique_name::{NameCandidates, RESCUE_NAME_ATTEMPTS, recovered_sibling};
+use cmdr_fs::log_private::LogPrivate;
 
 /// Settles the records an earlier run left that the local filesystem can answer
 /// for on its own, then takes whatever pending volume is already reachable.
@@ -419,15 +422,15 @@ async fn settle_kind(
                     }
                     Standing::Unknown => Outcome::Deferred,
                 },
-                // Not the bytes the landing recorded, so nothing proves where
-                // they belong.
+                // Not the bytes the landing recorded, so nothing proves they're
+                // the file: they never take its name, and they don't stay on a
+                // scratch one either.
                 Standing::File { .. } | Standing::Other => {
-                    log::warn!(
-                        target: "copy",
-                        "an unfinished landing's temp isn't the size it was recorded at, so it stays where it is: {}",
-                        path.display()
-                    );
-                    Outcome::LeftAlone
+                    let Some(kept) = keep_beside(surface, path, destination, Rescued::UnprovenLanding).await else {
+                        return Outcome::Deferred;
+                    };
+                    announce_landing_kept(host, drive_name, destination, &kept);
+                    Outcome::Recovered
                 }
             }
         }
@@ -532,6 +535,8 @@ enum Rescued {
     Aside,
     /// A landing's temp: the complete new bytes a transfer was putting there.
     Landing,
+    /// A landing's temp that isn't the size it was recorded at.
+    UnprovenLanding,
 }
 
 /// Keeps an aside's (or a landing's) bytes under a ` (recovered)` name beside
@@ -541,6 +546,15 @@ enum Rescued {
 /// volume engine's rescue use, so a person meets one shape of rescued file
 /// rather than three.
 async fn recover(surface: &Surface, aside: &Path, destination: &Path, rescued: Rescued) -> Outcome {
+    match keep_beside(surface, aside, destination, rescued).await {
+        Some(_) => Outcome::Recovered,
+        None => Outcome::Deferred,
+    }
+}
+
+/// [`recover`], answering the name the bytes are kept under, or `None` when
+/// they couldn't move and stay where they are (the record kept for a later try).
+async fn keep_beside(surface: &Surface, aside: &Path, destination: &Path, rescued: Rescued) -> Option<PathBuf> {
     let recovered = recovered_sibling(destination);
     let mut candidates = NameCandidates::for_file(&recovered);
     // The bare ` (recovered)` name first; `NameCandidates` starts at ` (1)`.
@@ -562,13 +576,19 @@ async fn recover(surface: &Surface, aside: &Path, destination: &Path, rescued: R
                         destination.display(),
                         candidate.display()
                     ),
+                    Rescued::UnprovenLanding => log::warn!(
+                        target: "copy",
+                        "an unfinished landing for {} isn't the size it was recorded at, so it's kept at {}",
+                        LogPrivate::file_path(destination),
+                        LogPrivate::file_path(&candidate)
+                    ),
                 }
-                return Outcome::Recovered;
+                return Some(candidate);
             }
             Renaming::Occupied => {}
             // A read-only destination or a dead mount refuses every candidate
             // identically, so trying more of them buys nothing.
-            Renaming::Refused => return Outcome::Deferred,
+            Renaming::Refused => return None,
         }
         if candidates.attempts() >= RESCUE_NAME_ATTEMPTS {
             log::warn!(
@@ -577,7 +597,7 @@ async fn recover(surface: &Surface, aside: &Path, destination: &Path, rescued: R
                 recovered.display(),
                 aside.display()
             );
-            return Outcome::Deferred;
+            return None;
         }
         candidate = candidates.current();
         candidates.advance();
@@ -590,7 +610,7 @@ async fn recover(surface: &Surface, aside: &Path, destination: &Path, rescued: R
 ///
 /// The sweep runs off the launch thread and, later, inside a volume-arrival
 /// task, so it has no operation and no event sink to speak through: the notice
-/// is an engine-wide fact (`EngineEvents::staging_leftovers_kept`).
+/// is an engine-wide fact (`EngineEvents::leftovers_kept`).
 ///
 /// Silent when the record doesn't name a drive: the copy names one, and a
 /// Mac-internal staging folder (a move whose destination is the boot volume)
@@ -603,11 +623,28 @@ fn announce_leftovers_kept(host: &EngineHost, drive_name: Option<&str>, path: &P
     let Some(folder_name) = path.file_name().map(|n| n.to_string_lossy().into_owned()) else {
         return;
     };
-    let notice = MoveLeftoversKeptEvent {
+    host.events().leftovers_kept(LeftoversKeptEvent {
         volume_name: volume_name.to_string(),
-        folder_name,
+        kept: KeptLeftover::StagingFolder { folder_name },
+    });
+}
+
+/// Tells the frontend an unfinished landing it couldn't prove whole is kept
+/// under `kept`, beside `destination`, the way [`announce_leftovers_kept`]
+/// tells it about a staging folder (and silent for a Mac-internal path, which
+/// names no drive).
+fn announce_landing_kept(host: &EngineHost, drive_name: Option<&str>, destination: &Path, kept: &Path) {
+    let Some(volume_name) = drive_name else {
+        return;
     };
-    host.events().staging_leftovers_kept(notice);
+    let name = |path: &Path| path.file_name().map(|n| n.to_string_lossy().into_owned());
+    let (Some(file_name), Some(kept_name)) = (name(destination), name(kept)) else {
+        return;
+    };
+    host.events().leftovers_kept(LeftoversKeptEvent {
+        volume_name: volume_name.to_string(),
+        kept: KeptLeftover::UnfinishedLanding { file_name, kept_name },
+    });
 }
 
 /// Says what the sweep did, so a leftover that survives leaves a trail.

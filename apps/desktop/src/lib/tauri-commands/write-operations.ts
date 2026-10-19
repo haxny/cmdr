@@ -20,7 +20,7 @@ import type {
   ConflictResolutionOutcome,
   DryRunResult,
   Initiator,
-  MoveLeftoversKeptEvent,
+  LeftoversKeptEvent,
   ProgressAtStop,
   ScanPreviewCancelledEvent,
   ScanPreviewCompleteEvent,
@@ -258,14 +258,15 @@ export async function onWriteSettled(callback: (event: WriteSettledEvent) => voi
 }
 
 /**
- * A drive came back carrying a staging folder from a move that never finished,
- * and Cmdr left every file inside it where it was.
+ * A drive or server came back carrying something an unfinished transfer left,
+ * and Cmdr kept it: a move's staging folder, or a file that wasn't the size it
+ * should be, under a ` (recovered)` name.
  *
- * Belongs to no operation: the move that made the folder ended in an earlier
- * session, or before the drive was unplugged. See `MoveLeftoversKeptEvent`.
+ * Belongs to no operation: the transfer that left it ended in an earlier
+ * session, or before the drive was unplugged. See `LeftoversKeptEvent`.
  */
-export async function onMoveLeftoversKept(callback: (event: MoveLeftoversKeptEvent) => void): Promise<UnlistenFn> {
-  return events.moveLeftoversKept.listen((event) => {
+export async function onLeftoversKept(callback: (event: LeftoversKeptEvent) => void): Promise<UnlistenFn> {
+  return events.leftoversKept.listen((event) => {
     callback(event.payload)
   })
 }

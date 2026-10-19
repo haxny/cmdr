@@ -99,7 +99,7 @@ every emit site writes `wire::WriteProgress(event).emit(&app)`. A payload emitte
 - `volumes_busy_changed` → `volumes-busy-changed`, wrapped in `VolumesBusyChanged`, an event struct this module owns
   outright since the engine only reports the ids (a failed emit is a `log_error!` under `eject`).
 - `transfer_started` / `transfer_finished` → `priority::transfers::note_transfer_started` / `_finished`.
-- `staging_leftovers_kept` → `move-leftovers-kept` (a failed emit `warn!`s under `copy`).
+- `leftovers_kept` → `leftovers-kept` (a failed emit `warn!`s under `copy`).
 - `instant_mutation_settled` → `rename_used` / `folder_created` / `file_created`, with the `initiator`, `target`, and
   `outcome` tokens `analytics/DETAILS.md` § "Starter event set" catalogs.
 - `error_report` → `log_error!`, one arm per `OperationErrorReport` variant, each with the message and target the

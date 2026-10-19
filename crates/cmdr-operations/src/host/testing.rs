@@ -30,7 +30,7 @@ use cmdr_listing::testing::TestEngine;
 use cmdr_listing::{DirectorySortMode, SortColumn, SortOrder, sort_entries};
 use cmdr_operation_log::rollback::VolumeLookup;
 
-use super::super::types::{MoveLeftoversKeptEvent, OperationsChanged, WriteProgressEvent};
+use super::super::types::{LeftoversKeptEvent, OperationsChanged, WriteProgressEvent};
 use super::{
     EngineEvents, InstantMutationFact, OperationErrorReport, OperationVolumes, OwnWrites, Pacing, UnregisteredVolume,
     VolumeAnswer,
@@ -48,7 +48,7 @@ pub struct RecordingEngineEvents {
     pub volumes_busy_changed: Mutex<Vec<Vec<String>>>,
     pub transfers_started: Mutex<Vec<Vec<String>>>,
     pub transfers_finished: Mutex<Vec<Vec<String>>>,
-    pub staging_leftovers_kept: Mutex<Vec<MoveLeftoversKeptEvent>>,
+    pub leftovers_kept: Mutex<Vec<LeftoversKeptEvent>>,
     pub instant_mutations: Mutex<Vec<InstantMutationFact>>,
     pub error_reports: Mutex<Vec<OperationErrorReport>>,
     pub scan_wait_progress: Mutex<Vec<WriteProgressEvent>>,
@@ -67,8 +67,8 @@ impl EngineEvents for RecordingEngineEvents {
     fn transfer_finished(&self, volume_ids: &[String]) {
         self.transfers_finished.lock_ignore_poison().push(volume_ids.to_vec());
     }
-    fn staging_leftovers_kept(&self, notice: MoveLeftoversKeptEvent) {
-        self.staging_leftovers_kept.lock_ignore_poison().push(notice);
+    fn leftovers_kept(&self, notice: LeftoversKeptEvent) {
+        self.leftovers_kept.lock_ignore_poison().push(notice);
     }
     fn instant_mutation_settled(&self, fact: InstantMutationFact) {
         self.instant_mutations.lock_ignore_poison().push(fact);

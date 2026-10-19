@@ -9,7 +9,7 @@
 
 use cmdr_operation_log::types::Initiator;
 
-use super::super::types::{MoveLeftoversKeptEvent, OperationsChanged, WriteProgressEvent};
+use super::super::types::{LeftoversKeptEvent, OperationsChanged, WriteProgressEvent};
 use super::error_report::OperationErrorReport;
 
 /// Everything the engine reports that belongs to no single operation.
@@ -37,8 +37,9 @@ pub trait EngineEvents: Send + Sync {
     /// The operation that started on `volume_ids` is over.
     fn transfer_finished(&self, volume_ids: &[String]);
 
-    /// The leftover sweep kept a non-empty staging folder on a drive.
-    fn staging_leftovers_kept(&self, notice: MoveLeftoversKeptEvent);
+    /// The leftover sweep kept something on a drive: a non-empty staging
+    /// folder, or an unfinished landing it couldn't prove whole.
+    fn leftovers_kept(&self, notice: LeftoversKeptEvent);
 
     /// An instant metadata op (rename, new folder, new file) finished, however
     /// it ended. Exactly one per op, from the wrapper around its whole driver.
@@ -64,7 +65,7 @@ impl EngineEvents for NoEngineEvents {
     fn volumes_busy_changed(&self, _volume_ids: Vec<String>) {}
     fn transfer_started(&self, _volume_ids: &[String]) {}
     fn transfer_finished(&self, _volume_ids: &[String]) {}
-    fn staging_leftovers_kept(&self, _notice: MoveLeftoversKeptEvent) {}
+    fn leftovers_kept(&self, _notice: LeftoversKeptEvent) {}
     fn instant_mutation_settled(&self, _fact: InstantMutationFact) {}
     fn error_report(&self, _report: OperationErrorReport) {}
     fn scan_wait_progress(&self, _event: WriteProgressEvent) {}
