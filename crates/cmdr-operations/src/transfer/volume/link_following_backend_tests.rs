@@ -463,8 +463,10 @@ async fn stamp_then_sweep_spares_a_link_target(source: Arc<dyn Volume>, root: &P
     link(root, "src/album/link", "outside/target");
 
     let album = Path::new("src/album");
+    let state = make_state(&TestOperations::new());
     let carried = super::source_sweep::stamp_source(&source, album).await.expect("stamp");
     let left = super::source_sweep::sweep_carried_source(
+        &state,
         &source,
         album,
         &carried,

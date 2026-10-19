@@ -629,7 +629,7 @@ pub async fn move_volumes_with_progress(
                         super::source_sweep::CarriedSource::File(stamp_before)
                     };
                     let delete_result =
-                        super::source_sweep::sweep_carried_source(&source_volume, &source_path, &carried, &skipped, &locked)
+                        super::source_sweep::sweep_carried_source(&state, &source_volume, &source_path, &carried, &skipped, &locked)
                             .await
                             .map(|kept| {
                                 left_in_source.lock_ignore_poison().note(
@@ -832,6 +832,11 @@ mod merge_tests;
 // Both drivers' in-flight tables, pinned side by side: a folder fans out the
 // same way whether it is moved or copied, so the table it renders is one
 // subject rather than two.
+/// A source share that drops during the source sweep is waited for, then swept
+/// again from what it shows.
+#[cfg(test)]
+#[path = "move_outage_tests.rs"]
+mod outage_tests;
 #[cfg(test)]
 #[path = "probe_row_tests.rs"]
 mod probe_row_tests;

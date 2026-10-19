@@ -748,6 +748,24 @@ engine's): each delete; a `NotFound` after a wait means done. `transfer/volume/f
 **Landmine**: a source sweep must never delete something it can't prove is the ledger's: re-check per entry after a
 wait, as `source_sweep.rs` already does.
 
+**Status: done.** As built (for the milestones after it):
+
+- The source sweep's item is the WHOLE top-level source: `sweep_carried_source` (now taking the op's `state`) runs
+  inside `through_outages`, and a run after a wait re-lists every level and re-compares every stamp, so the per-entry
+  re-check is the sweep's own; ❌ no single delete is ever retried blind. The top-level item's own delete reads a
+  `NotFound` after a wait as done (the server performed it); a first-run `NotFound` keeps `SourceNotRemoved`. The
+  into-zip move (`archive_edit/copy_into.rs::delete_originals`) shares the function, so it waits too. A sweep that gives
+  up still reports `SourceNotRemoved` (the copy landed, and that's what the person needs to read), ❌ not
+  `ServerConnectionLost`; its `lost_connection` is dropped at that mapping.
+- The folder stamp has no error to classify (`apply_metadata` reports a drop as `Refused`, `folder_metadata` as
+  nothing). New `volume_outage::wait_after_shortfall`, `wait_after_failure` minus its transport-fault gate (which now
+  calls it): a stamp that came up short, or a source that was asked, asks the volumes whether one is `Disconnected` or
+  live on a newer generation, waits, and stamps the folder again. Per folder `MAX_OUTAGES_PER_ITEM`; a give-up ends the
+  waiting for the rest of that pass. `FolderMetadata::stamp` takes `&Arc<WriteOperationState>`.
+- Test support: `OutageVolume::{drop_at_apply_metadata_of, refuse_metadata_of}`, and `FaultyVolume` forwards
+  `connection_state`, `connection_generation`, and `attempt_reconnect`, so a `FaultyVolume<OutageVolume>` is a LIVE
+  session that refuses (the negative cells). Cells: `volume/move_outage_tests.rs`, `volume/folder_metadata_tests.rs`.
+
 #### 10b. Delete (S–M)
 
 `crates/cmdr-operations/src/delete/walker.rs`: each per-item delete; a `NotFound` on a re-run after a wait counts as

@@ -16,7 +16,7 @@ Copy and move across backends (Local, MTP, SMB, archive). File map: `DETAILS.md`
 - **Overwrite merges dirs and replaces files**, enforced at `apply_volume_conflict_resolution`, ❌ not `Volume::delete`;
   NOT reversible. A BLANKET one ❌ never crosses types (`../../../CLAUDE.md`); an answered one sets the dest ASIDE.
 - **A MOVE's source sweep deletes the walk's LEDGER, ❌ never the tree** (`source_sweep.rs`): Skips, newcomers, and
-  changed files stay.
+  changes stay. A drop re-runs it WHOLE, ❌ no blind retry.
 - **❌ Never fabricate a destination size for the conflict dialog**: `None` (a fake `0` makes "Overwrite all smaller"
   unconditional).
 - **Skip the dest pre-check ONLY for a dir THIS op created** (`DirectoryCreation::Created`), ❌ never one that looks
@@ -55,4 +55,4 @@ Copy and move across backends (Local, MTP, SMB, archive). File map: `DETAILS.md`
 - **Two test traps**: a `*_tests.rs` here is a `#[path]` CHILD (`super::` one level shallower), and a `FaultyVolume`
   cell must **assert `fault_fired(op)`**.
 
-Flows and decisions: `DETAILS.md`; read it before non-trivial work.
+Flows and decisions: `DETAILS.md`.

@@ -1953,8 +1953,13 @@ again:
   failing on it. It announces the wait itself (no probe is registered yet). Only a cancel stops the transfer there;
   every other ending carries on, and a volume still gone fails the first step exactly as before.
 
-**Not covered, deliberately.** The pre-flight SCAN of a big tree (its own walker, its own failure path), the post-loop
-folder dates and source sweep, delete and trash, and the local engines. Each would fail on an outage as it always did.
+- After the copy: a cross-volume move's source sweep (`volume/source_sweep.rs::sweep_carried_source`, whole, through
+  `through_outages`: every run re-lists and re-stamps before it deletes), and each folder's date stamp
+  (`volume/folder_metadata.rs`, through `wait_after_shortfall`, since a backend reports a drop under `apply_metadata` as
+  a refused class rather than an error). Both: `volume/DETAILS.md`.
+
+**Not covered, deliberately.** The pre-flight SCAN of a big tree (its own walker, its own failure path), delete and
+trash, and the local engines. Each would fail on an outage as it always did.
 
 **A landing the drop cut off (`interrupted_landing.rs`, `staged_write_landing.rs::CutOffLanding`).** A rename or a
 delete whose reply never arrives may have happened or not: the drop can come before the server saw it, or after it

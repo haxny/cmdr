@@ -321,7 +321,25 @@ pub(crate) async fn wait_after_failure(
     started_on: &StartedOn,
     outages: &mut u32,
 ) -> OutageEnd {
-    if *outages >= MAX_OUTAGES_PER_ITEM || error.transport_fault().is_none() || state.work_stopped() {
+    if error.transport_fault().is_none() {
+        return OutageEnd::NotWaitable;
+    }
+    wait_after_shortfall(state, volumes, started_on, outages).await
+}
+
+/// [`wait_after_failure`] for a call that came up short with no error to
+/// classify: a best-effort apply (`Volume::apply_metadata`) reports a drop as a
+/// refused class, the same as a server's refusal. So the volumes answer
+/// instead: one that reads `Disconnected`, or live on a newer session than the
+/// call started on, is waited for; [`OutageEnd::NotWaitable`] when none is, and
+/// the shortfall stands. ❗ Only for a call that's safe to run again.
+pub(crate) async fn wait_after_shortfall(
+    state: &Arc<WriteOperationState>,
+    volumes: &[&Arc<dyn Volume>],
+    started_on: &StartedOn,
+    outages: &mut u32,
+) -> OutageEnd {
+    if *outages >= MAX_OUTAGES_PER_ITEM || state.work_stopped() {
         return OutageEnd::NotWaitable;
     }
     let ended = wait_out(state, volumes, started_on, None).await;

@@ -1072,6 +1072,17 @@ walk copied the target) still leaves the target alone (`link_following_backend_t
 sources outside the merge walk, so it stamps them up front with `stamp_source` (the same listing-per-folder walk, links
 never followed) and sweeps with the same `sweep_carried_source`: `../../archive_edit/DETAILS.md`.
 
+**A source share that drops under the sweep is waited for, then swept again from the top.** `sweep_carried_source` runs
+inside `through_outages` (`../volume_outage.rs`, the wait every transfer step takes), with the whole sweep as the item
+(`MAX_OUTAGES_PER_ITEM` outages per top-level source). ❗ The re-run is what makes it safe to run twice: it lists every
+level again and compares every entry with its stamp again, so a file someone saved over while the share was out no
+longer matches and stays, and a file the first run deleted isn't listed. ❌ Never retry a single delete blind after a
+wait: the path may hold someone else's new file by then. The top-level item's own delete is the one a listing can't
+re-check, so after a wait its `NotFound` reads as the delete the drop swallowed (the server performed it) and the item
+is done; a `NotFound` on the first run keeps its meaning (`SourceNotRemoved`). A refusal from a share that stayed up is
+a refusal, reported at once. Pinned by `move_outage_tests.rs` (a folder's drop with a save over a carried file during
+the outage, a swallowed delete, a top-level file saved over during the outage, and a live share's refusal).
+
 **`write-error` carries a typed, word-free `WriteOperationError` for both move and copy.** Both `move_between_volumes`
 and `copy_volumes_with_progress` funnel every `?`-propagated failure through the shared `WriteFailure` struct (in
 `transfer_error.rs`). `WriteFailure::from_volume(path, e)` maps an originating `VolumeError + path` to a
@@ -1539,6 +1550,14 @@ every real store, so a folder dated when it's created lists "now" by the end of 
   of their own. A source whose scan carried none (an S3 prefix, MTP's single-path scan, a top-level dispatch with no
   hint) leaves them the destination's. The one-pass sequential extract hands the list to its `ExtractPlan` and stamps
   after the data pass.
+- **A share that drops under a folder's stamp is waited for, and the folder stamped again**
+  (`folder_metadata.rs::stamp_through_outages`). Neither call has an error to classify: a backend reports a drop under
+  `apply_metadata` as a refused class and under `folder_metadata` as nothing carried. So a stamp that came up short, or
+  a source that was asked for something, asks the volumes themselves (`volume_outage.rs::wait_after_shortfall`): one
+  that reads `Disconnected`, or live on a newer session than the stamp started on, is waited for; a share that stayed up
+  made a real refusal, a counted loss. Restamping sets the same values, so it's safe to run twice. A wait that gives up
+  ends the waiting for the rest of that pass (each later folder fails fast and counts its loss), and a stop ends the
+  pass. Pinned by `folder_metadata_tests.rs` (a drop at the inner folder's stamp, and a live share's refusal).
 - **What a source folder carries beyond its listing entry** comes from `Volume::folder_metadata`, asked once per created
   folder at stamp time (a folder has no stream to ask). It defaults to empty with no I/O; the archive answers with the
   folder's AppleDouble xattrs (`crates/cmdr-archive/src/read/DETAILS.md` § "AppleDouble sidecars"), local disk with its

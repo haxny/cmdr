@@ -16,7 +16,10 @@
 //!
 //! A folder that arrives without a date its source had (the destination can't
 //! hold it, or refused it) is counted for the loss note
-//! (`crates/cmdr-operations/src/metadata_losses.rs`).
+//! (`crates/cmdr-operations/src/metadata_losses.rs`). A share that drops
+//! under a folder's stamp is waited for, as every transfer step is
+//! (`../volume_outage.rs`), and the folder stamped again; only a refusal from a
+//! share that stayed up is a loss.
 //!
 //! ❌ Not the extract quarantine: a folder gets that the moment the walk creates
 //! it (`extract_quarantine.rs`), since this pass skips every folder of a
@@ -31,6 +34,7 @@ use cmdr_fs::metadata::{CarriedMetadata, ClassOutcome, MetadataClasses};
 
 use super::super::super::metadata_losses::FolderLosses;
 use super::super::super::state::WriteOperationState;
+use super::super::volume_outage::{OutageEnd, StartedOn, wait_after_shortfall};
 use cmdr_fs::volume::Volume;
 
 /// A source folder's own dates (Unix seconds), as the listing entry or the
@@ -86,25 +90,83 @@ impl FolderMetadata {
     /// a `log::warn!` and the copy stands; a destination that can hold none of
     /// it (`MetadataReport::holds_none`) gets asked no more, though every
     /// folder still counts what it lost.
+    ///
+    /// A share that drops under a folder's stamp is waited for, and the folder
+    /// stamped again (see [`stamp_through_outages`]).
     pub(super) async fn stamp(
         self,
         source_volume: &Arc<dyn Volume>,
         dest_volume: &Arc<dyn Volume>,
-        state: &WriteOperationState,
+        state: &Arc<WriteOperationState>,
     ) {
-        let mut asking = true;
+        let mut stamping = Stamping {
+            asking: true,
+            waiting: true,
+        };
         for folder in self.folders {
             if state.work_stopped() {
                 return;
             }
-            let carried = source_set(source_volume, dest_volume, &folder, state).await;
-            let outcome = if asking {
-                stamp_one(dest_volume, &folder, &carried).await
-            } else {
-                Stamped::NotAsked
+            let Some((carried, outcome)) =
+                stamp_through_outages(source_volume, dest_volume, &folder, state, &mut stamping).await
+            else {
+                return;
             };
-            asking = !matches!(outcome, Stamped::HeldNone);
+            stamping.asking = !matches!(outcome, Stamped::HeldNone);
             note_losses(dest_volume, &folder, &carried, outcome, state);
+        }
+    }
+}
+
+/// What one stamp pass has learned so far about its destination.
+struct Stamping {
+    /// Whether to ask the destination at all: `false` once it said it can hold
+    /// none of a folder's metadata.
+    asking: bool,
+    /// Whether a share that drops is still worth waiting for: `false` once a
+    /// wait gave up, so the folders after it don't each wait again.
+    waiting: bool,
+}
+
+/// Reads what the source folder carries and stamps the folder with it, once
+/// more after each outage that may have cut either off. `None` when the work
+/// stopped during a wait.
+///
+/// Neither call has an error to classify: a backend reports a drop under the
+/// stamp as a refused class, and under the source read as nothing carried. So
+/// a stamp that came up short, or a source that was asked for something, asks
+/// the volumes themselves ([`wait_after_shortfall`]): one that went away, or
+/// came back on a newer session while the stamp ran, is waited for and the
+/// folder stamped again. Safe to run twice: it sets the same values. A refusal
+/// from a share that stayed up is a refusal, counted as a loss.
+async fn stamp_through_outages(
+    source_volume: &Arc<dyn Volume>,
+    dest_volume: &Arc<dyn Volume>,
+    folder: &FilledFolder,
+    state: &Arc<WriteOperationState>,
+    stamping: &mut Stamping,
+) -> Option<(CarriedMetadata, Stamped)> {
+    let volumes = [source_volume, dest_volume];
+    let mut outages = 0;
+    loop {
+        let started_on = StartedOn::now(&volumes);
+        let (carried, asked_the_source) = source_set(source_volume, dest_volume, folder, state).await;
+        let outcome = if stamping.asking {
+            stamp_one(dest_volume, folder, &carried).await
+        } else {
+            Stamped::NotAsked
+        };
+        if !stamping.waiting || !(asked_the_source || outcome.came_up_short()) {
+            return Some((carried, outcome));
+        }
+        match wait_after_shortfall(state, &volumes, &started_on, &mut outages).await {
+            OutageEnd::Back => {}
+            OutageEnd::NotWaitable => return Some((carried, outcome)),
+            OutageEnd::GaveUp { .. } => {
+                stamping.waiting = false;
+                return Some((carried, outcome));
+            }
+            OutageEnd::Cancelled => return None,
         }
     }
 }
@@ -124,18 +186,36 @@ enum Stamped {
     NotAsked,
 }
 
+impl Stamped {
+    /// Whether the destination refused a class: a server's refusal, or a drop
+    /// under the stamp, which a backend reports the same way.
+    fn came_up_short(&self) -> bool {
+        match self {
+            Self::Answered {
+                created,
+                modified,
+                xattrs,
+                flags,
+            } => [created, modified, xattrs, flags]
+                .iter()
+                .any(|outcome| **outcome == ClassOutcome::Refused),
+            Self::HeldNone | Self::NotAsked => false,
+        }
+    }
+}
+
 /// What the source folder carries beyond its dates: its xattrs (an archive's
 /// sidecar, a local folder's tags), asked only of a source that reports them,
 /// and with the archive's quarantine in place of any a sidecar names; and its
 /// flags (Hidden, Locked), asked only when the destination keeps a folder's,
 /// since a share answers them with a round trip a loss count alone doesn't
-/// earn.
+/// earn. Also answers whether the source was asked at all.
 async fn source_set(
     source_volume: &Arc<dyn Volume>,
     dest_volume: &Arc<dyn Volume>,
     folder: &FilledFolder,
     state: &WriteOperationState,
-) -> CarriedMetadata {
+) -> (CarriedMetadata, bool) {
     let flags = dest_volume
         .metadata_caps()
         .folder_stores
@@ -145,11 +225,11 @@ async fn source_set(
         .reports
         .intersection(MetadataClasses::XATTRS | flags);
     if wanted.is_empty() {
-        return CarriedMetadata::default();
+        return (CarriedMetadata::default(), false);
     }
     let mut carried = source_volume.folder_metadata(&folder.source, wanted).await;
     super::extract_quarantine::keep_archive_quarantine(state, source_volume, &mut carried.xattrs);
-    carried
+    (carried, true)
 }
 
 /// Counts what the folder had worth keeping that it arrived without: what the

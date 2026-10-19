@@ -25,7 +25,9 @@
 //! A swap's landing is armed by PATH rather than by count, since a concurrent
 //! window's siblings rename and delete in no fixed order: the drop around the
 //! next delete of a path or rename onto it, on either side, the late error of
-//! a delete, and the drop at the next stat of a path. It can also copy inside itself on the server
+//! a delete, the drop at the next stat of a path, and the drop as a path's
+//! metadata goes on (a folder's dates, which a backend answers as a refused
+//! class, never an error), or a refusal of it with the session up. It can also copy inside itself on the server
 //! (`Volume::copy_within`), and it counts where every write went, so a cell can
 //! tell a landing resumed from its temp from a file streamed again.
 //!
@@ -94,6 +96,10 @@ pub(crate) struct OutageVolume {
     stale_error_at_delete_of: Mutex<Option<(PathBuf, RenameDrop)>>,
     /// Drop the session as the next stat of this path starts, once.
     drop_at_stat_of: Mutex<Option<PathBuf>>,
+    /// Drop the session as the next metadata apply on this path starts, once.
+    drop_at_apply_metadata_of: Mutex<Option<PathBuf>>,
+    /// Refuse every metadata apply on this path, with the session up.
+    refuse_metadata_of: Mutex<Option<PathBuf>>,
     /// Copy inside itself on the server (`Volume::copy_within`), counting each.
     copies_on_server: AtomicBool,
     server_copies: AtomicUsize,
@@ -149,6 +155,8 @@ impl OutageVolume {
             drop_at_delete_of: Mutex::new(None),
             stale_error_at_delete_of: Mutex::new(None),
             drop_at_stat_of: Mutex::new(None),
+            drop_at_apply_metadata_of: Mutex::new(None),
+            refuse_metadata_of: Mutex::new(None),
             copies_on_server: AtomicBool::new(false),
             server_copies: AtomicUsize::new(0),
             generation: AtomicU64::new(0),
@@ -267,6 +275,19 @@ impl OutageVolume {
     /// starts (`get_metadata`, and every probe built on it, `entry_kind` too).
     pub(crate) fn drop_at_stat_of(&self, path: &Path) {
         *self.drop_at_stat_of.lock_ignore_poison() = Some(path.to_path_buf());
+    }
+
+    /// The session drops (and the server goes away) as the next metadata apply
+    /// on `path` starts: the apply answers every class refused, as a share
+    /// does when the drop cuts off a folder's dates.
+    pub(crate) fn drop_at_apply_metadata_of(&self, path: &Path) {
+        *self.drop_at_apply_metadata_of.lock_ignore_poison() = Some(path.to_path_buf());
+    }
+
+    /// Every metadata apply on `path` is refused while the session stays up: a
+    /// server that won't take a folder's dates.
+    pub(crate) fn refuse_metadata_of(&self, path: &Path) {
+        *self.refuse_metadata_of.lock_ignore_poison() = Some(path.to_path_buf());
     }
 
     /// Copies inside itself on the server from now on, the way SFTP's
@@ -628,7 +649,15 @@ impl Volume for OutageVolume {
         modified: Option<std::time::SystemTime>,
     ) -> Fut<'a, MetadataReport> {
         Box::pin(async move {
-            if self.gate().is_err() {
+            let armed_here = {
+                let mut armed = self.drop_at_apply_metadata_of.lock_ignore_poison();
+                armed.as_deref() == Some(path) && armed.take().is_some()
+            };
+            if armed_here {
+                self.go_away();
+            }
+            let refused_here = self.refuse_metadata_of.lock_ignore_poison().as_deref() == Some(path);
+            if self.gate().is_err() || refused_here {
                 return MetadataReport::uniform(carried, modified, ClassOutcome::Refused);
             }
             self.inner.apply_metadata(path, carried, modified).await

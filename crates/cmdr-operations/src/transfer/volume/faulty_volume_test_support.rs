@@ -73,6 +73,21 @@ macro_rules! forward_volume_methods {
             self.$inner.lane_key()
         }
     };
+    (@one $inner:ident, connection_state) => {
+        fn connection_state(&self) -> Option<::cmdr_fs::volume::ConnectionState> {
+            self.$inner.connection_state()
+        }
+    };
+    (@one $inner:ident, connection_generation) => {
+        fn connection_generation(&self) -> Option<u64> {
+            self.$inner.connection_generation()
+        }
+    };
+    (@one $inner:ident, attempt_reconnect) => {
+        fn attempt_reconnect<'a>(&'a self) -> ::std::pin::Pin<Box<dyn ::std::future::Future<Output = Result<(), ::cmdr_fs::volume::VolumeError>> + Send + 'a>> {
+            self.$inner.attempt_reconnect()
+        }
+    };
     (@one $inner:ident, list_directory) => {
         fn list_directory<'a>(
             &'a self,
@@ -429,6 +444,11 @@ impl<V: Volume + 'static> Volume for FaultyVolume<V> {
         inner => name,
         root,
         lane_key,
+        // A session's answers, so a wrapped `OutageVolume` is a LIVE session
+        // that refuses: the cell for "a refusal fails at once, no wait".
+        connection_state,
+        connection_generation,
+        attempt_reconnect,
         exists,
         get_space_info,
         local_path,

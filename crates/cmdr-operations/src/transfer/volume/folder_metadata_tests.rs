@@ -12,9 +12,12 @@ use std::time::Duration;
 use super::copy_volumes_with_progress;
 use super::faulty_volume::{FaultyOp, FaultyVolume};
 use crate::event_sinks::CollectorEventSink;
+use crate::outage_slot::OutagePolicy;
 use crate::state::WriteOperationState;
 use crate::testing::TestOperations;
+use crate::transfer::outage_volume_test_support::OutageVolume;
 use crate::types::VolumeCopyConfig;
+use cmdr_fs::testing::wait_until_async;
 use cmdr_fs::volume::{InMemoryVolume, Volume, VolumeError};
 
 /// The copied folder's date: 2021-01-29 08:30:15 UTC.
@@ -247,4 +250,96 @@ async fn copied_folders_keep_their_creation_dates_through_both_drivers() {
             );
         }
     }
+}
+
+/// The outage wait's cadence at test speed.
+const CADENCE: &[Duration] = &[Duration::from_millis(10), Duration::from_millis(20)];
+
+/// A copy onto a share whose session the cell can take away, with the outage
+/// wait tuned to test speed. Answers the share and the copy's result.
+async fn copy_onto_a_share(
+    engine: &TestOperations,
+    op: &str,
+    arm: impl FnOnce(&OutageVolume),
+) -> (
+    Arc<InMemoryVolume>,
+    Arc<OutageVolume>,
+    Result<(), crate::types::WriteOperationError>,
+) {
+    let (source, dest_inner) = volumes();
+    dest_inner.create_directory(Path::new("/inbox")).await.unwrap();
+    let album = seed_dated_folder(&source, "album").await;
+    let share = OutageVolume::wrap(Arc::clone(&dest_inner), op);
+    arm(&share);
+    let state = Arc::new(
+        engine
+            .new_operation_state(Duration::from_millis(50))
+            .with_outage_policy(OutagePolicy {
+                budget: Duration::from_secs(30),
+                cadence: CADENCE,
+                poll_every: Duration::from_millis(5),
+                attempt_timeout: Duration::from_secs(1),
+            }),
+    );
+    let registered = engine.register_state(op, Arc::clone(&state));
+    let waiting = Arc::clone(&state);
+    let coming_back = Arc::clone(&share);
+    tokio::spawn(async move {
+        wait_until_async(Duration::from_secs(10), "the copy to wait for the share", || {
+            waiting.outage.waiting_for().is_some()
+        })
+        .await;
+        coming_back.become_reachable();
+    });
+    let result = copy_volumes_with_progress(
+        Arc::new(CollectorEventSink::new()),
+        registered.id(),
+        &state,
+        Arc::clone(&source) as Arc<dyn Volume>,
+        &[album],
+        Arc::clone(&share) as Arc<dyn Volume>,
+        Path::new("/inbox"),
+        &VolumeCopyConfig::default(),
+    )
+    .await
+    .map(|_| ())
+    .map_err(|failure| failure.error);
+    (dest_inner, share, result)
+}
+
+/// The share drops as the inner folder's dates go on. A folder's stamp has no
+/// error to classify (a backend reports the drop as a refused class), so the
+/// share's own state says it went away: the copy waits for it and stamps again.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_share_that_drops_as_a_folder_is_dated_is_waited_for_and_dated_again() {
+    let engine = TestOperations::new();
+    let (dest, share, result) = copy_onto_a_share(&engine, "op-folder-dates-outage", |share| {
+        share.drop_at_apply_metadata_of(Path::new("/inbox/album/inner"));
+    })
+    .await;
+
+    result.expect("a share that comes back within the budget must not fail the copy");
+    assert!(share.reconnect_attempts() >= 1, "the share really dropped at the stamp");
+    assert_eq!(listed_date(&dest, "/inbox/album/inner").await, Some(INNER_FOLDER_DATE));
+    assert_eq!(listed_date(&dest, "/inbox/album").await, Some(FOLDER_DATE));
+}
+
+/// A live share that refuses a folder's dates is a refusal: the folder keeps
+/// the store's date, nothing waits, and the copy stands.
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn a_live_share_that_refuses_a_folders_dates_is_never_waited_for() {
+    let engine = TestOperations::new();
+    let (dest, share, result) = copy_onto_a_share(&engine, "op-folder-dates-refused", |share| {
+        share.refuse_metadata_of(Path::new("/inbox/album/inner"));
+    })
+    .await;
+
+    result.expect("a refused date is a metadata loss, never a failed copy");
+    assert_eq!(
+        share.reconnect_attempts(),
+        0,
+        "a live share's refusal is never waited for"
+    );
+    assert_ne!(listed_date(&dest, "/inbox/album/inner").await, Some(INNER_FOLDER_DATE));
+    assert_eq!(listed_date(&dest, "/inbox/album").await, Some(FOLDER_DATE));
 }

@@ -185,11 +185,12 @@ impl MaterializedSources {
     /// added in the source meanwhile exists only there, so it stays and the
     /// answer counts it. Best-effort per source: a failure leaves an incomplete
     /// move (a copy in both places), never data loss.
-    async fn delete_originals(&self) -> LeftInSource {
+    async fn delete_originals(&self, state: &Arc<WriteOperationState>) -> LeftInSource {
         let mut left = LeftInSource::default();
         let nothing_skipped = HashSet::new();
         for (path, carried) in &self.carried {
             match sweep_carried_source(
+                state,
                 &self.source_volume,
                 path,
                 carried,
@@ -489,7 +490,7 @@ impl crate::Operations {
                     .await?;
 
                     let left = if should_delete_sources {
-                        materialized.delete_originals().await
+                        materialized.delete_originals(&state).await
                     } else {
                         LeftInSource::default()
                     };

@@ -20,13 +20,17 @@
 //!   that, so it's not counted as news.
 //!
 //! ❌ Never go back to a recursive delete of the source (`remove_tree`): it acts
-//! on what is on disk NOW rather than on what this move carried.
+//! on what is on disk NOW rather than on what this move carried. For the same
+//! reason a share that drops under the sweep re-runs it whole once it's back
+//! ([`sweep_carried_source`]), ❌ never one delete blind.
 
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use super::super::super::locked_sources::{LockedPlan, Unlocked};
+use super::super::super::state::WriteOperationState;
+use super::super::volume_outage::through_outages;
 use super::transfer_error::{AtPath, PathedVolumeError};
 use cmdr_fs::entry::FileEntry;
 use cmdr_fs::volume::{EntryKind, Volume, VolumeError};
@@ -276,29 +280,60 @@ pub(crate) async fn stamp_source(volume: &Arc<dyn Volume>, source: &Path) -> Res
 /// Removes one moved top-level source from what the move carried, sparing
 /// `skipped` (a merge's Skips) and whatever appeared or changed since, and
 /// unlocking what `locked` says the person agreed to. Answers what stayed.
+///
+/// A share that drops under the sweep is waited for, and the sweep runs again
+/// from the top (`../volume_outage.rs::through_outages`). That's safe because
+/// every run re-lists and re-stamps what it's about to delete: a file saved
+/// over while the share was out no longer matches the ledger and stays, and
+/// one already deleted isn't listed. The one delete a re-run can't re-check by
+/// listing, the top-level item's own, reads a `NotFound` after a wait as the
+/// delete the drop swallowed (the server performed it), so done.
 pub(crate) async fn sweep_carried_source(
+    state: &Arc<WriteOperationState>,
     volume: &Arc<dyn Volume>,
     source: &Path,
     carried: &CarriedSource,
     skipped: &HashSet<PathBuf>,
     locked: &LockedPlan,
 ) -> Result<FolderLeftovers, PathedVolumeError> {
+    let mut runs = 0_u32;
+    through_outages(state, &[volume], || {
+        let after_a_wait = runs > 0;
+        runs += 1;
+        sweep_once(volume, source, carried, skipped, locked, after_a_wait)
+    })
+    .await
+}
+
+/// One run of [`sweep_carried_source`]. `after_a_wait`: an earlier run met an
+/// outage, so a top-level item already gone may be that run's own delete.
+async fn sweep_once(
+    volume: &Arc<dyn Volume>,
+    source: &Path,
+    carried: &CarriedSource,
+    skipped: &HashSet<PathBuf>,
+    locked: &LockedPlan,
+    after_a_wait: bool,
+) -> Result<FolderLeftovers, PathedVolumeError> {
+    let delete_top_level = || async {
+        match volume.delete(source).await {
+            Err(VolumeError::NotFound(_)) if after_a_wait => Ok(FolderLeftovers::default()),
+            result => result.at_source(source).map(|()| FolderLeftovers::default()),
+        }
+    };
     match carried {
         CarriedSource::Folder(ledger) => match volume.entry_kind(source).await {
             // A selected link the walk followed: the link goes, its target stays.
-            Ok(EntryKind::Symlink) => {
-                volume.delete(source).await.at_source(source)?;
-                Ok(FolderLeftovers::default())
-            }
+            Ok(EntryKind::Symlink) => delete_top_level().await,
             Ok(_) | Err(VolumeError::NotFound(_)) => sweep_moved_folder(volume, source, ledger, skipped, locked).await,
             Err(e) => Err(e).at_source(source),
         },
         CarriedSource::File(before) => {
             if file_is_unchanged(volume, source, *before).await? {
                 let unlocked = locked.unlock(source);
-                volume.delete(source).await.at_source(source)?;
+                let left = delete_top_level().await?;
                 unlocked.gone();
-                Ok(FolderLeftovers::default())
+                Ok(left)
             } else {
                 Ok(FolderLeftovers {
                     appeared: 0,
