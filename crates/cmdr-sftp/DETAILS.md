@@ -399,13 +399,13 @@ below reads `NotSupported` without dialing and the volume reports `Disconnected`
 `auth::reconnect_policy` is the rung half; `rebuild` obeys it for an UNATTENDED attempt and skips it when the user has
 just typed a secret, which is the whole difference the policy is about.
 
-| rung                  | `attempt_reconnect`                        | `reconnect_with_credentials`         |
-| --------------------- | ------------------------------------------ | ------------------------------------ |
-| agent                 | dials freely; a removed identity refuses   | `NotSupported`                       |
-| key file, unencrypted | dials freely                               | `NotSupported`                       |
-| key file, passphrase  | ONE dial, then `NeedsCredentials` for good | refreshes a remembered secret, dials |
-| password              | ONE dial, then `NeedsCredentials` for good | refreshes a remembered secret, dials |
-| keyboard-interactive  | `NeedsCredentials` without dialing         | refreshes a remembered secret, dials |
+| rung                  | `attempt_reconnect`                        | `reconnect_with_credentials`              |
+| --------------------- | ------------------------------------------ | ----------------------------------------- |
+| agent                 | dials freely; a removed identity refuses   | `NotSupported`                            |
+| key file, unencrypted | dials freely                               | `NotSupported`                            |
+| key file, passphrase  | ONE dial, then `NeedsCredentials` for good | dials, then refreshes a remembered secret |
+| password              | ONE dial, then `NeedsCredentials` for good | dials, then refreshes a remembered secret |
+| keyboard-interactive  | `NeedsCredentials` without dialing         | dials, then refreshes a remembered secret |
 
 - ❌ **The latch is the point.** The frontend's reconnect manager calls `attempt_reconnect` on every backoff tick, so
   without `auth_attempt_spent` a wrong secret is offered every few seconds until the account locks. It is set only on a
@@ -414,6 +414,9 @@ just typed a secret, which is the whole difference the policy is about.
 - **The store is re-read on every dial**, so the ONE unattended try already carries whatever the user changed.
 - ❗ **"Refreshes" means refreshes**, on every rung including the passphrase one: an attended reconnect writes the typed
   secret to the store only if the store already holds one. § "The two switches" has the why.
+- ❗ **And only once it WORKED** (#530): `rebuild` answers `Rebuilt::Dialed(rung)`, and the secret is written only when
+  a fresh session came up on a rung that took it (not the agent, not an unencrypted key, not an already-live session).
+  Writing before the dial let a typo replace the secret that worked.
 - ❗ **Another account is another volume.** The id is `host:port:username`, so `reconnect_with_credentials` refuses a
   username that isn't this volume's rather than quietly authenticating as somebody else under this volume's name and
   index.
@@ -1148,13 +1151,13 @@ answers `NotSupported` every time it's pressed, or no button where one was the o
 
 With `autoReconnect` on (off makes every "unattended reconnect" cell `NotSupported` without dialing):
 
-| `rung`                 | unattended reconnect                       | sign-in state    | attended reconnect                   |
-| ---------------------- | ------------------------------------------ | ---------------- | ------------------------------------ |
-| `agent`                | dials freely; a removed identity refuses   | `nothing`        | `NotSupported`                       |
-| `key_file`             | dials freely                               | `nothing`        | `NotSupported`                       |
-| `encrypted_key_file`   | ONE dial, then `NeedsCredentials` for good | `key_passphrase` | refreshes a remembered secret, dials |
-| `password`             | ONE dial, then `NeedsCredentials` for good | `password`       | refreshes a remembered secret, dials |
-| `keyboard_interactive` | `NeedsCredentials` without dialing         | `password`       | refreshes a remembered secret, dials |
+| `rung`                 | unattended reconnect                       | sign-in state    | attended reconnect                        |
+| ---------------------- | ------------------------------------------ | ---------------- | ----------------------------------------- |
+| `agent`                | dials freely; a removed identity refuses   | `nothing`        | `NotSupported`                            |
+| `key_file`             | dials freely                               | `nothing`        | `NotSupported`                            |
+| `encrypted_key_file`   | ONE dial, then `NeedsCredentials` for good | `key_passphrase` | dials, then refreshes a remembered secret |
+| `password`             | ONE dial, then `NeedsCredentials` for good | `password`       | dials, then refreshes a remembered secret |
+| `keyboard_interactive` | `NeedsCredentials` without dialing         | `password`       | dials, then refreshes a remembered secret |
 
 A volume that is not SFTP, and an id nothing is registered under, both answer `password` (`Volume::sign_in_prompt`'s
 default; a share answers `username_password { guestAllowed }` instead). That is the safe way to be wrong: this is only

@@ -4,7 +4,9 @@
 
 use super::*;
 use crate::volume::SmbVolume;
+use crate::volume::session::refresh_remembered_credentials;
 use crate::volume::test_support::*;
+use cmdr_fs::volume::host::credentials::{CredentialStore, InMemoryCredentials};
 use cmdr_fs::volume::host::events::{RecordingVolumeEvents, VolumeConnection};
 use cmdr_fs::volume::{Volume, WatchCoverage};
 use std::path::Path;
@@ -257,4 +259,127 @@ async fn a_refused_signature_drops_the_session() {
         events.transitions(),
         vec![(RECORDED_ID.to_string(), VolumeConnection::Disconnected)]
     );
+}
+
+// ── Signing in, and what it writes down (#530) ───────────────────────
+
+/// Nothing listens here, so every dial is refused at once, ❌ never a LAN
+/// address a dial could actually reach.
+const CLOSED_PORT: u16 = 1;
+
+/// A disconnected volume on loopback's closed port, over `store`.
+async fn offline_volume_over(store: &Arc<InMemoryCredentials>) -> SmbVolume {
+    let host = VolumeHost::builder()
+        .credentials(Arc::clone(store) as Arc<dyn CredentialStore>)
+        .build();
+    let vol = make_test_volume_with(RECORDED_ID, host);
+    {
+        let mut params = vol.inner.params.write().await;
+        params.server = "127.0.0.1".to_string();
+        params.port = CLOSED_PORT;
+    }
+    vol
+}
+
+fn secret_at(store: &InMemoryCredentials, scope: Option<&str>) -> Option<(String, String)> {
+    store
+        .credentials("127.0.0.1", scope)
+        .map(|held| (held.username, held.secret))
+}
+
+fn held(username: &str, secret: &str) -> Option<(String, String)> {
+    Some((username.to_string(), secret.to_string()))
+}
+
+/// ❗ **A typed password is written only once it WORKED.** A typo written before
+/// the dial replaced the server-level password every share on the server falls
+/// back to, and then the dial failed.
+#[tokio::test]
+async fn a_sign_in_that_does_not_connect_leaves_the_remembered_password_alone() {
+    let store = Arc::new(InMemoryCredentials::new().with_entry("127.0.0.1", None, "ada", "right"));
+    let vol = offline_volume_over(&store).await;
+
+    let refusal = vol
+        .inner
+        .do_reconnect_with_credentials("ada".to_string(), "a-typo".to_string())
+        .await;
+
+    assert!(refusal.is_err(), "nothing listens on the closed port");
+    assert_eq!(secret_at(&store, None), held("ada", "right"));
+    assert_eq!(secret_at(&store, Some("TestShare")), None);
+}
+
+/// ❗ **Remember off means nothing is written.** The sheet forgets the entry
+/// before it dials, and the sign-in used to write the typed password straight
+/// back.
+#[tokio::test]
+async fn a_sign_in_with_nothing_remembered_writes_nothing() {
+    let store = Arc::new(InMemoryCredentials::new());
+    let vol = offline_volume_over(&store).await;
+
+    let _ = vol
+        .inner
+        .do_reconnect_with_credentials("ada".to_string(), "typed".to_string())
+        .await;
+
+    assert_eq!(secret_at(&store, None), None);
+    assert_eq!(secret_at(&store, Some("TestShare")), None);
+}
+
+// The rule a sign-in that DID connect writes by, one cell per entry shape.
+
+fn connected_as(username: &str, password: &str) -> SmbConnectionParams {
+    SmbConnectionParams::new("127.0.0.1", "TestShare", CLOSED_PORT, Some(username), Some(password))
+}
+
+fn host_over(store: &Arc<InMemoryCredentials>) -> VolumeHost {
+    VolumeHost::builder()
+        .credentials(Arc::clone(store) as Arc<dyn CredentialStore>)
+        .build()
+}
+
+#[tokio::test]
+async fn a_working_sign_in_refreshes_the_shares_own_entry_and_leaves_the_servers_alone() {
+    let store = Arc::new(
+        InMemoryCredentials::new()
+            .with_entry("127.0.0.1", Some("TestShare"), "ada", "old")
+            .with_entry("127.0.0.1", None, "ada", "server-wide"),
+    );
+
+    assert!(refresh_remembered_credentials(&host_over(&store), &connected_as("ada", "new")).await);
+
+    assert_eq!(secret_at(&store, Some("TestShare")), held("ada", "new"));
+    assert_eq!(secret_at(&store, None), held("ada", "server-wide"));
+}
+
+#[tokio::test]
+async fn a_working_sign_in_refreshes_the_server_entry_it_reads_for_the_same_account() {
+    let store = Arc::new(InMemoryCredentials::new().with_entry("127.0.0.1", None, "ada", "old"));
+
+    assert!(refresh_remembered_credentials(&host_over(&store), &connected_as("ada", "new")).await);
+
+    assert_eq!(secret_at(&store, None), held("ada", "new"));
+    assert_eq!(secret_at(&store, Some("TestShare")), None);
+}
+
+/// ❗ Another account on this share never replaces the server-level entry every
+/// other share on the server signs in with.
+#[tokio::test]
+async fn a_working_sign_in_as_another_account_files_the_share_its_own_entry() {
+    let store = Arc::new(InMemoryCredentials::new().with_entry("127.0.0.1", None, "ada", "ada-pw"));
+
+    assert!(refresh_remembered_credentials(&host_over(&store), &connected_as("grace", "grace-pw")).await);
+
+    assert_eq!(secret_at(&store, None), held("ada", "ada-pw"));
+    assert_eq!(secret_at(&store, Some("TestShare")), held("grace", "grace-pw"));
+}
+
+#[tokio::test]
+async fn a_working_sign_in_never_seeds_an_empty_store() {
+    let store = Arc::new(InMemoryCredentials::new());
+
+    assert!(refresh_remembered_credentials(&host_over(&store), &connected_as("ada", "new")).await);
+
+    assert_eq!(secret_at(&store, None), None);
+    assert_eq!(secret_at(&store, Some("TestShare")), None);
 }

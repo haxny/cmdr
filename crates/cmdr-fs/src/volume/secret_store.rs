@@ -28,6 +28,9 @@ pub async fn has_stored_secret(host: &VolumeHost, service: &str, username: &str)
 
 /// Brings a REMEMBERED secret up to date with the one the user just typed.
 ///
+/// ❗ Call it only once that secret CONNECTED. Called before the dial, a typo
+/// replaced the secret that worked, and the dial then failed (#530).
+///
 /// ❗ Refreshes, ❌ never seeds: a store with nothing in it is the user having
 /// said no to remembering, and writing one anyway would put a password in the
 /// Keychain they declined to leave there. The read and the write ride ONE

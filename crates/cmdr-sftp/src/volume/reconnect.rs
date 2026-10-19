@@ -86,6 +86,33 @@ enum Stalled {
     Transient(VolumeError),
 }
 
+/// How an attempt left a live session, which an attended sign-in needs to know
+/// before it writes the typed secret down.
+#[derive(Debug, Clone, Copy)]
+enum Rebuilt {
+    /// A live session was already there, so nothing was dialed.
+    AlreadyLive,
+    /// A fresh session came up on this rung.
+    Dialed(AuthRungUsed),
+}
+
+/// Whether a session on `rung` was opened WITH the secret the dial carried. The
+/// agent and an unencrypted key file take none, so a session on either proves
+/// nothing about a typed one.
+fn rung_took_the_secret(rung: AuthRungUsed) -> bool {
+    match rung {
+        AuthRungUsed::Agent
+        | AuthRungUsed::KeyFile {
+            passphrase_protected: false,
+        } => false,
+        AuthRungUsed::Password
+        | AuthRungUsed::KeyboardInteractive
+        | AuthRungUsed::KeyFile {
+            passphrase_protected: true,
+        } => true,
+    }
+}
+
 impl SftpVolume {
     /// Notices, once, that the session behind this volume is gone.
     ///
@@ -132,7 +159,10 @@ impl SftpVolumeInner {
     /// Idempotent and single-flight: concurrent callers wait on
     /// `reconnect_lock`, and the second one finds a live session.
     pub(super) async fn do_attempt_reconnect(&self) -> Result<(), VolumeError> {
-        self.rebuild(None).await.map_err(|stalled| self.report(stalled))
+        self.rebuild(None)
+            .await
+            .map(|_| ())
+            .map_err(|stalled| self.report(stalled))
     }
 
     /// The attended variant: the user just typed a secret, so the unattended
@@ -167,11 +197,21 @@ impl SftpVolumeInner {
             | AuthRungUsed::KeyFile {
                 passphrase_protected: true,
             } => {
-                self.refresh_remembered_secret(&username, &password).await;
                 self.auth_attempt_spent.store(false, Ordering::Relaxed);
-                self.rebuild(Some(password))
+                let rebuilt = self
+                    .rebuild(Some(password.clone()))
                     .await
-                    .map_err(|stalled| self.report(stalled))
+                    .map_err(|stalled| self.report(stalled))?;
+                // ❗ Written only once the typed secret WORKED (#530): a typo
+                // written before the dial replaced the one that did. A session
+                // that was already live, or a rung that took no secret (the agent
+                // signed first), proved nothing about it.
+                if let Rebuilt::Dialed(rung) = rebuilt
+                    && rung_took_the_secret(rung)
+                {
+                    self.refresh_remembered_secret(&username, &password).await;
+                }
+                Ok(())
             }
         }
     }
@@ -182,7 +222,7 @@ impl SftpVolumeInner {
     /// attempt ATTENDED, which is the whole difference the policy is about: a
     /// rung that may not reconnect on its own may always reconnect with a person
     /// watching.
-    async fn rebuild(&self, offered: Option<String>) -> Result<(), Stalled> {
+    async fn rebuild(&self, offered: Option<String>) -> Result<Rebuilt, Stalled> {
         let attended = offered.is_some();
         if self.unmounted.load(Ordering::Relaxed) {
             return Err(Stalled::Transient(VolumeError::DeviceDisconnected(
@@ -199,7 +239,7 @@ impl SftpVolumeInner {
         }
         if self.session.read().await.is_some() {
             if self.connection_state() == ConnectionState::Connected {
-                return Ok(());
+                return Ok(Rebuilt::AlreadyLive);
             }
             // ❗ The dead session a lost-session notice hasn't got round to
             // dropping yet: that happens on a spawned task, and the frontend's
@@ -235,7 +275,7 @@ impl SftpVolumeInner {
                 self.emit_if_changed(ConnectionState::Connected);
                 drop(session);
                 info!(target: "volume", "sftp volume '{}' is back", self.volume_id);
-                Ok(())
+                Ok(Rebuilt::Dialed(rung))
             }
             Ok(DialOutcome::NeedsHostKeyApproval(_)) => Err(Stalled::HostKeyNeedsApproval),
             Err(SftpConnectError::HostKeyRevoked { .. }) => Err(Stalled::HostKeyNeedsApproval),
@@ -433,7 +473,7 @@ async fn run_reconnect_loop(handle: SelfHandle<SftpVolumeInner>) {
         }
         let volume_id = inner.volume_id.clone();
         match inner.rebuild(None).await {
-            Ok(()) => return,
+            Ok(_) => return,
             Err(stalled) => {
                 let switched_off = matches!(stalled, Stalled::AutoReconnectOff);
                 let stop = !matches!(stalled, Stalled::Transient(_));

@@ -160,8 +160,9 @@ reports every occurrence, and a superseded instance reports too: a refused reply
 ### `CredentialStore`
 
 ⇐ `network::keychain::{get_credentials, save_credentials}`. Three sites: the session builder's narrow-then-wide lookup
-(`session.rs::refresh_credentials_from_store`, which tries share-level then server-level) and the sign-in path's save
-(`reconnect.rs::do_reconnect_with_credentials`, which saves server-level so one password covers every share).
+(`session.rs::refresh_credentials_from_store`, which tries share-level then server-level) and the sign-in path's write
+(`session.rs::refresh_remembered_credentials`, after a sign-in connected: it refreshes the entry the lookup reads and
+never seeds one).
 
 `(service, scope)` generalizes that pair: `(hostname, share)` for SMB, `("host:port", username)` for SFTP, and
 `(endpoint, bucket)` for S3. `secret` rather than `password` because S3's is an access key.

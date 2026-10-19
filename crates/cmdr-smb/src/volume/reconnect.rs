@@ -3,13 +3,12 @@
 //! start/stop, and the backend-autonomous watcher-death reconnect loop.
 
 use super::mapping::map_smb_error;
-use super::session::{MainSession, build_session, refresh_credentials_from_store};
+use super::session::{MainSession, build_session, refresh_credentials_from_store, refresh_remembered_credentials};
 use super::state::ConnectionState;
 use super::{SmbConnectionParams, SmbVolumeInner};
 use cmdr_fs::ignore_poison::RwLockIgnorePoison;
 use cmdr_fs::volume::SelfHandle;
 use cmdr_fs::volume::VolumeError;
-use cmdr_fs::volume::host::credentials::StoredCredentials;
 use cmdr_fs::volume::host::events::VolumeConnection;
 use log::{debug, info, warn};
 use std::sync::Arc;
@@ -113,6 +112,13 @@ impl SmbVolumeInner {
     ///   backoff cycle, the watcher-death loop below, or a transfer waiting for this share to come
     ///   back, `crates/cmdr-operations/src/transfer/volume_outage.rs` in the app).
     pub(super) async fn do_attempt_reconnect(&self) -> Result<(), VolumeError> {
+        self.reconnect_once().await.map(|_| ())
+    }
+
+    /// [`Self::do_attempt_reconnect`]'s body, answering which credentials a fresh
+    /// session came up on, or `None` when one was already live and nothing was
+    /// dialed. A sign-in needs the difference before it writes anything down.
+    async fn reconnect_once(&self) -> Result<Option<SmbConnectionParams>, VolumeError> {
         // Bail early if `on_unmount` already ran. Doing this before taking the
         // lock means a queued caller doesn't pay the lock-acquisition cost for
         // a volume that's about to be (or already is) gone.
@@ -139,7 +145,7 @@ impl SmbVolumeInner {
                 "SmbVolumeInner::attempt_reconnect(share={:?}): already Direct, skipping",
                 self.share_name
             );
-            return Ok(());
+            return Ok(None);
         }
 
         // The whole share is what a reconnect refusal is about, so its mount root
@@ -159,8 +165,8 @@ impl SmbVolumeInner {
         );
 
         let first_attempt = build_session(&params_snapshot).await;
-        let (client, tree) = match first_attempt {
-            Ok(pair) => pair,
+        let ((client, tree), connected_with) = match first_attempt {
+            Ok(pair) => (pair, params_snapshot),
             Err(err) if crate::is_auth_error(&err) => {
                 // Cached creds may be stale. Re-pull from the secret store and retry once.
                 info!(
@@ -178,7 +184,7 @@ impl SmbVolumeInner {
                                 let mut params_w = self.params.write().await;
                                 params_w.username = refreshed.username.clone();
                                 params_w.password = refreshed.password.clone();
-                                pair
+                                (pair, refreshed)
                             }
                             Err(e2) => {
                                 warn!(
@@ -260,45 +266,39 @@ impl SmbVolumeInner {
             "SmbVolumeInner::attempt_reconnect(share={:?}): success",
             self.share_name
         );
-        Ok(())
+        Ok(Some(connected_with))
     }
 
     /// Reconnect with freshly-entered credentials (the "Sign in" affordance after a
-    /// `needs_credentials` give-up). Persists the new password server-level — mirroring how the
-    /// login form saves, so the NEXT reconnect finds it silently — updates the in-memory
-    /// params, then runs the standard reconnect. If these credentials are also wrong,
-    /// `do_attempt_reconnect` re-emits `needs_credentials`, so a bad retry re-prompts rather than
-    /// dead-ending.
+    /// `needs_credentials` give-up). Puts them in the in-memory params, runs the standard
+    /// reconnect, and only once a session came up brings the remembered entry up to date
+    /// (`session::refresh_remembered_credentials`), so the NEXT reconnect is silent. If these
+    /// credentials are also wrong, `do_attempt_reconnect` re-emits `needs_credentials`, so a bad
+    /// retry re-prompts rather than dead-ending.
+    ///
+    /// ❗ Dial first, write after (#530): writing first let a typo replace the password that
+    /// worked for every share on the server, and wrote one back even with Remember off.
     pub(super) async fn do_reconnect_with_credentials(
         &self,
         username: String,
         password: String,
     ) -> Result<(), VolumeError> {
-        let server = { self.params.read().await.server.clone() };
-        // Server-level (`scope: None`), so one password covers every share on it.
-        let stored = StoredCredentials {
-            username: username.clone(),
-            secret: password.clone(),
-        };
-        if self
-            .host
-            .credentials()
-            .save_credentials(&server, None, &stored)
-            .is_err()
-        {
-            // Non-fatal: the in-memory params below still carry the creds for this
-            // reconnect; only the "silent next time" guarantee is lost.
-            warn!(
-                "SmbVolumeInner::reconnect_with_credentials(share={:?}): the secret store didn't take the credentials",
-                self.share_name
-            );
-        }
         {
             let mut params_w = self.params.write().await;
             params_w.username = username;
             params_w.password = password;
         }
-        self.do_attempt_reconnect().await
+        // `None`: a session was already live, so nothing proved these credentials.
+        if let Some(connected_with) = self.reconnect_once().await?
+            && !refresh_remembered_credentials(&self.host, &connected_with).await
+        {
+            // Non-fatal: the session is up; only the "silent next time" guarantee is lost.
+            warn!(
+                "SmbVolumeInner::reconnect_with_credentials(share={:?}): the secret store didn't take the credentials; this session still came up",
+                self.share_name
+            );
+        }
+        Ok(())
     }
 }
 

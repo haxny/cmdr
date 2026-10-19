@@ -374,8 +374,9 @@ and a retired volume reports nothing. `reconnect.rs`: `note_lost_session` acts o
 edge, drops the client, and, if "reconnect automatically" is on, runs a 2/5/15/30/60/120 s backoff loop that re-reads
 the store and re-probes. A refusal latches `auth_attempt_spent`, moves to `NeedsCredentials`, and stops.
 `attempt_reconnect` probes now; `reconnect_with_credentials(username, password)` requires the volume's own username
-(another account is another volume: `NotSupported`), refreshes a REMEMBERED secret (never seeds one), and probes with
-the typed password. `UnattendedReconnect` is `SwitchOff`, `NoStoredSecret`, or `Possible`. `sign_in_prompt` is always
+(another account is another volume: `NotSupported`), probes with the typed password, and ❗ only once that connected
+refreshes a REMEMBERED secret (never seeds one). Writing before the probe let a typo replace the secret that worked
+(#530). `UnattendedReconnect` is `SwitchOff`, `NoStoredSecret`, or `Possible`. `sign_in_prompt` is always
 `SignInShape::Password`, so the sheet renders one field under a read-only username.
 
 `note_lost_session` takes the dead client out and cancels its `lost` token, so every other operation still waiting on it

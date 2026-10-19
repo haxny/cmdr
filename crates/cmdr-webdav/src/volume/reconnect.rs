@@ -143,11 +143,15 @@ impl WebdavVolumeInner {
         if username != self.params().username {
             return Err(VolumeError::NotSupported);
         }
-        self.refresh_remembered_secret(&username, &password).await;
         self.auth_attempt_spent.store(false, Ordering::Relaxed);
-        self.rebuild(Some(password))
+        self.rebuild(Some(password.clone()))
             .await
-            .map_err(|stalled| self.report(stalled))
+            .map_err(|stalled| self.report(stalled))?;
+        // ❗ Written only once the typed secret WORKED (#530): a typo written
+        // before the dial replaced the one that did. An attended rebuild always
+        // dials, so `Ok` here means this secret was accepted.
+        self.refresh_remembered_secret(&username, &password).await;
+        Ok(())
     }
 
     /// One rebuild attempt, under the single-flight lock. `offered` is a secret

@@ -737,9 +737,10 @@ async fn the_toggle_back_on_hands_the_rung_its_policy_again() {
 /// account", so a store with nothing in it is the user having said no. Writing
 /// the typed secret there anyway would turn the toggle on behind their back.
 ///
-/// The dial that follows fails against the closed port, which is beside the
-/// point: the store is written before it, so what the store holds afterwards is
-/// the whole assertion.
+/// The dial fails against the closed port, so this cell only holds the line
+/// against an empty store; the Docker cell
+/// `sftp_integration_an_encrypted_key_with_nothing_remembered_asks_and_stays_unremembered`
+/// holds it for a sign-in that connects.
 #[tokio::test]
 async fn an_attended_sign_in_never_starts_remembering_a_secret_on_its_own() {
     for rung in [
@@ -763,15 +764,15 @@ async fn an_attended_sign_in_never_starts_remembering_a_secret_on_its_own() {
     }
 }
 
-/// The other half: a secret that IS remembered is kept current, so the next drop
-/// is silent.
+/// ❗ **A typed secret is written only once it WORKED** (#530).
 ///
-/// ❗ The passphrase rung is in here too. It's the rung that most needs its
-/// secret stored (a passphrase-protected key can't make its FIRST connection
-/// without one), and leaving a stale passphrase behind after the user typed a new
-/// one is a volume that asks again every single time.
+/// A typo written before the dial replaced the remembered secret that worked,
+/// and then the dial failed. The closed port fails every dial, so whatever the
+/// store holds afterwards is what a failed sign-in left behind. The other half,
+/// a secret that worked being kept current, needs a server that says yes:
+/// `sftp_integration_signing_in_with_the_right_password_comes_back_and_is_remembered`.
 #[tokio::test]
-async fn an_attended_sign_in_keeps_a_remembered_secret_current() {
+async fn a_sign_in_that_does_not_connect_leaves_the_remembered_secret_alone() {
     for rung in [
         AuthRungUsed::Password,
         AuthRungUsed::KeyboardInteractive,
@@ -781,14 +782,15 @@ async fn an_attended_sign_in_keeps_a_remembered_secret_current() {
     ] {
         let (_events, credentials, volume) = offline_volume(rung);
 
-        let _ = volume
-            .reconnect_with_credentials("ada".to_string(), "hunter2".to_string())
+        let refusal = volume
+            .reconnect_with_credentials("ada".to_string(), "a-typo".to_string())
             .await;
 
+        assert!(refusal.is_err(), "{rung:?}: the closed port refuses every dial");
         assert_eq!(
             credentials.stored("127.0.0.1:12599", "ada").as_deref(),
-            Some("hunter2"),
-            "{rung:?}: the store held the old one, so it holds the new one"
+            Some("whatever"),
+            "{rung:?}: ❌ the secret that worked before is still the one remembered"
         );
     }
 }

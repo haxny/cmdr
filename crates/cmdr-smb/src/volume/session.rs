@@ -8,6 +8,7 @@ use super::{SmbConnectionParams, SmbVolume};
 use cmdr_fs::volume::Retirement;
 use cmdr_fs::volume::VolumeError;
 use cmdr_fs::volume::host::VolumeHost;
+use cmdr_fs::volume::host::credentials::StoredCredentials;
 use log::{debug, warn};
 use smb2::client::tree::Tree;
 use smb2::{ClientConfig, SmbClient};
@@ -241,6 +242,46 @@ pub(super) async fn refresh_credentials_from_store(
         username: creds.username,
         password: creds.secret,
     })
+}
+
+/// After a sign-in WORKED, brings the remembered entry this share reads up to
+/// date with the credentials that connected.
+///
+/// ❗ Refreshes, ❌ never seeds: no entry means the person turned Remember off
+/// (the sign-in sheet forgets before it dials), and writing one anyway put back
+/// the password they had just told Cmdr to forget (#530).
+///
+/// The entry is the one [`refresh_credentials_from_store`] reads: the share's
+/// own, else the server's. ❗ A server entry holding ANOTHER account is left
+/// alone and this share gets its own instead: every other share on the server
+/// signs in with that one.
+///
+/// The reads and the write ride ONE blocking task, so a store that prompts asks
+/// once. Answers whether the store took it; `false` costs only "silent next
+/// time", ❌ never the session that just came up.
+pub(super) async fn refresh_remembered_credentials(host: &VolumeHost, connected: &SmbConnectionParams) -> bool {
+    let host = host.clone();
+    let server = connected.server.clone();
+    let share = connected.share_name.clone();
+    let stored = StoredCredentials {
+        username: connected.username.clone(),
+        secret: connected.password.clone(),
+    };
+    let written = tokio::task::spawn_blocking(move || {
+        let store = host.credentials();
+        let scope = if store.credentials(&server, Some(&share)).is_some() {
+            Some(share.as_str())
+        } else {
+            match store.credentials(&server, None) {
+                None => return Ok(()),
+                Some(wide) if wide.username == stored.username => None,
+                Some(_) => Some(share.as_str()),
+            }
+        };
+        store.save_credentials(&server, scope, &stored)
+    })
+    .await;
+    matches!(written, Ok(Ok(())))
 }
 
 /// If an smb2 error indicates the session is dead, transition state to

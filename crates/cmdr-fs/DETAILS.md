@@ -873,7 +873,8 @@ modules under `volume/` carry the arithmetic, each behind a trait the backend im
   directories is two changes, ❗ never one `Renamed`.
 - **`secret_store.rs`** is the only place a backend reads or refreshes a stored secret, always on a blocking task: the
   store can put a Keychain prompt in front of a call, and a modal dialog on the async runtime holds every other volume.
-  It REFRESHES and ❌ never seeds, because an empty store is the user having declined to remember.
+  It REFRESHES and ❌ never seeds, because an empty store is the user having declined to remember, and a backend calls
+  it only once the typed secret CONNECTED: before the dial, a typo replaced the secret that worked (#530).
 
 SMB and MTP keep their own cache-aware batch scans (their watchers back the `authoritative_listing` shortcut) and borrow
 only the pure halves, `conflicts_against` and `fold_batch`, so every backend hands a conflict dialog the same shape and

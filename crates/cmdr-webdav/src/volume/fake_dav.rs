@@ -21,7 +21,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Duration;
 
 use cmdr_fs::volume::host::VolumeHost;
-use cmdr_fs::volume::host::credentials::InMemoryCredentials;
+use cmdr_fs::volume::host::credentials::{CredentialStore, InMemoryCredentials};
 use cmdr_fs::volume::host::events::{RecordingVolumeEvents, VolumeEventSink};
 use cmdr_fs::volume::liveness::Timings;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -93,20 +93,34 @@ impl FakeDav {
         self.probes.load(Ordering::SeqCst)
     }
 
+    /// The store key the fake's volumes file account `ada` under.
+    pub(super) fn credential_service(&self) -> String {
+        self.params().credential_service()
+    }
+
+    fn params(&self) -> WebdavConnectionParams {
+        let base = Url::parse(&format!("http://127.0.0.1:{}/dav/", self.port)).expect("a valid URL");
+        WebdavConnectionParams::new(base, "ada", "/")
+    }
+
     /// A volume on the fake server, on the short ladder.
     pub(super) async fn connected(&self) -> (WebdavVolume, Arc<RecordingVolumeEvents>) {
-        let base = Url::parse(&format!("http://127.0.0.1:{}/dav/", self.port)).expect("a valid URL");
-        let params = WebdavConnectionParams::new(base, "ada", "/");
+        let store = InMemoryCredentials::new().with_entry(&self.credential_service(), Some("ada"), "ada", "secret");
+        self.connected_with(Arc::new(store)).await
+    }
+
+    /// The same, over a secret store the caller holds on to. The fake takes any
+    /// password, so whatever a sign-in typed connects.
+    pub(super) async fn connected_with(
+        &self,
+        credentials: Arc<dyn CredentialStore>,
+    ) -> (WebdavVolume, Arc<RecordingVolumeEvents>) {
+        let params = self.params();
         let events = Arc::new(RecordingVolumeEvents::new());
         let host = VolumeHost::builder()
             .runtime(tokio::runtime::Handle::current())
             .events(Arc::clone(&events) as Arc<dyn VolumeEventSink>)
-            .credentials(Arc::new(InMemoryCredentials::new().with_entry(
-                &params.credential_service(),
-                Some("ada"),
-                "ada",
-                "secret",
-            )))
+            .credentials(credentials)
             .build();
         let volume = connect_webdav_volume("fake", "webdav-fake", params, host, CancellationToken::new())
             .await

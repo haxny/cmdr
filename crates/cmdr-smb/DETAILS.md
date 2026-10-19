@@ -221,10 +221,16 @@ reconnect manager listens for this event and runs a per-volume backoff cycle (ti
    months; the invariant that keeps it apart, and how it hid from grep, is `network/CLAUDE.md` plus `network/DETAILS.md`
    § "The one edge that must not come back". The reconnect manager flips to `needs-auth`, stops the futile backoff, and
    FilePane shows a "Sign in" prompt (`SmbReauthView`) instead of the generic "unreachable" banner. The user signs in
-   via `Volume::reconnect_with_credentials` (Tauri `reconnect_smb_volume_with_credentials`), which persists the new
-   password server-level (so the next reconnect is silent), updates the in-memory params, and runs
-   `do_attempt_reconnect`. If the new creds are also wrong, it re-emits `needs_credentials` — a bad retry re-prompts
-   rather than dead-ending.
+   via `Volume::reconnect_with_credentials` (Tauri `reconnect_smb_volume_with_credentials`), which updates the in-memory
+   params, runs the reconnect, and ❗ only once a session came up refreshes the remembered entry
+   (`session::refresh_remembered_credentials`), so the next reconnect is silent. If the new creds are also wrong, it
+   re-emits `needs_credentials` — a bad retry re-prompts rather than dead-ending.
+   - **Which entry**: the one `refresh_credentials_from_store` reads (the share's own, else the server's), with the
+     credentials that actually connected. ❌ It never seeds: no entry means Remember is off (the sheet forgets before it
+     dials). ❗ A server-level entry for ANOTHER account stays, and this share gets its own: every other share on the
+     server signs in with it.
+   - **Why dial first** (#530): writing before the dial let a typo replace the server-level password every share falls
+     back to, and wrote one back even with Remember off.
 
 Credentials are kept in memory for the lifetime of the `SmbVolume` (no security concern: they're already in the
 process's address space for every smb2 call). Only re-pulled from the secret store on auth failure, in case the user

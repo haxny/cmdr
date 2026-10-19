@@ -10,10 +10,11 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use cmdr_fs::volume::host::VolumeHost;
-use cmdr_fs::volume::host::credentials::InMemoryCredentials;
+use cmdr_fs::volume::host::credentials::{CredentialStore, InMemoryCredentials};
 use cmdr_fs::volume::{ConnectionState, Volume, VolumeError};
 
 use super::UnattendedReconnect;
+use super::fake_dav::FakeDav;
 use super::test_support::{make_test_volume, make_test_volume_with};
 use super::testing::*;
 
@@ -75,6 +76,57 @@ async fn the_readiness_answer_follows_the_switch_and_the_store() {
 
     let empty = make_test_volume("/");
     assert_eq!(empty.unattended_reconnect().await, UnattendedReconnect::NoStoredSecret);
+}
+
+// ── Signing in, and what it writes down (#530) ───────────────────────
+
+/// ❗ **A typed secret is written only once it WORKED.** A typo written before
+/// the dial replaced the remembered secret that worked, and then the dial
+/// failed. Port 1 refuses every dial, so whatever the store holds afterwards is
+/// what a failed sign-in left behind.
+#[tokio::test]
+async fn a_sign_in_that_does_not_connect_leaves_the_remembered_secret_alone() {
+    let stored = Arc::new(InMemoryCredentials::new().with_entry("http://127.0.0.1:1", Some("ada"), "ada", "hunter2"));
+    let volume = make_test_volume_with(
+        "/",
+        VolumeHost::builder()
+            .credentials(Arc::clone(&stored) as Arc<dyn CredentialStore>)
+            .build(),
+    );
+
+    let refusal = volume
+        .reconnect_with_credentials("ada".to_string(), "a-typo".to_string())
+        .await;
+
+    assert!(refusal.is_err(), "nothing listens on port 1");
+    assert_eq!(
+        stored
+            .credentials("http://127.0.0.1:1", Some("ada"))
+            .map(|held| held.secret),
+        Some("hunter2".to_string()),
+        "❌ the secret that worked before is still the one remembered"
+    );
+}
+
+/// The other half: a sign-in that connects keeps a remembered secret current,
+/// so the next drop is silent.
+#[tokio::test]
+async fn a_sign_in_that_connects_refreshes_a_remembered_secret() {
+    let server = FakeDav::start().await;
+    let service = server.credential_service();
+
+    let remembered = Arc::new(InMemoryCredentials::new().with_entry(&service, Some("ada"), "ada", "the-old-one"));
+    let (volume, _events) = server
+        .connected_with(Arc::clone(&remembered) as Arc<dyn CredentialStore>)
+        .await;
+    volume
+        .reconnect_with_credentials("ada".to_string(), "the-new-one".to_string())
+        .await
+        .expect("the fake takes any password");
+    assert_eq!(
+        remembered.credentials(&service, Some("ada")).map(|held| held.secret),
+        Some("the-new-one".to_string())
+    );
 }
 
 // ── Against the fixture ──────────────────────────────────────────────
