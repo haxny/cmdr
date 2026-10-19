@@ -14,7 +14,7 @@ use cmdr_fs::testing::wait_until_async;
 use cmdr_fs::volume::host::VolumeHost;
 use cmdr_fs::volume::host::credentials::InMemoryCredentials;
 use cmdr_fs::volume::host::events::{RecordingVolumeEvents, VolumeConnection, VolumeEventSink};
-use cmdr_fs::volume::{ConnectionState, Volume, VolumeError};
+use cmdr_fs::volume::{ConnectionState, Volume, VolumeError, VolumeReadStream};
 use tokio_util::sync::CancellationToken;
 use url::Url;
 
@@ -108,6 +108,112 @@ async fn a_server_that_goes_away_is_reported_down_and_comes_back_on_its_own() {
         reported(&events),
         vec![VolumeConnection::Disconnected, VolumeConnection::Connected],
         "one drop, one recovery"
+    );
+}
+
+/// Writes `bytes` to `path` as a new file, black-holing `proxy` once more than
+/// `hole_after` bytes went out and saying so on `holed`.
+async fn write_holing_at(
+    volume: &S3Volume,
+    path: &std::path::Path,
+    bytes: Vec<u8>,
+    hole_after: Option<(u64, &TcpProxy, &tokio::sync::Notify)>,
+) -> Result<u64, VolumeError> {
+    let source = BytesSource::new(bytes);
+    let holed = std::sync::atomic::AtomicBool::new(false);
+    volume
+        .write_from_stream(
+            path,
+            cmdr_fs::volume::WriteMode::CreateNew,
+            source.total_size(),
+            Box::new(source),
+            &|progress| {
+                if let Some((after, proxy, notify)) = hole_after
+                    && progress.bytes_written > after
+                    && !holed.swap(true, std::sync::atomic::Ordering::SeqCst)
+                {
+                    proxy.black_hole();
+                    notify.notify_one();
+                }
+                std::ops::ControlFlow::Continue(())
+            },
+        )
+        .await
+        .map(|written| written.bytes)
+}
+
+/// ❗ **A PUT cut off by the link going down, with the server out of reach
+/// for the cleanup, never leaves VersityGW's truncated object under the
+/// user's name for the retry to trip over (#522).** VersityGW stores the part
+/// of a body that arrived once the connection drops (verified here), and the
+/// write's own cleanup can't reach it then; the write's token is on record, so
+/// the retry after the outage removes it and lands the file.
+#[tokio::test(flavor = "multi_thread")]
+#[ignore = "needs the S3 fixture stack: apps/desktop/test/s3-servers/start.sh (s3-fixture)"]
+async fn a_put_cut_off_by_an_outage_leaves_nothing_for_the_retry_to_trip_over() {
+    let Proxied { proxy, volume, .. } = through_a_proxy().await;
+    // Brought back by hand below, once the precondition is checked: the
+    // sweep a reconnect starts would otherwise race the checks for the body.
+    volume.set_auto_reconnect(false);
+    let key = format!("{}cut-off.bin", scratch_prefix("cut-off-put"));
+    let path = volume.root().join(&key);
+    // One PUT (under the part floor), well past what the sockets on the way
+    // take in once the hole opens.
+    let bytes = self_describing_bytes(24 * 1024 * 1024, "cut-off");
+    let holed = tokio::sync::Notify::new();
+
+    let first = {
+        let write = write_holing_at(&volume, &path, bytes.clone(), Some((2 * 1024 * 1024, &proxy, &holed)));
+        let cut = async {
+            holed.notified().await;
+            // The link went silent mid-body; now it's gone for good.
+            proxy.refuse().await;
+        };
+        tokio::join!(write, cut).0
+    };
+    assert!(first.is_err(), "the cut-off write fails: {first:?}");
+
+    proxy.restore().await;
+    // VersityGW stores the cut-off body a moment after the drop (within a
+    // second here, v1.8.0, 2026-10-20), not as the connection closes.
+    let target = S3Target::Fixture(VERSITYGW);
+    let mut kept = None;
+    for _ in 0..50 {
+        kept = target.stored_header(FIXTURE_BUCKET, &key, "content-length").await;
+        if kept.is_some() {
+            break;
+        }
+        // allowed-test-sleep: the poll interval of a wait on the SERVER's store, which only an async HEAD can see.
+        tokio::time::sleep(Duration::from_millis(100)).await;
+    }
+    assert!(
+        kept.as_deref()
+            .and_then(|len| len.parse::<usize>().ok())
+            .is_some_and(|len| len < bytes.len()),
+        "precondition: VersityGW kept the cut-off body under the name (it held {kept:?})"
+    );
+    assert!(
+        target
+            .stored_header(FIXTURE_BUCKET, &key, crate::metadata::WRITE_TOKEN_HEADER)
+            .await
+            .is_some(),
+        "precondition: the kept body carries the cut-off write's token"
+    );
+
+    volume
+        .reconnect_with_credentials(FIXTURE_ACCESS_KEY.to_string(), fixture_secret())
+        .await
+        .expect(FIXTURE);
+    let again = write_holing_at(&volume, &path, bytes.clone(), None).await;
+
+    assert!(
+        matches!(again, Ok(written) if written == bytes.len() as u64),
+        "the retry lands the file: {again:?}"
+    );
+    assert_eq!(
+        target.stored_header(FIXTURE_BUCKET, &key, "content-length").await,
+        Some(bytes.len().to_string()),
+        "whole, not the truncated leftover"
     );
 }
 

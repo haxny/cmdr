@@ -13,10 +13,10 @@ use cmdr_fs::metadata::CarriedMetadata;
 use cmdr_fs::volume::{ListingProgress, VolumeError};
 use tokio_util::sync::CancellationToken;
 
-use super::S3Volume;
 use super::errors::map_s3_error;
 use super::listing::{Child, FILE_SUFFIX, can_hold_keys, children_of, settle};
 use super::paths::{Holder, Resolved, Target, child_of, target_of};
+use super::{S3Volume, S3VolumeInner};
 use crate::error::S3Error;
 use crate::metadata::{BTIME_HEADER, MODE_HEADER, MTIME_HEADER, parse_btime, parse_mode, parse_mtime};
 use crate::ops::{self, ListObjectsParams};
@@ -24,14 +24,14 @@ use crate::request::S3Request;
 use crate::transport::{Answer, QUERY_BUDGET, S3Client, map_exchange_error};
 use crate::xml::{BodyError, StorageClass, parse_list_buckets, parse_list_objects};
 
-impl S3Volume {
+impl S3VolumeInner {
     /// One request, in the `Volume` vocabulary: a transport failure by its
     /// typed predicates, a non-2xx by the S3 error table, both against `path`.
     pub(super) async fn ask(&self, client: &S3Client, request: S3Request, path: &str) -> Result<Answer, VolumeError> {
         let answer = client
             .exchange(request, QUERY_BUDGET)
             .await
-            .map_err(|e| map_exchange_error(&e, self.volume_id(), path))?;
+            .map_err(|e| map_exchange_error(&e, &self.volume_id, path))?;
         if answer.status.is_success() {
             Ok(answer)
         } else {
@@ -40,6 +40,30 @@ impl S3Volume {
                 path,
             ))
         }
+    }
+
+    /// One `HeadObject`, `None` when nothing is at the key.
+    pub(super) async fn head_object(
+        &self,
+        client: &S3Client,
+        bucket: &str,
+        key: &str,
+        remote: &str,
+    ) -> Result<Option<Answer>, VolumeError> {
+        let request =
+            ops::head_object(client.profile(), bucket, key).map_err(|_| VolumeError::NotFound(remote.to_string()))?;
+        match self.ask(client, request, remote).await {
+            Ok(answer) => Ok(Some(answer)),
+            Err(VolumeError::NotFound(_)) => Ok(None),
+            Err(other) => Err(other),
+        }
+    }
+}
+
+impl S3Volume {
+    /// [`S3VolumeInner::ask`].
+    pub(super) async fn ask(&self, client: &S3Client, request: S3Request, path: &str) -> Result<Answer, VolumeError> {
+        self.inner.ask(client, request, path).await
     }
 
     /// A folder's children, every page of them, reporting the running tally

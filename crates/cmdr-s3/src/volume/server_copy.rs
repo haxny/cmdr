@@ -324,6 +324,9 @@ impl S3Volume {
             // A provider that copies within one bucket only: stream it instead.
             return Err(VolumeError::NotSupported);
         }
+        // Like a streamed write: a cut-off PUT left at the key is settled, and
+        // no sweep acts on the key while the copy lands there.
+        let _claim = self.claim_for_write(&client, to_bucket, to_key).await;
         let head = self
             .head_object(&client, from_bucket, from_key, &from_remote)
             .await?

@@ -31,6 +31,7 @@ use crate::transport::S3Client;
 use upload_ledger::UploadLedger;
 
 mod batch;
+mod cut_off;
 mod errors;
 mod listing;
 mod multipart_upload;
@@ -385,6 +386,8 @@ mod connection_drop_test;
 mod copy_landed_test;
 #[cfg(test)]
 mod copy_test;
+#[cfg(test)]
+mod cut_off_record_test;
 #[cfg(test)]
 mod fake_s3;
 #[cfg(test)]

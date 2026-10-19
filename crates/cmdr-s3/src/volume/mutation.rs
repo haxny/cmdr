@@ -30,12 +30,12 @@ use cmdr_fs::volume::scan_walk::Walking;
 use cmdr_fs::volume::{DirectoryCreation, RenameWork, VolumeError, WriteMode};
 use log::{debug, warn};
 
-use super::S3Volume;
 use super::errors::map_s3_error;
 use super::listing::{FolderContents, can_hold_keys, folder_contents};
 use super::paths::{Holder, Resolved, Target, target_of};
 use super::query::body_error;
 use super::writes::{Landed, Landing, judge_landing, refuse_unstorable};
+use super::{S3Volume, S3VolumeInner};
 use crate::error::S3Error;
 use crate::ops::{self, BuildError, CopySource, ListObjectsParams, MetadataDirective, ObjectMetadata, Overwrite};
 use crate::transport::S3Client;
@@ -215,7 +215,7 @@ impl S3Volume {
         Ok(())
     }
 
-    /// One `DeleteObject`.
+    /// [`S3VolumeInner::delete_key`].
     pub(super) async fn delete_key(
         &self,
         client: &S3Client,
@@ -223,9 +223,7 @@ impl S3Volume {
         key: &str,
         remote: &str,
     ) -> Result<(), VolumeError> {
-        let request =
-            ops::delete_object(client.profile(), bucket, key).map_err(|_| VolumeError::NotFound(remote.to_string()))?;
-        self.ask(client, request, remote).await.map(|_| ())
+        self.inner.delete_key(client, bucket, key, remote).await
     }
 
     /// A small file's rename: `CopyObject` (refusing an occupied name unless
@@ -375,6 +373,21 @@ impl S3Volume {
 
 /// What the shared `mkdir -p` walk needs: the marker write, and what a name
 /// leads to. S3 has no links, so a folder is a folder.
+impl S3VolumeInner {
+    /// One `DeleteObject`.
+    pub(super) async fn delete_key(
+        &self,
+        client: &S3Client,
+        bucket: &str,
+        key: &str,
+        remote: &str,
+    ) -> Result<(), VolumeError> {
+        let request =
+            ops::delete_object(client.profile(), bucket, key).map_err(|_| VolumeError::NotFound(remote.to_string()))?;
+        self.ask(client, request, remote).await.map(|_| ())
+    }
+}
+
 impl MakesDirectories for S3Volume {
     fn remote_path_of(&self, path: &Path) -> Result<String, VolumeError> {
         self.to_remote_path(path)

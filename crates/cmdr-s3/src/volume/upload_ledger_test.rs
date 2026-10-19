@@ -5,7 +5,7 @@
 
 use cmdr_fs::testing::TestDir;
 
-use super::{UnfinishedUpload, UploadLedger};
+use super::{UnfinishedUpload, UnsettledPut, UploadLedger};
 
 fn upload(account: &str, key: &str, id: &str) -> UnfinishedUpload {
     UnfinishedUpload {
@@ -171,4 +171,74 @@ fn a_cells_question_sees_only_the_records_under_its_own_prefix() {
     assert_eq!(ledger.open_under("acct-shared", "cell-a/"), vec![neighbours.clone()]);
     ledger.finished(&neighbours);
     assert!(ledger.open_under("acct-shared", "cell-a/").is_empty());
+}
+
+fn put(account: &str, key: &str, token: &str) -> UnsettledPut {
+    UnsettledPut {
+        account: account.to_string(),
+        bucket: "cmdr-test".to_string(),
+        key: key.to_string(),
+        token: token.to_string(),
+        size: 1_234,
+    }
+}
+
+/// #522: a PUT a previous launch left unsettled (its cleanup couldn't reach
+/// the server, then the app quit) survives in the log beside the uploads, and
+/// a sweep sees each kind on its own list.
+#[test]
+fn a_put_a_previous_launch_left_unsettled_is_swept_on_its_own_list() {
+    let dir = TestDir::new("ledger_put_crash");
+    let cut = put("acct-put-crash", "photos/cut.jpg", "token-1");
+    let stuck = upload("acct-put-crash", "photos/big.mov", "id-1");
+    let ledger = UploadLedger::at(Some(dir.to_path_buf()));
+    ledger.started(&cut);
+    ledger.started(&stuck);
+    UploadLedger::forget_in_flight(&cut);
+    UploadLedger::forget_in_flight(&stuck);
+
+    let later = UploadLedger::at(Some(dir.to_path_buf()));
+    assert_eq!(later.unsettled_puts("acct-put-crash"), vec![cut.clone()]);
+    assert_eq!(later.leftovers("acct-put-crash"), vec![stuck.clone()]);
+    later.finished(&cut);
+    later.finished(&stuck);
+}
+
+/// The next write to a key finds what earlier PUTs to it left, ❌ and never a
+/// PUT still running, nor one to another key.
+#[test]
+fn a_write_finds_only_its_own_keys_unsettled_puts() {
+    let ledger = UploadLedger::at(None);
+    let cut = put("acct-put-key", "a.bin", "token-cut");
+    let live = put("acct-put-key", "a.bin", "token-live");
+    let elsewhere = put("acct-put-key", "b.bin", "token-b");
+    for record in [&cut, &live, &elsewhere] {
+        ledger.started(record);
+    }
+    ledger.abandoned(&cut);
+    ledger.abandoned(&elsewhere);
+
+    assert_eq!(
+        ledger.unsettled_puts_at("acct-put-key", "cmdr-test", "a.bin"),
+        vec![cut.clone()]
+    );
+    for record in [&cut, &live, &elsewhere] {
+        ledger.finished(record);
+    }
+}
+
+/// ❗ A claimed key can't be claimed again until the claim drops, and a
+/// refused claim leaves the holder's in place (one built for a taken key would
+/// drop at once, free the key, and re-lock the registry it was refused under).
+#[test]
+fn a_claimed_key_is_held_until_its_claim_drops() {
+    let held = UploadLedger::try_claim_key("acct-claim", "cmdr-test", "a.bin").expect("a free key");
+
+    assert!(UploadLedger::try_claim_key("acct-claim", "cmdr-test", "a.bin").is_none());
+    assert!(
+        UploadLedger::try_claim_key("acct-claim", "cmdr-test", "a.bin").is_none(),
+        "the refused claim didn't free the holder's"
+    );
+    drop(held);
+    assert!(UploadLedger::try_claim_key("acct-claim", "cmdr-test", "a.bin").is_some());
 }

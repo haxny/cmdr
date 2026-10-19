@@ -614,19 +614,26 @@ impl S3VolumeInner {
 
     /// Aborts every upload this account recorded and never finished, ❌ and
     /// nothing else: an upload ID the ledger doesn't hold is another tool's,
-    /// and may be live. Answers how many it aborted.
+    /// and may be live. Then settles every PUT left on record, which clears a
+    /// cut-off body a server kept under the user's name while the link was
+    /// down (#522). Answers how many uploads it aborted.
     pub(super) async fn sweep_unfinished_uploads(&self) -> usize {
         let ledger = self.ledger.clone();
         let account = self.account();
-        let leftovers = tokio::task::spawn_blocking(move || ledger.leftovers(&account))
-            .await
-            .unwrap_or_default();
-        if leftovers.is_empty() {
+        let (leftovers, puts) =
+            tokio::task::spawn_blocking(move || (ledger.leftovers(&account), ledger.unsettled_puts(&account)))
+                .await
+                .unwrap_or_default();
+        if leftovers.is_empty() && puts.is_empty() {
             return 0;
         }
         let Some(client) = self.client.read().await.clone() else {
             return 0;
         };
+        self.settle_unsettled_puts(&client, &puts).await;
+        if leftovers.is_empty() {
+            return 0;
+        }
         let mut aborted = 0;
         for upload in &leftovers {
             if abort_upload(&client, &self.ledger, upload).await {

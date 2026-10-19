@@ -475,13 +475,25 @@ holds nothing until the request's last byte, yet a multipart upload spans many r
   `Content-Length`: VersityGW stores whatever arrived before the connection dropped (fixture README). Every PUT carries
   a token of its own (`x-amz-meta-cmdr-write`, `metadata::write_token`), and a PUT that was cancelled or cut off HEADs
   its key (again after 150 and 300 ms, since the server stores the body only once it notices the drop) and deletes the
-  object ONLY when it carries that token AND is short (`writes.rs::settle_cut_off_put`): anything else there is the
+  object ONLY when it carries that token AND is short (`cut_off.rs::settle_cut_off_put`): anything else there is the
   original or another writer's. ❗ Ours at the full size is the write having LANDED (the server published, then the link
   died before the answer), so the write reports it as written; deleting it there lost the original and the new bytes
   alike on an overwrite. A failed `CompleteMultipartUpload` asks `landed_whole` (one HEAD, never a delete) before
   calling the write failed (`late_cancel_test.rs`, a fake that commits and then hangs up). That covers a write to a FREE
   name; an overwrite of an existing object on a provider not trusted to refuse a short body never goes as a PUT at all
   (§ "Overwrites in parts"). The token is visible as user metadata and harmless to other tools.
+- ❗ **A cut-off PUT the cleanup can't reach stays ON RECORD until settled** (#522). The cleanup's HEAD needs the link
+  that just died, and the silence watch (`noting`) drops the write future before it runs at all, so on a provider off
+  the `refuses_short_body` allowlist every PUT is recorded in the upload ledger (§ "Unfinished uploads") right before
+  its first request, and settled once it's known clear: published, removed, or the name holding nothing of ours. What
+  stays is settled by the reconnect/connect sweep and, first, by the next write to that key (`claim_for_write`, also
+  before a server-side copy), so the engine's retry after the outage lands instead of meeting our own truncated body as
+  "already exists". Verified on VersityGW v1.8.0 through a black-holed then refused proxy (2026-10-20): it stored
+  17,038,220 of 25,165,824 bytes WITH our token under the name, a moment after the drop rather than at it
+  (`connection_drop_test.rs::a_put_cut_off_by_an_outage_leaves_nothing_for_the_retry_to_trip_over`; the plain-lane twins
+  are `cut_off_record_test.rs`). ❗ A sweep's HEAD-then-DELETE is only safe while nothing publishes at the key, so it
+  takes the key's claim (`UploadLedger::try_claim_key`) and skips a held one; a write claims the key only when a record
+  exists for it, since only a write to that key makes one.
 - **Multipart** (`multipart_upload.rs`): up to the profile's `upload_concurrency()` (4) parts in flight, and a part is
   read from the source only when a slot is free, so at most four part buffers exist (256 MiB at the floor). Parts are
   buffered at all because a failed one is sent again after 1, 2, then 4 s on a throttle (`SlowDown`, 503, 429), a server
@@ -597,11 +609,11 @@ S3 keeps an unfinished multipart upload's parts forever, invisible in every list
 abort it on the spot; what an abort can't reach (a crash, a dropped future, a server gone mid-abort) is swept later.
 
 - **The record** (`upload_ledger.rs`): `<state dir>/unfinished-uploads` under `VolumeHost::state_dir("s3")`, one line
-  per event (`+` when `CreateMultipartUpload` answers, `-` once completed or aborted), every field percent-encoded,
-  rewritten to the open records whenever a sweep reads it. A process-wide registry marks uploads running in THIS
-  process, and a guard marks a dropped upload abandoned. Without a state directory (a test host) the record lives for
-  the session. ❗ Being process-wide, a fixture cell asks it only about its own scratch prefix (`open_under`), or
-  another cell's open record of the same account fails it.
+  per event (`+` when `CreateMultipartUpload` answers, `-` once completed or aborted; a five-field line is a PUT on
+  record, § "Writing"), every field percent-encoded, rewritten to the open records whenever a sweep reads it. A
+  process-wide registry marks uploads running in THIS process, and a guard marks a dropped upload abandoned. Without a
+  state directory (a test host) the record lives for the session. ❗ Being process-wide, a fixture cell asks it only
+  about its own scratch prefix (`open_under`), or another cell's open record of the same account fails it.
 - **Decision/Why not the operation log**: the operation log is the durable journal of what happened to the USER's files,
   for undo and search, and its rows are paths a rollback can act on. An unfinished upload is protocol state that only
   this crate can act on (`AbortMultipartUpload`), keyed by an account and an upload ID; putting it there would mean a

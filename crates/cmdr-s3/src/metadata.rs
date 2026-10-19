@@ -33,7 +33,7 @@ pub(crate) const MODE_HEADER: &str = "x-amz-meta-mode";
 
 /// The header naming the one PUT that wrote an object (`write_token`), so a
 /// write that was cut off can recognise and remove what a server kept of it
-/// (`volume/writes.rs` § "A cut-off PUT"), ❌ and nothing else.
+/// (`volume/cut_off.rs`), ❌ and nothing else.
 pub(crate) const WRITE_TOKEN_HEADER: &str = "x-amz-meta-cmdr-write";
 
 /// A token no other write on this machine uses: the process, the clock, and a

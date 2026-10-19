@@ -20,16 +20,10 @@
 //! writer that lands BETWEEN our check and our write is the one window nothing
 //! can see without bucket versioning; `DETAILS.md` § "No-overwrite writes".
 //!
-//! ❗ **A cut-off PUT is cleaned up after**, because not every server keeps
-//! S3's promise to publish nothing short of `Content-Length`: VersityGW stores
-//! whatever arrived before the connection dropped, under the user's name
-//! (`apps/desktop/test/s3-servers/README.md`). So every PUT carries a token of
-//! its own (`x-amz-meta-cmdr-write`), and a PUT that was cancelled or cut off
-//! removes the object at its key ONLY when that object carries its token and
-//! is short ([`S3Volume::settle_cut_off_put`]). ❗ Ours at the full size means
-//! the server published before the link died: that's the write landing, never
-//! a leftover. That covers a write to a free name; an overwrite of an existing
-//! object there never goes as a PUT at all ([`ShortStream::OnePart`]).
+//! ❗ **A cut-off PUT is cleaned up after** by its own token (`cut_off.rs`),
+//! because VersityGW stores whatever arrived before the connection dropped.
+//! That covers a write to a free name; an overwrite of an existing object
+//! there never goes as a PUT at all ([`ShortStream::OnePart`]).
 
 use std::ops::ControlFlow;
 use std::path::Path;
@@ -47,6 +41,7 @@ use log::{debug, warn};
 use tokio_util::sync::CancellationToken;
 
 use super::S3Volume;
+use super::cut_off::{CutOff, settle};
 use super::errors::map_s3_error;
 use super::paths::{Target, target_of};
 use super::upload::{
@@ -157,12 +152,6 @@ pub(super) fn refuse_unstorable(client: &S3Client, key: &str, remote: &str) -> R
     }
 }
 
-/// Whether a HEAD shows this write's own object (`token`) at the full `size`:
-/// what a write that lost its answer left when it landed whole.
-fn is_ours_whole(head: &Answer, token: &str, size: u64) -> bool {
-    head.header(crate::metadata::WRITE_TOKEN_HEADER) == Some(token) && head.object_length() == Some(size)
-}
-
 pub(super) fn normalize_etag(etag: &str) -> String {
     etag.trim().trim_matches('"').to_ascii_lowercase()
 }
@@ -187,6 +176,7 @@ impl S3Volume {
         };
         let client = self.clone_client().await?;
         refuse_unstorable(&client, key, &remote)?;
+        let _claim = self.claim_for_write(&client, bucket, key).await;
         let shape = shape_for(length, self.part_floor(), client.profile().short_tail).map_err(|TooLarge| {
             VolumeError::IoError {
                 message: format!("{remote}: too big for one S3 object (10,000 parts of 5 GiB)"),
@@ -325,6 +315,11 @@ impl S3Volume {
         .map_err(|_| VolumeError::NotFound(target.remote.to_string()))?;
         let conditional = target.mode.refuses_occupied() && !built.check_first;
         let cancelled = || VolumeError::Cancelled(self.volume_id().to_string());
+        // On a server that may keep a cut-off body, this PUT stays on record
+        // until it's known settled, so one the cleanup below can't reach (the
+        // link is down, or the request was dropped mid-flight) is cleared by
+        // the next sweep or write to the key.
+        let mut record = self.put_record(client, target, size);
         let mut set_aside = false;
         let mut faults = 0;
         loop {
@@ -336,7 +331,8 @@ impl S3Volume {
             // has drained the dropped connection, long after the settle right
             // after the drop. Left there, ours would make this resend's own
             // no-overwrite header refuse the name, so it's settled again.
-            if set_aside && let Some(head) = self.settle_cut_off_put(client, target, size).await {
+            if set_aside && let CutOff::Landed(head) = self.settle_cut_off_put(client, target, size).await {
+                settle(&mut record);
                 return Ok(self.published_after_all(target, &head, size, progress));
             }
             // Again after a set-aside PUT: a writer may have taken the name
@@ -371,6 +367,9 @@ impl S3Volume {
             // answers slowly enough to hit this, live). The write waits for the
             // answer and reports the file it finished (`late_cancel_test.rs`).
             let mut released = size == 0;
+            if let Some(record) = record.as_mut() {
+                record.start();
+            }
             // The block scopes the in-flight request: leaving it drops the
             // request, which is what stops a cancelled upload on the wire.
             let sent = {
@@ -407,18 +406,25 @@ impl S3Volume {
                 // ❗ The link can die after the server published our whole
                 // body: then the write landed, and it's reported as such.
                 interrupted => {
-                    if let Some(head) = self.settle_cut_off_put(client, target, size).await {
+                    let cut = self.settle_cut_off_put(client, target, size).await;
+                    let cleared = matches!(cut, CutOff::Clear);
+                    if let CutOff::Landed(head) = cut {
+                        settle(&mut record);
                         return Ok(self.published_after_all(target, &head, size, progress));
                     }
-                    match (interrupted, halted.get()) {
+                    let error = match (interrupted, halted.get()) {
                         (Some(Err(_)), Some(Halt::SetAside)) => {
                             debug!(target: "volume", "s3: set {} aside for a pause; it goes again on resume", target.remote);
                             set_aside = true;
                             continue;
                         }
-                        (Some(Err(e)), None) => return Err(map_exchange_error(&e, self.volume_id(), target.remote)),
-                        _ => return Err(cancelled()),
+                        (Some(Err(e)), None) => map_exchange_error(&e, self.volume_id(), target.remote),
+                        _ => cancelled(),
+                    };
+                    if cleared {
+                        settle(&mut record);
                     }
+                    return Err(error);
                 }
             };
             if !answer.status.is_success() {
@@ -436,6 +442,7 @@ impl S3Volume {
                     debug!(target: "volume", "s3: {} answered {error}; sending it again in {wait:?}", target.remote);
                     tokio::time::sleep(wait).await;
                     if let Some(head) = self.landed_whole(client, target, size).await {
+                        settle(&mut record);
                         return Ok(self.published_after_all(target, &head, size, progress));
                     }
                     continue;
@@ -443,102 +450,13 @@ impl S3Volume {
                 self.note_refused_condition(client, &error, crate::profile::ConditionalOp::Put, conditional);
                 return Err(map_s3_error(&error, target.remote));
             }
+            settle(&mut record);
             // Published: a cancel this late can't take it back, and the bytes
             // are whole, so the final report's answer changes nothing.
             let _ = progress.at(size);
             self.verify_landing(client, target, size, answer.header("etag")).await?;
             return Ok(size);
         }
-    }
-
-    /// After a PUT of `size` bytes that was cancelled or failed without an
-    /// answer, settles what it left at the key, by THIS write's token:
-    ///
-    /// - ❗ **Ours, at `size` bytes: the write landed whole** (the link died
-    ///   after the server published), so it's answered (`Some`) for the caller
-    ///   to report as written. ❌ Never removed: by then it's the only copy of
-    ///   the new bytes, and on an overwrite the original is already gone.
-    /// - **Ours, at any other size**: a server keeping a truncated body against
-    ///   S3's contract (VersityGW does), so it's removed.
-    /// - ❌ **Anything else is left alone**: the original, or another writer's.
-    ///
-    /// The server stores a cut-off body once it notices the dropped
-    /// connection, which may be a moment after the drop, so a miss is checked
-    /// again twice, 150 ms apart. On a server that keeps the contract this
-    /// costs one HEAD that finds nothing, plus two after short waits, and only
-    /// for a PUT that didn't finish.
-    pub(super) async fn settle_cut_off_put(
-        &self,
-        client: &S3Client,
-        target: &WriteTarget<'_>,
-        size: u64,
-    ) -> Option<Answer> {
-        let token = target.metadata.write_token.as_deref()?;
-        for attempt in 0..3 {
-            if attempt > 0 {
-                tokio::time::sleep(Duration::from_millis(150)).await;
-            }
-            let Ok(head) = self.head_object(client, target.bucket, target.key, target.remote).await else {
-                return None;
-            };
-            let Some(head) = head else {
-                continue;
-            };
-            if head.header(crate::metadata::WRITE_TOKEN_HEADER) != Some(token) {
-                // The original, or another writer's: never ours to remove.
-                return None;
-            }
-            if is_ours_whole(&head, token, size) {
-                return Some(head);
-            }
-            match self.delete_key(client, target.bucket, target.key, target.remote).await {
-                Ok(()) => warn!(
-                    target: "volume",
-                    "s3: the server kept a cut-off upload of {}; removed it",
-                    target.remote
-                ),
-                Err(e) => warn!(
-                    target: "volume",
-                    "s3: the server kept a cut-off upload of {} and removing it failed: {e}",
-                    target.remote
-                ),
-            }
-            return None;
-        }
-        None
-    }
-
-    /// After a `CompleteMultipartUpload` that failed: our whole object at the
-    /// key (this write's token, `size` bytes) means the server completed and
-    /// only its answer was lost. One HEAD, ❌ never a delete.
-    pub(super) async fn landed_whole(&self, client: &S3Client, target: &WriteTarget<'_>, size: u64) -> Option<Answer> {
-        let token = target.metadata.write_token.as_deref()?;
-        let head = self
-            .head_object(client, target.bucket, target.key, target.remote)
-            .await
-            .ok()
-            .flatten()?;
-        is_ours_whole(&head, token, size).then_some(head)
-    }
-
-    /// A write whose answer never came but whose whole object is at the key
-    /// (`head`, carrying our token): reported as written, the pane patched
-    /// from that HEAD the way a verified landing is.
-    pub(super) fn published_after_all(
-        &self,
-        target: &WriteTarget<'_>,
-        head: &Answer,
-        size: u64,
-        progress: &Progress<'_>,
-    ) -> u64 {
-        warn!(
-            target: "volume",
-            "s3: the answer to a write of {} never came, but the server published it whole",
-            target.remote
-        );
-        self.remember_written(target, head);
-        let _ = progress.at(size);
-        size
     }
 
     /// `CreateNew` on a provider with no trusted conditional header: refuse a
@@ -563,7 +481,7 @@ impl S3Volume {
         }
     }
 
-    /// One `HeadObject`, `None` when nothing is at the key.
+    /// [`S3VolumeInner::head_object`].
     pub(super) async fn head_object(
         &self,
         client: &S3Client,
@@ -571,13 +489,7 @@ impl S3Volume {
         key: &str,
         remote: &str,
     ) -> Result<Option<Answer>, VolumeError> {
-        let request =
-            ops::head_object(client.profile(), bucket, key).map_err(|_| VolumeError::NotFound(remote.to_string()))?;
-        match self.ask(client, request, remote).await {
-            Ok(answer) => Ok(Some(answer)),
-            Err(VolumeError::NotFound(_)) => Ok(None),
-            Err(other) => Err(other),
-        }
+        self.inner.head_object(client, bucket, key, remote).await
     }
 
     /// A 501 to a request that carried an allowlisted conditional header
