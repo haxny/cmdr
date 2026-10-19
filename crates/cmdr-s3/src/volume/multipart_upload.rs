@@ -31,7 +31,7 @@ use super::upload::{
     PROGRESS_TICK, PartReader, Progress, ShortStream, WriteTarget, overwrite_for, retry_after, size_mismatch,
 };
 use super::upload_body::{BodyWatch, Halt, HaltSlot, PauseHold, buffered_body};
-use super::upload_ledger::{UnfinishedUpload, UploadLedger};
+use super::upload_ledger::{UnfinishedUpload, UploadLedger, ledger_account};
 use super::{S3Volume, S3VolumeInner};
 use crate::error::{S3Error, S3ErrorCode};
 use crate::multipart::{MAX_PARTS, PartPlan};
@@ -595,11 +595,9 @@ async fn still_listed(client: &S3Client, upload: &UnfinishedUpload) -> Option<bo
 }
 
 impl S3VolumeInner {
-    /// The account a ledger record belongs to: the endpoint plus the key id,
-    /// the identity that can abort its uploads.
+    /// The account a ledger record belongs to ([`ledger_account`]).
     pub(super) fn account(&self) -> String {
-        let params = self.params();
-        format!("{}#{}", params.credential_service(), params.access_key_id())
+        ledger_account(&self.params())
     }
 
     /// Starts the sweep in the background, so a connect never waits on it.

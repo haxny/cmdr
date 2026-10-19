@@ -220,11 +220,17 @@ var surfaceGuardedCrates = []struct {
 		// better design here: how many requests a write sends is this crate's
 		// knowledge, so counting them beside the write paths keeps the two from
 		// drifting apart, which an app-side copy of the counts would invite.
+		//
+		// RAISED 15 -> 16 for `volume::follow_account_move` (#545): the record of
+		// unfinished uploads is keyed by endpoint, and only the app knows that a
+		// server at a new address is the same storage, so it tells the crate. An
+		// address-free key would hand one server's records to another sharing a key
+		// id, which is worse.
 		Name: "cmdr-s3",
 		Ceilings: surfaceCeilings{
 			RootPromises:   9,
 			PublicModules:  2,
-			SubsystemItems: 15,
+			SubsystemItems: 16,
 		},
 	},
 	{

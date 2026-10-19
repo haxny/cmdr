@@ -28,7 +28,7 @@ use crate::params::S3ConnectionParams;
 use crate::refusal::S3ConnectError;
 use crate::sigv4::Credentials;
 use crate::transport::S3Client;
-use upload_ledger::UploadLedger;
+use upload_ledger::{UploadLedger, ledger_account};
 
 mod batch;
 mod cut_off;
@@ -279,6 +279,18 @@ impl S3Volume {
     }
 }
 
+/// Carries the writes an account left unfinished (multipart uploads to abort,
+/// cut-off PUTs to settle) from the address in `from` to the one in `to`, so
+/// the next connect's sweep at the new address finds them: the records are
+/// keyed by endpoint and key id, and no connect asks about the old endpoint
+/// again (`DETAILS.md` § "Unfinished uploads"). For a server that MOVED, the
+/// same storage at a new address; ❌ never for another server. Reads and
+/// rewrites a small file under `host`'s state directory, so call it off the
+/// async runtime. Answers how many records moved.
+pub fn follow_account_move(host: &VolumeHost, from: &S3ConnectionParams, to: &S3ConnectionParams) -> usize {
+    UploadLedger::at(host.state_dir(BACKEND)).move_account(&ledger_account(from), &ledger_account(to))
+}
+
 /// Opens one S3 place: reads the account's secret from the store, builds a
 /// signed client, and probes (`ListBuckets`, then `HeadBucket` for a bucket).
 ///
@@ -373,6 +385,8 @@ impl S3Volume {
     }
 }
 
+#[cfg(test)]
+mod account_move_test;
 #[cfg(test)]
 mod batch_retry_test;
 #[cfg(test)]

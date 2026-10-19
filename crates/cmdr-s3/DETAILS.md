@@ -208,9 +208,10 @@ delete's per-object requests, don't (the note has the numbers).
 Root re-exports: 7 items (`S3ConnectionParams`, `S3Provider`, `InvalidProvider`, `S3ConnectError`, `S3Volume`,
 `UnattendedReconnect`, `connect_s3_volume`) plus `pub mod volume` and `pub mod cost`, which the check counts as an
 eighth and ninth. Public modules: 2 (`volume`, `cost`), plus `volume::testing` under the `testing` feature.
-`index-crate-isolation` pins it at exactly 9 / 2 / 15: `cmdr-webdav`'s shape plus the provider preset the host maps its
-saved entry onto, the refusal for a preset that can't make an endpoint, and the cost estimator (`PriceTable`,
-`PriceTableError`, `Workload`, `Estimate`, `LineItem`, `S3Volume::cost_workload`, `S3Volume::copies_on_server_from`).
+`index-crate-isolation` pins it at exactly 9 / 2 / 16: `cmdr-webdav`'s shape plus the provider preset the host maps its
+saved entry onto, the refusal for a preset that can't make an endpoint, the cost estimator (`PriceTable`,
+`PriceTableError`, `Workload`, `Estimate`, `LineItem`, `S3Volume::cost_workload`, `S3Volume::copies_on_server_from`),
+and `volume::follow_account_move` (§ "Unfinished uploads": only the app knows two addresses are one server).
 
 **Decision**: the estimator lives here, not in the app. **Why**: how many requests a write sends (a verifying HEAD, the
 part plan, the no-overwrite HEAD) is this crate's knowledge, and counting it beside the write paths keeps the two from
@@ -631,6 +632,14 @@ abort it on the spot; what an abort can't reach (a crash, a dropped future, a se
   reconnect, and aborts the account's open records that no task in this process is running. A record the server confirms
   gone (aborted now or already) is forgotten; any other answer keeps it for the next connect. ❌ It never aborts an
   upload ID it didn't record, and never lists the server's uploads to decide: another tool's upload may be live.
+- ❗ **A record is keyed by its ACCOUNT: the endpoint plus the key id** (`upload_ledger::ledger_account`), the identity
+  that can abort the upload. An "Other" server that moves to a new address takes its records along:
+  `follow_account_move` re-keys the session's and the log's in one rewrite, called by the app's account edit right after
+  the store moves (`apps/desktop/src-tauri/src/server_move.rs`). Decision/Why re-keying over an address-free key:
+  matching by key id alone would hand one server's records to another that happens to share it (two MinIO boxes on
+  `minioadmin`), whose listing lacks the upload and so FORGETS a record the first server still bills for; the app is the
+  only party that knows two addresses are one server, so it says so. A forgotten account keeps its records, and adding
+  it again at that address sweeps them (`account_move_test.rs`, #545).
 - ❗ **"In flight" is per process, so the sweep relies on one Cmdr per data dir** (`instance_lock.rs` in the app). A
   second LIVE process on the same record has its running upload aborted by the first one's sweep ("the server ended the
   upload"), while an upload a SIGKILLed process left is swept as designed (verified on R2, GCS, and Spaces,

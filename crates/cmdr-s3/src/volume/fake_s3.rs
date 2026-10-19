@@ -251,6 +251,23 @@ impl FakeS3 {
         self.world.lock_ignore_poison().uploads.len()
     }
 
+    /// Opens a multipart upload at `key` the way a `CreateMultipartUpload`
+    /// would, answering its id: what a write a crash cut short leaves.
+    pub(super) fn open_upload(&self, key: &str) -> String {
+        let mut world = self.world.lock_ignore_poison();
+        world.writes += 1;
+        let id = format!("up{}", world.writes);
+        world.uploads.insert(
+            id.clone(),
+            Upload {
+                key: key.to_string(),
+                meta: Vec::new(),
+                parts: BTreeMap::new(),
+            },
+        );
+        id
+    }
+
     /// How many requests named `key` (any method, the multipart calls too).
     pub(super) fn requests_about(&self, key: &str) -> usize {
         self.world

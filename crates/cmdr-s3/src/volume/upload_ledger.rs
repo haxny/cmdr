@@ -43,9 +43,18 @@ use percent_encoding::percent_decode_str;
 use tokio::sync::Notify;
 
 use crate::encoding::encode_component;
+use crate::params::S3ConnectionParams;
 
 /// The log's file name inside the backend's state directory.
 const LOG_NAME: &str = "unfinished-uploads";
+
+/// The account a record belongs to: the endpoint plus the key id, the identity
+/// that can abort its uploads. ❗ The endpoint is part of it, so a server that
+/// moves to a new address takes its records along ([`UploadLedger::move_account`]),
+/// or no sweep ever asks about them again.
+pub(super) fn ledger_account(params: &S3ConnectionParams) -> String {
+    format!("{}#{}", params.credential_service(), params.access_key_id())
+}
 
 /// One upload Cmdr started and hasn't finished or aborted yet.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -91,6 +100,16 @@ impl Record {
             Self::Upload(upload) => &upload.key,
             Self::Put(put) => &put.key,
         }
+    }
+
+    /// The same record, under `account`.
+    fn moved_to(&self, account: &str) -> Self {
+        let mut moved = self.clone();
+        match &mut moved {
+            Self::Upload(upload) => account.clone_into(&mut upload.account),
+            Self::Put(put) => account.clone_into(&mut put.account),
+        }
+        moved
     }
 }
 
@@ -287,6 +306,49 @@ impl UploadLedger {
         }
         open.retain(|record| record.account() == account && !registry.in_flight.contains(record));
         open
+    }
+
+    /// Re-keys every record of `from` to `to`, the session's and the log's: the
+    /// account's server moved to a new address, and a sweep only asks about
+    /// the account it connects as. One log rewrite (temp and rename), so a
+    /// crash leaves the records under one account or the other, ❌ never
+    /// neither. Answers how many records moved.
+    pub(super) fn move_account(&self, from: &str, to: &str) -> usize {
+        if from == to {
+            return 0;
+        }
+        let mut guard = registry();
+        let registry = guard.get_or_insert_with(Registry::default);
+        let mut moved: HashSet<Record> = HashSet::new();
+        // In flight too, for completeness: a move waits for every operation on
+        // the account, so nothing should be.
+        for records in [&mut registry.open, &mut registry.in_flight] {
+            let old: Vec<Record> = records.iter().filter(|r| r.account() == from).cloned().collect();
+            for record in old {
+                records.remove(&record);
+                let renamed = record.moved_to(to);
+                moved.insert(renamed.clone());
+                records.insert(renamed);
+            }
+        }
+        if let Some(log) = &self.log {
+            let recorded = replay(log);
+            if recorded.iter().any(|record| record.account() == from) {
+                let rewritten: Vec<Record> = recorded
+                    .into_iter()
+                    .map(|record| {
+                        if record.account() != from {
+                            return record;
+                        }
+                        let renamed = record.moved_to(to);
+                        moved.insert(renamed.clone());
+                        renamed
+                    })
+                    .collect();
+                compact(log, &rewritten);
+            }
+        }
+        moved.len()
     }
 
     /// Reads this ledger's log into the session's record, once per process.

@@ -83,6 +83,11 @@ Everything that names a place by its id or spells a path with its address prefix
     scheme gate), and the media-index network prefs are SMB-only.
 11. **MCP, the hub, and the switcher**: they read the live listing, which `volumes-changed` republishes after the move.
     Nothing caches a server-keyed answer on the frontend for these protocols (`forgetShareListsOfMachine` is SMB's).
+12. **S3's record of unfinished writes** (`<data dir>/backend-state/s3/unfinished-uploads`, keyed by endpoint plus key
+    id): re-keyed to the new endpoint right after the store's write (`cmdr_s3::volume::follow_account_move`), so the
+    next connect's sweep aborts an upload or settles a cut-off PUT a crash left at the old address. Left behind, no
+    connect would ask about the old endpoint again and the parts would stay billed (#545). Mechanism:
+    `crates/cmdr-s3/DETAILS.md` § "Unfinished uploads".
 
 ## Validation: Save doesn't dial
 

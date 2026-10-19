@@ -242,3 +242,25 @@ fn a_claimed_key_is_held_until_its_claim_drops() {
     drop(held);
     assert!(UploadLedger::try_claim_key("acct-claim", "cmdr-test", "a.bin").is_some());
 }
+
+/// #545: a server that moved takes its records along, the log's included, so a
+/// later launch's sweep at the new address finds what a crash left at the old
+/// one.
+#[test]
+fn a_moved_account_takes_its_logged_records_along() {
+    let dir = TestDir::new("ledger_move");
+    let crashed = upload("acct-move-old", "photos/big.mov", "id-move");
+    UploadLedger::at(Some(dir.to_path_buf())).started(&crashed);
+    // Only the log is left, as after a crash.
+    UploadLedger::forget_in_flight(&crashed);
+
+    let moved = UploadLedger::at(Some(dir.to_path_buf())).move_account("acct-move-old", "acct-move-new");
+
+    assert_eq!(moved, 1);
+    let later = UploadLedger::at(Some(dir.to_path_buf()));
+    assert!(later.leftovers("acct-move-old").is_empty());
+    assert_eq!(
+        later.leftovers("acct-move-new"),
+        vec![upload("acct-move-new", "photos/big.mov", "id-move")]
+    );
+}

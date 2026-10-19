@@ -44,6 +44,8 @@
 
 use std::time::Duration;
 
+use cmdr_s3::S3ConnectionParams;
+
 use crate::favorites::store::FavoriteVolume;
 use crate::network::keychain::{self, KeychainError, SmbCredentials};
 use crate::network::s3_known_places::{self, KnownS3Place, S3ProviderChoice};
@@ -55,6 +57,10 @@ use crate::volume_broadcast::{self, MovedPlace, ServerPlaceMoved};
 
 /// How long the secret store gets to answer, the same as every secret command.
 const SECRET_STORE_BUDGET: Duration = Duration::from_secs(15);
+
+/// How long carrying an S3 account's unfinished-write record to its new address
+/// gets: one small file in the data dir.
+const LEDGER_BUDGET: Duration = Duration::from_secs(5);
 
 /// Saves an edit to the saved SFTP server `saved`: in place when the address is
 /// the same, else as a move.
@@ -288,6 +294,7 @@ pub async fn edit_s3_account(account_id: &str, name: &str, endpoint: Option<S3Pr
         }
     };
     s3_known_places::rename_account(&new_account_id, name);
+    follow_unfinished_writes(old_params.clone(), new_params.clone()).await;
     leave_behind(&mut moving, &account_places);
     let places = previous
         .into_iter()
@@ -312,6 +319,31 @@ pub async fn edit_s3_account(account_id: &str, name: &str, endpoint: Option<S3Pr
         delete_secret(from).await;
     }
     SavedServerOutcome::Saved
+}
+
+/// Carries the S3 account's record of unfinished writes (multipart uploads to
+/// abort, cut-off PUTs to settle) to its new address, once the store holds it:
+/// the record is keyed by endpoint, so left behind it would never be swept and
+/// the parts would stay billed (#545). A file rewrite, so off the runtime.
+///
+/// Right after the store's write, so only a crash in that instant leaves records
+/// at the old address. A forgotten account keeps its records: adding it again at
+/// the same address sweeps them.
+async fn follow_unfinished_writes(from: S3ConnectionParams, to: S3ConnectionParams) {
+    let host = crate::volume_host::host();
+    // A local file, so a few seconds is generous; past them the rewrite still
+    // finishes in the background, it just isn't waited for.
+    let moved = cmdr_fs::deadline::blocking_with_timeout(LEDGER_BUDGET, None, move || {
+        Some(cmdr_s3::volume::follow_account_move(&host, &from, &to))
+    })
+    .await;
+    match moved {
+        Some(0) => {}
+        Some(moved) => {
+            log::info!(target: "volume", "{moved} unfinished S3 write(s) follow the server to its new address")
+        }
+        None => log::warn!(target: "volume", "carrying unfinished S3 writes to the new address didn't answer in time"),
+    }
 }
 
 /// Whether an operation still needs any of `places` (queued, running, or paused),
