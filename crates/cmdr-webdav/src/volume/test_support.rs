@@ -2,7 +2,7 @@
 //! translation and the state machine without a server.
 
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, AtomicU8, AtomicU64};
+use std::sync::atomic::{AtomicBool, AtomicU64};
 
 use cmdr_fs::volume::Retirement;
 use cmdr_fs::volume::host::VolumeHost;
@@ -33,7 +33,7 @@ pub(super) fn make_test_volume_with(root: &str, host: VolumeHost) -> WebdavVolum
             volume_id: "webdav-test".to_string(),
             params: std::sync::RwLock::new(params),
             client: tokio::sync::RwLock::new(None),
-            state: AtomicU8::new(ConnectionState::Connected as u8),
+            state: cmdr_fs::volume::ConnectionCell::new(ConnectionState::Connected),
             retirement: Retirement::new(),
             me: me.clone(),
             reconnect_lock: tokio::sync::Mutex::new(()),

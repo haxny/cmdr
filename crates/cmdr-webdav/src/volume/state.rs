@@ -8,10 +8,8 @@
 //! quiet when the value didn't move. ❗ A retired volume stays silent: its id
 //! belongs to a newer instance now.
 
-use std::sync::atomic::Ordering;
-
 use cmdr_fs::volume::host::events::VolumeConnection;
-use cmdr_fs::volume::{Retirement, Retires, SelfHandle};
+use cmdr_fs::volume::{CellState, Retirement, Retires, SelfHandle};
 
 use super::WebdavVolumeInner;
 
@@ -29,9 +27,16 @@ pub enum ConnectionState {
     NeedsCredentials = 2,
 }
 
-impl ConnectionState {
-    fn from_u8(value: u8) -> Self {
-        match value {
+impl CellState for ConnectionState {
+    const LIVE: Self = Self::Connected;
+    const LOST: Self = Self::Disconnected;
+
+    fn to_byte(self) -> u8 {
+        self as u8
+    }
+
+    fn from_byte(byte: u8) -> Self {
+        match byte {
             0 => Self::Connected,
             2 => Self::NeedsCredentials,
             _ => Self::Disconnected,
@@ -69,7 +74,14 @@ impl WebdavVolumeInner {
 
     /// Where the connection stands right now.
     pub(super) fn connection_state(&self) -> ConnectionState {
-        ConnectionState::from_u8(self.state.load(Ordering::Relaxed))
+        self.state.state()
+    }
+
+    /// The installed client's generation: what `Volume::connection_generation`
+    /// answers, and what a call reads BEFORE it runs to name the client it ran
+    /// on (`volume_impl.rs` § noting).
+    pub(super) fn session_generation(&self) -> u64 {
+        self.state.generation()
     }
 
     /// Records that the connection is gone ❗ without reporting it, for the
@@ -77,21 +89,48 @@ impl WebdavVolumeInner {
     /// `volumes-changed`, and a `disconnected` alongside it would race that
     /// into a banner for a volume no longer in the sidebar.
     pub(super) fn mark_gone_silently(&self) {
-        self.state.store(ConnectionState::Disconnected as u8, Ordering::Relaxed);
+        self.state.set(ConnectionState::Disconnected);
     }
 
     /// Moves to `next` and reports it, ❗ only if that is a change. Returns
-    /// whether anything moved, which lets the caller act once on a transition
-    /// several tasks noticed at the same moment.
+    /// whether anything moved, so a transition several tasks noticed at once
+    /// is acted on once. For a reconnect attempt's outcome; a failing call goes
+    /// through [`lose_session`](Self::lose_session).
     pub(super) fn emit_if_changed(&self, next: ConnectionState) -> bool {
-        let previous = self.state.swap(next as u8, Ordering::Relaxed);
-        if previous == next as u8 {
-            return false;
+        let moved = self.state.set(next);
+        if moved {
+            self.announce(next);
         }
+        moved
+    }
+
+    /// The client generation `ran_on` found the server gone: `Connected` →
+    /// `Disconnected` and reported, ❗ only while `ran_on` is still the
+    /// installed client. Whether this call flipped it, so exactly one of the
+    /// requests meeting the same dead server starts the recovery.
+    pub(super) fn lose_session(&self, ran_on: u64) -> bool {
+        let moved = self.state.lose(ran_on);
+        if moved {
+            self.announce(ConnectionState::Disconnected);
+        }
+        moved
+    }
+
+    /// A rebuilt client is in place: the next generation and `Connected`, in
+    /// one step, reported if the state moved. Called under the same guard that
+    /// installs the client.
+    pub(super) fn session_installed(&self) {
+        if self.state.install() {
+            self.announce(ConnectionState::Connected);
+        }
+    }
+
+    /// Tells the host about a transition, ❗ unless retired: the id belongs to
+    /// a newer instance now.
+    fn announce(&self, state: ConnectionState) {
         if !self.is_retired() {
-            self.host.events().connection_changed(&self.volume_id, next.into());
+            self.host.events().connection_changed(&self.volume_id, state.into());
         }
-        true
     }
 }
 

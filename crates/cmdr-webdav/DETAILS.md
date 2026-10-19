@@ -388,6 +388,20 @@ client is installed and marked `Connected` under ONE write guard, and `drop_dead
 non-`Connected` state, so the late task can never take the fresh one. The same pair as `crates/cmdr-sftp/DETAILS.md` §
 "Coming back".
 
+❗ **A failing request loses only the client it went out on.** HTTP holds no session, but this backend holds a CLIENT
+(its pool and cookie jar), and every installed one gets the next generation, packed with the state in one atomic
+(`cmdr_fs::volume::ConnectionCell`; `rebuild` calls `session_installed` under the install's guard, and an attended
+sign-in that replaces a live client counts too). `noting` reads the generation with the client, before the call runs,
+and `note_lost_session` flips only while it's still installed (`lose_session`, a CAS): a late `DeviceDisconnected` from
+a replaced client can't drop the fresh one and cut every request waiting on it. The read can only be older than the
+client `work` takes a moment later, which at worst leaves a real loss for the next call to notice.
+`Volume::connection_generation` answers the same counter, so a transfer whose request failed on the old client sees the
+volume live on a newer one and runs it again (`cmdr-operations`'s `transfer/volume_outage.rs`). Only an install moves
+it: ❌ not a loss, ❌ not a reconnect that found the client live or didn't take. A reconnect's own outcome (`report`)
+moves the state with a plain `set`, in the same poll as the failed attempt's return, before any next install could
+finish a probe. Pinned by `reconnect_test.rs` (`a_late_loss_from_a_replaced_client_*`,
+`only_an_installed_client_moves_the_generation`, and the Docker cell `the_switch_off_leaves_a_reachable_server_alone`).
+
 ## Bounded bodies
 
 A hostile or broken server can stream an answer forever, so every buffered body reads through `WebdavClient::read_body`

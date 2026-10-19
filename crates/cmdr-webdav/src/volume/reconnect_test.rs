@@ -11,6 +11,7 @@ use std::time::Duration;
 
 use cmdr_fs::volume::host::VolumeHost;
 use cmdr_fs::volume::host::credentials::{CredentialStore, InMemoryCredentials};
+use cmdr_fs::volume::host::events::{RecordingVolumeEvents, VolumeConnection, VolumeEventSink};
 use cmdr_fs::volume::{ConnectionState, Volume, VolumeError};
 
 use super::UnattendedReconnect;
@@ -247,9 +248,24 @@ async fn the_switch_off_leaves_a_reachable_server_alone() {
     );
     assert!(!volume.exists(&hello).await, "and the volume is genuinely still down");
 
+    let first = volume
+        .connection_generation()
+        .expect("a WebDAV volume reports its generation");
     volume.set_auto_reconnect(true);
     volume.attempt_reconnect().await.expect(FIXTURE);
     assert!(volume.exists(&hello).await);
+    assert_eq!(
+        volume.connection_generation(),
+        Some(first + 1),
+        "the rebuilt client is a new generation, and the refused attempt before it moved nothing"
+    );
+
+    volume.attempt_reconnect().await.expect(FIXTURE);
+    assert_eq!(
+        volume.connection_generation(),
+        Some(first + 1),
+        "a reconnect that found the server live installed nothing"
+    );
 }
 
 /// ❗ **Switching it back on brings a volume that is already down back**, on
@@ -289,4 +305,78 @@ async fn switching_the_switch_on_revives_a_volume_that_is_already_down() {
     )
     .await;
     assert!(volume.exists(&hello).await, "the rebuilt client serves the root");
+}
+
+// ── Which client a failure belongs to ────────────────────────────────
+
+/// A volume with no client, reporting into `events`.
+fn recorded_volume() -> (Arc<RecordingVolumeEvents>, super::WebdavVolume) {
+    let events = Arc::new(RecordingVolumeEvents::new());
+    let host = VolumeHost::builder()
+        .events(Arc::clone(&events) as Arc<dyn VolumeEventSink>)
+        .build();
+    (events, make_test_volume_with("/", host))
+}
+
+/// ❗ **A late loss from a replaced client leaves the new one connected.**
+///
+/// A request that went out on the old client and fails after a reconnect
+/// installed a fresh one is old news. Flipping the state on it would drop the
+/// HEALTHY client, cut every request waiting on it, and hand each an outage it
+/// never had. Driven through `noting`, the funnel every delegator uses, so the
+/// generation is read where production reads it: before the call runs. The
+/// install itself needs a live server; `the_switch_off_leaves_a_reachable_server_alone`
+/// is its Docker twin.
+#[tokio::test]
+async fn a_late_loss_from_a_replaced_client_leaves_the_new_one_connected() {
+    let (events, volume) = recorded_volume();
+
+    let outcome: Result<(), _> = volume
+        .noting(async {
+            // While the call is out, a sibling's failure marks the old client
+            // lost and a reconnect installs a new one.
+            assert!(volume.inner.lose_session(volume.inner.session_generation()));
+            volume.inner.session_installed();
+            Err(VolumeError::DeviceDisconnected("old client".to_string()))
+        })
+        .await;
+
+    assert!(outcome.is_err(), "the call's own answer is passed through untouched");
+    assert_eq!(volume.connection_state(), Some(ConnectionState::Direct));
+    assert_eq!(
+        events
+            .transitions()
+            .into_iter()
+            .map(|(_, state)| state)
+            .collect::<Vec<_>>(),
+        vec![VolumeConnection::Disconnected, VolumeConnection::Connected],
+        "the sibling's loss and the reconnect, and nothing from the late error"
+    );
+
+    // The new client's own loss still counts.
+    let outcome: Result<(), _> = volume
+        .noting(async { Err(VolumeError::DeviceDisconnected("new client".to_string())) })
+        .await;
+    assert!(outcome.is_err());
+    assert_eq!(volume.connection_state(), Some(ConnectionState::Disconnected));
+}
+
+/// The reported generation moves only when a client is installed: ❌ not on a
+/// loss, ❌ not on a reconnect attempt that didn't take.
+#[tokio::test]
+async fn only_an_installed_client_moves_the_generation() {
+    let (_events, volume) = recorded_volume();
+    let first = volume
+        .connection_generation()
+        .expect("a WebDAV volume reports its generation");
+
+    volume.inner.lose_session(first);
+    assert!(
+        volume.attempt_reconnect().await.is_err(),
+        "nothing is stored to probe with"
+    );
+    assert_eq!(volume.connection_generation(), Some(first));
+
+    volume.inner.session_installed();
+    assert_eq!(volume.connection_generation(), Some(first + 1));
 }

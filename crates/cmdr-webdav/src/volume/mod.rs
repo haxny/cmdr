@@ -12,14 +12,14 @@
 //! `CLAUDE.md` has the must-knows, `DETAILS.md` the decisions.
 
 use std::path::Path;
-use std::sync::atomic::{AtomicBool, AtomicU8, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Weak};
 
 use cmdr_fs::ignore_poison::RwLockIgnorePoison;
 use cmdr_fs::volume::host::VolumeHost;
 use cmdr_fs::volume::host::settings::BackendName;
 use cmdr_fs::volume::remote_paths::RemoteRoot;
-use cmdr_fs::volume::{Retirement, VolumeError};
+use cmdr_fs::volume::{ConnectionCell, Retirement, VolumeError};
 use reqwest::{RequestBuilder, Response};
 use tokio_util::sync::CancellationToken;
 
@@ -95,7 +95,7 @@ struct WebdavVolumeInner {
     /// point every operation fails fast rather than each one timing out.
     client: tokio::sync::RwLock<Option<Arc<WebdavClient>>>,
     /// The state the host was last told about (`state.rs`).
-    state: AtomicU8,
+    state: ConnectionCell<ConnectionState>,
     /// Whether the registry still serves this volume under its id.
     retirement: Retirement,
     /// This state's own weak reference, for the background work that outlives
@@ -360,7 +360,7 @@ impl WebdavVolume {
                 volume_id: volume_id.to_string(),
                 params: std::sync::RwLock::new(params),
                 client: tokio::sync::RwLock::new(Some(Arc::new(client))),
-                state: AtomicU8::new(ConnectionState::Connected as u8),
+                state: ConnectionCell::new(ConnectionState::Connected),
                 retirement: Retirement::new(),
                 me: me.clone(),
                 reconnect_lock: tokio::sync::Mutex::new(()),

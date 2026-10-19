@@ -300,12 +300,13 @@ interchangeable:
 - **How live is the SESSION?** `ConnectionState`, via `Volume::connection_state()`. The switcher dot, the pane's connect
   views, and the reconnect manager read it. Every connecting backend answers; a local disk, an archive, and the git
   portal answer `None`. Its companion `Volume::connection_generation()` says WHICH session: a counter only a successful
-  in-place rebuild bumps (`None` by default; SMB and SFTP answer it). A transfer reads "live on a newer generation than
-  my call started on" as proof its error was the old session's (`crates/cmdr-operations/src/transfer/volume_outage.rs`).
-  `connection_cell.rs`'s `ConnectionCell` is the shared half for the backends whose operations are their own liveness
-  detector: the state and the generation in ONE atomic, so a call's loss flips only the session it started on (`lose`, a
-  CAS) and only an install moves the generation (`install` for a backend holding a session object, `revive` for one
-  whose reconnect is a probe). SMB keeps its own `SessionCell`, which hands the generation out on a lease.
+  in-place rebuild bumps (`None` by default; SMB, SFTP, and WebDAV answer it). A transfer reads "live on a newer
+  generation than my call started on" as proof its error was the old session's
+  (`crates/cmdr-operations/src/transfer/volume_outage.rs`). `connection_cell.rs`'s `ConnectionCell` is the shared half
+  for the backends whose operations are their own liveness detector: the state and the generation in ONE atomic, so a
+  call's loss flips only the session it started on (`lose`, a CAS) and only an install moves the generation (`install`
+  for a backend holding a session object, `revive` for one whose reconnect is a probe). SMB keeps its own `SessionCell`,
+  which hands the generation out on a lease.
 - **WHICH BACKEND serves it?** `BackendKind`, via `Volume::backend_kind()`. ❗ The one an "is this SMB?" test must ask.
   A `connection_state().is_some()` used that way hands an SFTP volume to the SMB indexer, which is exactly what happened
   when one field answered both questions. Backend-side only: the frontend classifies a pane off `fsType` and category,
