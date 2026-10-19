@@ -31,7 +31,7 @@ use std::sync::OnceLock;
 /// any cross-contamination flip at least one destination's hash.
 ///
 /// Runs the real copy pipeline (`copy_volumes_with_progress`, the same
-/// function `copy_between_volumes` calls) so `FuturesUnordered` + Fix 2's
+/// function `copy_between_volumes` calls) so the concurrent window + Fix 2's
 /// split session + Fix 3's compound fast-path + Fix 4's pipelined scan all
 /// execute together, the way a user's "copy 100 files" action does.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]

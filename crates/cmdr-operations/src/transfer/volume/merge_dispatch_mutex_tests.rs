@@ -170,7 +170,7 @@ async fn until_the_driver_queues_behind_the_deep_prompt(events: &CollectorEventS
 // ============================================================================
 
 /// Concurrent merge with two deep clashes (across two top-level sources, taking
-/// the FuturesUnordered concurrent path) under Stop: the dispatch mutex
+/// the concurrent path) under Stop: the dispatch mutex
 /// serializes the prompts so each one gets answered through the single oneshot
 /// slot. Both clashes resolve, both dest-only files survive.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]

@@ -2066,9 +2066,12 @@ the driver is already sitting on the cooperative deadline, so tier 2 has its own
 arm is latched (`drain_shortened`) because a fired token is ready forever and an unguarded arm would spin.
 
 **When the deadline fires** the driver logs at error level with the full `transfer_probe` dump — naming every task and
-what it is awaiting — and breaks. Dropping `in_flight` aborts the parked futures, which is what makes an in-flight task
-abortable at all: these are futures in a `FuturesUnordered`, not spawned tasks, so a drop is an abort. Their staged
-partials are removed by `clean_abandoned_staged_writes` in the post-loop.
+what it is awaiting — and breaks. `ConcurrentDriver::finish` then aborts the window (the tasks are spawned into a
+`JoinSet`) and waits up to `ABORTED_TASKS_GRACE` (1 s) for them to stop, so each one's teardown (a backend writer's
+abort, its probe row) runs before the post-loop sweeps what it left; a result that raced the abort is recorded like any
+other, since it carries the only copy of its ledger. A task stuck INSIDE a poll can't be stopped by anything, and the
+driver lets go of it after the grace rather than freeze with it. The staged partials are removed by
+`clean_abandoned_staged_writes` in the post-loop.
 
 **Decision/Why abandon rather than hold**: an abandoned task can leave an open SMB write handle behind. Servers reap
 idle handles on their own, and the alternative is the incident's outcome — the user's only way out being a force-quit,
@@ -2178,7 +2181,7 @@ driver owns that dispatch (uniform shape across all 3 volume ops, exactly what w
 contract (closure never invoked for pre-skipped / resolved-as-Skip / post-cancel) is enforced in both shapes by the
 driver's loop structure and pinned by the `transfer_driver_*_tests.rs` suite. Volume copy's two paths are sibling
 modules over that shared driver: `volume/copy_serial.rs` supplies the copy-specific closures, and
-`volume/copy_concurrent.rs` runs its own `FuturesUnordered` window rather than becoming a third driver mode (one-of-four
+`volume/copy_concurrent.rs` runs its own window of spawned tasks rather than becoming a third driver mode (one-of-four
 abstraction not worth its weight).
 
 **Decision**: `copy_files_with_progress_inner` aligns `scan_result.files` to the driver's `&[PathBuf]` API via a paired

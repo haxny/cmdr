@@ -1701,8 +1701,8 @@ mid-`Copying`).
   The fold is `impl FromIterator<PauseOutcome> for PauseAllOutcome`, which is what makes it testable without touching
   the process-global manager (`manager::tests::a_sweep_counts_every_outcome_it_collected`); ❌ never drive a real
   `pause_all()` from a test, it would park a sibling test's operation.
-- **Concurrent copy path.** `copy_volumes_with_progress`'s `FuturesUnordered` path has no single between-files boundary,
-  and its per-file `on_progress` callback stays cancel-only (pinned by
+- **Concurrent copy path.** `copy_volumes_with_progress`'s concurrent path has no single between-files boundary, and its
+  per-file `on_progress` callback stays cancel-only (pinned by
   `transfer_driver::tests::concurrent_per_file_callback_is_cancel_only_not_pause_aware`). But its in-flight files stream
   through the shared `stream_pipe_file`, so each parks between chunks via `CheckpointStream` when paused; the admission
   loop adds no new files while everyone is parked, so the batch effectively halts. Serial paths (local copy/move,

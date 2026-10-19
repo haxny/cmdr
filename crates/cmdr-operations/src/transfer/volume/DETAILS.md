@@ -23,10 +23,11 @@ Where a symbol lives and who calls it: `codegraph_search` / `codegraph_explore`.
   source needs before it can join it (`ConcurrentCopy::prepare_source`: the directory question, the destination
   pre-check, the SYNCHRONOUS conflict resolve, skip accounting); `copy_concurrent_task.rs` streams one source end to end
   (`run_copy_task` over an owned `CopyTask`, plus the two result payloads). The task's inputs are OWNED, which is what
-  keeps its future `'static` and the window free of a lifetime — ❌ don't reintroduce a borrow there, it welds the
-  window to the borrowed context and blocks every further split. `copy_concurrent_driver_tests.rs` drives
-  `drive_transfer_concurrent` and `prepare_source` directly, because the post-loop's delete-capability split (below)
-  means an end-to-end assertion can't tell a right rollback ledger from a wrong one.
+  keeps its future `'static` so it SPAWNS (a `JoinSet` on the engine's runtime) — ❌ don't reintroduce a borrow there:
+  it would force the tasks back into futures only the driver polls, the shape that deadlocked in ERR-8MEX6.
+  `copy_concurrent_driver_tests.rs` drives `drive_transfer_concurrent` and `prepare_source` directly, because the
+  post-loop's delete-capability split (below) means an end-to-end assertion can't tell a right rollback ledger from a
+  wrong one.
 - **The engine is a dispatcher over two halves, with the file half as the leaf.** `strategy.rs` dispatches ONE source
   (`copy_single_path`, `resolve_source_is_directory`, `pull_path_to_local`); `stream_pipe.rs` moves one file's bytes
   (`stream_pipe_file`: staging, retry, outages, the auto-yield tuning, both cancel tiers) and calls neither half back.
@@ -229,10 +230,12 @@ rename) cleans its own partial there instead (`remove_unstaged_partial`). Pinned
 `copy_rollback_tests.rs::{cancel_mid_merge_stream_preserves_preexisting_dest_file, rollback_mid_merge_stream_preserves_preexisting_dest_file, cancel_mid_merge_stream_concurrent_preserves_preexisting_dest_file}`
 (serial Cancel, serial Rollback, concurrent Cancel) and `rollback_after_rename_keeps_preexisting_dest_file` (file→file
 Rename rollback removes only the `name (1)` it landed). **Don't** drop the `created` ledger in the `Err`/cancel arms or
-let a directory source's dest root reach `last_dest_path`. A task the concurrent driver ABANDONS at its cancel-drain
-deadline never reaches either arm, so the driver holds an `Arc` on each in-flight task's `CreatedPaths`
-(`CopyTask.created`) and `ConcurrentDriver::finish` hands over, and journals, what every abandoned directory source had
-already landed. Pinned by `copy_cancel_tests.rs::rollback_undoes_what_an_abandoned_folder_task_already_landed`.
+let a directory source's dest root reach `last_dest_path`. A task the concurrent driver ABORTS (at its cancel-drain
+deadline, or after the batch's first failure) never reaches either arm, nor does one that panics, so the driver holds an
+`Arc` on each in-flight task's `CreatedPaths` (`CopyTask.created`) and `ConcurrentDriver::finish` (or
+`Settlements::record_panic`) hands over, and journals, what every such directory source had already landed. A panic is
+the operation's failure, like a task error, ❌ never a source that silently goes missing. Pinned by
+`copy_cancel_tests.rs::rollback_undoes_what_an_abandoned_folder_task_already_landed`.
 
 ### Three ways to delete, and who may use each
 
@@ -869,16 +872,19 @@ the two driver-behind-a-deep-prompt cells below).
 
 Two rules keep that queue from wedging or re-asking:
 
-- **Whoever waits on the mutex keeps polling what it owns.** A deep merge is a future in the concurrent driver's window,
-  so it moves only when the driver polls it. The driver prepares each source (pre-check and top-level resolver) through
-  `copy_concurrent.rs::prepare_while_draining`, which keeps draining the window meanwhile, even after a task fails
-  (later failures record too: the first error stands, and a later partial stays in `in_flight_partials` for the
-  post-loop). A driver that awaited `prepare_source` bare queued behind a merge's prompt and waited on itself: the
-  person's answer landed in the slot, the merge never woke to read it, and Cancel had nothing to wake either (ERR-8MEX6,
-  21 minutes with no I/O). The draining has no cancel arm on purpose: dropping a resolver mid-answer can strand a
-  reserved name or a set-aside destination, and a cancel ends preparation anyway (it abandons the prompt, and a resolver
-  checks the intent once it holds the mutex). So a top-level prompt holds back its own source and every later one, while
-  the sources already in flight run on, exactly as they do during a deep prompt.
+- **Nothing that waits on the mutex is what moves its holder.** The concurrent driver's tasks are SPAWNED (a `JoinSet`
+  on the engine's runtime), so a deep merge holding the mutex reads the person's answer and lets go whatever the driver
+  is doing. The driver prepares each source (pre-check and top-level resolver) itself and may queue behind a merge's
+  prompt for as long as the person takes. When the tasks were futures only the driver polled, a driver queued that way
+  waited on itself: the person's answer landed in the slot, the merge never woke to read it, and Cancel had nothing to
+  wake either (ERR-8MEX6, 21 minutes with no I/O). While it prepares, the driver still records what the window hands
+  back (`copy_concurrent.rs::prepare_while_draining`), so a source that lands during a prompt gets its
+  `write-source-item-done`, journal rows, and files-axis tick at once; that's bookkeeping, not liveness (later failures
+  record too: the first error stands, and a later partial stays in `in_flight_partials` for the post-loop). Preparing
+  has no cancel arm on purpose: dropping a resolver mid-answer can strand a reserved name or a set-aside destination,
+  and a cancel ends preparation anyway (it abandons the prompt, and a resolver checks the intent once it holds the
+  mutex). So a top-level prompt holds back its own source and every later one, while the sources already in flight run
+  on, exactly as they do during a deep prompt.
 - **The resolver takes the op-wide latch CELL, ❌ never a copy.** It reads the cell up front, re-reads it under the
   mutex, and records the answer into it the moment it lands. Callers used to copy the latch out, run the resolver on the
   copy, and store it back: a prompt queued behind another task's "Skip all" re-checked a stale copy and asked again, and
@@ -1772,14 +1778,13 @@ The serial drivers (`drive_transfer_serial_{sync,async}`) ask `stop_or_park_{syn
 so local copy/move, the cross-volume _serial_ path, and delete all honor pause between files; the cross-volume serial
 path additionally parks between chunks (see above).
 
-**The concurrent copy path is deliberately NOT gated for mid-batch pause.** `copy_volumes_with_progress`'s
-`FuturesUnordered` path (several files in flight at once) has no single "between files" boundary to park at, so it does
-**not** honor mid-batch pause: its per-chunk progress callback (`LeafProgress::on_chunk`) stays **cancel-only** (it
-breaks on `is_cancelled`, ignores `paused`). A pause on a concurrent-path op takes effect once the in-flight batch
-drains to the next admission point. (Threading the `CheckpointStream` checkpoint into the concurrent path too is
-possible — each in-flight file already streams through `stream_pipe_file` — but isn't wired yet; the admission-point
-framing is the current contract.) Pinned by
-`transfer_driver::tests::concurrent_per_file_callback_is_cancel_only_not_pause_aware`.
+**The concurrent copy path is deliberately NOT gated for mid-batch pause.** `copy_volumes_with_progress`'s concurrent
+path (several files in flight at once) has no single "between files" boundary to park at, so it does **not** honor
+mid-batch pause: its per-chunk progress callback (`LeafProgress::on_chunk`) stays **cancel-only** (it breaks on
+`is_cancelled`, ignores `paused`). A pause on a concurrent-path op takes effect once the in-flight batch drains to the
+next admission point. (Threading the `CheckpointStream` checkpoint into the concurrent path too is possible — each
+in-flight file already streams through `stream_pipe_file` — but isn't wired yet; the admission-point framing is the
+current contract.) Pinned by `transfer_driver::tests::concurrent_per_file_callback_is_cancel_only_not_pause_aware`.
 
 ## Overwrite isn't reversible
 

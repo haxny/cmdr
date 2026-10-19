@@ -167,9 +167,20 @@ async fn the_serial_driver_starts_its_sources_in_tree_order() {
 /// The concurrent driver spawns sources in tree order. With two in flight a
 /// neighbor may open first, so each file starts at most one place from its
 /// tree position, ❌ never at its selection position.
-#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+///
+/// The tasks run on the ENGINE's runtime, which here is this test's single
+/// thread, so they start in the order they were spawned. On a pool, two
+/// walkers listing their folders in parallel can start in either order, and
+/// what this pins is the spawn order, not the scheduler's.
+#[tokio::test(flavor = "current_thread")]
 async fn the_concurrent_driver_starts_its_sources_in_tree_order() {
-    let engine = TestOperations::new();
+    let engine = TestOperations::with(|builder| {
+        builder.volume_host(
+            cmdr_fs::volume::host::VolumeHost::builder()
+                .runtime(tokio::runtime::Handle::current())
+                .build(),
+        )
+    });
     let source = tree_source(2).await;
 
     copy_volumes_with_progress(

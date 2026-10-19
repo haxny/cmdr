@@ -2,8 +2,9 @@
 //! runs it.
 //!
 //! Everything the task needs arrives owned on [`CopyTask`], so the future is
-//! `'static` and the driver's window borrows nothing. The two result payloads
-//! carry back what the phase runner's cleanup and rollback have to know, and the
+//! `'static` and spawns on its own (the probe's task-local scope is set inside
+//! it, in [`run_copy_task`]). The two result payloads carry back what the phase
+//! runner's cleanup and rollback have to know, and the
 //! distinction their doc comments draw between a STREAM failure and a FINALIZE
 //! failure is the most data-loss-sensitive line in this directory: read them
 //! before touching the arms that build them.
@@ -106,7 +107,7 @@ pub(super) struct CopyTaskFailure {
 /// Everything one task owns for the life of one top-level source.
 ///
 /// Owned, not borrowed: it is what makes [`run_copy_task`]'s future `'static`,
-/// so the driver's `FuturesUnordered` carries no lifetime and the phases around
+/// so it spawns into the driver's `JoinSet` with no lifetime and the phases around
 /// it stay free to hold `&mut` on the window.
 pub(super) struct CopyTask {
     pub(super) events: Arc<dyn OperationEventSink>,

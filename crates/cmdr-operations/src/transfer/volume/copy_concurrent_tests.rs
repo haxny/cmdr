@@ -1,5 +1,5 @@
 //! Concurrency tests for `copy_volumes_with_progress`, split out of
-//! `volume/copy_tests/`. These exercise the `FuturesUnordered` batch path:
+//! `volume/copy_tests/`. These exercise the concurrent batch path:
 //! all-succeed, abort-on-first-error, and cancellation mid-batch. The
 //! `PoisonedReadVolume` double injects a read failure, and the local
 //! `CancelOnProgressSink` flips the operation's intent mid-flight.
@@ -19,7 +19,7 @@ use cmdr_fs::volume::{CopyScanResult, InMemoryVolume, ListingProgress, SpaceInfo
 
 // ── Phase 4.2 concurrency tests ──────────────────────────────────
 //
-// Exercise the FuturesUnordered path in `copy_volumes_with_progress`.
+// Exercise the concurrent path in `copy_volumes_with_progress`.
 // `InMemoryVolume` returns `max_concurrent_ops() = 32`, so batches of
 // 3+ files automatically take the concurrent branch (clamped to 32).
 
@@ -331,9 +331,9 @@ async fn test_concurrent_copy_cancellation_mid_batch() {
 /// ones — so prompt COUNTS can't tell those designs apart. What changes is what
 /// the rest of the batch does while a person is deciding: here it waits its
 /// turn; the alternative copies later sources, and the prompts arrive out of
-/// order. The window keeps draining (`ConcurrentDriver::prepare_while_draining`)
-/// because a deep merge's prompt needs it: a driver that stopped polling its
-/// window while queued behind one waited on itself (ERR-8MEX6).
+/// order. The source already in the window lands AND is recorded while the
+/// prompt is up (`ConcurrentDriver::prepare_while_draining`), so its
+/// `write-source-item-done` doesn't wait on the person's answer.
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn a_top_level_conflict_prompt_holds_back_its_source_and_every_later_one() {
     let engine = TestOperations::new();

@@ -45,8 +45,8 @@ Copy and move across backends (Local, MTP, SMB, archive). File map: `DETAILS.md`
 ## Concurrency and failures
 
 - **A LOCAL `max_concurrent_ops` must ❌ NOT bound a REMOTE peer** (`copy.rs::transfer_concurrency`, ❌ never a
-  `min()`). The concurrent driver watches cancel/rollback ON ITS AWAIT and drains while preparing
-  (`prepare_while_draining`). EVERY driver sets its `DriverPhase`.
+  `min()`). The concurrent driver SPAWNS its tasks (ERR-8MEX6) and watches cancel/rollback ON ITS AWAIT. EVERY driver
+  sets its `DriverPhase`.
 - **ONE `FileWindow` per operation** (`merge_ctx.rs::MergeCtx`), taken by every merge leaf and top-level FILE task
   (width 1 keeps MTP serial). ❌ Never per level or per source. A walker ❌ never holds a permit while it recurses
   (deadlock at width 1) and ❌ never returns before draining its leaves.

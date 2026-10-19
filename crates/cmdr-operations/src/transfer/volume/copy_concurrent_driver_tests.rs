@@ -36,6 +36,8 @@ use crate::types::{ConflictResolution, WriteOperationType};
 use cmdr_fs::staging::STAGING_TEMP_MARKER;
 use cmdr_fs::volume::{InMemoryVolume, VolumeError, VolumeReadStream};
 use std::collections::HashSet;
+use std::future::Future;
+use std::pin::Pin;
 
 use super::super::faulty_volume::forward_volume_methods;
 
@@ -742,4 +744,127 @@ async fn a_conflict_resolution_failure_comes_back_in_the_outcome() {
         "the window was empty when the resolver refused, so nothing is left in flight: {:?}",
         run.in_flight_partials
     );
+}
+
+// ============================================================================
+// The window's tasks are spawned: a panic is a failure, a drop is an abort
+// ============================================================================
+
+/// A source volume that misbehaves when ONE named path is opened: it panics (a
+/// bug in a backend, as the task running it meets it), or it never answers,
+/// holding `parked` for as long as the open is alive, so a test can see the
+/// task that awaits it go away.
+struct MisbehaveOnOpenVolume {
+    inner: Arc<InMemoryVolume>,
+    misbehave_for: Option<PathBuf>,
+    panics: bool,
+    parked: Arc<()>,
+}
+
+impl Volume for MisbehaveOnOpenVolume {
+    forward_volume_methods!(inner =>
+        name, root, list_directory, get_metadata, exists, is_directory, create_file, create_directory,
+        create_directory_all, delete, rename, get_space_info, supports_streaming, supports_export,
+        operations_are_local, max_concurrent_ops, scan_for_copy, supports_unknown_length_writes,
+        write_from_stream,
+    );
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn open_read_stream<'a>(
+        &'a self,
+        path: &'a Path,
+    ) -> Pin<Box<dyn Future<Output = Result<Box<dyn VolumeReadStream>, VolumeError>> + Send + 'a>> {
+        if self.misbehave_for.as_deref().is_some_and(|p| p != path) {
+            return self.inner.open_read_stream(path);
+        }
+        let panics = self.panics;
+        let parked = Arc::clone(&self.parked);
+        Box::pin(async move {
+            assert!(!panics, "simulated bug while opening {}", path.display());
+            std::future::pending::<()>().await;
+            drop(parked);
+            unreachable!("a parked open never answers")
+        })
+    }
+}
+
+/// Three file sources, where `misbehave_for` is the one the volume acts up on
+/// (`None`: all of them).
+async fn misbehaving_batch(misbehave_for: Option<&str>, panics: bool) -> (Arc<MisbehaveOnOpenVolume>, Vec<PathBuf>) {
+    let inner = Arc::new(InMemoryVolume::new("Source").with_space_info(10_000_000, 10_000_000));
+    for name in ["a.txt", "b.txt", "c.txt"] {
+        inner
+            .create_file(Path::new(&format!("/{name}")), &vec![7u8; 20_000])
+            .await
+            .unwrap();
+    }
+    let source = Arc::new(MisbehaveOnOpenVolume {
+        inner,
+        misbehave_for: misbehave_for.map(PathBuf::from),
+        panics,
+        parked: Arc::new(()),
+    });
+    let sources = ["/a.txt", "/b.txt", "/c.txt"].into_iter().map(PathBuf::from).collect();
+    (source, sources)
+}
+
+/// A task that PANICS is the operation's failure, like one that returned an
+/// error, ❌ never a source that silently goes missing: the operation stops,
+/// and the error names the source whose task died.
+///
+/// With futures the driver polled, a panic unwound through the driver itself;
+/// a spawned task's panic comes back as a `JoinError` the driver has to read.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn a_task_that_panics_comes_back_as_the_operations_failure() {
+    let engine = TestOperations::new();
+    let (source, sources) = misbehaving_batch(Some("/b.txt"), true).await;
+    let dest: Arc<dyn Volume> = Arc::new(InMemoryVolume::new("Dest").with_space_info(10_000_000, 10_000_000));
+    let harness = Harness::new(&engine, &sources);
+
+    let run = harness.drive(source, Arc::clone(&dest), 4).await;
+
+    match run.outcome.copy_error.as_ref().map(|failure| &failure.error) {
+        Some(WriteOperationError::IoError { path, .. }) => assert_eq!(path, "/b.txt"),
+        other => panic!("the panicked task must surface as the operation's error, got {other:?}"),
+    }
+    for landed in run.copied_paths() {
+        assert!(
+            dest.exists(&landed).await,
+            "the rollback ledger names only what landed: {}",
+            landed.display()
+        );
+    }
+}
+
+/// Dropping the driver mid-run (its operation's own task aborted) aborts every
+/// task in its window, ❌ never leaves one streaming into the destination
+/// behind an operation that's gone.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn dropping_the_driver_aborts_every_task_in_its_window() {
+    let engine = TestOperations::new();
+    let (source, sources) = misbehaving_batch(None, false).await;
+    let parked = Arc::clone(&source.parked);
+    let dest: Arc<dyn Volume> = Arc::new(InMemoryVolume::new("Dest").with_space_info(10_000_000, 10_000_000));
+    let harness = Harness::new(&engine, &sources);
+    // Ours, the volume's own, and one per parked open.
+    let all_parked = 2 + sources.len();
+
+    // Leaving the `select!` drops the driver with its whole window parked.
+    tokio::select! {
+        _ = harness.drive(source, dest, 4) => panic!("every open is parked, so the driver can't finish"),
+        () = cmdr_fs::testing::wait_until_async(Duration::from_secs(5), "every task to park on its open", || {
+            Arc::strong_count(&parked) == all_parked
+        }) => {}
+    }
+
+    // Only ours left: every task let go of its open, and of the volume.
+    cmdr_fs::testing::wait_until_async(
+        Duration::from_secs(5),
+        "the dropped driver's tasks to be aborted",
+        || Arc::strong_count(&parked) == 1,
+    )
+    .await;
 }

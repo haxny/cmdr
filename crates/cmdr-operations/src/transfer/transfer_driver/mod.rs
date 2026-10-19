@@ -94,7 +94,7 @@
 //!   transaction`; the driver never sees it. On a non-Ok `TransferLoopOutcome.intent`, the caller
 //!   decides whether to invoke `rollback_with_progress`.
 //! - **Concurrent path**: deliberately out of scope. `copy_volumes_with_progress` keeps its
-//!   `FuturesUnordered` block inline (only 1 of the 4 ops needs concurrency, so abstracting it
+//!   concurrent window in `volume/copy_concurrent.rs` (only 1 of the 4 ops needs concurrency, so abstracting it
 //!   would be a 1-of-4 abstraction, not a shared pattern — see plan § "Concurrent driver scope").
 
 // A handful of driver surface items aren't wired up by today's three callers

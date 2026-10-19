@@ -5,10 +5,9 @@
 //! the concurrent path is built on: a Stop prompt holds back its source and
 //! every one after it instead of several tasks racing prompts into one oneshot
 //! slot, and nothing streams into a destination the user is still being asked
-//! about. The window keeps draining meanwhile
-//! (`copy_concurrent.rs::ConcurrentDriver::prepare_while_draining`), which a
-//! deep merge's prompt needs. The driver itself is `copy_concurrent.rs`; what it
-//! spawns is `copy_concurrent_task.rs`.
+//! about. The tasks already spawned run on meanwhile, a deep merge's prompt
+//! included. The driver itself is `copy_concurrent.rs`; what it spawns is
+//! `copy_concurrent_task.rs`.
 //!
 //! These are methods on `ConcurrentCopy` rather than free functions because the
 //! borrowed context already holds every input they need — the volumes, the
@@ -330,10 +329,9 @@ impl ConcurrentCopy<'_> {
     /// The resolver's `conflict_dispatch_lock` (acquired inside) queues this
     /// prompt behind any deep merge's, so the two can't race the one oneshot
     /// slot, and its turn re-reads the op-wide latch so an "…all" answered
-    /// meanwhile collapses it. ❗ The merge holding that lock moves only when
-    /// the driver polls it, so the driver awaits this through
-    /// `ConcurrentDriver::prepare_while_draining`, ❌ never bare. The known
-    /// acceptable residual: an already-emitted prompt isn't retroactively
+    /// meanwhile collapses it. The merge holding that lock is a spawned task,
+    /// so it reads its answer and lets go while the driver waits here
+    /// (ERR-8MEX6). The known acceptable residual: an already-emitted prompt isn't retroactively
     /// resolved by another task's "…all" latch — a rare extra prompt, never
     /// data loss.
     async fn resolve_conflict_on_the_driver(

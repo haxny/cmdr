@@ -255,7 +255,7 @@ async fn cross_volume_overwrite_success_replaces_and_cleans_temp() {
 }
 
 /// Concurrent path (≥3 sources, InMemory `max_concurrent_ops` = 32) exercises
-/// the inline `FuturesUnordered` safe-replace finalize: a mix of fresh and
+/// the concurrent safe-replace finalize: a mix of fresh and
 /// conflicting files all land correctly with no temp siblings left behind, and
 /// the conflicting one ends up with the source content.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -337,7 +337,7 @@ impl Volume for RenameFailsDestVolume {
         true
     }
     fn max_concurrent_ops(&self) -> usize {
-        // Let the concurrent test exercise the FuturesUnordered path.
+        // Let the concurrent test exercise the concurrent path.
         32
     }
     fn list_directory<'a>(
@@ -492,7 +492,7 @@ async fn cross_volume_overwrite_serial_preserves_new_data_on_finalize_failure() 
 }
 
 /// CONCURRENT path: same finalize-failure scenario, ≥3 sources so the
-/// FuturesUnordered path runs. RED today: the failing task returns
+/// concurrent path runs. RED today: the failing task returns
 /// `Err((temp, e))`, the result handler sets `last_dest_path = Some(temp)`, and
 /// the post-loop deletes it — after finalize already deleted the original.
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]

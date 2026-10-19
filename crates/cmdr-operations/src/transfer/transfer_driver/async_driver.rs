@@ -151,7 +151,7 @@ where
         // cross-volume streaming path ALSO parks between chunks
         // (`checkpoint_stream.rs` `CheckpointStream`), so a paused single large
         // file stops mid-stream rather than streaming to completion. The
-        // concurrent `copy_volumes_with_progress` `FuturesUnordered` path has no
+        // concurrent `copy_volumes_with_progress` path has no
         // between-files boundary and does NOT honor mid-batch pause (see
         // transfer/DETAILS.md § "Pause and the concurrent copy path").
         if state.stop_or_park_async().await {

@@ -2,7 +2,7 @@
 //! (`make_concurrent_per_file_progress`).
 //!
 //! Coverage: the concurrent copy path (`copy_volumes_with_progress`'s
-//! `FuturesUnordered`) has no between-files boundary, so its per-file progress
+//! window of spawned tasks) has no between-files boundary, so its per-file progress
 //! callback is cancel-only — it breaks on cancel but ignores pause. This pins
 //! that contract so any future change to gate the concurrent path for pause is a
 //! deliberate decision. See transfer/DETAILS.md § "Pause and the concurrent copy
@@ -18,7 +18,7 @@ use std::time::Duration;
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn concurrent_per_file_callback_is_cancel_only_not_pause_aware() {
     let engine = TestOperations::new();
-    // The concurrent copy path (`copy_volumes_with_progress` FuturesUnordered)
+    // The concurrent copy path (`copy_volumes_with_progress`, several at once)
     // has no between-files boundary, so v1 does NOT gate it for pause: its
     // per-file progress callback breaks on cancel but ignores pause. Pin that so
     // a future change to gate the concurrent path is a deliberate decision, not

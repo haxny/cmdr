@@ -986,7 +986,7 @@ pub async fn copy_volumes_with_progress(
         .map(super::super::transfer_probe::OperationProbeGuard::probe);
 
     if use_concurrent_path {
-        // The `FuturesUnordered` sliding window, in `volume/copy_concurrent.rs`.
+        // The sliding window of spawned tasks, in `volume/copy_concurrent.rs`.
         // Everything it needs is already on hand here; the ledger Arcs are cloned
         // in, so the post-loop below keeps reading the same counters.
         let outcome = super::copy_concurrent::drive_transfer_concurrent(super::copy_concurrent::ConcurrentCopy {
