@@ -173,6 +173,22 @@ fn a_revoked_key_is_never_a_match_however_it_is_reached() {
 }
 
 #[test]
+fn a_wildcard_revocation_never_reaches_the_first_contact_approval() {
+    // `@revoked * <blob>` is how `sshd(8)` revokes a key everywhere. Falling
+    // through to `Unknown` would put a one-click approval in front of it.
+    let store = InMemoryHostKeys::new();
+    let known = KnownHostsFile::parse(&format!("@revoked * ssh-ed25519 {ED25519_BLOB}\n"));
+    assert_eq!(decide(&store, &known, HOST, PORT, &ed25519()), HostKeyDecision::Revoked);
+}
+
+#[test]
+fn a_wildcard_revocation_outranks_an_earlier_approval() {
+    let store = InMemoryHostKeys::new().with_entry(HOST, PORT, "ssh-ed25519", &ed25519().fingerprint);
+    let known = KnownHostsFile::parse(&format!("@revoked * ssh-ed25519 {ED25519_BLOB}\n"));
+    assert_eq!(decide(&store, &known, HOST, PORT, &ed25519()), HostKeyDecision::Revoked);
+}
+
+#[test]
 fn a_cert_authority_line_is_recognized_rather_than_read_as_a_host_key() {
     // `@cert-authority` marks a CA that SIGNS host keys; the blob on the line is
     // not the host's own key. Misreading it as one turns every first connection

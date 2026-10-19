@@ -115,3 +115,32 @@ fn a_revoked_entry_for_a_different_key_leaves_this_one_alone() {
         KnownHostsVerdict::Matches
     );
 }
+
+#[test]
+fn a_wildcard_revocation_names_the_key_on_every_host() {
+    // `@revoked * ssh-ed25519 AAAA…` is the `sshd(8)` way to revoke a
+    // compromised key everywhere. A revocation names a key, not a host, so its
+    // patterns can't hide it, even though plain entries never expand a glob.
+    let file = KnownHostsFile::parse(&format!("@revoked * ssh-ed25519 {BLOB}\n"));
+    assert_eq!(
+        file.lookup("naspolya", 22, "ssh-ed25519", BLOB),
+        KnownHostsVerdict::Revoked
+    );
+    assert_eq!(
+        file.lookup("naspolya", 2222, "ssh-ed25519", BLOB),
+        KnownHostsVerdict::Revoked
+    );
+}
+
+#[test]
+fn a_revocation_written_for_another_host_still_revokes_the_key() {
+    // A compromised key is compromised wherever it turns up: failing closed costs
+    // one refused connection, failing open hands a man in the middle the session.
+    let file = KnownHostsFile::parse(&format!(
+        "@revoked other.example.com ssh-ed25519 {BLOB}\nnaspolya ssh-ed25519 {BLOB}\n"
+    ));
+    assert_eq!(
+        file.lookup("naspolya", 22, "ssh-ed25519", BLOB),
+        KnownHostsVerdict::Revoked
+    );
+}

@@ -122,13 +122,21 @@ impl KnownHostsFile {
     /// What this file says about `blob` presented for `(host, port)` under
     /// `algorithm`.
     pub fn lookup(&self, host: &str, port: u16, algorithm: &str, blob: &str) -> KnownHostsVerdict {
+        // A revocation names a key, not a host, so it's matched by blob alone,
+        // whatever its host patterns say. That's what makes the `sshd(8)` form
+        // `@revoked * <type> <blob>` work without this reader expanding globs,
+        // and applying a revocation written for another host fails closed.
+        if self
+            .entries
+            .iter()
+            .any(|entry| entry.marker == Some(Marker::Revoked) && entry.blob == blob)
+        {
+            return KnownHostsVerdict::Revoked;
+        }
         let addressed = address_forms(host, port);
         let mut verdict = KnownHostsVerdict::Unknown;
         for entry in self.matching(&addressed) {
             match entry.marker {
-                // Checked against the blob rather than the algorithm, because a
-                // revocation names one specific key.
-                Some(Marker::Revoked) if entry.blob == blob => return KnownHostsVerdict::Revoked,
                 Some(_) => continue,
                 None if entry.algorithm != algorithm => continue,
                 None if entry.blob == blob => verdict = KnownHostsVerdict::Matches,
@@ -188,8 +196,10 @@ fn matches_pattern(address: &str, pattern: &str) -> bool {
     }
     // ❌ No glob expansion. OpenSSH allows `*` and `?` in a pattern, and a
     // fallback reader that got the expansion subtly wrong would either trust a
-    // host it shouldn't or alarm on one it should. An exact match is always safe:
-    // the worst it costs is one extra approval.
+    // host it shouldn't or alarm on one it should. For a plain entry an exact
+    // match is the safe direction: the worst it costs is one extra approval.
+    // `@revoked` never reaches here; `lookup` matches it by key alone, because
+    // an unexpanded `@revoked *` would silently miss a compromised key.
     if pattern.contains('*') || pattern.contains('?') {
         return false;
     }

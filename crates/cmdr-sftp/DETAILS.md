@@ -741,7 +741,12 @@ the cases that must not be misread.
 `known_hosts.rs` therefore parses markers, hashed hostnames (`|1|salt|hash`, HMAC-SHA1, which is the Debian and Ubuntu
 default), the `[host]:port` form, and comma-separated host lists — and **skips** any line it can't use rather than
 failing the file. ❌ It does not expand `*`/`?` globs: getting that subtly wrong either trusts a host it shouldn't or
-alarms on one it should, and an exact match costs at most one extra approval.
+alarms on one it should, and for a plain entry an exact match costs at most one extra approval.
+
+❗ **`@revoked` is matched by key blob alone, whatever its host patterns.** A revocation names a key, not a host, and
+the `sshd(8)` way to revoke one everywhere is `@revoked * <type> <blob>`. Run through the no-glob pattern rule, that
+line matched nothing, so a revoked key connected silently or reached the one-click approval. Applying a revocation
+written for another host fails closed, which is the right direction for a compromised key.
 
 ### The detached host, and the double that remembers
 
