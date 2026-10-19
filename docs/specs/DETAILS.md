@@ -43,6 +43,14 @@ Read this before adding, wiping, or reorganizing a spec.
   [#284](https://github.com/vdavid/cmdr/issues/284)–[#287](https://github.com/vdavid/cmdr/issues/287).
 - `dropbox-sync-status-linux.md`: **Cloud badges on Linux, which today are simply absent.** Holds the Dropbox socket
   protocol research and what a Linux arm needs. Issue: [#288](https://github.com/vdavid/cmdr/issues/288).
+- `transfer-outages-and-cleanup-plan.md`: **Copies to a network share fail after a successful reconnect, and a failed
+  copy leaves temps and open handles behind.** One transport-fault classifier, a per-file step runner, safe-replace as a
+  landing mode, a connection generation, drain-don't-drop, and cleanup through outages. Issues:
+  [#489](https://github.com/vdavid/cmdr/issues/489), [#490](https://github.com/vdavid/cmdr/issues/490).
+- `log-redaction-markers-plan.md`: **Error-report bundles keep leaking file and folder names**, because the redactor
+  guesses where a name ends in free text. Mark every user value where the line is written, hash exact spans at bundle
+  time, keep a greedy regex fallback, and ratchet log sites over by crate. Issue:
+  [#491](https://github.com/vdavid/cmdr/issues/491).
 
 ## Wiping a shipped spec
 
