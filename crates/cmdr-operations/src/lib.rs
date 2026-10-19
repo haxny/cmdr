@@ -95,6 +95,9 @@ mod queued_sources;
 mod rename;
 mod reversal;
 mod rollback;
+mod routed_writes;
+#[cfg(test)]
+mod routed_writes_tests;
 mod routing;
 mod scan;
 mod scan_bridge;

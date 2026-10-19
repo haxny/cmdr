@@ -79,9 +79,12 @@ inside it names the app's accessor.
   `VolumeLookup`, so one answer serves both. The app answers it with `operations_host/volumes.rs`, which asks
   `get_volume_manager()` per call. ❗ A site passing a path calls `resolve`; each that stays on `get` says why in one
   line (the `.zip` file itself is a plain file on its parent; a lane key or a capability flag is a question about the
-  drive, not the path; an archive gate upstream already routed the in-zip case). Bulk rename, the numbered create, and
-  rename-as-move have no route of their own, so an in-zip or `.git/<category>/` path there would act on the drive; they
-  trust the frontend's refusal to write in a routed pane, and a backend gate is #463.
+  drive, not the path; an archive gate upstream already routed the in-zip case). Bulk rename, the numbered create,
+  rename-as-move, delete, trash, and the `.git` half of the instant rename and create have no route of their own, so
+  each asks `routed_writes.rs` first and refuses a path a route serves (typed: `ReadOnlyDevice` on the transfer path,
+  `VolumeError::ReadOnly` on the instant one), whatever the caller. The frontend refuses the same writes in a routed
+  pane; this is the backend's line for Ask Cmdr, MCP, and any later caller. `FakeVolumes::route` lets a test serve a
+  prefix through a route (`routed_writes_tests.rs`).
 - **Engine-wide facts go through `EngineEvents`**: operations changed, busy volumes changed, a transfer started /
   finished on volumes (indexing priority), staging leftovers kept, an instant mutation settled (analytics, as an
   `InstantMutationFact` of categories only), an error report, and the scan bridge's scanning-phase `write-progress` (one

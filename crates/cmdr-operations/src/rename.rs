@@ -24,6 +24,7 @@ use super::host::{self, InstantMutationFact, InstantOp, InstantTarget};
 use super::look_alike::{NewEntry, place_new_entry};
 use super::manager::{OperationDescriptor, OperationSummaryText};
 use super::mutation_error::MutationError;
+use super::routed_writes::{route_serving, routed_mutation_refusal};
 use super::types::{ReadOnlySide, WriteOperationType};
 use cmdr_archive::mutator::Changeset;
 use cmdr_fs::volume::{RenameWork, Volume};
@@ -151,6 +152,13 @@ async fn rename_managed_inner(
             route_archive_rename(engine, &from, &to, &volume_id).await,
             InstantTarget::Archive,
         );
+    }
+    // Inside a repo's `.git/<category>/` trees the portal serves the path read-only;
+    // the drive underneath would rename a real entry in the repository's `.git`.
+    for path in [&from, &to] {
+        if route_serving(host, &volume_id, path).await.is_some() {
+            return (Err(routed_mutation_refusal(path)), InstantTarget::Volume);
+        }
     }
 
     let is_root = volume_id == "root";

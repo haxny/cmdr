@@ -20,9 +20,10 @@ use std::sync::Arc;
 use super::plan::{RenamePlanStep, build_execution_plan, spelled_destinations};
 use super::{BulkRenameRow, RenameStartError};
 use crate::event_sinks::OperationEventSink;
+use crate::routed_writes::{first_routed, routed_transfer_refusal};
 use crate::source_binding::ExpectedSources;
 use crate::transfer::volume::{PathRole, unregistered_volume_error};
-use crate::types::{ConflictResolution, VolumeCopyConfig, WriteOperationStartResult};
+use crate::types::{ConflictResolution, ReadOnlySide, VolumeCopyConfig, WriteOperationStartResult};
 use cmdr_fs::volume::{RenameWork, Volume};
 use cmdr_operation_log::types::Initiator;
 
@@ -54,8 +55,22 @@ impl crate::Operations {
         rows: Vec<BulkRenameRow>,
         initiator: Initiator,
     ) -> Result<RenamesStarted, RenameStartError> {
+        // A rename inside a `.zip` or a repo's `.git/<category>/` trees would act on the
+        // drive underneath, which the route serves read-only. Source and destination
+        // share one folder, so the refusal names the source side.
+        // Collected, ❌ not a lazy `flat_map`: a closure held across the await makes the
+        // future not general enough for a Tauri command to hold.
+        let touched: Vec<&Path> = rows
+            .iter()
+            .flat_map(|row| [row.source.as_path(), row.destination.as_path()])
+            .collect();
+        if let Some((routed, _)) = first_routed(self.host(), &volume_id, touched).await {
+            return Err(RenameStartError::Engine {
+                error: routed_transfer_refusal(&routed, ReadOnlySide::Source),
+            });
+        }
         if volume_id != "root" {
-            // Plain `get`: a bulk rename acts on the drive itself; it has no archive or `.git` routing.
+            // Plain `get`: the route gate above refused an in-zip or `.git` row.
             let Some(volume) = self.host().volumes().get(&volume_id) else {
                 // Asked before anything runs, so a phone or server nobody connected is worded the way
                 // a clicked copy off it would be, ❌ never as a volume that vanished.

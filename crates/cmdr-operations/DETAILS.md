@@ -217,13 +217,14 @@ The full top-level inventory is here:
   in: `scratch_dir.rs` (the remote edit itself is `archive_edit/remote.rs`). Entry points: `create/` + `create.rs`,
   `rename/` + `rename.rs`, `create_numbered.rs` (paste-as-file's numbered create), `routing.rs` (the one routing every
   cross-volume transfer takes: `start_volume_{copy,move,compress}`, plus `start_rename_by_move`; `routing/retry.rs` is
-  the Retry recipe a copy or move leaves with the manager). `source_binding.rs` is the optional set of sources an op may
-  touch. `queued_sources.rs` is the check an op that waited in the queue runs on its sources when admitted, parking on
-  `sources_gone_slot.rs` (a leaf the state owns, like `outage_slot.rs`). Layering, so the three stay out of a cycle:
-  `source_binding` → `queued_sources` → `state` → `sources_gone_slot`, and the empty batch's terminal shape is
-  `WriteCompleteEvent::all_skipped` in `types`. Fixtures: `testing/` (an engine a test owns, and what test cells outside
-  the engine reach beyond its public list) and `test_support.rs` (the placeholder conflict, the park-window wait, and
-  the queued-operation fixture). Every backend's cells through this pipeline live app-side, in
+  the Retry recipe a copy or move leaves with the manager), `routed_writes.rs` (the refusal every drive-only entry point
+  asks first for an in-zip or `.git/<category>/` path, `host/DETAILS.md`). `source_binding.rs` is the optional set of
+  sources an op may touch. `queued_sources.rs` is the check an op that waited in the queue runs on its sources when
+  admitted, parking on `sources_gone_slot.rs` (a leaf the state owns, like `outage_slot.rs`). Layering, so the three
+  stay out of a cycle: `source_binding` → `queued_sources` → `state` → `sources_gone_slot`, and the empty batch's
+  terminal shape is `WriteCompleteEvent::all_skipped` in `types`. Fixtures: `testing/` (an engine a test owns, and what
+  test cells outside the engine reach beyond its public list) and `test_support.rs` (the placeholder conflict, the
+  park-window wait, and the queued-operation fixture). Every backend's cells through this pipeline live app-side, in
   `operations_host/backend_suites/`, because they need the app around the engine
   (`apps/desktop/src-tauri/src/operations_host/DETAILS.md` § "Backend suites"). `testing/bench.rs` is the Criterion
   bench's door in: thin wrappers over five entry points, each with a no-op sink and an unregistered state on an engine

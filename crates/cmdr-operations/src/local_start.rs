@@ -14,13 +14,14 @@ use cmdr_operation_log::types::Initiator;
 use super::delete::delete_files_with_progress_inner;
 use super::delete::trash::trash_files_with_progress;
 use super::manager::{self, OperationDescriptor, OperationSummaryText};
+use super::routed_writes::{first_routed, routed_transfer_refusal};
 use super::source_binding::{ExpectedSources, retain_bound_sources, retain_bound_sources_with_sizes};
 use super::state::{WriteOperationState, WriteSettledGuard};
 use super::transfer::copy::copy_files_with_progress_inner;
 use super::transfer::move_op::move_files_with_progress_inner;
 use super::types::{
-    RollbackSupport, WriteErrorEvent, WriteOperationConfig, WriteOperationError, WriteOperationStartResult,
-    WriteOperationType,
+    ReadOnlySide, RollbackSupport, WriteErrorEvent, WriteOperationConfig, WriteOperationError,
+    WriteOperationStartResult, WriteOperationType,
 };
 use super::validation::{
     ensure_destination_dir, validate_destination_not_inside_source, validate_destination_writable,
@@ -395,6 +396,14 @@ impl Operations {
                 .await;
         }
 
+        // Anything else a route serves (a repo's `.git/<category>/` trees, or an in-zip
+        // path behind a first source that isn't one) is read-only, and the drive
+        // underneath would delete a real entry (`routed_writes.rs`).
+        if let Some((routed, _)) = first_routed(self.host(), &volume_id_str, sources.iter().map(PathBuf::as_path)).await
+        {
+            return Err(routed_transfer_refusal(&routed, ReadOnlySide::Source));
+        }
+
         if volume_id_str != "root" {
             // Volume-aware delete: its body is async (the `Volume` trait's I/O is), so
             // it owns its own deferred start rather than riding `start_write_operation`.
@@ -466,6 +475,17 @@ impl Operations {
         // cleanup, because on the DELETE path the operation does consume it.)
         if let Some(preview_id) = &config.preview_id {
             self.cancel_scan_preview(preview_id);
+        }
+
+        // A routed path is read-only, as for delete (`routed_writes.rs`).
+        if let Some((routed, _)) = first_routed(
+            self.host(),
+            cmdr_fs::volume::DEFAULT_VOLUME_ID,
+            sources.iter().map(PathBuf::as_path),
+        )
+        .await
+        {
+            return Err(routed_transfer_refusal(&routed, ReadOnlySide::Source));
         }
 
         // Trash always targets the local macOS Trash; no ejectable volume involved.

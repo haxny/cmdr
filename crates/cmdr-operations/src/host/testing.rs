@@ -25,7 +25,7 @@ use cmdr_fs::entry::FileEntry;
 use cmdr_fs::ignore_poison::IgnorePoison;
 use cmdr_fs::volume::host::VolumeHost;
 use cmdr_fs::volume::host::listings::ListingHost;
-use cmdr_fs::volume::{DirectoryChange, ResolvedVolume, Volume};
+use cmdr_fs::volume::{DirectoryChange, ResolvedVolume, RoutedKind, Volume};
 use cmdr_listing::testing::TestEngine;
 use cmdr_listing::{DirectorySortMode, SortColumn, SortOrder, sort_entries};
 use cmdr_operation_log::rollback::VolumeLookup;
@@ -84,17 +84,44 @@ impl EngineEvents for RecordingEngineEvents {
 /// What [`FakeVolumes`] calls with each id it registers.
 type ArrivalListener = Arc<dyn Fn(&str) + Send + Sync>;
 
-/// A volume registry the test fills: nothing routes, nothing is an archive, and
-/// an id it doesn't hold is gone. A registration announces the id to every
-/// arrival listener, inside the call, as the app's registry does.
+/// A volume registry the test fills: nothing is an archive, nothing routes but
+/// what [`FakeVolumes::route`] adds, and an id it doesn't hold is gone. A
+/// registration announces the id to every arrival listener, inside the call, as the app's registry does.
 // DEFAULT-OK: a registry the test hasn't filled holds no volume, which is what it says.
 #[derive(Default)]
 pub struct FakeVolumes {
     volumes: Mutex<HashMap<String, Arc<dyn Volume>>>,
     arrival_listeners: Mutex<Vec<ArrivalListener>>,
+    routes: Mutex<Vec<FakeRoute>>,
+}
+
+/// A path prefix [`FakeVolumes`] serves through a route rather than its drive.
+struct FakeRoute {
+    under: PathBuf,
+    kind: RoutedKind,
+    volume: Arc<dyn Volume>,
 }
 
 impl FakeVolumes {
+    /// Serves every path strictly under `under` (on any volume id) through
+    /// `volume` as a `kind` route, the way the app routes a `.zip`'s inside or a
+    /// repo's `.git/<category>/` trees.
+    pub fn route(&self, under: impl Into<PathBuf>, kind: RoutedKind, volume: Arc<dyn Volume>) {
+        self.routes.lock_ignore_poison().push(FakeRoute {
+            under: under.into(),
+            kind,
+            volume,
+        });
+    }
+
+    fn route_for(&self, path: &Path) -> Option<(RoutedKind, Arc<dyn Volume>)> {
+        self.routes
+            .lock_ignore_poison()
+            .iter()
+            .find(|route| path != route.under && path.starts_with(&route.under))
+            .map(|route| (route.kind, Arc::clone(&route.volume)))
+    }
+
     /// Registers `volume` under `volume_id`, then tells every arrival listener.
     pub fn register(&self, volume_id: &str, volume: Arc<dyn Volume>) {
         self.volumes.lock_ignore_poison().insert(volume_id.to_string(), volume);
@@ -114,11 +141,18 @@ impl VolumeLookup for FakeVolumes {
 
 impl OperationVolumes for FakeVolumes {
     fn resolve<'a>(&'a self, volume_id: &'a str, path: &'a Path) -> VolumeAnswer<'a, ResolvedVolume> {
-        let volume = self.get(volume_id);
-        Box::pin(async move { ResolvedVolume::passthrough(volume, path) })
+        let resolved = match self.route_for(path) {
+            Some((kind, volume)) => ResolvedVolume {
+                volume: Some(volume),
+                path: path.to_path_buf(),
+                routed: Some(kind),
+            },
+            None => ResolvedVolume::passthrough(self.get(volume_id), path),
+        };
+        Box::pin(async move { resolved })
     }
-    fn routes_over_its_parent(&self, _path: &Path) -> bool {
-        false
+    fn routes_over_its_parent(&self, path: &Path) -> bool {
+        self.route_for(path).is_some()
     }
     fn path_is_inside_archive<'a>(&'a self, _volume_id: &'a str, _path: &'a Path) -> VolumeAnswer<'a, bool> {
         Box::pin(async { false })

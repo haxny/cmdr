@@ -126,8 +126,8 @@ impl crate::Operations {
             (vec![LaneKey::new("root")], Vec::new(), None, rows)
         } else {
             // `start_renames` classified an unregistered id before this; one missing NOW left the
-            // registry in between (an unmount race). Plain `get`: a bulk rename acts on the drive
-            // itself; it has no archive or `.git` routing.
+            // registry in between (an unmount race). Plain `get`: `start_renames` refused a
+            // routed row.
             let volume = self
                 .host()
                 .volumes()

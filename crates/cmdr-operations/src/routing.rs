@@ -24,6 +24,7 @@ use std::sync::Arc;
 
 use super::event_sinks::OperationEventSink;
 use super::host;
+use super::routed_writes::{first_routed, routed_transfer_refusal};
 use super::source_binding::ExpectedSources;
 use super::target_names::{NotAName, TargetNames};
 use super::transfer::volume::{PathRole, unregistered_volume_error};
@@ -509,13 +510,21 @@ impl crate::Operations {
                 path: name,
                 message: "a new name is one name, not a path".to_string(),
             })?;
-        let sources: Vec<PathBuf> = renames.into_iter().map(|(source, _)| source).collect();
-        // Plain `get`: a rename that runs as a move acts on the drive itself; it has no
-        // archive or `.git` routing of its own.
+        let (sources, names): (Vec<PathBuf>, Vec<String>) = renames.into_iter().unzip();
+        // Plain `get`: the route gates below refuse an in-zip or `.git` source or target.
         let Some(volume) = self.host().volumes().get(&volume_id) else {
             return Err(source_volume_missing(self.host(), &volume_id, &sources).await);
         };
         let dest_path = resolve_dest_path(&volume, dest_path);
+        // A rename runs on the drive itself, and a route (inside a `.zip`, or a repo's
+        // `.git/<category>/` trees) serves these paths read-only (`routed_writes.rs`).
+        if let Some((routed, _)) = first_routed(self.host(), &volume_id, sources.iter().map(PathBuf::as_path)).await {
+            return Err(routed_transfer_refusal(&routed, ReadOnlySide::Source));
+        }
+        let targets: Vec<PathBuf> = names.iter().map(|name| dest_path.join(name)).collect();
+        if let Some((routed, _)) = first_routed(self.host(), &volume_id, targets.iter().map(PathBuf::as_path)).await {
+            return Err(routed_transfer_refusal(&routed, ReadOnlySide::Destination));
+        }
         self.move_between_volumes(
             events,
             volume_id.clone(),

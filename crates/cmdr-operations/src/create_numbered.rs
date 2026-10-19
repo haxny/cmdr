@@ -15,6 +15,7 @@ use cmdr_fs::volume::VolumeError;
 use cmdr_operation_log::types::{EntryType, Initiator, OpKind};
 
 use super::mutation_error::MutationError;
+use super::routed_writes::{route_serving, routed_mutation_refusal};
 use super::types::WriteOperationType;
 use super::unique_name::numbered_name;
 
@@ -36,7 +37,16 @@ impl super::Operations {
         initiator: Initiator,
     ) -> Result<String, MutationError> {
         let volume_id_str = volume_id.clone().unwrap_or_else(|| "root".to_string());
-        // Plain `get`: a numbered create acts on the drive itself; it has no archive or `.git` routing.
+        // A route (inside a `.zip`, or a repo's `.git/<category>/` trees) serves `dir`
+        // read-only; the drive underneath would take a real file there.
+        let first_candidate = dir.join(numbered_name(stem, Some(ext), 0));
+        if route_serving(self.host(), &volume_id_str, &first_candidate)
+            .await
+            .is_some()
+        {
+            return Err(routed_mutation_refusal(&first_candidate));
+        }
+        // Plain `get`: the route gate above sent an in-zip or `.git` folder away.
         let Some(volume) = self.host().volumes().get(&volume_id_str) else {
             return Err(
                 super::mutation_error::unregistered_volume_refusal(self.host().volumes(), volume_id_str, dir).await,

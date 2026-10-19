@@ -28,6 +28,7 @@ use super::host::{EngineHost, InstantMutationFact, InstantOp, InstantTarget};
 use super::look_alike::{NewEntry, place_new_entry};
 use super::manager::{OperationDescriptor, OperationSummaryText};
 use super::mutation_error::MutationError;
+use super::routed_writes::{route_serving, routed_mutation_refusal};
 use super::types::{ReadOnlySide, WriteOperationType};
 use cmdr_archive::mutator::{AddEntry, AddSource, Changeset};
 use cmdr_fs::volume::{MutationEvent, Volume};
@@ -47,6 +48,22 @@ async fn parent_crosses_archive_boundary(host: &EngineHost, volume_id: Option<&s
     host.volumes()
         .path_crosses_archive_boundary(volume_id.unwrap_or("root"), Path::new(parent_path))
         .await
+}
+
+/// Refuses a new entry inside a repo's `.git/<category>/` trees: the portal
+/// serves them read-only, and the drive underneath would get a real entry in the
+/// repository's `.git` folder (`routed_writes.rs`). An in-zip parent never gets
+/// here: the archive gate above routes it to the edit driver.
+async fn refuse_routed_create(
+    host: &EngineHost,
+    volume_id: Option<&str>,
+    parent_path: &str,
+    name: &str,
+) -> Option<MutationError> {
+    let new_path = Path::new(parent_path).join(name);
+    route_serving(host, volume_id.unwrap_or("root"), &new_path)
+        .await
+        .map(|_| routed_mutation_refusal(&new_path))
 }
 
 impl Operations {
@@ -111,6 +128,9 @@ async fn create_directory_managed_inner(
             route_archive_create(engine, &parent_path, &name, ArchiveEntryKind::Dir, volume_id).await,
             InstantTarget::Archive,
         );
+    }
+    if let Some(refusal) = refuse_routed_create(engine.host(), volume_id.as_deref(), &parent_path, &name).await {
+        return (Err(refusal), InstantTarget::Volume);
     }
 
     let volume_id_for_diff = volume_id.clone();
@@ -186,6 +206,9 @@ async fn create_file_managed_inner(
             route_archive_create(engine, &parent_path, &name, ArchiveEntryKind::File, volume_id).await,
             InstantTarget::Archive,
         );
+    }
+    if let Some(refusal) = refuse_routed_create(engine.host(), volume_id.as_deref(), &parent_path, &name).await {
+        return (Err(refusal), InstantTarget::Volume);
     }
 
     let volume_id_for_diff = volume_id.clone();
