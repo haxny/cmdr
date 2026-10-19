@@ -18,7 +18,7 @@ use super::scope::OpScope;
 use super::sources_gone_slot::SourcesGoneSlot;
 use super::types::{
     ConflictId, ConflictResolution, ConflictResolutionOutcome, TransferActivity, TransferWaitReason,
-    WriteConflictEvent, WriteOperationType, WriteProgressEvent, WriteSettledEvent,
+    WriteConflictEvent, WriteProgressEvent,
 };
 
 // The conflict slot lives in its own module: arbitrating one answer per conflict
@@ -739,59 +739,6 @@ impl cmdr_fs::volume::ScanStopSignal for WriteOperationState {
     }
 }
 
-/// RAII guard that emits exactly one `write-settled` event when dropped.
-///
-/// Place at the top of every write-op spawned task. Whatever way the task
-/// exits — happy path, error path, cancel, or panic via `JoinError` propagation
-/// — the guard's `Drop` impl fires, so the FE always learns "this op's
-/// background work is fully torn down; the volume is ready for the next op."
-///
-/// The guard takes the same injected `Arc<dyn OperationEventSink>` the rest of
-/// the pipeline uses (built at the IPC edge as `TauriEventSink`, or a
-/// `CollectorEventSink` in tests), so the full spawn-task lifecycle runs with no
-/// Tauri runtime under test.
-pub(crate) struct WriteSettledGuard {
-    inner: Option<WriteSettledGuardInner>,
-}
-
-struct WriteSettledGuardInner {
-    sink: Arc<dyn OperationEventSink>,
-    operation_id: String,
-    operation_type: WriteOperationType,
-    volume_id: Option<String>,
-}
-
-impl WriteSettledGuard {
-    /// Builds a guard that emits `write-settled` via `sink.emit_settled(...)`
-    /// on drop.
-    pub(crate) fn new(
-        sink: Arc<dyn OperationEventSink>,
-        operation_id: impl Into<String>,
-        operation_type: WriteOperationType,
-        volume_id: Option<String>,
-    ) -> Self {
-        Self {
-            inner: Some(WriteSettledGuardInner {
-                sink,
-                operation_id: operation_id.into(),
-                operation_type,
-                volume_id,
-            }),
-        }
-    }
-}
-
-impl Drop for WriteSettledGuard {
-    fn drop(&mut self) {
-        let Some(inner) = self.inner.take() else { return };
-        inner.sink.emit_settled(WriteSettledEvent {
-            operation_id: inner.operation_id,
-            operation_type: inner.operation_type,
-            volume_id: inner.volume_id,
-        });
-    }
-}
-
 // The by-id controls (cancel / abort / pause / resume / conflict answer) live in
 // `state/controls.rs`: each is a registry lookup plus one flag flip, and keeping
 // them together is what makes the two stopping tiers legible side by side.
@@ -799,9 +746,12 @@ mod activity;
 mod controls;
 // The registry every by-id lookup goes through, and its walks over all of them.
 mod registry;
+// The RAII guard behind every op's one `write-settled`.
+mod settled_guard;
 // What a Rollback-cancelled transfer's own reversal sees of it.
 mod wind_down;
 pub(super) use registry::WriteOperationRegistry;
+pub(crate) use settled_guard::WriteSettledGuard;
 pub(crate) use wind_down::WindDown;
 
 #[cfg(test)]

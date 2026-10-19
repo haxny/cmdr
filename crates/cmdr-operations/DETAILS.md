@@ -134,15 +134,15 @@ The full top-level inventory is here:
   the runtime, the volumes, the engine-wide events, and the optional seams, § "The engine's host"), `manager.rs`
   (registry + lane admission; what the queue window asks in `manager/queue_api.rs`, its request answers in
   `manager/wire.rs`, reordering the line in `manager/reorder.rs`, and a retained failure's way to start again in
-  `manager/retry.rs`, § "Retained failures"), `state.rs` (`WriteOperationState`, the settle guard, plus
-  `state/registry.rs`: `WriteOperationRegistry` and its walks, and `state/controls.rs`: the by-id cancel / abort / pause
-  / resume / conflict-answer entry points, re-exported through `state`, and `state/activity.rs`: the one wait
-  classifier, § "Naming a wait"), `outage_slot.rs` (which volume the operation waits on to come back, and how patiently:
-  `src/transfer/DETAILS.md` § "Waiting out a volume that went away"), `status_cache.rs` (the status cache, the
-  busy-volumes set it derives, the external drag-out seam, and `get_operation_status`), `summary.rs` (what the queue row
-  says an operation acts on, § "What a row says it acts on"), `operation_intent.rs` (`OperationIntent`, `PauseGate`),
-  `human_wait.rs` (how long a person, or a volume that left, has kept the operation waiting), `metadata_losses.rs`
-  (per-class counts of the metadata a destination couldn't keep, for the completion's note:
+  `manager/retry.rs`, § "Retained failures"), `state.rs` (`WriteOperationState`, plus `state/settled_guard.rs`: the
+  settle guard, `state/registry.rs`: `WriteOperationRegistry` and its walks, and `state/controls.rs`: the by-id cancel /
+  abort / pause / resume / conflict-answer entry points, re-exported through `state`, and `state/activity.rs`: the one
+  wait classifier, § "Naming a wait"), `outage_slot.rs` (which volume the operation waits on to come back, and how
+  patiently: `src/transfer/DETAILS.md` § "Waiting out a volume that went away"), `status_cache.rs` (the status cache,
+  the busy-volumes set it derives, the external drag-out seam, and `get_operation_status`), `summary.rs` (what the queue
+  row says an operation acts on, § "What a row says it acts on"), `operation_intent.rs` (`OperationIntent`,
+  `PauseGate`), `human_wait.rs` (how long a person, or a volume that left, has kept the operation waiting),
+  `metadata_losses.rs` (per-class counts of the metadata a destination couldn't keep, for the completion's note:
   `src/transfer/volume/DETAILS.md` § "Copies keep the source's metadata"), `mount_boundary.rs` (where a delete's walk
   stops: `src/delete/DETAILS.md` § "A mount is a wall"), `archive_edit/` (the zip-edit driver).
 - The in-flight ledgers and what reverses them: `ledger.rs` (`CopyTransaction` and `WrittenFile`, the vocabulary of what
