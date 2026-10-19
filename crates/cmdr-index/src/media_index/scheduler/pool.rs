@@ -45,6 +45,7 @@ use crate::media_index::progress::{EnrichProgress, EnrichProgressSink};
 use crate::media_index::store::{EnrichmentState, needs_clip, needs_enrichment};
 use crate::media_index::writer::MediaWriter;
 use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::log_private::LogPrivate;
 
 use crate::media_index::paths::parent_dir;
 
@@ -310,13 +311,13 @@ fn process_image(image: &ImageEntry, backend: &dyn VisionBackend, state: &PassSt
                 // A VANISHED source (ENOENT-class): skip QUIETLY (DEBUG, no row); a later
                 // completed pass's GC collects any stale row. Already counted toward `done`.
                 Err(VisionError::Missing(msg)) => {
-                    log::debug!(target: "media_index", "skipping vanished image '{}': {msg}", image.path);
+                    log::debug!(target: "media_index", "skipping vanished image '{}': {msg}", LogPrivate::file_path(&image.path));
                 }
                 // A present-but-bad file: a real per-file failure. Mark Vision `Failed` (if
                 // attempted) and stamp CLIP (embedding `None`) so a bad file isn't re-decoded
                 // for CLIP every pass.
                 Err(e) => {
-                    log::warn!(target: "media_index", "analysis failed for '{}': {e}", image.path);
+                    log::warn!(target: "media_index", "analysis failed for '{}': {e}", LogPrivate::file_path(&image.path));
                     if want_vision {
                         state
                             .writer

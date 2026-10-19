@@ -60,6 +60,7 @@ use usearch::{IndexOptions, MetricKind, ScalarKind};
 
 use super::store::MediaStoreError;
 use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::log_private::LogPrivate;
 
 /// Below this many stored vectors, semantic search keeps the EXACT resident-f16
 /// brute-force scan; at or above it, the ANN index takes over. Rationale (spike,
@@ -224,7 +225,7 @@ pub(crate) fn delete_index_files(db_path: &Path, space: AnnSpace) {
         if path.exists()
             && let Err(e) = std::fs::remove_file(&path)
         {
-            log::warn!(target: "media_index", "removing ann file {} failed: {e}", path.display());
+            log::warn!(target: "media_index", "removing ann file {} failed: {e}", LogPrivate::file_path(&path));
         }
     }
 }
@@ -414,7 +415,7 @@ pub(crate) fn flush_ops(db_path: &Path, space: AnnSpace, model_id: &str, ops: Ve
             log::info!(
                 target: "media_index",
                 "ann index at {} is stale ({e}); deleting for rebuild",
-                idx_path.display()
+                LogPrivate::file_path(&idx_path)
             );
             delete_index_files(db_path, space);
             return FlushOutcome::DroppedStale;
@@ -444,7 +445,7 @@ pub(crate) fn flush_ops(db_path: &Path, space: AnnSpace, model_id: &str, ops: Ve
             log::warn!(
                 target: "media_index",
                 "ann flush failed for {} ({e}); deleting for rebuild",
-                idx_path.display()
+                LogPrivate::file_path(&idx_path)
             );
             delete_index_files(db_path, space);
             FlushOutcome::DroppedStale
@@ -521,7 +522,7 @@ pub(crate) fn wipe_if_crashed(db_path: &Path, space: AnnSpace) {
         log::info!(
             target: "media_index",
             "ann index for {} has a dirty marker from a previous session; wiping for rebuild",
-            db_path.display()
+            LogPrivate::file_path(&db_path)
         );
         delete_index_files(db_path, space);
     }

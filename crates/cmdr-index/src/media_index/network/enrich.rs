@@ -43,6 +43,7 @@ use crate::media_index::scheduler::pool::{MakeBackend, WorkerCount};
 use crate::media_index::store::{EnrichmentState, MediaStatusRow, needs_clip, needs_enrichment};
 use crate::media_index::writer::MediaWriter;
 use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::log_private::LogPrivate;
 
 use super::budget::ByteBudget;
 use super::fetch::{ByteFetcher, FetchError, os_join};
@@ -192,14 +193,14 @@ fn run_sequential(ctx: &NetworkEnrichCtx) -> Result<NetworkPassOutcome, String> 
                 }
                 Err(FetchError::NotFound) => {}
                 Err(FetchError::TooLarge) => {
-                    log::debug!(target: "media_index", "network enrichment skips oversized '{}'", image.path);
+                    log::debug!(target: "media_index", "network enrichment skips oversized '{}'", LogPrivate::file_path(&image.path));
                 }
                 // A per-file read failure (permission denied and friends) skips and
                 // counts, NEVER pauses (that's reserved for a typed disconnect) and
                 // never writes a row (`Failed` is for a good read with a bad decode).
                 Err(FetchError::Unreadable(msg)) => {
                     summary.skipped_unreadable += 1;
-                    log::debug!(target: "media_index", "network enrichment skips unreadable '{}': {msg}", image.path);
+                    log::debug!(target: "media_index", "network enrichment skips unreadable '{}': {msg}", LogPrivate::file_path(&image.path));
                 }
             }
         }
@@ -444,14 +445,14 @@ fn run_parallel(ctx: &NetworkEnrichCtx) -> Result<NetworkPassOutcome, String> {
                         }
                         Err(FetchError::TooLarge) => {
                             budget.release(reserved);
-                            log::debug!(target: "media_index", "network enrichment skips oversized '{}'", image.path);
+                            log::debug!(target: "media_index", "network enrichment skips oversized '{}'", LogPrivate::file_path(&image.path));
                         }
                         // Per-file read failure: skip-and-count, never a pause (see
                         // the sequential arm).
                         Err(FetchError::Unreadable(msg)) => {
                             budget.release(reserved);
                             skipped_unreadable.fetch_add(1, Ordering::Relaxed);
-                            log::debug!(target: "media_index", "network enrichment skips unreadable '{}': {msg}", image.path);
+                            log::debug!(target: "media_index", "network enrichment skips unreadable '{}': {msg}", LogPrivate::file_path(&image.path));
                         }
                     }
                 }
@@ -609,7 +610,7 @@ fn compute_and_write(
         Err(e) => {
             // A GOOD read but a bad decode/analysis ⇒ a genuinely bad file ⇒ `Failed` (same
             // as the local pass). NOT a disconnect.
-            log::warn!(target: "media_index", "network analysis failed for '{}': {e}", image.path);
+            log::warn!(target: "media_index", "network analysis failed for '{}': {e}", LogPrivate::file_path(&image.path));
             if want_vision {
                 cctx.writer
                     .upsert(status_row(image, EnrichmentState::Failed, stamp), None)

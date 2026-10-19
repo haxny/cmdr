@@ -36,6 +36,7 @@
 use std::sync::mpsc;
 use std::thread;
 
+use cmdr_fs::log_private::LogPrivate;
 use objc2::AnyThread;
 use objc2::rc::autoreleasepool;
 use objc2_core_foundation::{
@@ -326,7 +327,8 @@ fn analyze_image(path: &str, prefetched: Option<&[u8]>) -> Result<Analysis, Visi
     if width < MIN_ANALYZE_DIMENSION || height < MIN_ANALYZE_DIMENSION {
         log::debug!(
             target: "media_index",
-            "skipping too-small image '{path}' ({width}x{height}); indexable-file noise, not a photo"
+            "skipping too-small image '{path}' ({width}x{height}); indexable-file noise, not a photo",
+            path = LogPrivate::file_path(path),
         );
         return Ok(Analysis {
             ocr: OcrResult { text: String::new() },
@@ -416,7 +418,11 @@ fn analyze_media_image(
             Some(pixels) => match crate::media_index::clip::encode_image_pixels(pixels) {
                 Ok(vec) => Some(vec),
                 Err(e) => {
-                    log::debug!(target: "media_index", "CLIP image encode unavailable for '{path}': {e}");
+                    log::debug!(
+                        target: "media_index",
+                        "CLIP image encode unavailable for '{}': {e}",
+                        LogPrivate::file_path(path)
+                    );
                     None
                 }
             },

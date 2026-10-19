@@ -61,6 +61,7 @@ mod tests;
 
 use std::path::{Path, PathBuf};
 
+use cmdr_fs::log_private::LogPrivate;
 use half::f16;
 use rusqlite::Connection;
 
@@ -633,7 +634,7 @@ pub(crate) fn embedding_count(db_path: &Path, table: EmbeddingTable) -> u64 {
     open_read_connection(db_path)
         .and_then(|conn| embedding_count_on(&conn, table))
         .unwrap_or_else(|e| {
-            log::warn!(target: "media_index", "embedding count failed for {}: {e}", db_path.display());
+            log::warn!(target: "media_index", "embedding count failed for {}: {e}", LogPrivate::file_path(&db_path));
             0
         })
 }

@@ -17,6 +17,7 @@
 use std::collections::HashMap;
 
 use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::log_private::LogPrivate;
 
 use crate::media_index::{coverage, network, store, vector};
 
@@ -168,7 +169,8 @@ impl MediaScheduler {
                 Err(e) => {
                     log::warn!(
                         target: "media_index",
-                        "purge under '{folder}' on '{volume_id}' didn't land ({e}); retrying on its next pass"
+                        "purge under '{folder}' on '{volume_id}' didn't land ({e}); retrying on its next pass",
+                        folder = LogPrivate::dir_path(folder),
                     );
                     true
                 }

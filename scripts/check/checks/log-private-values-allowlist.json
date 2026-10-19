@@ -481,62 +481,6 @@
       "count": 1,
       "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
     },
-    "crates/cmdr-index/src/drive_index_relocation.rs": {
-      "count": 1,
-      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
-    },
-    "crates/cmdr-index/src/media_index/ann/cache.rs": {
-      "count": 1,
-      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
-    },
-    "crates/cmdr-index/src/media_index/ann/mod.rs": {
-      "count": 4,
-      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
-    },
-    "crates/cmdr-index/src/media_index/ann/rebuild.rs": {
-      "count": 3,
-      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
-    },
-    "crates/cmdr-index/src/media_index/backend/vision/mod.rs": {
-      "count": 2,
-      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
-    },
-    "crates/cmdr-index/src/media_index/network/enrich.rs": {
-      "count": 5,
-      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
-    },
-    "crates/cmdr-index/src/media_index/read/mod.rs": {
-      "count": 1,
-      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
-    },
-    "crates/cmdr-index/src/media_index/scheduler/pool.rs": {
-      "count": 2,
-      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
-    },
-    "crates/cmdr-index/src/media_index/scheduler/purge.rs": {
-      "count": 1,
-      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
-    },
-    "crates/cmdr-index/src/media_index/store/mod.rs": {
-      "count": 1,
-      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
-    },
-    "crates/cmdr-index/src/media_index/vector/cache.rs": {
-      "count": 1,
-      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
-    },
-    "crates/cmdr-index/src/media_index/writer/ann_pending.rs": {
-      "count": 2,
-      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
-    },
-    "crates/cmdr-index/src/media_index/writer/mod.rs": {
-      "count": 3,
-      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
-    },
-    "crates/cmdr-index/src/volume_files.rs": {
-      "count": 1,
-      "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"
-    },
     "crates/cmdr-listing/src/foreign_path.rs": {
       "count": 7,
       "reason": "Unmarked log values from before the marker convention (#491); wrap each in `LogPrivate` to retire this entry"

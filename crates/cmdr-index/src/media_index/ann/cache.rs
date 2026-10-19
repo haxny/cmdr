@@ -25,6 +25,7 @@ use std::sync::{Arc, LazyLock, Mutex};
 use super::{AnnError, AnnSpace, engine_err, expansion_search_for, index_path, read_meta, verify_index_checksum};
 use crate::media_index::store;
 use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::log_private::LogPrivate;
 
 /// A warm, immutable mmap `view` of a volume's ANN index. `usearch::Index` is
 /// thread-safe for concurrent searches, so one handle serves every query until
@@ -73,7 +74,7 @@ fn decide(db_path: &Path, space: AnnSpace, threshold: usize, model_id: &str) -> 
             log::info!(
                 target: "media_index",
                 "ann index for {} unusable ({e}); brute-force fallback while it rebuilds",
-                db_path.display()
+                LogPrivate::file_path(&db_path)
             );
             super::rebuild::kick(db_path, space, model_id);
             Route::BruteForce

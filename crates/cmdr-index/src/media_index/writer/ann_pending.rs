@@ -2,6 +2,8 @@
 
 use std::path::PathBuf;
 
+use cmdr_fs::log_private::LogPrivate;
+
 use crate::media_index::ann;
 
 /// The writer thread's buffered ANN mutations (plan M6): ops accumulate beside the
@@ -62,14 +64,14 @@ impl AnnPending {
             log::debug!(
                 target: "media_index",
                 "ann flush deferred for {} (rebuild in flight; {} ops retained)",
-                self.db_path.display(),
+                LogPrivate::file_path(&self.db_path),
                 self.ops.len()
             );
             return;
         }
         let ops = std::mem::take(&mut self.ops);
         let outcome = ann::flush_ops(&self.db_path, space, space.current_model_id(), ops);
-        log::debug!(target: "media_index", "ann flush for {}: {outcome:?}", self.db_path.display());
+        log::debug!(target: "media_index", "ann flush for {}: {outcome:?}", LogPrivate::file_path(&self.db_path));
         self.dirty_marked = false;
     }
 

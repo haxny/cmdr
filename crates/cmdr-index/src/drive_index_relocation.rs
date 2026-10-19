@@ -35,6 +35,7 @@
 use std::io::ErrorKind;
 use std::path::Path;
 
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::sqlite_util;
 
 use crate::volume_files::VolumeStore;
@@ -136,7 +137,7 @@ fn relocate_one(from: &Path, to: &Path, volume_id: &str) -> Outcome {
             log::info!(
                 target: "indexing",
                 "the drive index of '{volume_id}' is on another volume than {}; rebuilding it there instead of copying",
-                to.display()
+                LogPrivate::dir_path(to)
             );
             discard(&old_db)
         }

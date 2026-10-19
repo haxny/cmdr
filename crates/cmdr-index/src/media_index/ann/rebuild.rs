@@ -21,6 +21,7 @@ use std::time::Instant;
 use super::{AnnError, AnnMeta, AnnSpace, engine_err};
 use crate::media_index::store;
 use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::log_private::LogPrivate;
 
 /// The in-flight set: one rebuild per index file at a time. A query that finds the
 /// route unusable while a rebuild is already running just keeps brute-forcing.
@@ -73,19 +74,19 @@ pub(crate) fn kick(db_path: &Path, space: AnnSpace, model_id: &str) {
                 Ok(rows) => log::info!(
                     target: "media_index",
                     "ann rebuild for {} done: {} in {:.1?}",
-                    db_path.display(),
+                    LogPrivate::file_path(&db_path),
                     cmdr_fs::pluralize::pluralize(rows, "vector"),
                     started.elapsed()
                 ),
                 Err(AnnError::Stopped) => log::info!(
                     target: "media_index",
                     "ann rebuild for {} stopped early (watchdog/toggle); will retry on a later query",
-                    db_path.display()
+                    LogPrivate::file_path(&db_path)
                 ),
                 Err(e) => log::warn!(
                     target: "media_index",
                     "ann rebuild for {} did not complete: {e}",
-                    db_path.display()
+                    LogPrivate::file_path(&db_path)
                 ),
             }
             IN_FLIGHT.lock_ignore_poison().remove(&(db_path.clone(), space));

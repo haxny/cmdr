@@ -25,6 +25,8 @@ mod exclusion;
 use std::collections::HashMap;
 use std::path::PathBuf;
 
+use cmdr_fs::log_private::LogPrivate;
+
 use super::ann;
 pub use super::scheduler::enrich::ImageEntry;
 use super::store::{
@@ -229,7 +231,7 @@ impl MediaIndex {
                     log::warn!(
                         target: "media_index",
                         "ann semantic search failed for {} ({e}); brute-force fallback",
-                        self.db_path.display()
+                        LogPrivate::file_path(&self.db_path)
                     );
                 }
             }

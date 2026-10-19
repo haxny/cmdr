@@ -23,6 +23,7 @@ use std::sync::{Arc, LazyLock, Mutex};
 
 use crate::media_index::store::{EmbeddingTable, open_read_connection, read_all_embeddings_from};
 use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::log_private::LogPrivate;
 
 use super::BruteForceVectorStore;
 
@@ -68,7 +69,7 @@ fn load(db_path: &Path, table: EmbeddingTable) -> BruteForceVectorStore {
         .and_then(|conn| read_all_embeddings_from(&conn, table))
         .map(|rows| rows.into_iter().map(|r| (r.path, r.vector)).collect())
         .unwrap_or_else(|e| {
-            log::warn!(target: "media_index", "vector cache load failed for {} ({table:?}): {e}", db_path.display());
+            log::warn!(target: "media_index", "vector cache load failed for {} ({table:?}): {e}", LogPrivate::file_path(&db_path));
             Vec::new()
         });
     BruteForceVectorStore::new(entries)

@@ -25,6 +25,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
 use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::log_private::LogPrivate;
 use cmdr_fs::sqlite_util;
 
 /// One of the per-volume stores in the data dir.
@@ -312,7 +313,7 @@ pub(crate) fn volume_ids_on_disk(dirs: &StoreDirs, why: Removal) -> Vec<String> 
             // A drive-index dir nothing has written yet, or one a cleaner emptied.
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => continue,
             Err(e) => {
-                log::warn!(target: "indexing::retention", "cannot read {}: {e}", dir.display());
+                log::warn!(target: "indexing::retention", "cannot read {}: {e}", LogPrivate::dir_path(dir));
                 continue;
             }
         };

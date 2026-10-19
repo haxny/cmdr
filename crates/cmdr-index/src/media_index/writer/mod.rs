@@ -71,6 +71,7 @@ use super::coverage::accounted;
 use super::paths::parent_dir;
 use super::store::{EnrichmentState, MediaStatusRow, MediaStoreError, open_write_connection};
 use cmdr_fs::ignore_poison::IgnorePoison;
+use cmdr_fs::log_private::LogPrivate;
 
 /// Bounded channel capacity. Enrichment sends one `Upsert` per image; a modest
 /// bound gives backpressure without holding many messages.
@@ -425,7 +426,9 @@ fn writer_loop(mut conn: Connection, receiver: mpsc::Receiver<WriteMessage>, vol
                         accounted::inc(&volume_id, parent_dir(&row.path));
                     }
                     Ok(_) => {}
-                    Err(e) => log::warn!(target: "media_index", "upsert failed for '{}': {e}", row.path),
+                    Err(e) => {
+                        log::warn!(target: "media_index", "upsert failed for '{}': {e}", LogPrivate::file_path(&row.path))
+                    }
                 }
             }
             WriteMessage::UpsertClip {
@@ -448,7 +451,9 @@ fn writer_loop(mut conn: Connection, receiver: mpsc::Receiver<WriteMessage>, vol
                         ann_pending.push(ann::AnnOp::Remove { key: file_id as u64 });
                     }
                     Ok(ClipWrite::NoRow) => {}
-                    Err(e) => log::warn!(target: "media_index", "clip upsert failed for '{path}': {e}"),
+                    Err(e) => {
+                        log::warn!(target: "media_index", "clip upsert failed for '{}': {e}", LogPrivate::file_path(&path))
+                    }
                 }
             }
             WriteMessage::GcPaths { paths } => {
@@ -547,7 +552,7 @@ fn writer_loop(mut conn: Connection, receiver: mpsc::Receiver<WriteMessage>, vol
             }
             WriteMessage::RecordMountRoot { root } => {
                 if let Err(e) = super::store::write_mount_root(&conn, &root) {
-                    log::warn!(target: "media_index", "recording mount root '{root}' failed: {e}");
+                    log::warn!(target: "media_index", "recording mount root '{}' failed: {e}", LogPrivate::dir_path(&root));
                 }
             }
             WriteMessage::Shutdown => break,
