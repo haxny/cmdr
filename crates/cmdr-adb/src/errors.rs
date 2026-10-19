@@ -158,10 +158,8 @@ pub const ENOENT: i32 = 2;
 pub const EACCES: i32 = 13;
 /// Linux `EEXIST`.
 pub const EEXIST: i32 = 17;
-/// Linux `ENOTDIR`. Only the fake device in `testing` names it: a real one
-/// falls through `volume_error_from_errno` to `IoError` carrying the number,
-/// which is all the app's classifier needs, so it is gated like its one user.
-#[cfg(any(test, feature = "testing"))]
+/// Linux `ENOTDIR`. The destination probe reads it as "nothing there" (a
+/// parent that's a file), and the fake device answers with it.
 pub const ENOTDIR: i32 = 20;
 /// Linux `EISDIR`.
 pub const EISDIR: i32 = 21;
