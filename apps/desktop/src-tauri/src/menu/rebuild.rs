@@ -96,6 +96,8 @@ fn install<R: Runtime>(
     *menu_state.viewer_word_wrap.lock_ignore_poison() = Some(viewer_menu_items.word_wrap);
     *menu_state.viewer_edit_cut.lock_ignore_poison() = Some(viewer_menu_items.edit_cut);
     *menu_state.viewer_edit_paste.lock_ignore_poison() = Some(viewer_menu_items.edit_paste);
+    *menu_state.viewer_go_back.lock_ignore_poison() = Some(viewer_menu_items.go_back);
+    *menu_state.viewer_go_forward.lock_ignore_poison() = Some(viewer_menu_items.go_forward);
     *menu_state.viewer_menu.lock_ignore_poison() = Some(viewer_menu_items.menu);
 
     // A fresh bar comes up with fresh items, so every stored verdict has to be put back on them.

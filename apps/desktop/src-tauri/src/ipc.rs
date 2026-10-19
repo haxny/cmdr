@@ -90,7 +90,7 @@ use crate::window_events::{
     FocusFileViewer, ForegroundOperation, FunctionKeyBarHideRequested, McpSettingsClose, MouseNav, OpenErrorReport,
     OpenFavorite, OpenFileViewer, OpenSettings, PersistRestrictedSetting, QueueRowContextAction, QueueSelectAll,
     RevealPath, ShowSearchResultInFolder, TabContextAction, ViewerContextMenuAction, ViewerEditAction,
-    ViewerWordWrapToggled,
+    ViewerHistoryAction, ViewerWordWrapToggled,
 };
 // AI + system/misc events.
 use crate::ai::{
@@ -239,6 +239,7 @@ macro_rules! ipc_command_manifest {
                     crate::commands::file_viewer::viewer_get_bytes,
                     crate::commands::file_viewer::viewer_render_markdown,
                     crate::commands::file_viewer::viewer_allow_remote_images,
+                    crate::commands::file_viewer::viewer_follow_markdown_link,
                     crate::commands::file_viewer::viewer_get_status,
                     crate::commands::file_viewer::viewer_search_start,
                     crate::commands::file_viewer::viewer_search_poll,
@@ -250,6 +251,7 @@ macro_rules! ipc_command_manifest {
                     crate::commands::file_viewer::viewer_setup_menu,
                     crate::commands::file_viewer::viewer_set_word_wrap,
                     crate::commands::file_viewer::viewer_set_search_input_focused,
+                    crate::commands::file_viewer::viewer_set_history_state,
                     crate::commands::file_viewer::viewer_get_encoding_options,
                     crate::commands::file_viewer::viewer_set_encoding,
                     crate::commands::file_viewer::viewer_set_tail_mode,
@@ -1260,6 +1262,8 @@ pub fn builder() -> Builder<tauri::Wry> {
             // has to run itself (its selection model isn't in the DOM the responder chain sees).
             ViewerEditAction,
             ViewerContextMenuAction,
+            // emit_to(viewer label): the viewer bar's Go > Back / Forward.
+            ViewerHistoryAction,
             // emit_to("queue"): a pick from a queue row's right-click menu.
             QueueRowContextAction,
             // emit_to(viewer label): how far a viewer's pull into its preview temp got.

@@ -17,9 +17,13 @@
         onViewerWordWrapToggled,
         onViewerEditAction,
         onViewerContextMenuAction,
+        onViewerHistoryAction,
         showViewerContextMenu,
         activateWindowMenu,
     } from '#lib/tauri-commands/index.js'
+    import { replaceState } from '$app/navigation'
+    import { eventMatchesCommand } from '#lib/shortcuts/index.js'
+    import { createViewerNavigation } from './viewer-navigation.svelte'
     import { createViewerPull } from './viewer-pull.svelte'
     import PullProgressPanel from './PullProgressPanel.svelte'
     import { getCurrentWindow } from '@tauri-apps/api/window'
@@ -206,7 +210,26 @@
     // against the spacer rather than the scroll container.
     let spacerRef = $state<HTMLDivElement>()
     let imageViewRef = $state<{ handleKey: (e: KeyboardEvent) => boolean }>()
-    let markdownViewRef = $state<{ selectAll: () => void }>()
+    let markdownViewRef = $state<{
+        selectAll: () => void
+        scrollToElement: (elementId: string | null) => void
+        getScrollTop: () => number
+    }>()
+
+    /**
+     * Links between documents and Back / Forward through them (`viewer-navigation.svelte.ts`),
+     * started on mount with the window's own file. It opens the target; the page swaps to it.
+     */
+    const navigation = createViewerNavigation<OpenResult>({
+        getSessionId: () => sessionId,
+        isBusy: () => loading,
+        getMarkdownScrollTop: () =>
+            viewMode === 'media' && media.kind === 'markdown' && markdownViewRef ? markdownViewRef.getScrollTop() : null,
+        scrollToElement: (elementId) => markdownViewRef?.scrollToElement(elementId),
+        open: (path) => requestOpen(path, false),
+        swapTo: swapToDocument,
+        log,
+    })
 
     // Window lifecycle state. `canClose` prevents closing before WebKit has settled the
     // mount; it flips right after mount, NOT when the open resolves, because a pull off
@@ -283,6 +306,7 @@
     let unlistenWordWrap: UnlistenFn | undefined
     let unlistenEditAction: UnlistenFn | undefined
     let unlistenContextMenuAction: UnlistenFn | undefined
+    let unlistenHistoryAction: UnlistenFn | undefined
     let unlistenWindowFocus: UnlistenFn | undefined
 
     const textWidthTracker = createTextWidthTracker({
@@ -650,6 +674,16 @@
      */
     function handleWindowKeyDown(e: KeyboardEvent) {
         if (!isTextView && media.kind === 'image' && imageViewRef?.handleKey(e)) return
+        const historyStep = eventMatchesCommand(e, 'viewer.goBack')
+            ? 'back'
+            : eventMatchesCommand(e, 'viewer.goForward')
+              ? 'forward'
+              : null
+        if (historyStep) {
+            e.preventDefault()
+            void navigation.step(historyStep)
+            return
+        }
         const mode = modeForKey(e, availableMediaKind(media.kind, media.lastMediaKind) !== null)
         const target = e.target
         const editing = target instanceof HTMLElement && target.closest('input, textarea, [contenteditable="true"], [role="combobox"]')
@@ -692,19 +726,28 @@
      * lets the backend classify and return a media or text session.
      */
     async function openViewerSession(path: string, { asText = false }: { asText?: boolean } = {}) {
+        await applyOpenResult(path, await requestOpen(path, asText))
+    }
+
+    type OpenResult = Awaited<ReturnType<typeof viewerOpen>>
+
+    /** The open itself, with the pull bar around it. Touches no page state. */
+    async function requestOpen(path: string, asText: boolean): Promise<OpenResult> {
         const t0 = performance.now()
         // Pass the window label so the backend can free this session when the
         // window is closed via the titlebar X (which never fires `viewerClose`).
         const open = asText ? viewerOpenAsText : viewerOpen
         pull.start()
-        let result: Awaited<ReturnType<typeof open>>
         try {
-            result = await open(path, volumeId, getCurrentWindow().label)
+            return await open(path, volumeId, getCurrentWindow().label)
         } finally {
             pull.finish()
+            log.debug('viewer_open IPC took {ms}ms', { ms: Math.round(performance.now() - t0) })
         }
-        log.debug('viewer_open IPC took {ms}ms', { ms: Math.round(performance.now() - t0) })
+    }
 
+    /** Swaps the page to a fresh session and (re)attaches the per-session listeners. */
+    async function applyOpenResult(path: string, result: OpenResult) {
         sessionId = result.sessionId
         fileName = result.fileName
         totalBytes = result.totalBytes
@@ -832,6 +875,11 @@
             runViewerContextMenuAction(action, viewerEditActionDeps)
         })
 
+        // Go > Back / Forward from the viewer's menu bar: the same steps ⌘[ / ⌘] take.
+        unlistenHistoryAction = await onViewerHistoryAction(({ direction }) => {
+            void navigation.step(direction)
+        })
+
         // On macOS the app-level menu bar is shared across windows, so each window swaps in its
         // own menu when it gains focus. A freshly-opened viewer window is already focused, so
         // `onFocusChanged` won't fire for this initial focus — activate the viewer menu explicitly
@@ -839,6 +887,7 @@
         void activateWindowMenu('viewer')
         viewerSetWordWrap(windowLabel, scroll.wordWrap).catch(() => {})
         pushSearchInputFocused(isSearchInputFocused(viewerEditActionDeps.search))
+        navigation.pushHistoryState()
 
         // The listener covers subsequent focus regains (clicking back to this viewer), re-syncing
         // the shared checkbox since multiple viewers can have different word-wrap states — and the
@@ -849,6 +898,7 @@
                 void activateWindowMenu('viewer')
                 viewerSetWordWrap(windowLabel, scroll.wordWrap).catch(() => {})
                 pushSearchInputFocused(isSearchInputFocused(viewerEditActionDeps.search))
+                navigation.pushHistoryState({ force: true })
             }
         })
 
@@ -880,6 +930,7 @@
         unlistenWordWrap?.()
         unlistenEditAction?.()
         unlistenContextMenuAction?.()
+        unlistenHistoryAction?.()
         unlistenWindowFocus?.()
     }
 
@@ -902,6 +953,8 @@
         loading = true
         error = ''
         errorCanRetry = false
+        // A view switch reopens the same document at its top, never at a link's old target.
+        navigation.clearLanding()
         cleanupListeners()
         viewerTail.destroy()
         indexingPoll.stop()
@@ -929,6 +982,42 @@
     /** "View as image / PDF" reverse switch: re-open the file so it re-renders as media. */
     function reopenNatural() {
         return reopenSession({ asText: false }, 'View as media')
+    }
+
+    /**
+     * Shows another file in this window the way the window opened its first one, after
+     * `navigation` opened it: everything per-file goes with the old session (search,
+     * selection, tail mode, the encoding pick, the binary banner, the byte offset, the
+     * remembered media kind), and the window's URL names the new file so a reload reopens it.
+     * ❗ A new per-file field resets here too, or it leaks into the next linked document.
+     */
+    async function swapToDocument({ path, result }: { path: string; result: OpenResult }): Promise<void> {
+        const oldSessionId = sessionId
+        cleanupListeners()
+        viewerTail.destroy()
+        indexingPoll.stop()
+        search.closeSearch()
+        selection.clear()
+        tailMode = false
+        bannerDismissed = false
+        rawByteOffset = 0
+        encodingChoices = []
+        media.forgetFile()
+        filePath = path
+        try {
+            await applyOpenResult(path, result)
+        } catch (e) {
+            const failure = handleOpenFailure(log, 'Follow link', e)
+            error = failure.message
+            errorCanRetry = failure.canRetry
+        }
+        if (oldSessionId && oldSessionId !== sessionId) viewerClose(oldSessionId).catch(() => {})
+        const url = new URL(window.location.href)
+        url.searchParams.set('path', path)
+        url.searchParams.delete('tail')
+        replaceState(url, {})
+        await tick()
+        if (viewMode === 'text') scroll.contentRef?.focus()
     }
 
     onMount(async () => {
@@ -982,6 +1071,7 @@
         }
 
         filePath = pathParam
+        navigation.start(pathParam)
         // Missing / empty `volume` param means the local drive (older links, MCP).
         volumeId = params.get('volume') || 'root'
         unlistenPull = await onViewerPullProgress(getCurrentWindow(), (progress) => {
@@ -1227,7 +1317,7 @@
         </div>
     {/if}
 
-    {#if loading && pull.visible}
+    {#if (loading || navigation.navigating) && pull.visible}
         <PullProgressPanel
             fileName={filePath.split('/').pop() ?? filePath}
             bytesDone={pull.bytesDone}
@@ -1266,7 +1356,13 @@
     {:else if media.kind === 'pdf'}
         <MediaPdfView src={media.mediaSrc} {fileName} />
     {:else if media.kind === 'markdown' && sessionId}
-        <MediaMarkdownView bind:this={markdownViewRef} {sessionId} {fileName} />
+        <MediaMarkdownView
+            bind:this={markdownViewRef}
+            {sessionId}
+            {fileName}
+            landing={navigation.landing}
+            onFollowLink={(href: string) => void navigation.followLink(href)}
+        />
     {:else}
         <div
             class="file-content"

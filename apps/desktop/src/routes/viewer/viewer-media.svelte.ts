@@ -78,6 +78,16 @@ export function createViewerMedia(deps: ViewerMediaDeps) {
   }
 
   /**
+   * The window moved on to another file (a followed Markdown link, Back / Forward): its
+   * natural kind is the new file's business, so `lastMediaKind` goes too. The next
+   * `setFromOpenResult` sets it again for a media file.
+   */
+  function forgetFile(): void {
+    reset()
+    lastMediaKind = null
+  }
+
+  /**
    * "View as text" override for a media file. Resets the media state up front,
    * then asks the page to open a fresh full text session and swap to it. A no-op
    * for a text session (nothing to switch to).
@@ -117,6 +127,7 @@ export function createViewerMedia(deps: ViewerMediaDeps) {
     },
     setFromOpenResult,
     reset,
+    forgetFile,
     viewAsText,
     viewAsMedia,
   }

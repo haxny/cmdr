@@ -255,6 +255,17 @@ pub(crate) fn apply_menu_item_states<R: Runtime>(menu_state: &MenuState<R>) {
                 let _ = item.set_enabled(enabled);
             }
         }
+
+        // Go > Back / Forward follow the front viewer's document history.
+        let history = *menu_state.viewer_history.lock_ignore_poison();
+        for (item, enabled) in [
+            (&menu_state.viewer_go_back, history.can_go_back),
+            (&menu_state.viewer_go_forward, history.can_go_forward),
+        ] {
+            if let Some(ref item) = *item.lock_ignore_poison() {
+                let _ = item.set_enabled(enabled);
+            }
+        }
     }
 }
 

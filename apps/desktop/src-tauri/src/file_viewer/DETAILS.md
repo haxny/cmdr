@@ -214,6 +214,8 @@ option, like any text file. Files:
   task lists, heading attributes, GFM alerts) → HTML → `ammonia`.
 - `markdown_images.rs`: pure `resolve_image_src`, plus `VolumeImage` and `RemoteImage`, the two `DeferredMedia`
   sources behind an image's token.
+- `markdown_links.rs`: pure `resolve_link` (what a clicked `href` means, a typed `MarkdownLink`) and
+  `resolve_relative`, the volume-confined relative-reference rule images and links share.
 
 **A Markdown session is shaped like a media session**: a `MediaBackend`, empty text fields, `kind: Markdown`, so the
 frontend's media branch, the "View as text" reopen, and Binary / Hex all work unchanged. Unlike a media session it
@@ -252,6 +254,18 @@ pins it; an ammonia upgrade that reorders attributes fails there.
 - `data:image/…`: inline.
 - Decision: absolute paths (`/img.png`) and `file:` are BLOCKED, as is every other scheme. On GitHub `/img.png` means
   the repository root, which the viewer doesn't know, and a document has no business naming arbitrary files.
+
+**Where a link goes** (`resolve_link`, `markdown_links_test.rs`; the `viewer_follow_markdown_link` command):
+
+- `http(s)`, `mailto`, and protocol-relative `//host/…` (as `https`): `External`. The COMMAND opens it through
+  `tauri_plugin_opener` before answering. Decision/Why: the viewer renders untrusted files, so its webview keeps no
+  opener grant, and only these three schemes can ever leave the app from a document.
+- A relative link: `resolve_relative`, the same rule as an image's, so it stays on the document's volume (a phone, a
+  zip, a share) and can't climb past its root. Its fragment becomes the rendered heading id (`#install` →
+  `md-install`, percent-decoded); the query goes. The document itself (`README.md#usage`) is an `Anchor`, anything
+  else a `File` the viewer opens in the same window. No I/O: a missing file is the open's typed `NotFound`.
+- A bare `#fragment` is already the rendered id (the sanitizer rewrote it), so it's an `Anchor` as written.
+- Absolute paths, `file:`, and every other scheme: `Blocked`, for the reason images block them.
 
 **An image's bytes are fetched on the webview's first request, never during the render.** Each image gets a deferred
 `cmdr-media://` token (`media::DeferredMedia`, `mint_deferred_token`); a repeated source shares one. The scheme handler

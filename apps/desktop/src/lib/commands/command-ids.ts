@@ -79,6 +79,8 @@ export const COMMAND_IDS = [
   'viewer.zoomIn',
   'viewer.zoomOut',
   'viewer.toggleImageZoom',
+  'viewer.goBack',
+  'viewer.goForward',
 
   // Operation log (alpha)
   'log.operationLog',

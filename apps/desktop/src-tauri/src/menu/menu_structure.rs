@@ -22,7 +22,8 @@ use super::{
     COPY_CURRENT_DIR_PATH_ID, EDIT_MENU_ID, EJECT_VOLUME_ID, FAVORITES_ADD_CONTEXT_ID, FUNCTION_KEY_BAR_HIDE_ID,
     NETWORK_HOST_DISCONNECT_ID, NETWORK_HOST_EDIT_ID, NETWORK_HOST_FORGET_SECRET_ID, NETWORK_HOST_FORGET_SERVER_ID,
     TAB_CLOSE_ID, TAB_CLOSE_OTHERS_ID, TAB_PIN_ID, VIEWER_CONTEXT_COPY_ID, VIEWER_CONTEXT_SELECT_ALL_ID,
-    VIEWER_EDIT_COPY_ID, VIEWER_SELECT_ALL_ID, VIEWER_WORD_WRAP_ID, ViewerMenuItems,
+    VIEWER_EDIT_COPY_ID, VIEWER_GO_BACK_ID, VIEWER_GO_FORWARD_ID, VIEWER_SELECT_ALL_ID, VIEWER_WORD_WRAP_ID,
+    ViewerMenuItems,
 };
 #[cfg(target_os = "macos")]
 use super::{VIEWER_EDIT_CUT_ID, VIEWER_EDIT_PASTE_ID};
@@ -310,6 +311,23 @@ pub fn build_viewer_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Viewer
     let view_submenu = Submenu::with_items(app, menu_t("menu.bar.view"), true, &[&word_wrap])?;
     menu.append(&view_submenu)?;
 
+    // --- Go menu ---
+    // Back / Forward through the documents Markdown links led to, in the viewer in front. They
+    // come up disabled (a fresh viewer has no history) and `apply_menu_item_states` follows the
+    // viewer's pushes (`viewer_set_history_state`). No accelerator, like Word wrap: the viewer's
+    // keydown owns ⌘[ / ⌘] through the command registry, so a rebind stays honest and one press
+    // can't step twice (a registered key equivalent can reach the webview as well).
+    let go_back = MenuItem::with_id(app, VIEWER_GO_BACK_ID, menu_t("menu.go.back"), false, None::<&str>)?;
+    let go_forward = MenuItem::with_id(
+        app,
+        VIEWER_GO_FORWARD_ID,
+        menu_t("menu.go.forward"),
+        false,
+        None::<&str>,
+    )?;
+    let go_submenu = Submenu::with_items(app, menu_t("menu.bar.go"), true, &[&go_back, &go_forward])?;
+    menu.append(&go_submenu)?;
+
     #[cfg(target_os = "macos")]
     {
         // --- Window menu ---
@@ -334,6 +352,8 @@ pub fn build_viewer_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Viewer
     Ok(ViewerMenuItems {
         menu,
         word_wrap,
+        go_back,
+        go_forward,
         #[cfg(target_os = "macos")]
         edit_cut,
         #[cfg(target_os = "macos")]

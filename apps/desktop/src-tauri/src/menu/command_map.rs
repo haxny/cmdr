@@ -250,6 +250,13 @@ pub const VIEWER_SELECT_ALL_ID: &str = "viewer_select_all";
 pub const VIEWER_EDIT_CUT_ID: &str = "viewer_edit_cut";
 pub const VIEWER_EDIT_PASTE_ID: &str = "viewer_edit_paste";
 
+/// Menu item IDs for the VIEWER menu bar's Go > Back and Go > Forward: a step through the
+/// documents that Markdown links led to in the viewer in front. They emit `ViewerHistoryAction`
+/// to that viewer, which owns the history. Distinct from the main bar's `GO_BACK_ID` /
+/// `GO_FORWARD_ID` (those move a pane), and unmapped in `menu_id_to_command`.
+pub const VIEWER_GO_BACK_ID: &str = "viewer_go_back";
+pub const VIEWER_GO_FORWARD_ID: &str = "viewer_go_forward";
+
 /// Menu item IDs for the viewer's right-click menu over the file text (Copy, Select all).
 ///
 /// ❗ Distinct from the bar's `VIEWER_EDIT_COPY_ID` / `VIEWER_SELECT_ALL_ID`: those go through

@@ -92,6 +92,8 @@ export const EXEMPT_IDS = [
   'viewer.zoomIn',
   'viewer.zoomOut',
   'viewer.toggleImageZoom',
+  'viewer.goBack',
+  'viewer.goForward',
 ] as const satisfies readonly CommandId[]
 
 export const EXEMPT_SET: ReadonlySet<string> = new Set(EXEMPT_IDS)

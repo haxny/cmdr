@@ -596,6 +596,14 @@ each viewer pushes through `viewer_set_search_input_focused` on the input's focu
 - A language rebuild builds fresh items, so `install` in `rebuild.rs` re-runs the recompute: this verdict's input lives
   in Rust, and unlike the frontend-owned ones nobody re-pushes it after `MenuBarRebuilt`.
 
+The viewer bar's **Go > Back / Forward** (`VIEWER_GO_BACK_ID` / `VIEWER_GO_FORWARD_ID`, through the documents a
+viewer's Markdown links led to) follow `MenuState.viewer_history`, which the viewer in front pushes through
+`viewer_set_history_state`: after a step or a visit while it has focus, and on its focus-gain. A plain last-push value
+is enough here, unlike the search-focus label: a viewer without focus doesn't push. A click emits `ViewerHistoryAction`
+to `focused_viewer_label`. Decision/Why no accelerator: like Word wrap, the viewer's keydown owns the keys through the
+command registry (`viewer.goBack` / `viewer.goForward`, ⌘[ / ⌘]), so a rebind stays honest, and a registered key
+equivalent could reach the webview too and step twice.
+
 **Gotcha: `onFocusChanged` doesn't fire for a window's initial focus.** A window opens already
 focused, so its frontend focus listener (registered in `onMount`) misses the first focus and only
 sees later regains. The main window is fine (its menu is installed at startup) and Settings is fine
@@ -1167,8 +1175,8 @@ Linux skips the in/out accelerators because GTK intercepts `Cmd+Plus` / `Cmd+Min
 shortcut dispatch path covers Linux.
 macOS adds: cmdr (app menu), Window. `menu_bar.rs` has the full item list.
 
-Viewer windows get a minimal menu: File (Close), Edit (clipboard), View (Word wrap), and on macOS
-also Window and Help. On Linux it's a per-window menu; on macOS it's installed app-level on viewer
+Viewer windows get a minimal menu: File (Close), Edit (clipboard), View (Word wrap), Go (Back, Forward), and on
+macOS also Window and Help. On Linux it's a per-window menu; on macOS it's installed app-level on viewer
 focus-gain (see "Per-window menu activation" above).
 
 ## Mapping functions

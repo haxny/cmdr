@@ -52,7 +52,7 @@ impl ImageMarker {
 const IMAGE_MARKER_ATTRIBUTE: &str = "data-md-image";
 
 /// The prefix every rendered `id` (and every in-page link) carries.
-const ID_PREFIX: &str = "md-";
+pub(super) const ID_PREFIX: &str = "md-";
 
 /// Renders `source` to sanitized HTML. `image` is asked once per `<img>` that has a
 /// source, in document order, and answers what that image becomes.

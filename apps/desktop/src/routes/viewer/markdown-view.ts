@@ -9,6 +9,9 @@
 
 import { mediaUrl } from './media-view'
 
+/** Where a freshly rendered document opens: at a link's target, or back where it was left. */
+export type MarkdownLanding = { kind: 'element'; elementId: string | null } | { kind: 'scroll'; top: number }
+
 export type ImageMarker = { kind: 'local'; token: string } | { kind: 'remote'; token: string } | { kind: 'blocked' }
 
 /** The words a placeholder shows, resolved by the caller from the catalog. */
@@ -59,6 +62,28 @@ export function loadRemoteImages(root: ParentNode, labels: PlaceholderLabels): v
     const marker = parseImageMarker(img.getAttribute(MARKER_ATTRIBUTE))
     if (marker.kind === 'remote') load(img, marker.token, labels)
   }
+}
+
+/**
+ * The `href` of the link a click landed in, or `null` off a link. The backend decides
+ * where it goes (`viewerFollowMarkdownLink`); a link the sanitizer stripped (an unsafe
+ * scheme) has no `href` left and goes nowhere.
+ */
+export function clickedLinkHref(target: EventTarget | null): string | null {
+  const link = target instanceof Element ? target.closest('a') : null
+  return link?.getAttribute('href') || null
+}
+
+/**
+ * The element an in-page link lands on, by its rendered id (`md-…`), or `null`. Matched by
+ * comparing ids rather than through a selector, so no character in a heading's slug needs
+ * escaping.
+ */
+export function findAnchorTarget(root: ParentNode, elementId: string): Element | null {
+  for (const element of root.querySelectorAll('[id]')) {
+    if (element.id === elementId) return element
+  }
+  return null
 }
 
 function load(img: HTMLImageElement, token: string, labels: PlaceholderLabels): void {

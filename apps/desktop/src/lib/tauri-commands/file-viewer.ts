@@ -9,6 +9,7 @@ import {
   type ChunkEnd,
   type FileEncoding,
   type LineChunk,
+  type MarkdownLink,
   type MarkdownRender,
   type MediaDimensions,
   type RangeEnd,
@@ -202,6 +203,17 @@ export async function viewerAllowRemoteImages(sessionId: string): Promise<void> 
   if (res.status === 'error') throwViewerError(res.error)
 }
 
+/**
+ * Follows a link clicked in a Markdown session's rendered view. A web or mail link has
+ * already opened in the user's browser or mail app when this returns; the rest says what
+ * the viewer does: scroll to an anchor, open a file in this window, or nothing.
+ */
+export async function viewerFollowMarkdownLink(sessionId: string, href: string): Promise<MarkdownLink> {
+  const res = await commands.viewerFollowMarkdownLink(sessionId, href)
+  if (res.status === 'error') throwViewerError(res.error)
+  return res.data
+}
+
 /** Starts a background search in the viewer session. */
 export async function viewerSearchStart(sessionId: string, query: string, mode: ViewerSearchMode): Promise<void> {
   const res = await commands.viewerSearchStart(sessionId, query, mode)
@@ -263,6 +275,16 @@ export async function showViewerContextMenu(hasSelection: boolean): Promise<void
  */
 export async function viewerSetSearchInputFocused(label: string, focused: boolean): Promise<void> {
   const res = await commands.viewerSetSearchInputFocused(label, focused)
+  if (res.status === 'error') throwIpcError(res.error)
+}
+
+/**
+ * Tells the viewer menu bar whether this viewer can step back or forward through the
+ * documents its links led to, which greys Go > Back and Go > Forward. Push it when the
+ * history changes while this window has focus, and on the window's focus-gain.
+ */
+export async function viewerSetHistoryState(canGoBack: boolean, canGoForward: boolean): Promise<void> {
+  const res = await commands.viewerSetHistoryState(canGoBack, canGoForward)
   if (res.status === 'error') throwIpcError(res.error)
 }
 

@@ -26,6 +26,8 @@ export const VIEWER_KEY_COMMAND_IDS = [
   'viewer.zoomIn',
   'viewer.zoomOut',
   'viewer.toggleImageZoom',
+  'viewer.goBack',
+  'viewer.goForward',
 ] as const satisfies readonly CommandId[]
 
 /** Every entry shares these: the viewer answers them itself, never the dispatch spine. */
@@ -53,4 +55,8 @@ export const viewerWindowCommands: CommandSource[] = [
     shortcuts: ['Enter', 'Space'],
     ...viewerKey,
   },
+  // Back / Forward through the documents a Markdown link led to, on the browser's and the
+  // main window's keys. The viewer bar's Go menu reaches the same two steps.
+  { id: 'viewer.goBack', nameKey: 'commands.viewerGoBack.label', shortcuts: ['⌘['], ...viewerKey },
+  { id: 'viewer.goForward', nameKey: 'commands.viewerGoForward.label', shortcuts: ['⌘]'], ...viewerKey },
 ]

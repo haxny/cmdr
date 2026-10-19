@@ -15,7 +15,7 @@ use tauri::{AppHandle, Manager};
 
 use crate::ignore_poison::IgnorePoison;
 use crate::volume_broadcast::VolumeContextActionKind;
-use crate::window_events::{QueueRowMenuAction, ViewerEditActionKind};
+use crate::window_events::{QueueRowMenuAction, ViewerEditActionKind, ViewerHistoryDirection};
 
 use super::{
     CLOSE_TAB_ID, CommandScope, EDIT_COPY_ID, EDIT_CUT_ID, EDIT_PASTE_ID, EJECT_VOLUME_ID, FAVORITES_ADD_CONTEXT_ID,
@@ -27,7 +27,8 @@ use super::{
     TAB_CLOSE_ID, TAB_CLOSE_OTHERS_ID, TAB_PIN_ID, VIEW_MODE_BRIEF_LEFT_ID, VIEW_MODE_BRIEF_RIGHT_ID,
     VIEW_MODE_FULL_LEFT_ID, VIEW_MODE_FULL_RIGHT_ID, VIEW_SET_MODE_COMMAND_ID, VIEW_SHOW_HIDDEN_COMMAND_ID,
     VIEWER_CONTEXT_COPY_ID, VIEWER_CONTEXT_SELECT_ALL_ID, VIEWER_EDIT_COPY_ID, VIEWER_EDIT_CUT_ID,
-    VIEWER_EDIT_PASTE_ID, VIEWER_SELECT_ALL_ID, VIEWER_WORD_WRAP_ID, ViewMode, ViewModeChanged, menu_id_to_command,
+    VIEWER_EDIT_PASTE_ID, VIEWER_GO_BACK_ID, VIEWER_GO_FORWARD_ID, VIEWER_SELECT_ALL_ID, VIEWER_WORD_WRAP_ID, ViewMode,
+    ViewModeChanged, menu_id_to_command,
 };
 
 /// Removes macOS system-injected items from the Edit menu and registers the Help menu.
@@ -197,6 +198,15 @@ fn viewer_edit_action_for(menu_id: &str) -> Option<ViewerEditActionKind> {
     match menu_id {
         VIEWER_EDIT_COPY_ID => Some(ViewerEditActionKind::Copy),
         VIEWER_SELECT_ALL_ID => Some(ViewerEditActionKind::SelectAll),
+        _ => None,
+    }
+}
+
+/// The viewer Go-menu step a clicked item id names, or `None` when the id isn't one of them.
+fn viewer_history_direction_for(menu_id: &str) -> Option<ViewerHistoryDirection> {
+    match menu_id {
+        VIEWER_GO_BACK_ID => Some(ViewerHistoryDirection::Back),
+        VIEWER_GO_FORWARD_ID => Some(ViewerHistoryDirection::Forward),
         _ => None,
     }
 }
@@ -404,6 +414,17 @@ pub fn handle_menu_event(app: &AppHandle<tauri::Wry>, event: tauri::menu::MenuEv
         };
         use tauri_specta::Event as _;
         let _ = crate::window_events::ViewerEditAction { action }.emit_to(app, &label);
+        return;
+    }
+
+    // === Viewer Go > Back / Forward: emit to the focused viewer window, which owns its history ===
+    if let Some(direction) = viewer_history_direction_for(id) {
+        let Some(label) = focused_viewer_label(app) else {
+            log::warn!(target: "menu", "Viewer Go item {id} clicked with no viewer focused, ignoring");
+            return;
+        };
+        use tauri_specta::Event as _;
+        let _ = crate::window_events::ViewerHistoryAction { direction }.emit_to(app, &label);
         return;
     }
 
@@ -803,6 +824,33 @@ mod volume_row_action_tests {
         assert_eq!(volume_row_action(NETWORK_HOST_FORGET_SERVER_ID), None);
         assert_eq!(volume_row_action(NETWORK_HOST_FORGET_SECRET_ID), None);
         assert_eq!(volume_row_action("tab_close"), None);
+    }
+}
+
+#[cfg(test)]
+mod viewer_history_direction_tests {
+    use super::*;
+    use crate::menu::{GO_BACK_ID, GO_FORWARD_ID};
+
+    #[test]
+    fn the_viewer_bars_go_items_name_their_direction() {
+        assert_eq!(
+            viewer_history_direction_for(VIEWER_GO_BACK_ID),
+            Some(ViewerHistoryDirection::Back)
+        );
+        assert_eq!(
+            viewer_history_direction_for(VIEWER_GO_FORWARD_ID),
+            Some(ViewerHistoryDirection::Forward)
+        );
+    }
+
+    /// ❗ The main bar's Back / Forward move a pane; one landing here would step a viewer's
+    /// document history instead.
+    #[test]
+    fn the_main_bars_go_items_are_not_viewer_steps() {
+        assert_eq!(viewer_history_direction_for(GO_BACK_ID), None);
+        assert_eq!(viewer_history_direction_for(GO_FORWARD_ID), None);
+        assert_eq!(viewer_history_direction_for(VIEWER_WORD_WRAP_ID), None);
     }
 }
 

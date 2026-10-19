@@ -23,6 +23,7 @@ import {
   type RevealPath,
   type ViewerContextMenuAction,
   type ViewerEditAction,
+  type ViewerHistoryAction,
 } from '#lib/ipc/bindings.js'
 
 /**
@@ -162,6 +163,16 @@ export function onViewerWordWrapToggled(handler: () => void): Promise<UnlistenFn
  */
 export function onViewerEditAction(handler: (payload: ViewerEditAction) => void): Promise<UnlistenFn> {
   return events.viewerEditAction.listen((event) => {
+    handler(event.payload)
+  })
+}
+
+/**
+ * The viewer bar's Go > Back or Go > Forward was picked while a viewer window had focus.
+ * Emitted to that viewer's label, which steps its own document history.
+ */
+export function onViewerHistoryAction(handler: (payload: ViewerHistoryAction) => void): Promise<UnlistenFn> {
+  return events.viewerHistoryAction.listen((event) => {
     handler(event.payload)
   })
 }

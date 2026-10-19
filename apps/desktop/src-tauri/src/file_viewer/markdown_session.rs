@@ -25,6 +25,7 @@ use super::content_kind::{
 };
 use super::encoding::{DETECT_HEAD_BYTES, FileEncoding, decode_line, detect_from_head};
 use super::markdown_images::{ImageTarget, RemoteImage, VolumeImage, resolve_image_src};
+use super::markdown_links::{MarkdownLink, resolve_link};
 use super::markdown_render::{ImageMarker, render_markdown};
 use super::materialize::PreviewTemp;
 use super::media;
@@ -206,9 +207,7 @@ pub fn render_markdown_session(session_id: &str) -> Result<MarkdownRender, Viewe
         (document, session.open_file()?)
     };
     let text = read_document(&opened)?;
-    let volume_root = get_volume_manager()
-        .get(&document.volume_id)
-        .map_or_else(|| PathBuf::from("/"), |volume| volume.root().to_path_buf());
+    let volume_root = volume_root(&document.volume_id);
 
     document.drop_images();
     let for_images = Arc::clone(&document);
@@ -221,6 +220,27 @@ pub fn render_markdown_session(session_id: &str) -> Result<MarkdownRender, Viewe
         html,
         has_remote_images: document.has_remote_images(),
     })
+}
+
+/// Where a link clicked in this session's rendered document goes (`markdown_links.rs`).
+/// No I/O: a link to a file that isn't there is the open's to report.
+pub fn resolve_markdown_link(session_id: &str, href: &str) -> Result<MarkdownLink, ViewerError> {
+    let document = {
+        let sessions = SESSIONS.lock_ignore_poison();
+        let session = sessions.get(session_id).ok_or_else(|| ViewerError::SessionNotFound {
+            session_id: session_id.to_string(),
+        })?;
+        markdown_of(session, session_id)?
+    };
+    Ok(resolve_link(href, &document.path, &volume_root(&document.volume_id)))
+}
+
+/// The root of the volume a document lives on, which its relative references can't climb
+/// past. The local drive's `/` when the volume is gone.
+fn volume_root(volume_id: &str) -> PathBuf {
+    get_volume_manager()
+        .get(volume_id)
+        .map_or_else(|| PathBuf::from("/"), |volume| volume.root().to_path_buf())
 }
 
 /// Lets this session's document load its web images. Until it's called, a remote

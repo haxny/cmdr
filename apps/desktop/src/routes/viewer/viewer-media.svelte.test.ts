@@ -91,6 +91,15 @@ describe('createViewerMedia', () => {
     expect(media.lastMediaKind).toBe('image')
   })
 
+  it('forgetFile() also drops lastMediaKind: a linked text file offers no formatted view', () => {
+    const media = createViewerMedia(deps())
+    media.setFromOpenResult(openResult({ kind: 'markdown' }))
+    media.forgetFile()
+    media.setFromOpenResult(openResult({ kind: 'text' }))
+    expect(media.kind).toBe('text')
+    expect(media.lastMediaKind).toBeNull()
+  })
+
   it('viewAsText resets media state BEFORE re-opening, so a slow re-open never renders a dangling image', async () => {
     let kindAtReopen: string | null = null
     let srcAtReopen: string | null = null

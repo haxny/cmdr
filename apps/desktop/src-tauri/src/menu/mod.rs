@@ -261,6 +261,24 @@ pub struct ViewerMenuItems<R: Runtime> {
         )
     )]
     pub word_wrap: CheckMenuItem<R>,
+    /// Go > Back and Go > Forward, greyed with the front viewer's history. Read on macOS only,
+    /// like `word_wrap`: on Linux each window builds its own menu and the items stay as built.
+    #[cfg_attr(
+        not(target_os = "macos"),
+        allow(
+            dead_code,
+            reason = "the viewer bar's enabled state is macOS-only; built but never read on Linux"
+        )
+    )]
+    pub go_back: MenuItem<R>,
+    #[cfg_attr(
+        not(target_os = "macos"),
+        allow(
+            dead_code,
+            reason = "the viewer bar's enabled state is macOS-only; built but never read on Linux"
+        )
+    )]
+    pub go_forward: MenuItem<R>,
     /// The Edit submenu's Cut and Paste, which are Custom items on macOS alone (elsewhere they
     /// stay Predefined, because forwarding the native selector needs the responder chain).
     #[cfg(target_os = "macos")]
@@ -448,6 +466,25 @@ pub struct MenuState<R: Runtime> {
     /// this says: see `viewer_text_edit_enabled`.
     #[cfg(target_os = "macos")]
     pub viewer_search_focus: Mutex<Option<String>>,
+    /// The viewer bar's Go > Back and Go > Forward, captured at build time. Their enabled state
+    /// follows `viewer_history`, through `apply_menu_item_states`.
+    #[cfg(target_os = "macos")]
+    pub viewer_go_back: Mutex<Option<MenuItem<R>>>,
+    #[cfg(target_os = "macos")]
+    pub viewer_go_forward: Mutex<Option<MenuItem<R>>>,
+    /// Whether the viewer in front can step back or forward through its document history. Pushed
+    /// by each viewer (`viewer_set_history_state`) when its history changes while it has focus,
+    /// and again on its focus-gain, so the last push is the front viewer's. Chrome only: Back with
+    /// nothing behind it is a no-op in the viewer anyway.
+    #[cfg(target_os = "macos")]
+    pub viewer_history: Mutex<ViewerHistoryAvailability>,
+}
+
+/// What the viewer in front can do with its document history: the Go menu's two verdicts.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct ViewerHistoryAvailability {
+    pub can_go_back: bool,
+    pub can_go_forward: bool,
 }
 
 impl<R: Runtime> Default for MenuState<R> {
@@ -493,6 +530,12 @@ impl<R: Runtime> Default for MenuState<R> {
             viewer_edit_paste: Mutex::new(None),
             #[cfg(target_os = "macos")]
             viewer_search_focus: Mutex::new(None),
+            #[cfg(target_os = "macos")]
+            viewer_go_back: Mutex::new(None),
+            #[cfg(target_os = "macos")]
+            viewer_go_forward: Mutex::new(None),
+            #[cfg(target_os = "macos")]
+            viewer_history: Mutex::new(ViewerHistoryAvailability::default()),
         }
     }
 }

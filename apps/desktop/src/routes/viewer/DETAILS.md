@@ -51,7 +51,11 @@ Per-file inventory for the route. Locate symbols via `codegraph_search`; this is
 - Media: **`media-view.ts`** (pure helpers incl. `mediaUrl(token)`, the ONE `cmdr-media://localhost/` origin, + zoom
   math), **`viewer-media.svelte.ts`** (`createViewerMedia`: state, `isMedia`/`mediaSrc`, `lastMediaKind`, switch
   triggers), **`MediaImageView` / `MediaPdfView`** (inline `<img>` / `<embed>`), **`MediaMarkdownView`** (the formatted
-  Markdown document) + **`markdown-view.ts`** (its image markers → sources or placeholders). See § "Formatted Markdown".
+  Markdown document) + **`markdown-view.ts`** (its image markers → sources or placeholders, the clicked link, the anchor
+  target). See § "Formatted Markdown".
+- Links between documents: **`viewer-navigation.svelte.ts`** (`createViewerNavigation`: follow a link, Back / Forward,
+  the Go menu's enabled push) over **`viewer-history.ts`** (pure history with scroll positions). See § "Links and
+  history".
 - Presentational: **`ViewerToolbar`** (title-bar overlay, owns `data-tauri-drag-region`, disabled-not-hidden in media),
   **`ViewerStatusBar`** (keeps `user-select: text`), **`ViewerCopyDialogs`**, **`EncodingPicker`**, **`ViewModePicker`**
   (text / binary / hex / optional rendered media), **`ViewerReloadToastContent`** (session id and change kind as toast
@@ -154,8 +158,37 @@ The placeholder is a `span[data-md-placeholder]` after the hidden `img`, naming 
 injected HTML through `:global`, and the renderer's own classes (alerts, footnotes) are matched as `[class~='…']`, which
 keeps them out of `css-unused`'s sight (no markup carries them). The document scrolls natively in a focused container
 (arrows, Space, Page keys); it's `user-select: text`, and Edit > Copy / Select all act on the browser selection
-(`selectAll()` on the component). A link click is prevented, so the webview never navigates away; following links is not
-wired yet.
+(`selectAll()` on the component). A link click never navigates the webview: § "Links and history".
+
+### Links and history
+
+A click on a link hands its `href` to `createViewerNavigation.followLink`, which asks the backend where it goes
+(`viewerFollowMarkdownLink`; resolution rules: `src-tauri/src/file_viewer/DETAILS.md` § "Markdown rendering"):
+
+- `external`: the backend already opened it in the user's browser or mail app. The viewer webview has no opener grant.
+- `anchor` (a `#heading`, a footnote, or a link to the document itself): `MediaMarkdownView.scrollToElement`, matched by
+  comparing ids (`findAnchorTarget`), so no slug needs CSS escaping. Not a history entry, like a browser's.
+- `file`: opens in THIS window and lands at the link's heading. Any file the viewer shows, not just Markdown:
+  Decision/Why: a README's links to `LICENSE`, a script, or a screenshot are as worth following as one to another `.md`,
+  and the viewer already opens every kind; a folder or a missing file is a toast.
+- `blocked` (an absolute path, `file:`): an info toast saying why nothing happened.
+
+**The new file opens before the current one is torn down.** `navigation.show` runs only the open IPC (`requestOpen`); a
+typed failure (`notFound`, `isDirectory`, anything else) costs a toast and the document stays. Only then does the page's
+`swapToDocument` tear the old session down the way the window opened its first file: listeners, tail watcher, indexing
+poll, search, selection, tail mode, the encoding choices, the binary banner, the byte offset, and `media.forgetFile()`
+(which drops `lastMediaKind` too, so a linked text file offers no formatted view). It then applies the result through
+`applyOpenResult`, the same path the mount takes, closes the old session, and rewrites the window URL's `path` so a
+reload reopens what's shown. The title and status bar follow `fileName`. A pull (a phone, a zip) shows the pull panel
+over the document while it runs; its Cancel closes the window, as on the first open.
+
+**History** is per window (`viewer-history.ts`, capped at 100). ⌘[ / ⌘] are the registry commands `viewer.goBack` /
+`viewer.goForward` (rebindable; matched in `handleWindowKeyDown` in every view mode), and the viewer bar's Go > Back /
+Forward reach the same `navigation.step` through `ViewerHistoryAction`. A step restores the scroll position the document
+was left at (taken from the formatted view; a document left in another view mode lands at the top), as far as the
+document reaches when it renders: pictures still loading can shift it a little. The Go menu greys with
+`viewerSetHistoryState`, pushed after a step or a visit only while this window has focus, and again on its focus-gain:
+the bar is shared by every viewer.
 
 ### Binary and hex views
 

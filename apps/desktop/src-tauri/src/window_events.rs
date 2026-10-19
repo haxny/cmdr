@@ -155,6 +155,25 @@ pub struct ViewerContextMenuAction {
     pub action: ViewerEditActionKind,
 }
 
+/// Which way a viewer's document history steps. A typed variant rather than a string.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub enum ViewerHistoryDirection {
+    /// Go > Back: the document shown before the last followed link.
+    Back,
+    /// Go > Forward: undoes a Back.
+    Forward,
+}
+
+/// `viewer-history-action`: Go > Back or Go > Forward was picked while a viewer window had
+/// focus. Emitted to that viewer's label, which owns its own history (the documents its
+/// Markdown links led to) and runs the same step its keys do.
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type, Event)]
+#[serde(rename_all = "camelCase")]
+pub struct ViewerHistoryAction {
+    pub direction: ViewerHistoryDirection,
+}
+
 /// One thing a queue row's menu can do. Pause and Resume share a key but are separate
 /// actions, so the label can say which one this click is, and so a pick that went stale
 /// while the menu was up can be told apart. Its menu ids, labels, and commands live with the

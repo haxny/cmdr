@@ -1640,6 +1640,14 @@ export const commands = {
    */
   viewerAllowRemoteImages: (sessionId: string) =>
     typedError<null, ViewerError>(__TAURI_INVOKE('viewer_allow_remote_images', { sessionId })),
+  /**
+   *  Follows a link clicked in a Markdown session's rendered view. A web or mail link opens in
+   *  the user's browser or mail app from here, so the viewer's webview needs no opener grant and
+   *  only `http`, `https`, and `mailto` ever leave the app; the rest comes back for the viewer to
+   *  act on (scroll, open the file in this window, or nothing). No file I/O: resolving is pure.
+   */
+  viewerFollowMarkdownLink: (sessionId: string, href: string) =>
+    typedError<MarkdownLink, ViewerError>(__TAURI_INVOKE('viewer_follow_markdown_link', { sessionId, href })),
   // Gets the current status of a viewer session (backend type, indexing state).
   viewerGetStatus: (sessionId: string) =>
     typedError<ViewerSessionStatus, string>(__TAURI_INVOKE('viewer_get_status', { sessionId })),
@@ -1729,6 +1737,17 @@ export const commands = {
    */
   viewerSetSearchInputFocused: (label: string, focused: boolean) =>
     typedError<null, string>(__TAURI_INVOKE('viewer_set_search_input_focused', { label, focused })),
+  /**
+   *  Tells the viewer menu bar whether the viewer in front can step back or forward through the
+   *  documents its Markdown links led to, which is what greys Go > Back and Go > Forward. The
+   *  viewer pushes it when its history changes while it has focus, and on its focus-gain, so the
+   *  shared bar follows whichever viewer is in front.
+   *
+   *  macOS only, where the viewer bar is app-level and its items are stored. Elsewhere each
+   *  window builds its own bar and the items stay as built, so this is a no-op.
+   */
+  viewerSetHistoryState: (canGoBack: boolean, canGoForward: boolean) =>
+    typedError<null, string>(__TAURI_INVOKE('viewer_set_history_state', { canGoBack, canGoForward })),
   /**
    *  Returns the encoding dropdown payload: current selection, detected encoding, and the
    *  full list of selectable encodings (with their labels and groups). The FE renders the
@@ -5317,6 +5336,7 @@ export const events = {
   viewModeChanged: makeEvent<ViewModeChanged>('view-mode-changed'),
   viewerContextMenuAction: makeEvent<ViewerContextMenuAction>('viewer-context-menu-action'),
   viewerEditAction: makeEvent<ViewerEditAction>('viewer-edit-action'),
+  viewerHistoryAction: makeEvent<ViewerHistoryAction>('viewer-history-action'),
   viewerPullProgress: makeEvent<ViewerPullProgress>('viewer-pull-progress'),
   viewerWordWrapToggled: makeEvent<ViewerWordWrapToggled>('viewer-word-wrap-toggled'),
   volumeConnectionChanged: makeEvent<VolumeConnectionChanged>('volume-connection-changed'),
@@ -10935,6 +10955,20 @@ export type ManualConnectResult = {
   host: NetworkHost
   sharePath: string | null
 }
+
+// What following one link in a rendered Markdown document means.
+export type MarkdownLink =
+  // An `http(s)` or `mailto` URL, for the user's browser or mail app.
+  | { kind: 'external'; url: string }
+  // A spot in the same document: the element with this id, or the top when `None`.
+  | { kind: 'anchor'; elementId: string | null }
+  /**
+   *  Another file on the document's volume, opened in the same viewer window, then
+   *  scrolled to `element_id` if the link named one.
+   */
+  | { kind: 'file'; path: string; elementId: string | null }
+  // Nothing the viewer follows: an absolute path, `file:`, another scheme, or empty.
+  | { kind: 'blocked' }
 
 // What the viewer shows for a Markdown session.
 export type MarkdownRender = {
@@ -17727,6 +17761,22 @@ export type ViewerError =
    *  nothing to preview yet and a Retry can't help.
    */
   | { kind: 'coldStorage' }
+
+/**
+ *  `viewer-history-action`: Go > Back or Go > Forward was picked while a viewer window had
+ *  focus. Emitted to that viewer's label, which owns its own history (the documents its
+ *  Markdown links led to) and runs the same step its keys do.
+ */
+export type ViewerHistoryAction = {
+  direction: ViewerHistoryDirection
+}
+
+// Which way a viewer's document history steps. A typed variant rather than a string.
+export type ViewerHistoryDirection =
+  // Go > Back: the document shown before the last followed link.
+  | 'back'
+  // Go > Forward: undoes a Back.
+  | 'forward'
 
 // Result returned when opening a viewer session.
 export type ViewerOpenResult = {

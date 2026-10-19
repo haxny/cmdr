@@ -301,6 +301,28 @@ pub fn viewer_allow_remote_images(session_id: String) -> Result<(), ViewerError>
     file_viewer::allow_remote_images(&session_id)
 }
 
+/// Follows a link clicked in a Markdown session's rendered view. A web or mail link opens in
+/// the user's browser or mail app from here, so the viewer's webview needs no opener grant and
+/// only `http`, `https`, and `mailto` ever leave the app; the rest comes back for the viewer to
+/// act on (scroll, open the file in this window, or nothing). No file I/O: resolving is pure.
+#[tauri::command]
+#[specta::specta]
+pub fn viewer_follow_markdown_link(
+    app_handle: tauri::AppHandle,
+    session_id: String,
+    href: String,
+) -> Result<file_viewer::MarkdownLink, ViewerError> {
+    let link = file_viewer::resolve_markdown_link(&session_id, &href)?;
+    if let file_viewer::MarkdownLink::External { url } = &link {
+        use tauri_plugin_opener::OpenerExt;
+        app_handle
+            .opener()
+            .open_url(url, None::<&str>)
+            .map_err(|e| ViewerError::Io { message: e.to_string() })?;
+    }
+    Ok(link)
+}
+
 /// Reads at most 64 KiB of original file bytes for the binary and hex views.
 #[tauri::command]
 #[specta::specta]
@@ -622,6 +644,40 @@ pub fn viewer_set_search_input_focused(
     #[cfg(not(target_os = "macos"))]
     {
         let _ = (&app_handle, &label, focused);
+        Ok(())
+    }
+}
+
+/// Tells the viewer menu bar whether the viewer in front can step back or forward through the
+/// documents its Markdown links led to, which is what greys Go > Back and Go > Forward. The
+/// viewer pushes it when its history changes while it has focus, and on its focus-gain, so the
+/// shared bar follows whichever viewer is in front.
+///
+/// macOS only, where the viewer bar is app-level and its items are stored. Elsewhere each
+/// window builds its own bar and the items stay as built, so this is a no-op.
+#[tauri::command]
+#[specta::specta]
+pub fn viewer_set_history_state(
+    app_handle: tauri::AppHandle,
+    can_go_back: bool,
+    can_go_forward: bool,
+) -> Result<(), String> {
+    #[cfg(target_os = "macos")]
+    {
+        use crate::ignore_poison::IgnorePoison;
+        let menu_state = app_handle.state::<crate::menu::MenuState<tauri::Wry>>();
+        *menu_state.viewer_history.lock_ignore_poison() = crate::menu::ViewerHistoryAvailability {
+            can_go_back,
+            can_go_forward,
+        };
+        // Dropped the lock first: `apply_menu_item_states` takes it again.
+        crate::menu::apply_menu_item_states(&menu_state);
+        Ok(())
+    }
+
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = (&app_handle, can_go_back, can_go_forward);
         Ok(())
     }
 }

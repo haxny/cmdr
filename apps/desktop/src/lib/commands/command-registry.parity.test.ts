@@ -63,6 +63,8 @@ const EXPECTED_NAMES: Record<string, string> = {
   'viewer.zoomIn': 'Zoom in on the image',
   'viewer.zoomOut': 'Zoom out of the image',
   'viewer.toggleImageZoom': 'Switch the image between fit and actual size',
+  'viewer.goBack': 'Go back to the previous document',
+  'viewer.goForward': 'Go forward to the next document',
   'help.sendErrorReport': 'Send error report…',
   'help.whatsNew': 'What’s new',
   'feedback.send': 'Send feedback',

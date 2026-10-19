@@ -363,9 +363,10 @@ registry, so it follows a rebind).
 ### The viewer's keys
 
 The viewer is a separate window with its own keydown. Its single keys (word wrap, tail, the 0–3 view modes, image zoom)
-are registry commands in `../commands/sources/viewer-window.ts` (scope `Viewer window`), matched with
-`eventMatchesCommand`, and NOT fixed: bare letters and digits must be remappable or able to be turned off (WCAG 2.1.4).
-They ride no dispatch spine, so `DISPATCH_EXEMPT_IDS` takes `VIEWER_KEY_COMMAND_IDS` whole.
+and its two chords (⌘[ / ⌘], Back / Forward between linked documents) are registry commands in
+`../commands/sources/viewer-window.ts` (scope `Viewer window`), matched with `eventMatchesCommand`, and NOT fixed: bare
+letters and digits must be remappable or able to be turned off (WCAG 2.1.4). They ride no dispatch spine, so
+`DISPATCH_EXEMPT_IDS` takes `VIEWER_KEY_COMMAND_IDS` whole.
 
 - **Reading rebinds without store access.** The viewer may never load a store (`src-tauri/capabilities/CLAUDE.md`), so
   it calls `initializeShortcuts({ restrictedWindow: true })`: the seed comes from the typed, read-only

@@ -718,6 +718,16 @@
     "description": "Row in the Keyboard shortcuts list: what the key does in the file viewer window while it shows an image. It flips between fitting the whole image in the window and showing it at 100% (one image pixel per screen pixel), the same as clicking the image.",
     "screenshot": "settings-keyboard-shortcuts.png"
   },
+  "commands.viewerGoBack.label": "Go back to the previous document",
+  "@commands.viewerGoBack.label": {
+    "description": "Row in the Keyboard shortcuts list: what the key does in the file viewer window. After the user follows a link in a formatted Markdown document to another file, which opens in the same window, this returns to the document they came from, like a web browser's Back button. The user can rebind or remove this key.",
+    "screenshot": "settings-keyboard-shortcuts.png"
+  },
+  "commands.viewerGoForward.label": "Go forward to the next document",
+  "@commands.viewerGoForward.label": {
+    "description": "Row in the Keyboard shortcuts list: what the key does in the file viewer window. After going back from a document reached by a link (commands.viewerGoBack.label), this returns to it again, like a web browser's Forward button. The user can rebind or remove this key.",
+    "screenshot": "settings-keyboard-shortcuts.png"
+  },
   "commands.multiRenameOpenPresets.label": "Open the presets menu",
   "@commands.multiRenameOpenPresets.label": {
     "description": "Row in the Keyboard shortcuts list: what F2 does while the Multi-rename tool is open. It opens the menu of saved rename settings (presets), as in Total Commander. Read-only (the key can't be rebound).",

@@ -44,8 +44,12 @@
       "lines": 1008,
       "reason": "TODO: split it, because it is two halves plus an inline test block. Lines 1-475 are binding and lifecycle (`BindStrategy`, `BindMode`, `BindError`, `resolve_bind_strategy`, `decide_rebind_action`, `bind_listener`, `bind_with_probe`, `bind_ephemeral`, `start_mcp_server`, `rebind_interactive`, `serve_on`, the `stop_mcp_server*` pair, and the port-file statics); lines 476-820 are the Streamable HTTP transport (`health_check`, `handle_mcp_get`, `format_sse_event`, `build_sse_response`, `build_json_response`, `handle_mcp_post`, `process_request`, `format_tool_result`), which should move to `mcp/transport.rs` at ~345 lines. The inline `#[cfg(test)] mod tests` at lines 821-1043 is ~222 lines while every other test in this module already lives under `mcp/tests/`; it holds the compile-time `both_routes_take_redacting_headers` pin that reaches private handlers, so it needs a `#[path = \"server_test.rs\"]` sibling rather than a move into `mcp/tests/`. Both halves land near 300-350 lines."
     },
+    "apps/desktop/src-tauri/src/menu/command_map.rs": {
+      "lines": 805,
+      "reason": "The menu-id registry: every bar and context-menu item id, the id-to-command table, and its inverse, in one place on purpose. A new item is one id plus one table row, and the round-trip tests over both tables need them side by side; splitting ids from the mapping would make every item two edits in two files."
+    },
     "apps/desktop/src-tauri/src/menu/menu_handlers.rs": {
-      "lines": 841,
+      "lines": 969,
       "reason": "TODO: three things share this file and only one of them is the dispatcher the module map names. Move the six macOS post-construction wrappers (`cleanup_macos_menus`, `set_macos_menu_icons`, `set_display_accelerators`, and their three `*_from_command` main-thread hops, lines 34-110) to `macos_passes.rs`: they hold no routing logic at all, just the `run_on_main_thread` hop onto `macos_appkit.rs` and `display_accelerators.rs`, and they only live here because that is where the AppKit seam used to be. Move the native-edit lane (`NativeEditSelector`, `native_edit_selector_for`, `send_native_edit_action`, lines 111-186, plus the `native_edit_selector_tests` module) to `native_edit.rs`, which gives both bars' id-to-selector table one named home next to the `objc2` call that consumes it. That leaves roughly 650 lines: `handle_menu_event` with its per-family branches and the small routing helpers each one reads (`focused_viewer_label`, `viewer_edit_action_for`, `volume_row_action`) plus their tests, which do belong together because the branch order between them is the contract."
     },
     "apps/desktop/src-tauri/src/operations_host/backend_suites/copy_concurrency_bench.rs": {

@@ -1,6 +1,13 @@
 import { describe, it, expect } from 'vitest'
 
-import { loadRemoteImages, parseImageMarker, wireImages, type PlaceholderLabels } from './markdown-view'
+import {
+  clickedLinkHref,
+  findAnchorTarget,
+  loadRemoteImages,
+  parseImageMarker,
+  wireImages,
+  type PlaceholderLabels,
+} from './markdown-view'
 import { mediaUrl } from './media-view'
 
 const LABELS: PlaceholderLabels = { remote: 'From the web', blocked: 'Not shown', missing: 'Not found' }
@@ -86,5 +93,31 @@ describe('loadRemoteImages', () => {
     expect(remote.hidden).toBe(false)
     expect(placeholders(root)).toEqual([])
     expect(local.getAttribute('src')).toBe(localSrc)
+  })
+})
+
+describe('clickedLinkHref', () => {
+  it('finds the link a click landed in, through nested markup', () => {
+    const root = article('<p><a href="setup.md#install"><strong>Set up</strong></a> and more</p>')
+    expect(clickedLinkHref(root.querySelector('strong'))).toBe('setup.md#install')
+  })
+
+  it('is null off a link, or on a link with no href (the sanitizer dropped it)', () => {
+    const root = article('<p>plain <a>no target</a></p>')
+    expect(clickedLinkHref(root.querySelector('p'))).toBeNull()
+    expect(clickedLinkHref(root.querySelector('a'))).toBeNull()
+    expect(clickedLinkHref(null)).toBeNull()
+  })
+})
+
+describe('findAnchorTarget', () => {
+  it('finds the element with that id inside the document, whatever characters it holds', () => {
+    const root = article('<h2 id="md-árvíz">A</h2><h2 id="md-a.b:c">B</h2>')
+    expect(findAnchorTarget(root, 'md-árvíz')?.textContent).toBe('A')
+    expect(findAnchorTarget(root, 'md-a.b:c')?.textContent).toBe('B')
+  })
+
+  it('is null for an id the document doesn’t have', () => {
+    expect(findAnchorTarget(article('<h2 id="md-a">A</h2>'), 'md-b')).toBeNull()
   })
 })

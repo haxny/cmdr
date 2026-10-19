@@ -7,7 +7,8 @@
      *
      * Web images stay held back until the user presses "Load remote images" (loading
      * them would tell each site the user's IP address, like an email tracking pixel).
-     * Links never navigate the viewer's webview.
+     * Links never navigate the viewer's webview: a click hands its `href` to the page
+     * (`onFollowLink`), which asks the backend where it goes.
      */
     import { tick } from 'svelte'
     import Button from '#lib/ui/Button.svelte'
@@ -15,7 +16,14 @@
     import { tString } from '#lib/intl/messages.svelte.js'
     import { viewerAllowRemoteImages, viewerRenderMarkdown } from '#lib/tauri-commands/index.js'
     import { getAppLogger } from '#lib/logging/logger.js'
-    import { loadRemoteImages, wireImages, type PlaceholderLabels } from './markdown-view'
+    import {
+        clickedLinkHref,
+        findAnchorTarget,
+        loadRemoteImages,
+        wireImages,
+        type MarkdownLanding,
+        type PlaceholderLabels,
+    } from './markdown-view'
 
     const log = getAppLogger('viewer')
 
@@ -23,9 +31,13 @@
         sessionId: string
         /** File name, the document region's accessible name. */
         fileName: string
+        /** Where the document opens once rendered; read once per render. `null` is the top. */
+        landing: MarkdownLanding | null
+        /** A link was clicked: the page resolves and follows it. */
+        onFollowLink: (href: string) => void
     }
 
-    const { sessionId, fileName }: Props = $props()
+    const { sessionId, fileName, landing, onFollowLink }: Props = $props()
 
     type LoadState = 'loading' | 'ready' | 'error'
     let loadState = $state<LoadState>('loading')
@@ -55,6 +67,7 @@
                 loadState = 'ready'
                 await tick()
                 if (articleRef) wireImages(articleRef, placeholderLabels())
+                land(landing)
                 scrollRef?.focus()
             })
             .catch((e: unknown) => {
@@ -75,9 +88,36 @@
         if (articleRef) loadRemoteImages(articleRef, placeholderLabels())
     }
 
-    /** Links stay put for now: a click never navigates the viewer's webview away. */
+    /**
+     * Opens the document where `target` says. A scroll position restores as far as the
+     * document reaches now: pictures still loading may shift it a little.
+     */
+    function land(target: MarkdownLanding | null): void {
+        if (target?.kind === 'scroll') {
+            if (scrollRef) scrollRef.scrollTop = target.top
+        } else {
+            scrollToElement(target?.elementId ?? null)
+        }
+    }
+
+    /** A click on a link never navigates the webview: the page decides where it goes. */
     function handleClick(e: MouseEvent): void {
-        if (e.target instanceof Element && e.target.closest('a')) e.preventDefault()
+        if (!(e.target instanceof Element) || !e.target.closest('a')) return
+        e.preventDefault()
+        const href = clickedLinkHref(e.target)
+        if (href) onFollowLink(href)
+    }
+
+    /** Scrolls to the element an in-page link names, or to the top for `null` or a missing one. */
+    export function scrollToElement(elementId: string | null): void {
+        const target = elementId && articleRef ? findAnchorTarget(articleRef, elementId) : null
+        if (target) target.scrollIntoView({ block: 'start' })
+        else if (scrollRef) scrollRef.scrollTop = 0
+    }
+
+    /** How far the document is scrolled, so Back can bring the user back to it. */
+    export function getScrollTop(): number {
+        return scrollRef?.scrollTop ?? 0
     }
 
     /** Edit > Select all: the document's text, not the window's chrome. */

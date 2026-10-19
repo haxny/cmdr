@@ -18,6 +18,7 @@ use log::debug;
 use crate::ignore_poison::IgnorePoison;
 
 use super::content_kind::{CLASSIFY_HEAD_LEN, ViewerContentKind, classify_viewer_content, media_mime};
+use super::markdown_links::resolve_relative;
 use super::materialize::{PreviewTemp, materialize_markdown_image, write_preview_temp};
 use super::media::{DeferredMedia, MediaEntry};
 use super::pending_open::{AbandonReason, PendingOpen};
@@ -72,7 +73,8 @@ pub(super) fn resolve_image_src(src: &str, document: &Path, volume_root: &Path) 
             }
             _ => ImageTarget::Blocked,
         },
-        Err(url::ParseError::RelativeUrlWithoutBase) => resolve_relative(src, document, volume_root),
+        Err(url::ParseError::RelativeUrlWithoutBase) => resolve_relative(src, document, volume_root)
+            .map_or(ImageTarget::Blocked, |target| ImageTarget::Local(target.path)),
         Err(_) => ImageTarget::Blocked,
     }
 }
@@ -81,30 +83,6 @@ fn remote(url: &str) -> ImageTarget {
     match url::Url::parse(url) {
         Ok(url) => ImageTarget::Remote(url.to_string()),
         Err(_) => ImageTarget::Blocked,
-    }
-}
-
-/// Joins a relative `src` onto the document's folder as a URL rooted at the volume, so
-/// URL resolution does the dot segments, the query, the fragment, and the escapes, and
-/// its own rule (a `..` at the root stays at the root) is the confinement.
-fn resolve_relative(src: &str, document: &Path, volume_root: &Path) -> ImageTarget {
-    let Some(folder) = document.parent().and_then(|dir| dir.strip_prefix(volume_root).ok()) else {
-        return ImageTarget::Blocked;
-    };
-    let Ok(base) = url::Url::from_directory_path(Path::new("/").join(folder)) else {
-        return ImageTarget::Blocked;
-    };
-    let Some(on_volume) = base
-        .join(src)
-        .ok()
-        .filter(|joined| joined.scheme() == "file")
-        .and_then(|joined| joined.to_file_path().ok())
-    else {
-        return ImageTarget::Blocked;
-    };
-    match on_volume.strip_prefix("/") {
-        Ok(relative) if !relative.as_os_str().is_empty() => ImageTarget::Local(volume_root.join(relative)),
-        _ => ImageTarget::Blocked,
     }
 }
 
