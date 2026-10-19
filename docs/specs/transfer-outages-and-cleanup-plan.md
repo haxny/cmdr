@@ -483,6 +483,11 @@ destination, so discarding it and re-streaming would be wasteful at best.
   skips it (5b).
 - MTP's `rename(force=true)` duplicates: the swap stays delete-then-rename, ❌ never force.
 - Whole-publish (`Replaces::InPlace`) is untouched; a cross-type Overwrite (aside) is untouched.
+- ❗ **The server-side copy's landing gets the same wait** (found while executing milestone 3): `server_side_copy.rs`
+  calls `staged.commit(...)?` with no outage wait or settle, so a late error at its landing still fails that file (since
+  milestone 3 the temp goes with the abandoned-write cleanup instead of an immediate discard). Route it through the same
+  landing wait + settle as `stream_pipe_file`'s (a red cell: a server-side copy whose landing rename performs, then
+  answers a transport error → lands once).
 - A move's source sweep must still run only after the landing succeeded (`move_cross.rs`).
 - Journal and rollback ledgers record `orig`, never the temp.
 
