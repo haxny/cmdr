@@ -453,3 +453,24 @@ rule into `translation-principles.md` or `translator-instructions.md`), then del
   malfunction; added `stopped working` / `stops working` to its `notMatch`. (de, fr)
 - `errorReporter.pageCrash.body`: "Reloading usually helps … sending a report helps get it fixed" repeats "helps" in
   adjacent sentences; several languages varied the verb. Consider "a report lets us fix it" or similar. (de, fr, ru, zh)
+- Cross-language rule proposal for `settings.*.keywords` (hidden search synonyms): exempt them from termbase drift and
+  avoid-lists, and skip pile mining for them. The check forced ruled forms and brands in (ru: 24 edits, 5 exceptions).
+  (all)
+- Keyword `@key` descriptions are one boilerplate: add what the setting does (jargon: slot, cadence, shrink-wrap,
+  wilting, staging, ephemeral, sparse, dynamic), that label/description are already searched, and the CJK exact-match
+  rule. (all)
+- `concepts.json`: add `notMatch` for "shrink-wrap" (`word-wrap`), the verb "notice" (`notification`), and "accent" as
+  accent color (`accent`, on `settings.appearance.appColor.keywords`); four locales needed per-key exceptions. (es, fr,
+  ru, sv, vi)
+- `settings.whatsNew.showOnUpdate.keywords`: curly ’ in "what’s new" trips mechanics in any locale that copies it. (pt,
+  zh-Hant)
+- English keyword lists split "Quick Look" into `quick, look` (`suppressBinaryWarning`, `suppressQuickLookHint`); keep
+  the phrase. (fr)
+- `settings.updates.showSecurityLog.keywords`: the row is "Show in Finder" but the list has no reveal/Finder word. (hu)
+- Unclear English keywords: `serviceResolveTimeout` ("resolve": say Bonjour/mDNS service resolution), "app" in
+  `sizeColors`/`dateColors`, "watching" in `adb.status`. (es, sv, ru)
+- nl labels outside the keyword batch: `settings.advanced.showStagingTempFiles.label` ("Cmdrs …" breaks the
+  brand-genitive rule), and `settings.analytics.enabled`/`updates.crashReports`/`updates.errorReports` labels use
+  `sturen`, ruling `versturen`. (nl)
+- `i18n:brief`: say the restamp step is a no-op for freshly synced keys, and that `pnpm check --fast` covers
+  `i18n:check-locale`. (nl, zh-Hant, de)
